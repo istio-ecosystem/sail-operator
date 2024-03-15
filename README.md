@@ -31,7 +31,7 @@ Make sure that the `HUB` and `TAG` environment variables point to your container
 kubectl apply -f chart/samples/istio-sample-openshift.yaml
 ```
 
-or 
+or
 
 ```sh
 kubectl apply -f chart/samples/istio-sample-kubernetes.yaml
