@@ -103,15 +103,15 @@ function convertIstioProfiles() {
     yq eval -i '.apiVersion="operator.istio.io/v1alpha1"
       | .kind="Istio"
       | (select(.spec.meshConfig) | .spec.values.meshConfig)=.spec.meshConfig
+      | (select(.spec.values.istio_cni) | .spec.values.pilot.cni)=.spec.values.istio_cni
+      | del(.spec.values.istio_cni)
       | del(.metadata)
       | del(.spec.components)
       | del(.spec.meshConfig)
       | del(.spec.hub)
       | del(.spec.tag)
-      | del(.spec.values.global.defaultNodeSelector)
       | del(.spec.values.global.sds.token)
       | del(.spec.values.meshConfig.defaultConfig.proxyMetadata)
-      | del(.spec.values.pilot.nodeSelector)
       | del(.spec.values.telemetry.v2.metadataExchange)
       | del(.spec.values.telemetry.v2.prometheus.wasmEnabled)
       | del(.spec.values.telemetry.v2.stackdriver.configOverride)

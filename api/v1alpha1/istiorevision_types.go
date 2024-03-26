@@ -30,9 +30,9 @@ const (
 type IstioRevisionSpec struct {
 	// +sail:version
 	// Defines the version of Istio to install.
-	// Must be one of: v1.20.3, v1.20.2, v1.20.1, v1.19.7, v1.19.6, latest, gwAPIControllerMode.
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.20.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.20.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.20.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.19.7", "urn:alm:descriptor:com.tectonic.ui:select:v1.19.6", "urn:alm:descriptor:com.tectonic.ui:select:latest", "urn:alm:descriptor:com.tectonic.ui:select:gwAPIControllerMode"}
-	// +kubebuilder:validation:Enum=v1.20.3;v1.20.2;v1.20.1;v1.19.7;v1.19.6;latest;gwAPIControllerMode
+	// Must be one of: v1.21.0, v1.20.3, latest.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.21.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.20.3", "urn:alm:descriptor:com.tectonic.ui:select:latest"}
+	// +kubebuilder:validation:Enum=v1.21.0;v1.20.3;latest
 	Version string `json:"version"`
 
 	// Namespace to which the Istio components should be installed.
@@ -130,40 +130,43 @@ type IstioRevisionConditionType string
 type IstioRevisionConditionReason string
 
 const (
-	// IstioRevisionConditionTypeReconciled signifies whether the controller has
+	// IstioRevisionConditionReconciled signifies whether the controller has
 	// successfully reconciled the resources defined through the CR.
-	IstioRevisionConditionTypeReconciled IstioRevisionConditionType = "Reconciled"
+	IstioRevisionConditionReconciled IstioRevisionConditionType = "Reconciled"
 
-	// IstioRevisionConditionReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried.
-	IstioRevisionConditionReasonReconcileError IstioRevisionConditionReason = "ReconcileError"
+	// IstioRevisionReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried.
+	IstioRevisionReasonReconcileError IstioRevisionConditionReason = "ReconcileError"
 )
 
 const (
-	// IstioRevisionConditionTypeReady signifies whether any Deployment, StatefulSet,
+	// IstioRevisionConditionReady signifies whether any Deployment, StatefulSet,
 	// etc. resources are Ready.
-	IstioRevisionConditionTypeReady IstioRevisionConditionType = "Ready"
+	IstioRevisionConditionReady IstioRevisionConditionType = "Ready"
 
-	// IstioRevisionConditionReasonIstiodNotReady indicates that the control plane is fully reconciled, but istiod is not ready.
-	IstioRevisionConditionReasonIstiodNotReady IstioRevisionConditionReason = "IstiodNotReady"
+	// IstioRevisionReasonIstiodNotReady indicates that the control plane is fully reconciled, but istiod is not ready.
+	IstioRevisionReasonIstiodNotReady IstioRevisionConditionReason = "IstiodNotReady"
 
-	// IstioRevisionConditionReasonCNINotReady indicates that the control plane is fully reconciled, but istio-cni-node is not ready.
-	IstioRevisionConditionReasonCNINotReady IstioRevisionConditionReason = "CNINotReady"
+	// IstioRevisionReasonReadinessCheckFailed indicates that istiod readiness status could not be ascertained.
+	IstioRevisionReasonReadinessCheckFailed IstioRevisionConditionReason = "ReadinessCheckFailed"
 )
 
 const (
-	// IstioRevisionConditionTypeInUse signifies whether any workload is configured to use the revision.
-	IstioRevisionConditionTypeInUse IstioRevisionConditionType = "InUse"
+	// IstioRevisionConditionInUse signifies whether any workload is configured to use the revision.
+	IstioRevisionConditionInUse IstioRevisionConditionType = "InUse"
 
-	// IstioRevisionConditionReasonReferencedByWorkloads indicates that the revision is referenced by at least one pod or namespace.
-	IstioRevisionConditionReasonReferencedByWorkloads IstioRevisionConditionReason = "ReferencedByWorkloads"
+	// IstioRevisionReasonReferencedByWorkloads indicates that the revision is referenced by at least one pod or namespace.
+	IstioRevisionReasonReferencedByWorkloads IstioRevisionConditionReason = "ReferencedByWorkloads"
 
-	// IstioRevisionConditionReasonNotReferenced indicates that the revision is not referenced by any pod or namespace.
-	IstioRevisionConditionReasonNotReferenced IstioRevisionConditionReason = "NotReferencedByAnything"
+	// IstioRevisionReasonNotReferenced indicates that the revision is not referenced by any pod or namespace.
+	IstioRevisionReasonNotReferenced IstioRevisionConditionReason = "NotReferencedByAnything"
+
+	// IstioRevisionReasonUsageCheckFailed indicates that the operator could not check whether any workloads use the revision.
+	IstioRevisionReasonUsageCheckFailed IstioRevisionConditionReason = "UsageCheckFailed"
 )
 
 const (
-	// IstioRevisionConditionReasonHealthy indicates that the control plane is fully reconciled and that all components are ready.
-	IstioRevisionConditionReasonHealthy IstioRevisionConditionReason = "Healthy"
+	// IstioRevisionReasonHealthy indicates that the control plane is fully reconciled and that all components are ready.
+	IstioRevisionReasonHealthy IstioRevisionConditionReason = "Healthy"
 )
 
 // +kubebuilder:object:root=true
@@ -177,7 +180,7 @@ const (
 
 // IstioRevision represents a single revision of an Istio Service Mesh deployment.
 // Users shouldn't create IstioRevision objects directly. Instead, they should
-// create an Istio object and allow the Istio operator to create the underlying
+// create an Istio object and allow the operator to create the underlying
 // IstioRevision object(s).
 // +kubebuilder:validation:XValidation:rule="self.metadata.name == 'default' ? (!has(self.spec.values.revision) || size(self.spec.values.revision) == 0) : self.spec.values.revision == self.metadata.name",message="spec.values.revision must match metadata.name"
 type IstioRevision struct {

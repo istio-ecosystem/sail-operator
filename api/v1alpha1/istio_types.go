@@ -37,9 +37,9 @@ const (
 type IstioSpec struct {
 	// +sail:version
 	// Defines the version of Istio to install.
-	// Must be one of: v1.20.3, v1.20.2, v1.20.1, v1.19.7, v1.19.6, latest, gwAPIControllerMode.
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.20.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.20.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.20.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.19.7", "urn:alm:descriptor:com.tectonic.ui:select:v1.19.6", "urn:alm:descriptor:com.tectonic.ui:select:latest", "urn:alm:descriptor:com.tectonic.ui:select:gwAPIControllerMode"}
-	// +kubebuilder:validation:Enum=v1.20.3;v1.20.2;v1.20.1;v1.19.7;v1.19.6;latest;gwAPIControllerMode
+	// Must be one of: v1.21.0, v1.20.3, latest.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.21.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.20.3", "urn:alm:descriptor:com.tectonic.ui:select:latest"}
+	// +kubebuilder:validation:Enum=v1.21.0;v1.20.3;latest
 	Version string `json:"version"`
 
 	// Defines the update strategy to use when the version in the Istio CR is updated.
@@ -197,32 +197,32 @@ type IstioConditionType string
 type IstioConditionReason string
 
 const (
-	// IstioConditionTypeReconciled signifies whether the controller has
+	// IstioConditionReconciled signifies whether the controller has
 	// successfully reconciled the resources defined through the CR.
-	IstioConditionTypeReconciled IstioConditionType = "Reconciled"
+	IstioConditionReconciled IstioConditionType = "Reconciled"
 
-	// IstioConditionReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried.
-	IstioConditionReasonReconcileError IstioConditionReason = "ReconcileError"
+	// IstioReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried.
+	IstioReasonReconcileError IstioConditionReason = "ReconcileError"
 )
 
 const (
-	// IstioConditionTypeReady signifies whether any Deployment, StatefulSet,
+	// IstioConditionReady signifies whether any Deployment, StatefulSet,
 	// etc. resources are Ready.
-	IstioConditionTypeReady IstioConditionType = "Ready"
+	IstioConditionReady IstioConditionType = "Ready"
 
-	// IstioConditionReasonIstioRevisionNotFound indicates that the active IstioRevision is not found.
-	IstioConditionReasonIstioRevisionNotFound IstioConditionReason = "ActiveRevisionNotFound"
+	// IstioReasonRevisionNotFound indicates that the active IstioRevision is not found.
+	IstioReasonRevisionNotFound IstioConditionReason = "ActiveRevisionNotFound"
 
-	// IstioConditionReasonIstiodNotReady indicates that the control plane is fully reconciled, but istiod is not ready.
-	IstioConditionReasonIstiodNotReady IstioConditionReason = "IstiodNotReady"
+	// IstioReasonIstiodNotReady indicates that the control plane is fully reconciled, but istiod is not ready.
+	IstioReasonIstiodNotReady IstioConditionReason = "IstiodNotReady"
 
-	// IstioConditionReasonCNINotReady indicates that the control plane is fully reconciled, but istio-cni-node is not ready.
-	IstioConditionReasonCNINotReady IstioConditionReason = "CNINotReady"
+	// IstioReasonReadinessCheckFailed indicates that readiness could not be ascertained.
+	IstioReasonReadinessCheckFailed IstioConditionReason = "ReadinessCheckFailed"
 )
 
 const (
-	// IstioConditionReasonHealthy indicates that the control plane is fully reconciled and that all components are ready.
-	IstioConditionReasonHealthy IstioConditionReason = "Healthy"
+	// IstioReasonHealthy indicates that the control plane is fully reconciled and that all components are ready.
+	IstioReasonHealthy IstioConditionReason = "Healthy"
 )
 
 // +kubebuilder:object:root=true
@@ -238,7 +238,7 @@ const (
 // Istio represents an Istio Service Mesh deployment consisting of one or more
 // control plane instances (represented by one or more IstioRevision objects).
 // To deploy an Istio Service Mesh, a user creates an Istio object with the
-// desired Istio version and configuration. The Istio operator then creates
+// desired Istio version and configuration. The operator then creates
 // an IstioRevision object, which in turn creates the underlying Deployment
 // objects for istiod and other control plane components, similar to how a
 // Deployment object in Kubernetes creates ReplicaSets that create the Pods.

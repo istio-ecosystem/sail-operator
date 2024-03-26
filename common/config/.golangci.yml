@@ -14,6 +14,8 @@ run:
   build-tags:
     - integ
     - integfuzz
+    - integration
+    - e2e
   # which dirs to skip: they won't be analyzed;
   # can use regexp here: generated.*, regexp is applied on full path;
   # default value is empty list, but next dirs are always skipped independently
@@ -52,6 +54,7 @@ linters:
     - unused
     - gci
     - gosec
+    - ginkgolinter
   fast: false
 linters-settings:
   errcheck:
@@ -243,6 +246,8 @@ linters-settings:
       - G401
       - G402
       - G404
+  ginkgolinter:
+    force-expect-to: true
 issues:
   # List of regexps of issue texts to exclude, empty list by default.
   # But independently from this option we use default exclude patterns,
@@ -268,6 +273,10 @@ issues:
     - path: ^tests/integration/
       text: "dot-imports: should not use dot imports"
     - path: ^tests/integration/
+      text: "ST1001: should not use dot imports"
+    - path: ^tests/e2e/
+      text: "dot-imports: should not use dot imports"
+    - path: ^tests/e2e/
       text: "ST1001: should not use dot imports"
     - linters:
         - revive

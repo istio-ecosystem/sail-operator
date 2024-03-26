@@ -21,55 +21,41 @@ import (
 	"os"
 	"strings"
 
-	multusv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"github.com/istio-ecosystem/sail-operator/controllers/istio"
+	"github.com/istio-ecosystem/sail-operator/controllers/istiocni"
+	"github.com/istio-ecosystem/sail-operator/controllers/istiorevision"
+	"github.com/istio-ecosystem/sail-operator/pkg/common"
+	"github.com/istio-ecosystem/sail-operator/pkg/helm"
+	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
+	"github.com/istio-ecosystem/sail-operator/pkg/version"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	maistraiov1 "maistra.io/istio-operator/api/v1alpha1"
-	"maistra.io/istio-operator/controllers/istio"
-	"maistra.io/istio-operator/controllers/istiorevision"
-	"maistra.io/istio-operator/pkg/common"
-	"maistra.io/istio-operator/pkg/helm"
-	"maistra.io/istio-operator/pkg/version"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-
-	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 )
 
-var (
-	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
-)
-
-func init() {
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(multusv1.AddToScheme(scheme))
-	utilruntime.Must(networkingv1alpha3.AddToScheme(scheme))
-
-	utilruntime.Must(maistraiov1.AddToScheme(scheme))
-	// +kubebuilder:scaffold:scheme
-}
+var setupLog = ctrl.Log.WithName("setup")
 
 func main() {
 	var metricsAddr string
 	var probeAddr string
 	var configFile string
 	var resourceDirectory string
-	var defaultProfiles string
+	var defaultProfilesStr string
 	var logAPIRequests bool
 	var printVersion bool
+	var leaderElectionEnabled bool
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.StringVar(&configFile, "config-file", "/etc/istio-operator/config.properties", "Location of the config file, propagated by k8s downward APIs")
-	flag.StringVar(&resourceDirectory, "resource-directory", "/var/lib/istio-operator/resources", "Where to find resources (e.g. charts)")
-	flag.StringVar(&defaultProfiles, "default-profiles", "default", "One or more comma-separated profile names that are always applied to each Istio resource")
+	flag.StringVar(&configFile, "config-file", "/etc/sail-operator/config.properties", "Location of the config file, propagated by k8s downward APIs")
+	flag.StringVar(&resourceDirectory, "resource-directory", "/var/lib/sail-operator/resources", "Where to find resources (e.g. charts)")
+	flag.StringVar(&defaultProfilesStr, "default-profiles", "default", "Comma-separated profile names that are always applied to each Istio resource")
 	flag.BoolVar(&logAPIRequests, "log-api-requests", false, "Whether to log each request sent to the Kubernetes API server")
 	flag.BoolVar(&printVersion, "version", printVersion, "Prints version information and exits")
+	flag.BoolVar(&leaderElectionEnabled, "leader-elect", true,
+		"Enable leader election for this operator. Enabling this will ensure there is only one active controller manager.")
 
 	opts := zap.Options{
 		Development: true,
@@ -94,7 +80,7 @@ func main() {
 		}
 	}
 
-	if defaultProfiles == "" {
+	if defaultProfilesStr == "" {
 		setupLog.Error(nil, "--default-profiles shouldn't be empty")
 		os.Exit(1)
 	}
@@ -116,11 +102,11 @@ func main() {
 	}
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:                  scheme,
+		Scheme:                  scheme.Scheme,
 		Metrics:                 metricsserver.Options{BindAddress: metricsAddr},
 		HealthProbeBindAddress:  probeAddr,
-		LeaderElection:          true,
-		LeaderElectionID:        "8d20bb54.istio.io",
+		LeaderElection:          leaderElectionEnabled,
+		LeaderElectionID:        "sail-operator-lock",
 		LeaderElectionNamespace: operatorNamespace,
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
@@ -139,18 +125,27 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = istio.NewIstioReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDirectory, strings.Split(defaultProfiles, ",")).
+	chartManager := helm.NewChartManager(mgr.GetConfig(), os.Getenv("HELM_DRIVER"))
+	defaultProfiles := strings.Split(defaultProfilesStr, ",")
+
+	err = istio.NewIstioReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDirectory, defaultProfiles).
 		SetupWithManager(mgr)
 	if err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Istio")
 		os.Exit(1)
 	}
 
-	helm.ResourceDirectory = resourceDirectory
-	err = istiorevision.NewIstioRevisionReconciler(mgr.GetClient(), mgr.GetScheme(), mgr.GetConfig(), operatorNamespace).
+	err = istiorevision.NewIstioRevisionReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDirectory, chartManager).
 		SetupWithManager(mgr)
 	if err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "IstioRevision")
+		os.Exit(1)
+	}
+
+	err = istiocni.NewIstioCNIReconciler(mgr.GetClient(), mgr.GetScheme(), mgr.GetConfig(), resourceDirectory, chartManager, defaultProfiles).
+		SetupWithManager(mgr)
+	if err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "IstioCNI")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

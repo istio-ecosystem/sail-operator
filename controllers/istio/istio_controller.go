@@ -17,23 +17,20 @@ package istio
 import (
 	"context"
 	"fmt"
-	"os"
 	"path"
 	"reflect"
 	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
-	"gopkg.in/yaml.v3"
+	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	"github.com/istio-ecosystem/sail-operator/pkg/common"
+	"github.com/istio-ecosystem/sail-operator/pkg/kube"
+	"github.com/istio-ecosystem/sail-operator/pkg/profiles"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"maistra.io/istio-operator/api/v1alpha1"
-	"maistra.io/istio-operator/pkg/common"
-	"maistra.io/istio-operator/pkg/helm"
-	"maistra.io/istio-operator/pkg/kube"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -41,7 +38,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"istio.io/istio/pkg/ptr"
-	"istio.io/istio/pkg/util/sets"
 )
 
 // IstioReconciler reconciles an Istio object
@@ -79,7 +75,7 @@ func (r *IstioReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 			log.V(2).Info("Istio not found. Skipping reconciliation")
 			return ctrl.Result{}, nil
 		}
-		log.Error(err, "failed to get Istio from cluster")
+		return ctrl.Result{}, fmt.Errorf("failed to get Istio: %v", err)
 	}
 
 	if istio.DeletionTimestamp != nil {
@@ -91,7 +87,10 @@ func (r *IstioReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	log.Info("Reconciliation done. Updating status.")
 	err = r.updateStatus(ctx, &istio, err)
-
+	if errors.IsConflict(err) {
+		log.Info("Status update failed. Requeuing reconciliation")
+		return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
+	}
 	return result, err
 }
 
@@ -110,14 +109,15 @@ func (r *IstioReconciler) doReconcile(ctx context.Context, istio v1alpha1.Istio)
 		return ctrl.Result{}, err
 	}
 
-	if err = r.reconcileActiveRevision(ctx, &istio, values); err != nil {
-		return ctrl.Result{}, err
+	var res ctrl.Result
+	if res, err = r.reconcileActiveRevision(ctx, &istio, values); err != nil || shouldRequeue(res) {
+		return res, err
 	}
 
 	return r.pruneInactiveRevisions(ctx, &istio)
 }
 
-func (r *IstioReconciler) reconcileActiveRevision(ctx context.Context, istio *v1alpha1.Istio, values *v1alpha1.Values) error {
+func (r *IstioReconciler) reconcileActiveRevision(ctx context.Context, istio *v1alpha1.Istio, values *v1alpha1.Values) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
 	activeRevisionName := getActiveRevisionName(istio)
@@ -129,7 +129,10 @@ func (r *IstioReconciler) reconcileActiveRevision(ctx context.Context, istio *v1
 		rev.Spec.Version = istio.Spec.Version
 		rev.Spec.Values = values
 		log.Info("Updating IstioRevision")
-		return r.Client.Update(ctx, &rev)
+		if err = r.Client.Update(ctx, &rev); errors.IsConflict(err) {
+			log.Info("IstioRevision update failed. Requeuing reconciliation")
+			return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
+		}
 	} else if errors.IsNotFound(err) {
 		// create new
 		rev = v1alpha1.IstioRevision{
@@ -153,9 +156,12 @@ func (r *IstioReconciler) reconcileActiveRevision(ctx context.Context, istio *v1
 			},
 		}
 		log.Info("Creating IstioRevision")
-		return r.Client.Create(ctx, &rev)
+		if err = r.Client.Create(ctx, &rev); errors.IsForbidden(err) && strings.Contains(err.Error(), "RESTMapping") {
+			log.Info("APIServer seems to be not ready - RESTMapper of gc admission plugin is not up to date. Trying again in 5 seconds", "error", err)
+			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+		}
 	}
-	return err
+	return ctrl.Result{}, err
 }
 
 func (r *IstioReconciler) pruneInactiveRevisions(ctx context.Context, istio *v1alpha1.Istio) (ctrl.Result, error) {
@@ -174,7 +180,7 @@ func (r *IstioReconciler) pruneInactiveRevisions(ctx context.Context, istio *v1a
 			log.V(2).Info("IstioRevision is the active revision", "IstioRevision", rev.Name)
 			continue
 		}
-		inUseCondition := rev.Status.GetCondition(v1alpha1.IstioRevisionConditionTypeInUse)
+		inUseCondition := rev.Status.GetCondition(v1alpha1.IstioRevisionConditionInUse)
 		inUse := inUseCondition.Status == metav1.ConditionTrue
 		if inUse {
 			log.V(2).Info("IstioRevision is in use", "IstioRevision", rev.Name)
@@ -287,12 +293,12 @@ func computeIstioRevisionValues(istio v1alpha1.Istio, defaultProfiles []string, 
 	userValues = applyImageDigests(&istio, userValues, common.Config)
 
 	// apply userValues on top of defaultValues from profiles
-	defaultValues, err := getValuesFromProfiles(getProfilesDir(resourceDir, istio), getProfiles(istio, defaultProfiles))
+	mergedHelmValues, err := profiles.Apply(getProfilesDir(resourceDir, istio), getProfiles(istio, defaultProfiles), userValues.ToHelmValues())
 	if err != nil {
 		return nil, err
 	}
-	mergedHelmValues := mergeOverwrite(defaultValues, userValues.ToHelmValues())
-	values, err := v1alpha1.ValuesFromHelmValues(mergedHelmValues)
+
+	values, err := v1alpha1.FromHelmValues(mergedHelmValues, &v1alpha1.Values{})
 	if err != nil {
 		return nil, err
 	}
@@ -350,13 +356,6 @@ func applyImageDigests(istio *v1alpha1.Istio, values *v1alpha1.Values, config co
 		values.Pilot.Image = imageDigests.IstiodImage
 	}
 
-	if values.Cni == nil {
-		values.Cni = &v1alpha1.CNIConfig{}
-	}
-	if values.Cni.Image == "" && values.Cni.Hub == "" && values.Cni.Tag == nil {
-		values.Cni.Image = imageDigests.CNIImage
-	}
-
 	if values.Global == nil {
 		values.Global = &v1alpha1.GlobalConfig{}
 	}
@@ -406,18 +405,18 @@ func (r *IstioReconciler) updateStatus(ctx context.Context, istio *v1alpha1.Isti
 	// set Reconciled and Ready conditions
 	if reconciliationErr != nil {
 		status.SetCondition(v1alpha1.IstioCondition{
-			Type:    v1alpha1.IstioConditionTypeReconciled,
+			Type:    v1alpha1.IstioConditionReconciled,
 			Status:  metav1.ConditionFalse,
-			Reason:  v1alpha1.IstioConditionReasonReconcileError,
+			Reason:  v1alpha1.IstioReasonReconcileError,
 			Message: reconciliationErr.Error(),
 		})
 		status.SetCondition(v1alpha1.IstioCondition{
-			Type:    v1alpha1.IstioConditionTypeReady,
+			Type:    v1alpha1.IstioConditionReady,
 			Status:  metav1.ConditionUnknown,
-			Reason:  v1alpha1.IstioConditionReasonReconcileError,
+			Reason:  v1alpha1.IstioReasonReconcileError,
 			Message: "cannot determine readiness due to reconciliation error",
 		})
-		status.State = v1alpha1.IstioConditionReasonReconcileError
+		status.State = v1alpha1.IstioReasonReconcileError
 	} else {
 		rev, err := r.getActiveRevision(ctx, istio)
 		if errors.IsNotFound(err) {
@@ -425,17 +424,17 @@ func (r *IstioReconciler) updateStatus(ctx context.Context, istio *v1alpha1.Isti
 				return v1alpha1.IstioCondition{
 					Type:    conditionType,
 					Status:  metav1.ConditionFalse,
-					Reason:  v1alpha1.IstioConditionReasonIstioRevisionNotFound,
+					Reason:  v1alpha1.IstioReasonRevisionNotFound,
 					Message: "active IstioRevision not found",
 				}
 			}
 
-			status.SetCondition(revisionNotFound(v1alpha1.IstioConditionTypeReconciled))
-			status.SetCondition(revisionNotFound(v1alpha1.IstioConditionTypeReady))
-			status.State = v1alpha1.IstioConditionReasonIstioRevisionNotFound
+			status.SetCondition(revisionNotFound(v1alpha1.IstioConditionReconciled))
+			status.SetCondition(revisionNotFound(v1alpha1.IstioConditionReady))
+			status.State = v1alpha1.IstioReasonRevisionNotFound
 		} else if err == nil {
-			status.SetCondition(convertCondition(rev.Status.GetCondition(v1alpha1.IstioRevisionConditionTypeReconciled)))
-			status.SetCondition(convertCondition(rev.Status.GetCondition(v1alpha1.IstioRevisionConditionTypeReady)))
+			status.SetCondition(convertCondition(rev.Status.GetCondition(v1alpha1.IstioRevisionConditionReconciled)))
+			status.SetCondition(convertCondition(rev.Status.GetCondition(v1alpha1.IstioRevisionConditionReady)))
 			status.State = convertConditionReason(rev.Status.State)
 		} else {
 			return err
@@ -448,10 +447,10 @@ func (r *IstioReconciler) updateStatus(ctx context.Context, istio *v1alpha1.Isti
 		status.Revisions.Ready = 0
 		status.Revisions.InUse = 0
 		for _, rev := range revisions {
-			if rev.Status.GetCondition(v1alpha1.IstioRevisionConditionTypeReady).Status == metav1.ConditionTrue {
+			if rev.Status.GetCondition(v1alpha1.IstioRevisionConditionReady).Status == metav1.ConditionTrue {
 				status.Revisions.Ready++
 			}
-			if rev.Status.GetCondition(v1alpha1.IstioRevisionConditionTypeInUse).Status == metav1.ConditionTrue {
+			if rev.Status.GetCondition(v1alpha1.IstioRevisionConditionInUse).Status == metav1.ConditionTrue {
 				status.Revisions.InUse++
 			}
 		}
@@ -481,10 +480,10 @@ func convertCondition(condition v1alpha1.IstioRevisionCondition) v1alpha1.IstioC
 
 func convertConditionType(condition v1alpha1.IstioRevisionCondition) v1alpha1.IstioConditionType {
 	switch condition.Type {
-	case v1alpha1.IstioRevisionConditionTypeReconciled:
-		return v1alpha1.IstioConditionTypeReconciled
-	case v1alpha1.IstioRevisionConditionTypeReady:
-		return v1alpha1.IstioConditionTypeReady
+	case v1alpha1.IstioRevisionConditionReconciled:
+		return v1alpha1.IstioConditionReconciled
+	case v1alpha1.IstioRevisionConditionReady:
+		return v1alpha1.IstioConditionReady
 	default:
 		panic(fmt.Sprintf("can't convert IstioRevisionConditionType: %s", condition.Type))
 	}
@@ -494,96 +493,19 @@ func convertConditionReason(reason v1alpha1.IstioRevisionConditionReason) v1alph
 	switch reason {
 	case "":
 		return ""
-	case v1alpha1.IstioRevisionConditionReasonIstiodNotReady:
-		return v1alpha1.IstioConditionReasonIstiodNotReady
-	case v1alpha1.IstioRevisionConditionReasonCNINotReady:
-		return v1alpha1.IstioConditionReasonCNINotReady
-	case v1alpha1.IstioRevisionConditionReasonHealthy:
-		return v1alpha1.IstioConditionReasonHealthy
-	case v1alpha1.IstioRevisionConditionReasonReconcileError:
-		return v1alpha1.IstioConditionReasonReconcileError
+	case v1alpha1.IstioRevisionReasonIstiodNotReady:
+		return v1alpha1.IstioReasonIstiodNotReady
+	case v1alpha1.IstioRevisionReasonHealthy:
+		return v1alpha1.IstioReasonHealthy
+	case v1alpha1.IstioRevisionReasonReadinessCheckFailed:
+		return v1alpha1.IstioReasonReadinessCheckFailed
+	case v1alpha1.IstioRevisionReasonReconcileError:
+		return v1alpha1.IstioReasonReconcileError
 	default:
 		panic(fmt.Sprintf("can't convert IstioRevisionConditionReason: %s", reason))
 	}
 }
 
-func getValuesFromProfiles(profilesDir string, profiles []string) (helm.HelmValues, error) {
-	// start with an empty values map
-	values := helm.HelmValues{}
-
-	// apply profiles in order, overwriting values from previous profiles
-	alreadyApplied := sets.New[string]()
-	for _, profile := range profiles {
-		if profile == "" {
-			return nil, fmt.Errorf("profile name cannot be empty")
-		}
-		if alreadyApplied.Contains(profile) {
-			continue
-		}
-		alreadyApplied.Insert(profile)
-
-		file := path.Join(profilesDir, profile+".yaml")
-		// prevent path traversal attacks
-		if path.Dir(file) != profilesDir {
-			return nil, fmt.Errorf("invalid profile name %s", profile)
-		}
-
-		profileValues, err := getProfileValues(file)
-		if err != nil {
-			return nil, err
-		}
-		values = mergeOverwrite(values, profileValues)
-	}
-
-	return values, nil
-}
-
-func getProfileValues(file string) (helm.HelmValues, error) {
-	fileContents, err := os.ReadFile(file)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read profile file %v: %v", file, err)
-	}
-
-	var profile map[string]any
-	err = yaml.Unmarshal(fileContents, &profile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal profile YAML %s: %v", file, err)
-	}
-
-	val, found, err := unstructured.NestedFieldNoCopy(profile, "spec", "values")
-	if !found || err != nil {
-		return nil, err
-	}
-	m, ok := val.(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("spec.values is not a map[string]any")
-	}
-	return m, nil
-}
-
-func mergeOverwrite(base map[string]any, overrides map[string]any) map[string]any {
-	if base == nil {
-		base = make(map[string]any, 1)
-	}
-
-	for key, value := range overrides {
-		// if the key doesn't already exist, add it
-		if _, exists := base[key]; !exists {
-			base[key] = value
-			continue
-		}
-
-		// At this point, key exists in both base and overrides.
-		// If both are maps, recurse so that we override only specific values in the map.
-		// If only override value is a map, overwrite base value completely.
-		// If both are values, overwrite base.
-		childOverrides, overrideValueIsMap := value.(map[string]any)
-		childBase, baseValueIsMap := base[key].(map[string]any)
-		if baseValueIsMap && overrideValueIsMap {
-			base[key] = mergeOverwrite(childBase, childOverrides)
-		} else {
-			base[key] = value
-		}
-	}
-	return base
+func shouldRequeue(result ctrl.Result) bool {
+	return result.Requeue || result.RequeueAfter > 0
 }

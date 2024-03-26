@@ -17,11 +17,16 @@ package istiorevision
 import (
 	"context"
 	"fmt"
+	"path"
 	"reflect"
 	"regexp"
-	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	"github.com/istio-ecosystem/sail-operator/pkg/common"
+	"github.com/istio-ecosystem/sail-operator/pkg/helm"
+	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -31,13 +36,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/cli-runtime/pkg/genericclioptions"
-	"k8s.io/client-go/rest"
-	"maistra.io/istio-operator/api/v1alpha1"
-	"maistra.io/istio-operator/pkg/helm"
-	"maistra.io/istio-operator/pkg/kube"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -53,32 +52,30 @@ import (
 )
 
 const (
-	cniReleaseNameBase         = "istio"
 	IstioInjectionLabel        = "istio-injection"
 	IstioInjectionEnabledValue = "enabled"
 	IstioRevLabel              = "istio.io/rev"
 	IstioSidecarInjectLabel    = "sidecar.istio.io/inject"
+
+	finalizer = common.FinalizerName
 )
 
 // IstioRevisionReconciler reconciles an IstioRevision object
 type IstioRevisionReconciler struct {
-	CNINamespace     string
-	RestClientGetter genericclioptions.RESTClientGetter
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme            *runtime.Scheme
+	ResourceDirectory string
+	ChartManager      *helm.ChartManager
 }
 
-func NewIstioRevisionReconciler(client client.Client, scheme *runtime.Scheme, restConfig *rest.Config, cniNamespace string) *IstioRevisionReconciler {
+func NewIstioRevisionReconciler(client client.Client, scheme *runtime.Scheme, resourceDir string, chartManager *helm.ChartManager) *IstioRevisionReconciler {
 	return &IstioRevisionReconciler{
-		CNINamespace:     cniNamespace,
-		RestClientGetter: helm.NewRESTClientGetter(restConfig),
-		Client:           client,
-		Scheme:           scheme,
+		Client:            client,
+		Scheme:            scheme,
+		ResourceDirectory: resourceDir,
+		ChartManager:      chartManager,
 	}
 }
-
-// charts to deploy in the istio namespace
-var userCharts = []string{"istiod"}
 
 // +kubebuilder:rbac:groups=operator.istio.io,resources=istiorevisions,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=operator.istio.io,resources=istiorevisions/status,verbs=get;update;patch
@@ -108,27 +105,18 @@ func (r *IstioRevisionReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			log.V(2).Info("IstioRevision not found. Skipping reconciliation")
 			return ctrl.Result{}, nil
 		}
-		log.Error(err, "failed to get IstioRevision from cluster")
+		return ctrl.Result{}, fmt.Errorf("failed to get IstioRevision: %v", err)
 	}
 
 	if rev.DeletionTimestamp != nil {
 		if err := r.uninstallHelmCharts(ctx, &rev); err != nil {
 			return ctrl.Result{}, err
 		}
-
-		if err := kube.RemoveFinalizer(ctx, &rev, r.Client); err != nil {
-			log.Info("failed to remove finalizer")
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{}, nil
+		return kube.RemoveFinalizer(ctx, r.Client, &rev, finalizer)
 	}
 
-	if !kube.HasFinalizer(&rev) {
-		err := kube.AddFinalizer(ctx, &rev, r.Client)
-		if err != nil {
-			log.Info("failed to add finalizer")
-			return ctrl.Result{}, err
-		}
+	if !kube.HasFinalizer(&rev, finalizer) {
+		return kube.AddFinalizer(ctx, r.Client, &rev, finalizer)
 	}
 
 	if err := validateIstioRevision(rev); err != nil {
@@ -140,6 +128,10 @@ func (r *IstioRevisionReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	log.Info("Reconciliation done. Updating status.")
 	err = r.updateStatus(ctx, &rev, err)
+	if errors.IsConflict(err) {
+		log.Info("Status update failed. Requeuing reconciliation")
+		return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
+	}
 
 	return ctrl.Result{}, err
 }
@@ -178,74 +170,29 @@ func (r *IstioRevisionReconciler) installHelmCharts(ctx context.Context, rev *v1
 	}
 
 	values := rev.Spec.Values.ToHelmValues()
+	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev, "istiod"), values, rev.Spec.Namespace, getReleaseName(rev, "istiod"), ownerReference)
+	return err
+}
 
-	if isCNIEnabled(rev.Spec.Values) {
-		if shouldInstallCNI, err := r.isOldestRevisionWithCNI(ctx, rev); shouldInstallCNI {
-			if err := helm.UpgradeOrInstallCharts(ctx, r.RestClientGetter, []string{"cni"}, values,
-				rev.Spec.Version, cniReleaseNameBase, r.CNINamespace, ownerReference); err != nil {
-				return err
-			}
-		} else if err != nil {
-			return err
-		} else {
-			log := logf.FromContext(ctx)
-			log.Info("Skipping istio-cni-node installation because CNI is already installed and owned by another IstioRevision")
-		}
-	}
+func getReleaseName(rev *v1alpha1.IstioRevision, chartName string) string {
+	return fmt.Sprintf("%s-%s", rev.Name, chartName)
+}
 
-	if err := helm.UpgradeOrInstallCharts(ctx, r.RestClientGetter, userCharts, values,
-		rev.Spec.Version, rev.Name, rev.Spec.Namespace, ownerReference); err != nil {
-		return err
-	}
-	return nil
+func (r *IstioRevisionReconciler) getChartDir(rev *v1alpha1.IstioRevision, chartName string) string {
+	return path.Join(r.ResourceDirectory, rev.Spec.Version, "charts", chartName)
 }
 
 func (r *IstioRevisionReconciler) uninstallHelmCharts(ctx context.Context, rev *v1alpha1.IstioRevision) error {
-	if err := helm.UninstallCharts(ctx, r.RestClientGetter, []string{"cni"}, cniReleaseNameBase, r.CNINamespace); err != nil {
-		return err
-	}
-
-	if err := helm.UninstallCharts(ctx, r.RestClientGetter, userCharts, rev.Name, rev.Spec.Namespace); err != nil {
+	if _, err := r.ChartManager.UninstallChart(ctx, getReleaseName(rev, "istiod"), rev.Spec.Namespace); err != nil {
 		return err
 	}
 	return nil
-}
-
-func (r *IstioRevisionReconciler) isOldestRevisionWithCNI(ctx context.Context, rev *v1alpha1.IstioRevision) (bool, error) {
-	revList := v1alpha1.IstioRevisionList{}
-	if err := r.Client.List(ctx, &revList); err != nil {
-		return false, err
-	}
-
-	oldestRevision := *rev
-	for _, item := range revList.Items {
-		if isCNIEnabled(item.Spec.Values) &&
-			(item.CreationTimestamp.Before(&oldestRevision.CreationTimestamp) ||
-				item.CreationTimestamp.Equal(&oldestRevision.CreationTimestamp) &&
-					strings.Compare(item.Name, oldestRevision.Name) < 0) {
-
-			oldestRevision = item
-		}
-	}
-	return oldestRevision.UID == rev.UID, nil
-}
-
-func isCNIEnabled(values *v1alpha1.Values) bool {
-	if values == nil {
-		return false
-	}
-	// TODO: remove this temporary hack when we introduce Istio.spec.components.cni.enabled
-	if values.Profile == "openshift" {
-		return true
-	}
-
-	return values.IstioCni != nil && values.IstioCni.Enabled
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *IstioRevisionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// ownedResourceHandler handles resources that are owned by the IstioRevision CR
-	ownedResourceHandler := handler.EnqueueRequestsFromMapFunc(r.mapOwnerToReconcileRequest)
+	ownedResourceHandler := handler.EnqueueRequestForOwner(r.Scheme, r.RESTMapper(), &v1alpha1.IstioRevision{}, handler.OnlyControllerOwner())
 
 	// nsHandler handles namespaces that reference the IstioRevision CR via the istio.io/rev or istio-injection labels.
 	// The handler triggers the reconciliation of the referenced IstioRevision CR so that its InUse condition is updated.
@@ -281,10 +228,6 @@ func (r *IstioRevisionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&policyv1.PodDisruptionBudget{}, ownedResourceHandler).
 		Watches(&autoscalingv2.HorizontalPodAutoscaler{}, ownedResourceHandler).
 		Watches(&networkingv1alpha3.EnvoyFilter{}, ownedResourceHandler).
-
-		// TODO: only register NetAttachDef if the CRD is installed (may also need to watch for CRD creation)
-		// Owns(&multusv1.NetworkAttachmentDefinition{}).
-
 		Watches(&corev1.Namespace{}, nsHandler).
 		Watches(&corev1.Pod{}, podHandler).
 
@@ -304,10 +247,7 @@ func (r *IstioRevisionReconciler) updateStatus(ctx context.Context, rev *v1alpha
 	log := logf.FromContext(ctx)
 	reconciledCondition := r.determineReconciledCondition(err)
 	readyCondition := r.determineReadyCondition(ctx, rev)
-	inUseCondition, err := r.determineInUseCondition(ctx, rev)
-	if err != nil {
-		return err
-	}
+	inUseCondition := r.determineInUseCondition(ctx, rev)
 
 	status := rev.Status.DeepCopy()
 	status.ObservedGeneration = rev.Generation
@@ -334,96 +274,74 @@ func (r *IstioRevisionReconciler) updateStatus(ctx context.Context, rev *v1alpha
 }
 
 func deriveState(reconciledCondition, readyCondition v1alpha1.IstioRevisionCondition) v1alpha1.IstioRevisionConditionReason {
-	if reconciledCondition.Status == metav1.ConditionFalse {
+	if reconciledCondition.Status != metav1.ConditionTrue {
 		return reconciledCondition.Reason
-	} else if readyCondition.Status == metav1.ConditionFalse {
+	} else if readyCondition.Status != metav1.ConditionTrue {
 		return readyCondition.Reason
 	}
-
-	return v1alpha1.IstioRevisionConditionReasonHealthy
+	return v1alpha1.IstioRevisionReasonHealthy
 }
 
 func (r *IstioRevisionReconciler) determineReconciledCondition(err error) v1alpha1.IstioRevisionCondition {
-	if err == nil {
-		return v1alpha1.IstioRevisionCondition{
-			Type:   v1alpha1.IstioRevisionConditionTypeReconciled,
-			Status: metav1.ConditionTrue,
-		}
-	}
+	c := v1alpha1.IstioRevisionCondition{Type: v1alpha1.IstioRevisionConditionReconciled}
 
-	return v1alpha1.IstioRevisionCondition{
-		Type:    v1alpha1.IstioRevisionConditionTypeReconciled,
-		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.IstioRevisionConditionReasonReconcileError,
-		Message: fmt.Sprintf("error reconciling resource: %v", err),
+	if err == nil {
+		c.Status = metav1.ConditionTrue
+	} else {
+		c.Status = metav1.ConditionFalse
+		c.Reason = v1alpha1.IstioRevisionReasonReconcileError
+		c.Message = fmt.Sprintf("error reconciling resource: %v", err)
 	}
+	return c
 }
 
 func (r *IstioRevisionReconciler) determineReadyCondition(ctx context.Context, rev *v1alpha1.IstioRevision) v1alpha1.IstioRevisionCondition {
-	notReady := func(reason v1alpha1.IstioRevisionConditionReason, message string) v1alpha1.IstioRevisionCondition {
-		return v1alpha1.IstioRevisionCondition{
-			Type:    v1alpha1.IstioRevisionConditionTypeReady,
-			Status:  metav1.ConditionFalse,
-			Reason:  reason,
-			Message: message,
-		}
+	c := v1alpha1.IstioRevisionCondition{
+		Type:   v1alpha1.IstioRevisionConditionReady,
+		Status: metav1.ConditionFalse,
 	}
 
 	istiod := appsv1.Deployment{}
-	if err := r.Client.Get(ctx, istiodDeploymentKey(rev), &istiod); err != nil {
-		if errors.IsNotFound(err) {
-			return notReady(v1alpha1.IstioRevisionConditionReasonIstiodNotReady, "istiod Deployment not found")
+	if err := r.Client.Get(ctx, istiodDeploymentKey(rev), &istiod); err == nil {
+		if istiod.Status.Replicas == 0 {
+			c.Reason = v1alpha1.IstioRevisionReasonIstiodNotReady
+			c.Message = "istiod Deployment is scaled to zero replicas"
+		} else if istiod.Status.ReadyReplicas < istiod.Status.Replicas {
+			c.Reason = v1alpha1.IstioRevisionReasonIstiodNotReady
+			c.Message = "not all istiod pods are ready"
+		} else {
+			c.Status = metav1.ConditionTrue
 		}
-		return notReady(v1alpha1.IstioRevisionConditionReasonReconcileError, fmt.Sprintf("failed to get readiness: %v", err))
+	} else if errors.IsNotFound(err) {
+		c.Reason = v1alpha1.IstioRevisionReasonIstiodNotReady
+		c.Message = "istiod Deployment not found"
+	} else {
+		c.Status = metav1.ConditionUnknown
+		c.Reason = v1alpha1.IstioRevisionReasonReadinessCheckFailed
+		c.Message = fmt.Sprintf("failed to get readiness: %v", err)
 	}
-	if istiod.Status.Replicas == 0 {
-		return notReady(v1alpha1.IstioRevisionConditionReasonIstiodNotReady, "istiod Deployment is scaled to zero replicas")
-	} else if istiod.Status.ReadyReplicas < istiod.Status.Replicas {
-		return notReady(v1alpha1.IstioRevisionConditionReasonIstiodNotReady, "not all istiod pods are ready")
-	}
-
-	if isCNIEnabled(rev.Spec.Values) {
-		cni := appsv1.DaemonSet{}
-		if err := r.Client.Get(ctx, r.cniDaemonSetKey(), &cni); err != nil {
-			if errors.IsNotFound(err) {
-				return notReady(v1alpha1.IstioRevisionConditionReasonCNINotReady, "istio-cni-node DaemonSet not found")
-			}
-			return notReady(v1alpha1.IstioRevisionConditionReasonReconcileError, fmt.Sprintf("failed to get readiness: %v", err))
-		}
-
-		if cni.Status.CurrentNumberScheduled == 0 {
-			return notReady(v1alpha1.IstioRevisionConditionReasonCNINotReady, "no istio-cni-node pods are currently scheduled")
-		} else if cni.Status.NumberReady < cni.Status.CurrentNumberScheduled {
-			return notReady(v1alpha1.IstioRevisionConditionReasonCNINotReady, "not all istio-cni-node pods are ready")
-		}
-	}
-
-	return v1alpha1.IstioRevisionCondition{
-		Type:   v1alpha1.IstioRevisionConditionTypeReady,
-		Status: metav1.ConditionTrue,
-	}
+	return c
 }
 
-func (r *IstioRevisionReconciler) determineInUseCondition(ctx context.Context, rev *v1alpha1.IstioRevision) (v1alpha1.IstioRevisionCondition, error) {
-	isReferenced, err := r.isRevisionReferencedByWorkloads(ctx, rev)
-	if err != nil {
-		return v1alpha1.IstioRevisionCondition{}, err
-	}
+func (r *IstioRevisionReconciler) determineInUseCondition(ctx context.Context, rev *v1alpha1.IstioRevision) v1alpha1.IstioRevisionCondition {
+	c := v1alpha1.IstioRevisionCondition{Type: v1alpha1.IstioRevisionConditionInUse}
 
-	if isReferenced {
-		return v1alpha1.IstioRevisionCondition{
-			Type:    v1alpha1.IstioRevisionConditionTypeInUse,
-			Status:  metav1.ConditionTrue,
-			Reason:  v1alpha1.IstioRevisionConditionReasonReferencedByWorkloads,
-			Message: "Referenced by at least one pod or namespace",
-		}, nil
+	if isReferenced, err := r.isRevisionReferencedByWorkloads(ctx, rev); err == nil {
+		if isReferenced {
+			c.Status = metav1.ConditionTrue
+			c.Reason = v1alpha1.IstioRevisionReasonReferencedByWorkloads
+			c.Message = "Referenced by at least one pod or namespace"
+		} else {
+			c.Status = metav1.ConditionFalse
+			c.Reason = v1alpha1.IstioRevisionReasonNotReferenced
+			c.Message = "Not referenced by any pod or namespace"
+		}
+	} else {
+		c.Status = metav1.ConditionUnknown
+		c.Reason = v1alpha1.IstioRevisionReasonUsageCheckFailed
+		c.Message = fmt.Sprintf("failed to determine if revision is in use: %v", err)
 	}
-	return v1alpha1.IstioRevisionCondition{
-		Type:    v1alpha1.IstioRevisionConditionTypeInUse,
-		Status:  metav1.ConditionFalse,
-		Reason:  v1alpha1.IstioRevisionConditionReasonNotReferenced,
-		Message: "Not referenced by any pod or namespace",
-	}, nil
+	return c
 }
 
 func (r *IstioRevisionReconciler) isRevisionReferencedByWorkloads(ctx context.Context, rev *v1alpha1.IstioRevision) (bool, error) {
@@ -454,7 +372,8 @@ func (r *IstioRevisionReconciler) isRevisionReferencedByWorkloads(ctx context.Co
 
 	if rev.Name == v1alpha1.DefaultRevision && rev.Spec.Values != nil &&
 		rev.Spec.Values.SidecarInjectorWebhook != nil &&
-		rev.Spec.Values.SidecarInjectorWebhook.EnableNamespacesByDefault {
+		rev.Spec.Values.SidecarInjectorWebhook.EnableNamespacesByDefault != nil &&
+		*rev.Spec.Values.SidecarInjectorWebhook.EnableNamespacesByDefault {
 		return true, nil
 	}
 
@@ -506,13 +425,6 @@ func getReferencedRevisionFromPod(podLabels, podAnnotations, nsLabels map[string
 	return ""
 }
 
-func (r *IstioRevisionReconciler) cniDaemonSetKey() client.ObjectKey {
-	return client.ObjectKey{
-		Namespace: r.CNINamespace,
-		Name:      "istio-cni-node",
-	}
-}
-
 func istiodDeploymentKey(rev *v1alpha1.IstioRevision) client.ObjectKey {
 	name := "istiod"
 	if rev.Spec.Values != nil && rev.Spec.Values.Revision != "" {
@@ -523,57 +435,6 @@ func istiodDeploymentKey(rev *v1alpha1.IstioRevision) client.ObjectKey {
 		Namespace: rev.Spec.Namespace,
 		Name:      name,
 	}
-}
-
-func (r *IstioRevisionReconciler) mapOwnerToReconcileRequest(ctx context.Context, obj client.Object) []reconcile.Request {
-	log := logf.FromContext(ctx)
-	ownerKind := v1alpha1.IstioRevisionKind
-	ownerAPIGroup := v1alpha1.GroupVersion.Group
-
-	var requests []reconcile.Request
-
-	for _, ref := range obj.GetOwnerReferences() {
-		refGV, err := schema.ParseGroupVersion(ref.APIVersion)
-		if err != nil {
-			log.Error(err, "Could not parse OwnerReference APIVersion", "api version", ref.APIVersion)
-			continue
-		}
-
-		if ref.Kind == ownerKind && refGV.Group == ownerAPIGroup {
-			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: ref.Name}})
-		}
-	}
-
-	annotations := obj.GetAnnotations()
-	namespacedName, kind, apiGroup := helm.GetOwnerFromAnnotations(annotations)
-	if namespacedName != nil && kind == ownerKind && apiGroup == ownerAPIGroup {
-		requests = append(requests, reconcile.Request{NamespacedName: *namespacedName})
-	}
-
-	// HACK: because CNI components are shared between multiple IstioRevisions, we need to trigger a reconcile
-	// of all IstioRevisions that have CNI enabled whenever a CNI component changes so that their status is
-	// updated (e.g. readiness).
-	if obj.GetNamespace() == r.CNINamespace &&
-		annotations != nil && annotations["meta.helm.sh/release-name"] == cniReleaseNameBase+"-cni" {
-
-		revList := v1alpha1.IstioRevisionList{}
-		if err := r.Client.List(ctx, &revList); err != nil {
-			log.Error(err, "Could not list IstioRevisions")
-		} else {
-			for _, item := range revList.Items {
-				if isCNIEnabled(item.Spec.Values) {
-					requests = append(requests, reconcile.Request{
-						NamespacedName: types.NamespacedName{
-							Name:      item.Name,
-							Namespace: item.Spec.Namespace,
-						},
-					})
-				}
-			}
-		}
-	}
-
-	return requests
 }
 
 func (r *IstioRevisionReconciler) mapNamespaceToReconcileRequest(ctx context.Context, ns client.Object) []reconcile.Request {

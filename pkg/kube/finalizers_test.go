@@ -16,135 +16,259 @@ package kube
 
 import (
 	"context"
-	"os"
+	"fmt"
 	"testing"
+	"time"
 
+	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	"github.com/istio-ecosystem/sail-operator/pkg/common"
+	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
+	"github.com/istio-ecosystem/sail-operator/pkg/util/tests/kube"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/rest"
-	v1 "maistra.io/istio-operator/api/v1alpha1"
-	"maistra.io/istio-operator/pkg/common"
-	"maistra.io/istio-operator/pkg/test"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
 
-const version = "v1.20.2"
-
-var (
-	cfg       *rest.Config
-	k8sClient client.Client
-	testEnv   *envtest.Environment
-	namespace = &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test",
-		},
-	}
-)
-
-func setup() {
-	testEnv, k8sClient, cfg = test.SetupEnv()
-	err := k8sClient.Create(context.TODO(), namespace)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func teardown() {
-	err := testEnv.Stop()
-	if err != nil {
-		panic(err)
-	}
-	k8sClient.Delete(context.TODO(), namespace)
-}
-
-func TestMain(m *testing.M) {
-	setup()
-	code := m.Run()
-	teardown()
-	os.Exit(code)
-}
+var ctx = context.TODO()
 
 func TestHasFinalizer(t *testing.T) {
-	RegisterTestingT(t)
 	testCases := []struct {
-		obj            client.Object
+		name           string
+		finalizers     []string
 		expectedResult bool
 	}{
 		{
-			obj:            &v1.Istio{},
+			name:           "nil finalizers",
+			finalizers:     nil,
 			expectedResult: false,
 		},
 		{
-			obj: &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Finalizers: []string{"blah"},
-				},
-				Spec: v1.IstioSpec{
-					Version: version,
-				},
-			},
+			name:           "has other finalizer",
+			finalizers:     []string{"example.com/some-finalizer"},
 			expectedResult: false,
 		},
 		{
-			obj: &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Finalizers: []string{common.FinalizerName},
-				},
-				Spec: v1.IstioSpec{
-					Version: version,
-				},
-			},
+			name:           "has finalizer in question",
+			finalizers:     []string{common.FinalizerName},
 			expectedResult: true,
 		},
 	}
 	for _, tc := range testCases {
-		Expect(HasFinalizer(tc.obj)).To(Equal(tc.expectedResult))
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			obj := &v1alpha1.Istio{
+				ObjectMeta: metav1.ObjectMeta{
+					Finalizers: tc.finalizers,
+				},
+			}
+			g.Expect(HasFinalizer(obj, common.FinalizerName)).To(Equal(tc.expectedResult))
+		})
 	}
 }
 
-func TestAddRemoveFinalizer(t *testing.T) {
-	RegisterTestingT(t)
-
-	testCases := []struct {
-		obj              client.Object
-		resultFinalizers []string
+func TestRemoveFinalizer(t *testing.T) {
+	tests := []struct {
+		name               string
+		initialFinalizers  []string
+		interceptorFuncs   interceptor.Funcs
+		expectResult       ctrl.Result
+		expectError        bool
+		checkFinalizers    bool
+		expectedFinalizers []string
 	}{
 		{
-			obj: &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "test",
-				},
-				Spec: v1.IstioSpec{
-					Version: version,
+			name: "object not found",
+			interceptorFuncs: interceptor.Funcs{
+				Get: func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					return errors.NewNotFound(schema.GroupResource{}, "Istio")
 				},
 			},
-			resultFinalizers: []string{common.FinalizerName},
+			expectResult: ctrl.Result{},
+			expectError:  false,
 		},
 		{
-			obj: &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test",
-					Namespace:  "test",
-					Finalizers: []string{common.FinalizerName},
-				},
-				Spec: v1.IstioSpec{
-					Version: version,
+			name:              "update conflict",
+			initialFinalizers: []string{common.FinalizerName},
+			interceptorFuncs: interceptor.Funcs{
+				Update: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+					return errors.NewConflict(schema.GroupResource{}, "dummy", fmt.Errorf("simulated conflict error"))
 				},
 			},
-			resultFinalizers: []string{common.FinalizerName},
+			expectResult: ctrl.Result{RequeueAfter: 2 * time.Second},
+			expectError:  false,
+		},
+		{
+			name:              "update error",
+			initialFinalizers: []string{common.FinalizerName},
+			interceptorFuncs: interceptor.Funcs{
+				Update: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+					return fmt.Errorf("simulated update error")
+				},
+			},
+			expectResult: ctrl.Result{},
+			expectError:  true,
+		},
+		{
+			name:               "success with single finalizer",
+			initialFinalizers:  []string{common.FinalizerName},
+			expectResult:       ctrl.Result{},
+			expectError:        false,
+			checkFinalizers:    true,
+			expectedFinalizers: nil,
+		},
+		{
+			name:               "success with other finalizers",
+			initialFinalizers:  []string{common.FinalizerName, "example.com/some-finalizer"},
+			expectResult:       ctrl.Result{},
+			expectError:        false,
+			checkFinalizers:    true,
+			expectedFinalizers: []string{"example.com/some-finalizer"},
+		},
+		{
+			name:               "success with no finalizer",
+			initialFinalizers:  nil,
+			expectResult:       ctrl.Result{},
+			expectError:        false,
+			checkFinalizers:    true,
+			expectedFinalizers: nil,
 		},
 	}
-	for _, tc := range testCases {
-		Eventually(k8sClient.Create(context.TODO(), tc.obj)).Should(Succeed())
-		Expect(AddFinalizer(context.TODO(), tc.obj, k8sClient)).NotTo(HaveOccurred())
-		obj := &v1.Istio{}
-		Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Namespace: tc.obj.GetNamespace(), Name: tc.obj.GetName()}, obj)).To(Succeed())
-		Expect(obj.ObjectMeta.Finalizers).To(Equal(tc.resultFinalizers))
-		Expect(RemoveFinalizer(context.TODO(), tc.obj, k8sClient)).NotTo(HaveOccurred())
-		Eventually(k8sClient.Delete(context.TODO(), tc.obj)).Should(Succeed())
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			obj := &v1alpha1.Istio{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test",
+					Finalizers: tc.initialFinalizers,
+				},
+			}
+
+			cl := fake.NewClientBuilder().
+				WithScheme(scheme.Scheme).
+				WithObjects(obj).
+				WithInterceptorFuncs(tc.interceptorFuncs).
+				Build()
+
+			result, err := RemoveFinalizer(ctx, cl, obj, common.FinalizerName)
+
+			g.Expect(result).To(Equal(tc.expectResult))
+
+			if tc.expectError {
+				g.Expect(err).To(HaveOccurred())
+			} else {
+				g.Expect(err).ToNot(HaveOccurred())
+			}
+
+			if tc.checkFinalizers {
+				g.Expect(cl.Get(ctx, kube.GetObjectKey(obj), obj)).To(Succeed())
+				g.Expect(obj.GetFinalizers()).To(ConsistOf(tc.expectedFinalizers))
+			}
+		})
+	}
+}
+
+func TestAddFinalizer(t *testing.T) {
+	tests := []struct {
+		name               string
+		initialFinalizers  []string
+		interceptorFuncs   interceptor.Funcs
+		expectResult       ctrl.Result
+		expectError        bool
+		checkFinalizers    bool
+		expectedFinalizers []string
+	}{
+		{
+			name: "object not found",
+			interceptorFuncs: interceptor.Funcs{
+				Get: func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					return errors.NewNotFound(schema.GroupResource{}, "Istio")
+				},
+			},
+			expectResult: ctrl.Result{},
+			expectError:  false,
+		},
+		{
+			name:              "update conflict",
+			initialFinalizers: nil,
+			interceptorFuncs: interceptor.Funcs{
+				Update: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+					return errors.NewConflict(schema.GroupResource{}, "dummy", fmt.Errorf("simulated conflict error"))
+				},
+			},
+			expectResult: ctrl.Result{RequeueAfter: 2 * time.Second},
+			expectError:  false,
+		},
+		{
+			name:              "update error",
+			initialFinalizers: nil,
+			interceptorFuncs: interceptor.Funcs{
+				Update: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+					return fmt.Errorf("simulated update error")
+				},
+			},
+			expectResult: ctrl.Result{},
+			expectError:  true,
+		},
+		{
+			name:               "success with no previous finalizer",
+			initialFinalizers:  nil,
+			expectResult:       ctrl.Result{},
+			expectError:        false,
+			checkFinalizers:    true,
+			expectedFinalizers: []string{common.FinalizerName},
+		},
+		{
+			name:               "success with other finalizers",
+			initialFinalizers:  []string{"example.com/some-finalizer"},
+			expectResult:       ctrl.Result{},
+			expectError:        false,
+			checkFinalizers:    true,
+			expectedFinalizers: []string{"example.com/some-finalizer", common.FinalizerName},
+		},
+		{
+			name:               "finalizer already present",
+			initialFinalizers:  []string{common.FinalizerName},
+			expectResult:       ctrl.Result{},
+			expectError:        false,
+			checkFinalizers:    true,
+			expectedFinalizers: []string{common.FinalizerName},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			obj := &v1alpha1.Istio{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test",
+					Finalizers: tc.initialFinalizers,
+				},
+			}
+
+			cl := fake.NewClientBuilder().
+				WithScheme(scheme.Scheme).
+				WithObjects(obj).
+				WithInterceptorFuncs(tc.interceptorFuncs).
+				Build()
+
+			result, err := AddFinalizer(ctx, cl, obj, common.FinalizerName)
+
+			g.Expect(result).To(Equal(tc.expectResult))
+
+			if tc.expectError {
+				g.Expect(err).To(HaveOccurred())
+			} else {
+				g.Expect(err).ToNot(HaveOccurred())
+			}
+
+			if tc.checkFinalizers {
+				g.Expect(cl.Get(ctx, kube.GetObjectKey(obj), obj)).To(Succeed())
+				g.Expect(obj.GetFinalizers()).To(ConsistOf(tc.expectedFinalizers))
+			}
+		})
 	}
 }

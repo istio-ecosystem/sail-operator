@@ -56,6 +56,7 @@ defaults:
     nodeSelector: {}
     podAnnotations: {}
     serviceAnnotations: {}
+    serviceAccountAnnotations: {}
 
     topologySpreadConstraints: []
 
@@ -161,6 +162,8 @@ defaults:
     # Sidecar injector mutating webhook configuration path value for the clientConfig.service field.
     # Override to pass env variables, for example: /inject/cluster/remote/net/network2
     injectionPath: "/inject"
+
+    injectionCABundle: ""
   telemetry:
     enabled: true
     v2:
@@ -219,7 +222,7 @@ defaults:
     # Dev builds from prow are on gcr.io
     hub: gcr.io/istio-testing
     # Default tag for Istio images.
-    tag: 1.22-alpha.d27e3e16415b62994ff5ec3318197f3bcfe1c419
+    tag: 1.22-alpha.2f54c6a52a5c6661d5eb9bd2277aab77304fee45
     # Variant of the image to use.
     # Currently supported are: [debug, distroless]
     variant: ""
@@ -250,10 +253,6 @@ defaults:
       level: "default:info"
 
     omitSidecarInjectorConfigMap: false
-
-    # Whether to restrict the applications namespace the controller manages;
-    # If not set, controller watches all namespaces
-    oneNamespace: false
 
     # Configure whether Operator manages webhook configurations. The current behavior
     # of Istiod is to manage its own webhook configurations.
@@ -355,9 +354,9 @@ defaults:
       # Default port for Pilot agent health checks. A value of 0 will disable health checking.
       statusPort: 15020
 
-      # Specify which tracer to use. One of: zipkin, lightstep, datadog, stackdriver.
+      # Specify which tracer to use. One of: zipkin, lightstep, datadog, stackdriver, none.
       # If using stackdriver tracer outside GCP, set env GOOGLE_APPLICATION_CREDENTIALS to the GCP credential file.
-      tracer: "zipkin"
+      tracer: "none"
 
     proxy_init:
       # Base name for the proxy_init container, used to configure iptables.
@@ -384,9 +383,8 @@ defaults:
     # Configure a remote cluster as the config cluster for an external istiod.
     configCluster: false
 
-    # Configure the policy for validating JWT.
-    # Currently, two options are supported: "third-party-jwt" and "first-party-jwt".
-    jwtPolicy: "third-party-jwt"
+    # configValidation enables the validation webhook for Istio configuration.
+    configValidation: true
 
     # Mesh ID means Mesh Identifier. It should be unique within the scope where
     # meshes will interact with each other, but it is not required to be

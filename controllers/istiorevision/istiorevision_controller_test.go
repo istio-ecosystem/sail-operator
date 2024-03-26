@@ -16,72 +16,77 @@ package istiorevision
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
+	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
+	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/kubectl/pkg/scheme"
-	v1 "maistra.io/istio-operator/api/v1alpha1"
-	"maistra.io/istio-operator/pkg/test"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-)
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
-const operatorNamespace = "istio-operator"
+	"istio.io/istio/pkg/ptr"
+)
 
 func TestDeriveState(t *testing.T) {
 	testCases := []struct {
 		name                string
-		reconciledCondition v1.IstioRevisionCondition
-		readyCondition      v1.IstioRevisionCondition
-		expectedState       v1.IstioRevisionConditionReason
+		reconciledCondition v1alpha1.IstioRevisionCondition
+		readyCondition      v1alpha1.IstioRevisionCondition
+		expectedState       v1alpha1.IstioRevisionConditionReason
 	}{
 		{
 			name:                "healthy",
-			reconciledCondition: newCondition(v1.IstioRevisionConditionTypeReconciled, true, ""),
-			readyCondition:      newCondition(v1.IstioRevisionConditionTypeReady, true, ""),
-			expectedState:       v1.IstioRevisionConditionReasonHealthy,
+			reconciledCondition: newCondition(v1alpha1.IstioRevisionConditionReconciled, metav1.ConditionTrue, ""),
+			readyCondition:      newCondition(v1alpha1.IstioRevisionConditionReady, metav1.ConditionTrue, ""),
+			expectedState:       v1alpha1.IstioRevisionReasonHealthy,
 		},
 		{
 			name:                "not reconciled",
-			reconciledCondition: newCondition(v1.IstioRevisionConditionTypeReconciled, false, v1.IstioRevisionConditionReasonReconcileError),
-			readyCondition:      newCondition(v1.IstioRevisionConditionTypeReady, true, ""),
-			expectedState:       v1.IstioRevisionConditionReasonReconcileError,
+			reconciledCondition: newCondition(v1alpha1.IstioRevisionConditionReconciled, metav1.ConditionFalse, v1alpha1.IstioRevisionReasonReconcileError),
+			readyCondition:      newCondition(v1alpha1.IstioRevisionConditionReady, metav1.ConditionTrue, ""),
+			expectedState:       v1alpha1.IstioRevisionReasonReconcileError,
 		},
 		{
 			name:                "not ready",
-			reconciledCondition: newCondition(v1.IstioRevisionConditionTypeReconciled, true, ""),
-			readyCondition:      newCondition(v1.IstioRevisionConditionTypeReady, false, v1.IstioRevisionConditionReasonIstiodNotReady),
-			expectedState:       v1.IstioRevisionConditionReasonIstiodNotReady,
+			reconciledCondition: newCondition(v1alpha1.IstioRevisionConditionReconciled, metav1.ConditionTrue, ""),
+			readyCondition:      newCondition(v1alpha1.IstioRevisionConditionReady, metav1.ConditionFalse, v1alpha1.IstioRevisionReasonIstiodNotReady),
+			expectedState:       v1alpha1.IstioRevisionReasonIstiodNotReady,
+		},
+		{
+			name:                "readiness unknown",
+			reconciledCondition: newCondition(v1alpha1.IstioRevisionConditionReconciled, metav1.ConditionTrue, ""),
+			readyCondition:      newCondition(v1alpha1.IstioRevisionConditionReady, metav1.ConditionUnknown, v1alpha1.IstioRevisionReasonReadinessCheckFailed),
+			expectedState:       v1alpha1.IstioRevisionReasonReadinessCheckFailed,
 		},
 		{
 			name:                "not reconciled nor ready",
-			reconciledCondition: newCondition(v1.IstioRevisionConditionTypeReconciled, false, v1.IstioRevisionConditionReasonReconcileError),
-			readyCondition:      newCondition(v1.IstioRevisionConditionTypeReady, false, v1.IstioRevisionConditionReasonIstiodNotReady),
-			expectedState:       v1.IstioRevisionConditionReasonReconcileError, // reconcile reason takes precedence over ready reason
+			reconciledCondition: newCondition(v1alpha1.IstioRevisionConditionReconciled, metav1.ConditionFalse, v1alpha1.IstioRevisionReasonReconcileError),
+			readyCondition:      newCondition(v1alpha1.IstioRevisionConditionReady, metav1.ConditionFalse, v1alpha1.IstioRevisionReasonIstiodNotReady),
+			expectedState:       v1alpha1.IstioRevisionReasonReconcileError, // reconcile reason takes precedence over ready reason
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
 			result := deriveState(tc.reconciledCondition, tc.readyCondition)
-			if result != tc.expectedState {
-				t.Errorf("Expected reason %s, but got %s", tc.expectedState, result)
-			}
+			g.Expect(result).To(Equal(tc.expectedState))
 		})
 	}
 }
 
-func newCondition(conditionType v1.IstioRevisionConditionType, status bool, reason v1.IstioRevisionConditionReason) v1.IstioRevisionCondition {
-	st := metav1.ConditionFalse
-	if status {
-		st = metav1.ConditionTrue
-	}
-	return v1.IstioRevisionCondition{
+func newCondition(
+	conditionType v1alpha1.IstioRevisionConditionType, status metav1.ConditionStatus, reason v1alpha1.IstioRevisionConditionReason,
+) v1alpha1.IstioRevisionCondition {
+	return v1alpha1.IstioRevisionCondition{
 		Type:   conditionType,
-		Status: st,
+		Status: status,
 		Reason: reason,
 	}
 }
@@ -89,10 +94,10 @@ func newCondition(conditionType v1.IstioRevisionConditionType, status bool, reas
 func TestDetermineReadyCondition(t *testing.T) {
 	testCases := []struct {
 		name          string
-		cniEnabled    bool
-		values        *v1.Values
+		values        *v1alpha1.Values
 		clientObjects []client.Object
-		expected      v1.IstioRevisionCondition
+		interceptors  interceptor.Funcs
+		expected      v1alpha1.IstioRevisionCondition
 	}{
 		{
 			name:   "Istiod ready",
@@ -110,8 +115,8 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1.IstioRevisionCondition{
-				Type:   v1.IstioRevisionConditionTypeReady,
+			expected: v1alpha1.IstioRevisionCondition{
+				Type:   v1alpha1.IstioRevisionConditionReady,
 				Status: metav1.ConditionTrue,
 			},
 		},
@@ -131,10 +136,10 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1.IstioRevisionCondition{
-				Type:    v1.IstioRevisionConditionTypeReady,
+			expected: v1alpha1.IstioRevisionCondition{
+				Type:    v1alpha1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
-				Reason:  v1.IstioRevisionConditionReasonIstiodNotReady,
+				Reason:  v1alpha1.IstioRevisionReasonIstiodNotReady,
 				Message: "not all istiod pods are ready",
 			},
 		},
@@ -154,10 +159,10 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1.IstioRevisionCondition{
-				Type:    v1.IstioRevisionConditionTypeReady,
+			expected: v1alpha1.IstioRevisionCondition{
+				Type:    v1alpha1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
-				Reason:  v1.IstioRevisionConditionReasonIstiodNotReady,
+				Reason:  v1alpha1.IstioRevisionReasonIstiodNotReady,
 				Message: "istiod Deployment is scaled to zero replicas",
 			},
 		},
@@ -165,152 +170,16 @@ func TestDetermineReadyCondition(t *testing.T) {
 			name:          "Istiod not found",
 			values:        nil,
 			clientObjects: []client.Object{},
-			expected: v1.IstioRevisionCondition{
-				Type:    v1.IstioRevisionConditionTypeReady,
+			expected: v1alpha1.IstioRevisionCondition{
+				Type:    v1alpha1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
-				Reason:  v1.IstioRevisionConditionReasonIstiodNotReady,
+				Reason:  v1alpha1.IstioRevisionReasonIstiodNotReady,
 				Message: "istiod Deployment not found",
 			},
 		},
 		{
-			name: "Istiod and CNI ready",
-			values: &v1.Values{
-				IstioCni: &v1.CNIConfig{
-					Enabled: true,
-				},
-			},
-			clientObjects: []client.Object{
-				&appsv1.Deployment{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "istiod",
-						Namespace: "istio-system",
-					},
-					Status: appsv1.DeploymentStatus{
-						Replicas:          2,
-						ReadyReplicas:     2,
-						AvailableReplicas: 2,
-					},
-				},
-				&appsv1.DaemonSet{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "istio-cni-node",
-						Namespace: operatorNamespace,
-					},
-					Status: appsv1.DaemonSetStatus{
-						CurrentNumberScheduled: 3,
-						NumberReady:            3,
-					},
-				},
-			},
-			expected: v1.IstioRevisionCondition{
-				Type:   v1.IstioRevisionConditionTypeReady,
-				Status: metav1.ConditionTrue,
-			},
-		},
-		{
-			name: "CNI not ready",
-			values: &v1.Values{
-				IstioCni: &v1.CNIConfig{
-					Enabled: true,
-				},
-			},
-			clientObjects: []client.Object{
-				&appsv1.Deployment{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "istiod",
-						Namespace: "istio-system",
-					},
-					Status: appsv1.DeploymentStatus{
-						Replicas:          2,
-						ReadyReplicas:     2,
-						AvailableReplicas: 2,
-					},
-				},
-				&appsv1.DaemonSet{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "istio-cni-node",
-						Namespace: operatorNamespace,
-					},
-					Status: appsv1.DaemonSetStatus{
-						CurrentNumberScheduled: 1,
-						NumberReady:            0,
-					},
-				},
-			},
-			expected: v1.IstioRevisionCondition{
-				Type:    v1.IstioRevisionConditionTypeReady,
-				Status:  metav1.ConditionFalse,
-				Reason:  v1.IstioRevisionConditionReasonCNINotReady,
-				Message: "not all istio-cni-node pods are ready",
-			},
-		},
-		{
-			name: "CNI pods not scheduled",
-			values: &v1.Values{
-				IstioCni: &v1.CNIConfig{
-					Enabled: true,
-				},
-			},
-			clientObjects: []client.Object{
-				&appsv1.Deployment{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "istiod",
-						Namespace: "istio-system",
-					},
-					Status: appsv1.DeploymentStatus{
-						Replicas:          2,
-						ReadyReplicas:     2,
-						AvailableReplicas: 2,
-					},
-				},
-				&appsv1.DaemonSet{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "istio-cni-node",
-						Namespace: operatorNamespace,
-					},
-					Status: appsv1.DaemonSetStatus{
-						CurrentNumberScheduled: 0,
-						NumberReady:            0,
-					},
-				},
-			},
-			expected: v1.IstioRevisionCondition{
-				Type:    v1.IstioRevisionConditionTypeReady,
-				Status:  metav1.ConditionFalse,
-				Reason:  v1.IstioRevisionConditionReasonCNINotReady,
-				Message: "no istio-cni-node pods are currently scheduled",
-			},
-		},
-		{
-			name: "CNI not found",
-			values: &v1.Values{
-				IstioCni: &v1.CNIConfig{
-					Enabled: true,
-				},
-			},
-			clientObjects: []client.Object{
-				&appsv1.Deployment{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "istiod",
-						Namespace: "istio-system",
-					},
-					Status: appsv1.DeploymentStatus{
-						Replicas:          2,
-						ReadyReplicas:     2,
-						AvailableReplicas: 2,
-					},
-				},
-			},
-			expected: v1.IstioRevisionCondition{
-				Type:    v1.IstioRevisionConditionTypeReady,
-				Status:  metav1.ConditionFalse,
-				Reason:  v1.IstioRevisionConditionReasonCNINotReady,
-				Message: "istio-cni-node DaemonSet not found",
-			},
-		},
-		{
 			name: "Non-default revision",
-			values: &v1.Values{
+			values: &v1alpha1.Values{
 				Revision: "my-revision",
 			},
 			clientObjects: []client.Object{
@@ -326,47 +195,64 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1.IstioRevisionCondition{
-				Type:   v1.IstioRevisionConditionTypeReady,
+			expected: v1alpha1.IstioRevisionCondition{
+				Type:   v1alpha1.IstioRevisionConditionReady,
 				Status: metav1.ConditionTrue,
+			},
+		},
+		{
+			name:          "client error on get",
+			clientObjects: []client.Object{},
+			interceptors: interceptor.Funcs{
+				Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					return fmt.Errorf("simulated error")
+				},
+			},
+			expected: v1alpha1.IstioRevisionCondition{
+				Type:    v1alpha1.IstioRevisionConditionReady,
+				Status:  metav1.ConditionUnknown,
+				Reason:  v1alpha1.IstioRevisionReasonReadinessCheckFailed,
+				Message: "failed to get readiness: simulated error",
 			},
 		},
 	}
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(tt.clientObjects...).Build()
+			g := NewWithT(t)
 
-			r := NewIstioRevisionReconciler(cl, scheme.Scheme, nil, operatorNamespace)
+			cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(tt.clientObjects...).WithInterceptorFuncs(tt.interceptors).Build()
 
-			rev := &v1.IstioRevision{
+			r := NewIstioRevisionReconciler(cl, scheme.Scheme, "no-resource-dir", nil)
+
+			rev := &v1alpha1.IstioRevision{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "my-istio",
 				},
-				Spec: v1.IstioRevisionSpec{
+				Spec: v1alpha1.IstioRevisionSpec{
 					Namespace: "istio-system",
 					Values:    tt.values,
 				},
 			}
 
 			result := r.determineReadyCondition(context.TODO(), rev)
-			if result.Type != tt.expected.Type || result.Status != tt.expected.Status ||
-				result.Reason != tt.expected.Reason || result.Message != tt.expected.Message {
-				t.Errorf("Unexpected result.\nGot:\n    %+v\nexpected:\n    %+v", result, tt.expected)
-			}
+			g.Expect(result.Type).To(Equal(tt.expected.Type))
+			g.Expect(result.Status).To(Equal(tt.expected.Status))
+			g.Expect(result.Reason).To(Equal(tt.expected.Reason))
+			g.Expect(result.Message).To(Equal(tt.expected.Message))
 		})
 	}
 }
 
 func TestDetermineInUseCondition(t *testing.T) {
-	test.SetupScheme()
-
 	testCases := []struct {
 		podLabels           map[string]string
 		podAnnotations      map[string]string
 		nsLabels            map[string]string
 		enableAllNamespaces bool
+		interceptors        interceptor.Funcs
 		matchesRevision     string
+		expectUnknownState  bool
 	}{
 		// no labels on namespace or pod
 		{
@@ -473,6 +359,14 @@ func TestDetermineInUseCondition(t *testing.T) {
 			enableAllNamespaces: true,
 			matchesRevision:     "default",
 		},
+		{
+			interceptors: interceptor.Funcs{
+				List: func(ctx context.Context, client client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+					return fmt.Errorf("simulated error")
+				},
+			},
+			expectUnknownState: true,
+		},
 	}
 
 	for _, revName := range []string{"default", "my-rev"} {
@@ -497,19 +391,20 @@ func TestDetermineInUseCondition(t *testing.T) {
 			name := strings.TrimSuffix(nameBuilder.String(), ",")
 
 			t.Run(name, func(t *testing.T) {
-				rev := &v1.IstioRevision{
+				g := NewWithT(t)
+				rev := &v1alpha1.IstioRevision{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: revName,
 					},
-					Spec: v1.IstioRevisionSpec{
+					Spec: v1alpha1.IstioRevisionSpec{
 						Namespace: "istio-system",
 						Version:   "my-version",
 					},
 				}
 				if tc.enableAllNamespaces {
-					rev.Spec.Values = &v1.Values{
-						SidecarInjectorWebhook: &v1.SidecarInjectorConfig{
-							EnableNamespacesByDefault: true,
+					rev.Spec.Values = &v1alpha1.Values{
+						SidecarInjectorWebhook: &v1alpha1.SidecarInjectorConfig{
+							EnableNamespacesByDefault: ptr.Of(true),
 						},
 					}
 				}
@@ -534,27 +429,29 @@ func TestDetermineInUseCondition(t *testing.T) {
 				cl := fake.NewClientBuilder().
 					WithScheme(scheme.Scheme).
 					WithObjects(rev, ns, pod).
+					WithInterceptorFuncs(tc.interceptors).
 					Build()
 
-				r := NewIstioRevisionReconciler(cl, scheme.Scheme, nil, operatorNamespace)
+				r := NewIstioRevisionReconciler(cl, scheme.Scheme, "no-resource-dir", nil)
 
-				result, err := r.determineInUseCondition(context.TODO(), rev)
-				if err != nil {
-					t.Fatalf("Unexpected error: %v", err)
-				}
-				if result.Type != v1.IstioRevisionConditionTypeInUse {
-					t.Errorf("unexpected condition type: %v", result.Type)
-				}
+				result := r.determineInUseCondition(context.TODO(), rev)
+				g.Expect(result.Type).To(Equal(v1alpha1.IstioRevisionConditionInUse))
 
-				expectedStatus := metav1.ConditionFalse
-				if revName == tc.matchesRevision {
-					expectedStatus = metav1.ConditionTrue
-				}
-
-				if result.Status != expectedStatus {
-					t.Errorf("Unexpected status. Revision %s reports being in use, but shouldn't be\n"+
-						"revision: %s\nexpected revision: %s\nnamespace labels: %+v\npod labels: %+v",
-						revName, revName, tc.matchesRevision, tc.nsLabels, tc.podLabels)
+				if tc.expectUnknownState {
+					g.Expect(result.Status).To(Equal(metav1.ConditionUnknown))
+					g.Expect(result.Reason).To(Equal(v1alpha1.IstioRevisionReasonUsageCheckFailed))
+				} else {
+					if revName == tc.matchesRevision {
+						g.Expect(result.Status).To(Equal(metav1.ConditionTrue),
+							fmt.Sprintf("Revision %s should be in use, but isn't\n"+
+								"revision: %s\nexpected revision: %s\nnamespace labels: %+v\npod labels: %+v",
+								revName, revName, tc.matchesRevision, tc.nsLabels, tc.podLabels))
+					} else {
+						g.Expect(result.Status).To(Equal(metav1.ConditionFalse),
+							fmt.Sprintf("Revision %s should not be in use\n"+
+								"revision: %s\nexpected revision: %s\nnamespace labels: %+v\npod labels: %+v",
+								revName, revName, tc.matchesRevision, tc.nsLabels, tc.podLabels))
+					}
 				}
 			})
 		}

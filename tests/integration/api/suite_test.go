@@ -1,3 +1,5 @@
+//go:build integration
+
 // Copyright Istio Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,22 +21,21 @@ import (
 	"path"
 	"testing"
 
+	"github.com/istio-ecosystem/sail-operator/controllers/istio"
+	"github.com/istio-ecosystem/sail-operator/controllers/istiocni"
+	"github.com/istio-ecosystem/sail-operator/controllers/istiorevision"
+	"github.com/istio-ecosystem/sail-operator/pkg/common"
+	"github.com/istio-ecosystem/sail-operator/pkg/helm"
+	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
+	"github.com/istio-ecosystem/sail-operator/pkg/test"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/kubectl/pkg/scheme"
-	"maistra.io/istio-operator/controllers/istio"
-	"maistra.io/istio-operator/controllers/istiorevision"
-	"maistra.io/istio-operator/pkg/common"
-	"maistra.io/istio-operator/pkg/helm"
-	"maistra.io/istio-operator/pkg/test"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
@@ -47,7 +48,7 @@ var (
 	cancel    context.CancelFunc
 )
 
-const operatorNamespace = "istio-operator"
+const operatorNamespace = "sail-operator"
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -55,10 +56,7 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	testEnv, k8sClient, cfg = test.SetupEnv()
-	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
-
-	helm.ResourceDirectory = path.Join(common.RepositoryRoot, "resources")
+	testEnv, k8sClient, cfg = test.SetupEnv(GinkgoWriter)
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: scheme.Scheme,
@@ -70,10 +68,17 @@ var _ = BeforeSuite(func() {
 		panic(err)
 	}
 
-	Expect(istio.NewIstioReconciler(mgr.GetClient(), mgr.GetScheme(), path.Join(common.RepositoryRoot, "resources"), []string{"default"}).
+	chartManager := helm.NewChartManager(mgr.GetConfig(), "")
+	resourceDir := path.Join(common.RepositoryRoot, "resources")
+	defaultProfiles := []string{"default"}
+
+	Expect(istio.NewIstioReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDir, defaultProfiles).
 		SetupWithManager(mgr)).To(Succeed())
 
-	Expect(istiorevision.NewIstioRevisionReconciler(mgr.GetClient(), mgr.GetScheme(), mgr.GetConfig(), operatorNamespace).
+	Expect(istiorevision.NewIstioRevisionReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDir, chartManager).
+		SetupWithManager(mgr)).To(Succeed())
+
+	Expect(istiocni.NewIstioCNIReconciler(mgr.GetClient(), mgr.GetScheme(), mgr.GetConfig(), resourceDir, chartManager, defaultProfiles).
 		SetupWithManager(mgr)).To(Succeed())
 
 	// create new cancellable context

@@ -1,3 +1,5 @@
+//go:build integration
+
 // Copyright Istio Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,13 +20,15 @@ import (
 	"context"
 	"time"
 
+	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"maistra.io/istio-operator/api/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -33,7 +37,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 		revName        = "test-istiorevision"
 		istioNamespace = "istiorevision-test"
 
-		pilotImage = "maistra.io/test:latest"
+		pilotImage = "sail-operator/test:latest"
 	)
 
 	SetDefaultEventuallyPollingInterval(time.Second)
@@ -49,7 +53,6 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 
 	revKey := client.ObjectKey{Name: revName}
 	istiodKey := client.ObjectKey{Name: "istiod-" + revName, Namespace: istioNamespace}
-	cniKey := client.ObjectKey{Name: "istio-cni-node", Namespace: operatorNamespace}
 	webhookKey := client.ObjectKey{Name: "istio-sidecar-injector-" + revName + "-" + istioNamespace}
 
 	BeforeAll(func() {
@@ -84,7 +87,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 					Name: revName,
 				},
 				Spec: v1alpha1.IstioRevisionSpec{
-					Version:   defaultVersion,
+					Version:   supportedversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1alpha1.Values{
 						Revision: revName,
@@ -103,7 +106,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 					Name: revName,
 				},
 				Spec: v1alpha1.IstioRevisionSpec{
-					Version:   defaultVersion,
+					Version:   supportedversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1alpha1.Values{
 						Revision: "is-not-" + revName,
@@ -122,7 +125,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 					Name: "default",
 				},
 				Spec: v1alpha1.IstioRevisionSpec{
-					Version:   defaultVersion,
+					Version:   supportedversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1alpha1.Values{
 						Revision: "default", // this must be rejected, because revision needs to be '' when metadata.name is 'default'
@@ -141,7 +144,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 					Name: "default",
 				},
 				Spec: v1alpha1.IstioRevisionSpec{
-					Version:   defaultVersion,
+					Version:   supportedversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1alpha1.Values{
 						Revision: "",
@@ -162,7 +165,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 				Name: revName,
 			},
 			Spec: v1alpha1.IstioRevisionSpec{
-				Version:   defaultVersion,
+				Version:   supportedversion.Default,
 				Namespace: istioNamespace,
 				Values: &v1alpha1.Values{
 					Global: &v1alpha1.GlobalConfig{
@@ -171,9 +174,6 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 					Revision: revName,
 					Pilot: &v1alpha1.PilotConfig{
 						Image: pilotImage,
-					},
-					IstioCni: &v1alpha1.CNIConfig{
-						Enabled: true,
 					},
 				},
 			},
@@ -197,24 +197,18 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 		}).Should(Succeed())
 	})
 
-	When("istiod and istio-cni-node readiness changes", func() {
+	When("istiod readiness changes", func() {
 		It("updates the status of the IstioRevision resource", func() {
-			By("setting the Ready condition status to true when both are ready", func() {
+			By("setting the Ready condition status to true when istiod is ready", func() {
 				istiod := &appsv1.Deployment{}
 				Expect(k8sClient.Get(ctx, istiodKey, istiod)).To(Succeed())
 				istiod.Status.Replicas = 1
 				istiod.Status.ReadyReplicas = 1
 				Expect(k8sClient.Status().Update(ctx, istiod)).To(Succeed())
 
-				cni := &appsv1.DaemonSet{}
-				Expect(k8sClient.Get(ctx, cniKey, cni)).To(Succeed())
-				cni.Status.CurrentNumberScheduled = 3
-				cni.Status.NumberReady = 3
-				Expect(k8sClient.Status().Update(ctx, cni)).To(Succeed())
-
 				Eventually(func(g Gomega) {
 					g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
-					readyCondition := rev.Status.GetCondition(v1alpha1.IstioRevisionConditionTypeReady)
+					readyCondition := rev.Status.GetCondition(v1alpha1.IstioRevisionConditionReady)
 					g.Expect(readyCondition.Status).To(Equal(metav1.ConditionTrue))
 				}).Should(Succeed())
 			})
@@ -228,7 +222,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 
 				Eventually(func(g Gomega) {
 					g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
-					readyCondition := rev.Status.GetCondition(v1alpha1.IstioRevisionConditionTypeReady)
+					readyCondition := rev.Status.GetCondition(v1alpha1.IstioRevisionConditionReady)
 					g.Expect(readyCondition.Status).To(Equal(metav1.ConditionFalse))
 				}).Should(Succeed())
 			})
@@ -314,7 +308,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 				Name: rev2Key.Name,
 			},
 			Spec: v1alpha1.IstioRevisionSpec{
-				Version:   defaultVersion,
+				Version:   supportedversion.Default,
 				Namespace: istioNamespace,
 				Values: &v1alpha1.Values{
 					Global: &v1alpha1.GlobalConfig{
