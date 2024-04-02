@@ -1,4 +1,4 @@
-# This file defines all the Istio versions supported by this operator.
+# This file defines all the Istio versions supported by this operator
 
 # Since you can't install multiple versions of the same CRD, only one of the
 # versions specified below can be the source of the CRDs. Because CRDs are
