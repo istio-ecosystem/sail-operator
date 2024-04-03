@@ -33,7 +33,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -57,57 +56,6 @@ var (
 func TestReconcile(t *testing.T) {
 	resourceDir := t.TempDir()
 
-	req := ctrl.Request{NamespacedName: istioKey}
-
-	t.Run("skips reconciliation when Istio not found", func(t *testing.T) {
-		cl := newFakeClientBuilder().
-			WithInterceptorFuncs(noWrites(t)).
-			Build()
-		reconciler := NewIstioReconciler(cl, scheme.Scheme, resourceDir, nil)
-
-		_, err := reconciler.Reconcile(ctx, req)
-		if err != nil {
-			t.Errorf("Expected no error, but got: %v", err)
-		}
-	})
-
-	t.Run("skips reconciliation when Istio deleted", func(t *testing.T) {
-		istio := &v1alpha1.Istio{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:              istioKey.Name,
-				DeletionTimestamp: oneMinuteAgo(),
-				Finalizers:        []string{"dummy"}, // the fake client doesn't allow you to add a deleted object unless it has a finalizer
-			},
-		}
-
-		cl := newFakeClientBuilder().
-			WithObjects(istio).
-			WithInterceptorFuncs(noWrites(t)).
-			Build()
-		reconciler := NewIstioReconciler(cl, scheme.Scheme, resourceDir, nil)
-
-		_, err := reconciler.Reconcile(ctx, req)
-		if err != nil {
-			t.Errorf("Expected no error, but got: %v", err)
-		}
-	})
-
-	t.Run("returns error when it fails to get Istio", func(t *testing.T) {
-		cl := newFakeClientBuilder().
-			WithInterceptorFuncs(interceptor.Funcs{
-				Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
-					return fmt.Errorf("internal error")
-				},
-			}).
-			Build()
-		reconciler := NewIstioReconciler(cl, scheme.Scheme, resourceDir, nil)
-
-		_, err := reconciler.Reconcile(ctx, req)
-		if err == nil {
-			t.Errorf("Expected an error, but got nil")
-		}
-	})
-
 	t.Run("returns error when Istio version not set", func(t *testing.T) {
 		istio := &v1alpha1.Istio{
 			ObjectMeta: objectMeta,
@@ -118,7 +66,7 @@ func TestReconcile(t *testing.T) {
 			Build()
 		reconciler := NewIstioReconciler(cl, scheme.Scheme, resourceDir, nil)
 
-		_, err := reconciler.Reconcile(ctx, req)
+		_, err := reconciler.Reconcile(ctx, istio)
 		if err == nil {
 			t.Errorf("Expected an error, but got nil")
 		}
@@ -154,7 +102,7 @@ func TestReconcile(t *testing.T) {
 			Build()
 		reconciler := NewIstioReconciler(cl, scheme.Scheme, resourceDir, []string{"invalid-profile"})
 
-		_, err := reconciler.Reconcile(ctx, req)
+		_, err := reconciler.Reconcile(ctx, istio)
 		if err == nil {
 			t.Errorf("Expected an error, but got nil")
 		}
@@ -194,7 +142,7 @@ func TestReconcile(t *testing.T) {
 			Build()
 		reconciler := NewIstioReconciler(cl, scheme.Scheme, resourceDir, nil)
 
-		_, err := reconciler.Reconcile(ctx, req)
+		_, err := reconciler.Reconcile(ctx, istio)
 		if err == nil {
 			t.Errorf("Expected an error, but got nil")
 		}
@@ -1240,7 +1188,7 @@ spec:
       tag: from-my-profile
       image: from-my-profile  # this gets overridden in values`)), 0o644))
 
-	istio := v1alpha1.Istio{
+	istio := &v1alpha1.Istio{
 		ObjectMeta: objectMeta,
 		Spec: v1alpha1.IstioSpec{
 			Version:   version,
