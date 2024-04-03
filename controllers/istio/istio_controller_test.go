@@ -64,7 +64,7 @@ func TestReconcile(t *testing.T) {
 		cl := newFakeClientBuilder().
 			WithObjects(istio).
 			Build()
-		reconciler := NewIstioReconciler(cl, scheme.Scheme, resourceDir, nil)
+		reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, nil)
 
 		_, err := reconciler.Reconcile(ctx, istio)
 		if err == nil {
@@ -100,7 +100,7 @@ func TestReconcile(t *testing.T) {
 			WithStatusSubresource(&v1alpha1.Istio{}).
 			WithObjects(istio).
 			Build()
-		reconciler := NewIstioReconciler(cl, scheme.Scheme, resourceDir, []string{"invalid-profile"})
+		reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, []string{"invalid-profile"})
 
 		_, err := reconciler.Reconcile(ctx, istio)
 		if err == nil {
@@ -140,7 +140,7 @@ func TestReconcile(t *testing.T) {
 				},
 			}).
 			Build()
-		reconciler := NewIstioReconciler(cl, scheme.Scheme, resourceDir, nil)
+		reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, nil)
 
 		_, err := reconciler.Reconcile(ctx, istio)
 		if err == nil {
@@ -472,7 +472,7 @@ func TestDetermineStatus(t *testing.T) {
 				WithObjects(initObjs...).
 				WithInterceptorFuncs(interceptorFuncs).
 				Build()
-			reconciler := NewIstioReconciler(cl, scheme.Scheme, resourceDir, nil)
+			reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, nil)
 
 			status, err := reconciler.determineStatus(ctx, istio, tc.reconciliationErr)
 			if (err != nil) != tc.wantErr {
@@ -670,7 +670,7 @@ func TestUpdateStatus(t *testing.T) {
 				WithObjects(initObjs...).
 				WithInterceptorFuncs(interceptorFuncs).
 				Build()
-			reconciler := NewIstioReconciler(cl, scheme.Scheme, resourceDir, nil)
+			reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, nil)
 
 			err := reconciler.updateStatus(ctx, istio, tc.reconciliationErr)
 			if (err != nil) != tc.wantErr {
@@ -797,7 +797,7 @@ func TestReconcileActiveRevision(t *testing.T) {
 					}
 
 					cl := newFakeClientBuilder().WithObjects(initObjs...).Build()
-					reconciler := NewIstioReconciler(cl, scheme.Scheme, resourceDir, nil)
+					reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, nil)
 
 					_, err := reconciler.reconcileActiveRevision(ctx, istio, &tc.istioValues)
 					if err != nil {
@@ -1009,7 +1009,7 @@ func TestPruneInactiveRevisions(t *testing.T) {
 			}
 
 			cl := newFakeClientBuilder().WithObjects(initObjs...).Build()
-			reconciler := NewIstioReconciler(cl, scheme.Scheme, resourceDir, nil)
+			reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, nil)
 
 			result, err := reconciler.pruneInactiveRevisions(ctx, istio)
 			if err != nil {
