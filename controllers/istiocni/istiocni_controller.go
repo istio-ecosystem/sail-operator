@@ -48,8 +48,8 @@ import (
 
 const cniReleaseName = "istio-cni"
 
-// IstioCNIReconciler reconciles an IstioCNI object
-type IstioCNIReconciler struct {
+// Reconciler reconciles an IstioCNI object
+type Reconciler struct {
 	ResourceDirectory string
 	DefaultProfiles   []string
 	client.Client
@@ -57,10 +57,10 @@ type IstioCNIReconciler struct {
 	ChartManager *helm.ChartManager
 }
 
-func NewIstioCNIReconciler(
+func NewReconciler(
 	client client.Client, scheme *runtime.Scheme, resourceDir string, chartManager *helm.ChartManager, defaultProfiles []string,
-) *IstioCNIReconciler {
-	return &IstioCNIReconciler{
+) *Reconciler {
+	return &Reconciler{
 		ResourceDirectory: resourceDir,
 		DefaultProfiles:   defaultProfiles,
 		Client:            client,
@@ -89,7 +89,7 @@ func NewIstioCNIReconciler(
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
-func (r *IstioCNIReconciler) Reconcile(ctx context.Context, cni *v1alpha1.IstioCNI) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, cni *v1alpha1.IstioCNI) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
 	if err := validateIstioCNI(cni); err != nil {
@@ -105,7 +105,7 @@ func (r *IstioCNIReconciler) Reconcile(ctx context.Context, cni *v1alpha1.IstioC
 	return ctrl.Result{}, errors.Join(reconcileErr, statusErr)
 }
 
-func (r *IstioCNIReconciler) Finalize(ctx context.Context, cni *v1alpha1.IstioCNI) error {
+func (r *Reconciler) Finalize(ctx context.Context, cni *v1alpha1.IstioCNI) error {
 	return r.uninstallHelmChart(ctx, cni)
 }
 
@@ -119,7 +119,7 @@ func validateIstioCNI(cni *v1alpha1.IstioCNI) error {
 	return nil
 }
 
-func (r *IstioCNIReconciler) installHelmChart(ctx context.Context, cni *v1alpha1.IstioCNI) error {
+func (r *Reconciler) installHelmChart(ctx context.Context, cni *v1alpha1.IstioCNI) error {
 	ownerReference := metav1.OwnerReference{
 		APIVersion:         v1alpha1.GroupVersion.String(),
 		Kind:               v1alpha1.IstioCNIKind,
@@ -145,7 +145,7 @@ func (r *IstioCNIReconciler) installHelmChart(ctx context.Context, cni *v1alpha1
 	return err
 }
 
-func (r *IstioCNIReconciler) getChartDir(cni *v1alpha1.IstioCNI) string {
+func (r *Reconciler) getChartDir(cni *v1alpha1.IstioCNI) string {
 	return path.Join(r.ResourceDirectory, cni.Spec.Version, "charts", "cni")
 }
 
@@ -181,13 +181,13 @@ func applyImageDigests(cni *v1alpha1.IstioCNI, values *v1alpha1.CNIValues, confi
 	return values
 }
 
-func (r *IstioCNIReconciler) uninstallHelmChart(ctx context.Context, cni *v1alpha1.IstioCNI) error {
+func (r *Reconciler) uninstallHelmChart(ctx context.Context, cni *v1alpha1.IstioCNI) error {
 	_, err := r.ChartManager.UninstallChart(ctx, cniReleaseName, cni.Spec.Namespace)
 	return err
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *IstioCNIReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// ownedResourceHandler handles resources that are owned by the IstioCNI CR
 	ownedResourceHandler := handler.EnqueueRequestForOwner(r.Scheme, r.RESTMapper(), &v1alpha1.IstioCNI{}, handler.OnlyControllerOwner())
 
@@ -219,7 +219,7 @@ func (r *IstioCNIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(reconciler.NewStandardReconcilerWithFinalizer(r.Client, &v1alpha1.IstioCNI{}, r.Reconcile, r.Finalize, constants.FinalizerName))
 }
 
-func (r *IstioCNIReconciler) determineStatus(ctx context.Context, cni *v1alpha1.IstioCNI, reconcileErr error) (v1alpha1.IstioCNIStatus, error) {
+func (r *Reconciler) determineStatus(ctx context.Context, cni *v1alpha1.IstioCNI, reconcileErr error) (v1alpha1.IstioCNIStatus, error) {
 	var errs errlist.Builder
 	reconciledCondition := r.determineReconciledCondition(reconcileErr)
 	readyCondition, err := r.determineReadyCondition(ctx, cni)
@@ -233,7 +233,7 @@ func (r *IstioCNIReconciler) determineStatus(ctx context.Context, cni *v1alpha1.
 	return status, errs.Error()
 }
 
-func (r *IstioCNIReconciler) updateStatus(ctx context.Context, cni *v1alpha1.IstioCNI, reconcileErr error) error {
+func (r *Reconciler) updateStatus(ctx context.Context, cni *v1alpha1.IstioCNI, reconcileErr error) error {
 	var errs errlist.Builder
 
 	status, err := r.determineStatus(ctx, cni, reconcileErr)
@@ -254,7 +254,7 @@ func deriveState(reconciledCondition, readyCondition v1alpha1.IstioCNICondition)
 	return v1alpha1.IstioCNIReasonHealthy
 }
 
-func (r *IstioCNIReconciler) determineReconciledCondition(err error) v1alpha1.IstioCNICondition {
+func (r *Reconciler) determineReconciledCondition(err error) v1alpha1.IstioCNICondition {
 	c := v1alpha1.IstioCNICondition{Type: v1alpha1.IstioCNIConditionReconciled}
 
 	if err == nil {
@@ -267,7 +267,7 @@ func (r *IstioCNIReconciler) determineReconciledCondition(err error) v1alpha1.Is
 	return c
 }
 
-func (r *IstioCNIReconciler) determineReadyCondition(ctx context.Context, cni *v1alpha1.IstioCNI) (v1alpha1.IstioCNICondition, error) {
+func (r *Reconciler) determineReadyCondition(ctx context.Context, cni *v1alpha1.IstioCNI) (v1alpha1.IstioCNICondition, error) {
 	c := v1alpha1.IstioCNICondition{
 		Type:   v1alpha1.IstioCNIConditionReady,
 		Status: metav1.ConditionFalse,
@@ -296,7 +296,7 @@ func (r *IstioCNIReconciler) determineReadyCondition(ctx context.Context, cni *v
 	return c, nil
 }
 
-func (r *IstioCNIReconciler) cniDaemonSetKey(cni *v1alpha1.IstioCNI) client.ObjectKey {
+func (r *Reconciler) cniDaemonSetKey(cni *v1alpha1.IstioCNI) client.ObjectKey {
 	return client.ObjectKey{
 		Namespace: cni.Spec.Namespace,
 		Name:      "istio-cni-node",

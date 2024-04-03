@@ -44,16 +44,16 @@ import (
 	"istio.io/istio/pkg/ptr"
 )
 
-// IstioReconciler reconciles an Istio object
-type IstioReconciler struct {
+// Reconciler reconciles an Istio object
+type Reconciler struct {
 	ResourceDirectory string
 	DefaultProfiles   []string
 	client.Client
 	Scheme *runtime.Scheme
 }
 
-func NewIstioReconciler(client client.Client, scheme *runtime.Scheme, resourceDir string, defaultProfiles []string) *IstioReconciler {
-	return &IstioReconciler{
+func NewReconciler(client client.Client, scheme *runtime.Scheme, resourceDir string, defaultProfiles []string) *Reconciler {
+	return &Reconciler{
 		ResourceDirectory: resourceDir,
 		DefaultProfiles:   defaultProfiles,
 		Client:            client,
@@ -70,7 +70,7 @@ func NewIstioReconciler(client client.Client, scheme *runtime.Scheme, resourceDi
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
-func (r *IstioReconciler) Reconcile(ctx context.Context, istio *v1alpha1.Istio) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, istio *v1alpha1.Istio) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
 	log.Info("Reconciling")
@@ -84,7 +84,7 @@ func (r *IstioReconciler) Reconcile(ctx context.Context, istio *v1alpha1.Istio) 
 
 // doReconcile is the function that actually reconciles the Istio object. Any error reported by this
 // function should get reported in the status of the Istio object by the caller.
-func (r *IstioReconciler) doReconcile(ctx context.Context, istio *v1alpha1.Istio) (result ctrl.Result, err error) {
+func (r *Reconciler) doReconcile(ctx context.Context, istio *v1alpha1.Istio) (result ctrl.Result, err error) {
 	if istio.Spec.Version == "" {
 		return ctrl.Result{}, fmt.Errorf("no spec.version set")
 	}
@@ -105,7 +105,7 @@ func (r *IstioReconciler) doReconcile(ctx context.Context, istio *v1alpha1.Istio
 	return r.pruneInactiveRevisions(ctx, istio)
 }
 
-func (r *IstioReconciler) reconcileActiveRevision(ctx context.Context, istio *v1alpha1.Istio, values *v1alpha1.Values) (ctrl.Result, error) {
+func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1alpha1.Istio, values *v1alpha1.Values) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
 	activeRevisionName := getActiveRevisionName(istio)
@@ -152,7 +152,7 @@ func (r *IstioReconciler) reconcileActiveRevision(ctx context.Context, istio *v1
 	return ctrl.Result{}, err
 }
 
-func (r *IstioReconciler) pruneInactiveRevisions(ctx context.Context, istio *v1alpha1.Istio) (ctrl.Result, error) {
+func (r *Reconciler) pruneInactiveRevisions(ctx context.Context, istio *v1alpha1.Istio) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 	revisions, err := r.getRevisions(ctx, istio)
 	if err != nil {
@@ -214,13 +214,13 @@ func getPruningGracePeriod(istio *v1alpha1.Istio) time.Duration {
 	return time.Duration(period) * time.Second
 }
 
-func (r *IstioReconciler) getActiveRevision(ctx context.Context, istio *v1alpha1.Istio) (v1alpha1.IstioRevision, error) {
+func (r *Reconciler) getActiveRevision(ctx context.Context, istio *v1alpha1.Istio) (v1alpha1.IstioRevision, error) {
 	rev := v1alpha1.IstioRevision{}
 	err := r.Client.Get(ctx, getActiveRevisionKey(istio), &rev)
 	return rev, err
 }
 
-func (r *IstioReconciler) getRevisions(ctx context.Context, istio *v1alpha1.Istio) ([]v1alpha1.IstioRevision, error) {
+func (r *Reconciler) getRevisions(ctx context.Context, istio *v1alpha1.Istio) ([]v1alpha1.IstioRevision, error) {
 	revList := v1alpha1.IstioRevisionList{}
 	if err := r.Client.List(ctx, &revList); err != nil {
 		return nil, err
@@ -370,7 +370,7 @@ func applyImageDigests(istio *v1alpha1.Istio, values *v1alpha1.Values, config co
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *IstioReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
 			LogConstructor: func(req *reconcile.Request) logr.Logger {
@@ -386,7 +386,7 @@ func (r *IstioReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(reconciler.NewStandardReconciler(r.Client, &v1alpha1.Istio{}, r.Reconcile))
 }
 
-func (r *IstioReconciler) determineStatus(ctx context.Context, istio *v1alpha1.Istio, reconcileErr error) (v1alpha1.IstioStatus, error) {
+func (r *Reconciler) determineStatus(ctx context.Context, istio *v1alpha1.Istio, reconcileErr error) (v1alpha1.IstioStatus, error) {
 	var errs errlist.Builder
 	status := *istio.Status.DeepCopy()
 	status.ObservedGeneration = istio.Generation
@@ -463,7 +463,7 @@ func (r *IstioReconciler) determineStatus(ctx context.Context, istio *v1alpha1.I
 	return status, errs.Error()
 }
 
-func (r *IstioReconciler) updateStatus(ctx context.Context, istio *v1alpha1.Istio, reconcileErr error) error {
+func (r *Reconciler) updateStatus(ctx context.Context, istio *v1alpha1.Istio, reconcileErr error) error {
 	var errs errlist.Builder
 	status, err := r.determineStatus(ctx, istio, reconcileErr)
 	errs.Add(err)
