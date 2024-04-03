@@ -29,6 +29,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/profiles"
+	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -45,10 +46,7 @@ import (
 	"istio.io/istio/pkg/ptr"
 )
 
-const (
-	cniReleaseName = "istio-cni"
-	finalizer      = constants.FinalizerName
-)
+const cniReleaseName = "istio-cni"
 
 // IstioCNIReconciler reconciles an IstioCNI object
 type IstioCNIReconciler struct {
@@ -91,42 +89,27 @@ func NewIstioCNIReconciler(
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
-func (r *IstioCNIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *IstioCNIReconciler) Reconcile(ctx context.Context, cni *v1alpha1.IstioCNI) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
-	var cni v1alpha1.IstioCNI
-	if err := r.Client.Get(ctx, req.NamespacedName, &cni); err != nil {
-		if apierrors.IsNotFound(err) {
-			log.V(2).Info("IstioCNI not found. Skipping reconciliation")
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, fmt.Errorf("failed to get IstioCNI: %v", err)
-	}
-
-	if cni.DeletionTimestamp != nil {
-		if err := r.uninstallHelmChart(ctx, &cni); err != nil {
-			return ctrl.Result{}, err
-		}
-		return kube.RemoveFinalizer(ctx, r.Client, &cni, finalizer)
-	}
-
-	if !kube.HasFinalizer(&cni, finalizer) {
-		return kube.AddFinalizer(ctx, r.Client, &cni, finalizer)
-	}
 
 	if err := validateIstioCNI(cni); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	log.Info("Installing components")
-	reconcileErr := r.installHelmChart(ctx, &cni)
+	reconcileErr := r.installHelmChart(ctx, cni)
 
 	log.Info("Reconciliation done. Updating status.")
-	statusErr := r.updateStatus(ctx, &cni, reconcileErr)
+	statusErr := r.updateStatus(ctx, cni, reconcileErr)
 
 	return ctrl.Result{}, errors.Join(reconcileErr, statusErr)
 }
 
-func validateIstioCNI(cni v1alpha1.IstioCNI) error {
+func (r *IstioCNIReconciler) Finalize(ctx context.Context, cni *v1alpha1.IstioCNI) error {
+	return r.uninstallHelmChart(ctx, cni)
+}
+
+func validateIstioCNI(cni *v1alpha1.IstioCNI) error {
 	if cni.Spec.Version == "" {
 		return fmt.Errorf("spec.version not set")
 	}
@@ -233,7 +216,7 @@ func (r *IstioCNIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// cluster-scoped resources
 		Watches(&rbacv1.ClusterRole{}, ownedResourceHandler).
 		Watches(&rbacv1.ClusterRoleBinding{}, ownedResourceHandler).
-		Complete(r)
+		Complete(reconciler.NewStandardReconcilerWithFinalizer(r.Client, &v1alpha1.IstioCNI{}, r.Reconcile, r.Finalize, constants.FinalizerName))
 }
 
 func (r *IstioCNIReconciler) determineStatus(ctx context.Context, cni *v1alpha1.IstioCNI, reconcileErr error) (v1alpha1.IstioCNIStatus, error) {
