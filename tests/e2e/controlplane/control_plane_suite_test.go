@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package operator
+package controlplane
 
 import (
 	"os"
@@ -29,32 +29,30 @@ import (
 )
 
 var (
-	cl             client.Client
-	err            error
-	ocp            = env.GetBool("OCP", false)
-	skipDeploy     = env.GetBool("SKIP_DEPLOY", false)
-	image          = env.Get("IMAGE", "quay.io/maistra-dev/sail-operator:latest")
-	namespace      = env.Get("NAMESPACE", "sail-operator")
-	deploymentName = env.Get("DEPLOYMENT_NAME", "sail-operator")
-	wd, _          = os.Getwd()
-	baseDir        = filepath.Join(wd, "../../..")
+	cl                    client.Client
+	err                   error
+	ocp                   = env.GetBool("OCP", false)
+	namespace             = env.Get("NAMESPACE", "sail-operator")
+	deploymentName        = env.Get("DEPLOYMENT_NAME", "sail-operator")
+	controlPlaneNamespace = env.Get("CONTROL_PLANE_NS", "istio-system")
+	wd, _                 = os.Getwd()
+	istioName             = env.Get("ISTIO_NAME", "default")
+	istioCniNamespace     = env.Get("ISTIOCNI_NAMESPACE", "istio-cni")
+	istioCniName          = env.Get("ISTIOCNI_NAME", "default")
+	baseDir               = filepath.Join(wd, "../../..")
+	image                 = env.Get("IMAGE", "quay.io/maistra-dev/sail-operator:latest")
 )
 
 func TestInstall(t *testing.T) {
 	RegisterFailHandler(Fail)
 	setup()
-	RunSpecs(t, "Install Operator Suite")
+	RunSpecs(t, "Control Plane Suite")
 }
 
 func setup() {
 	GinkgoWriter.Println("************ Running Setup ************")
+
 	GinkgoWriter.Println("Initializing k8s client")
 	cl, err = k8sclient.InitK8sClient()
 	Expect(err).NotTo(HaveOccurred())
-
-	if ocp {
-		GinkgoWriter.Println("Running on OCP cluster")
-	} else {
-		GinkgoWriter.Println("Running on Kubernetes")
-	}
 }

@@ -28,6 +28,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
+	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -57,8 +58,6 @@ const (
 	IstioInjectionEnabledValue = "enabled"
 	IstioRevLabel              = "istio.io/rev"
 	IstioSidecarInjectLabel    = "sidecar.istio.io/inject"
-
-	finalizer = constants.FinalizerName
 )
 
 // IstioRevisionReconciler reconciles an IstioRevision object
@@ -98,42 +97,27 @@ func NewIstioRevisionReconciler(client client.Client, scheme *runtime.Scheme, re
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
-func (r *IstioRevisionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *IstioRevisionReconciler) Reconcile(ctx context.Context, rev *v1alpha1.IstioRevision) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
-	var rev v1alpha1.IstioRevision
-	if err := r.Client.Get(ctx, req.NamespacedName, &rev); err != nil {
-		if apierrors.IsNotFound(err) {
-			log.V(2).Info("IstioRevision not found. Skipping reconciliation")
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, fmt.Errorf("failed to get IstioRevision: %v", err)
-	}
-
-	if rev.DeletionTimestamp != nil {
-		if err := r.uninstallHelmCharts(ctx, &rev); err != nil {
-			return ctrl.Result{}, err
-		}
-		return kube.RemoveFinalizer(ctx, r.Client, &rev, finalizer)
-	}
-
-	if !kube.HasFinalizer(&rev, finalizer) {
-		return kube.AddFinalizer(ctx, r.Client, &rev, finalizer)
-	}
 
 	if err := validateIstioRevision(rev); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	log.Info("Installing components")
-	reconcileErr := r.installHelmCharts(ctx, &rev)
+	reconcileErr := r.installHelmCharts(ctx, rev)
 
 	log.Info("Reconciliation done. Updating status.")
-	statusErr := r.updateStatus(ctx, &rev, reconcileErr)
+	statusErr := r.updateStatus(ctx, rev, reconcileErr)
 
 	return ctrl.Result{}, errors.Join(reconcileErr, statusErr)
 }
 
-func validateIstioRevision(rev v1alpha1.IstioRevision) error {
+func (r *IstioRevisionReconciler) Finalize(ctx context.Context, rev *v1alpha1.IstioRevision) error {
+	return r.uninstallHelmCharts(ctx, rev)
+}
+
+func validateIstioRevision(rev *v1alpha1.IstioRevision) error {
 	if rev.Spec.Version == "" {
 		return fmt.Errorf("spec.version not set")
 	}
@@ -237,7 +221,7 @@ func (r *IstioRevisionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			builder.WithPredicates(validatingWebhookConfigPredicate{})).
 
 		// +lint-watches:ignore: CustomResourceDefinition (prevents `make lint-watches` from bugging us about CRDs)
-		Complete(r)
+		Complete(reconciler.NewStandardReconcilerWithFinalizer(r.Client, &v1alpha1.IstioRevision{}, r.Reconcile, r.Finalize, constants.FinalizerName))
 }
 
 func (r *IstioRevisionReconciler) determineStatus(ctx context.Context, rev *v1alpha1.IstioRevision, reconcileErr error) (v1alpha1.IstioRevisionStatus, error) {

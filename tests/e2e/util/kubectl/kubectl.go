@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/operator/util/shell"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/shell"
 )
 
 const DefaultBinary = "kubectl"

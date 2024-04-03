@@ -33,6 +33,10 @@ func Step(text string, callback ...func()) {
 	g.By(text, callback...)
 }
 
+func Log(a ...any) {
+	g.GinkgoWriter.Println(a...)
+}
+
 func ReturnNotFoundError() types.GomegaMatcher {
 	return gomega.MatchError(errors.IsNotFound, "IsNotFound")
 }
