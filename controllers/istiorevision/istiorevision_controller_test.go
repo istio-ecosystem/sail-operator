@@ -225,7 +225,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 
 			cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(tt.clientObjects...).WithInterceptorFuncs(tt.interceptors).Build()
 
-			r := NewIstioRevisionReconciler(cl, scheme.Scheme, "no-resource-dir", nil)
+			r := NewReconciler(cl, scheme.Scheme, "no-resource-dir", nil)
 
 			rev := &v1alpha1.IstioRevision{
 				ObjectMeta: metav1.ObjectMeta{
@@ -439,7 +439,7 @@ func TestDetermineInUseCondition(t *testing.T) {
 					WithInterceptorFuncs(tc.interceptors).
 					Build()
 
-				r := NewIstioRevisionReconciler(cl, scheme.Scheme, "no-resource-dir", nil)
+				r := NewReconciler(cl, scheme.Scheme, "no-resource-dir", nil)
 
 				result, _ := r.determineInUseCondition(context.TODO(), rev)
 				g.Expect(result.Type).To(Equal(v1alpha1.IstioRevisionConditionInUse))
