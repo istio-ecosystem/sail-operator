@@ -72,13 +72,13 @@ var _ = BeforeSuite(func() {
 	resourceDir := path.Join(config.RepositoryRoot, "resources")
 	defaultProfiles := []string{"default"}
 
-	Expect(istio.NewIstioReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDir, defaultProfiles).
+	Expect(istio.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDir, defaultProfiles).
 		SetupWithManager(mgr)).To(Succeed())
 
-	Expect(istiorevision.NewIstioRevisionReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDir, chartManager).
+	Expect(istiorevision.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDir, chartManager).
 		SetupWithManager(mgr)).To(Succeed())
 
-	Expect(istiocni.NewIstioCNIReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDir, chartManager, defaultProfiles).
+	Expect(istiocni.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDir, chartManager, defaultProfiles).
 		SetupWithManager(mgr)).To(Succeed())
 
 	// create new cancellable context

@@ -15,7 +15,6 @@
 package kubectl
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -25,16 +24,6 @@ import (
 )
 
 const DefaultBinary = "kubectl"
-
-var (
-	ErrNotFound       = errors.New("resource was not found")
-	EmptyResourceList = ResourceList{
-		APIVersion: "v1",
-		Items:      []interface{}{},
-		Kind:       "List",
-		Metadata:   Metadata{ResourceVersion: ""},
-	}
-)
 
 // kubectl return the kubectl command
 // If the environment variable COMMAND is set, it will return the value of COMMAND
@@ -62,22 +51,6 @@ func ApplyString(yamlString string) error {
 	return nil
 }
 
-// DeleteString delete the given yaml string to the cluster
-func DeleteString(yamlString string) error {
-	cmd := kubectl("delete -f -")
-	output, err := shell.ExecuteCommandWithInput(cmd, yamlString)
-	if err != nil {
-		// Workaround because the resource can be already deleted
-		if strings.Contains(output, "not found") {
-			return nil
-		}
-
-		return fmt.Errorf("error deleting yaml: %v", err)
-	}
-
-	return nil
-}
-
 // CreateNamespace creates a namespace
 // If the namespace already exists, it will return nil
 func CreateNamespace(ns string) error {
@@ -89,17 +62,6 @@ func CreateNamespace(ns string) error {
 		}
 
 		return fmt.Errorf("error creating namespace: %v, output: %s", err, output)
-	}
-
-	return nil
-}
-
-// DeleteNamespace deletes a namespace
-func DeleteNamespace(ns string) error {
-	cmd := kubectl("delete namespace %s", ns)
-	_, err := shell.ExecuteCommand(cmd)
-	if err != nil {
-		return fmt.Errorf("error deleting namespace: %v", err)
 	}
 
 	return nil

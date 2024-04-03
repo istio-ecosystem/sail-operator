@@ -1,7 +1,3 @@
-| :exclamation:  Issues for this repository are disabled |
-|--------------------------------------------------------|
-| Issues for OpenShift Service Mesh are tracked in Red Hat Jira. Please head to the [OSSM Jira project](https://issues.redhat.com/browse/OSSM) in order to browse or open an issue |
-
 # Sail Operator
 
 This project is an operator that can be used to manage the installation of an [Istio](https://istio.io) control plane.
@@ -25,16 +21,18 @@ make deploy-olm
 Make sure that the `HUB` and `TAG` environment variables point to your container image repository and that the repository is publicly accessible.
 
 ### Deploying the Istio Control Plane
-Create an instance of the Istio resource to install the Istio Control Plane. Use the `istio-sample-openshift.yaml` file on OpenShift:
-
-```sh
-kubectl apply -f chart/samples/istio-sample-openshift.yaml
-```
+Create an instance of the Istio resource to install the Istio Control Plane. 
 
 Use the `istio-sample-kubernetes.yaml` file on vanilla Kubernetes:
 
 ```sh
 kubectl apply -f chart/samples/istio-sample-kubernetes.yaml
+```
+
+Use the `istio-sample-openshift.yaml` file on OpenShift:
+
+```sh
+kubectl apply -f chart/samples/istio-sample-openshift.yaml
 ```
 
 ### Deploying the Istio CNI plugin
@@ -52,7 +50,7 @@ make undeploy
 ```
 
 ## Contributing
-We welcome community contributions! For features or bugfixes, please first create an issue in our [OSSM Jira project](https://issues.redhat.com/browse/OSSM) and make sure to prefix your commit message with the issue ID.
+We use GitHub to track all of our bugs and feature requests. Please create a GitHub issue for any new bug or feature request.
 
 ### How it works
 This project aims to follow the Kubernetes [Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/).
@@ -89,10 +87,28 @@ More information can be found via the [Kubebuilder Documentation](https://book.k
 ### Writing Tests
 Please try to keep business logic in separate packages that can be independently tested wherever possible, especially if you can avoid the usage of Kubernetes clients. It greatly simplifies testing if we don't need to use envtest everywhere.
 
-E2E tests should use the ginkgo-style BDD testing method, an example can be found in [`controllers/istio_controller_test.go`](https://github.com/maistra/istio-operator/blob/maistra-3.0/controllers/istio_controller_test.go) for the test code and suite setup in [`controllers/suite_test.go`](https://github.com/maistra/istio-operator/blob/maistra-3.0/controllers/suite_test.go). All other tests should use standard golang xUnit-style tests (see [`pkg/kube/finalizers_test.go`](https://github.com/maistra/istio-operator/blob/maistra-3.0/pkg/kube/finalizers_test.go) for an example).
+E2E and integration tests should use the ginkgo-style BDD testing method, an example can be found in [`tests/integration/api/istio_test.go`](https://github.com/istio-ecosystem/sail-operator/blob/main/tests/integration/api/istio_test.go) for the test code and suite setup in [`tests/integration/api/suite_test.go`](https://github.com/istio-ecosystem/sail-operator/blob/main/tests/integration/api/suite_test.go). Unit tests should use standard golang xUnit-style tests (see [`pkg/kube/finalizers_test.go`](https://github.com/maistra/istio-operator/blob/maistra-3.0/pkg/kube/finalizers_test.go) for an example).
 
-### OCP Integration Tests
-Must be logged into OCP using 'oc' client
+### Integration Tests
+Please check the specific instructions for the integration tests in the [integration](https://github.com/istio-ecosystem/sail-operator/blob/main/tests/integration/README.md) directory.
+
+To run the integration tests, you can use the following command:
+
 ```sh
-make test.integration.ocp
+make test.integration
+```
+
+### End-to-End Tests
+Please check the specific instructions for the end-to-end tests in the [e2e](https://github.com/istio-ecosystem/sail-operator/blob/main/tests/e2e/README.md) directory.
+
+To run the end-to-end tests, you can use the following command:
+
+```sh
+make test.e2e.kind
+```
+
+or
+
+```sh
+make test.e2e.ocp
 ```

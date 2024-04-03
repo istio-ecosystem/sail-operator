@@ -30,6 +30,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/profiles"
+	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -43,16 +44,16 @@ import (
 	"istio.io/istio/pkg/ptr"
 )
 
-// IstioReconciler reconciles an Istio object
-type IstioReconciler struct {
+// Reconciler reconciles an Istio object
+type Reconciler struct {
 	ResourceDirectory string
 	DefaultProfiles   []string
 	client.Client
 	Scheme *runtime.Scheme
 }
 
-func NewIstioReconciler(client client.Client, scheme *runtime.Scheme, resourceDir string, defaultProfiles []string) *IstioReconciler {
-	return &IstioReconciler{
+func NewReconciler(client client.Client, scheme *runtime.Scheme, resourceDir string, defaultProfiles []string) *Reconciler {
+	return &Reconciler{
 		ResourceDirectory: resourceDir,
 		DefaultProfiles:   defaultProfiles,
 		Client:            client,
@@ -69,34 +70,21 @@ func NewIstioReconciler(client client.Client, scheme *runtime.Scheme, resourceDi
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
-func (r *IstioReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, istio *v1alpha1.Istio) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
-
-	var istio v1alpha1.Istio
-	if err := r.Client.Get(ctx, req.NamespacedName, &istio); err != nil {
-		if apierrors.IsNotFound(err) {
-			log.V(2).Info("Istio not found. Skipping reconciliation")
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, fmt.Errorf("failed to get Istio: %v", err)
-	}
-
-	if istio.DeletionTimestamp != nil {
-		return ctrl.Result{}, nil
-	}
 
 	log.Info("Reconciling")
 	result, reconcileErr := r.doReconcile(ctx, istio)
 
 	log.Info("Reconciliation done. Updating status.")
-	statusErr := r.updateStatus(ctx, &istio, reconcileErr)
+	statusErr := r.updateStatus(ctx, istio, reconcileErr)
 
 	return result, errors.Join(reconcileErr, statusErr)
 }
 
 // doReconcile is the function that actually reconciles the Istio object. Any error reported by this
 // function should get reported in the status of the Istio object by the caller.
-func (r *IstioReconciler) doReconcile(ctx context.Context, istio v1alpha1.Istio) (result ctrl.Result, err error) {
+func (r *Reconciler) doReconcile(ctx context.Context, istio *v1alpha1.Istio) (result ctrl.Result, err error) {
 	if istio.Spec.Version == "" {
 		return ctrl.Result{}, fmt.Errorf("no spec.version set")
 	}
@@ -110,14 +98,14 @@ func (r *IstioReconciler) doReconcile(ctx context.Context, istio v1alpha1.Istio)
 	}
 
 	var res ctrl.Result
-	if res, err = r.reconcileActiveRevision(ctx, &istio, values); err != nil || shouldRequeue(res) {
+	if res, err = r.reconcileActiveRevision(ctx, istio, values); err != nil || shouldRequeue(res) {
 		return res, err
 	}
 
-	return r.pruneInactiveRevisions(ctx, &istio)
+	return r.pruneInactiveRevisions(ctx, istio)
 }
 
-func (r *IstioReconciler) reconcileActiveRevision(ctx context.Context, istio *v1alpha1.Istio, values *v1alpha1.Values) (ctrl.Result, error) {
+func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1alpha1.Istio, values *v1alpha1.Values) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
 	activeRevisionName := getActiveRevisionName(istio)
@@ -164,7 +152,7 @@ func (r *IstioReconciler) reconcileActiveRevision(ctx context.Context, istio *v1
 	return ctrl.Result{}, err
 }
 
-func (r *IstioReconciler) pruneInactiveRevisions(ctx context.Context, istio *v1alpha1.Istio) (ctrl.Result, error) {
+func (r *Reconciler) pruneInactiveRevisions(ctx context.Context, istio *v1alpha1.Istio) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 	revisions, err := r.getRevisions(ctx, istio)
 	if err != nil {
@@ -226,13 +214,13 @@ func getPruningGracePeriod(istio *v1alpha1.Istio) time.Duration {
 	return time.Duration(period) * time.Second
 }
 
-func (r *IstioReconciler) getActiveRevision(ctx context.Context, istio *v1alpha1.Istio) (v1alpha1.IstioRevision, error) {
+func (r *Reconciler) getActiveRevision(ctx context.Context, istio *v1alpha1.Istio) (v1alpha1.IstioRevision, error) {
 	rev := v1alpha1.IstioRevision{}
 	err := r.Client.Get(ctx, getActiveRevisionKey(istio), &rev)
 	return rev, err
 }
 
-func (r *IstioReconciler) getRevisions(ctx context.Context, istio *v1alpha1.Istio) ([]v1alpha1.IstioRevision, error) {
+func (r *Reconciler) getRevisions(ctx context.Context, istio *v1alpha1.Istio) ([]v1alpha1.IstioRevision, error) {
 	revList := v1alpha1.IstioRevisionList{}
 	if err := r.Client.List(ctx, &revList); err != nil {
 		return nil, err
@@ -285,12 +273,12 @@ func getActiveRevisionName(istio *v1alpha1.Istio) string {
 	}
 }
 
-func computeIstioRevisionValues(istio v1alpha1.Istio, defaultProfiles []string, resourceDir string) (*v1alpha1.Values, error) {
+func computeIstioRevisionValues(istio *v1alpha1.Istio, defaultProfiles []string, resourceDir string) (*v1alpha1.Values, error) {
 	// get userValues from Istio.spec.values
 	userValues := istio.Spec.Values
 
 	// apply image digests from configuration, if not already set by user
-	userValues = applyImageDigests(&istio, userValues, config.Config)
+	userValues = applyImageDigests(istio, userValues, config.Config)
 
 	// apply userValues on top of defaultValues from profiles
 	mergedHelmValues, err := profiles.Apply(getProfilesDir(resourceDir, istio), getProfiles(istio, defaultProfiles), helm.FromValues(userValues))
@@ -304,17 +292,17 @@ func computeIstioRevisionValues(istio v1alpha1.Istio, defaultProfiles []string, 
 	}
 
 	// override values that are not configurable by the user
-	return applyOverrides(&istio, values)
+	return applyOverrides(istio, values)
 }
 
-func getProfiles(istio v1alpha1.Istio, defaultProfiles []string) []string {
+func getProfiles(istio *v1alpha1.Istio, defaultProfiles []string) []string {
 	if istio.Spec.Profile == "" {
 		return defaultProfiles
 	}
 	return append(defaultProfiles, istio.Spec.Profile)
 }
 
-func getProfilesDir(resourceDir string, istio v1alpha1.Istio) string {
+func getProfilesDir(resourceDir string, istio *v1alpha1.Istio) string {
 	return path.Join(resourceDir, istio.Spec.Version, "profiles")
 }
 
@@ -382,7 +370,7 @@ func applyImageDigests(istio *v1alpha1.Istio, values *v1alpha1.Values, config co
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *IstioReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
 			LogConstructor: func(req *reconcile.Request) logr.Logger {
@@ -395,10 +383,10 @@ func (r *IstioReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		}).
 		For(&v1alpha1.Istio{}).
 		Owns(&v1alpha1.IstioRevision{}).
-		Complete(r)
+		Complete(reconciler.NewStandardReconciler(r.Client, &v1alpha1.Istio{}, r.Reconcile))
 }
 
-func (r *IstioReconciler) determineStatus(ctx context.Context, istio *v1alpha1.Istio, reconcileErr error) (v1alpha1.IstioStatus, error) {
+func (r *Reconciler) determineStatus(ctx context.Context, istio *v1alpha1.Istio, reconcileErr error) (v1alpha1.IstioStatus, error) {
 	var errs errlist.Builder
 	status := *istio.Status.DeepCopy()
 	status.ObservedGeneration = istio.Generation
@@ -475,7 +463,7 @@ func (r *IstioReconciler) determineStatus(ctx context.Context, istio *v1alpha1.I
 	return status, errs.Error()
 }
 
-func (r *IstioReconciler) updateStatus(ctx context.Context, istio *v1alpha1.Istio, reconcileErr error) error {
+func (r *Reconciler) updateStatus(ctx context.Context, istio *v1alpha1.Istio, reconcileErr error) error {
 	var errs errlist.Builder
 	status, err := r.determineStatus(ctx, istio, reconcileErr)
 	errs.Add(err)
