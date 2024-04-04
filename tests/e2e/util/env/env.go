@@ -14,31 +14,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package operator
+package env
 
 import (
 	"os"
-	"path/filepath"
 	"strconv"
 
 	g "github.com/onsi/ginkgo/v2"
 )
 
-var (
-	ocp                   = getBoolEnv("OCP", false)
-	skipDeploy            = getBoolEnv("SKIP_DEPLOY", false)
-	image                 = getEnv("IMAGE", "quay.io/maistra-dev/sail-operator:latest")
-	namespace             = getEnv("NAMESPACE", "sail-operator")
-	deploymentName        = getEnv("DEPLOYMENT_NAME", "sail-operator")
-	controlPlaneNamespace = getEnv("CONTROL_PLANE_NS", "istio-system")
-	wd, _                 = os.Getwd()
-	istioName             = getEnv("ISTIO_NAME", "default")
-	istioCniNamespace     = getEnv("ISTIOCNI_NAMESPACE", "istio-cni")
-	istioCniName          = getEnv("ISTIOCNI_NAME", "default")
-	baseDir               = filepath.Join(wd, "../../..")
-)
-
-func getEnv(key, defaultValue string) string {
+func Get(key, defaultValue string) string {
 	value := os.Getenv(key)
 	if value == "" {
 		return defaultValue
@@ -49,8 +34,8 @@ func getEnv(key, defaultValue string) string {
 	return value
 }
 
-func getBoolEnv(key string, defaultValue bool) bool {
-	value := getEnv(key, strconv.FormatBool(defaultValue))
+func GetBool(key string, defaultValue bool) bool {
+	value := Get(key, strconv.FormatBool(defaultValue))
 	boolValue, err := strconv.ParseBool(value)
 	if err != nil {
 		return defaultValue

@@ -19,7 +19,7 @@ import (
 	"strings"
 
 	g "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/operator/util/shell"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/shell"
 )
 
 // Install runs helm install in the given directory with params

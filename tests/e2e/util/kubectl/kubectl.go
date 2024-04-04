@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/operator/util/shell"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/shell"
 )
 
 const DefaultBinary = "kubectl"
@@ -62,6 +62,17 @@ func CreateNamespace(ns string) error {
 		}
 
 		return fmt.Errorf("error creating namespace: %v, output: %s", err, output)
+	}
+
+	return nil
+}
+
+// DeleteNamespace deletes a namespace
+func DeleteNamespace(ns string) error {
+	cmd := kubectl("delete namespace %s", ns)
+	_, err := shell.ExecuteCommand(cmd)
+	if err != nil {
+		return fmt.Errorf("error deleting namespace: %v", err)
 	}
 
 	return nil
