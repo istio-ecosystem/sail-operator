@@ -46,7 +46,6 @@ var _ = Describe("Control Plane Installation", Ordered, func() {
 	SetDefaultEventuallyPollingInterval(time.Second)
 
 	Describe("given Istio version", func() {
-
 		BeforeAll(func(ctx SpecContext) {
 			Expect(kubectl.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
 

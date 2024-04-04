@@ -32,27 +32,25 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var (
-	sailCRDs = []string{
-		// TODO: Find an alternative to this list
-		"authorizationpolicies.security.istio.io",
-		"destinationrules.networking.istio.io",
-		"envoyfilters.networking.istio.io",
-		"gateways.networking.istio.io",
-		"istiorevisions.operator.istio.io",
-		"istios.operator.istio.io",
-		"peerauthentications.security.istio.io",
-		"proxyconfigs.networking.istio.io",
-		"requestauthentications.security.istio.io",
-		"serviceentries.networking.istio.io",
-		"sidecars.networking.istio.io",
-		"telemetries.telemetry.istio.io",
-		"virtualservices.networking.istio.io",
-		"wasmplugins.extensions.istio.io",
-		"workloadentries.networking.istio.io",
-		"workloadgroups.networking.istio.io",
-	}
-)
+var sailCRDs = []string{
+	// TODO: Find an alternative to this list
+	"authorizationpolicies.security.istio.io",
+	"destinationrules.networking.istio.io",
+	"envoyfilters.networking.istio.io",
+	"gateways.networking.istio.io",
+	"istiorevisions.operator.istio.io",
+	"istios.operator.istio.io",
+	"peerauthentications.security.istio.io",
+	"proxyconfigs.networking.istio.io",
+	"requestauthentications.security.istio.io",
+	"serviceentries.networking.istio.io",
+	"sidecars.networking.istio.io",
+	"telemetries.telemetry.istio.io",
+	"virtualservices.networking.istio.io",
+	"wasmplugins.extensions.istio.io",
+	"workloadentries.networking.istio.io",
+	"workloadgroups.networking.istio.io",
+}
 
 var _ = Describe("Operator", Ordered, func() {
 	SetDefaultEventuallyTimeout(120 * time.Second)
@@ -78,8 +76,9 @@ var _ = Describe("Operator", Ordered, func() {
 		})
 
 		It("deploys all the CRDs", func(ctx SpecContext) {
-			Eventually(common.GetList).WithArguments(ctx, cl, &apiextensionsv1.CustomResourceDefinitionList{}).Should(WithTransform(extractCRDNames, ContainElements(sailCRDs)),
-				"Not all Istio and Sail CRDs are present")
+			Eventually(common.GetList).WithArguments(ctx, cl, &apiextensionsv1.CustomResourceDefinitionList{}).
+				Should(WithTransform(extractCRDNames, ContainElements(sailCRDs)),
+					"Not all Istio and Sail CRDs are present")
 			Success("Istio CRDs are present")
 		})
 

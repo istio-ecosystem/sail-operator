@@ -37,8 +37,6 @@ var (
 	namespace      = env.Get("NAMESPACE", "sail-operator")
 	deploymentName = env.Get("DEPLOYMENT_NAME", "sail-operator")
 	wd, _          = os.Getwd()
-	istioName      = env.Get("ISTIO_NAME", "default")
-	istioCniName   = env.Get("ISTIOCNI_NAME", "default")
 	baseDir        = filepath.Join(wd, "../../..")
 )
 

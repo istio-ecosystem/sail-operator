@@ -67,6 +67,17 @@ func CreateNamespace(ns string) error {
 	return nil
 }
 
+// DeleteNamespace deletes a namespace
+func DeleteNamespace(ns string) error {
+	cmd := kubectl("delete namespace %s", ns)
+	_, err := shell.ExecuteCommand(cmd)
+	if err != nil {
+		return fmt.Errorf("error deleting namespace: %v", err)
+	}
+
+	return nil
+}
+
 // Delete deletes a resource based on the namespace, kind and the name
 func Delete(ns, kind, name string) error {
 	cmd := kubectl("delete %s %s %s", kind, name, nsflag(ns))

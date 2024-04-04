@@ -20,16 +20,15 @@ import (
 	"context"
 	"time"
 
-	"istio.io/istio/pkg/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	env "github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"istio.io/istio/pkg/ptr"
 )
 
 var (
