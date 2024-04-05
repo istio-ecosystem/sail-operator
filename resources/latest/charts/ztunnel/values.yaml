@@ -2,7 +2,7 @@ defaults:
   # Hub to pull from. Image will be `Hub/Image:Tag-Variant`
   hub: gcr.io/istio-testing
   # Tag to pull from. Image will be `Hub/Image:Tag-Variant`
-  tag: 1.22-alpha.f853d1e9a3dc9365db4e9002043240a7036fb171
+  tag: 1.22-alpha.fd7ec2e62b2f8bb991c5f848172745b4d8d1b3c0
   # Variant to pull. Options are "debug" or "distroless". Unset will use the default for the given version.
   variant: ""
 
