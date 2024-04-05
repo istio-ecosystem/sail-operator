@@ -110,14 +110,6 @@ function convertIstioProfiles() {
       | del(.spec.meshConfig)
       | del(.spec.hub)
       | del(.spec.tag)
-      | del(.spec.values.global.sds.token)
-      | del(.spec.values.meshConfig.defaultConfig.proxyMetadata)
-      | del(.spec.values.telemetry.v2.metadataExchange)
-      | del(.spec.values.telemetry.v2.prometheus.wasmEnabled)
-      | del(.spec.values.telemetry.v2.stackdriver.configOverride)
-      | del(.spec.values.telemetry.v2.stackdriver.logging)
-      | del(.spec.values.telemetry.v2.stackdriver.monitoring)
-      | del(.spec.values.telemetry.v2.stackdriver.topology)
       | del(.spec.values.gateways)' "$profile"
   done
 }
