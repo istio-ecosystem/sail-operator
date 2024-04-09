@@ -141,16 +141,12 @@ func GetPods(ns string, args ...string) (string, error) {
 	return output, nil
 }
 
-// Describe returns the description of a resource, the equivalent of running `kubectl describe`
-// Arguments:
-// - ns: namespace
-// - kind: type of the resource
-// - name: name of the resource
-func Describe(ns, kind, name string) (string, error) {
-	cmd := kubectl("describe %s %s %s", kind, name, nsflag(ns))
+// GetEvents returns the events of a namespace
+func GetEvents(ns string) (string, error) {
+	cmd := kubectl("get events %s", nsflag(ns))
 	output, err := shell.ExecuteCommand(cmd)
 	if err != nil {
-		return "", fmt.Errorf("error describing resource: %w, output: %s", err, output)
+		return "", fmt.Errorf("error getting events: %w, output: %s", err, output)
 	}
 
 	return output, nil

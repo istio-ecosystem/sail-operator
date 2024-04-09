@@ -108,6 +108,12 @@ func LogDebugInfo() {
 	}
 	GinkgoWriter.Println("Logs from sail-operator pod: \n", logs)
 
+	events, err := kubectl.GetEvents(namespace)
+	if err != nil {
+		GinkgoWriter.Println("Error getting events from sail operator namespace: ", err)
+	}
+	GinkgoWriter.Println("Events from sail operator namespace: \n", events)
+
 	// Display Istio CR information
 	resource, err := kubectl.GetYAML(controlPlaneNamespace, "istio", istioName)
 	if err != nil {
@@ -127,10 +133,22 @@ func LogDebugInfo() {
 	}
 	GinkgoWriter.Println("Logs from istiod pod: \n", logs)
 
+	events, err = kubectl.GetEvents(controlPlaneNamespace)
+	if err != nil {
+		GinkgoWriter.Println("Error getting events from Istio CR namespace: ", err)
+	}
+	GinkgoWriter.Println("Events from Istio CR namespace: \n", events)
+
 	// Display Istio CNI information.
 	cni, err := kubectl.GetYAML(istioCniNamespace, "daemonset", istioCniName)
 	if err != nil {
 		GinkgoWriter.Println("Error getting Istio CNI daemonset yaml: ", err)
 	}
 	GinkgoWriter.Println("Istio CNI daemonset: \n", cni)
+
+	events, err = kubectl.GetEvents(istioCniNamespace)
+	if err != nil {
+		GinkgoWriter.Println("Error getting events from Istio CNI namespace: ", err)
+	}
+	GinkgoWriter.Println("Events from Istio CNI namespace: \n", events)
 }
