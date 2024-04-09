@@ -141,6 +141,17 @@ func GetPods(ns string, args ...string) (string, error) {
 	return output, nil
 }
 
+// GetEvents returns the events of a namespace
+func GetEvents(ns string) (string, error) {
+	cmd := kubectl("get events %s", nsflag(ns))
+	output, err := shell.ExecuteCommand(cmd)
+	if err != nil {
+		return "", fmt.Errorf("error getting events: %w, output: %s", err, output)
+	}
+
+	return output, nil
+}
+
 // Logs returns the logs of a deployment
 // Arguments:
 // - ns: namespace
