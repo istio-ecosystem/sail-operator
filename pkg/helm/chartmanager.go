@@ -91,13 +91,13 @@ func (h *ChartManager) UpgradeOrInstallChart(
 	} else if rel.Info.Status == release.StatusPendingUpgrade || (rel.Info.Status == release.StatusFailed && rel.Version > 1) {
 		log.V(2).Info("Performing helm rollback", "release", releaseName)
 		if err := action.NewRollback(cfg).Run(releaseName); err != nil {
-			return nil, fmt.Errorf("failed to roll back helm release %s: %v", releaseName, err)
+			return nil, fmt.Errorf("failed to roll back helm release %s: %w", releaseName, err)
 		}
 		releaseExists = true
 	} else if rel.Info.Status == release.StatusPendingInstall || (rel.Info.Status == release.StatusFailed && rel.Version <= 1) {
 		log.V(2).Info("Performing helm uninstall", "release", releaseName)
 		if _, err := action.NewUninstall(cfg).Run(releaseName); err != nil {
-			return nil, fmt.Errorf("failed to uninstall failed helm release %s: %v", releaseName, err)
+			return nil, fmt.Errorf("failed to uninstall failed helm release %s: %w", releaseName, err)
 		}
 		releaseExists = false
 	} else if rel.Info.Status == release.StatusPendingRollback {
@@ -116,7 +116,7 @@ func (h *ChartManager) UpgradeOrInstallChart(
 
 		rel, err = updateAction.RunWithContext(ctx, releaseName, chart, values)
 		if err != nil {
-			return nil, fmt.Errorf("failed to update helm chart %s: %v", chart.Name(), err)
+			return nil, fmt.Errorf("failed to update helm chart %s: %w", chart.Name(), err)
 		}
 	} else {
 		log.V(2).Info("Performing helm install", "chartName", chart.Name())
@@ -129,7 +129,7 @@ func (h *ChartManager) UpgradeOrInstallChart(
 
 		rel, err = installAction.RunWithContext(ctx, chart, values)
 		if err != nil {
-			return nil, fmt.Errorf("failed to install helm chart %s: %v", chart.Name(), err)
+			return nil, fmt.Errorf("failed to install helm chart %s: %w", chart.Name(), err)
 		}
 	}
 	return rel, nil
@@ -156,7 +156,7 @@ func getRelease(cfg *action.Configuration, releaseName string) (*release.Release
 	getAction := action.NewGet(cfg)
 	rel, err := getAction.Run(releaseName)
 	if err != nil && !errors.Is(err, driver.ErrReleaseNotFound) {
-		return nil, fmt.Errorf("failed to get helm release %s: %v", releaseName, err)
+		return nil, fmt.Errorf("failed to get helm release %s: %w", releaseName, err)
 	}
 	return rel, nil
 }

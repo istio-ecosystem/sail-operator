@@ -15,7 +15,6 @@ require (
 	github.com/magiconair/properties v1.8.7
 	github.com/onsi/ginkgo/v2 v2.15.0
 	github.com/onsi/gomega v1.31.1
-	github.com/pkg/errors v0.9.1
 	golang.org/x/text v0.14.0
 	golang.org/x/tools v0.17.0
 	gomodules.xyz/jsonpatch/v2 v2.4.0
@@ -118,6 +117,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc5 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.18.0 // indirect
 	github.com/prometheus/client_model v0.5.0 // indirect
 	github.com/prometheus/common v0.46.0 // indirect

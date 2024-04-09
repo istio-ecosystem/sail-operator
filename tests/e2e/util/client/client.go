@@ -35,7 +35,7 @@ func getConfig() (*rest.Config, error) {
 	// use the current context in kubeconfig
 	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
 	if err != nil {
-		return nil, fmt.Errorf("error building config: %v", err)
+		return nil, fmt.Errorf("error building config: %w", err)
 	}
 
 	return config, nil
@@ -45,13 +45,13 @@ func getConfig() (*rest.Config, error) {
 func InitK8sClient() (client.Client, error) {
 	config, err := getConfig()
 	if err != nil {
-		return nil, fmt.Errorf("error getting config for k8s client: %v", err)
+		return nil, fmt.Errorf("error getting config for k8s client: %w", err)
 	}
 
 	// create the clientset
 	k8sClient, err := client.New(config, client.Options{Scheme: scheme.Scheme})
 	if err != nil {
-		return nil, fmt.Errorf("error creating clientset: %v", err)
+		return nil, fmt.Errorf("error creating clientset: %w", err)
 	}
 
 	if err := apiextensionsv1.AddToScheme(scheme.Scheme); err != nil {

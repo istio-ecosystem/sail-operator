@@ -223,7 +223,7 @@ spec:
 func getVersionFromIstiod() (string, error) {
 	output, err := kubectl.Exec(controlPlaneNamespace, "deploy/istiod", "pilot-discovery version")
 	if err != nil {
-		return "", fmt.Errorf("error getting version from istiod: %v", err)
+		return "", fmt.Errorf("error getting version from istiod: %w", err)
 	}
 
 	matches := istiodVersionRegex.FindStringSubmatch(output)
@@ -243,17 +243,17 @@ func forceDeleteIstioResources() error {
 	// This will be improved by splitting the tests into different Nodes with their independent setups and cleanups
 	err := kubectl.ForceDelete("", "istio", istioName)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
-		return fmt.Errorf("failed to delete %s CR: %v", "istio", err)
+		return fmt.Errorf("failed to delete %s CR: %w", "istio", err)
 	}
 
 	err = kubectl.ForceDelete("", "istiorevision", "default")
 	if err != nil && !strings.Contains(err.Error(), "not found") {
-		return fmt.Errorf("failed to delete %s CR: %v", "istiorevision", err)
+		return fmt.Errorf("failed to delete %s CR: %w", "istiorevision", err)
 	}
 
 	err = kubectl.Delete("", "istiocni", istioCniName)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
-		return fmt.Errorf("failed to delete %s CR: %v", "istiocni", err)
+		return fmt.Errorf("failed to delete %s CR: %w", "istiocni", err)
 	}
 
 	return nil

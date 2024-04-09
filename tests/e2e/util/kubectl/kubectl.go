@@ -45,7 +45,7 @@ func ApplyString(yamlString string) error {
 	cmd := kubectl("apply --server-side -f -")
 	_, err := shell.ExecuteCommandWithInput(cmd, yamlString)
 	if err != nil {
-		return fmt.Errorf("error applying yaml: %v", err)
+		return fmt.Errorf("error applying yaml: %w", err)
 	}
 
 	return nil
@@ -61,7 +61,7 @@ func CreateNamespace(ns string) error {
 			return nil
 		}
 
-		return fmt.Errorf("error creating namespace: %v, output: %s", err, output)
+		return fmt.Errorf("error creating namespace: %w, output: %s", err, output)
 	}
 
 	return nil
@@ -72,7 +72,7 @@ func DeleteNamespace(ns string) error {
 	cmd := kubectl("delete namespace %s", ns)
 	_, err := shell.ExecuteCommand(cmd)
 	if err != nil {
-		return fmt.Errorf("error deleting namespace: %v", err)
+		return fmt.Errorf("error deleting namespace: %w", err)
 	}
 
 	return nil
@@ -83,7 +83,7 @@ func Delete(ns, kind, name string) error {
 	cmd := kubectl("delete %s %s %s", kind, name, nsflag(ns))
 	_, err := shell.ExecuteCommand(cmd)
 	if err != nil {
-		return fmt.Errorf("error deleting deployment: %v", err)
+		return fmt.Errorf("error deleting deployment: %w", err)
 	}
 
 	return nil
@@ -95,7 +95,7 @@ func DeleteCRDs(crds []string) error {
 		cmd := kubectl("delete crd %s", crd)
 		_, err := shell.ExecuteCommand(cmd)
 		if err != nil {
-			return fmt.Errorf("error deleting crd %s: %v", crd, err)
+			return fmt.Errorf("error deleting crd %s: %w", crd, err)
 		}
 	}
 
@@ -107,7 +107,7 @@ func Patch(ns, kind, name, patchType, patch string) error {
 	cmd := kubectl(`patch %s %s %s --type=%s -p=%q`, kind, name, prepend("-n", ns), patchType, patch)
 	_, err := shell.ExecuteCommand(cmd)
 	if err != nil {
-		return fmt.Errorf("error patching resource: %v", err)
+		return fmt.Errorf("error patching resource: %w", err)
 	}
 	return nil
 }
@@ -135,7 +135,7 @@ func GetPods(ns string, args ...string) (string, error) {
 	cmd := kubectl("get pods %s %s", nsflag(ns), strings.Join(args, " "))
 	output, err := shell.ExecuteCommand(cmd)
 	if err != nil {
-		return "", fmt.Errorf("error getting pods: %v, output: %s", err, output)
+		return "", fmt.Errorf("error getting pods: %w, output: %s", err, output)
 	}
 
 	return output, nil
