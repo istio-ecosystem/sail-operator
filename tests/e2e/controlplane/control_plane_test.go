@@ -210,6 +210,10 @@ spec:
 	})
 
 	AfterAll(func() {
+		if CurrentSpecReport().Failed() {
+			common.LogDebugInfo()
+		}
+
 		By("Deleting operator deployment")
 		Expect(helm.Uninstall("sail-operator", "--namespace "+namespace)).
 			To(Succeed(), "Operator failed to be deleted")
