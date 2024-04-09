@@ -102,12 +102,6 @@ func LogDebugInfo() {
 	}
 	GinkgoWriter.Println("Operator deployment: \n", operator)
 
-	describe, err := kubectl.Describe(namespace, "deployment", deploymentName)
-	if err != nil {
-		GinkgoWriter.Println("Error getting operator deployment describe: ", err)
-	}
-	GinkgoWriter.Println("Operator deployment describe: \n", describe)
-
 	logs, err := kubectl.Logs(namespace, "deploy/"+deploymentName, ptr.Of(120*time.Second))
 	if err != nil {
 		GinkgoWriter.Println("Error getting logs from the operator: ", err)
@@ -139,10 +133,4 @@ func LogDebugInfo() {
 		GinkgoWriter.Println("Error getting Istio CNI daemonset yaml: ", err)
 	}
 	GinkgoWriter.Println("Istio CNI daemonset: \n", cni)
-
-	describe, err = kubectl.Describe(istioCniNamespace, "daemonset", istioCniName)
-	if err != nil {
-		GinkgoWriter.Println("Error getting Istio CNI daemonset describe: ", err)
-	}
-	GinkgoWriter.Println("Istio CNI daemonset describe: \n", describe)
 }
