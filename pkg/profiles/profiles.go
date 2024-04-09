@@ -68,13 +68,13 @@ func getValuesFromProfiles(profilesDir string, profiles []string) (helm.Values, 
 func getProfileValues(file string) (helm.Values, error) {
 	fileContents, err := os.ReadFile(file)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read profile file %v: %v", file, err)
+		return nil, fmt.Errorf("failed to read profile file %v: %w", file, err)
 	}
 
 	var profile map[string]any
 	err = yaml.Unmarshal(fileContents, &profile)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal profile YAML %s: %v", file, err)
+		return nil, fmt.Errorf("failed to unmarshal profile YAML %s: %w", file, err)
 	}
 
 	val, found, err := unstructured.NestedFieldNoCopy(profile, "spec", "values")
