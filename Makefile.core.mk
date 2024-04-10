@@ -357,7 +357,7 @@ gen-charts: ## Pull charts from istio repository.
 	@hack/copy-crds.sh "resources/$$(yq eval '.crdSourceVersion' $(VERSIONS_YAML_FILE))/charts"
 
 .PHONY: gen
-gen: controller-gen gen-api gen-charts gen-manifests gen-code bundle ## Generate everything.
+gen: operator-name controller-gen gen-api gen-charts gen-manifests gen-code bundle ## Generate everything.
 
 .PHONY: gen-check
 gen-check: gen restore-manifest-dates check-clean-repo ## Verify that changes in generated resources have been checked in.
@@ -367,6 +367,10 @@ restore-manifest-dates:
 ifneq "${BUNDLE_MANIFEST_DATE}" ""
 	@sed -i -e "s/\(createdAt:\).*/\1 \"${BUNDLE_MANIFEST_DATE}\"/" bundle/manifests/${OPERATOR_NAME}.clusterserviceversion.yaml
 endif
+
+.PHONY: operator-name
+operator-name:
+	sed -i "s/\(projectName:\).*/\1 ${OPERATOR_NAME}/g" PROJECT
 
 .PHONY: update-istio
 update-istio: ## Update the Istio commit hash in the 'latest' entry in versions.yaml to the latest commit in the branch.
@@ -538,7 +542,7 @@ lint: lint-scripts lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle
 .PHONY: format
 format: format-go tidy-go ## Auto-format all code. This should be run before sending a PR.
 
-.SILENT: helm $(HELM) $(LOCALBIN) deploy-yaml gen-api
+.SILENT: helm $(HELM) $(LOCALBIN) deploy-yaml gen-api operator-name
 
 COMMON_IMPORTS ?= lint-all lint-scripts lint-copyright-banner lint-go lint-yaml lint-helm format-go tidy-go check-clean-repo update-common
 .PHONY: $(COMMON_IMPORTS)
