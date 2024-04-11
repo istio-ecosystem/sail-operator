@@ -26,12 +26,16 @@ Create an instance of the Istio resource to install the Istio Control Plane.
 Use the `istio-sample-kubernetes.yaml` file on vanilla Kubernetes:
 
 ```sh
+# Namespace must exist prior to creating istio resource
+kubectl get ns istio-system || kubectl create ns istio-system
 kubectl apply -f chart/samples/istio-sample-kubernetes.yaml
 ```
 
 Use the `istio-sample-openshift.yaml` file on OpenShift:
 
 ```sh
+# Namespace must exist prior to creating istio resource
+kubectl get ns istio-system || kubectl create ns istio-system
 kubectl apply -f chart/samples/istio-sample-openshift.yaml
 ```
 
