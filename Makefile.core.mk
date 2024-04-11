@@ -31,7 +31,7 @@ ISTIO_PILOT_IMAGE_NAME ?= pilot
 ISTIO_PROXY_IMAGE_NAME ?= proxyv2
 
 # GitHub creds
-GITHUB_USER ?= maistra-bot
+GITHUB_USER ?= openshift-service-mesh-bot
 GITHUB_TOKEN ?= 
 
 SOURCE_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
