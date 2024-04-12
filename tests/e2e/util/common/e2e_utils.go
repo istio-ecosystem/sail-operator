@@ -37,7 +37,6 @@ var (
 	controlPlaneNamespace = env.Get("CONTROL_PLANE_NS", "istio-system")
 	istioName             = env.Get("ISTIO_NAME", "default")
 	istioCniNamespace     = env.Get("ISTIOCNI_NAMESPACE", "istio-cni")
-	istioCniName          = env.Get("ISTIOCNI_NAME", "default")
 )
 
 // key returns the client.ObjectKey for the given name and namespace. If no namespace is provided, it returns a key cluster scoped
@@ -140,7 +139,7 @@ func LogDebugInfo() {
 	GinkgoWriter.Println("Events from Istio CR namespace: \n", events)
 
 	// Display Istio CNI information.
-	cni, err := kubectl.GetYAML(istioCniNamespace, "daemonset", istioCniName)
+	cni, err := kubectl.GetYAML(istioCniNamespace, "daemonset", "istio-cni-node")
 	if err != nil {
 		GinkgoWriter.Println("Error getting Istio CNI daemonset yaml: ", err)
 	}
