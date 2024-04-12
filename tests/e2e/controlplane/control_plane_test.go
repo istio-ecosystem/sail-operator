@@ -45,23 +45,72 @@ var _ = Describe("Control Plane Installation", Ordered, func() {
 	SetDefaultEventuallyTimeout(120 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
+	BeforeAll(func(ctx SpecContext) {
+		Expect(kubectl.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
+
+		extraArg := ""
+		if ocp {
+			extraArg = "--set=platform=openshift"
+		}
+
+		Expect(helm.Install("sail-operator", filepath.Join(baseDir, "chart"), "--namespace "+namespace, "--set=image="+image, extraArg)).
+			To(Succeed(), "Operator failed to be deployed")
+
+		Eventually(common.GetObject).WithArguments(ctx, cl, common.Key(deploymentName, namespace), &appsv1.Deployment{}).
+			Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
+		Success("Operator is deployed in the namespace and Running")
+	})
+
+	Describe("defaulting", func() {
+		DescribeTable("IstioCNI",
+			Entry("no spec", ""),
+			Entry("empty spec", "spec: {}"),
+			func(ctx SpecContext, spec string) {
+				yaml := `
+apiVersion: operator.istio.io/v1alpha1
+kind: IstioCNI
+metadata:
+  name: default
+` + spec
+				Expect(kubectl.ApplyString(yaml)).To(Succeed(), "IstioCNI creation failed")
+				Success("IstioCNI created")
+
+				cni := &v1alpha1.IstioCNI{}
+				Expect(cl.Get(ctx, common.Key("default"), cni)).To(Succeed())
+				Expect(cni.Spec.Version).To(Equal(supportedversion.Default))
+				Expect(cni.Spec.Namespace).To(Equal("istio-cni"))
+
+				Expect(cl.Delete(ctx, cni)).To(Succeed())
+			},
+		)
+
+		DescribeTable("Istio",
+			Entry("no spec", ""),
+			Entry("empty spec", "spec: {}"),
+			Entry("empty updateStrategy", "spec: {updateStrategy: {}}"),
+			func(ctx SpecContext, spec string) {
+				yaml := `
+apiVersion: operator.istio.io/v1alpha1
+kind: Istio
+metadata:
+  name: default
+` + spec
+				Expect(kubectl.ApplyString(yaml)).To(Succeed(), "Istio creation failed")
+				Success("Istio created")
+
+				istio := &v1alpha1.Istio{}
+				Expect(cl.Get(ctx, common.Key("default"), istio)).To(Succeed())
+				Expect(istio.Spec.Version).To(Equal(supportedversion.Default))
+				Expect(istio.Spec.Namespace).To(Equal("istio-system"))
+				Expect(istio.Spec.UpdateStrategy).ToNot(BeNil())
+				Expect(istio.Spec.UpdateStrategy.Type).To(Equal(v1alpha1.UpdateStrategyTypeInPlace))
+
+				Expect(cl.Delete(ctx, istio)).To(Succeed())
+			},
+		)
+	})
+
 	Describe("given Istio version", func() {
-		BeforeAll(func(ctx SpecContext) {
-			Expect(kubectl.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
-
-			extraArg := ""
-			if ocp {
-				extraArg = "--set=platform=openshift"
-			}
-
-			Expect(helm.Install("sail-operator", filepath.Join(baseDir, "chart"), "--namespace "+namespace, "--set=image="+image, extraArg)).
-				To(Succeed(), "Operator failed to be deployed")
-
-			Eventually(common.GetObject).WithArguments(ctx, cl, common.Key(deploymentName, namespace), &appsv1.Deployment{}).
-				Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
-			Success("Operator is deployed in the namespace and Running")
-		})
-
 		for _, version := range supportedversion.List {
 			// Note: This var version is needed to avoid the closure of the loop
 			version := version
