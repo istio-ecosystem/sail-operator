@@ -463,14 +463,14 @@ var _ = Describe("Istio resource", Ordered, func() {
 
 func deleteAllIstiosAndRevisions(ctx context.Context) {
 	Step("Deleting all Istio and IstioRevision resources")
-	Expect(k8sClient.DeleteAllOf(ctx, &v1alpha1.Istio{})).To(Succeed())
+	Eventually(k8sClient.DeleteAllOf).WithArguments(ctx, &v1alpha1.Istio{}).Should(Succeed())
 	Eventually(func(g Gomega) {
 		list := &v1alpha1.IstioList{}
 		g.Expect(k8sClient.List(ctx, list)).To(Succeed())
 		g.Expect(list.Items).To(BeEmpty())
 	}).Should(Succeed())
 
-	Expect(k8sClient.DeleteAllOf(ctx, &v1alpha1.IstioRevision{})).To(Succeed())
+	Eventually(k8sClient.DeleteAllOf).WithArguments(ctx, &v1alpha1.IstioRevision{}).Should(Succeed())
 	Eventually(func(g Gomega) {
 		list := &v1alpha1.IstioRevisionList{}
 		g.Expect(k8sClient.List(ctx, list)).To(Succeed())
