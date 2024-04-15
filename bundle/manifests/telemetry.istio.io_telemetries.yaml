@@ -202,7 +202,6 @@ spec:
                     type: object
                 type: object
               targetRef:
-                description: Optional.
                 properties:
                   group:
                     description: group is the group of the target resource.
@@ -217,6 +216,24 @@ spec:
                     description: namespace is the namespace of the referent.
                     type: string
                 type: object
+              targetRefs:
+                description: Optional.
+                items:
+                  properties:
+                    group:
+                      description: group is the group of the target resource.
+                      type: string
+                    kind:
+                      description: kind is kind of the target resource.
+                      type: string
+                    name:
+                      description: name is the name of the target resource.
+                      type: string
+                    namespace:
+                      description: namespace is the namespace of the referent.
+                      type: string
+                  type: object
+                type: array
               tracing:
                 description: Optional.
                 items:
@@ -511,7 +528,6 @@ spec:
                     type: object
                 type: object
               targetRef:
-                description: Optional.
                 properties:
                   group:
                     description: group is the group of the target resource.
@@ -526,6 +542,24 @@ spec:
                     description: namespace is the namespace of the referent.
                     type: string
                 type: object
+              targetRefs:
+                description: Optional.
+                items:
+                  properties:
+                    group:
+                      description: group is the group of the target resource.
+                      type: string
+                    kind:
+                      description: kind is kind of the target resource.
+                      type: string
+                    name:
+                      description: name is the name of the target resource.
+                      type: string
+                    namespace:
+                      description: namespace is the namespace of the referent.
+                      type: string
+                  type: object
+                type: array
               tracing:
                 description: Optional.
                 items:
