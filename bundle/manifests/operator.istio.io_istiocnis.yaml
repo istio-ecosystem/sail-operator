@@ -56,9 +56,13 @@ spec:
           metadata:
             type: object
           spec:
+            default:
+              namespace: istio-cni
+              version: v1.21.0
             description: IstioCNISpec defines the desired state of IstioCNI
             properties:
               namespace:
+                default: istio-cni
                 description: Namespace to which the Istio CNI component should be
                   installed.
                 type: string
@@ -1367,6 +1371,7 @@ spec:
                     type: object
                 type: object
               version:
+                default: v1.21.0
                 description: |-
                   Defines the version of Istio to install.
                   Must be one of: v1.21.0, latest.

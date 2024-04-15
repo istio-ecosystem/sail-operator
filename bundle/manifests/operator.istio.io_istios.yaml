@@ -72,9 +72,15 @@ spec:
           metadata:
             type: object
           spec:
+            default:
+              namespace: istio-system
+              updateStrategy:
+                type: InPlace
+              version: v1.21.0
             description: IstioSpec defines the desired state of Istio
             properties:
               namespace:
+                default: istio-system
                 description: Namespace to which the Istio components should be installed.
                 type: string
               profile:
@@ -95,6 +101,8 @@ spec:
                 - remote
                 type: string
               updateStrategy:
+                default:
+                  type: InPlace
                 description: Defines the update strategy to use when the version in
                   the Istio CR is updated.
                 properties:
@@ -107,6 +115,7 @@ spec:
                     minimum: 30
                     type: integer
                   type:
+                    default: InPlace
                     description: "Type of strategy to use. Can be \"InPlace\" or \"RevisionBased\".
                       When the \"InPlace\" strategy\nis used, the existing Istio control
                       plane is updated in-place. The workloads therefore\ndon't need
@@ -7981,6 +7990,7 @@ spec:
                     type: object
                 type: object
               version:
+                default: v1.21.0
                 description: |-
                   Defines the version of Istio to install.
                   Must be one of: v1.21.0, latest.

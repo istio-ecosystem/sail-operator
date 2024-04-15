@@ -40,10 +40,12 @@ type IstioSpec struct {
 	// Must be one of: v1.21.0, latest.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.21.0", "urn:alm:descriptor:com.tectonic.ui:select:latest"}
 	// +kubebuilder:validation:Enum=v1.21.0;latest
+	// +kubebuilder:default=v1.21.0
 	Version string `json:"version"`
 
 	// Defines the update strategy to use when the version in the Istio CR is updated.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Update Strategy"
+	// +kubebuilder:default={type: "InPlace"}
 	UpdateStrategy *IstioUpdateStrategy `json:"updateStrategy,omitempty"`
 
 	// +sail:profile
@@ -57,6 +59,7 @@ type IstioSpec struct {
 
 	// Namespace to which the Istio components should be installed.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,xDescriptors={"urn:alm:descriptor:io.kubernetes:Namespace"}
+	// +kubebuilder:default=istio-system
 	Namespace string `json:"namespace"`
 
 	// Defines the values to be passed to the Helm charts when installing Istio.
@@ -77,6 +80,7 @@ type IstioUpdateStrategy struct {
 	// The "InPlace" strategy is the default.	TODO: change default to "RevisionBased"
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Type",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:select:InPlace", "urn:alm:descriptor:com.tectonic.ui:select:RevisionBased"}
 	// +kubebuilder:validation:Enum=InPlace;RevisionBased
+	// +kubebuilder:default=InPlace
 	Type UpdateStrategyType `json:"type,omitempty"`
 
 	// Defines how many seconds the operator should wait before removing a non-active revision after all
@@ -249,7 +253,9 @@ type Istio struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   IstioSpec   `json:"spec,omitempty"`
+	// +kubebuilder:default={version: "v1.21.0", namespace: "istio-system", updateStrategy: {type:"InPlace"}}
+	Spec IstioSpec `json:"spec,omitempty"`
+
 	Status IstioStatus `json:"status,omitempty"`
 }
 
