@@ -62,6 +62,15 @@ This project aims to follow the Kubernetes [Operator pattern](https://kubernetes
 It uses [Controllers](https://kubernetes.io/docs/concepts/architecture/controller/),
 which provide a reconcile function responsible for synchronizing resources until the desired state is reached on the cluster.
 
+### Repository Setup
+We're using [gitleaks](https://github.com/gitleaks/gitleaks) to scan the repository for secrets. After cloning, please enable the pre-commit hook by running `make git-hook`. This will make sure that `gitleaks` scans your contributions before you push them to GitHub, avoiding any potential secret leaks.
+
+```sh
+make git-hook
+```
+
+You will also need to sign off your commits to this repository. This can be done by adding the `-s` flag to your `git commit` command. If you want to automate that for this repository, take a look at `.git/hooks/prepare-commit-msg.sample`, it contains an example to do just that.
+
 ### Test It Out
 1. Install the CRDs into the cluster:
 
