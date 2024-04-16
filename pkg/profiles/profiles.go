@@ -26,12 +26,23 @@ import (
 	"istio.io/istio/pkg/util/sets"
 )
 
-func Apply(profilesDir string, profiles []string, userValues helm.Values) (helm.Values, error) {
-	defaultValues, err := getValuesFromProfiles(profilesDir, profiles)
+func Apply(profilesDir string, defaultProfile, userProfile string, userValues helm.Values) (helm.Values, error) {
+	defaultValues, err := getValuesFromProfiles(profilesDir, resolve(defaultProfile, userProfile))
 	if err != nil {
 		return nil, err
 	}
 	return mergeOverwrite(defaultValues, userValues), nil
+}
+
+func resolve(defaultProfile, userProfile string) []string {
+	switch {
+	case userProfile != "" && userProfile != "default":
+		return []string{"default", userProfile}
+	case defaultProfile != "" && defaultProfile != "default":
+		return []string{"default", defaultProfile}
+	default:
+		return []string{"default"}
+	}
 }
 
 func getValuesFromProfiles(profilesDir string, profiles []string) (helm.Values, error) {

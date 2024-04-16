@@ -47,15 +47,15 @@ import (
 // Reconciler reconciles an Istio object
 type Reconciler struct {
 	ResourceDirectory string
-	DefaultProfiles   []string
+	DefaultProfile    string
 	client.Client
 	Scheme *runtime.Scheme
 }
 
-func NewReconciler(client client.Client, scheme *runtime.Scheme, resourceDir string, defaultProfiles []string) *Reconciler {
+func NewReconciler(client client.Client, scheme *runtime.Scheme, resourceDir string, defaultProfile string) *Reconciler {
 	return &Reconciler{
 		ResourceDirectory: resourceDir,
-		DefaultProfiles:   defaultProfiles,
+		DefaultProfile:    defaultProfile,
 		Client:            client,
 		Scheme:            scheme,
 	}
@@ -93,7 +93,7 @@ func (r *Reconciler) doReconcile(ctx context.Context, istio *v1alpha1.Istio) (re
 	}
 
 	var values *v1alpha1.Values
-	if values, err = computeIstioRevisionValues(istio, r.DefaultProfiles, r.ResourceDirectory); err != nil {
+	if values, err = computeIstioRevisionValues(istio, r.DefaultProfile, r.ResourceDirectory); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -266,7 +266,7 @@ func getActiveRevisionName(istio *v1alpha1.Istio) string {
 	}
 }
 
-func computeIstioRevisionValues(istio *v1alpha1.Istio, defaultProfiles []string, resourceDir string) (*v1alpha1.Values, error) {
+func computeIstioRevisionValues(istio *v1alpha1.Istio, defaultProfile string, resourceDir string) (*v1alpha1.Values, error) {
 	// get userValues from Istio.spec.values
 	userValues := istio.Spec.Values
 
@@ -274,7 +274,7 @@ func computeIstioRevisionValues(istio *v1alpha1.Istio, defaultProfiles []string,
 	userValues = applyImageDigests(istio, userValues, config.Config)
 
 	// apply userValues on top of defaultValues from profiles
-	mergedHelmValues, err := profiles.Apply(getProfilesDir(resourceDir, istio), getProfiles(istio, defaultProfiles), helm.FromValues(userValues))
+	mergedHelmValues, err := profiles.Apply(getProfilesDir(resourceDir, istio), defaultProfile, istio.Spec.Profile, helm.FromValues(userValues))
 	if err != nil {
 		return nil, err
 	}
@@ -286,13 +286,6 @@ func computeIstioRevisionValues(istio *v1alpha1.Istio, defaultProfiles []string,
 
 	// override values that are not configurable by the user
 	return applyOverrides(istio, values)
-}
-
-func getProfiles(istio *v1alpha1.Istio, defaultProfiles []string) []string {
-	if istio.Spec.Profile == "" {
-		return defaultProfiles
-	}
-	return append(defaultProfiles, istio.Spec.Profile)
 }
 
 func getProfilesDir(resourceDir string, istio *v1alpha1.Istio) string {
