@@ -42,8 +42,10 @@ import (
 var istiodVersionRegex = regexp.MustCompile(`Version:"(\d+\.\d+(\.\d+|-\w+))`)
 
 var _ = Describe("Control Plane Installation", Ordered, func() {
-	SetDefaultEventuallyTimeout(120 * time.Second)
+	SetDefaultEventuallyTimeout(60 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
+
+	debugInfoLogged := false
 
 	BeforeAll(func(ctx SpecContext) {
 		Expect(kubectl.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
@@ -72,7 +74,7 @@ kind: IstioCNI
 metadata:
   name: default
 ` + spec
-				Expect(kubectl.ApplyString(yaml)).To(Succeed(), "IstioCNI creation failed")
+				Expect(kubectl.CreateFromString(yaml)).To(Succeed(), "IstioCNI creation failed")
 				Success("IstioCNI created")
 
 				cni := &v1alpha1.IstioCNI{}
@@ -81,6 +83,7 @@ metadata:
 				Expect(cni.Spec.Namespace).To(Equal("istio-cni"))
 
 				Expect(cl.Delete(ctx, cni)).To(Succeed())
+				Eventually(cl.Get).WithArguments(ctx, common.Key("default"), cni).Should(ReturnNotFoundError())
 			},
 		)
 
@@ -95,7 +98,7 @@ kind: Istio
 metadata:
   name: default
 ` + spec
-				Expect(kubectl.ApplyString(yaml)).To(Succeed(), "Istio creation failed")
+				Expect(kubectl.CreateFromString(yaml)).To(Succeed(), "Istio creation failed")
 				Success("Istio created")
 
 				istio := &v1alpha1.Istio{}
@@ -106,6 +109,7 @@ metadata:
 				Expect(istio.Spec.UpdateStrategy.Type).To(Equal(v1alpha1.UpdateStrategyTypeInPlace))
 
 				Expect(cl.Delete(ctx, istio)).To(Succeed())
+				Eventually(cl.Get).WithArguments(ctx, common.Key("default"), istio).Should(ReturnNotFoundError())
 			},
 		)
 	})
@@ -122,7 +126,7 @@ metadata:
 				})
 
 				When("the IstioCNI CR is created", func() {
-					BeforeAll(func() {
+					BeforeAll(func(ctx SpecContext) {
 						yaml := `
 apiVersion: operator.istio.io/v1alpha1
 kind: IstioCNI
@@ -135,6 +139,9 @@ spec:
 						Log("IstioCNI YAML:", indent(2, yaml))
 						Expect(kubectl.ApplyString(yaml)).To(Succeed(), "IstioCNI creation failed")
 						Success("IstioCNI created")
+
+						cni := &v1alpha1.IstioCNI{}
+						Expect(cl.Get(ctx, common.Key("default"), cni)).To(Succeed())
 					})
 
 					It("deploys the CNI DaemonSet", func(ctx SpecContext) {
@@ -243,6 +250,7 @@ spec:
 		AfterAll(func(ctx SpecContext) {
 			if CurrentSpecReport().Failed() {
 				common.LogDebugInfo()
+				debugInfoLogged = true
 			}
 
 			By("Cleaning up the Istio namespace")
@@ -259,8 +267,9 @@ spec:
 	})
 
 	AfterAll(func() {
-		if CurrentSpecReport().Failed() {
+		if CurrentSpecReport().Failed() && !debugInfoLogged {
 			common.LogDebugInfo()
+			debugInfoLogged = true
 		}
 
 		By("Deleting operator deployment")

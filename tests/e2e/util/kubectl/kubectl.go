@@ -40,6 +40,16 @@ func kubectl(format string, args ...interface{}) string {
 	return binary + " " + fmt.Sprintf(format, args...)
 }
 
+// CreateFromString creates a resource from the given yaml string
+func CreateFromString(yamlString string) error {
+	cmd := kubectl("create -f -")
+	_, err := shell.ExecuteCommandWithInput(cmd, yamlString)
+	if err != nil {
+		return fmt.Errorf("error creating resource from yaml: %w", err)
+	}
+	return nil
+}
+
 // ApplyString applies the given yaml string to the cluster
 func ApplyString(yamlString string) error {
 	cmd := kubectl("apply --server-side -f -")

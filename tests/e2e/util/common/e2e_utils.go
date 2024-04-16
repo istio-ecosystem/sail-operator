@@ -18,6 +18,7 @@ package common
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	env "github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
@@ -36,6 +37,7 @@ var (
 	deploymentName        = env.Get("DEPLOYMENT_NAME", "sail-operator")
 	controlPlaneNamespace = env.Get("CONTROL_PLANE_NS", "istio-system")
 	istioName             = env.Get("ISTIO_NAME", "default")
+	istioCniName          = env.Get("ISTIOCNI_NAME", "default")
 	istioCniNamespace     = env.Get("ISTIOCNI_NAMESPACE", "istio-cni")
 )
 
@@ -93,61 +95,59 @@ func LogDebugInfo() {
 	// General debugging information to help diagnose the failure
 	// TODO: Add the creation of file with this information to be attached to the test report
 
+	GinkgoWriter.Println()
 	GinkgoWriter.Println("The test run has failures and the debug information is as follows:")
-	// Display Operator information
+	GinkgoWriter.Println("=========================================================")
+	logOperatorDebugInfo()
+	GinkgoWriter.Println("=========================================================")
+	logIstioDebugInfo()
+	GinkgoWriter.Println("=========================================================")
+	logCNIDebugInfo()
+	GinkgoWriter.Println("=========================================================")
+}
+
+func logOperatorDebugInfo() {
 	operator, err := kubectl.GetYAML(namespace, "deployment", deploymentName)
-	if err != nil {
-		GinkgoWriter.Println("Error getting operator deployment yaml: ", err)
-	}
-	GinkgoWriter.Println("Operator deployment: \n", operator)
+	logDebugElement("Operator Deployment YAML", operator, err)
 
 	logs, err := kubectl.Logs(namespace, "deploy/"+deploymentName, ptr.Of(120*time.Second))
-	if err != nil {
-		GinkgoWriter.Println("Error getting logs from the operator: ", err)
-	}
-	GinkgoWriter.Println("Logs from sail-operator pod: \n", logs)
+	logDebugElement("Operator logs", logs, err)
 
 	events, err := kubectl.GetEvents(namespace)
-	if err != nil {
-		GinkgoWriter.Println("Error getting events from sail operator namespace: ", err)
-	}
-	GinkgoWriter.Println("Events from sail operator namespace: \n", events)
+	logDebugElement("Events in "+namespace, events, err)
+}
 
-	// Display Istio CR information
-	resource, err := kubectl.GetYAML(controlPlaneNamespace, "istio", istioName)
-	if err != nil {
-		GinkgoWriter.Println("Error getting Istio CR: ", err)
-	}
-	GinkgoWriter.Println("Istio CR: \n", resource)
+func logIstioDebugInfo() {
+	resource, err := kubectl.GetYAML("", "istio", istioName)
+	logDebugElement("Istio YAML", resource, err)
 
 	output, err := kubectl.GetPods(controlPlaneNamespace, "-o wide")
-	if err != nil {
-		GinkgoWriter.Println("Error getting pods: ", err)
-	}
-	GinkgoWriter.Println("Pods in Istio CR namespace: \n", output)
+	logDebugElement("Pods in "+controlPlaneNamespace, output, err)
 
-	logs, err = kubectl.Logs(controlPlaneNamespace, "deploy/istiod", ptr.Of(120*time.Second))
-	if err != nil {
-		GinkgoWriter.Println("Error getting logs from the istiod: ", err)
-	}
-	GinkgoWriter.Println("Logs from istiod pod: \n", logs)
+	logs, err := kubectl.Logs(controlPlaneNamespace, "deploy/istiod", ptr.Of(120*time.Second))
+	logDebugElement("Istiod logs", logs, err)
 
-	events, err = kubectl.GetEvents(controlPlaneNamespace)
-	if err != nil {
-		GinkgoWriter.Println("Error getting events from Istio CR namespace: ", err)
-	}
-	GinkgoWriter.Println("Events from Istio CR namespace: \n", events)
+	events, err := kubectl.GetEvents(controlPlaneNamespace)
+	logDebugElement("Events in "+controlPlaneNamespace, events, err)
+}
 
-	// Display Istio CNI information.
-	cni, err := kubectl.GetYAML(istioCniNamespace, "daemonset", "istio-cni-node")
-	if err != nil {
-		GinkgoWriter.Println("Error getting Istio CNI daemonset yaml: ", err)
-	}
-	GinkgoWriter.Println("Istio CNI daemonset: \n", cni)
+func logCNIDebugInfo() {
+	resource, err := kubectl.GetYAML("", "istiocni", istioCniName)
+	logDebugElement("IstioCNI YAML", resource, err)
 
-	events, err = kubectl.GetEvents(istioCniNamespace)
+	ds, err := kubectl.GetYAML("istioCniNamespace", "daemonset", "istio-cni-node")
+	logDebugElement("Istio CNI DaemonSet YAML", ds, err)
+
+	events, err := kubectl.GetEvents(istioCniNamespace)
+	logDebugElement("Events in "+istioCniNamespace, events, err)
+}
+
+func logDebugElement(caption string, info string, err error) {
+	GinkgoWriter.Println("\n" + caption + ":")
+	indent := "  "
 	if err != nil {
-		GinkgoWriter.Println("Error getting events from Istio CNI namespace: ", err)
+		GinkgoWriter.Println(indent + err.Error())
+	} else {
+		GinkgoWriter.Println(indent + strings.ReplaceAll(strings.TrimSpace(info), "\n", "\n"+indent))
 	}
-	GinkgoWriter.Println("Events from Istio CNI namespace: \n", events)
 }
