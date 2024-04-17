@@ -1,6 +1,6 @@
 # Sail Operator Integration Test
 
-This integration test suite utilizes Ginkgo, a testing framework known for its expressive specs (reference: https://onsi.github.io/ginkgo/). The test SUites not need a running Kubernetes cluster, as it uses the `envtest` package to create a fake Kubernetes client.
+This integration test suite utilizes Ginkgo, a testing framework known for its expressive specs (reference: https://onsi.github.io/ginkgo/). The test suites do not need a running Kubernetes cluster, as it uses the `envtest` package to create a fake Kubernetes client.
 
 ## Running the tests
 
