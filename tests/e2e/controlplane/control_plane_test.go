@@ -42,8 +42,10 @@ import (
 var istiodVersionRegex = regexp.MustCompile(`Version:"(\d+\.\d+(\.\d+|-\w+))`)
 
 var _ = Describe("Control Plane Installation", Ordered, func() {
-	SetDefaultEventuallyTimeout(120 * time.Second)
+	SetDefaultEventuallyTimeout(60 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
+
+	debugInfoLogged := false
 
 	BeforeAll(func(ctx SpecContext) {
 		Expect(kubectl.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
@@ -243,6 +245,7 @@ spec:
 		AfterAll(func(ctx SpecContext) {
 			if CurrentSpecReport().Failed() {
 				common.LogDebugInfo()
+				debugInfoLogged = true
 			}
 
 			By("Cleaning up the Istio namespace")
@@ -259,8 +262,9 @@ spec:
 	})
 
 	AfterAll(func() {
-		if CurrentSpecReport().Failed() {
+		if CurrentSpecReport().Failed() && !debugInfoLogged {
 			common.LogDebugInfo()
+			debugInfoLogged = true
 		}
 
 		By("Deleting operator deployment")
