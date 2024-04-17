@@ -42,7 +42,33 @@ The `suite_test.go` file is used to run the test suite. It should not contain an
 
 * Keep the test cases small and focused on a single functionality.
 * Use the `BeforeEach` and `AfterEach` hooks to set up and tear down the test environment.
-* Use the `Describe` and `Context` blocks to group related test cases.
+* Use the `Describe` and `Context` blocks to group related test cases. For example, you can group test cases that test the same functionality or the same method.
+```go
+var _ = Describe("resource is created", func() {
+    Context("status changes", func() {
+		When("Resource becomes ready", func() {
+			BeforeAll(func() {
+				// Your test code here
+			})
+
+			It("marks the resource as ready", func() {
+				// Your test code here
+			})
+		})
+
+		When("Resource becomes not ready", func() {
+			BeforeAll(func() {
+				// Your test code here
+			})
+
+			It("marks the resource as not ready", func() {
+				// Your test code here
+			})
+		})
+	})
+})
+``` 
+
 * Use the `It` block to write the test cases.
 * Use the `By` block to provide additional context to the test case.
 * Use the `Expect` block to make assertions.

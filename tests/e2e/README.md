@@ -1,7 +1,7 @@
 # Sail Operator end-to-end test
 
 This end-to-end test suite utilizes Ginkgo, a testing framework known for its expressive specs (reference: https://onsi.github.io/ginkgo/). The setup for the test run is similar to the upstream Istio integration tests:
-* In the case of kind execution, it relies on the upstream script `kind_provisioner.sh` and `integ-suite-kind.sh`, which are copied from the `github.com/istio/common-files` repository to set up the kind cluster used for the test.
+* In the case of kind execution, it relies on the upstream script [`kind_provisioner.sh`](https://github.com/istio-ecosystem/sail-operator/blob/main/common/scripts/kind_provisioner.sh) and [`integ-suite-kind.sh`](https://github.com/istio-ecosystem/sail-operator/blob/main/tests/e2e/integ-suite-kind.sh), which are copied from the `github.com/istio/common-files` repository to set up the kind cluster used for the test.
 * In the case of OCP execution, it relies on the `inter-suite-ocp.sh` and `common-operator-integ-suite` scripts to setup the OCP cluster to be ready for the test.
 
 ## Table of Contents
@@ -25,7 +25,7 @@ case, just typing `make test.e2e.kind` will run all the tests in the `tests/e2e`
 
 This framework is designed to be flexible and extensible. It is easy to add new test suites and new tests. The idea is to be able to simulate what a real user scenario looks like when using the operator.
 
-## Writing Tests
+### Writing Tests
 As was mentioned before, the test suite is based on Ginkgo. The tests are written in a BDD style, which makes them easy to read and write. The test suite is organized in a hierarchical way, with the following structure:
 
 * Describe
@@ -107,10 +107,50 @@ var _ = Describe("Operator", func() {
 ```
 
 ### Best practices
-* Use the `Context` block to group tests that share the same context. This is useful when you need to group tests that share the same context.
+* Use the `Context` block to group tests that share the same context. Example:
+```go
+var _ = Describe("Operator", func() {
+    Context("installation", func() {
+        When("installed via helm install", func() {
+            It("starts successfully", func() {
+                // Test code here
+            })
+            It("deploys all the CRDs", func() {
+                // Test code here
+            })
+        })
+
+        When("installed via olm", func() {
+            It("starts successfully", func() {
+                // Test code here
+            })
+            It("deploys all the CRDs", func() {
+                // Test code here
+            })
+        })
+    })
+})
+``` 
 * Use the `Describe` block to group tests together. Remember that the `Describe` block is the top-level block in the test suite.
-* Use the `When` block to group tests that share the same action. This is useful when you need to group tests that share the same action.
-* Use the `BeforeAll` and `AfterAll` blocks to set up and tear down the test Suite. This is useful when you need to set up the environment before the entire suite.
+* Use the `When` block to group tests that share the same action. For example:
+```go
+var _ = Describe("Operator", func() {
+    Context("installation", func() {
+        When("installed via helm install", func() {
+            It("starts successfully", func() {
+                // Test code here
+            })
+            It("deploys all the CRDs", func() {
+                // Test code here
+            })
+            It("the confirguration is the expected", func() {
+                // Test code here
+            })
+        })
+    })
+})
+```
+* Use the `BeforeAll` and `AfterAll` blocks to set up and tear down the test Suite.
 * Use the `BeforeEach` and `AfterEach` blocks to set up and tear down the test environment. This is useful when you need to set up the environment before each test.
 * Use the `It` block to define the test itself. This is where the test code should be placed.
 * Use the `Specify` block to define the test itself. Remember that `Specify` is an alias for `It` and can be used interchangeably. Use them according to the context of the test.
@@ -118,16 +158,22 @@ var _ = Describe("Operator", func() {
 * Use `Expect` to make direct assertions.
 * Use `Success` helper to print Success message in the test output.
 * Use `kubectl` and `helm` utils to make all the necessary operations in the test that are going to be done by a user. This means that the test should simulate the user behavior when using the operator.
-* Use `client` to interact with the Kubernetes API. This is useful when you need to interact with the Kubernetes API directly and not through `kubectl`. This need to be used to make all the assertions in the test, this means that the test should check the state of the resources in the cluster using the Kubernetes API because are operations that are not going to be done by a user.
+* Use `client` to interact with the Kubernetes API. This is useful when you need to interact with the Kubernetes API directly and not through `kubectl`. This needs to be used to make all the assertions if is possible. We use the client to make the assertions over `kubectl` because it is more reliable and faster, it will not need any complex parsing of the output.
 
 ## Running the test
 The end-to-end test can be run in two different environments: OCP (OpenShift Container Platform) and KinD (Kubernetes in Docker).
 
-## Pre-requisites
+### Pre-requisites
 
 * To perform OCP end-to-end testing, it is essential to have a functional OCP (OpenShift Container Platform) cluster already running. However, when testing against a KinD (Kubernetes in Docker) environment, the KinD cluster will be automatically configured using the provided script.
+* The `kubectl` command-line tool is required to interact with the KinD cluster.
+* The `helm` command-line tool is required to install the operator using Helm. The Helm chart is used to install the operator.
 
-## How to Run the test
+Specifically for OCP:
+* The `oc` command-line tool is required to interact with the OCP cluster.
+* Running on OCP cluster requires to being logged in with the `oc` command-line tool.
+
+### How to Run the test
 
 * To run the end-to-end tests in OCP cluster, use the following command:
 ```
@@ -143,7 +189,7 @@ Both targets will run setup first by using `integ-suite-ocp.sh` and `integ-suite
 
 Note: By default, the test runs inside a container because the env var `BUILD_WITH_CONTAINER` default value is 1. Take into account that to be able to run the end-to-end tests in a container, you need to have `docker` or `podman` installed in your machine. To select the container cli you will also need to set the `CONTAINER_CLI` env var to `docker` or `podman` in the `make` command, the default value is `docker`.
 
-## Running the test locally
+### Running the test locally
 
 To run the end-to-end tests without a container, use the following command:
 
@@ -155,7 +201,7 @@ or
 $ make BUILD_WITH_CONTAINER=0 test.2e2.ocp
 ```
 
-## Settings for end-to-end test execution
+### Settings for end-to-end test execution
 
 The following environment variables define the behavior of the test run:
 
@@ -167,7 +213,7 @@ The following environment variables define the behavior of the test run:
 * CONTROL_PLANE_NS=istio-system - The namespace where the control plane will be deployed.
 * DEPLOYMENT_NAME=sail-operator - The name of the operator deployment.
 
-## Get test definitions for the end-to-end test
+### Get test definitions for the end-to-end test
 
 The end-to-end test suite is defined in the `tests/e2e/operator` directory. If you want to check the test definition without running the test, you can use the following make target:
 
