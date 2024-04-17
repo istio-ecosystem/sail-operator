@@ -42,7 +42,7 @@ import (
 var istiodVersionRegex = regexp.MustCompile(`Version:"(\d+\.\d+(\.\d+|-\w+))`)
 
 var _ = Describe("Control Plane Installation", Ordered, func() {
-	SetDefaultEventuallyTimeout(120 * time.Second)
+	SetDefaultEventuallyTimeout(60 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
 	BeforeAll(func(ctx SpecContext) {
