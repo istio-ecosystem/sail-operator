@@ -74,7 +74,7 @@ kind: IstioCNI
 metadata:
   name: default
 ` + spec
-				Expect(kubectl.ApplyString(yaml)).To(Succeed(), "IstioCNI creation failed")
+				Expect(kubectl.CreateFromString(yaml)).To(Succeed(), "IstioCNI creation failed")
 				Success("IstioCNI created")
 
 				cni := &v1alpha1.IstioCNI{}
@@ -83,6 +83,7 @@ metadata:
 				Expect(cni.Spec.Namespace).To(Equal("istio-cni"))
 
 				Expect(cl.Delete(ctx, cni)).To(Succeed())
+				Eventually(cl.Get).WithArguments(ctx, common.Key("default"), cni).Should(ReturnNotFoundError())
 			},
 		)
 
@@ -97,7 +98,7 @@ kind: Istio
 metadata:
   name: default
 ` + spec
-				Expect(kubectl.ApplyString(yaml)).To(Succeed(), "Istio creation failed")
+				Expect(kubectl.CreateFromString(yaml)).To(Succeed(), "Istio creation failed")
 				Success("Istio created")
 
 				istio := &v1alpha1.Istio{}
@@ -108,6 +109,7 @@ metadata:
 				Expect(istio.Spec.UpdateStrategy.Type).To(Equal(v1alpha1.UpdateStrategyTypeInPlace))
 
 				Expect(cl.Delete(ctx, istio)).To(Succeed())
+				Eventually(cl.Get).WithArguments(ctx, common.Key("default"), istio).Should(ReturnNotFoundError())
 			},
 		)
 	})
@@ -135,7 +137,7 @@ spec:
   namespace: %s`
 						yaml = fmt.Sprintf(yaml, version.Name, istioCniNamespace)
 						Log("IstioCNI YAML:", indent(2, yaml))
-						Expect(kubectl.ApplyString(yaml)).To(Succeed(), "IstioCNI creation failed")
+						Expect(kubectl.CreateFromString(yaml)).To(Succeed(), "IstioCNI creation failed")
 						Success("IstioCNI created")
 					})
 
@@ -180,7 +182,7 @@ spec:
   namespace: %s`
 						istioYAML = fmt.Sprintf(istioYAML, version.Name, controlPlaneNamespace)
 						Log("Istio YAML:", indent(2, istioYAML))
-						Expect(kubectl.ApplyString(istioYAML)).
+						Expect(kubectl.CreateFromString(istioYAML)).
 							To(Succeed(), "Istio CR failed to be created")
 						Success("Istio CR created")
 					})
