@@ -171,7 +171,6 @@ test.e2e.kind: ## Deploy a KinD cluster and run the end-to-end tests against it.
 .PHONY: test.e2e.describe
 test.e2e.describe: ## Runs ginkgo outline -format indent over the e2e test to show in BDD style the steps and test structure
 	GINKGO_FLAGS="$(GINKGO_FLAGS)" ${SOURCE_DIR}/tests/e2e/common-operator-integ-suite.sh --describe
-
 ##@ Build
 
 .PHONY: build
@@ -395,6 +394,7 @@ OPERATOR_SDK ?= $(LOCALBIN)/operator-sdk
 HELM ?= $(LOCALBIN)/helm
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
+GITLEAKS ?= $(LOCALBIN)/gitleaks
 OPM ?= $(LOCALBIN)/opm
 
 ## Tool Versions
@@ -402,6 +402,7 @@ OPERATOR_SDK_VERSION ?= v1.34.1
 HELM_VERSION ?= v3.14.4
 CONTROLLER_TOOLS_VERSION ?= v0.14.0
 OPM_VERSION ?= v1.39.0
+GITLEAKS_VERSION ?= v8.18.2
 
 .PHONY: helm $(HELM)
 helm: $(HELM) ## Download helm to bin directory. If wrong version is installed, it will be overwritten.
@@ -434,6 +435,11 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 envtest: $(ENVTEST) ## Download envtest-setup to bin directory.
 $(ENVTEST): $(LOCALBIN)
 	@test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+.PHONY: gitleaks
+gitleaks: $(GITLEAKS) ## Download gitleaks to bin directory.
+$(GITLEAKS): $(LOCALBIN)
+	@test -s $(LOCALBIN)/gitleaks || GOBIN=$(LOCALBIN) go install github.com/zricethezav/gitleaks/v8@${GITLEAKS_VERSION}
 
 .PHONY: bundle
 bundle: gen helm operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
@@ -536,11 +542,21 @@ lint-bundle: operator-sdk ## Run linters against OLM metadata bundle.
 lint-watches: ## Checks if the operator watches all resource kinds present in Helm charts.
 	@hack/lint-watches.sh
 
+lint-secrets: gitleaks ## Checks whether any secrets are present in the repository.
+	@${GITLEAKS} detect --redact -v
+
 .PHONY: lint
-lint: lint-scripts lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle lint-watches ## Run all linters.
+lint: lint-scripts lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle lint-watches lint-secrets ## Run all linters.
 
 .PHONY: format
 format: format-go tidy-go ## Auto-format all code. This should be run before sending a PR.
+
+git-hook: gitleaks ## Installs gitleaks as a git pre-commit hook.
+	@if ! test -x .git/hooks/pre-commit || ! grep -q "gitleaks" .git/hooks/pre-commit ; then \
+		echo "Adding gitleaks to pre-commit hook"; \
+		echo "bin/gitleaks protect --staged -v" >> .git/hooks/pre-commit; \
+		chmod +x .git/hooks/pre-commit; \
+	fi
 
 .SILENT: helm $(HELM) $(LOCALBIN) deploy-yaml gen-api operator-name
 
