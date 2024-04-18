@@ -86,10 +86,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, istio *v1alpha1.Istio) (ctrl
 // function should get reported in the status of the Istio object by the caller.
 func (r *Reconciler) doReconcile(ctx context.Context, istio *v1alpha1.Istio) (result ctrl.Result, err error) {
 	if istio.Spec.Version == "" {
-		return ctrl.Result{}, fmt.Errorf("no spec.version set")
+		return ctrl.Result{}, reconciler.NewValidationError("no spec.version set")
 	}
 	if istio.Spec.Namespace == "" {
-		return ctrl.Result{}, fmt.Errorf("no spec.namespace set")
+		return ctrl.Result{}, reconciler.NewValidationError("no spec.namespace set")
 	}
 
 	var values *v1alpha1.Values
