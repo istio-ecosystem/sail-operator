@@ -302,12 +302,12 @@ deploy-example: deploy-example-openshift ## Deploy an example Istio resource to 
 .PHONY: deploy-example-openshift
 deploy-example-openshift: ## Deploy an example Istio resource to an existing OCP cluster.
 	kubectl create ns istio-system || echo "namespace istio-system already exists"
-	kubectl apply -n istio-system -f chart/samples/istio-sample-openshift.yaml
+	kubectl apply -f chart/samples/istio-sample-openshift.yaml
 
 .PHONY: deploy-example-kubernetes
 deploy-example-kubernetes: ## Deploy an example Istio resource on an existing cluster.
 	kubectl create ns istio-system || echo "namespace istio-system already exists"
-	kubectl apply -n istio-system -f chart/samples/istio-sample-kubernetes.yaml
+	kubectl apply -f chart/samples/istio-sample-kubernetes.yaml
 
 ##@ Generated Code & Resources
 
