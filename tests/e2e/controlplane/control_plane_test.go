@@ -274,6 +274,10 @@ spec:
 			To(Succeed(), "Operator failed to be deleted")
 		GinkgoWriter.Println("Operator uninstalled")
 
+		if ocp {
+			Success("Skipping deletion of operator namespace to avoid removal of operator container image from internal registry")
+			return
+		}
 		Expect(kubectl.DeleteNamespace(namespace)).To(Succeed(), "Namespace failed to be deleted")
 		Success("Namespace deleted")
 	})
