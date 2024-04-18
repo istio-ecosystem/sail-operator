@@ -170,6 +170,7 @@ const (
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.state",description="The current state of this object."
 // +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".spec.version",description="The version of the Istio CNI installation."
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",description="The age of the object"
+// +kubebuilder:validation:XValidation:rule="self.metadata.name == 'default'",message="metadata.name must be 'default'"
 
 // IstioCNI represents a deployment of the Istio CNI component.
 type IstioCNI struct {
