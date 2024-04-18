@@ -135,7 +135,7 @@ func logCNIDebugInfo() {
 	resource, err := kubectl.GetYAML("", "istiocni", istioCniName)
 	logDebugElement("IstioCNI YAML", resource, err)
 
-	ds, err := kubectl.GetYAML("istioCniNamespace", "daemonset", "istio-cni-node")
+	ds, err := kubectl.GetYAML(istioCniNamespace, "daemonset", "istio-cni-node")
 	logDebugElement("Istio CNI DaemonSet YAML", ds, err)
 
 	events, err := kubectl.GetEvents(istioCniNamespace)
