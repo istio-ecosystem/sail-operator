@@ -172,7 +172,7 @@ func (t *FileTransformer) processFile() (*ast.File, error) {
 	// Parse the Go source file
 	file, err := parser.ParseFile(t.FileSet, t.InputFile, nil, parser.ParseComments)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing file: %v", err)
+		return nil, fmt.Errorf("error parsing file: %w", err)
 	}
 
 	t.renamePackage(file)

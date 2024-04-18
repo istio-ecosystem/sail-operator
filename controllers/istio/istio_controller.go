@@ -47,15 +47,15 @@ import (
 // Reconciler reconciles an Istio object
 type Reconciler struct {
 	ResourceDirectory string
-	DefaultProfiles   []string
+	DefaultProfile    string
 	client.Client
 	Scheme *runtime.Scheme
 }
 
-func NewReconciler(client client.Client, scheme *runtime.Scheme, resourceDir string, defaultProfiles []string) *Reconciler {
+func NewReconciler(client client.Client, scheme *runtime.Scheme, resourceDir string, defaultProfile string) *Reconciler {
 	return &Reconciler{
 		ResourceDirectory: resourceDir,
-		DefaultProfiles:   defaultProfiles,
+		DefaultProfile:    defaultProfile,
 		Client:            client,
 		Scheme:            scheme,
 	}
@@ -86,26 +86,25 @@ func (r *Reconciler) Reconcile(ctx context.Context, istio *v1alpha1.Istio) (ctrl
 // function should get reported in the status of the Istio object by the caller.
 func (r *Reconciler) doReconcile(ctx context.Context, istio *v1alpha1.Istio) (result ctrl.Result, err error) {
 	if istio.Spec.Version == "" {
-		return ctrl.Result{}, fmt.Errorf("no spec.version set")
+		return ctrl.Result{}, reconciler.NewValidationError("no spec.version set")
 	}
 	if istio.Spec.Namespace == "" {
-		return ctrl.Result{}, fmt.Errorf("no spec.namespace set")
+		return ctrl.Result{}, reconciler.NewValidationError("no spec.namespace set")
 	}
 
 	var values *v1alpha1.Values
-	if values, err = computeIstioRevisionValues(istio, r.DefaultProfiles, r.ResourceDirectory); err != nil {
+	if values, err = computeIstioRevisionValues(istio, r.DefaultProfile, r.ResourceDirectory); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	var res ctrl.Result
-	if res, err = r.reconcileActiveRevision(ctx, istio, values); err != nil || shouldRequeue(res) {
-		return res, err
+	if err = r.reconcileActiveRevision(ctx, istio, values); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	return r.pruneInactiveRevisions(ctx, istio)
 }
 
-func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1alpha1.Istio, values *v1alpha1.Values) (ctrl.Result, error) {
+func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1alpha1.Istio, values *v1alpha1.Values) error {
 	log := logf.FromContext(ctx)
 
 	activeRevisionName := getActiveRevisionName(istio)
@@ -117,10 +116,7 @@ func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1alpha
 		rev.Spec.Version = istio.Spec.Version
 		rev.Spec.Values = values
 		log.Info("Updating IstioRevision")
-		if err = r.Client.Update(ctx, &rev); apierrors.IsConflict(err) {
-			log.Info("IstioRevision update failed. Requeuing reconciliation")
-			return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
-		}
+		err = r.Client.Update(ctx, &rev)
 	} else if apierrors.IsNotFound(err) {
 		// create new
 		rev = v1alpha1.IstioRevision{
@@ -144,12 +140,9 @@ func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1alpha
 			},
 		}
 		log.Info("Creating IstioRevision")
-		if err = r.Client.Create(ctx, &rev); apierrors.IsForbidden(err) && strings.Contains(err.Error(), "RESTMapping") {
-			log.Info("APIServer seems to be not ready - RESTMapper of gc admission plugin is not up to date. Trying again in 5 seconds", "error", err)
-			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
-		}
+		err = r.Client.Create(ctx, &rev)
 	}
-	return ctrl.Result{}, err
+	return err
 }
 
 func (r *Reconciler) pruneInactiveRevisions(ctx context.Context, istio *v1alpha1.Istio) (ctrl.Result, error) {
@@ -273,7 +266,7 @@ func getActiveRevisionName(istio *v1alpha1.Istio) string {
 	}
 }
 
-func computeIstioRevisionValues(istio *v1alpha1.Istio, defaultProfiles []string, resourceDir string) (*v1alpha1.Values, error) {
+func computeIstioRevisionValues(istio *v1alpha1.Istio, defaultProfile string, resourceDir string) (*v1alpha1.Values, error) {
 	// get userValues from Istio.spec.values
 	userValues := istio.Spec.Values
 
@@ -281,7 +274,7 @@ func computeIstioRevisionValues(istio *v1alpha1.Istio, defaultProfiles []string,
 	userValues = applyImageDigests(istio, userValues, config.Config)
 
 	// apply userValues on top of defaultValues from profiles
-	mergedHelmValues, err := profiles.Apply(getProfilesDir(resourceDir, istio), getProfiles(istio, defaultProfiles), helm.FromValues(userValues))
+	mergedHelmValues, err := profiles.Apply(getProfilesDir(resourceDir, istio), defaultProfile, istio.Spec.Profile, helm.FromValues(userValues))
 	if err != nil {
 		return nil, err
 	}
@@ -292,21 +285,15 @@ func computeIstioRevisionValues(istio *v1alpha1.Istio, defaultProfiles []string,
 	}
 
 	// override values that are not configurable by the user
-	return applyOverrides(istio, values)
-}
-
-func getProfiles(istio *v1alpha1.Istio, defaultProfiles []string) []string {
-	if istio.Spec.Profile == "" {
-		return defaultProfiles
-	}
-	return append(defaultProfiles, istio.Spec.Profile)
+	applyOverrides(istio, values)
+	return values, nil
 }
 
 func getProfilesDir(resourceDir string, istio *v1alpha1.Istio) string {
 	return path.Join(resourceDir, istio.Spec.Version, "profiles")
 }
 
-func applyOverrides(istio *v1alpha1.Istio, values *v1alpha1.Values) (*v1alpha1.Values, error) {
+func applyOverrides(istio *v1alpha1.Istio, values *v1alpha1.Values) {
 	revisionName := getActiveRevisionName(istio)
 
 	// Set revision name to "" if revision name is "default". This is a temporary fix until we fix the injection
@@ -322,7 +309,6 @@ func applyOverrides(istio *v1alpha1.Istio, values *v1alpha1.Values) (*v1alpha1.V
 		values.Global = &v1alpha1.GlobalConfig{}
 	}
 	values.Global.IstioNamespace = istio.Spec.Namespace
-	return values, nil
 }
 
 func applyImageDigests(istio *v1alpha1.Istio, values *v1alpha1.Values, config config.OperatorConfig) *v1alpha1.Values {
@@ -509,8 +495,4 @@ func convertConditionReason(reason v1alpha1.IstioRevisionConditionReason) v1alph
 	default:
 		panic(fmt.Sprintf("can't convert IstioRevisionConditionReason: %s", reason))
 	}
-}
-
-func shouldRequeue(result ctrl.Result) bool {
-	return result.Requeue || result.RequeueAfter > 0
 }

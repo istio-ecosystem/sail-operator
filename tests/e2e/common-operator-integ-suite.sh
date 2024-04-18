@@ -59,7 +59,11 @@ parse_flags() {
 
   if [ "${DESCRIBE}" == "true" ]; then
     WD=$(dirname "$0")
-    go run github.com/onsi/ginkgo/v2/ginkgo outline -format indent "${WD}"/operator/operator_test.go 
+    while IFS= read -r -d '' file; do
+      if [[ $file == *"_test.go" ]]; then
+        go run github.com/onsi/ginkgo/v2/ginkgo outline -format indent "${file}"
+      fi
+    done < <(find "${WD}" -type f -name "*_test.go" -print0)
     exit 0
   fi
 
@@ -202,4 +206,4 @@ fi
 IMAGE="${HUB}/${IMAGE_BASE}:${TAG}" SKIP_DEPLOY="${SKIP_DEPLOY}" OCP="${OCP}" ISTIO_MANIFEST="${ISTIO_MANIFEST}" \
 NAMESPACE="${NAMESPACE}" CONTROL_PLANE_NS="${CONTROL_PLANE_NS}" DEPLOYMENT_NAME="${DEPLOYMENT_NAME}" \
 ISTIO_NAME="${ISTIO_NAME}" COMMAND="${COMMAND}" VERSIONS_YAML_FILE="${VERSIONS_YAML_FILE}" KUBECONFIG="${KUBECONFIG}" \
-go run github.com/onsi/ginkgo/v2/ginkgo -tags e2e --timeout 30m --junit-report=report.xml ${GINKGO_FLAGS} "${WD}"/operator/...
+go run github.com/onsi/ginkgo/v2/ginkgo -tags e2e --timeout 30m --junit-report=report.xml ${GINKGO_FLAGS} "${WD}"/...

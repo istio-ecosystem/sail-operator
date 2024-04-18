@@ -32,7 +32,7 @@ import (
 
 var _ = Describe("IstioCNI", Ordered, func() {
 	const (
-		cniName      = "cni-test"
+		cniName      = "default"
 		cniNamespace = "istiocni-test"
 	)
 
@@ -62,111 +62,128 @@ var _ = Describe("IstioCNI", Ordered, func() {
 		Expect(k8sClient.Delete(ctx, namespace)).To(Succeed())
 	})
 
-	When("the resource is created", func() {
-		BeforeAll(func() {
+	Describe("validation", func() {
+		It("only accepts IstioCNI with the name 'default'", func() {
 			cni = &v1alpha1.IstioCNI{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: cniName,
+					Name: "not-default",
 				},
 				Spec: v1alpha1.IstioCNISpec{
 					Version:   supportedversion.Default,
 					Namespace: cniNamespace,
 				},
 			}
-			Expect(k8sClient.Create(ctx, cni)).To(Succeed())
-		})
-
-		It("creates the istio-cni-node DaemonSet", func() {
-			Eventually(k8sClient.Get).WithArguments(ctx, daemonsetKey, ds).Should(Succeed())
-			Expect(ds.ObjectMeta.OwnerReferences).To(ContainElement(NewOwnerReference(cni)))
-		})
-
-		It("updates the status of the IstioCNI resource", func() {
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, cniKey, cni)).To(Succeed())
-				g.Expect(cni.Status.ObservedGeneration).To(Equal(cni.ObjectMeta.Generation))
-			}).Should(Succeed())
+			Expect(k8sClient.Create(ctx, cni)).To(Not(Succeed()))
 		})
 	})
 
-	Context("status changes", func() {
-		When("DaemonSet becomes ready", func() {
+	Describe("basic operation", func() {
+		When("the resource is created", func() {
 			BeforeAll(func() {
-				Expect(k8sClient.Get(ctx, daemonsetKey, ds)).To(Succeed())
-				ds.Status.CurrentNumberScheduled = 3
-				ds.Status.NumberReady = 3
-				Expect(k8sClient.Status().Update(ctx, ds)).To(Succeed())
+				cni = &v1alpha1.IstioCNI{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: cniName,
+					},
+					Spec: v1alpha1.IstioCNISpec{
+						Version:   supportedversion.Default,
+						Namespace: cniNamespace,
+					},
+				}
+				Expect(k8sClient.Create(ctx, cni)).To(Succeed())
 			})
 
-			It("marks the IstioCNI resource as ready", func() {
-				Eventually(func(g Gomega) {
-					g.Expect(k8sClient.Get(ctx, cniKey, cni)).To(Succeed())
-					readyCondition := cni.Status.GetCondition(v1alpha1.IstioCNIConditionReady)
-					g.Expect(readyCondition.Status).To(Equal(metav1.ConditionTrue))
-				}).Should(Succeed())
-			})
-		})
-
-		When("DaemonSet becomes not ready", func() {
-			BeforeAll(func() {
-				Expect(k8sClient.Get(ctx, daemonsetKey, ds)).To(Succeed())
-				ds.Status.CurrentNumberScheduled = 3
-				ds.Status.NumberReady = 2
-				Expect(k8sClient.Status().Update(ctx, ds)).To(Succeed())
-			})
-
-			It("marks the IstioCNI resource as not ready", func() {
-				Eventually(func(g Gomega) {
-					g.Expect(k8sClient.Get(ctx, cniKey, cni)).To(Succeed())
-					readyCondition := cni.Status.GetCondition(v1alpha1.IstioCNIConditionReady)
-					g.Expect(readyCondition.Status).To(Equal(metav1.ConditionFalse))
-				}).Should(Succeed())
-			})
-		})
-	})
-
-	Context("changes to owned resources", func() {
-		When("DaemonSet is deleted", func() {
-			BeforeAll(func() {
-				Expect(k8sClient.Delete(ctx, ds)).To(Succeed())
-			})
-
-			It("recreates the DaemonSet", func() {
+			It("creates the istio-cni-node DaemonSet", func() {
 				Eventually(k8sClient.Get).WithArguments(ctx, daemonsetKey, ds).Should(Succeed())
 				Expect(ds.ObjectMeta.OwnerReferences).To(ContainElement(NewOwnerReference(cni)))
 			})
-		})
 
-		When("DaemonSet is modified", func() {
-			var originalImage string
-
-			BeforeAll(func() {
-				Expect(k8sClient.Get(ctx, daemonsetKey, ds)).To(Succeed())
-				originalImage = ds.Spec.Template.Spec.Containers[0].Image
-
-				ds.Spec.Template.Spec.Containers[0].Image = "user-supplied-image"
-				Expect(k8sClient.Update(ctx, ds)).To(Succeed())
-			})
-
-			It("reverts the changes", func() {
+			It("updates the status of the IstioCNI resource", func() {
 				Eventually(func(g Gomega) {
-					g.Expect(k8sClient.Get(ctx, daemonsetKey, ds)).To(Succeed())
-					g.Expect(ds.Spec.Template.Spec.Containers[0].Image).To(Equal(originalImage))
+					g.Expect(k8sClient.Get(ctx, cniKey, cni)).To(Succeed())
+					g.Expect(cni.Status.ObservedGeneration).To(Equal(cni.ObjectMeta.Generation))
 				}).Should(Succeed())
 			})
 		})
-	})
 
-	When("the resource is deleted", func() {
-		BeforeAll(func() {
-			Expect(k8sClient.DeleteAllOf(ctx, &v1alpha1.IstioCNI{})).To(Succeed())
+		Context("status changes", func() {
+			When("DaemonSet becomes ready", func() {
+				BeforeAll(func() {
+					Expect(k8sClient.Get(ctx, daemonsetKey, ds)).To(Succeed())
+					ds.Status.CurrentNumberScheduled = 3
+					ds.Status.NumberReady = 3
+					Expect(k8sClient.Status().Update(ctx, ds)).To(Succeed())
+				})
+
+				It("marks the IstioCNI resource as ready", func() {
+					Eventually(func(g Gomega) {
+						g.Expect(k8sClient.Get(ctx, cniKey, cni)).To(Succeed())
+						readyCondition := cni.Status.GetCondition(v1alpha1.IstioCNIConditionReady)
+						g.Expect(readyCondition.Status).To(Equal(metav1.ConditionTrue))
+					}).Should(Succeed())
+				})
+			})
+
+			When("DaemonSet becomes not ready", func() {
+				BeforeAll(func() {
+					Expect(k8sClient.Get(ctx, daemonsetKey, ds)).To(Succeed())
+					ds.Status.CurrentNumberScheduled = 3
+					ds.Status.NumberReady = 2
+					Expect(k8sClient.Status().Update(ctx, ds)).To(Succeed())
+				})
+
+				It("marks the IstioCNI resource as not ready", func() {
+					Eventually(func(g Gomega) {
+						g.Expect(k8sClient.Get(ctx, cniKey, cni)).To(Succeed())
+						readyCondition := cni.Status.GetCondition(v1alpha1.IstioCNIConditionReady)
+						g.Expect(readyCondition.Status).To(Equal(metav1.ConditionFalse))
+					}).Should(Succeed())
+				})
+			})
 		})
 
-		It("deletes the istio-cni-node DaemonSet", func() {
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.List(ctx, cniList)).To(Succeed())
-				g.Expect(cniList.Items).To(BeEmpty())
-			}).Should(Succeed())
+		Context("changes to owned resources", func() {
+			When("DaemonSet is deleted", func() {
+				BeforeAll(func() {
+					Expect(k8sClient.Delete(ctx, ds)).To(Succeed())
+				})
+
+				It("recreates the DaemonSet", func() {
+					Eventually(k8sClient.Get).WithArguments(ctx, daemonsetKey, ds).Should(Succeed())
+					Expect(ds.ObjectMeta.OwnerReferences).To(ContainElement(NewOwnerReference(cni)))
+				})
+			})
+
+			When("DaemonSet is modified", func() {
+				var originalImage string
+
+				BeforeAll(func() {
+					Expect(k8sClient.Get(ctx, daemonsetKey, ds)).To(Succeed())
+					originalImage = ds.Spec.Template.Spec.Containers[0].Image
+
+					ds.Spec.Template.Spec.Containers[0].Image = "user-supplied-image"
+					Expect(k8sClient.Update(ctx, ds)).To(Succeed())
+				})
+
+				It("reverts the changes", func() {
+					Eventually(func(g Gomega) {
+						g.Expect(k8sClient.Get(ctx, daemonsetKey, ds)).To(Succeed())
+						g.Expect(ds.Spec.Template.Spec.Containers[0].Image).To(Equal(originalImage))
+					}).Should(Succeed())
+				})
+			})
+		})
+
+		When("the resource is deleted", func() {
+			BeforeAll(func() {
+				Expect(k8sClient.DeleteAllOf(ctx, &v1alpha1.IstioCNI{})).To(Succeed())
+			})
+
+			It("deletes the istio-cni-node DaemonSet", func() {
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.List(ctx, cniList)).To(Succeed())
+					g.Expect(cniList.Items).To(BeEmpty())
+				}).Should(Succeed())
+			})
 		})
 	})
 })

@@ -16,9 +16,9 @@ package kube
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	pkgerrors "github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -53,7 +53,7 @@ func RemoveFinalizer(ctx context.Context, cl client.Client, obj client.Object, f
 		log.Info("Conflict while removing finalizer; will retry")
 		return ctrl.Result{RequeueAfter: conflictRequeueDelay}, nil
 	} else if err != nil {
-		return ctrl.Result{}, pkgerrors.Wrapf(err, "could not remove finalizer from %s/%s", obj.GetNamespace(), obj.GetName())
+		return ctrl.Result{}, fmt.Errorf("could not remove finalizer from %s/%s: %w", obj.GetNamespace(), obj.GetName(), err)
 	}
 
 	log.Info("Removed finalizer")
@@ -75,7 +75,7 @@ func AddFinalizer(ctx context.Context, cl client.Client, obj client.Object, fina
 		log.Info("Conflict while adding finalizer; will retry")
 		return ctrl.Result{RequeueAfter: conflictRequeueDelay}, nil
 	} else if err != nil {
-		return ctrl.Result{}, pkgerrors.Wrapf(err, "could not add finalizer to %s/%s", obj.GetNamespace(), obj.GetName())
+		return ctrl.Result{}, fmt.Errorf("could not add finalizer to %s/%s: %w", obj.GetNamespace(), obj.GetName(), err)
 	}
 
 	log.Info("Added finalizer")

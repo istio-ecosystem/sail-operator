@@ -56,9 +56,13 @@ spec:
           metadata:
             type: object
           spec:
+            default:
+              namespace: istio-cni
+              version: v1.21.0
             description: IstioCNISpec defines the desired state of IstioCNI
             properties:
               namespace:
+                default: istio-cni
                 description: Namespace to which the Istio CNI component should be
                   installed.
                 type: string
@@ -1367,12 +1371,12 @@ spec:
                     type: object
                 type: object
               version:
+                default: v1.21.0
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.21.0, v1.20.3, latest.
+                  Must be one of: v1.21.0, latest.
                 enum:
                 - v1.21.0
-                - v1.20.3
                 - latest
                 type: string
             required:
@@ -1424,6 +1428,9 @@ spec:
                 type: string
             type: object
         type: object
+        x-kubernetes-validations:
+        - message: metadata.name must be 'default'
+          rule: self.metadata.name == 'default'
     served: true
     storage: true
     subresources:

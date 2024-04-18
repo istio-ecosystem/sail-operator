@@ -51,18 +51,18 @@ const cniReleaseName = "istio-cni"
 // Reconciler reconciles an IstioCNI object
 type Reconciler struct {
 	ResourceDirectory string
-	DefaultProfiles   []string
+	DefaultProfile    string
 	client.Client
 	Scheme       *runtime.Scheme
 	ChartManager *helm.ChartManager
 }
 
 func NewReconciler(
-	client client.Client, scheme *runtime.Scheme, resourceDir string, chartManager *helm.ChartManager, defaultProfiles []string,
+	client client.Client, scheme *runtime.Scheme, resourceDir string, chartManager *helm.ChartManager, defaultProfile string,
 ) *Reconciler {
 	return &Reconciler{
 		ResourceDirectory: resourceDir,
-		DefaultProfiles:   defaultProfiles,
+		DefaultProfile:    defaultProfile,
 		Client:            client,
 		Scheme:            scheme,
 		ChartManager:      chartManager,
@@ -111,10 +111,10 @@ func (r *Reconciler) Finalize(ctx context.Context, cni *v1alpha1.IstioCNI) error
 
 func validateIstioCNI(cni *v1alpha1.IstioCNI) error {
 	if cni.Spec.Version == "" {
-		return fmt.Errorf("spec.version not set")
+		return reconciler.NewValidationError("spec.version not set")
 	}
 	if cni.Spec.Namespace == "" {
-		return fmt.Errorf("spec.namespace not set")
+		return reconciler.NewValidationError("spec.namespace not set")
 	}
 	return nil
 }
@@ -136,7 +136,7 @@ func (r *Reconciler) installHelmChart(ctx context.Context, cni *v1alpha1.IstioCN
 	userValues = applyImageDigests(cni, userValues, config.Config)
 
 	// apply userValues on top of defaultValues from profiles
-	mergedHelmValues, err := profiles.Apply(getProfilesDir(r.ResourceDirectory, cni), getProfiles(cni, r.DefaultProfiles), helm.FromValues(userValues))
+	mergedHelmValues, err := profiles.Apply(getProfilesDir(r.ResourceDirectory, cni), r.DefaultProfile, cni.Spec.Profile, helm.FromValues(userValues))
 	if err != nil {
 		return err
 	}
@@ -147,13 +147,6 @@ func (r *Reconciler) installHelmChart(ctx context.Context, cni *v1alpha1.IstioCN
 
 func (r *Reconciler) getChartDir(cni *v1alpha1.IstioCNI) string {
 	return path.Join(r.ResourceDirectory, cni.Spec.Version, "charts", "cni")
-}
-
-func getProfiles(cni *v1alpha1.IstioCNI, defaultProfiles []string) []string {
-	if cni.Spec.Profile == "" {
-		return defaultProfiles
-	}
-	return append(defaultProfiles, cni.Spec.Profile)
 }
 
 func getProfilesDir(resourceDir string, cni *v1alpha1.IstioCNI) string {

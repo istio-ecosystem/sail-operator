@@ -64,7 +64,7 @@ func TestReconcile(t *testing.T) {
 		cl := newFakeClientBuilder().
 			WithObjects(istio).
 			Build()
-		reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, nil)
+		reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, "")
 
 		_, err := reconciler.Reconcile(ctx, istio)
 		if err == nil {
@@ -100,7 +100,7 @@ func TestReconcile(t *testing.T) {
 			WithStatusSubresource(&v1alpha1.Istio{}).
 			WithObjects(istio).
 			Build()
-		reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, []string{"invalid-profile"})
+		reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, "invalid-profile")
 
 		_, err := reconciler.Reconcile(ctx, istio)
 		if err == nil {
@@ -140,7 +140,7 @@ func TestReconcile(t *testing.T) {
 				},
 			}).
 			Build()
-		reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, nil)
+		reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, "")
 
 		_, err := reconciler.Reconcile(ctx, istio)
 		if err == nil {
@@ -472,7 +472,7 @@ func TestDetermineStatus(t *testing.T) {
 				WithObjects(initObjs...).
 				WithInterceptorFuncs(interceptorFuncs).
 				Build()
-			reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, nil)
+			reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, "")
 
 			status, err := reconciler.determineStatus(ctx, istio, tc.reconciliationErr)
 			if (err != nil) != tc.wantErr {
@@ -670,7 +670,7 @@ func TestUpdateStatus(t *testing.T) {
 				WithObjects(initObjs...).
 				WithInterceptorFuncs(interceptorFuncs).
 				Build()
-			reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, nil)
+			reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, "")
 
 			err := reconciler.updateStatus(ctx, istio, tc.reconciliationErr)
 			if (err != nil) != tc.wantErr {
@@ -797,9 +797,9 @@ func TestReconcileActiveRevision(t *testing.T) {
 					}
 
 					cl := newFakeClientBuilder().WithObjects(initObjs...).Build()
-					reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, nil)
+					reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, "")
 
-					_, err := reconciler.reconcileActiveRevision(ctx, istio, &tc.istioValues)
+					err := reconciler.reconcileActiveRevision(ctx, istio, &tc.istioValues)
 					if err != nil {
 						t.Errorf("Expected no error, but got: %v", err)
 					}
@@ -1009,7 +1009,7 @@ func TestPruneInactiveRevisions(t *testing.T) {
 			}
 
 			cl := newFakeClientBuilder().WithObjects(initObjs...).Build()
-			reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, nil)
+			reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, "")
 
 			result, err := reconciler.pruneInactiveRevisions(ctx, istio)
 			if err != nil {
@@ -1202,7 +1202,7 @@ spec:
 		},
 	}
 
-	result, err := computeIstioRevisionValues(istio, []string{"default"}, resourceDir)
+	result, err := computeIstioRevisionValues(istio, "default", resourceDir)
 	if err != nil {
 		t.Errorf("Expected no error, but got an error: %v", err)
 	}

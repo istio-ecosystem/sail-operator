@@ -119,23 +119,23 @@ func (r *Reconciler) Finalize(ctx context.Context, rev *v1alpha1.IstioRevision) 
 
 func validateIstioRevision(rev *v1alpha1.IstioRevision) error {
 	if rev.Spec.Version == "" {
-		return fmt.Errorf("spec.version not set")
+		return reconciler.NewValidationError("spec.version not set")
 	}
 	if rev.Spec.Namespace == "" {
-		return fmt.Errorf("spec.namespace not set")
+		return reconciler.NewValidationError("spec.namespace not set")
 	}
 	if rev.Spec.Values == nil {
-		return fmt.Errorf("spec.values not set")
+		return reconciler.NewValidationError("spec.values not set")
 	}
 
 	if rev.Name == v1alpha1.DefaultRevision && rev.Spec.Values.Revision != "" {
-		return fmt.Errorf("spec.values.revision must be \"\" when IstioRevision name is %s", v1alpha1.DefaultRevision)
+		return reconciler.NewValidationError(fmt.Sprintf("spec.values.revision must be \"\" when IstioRevision name is %s", v1alpha1.DefaultRevision))
 	} else if rev.Name != v1alpha1.DefaultRevision && rev.Spec.Values.Revision != rev.Name {
-		return fmt.Errorf("spec.values.revision does not match IstioRevision name")
+		return reconciler.NewValidationError("spec.values.revision does not match IstioRevision name")
 	}
 
 	if rev.Spec.Values.Global == nil || rev.Spec.Values.Global.IstioNamespace != rev.Spec.Namespace {
-		return fmt.Errorf("spec.values.global.istioNamespace does not match spec.namespace")
+		return reconciler.NewValidationError("spec.values.global.istioNamespace does not match spec.namespace")
 	}
 	return nil
 }

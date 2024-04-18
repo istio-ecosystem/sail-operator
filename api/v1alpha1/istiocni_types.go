@@ -28,9 +28,10 @@ const (
 type IstioCNISpec struct {
 	// +sail:version
 	// Defines the version of Istio to install.
-	// Must be one of: v1.21.0, v1.20.3, latest.
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.21.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.20.3", "urn:alm:descriptor:com.tectonic.ui:select:latest"}
-	// +kubebuilder:validation:Enum=v1.21.0;v1.20.3;latest
+	// Must be one of: v1.21.0, latest.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.21.0", "urn:alm:descriptor:com.tectonic.ui:select:latest"}
+	// +kubebuilder:validation:Enum=v1.21.0;latest
+	// +kubebuilder:default=v1.21.0
 	Version string `json:"version"`
 
 	// +sail:profile
@@ -44,6 +45,7 @@ type IstioCNISpec struct {
 
 	// Namespace to which the Istio CNI component should be installed.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,xDescriptors={"urn:alm:descriptor:io.kubernetes:Namespace"}
+	// +kubebuilder:default=istio-cni
 	Namespace string `json:"namespace"`
 
 	// Defines the values to be passed to the Helm charts when installing Istio CNI.
@@ -168,13 +170,16 @@ const (
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.state",description="The current state of this object."
 // +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".spec.version",description="The version of the Istio CNI installation."
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",description="The age of the object"
+// +kubebuilder:validation:XValidation:rule="self.metadata.name == 'default'",message="metadata.name must be 'default'"
 
 // IstioCNI represents a deployment of the Istio CNI component.
 type IstioCNI struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   IstioCNISpec   `json:"spec,omitempty"`
+	// +kubebuilder:default={version: "v1.21.0", namespace: "istio-cni"}
+	Spec IstioCNISpec `json:"spec,omitempty"`
+
 	Status IstioCNIStatus `json:"status,omitempty"`
 }
 

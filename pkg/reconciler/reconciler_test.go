@@ -16,6 +16,7 @@ package reconciler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -23,12 +24,15 @@ import (
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	. "github.com/onsi/gomega"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const testFinalizer = "test-finalizer"
@@ -36,8 +40,8 @@ const testFinalizer = "test-finalizer"
 type mockReconciler struct {
 	reconcileInvoked bool
 	finalizeInvoked  bool
-	failReconcile    bool
-	failFinalize     bool
+	reconcileError   error
+	finalizeError    error
 }
 
 func (t *mockReconciler) Object() client.Object {
@@ -46,18 +50,12 @@ func (t *mockReconciler) Object() client.Object {
 
 func (t *mockReconciler) Reconcile(ctx context.Context, _ *v1alpha1.Istio) (ctrl.Result, error) {
 	t.reconcileInvoked = true
-	if t.failReconcile {
-		return ctrl.Result{}, fmt.Errorf("reconcile failed")
-	}
-	return ctrl.Result{}, nil
+	return ctrl.Result{}, t.reconcileError
 }
 
 func (t *mockReconciler) Finalize(ctx context.Context, _ *v1alpha1.Istio) error {
 	t.finalizeInvoked = true
-	if t.failFinalize {
-		return fmt.Errorf("finalize failed")
-	}
-	return nil
+	return t.finalizeError
 }
 
 var ctx = context.TODO()
@@ -146,7 +144,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			setup: func(g *WithT, mock *mockReconciler) {
-				mock.failFinalize = true
+				mock.finalizeError = errors.New("simulated error")
 			},
 			assert: func(g *WithT, cl client.Client, result ctrl.Result, err error, mock *mockReconciler) {
 				g.Expect(result).To(BeZero())
@@ -207,11 +205,72 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			setup: func(g *WithT, mock *mockReconciler) {
-				mock.failReconcile = true
+				mock.reconcileError = errors.New("simulated error")
 			},
 			assert: func(g *WithT, cl client.Client, result ctrl.Result, err error, mock *mockReconciler) {
 				g.Expect(result).To(BeZero())
 				g.Expect(err).To(HaveOccurred())
+				g.Expect(mock.reconcileInvoked).To(BeTrue())
+				g.Expect(mock.finalizeInvoked).To(BeFalse())
+			},
+		},
+		{
+			name: "requeues on conflict",
+			objects: []client.Object{
+				&v1alpha1.Istio{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       key.Name,
+						Finalizers: []string{testFinalizer},
+					},
+				},
+			},
+			setup: func(g *WithT, mock *mockReconciler) {
+				mock.reconcileError = apierrors.NewConflict(schema.GroupResource{}, "foo", fmt.Errorf("simulated conflict"))
+			},
+			assert: func(g *WithT, cl client.Client, result ctrl.Result, err error, mock *mockReconciler) {
+				g.Expect(result).To(Equal(reconcile.Result{Requeue: true}))
+				g.Expect(err).ToNot(HaveOccurred())
+				g.Expect(mock.reconcileInvoked).To(BeTrue())
+				g.Expect(mock.finalizeInvoked).To(BeFalse())
+			},
+		},
+		{
+			name: "handles ValidationErrors",
+			objects: []client.Object{
+				&v1alpha1.Istio{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       key.Name,
+						Finalizers: []string{testFinalizer},
+					},
+				},
+			},
+			setup: func(g *WithT, mock *mockReconciler) {
+				mock.reconcileError = NewValidationError("simulated validation error")
+			},
+			assert: func(g *WithT, cl client.Client, result ctrl.Result, err error, mock *mockReconciler) {
+				g.Expect(result).To(Equal(reconcile.Result{}))
+				g.Expect(err).ToNot(HaveOccurred())
+				g.Expect(mock.reconcileInvoked).To(BeTrue())
+				g.Expect(mock.finalizeInvoked).To(BeFalse())
+			},
+		},
+		{
+			name: "requeues when gc admission plugin does not yet know about our resources",
+			objects: []client.Object{
+				&v1alpha1.Istio{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       key.Name,
+						Finalizers: []string{testFinalizer},
+					},
+				},
+			},
+			setup: func(g *WithT, mock *mockReconciler) {
+				mock.reconcileError = apierrors.NewForbidden(schema.GroupResource{}, "foo",
+					fmt.Errorf("cannot set blockOwnerDeletion in this case because cannot find RESTMapping for APIVersion xyz"))
+			},
+			assert: func(g *WithT, cl client.Client, result ctrl.Result, err error, mock *mockReconciler) {
+				g.Expect(result).To(Equal(reconcile.Result{Requeue: true}))
+				g.Expect(err).ToNot(HaveOccurred())
 				g.Expect(mock.reconcileInvoked).To(BeTrue())
 				g.Expect(mock.finalizeInvoked).To(BeFalse())
 			},
