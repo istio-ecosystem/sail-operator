@@ -273,6 +273,7 @@ deploy-yaml: helm ## Output YAML manifests used by `deploy`.
 .PHONY: deploy-openshift # TODO: remove this target and use deploy-olm instead (when we fix the internal registry TLS issues when using operator-sdk run bundle)
 deploy-openshift: helm ## Deploy controller to an existing OCP cluster.
 	$(info NAMESPACE: $(NAMESPACE))
+	kubectl create ns ${NAMESPACE} || echo "namespace ${NAMESPACE} already exists"
 	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --namespace $(NAMESPACE) --set platform="openshift" | kubectl apply --server-side=true -f -
 
 .PHONY: deploy-yaml-openshift
