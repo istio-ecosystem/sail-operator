@@ -285,14 +285,15 @@ func computeIstioRevisionValues(istio *v1alpha1.Istio, defaultProfile string, re
 	}
 
 	// override values that are not configurable by the user
-	return applyOverrides(istio, values)
+	applyOverrides(istio, values)
+	return values, nil
 }
 
 func getProfilesDir(resourceDir string, istio *v1alpha1.Istio) string {
 	return path.Join(resourceDir, istio.Spec.Version, "profiles")
 }
 
-func applyOverrides(istio *v1alpha1.Istio, values *v1alpha1.Values) (*v1alpha1.Values, error) {
+func applyOverrides(istio *v1alpha1.Istio, values *v1alpha1.Values) {
 	revisionName := getActiveRevisionName(istio)
 
 	// Set revision name to "" if revision name is "default". This is a temporary fix until we fix the injection
@@ -308,7 +309,6 @@ func applyOverrides(istio *v1alpha1.Istio, values *v1alpha1.Values) (*v1alpha1.V
 		values.Global = &v1alpha1.GlobalConfig{}
 	}
 	values.Global.IstioNamespace = istio.Spec.Namespace
-	return values, nil
 }
 
 func applyImageDigests(istio *v1alpha1.Istio, values *v1alpha1.Values, config config.OperatorConfig) *v1alpha1.Values {
