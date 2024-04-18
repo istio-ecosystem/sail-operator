@@ -104,6 +104,9 @@ func (r *StandardReconciler[T]) Reconcile(ctx context.Context, req ctrl.Request)
 	} else if errors.IsConflict(err) {
 		log.Info("Conflict detected. Retrying...")
 		return ctrl.Result{Requeue: true}, nil
+	} else if IsValidationError(err) {
+		log.Info("Validation failed", "error", err)
+		return ctrl.Result{}, nil
 	}
 	return result, err
 }

@@ -111,10 +111,10 @@ func (r *Reconciler) Finalize(ctx context.Context, cni *v1alpha1.IstioCNI) error
 
 func validateIstioCNI(cni *v1alpha1.IstioCNI) error {
 	if cni.Spec.Version == "" {
-		return fmt.Errorf("spec.version not set")
+		return reconciler.NewValidationError("spec.version not set")
 	}
 	if cni.Spec.Namespace == "" {
-		return fmt.Errorf("spec.namespace not set")
+		return reconciler.NewValidationError("spec.namespace not set")
 	}
 	return nil
 }

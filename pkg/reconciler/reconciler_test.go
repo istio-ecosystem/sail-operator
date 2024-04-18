@@ -235,6 +235,26 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
+			name: "handles ValidationErrors",
+			objects: []client.Object{
+				&v1alpha1.Istio{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       key.Name,
+						Finalizers: []string{testFinalizer},
+					},
+				},
+			},
+			setup: func(g *WithT, mock *mockReconciler) {
+				mock.reconcileError = NewValidationError("simulated validation error")
+			},
+			assert: func(g *WithT, cl client.Client, result ctrl.Result, err error, mock *mockReconciler) {
+				g.Expect(result).To(Equal(reconcile.Result{}))
+				g.Expect(err).ToNot(HaveOccurred())
+				g.Expect(mock.reconcileInvoked).To(BeTrue())
+				g.Expect(mock.finalizeInvoked).To(BeFalse())
+			},
+		},
+		{
 			name: "requeues when gc admission plugin does not yet know about our resources",
 			objects: []client.Object{
 				&v1alpha1.Istio{

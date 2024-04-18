@@ -20,6 +20,7 @@ import (
 	"path"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
+	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -53,7 +54,7 @@ func getValuesFromProfiles(profilesDir string, profiles []string) (helm.Values, 
 	alreadyApplied := sets.New[string]()
 	for _, profile := range profiles {
 		if profile == "" {
-			return nil, fmt.Errorf("profile name cannot be empty")
+			return nil, reconciler.NewValidationError("profile name cannot be empty")
 		}
 		if alreadyApplied.Contains(profile) {
 			continue
@@ -63,7 +64,7 @@ func getValuesFromProfiles(profilesDir string, profiles []string) (helm.Values, 
 		file := path.Join(profilesDir, profile+".yaml")
 		// prevent path traversal attacks
 		if path.Dir(file) != profilesDir {
-			return nil, fmt.Errorf("invalid profile name %s", profile)
+			return nil, reconciler.NewValidationError(fmt.Sprintf("invalid profile name %s", profile))
 		}
 
 		profileValues, err := getProfileValues(file)
