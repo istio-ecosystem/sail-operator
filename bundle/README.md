@@ -72,10 +72,10 @@ Repeat the process to create a project named `istio-cni`.
 ### Creating the IstioCNI resource
 
 1. In the OpenShift Container Platform web console, click **Operators** -> **Installed Operators**. 
-1. Select `istio-cni` in the **Project** drop-down menu.
 1. Click the Sail Operator.
 1. Click **IstioCNI**.
 1. Click **Create IstioCNI**.
+1. Ensure that the name is `default`.
 1. Select the `istio-cni` project from the **Namespace** drop-down menu.
 1. Click **Create**. This action deploys the Istio CNI plugin.
 1. When `State: Healthy` appears in the `Status` column, the Istio CNI plugin is successfully deployed.
