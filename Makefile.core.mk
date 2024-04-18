@@ -301,7 +301,9 @@ undeploy-olm: operator-sdk ## Undeploy the operator from an existing cluster (us
 deploy-example: deploy-example-openshift ## Deploy an example Istio resource to an existing OCP cluster. Same as `deploy-example-openshift`.
 
 .PHONY: deploy-example-openshift
-deploy-example-openshift: ## Deploy an example Istio resource to an existing OCP cluster.
+deploy-example-openshift: ## Deploy an example Istio and IstioCNI resource to an existing OCP cluster.
+	kubectl create ns istio-cni || echo "namespace istio-cni already exists"
+	kubectl apply -f chart/samples/istiocni-sample.yaml
 	kubectl create ns istio-system || echo "namespace istio-system already exists"
 	kubectl apply -f chart/samples/istio-sample-openshift.yaml
 
