@@ -67,7 +67,7 @@ func ToValues[V any](helmValues Values, values V) (V, error) {
 	decoder := json.NewDecoder(strings.NewReader(string(data)))
 	err = decoder.Decode(&values)
 	if err != nil {
-		return values, fmt.Errorf("failed to unmarshal into Values struct: %v:\n%v", err, string(data))
+		return values, fmt.Errorf("failed to unmarshal into Values struct: %w:\n%v", err, string(data))
 	}
 	return values, nil
 }

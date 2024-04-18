@@ -20,18 +20,30 @@ import (
 	"path"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
+	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"istio.io/istio/pkg/util/sets"
 )
 
-func Apply(profilesDir string, profiles []string, userValues helm.Values) (helm.Values, error) {
-	defaultValues, err := getValuesFromProfiles(profilesDir, profiles)
+func Apply(profilesDir string, defaultProfile, userProfile string, userValues helm.Values) (helm.Values, error) {
+	defaultValues, err := getValuesFromProfiles(profilesDir, resolve(defaultProfile, userProfile))
 	if err != nil {
 		return nil, err
 	}
 	return mergeOverwrite(defaultValues, userValues), nil
+}
+
+func resolve(defaultProfile, userProfile string) []string {
+	switch {
+	case userProfile != "" && userProfile != "default":
+		return []string{"default", userProfile}
+	case defaultProfile != "" && defaultProfile != "default":
+		return []string{"default", defaultProfile}
+	default:
+		return []string{"default"}
+	}
 }
 
 func getValuesFromProfiles(profilesDir string, profiles []string) (helm.Values, error) {
@@ -42,7 +54,7 @@ func getValuesFromProfiles(profilesDir string, profiles []string) (helm.Values, 
 	alreadyApplied := sets.New[string]()
 	for _, profile := range profiles {
 		if profile == "" {
-			return nil, fmt.Errorf("profile name cannot be empty")
+			return nil, reconciler.NewValidationError("profile name cannot be empty")
 		}
 		if alreadyApplied.Contains(profile) {
 			continue
@@ -52,7 +64,7 @@ func getValuesFromProfiles(profilesDir string, profiles []string) (helm.Values, 
 		file := path.Join(profilesDir, profile+".yaml")
 		// prevent path traversal attacks
 		if path.Dir(file) != profilesDir {
-			return nil, fmt.Errorf("invalid profile name %s", profile)
+			return nil, reconciler.NewValidationError(fmt.Sprintf("invalid profile name %s", profile))
 		}
 
 		profileValues, err := getProfileValues(file)
@@ -68,13 +80,13 @@ func getValuesFromProfiles(profilesDir string, profiles []string) (helm.Values, 
 func getProfileValues(file string) (helm.Values, error) {
 	fileContents, err := os.ReadFile(file)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read profile file %v: %v", file, err)
+		return nil, fmt.Errorf("failed to read profile file %v: %w", file, err)
 	}
 
 	var profile map[string]any
 	err = yaml.Unmarshal(fileContents, &profile)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal profile YAML %s: %v", file, err)
+		return nil, fmt.Errorf("failed to unmarshal profile YAML %s: %w", file, err)
 	}
 
 	val, found, err := unstructured.NestedFieldNoCopy(profile, "spec", "values")

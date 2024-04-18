@@ -66,7 +66,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 		Step("Deleting the Namespace to perform the tests")
 		Expect(k8sClient.Delete(ctx, namespace)).To(Succeed())
 
-		Expect(k8sClient.DeleteAllOf(ctx, &v1alpha1.IstioRevision{})).To(Succeed())
+		Eventually(k8sClient.DeleteAllOf).WithArguments(ctx, &v1alpha1.IstioRevision{}).Should(Succeed())
 		Eventually(func(g Gomega) {
 			list := &v1alpha1.IstioRevisionList{}
 			g.Expect(k8sClient.List(ctx, list)).To(Succeed())
@@ -78,7 +78,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 
 	Describe("validation", func() {
 		AfterEach(func() {
-			Expect(k8sClient.DeleteAllOf(ctx, &v1alpha1.IstioRevision{})).To(Succeed())
+			Eventually(k8sClient.DeleteAllOf).WithArguments(ctx, &v1alpha1.IstioRevision{}).Should(Succeed())
 		})
 
 		It("rejects an IstioRevision where spec.values.global.istioNamespace doesn't match spec.namespace", func() {

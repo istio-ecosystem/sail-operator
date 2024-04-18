@@ -17,17 +17,27 @@
 package operator
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
-	k8sclient "github.com/istio-ecosystem/sail-operator/tests/e2e/operator/util/client"
+	k8sclient "github.com/istio-ecosystem/sail-operator/tests/e2e/util/client"
+	env "github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
-	cl  client.Client
-	err error
+	cl             client.Client
+	err            error
+	ocp            = env.GetBool("OCP", false)
+	skipDeploy     = env.GetBool("SKIP_DEPLOY", false)
+	image          = env.Get("IMAGE", "quay.io/maistra-dev/sail-operator:latest")
+	namespace      = env.Get("NAMESPACE", "sail-operator")
+	deploymentName = env.Get("DEPLOYMENT_NAME", "sail-operator")
+	wd, _          = os.Getwd()
+	baseDir        = filepath.Join(wd, "../../..")
 )
 
 func TestInstall(t *testing.T) {

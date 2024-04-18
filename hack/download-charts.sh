@@ -89,13 +89,6 @@ function patchIstioCharts() {
   resources: ["securitycontextconstraints"] \
   resourceNames: ["privileged"] \
   verbs: ["use"]/' "${CHARTS_DIR}/cni/templates/clusterrole.yaml"
-  
-  echo "patching istio charts ${CHARTS_DIR}/istiod/templates/deployment.yaml "
-  # Remove fsGroup, runAsUser, runAsGroup from istiod deployment so that it can run on OpenShift
-  sed -i "${CHARTS_DIR}/istiod/templates/deployment.yaml" \
-    -e '/fsGroup: 1337/d' \
-    -e '/runAsUser: 1337/d' \
-    -e '/runAsGroup: 1337/d'
 }
 
 function convertIstioProfiles() {
@@ -110,14 +103,6 @@ function convertIstioProfiles() {
       | del(.spec.meshConfig)
       | del(.spec.hub)
       | del(.spec.tag)
-      | del(.spec.values.global.sds.token)
-      | del(.spec.values.meshConfig.defaultConfig.proxyMetadata)
-      | del(.spec.values.telemetry.v2.metadataExchange)
-      | del(.spec.values.telemetry.v2.prometheus.wasmEnabled)
-      | del(.spec.values.telemetry.v2.stackdriver.configOverride)
-      | del(.spec.values.telemetry.v2.stackdriver.logging)
-      | del(.spec.values.telemetry.v2.stackdriver.monitoring)
-      | del(.spec.values.telemetry.v2.stackdriver.topology)
       | del(.spec.values.gateways)' "$profile"
   done
 }

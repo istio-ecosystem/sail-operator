@@ -31,7 +31,7 @@ ISTIO_PILOT_IMAGE_NAME ?= pilot
 ISTIO_PROXY_IMAGE_NAME ?= proxyv2
 
 # GitHub creds
-GITHUB_USER ?= maistra-bot
+GITHUB_USER ?= openshift-service-mesh-bot
 GITHUB_TOKEN ?= 
 
 SOURCE_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
@@ -171,7 +171,6 @@ test.e2e.kind: ## Deploy a KinD cluster and run the end-to-end tests against it.
 .PHONY: test.e2e.describe
 test.e2e.describe: ## Runs ginkgo outline -format indent over the e2e test to show in BDD style the steps and test structure
 	GINKGO_FLAGS="$(GINKGO_FLAGS)" ${SOURCE_DIR}/tests/e2e/common-operator-integ-suite.sh --describe
-
 ##@ Build
 
 .PHONY: build
@@ -274,6 +273,7 @@ deploy-yaml: helm ## Output YAML manifests used by `deploy`.
 .PHONY: deploy-openshift # TODO: remove this target and use deploy-olm instead (when we fix the internal registry TLS issues when using operator-sdk run bundle)
 deploy-openshift: helm ## Deploy controller to an existing OCP cluster.
 	$(info NAMESPACE: $(NAMESPACE))
+	kubectl create ns ${NAMESPACE} || echo "namespace ${NAMESPACE} already exists"
 	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --namespace $(NAMESPACE) --set platform="openshift" | kubectl apply --server-side=true -f -
 
 .PHONY: deploy-yaml-openshift
@@ -301,14 +301,16 @@ undeploy-olm: operator-sdk ## Undeploy the operator from an existing cluster (us
 deploy-example: deploy-example-openshift ## Deploy an example Istio resource to an existing OCP cluster. Same as `deploy-example-openshift`.
 
 .PHONY: deploy-example-openshift
-deploy-example-openshift: ## Deploy an example Istio resource to an existing OCP cluster.
+deploy-example-openshift: ## Deploy an example Istio and IstioCNI resource to an existing OCP cluster.
+	kubectl create ns istio-cni || echo "namespace istio-cni already exists"
+	kubectl apply -f chart/samples/istiocni-sample.yaml
 	kubectl create ns istio-system || echo "namespace istio-system already exists"
-	kubectl apply -n istio-system -f chart/samples/istio-sample-openshift.yaml
+	kubectl apply -f chart/samples/istio-sample-openshift.yaml
 
 .PHONY: deploy-example-kubernetes
 deploy-example-kubernetes: ## Deploy an example Istio resource on an existing cluster.
 	kubectl create ns istio-system || echo "namespace istio-system already exists"
-	kubectl apply -n istio-system -f chart/samples/istio-sample-kubernetes.yaml
+	kubectl apply -f chart/samples/istio-sample-kubernetes.yaml
 
 ##@ Generated Code & Resources
 
@@ -357,7 +359,7 @@ gen-charts: ## Pull charts from istio repository.
 	@hack/copy-crds.sh "resources/$$(yq eval '.crdSourceVersion' $(VERSIONS_YAML_FILE))/charts"
 
 .PHONY: gen
-gen: controller-gen gen-api gen-charts gen-manifests gen-code bundle ## Generate everything.
+gen: operator-name controller-gen gen-api gen-charts gen-manifests gen-code bundle ## Generate everything.
 
 .PHONY: gen-check
 gen-check: gen restore-manifest-dates check-clean-repo ## Verify that changes in generated resources have been checked in.
@@ -367,6 +369,10 @@ restore-manifest-dates:
 ifneq "${BUNDLE_MANIFEST_DATE}" ""
 	@sed -i -e "s/\(createdAt:\).*/\1 \"${BUNDLE_MANIFEST_DATE}\"/" bundle/manifests/${OPERATOR_NAME}.clusterserviceversion.yaml
 endif
+
+.PHONY: operator-name
+operator-name:
+	sed -i "s/\(projectName:\).*/\1 ${OPERATOR_NAME}/g" PROJECT
 
 .PHONY: update-istio
 update-istio: ## Update the Istio commit hash in the 'latest' entry in versions.yaml to the latest commit in the branch.
@@ -391,13 +397,15 @@ OPERATOR_SDK ?= $(LOCALBIN)/operator-sdk
 HELM ?= $(LOCALBIN)/helm
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
+GITLEAKS ?= $(LOCALBIN)/gitleaks
 OPM ?= $(LOCALBIN)/opm
 
 ## Tool Versions
 OPERATOR_SDK_VERSION ?= v1.34.1
-HELM_VERSION ?= v3.14.3
+HELM_VERSION ?= v3.14.4
 CONTROLLER_TOOLS_VERSION ?= v0.14.0
 OPM_VERSION ?= v1.39.0
+GITLEAKS_VERSION ?= v8.18.2
 
 .PHONY: helm $(HELM)
 helm: $(HELM) ## Download helm to bin directory. If wrong version is installed, it will be overwritten.
@@ -430,6 +438,11 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 envtest: $(ENVTEST) ## Download envtest-setup to bin directory.
 $(ENVTEST): $(LOCALBIN)
 	@test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+.PHONY: gitleaks
+gitleaks: $(GITLEAKS) ## Download gitleaks to bin directory.
+$(GITLEAKS): $(LOCALBIN)
+	@test -s $(LOCALBIN)/gitleaks || GOBIN=$(LOCALBIN) go install github.com/zricethezav/gitleaks/v8@${GITLEAKS_VERSION}
 
 .PHONY: bundle
 bundle: gen helm operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
@@ -532,13 +545,23 @@ lint-bundle: operator-sdk ## Run linters against OLM metadata bundle.
 lint-watches: ## Checks if the operator watches all resource kinds present in Helm charts.
 	@hack/lint-watches.sh
 
+lint-secrets: gitleaks ## Checks whether any secrets are present in the repository.
+	@${GITLEAKS} detect --redact -v
+
 .PHONY: lint
-lint: lint-scripts lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle lint-watches ## Run all linters.
+lint: lint-scripts lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle lint-watches lint-secrets ## Run all linters.
 
 .PHONY: format
 format: format-go tidy-go ## Auto-format all code. This should be run before sending a PR.
 
-.SILENT: helm $(HELM) $(LOCALBIN) deploy-yaml gen-api
+git-hook: gitleaks ## Installs gitleaks as a git pre-commit hook.
+	@if ! test -x .git/hooks/pre-commit || ! grep -q "gitleaks" .git/hooks/pre-commit ; then \
+		echo "Adding gitleaks to pre-commit hook"; \
+		echo "bin/gitleaks protect --staged -v" >> .git/hooks/pre-commit; \
+		chmod +x .git/hooks/pre-commit; \
+	fi
+
+.SILENT: helm $(HELM) $(LOCALBIN) deploy-yaml gen-api operator-name
 
 COMMON_IMPORTS ?= lint-all lint-scripts lint-copyright-banner lint-go lint-yaml lint-helm format-go tidy-go check-clean-repo update-common
 .PHONY: $(COMMON_IMPORTS)

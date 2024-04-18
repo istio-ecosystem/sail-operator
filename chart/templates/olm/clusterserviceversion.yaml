@@ -14,7 +14,7 @@ metadata:
     support: {{ .Values.csv.support }}
 {{- if .Values.csv.annotations }}
 {{- range $key, $val := .Values.csv.annotations }}
-    {{ $key }}: "{{ $val }}" 
+    {{ $key | quote }}: {{ $val | quote }}
 {{- end}}
 {{- end}}
   name: {{ .Values.name }}.v{{ .Values.csv.version }}

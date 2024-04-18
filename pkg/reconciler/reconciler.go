@@ -16,6 +16,7 @@ package reconciler
 
 import (
 	"context"
+	"strings"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -95,7 +96,19 @@ func (r *StandardReconciler[T]) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 	}
 
-	return r.reconcile(ctx, obj)
+	result, err := r.reconcile(ctx, obj)
+
+	if errors.IsForbidden(err) && strings.Contains(err.Error(), "RESTMapping") {
+		log.Info("APIServer seems to be not ready - RESTMapper of gc admission plugin is not up to date. Retrying...", "error", err)
+		return ctrl.Result{Requeue: true}, nil
+	} else if errors.IsConflict(err) {
+		log.Info("Conflict detected. Retrying...")
+		return ctrl.Result{Requeue: true}, nil
+	} else if IsValidationError(err) {
+		log.Info("Validation failed", "error", err)
+		return ctrl.Result{}, nil
+	}
+	return result, err
 }
 
 func (r *StandardReconciler[T]) finalizationEnabled() bool {

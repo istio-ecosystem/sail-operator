@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
+	. "github.com/onsi/gomega"
 )
 
 func TestGetValuesFromProfiles(t *testing.T) {
@@ -223,6 +224,33 @@ func TestMergeOverwrite(t *testing.T) {
 			if diff := cmp.Diff(tc.expect, result); diff != "" {
 				t.Errorf("unexpected merge result; diff (-expected, +actual):\n%v", diff)
 			}
+		})
+	}
+}
+
+func TestResolve(t *testing.T) {
+	testCases := []struct {
+		dflt     string
+		user     string
+		expected []string
+	}{
+		{dflt: "", user: "", expected: []string{"default"}},
+		{dflt: "", user: "default", expected: []string{"default"}},
+		{dflt: "", user: "demo", expected: []string{"default", "demo"}},
+
+		{dflt: "default", user: "", expected: []string{"default"}},
+		{dflt: "default", user: "default", expected: []string{"default"}},
+		{dflt: "default", user: "demo", expected: []string{"default", "demo"}},
+
+		{dflt: "openshift", user: "", expected: []string{"default", "openshift"}},
+		{dflt: "openshift", user: "default", expected: []string{"default", "openshift"}},
+		{dflt: "openshift", user: "openshift", expected: []string{"default", "openshift"}},
+		{dflt: "openshift", user: "openshift-ambient", expected: []string{"default", "openshift-ambient"}},
+	}
+	for _, tc := range testCases {
+		t.Run("default:"+tc.dflt+",user:"+tc.user, func(t *testing.T) {
+			g := NewWithT(t)
+			g.Expect(resolve(tc.dflt, tc.user)).To(Equal(tc.expected))
 		})
 	}
 }
