@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	. "github.com/onsi/ginkgo/v2"
@@ -155,6 +156,71 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 				},
 			}
 			Expect(k8sClient.Create(ctx, rev)).To(Succeed())
+		})
+	})
+
+	Describe("reconciles immediately after target namespace is created", func() {
+		BeforeAll(func() {
+			Step("Creating the IstioRevision resource without the namespace")
+			rev = &v1alpha1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: revName,
+				},
+				Spec: v1alpha1.IstioRevisionSpec{
+					Version:   supportedversion.Default,
+					Namespace: "nonexistent-namespace",
+					Values: &v1alpha1.Values{
+						Revision: revName,
+						Global: &v1alpha1.GlobalConfig{
+							IstioNamespace: "nonexistent-namespace",
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, rev)).To(Succeed())
+		})
+
+		AfterAll(func() {
+			Expect(k8sClient.Delete(ctx, rev)).To(Succeed())
+			Eventually(k8sClient.Get).WithArguments(ctx, kube.Key(revName), rev).Should(ReturnNotFoundError())
+		})
+
+		It("indicates in the status that the namespace doesn't exist", func() {
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
+				g.Expect(rev.Status.ObservedGeneration).To(Equal(rev.ObjectMeta.Generation))
+
+				reconciled := rev.Status.GetCondition(v1alpha1.IstioRevisionConditionReconciled)
+				g.Expect(reconciled.Status).To(Equal(metav1.ConditionFalse))
+				g.Expect(reconciled.Reason).To(Equal(v1alpha1.IstioRevisionReasonReconcileError))
+				g.Expect(reconciled.Message).To(ContainSubstring(`namespace "nonexistent-namespace" doesn't exist`))
+			}).Should(Succeed())
+		})
+
+		When("the namespace is created", func() {
+			BeforeAll(func() {
+				ns := &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "nonexistent-namespace",
+					},
+				}
+				Expect(k8sClient.Create(ctx, ns)).To(Succeed())
+			})
+
+			It("reconciles immediately", func() {
+				Step("Checking if istiod is deployed immediately")
+				istiod := &appsv1.Deployment{}
+				istiodKey := client.ObjectKey{Name: "istiod-" + revName, Namespace: "nonexistent-namespace"}
+				Eventually(k8sClient.Get).WithArguments(ctx, istiodKey, istiod).WithTimeout(10 * time.Second).Should(Succeed())
+
+				Step("Checking if the status is updated")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
+					g.Expect(rev.Status.ObservedGeneration).To(Equal(rev.ObjectMeta.Generation))
+					reconciled := rev.Status.GetCondition(v1alpha1.IstioRevisionConditionReconciled)
+					g.Expect(reconciled.Status).To(Equal(metav1.ConditionTrue))
+				}).Should(Succeed())
+			})
 		})
 	})
 

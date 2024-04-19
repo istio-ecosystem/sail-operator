@@ -44,7 +44,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"istio.io/istio/pkg/log"
 	"istio.io/istio/pkg/ptr"
 )
 
@@ -107,6 +106,7 @@ func (r *Reconciler) Finalize(ctx context.Context, cni *v1alpha1.IstioCNI) error
 }
 
 func (r *Reconciler) doReconcile(ctx context.Context, cni *v1alpha1.IstioCNI) error {
+	log := logf.FromContext(ctx)
 	if err := r.validateIstioCNI(ctx, cni); err != nil {
 		return err
 	}
