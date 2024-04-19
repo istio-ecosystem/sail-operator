@@ -41,16 +41,6 @@ var (
 	istioCniNamespace     = env.Get("ISTIOCNI_NAMESPACE", "istio-cni")
 )
 
-// key returns the client.ObjectKey for the given name and namespace. If no namespace is provided, it returns a key cluster scoped
-func Key(name string, namespace ...string) client.ObjectKey {
-	if len(namespace) > 1 {
-		panic("you can only provide one namespace")
-	} else if len(namespace) == 1 {
-		return client.ObjectKey{Name: name, Namespace: namespace[0]}
-	}
-	return client.ObjectKey{Name: name}
-}
-
 // getObject returns the object with the given key
 func GetObject(ctx context.Context, cl client.Client, key client.ObjectKey, obj client.Object) (client.Object, error) {
 	err := cl.Get(ctx, key, obj)

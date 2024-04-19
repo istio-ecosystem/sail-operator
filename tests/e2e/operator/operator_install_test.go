@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	common "github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
@@ -84,7 +85,7 @@ var _ = Describe("Operator", Ordered, func() {
 
 		It("updates the CRDs status to Established", func(ctx SpecContext) {
 			for _, crdName := range sailCRDs {
-				Eventually(common.GetObject).WithArguments(ctx, cl, common.Key(crdName), &apiextensionsv1.CustomResourceDefinition{}).
+				Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(crdName), &apiextensionsv1.CustomResourceDefinition{}).
 					Should(HaveCondition(apiextensionsv1.Established, metav1.ConditionTrue), "Error getting Istio CRD")
 			}
 			Success("CRDs are Established")
@@ -92,13 +93,13 @@ var _ = Describe("Operator", Ordered, func() {
 
 		Specify("istio crd is present", func(ctx SpecContext) {
 			// When the operator runs in OCP cluster, the CRD is created but not available at the moment
-			Eventually(cl.Get).WithArguments(ctx, common.Key("istios.operator.istio.io"), &apiextensionsv1.CustomResourceDefinition{}).
+			Eventually(cl.Get).WithArguments(ctx, kube.Key("istios.operator.istio.io"), &apiextensionsv1.CustomResourceDefinition{}).
 				Should(Succeed(), "Error getting Istio CRD")
 			Success("Istio CRD is present")
 		})
 
 		It("starts successfully", func(ctx SpecContext) {
-			Eventually(common.GetObject).WithArguments(ctx, cl, common.Key(deploymentName, namespace), &appsv1.Deployment{}).
+			Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
 				Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
 		})
 

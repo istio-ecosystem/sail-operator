@@ -15,7 +15,6 @@
 package client
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -29,11 +28,8 @@ import (
 
 // getConfig returns the configuration of the kubernetes go-client
 func getConfig() (*rest.Config, error) {
-	kubeconfig := flag.String("kubeconfig", os.Getenv("KUBECONFIG"), "(optional) absolute path to the kubeconfig file")
-	flag.Parse()
-
 	// use the current context in kubeconfig
-	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
+	config, err := clientcmd.BuildConfigFromFlags("", os.Getenv("KUBECONFIG"))
 	if err != nil {
 		return nil, fmt.Errorf("error building config: %w", err)
 	}
