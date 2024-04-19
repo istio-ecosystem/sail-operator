@@ -50,6 +50,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
+	"istio.io/istio/pkg/log"
 	"istio.io/istio/pkg/ptr"
 )
 
@@ -100,12 +101,7 @@ func NewReconciler(client client.Client, scheme *runtime.Scheme, resourceDir str
 func (r *Reconciler) Reconcile(ctx context.Context, rev *v1alpha1.IstioRevision) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
-	if err := validateIstioRevision(rev); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	log.Info("Installing components")
-	reconcileErr := r.installHelmCharts(ctx, rev)
+	reconcileErr := r.doReconcile(ctx, rev)
 
 	log.Info("Reconciliation done. Updating status.")
 	statusErr := r.updateStatus(ctx, rev, reconcileErr)
@@ -113,17 +109,33 @@ func (r *Reconciler) Reconcile(ctx context.Context, rev *v1alpha1.IstioRevision)
 	return ctrl.Result{}, errors.Join(reconcileErr, statusErr)
 }
 
+func (r *Reconciler) doReconcile(ctx context.Context, rev *v1alpha1.IstioRevision) error {
+	if err := r.validateIstioRevision(ctx, rev); err != nil {
+		return err
+	}
+
+	log.Info("Installing Helm chart")
+	return r.installHelmCharts(ctx, rev)
+}
+
 func (r *Reconciler) Finalize(ctx context.Context, rev *v1alpha1.IstioRevision) error {
 	return r.uninstallHelmCharts(ctx, rev)
 }
 
-func validateIstioRevision(rev *v1alpha1.IstioRevision) error {
+func (r *Reconciler) validateIstioRevision(ctx context.Context, rev *v1alpha1.IstioRevision) error {
 	if rev.Spec.Version == "" {
 		return reconciler.NewValidationError("spec.version not set")
 	}
 	if rev.Spec.Namespace == "" {
 		return reconciler.NewValidationError("spec.namespace not set")
 	}
+	if err := r.Client.Get(ctx, types.NamespacedName{Name: rev.Spec.Namespace}, &corev1.Namespace{}); err != nil {
+		if apierrors.IsNotFound(err) {
+			return reconciler.NewValidationError(fmt.Sprintf("namespace %q doesn't exist", rev.Spec.Namespace))
+		}
+		return err
+	}
+
 	if rev.Spec.Values == nil {
 		return reconciler.NewValidationError("spec.values not set")
 	}
