@@ -36,6 +36,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -43,6 +44,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"istio.io/istio/pkg/log"
 	"istio.io/istio/pkg/ptr"
 )
 
@@ -92,12 +94,7 @@ func NewReconciler(
 func (r *Reconciler) Reconcile(ctx context.Context, cni *v1alpha1.IstioCNI) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
-	if err := validateIstioCNI(cni); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	log.Info("Installing components")
-	reconcileErr := r.installHelmChart(ctx, cni)
+	reconcileErr := r.doReconcile(ctx, cni)
 
 	log.Info("Reconciliation done. Updating status.")
 	statusErr := r.updateStatus(ctx, cni, reconcileErr)
@@ -109,12 +106,28 @@ func (r *Reconciler) Finalize(ctx context.Context, cni *v1alpha1.IstioCNI) error
 	return r.uninstallHelmChart(ctx, cni)
 }
 
-func validateIstioCNI(cni *v1alpha1.IstioCNI) error {
+func (r *Reconciler) doReconcile(ctx context.Context, cni *v1alpha1.IstioCNI) error {
+	if err := r.validateIstioCNI(ctx, cni); err != nil {
+		return err
+	}
+
+	log.Info("Installing Helm chart")
+	return r.installHelmChart(ctx, cni)
+}
+
+func (r *Reconciler) validateIstioCNI(ctx context.Context, cni *v1alpha1.IstioCNI) error {
 	if cni.Spec.Version == "" {
 		return reconciler.NewValidationError("spec.version not set")
 	}
 	if cni.Spec.Namespace == "" {
 		return reconciler.NewValidationError("spec.namespace not set")
+	}
+
+	if err := r.Client.Get(ctx, types.NamespacedName{Name: cni.Spec.Namespace}, &corev1.Namespace{}); err != nil {
+		if apierrors.IsNotFound(err) {
+			return reconciler.NewValidationError(fmt.Sprintf("namespace %q doesn't exist", cni.Spec.Namespace))
+		}
+		return err
 	}
 	return nil
 }
