@@ -93,18 +93,19 @@ func (r *StandardReconciler[T]) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	result, err := r.reconcile(ctx, obj)
-
-	if errors.IsForbidden(err) && strings.Contains(err.Error(), "RESTMapping") {
+	switch {
+	case errors.IsForbidden(err) && strings.Contains(err.Error(), "RESTMapping"):
 		log.Info("APIServer seems to be not ready - RESTMapper of gc admission plugin is not up to date. Retrying...", "error", err)
 		return ctrl.Result{Requeue: true}, nil
-	} else if errors.IsConflict(err) {
+	case errors.IsConflict(err):
 		log.Info("Conflict detected. Retrying...")
 		return ctrl.Result{Requeue: true}, nil
-	} else if IsValidationError(err) {
+	case IsValidationError(err):
 		log.Info("Validation failed", "error", err)
 		return ctrl.Result{}, nil
+	default:
+		return result, err
 	}
-	return result, err
 }
 
 func (r *StandardReconciler[T]) finalizationEnabled() bool {
