@@ -61,7 +61,7 @@ func FromValues(values any) Values {
 func ToValues[V any](helmValues Values, values V) (V, error) {
 	data, err := json.Marshal(helmValues)
 	if err != nil {
-		return values, err
+		return values, fmt.Errorf("failed to marshal Values struct: %w", err)
 	}
 
 	decoder := json.NewDecoder(strings.NewReader(string(data)))
