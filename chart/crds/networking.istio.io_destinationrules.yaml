@@ -151,6 +151,8 @@ spec:
                                       description: Maximum number of keepalive probes
                                         to send without response before deciding the
                                         connection is dead.
+                                      maximum: 4294967295
+                                      minimum: 0
                                       type: integer
                                     time:
                                       description: The time duration a connection
@@ -235,10 +237,12 @@ spec:
                                   properties:
                                     tableSize:
                                       description: The table size for Maglev hashing.
+                                      minimum: 0
                                       type: integer
                                   type: object
                                 minimumRingSize:
                                   description: Deprecated.
+                                  minimum: 0
                                   type: integer
                                 ringHash:
                                   description: The ring/modulo hash load balancer
@@ -247,6 +251,7 @@ spec:
                                     minimumRingSize:
                                       description: The minimum number of virtual nodes
                                         to use for the hash ring.
+                                      minimum: 0
                                       type: integer
                                   type: object
                                 useSourceIp:
@@ -266,6 +271,8 @@ spec:
                                         type: string
                                       to:
                                         additionalProperties:
+                                          maximum: 4294967295
+                                          minimum: 0
                                           type: integer
                                         description: Map of upstream localities to
                                           traffic distribution weights.
@@ -326,6 +333,8 @@ spec:
                             consecutive5xxErrors:
                               description: Number of 5xx errors before a host is ejected
                                 from the connection pool.
+                              maximum: 4294967295
+                              minimum: 0
                               nullable: true
                               type: integer
                             consecutiveErrors:
@@ -334,11 +343,15 @@ spec:
                             consecutiveGatewayErrors:
                               description: Number of gateway errors before a host
                                 is ejected from the connection pool.
+                              maximum: 4294967295
+                              minimum: 0
                               nullable: true
                               type: integer
                             consecutiveLocalOriginFailures:
                               description: The number of consecutive locally originated
                                 failures before ejection occurs.
+                              maximum: 4294967295
+                              minimum: 0
                               nullable: true
                               type: integer
                             interval:
@@ -447,6 +460,8 @@ spec:
                                             description: Maximum number of keepalive
                                               probes to send without response before
                                               deciding the connection is dead.
+                                            maximum: 4294967295
+                                            minimum: 0
                                             type: integer
                                           time:
                                             description: The time duration a connection
@@ -534,10 +549,12 @@ spec:
                                           tableSize:
                                             description: The table size for Maglev
                                               hashing.
+                                            minimum: 0
                                             type: integer
                                         type: object
                                       minimumRingSize:
                                         description: Deprecated.
+                                        minimum: 0
                                         type: integer
                                       ringHash:
                                         description: The ring/modulo hash load balancer
@@ -547,6 +564,7 @@ spec:
                                           minimumRingSize:
                                             description: The minimum number of virtual
                                               nodes to use for the hash ring.
+                                            minimum: 0
                                             type: integer
                                         type: object
                                       useSourceIp:
@@ -566,6 +584,8 @@ spec:
                                               type: string
                                             to:
                                               additionalProperties:
+                                                maximum: 4294967295
+                                                minimum: 0
                                                 type: integer
                                               description: Map of upstream localities
                                                 to traffic distribution weights.
@@ -627,6 +647,8 @@ spec:
                                   consecutive5xxErrors:
                                     description: Number of 5xx errors before a host
                                       is ejected from the connection pool.
+                                    maximum: 4294967295
+                                    minimum: 0
                                     nullable: true
                                     type: integer
                                   consecutiveErrors:
@@ -635,11 +657,15 @@ spec:
                                   consecutiveGatewayErrors:
                                     description: Number of gateway errors before a
                                       host is ejected from the connection pool.
+                                    maximum: 4294967295
+                                    minimum: 0
                                     nullable: true
                                     type: integer
                                   consecutiveLocalOriginFailures:
                                     description: The number of consecutive locally
                                       originated failures before ejection occurs.
+                                    maximum: 4294967295
+                                    minimum: 0
                                     nullable: true
                                     type: integer
                                   interval:
@@ -669,6 +695,8 @@ spec:
                                   applied.
                                 properties:
                                   number:
+                                    maximum: 4294967295
+                                    minimum: 0
                                     type: integer
                                 type: object
                               tls:
@@ -808,6 +836,8 @@ spec:
                             targetPort:
                               description: Specifies a port to which the downstream
                                 connection is tunneled.
+                              maximum: 4294967295
+                              minimum: 0
                               type: integer
                           required:
                           - targetHost
@@ -900,6 +930,8 @@ spec:
                                 description: Maximum number of keepalive probes to
                                   send without response before deciding the connection
                                   is dead.
+                                maximum: 4294967295
+                                minimum: 0
                                 type: integer
                               time:
                                 description: The time duration a connection needs
@@ -983,10 +1015,12 @@ spec:
                             properties:
                               tableSize:
                                 description: The table size for Maglev hashing.
+                                minimum: 0
                                 type: integer
                             type: object
                           minimumRingSize:
                             description: Deprecated.
+                            minimum: 0
                             type: integer
                           ringHash:
                             description: The ring/modulo hash load balancer implements
@@ -995,6 +1029,7 @@ spec:
                               minimumRingSize:
                                 description: The minimum number of virtual nodes to
                                   use for the hash ring.
+                                minimum: 0
                                 type: integer
                             type: object
                           useSourceIp:
@@ -1014,6 +1049,8 @@ spec:
                                   type: string
                                 to:
                                   additionalProperties:
+                                    maximum: 4294967295
+                                    minimum: 0
                                     type: integer
                                   description: Map of upstream localities to traffic
                                     distribution weights.
@@ -1072,6 +1109,8 @@ spec:
                       consecutive5xxErrors:
                         description: Number of 5xx errors before a host is ejected
                           from the connection pool.
+                        maximum: 4294967295
+                        minimum: 0
                         nullable: true
                         type: integer
                       consecutiveErrors:
@@ -1080,11 +1119,15 @@ spec:
                       consecutiveGatewayErrors:
                         description: Number of gateway errors before a host is ejected
                           from the connection pool.
+                        maximum: 4294967295
+                        minimum: 0
                         nullable: true
                         type: integer
                       consecutiveLocalOriginFailures:
                         description: The number of consecutive locally originated
                           failures before ejection occurs.
+                        maximum: 4294967295
+                        minimum: 0
                         nullable: true
                         type: integer
                       interval:
@@ -1191,6 +1234,8 @@ spec:
                                       description: Maximum number of keepalive probes
                                         to send without response before deciding the
                                         connection is dead.
+                                      maximum: 4294967295
+                                      minimum: 0
                                       type: integer
                                     time:
                                       description: The time duration a connection
@@ -1275,10 +1320,12 @@ spec:
                                   properties:
                                     tableSize:
                                       description: The table size for Maglev hashing.
+                                      minimum: 0
                                       type: integer
                                   type: object
                                 minimumRingSize:
                                   description: Deprecated.
+                                  minimum: 0
                                   type: integer
                                 ringHash:
                                   description: The ring/modulo hash load balancer
@@ -1287,6 +1334,7 @@ spec:
                                     minimumRingSize:
                                       description: The minimum number of virtual nodes
                                         to use for the hash ring.
+                                      minimum: 0
                                       type: integer
                                   type: object
                                 useSourceIp:
@@ -1306,6 +1354,8 @@ spec:
                                         type: string
                                       to:
                                         additionalProperties:
+                                          maximum: 4294967295
+                                          minimum: 0
                                           type: integer
                                         description: Map of upstream localities to
                                           traffic distribution weights.
@@ -1366,6 +1416,8 @@ spec:
                             consecutive5xxErrors:
                               description: Number of 5xx errors before a host is ejected
                                 from the connection pool.
+                              maximum: 4294967295
+                              minimum: 0
                               nullable: true
                               type: integer
                             consecutiveErrors:
@@ -1374,11 +1426,15 @@ spec:
                             consecutiveGatewayErrors:
                               description: Number of gateway errors before a host
                                 is ejected from the connection pool.
+                              maximum: 4294967295
+                              minimum: 0
                               nullable: true
                               type: integer
                             consecutiveLocalOriginFailures:
                               description: The number of consecutive locally originated
                                 failures before ejection occurs.
+                              maximum: 4294967295
+                              minimum: 0
                               nullable: true
                               type: integer
                             interval:
@@ -1405,6 +1461,8 @@ spec:
                             service on which this policy is being applied.
                           properties:
                             number:
+                              maximum: 4294967295
+                              minimum: 0
                               type: integer
                           type: object
                         tls:
@@ -1542,6 +1600,8 @@ spec:
                       targetPort:
                         description: Specifies a port to which the downstream connection
                           is tunneled.
+                        maximum: 4294967295
+                        minimum: 0
                         type: integer
                     required:
                     - targetHost
@@ -1698,6 +1758,8 @@ spec:
                                       description: Maximum number of keepalive probes
                                         to send without response before deciding the
                                         connection is dead.
+                                      maximum: 4294967295
+                                      minimum: 0
                                       type: integer
                                     time:
                                       description: The time duration a connection
@@ -1782,10 +1844,12 @@ spec:
                                   properties:
                                     tableSize:
                                       description: The table size for Maglev hashing.
+                                      minimum: 0
                                       type: integer
                                   type: object
                                 minimumRingSize:
                                   description: Deprecated.
+                                  minimum: 0
                                   type: integer
                                 ringHash:
                                   description: The ring/modulo hash load balancer
@@ -1794,6 +1858,7 @@ spec:
                                     minimumRingSize:
                                       description: The minimum number of virtual nodes
                                         to use for the hash ring.
+                                      minimum: 0
                                       type: integer
                                   type: object
                                 useSourceIp:
@@ -1813,6 +1878,8 @@ spec:
                                         type: string
                                       to:
                                         additionalProperties:
+                                          maximum: 4294967295
+                                          minimum: 0
                                           type: integer
                                         description: Map of upstream localities to
                                           traffic distribution weights.
@@ -1873,6 +1940,8 @@ spec:
                             consecutive5xxErrors:
                               description: Number of 5xx errors before a host is ejected
                                 from the connection pool.
+                              maximum: 4294967295
+                              minimum: 0
                               nullable: true
                               type: integer
                             consecutiveErrors:
@@ -1881,11 +1950,15 @@ spec:
                             consecutiveGatewayErrors:
                               description: Number of gateway errors before a host
                                 is ejected from the connection pool.
+                              maximum: 4294967295
+                              minimum: 0
                               nullable: true
                               type: integer
                             consecutiveLocalOriginFailures:
                               description: The number of consecutive locally originated
                                 failures before ejection occurs.
+                              maximum: 4294967295
+                              minimum: 0
                               nullable: true
                               type: integer
                             interval:
@@ -1994,6 +2067,8 @@ spec:
                                             description: Maximum number of keepalive
                                               probes to send without response before
                                               deciding the connection is dead.
+                                            maximum: 4294967295
+                                            minimum: 0
                                             type: integer
                                           time:
                                             description: The time duration a connection
@@ -2081,10 +2156,12 @@ spec:
                                           tableSize:
                                             description: The table size for Maglev
                                               hashing.
+                                            minimum: 0
                                             type: integer
                                         type: object
                                       minimumRingSize:
                                         description: Deprecated.
+                                        minimum: 0
                                         type: integer
                                       ringHash:
                                         description: The ring/modulo hash load balancer
@@ -2094,6 +2171,7 @@ spec:
                                           minimumRingSize:
                                             description: The minimum number of virtual
                                               nodes to use for the hash ring.
+                                            minimum: 0
                                             type: integer
                                         type: object
                                       useSourceIp:
@@ -2113,6 +2191,8 @@ spec:
                                               type: string
                                             to:
                                               additionalProperties:
+                                                maximum: 4294967295
+                                                minimum: 0
                                                 type: integer
                                               description: Map of upstream localities
                                                 to traffic distribution weights.
@@ -2174,6 +2254,8 @@ spec:
                                   consecutive5xxErrors:
                                     description: Number of 5xx errors before a host
                                       is ejected from the connection pool.
+                                    maximum: 4294967295
+                                    minimum: 0
                                     nullable: true
                                     type: integer
                                   consecutiveErrors:
@@ -2182,11 +2264,15 @@ spec:
                                   consecutiveGatewayErrors:
                                     description: Number of gateway errors before a
                                       host is ejected from the connection pool.
+                                    maximum: 4294967295
+                                    minimum: 0
                                     nullable: true
                                     type: integer
                                   consecutiveLocalOriginFailures:
                                     description: The number of consecutive locally
                                       originated failures before ejection occurs.
+                                    maximum: 4294967295
+                                    minimum: 0
                                     nullable: true
                                     type: integer
                                   interval:
@@ -2216,6 +2302,8 @@ spec:
                                   applied.
                                 properties:
                                   number:
+                                    maximum: 4294967295
+                                    minimum: 0
                                     type: integer
                                 type: object
                               tls:
@@ -2355,6 +2443,8 @@ spec:
                             targetPort:
                               description: Specifies a port to which the downstream
                                 connection is tunneled.
+                              maximum: 4294967295
+                              minimum: 0
                               type: integer
                           required:
                           - targetHost
@@ -2447,6 +2537,8 @@ spec:
                                 description: Maximum number of keepalive probes to
                                   send without response before deciding the connection
                                   is dead.
+                                maximum: 4294967295
+                                minimum: 0
                                 type: integer
                               time:
                                 description: The time duration a connection needs
@@ -2530,10 +2622,12 @@ spec:
                             properties:
                               tableSize:
                                 description: The table size for Maglev hashing.
+                                minimum: 0
                                 type: integer
                             type: object
                           minimumRingSize:
                             description: Deprecated.
+                            minimum: 0
                             type: integer
                           ringHash:
                             description: The ring/modulo hash load balancer implements
@@ -2542,6 +2636,7 @@ spec:
                               minimumRingSize:
                                 description: The minimum number of virtual nodes to
                                   use for the hash ring.
+                                minimum: 0
                                 type: integer
                             type: object
                           useSourceIp:
@@ -2561,6 +2656,8 @@ spec:
                                   type: string
                                 to:
                                   additionalProperties:
+                                    maximum: 4294967295
+                                    minimum: 0
                                     type: integer
                                   description: Map of upstream localities to traffic
                                     distribution weights.
@@ -2619,6 +2716,8 @@ spec:
                       consecutive5xxErrors:
                         description: Number of 5xx errors before a host is ejected
                           from the connection pool.
+                        maximum: 4294967295
+                        minimum: 0
                         nullable: true
                         type: integer
                       consecutiveErrors:
@@ -2627,11 +2726,15 @@ spec:
                       consecutiveGatewayErrors:
                         description: Number of gateway errors before a host is ejected
                           from the connection pool.
+                        maximum: 4294967295
+                        minimum: 0
                         nullable: true
                         type: integer
                       consecutiveLocalOriginFailures:
                         description: The number of consecutive locally originated
                           failures before ejection occurs.
+                        maximum: 4294967295
+                        minimum: 0
                         nullable: true
                         type: integer
                       interval:
@@ -2738,6 +2841,8 @@ spec:
                                       description: Maximum number of keepalive probes
                                         to send without response before deciding the
                                         connection is dead.
+                                      maximum: 4294967295
+                                      minimum: 0
                                       type: integer
                                     time:
                                       description: The time duration a connection
@@ -2822,10 +2927,12 @@ spec:
                                   properties:
                                     tableSize:
                                       description: The table size for Maglev hashing.
+                                      minimum: 0
                                       type: integer
                                   type: object
                                 minimumRingSize:
                                   description: Deprecated.
+                                  minimum: 0
                                   type: integer
                                 ringHash:
                                   description: The ring/modulo hash load balancer
@@ -2834,6 +2941,7 @@ spec:
                                     minimumRingSize:
                                       description: The minimum number of virtual nodes
                                         to use for the hash ring.
+                                      minimum: 0
                                       type: integer
                                   type: object
                                 useSourceIp:
@@ -2853,6 +2961,8 @@ spec:
                                         type: string
                                       to:
                                         additionalProperties:
+                                          maximum: 4294967295
+                                          minimum: 0
                                           type: integer
                                         description: Map of upstream localities to
                                           traffic distribution weights.
@@ -2913,6 +3023,8 @@ spec:
                             consecutive5xxErrors:
                               description: Number of 5xx errors before a host is ejected
                                 from the connection pool.
+                              maximum: 4294967295
+                              minimum: 0
                               nullable: true
                               type: integer
                             consecutiveErrors:
@@ -2921,11 +3033,15 @@ spec:
                             consecutiveGatewayErrors:
                               description: Number of gateway errors before a host
                                 is ejected from the connection pool.
+                              maximum: 4294967295
+                              minimum: 0
                               nullable: true
                               type: integer
                             consecutiveLocalOriginFailures:
                               description: The number of consecutive locally originated
                                 failures before ejection occurs.
+                              maximum: 4294967295
+                              minimum: 0
                               nullable: true
                               type: integer
                             interval:
@@ -2952,6 +3068,8 @@ spec:
                             service on which this policy is being applied.
                           properties:
                             number:
+                              maximum: 4294967295
+                              minimum: 0
                               type: integer
                           type: object
                         tls:
@@ -3089,6 +3207,8 @@ spec:
                       targetPort:
                         description: Specifies a port to which the downstream connection
                           is tunneled.
+                        maximum: 4294967295
+                        minimum: 0
                         type: integer
                     required:
                     - targetHost
@@ -3245,6 +3365,8 @@ spec:
                                       description: Maximum number of keepalive probes
                                         to send without response before deciding the
                                         connection is dead.
+                                      maximum: 4294967295
+                                      minimum: 0
                                       type: integer
                                     time:
                                       description: The time duration a connection
@@ -3329,10 +3451,12 @@ spec:
                                   properties:
                                     tableSize:
                                       description: The table size for Maglev hashing.
+                                      minimum: 0
                                       type: integer
                                   type: object
                                 minimumRingSize:
                                   description: Deprecated.
+                                  minimum: 0
                                   type: integer
                                 ringHash:
                                   description: The ring/modulo hash load balancer
@@ -3341,6 +3465,7 @@ spec:
                                     minimumRingSize:
                                       description: The minimum number of virtual nodes
                                         to use for the hash ring.
+                                      minimum: 0
                                       type: integer
                                   type: object
                                 useSourceIp:
@@ -3360,6 +3485,8 @@ spec:
                                         type: string
                                       to:
                                         additionalProperties:
+                                          maximum: 4294967295
+                                          minimum: 0
                                           type: integer
                                         description: Map of upstream localities to
                                           traffic distribution weights.
@@ -3420,6 +3547,8 @@ spec:
                             consecutive5xxErrors:
                               description: Number of 5xx errors before a host is ejected
                                 from the connection pool.
+                              maximum: 4294967295
+                              minimum: 0
                               nullable: true
                               type: integer
                             consecutiveErrors:
@@ -3428,11 +3557,15 @@ spec:
                             consecutiveGatewayErrors:
                               description: Number of gateway errors before a host
                                 is ejected from the connection pool.
+                              maximum: 4294967295
+                              minimum: 0
                               nullable: true
                               type: integer
                             consecutiveLocalOriginFailures:
                               description: The number of consecutive locally originated
                                 failures before ejection occurs.
+                              maximum: 4294967295
+                              minimum: 0
                               nullable: true
                               type: integer
                             interval:
@@ -3541,6 +3674,8 @@ spec:
                                             description: Maximum number of keepalive
                                               probes to send without response before
                                               deciding the connection is dead.
+                                            maximum: 4294967295
+                                            minimum: 0
                                             type: integer
                                           time:
                                             description: The time duration a connection
@@ -3628,10 +3763,12 @@ spec:
                                           tableSize:
                                             description: The table size for Maglev
                                               hashing.
+                                            minimum: 0
                                             type: integer
                                         type: object
                                       minimumRingSize:
                                         description: Deprecated.
+                                        minimum: 0
                                         type: integer
                                       ringHash:
                                         description: The ring/modulo hash load balancer
@@ -3641,6 +3778,7 @@ spec:
                                           minimumRingSize:
                                             description: The minimum number of virtual
                                               nodes to use for the hash ring.
+                                            minimum: 0
                                             type: integer
                                         type: object
                                       useSourceIp:
@@ -3660,6 +3798,8 @@ spec:
                                               type: string
                                             to:
                                               additionalProperties:
+                                                maximum: 4294967295
+                                                minimum: 0
                                                 type: integer
                                               description: Map of upstream localities
                                                 to traffic distribution weights.
@@ -3721,6 +3861,8 @@ spec:
                                   consecutive5xxErrors:
                                     description: Number of 5xx errors before a host
                                       is ejected from the connection pool.
+                                    maximum: 4294967295
+                                    minimum: 0
                                     nullable: true
                                     type: integer
                                   consecutiveErrors:
@@ -3729,11 +3871,15 @@ spec:
                                   consecutiveGatewayErrors:
                                     description: Number of gateway errors before a
                                       host is ejected from the connection pool.
+                                    maximum: 4294967295
+                                    minimum: 0
                                     nullable: true
                                     type: integer
                                   consecutiveLocalOriginFailures:
                                     description: The number of consecutive locally
                                       originated failures before ejection occurs.
+                                    maximum: 4294967295
+                                    minimum: 0
                                     nullable: true
                                     type: integer
                                   interval:
@@ -3763,6 +3909,8 @@ spec:
                                   applied.
                                 properties:
                                   number:
+                                    maximum: 4294967295
+                                    minimum: 0
                                     type: integer
                                 type: object
                               tls:
@@ -3902,6 +4050,8 @@ spec:
                             targetPort:
                               description: Specifies a port to which the downstream
                                 connection is tunneled.
+                              maximum: 4294967295
+                              minimum: 0
                               type: integer
                           required:
                           - targetHost
@@ -3994,6 +4144,8 @@ spec:
                                 description: Maximum number of keepalive probes to
                                   send without response before deciding the connection
                                   is dead.
+                                maximum: 4294967295
+                                minimum: 0
                                 type: integer
                               time:
                                 description: The time duration a connection needs
@@ -4077,10 +4229,12 @@ spec:
                             properties:
                               tableSize:
                                 description: The table size for Maglev hashing.
+                                minimum: 0
                                 type: integer
                             type: object
                           minimumRingSize:
                             description: Deprecated.
+                            minimum: 0
                             type: integer
                           ringHash:
                             description: The ring/modulo hash load balancer implements
@@ -4089,6 +4243,7 @@ spec:
                               minimumRingSize:
                                 description: The minimum number of virtual nodes to
                                   use for the hash ring.
+                                minimum: 0
                                 type: integer
                             type: object
                           useSourceIp:
@@ -4108,6 +4263,8 @@ spec:
                                   type: string
                                 to:
                                   additionalProperties:
+                                    maximum: 4294967295
+                                    minimum: 0
                                     type: integer
                                   description: Map of upstream localities to traffic
                                     distribution weights.
@@ -4166,6 +4323,8 @@ spec:
                       consecutive5xxErrors:
                         description: Number of 5xx errors before a host is ejected
                           from the connection pool.
+                        maximum: 4294967295
+                        minimum: 0
                         nullable: true
                         type: integer
                       consecutiveErrors:
@@ -4174,11 +4333,15 @@ spec:
                       consecutiveGatewayErrors:
                         description: Number of gateway errors before a host is ejected
                           from the connection pool.
+                        maximum: 4294967295
+                        minimum: 0
                         nullable: true
                         type: integer
                       consecutiveLocalOriginFailures:
                         description: The number of consecutive locally originated
                           failures before ejection occurs.
+                        maximum: 4294967295
+                        minimum: 0
                         nullable: true
                         type: integer
                       interval:
@@ -4285,6 +4448,8 @@ spec:
                                       description: Maximum number of keepalive probes
                                         to send without response before deciding the
                                         connection is dead.
+                                      maximum: 4294967295
+                                      minimum: 0
                                       type: integer
                                     time:
                                       description: The time duration a connection
@@ -4369,10 +4534,12 @@ spec:
                                   properties:
                                     tableSize:
                                       description: The table size for Maglev hashing.
+                                      minimum: 0
                                       type: integer
                                   type: object
                                 minimumRingSize:
                                   description: Deprecated.
+                                  minimum: 0
                                   type: integer
                                 ringHash:
                                   description: The ring/modulo hash load balancer
@@ -4381,6 +4548,7 @@ spec:
                                     minimumRingSize:
                                       description: The minimum number of virtual nodes
                                         to use for the hash ring.
+                                      minimum: 0
                                       type: integer
                                   type: object
                                 useSourceIp:
@@ -4400,6 +4568,8 @@ spec:
                                         type: string
                                       to:
                                         additionalProperties:
+                                          maximum: 4294967295
+                                          minimum: 0
                                           type: integer
                                         description: Map of upstream localities to
                                           traffic distribution weights.
@@ -4460,6 +4630,8 @@ spec:
                             consecutive5xxErrors:
                               description: Number of 5xx errors before a host is ejected
                                 from the connection pool.
+                              maximum: 4294967295
+                              minimum: 0
                               nullable: true
                               type: integer
                             consecutiveErrors:
@@ -4468,11 +4640,15 @@ spec:
                             consecutiveGatewayErrors:
                               description: Number of gateway errors before a host
                                 is ejected from the connection pool.
+                              maximum: 4294967295
+                              minimum: 0
                               nullable: true
                               type: integer
                             consecutiveLocalOriginFailures:
                               description: The number of consecutive locally originated
                                 failures before ejection occurs.
+                              maximum: 4294967295
+                              minimum: 0
                               nullable: true
                               type: integer
                             interval:
@@ -4499,6 +4675,8 @@ spec:
                             service on which this policy is being applied.
                           properties:
                             number:
+                              maximum: 4294967295
+                              minimum: 0
                               type: integer
                           type: object
                         tls:
@@ -4636,6 +4814,8 @@ spec:
                       targetPort:
                         description: Specifies a port to which the downstream connection
                           is tunneled.
+                        maximum: 4294967295
+                        minimum: 0
                         type: integer
                     required:
                     - targetHost

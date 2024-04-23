@@ -21,13 +21,13 @@ versions:
       - https://istio-release.storage.googleapis.com/charts/cni-1.21.0.tgz
       - https://istio-release.storage.googleapis.com/charts/ztunnel-1.21.0.tgz
   - name: latest
-    version: 1.22-alpha
+    version: 1.23-alpha
     repo: https://github.com/istio/istio
     branch: master
-    commit: 3112392b96748f15315150044244f0052a2f730d
+    commit: 713cd5d19404bad19669540656f4fa31b4641a08
     charts:
-      - https://storage.googleapis.com/istio-build/dev/1.22-alpha.3112392b96748f15315150044244f0052a2f730d/helm/base-1.22-alpha.3112392b96748f15315150044244f0052a2f730d.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.22-alpha.3112392b96748f15315150044244f0052a2f730d/helm/cni-1.22-alpha.3112392b96748f15315150044244f0052a2f730d.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.22-alpha.3112392b96748f15315150044244f0052a2f730d/helm/gateway-1.22-alpha.3112392b96748f15315150044244f0052a2f730d.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.22-alpha.3112392b96748f15315150044244f0052a2f730d/helm/istiod-1.22-alpha.3112392b96748f15315150044244f0052a2f730d.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.22-alpha.3112392b96748f15315150044244f0052a2f730d/helm/ztunnel-1.22-alpha.3112392b96748f15315150044244f0052a2f730d.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.23-alpha.713cd5d19404bad19669540656f4fa31b4641a08/helm/base-1.23-alpha.713cd5d19404bad19669540656f4fa31b4641a08.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.23-alpha.713cd5d19404bad19669540656f4fa31b4641a08/helm/cni-1.23-alpha.713cd5d19404bad19669540656f4fa31b4641a08.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.23-alpha.713cd5d19404bad19669540656f4fa31b4641a08/helm/gateway-1.23-alpha.713cd5d19404bad19669540656f4fa31b4641a08.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.23-alpha.713cd5d19404bad19669540656f4fa31b4641a08/helm/istiod-1.23-alpha.713cd5d19404bad19669540656f4fa31b4641a08.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.23-alpha.713cd5d19404bad19669540656f4fa31b4641a08/helm/ztunnel-1.23-alpha.713cd5d19404bad19669540656f4fa31b4641a08.tgz

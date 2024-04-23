@@ -2,7 +2,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.14.0
+    controller-gen.kubebuilder.io/version: v0.15.0
   creationTimestamp: null
   name: istios.operator.istio.io
 spec:
@@ -87,7 +87,7 @@ spec:
                 description: |-
                   The built-in installation configuration profile to use.
                   The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'.
-                  Must be one of: ambient, default, demo, empty, external, minimal, openshift-ambient, openshift, preview, remote.
+                  Must be one of: ambient, default, demo, empty, external, minimal, openshift-ambient, openshift, preview, remote, stable.
                 enum:
                 - ambient
                 - default
@@ -99,6 +99,7 @@ spec:
                 - openshift
                 - preview
                 - remote
+                - stable
                 type: string
               updateStrategy:
                 default:
