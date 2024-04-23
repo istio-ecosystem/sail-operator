@@ -111,7 +111,7 @@ func (r *Reconciler) Finalize(ctx context.Context, cni *v1alpha1.IstioCNI) error
 func (r *Reconciler) doReconcile(ctx context.Context, cni *v1alpha1.IstioCNI) error {
 	log := logf.FromContext(ctx)
 	if err := r.validateIstioCNI(ctx, cni); err != nil {
-		return fmt.Errorf("validation failed: %w", err)
+		return err
 	}
 
 	log.Info("Installing Helm chart")
@@ -130,7 +130,7 @@ func (r *Reconciler) validateIstioCNI(ctx context.Context, cni *v1alpha1.IstioCN
 		if apierrors.IsNotFound(err) {
 			return reconciler.NewValidationError(fmt.Sprintf("namespace %q doesn't exist", cni.Spec.Namespace))
 		}
-		return fmt.Errorf("failed to validate IstioCNI: %w", err)
+		return fmt.Errorf("get failed: %w", err)
 	}
 	return nil
 }
@@ -154,7 +154,7 @@ func (r *Reconciler) installHelmChart(ctx context.Context, cni *v1alpha1.IstioCN
 	// apply userValues on top of defaultValues from profiles
 	mergedHelmValues, err := profiles.Apply(getProfilesDir(r.ResourceDirectory, cni), r.DefaultProfile, cni.Spec.Profile, helm.FromValues(userValues))
 	if err != nil {
-		return fmt.Errorf("failed to install/update Helm chart %q: %w", cniChartName, err)
+		return fmt.Errorf("failed to apply profile: %w", err)
 	}
 
 	_, err = r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(cni), mergedHelmValues, cni.Spec.Namespace, cniReleaseName, ownerReference)
@@ -310,7 +310,7 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, cni *v1alpha1.
 		c.Status = metav1.ConditionUnknown
 		c.Reason = v1alpha1.IstioCNIReasonReadinessCheckFailed
 		c.Message = fmt.Sprintf("failed to get readiness: %v", err)
-		return c, fmt.Errorf("failed to determine readiness: %w", err)
+		return c, fmt.Errorf("get failed: %w", err)
 	}
 	return c, nil
 }

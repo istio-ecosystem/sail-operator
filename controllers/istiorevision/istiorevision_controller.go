@@ -113,7 +113,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, rev *v1alpha1.IstioRevision)
 func (r *Reconciler) doReconcile(ctx context.Context, rev *v1alpha1.IstioRevision) error {
 	log := logf.FromContext(ctx)
 	if err := r.validateIstioRevision(ctx, rev); err != nil {
-		return fmt.Errorf("validation failed: %w", err)
+		return err
 	}
 
 	log.Info("Installing Helm chart")
@@ -135,7 +135,7 @@ func (r *Reconciler) validateIstioRevision(ctx context.Context, rev *v1alpha1.Is
 		if apierrors.IsNotFound(err) {
 			return reconciler.NewValidationError(fmt.Sprintf("namespace %q doesn't exist", rev.Spec.Namespace))
 		}
-		return fmt.Errorf("failed to validate IstioRevision: %w", err)
+		return fmt.Errorf("get failed: %w", err)
 	}
 
 	if rev.Spec.Values == nil {
@@ -326,7 +326,7 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1alpha1.
 		c.Status = metav1.ConditionUnknown
 		c.Reason = v1alpha1.IstioRevisionReasonReadinessCheckFailed
 		c.Message = fmt.Sprintf("failed to get readiness: %v", err)
-		return c, fmt.Errorf("failed to determine readiness: %w", err)
+		return c, fmt.Errorf("get failed: %w", err)
 	}
 	return c, nil
 }

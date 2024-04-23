@@ -86,7 +86,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, istio *v1alpha1.Istio) (ctrl
 // function should get reported in the status of the Istio object by the caller.
 func (r *Reconciler) doReconcile(ctx context.Context, istio *v1alpha1.Istio) (result ctrl.Result, err error) {
 	if err := validateIstio(istio); err != nil {
-		return ctrl.Result{}, fmt.Errorf("validation failed: %w", err)
+		return ctrl.Result{}, err
 	}
 
 	var values *v1alpha1.Values
@@ -163,7 +163,7 @@ func (r *Reconciler) pruneInactiveRevisions(ctx context.Context, istio *v1alpha1
 	log := logf.FromContext(ctx)
 	revisions, err := r.getRevisions(ctx, istio)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to prune inactive IstioRevisions: %w", err)
+		return ctrl.Result{}, fmt.Errorf("failed to get revisions: %w", err)
 	}
 
 	// the following code does two things:
@@ -188,7 +188,7 @@ func (r *Reconciler) pruneInactiveRevisions(ctx context.Context, istio *v1alpha1
 			log.Info("Deleting expired IstioRevision", "IstioRevision", rev.Name)
 			err = r.Client.Delete(ctx, &rev)
 			if err != nil {
-				return ctrl.Result{}, fmt.Errorf("failed to delete inactive IstioRevision: %w", err)
+				return ctrl.Result{}, fmt.Errorf("delete failed: %w", err)
 			}
 		} else {
 			log.V(2).Info("IstioRevision is not in use, but hasn't yet expired", "IstioRevision", rev.Name, "InUseLastTransitionTime", inUseCondition.LastTransitionTime)
@@ -225,7 +225,7 @@ func (r *Reconciler) getActiveRevision(ctx context.Context, istio *v1alpha1.Isti
 	rev := v1alpha1.IstioRevision{}
 	err := r.Client.Get(ctx, getActiveRevisionKey(istio), &rev)
 	if err != nil {
-		return rev, fmt.Errorf("failed to get active IstioRevision: %w", err)
+		return rev, fmt.Errorf("get failed: %w", err)
 	}
 	return rev, nil
 }
@@ -233,7 +233,7 @@ func (r *Reconciler) getActiveRevision(ctx context.Context, istio *v1alpha1.Isti
 func (r *Reconciler) getRevisions(ctx context.Context, istio *v1alpha1.Istio) ([]v1alpha1.IstioRevision, error) {
 	revList := v1alpha1.IstioRevisionList{}
 	if err := r.Client.List(ctx, &revList); err != nil {
-		return nil, fmt.Errorf("failed to list IstioRevisions: %w", err)
+		return nil, fmt.Errorf("list failed: %w", err)
 	}
 
 	var revisions []v1alpha1.IstioRevision
@@ -293,12 +293,12 @@ func computeIstioRevisionValues(istio *v1alpha1.Istio, defaultProfile string, re
 	// apply userValues on top of defaultValues from profiles
 	mergedHelmValues, err := profiles.Apply(getProfilesDir(resourceDir, istio), defaultProfile, istio.Spec.Profile, helm.FromValues(userValues))
 	if err != nil {
-		return nil, fmt.Errorf("failed to compute IstioRevision values: %w", err)
+		return nil, fmt.Errorf("failed to apply profile: %w", err)
 	}
 
 	values, err := helm.ToValues(mergedHelmValues, &v1alpha1.Values{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to compute IstioRevision values: %w", err)
+		return nil, fmt.Errorf("conversion to Helm values failed: %w", err)
 	}
 
 	// override values that are not configurable by the user
@@ -440,7 +440,7 @@ func (r *Reconciler) determineStatus(ctx context.Context, istio *v1alpha1.Istio,
 			status.SetCondition(activeRevisionGetFailed(v1alpha1.IstioConditionReconciled))
 			status.SetCondition(activeRevisionGetFailed(v1alpha1.IstioConditionReady))
 			status.State = v1alpha1.IstioReasonFailedToGetActiveRevision
-			errs.Add(err)
+			errs.Add(fmt.Errorf("failed to get active IstioRevision: %w", err))
 		}
 	}
 

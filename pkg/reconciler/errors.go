@@ -21,7 +21,7 @@ type ValidationError struct {
 }
 
 func (v ValidationError) Error() string {
-	return v.message
+	return "validation error: " + v.message
 }
 
 func NewValidationError(message string) error {

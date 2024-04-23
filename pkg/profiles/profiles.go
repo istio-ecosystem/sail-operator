@@ -31,7 +31,7 @@ func Apply(profilesDir string, defaultProfile, userProfile string, userValues he
 	profile := resolve(defaultProfile, userProfile)
 	defaultValues, err := getValuesFromProfiles(profilesDir, profile)
 	if err != nil {
-		return nil, fmt.Errorf("failed to apply profile %q: %w", profile, err)
+		return nil, fmt.Errorf("failed to get values from profile %q: %w", profile, err)
 	}
 	return mergeOverwrite(defaultValues, userValues), nil
 }
