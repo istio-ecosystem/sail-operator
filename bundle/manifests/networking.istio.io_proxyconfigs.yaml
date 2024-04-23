@@ -32,6 +32,7 @@ spec:
             properties:
               concurrency:
                 description: The number of worker threads to run.
+                format: int32
                 nullable: true
                 type: integer
               environmentVariables:

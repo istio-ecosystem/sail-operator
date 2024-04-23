@@ -333,6 +333,7 @@ spec:
                     randomSamplingPercentage:
                       description: Controls the rate at which traffic will be selected
                         for tracing if no prior sampling decision has been made.
+                      format: double
                       maximum: 100
                       minimum: 0
                       nullable: true
@@ -659,6 +660,7 @@ spec:
                     randomSamplingPercentage:
                       description: Controls the rate at which traffic will be selected
                         for tracing if no prior sampling decision has been made.
+                      format: double
                       maximum: 100
                       minimum: 0
                       nullable: true
