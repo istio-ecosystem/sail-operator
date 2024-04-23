@@ -40,8 +40,12 @@ echo
 FULL_VERSION=$(curl -sSfL "${URL}")
 echo Full version: "${FULL_VERSION}"
 
-yq -i '(.versions[] | select(.name == "latest") | .commit) = "'"${COMMIT}"'"' "${VERSIONS_YAML_FILE}"
+PARTIAL_VERSION="${FULL_VERSION%.*}"
+echo Partial version: "${PARTIAL_VERSION}"
+
 yq -i '
+    (.versions[] | select(.name == "latest") | .version) = "'"${PARTIAL_VERSION}"'" |
+    (.versions[] | select(.name == "latest") | .commit) = "'"${COMMIT}"'" |
     (.versions[] | select(.name == "latest") | .charts) = [
         "https://storage.googleapis.com/istio-build/dev/'"${FULL_VERSION}"'/helm/base-'"${FULL_VERSION}"'.tgz",
         "https://storage.googleapis.com/istio-build/dev/'"${FULL_VERSION}"'/helm/cni-'"${FULL_VERSION}"'.tgz",
