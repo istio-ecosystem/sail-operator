@@ -236,6 +236,8 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 			ownedResourceHandler,
 			builder.WithPredicates(validatingWebhookConfigPredicate{})).
 
+		// +lint-watches:ignore: ValidatingAdmissionPolicy (TODO: fix this when CI supports golang 1.22 and k8s 1.30)
+		// +lint-watches:ignore: ValidatingAdmissionPolicyBinding (TODO: fix this when CI supports golang 1.22 and k8s 1.30)
 		// +lint-watches:ignore: CustomResourceDefinition (prevents `make lint-watches` from bugging us about CRDs)
 		Complete(reconciler.NewStandardReconcilerWithFinalizer(r.Client, &v1alpha1.IstioRevision{}, r.Reconcile, r.Finalize, constants.FinalizerName))
 }
