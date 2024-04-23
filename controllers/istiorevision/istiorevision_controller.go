@@ -346,12 +346,11 @@ func (r *Reconciler) determineInUseCondition(ctx context.Context, rev *v1alpha1.
 			c.Message = "Not referenced by any pod or namespace"
 		}
 		return c, nil
-	} else {
-		c.Status = metav1.ConditionUnknown
-		c.Reason = v1alpha1.IstioRevisionReasonUsageCheckFailed
-		c.Message = fmt.Sprintf("failed to determine if revision is in use: %v", err)
-		return c, fmt.Errorf("failed to determine if IstioRevision is in use: %w", err)
 	}
+	c.Status = metav1.ConditionUnknown
+	c.Reason = v1alpha1.IstioRevisionReasonUsageCheckFailed
+	c.Message = fmt.Sprintf("failed to determine if revision is in use: %v", err)
+	return c, fmt.Errorf("failed to determine if IstioRevision is in use: %w", err)
 }
 
 func (r *Reconciler) isRevisionReferencedByWorkloads(ctx context.Context, rev *v1alpha1.IstioRevision) (bool, error) {
