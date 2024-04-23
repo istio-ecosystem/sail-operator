@@ -79,21 +79,17 @@ func (r *StandardReconciler[T]) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	if !obj.GetDeletionTimestamp().IsZero() {
-		if r.finalizationEnabled() {
-			if kube.HasFinalizer(obj, r.finalizer) {
-				if err := r.finalize(ctx, obj); err != nil {
-					return ctrl.Result{}, err
-				}
-				return kube.RemoveFinalizer(ctx, r.client, obj, r.finalizer)
+		if r.finalizationEnabled() && kube.HasFinalizer(obj, r.finalizer) {
+			if err := r.finalize(ctx, obj); err != nil {
+				return ctrl.Result{}, err
 			}
+			return kube.RemoveFinalizer(ctx, r.client, obj, r.finalizer)
 		}
 		return ctrl.Result{}, nil
 	}
 
-	if r.finalizationEnabled() {
-		if !kube.HasFinalizer(obj, r.finalizer) {
-			return kube.AddFinalizer(ctx, r.client, obj, r.finalizer)
-		}
+	if r.finalizationEnabled() && !kube.HasFinalizer(obj, r.finalizer) {
+		return kube.AddFinalizer(ctx, r.client, obj, r.finalizer)
 	}
 
 	result, err := r.reconcile(ctx, obj)
