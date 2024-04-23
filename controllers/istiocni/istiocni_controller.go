@@ -47,7 +47,10 @@ import (
 	"istio.io/istio/pkg/ptr"
 )
 
-const cniReleaseName = "istio-cni"
+const (
+	cniReleaseName = "istio-cni"
+	cniChartName   = "cni"
+)
 
 // Reconciler reconciles an IstioCNI object
 type Reconciler struct {
@@ -127,7 +130,7 @@ func (r *Reconciler) validateIstioCNI(ctx context.Context, cni *v1alpha1.IstioCN
 		if apierrors.IsNotFound(err) {
 			return reconciler.NewValidationError(fmt.Sprintf("namespace %q doesn't exist", cni.Spec.Namespace))
 		}
-		return err
+		return fmt.Errorf("get failed: %w", err)
 	}
 	return nil
 }
@@ -151,15 +154,18 @@ func (r *Reconciler) installHelmChart(ctx context.Context, cni *v1alpha1.IstioCN
 	// apply userValues on top of defaultValues from profiles
 	mergedHelmValues, err := profiles.Apply(getProfilesDir(r.ResourceDirectory, cni), r.DefaultProfile, cni.Spec.Profile, helm.FromValues(userValues))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to apply profile: %w", err)
 	}
 
 	_, err = r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(cni), mergedHelmValues, cni.Spec.Namespace, cniReleaseName, ownerReference)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to install/update Helm chart %q: %w", cniChartName, err)
+	}
+	return nil
 }
 
 func (r *Reconciler) getChartDir(cni *v1alpha1.IstioCNI) string {
-	return path.Join(r.ResourceDirectory, cni.Spec.Version, "charts", "cni")
+	return path.Join(r.ResourceDirectory, cni.Spec.Version, "charts", cniChartName)
 }
 
 func getProfilesDir(resourceDir string, cni *v1alpha1.IstioCNI) string {
@@ -189,7 +195,10 @@ func applyImageDigests(cni *v1alpha1.IstioCNI, values *v1alpha1.CNIValues, confi
 
 func (r *Reconciler) uninstallHelmChart(ctx context.Context, cni *v1alpha1.IstioCNI) error {
 	_, err := r.ChartManager.UninstallChart(ctx, cniReleaseName, cni.Spec.Namespace)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to uninstall Helm chart %q: %w", cniChartName, err)
+	}
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -243,10 +252,14 @@ func (r *Reconciler) updateStatus(ctx context.Context, cni *v1alpha1.IstioCNI, r
 	var errs errlist.Builder
 
 	status, err := r.determineStatus(ctx, cni, reconcileErr)
-	errs.Add(err)
+	if err != nil {
+		errs.Add(fmt.Errorf("failed to determine status: %w", err))
+	}
 
 	if !reflect.DeepEqual(cni.Status, status) {
-		errs.Add(r.Client.Status().Patch(ctx, cni, kube.NewStatusPatch(status)))
+		if err := r.Client.Status().Patch(ctx, cni, kube.NewStatusPatch(status)); err != nil {
+			errs.Add(fmt.Errorf("failed to patch status: %w", err))
+		}
 	}
 	return errs.Error()
 }
@@ -297,7 +310,7 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, cni *v1alpha1.
 		c.Status = metav1.ConditionUnknown
 		c.Reason = v1alpha1.IstioCNIReasonReadinessCheckFailed
 		c.Message = fmt.Sprintf("failed to get readiness: %v", err)
-		return c, err
+		return c, fmt.Errorf("get failed: %w", err)
 	}
 	return c, nil
 }

@@ -28,9 +28,10 @@ import (
 )
 
 func Apply(profilesDir string, defaultProfile, userProfile string, userValues helm.Values) (helm.Values, error) {
-	defaultValues, err := getValuesFromProfiles(profilesDir, resolve(defaultProfile, userProfile))
+	profile := resolve(defaultProfile, userProfile)
+	defaultValues, err := getValuesFromProfiles(profilesDir, profile)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get values from profile %q: %w", profile, err)
 	}
 	return mergeOverwrite(defaultValues, userValues), nil
 }
