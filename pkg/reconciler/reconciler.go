@@ -79,36 +79,33 @@ func (r *StandardReconciler[T]) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	if !obj.GetDeletionTimestamp().IsZero() {
-		if r.finalizationEnabled() {
-			if kube.HasFinalizer(obj, r.finalizer) {
-				if err := r.finalize(ctx, obj); err != nil {
-					return ctrl.Result{}, err
-				}
-				return kube.RemoveFinalizer(ctx, r.client, obj, r.finalizer)
+		if r.finalizationEnabled() && kube.HasFinalizer(obj, r.finalizer) {
+			if err := r.finalize(ctx, obj); err != nil {
+				return ctrl.Result{}, err
 			}
+			return kube.RemoveFinalizer(ctx, r.client, obj, r.finalizer)
 		}
 		return ctrl.Result{}, nil
 	}
 
-	if r.finalizationEnabled() {
-		if !kube.HasFinalizer(obj, r.finalizer) {
-			return kube.AddFinalizer(ctx, r.client, obj, r.finalizer)
-		}
+	if r.finalizationEnabled() && !kube.HasFinalizer(obj, r.finalizer) {
+		return kube.AddFinalizer(ctx, r.client, obj, r.finalizer)
 	}
 
 	result, err := r.reconcile(ctx, obj)
-
-	if errors.IsForbidden(err) && strings.Contains(err.Error(), "RESTMapping") {
+	switch {
+	case errors.IsForbidden(err) && strings.Contains(err.Error(), "RESTMapping"):
 		log.Info("APIServer seems to be not ready - RESTMapper of gc admission plugin is not up to date. Retrying...", "error", err)
 		return ctrl.Result{Requeue: true}, nil
-	} else if errors.IsConflict(err) {
+	case errors.IsConflict(err):
 		log.Info("Conflict detected. Retrying...")
 		return ctrl.Result{Requeue: true}, nil
-	} else if IsValidationError(err) {
+	case IsValidationError(err):
 		log.Info("Validation failed", "error", err)
 		return ctrl.Result{}, nil
+	default:
+		return result, err
 	}
-	return result, err
 }
 
 func (r *StandardReconciler[T]) finalizationEnabled() bool {
