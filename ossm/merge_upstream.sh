@@ -33,7 +33,7 @@ fi
 GIT_COMMIT_MESSAGE=${GIT_COMMIT_MESSAGE:-"Automated merge"}
 
 MERGE_STRATEGY=${MERGE_STRATEGY:-"merge"}
-MERGE_REPOSITORY=${MERGE_REPOSITORY:-"git@github.com:istio-ecosystem/sail-operator.git"}
+MERGE_REPOSITORY=${MERGE_REPOSITORY:-"https://github.com/istio-ecosystem/sail-operator.git"}
 MERGE_BRANCH=${MERGE_BRANCH:-"main"}
 
 merge() {
@@ -53,7 +53,7 @@ main () {
   if ! merge; then
     set -e
     echo "Conflicts detected, attempting to run 'make gen' to resolve."
-    rm -rf bundle resources
+    rm -rf bundle/**/*.yaml resources
     make gen
     git add bundle resources chart
     git -c "user.name=$GIT_USERNAME" -c "user.email=$GIT_EMAIL" commit --no-edit
