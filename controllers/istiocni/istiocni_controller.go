@@ -229,6 +229,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// Owns(&multusv1.NetworkAttachmentDefinition{}).
 
 		// cluster-scoped resources
+		Watches(&corev1.Namespace{}, handler.EnqueueRequestsFromMapFunc(r.mapNamespaceToReconcileRequest)).
 		Watches(&rbacv1.ClusterRole{}, ownedResourceHandler).
 		Watches(&rbacv1.ClusterRoleBinding{}, ownedResourceHandler).
 		Complete(reconciler.NewStandardReconcilerWithFinalizer(r.Client, &v1alpha1.IstioCNI{}, r.Reconcile, r.Finalize, constants.FinalizerName))
@@ -320,4 +321,23 @@ func (r *Reconciler) cniDaemonSetKey(cni *v1alpha1.IstioCNI) client.ObjectKey {
 		Namespace: cni.Spec.Namespace,
 		Name:      "istio-cni-node",
 	}
+}
+
+func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, ns client.Object) []reconcile.Request {
+	log := logf.FromContext(ctx)
+
+	// Check if any IstioCNI references this namespace in .spec.namespace
+	cniList := v1alpha1.IstioCNIList{}
+	if err := r.Client.List(ctx, &cniList); err != nil {
+		log.Error(err, "failed to list IstioCNIs")
+		return nil
+	}
+
+	var requests []reconcile.Request
+	for _, cni := range cniList.Items {
+		if cni.Spec.Namespace == ns.GetName() {
+			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: cni.Name}})
+		}
+	}
+	return requests
 }
