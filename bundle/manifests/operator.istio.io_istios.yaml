@@ -147,15 +147,6 @@ spec:
                   base:
                     description: Configuration for the base component.
                     properties:
-                      enableCRDTemplates:
-                        description: For Helm2 use, adds the CRDs to templates.
-                        type: boolean
-                      enableIstioConfigCRDs:
-                        description: For istioctl usage to disable istio config crds
-                          in base
-                        type: boolean
-                      validateGateway:
-                        type: boolean
                       validationURL:
                         description: URL to use for validating webhook.
                         type: string
