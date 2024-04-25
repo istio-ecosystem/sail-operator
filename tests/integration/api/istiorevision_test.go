@@ -18,6 +18,7 @@ package integration
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
@@ -30,6 +31,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/rand"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -160,6 +162,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 	})
 
 	Describe("reconciles immediately after target namespace is created", func() {
+		nsName := "nonexistent-namespace-" + rand.String(8)
 		BeforeAll(func() {
 			Step("Creating the IstioRevision resource without the namespace")
 			rev = &v1alpha1.IstioRevision{
@@ -168,11 +171,11 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 				},
 				Spec: v1alpha1.IstioRevisionSpec{
 					Version:   supportedversion.Default,
-					Namespace: "nonexistent-namespace",
+					Namespace: nsName,
 					Values: &v1alpha1.Values{
 						Revision: revName,
 						Global: &v1alpha1.GlobalConfig{
-							IstioNamespace: "nonexistent-namespace",
+							IstioNamespace: nsName,
 						},
 					},
 				},
@@ -193,15 +196,17 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 				reconciled := rev.Status.GetCondition(v1alpha1.IstioRevisionConditionReconciled)
 				g.Expect(reconciled.Status).To(Equal(metav1.ConditionFalse))
 				g.Expect(reconciled.Reason).To(Equal(v1alpha1.IstioRevisionReasonReconcileError))
-				g.Expect(reconciled.Message).To(ContainSubstring(`namespace "nonexistent-namespace" doesn't exist`))
+				g.Expect(reconciled.Message).To(ContainSubstring(fmt.Sprintf("namespace %q doesn't exist", nsName)))
 			}).Should(Succeed())
 		})
 
 		When("the namespace is created", func() {
+			var ns *corev1.Namespace
+
 			BeforeAll(func() {
-				ns := &corev1.Namespace{
+				ns = &corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "nonexistent-namespace",
+						Name: nsName,
 					},
 				}
 				Expect(k8sClient.Create(ctx, ns)).To(Succeed())
@@ -210,7 +215,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 			It("reconciles immediately", func() {
 				Step("Checking if istiod is deployed immediately")
 				istiod := &appsv1.Deployment{}
-				istiodKey := client.ObjectKey{Name: "istiod-" + revName, Namespace: "nonexistent-namespace"}
+				istiodKey := client.ObjectKey{Name: "istiod-" + revName, Namespace: ns.Name}
 				Eventually(k8sClient.Get).WithArguments(ctx, istiodKey, istiod).WithTimeout(10 * time.Second).Should(Succeed())
 
 				Step("Checking if the status is updated")

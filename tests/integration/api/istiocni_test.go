@@ -18,15 +18,19 @@ package integration
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	"github.com/istio-ecosystem/sail-operator/pkg/kube"
+	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/rand"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -78,6 +82,67 @@ var _ = Describe("IstioCNI", Ordered, func() {
 	})
 
 	Describe("basic operation", func() {
+		Describe("reconciles immediately after target namespace is created", func() {
+			nsName := "nonexistent-namespace-" + rand.String(8)
+			BeforeAll(func() {
+				By("Creating the IstioCNI resource without the namespace")
+				cni = &v1alpha1.IstioCNI{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: cniName,
+					},
+					Spec: v1alpha1.IstioCNISpec{
+						Version:   supportedversion.Default,
+						Namespace: nsName,
+					},
+				}
+				Expect(k8sClient.Create(ctx, cni)).To(Succeed())
+			})
+
+			AfterAll(func() {
+				Expect(k8sClient.Delete(ctx, cni)).To(Succeed())
+				Eventually(k8sClient.Get).WithArguments(ctx, kube.Key(cniName), cni).Should(ReturnNotFoundError())
+			})
+
+			It("indicates in the status that the namespace doesn't exist", func() {
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, cniKey, cni)).To(Succeed())
+					g.Expect(cni.Status.ObservedGeneration).To(Equal(cni.ObjectMeta.Generation))
+
+					reconciled := cni.Status.GetCondition(v1alpha1.IstioCNIConditionReconciled)
+					g.Expect(reconciled.Status).To(Equal(metav1.ConditionFalse))
+					g.Expect(reconciled.Reason).To(Equal(v1alpha1.IstioCNIReasonReconcileError))
+					g.Expect(reconciled.Message).To(ContainSubstring(fmt.Sprintf("namespace %q doesn't exist", nsName)))
+				}).Should(Succeed())
+			})
+
+			When("the namespace is created", func() {
+				var ns *corev1.Namespace
+
+				BeforeAll(func() {
+					ns = &corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: nsName,
+						},
+					}
+					Expect(k8sClient.Create(ctx, ns)).To(Succeed())
+				})
+
+				It("reconciles immediately", func() {
+					Step("Checking if istio-cni-node DaemonSet is deployed immediately")
+					dsKey := client.ObjectKey{Name: "istio-cni-node", Namespace: nsName}
+					Eventually(k8sClient.Get).WithArguments(ctx, dsKey, ds).WithTimeout(10 * time.Second).Should(Succeed())
+
+					Step("Checking if the status is updated")
+					Eventually(func(g Gomega) {
+						g.Expect(k8sClient.Get(ctx, cniKey, cni)).To(Succeed())
+						g.Expect(cni.Status.ObservedGeneration).To(Equal(cni.ObjectMeta.Generation))
+						reconciled := cni.Status.GetCondition(v1alpha1.IstioCNIConditionReconciled)
+						g.Expect(reconciled.Status).To(Equal(metav1.ConditionTrue))
+					}).Should(Succeed())
+				})
+			})
+		})
+
 		When("the resource is created", func() {
 			BeforeAll(func() {
 				cni = &v1alpha1.IstioCNI{
