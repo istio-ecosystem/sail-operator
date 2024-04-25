@@ -910,13 +910,8 @@ type TracerStackdriverConfig struct {
 }
 
 type BaseConfig struct {
-	// For Helm2 use, adds the CRDs to templates.
-	EnableCRDTemplates *bool `json:"enableCRDTemplates,omitempty"`
 	// URL to use for validating webhook.
 	ValidationURL string `json:"validationURL,omitempty"`
-	// For istioctl usage to disable istio config crds in base
-	EnableIstioConfigCRDs *bool `json:"enableIstioConfigCRDs,omitempty"`
-	ValidateGateway       *bool `json:"validateGateway,omitempty"`
 }
 
 type IstiodRemoteConfig struct {
