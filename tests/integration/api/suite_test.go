@@ -24,10 +24,10 @@ import (
 	"github.com/istio-ecosystem/sail-operator/controllers/istio"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiocni"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiorevision"
-	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/test"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -69,7 +69,7 @@ var _ = BeforeSuite(func() {
 	}
 
 	chartManager := helm.NewChartManager(mgr.GetConfig(), "")
-	resourceDir := path.Join(config.RepositoryRoot, "resources")
+	resourceDir := path.Join(project.RootDir, "resources")
 
 	Expect(istio.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDir, "").
 		SetupWithManager(mgr)).To(Succeed())

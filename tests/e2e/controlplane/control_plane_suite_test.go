@@ -17,8 +17,6 @@
 package controlplane
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
 	k8sclient "github.com/istio-ecosystem/sail-operator/tests/e2e/util/client"
@@ -35,11 +33,9 @@ var (
 	namespace             = env.Get("NAMESPACE", "sail-operator")
 	deploymentName        = env.Get("DEPLOYMENT_NAME", "sail-operator")
 	controlPlaneNamespace = env.Get("CONTROL_PLANE_NS", "istio-system")
-	wd, _                 = os.Getwd()
 	istioName             = env.Get("ISTIO_NAME", "default")
 	istioCniNamespace     = env.Get("ISTIOCNI_NAMESPACE", "istio-cni")
 	istioCniName          = env.Get("ISTIOCNI_NAME", "default")
-	baseDir               = filepath.Join(wd, "../../..")
 	image                 = env.Get("IMAGE", "quay.io/maistra-dev/sail-operator:latest")
 )
 

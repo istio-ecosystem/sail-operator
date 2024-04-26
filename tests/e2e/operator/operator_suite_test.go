@@ -17,8 +17,6 @@
 package operator
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
 	k8sclient "github.com/istio-ecosystem/sail-operator/tests/e2e/util/client"
@@ -30,14 +28,11 @@ import (
 
 var (
 	cl             client.Client
-	err            error
 	ocp            = env.GetBool("OCP", false)
 	skipDeploy     = env.GetBool("SKIP_DEPLOY", false)
 	image          = env.Get("IMAGE", "quay.io/maistra-dev/sail-operator:latest")
 	namespace      = env.Get("NAMESPACE", "sail-operator")
 	deploymentName = env.Get("DEPLOYMENT_NAME", "sail-operator")
-	wd, _          = os.Getwd()
-	baseDir        = filepath.Join(wd, "../../..")
 )
 
 func TestInstall(t *testing.T) {
@@ -50,14 +45,13 @@ func setup() {
 	GinkgoWriter.Println("************ Running Setup ************")
 
 	GinkgoWriter.Println("Initializing k8s client")
+	var err error
 	cl, err = k8sclient.InitK8sClient()
 	Expect(err).NotTo(HaveOccurred())
 
 	if ocp {
 		GinkgoWriter.Println("Running on OCP cluster")
-		GinkgoWriter.Printf("Absolute Path: %s\n", wd)
 	} else {
 		GinkgoWriter.Println("Running on Kubernetes")
-		GinkgoWriter.Printf("Absolute Path: %s\n", wd)
 	}
 }

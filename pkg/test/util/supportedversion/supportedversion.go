@@ -18,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	"gopkg.in/yaml.v3"
 )
 
@@ -33,7 +34,7 @@ func init() {
 	if len(versionsFile) == 0 {
 		versionsFile = "versions.yaml"
 	}
-	versionsFile = filepath.Join("..", "..", "..", versionsFile)
+	versionsFile = filepath.Join(project.RootDir, versionsFile)
 
 	versionsBytes, err := os.ReadFile(versionsFile)
 	if err != nil {
