@@ -29,6 +29,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/testtime"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -490,7 +491,7 @@ func TestUpdateStatus(t *testing.T) {
 	resourceDir := t.TempDir()
 
 	generation := int64(100)
-	oneMinuteAgo := oneMinuteAgo()
+	oneMinuteAgo := testtime.OneMinuteAgo()
 
 	testCases := []struct {
 		name              string
@@ -1447,9 +1448,4 @@ func noWrites(t *testing.T) interceptor.Funcs {
 			return nil
 		},
 	}
-}
-
-func oneMinuteAgo() *metav1.Time {
-	t := metav1.NewTime(time.Now().Add(-1 * time.Minute))
-	return &t
 }
