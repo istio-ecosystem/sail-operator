@@ -19,10 +19,10 @@ import (
 	"errors"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/testtime"
 	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -102,7 +102,7 @@ func TestReconcile(t *testing.T) {
 				&v1alpha1.Istio{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:              key.Name,
-						DeletionTimestamp: oneMinuteAgo(),
+						DeletionTimestamp: testtime.OneMinuteAgo(),
 						Finalizers:        []string{"dummy"}, // the fake client doesn't allow you to add a deleted object unless it has a finalizer
 					},
 				},
@@ -120,7 +120,7 @@ func TestReconcile(t *testing.T) {
 				&v1alpha1.Istio{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:              key.Name,
-						DeletionTimestamp: oneMinuteAgo(),
+						DeletionTimestamp: testtime.OneMinuteAgo(),
 						Finalizers:        []string{testFinalizer},
 					},
 				},
@@ -138,7 +138,7 @@ func TestReconcile(t *testing.T) {
 				&v1alpha1.Istio{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:              key.Name,
-						DeletionTimestamp: oneMinuteAgo(),
+						DeletionTimestamp: testtime.OneMinuteAgo(),
 						Finalizers:        []string{testFinalizer},
 					},
 				},
@@ -297,9 +297,4 @@ func TestReconcile(t *testing.T) {
 			tt.assert(g, cl, result, err, mock)
 		})
 	}
-}
-
-func oneMinuteAgo() *metav1.Time {
-	t := metav1.NewTime(time.Now().Add(-1 * time.Minute))
-	return &t
 }
