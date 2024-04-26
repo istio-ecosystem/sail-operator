@@ -22,6 +22,7 @@ import (
 
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -32,6 +33,169 @@ import (
 
 	"istio.io/istio/pkg/ptr"
 )
+
+func TestValidate(t *testing.T) {
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "istio-system",
+		},
+	}
+
+	testCases := []struct {
+		name      string
+		rev       *v1alpha1.IstioRevision
+		objects   []client.Object
+		expectErr string
+	}{
+		{
+			name: "success",
+			rev: &v1alpha1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1alpha1.IstioRevisionSpec{
+					Version:   supportedversion.Default,
+					Namespace: "istio-system",
+					Values: &v1alpha1.Values{
+						Global: &v1alpha1.GlobalConfig{
+							IstioNamespace: "istio-system",
+						},
+					},
+				},
+			},
+			objects:   []client.Object{ns},
+			expectErr: "",
+		},
+		{
+			name: "no version",
+			rev: &v1alpha1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1alpha1.IstioRevisionSpec{
+					Namespace: "istio-system",
+				},
+			},
+			objects:   []client.Object{ns},
+			expectErr: "spec.version not set",
+		},
+		{
+			name: "no namespace",
+			rev: &v1alpha1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1alpha1.IstioRevisionSpec{
+					Version: supportedversion.Default,
+				},
+			},
+			objects:   []client.Object{ns},
+			expectErr: "spec.namespace not set",
+		},
+		{
+			name: "namespace not found",
+			rev: &v1alpha1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1alpha1.IstioRevisionSpec{
+					Version:   supportedversion.Default,
+					Namespace: "istio-system",
+				},
+			},
+			objects:   []client.Object{},
+			expectErr: `namespace "istio-system" doesn't exist`,
+		},
+		{
+			name: "no values",
+			rev: &v1alpha1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1alpha1.IstioRevisionSpec{
+					Version:   supportedversion.Default,
+					Namespace: "istio-system",
+				},
+			},
+			objects:   []client.Object{ns},
+			expectErr: "spec.values not set",
+		},
+		{
+			name: "invalid istioNamespace",
+			rev: &v1alpha1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1alpha1.IstioRevisionSpec{
+					Version:   supportedversion.Default,
+					Namespace: "istio-system",
+					Values: &v1alpha1.Values{
+						Global: &v1alpha1.GlobalConfig{
+							IstioNamespace: "other-namespace",
+						},
+					},
+				},
+			},
+			objects:   []client.Object{ns},
+			expectErr: "spec.values.global.istioNamespace does not match spec.namespace",
+		},
+		{
+			name: "invalid revision default",
+			rev: &v1alpha1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1alpha1.IstioRevisionSpec{
+					Version:   supportedversion.Default,
+					Namespace: "istio-system",
+					Values: &v1alpha1.Values{
+						Revision: "my-revision",
+						Global: &v1alpha1.GlobalConfig{
+							IstioNamespace: "other-namespace",
+						},
+					},
+				},
+			},
+			objects:   []client.Object{ns},
+			expectErr: `spec.values.revision must be "" when IstioRevision name is default`,
+		},
+		{
+			name: "invalid revision non-default",
+			rev: &v1alpha1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "my-revision",
+				},
+				Spec: v1alpha1.IstioRevisionSpec{
+					Version:   supportedversion.Default,
+					Namespace: "istio-system",
+					Values: &v1alpha1.Values{
+						Revision: "other-revision",
+						Global: &v1alpha1.GlobalConfig{
+							IstioNamespace: "other-namespace",
+						},
+					},
+				},
+			},
+			objects:   []client.Object{ns},
+			expectErr: `spec.values.revision does not match IstioRevision name`,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(tc.objects...).Build()
+			r := NewReconciler(cl, scheme.Scheme, "", nil)
+
+			err := r.validate(context.TODO(), tc.rev)
+			if tc.expectErr == "" {
+				g.Expect(err).ToNot(HaveOccurred())
+			} else {
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(err.Error()).To(ContainSubstring(tc.expectErr))
+			}
+		})
+	}
+}
 
 func TestDeriveState(t *testing.T) {
 	testCases := []struct {

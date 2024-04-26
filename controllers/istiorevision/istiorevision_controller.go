@@ -29,6 +29,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
+	"github.com/istio-ecosystem/sail-operator/pkg/validation"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -112,7 +113,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, rev *v1alpha1.IstioRevision)
 
 func (r *Reconciler) doReconcile(ctx context.Context, rev *v1alpha1.IstioRevision) error {
 	log := logf.FromContext(ctx)
-	if err := r.validateIstioRevision(ctx, rev); err != nil {
+	if err := r.validate(ctx, rev); err != nil {
 		return err
 	}
 
@@ -124,18 +125,15 @@ func (r *Reconciler) Finalize(ctx context.Context, rev *v1alpha1.IstioRevision) 
 	return r.uninstallHelmCharts(ctx, rev)
 }
 
-func (r *Reconciler) validateIstioRevision(ctx context.Context, rev *v1alpha1.IstioRevision) error {
+func (r *Reconciler) validate(ctx context.Context, rev *v1alpha1.IstioRevision) error {
 	if rev.Spec.Version == "" {
 		return reconciler.NewValidationError("spec.version not set")
 	}
 	if rev.Spec.Namespace == "" {
 		return reconciler.NewValidationError("spec.namespace not set")
 	}
-	if err := r.Client.Get(ctx, types.NamespacedName{Name: rev.Spec.Namespace}, &corev1.Namespace{}); err != nil {
-		if apierrors.IsNotFound(err) {
-			return reconciler.NewValidationError(fmt.Sprintf("namespace %q doesn't exist", rev.Spec.Namespace))
-		}
-		return fmt.Errorf("get failed: %w", err)
+	if err := validation.ValidateTargetNamespace(ctx, r.Client, rev.Spec.Namespace); err != nil {
+		return err
 	}
 
 	if rev.Spec.Values == nil {

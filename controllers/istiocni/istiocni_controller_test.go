@@ -23,8 +23,10 @@ import (
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,6 +35,91 @@ import (
 
 	"istio.io/istio/pkg/ptr"
 )
+
+func TestValidate(t *testing.T) {
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "istio-cni",
+		},
+	}
+
+	testCases := []struct {
+		name      string
+		cni       *v1alpha1.IstioCNI
+		objects   []client.Object
+		expectErr string
+	}{
+		{
+			name: "success",
+			cni: &v1alpha1.IstioCNI{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1alpha1.IstioCNISpec{
+					Version:   supportedversion.Default,
+					Namespace: "istio-cni",
+				},
+			},
+			objects:   []client.Object{ns},
+			expectErr: "",
+		},
+		{
+			name: "no version",
+			cni: &v1alpha1.IstioCNI{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1alpha1.IstioCNISpec{
+					Namespace: "istio-cni",
+				},
+			},
+			objects:   []client.Object{ns},
+			expectErr: "spec.version not set",
+		},
+		{
+			name: "no namespace",
+			cni: &v1alpha1.IstioCNI{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1alpha1.IstioCNISpec{
+					Version: supportedversion.Default,
+				},
+			},
+			objects:   []client.Object{ns},
+			expectErr: "spec.namespace not set",
+		},
+		{
+			name: "namespace not found",
+			cni: &v1alpha1.IstioCNI{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1alpha1.IstioCNISpec{
+					Version:   supportedversion.Default,
+					Namespace: "istio-cni",
+				},
+			},
+			objects:   []client.Object{},
+			expectErr: `namespace "istio-cni" doesn't exist`,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(tc.objects...).Build()
+			r := NewReconciler(cl, scheme.Scheme, "", nil, "")
+
+			err := r.validate(context.TODO(), tc.cni)
+			if tc.expectErr == "" {
+				g.Expect(err).ToNot(HaveOccurred())
+			} else {
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(err.Error()).To(ContainSubstring(tc.expectErr))
+			}
+		})
+	}
+}
 
 func TestDeriveState(t *testing.T) {
 	testCases := []struct {
