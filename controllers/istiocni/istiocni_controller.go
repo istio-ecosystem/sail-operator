@@ -30,6 +30,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/profiles"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
+	"github.com/istio-ecosystem/sail-operator/pkg/validation"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -110,7 +111,7 @@ func (r *Reconciler) Finalize(ctx context.Context, cni *v1alpha1.IstioCNI) error
 
 func (r *Reconciler) doReconcile(ctx context.Context, cni *v1alpha1.IstioCNI) error {
 	log := logf.FromContext(ctx)
-	if err := r.validateIstioCNI(ctx, cni); err != nil {
+	if err := r.validate(ctx, cni); err != nil {
 		return err
 	}
 
@@ -118,19 +119,15 @@ func (r *Reconciler) doReconcile(ctx context.Context, cni *v1alpha1.IstioCNI) er
 	return r.installHelmChart(ctx, cni)
 }
 
-func (r *Reconciler) validateIstioCNI(ctx context.Context, cni *v1alpha1.IstioCNI) error {
+func (r *Reconciler) validate(ctx context.Context, cni *v1alpha1.IstioCNI) error {
 	if cni.Spec.Version == "" {
 		return reconciler.NewValidationError("spec.version not set")
 	}
 	if cni.Spec.Namespace == "" {
 		return reconciler.NewValidationError("spec.namespace not set")
 	}
-
-	if err := r.Client.Get(ctx, types.NamespacedName{Name: cni.Spec.Namespace}, &corev1.Namespace{}); err != nil {
-		if apierrors.IsNotFound(err) {
-			return reconciler.NewValidationError(fmt.Sprintf("namespace %q doesn't exist", cni.Spec.Namespace))
-		}
-		return fmt.Errorf("get failed: %w", err)
+	if err := validation.ValidateTargetNamespace(ctx, r.Client, cni.Spec.Namespace); err != nil {
+		return err
 	}
 	return nil
 }

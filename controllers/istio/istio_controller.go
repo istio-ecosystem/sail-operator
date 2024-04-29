@@ -85,7 +85,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, istio *v1alpha1.Istio) (ctrl
 // doReconcile is the function that actually reconciles the Istio object. Any error reported by this
 // function should get reported in the status of the Istio object by the caller.
 func (r *Reconciler) doReconcile(ctx context.Context, istio *v1alpha1.Istio) (result ctrl.Result, err error) {
-	if err := validateIstio(istio); err != nil {
+	if err := validate(istio); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -101,12 +101,12 @@ func (r *Reconciler) doReconcile(ctx context.Context, istio *v1alpha1.Istio) (re
 	return r.pruneInactiveRevisions(ctx, istio)
 }
 
-func validateIstio(istio *v1alpha1.Istio) error {
+func validate(istio *v1alpha1.Istio) error {
 	if istio.Spec.Version == "" {
-		return reconciler.NewValidationError("no spec.version set")
+		return reconciler.NewValidationError("spec.version not set")
 	}
 	if istio.Spec.Namespace == "" {
-		return reconciler.NewValidationError("no spec.namespace set")
+		return reconciler.NewValidationError("spec.namespace not set")
 	}
 	return nil
 }
