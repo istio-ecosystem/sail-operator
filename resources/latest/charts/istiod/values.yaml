@@ -199,6 +199,9 @@ defaults:
   meshConfig:
     enablePrometheusMerge: true
 
+  experimental:
+    stableValidationPolicy: false
+
   global:
     # Used to locate istiod.
     istioNamespace: istio-system
@@ -231,7 +234,7 @@ defaults:
     # Dev builds from prow are on gcr.io
     hub: gcr.io/istio-testing
     # Default tag for Istio images.
-    tag: 1.22-alpha.bf9fd6127f5bebf2f0024362f3c687849f390749
+    tag: 1.23-alpha.367ed201d012693208f1ca81d28c8fefebdd7c32
     # Variant of the image to use.
     # Currently supported are: [debug, distroless]
     variant: ""

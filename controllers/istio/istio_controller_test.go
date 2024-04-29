@@ -29,6 +29,9 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/testtime"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
+	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -163,6 +166,65 @@ func TestReconcile(t *testing.T) {
 			t.Errorf("Expected Reconciled condition status to be %q, but got %q", metav1.ConditionUnknown, readyCond.Status)
 		}
 	})
+}
+
+func TestValidate(t *testing.T) {
+	testCases := []struct {
+		name      string
+		istio     *v1alpha1.Istio
+		expectErr string
+	}{
+		{
+			name: "success",
+			istio: &v1alpha1.Istio{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1alpha1.IstioSpec{
+					Version:   supportedversion.Default,
+					Namespace: "istio-system",
+				},
+			},
+			expectErr: "",
+		},
+		{
+			name: "no version",
+			istio: &v1alpha1.Istio{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1alpha1.IstioSpec{
+					Namespace: "istio-system",
+				},
+			},
+			expectErr: "spec.version not set",
+		},
+		{
+			name: "no namespace",
+			istio: &v1alpha1.Istio{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1alpha1.IstioSpec{
+					Version: supportedversion.Default,
+				},
+			},
+			expectErr: "spec.namespace not set",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			err := validate(tc.istio)
+			if tc.expectErr == "" {
+				g.Expect(err).ToNot(HaveOccurred())
+			} else {
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(err.Error()).To(ContainSubstring(tc.expectErr))
+			}
+		})
+	}
 }
 
 func TestDetermineStatus(t *testing.T) {
@@ -391,13 +453,13 @@ func TestDetermineStatus(t *testing.T) {
 						Type:    v1alpha1.IstioConditionReconciled,
 						Status:  metav1.ConditionUnknown,
 						Reason:  v1alpha1.IstioReasonFailedToGetActiveRevision,
-						Message: "failed to get active IstioRevision: simulated error",
+						Message: "failed to get active IstioRevision: get failed: simulated error",
 					},
 					{
 						Type:    v1alpha1.IstioConditionReady,
 						Status:  metav1.ConditionUnknown,
 						Reason:  v1alpha1.IstioReasonFailedToGetActiveRevision,
-						Message: "failed to get active IstioRevision: simulated error",
+						Message: "failed to get active IstioRevision: get failed: simulated error",
 					},
 				},
 				Revisions: v1alpha1.RevisionSummary{},
@@ -490,7 +552,7 @@ func TestUpdateStatus(t *testing.T) {
 	resourceDir := t.TempDir()
 
 	generation := int64(100)
-	oneMinuteAgo := oneMinuteAgo()
+	oneMinuteAgo := testtime.OneMinuteAgo()
 
 	testCases := []struct {
 		name              string
@@ -1447,9 +1509,4 @@ func noWrites(t *testing.T) interceptor.Funcs {
 			return nil
 		},
 	}
-}
-
-func oneMinuteAgo() *metav1.Time {
-	t := metav1.NewTime(time.Now().Add(-1 * time.Minute))
-	return &t
 }

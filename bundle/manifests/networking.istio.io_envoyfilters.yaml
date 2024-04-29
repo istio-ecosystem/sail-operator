@@ -80,6 +80,8 @@ spec:
                             portNumber:
                               description: The service port for which this cluster
                                 was generated.
+                              maximum: 4294967295
+                              minimum: 0
                               type: integer
                             service:
                               description: The fully qualified service name for this
@@ -112,6 +114,8 @@ spec:
                                 destinationPort:
                                   description: The destination_port value used by
                                     a filter chain's match condition.
+                                  maximum: 4294967295
+                                  minimum: 0
                                   type: integer
                                 filter:
                                   description: The name of a specific filter to apply
@@ -151,6 +155,8 @@ spec:
                             portNumber:
                               description: The service port/gateway port to which
                                 traffic is being sent/received.
+                              maximum: 4294967295
+                              minimum: 0
                               type: integer
                           type: object
                         proxy:
@@ -185,6 +191,8 @@ spec:
                               description: The service port number or gateway server
                                 port number for which this route configuration was
                                 generated.
+                              maximum: 4294967295
+                              minimum: 0
                               type: integer
                             vhost:
                               description: Match a specific virtual host in a route

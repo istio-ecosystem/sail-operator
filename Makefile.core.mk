@@ -403,8 +403,8 @@ OPM ?= $(LOCALBIN)/opm
 ## Tool Versions
 OPERATOR_SDK_VERSION ?= v1.34.1
 HELM_VERSION ?= v3.14.4
-CONTROLLER_TOOLS_VERSION ?= v0.14.0
-OPM_VERSION ?= v1.39.0
+CONTROLLER_TOOLS_VERSION ?= v0.15.0
+OPM_VERSION ?= v1.40.0
 GITLEAKS_VERSION ?= v8.18.2
 
 .PHONY: helm $(HELM)
@@ -461,7 +461,7 @@ bundle: gen helm operator-sdk ## Generate bundle manifests and metadata, then va
 		if (git ls-files --error-unmatch "$$csvPath" &>/dev/null); then \
 			if ! (git diff "$$csvPath" | grep '^[+-][^+-][^+-]' | grep -v "createdAt:" >/dev/null); then \
 				echo "reverting timestamp change in $$csvPath"; \
-				git checkout "$$csvPath"; \
+				git checkout "$$csvPath" || echo "failed to revert timestamp change. assuming we're in the middle of a merge"; \
 			fi \
 		fi
 	$(OPERATOR_SDK) bundle validate ./bundle

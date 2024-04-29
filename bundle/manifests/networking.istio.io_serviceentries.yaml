@@ -81,6 +81,8 @@ spec:
                       type: string
                     ports:
                       additionalProperties:
+                        maximum: 4294967295
+                        minimum: 0
                         type: integer
                       description: Set of ports associated with the endpoint.
                       type: object
@@ -90,6 +92,8 @@ spec:
                       type: string
                     weight:
                       description: The load balancing weight associated with the endpoint.
+                      maximum: 4294967295
+                      minimum: 0
                       type: integer
                   type: object
                 type: array
@@ -121,6 +125,8 @@ spec:
                       type: string
                     number:
                       description: A valid non-negative integer port number.
+                      maximum: 4294967295
+                      minimum: 0
                       type: integer
                     protocol:
                       description: The protocol exposed on the port.
@@ -128,6 +134,8 @@ spec:
                     targetPort:
                       description: The port number on the endpoint where the traffic
                         will be received.
+                      maximum: 4294967295
+                      minimum: 0
                       type: integer
                   required:
                   - number
@@ -229,6 +237,8 @@ spec:
                       type: string
                     ports:
                       additionalProperties:
+                        maximum: 4294967295
+                        minimum: 0
                         type: integer
                       description: Set of ports associated with the endpoint.
                       type: object
@@ -238,6 +248,8 @@ spec:
                       type: string
                     weight:
                       description: The load balancing weight associated with the endpoint.
+                      maximum: 4294967295
+                      minimum: 0
                       type: integer
                   type: object
                 type: array
@@ -269,6 +281,8 @@ spec:
                       type: string
                     number:
                       description: A valid non-negative integer port number.
+                      maximum: 4294967295
+                      minimum: 0
                       type: integer
                     protocol:
                       description: The protocol exposed on the port.
@@ -276,6 +290,8 @@ spec:
                     targetPort:
                       description: The port number on the endpoint where the traffic
                         will be received.
+                      maximum: 4294967295
+                      minimum: 0
                       type: integer
                   required:
                   - number
@@ -377,6 +393,8 @@ spec:
                       type: string
                     ports:
                       additionalProperties:
+                        maximum: 4294967295
+                        minimum: 0
                         type: integer
                       description: Set of ports associated with the endpoint.
                       type: object
@@ -386,6 +404,8 @@ spec:
                       type: string
                     weight:
                       description: The load balancing weight associated with the endpoint.
+                      maximum: 4294967295
+                      minimum: 0
                       type: integer
                   type: object
                 type: array
@@ -417,6 +437,8 @@ spec:
                       type: string
                     number:
                       description: A valid non-negative integer port number.
+                      maximum: 4294967295
+                      minimum: 0
                       type: integer
                     protocol:
                       description: The protocol exposed on the port.
@@ -424,6 +446,8 @@ spec:
                     targetPort:
                       description: The port number on the endpoint where the traffic
                         will be received.
+                      maximum: 4294967295
+                      minimum: 0
                       type: integer
                   required:
                   - number

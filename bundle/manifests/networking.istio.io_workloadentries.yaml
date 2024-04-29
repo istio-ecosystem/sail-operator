@@ -63,6 +63,8 @@ spec:
                 type: string
               ports:
                 additionalProperties:
+                  maximum: 4294967295
+                  minimum: 0
                   type: integer
                 description: Set of ports associated with the endpoint.
                 type: object
@@ -72,6 +74,8 @@ spec:
                 type: string
               weight:
                 description: The load balancing weight associated with the endpoint.
+                maximum: 4294967295
+                minimum: 0
                 type: integer
             type: object
           status:
@@ -121,6 +125,8 @@ spec:
                 type: string
               ports:
                 additionalProperties:
+                  maximum: 4294967295
+                  minimum: 0
                   type: integer
                 description: Set of ports associated with the endpoint.
                 type: object
@@ -130,6 +136,8 @@ spec:
                 type: string
               weight:
                 description: The load balancing weight associated with the endpoint.
+                maximum: 4294967295
+                minimum: 0
                 type: integer
             type: object
           status:
@@ -179,6 +187,8 @@ spec:
                 type: string
               ports:
                 additionalProperties:
+                  maximum: 4294967295
+                  minimum: 0
                   type: integer
                 description: Set of ports associated with the endpoint.
                 type: object
@@ -188,6 +198,8 @@ spec:
                 type: string
               weight:
                 description: The load balancing weight associated with the endpoint.
+                maximum: 4294967295
+                minimum: 0
                 type: integer
             type: object
           status:

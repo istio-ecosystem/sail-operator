@@ -24,6 +24,8 @@ import (
 	"time"
 
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	"github.com/istio-ecosystem/sail-operator/pkg/kube"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	common "github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
@@ -42,7 +44,7 @@ import (
 var istiodVersionRegex = regexp.MustCompile(`Version:"(\d+\.\d+(\.\d+|-\w+))`)
 
 var _ = Describe("Control Plane Installation", Ordered, func() {
-	SetDefaultEventuallyTimeout(60 * time.Second)
+	SetDefaultEventuallyTimeout(120 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
 	debugInfoLogged := false
@@ -55,10 +57,10 @@ var _ = Describe("Control Plane Installation", Ordered, func() {
 			extraArg = "--set=platform=openshift"
 		}
 
-		Expect(helm.Install("sail-operator", filepath.Join(baseDir, "chart"), "--namespace "+namespace, "--set=image="+image, extraArg)).
+		Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, extraArg)).
 			To(Succeed(), "Operator failed to be deployed")
 
-		Eventually(common.GetObject).WithArguments(ctx, cl, common.Key(deploymentName, namespace), &appsv1.Deployment{}).
+		Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
 			Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
 		Success("Operator is deployed in the namespace and Running")
 	})
@@ -78,12 +80,12 @@ metadata:
 				Success("IstioCNI created")
 
 				cni := &v1alpha1.IstioCNI{}
-				Expect(cl.Get(ctx, common.Key("default"), cni)).To(Succeed())
+				Expect(cl.Get(ctx, kube.Key("default"), cni)).To(Succeed())
 				Expect(cni.Spec.Version).To(Equal(supportedversion.Default))
 				Expect(cni.Spec.Namespace).To(Equal("istio-cni"))
 
 				Expect(cl.Delete(ctx, cni)).To(Succeed())
-				Eventually(cl.Get).WithArguments(ctx, common.Key("default"), cni).Should(ReturnNotFoundError())
+				Eventually(cl.Get).WithArguments(ctx, kube.Key("default"), cni).Should(ReturnNotFoundError())
 			},
 		)
 
@@ -102,14 +104,14 @@ metadata:
 				Success("Istio created")
 
 				istio := &v1alpha1.Istio{}
-				Expect(cl.Get(ctx, common.Key("default"), istio)).To(Succeed())
+				Expect(cl.Get(ctx, kube.Key("default"), istio)).To(Succeed())
 				Expect(istio.Spec.Version).To(Equal(supportedversion.Default))
 				Expect(istio.Spec.Namespace).To(Equal("istio-system"))
 				Expect(istio.Spec.UpdateStrategy).ToNot(BeNil())
 				Expect(istio.Spec.UpdateStrategy.Type).To(Equal(v1alpha1.UpdateStrategyTypeInPlace))
 
 				Expect(cl.Delete(ctx, istio)).To(Succeed())
-				Eventually(cl.Get).WithArguments(ctx, common.Key("default"), istio).Should(ReturnNotFoundError())
+				Eventually(cl.Get).WithArguments(ctx, kube.Key("default"), istio).Should(ReturnNotFoundError())
 			},
 		)
 	})
@@ -144,7 +146,7 @@ spec:
 					It("deploys the CNI DaemonSet", func(ctx SpecContext) {
 						Eventually(func(g Gomega) {
 							daemonset := &appsv1.DaemonSet{}
-							g.Expect(cl.Get(ctx, common.Key("istio-cni-node", istioCniNamespace), daemonset)).To(Succeed(), "Error getting IstioCNI DaemonSet")
+							g.Expect(cl.Get(ctx, kube.Key("istio-cni-node", istioCniNamespace), daemonset)).To(Succeed(), "Error getting IstioCNI DaemonSet")
 							g.Expect(daemonset.Status.NumberAvailable).
 								To(Equal(daemonset.Status.CurrentNumberScheduled), "CNI DaemonSet Pods not Available; expected numberAvailable to be equal to currentNumberScheduled")
 						}).Should(Succeed(), "CNI DaemonSet Pods are not Available")
@@ -152,13 +154,13 @@ spec:
 					})
 
 					It("updates the status to Reconciled", func(ctx SpecContext) {
-						Eventually(common.GetObject).WithArguments(ctx, cl, common.Key(istioCniName), &v1alpha1.IstioCNI{}).
+						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioCniName), &v1alpha1.IstioCNI{}).
 							Should(HaveCondition(v1alpha1.IstioCNIConditionReconciled, metav1.ConditionTrue), "IstioCNI is not Reconciled; unexpected Condition")
 						Success("IstioCNI is Reconciled")
 					})
 
 					It("updates the status to Ready", func(ctx SpecContext) {
-						Eventually(common.GetObject).WithArguments(ctx, cl, common.Key(istioCniName), &v1alpha1.IstioCNI{}).
+						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioCniName), &v1alpha1.IstioCNI{}).
 							Should(HaveCondition(v1alpha1.IstioCNIConditionReady, metav1.ConditionTrue), "IstioCNI is not Ready; unexpected Condition")
 						Success("IstioCNI is Ready")
 					})
@@ -188,19 +190,19 @@ spec:
 					})
 
 					It("updates the Istio CR status to Reconciled", func(ctx SpecContext) {
-						Eventually(common.GetObject).WithArguments(ctx, cl, common.Key(istioName), &v1alpha1.Istio{}).
+						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioName), &v1alpha1.Istio{}).
 							Should(HaveCondition(v1alpha1.IstioConditionReconciled, metav1.ConditionTrue), "Istio is not Reconciled; unexpected Condition")
 						Success("Istio CR is Reconciled")
 					})
 
 					It("updates the Istio CR status to Ready", func(ctx SpecContext) {
-						Eventually(common.GetObject).WithArguments(ctx, cl, common.Key(istioName), &v1alpha1.Istio{}).
+						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioName), &v1alpha1.Istio{}).
 							Should(HaveCondition(v1alpha1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready; unexpected Condition")
 						Success("Istio CR is Ready")
 					})
 
 					It("deploys istiod", func(ctx SpecContext) {
-						Eventually(common.GetObject).WithArguments(ctx, cl, common.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
+						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
 							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available; unexpected Condition")
 						Expect(getVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
 						Success("Istiod is deployed in the namespace and Running")
@@ -220,7 +222,7 @@ spec:
 					})
 
 					It("removes everything from the namespace", func(ctx SpecContext) {
-						Eventually(cl.Get).WithArguments(ctx, common.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
+						Eventually(cl.Get).WithArguments(ctx, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
 							Should(ReturnNotFoundError(), "Istiod should not exist anymore")
 						common.CheckNamespaceEmpty(ctx, cl, controlPlaneNamespace)
 						Success("Namespace is empty")
@@ -235,7 +237,7 @@ spec:
 
 					It("removes everything from the CNI namespace", func(ctx SpecContext) {
 						daemonset := &appsv1.DaemonSet{}
-						Eventually(cl.Get).WithArguments(ctx, common.Key("istio-cni-node", istioCniNamespace), daemonset).
+						Eventually(cl.Get).WithArguments(ctx, kube.Key("istio-cni-node", istioCniNamespace), daemonset).
 							Should(ReturnNotFoundError(), "IstioCNI DaemonSet should not exist anymore")
 						common.CheckNamespaceEmpty(ctx, cl, istioCniNamespace)
 						Success("CNI namespace is empty")

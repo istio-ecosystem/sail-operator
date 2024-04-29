@@ -47,7 +47,7 @@ check_watches() {
 
     # Print missing lines, if any
     if [[ ${#missing_kinds[@]} -gt 0 ]]; then
-        printf "The following kinds aren't watched in %s:\n" "$controllerPath"
+        printf "FAIL: The following kinds aren't watched in %s:\n" "$controllerPath"
         for line in "${missing_kinds[@]}"; do
             printf "  - %s\n" "$line"
         done

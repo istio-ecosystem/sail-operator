@@ -63,11 +63,15 @@ spec:
                           type: string
                         number:
                           description: A valid non-negative integer port number.
+                          maximum: 4294967295
+                          minimum: 0
                           type: integer
                         protocol:
                           description: The protocol exposed on the port.
                           type: string
                         targetPort:
+                          maximum: 4294967295
+                          minimum: 0
                           type: integer
                       type: object
                   required:
@@ -151,6 +155,8 @@ spec:
                           probes:
                             description: Maximum number of keepalive probes to send
                               without response before deciding the connection is dead.
+                            maximum: 4294967295
+                            minimum: 0
                             type: integer
                           time:
                             description: The time duration a connection needs to be
@@ -259,6 +265,8 @@ spec:
                                   description: Maximum number of keepalive probes
                                     to send without response before deciding the connection
                                     is dead.
+                                  maximum: 4294967295
+                                  minimum: 0
                                   type: integer
                                 time:
                                   description: The time duration a connection needs
@@ -280,11 +288,15 @@ spec:
                           type: string
                         number:
                           description: A valid non-negative integer port number.
+                          maximum: 4294967295
+                          minimum: 0
                           type: integer
                         protocol:
                           description: The protocol exposed on the port.
                           type: string
                         targetPort:
+                          maximum: 4294967295
+                          minimum: 0
                           type: integer
                       type: object
                     tls:
@@ -395,6 +407,8 @@ spec:
                           addressed.
                         properties:
                           number:
+                            maximum: 4294967295
+                            minimum: 0
                             type: integer
                         type: object
                       subset:
@@ -475,11 +489,15 @@ spec:
                           type: string
                         number:
                           description: A valid non-negative integer port number.
+                          maximum: 4294967295
+                          minimum: 0
                           type: integer
                         protocol:
                           description: The protocol exposed on the port.
                           type: string
                         targetPort:
+                          maximum: 4294967295
+                          minimum: 0
                           type: integer
                       type: object
                   required:
@@ -563,6 +581,8 @@ spec:
                           probes:
                             description: Maximum number of keepalive probes to send
                               without response before deciding the connection is dead.
+                            maximum: 4294967295
+                            minimum: 0
                             type: integer
                           time:
                             description: The time duration a connection needs to be
@@ -671,6 +691,8 @@ spec:
                                   description: Maximum number of keepalive probes
                                     to send without response before deciding the connection
                                     is dead.
+                                  maximum: 4294967295
+                                  minimum: 0
                                   type: integer
                                 time:
                                   description: The time duration a connection needs
@@ -692,11 +714,15 @@ spec:
                           type: string
                         number:
                           description: A valid non-negative integer port number.
+                          maximum: 4294967295
+                          minimum: 0
                           type: integer
                         protocol:
                           description: The protocol exposed on the port.
                           type: string
                         targetPort:
+                          maximum: 4294967295
+                          minimum: 0
                           type: integer
                       type: object
                     tls:
@@ -807,6 +833,8 @@ spec:
                           addressed.
                         properties:
                           number:
+                            maximum: 4294967295
+                            minimum: 0
                             type: integer
                         type: object
                       subset:
@@ -887,11 +915,15 @@ spec:
                           type: string
                         number:
                           description: A valid non-negative integer port number.
+                          maximum: 4294967295
+                          minimum: 0
                           type: integer
                         protocol:
                           description: The protocol exposed on the port.
                           type: string
                         targetPort:
+                          maximum: 4294967295
+                          minimum: 0
                           type: integer
                       type: object
                   required:
@@ -975,6 +1007,8 @@ spec:
                           probes:
                             description: Maximum number of keepalive probes to send
                               without response before deciding the connection is dead.
+                            maximum: 4294967295
+                            minimum: 0
                             type: integer
                           time:
                             description: The time duration a connection needs to be
@@ -1083,6 +1117,8 @@ spec:
                                   description: Maximum number of keepalive probes
                                     to send without response before deciding the connection
                                     is dead.
+                                  maximum: 4294967295
+                                  minimum: 0
                                   type: integer
                                 time:
                                   description: The time duration a connection needs
@@ -1104,11 +1140,15 @@ spec:
                           type: string
                         number:
                           description: A valid non-negative integer port number.
+                          maximum: 4294967295
+                          minimum: 0
                           type: integer
                         protocol:
                           description: The protocol exposed on the port.
                           type: string
                         targetPort:
+                          maximum: 4294967295
+                          minimum: 0
                           type: integer
                       type: object
                     tls:
@@ -1219,6 +1259,8 @@ spec:
                           addressed.
                         properties:
                           number:
+                            maximum: 4294967295
+                            minimum: 0
                             type: integer
                         type: object
                       subset:
