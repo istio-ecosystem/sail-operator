@@ -29,6 +29,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
+	"github.com/istio-ecosystem/sail-operator/pkg/validation"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -58,6 +59,8 @@ const (
 	IstioInjectionEnabledValue = "enabled"
 	IstioRevLabel              = "istio.io/rev"
 	IstioSidecarInjectLabel    = "sidecar.istio.io/inject"
+
+	istiodChartName = "istiod"
 )
 
 // Reconciler reconciles an IstioRevision object
@@ -100,12 +103,7 @@ func NewReconciler(client client.Client, scheme *runtime.Scheme, resourceDir str
 func (r *Reconciler) Reconcile(ctx context.Context, rev *v1alpha1.IstioRevision) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
-	if err := validateIstioRevision(rev); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	log.Info("Installing components")
-	reconcileErr := r.installHelmCharts(ctx, rev)
+	reconcileErr := r.doReconcile(ctx, rev)
 
 	log.Info("Reconciliation done. Updating status.")
 	statusErr := r.updateStatus(ctx, rev, reconcileErr)
@@ -113,17 +111,31 @@ func (r *Reconciler) Reconcile(ctx context.Context, rev *v1alpha1.IstioRevision)
 	return ctrl.Result{}, errors.Join(reconcileErr, statusErr)
 }
 
+func (r *Reconciler) doReconcile(ctx context.Context, rev *v1alpha1.IstioRevision) error {
+	log := logf.FromContext(ctx)
+	if err := r.validate(ctx, rev); err != nil {
+		return err
+	}
+
+	log.Info("Installing Helm chart")
+	return r.installHelmCharts(ctx, rev)
+}
+
 func (r *Reconciler) Finalize(ctx context.Context, rev *v1alpha1.IstioRevision) error {
 	return r.uninstallHelmCharts(ctx, rev)
 }
 
-func validateIstioRevision(rev *v1alpha1.IstioRevision) error {
+func (r *Reconciler) validate(ctx context.Context, rev *v1alpha1.IstioRevision) error {
 	if rev.Spec.Version == "" {
 		return reconciler.NewValidationError("spec.version not set")
 	}
 	if rev.Spec.Namespace == "" {
 		return reconciler.NewValidationError("spec.namespace not set")
 	}
+	if err := validation.ValidateTargetNamespace(ctx, r.Client, rev.Spec.Namespace); err != nil {
+		return err
+	}
+
 	if rev.Spec.Values == nil {
 		return reconciler.NewValidationError("spec.values not set")
 	}
@@ -151,21 +163,25 @@ func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1alpha1.IstioR
 	}
 
 	values := helm.FromValues(rev.Spec.Values)
-	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev, "istiod"), values, rev.Spec.Namespace, getReleaseName(rev, "istiod"), ownerReference)
-	return err
+	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev),
+		values, rev.Spec.Namespace, getReleaseName(rev, istiodChartName), ownerReference)
+	if err != nil {
+		return fmt.Errorf("failed to install/update Helm chart %q: %w", istiodChartName, err)
+	}
+	return nil
 }
 
 func getReleaseName(rev *v1alpha1.IstioRevision, chartName string) string {
 	return fmt.Sprintf("%s-%s", rev.Name, chartName)
 }
 
-func (r *Reconciler) getChartDir(rev *v1alpha1.IstioRevision, chartName string) string {
-	return path.Join(r.ResourceDirectory, rev.Spec.Version, "charts", chartName)
+func (r *Reconciler) getChartDir(rev *v1alpha1.IstioRevision) string {
+	return path.Join(r.ResourceDirectory, rev.Spec.Version, "charts", istiodChartName)
 }
 
 func (r *Reconciler) uninstallHelmCharts(ctx context.Context, rev *v1alpha1.IstioRevision) error {
-	if _, err := r.ChartManager.UninstallChart(ctx, getReleaseName(rev, "istiod"), rev.Spec.Namespace); err != nil {
-		return err
+	if _, err := r.ChartManager.UninstallChart(ctx, getReleaseName(rev, istiodChartName), rev.Spec.Namespace); err != nil {
+		return fmt.Errorf("failed to uninstall Helm chart %q: %w", istiodChartName, err)
 	}
 	return nil
 }
@@ -175,8 +191,12 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// ownedResourceHandler handles resources that are owned by the IstioRevision CR
 	ownedResourceHandler := handler.EnqueueRequestForOwner(r.Scheme, r.RESTMapper(), &v1alpha1.IstioRevision{}, handler.OnlyControllerOwner())
 
-	// nsHandler handles namespaces that reference the IstioRevision CR via the istio.io/rev or istio-injection labels.
-	// The handler triggers the reconciliation of the referenced IstioRevision CR so that its InUse condition is updated.
+	// nsHandler triggers reconciliation in two cases:
+	// - when a namespace that is referenced in IstioRevision.spec.namespace is
+	//   created, so that the control plane is installed immediately.
+	// - when a namespace that references the IstioRevision CR via the istio.io/rev
+	//   or istio-injection labels is updated, so that the InUse condition of
+	//   the IstioRevision CR is updated.
 	nsHandler := handler.EnqueueRequestsFromMapFunc(r.mapNamespaceToReconcileRequest)
 
 	// podHandler handles pods that reference the IstioRevision CR via the istio.io/rev or sidecar.istio.io/inject labels.
@@ -220,6 +240,8 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 			ownedResourceHandler,
 			builder.WithPredicates(validatingWebhookConfigPredicate{})).
 
+		// +lint-watches:ignore: ValidatingAdmissionPolicy (TODO: fix this when CI supports golang 1.22 and k8s 1.30)
+		// +lint-watches:ignore: ValidatingAdmissionPolicyBinding (TODO: fix this when CI supports golang 1.22 and k8s 1.30)
 		// +lint-watches:ignore: CustomResourceDefinition (prevents `make lint-watches` from bugging us about CRDs)
 		Complete(reconciler.NewStandardReconcilerWithFinalizer(r.Client, &v1alpha1.IstioRevision{}, r.Reconcile, r.Finalize, constants.FinalizerName))
 }
@@ -246,10 +268,14 @@ func (r *Reconciler) updateStatus(ctx context.Context, rev *v1alpha1.IstioRevisi
 	var errs errlist.Builder
 
 	status, err := r.determineStatus(ctx, rev, reconcileErr)
-	errs.Add(err)
+	if err != nil {
+		errs.Add(fmt.Errorf("failed to determine status: %w", err))
+	}
 
 	if !reflect.DeepEqual(rev.Status, status) {
-		errs.Add(r.Client.Status().Patch(ctx, rev, kube.NewStatusPatch(status)))
+		if err := r.Client.Status().Patch(ctx, rev, kube.NewStatusPatch(status)); err != nil {
+			errs.Add(fmt.Errorf("failed to patch status: %w", err))
+		}
 	}
 	return errs.Error()
 }
@@ -300,7 +326,7 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1alpha1.
 		c.Status = metav1.ConditionUnknown
 		c.Reason = v1alpha1.IstioRevisionReasonReadinessCheckFailed
 		c.Message = fmt.Sprintf("failed to get readiness: %v", err)
-		return c, err
+		return c, fmt.Errorf("get failed: %w", err)
 	}
 	return c, nil
 }
@@ -319,12 +345,12 @@ func (r *Reconciler) determineInUseCondition(ctx context.Context, rev *v1alpha1.
 			c.Reason = v1alpha1.IstioRevisionReasonNotReferenced
 			c.Message = "Not referenced by any pod or namespace"
 		}
-	} else {
-		c.Status = metav1.ConditionUnknown
-		c.Reason = v1alpha1.IstioRevisionReasonUsageCheckFailed
-		c.Message = fmt.Sprintf("failed to determine if revision is in use: %v", err)
+		return c, nil
 	}
-	return c, err
+	c.Status = metav1.ConditionUnknown
+	c.Reason = v1alpha1.IstioRevisionReasonUsageCheckFailed
+	c.Message = fmt.Sprintf("failed to determine if revision is in use: %v", err)
+	return c, fmt.Errorf("failed to determine if IstioRevision is in use: %w", err)
 }
 
 func (r *Reconciler) isRevisionReferencedByWorkloads(ctx context.Context, rev *v1alpha1.IstioRevision) (bool, error) {
@@ -332,7 +358,7 @@ func (r *Reconciler) isRevisionReferencedByWorkloads(ctx context.Context, rev *v
 	nsList := corev1.NamespaceList{}
 	nsMap := map[string]corev1.Namespace{}
 	if err := r.Client.List(ctx, &nsList); err != nil { // TODO: can we optimize this by specifying a label selector
-		return false, err
+		return false, fmt.Errorf("failed to list namespaces: %w", err)
 	}
 	for _, ns := range nsList.Items {
 		if namespaceReferencesRevision(ns, rev) {
@@ -344,7 +370,7 @@ func (r *Reconciler) isRevisionReferencedByWorkloads(ctx context.Context, rev *v
 
 	podList := corev1.PodList{}
 	if err := r.Client.List(ctx, &podList); err != nil { // TODO: can we optimize this by specifying a label selector
-		return false, err
+		return false, fmt.Errorf("failed to list pods: %w", err)
 	}
 	for _, pod := range podList.Items {
 		if ns, found := nsMap[pod.Namespace]; found && podReferencesRevision(pod, ns, rev) {
@@ -421,11 +447,27 @@ func istiodDeploymentKey(rev *v1alpha1.IstioRevision) client.ObjectKey {
 }
 
 func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, ns client.Object) []reconcile.Request {
+	log := logf.FromContext(ctx)
+	var requests []reconcile.Request
+
+	// Check if any IstioRevision references this namespace in .spec.namespace
+	revList := v1alpha1.IstioRevisionList{}
+	if err := r.Client.List(ctx, &revList); err != nil {
+		log.Error(err, "failed to list IstioRevisions")
+		return nil
+	}
+	for _, rev := range revList.Items {
+		if rev.Spec.Namespace == ns.GetName() {
+			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: rev.Name}})
+		}
+	}
+
+	// Check if the namespace references an IstioRevision in its labels
 	revision := getReferencedRevisionFromNamespace(ns.GetLabels())
 	if revision != "" {
-		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: revision}}}
+		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: revision}})
 	}
-	return nil
+	return requests
 }
 
 func (r *Reconciler) mapPodToReconcileRequest(ctx context.Context, pod client.Object) []reconcile.Request {

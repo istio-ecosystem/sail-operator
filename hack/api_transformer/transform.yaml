@@ -58,6 +58,9 @@ inputFiles:
     - Values.Ztunnel                       # ambient is not yet supported
     - SidecarInjectorConfig.ObjectSelector # appears to be unused
     - CNIConfig.Enabled                    # CNI is enabled by the mere presence of the IstioCNI resource
+    - BaseConfig.EnableCRDTemplates        # not used, because the operator doesn't deploy CRDs
+    - BaseConfig.EnableIstioConfigCRDs     # present in values.yaml, but not used in any chart
+    - BaseConfig.ValidateGateway           # not used anywhere
     replaceTypes:
       "*IntOrString": "*intstr.IntOrString"
       "*wrapperspb.BoolValue": "*bool"

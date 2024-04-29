@@ -172,6 +172,8 @@ spec:
                           type: object
                         status:
                           description: Specifies the HTTP response status to be returned.
+                          maximum: 4294967295
+                          minimum: 0
                           type: integer
                       required:
                       - status
@@ -397,6 +399,8 @@ spec:
                           port:
                             description: Specifies the ports on the host that is being
                               addressed.
+                            maximum: 4294967295
+                            minimum: 0
                             type: integer
                           queryParams:
                             additionalProperties:
@@ -542,6 +546,8 @@ spec:
                             addressed.
                           properties:
                             number:
+                              maximum: 4294967295
+                              minimum: 0
                               type: integer
                           type: object
                         subset:
@@ -551,9 +557,13 @@ spec:
                       - host
                       type: object
                     mirror_percent:
+                      maximum: 4294967295
+                      minimum: 0
                       nullable: true
                       type: integer
                     mirrorPercent:
+                      maximum: 4294967295
+                      minimum: 0
                       nullable: true
                       type: integer
                     mirrorPercentage:
@@ -582,6 +592,8 @@ spec:
                                   being addressed.
                                 properties:
                                   number:
+                                    maximum: 4294967295
+                                    minimum: 0
                                     type: integer
                                 type: object
                               subset:
@@ -636,10 +648,14 @@ spec:
                         port:
                           description: On a redirect, overwrite the port portion of
                             the URL with this value.
+                          maximum: 4294967295
+                          minimum: 0
                           type: integer
                         redirectCode:
                           description: On a redirect, Specifies the HTTP status code
                             to use in the redirect response.
+                          maximum: 4294967295
+                          minimum: 0
                           type: integer
                         scheme:
                           description: On a redirect, overwrite the scheme portion
@@ -715,6 +731,8 @@ spec:
                                   being addressed.
                                 properties:
                                   number:
+                                    maximum: 4294967295
+                                    minimum: 0
                                     type: integer
                                 type: object
                               subset:
@@ -794,6 +812,8 @@ spec:
                           port:
                             description: Specifies the port on the host that is being
                               addressed.
+                            maximum: 4294967295
+                            minimum: 0
                             type: integer
                           sourceLabels:
                             additionalProperties:
@@ -828,6 +848,8 @@ spec:
                                   being addressed.
                                 properties:
                                   number:
+                                    maximum: 4294967295
+                                    minimum: 0
                                     type: integer
                                 type: object
                               subset:
@@ -872,6 +894,8 @@ spec:
                           port:
                             description: Specifies the port on the host that is being
                               addressed.
+                            maximum: 4294967295
+                            minimum: 0
                             type: integer
                           sniHosts:
                             description: SNI (server name indicator) to match on.
@@ -911,6 +935,8 @@ spec:
                                   being addressed.
                                 properties:
                                   number:
+                                    maximum: 4294967295
+                                    minimum: 0
                                     type: integer
                                 type: object
                               subset:
@@ -1089,6 +1115,8 @@ spec:
                           type: object
                         status:
                           description: Specifies the HTTP response status to be returned.
+                          maximum: 4294967295
+                          minimum: 0
                           type: integer
                       required:
                       - status
@@ -1314,6 +1342,8 @@ spec:
                           port:
                             description: Specifies the ports on the host that is being
                               addressed.
+                            maximum: 4294967295
+                            minimum: 0
                             type: integer
                           queryParams:
                             additionalProperties:
@@ -1459,6 +1489,8 @@ spec:
                             addressed.
                           properties:
                             number:
+                              maximum: 4294967295
+                              minimum: 0
                               type: integer
                           type: object
                         subset:
@@ -1468,9 +1500,13 @@ spec:
                       - host
                       type: object
                     mirror_percent:
+                      maximum: 4294967295
+                      minimum: 0
                       nullable: true
                       type: integer
                     mirrorPercent:
+                      maximum: 4294967295
+                      minimum: 0
                       nullable: true
                       type: integer
                     mirrorPercentage:
@@ -1499,6 +1535,8 @@ spec:
                                   being addressed.
                                 properties:
                                   number:
+                                    maximum: 4294967295
+                                    minimum: 0
                                     type: integer
                                 type: object
                               subset:
@@ -1553,10 +1591,14 @@ spec:
                         port:
                           description: On a redirect, overwrite the port portion of
                             the URL with this value.
+                          maximum: 4294967295
+                          minimum: 0
                           type: integer
                         redirectCode:
                           description: On a redirect, Specifies the HTTP status code
                             to use in the redirect response.
+                          maximum: 4294967295
+                          minimum: 0
                           type: integer
                         scheme:
                           description: On a redirect, overwrite the scheme portion
@@ -1632,6 +1674,8 @@ spec:
                                   being addressed.
                                 properties:
                                   number:
+                                    maximum: 4294967295
+                                    minimum: 0
                                     type: integer
                                 type: object
                               subset:
@@ -1711,6 +1755,8 @@ spec:
                           port:
                             description: Specifies the port on the host that is being
                               addressed.
+                            maximum: 4294967295
+                            minimum: 0
                             type: integer
                           sourceLabels:
                             additionalProperties:
@@ -1745,6 +1791,8 @@ spec:
                                   being addressed.
                                 properties:
                                   number:
+                                    maximum: 4294967295
+                                    minimum: 0
                                     type: integer
                                 type: object
                               subset:
@@ -1789,6 +1837,8 @@ spec:
                           port:
                             description: Specifies the port on the host that is being
                               addressed.
+                            maximum: 4294967295
+                            minimum: 0
                             type: integer
                           sniHosts:
                             description: SNI (server name indicator) to match on.
@@ -1828,6 +1878,8 @@ spec:
                                   being addressed.
                                 properties:
                                   number:
+                                    maximum: 4294967295
+                                    minimum: 0
                                     type: integer
                                 type: object
                               subset:
@@ -2006,6 +2058,8 @@ spec:
                           type: object
                         status:
                           description: Specifies the HTTP response status to be returned.
+                          maximum: 4294967295
+                          minimum: 0
                           type: integer
                       required:
                       - status
@@ -2231,6 +2285,8 @@ spec:
                           port:
                             description: Specifies the ports on the host that is being
                               addressed.
+                            maximum: 4294967295
+                            minimum: 0
                             type: integer
                           queryParams:
                             additionalProperties:
@@ -2376,6 +2432,8 @@ spec:
                             addressed.
                           properties:
                             number:
+                              maximum: 4294967295
+                              minimum: 0
                               type: integer
                           type: object
                         subset:
@@ -2385,9 +2443,13 @@ spec:
                       - host
                       type: object
                     mirror_percent:
+                      maximum: 4294967295
+                      minimum: 0
                       nullable: true
                       type: integer
                     mirrorPercent:
+                      maximum: 4294967295
+                      minimum: 0
                       nullable: true
                       type: integer
                     mirrorPercentage:
@@ -2416,6 +2478,8 @@ spec:
                                   being addressed.
                                 properties:
                                   number:
+                                    maximum: 4294967295
+                                    minimum: 0
                                     type: integer
                                 type: object
                               subset:
@@ -2470,10 +2534,14 @@ spec:
                         port:
                           description: On a redirect, overwrite the port portion of
                             the URL with this value.
+                          maximum: 4294967295
+                          minimum: 0
                           type: integer
                         redirectCode:
                           description: On a redirect, Specifies the HTTP status code
                             to use in the redirect response.
+                          maximum: 4294967295
+                          minimum: 0
                           type: integer
                         scheme:
                           description: On a redirect, overwrite the scheme portion
@@ -2549,6 +2617,8 @@ spec:
                                   being addressed.
                                 properties:
                                   number:
+                                    maximum: 4294967295
+                                    minimum: 0
                                     type: integer
                                 type: object
                               subset:
@@ -2628,6 +2698,8 @@ spec:
                           port:
                             description: Specifies the port on the host that is being
                               addressed.
+                            maximum: 4294967295
+                            minimum: 0
                             type: integer
                           sourceLabels:
                             additionalProperties:
@@ -2662,6 +2734,8 @@ spec:
                                   being addressed.
                                 properties:
                                   number:
+                                    maximum: 4294967295
+                                    minimum: 0
                                     type: integer
                                 type: object
                               subset:
@@ -2706,6 +2780,8 @@ spec:
                           port:
                             description: Specifies the port on the host that is being
                               addressed.
+                            maximum: 4294967295
+                            minimum: 0
                             type: integer
                           sniHosts:
                             description: SNI (server name indicator) to match on.
@@ -2745,6 +2821,8 @@ spec:
                                   being addressed.
                                 properties:
                                   number:
+                                    maximum: 4294967295
+                                    minimum: 0
                                     type: integer
                                 type: object
                               subset:
