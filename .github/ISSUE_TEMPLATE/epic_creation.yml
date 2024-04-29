@@ -1,0 +1,24 @@
+name: Epic creation
+description: Create an epic to track a large feature or improvement for the Sail Operator
+title: "[EPIC]"
+labels:
+  - "epic"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this epic creation form!
+  - type: textarea
+    id: epic-description
+    attributes:
+      label: Epic Description
+      description: Tell us what you'd like to see added or improved.
+      placeholder: Include information about the description of the epic, the goals, and the scope. The more details, the better!
+    validations:
+      required: true
+  - type: textarea
+    id: additional-info
+    attributes:
+      label: Additional Information
+      description: |
+        Please put here all the relevant information about the epic; attach any relevant information below if you think is helpful.
