@@ -37,6 +37,7 @@ var (
 	istioCniNamespace     = env.Get("ISTIOCNI_NAMESPACE", "istio-cni")
 	istioCniName          = env.Get("ISTIOCNI_NAME", "default")
 	image                 = env.Get("IMAGE", "quay.io/maistra-dev/sail-operator:latest")
+	skipDeploy            = env.GetBool("SKIP_DEPLOY", false)
 )
 
 func TestInstall(t *testing.T) {
