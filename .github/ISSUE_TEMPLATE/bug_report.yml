@@ -26,6 +26,22 @@ body:
       placeholder: Include information about what you tried, what you expected to happen, and what actually happened. The more details, the better!
     validations:
       required: true
+  - type: input
+    id: operator-version
+    attributes:
+      label: Operator Version
+      description: What version of the Sail Operator were you using?
+      placeholder: e.g., 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: gist-link
+    attributes:
+      label: Link to Gist with Logs
+      description: Provide a link to a Gist containing any relevant logs or output.
+      placeholder: https://gist.github.com/example
+    validations:
+      required: false
   - type: textarea
     id: additional-info
     attributes:
