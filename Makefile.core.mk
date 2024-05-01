@@ -472,7 +472,7 @@ bundle-build: ## Build the bundle image.
 
 .PHONY: bundle-push
 bundle-push: ## Push the bundle image.
-	$(MAKE) docker-push IMAGE=$(BUNDLE_IMG)
+	docker push $(BUNDLE_IMG)
 
 .PHONY: bundle-publish
 bundle-publish: ## Create a PR for publishing in OperatorHub.

@@ -51,6 +51,8 @@ defaults:
       configDir: ""
       # If enabled, and ambient is enabled, DNS redirection will be enabled
       dnsCapture: false
+      # UNSTABLE: If enabled, and ambient is enabled, enables ipv6 support
+      ipv6: false
 
 
     repair:
@@ -110,7 +112,7 @@ defaults:
     hub: gcr.io/istio-testing
 
     # Default tag for Istio images.
-    tag: 1.23-alpha.367ed201d012693208f1ca81d28c8fefebdd7c32
+    tag: 1.23-alpha.49d42ed26d18560651d3aca4cd3a1c0930e0e5cd
 
     # Variant of the image to use.
     # Currently supported are: [debug, distroless]
