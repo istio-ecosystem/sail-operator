@@ -59,12 +59,6 @@ var _ = Describe("Operator", Ordered, func() {
 	SetDefaultEventuallyPollingInterval(time.Second)
 
 	Describe("installation", func() {
-		// TODO: we  need to support testing both types of deployment for the operator, helm and olm via subscription.
-		// Discuss with the team if we should add a flag to the test to enable the olm deployment and don't do that deployment in different step
-		if skipDeploy {
-			Skip("Skipping the deployment of the operator")
-		}
-
 		BeforeAll(func() {
 			Expect(kubectl.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
 
@@ -73,8 +67,12 @@ var _ = Describe("Operator", Ordered, func() {
 				extraArg = "--set=platform=openshift"
 			}
 
-			Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, extraArg)).
-				To(Succeed(), "Operator failed to be deployed")
+			if skipDeploy {
+				Success("Skipping operator installation because it was deployed externally")
+			} else {
+				Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, extraArg)).
+					To(Succeed(), "Operator failed to be deployed")
+			}
 		})
 
 		It("deploys all the CRDs", func(ctx SpecContext) {
@@ -114,6 +112,11 @@ var _ = Describe("Operator", Ordered, func() {
 	AfterAll(func() {
 		if CurrentSpecReport().Failed() {
 			common.LogDebugInfo()
+		}
+
+		if skipDeploy {
+			Success("Skipping operator undeploy because it was deployed externally")
+			return
 		}
 
 		By("Uninstalling the operator")

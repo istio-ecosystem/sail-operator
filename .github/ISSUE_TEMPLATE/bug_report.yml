@@ -1,0 +1,51 @@
+name: Bug report
+description: Report a bug to help us improve the Sail Operator
+title: "[BUG]"
+labels:
+  - "bug"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+  - type: checkboxes
+    id: security-check
+    attributes:
+      label: Is this the right place to submit this?
+      description: |-
+        This is used to report product bugs and issues that prevent you from using the operator as expected.
+        To ask questions about how to use Sail Operator, please visit <https://github.com/istio-ecosystem/sail-operator/discussions>.
+      options:
+        - label: "This is not a question about how to use the Sail Operator"
+          required: true
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: Bug Description
+      description: Tell us what issues you ran into.
+      placeholder: Include information about what you tried, what you expected to happen, and what actually happened. The more details, the better!
+    validations:
+      required: true
+  - type: input
+    id: operator-version
+    attributes:
+      label: Operator Version
+      description: What version of the Sail Operator were you using?
+      placeholder: e.g., 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: gist-link
+    attributes:
+      label: Link to Gist with Logs
+      description: Provide a link to a Gist containing any relevant logs or output.
+      placeholder: https://gist.github.com/example
+    validations:
+      required: false
+  - type: textarea
+    id: additional-info
+    attributes:
+      label: Additional Information
+      description: |
+        Please put here all the relevant debugging information manually and attached below;
+        issue without enough information will not be resolvable.
