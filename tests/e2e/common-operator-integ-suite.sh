@@ -25,8 +25,8 @@ check_arguments() {
 }
 
 parse_flags() {
-  SKIP_BUILD=false
-  SKIP_DEPLOY=false
+  SKIP_BUILD=${SKIP_BUILD:-false}
+  SKIP_DEPLOY=${SKIP_DEPLOY:-false}
   DESCRIBE=false
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -44,6 +44,8 @@ parse_flags() {
         ;;
       --skip-deploy)
         shift
+        # no point building if we don't deploy
+        SKIP_BUILD=true
         SKIP_DEPLOY=true
         ;;
       --describe)

@@ -1,0 +1,34 @@
+name: Feature request
+description: Suggest a new feature or improvement for the Sail Operator
+title: "[FEATURE]"
+labels:
+  - "enhancement"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this feature request!
+  - type: checkboxes
+    id: security-check
+    attributes:
+      label: Is this the right place to submit this?
+      description: |-
+        This is used to request new features or improvements to the Sail Operator.
+        To ask questions about how to use Sail Operator, please visit <https://github.com/istio-ecosystem/sail-operator/discussions>.
+      options:
+        - label: "This is not a question about how to use the Sail Operator"
+          required: true
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: Feature Description
+      description: Tell us what you'd like to see added or improved.
+      placeholder: Include information about what needs to be added or improved, and why you think it would be useful. The more details, the better!
+    validations:
+      required: true
+  - type: textarea
+    id: additional-info
+    attributes:
+      label: Additional Information
+      description: |
+        Please put here all the relevant information about the feature request; attach any relevant information below if you think is helpful.

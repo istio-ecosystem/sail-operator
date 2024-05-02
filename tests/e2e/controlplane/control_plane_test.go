@@ -57,8 +57,12 @@ var _ = Describe("Control Plane Installation", Ordered, func() {
 			extraArg = "--set=platform=openshift"
 		}
 
-		Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, extraArg)).
-			To(Succeed(), "Operator failed to be deployed")
+		if skipDeploy {
+			Success("Skipping operator installation because it was deployed externally")
+		} else {
+			Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, extraArg)).
+				To(Succeed(), "Operator failed to be deployed")
+		}
 
 		Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
 			Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
@@ -269,6 +273,11 @@ spec:
 		if CurrentSpecReport().Failed() && !debugInfoLogged {
 			common.LogDebugInfo()
 			debugInfoLogged = true
+		}
+
+		if skipDeploy {
+			Success("Skipping operator undeploy because it was deployed externally")
+			return
 		}
 
 		By("Deleting operator deployment")
