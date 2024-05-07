@@ -100,7 +100,7 @@ More information can be found via the [Kubebuilder Documentation](https://book.k
 ### Writing Tests
 Please try to keep business logic in separate packages that can be independently tested wherever possible, especially if you can avoid the usage of Kubernetes clients. It greatly simplifies testing if we don't need to use envtest everywhere.
 
-E2E and integration tests should use the ginkgo-style BDD testing method, an example can be found in [`tests/integration/api/istio_test.go`](https://github.com/istio-ecosystem/sail-operator/blob/main/tests/integration/api/istio_test.go) for the test code and suite setup in [`tests/integration/api/suite_test.go`](https://github.com/istio-ecosystem/sail-operator/blob/main/tests/integration/api/suite_test.go). Unit tests should use standard golang xUnit-style tests (see [`pkg/kube/finalizers_test.go`](https://github.com/maistra/istio-operator/blob/maistra-3.0/pkg/kube/finalizers_test.go) for an example).
+E2E and integration tests should use the ginkgo-style BDD testing method, an example can be found in [`tests/integration/api/istio_test.go`](https://github.com/istio-ecosystem/sail-operator/blob/main/tests/integration/api/istio_test.go) for the test code and suite setup in [`tests/integration/api/suite_test.go`](https://github.com/istio-ecosystem/sail-operator/blob/main/tests/integration/api/suite_test.go). Unit tests should use standard golang xUnit-style tests (see [`pkg/kube/finalizers_test.go`](https://github.com/istio-ecosystem/sail-operator/blob/main/pkg/kube/finalizers_test.go) for an example).
 
 ### Integration Tests
 Please check the specific instructions for the integration tests in the [integration](https://github.com/istio-ecosystem/sail-operator/blob/main/tests/integration/README.md) directory.

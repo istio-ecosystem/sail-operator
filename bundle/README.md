@@ -20,13 +20,13 @@ You have access to the OpenShift CLI (oc).
 
 1. Click **Operator** -> **Operator Hub**.
 
-1. Search on Sail.
+1. Search for "sail".
 
 1. Locate the Sail Operator, and click to select it.
 
 1. When the prompt that discusses the community operator appears, click **Continue**.
 
-1. Verify the Sail Operator is version 3.0, and click **Install**.
+1. Verify the Sail Operator is version 0.1, and click **Install**.
 
 1. Use the default installation settings presented, and click **Install** to continue.
 

@@ -19,7 +19,7 @@ OLD_VARS := $(.VARIABLES)
 # Use `make print-variables` to inspect the values of the variables
 -include Makefile.vendor.mk
 
-VERSION ?= 3.0.0
+VERSION ?= 0.1.0
 MINOR_VERSION := $(shell v='$(VERSION)'; echo "$${v%.*}")
 
 OPERATOR_NAME ?= sailoperator
@@ -79,7 +79,7 @@ GINKGO_FLAGS := $(if $(VERBOSE),-v) $(if $(CI),--no-color)
 # To re-generate a bundle for other specific channels without changing the standard setup, you can:
 # - use the CHANNELS as arg of the bundle target (e.g make bundle CHANNELS=candidate,fast,stable)
 # - use environment variables to overwrite this value (e.g export CHANNELS="candidate,fast,stable")
-CHANNELS ?= "3.0"
+CHANNELS ?= "0.1"
 ifneq ($(origin CHANNELS), undefined)
 BUNDLE_CHANNELS = --channels=\"$(CHANNELS)\"
 endif
