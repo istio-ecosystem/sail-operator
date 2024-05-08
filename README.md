@@ -145,4 +145,6 @@ Please refer to the [CONTRIBUTING-SAIL-PROJECT.md](https://github.com/istio-ecos
 If you want to make contributions to the Istio project please refer to the [CONTRIBUTING.md](https://github.com/istio-ecosystem/sail-operator/blob/main/CONTRIBUTING.md) for more information.
 
 ## Issue management
-Please refer to the [ISSUE-MANAGMENT.md](https://github.com/istio-ecosystem/sail-operator/blob/main/ISSUE-MANAGMENT.md) file for more information on how to report bugs and feature requests to the Sail Operator team.
+Please refer to the [ISSUE-MANAGEMENT.md](https://github.com/istio-ecosystem/sail-operator/blob/main/ISSUE-MANAGEMENT.md) file for more information on how to report bugs and feature requests to the Sail Operator team.
+
+If you found a bug in Istio, please refer to the [Istio GitHub repository](https://github.com/istio-ecosystem/sail-operator/blob/main/BUGS-AND-FEATURE-REQUESTS.md)

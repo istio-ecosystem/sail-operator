@@ -1,4 +1,4 @@
-# Bugs and Feature Requests
+# Issue management in the Sail Operator project
 
 You can report bugs and feature requests to the Sail Operator team opening a new issue in the [Sail Operator GitHub repository](https://github.com/istio-ecosystem/sail-operator/issues). You will find templates with all the information needed to fill a new bug or a new feature request. Once you open an issue, the Sail Operator team will review it and provide feedback.
 

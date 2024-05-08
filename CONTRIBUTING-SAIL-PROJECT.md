@@ -1,4 +1,4 @@
-# Contribution guidelines
+# Contribution guidelines to the Sail Operator project
 
 So you want to make contributions to the Sail Operator project, please take a look at the following guidelines to help you get started.
 
