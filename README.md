@@ -2,6 +2,22 @@
 
 This project is an operator that can be used to manage the installation of an [Istio](https://istio.io) control plane.
 
+## Table of Contents
+- [Getting Started](#getting-started)
+    - [Deploying the operator](#deploying-the-operator)
+    - [Deploying the Istio Control Plane](#deploying-the-istio-control-plane)
+    - [Deploying the Istio CNI plugin](#deploying-the-istio-cni-plugin)
+    - [Undeploying the operator](#undeploying-the-operator)
+    - [How it works](#how-it-works)
+    - [Repository Setup](#repository-setup)
+    - [Test It Out](#test-it-out)
+    - [Modifying the API definitions](#modifying-the-api-definitions)
+    - [Writing Tests](#writing-tests)
+    - [Integration Tests](#integration-tests)
+    - [End-to-End Tests](#end-to-end-tests)
+- [Community Support and Contributing](#community-support-and-contributing)
+- [Issue management](#issue-management)
+
 ## Getting Started
 You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
 **Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
@@ -52,9 +68,6 @@ Undeploy the operator from the cluster:
 ```sh
 make undeploy
 ```
-
-## Contributing
-We use GitHub to track all of our bugs and feature requests. Please create a GitHub issue for any new bug or feature request.
 
 ### How it works
 This project aims to follow the Kubernetes [Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/).
@@ -125,3 +138,11 @@ or
 ```sh
 make test.e2e.ocp
 ```
+
+## Community Support and Contributing
+Please refer to the [CONTRIBUTING-SAIL-PROJECT.md](https://github.com/istio-ecosystem/sail-operator/blob/main/CONTRIBUTING.md) file for more information on how to contribute to the Sail Operator project. This file contains all the information you need to get started with contributing to the project.
+
+If you want to make contributions to the Istio project please refer to the [CONTRIBUTING.md](https://github.com/istio-ecosystem/sail-operator/blob/main/CONTRIBUTING.md) for more information.
+
+## Issue management
+Please refer to the [ISSUE-MANAGMENT.md](https://github.com/istio-ecosystem/sail-operator/blob/main/ISSUE-MANAGMENT.md) file for more information on how to report bugs and feature requests to the Sail Operator team.
