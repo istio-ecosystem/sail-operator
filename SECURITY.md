@@ -9,4 +9,4 @@ Security bulletins location is work in progress. We will update the location onc
 Please send mail to (email to be defined) to report a security issue found in Sail project.  We will update you
 via e-mail when the issue has been evaluated.
 
-Please do NOT reveal any potential security issue in a Sail operator github issue, or on other Sail mailing lists.
+Please do NOT reveal any potential security issues in a GitHub issue or through other public channels.
