@@ -1,4 +1,4 @@
-# Sail Operator
+# Sail-operator
 
 This project is an operator that can be used to manage the installation of an [Istio](https://istio.io) control plane.
 
@@ -140,11 +140,9 @@ make test.e2e.ocp
 ```
 
 ## Community Support and Contributing
-Please refer to the [CONTRIBUTING-SAIL-PROJECT.md](https://github.com/istio-ecosystem/sail-operator/blob/main/CONTRIBUTING.md) file for more information on how to contribute to the Sail Operator project. This file contains all the information you need to get started with contributing to the project.
-
-If you want to make contributions to the Istio project please refer to the [CONTRIBUTING.md](https://github.com/istio-ecosystem/sail-operator/blob/main/CONTRIBUTING.md) for more information.
+Please refer to the [CONTRIBUTING-SAIL-PROJECT.md](https://github.com/istio-ecosystem/sail-operator/blob/main/CONTRIBUTING.md) file for more information on how to contribute to the sail-operator project. This file contains all the information you need to get started with contributing to the project.
 
 ## Issue management
-Please refer to the [ISSUE-MANAGEMENT.md](https://github.com/istio-ecosystem/sail-operator/blob/main/ISSUE-MANAGEMENT.md) file for more information on how to report bugs and feature requests to the Sail Operator team.
+Please refer to the [ISSUE-MANAGEMENT.md](https://github.com/istio-ecosystem/sail-operator/blob/main/ISSUE-MANAGEMENT.md) file for more information on how to report bugs and feature requests to the sail-operator team.
 
 If you found a bug in Istio, please refer to the [Istio GitHub repository](https://github.com/istio-ecosystem/sail-operator/blob/main/BUGS-AND-FEATURE-REQUESTS.md)

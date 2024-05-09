@@ -1,6 +1,6 @@
-# About the Sail Operator
+# About the sail-operator
 
-The Sail Operator is able to install and manage the lifecycle of the Istio 
+The sail-operator is able to install and manage the lifecycle of the Istio 
 control plane in an OpenShift cluster.
 
 
@@ -14,7 +14,7 @@ the `cluster-admin` role.
 You have access to the OpenShift CLI (oc).
 
 
-## Installing the Sail Operator
+## Installing the sail-operator
 
 1. Navigate to the OperatorHub.
 
@@ -22,15 +22,15 @@ You have access to the OpenShift CLI (oc).
 
 1. Search for "sail".
 
-1. Locate the Sail Operator, and click to select it.
+1. Locate the sail-operator, and click to select it.
 
 1. When the prompt that discusses the community operator appears, click **Continue**.
 
-1. Verify the Sail Operator is version 0.1, and click **Install**.
+1. Verify the sail-operator is version 0.1, and click **Install**.
 
 1. Use the default installation settings presented, and click **Install** to continue.
 
-1. Click **Operators** -> **Installed Operators** to verify that the Sail Operator 
+1. Click **Operators** -> **Installed Operators** to verify that the sail-operator 
 is installed. `Succeeded` should appear in the **Status** column.
 
 
@@ -61,7 +61,7 @@ Repeat the process to create a project named `istio-cni`.
 
 1. In the OpenShift Container Platform web console, click **Operators** -> **Installed Operators**. 
 1. Select `istio-system` in the **Project** drop-down menu.
-1. Click the Sail Operator.
+1. Click the sail-operator.
 1. Click **Istio**.
 1. Click **Create Istio**.
 1. Select the `istio-system` project from the **Namespace** drop-down menu.
@@ -72,7 +72,7 @@ Repeat the process to create a project named `istio-cni`.
 ### Creating the IstioCNI resource
 
 1. In the OpenShift Container Platform web console, click **Operators** -> **Installed Operators**. 
-1. Click the Sail Operator.
+1. Click the sail-operator.
 1. Click **IstioCNI**.
 1. Click **Create IstioCNI**.
 1. Ensure that the name is `default`.
@@ -198,7 +198,7 @@ at the terminal:
     ```
 
 
-*Note*: `istioctl install` is not supported. The Sail Operator installs Istio.
+*Note*: `istioctl install` is not supported. The sail-operator installs Istio.
 
 ## Installing the Bookinfo Application
 
@@ -234,7 +234,7 @@ be accessible outside the cluster.
 
 ## Creating and Configuring Gateways
 
-The Sail Operator does not deploy Ingress or Egress Gateways. Gateways are not 
+The sail-operator does not deploy Ingress or Egress Gateways. Gateways are not 
 part of the control plane. As a security best-practice, Ingress and Egress 
 Gateways should be deployed in a different namespace than the namespace that 
 contains the control plane.
@@ -329,7 +329,7 @@ should not be used in production environments:
 ### Prometheus
 
 `Prometheus` is an open-source systems monitoring and alerting toolkit. You can 
-use `Prometheus` with the Sail Operator to keep an eye on how healthy Istio and 
+use `Prometheus` with the sail-operator to keep an eye on how healthy Istio and 
 the apps in the service mesh are, for more information, see [Prometheus](https://istio.io/latest/docs/ops/integrations/prometheus/). 
 
 To install Prometheus, perform the following steps:
@@ -356,7 +356,7 @@ To install Prometheus, perform the following steps:
 ### Grafana
 
 `Grafana` is an open-source platform for monitoring and observability. You can 
-use `Grafana` with the Sail Operator to configure dahsboards for istio, see 
+use `Grafana` with the sail-operator to configure dahsboards for istio, see 
 [Grafana](https://istio.io/latest/docs/ops/integrations/grafana/) for more information. 
 
 To install Grafana, perform the following steps:
@@ -384,7 +384,7 @@ To install Grafana, perform the following steps:
 ### Jaeger
 
 `Jaeger` is an open-source end-to-end distributed tracing system. You can use 
-`Jaeger` with the Sail Operator to monitor and troubleshoot transactions in 
+`Jaeger` with the sail-operator to monitor and troubleshoot transactions in 
 complex distributed systems, see [Jaeger](https://istio.io/latest/docs/ops/integrations/jaeger/) for more information. 
 
 To install Jaeger, perform the following steps:
@@ -439,7 +439,7 @@ To install Kiali, perform the following steps:
         ```
 
 
-## Undeploying Istio and the Sail Operator
+## Undeploying Istio and the sail-operator
 
 ### Deleting Istio
 1. In the OpenShift Container Platform web console, click **Operators** -> **Installed Operators**.
@@ -453,9 +453,9 @@ To install Kiali, perform the following steps:
 1. Click the Options menu, and select **Delete IstioCNI**. 
 1. At the prompt to confirm the action, click **Delete**.
 
-### Deleting the Sail Operator
+### Deleting the sail-operator
 1. In the OpenShift Container Platform web console, click **Operators** -> **Installed Operators**.
-1. Locate the Sail Operator. Click the Options menu, and select **Uninstall Operator**. 
+1. Locate the sail-operator. Click the Options menu, and select **Uninstall Operator**. 
 1. At the prompt to confirm the action, click **Uninstall**.
  
 ### Deleting the Projects
