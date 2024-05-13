@@ -1,4 +1,4 @@
-# Sail Operator end-to-end test
+# Sail-operator end-to-end test
 
 This end-to-end test suite utilizes Ginkgo, a testing framework known for its expressive specs (reference: https://onsi.github.io/ginkgo/). The setup for the test run is similar to the upstream Istio integration tests:
 * In the case of kind execution, it relies on the upstream script [`kind_provisioner.sh`](https://github.com/istio-ecosystem/sail-operator/blob/main/common/scripts/kind_provisioner.sh) and [`integ-suite-kind.sh`](https://github.com/istio-ecosystem/sail-operator/blob/main/tests/e2e/integ-suite-kind.sh), which are copied from the `github.com/istio/common-files` repository to set up the kind cluster used for the test.

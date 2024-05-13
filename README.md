@@ -1,6 +1,22 @@
-# Sail Operator
+# Sail-operator
 
 This project is an operator that can be used to manage the installation of an [Istio](https://istio.io) control plane.
+
+## Table of Contents
+- [Getting Started](#getting-started)
+    - [Deploying the operator](#deploying-the-operator)
+    - [Deploying the Istio Control Plane](#deploying-the-istio-control-plane)
+    - [Deploying the Istio CNI plugin](#deploying-the-istio-cni-plugin)
+    - [Undeploying the operator](#undeploying-the-operator)
+    - [How it works](#how-it-works)
+    - [Repository Setup](#repository-setup)
+    - [Test It Out](#test-it-out)
+    - [Modifying the API definitions](#modifying-the-api-definitions)
+    - [Writing Tests](#writing-tests)
+    - [Integration Tests](#integration-tests)
+    - [End-to-End Tests](#end-to-end-tests)
+- [Community Support and Contributing](#community-support-and-contributing)
+- [Issue management](#issue-management)
 
 ## Getting Started
 You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
@@ -53,9 +69,6 @@ Undeploy the operator from the cluster:
 make undeploy
 ```
 
-## Contributing
-We use GitHub to track all of our bugs and feature requests. Please create a GitHub issue for any new bug or feature request.
-
 ### How it works
 This project aims to follow the Kubernetes [Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/).
 
@@ -100,7 +113,7 @@ More information can be found via the [Kubebuilder Documentation](https://book.k
 ### Writing Tests
 Please try to keep business logic in separate packages that can be independently tested wherever possible, especially if you can avoid the usage of Kubernetes clients. It greatly simplifies testing if we don't need to use envtest everywhere.
 
-E2E and integration tests should use the ginkgo-style BDD testing method, an example can be found in [`tests/integration/api/istio_test.go`](https://github.com/istio-ecosystem/sail-operator/blob/main/tests/integration/api/istio_test.go) for the test code and suite setup in [`tests/integration/api/suite_test.go`](https://github.com/istio-ecosystem/sail-operator/blob/main/tests/integration/api/suite_test.go). Unit tests should use standard golang xUnit-style tests (see [`pkg/kube/finalizers_test.go`](https://github.com/maistra/istio-operator/blob/maistra-3.0/pkg/kube/finalizers_test.go) for an example).
+E2E and integration tests should use the ginkgo-style BDD testing method, an example can be found in [`tests/integration/api/istio_test.go`](https://github.com/istio-ecosystem/sail-operator/blob/main/tests/integration/api/istio_test.go) for the test code and suite setup in [`tests/integration/api/suite_test.go`](https://github.com/istio-ecosystem/sail-operator/blob/main/tests/integration/api/suite_test.go). Unit tests should use standard golang xUnit-style tests (see [`pkg/kube/finalizers_test.go`](https://github.com/istio-ecosystem/sail-operator/blob/main/pkg/kube/finalizers_test.go) for an example).
 
 ### Integration Tests
 Please check the specific instructions for the integration tests in the [integration](https://github.com/istio-ecosystem/sail-operator/blob/main/tests/integration/README.md) directory.
@@ -125,3 +138,11 @@ or
 ```sh
 make test.e2e.ocp
 ```
+
+## Community Support and Contributing
+Please refer to the [CONTRIBUTING-SAIL-PROJECT.md](https://github.com/istio-ecosystem/sail-operator/blob/main/CONTRIBUTING.md) file for more information on how to contribute to the sail-operator project. This file contains all the information you need to get started with contributing to the project.
+
+## Issue management
+Please refer to the [ISSUE-MANAGEMENT.md](https://github.com/istio-ecosystem/sail-operator/blob/main/ISSUE-MANAGEMENT.md) file for more information on how to report bugs and feature requests to the sail-operator team.
+
+If you found a bug in Istio, please refer to the [Istio GitHub repository](https://github.com/istio-ecosystem/sail-operator/blob/main/BUGS-AND-FEATURE-REQUESTS.md)

@@ -234,7 +234,7 @@ defaults:
     # Dev builds from prow are on gcr.io
     hub: gcr.io/istio-testing
     # Default tag for Istio images.
-    tag: 1.23-alpha.044be69f174a7afe8a827ddc4e9717df7ee97cd3
+    tag: 1.23-alpha.f4d0779389cb4e451d3184296b54560110794f93
     # Variant of the image to use.
     # Currently supported are: [debug, distroless]
     variant: ""
@@ -328,6 +328,10 @@ defaults:
       # Log level for proxy, applies to gateways and sidecars.
       # Expected values are: trace|debug|info|warning|error|critical|off
       logLevel: warning
+
+      # Specify the path to the outlier event log.
+      # Example: /dev/stdout
+      outlierLogPath: ""
 
       #If set to true, istio-proxy container will have privileged securityContext
       privileged: false

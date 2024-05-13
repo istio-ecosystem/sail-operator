@@ -124,9 +124,9 @@ func Patch(ns, kind, name, patchType, patch string) error {
 
 // ForceDelete deletes a resource by removing its finalizers.
 func ForceDelete(ns, kind, name string) error {
-	if err := Patch(ns, kind, name, "json", `[{"op": "remove", "path": "/metadata/finalizers"}]`); err != nil {
-		return err
-	}
+	// Not all resources have finalizers, trying to remove them returns an error here.
+	// We explicitly ignore the error and attempt to delete the resource anyway.
+	_ = Patch(ns, kind, name, "json", `[{"op": "remove", "path": "/metadata/finalizers"}]`)
 	return Delete(ns, kind, name)
 }
 

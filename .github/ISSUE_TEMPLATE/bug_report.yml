@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a bug to help us improve the Sail Operator
+description: Report a bug to help us improve the sail-operator
 title: "[BUG]"
 labels:
   - "bug"
@@ -14,9 +14,9 @@ body:
       label: Is this the right place to submit this?
       description: |-
         This is used to report product bugs and issues that prevent you from using the operator as expected.
-        To ask questions about how to use Sail Operator, please visit <https://github.com/istio-ecosystem/sail-operator/discussions>.
+        To ask questions about how to use sail-operator, please visit <https://github.com/istio-ecosystem/sail-operator/discussions>.
       options:
-        - label: "This is not a question about how to use the Sail Operator"
+        - label: "This is not a question about how to use the sail-operator"
           required: true
   - type: textarea
     id: bug-description
@@ -30,7 +30,7 @@ body:
     id: operator-version
     attributes:
       label: Operator Version
-      description: What version of the Sail Operator were you using?
+      description: What version of the sail-operator were you using?
       placeholder: e.g., 0.1.0
     validations:
       required: true

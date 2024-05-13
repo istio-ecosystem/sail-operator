@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest a new feature or improvement for the Sail Operator
+description: Suggest a new feature or improvement for the sail-operator
 title: "[FEATURE]"
 labels:
   - "enhancement"
@@ -13,10 +13,10 @@ body:
     attributes:
       label: Is this the right place to submit this?
       description: |-
-        This is used to request new features or improvements to the Sail Operator.
-        To ask questions about how to use Sail Operator, please visit <https://github.com/istio-ecosystem/sail-operator/discussions>.
+        This is used to request new features or improvements to the sail-operator.
+        To ask questions about how to use sail-operator, please visit <https://github.com/istio-ecosystem/sail-operator/discussions>.
       options:
-        - label: "This is not a question about how to use the Sail Operator"
+        - label: "This is not a question about how to use the sail-operator"
           required: true
   - type: textarea
     id: feature-description

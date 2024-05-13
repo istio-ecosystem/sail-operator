@@ -1,5 +1,5 @@
 name: Epic creation
-description: Create an epic to track a large feature or improvement for the Sail Operator
+description: Create an epic to track a large feature or improvement for the sail-operator
 title: "[EPIC]"
 labels:
   - "epic"
