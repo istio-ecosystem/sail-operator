@@ -53,9 +53,9 @@ main () {
   if ! merge; then
     set -e
     echo "Conflicts detected, attempting to run 'make gen' to resolve."
-    rm -rf bundle/**/*.yaml resources
+    rm -rf bundle/**/*.yaml resources bundle.Dockerfile
     make gen
-    git add bundle resources chart
+    git add bundle resources chart bundle.Dockerfile
     git -c "user.name=$GIT_USERNAME" -c "user.email=$GIT_EMAIL" commit --no-edit
   fi
 }
