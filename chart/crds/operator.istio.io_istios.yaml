@@ -76,7 +76,7 @@ spec:
               namespace: istio-system
               updateStrategy:
                 type: InPlace
-              version: v1.21.0
+              version: v1.21.2
             description: IstioSpec defines the desired state of Istio
             properties:
               namespace:
@@ -7982,11 +7982,12 @@ spec:
                     type: object
                 type: object
               version:
-                default: v1.21.0
+                default: v1.21.2
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.21.0, latest.
+                  Must be one of: v1.21.2, v1.21.0, latest.
                 enum:
+                - v1.21.2
                 - v1.21.0
                 - latest
                 type: string
