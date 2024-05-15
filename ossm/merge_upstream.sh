@@ -36,6 +36,9 @@ MERGE_STRATEGY=${MERGE_STRATEGY:-"merge"}
 MERGE_REPOSITORY=${MERGE_REPOSITORY:-"https://github.com/istio-ecosystem/sail-operator.git"}
 MERGE_BRANCH=${MERGE_BRANCH:-"main"}
 
+VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"versions.yaml"}
+HELM_VALUES_FILE=${HELM_VALUES_FILE:-"ossm/values.yaml"}
+
 merge() {
   git remote add -f -t "$MERGE_BRANCH" upstream "$MERGE_REPOSITORY"
   echo "Using branch $MERGE_BRANCH"
@@ -49,13 +52,22 @@ merge() {
   return $?
 }
 
-main () {  
+updateVersionsInOssmValuesYaml() {
+    latest_version=$(yq '.versions[0].version' < "${VERSIONS_YAML_FILE}")
+    minor_version=${latest_version%.*}
+    latest_version_underscore=${latest_version//./_}
+    minor_version_underscore=${minor_version//./_}
+    sed -i -e "s/${minor_version}\.[0-9]\+/${latest_version}/g" -e "s/${minor_version_underscore}_[0-9]\+/${latest_version_underscore}/g" "${HELM_VALUES_FILE}"
+}
+
+main () {
   if ! merge; then
     set -e
     echo "Conflicts detected, attempting to run 'make gen' to resolve."
     rm -rf bundle/**/*.yaml resources bundle.Dockerfile
+    updateVersionsInOssmValuesYaml
     make gen
-    git add bundle resources chart bundle.Dockerfile
+    git add bundle resources chart bundle.Dockerfile "$HELM_VALUES_FILE"
     git -c "user.name=$GIT_USERNAME" -c "user.email=$GIT_EMAIL" commit --no-edit
   fi
 }
