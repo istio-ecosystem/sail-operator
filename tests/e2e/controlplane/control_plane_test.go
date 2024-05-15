@@ -34,6 +34,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -157,6 +158,11 @@ spec:
 						Success("CNI DaemonSet is deployed in the namespace and Running")
 					})
 
+					It("uses the correct image", func(ctx SpecContext) {
+						Expect(common.GetObject(ctx, cl, kube.Key("istio-cni-node", istioCniNamespace), &appsv1.DaemonSet{})).
+							To(HaveContainersThat(HaveEach(ImageFromRegistry(expectedRegistry))))
+					})
+
 					It("updates the status to Reconciled", func(ctx SpecContext) {
 						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioCniName), &v1alpha1.IstioCNI{}).
 							Should(HaveCondition(v1alpha1.IstioCNIConditionReconciled, metav1.ConditionTrue), "IstioCNI is not Reconciled; unexpected Condition")
@@ -210,6 +216,11 @@ spec:
 							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available; unexpected Condition")
 						Expect(getVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
 						Success("Istiod is deployed in the namespace and Running")
+					})
+
+					It("uses the correct image", func(ctx SpecContext) {
+						Expect(common.GetObject(ctx, cl, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{})).
+							To(HaveContainersThat(HaveEach(ImageFromRegistry(expectedRegistry))))
 					})
 
 					It("doesn't continuously reconcile the Istio CR", func() {
@@ -293,6 +304,14 @@ spec:
 		Success("Namespace deleted")
 	})
 })
+
+func HaveContainersThat(matcher types.GomegaMatcher) types.GomegaMatcher {
+	return HaveField("Spec.Template.Spec.Containers", matcher)
+}
+
+func ImageFromRegistry(regexp string) types.GomegaMatcher {
+	return HaveField("Image", MatchRegexp(regexp))
+}
 
 func getVersionFromIstiod() (string, error) {
 	output, err := kubectl.Exec(controlPlaneNamespace, "deploy/istiod", "pilot-discovery version")

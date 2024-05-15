@@ -212,6 +212,7 @@ The following environment variables define the behavior of the test run:
 * NAMESPACE=sail-operator - The namespace where the operator will be deployed and the test will run.
 * CONTROL_PLANE_NS=istio-system - The namespace where the control plane will be deployed.
 * DEPLOYMENT_NAME=sail-operator - The name of the operator deployment.
+* EXPECTED_REGISTRY=`^docker\.io|^gcr\.io` - Which image registry should the operand images come from. Useful for downstream tests.
 
 ### Get test definitions for the end-to-end test
 
