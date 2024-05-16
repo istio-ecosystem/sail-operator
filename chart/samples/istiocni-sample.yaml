@@ -3,5 +3,5 @@ kind: IstioCNI
 metadata:
   name: default
 spec:
-  version: v1.21.2
+  version: v1.22.0
   namespace: istio-cni
