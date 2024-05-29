@@ -260,6 +260,10 @@ install: gen-manifests ## Install CRDs into an existing cluster.
 uninstall: ## Uninstall CRDs from an existing cluster.
 	kubectl delete --ignore-not-found -f chart/crds
 
+.PHONY: helm-package
+helm-package: helm ## Package the helm chart.
+	$(HELM) package chart
+
 .PHONY: deploy
 deploy: helm ## Deploy controller to an existing cluster.
 	$(info NAMESPACE: $(NAMESPACE))
