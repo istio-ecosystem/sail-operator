@@ -2,6 +2,9 @@
 
 The Sail-operator manages the lifecycle of your [Istio](https://istio.io) control plane. It provides custom resources for you to deploy and manage your control plane components.
 
+## User Documentation
+This document aims to provide an overview of the project and some information for contributors. For information on how to use the operator, take a look at the [User Documentation](docs/README.md).
+
 ## Table of Contents
 
 - [How it works](#how-it-works)
