@@ -169,4 +169,34 @@ If you followed [Scraping metrics using the OpenShift monitoring stack](#scrapin
     ```
 
 ## Uninstalling
-tbd
+
+### Deleting Istio
+1. In the OpenShift Container Platform web console, click **Operators** -> **Installed Operators**.
+1. Click **Istio** in the **Provided APIs** column.
+1. Click the Options menu, and select **Delete Istio**.
+1. At the prompt to confirm the action, click **Delete**.
+
+### Deleting IstioCNI
+1. In the OpenShift Container Platform web console, click **Operators** -> **Installed Operators**.
+1. Click **IstioCNI** in the **Provided APIs** column.
+1. Click the Options menu, and select **Delete IstioCNI**.
+1. At the prompt to confirm the action, click **Delete**.
+
+### Deleting the sail-operator
+1. In the OpenShift Container Platform web console, click **Operators** -> **Installed Operators**.
+1. Locate the sail-operator. Click the Options menu, and select **Uninstall Operator**.
+1. At the prompt to confirm the action, click **Uninstall**.
+
+### Deleting the istio-system and istio-cni Projects
+1. In the OpenShift Container Platform web console, click  **Home** -> **Projects**.
+1. Locate the name of the project and click the Options menu.
+1. Click **Delete Project**.
+1. At the prompt to confirm the action, enter the name of the project.
+1. Click **Delete**.
+
+### Decide whether you want to delete the CRDs as well
+OLM leaves this [decision](https://olm.operatorframework.io/docs/tasks/uninstall-operator/#step-4-deciding-whether-or-not-to-delete-the-crds-and-apiservices) to the users.
+If you want to delete the Istio CRDs, you can use the following command.
+```bash
+$ kubectl get crds -oname | grep istio.io | xargs kubectl delete
+```
