@@ -174,7 +174,7 @@ If you are editing the API definitions, generate the manifests such as CRs or CR
 make manifests
 ```
 
-**NOTE:** Run `make --help` for more information on all potential `make` targets
+**NOTE:** Run `make help` for more information on all potential `make` targets
 
 More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
 
