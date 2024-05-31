@@ -60,11 +60,10 @@ Repeat the process to create a project named `istio-cni`.
 ### Creating the Istio resource
 
 1. In the OpenShift Container Platform web console, click **Operators** -> **Installed Operators**. 
-1. Select `istio-system` in the **Project** drop-down menu.
+1. Select the `istio-system` project from the **Namespace** drop-down menu.
 1. Click the sail-operator.
 1. Click **Istio**.
 1. Click **Create Istio**.
-1. Select the `istio-system` project from the **Namespace** drop-down menu.
 1. Click **Create**. This action deploys the Istio control plane.
 1. When `State: Healthy` appears in the `Status` column, Istio is successfully deployed.
 
