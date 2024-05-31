@@ -30,8 +30,7 @@ import (
 //
 // <!-- crd generation tags
 // +cue-gen:DestinationRule:groupName:networking.istio.io
-// +cue-gen:DestinationRule:version:v1alpha3
-// +cue-gen:DestinationRule:storageVersion
+// +cue-gen:DestinationRule:versions:v1beta1,v1alpha3,v1
 // +cue-gen:DestinationRule:annotations:helm.sh/resource-policy=keep
 // +cue-gen:DestinationRule:labels:app=istio-pilot,chart=istio,heritage=Tiller,release=istio
 // +cue-gen:DestinationRule:subresource:status
@@ -50,9 +49,6 @@ import (
 // +kubetype-gen:groupVersion=networking.istio.io/v1alpha3
 // +genclient
 // +k8s:deepcopy-gen=true
-// -->
-// <!-- istio code generation tags
-// +istio.io/sync-start
 // -->
 type DestinationRule struct {
 	v1.TypeMeta `json:",inline"`
@@ -84,12 +80,13 @@ type DestinationRuleList struct {
 //
 // <!-- crd generation tags
 // +cue-gen:EnvoyFilter:groupName:networking.istio.io
-// +cue-gen:EnvoyFilter:version:v1alpha3
+// +cue-gen:EnvoyFilter:versions:v1alpha3
 // +cue-gen:EnvoyFilter:storageVersion
 // +cue-gen:EnvoyFilter:annotations:helm.sh/resource-policy=keep
 // +cue-gen:EnvoyFilter:labels:app=istio-pilot,chart=istio,heritage=Tiller,release=istio
 // +cue-gen:EnvoyFilter:subresource:status
 // +cue-gen:EnvoyFilter:scope:Namespaced
+// +cue-gen:EnvoyFilter:releaseChannel:extended
 // +cue-gen:EnvoyFilter:resource:categories=istio-io,networking-istio-io
 // +cue-gen:EnvoyFilter:preserveUnknownFields:configPatches.[].patch.value
 // -->
@@ -130,8 +127,7 @@ type EnvoyFilterList struct {
 //
 // <!-- crd generation tags
 // +cue-gen:Gateway:groupName:networking.istio.io
-// +cue-gen:Gateway:version:v1alpha3
-// +cue-gen:Gateway:storageVersion
+// +cue-gen:Gateway:versions:v1beta1,v1alpha3,v1
 // +cue-gen:Gateway:annotations:helm.sh/resource-policy=keep
 // +cue-gen:Gateway:labels:app=istio-pilot,chart=istio,heritage=Tiller,release=istio
 // +cue-gen:Gateway:subresource:status
@@ -145,9 +141,6 @@ type EnvoyFilterList struct {
 // +kubetype-gen:groupVersion=networking.istio.io/v1alpha3
 // +genclient
 // +k8s:deepcopy-gen=true
-// -->
-// <!-- istio code generation tags
-// +istio.io/sync-start
 // -->
 type Gateway struct {
 	v1.TypeMeta `json:",inline"`
@@ -179,8 +172,7 @@ type GatewayList struct {
 //
 // <!-- crd generation tags
 // +cue-gen:ServiceEntry:groupName:networking.istio.io
-// +cue-gen:ServiceEntry:version:v1alpha3
-// +cue-gen:ServiceEntry:storageVersion
+// +cue-gen:ServiceEntry:versions:v1beta1,v1alpha3,v1
 // +cue-gen:ServiceEntry:annotations:helm.sh/resource-policy=keep
 // +cue-gen:ServiceEntry:labels:app=istio-pilot,chart=istio,heritage=Tiller,release=istio
 // +cue-gen:ServiceEntry:subresource:status
@@ -203,9 +195,6 @@ type GatewayList struct {
 // +kubetype-gen:groupVersion=networking.istio.io/v1alpha3
 // +genclient
 // +k8s:deepcopy-gen=true
-// -->
-// <!-- istio code generation tags
-// +istio.io/sync-start
 // -->
 type ServiceEntry struct {
 	v1.TypeMeta `json:",inline"`
@@ -238,8 +227,7 @@ type ServiceEntryList struct {
 //
 // <!-- crd generation tags
 // +cue-gen:Sidecar:groupName:networking.istio.io
-// +cue-gen:Sidecar:version:v1alpha3
-// +cue-gen:Sidecar:storageVersion
+// +cue-gen:Sidecar:versions:v1beta1,v1alpha3,v1
 // +cue-gen:Sidecar:annotations:helm.sh/resource-policy=keep
 // +cue-gen:Sidecar:labels:app=istio-pilot,chart=istio,heritage=Tiller,release=istio
 // +cue-gen:Sidecar:subresource:status
@@ -253,9 +241,6 @@ type ServiceEntryList struct {
 // +kubetype-gen:groupVersion=networking.istio.io/v1alpha3
 // +genclient
 // +k8s:deepcopy-gen=true
-// -->
-// <!-- istio code generation tags
-// +istio.io/sync-start
 // -->
 type Sidecar struct {
 	v1.TypeMeta `json:",inline"`
@@ -286,8 +271,7 @@ type SidecarList struct {
 //
 // <!-- crd generation tags
 // +cue-gen:VirtualService:groupName:networking.istio.io
-// +cue-gen:VirtualService:version:v1alpha3
-// +cue-gen:VirtualService:storageVersion
+// +cue-gen:VirtualService:versions:v1beta1,v1alpha3,v1
 // +cue-gen:VirtualService:annotations:helm.sh/resource-policy=keep
 // +cue-gen:VirtualService:labels:app=istio-pilot,chart=istio,heritage=Tiller,release=istio
 // +cue-gen:VirtualService:subresource:status
@@ -308,9 +292,6 @@ type SidecarList struct {
 // +kubetype-gen:groupVersion=networking.istio.io/v1alpha3
 // +genclient
 // +k8s:deepcopy-gen=true
-// -->
-// <!-- istio code generation tags
-// +istio.io/sync-start
 // -->
 type VirtualService struct {
 	v1.TypeMeta `json:",inline"`
@@ -341,8 +322,7 @@ type VirtualServiceList struct {
 //
 // <!-- crd generation tags
 // +cue-gen:WorkloadEntry:groupName:networking.istio.io
-// +cue-gen:WorkloadEntry:version:v1alpha3
-// +cue-gen:WorkloadEntry:storageVersion
+// +cue-gen:WorkloadEntry:versions:v1beta1,v1alpha3,v1
 // +cue-gen:WorkloadEntry:annotations:helm.sh/resource-policy=keep
 // +cue-gen:WorkloadEntry:labels:app=istio-pilot,chart=istio,heritage=Tiller,release=istio
 // +cue-gen:WorkloadEntry:subresource:status
@@ -361,9 +341,6 @@ type VirtualServiceList struct {
 // +kubetype-gen:groupVersion=networking.istio.io/v1alpha3
 // +genclient
 // +k8s:deepcopy-gen=true
-// -->
-// <!-- istio code generation tags
-// +istio.io/sync-start
 // -->
 type WorkloadEntry struct {
 	v1.TypeMeta `json:",inline"`
@@ -398,8 +375,7 @@ type WorkloadEntryList struct {
 //
 // <!-- crd generation tags
 // +cue-gen:WorkloadGroup:groupName:networking.istio.io
-// +cue-gen:WorkloadGroup:version:v1alpha3
-// +cue-gen:WorkloadGroup:storageVersion
+// +cue-gen:WorkloadGroup:versions:v1beta1,v1alpha3,v1
 // +cue-gen:WorkloadGroup:labels:app=istio-pilot,chart=istio,heritage=Tiller,release=istio
 // +cue-gen:WorkloadGroup:subresource:status
 // +cue-gen:WorkloadGroup:scope:Namespaced
@@ -416,9 +392,6 @@ type WorkloadEntryList struct {
 // +kubetype-gen:groupVersion=networking.istio.io/v1alpha3
 // +genclient
 // +k8s:deepcopy-gen=true
-// -->
-// <!-- istio code generation tags
-// +istio.io/sync-start
 // -->
 type WorkloadGroup struct {
 	v1.TypeMeta `json:",inline"`
