@@ -196,10 +196,18 @@ spec:
                 properties:
                   matchLabels:
                     additionalProperties:
+                      maxLength: 63
                       type: string
+                      x-kubernetes-validations:
+                      - message: wildcard not allowed in label value match
+                        rule: '!self.contains(''*'')'
                     description: One or more labels that indicate a specific set of
                       pods/VMs on which a policy should be applied.
+                    maxProperties: 4096
                     type: object
+                    x-kubernetes-validations:
+                    - message: wildcard not allowed in label key match
+                      rule: self.all(key, !key.contains('*'))
                 type: object
               targetRef:
                 properties:
@@ -523,10 +531,18 @@ spec:
                 properties:
                   matchLabels:
                     additionalProperties:
+                      maxLength: 63
                       type: string
+                      x-kubernetes-validations:
+                      - message: wildcard not allowed in label value match
+                        rule: '!self.contains(''*'')'
                     description: One or more labels that indicate a specific set of
                       pods/VMs on which a policy should be applied.
+                    maxProperties: 4096
                     type: object
+                    x-kubernetes-validations:
+                    - message: wildcard not allowed in label key match
+                      rule: self.all(key, !key.contains('*'))
                 type: object
               targetRef:
                 properties:
