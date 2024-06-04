@@ -132,6 +132,9 @@ spec:
                           description: Specifies how long the results of a preflight
                             request can be cached.
                           type: string
+                          x-kubernetes-validations:
+                          - message: must be a valid duration greater than 1ms
+                            rule: duration(self) >= duration('1ms')
                         unmatchedPreflights:
                           description: |-
                             Indicates whether preflight requests not matching the configured allowed origin shouldn't be forwarded to the upstream.
@@ -249,10 +252,16 @@ spec:
                           properties:
                             exponentialDelay:
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                             fixedDelay:
                               description: Add a fixed delay before forwarding the
                                 request.
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                             percent:
                               description: Percentage of requests on which the delay
                                 will be injected (0-100).
@@ -688,6 +697,9 @@ spec:
                           description: Timeout per attempt for a given request, including
                             the initial call and any retries.
                           type: string
+                          x-kubernetes-validations:
+                          - message: must be a valid duration greater than 1ms
+                            rule: duration(self) >= duration('1ms')
                         retryOn:
                           description: Specifies the conditions under which retry
                             takes place.
@@ -796,6 +808,9 @@ spec:
                     timeout:
                       description: Timeout for HTTP requests, default is disabled.
                       type: string
+                      x-kubernetes-validations:
+                      - message: must be a valid duration greater than 1ms
+                        rule: duration(self) >= duration('1ms')
                   type: object
                 type: array
               tcp:
@@ -1085,6 +1100,9 @@ spec:
                           description: Specifies how long the results of a preflight
                             request can be cached.
                           type: string
+                          x-kubernetes-validations:
+                          - message: must be a valid duration greater than 1ms
+                            rule: duration(self) >= duration('1ms')
                         unmatchedPreflights:
                           description: |-
                             Indicates whether preflight requests not matching the configured allowed origin shouldn't be forwarded to the upstream.
@@ -1202,10 +1220,16 @@ spec:
                           properties:
                             exponentialDelay:
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                             fixedDelay:
                               description: Add a fixed delay before forwarding the
                                 request.
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                             percent:
                               description: Percentage of requests on which the delay
                                 will be injected (0-100).
@@ -1641,6 +1665,9 @@ spec:
                           description: Timeout per attempt for a given request, including
                             the initial call and any retries.
                           type: string
+                          x-kubernetes-validations:
+                          - message: must be a valid duration greater than 1ms
+                            rule: duration(self) >= duration('1ms')
                         retryOn:
                           description: Specifies the conditions under which retry
                             takes place.
@@ -1749,6 +1776,9 @@ spec:
                     timeout:
                       description: Timeout for HTTP requests, default is disabled.
                       type: string
+                      x-kubernetes-validations:
+                      - message: must be a valid duration greater than 1ms
+                        rule: duration(self) >= duration('1ms')
                   type: object
                 type: array
               tcp:
@@ -2038,6 +2068,9 @@ spec:
                           description: Specifies how long the results of a preflight
                             request can be cached.
                           type: string
+                          x-kubernetes-validations:
+                          - message: must be a valid duration greater than 1ms
+                            rule: duration(self) >= duration('1ms')
                         unmatchedPreflights:
                           description: |-
                             Indicates whether preflight requests not matching the configured allowed origin shouldn't be forwarded to the upstream.
@@ -2155,10 +2188,16 @@ spec:
                           properties:
                             exponentialDelay:
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                             fixedDelay:
                               description: Add a fixed delay before forwarding the
                                 request.
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                             percent:
                               description: Percentage of requests on which the delay
                                 will be injected (0-100).
@@ -2594,6 +2633,9 @@ spec:
                           description: Timeout per attempt for a given request, including
                             the initial call and any retries.
                           type: string
+                          x-kubernetes-validations:
+                          - message: must be a valid duration greater than 1ms
+                            rule: duration(self) >= duration('1ms')
                         retryOn:
                           description: Specifies the conditions under which retry
                             takes place.
@@ -2702,6 +2744,9 @@ spec:
                     timeout:
                       description: Timeout for HTTP requests, default is disabled.
                       type: string
+                      x-kubernetes-validations:
+                      - message: must be a valid duration greater than 1ms
+                        rule: duration(self) >= duration('1ms')
                   type: object
                 type: array
               tcp:
