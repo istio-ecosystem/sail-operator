@@ -189,6 +189,9 @@ spec:
                     reportingInterval:
                       description: Optional.
                       type: string
+                      x-kubernetes-validations:
+                      - message: must be a valid duration greater than 1ms
+                        rule: duration(self) >= duration('1ms')
                   type: object
                 type: array
               selector:
@@ -208,39 +211,75 @@ spec:
                     x-kubernetes-validations:
                     - message: wildcard not allowed in label key match
                       rule: self.all(key, !key.contains('*'))
+                    - message: key must not be empty
+                      rule: self.all(key, key.size() != 0)
                 type: object
               targetRef:
                 properties:
                   group:
                     description: group is the group of the target resource.
+                    maxLength: 253
+                    pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                     type: string
                   kind:
                     description: kind is kind of the target resource.
+                    maxLength: 63
+                    minLength: 1
+                    pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
                     type: string
                   name:
                     description: name is the name of the target resource.
+                    maxLength: 253
+                    minLength: 1
                     type: string
                   namespace:
                     description: namespace is the namespace of the referent.
                     type: string
+                    x-kubernetes-validations:
+                    - message: cross namespace referencing is not currently supported
+                      rule: self.size() == 0
+                required:
+                - kind
+                - name
                 type: object
+                x-kubernetes-validations:
+                - message: Support kinds are core/Service and gateway.networking.k8s.io/Gateway
+                  rule: '[self.group, self.kind] in [[''core'',''Service''], ['''',''Service''],
+                    [''gateway.networking.k8s.io'',''Gateway'']]'
               targetRefs:
                 description: Optional.
                 items:
                   properties:
                     group:
                       description: group is the group of the target resource.
+                      maxLength: 253
+                      pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                       type: string
                     kind:
                       description: kind is kind of the target resource.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
                       type: string
                     name:
                       description: name is the name of the target resource.
+                      maxLength: 253
+                      minLength: 1
                       type: string
                     namespace:
                       description: namespace is the namespace of the referent.
                       type: string
+                      x-kubernetes-validations:
+                      - message: cross namespace referencing is not currently supported
+                        rule: self.size() == 0
+                  required:
+                  - kind
+                  - name
                   type: object
+                  x-kubernetes-validations:
+                  - message: Support kinds are core/Service and gateway.networking.k8s.io/Gateway
+                    rule: '[self.group, self.kind] in [[''core'',''Service''], ['''',''Service''],
+                      [''gateway.networking.k8s.io'',''Gateway'']]'
                 type: array
               tracing:
                 description: Optional.
@@ -524,6 +563,9 @@ spec:
                     reportingInterval:
                       description: Optional.
                       type: string
+                      x-kubernetes-validations:
+                      - message: must be a valid duration greater than 1ms
+                        rule: duration(self) >= duration('1ms')
                   type: object
                 type: array
               selector:
@@ -543,39 +585,75 @@ spec:
                     x-kubernetes-validations:
                     - message: wildcard not allowed in label key match
                       rule: self.all(key, !key.contains('*'))
+                    - message: key must not be empty
+                      rule: self.all(key, key.size() != 0)
                 type: object
               targetRef:
                 properties:
                   group:
                     description: group is the group of the target resource.
+                    maxLength: 253
+                    pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                     type: string
                   kind:
                     description: kind is kind of the target resource.
+                    maxLength: 63
+                    minLength: 1
+                    pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
                     type: string
                   name:
                     description: name is the name of the target resource.
+                    maxLength: 253
+                    minLength: 1
                     type: string
                   namespace:
                     description: namespace is the namespace of the referent.
                     type: string
+                    x-kubernetes-validations:
+                    - message: cross namespace referencing is not currently supported
+                      rule: self.size() == 0
+                required:
+                - kind
+                - name
                 type: object
+                x-kubernetes-validations:
+                - message: Support kinds are core/Service and gateway.networking.k8s.io/Gateway
+                  rule: '[self.group, self.kind] in [[''core'',''Service''], ['''',''Service''],
+                    [''gateway.networking.k8s.io'',''Gateway'']]'
               targetRefs:
                 description: Optional.
                 items:
                   properties:
                     group:
                       description: group is the group of the target resource.
+                      maxLength: 253
+                      pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                       type: string
                     kind:
                       description: kind is kind of the target resource.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
                       type: string
                     name:
                       description: name is the name of the target resource.
+                      maxLength: 253
+                      minLength: 1
                       type: string
                     namespace:
                       description: namespace is the namespace of the referent.
                       type: string
+                      x-kubernetes-validations:
+                      - message: cross namespace referencing is not currently supported
+                        rule: self.size() == 0
+                  required:
+                  - kind
+                  - name
                   type: object
+                  x-kubernetes-validations:
+                  - message: Support kinds are core/Service and gateway.networking.k8s.io/Gateway
+                    rule: '[self.group, self.kind] in [[''core'',''Service''], ['''',''Service''],
+                      [''gateway.networking.k8s.io'',''Gateway'']]'
                 type: array
               tracing:
                 description: Optional.
