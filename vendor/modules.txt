@@ -679,16 +679,16 @@ helm.sh/helm/v3/pkg/storage
 helm.sh/helm/v3/pkg/storage/driver
 helm.sh/helm/v3/pkg/time
 helm.sh/helm/v3/pkg/uploader
-# istio.io/api v1.22.0-alpha.1.0.20240602151005-f51895ee7a48
+# istio.io/api v1.22.0-alpha.1.0.20240605170309-974eadbbdcd2
 ## explicit; go 1.22.0
 istio.io/api/analysis/v1alpha1
 istio.io/api/meta/v1alpha1
 istio.io/api/networking/v1alpha3
 istio.io/api/type/v1beta1
-# istio.io/client-go v1.22.0-alpha.1.0.20240602151604-51bb0b3e7ab8
+# istio.io/client-go v1.22.0-alpha.1.0.20240605171227-6e195519847e
 ## explicit; go 1.22.0
 istio.io/client-go/pkg/apis/networking/v1alpha3
-# istio.io/istio v0.0.0-20240603210205-aa747efe12e9
+# istio.io/istio v0.0.0-20240605203230-e5a37dfed603
 ## explicit; go 1.22.0
 istio.io/istio/pkg/ptr
 istio.io/istio/pkg/slices
