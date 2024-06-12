@@ -67,15 +67,8 @@ main () {
     rm -rf bundle/**/*.yaml resources bundle.Dockerfile
     updateVersionsInOssmValuesYaml
     make gen
-    git add .
+    git add bundle resources chart bundle.Dockerfile "$HELM_VALUES_FILE"
     git -c "user.name=$GIT_USERNAME" -c "user.email=$GIT_EMAIL" commit --no-edit
-  else
-    echo "Syncing the vendor directory"
-    make vendor
-    git add vendor
-    if ! git diff --cached --quiet; then
-      git -c "user.name=$GIT_USERNAME" -c "user.email=$GIT_EMAIL" commit -m "Syncing the vendor directory"
-    fi
   fi
 }
 
