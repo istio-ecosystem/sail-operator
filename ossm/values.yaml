@@ -2,11 +2,11 @@ name: servicemeshoperator3
 deployment:
   name: servicemesh-operator3
   annotations:
-    images.v1_21_2.istiod: registry.redhat.io/openshift-service-mesh/istio-pilot-rhel9:1.21.2.tp.1
-    images.v1_21_2.proxy: registry.redhat.io/openshift-service-mesh/istio-proxyv2-rhel9:3.0.0.tp.1
-    images.v1_21_2.cni: registry.redhat.io/openshift-service-mesh/istio-cni-rhel9:1.21.2.tp.1
+    images.v1_22_1.istiod: registry.redhat.io/openshift-service-mesh/istio-pilot-rhel9:1.22.1.tp.1
+    images.v1_22_1.proxy: registry.redhat.io/openshift-service-mesh/istio-proxyv2-rhel9:3.0.0.tp.1
+    images.v1_22_1.cni: registry.redhat.io/openshift-service-mesh/istio-cni-rhel9:1.22.1.tp.1
     # TODO insert ztunnel image name once we're shipping ztunnel
-    images.v1_21_2.ztunnel: registry.redhat.io/openshift-service-mesh/istio-pilot-rhel9:1.21.2.tp.1
+    images.v1_22_1.ztunnel: registry.redhat.io/openshift-service-mesh/istio-pilot-rhel9:1.22.1.tp.1
 service:
   port: 8443
 serviceAccountName: servicemesh-operator3
