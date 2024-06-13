@@ -213,6 +213,12 @@ var _ = Describe("Istio resource", Ordered, func() {
 		var workloadNs *corev1.Namespace
 		rev := &v1alpha1.IstioRevision{}
 
+		BeforeAll(func() {
+			if supportedversion.Old == "" {
+				Skip("Only one supported version, nothing to upgrade from")
+			}
+		})
+
 		for _, withWorkloads := range []bool{true, false} {
 			withWorkloads := withWorkloads
 
