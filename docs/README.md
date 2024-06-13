@@ -7,7 +7,25 @@ tbd
 tbd
 
 ## Getting Started
-tbd
+
+### Installation on OpenShift
+
+1. In the OpenShift Console, navigate to the OperatorHub by clicking **Operator** -> **Operator Hub** in the left side-pane.
+
+1. Search for "sail".
+
+1. Locate the sail-operator, and click to select it.
+
+1. When the prompt that discusses the community operator appears, click **Continue**, then click **Install**.
+
+1. Use the default installation settings presented, and click **Install** to continue.
+
+1. Click **Operators** -> **Installed Operators** to verify that the sail-operator 
+is installed. `Succeeded` should appear in the **Status** column.
+
+### Installation from Source
+
+If you're not using OpenShift or simply want to install from source, follow the [instructions in the Contributor Documentation](../README.md#deploying-the-operator).
 
 ## Gateways
 
