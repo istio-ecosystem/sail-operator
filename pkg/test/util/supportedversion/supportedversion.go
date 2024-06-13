@@ -49,7 +49,9 @@ func init() {
 
 	List = versions.Versions
 	Default = List[0].Name
-	Old = List[1].Name
+	if len(List) > 1 {
+		Old = List[1].Name
+	}
 	New = List[0].Name
 }
 
