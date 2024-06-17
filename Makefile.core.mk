@@ -409,7 +409,7 @@ OPERATOR_SDK_VERSION ?= v1.34.2
 HELM_VERSION ?= v3.15.2
 CONTROLLER_TOOLS_VERSION ?= v0.15.0
 OPM_VERSION ?= v1.43.1
-GITLEAKS_VERSION ?= v8.18.3
+GITLEAKS_VERSION ?= v8.18.4
 
 .PHONY: helm $(HELM)
 helm: $(HELM) ## Download helm to bin directory. If wrong version is installed, it will be overwritten.
