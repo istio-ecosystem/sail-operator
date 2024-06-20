@@ -10,6 +10,8 @@ tbd
 
 ### Installation on OpenShift
 
+#### Installing through the web console
+
 1. In the OpenShift Console, navigate to the OperatorHub by clicking **Operator** -> **Operator Hub** in the left side-pane.
 
 1. Search for "sail".
@@ -22,6 +24,46 @@ tbd
 
 1. Click **Operators** -> **Installed Operators** to verify that the sail-operator 
 is installed. `Succeeded` should appear in the **Status** column.
+
+#### Installing using the CLI
+
+*Prerequisites*
+
+* You must have `admin` privileges.
+
+*Steps*
+
+1. Create the `openshift-operators` namespace (if it does not already exist).
+
+    ```bash
+    $ kubectl get ns openshift-operators --ignore-not-found || kubectl create namespace openshift-operators
+    ```
+
+1. Create the `Subscription` object with the desired `spec.channel`.
+
+    ```yaml
+    apiVersion: operators.coreos.com/v1alpha1
+    kind: Subscription
+    metadata:
+      name: sailoperator
+      namespace: openshift-operators
+    spec:
+      channel: "3.0-nightly"
+      installPlanApproval: Automatic
+      name: sailoperator
+      source: community-operators
+      sourceNamespace: openshift-marketplace
+    ```
+
+1. Verify the installation succeeded by inspecting the CSV file.
+
+    ```bash
+    $ kubectl get csv -n openshift-operators
+    NAME                                     DISPLAY         VERSION                    REPLACES                                 PHASE
+    sailoperator.v3.0.0-nightly-2024-05-13   Sail Operator   3.0.0-nightly-2024-05-13   sailoperator.v3.0.0-nightly-2024-05-11   Succeeded
+    ```
+
+    `Succeeded` should appear in the sailoperator's `PHASE` column.
 
 ### Installation from Source
 
