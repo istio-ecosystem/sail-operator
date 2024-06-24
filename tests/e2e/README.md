@@ -2,7 +2,7 @@
 
 This end-to-end test suite utilizes Ginkgo, a testing framework known for its expressive specs (reference: https://onsi.github.io/ginkgo/). The setup for the test run is similar to the upstream Istio integration tests:
 * In the case of kind execution, it relies on the upstream script [`kind_provisioner.sh`](https://github.com/istio-ecosystem/sail-operator/blob/main/common/scripts/kind_provisioner.sh) and [`integ-suite-kind.sh`](https://github.com/istio-ecosystem/sail-operator/blob/main/tests/e2e/integ-suite-kind.sh), which are copied from the `github.com/istio/common-files` repository to set up the kind cluster used for the test.
-* In the case of OCP execution, it relies on the `inter-suite-ocp.sh` and `common-operator-integ-suite` scripts to setup the OCP cluster to be ready for the test.
+* In the case of OCP execution, it relies on the `integ-suite-ocp.sh` and `common-operator-integ-suite.sh` scripts to setup the OCP cluster to be ready for the test.
 
 ## Table of Contents
 
@@ -198,7 +198,7 @@ $ make BUILD_WITH_CONTAINER=0 test.e2e.kind
 ```
 or
 ```
-$ make BUILD_WITH_CONTAINER=0 test.2e2.ocp
+$ make BUILD_WITH_CONTAINER=0 test.e2e.ocp
 ```
 
 ### Settings for end-to-end test execution
