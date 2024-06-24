@@ -117,6 +117,8 @@ kubectl apply -f chart/samples/istio-sample-openshift.yaml
 On OpenShift, you must also deploy the Istio CNI plugin by creating an instance of the `IstioCNI` resource:
 
 ```sh
+# Create the istio-cni namespace if it does not exist
+kubectl get ns istio-cni || kubectl create ns istio-cni
 kubectl apply -f chart/samples/istiocni-sample.yaml
 ```
 
