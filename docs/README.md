@@ -48,19 +48,19 @@ is installed. `Succeeded` should appear in the **Status** column.
       name: sailoperator
       namespace: openshift-operators
     spec:
-      channel: "3.0-nightly"
+      channel: "0.1-nightly"
       installPlanApproval: Automatic
       name: sailoperator
       source: community-operators
       sourceNamespace: openshift-marketplace
     ```
 
-1. Verify the installation succeeded by inspecting the CSV file.
+1. Verify that the installation succeeded by inspecting the CSV file.
 
     ```bash
     $ kubectl get csv -n openshift-operators
     NAME                                     DISPLAY         VERSION                    REPLACES                                 PHASE
-    sailoperator.v3.0.0-nightly-2024-05-13   Sail Operator   3.0.0-nightly-2024-05-13   sailoperator.v3.0.0-nightly-2024-05-11   Succeeded
+    sailoperator.v0.1.0-nightly-2024-06-25   Sail Operator   0.1.0-nightly-2024-06-25   sailoperator.v0.1.0-nightly-2024-06-21   Succeeded
     ```
 
     `Succeeded` should appear in the sailoperator's `PHASE` column.
