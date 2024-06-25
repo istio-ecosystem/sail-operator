@@ -251,53 +251,57 @@ docker-buildx: build-all ## Build and push docker image with cross-platform supp
 
 ##@ Deployment
 
+.PHONY: verify-kubeconfig
+verify-kubeconfig:
+	@kubectl get pods >/dev/null 2>&1 || (echo "Please verify that you have an active, running cluster and that KUBECONFIG is pointing to it." && exit 1)
+
 .PHONY: install
-install: gen-manifests ## Install CRDs into an existing cluster.
+install: verify-kubeconfig gen-manifests ## Install CRDs into an existing cluster.
 	kubectl create ns ${NAMESPACE} || echo "namespace ${NAMESPACE} already exists"
 	kubectl apply --server-side=true -f chart/crds
 
 .PHONY: uninstall
-uninstall: ## Uninstall CRDs from an existing cluster.
+uninstall: verify-kubeconfig ## Uninstall CRDs from an existing cluster.
 	kubectl delete --ignore-not-found -f chart/crds
 
 .PHONY: helm-package
-helm-package: helm ## Package the helm chart.
+helm-package: verify-kubeconfig helm ## Package the helm chart.
 	$(HELM) package chart
 
 .PHONY: deploy
-deploy: helm ## Deploy controller to an existing cluster.
+deploy: verify-kubeconfig helm ## Deploy controller to an existing cluster.
 	$(info NAMESPACE: $(NAMESPACE))
 	kubectl create ns ${NAMESPACE} || echo "namespace ${NAMESPACE} already exists"
 	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --namespace $(NAMESPACE) | kubectl apply --server-side=true -f -
 
 .PHONY: deploy-yaml
-deploy-yaml: helm ## Output YAML manifests used by `deploy`.
+deploy-yaml: verify-kubeconfig helm ## Output YAML manifests used by `deploy`.
 	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --namespace $(NAMESPACE)
 
 .PHONY: deploy-openshift # TODO: remove this target and use deploy-olm instead (when we fix the internal registry TLS issues when using operator-sdk run bundle)
-deploy-openshift: helm ## Deploy controller to an existing OCP cluster.
+deploy-openshift: verify-kubeconfig helm ## Deploy controller to an existing OCP cluster.
 	$(info NAMESPACE: $(NAMESPACE))
 	kubectl create ns ${NAMESPACE} || echo "namespace ${NAMESPACE} already exists"
 	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --namespace $(NAMESPACE) --set platform="openshift" | kubectl apply --server-side=true -f -
 
 .PHONY: deploy-yaml-openshift
-deploy-yaml-openshift: helm ## Output YAML manifests used by `deploy-openshift`.
+deploy-yaml-openshift: verify-kubeconfig helm ## Output YAML manifests used by `deploy-openshift`.
 	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --namespace $(NAMESPACE) --set platform="openshift"
 
 .PHONY: deploy-olm
-deploy-olm: bundle bundle-build bundle-push ## Build and push the operator OLM bundle and deploy the operator using OLM.
+deploy-olm: verify-kubeconfig bundle bundle-build bundle-push ## Build and push the operator OLM bundle and deploy the operator using OLM.
 	kubectl create ns ${NAMESPACE} || echo "namespace ${NAMESPACE} already exists"
 	$(OPERATOR_SDK) run bundle $(BUNDLE_IMG) -n ${NAMESPACE}
 
 .PHONY: undeploy
-undeploy: ## Undeploy controller from an existing cluster.
+undeploy: verify-kubeconfig ## Undeploy controller from an existing cluster.
 	kubectl delete istios.operator.istio.io --all --all-namespaces --wait=true
 	$(MAKE) -e HELM_TEMPL_DEF_FLAGS="$(HELM_TEMPL_DEF_FLAGS)" deploy-yaml | kubectl delete --ignore-not-found -f -
 	kubectl delete ns ${NAMESPACE} --ignore-not-found
 	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --namespace $(NAMESPACE) | kubectl delete --ignore-not-found -f -
 
 .PHONY: undeploy-olm
-undeploy-olm: operator-sdk ## Undeploy the operator from an existing cluster (used only if operator was installed via OLM).
+undeploy-olm: verify-kubeconfig operator-sdk ## Undeploy the operator from an existing cluster (used only if operator was installed via OLM).
 	kubectl delete istios.operator.istio.io --all --all-namespaces --wait=true
 	$(OPERATOR_SDK) cleanup $(OPERATOR_NAME) --delete-all -n ${NAMESPACE}
 
@@ -305,14 +309,14 @@ undeploy-olm: operator-sdk ## Undeploy the operator from an existing cluster (us
 deploy-example: deploy-example-openshift ## Deploy an example Istio resource to an existing OCP cluster. Same as `deploy-example-openshift`.
 
 .PHONY: deploy-example-openshift
-deploy-example-openshift: ## Deploy an example Istio and IstioCNI resource to an existing OCP cluster.
+deploy-example-openshift: verify-kubeconfig ## Deploy an example Istio and IstioCNI resource to an existing OCP cluster.
 	kubectl create ns istio-cni || echo "namespace istio-cni already exists"
 	kubectl apply -f chart/samples/istiocni-sample.yaml
 	kubectl create ns istio-system || echo "namespace istio-system already exists"
 	kubectl apply -f chart/samples/istio-sample-openshift.yaml
 
 .PHONY: deploy-example-kubernetes
-deploy-example-kubernetes: ## Deploy an example Istio resource on an existing cluster.
+deploy-example-kubernetes: verify-kubeconfig ## Deploy an example Istio resource on an existing cluster.
 	kubectl create ns istio-system || echo "namespace istio-system already exists"
 	kubectl apply -f chart/samples/istio-sample-kubernetes.yaml
 
