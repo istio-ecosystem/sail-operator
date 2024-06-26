@@ -29,14 +29,14 @@ is installed. `Succeeded` should appear in the **Status** column.
 
 *Prerequisites*
 
-* You must have `admin` privileges.
+* You have access to the cluster as a user with the `cluster-admin` cluster role.
 
 *Steps*
 
 1. Create the `openshift-operators` namespace (if it does not already exist).
 
     ```bash
-    $ kubectl get ns openshift-operators --ignore-not-found || kubectl create namespace openshift-operators
+    $ kubectl create namespace openshift-operators
     ```
 
 1. Create the `Subscription` object with the desired `spec.channel`.
