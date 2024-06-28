@@ -16,7 +16,7 @@ metadata:
               "inactiveRevisionDeletionGracePeriodSeconds": 30,
               "type": "InPlace"
             },
-            "version": "v1.22.1"
+            "version": "v1.22.2"
           }
         },
         {
@@ -27,14 +27,14 @@ metadata:
           },
           "spec": {
             "namespace": "istio-cni",
-            "version": "v1.22.1"
+            "version": "v1.22.2"
           }
         }
       ]
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/maistra-dev/sail-operator:0.1-latest
-    createdAt: "2024-06-27T23:03:53Z"
+    createdAt: "2024-06-28T23:02:48Z"
     description: Experimental operator for installing Istio service mesh
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -158,14 +158,16 @@ spec:
       kind: IstioCNI
       name: istiocnis.operator.istio.io
       specDescriptors:
-      - description: 'Defines the version of Istio to install. Must be one of: v1.22.1,
-          v1.22.0, v1.21.3, v1.21.2, v1.21.0, latest.'
+      - description: 'Defines the version of Istio to install. Must be one of: v1.22.2,
+          v1.22.1, v1.22.0, v1.21.4, v1.21.3, v1.21.2, v1.21.0, latest.'
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.2
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.1
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.0
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.4
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.3
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.2
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.0
@@ -197,14 +199,16 @@ spec:
       kind: IstioRevision
       name: istiorevisions.operator.istio.io
       specDescriptors:
-      - description: 'Defines the version of Istio to install. Must be one of: v1.22.1,
-          v1.22.0, v1.21.3, v1.21.2, v1.21.0, latest.'
+      - description: 'Defines the version of Istio to install. Must be one of: v1.22.2,
+          v1.22.1, v1.22.0, v1.21.4, v1.21.3, v1.21.2, v1.21.0, latest.'
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.2
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.1
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.0
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.4
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.3
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.2
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.0
@@ -243,14 +247,16 @@ spec:
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:select:InPlace
         - urn:alm:descriptor:com.tectonic.ui:select:RevisionBased
-      - description: 'Defines the version of Istio to install. Must be one of: v1.22.1,
-          v1.22.0, v1.21.3, v1.21.2, v1.21.0, latest.'
+      - description: 'Defines the version of Istio to install. Must be one of: v1.22.2,
+          v1.22.1, v1.22.0, v1.21.4, v1.21.3, v1.21.2, v1.21.0, latest.'
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.2
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.1
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.0
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.4
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.3
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.2
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.0
@@ -301,12 +307,14 @@ spec:
 
     This version of the operator supports the following Istio versions:
 
+    - v1.22.2
     - v1.22.1
     - v1.22.0
+    - v1.21.4
     - v1.21.3
     - v1.21.2
     - v1.21.0
-    - latest (e3386b49)
+    - latest (cef4ca15)
 
     [See this page](https://github.com/istio-ecosystem/sail-operator/blob/pre-main/bundle/README.md) for instructions on how to use it.
   displayName: Sail Operator
