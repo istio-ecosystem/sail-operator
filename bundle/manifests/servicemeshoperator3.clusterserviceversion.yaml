@@ -16,7 +16,7 @@ metadata:
               "inactiveRevisionDeletionGracePeriodSeconds": 30,
               "type": "InPlace"
             },
-            "version": "v1.22.1"
+            "version": "v1.22.2"
           }
         },
         {
@@ -27,14 +27,14 @@ metadata:
           },
           "spec": {
             "namespace": "istio-cni",
-            "version": "v1.22.1"
+            "version": "v1.22.2"
           }
         }
       ]
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/maistra-dev/sail-operator:3.0.0-tp-latest
-    createdAt: "2024-06-28T06:10:47Z"
+    createdAt: "2024-07-01T15:05:08Z"
     description: The OpenShift Service Mesh Operator enables you to install, configure,
       and manage an instance of Red Hat OpenShift Service Mesh. OpenShift Service
       Mesh is based on the open source Istio project.
@@ -162,14 +162,16 @@ spec:
       kind: IstioCNI
       name: istiocnis.operator.istio.io
       specDescriptors:
-      - description: 'Defines the version of Istio to install. Must be one of: v1.22.1,
-          v1.22.0, v1.21.3, v1.21.2, v1.21.0, latest.'
+      - description: 'Defines the version of Istio to install. Must be one of: v1.22.2,
+          v1.22.1, v1.22.0, v1.21.4, v1.21.3, v1.21.2, v1.21.0, latest.'
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.2
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.1
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.0
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.4
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.3
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.2
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.0
@@ -201,14 +203,16 @@ spec:
       kind: IstioRevision
       name: istiorevisions.operator.istio.io
       specDescriptors:
-      - description: 'Defines the version of Istio to install. Must be one of: v1.22.1,
-          v1.22.0, v1.21.3, v1.21.2, v1.21.0, latest.'
+      - description: 'Defines the version of Istio to install. Must be one of: v1.22.2,
+          v1.22.1, v1.22.0, v1.21.4, v1.21.3, v1.21.2, v1.21.0, latest.'
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.2
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.1
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.0
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.4
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.3
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.2
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.0
@@ -247,14 +251,16 @@ spec:
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:select:InPlace
         - urn:alm:descriptor:com.tectonic.ui:select:RevisionBased
-      - description: 'Defines the version of Istio to install. Must be one of: v1.22.1,
-          v1.22.0, v1.21.3, v1.21.2, v1.21.0, latest.'
+      - description: 'Defines the version of Istio to install. Must be one of: v1.22.2,
+          v1.22.1, v1.22.0, v1.21.4, v1.21.3, v1.21.2, v1.21.0, latest.'
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.2
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.1
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.0
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.4
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.3
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.2
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.0
@@ -496,10 +502,10 @@ spec:
           template:
             metadata:
               annotations:
-                images.v1_22_1.cni: registry.redhat.io/openshift-service-mesh/istio-cni-rhel9:1.22.1.tp.1
-                images.v1_22_1.istiod: registry.redhat.io/openshift-service-mesh/istio-pilot-rhel9:1.22.1.tp.1
-                images.v1_22_1.proxy: registry.redhat.io/openshift-service-mesh/istio-proxyv2-rhel9:3.0.0.tp.1
-                images.v1_22_1.ztunnel: registry.redhat.io/openshift-service-mesh/istio-pilot-rhel9:1.22.1.tp.1
+                images.v1_22_2.cni: registry.redhat.io/openshift-service-mesh/istio-cni-rhel9:1.22.2.tp.1
+                images.v1_22_2.istiod: registry.redhat.io/openshift-service-mesh/istio-pilot-rhel9:1.22.2.tp.1
+                images.v1_22_2.proxy: registry.redhat.io/openshift-service-mesh/istio-proxyv2-rhel9:3.0.0.tp.1
+                images.v1_22_2.ztunnel: registry.redhat.io/openshift-service-mesh/istio-pilot-rhel9:1.22.2.tp.1
                 kubectl.kubernetes.io/default-container: manager
               labels:
                 app.kubernetes.io/created-by: servicemeshoperator3
