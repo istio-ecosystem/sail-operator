@@ -174,7 +174,7 @@ kubectl wait -n bookinfo --for=condition=programmed gtw bookinfo-gateway
 
 ### Generate traffic and visualize your mesh
 
-Send traffic to the productpage service. Note that this will command will run until cancelled.
+Send traffic to the productpage service. Note that this command will run until cancelled.
 
 ```sh
 export INGRESS_HOST=$(kubectl get gtw bookinfo-gateway -n bookinfo -o jsonpath='{.status.addresses[0].value}')
@@ -197,7 +197,7 @@ Otherwise port forward to the kiali pod directly:
 kubectl port-forward -n istio-system svc/kiali 20001:20001
 ```
 
-Visit Kiali at: http://localhost:20001
+You can view Kiali dashboard at: http://localhost:20001
 
 ## Observability Integrations
 
