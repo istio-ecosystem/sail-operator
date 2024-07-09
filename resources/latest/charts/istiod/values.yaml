@@ -244,7 +244,7 @@ defaults:
     # Dev builds from prow are on gcr.io
     hub: gcr.io/istio-testing
     # Default tag for Istio images.
-    tag: 1.23-alpha.f8dfe4e98c099b72c34a871a0e6eb0a9d189460a
+    tag: 1.23-alpha.6738c5d9d32b91ddff783888b076cf7450a9768c
     # Variant of the image to use.
     # Currently supported are: [debug, distroless]
     variant: ""
@@ -526,3 +526,6 @@ defaults:
     # If unset, this will be automatically set to the minimum privileges required to bind to port 80 and 443.
     # On Kubernetes 1.22+, this only requires the `net.ipv4.ip_unprivileged_port_start` sysctl.
     securityContext: {}
+
+    # Set to `type: RuntimeDefault` to use the default profile for templated gateways, if your container runtime supports it
+    seccompProfile: {}
