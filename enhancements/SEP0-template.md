@@ -24,6 +24,8 @@ This is free-form; use as many or few sub-headings as appropriate. The following
 
 ### Performance Impact
 
+### Backward Compatibility
+
 ### Kubernetes vs OpenShift vs Other Distributions
 
 ## Alternatives Considered
