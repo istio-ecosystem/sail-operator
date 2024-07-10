@@ -23,6 +23,8 @@ For non-trivial (for definition see below) changes to the sail-operator, we're g
 ### Applicability
 The SEP process should be used for non-trivial features or epics and any API changes. Changes without user impact will most of the time not need a SEP, but if they're big enough or result in changes to the development workflows (e.g. a rewrite of our integration testing framework) it's probably a good idea to create one.
 
+If your Proposal includes work that has to be done in Istio, depending on the size of the patchset it might be required to create an Istio design doc. If you do create one, make sure to link to it in the SEP.
+
 ### Storage
 Initially, SEPs will be stored in the enhancements/ directory of the sail-operator repository in Markdown format. We might migrate them to a separate repository later on.
 
