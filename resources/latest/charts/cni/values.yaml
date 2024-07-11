@@ -8,10 +8,9 @@ defaults:
     image: install-cni
     pullPolicy: ""
 
-    # Configuration log level of istio-cni binary
-    # by default istio-cni send all logs to UDS server
-    # if want to see them you need change global.logging.level with cni:debug
-    logLevel: debug
+    # Same as `global.logging.level`, but will override it if set
+    logging:
+      level: ""
 
     # Configuration file to insert istio-cni plugin configuration
     # by default this will be the first file found in the cni-conf-dir
@@ -114,7 +113,7 @@ defaults:
     hub: gcr.io/istio-testing
 
     # Default tag for Istio images.
-    tag: 1.23-alpha.6738c5d9d32b91ddff783888b076cf7450a9768c
+    tag: 1.23-alpha.45c812104ae0e7a0a9180607e796e27bbcd760fc
 
     # Variant of the image to use.
     # Currently supported are: [debug, distroless]
