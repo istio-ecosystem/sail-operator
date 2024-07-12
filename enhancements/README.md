@@ -1,0 +1,1 @@
+This directory stores all of our Sail Enhancement Proposal (SEP) documents in markdown format. For more information on the process around enhancements, see [SEP1-enhancement-process.md](./SEP1-enhancement-process.md). If you want to create a SEP, be sure to check out the [SEP template](./SEP0-template.md).
