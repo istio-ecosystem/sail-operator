@@ -61,7 +61,8 @@ const (
 	IstioRevLabel              = "istio.io/rev"
 	IstioSidecarInjectLabel    = "sidecar.istio.io/inject"
 
-	istiodChartName = "istiod"
+	istiodChartName       = "istiod"
+	istiodRemoteChartName = "istiod-remote"
 )
 
 // Reconciler reconciles an IstioRevision object
@@ -127,6 +128,9 @@ func (r *Reconciler) Finalize(ctx context.Context, rev *v1alpha1.IstioRevision) 
 }
 
 func (r *Reconciler) validate(ctx context.Context, rev *v1alpha1.IstioRevision) error {
+	if rev.Spec.Type == "" {
+		return reconciler.NewValidationError("spec.type not set")
+	}
 	if rev.Spec.Version == "" {
 		return reconciler.NewValidationError("spec.version not set")
 	}
@@ -165,24 +169,35 @@ func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1alpha1.IstioR
 
 	values := helm.FromValues(rev.Spec.Values)
 	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev),
-		values, rev.Spec.Namespace, getReleaseName(rev, istiodChartName), ownerReference)
+		values, rev.Spec.Namespace, getReleaseName(rev), ownerReference)
 	if err != nil {
-		return fmt.Errorf("failed to install/update Helm chart %q: %w", istiodChartName, err)
+		return fmt.Errorf("failed to install/update Helm chart %q: %w", getChartName(rev), err)
 	}
 	return nil
 }
 
-func getReleaseName(rev *v1alpha1.IstioRevision, chartName string) string {
-	return fmt.Sprintf("%s-%s", rev.Name, chartName)
+func getReleaseName(rev *v1alpha1.IstioRevision) string {
+	return fmt.Sprintf("%s-%s", rev.Name, getChartName(rev))
 }
 
 func (r *Reconciler) getChartDir(rev *v1alpha1.IstioRevision) string {
-	return path.Join(r.ResourceDirectory, rev.Spec.Version, "charts", istiodChartName)
+	return path.Join(r.ResourceDirectory, rev.Spec.Version, "charts", getChartName(rev))
+}
+
+func getChartName(rev *v1alpha1.IstioRevision) string {
+	switch rev.Spec.Type {
+	case v1alpha1.IstioRevisionTypeLocal:
+		return istiodChartName
+	case v1alpha1.IstioRevisionTypeRemote:
+		return istiodRemoteChartName
+	default:
+		panic(badIstioRevisionType(rev))
+	}
 }
 
 func (r *Reconciler) uninstallHelmCharts(ctx context.Context, rev *v1alpha1.IstioRevision) error {
-	if _, err := r.ChartManager.UninstallChart(ctx, getReleaseName(rev, istiodChartName), rev.Spec.Namespace); err != nil {
-		return fmt.Errorf("failed to uninstall Helm chart %q: %w", istiodChartName, err)
+	if _, err := r.ChartManager.UninstallChart(ctx, getReleaseName(rev), rev.Spec.Namespace); err != nil {
+		return fmt.Errorf("failed to uninstall Helm chart %q: %w", getChartName(rev), err)
 	}
 	return nil
 }
@@ -314,25 +329,54 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1alpha1.
 		Status: metav1.ConditionFalse,
 	}
 
-	istiod := appsv1.Deployment{}
-	if err := r.Client.Get(ctx, istiodDeploymentKey(rev), &istiod); err == nil {
-		if istiod.Status.Replicas == 0 {
+	switch rev.Spec.Type {
+	case v1alpha1.IstioRevisionTypeLocal:
+		istiod := appsv1.Deployment{}
+		if err := r.Client.Get(ctx, istiodDeploymentKey(rev), &istiod); err == nil {
+			if istiod.Status.Replicas == 0 {
+				c.Reason = v1alpha1.IstioRevisionReasonIstiodNotReady
+				c.Message = "istiod Deployment is scaled to zero replicas"
+			} else if istiod.Status.ReadyReplicas < istiod.Status.Replicas {
+				c.Reason = v1alpha1.IstioRevisionReasonIstiodNotReady
+				c.Message = "not all istiod pods are ready"
+			} else {
+				c.Status = metav1.ConditionTrue
+			}
+		} else if apierrors.IsNotFound(err) {
 			c.Reason = v1alpha1.IstioRevisionReasonIstiodNotReady
-			c.Message = "istiod Deployment is scaled to zero replicas"
-		} else if istiod.Status.ReadyReplicas < istiod.Status.Replicas {
-			c.Reason = v1alpha1.IstioRevisionReasonIstiodNotReady
-			c.Message = "not all istiod pods are ready"
+			c.Message = "istiod Deployment not found"
 		} else {
-			c.Status = metav1.ConditionTrue
+			c.Status = metav1.ConditionUnknown
+			c.Reason = v1alpha1.IstioRevisionReasonReadinessCheckFailed
+			c.Message = fmt.Sprintf("failed to get readiness: %v", err)
+			return c, fmt.Errorf("get failed: %w", err)
 		}
-	} else if apierrors.IsNotFound(err) {
-		c.Reason = v1alpha1.IstioRevisionReasonIstiodNotReady
-		c.Message = "istiod Deployment not found"
-	} else {
-		c.Status = metav1.ConditionUnknown
-		c.Reason = v1alpha1.IstioRevisionReasonReadinessCheckFailed
-		c.Message = fmt.Sprintf("failed to get readiness: %v", err)
-		return c, fmt.Errorf("get failed: %w", err)
+	case v1alpha1.IstioRevisionTypeRemote:
+		webhook := admissionv1.MutatingWebhookConfiguration{}
+		webhookKey := injectionWebhookKey(rev)
+		if err := r.Client.Get(ctx, webhookKey, &webhook); err == nil {
+			switch webhook.Annotations[constants.WebhookReadinessProbeStatusAnnotationKey] {
+			case "true":
+				c.Status = metav1.ConditionTrue
+			case "false":
+				c.Reason = v1alpha1.IstioRevisionReasonRemoteIstiodNotReady
+				c.Message = "readiness probe on remote istiod failed"
+			default:
+				c.Reason = v1alpha1.IstioRevisionReasonRemoteIstiodNotReady
+				c.Message = fmt.Sprintf("invalid or missing annotation %s on MutatingWebhookConfiguration %s",
+					constants.WebhookReadinessProbeStatusAnnotationKey, webhookKey.Name)
+			}
+		} else if apierrors.IsNotFound(err) {
+			c.Reason = v1alpha1.IstioRevisionReasonRemoteIstiodNotReady
+			c.Message = fmt.Sprintf("MutatingWebhookConfiguration %s not found", webhookKey.Name)
+		} else {
+			c.Status = metav1.ConditionUnknown
+			c.Reason = v1alpha1.IstioRevisionReasonReadinessCheckFailed
+			c.Message = fmt.Sprintf("failed to get readiness: %v", err)
+			return c, fmt.Errorf("get failed: %w", err)
+		}
+	default:
+		panic(badIstioRevisionType(rev))
 	}
 	return c, nil
 }
@@ -452,6 +496,19 @@ func istiodDeploymentKey(rev *v1alpha1.IstioRevision) client.ObjectKey {
 	}
 }
 
+func injectionWebhookKey(rev *v1alpha1.IstioRevision) client.ObjectKey {
+	name := "istio-sidecar-injector"
+	if rev.Spec.Values != nil && rev.Spec.Values.Revision != "" {
+		name += "-" + rev.Spec.Values.Revision
+	}
+	if rev.Spec.Namespace != "istio-system" {
+		name += "-" + rev.Spec.Namespace
+	}
+	return client.ObjectKey{
+		Name: name,
+	}
+}
+
 func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, ns client.Object) []reconcile.Request {
 	log := logf.FromContext(ctx)
 	var requests []reconcile.Request
@@ -548,4 +605,8 @@ func clearIgnoredFields(obj client.Object) {
 			webhookConfig.Webhooks[i].FailurePolicy = nil
 		}
 	}
+}
+
+func badIstioRevisionType(rev *v1alpha1.IstioRevision) string {
+	return fmt.Sprintf("unknown IstioRevisionType: %s", rev.Spec.Type)
 }
