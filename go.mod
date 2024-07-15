@@ -18,8 +18,8 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.15.1
-	istio.io/client-go v1.22.0-alpha.1.0.20240710165223-77a6a2312154
-	istio.io/istio v0.0.0-20240711203653-f573bd2b3446
+	istio.io/client-go v1.23.0-alpha.0
+	istio.io/istio v0.0.0-20240712200811-9bcbb2349ce8
 	k8s.io/api v0.30.1
 	k8s.io/apiextensions-apiserver v0.30.1
 	k8s.io/apimachinery v0.30.1
