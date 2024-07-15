@@ -1,6 +1,6 @@
 |Status                                             | Authors      | Created    | 
 |---------------------------------------------------|--------------|------------|
-|WIP                                                | @dgn         | 2024-07-09 |
+|Done                                               | @dgn         | 2024-07-09 |
 
 # Sail Enhancement Proposal (SEP) Process
 
