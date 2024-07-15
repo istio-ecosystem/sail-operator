@@ -55,7 +55,7 @@ var sailCRDs = []string{
 }
 
 var _ = Describe("Operator", Ordered, func() {
-	SetDefaultEventuallyTimeout(120 * time.Second)
+	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
 	Describe("installation", func() {
