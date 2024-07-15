@@ -269,7 +269,7 @@ helm-package: helm ## Package the helm chart.
 	$(HELM) package chart --destination $(REPO_ROOT)/out
 
 .PHONY: helm-publish
-helm-publish: helm-package ## Create a GitHub release and upload the helm charts tarball to it.
+helm-publish: helm-package ## Create a GitHub release and upload the helm charts package to it.
 	export GITHUB_TOKEN=$(GITHUB_TOKEN)
 	gh release create $(VERSION) $(REPO_ROOT)/out/sail-operator-$(VERSION).tgz \
 		--target release-$(MINOR_VERSION) \
