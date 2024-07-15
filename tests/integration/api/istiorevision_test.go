@@ -90,6 +90,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 					Name: revName,
 				},
 				Spec: v1alpha1.IstioRevisionSpec{
+					Type:      v1alpha1.IstioRevisionTypeLocal,
 					Version:   supportedversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1alpha1.Values{
@@ -109,6 +110,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 					Name: revName,
 				},
 				Spec: v1alpha1.IstioRevisionSpec{
+					Type:      v1alpha1.IstioRevisionTypeLocal,
 					Version:   supportedversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1alpha1.Values{
@@ -128,6 +130,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 					Name: "default",
 				},
 				Spec: v1alpha1.IstioRevisionSpec{
+					Type:      v1alpha1.IstioRevisionTypeLocal,
 					Version:   supportedversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1alpha1.Values{
@@ -147,6 +150,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 					Name: "default",
 				},
 				Spec: v1alpha1.IstioRevisionSpec{
+					Type:      v1alpha1.IstioRevisionTypeLocal,
 					Version:   supportedversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1alpha1.Values{
@@ -170,6 +174,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 					Name: revName,
 				},
 				Spec: v1alpha1.IstioRevisionSpec{
+					Type:      v1alpha1.IstioRevisionTypeLocal,
 					Version:   supportedversion.Default,
 					Namespace: nsName,
 					Values: &v1alpha1.Values{
@@ -236,6 +241,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 				Name: revName,
 			},
 			Spec: v1alpha1.IstioRevisionSpec{
+				Type:      v1alpha1.IstioRevisionTypeLocal,
 				Version:   supportedversion.Default,
 				Namespace: istioNamespace,
 				Values: &v1alpha1.Values{
@@ -379,6 +385,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 				Name: rev2Key.Name,
 			},
 			Spec: v1alpha1.IstioRevisionSpec{
+				Type:      v1alpha1.IstioRevisionTypeLocal,
 				Version:   supportedversion.Default,
 				Namespace: istioNamespace,
 				Values: &v1alpha1.Values{
