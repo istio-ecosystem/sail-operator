@@ -20,6 +20,7 @@ This document aims to provide an overview of the project and some information fo
     - [Integration Tests](#integration-tests)
     - [End-to-End Tests](#end-to-end-tests)
 - [Community Support and Contributing](#community-support-and-contributing)
+- [Sail Enhancement Proposal](#sail-enhancement-proposal)
 - [Issue management](#issue-management)
 
 ## How it works
@@ -170,6 +171,8 @@ make run
 
 ### Modifying the API definitions
 
+**Important:** Any API change should be discussed in an [SEP](https://github.com/istio-ecosystem/sail-operator/blob/main/enhancements/SEP1-enhancement-process.md) before being implemented.
+
 If you are editing the API definitions, generate the manifests such as CRs or CRDs using:
 
 ```sh
@@ -214,6 +217,12 @@ make test.e2e.ocp
 
 ## Community Support and Contributing
 Please refer to the [CONTRIBUTING-SAIL-PROJECT.md](https://github.com/istio-ecosystem/sail-operator/blob/main/CONTRIBUTING.md) file for more information on how to contribute to the sail-operator project. This file contains all the information you need to get started with contributing to the project.
+
+## Sail Enhancement Proposal
+
+SEP documents are used to propose and discuss non-trivial features or epics and any API changes. Please refer to the [SEP1-enhancement-process.md](https://github.com/istio-ecosystem/sail-operator/blob/main/enhancements/SEP1-enhancement-process.md) file for more information on how to create a Sail Enhancement Proposal (SEP) for the sail-operator project.
+
+SEP documents are stored in the [enhancements](https://github.com/istio-ecosystem/sail-operator/tree/main/enhancements) directory of the sail-operator repository in Markdown format. If you want to create a SEP, be sure to check out the [SEP template](https://github.com/istio-ecosystem/sail-operator/blob/main/enhancements/SEP0-template.md).
 
 ## Issue management
 Please refer to the [ISSUE-MANAGEMENT.md](https://github.com/istio-ecosystem/sail-operator/blob/main/ISSUE-MANAGEMENT.md) file for more information on how to report bugs and feature requests to the sail-operator team.
