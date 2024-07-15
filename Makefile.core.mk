@@ -265,8 +265,16 @@ uninstall: verify-kubeconfig ## Uninstall CRDs from an existing cluster.
 	kubectl delete --ignore-not-found -f chart/crds
 
 .PHONY: helm-package
-helm-package: verify-kubeconfig helm ## Package the helm chart.
-	$(HELM) package chart
+helm-package: helm ## Package the helm chart.
+	$(HELM) package chart --destination $(REPO_ROOT)/out
+
+.PHONY: helm-publish
+helm-publish: helm-package ## Create a GitHub release and upload the helm charts package to it.
+	export GITHUB_TOKEN=$(GITHUB_TOKEN)
+	gh release create $(VERSION) $(REPO_ROOT)/out/sail-operator-$(VERSION).tgz \
+		--target release-$(MINOR_VERSION) \
+		--title "sail-operator $(VERSION)" \
+		--generate-notes
 
 .PHONY: deploy
 deploy: verify-kubeconfig helm ## Deploy controller to an existing cluster.
