@@ -5,7 +5,7 @@ metadata:
     alm-examples: |-
       [
         {
-          "apiVersion": "operator.istio.io/v1alpha1",
+          "apiVersion": "sail-operator.io/v1alpha1",
           "kind": "Istio",
           "metadata": {
             "name": "default"
@@ -20,7 +20,7 @@ metadata:
           }
         },
         {
-          "apiVersion": "operator.istio.io/v1alpha1",
+          "apiVersion": "sail-operator.io/v1alpha1",
           "kind": "IstioCNI",
           "metadata": {
             "name": "default"
@@ -156,7 +156,7 @@ spec:
     - description: IstioCNI represents a deployment of the Istio CNI component.
       displayName: Istio CNI
       kind: IstioCNI
-      name: istiocnis.operator.istio.io
+      name: istiocnis.sail-operator.io
       specDescriptors:
       - description: 'Defines the version of Istio to install. Must be one of: v1.22.3,
           v1.22.2, v1.22.1, v1.22.0, v1.21.5, v1.21.4, v1.21.3, v1.21.2, v1.21.0,
@@ -200,7 +200,7 @@ spec:
         IstioRevision object(s).
       displayName: Istio Revision
       kind: IstioRevision
-      name: istiorevisions.operator.istio.io
+      name: istiorevisions.sail-operator.io
       specDescriptors:
       - description: 'Defines the version of Istio to install. Must be one of: v1.22.3,
           v1.22.2, v1.22.1, v1.22.0, v1.21.5, v1.21.4, v1.21.3, v1.21.2, v1.21.0,
@@ -238,7 +238,7 @@ spec:
         object in Kubernetes creates ReplicaSets that create the Pods.
       displayName: Istio
       kind: Istio
-      name: istios.operator.istio.io
+      name: istios.sail-operator.io
       specDescriptors:
       - description: "Type of strategy to use. Can be \"InPlace\" or \"RevisionBased\".
           When the \"InPlace\" strategy is used, the existing Istio control plane
@@ -401,7 +401,7 @@ spec:
           verbs:
           - '*'
         - apiGroups:
-          - operator.istio.io
+          - sail-operator.io
           resources:
           - istiorevisions
           verbs:
@@ -413,13 +413,13 @@ spec:
           - update
           - watch
         - apiGroups:
-          - operator.istio.io
+          - sail-operator.io
           resources:
           - istiorevisions/finalizers
           verbs:
           - update
         - apiGroups:
-          - operator.istio.io
+          - sail-operator.io
           resources:
           - istiorevisions/status
           verbs:
@@ -427,7 +427,7 @@ spec:
           - patch
           - update
         - apiGroups:
-          - operator.istio.io
+          - sail-operator.io
           resources:
           - istiocnis
           verbs:
@@ -439,13 +439,13 @@ spec:
           - update
           - watch
         - apiGroups:
-          - operator.istio.io
+          - sail-operator.io
           resources:
           - istiocnis/finalizers
           verbs:
           - update
         - apiGroups:
-          - operator.istio.io
+          - sail-operator.io
           resources:
           - istiocnis/status
           verbs:
@@ -453,7 +453,7 @@ spec:
           - patch
           - update
         - apiGroups:
-          - operator.istio.io
+          - sail-operator.io
           resources:
           - istios
           verbs:
@@ -465,13 +465,13 @@ spec:
           - update
           - watch
         - apiGroups:
-          - operator.istio.io
+          - sail-operator.io
           resources:
           - istios/finalizers
           verbs:
           - update
         - apiGroups:
-          - operator.istio.io
+          - sail-operator.io
           resources:
           - istios/status
           verbs:

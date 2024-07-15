@@ -1,4 +1,4 @@
-apiVersion: operator.istio.io/v1alpha1
+apiVersion: sail-operator.io/v1alpha1
 kind: Istio
 metadata:
   name: istio-gw

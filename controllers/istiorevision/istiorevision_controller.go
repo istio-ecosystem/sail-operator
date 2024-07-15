@@ -81,9 +81,9 @@ func NewReconciler(client client.Client, scheme *runtime.Scheme, resourceDir str
 	}
 }
 
-// +kubebuilder:rbac:groups=operator.istio.io,resources=istiorevisions,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=operator.istio.io,resources=istiorevisions/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=operator.istio.io,resources=istiorevisions/finalizers,verbs=update
+// +kubebuilder:rbac:groups=sail-operator.io,resources=istiorevisions,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=sail-operator.io,resources=istiorevisions/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=sail-operator.io,resources=istiorevisions/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources="*",verbs="*"
 // +kubebuilder:rbac:groups="networking.k8s.io",resources="networkpolicies",verbs="*"
 // +kubebuilder:rbac:groups="policy",resources="poddisruptionbudgets",verbs="*"

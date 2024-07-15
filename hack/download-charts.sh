@@ -93,7 +93,7 @@ function patchIstioCharts() {
 
 function convertIstioProfiles() {
   for profile in "${PROFILES_DIR}"/*.yaml; do
-    yq eval -i '.apiVersion="operator.istio.io/v1alpha1"
+    yq eval -i '.apiVersion="sail-operator.io/v1alpha1"
       | .kind="Istio"
       | (select(.spec.meshConfig) | .spec.values.meshConfig)=.spec.meshConfig
       | (select(.spec.values.istio_cni) | .spec.values.pilot.cni)=.spec.values.istio_cni
