@@ -504,6 +504,7 @@ spec:
               annotations:
                 images.v1_22_2.cni: registry.redhat.io/openshift-service-mesh/istio-cni-rhel9:1.22.2.tp.1
                 images.v1_22_2.istiod: registry.redhat.io/openshift-service-mesh/istio-pilot-rhel9:1.22.2.tp.1
+                images.v1_22_2.must-gather: registry.redhat.io/openshift-service-mesh/istio-must-gather-rhel9:3.0.0.tp.1
                 images.v1_22_2.proxy: registry.redhat.io/openshift-service-mesh/istio-proxyv2-rhel9:3.0.0.tp.1
                 images.v1_22_2.ztunnel: registry.redhat.io/openshift-service-mesh/istio-pilot-rhel9:1.22.2.tp.1
                 kubectl.kubernetes.io/default-container: manager
