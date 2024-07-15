@@ -25,7 +25,7 @@ import (
 func TestOwnerReferencePostRenderer(t *testing.T) {
 	postRenderer := OwnerReferencePostRenderer{
 		ownerReference: metav1.OwnerReference{
-			APIVersion: "operator.istio.io/v1alpha1",
+			APIVersion: "sailoperator.io/v1alpha1",
 			Kind:       "Istio",
 			Name:       "my-istio",
 			UID:        "123",
@@ -61,7 +61,7 @@ metadata:
   name: deployment-in-same-namespace
   namespace: istio-system
   ownerReferences:
-    - apiVersion: operator.istio.io/v1alpha1
+    - apiVersion: sailoperator.io/v1alpha1
       kind: Istio
       name: my-istio
       uid: "123"
@@ -73,7 +73,7 @@ kind: Service
 metadata:
   annotations:
     operator-sdk/primary-resource: istio-system/my-istio
-    operator-sdk/primary-resource-type: Istio.operator.istio.io
+    operator-sdk/primary-resource-type: Istio.sailoperator.io
   name: service-in-different-namespace
   namespace: other-namespace
 spec:

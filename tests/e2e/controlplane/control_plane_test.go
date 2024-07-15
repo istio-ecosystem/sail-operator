@@ -80,7 +80,7 @@ var _ = Describe("Control Plane Installation", Ordered, func() {
 			Entry("empty spec", "spec: {}"),
 			func(ctx SpecContext, spec string) {
 				yaml := `
-apiVersion: operator.istio.io/v1alpha1
+apiVersion: sailoperator.io/v1alpha1
 kind: IstioCNI
 metadata:
   name: default
@@ -104,7 +104,7 @@ metadata:
 			Entry("empty updateStrategy", "spec: {updateStrategy: {}}"),
 			func(ctx SpecContext, spec string) {
 				yaml := `
-apiVersion: operator.istio.io/v1alpha1
+apiVersion: sailoperator.io/v1alpha1
 kind: Istio
 metadata:
   name: default
@@ -139,7 +139,7 @@ metadata:
 				When("the IstioCNI CR is created", func() {
 					BeforeAll(func() {
 						yaml := `
-apiVersion: operator.istio.io/v1alpha1
+apiVersion: sailoperator.io/v1alpha1
 kind: IstioCNI
 metadata:
   name: default
@@ -189,7 +189,7 @@ spec:
 				When("the Istio CR is created", func() {
 					BeforeAll(func() {
 						istioYAML := `
-apiVersion: operator.istio.io/v1alpha1
+apiVersion: sailoperator.io/v1alpha1
 kind: Istio
 metadata:
   name: default

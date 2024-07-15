@@ -1,5 +1,5 @@
 # Deprecated. Use the "remote" profile instead.
-apiVersion: operator.istio.io/v1alpha1
+apiVersion: sailoperator.io/v1alpha1
 kind: Istio
 spec:
   values:

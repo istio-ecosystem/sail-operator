@@ -4,36 +4,35 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.0
   creationTimestamp: null
-  name: istiorevisions.operator.istio.io
+  name: istios.sailoperator.io
 spec:
-  group: operator.istio.io
+  group: sailoperator.io
   names:
     categories:
     - istio-io
-    kind: IstioRevision
-    listKind: IstioRevisionList
-    plural: istiorevisions
-    shortNames:
-    - istiorev
-    singular: istiorevision
+    kind: Istio
+    listKind: IstioList
+    plural: istios
+    singular: istio
   scope: Cluster
   versions:
   - additionalPrinterColumns:
-    - description: Whether the control plane is installed locally or in a remote cluster.
-      jsonPath: .spec.type
-      name: Type
+    - description: Total number of IstioRevision objects currently associated with
+        this object.
+      jsonPath: .status.revisions.total
+      name: Revisions
       type: string
-    - description: Whether the control plane installation is ready to handle requests.
-      jsonPath: .status.conditions[?(@.type=="Ready")].status
+    - description: Number of revisions that are ready.
+      jsonPath: .status.revisions.ready
       name: Ready
       type: string
-    - description: The current state of this object.
-      jsonPath: .status.state
-      name: Status
-      type: string
-    - description: Whether the revision is being used by workloads.
-      jsonPath: .status.conditions[?(@.type=="InUse")].status
+    - description: Number of revisions that are currently being used by workloads.
+      jsonPath: .status.revisions.inUse
       name: In use
+      type: string
+    - description: The current state of the active revision.
+      jsonPath: .status.state
+      name: Active Revision
       type: string
     - description: The version of the control plane installation.
       jsonPath: .spec.version
@@ -47,10 +46,13 @@ spec:
     schema:
       openAPIV3Schema:
         description: |-
-          IstioRevision represents a single revision of an Istio Service Mesh deployment.
-          Users shouldn't create IstioRevision objects directly. Instead, they should
-          create an Istio object and allow the operator to create the underlying
-          IstioRevision object(s).
+          Istio represents an Istio Service Mesh deployment consisting of one or more
+          control plane instances (represented by one or more IstioRevision objects).
+          To deploy an Istio Service Mesh, a user creates an Istio object with the
+          desired Istio version and configuration. The operator then creates
+          an IstioRevision object, which in turn creates the underlying Deployment
+          objects for istiod and other control plane components, similar to how a
+          Deployment object in Kubernetes creates ReplicaSets that create the Pods.
         properties:
           apiVersion:
             description: |-
@@ -70,19 +72,72 @@ spec:
           metadata:
             type: object
           spec:
-            description: IstioRevisionSpec defines the desired state of IstioRevision
+            default:
+              namespace: istio-system
+              updateStrategy:
+                type: InPlace
+              version: v1.23.0
+            description: IstioSpec defines the desired state of Istio
             properties:
               namespace:
+                default: istio-system
                 description: Namespace to which the Istio components should be installed.
                 type: string
-              type:
-                default: Local
-                description: Type indicates whether this revision represents a local
-                  or a remote control plane installation.
+              profile:
+                description: |-
+                  The built-in installation configuration profile to use.
+                  The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'.
+                  Must be one of: ambient, default, demo, empty, external, openshift-ambient, openshift, preview, stable.
+                enum:
+                - ambient
+                - default
+                - demo
+                - empty
+                - external
+                - openshift-ambient
+                - openshift
+                - preview
+                - stable
                 type: string
-                x-kubernetes-validations:
-                - message: Value is immutable
-                  rule: self == oldSelf
+              updateStrategy:
+                default:
+                  type: InPlace
+                description: Defines the update strategy to use when the version in
+                  the Istio CR is updated.
+                properties:
+                  inactiveRevisionDeletionGracePeriodSeconds:
+                    description: |-
+                      Defines how many seconds the operator should wait before removing a non-active revision after all
+                      the workloads have stopped using it. You may want to set this value on the order of minutes.
+                      The minimum and the default value is 30.
+                    format: int64
+                    minimum: 30
+                    type: integer
+                  type:
+                    default: InPlace
+                    description: "Type of strategy to use. Can be \"InPlace\" or \"RevisionBased\".
+                      When the \"InPlace\" strategy\nis used, the existing Istio control
+                      plane is updated in-place. The workloads therefore\ndon't need
+                      to be moved from one control plane instance to another. When
+                      the \"RevisionBased\"\nstrategy is used, a new Istio control
+                      plane instance is created for every change to the\nIstio.spec.version
+                      field. The old control plane remains in place until all workloads
+                      have\nbeen moved to the new control plane instance.\n\nThe \"InPlace\"
+                      strategy is the default.\tTODO: change default to \"RevisionBased\""
+                    enum:
+                    - InPlace
+                    - RevisionBased
+                    type: string
+                  updateWorkloads:
+                    description: |-
+                      Defines whether the workloads should be moved from one control plane instance to another
+                      automatically. If updateWorkloads is true, the operator moves the workloads from the old
+                      control plane instance to the new one after the new control plane is ready.
+                      If updateWorkloads is false, the user must move the workloads manually by updating the
+                      istio.io/rev labels on the namespace and/or the pods.
+                      Defaults to false.
+                    type: boolean
+                type: object
               values:
                 description: Defines the values to be passed to the Helm charts when
                   installing Istio.
@@ -7925,6 +7980,7 @@ spec:
                     type: object
                 type: object
               version:
+                default: v1.23.0
                 description: |-
                   Defines the version of Istio to install.
                   Must be one of: v1.23.0, v1.22.3, v1.21.5, latest.
@@ -7936,21 +7992,21 @@ spec:
                 type: string
             required:
             - namespace
-            - type
             - version
             type: object
             x-kubernetes-validations:
             - message: spec.values.global.istioNamespace must match spec.namespace
-              rule: self.values.global.istioNamespace == self.__namespace__
+              rule: '!has(self.values) || !has(self.values.global) || !has(self.values.global.istioNamespace)
+                || self.values.global.istioNamespace == self.__namespace__'
           status:
-            description: IstioRevisionStatus defines the observed state of IstioRevision
+            description: IstioStatus defines the observed state of Istio
             properties:
               conditions:
                 description: Represents the latest available observations of the object's
                   current state.
                 items:
-                  description: IstioRevisionCondition represents a specific observation
-                    of the IstioRevision object's state.
+                  description: IstioCondition represents a specific observation of
+                    the IstioCondition object's state.
                   properties:
                     lastTransitionTime:
                       description: Last time the condition transitioned from one status
@@ -7977,21 +8033,37 @@ spec:
               observedGeneration:
                 description: |-
                   ObservedGeneration is the most recent generation observed for this
-                  IstioRevision object. It corresponds to the object's generation, which is
+                  Istio object. It corresponds to the object's generation, which is
                   updated on mutation by the API Server. The information in the status
                   pertains to this particular generation of the object.
                 format: int64
                 type: integer
+              revisions:
+                description: Reports information about the underlying IstioRevisions.
+                properties:
+                  inUse:
+                    description: Number of IstioRevisions that are currently in use.
+                    format: int32
+                    type: integer
+                  ready:
+                    description: Number of IstioRevisions that are Ready.
+                    format: int32
+                    type: integer
+                  total:
+                    description: Total number of IstioRevisions currently associated
+                      with this Istio.
+                    format: int32
+                    type: integer
+                required:
+                - inUse
+                - ready
+                - total
+                type: object
               state:
                 description: Reports the current state of the object.
                 type: string
             type: object
         type: object
-        x-kubernetes-validations:
-        - message: spec.values.revision must match metadata.name
-          rule: 'self.metadata.name == ''default'' ? (!has(self.spec.values.revision)
-            || size(self.spec.values.revision) == 0) : self.spec.values.revision ==
-            self.metadata.name'
     served: true
     storage: true
     subresources:
