@@ -10,6 +10,16 @@ crdSourceVersion: latest
 # a list of URLs for retrieving the charts.
 # The first item in the list is the default version.
 versions:
+  - name: v1.22.3
+    version: 1.22.3
+    repo: https://github.com/istio/istio
+    commit: 1.22.3
+    charts:
+      - https://istio-release.storage.googleapis.com/charts/base-1.22.3.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-1.22.3.tgz
+      - https://istio-release.storage.googleapis.com/charts/gateway-1.22.3.tgz
+      - https://istio-release.storage.googleapis.com/charts/cni-1.22.3.tgz
+      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.22.3.tgz
   - name: v1.22.2
     version: 1.22.2
     repo: https://github.com/istio/istio
@@ -40,6 +50,16 @@ versions:
       - https://istio-release.storage.googleapis.com/charts/gateway-1.22.0.tgz
       - https://istio-release.storage.googleapis.com/charts/cni-1.22.0.tgz
       - https://istio-release.storage.googleapis.com/charts/ztunnel-1.22.0.tgz
+  - name: v1.21.5
+    version: 1.21.5
+    repo: https://github.com/istio/istio
+    commit: 1.21.5
+    charts:
+      - https://istio-release.storage.googleapis.com/charts/base-1.21.5.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-1.21.5.tgz
+      - https://istio-release.storage.googleapis.com/charts/gateway-1.21.5.tgz
+      - https://istio-release.storage.googleapis.com/charts/cni-1.21.5.tgz
+      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.21.5.tgz
   - name: v1.21.4
     version: 1.21.4
     repo: https://github.com/istio/istio
@@ -84,10 +104,10 @@ versions:
     version: 1.23-alpha
     repo: https://github.com/istio/istio
     branch: master
-    commit: ec07c28db1fda5fcc11eac9979d103eb59e8a7ae
+    commit: b5122951ad2ebbc2f0ddea09b21ef88dffbd9e62
     charts:
-      - https://storage.googleapis.com/istio-build/dev/1.23-alpha.ec07c28db1fda5fcc11eac9979d103eb59e8a7ae/helm/base-1.23-alpha.ec07c28db1fda5fcc11eac9979d103eb59e8a7ae.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.23-alpha.ec07c28db1fda5fcc11eac9979d103eb59e8a7ae/helm/cni-1.23-alpha.ec07c28db1fda5fcc11eac9979d103eb59e8a7ae.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.23-alpha.ec07c28db1fda5fcc11eac9979d103eb59e8a7ae/helm/gateway-1.23-alpha.ec07c28db1fda5fcc11eac9979d103eb59e8a7ae.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.23-alpha.ec07c28db1fda5fcc11eac9979d103eb59e8a7ae/helm/istiod-1.23-alpha.ec07c28db1fda5fcc11eac9979d103eb59e8a7ae.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.23-alpha.ec07c28db1fda5fcc11eac9979d103eb59e8a7ae/helm/ztunnel-1.23-alpha.ec07c28db1fda5fcc11eac9979d103eb59e8a7ae.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.23-alpha.b5122951ad2ebbc2f0ddea09b21ef88dffbd9e62/helm/base-1.23-alpha.b5122951ad2ebbc2f0ddea09b21ef88dffbd9e62.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.23-alpha.b5122951ad2ebbc2f0ddea09b21ef88dffbd9e62/helm/cni-1.23-alpha.b5122951ad2ebbc2f0ddea09b21ef88dffbd9e62.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.23-alpha.b5122951ad2ebbc2f0ddea09b21ef88dffbd9e62/helm/gateway-1.23-alpha.b5122951ad2ebbc2f0ddea09b21ef88dffbd9e62.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.23-alpha.b5122951ad2ebbc2f0ddea09b21ef88dffbd9e62/helm/istiod-1.23-alpha.b5122951ad2ebbc2f0ddea09b21ef88dffbd9e62.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.23-alpha.b5122951ad2ebbc2f0ddea09b21ef88dffbd9e62/helm/ztunnel-1.23-alpha.b5122951ad2ebbc2f0ddea09b21ef88dffbd9e62.tgz
