@@ -48,6 +48,8 @@ Istio has a `values.revisionTags` field that we even currently expose in our API
 - [ ] Add field revisionTags to Istio CRD
 - [ ] Implement tag creation and update
 - [ ] Add logic to prevent duplicate tags
+- [ ] Documentation
+- [ ] Integration tests
 
 ## Test Plan
 We should cover this functionality in our sail-operator integration tests.
