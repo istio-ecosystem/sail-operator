@@ -30,7 +30,7 @@ istioctl tag set default --revision 1-21-1
 1. As a platform engineer, I want my application teams to be able to use a fixed label for proxy injection without having to know which version of Istio is running in the cluster, so that I can perform upgrades in the background without the application teams having to make changes to use the new version.
 
 ### API Changes
-We will add a new field `revisionTags` of type `[]string` to the `Istio` CRD. It will be located under `spec.updateStrategy.revisionTags`. Whenever the sail-operator deploys a new revision, it will update all the tags listed in the `revisionTags` field to point to this new revision. The default value for the field will be `{"default"}` - this way, the standard injection label `istio-injection=true` will work out of the box for RevisionBased deployments.
+We will add a new field `revisionTags` of type `[]string` to the `Istio` CRD. It will be located under `spec.updateStrategy.revisionTags`. Whenever the sail-operator deploys a new revision, it will update all the tags listed in the `revisionTags` field to point to this new revision. The default value for the field will be `{"default"}` - this way, the standard namespace injection label `istio-injection=enabled` will work out of the box for RevisionBased deployments (see second paragraph of the [Overview](#overview)).
 
 We will also need to remove the `values.revisionTags` field (which is how the upstream charts expose this feature). We can still set that field to trigger creation of the tags, but we should not expose it to users.
 
