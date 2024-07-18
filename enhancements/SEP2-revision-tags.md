@@ -18,7 +18,7 @@ Each revision tag only ever points to exactly one Istio revision. Upstream, revi
 ## Design
 
 ### User Stories
-1. As a user of sail-operator's RevisionBased update strategy, I want to be able to use the `istio-injection=enabled` label on my namespaces and pods.
+1. As a user of sail-operator's RevisionBased update strategy, I want to be able to use the `istio-injection=enabled` label on my namespaces.
 1. As a platform engineer, I want my application teams to be able to use a fixed label for proxy injection without having to know which version of Istio is running in the cluster, so that I can perform upgrades in the background without the application teams having to make changes to use the new version.
 
 ### API Changes
