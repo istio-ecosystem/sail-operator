@@ -7,6 +7,8 @@
 ## Overview
 Upstream Istio supports the use of [stable revision tags](https://istio.io/latest/blog/2021/revision-tags/) for multi-revision deployments and canary upgrades of Istio control planes. These tags serve as aliases for revisions and allow users to use stable revision names (e.g. `prod` or `default`), so they don't have to change their namespace and pod labels (in this case `istio.io/rev=prod` or `istio-injection=enabled`) when switching to a new version. Instead, by tagging a new revision with the correct tag and restarting their workloads, they can perform an Istio update without having to change their labels. This is especially useful in situations where the team managing the Istio control plane is separate from the teams managing the workloads.
 
+Revision tags can have any name, there is only one special case: revisions tagged `default` are treated as if they had an empty revision name, thereby allowing the use of the standard namespace injection label `istio-injection=enabled`.
+
 Each revision tag only ever points to exactly one Istio revision. Upstream, revision tags are created manually using `istioctl` and- as they only affect injection- are represented in the cluster by a MutatingWebhookConfiguration.
 
 Here's an example how to create a `default` revision tag that points to the `1-21-1` revision using `istioctl`:
