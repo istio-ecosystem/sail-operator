@@ -37,7 +37,7 @@ We will also need to remove the `values.revisionTags` field (which is how the up
 ### Architecture
 We will need to update the sail-operators mechanism to detect revisions that are being used. Today, we only look at the `istio.io/rev` label's value to check which revisions are in use. But when revision tags are used, those values will be mere aliases, so we have to improve our detection mechanism. The most correct way is probably to look at the revision annotation on the pods that is set by Istio during injection. That requires inspecting every pod in the cluster, though. Another way could be to resolve the tags - the sail-operator knows which revisions the tags point to, after all - but only if tags are exclusively managed by the sail-operator.
 
-Revision tags must never overlap between `Istio` resources, so we'll need to make sure during reconciliation that they are unique and report an error in the status if they are not.
+Revision tags must never overlap between `Istio` resources, as every revision tag must point to exactly one revision, and if multiple `Istio` resources define the same revision tags, they would flip-flop between the respective revisions, depending on which resource was reconciled last. We'll need to make sure during reconciliation that they are unique and report an error in the status if they are not.
 
 ## Alternatives Considered
 ### values.revisionTags
