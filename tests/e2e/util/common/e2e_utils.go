@@ -105,6 +105,13 @@ func logOperatorDebugInfo() {
 
 	events, err := kubectl.GetEvents(namespace)
 	logDebugElement("Events in "+namespace, events, err)
+
+	// Temporaty information to gather more details about failure
+	pods, err := kubectl.GetPods(namespace, "-o wide")
+	logDebugElement("Pods in "+namespace, pods, err)
+
+	describe, err := kubectl.Describe(namespace, "deployment", deploymentName)
+	logDebugElement("Operator Deployment describe", describe, err)
 }
 
 func logIstioDebugInfo() {
@@ -130,6 +137,13 @@ func logCNIDebugInfo() {
 
 	events, err := kubectl.GetEvents(istioCniNamespace)
 	logDebugElement("Events in "+istioCniNamespace, events, err)
+
+	// Temporaty information to gather more details about failure
+	pods, err := kubectl.GetPods(istioCniNamespace, "-o wide")
+	logDebugElement("Pods in "+istioCniNamespace, pods, err)
+
+	describe, err := kubectl.Describe(istioCniNamespace, "daemonset", "istio-cni-node")
+	logDebugElement("Istio CNI DaemonSet describe", describe, err)
 }
 
 func logDebugElement(caption string, info string, err error) {
