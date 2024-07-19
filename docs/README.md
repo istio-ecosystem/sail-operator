@@ -35,10 +35,59 @@
 
 
 # User Documentation
-tbd
+sail-operator manages the lifecycle of your Istio control planes and aims to become a vehicle for automated integration of Istio with compatible third-party software. Instead of creating a new configuration schema, sail-operator APIs are built around Istio's helm chart APIs. All installation and configuration options that are exposed by Istio's helm charts are available through the sail-operator CRDs' `values` fields.
 
 ## Concepts
-tbd
+
+### Istio resource
+The `Istio` resource is used to manage your Istio control planes. You can access all helm chart options through the `values` field in the `spec`:
+
+```yaml
+apiVersion: operator.istio.io/v1alpha1
+kind: Istio
+metadata:
+  name: default
+spec:
+  version: v1.22.3
+  namespace: istio-system
+  updateStrategy:
+    type: InPlace
+  values:
+    pilot:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 1024Mi
+```
+
+To support canary updates of the control plane, sail-operator includes support for multiple Istio versions. You can select a version by setting the `version` field in the `spec` to the version you would like to install, prefixed with a `v`. You can then update to a new version just by changing this field.
+
+sail-operator supports two different update strategies for your control planes: `InPlace` and `RevisionBased`. When using `InPlace`, the operator will immediately replace your existing control plane resources with the ones for the new version, whereas `RevisionBased` uses Istio's canary update mechanism by creating a second control plane to which you can migrate your workloads to complete the update.
+
+After creation of an `Istio` resource, the sail-operator will generate a revision name for it based on the updateStrategy that was chosen, and create a corresponding [`IstioRevision`](#istiorevision-resource).
+
+### IstioRevision resource
+The `IstioRevision` is the lowest-level API the sail-operator provides, and it is usually not created by the user, but by the operator itself. It's schema closely resembles that of the `Istio` resource - but instead of representing the state of a control plane you want to be present in your cluster, it represents a *revision* of that control plane, which is an important distinction especially when you're working with Istio's canary update feature.
+
+You can think of the relationship between the `Istio` and `IstioRevision` resource as similar to the one between Kubernetes' `ReplicaSet` and `Pod`: a `ReplicaSet` can be created by users and results in the automatic creation of `Pods`, which will trigger the instanciation of your containers. Similarly, users create an `Istio` resource which instructs the operator to create a matching `IstioRevision`, which then in turn triggers the creation of the Istio control plane. To do that, the sail-operator will copy all of your relevant configuration from the `Istio` resource to the `IstioRevision` resource.
+
+### IstioCNI resource
+The lifecycle of Istio's CNI plugin is managed separately when using sail-operator. To install it, you can create a `IstioCNI` resource. It also has a `values` field that exposes all of the options provided in the `istio-cni` chart:
+
+```yaml
+apiVersion: operator.istio.io/v1alpha1
+kind: IstioCNI
+metadata:
+  name: default
+spec:
+  version: v1.22.3
+  namespace: istio-cni
+  values:
+    cni:
+      cniConfDir: /etc/cni/net.d
+      excludeNamespaces:
+      - kube-system
+```
 
 ## API Reference documentation
 The Sail Operator API reference documentation can be found [here](https://github.com/istio-ecosystem/sail-operator/tree/main/docs/api-reference/operator.istio.io.md).
