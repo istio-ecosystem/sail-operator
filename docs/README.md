@@ -316,7 +316,7 @@ Steps:
     EOF
     ```
 
-9. Verify the `Istio` and `IstioRevision` resources. There will be a new revision created with the new version.
+10. Verify the `Istio` and `IstioRevision` resources. There will be a new revision created with the new version.
 
     ```bash
     $ kubectl get istio -n istio-system
@@ -328,7 +328,7 @@ Steps:
       default-v1-21-2   True    Healthy   False    v1.21.2   4m45s
     ```
 
-10. Confirm there is two control plane pods running, one for each revision
+11. Confirm there is two control plane pods running, one for each revision
 
     ```bash
     $ kubectl get pods -n istio-system
@@ -337,7 +337,7 @@ Steps:
       istiod-default-v1-21-2-7c4f4674c5-4g7n7   1/1     Running   0          6m9s
     ```
 
-11. Confirm the proxy sidecar version remains the same:
+12. Confirm the proxy sidecar version remains the same:
 
     ```bash
     $ kubectl get pod -n bookinfo -l app=details -o yaml | yq '.items[].spec.containers[].image'
@@ -345,21 +345,21 @@ Steps:
       docker.io/istio/proxyv2:1.21.0
     ```
 
-12. Change the label of the `bookinfo` namespace
+13. Change the label of the `bookinfo` namespace
 
     ```bash
     kubectl label namespace bookinfo istio.io/rev=default-v1-21-2 --overwrite
     ```
 
-Note: The control plane used by the pods will be updated to the new version only after all workloads are moved to the new revision, and this will happen after the pods are restarted.
+The control plane used by the pods will be updated to the new version only after all workloads are moved to the new revision, and this will happen after the pods are restarted.
 
-13. Delete all the pods in the `bookinfo` namespace
+14. Delete all the pods in the `bookinfo` namespace
 
     ```bash
     kubectl delete pods --all -n bookinfo
     ```
 
-14. Confirm the new version is used in the sidecars
+15. Confirm the new version is used in the sidecars
 
     ```bash
     kubectl get pod -n bookinfo -l app=details -o yaml | yq '.items[].spec.containers[].image'
@@ -367,7 +367,7 @@ Note: The control plane used by the pods will be updated to the new version only
     docker.io/istio/proxyv2:1.21.2
     ```
 
-15. Confirm the old control plane deletion
+16. Confirm the old control plane deletion
 
     ```bash
     kubectl get pods -n istio-system
@@ -375,7 +375,7 @@ Note: The control plane used by the pods will be updated to the new version only
     istiod-default-v1-21-2-7c4f4674c5-4g7n7   1/1     Running   0          94m
     ```
 
-16. Confirm the old revision deletion
+17. Confirm the old revision deletion
 
     ```bash
     kubectl get istiorevision -n istio-system
