@@ -1,5 +1,38 @@
 [Return to Project Root](../)
 
+# Table of Contents
+
+- [User Documentation](#user-documentation)
+- [Concepts](#concepts)
+- [Getting Started](#getting-started)
+  - [Installation on OpenShift](#installation-on-openshift)
+    - [Installing through the web console](#installing-through-the-web-console)
+    - [Installing using the CLI](#installing-using-the-cli)
+  - [Installation from Source](#installation-from-source)
+- [Gateways](#gateways)
+- [Update Strategy](#update-strategy)
+  - [InPlace](#inplace)
+    - [Example using the InPlace strategy](#example-using-the-inplace-strategy)
+  - [RevisionBased](#revisionbased)
+    - [Example using the RevisionBased strategy](#example-using-the-revisionbased-strategy)
+- [Multicluster](#multicluster)
+- [Addons](#addons)
+  - [Deploy Prometheus and Jaeger addons](#deploy-prometheus-and-jaeger-addons)
+  - [Deploy Kiali addon](#deploy-kiali-addon)
+  - [Deploy Gateway and Bookinfo](#deploy-gateway-and-bookinfo)
+  - [Generate traffic and visualize your mesh](#generate-traffic-and-visualize-your-mesh)
+- [Observability Integrations](#observability-integrations)
+  - [Scraping metrics using the OpenShift monitoring stack](#scraping-metrics-using-the-openshift-monitoring-stack)
+  - [Integrating with Kiali](#integrating-with-kiali)
+    - [Integrating Kiali with the OpenShift monitoring stack](#integrating-kiali-with-the-openshift-monitoring-stack)
+- [Uninstalling](#uninstalling)
+  - [Deleting Istio](#deleting-istio)
+  - [Deleting IstioCNI](#deleting-istiocni)
+  - [Deleting the sail-operator](#deleting-the-sail-operator)
+  - [Deleting the istio-system and istio-cni Projects](#deleting-the-istio-system-and-istiocni-projects)
+  - [Decide whether you want to delete the CRDs as well](#decide-whether-you-want-to-delete-the-crds-as-well)
+
+
 # User Documentation
 tbd
 
@@ -74,6 +107,281 @@ If you're not using OpenShift or simply want to install from source, follow the 
 The Sail-operator does not manage Gateways. You can deploy a gateway manually either through [gateway-api](https://istio.io/latest/docs/tasks/traffic-management/ingress/gateway-api/) or through [gateway injection](https://istio.io/latest/docs/setup/additional-setup/gateway/#deploying-a-gateway). As you are following the gateway installation instructions, skip the step to install Istio since this is handled by the Sail-operator.
 
 **Note:** The `IstioOperator` / `istioctl` example is separate from the Sail-operator. Setting `spec.components` or `spec.values.gateways` on your Sail-operator `Istio` resource **will not work**.
+
+## Update Strategy
+
+The sail-operator supports two update strategies to update the istio version of the control plane: `InPlace` and `RevisionBased`. The default strategy is `InPlace`.
+
+### InPlace
+When the `InPlace` strategy is used, the existing Istio control plane is updated in-place. The workloads therefore don't need to be moved from one control plane instance to another.
+
+#### Example using the InPlace strategy
+
+Prerequisites:
+* sail-operator needs to be installed.
+
+Steps:
+1. Create the `istio-system` and the `istio-cni` namespaces.
+
+    ```bash
+    kubectl create namespace istio-system
+    kubectl create namespace istio-cni
+    ```
+
+2. Create the `Istio-cni` resource
+  
+      ```bash
+      cat <<EOF | kubectl apply -f -
+      apiVersion: operator.istio.io/v1alpha1
+      kind: IstioCNI
+      metadata:
+        name: default
+      spec:
+        version: v1.21.0
+        namespace: istio-cni
+      EOF
+      ```
+
+3. Create the `Istio` resource
+
+    ```bash
+    cat <<EOF | kubectl apply -f-
+    apiVersion: operator.istio.io/v1alpha1
+    kind: Istio
+    metadata:
+      name: default
+    spec:
+      namespace: istio-system
+      updateStrategy:
+        type: InPlace
+        inactiveRevisionDeletionGracePeriodSeconds: 30
+      version: v1.21.0
+    EOF
+    ```
+
+4. Confirm the installation and version of the control plane.
+
+    ```bash
+    $ kubectl get istio -n istio-system
+    NAME      READY   STATUS    IN USE   VERSION   AGE
+    default   True    Healthy   True     v1.21.0   2m
+    ```
+
+5. Create namespace `bookinfo` and deploy bookinfo application
+
+    ```bash
+    kubectl create namespace bookinfo
+    kubectl label namespace bookinfo istio.io/rev=default
+    kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/release-1.22/samples/bookinfo/platform/kube/bookinfo.yaml
+    ```
+
+6. Perform the update of the control plane by changing the version in the Istio resource
+
+    ```bash
+    cat <<EOF | kubectl apply -f-
+    apiVersion: operator.istio.io/v1alpha1
+    kind: Istio
+    metadata:
+      name: default
+    spec:
+      namespace: istio-system
+      updateStrategy:
+        type: InPlace
+        inactiveRevisionDeletionGracePeriodSeconds: 30
+      version: v1.21.2
+    EOF
+    ```
+
+7. Confirm the istio resource version was updated
+
+    ```bash
+    kubectl get istio -n istio-system
+    NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   VERSION   AGE
+    default   1           1       1        Healthy           v1.21.2   12m
+    ```
+
+8. Delete `bookinfo` pod to trigger sidecar injection with the new version
+
+    ```bash
+    kubectl delete pods --all -n bookinfo
+    ```
+
+9. Confirm that the new version is used in the sidecar
+
+    ```bash
+    kubectl get pod -n bookinfo -l app=details -o yaml | yq '.items[].spec.containers[].image'
+    docker.io/istio/examples-bookinfo-details-v1:1.19.1
+    docker.io/istio/proxyv2:1.21.2
+    ```
+
+### RevisionBased
+When the `RevisionBased` strategy is used, a new Istio control plane instance is created for every change to the Istio.spec.version field. The old control plane remains in place until all workloads have been moved to the new control plane instance, then, the old control plane is deleted.
+
+#### Example using the RevisionBased strategy
+
+Prerequisites:
+* sail-operator needs to be installed.
+
+Steps:
+
+1. Create the `istio-system` and the `istio-cni` namespaces.
+
+    ```bash
+    kubectl create namespace istio-system
+    kubectl create namespace istio-cni
+    ```
+
+2. Create the `Istio-cni` resource
+  
+      ```bash
+      cat <<EOF | kubectl apply -f -
+      apiVersion: operator.istio.io/v1alpha1
+      kind: IstioCNI
+      metadata:
+        name: default
+      spec:
+        version: v1.21.0
+        namespace: istio-cni
+      EOF
+      ```
+
+3. Create the `Istio` resource
+
+    ```bash
+    cat <<EOF | kubectl apply -f-
+    apiVersion: operator.istio.io/v1alpha1
+    kind: Istio
+    metadata:
+      name: default
+    spec:
+      namespace: istio-system
+      updateStrategy:
+        type: RevisionBased
+        inactiveRevisionDeletionGracePeriodSeconds: 30
+      version: v1.21.0
+    EOF
+    ```
+
+4. Confirm the control plane is installed and is using the desired version.
+
+    ```bash
+    $ kubectl get istio -n istio-system
+    NAME      READY   STATUS    IN USE   VERSION   AGE
+    default   True    Healthy   True     v1.21.0   2m
+    ```
+
+5. Get the `istiorevision` name
+
+    ```bash
+    $ kubectl get istiorevision -n istio-system
+    NAME              READY   STATUS    IN USE   VERSION   AGE
+    default-v1-21-0   True    Healthy   False    v1.21.0   114s
+    ```
+
+6. Create `bookinfo` namespace and label it with the revision name
+
+    ```bash
+    kubectl create namespace bookinfo
+    kubectl label namespace bookinfo istio.io/rev=default-v1-21-0
+    ```
+
+7. Deploy bookinfo application
+
+    ```bash
+    kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/release-1.22/samples/bookinfo/platform/kube/bookinfo.yaml
+    ```
+
+8. Confirm proxy sidecar injection version match the control plane version
+
+    ```bash
+    kubectl get pod -n bookinfo -l app=details -o yaml | yq '.items[].spec.containers[].image'
+    docker.io/istio/examples-bookinfo-details-v1:1.19.1
+    docker.io/istio/proxyv2:1.21.0
+    ```
+
+9. Update the control plane to a new version
+
+    ```bash
+    cat <<EOF | kubectl apply -f-
+    apiVersion: operator.istio.io/v1alpha1
+    kind: Istio
+    metadata:
+      name: default
+    spec:
+      namespace: istio-system
+      updateStrategy:
+        type: RevisionBased
+        inactiveRevisionDeletionGracePeriodSeconds: 30
+      version: v1.21.2
+    EOF
+    ```
+
+9. Verify the `Istio` and `IstioRevision` resources. There will be a new revision created with the new version.
+
+    ```bash
+    $ kubectl get istio -n istio-system
+      NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   VERSION   AGE
+      default   2           2       1        Healthy           v1.21.2   23m
+    $ kubectl get istiorevision -n istio-system
+      NAME              READY   STATUS    IN USE   VERSION   AGE
+      default-v1-21-0   True    Healthy   True     v1.21.0   27m
+      default-v1-21-2   True    Healthy   False    v1.21.2   4m45s
+    ```
+
+10. Confirm there is two control plane pods running, one for each revision
+
+    ```bash
+    $ kubectl get pods -n istio-system
+      NAME                                      READY   STATUS    RESTARTS   AGE
+      istiod-default-v1-21-0-69d6df7f9c-grm24   1/1     Running   0          28m
+      istiod-default-v1-21-2-7c4f4674c5-4g7n7   1/1     Running   0          6m9s
+    ```
+
+11. Confirm the proxy sidecar version remains the same:
+
+    ```bash
+    $ kubectl get pod -n bookinfo -l app=details -o yaml | yq '.items[].spec.containers[].image'
+      docker.io/istio/examples-bookinfo-details-v1:1.19.1
+      docker.io/istio/proxyv2:1.21.0
+    ```
+
+12. Change the label of the `bookinfo` namespace
+
+    ```bash
+    kubectl label namespace bookinfo istio.io/rev=default-v1-21-2 --overwrite
+    ```
+
+Note: The control plane used by the pods will be updated to the new version only after all workloads are moved to the new revision, and this will happen after the pods are restarted.
+
+13. Delete all the pods in the `bookinfo` namespace
+
+    ```bash
+    kubectl delete pods --all -n bookinfo
+    ```
+
+14. Confirm the new version is used in the sidecars
+
+    ```bash
+    kubectl get pod -n bookinfo -l app=details -o yaml | yq '.items[].spec.containers[].image'
+    docker.io/istio/examples-bookinfo-details-v1:1.19.1
+    docker.io/istio/proxyv2:1.21.2
+    ```
+
+15. Confirm the old control plane deletion
+
+    ```bash
+    kubectl get pods -n istio-system
+    NAME                                      READY   STATUS    RESTARTS   AGE
+    istiod-default-v1-21-2-7c4f4674c5-4g7n7   1/1     Running   0          94m
+    ```
+
+16. Confirm the old revision deletion
+
+    ```bash
+    kubectl get istiorevision -n istio-system
+    NAME              READY   STATUS    IN USE   VERSION   AGE
+    default-v1-21-2   True    Healthy   True     v1.21.2   94m
+    ```
 
 ## Multicluster
 tbd
