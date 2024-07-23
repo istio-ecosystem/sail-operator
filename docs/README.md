@@ -119,7 +119,6 @@ When the `InPlace` strategy is used, the existing Istio control plane is updated
 
 Prerequisites:
 * sail-operator needs to be installed.
-* Deploy `IstioCni` resource.
 * `istioctl` is installed.
 
 Steps:
@@ -197,7 +196,6 @@ When the `RevisionBased` strategy is used, a new Istio control plane instance is
 
 Prerequisites:
 * sail-operator needs to be installed.
-* Deploy `IstioCni` resource.
 * `istioctl` is installed.
 
 Steps:
@@ -220,7 +218,6 @@ Steps:
       namespace: istio-system
       updateStrategy:
         type: RevisionBased
-        inactiveRevisionDeletionGracePeriodSeconds: 30
       version: v1.21.0
     EOF
     ```
@@ -240,6 +237,7 @@ Steps:
     NAME              READY   STATUS    IN USE   VERSION   AGE
     default-v1-21-0   True    Healthy   False    v1.21.0   114s
     ```
+Note: `IstioRevision` name is in the format `<Istio resource name>-<version>`.
 
 5. Create `bookinfo` namespace and label it with the revision name
 
