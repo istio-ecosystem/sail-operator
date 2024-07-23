@@ -140,7 +140,6 @@ Steps:
       namespace: istio-system
       updateStrategy:
         type: InPlace
-        inactiveRevisionDeletionGracePeriodSeconds: 30
       version: v1.21.0
     EOF
     ```
@@ -218,6 +217,7 @@ Steps:
       namespace: istio-system
       updateStrategy:
         type: RevisionBased
+        inactiveRevisionDeletionGracePeriodSeconds: 30
       version: v1.21.0
     EOF
     ```
