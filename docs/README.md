@@ -161,7 +161,7 @@ Steps:
     kubectl label namespace bookinfo istio-injection=enabled
     kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/release-1.22/samples/bookinfo/platform/kube/bookinfo.yaml
     ```
-Note: if the `Istio` resource name is other than default, you need to label the namespace with the revision name.
+Note: if the `Istio` resource name is other than `default`, you need to set the `istio.io/rev` label to the name of the `Istio` resource instead of adding the `istio-injection=enabled` label.
 
 5. Perform the update of the control plane by changing the version in the Istio resource
 
@@ -169,7 +169,7 @@ Note: if the `Istio` resource name is other than default, you need to label the 
     kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v1.21.2"}}'
     ```
 
-6. Confirm the istio resource version was updated
+6. Confirm the `Istio` resource version was updated
 
     ```bash
     $ kubectl get istio -n istio-system
@@ -177,7 +177,7 @@ Note: if the `Istio` resource name is other than default, you need to label the 
     default   1           1       1        Healthy           v1.21.2   12m
     ```
 
-7. Delete `bookinfo` pod to trigger sidecar injection with the new version
+7. Delete `bookinfo` pods to trigger sidecar injection with the new version
 
     ```bash
     kubectl rollout restart deployment -n bookinfo
@@ -219,7 +219,7 @@ Steps:
     spec:
       namespace: istio-system
       updateStrategy:
-        type: InPlace
+        type: RevisionBased
         inactiveRevisionDeletionGracePeriodSeconds: 30
       version: v1.21.0
     EOF
@@ -233,7 +233,7 @@ Steps:
     default   True    Healthy   True     v1.21.0   2m
     ```
 
-4. Get the `istiorevision` name
+4. Get the `IstioRevision` name
 
     ```bash
     $ kubectl get istiorevision -n istio-system
@@ -300,7 +300,7 @@ The column `VERSION` should still match the old control plane version.
     ```bash
     kubectl label namespace bookinfo istio.io/rev=default-v1-21-2 --overwrite
     ```
-The injected version by the control plane will not change immediately. Only will be changed after the pods are restarted, this will trigger the sidecar injection with the new version.
+The injected version by the control plane will not change immediately. It will only be changed after the pods are restarted, this will trigger the sidecar injection with the new version.
 
 13. Delete all the pods in the `bookinfo` namespace
 
@@ -316,6 +316,7 @@ The injected version by the control plane will not change immediately. Only will
 The column `VERSION` should match the updated control plane version.
 
 15. Confirm the old control plane deletion
+
 The old control plane will be deleted after the grace period specified in the `Istio` resource `Istio.spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds`.
     ```bash
     $ kubectl get pods -n istio-system
@@ -324,6 +325,7 @@ The old control plane will be deleted after the grace period specified in the `I
     ```
 
 16. Confirm the old revision deletion
+
 The old revision will be deleted after the grace period specified in the `Istio` resource `Istio.spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds`.
     ```bash
     $ kubectl get istiorevision -n istio-system
