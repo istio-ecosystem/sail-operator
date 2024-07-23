@@ -146,7 +146,7 @@ Steps:
 
 3. Confirm the installation and version of the control plane.
 
-    ```bash
+    ```console
     $ kubectl get istio -n istio-system
     NAME      READY   STATUS    IN USE   VERSION   AGE
     default   True    Healthy   True     v1.21.0   2m
@@ -169,7 +169,7 @@ Note: if the `Istio` resource name is other than `default`, you need to set the 
 
 6. Confirm the `Istio` resource version was updated
 
-    ```bash
+    ```console
     $ kubectl get istio -n istio-system
     NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   VERSION   AGE
     default   1           1       1        Healthy           v1.21.2   12m
@@ -224,7 +224,7 @@ Steps:
 
 3. Confirm the control plane is installed and is using the desired version.
 
-    ```bash
+    ```console
     $ kubectl get istio -n istio-system
     NAME      READY   STATUS    IN USE   VERSION   AGE
     default   True    Healthy   True     v1.21.0   2m
@@ -232,7 +232,7 @@ Steps:
 
 4. Get the `IstioRevision` name
 
-    ```bash
+    ```console
     $ kubectl get istiorevision -n istio-system
     NAME              READY   STATUS    IN USE   VERSION   AGE
     default-v1-21-0   True    Healthy   False    v1.21.0   114s
@@ -267,7 +267,7 @@ The column `VERSION` should match the control plane version.
 
 9. Verify the `Istio` and `IstioRevision` resources. There will be a new revision created with the new version.
 
-    ```bash
+    ```console
     $ kubectl get istio -n istio-system
       NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   VERSION   AGE
       default   2           2       1        Healthy           v1.21.2   23m
@@ -279,7 +279,7 @@ The column `VERSION` should match the control plane version.
 
 10. Confirm there are two control plane pods running, one for each revision
 
-    ```bash
+    ```console
     $ kubectl get pods -n istio-system
       NAME                                      READY   STATUS    RESTARTS   AGE
       istiod-default-v1-21-0-69d6df7f9c-grm24   1/1     Running   0          28m
@@ -316,7 +316,7 @@ The column `VERSION` should match the updated control plane version.
 15. Confirm the old control plane deletion
 
 The old control plane will be deleted after the grace period specified in the `Istio` resource `Istio.spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds`.
-    ```bash
+    ```console
     $ kubectl get pods -n istio-system
     NAME                                      READY   STATUS    RESTARTS   AGE
     istiod-default-v1-21-2-7c4f4674c5-4g7n7   1/1     Running   0          94m
@@ -325,7 +325,7 @@ The old control plane will be deleted after the grace period specified in the `I
 16. Confirm the old revision deletion
 
 The old revision will be deleted after the grace period specified in the `Istio` resource `Istio.spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds`.
-    ```bash
+    ```console
     $ kubectl get istiorevision -n istio-system
     NAME              READY   STATUS    IN USE   VERSION   AGE
     default-v1-21-2   True    Healthy   True     v1.21.2   94m
