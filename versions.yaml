@@ -104,10 +104,10 @@ versions:
     version: 1.24-alpha
     repo: https://github.com/istio/istio
     branch: master
-    commit: 09d06a301c5690143cb7b0e8c8a89f72b3305010
+    commit: c0805c400d51da291de575fa09771e5c498f5388
     charts:
-      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.09d06a301c5690143cb7b0e8c8a89f72b3305010/helm/base-1.24-alpha.09d06a301c5690143cb7b0e8c8a89f72b3305010.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.09d06a301c5690143cb7b0e8c8a89f72b3305010/helm/cni-1.24-alpha.09d06a301c5690143cb7b0e8c8a89f72b3305010.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.09d06a301c5690143cb7b0e8c8a89f72b3305010/helm/gateway-1.24-alpha.09d06a301c5690143cb7b0e8c8a89f72b3305010.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.09d06a301c5690143cb7b0e8c8a89f72b3305010/helm/istiod-1.24-alpha.09d06a301c5690143cb7b0e8c8a89f72b3305010.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.09d06a301c5690143cb7b0e8c8a89f72b3305010/helm/ztunnel-1.24-alpha.09d06a301c5690143cb7b0e8c8a89f72b3305010.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.c0805c400d51da291de575fa09771e5c498f5388/helm/base-1.24-alpha.c0805c400d51da291de575fa09771e5c498f5388.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.c0805c400d51da291de575fa09771e5c498f5388/helm/cni-1.24-alpha.c0805c400d51da291de575fa09771e5c498f5388.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.c0805c400d51da291de575fa09771e5c498f5388/helm/gateway-1.24-alpha.c0805c400d51da291de575fa09771e5c498f5388.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.c0805c400d51da291de575fa09771e5c498f5388/helm/istiod-1.24-alpha.c0805c400d51da291de575fa09771e5c498f5388.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.c0805c400d51da291de575fa09771e5c498f5388/helm/ztunnel-1.24-alpha.c0805c400d51da291de575fa09771e5c498f5388.tgz
