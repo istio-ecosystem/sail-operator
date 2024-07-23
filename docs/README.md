@@ -113,12 +113,12 @@ The Sail-operator does not manage Gateways. You can deploy a gateway manually ei
 The sail-operator supports two update strategies to update the version of the Istio control plane: `InPlace` and `RevisionBased`. The default strategy is `InPlace`.
 
 ### InPlace
-When the `InPlace` strategy is used, the existing Istio control plane is updated in-place. The workloads therefore don't need to be moved from one control plane instance to another.
+When the `InPlace` strategy is used, the existing Istio control plane is replaced with a new version. The workload sidecars immediately connect to the new control plane. The workloads therefore don't need to be moved from one control plane instance to another.
 
 #### Example using the InPlace strategy
 
 Prerequisites:
-* sail-operator needs to be installed.
+* sail-operator is installed.
 * `istioctl` is installed.
 
 Steps:
