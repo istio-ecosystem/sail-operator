@@ -316,7 +316,6 @@ The column `VERSION` should match the updated control plane version.
 
 15. Confirm the old control plane and revision deletion
 
-The old control plane and revision will be deleted after the grace period specified in the `Istio` resource `Istio.spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds`.
     ```console
     $ kubectl get pods -n istio-system
     NAME                                      READY   STATUS    RESTARTS   AGE
@@ -325,6 +324,7 @@ The old control plane and revision will be deleted after the grace period specif
     NAME              READY   STATUS    IN USE   VERSION   AGE
     default-v1-21-2   True    Healthy   True     v1.21.2   94m
     ```
+The old control plane and revision will be deleted after the grace period specified in the `Istio` resource `Istio.spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds`.
 
 ## Multicluster
 tbd
