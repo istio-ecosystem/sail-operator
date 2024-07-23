@@ -55,7 +55,7 @@ is installed. `Succeeded` should appear in the **Status** column.
       sourceNamespace: openshift-marketplace
     ```
 
-1. Verify that the installation succeeded by inspecting the CSV file.
+1. Verify that the installation succeeded by inspecting the CSV status.
 
     ```bash
     $ kubectl get csv -n openshift-operators
@@ -63,7 +63,7 @@ is installed. `Succeeded` should appear in the **Status** column.
     sailoperator.v0.1.0-nightly-2024-06-25   Sail Operator   0.1.0-nightly-2024-06-25   sailoperator.v0.1.0-nightly-2024-06-21   Succeeded
     ```
 
-    `Succeeded` should appear in the sailoperator's `PHASE` column.
+    `Succeeded` should appear in the sailoperator CSV `PHASE` column.
 
 ### Installation from Source
 

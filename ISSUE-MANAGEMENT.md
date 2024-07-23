@@ -11,5 +11,5 @@ If you have questions or need help, you can reach out to the Sail Operator commu
 ## Contributing
 If you want to contribute to the Sail Operator project, please refer to the [CONTRIBUTING-SAIL-PROJECT.md](https://github.com/istio-ecosystem/sail-operator/blob/main/CONTRIBUTING-SAIL-PROJECT.md) file for more information on how to contribute to the project. The file [CONTRIBUTING.md](https://github.com/istio-ecosystem/sail-operator/blob/main/CONTRIBUTING.md) contains all the information you need to get started with contributing Istio.
 
-## Did you found a Istio bug?
+## Did you find an Istio bug?
 If you found a bug in Istio, please refer to the [Istio GitHub repository](https://github.com/istio-ecosystem/sail-operator/blob/main/CONTRIBUTING-SAIL-PROJECT.md) to check the guidelines on how to report a bug to the Sail team.

@@ -23,7 +23,7 @@ For non-trivial (for definition see below) changes to the Sail Operator, we're g
 ### Applicability
 The SEP process should be used for non-trivial features or epics and any API changes. Changes without user impact will most of the time not need a SEP, but if they're big enough or result in changes to the development workflows (e.g. a rewrite of our integration testing framework) it's probably a good idea to create one.
 
-If your Proposal includes work that has to be done in Istio, depending on the size of the patchset it might be required to create an Istio design doc. If you do create one, make sure to link to it in the SEP.
+If your Proposal includes work that has to be done in Istio, depending on the size of the patch set it might be required to create an Istio design doc. If you do create one, make sure to link to it in the SEP.
 
 ### Storage
 Initially, SEPs will be stored in the enhancements/ directory of the sail-operator repository in Markdown format. We might migrate them to a separate repository later on.
@@ -43,8 +43,8 @@ Once a SEP is accepted, it is considered read-only. Should a change be urgently 
 
 ## Alternatives Considered
 
-* Using GDocs for storage - good for collaboration and search but hard to "lock down" a document once it has been approved. Also there's a disconnect between the code and the documents
-* ad-hoc meetings and slack discussions - this is what we've done up until now but it's not community-friendly and hard to do across time zones
+* Using GDocs for storage - good for collaboration and search but hard to "lock down" a document once it has been approved. Also, there's a disconnect between the code and the documents
+* ad-hoc meetings and Slack discussions - this is what we've done up until now but it's not community-friendly and hard to do across time zones
 
 ## Implementation Plan
 

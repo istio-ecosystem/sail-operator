@@ -214,7 +214,7 @@ The `bookinfo` application is exposed through the mesh, and the mesh configurati
 determines how the microservices comprising the application are used to serve 
 requests. The review information comes from one of three services: `reviews-v1`, 
 `reviews-v2` or `reviews-v3`. If you deploy the `bookinfo` application without 
-defining the `reviews` virtual service, then the mesh uses a round robin rule to 
+defining the `reviews` virtual service, then the mesh uses a round-robin rule to 
 route requests to a service.
 
 By deploying the `reviews` virtual service, you can specify a different behavior. 

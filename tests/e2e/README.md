@@ -2,7 +2,7 @@
 
 This end-to-end test suite utilizes Ginkgo, a testing framework known for its expressive specs (reference: https://onsi.github.io/ginkgo/). The setup for the test run is similar to the upstream Istio integration tests:
 * In the case of kind execution, it relies on the upstream script [`kind_provisioner.sh`](https://github.com/istio-ecosystem/sail-operator/blob/main/common/scripts/kind_provisioner.sh) and [`integ-suite-kind.sh`](https://github.com/istio-ecosystem/sail-operator/blob/main/tests/e2e/integ-suite-kind.sh), which are copied from the `github.com/istio/common-files` repository to set up the kind cluster used for the test.
-* In the case of OCP execution, it relies on the `integ-suite-ocp.sh` and `common-operator-integ-suite.sh` scripts to setup the OCP cluster to be ready for the test.
+* In the case of OCP execution, it relies on the `integ-suite-ocp.sh` and `common-operator-integ-suite.sh` scripts to set up the OCP cluster to be ready for the test.
 
 ## Table of Contents
 
@@ -88,7 +88,7 @@ func TestOperator(t *testing.T) {
 ```
 
 ### Sub-Tests
-The test suite can have multiple levels of sub-tests. The `Describe` block is used to group tests together. The `Context` block is used to group tests that share the same context. The `When` block is used to group tests that share the same action. The `It` block is used to define the test itself. So, the test suite can have multiple levels of sub-tests.
+The test suite can have multiple levels of subtests. The `Describe` block is used to group tests together. The `Context` block is used to group tests that share the same context. The `When` block is used to group tests that share the same action. The `It` block is used to define the test itself. So, the test suite can have multiple levels of subtests.
 
 For example:
 ```go
@@ -207,7 +207,7 @@ The following environment variables define the behavior of the test run:
 
 * SKIP_BUILD=false - If set to true, the test will skip the build process and an existing operator image will be used to deploy the operator and run the test. The operator image that is going to be used is defined by the `IMAGE` variable.
 * IMAGE=quay.io/maistra-dev/sail-operator:latest - The operator image to be used to deploy the operator and run the test. This is useful when you want to test a specific operator image.
-* SKIP_DEPLOY=false - If set to true, the test will skip the deployment of the operator. This is useful when the operator is already deployed in the cluster and you want to run the test only.
+* SKIP_DEPLOY=false - If set to true, the test will skip the deployment of the operator. This is useful when the operator is already deployed in the cluster, and you want to run the test only.
 * OCP=false - If set to true, the test will be configured to run on an OCP cluster and use the `oc` command to interact with it. If set to false, the test will run in a KinD cluster and use `kubectl`.
 * NAMESPACE=sail-operator - The namespace where the operator will be deployed and the test will run.
 * CONTROL_PLANE_NS=istio-system - The namespace where the control plane will be deployed.

@@ -25,7 +25,7 @@ This document aims to provide an overview of the project and some information fo
 
 ## How it works
 
-You manage your controlplane through an `Istio` resource.
+You manage your control plane through an `Istio` resource.
 
 ```yaml
 apiVersion: operator.istio.io/v1alpha1
@@ -53,7 +53,7 @@ status:
   state: Healthy
 ```
 
-You can customize your controlplane installation through the `Istio` resource using Istio's `Helm` configuration values:
+You can customize your control plane installation through the `Istio` resource using Istio's `Helm` configuration values:
 
 ```yaml
 apiVersion: operator.istio.io/v1alpha1
@@ -123,7 +123,7 @@ kubectl get ns istio-cni || kubectl create ns istio-cni
 kubectl apply -f chart/samples/istiocni-sample.yaml
 ```
 
-View your controlplane:
+View your control plane:
 
 ```sh
 kubectl get istio default
