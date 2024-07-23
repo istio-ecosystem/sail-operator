@@ -16,13 +16,13 @@ tbd
 
 1. Search for "sail".
 
-1. Locate the sail-operator, and click to select it.
+1. Locate the Sail Operator, and click to select it.
 
 1. When the prompt that discusses the community operator appears, click **Continue**, then click **Install**.
 
 1. Use the default installation settings presented, and click **Install** to continue.
 
-1. Click **Operators** -> **Installed Operators** to verify that the sail-operator 
+1. Click **Operators** -> **Installed Operators** to verify that the Sail Operator 
 is installed. `Succeeded` should appear in the **Status** column.
 
 #### Installing using the CLI
@@ -71,16 +71,16 @@ If you're not using OpenShift or simply want to install from source, follow the 
 
 ## Gateways
 
-The Sail-operator does not manage Gateways. You can deploy a gateway manually either through [gateway-api](https://istio.io/latest/docs/tasks/traffic-management/ingress/gateway-api/) or through [gateway injection](https://istio.io/latest/docs/setup/additional-setup/gateway/#deploying-a-gateway). As you are following the gateway installation instructions, skip the step to install Istio since this is handled by the Sail-operator.
+The Sail Operator does not manage Gateways. You can deploy a gateway manually either through [gateway-api](https://istio.io/latest/docs/tasks/traffic-management/ingress/gateway-api/) or through [gateway injection](https://istio.io/latest/docs/setup/additional-setup/gateway/#deploying-a-gateway). As you are following the gateway installation instructions, skip the step to install Istio since this is handled by the Sail Operator.
 
-**Note:** The `IstioOperator` / `istioctl` example is separate from the Sail-operator. Setting `spec.components` or `spec.values.gateways` on your Sail-operator `Istio` resource **will not work**.
+**Note:** The `IstioOperator` / `istioctl` example is separate from the Sail Operator. Setting `spec.components` or `spec.values.gateways` on your Sail Operator `Istio` resource **will not work**.
 
-## Multicluster
+## Multi-cluster
 tbd
 
 ## Addons
 
-Addons are managed separately from the Sail-operator. You can follow the [istio documentation](https://istio.io/latest/docs/ops/integrations/) for how to install addons. Below is an example of how to install some addons for Istio.
+Addons are managed separately from the Sail Operator. You can follow the [istio documentation](https://istio.io/latest/docs/ops/integrations/) for how to install addons. Below is an example of how to install some addons for Istio.
 
 The sample will deploy:
 
@@ -91,8 +91,8 @@ The sample will deploy:
 
 *Prerequisites*
 
-- Sail operator installed.
-- Control Plane installed with Sail.
+- Sail operator is installed.
+- Control Plane is installed via the Sail Operator.
 
 ### Deploy Prometheus and Jaeger addons
 
@@ -191,7 +191,7 @@ If using Openshift, open the Kiali route:
 echo https://$(kubectl get routes -n istio-system kiali -o jsonpath='{.spec.host}')
 ```
 
-Otherwise port forward to the kiali pod directly:
+Otherwise, port forward to the kiali pod directly:
 
 ```sh
 kubectl port-forward -n istio-system svc/kiali 20001:20001
@@ -202,7 +202,7 @@ You can view Kiali dashboard at: http://localhost:20001
 ## Observability Integrations
 
 ### Scraping metrics using the OpenShift monitoring stack
-The easiest way to get started with production-grade metrics collection is to use OpenShift's user-workload monitoring stack. The following steps assume that you installed Istio into the `istio-system` namespace. Note that these steps are not specific to the `sail-operator`, but describe how to configure user-workload monitoring for Istio in general.
+The easiest way to get started with production-grade metrics collection is to use OpenShift's user-workload monitoring stack. The following steps assume that you installed Istio into the `istio-system` namespace. Note that these steps are not specific to the Sail Operator, but describe how to configure user-workload monitoring for Istio in general.
 
 *Prerequisites*
 * User Workload monitoring is [enabled](https://docs.openshift.com/container-platform/latest/observability/monitoring/enabling-monitoring-for-user-defined-projects.html)
@@ -271,17 +271,17 @@ The easiest way to get started with production-grade metrics collection is to us
 Congratulations! You should now be able to see your control plane and data plane metrics in the OpenShift Console. Just go to Observe -> Metrics and try the query `istio_requests_total`.
 
 ### Integrating with Kiali
-Integration with Kiali really depends on how you collect your metrics and traces. Note that Kiali is a separate project which for the purpose of this document we'll expect is installed using the Kiali operator. The steps here are not specific to `sail-operator`, but describe how to configure Kiali for use with Istio in general.
+Integration with Kiali really depends on how you collect your metrics and traces. Note that Kiali is a separate project which for the purpose of this document we'll expect is installed using the Kiali operator. The steps here are not specific to Sail Operator, but describe how to configure Kiali for use with Istio in general.
 
 #### Integrating Kiali with the OpenShift monitoring stack
-If you followed [Scraping metrics using the OpenShift monitoring stack](#scraping-metrics-using-the-openshift-monitoring-stack), you can setup Kiali to retrieve metrics from there.
+If you followed [Scraping metrics using the OpenShift monitoring stack](#scraping-metrics-using-the-openshift-monitoring-stack), you can set up Kiali to retrieve metrics from there.
 
 *Prerequisites*
 * User Workload monitoring is [enabled](https://docs.openshift.com/container-platform/latest/observability/monitoring/enabling-monitoring-for-user-defined-projects.html) and [configured](#scraping-metrics-using-the-openshift-monitoring-stack)
 * Kiali Operator is installed
 
 *Steps*
-1. Create a ClusterRoleBinding for Kiali so it can view metrics from user-workload monitoring
+1. Create a ClusterRoleBinding for Kiali, so it can view metrics from user-workload monitoring
 
     ```yaml
     apiVersion: rbac.authorization.k8s.io/v1
@@ -342,9 +342,9 @@ If you followed [Scraping metrics using the OpenShift monitoring stack](#scrapin
 1. Click the Options menu, and select **Delete IstioCNI**.
 1. At the prompt to confirm the action, click **Delete**.
 
-### Deleting the sail-operator
+### Deleting the Sail Operator
 1. In the OpenShift Container Platform web console, click **Operators** -> **Installed Operators**.
-1. Locate the sail-operator. Click the Options menu, and select **Uninstall Operator**.
+1. Locate the Sail Operator. Click the Options menu, and select **Uninstall Operator**.
 1. At the prompt to confirm the action, click **Uninstall**.
 
 ### Deleting the istio-system and istio-cni Projects
