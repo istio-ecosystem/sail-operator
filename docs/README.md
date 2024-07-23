@@ -69,31 +69,33 @@ is installed. `Succeeded` should appear in the **Status** column.
 1. Create the `openshift-operators` namespace (if it does not already exist).
 
     ```bash
-    $ kubectl create namespace openshift-operators
+    $ kubectl get ns openshift-operators || kubectl create ns openshift-operators
     ```
 
 1. Create the `Subscription` object with the desired `spec.channel`.
 
-    ```yaml
-    apiVersion: operators.coreos.com/v1alpha1
-    kind: Subscription
-    metadata:
-      name: sailoperator
-      namespace: openshift-operators
-    spec:
-      channel: "0.1-nightly"
-      installPlanApproval: Automatic
-      name: sailoperator
-      source: community-operators
-      sourceNamespace: openshift-marketplace
-    ```
+   ```bash
+   kubectl apply -f - <<EOF
+       apiVersion: operators.coreos.com/v1alpha1
+       kind: Subscription
+       metadata:
+         name: sailoperator
+         namespace: openshift-operators
+       spec:
+         channel: "3.0-nightly"
+         installPlanApproval: Automatic
+         name: sailoperator
+         source: community-operators
+         sourceNamespace: openshift-marketplace
+   EOF
+   ```
 
 1. Verify that the installation succeeded by inspecting the CSV status.
 
     ```bash
     $ kubectl get csv -n openshift-operators
     NAME                                     DISPLAY         VERSION                    REPLACES                                 PHASE
-    sailoperator.v0.1.0-nightly-2024-06-25   Sail Operator   0.1.0-nightly-2024-06-25   sailoperator.v0.1.0-nightly-2024-06-21   Succeeded
+    sailoperator.v3.0.0-nightly-2024-05-13   Sail Operator   3.0.0-nightly-2024-05-13   sailoperator.v3.0.0-nightly-2024-05-11   Succeeded
     ```
 
     `Succeeded` should appear in the sailoperator CSV `PHASE` column.
