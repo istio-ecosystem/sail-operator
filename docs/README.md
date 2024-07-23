@@ -269,21 +269,22 @@ The column `VERSION` should match the control plane version.
 
     ```console
     $ kubectl get istio -n istio-system
-      NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   VERSION   AGE
-      default   2           2       1        Healthy           v1.21.2   23m
+    NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   VERSION   AGE
+    default   2           2       1        Healthy           v1.21.2   23m
+
     $ kubectl get istiorevision -n istio-system
-      NAME              READY   STATUS    IN USE   VERSION   AGE
-      default-v1-21-0   True    Healthy   True     v1.21.0   27m
-      default-v1-21-2   True    Healthy   False    v1.21.2   4m45s
+    NAME              READY   STATUS    IN USE   VERSION   AGE
+    default-v1-21-0   True    Healthy   True     v1.21.0   27m
+    default-v1-21-2   True    Healthy   False    v1.21.2   4m45s
     ```
 
 10. Confirm there are two control plane pods running, one for each revision
 
     ```console
     $ kubectl get pods -n istio-system
-      NAME                                      READY   STATUS    RESTARTS   AGE
-      istiod-default-v1-21-0-69d6df7f9c-grm24   1/1     Running   0          28m
-      istiod-default-v1-21-2-7c4f4674c5-4g7n7   1/1     Running   0          6m9s
+    NAME                                      READY   STATUS    RESTARTS   AGE
+    istiod-default-v1-21-0-69d6df7f9c-grm24   1/1     Running   0          28m
+    istiod-default-v1-21-2-7c4f4674c5-4g7n7   1/1     Running   0          6m9s
     ```
 
 11. Confirm the proxy sidecar version remains the same:
@@ -298,7 +299,7 @@ The column `VERSION` should still match the old control plane version.
     ```bash
     kubectl label namespace bookinfo istio.io/rev=default-v1-21-2 --overwrite
     ```
-The injected version by the control plane will not change immediately. It will only be changed after the pods are restarted, this will trigger the sidecar injection with the new version.
+The existing workload sidecars will continue to run and will remain connected to the old control plane instance. They will not be replaced with a new version until the pods are deleted and recreated.
 
 13. Delete all the pods in the `bookinfo` namespace
 
