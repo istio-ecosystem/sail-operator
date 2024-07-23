@@ -113,12 +113,12 @@ The Sail-operator does not manage Gateways. You can deploy a gateway manually ei
 The sail-operator supports two update strategies to update the version of the Istio control plane: `InPlace` and `RevisionBased`. The default strategy is `InPlace`.
 
 ### InPlace
-When the `InPlace` strategy is used, the existing Istio control plane is updated in-place. The workloads therefore don't need to be moved from one control plane instance to another.
+When the `InPlace` strategy is used, the existing Istio control plane is replaced with a new version. The workload sidecars immediately connect to the new control plane. The workloads therefore don't need to be moved from one control plane instance to another.
 
 #### Example using the InPlace strategy
 
 Prerequisites:
-* sail-operator needs to be installed.
+* sail-operator is installed.
 * `istioctl` is installed.
 
 Steps:
@@ -271,6 +271,7 @@ The column `VERSION` should match the control plane version.
     $ kubectl get istio -n istio-system
     NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   VERSION   AGE
     default   2           2       1        Healthy           v1.21.2   23m
+
     $ kubectl get istiorevision -n istio-system
     NAME              READY   STATUS    IN USE   VERSION   AGE
     default-v1-21-0   True    Healthy   True     v1.21.0   27m
@@ -298,7 +299,7 @@ The column `VERSION` should still match the old control plane version.
     ```bash
     kubectl label namespace bookinfo istio.io/rev=default-v1-21-2 --overwrite
     ```
-The injected version by the control plane will not change immediately. It will only be changed after the pods are restarted, this will trigger the sidecar injection with the new version.
+The existing workload sidecars will continue to run and will remain connected to the old control plane instance. They will not be replaced with a new version until the pods are deleted and recreated.
 
 13. Delete all the pods in the `bookinfo` namespace
 
