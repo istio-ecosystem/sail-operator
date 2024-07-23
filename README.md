@@ -1,6 +1,6 @@
-# Sail-operator
+# Sail Operator
 
-The Sail-operator manages the lifecycle of your [Istio](https://istio.io) control plane. It provides custom resources for you to deploy and manage your control plane components.
+The Sail Operator manages the lifecycle of your [Istio](https://istio.io) control plane. It provides custom resources for you to deploy and manage your control plane components.
 
 ## User Documentation
 This document aims to provide an overview of the project and some information for contributors. For information on how to use the operator, take a look at the [User Documentation](docs/README.md).
@@ -25,7 +25,7 @@ This document aims to provide an overview of the project and some information fo
 
 ## How it works
 
-You manage your controlplane through an `Istio` resource.
+You manage your control plane through an `Istio` resource.
 
 ```yaml
 apiVersion: operator.istio.io/v1alpha1
@@ -53,7 +53,7 @@ status:
   state: Healthy
 ```
 
-You can customize your controlplane installation through the `Istio` resource using Istio's `Helm` configuration values:
+You can customize your control plane installation through the `Istio` resource using Istio's `Helm` configuration values:
 
 ```yaml
 apiVersion: operator.istio.io/v1alpha1
@@ -123,7 +123,7 @@ kubectl get ns istio-cni || kubectl create ns istio-cni
 kubectl apply -f chart/samples/istiocni-sample.yaml
 ```
 
-View your controlplane:
+View your control plane:
 
 ```sh
 kubectl get istio default
@@ -216,15 +216,15 @@ make test.e2e.ocp
 ```
 
 ## Community Support and Contributing
-Please refer to the [CONTRIBUTING-SAIL-PROJECT.md](https://github.com/istio-ecosystem/sail-operator/blob/main/CONTRIBUTING.md) file for more information on how to contribute to the sail-operator project. This file contains all the information you need to get started with contributing to the project.
+Please refer to the [CONTRIBUTING-SAIL-PROJECT.md](https://github.com/istio-ecosystem/sail-operator/blob/main/CONTRIBUTING.md) file for more information on how to contribute to the Sail Operator project. This file contains all the information you need to get started with contributing to the project.
 
 ## Sail Enhancement Proposal
 
-SEP documents are used to propose and discuss non-trivial features or epics and any API changes. Please refer to the [SEP1-enhancement-process.md](https://github.com/istio-ecosystem/sail-operator/blob/main/enhancements/SEP1-enhancement-process.md) file for more information on how to create a Sail Enhancement Proposal (SEP) for the sail-operator project.
+SEP documents are used to propose and discuss non-trivial features or epics and any API changes. Please refer to the [SEP1-enhancement-process.md](https://github.com/istio-ecosystem/sail-operator/blob/main/enhancements/SEP1-enhancement-process.md) file for more information on how to create a Sail Enhancement Proposal (SEP) for the Sail Operator project.
 
-SEP documents are stored in the [enhancements](https://github.com/istio-ecosystem/sail-operator/tree/main/enhancements) directory of the sail-operator repository in Markdown format. If you want to create a SEP, be sure to check out the [SEP template](https://github.com/istio-ecosystem/sail-operator/blob/main/enhancements/SEP0-template.md).
+SEP documents are stored in the [enhancements](https://github.com/istio-ecosystem/sail-operator/tree/main/enhancements) directory of the Sail Operator repository in Markdown format. If you want to create a SEP, be sure to check out the [SEP template](https://github.com/istio-ecosystem/sail-operator/blob/main/enhancements/SEP0-template.md).
 
 ## Issue management
-Please refer to the [ISSUE-MANAGEMENT.md](https://github.com/istio-ecosystem/sail-operator/blob/main/ISSUE-MANAGEMENT.md) file for more information on how to report bugs and feature requests to the sail-operator team.
+Please refer to the [ISSUE-MANAGEMENT.md](https://github.com/istio-ecosystem/sail-operator/blob/main/ISSUE-MANAGEMENT.md) file for more information on how to report bugs and feature requests to the Sail Operator team.
 
 If you found a bug in Istio, please refer to the [Istio GitHub repository](https://github.com/istio-ecosystem/sail-operator/blob/main/BUGS-AND-FEATURE-REQUESTS.md)
