@@ -63,7 +63,7 @@ func NewStandardReconcilerWithFinalizer[T client.Object](
 }
 
 // Reconcile reconciles the object. It first fetches the object from the client, then invokes the
-// configured ReconcileFunc. If a finalizer is configured in the reconciler and the object is new,
+// configured ReconcileFunc. If a finalizer is configured in the reconciler, and the object is new,
 // this function adds the finalizer to the object. When the object is being deleted, this function
 // invokes the configured FinalizerFunc and removes the finalizer afterward.
 func (r *StandardReconciler[T]) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

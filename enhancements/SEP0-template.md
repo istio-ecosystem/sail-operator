@@ -14,7 +14,7 @@ Itemized list of things you want to achieve. Can be functional/nonfunctional req
 Itemized list of things specifically excluded from the design. Could be either to simplify the review or to avoid misunderstandings.
 
 ## Design
-This is free-form; use as many or few sub-headings as appropriate. The following are just examples, use them only if they apply to your SEP.
+This is free-form; use as many or few subheadings as appropriate. The following are just examples, use them only if they apply to your SEP.
 
 ### User Stories
 
