@@ -78,6 +78,9 @@ spec:
                   base:
                     description: Configuration for the base component.
                     properties:
+                      validationCABundle:
+                        description: validation webhook CA bundle
+                        type: string
                       validationURL:
                         description: URL to use for validating webhook.
                         type: string
@@ -144,22 +147,10 @@ spec:
                         description: Controls whether a remote cluster is the config
                           cluster for an external istiod
                         type: boolean
-                      configRootNamespace:
-                        description: |-
-                          TODO: remove this?
-                          No longer used.
-                        type: string
                       configValidation:
                         description: Controls whether the server-side validation is
                           enabled.
                         type: boolean
-                      defaultConfigVisibilitySettings:
-                        description: |-
-                          TODO: remove this?
-                          No longer used.
-                        items:
-                          type: string
-                        type: array
                       defaultNodeSelector:
                         additionalProperties:
                           type: string
@@ -308,6 +299,10 @@ spec:
 
 
                           More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
+                        enum:
+                        - Always
+                        - Never
+                        - IfNotPresent
                         type: string
                       imagePullSecrets:
                         description: |-
@@ -537,11 +532,6 @@ spec:
                         description: |-
                           Controls whether the creation of the sidecar injector ConfigMap should be skipped.
                           Defaults to false. When set to true, the sidecar injector ConfigMap will not be created.
-                        type: boolean
-                      oneNamespace:
-                        description: |-
-                          Controls whether to restrict the applications namespace the controller manages;
-                          If set it to false, the controller watches all namespaces.
                         type: boolean
                       operatorManageWebhooks:
                         description: |-
@@ -889,6 +879,14 @@ spec:
                               and sidecars. If left empty, "warning" is used. Expected
                               values are: trace\|debug\|info\|warning\|error\|critical\|off'
                             type: string
+                          outlierLogPath:
+                            description: |-
+                              Path to the file to which the proxy will write outlier detection logs.
+
+
+                              Example: "/dev/stdout"
+                              This would write the logs to standard output.
+                            type: string
                           privileged:
                             description: |-
                               Enables privileged securityContext for the istio-proxy container.
@@ -1116,11 +1114,8 @@ spec:
                             type: integer
                         type: object
                       tag:
-                        anyOf:
-                        - type: integer
-                        - type: string
                         description: Specifies the tag for the Istio docker images.
-                        x-kubernetes-int-or-string: true
+                        type: string
                       tracer:
                         description: Specifies the Configuration for each of the supported
                           tracers.
@@ -1179,10 +1174,6 @@ spec:
                                 type: string
                             type: object
                         type: object
-                      useMCP:
-                        description: Controls whether to use of Mesh Configuration
-                          Protocol to distribute configuration.
-                        type: boolean
                       variant:
                         description: The variant of the Istio container images to
                           use. Options are "debug" or "distroless". Unset will use
@@ -1192,6 +1183,9 @@ spec:
                   istiodRemote:
                     description: Configuration for istiod-remote.
                     properties:
+                      injectionCABundle:
+                        description: injector ca bundle
+                        type: string
                       injectionPath:
                         description: Path to use for the sidecar injector webhook
                           service.
@@ -1259,7 +1253,8 @@ spec:
                                 description: |-
                                   OPTIONAL: The path to the file containing certificate authority
                                   certificates to use in verifying a presented server certificate. If
-                                  omitted, the proxy will not verify the server's certificate.
+                                  omitted, the proxy will verify the server's certificate using
+                                  the OS CA certificates.
                                   Should be empty if mode is `ISTIO_MUTUAL`.
                                 type: string
                               caCrl:
@@ -1303,17 +1298,7 @@ spec:
                                 description: |-
                                   `insecureSkipVerify` specifies whether the proxy should skip verifying the
                                   CA signature and SAN for the server certificate corresponding to the host.
-                                  This flag should only be set if global CA signature verification is
-                                  enabled, `VERIFY_CERTIFICATE_AT_CLIENT` environmental variable is set to `true`,
-                                  but no verification is desired for a specific host. If enabled with or
-                                  without `VERIFY_CERTIFICATE_AT_CLIENT` enabled, verification of the CA signature and
-                                  SAN will be skipped.
-
-
-                                  `insecureSkipVerify` is `false` by default.
-                                  `VERIFY_CERTIFICATE_AT_CLIENT` is `false` by default in Istio version 1.9 but will
-                                  be `true` by default in a later version where, going forward, it will be
-                                  enabled by default.
+                                  The default value of this field is false.
                                 type: boolean
                               mode:
                                 description: |-
@@ -1335,8 +1320,7 @@ spec:
                                 description: |-
                                   SNI string to present to the server during TLS handshake.
                                   If unspecified, SNI will be automatically set based on downstream HTTP
-                                  host/authority header for SIMPLE and MUTUAL TLS modes, provided `ENABLE_AUTO_SNI`
-                                  environmental variable is set to `true`.
+                                  host/authority header for SIMPLE and MUTUAL TLS modes.
                                 type: string
                               subjectAltNames:
                                 description: |-
@@ -1346,8 +1330,7 @@ spec:
                                   If specified, this list overrides the value of subject_alt_names
                                   from the ServiceEntry. If unspecified, automatic validation of upstream
                                   presented certificate for new upstream connections will be done based on the
-                                  downstream HTTP host/authority header, provided `VERIFY_CERTIFICATE_AT_CLIENT`
-                                  and `ENABLE_AUTO_SNI` environmental variables are set to `true`.
+                                  downstream HTTP host/authority header.
                                 items:
                                   type: string
                                 type: array
@@ -1473,7 +1456,8 @@ spec:
                                   description: |-
                                     OPTIONAL: The path to the file containing certificate authority
                                     certificates to use in verifying a presented server certificate. If
-                                    omitted, the proxy will not verify the server's certificate.
+                                    omitted, the proxy will verify the server's certificate using
+                                    the OS CA certificates.
                                     Should be empty if mode is `ISTIO_MUTUAL`.
                                   type: string
                                 caCrl:
@@ -1517,17 +1501,7 @@ spec:
                                   description: |-
                                     `insecureSkipVerify` specifies whether the proxy should skip verifying the
                                     CA signature and SAN for the server certificate corresponding to the host.
-                                    This flag should only be set if global CA signature verification is
-                                    enabled, `VERIFY_CERTIFICATE_AT_CLIENT` environmental variable is set to `true`,
-                                    but no verification is desired for a specific host. If enabled with or
-                                    without `VERIFY_CERTIFICATE_AT_CLIENT` enabled, verification of the CA signature and
-                                    SAN will be skipped.
-
-
-                                    `insecureSkipVerify` is `false` by default.
-                                    `VERIFY_CERTIFICATE_AT_CLIENT` is `false` by default in Istio version 1.9 but will
-                                    be `true` by default in a later version where, going forward, it will be
-                                    enabled by default.
+                                    The default value of this field is false.
                                   type: boolean
                                 mode:
                                   description: |-
@@ -1549,8 +1523,7 @@ spec:
                                   description: |-
                                     SNI string to present to the server during TLS handshake.
                                     If unspecified, SNI will be automatically set based on downstream HTTP
-                                    host/authority header for SIMPLE and MUTUAL TLS modes, provided `ENABLE_AUTO_SNI`
-                                    environmental variable is set to `true`.
+                                    host/authority header for SIMPLE and MUTUAL TLS modes.
                                   type: string
                                 subjectAltNames:
                                   description: |-
@@ -1560,8 +1533,7 @@ spec:
                                     If specified, this list overrides the value of subject_alt_names
                                     from the ServiceEntry. If unspecified, automatic validation of upstream
                                     presented certificate for new upstream connections will be done based on the
-                                    downstream HTTP host/authority header, provided `VERIFY_CERTIFICATE_AT_CLIENT`
-                                    and `ENABLE_AUTO_SNI` environmental variables are set to `true`.
+                                    downstream HTTP host/authority header.
                                   items:
                                     type: string
                                   type: array
@@ -1599,9 +1571,9 @@ spec:
                           concurrency:
                             description: |-
                               The number of worker threads to run.
-                              If unset, this will be automatically determined based on CPU requests/limits.
-                              If set to 0, all cores on the machine will be used.
-                              Default is 2 worker threads.
+                              If unset, which is recommended, this will be automatically determined based on CPU requests/limits.
+                              If set to 0, all cores on the machine will be used, ignoring CPU requests or limits. This can lead to major performance
+                              issues if CPU limits are also set.
                             format: int32
                             type: integer
                           configPath:
@@ -1683,7 +1655,8 @@ spec:
                                     description: |-
                                       OPTIONAL: The path to the file containing certificate authority
                                       certificates to use in verifying a presented server certificate. If
-                                      omitted, the proxy will not verify the server's certificate.
+                                      omitted, the proxy will verify the server's certificate using
+                                      the OS CA certificates.
                                       Should be empty if mode is `ISTIO_MUTUAL`.
                                     type: string
                                   caCrl:
@@ -1727,17 +1700,7 @@ spec:
                                     description: |-
                                       `insecureSkipVerify` specifies whether the proxy should skip verifying the
                                       CA signature and SAN for the server certificate corresponding to the host.
-                                      This flag should only be set if global CA signature verification is
-                                      enabled, `VERIFY_CERTIFICATE_AT_CLIENT` environmental variable is set to `true`,
-                                      but no verification is desired for a specific host. If enabled with or
-                                      without `VERIFY_CERTIFICATE_AT_CLIENT` enabled, verification of the CA signature and
-                                      SAN will be skipped.
-
-
-                                      `insecureSkipVerify` is `false` by default.
-                                      `VERIFY_CERTIFICATE_AT_CLIENT` is `false` by default in Istio version 1.9 but will
-                                      be `true` by default in a later version where, going forward, it will be
-                                      enabled by default.
+                                      The default value of this field is false.
                                     type: boolean
                                   mode:
                                     description: |-
@@ -1759,8 +1722,7 @@ spec:
                                     description: |-
                                       SNI string to present to the server during TLS handshake.
                                       If unspecified, SNI will be automatically set based on downstream HTTP
-                                      host/authority header for SIMPLE and MUTUAL TLS modes, provided `ENABLE_AUTO_SNI`
-                                      environmental variable is set to `true`.
+                                      host/authority header for SIMPLE and MUTUAL TLS modes.
                                     type: string
                                   subjectAltNames:
                                     description: |-
@@ -1770,8 +1732,7 @@ spec:
                                       If specified, this list overrides the value of subject_alt_names
                                       from the ServiceEntry. If unspecified, automatic validation of upstream
                                       presented certificate for new upstream connections will be done based on the
-                                      downstream HTTP host/authority header, provided `VERIFY_CERTIFICATE_AT_CLIENT`
-                                      and `ENABLE_AUTO_SNI` environmental variables are set to `true`.
+                                      downstream HTTP host/authority header.
                                     items:
                                       type: string
                                     type: array
@@ -1823,7 +1784,8 @@ spec:
                                     description: |-
                                       OPTIONAL: The path to the file containing certificate authority
                                       certificates to use in verifying a presented server certificate. If
-                                      omitted, the proxy will not verify the server's certificate.
+                                      omitted, the proxy will verify the server's certificate using
+                                      the OS CA certificates.
                                       Should be empty if mode is `ISTIO_MUTUAL`.
                                     type: string
                                   caCrl:
@@ -1867,17 +1829,7 @@ spec:
                                     description: |-
                                       `insecureSkipVerify` specifies whether the proxy should skip verifying the
                                       CA signature and SAN for the server certificate corresponding to the host.
-                                      This flag should only be set if global CA signature verification is
-                                      enabled, `VERIFY_CERTIFICATE_AT_CLIENT` environmental variable is set to `true`,
-                                      but no verification is desired for a specific host. If enabled with or
-                                      without `VERIFY_CERTIFICATE_AT_CLIENT` enabled, verification of the CA signature and
-                                      SAN will be skipped.
-
-
-                                      `insecureSkipVerify` is `false` by default.
-                                      `VERIFY_CERTIFICATE_AT_CLIENT` is `false` by default in Istio version 1.9 but will
-                                      be `true` by default in a later version where, going forward, it will be
-                                      enabled by default.
+                                      The default value of this field is false.
                                     type: boolean
                                   mode:
                                     description: |-
@@ -1899,8 +1851,7 @@ spec:
                                     description: |-
                                       SNI string to present to the server during TLS handshake.
                                       If unspecified, SNI will be automatically set based on downstream HTTP
-                                      host/authority header for SIMPLE and MUTUAL TLS modes, provided `ENABLE_AUTO_SNI`
-                                      environmental variable is set to `true`.
+                                      host/authority header for SIMPLE and MUTUAL TLS modes.
                                     type: string
                                   subjectAltNames:
                                     description: |-
@@ -1910,8 +1861,7 @@ spec:
                                       If specified, this list overrides the value of subject_alt_names
                                       from the ServiceEntry. If unspecified, automatic validation of upstream
                                       presented certificate for new upstream connections will be done based on the
-                                      downstream HTTP host/authority header, provided `VERIFY_CERTIFICATE_AT_CLIENT`
-                                      and `ENABLE_AUTO_SNI` environmental variables are set to `true`.
+                                      downstream HTTP host/authority header.
                                     items:
                                       type: string
                                     type: array
@@ -2091,7 +2041,7 @@ spec:
                                 type: object
                               envoyDebugHeaders:
                                 description: |-
-                                  Controls various `X-Envoy-*` headers, such as `X-Envoy-Overloaded` and `X-Envoy-Upstream-Service-Time. If enabled,
+                                  Controls various `X-Envoy-*` headers, such as `X-Envoy-Overloaded` and `X-Envoy-Upstream-Service-Time`. If enabled,
                                   these headers will be included.
                                   If disabled, these headers will not be set. If they are already present, they will be preserved.
                                   See the [Envoy documentation](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#envoy-v3-api-field-extensions-filters-http-router-v3-router-suppress-envoy-headers) for more details.
@@ -2411,8 +2361,8 @@ spec:
                           terminationDrainDuration:
                             description: |-
                               The amount of time allowed for connections to complete on proxy shutdown.
-                              On receiving `SIGTERM` or `SIGINT`, `istio-agent` tells the active Envoy to start draining,
-                              preventing any new connections and allowing existing connections to complete. It then
+                              On receiving `SIGTERM` or `SIGINT`, `istio-agent` tells the active Envoy to start gracefully draining,
+                              discouraging any new connections and allowing existing connections to complete. It then
                               sleeps for the `termination_drain_duration` and then kills any remaining active Envoy processes.
                               If not set, a default of `5s` will be applied.
                             type: string
@@ -2574,7 +2524,8 @@ spec:
                                     description: |-
                                       OPTIONAL: The path to the file containing certificate authority
                                       certificates to use in verifying a presented server certificate. If
-                                      omitted, the proxy will not verify the server's certificate.
+                                      omitted, the proxy will verify the server's certificate using
+                                      the OS CA certificates.
                                       Should be empty if mode is `ISTIO_MUTUAL`.
                                     type: string
                                   caCrl:
@@ -2618,17 +2569,7 @@ spec:
                                     description: |-
                                       `insecureSkipVerify` specifies whether the proxy should skip verifying the
                                       CA signature and SAN for the server certificate corresponding to the host.
-                                      This flag should only be set if global CA signature verification is
-                                      enabled, `VERIFY_CERTIFICATE_AT_CLIENT` environmental variable is set to `true`,
-                                      but no verification is desired for a specific host. If enabled with or
-                                      without `VERIFY_CERTIFICATE_AT_CLIENT` enabled, verification of the CA signature and
-                                      SAN will be skipped.
-
-
-                                      `insecureSkipVerify` is `false` by default.
-                                      `VERIFY_CERTIFICATE_AT_CLIENT` is `false` by default in Istio version 1.9 but will
-                                      be `true` by default in a later version where, going forward, it will be
-                                      enabled by default.
+                                      The default value of this field is false.
                                     type: boolean
                                   mode:
                                     description: |-
@@ -2650,8 +2591,7 @@ spec:
                                     description: |-
                                       SNI string to present to the server during TLS handshake.
                                       If unspecified, SNI will be automatically set based on downstream HTTP
-                                      host/authority header for SIMPLE and MUTUAL TLS modes, provided `ENABLE_AUTO_SNI`
-                                      environmental variable is set to `true`.
+                                      host/authority header for SIMPLE and MUTUAL TLS modes.
                                     type: string
                                   subjectAltNames:
                                     description: |-
@@ -2661,8 +2601,7 @@ spec:
                                       If specified, this list overrides the value of subject_alt_names
                                       from the ServiceEntry. If unspecified, automatic validation of upstream
                                       presented certificate for new upstream connections will be done based on the
-                                      downstream HTTP host/authority header, provided `VERIFY_CERTIFICATE_AT_CLIENT`
-                                      and `ENABLE_AUTO_SNI` environmental variables are set to `true`.
+                                      downstream HTTP host/authority header.
                                     items:
                                       type: string
                                     type: array
@@ -2746,9 +2685,17 @@ spec:
                             description: |-
                               Specifies the conditions under which retry takes place.
                               One or more policies can be specified using a ‘,’ delimited list.
-                              If `retry_on` specifies a valid HTTP status, it will be added to retriable_status_codes retry policy.
                               See the [retry policies](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-on)
                               and [gRPC retry policies](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-grpc-on) for more details.
+
+
+                              In addition to the policies specified above, a list of HTTP status codes can be passed, such as `retryOn: "503,reset"`.
+                              Note these status codes refer to the actual responses received from the destination.
+                              For example, if a connection is reset, Istio will translate this to 503 for it's response.
+                              However, the destination did not return a 503 error, so this would not match `"503"` (it would, however, match `"reset"`).
+
+
+                              If not specified, this defaults to `connect-failure,refused-stream,unavailable,cancelled,503`.
                             type: string
                           retryRemoteLocalities:
                             description: |-
@@ -3504,6 +3451,126 @@ spec:
                             opentelemetry:
                               description: Configures an OpenTelemetry tracing provider.
                               properties:
+                                dynatraceSampler:
+                                  description: |-
+                                    The Dynatrace adaptive traffic management (ATM) sampler.
+
+
+                                    Example configuration:
+
+
+                                    ```yaml
+                                      - name: otel-tracing
+                                        opentelemetry:
+                                        port: 443
+                                        service: "{your-environment-id}.live.dynatrace.com"
+                                        http:
+                                        path: "/api/v2/otlp/v1/traces"
+                                        timeout: 10s
+                                        headers:
+                                      - name: "Authorization"
+                                        value: "Api-Token dt0c01."
+                                        resource_detectors:
+                                        dynatrace: {}
+                                        dynatrace_sampler:
+                                        tenant: "{your-environment-id}"
+                                        cluster_id: 1234
+                                  properties:
+                                    clusterId:
+                                      description: |-
+                                        REQUIRED. The identifier of the cluster in the Dynatrace platform.
+                                        The cluster here is Dynatrace-specific concept and not related to the cluster concept in Istio/Envoy.
+
+
+                                        The value can be obtained from the Istio deployment page in Dynatrace.
+                                      format: int32
+                                      type: integer
+                                    httpService:
+                                      description: |-
+                                        Optional. Dynatrace HTTP API to obtain sampling configuration.
+
+
+                                        When not provided, the Dynatrace Sampler will re-use the configuration from the OpenTelemetryTracingProvider HTTP Exporter
+                                        (`service`, `port` and `http`), including the access token.
+                                      properties:
+                                        http:
+                                          description: REQUIRED. Specifies sampling
+                                            configuration URI.
+                                          properties:
+                                            headers:
+                                              description: |-
+                                                Optional. Allows specifying custom HTTP headers that will be added
+                                                to each HTTP request sent.
+                                              items:
+                                                properties:
+                                                  name:
+                                                    description: REQUIRED. The HTTP
+                                                      header name.
+                                                    type: string
+                                                  value:
+                                                    description: REQUIRED. The HTTP
+                                                      header value.
+                                                    type: string
+                                                required:
+                                                - name
+                                                - value
+                                                type: object
+                                              type: array
+                                            path:
+                                              description: REQUIRED. Specifies the
+                                                path on the service.
+                                              type: string
+                                            timeout:
+                                              description: |-
+                                                Optional. Specifies the timeout for the HTTP request.
+                                                If not specified, the default is 3s.
+                                              type: string
+                                          required:
+                                          - path
+                                          type: object
+                                        port:
+                                          description: REQUIRED. Specifies the port
+                                            of the service.
+                                          format: int32
+                                          type: integer
+                                        service:
+                                          description: |-
+                                            REQUIRED. Specifies the Dynatrace environment to obtain the sampling configuration.
+                                            The format is `<Hostname>`, where `<Hostname>` is the fully qualified Dynatrace environment
+                                            host name defined in the ServiceEntry.
+
+
+                                            Example: "{your-environment-id}.live.dynatrace.com".
+                                          type: string
+                                      required:
+                                      - http
+                                      - port
+                                      - service
+                                      type: object
+                                    rootSpansPerMinute:
+                                      description: |-
+                                        Optional. Number of sampled spans per minute to be used
+                                        when the adaptive value cannot be obtained from the Dynatrace API.
+
+
+                                        A default value of `1000` is used when:
+
+
+                                        - `root_spans_per_minute` is unset
+                                        - `root_spans_per_minute` is set to 0
+                                      format: int32
+                                      type: integer
+                                    tenant:
+                                      description: |-
+                                        REQUIRED. The Dynatrace customer's tenant identifier.
+
+
+                                        The value can be obtained from the Istio deployment page in Dynatrace.
+                                      type: string
+                                  required:
+                                  - clusterId
+                                  - tenant
+                                  type: object
                                 http:
                                   description: "Optional. Specifies the configuration
                                     for exporting OTLP traces via HTTP.\nWhen empty,
@@ -3624,6 +3691,10 @@ spec:
                               - port
                               - service
                               type: object
+                              x-kubernetes-validations:
+                              - message: At most one of [dynatraceSampler] should
+                                  be set
+                                rule: (has(self.dynatraceSampler)?1:0) <= 1
                             prometheus:
                               description: Configures a Prometheus metrics provider.
                               type: object
@@ -3952,6 +4023,7 @@ spec:
                                 - `topology.kubernetes.io/region` is used to match the region metadata of an endpoint, which maps to Kubernetes node label `topology.kubernetes.io/region` or the deprecated label `failure-domain.beta.kubernetes.io/region`.
                                 - `topology.kubernetes.io/zone` is used to match the zone metadata of an endpoint, which maps to Kubernetes node label `topology.kubernetes.io/zone` or the deprecated label `failure-domain.beta.kubernetes.io/zone`.
                                 - `topology.istio.io/subzone` is used to match the subzone metadata of an endpoint, which maps to Istio node label `topology.istio.io/subzone`.
+                                - `kubernetes.io/hostname` is used to match the current node of an endpoint, which maps to Kubernetes node label `kubernetes.io/hostname`.
 
 
                               The below topology config indicates the following priority levels:
@@ -5394,9 +5466,6 @@ spec:
                         description: Configures whether to use an existing CNI installation
                           for workloads
                         properties:
-                          chained:
-                            description: 'Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.'
-                            type: boolean
                           enabled:
                             description: Controls whether CNI should be used.
                             type: boolean
@@ -5414,23 +5483,6 @@ spec:
                           This controls whether the mesh config map, generated from values.yaml is generated.
                           If false, pilot wil use default values or user-supplied values, in that order of preference.
                         type: boolean
-                      configNamespace:
-                        description: Namespace that the configuration management feature
-                          is installed into, if different from Pilot namespace.
-                        type: string
-                      configSource:
-                        description: |-
-                          ConfigSource describes a source of configuration data for networking
-                          rules, and other Istio configuration artifacts. Multiple data sources
-                          can be configured for a single control plane.
-                        properties:
-                          subscribedResources:
-                            description: Describes the source of configuration, if
-                              nothing is specified default is MCP.
-                            items:
-                              type: string
-                            type: array
-                        type: object
                       cpu:
                         description: |-
                           Target CPU utilization used in HorizontalPodAutoscaler.
@@ -5459,20 +5511,6 @@ spec:
 
                           See https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
                         type: object
-                      enableProtocolSniffingForInbound:
-                        description: |-
-                          Specifies whether protocol sniffing is enabled for inbound traffic.
-
-
-                          Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
-                        type: boolean
-                      enableProtocolSniffingForOutbound:
-                        description: |-
-                          Specifies whether protocol sniffing is enabled for outbound traffic.
-
-
-                          Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
-                        type: boolean
                       enabled:
                         description: Controls whether Pilot is enabled.
                         type: boolean
@@ -5704,6 +5742,11 @@ spec:
                         required:
                         - type
                         type: object
+                      serviceAccountAnnotations:
+                        additionalProperties:
+                          type: string
+                        description: K8s annotations for the service account
+                        type: object
                       serviceAnnotations:
                         additionalProperties:
                           type: string
@@ -5714,12 +5757,22 @@ spec:
                           See: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
                         type: object
                       tag:
-                        anyOf:
-                        - type: integer
-                        - type: string
                         description: The container image tag to pull. Image will be
                           `Hub/Image:Tag-Variant`.
-                        x-kubernetes-int-or-string: true
+                        type: string
+                      taint:
+                        properties:
+                          enabled:
+                            description: |-
+                              Enable the untaint controller for new nodes. This aims to solve a race for CNI installation on
+                              new nodes. For this to work, the newly added nodes need to have the istio CNI taint as they are
+                              added to the cluster. This is usually done by configuring the cluster infra provider.
+                            type: boolean
+                          namespace:
+                            description: The namespace of the CNI daemonset, incase
+                              it's not the same as istiod.
+                            type: string
+                        type: object
                       tolerations:
                         description: |-
                           The node tolerations to be applied to the Pilot deployment so that it can be
@@ -5956,13 +6009,11 @@ spec:
 
                           Allowed values: 0.0 to 1.0
                         type: number
-                      useMCP:
+                      trustedZtunnelNamespace:
                         description: |-
-                          Controls whether Pilot is configured through the Mesh Control Protocol (MCP).
-
-
-                          If set to true, Pilot requires an MCP server (like Galley) to be installed.
-                        type: boolean
+                          If set, `istiod` will allow connections from trusted node proxy ztunnels
+                          in the provided namespace.
+                        type: string
                       variant:
                         description: The container image variant to pull. Options
                           are "debug" or "distroless". Unset will use the default
@@ -7980,15 +8031,6 @@ spec:
                           the hello=world labels.\nThis is intended for advanced configuration
                           only; most users should use the built in template"
                         type: object
-                      useLegacySelectors:
-                        description: |-
-                          If enabled, the legacy webhook selection logic will be used. This relies on filtering of webhook
-                          requests in Istiod, rather than at the webhook selection level.
-                          This is option is intended for migration purposes only and will be removed in Istio 1.10.
-
-
-                          Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
-                        type: boolean
                     type: object
                   telemetry:
                     description: Controls whether telemetry is exported for Pilot.

@@ -335,8 +335,8 @@ gen-manifests: controller-gen ## Generate WebhookConfiguration and CustomResourc
 	$(CONTROLLER_GEN) crd:allowDangerousTypes=true webhook paths="./..." output:crd:artifacts:config=chart/crds
 
 # TODO: move this to versions.yaml or get the files via go.mod instead of downloading them
-ISTIO_REPO_BASE=https://raw.githubusercontent.com/istio/istio/0e7ecbd31f9524b063ced1f49f1a6f6e063d2bf5
-API_REPO_BASE=https://raw.githubusercontent.com/istio/api/ccd5cd40965ccba232d1f7c3b0e4ecacd0f6ceda
+ISTIO_REPO_BASE=https://raw.githubusercontent.com/istio/istio/09d06a301c5690143cb7b0e8c8a89f72b3305010
+API_REPO_BASE=https://raw.githubusercontent.com/istio/api/ef9163fb1200860099f1479cbfbf33214e5c0b07
 .PHONY: gen-api
 gen-api: ## Generate API types from upstream files.
 	# TODO: should we get these files from the local filesystem by inspecting go.mod?

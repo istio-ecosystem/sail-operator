@@ -1039,6 +1039,10 @@ spec:
                           enabled:
                             description: Controls whether ambient redirection is enabled
                             type: boolean
+                          ipv6:
+                            description: 'UNSTABLE: If enabled, and ambient is enabled,
+                              enables ipv6 support'
+                            type: boolean
                         type: object
                       chained:
                         description: |-
@@ -1079,11 +1083,17 @@ spec:
                           Image name to pull from. Image will be `Hub/Image:Tag-Variant`.
                           If Image contains a "/", it will replace the entire `image` in the pod.
                         type: string
-                      logLevel:
-                        description: |-
-                          Configuration log level of istio-cni binary. By default, istio-cni sends all logs to the UDS server.
-                          To see the logs, change global.logging.level to cni:debug.
-                        type: string
+                      logging:
+                        description: Same as `global.logging.level`, but will override
+                          it if set
+                        properties:
+                          level:
+                            description: |-
+                              Comma-separated minimum per-scope logging level of messages to output, in the form of <scope>:<level>,<scope>:<level>
+                              The control plane has different scopes depending on component, but can configure default log level across all components
+                              If empty, default scope and level will be used as configured in code
+                            type: string
+                        type: object
                       podAnnotations:
                         additionalProperties:
                           type: string
@@ -1117,6 +1127,10 @@ spec:
 
 
                           More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
+                        enum:
+                        - Always
+                        - Never
+                        - IfNotPresent
                         type: string
                       repair:
                         description: Configuration for the CNI Repair controller.
@@ -1176,12 +1190,9 @@ spec:
                               This requires no RBAC privilege, but will require the CNI agent to run as a privileged pod.
                             type: boolean
                           tag:
-                            anyOf:
-                            - type: integer
-                            - type: string
                             description: The container image tag to pull. Image will
                               be `Hub/Image:Tag-Variant`.
-                            x-kubernetes-int-or-string: true
+                            type: string
                         type: object
                       resource_quotas:
                         description: The resource quotas configration for the CNI
@@ -1292,12 +1303,9 @@ spec:
                         - type
                         type: object
                       tag:
-                        anyOf:
-                        - type: integer
-                        - type: string
                         description: The container image tag to pull. Image will be
                           `Hub/Image:Tag-Variant`.
-                        x-kubernetes-int-or-string: true
+                        type: string
                       variant:
                         description: The container image variant to pull. Options
                           are "debug" or "distroless". Unset will use the default
@@ -1377,6 +1385,10 @@ spec:
 
 
                           More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
+                        enum:
+                        - Always
+                        - Never
+                        - IfNotPresent
                         type: string
                       imagePullSecrets:
                         description: |-
@@ -1403,11 +1415,8 @@ spec:
                             type: string
                         type: object
                       tag:
-                        anyOf:
-                        - type: integer
-                        - type: string
                         description: Specifies the tag for the Istio CNI image.
-                        x-kubernetes-int-or-string: true
+                        type: string
                       variant:
                         description: The variant of the Istio container images to
                           use. Options are "debug" or "distroless". Unset will use
