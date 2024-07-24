@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"istio.io/istio/pkg/log"
 	"path"
 	"reflect"
 	"regexp"
@@ -105,7 +106,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, rev *v1alpha1.IstioRevision)
 
 	reconcileErr := r.doReconcile(ctx, rev)
 
-	log.Info("Reconciliation done. Updating status.")
 	statusErr := r.updateStatus(ctx, rev, reconcileErr)
 
 	return ctrl.Result{}, errors.Join(reconcileErr, statusErr)
@@ -273,6 +273,7 @@ func (r *Reconciler) updateStatus(ctx context.Context, rev *v1alpha1.IstioRevisi
 	}
 
 	if !reflect.DeepEqual(rev.Status, status) {
+		log.Infof("Reconciliation done. Updating the status of IstioRevision %q", rev.Name)
 		if err := r.Client.Status().Patch(ctx, rev, kube.NewStatusPatch(status)); err != nil {
 			errs.Add(fmt.Errorf("failed to patch status: %w", err))
 		}
