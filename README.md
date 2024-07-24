@@ -102,16 +102,16 @@ Create an instance of the `Istio` resource to install the Istio Control Plane.
 Use the `istio-sample-kubernetes.yaml` file on vanilla Kubernetes:
 
 ```sh
-# Namespace must exist prior to creating istio resource
-kubectl get ns istio-system || kubectl create ns istio-system
+# Create the istio-system namespace if it does not exist
+kubectl create ns istio-system
 kubectl apply -f chart/samples/istio-sample-kubernetes.yaml
 ```
 
 Use the `istio-sample-openshift.yaml` file on OpenShift:
 
 ```sh
-# Namespace must exist prior to creating istio resource
-kubectl get ns istio-system || kubectl create ns istio-system
+# Create the istio-system namespace if it does not exist
+kubectl create ns istio-system
 kubectl apply -f chart/samples/istio-sample-openshift.yaml
 ```
 
@@ -119,7 +119,7 @@ On OpenShift, you must also deploy the Istio CNI plugin by creating an instance 
 
 ```sh
 # Create the istio-cni namespace if it does not exist
-kubectl get ns istio-cni || kubectl create ns istio-cni
+kubectl create ns istio-cni
 kubectl apply -f chart/samples/istiocni-sample.yaml
 ```
 

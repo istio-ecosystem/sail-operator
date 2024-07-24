@@ -69,7 +69,7 @@ is installed. `Succeeded` should appear in the **Status** column.
 1. Create the `openshift-operators` namespace (if it does not already exist).
 
     ```bash
-    $ kubectl get ns openshift-operators || kubectl create ns openshift-operators
+    $ kubectl create namespace openshift-operators
     ```
 
 1. Create the `Subscription` object with the desired `spec.channel`.
@@ -82,7 +82,7 @@ is installed. `Succeeded` should appear in the **Status** column.
          name: sailoperator
          namespace: openshift-operators
        spec:
-         channel: "3.0-nightly"
+         channel: "0.1-nightly"
          installPlanApproval: Automatic
          name: sailoperator
          source: community-operators
@@ -95,7 +95,7 @@ is installed. `Succeeded` should appear in the **Status** column.
     ```bash
     $ kubectl get csv -n openshift-operators
     NAME                                     DISPLAY         VERSION                    REPLACES                                 PHASE
-    sailoperator.v3.0.0-nightly-2024-05-13   Sail Operator   3.0.0-nightly-2024-05-13   sailoperator.v3.0.0-nightly-2024-05-11   Succeeded
+    sailoperator.v0.1.0-nightly-2024-06-25   Sail Operator   0.1.0-nightly-2024-06-25   sailoperator.v0.1.0-nightly-2024-06-21   Succeeded
     ```
 
     `Succeeded` should appear in the sailoperator CSV `PHASE` column.
@@ -398,10 +398,10 @@ EOF
 
 ### Deploy Gateway and Bookinfo
 
-Create the bookinfo namespace and enable injection.
+Create the bookinfo namespace (if it doesn't already exist) and enable injection.
 
 ```sh
-kubectl get namespace bookinfo || kubectl create namespace bookinfo
+kubectl create namespace bookinfo
 kubectl label namespace bookinfo istio.io/rev=test
 ```
 
