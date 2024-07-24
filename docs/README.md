@@ -28,7 +28,7 @@
 - [Uninstalling](#uninstalling)
   - [Deleting Istio](#deleting-istio)
   - [Deleting IstioCNI](#deleting-istiocni)
-  - [Deleting the sail-operator](#deleting-the-sail-operator)
+  - [Deleting the Sail Operator](#deleting-the-sail-operator)
   - [Deleting the istio-system and istio-cni Projects](#deleting-the-istio-system-and-istiocni-projects)
   - [Decide whether you want to delete the CRDs as well](#decide-whether-you-want-to-delete-the-crds-as-well)
 
@@ -106,11 +106,11 @@ If you're not using OpenShift or simply want to install from source, follow the 
 
 The Sail-operator does not manage Gateways. You can deploy a gateway manually either through [gateway-api](https://istio.io/latest/docs/tasks/traffic-management/ingress/gateway-api/) or through [gateway injection](https://istio.io/latest/docs/setup/additional-setup/gateway/#deploying-a-gateway). As you are following the gateway installation instructions, skip the step to install Istio since this is handled by the Sail-operator.
 
-**Note:** The `IstioOperator` / `istioctl` example is separate from the Sail-operator. Setting `spec.components` or `spec.values.gateways` on your Sail-operator `Istio` resource **will not work**.
+**Note:** The `IstioOperator` / `istioctl` example is separate from the Sail-operator. Setting `spec.components` or `spec.values.gateways` on your Sail Operator `Istio` resource **will not work**.
 
 ## Update Strategy
 
-The sail-operator supports two update strategies to update the version of the Istio control plane: `InPlace` and `RevisionBased`. The default strategy is `InPlace`.
+The Sail Operator supports two update strategies to update the version of the Istio control plane: `InPlace` and `RevisionBased`. The default strategy is `InPlace`.
 
 ### InPlace
 When the `InPlace` strategy is used, the existing Istio control plane is replaced with a new version. The workload sidecars immediately connect to the new control plane. The workloads therefore don't need to be moved from one control plane instance to another.
@@ -118,7 +118,7 @@ When the `InPlace` strategy is used, the existing Istio control plane is replace
 #### Example using the InPlace strategy
 
 Prerequisites:
-* sail-operator is installed.
+* Sail Operator is installed.
 * `istioctl` is installed.
 
 Steps:
@@ -194,7 +194,7 @@ When the `RevisionBased` strategy is used, a new Istio control plane instance is
 #### Example using the RevisionBased strategy
 
 Prerequisites:
-* sail-operator needs to be installed.
+* Sail Operator is installed.
 * `istioctl` is installed.
 
 Steps:
