@@ -189,7 +189,7 @@ Steps:
     The column `VERSION` should match the new control plane version.
 
 ### RevisionBased
-When the `RevisionBased` strategy is used, a new Istio control plane instance is created for every change to the `Istio.spec.version` field. The old control plane remains in place until all workloads have been moved to the new control plane instance, this need to be done by the user by updating the label of the namespace and restarting all the pods. The old control plane will be deleted after a grace period specified in the `Istio` resource `Istio.spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds`.
+When the `RevisionBased` strategy is used, a new Istio control plane instance is created for every change to the `Istio.spec.version` field. The old control plane remains in place until all workloads have been moved to the new control plane instance. This needs to be done by the user by updating the namespace label and restarting all the pods. The old control plane will be deleted after the grace period specified in the `Istio` resource field `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds`.
 
 #### Example using the RevisionBased strategy
 
@@ -252,7 +252,7 @@ Steps:
     kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/release-1.22/samples/bookinfo/platform/kube/bookinfo.yaml
     ```
 
-7. Confirm proxy sidecar injection version match the control plane version.
+7. Confirm that the proxy version matches the control plane version.
 
     ```bash
     istioctl proxy-status 
@@ -320,11 +320,12 @@ Steps:
     $ kubectl get pods -n istio-system
     NAME                                      READY   STATUS    RESTARTS   AGE
     istiod-default-v1-21-2-7c4f4674c5-4g7n7   1/1     Running   0          94m
+
     $ kubectl get istiorevision -n istio-system
     NAME              READY   STATUS    IN USE   VERSION   AGE
     default-v1-21-2   True    Healthy   True     v1.21.2   94m
     ```
-    The old control plane and revision will be deleted after the grace period specified in the `Istio` resource `Istio.spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds`.
+    The old `IstioRevision` resource and the old control plane will be deleted when the grace period specified in the `Istio` resource field `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds` expires.
 
 ## Multi-cluster
 tbd
