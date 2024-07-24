@@ -128,7 +128,7 @@ Steps:
     kubectl create namespace istio-system
     ```
 
-2. Create the `Istio` resource
+2. Create the `Istio` resource.
 
     ```bash
     cat <<EOF | kubectl apply -f-
@@ -152,22 +152,22 @@ Steps:
     default   True    Healthy   True     v1.21.0   2m
     ```
 
-4. Create namespace `bookinfo` and deploy bookinfo application
+4. Create namespace `bookinfo` and deploy bookinfo application.
 
     ```bash
     kubectl create namespace bookinfo
     kubectl label namespace bookinfo istio-injection=enabled
     kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/release-1.22/samples/bookinfo/platform/kube/bookinfo.yaml
     ```
-Note: if the `Istio` resource name is other than `default`, you need to set the `istio.io/rev` label to the name of the `Istio` resource instead of adding the `istio-injection=enabled` label.
+    Note: if the `Istio` resource name is other than `default`, you need to set the `istio.io/rev` label to the name of the `Istio` resource instead of adding the `istio-injection=enabled` label.
 
-5. Perform the update of the control plane by changing the version in the Istio resource
+5. Perform the update of the control plane by changing the version in the Istio resource.
 
     ```bash
     kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v1.21.2"}}'
     ```
 
-6. Confirm the `Istio` resource version was updated
+6. Confirm the `Istio` resource version was updated.
 
     ```console
     $ kubectl get istio -n istio-system
@@ -175,18 +175,18 @@ Note: if the `Istio` resource name is other than `default`, you need to set the 
     default   1           1       1        Healthy           v1.21.2   12m
     ```
 
-7. Delete `bookinfo` pods to trigger sidecar injection with the new version
+7. Delete `bookinfo` pods to trigger sidecar injection with the new version.
 
     ```bash
     kubectl rollout restart deployment -n bookinfo
     ```
 
-8. Confirm that the new version is used in the sidecar
+8. Confirm that the new version is used in the sidecar.
 
     ```bash
     istioctl proxy-status 
     ```
-The column `VERSION` should match the new control plane version.
+    The column `VERSION` should match the new control plane version.
 
 ### RevisionBased
 When the `RevisionBased` strategy is used, a new Istio control plane instance is created for every change to the `Istio.spec.version` field. The old control plane remains in place until all workloads have been moved to the new control plane instance, this need to be done by the user by updating the label of the namespace and restarting all the pods. The old control plane will be deleted after a grace period specified in the `Istio` resource `Istio.spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds`.
@@ -205,7 +205,7 @@ Steps:
     kubectl create namespace istio-system
     ```
 
-2. Create the `Istio` resource
+2. Create the `Istio` resource.
 
     ```bash
     cat <<EOF | kubectl apply -f-
@@ -230,36 +230,36 @@ Steps:
     default   True    Healthy   True     v1.21.0   2m
     ```
 
-4. Get the `IstioRevision` name
+4. Get the `IstioRevision` name.
 
     ```console
     $ kubectl get istiorevision -n istio-system
     NAME              READY   STATUS    IN USE   VERSION   AGE
     default-v1-21-0   True    Healthy   False    v1.21.0   114s
     ```
-Note: `IstioRevision` name is in the format `<Istio resource name>-<version>`.
+    Note: `IstioRevision` name is in the format `<Istio resource name>-<version>`.
 
-5. Create `bookinfo` namespace and label it with the revision name
+5. Create `bookinfo` namespace and label it with the revision name.
 
     ```bash
     kubectl create namespace bookinfo
     kubectl label namespace bookinfo istio.io/rev=default-v1-21-0
     ```
 
-6. Deploy bookinfo application
+6. Deploy bookinfo application.
 
     ```bash
     kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/release-1.22/samples/bookinfo/platform/kube/bookinfo.yaml
     ```
 
-7. Confirm proxy sidecar injection version match the control plane version
+7. Confirm proxy sidecar injection version match the control plane version.
 
     ```bash
     istioctl proxy-status 
     ```
-The column `VERSION` should match the control plane version.
+    The column `VERSION` should match the control plane version.
 
-8. Update the control plane to a new version
+8. Update the control plane to a new version.
 
     ```bash
     kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v1.21.2"}}'
@@ -278,7 +278,7 @@ The column `VERSION` should match the control plane version.
     default-v1-21-2   True    Healthy   False    v1.21.2   4m45s
     ```
 
-10. Confirm there are two control plane pods running, one for each revision
+10. Confirm there are two control plane pods running, one for each revision.
 
     ```console
     $ kubectl get pods -n istio-system
@@ -292,29 +292,29 @@ The column `VERSION` should match the control plane version.
     ```bash
     istioctl proxy-status 
     ```
-The column `VERSION` should still match the old control plane version.
+    The column `VERSION` should still match the old control plane version.
 
-12. Change the label of the `bookinfo` namespace to use the new revision
+12. Change the label of the `bookinfo` namespace to use the new revision.
 
     ```bash
     kubectl label namespace bookinfo istio.io/rev=default-v1-21-2 --overwrite
     ```
-The existing workload sidecars will continue to run and will remain connected to the old control plane instance. They will not be replaced with a new version until the pods are deleted and recreated.
+    The existing workload sidecars will continue to run and will remain connected to the old control plane instance. They will not be replaced with a new version until the pods are deleted and recreated.
 
-13. Delete all the pods in the `bookinfo` namespace
+13. Delete all the pods in the `bookinfo` namespace.
 
     ```bash
     kubectl rollout restart deployment -n bookinfo
     ```
 
-14. Confirm the new version is used in the sidecars
+14. Confirm the new version is used in the sidecars.
 
     ```bash
     istioctl proxy-status 
     ```
-The column `VERSION` should match the updated control plane version.
+    The column `VERSION` should match the updated control plane version.
 
-15. Confirm the old control plane and revision deletion
+15. Confirm the old control plane and revision deletion.
 
     ```console
     $ kubectl get pods -n istio-system
@@ -324,7 +324,7 @@ The column `VERSION` should match the updated control plane version.
     NAME              READY   STATUS    IN USE   VERSION   AGE
     default-v1-21-2   True    Healthy   True     v1.21.2   94m
     ```
-The old control plane and revision will be deleted after the grace period specified in the `Istio` resource `Istio.spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds`.
+    The old control plane and revision will be deleted after the grace period specified in the `Istio` resource `Istio.spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds`.
 
 ## Multicluster
 tbd
