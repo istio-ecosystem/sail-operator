@@ -25,6 +25,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
+	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
@@ -188,8 +189,14 @@ func (r *Reconciler) uninstallHelmCharts(ctx context.Context, rev *v1alpha1.Isti
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+	logger := mgr.GetLogger().WithName("ctrlr").WithName("istiorev")
+
+	// mainObjectHandler handles the IstioRevision watch events
+	mainObjectHandler := enqueuelogger.WrapIfNecessary(v1alpha1.IstioRevisionKind, logger, &handler.EnqueueRequestForObject{})
+
 	// ownedResourceHandler handles resources that are owned by the IstioRevision CR
-	ownedResourceHandler := handler.EnqueueRequestForOwner(r.Scheme, r.RESTMapper(), &v1alpha1.IstioRevision{}, handler.OnlyControllerOwner())
+	ownedResourceHandler := enqueuelogger.WrapIfNecessary(v1alpha1.IstioRevisionKind, logger,
+		handler.EnqueueRequestForOwner(r.Scheme, r.RESTMapper(), &v1alpha1.IstioRevision{}, handler.OnlyControllerOwner()))
 
 	// nsHandler triggers reconciliation in two cases:
 	// - when a namespace that is referenced in IstioRevision.spec.namespace is
@@ -197,23 +204,25 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// - when a namespace that references the IstioRevision CR via the istio.io/rev
 	//   or istio-injection labels is updated, so that the InUse condition of
 	//   the IstioRevision CR is updated.
-	nsHandler := handler.EnqueueRequestsFromMapFunc(r.mapNamespaceToReconcileRequest)
+	nsHandler := enqueuelogger.WrapIfNecessary(v1alpha1.IstioRevisionKind, logger, handler.EnqueueRequestsFromMapFunc(r.mapNamespaceToReconcileRequest))
 
 	// podHandler handles pods that reference the IstioRevision CR via the istio.io/rev or sidecar.istio.io/inject labels.
 	// The handler triggers the reconciliation of the referenced IstioRevision CR so that its InUse condition is updated.
-	podHandler := handler.EnqueueRequestsFromMapFunc(r.mapPodToReconcileRequest)
+	podHandler := enqueuelogger.WrapIfNecessary(v1alpha1.IstioRevisionKind, logger, handler.EnqueueRequestsFromMapFunc(r.mapPodToReconcileRequest))
 
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
 			LogConstructor: func(req *reconcile.Request) logr.Logger {
-				log := mgr.GetLogger().WithName("ctrlr").WithName("istiorev")
+				log := logger
 				if req != nil {
 					log = log.WithValues("IstioRevision", req.Name)
 				}
 				return log
 			},
 		}).
-		For(&v1alpha1.IstioRevision{}).
+		// we use Watches() instead of For(), so that we can wrap the handler so that events that cause the object to be enqueued are logged
+		Watches(&v1alpha1.IstioRevision{}, mainObjectHandler).
+		Named("istiorevision").
 
 		// namespaced resources
 		Watches(&corev1.ConfigMap{}, ownedResourceHandler).
