@@ -388,6 +388,7 @@ CONFIG_API_DOCS_GEN_PATH := ./hack/api-docs/config.yaml
 gen-api-docs: ## Generate API documentation.
 	@echo "Generating API documentation..."
 	@echo "CRD_PATH: $(CRD_PATH)"
+	mkdir -p $(OUTPUT_DOCS_PATH)
 	go run github.com/elastic/crd-ref-docs \
 		--source-path=$(CRD_PATH) \
 		--config=$(CONFIG_API_DOCS_GEN_PATH) \
