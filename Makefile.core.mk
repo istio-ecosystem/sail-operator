@@ -375,7 +375,7 @@ gen-charts: ## Pull charts from istio repository.
 	@hack/copy-crds.sh "resources/$$(yq eval '.crdSourceVersion' $(VERSIONS_YAML_FILE))/charts"
 
 .PHONY: gen
-gen: operator-name controller-gen gen-api gen-charts gen-manifests gen-code bundle ## Generate everything.
+gen: operator-name controller-gen gen-api gen-charts gen-manifests gen-code bundle gen-api-docs ## Generate everything.
 
 .PHONY: gen-check
 gen-check: gen restore-manifest-dates check-clean-repo ## Verify that changes in generated resources have been checked in.
