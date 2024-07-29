@@ -183,6 +183,8 @@ make manifests
 
 More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
 
+The API reference documentation can be found in the [docs](https://github.com/istio-ecosystem/sail-operator/tree/main/docs/api-reference/operator.istio.io.md)
+
 ### Writing Tests
 
 Please try to keep business logic in separate packages that can be independently tested wherever possible, especially if you can avoid the usage of Kubernetes clients. It greatly simplifies testing if we don't need to use envtest everywhere.
