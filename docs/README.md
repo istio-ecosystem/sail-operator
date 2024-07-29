@@ -4,6 +4,7 @@
 
 - [User Documentation](#user-documentation)
 - [Concepts](#concepts)
+- [API Reference documentation](#api-reference-documentation)
 - [Getting Started](#getting-started)
   - [Installation on OpenShift](#installation-on-openshift)
     - [Installing through the web console](#installing-through-the-web-console)
@@ -38,6 +39,9 @@ tbd
 
 ## Concepts
 tbd
+
+## API Reference documentation
+The Sail Operator API reference documentation can be found [here](https://github.com/istio-ecosystem/sail-operator/tree/main/docs/api-reference/operator.istio.io.md).
 
 ## Getting Started
 
