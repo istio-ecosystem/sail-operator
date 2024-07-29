@@ -380,6 +380,22 @@ gen: operator-name controller-gen gen-api gen-charts gen-manifests gen-code bund
 .PHONY: gen-check
 gen-check: gen restore-manifest-dates check-clean-repo ## Verify that changes in generated resources have been checked in.
 
+.PHONY: gen-api-docs
+CRD_PATH := ./api
+OUTPUT_DOCS_PATH := ./docs/api-reference
+CONFIG_API_DOCS_GEN_PATH := ./hack/api-docs/config.yaml
+
+gen-api-docs: ## Generate API documentation.
+	@echo "Generating API documentation..."
+	@echo "CRD_PATH: $(CRD_PATH)"
+	go run github.com/elastic/crd-ref-docs \
+		--source-path=$(CRD_PATH) \
+		--config=$(CONFIG_API_DOCS_GEN_PATH) \
+		--renderer=markdown \
+		--output-path=$(OUTPUT_DOCS_PATH) \
+		--output-mode=group
+	@echo "API reference documentation generated at $(OUTPUT_DOCS_PATH)"
+
 .PHONY: restore-manifest-dates
 restore-manifest-dates:
 ifneq "${BUNDLE_MANIFEST_DATE}" ""
