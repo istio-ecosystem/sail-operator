@@ -1,9 +1,9 @@
-apiVersion: v1
-kind: Config
-spec:
-  outputPath: ./docs/api-reference
-  renderer: markdown
-  outputMode: group
+processor:
+  customMarkers:
+  - name: hidefromdoc
+    target: field
+  - name: hidefromdoc
+    target: type
 render:
   # Version of Kubernetes to use when generating links to Kubernetes API documentation.
   kubernetesVersion: 1.25
