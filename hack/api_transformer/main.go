@@ -273,6 +273,7 @@ func (t *FileTransformer) processFile() (*ast.File, error) {
 	t.renameImports(file)
 	fixNames(file)
 	hideFromDocs(file)
+	replaceTabsWithHeadings(file)
 	removeEmptyBlocks(file)
 
 	return file, nil
@@ -338,6 +339,22 @@ func hideFromDocs(file *ast.File) {
 	})
 }
 
+func replaceTabsWithHeadings(file *ast.File) {
+	ast.Inspect(file, func(n ast.Node) bool {
+		switch x := n.(type) {
+		case *ast.GenDecl:
+			convertTabsToHeadings(x.Doc)
+		case *ast.TypeSpec:
+			convertTabsToHeadings(x.Doc)
+		case *ast.ValueSpec:
+			convertTabsToHeadings(x.Doc)
+		case *ast.Field:
+			convertTabsToHeadings(x.Doc)
+		}
+		return true
+	})
+}
+
 func convertHideFromDocs(doc *ast.CommentGroup) {
 	if doc == nil {
 		return
@@ -347,6 +364,49 @@ func convertHideFromDocs(doc *ast.CommentGroup) {
 			comment.Text = "// +hidefromdoc"
 		}
 	}
+}
+
+func convertTabsToHeadings(doc *ast.CommentGroup) {
+	if doc == nil {
+		return
+	}
+
+	var newComments []*ast.Comment
+	inTabset := false
+
+	for _, comment := range doc.List {
+		text := comment.Text
+
+		if strings.Contains(text, "{{<tabset") {
+			inTabset = true
+			newComments = append(newComments, &ast.Comment{Text: "//"})
+			continue
+		}
+
+		if inTabset {
+			if strings.Contains(text, "{{<tab name=") {
+				// Extract the tab name and convert it to a heading
+				start := strings.Index(text, "name=\"") + len("name=\"")
+				end := strings.Index(text[start:], "\"") + start
+				heading := text[start:end]
+				newComments = append(newComments, &ast.Comment{Text: "// #### " + heading}) // #### Heading
+			} else if strings.Contains(text, "{{</tab>}}") || strings.Contains(text, "{{</tabset") {
+				// Skip these lines
+				if strings.Contains(text, "{{</tabset>}}") {
+					// Set to false after the last tabset
+					inTabset = false
+				}
+				// Add a newline to separate the headings
+				newComments = append(newComments, &ast.Comment{Text: "//"})
+			} else {
+				newComments = append(newComments, comment)
+			}
+		} else {
+			newComments = append(newComments, comment)
+		}
+	}
+
+	doc.List = newComments
 }
 
 func addTag(node ast.Node, text string) {

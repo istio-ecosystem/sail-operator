@@ -230,8 +230,7 @@ For example, the following rule configures a client to use mutual TLS
 for connections to upstream database cluster.
 
 
-{{<tabset category-name="example">}}
-{{<tab name="v1alpha3" category-value="v1alpha3">}}
+#### v1alpha3
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
@@ -254,10 +253,9 @@ spec:
 
 
 ```
-{{</tab>}}
 
 
-{{<tab name="v1beta1" category-value="v1beta1">}}
+#### v1beta1
 ```yaml
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
@@ -280,16 +278,13 @@ spec:
 
 
 ```
-{{</tab>}}
-{{</tabset>}}
 
 
 The following rule configures a client to use TLS when talking to a
 foreign service whose domain matches *.foo.com.
 
 
-{{<tabset category-name="example">}}
-{{<tab name="v1alpha3" category-value="v1alpha3">}}
+#### v1alpha3
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
@@ -309,10 +304,9 @@ spec:
 
 
 ```
-{{</tab>}}
 
 
-{{<tab name="v1beta1" category-value="v1beta1">}}
+#### v1beta1
 ```yaml
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
@@ -332,16 +326,13 @@ spec:
 
 
 ```
-{{</tab>}}
-{{</tabset>}}
 
 
 The following rule configures a client to use Istio mutual TLS when talking
 to rating services.
 
 
-{{<tabset category-name="example">}}
-{{<tab name="v1alpha3" category-value="v1alpha3">}}
+#### v1alpha3
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
@@ -361,10 +352,9 @@ spec:
 
 
 ```
-{{</tab>}}
 
 
-{{<tab name="v1beta1" category-value="v1beta1">}}
+#### v1beta1
 ```yaml
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
@@ -384,8 +374,6 @@ spec:
 
 
 ```
-{{</tab>}}
-{{</tabset>}}
 
 
 
@@ -572,8 +560,7 @@ A retry will be attempted if there is a connect-failure, refused_stream
 or when the upstream server responds with Service Unavailable(503).
 
 
-{{<tabset category-name="example">}}
-{{<tab name="v1alpha3" category-value="v1alpha3">}}
+#### v1alpha3
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
@@ -600,10 +587,9 @@ spec:
 
 
 ```
-{{</tab>}}
 
 
-{{<tab name="v1beta1" category-value="v1beta1">}}
+#### v1beta1
 ```yaml
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
@@ -630,8 +616,6 @@ spec:
 
 
 ```
-{{</tab>}}
-{{</tabset>}}
 
 
 
