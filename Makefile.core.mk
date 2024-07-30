@@ -384,6 +384,7 @@ gen-check: gen restore-manifest-dates check-clean-repo ## Verify that changes in
 CRD_PATH := ./api
 OUTPUT_DOCS_PATH := ./docs/api-reference
 CONFIG_API_DOCS_GEN_PATH := ./hack/api-docs/config.yaml
+TEMPLATES_DIR := ./hack/api-docs/templates/markdown
 
 gen-api-docs: ## Generate API documentation.
 	@echo "Generating API documentation..."
@@ -391,6 +392,7 @@ gen-api-docs: ## Generate API documentation.
 	mkdir -p $(OUTPUT_DOCS_PATH)
 	go run github.com/elastic/crd-ref-docs \
 		--source-path=$(CRD_PATH) \
+		--templates-dir=$(TEMPLATES_DIR) \
 		--config=$(CONFIG_API_DOCS_GEN_PATH) \
 		--renderer=markdown \
 		--output-path=$(OUTPUT_DOCS_PATH) \

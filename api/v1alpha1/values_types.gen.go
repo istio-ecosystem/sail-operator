@@ -995,7 +995,7 @@ const (
 	MeshConfigIngressControllerModeStrict MeshConfigIngressControllerMode = "STRICT"
 )
 
-// $hide_from_docs
+// +hidefromdoc
 // +kubebuilder:validation:Enum=NONE;MUTUAL_TLS
 type MeshConfigAuthPolicy string
 
@@ -1055,7 +1055,7 @@ const (
 type MeshConfigExtensionProviderOpenCensusAgentTracingProviderTraceContext string
 
 const (
-	// $hide_from_docs
+	// +hidefromdoc
 	// Unspecified context. Should not be used for now, but added to reserve
 	// the 0 enum value if TraceContext is used outside of a repeated field.
 	MeshConfigExtensionProviderOpenCensusAgentTracingProviderTraceContextUnspecified MeshConfigExtensionProviderOpenCensusAgentTracingProviderTraceContext = "UNSPECIFIED"
@@ -1122,7 +1122,7 @@ type MeshConfig struct {
 	// Connection timeout used by Envoy. (MUST BE >=1ms)
 	// Default timeout is 10s.
 	ConnectTimeout *metav1.Duration `json:"connectTimeout,omitempty"`
-	// $hide_from_docs
+	// +hidefromdoc
 	// Automatic protocol detection uses a set of heuristics to
 	// determine whether the connection is using TLS or not (on the
 	// server side), as well as the application protocol being used
@@ -1330,14 +1330,14 @@ type MeshConfig struct {
 	// - `%SERVICE_FQDN%_%SERVICE_PORT%` will use `reviews.prod.svc.cluster.local_7443` as the stats name.
 	// - `%SERVICE%` will use reviews.prod as the stats name.
 	OutboundClusterStatName string `json:"outboundClusterStatName,omitempty"`
-	// $hide_from_docs
+	// +hidefromdoc
 	// Configure the provision of certificates.
 	//
 	// Note: Deprecated, please refer to Cert-Manager or other cert provisioning solutions to sign DNS certificates.
 	//
 	// Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
 	Certificates []*Certificate `json:"certificates,omitempty"`
-	// $hide_from_docs
+	// +hidefromdoc
 	// Settings to be applied to select services.
 	ServiceSettings []*MeshConfigServiceSettings `json:"serviceSettings,omitempty"`
 	// If enabled, Istio agent will merge metrics exposed by the application with metrics from Envoy
@@ -1350,7 +1350,7 @@ type MeshConfig struct {
 	// `prometheus.istio.io/merge-metrics: "false"` annotation.
 	// If not specified, this will be enabled by default.
 	EnablePrometheusMerge *bool `json:"enablePrometheusMerge,omitempty"`
-	// $hide_from_docs
+	// +hidefromdoc
 	// `VerifyCertificateAtClient` sets the mesh global default for peer certificate validation
 	// at the client-side proxy when `SIMPLE` TLS or `MUTUAL` TLS (non `ISTIO_MUTUAL`) origination
 	// modes are used. This setting can be overridden at the host level via DestinationRule API.
@@ -1374,7 +1374,7 @@ type MeshConfig struct {
 	//
 	// Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
 	VerifyCertificateAtClient *bool `json:"verifyCertificateAtClient,omitempty"`
-	// $hide_from_docs
+	// +hidefromdoc
 	// If specified, Istiod will authorize and forward the CSRs from the workloads to the specified external CA
 	// using the Istio CA gRPC API.
 	Ca *MeshConfigCA `json:"ca,omitempty"`
@@ -1468,7 +1468,7 @@ type ConfigSource struct {
 	SubscribedResources []Resource `json:"subscribedResources,omitempty"`
 }
 
-// $hide_from_docs
+// +hidefromdoc
 // Certificate configures the provision of a certificate and its key.
 // Example 1: key and cert stored in a secret
 // ```
@@ -1534,7 +1534,7 @@ type MeshConfigCertificateData struct {
 	TrustDomains []string `json:"trustDomains,omitempty"`
 }
 
-// $hide_from_docs
+// +hidefromdoc
 // Settings to be applied to select services.
 //
 // For example, the following configures all services in namespace "foo" as well as the
@@ -1596,7 +1596,7 @@ type MeshConfigExtensionProvider struct {
 	// Configures a tracing provider that uses the Zipkin API.
 	Zipkin *MeshConfigExtensionProviderZipkinTracingProvider `json:"zipkin,omitempty"`
 
-	// $hide_from_docs
+	// +hidefromdoc
 	// Configures a Lightstep tracing provider.
 	// Deprecated: For Istio 1.15+, please use an OpenTelemetryTracingProvider instead, more details can be found at https://github.com/istio/istio/issues/40027
 	//
@@ -1609,7 +1609,7 @@ type MeshConfigExtensionProvider struct {
 	// Configures a Stackdriver provider.
 	Stackdriver *MeshConfigExtensionProviderStackdriverProvider `json:"stackdriver,omitempty"`
 
-	// $hide_from_docs
+	// +hidefromdoc
 	// Configures an OpenCensusAgent tracing provider.
 	// Deprecated: OpenCensus is deprecated, more details can be found at https://opentelemetry.io/blog/2023/sunsetting-opencensus/
 	//
@@ -1926,25 +1926,25 @@ type MeshConfigExtensionProviderSkyWalkingTracingProvider struct {
 // driver in Envoy.
 type MeshConfigExtensionProviderStackdriverProvider struct {
 	// debug enables trace output to stdout.
-	// $hide_from_docs
+	// +hidefromdoc
 	//
 	// Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
 	Debug bool `json:"debug,omitempty"`
 	// The global default max number of attributes per span.
 	// default is 200.
-	// $hide_from_docs
+	// +hidefromdoc
 	//
 	// Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
 	MaxNumberOfAttributes *int64 `json:"maxNumberOfAttributes,omitempty"`
 	// The global default max number of annotation events per span.
 	// default is 200.
-	// $hide_from_docs
+	// +hidefromdoc
 	//
 	// Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
 	MaxNumberOfAnnotations *int64 `json:"maxNumberOfAnnotations,omitempty"`
 	// The global default max number of message events per span.
 	// default is 200.
-	// $hide_from_docs
+	// +hidefromdoc
 	//
 	// Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
 	MaxNumberOfMessageEvents *int64 `json:"maxNumberOfMessageEvents,omitempty"`
@@ -2424,7 +2424,7 @@ const (
 type TracingOpenCensusAgentTraceContext string
 
 const (
-	// $hide_from_docs
+	// +hidefromdoc
 	// Unspecified context. Should not be used for now, but added to reserve
 	// the 0 enum value if TraceContext is used outside of a repeated field.
 	TracingOpenCensusAgentTraceContextUnspecified TracingOpenCensusAgentTraceContext = "UNSPECIFIED"
@@ -2522,12 +2522,12 @@ type Tracing struct {
 	//	    default_value: defaulted-value-from-custom-header
 	//
 	// ```
-	// $hide_from_docs
+	// +hidefromdoc
 	CustomTags map[string]*TracingCustomTag `json:"customTags,omitempty"`
 	// Configures the maximum length of the request path to extract and include in the
 	// HttpUrl tag. Used to truncate length request paths to meet the needs of tracing
 	// backend. If not set, then a length of 256 will be used.
-	// $hide_from_docs
+	// +hidefromdoc
 	MaxPathTagLength uint32 `json:"maxPathTagLength,omitempty"`
 	// The percentage of requests (0.0 - 100.0) that will be randomly selected for trace generation,
 	// if not requested by the client or not forced. Default is 1.0.
@@ -2541,7 +2541,7 @@ type Tracing struct {
 // SDS defines secret discovery service(SDS) configuration to be used by the proxy.
 // For workload, its values are set in sidecar injector(passed as arguments to istio-proxy container).
 // For pilot/mixer, it's passed as arguments to istio-proxy container in pilot/mixer deployment yaml files directly.
-// $hide_from_docs
+// +hidefromdoc
 type SDS struct {
 	// True if SDS is enabled.
 	Enabled bool `json:"enabled,omitempty"`
@@ -2648,7 +2648,7 @@ type MeshConfigProxyConfig struct {
 	// Address of the discovery service exposing xDS with mTLS connection.
 	// The inject configuration may override this value.
 	DiscoveryAddress string `json:"discoveryAddress,omitempty"`
-	// $hide_from_docs
+	// +hidefromdoc
 	//
 	// Deprecated: Marked as deprecated in mesh/v1alpha1/proxy.proto.
 	DiscoveryRefreshDelay *metav1.Duration `json:"discoveryRefreshDelay,omitempty"`
@@ -2659,14 +2659,14 @@ type MeshConfigProxyConfig struct {
 	ZipkinAddress string `json:"zipkinAddress,omitempty"`
 	// IP Address and Port of a statsd UDP listener (e.g. `10.75.241.127:9125`).
 	StatsdUdpAddress string `json:"statsdUdpAddress,omitempty"`
-	// $hide_from_docs
+	// +hidefromdoc
 	//
 	// Deprecated: Marked as deprecated in mesh/v1alpha1/proxy.proto.
 	EnvoyMetricsServiceAddress string `json:"envoyMetricsServiceAddress,omitempty"`
 	// Port on which Envoy should listen for administrative commands.
 	// Default port is `15000`.
 	ProxyAdminPort int32 `json:"proxyAdminPort,omitempty"`
-	// $hide_from_docs
+	// +hidefromdoc
 	//
 	// Deprecated: Marked as deprecated in mesh/v1alpha1/proxy.proto.
 	AvailabilityZone string `json:"availabilityZone,omitempty"`
@@ -2694,7 +2694,7 @@ type MeshConfigProxyConfig struct {
 	// Tracing configuration to be used by the proxy.
 	Tracing *Tracing `json:"tracing,omitempty"`
 	// Secret Discovery Service(SDS) configuration to be used by the proxy.
-	// $hide_from_docs
+	// +hidefromdoc
 	//
 	// Deprecated: Marked as deprecated in mesh/v1alpha1/proxy.proto.
 	Sds *SDS `json:"sds,omitempty"`
@@ -2840,7 +2840,7 @@ type TracingZipkin struct {
 	Address string `json:"address,omitempty"`
 }
 
-// $hide_from_docs
+// +hidefromdoc
 // Defines configuration for a Lightstep tracer.
 type TracingLightstep struct {
 	// Address of the Lightstep Satellite pool.
@@ -2861,19 +2861,19 @@ type TracingDatadog struct {
 // [OpenCensus trace config](https://github.com/census-instrumentation/opencensus-proto/blob/master/src/opencensus/proto/trace/v1/trace_config.proto) for details.
 type TracingStackdriver struct {
 	// debug enables trace output to stdout.
-	// $hide_from_docs
+	// +hidefromdoc
 	Debug bool `json:"debug,omitempty"`
 	// The global default max number of attributes per span.
 	// default is 200.
-	// $hide_from_docs
+	// +hidefromdoc
 	MaxNumberOfAttributes *int64 `json:"maxNumberOfAttributes,omitempty"`
 	// The global default max number of annotation events per span.
 	// default is 200.
-	// $hide_from_docs
+	// +hidefromdoc
 	MaxNumberOfAnnotations *int64 `json:"maxNumberOfAnnotations,omitempty"`
 	// The global default max number of message events per span.
 	// default is 200.
-	// $hide_from_docs
+	// +hidefromdoc
 	MaxNumberOfMessageEvents *int64 `json:"maxNumberOfMessageEvents,omitempty"`
 }
 
@@ -2898,7 +2898,7 @@ type TracingOpenCensusAgent struct {
 
 // Configure custom tags that will be added to any active span.
 // Tags can be generated via literals, environment variables or an incoming request header.
-// $hide_from_docs
+// +hidefromdoc
 // +kubebuilder:validation:XValidation:message="At most one of [literal environment header] should be set",rule="(has(self.literal)?1:0) + (has(self.environment)?1:0) + (has(self.header)?1:0) <= 1"
 type TracingCustomTag struct {
 	// The custom tag's value is the specified literal.
@@ -2914,14 +2914,14 @@ type TracingCustomTag struct {
 }
 
 // Literal type represents a static value.
-// $hide_from_docs
+// +hidefromdoc
 type TracingLiteral struct {
 	// Static literal value used to populate the tag value.
 	Value string `json:"value,omitempty"`
 }
 
 // Environment is the proxy's environment variable to be used for populating the custom span tag.
-// $hide_from_docs
+// +hidefromdoc
 type TracingEnvironment struct {
 	// Name of the environment variable used to populate the tag's value
 	Name string `json:"name,omitempty"`
@@ -2933,7 +2933,7 @@ type TracingEnvironment struct {
 
 // RequestHeader is the HTTP request header which will be used to populate the span tag.
 // A default value can be configured if the header does not exist.
-// $hide_from_docs
+// +hidefromdoc
 type TracingRequestHeader struct {
 	// HTTP header name used to obtain the value from to populate the tag value.
 	Name string `json:"name,omitempty"`

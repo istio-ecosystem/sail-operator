@@ -1226,7 +1226,6 @@ spec:
                         type: string
                       ca:
                         description: |-
-                          $hide_from_docs
                           If specified, Istiod will authorize and forward the CSRs from the workloads to the specified external CA
                           using the Istio CA gRPC API.
                         properties:
@@ -1405,7 +1404,6 @@ spec:
                         type: array
                       certificates:
                         description: |-
-                          $hide_from_docs
                           Configure the provision of certificates.
 
 
@@ -1414,14 +1412,14 @@ spec:
 
                           Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
                         items:
-                          description: "$hide_from_docs\nCertificate configures the
-                            provision of a certificate and its key.\nExample 1: key
-                            and cert stored in a secret\n```\n{ secretName: galley-cert\n\n\n\t
-                            \ secretNamespace: istio-system\n\t  dnsNames:\n\t    -
-                            galley.istio-system.svc\n\t    - galley.mydomain.com\n\t}\n\n\n```\nExample
-                            2: key and cert stored in a directory\n```\n{ dnsNames:\n
-                            \ - pilot.istio-system\n  - pilot.istio-system.svc\n  -
-                            pilot.mydomain.com\n    }\n\n\n```"
+                          description: "Certificate configures the provision of a
+                            certificate and its key.\nExample 1: key and cert stored
+                            in a secret\n```\n{ secretName: galley-cert\n\n\n\t  secretNamespace:
+                            istio-system\n\t  dnsNames:\n\t    - galley.istio-system.svc\n\t
+                            \   - galley.mydomain.com\n\t}\n\n\n```\nExample 2: key
+                            and cert stored in a directory\n```\n{ dnsNames:\n  -
+                            pilot.istio-system\n  - pilot.istio-system.svc\n  - pilot.mydomain.com\n
+                            \   }\n\n\n```"
                           properties:
                             dnsNames:
                               description: |-
@@ -1584,11 +1582,7 @@ spec:
                           On Kubernetes, this can be overridden on individual pods with the `proxy.istio.io/config` annotation.
                         properties:
                           availabilityZone:
-                            description: |-
-                              $hide_from_docs
-
-
-                              Deprecated: Marked as deprecated in mesh/v1alpha1/proxy.proto.
+                            description: 'Deprecated: Marked as deprecated in mesh/v1alpha1/proxy.proto.'
                             type: string
                           binaryPath:
                             description: Path to the proxy binary
@@ -1635,11 +1629,7 @@ spec:
                               The inject configuration may override this value.
                             type: string
                           discoveryRefreshDelay:
-                            description: |-
-                              $hide_from_docs
-
-
-                              Deprecated: Marked as deprecated in mesh/v1alpha1/proxy.proto.
+                            description: 'Deprecated: Marked as deprecated in mesh/v1alpha1/proxy.proto.'
                             type: string
                           drainDuration:
                             description: |-
@@ -1928,11 +1918,7 @@ spec:
                                 type: object
                             type: object
                           envoyMetricsServiceAddress:
-                            description: |-
-                              $hide_from_docs
-
-
-                              Deprecated: Marked as deprecated in mesh/v1alpha1/proxy.proto.
+                            description: 'Deprecated: Marked as deprecated in mesh/v1alpha1/proxy.proto.'
                             type: string
                           extraStatTags:
                             description: |-
@@ -2375,7 +2361,6 @@ spec:
                           sds:
                             description: |-
                               Secret Discovery Service(SDS) configuration to be used by the proxy.
-                              $hide_from_docs
 
 
                               Deprecated: Marked as deprecated in mesh/v1alpha1/proxy.proto.
@@ -2439,7 +2424,6 @@ spec:
                                   description: |-
                                     Configure custom tags that will be added to any active span.
                                     Tags can be generated via literals, environment variables or an incoming request header.
-                                    $hide_from_docs
                                   properties:
                                     environment:
                                       description: |-
@@ -2490,7 +2474,7 @@ spec:
                                 description: "and gateways).\nThe key represents the
                                   name of the tag.\nEx:\n```yaml\ncustom_tags:\n\n\n\tnew_tag_name:\n\t
                                   \ header:\n\t    name: custom-http-header-name\n\t
-                                  \   default_value: defaulted-value-from-custom-header\n\n\n```\n$hide_from_docs"
+                                  \   default_value: defaulted-value-from-custom-header\n\n\n```"
                                 type: object
                               datadog:
                                 description: Use a Datadog tracer.
@@ -2518,7 +2502,6 @@ spec:
                                   Configures the maximum length of the request path to extract and include in the
                                   HttpUrl tag. Used to truncate length request paths to meet the needs of tracing
                                   backend. If not set, then a length of 256 will be used.
-                                  $hide_from_docs
                                 format: int32
                                 type: integer
                               openCensusAgent:
@@ -2560,29 +2543,24 @@ spec:
                                 description: Use a Stackdriver tracer.
                                 properties:
                                   debug:
-                                    description: |-
-                                      debug enables trace output to stdout.
-                                      $hide_from_docs
+                                    description: debug enables trace output to stdout.
                                     type: boolean
                                   maxNumberOfAnnotations:
                                     description: |-
                                       The global default max number of annotation events per span.
                                       default is 200.
-                                      $hide_from_docs
                                     format: int64
                                     type: integer
                                   maxNumberOfAttributes:
                                     description: |-
                                       The global default max number of attributes per span.
                                       default is 200.
-                                      $hide_from_docs
                                     format: int64
                                     type: integer
                                   maxNumberOfMessageEvents:
                                     description: |-
                                       The global default max number of message events per span.
                                       default is 200.
-                                      $hide_from_docs
                                     format: int64
                                     type: integer
                                 type: object
@@ -3434,7 +3412,6 @@ spec:
                               type: object
                             lightstep:
                               description: |-
-                                $hide_from_docs
                                 Configures a Lightstep tracing provider.
                                 Deprecated: For Istio 1.15+, please use an OpenTelemetryTracingProvider instead, more details can be found at https://github.com/istio/istio/issues/40027
 
@@ -3475,7 +3452,6 @@ spec:
                               type: string
                             opencensus:
                               description: |-
-                                $hide_from_docs
                                 Configures an OpenCensusAgent tracing provider.
                                 Deprecated: OpenCensus is deprecated, more details can be found at https://opentelemetry.io/blog/2023/sunsetting-opencensus/
 
@@ -3683,7 +3659,6 @@ spec:
                                 debug:
                                   description: |-
                                     debug enables trace output to stdout.
-                                    $hide_from_docs
 
 
                                     Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
@@ -3706,7 +3681,6 @@ spec:
                                   description: |-
                                     The global default max number of annotation events per span.
                                     default is 200.
-                                    $hide_from_docs
 
 
                                     Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
@@ -3716,7 +3690,6 @@ spec:
                                   description: |-
                                     The global default max number of attributes per span.
                                     default is 200.
-                                    $hide_from_docs
 
 
                                     Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
@@ -3726,7 +3699,6 @@ spec:
                                   description: |-
                                     The global default max number of message events per span.
                                     default is 200.
-                                    $hide_from_docs
 
 
                                     Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
@@ -4134,7 +4106,6 @@ spec:
                         type: object
                       protocolDetectionTimeout:
                         description: |-
-                          $hide_from_docs
                           Automatic protocol detection uses a set of heuristics to
                           determine whether the connection is using TLS or not (on the
                           server side), as well as the application protocol being used
@@ -4182,12 +4153,9 @@ spec:
                           type.
                         type: string
                       serviceSettings:
-                        description: |-
-                          $hide_from_docs
-                          Settings to be applied to select services.
+                        description: Settings to be applied to select services.
                         items:
                           description: |-
-                            $hide_from_docs
                             Settings to be applied to select services.
 
 
@@ -4332,7 +4300,6 @@ spec:
                         type: array
                       verifyCertificateAtClient:
                         description: |-
-                          $hide_from_docs
                           `VerifyCertificateAtClient` sets the mesh global default for peer certificate validation
                           at the client-side proxy when `SIMPLE` TLS or `MUTUAL` TLS (non `ISTIO_MUTUAL`) origination
                           modes are used. This setting can be overridden at the host level via DestinationRule API.

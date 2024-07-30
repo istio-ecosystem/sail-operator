@@ -272,6 +272,7 @@ func (t *FileTransformer) processFile() (*ast.File, error) {
 
 	t.renameImports(file)
 	fixNames(file)
+	hideFromDocs(file)
 	removeEmptyBlocks(file)
 
 	return file, nil
@@ -319,6 +320,33 @@ func fixNames(file *ast.File) {
 		}
 		return true
 	})
+}
+
+func hideFromDocs(file *ast.File) {
+	ast.Inspect(file, func(n ast.Node) bool {
+		switch x := n.(type) {
+		case *ast.GenDecl:
+			convertHideFromDocs(x.Doc)
+		case *ast.TypeSpec:
+			convertHideFromDocs(x.Doc)
+		case *ast.ValueSpec:
+			convertHideFromDocs(x.Doc)
+		case *ast.Field:
+			convertHideFromDocs(x.Doc)
+		}
+		return true
+	})
+}
+
+func convertHideFromDocs(doc *ast.CommentGroup) {
+	if doc == nil {
+		return
+	}
+	for _, comment := range doc.List {
+		if strings.HasPrefix(comment.Text, "// $hide_from_docs") {
+			comment.Text = "// +hidefromdoc"
+		}
+	}
 }
 
 func addTag(node ast.Node, text string) {
