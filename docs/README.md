@@ -78,19 +78,21 @@ is installed. `Succeeded` should appear in the **Status** column.
 
 1. Create the `Subscription` object with the desired `spec.channel`.
 
-    ```yaml
-    apiVersion: operators.coreos.com/v1alpha1
-    kind: Subscription
-    metadata:
-      name: sailoperator
-      namespace: openshift-operators
-    spec:
-      channel: "0.1-nightly"
-      installPlanApproval: Automatic
-      name: sailoperator
-      source: community-operators
-      sourceNamespace: openshift-marketplace
-    ```
+   ```bash
+   kubectl apply -f - <<EOF
+       apiVersion: operators.coreos.com/v1alpha1
+       kind: Subscription
+       metadata:
+         name: sailoperator
+         namespace: openshift-operators
+       spec:
+         channel: "0.1-nightly"
+         installPlanApproval: Automatic
+         name: sailoperator
+         source: community-operators
+         sourceNamespace: openshift-marketplace
+   EOF
+   ```
 
 1. Verify that the installation succeeded by inspecting the CSV status.
 
@@ -400,10 +402,10 @@ EOF
 
 ### Deploy Gateway and Bookinfo
 
-Create the bookinfo namespace and enable injection.
+Create the bookinfo namespace (if it doesn't already exist) and enable injection.
 
 ```sh
-kubectl get namespace bookinfo || kubectl create namespace bookinfo
+kubectl create namespace bookinfo
 kubectl label namespace bookinfo istio.io/rev=test
 ```
 
