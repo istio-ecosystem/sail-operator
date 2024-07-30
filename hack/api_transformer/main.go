@@ -251,6 +251,9 @@ func (t *FileTransformer) processFile() (*ast.File, error) {
 								removeOmitemptyFromJSONTag(field)
 								// TODO: remove pointer?
 							}
+							if strings.HasPrefix(comment.Text, "// $hide_from_docs") {
+								comment.Text = "// +hidefromdoc"
+							}
 						}
 					}
 
