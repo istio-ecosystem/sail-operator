@@ -1,6 +1,7 @@
 {{- define "type" -}}
 {{- $type := . -}}
 {{- if markdownShouldRenderType $type -}}
+{{- if not $type.Markers.hidefromdoc -}}
 
 #### {{ $type.Name }}
 
@@ -48,5 +49,6 @@ _Appears in:_
 {{ end -}}
 
 
+{{- end -}}
 {{- end -}}
 {{- end -}}

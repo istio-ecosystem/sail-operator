@@ -215,45 +215,6 @@ _Appears in:_
 | `global` _[CNIGlobalConfig](#cniglobalconfig)_ | Part of the global configuration applicable to the Istio CNI component. |  |  |
 
 
-#### Certificate
-
-
-
-$hide_from_docs
-Certificate configures the provision of a certificate and its key.
-Example 1: key and cert stored in a secret
-```
-{ secretName: galley-cert
-
-
-	  secretNamespace: istio-system
-	  dnsNames:
-	    - galley.istio-system.svc
-	    - galley.mydomain.com
-	}
-
-
-```
-Example 2: key and cert stored in a directory
-```
-{ dnsNames:
-  - pilot.istio-system
-  - pilot.istio-system.svc
-  - pilot.mydomain.com
-    }
-
-
-```
-
-
-
-_Appears in:_
-- [MeshConfig](#meshconfig)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `secretName` _string_ | Name of the secret the certificate and its key will be stored into.<br />If it is empty, it will not be stored into a secret.<br />Instead, the certificate and its key will be stored into a hard-coded directory. |  |  |
-| `dnsNames` _string array_ | The DNS names for the certificate. A certificate may contain<br />multiple DNS names. |  |  |
 
 
 #### ClientTLSSettings
@@ -2046,38 +2007,6 @@ _Appears in:_
 | `DECODE_AND_MERGE_SLASHES` | In addition to normalization in `MERGE_SLASHES`, slash characters are UTF-8 decoded (case insensitive) prior to merging.<br />This means `%2F`, `%2f`, `%5C`, and `%5c` sequences in the request path will be rewritten to `/` or `\`.<br />For example, `/a%2f/b` normalizes to `a/b`.<br /> |
 
 
-#### MeshConfigServiceSettings
-
-
-
-$hide_from_docs
-Settings to be applied to select services.
-
-
-For example, the following configures all services in namespace "foo" as well as the
-"bar" service in namespace "baz" to be considered cluster-local:
-
-
-```yaml
-serviceSettings:
-  - settings:
-    cluster_local: true
-    hosts:
-  - "*.foo.svc.cluster.local"
-  - "bar.baz.svc.cluster.local"
-
-
-```
-
-
-
-_Appears in:_
-- [MeshConfig](#meshconfig)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `settings` _[MeshConfigServiceSettingsSettings](#meshconfigservicesettingssettings)_ | The settings to apply to the selected services. |  |  |
-| `hosts` _string array_ | The services to which the Settings should be applied. Services are selected using the hostname<br />matching rules used by DestinationRule.<br /><br />For example: foo.bar.svc.cluster.local, *.baz.svc.cluster.local |  |  |
 
 
 #### MeshConfigServiceSettingsSettings
@@ -2677,24 +2606,6 @@ _Appears in:_
 | `inUse` _integer_ | Number of IstioRevisions that are currently in use. |  |  |
 
 
-#### SDS
-
-
-
-SDS defines secret discovery service(SDS) configuration to be used by the proxy.
-For workload, its values are set in sidecar injector(passed as arguments to istio-proxy container).
-For pilot/mixer, it's passed as arguments to istio-proxy container in pilot/mixer deployment yaml files directly.
-$hide_from_docs
-
-
-
-_Appears in:_
-- [MeshConfigProxyConfig](#meshconfigproxyconfig)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `enabled` _boolean_ | True if SDS is enabled. |  |  |
-| `k8sSaJwtPath` _string_ | Path of k8s service account JWT path. |  |  |
 
 
 #### SDSConfig
@@ -3032,7 +2943,6 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `zipkin` _[TracingZipkin](#tracingzipkin)_ | Use a Zipkin tracer. |  |  |
-| `lightstep` _[TracingLightstep](#tracinglightstep)_ | Use a Lightstep tracer.<br />NOTE: For Istio 1.15+, this configuration option will result<br />in using OpenTelemetry-based Lightstep integration. |  |  |
 | `datadog` _[TracingDatadog](#tracingdatadog)_ | Use a Datadog tracer. |  |  |
 | `stackdriver` _[TracingStackdriver](#tracingstackdriver)_ | Use a Stackdriver tracer. |  |  |
 | `openCensusAgent` _[TracingOpenCensusAgent](#tracingopencensusagent)_ | Use an OpenCensus tracer exporting to an OpenCensus agent. |  |  |
@@ -3055,53 +2965,10 @@ _Appears in:_
 
 
 
-#### TracingEnvironment
 
 
 
-Environment is the proxy's environment variable to be used for populating the custom span tag.
-$hide_from_docs
 
-
-
-_Appears in:_
-- [TracingCustomTag](#tracingcustomtag)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `name` _string_ | Name of the environment variable used to populate the tag's value |  |  |
-| `defaultValue` _string_ | When the environment variable is not found,<br />the tag's value will be populated with this default value if specified,<br />otherwise the tag will not be populated. |  |  |
-
-
-#### TracingLightstep
-
-_Underlying type:_ _[struct{Address string "json:\"address,omitempty\""; AccessToken string "json:\"accessToken,omitempty\""}](#struct{address-string-"json:\"address,omitempty\"";-accesstoken-string-"json:\"accesstoken,omitempty\""})_
-
-$hide_from_docs
-Defines configuration for a Lightstep tracer.
-
-
-
-_Appears in:_
-- [Tracing](#tracing)
-
-
-
-#### TracingLiteral
-
-
-
-Literal type represents a static value.
-$hide_from_docs
-
-
-
-_Appears in:_
-- [TracingCustomTag](#tracingcustomtag)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `value` _string_ | Static literal value used to populate the tag value. |  |  |
 
 
 #### TracingOpenCensusAgent
@@ -3124,23 +2991,6 @@ _Appears in:_
 
 
 
-#### TracingRequestHeader
-
-
-
-RequestHeader is the HTTP request header which will be used to populate the span tag.
-A default value can be configured if the header does not exist.
-$hide_from_docs
-
-
-
-_Appears in:_
-- [TracingCustomTag](#tracingcustomtag)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `name` _string_ | HTTP header name used to obtain the value from to populate the tag value. |  |  |
-| `defaultValue` _string_ | Default value to be used for the tag when the named HTTP header does not exist.<br />The tag will be skipped if no default value is provided. |  |  |
 
 
 #### TracingStackdriver

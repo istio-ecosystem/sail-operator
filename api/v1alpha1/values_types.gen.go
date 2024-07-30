@@ -995,7 +995,7 @@ const (
 	MeshConfigIngressControllerModeStrict MeshConfigIngressControllerMode = "STRICT"
 )
 
-// $hide_from_docs
+// +hidefromdoc
 // +kubebuilder:validation:Enum=NONE;MUTUAL_TLS
 type MeshConfigAuthPolicy string
 
@@ -1055,7 +1055,7 @@ const (
 type MeshConfigExtensionProviderOpenCensusAgentTracingProviderTraceContext string
 
 const (
-	// $hide_from_docs
+	// +hidefromdoc
 	// Unspecified context. Should not be used for now, but added to reserve
 	// the 0 enum value if TraceContext is used outside of a repeated field.
 	MeshConfigExtensionProviderOpenCensusAgentTracingProviderTraceContextUnspecified MeshConfigExtensionProviderOpenCensusAgentTracingProviderTraceContext = "UNSPECIFIED"
@@ -1468,7 +1468,7 @@ type ConfigSource struct {
 	SubscribedResources []Resource `json:"subscribedResources,omitempty"`
 }
 
-// $hide_from_docs
+// +hidefromdoc
 // Certificate configures the provision of a certificate and its key.
 // Example 1: key and cert stored in a secret
 // ```
@@ -1534,7 +1534,7 @@ type MeshConfigCertificateData struct {
 	TrustDomains []string `json:"trustDomains,omitempty"`
 }
 
-// $hide_from_docs
+// +hidefromdoc
 // Settings to be applied to select services.
 //
 // For example, the following configures all services in namespace "foo" as well as the
@@ -2424,7 +2424,7 @@ const (
 type TracingOpenCensusAgentTraceContext string
 
 const (
-	// $hide_from_docs
+	// +hidefromdoc
 	// Unspecified context. Should not be used for now, but added to reserve
 	// the 0 enum value if TraceContext is used outside of a repeated field.
 	TracingOpenCensusAgentTraceContextUnspecified TracingOpenCensusAgentTraceContext = "UNSPECIFIED"
@@ -2541,7 +2541,7 @@ type Tracing struct {
 // SDS defines secret discovery service(SDS) configuration to be used by the proxy.
 // For workload, its values are set in sidecar injector(passed as arguments to istio-proxy container).
 // For pilot/mixer, it's passed as arguments to istio-proxy container in pilot/mixer deployment yaml files directly.
-// $hide_from_docs
+// +hidefromdoc
 type SDS struct {
 	// True if SDS is enabled.
 	Enabled bool `json:"enabled,omitempty"`
@@ -2840,7 +2840,7 @@ type TracingZipkin struct {
 	Address string `json:"address,omitempty"`
 }
 
-// $hide_from_docs
+// +hidefromdoc
 // Defines configuration for a Lightstep tracer.
 type TracingLightstep struct {
 	// Address of the Lightstep Satellite pool.
@@ -2898,7 +2898,7 @@ type TracingOpenCensusAgent struct {
 
 // Configure custom tags that will be added to any active span.
 // Tags can be generated via literals, environment variables or an incoming request header.
-// $hide_from_docs
+// +hidefromdoc
 // +kubebuilder:validation:XValidation:message="At most one of [literal environment header] should be set",rule="(has(self.literal)?1:0) + (has(self.environment)?1:0) + (has(self.header)?1:0) <= 1"
 type TracingCustomTag struct {
 	// The custom tag's value is the specified literal.
@@ -2914,14 +2914,14 @@ type TracingCustomTag struct {
 }
 
 // Literal type represents a static value.
-// $hide_from_docs
+// +hidefromdoc
 type TracingLiteral struct {
 	// Static literal value used to populate the tag value.
 	Value string `json:"value,omitempty"`
 }
 
 // Environment is the proxy's environment variable to be used for populating the custom span tag.
-// $hide_from_docs
+// +hidefromdoc
 type TracingEnvironment struct {
 	// Name of the environment variable used to populate the tag's value
 	Name string `json:"name,omitempty"`
@@ -2933,7 +2933,7 @@ type TracingEnvironment struct {
 
 // RequestHeader is the HTTP request header which will be used to populate the span tag.
 // A default value can be configured if the header does not exist.
-// $hide_from_docs
+// +hidefromdoc
 type TracingRequestHeader struct {
 	// HTTP header name used to obtain the value from to populate the tag value.
 	Name string `json:"name,omitempty"`
