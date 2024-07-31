@@ -499,6 +499,8 @@ bundle: gen helm operator-sdk ## Generate bundle manifests and metadata, then va
 				git checkout "$$csvPath" || echo "failed to revert timestamp change. assuming we're in the middle of a merge"; \
 			fi \
 		fi
+
+	@hack/patch-csv.sh bundle/manifests/$(OPERATOR_NAME).clusterserviceversion.yaml
 	$(OPERATOR_SDK) bundle validate ./bundle
 
 .PHONY: bundle-build
