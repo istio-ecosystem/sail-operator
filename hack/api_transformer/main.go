@@ -272,8 +272,7 @@ func (t *FileTransformer) processFile() (*ast.File, error) {
 
 	t.renameImports(file)
 	fixNames(file)
-	hideFromDocs(file)
-	replaceTabsWithHeadings(file)
+	processDocs(file)
 	removeEmptyBlocks(file)
 
 	return file, nil
@@ -323,32 +322,20 @@ func fixNames(file *ast.File) {
 	})
 }
 
-func hideFromDocs(file *ast.File) {
+func processDocs(file *ast.File) {
 	ast.Inspect(file, func(n ast.Node) bool {
 		switch x := n.(type) {
 		case *ast.GenDecl:
 			convertHideFromDocs(x.Doc)
-		case *ast.TypeSpec:
-			convertHideFromDocs(x.Doc)
-		case *ast.ValueSpec:
-			convertHideFromDocs(x.Doc)
-		case *ast.Field:
-			convertHideFromDocs(x.Doc)
-		}
-		return true
-	})
-}
-
-func replaceTabsWithHeadings(file *ast.File) {
-	ast.Inspect(file, func(n ast.Node) bool {
-		switch x := n.(type) {
-		case *ast.GenDecl:
 			convertTabsToHeadings(x.Doc)
 		case *ast.TypeSpec:
+			convertHideFromDocs(x.Doc)
 			convertTabsToHeadings(x.Doc)
 		case *ast.ValueSpec:
+			convertHideFromDocs(x.Doc)
 			convertTabsToHeadings(x.Doc)
 		case *ast.Field:
+			convertHideFromDocs(x.Doc)
 			convertTabsToHeadings(x.Doc)
 		}
 		return true
@@ -371,42 +358,27 @@ func convertTabsToHeadings(doc *ast.CommentGroup) {
 		return
 	}
 
-	var newComments []*ast.Comment
 	inTabset := false
 
-	for _, comment := range doc.List {
-		text := comment.Text
-
-		if strings.Contains(text, "{{<tabset") {
+	for i, comment := range doc.List {
+		switch {
+		case strings.Contains(comment.Text, "{{<tabset"):
 			inTabset = true
-			newComments = append(newComments, &ast.Comment{Text: "//"})
-			continue
-		}
-
-		if inTabset {
-			if strings.Contains(text, "{{<tab name=") {
-				// Extract the tab name and convert it to a heading
-				start := strings.Index(text, "name=\"") + len("name=\"")
-				end := strings.Index(text[start:], "\"") + start
-				heading := text[start:end]
-				newComments = append(newComments, &ast.Comment{Text: "// #### " + heading}) // #### Heading
-			} else if strings.Contains(text, "{{</tab>}}") || strings.Contains(text, "{{</tabset") {
-				// Skip these lines
-				if strings.Contains(text, "{{</tabset>}}") {
-					// Set to false after the last tabset
-					inTabset = false
-				}
-				// Add a newline to separate the headings
-				newComments = append(newComments, &ast.Comment{Text: "//"})
-			} else {
-				newComments = append(newComments, comment)
+			doc.List[i] = &ast.Comment{Text: "//"}
+		case inTabset && strings.Contains(comment.Text, "{{<tab name="):
+			// Extract the tab name and convert it to a heading
+			start := strings.Index(comment.Text, "name=\"") + len("name=\"")
+			end := strings.Index(comment.Text[start:], "\"") + start
+			heading := comment.Text[start:end]
+			doc.List[i] = &ast.Comment{Text: "// #### " + heading} // #### Heading
+		case inTabset && (strings.Contains(comment.Text, "{{</tab>}}") || strings.Contains(comment.Text, "{{</tabset")):
+			// Handle closing tab or tabset tags
+			doc.List[i] = &ast.Comment{Text: "//"}
+			if strings.Contains(comment.Text, "{{</tabset>}}") {
+				inTabset = false
 			}
-		} else {
-			newComments = append(newComments, comment)
 		}
 	}
-
-	doc.List = newComments
 }
 
 func addTag(node ast.Node, text string) {
