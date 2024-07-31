@@ -272,7 +272,7 @@ func (t *FileTransformer) processFile() (*ast.File, error) {
 
 	t.renameImports(file)
 	fixNames(file)
-	hideFromDocs(file)
+	processDocs(file)
 	removeEmptyBlocks(file)
 
 	return file, nil
@@ -322,17 +322,21 @@ func fixNames(file *ast.File) {
 	})
 }
 
-func hideFromDocs(file *ast.File) {
+func processDocs(file *ast.File) {
 	ast.Inspect(file, func(n ast.Node) bool {
 		switch x := n.(type) {
 		case *ast.GenDecl:
 			convertHideFromDocs(x.Doc)
+			convertTabsToHeadings(x.Doc)
 		case *ast.TypeSpec:
 			convertHideFromDocs(x.Doc)
+			convertTabsToHeadings(x.Doc)
 		case *ast.ValueSpec:
 			convertHideFromDocs(x.Doc)
+			convertTabsToHeadings(x.Doc)
 		case *ast.Field:
 			convertHideFromDocs(x.Doc)
+			convertTabsToHeadings(x.Doc)
 		}
 		return true
 	})
@@ -345,6 +349,34 @@ func convertHideFromDocs(doc *ast.CommentGroup) {
 	for _, comment := range doc.List {
 		if strings.HasPrefix(comment.Text, "// $hide_from_docs") {
 			comment.Text = "// +hidefromdoc"
+		}
+	}
+}
+
+func convertTabsToHeadings(doc *ast.CommentGroup) {
+	if doc == nil {
+		return
+	}
+
+	inTabset := false
+
+	for i, comment := range doc.List {
+		switch {
+		case strings.Contains(comment.Text, "{{<tabset"):
+			inTabset = true
+			doc.List[i] = &ast.Comment{Text: "//"}
+		case inTabset && strings.Contains(comment.Text, "{{<tab name="):
+			// Extract the tab name and convert it to a heading
+			start := strings.Index(comment.Text, "name=\"") + len("name=\"")
+			end := strings.Index(comment.Text[start:], "\"") + start
+			heading := comment.Text[start:end]
+			doc.List[i] = &ast.Comment{Text: "// #### " + heading} // #### Heading
+		case inTabset && (strings.Contains(comment.Text, "{{</tab>}}") || strings.Contains(comment.Text, "{{</tabset")):
+			// Handle closing tab or tabset tags
+			doc.List[i] = &ast.Comment{Text: "//"}
+			if strings.Contains(comment.Text, "{{</tabset>}}") {
+				inTabset = false
+			}
 		}
 	}
 }
