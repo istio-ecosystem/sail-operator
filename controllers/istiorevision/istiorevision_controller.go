@@ -247,7 +247,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&admissionv1.MutatingWebhookConfiguration{}, ownedResourceHandler).
 		Watches(&admissionv1.ValidatingWebhookConfiguration{},
 			ownedResourceHandler,
-			builder.WithPredicates(validatingWebhookConfigPredicate{})).
+			builder.WithPredicates(validatingWebhookConfigPredicate())).
 
 		// +lint-watches:ignore: ValidatingAdmissionPolicy (TODO: fix this when CI supports golang 1.22 and k8s 1.30)
 		// +lint-watches:ignore: ValidatingAdmissionPolicyBinding (TODO: fix this when CI supports golang 1.22 and k8s 1.30)
@@ -494,23 +494,23 @@ func (r *Reconciler) mapPodToReconcileRequest(ctx context.Context, pod client.Ob
 	return nil
 }
 
-type validatingWebhookConfigPredicate struct {
-	predicate.Funcs
-}
+func validatingWebhookConfigPredicate() predicate.Funcs {
+	return predicate.Funcs{
+		UpdateFunc: func(e event.TypedUpdateEvent[client.Object]) bool {
+			if e.ObjectOld == nil || e.ObjectNew == nil {
+				return false
+			}
 
-func (v validatingWebhookConfigPredicate) Update(e event.UpdateEvent) bool {
-	if e.ObjectOld == nil || e.ObjectNew == nil {
-		return false
+			if matched, _ := regexp.MatchString("istiod-.*-validator|istio-validator.*", e.ObjectNew.GetName()); matched {
+				// Istiod updates the caBundle and failurePolicy fields in istiod-<ns>-validator and istio-validator[-<rev>]-<ns>
+				// webhook configs. We must ignore changes to these fields to prevent an endless update loop.
+				clearIgnoredFields(e.ObjectOld)
+				clearIgnoredFields(e.ObjectNew)
+				return !reflect.DeepEqual(e.ObjectNew, e.ObjectOld)
+			}
+			return true
+		},
 	}
-
-	if matched, _ := regexp.MatchString("istiod-.*-validator|istio-validator.*", e.ObjectNew.GetName()); matched {
-		// Istiod updates the caBundle and failurePolicy fields in istiod-<ns>-validator and istio-validator[-<rev>]-<ns>
-		// webhook configs. We must ignore changes to these fields to prevent an endless update loop.
-		clearIgnoredFields(e.ObjectOld)
-		clearIgnoredFields(e.ObjectNew)
-		return !reflect.DeepEqual(e.ObjectNew, e.ObjectOld)
-	}
-	return true
 }
 
 func clearIgnoredFields(obj client.Object) {
