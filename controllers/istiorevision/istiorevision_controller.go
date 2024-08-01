@@ -252,7 +252,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// +lint-watches:ignore: ValidatingAdmissionPolicy (TODO: fix this when CI supports golang 1.22 and k8s 1.30)
 		// +lint-watches:ignore: ValidatingAdmissionPolicyBinding (TODO: fix this when CI supports golang 1.22 and k8s 1.30)
 		// +lint-watches:ignore: CustomResourceDefinition (prevents `make lint-watches` from bugging us about CRDs)
-		Complete(reconciler.NewStandardReconcilerWithFinalizer(r.Client, &v1alpha1.IstioRevision{}, r.Reconcile, r.Finalize, constants.FinalizerName))
+		Complete(reconciler.NewStandardReconcilerWithFinalizer[*v1alpha1.IstioRevision](r.Client, r.Reconcile, r.Finalize, constants.FinalizerName))
 }
 
 func (r *Reconciler) determineStatus(ctx context.Context, rev *v1alpha1.IstioRevision, reconcileErr error) (v1alpha1.IstioRevisionStatus, error) {
