@@ -291,7 +291,7 @@ func TestReconcile(t *testing.T) {
 				tt.setup(g, mock)
 			}
 
-			reconciler := NewStandardReconcilerWithFinalizer(cl, &v1alpha1.Istio{}, mock.Reconcile, mock.Finalize, testFinalizer)
+			reconciler := NewStandardReconcilerWithFinalizer[*v1alpha1.Istio](cl, mock.Reconcile, mock.Finalize, testFinalizer)
 			result, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: key})
 
 			tt.assert(g, cl, result, err, mock)
