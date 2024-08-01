@@ -3110,8 +3110,7 @@ type PortSelector struct {
 // It denies all the requests with `POST` method on port `8080` directed through the
 // `waypoint` Gateway in the `foo` namespace.
 //
-// {{<tabset category-name="example">}}
-// {{<tab name="v1" category-value="v1">}}
+// #### v1
 // ```yaml
 // apiVersion: security.istio.io/v1
 // kind: AuthorizationPolicy
@@ -3134,8 +3133,6 @@ type PortSelector struct {
 //	      ports: ["8080"]
 //
 // ```
-// {{</tab>}}
-// {{</tabset>}}
 type PolicyTargetReference struct {
 	// group is the group of the target resource.
 	Group string `json:"group,omitempty"`
@@ -3175,8 +3172,7 @@ const (
 // For example, the following rule configures a client to use mutual TLS
 // for connections to upstream database cluster.
 //
-// {{<tabset category-name="example">}}
-// {{<tab name="v1alpha3" category-value="v1alpha3">}}
+// #### v1alpha3
 // ```yaml
 // apiVersion: networking.istio.io/v1alpha3
 // kind: DestinationRule
@@ -3195,9 +3191,8 @@ const (
 //	    caCertificates: /etc/certs/rootcacerts.pem
 //
 // ```
-// {{</tab>}}
 //
-// {{<tab name="v1beta1" category-value="v1beta1">}}
+// #### v1beta1
 // ```yaml
 // apiVersion: networking.istio.io/v1beta1
 // kind: DestinationRule
@@ -3216,14 +3211,11 @@ const (
 //	    caCertificates: /etc/certs/rootcacerts.pem
 //
 // ```
-// {{</tab>}}
-// {{</tabset>}}
 //
 // The following rule configures a client to use TLS when talking to a
 // foreign service whose domain matches *.foo.com.
 //
-// {{<tabset category-name="example">}}
-// {{<tab name="v1alpha3" category-value="v1alpha3">}}
+// #### v1alpha3
 // ```yaml
 // apiVersion: networking.istio.io/v1alpha3
 // kind: DestinationRule
@@ -3239,9 +3231,8 @@ const (
 //	    mode: SIMPLE
 //
 // ```
-// {{</tab>}}
 //
-// {{<tab name="v1beta1" category-value="v1beta1">}}
+// #### v1beta1
 // ```yaml
 // apiVersion: networking.istio.io/v1beta1
 // kind: DestinationRule
@@ -3257,14 +3248,11 @@ const (
 //	    mode: SIMPLE
 //
 // ```
-// {{</tab>}}
-// {{</tabset>}}
 //
 // The following rule configures a client to use Istio mutual TLS when talking
 // to rating services.
 //
-// {{<tabset category-name="example">}}
-// {{<tab name="v1alpha3" category-value="v1alpha3">}}
+// #### v1alpha3
 // ```yaml
 // apiVersion: networking.istio.io/v1alpha3
 // kind: DestinationRule
@@ -3280,9 +3268,8 @@ const (
 //	    mode: ISTIO_MUTUAL
 //
 // ```
-// {{</tab>}}
 //
-// {{<tab name="v1beta1" category-value="v1beta1">}}
+// #### v1beta1
 // ```yaml
 // apiVersion: networking.istio.io/v1beta1
 // kind: DestinationRule
@@ -3298,8 +3285,6 @@ const (
 //	    mode: ISTIO_MUTUAL
 //
 // ```
-// {{</tab>}}
-// {{</tabset>}}
 type ClientTLSSettings struct {
 	// Indicates whether connections to this port should be secured
 	// using TLS. The value of this field determines how TLS is enforced.
@@ -3556,8 +3541,7 @@ type LocalityLoadBalancerSettingFailover struct {
 // A retry will be attempted if there is a connect-failure, refused_stream
 // or when the upstream server responds with Service Unavailable(503).
 //
-// {{<tabset category-name="example">}}
-// {{<tab name="v1alpha3" category-value="v1alpha3">}}
+// #### v1alpha3
 // ```yaml
 // apiVersion: networking.istio.io/v1alpha3
 // kind: VirtualService
@@ -3580,9 +3564,8 @@ type LocalityLoadBalancerSettingFailover struct {
 //	    retryOn: connect-failure,refused-stream,503
 //
 // ```
-// {{</tab>}}
 //
-// {{<tab name="v1beta1" category-value="v1beta1">}}
+// #### v1beta1
 // ```yaml
 // apiVersion: networking.istio.io/v1beta1
 // kind: VirtualService
@@ -3605,8 +3588,6 @@ type LocalityLoadBalancerSettingFailover struct {
 //	    retryOn: gateway-error,connect-failure,refused-stream
 //
 // ```
-// {{</tab>}}
-// {{</tabset>}}
 type HTTPRetry struct {
 	// Number of retries to be allowed for a given request. The interval
 	// between retries will be determined automatically (25ms+). When request
