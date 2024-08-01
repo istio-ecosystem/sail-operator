@@ -193,14 +193,14 @@ if [ "${SKIP_BUILD}" == "false" ]; then
 
   # BUILD AND PUSH IMAGE
   build_and_push_image
-fi
 
-if [ "${OCP}" == "true" ]; then
+  if [ "${OCP}" == "true" ]; then
     # This is a workaround
     # To avoid errors of certificates meanwhile we are pulling the operator image from the internal registry
     # We need to set image $HUB to a fixed known value after the push
     # This value always will be equal to the svc url of the internal registry
-  HUB="image-registry.openshift-image-registry.svc:5000/sail-operator"
+    HUB="image-registry.openshift-image-registry.svc:5000/sail-operator"
+  fi
 fi
 
 # Run the go test passing the env variables defined that are going to be used in the operator tests
