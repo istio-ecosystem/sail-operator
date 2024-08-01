@@ -229,7 +229,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&corev1.Namespace{}, handler.EnqueueRequestsFromMapFunc(r.mapNamespaceToReconcileRequest)).
 		Watches(&rbacv1.ClusterRole{}, ownedResourceHandler).
 		Watches(&rbacv1.ClusterRoleBinding{}, ownedResourceHandler).
-		Complete(reconciler.NewStandardReconcilerWithFinalizer(r.Client, &v1alpha1.IstioCNI{}, r.Reconcile, r.Finalize, constants.FinalizerName))
+		Complete(reconciler.NewStandardReconcilerWithFinalizer[*v1alpha1.IstioCNI](r.Client, r.Reconcile, r.Finalize, constants.FinalizerName))
 }
 
 func (r *Reconciler) determineStatus(ctx context.Context, cni *v1alpha1.IstioCNI, reconcileErr error) (v1alpha1.IstioCNIStatus, error) {

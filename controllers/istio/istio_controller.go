@@ -386,7 +386,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		}).
 		For(&v1alpha1.Istio{}).
 		Owns(&v1alpha1.IstioRevision{}).
-		Complete(reconciler.NewStandardReconciler(r.Client, &v1alpha1.Istio{}, r.Reconcile))
+		Complete(reconciler.NewStandardReconciler[*v1alpha1.Istio](r.Client, r.Reconcile))
 }
 
 func (r *Reconciler) determineStatus(ctx context.Context, istio *v1alpha1.Istio, reconcileErr error) (v1alpha1.IstioStatus, error) {

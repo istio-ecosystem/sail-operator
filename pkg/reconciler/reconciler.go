@@ -16,6 +16,7 @@ package reconciler
 
 import (
 	"context"
+	"reflect"
 	"strings"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
@@ -36,7 +37,6 @@ type FinalizeFunc[T client.Object] func(ctx context.Context, obj T) error
 // FinalizeFunc. These functions are invoked at the appropriate time and are
 // passed the object being reconciled.
 type StandardReconciler[T client.Object] struct {
-	object    T
 	client    client.Client
 	reconcile ReconcileFunc[T]
 	finalizer string
@@ -44,17 +44,16 @@ type StandardReconciler[T client.Object] struct {
 }
 
 // NewStandardReconciler creates a new StandardReconciler for objects of the specified type.
-func NewStandardReconciler[T client.Object](cl client.Client, object T, reconcileFunc ReconcileFunc[T]) *StandardReconciler[T] {
-	return NewStandardReconcilerWithFinalizer(cl, object, reconcileFunc, nil, "")
+func NewStandardReconciler[T client.Object](cl client.Client, reconcileFunc ReconcileFunc[T]) *StandardReconciler[T] {
+	return NewStandardReconcilerWithFinalizer[T](cl, reconcileFunc, nil, "")
 }
 
 // NewStandardReconcilerWithFinalizer is similar to NewStandardReconciler, but also accepts a finalizer and a
 // FinalizerFunc.
 func NewStandardReconcilerWithFinalizer[T client.Object](
-	cl client.Client, object T, reconcileFunc ReconcileFunc[T], finalizeFunc FinalizeFunc[T], finalizer string,
+	cl client.Client, reconcileFunc ReconcileFunc[T], finalizeFunc FinalizeFunc[T], finalizer string,
 ) *StandardReconciler[T] {
 	return &StandardReconciler[T]{
-		object:    object,
 		client:    cl,
 		reconcile: reconcileFunc,
 		finalizer: finalizer,
@@ -69,7 +68,7 @@ func NewStandardReconcilerWithFinalizer[T client.Object](
 func (r *StandardReconciler[T]) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
-	obj := r.object.DeepCopyObject().(T) // TODO: create object using scheme.New() instead?
+	obj := reflect.New(reflect.TypeOf(*new(T)).Elem()).Interface().(T)
 	if err := r.client.Get(ctx, req.NamespacedName, obj); err != nil {
 		if errors.IsNotFound(err) {
 			log.V(2).Info("Resource not found. Skipping reconciliation")
