@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	"istio.io/istio/pkg/ptr"
 )
@@ -626,5 +627,109 @@ func TestDetermineInUseCondition(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestIgnoreStatusChangePredicate(t *testing.T) {
+	predicate := ignoreStatusChange()
+
+	oldObj := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			ResourceVersion: "1",
+			Generation:      1,
+			Labels:          map[string]string{"app": "test"},
+			Annotations:     map[string]string{"annotation1": "value1"},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "v1",
+					Kind:       "IstioRevision",
+					Name:       "myrev",
+				},
+			},
+		},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP,
+		},
+		Status: corev1.ServiceStatus{
+			LoadBalancer: corev1.LoadBalancerStatus{
+				Ingress: []corev1.LoadBalancerIngress{
+					{
+						IP: "1.1.1.1",
+					},
+				},
+			},
+			Conditions: nil,
+		},
+	}
+
+	tests := []struct {
+		name     string
+		update   func(svc *corev1.Service)
+		expected bool
+	}{
+		{
+			name:     "No changes",
+			update:   func(svc *corev1.Service) {},
+			expected: false,
+		},
+		{
+			name: "ResourceVersion changed",
+			update: func(svc *corev1.Service) {
+				svc.ResourceVersion = "2"
+			},
+			expected: false,
+		},
+		{
+			name: "Spec changed",
+			update: func(svc *corev1.Service) {
+				svc.ResourceVersion = "2"
+				svc.Generation++
+				svc.Spec.Type = corev1.ServiceTypeNodePort
+			},
+			expected: true,
+		},
+		{
+			name: "Status changed",
+			update: func(svc *corev1.Service) {
+				svc.ResourceVersion = "2"
+				svc.Status.LoadBalancer.Ingress[0].IP = "2.2.2.2"
+			},
+			expected: false,
+		},
+		{
+			name: "Labels changed",
+			update: func(svc *corev1.Service) {
+				svc.ResourceVersion = "2"
+				svc.Labels["app"] = "new-value"
+			},
+			expected: true,
+		},
+		{
+			name: "Annotations changed",
+			update: func(svc *corev1.Service) {
+				svc.ResourceVersion = "2"
+				svc.Annotations["annotation1"] = "new-value"
+			},
+			expected: true,
+		},
+		{
+			name: "OwnerReferences changed",
+			update: func(svc *corev1.Service) {
+				svc.ResourceVersion = "2"
+				svc.OwnerReferences[0].Name = "new-owner"
+			},
+			expected: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			newObj := oldObj.DeepCopy()
+			tc.update(newObj)
+
+			result := predicate.Update(event.UpdateEvent{ObjectOld: oldObj, ObjectNew: newObj})
+			g.Expect(result).To(Equal(tc.expected), "unexpected result of predicate.Update()")
+		})
 	}
 }
