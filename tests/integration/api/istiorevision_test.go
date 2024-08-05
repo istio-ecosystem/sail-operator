@@ -19,17 +19,22 @@ package integration
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/prometheus/common/expfmt"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,6 +51,8 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 	SetDefaultEventuallyPollingInterval(time.Second)
 	SetDefaultEventuallyTimeout(30 * time.Second)
 
+	enqueuelogger.LogEnqueueEvents = true
+
 	ctx := context.Background()
 
 	namespace := &corev1.Namespace{
@@ -56,7 +63,6 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 
 	revKey := client.ObjectKey{Name: revName}
 	istiodKey := client.ObjectKey{Name: "istiod-" + revName, Namespace: istioNamespace}
-	webhookKey := client.ObjectKey{Name: "istio-sidecar-injector-" + revName + "-" + istioNamespace}
 
 	BeforeAll(func() {
 		Step("Creating the Namespace to perform the tests")
@@ -230,7 +236,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 	})
 
 	It("successfully reconciles the resource", func() {
-		Step("Creating the custom resource")
+		Step("Creating the IstioRevision")
 		rev = &v1alpha1.IstioRevision{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: revName,
@@ -271,6 +277,10 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 	When("istiod readiness changes", func() {
 		It("updates the status of the IstioRevision resource", func() {
 			By("setting the Ready condition status to true when istiod is ready", func() {
+				Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
+				readyCondition := rev.Status.GetCondition(v1alpha1.IstioRevisionConditionReady)
+				Expect(readyCondition.Status).To(Equal(metav1.ConditionFalse))
+
 				istiod := &appsv1.Deployment{}
 				Expect(k8sClient.Get(ctx, istiodKey, istiod)).To(Succeed())
 				istiod.Status.Replicas = 1
@@ -300,73 +310,110 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 		})
 	})
 
-	When("an owned namespaced resource is deleted", func() {
-		It("recreates the owned resource", func() {
-			istiod := &appsv1.Deployment{
+	DescribeTable("reconciles owned resource",
+		func(obj client.Object, modify func(obj client.Object), validate func(g Gomega, obj client.Object)) {
+			By("on update", func() {
+				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
+
+				modify(obj)
+				Expect(k8sClient.Update(ctx, obj)).To(Succeed())
+
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
+					validate(g, obj)
+				}).Should(Succeed())
+			})
+
+			By("on delete", func() {
+				Expect(k8sClient.Delete(ctx, obj)).To(Succeed())
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
+					g.Expect(obj.GetOwnerReferences()).To(ContainElement(NewOwnerReference(rev)))
+					validate(g, obj)
+				}).Should(Succeed())
+			})
+		},
+		Entry("Deployment",
+			&appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      istiodKey.Name,
 					Namespace: istiodKey.Namespace,
 				},
-			}
-			Expect(k8sClient.Delete(ctx, istiod)).To(Succeed())
-
-			Eventually(k8sClient.Get).WithArguments(ctx, istiodKey, istiod).Should(Succeed())
-			Expect(istiod.Spec.Template.Spec.Containers[0].Image).To(Equal(pilotImage))
-			Expect(istiod.ObjectMeta.OwnerReferences).To(ContainElement(NewOwnerReference(rev)))
-		})
-	})
-
-	When("an owned cluster-scoped resource is deleted", func() {
-		It("recreates the owned resource", func() {
-			webhook := &admissionv1.MutatingWebhookConfiguration{
+			}, func(obj client.Object) {
+				deployment := obj.(*appsv1.Deployment)
+				deployment.Spec.Template.Spec.Containers[0].Image = "xyz"
+			}, func(g Gomega, obj client.Object) {
+				deployment := obj.(*appsv1.Deployment)
+				g.Expect(deployment.Spec.Template.Spec.Containers[0].Image).ToNot(Equal("xyz"))
+			}),
+		Entry("MutatingWebhookConfiguration",
+			&admissionv1.MutatingWebhookConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: webhookKey.Name,
+					Name: "istio-sidecar-injector-" + revName + "-" + istioNamespace,
 				},
-			}
-			Expect(k8sClient.Delete(ctx, webhook)).To(Succeed())
-			Eventually(k8sClient.Get).WithArguments(ctx, webhookKey, webhook).Should(Succeed())
-		})
-	})
+			}, func(obj client.Object) {
+				webhook := obj.(*admissionv1.MutatingWebhookConfiguration)
+				webhook.Webhooks[0].Name = "xyz.xyz.xyz"
+			}, func(g Gomega, obj client.Object) {
+				webhook := obj.(*admissionv1.MutatingWebhookConfiguration)
+				g.Expect(webhook.Webhooks[0].Name).ToNot(Equal("xyz.xyz.xyz"))
+			}),
+		Entry("HorizontalPodAutoscaler",
+			&autoscalingv2.HorizontalPodAutoscaler{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "istiod-" + revName,
+					Namespace: istioNamespace,
+				},
+			}, func(obj client.Object) {
+				hpa := obj.(*autoscalingv2.HorizontalPodAutoscaler)
+				hpa.Spec.MaxReplicas = 123
+			}, func(g Gomega, obj client.Object) {
+				hpa := obj.(*autoscalingv2.HorizontalPodAutoscaler)
+				g.Expect(hpa.Spec.MaxReplicas).ToNot(Equal(int32(123)))
+			}),
+	)
 
-	When("an owned namespaced resource is modified", func() {
-		istiod := &appsv1.Deployment{}
-		var originalImage string
+	DescribeTable("skips reconcile when only the status of the owned resource is updated",
+		func(obj client.Object, modify func(obj client.Object)) {
+			time.Sleep(5 * time.Second)
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
 
-		BeforeAll(func() {
-			Expect(k8sClient.Get(ctx, istiodKey, istiod)).To(Succeed())
-			originalImage = istiod.Spec.Template.Spec.Containers[0].Image
+			beforeCount := getReconcileCount(Default)
 
-			istiod.Spec.Template.Spec.Containers[0].Image = "user-supplied-image"
-			Expect(k8sClient.Update(ctx, istiod)).To(Succeed())
-		})
+			By("modifying object")
+			modify(obj)
+			Expect(k8sClient.Status().Update(ctx, obj)).To(Succeed())
 
-		It("reverts the owned resource", func() {
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, istiodKey, istiod)).To(Succeed())
-				g.Expect(istiod.Spec.Template.Spec.Containers[0].Image).To(Equal(originalImage))
-			}).Should(Succeed())
-		})
-	})
-
-	When("an owned cluster-scoped resource is modified", func() {
-		webhook := &admissionv1.MutatingWebhookConfiguration{}
-		var origWebhooks []admissionv1.MutatingWebhook
-
-		BeforeAll(func() {
-			Expect(k8sClient.Get(ctx, webhookKey, webhook)).To(Succeed())
-			origWebhooks = webhook.Webhooks
-
-			webhook.Webhooks = []admissionv1.MutatingWebhook{}
-			Expect(k8sClient.Update(ctx, webhook)).To(Succeed())
-		})
-
-		It("reverts the owned resource", func() {
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, webhookKey, webhook)).To(Succeed())
-				g.Expect(webhook.Webhooks).To(Equal(origWebhooks))
-			}).Should(Succeed())
-		})
-	})
+			Consistently(func(g Gomega) {
+				afterCount := getReconcileCount(g)
+				g.Expect(afterCount).To(Equal(beforeCount))
+			}, 5*time.Second).Should(Succeed())
+		},
+		Entry("HorizontalPodAutoscaler",
+			&autoscalingv2.HorizontalPodAutoscaler{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "istiod-" + revName,
+					Namespace: istioNamespace,
+				},
+			},
+			func(obj client.Object) {
+				hpa := obj.(*autoscalingv2.HorizontalPodAutoscaler)
+				hpa.Status.CurrentReplicas = 123
+			},
+		),
+		Entry("PodDisruptionBudget",
+			&policyv1.PodDisruptionBudget{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "istiod-" + revName,
+					Namespace: istioNamespace,
+				},
+			},
+			func(obj client.Object) {
+				pdb := obj.(*policyv1.PodDisruptionBudget)
+				pdb.Status.CurrentHealthy = 123
+			},
+		),
+	)
 
 	It("supports concurrent deployment of two control planes", func() {
 		rev2Name := revName + "2"
@@ -410,3 +457,25 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 		Expect(istiod.ObjectMeta.OwnerReferences).To(ContainElement(NewOwnerReference(rev2)))
 	})
 })
+
+func getReconcileCount(g Gomega) float64 {
+	resp, err := http.Get("http://localhost:8080/metrics")
+	g.Expect(err).NotTo(HaveOccurred())
+	defer resp.Body.Close()
+
+	parser := expfmt.TextParser{}
+	metricFamilies, err := parser.TextToMetricFamilies(resp.Body)
+	g.Expect(err).NotTo(HaveOccurred())
+
+	metricName := "controller_runtime_reconcile_total"
+	mf := metricFamilies[metricName]
+	sum := float64(0)
+	for _, metric := range mf.Metric {
+		for _, l := range metric.Label {
+			if *l.Name == "controller" && *l.Value == "istiorevision" {
+				sum += metric.GetCounter().GetValue()
+			}
+		}
+	}
+	return sum
+}
