@@ -483,6 +483,8 @@ $(GITLEAKS): $(LOCALBIN)
 bundle: gen helm operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
 	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --set platform=openshift --set bundleGeneration=true | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
 
+	@hack/patch-csv.sh bundle/manifests/$(OPERATOR_NAME).clusterserviceversion.yaml
+
 	# update CSV's spec.customresourcedefinitions.owned field. ideally we could do this straight in ./bundle, but
 	# sadly this is only possible if the file lives in a `bases` directory
 	mkdir -p _tmp/bases
@@ -500,7 +502,6 @@ bundle: gen helm operator-sdk ## Generate bundle manifests and metadata, then va
 			fi \
 		fi
 
-	@hack/patch-csv.sh bundle/manifests/$(OPERATOR_NAME).clusterserviceversion.yaml
 	$(OPERATOR_SDK) bundle validate ./bundle
 
 .PHONY: bundle-build
