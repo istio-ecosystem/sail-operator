@@ -698,6 +698,16 @@ func TestIgnoreStatusChangePredicate(t *testing.T) {
 			expected: false,
 		},
 		{
+			name: "Spec and status changed",
+			update: func(svc *corev1.Service) {
+				svc.ResourceVersion = "2"
+				svc.Generation++
+				svc.Spec.Type = corev1.ServiceTypeNodePort
+				svc.Status.LoadBalancer.Ingress[0].IP = "2.2.2.2"
+			},
+			expected: true,
+		},
+		{
 			name: "Labels changed",
 			update: func(svc *corev1.Service) {
 				svc.ResourceVersion = "2"
