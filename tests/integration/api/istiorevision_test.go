@@ -375,7 +375,10 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 
 	DescribeTable("skips reconcile when only the status of the owned resource is updated",
 		func(obj client.Object, modify func(obj client.Object)) {
+			// wait for the in-flight reconcile operations to finish
+			// unfortunately, I don't see a good way to do this other than by waiting
 			time.Sleep(5 * time.Second)
+
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
 
 			beforeCount := getReconcileCount(Default)

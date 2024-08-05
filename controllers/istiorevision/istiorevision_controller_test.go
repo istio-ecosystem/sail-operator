@@ -637,6 +637,7 @@ func TestIgnoreStatusChangePredicate(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			ResourceVersion: "1",
 			Generation:      1,
+			Finalizers:      []string{"finalizer1"},
 			Labels:          map[string]string{"app": "test"},
 			Annotations:     map[string]string{"annotation1": "value1"},
 			OwnerReferences: []metav1.OwnerReference{
@@ -717,6 +718,14 @@ func TestIgnoreStatusChangePredicate(t *testing.T) {
 			update: func(svc *corev1.Service) {
 				svc.ResourceVersion = "2"
 				svc.OwnerReferences[0].Name = "new-owner"
+			},
+			expected: true,
+		},
+		{
+			name: "Finalizers changed",
+			update: func(svc *corev1.Service) {
+				svc.ResourceVersion = "2"
+				svc.Finalizers = append(svc.Finalizers, "finalizer2")
 			},
 			expected: true,
 		},
