@@ -36,6 +36,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
@@ -59,7 +60,8 @@ var _ = BeforeSuite(func() {
 	testEnv, k8sClient, cfg = test.SetupEnv(GinkgoWriter, true)
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme: scheme.Scheme,
+		Scheme:  scheme.Scheme,
+		Metrics: metricsserver.Options{BindAddress: ":8080"},
 		NewClient: func(config *rest.Config, options client.Options) (client.Client, error) {
 			return k8sClient, nil
 		},
