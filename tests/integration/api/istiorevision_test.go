@@ -313,6 +313,9 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 	DescribeTable("reconciles owned resource",
 		func(obj client.Object, modify func(obj client.Object), validate func(g Gomega, obj client.Object)) {
 			By("on update", func() {
+				// ensure all in-flight reconcile operations finish before the test; unfortunately, sleeping seems to be the only option to achieve this
+				time.Sleep(5 * time.Second)
+
 				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
 
 				modify(obj)
