@@ -34,7 +34,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/maistra-dev/sail-operator:0.1-latest
-    createdAt: "2024-08-06T08:03:02Z"
+    createdAt: "2024-08-06T08:17:54Z"
     description: Experimental operator for installing Istio service mesh
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -331,12 +331,21 @@ spec:
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:select:InPlace
         - urn:alm:descriptor:com.tectonic.ui:select:RevisionBased
-      - description: 'Defines the version of Istio to install. Must be one of: v1.21.0,
+      - description: 'Defines the version of Istio to install. Must be one of: v1.22.3,
+          v1.22.2, v1.22.1, v1.22.0, v1.21.5, v1.21.4, v1.21.3, v1.21.2, v1.21.0,
           latest.'
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.3
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.2
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.1
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.0
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.5
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.4
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.3
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.2
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.0
         - urn:alm:descriptor:com.tectonic.ui:select:latest
       - description: Defines how many seconds the operator should wait before removing
