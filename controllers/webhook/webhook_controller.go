@@ -98,9 +98,12 @@ func doProbe(ctx context.Context, webhook *admissionv1.MutatingWebhookConfigurat
 		return false, nil
 	}
 
+	if len(clientConfig.CABundle) == 0 {
+		return false, errors.New("webhooks[].clientConfig.caBundle hasn't been set; check if the remote istiod can access this cluster")
+	}
 	caCertPool := x509.NewCertPool()
 	if ok := caCertPool.AppendCertsFromPEM(clientConfig.CABundle); !ok {
-		return false, fmt.Errorf("failed to append CA bundle to cert pool")
+		return false, errors.New("failed to append CA bundle to cert pool")
 	}
 
 	httpClient := http.Client{

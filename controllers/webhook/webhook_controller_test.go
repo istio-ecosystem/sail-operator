@@ -197,6 +197,21 @@ func TestDoProbe(t *testing.T) {
 			expectedError:  "",
 		},
 		{
+			name: "Missing CA bundle",
+			webhook: &admissionv1.MutatingWebhookConfiguration{
+				Webhooks: []admissionv1.MutatingWebhook{
+					{
+						ClientConfig: admissionv1.WebhookClientConfig{
+							Service:  &svc,
+							CABundle: nil,
+						},
+					},
+				},
+			},
+			expectedResult: false,
+			expectedError:  "webhooks[].clientConfig.caBundle hasn't been set; check if the remote istiod can access this cluster",
+		},
+		{
 			name: "Invalid CA bundle",
 			webhook: &admissionv1.MutatingWebhookConfiguration{
 				Webhooks: []admissionv1.MutatingWebhook{
