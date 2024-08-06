@@ -943,6 +943,7 @@ the Istio CR is updated.
 
 _Appears in:_
 - [IstioSpec](#istiospec)
+- [RemoteIstioSpec](#remoteistiospec)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -2511,7 +2512,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `version` _string_ | Defines the version of Istio to install. Must be one of: v1.21.0, latest. | v1.21.0 | Enum: [v1.21.0 latest]   |
-| `updateStrategy` _[RemoteIstioUpdateStrategy](#remoteistioupdatestrategy)_ | Defines the update strategy to use when the version in the RemoteIstio CR is updated. | \{ type:InPlace \} |  |
+| `updateStrategy` _[IstioUpdateStrategy](#istioupdatestrategy)_ | Defines the update strategy to use when the version in the RemoteIstio CR is updated. | \{ type:InPlace \} |  |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, external, minimal, openshift-ambient, openshift, preview, remote, stable. |  | Enum: [ambient default demo empty external minimal openshift-ambient openshift preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. | istio-system |  |
 | `values` _[Values](#values)_ | Defines the values to be passed to the Helm charts when installing Istio. |  |  |
@@ -2533,44 +2534,7 @@ _Appears in:_
 | `observedGeneration` _integer_ | ObservedGeneration is the most recent generation observed for this RemoteIstio object. It corresponds to the object's generation, which is updated on mutation by the API Server. The information in the status pertains to this particular generation of the object. |  |  |
 | `conditions` _[RemoteIstioCondition](#remoteistiocondition) array_ | Represents the latest available observations of the object's current state. |  |  |
 | `state` _[RemoteIstioConditionReason](#remoteistioconditionreason)_ | Reports the current state of the object. |  |  |
-| `revisions` _[RemoteRevisionSummary](#remoterevisionsummary)_ | Reports information about the underlying IstioRevisions. |  |  |
-
-
-#### RemoteIstioUpdateStrategy
-
-
-
-RemoteIstioUpdateStrategy defines how the control plane should be updated when the version in
-the RemoteIstio CR is updated.
-
-
-
-_Appears in:_
-- [RemoteIstioSpec](#remoteistiospec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `type` _[UpdateStrategyType](#updatestrategytype)_ | Type of strategy to use. Can be "InPlace" or "RevisionBased". When the "InPlace" strategy is used, the existing Istio control plane is updated in-place. The workloads therefore don't need to be moved from one control plane instance to another. When the "RevisionBased" strategy is used, a new Istio control plane instance is created for every change to the RemoteIstio.spec.version field. The old control plane remains in place until all workloads have been moved to the new control plane instance.  The "InPlace" strategy is the default.  TODO: change default to "RevisionBased" | InPlace | Enum: [InPlace RevisionBased]   |
-| `inactiveRevisionDeletionGracePeriodSeconds` _integer_ | Defines how many seconds the operator should wait before removing a non-active revision after all the workloads have stopped using it. You may want to set this value on the order of minutes. The minimum and the default value is 30. |  | Minimum: 30   |
-| `updateWorkloads` _boolean_ | Defines whether the workloads should be moved from one control plane instance to another automatically. If updateWorkloads is true, the operator moves the workloads from the old control plane instance to the new one after the new control plane is ready. If updateWorkloads is false, the user must move the workloads manually by updating the istio.io/rev labels on the namespace and/or the pods. Defaults to false. |  |  |
-
-
-#### RemoteRevisionSummary
-
-
-
-RemoteRevisionSummary contains information on the number of IstioRevisions associated with this RemoteIstio.
-
-
-
-_Appears in:_
-- [RemoteIstioStatus](#remoteistiostatus)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `total` _integer_ | Total number of IstioRevisions currently associated with this RemoteIstio. |  |  |
-| `ready` _integer_ | Number of IstioRevisions that are Ready. |  |  |
-| `inUse` _integer_ | Number of IstioRevisions that are currently in use. |  |  |
+| `revisions` _[RevisionSummary](#revisionsummary)_ | Reports information about the underlying IstioRevisions. |  |  |
 
 
 #### RemoteService
@@ -2637,6 +2601,7 @@ RevisionSummary contains information on the number of IstioRevisions associated 
 
 _Appears in:_
 - [IstioStatus](#istiostatus)
+- [RemoteIstioStatus](#remoteistiostatus)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -3070,7 +3035,6 @@ _Underlying type:_ _string_
 
 _Appears in:_
 - [IstioUpdateStrategy](#istioupdatestrategy)
-- [RemoteIstioUpdateStrategy](#remoteistioupdatestrategy)
 
 | Field | Description |
 | --- | --- |
