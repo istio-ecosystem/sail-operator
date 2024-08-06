@@ -91,11 +91,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, webhook *admissionv1.Mutatin
 func doProbe(ctx context.Context, webhook *admissionv1.MutatingWebhookConfiguration) (bool, error) {
 	log := logf.FromContext(ctx).V(3)
 	if len(webhook.Webhooks) == 0 {
-		return false, nil
+		return false, errors.New("mutatingwebhookconfiguration contains no webhooks")
 	}
 	clientConfig := webhook.Webhooks[0].ClientConfig
 	if clientConfig.Service == nil {
-		return false, nil
+		return false, errors.New("missing webhooks[].clientConfig.service")
 	}
 
 	if len(clientConfig.CABundle) == 0 {

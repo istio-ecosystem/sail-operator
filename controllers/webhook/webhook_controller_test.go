@@ -184,7 +184,7 @@ func TestDoProbe(t *testing.T) {
 				Webhooks: []admissionv1.MutatingWebhook{},
 			},
 			expectedResult: false,
-			expectedError:  "",
+			expectedError:  "mutatingwebhookconfiguration contains no webhooks",
 		},
 		{
 			name: "No service in client config",
@@ -194,7 +194,7 @@ func TestDoProbe(t *testing.T) {
 				},
 			},
 			expectedResult: false,
-			expectedError:  "",
+			expectedError:  "missing webhooks[].clientConfig.service",
 		},
 		{
 			name: "Missing CA bundle",
