@@ -36,7 +36,7 @@ type RemoteIstioSpec struct {
 	// Defines the update strategy to use when the version in the RemoteIstio CR is updated.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Update Strategy"
 	// +kubebuilder:default={type: "InPlace"}
-	UpdateStrategy *RemoteIstioUpdateStrategy `json:"updateStrategy,omitempty"`
+	UpdateStrategy *IstioUpdateStrategy `json:"updateStrategy,omitempty"`
 
 	// +sail:profile
 	// The built-in installation configuration profile to use.
@@ -57,39 +57,6 @@ type RemoteIstioSpec struct {
 	Values *Values `json:"values,omitempty"`
 }
 
-// RemoteIstioUpdateStrategy defines how the control plane should be updated when the version in
-// the RemoteIstio CR is updated.
-type RemoteIstioUpdateStrategy struct {
-	// Type of strategy to use. Can be "InPlace" or "RevisionBased". When the "InPlace" strategy
-	// is used, the existing Istio control plane is updated in-place. The workloads therefore
-	// don't need to be moved from one control plane instance to another. When the "RevisionBased"
-	// strategy is used, a new Istio control plane instance is created for every change to the
-	// RemoteIstio.spec.version field. The old control plane remains in place until all workloads have
-	// been moved to the new control plane instance.
-	//
-	// The "InPlace" strategy is the default.	TODO: change default to "RevisionBased"
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Type",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:select:InPlace", "urn:alm:descriptor:com.tectonic.ui:select:RevisionBased"}
-	// +kubebuilder:validation:Enum=InPlace;RevisionBased
-	// +kubebuilder:default=InPlace
-	Type UpdateStrategyType `json:"type,omitempty"`
-
-	// Defines how many seconds the operator should wait before removing a non-active revision after all
-	// the workloads have stopped using it. You may want to set this value on the order of minutes.
-	// The minimum and the default value is 30.
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=2,displayName="Inactive Revision Deletion Grace Period (seconds)",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:number"}
-	// +kubebuilder:validation:Minimum=30
-	InactiveRevisionDeletionGracePeriodSeconds *int64 `json:"inactiveRevisionDeletionGracePeriodSeconds,omitempty"`
-
-	// Defines whether the workloads should be moved from one control plane instance to another
-	// automatically. If updateWorkloads is true, the operator moves the workloads from the old
-	// control plane instance to the new one after the new control plane is ready.
-	// If updateWorkloads is false, the user must move the workloads manually by updating the
-	// istio.io/rev labels on the namespace and/or the pods.
-	// Defaults to false.
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=3,displayName="Update Workloads Automatically",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:booleanSwitch"}
-	UpdateWorkloads bool `json:"updateWorkloads,omitempty"`
-}
-
 // RemoteIstioStatus defines the observed state of RemoteIstio
 type RemoteIstioStatus struct {
 	// ObservedGeneration is the most recent generation observed for this
@@ -105,19 +72,7 @@ type RemoteIstioStatus struct {
 	State RemoteIstioConditionReason `json:"state,omitempty"`
 
 	// Reports information about the underlying IstioRevisions.
-	Revisions RemoteRevisionSummary `json:"revisions,omitempty"`
-}
-
-// RemoteRevisionSummary contains information on the number of IstioRevisions associated with this RemoteIstio.
-type RemoteRevisionSummary struct {
-	// Total number of IstioRevisions currently associated with this RemoteIstio.
-	Total int32 `json:"total"`
-
-	// Number of IstioRevisions that are Ready.
-	Ready int32 `json:"ready"`
-
-	// Number of IstioRevisions that are currently in use.
-	InUse int32 `json:"inUse"`
+	Revisions RevisionSummary `json:"revisions,omitempty"`
 }
 
 // GetCondition returns the condition of the specified type

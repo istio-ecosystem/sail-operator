@@ -367,7 +367,7 @@ func TestDetermineStatus(t *testing.T) {
 						Message: "ready message",
 					},
 				},
-				Revisions: v1alpha1.RemoteRevisionSummary{
+				Revisions: v1alpha1.RevisionSummary{
 					Total: 2,
 					Ready: 1,
 					InUse: 0,
@@ -398,7 +398,7 @@ func TestDetermineStatus(t *testing.T) {
 						Status: metav1.ConditionTrue,
 					},
 				},
-				Revisions: v1alpha1.RemoteRevisionSummary{
+				Revisions: v1alpha1.RevisionSummary{
 					Total: 3,
 					Ready: 2,
 					InUse: 1,
@@ -455,7 +455,7 @@ func TestDetermineStatus(t *testing.T) {
 						Message: "failed to get active IstioRevision: get failed: simulated error",
 					},
 				},
-				Revisions: v1alpha1.RemoteRevisionSummary{},
+				Revisions: v1alpha1.RevisionSummary{},
 			},
 		},
 		{
@@ -486,7 +486,7 @@ func TestDetermineStatus(t *testing.T) {
 						Message: "active IstioRevision not found",
 					},
 				},
-				Revisions: v1alpha1.RemoteRevisionSummary{
+				Revisions: v1alpha1.RevisionSummary{
 					Total: -1,
 					Ready: -1,
 					InUse: -1,
@@ -587,7 +587,7 @@ func TestUpdateStatus(t *testing.T) {
 						Message: "active IstioRevision not found",
 					},
 				},
-				Revisions: v1alpha1.RemoteRevisionSummary{
+				Revisions: v1alpha1.RevisionSummary{
 					Total: -1,
 					Ready: -1,
 					InUse: -1,
@@ -798,7 +798,7 @@ func TestGetActiveRevisionName(t *testing.T) {
 				},
 			}
 			if tt.updateStrategyType != nil {
-				istio.Spec.UpdateStrategy = &v1alpha1.RemoteIstioUpdateStrategy{
+				istio.Spec.UpdateStrategy = &v1alpha1.IstioUpdateStrategy{
 					Type: *tt.updateStrategyType,
 				}
 			}
@@ -819,7 +819,7 @@ func newFakeClientBuilder() *fake.ClientBuilder {
 func TestGetPruningGracePeriod(t *testing.T) {
 	tests := []struct {
 		name           string
-		updateStrategy *v1alpha1.RemoteIstioUpdateStrategy
+		updateStrategy *v1alpha1.IstioUpdateStrategy
 		expected       time.Duration
 	}{
 		{
@@ -829,19 +829,19 @@ func TestGetPruningGracePeriod(t *testing.T) {
 		},
 		{
 			name:           "Nil grace period",
-			updateStrategy: &v1alpha1.RemoteIstioUpdateStrategy{},
+			updateStrategy: &v1alpha1.IstioUpdateStrategy{},
 			expected:       v1alpha1.DefaultRevisionDeletionGracePeriodSeconds * time.Second,
 		},
 		{
 			name: "Grace period less than minimum",
-			updateStrategy: &v1alpha1.RemoteIstioUpdateStrategy{
+			updateStrategy: &v1alpha1.IstioUpdateStrategy{
 				InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(v1alpha1.MinRevisionDeletionGracePeriodSeconds - 10)),
 			},
 			expected: v1alpha1.MinRevisionDeletionGracePeriodSeconds * time.Second,
 		},
 		{
 			name: "Grace period more than minimum",
-			updateStrategy: &v1alpha1.RemoteIstioUpdateStrategy{
+			updateStrategy: &v1alpha1.IstioUpdateStrategy{
 				InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(v1alpha1.MinRevisionDeletionGracePeriodSeconds + 10)),
 			},
 			expected: (v1alpha1.MinRevisionDeletionGracePeriodSeconds + 10) * time.Second,
