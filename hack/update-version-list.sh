@@ -31,7 +31,7 @@ function updateVersionsInIstioTypeComment() {
       -e "/\+sail:version/,/Version string/ s/(\/\/ \+kubebuilder:default=)(.*)/\1$defaultVersion/g" \
       -e "/\+sail:version/,/Version string/ s/(\/\/ \Must be one of:)(.*)/\1 $versions./g" \
       -e "s/(\+kubebuilder:default=.*version: \")[^\"]*\"/\1$defaultVersion\"/g" \
-      api/v1alpha1/istio_types.go api/v1alpha1/istiorevision_types.go api/v1alpha1/istiocni_types.go
+      api/v1alpha1/istio_types.go api/v1alpha1/remoteistio_types.go api/v1alpha1/istiorevision_types.go api/v1alpha1/istiocni_types.go
 }
 
 function updateVersionsInCSVDescription() {
