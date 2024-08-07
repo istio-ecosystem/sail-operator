@@ -226,28 +226,25 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 		// namespaced resources
 		Watches(&corev1.ConfigMap{}, ownedResourceHandler).
-		Watches(&appsv1.Deployment{}, ownedResourceHandler).
-		Watches(&appsv1.DaemonSet{}, ownedResourceHandler).
+		Watches(&appsv1.Deployment{}, ownedResourceHandler). // we don't ignore the status here because we use it to calculate the IstioRevision status
+		Watches(&appsv1.DaemonSet{}, ownedResourceHandler).  // we don't ignore the status here because we use it to calculate the IstioRevision status
 		Watches(&corev1.Endpoints{}, ownedResourceHandler).
-		Watches(&corev1.ResourceQuota{}, ownedResourceHandler).
 		Watches(&corev1.Secret{}, ownedResourceHandler).
-		Watches(&corev1.Service{}, ownedResourceHandler).
+		Watches(&corev1.Service{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
 		Watches(&corev1.ServiceAccount{}, ownedResourceHandler).
 		Watches(&rbacv1.Role{}, ownedResourceHandler).
 		Watches(&rbacv1.RoleBinding{}, ownedResourceHandler).
-		Watches(&policyv1.PodDisruptionBudget{}, ownedResourceHandler).
-		Watches(&autoscalingv2.HorizontalPodAutoscaler{}, ownedResourceHandler).
-		Watches(&networkingv1alpha3.EnvoyFilter{}, ownedResourceHandler).
-		Watches(&corev1.Namespace{}, nsHandler).
-		Watches(&corev1.Pod{}, podHandler).
+		Watches(&policyv1.PodDisruptionBudget{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
+		Watches(&autoscalingv2.HorizontalPodAutoscaler{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
+		Watches(&networkingv1alpha3.EnvoyFilter{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
+		Watches(&corev1.Namespace{}, nsHandler, builder.WithPredicates(ignoreStatusChange())).
+		Watches(&corev1.Pod{}, podHandler, builder.WithPredicates(ignoreStatusChange())).
 
 		// cluster-scoped resources
 		Watches(&rbacv1.ClusterRole{}, ownedResourceHandler).
 		Watches(&rbacv1.ClusterRoleBinding{}, ownedResourceHandler).
 		Watches(&admissionv1.MutatingWebhookConfiguration{}, ownedResourceHandler).
-		Watches(&admissionv1.ValidatingWebhookConfiguration{},
-			ownedResourceHandler,
-			builder.WithPredicates(validatingWebhookConfigPredicate())).
+		Watches(&admissionv1.ValidatingWebhookConfiguration{}, ownedResourceHandler, builder.WithPredicates(validatingWebhookConfigPredicate())).
 
 		// +lint-watches:ignore: ValidatingAdmissionPolicy (TODO: fix this when CI supports golang 1.22 and k8s 1.30)
 		// +lint-watches:ignore: ValidatingAdmissionPolicyBinding (TODO: fix this when CI supports golang 1.22 and k8s 1.30)
@@ -492,6 +489,35 @@ func (r *Reconciler) mapPodToReconcileRequest(ctx context.Context, pod client.Ob
 		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: revision}}}
 	}
 	return nil
+}
+
+// ignoreStatusChange returns a predicate that ignores watch events where only the resource status changes; if
+// there are any other changes to the resource, the event is not ignored.
+// This ensures that the controller doesn't reconcile the entire IstioRevision every time the status of an owned
+// resource is updated. Without this predicate, the controller would continuously reconcile the IstioRevision
+// because the status.currentMetrics of the HorizontalPodAutoscaler object was updated.
+func ignoreStatusChange() predicate.Funcs {
+	return predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return specWasUpdated(e.ObjectOld, e.ObjectNew) ||
+				!reflect.DeepEqual(e.ObjectNew.GetLabels(), e.ObjectOld.GetLabels()) ||
+				!reflect.DeepEqual(e.ObjectNew.GetAnnotations(), e.ObjectOld.GetAnnotations()) ||
+				!reflect.DeepEqual(e.ObjectNew.GetOwnerReferences(), e.ObjectOld.GetOwnerReferences()) ||
+				!reflect.DeepEqual(e.ObjectNew.GetFinalizers(), e.ObjectOld.GetFinalizers())
+		},
+	}
+}
+
+func specWasUpdated(oldObject client.Object, newObject client.Object) bool {
+	// for HPAs, k8s doesn't set metadata.generation, so we actually have to check whether the spec was updated
+	if oldHpa, ok := oldObject.(*autoscalingv2.HorizontalPodAutoscaler); ok {
+		if newHpa, ok := newObject.(*autoscalingv2.HorizontalPodAutoscaler); ok {
+			return !reflect.DeepEqual(oldHpa.Spec, newHpa.Spec)
+		}
+	}
+
+	// for other resources, comparing the metadata.generation suffices
+	return oldObject.GetGeneration() != newObject.GetGeneration()
 }
 
 func validatingWebhookConfigPredicate() predicate.Funcs {
