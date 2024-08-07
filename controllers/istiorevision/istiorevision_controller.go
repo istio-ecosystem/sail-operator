@@ -500,13 +500,25 @@ func (r *Reconciler) mapPodToReconcileRequest(ctx context.Context, pod client.Ob
 func ignoreStatusChange() predicate.Funcs {
 	return predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			return e.ObjectNew.GetGeneration() != e.ObjectOld.GetGeneration() || // this detects changes in the .spec
+			return specWasUpdated(e.ObjectOld, e.ObjectNew) ||
 				!reflect.DeepEqual(e.ObjectNew.GetLabels(), e.ObjectOld.GetLabels()) ||
 				!reflect.DeepEqual(e.ObjectNew.GetAnnotations(), e.ObjectOld.GetAnnotations()) ||
 				!reflect.DeepEqual(e.ObjectNew.GetOwnerReferences(), e.ObjectOld.GetOwnerReferences()) ||
 				!reflect.DeepEqual(e.ObjectNew.GetFinalizers(), e.ObjectOld.GetFinalizers())
 		},
 	}
+}
+
+func specWasUpdated(oldObject client.Object, newObject client.Object) bool {
+	// for HPAs, k8s doesn't set metadata.generation, so we actually have to check whether the spec was updated
+	if oldHpa, ok := oldObject.(*autoscalingv2.HorizontalPodAutoscaler); ok {
+		if newHpa, ok := newObject.(*autoscalingv2.HorizontalPodAutoscaler); ok {
+			return !reflect.DeepEqual(oldHpa.Spec, newHpa.Spec)
+		}
+	}
+
+	// for other resources, comparing the metadata.generation suffices
+	return oldObject.GetGeneration() != newObject.GetGeneration()
 }
 
 func validatingWebhookConfigPredicate() predicate.Funcs {
