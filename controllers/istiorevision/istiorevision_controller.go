@@ -229,7 +229,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&appsv1.Deployment{}, ownedResourceHandler). // we don't ignore the status here because we use it to calculate the IstioRevision status
 		Watches(&appsv1.DaemonSet{}, ownedResourceHandler).  // we don't ignore the status here because we use it to calculate the IstioRevision status
 		Watches(&corev1.Endpoints{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
-		Watches(&corev1.ResourceQuota{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
 		Watches(&corev1.Secret{}, ownedResourceHandler).
 		Watches(&corev1.Service{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
 		Watches(&corev1.ServiceAccount{}, ownedResourceHandler).
