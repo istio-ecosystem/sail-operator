@@ -21,9 +21,11 @@ import (
 	"testing"
 
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	. "github.com/onsi/gomega"
+	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -55,6 +57,7 @@ func TestValidate(t *testing.T) {
 					Name: "default",
 				},
 				Spec: v1alpha1.IstioRevisionSpec{
+					Type:      v1alpha1.IstioRevisionTypeLocal,
 					Version:   supportedversion.Default,
 					Namespace: "istio-system",
 					Values: &v1alpha1.Values{
@@ -68,12 +71,32 @@ func TestValidate(t *testing.T) {
 			expectErr: "",
 		},
 		{
+			name: "no type",
+			rev: &v1alpha1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1alpha1.IstioRevisionSpec{
+					Version:   supportedversion.Default,
+					Namespace: "istio-system",
+					Values: &v1alpha1.Values{
+						Global: &v1alpha1.GlobalConfig{
+							IstioNamespace: "istio-system",
+						},
+					},
+				},
+			},
+			objects:   []client.Object{ns},
+			expectErr: `spec.type not set`,
+		},
+		{
 			name: "no version",
 			rev: &v1alpha1.IstioRevision{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
 				Spec: v1alpha1.IstioRevisionSpec{
+					Type:      v1alpha1.IstioRevisionTypeLocal,
 					Namespace: "istio-system",
 				},
 			},
@@ -87,6 +110,7 @@ func TestValidate(t *testing.T) {
 					Name: "default",
 				},
 				Spec: v1alpha1.IstioRevisionSpec{
+					Type:    v1alpha1.IstioRevisionTypeLocal,
 					Version: supportedversion.Default,
 				},
 			},
@@ -100,6 +124,7 @@ func TestValidate(t *testing.T) {
 					Name: "default",
 				},
 				Spec: v1alpha1.IstioRevisionSpec{
+					Type:      v1alpha1.IstioRevisionTypeLocal,
 					Version:   supportedversion.Default,
 					Namespace: "istio-system",
 				},
@@ -114,6 +139,7 @@ func TestValidate(t *testing.T) {
 					Name: "default",
 				},
 				Spec: v1alpha1.IstioRevisionSpec{
+					Type:      v1alpha1.IstioRevisionTypeLocal,
 					Version:   supportedversion.Default,
 					Namespace: "istio-system",
 				},
@@ -128,6 +154,7 @@ func TestValidate(t *testing.T) {
 					Name: "default",
 				},
 				Spec: v1alpha1.IstioRevisionSpec{
+					Type:      v1alpha1.IstioRevisionTypeLocal,
 					Version:   supportedversion.Default,
 					Namespace: "istio-system",
 					Values: &v1alpha1.Values{
@@ -147,6 +174,7 @@ func TestValidate(t *testing.T) {
 					Name: "default",
 				},
 				Spec: v1alpha1.IstioRevisionSpec{
+					Type:      v1alpha1.IstioRevisionTypeLocal,
 					Version:   supportedversion.Default,
 					Namespace: "istio-system",
 					Values: &v1alpha1.Values{
@@ -167,6 +195,7 @@ func TestValidate(t *testing.T) {
 					Name: "my-revision",
 				},
 				Spec: v1alpha1.IstioRevisionSpec{
+					Type:      v1alpha1.IstioRevisionTypeLocal,
 					Version:   supportedversion.Default,
 					Namespace: "istio-system",
 					Values: &v1alpha1.Values{
@@ -259,6 +288,7 @@ func newCondition(
 func TestDetermineReadyCondition(t *testing.T) {
 	testCases := []struct {
 		name          string
+		revType       v1alpha1.IstioRevisionType
 		values        *v1alpha1.Values
 		clientObjects []client.Object
 		interceptors  interceptor.Funcs
@@ -382,6 +412,94 @@ func TestDetermineReadyCondition(t *testing.T) {
 			},
 			expectErr: true,
 		},
+		{
+			name:    "Istiod-remote ready",
+			revType: v1alpha1.IstioRevisionTypeRemote,
+			values:  nil,
+			clientObjects: []client.Object{
+				&admissionv1.MutatingWebhookConfiguration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "istio-sidecar-injector",
+						Annotations: map[string]string{
+							constants.WebhookReadinessProbeStatusAnnotationKey: "true",
+						},
+					},
+				},
+			},
+			expected: v1alpha1.IstioRevisionCondition{
+				Type:   v1alpha1.IstioRevisionConditionReady,
+				Status: metav1.ConditionTrue,
+			},
+		},
+		{
+			name:    "Istiod-remote not ready",
+			revType: v1alpha1.IstioRevisionTypeRemote,
+			values:  nil,
+			clientObjects: []client.Object{
+				&admissionv1.MutatingWebhookConfiguration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "istio-sidecar-injector",
+						Annotations: map[string]string{
+							constants.WebhookReadinessProbeStatusAnnotationKey: "false",
+						},
+					},
+				},
+			},
+			expected: v1alpha1.IstioRevisionCondition{
+				Type:    v1alpha1.IstioRevisionConditionReady,
+				Status:  metav1.ConditionFalse,
+				Reason:  v1alpha1.IstioRevisionReasonRemoteIstiodNotReady,
+				Message: "readiness probe on remote istiod failed",
+			},
+		},
+		{
+			name:    "Istiod-remote no readiness probe status annotation",
+			revType: v1alpha1.IstioRevisionTypeRemote,
+			values:  nil,
+			clientObjects: []client.Object{
+				&admissionv1.MutatingWebhookConfiguration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        "istio-sidecar-injector",
+						Annotations: map[string]string{},
+					},
+				},
+			},
+			expected: v1alpha1.IstioRevisionCondition{
+				Type:    v1alpha1.IstioRevisionConditionReady,
+				Status:  metav1.ConditionFalse,
+				Reason:  v1alpha1.IstioRevisionReasonRemoteIstiodNotReady,
+				Message: "invalid or missing annotation operator.istio.io/readinessProbe.status on MutatingWebhookConfiguration istio-sidecar-injector",
+			},
+		},
+		{
+			name:          "Istiod-remote webhook config not found",
+			revType:       v1alpha1.IstioRevisionTypeRemote,
+			values:        nil,
+			clientObjects: []client.Object{},
+			expected: v1alpha1.IstioRevisionCondition{
+				Type:    v1alpha1.IstioRevisionConditionReady,
+				Status:  metav1.ConditionFalse,
+				Reason:  v1alpha1.IstioRevisionReasonRemoteIstiodNotReady,
+				Message: "MutatingWebhookConfiguration istio-sidecar-injector not found",
+			},
+		},
+		{
+			name:          "Istiod-remote client error on get",
+			revType:       v1alpha1.IstioRevisionTypeRemote,
+			clientObjects: []client.Object{},
+			interceptors: interceptor.Funcs{
+				Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					return fmt.Errorf("simulated error")
+				},
+			},
+			expected: v1alpha1.IstioRevisionCondition{
+				Type:    v1alpha1.IstioRevisionConditionReady,
+				Status:  metav1.ConditionUnknown,
+				Reason:  v1alpha1.IstioRevisionReasonReadinessCheckFailed,
+				Message: "failed to get readiness: simulated error",
+			},
+			expectErr: true,
+		},
 	}
 
 	for _, tt := range testCases {
@@ -392,12 +510,16 @@ func TestDetermineReadyCondition(t *testing.T) {
 
 			r := NewReconciler(cl, scheme.Scheme, "no-resource-dir", nil)
 
+			if tt.revType == "" {
+				tt.revType = v1alpha1.IstioRevisionTypeLocal
+			}
 			rev := &v1alpha1.IstioRevision{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "my-istio",
 				},
 				Spec: v1alpha1.IstioRevisionSpec{
 					Namespace: "istio-system",
+					Type:      tt.revType,
 					Values:    tt.values,
 				},
 			}

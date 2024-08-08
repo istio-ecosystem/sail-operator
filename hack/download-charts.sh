@@ -70,6 +70,7 @@ function downloadIstioManifests() {
     cp -rf "${WORK_DIR}"/"${EXTRACT_DIR}"/manifests/charts/gateway "${CHARTS_DIR}/gateway"
     cp -rf "${WORK_DIR}"/"${EXTRACT_DIR}"/manifests/charts/istio-cni "${CHARTS_DIR}/cni"
     cp -rf "${WORK_DIR}"/"${EXTRACT_DIR}"/manifests/charts/istio-control/istio-discovery "${CHARTS_DIR}/istiod"
+    cp -rf "${WORK_DIR}"/"${EXTRACT_DIR}"/manifests/charts/istiod-remote "${CHARTS_DIR}/istiod-remote"
     cp -rf "${WORK_DIR}"/"${EXTRACT_DIR}"/manifests/charts/ztunnel "${CHARTS_DIR}/ztunnel"
 
     echo "copying profiles to ${PROFILES_DIR}"
