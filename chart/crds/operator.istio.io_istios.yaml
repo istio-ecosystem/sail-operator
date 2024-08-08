@@ -1249,6 +1249,71 @@ spec:
                           use. Options are "debug" or "distroless". Unset will use
                           the default for the given version.
                         type: string
+                      waypoint:
+                        description: Specifies how waypoints are configured within
+                          Istio.
+                        properties:
+                          resources:
+                            description: |-
+                              K8s resource settings.
+
+
+                              See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
+                            properties:
+                              claims:
+                                description: |-
+                                  Claims lists the names of resources, defined in spec.resourceClaims,
+                                  that are used by this container.
+
+
+                                  This is an alpha field and requires enabling the
+                                  DynamicResourceAllocation feature gate.
+
+
+                                  This field is immutable. It can only be set for containers.
+                                items:
+                                  description: ResourceClaim references one entry
+                                    in PodSpec.ResourceClaims.
+                                  properties:
+                                    name:
+                                      description: |-
+                                        Name must match the name of one entry in pod.spec.resourceClaims of
+                                        the Pod where this field is used. It makes that resource available
+                                        inside a container.
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
+                                type: array
+                                x-kubernetes-list-map-keys:
+                                - name
+                                x-kubernetes-list-type: map
+                              limits:
+                                additionalProperties:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                description: |-
+                                  Limits describes the maximum amount of compute resources allowed.
+                                  More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                                type: object
+                              requests:
+                                additionalProperties:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                description: |-
+                                  Requests describes the minimum amount of compute resources required.
+                                  If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                                  otherwise to an implementation-defined value. Requests cannot exceed Limits.
+                                  More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                                type: object
+                            type: object
+                        type: object
                     type: object
                   istiodRemote:
                     description: Configuration for istiod-remote.
@@ -3925,7 +3990,8 @@ spec:
                           A Pattern can be composed of various pre-defined variables. The following variables are supported.
 
 
-                          - `%SERVICE%` - Will be substituted with name of the service.
+                          - `%SERVICE%` - Will be substituted with short hostname of the service.
+                          - `%SERVICE_NAME%` - Will be substituted with name of the service.
                           - `%SERVICE_FQDN%` - Will be substituted with FQDN of the service.
                           - `%SERVICE_PORT%` - Will be substituted with port of the service.
                           - `%TARGET_PORT%`  - Will be substituted with the target port of the service.
@@ -4193,7 +4259,8 @@ spec:
                           A Pattern can be composed of various pre-defined variables. The following variables are supported.
 
 
-                          - `%SERVICE%` - Will be substituted with name of the service.
+                          - `%SERVICE%` - Will be substituted with short hostname of the service.
+                          - `%SERVICE_NAME%` - Will be substituted with name of the service.
                           - `%SERVICE_FQDN%` - Will be substituted with FQDN of the service.
                           - `%SERVICE_PORT%` - Will be substituted with port of the service.
                           - `%SERVICE_PORT_NAME%` - Will be substituted with port name of the service.
@@ -4209,17 +4276,14 @@ spec:
                       outboundTrafficPolicy:
                         description: |-
                           Set the default behavior of the sidecar for handling outbound
-                          traffic from the application.  If your application uses one or
-                          more external services that are not known apriori, setting the
-                          policy to `ALLOW_ANY` will cause the sidecars to route any unknown
-                          traffic originating from the application to its requested
-                          destination. Users are strongly encouraged to use ServiceEntries
-                          to explicitly declare any external dependencies, instead of using
-                          `ALLOW_ANY`, so that traffic to these services can be
-                          monitored. Can be overridden at a Sidecar level by setting the
-                          `OutboundTrafficPolicy` in the [Sidecar
-                          API](https://istio.io/docs/reference/config/networking/sidecar/#OutboundTrafficPolicy).
-                          Default mode is `ALLOW_ANY` which means outbound traffic to unknown destinations will be allowed.
+                          traffic from the application.
+
+
+                          Can be overridden at a Sidecar level by setting the `OutboundTrafficPolicy` in the
+                          [Sidecar API](https://istio.io/docs/reference/config/networking/sidecar/#OutboundTrafficPolicy).
+
+
+                          Default mode is `ALLOW_ANY`, which means outbound traffic to unknown destinations will be allowed.
                         properties:
                           mode:
                             enum:

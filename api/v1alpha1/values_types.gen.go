@@ -421,7 +421,9 @@ type GlobalConfig struct {
 	// Controls whether Services are configured to use IPv4, IPv6, or both. Valid options
 	// are PreferDualStack, RequireDualStack, and SingleStack.
 	// More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services
-	IpFamilyPolicy string `json:"ipFamilyPolicy,omitempty"` // The next available key is 72
+	IpFamilyPolicy string `json:"ipFamilyPolicy,omitempty"`
+	// Specifies how waypoints are configured within Istio.
+	Waypoint *WaypointConfig `json:"waypoint,omitempty"` // The next available key is 73
 }
 
 // Configuration for Security Token Service (STS) server.
@@ -948,6 +950,14 @@ type ExperimentalConfig struct {
 	StableValidationPolicy *bool `json:"stableValidationPolicy,omitempty"`
 }
 
+// Configuration for Waypoint proxies.
+type WaypointConfig struct {
+	// K8s resource settings.
+	//
+	// See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
+	Resources *k8sv1.ResourceRequirements `json:"resources,omitempty"`
+}
+
 // Resource describes the source of configuration
 // +kubebuilder:validation:Enum=SERVICE_REGISTRY
 type Resource string
@@ -1015,11 +1025,17 @@ const (
 type MeshConfigOutboundTrafficPolicyMode string
 
 const (
-	// outbound traffic will be restricted to services defined in the
-	// service registry as well as those defined through ServiceEntries
+	// In `REGISTRY_ONLY` mode, unknown outbound traffic will be dropped.
+	// Traffic destinations must be explicitly declared into the service registry through `ServiceEntry` configurations.
+	//
+	// Note: Istio [does not offer an outbound traffic security policy](https://istio.io/latest/docs/ops/best-practices/security/#understand-traffic-capture-limitations).
+	// This option does not act as one, or as any form of an outbound firewall.
+	// Instead, this option exists primarily to offer users a way to detect missing `ServiceEntry` configurations by explicitly failing.
 	MeshConfigOutboundTrafficPolicyModeRegistryOnly MeshConfigOutboundTrafficPolicyMode = "REGISTRY_ONLY"
-	// outbound traffic to unknown destinations will be allowed, in case
-	// there are no services or ServiceEntries for the destination port
+	// In `ALLOW_ANY` mode, any traffic to unknown destinations will be allowed.
+	// Unknown destination traffic will have limited functionality, however, such as reduced observability.
+	// This mode allows users that do not have all possible egress destinations registered through `ServiceEntry` configurations to still connect
+	// to arbitrary destinations.
 	MeshConfigOutboundTrafficPolicyModeAllowAny MeshConfigOutboundTrafficPolicyMode = "ALLOW_ANY"
 )
 
@@ -1172,17 +1188,12 @@ type MeshConfig struct {
 	// On Kubernetes, this can be overridden on individual pods with the `proxy.istio.io/config` annotation.
 	DefaultConfig *MeshConfigProxyConfig `json:"defaultConfig,omitempty"`
 	// Set the default behavior of the sidecar for handling outbound
-	// traffic from the application.  If your application uses one or
-	// more external services that are not known apriori, setting the
-	// policy to `ALLOW_ANY` will cause the sidecars to route any unknown
-	// traffic originating from the application to its requested
-	// destination. Users are strongly encouraged to use ServiceEntries
-	// to explicitly declare any external dependencies, instead of using
-	// `ALLOW_ANY`, so that traffic to these services can be
-	// monitored. Can be overridden at a Sidecar level by setting the
-	// `OutboundTrafficPolicy` in the [Sidecar
-	// API](https://istio.io/docs/reference/config/networking/sidecar/#OutboundTrafficPolicy).
-	// Default mode is `ALLOW_ANY` which means outbound traffic to unknown destinations will be allowed.
+	// traffic from the application.
+	//
+	// Can be overridden at a Sidecar level by setting the `OutboundTrafficPolicy` in the
+	// [Sidecar API](https://istio.io/docs/reference/config/networking/sidecar/#OutboundTrafficPolicy).
+	//
+	// Default mode is `ALLOW_ANY`, which means outbound traffic to unknown destinations will be allowed.
 	OutboundTrafficPolicy *MeshConfigOutboundTrafficPolicy `json:"outboundTrafficPolicy,omitempty"`
 	// Set the default behavior of the sidecar for handling inbound
 	// traffic to the application.  If your application listens on
@@ -1287,7 +1298,8 @@ type MeshConfig struct {
 	//
 	// A Pattern can be composed of various pre-defined variables. The following variables are supported.
 	//
-	// - `%SERVICE%` - Will be substituted with name of the service.
+	// - `%SERVICE%` - Will be substituted with short hostname of the service.
+	// - `%SERVICE_NAME%` - Will be substituted with name of the service.
 	// - `%SERVICE_FQDN%` - Will be substituted with FQDN of the service.
 	// - `%SERVICE_PORT%` - Will be substituted with port of the service.
 	// - `%TARGET_PORT%`  - Will be substituted with the target port of the service.
@@ -1305,7 +1317,8 @@ type MeshConfig struct {
 	//
 	// A Pattern can be composed of various pre-defined variables. The following variables are supported.
 	//
-	// - `%SERVICE%` - Will be substituted with name of the service.
+	// - `%SERVICE%` - Will be substituted with short hostname of the service.
+	// - `%SERVICE_NAME%` - Will be substituted with name of the service.
 	// - `%SERVICE_FQDN%` - Will be substituted with FQDN of the service.
 	// - `%SERVICE_PORT%` - Will be substituted with port of the service.
 	// - `%SERVICE_PORT_NAME%` - Will be substituted with port name of the service.
@@ -1486,6 +1499,8 @@ type Certificate struct {
 	DnsNames []string `json:"dnsNames,omitempty"`
 }
 
+// `OutboundTrafficPolicy` sets the default behavior of the sidecar for
+// handling unknown outbound traffic from the application.
 type MeshConfigOutboundTrafficPolicy struct {
 	Mode MeshConfigOutboundTrafficPolicyMode `json:"mode,omitempty"`
 }
@@ -3189,7 +3204,7 @@ type PortSelector struct {
 //	      ports: ["8080"]
 //
 // ```
-// +kubebuilder:validation:XValidation:message="Support kinds are core/Service and gateway.networking.k8s.io/Gateway",rule="[self.group, self.kind] in [['core','Service'], [”,'Service'], ['gateway.networking.k8s.io','Gateway']]"
+// +kubebuilder:validation:XValidation:message="Support kinds are core/Service, networking.istio.io/ServiceEntry, gateway.networking.k8s.io/Gateway",rule="[self.group, self.kind] in [['core','Service'], [”,'Service'], ['gateway.networking.k8s.io','Gateway'], ['networking.istio.io','ServiceEntry']]"
 type PolicyTargetReference struct {
 	// group is the group of the target resource.
 	// +kubebuilder:validation:MaxLength=253
