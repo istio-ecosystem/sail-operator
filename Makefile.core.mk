@@ -385,6 +385,15 @@ gen-api-docs: ## Generate API documentation.
 		--renderer=markdown \
 		--output-path=$(OUTPUT_DOCS_PATH) \
 		--output-mode=group
+	@echo "The following replaces are applied to the generated markdown files as workaround"
+	@echo "because can't be applied in the ast nodes in the transform api"
+	@echo "go fmt does not properly handle tabs"
+	@echo "Remove br tags from the generated markdown files"
+	@find $(OUTPUT_DOCS_PATH) -type f -name "*.md" -exec sed -i 's/<br \/>/ /g' {} \;
+	@echo "Replace tabs with spaces in the generated markdown files"
+	@find $(OUTPUT_DOCS_PATH) -type f -name "*.md" -exec sed -i 's/\t/  /g' {} \;
+	@echo "Delete empty new lines inside yaml blocks"
+	@find $(OUTPUT_DOCS_PATH) -type f -name "*.md" -exec sed -i '/```yaml/,/```/ { /^$$/ d }' {} \;
 	@echo "API reference documentation generated at $(OUTPUT_DOCS_PATH)"
 
 .PHONY: restore-manifest-dates
