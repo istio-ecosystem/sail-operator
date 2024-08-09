@@ -171,13 +171,18 @@ func (in *CNIGlobalConfig) DeepCopyInto(out *CNIGlobalConfig) {
 		*out = new(v1.ResourceRequirements)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.ImagePullPolicy != nil {
+		in, out := &in.ImagePullPolicy, &out.ImagePullPolicy
+		*out = new(v1.PullPolicy)
+		**out = **in
+	}
 	if in.ImagePullSecrets != nil {
 		in, out := &in.ImagePullSecrets, &out.ImagePullSecrets
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	if in.LogAsJSON != nil {
-		in, out := &in.LogAsJSON, &out.LogAsJSON
+	if in.LogAsJson != nil {
+		in, out := &in.LogAsJson, &out.LogAsJson
 		*out = new(bool)
 		**out = **in
 	}
