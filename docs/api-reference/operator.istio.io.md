@@ -147,11 +147,11 @@ _Appears in:_
 | `defaultResources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core)_ | Default k8s resources settings for all Istio control plane components.<br /><br />See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container |  |  |
 | `hub` _string_ | Specifies the docker hub for Istio images. |  |  |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#pullpolicy-v1-core)_ | Specifies the image pull policy for the Istio images. one of Always, Never, IfNotPresent.<br />Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.<br /><br />More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |  |  |
-| `imagePullSecrets` _string array_ |  |  |  |
-| `logAsJson` _boolean_ |  |  |  |
+| `imagePullSecrets` _string array_ | ImagePullSecrets for the control plane ServiceAccount, list of secrets in the same namespace<br />to use for pulling any images in pods that reference this ServiceAccount.<br />Must be set for any cluster configured with private docker registry. |  |  |
+| `logAsJson` _boolean_ | Specifies whether istio components should output logs in json format by adding --log_as_json argument to each container. |  |  |
 | `logging` _[GlobalLoggingConfig](#globalloggingconfig)_ | Specifies the global logging level settings for the Istio CNI component. |  |  |
 | `tag` _[IntOrString](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#intorstring-intstr-util)_ | Specifies the tag for the Istio CNI image. |  | XIntOrString: \{\} <br /> |
-| `variant` _string_ |  |  |  |
+| `variant` _string_ | The variant of the Istio container images to use. Options are "debug" or "distroless". Unset will use the default for the given version. |  |  |
 
 
 #### CNIRepairConfig
