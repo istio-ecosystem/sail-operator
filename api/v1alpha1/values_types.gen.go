@@ -131,8 +131,7 @@ type CNIConfig struct {
 	//
 	// See: https://kubernetes.io/docs/tutorials/security/seccomp/
 	SeccompProfile *k8sv1.SeccompProfile `json:"seccompProfile,omitempty"`
-	// Configuration for Istio Ambient.
-	Ambient *CNIAmbientConfig `json:"ambient,omitempty"`
+
 	// Specifies the CNI provider. Can be either "default" or "multus". When set to "multus", an additional
 	// NetworkAttachmentDefinition resource is deployed to the cluster to allow the istio-cni plugin to be
 	// invoked in a cluster using the Multus CNI plugin.

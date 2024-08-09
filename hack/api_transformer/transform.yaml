@@ -62,6 +62,7 @@ inputFiles:
     - SidecarInjectorConfig.ObjectSelector # appears to be unused
     - CNIConfig.Enabled                    # CNI is enabled by the mere presence of the IstioCNI resource
     - CNIConfig.LogLevel                   # deprecated and replaced with CNIConfig.logging.level
+    - CNIConfig.Ambient                    # we don't support Ambient yet
     - CNIUsageConfig.Chained               # deprecated and unused in upstream
     - BaseConfig.EnableCRDTemplates        # not used, because the operator doesn't deploy CRDs
     - BaseConfig.EnableIstioConfigCRDs     # present in values.yaml, but not used in any chart

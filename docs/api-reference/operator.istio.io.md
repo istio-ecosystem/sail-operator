@@ -76,23 +76,6 @@ _Appears in:_
 | `validationCABundle` _string_ | validation webhook CA bundle |  |  |
 
 
-#### CNIAmbientConfig
-
-
-
-
-
-
-
-_Appears in:_
-- [CNIConfig](#cniconfig)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `enabled` _boolean_ | Controls whether ambient redirection is enabled |  |  |
-| `configDir` _string_ | The directory path containing the configuration files for Ambient. Defaults to /etc/ambient-config. |  |  |
-| `dnsCapture` _boolean_ | If enabled, and ambient is enabled, DNS redirection will be enabled. |  |  |
-| `ipv6` _boolean_ | UNSTABLE: If enabled, and ambient is enabled, enables ipv6 support |  |  |
 
 
 #### CNIConfig
@@ -128,7 +111,6 @@ _Appears in:_
 | `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core)_ | The k8s resource requests and limits for the istio-cni Pods. |  |  |
 | `privileged` _boolean_ | No longer used for CNI. See: https://github.com/istio/istio/issues/49004<br /><br />Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto. |  |  |
 | `seccompProfile` _[SeccompProfile](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#seccompprofile-v1-core)_ | The Container seccompProfile<br /><br />See: https://kubernetes.io/docs/tutorials/security/seccomp/ |  |  |
-| `ambient` _[CNIAmbientConfig](#cniambientconfig)_ | Configuration for Istio Ambient. |  |  |
 | `provider` _string_ | Specifies the CNI provider. Can be either "default" or "multus". When set to "multus", an additional<br />NetworkAttachmentDefinition resource is deployed to the cluster to allow the istio-cni plugin to be<br />invoked in a cluster using the Multus CNI plugin. |  |  |
 | `rollingMaxUnavailable` _[IntOrString](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#intorstring-intstr-util)_ | The number of pods that can be unavailable during a rolling update of the CNI DaemonSet (see<br />`updateStrategy.rollingUpdate.maxUnavailable` here:<br />https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/daemon-set-v1/#DaemonSetSpec).<br />May be specified as a number of pods or as a percent of the total number<br />of pods at the start of the update. |  | XIntOrString: \{\} <br /> |
 
