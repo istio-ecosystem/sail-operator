@@ -21,9 +21,11 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
+	"golang.org/x/mod/modfile"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 	"golang.org/x/tools/go/ast/astutil"
@@ -49,6 +51,7 @@ type Config struct {
 }
 
 type InputFile struct {
+	Module          string           `yaml:"module"`
 	Path            string           `yaml:"path"`
 	Transformations *Transformations `yaml:"transformations"`
 }
@@ -93,7 +96,7 @@ func main() {
 	for _, inputFile := range config.InputFiles {
 		fileTransformer := FileTransformer{
 			FileSet:         fset,
-			InputFile:       inputFile.Path,
+			InputFile:       getFilePath(inputFile.Module, inputFile.Path),
 			Transformations: merge(inputFile.Transformations, config.GlobalTransformations),
 			Package:         config.Package,
 		}
@@ -276,6 +279,44 @@ func (t *FileTransformer) processFile() (*ast.File, error) {
 	removeEmptyBlocks(file)
 
 	return file, nil
+}
+
+// getFilePath finds the file path of the given module and file in the go.mod cache.
+func getFilePath(module, file string) string {
+	goModPath := "go.mod"
+
+	data, err := os.ReadFile(goModPath)
+	if err != nil {
+		panic(fmt.Errorf("could not read go.mod file: %v", err))
+	}
+
+	modFile, err := modfile.Parse(goModPath, data, nil)
+	if err != nil {
+		panic(fmt.Errorf("could not parse go.mod file: %v", err))
+	}
+
+	version := findDependencyVersion(modFile, module)
+	if version == "" {
+		panic(fmt.Errorf("dependency %s not found in go.mod", module))
+	}
+
+	goPath := os.Getenv("GOPATH")
+	if goPath == "" {
+		goPath = filepath.Join(os.Getenv("HOME"), "go")
+	}
+	modCachePath := filepath.Join(goPath, "pkg", "mod")
+
+	return filepath.Join(modCachePath, module+"@"+version, file)
+}
+
+// findDependencyVersion finds the version of the given module path in the parsed modfile.
+func findDependencyVersion(modFile *modfile.File, modulePath string) string {
+	for _, req := range modFile.Require {
+		if req.Mod.Path == modulePath {
+			return req.Mod.Version
+		}
+	}
+	return ""
 }
 
 func mergeFiles(fset *token.FileSet, files []*ast.File) *ast.File {

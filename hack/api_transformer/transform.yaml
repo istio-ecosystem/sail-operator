@@ -40,7 +40,8 @@ globalTransformations:
     "*duration.Duration": "*metav1.Duration"
 
 inputFiles:
-- path: /tmp/values_types.pb.go
+- module: istio.io/istio
+  path: /operator/pkg/apis/istio/v1alpha1/values_types.pb.go
   transformations:
     removeTypes:
     - EgressGatewayConfig
@@ -110,7 +111,8 @@ inputFiles:
       CNIConfig.PullPolicy: "// +kubebuilder:validation:Enum=Always;Never;IfNotPresent"
       GlobalConfig.ImagePullPolicy: "// +kubebuilder:validation:Enum=Always;Never;IfNotPresent"
 
-- path: /tmp/config.pb.go
+- module: istio.io/api
+  path: /mesh/v1alpha1/config.pb.go
   transformations:
     renameImports:
       v1: metav1
@@ -130,9 +132,11 @@ inputFiles:
     addTags:
       MeshConfig.ExtensionProviders: "// +kubebuilder:validation:MaxItems=1000"  # to prevent CEL cost overruns
 
-- path: /tmp/network.pb.go
+- module: istio.io/api
+  path: /mesh/v1alpha1/network.pb.go
 
-- path: /tmp/proxy.pb.go
+- module: istio.io/api
+  path: /mesh/v1alpha1/proxy.pb.go
   transformations:
     renameTypes:
       ProxyConfig: MeshConfigProxyConfig
@@ -143,7 +147,8 @@ inputFiles:
       ProxyConfig.ReadinessProbe: "*k8sv1.Probe"
       ProxyConfig.Image: "*ProxyImage"
 
-- path: /tmp/proxy_config.pb.go
+- module: istio.io/api
+  path: /networking/v1beta1/proxy_config.pb.go
   transformations:
     removeTypes:
     - '*'
@@ -152,9 +157,11 @@ inputFiles:
     replaceFieldTypes:
       ProxyConfig.Selector: "*WorkloadSelector"
 
-- path: /tmp/selector.pb.go
+- module: istio.io/api
+  path: /type/v1beta1/selector.pb.go
 
-- path: /tmp/destination_rule.pb.go
+- module: istio.io/api
+  path: /networking/v1alpha3/destination_rule.pb.go
   transformations:
     removeTypes:
     - '*'
@@ -166,7 +173,8 @@ inputFiles:
     - ClientTLSSettings
     - ClientTLSSettings_TLSmode
 
-- path: /tmp/virtual_service.pb.go
+- module: istio.io/api
+  path: /networking/v1alpha3/virtual_service.pb.go
   transformations:
     removeTypes:
     - '*'
