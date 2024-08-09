@@ -107,7 +107,7 @@ inputFiles:
       SidecarInjectorConfig.AlwaysInjectSelector: "[]metav1.LabelSelector"
       SidecarInjectorConfig.InjectedAnnotations: "map[string]string"
       SidecarInjectorConfig.Templates: "map[string]string"
-    addTags:
+    addComments:
       CNIConfig.PullPolicy: "// +kubebuilder:validation:Enum=Always;Never;IfNotPresent"
       GlobalConfig.ImagePullPolicy: "// +kubebuilder:validation:Enum=Always;Never;IfNotPresent"
 
@@ -129,7 +129,7 @@ inputFiles:
     removeTypes:
     - LabelSelector
     - LabelSelectorRequirement
-    addTags:
+    addComments:
       MeshConfig.ExtensionProviders: "// +kubebuilder:validation:MaxItems=1000"  # to prevent CEL cost overruns
 
 - module: istio.io/api
