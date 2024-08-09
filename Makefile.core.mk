@@ -430,6 +430,10 @@ CONTROLLER_TOOLS_VERSION ?= v0.15.0
 OPM_VERSION ?= v1.45.0
 GITLEAKS_VERSION ?= v8.18.4
 
+# GENERATE_RELATED_IMAGES defines whether `spec.relatedImages` is going to be generated or not
+# To disable set flag to false
+GENERATE_RELATED_IMAGES ?= true
+
 .PHONY: helm $(HELM)
 helm: $(HELM) ## Download helm to bin directory. If wrong version is installed, it will be overwritten.
 $(HELM): $(LOCALBIN)
@@ -471,6 +475,10 @@ $(GITLEAKS): $(LOCALBIN)
 bundle: gen helm operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
 	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --set platform=openshift --set bundleGeneration=true | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
 
+ifeq ($(GENERATE_RELATED_IMAGES), true)
+	@hack/patch-csv.sh bundle/manifests/$(OPERATOR_NAME).clusterserviceversion.yaml
+endif
+
 	# update CSV's spec.customresourcedefinitions.owned field. ideally we could do this straight in ./bundle, but
 	# sadly this is only possible if the file lives in a `bases` directory
 	mkdir -p _tmp/bases
@@ -487,6 +495,7 @@ bundle: gen helm operator-sdk ## Generate bundle manifests and metadata, then va
 				git checkout "$$csvPath" || echo "failed to revert timestamp change. assuming we're in the middle of a merge"; \
 			fi \
 		fi
+
 	$(OPERATOR_SDK) bundle validate ./bundle
 
 .PHONY: bundle-build
