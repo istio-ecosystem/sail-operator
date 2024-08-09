@@ -1379,10 +1379,17 @@ spec:
                           More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
                         type: string
                       imagePullSecrets:
+                        description: |-
+                          ImagePullSecrets for the control plane ServiceAccount, list of secrets in the same namespace
+                          to use for pulling any images in pods that reference this ServiceAccount.
+                          Must be set for any cluster configured with private docker registry.
                         items:
                           type: string
                         type: array
                       logAsJson:
+                        description: Specifies whether istio components should output
+                          logs in json format by adding --log_as_json argument to
+                          each container.
                         type: boolean
                       logging:
                         description: Specifies the global logging level settings for
@@ -1402,6 +1409,9 @@ spec:
                         description: Specifies the tag for the Istio CNI image.
                         x-kubernetes-int-or-string: true
                       variant:
+                        description: The variant of the Istio container images to
+                          use. Options are "debug" or "distroless". Unset will use
+                          the default for the given version.
                         type: string
                     type: object
                 type: object
