@@ -70,7 +70,7 @@ type Transformations struct {
 	ReplaceFunctionReturnTypes map[string]string `yaml:"replaceFunctionReturnTypes"`
 	ReplaceFieldTypes          map[string]string `yaml:"replaceFieldTypes"`
 	ReplaceTypes               map[string]string `yaml:"replaceTypes"`
-	AddTags                    map[string]string `yaml:"addTags"`
+	AddComments                map[string]string `yaml:"addComments"`
 }
 
 var config *Config
@@ -139,7 +139,7 @@ func merge(local, global *Transformations) *Transformations {
 		ReplaceFunctionReturnTypes: mergeStringMaps(local.ReplaceFunctionReturnTypes, global.ReplaceFunctionReturnTypes),
 		ReplaceFieldTypes:          mergeStringMaps(local.ReplaceFieldTypes, global.ReplaceFieldTypes),
 		ReplaceTypes:               mergeStringMaps(local.ReplaceTypes, global.ReplaceTypes),
-		AddTags:                    mergeStringMaps(local.AddTags, global.AddTags),
+		AddComments:                mergeStringMaps(local.AddComments, global.AddComments),
 	}
 }
 
@@ -240,17 +240,17 @@ func (t *FileTransformer) processFile() (*ast.File, error) {
 						field.Type = newType
 					}
 
-					if tag := t.getFieldTags(structName, fieldName); tag != "" {
-						addTag(field, tag)
+					if tag := t.getFieldComments(structName, fieldName); tag != "" {
+						addComment(field, tag)
 					}
 					if toString(field.Type) == "*intstr.IntOrString" {
-						addTag(field, "// +kubebuilder:validation:XIntOrString")
+						addComment(field, "// +kubebuilder:validation:XIntOrString")
 					}
 
 					if field.Doc != nil {
 						for _, comment := range field.Doc.List {
 							if strings.HasPrefix(comment.Text, "// REQUIRED.") {
-								addTag(field, "// +kubebuilder:validation:Required")
+								addComment(field, "// +kubebuilder:validation:Required")
 								removeOmitemptyFromJSONTag(field)
 								// TODO: remove pointer?
 							}
@@ -422,7 +422,7 @@ func convertTabsToHeadings(doc *ast.CommentGroup) {
 	}
 }
 
-func addTag(node ast.Node, text string) {
+func addComment(node ast.Node, text string) {
 	switch n := node.(type) {
 	case *ast.Field:
 		if n.Doc == nil {
@@ -499,7 +499,7 @@ func processInterfaceFields(file *ast.File) {
 							newFields = append(newFields, field)
 						}
 						if hasInterfaceField {
-							addTag(genDecl, buildOneOfValidation(interfaceFields))
+							addComment(genDecl, buildOneOfValidation(interfaceFields))
 						}
 						structType.Fields.List = newFields
 					}
@@ -654,7 +654,7 @@ func convertEnum(enumName string, file *ast.File) {
 					if ident, ok := typeSpec.Type.(*ast.Ident); ok && ident.Name == "int32" {
 						ident.Name = "string"
 					}
-					addTag(genDecl, "// +kubebuilder:validation:Enum="+strings.Join(enumValues, ";"))
+					addComment(genDecl, "// +kubebuilder:validation:Enum="+strings.Join(enumValues, ";"))
 				}
 			case token.CONST:
 				// change the constant values to strings
@@ -745,8 +745,8 @@ func (t *FileTransformer) getFieldRename(structName string, fieldName string) st
 	return getMapValue(structName, fieldName, t.Transformations.RenameFields)
 }
 
-func (t *FileTransformer) getFieldTags(structName string, fieldName string) string {
-	return getMapValue(structName, fieldName, t.Transformations.AddTags)
+func (t *FileTransformer) getFieldComments(structName string, fieldName string) string {
+	return getMapValue(structName, fieldName, t.Transformations.AddComments)
 }
 
 func getMapValue(parent string, child string, m map[string]string) string {
