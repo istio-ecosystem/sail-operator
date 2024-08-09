@@ -19,6 +19,8 @@ globalTransformations:
   - istio.io/api/type/v1beta1
   - istio.io/api/networking/v1alpha3
   - istio.io/api/networking/v1beta1
+  - k8s.io/apimachinery/pkg/apis/meta/v1
+  - k8s.io/api/core/v1
   addImports:
     metav1: k8s.io/apimachinery/pkg/apis/meta/v1
     k8sv1: k8s.io/api/core/v1
@@ -38,7 +40,8 @@ globalTransformations:
     "*duration.Duration": "*metav1.Duration"
 
 inputFiles:
-- path: /tmp/values_types.pb.go
+- module: istio.io/istio
+  path: /operator/pkg/apis/istio/v1alpha1/values_types.pb.go
   transformations:
     removeTypes:
     - EgressGatewayConfig
@@ -56,8 +59,12 @@ inputFiles:
     - Values.Gateways                      # operator doesn't support deployment of ingress/egress gateways
     - Values.OwnerName                     # operator sets this internally
     - Values.Ztunnel                       # ambient is not yet supported
+    - Values.Experimental                  # unstable/experimental fields that could be removed or changed in the future
     - SidecarInjectorConfig.ObjectSelector # appears to be unused
     - CNIConfig.Enabled                    # CNI is enabled by the mere presence of the IstioCNI resource
+    - CNIConfig.LogLevel                   # deprecated and replaced with CNIConfig.logging.level
+    - CNIConfig.Ambient                    # we don't support Ambient yet
+    - CNIUsageConfig.Chained               # deprecated and unused in upstream
     - BaseConfig.EnableCRDTemplates        # not used, because the operator doesn't deploy CRDs
     - BaseConfig.EnableIstioConfigCRDs     # present in values.yaml, but not used in any chart
     - BaseConfig.ValidateGateway           # not used anywhere
@@ -67,10 +74,11 @@ inputFiles:
       "*durationpb.Duration": "*metav1.Duration"
       "*Resources": "*k8sv1.ResourceRequirements"
     replaceFieldTypes:
-      "*.Tag": "*intstr.IntOrString"
+      "*.Tag": "string"
       CNIConfig.Affinity: "*k8sv1.Affinity"
       CNIConfig.PodAnnotations: "map[string]string"
       CNIConfig.SeccompProfile: "*k8sv1.SeccompProfile"
+      CNIConfig.PullPolicy: "*k8sv1.PullPolicy"
       Values.MeshConfig: "*MeshConfig"
       GlobalConfig.DefaultNodeSelector: "map[string]string"
       GlobalConfig.DefaultResources: "*k8sv1.ResourceRequirements"
@@ -86,6 +94,7 @@ inputFiles:
       PilotConfig.PodAnnotations: "map[string]string"
       PilotConfig.PodLabels: "map[string]string"
       PilotConfig.ServiceAnnotations: "map[string]string"
+      PilotConfig.ServiceAccountAnnotations: "map[string]string"
       PilotConfig.SeccompProfile: "*k8sv1.SeccompProfile"
       PilotConfig.Tolerations: "[]k8sv1.Toleration"
       PilotConfig.TopologySpreadConstraints: "[]k8sv1.TopologySpreadConstraint"
@@ -98,8 +107,12 @@ inputFiles:
       SidecarInjectorConfig.AlwaysInjectSelector: "[]metav1.LabelSelector"
       SidecarInjectorConfig.InjectedAnnotations: "map[string]string"
       SidecarInjectorConfig.Templates: "map[string]string"
+    addTags:
+      CNIConfig.PullPolicy: "// +kubebuilder:validation:Enum=Always;Never;IfNotPresent"
+      GlobalConfig.ImagePullPolicy: "// +kubebuilder:validation:Enum=Always;Never;IfNotPresent"
 
-- path: /tmp/config.pb.go
+- module: istio.io/api
+  path: /mesh/v1alpha1/config.pb.go
   transformations:
     renameImports:
       v1: metav1
@@ -110,14 +123,20 @@ inputFiles:
       MeshConfig.TcpKeepalive: "*ConnectionPoolSettingsTCPSettingsTcpKeepalive"
       MeshConfig.LocalityLbSetting: "*LocalityLoadBalancerSetting"
       MeshConfig.DefaultHttpRetryPolicy: "*HTTPRetry"
+      MeshConfig.DiscoverySelectors: "[]*metav1.LabelSelector"
       ConfigSource.TlsSettings: "*ClientTLSSettings"
       MeshConfig_CA.TlsSettings: "*ClientTLSSettings"
+    removeTypes:
+    - LabelSelector
+    - LabelSelectorRequirement
     addTags:
       MeshConfig.ExtensionProviders: "// +kubebuilder:validation:MaxItems=1000"  # to prevent CEL cost overruns
 
-- path: /tmp/network.pb.go
+- module: istio.io/api
+  path: /mesh/v1alpha1/network.pb.go
 
-- path: /tmp/proxy.pb.go
+- module: istio.io/api
+  path: /mesh/v1alpha1/proxy.pb.go
   transformations:
     renameTypes:
       ProxyConfig: MeshConfigProxyConfig
@@ -128,7 +147,8 @@ inputFiles:
       ProxyConfig.ReadinessProbe: "*k8sv1.Probe"
       ProxyConfig.Image: "*ProxyImage"
 
-- path: /tmp/proxy_config.pb.go
+- module: istio.io/api
+  path: /networking/v1beta1/proxy_config.pb.go
   transformations:
     removeTypes:
     - '*'
@@ -137,9 +157,11 @@ inputFiles:
     replaceFieldTypes:
       ProxyConfig.Selector: "*WorkloadSelector"
 
-- path: /tmp/selector.pb.go
+- module: istio.io/api
+  path: /type/v1beta1/selector.pb.go
 
-- path: /tmp/destination_rule.pb.go
+- module: istio.io/api
+  path: /networking/v1alpha3/destination_rule.pb.go
   transformations:
     removeTypes:
     - '*'
@@ -151,7 +173,8 @@ inputFiles:
     - ClientTLSSettings
     - ClientTLSSettings_TLSmode
 
-- path: /tmp/virtual_service.pb.go
+- module: istio.io/api
+  path: /networking/v1alpha3/virtual_service.pb.go
   transformations:
     removeTypes:
     - '*'

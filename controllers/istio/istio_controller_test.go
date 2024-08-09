@@ -35,7 +35,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -1272,7 +1271,7 @@ spec:
 	expected := &v1alpha1.Values{
 		Pilot: &v1alpha1.PilotConfig{
 			Hub:   "from-default-profile",
-			Tag:   ptr.Of(intstr.FromString("from-my-profile")),
+			Tag:   "from-my-profile",
 			Image: "from-istio-spec-values",
 		},
 		Global: &v1alpha1.GlobalConfig{
@@ -1406,13 +1405,13 @@ func TestApplyImageDigests(t *testing.T) {
 			inputValues: &v1alpha1.Values{
 				Pilot: &v1alpha1.PilotConfig{
 					Hub: "docker.io/istio",
-					Tag: ptr.Of(intstr.FromString("1.20.1")),
+					Tag: "1.20.1",
 				},
 			},
 			expectValues: &v1alpha1.Values{
 				Pilot: &v1alpha1.PilotConfig{
 					Hub: "docker.io/istio",
-					Tag: ptr.Of(intstr.FromString("1.20.1")),
+					Tag: "1.20.1",
 				},
 				Global: &v1alpha1.GlobalConfig{
 					Proxy: &v1alpha1.ProxyConfig{
@@ -1446,13 +1445,13 @@ func TestApplyImageDigests(t *testing.T) {
 			inputValues: &v1alpha1.Values{
 				Pilot: &v1alpha1.PilotConfig{
 					Hub: "docker.io/istio",
-					Tag: ptr.Of(intstr.FromString("1.20.2")),
+					Tag: "1.20.2",
 				},
 			},
 			expectValues: &v1alpha1.Values{
 				Pilot: &v1alpha1.PilotConfig{
 					Hub: "docker.io/istio",
-					Tag: ptr.Of(intstr.FromString("1.20.2")),
+					Tag: "1.20.2",
 				},
 			},
 		},

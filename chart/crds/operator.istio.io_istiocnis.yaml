@@ -1025,21 +1025,6 @@ spec:
                                 x-kubernetes-list-type: atomic
                             type: object
                         type: object
-                      ambient:
-                        description: Configuration for Istio Ambient.
-                        properties:
-                          configDir:
-                            description: The directory path containing the configuration
-                              files for Ambient. Defaults to /etc/ambient-config.
-                            type: string
-                          dnsCapture:
-                            description: If enabled, and ambient is enabled, DNS redirection
-                              will be enabled.
-                            type: boolean
-                          enabled:
-                            description: Controls whether ambient redirection is enabled
-                            type: boolean
-                        type: object
                       chained:
                         description: |-
                           Configure the plugin as a chained CNI plugin. When true, the configuration is added to the CNI chain; when false,
@@ -1079,11 +1064,17 @@ spec:
                           Image name to pull from. Image will be `Hub/Image:Tag-Variant`.
                           If Image contains a "/", it will replace the entire `image` in the pod.
                         type: string
-                      logLevel:
-                        description: |-
-                          Configuration log level of istio-cni binary. By default, istio-cni sends all logs to the UDS server.
-                          To see the logs, change global.logging.level to cni:debug.
-                        type: string
+                      logging:
+                        description: Same as `global.logging.level`, but will override
+                          it if set
+                        properties:
+                          level:
+                            description: |-
+                              Comma-separated minimum per-scope logging level of messages to output, in the form of <scope>:<level>,<scope>:<level>
+                              The control plane has different scopes depending on component, but can configure default log level across all components
+                              If empty, default scope and level will be used as configured in code
+                            type: string
+                        type: object
                       podAnnotations:
                         additionalProperties:
                           type: string
@@ -1117,6 +1108,10 @@ spec:
 
 
                           More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
+                        enum:
+                        - Always
+                        - Never
+                        - IfNotPresent
                         type: string
                       repair:
                         description: Configuration for the CNI Repair controller.
@@ -1176,12 +1171,9 @@ spec:
                               This requires no RBAC privilege, but will require the CNI agent to run as a privileged pod.
                             type: boolean
                           tag:
-                            anyOf:
-                            - type: integer
-                            - type: string
                             description: The container image tag to pull. Image will
                               be `Hub/Image:Tag-Variant`.
-                            x-kubernetes-int-or-string: true
+                            type: string
                         type: object
                       resource_quotas:
                         description: The resource quotas configration for the CNI
@@ -1292,12 +1284,9 @@ spec:
                         - type
                         type: object
                       tag:
-                        anyOf:
-                        - type: integer
-                        - type: string
                         description: The container image tag to pull. Image will be
                           `Hub/Image:Tag-Variant`.
-                        x-kubernetes-int-or-string: true
+                        type: string
                       variant:
                         description: The container image variant to pull. Options
                           are "debug" or "distroless". Unset will use the default
@@ -1377,12 +1366,23 @@ spec:
 
 
                           More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
+                        enum:
+                        - Always
+                        - Never
+                        - IfNotPresent
                         type: string
                       imagePullSecrets:
+                        description: |-
+                          ImagePullSecrets for the control plane ServiceAccount, list of secrets in the same namespace
+                          to use for pulling any images in pods that reference this ServiceAccount.
+                          Must be set for any cluster configured with private docker registry.
                         items:
                           type: string
                         type: array
                       logAsJson:
+                        description: Specifies whether istio components should output
+                          logs in json format by adding --log_as_json argument to
+                          each container.
                         type: boolean
                       logging:
                         description: Specifies the global logging level settings for
@@ -1396,12 +1396,12 @@ spec:
                             type: string
                         type: object
                       tag:
-                        anyOf:
-                        - type: integer
-                        - type: string
                         description: Specifies the tag for the Istio CNI image.
-                        x-kubernetes-int-or-string: true
+                        type: string
                       variant:
+                        description: The variant of the Istio container images to
+                          use. Options are "debug" or "distroless". Unset will use
+                          the default for the given version.
                         type: string
                     type: object
                 type: object

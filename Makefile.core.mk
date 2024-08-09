@@ -334,21 +334,9 @@ deploy-example-kubernetes: verify-kubeconfig ## Deploy an example Istio resource
 gen-manifests: controller-gen ## Generate WebhookConfiguration and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) crd:allowDangerousTypes=true webhook paths="./..." output:crd:artifacts:config=chart/crds
 
-# TODO: move this to versions.yaml or get the files via go.mod instead of downloading them
-ISTIO_REPO_BASE=https://raw.githubusercontent.com/istio/istio/0e7ecbd31f9524b063ced1f49f1a6f6e063d2bf5
-API_REPO_BASE=https://raw.githubusercontent.com/istio/api/ccd5cd40965ccba232d1f7c3b0e4ecacd0f6ceda
 .PHONY: gen-api
 gen-api: ## Generate API types from upstream files.
-	# TODO: should we get these files from the local filesystem by inspecting go.mod?
 	echo Generating API types from upstream files
-	curl -sSLfo /tmp/values_types.pb.go $(ISTIO_REPO_BASE)/operator/pkg/apis/istio/v1alpha1/values_types.pb.go
-	curl -sSLfo /tmp/config.pb.go $(API_REPO_BASE)/mesh/v1alpha1/config.pb.go
-	curl -sSLfo /tmp/network.pb.go $(API_REPO_BASE)/mesh/v1alpha1/network.pb.go
-	curl -sSLfo /tmp/proxy.pb.go $(API_REPO_BASE)/mesh/v1alpha1/proxy.pb.go
-	curl -sSLfo /tmp/proxy_config.pb.go $(API_REPO_BASE)/networking/v1beta1/proxy_config.pb.go
-	curl -sSLfo /tmp/selector.pb.go $(API_REPO_BASE)/type/v1beta1/selector.pb.go
-	curl -sSLfo /tmp/destination_rule.pb.go $(API_REPO_BASE)/networking/v1alpha3/destination_rule.pb.go
-	curl -sSLfo /tmp/virtual_service.pb.go $(API_REPO_BASE)/networking/v1alpha3/virtual_service.pb.go
 	go run hack/api_transformer/main.go hack/api_transformer/transform.yaml
 
 .PHONY: gen-code
@@ -452,6 +440,10 @@ CONTROLLER_TOOLS_VERSION ?= v0.15.0
 OPM_VERSION ?= v1.45.0
 GITLEAKS_VERSION ?= v8.18.4
 
+# GENERATE_RELATED_IMAGES defines whether `spec.relatedImages` is going to be generated or not
+# To disable set flag to false
+GENERATE_RELATED_IMAGES ?= true
+
 .PHONY: helm $(HELM)
 helm: $(HELM) ## Download helm to bin directory. If wrong version is installed, it will be overwritten.
 $(HELM): $(LOCALBIN)
@@ -493,6 +485,10 @@ $(GITLEAKS): $(LOCALBIN)
 bundle: gen helm operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
 	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --set platform=openshift --set bundleGeneration=true | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
 
+ifeq ($(GENERATE_RELATED_IMAGES), true)
+	@hack/patch-csv.sh bundle/manifests/$(OPERATOR_NAME).clusterserviceversion.yaml
+endif
+
 	# update CSV's spec.customresourcedefinitions.owned field. ideally we could do this straight in ./bundle, but
 	# sadly this is only possible if the file lives in a `bases` directory
 	mkdir -p _tmp/bases
@@ -509,6 +505,7 @@ bundle: gen helm operator-sdk ## Generate bundle manifests and metadata, then va
 				git checkout "$$csvPath" || echo "failed to revert timestamp change. assuming we're in the middle of a merge"; \
 			fi \
 		fi
+
 	$(OPERATOR_SDK) bundle validate ./bundle
 
 .PHONY: bundle-build
