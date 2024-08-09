@@ -1299,10 +1299,10 @@ spec:
                     properties:
                       defaultResources:
                         description: |-
-                          Default k8s resources settings for all Istio control plane components.
-
-
                           See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
+
+
+                          Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
                         properties:
                           claims:
                             description: |-
@@ -1386,7 +1386,7 @@ spec:
                         type: boolean
                       logging:
                         description: Specifies the global logging level settings for
-                          the Istio CNI component.
+                          the Istio control plane components.
                         properties:
                           level:
                             description: |-
@@ -1396,7 +1396,7 @@ spec:
                             type: string
                         type: object
                       tag:
-                        description: Specifies the tag for the Istio CNI image.
+                        description: Specifies the tag for the Istio docker images.
                         type: string
                       variant:
                         description: The variant of the Istio container images to
