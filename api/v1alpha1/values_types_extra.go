@@ -43,13 +43,18 @@ type CNIGlobalConfig struct {
 	// Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.
 	//
 	// More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
-	ImagePullPolicy  k8sv1.PullPolicy `json:"imagePullPolicy,omitempty"`
-	ImagePullSecrets []string         `json:"imagePullSecrets,omitempty"`
-	LogAsJSON        *bool            `json:"logAsJson,omitempty"`
+	ImagePullPolicy k8sv1.PullPolicy `json:"imagePullPolicy,omitempty"`
+	// ImagePullSecrets for the control plane ServiceAccount, list of secrets in the same namespace
+	// to use for pulling any images in pods that reference this ServiceAccount.
+	// Must be set for any cluster configured with private docker registry.
+	ImagePullSecrets []string `json:"imagePullSecrets,omitempty"`
+	// Specifies whether istio components should output logs in json format by adding --log_as_json argument to each container.
+	LogAsJSON *bool `json:"logAsJson,omitempty"`
 	// Specifies the global logging level settings for the Istio CNI component.
 	Logging *GlobalLoggingConfig `json:"logging,omitempty"`
 	// Specifies the tag for the Istio CNI image.
 	// +kubebuilder:validation:XIntOrString
-	Tag     *intstr.IntOrString `json:"tag,omitempty"`
-	Variant string              `json:"variant,omitempty"`
+	Tag *intstr.IntOrString `json:"tag,omitempty"`
+	// The variant of the Istio container images to use. Options are "debug" or "distroless". Unset will use the default for the given version.
+	Variant string `json:"variant,omitempty"`
 }
