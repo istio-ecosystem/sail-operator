@@ -334,21 +334,9 @@ deploy-example-kubernetes: verify-kubeconfig ## Deploy an example Istio resource
 gen-manifests: controller-gen ## Generate WebhookConfiguration and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) crd:allowDangerousTypes=true webhook paths="./..." output:crd:artifacts:config=chart/crds
 
-# TODO: move this to versions.yaml or get the files via go.mod instead of downloading them
-ISTIO_REPO_BASE=https://raw.githubusercontent.com/istio/istio/a56838dd6f3919958d51df46294cee9b37fdec75
-API_REPO_BASE=https://raw.githubusercontent.com/istio/api/970626b3c4f99082c9a5f361c428cdff7ec05322
 .PHONY: gen-api
 gen-api: ## Generate API types from upstream files.
-	# TODO: should we get these files from the local filesystem by inspecting go.mod?
 	echo Generating API types from upstream files
-	curl -sSLfo /tmp/values_types.pb.go $(ISTIO_REPO_BASE)/operator/pkg/apis/istio/v1alpha1/values_types.pb.go
-	curl -sSLfo /tmp/config.pb.go $(API_REPO_BASE)/mesh/v1alpha1/config.pb.go
-	curl -sSLfo /tmp/network.pb.go $(API_REPO_BASE)/mesh/v1alpha1/network.pb.go
-	curl -sSLfo /tmp/proxy.pb.go $(API_REPO_BASE)/mesh/v1alpha1/proxy.pb.go
-	curl -sSLfo /tmp/proxy_config.pb.go $(API_REPO_BASE)/networking/v1beta1/proxy_config.pb.go
-	curl -sSLfo /tmp/selector.pb.go $(API_REPO_BASE)/type/v1beta1/selector.pb.go
-	curl -sSLfo /tmp/destination_rule.pb.go $(API_REPO_BASE)/networking/v1alpha3/destination_rule.pb.go
-	curl -sSLfo /tmp/virtual_service.pb.go $(API_REPO_BASE)/networking/v1alpha3/virtual_service.pb.go
 	go run hack/api_transformer/main.go hack/api_transformer/transform.yaml
 
 .PHONY: gen-code
