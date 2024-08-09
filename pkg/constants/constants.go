@@ -16,7 +16,7 @@ package constants
 
 const (
 	// MetadataNamespace is the namespace for service mesh metadata (labels, annotations)
-	MetadataNamespace = "operator.istio.io"
+	MetadataNamespace = "sail-operator.io"
 
 	// CreatedByKey is used in annotations to mark ServiceMeshMemberRolls created by the ServiceMeshMember controller
 	CreatedByKey = MetadataNamespace + "/created-by"

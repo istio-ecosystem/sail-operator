@@ -4,9 +4,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.15.0
   creationTimestamp: null
-  name: istiocnis.operator.istio.io
+  name: istiocnis.sail-operator.io
 spec:
-  group: operator.istio.io
+  group: sail-operator.io
   names:
     categories:
     - istio-io

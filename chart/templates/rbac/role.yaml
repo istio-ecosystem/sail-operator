@@ -57,7 +57,7 @@ rules:
   verbs:
   - '*'
 - apiGroups:
-  - operator.istio.io
+  - sail-operator.io
   resources:
   - istiorevisions
   verbs:
@@ -69,13 +69,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - operator.istio.io
+  - sail-operator.io
   resources:
   - istiorevisions/finalizers
   verbs:
   - update
 - apiGroups:
-  - operator.istio.io
+  - sail-operator.io
   resources:
   - istiorevisions/status
   verbs:
@@ -83,7 +83,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - operator.istio.io
+  - sail-operator.io
   resources:
   - istiocnis
   verbs:
@@ -95,13 +95,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - operator.istio.io
+  - sail-operator.io
   resources:
   - istiocnis/finalizers
   verbs:
   - update
 - apiGroups:
-  - operator.istio.io
+  - sail-operator.io
   resources:
   - istiocnis/status
   verbs:
@@ -109,7 +109,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - operator.istio.io
+  - sail-operator.io
   resources:
   - istios
   verbs:
@@ -121,13 +121,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - operator.istio.io
+  - sail-operator.io
   resources:
   - istios/finalizers
   verbs:
   - update
 - apiGroups:
-  - operator.istio.io
+  - sail-operator.io
   resources:
   - istios/status
   verbs:

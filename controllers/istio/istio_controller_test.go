@@ -1231,7 +1231,7 @@ func TestComputeIstioRevisionValues(t *testing.T) {
 	Must(t, os.MkdirAll(profilesDir, 0o755))
 
 	Must(t, os.WriteFile(path.Join(profilesDir, "default.yaml"), []byte((`
-apiVersion: operator.istio.io/v1alpha1
+apiVersion: sail-operator.io/v1alpha1
 kind: IstioRevision
 spec:
   values:
@@ -1241,7 +1241,7 @@ spec:
       image: from-default-profile    # this gets overridden in my-profile and values`)), 0o644))
 
 	Must(t, os.WriteFile(path.Join(profilesDir, "my-profile.yaml"), []byte((`
-apiVersion: operator.istio.io/v1alpha1
+apiVersion: sail-operator.io/v1alpha1
 kind: IstioRevision
 spec:
   values:
