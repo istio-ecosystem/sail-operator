@@ -435,7 +435,6 @@ _Appears in:_
 | `externalIstiod` _boolean_ | Controls whether one external istiod is enabled. |  |  |
 | `configCluster` _boolean_ | Controls whether a remote cluster is the config cluster for an external istiod |  |  |
 | `caName` _string_ | The name of the CA for workloads.<br />For example, when caName=GkeWorkloadCertificate, GKE workload certificates<br />will be used as the certificates for workloads.<br />The default value is "" and when caName="", the CA will be configured by other<br />mechanisms (e.g., environmental variable CA_PROVIDER). |  |  |
-| `autoscalingv2API` _boolean_ | TODO: remove this?<br />No longer used. |  |  |
 | `platform` _string_ | Platform in which Istio is deployed. Possible values are: "openshift" and "gcp"<br />An empty value means it is a vanilla Kubernetes distribution, therefore no special<br />treatment will be considered. |  |  |
 | `ipFamilies` _string array_ | Defines which IP family to use for single stack or the order of IP families for dual-stack.<br />Valid list items are "IPv4", "IPv6".<br />More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services |  |  |
 | `ipFamilyPolicy` _string_ | Controls whether Services are configured to use IPv4, IPv6, or both. Valid options<br />are PreferDualStack, RequireDualStack, and SingleStack.<br />More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services |  |  |
