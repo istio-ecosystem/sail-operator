@@ -28,12 +28,9 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 func TestValidate(t *testing.T) {
@@ -397,7 +394,7 @@ func TestApplyImageDigests(t *testing.T) {
 					Values: &v1alpha1.CNIValues{
 						Cni: &v1alpha1.CNIConfig{
 							Hub: "docker.io/istio",
-							Tag: ptr.Of(intstr.FromString("1.20.1")),
+							Tag: "1.20.1",
 						},
 					},
 				},
@@ -405,7 +402,7 @@ func TestApplyImageDigests(t *testing.T) {
 			expectValues: &v1alpha1.CNIValues{
 				Cni: &v1alpha1.CNIConfig{
 					Hub: "docker.io/istio",
-					Tag: ptr.Of(intstr.FromString("1.20.1")),
+					Tag: "1.20.1",
 				},
 			},
 		},
@@ -424,7 +421,7 @@ func TestApplyImageDigests(t *testing.T) {
 					Values: &v1alpha1.CNIValues{
 						Cni: &v1alpha1.CNIConfig{
 							Hub: "docker.io/istio",
-							Tag: ptr.Of(intstr.FromString("1.20.2")),
+							Tag: "1.20.2",
 						},
 					},
 				},
@@ -432,7 +429,7 @@ func TestApplyImageDigests(t *testing.T) {
 			expectValues: &v1alpha1.CNIValues{
 				Cni: &v1alpha1.CNIConfig{
 					Hub: "docker.io/istio",
-					Tag: ptr.Of(intstr.FromString("1.20.2")),
+					Tag: "1.20.2",
 				},
 			},
 		},

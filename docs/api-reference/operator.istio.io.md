@@ -73,24 +73,9 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `validationURL` _string_ | URL to use for validating webhook. |  |  |
+| `validationCABundle` _string_ | validation webhook CA bundle |  |  |
 
 
-#### CNIAmbientConfig
-
-
-
-
-
-
-
-_Appears in:_
-- [CNIConfig](#cniconfig)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `enabled` _boolean_ | Controls whether ambient redirection is enabled |  |  |
-| `configDir` _string_ | The directory path containing the configuration files for Ambient. Defaults to /etc/ambient-config. |  |  |
-| `dnsCapture` _boolean_ | If enabled, and ambient is enabled, DNS redirection will be enabled. |  |  |
 
 
 #### CNIConfig
@@ -107,10 +92,10 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `hub` _string_ | Hub to pull the container image from. Image will be `Hub/Image:Tag-Variant`. |  |  |
-| `tag` _[IntOrString](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#intorstring-intstr-util)_ | The container image tag to pull. Image will be `Hub/Image:Tag-Variant`. |  | XIntOrString: \{\} <br /> |
+| `tag` _string_ | The container image tag to pull. Image will be `Hub/Image:Tag-Variant`. |  |  |
 | `variant` _string_ | The container image variant to pull. Options are "debug" or "distroless". Unset will use the default for the given version. |  |  |
 | `image` _string_ | Image name to pull from. Image will be `Hub/Image:Tag-Variant`.<br />If Image contains a "/", it will replace the entire `image` in the pod. |  |  |
-| `pullPolicy` _string_ | Specifies the image pull policy. one of Always, Never, IfNotPresent.<br />Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.<br /><br />More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |  |  |
+| `pullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#pullpolicy-v1-core)_ | Specifies the image pull policy. one of Always, Never, IfNotPresent.<br />Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.<br /><br />More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |  | Enum: [Always Never IfNotPresent] <br /> |
 | `cniBinDir` _string_ | The directory path within the cluster node's filesystem where the CNI binaries are to be installed. Typically /var/lib/cni/bin. |  |  |
 | `cniConfDir` _string_ | The directory path within the cluster node's filesystem where the CNI configuration files are to be installed. Typically /etc/cni/net.d. |  |  |
 | `cniConfFileName` _string_ | The name of the CNI plugin configuration file. Defaults to istio-cni.conf. |  |  |
@@ -119,14 +104,13 @@ _Appears in:_
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#affinity-v1-core)_ | K8s affinity to set on the istio-cni Pods. Can be used to exclude istio-cni from being scheduled on specified nodes. |  |  |
 | `podAnnotations` _object (keys:string, values:string)_ | Additional annotations to apply to the istio-cni Pods.<br /><br />Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto. |  |  |
 | `psp_cluster_role` _string_ | PodSecurityPolicy cluster role. No longer used anywhere. |  |  |
-| `logLevel` _string_ | Configuration log level of istio-cni binary. By default, istio-cni sends all logs to the UDS server.<br />To see the logs, change global.logging.level to cni:debug. |  |  |
+| `logging` _[GlobalLoggingConfig](#globalloggingconfig)_ | Same as `global.logging.level`, but will override it if set |  |  |
 | `repair` _[CNIRepairConfig](#cnirepairconfig)_ | Configuration for the CNI Repair controller. |  |  |
 | `chained` _boolean_ | Configure the plugin as a chained CNI plugin. When true, the configuration is added to the CNI chain; when false,<br />the configuration is added as a standalone file in the CNI configuration directory. |  |  |
 | `resource_quotas` _[ResourceQuotas](#resourcequotas)_ | The resource quotas configration for the CNI DaemonSet. |  |  |
 | `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core)_ | The k8s resource requests and limits for the istio-cni Pods. |  |  |
 | `privileged` _boolean_ | No longer used for CNI. See: https://github.com/istio/istio/issues/49004<br /><br />Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto. |  |  |
 | `seccompProfile` _[SeccompProfile](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#seccompprofile-v1-core)_ | The Container seccompProfile<br /><br />See: https://kubernetes.io/docs/tutorials/security/seccomp/ |  |  |
-| `ambient` _[CNIAmbientConfig](#cniambientconfig)_ | Configuration for Istio Ambient. |  |  |
 | `provider` _string_ | Specifies the CNI provider. Can be either "default" or "multus". When set to "multus", an additional<br />NetworkAttachmentDefinition resource is deployed to the cluster to allow the istio-cni plugin to be<br />invoked in a cluster using the Multus CNI plugin. |  |  |
 | `rollingMaxUnavailable` _[IntOrString](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#intorstring-intstr-util)_ | The number of pods that can be unavailable during a rolling update of the CNI DaemonSet (see<br />`updateStrategy.rollingUpdate.maxUnavailable` here:<br />https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/daemon-set-v1/#DaemonSetSpec).<br />May be specified as a number of pods or as a percent of the total number<br />of pods at the start of the update. |  | XIntOrString: \{\} <br /> |
 
@@ -146,11 +130,11 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `defaultResources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core)_ | Default k8s resources settings for all Istio control plane components.<br /><br />See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container |  |  |
 | `hub` _string_ | Specifies the docker hub for Istio images. |  |  |
-| `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#pullpolicy-v1-core)_ | Specifies the image pull policy for the Istio images. one of Always, Never, IfNotPresent.<br />Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.<br /><br />More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |  |  |
+| `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#pullpolicy-v1-core)_ | Specifies the image pull policy for the Istio images. one of Always, Never, IfNotPresent.<br />Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.<br /><br />More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |  | Enum: [Always Never IfNotPresent] <br /> |
 | `imagePullSecrets` _string array_ | ImagePullSecrets for the control plane ServiceAccount, list of secrets in the same namespace<br />to use for pulling any images in pods that reference this ServiceAccount.<br />Must be set for any cluster configured with private docker registry. |  |  |
 | `logAsJson` _boolean_ | Specifies whether istio components should output logs in json format by adding --log_as_json argument to each container. |  |  |
 | `logging` _[GlobalLoggingConfig](#globalloggingconfig)_ | Specifies the global logging level settings for the Istio CNI component. |  |  |
-| `tag` _[IntOrString](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#intorstring-intstr-util)_ | Specifies the tag for the Istio CNI image. |  | XIntOrString: \{\} <br /> |
+| `tag` _string_ | Specifies the tag for the Istio CNI image. |  |  |
 | `variant` _string_ | The variant of the Istio container images to use. Options are "debug" or "distroless". Unset will use the default for the given version. |  |  |
 
 
@@ -169,7 +153,7 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `enabled` _boolean_ | Controls whether repair behavior is enabled. |  |  |
 | `hub` _string_ | Hub to pull the container image from. Image will be `Hub/Image:Tag-Variant`. |  |  |
-| `tag` _[IntOrString](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#intorstring-intstr-util)_ | The container image tag to pull. Image will be `Hub/Image:Tag-Variant`. |  | XIntOrString: \{\} <br /> |
+| `tag` _string_ | The container image tag to pull. Image will be `Hub/Image:Tag-Variant`. |  |  |
 | `image` _string_ | Image name to pull from. Image will be `Hub/Image:Tag-Variant`.<br />If Image contains a "/", it will replace the entire `image` in the pod. |  |  |
 | `labelPods` _boolean_ | The Repair controller has 3 modes (labelPods, deletePods, and repairPods). Pick which one meets your use cases. Note only one may be used.<br />The mode defines the action the controller will take when a pod is detected as broken.<br />If labelPods is true, the controller will label all broken pods with <brokenPodLabelKey>=<brokenPodLabelValue>.<br />This is only capable of identifying broken pods; the user is responsible for fixing them (generally, by deleting them).<br />Note this gives the DaemonSet a relatively high privilege, as modifying pod metadata/status can have wider impacts. |  |  |
 | `repairPods` _boolean_ | The Repair controller has 3 modes (labelPods, deletePods, and repairPods). Pick which one meets your use cases. Note only one may be used.<br />The mode defines the action the controller will take when a pod is detected as broken.<br />If repairPods is true, the controller will dynamically repair any broken pod by setting up the pod networking configuration even after it has started.<br />Note the pod will be crashlooping, so this may take a few minutes to become fully functional based on when the retry occurs.<br />This requires no RBAC privilege, but will require the CNI agent to run as a privileged pod. |  |  |
@@ -194,7 +178,6 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `enabled` _boolean_ | Controls whether CNI should be used. |  |  |
-| `chained` _boolean_ | Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto. |  |  |
 | `provider` _string_ | Specifies the CNI provider. Can be either "default" or "multus". When set to "multus", an annotation<br />`k8s.v1.cni.cncf.io/networks` is set on injected pods to point to a NetworkAttachmentDefinition |  |  |
 
 
@@ -230,34 +213,8 @@ For example, the following rule configures a client to use mutual TLS
 for connections to upstream database cluster.
 
 
-#### v1alpha3
 ```yaml
-apiVersion: networking.istio.io/v1alpha3
-kind: DestinationRule
-metadata:
-
-
-	name: db-mtls
-
-
-spec:
-
-
-	host: mydbserver.prod.svc.cluster.local
-	trafficPolicy:
-	  tls:
-	    mode: MUTUAL
-	    clientCertificate: /etc/certs/myclientcert.pem
-	    privateKey: /etc/certs/client_private_key.pem
-	    caCertificates: /etc/certs/rootcacerts.pem
-
-
-```
-
-
-#### v1beta1
-```yaml
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: DestinationRule
 metadata:
 
@@ -284,31 +241,8 @@ The following rule configures a client to use TLS when talking to a
 foreign service whose domain matches *.foo.com.
 
 
-#### v1alpha3
 ```yaml
-apiVersion: networking.istio.io/v1alpha3
-kind: DestinationRule
-metadata:
-
-
-	name: tls-foo
-
-
-spec:
-
-
-	host: "*.foo.com"
-	trafficPolicy:
-	  tls:
-	    mode: SIMPLE
-
-
-```
-
-
-#### v1beta1
-```yaml
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: DestinationRule
 metadata:
 
@@ -332,31 +266,8 @@ The following rule configures a client to use Istio mutual TLS when talking
 to rating services.
 
 
-#### v1alpha3
 ```yaml
-apiVersion: networking.istio.io/v1alpha3
-kind: DestinationRule
-metadata:
-
-
-	name: ratings-istio-mtls
-
-
-spec:
-
-
-	host: ratings.prod.svc.cluster.local
-	trafficPolicy:
-	  tls:
-	    mode: ISTIO_MUTUAL
-
-
-```
-
-
-#### v1beta1
-```yaml
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: DestinationRule
 metadata:
 
@@ -445,6 +356,8 @@ _Appears in:_
 | `enabled` _boolean_ | Controls whether a PodDisruptionBudget with a default minAvailable value of 1 is created for each deployment. |  |  |
 
 
+
+
 #### ForwardClientCertDetails
 
 _Underlying type:_ _string_
@@ -486,15 +399,13 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `arch` _[ArchConfig](#archconfig)_ | Specifies pod scheduling arch(amd64, ppc64le, s390x, arm64) and weight as follows:<br /><br />	0 - Never scheduled<br />	1 - Least preferred<br />	2 - No preference<br />	3 - Most preferred<br /><br />Deprecated: replaced by the affinity k8s settings which allows architecture nodeAffinity configuration of this behavior.<br /><br />Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto. |  |  |
 | `certSigners` _string array_ | List of certSigners to allow "approve" action in the ClusterRole |  |  |
-| `configRootNamespace` _string_ | TODO: remove this?<br />No longer used. |  |  |
 | `configValidation` _boolean_ | Controls whether the server-side validation is enabled. |  |  |
-| `defaultConfigVisibilitySettings` _string array_ | TODO: remove this?<br />No longer used. |  |  |
 | `defaultNodeSelector` _object (keys:string, values:string)_ | Default k8s node selector for all the Istio control plane components<br /><br />See https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector<br /><br />Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto. |  |  |
 | `defaultPodDisruptionBudget` _[DefaultPodDisruptionBudgetConfig](#defaultpoddisruptionbudgetconfig)_ | Specifies the default pod disruption budget configuration.<br /><br />Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto. |  |  |
 | `defaultResources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core)_ | Default k8s resources settings for all Istio control plane components.<br /><br />See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container<br /><br />Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto. |  |  |
 | `defaultTolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#toleration-v1-core) array_ | Default node tolerations to be applied to all deployments so that all pods can be<br />scheduled to nodes with matching taints. Each component can overwrite<br />these default values by adding its tolerations block in the relevant section below<br />and setting the desired values.<br />Configure this field in case that all pods of Istio control plane are expected to<br />be scheduled to particular nodes with specified taints.<br /><br />Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto. |  |  |
 | `hub` _string_ | Specifies the docker hub for Istio images. |  |  |
-| `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#pullpolicy-v1-core)_ | Specifies the image pull policy for the Istio images. one of Always, Never, IfNotPresent.<br />Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.<br /><br />More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |  |  |
+| `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#pullpolicy-v1-core)_ | Specifies the image pull policy for the Istio images. one of Always, Never, IfNotPresent.<br />Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.<br /><br />More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |  | Enum: [Always Never IfNotPresent] <br /> |
 | `imagePullSecrets` _string array_ | ImagePullSecrets for the control plane ServiceAccount, list of secrets in the same namespace<br />to use for pulling any images in pods that reference this ServiceAccount.<br />Must be set for any cluster configured with private docker registry. |  |  |
 | `istioNamespace` _string_ | Specifies the default namespace for the Istio control plane components. |  |  |
 | `logAsJson` _boolean_ | Specifies whether istio components should output logs in json format by adding --log_as_json argument to each container. |  |  |
@@ -505,16 +416,14 @@ _Appears in:_
 | `network` _string_ | Network defines the network this cluster belong to. This name<br />corresponds to the networks in the map of mesh networks. |  |  |
 | `podDNSSearchNamespaces` _string array_ | Custom DNS config for the pod to resolve names of services in other<br />clusters. Use this to add additional search domains, and other settings.<br />see https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#dns-config<br />This does not apply to gateway pods as they typically need a different<br />set of DNS settings than the normal application pods (e.g. in multicluster scenarios). |  |  |
 | `omitSidecarInjectorConfigMap` _boolean_ | Controls whether the creation of the sidecar injector ConfigMap should be skipped.<br />Defaults to false. When set to true, the sidecar injector ConfigMap will not be created. |  |  |
-| `oneNamespace` _boolean_ | Controls whether to restrict the applications namespace the controller manages;<br />If set it to false, the controller watches all namespaces. |  |  |
 | `operatorManageWebhooks` _boolean_ | Controls whether the WebhookConfiguration resource(s) should be created. The current behavior<br />of Istiod is to manage its own webhook configurations.<br />When this option is set to true, Istio Operator, instead of webhooks, manages the<br />webhook configurations. When this option is set as false, webhooks manage their<br />own webhook configurations. |  |  |
 | `priorityClassName` _string_ | Specifies the k8s priorityClassName for the istio control plane components.<br /><br />See https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass<br /><br />Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto. |  |  |
 | `proxy` _[ProxyConfig](#proxyconfig)_ | Specifies how proxies are configured within Istio. |  |  |
 | `proxy_init` _[ProxyInitConfig](#proxyinitconfig)_ | Specifies the Configuration for proxy_init container which sets the pods' networking to intercept the inbound/outbound traffic. |  |  |
 | `sds` _[SDSConfig](#sdsconfig)_ | Specifies the Configuration for the SecretDiscoveryService instead of using K8S secrets to mount the certificates. |  |  |
-| `tag` _[IntOrString](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#intorstring-intstr-util)_ | Specifies the tag for the Istio docker images. |  | XIntOrString: \{\} <br /> |
+| `tag` _string_ | Specifies the tag for the Istio docker images. |  |  |
 | `variant` _string_ | The variant of the Istio container images to use. Options are "debug" or "distroless". Unset will use the default for the given version. |  |  |
 | `tracer` _[TracerConfig](#tracerconfig)_ | Specifies the Configuration for each of the supported tracers. |  |  |
-| `useMCP` _boolean_ | Controls whether to use of Mesh Configuration Protocol to distribute configuration. |  |  |
 | `remotePilotAddress` _string_ | Specifies the Istio control plane’s pilot Pod IP address or remote cluster DNS resolvable hostname. |  |  |
 | `istiod` _[IstiodConfig](#istiodconfig)_ | Specifies the configution of istiod |  |  |
 | `pilotCertProvider` _string_ | Configure the Pilot certificate provider.<br />Currently, four providers are supported: "kubernetes", "istiod", "custom" and "none". |  |  |
@@ -530,6 +439,7 @@ _Appears in:_
 | `platform` _string_ | Platform in which Istio is deployed. Possible values are: "openshift" and "gcp"<br />An empty value means it is a vanilla Kubernetes distribution, therefore no special<br />treatment will be considered. |  |  |
 | `ipFamilies` _string array_ | Defines which IP family to use for single stack or the order of IP families for dual-stack.<br />Valid list items are "IPv4", "IPv6".<br />More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services |  |  |
 | `ipFamilyPolicy` _string_ | Controls whether Services are configured to use IPv4, IPv6, or both. Valid options<br />are PreferDualStack, RequireDualStack, and SingleStack.<br />More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services |  |  |
+| `waypoint` _[WaypointConfig](#waypointconfig)_ | Specifies how waypoints are configured within Istio. |  |  |
 
 
 #### GlobalLoggingConfig
@@ -541,6 +451,7 @@ GlobalLoggingConfig specifies the global logging level settings for the Istio co
 
 
 _Appears in:_
+- [CNIConfig](#cniconfig)
 - [CNIGlobalConfig](#cniglobalconfig)
 - [GlobalConfig](#globalconfig)
 
@@ -560,38 +471,8 @@ A retry will be attempted if there is a connect-failure, refused_stream
 or when the upstream server responds with Service Unavailable(503).
 
 
-#### v1alpha3
 ```yaml
-apiVersion: networking.istio.io/v1alpha3
-kind: VirtualService
-metadata:
-
-
-	name: ratings-route
-
-
-spec:
-
-
-	hosts:
-	- ratings.prod.svc.cluster.local
-	http:
-	- route:
-	  - destination:
-	      host: ratings.prod.svc.cluster.local
-	      subset: v1
-	  retries:
-	    attempts: 3
-	    perTryTimeout: 2s
-	    retryOn: connect-failure,refused-stream,503
-
-
-```
-
-
-#### v1beta1
-```yaml
-apiVersion: networking.istio.io/v1beta1
+apiVersion: networking.istio.io/v1
 kind: VirtualService
 metadata:
 
@@ -626,7 +507,7 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `attempts` _integer_ | Number of retries to be allowed for a given request. The interval<br />between retries will be determined automatically (25ms+). When request<br />`timeout` of the [HTTP route](https://istio.io/docs/reference/config/networking/virtual-service/#HTTPRoute)<br />or `per_try_timeout` is configured, the actual number of retries attempted also depends on<br />the specified request `timeout` and `per_try_timeout` values. MUST BE >= 0. If `0`, retries will be disabled.<br />The maximum possible number of requests made will be 1 + `attempts`. |  |  |
 | `perTryTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | Timeout per attempt for a given request, including the initial call and any retries. Format: 1h/1m/1s/1ms. MUST BE >=1ms.<br />Default is same value as request<br />`timeout` of the [HTTP route](https://istio.io/docs/reference/config/networking/virtual-service/#HTTPRoute),<br />which means no timeout. |  |  |
-| `retryOn` _string_ | Specifies the conditions under which retry takes place.<br />One or more policies can be specified using a ‘,’ delimited list.<br />If `retry_on` specifies a valid HTTP status, it will be added to retriable_status_codes retry policy.<br />See the [retry policies](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-on)<br />and [gRPC retry policies](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-grpc-on) for more details. |  |  |
+| `retryOn` _string_ | Specifies the conditions under which retry takes place.<br />One or more policies can be specified using a ‘,’ delimited list.<br />See the [retry policies](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-on)<br />and [gRPC retry policies](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-grpc-on) for more details.<br /><br />In addition to the policies specified above, a list of HTTP status codes can be passed, such as `retryOn: "503,reset"`.<br />Note these status codes refer to the actual responses received from the destination.<br />For example, if a connection is reset, Istio will translate this to 503 for it's response.<br />However, the destination did not return a 503 error, so this would not match `"503"` (it would, however, match `"reset"`).<br /><br />If not specified, this defaults to `connect-failure,refused-stream,unavailable,cancelled,503`. |  |  |
 | `retryRemoteLocalities` _boolean_ | Flag to specify whether the retries should retry to other localities.<br />See the [retry plugin configuration](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/http/http_connection_management#retry-plugin-configuration) for more details. |  |  |
 
 
@@ -1112,6 +993,7 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `injectionURL` _string_ | URL to use for sidecar injector webhook. |  |  |
 | `injectionPath` _string_ | Path to use for the sidecar injector webhook service. |  |  |
+| `injectionCABundle` _string_ | injector ca bundle |  |  |
 
 
 #### LocalityLoadBalancerSetting
@@ -1188,7 +1070,7 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `distribute` _[LocalityLoadBalancerSettingDistribute](#localityloadbalancersettingdistribute) array_ | Optional: only one of distribute, failover or failoverPriority can be set.<br />Explicitly specify loadbalancing weight across different zones and geographical locations.<br />Refer to [Locality weighted load balancing](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/locality_weight)<br />If empty, the locality weight is set according to the endpoints number within it. |  |  |
 | `failover` _[LocalityLoadBalancerSettingFailover](#localityloadbalancersettingfailover) array_ | Optional: only one of distribute, failover or failoverPriority can be set.<br />Explicitly specify the region traffic will land on when endpoints in local region becomes unhealthy.<br />Should be used together with OutlierDetection to detect unhealthy endpoints.<br />Note: if no OutlierDetection specified, this will not take effect. |  |  |
-| `failoverPriority` _string array_ | failoverPriority is an ordered list of labels used to sort endpoints to do priority based load balancing.<br />This is to support traffic failover across different groups of endpoints.<br />Two kinds of labels can be specified:<br /><br />  - Specify only label keys `[key1, key2, key3]`, istio would compare the label values of client with endpoints.<br />    Suppose there are total N label keys `[key1, key2, key3, ...keyN]` specified:<br /><br />    1. Endpoints matching all N labels with the client proxy have priority P(0) i.e. the highest priority.<br />    2. Endpoints matching the first N-1 labels with the client proxy have priority P(1) i.e. second highest priority.<br />    3. By extension of this logic, endpoints matching only the first label with the client proxy has priority P(N-1) i.e. second lowest priority.<br />    4. All the other endpoints have priority P(N) i.e. lowest priority.<br /><br />  - Specify labels with key and value `[key1=value1, key2=value2, key3=value3]`, istio would compare the labels with endpoints.<br />    Suppose there are total N labels `[key1=value1, key2=value2, key3=value3, ...keyN=valueN]` specified:<br /><br />    1. Endpoints matching all N labels have priority P(0) i.e. the highest priority.<br />    2. Endpoints matching the first N-1 labels have priority P(1) i.e. second highest priority.<br />    3. By extension of this logic, endpoints matching only the first label has priority P(N-1) i.e. second lowest priority.<br />    4. All the other endpoints have priority P(N) i.e. lowest priority.<br /><br />Note: For a label to be considered for match, the previous labels must match, i.e. nth label would be considered matched only if first n-1 labels match.<br /><br />It can be any label specified on both client and server workloads.<br />The following labels which have special semantic meaning are also supported:<br /><br />  - `topology.istio.io/network` is used to match the network metadata of an endpoint, which can be specified by pod/namespace label `topology.istio.io/network`, sidecar env `ISTIO_META_NETWORK` or MeshNetworks.<br />  - `topology.istio.io/cluster` is used to match the clusterID of an endpoint, which can be specified by pod label `topology.istio.io/cluster` or pod env `ISTIO_META_CLUSTER_ID`.<br />  - `topology.kubernetes.io/region` is used to match the region metadata of an endpoint, which maps to Kubernetes node label `topology.kubernetes.io/region` or the deprecated label `failure-domain.beta.kubernetes.io/region`.<br />  - `topology.kubernetes.io/zone` is used to match the zone metadata of an endpoint, which maps to Kubernetes node label `topology.kubernetes.io/zone` or the deprecated label `failure-domain.beta.kubernetes.io/zone`.<br />  - `topology.istio.io/subzone` is used to match the subzone metadata of an endpoint, which maps to Istio node label `topology.istio.io/subzone`.<br /><br />The below topology config indicates the following priority levels:<br /><br />```yaml<br />failoverPriority:<br />- "topology.istio.io/network"<br />- "topology.kubernetes.io/region"<br />- "topology.kubernetes.io/zone"<br />- "topology.istio.io/subzone"<br />```<br /><br />1. endpoints match same [network, region, zone, subzone] label with the client proxy have the highest priority.<br />2. endpoints have same [network, region, zone] label but different [subzone] label with the client proxy have the second highest priority.<br />3. endpoints have same [network, region] label but different [zone] label with the client proxy have the third highest priority.<br />4. endpoints have same [network] but different [region] labels with the client proxy have the fourth highest priority.<br />5. all the other endpoints have the same lowest priority.<br /><br />Suppose a service associated endpoints reside in multi clusters, the below example represents:<br />1. endpoints in `clusterA` and has `version=v1` label have P(0) priority.<br />2. endpoints not in `clusterA` but has `version=v1` label have P(1) priority.<br />2. all the other endpoints have P(2) priority.<br /><br />```yaml<br />failoverPriority:<br />- "version=v1"<br />- "topology.istio.io/cluster=clusterA"<br />```<br /><br />Optional: only one of distribute, failover or failoverPriority can be set.<br />And it should be used together with `OutlierDetection` to detect unhealthy endpoints, otherwise has no effect. |  |  |
+| `failoverPriority` _string array_ | failoverPriority is an ordered list of labels used to sort endpoints to do priority based load balancing.<br />This is to support traffic failover across different groups of endpoints.<br />Two kinds of labels can be specified:<br /><br />  - Specify only label keys `[key1, key2, key3]`, istio would compare the label values of client with endpoints.<br />    Suppose there are total N label keys `[key1, key2, key3, ...keyN]` specified:<br /><br />    1. Endpoints matching all N labels with the client proxy have priority P(0) i.e. the highest priority.<br />    2. Endpoints matching the first N-1 labels with the client proxy have priority P(1) i.e. second highest priority.<br />    3. By extension of this logic, endpoints matching only the first label with the client proxy has priority P(N-1) i.e. second lowest priority.<br />    4. All the other endpoints have priority P(N) i.e. lowest priority.<br /><br />  - Specify labels with key and value `[key1=value1, key2=value2, key3=value3]`, istio would compare the labels with endpoints.<br />    Suppose there are total N labels `[key1=value1, key2=value2, key3=value3, ...keyN=valueN]` specified:<br /><br />    1. Endpoints matching all N labels have priority P(0) i.e. the highest priority.<br />    2. Endpoints matching the first N-1 labels have priority P(1) i.e. second highest priority.<br />    3. By extension of this logic, endpoints matching only the first label has priority P(N-1) i.e. second lowest priority.<br />    4. All the other endpoints have priority P(N) i.e. lowest priority.<br /><br />Note: For a label to be considered for match, the previous labels must match, i.e. nth label would be considered matched only if first n-1 labels match.<br /><br />It can be any label specified on both client and server workloads.<br />The following labels which have special semantic meaning are also supported:<br /><br />  - `topology.istio.io/network` is used to match the network metadata of an endpoint, which can be specified by pod/namespace label `topology.istio.io/network`, sidecar env `ISTIO_META_NETWORK` or MeshNetworks.<br />  - `topology.istio.io/cluster` is used to match the clusterID of an endpoint, which can be specified by pod label `topology.istio.io/cluster` or pod env `ISTIO_META_CLUSTER_ID`.<br />  - `topology.kubernetes.io/region` is used to match the region metadata of an endpoint, which maps to Kubernetes node label `topology.kubernetes.io/region` or the deprecated label `failure-domain.beta.kubernetes.io/region`.<br />  - `topology.kubernetes.io/zone` is used to match the zone metadata of an endpoint, which maps to Kubernetes node label `topology.kubernetes.io/zone` or the deprecated label `failure-domain.beta.kubernetes.io/zone`.<br />  - `topology.istio.io/subzone` is used to match the subzone metadata of an endpoint, which maps to Istio node label `topology.istio.io/subzone`.<br />  - `kubernetes.io/hostname` is used to match the current node of an endpoint, which maps to Kubernetes node label `kubernetes.io/hostname`.<br /><br />The below topology config indicates the following priority levels:<br /><br />```yaml<br />failoverPriority:<br />- "topology.istio.io/network"<br />- "topology.kubernetes.io/region"<br />- "topology.kubernetes.io/zone"<br />- "topology.istio.io/subzone"<br />```<br /><br />1. endpoints match same [network, region, zone, subzone] label with the client proxy have the highest priority.<br />2. endpoints have same [network, region, zone] label but different [subzone] label with the client proxy have the second highest priority.<br />3. endpoints have same [network, region] label but different [zone] label with the client proxy have the third highest priority.<br />4. endpoints have same [network] but different [region] labels with the client proxy have the fourth highest priority.<br />5. all the other endpoints have the same lowest priority.<br /><br />Suppose a service associated endpoints reside in multi clusters, the below example represents:<br />1. endpoints in `clusterA` and has `version=v1` label have P(0) priority.<br />2. endpoints not in `clusterA` but has `version=v1` label have P(1) priority.<br />2. all the other endpoints have P(2) priority.<br /><br />```yaml<br />failoverPriority:<br />- "version=v1"<br />- "topology.istio.io/cluster=clusterA"<br />```<br /><br />Optional: only one of distribute, failover or failoverPriority can be set.<br />And it should be used together with `OutlierDetection` to detect unhealthy endpoints, otherwise has no effect. |  |  |
 | `enabled` _boolean_ | enable locality load balancing, this is DestinationRule-level and will override mesh wide settings in entirety.<br />e.g. true means that turn on locality load balancing for this DestinationRule no matter what mesh wide settings is. |  |  |
 
 
@@ -1273,7 +1155,7 @@ _Appears in:_
 | `enableEnvoyAccessLogService` _boolean_ | This flag enables Envoy's gRPC Access Log Service.<br />See [Access Log Service](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/grpc/v3/als.proto)<br />for details about Envoy's gRPC Access Log Service API.<br />Default value is `false`. |  |  |
 | `disableEnvoyListenerLog` _boolean_ | This flag disables Envoy Listener logs.<br />See [Listener Access Log](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#envoy-v3-api-field-config-listener-v3-listener-access-log)<br />Istio Enables Envoy's listener access logs on "NoRoute" response flag.<br />Default value is `false`. |  |  |
 | `defaultConfig` _[MeshConfigProxyConfig](#meshconfigproxyconfig)_ | Default proxy config used by gateway and sidecars.<br />In case of Kubernetes, the proxy config is applied once during the injection process,<br />and remain constant for the duration of the pod. The rest of the mesh config can be changed<br />at runtime and config gets distributed dynamically.<br />On Kubernetes, this can be overridden on individual pods with the `proxy.istio.io/config` annotation. |  |  |
-| `outboundTrafficPolicy` _[MeshConfigOutboundTrafficPolicy](#meshconfigoutboundtrafficpolicy)_ | Set the default behavior of the sidecar for handling outbound<br />traffic from the application.  If your application uses one or<br />more external services that are not known apriori, setting the<br />policy to `ALLOW_ANY` will cause the sidecars to route any unknown<br />traffic originating from the application to its requested<br />destination. Users are strongly encouraged to use ServiceEntries<br />to explicitly declare any external dependencies, instead of using<br />`ALLOW_ANY`, so that traffic to these services can be<br />monitored. Can be overridden at a Sidecar level by setting the<br />`OutboundTrafficPolicy` in the [Sidecar<br />API](https://istio.io/docs/reference/config/networking/sidecar/#OutboundTrafficPolicy).<br />Default mode is `ALLOW_ANY` which means outbound traffic to unknown destinations will be allowed. |  |  |
+| `outboundTrafficPolicy` _[MeshConfigOutboundTrafficPolicy](#meshconfigoutboundtrafficpolicy)_ | Set the default behavior of the sidecar for handling outbound<br />traffic from the application.<br /><br />Can be overridden at a Sidecar level by setting the `OutboundTrafficPolicy` in the<br />[Sidecar API](https://istio.io/docs/reference/config/networking/sidecar/#OutboundTrafficPolicy).<br /><br />Default mode is `ALLOW_ANY`, which means outbound traffic to unknown destinations will be allowed. |  |  |
 | `inboundTrafficPolicy` _[MeshConfigInboundTrafficPolicy](#meshconfiginboundtrafficpolicy)_ | Set the default behavior of the sidecar for handling inbound<br />traffic to the application.  If your application listens on<br />localhost, you will need to set this to `LOCALHOST`. |  |  |
 | `configSources` _[ConfigSource](#configsource) array_ | ConfigSource describes a source of configuration data for networking<br />rules, and other Istio configuration artifacts. Multiple data sources<br />can be configured for a single control plane. |  |  |
 | `enableAutoMtls` _boolean_ | This flag is used to enable mutual `TLS` automatically for service to service communication<br />within the mesh, default true.<br />If set to true, and a given service does not have a corresponding `DestinationRule` configured,<br />or its `DestinationRule` does not have ClientTLSSettings specified, Istio configures client side<br />TLS configuration appropriately. More specifically,<br />If the upstream authentication policy is in `STRICT` mode, use Istio provisioned certificate<br />for mutual `TLS` to connect to upstream.<br />If upstream service is in plain text mode, use plain text.<br />If the upstream authentication policy is in PERMISSIVE mode, Istio configures clients to use<br />mutual `TLS` when server sides are capable of accepting mutual `TLS` traffic.<br />If service `DestinationRule` exists and has `ClientTLSSettings` specified, that is always used instead. |  |  |
@@ -1287,8 +1169,8 @@ _Appears in:_
 | `localityLbSetting` _[LocalityLoadBalancerSetting](#localityloadbalancersetting)_ | Locality based load balancing distribution or failover settings.<br />If unspecified, locality based load balancing will be enabled by default.<br />However, this requires outlierDetection to actually take effect for a particular<br />service, see https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/failover/ |  |  |
 | `dnsRefreshRate` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | Configures DNS refresh rate for Envoy clusters of type `STRICT_DNS`<br />Default refresh rate is `60s`. |  |  |
 | `h2UpgradePolicy` _[MeshConfigH2UpgradePolicy](#meshconfigh2upgradepolicy)_ | Specify if http1.1 connections should be upgraded to http2 by default.<br />if sidecar is installed on all pods in the mesh, then this should be set to `UPGRADE`.<br />If one or more services or namespaces do not have sidecar(s), then this should be set to `DO_NOT_UPGRADE`.<br />It can be enabled by destination using the `destinationRule.trafficPolicy.connectionPool.http.h2UpgradePolicy` override. |  | Enum: [DO_NOT_UPGRADE UPGRADE] <br /> |
-| `inboundClusterStatName` _string_ | Name to be used while emitting statistics for inbound clusters. The same pattern is used while computing stat prefix for<br />network filters like TCP and Redis.<br />By default, Istio emits statistics with the pattern `inbound\|<port>\|<port-name>\|<service-FQDN>`.<br />For example `inbound\|7443\|grpc-reviews\|reviews.prod.svc.cluster.local`. This can be used to override that pattern.<br /><br />A Pattern can be composed of various pre-defined variables. The following variables are supported.<br /><br />- `%SERVICE%` - Will be substituted with name of the service.<br />- `%SERVICE_FQDN%` - Will be substituted with FQDN of the service.<br />- `%SERVICE_PORT%` - Will be substituted with port of the service.<br />- `%TARGET_PORT%`  - Will be substituted with the target port of the service.<br />- `%SERVICE_PORT_NAME%` - Will be substituted with port name of the service.<br /><br />Following are some examples of supported patterns for reviews:<br /><br />- `%SERVICE_FQDN%_%SERVICE_PORT%` will use reviews.prod.svc.cluster.local_7443 as the stats name.<br />- `%SERVICE%` will use reviews.prod as the stats name. |  |  |
-| `outboundClusterStatName` _string_ | Name to be used while emitting statistics for outbound clusters. The same pattern is used while computing stat prefix for<br />network filters like TCP and Redis.<br />By default, Istio emits statistics with the pattern `outbound\|<port>\|<subsetname>\|<service-FQDN>`.<br />For example `outbound\|8080\|v2\|reviews.prod.svc.cluster.local`. This can be used to override that pattern.<br /><br />A Pattern can be composed of various pre-defined variables. The following variables are supported.<br /><br />- `%SERVICE%` - Will be substituted with name of the service.<br />- `%SERVICE_FQDN%` - Will be substituted with FQDN of the service.<br />- `%SERVICE_PORT%` - Will be substituted with port of the service.<br />- `%SERVICE_PORT_NAME%` - Will be substituted with port name of the service.<br />- `%SUBSET_NAME%` - Will be substituted with subset.<br /><br />Following are some examples of supported patterns for reviews:<br /><br />- `%SERVICE_FQDN%_%SERVICE_PORT%` will use `reviews.prod.svc.cluster.local_7443` as the stats name.<br />- `%SERVICE%` will use reviews.prod as the stats name. |  |  |
+| `inboundClusterStatName` _string_ | Name to be used while emitting statistics for inbound clusters. The same pattern is used while computing stat prefix for<br />network filters like TCP and Redis.<br />By default, Istio emits statistics with the pattern `inbound\|<port>\|<port-name>\|<service-FQDN>`.<br />For example `inbound\|7443\|grpc-reviews\|reviews.prod.svc.cluster.local`. This can be used to override that pattern.<br /><br />A Pattern can be composed of various pre-defined variables. The following variables are supported.<br /><br />- `%SERVICE%` - Will be substituted with short hostname of the service.<br />- `%SERVICE_NAME%` - Will be substituted with name of the service.<br />- `%SERVICE_FQDN%` - Will be substituted with FQDN of the service.<br />- `%SERVICE_PORT%` - Will be substituted with port of the service.<br />- `%TARGET_PORT%`  - Will be substituted with the target port of the service.<br />- `%SERVICE_PORT_NAME%` - Will be substituted with port name of the service.<br /><br />Following are some examples of supported patterns for reviews:<br /><br />- `%SERVICE_FQDN%_%SERVICE_PORT%` will use reviews.prod.svc.cluster.local_7443 as the stats name.<br />- `%SERVICE%` will use reviews.prod as the stats name. |  |  |
+| `outboundClusterStatName` _string_ | Name to be used while emitting statistics for outbound clusters. The same pattern is used while computing stat prefix for<br />network filters like TCP and Redis.<br />By default, Istio emits statistics with the pattern `outbound\|<port>\|<subsetname>\|<service-FQDN>`.<br />For example `outbound\|8080\|v2\|reviews.prod.svc.cluster.local`. This can be used to override that pattern.<br /><br />A Pattern can be composed of various pre-defined variables. The following variables are supported.<br /><br />- `%SERVICE%` - Will be substituted with short hostname of the service.<br />- `%SERVICE_NAME%` - Will be substituted with name of the service.<br />- `%SERVICE_FQDN%` - Will be substituted with FQDN of the service.<br />- `%SERVICE_PORT%` - Will be substituted with port of the service.<br />- `%SERVICE_PORT_NAME%` - Will be substituted with port name of the service.<br />- `%SUBSET_NAME%` - Will be substituted with subset.<br /><br />Following are some examples of supported patterns for reviews:<br /><br />- `%SERVICE_FQDN%_%SERVICE_PORT%` will use `reviews.prod.svc.cluster.local_7443` as the stats name.<br />- `%SERVICE%` will use reviews.prod as the stats name. |  |  |
 | `enablePrometheusMerge` _boolean_ | If enabled, Istio agent will merge metrics exposed by the application with metrics from Envoy<br />and Istio agent. The sidecar injection will replace `prometheus.io` annotations present on the pod<br />and redirect them towards Istio agent, which will then merge metrics of from the application with Istio metrics.<br />This relies on the annotations `prometheus.io/scrape`, `prometheus.io/port`, and<br />`prometheus.io/path` annotations.<br />If you are running a separately managed Envoy with an Istio sidecar, this may cause issues, as the metrics will collide.<br />In this case, it is recommended to disable aggregation on that deployment with the<br />`prometheus.istio.io/merge-metrics: "false"` annotation.<br />If not specified, this will be enabled by default. |  |  |
 | `extensionProviders` _[MeshConfigExtensionProvider](#meshconfigextensionprovider) array_ | Defines a list of extension providers that extend Istio's functionality. For example, the AuthorizationPolicy<br />can be used with an extension provider to delegate the authorization decision to a custom authorization system. |  | MaxItems: 1000 <br /> |
 | `defaultProviders` _[MeshConfigDefaultProviders](#meshconfigdefaultproviders)_ | Specifies extension providers to use by default in Istio configuration resources. |  |  |
@@ -1651,6 +1533,27 @@ _Appears in:_
 | `maxTagLength` _integer_ | Optional. Controls the overall path length allowed in a reported span.<br />NOTE: currently only controls max length of the path tag. |  |  |
 | `http` _[MeshConfigExtensionProviderHttpService](#meshconfigextensionproviderhttpservice)_ | Optional. Specifies the configuration for exporting OTLP traces via HTTP.<br />When empty, traces will be exported via gRPC.<br /><br />The following example shows how to configure the OpenTelemetry ExtensionProvider to export via HTTP:<br /><br />1. Add/change the OpenTelemetry extension provider in `MeshConfig`<br />```yaml<br />  - name: otel-tracing<br />    opentelemetry:<br />    port: 443<br />    service: my.olly-backend.com<br />    http:<br />    path: "/api/otlp/traces"<br />    timeout: 10s<br />    headers:<br />  - name: "my-custom-header"<br />    value: "some value"<br /><br />```<br /><br />2. Deploy a `ServiceEntry` for the observability back-end<br />```yaml<br />apiVersion: networking.istio.io/v1alpha3<br />kind: ServiceEntry<br />metadata:<br /><br />	name: my-olly-backend<br /><br />spec:<br /><br />	hosts:<br />	- my.olly-backend.com<br />	ports:<br />	- number: 443<br />	  name: https-port<br />	  protocol: HTTPS<br />	resolution: DNS<br />	location: MESH_EXTERNAL<br /><br />---<br />apiVersion: networking.istio.io/v1alpha3<br />kind: DestinationRule<br />metadata:<br /><br />	name: my-olly-backend<br /><br />spec:<br /><br />	host: my.olly-backend.com<br />	trafficPolicy:<br />	  portLevelSettings:<br />	  - port:<br />	      number: 443<br />	    tls:<br />	      mode: SIMPLE<br /><br />``` |  |  |
 | `resourceDetectors` _[MeshConfigExtensionProviderResourceDetectors](#meshconfigextensionproviderresourcedetectors)_ | Optional. Specifies [Resource Detectors](https://opentelemetry.io/docs/specs/otel/resource/sdk/)<br />to be used by the OpenTelemetry Tracer. When multiple resources are provided, they are merged<br />according to the OpenTelemetry [Resource specification](https://opentelemetry.io/docs/specs/otel/resource/sdk/#merge).<br /><br />The following example shows how to configure the Environment Resource Detector, that will<br />read the attributes from the environment variable `OTEL_RESOURCE_ATTRIBUTES`:<br /><br />```yaml<br />  - name: otel-tracing<br />    opentelemetry:<br />    port: 443<br />    service: my.olly-backend.com<br />    resource_detectors:<br />    environment: \{\}<br /><br />``` |  |  |
+| `dynatraceSampler` _[MeshConfigExtensionProviderOpenTelemetryTracingProviderDynatraceSampler](#meshconfigextensionprovideropentelemetrytracingproviderdynatracesampler)_ | The Dynatrace adaptive traffic management (ATM) sampler.<br /><br />Example configuration:<br /><br />```yaml<br />  - name: otel-tracing<br />    opentelemetry:<br />    port: 443<br />    service: "\{your-environment-id\}.live.dynatrace.com"<br />    http:<br />    path: "/api/v2/otlp/v1/traces"<br />    timeout: 10s<br />    headers:<br />  - name: "Authorization"<br />    value: "Api-Token dt0c01."<br />    resource_detectors:<br />    dynatrace: \{\}<br />    dynatrace_sampler:<br />    tenant: "\{your-environment-id\}"<br />    cluster_id: 1234 |  |  |
+
+
+
+
+#### MeshConfigExtensionProviderOpenTelemetryTracingProviderDynatraceSamplerDynatraceApi
+
+
+
+
+
+
+
+_Appears in:_
+- [MeshConfigExtensionProviderOpenTelemetryTracingProviderDynatraceSampler](#meshconfigextensionprovideropentelemetrytracingproviderdynatracesampler)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `service` _string_ | REQUIRED. Specifies the Dynatrace environment to obtain the sampling configuration.<br />The format is `<Hostname>`, where `<Hostname>` is the fully qualified Dynatrace environment<br />host name defined in the ServiceEntry.<br /><br />Example: "\{your-environment-id\}.live.dynatrace.com". |  | Required: \{\} <br /> |
+| `port` _integer_ | REQUIRED. Specifies the port of the service. |  | Required: \{\} <br /> |
+| `http` _[MeshConfigExtensionProviderHttpService](#meshconfigextensionproviderhttpservice)_ | REQUIRED. Specifies sampling configuration URI. |  | Required: \{\} <br /> |
 
 
 #### MeshConfigExtensionProviderPrometheusMetricsProvider
@@ -1841,7 +1744,8 @@ _Appears in:_
 
 
 
-
+`OutboundTrafficPolicy` sets the default behavior of the sidecar for
+handling unknown outbound traffic from the application.
 
 
 
@@ -1867,8 +1771,8 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `REGISTRY_ONLY` | outbound traffic will be restricted to services defined in the<br />service registry as well as those defined through ServiceEntries<br /> |
-| `ALLOW_ANY` | outbound traffic to unknown destinations will be allowed, in case<br />there are no services or ServiceEntries for the destination port<br /> |
+| `REGISTRY_ONLY` | In `REGISTRY_ONLY` mode, unknown outbound traffic will be dropped.<br />Traffic destinations must be explicitly declared into the service registry through `ServiceEntry` configurations.<br />Note: Istio [does not offer an outbound traffic security policy](https://istio.io/latest/docs/ops/best-practices/security/#understand-traffic-capture-limitations).<br />This option does not act as one, or as any form of an outbound firewall.<br />Instead, this option exists primarily to offer users a way to detect missing `ServiceEntry` configurations by explicitly failing.<br /> |
+| `ALLOW_ANY` | In `ALLOW_ANY` mode, any traffic to unknown destinations will be allowed.<br />Unknown destination traffic will have limited functionality, however, such as reduced observability.<br />This mode allows users that do not have all possible egress destinations registered through `ServiceEntry` configurations to still connect<br />to arbitrary destinations.<br /> |
 
 
 #### MeshConfigProxyConfig
@@ -1932,7 +1836,7 @@ _Appears in:_
 | `controlPlaneAuthPolicy` _[AuthenticationPolicy](#authenticationpolicy)_ | AuthenticationPolicy defines how the proxy is authenticated when it connects to the control plane.<br />Default is set to `MUTUAL_TLS`. |  | Enum: [NONE MUTUAL_TLS INHERIT] <br /> |
 | `customConfigFile` _string_ | File path of custom proxy configuration, currently used by proxies<br />in front of Mixer and Pilot. |  |  |
 | `statNameLength` _integer_ | Maximum length of name field in Envoy's metrics. The length of the name field<br />is determined by the length of a name field in a service and the set of labels that<br />comprise a particular version of the service. The default value is set to 189 characters.<br />Envoy's internal metrics take up 67 characters, for a total of 256 character name per metric.<br />Increase the value of this field if you find that the metrics from Envoys are truncated. |  |  |
-| `concurrency` _integer_ | The number of worker threads to run.<br />If unset, this will be automatically determined based on CPU requests/limits.<br />If set to 0, all cores on the machine will be used.<br />Default is 2 worker threads. |  |  |
+| `concurrency` _integer_ | The number of worker threads to run.<br />If unset, which is recommended, this will be automatically determined based on CPU requests/limits.<br />If set to 0, all cores on the machine will be used, ignoring CPU requests or limits. This can lead to major performance<br />issues if CPU limits are also set. |  |  |
 | `proxyBootstrapTemplatePath` _string_ | Path to the proxy bootstrap template file |  |  |
 | `interceptionMode` _[ProxyConfigInboundInterceptionMode](#proxyconfiginboundinterceptionmode)_ | The mode used to redirect inbound traffic to Envoy. |  | Enum: [REDIRECT TPROXY NONE] <br /> |
 | `tracing` _[Tracing](#tracing)_ | Tracing configuration to be used by the proxy. |  |  |
@@ -1943,7 +1847,7 @@ _Appears in:_
 | `statusPort` _integer_ | Port on which the agent should listen for administrative commands such as readiness probe.<br />Default is set to port `15020`. |  |  |
 | `extraStatTags` _string array_ | An additional list of tags to extract from the in-proxy Istio telemetry. These extra tags can be<br />added by configuring the telemetry extension. Each additional tag needs to be present in this list.<br />Extra tags emitted by the telemetry extensions must be listed here so that they can be processed<br />and exposed as Prometheus metrics.<br />Deprecated: `istio.stats` is a native filter now, this field is no longer needed. |  |  |
 | `gatewayTopology` _[Topology](#topology)_ | Topology encapsulates the configuration which describes where the proxy is<br />located i.e. behind a (or N) trusted proxy (proxies) or directly exposed<br />to the internet. This configuration only effects gateways and is applied<br />to all the gateways in the cluster unless overridden via annotations of the<br />gateway workloads. |  |  |
-| `terminationDrainDuration` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | The amount of time allowed for connections to complete on proxy shutdown.<br />On receiving `SIGTERM` or `SIGINT`, `istio-agent` tells the active Envoy to start draining,<br />preventing any new connections and allowing existing connections to complete. It then<br />sleeps for the `termination_drain_duration` and then kills any remaining active Envoy processes.<br />If not set, a default of `5s` will be applied. |  |  |
+| `terminationDrainDuration` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | The amount of time allowed for connections to complete on proxy shutdown.<br />On receiving `SIGTERM` or `SIGINT`, `istio-agent` tells the active Envoy to start gracefully draining,<br />discouraging any new connections and allowing existing connections to complete. It then<br />sleeps for the `termination_drain_duration` and then kills any remaining active Envoy processes.<br />If not set, a default of `5s` will be applied. |  |  |
 | `meshId` _string_ | The unique identifier for the [service mesh](https://istio.io/docs/reference/glossary/#service-mesh)<br />All control planes running in the same service mesh should specify the same mesh ID.<br />Mesh ID is used to label telemetry reports for cases where telemetry from multiple meshes is mixed together. |  |  |
 | `readinessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#probe-v1-core)_ | VM Health Checking readiness probe. This health check config exactly mirrors the<br />kubernetes readiness probe configuration both in schema and logic.<br />Only one health check method of 3 can be set at a time. |  |  |
 | `proxyStatsMatcher` _[ProxyConfigProxyStatsMatcher](#proxyconfigproxystatsmatcher)_ | Proxy stats matcher defines configuration for reporting custom Envoy stats.<br />To reduce memory and CPU overhead from Envoy stats system, Istio proxies by<br />default create and expose only a subset of Envoy stats. This option is to<br />control creation of additional Envoy stats with prefix, suffix, and regex<br />expressions match on the name of the stats. This replaces the stats<br />inclusion annotations<br />(`sidecar.istio.io/statsInclusionPrefixes`,<br />`sidecar.istio.io/statsInclusionRegexps`, and<br />`sidecar.istio.io/statsInclusionSuffixes`). For example, to enable stats<br />for circuit breakers, request retries, upstream connections, and request timeouts,<br />you can specify stats matcher as follows:<br />```yaml<br />proxyStatsMatcher:<br /><br />	inclusionRegexps:<br />	  - .*outlier_detection.*<br />	  - .*upstream_rq_retry.*<br />	  - .*upstream_cx_.*<br />	inclusionSuffixes:<br />	  - upstream_rq_timeout<br /><br />```<br />Note including more Envoy stats might increase number of time series<br />collected by prometheus significantly. Care needs to be taken on Prometheus<br />resource provision and configuration to reduce cardinality. |  |  |
@@ -2193,27 +2097,23 @@ _Appears in:_
 | `image` _string_ | Image name used for Pilot.<br /><br />This can be set either to image name if hub is also set, or can be set to the full hub:name string.<br /><br />Examples: custom-pilot, docker.io/someuser:custom-pilot |  |  |
 | `traceSampling` _float_ | Trace sampling fraction.<br /><br />Used to set the fraction of time that traces are sampled. Higher values are more accurate but add CPU overhead.<br /><br />Allowed values: 0.0 to 1.0 |  |  |
 | `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core)_ | K8s resources settings.<br /><br />See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container<br /><br />Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto. |  |  |
-| `configNamespace` _string_ | Namespace that the configuration management feature is installed into, if different from Pilot namespace. |  |  |
 | `cpu` _[TargetUtilizationConfig](#targetutilizationconfig)_ | Target CPU utilization used in HorizontalPodAutoscaler.<br /><br />See https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/<br /><br />Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto. |  |  |
 | `nodeSelector` _object (keys:string, values:string)_ | K8s node selector.<br /><br />See https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector<br /><br />Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto. |  |  |
 | `keepaliveMaxServerConnectionAge` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | Maximum duration that a sidecar can be connected to a pilot.<br /><br />This setting balances out load across pilot instances, but adds some resource overhead.<br /><br />Examples: 300s, 30m, 1h |  |  |
 | `deploymentLabels` _object (keys:string, values:string)_ | Labels that are added to Pilot deployment.<br /><br />See https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/ |  |  |
 | `podLabels` _object (keys:string, values:string)_ | Labels that are added to Pilot pods.<br /><br />See https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/ |  |  |
 | `configMap` _boolean_ | Configuration settings passed to Pilot as a ConfigMap.<br /><br />This controls whether the mesh config map, generated from values.yaml is generated.<br />If false, pilot wil use default values or user-supplied values, in that order of preference. |  |  |
-| `useMCP` _boolean_ | Controls whether Pilot is configured through the Mesh Control Protocol (MCP).<br /><br />If set to true, Pilot requires an MCP server (like Galley) to be installed. |  |  |
 | `env` _object (keys:string, values:string)_ | Environment variables passed to the Pilot container.<br /><br />Examples:<br />env:<br /><br />	ENV_VAR_1: value1<br />	ENV_VAR_2: value2 |  |  |
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#affinity-v1-core)_ | K8s affinity to set on the Pilot Pods. |  |  |
 | `rollingMaxSurge` _[IntOrString](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#intorstring-intstr-util)_ | K8s rolling update strategy<br /><br />Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto. |  | XIntOrString: \{\} <br /> |
 | `rollingMaxUnavailable` _[IntOrString](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#intorstring-intstr-util)_ | The number of pods that can be unavailable during a rolling update (see<br />`strategy.rollingUpdate.maxUnavailable` here:<br />https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/deployment-v1/#DeploymentSpec).<br />May be specified as a number of pods or as a percent of the total number<br />of pods at the start of the update.<br /><br />Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto. |  | XIntOrString: \{\} <br /> |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#toleration-v1-core) array_ | The node tolerations to be applied to the Pilot deployment so that it can be<br />scheduled to particular nodes with matching taints.<br />More info: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#scheduling<br /><br />Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto. |  |  |
-| `enableProtocolSniffingForOutbound` _boolean_ | Specifies whether protocol sniffing is enabled for outbound traffic.<br /><br />Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto. |  |  |
-| `enableProtocolSniffingForInbound` _boolean_ | Specifies whether protocol sniffing is enabled for inbound traffic.<br /><br />Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto. |  |  |
 | `podAnnotations` _object (keys:string, values:string)_ | K8s annotations for pods.<br /><br />See: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/<br /><br />Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto. |  |  |
 | `serviceAnnotations` _object (keys:string, values:string)_ | K8s annotations for the Service.<br /><br />See: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/ |  |  |
-| `configSource` _[PilotConfigSource](#pilotconfigsource)_ | ConfigSource describes a source of configuration data for networking<br />rules, and other Istio configuration artifacts. Multiple data sources<br />can be configured for a single control plane. |  |  |
+| `serviceAccountAnnotations` _object (keys:string, values:string)_ | K8s annotations for the service account |  |  |
 | `jwksResolverExtraRootCA` _string_ | Specifies an extra root certificate in PEM format. This certificate will be trusted<br />by pilot when resolving JWKS URIs. |  |  |
 | `hub` _string_ | Hub to pull the container image from. Image will be `Hub/Image:Tag-Variant`. |  |  |
-| `tag` _[IntOrString](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#intorstring-intstr-util)_ | The container image tag to pull. Image will be `Hub/Image:Tag-Variant`. |  | XIntOrString: \{\} <br /> |
+| `tag` _string_ | The container image tag to pull. Image will be `Hub/Image:Tag-Variant`. |  |  |
 | `variant` _string_ | The container image variant to pull. Options are "debug" or "distroless". Unset will use the default for the given version. |  |  |
 | `seccompProfile` _[SeccompProfile](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#seccompprofile-v1-core)_ | The seccompProfile for the Pilot container.<br /><br />See: https://kubernetes.io/docs/tutorials/security/seccomp/ |  |  |
 | `topologySpreadConstraints` _[TopologySpreadConstraint](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#topologyspreadconstraint-v1-core) array_ | The k8s topologySpreadConstraints for the Pilot pods. |  |  |
@@ -2224,15 +2124,17 @@ _Appears in:_
 | `ipFamilyPolicy` _string_ | Controls whether Services are configured to use IPv4, IPv6, or both. Valid options<br />are PreferDualStack, RequireDualStack, and SingleStack.<br />More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services |  |  |
 | `memory` _[TargetUtilizationConfig](#targetutilizationconfig)_ | Target memory utilization used in HorizontalPodAutoscaler.<br /><br />See https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/<br /><br />Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto. |  |  |
 | `cni` _[CNIUsageConfig](#cniusageconfig)_ | Configures whether to use an existing CNI installation for workloads |  |  |
+| `taint` _[PilotTaintControllerConfig](#pilottaintcontrollerconfig)_ |  |  |  |
+| `trustedZtunnelNamespace` _string_ | If set, `istiod` will allow connections from trusted node proxy ztunnels<br />in the provided namespace. |  |  |
 
 
-#### PilotConfigSource
+
+
+#### PilotTaintControllerConfig
 
 
 
-PilotConfigSource describes information about a configuration store inside a
-mesh. A single control plane instance can interact with one or more data
-sources.
+
 
 
 
@@ -2241,9 +2143,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `subscribedResources` _string array_ | Describes the source of configuration, if nothing is specified default is MCP. |  |  |
-
-
+| `enabled` _boolean_ | Enable the untaint controller for new nodes. This aims to solve a race for CNI installation on<br />new nodes. For this to work, the newly added nodes need to have the istio CNI taint as they are<br />added to the cluster. This is usually done by configuring the cluster infra provider. |  |  |
+| `namespace` _string_ | The namespace of the CNI daemonset, incase it's not the same as istiod. |  |  |
 
 
 
@@ -2318,6 +2219,7 @@ _Appears in:_
 | `image` _string_ | Image name or path for the proxy, default: "proxyv2".<br /><br />If registry or tag are not specified, global.hub and global.tag are used.<br /><br />Examples: my-proxy (uses global.hub/tag), docker.io/myrepo/my-proxy:v1.0.0 |  |  |
 | `includeIPRanges` _string_ | Lists the IP ranges of Istio egress traffic that the sidecar captures.<br /><br />Example: "172.30.0.0/16,172.20.0.0/16"<br />This would only capture egress traffic on those two IP Ranges, all other outbound traffic would # be allowed by the sidecar." |  |  |
 | `logLevel` _string_ | Log level for proxy, applies to gateways and sidecars. If left empty, "warning" is used. Expected values are: trace\\|debug\\|info\\|warning\\|error\\|critical\\|off |  |  |
+| `outlierLogPath` _string_ | Path to the file to which the proxy will write outlier detection logs.<br /><br />Example: "/dev/stdout"<br />This would write the logs to standard output. |  |  |
 | `privileged` _boolean_ | Enables privileged securityContext for the istio-proxy container.<br /><br />See https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ |  |  |
 | `readinessInitialDelaySeconds` _integer_ | Sets the initial delay for readiness probes in seconds. |  |  |
 | `readinessPeriodSeconds` _integer_ | Sets the interval between readiness probes in seconds. |  |  |
@@ -2371,7 +2273,7 @@ _Appears in:_
 | `requestId` _[ProxyConfigProxyHeadersRequestId](#proxyconfigproxyheadersrequestid)_ | Controls the `X-Request-Id` header. If enabled, a request ID is generated for each request if one is not already set.<br />This applies to all types of traffic (inbound, outbound, and gateways).<br />If disabled, no request ID will be generate for the request. If it is already present, it will be preserved.<br />Warning: request IDs are a critical component to mesh tracing and logging, so disabling this is not recommended.<br />This header is enabled by default if not configured. |  |  |
 | `server` _[ProxyConfigProxyHeadersServer](#proxyconfigproxyheadersserver)_ | Controls the `server` header. If enabled, the `Server: istio-envoy` header is set in response headers for inbound traffic (including gateways).<br />If disabled, the `Server` header is not modified. If it is already present, it will be preserved. |  |  |
 | `attemptCount` _[ProxyConfigProxyHeadersAttemptCount](#proxyconfigproxyheadersattemptcount)_ | Controls the `X-Envoy-Attempt-Count` header.<br />If enabled, this header will be added on outbound request headers (including gateways) that have retries configured.<br />If disabled, this header will not be set. If it is already present, it will be preserved.<br />This header is enabled by default if not configured. |  |  |
-| `envoyDebugHeaders` _[ProxyConfigProxyHeadersEnvoyDebugHeaders](#proxyconfigproxyheadersenvoydebugheaders)_ | Controls various `X-Envoy-*` headers, such as `X-Envoy-Overloaded` and `X-Envoy-Upstream-Service-Time. If enabled,<br />these headers will be included.<br />If disabled, these headers will not be set. If they are already present, they will be preserved.<br />See the [Envoy documentation](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#envoy-v3-api-field-extensions-filters-http-router-v3-router-suppress-envoy-headers) for more details.<br />These headers are enabled by default if not configured. |  |  |
+| `envoyDebugHeaders` _[ProxyConfigProxyHeadersEnvoyDebugHeaders](#proxyconfigproxyheadersenvoydebugheaders)_ | Controls various `X-Envoy-*` headers, such as `X-Envoy-Overloaded` and `X-Envoy-Upstream-Service-Time`. If enabled,<br />these headers will be included.<br />If disabled, these headers will not be set. If they are already present, they will be preserved.<br />See the [Envoy documentation](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#envoy-v3-api-field-extensions-filters-http-router-v3-router-suppress-envoy-headers) for more details.<br />These headers are enabled by default if not configured. |  |  |
 | `metadataExchangeHeaders` _[ProxyConfigProxyHeadersMetadataExchangeHeaders](#proxyconfigproxyheadersmetadataexchangeheaders)_ | Controls Istio metadata exchange headers `X-Envoy-Peer-Metadata` and `X-Envoy-Peer-Metadata-Id`.<br />By default, the behavior is unspecified.<br />If IN_MESH, these headers will not be appended to outbound requests from sidecars to services not in-mesh. |  |  |
 
 
@@ -2667,7 +2569,6 @@ _Appears in:_
 | `injectionURL` _string_ | Configure the injection url for sidecar injector webhook |  |  |
 | `templates` _object (keys:string, values:string)_ | Templates defines a set of custom injection templates that can be used. For example, defining:<br /><br />templates:<br /><br />	hello: \|<br />	  metadata:<br />	    labels:<br />	      hello: world<br /><br />Then starting a pod with the `inject.istio.io/templates: hello` annotation, will result in the pod<br />being injected with the hello=world labels.<br />This is intended for advanced configuration only; most users should use the built in template |  |  |
 | `defaultTemplates` _string array_ | defaultTemplates: ["sidecar", "hello"] |  |  |
-| `useLegacySelectors` _boolean_ | If enabled, the legacy webhook selection logic will be used. This relies on filtering of webhook<br />requests in Istiod, rather than at the webhook selection level.<br />This is option is intended for migration purposes only and will be removed in Istio 1.10.<br /><br />Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto. |  |  |
 
 
 #### StartupProbe
@@ -3049,6 +2950,22 @@ _Appears in:_
 | `defaultRevision` _string_ | The name of the default revision in the cluster. |  |  |
 | `profile` _string_ | Specifies which installation configuration profile to apply. |  |  |
 | `compatibilityVersion` _string_ | Specifies the compatibility version to use. When this is set, the control plane will<br />be configured with the same defaults as the specified version. |  |  |
+
+
+#### WaypointConfig
+
+
+
+Configuration for Waypoint proxies.
+
+
+
+_Appears in:_
+- [GlobalConfig](#globalconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core)_ | K8s resource settings.<br /><br />See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container |  |  |
 
 
 

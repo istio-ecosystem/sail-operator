@@ -16,7 +16,6 @@ package v1alpha1
 
 import (
 	k8sv1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 type SDSConfigToken struct {
@@ -43,6 +42,7 @@ type CNIGlobalConfig struct {
 	// Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.
 	//
 	// More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
+	// +kubebuilder:validation:Enum=Always;Never;IfNotPresent
 	ImagePullPolicy k8sv1.PullPolicy `json:"imagePullPolicy,omitempty"`
 	// ImagePullSecrets for the control plane ServiceAccount, list of secrets in the same namespace
 	// to use for pulling any images in pods that reference this ServiceAccount.
@@ -53,8 +53,7 @@ type CNIGlobalConfig struct {
 	// Specifies the global logging level settings for the Istio CNI component.
 	Logging *GlobalLoggingConfig `json:"logging,omitempty"`
 	// Specifies the tag for the Istio CNI image.
-	// +kubebuilder:validation:XIntOrString
-	Tag *intstr.IntOrString `json:"tag,omitempty"`
+	Tag string `json:"tag,omitempty"`
 	// The variant of the Istio container images to use. Options are "debug" or "distroless". Unset will use the default for the given version.
 	Variant string `json:"variant,omitempty"`
 }

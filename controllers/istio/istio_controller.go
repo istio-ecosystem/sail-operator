@@ -343,7 +343,7 @@ func applyImageDigests(istio *v1alpha1.Istio, values *v1alpha1.Values, config co
 	if values.Pilot == nil {
 		values.Pilot = &v1alpha1.PilotConfig{}
 	}
-	if values.Pilot.Image == "" && values.Pilot.Hub == "" && values.Pilot.Tag == nil {
+	if values.Pilot.Image == "" && values.Pilot.Hub == "" && values.Pilot.Tag == "" {
 		values.Pilot.Image = imageDigests.IstiodImage
 	}
 
