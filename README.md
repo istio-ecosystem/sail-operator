@@ -230,3 +230,5 @@ SEP documents are stored in the [enhancements](https://github.com/istio-ecosyste
 Please refer to the [ISSUE-MANAGEMENT.md](https://github.com/istio-ecosystem/sail-operator/blob/main/ISSUE-MANAGEMENT.md) file for more information on how to report bugs and feature requests to the Sail Operator team.
 
 If you found a bug in Istio, please refer to the [Istio GitHub repository](https://github.com/istio-ecosystem/sail-operator/blob/main/BUGS-AND-FEATURE-REQUESTS.md)
+
+.
