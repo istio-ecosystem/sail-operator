@@ -532,11 +532,6 @@ func (in *GlobalConfig) DeepCopyInto(out *GlobalConfig) {
 		*out = new(bool)
 		**out = **in
 	}
-	if in.Autoscalingv2API != nil {
-		in, out := &in.Autoscalingv2API, &out.Autoscalingv2API
-		*out = new(bool)
-		**out = **in
-	}
 	if in.IpFamilies != nil {
 		in, out := &in.IpFamilies, &out.IpFamilies
 		*out = make([]string, len(*in))

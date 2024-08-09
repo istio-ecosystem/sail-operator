@@ -121,11 +121,6 @@ spec:
                             format: int32
                             type: integer
                         type: object
-                      autoscalingv2API:
-                        description: |-
-                          TODO: remove this?
-                          No longer used.
-                        type: boolean
                       caAddress:
                         description: The address of the CA for CSR.
                         type: string
