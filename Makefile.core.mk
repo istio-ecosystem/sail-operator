@@ -387,7 +387,7 @@ gen-api-docs: ## Generate API documentation. Known issues: go fmt does not prope
 		--output-mode=group
 	@find $(OUTPUT_DOCS_PATH) -type f -name "*.md" -exec sed -i 's/<br \/>/ /g' {} \;
 	@find $(OUTPUT_DOCS_PATH) -type f -name "*.md" -exec sed -i 's/\t/  /g' {} \;
-	@find $(OUTPUT_DOCS_PATH) -type f -name "*.md" -exec sed -i '/```yaml/,/```/ { /^$$/ d }' {} \;
+	@find $(OUTPUT_DOCS_PATH) -type f -name "*.md" -exec sed -i '/^```/,/^```/ {/./!d;}' {} \;
 	@echo "API reference documentation generated at $(OUTPUT_DOCS_PATH)"
 
 .PHONY: restore-manifest-dates
