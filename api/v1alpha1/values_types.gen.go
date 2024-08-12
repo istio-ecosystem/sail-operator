@@ -17,6 +17,7 @@
 package v1alpha1
 
 import (
+	json "encoding/json"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -934,6 +935,10 @@ type Values struct {
 	// Specifies the compatibility version to use. When this is set, the control plane will
 	// be configured with the same defaults as the specified version.
 	CompatibilityVersion string `json:"compatibilityVersion,omitempty"`
+	// Specifies experimental helm fields that could be removed or changed in the future
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
+	Experimental json.RawMessage `json:"experimental,omitempty"`
 }
 
 // ZeroVPNConfig enables cross-cluster access using SNI matching.
