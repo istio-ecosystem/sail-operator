@@ -954,6 +954,38 @@ type WaypointConfig struct {
 	Resources *k8sv1.ResourceRequirements `json:"resources,omitempty"`
 }
 
+// CNIGlobalConfig is a subset of the Global Configuration used in the Istio CNI chart.
+type CNIGlobalConfig struct { // Default k8s resources settings for all Istio control plane components.
+	//
+	// See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
+	//
+	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	DefaultResources *k8sv1.ResourceRequirements `json:"defaultResources,omitempty"`
+
+	// Specifies the docker hub for Istio images.
+	Hub string `json:"hub,omitempty"`
+	// Specifies the image pull policy for the Istio images. one of Always, Never, IfNotPresent.
+	// Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.
+	//
+	// More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
+	// +kubebuilder:validation:Enum=Always;Never;IfNotPresent
+	ImagePullPolicy *k8sv1.PullPolicy `json:"imagePullPolicy,omitempty"`
+	// ImagePullSecrets for the control plane ServiceAccount, list of secrets in the same namespace
+	// to use for pulling any images in pods that reference this ServiceAccount.
+	// Must be set for any cluster configured with private docker registry.
+	ImagePullSecrets []string `json:"imagePullSecrets,omitempty"`
+
+	// Specifies whether istio components should output logs in json format by adding --log_as_json argument to each container.
+	LogAsJson *bool `json:"logAsJson,omitempty"`
+	// Specifies the global logging level settings for the Istio control plane components.
+	Logging *GlobalLoggingConfig `json:"logging,omitempty"`
+
+	// Specifies the tag for the Istio docker images.
+	Tag string `json:"tag,omitempty"`
+	// The variant of the Istio container images to use. Options are "debug" or "distroless". Unset will use the default for the given version.
+	Variant string `json:"variant,omitempty"`
+}
+
 // Resource describes the source of configuration
 // +kubebuilder:validation:Enum=SERVICE_REGISTRY
 type Resource string
