@@ -374,7 +374,7 @@ OUTPUT_DOCS_PATH := ./docs/api-reference
 CONFIG_API_DOCS_GEN_PATH := ./hack/api-docs/config.yaml
 TEMPLATES_DIR := ./hack/api-docs/templates/markdown
 
-gen-api-docs: ## Generate API documentation.
+gen-api-docs: ## Generate API documentation. Known issues: go fmt does not properly handle tabs and add new line empty. Workaround is applied to the generated markdown files. The crd-ref-docs tool add br tags to the generated markdown files. Workaround is applied to the generated markdown files.
 	@echo "Generating API documentation..."
 	@echo "CRD_PATH: $(CRD_PATH)"
 	mkdir -p $(OUTPUT_DOCS_PATH)
@@ -385,14 +385,8 @@ gen-api-docs: ## Generate API documentation.
 		--renderer=markdown \
 		--output-path=$(OUTPUT_DOCS_PATH) \
 		--output-mode=group
-	@echo "The following replaces are applied to the generated markdown files as workaround"
-	@echo "because can't be applied in the ast nodes in the transform api"
-	@echo "go fmt does not properly handle tabs"
-	@echo "Remove br tags from the generated markdown files"
 	@find $(OUTPUT_DOCS_PATH) -type f -name "*.md" -exec sed -i 's/<br \/>/ /g' {} \;
-	@echo "Replace tabs with spaces in the generated markdown files"
 	@find $(OUTPUT_DOCS_PATH) -type f -name "*.md" -exec sed -i 's/\t/  /g' {} \;
-	@echo "Delete empty new lines inside yaml blocks"
 	@find $(OUTPUT_DOCS_PATH) -type f -name "*.md" -exec sed -i '/```yaml/,/```/ { /^$$/ d }' {} \;
 	@echo "API reference documentation generated at $(OUTPUT_DOCS_PATH)"
 
