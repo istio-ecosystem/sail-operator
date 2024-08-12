@@ -1032,21 +1032,41 @@ _Appears in:_
 | `failover` _[LocalityLoadBalancerSettingFailover](#localityloadbalancersettingfailover) array_ | Optional: only one of distribute, failover or failoverPriority can be set. Explicitly specify the region traffic will land on when endpoints in local region becomes unhealthy. Should be used together with OutlierDetection to detect unhealthy endpoints. Note: if no OutlierDetection specified, this will not take effect. |  |  |
 | `failoverPriority` _string array_ | failoverPriority is an ordered list of labels used to sort endpoints to do priority based load balancing. This is to support traffic failover across different groups of endpoints. Two kinds of labels can be specified:    - Specify only label keys `[key1, key2, key3]`, istio would compare the label values of client with endpoints.     Suppose there are total N label keys `[key1, key2, key3, ...keyN]` specified:      1. Endpoints matching all N labels with the client proxy have priority P(0) i.e. the highest priority.     2. Endpoints matching the first N-1 labels with the client proxy have priority P(1) i.e. second highest priority.     3. By extension of this logic, endpoints matching only the first label with the client proxy has priority P(N-1) i.e. second lowest priority.     4. All the other endpoints have priority P(N) i.e. lowest priority.    - Specify labels with key and value `[key1=value1, key2=value2, key3=value3]`, istio would compare the labels with endpoints.     Suppose there are total N labels `[key1=value1, key2=value2, key3=value3, ...keyN=valueN]` specified:      1. Endpoints matching all N labels have priority P(0) i.e. the highest priority.     2. Endpoints matching the first N-1 labels have priority P(1) i.e. second highest priority.     3. By extension of this logic, endpoints matching only the first label has priority P(N-1) i.e. second lowest priority.     4. All the other endpoints have priority P(N) i.e. lowest priority.  Note: For a label to be considered for match, the previous labels must match, i.e. nth label would be considered matched only if first n-1 labels match.  It can be any label specified on both client and server workloads. The following labels which have special semantic meaning are also supported:    - `topology.istio.io/network` is used to match the network metadata of an endpoint, which can be specified by pod/namespace label `topology.istio.io/network`, sidecar env `ISTIO_META_NETWORK` or MeshNetworks.   - `topology.istio.io/cluster` is used to match the clusterID of an endpoint, which can be specified by pod label `topology.istio.io/cluster` or pod env `ISTIO_META_CLUSTER_ID`.   - `topology.kubernetes.io/region` is used to match the region metadata of an endpoint, which maps to Kubernetes node label `topology.kubernetes.io/region` or the deprecated label `failure-domain.beta.kubernetes.io/region`.   - `topology.kubernetes.io/zone` is used to match the zone metadata of an endpoint, which maps to Kubernetes node label `topology.kubernetes.io/zone` or the deprecated label `failure-domain.beta.kubernetes.io/zone`.   - `topology.istio.io/subzone` is used to match the subzone metadata of an endpoint, which maps to Istio node label `topology.istio.io/subzone`.   - `kubernetes.io/hostname` is used to match the current node of an endpoint, which maps to Kubernetes node label `kubernetes.io/hostname`.  The below topology config indicates the following priority levels:  ```yaml failoverPriority: - "topology.istio.io/network" - "topology.kubernetes.io/region" - "topology.kubernetes.io/zone" - "topology.istio.io/subzone" ```  1. endpoints match same [network, region, zone, subzone] label with the client proxy have the highest priority. 2. endpoints have same [network, region, zone] label but different [subzone] label with the client proxy have the second highest priority. 3. endpoints have same [network, region] label but different [zone] label with the client proxy have the third highest priority. 4. endpoints have same [network] but different [region] labels with the client proxy have the fourth highest priority. 5. all the other endpoints have the same lowest priority.  Suppose a service associated endpoints reside in multi clusters, the below example represents: 1. endpoints in `clusterA` and has `version=v1` label have P(0) priority. 2. endpoints not in `clusterA` but has `version=v1` label have P(1) priority. 2. all the other endpoints have P(2) priority.  ```yaml failoverPriority: - "version=v1" - "topology.istio.io/cluster=clusterA" ```  Optional: only one of distribute, failover or failoverPriority can be set. And it should be used together with `OutlierDetection` to detect unhealthy endpoints, otherwise has no effect. |  |  |
 | `enabled` _boolean_ | enable locality load balancing, this is DestinationRule-level and will override mesh wide settings in entirety. e.g. true means that turn on locality load balancing for this DestinationRule no matter what mesh wide settings is. |  |  |
+
+
 #### LocalityLoadBalancerSettingDistribute
+
+
+
 Describes how traffic originating in the 'from' zone or sub-zone is
 distributed over a set of 'to' zones. Syntax for specifying a zone is
 {region}/{zone}/{sub-zone} and terminal wildcards are allowed on any
 segment of the specification. Examples:
+
+
 `*` - matches all localities
+
+
 `us-west/*` - all zones and sub-zones within the us-west region
+
+
 `us-west/zone-1/*` - all sub-zones within us-west/zone-1
+
+
+
 _Appears in:_
 - [LocalityLoadBalancerSetting](#localityloadbalancersetting)
+
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `from` _string_ | Originating locality, '/' separated, e.g. 'region/zone/sub_zone'. |  |  |
 | `to` _object (keys:string, values:integer)_ | Map of upstream localities to traffic distribution weights. The sum of all weights should be 100. Any locality not present will receive no traffic. |  |  |
+
+
 #### LocalityLoadBalancerSettingFailover
+
+
+
 Specify the traffic failover policy across regions. Since zone and sub-zone
 failover is supported by default this only needs to be specified for
 regions when the operator needs to constrain traffic failover so that
@@ -1054,16 +1074,29 @@ the default behavior of failing over to any endpoint globally does not
 apply. This is useful when failing over traffic across regions would not
 improve service health or may need to be restricted for other reasons
 like regulatory controls.
+
+
+
 _Appears in:_
 - [LocalityLoadBalancerSetting](#localityloadbalancersetting)
+
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `from` _string_ | Originating region. |  |  |
 | `to` _string_ | Destination region the traffic will fail over to when endpoints in the 'from' region becomes unhealthy. |  |  |
+
+
 #### MeshConfig
+
+
+
 MeshConfig defines mesh-wide settings for the Istio service mesh.
+
+
+
 _Appears in:_
 - [Values](#values)
+
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `proxyListenPort` _integer_ | Port on which Envoy should listen for all outbound traffic to other services. Default port is 15001. |  |  |
@@ -1461,130 +1494,260 @@ _Appears in:_
 | `http` _[MeshConfigExtensionProviderHttpService](#meshconfigextensionproviderhttpservice)_ | Optional. Specifies the configuration for exporting OTLP traces via HTTP. When empty, traces will be exported via gRPC.  The following example shows how to configure the OpenTelemetry ExtensionProvider to export via HTTP:  1. Add/change the OpenTelemetry extension provider in `MeshConfig` ```yaml   - name: otel-tracing     opentelemetry:     port: 443     service: my.olly-backend.com     http:     path: "/api/otlp/traces"     timeout: 10s     headers:   - name: "my-custom-header"     value: "some value"  ```  2. Deploy a `ServiceEntry` for the observability back-end ```yaml apiVersion: networking.istio.io/v1alpha3 kind: ServiceEntry metadata:    name: my-olly-backend  spec:    hosts:   - my.olly-backend.com   ports:   - number: 443     name: https-port     protocol: HTTPS   resolution: DNS   location: MESH_EXTERNAL  --- apiVersion: networking.istio.io/v1alpha3 kind: DestinationRule metadata:    name: my-olly-backend  spec:    host: my.olly-backend.com   trafficPolicy:     portLevelSettings:     - port:         number: 443       tls:         mode: SIMPLE  ``` |  |  |
 | `resourceDetectors` _[MeshConfigExtensionProviderResourceDetectors](#meshconfigextensionproviderresourcedetectors)_ | Optional. Specifies [Resource Detectors](https://opentelemetry.io/docs/specs/otel/resource/sdk/) to be used by the OpenTelemetry Tracer. When multiple resources are provided, they are merged according to the OpenTelemetry [Resource specification](https://opentelemetry.io/docs/specs/otel/resource/sdk/#merge).  The following example shows how to configure the Environment Resource Detector, that will read the attributes from the environment variable `OTEL_RESOURCE_ATTRIBUTES`:  ```yaml   - name: otel-tracing     opentelemetry:     port: 443     service: my.olly-backend.com     resource_detectors:     environment: \{\}  ``` |  |  |
 | `dynatraceSampler` _[MeshConfigExtensionProviderOpenTelemetryTracingProviderDynatraceSampler](#meshconfigextensionprovideropentelemetrytracingproviderdynatracesampler)_ | The Dynatrace adaptive traffic management (ATM) sampler.  Example configuration:  ```yaml   - name: otel-tracing     opentelemetry:     port: 443     service: "\{your-environment-id\}.live.dynatrace.com"     http:     path: "/api/v2/otlp/v1/traces"     timeout: 10s     headers:   - name: "Authorization"     value: "Api-Token dt0c01."     resource_detectors:     dynatrace: \{\}     dynatrace_sampler:     tenant: "\{your-environment-id\}"     cluster_id: 1234 |  |  |
+
+
+
+
 #### MeshConfigExtensionProviderOpenTelemetryTracingProviderDynatraceSamplerDynatraceApi
+
+
+
+
+
+
+
 _Appears in:_
 - [MeshConfigExtensionProviderOpenTelemetryTracingProviderDynatraceSampler](#meshconfigextensionprovideropentelemetrytracingproviderdynatracesampler)
+
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `service` _string_ | REQUIRED. Specifies the Dynatrace environment to obtain the sampling configuration. The format is `<Hostname>`, where `<Hostname>` is the fully qualified Dynatrace environment host name defined in the ServiceEntry.  Example: "\{your-environment-id\}.live.dynatrace.com". |  | Required: \{\}   |
 | `port` _integer_ | REQUIRED. Specifies the port of the service. |  | Required: \{\}   |
 | `http` _[MeshConfigExtensionProviderHttpService](#meshconfigextensionproviderhttpservice)_ | REQUIRED. Specifies sampling configuration URI. |  | Required: \{\}   |
+
+
 #### MeshConfigExtensionProviderPrometheusMetricsProvider
+
+
+
+
+
+
+
 _Appears in:_
 - [MeshConfigExtensionProvider](#meshconfigextensionprovider)
+
+
+
+
+
 #### MeshConfigExtensionProviderResourceDetectorsDynatraceResourceDetector
+
+
+
 Dynatrace Resource Detector.
 The resource detector reads from the Dynatrace enrichment files
 and adds host/process related attributes to the OpenTelemetry resource.
+
+
 See: [Enrich ingested data with Dynatrace-specific dimensions](https://docs.dynatrace.com/docs/shortlink/enrichment-files)
+
+
+
 _Appears in:_
 - [MeshConfigExtensionProviderResourceDetectors](#meshconfigextensionproviderresourcedetectors)
+
+
+
 #### MeshConfigExtensionProviderResourceDetectorsEnvironmentResourceDetector
+
+
+
 OpenTelemetry Environment Resource Detector.
 The resource detector reads attributes from the environment variable `OTEL_RESOURCE_ATTRIBUTES`
 and adds them to the OpenTelemetry resource.
+
+
 See: [Resource specification](https://opentelemetry.io/docs/specs/otel/resource/sdk/#specifying-resource-information-via-an-environment-variable)
+
+
+
 _Appears in:_
 - [MeshConfigExtensionProviderResourceDetectors](#meshconfigextensionproviderresourcedetectors)
+
+
+
 #### MeshConfigExtensionProviderSkyWalkingTracingProvider
+
+
+
 Defines configuration for a SkyWalking tracer.
+
+
+
 _Appears in:_
 - [MeshConfigExtensionProvider](#meshconfigextensionprovider)
+
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `service` _string_ | REQUIRED. Specifies the service for the SkyWalking receiver. The format is `[<Namespace>/]<Hostname>`. The specification of `<Namespace>` is required only when it is insufficient to unambiguously resolve a service in the service registry. The `<Hostname>` is a fully qualified host name of a service defined by the Kubernetes service or ServiceEntry.  Example: "skywalking.default.svc.cluster.local" or "bar/skywalking.example.com". |  | Required: \{\}   |
 | `port` _integer_ | REQUIRED. Specifies the port of the service. |  | Required: \{\}   |
 | `accessToken` _string_ | Optional. The SkyWalking OAP access token. |  |  |
+
+
 #### MeshConfigExtensionProviderStackdriverProvider
+
+
+
 Defines configuration for Stackdriver.
+
+
 WARNING: Stackdriver tracing uses OpenCensus configuration under the hood and, as a result, cannot be used
 alongside any OpenCensus provider configuration. This is due to a limitation in the implementation of OpenCensus
 driver in Envoy.
+
+
+
 _Appears in:_
 - [MeshConfigExtensionProvider](#meshconfigextensionprovider)
+
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `maxTagLength` _integer_ | Optional. Controls the overall path length allowed in a reported span. NOTE: currently only controls max length of the path tag. |  |  |
 | `logging` _[MeshConfigExtensionProviderStackdriverProviderLogging](#meshconfigextensionproviderstackdriverproviderlogging)_ | Optional. Controls Stackdriver logging behavior. |  |  |
+
+
+
+
 #### MeshConfigExtensionProviderZipkinTracingProvider
+
+
+
 Defines configuration for a Zipkin tracer.
+
+
+
 _Appears in:_
 - [MeshConfigExtensionProvider](#meshconfigextensionprovider)
+
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `service` _string_ | REQUIRED. Specifies the service that the Zipkin API. The format is `[<Namespace>/]<Hostname>`. The specification of `<Namespace>` is required only when it is insufficient to unambiguously resolve a service in the service registry. The `<Hostname>` is a fully qualified host name of a service defined by the Kubernetes service or ServiceEntry.  Example: "zipkin.default.svc.cluster.local" or "bar/zipkin.example.com". |  | Required: \{\}   |
 | `port` _integer_ | REQUIRED. Specifies the port of the service. |  | Required: \{\}   |
 | `maxTagLength` _integer_ | Optional. Controls the overall path length allowed in a reported span. NOTE: currently only controls max length of the path tag. |  |  |
 | `enable64bitTraceId` _boolean_ | Optional. A 128 bit trace id will be used in Istio. If true, will result in a 64 bit trace id being used. |  |  |
+
+
 #### MeshConfigH2UpgradePolicy
+
 _Underlying type:_ _string_
+
 Default Policy for upgrading http1.1 connections to http2.
+
 _Validation:_
 - Enum: [DO_NOT_UPGRADE UPGRADE]
+
 _Appears in:_
 - [MeshConfig](#meshconfig)
+
 | Field | Description |
 | --- | --- |
 | `DO_NOT_UPGRADE` | Do not upgrade connections to http2.  |
 | `UPGRADE` | Upgrade the connections to http2.  |
+
+
 #### MeshConfigInboundTrafficPolicy
+
+
+
+
+
+
+
 _Appears in:_
 - [MeshConfig](#meshconfig)
+
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `mode` _[MeshConfigInboundTrafficPolicyMode](#meshconfiginboundtrafficpolicymode)_ |  |  | Enum: [PASSTHROUGH LOCALHOST]   |
+
+
 #### MeshConfigInboundTrafficPolicyMode
+
 _Underlying type:_ _string_
+
+
+
 _Validation:_
 - Enum: [PASSTHROUGH LOCALHOST]
+
 _Appears in:_
 - [MeshConfigInboundTrafficPolicy](#meshconfiginboundtrafficpolicy)
+
 | Field | Description |
 | --- | --- |
 | `PASSTHROUGH` | inbound traffic will be passed through to the destination listening on Pod IP. This matches the behavior without Istio enabled at all allowing proxy to be transparent.  |
 | `LOCALHOST` | inbound traffic will be sent to the destinations listening on localhost.  |
+
+
 #### MeshConfigIngressControllerMode
+
 _Underlying type:_ _string_
+
+
+
 _Validation:_
 - Enum: [UNSPECIFIED OFF DEFAULT STRICT]
+
 _Appears in:_
 - [MeshConfig](#meshconfig)
+
 | Field | Description |
 | --- | --- |
 | `UNSPECIFIED` | Unspecified Istio ingress controller.  |
 | `OFF` | Disables Istio ingress controller.  |
 | `DEFAULT` | Istio ingress controller will act on ingress resources that do not contain any annotation or whose annotations match the value specified in the ingress_class parameter described earlier. Use this mode if Istio ingress controller will be the default ingress controller for the entire Kubernetes cluster.  |
 | `STRICT` | Istio ingress controller will only act on ingress resources whose annotations match the value specified in the ingress_class parameter described earlier. Use this mode if Istio ingress controller will be a secondary ingress controller (e.g., in addition to a cloud-provided ingress controller).  |
+
+
 #### MeshConfigOutboundTrafficPolicy
+
+
+
 `OutboundTrafficPolicy` sets the default behavior of the sidecar for
 handling unknown outbound traffic from the application.
+
+
+
 _Appears in:_
 - [MeshConfig](#meshconfig)
+
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `mode` _[MeshConfigOutboundTrafficPolicyMode](#meshconfigoutboundtrafficpolicymode)_ |  |  | Enum: [REGISTRY_ONLY ALLOW_ANY]   |
+
+
 #### MeshConfigOutboundTrafficPolicyMode
+
 _Underlying type:_ _string_
+
+
+
 _Validation:_
 - Enum: [REGISTRY_ONLY ALLOW_ANY]
+
 _Appears in:_
 - [MeshConfigOutboundTrafficPolicy](#meshconfigoutboundtrafficpolicy)
+
 | Field | Description |
 | --- | --- |
 | `REGISTRY_ONLY` | In `REGISTRY_ONLY` mode, unknown outbound traffic will be dropped. Traffic destinations must be explicitly declared into the service registry through `ServiceEntry` configurations. Note: Istio [does not offer an outbound traffic security policy](https://istio.io/latest/docs/ops/best-practices/security/#understand-traffic-capture-limitations). This option does not act as one, or as any form of an outbound firewall. Instead, this option exists primarily to offer users a way to detect missing `ServiceEntry` configurations by explicitly failing.  |
 | `ALLOW_ANY` | In `ALLOW_ANY` mode, any traffic to unknown destinations will be allowed. Unknown destination traffic will have limited functionality, however, such as reduced observability. This mode allows users that do not have all possible egress destinations registered through `ServiceEntry` configurations to still connect to arbitrary destinations.  |
+
+
 #### MeshConfigProxyConfig
+
+
+
 ProxyConfig defines variables for individual Envoy instances. This can be configured on a per-workload basis
 as well as by the mesh-wide defaults.
 To set the mesh wide defaults, configure the `defaultConfig` section of `meshConfig`. For example:
+
+
 ```
 meshConfig:
-
-
   defaultConfig:
     discoveryAddress: istiod:15012
-
-
 ```
 
 
@@ -1593,12 +1756,8 @@ This can also be configured on a per-workload basis by configuring the `proxy.is
 
 ```
 annotations:
-
-
   proxy.istio.io/config: |
     discoveryAddress: istiod:15012
-
-
 ```
 
 
