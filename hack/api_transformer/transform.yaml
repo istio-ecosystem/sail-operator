@@ -107,6 +107,20 @@ inputFiles:
       SidecarInjectorConfig.AlwaysInjectSelector: "[]metav1.LabelSelector"
       SidecarInjectorConfig.InjectedAnnotations: "map[string]string"
       SidecarInjectorConfig.Templates: "map[string]string"
+    copyTypes:
+    - from: GlobalConfig
+      to: CNIGlobalConfig
+      comments:
+      - // CNIGlobalConfig is a subset of the Global Configuration used in the Istio CNI chart.
+      includeFields:
+      - DefaultResources
+      - Hub
+      - ImagePullPolicy
+      - ImagePullSecrets
+      - LogAsJson
+      - Logging
+      - Tag
+      - Variant
     addComments:
       CNIConfig.PullPolicy: "// +kubebuilder:validation:Enum=Always;Never;IfNotPresent"
       GlobalConfig.ImagePullPolicy: "// +kubebuilder:validation:Enum=Always;Never;IfNotPresent"
