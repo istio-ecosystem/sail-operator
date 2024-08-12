@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"golang.org/x/mod/modfile"
@@ -70,7 +71,15 @@ type Transformations struct {
 	ReplaceFunctionReturnTypes map[string]string `yaml:"replaceFunctionReturnTypes"`
 	ReplaceFieldTypes          map[string]string `yaml:"replaceFieldTypes"`
 	ReplaceTypes               map[string]string `yaml:"replaceTypes"`
+	CopyTypes                  []CopyTransform   `yaml:"copyTypes"`
 	AddComments                map[string]string `yaml:"addComments"`
+}
+
+type CopyTransform struct {
+	From          string   `yaml:"from"`
+	To            string   `yaml:"to"`
+	Comments      []string `yaml:"comments"`
+	IncludeFields []string `yaml:"includeFields"`
 }
 
 var config *Config
@@ -139,6 +148,7 @@ func merge(local, global *Transformations) *Transformations {
 		ReplaceFunctionReturnTypes: mergeStringMaps(local.ReplaceFunctionReturnTypes, global.ReplaceFunctionReturnTypes),
 		ReplaceFieldTypes:          mergeStringMaps(local.ReplaceFieldTypes, global.ReplaceFieldTypes),
 		ReplaceTypes:               mergeStringMaps(local.ReplaceTypes, global.ReplaceTypes),
+		CopyTypes:                  local.CopyTypes,
 		AddComments:                mergeStringMaps(local.AddComments, global.AddComments),
 	}
 }
@@ -264,6 +274,33 @@ func (t *FileTransformer) processFile() (*ast.File, error) {
 
 				if newName := t.getTypeRename(structName); newName != "" {
 					typeSpec.Name.Name = newName
+				}
+
+				if ct, found := t.getCopyTransform(structName); found {
+					structCopy := &ast.StructType{
+						Fields: &ast.FieldList{},
+					}
+					for _, f := range structType.Fields.List {
+						if slices.Contains(ct.IncludeFields, f.Names[0].Name) {
+							structCopy.Fields.List = append(structCopy.Fields.List, f)
+						}
+					}
+					declCopy := &ast.GenDecl{
+						Tok: token.TYPE,
+						Specs: []ast.Spec{
+							&ast.TypeSpec{
+								Name: &ast.Ident{Name: ct.To},
+								Type: structCopy,
+							},
+						},
+					}
+					if len(ct.Comments) > 0 {
+						declCopy.Doc = &ast.CommentGroup{}
+						for _, c := range ct.Comments {
+							declCopy.Doc.List = append(declCopy.Doc.List, &ast.Comment{Text: c})
+						}
+					}
+					file.Decls = append(file.Decls, declCopy)
 				}
 			}
 		}
@@ -768,6 +805,15 @@ func matches(parent string, child string, list []string) bool {
 		}
 	}
 	return false
+}
+
+func (t *FileTransformer) getCopyTransform(typeName string) (CopyTransform, bool) {
+	for _, ct := range t.Transformations.CopyTypes {
+		if ct.From == typeName {
+			return ct, true
+		}
+	}
+	return CopyTransform{}, false
 }
 
 func (t *FileTransformer) getTypeRename(typeName string) string {
