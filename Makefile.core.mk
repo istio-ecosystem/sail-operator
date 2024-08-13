@@ -335,7 +335,7 @@ gen-manifests: controller-gen ## Generate WebhookConfiguration and CustomResourc
 	$(CONTROLLER_GEN) crd:allowDangerousTypes=true webhook paths="./..." output:crd:artifacts:config=chart/crds
 
 .PHONY: gen-api
-gen-api: ## Generate API types from upstream files.
+gen-api: tidy-go ## Generate API types from upstream files.
 	echo Generating API types from upstream files
 	go run hack/api_transformer/main.go hack/api_transformer/transform.yaml
 
