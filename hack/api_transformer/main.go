@@ -58,21 +58,21 @@ type InputFile struct {
 }
 
 type Transformations struct {
-	RemoveImports              []string          `yaml:"removeImports"`
-	RenameImports              map[string]string `yaml:"renameImports"`
-	AddImports                 map[string]string `yaml:"addImports"`
-	RemoveVars                 []string          `yaml:"removeVars"`
-	RemoveTypes                []string          `yaml:"removeTypes"`
-	PreserveTypes              []string          `yaml:"preserveTypes"`
-	RemoveFunctions            []string          `yaml:"removeFunctions"`
-	RemoveFields               []string          `yaml:"removeFields"`
-	RenameFields               map[string]string `yaml:"renameFields"`
-	RenameTypes                map[string]string `yaml:"renameTypes"`
-	ReplaceFunctionReturnTypes map[string]string `yaml:"replaceFunctionReturnTypes"`
-	ReplaceFieldTypes          map[string]string `yaml:"replaceFieldTypes"`
-	ReplaceTypes               map[string]string `yaml:"replaceTypes"`
-	CopyTypes                  []CopyTransform   `yaml:"copyTypes"`
-	AddComments                map[string]string `yaml:"addComments"`
+	RemoveImports              []string            `yaml:"removeImports"`
+	RenameImports              map[string]string   `yaml:"renameImports"`
+	AddImports                 map[string]string   `yaml:"addImports"`
+	RemoveVars                 []string            `yaml:"removeVars"`
+	RemoveTypes                []string            `yaml:"removeTypes"`
+	PreserveTypes              []string            `yaml:"preserveTypes"`
+	RemoveFunctions            []string            `yaml:"removeFunctions"`
+	RemoveFields               []string            `yaml:"removeFields"`
+	RenameFields               map[string]string   `yaml:"renameFields"`
+	RenameTypes                map[string]string   `yaml:"renameTypes"`
+	ReplaceFunctionReturnTypes map[string]string   `yaml:"replaceFunctionReturnTypes"`
+	ReplaceFieldTypes          map[string]string   `yaml:"replaceFieldTypes"`
+	ReplaceTypes               map[string]string   `yaml:"replaceTypes"`
+	CopyTypes                  []CopyTransform     `yaml:"copyTypes"`
+	AddComments                map[string][]string `yaml:"addComments"`
 }
 
 type CopyTransform struct {
@@ -149,7 +149,7 @@ func merge(local, global *Transformations) *Transformations {
 		ReplaceFieldTypes:          mergeStringMaps(local.ReplaceFieldTypes, global.ReplaceFieldTypes),
 		ReplaceTypes:               mergeStringMaps(local.ReplaceTypes, global.ReplaceTypes),
 		CopyTypes:                  local.CopyTypes,
-		AddComments:                mergeStringMaps(local.AddComments, global.AddComments),
+		AddComments:                mergeStringArrayMaps(local.AddComments, global.AddComments),
 	}
 }
 
@@ -168,6 +168,16 @@ func mergeStringMaps(maps ...map[string]string) map[string]string {
 	for _, m := range maps {
 		for k, v := range m {
 			result[k] = v
+		}
+	}
+	return result
+}
+
+func mergeStringArrayMaps(maps ...map[string][]string) map[string][]string {
+	result := make(map[string][]string)
+	for _, m := range maps {
+		for k, v := range m {
+			result[k] = append(result[k], v...)
 		}
 	}
 	return result
@@ -250,8 +260,8 @@ func (t *FileTransformer) processFile() (*ast.File, error) {
 						field.Type = newType
 					}
 
-					if tag := t.getFieldComments(structName, fieldName); tag != "" {
-						addComment(field, tag)
+					for _, comment := range t.getFieldComments(structName, fieldName) {
+						addComment(field, comment)
 					}
 					if toString(field.Type) == "*intstr.IntOrString" {
 						addComment(field, "// +kubebuilder:validation:XIntOrString")
@@ -782,18 +792,18 @@ func (t *FileTransformer) getFieldRename(structName string, fieldName string) st
 	return getMapValue(structName, fieldName, t.Transformations.RenameFields)
 }
 
-func (t *FileTransformer) getFieldComments(structName string, fieldName string) string {
+func (t *FileTransformer) getFieldComments(structName string, fieldName string) []string {
 	return getMapValue(structName, fieldName, t.Transformations.AddComments)
 }
 
-func getMapValue(parent string, child string, m map[string]string) string {
+func getMapValue[T any](parent string, child string, m map[string]T) T {
 	if v, found := m[parent+"."+child]; found {
 		return v
 	}
 	if v, found := m["*."+child]; found {
 		return v
 	}
-	return ""
+	return *new(T) // return empty value
 }
 
 func matches(parent string, child string, list []string) bool {

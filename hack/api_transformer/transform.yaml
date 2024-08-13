@@ -26,6 +26,7 @@ globalTransformations:
     k8sv1: k8s.io/api/core/v1
     autoscalingv2: k8s.io/api/autoscaling/v2
     intstr: k8s.io/apimachinery/pkg/util/intstr
+    json: encoding/json
   removeFields:
   - "*.state"         # protobuf-specific field
   - "*.sizeCache"     # protobuf-specific field
@@ -59,7 +60,6 @@ inputFiles:
     - Values.Gateways                      # operator doesn't support deployment of ingress/egress gateways
     - Values.OwnerName                     # operator sets this internally
     - Values.Ztunnel                       # ambient is not yet supported
-    - Values.Experimental                  # unstable/experimental fields that could be removed or changed in the future
     - SidecarInjectorConfig.ObjectSelector # appears to be unused
     - CNIConfig.Enabled                    # CNI is enabled by the mere presence of the IstioCNI resource
     - CNIConfig.LogLevel                   # deprecated and replaced with CNIConfig.logging.level
@@ -80,6 +80,7 @@ inputFiles:
       CNIConfig.SeccompProfile: "*k8sv1.SeccompProfile"
       CNIConfig.PullPolicy: "*k8sv1.PullPolicy"
       Values.MeshConfig: "*MeshConfig"
+      Values.Experimental: "json.RawMessage"
       GlobalConfig.DefaultNodeSelector: "map[string]string"
       GlobalConfig.DefaultResources: "*k8sv1.ResourceRequirements"
       GlobalConfig.DefaultTolerations: "[]k8sv1.Toleration"
@@ -122,8 +123,13 @@ inputFiles:
       - Tag
       - Variant
     addComments:
-      CNIConfig.PullPolicy: "// +kubebuilder:validation:Enum=Always;Never;IfNotPresent"
-      GlobalConfig.ImagePullPolicy: "// +kubebuilder:validation:Enum=Always;Never;IfNotPresent"
+      CNIConfig.PullPolicy:
+      - "// +kubebuilder:validation:Enum=Always;Never;IfNotPresent"
+      GlobalConfig.ImagePullPolicy:
+      - "// +kubebuilder:validation:Enum=Always;Never;IfNotPresent"
+      Values.Experimental:
+      - "// +kubebuilder:pruning:PreserveUnknownFields"
+      - "// +kubebuilder:validation:Schemaless"
 
 - module: istio.io/api
   path: /mesh/v1alpha1/config.pb.go
@@ -144,7 +150,8 @@ inputFiles:
     - LabelSelector
     - LabelSelectorRequirement
     addComments:
-      MeshConfig.ExtensionProviders: "// +kubebuilder:validation:MaxItems=1000"  # to prevent CEL cost overruns
+      MeshConfig.ExtensionProviders:
+      - "// +kubebuilder:validation:MaxItems=1000"  # to prevent CEL cost overruns
 
 - module: istio.io/api
   path: /mesh/v1alpha1/network.pb.go
