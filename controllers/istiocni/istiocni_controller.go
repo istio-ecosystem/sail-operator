@@ -27,8 +27,8 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
+	"github.com/istio-ecosystem/sail-operator/pkg/istiovalues"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
-	"github.com/istio-ecosystem/sail-operator/pkg/profiles"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/validation"
 	appsv1 "k8s.io/api/apps/v1"
@@ -149,7 +149,7 @@ func (r *Reconciler) installHelmChart(ctx context.Context, cni *v1alpha1.IstioCN
 	userValues = applyImageDigests(cni, userValues, config.Config)
 
 	// apply userValues on top of defaultValues from profiles
-	mergedHelmValues, err := profiles.Apply(getProfilesDir(r.ResourceDirectory, cni), r.DefaultProfile, cni.Spec.Profile, helm.FromValues(userValues))
+	mergedHelmValues, err := istiovalues.ApplyProfiles(r.ResourceDirectory, cni.Spec.Version, r.DefaultProfile, cni.Spec.Profile, helm.FromValues(userValues))
 	if err != nil {
 		return fmt.Errorf("failed to apply profile: %w", err)
 	}
@@ -163,10 +163,6 @@ func (r *Reconciler) installHelmChart(ctx context.Context, cni *v1alpha1.IstioCN
 
 func (r *Reconciler) getChartDir(cni *v1alpha1.IstioCNI) string {
 	return path.Join(r.ResourceDirectory, cni.Spec.Version, "charts", cniChartName)
-}
-
-func getProfilesDir(resourceDir string, cni *v1alpha1.IstioCNI) string {
-	return path.Join(resourceDir, cni.Spec.Version, "profiles")
 }
 
 func applyImageDigests(cni *v1alpha1.IstioCNI, values *v1alpha1.CNIValues, config config.OperatorConfig) *v1alpha1.CNIValues {
@@ -184,7 +180,7 @@ func applyImageDigests(cni *v1alpha1.IstioCNI, values *v1alpha1.CNIValues, confi
 	if values.Cni == nil {
 		values.Cni = &v1alpha1.CNIConfig{}
 	}
-	if values.Cni.Image == "" && values.Cni.Hub == "" && values.Cni.Tag == nil {
+	if values.Cni.Image == "" && values.Cni.Hub == "" && values.Cni.Tag == "" {
 		values.Cni.Image = imageDigests.CNIImage
 	}
 	return values

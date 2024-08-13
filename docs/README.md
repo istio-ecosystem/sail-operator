@@ -4,6 +4,10 @@
 
 - [User Documentation](#user-documentation)
 - [Concepts](#concepts)
+  - [Istio resource](#istio-resource)
+  - [IstioRevision resource](#istiorevision-resource)
+  - [IstioCNI resource](#istiocni-resource)
+  - [RemoteIstio resource](#remoteistio-resource)
 - [API Reference documentation](#api-reference-documentation)
 - [Getting Started](#getting-started)
   - [Installation on OpenShift](#installation-on-openshift)
@@ -88,6 +92,32 @@ spec:
       excludeNamespaces:
       - kube-system
 ```
+
+### RemoteIstio resource
+The `RemoteIstio` resource is used to connect the local cluster to an external Istio control plane. 
+When you create a `RemoteIstio` resource, the operator deploys the `istiod-remote` Helm chart. 
+Instead of deploying the entire Istio control plane, this chart deploys only the sidecar injector webhook, allowing you to inject the Istio proxy into your workloads and have this proxy managed by the Istio control plane running outside the cluster (typically in another Kubernetes cluster). 
+
+The `RemoteIstio` resource is very similar to the `Istio` resource, with the most notable difference being the `istiodRemote` field in the `values` section, which allows you to configure the address of the remote Istio control plane:
+
+```yaml
+apiVersion: operator.istio.io/v1alpha1
+kind: RemoteIstio
+metadata:
+  name: default
+spec:
+  version: v1.22.3
+  namespace: istio-system
+  updateStrategy:
+    type: InPlace
+  values:
+    istiodRemote:
+      injectionPath: /inject/cluster/cluster2/net/network1
+    global:
+      remotePilotAddress: 1.2.3.4
+```
+
+For more information on how to use the `RemoteIstio` resource, refer to the [multi-cluster](#multicluster) section.
 
 ## API Reference documentation
 The Sail Operator API reference documentation can be found [here](https://github.com/istio-ecosystem/sail-operator/tree/main/docs/api-reference/operator.istio.io.md).
