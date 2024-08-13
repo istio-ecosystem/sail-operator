@@ -163,6 +163,10 @@ spec:
                   defaultRevision:
                     description: The name of the default revision in the cluster.
                     type: string
+                  experimental:
+                    description: Specifies experimental helm fields that could be
+                      removed or changed in the future
+                    x-kubernetes-preserve-unknown-fields: true
                   global:
                     description: Global configuration for Istio components.
                     properties:
