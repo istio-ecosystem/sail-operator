@@ -19,6 +19,7 @@
 package v1alpha1
 
 import (
+	"encoding/json"
 	"k8s.io/api/autoscaling/v2"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -3689,6 +3690,11 @@ func (in *Values) DeepCopyInto(out *Values) {
 	if in.RevisionTags != nil {
 		in, out := &in.RevisionTags, &out.RevisionTags
 		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
+	if in.Experimental != nil {
+		in, out := &in.Experimental, &out.Experimental
+		*out = make(json.RawMessage, len(*in))
 		copy(*out, *in)
 	}
 }
