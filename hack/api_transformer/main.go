@@ -21,6 +21,7 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -347,11 +348,11 @@ func getFilePath(module, file string) string {
 		panic(fmt.Errorf("dependency %s not found in go.mod", module))
 	}
 
-	goPath := os.Getenv("GOPATH")
-	if goPath == "" {
-		goPath = filepath.Join(os.Getenv("HOME"), "go")
+	goEnvOutput, err := exec.Command("go", "env", "GOMODCACHE").Output()
+	if err != nil {
+		panic(fmt.Errorf("failed to execute 'go env GOMODCACHE': %s", err))
 	}
-	modCachePath := filepath.Join(goPath, "pkg", "mod")
+	modCachePath := strings.Trim(string(goEnvOutput), "\n")
 
 	return filepath.Join(modCachePath, module+"@"+version, file)
 }
