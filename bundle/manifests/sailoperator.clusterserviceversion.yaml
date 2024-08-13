@@ -16,7 +16,7 @@ metadata:
               "inactiveRevisionDeletionGracePeriodSeconds": 30,
               "type": "InPlace"
             },
-            "version": "v1.22.1"
+            "version": "v1.22.3"
           }
         },
         {
@@ -27,14 +27,14 @@ metadata:
           },
           "spec": {
             "namespace": "istio-cni",
-            "version": "v1.22.1"
+            "version": "v1.22.3"
           }
         }
       ]
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
-    containerImage: quay.io/maistra-dev/sail-operator:0.1-latest
-    createdAt: "2024-06-14T23:01:36Z"
+    containerImage: registry.gitlab.com/dgrimm/istio/sail-operator:dgn
+    createdAt: "2024-08-13T09:22:24Z"
     description: Experimental operator for installing Istio service mesh
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -46,7 +46,7 @@ metadata:
     features.operators.openshift.io/token-auth-aws: "false"
     features.operators.openshift.io/token-auth-azure: "false"
     features.operators.openshift.io/token-auth-gcp: "false"
-    operators.operatorframework.io/builder: operator-sdk-v1.34.2
+    operators.operatorframework.io/builder: operator-sdk-v1.36.1
     operators.operatorframework.io/internal-objects: '["wasmplugins.extensions.istio.io","destinationrules.networking.istio.io","envoyfilters.networking.istio.io","gateways.networking.istio.io","proxyconfigs.networking.istio.io","serviceentries.networking.istio.io","sidecars.networking.istio.io","virtualservices.networking.istio.io","workloadentries.networking.istio.io","workloadgroups.networking.istio.io","authorizationpolicies.security.istio.io","peerauthentications.security.istio.io","requestauthentications.security.istio.io","telemetries.telemetry.istio.io"]'
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
     repository: https://github.com/istio-ecosystem/sail-operator
@@ -158,14 +158,17 @@ spec:
       kind: IstioCNI
       name: istiocnis.operator.istio.io
       specDescriptors:
-      - description: 'Defines the version of Istio to install. Must be one of: v1.22.1,
-          v1.22.0, v1.21.3, v1.21.2, v1.21.0, latest.'
+      - description: |-
+          Defines the version of Istio to install.
+          Must be one of: v1.22.3, v1.22.1, v1.22.0, v1.21.5, v1.21.3, v1.21.2, v1.21.0, latest.
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.3
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.1
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.0
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.5
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.3
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.2
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.0
@@ -175,11 +178,10 @@ spec:
         path: namespace
         x-descriptors:
         - urn:alm:descriptor:io.kubernetes:Namespace
-      - description: 'The built-in installation configuration profile to use. The
-          ''default'' profile is always applied. On OpenShift, the ''openshift'' profile
-          is also applied on top of ''default''. Must be one of: ambient, default,
-          demo, empty, external, minimal, openshift-ambient, openshift, preview, remote,
-          stable.'
+      - description: |-
+          The built-in installation configuration profile to use.
+          The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'.
+          Must be one of: ambient, default, demo, empty, external, minimal, openshift-ambient, openshift, preview, remote, stable.
         displayName: Profile
         path: profile
         x-descriptors:
@@ -189,22 +191,26 @@ spec:
         displayName: Helm Values
         path: values
       version: v1alpha1
-    - description: IstioRevision represents a single revision of an Istio Service
-        Mesh deployment. Users shouldn't create IstioRevision objects directly. Instead,
-        they should create an Istio object and allow the operator to create the underlying
+    - description: |-
+        IstioRevision represents a single revision of an Istio Service Mesh deployment.
+        Users shouldn't create IstioRevision objects directly. Instead, they should
+        create an Istio object and allow the operator to create the underlying
         IstioRevision object(s).
       displayName: Istio Revision
       kind: IstioRevision
       name: istiorevisions.operator.istio.io
       specDescriptors:
-      - description: 'Defines the version of Istio to install. Must be one of: v1.22.1,
-          v1.22.0, v1.21.3, v1.21.2, v1.21.0, latest.'
+      - description: |-
+          Defines the version of Istio to install.
+          Must be one of: v1.22.3, v1.22.1, v1.22.0, v1.21.5, v1.21.3, v1.21.2, v1.21.0, latest.
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.3
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.1
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.0
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.5
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.3
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.2
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.0
@@ -219,56 +225,61 @@ spec:
         displayName: Helm Values
         path: values
       version: v1alpha1
-    - description: Istio represents an Istio Service Mesh deployment consisting of
-        one or more control plane instances (represented by one or more IstioRevision
-        objects). To deploy an Istio Service Mesh, a user creates an Istio object
-        with the desired Istio version and configuration. The operator then creates
-        an IstioRevision object, which in turn creates the underlying Deployment objects
-        for istiod and other control plane components, similar to how a Deployment
-        object in Kubernetes creates ReplicaSets that create the Pods.
+    - description: |-
+        Istio represents an Istio Service Mesh deployment consisting of one or more
+        control plane instances (represented by one or more IstioRevision objects).
+        To deploy an Istio Service Mesh, a user creates an Istio object with the
+        desired Istio version and configuration. The operator then creates
+        an IstioRevision object, which in turn creates the underlying Deployment
+        objects for istiod and other control plane components, similar to how a
+        Deployment object in Kubernetes creates ReplicaSets that create the Pods.
       displayName: Istio
       kind: Istio
       name: istios.operator.istio.io
       specDescriptors:
       - description: "Type of strategy to use. Can be \"InPlace\" or \"RevisionBased\".
-          When the \"InPlace\" strategy is used, the existing Istio control plane
-          is updated in-place. The workloads therefore don't need to be moved from
-          one control plane instance to another. When the \"RevisionBased\" strategy
+          When the \"InPlace\" strategy\nis used, the existing Istio control plane
+          is updated in-place. The workloads therefore\ndon't need to be moved from
+          one control plane instance to another. When the \"RevisionBased\"\nstrategy
           is used, a new Istio control plane instance is created for every change
-          to the Istio.spec.version field. The old control plane remains in place
-          until all workloads have been moved to the new control plane instance. \n
-          The \"InPlace\" strategy is the default.\tTODO: change default to \"RevisionBased\""
+          to the\nIstio.spec.version field. The old control plane remains in place
+          until all workloads have\nbeen moved to the new control plane instance.\n\n\nThe
+          \"InPlace\" strategy is the default.\tTODO: change default to \"RevisionBased\""
         displayName: Type
         path: updateStrategy.type
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:select:InPlace
         - urn:alm:descriptor:com.tectonic.ui:select:RevisionBased
-      - description: 'Defines the version of Istio to install. Must be one of: v1.22.1,
-          v1.22.0, v1.21.3, v1.21.2, v1.21.0, latest.'
+      - description: |-
+          Defines the version of Istio to install.
+          Must be one of: v1.22.3, v1.22.1, v1.22.0, v1.21.5, v1.21.3, v1.21.2, v1.21.0, latest.
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.3
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.1
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.0
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.5
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.3
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.2
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.0
         - urn:alm:descriptor:com.tectonic.ui:select:latest
-      - description: Defines how many seconds the operator should wait before removing
-          a non-active revision after all the workloads have stopped using it. You
-          may want to set this value on the order of minutes. The minimum and the
-          default value is 30.
+      - description: |-
+          Defines how many seconds the operator should wait before removing a non-active revision after all
+          the workloads have stopped using it. You may want to set this value on the order of minutes.
+          The minimum and the default value is 30.
         displayName: Inactive Revision Deletion Grace Period (seconds)
         path: updateStrategy.inactiveRevisionDeletionGracePeriodSeconds
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:number
-      - description: Defines whether the workloads should be moved from one control
-          plane instance to another automatically. If updateWorkloads is true, the
-          operator moves the workloads from the old control plane instance to the
-          new one after the new control plane is ready. If updateWorkloads is false,
-          the user must move the workloads manually by updating the istio.io/rev labels
-          on the namespace and/or the pods. Defaults to false.
+      - description: |-
+          Defines whether the workloads should be moved from one control plane instance to another
+          automatically. If updateWorkloads is true, the operator moves the workloads from the old
+          control plane instance to the new one after the new control plane is ready.
+          If updateWorkloads is false, the user must move the workloads manually by updating the
+          istio.io/rev labels on the namespace and/or the pods.
+          Defaults to false.
         displayName: Update Workloads Automatically
         path: updateStrategy.updateWorkloads
         x-descriptors:
@@ -278,11 +289,10 @@ spec:
         path: namespace
         x-descriptors:
         - urn:alm:descriptor:io.kubernetes:Namespace
-      - description: 'The built-in installation configuration profile to use. The
-          ''default'' profile is always applied. On OpenShift, the ''openshift'' profile
-          is also applied on top of ''default''. Must be one of: ambient, default,
-          demo, empty, external, minimal, openshift-ambient, openshift, preview, remote,
-          stable.'
+      - description: |-
+          The built-in installation configuration profile to use.
+          The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'.
+          Must be one of: ambient, default, demo, empty, external, minimal, openshift-ambient, openshift, preview, remote, stable.
         displayName: Profile
         path: profile
         x-descriptors:
@@ -301,12 +311,14 @@ spec:
 
     This version of the operator supports the following Istio versions:
 
+    - v1.22.3
     - v1.22.1
     - v1.22.0
+    - v1.21.5
     - v1.21.3
     - v1.21.2
     - v1.21.0
-    - latest (0e07d8c2)
+    - latest (cc81ac1f)
 
     [See this page](https://github.com/istio-ecosystem/sail-operator/blob/pre-main/bundle/README.md) for instructions on how to use it.
   displayName: Sail Operator
@@ -556,7 +568,7 @@ spec:
                 - --default-profile=openshift
                 command:
                 - /manager
-                image: quay.io/maistra-dev/sail-operator:0.1-latest
+                image: registry.gitlab.com/dgrimm/istio/sail-operator:dgn
                 imagePullPolicy: Always
                 livenessProbe:
                   httpGet:
