@@ -4,7 +4,7 @@ defaults:
   # Hub to pull from. Image will be `Hub/Image:Tag-Variant`
   hub: gcr.io/istio-testing
   # Tag to pull from. Image will be `Hub/Image:Tag-Variant`
-  tag: 1.24-alpha.cc81ac1f8216ef57087e90fc4707fa2e7ab94980
+  tag: latest
   # Variant to pull. Options are "debug" or "distroless". Unset will use the default for the given version.
   variant: ""
 
@@ -87,9 +87,6 @@ defaults:
   # Configuration log level of ztunnel binary, default is info.
   # Valid values are: trace, debug, info, warn, error
   logLevel: info
-
-  # To output all logs in json format
-  logAsJson: false
 
   # Set to `type: RuntimeDefault` to use the default profile if available.
   seLinuxOptions: {}

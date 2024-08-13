@@ -1,0 +1,15 @@
+apiVersion: operator.istio.io/v1alpha1
+kind: RemoteIstio
+metadata:
+  name: default
+spec:
+  version: latest
+  namespace: istio-system
+  updateStrategy:
+    type: InPlace
+    inactiveRevisionDeletionGracePeriodSeconds: 30
+  values:
+    istiodRemote:
+      injectionPath: /inject/cluster/cluster2/net/network1
+    global:
+      remotePilotAddress: 1.2.3.4

@@ -28,6 +28,11 @@ const (
 // IstioRevisionSpec defines the desired state of IstioRevision
 // +kubebuilder:validation:XValidation:rule="self.values.global.istioNamespace == self.__namespace__",message="spec.values.global.istioNamespace must match spec.namespace"
 type IstioRevisionSpec struct {
+	// Type indicates whether this revision represents a local or a remote control plane installation.
+	// +kubebuilder:default=Local
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	Type IstioRevisionType `json:"type"`
+
 	// +sail:version
 	// Defines the version of Istio to install.
 	// Must be one of: v1.22.3, v1.22.1, v1.22.0, v1.21.5, v1.21.3, v1.21.2, v1.21.0, latest.
@@ -146,6 +151,9 @@ const (
 	// IstioRevisionReasonIstiodNotReady indicates that the control plane is fully reconciled, but istiod is not ready.
 	IstioRevisionReasonIstiodNotReady IstioRevisionConditionReason = "IstiodNotReady"
 
+	// IstioRevisionReasonRemoteIstiodNotReady indicates that the remote istiod is not ready.
+	IstioRevisionReasonRemoteIstiodNotReady IstioRevisionConditionReason = "RemoteIstiodNotReady"
+
 	// IstioRevisionReasonReadinessCheckFailed indicates that istiod readiness status could not be ascertained.
 	IstioRevisionReasonReadinessCheckFailed IstioRevisionConditionReason = "ReadinessCheckFailed"
 )
@@ -169,9 +177,20 @@ const (
 	IstioRevisionReasonHealthy IstioRevisionConditionReason = "Healthy"
 )
 
+type IstioRevisionType string
+
+const (
+	// IstioRevisionTypeLocal indicates that the revision represents a local control plane installation.
+	IstioRevisionTypeLocal IstioRevisionType = "Local"
+
+	// IstioRevisionTypeRemote indicates that the revision represents a remote control plane installation.
+	IstioRevisionTypeRemote IstioRevisionType = "Remote"
+)
+
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster,shortName=istiorev,categories=istio-io
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Type",type="string",JSONPath=".spec.type",description="Whether the control plane is installed locally or in a remote cluster."
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].status",description="Whether the control plane installation is ready to handle requests."
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.state",description="The current state of this object."
 // +kubebuilder:printcolumn:name="In use",type="string",JSONPath=".status.conditions[?(@.type==\"InUse\")].status",description="Whether the revision is being used by workloads."
