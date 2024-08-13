@@ -173,9 +173,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
 			LogConstructor: func(req *reconcile.Request) logr.Logger {
-				log := mgr.GetLogger().WithName("ctrlr").WithName("istio")
+				log := mgr.GetLogger().WithName("ctrlr").WithName("remoteistio")
 				if req != nil {
-					log = log.WithValues("Istio", req.Name)
+					log = log.WithValues("RemoteIstio", req.Name)
 				}
 				return log
 			},
