@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package profiles
+package istiovalues
 
 import (
 	"fmt"
@@ -27,9 +27,9 @@ import (
 	"istio.io/istio/pkg/util/sets"
 )
 
-func Apply(profilesDir string, defaultProfile, userProfile string, userValues helm.Values) (helm.Values, error) {
+func ApplyProfiles(resourceDir string, version string, defaultProfile, userProfile string, userValues helm.Values) (helm.Values, error) {
 	profile := resolve(defaultProfile, userProfile)
-	defaultValues, err := getValuesFromProfiles(profilesDir, profile)
+	defaultValues, err := getValuesFromProfiles(path.Join(resourceDir, version, "profiles"), profile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get values from profile %q: %w", profile, err)
 	}

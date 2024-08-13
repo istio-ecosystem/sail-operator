@@ -135,6 +135,32 @@ rules:
   - patch
   - update
 - apiGroups:
+  - operator.istio.io
+  resources:
+  - remoteistios
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - operator.istio.io
+  resources:
+  - remoteistios/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - operator.istio.io
+  resources:
+  - remoteistios/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - policy
   resources:
   - poddisruptionbudgets

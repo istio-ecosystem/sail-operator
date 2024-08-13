@@ -17,6 +17,7 @@
 package v1alpha1
 
 import (
+	json "encoding/json"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -80,8 +81,7 @@ type CNIConfig struct {
 	// Hub to pull the container image from. Image will be `Hub/Image:Tag-Variant`.
 	Hub string `json:"hub,omitempty"`
 	// The container image tag to pull. Image will be `Hub/Image:Tag-Variant`.
-	// +kubebuilder:validation:XIntOrString
-	Tag *intstr.IntOrString `json:"tag,omitempty"`
+	Tag string `json:"tag,omitempty"`
 	// The container image variant to pull. Options are "debug" or "distroless". Unset will use the default for the given version.
 	Variant string `json:"variant,omitempty"`
 	// Image name to pull from. Image will be `Hub/Image:Tag-Variant`.
@@ -91,7 +91,8 @@ type CNIConfig struct {
 	// Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.
 	//
 	// More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
-	PullPolicy string `json:"pullPolicy,omitempty"`
+	// +kubebuilder:validation:Enum=Always;Never;IfNotPresent
+	PullPolicy *k8sv1.PullPolicy `json:"pullPolicy,omitempty"`
 	// The directory path within the cluster node's filesystem where the CNI binaries are to be installed. Typically /var/lib/cni/bin.
 	CniBinDir string `json:"cniBinDir,omitempty"`
 	// The directory path within the cluster node's filesystem where the CNI configuration files are to be installed. Typically /etc/cni/net.d.
@@ -111,9 +112,9 @@ type CNIConfig struct {
 	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
 	// PodSecurityPolicy cluster role. No longer used anywhere.
 	PspClusterRole string `json:"psp_cluster_role,omitempty"`
-	// Configuration log level of istio-cni binary. By default, istio-cni sends all logs to the UDS server.
-	// To see the logs, change global.logging.level to cni:debug.
-	LogLevel string `json:"logLevel,omitempty"`
+
+	// Same as `global.logging.level`, but will override it if set
+	Logging *GlobalLoggingConfig `json:"logging,omitempty"`
 	// Configuration for the CNI Repair controller.
 	Repair *CNIRepairConfig `json:"repair,omitempty"`
 	// Configure the plugin as a chained CNI plugin. When true, the configuration is added to the CNI chain; when false,
@@ -131,8 +132,7 @@ type CNIConfig struct {
 	//
 	// See: https://kubernetes.io/docs/tutorials/security/seccomp/
 	SeccompProfile *k8sv1.SeccompProfile `json:"seccompProfile,omitempty"`
-	// Configuration for Istio Ambient.
-	Ambient *CNIAmbientConfig `json:"ambient,omitempty"`
+
 	// Specifies the CNI provider. Can be either "default" or "multus". When set to "multus", an additional
 	// NetworkAttachmentDefinition resource is deployed to the cluster to allow the istio-cni plugin to be
 	// invoked in a cluster using the Multus CNI plugin.
@@ -149,8 +149,7 @@ type CNIConfig struct {
 type CNIUsageConfig struct {
 	// Controls whether CNI should be used.
 	Enabled *bool `json:"enabled,omitempty"`
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
-	Chained *bool `json:"chained,omitempty"`
+
 	// Specifies the CNI provider. Can be either "default" or "multus". When set to "multus", an annotation
 	// `k8s.v1.cni.cncf.io/networks` is set on injected pods to point to a NetworkAttachmentDefinition
 	Provider string `json:"provider,omitempty"`
@@ -163,6 +162,8 @@ type CNIAmbientConfig struct {
 	ConfigDir string `json:"configDir,omitempty"`
 	// If enabled, and ambient is enabled, DNS redirection will be enabled.
 	DnsCapture *bool `json:"dnsCapture,omitempty"`
+	// UNSTABLE: If enabled, and ambient is enabled, enables ipv6 support
+	Ipv6 *bool `json:"ipv6,omitempty"`
 }
 
 type CNIRepairConfig struct {
@@ -171,8 +172,7 @@ type CNIRepairConfig struct {
 	// Hub to pull the container image from. Image will be `Hub/Image:Tag-Variant`.
 	Hub string `json:"hub,omitempty"`
 	// The container image tag to pull. Image will be `Hub/Image:Tag-Variant`.
-	// +kubebuilder:validation:XIntOrString
-	Tag *intstr.IntOrString `json:"tag,omitempty"`
+	Tag string `json:"tag,omitempty"`
 	// Image name to pull from. Image will be `Hub/Image:Tag-Variant`.
 	// If Image contains a "/", it will replace the entire `image` in the pod.
 	Image string `json:"image,omitempty"`
@@ -244,14 +244,8 @@ type GlobalConfig struct {
 	Arch *ArchConfig `json:"arch,omitempty"`
 	// List of certSigners to allow "approve" action in the ClusterRole
 	CertSigners []string `json:"certSigners,omitempty"`
-	// TODO: remove this?
-	// No longer used.
-	ConfigRootNamespace string `json:"configRootNamespace,omitempty"`
 	// Controls whether the server-side validation is enabled.
 	ConfigValidation *bool `json:"configValidation,omitempty"`
-	// TODO: remove this?
-	// No longer used.
-	DefaultConfigVisibilitySettings []string `json:"defaultConfigVisibilitySettings,omitempty"`
 	// Default k8s node selector for all the Istio control plane components
 	//
 	// See https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
@@ -283,6 +277,7 @@ type GlobalConfig struct {
 	// Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.
 	//
 	// More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
+	// +kubebuilder:validation:Enum=Always;Never;IfNotPresent
 	ImagePullPolicy *k8sv1.PullPolicy `json:"imagePullPolicy,omitempty"`
 	// ImagePullSecrets for the control plane ServiceAccount, list of secrets in the same namespace
 	// to use for pulling any images in pods that reference this ServiceAccount.
@@ -358,9 +353,6 @@ type GlobalConfig struct {
 	// Controls whether the creation of the sidecar injector ConfigMap should be skipped.
 	// Defaults to false. When set to true, the sidecar injector ConfigMap will not be created.
 	OmitSidecarInjectorConfigMap *bool `json:"omitSidecarInjectorConfigMap,omitempty"`
-	// Controls whether to restrict the applications namespace the controller manages;
-	// If set it to false, the controller watches all namespaces.
-	OneNamespace *bool `json:"oneNamespace,omitempty"`
 	// Controls whether the WebhookConfiguration resource(s) should be created. The current behavior
 	// of Istiod is to manage its own webhook configurations.
 	// When this option is set to true, Istio Operator, instead of webhooks, manages the
@@ -380,14 +372,11 @@ type GlobalConfig struct {
 	// Specifies the Configuration for the SecretDiscoveryService instead of using K8S secrets to mount the certificates.
 	Sds *SDSConfig `json:"sds,omitempty"`
 	// Specifies the tag for the Istio docker images.
-	// +kubebuilder:validation:XIntOrString
-	Tag *intstr.IntOrString `json:"tag,omitempty"`
+	Tag string `json:"tag,omitempty"`
 	// The variant of the Istio container images to use. Options are "debug" or "distroless". Unset will use the default for the given version.
 	Variant string `json:"variant,omitempty"`
 	// Specifies the Configuration for each of the supported tracers.
 	Tracer *TracerConfig `json:"tracer,omitempty"`
-	// Controls whether to use of Mesh Configuration Protocol to distribute configuration.
-	UseMCP *bool `json:"useMCP,omitempty"`
 	// Specifies the Istio control plane’s pilot Pod IP address or remote cluster DNS resolvable hostname.
 	RemotePilotAddress string `json:"remotePilotAddress,omitempty"`
 	// Specifies the configution of istiod
@@ -432,7 +421,9 @@ type GlobalConfig struct {
 	// Controls whether Services are configured to use IPv4, IPv6, or both. Valid options
 	// are PreferDualStack, RequireDualStack, and SingleStack.
 	// More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services
-	IpFamilyPolicy string `json:"ipFamilyPolicy,omitempty"` // The next available key is 72
+	IpFamilyPolicy string `json:"ipFamilyPolicy,omitempty"`
+	// Specifies how waypoints are configured within Istio.
+	Waypoint *WaypointConfig `json:"waypoint,omitempty"` // The next available key is 73
 }
 
 // Configuration for Security Token Service (STS) server.
@@ -508,8 +499,6 @@ type PilotConfig struct {
 	//
 	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
 	Resources *k8sv1.ResourceRequirements `json:"resources,omitempty"`
-	// Namespace that the configuration management feature is installed into, if different from Pilot namespace.
-	ConfigNamespace string `json:"configNamespace,omitempty"`
 	// Target CPU utilization used in HorizontalPodAutoscaler.
 	//
 	// See https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
@@ -541,10 +530,6 @@ type PilotConfig struct {
 	// This controls whether the mesh config map, generated from values.yaml is generated.
 	// If false, pilot wil use default values or user-supplied values, in that order of preference.
 	ConfigMap *bool `json:"configMap,omitempty"`
-	// Controls whether Pilot is configured through the Mesh Control Protocol (MCP).
-	//
-	// If set to true, Pilot requires an MCP server (like Galley) to be installed.
-	UseMCP *bool `json:"useMCP,omitempty"`
 	// Environment variables passed to the Pilot container.
 	//
 	// Examples:
@@ -575,14 +560,6 @@ type PilotConfig struct {
 	//
 	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
 	Tolerations []k8sv1.Toleration `json:"tolerations,omitempty"`
-	// Specifies whether protocol sniffing is enabled for outbound traffic.
-	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
-	EnableProtocolSniffingForOutbound *bool `json:"enableProtocolSniffingForOutbound,omitempty"`
-	// Specifies whether protocol sniffing is enabled for inbound traffic.
-	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
-	EnableProtocolSniffingForInbound *bool `json:"enableProtocolSniffingForInbound,omitempty"`
 	// K8s annotations for pods.
 	//
 	// See: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
@@ -593,18 +570,15 @@ type PilotConfig struct {
 	//
 	// See: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
 	ServiceAnnotations map[string]string `json:"serviceAnnotations,omitempty"`
-	// ConfigSource describes a source of configuration data for networking
-	// rules, and other Istio configuration artifacts. Multiple data sources
-	// can be configured for a single control plane.
-	ConfigSource *PilotConfigSource `json:"configSource,omitempty"`
+	// K8s annotations for the service account
+	ServiceAccountAnnotations map[string]string `json:"serviceAccountAnnotations,omitempty"`
 	// Specifies an extra root certificate in PEM format. This certificate will be trusted
 	// by pilot when resolving JWKS URIs.
 	JwksResolverExtraRootCA string `json:"jwksResolverExtraRootCA,omitempty"`
 	// Hub to pull the container image from. Image will be `Hub/Image:Tag-Variant`.
 	Hub string `json:"hub,omitempty"`
 	// The container image tag to pull. Image will be `Hub/Image:Tag-Variant`.
-	// +kubebuilder:validation:XIntOrString
-	Tag *intstr.IntOrString `json:"tag,omitempty"`
+	Tag string `json:"tag,omitempty"`
 	// The container image variant to pull. Options are "debug" or "distroless". Unset will use the default for the given version.
 	Variant string `json:"variant,omitempty"`
 	// The seccompProfile for the Pilot container.
@@ -634,7 +608,20 @@ type PilotConfig struct {
 	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
 	Memory *TargetUtilizationConfig `json:"memory,omitempty"`
 	// Configures whether to use an existing CNI installation for workloads
-	Cni *CNIUsageConfig `json:"cni,omitempty"`
+	Cni   *CNIUsageConfig             `json:"cni,omitempty"`
+	Taint *PilotTaintControllerConfig `json:"taint,omitempty"`
+	// If set, `istiod` will allow connections from trusted node proxy ztunnels
+	// in the provided namespace.
+	TrustedZtunnelNamespace string `json:"trustedZtunnelNamespace,omitempty"`
+}
+
+type PilotTaintControllerConfig struct {
+	// Enable the untaint controller for new nodes. This aims to solve a race for CNI installation on
+	// new nodes. For this to work, the newly added nodes need to have the istio CNI taint as they are
+	// added to the cluster. This is usually done by configuring the cluster infra provider.
+	Enabled bool `json:"enabled,omitempty"`
+	// The namespace of the CNI daemonset, incase it's not the same as istiod.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 // Controls whether Istio policy is applied to Pilot.
@@ -670,14 +657,6 @@ type TelemetryV2PrometheusConfig struct {
 // TelemetryV2StackDriverConfig controls telemetry v2 stackdriver settings.
 type TelemetryV2StackDriverConfig struct {
 	Enabled *bool `json:"enabled,omitempty"`
-}
-
-// PilotConfigSource describes information about a configuration store inside a
-// mesh. A single control plane instance can interact with one or more data
-// sources.
-type PilotConfigSource struct {
-	// Describes the source of configuration, if nothing is specified default is MCP.
-	SubscribedResources []string `json:"subscribedResources,omitempty"`
 }
 
 // Configuration for a port.
@@ -727,6 +706,11 @@ type ProxyConfig struct {
 	IncludeIPRanges string `json:"includeIPRanges,omitempty"`
 	// Log level for proxy, applies to gateways and sidecars. If left empty, "warning" is used. Expected values are: trace\|debug\|info\|warning\|error\|critical\|off
 	LogLevel string `json:"logLevel,omitempty"`
+	// Path to the file to which the proxy will write outlier detection logs.
+	//
+	// Example: "/dev/stdout"
+	// This would write the logs to standard output.
+	OutlierLogPath string `json:"outlierLogPath,omitempty"`
 	// Enables privileged securityContext for the istio-proxy container.
 	//
 	// See https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
@@ -837,7 +821,6 @@ type SidecarInjectorConfig struct {
 	// injectedAnnotations are additional annotations that will be added to the pod spec after injection
 	// This is primarily to support PSP annotations.
 	InjectedAnnotations map[string]string `json:"injectedAnnotations,omitempty"`
-
 	// Configure the injection url for sidecar injector webhook
 	InjectionURL string `json:"injectionURL,omitempty"`
 	// Templates defines a set of custom injection templates that can be used. For example, defining:
@@ -855,12 +838,6 @@ type SidecarInjectorConfig struct {
 	Templates map[string]string `json:"templates,omitempty"`
 	// defaultTemplates: ["sidecar", "hello"]
 	DefaultTemplates []string `json:"defaultTemplates,omitempty"`
-	// If enabled, the legacy webhook selection logic will be used. This relies on filtering of webhook
-	// requests in Istiod, rather than at the webhook selection level.
-	// This is option is intended for migration purposes only and will be removed in Istio 1.10.
-	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
-	UseLegacySelectors *bool `json:"useLegacySelectors,omitempty"`
 }
 
 // Configuration for each of the supported tracers.
@@ -912,6 +889,9 @@ type TracerStackdriverConfig struct {
 type BaseConfig struct {
 	// URL to use for validating webhook.
 	ValidationURL string `json:"validationURL,omitempty"`
+
+	// validation webhook CA bundle
+	ValidationCABundle string `json:"validationCABundle,omitempty"`
 }
 
 type IstiodRemoteConfig struct {
@@ -919,6 +899,8 @@ type IstiodRemoteConfig struct {
 	InjectionURL string `json:"injectionURL,omitempty"`
 	// Path to use for the sidecar injector webhook service.
 	InjectionPath string `json:"injectionPath,omitempty"`
+	// injector ca bundle
+	InjectionCABundle string `json:"injectionCABundle,omitempty"`
 }
 
 type Values struct {
@@ -953,6 +935,10 @@ type Values struct {
 	// Specifies the compatibility version to use. When this is set, the control plane will
 	// be configured with the same defaults as the specified version.
 	CompatibilityVersion string `json:"compatibilityVersion,omitempty"`
+	// Specifies experimental helm fields that could be removed or changed in the future
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
+	Experimental json.RawMessage `json:"experimental,omitempty"`
 }
 
 // ZeroVPNConfig enables cross-cluster access using SNI matching.
@@ -960,6 +946,52 @@ type ZeroVPNConfig struct {
 	// Controls whether ZeroVPN is enabled.
 	Enabled *bool  `json:"enabled,omitempty"`
 	Suffix  string `json:"suffix,omitempty"`
+}
+
+// ExperimentalConfig is a placeholder for experimental installation features.
+type ExperimentalConfig struct {
+	// Controls whether the experimental feature is enabled.
+	StableValidationPolicy *bool `json:"stableValidationPolicy,omitempty"`
+}
+
+// Configuration for Waypoint proxies.
+type WaypointConfig struct {
+	// K8s resource settings.
+	//
+	// See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
+	Resources *k8sv1.ResourceRequirements `json:"resources,omitempty"`
+}
+
+// CNIGlobalConfig is a subset of the Global Configuration used in the Istio CNI chart.
+type CNIGlobalConfig struct { // Default k8s resources settings for all Istio control plane components.
+	//
+	// See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
+	//
+	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	DefaultResources *k8sv1.ResourceRequirements `json:"defaultResources,omitempty"`
+
+	// Specifies the docker hub for Istio images.
+	Hub string `json:"hub,omitempty"`
+	// Specifies the image pull policy for the Istio images. one of Always, Never, IfNotPresent.
+	// Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.
+	//
+	// More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
+	// +kubebuilder:validation:Enum=Always;Never;IfNotPresent
+	ImagePullPolicy *k8sv1.PullPolicy `json:"imagePullPolicy,omitempty"`
+	// ImagePullSecrets for the control plane ServiceAccount, list of secrets in the same namespace
+	// to use for pulling any images in pods that reference this ServiceAccount.
+	// Must be set for any cluster configured with private docker registry.
+	ImagePullSecrets []string `json:"imagePullSecrets,omitempty"`
+
+	// Specifies whether istio components should output logs in json format by adding --log_as_json argument to each container.
+	LogAsJson *bool `json:"logAsJson,omitempty"`
+	// Specifies the global logging level settings for the Istio control plane components.
+	Logging *GlobalLoggingConfig `json:"logging,omitempty"`
+
+	// Specifies the tag for the Istio docker images.
+	Tag string `json:"tag,omitempty"`
+	// The variant of the Istio container images to use. Options are "debug" or "distroless". Unset will use the default for the given version.
+	Variant string `json:"variant,omitempty"`
 }
 
 // Resource describes the source of configuration
@@ -1029,11 +1061,17 @@ const (
 type MeshConfigOutboundTrafficPolicyMode string
 
 const (
-	// outbound traffic will be restricted to services defined in the
-	// service registry as well as those defined through ServiceEntries
+	// In `REGISTRY_ONLY` mode, unknown outbound traffic will be dropped.
+	// Traffic destinations must be explicitly declared into the service registry through `ServiceEntry` configurations.
+	//
+	// Note: Istio [does not offer an outbound traffic security policy](https://istio.io/latest/docs/ops/best-practices/security/#understand-traffic-capture-limitations).
+	// This option does not act as one, or as any form of an outbound firewall.
+	// Instead, this option exists primarily to offer users a way to detect missing `ServiceEntry` configurations by explicitly failing.
 	MeshConfigOutboundTrafficPolicyModeRegistryOnly MeshConfigOutboundTrafficPolicyMode = "REGISTRY_ONLY"
-	// outbound traffic to unknown destinations will be allowed, in case
-	// there are no services or ServiceEntries for the destination port
+	// In `ALLOW_ANY` mode, any traffic to unknown destinations will be allowed.
+	// Unknown destination traffic will have limited functionality, however, such as reduced observability.
+	// This mode allows users that do not have all possible egress destinations registered through `ServiceEntry` configurations to still connect
+	// to arbitrary destinations.
 	MeshConfigOutboundTrafficPolicyModeAllowAny MeshConfigOutboundTrafficPolicyMode = "ALLOW_ANY"
 )
 
@@ -1186,17 +1224,12 @@ type MeshConfig struct {
 	// On Kubernetes, this can be overridden on individual pods with the `proxy.istio.io/config` annotation.
 	DefaultConfig *MeshConfigProxyConfig `json:"defaultConfig,omitempty"`
 	// Set the default behavior of the sidecar for handling outbound
-	// traffic from the application.  If your application uses one or
-	// more external services that are not known apriori, setting the
-	// policy to `ALLOW_ANY` will cause the sidecars to route any unknown
-	// traffic originating from the application to its requested
-	// destination. Users are strongly encouraged to use ServiceEntries
-	// to explicitly declare any external dependencies, instead of using
-	// `ALLOW_ANY`, so that traffic to these services can be
-	// monitored. Can be overridden at a Sidecar level by setting the
-	// `OutboundTrafficPolicy` in the [Sidecar
-	// API](https://istio.io/docs/reference/config/networking/sidecar/#OutboundTrafficPolicy).
-	// Default mode is `ALLOW_ANY` which means outbound traffic to unknown destinations will be allowed.
+	// traffic from the application.
+	//
+	// Can be overridden at a Sidecar level by setting the `OutboundTrafficPolicy` in the
+	// [Sidecar API](https://istio.io/docs/reference/config/networking/sidecar/#OutboundTrafficPolicy).
+	//
+	// Default mode is `ALLOW_ANY`, which means outbound traffic to unknown destinations will be allowed.
 	OutboundTrafficPolicy *MeshConfigOutboundTrafficPolicy `json:"outboundTrafficPolicy,omitempty"`
 	// Set the default behavior of the sidecar for handling inbound
 	// traffic to the application.  If your application listens on
@@ -1301,7 +1334,8 @@ type MeshConfig struct {
 	//
 	// A Pattern can be composed of various pre-defined variables. The following variables are supported.
 	//
-	// - `%SERVICE%` - Will be substituted with name of the service.
+	// - `%SERVICE%` - Will be substituted with short hostname of the service.
+	// - `%SERVICE_NAME%` - Will be substituted with name of the service.
 	// - `%SERVICE_FQDN%` - Will be substituted with FQDN of the service.
 	// - `%SERVICE_PORT%` - Will be substituted with port of the service.
 	// - `%TARGET_PORT%`  - Will be substituted with the target port of the service.
@@ -1319,7 +1353,8 @@ type MeshConfig struct {
 	//
 	// A Pattern can be composed of various pre-defined variables. The following variables are supported.
 	//
-	// - `%SERVICE%` - Will be substituted with name of the service.
+	// - `%SERVICE%` - Will be substituted with short hostname of the service.
+	// - `%SERVICE_NAME%` - Will be substituted with name of the service.
 	// - `%SERVICE_FQDN%` - Will be substituted with FQDN of the service.
 	// - `%SERVICE_PORT%` - Will be substituted with port of the service.
 	// - `%SERVICE_PORT_NAME%` - Will be substituted with port name of the service.
@@ -1500,6 +1535,8 @@ type Certificate struct {
 	DnsNames []string `json:"dnsNames,omitempty"`
 }
 
+// `OutboundTrafficPolicy` sets the default behavior of the sidecar for
+// handling unknown outbound traffic from the application.
 type MeshConfigOutboundTrafficPolicy struct {
 	Mode MeshConfigOutboundTrafficPolicyMode `json:"mode,omitempty"`
 }
@@ -2076,6 +2113,7 @@ type MeshConfigExtensionProviderEnvoyOpenTelemetryLogProvider struct {
 }
 
 // Defines configuration for an OpenTelemetry tracing backend. Istio 1.16.1 or higher is needed.
+// +kubebuilder:validation:XValidation:message="At most one of [dynatraceSampler] should be set",rule="(has(self.dynatraceSampler)?1:0) <= 1"
 type MeshConfigExtensionProviderOpenTelemetryTracingProvider struct {
 	// REQUIRED. Specifies the OpenTelemetry endpoint that will receive OTLP traces.
 	// The format is `[<Namespace>/]<Hostname>`. The specification of `<Namespace>` is required only when it is insufficient
@@ -2166,6 +2204,28 @@ type MeshConfigExtensionProviderOpenTelemetryTracingProvider struct {
 	//
 	// ```
 	ResourceDetectors *MeshConfigExtensionProviderResourceDetectors `json:"resourceDetectors,omitempty"`
+
+	// The Dynatrace adaptive traffic management (ATM) sampler.
+	//
+	// Example configuration:
+	//
+	// ```yaml
+	//   - name: otel-tracing
+	//     opentelemetry:
+	//     port: 443
+	//     service: "{your-environment-id}.live.dynatrace.com"
+	//     http:
+	//     path: "/api/v2/otlp/v1/traces"
+	//     timeout: 10s
+	//     headers:
+	//   - name: "Authorization"
+	//     value: "Api-Token dt0c01."
+	//     resource_detectors:
+	//     dynatrace: {}
+	//     dynatrace_sampler:
+	//     tenant: "{your-environment-id}"
+	//     cluster_id: 1234
+	DynatraceSampler *MeshConfigExtensionProviderOpenTelemetryTracingProviderDynatraceSampler `json:"dynatraceSampler,omitempty"`
 }
 
 // Defines configuration for an HTTP service that can be used by an Extension Provider.
@@ -2262,6 +2322,49 @@ type MeshConfigExtensionProviderEnvoyOpenTelemetryLogProviderLogFormat struct {
 	//
 	// ```
 	Labels map[string]string `json:"labels,omitempty"`
+}
+
+type MeshConfigExtensionProviderOpenTelemetryTracingProviderDynatraceSampler struct {
+	// REQUIRED. The Dynatrace customer's tenant identifier.
+	//
+	// The value can be obtained from the Istio deployment page in Dynatrace.
+	// +kubebuilder:validation:Required
+	Tenant string `json:"tenant"`
+	// REQUIRED. The identifier of the cluster in the Dynatrace platform.
+	// The cluster here is Dynatrace-specific concept and not related to the cluster concept in Istio/Envoy.
+	//
+	// The value can be obtained from the Istio deployment page in Dynatrace.
+	// +kubebuilder:validation:Required
+	ClusterId int32 `json:"clusterId"`
+	// Optional. Number of sampled spans per minute to be used
+	// when the adaptive value cannot be obtained from the Dynatrace API.
+	//
+	// A default value of `1000` is used when:
+	//
+	// - `root_spans_per_minute` is unset
+	// - `root_spans_per_minute` is set to 0
+	RootSpansPerMinute uint32 `json:"rootSpansPerMinute,omitempty"`
+	// Optional. Dynatrace HTTP API to obtain sampling configuration.
+	//
+	// When not provided, the Dynatrace Sampler will re-use the configuration from the OpenTelemetryTracingProvider HTTP Exporter
+	// (`service`, `port` and `http`), including the access token.
+	HttpService *MeshConfigExtensionProviderOpenTelemetryTracingProviderDynatraceSamplerDynatraceApi `json:"httpService,omitempty"`
+}
+
+type MeshConfigExtensionProviderOpenTelemetryTracingProviderDynatraceSamplerDynatraceApi struct {
+	// REQUIRED. Specifies the Dynatrace environment to obtain the sampling configuration.
+	// The format is `<Hostname>`, where `<Hostname>` is the fully qualified Dynatrace environment
+	// host name defined in the ServiceEntry.
+	//
+	// Example: "{your-environment-id}.live.dynatrace.com".
+	// +kubebuilder:validation:Required
+	Service string `json:"service"`
+	// REQUIRED. Specifies the port of the service.
+	// +kubebuilder:validation:Required
+	Port uint32 `json:"port"`
+	// REQUIRED. Specifies sampling configuration URI.
+	// +kubebuilder:validation:Required
+	Http *MeshConfigExtensionProviderHttpService `json:"http"`
 }
 
 // OpenTelemetry Environment Resource Detector.
@@ -2683,9 +2786,9 @@ type MeshConfigProxyConfig struct {
 	// Increase the value of this field if you find that the metrics from Envoys are truncated.
 	StatNameLength int32 `json:"statNameLength,omitempty"`
 	// The number of worker threads to run.
-	// If unset, this will be automatically determined based on CPU requests/limits.
-	// If set to 0, all cores on the machine will be used.
-	// Default is 2 worker threads.
+	// If unset, which is recommended, this will be automatically determined based on CPU requests/limits.
+	// If set to 0, all cores on the machine will be used, ignoring CPU requests or limits. This can lead to major performance
+	// issues if CPU limits are also set.
 	Concurrency *int32 `json:"concurrency,omitempty"`
 	// Path to the proxy bootstrap template file
 	ProxyBootstrapTemplatePath string `json:"proxyBootstrapTemplatePath,omitempty"`
@@ -2729,8 +2832,8 @@ type MeshConfigProxyConfig struct {
 	// gateway workloads.
 	GatewayTopology *Topology `json:"gatewayTopology,omitempty"`
 	// The amount of time allowed for connections to complete on proxy shutdown.
-	// On receiving `SIGTERM` or `SIGINT`, `istio-agent` tells the active Envoy to start draining,
-	// preventing any new connections and allowing existing connections to complete. It then
+	// On receiving `SIGTERM` or `SIGINT`, `istio-agent` tells the active Envoy to start gracefully draining,
+	// discouraging any new connections and allowing existing connections to complete. It then
 	// sleeps for the `termination_drain_duration` and then kills any remaining active Envoy processes.
 	// If not set, a default of `5s` will be applied.
 	TerminationDrainDuration *metav1.Duration `json:"terminationDrainDuration,omitempty"`
@@ -3004,7 +3107,7 @@ type ProxyConfigProxyHeaders struct {
 	// If disabled, this header will not be set. If it is already present, it will be preserved.
 	// This header is enabled by default if not configured.
 	AttemptCount *ProxyConfigProxyHeadersAttemptCount `json:"attemptCount,omitempty"`
-	// Controls various `X-Envoy-*` headers, such as `X-Envoy-Overloaded` and `X-Envoy-Upstream-Service-Time. If enabled,
+	// Controls various `X-Envoy-*` headers, such as `X-Envoy-Overloaded` and `X-Envoy-Upstream-Service-Time`. If enabled,
 	// these headers will be included.
 	// If disabled, these headers will not be set. If they are already present, they will be preserved.
 	// See the [Envoy documentation](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#envoy-v3-api-field-extensions-filters-http-router-v3-router-suppress-envoy-headers) for more details.
@@ -3084,6 +3187,11 @@ type WorkloadSelector struct {
 	// One or more labels that indicate a specific set of pods/VMs
 	// on which a policy should be applied. The scope of label search is restricted to
 	// the configuration namespace in which the resource is present.
+	// +kubebuilder:validation:XValidation:message="wildcard not allowed in label key match",rule="self.all(key, !key.contains('*'))"
+	// +kubebuilder:validation:XValidation:message="key must not be empty",rule="self.all(key, key.size() != 0)"
+	// +kubebuilder:map-value-validation:XValidation:message="wildcard not allowed in label value match",rule="!self.contains('*')"
+	// +kubebuilder:map-value-validation:MaxLength=63
+	// +kubebuilder:validation:MaxProperties=4096
 	MatchLabels map[string]string `json:"matchLabels,omitempty"`
 }
 
@@ -3096,10 +3204,10 @@ type PortSelector struct {
 	Number uint32 `json:"number,omitempty"`
 }
 
-// PolicyTargetReference format as defined by [GEP-713](https://gateway-api.sigs.k8s.io/geps/gep-713/#policy-targetref-api).
+// PolicyTargetReference format as defined by [GEP-2648](https://gateway-api.sigs.k8s.io/geps/gep-2648/#direct-policy-design-rules).
 //
-// PolicyTargetReferences specifies the targeted resource which the policy
-// can be applied to. It must only target a single resource at a time, but it
+// PolicyTargetReference specifies the targeted resource which the policy
+// should be applied to. It must only target a single resource at a time, but it
 // can be used to target larger resources such as Gateways that may apply to
 // multiple child resources. The PolicyTargetReference will be used instead of
 // a WorkloadSelector in the RequestAuthentication, AuthorizationPolicy,
@@ -3110,7 +3218,6 @@ type PortSelector struct {
 // It denies all the requests with `POST` method on port `8080` directed through the
 // `waypoint` Gateway in the `foo` namespace.
 //
-// #### v1
 // ```yaml
 // apiVersion: security.istio.io/v1
 // kind: AuthorizationPolicy
@@ -3121,8 +3228,8 @@ type PortSelector struct {
 //
 // spec:
 //
-//	targetRef:
-//	  name: waypoint
+//	targetRefs:
+//	- name: waypoint
 //	  kind: Gateway
 //	  group: gateway.networking.k8s.io
 //	action: DENY
@@ -3133,15 +3240,24 @@ type PortSelector struct {
 //	      ports: ["8080"]
 //
 // ```
+// +kubebuilder:validation:XValidation:message="Support kinds are core/Service, networking.istio.io/ServiceEntry, gateway.networking.k8s.io/Gateway",rule="[self.group, self.kind] in [['core','Service'], [”,'Service'], ['gateway.networking.k8s.io','Gateway'], ['networking.istio.io','ServiceEntry']]"
 type PolicyTargetReference struct {
 	// group is the group of the target resource.
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	Group string `json:"group,omitempty"`
 	// kind is kind of the target resource.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=63
+	// +kubebuilder:validation:Pattern=`^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$`
 	Kind string `json:"kind,omitempty"`
 	// name is the name of the target resource.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
 	Name string `json:"name,omitempty"`
 	// namespace is the namespace of the referent. When unspecified, the local
 	// namespace is inferred.
+	// +kubebuilder:validation:XValidation:message="cross namespace referencing is not currently supported",rule="self.size() == 0"
 	Namespace string `json:"namespace,omitempty"`
 }
 
@@ -3172,29 +3288,8 @@ const (
 // For example, the following rule configures a client to use mutual TLS
 // for connections to upstream database cluster.
 //
-// #### v1alpha3
 // ```yaml
-// apiVersion: networking.istio.io/v1alpha3
-// kind: DestinationRule
-// metadata:
-//
-//	name: db-mtls
-//
-// spec:
-//
-//	host: mydbserver.prod.svc.cluster.local
-//	trafficPolicy:
-//	  tls:
-//	    mode: MUTUAL
-//	    clientCertificate: /etc/certs/myclientcert.pem
-//	    privateKey: /etc/certs/client_private_key.pem
-//	    caCertificates: /etc/certs/rootcacerts.pem
-//
-// ```
-//
-// #### v1beta1
-// ```yaml
-// apiVersion: networking.istio.io/v1beta1
+// apiVersion: networking.istio.io/v1
 // kind: DestinationRule
 // metadata:
 //
@@ -3215,26 +3310,8 @@ const (
 // The following rule configures a client to use TLS when talking to a
 // foreign service whose domain matches *.foo.com.
 //
-// #### v1alpha3
 // ```yaml
-// apiVersion: networking.istio.io/v1alpha3
-// kind: DestinationRule
-// metadata:
-//
-//	name: tls-foo
-//
-// spec:
-//
-//	host: "*.foo.com"
-//	trafficPolicy:
-//	  tls:
-//	    mode: SIMPLE
-//
-// ```
-//
-// #### v1beta1
-// ```yaml
-// apiVersion: networking.istio.io/v1beta1
+// apiVersion: networking.istio.io/v1
 // kind: DestinationRule
 // metadata:
 //
@@ -3252,26 +3329,8 @@ const (
 // The following rule configures a client to use Istio mutual TLS when talking
 // to rating services.
 //
-// #### v1alpha3
 // ```yaml
-// apiVersion: networking.istio.io/v1alpha3
-// kind: DestinationRule
-// metadata:
-//
-//	name: ratings-istio-mtls
-//
-// spec:
-//
-//	host: ratings.prod.svc.cluster.local
-//	trafficPolicy:
-//	  tls:
-//	    mode: ISTIO_MUTUAL
-//
-// ```
-//
-// #### v1beta1
-// ```yaml
-// apiVersion: networking.istio.io/v1beta1
+// apiVersion: networking.istio.io/v1
 // kind: DestinationRule
 // metadata:
 //
@@ -3299,7 +3358,8 @@ type ClientTLSSettings struct {
 	PrivateKey string `json:"privateKey,omitempty"`
 	// OPTIONAL: The path to the file containing certificate authority
 	// certificates to use in verifying a presented server certificate. If
-	// omitted, the proxy will not verify the server's certificate.
+	// omitted, the proxy will verify the server's certificate using
+	// the OS CA certificates.
 	// Should be empty if mode is `ISTIO_MUTUAL`.
 	CaCertificates string `json:"caCertificates,omitempty"`
 	// The name of the secret that holds the TLS certs for the
@@ -3328,26 +3388,15 @@ type ClientTLSSettings struct {
 	// If specified, this list overrides the value of subject_alt_names
 	// from the ServiceEntry. If unspecified, automatic validation of upstream
 	// presented certificate for new upstream connections will be done based on the
-	// downstream HTTP host/authority header, provided `VERIFY_CERTIFICATE_AT_CLIENT`
-	// and `ENABLE_AUTO_SNI` environmental variables are set to `true`.
+	// downstream HTTP host/authority header.
 	SubjectAltNames []string `json:"subjectAltNames,omitempty"`
 	// SNI string to present to the server during TLS handshake.
 	// If unspecified, SNI will be automatically set based on downstream HTTP
-	// host/authority header for SIMPLE and MUTUAL TLS modes, provided `ENABLE_AUTO_SNI`
-	// environmental variable is set to `true`.
+	// host/authority header for SIMPLE and MUTUAL TLS modes.
 	Sni string `json:"sni,omitempty"`
 	// `insecureSkipVerify` specifies whether the proxy should skip verifying the
 	// CA signature and SAN for the server certificate corresponding to the host.
-	// This flag should only be set if global CA signature verification is
-	// enabled, `VERIFY_CERTIFICATE_AT_CLIENT` environmental variable is set to `true`,
-	// but no verification is desired for a specific host. If enabled with or
-	// without `VERIFY_CERTIFICATE_AT_CLIENT` enabled, verification of the CA signature and
-	// SAN will be skipped.
-	//
-	// `insecureSkipVerify` is `false` by default.
-	// `VERIFY_CERTIFICATE_AT_CLIENT` is `false` by default in Istio version 1.9 but will
-	// be `true` by default in a later version where, going forward, it will be
-	// enabled by default.
+	// The default value of this field is false.
 	InsecureSkipVerify *bool `json:"insecureSkipVerify,omitempty"`
 	// OPTIONAL: The path to the file containing the certificate revocation list (CRL)
 	// to use in verifying a presented server certificate. `CRL` is a list of certificates
@@ -3449,6 +3498,7 @@ type LocalityLoadBalancerSetting struct {
 	//   - `topology.kubernetes.io/region` is used to match the region metadata of an endpoint, which maps to Kubernetes node label `topology.kubernetes.io/region` or the deprecated label `failure-domain.beta.kubernetes.io/region`.
 	//   - `topology.kubernetes.io/zone` is used to match the zone metadata of an endpoint, which maps to Kubernetes node label `topology.kubernetes.io/zone` or the deprecated label `failure-domain.beta.kubernetes.io/zone`.
 	//   - `topology.istio.io/subzone` is used to match the subzone metadata of an endpoint, which maps to Istio node label `topology.istio.io/subzone`.
+	//   - `kubernetes.io/hostname` is used to match the current node of an endpoint, which maps to Kubernetes node label `kubernetes.io/hostname`.
 	//
 	// The below topology config indicates the following priority levels:
 	//
@@ -3541,33 +3591,8 @@ type LocalityLoadBalancerSettingFailover struct {
 // A retry will be attempted if there is a connect-failure, refused_stream
 // or when the upstream server responds with Service Unavailable(503).
 //
-// #### v1alpha3
 // ```yaml
-// apiVersion: networking.istio.io/v1alpha3
-// kind: VirtualService
-// metadata:
-//
-//	name: ratings-route
-//
-// spec:
-//
-//	hosts:
-//	- ratings.prod.svc.cluster.local
-//	http:
-//	- route:
-//	  - destination:
-//	      host: ratings.prod.svc.cluster.local
-//	      subset: v1
-//	  retries:
-//	    attempts: 3
-//	    perTryTimeout: 2s
-//	    retryOn: connect-failure,refused-stream,503
-//
-// ```
-//
-// #### v1beta1
-// ```yaml
-// apiVersion: networking.istio.io/v1beta1
+// apiVersion: networking.istio.io/v1
 // kind: VirtualService
 // metadata:
 //
@@ -3603,9 +3628,15 @@ type HTTPRetry struct {
 	PerTryTimeout *metav1.Duration `json:"perTryTimeout,omitempty"`
 	// Specifies the conditions under which retry takes place.
 	// One or more policies can be specified using a ‘,’ delimited list.
-	// If `retry_on` specifies a valid HTTP status, it will be added to retriable_status_codes retry policy.
 	// See the [retry policies](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-on)
 	// and [gRPC retry policies](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-grpc-on) for more details.
+	//
+	// In addition to the policies specified above, a list of HTTP status codes can be passed, such as `retryOn: "503,reset"`.
+	// Note these status codes refer to the actual responses received from the destination.
+	// For example, if a connection is reset, Istio will translate this to 503 for it's response.
+	// However, the destination did not return a 503 error, so this would not match `"503"` (it would, however, match `"reset"`).
+	//
+	// If not specified, this defaults to `connect-failure,refused-stream,unavailable,cancelled,503`.
 	RetryOn string `json:"retryOn,omitempty"`
 	// Flag to specify whether the retries should retry to other localities.
 	// See the [retry plugin configuration](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/http/http_connection_management#retry-plugin-configuration) for more details.
