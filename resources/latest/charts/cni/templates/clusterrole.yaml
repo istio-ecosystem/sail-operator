@@ -23,7 +23,7 @@ rules:
   verbs: ["use"]
 {{- end }}
 ---
-{{- if .Values.repair.enabled }}
+{{- if .Values.cni.repair.enabled }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -41,13 +41,13 @@ rules:
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["watch", "get", "list"]
-{{- if .Values.repair.repairPods }}
+{{- if .Values.cni.repair.repairPods }}
 {{- /*  No privileges needed*/}}
-{{- else if .Values.repair.deletePods }}
+{{- else if .Values.cni.repair.deletePods }}
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["delete"]
-{{- else if .Values.repair.labelPods }}
+{{- else if .Values.cni.repair.labelPods }}
   - apiGroups: [""]
     {{- /* pods/status is less privileged than the full pod, and either can label. So use the lower pods/status */}}
     resources: ["pods/status"]
@@ -55,7 +55,7 @@ rules:
 {{- end }}
 {{- end }}
 ---
-{{- if .Values.ambient.enabled }}
+{{- if .Values.cni.ambient.enabled }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:

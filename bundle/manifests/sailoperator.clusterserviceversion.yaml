@@ -34,7 +34,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/maistra-dev/sail-operator:0.1-latest
-    createdAt: "2024-08-13T10:08:59Z"
+    createdAt: "2024-08-13T14:52:40Z"
     description: Experimental operator for installing Istio service mesh
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -306,6 +306,82 @@ spec:
         displayName: Helm Values
         path: values
       version: v1alpha1
+    - description: |-
+        RemoteIstio represents a remote Istio Service Mesh deployment consisting of one or more
+        remote control plane instances (represented by one or more IstioRevision objects).
+      displayName: Remote Istio
+      kind: RemoteIstio
+      name: remoteistios.operator.istio.io
+      specDescriptors:
+      - description: "Type of strategy to use. Can be \"InPlace\" or \"RevisionBased\".
+          When the \"InPlace\" strategy\nis used, the existing Istio control plane
+          is updated in-place. The workloads therefore\ndon't need to be moved from
+          one control plane instance to another. When the \"RevisionBased\"\nstrategy
+          is used, a new Istio control plane instance is created for every change
+          to the\nIstio.spec.version field. The old control plane remains in place
+          until all workloads have\nbeen moved to the new control plane instance.\n\n\nThe
+          \"InPlace\" strategy is the default.\tTODO: change default to \"RevisionBased\""
+        displayName: Type
+        path: updateStrategy.type
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:select:InPlace
+        - urn:alm:descriptor:com.tectonic.ui:select:RevisionBased
+      - description: |-
+          Defines the version of Istio to install.
+          Must be one of: v1.22.3, v1.22.1, v1.22.0, v1.21.5, v1.21.3, v1.21.2, v1.21.0, latest.
+        displayName: Istio Version
+        path: version
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.3
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.1
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.0
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.5
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.3
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.2
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.0
+        - urn:alm:descriptor:com.tectonic.ui:select:latest
+      - description: |-
+          Defines how many seconds the operator should wait before removing a non-active revision after all
+          the workloads have stopped using it. You may want to set this value on the order of minutes.
+          The minimum and the default value is 30.
+        displayName: Inactive Revision Deletion Grace Period (seconds)
+        path: updateStrategy.inactiveRevisionDeletionGracePeriodSeconds
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:number
+      - description: |-
+          Defines whether the workloads should be moved from one control plane instance to another
+          automatically. If updateWorkloads is true, the operator moves the workloads from the old
+          control plane instance to the new one after the new control plane is ready.
+          If updateWorkloads is false, the user must move the workloads manually by updating the
+          istio.io/rev labels on the namespace and/or the pods.
+          Defaults to false.
+        displayName: Update Workloads Automatically
+        path: updateStrategy.updateWorkloads
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: Namespace to which the Istio components should be installed.
+        displayName: Namespace
+        path: namespace
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes:Namespace
+      - description: |-
+          The built-in installation configuration profile to use.
+          The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'.
+          Must be one of: ambient, default, demo, empty, external, minimal, openshift-ambient, openshift, preview, remote, stable.
+        displayName: Profile
+        path: profile
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:hidden
+      - description: Defines the update strategy to use when the version in the RemoteIstio
+          CR is updated.
+        displayName: Update Strategy
+        path: updateStrategy
+      - description: Defines the values to be passed to the Helm charts when installing
+          Istio.
+        displayName: Helm Values
+        path: values
+      version: v1alpha1
   description: |-
     This is an experimental operator for installing Istio service mesh.
 
@@ -318,7 +394,7 @@ spec:
     - v1.21.3
     - v1.21.2
     - v1.21.0
-    - latest (cc81ac1f)
+    - latest (52c90974)
 
     [See this page](https://github.com/istio-ecosystem/sail-operator/blob/main/bundle/README.md) for instructions on how to use it.
   displayName: Sail Operator
@@ -472,6 +548,32 @@ spec:
           - patch
           - update
         - apiGroups:
+          - operator.istio.io
+          resources:
+          - remoteistios
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - operator.istio.io
+          resources:
+          - remoteistios/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - operator.istio.io
+          resources:
+          - remoteistios/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
           - policy
           resources:
           - poddisruptionbudgets
@@ -517,10 +619,10 @@ spec:
             metadata:
               annotations:
                 kubectl.kubernetes.io/default-container: manager
-                olm.relatedImage.latest.cni: gcr.io/istio-testing/install-cni:1.24-alpha.cc81ac1f8216ef57087e90fc4707fa2e7ab94980
-                olm.relatedImage.latest.pilot: gcr.io/istio-testing/pilot:1.24-alpha.cc81ac1f8216ef57087e90fc4707fa2e7ab94980
-                olm.relatedImage.latest.proxy: gcr.io/istio-testing/pilot:1.24-alpha.cc81ac1f8216ef57087e90fc4707fa2e7ab94980
-                olm.relatedImage.latest.ztunnel: gcr.io/istio-testing/ztunnel:1.24-alpha.cc81ac1f8216ef57087e90fc4707fa2e7ab94980
+                olm.relatedImage.latest.cni: gcr.io/istio-testing/install-cni:latest
+                olm.relatedImage.latest.pilot: gcr.io/istio-testing/pilot:latest
+                olm.relatedImage.latest.proxy: gcr.io/istio-testing/proxyv2:latest
+                olm.relatedImage.latest.ztunnel: gcr.io/istio-testing/ztunnel:latest
                 olm.relatedImage.v1_21_0.cni: docker.io/istio/install-cni:1.21.0
                 olm.relatedImage.v1_21_0.pilot: docker.io/istio/pilot:1.21.0
                 olm.relatedImage.v1_21_0.proxy: docker.io/istio/proxyv2:1.21.0
@@ -701,13 +803,13 @@ spec:
   provider:
     name: Red Hat, Inc.
   relatedImages:
-  - image: gcr.io/istio-testing/install-cni:1.24-alpha.cc81ac1f8216ef57087e90fc4707fa2e7ab94980
+  - image: gcr.io/istio-testing/install-cni:latest
     name: latest.cni
-  - image: gcr.io/istio-testing/pilot:1.24-alpha.cc81ac1f8216ef57087e90fc4707fa2e7ab94980
+  - image: gcr.io/istio-testing/pilot:latest
     name: latest.pilot
-  - image: gcr.io/istio-testing/pilot:1.24-alpha.cc81ac1f8216ef57087e90fc4707fa2e7ab94980
+  - image: gcr.io/istio-testing/proxyv2:latest
     name: latest.proxy
-  - image: gcr.io/istio-testing/ztunnel:1.24-alpha.cc81ac1f8216ef57087e90fc4707fa2e7ab94980
+  - image: gcr.io/istio-testing/ztunnel:latest
     name: latest.ztunnel
   - image: docker.io/istio/install-cni:1.21.0
     name: v1_21_0.cni

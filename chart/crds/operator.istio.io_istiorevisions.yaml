@@ -19,6 +19,10 @@ spec:
   scope: Cluster
   versions:
   - additionalPrinterColumns:
+    - description: Whether the control plane is installed locally or in a remote cluster.
+      jsonPath: .spec.type
+      name: Type
+      type: string
     - description: Whether the control plane installation is ready to handle requests.
       jsonPath: .status.conditions[?(@.type=="Ready")].status
       name: Ready
@@ -71,6 +75,14 @@ spec:
               namespace:
                 description: Namespace to which the Istio components should be installed.
                 type: string
+              type:
+                default: Local
+                description: Type indicates whether this revision represents a local
+                  or a remote control plane installation.
+                type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
               values:
                 description: Defines the values to be passed to the Helm charts when
                   installing Istio.
@@ -8141,6 +8153,7 @@ spec:
                 type: string
             required:
             - namespace
+            - type
             - version
             type: object
             x-kubernetes-validations:

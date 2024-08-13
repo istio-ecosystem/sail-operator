@@ -10,19 +10,19 @@ metadata:
     operator.istio.io/component: "Pilot"
     istio: pilot
     release: {{ .Release.Name }}
-{{- range $key, $val := .Values.deploymentLabels }}
+{{- range $key, $val := .Values.pilot.deploymentLabels }}
     {{ $key }}: "{{ $val }}"
 {{- end }}
 spec:
-{{- if not .Values.autoscaleEnabled }}
-{{- if .Values.replicaCount }}
-  replicas: {{ .Values.replicaCount }}
+{{- if not .Values.pilot.autoscaleEnabled }}
+{{- if .Values.pilot.replicaCount }}
+  replicas: {{ .Values.pilot.replicaCount }}
 {{- end }}
 {{- end }}
   strategy:
     rollingUpdate:
-      maxSurge: {{ .Values.rollingMaxSurge }}
-      maxUnavailable: {{ .Values.rollingMaxUnavailable }}
+      maxSurge: {{ .Values.pilot.rollingMaxSurge }}
+      maxUnavailable: {{ .Values.pilot.rollingMaxUnavailable }}
   selector:
     matchLabels:
       {{- if ne .Values.revision "" }}
@@ -44,7 +44,7 @@ spec:
         {{- else }}
         istio: pilot
         {{- end }}
-        {{- range $key, $val := .Values.podLabels }}
+        {{- range $key, $val := .Values.pilot.podLabels }}
         {{ $key }}: "{{ $val }}"
         {{- end }}
         istio.io/dataplane-mode: none
@@ -52,25 +52,25 @@ spec:
         prometheus.io/port: "15014"
         prometheus.io/scrape: "true"
         sidecar.istio.io/inject: "false"
-        {{- if .Values.podAnnotations }}
-{{ toYaml .Values.podAnnotations | indent 8 }}
+        {{- if .Values.pilot.podAnnotations }}
+{{ toYaml .Values.pilot.podAnnotations | indent 8 }}
         {{- end }}
     spec:
-{{- if .Values.nodeSelector }}
+{{- if .Values.pilot.nodeSelector }}
       nodeSelector:
-{{ toYaml .Values.nodeSelector | indent 8 }}
+{{ toYaml .Values.pilot.nodeSelector | indent 8 }}
 {{- end }}
-{{- with .Values.affinity }}
+{{- with .Values.pilot.affinity }}
       affinity:
 {{- toYaml . | nindent 8 }}
 {{- end }}
       tolerations:
         - key: cni.istio.io/not-ready
           operator: "Exists"
-{{- with .Values.tolerations }}
+{{- with .Values.pilot.tolerations }}
 {{- toYaml . | nindent 8 }}
 {{- end }}
-{{- with .Values.topologySpreadConstraints }}
+{{- with .Values.pilot.topologySpreadConstraints }}
       topologySpreadConstraints:
 {{- toYaml . | nindent 8 }}
 {{- end }}
@@ -80,10 +80,10 @@ spec:
 {{- end }}
       containers:
         - name: discovery
-{{- if contains "/" .Values.image }}
-          image: "{{ .Values.image }}"
+{{- if contains "/" .Values.pilot.image }}
+          image: "{{ .Values.pilot.image }}"
 {{- else }}
-          image: "{{ .Values.hub | default .Values.global.hub }}/{{ .Values.image | default "pilot" }}:{{ .Values.tag | default .Values.global.tag }}{{with (.Values.variant | default .Values.global.variant)}}-{{.}}{{end}}"
+          image: "{{ .Values.pilot.hub | default .Values.global.hub }}/{{ .Values.pilot.image | default "pilot" }}:{{ .Values.pilot.tag | default .Values.global.tag }}{{with (.Values.pilot.variant | default .Values.global.variant)}}-{{.}}{{end}}"
 {{- end }}
 {{- if .Values.global.imagePullPolicy }}
           imagePullPolicy: {{ .Values.global.imagePullPolicy }}
@@ -99,13 +99,13 @@ spec:
 {{- end }}
           - --domain
           - {{ .Values.global.proxy.clusterDomain }}
-{{- if .Values.taint.namespace }}
-          - --cniNamespace={{ .Values.taint.namespace }}
+{{- if .Values.pilot.taint.namespace }}
+          - --cniNamespace={{ .Values.pilot.taint.namespace }}
 {{- end }}
           - --keepaliveMaxServerConnectionAge
-          - "{{ .Values.keepaliveMaxServerConnectionAge }}"
-{{- if .Values.extraContainerArgs }}
-          {{- with .Values.extraContainerArgs }}
+          - "{{ .Values.pilot.keepaliveMaxServerConnectionAge }}"
+{{- if .Values.pilot.extraContainerArgs }}
+          {{- with .Values.pilot.extraContainerArgs }}
             {{- toYaml . | nindent 10 }}
           {{- end }}
 {{- end }}
@@ -151,25 +151,24 @@ spec:
           # Otherwise, assume it lives in our namespace
           # Also, check for an explicit ENV override (legacy approach) and prefer that
           # if present
-          {{ $ztTrustedNS := or .Values.trustedZtunnelNamespace .Release.Namespace }}
-          {{- if not .Values.env.CA_TRUSTED_NODE_ACCOUNTS }}
+          {{ $ztTrustedNS := or .Values.pilot.trustedZtunnelNamespace .Release.Namespace }}
+          {{- if not .Values.pilot.env.CA_TRUSTED_NODE_ACCOUNTS }}
           - name: CA_TRUSTED_NODE_ACCOUNTS
             value: "{{ $ztTrustedNS }}/ztunnel"
           {{- end }}
-          {{- if .Values.env }}
-          {{- range $key, $val := .Values.env }}
+          {{- if .Values.pilot.env }}
+          {{- range $key, $val := .Values.pilot.env }}
           - name: {{ $key }}
             value: "{{ $val }}"
           {{- end }}
           {{- end }}
-{{- if .Values.traceSampling }}
+{{- if .Values.pilot.traceSampling }}
           - name: PILOT_TRACE_SAMPLING
-            value: "{{ .Values.traceSampling }}"
+            value: "{{ .Values.pilot.traceSampling }}"
 {{- end }}
 # If externalIstiod is set via Values.Global, then enable the pilot env variable. However, if it's set via Values.pilot.env, then
 # don't set it here to avoid duplication.
-# TODO (nshankar13): Move from Helm chart to code: https://github.com/istio/istio/issues/52449
-{{- if and .Values.global.externalIstiod (not (and .Values.pilot.env .Values.pilot.env.EXTERNAL_ISTIOD)) }}
+{{- if and .Values.global.externalIstiod (eq .Values.pilot.env.EXTERNAL_ISTIOD "")}}
           - name: EXTERNAL_ISTIOD
             value: "{{ .Values.global.externalIstiod }}"
 {{- end }}
@@ -188,8 +187,8 @@ spec:
           - name: PLATFORM
             value: "{{ .Values.global.platform }}"
           resources:
-{{- if .Values.resources }}
-{{ toYaml .Values.resources | trim | indent 12 }}
+{{- if .Values.pilot.resources }}
+{{ toYaml .Values.pilot.resources | trim | indent 12 }}
 {{- else }}
 {{ toYaml .Values.global.defaultResources | trim | indent 12 }}
 {{- end }}
@@ -200,9 +199,9 @@ spec:
             capabilities:
               drop:
               - ALL
-{{- if .Values.seccompProfile }}
+{{- if .Values.pilot.seccompProfile }}
             seccompProfile:
-{{ toYaml .Values.seccompProfile | trim | indent 14 }}
+{{ toYaml .Values.pilot.seccompProfile | trim | indent 14 }}
 {{- end }}
           volumeMounts:
           - name: istio-token
@@ -216,7 +215,7 @@ spec:
           - name: istio-kubeconfig
             mountPath: /var/run/secrets/remote
             readOnly: true
-          {{- if .Values.jwksResolverExtraRootCA }}
+          {{- if .Values.pilot.jwksResolverExtraRootCA }}
           - name: extracacerts
             mountPath: /cacerts
           {{- end }}
@@ -226,7 +225,7 @@ spec:
           - name: istio-csr-ca-configmap
             mountPath: /var/run/secrets/istiod/ca
             readOnly: true
-          {{- with .Values.volumeMounts }}
+          {{- with .Values.pilot.volumeMounts }}
             {{- toYaml . | nindent 10 }}
           {{- end }}
       volumes:
@@ -261,12 +260,12 @@ spec:
           name: istio-ca-root-cert
           defaultMode: 420
           optional: true
-  {{- if .Values.jwksResolverExtraRootCA }}
+  {{- if .Values.pilot.jwksResolverExtraRootCA }}
       - name: extracacerts
         configMap:
           name: pilot-jwks-extra-cacerts{{- if not (eq .Values.revision "") }}-{{ .Values.revision }}{{- end }}
   {{- end }}
-      {{- with .Values.volumes }}
+      {{- with .Values.pilot.volumes }}
         {{- toYaml . | nindent 6}}
       {{- end }}
 
