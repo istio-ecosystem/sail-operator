@@ -35,6 +35,7 @@ function add_stable_version() {
   "charts": [
     "https://istio-release.storage.googleapis.com/charts/base-${1}.tgz",
     "https://istio-release.storage.googleapis.com/charts/istiod-${1}.tgz",
+    "https://istio-release.storage.googleapis.com/charts/istiod-remote-${1}.tgz",
     "https://istio-release.storage.googleapis.com/charts/gateway-${1}.tgz",
     "https://istio-release.storage.googleapis.com/charts/cni-${1}.tgz",
     "https://istio-release.storage.googleapis.com/charts/ztunnel-${1}.tgz"
@@ -76,7 +77,7 @@ function list_only_latest() {
 }
 
 function update_stable() {
-    all_releases=$(curl -sL "https://api.github.com/repos/istio/istio/releases" | yq '.[].tag_name' -oy | grep -vE 'rc|alpha|beta')
+    all_releases=$(curl -sL "https://api.github.com/repos/istio/istio/releases" | yq '.[].tag_name' -oy)
     supported_versions=$(yq '.versions[] | .name' "${VERSIONS_YAML_FILE}" | grep -v latest | list_only_latest)
 
     # For each supported version, look for a greater version in the all_releases list
@@ -123,6 +124,7 @@ function update_latest() {
             "https://storage.googleapis.com/istio-build/dev/'"${FULL_VERSION}"'/helm/cni-'"${FULL_VERSION}"'.tgz",
             "https://storage.googleapis.com/istio-build/dev/'"${FULL_VERSION}"'/helm/gateway-'"${FULL_VERSION}"'.tgz",
             "https://storage.googleapis.com/istio-build/dev/'"${FULL_VERSION}"'/helm/istiod-'"${FULL_VERSION}"'.tgz",
+            "https://storage.googleapis.com/istio-build/dev/'"${FULL_VERSION}"'/helm/istiod-remote-'"${FULL_VERSION}"'.tgz",
             "https://storage.googleapis.com/istio-build/dev/'"${FULL_VERSION}"'/helm/ztunnel-'"${FULL_VERSION}"'.tgz"
         ]' "${VERSIONS_YAML_FILE}"
 }
