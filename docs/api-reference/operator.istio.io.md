@@ -2512,7 +2512,7 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `version` _string_ | Defines the version of Istio to install. Must be one of: v1.23.0-rc.1, v1.22.3, v1.21.5, latest. | v1.23.0-rc.1 | Enum: [v1.23.0-rc.1 v1.22.3 v1.21.5 latest]   |
 | `updateStrategy` _[IstioUpdateStrategy](#istioupdatestrategy)_ | Defines the update strategy to use when the version in the RemoteIstio CR is updated. | \{ type:InPlace \} |  |
-| `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, external, minimal, openshift-ambient, openshift, preview, remote, stable. |  | Enum: [ambient default demo empty external minimal openshift-ambient openshift preview remote stable]   |
+| `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, external, openshift-ambient, openshift, preview, stable. |  | Enum: [ambient default demo empty external openshift-ambient openshift preview stable]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. | istio-system |  |
 | `values` _[Values](#values)_ | Defines the values to be passed to the Helm charts when installing Istio. |  |  |
 
