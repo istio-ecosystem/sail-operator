@@ -45,11 +45,11 @@ versions:
     version: 1.24-alpha
     repo: https://github.com/istio/istio
     branch: master
-    commit: b28bdd77da4c7f0f4f3631db514f1c4f79a90289
+    commit: 2021e0ebd4b65592c62522236f3c3823da18fd0c
     charts:
-      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289/helm/base-1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289/helm/cni-1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289/helm/gateway-1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289/helm/istiod-1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289/helm/istiod-remote-1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289/helm/ztunnel-1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.2021e0ebd4b65592c62522236f3c3823da18fd0c/helm/base-1.24-alpha.2021e0ebd4b65592c62522236f3c3823da18fd0c.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.2021e0ebd4b65592c62522236f3c3823da18fd0c/helm/cni-1.24-alpha.2021e0ebd4b65592c62522236f3c3823da18fd0c.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.2021e0ebd4b65592c62522236f3c3823da18fd0c/helm/gateway-1.24-alpha.2021e0ebd4b65592c62522236f3c3823da18fd0c.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.2021e0ebd4b65592c62522236f3c3823da18fd0c/helm/istiod-1.24-alpha.2021e0ebd4b65592c62522236f3c3823da18fd0c.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.2021e0ebd4b65592c62522236f3c3823da18fd0c/helm/istiod-remote-1.24-alpha.2021e0ebd4b65592c62522236f3c3823da18fd0c.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.2021e0ebd4b65592c62522236f3c3823da18fd0c/helm/ztunnel-1.24-alpha.2021e0ebd4b65592c62522236f3c3823da18fd0c.tgz
