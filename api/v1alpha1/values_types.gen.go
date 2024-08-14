@@ -407,9 +407,6 @@ type GlobalConfig struct {
 	// The default value is "" and when caName="", the CA will be configured by other
 	// mechanisms (e.g., environmental variable CA_PROVIDER).
 	CaName string `json:"caName,omitempty"`
-	// TODO: remove this?
-	// No longer used.
-	Autoscalingv2API *bool `json:"autoscalingv2API,omitempty"`
 	// Platform in which Istio is deployed. Possible values are: "openshift" and "gcp"
 	// An empty value means it is a vanilla Kubernetes distribution, therefore no special
 	// treatment will be considered.
