@@ -16,7 +16,7 @@ metadata:
               "inactiveRevisionDeletionGracePeriodSeconds": 30,
               "type": "InPlace"
             },
-            "version": "v1.22.3"
+            "version": "v1.23.0-rc.1"
           }
         },
         {
@@ -27,14 +27,14 @@ metadata:
           },
           "spec": {
             "namespace": "istio-cni",
-            "version": "v1.22.3"
+            "version": "v1.23.0-rc.1"
           }
         }
       ]
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/maistra-dev/sail-operator:3.0.0-tp-latest
-    createdAt: "2024-08-14T09:11:05Z"
+    createdAt: "2024-08-14T18:06:41Z"
     description: The OpenShift Service Mesh Operator enables you to install, configure,
       and manage an instance of Red Hat OpenShift Service Mesh. OpenShift Service
       Mesh is based on the open source Istio project.
@@ -164,20 +164,14 @@ spec:
       specDescriptors:
       - description: |-
           Defines the version of Istio to install.
-          Must be one of: v1.22.3, v1.22.2, v1.22.1, v1.22.0, v1.21.5, v1.21.4, v1.21.3, v1.21.2, v1.21.0, latest.
+          Must be one of: v1.23.0-rc.1, v1.22.3, v1.21.5, latest.
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.23.0-rc.1
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.3
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.2
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.1
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.0
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.5
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.4
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.3
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.2
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.0
         - urn:alm:descriptor:com.tectonic.ui:select:latest
       - description: Namespace to which the Istio CNI component should be installed.
         displayName: Namespace
@@ -208,20 +202,14 @@ spec:
       specDescriptors:
       - description: |-
           Defines the version of Istio to install.
-          Must be one of: v1.22.3, v1.22.2, v1.22.1, v1.22.0, v1.21.5, v1.21.4, v1.21.3, v1.21.2, v1.21.0, latest.
+          Must be one of: v1.23.0-rc.1, v1.22.3, v1.21.5, latest.
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.23.0-rc.1
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.3
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.2
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.1
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.0
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.5
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.4
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.3
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.2
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.0
         - urn:alm:descriptor:com.tectonic.ui:select:latest
       - description: Namespace to which the Istio components should be installed.
         displayName: Namespace
@@ -260,20 +248,14 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:select:RevisionBased
       - description: |-
           Defines the version of Istio to install.
-          Must be one of: v1.22.3, v1.22.2, v1.22.1, v1.22.0, v1.21.5, v1.21.4, v1.21.3, v1.21.2, v1.21.0, latest.
+          Must be one of: v1.23.0-rc.1, v1.22.3, v1.21.5, latest.
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.23.0-rc.1
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.3
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.2
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.1
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.0
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.5
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.4
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.3
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.2
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.0
         - urn:alm:descriptor:com.tectonic.ui:select:latest
       - description: |-
           Defines how many seconds the operator should wait before removing a non-active revision after all
@@ -338,20 +320,14 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:select:RevisionBased
       - description: |-
           Defines the version of Istio to install.
-          Must be one of: v1.22.3, v1.22.2, v1.22.1, v1.22.0, v1.21.5, v1.21.4, v1.21.3, v1.21.2, v1.21.0, latest.
+          Must be one of: v1.23.0-rc.1, v1.22.3, v1.21.5, latest.
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.23.0-rc.1
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.3
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.2
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.1
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.0
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.5
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.4
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.3
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.2
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.0
         - urn:alm:descriptor:com.tectonic.ui:select:latest
       - description: |-
           Defines how many seconds the operator should wait before removing a non-active revision after all
@@ -380,7 +356,7 @@ spec:
       - description: |-
           The built-in installation configuration profile to use.
           The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'.
-          Must be one of: ambient, default, demo, empty, external, minimal, openshift-ambient, openshift, preview, remote, stable.
+          Must be one of: ambient, default, demo, empty, external, openshift-ambient, openshift, preview, stable.
         displayName: Profile
         path: profile
         x-descriptors:

@@ -27,10 +27,10 @@ const RemoteIstioKind = "RemoteIstio"
 type RemoteIstioSpec struct {
 	// +sail:version
 	// Defines the version of Istio to install.
-	// Must be one of: v1.22.3, v1.22.2, v1.22.1, v1.22.0, v1.21.5, v1.21.4, v1.21.3, v1.21.2, v1.21.0, latest.
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.22.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.22.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.22.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.22.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.21.5", "urn:alm:descriptor:com.tectonic.ui:select:v1.21.4", "urn:alm:descriptor:com.tectonic.ui:select:v1.21.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.21.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.21.0", "urn:alm:descriptor:com.tectonic.ui:select:latest"}
-	// +kubebuilder:validation:Enum=v1.22.3;v1.22.2;v1.22.1;v1.22.0;v1.21.5;v1.21.4;v1.21.3;v1.21.2;v1.21.0;latest
-	// +kubebuilder:default=v1.22.3
+	// Must be one of: v1.23.0-rc.1, v1.22.3, v1.21.5, latest.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.23.0-rc.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.22.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.21.5", "urn:alm:descriptor:com.tectonic.ui:select:latest"}
+	// +kubebuilder:validation:Enum=v1.23.0-rc.1;v1.22.3;v1.21.5;latest
+	// +kubebuilder:default=v1.23.0-rc.1
 	Version string `json:"version"`
 
 	// Defines the update strategy to use when the version in the RemoteIstio CR is updated.
@@ -41,10 +41,10 @@ type RemoteIstioSpec struct {
 	// +sail:profile
 	// The built-in installation configuration profile to use.
 	// The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'.
-	// Must be one of: ambient, default, demo, empty, external, minimal, openshift-ambient, openshift, preview, remote, stable.
+	// Must be one of: ambient, default, demo, empty, external, openshift-ambient, openshift, preview, stable.
 	// +++PROFILES-DROPDOWN-HIDDEN-UNTIL-WE-FULLY-IMPLEMENT-THEM+++operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Profile",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:ambient", "urn:alm:descriptor:com.tectonic.ui:select:default", "urn:alm:descriptor:com.tectonic.ui:select:demo", "urn:alm:descriptor:com.tectonic.ui:select:empty", "urn:alm:descriptor:com.tectonic.ui:select:external", "urn:alm:descriptor:com.tectonic.ui:select:minimal", "urn:alm:descriptor:com.tectonic.ui:select:preview", "urn:alm:descriptor:com.tectonic.ui:select:remote"}
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,xDescriptors={"urn:alm:descriptor:com.tectonic.ui:hidden"}
-	// +kubebuilder:validation:Enum=ambient;default;demo;empty;external;minimal;openshift-ambient;openshift;preview;remote;stable
+	// +kubebuilder:validation:Enum=ambient;default;demo;empty;external;openshift-ambient;openshift;preview;stable
 	Profile string `json:"profile,omitempty"`
 
 	// Namespace to which the Istio components should be installed.
@@ -193,7 +193,7 @@ type RemoteIstio struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// +kubebuilder:default={version: "v1.22.3", namespace: "istio-system", updateStrategy: {type:"InPlace"}}
+	// +kubebuilder:default={version: "v1.23.0-rc.1", namespace: "istio-system", updateStrategy: {type:"InPlace"}}
 	Spec RemoteIstioSpec `json:"spec,omitempty"`
 
 	Status RemoteIstioStatus `json:"status,omitempty"`
