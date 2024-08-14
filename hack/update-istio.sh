@@ -123,6 +123,7 @@ function update_latest() {
             "https://storage.googleapis.com/istio-build/dev/'"${FULL_VERSION}"'/helm/cni-'"${FULL_VERSION}"'.tgz",
             "https://storage.googleapis.com/istio-build/dev/'"${FULL_VERSION}"'/helm/gateway-'"${FULL_VERSION}"'.tgz",
             "https://storage.googleapis.com/istio-build/dev/'"${FULL_VERSION}"'/helm/istiod-'"${FULL_VERSION}"'.tgz",
+            "https://storage.googleapis.com/istio-build/dev/'"${FULL_VERSION}"'/helm/istiod-remote-'"${FULL_VERSION}"'.tgz",
             "https://storage.googleapis.com/istio-build/dev/'"${FULL_VERSION}"'/helm/ztunnel-'"${FULL_VERSION}"'.tgz"
         ]' "${VERSIONS_YAML_FILE}"
 }
