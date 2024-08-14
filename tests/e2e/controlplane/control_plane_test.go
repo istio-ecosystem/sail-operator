@@ -42,7 +42,11 @@ import (
 	"istio.io/istio/pkg/ptr"
 )
 
-var istiodVersionRegex = regexp.MustCompile(`Version:"(\d+\.\d+(\.\d+|-\w+))`)
+// version can have one of the following formats:
+// - 1.22.2
+// - 1.23.0-rc.1
+// - 1.24-alpha
+var istiodVersionRegex = regexp.MustCompile(`Version:"(\d+\.\d+(\.\d+)?(-\w+(\.\d+)?)?)`)
 
 var _ = Describe("Control Plane Installation", Ordered, func() {
 	SetDefaultEventuallyTimeout(180 * time.Second)
