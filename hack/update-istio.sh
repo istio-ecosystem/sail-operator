@@ -35,6 +35,7 @@ function add_stable_version() {
   "charts": [
     "https://istio-release.storage.googleapis.com/charts/base-${1}.tgz",
     "https://istio-release.storage.googleapis.com/charts/istiod-${1}.tgz",
+    "https://istio-release.storage.googleapis.com/charts/istiod-remote-${1}.tgz",
     "https://istio-release.storage.googleapis.com/charts/gateway-${1}.tgz",
     "https://istio-release.storage.googleapis.com/charts/cni-${1}.tgz",
     "https://istio-release.storage.googleapis.com/charts/ztunnel-${1}.tgz"
