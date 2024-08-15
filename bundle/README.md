@@ -110,7 +110,7 @@ To view or modify the `Istio` resource from the OpenShift Container Platform web
 An example configuration:
 
 ```
-apiVersion: operator.istio.io/v1alpha1
+apiVersion: sailoperator.io/v1alpha1
 kind: Istio
 metadata:
   name: example

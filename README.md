@@ -28,7 +28,7 @@ This document aims to provide an overview of the project and some information fo
 You manage your control plane through an `Istio` resource.
 
 ```yaml
-apiVersion: operator.istio.io/v1alpha1
+apiVersion: sailoperator.io/v1alpha1
 kind: Istio
 metadata:
   name: example
@@ -40,7 +40,7 @@ spec:
 When you create an `Istio` resource, the sail operator then creates an `IstioRevision` that represents a control plane deployment.
 
 ```yaml
-apiVersion: operator.istio.io/v1alpha1
+apiVersion: sailoperator.io/v1alpha1
 kind: IstioRevision
 metadata:
   name: example
@@ -56,7 +56,7 @@ status:
 You can customize your control plane installation through the `Istio` resource using Istio's `Helm` configuration values:
 
 ```yaml
-apiVersion: operator.istio.io/v1alpha1
+apiVersion: sailoperator.io/v1alpha1
 kind: Istio
 metadata:
   name: example
@@ -183,7 +183,7 @@ make manifests
 
 More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
 
-The API reference documentation can be found in the [docs](https://github.com/istio-ecosystem/sail-operator/tree/main/docs/api-reference/operator.istio.io.md)
+The API reference documentation can be found in the [docs](https://github.com/istio-ecosystem/sail-operator/tree/main/docs/api-reference/sailoperator.io.md)
 
 ### Writing Tests
 

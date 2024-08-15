@@ -5,7 +5,7 @@ metadata:
     alm-examples: |-
       [
         {
-          "apiVersion": "operator.istio.io/v1alpha1",
+          "apiVersion": "sailoperator.io/v1alpha1",
           "kind": "Istio",
           "metadata": {
             "name": "default"
@@ -20,7 +20,7 @@ metadata:
           }
         },
         {
-          "apiVersion": "operator.istio.io/v1alpha1",
+          "apiVersion": "sailoperator.io/v1alpha1",
           "kind": "IstioCNI",
           "metadata": {
             "name": "default"
@@ -34,7 +34,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/maistra-dev/sail-operator:3.0.0-tp-latest
-    createdAt: "2024-08-15T09:07:01Z"
+    createdAt: "2024-08-15T15:05:26Z"
     description: The OpenShift Service Mesh Operator enables you to install, configure,
       and manage an instance of Red Hat OpenShift Service Mesh. OpenShift Service
       Mesh is based on the open source Istio project.
@@ -160,7 +160,7 @@ spec:
     - description: IstioCNI represents a deployment of the Istio CNI component.
       displayName: Istio CNI
       kind: IstioCNI
-      name: istiocnis.operator.istio.io
+      name: istiocnis.sailoperator.io
       specDescriptors:
       - description: |-
           Defines the version of Istio to install.
@@ -198,7 +198,7 @@ spec:
         IstioRevision object(s).
       displayName: Istio Revision
       kind: IstioRevision
-      name: istiorevisions.operator.istio.io
+      name: istiorevisions.sailoperator.io
       specDescriptors:
       - description: |-
           Defines the version of Istio to install.
@@ -231,7 +231,7 @@ spec:
         Deployment object in Kubernetes creates ReplicaSets that create the Pods.
       displayName: Istio
       kind: Istio
-      name: istios.operator.istio.io
+      name: istios.sailoperator.io
       specDescriptors:
       - description: "Type of strategy to use. Can be \"InPlace\" or \"RevisionBased\".
           When the \"InPlace\" strategy\nis used, the existing Istio control plane
@@ -303,7 +303,7 @@ spec:
         remote control plane instances (represented by one or more IstioRevision objects).
       displayName: Remote Istio
       kind: RemoteIstio
-      name: remoteistios.operator.istio.io
+      name: remoteistios.sailoperator.io
       specDescriptors:
       - description: "Type of strategy to use. Can be \"InPlace\" or \"RevisionBased\".
           When the \"InPlace\" strategy\nis used, the existing Istio control plane
@@ -479,7 +479,7 @@ spec:
           verbs:
           - '*'
         - apiGroups:
-          - operator.istio.io
+          - sailoperator.io
           resources:
           - istiorevisions
           verbs:
@@ -491,13 +491,13 @@ spec:
           - update
           - watch
         - apiGroups:
-          - operator.istio.io
+          - sailoperator.io
           resources:
           - istiorevisions/finalizers
           verbs:
           - update
         - apiGroups:
-          - operator.istio.io
+          - sailoperator.io
           resources:
           - istiorevisions/status
           verbs:
@@ -505,7 +505,7 @@ spec:
           - patch
           - update
         - apiGroups:
-          - operator.istio.io
+          - sailoperator.io
           resources:
           - istiocnis
           verbs:
@@ -517,13 +517,13 @@ spec:
           - update
           - watch
         - apiGroups:
-          - operator.istio.io
+          - sailoperator.io
           resources:
           - istiocnis/finalizers
           verbs:
           - update
         - apiGroups:
-          - operator.istio.io
+          - sailoperator.io
           resources:
           - istiocnis/status
           verbs:
@@ -531,7 +531,7 @@ spec:
           - patch
           - update
         - apiGroups:
-          - operator.istio.io
+          - sailoperator.io
           resources:
           - istios
           verbs:
@@ -543,13 +543,13 @@ spec:
           - update
           - watch
         - apiGroups:
-          - operator.istio.io
+          - sailoperator.io
           resources:
           - istios/finalizers
           verbs:
           - update
         - apiGroups:
-          - operator.istio.io
+          - sailoperator.io
           resources:
           - istios/status
           verbs:
@@ -557,7 +557,7 @@ spec:
           - patch
           - update
         - apiGroups:
-          - operator.istio.io
+          - sailoperator.io
           resources:
           - remoteistios
           verbs:
@@ -569,13 +569,13 @@ spec:
           - update
           - watch
         - apiGroups:
-          - operator.istio.io
+          - sailoperator.io
           resources:
           - remoteistios/finalizers
           verbs:
           - update
         - apiGroups:
-          - operator.istio.io
+          - sailoperator.io
           resources:
           - remoteistios/status
           verbs:

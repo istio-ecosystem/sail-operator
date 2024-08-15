@@ -47,7 +47,7 @@ Sail Operator manages the lifecycle of your Istio control planes. Instead of cre
 The `Istio` resource is used to manage your Istio control planes. It is a cluster-wide resource, as the Istio control plane operates in and requires access to the entire cluster. To select a namespace to run the control plane pods in, you can use the `spec.namespace` field. You can access all helm chart options through the `values` field in the `spec`:
 
 ```yaml
-apiVersion: operator.istio.io/v1alpha1
+apiVersion: sailoperator.io/v1alpha1
 kind: Istio
 metadata:
   name: default
@@ -79,7 +79,7 @@ You can think of the relationship between the `Istio` and `IstioRevision` resour
 The lifecycle of Istio's CNI plugin is managed separately when using Sail Operator. To install it, you can create an `IstioCNI` resource. The `IstioCNI` resource is a cluster-wide resource as it will install a `DaemonSet` that will be operating on all nodes of your cluster. You can select a version by setting the `spec.version` field, as you can see in the sample below. To update the CNI plugin, just change the `version` field to the version you want to install. Just like the `Istio` resource, it also has a `values` field that exposes all of the options provided in the `istio-cni` chart:
 
 ```yaml
-apiVersion: operator.istio.io/v1alpha1
+apiVersion: sailoperator.io/v1alpha1
 kind: IstioCNI
 metadata:
   name: default
@@ -101,7 +101,7 @@ Instead of deploying the entire Istio control plane, this chart deploys only the
 The `RemoteIstio` resource is very similar to the `Istio` resource, with the most notable difference being the `istiodRemote` field in the `values` section, which allows you to configure the address of the remote Istio control plane:
 
 ```yaml
-apiVersion: operator.istio.io/v1alpha1
+apiVersion: sailoperator.io/v1alpha1
 kind: RemoteIstio
 metadata:
   name: default
@@ -120,7 +120,7 @@ spec:
 For more information on how to use the `RemoteIstio` resource, refer to the [multi-cluster](#multicluster) section.
 
 ## API Reference documentation
-The Sail Operator API reference documentation can be found [here](https://github.com/istio-ecosystem/sail-operator/tree/main/docs/api-reference/operator.istio.io.md).
+The Sail Operator API reference documentation can be found [here](https://github.com/istio-ecosystem/sail-operator/tree/main/docs/api-reference/sailoperator.io.md).
 
 ## Getting Started
 
@@ -217,7 +217,7 @@ Steps:
 
     ```bash
     cat <<EOF | kubectl apply -f-
-    apiVersion: operator.istio.io/v1alpha1
+    apiVersion: sailoperator.io/v1alpha1
     kind: Istio
     metadata:
       name: default
@@ -294,7 +294,7 @@ Steps:
 
     ```bash
     cat <<EOF | kubectl apply -f-
-    apiVersion: operator.istio.io/v1alpha1
+    apiVersion: sailoperator.io/v1alpha1
     kind: Istio
     metadata:
       name: default
@@ -451,7 +451,7 @@ helm install --namespace kiali-operator --create-namespace kiali-operator kiali/
 Find out the revision name of your Istio instance. In our case it is `test`.
     
 ```bash
-$ kubectl get istiorevisions.operator.istio.io 
+$ kubectl get istiorevisions.sailoperator.io 
 NAME   READY   STATUS    IN USE   VERSION   AGE
 test True    Healthy   True     v1.21.0   119m
 ```
@@ -637,7 +637,7 @@ If you followed [Scraping metrics using the OpenShift monitoring stack](#scrapin
 1. Find out the revision name of your Istio instance. In our case it is `test`.
     
     ```bash
-    $ kubectl get istiorevisions.operator.istio.io 
+    $ kubectl get istiorevisions.sailoperator.io 
     NAME   READY   STATUS    IN USE   VERSION   AGE
     test   True    Healthy   True     v1.21.0   119m
     ```
