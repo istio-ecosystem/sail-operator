@@ -10,17 +10,17 @@ crdSourceVersion: latest
 # a list of URLs for retrieving the charts.
 # The first item in the list is the default version.
 versions:
-  - name: v1.23.0-rc.1
-    version: 1.23.0-rc.1
+  - name: v1.23.0
+    version: 1.23.0
     repo: https://github.com/istio/istio
-    commit: 1.23.0-rc.1
+    commit: 1.23.0
     charts:
-      - https://istio-release.storage.googleapis.com/charts/base-1.23.0-rc.1.tgz
-      - https://istio-release.storage.googleapis.com/charts/istiod-1.23.0-rc.1.tgz
-      - https://istio-release.storage.googleapis.com/charts/istiod-remote-1.23.0-rc.1.tgz
-      - https://istio-release.storage.googleapis.com/charts/gateway-1.23.0-rc.1.tgz
-      - https://istio-release.storage.googleapis.com/charts/cni-1.23.0-rc.1.tgz
-      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.23.0-rc.1.tgz
+      - https://istio-release.storage.googleapis.com/charts/base-1.23.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-1.23.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-remote-1.23.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/gateway-1.23.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/cni-1.23.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.23.0.tgz
   - name: v1.22.3
     version: 1.22.3
     repo: https://github.com/istio/istio

@@ -58,7 +58,7 @@ spec:
           spec:
             default:
               namespace: istio-cni
-              version: v1.23.0-rc.1
+              version: v1.23.0
             description: IstioCNISpec defines the desired state of IstioCNI
             properties:
               namespace:
@@ -1392,12 +1392,12 @@ spec:
                     type: object
                 type: object
               version:
-                default: v1.23.0-rc.1
+                default: v1.23.0
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.23.0-rc.1, v1.22.3, v1.21.5, latest.
+                  Must be one of: v1.23.0, v1.22.3, v1.21.5, latest.
                 enum:
-                - v1.23.0-rc.1
+                - v1.23.0
                 - v1.22.3
                 - v1.21.5
                 - latest
