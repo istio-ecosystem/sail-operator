@@ -598,6 +598,8 @@ git-hook: gitleaks ## Installs gitleaks as a git pre-commit hook.
 
 .SILENT: helm $(HELM) $(LOCALBIN) deploy-yaml gen-api operator-name
 
+UPDATE_BRANCH ?= release-1.23
+
 COMMON_IMPORTS ?= lint-all lint-scripts lint-copyright-banner lint-go lint-yaml lint-helm format-go tidy-go check-clean-repo update-common
 .PHONY: $(COMMON_IMPORTS)
 $(COMMON_IMPORTS):
