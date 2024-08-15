@@ -428,8 +428,8 @@ OPM ?= $(LOCALBIN)/opm
 
 ## Tool Versions
 OPERATOR_SDK_VERSION ?= v1.36.1
-HELM_VERSION ?= v3.15.3
-CONTROLLER_TOOLS_VERSION ?= v0.15.0
+HELM_VERSION ?= v3.15.4
+CONTROLLER_TOOLS_VERSION ?= v0.16.1
 OPM_VERSION ?= v1.45.0
 GITLEAKS_VERSION ?= v8.18.4
 
@@ -597,6 +597,8 @@ git-hook: gitleaks ## Installs gitleaks as a git pre-commit hook.
 	fi
 
 .SILENT: helm $(HELM) $(LOCALBIN) deploy-yaml gen-api operator-name
+
+UPDATE_BRANCH ?= release-1.23
 
 COMMON_IMPORTS ?= lint-all lint-scripts lint-copyright-banner lint-go lint-yaml lint-helm format-go tidy-go check-clean-repo update-common
 .PHONY: $(COMMON_IMPORTS)

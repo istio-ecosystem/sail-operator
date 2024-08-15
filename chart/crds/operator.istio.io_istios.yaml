@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.15.0
+    controller-gen.kubebuilder.io/version: v0.16.1
   name: istios.operator.istio.io
 spec:
   group: operator.istio.io
@@ -76,7 +76,7 @@ spec:
               namespace: istio-system
               updateStrategy:
                 type: InPlace
-              version: v1.22.3
+              version: v1.23.0
             description: IstioSpec defines the desired state of Istio
             properties:
               namespace:
@@ -124,9 +124,8 @@ spec:
                       the \"RevisionBased\"\nstrategy is used, a new Istio control
                       plane instance is created for every change to the\nIstio.spec.version
                       field. The old control plane remains in place until all workloads
-                      have\nbeen moved to the new control plane instance.\n\n\nThe
-                      \"InPlace\" strategy is the default.\tTODO: change default to
-                      \"RevisionBased\""
+                      have\nbeen moved to the new control plane instance.\n\nThe \"InPlace\"
+                      strategy is the default.\tTODO: change default to \"RevisionBased\""
                     enum:
                     - InPlace
                     - RevisionBased
@@ -172,10 +171,10 @@ spec:
                     properties:
                       arch:
                         description: "Specifies pod scheduling arch(amd64, ppc64le,
-                          s390x, arm64) and weight as follows:\n\n\n\t0 - Never scheduled\n\t1
-                          - Least preferred\n\t2 - No preference\n\t3 - Most preferred\n\n\nDeprecated:
+                          s390x, arm64) and weight as follows:\n\n\t0 - Never scheduled\n\t1
+                          - Least preferred\n\t2 - No preference\n\t3 - Most preferred\n\nDeprecated:
                           replaced by the affinity k8s settings which allows architecture
-                          nodeAffinity configuration of this behavior.\n\n\nDeprecated:
+                          nodeAffinity configuration of this behavior.\n\nDeprecated:
                           Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto."
                         properties:
                           amd64:
@@ -226,16 +225,13 @@ spec:
                         description: |-
                           Default k8s node selector for all the Istio control plane components
 
-
                           See https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
-
 
                           Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
                         type: object
                       defaultPodDisruptionBudget:
                         description: |-
                           Specifies the default pod disruption budget configuration.
-
 
                           Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
                         properties:
@@ -249,9 +245,7 @@ spec:
                         description: |-
                           Default k8s resources settings for all Istio control plane components.
 
-
                           See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
-
 
                           Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
                         properties:
@@ -260,10 +254,8 @@ spec:
                               Claims lists the names of resources, defined in spec.resourceClaims,
                               that are used by this container.
 
-
                               This is an alpha field and requires enabling the
                               DynamicResourceAllocation feature gate.
-
 
                               This field is immutable. It can only be set for containers.
                             items:
@@ -316,7 +308,6 @@ spec:
                           Configure this field in case that all pods of Istio control plane are expected to
                           be scheduled to particular nodes with specified taints.
 
-
                           Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
                         items:
                           description: |-
@@ -366,7 +357,6 @@ spec:
                           Specifies the image pull policy for the Istio images. one of Always, Never, IfNotPresent.
                           Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.
 
-
                           More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
                         enum:
                         - Always
@@ -411,7 +401,6 @@ spec:
                           Configure the policy for validating JWT.
                           This is deprecated and has no effect.
 
-
                           Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
                         type: string
                       logAsJson:
@@ -440,18 +429,15 @@ spec:
                           - Meshes will be federated together
                           - Policy will be written referencing one mesh from the other
 
-
                           If an administrator expects that any of these conditions may become true in
                           the future, they should ensure their meshes have different Mesh IDs
                           assigned.
-
 
                           Within a multicluster mesh, each cluster must be (manually or auto)
                           configured to have the same Mesh ID value. If an existing cluster 'joins' a
                           multicluster mesh, it will need to be migrated to the new mesh ID. Details
                           of migration TBD, and it may be a disruptive operation to change the Mesh
                           ID post-install.
-
 
                           If the mesh admin does not specify a value, Istio will use the value of the
                           mesh's Trust Domain. The best practice is to select a proper Trust Domain
@@ -475,18 +461,18 @@ spec:
                                 description: "NetworkEndpoints describes how the network
                                   associated with an endpoint\nshould be inferred.
                                   An endpoint will be assigned to a network based
-                                  on\nthe following rules:\n\n\n1. Implicitly: If
-                                  the registry explicitly provides information about\nthe
+                                  on\nthe following rules:\n\n1. Implicitly: If the
+                                  registry explicitly provides information about\nthe
                                   network to which the endpoint belongs to. In some
                                   cases, its\npossible to indicate the network associated
                                   with the endpoint by\nadding the `ISTIO_META_NETWORK`
-                                  environment variable to the sidecar.\n\n\n2. Explicitly:\n\n\n\ta.
+                                  environment variable to the sidecar.\n\n2. Explicitly:\n\n\ta.
                                   By matching the registry name with one of the \"fromRegistry\"\n\tin
                                   the mesh config. A \"from_registry\" can only be
-                                  assigned to a\n\tsingle network.\n\n\n\tb. By matching
+                                  assigned to a\n\tsingle network.\n\n\tb. By matching
                                   the IP against one of the CIDR ranges in a mesh\n\tconfig
                                   network. The CIDR ranges must not overlap and be
-                                  assigned to\n\ta single network.\n\n\n(2) will override
+                                  assigned to\n\ta single network.\n\n(2) will override
                                   (1) if both are present."
                                 properties:
                                   fromCidr:
@@ -546,7 +532,7 @@ spec:
                               type: array
                           type: object
                         description: "Configure the mesh networks to be used by the
-                          Split Horizon EDS.\n\n\nThe following example defines two
+                          Split Horizon EDS.\n\nThe following example defines two
                           networks with different endpoints association methods.\nFor
                           `network1` all endpoints that their IP belongs to the provided
                           CIDR range will be\nmapped to network1. The gateway for
@@ -559,7 +545,7 @@ spec:
                           for the gateway will be determined from that remote service
                           (only\nLoadBalancer gateway service type is currently supported,
                           for a NodePort type gateway service,\nit still need to be
-                          configured manually).\n\n\nmeshNetworks:\n\n\n\tnetwork1:\n\t
+                          configured manually).\n\nmeshNetworks:\n\n\tnetwork1:\n\t
                           \ endpoints:\n\t  - fromCidr: \"192.168.0.1/24\"\n\t  gateways:\n\t
                           \ - address: 1.1.1.1\n\t    port: 80\n\tnetwork2:\n\t  endpoints:\n\t
                           \ - fromRegistry: reg1\n\t  gateways:\n\t  - registryServiceName:
@@ -635,9 +621,7 @@ spec:
                         description: |-
                           Specifies the k8s priorityClassName for the istio control plane components.
 
-
                           See https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass
-
 
                           Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
                         type: string
@@ -651,20 +635,17 @@ spec:
                             description: |-
                               Domain for the cluster, default: "cluster.local".
 
-
                               K8s allows this to be customized, see https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/
                             type: string
                           componentLogLevel:
                             description: |-
                               Per Component log level for proxy, applies to gateways and sidecars.
 
-
                               If a component level is not set, then the global "logLevel" will be used. If left empty, "misc:error" is used.
                             type: string
                           enableCoreDump:
                             description: |-
                               Enables core dumps for newly injected sidecars.
-
 
                               If set, newly injected sidecars will have core dumps enabled.
                             type: boolean
@@ -684,9 +665,7 @@ spec:
                             description: |-
                               Controls if sidecar is injected at the front of the container list and blocks the start of the other containers until the proxy is ready
 
-
                               Deprecated: replaced by ProxyConfig setting which allows per-pod configuration of this behavior.
-
 
                               Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
                             type: boolean
@@ -694,16 +673,13 @@ spec:
                             description: |-
                               Image name or path for the proxy, default: "proxyv2".
 
-
                               If registry or tag are not specified, global.hub and global.tag are used.
-
 
                               Examples: my-proxy (uses global.hub/tag), docker.io/myrepo/my-proxy:v1.0.0
                             type: string
                           includeIPRanges:
                             description: |-
                               Lists the IP ranges of Istio egress traffic that the sidecar captures.
-
 
                               Example: "172.30.0.0/16,172.20.0.0/16"
                               This would only capture egress traffic on those two IP Ranges, all other outbound traffic would # be allowed by the sidecar."
@@ -952,14 +928,12 @@ spec:
                             description: |-
                               Path to the file to which the proxy will write outlier detection logs.
 
-
                               Example: "/dev/stdout"
                               This would write the logs to standard output.
                             type: string
                           privileged:
                             description: |-
                               Enables privileged securityContext for the istio-proxy container.
-
 
                               See https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
                             type: boolean
@@ -982,9 +956,7 @@ spec:
                             description: |-
                               K8s resources settings.
 
-
                               See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
-
 
                               Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
                             properties:
@@ -993,10 +965,8 @@ spec:
                                   Claims lists the names of resources, defined in spec.resourceClaims,
                                   that are used by this container.
 
-
                                   This is an alpha field and requires enabling the
                                   DynamicResourceAllocation feature gate.
-
 
                                   This field is immutable. It can only be set for containers.
                                 items:
@@ -1050,11 +1020,9 @@ spec:
                                   Enables or disables a startup probe.
                                   For optimal startup times, changing this should be tied to the readiness probe values.
 
-
                                   If the probe is enabled, it is recommended to have delay=0s,period=15s,failureThreshold=4.
                                   This ensures the pod is marked ready immediately after the startup probe passes (which has a 1s poll interval),
                                   and doesn't spam the readiness endpoint too much
-
 
                                   If the probe is disabled, it is recommended to have delay=1s,period=2s,failureThreshold=30.
                                   This ensures the startup is reasonable fast (polling every 2s). 1s delay is used since the startup is not often ready instantly.
@@ -1095,9 +1063,7 @@ spec:
                             description: |-
                               K8s resources settings.
 
-
                               See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
-
 
                               Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
                             properties:
@@ -1106,10 +1072,8 @@ spec:
                                   Claims lists the names of resources, defined in spec.resourceClaims,
                                   that are used by this container.
 
-
                                   This is an alpha field and requires enabling the
                                   DynamicResourceAllocation feature gate.
-
 
                                   This field is immutable. It can only be set for containers.
                                 items:
@@ -1238,7 +1202,6 @@ spec:
                                 description: |-
                                   Address of zipkin instance in host:port format for reporting trace data.
 
-
                                   Example: <zipkin-collector-service>.<zipkin-collector-namespace>:941
                                 type: string
                             type: object
@@ -1256,7 +1219,6 @@ spec:
                             description: |-
                               K8s resource settings.
 
-
                               See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
                             properties:
                               claims:
@@ -1264,10 +1226,8 @@ spec:
                                   Claims lists the names of resources, defined in spec.resourceClaims,
                                   that are used by this container.
 
-
                                   This is an alpha field and requires enabling the
                                   DynamicResourceAllocation feature gate.
-
 
                                   This field is immutable. It can only be set for containers.
                                 items:
@@ -1332,7 +1292,6 @@ spec:
                     description: |-
                       Defines runtime configuration of components, including Istiod and istio-agent behavior.
                       See https://istio.io/docs/reference/config/istio.mesh.v1alpha1/ for all available options.
-                      TODO can this import the real mesh config API?
                     properties:
                       accessLogEncoding:
                         description: |-
@@ -1421,7 +1380,6 @@ spec:
                                   certificate revocation list(CRL) is also supported.
                                   Only one of client certificates and CA certificate
                                   or credentialName can be specified.
-
 
                                   **NOTE:** This field is applicable at sidecars only if
                                   `DestinationRule` has a `workloadSelector` specified.
@@ -1523,20 +1481,18 @@ spec:
                         description: |-
                           Configure the provision of certificates.
 
-
                           Note: Deprecated, please refer to Cert-Manager or other cert provisioning solutions to sign DNS certificates.
-
 
                           Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
                         items:
                           description: "Certificate configures the provision of a
                             certificate and its key.\nExample 1: key and cert stored
-                            in a secret\n```\n{ secretName: galley-cert\n\n\n\t  secretNamespace:
+                            in a secret\n```\n{ secretName: galley-cert\n\n\t  secretNamespace:
                             istio-system\n\t  dnsNames:\n\t    - galley.istio-system.svc\n\t
-                            \   - galley.mydomain.com\n\t}\n\n\n```\nExample 2: key
+                            \   - galley.mydomain.com\n\t}\n\n```\nExample 2: key
                             and cert stored in a directory\n```\n{ dnsNames:\n  -
                             pilot.istio-system\n  - pilot.istio-system.svc\n  - pilot.mydomain.com\n
-                            \   }\n\n\n```"
+                            \   }\n\n```"
                           properties:
                             dnsNames:
                               description: |-
@@ -1624,7 +1580,6 @@ spec:
                                     certificate revocation list(CRL) is also supported.
                                     Only one of client certificates and CA certificate
                                     or credentialName can be specified.
-
 
                                     **NOTE:** This field is applicable at sidecars only if
                                     `DestinationRule` has a `workloadSelector` specified.
@@ -1824,7 +1779,6 @@ spec:
                                       Only one of client certificates and CA certificate
                                       or credentialName can be specified.
 
-
                                       **NOTE:** This field is applicable at sidecars only if
                                       `DestinationRule` has a `workloadSelector` specified.
                                       Otherwise the field will be applicable only at gateways, and
@@ -1952,7 +1906,6 @@ spec:
                                       certificate revocation list(CRL) is also supported.
                                       Only one of client certificates and CA certificate
                                       or credentialName can be specified.
-
 
                                       **NOTE:** This field is applicable at sidecars only if
                                       `DestinationRule` has a `workloadSelector` specified.
@@ -2146,22 +2099,22 @@ spec:
                             type: string
                           proxyHeaders:
                             description: "Define the set of headers to add/modify
-                              for HTTP request/responses.\n\n\nTo enable an optional
+                              for HTTP request/responses.\n\nTo enable an optional
                               header, simply set the field. If no specific configuration
                               is required, an empty object (`{}`) will enable it.\nNote:
-                              currently all headers are enabled by default.\n\n\nBelow
+                              currently all headers are enabled by default.\n\nBelow
                               shows an example of customizing the `server` header
-                              and disabling the `X-Envoy-Attempt-Count` header:\n\n\n```yaml\nproxyHeaders:\n\n\n\tserver:\n\t
+                              and disabling the `X-Envoy-Attempt-Count` header:\n\n```yaml\nproxyHeaders:\n\n\tserver:\n\t
                               \ value: \"my-custom-server\"\n\trequestId: {} // Explicitly
                               enable Request IDs. As this is the default, this has
-                              no effect.\n\tattemptCount:\n\t  disabled: true\n\n\n```\n\n\nSome
+                              no effect.\n\tattemptCount:\n\t  disabled: true\n\n```\n\nSome
                               headers are enabled by default, and require explicitly
                               disabling. See below for an example of disabling all
-                              default-enabled headers:\n\n\n```yaml\nproxyHeaders:\n\n\n\tforwardedClientCert:
+                              default-enabled headers:\n\n```yaml\nproxyHeaders:\n\n\tforwardedClientCert:
                               SANITIZE\n\tserver:\n\t  disabled: true\n\trequestId:\n\t
                               \ disabled: true\n\tattemptCount:\n\t  disabled: true\n\tenvoyDebugHeaders:\n\t
                               \ disabled: true\n\tmetadataExchangeHeaders:\n\t  mode:
-                              IN_MESH\n\n\n```"
+                              IN_MESH\n\n```"
                             properties:
                               attemptCount:
                                 description: |-
@@ -2253,9 +2206,9 @@ spec:
                               and\n`sidecar.istio.io/statsInclusionSuffixes`). For
                               example, to enable stats\nfor circuit breakers, request
                               retries, upstream connections, and request timeouts,\nyou
-                              can specify stats matcher as follows:\n```yaml\nproxyStatsMatcher:\n\n\n\tinclusionRegexps:\n\t
+                              can specify stats matcher as follows:\n```yaml\nproxyStatsMatcher:\n\n\tinclusionRegexps:\n\t
                               \ - .*outlier_detection.*\n\t  - .*upstream_rq_retry.*\n\t
-                              \ - .*upstream_cx_.*\n\tinclusionSuffixes:\n\t  - upstream_rq_timeout\n\n\n```\nNote
+                              \ - .*upstream_cx_.*\n\tinclusionSuffixes:\n\t  - upstream_rq_timeout\n\n```\nNote
                               including more Envoy stats might increase number of
                               time series\ncollected by prometheus significantly.
                               Care needs to be taken on Prometheus\nresource provision
@@ -2315,10 +2268,10 @@ spec:
                                     format: int32
                                     type: integer
                                   service:
+                                    default: ""
                                     description: |-
                                       Service is the name of the service to place in the gRPC HealthCheckRequest
                                       (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-
 
                                       If this is not specified, the default behavior is defined by gRPC.
                                     type: string
@@ -2446,7 +2399,6 @@ spec:
                             description: |-
                               Secret Discovery Service(SDS) configuration to be used by the proxy.
 
-
                               Deprecated: Marked as deprecated in mesh/v1alpha1/proxy.proto.
                             properties:
                               enabled:
@@ -2463,7 +2415,6 @@ spec:
                               `--service-cluster` flag in Envoy.  In a typical Envoy deployment, the
                               `service-cluster` flag is used to identify the caller, for
                               source-based routing scenarios.
-
 
                               Since Istio does not assign a local `service/service` version to each
                               Envoy instance, the name is same for all of them.  However, the
@@ -2556,9 +2507,9 @@ spec:
                                     rule: (has(self.literal)?1:0) + (has(self.environment)?1:0)
                                       + (has(self.header)?1:0) <= 1
                                 description: "and gateways).\nThe key represents the
-                                  name of the tag.\nEx:\n```yaml\ncustom_tags:\n\n\n\tnew_tag_name:\n\t
+                                  name of the tag.\nEx:\n```yaml\ncustom_tags:\n\n\tnew_tag_name:\n\t
                                   \ header:\n\t    name: custom-http-header-name\n\t
-                                  \   default_value: defaulted-value-from-custom-header\n\n\n```"
+                                  \   default_value: defaulted-value-from-custom-header\n\n```"
                                 type: object
                               datadog:
                                 description: Use a Datadog tracer.
@@ -2693,7 +2644,6 @@ spec:
                                       Only one of client certificates and CA certificate
                                       or credentialName can be specified.
 
-
                                       **NOTE:** This field is applicable at sidecars only if
                                       `DestinationRule` has a `workloadSelector` specified.
                                       Otherwise the field will be applicable only at gateways, and
@@ -2769,7 +2719,6 @@ spec:
                               Address of the Zipkin service (e.g. _zipkin:9411_).
                               DEPRECATED: Use [tracing][istio.mesh.v1alpha1.ProxyConfig.tracing] instead.
 
-
                               Deprecated: Marked as deprecated in mesh/v1alpha1/proxy.proto.
                             type: string
                         type: object
@@ -2783,7 +2732,6 @@ spec:
                           The default value for the `DestinationRule.export_to` field. Has the same
                           syntax as `default_service_export_to`.
 
-
                           If not set the system will use "*" as the default value which implies that
                           destination rules are exported to all namespaces
                         items:
@@ -2791,7 +2739,7 @@ spec:
                         type: array
                       defaultHttpRetryPolicy:
                         description: "Configure the default HTTP retry policy.\nThe
-                          default number of retry attempts is set at 2 for these errors:\n\n\n\t\"connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes\".\n\n\nSetting
+                          default number of retry attempts is set at 2 for these errors:\n\n\t\"connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes\".\n\nSetting
                           the number of attempts to 0 disables retry policy globally.\nThis
                           setting can be overridden on a per-host basis using the
                           Virtual Service\nAPI.\nAll settings in the retry policy
@@ -2822,12 +2770,10 @@ spec:
                               See the [retry policies](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-on)
                               and [gRPC retry policies](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-grpc-on) for more details.
 
-
                               In addition to the policies specified above, a list of HTTP status codes can be passed, such as `retryOn: "503,reset"`.
                               Note these status codes refer to the actual responses received from the destination.
                               For example, if a connection is reset, Istio will translate this to 503 for it's response.
                               However, the destination did not return a 503 error, so this would not match `"503"` (it would, however, match `"reset"`).
-
 
                               If not specified, this defaults to `connect-failure,refused-stream,unavailable,cancelled,503`.
                             type: string
@@ -2872,7 +2818,6 @@ spec:
                           If not set the system will use "*" as the default value which implies that
                           services are exported to all namespaces.
 
-
                           `All namespaces` is a reasonable default for implementations that don't
                           need to restrict access or visibility of services across namespace
                           boundaries. If that requirement is present it is generally good practice to
@@ -2883,7 +2828,6 @@ spec:
                           dependency management needs to be precise even within the scope of a single
                           namespace.
 
-
                           For further discussion see the reference documentation for `ServiceEntry`,
                           `Sidecar`, and `Gateway`.
                         items:
@@ -2893,7 +2837,6 @@ spec:
                         description: |-
                           The default value for the VirtualService.export_to field. Has the same
                           syntax as `default_service_export_to`.
-
 
                           If not set the system will use "*" as the default value which implies that
                           virtual services are exported to all namespaces
@@ -2928,7 +2871,6 @@ spec:
                               values:
                             - cassandra
                             - spark
-
 
                           ```
                           Refer to the [Kubernetes selector docs](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors)
@@ -3053,7 +2995,6 @@ spec:
                                     to unambiguously resolve a service in the service registry. The `<Hostname>` is a fully qualified host name of a
                                     service defined by the Kubernetes service or ServiceEntry.
 
-
                                     Example: "datadog.default.svc.cluster.local" or "bar/datadog.example.com".
                                   type: string
                               required:
@@ -3112,7 +3053,6 @@ spec:
                                     to unambiguously resolve a service in the service registry. The `<Hostname>` is a fully qualified host name of a
                                     service defined by the Kubernetes service or ServiceEntry.
 
-
                                     Example: "my-ext-authz.foo.svc.cluster.local" or "bar/my-ext-authz.example.com".
                                   type: string
                                 statusOnError:
@@ -3148,7 +3088,6 @@ spec:
                                     If not specified, the original response will not be modified and forwarded to downstream as-is.
                                     Note, any existing headers will be overridden.
 
-
                                     Exact, prefix and suffix matches are supported (similar to the
                                     [authorization policy rule syntax](https://istio.io/latest/docs/reference/config/security/authorization-policy/#Rule)
                                     except the presence match):
@@ -3168,7 +3107,6 @@ spec:
                                     automatically added.
                                     Note, the body from the authorization service is always included in the response to downstream.
 
-
                                     Exact, prefix and suffix matches are supported (similar to the
                                     [authorization policy rule syntax](https://istio.io/latest/docs/reference/config/security/authorization-policy/#Rule)
                                     except the presence match):
@@ -3184,7 +3122,6 @@ spec:
                                     forwarded to the upstream when the authorization check result is allowed (HTTP code 200).
                                     If not specified, the original request will not be modified and forwarded to backend as-is.
                                     Note, any existing headers will be overridden.
-
 
                                     Exact, prefix and suffix matches are supported (similar to the
                                     [authorization policy rule syntax](https://istio.io/latest/docs/reference/config/security/authorization-policy/#Rule)
@@ -3206,7 +3143,6 @@ spec:
                                 includeHeadersInCheck:
                                   description: |-
                                     DEPRECATED. Use include_request_headers_in_check instead.
-
 
                                     Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
                                   items:
@@ -3250,7 +3186,6 @@ spec:
                                     request can include the buffered client request body (controlled by include_request_body_in_check setting),
                                     consequently the value of Content-Length of the authorization request reflects the size of its payload size.
 
-
                                     Exact, prefix and suffix matches are supported (similar to the
                                     [authorization policy rule syntax](https://istio.io/latest/docs/reference/config/security/authorization-policy/#Rule)
                                     except the presence match):
@@ -3277,7 +3212,6 @@ spec:
                                     The format is `[<Namespace>/]<Hostname>`. The specification of `<Namespace>` is required only when it is insufficient
                                     to unambiguously resolve a service in the service registry. The `<Hostname>` is a fully qualified host name of a
                                     service defined by the Kubernetes service or ServiceEntry.
-
 
                                     Example: "my-ext-authz.foo.svc.cluster.local" or "bar/my-ext-authz.example.com".
                                   type: string
@@ -3314,8 +3248,8 @@ spec:
                                         dictionaries](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-dictionaries)).
                                         Nested JSON is\nsupported for some command
                                         operators (e.g. `FILTER_STATE` or `DYNAMIC_METADATA`).\nUse
-                                        `labels: {}` for default envoy JSON log format.\n\n\nExample:\n```\nlabels:\n\n\n\tstatus:
-                                        \"%RESPONSE_CODE%\"\n\tmessage: \"%LOCAL_REPLY_BODY%\"\n\n\n```"
+                                        `labels: {}` for default envoy JSON log format.\n\nExample:\n```\nlabels:\n\n\tstatus:
+                                        \"%RESPONSE_CODE%\"\n\tmessage: \"%LOCAL_REPLY_BODY%\"\n\n```"
                                       type: object
                                     text:
                                       description: |-
@@ -3323,9 +3257,7 @@ spec:
                                         used in the format. The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings)
                                         provides more information.
 
-
                                         NOTE: Istio will insert a newline ('\n') on all formats (if missing).
-
 
                                         Example: `text: "%LOCAL_REPLY_BODY%:%RESPONSE_CODE%:path=%REQ(:path)%"`
                                       type: string
@@ -3389,7 +3321,6 @@ spec:
                                     to unambiguously resolve a service in the service registry. The `<Hostname>` is a fully qualified host name of a
                                     service defined by the Kubernetes service or ServiceEntry.
 
-
                                     Example: "envoy-als.foo.svc.cluster.local" or "bar/envoy-als.example.com".
                                   type: string
                               required:
@@ -3418,8 +3349,8 @@ spec:
                                         dictionaries](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-dictionaries)).
                                         Nested JSON is\nsupported for some command
                                         operators (e.g. FILTER_STATE or DYNAMIC_METADATA).\nAlias
-                                        to `attributes` filed in [Open Telemetry](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/open_telemetry/v3/logs_service.proto)\n\n\nExample:\n```\nlabels:\n\n\n\tstatus:
-                                        \"%RESPONSE_CODE%\"\n\tmessage: \"%LOCAL_REPLY_BODY%\"\n\n\n```"
+                                        to `attributes` filed in [Open Telemetry](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/open_telemetry/v3/logs_service.proto)\n\nExample:\n```\nlabels:\n\n\tstatus:
+                                        \"%RESPONSE_CODE%\"\n\tmessage: \"%LOCAL_REPLY_BODY%\"\n\n```"
                                       type: object
                                     text:
                                       description: |-
@@ -3447,7 +3378,6 @@ spec:
                                     The format is `[<Namespace>/]<Hostname>`. The specification of `<Namespace>` is required only when it is insufficient
                                     to unambiguously resolve a service in the service registry. The `<Hostname>` is a fully qualified host name of a
                                     service defined by the Kubernetes service or ServiceEntry.
-
 
                                     Example: "envoy-als.foo.svc.cluster.local" or "bar/envoy-als.example.com".
                                   type: string
@@ -3484,7 +3414,6 @@ spec:
                                     to unambiguously resolve a service in the service registry. The `<Hostname>` is a fully qualified host name of a
                                     service defined by the Kubernetes service or ServiceEntry.
 
-
                                     Example: "envoy-als.foo.svc.cluster.local" or "bar/envoy-als.example.com".
                                   type: string
                               required:
@@ -3495,7 +3424,6 @@ spec:
                               description: |-
                                 Configures a Lightstep tracing provider.
                                 Deprecated: For Istio 1.15+, please use an OpenTelemetryTracingProvider instead, more details can be found at https://github.com/istio/istio/issues/40027
-
 
                                 Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
                               properties:
@@ -3520,7 +3448,6 @@ spec:
                                     to unambiguously resolve a service in the service registry. The `<Hostname>` is a fully qualified host name of a
                                     service defined by the Kubernetes service or ServiceEntry.
 
-
                                     Example: "lightstep.default.svc.cluster.local" or "bar/lightstep.example.com".
                                   type: string
                               required:
@@ -3535,7 +3462,6 @@ spec:
                               description: |-
                                 Configures an OpenCensusAgent tracing provider.
                                 Deprecated: OpenCensus is deprecated, more details can be found at https://opentelemetry.io/blog/2023/sunsetting-opencensus/
-
 
                                 Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
                               properties:
@@ -3575,7 +3501,6 @@ spec:
                                     to unambiguously resolve a service in the service registry. The `<Hostname>` is a fully qualified host name of a
                                     service defined by the Kubernetes service or ServiceEntry.
 
-
                                     Example: "ocagent.default.svc.cluster.local" or "bar/ocagent.example.com".
                                   type: string
                               required:
@@ -3589,9 +3514,7 @@ spec:
                                   description: |-
                                     The Dynatrace adaptive traffic management (ATM) sampler.
 
-
                                     Example configuration:
-
 
                                     ```yaml
                                       - name: otel-tracing
@@ -3615,14 +3538,12 @@ spec:
                                         REQUIRED. The identifier of the cluster in the Dynatrace platform.
                                         The cluster here is Dynatrace-specific concept and not related to the cluster concept in Istio/Envoy.
 
-
                                         The value can be obtained from the Istio deployment page in Dynatrace.
                                       format: int32
                                       type: integer
                                     httpService:
                                       description: |-
                                         Optional. Dynatrace HTTP API to obtain sampling configuration.
-
 
                                         When not provided, the Dynatrace Sampler will re-use the configuration from the OpenTelemetryTracingProvider HTTP Exporter
                                         (`service`, `port` and `http`), including the access token.
@@ -3673,7 +3594,6 @@ spec:
                                             The format is `<Hostname>`, where `<Hostname>` is the fully qualified Dynatrace environment
                                             host name defined in the ServiceEntry.
 
-
                                             Example: "{your-environment-id}.live.dynatrace.com".
                                           type: string
                                       required:
@@ -3686,9 +3606,7 @@ spec:
                                         Optional. Number of sampled spans per minute to be used
                                         when the adaptive value cannot be obtained from the Dynatrace API.
 
-
                                         A default value of `1000` is used when:
-
 
                                         - `root_spans_per_minute` is unset
                                         - `root_spans_per_minute` is set to 0
@@ -3697,7 +3615,6 @@ spec:
                                     tenant:
                                       description: |-
                                         REQUIRED. The Dynatrace customer's tenant identifier.
-
 
                                         The value can be obtained from the Istio deployment page in Dynatrace.
                                       type: string
@@ -3708,25 +3625,24 @@ spec:
                                 http:
                                   description: "Optional. Specifies the configuration
                                     for exporting OTLP traces via HTTP.\nWhen empty,
-                                    traces will be exported via gRPC.\n\n\nThe following
+                                    traces will be exported via gRPC.\n\nThe following
                                     example shows how to configure the OpenTelemetry
-                                    ExtensionProvider to export via HTTP:\n\n\n1.
-                                    Add/change the OpenTelemetry extension provider
-                                    in `MeshConfig`\n```yaml\n  - name: otel-tracing\n
-                                    \   opentelemetry:\n    port: 443\n    service:
-                                    my.olly-backend.com\n    http:\n    path: \"/api/otlp/traces\"\n
-                                    \   timeout: 10s\n    headers:\n  - name: \"my-custom-header\"\n
-                                    \   value: \"some value\"\n\n\n```\n\n\n2. Deploy
+                                    ExtensionProvider to export via HTTP:\n\n1. Add/change
+                                    the OpenTelemetry extension provider in `MeshConfig`\n```yaml\n
+                                    \ - name: otel-tracing\n    opentelemetry:\n    port:
+                                    443\n    service: my.olly-backend.com\n    http:\n
+                                    \   path: \"/api/otlp/traces\"\n    timeout: 10s\n
+                                    \   headers:\n  - name: \"my-custom-header\"\n
+                                    \   value: \"some value\"\n\n```\n\n2. Deploy
                                     a `ServiceEntry` for the observability back-end\n```yaml\napiVersion:
-                                    networking.istio.io/v1alpha3\nkind: ServiceEntry\nmetadata:\n\n\n\tname:
-                                    my-olly-backend\n\n\nspec:\n\n\n\thosts:\n\t-
-                                    my.olly-backend.com\n\tports:\n\t- number: 443\n\t
-                                    \ name: https-port\n\t  protocol: HTTPS\n\tresolution:
-                                    DNS\n\tlocation: MESH_EXTERNAL\n\n\n---\napiVersion:
-                                    networking.istio.io/v1alpha3\nkind: DestinationRule\nmetadata:\n\n\n\tname:
-                                    my-olly-backend\n\n\nspec:\n\n\n\thost: my.olly-backend.com\n\ttrafficPolicy:\n\t
+                                    networking.istio.io/v1alpha3\nkind: ServiceEntry\nmetadata:\n\n\tname:
+                                    my-olly-backend\n\nspec:\n\n\thosts:\n\t- my.olly-backend.com\n\tports:\n\t-
+                                    number: 443\n\t  name: https-port\n\t  protocol:
+                                    HTTPS\n\tresolution: DNS\n\tlocation: MESH_EXTERNAL\n\n---\napiVersion:
+                                    networking.istio.io/v1alpha3\nkind: DestinationRule\nmetadata:\n\n\tname:
+                                    my-olly-backend\n\nspec:\n\n\thost: my.olly-backend.com\n\ttrafficPolicy:\n\t
                                     \ portLevelSettings:\n\t  - port:\n\t      number:
-                                    443\n\t    tls:\n\t      mode: SIMPLE\n\n\n```"
+                                    443\n\t    tls:\n\t      mode: SIMPLE\n\n```"
                                   properties:
                                     headers:
                                       description: |-
@@ -3776,10 +3692,8 @@ spec:
                                     to be used by the OpenTelemetry Tracer. When multiple resources are provided, they are merged
                                     according to the OpenTelemetry [Resource specification](https://opentelemetry.io/docs/specs/otel/resource/sdk/#merge).
 
-
                                     The following example shows how to configure the Environment Resource Detector, that will
                                     read the attributes from the environment variable `OTEL_RESOURCE_ATTRIBUTES`:
-
 
                                     ```yaml
                                       - name: otel-tracing
@@ -3789,7 +3703,6 @@ spec:
                                         resource_detectors:
                                         environment: {}
 
-
                                     ```
                                   properties:
                                     dynatrace:
@@ -3798,7 +3711,6 @@ spec:
                                         The resource detector reads from the Dynatrace enrichment files
                                         and adds host/process related attributes to the OpenTelemetry resource.
 
-
                                         See: [Enrich ingested data with Dynatrace-specific dimensions](https://docs.dynatrace.com/docs/shortlink/enrichment-files)
                                       type: object
                                     environment:
@@ -3806,7 +3718,6 @@ spec:
                                         OpenTelemetry Environment Resource Detector.
                                         The resource detector reads attributes from the environment variable `OTEL_RESOURCE_ATTRIBUTES`
                                         and adds them to the OpenTelemetry resource.
-
 
                                         See: [Resource specification](https://opentelemetry.io/docs/specs/otel/resource/sdk/#specifying-resource-information-via-an-environment-variable)
                                       type: object
@@ -3817,7 +3728,6 @@ spec:
                                     The format is `[<Namespace>/]<Hostname>`. The specification of `<Namespace>` is required only when it is insufficient
                                     to unambiguously resolve a service in the service registry. The `<Hostname>` is a fully qualified host name of a
                                     service defined by the Kubernetes service or ServiceEntry.
-
 
                                     Example: "otlp.default.svc.cluster.local" or "bar/otlp.example.com".
                                   type: string
@@ -3851,7 +3761,6 @@ spec:
                                     to unambiguously resolve a service in the service registry. The `<Hostname>` is a fully qualified host name of a
                                     service defined by the Kubernetes service or ServiceEntry.
 
-
                                     Example: "skywalking.default.svc.cluster.local" or "bar/skywalking.example.com".
                                   type: string
                               required:
@@ -3865,7 +3774,6 @@ spec:
                                   description: |-
                                     debug enables trace output to stdout.
 
-
                                     Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
                                   type: boolean
                                 logging:
@@ -3878,7 +3786,7 @@ spec:
                                       description: "Collection of tag names and tag
                                         expressions to include in the log\nentry.
                                         Conflicts are resolved by the tag name by
-                                        overriding previously\nsupplied values.\n\n\nExample:\n\n\n\tlabels:\n\t
+                                        overriding previously\nsupplied values.\n\nExample:\n\n\tlabels:\n\t
                                         \ path: request.url_path\n\t  foo: request.headers['x-foo']"
                                       type: object
                                   type: object
@@ -3886,7 +3794,6 @@ spec:
                                   description: |-
                                     The global default max number of annotation events per span.
                                     default is 200.
-
 
                                     Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
                                   format: int64
@@ -3896,7 +3803,6 @@ spec:
                                     The global default max number of attributes per span.
                                     default is 200.
 
-
                                     Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
                                   format: int64
                                   type: integer
@@ -3904,7 +3810,6 @@ spec:
                                   description: |-
                                     The global default max number of message events per span.
                                     default is 200.
-
 
                                     Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
                                   format: int64
@@ -3942,7 +3847,6 @@ spec:
                                     The format is `[<Namespace>/]<Hostname>`. The specification of `<Namespace>` is required only when it is insufficient
                                     to unambiguously resolve a service in the service registry. The `<Hostname>` is a fully qualified host name of a
                                     service defined by the Kubernetes service or ServiceEntry.
-
 
                                     Example: "zipkin.default.svc.cluster.local" or "bar/zipkin.example.com".
                                   type: string
@@ -3985,9 +3889,7 @@ spec:
                           By default, Istio emits statistics with the pattern `inbound|<port>|<port-name>|<service-FQDN>`.
                           For example `inbound|7443|grpc-reviews|reviews.prod.svc.cluster.local`. This can be used to override that pattern.
 
-
                           A Pattern can be composed of various pre-defined variables. The following variables are supported.
-
 
                           - `%SERVICE%` - Will be substituted with short hostname of the service.
                           - `%SERVICE_NAME%` - Will be substituted with name of the service.
@@ -3996,9 +3898,7 @@ spec:
                           - `%TARGET_PORT%`  - Will be substituted with the target port of the service.
                           - `%SERVICE_PORT_NAME%` - Will be substituted with port name of the service.
 
-
                           Following are some examples of supported patterns for reviews:
-
 
                           - `%SERVICE_FQDN%_%SERVICE_PORT%` will use reviews.prod.svc.cluster.local_7443 as the stats name.
                           - `%SERVICE%` will use reviews.prod as the stats name.
@@ -4064,12 +3964,9 @@ spec:
                                 {region}/{zone}/{sub-zone} and terminal wildcards are allowed on any
                                 segment of the specification. Examples:
 
-
                                 `*` - matches all localities
 
-
                                 `us-west/*` - all zones and sub-zones within the us-west region
-
 
                                 `us-west/zone-1/*` - all sub-zones within us-west/zone-1
                               properties:
@@ -4125,33 +4022,26 @@ spec:
                               This is to support traffic failover across different groups of endpoints.
                               Two kinds of labels can be specified:
 
-
                                 - Specify only label keys `[key1, key2, key3]`, istio would compare the label values of client with endpoints.
                                   Suppose there are total N label keys `[key1, key2, key3, ...keyN]` specified:
-
 
                                   1. Endpoints matching all N labels with the client proxy have priority P(0) i.e. the highest priority.
                                   2. Endpoints matching the first N-1 labels with the client proxy have priority P(1) i.e. second highest priority.
                                   3. By extension of this logic, endpoints matching only the first label with the client proxy has priority P(N-1) i.e. second lowest priority.
                                   4. All the other endpoints have priority P(N) i.e. lowest priority.
 
-
                                 - Specify labels with key and value `[key1=value1, key2=value2, key3=value3]`, istio would compare the labels with endpoints.
                                   Suppose there are total N labels `[key1=value1, key2=value2, key3=value3, ...keyN=valueN]` specified:
-
 
                                   1. Endpoints matching all N labels have priority P(0) i.e. the highest priority.
                                   2. Endpoints matching the first N-1 labels have priority P(1) i.e. second highest priority.
                                   3. By extension of this logic, endpoints matching only the first label has priority P(N-1) i.e. second lowest priority.
                                   4. All the other endpoints have priority P(N) i.e. lowest priority.
 
-
                               Note: For a label to be considered for match, the previous labels must match, i.e. nth label would be considered matched only if first n-1 labels match.
-
 
                               It can be any label specified on both client and server workloads.
                               The following labels which have special semantic meaning are also supported:
-
 
                                 - `topology.istio.io/network` is used to match the network metadata of an endpoint, which can be specified by pod/namespace label `topology.istio.io/network`, sidecar env `ISTIO_META_NETWORK` or MeshNetworks.
                                 - `topology.istio.io/cluster` is used to match the clusterID of an endpoint, which can be specified by pod label `topology.istio.io/cluster` or pod env `ISTIO_META_CLUSTER_ID`.
@@ -4160,9 +4050,7 @@ spec:
                                 - `topology.istio.io/subzone` is used to match the subzone metadata of an endpoint, which maps to Istio node label `topology.istio.io/subzone`.
                                 - `kubernetes.io/hostname` is used to match the current node of an endpoint, which maps to Kubernetes node label `kubernetes.io/hostname`.
 
-
                               The below topology config indicates the following priority levels:
-
 
                               ```yaml
                               failoverPriority:
@@ -4172,26 +4060,22 @@ spec:
                               - "topology.istio.io/subzone"
                               ```
 
-
                               1. endpoints match same [network, region, zone, subzone] label with the client proxy have the highest priority.
                               2. endpoints have same [network, region, zone] label but different [subzone] label with the client proxy have the second highest priority.
                               3. endpoints have same [network, region] label but different [zone] label with the client proxy have the third highest priority.
                               4. endpoints have same [network] but different [region] labels with the client proxy have the fourth highest priority.
                               5. all the other endpoints have the same lowest priority.
 
-
                               Suppose a service associated endpoints reside in multi clusters, the below example represents:
                               1. endpoints in `clusterA` and has `version=v1` label have P(0) priority.
                               2. endpoints not in `clusterA` but has `version=v1` label have P(1) priority.
                               2. all the other endpoints have P(2) priority.
-
 
                               ```yaml
                               failoverPriority:
                               - "version=v1"
                               - "topology.istio.io/cluster=clusterA"
                               ```
-
 
                               Optional: only one of distribute, failover or failoverPriority can be set.
                               And it should be used together with `OutlierDetection` to detect unhealthy endpoints, otherwise has no effect.
@@ -4203,11 +4087,11 @@ spec:
                         description: "The below configuration parameters can be used
                           to specify TLSConfig for mesh traffic.\nFor example, a user
                           could enable min TLS version for ISTIO_MUTUAL traffic and
-                          specify a curve for non ISTIO_MUTUAL traffic like below:\n```yaml\nmeshConfig:\n\n\n\tmeshMTLS:\n\t
+                          specify a curve for non ISTIO_MUTUAL traffic like below:\n```yaml\nmeshConfig:\n\n\tmeshMTLS:\n\t
                           \ minProtocolVersion: TLSV1_3\n\ttlsDefaults:\n\t  Note:
                           applicable only for non ISTIO_MUTUAL scenarios\n\t  ecdhCurves:\n\t
-                          \   - P-256\n\t    - P-512\n\n\n```\nConfiguration of mTLS
-                          for traffic between workloads with ISTIO_MUTUAL TLS traffic.\n\n\nNote:
+                          \   - P-256\n\t    - P-512\n\n```\nConfiguration of mTLS
+                          for traffic between workloads with ISTIO_MUTUAL TLS traffic.\n\nNote:
                           Mesh mTLS does not respect ECDH curves."
                         properties:
                           cipherSuites:
@@ -4254,9 +4138,7 @@ spec:
                           By default, Istio emits statistics with the pattern `outbound|<port>|<subsetname>|<service-FQDN>`.
                           For example `outbound|8080|v2|reviews.prod.svc.cluster.local`. This can be used to override that pattern.
 
-
                           A Pattern can be composed of various pre-defined variables. The following variables are supported.
-
 
                           - `%SERVICE%` - Will be substituted with short hostname of the service.
                           - `%SERVICE_NAME%` - Will be substituted with name of the service.
@@ -4265,9 +4147,7 @@ spec:
                           - `%SERVICE_PORT_NAME%` - Will be substituted with port name of the service.
                           - `%SUBSET_NAME%` - Will be substituted with subset.
 
-
                           Following are some examples of supported patterns for reviews:
-
 
                           - `%SERVICE_FQDN%_%SERVICE_PORT%` will use `reviews.prod.svc.cluster.local_7443` as the stats name.
                           - `%SERVICE%` will use reviews.prod as the stats name.
@@ -4277,10 +4157,8 @@ spec:
                           Set the default behavior of the sidecar for handling outbound
                           traffic from the application.
 
-
                           Can be overridden at a Sidecar level by setting the `OutboundTrafficPolicy` in the
                           [Sidecar API](https://istio.io/docs/reference/config/networking/sidecar/#OutboundTrafficPolicy).
-
 
                           Default mode is `ALLOW_ANY`, which means outbound traffic to unknown destinations will be allowed.
                         properties:
@@ -4322,7 +4200,6 @@ spec:
                           for the client to send the first bits of data. (MUST BE >=1ms or
                           0s to disable). Default detection timeout is 0s (no timeout).
 
-
                           Setting a timeout is not recommended nor safe. Even high timeouts (>5s) will be hit
                           occasionally, and when they occur the result is typically broken traffic that may not
                           recover on its own. Exceptionally high values might solve this, but injecting 60s delays
@@ -4353,7 +4230,6 @@ spec:
                           search in the root namespace. Any matching declaration found in the root
                           namespace is processed as if it were declared in the leaf namespace.
 
-
                           The precise semantics of this processing are documented on each resource
                           type.
                         type: string
@@ -4363,10 +4239,8 @@ spec:
                           description: |-
                             Settings to be applied to select services.
 
-
                             For example, the following configures all services in namespace "foo" as well as the
                             "bar" service in namespace "baz" to be considered cluster-local:
-
 
                             ```yaml
                             serviceSettings:
@@ -4376,14 +4250,12 @@ spec:
                               - "*.foo.svc.cluster.local"
                               - "bar.baz.svc.cluster.local"
 
-
                             ```
                           properties:
                             hosts:
                               description: |-
                                 The services to which the Settings should be applied. Services are selected using the hostname
                                 matching rules used by DestinationRule.
-
 
                                 For example: foo.bar.svc.cluster.local, *.baz.svc.cluster.local
                               items:
@@ -4400,9 +4272,7 @@ spec:
                                     mesh. This configuration option limits the set of service endpoints visible to a client
                                     to be cluster scoped.
 
-
                                     There are some common scenarios when this can be useful:
-
 
                                       - A service (or group of services) is inherently local to the cluster and has local storage
                                         for that cluster. For example, the kube-system namespace (e.g. the Kube API Server).
@@ -4410,7 +4280,6 @@ spec:
                                         having services cluster-local and then slowly transition them to mesh-wide. They could do
                                         this service-by-service (e.g. mysvc.myns.svc.cluster.local) or as a group
                                         (e.g. *.myns.svc.cluster.local).
-
 
                                     By default Istio will consider kubernetes.default.svc (i.e. the API Server) as well as all
                                     services in the kube-system namespace to be cluster-local, unless explicitly overridden here.
@@ -4510,16 +4379,13 @@ spec:
                           modes are used. This setting can be overridden at the host level via DestinationRule API.
                           By default, `VerifyCertificateAtClient` is `true`.
 
-
                           `CaCertificates`: If set, proxy verifies CA signature based on given CaCertificates. If unset,
                           and VerifyCertificateAtClient is true, proxy uses default System CA bundle. If unset and
                           `VerifyCertificateAtClient` is false, proxy will not verify the CA.
 
-
                           `SubjectAltNames`: If set, proxy verifies subject alt names are present in the SAN. If unset,
                           and `VerifyCertificateAtClient` is true, proxy uses host in destination rule to verify the SANs.
                           If unset, and `VerifyCertificateAtClient` is false, proxy does not verify SANs.
-
 
                           For SAN, client-side proxy will exact match host in `DestinationRule` as well as one level
                           wildcard if the specified host in DestinationRule doesn't contain a wildcard.
@@ -4528,7 +4394,6 @@ spec:
                           For wildcard host name in DestinationRule, client-side proxy will do a suffix match. For example,
                           if host is `*.x.y.com`, client-side proxy will verify the presented server certificate SAN matches
                           “.x.y.com` suffix.
-
 
                           Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
                         type: boolean
@@ -5612,7 +5477,6 @@ spec:
                         description: |-
                           Configuration settings passed to Pilot as a ConfigMap.
 
-
                           This controls whether the mesh config map, generated from values.yaml is generated.
                           If false, pilot wil use default values or user-supplied values, in that order of preference.
                         type: boolean
@@ -5620,16 +5484,13 @@ spec:
                         description: |-
                           Target CPU utilization used in HorizontalPodAutoscaler.
 
-
                           See https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
-
 
                           Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
                         properties:
                           targetAverageUtilization:
                             description: |-
                               K8s utilization setting for HorizontalPodAutoscaler target.
-
 
                               See https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
                             format: int32
@@ -5641,7 +5502,6 @@ spec:
                         description: |-
                           Labels that are added to Pilot deployment.
 
-
                           See https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
                         type: object
                       enabled:
@@ -5650,7 +5510,7 @@ spec:
                       env:
                         additionalProperties:
                           type: string
-                        description: "Environment variables passed to the Pilot container.\n\n\nExamples:\nenv:\n\n\n\tENV_VAR_1:
+                        description: "Environment variables passed to the Pilot container.\n\nExamples:\nenv:\n\n\tENV_VAR_1:
                           value1\n\tENV_VAR_2: value2"
                         type: object
                       extraContainerArgs:
@@ -5667,9 +5527,7 @@ spec:
                         description: |-
                           Image name used for Pilot.
 
-
                           This can be set either to image name if hub is also set, or can be set to the full hub:name string.
-
 
                           Examples: custom-pilot, docker.io/someuser:custom-pilot
                         type: string
@@ -5696,9 +5554,7 @@ spec:
                         description: |-
                           Maximum duration that a sidecar can be connected to a pilot.
 
-
                           This setting balances out load across pilot instances, but adds some resource overhead.
-
 
                           Examples: 300s, 30m, 1h
                         type: string
@@ -5706,16 +5562,13 @@ spec:
                         description: |-
                           Target memory utilization used in HorizontalPodAutoscaler.
 
-
                           See https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
-
 
                           Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
                         properties:
                           targetAverageUtilization:
                             description: |-
                               K8s utilization setting for HorizontalPodAutoscaler target.
-
 
                               See https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
                             format: int32
@@ -5727,9 +5580,7 @@ spec:
                         description: |-
                           K8s node selector.
 
-
                           See https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
-
 
                           Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
                         type: object
@@ -5739,9 +5590,7 @@ spec:
                         description: |-
                           K8s annotations for pods.
 
-
                           See: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
-
 
                           Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
                         type: object
@@ -5751,13 +5600,11 @@ spec:
                         description: |-
                           Labels that are added to Pilot pods.
 
-
                           See https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
                         type: object
                       replicaCount:
                         description: |-
                           Number of replicas in the Pilot Deployment.
-
 
                           Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
                         format: int32
@@ -5766,9 +5613,7 @@ spec:
                         description: |-
                           K8s resources settings.
 
-
                           See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
-
 
                           Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
                         properties:
@@ -5777,10 +5622,8 @@ spec:
                               Claims lists the names of resources, defined in spec.resourceClaims,
                               that are used by this container.
 
-
                               This is an alpha field and requires enabling the
                               DynamicResourceAllocation feature gate.
-
 
                               This field is immutable. It can only be set for containers.
                             items:
@@ -5831,7 +5674,6 @@ spec:
                         description: |-
                           K8s rolling update strategy
 
-
                           Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
                         x-kubernetes-int-or-string: true
                       rollingMaxUnavailable:
@@ -5845,13 +5687,11 @@ spec:
                           May be specified as a number of pods or as a percent of the total number
                           of pods at the start of the update.
 
-
                           Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
                         x-kubernetes-int-or-string: true
                       seccompProfile:
                         description: |-
                           The seccompProfile for the Pilot container.
-
 
                           See: https://kubernetes.io/docs/tutorials/security/seccomp/
                         properties:
@@ -5866,7 +5706,6 @@ spec:
                             description: |-
                               type indicates which kind of seccomp profile will be applied.
                               Valid options are:
-
 
                               Localhost - a profile defined in a file on the node should be used.
                               RuntimeDefault - the container runtime default profile should be used.
@@ -5885,7 +5724,6 @@ spec:
                           type: string
                         description: |-
                           K8s annotations for the Service.
-
 
                           See: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
                         type: object
@@ -5911,7 +5749,6 @@ spec:
                           The node tolerations to be applied to the Pilot deployment so that it can be
                           scheduled to particular nodes with matching taints.
                           More info: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#scheduling
-
 
                           Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
                         items:
@@ -6018,7 +5855,6 @@ spec:
                                 Keys that don't exist in the incoming pod labels will
                                 be ignored. A null or empty list means only match against labelSelector.
 
-
                                 This is a beta field and requires the MatchLabelKeysInPodTopologySpread feature gate to be enabled (enabled by default).
                               items:
                                 type: string
@@ -6058,7 +5894,6 @@ spec:
                                 Valid values are integers greater than 0.
                                 When value is not nil, WhenUnsatisfiable must be DoNotSchedule.
 
-
                                 For example, in a 3-zone cluster, MaxSkew is set to 2, MinDomains is set to 5 and pods with the same
                                 labelSelector spread as 2/2/2:
                                 | zone1 | zone2 | zone3 |
@@ -6076,7 +5911,6 @@ spec:
                                 - Honor: only nodes matching nodeAffinity/nodeSelector are included in the calculations.
                                 - Ignore: nodeAffinity/nodeSelector are ignored. All nodes are included in the calculations.
 
-
                                 If this value is nil, the behavior is equivalent to the Honor policy.
                                 This is a beta-level feature default enabled by the NodeInclusionPolicyInPodTopologySpread feature flag.
                               type: string
@@ -6087,7 +5921,6 @@ spec:
                                 - Honor: nodes without taints, along with tainted nodes for which the incoming pod
                                 has a toleration, are included.
                                 - Ignore: node taints are ignored. All nodes are included.
-
 
                                 If this value is nil, the behavior is equivalent to the Ignore policy.
                                 This is a beta-level feature default enabled by the NodeInclusionPolicyInPodTopologySpread feature flag.
@@ -6136,9 +5969,7 @@ spec:
                         description: |-
                           Trace sampling fraction.
 
-
                           Used to set the fraction of time that traces are sampled. Higher values are more accurate but add CPU overhead.
-
 
                           Allowed values: 0.0 to 1.0
                         type: number
@@ -6185,9 +6016,7 @@ spec:
                                 RecursiveReadOnly specifies whether read-only mounts should be handled
                                 recursively.
 
-
                                 If ReadOnly is false, this field has no meaning and must be unspecified.
-
 
                                 If ReadOnly is true, and this field is set to Disabled, the mount is not made
                                 recursively read-only.  If this field is set to IfPossible, the mount is made
@@ -6196,10 +6025,8 @@ spec:
                                 supported by the container runtime, otherwise the pod will not be started and
                                 an error will be generated to indicate the reason.
 
-
                                 If this field is set to IfPossible or Enabled, MountPropagation must be set to
                                 None (or be unspecified, which defaults to None).
-
 
                                 If this field is not specified, it is treated as an equivalent of Disabled.
                               type: string
@@ -6238,7 +6065,6 @@ spec:
                                     Tip: Ensure that the filesystem type is supported by the host operating system.
                                     Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
                                     More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
-                                    TODO: how do we prevent errors in the filesystem from compromising the machine
                                   type: string
                                 partition:
                                   description: |-
@@ -6359,9 +6185,7 @@ spec:
                                         This field is effectively required, but due to backwards compatibility is
                                         allowed to be empty. Instances of this type with an empty value here are
                                         almost certainly wrong.
-                                        TODO: Add other useful fields. apiVersion, kind, uid?
                                         More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                        TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                       type: string
                                   type: object
                                   x-kubernetes-map-type: atomic
@@ -6403,9 +6227,7 @@ spec:
                                         This field is effectively required, but due to backwards compatibility is
                                         allowed to be empty. Instances of this type with an empty value here are
                                         almost certainly wrong.
-                                        TODO: Add other useful fields. apiVersion, kind, uid?
                                         More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                        TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                       type: string
                                   type: object
                                   x-kubernetes-map-type: atomic
@@ -6478,9 +6300,7 @@ spec:
                                     This field is effectively required, but due to backwards compatibility is
                                     allowed to be empty. Instances of this type with an empty value here are
                                     almost certainly wrong.
-                                    TODO: Add other useful fields. apiVersion, kind, uid?
                                     More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                    TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                   type: string
                                 optional:
                                   description: optional specify whether the ConfigMap
@@ -6519,9 +6339,7 @@ spec:
                                         This field is effectively required, but due to backwards compatibility is
                                         allowed to be empty. Instances of this type with an empty value here are
                                         almost certainly wrong.
-                                        TODO: Add other useful fields. apiVersion, kind, uid?
                                         More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                        TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                       type: string
                                   type: object
                                   x-kubernetes-map-type: atomic
@@ -6662,7 +6480,6 @@ spec:
                                 The volume's lifecycle is tied to the pod that defines it - it will be created before the pod starts,
                                 and deleted when the pod is removed.
 
-
                                 Use this if:
                                 a) the volume is only needed while the pod runs,
                                 b) features of normal volumes like restoring from snapshot or capacity
@@ -6673,16 +6490,13 @@ spec:
                                    information on the connection between this volume type
                                    and PersistentVolumeClaim).
 
-
                                 Use PersistentVolumeClaim or one of the vendor-specific
                                 APIs for volumes that persist for longer than the lifecycle
                                 of an individual pod.
 
-
                                 Use CSI for light-weight local ephemeral volumes if the CSI driver is meant to
                                 be used that way - see the documentation of the driver for
                                 more information.
-
 
                                 A pod can use both types of ephemeral volumes and
                                 persistent volumes at the same time.
@@ -6697,7 +6511,6 @@ spec:
                                     entry. Pod validation will reject the pod if the concatenated name
                                     is not valid for a PVC (for example, too long).
 
-
                                     An existing PVC with that name that is not owned by the pod
                                     will *not* be used for the pod to avoid using an unrelated
                                     volume by mistake. Starting the pod is then blocked until
@@ -6707,10 +6520,8 @@ spec:
                                     this should not be necessary, but it may be useful when
                                     manually reconstructing a broken cluster.
 
-
                                     This field is read-only and no changes will be made by Kubernetes
                                     to the PVC after it has been created.
-
 
                                     Required, must not be nil.
                                   properties:
@@ -6941,7 +6752,6 @@ spec:
                                     fsType is the filesystem type to mount.
                                     Must be a filesystem type supported by the host operating system.
                                     Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
-                                    TODO: how do we prevent errors in the filesystem from compromising the machine
                                   type: string
                                 lun:
                                   description: 'lun is Optional: FC target lun number'
@@ -7009,9 +6819,7 @@ spec:
                                         This field is effectively required, but due to backwards compatibility is
                                         allowed to be empty. Instances of this type with an empty value here are
                                         almost certainly wrong.
-                                        TODO: Add other useful fields. apiVersion, kind, uid?
                                         More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                        TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                       type: string
                                   type: object
                                   x-kubernetes-map-type: atomic
@@ -7045,7 +6853,6 @@ spec:
                                     Tip: Ensure that the filesystem type is supported by the host operating system.
                                     Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
                                     More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
-                                    TODO: how do we prevent errors in the filesystem from compromising the machine
                                   type: string
                                 partition:
                                   description: |-
@@ -7126,9 +6933,6 @@ spec:
                                 used for system agents or other privileged things that are allowed
                                 to see the host machine. Most containers will NOT need this.
                                 More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
-                                ---
-                                TODO(jonesdl) We need to restrict who can use host directory mounts and who can/can not
-                                mount host directories as read/write.
                               properties:
                                 path:
                                   description: |-
@@ -7165,7 +6969,6 @@ spec:
                                     Tip: Ensure that the filesystem type is supported by the host operating system.
                                     Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
                                     More info: https://kubernetes.io/docs/concepts/storage/volumes#iscsi
-                                    TODO: how do we prevent errors in the filesystem from compromising the machine
                                   type: string
                                 initiatorName:
                                   description: |-
@@ -7209,9 +7012,7 @@ spec:
                                         This field is effectively required, but due to backwards compatibility is
                                         allowed to be empty. Instances of this type with an empty value here are
                                         almost certainly wrong.
-                                        TODO: Add other useful fields. apiVersion, kind, uid?
                                         More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                        TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                       type: string
                                   type: object
                                   x-kubernetes-map-type: atomic
@@ -7340,13 +7141,10 @@ spec:
                                           ClusterTrustBundle allows a pod to access the `.spec.trustBundle` field
                                           of ClusterTrustBundle objects in an auto-updating file.
 
-
                                           Alpha, gated by the ClusterTrustBundleProjection feature gate.
-
 
                                           ClusterTrustBundle objects can either be selected by name, or by the
                                           combination of signer name and a label selector.
-
 
                                           Kubelet performs aggressive normalization of the PEM contents written
                                           into the pod filesystem.  Esoteric PEM features such as inter-block
@@ -7482,9 +7280,7 @@ spec:
                                               This field is effectively required, but due to backwards compatibility is
                                               allowed to be empty. Instances of this type with an empty value here are
                                               almost certainly wrong.
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                             type: string
                                           optional:
                                             description: optional specify whether
@@ -7626,9 +7422,7 @@ spec:
                                               This field is effectively required, but due to backwards compatibility is
                                               allowed to be empty. Instances of this type with an empty value here are
                                               almost certainly wrong.
-                                              TODO: Add other useful fields. apiVersion, kind, uid?
                                               More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                              TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                             type: string
                                           optional:
                                             description: optional field specify whether
@@ -7718,7 +7512,6 @@ spec:
                                     Tip: Ensure that the filesystem type is supported by the host operating system.
                                     Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
                                     More info: https://kubernetes.io/docs/concepts/storage/volumes#rbd
-                                    TODO: how do we prevent errors in the filesystem from compromising the machine
                                   type: string
                                 image:
                                   description: |-
@@ -7765,9 +7558,7 @@ spec:
                                         This field is effectively required, but due to backwards compatibility is
                                         allowed to be empty. Instances of this type with an empty value here are
                                         almost certainly wrong.
-                                        TODO: Add other useful fields. apiVersion, kind, uid?
                                         More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                        TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                       type: string
                                   type: object
                                   x-kubernetes-map-type: atomic
@@ -7817,9 +7608,7 @@ spec:
                                         This field is effectively required, but due to backwards compatibility is
                                         allowed to be empty. Instances of this type with an empty value here are
                                         almost certainly wrong.
-                                        TODO: Add other useful fields. apiVersion, kind, uid?
                                         More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                        TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                       type: string
                                   type: object
                                   x-kubernetes-map-type: atomic
@@ -7942,9 +7731,7 @@ spec:
                                         This field is effectively required, but due to backwards compatibility is
                                         allowed to be empty. Instances of this type with an empty value here are
                                         almost certainly wrong.
-                                        TODO: Add other useful fields. apiVersion, kind, uid?
                                         More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                        TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                       type: string
                                   type: object
                                   x-kubernetes-map-type: atomic
@@ -8088,7 +7875,6 @@ spec:
                         description: |-
                           Instructs Istio to not inject the sidecar on those pods, based on labels that are present in those pods.
 
-
                           Annotations in the pods have higher precedence than the label selectors.
                           Order of evaluation: Pod Annotations → NeverInjectSelector → AlwaysInjectSelector → Default Policy.
                           See https://istio.io/docs/setup/kubernetes/additional-setup/sidecar-injection/#more-control-adding-exceptions
@@ -8157,8 +7943,8 @@ spec:
                         additionalProperties:
                           type: string
                         description: "Templates defines a set of custom injection
-                          templates that can be used. For example, defining:\n\n\ntemplates:\n\n\n\thello:
-                          |\n\t  metadata:\n\t    labels:\n\t      hello: world\n\n\nThen
+                          templates that can be used. For example, defining:\n\ntemplates:\n\n\thello:
+                          |\n\t  metadata:\n\t    labels:\n\t      hello: world\n\nThen
                           starting a pod with the `inject.istio.io/templates: hello`
                           annotation, will result in the pod\nbeing injected with
                           the hello=world labels.\nThis is intended for advanced configuration
@@ -8196,18 +7982,14 @@ spec:
                     type: object
                 type: object
               version:
-                default: v1.22.3
+                default: v1.23.0
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.22.3, v1.22.1, v1.22.0, v1.21.5, v1.21.3, v1.21.2, v1.21.0, latest.
+                  Must be one of: v1.23.0, v1.22.3, v1.21.5, latest.
                 enum:
+                - v1.23.0
                 - v1.22.3
-                - v1.22.1
-                - v1.22.0
                 - v1.21.5
-                - v1.21.3
-                - v1.21.2
-                - v1.21.0
                 - latest
                 type: string
             required:

@@ -16,7 +16,7 @@ metadata:
               "inactiveRevisionDeletionGracePeriodSeconds": 30,
               "type": "InPlace"
             },
-            "version": "v1.22.3"
+            "version": "v1.23.0"
           }
         },
         {
@@ -27,14 +27,14 @@ metadata:
           },
           "spec": {
             "namespace": "istio-cni",
-            "version": "v1.22.3"
+            "version": "v1.23.0"
           }
         }
       ]
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/maistra-dev/sail-operator:0.1-latest
-    createdAt: "2024-08-13T14:52:40Z"
+    createdAt: "2024-08-15T08:32:34Z"
     description: Experimental operator for installing Istio service mesh
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -160,18 +160,14 @@ spec:
       specDescriptors:
       - description: |-
           Defines the version of Istio to install.
-          Must be one of: v1.22.3, v1.22.1, v1.22.0, v1.21.5, v1.21.3, v1.21.2, v1.21.0, latest.
+          Must be one of: v1.23.0, v1.22.3, v1.21.5, latest.
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.23.0
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.3
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.1
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.0
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.5
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.3
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.2
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.0
         - urn:alm:descriptor:com.tectonic.ui:select:latest
       - description: Namespace to which the Istio CNI component should be installed.
         displayName: Namespace
@@ -202,18 +198,14 @@ spec:
       specDescriptors:
       - description: |-
           Defines the version of Istio to install.
-          Must be one of: v1.22.3, v1.22.1, v1.22.0, v1.21.5, v1.21.3, v1.21.2, v1.21.0, latest.
+          Must be one of: v1.23.0, v1.22.3, v1.21.5, latest.
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.23.0
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.3
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.1
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.0
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.5
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.3
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.2
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.0
         - urn:alm:descriptor:com.tectonic.ui:select:latest
       - description: Namespace to which the Istio components should be installed.
         displayName: Namespace
@@ -252,18 +244,14 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:select:RevisionBased
       - description: |-
           Defines the version of Istio to install.
-          Must be one of: v1.22.3, v1.22.1, v1.22.0, v1.21.5, v1.21.3, v1.21.2, v1.21.0, latest.
+          Must be one of: v1.23.0, v1.22.3, v1.21.5, latest.
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.23.0
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.3
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.1
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.0
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.5
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.3
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.2
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.0
         - urn:alm:descriptor:com.tectonic.ui:select:latest
       - description: |-
           Defines how many seconds the operator should wait before removing a non-active revision after all
@@ -328,18 +316,14 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:select:RevisionBased
       - description: |-
           Defines the version of Istio to install.
-          Must be one of: v1.22.3, v1.22.1, v1.22.0, v1.21.5, v1.21.3, v1.21.2, v1.21.0, latest.
+          Must be one of: v1.23.0, v1.22.3, v1.21.5, latest.
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.23.0
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.3
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.1
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.0
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.5
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.3
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.2
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.0
         - urn:alm:descriptor:com.tectonic.ui:select:latest
       - description: |-
           Defines how many seconds the operator should wait before removing a non-active revision after all
@@ -387,14 +371,10 @@ spec:
 
     This version of the operator supports the following Istio versions:
 
+    - v1.23.0
     - v1.22.3
-    - v1.22.1
-    - v1.22.0
     - v1.21.5
-    - v1.21.3
-    - v1.21.2
-    - v1.21.0
-    - latest (52c90974)
+    - latest (68cb6773)
 
     [See this page](https://github.com/istio-ecosystem/sail-operator/blob/main/bundle/README.md) for instructions on how to use it.
   displayName: Sail Operator
@@ -619,38 +599,22 @@ spec:
             metadata:
               annotations:
                 kubectl.kubernetes.io/default-container: manager
-                olm.relatedImage.latest.cni: gcr.io/istio-testing/install-cni:latest
-                olm.relatedImage.latest.pilot: gcr.io/istio-testing/pilot:latest
-                olm.relatedImage.latest.proxy: gcr.io/istio-testing/proxyv2:latest
-                olm.relatedImage.latest.ztunnel: gcr.io/istio-testing/ztunnel:latest
-                olm.relatedImage.v1_21_0.cni: docker.io/istio/install-cni:1.21.0
-                olm.relatedImage.v1_21_0.pilot: docker.io/istio/pilot:1.21.0
-                olm.relatedImage.v1_21_0.proxy: docker.io/istio/proxyv2:1.21.0
-                olm.relatedImage.v1_21_0.ztunnel: docker.io/istio/ztunnel:1.21.0
-                olm.relatedImage.v1_21_2.cni: docker.io/istio/install-cni:1.21.2
-                olm.relatedImage.v1_21_2.pilot: docker.io/istio/pilot:1.21.2
-                olm.relatedImage.v1_21_2.proxy: docker.io/istio/proxyv2:1.21.2
-                olm.relatedImage.v1_21_2.ztunnel: docker.io/istio/ztunnel:1.21.2
-                olm.relatedImage.v1_21_3.cni: docker.io/istio/install-cni:1.21.3
-                olm.relatedImage.v1_21_3.pilot: docker.io/istio/pilot:1.21.3
-                olm.relatedImage.v1_21_3.proxy: docker.io/istio/proxyv2:1.21.3
-                olm.relatedImage.v1_21_3.ztunnel: docker.io/istio/ztunnel:1.21.3
+                olm.relatedImage.latest.cni: gcr.io/istio-testing/install-cni:1.24-alpha.68cb67731f1f6cd29e38c22e38ef0b7d48512fcd
+                olm.relatedImage.latest.pilot: gcr.io/istio-testing/pilot:1.24-alpha.68cb67731f1f6cd29e38c22e38ef0b7d48512fcd
+                olm.relatedImage.latest.proxy: gcr.io/istio-testing/pilot:1.24-alpha.68cb67731f1f6cd29e38c22e38ef0b7d48512fcd
+                olm.relatedImage.latest.ztunnel: gcr.io/istio-testing/ztunnel:1.24-alpha.68cb67731f1f6cd29e38c22e38ef0b7d48512fcd
                 olm.relatedImage.v1_21_5.cni: docker.io/istio/install-cni:1.21.5
                 olm.relatedImage.v1_21_5.pilot: docker.io/istio/pilot:1.21.5
                 olm.relatedImage.v1_21_5.proxy: docker.io/istio/proxyv2:1.21.5
                 olm.relatedImage.v1_21_5.ztunnel: docker.io/istio/ztunnel:1.21.5
-                olm.relatedImage.v1_22_0.cni: docker.io/istio/install-cni:1.22.0
-                olm.relatedImage.v1_22_0.pilot: docker.io/istio/pilot:1.22.0
-                olm.relatedImage.v1_22_0.proxy: docker.io/istio/proxyv2:1.22.0
-                olm.relatedImage.v1_22_0.ztunnel: docker.io/istio/ztunnel:1.22.0
-                olm.relatedImage.v1_22_1.cni: docker.io/istio/install-cni:1.22.1
-                olm.relatedImage.v1_22_1.pilot: docker.io/istio/pilot:1.22.1
-                olm.relatedImage.v1_22_1.proxy: docker.io/istio/proxyv2:1.22.1
-                olm.relatedImage.v1_22_1.ztunnel: docker.io/istio/ztunnel:1.22.1
                 olm.relatedImage.v1_22_3.cni: docker.io/istio/install-cni:1.22.3
                 olm.relatedImage.v1_22_3.pilot: docker.io/istio/pilot:1.22.3
                 olm.relatedImage.v1_22_3.proxy: docker.io/istio/proxyv2:1.22.3
                 olm.relatedImage.v1_22_3.ztunnel: docker.io/istio/ztunnel:1.22.3
+                olm.relatedImage.v1_23_0.cni: docker.io/istio/install-cni:1.23.0
+                olm.relatedImage.v1_23_0.pilot: docker.io/istio/pilot:1.23.0
+                olm.relatedImage.v1_23_0.proxy: docker.io/istio/proxyv2:1.23.0
+                olm.relatedImage.v1_23_0.ztunnel: docker.io/istio/ztunnel:1.23.0
               labels:
                 app.kubernetes.io/created-by: sailoperator
                 app.kubernetes.io/part-of: sailoperator
@@ -803,38 +767,14 @@ spec:
   provider:
     name: Red Hat, Inc.
   relatedImages:
-  - image: gcr.io/istio-testing/install-cni:latest
+  - image: gcr.io/istio-testing/install-cni:1.24-alpha.68cb67731f1f6cd29e38c22e38ef0b7d48512fcd
     name: latest.cni
-  - image: gcr.io/istio-testing/pilot:latest
+  - image: gcr.io/istio-testing/pilot:1.24-alpha.68cb67731f1f6cd29e38c22e38ef0b7d48512fcd
     name: latest.pilot
-  - image: gcr.io/istio-testing/proxyv2:latest
+  - image: gcr.io/istio-testing/pilot:1.24-alpha.68cb67731f1f6cd29e38c22e38ef0b7d48512fcd
     name: latest.proxy
-  - image: gcr.io/istio-testing/ztunnel:latest
+  - image: gcr.io/istio-testing/ztunnel:1.24-alpha.68cb67731f1f6cd29e38c22e38ef0b7d48512fcd
     name: latest.ztunnel
-  - image: docker.io/istio/install-cni:1.21.0
-    name: v1_21_0.cni
-  - image: docker.io/istio/pilot:1.21.0
-    name: v1_21_0.pilot
-  - image: docker.io/istio/proxyv2:1.21.0
-    name: v1_21_0.proxy
-  - image: docker.io/istio/ztunnel:1.21.0
-    name: v1_21_0.ztunnel
-  - image: docker.io/istio/install-cni:1.21.2
-    name: v1_21_2.cni
-  - image: docker.io/istio/pilot:1.21.2
-    name: v1_21_2.pilot
-  - image: docker.io/istio/proxyv2:1.21.2
-    name: v1_21_2.proxy
-  - image: docker.io/istio/ztunnel:1.21.2
-    name: v1_21_2.ztunnel
-  - image: docker.io/istio/install-cni:1.21.3
-    name: v1_21_3.cni
-  - image: docker.io/istio/pilot:1.21.3
-    name: v1_21_3.pilot
-  - image: docker.io/istio/proxyv2:1.21.3
-    name: v1_21_3.proxy
-  - image: docker.io/istio/ztunnel:1.21.3
-    name: v1_21_3.ztunnel
   - image: docker.io/istio/install-cni:1.21.5
     name: v1_21_5.cni
   - image: docker.io/istio/pilot:1.21.5
@@ -843,22 +783,6 @@ spec:
     name: v1_21_5.proxy
   - image: docker.io/istio/ztunnel:1.21.5
     name: v1_21_5.ztunnel
-  - image: docker.io/istio/install-cni:1.22.0
-    name: v1_22_0.cni
-  - image: docker.io/istio/pilot:1.22.0
-    name: v1_22_0.pilot
-  - image: docker.io/istio/proxyv2:1.22.0
-    name: v1_22_0.proxy
-  - image: docker.io/istio/ztunnel:1.22.0
-    name: v1_22_0.ztunnel
-  - image: docker.io/istio/install-cni:1.22.1
-    name: v1_22_1.cni
-  - image: docker.io/istio/pilot:1.22.1
-    name: v1_22_1.pilot
-  - image: docker.io/istio/proxyv2:1.22.1
-    name: v1_22_1.proxy
-  - image: docker.io/istio/ztunnel:1.22.1
-    name: v1_22_1.ztunnel
   - image: docker.io/istio/install-cni:1.22.3
     name: v1_22_3.cni
   - image: docker.io/istio/pilot:1.22.3
@@ -867,4 +791,12 @@ spec:
     name: v1_22_3.proxy
   - image: docker.io/istio/ztunnel:1.22.3
     name: v1_22_3.ztunnel
+  - image: docker.io/istio/install-cni:1.23.0
+    name: v1_23_0.cni
+  - image: docker.io/istio/pilot:1.23.0
+    name: v1_23_0.pilot
+  - image: docker.io/istio/proxyv2:1.23.0
+    name: v1_23_0.proxy
+  - image: docker.io/istio/ztunnel:1.23.0
+    name: v1_23_0.ztunnel
   version: 0.1.0
