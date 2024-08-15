@@ -2,7 +2,7 @@
 # This file is used to track the info used to scaffold your project
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
-domain: operator.istio.io
+domain: sailoperator.io
 layout:
 - go.kubebuilder.io/v4
 plugins:
@@ -15,7 +15,7 @@ resources:
     crdVersion: v1
     namespaced: false
   controller: true
-  domain: operator.istio.io
+  domain: sailoperator.io
   kind: Istio
   path: github.com/istio-ecosystem/sail-operator/api/v1alpha1
   version: v1alpha1
@@ -23,7 +23,7 @@ resources:
     crdVersion: v1
     namespaced: false
   controller: true
-  domain: operator.istio.io
+  domain: sailoperator.io
   kind: RemoteIstio
   path: github.com/istio-ecosystem/sail-operator/api/v1alpha1
   version: v1alpha1
@@ -31,7 +31,7 @@ resources:
     crdVersion: v1
     namespaced: false
   controller: true
-  domain: operator.istio.io
+  domain: sailoperator.io
   kind: IstioRevision
   path: github.com/istio-ecosystem/sail-operator/api/v1alpha1
   version: v1alpha1
@@ -39,7 +39,7 @@ resources:
     crdVersion: v1
     namespaced: false
   controller: true
-  domain: operator.istio.io
+  domain: sailoperator.io
   kind: IstioCNI
   path: github.com/istio-ecosystem/sail-operator/api/v1alpha1
   version: v1alpha1

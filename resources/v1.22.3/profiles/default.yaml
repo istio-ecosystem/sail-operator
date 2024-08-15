@@ -1,4 +1,4 @@
-apiVersion: operator.istio.io/v1alpha1
+apiVersion: sailoperator.io/v1alpha1
 kind: Istio
 spec:
   # Most default values come from the helm chart's values.yaml

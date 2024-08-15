@@ -21,7 +21,7 @@ VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"versions.yaml"}
 
 : "${YQ:=yq}"
 : "${API_VERSION:=v1alpha1}"
-: "${CRD_FILE:=${CUR_DIR}/../chart/crds/operator.istio.io_istios.yaml}"
+: "${CRD_FILE:=${CUR_DIR}/../chart/crds/sailoperator.io_istios.yaml}"
 
 values_yaml_path=".spec.versions.[] | select(.name == \"${API_VERSION}\") | .schema.openAPIV3Schema.properties.spec.properties.values"
 

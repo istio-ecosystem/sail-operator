@@ -40,8 +40,8 @@ var sailCRDs = []string{
 	"destinationrules.networking.istio.io",
 	"envoyfilters.networking.istio.io",
 	"gateways.networking.istio.io",
-	"istiorevisions.operator.istio.io",
-	"istios.operator.istio.io",
+	"istiorevisions.sailoperator.io",
+	"istios.sailoperator.io",
 	"peerauthentications.security.istio.io",
 	"proxyconfigs.networking.istio.io",
 	"requestauthentications.security.istio.io",
@@ -92,7 +92,7 @@ var _ = Describe("Operator", Ordered, func() {
 
 		Specify("istio crd is present", func(ctx SpecContext) {
 			// When the operator runs in OCP cluster, the CRD is created but not available at the moment
-			Eventually(cl.Get).WithArguments(ctx, kube.Key("istios.operator.istio.io"), &apiextensionsv1.CustomResourceDefinition{}).
+			Eventually(cl.Get).WithArguments(ctx, kube.Key("istios.sailoperator.io"), &apiextensionsv1.CustomResourceDefinition{}).
 				Should(Succeed(), "Error getting Istio CRD")
 			Success("Istio CRD is present")
 		})
