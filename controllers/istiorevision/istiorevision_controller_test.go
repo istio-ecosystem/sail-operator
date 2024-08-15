@@ -468,7 +468,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 				Type:    v1alpha1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1alpha1.IstioRevisionReasonRemoteIstiodNotReady,
-				Message: "invalid or missing annotation operator.istio.io/readinessProbe.status on MutatingWebhookConfiguration istio-sidecar-injector",
+				Message: "invalid or missing annotation sailoperator.io/readinessProbe.status on MutatingWebhookConfiguration istio-sidecar-injector",
 			},
 		},
 		{

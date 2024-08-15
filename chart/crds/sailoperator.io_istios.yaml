@@ -1,12 +1,12 @@
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.0
-  creationTimestamp: null
-  name: istios.operator.istio.io
+  name: istios.sailoperator.io
 spec:
-  group: operator.istio.io
+  group: sailoperator.io
   names:
     categories:
     - istio-io
@@ -8068,9 +8068,3 @@ spec:
     storage: true
     subresources:
       status: {}
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: null
-  storedVersions: null
