@@ -16,7 +16,7 @@ metadata:
               "inactiveRevisionDeletionGracePeriodSeconds": 30,
               "type": "InPlace"
             },
-            "version": "v1.23.0-rc.1"
+            "version": "v1.23.0"
           }
         },
         {
@@ -27,14 +27,14 @@ metadata:
           },
           "spec": {
             "namespace": "istio-cni",
-            "version": "v1.23.0-rc.1"
+            "version": "v1.23.0"
           }
         }
       ]
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/maistra-dev/sail-operator:3.0.0-tp-latest
-    createdAt: "2024-08-14T18:06:41Z"
+    createdAt: "2024-08-15T09:07:01Z"
     description: The OpenShift Service Mesh Operator enables you to install, configure,
       and manage an instance of Red Hat OpenShift Service Mesh. OpenShift Service
       Mesh is based on the open source Istio project.
@@ -164,12 +164,12 @@ spec:
       specDescriptors:
       - description: |-
           Defines the version of Istio to install.
-          Must be one of: v1.23.0-rc.1, v1.22.3, v1.21.5, latest.
+          Must be one of: v1.23.0, v1.22.3, v1.21.5, latest.
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.23.0-rc.1
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.23.0
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.3
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.5
         - urn:alm:descriptor:com.tectonic.ui:select:latest
@@ -202,12 +202,12 @@ spec:
       specDescriptors:
       - description: |-
           Defines the version of Istio to install.
-          Must be one of: v1.23.0-rc.1, v1.22.3, v1.21.5, latest.
+          Must be one of: v1.23.0, v1.22.3, v1.21.5, latest.
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.23.0-rc.1
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.23.0
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.3
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.5
         - urn:alm:descriptor:com.tectonic.ui:select:latest
@@ -248,12 +248,12 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:select:RevisionBased
       - description: |-
           Defines the version of Istio to install.
-          Must be one of: v1.23.0-rc.1, v1.22.3, v1.21.5, latest.
+          Must be one of: v1.23.0, v1.22.3, v1.21.5, latest.
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.23.0-rc.1
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.23.0
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.3
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.5
         - urn:alm:descriptor:com.tectonic.ui:select:latest
@@ -320,12 +320,12 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:select:RevisionBased
       - description: |-
           Defines the version of Istio to install.
-          Must be one of: v1.23.0-rc.1, v1.22.3, v1.21.5, latest.
+          Must be one of: v1.23.0, v1.22.3, v1.21.5, latest.
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.23.0-rc.1
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.23.0
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.3
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.5
         - urn:alm:descriptor:com.tectonic.ui:select:latest
