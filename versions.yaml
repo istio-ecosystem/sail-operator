@@ -45,10 +45,11 @@ versions:
     version: 1.24-alpha
     repo: https://github.com/istio/istio
     branch: master
-    commit: 68cb67731f1f6cd29e38c22e38ef0b7d48512fcd
+    commit: b28bdd77da4c7f0f4f3631db514f1c4f79a90289
     charts:
-      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.68cb67731f1f6cd29e38c22e38ef0b7d48512fcd/helm/base-1.24-alpha.68cb67731f1f6cd29e38c22e38ef0b7d48512fcd.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.68cb67731f1f6cd29e38c22e38ef0b7d48512fcd/helm/cni-1.24-alpha.68cb67731f1f6cd29e38c22e38ef0b7d48512fcd.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.68cb67731f1f6cd29e38c22e38ef0b7d48512fcd/helm/gateway-1.24-alpha.68cb67731f1f6cd29e38c22e38ef0b7d48512fcd.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.68cb67731f1f6cd29e38c22e38ef0b7d48512fcd/helm/istiod-1.24-alpha.68cb67731f1f6cd29e38c22e38ef0b7d48512fcd.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.68cb67731f1f6cd29e38c22e38ef0b7d48512fcd/helm/ztunnel-1.24-alpha.68cb67731f1f6cd29e38c22e38ef0b7d48512fcd.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289/helm/base-1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289/helm/cni-1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289/helm/gateway-1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289/helm/istiod-1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289/helm/istiod-remote-1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289/helm/ztunnel-1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289.tgz

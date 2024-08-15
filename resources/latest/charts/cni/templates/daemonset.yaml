@@ -82,6 +82,7 @@ spec:
 {{- end }}
           ports:
           - containerPort: 15014
+            hostPort: 15014
             name: metrics
             protocol: TCP
           readinessProbe:
