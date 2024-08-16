@@ -39,6 +39,7 @@ var (
 	image                 = env.Get("IMAGE", "quay.io/maistra-dev/sail-operator:latest")
 	skipDeploy            = env.GetBool("SKIP_DEPLOY", false)
 	expectedRegistry      = env.Get("EXPECTED_REGISTRY", "^docker\\.io|^gcr\\.io")
+	bookinfoNamespace     = env.Get("BOOKINFO_NAMESPACE", "bookinfo")
 )
 
 func TestInstall(t *testing.T) {

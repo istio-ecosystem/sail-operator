@@ -51,8 +51,8 @@ func CreateFromString(yamlString string) error {
 }
 
 // ApplyString applies the given yaml string to the cluster
-func ApplyString(yamlString string) error {
-	cmd := kubectl("apply --server-side -f -")
+func ApplyString(ns, yamlString string) error {
+	cmd := kubectl("apply -n %s --server-side -f -", ns)
 	_, err := shell.ExecuteCommandWithInput(cmd, yamlString)
 	if err != nil {
 		return fmt.Errorf("error applying yaml: %w", err)
@@ -198,9 +198,9 @@ func sinceFlag(since *time.Duration) string {
 	return "--since=" + since.String()
 }
 
-// Exec executes a command in the pod.
-func Exec(ns, pod string, command string) (string, error) {
-	cmd := kubectl("exec %s %s -- %s", pod, nsflag(ns), command)
+// Exec executes a command in the pod or specific container
+func Exec(ns, pod, container, command string) (string, error) {
+	cmd := kubectl("exec %s %s %s -- %s", pod, containerflag(container), nsflag(ns), command)
 	output, err := shell.ExecuteCommand(cmd)
 	if err != nil {
 		return "", err
@@ -221,4 +221,11 @@ func nsflag(ns string) string {
 		return "--all-namespaces"
 	}
 	return "-n " + ns
+}
+
+func containerflag(container string) string {
+	if container == "" {
+		return ""
+	}
+	return "-c " + container
 }
