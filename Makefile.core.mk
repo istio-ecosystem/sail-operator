@@ -363,7 +363,10 @@ gen-charts: ## Pull charts from istio repository.
 	@hack/copy-crds.sh "resources/$$(yq eval '.crdSourceVersion' $(VERSIONS_YAML_FILE))/charts"
 
 .PHONY: gen
-gen: operator-name controller-gen gen-api gen-charts gen-manifests gen-code bundle gen-api-docs ## Generate everything.
+gen: gen-all-except-bundle bundle ## Generate everything.
+
+.PHONY: gen-all-except-bundle
+gen: operator-name controller-gen gen-api gen-charts gen-manifests gen-code gen-api-docs
 
 .PHONY: gen-check
 gen-check: gen restore-manifest-dates check-clean-repo ## Verify that changes in generated resources have been checked in.
@@ -475,7 +478,7 @@ $(GITLEAKS): $(LOCALBIN)
 	@test -s $(LOCALBIN)/gitleaks || GOBIN=$(LOCALBIN) go install github.com/zricethezav/gitleaks/v8@${GITLEAKS_VERSION}
 
 .PHONY: bundle
-bundle: gen helm operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
+bundle: gen-all-except-bundle helm operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
 	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --set platform=openshift --set bundleGeneration=true | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
 
 ifeq ($(GENERATE_RELATED_IMAGES), true)
