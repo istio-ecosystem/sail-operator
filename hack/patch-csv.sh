@@ -52,22 +52,23 @@ function get_field() {
     component_dir="istiod"
   fi
 
-  # Set if non null order .defaults.<field> 
-  #                  then .defaults.<component>.<field> 
-  #                  then .defaults.global.<field> 
-  #               finally .defaults.global.<component>.<field>
+  # Set if non null order from the component most specific to the most generic
+  # 1) .defaults.global.<component>.<field>
+  # 2) .defaults.<component>.<field> 
+  # 3) .defaults.global.<field> 
+  # 4) .defaults.<field> 
   # Example:
-  #   .defaults.hub == null
-  #   .defaults.istiod.hub == ""
-  #   .defaults.global.hub == "gcr.io/istio-testing"
   #   .defaults.global.istiod.hub == null
-  field="$(${YQ} ".defaults.${field_name}" resources/"${version}"/charts/"${component_dir}"/values.yaml)"
+  #   .defaults.istiod.hub        == null
+  #   .defaults.global.hub        == "gcr.io/istio-testing"
+  #   .defaults.hub               N/A
+  field="$(${YQ} ".defaults.global.${COMPONENTS[$component_name]}.${field_name}" resources/"${version}"/charts/"${component_dir}"/values.yaml)"
   if is_empty_or_null "${field}"; then
     field="$(${YQ} ".defaults.${COMPONENTS[$component_name]}.${field_name}" resources/"${version}"/charts/"${component_dir}"/values.yaml)"
     if is_empty_or_null "${field}"; then
       field="$(${YQ} ".defaults.global.${field_name}" resources/"${version}"/charts/"${component_dir}"/values.yaml)"
       if is_empty_or_null "${field}"; then
-        field="$(${YQ} ".defaults.global.${COMPONENTS[$component_name]}.${field_name}" resources/"${version}"/charts/"${component_dir}"/values.yaml)"
+        field="$(${YQ} ".defaults.${field_name}" resources/"${version}"/charts/"${component_dir}"/values.yaml)"
       fi
     fi
   fi
