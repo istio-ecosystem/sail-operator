@@ -34,7 +34,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/maistra-dev/sail-operator:0.1-latest
-    createdAt: "2024-08-15T13:13:43Z"
+    createdAt: "2024-08-16T08:02:54Z"
     description: Experimental operator for installing Istio service mesh
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -601,7 +601,7 @@ spec:
                 kubectl.kubernetes.io/default-container: manager
                 olm.relatedImage.latest.cni: gcr.io/istio-testing/install-cni:1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289
                 olm.relatedImage.latest.pilot: gcr.io/istio-testing/pilot:1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289
-                olm.relatedImage.latest.proxy: gcr.io/istio-testing/pilot:1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289
+                olm.relatedImage.latest.proxy: gcr.io/istio-testing/proxyv2:1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289
                 olm.relatedImage.latest.ztunnel: gcr.io/istio-testing/ztunnel:1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289
                 olm.relatedImage.v1_21_5.cni: docker.io/istio/install-cni:1.21.5
                 olm.relatedImage.v1_21_5.pilot: docker.io/istio/pilot:1.21.5
@@ -771,7 +771,7 @@ spec:
     name: latest.cni
   - image: gcr.io/istio-testing/pilot:1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289
     name: latest.pilot
-  - image: gcr.io/istio-testing/pilot:1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289
+  - image: gcr.io/istio-testing/proxyv2:1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289
     name: latest.proxy
   - image: gcr.io/istio-testing/ztunnel:1.24-alpha.b28bdd77da4c7f0f4f3631db514f1c4f79a90289
     name: latest.ztunnel
