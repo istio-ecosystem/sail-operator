@@ -414,7 +414,7 @@ Steps:
 
 ## Multicluster
 
-You can use the Sail Operator and the Sail CRDs to manage a multi-cluster Istio deployment. The following instructions are adapated from the [Istio multicluster documentation](https://istio.io/latest/docs/setup/install/multicluster/) to demonstrate how you can setup the various deployment models with Sail. Please familiarize yourself with the different [deployment models](https://istio.io/latest/docs/ops/deployment/deployment-models/) before starting.
+You can use the Sail Operator and the Sail CRDs to manage a multi-cluster Istio deployment. The following instructions are adapted from the [Istio multicluster documentation](https://istio.io/latest/docs/setup/install/multicluster/) to demonstrate how you can setup the various deployment models with Sail. Please familiarize yourself with the different [deployment models](https://istio.io/latest/docs/ops/deployment/deployment-models/) before starting.
 
 *Prerequisites*
 
@@ -567,7 +567,7 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
     ```sh
     istioctl create-remote-secret \
       --context="${CTX_CLUSTER1}" \
-      --name=east | \
+      --name=cluster1 | \
       kubectl apply -f - --context="${CTX_CLUSTER2}"
     ```
 
@@ -737,10 +737,10 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
     EOF
     ```
 
-6. Set the controlplane cluster and network and for `cluster2`.
+6. Set the controlplane cluster and network for `cluster2`.
 
     ```sh
-    kubectl --context="${CTX_CLUSTER2}" annotate namespace istio-system topology.istio.io/controlPlaneClusters=primary
+    kubectl --context="${CTX_CLUSTER2}" annotate namespace istio-system topology.istio.io/controlPlaneClusters=cluster1
     kubectl --context="${CTX_CLUSTER2}" label namespace istio-system topology.istio.io/network=network2
     ```
 
