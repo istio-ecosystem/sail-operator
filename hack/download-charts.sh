@@ -90,6 +90,9 @@ function patchIstioCharts() {
   resources: ["securitycontextconstraints"] \
   resourceNames: ["privileged"] \
   verbs: ["use"]/' "${CHARTS_DIR}/cni/templates/clusterrole.yaml"
+
+  # remove CRDs from istiod-remote chart, since they are installed by OLM, not by the operator
+  rm -f "${CHARTS_DIR}/istiod-remote/templates/crd-all.gen.yaml"
 }
 
 function convertIstioProfiles() {
