@@ -247,7 +247,6 @@ spec:
 					bookinfoPods := &corev1.PodList{}
 
 					It("updates the pods status to Running", func(ctx SpecContext) {
-
 						cl.List(ctx, bookinfoPods, client.InNamespace(bookinfoNamespace))
 						Expect(bookinfoPods.Items).ToNot(BeEmpty(), "No pods found in bookinfo namespace")
 
