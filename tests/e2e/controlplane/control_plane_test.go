@@ -18,8 +18,6 @@ package controlplane
 
 import (
 	"fmt"
-	"io"
-	"net/http"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -239,7 +237,7 @@ spec:
 						Success("Istio Operator stopped reconciling")
 					})
 
-					It("can be deployed bookinfo with sidecar inyection", func(ctx SpecContext) {
+					It("can be deployed bookinfo with sidecar injection", func(ctx SpecContext) {
 						By("Applying bookinfo YAML")
 						Expect(deployBookinfo(version)).To(Succeed(), "Error deploying bookinfo")
 						Success("Bookinfo deployed")
@@ -393,7 +391,7 @@ func forceDeleteIstioResources() error {
 	return nil
 }
 
-func getBookinfoYAML(version supportedversion.VersionInfo) (string, error) {
+func getBookinfoURL(version supportedversion.VersionInfo) string {
 	// Bookinfo YAML for the current version can be found from istio/istio repository
 	// If the version is latest, we need to get the latest version from the master branch
 	bookinfoURL := fmt.Sprintf("https://raw.githubusercontent.com/istio/istio/%s/samples/bookinfo/platform/kube/bookinfo.yaml", version.Version)
@@ -401,23 +399,12 @@ func getBookinfoYAML(version supportedversion.VersionInfo) (string, error) {
 		bookinfoURL = "https://raw.githubusercontent.com/istio/istio/master/samples/bookinfo/platform/kube/bookinfo.yaml"
 	}
 
-	response, err := http.Get(bookinfoURL)
-	if err != nil {
-		return "", fmt.Errorf("error getting bookinfo YAML: %w", err)
-	}
-
-	defer response.Body.Close()
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		return "", fmt.Errorf("error reading bookinfo YAML: %w", err)
-	}
-
-	return string(body), nil
+	return bookinfoURL
 }
 
 func deployBookinfo(version supportedversion.VersionInfo) error {
-	bookinfoYAML, err := getBookinfoYAML(version)
-	kubectl.ApplyString(bookinfoNamespace, bookinfoYAML)
+	bookinfoURL := getBookinfoURL(version)
+	kubectl.Apply(bookinfoNamespace, bookinfoURL)
 	if err != nil {
 		return fmt.Errorf("error deploying bookinfo: %w", err)
 	}

@@ -61,6 +61,17 @@ func ApplyString(ns, yamlString string) error {
 	return nil
 }
 
+// Apply applies the given yaml file to the cluster
+func Apply(ns, yamlFile string) error {
+	cmd := kubectl("apply -n %s -f %s", ns, yamlFile)
+	_, err := shell.ExecuteCommand(cmd)
+	if err != nil {
+		return fmt.Errorf("error applying yaml: %w", err)
+	}
+
+	return nil
+}
+
 // CreateNamespace creates a namespace
 // If the namespace already exists, it will return nil
 func CreateNamespace(ns string) error {
