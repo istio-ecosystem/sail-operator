@@ -88,17 +88,17 @@ versions="$( ${YQ} '.versions[].name' "${VERSIONS_YAML_FILE}" )"
 
 for version in ${versions}; do
   version_underscore=${version//./_}
-  for component_name in "${!COMPONENTS[@]}"; do    
-    name="${version_underscore}.${COMPONENTS[$component_name]}"
+  for component_name in "${!COMPONENTS[@]}"; do
+    name="${version_underscore}.${component_name}"
     hub=$(get_field "${version}" "hub" "${component_name}")
     image=$(get_field "${version}" "image" "${component_name}")
     tag=$(get_field "${version}" "tag" "${component_name}")
 
     # Add .spec.install.spec.deployments[0].spec.template.metadata.annotations with olm.relatedImage
-    ${YQ} -i '.spec.install.spec.deployments[0].spec.template.metadata.annotations |= (. + {"olm.relatedImage.'"${name}"'": "'"${hub}"'/'"${image}"':'"${tag}"'"})' "${clusterserviceversion_file_path}"
+    ${YQ} -i '.spec.install.spec.deployments[0].spec.template.metadata.annotations |= (. + {"images.'"${name}"'": "'"${hub}"'/'"${image}"':'"${tag}"'"})' "${clusterserviceversion_file_path}"
 
     # Add .spec.relatedImages for every Istio components in all supported versions
     # BUG: yq indents the arrays with 2 more spaces (cf. https://mikefarah.gitbook.io/yq/usage/output-format#indent)
-    ${YQ} -i ".spec.relatedImages |= (. + [ {\"name\": \"${name}\", \"image\": \"${hub}/${image}:${tag}\"} ] | unique | sort_by(.name))" "${clusterserviceversion_file_path}"
+    ${YQ} -i ".spec.relatedImages |= (. + [ {\"name\": \"${name}\", \"image\": \"${hub}/${image}:${tag}\"} ] | sort_by(.name))" "${clusterserviceversion_file_path}"
   done
 done
