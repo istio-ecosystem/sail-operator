@@ -269,7 +269,6 @@ spec:
 						Expect(kubectl.DeleteNamespace(bookinfoNamespace)).To(Succeed(), "Bookinfo namespace failed to be deleted")
 						Success("Bookinfo deleted")
 					})
-
 				})
 
 				When("the Istio CR is deleted", func() {
@@ -397,12 +396,12 @@ func forceDeleteIstioResources() error {
 func getBookinfoYAML(version supportedversion.VersionInfo) (string, error) {
 	// Bookinfo YAML for the current version can be found from istio/istio repository
 	// If the version is latest, we need to get the latest version from the master branch
-	bookinfoUrl := fmt.Sprintf("https://raw.githubusercontent.com/istio/istio/%s/samples/bookinfo/platform/kube/bookinfo.yaml", version.Version)
+	bookinfoURL := fmt.Sprintf("https://raw.githubusercontent.com/istio/istio/%s/samples/bookinfo/platform/kube/bookinfo.yaml", version.Version)
 	if version.Name == "latest" {
-		bookinfoUrl = "https://raw.githubusercontent.com/istio/istio/master/samples/bookinfo/platform/kube/bookinfo.yaml"
+		bookinfoURL = "https://raw.githubusercontent.com/istio/istio/master/samples/bookinfo/platform/kube/bookinfo.yaml"
 	}
 
-	response, err := http.Get(bookinfoUrl)
+	response, err := http.Get(bookinfoURL)
 	if err != nil {
 		return "", fmt.Errorf("error getting bookinfo YAML: %w", err)
 	}
@@ -427,7 +426,10 @@ func deployBookinfo(version supportedversion.VersionInfo) error {
 }
 
 func getProxyVersion(podName, namespace string) (string, error) {
-	proxyVersion, err := kubectl.Exec(namespace, podName, "istio-proxy", `curl -s http://localhost:15000/server_info | grep "ISTIO_VERSION" | awk -F '"' '{print $4}'`)
+	proxyVersion, err := kubectl.Exec(namespace,
+		podName,
+		"istio-proxy",
+		`curl -s http://localhost:15000/server_info | grep "ISTIO_VERSION" | awk -F '"' '{print $4}'`)
 	if err != nil {
 		return "", fmt.Errorf("error getting sidecar version: %w", err)
 	}
