@@ -216,12 +216,12 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&appsv1.DaemonSet{}, ownedResourceHandler).
 		Watches(&corev1.ResourceQuota{}, ownedResourceHandler).
 		Watches(&corev1.ServiceAccount{}, ownedResourceHandler).
-		Watches(&rbacv1.RoleBinding{}, ownedResourceHandler).
 
 		// TODO: only register NetAttachDef if the CRD is installed (may also need to watch for CRD creation)
 		// Owns(&multusv1.NetworkAttachmentDefinition{}).
 
 		// cluster-scoped resources
+		// +lint-watches:ignore: Namespace (not present in charts, but must be watched to reconcile IstioCni when its namespace is created)
 		Watches(&corev1.Namespace{}, handler.EnqueueRequestsFromMapFunc(r.mapNamespaceToReconcileRequest)).
 		Watches(&rbacv1.ClusterRole{}, ownedResourceHandler).
 		Watches(&rbacv1.ClusterRoleBinding{}, ownedResourceHandler).
