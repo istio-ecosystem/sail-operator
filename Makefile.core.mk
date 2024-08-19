@@ -462,8 +462,7 @@ $(OPERATOR_SDK): $(LOCALBIN)
 	chmod +x $(LOCALBIN)/operator-sdk;
 
 .PHONY: controller-gen
-controller-gen: $(CONTROLLER_GEN) ## Download controller-gen to bin directory. If wrong version is installed, it will be overwritten.
-$(CONTROLLER_GEN): $(LOCALBIN)
+controller-gen: $(LOCALBIN) ## Download controller-gen to bin directory. If wrong version is installed, it will be overwritten.
 	@test -s $(LOCALBIN)/controller-gen && $(LOCALBIN)/controller-gen --version | grep -q $(CONTROLLER_TOOLS_VERSION) || \
 	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
 
