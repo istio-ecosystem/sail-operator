@@ -36,26 +36,45 @@ check_watches() {
     read -r -a ignoredKinds <<< "$(sed -n 's/.*\+lint-watches:ignore:\s*\(\w*\).*/\1/p' "$controllerPath" | sort | uniq | tr '\n' ' ')"
     echo "Ignored kinds: ${ignoredKinds[*]}"
 
-    # Check for missing lines
-    local missing_kinds=()
+    # Check for missing and unnecessary watches
+    local unwatched_kinds=()
     for kind in "${chartKinds[@]}"; do
         # shellcheck disable=SC2076
         if [[ ! " ${watchedKinds[*]} ${ignoredKinds[*]} " =~ " $kind " ]]; then
-            missing_kinds+=("$kind")
+            unwatched_kinds+=("$kind")
         fi
     done
 
-    # Print missing lines, if any
-    if [[ ${#missing_kinds[@]} -gt 0 ]]; then
+    local unneeded_watches=()
+    for kind in "${watchedKinds[@]}"; do
+        # shellcheck disable=SC2076
+        if [[ ! " ${chartKinds[*]} ${ignoredKinds[*]} " =~ " $kind " ]]; then
+            unneeded_watches+=("$kind")
+        fi
+    done
+
+    # Print unwatched kinds, if any
+    if [[ ${#unwatched_kinds[@]} -gt 0 ]]; then
         printf "FAIL: The following kinds aren't watched in %s:\n" "$controllerPath"
-        for line in "${missing_kinds[@]}"; do
-            printf "  - %s\n" "$line"
+        for kind in "${unwatched_kinds[@]}"; do
+            printf "  - %s\n" "$kind"
         done
         exit 1
     else
         printf "%s watches all kinds found in Helm charts.\n" "$controllerPath"
     fi
+
+    # Print unnecessary watches, if any
+    if [[ ${#unneeded_watches[@]} -gt 0 ]]; then
+        printf "FAIL: The following kinds are watched in %s, but are not present in the charts:\n" "$controllerPath"
+        for kind in "${unneeded_watches[@]}"; do
+            printf "  - %s\n" "$kind"
+        done
+        exit 1
+    else
+        printf "%s does not watch any kinds that aren't found in Helm charts.\n" "$controllerPath"
+    fi
 }
 
-check_watches "./controllers/istiorevision/istiorevision_controller.go" "./resources/*/charts/base ./resources/*/charts/gateway ./resources/*/charts/istiod ./resources/*/charts/ztunnel"
+check_watches "./controllers/istiorevision/istiorevision_controller.go" "./resources/*/charts/istiod ./resources/*/charts/istiod-remote"
 check_watches "./controllers/istiocni/istiocni_controller.go" "./resources/*/charts/cni"
