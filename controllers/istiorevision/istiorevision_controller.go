@@ -51,7 +51,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	"istio.io/istio/pkg/ptr"
 )
 
@@ -235,24 +234,26 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 				return log
 			},
 		}).
-		// we use Watches() instead of For(), so that we can wrap the handler so that events that cause the object to be enqueued are logged
+		// we use the Watches function instead of For(), so that we can wrap the handler so that events that cause the object to be enqueued are logged
+		// +lint-watches:ignore: IstioRevision (not found in charts, but this is the main resource watched by this controller)
 		Watches(&v1alpha1.IstioRevision{}, mainObjectHandler).
 		Named("istiorevision").
 
 		// namespaced resources
 		Watches(&corev1.ConfigMap{}, ownedResourceHandler).
 		Watches(&appsv1.Deployment{}, ownedResourceHandler). // we don't ignore the status here because we use it to calculate the IstioRevision status
-		Watches(&appsv1.DaemonSet{}, ownedResourceHandler).  // we don't ignore the status here because we use it to calculate the IstioRevision status
 		Watches(&corev1.Endpoints{}, ownedResourceHandler).
-		Watches(&corev1.Secret{}, ownedResourceHandler).
 		Watches(&corev1.Service{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
 		Watches(&corev1.ServiceAccount{}, ownedResourceHandler).
 		Watches(&rbacv1.Role{}, ownedResourceHandler).
 		Watches(&rbacv1.RoleBinding{}, ownedResourceHandler).
 		Watches(&policyv1.PodDisruptionBudget{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
 		Watches(&autoscalingv2.HorizontalPodAutoscaler{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
-		Watches(&networkingv1alpha3.EnvoyFilter{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
+
+		// +lint-watches:ignore: Namespace (not found in charts, but must be watched to reconcile IstioRevision when its namespace is created)
 		Watches(&corev1.Namespace{}, nsHandler, builder.WithPredicates(ignoreStatusChange())).
+
+		// +lint-watches:ignore: Pod (not found in charts, but must be watched to reconcile IstioRevision when a pod references it)
 		Watches(&corev1.Pod{}, podHandler, builder.WithPredicates(ignoreStatusChange())).
 
 		// cluster-scoped resources
