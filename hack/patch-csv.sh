@@ -99,6 +99,6 @@ for version in ${versions}; do
 
     # Add .spec.relatedImages for every Istio components in all supported versions
     # BUG: yq indents the arrays with 2 more spaces (cf. https://mikefarah.gitbook.io/yq/usage/output-format#indent)
-    ${YQ} -i ".spec.relatedImages |= (. + [ {\"name\": \"${name}\", \"image\": \"${hub}/${image}:${tag}\"} ] | unique | sort_by(.name))" "${clusterserviceversion_file_path}"
+    ${YQ} -i ".spec.relatedImages |= (. + [ {\"name\": \"${name}\", \"image\": \"${hub}/${image}:${tag}\"} ] | sort_by(.name))" "${clusterserviceversion_file_path}"
   done
 done
