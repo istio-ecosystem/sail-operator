@@ -51,7 +51,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	"istio.io/istio/pkg/ptr"
 )
 
@@ -244,14 +243,12 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&appsv1.Deployment{}, ownedResourceHandler). // we don't ignore the status here because we use it to calculate the IstioRevision status
 		Watches(&appsv1.DaemonSet{}, ownedResourceHandler).  // we don't ignore the status here because we use it to calculate the IstioRevision status
 		Watches(&corev1.Endpoints{}, ownedResourceHandler).
-		Watches(&corev1.Secret{}, ownedResourceHandler).
 		Watches(&corev1.Service{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
 		Watches(&corev1.ServiceAccount{}, ownedResourceHandler).
 		Watches(&rbacv1.Role{}, ownedResourceHandler).
 		Watches(&rbacv1.RoleBinding{}, ownedResourceHandler).
 		Watches(&policyv1.PodDisruptionBudget{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
 		Watches(&autoscalingv2.HorizontalPodAutoscaler{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
-		Watches(&networkingv1alpha3.EnvoyFilter{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
 		Watches(&corev1.Namespace{}, nsHandler, builder.WithPredicates(ignoreStatusChange())).
 		Watches(&corev1.Pod{}, podHandler, builder.WithPredicates(ignoreStatusChange())).
 
