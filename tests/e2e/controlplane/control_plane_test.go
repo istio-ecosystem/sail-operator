@@ -135,9 +135,6 @@ metadata:
 				BeforeAll(func() {
 					Expect(kubectl.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
 					Expect(kubectl.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
-					Expect(kubectl.CreateNamespace(bookinfoNamespace)).To(Succeed(), "Bookinfo namespace failed to be created")
-					Expect(kubectl.Patch("", "namespace", bookinfoNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
-						To(Succeed(), "Error patching bookinfo namespace")
 				})
 
 				When("the IstioCNI CR is created", func() {
@@ -236,30 +233,38 @@ spec:
 							ShouldNot(ContainSubstring("Reconciliation done"), "Istio Operator is continuously reconciling")
 						Success("Istio Operator stopped reconciling")
 					})
+				})
 
-					It("can be deployed bookinfo with sidecar injection", func(ctx SpecContext) {
-						By("Applying bookinfo YAML")
+				When("bookinfo is deployed", func() {
+					BeforeAll(func() {
+						Expect(kubectl.CreateNamespace(bookinfoNamespace)).To(Succeed(), "Bookinfo namespace failed to be created")
+						Expect(kubectl.Patch("", "namespace", bookinfoNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
+							To(Succeed(), "Error patching bookinfo namespace")
 						Expect(deployBookinfo(version)).To(Succeed(), "Error deploying bookinfo")
 						Success("Bookinfo deployed")
+					})
 
-						By("Waiting for bookinfo pods to be ready")
-						bookinfoPods := &corev1.PodList{}
+					bookinfoPods := &corev1.PodList{}
+
+					It("updates the pods status to Running", func(ctx SpecContext) {
+
 						cl.List(ctx, bookinfoPods, client.InNamespace(bookinfoNamespace))
 						Expect(bookinfoPods.Items).ToNot(BeEmpty(), "No pods found in bookinfo namespace")
 
 						for _, pod := range bookinfoPods.Items {
 							Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(pod.Name, bookinfoNamespace), &corev1.Pod{}).
-								Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not ready")
+								Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready")
 						}
 						Success("Bookinfo pods are ready")
+					})
 
-						By("Checking the sidecar injection version match the expected version")
+					It("has sidecars with the correct istio version", func(ctx SpecContext) {
 						for _, pod := range bookinfoPods.Items {
 							sidecarVersion, err := getProxyVersion(pod.Name, bookinfoNamespace)
 							Expect(err).To(Succeed(), "Error getting sidecar version")
-							Expect(sidecarVersion).To(ContainSubstring(version.Version), "Sidecar injection version does not match the expected version")
+							Expect(sidecarVersion).To(ContainSubstring(version.Version), "Sidecar Istio version does not match the expected version")
 						}
-						Success("Istio sidecar injection version matches the expected version")
+						Success("Istio sidecar version matches the expected Istio version")
 					})
 
 					AfterAll(func(ctx SpecContext) {
