@@ -1,0 +1,11 @@
+apiVersion: console.openshift.io/v1
+kind: ConsoleCLIDownload
+metadata:
+  name: istioctl
+spec:
+  description: istioctl is the OpenShift Service Mesh client that allows you to manage
+    OpenShift Service Mesh resources.
+  displayName: istioctl - OpenShift Service Mesh Command Line Interface (CLI)
+  links:
+  - href: https://developers.redhat.com/content-gateway/rest/browse/pub/openshift-v4/clients/servicemesh/3.0.0
+    text: Download istioctl
