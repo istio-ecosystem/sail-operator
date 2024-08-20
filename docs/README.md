@@ -591,7 +591,7 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
       kubectl apply -f - --context="${CTX_CLUSTER1}"
     ```
 
-    If using kind, first get the `cluster1` controlplane ip and pass the `--server` option to `istioctl create-remote-secret`
+    If using kind, first get the `cluster1` controlplane IP and pass the `--server` option to `istioctl create-remote-secret`
 
     ```sh
     CLUSTER2_CONTAINER_IP=$(kubectl get nodes -l node-role.kubernetes.io/control-plane --context "${CTX_CLUSTER2}" -o jsonpath='{.items[0].status.addresses[?(@.type == "InternalIP")].address}')
