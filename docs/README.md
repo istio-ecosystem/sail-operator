@@ -509,7 +509,7 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
             clusterName: cluster1
           network: network1
     EOF
-    kubectl wait --context "${CTX_CLUSTER1}" --for=jsonpath='{.status.revisions.ready}'=1 istios/default --timeout=3m
+    kubectl wait --context "${CTX_CLUSTER1}" --for=condition=Ready istios/default --timeout=3m
     ```
 
 2. Create east-west gateway on `cluster1`.
