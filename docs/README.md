@@ -421,7 +421,8 @@ You can use the Sail Operator and the Sail CRDs to manage a multi-cluster Istio 
 Each deployment model requires you to install the Sail Operator and the Sail CRDs to every cluster that is part of the mesh.
 
 - [istioctl](https://istio.io/latest/docs/setup/install/istioctl)
-- Two clusters with external lb support. (If using kind, `cloud-provider-kind` is running in the background)
+- Two kubernetes clusters with external lb support. (If using kind, `cloud-provider-kind` is running in the background)
+- kubeconfig file with a context for each cluster.
 - The Sail Operator and the Sail CRDs are installed on each cluster.
 
 ### Common Setup
@@ -498,11 +499,6 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
       version: v${ISTIO_VERSION}
       namespace: istio-system
       values:
-        pilot:
-          resources:
-            requests:
-              cpu: 100m
-              memory: 1024Mi
         global:
           meshID: mesh1
           multiCluster:
@@ -515,13 +511,13 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
 2. Create east-west gateway on `cluster1`.
 
     ```sh
-    kubectl apply --context "${CTX_CLUSTER1}" -f ./multicluster/east-west-gateway-net1.yaml
+    kubectl apply --context "${CTX_CLUSTER1}" -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/east-west-gateway-net1.yaml
     ```
 
 3. Expose services on `cluster1`.
 
     ```sh
-    kubectl --context "${CTX_CLUSTER1}" apply -n istio-system -f ./multicluster/expose-services.yaml
+    kubectl --context "${CTX_CLUSTER1}" apply -n istio-system -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/expose-services.yaml
     ```
 
 4. Create `Istio` resource on `cluster2`.
@@ -536,11 +532,6 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
       version: v${ISTIO_VERSION}
       namespace: istio-system
       values:
-        pilot:
-          resources:
-            requests:
-              cpu: 100m
-              memory: 1024Mi
         global:
           meshID: mesh1
           multiCluster:
@@ -553,13 +544,13 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
 5. Create east-west gateway on `cluster2`.
 
     ```sh
-    kubectl apply --context "${CTX_CLUSTER2}" -f ./multicluster/east-west-gateway-net2.yaml
+    kubectl apply --context "${CTX_CLUSTER2}" -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/east-west-gateway-net2.yaml
     ```
 
 6. Expose services on `cluster2`.
 
     ```sh
-    kubectl --context "${CTX_CLUSTER2}" apply -n istio-system -f ./multicluster/expose-services.yaml
+    kubectl --context "${CTX_CLUSTER2}" apply -n istio-system -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/expose-services.yaml
     ```
 
 7. Install a remote secret in `cluster2` that provides access to the `cluster1` API server.
@@ -682,10 +673,6 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
       namespace: istio-system
       values:
         pilot:
-          resources:
-            requests:
-              cpu: 100m
-              memory: 1024Mi
           env:
             EXTERNAL_ISTIOD: "true"
         global:
@@ -700,19 +687,19 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
 2. Create east-west gateway on `cluster1`.
 
     ```sh
-    kubectl apply --context "${CTX_CLUSTER1}" -f ./multicluster/east-west-gateway-net1.yaml
+    kubectl apply --context "${CTX_CLUSTER1}" -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/east-west-gateway-net1.yaml
     ```
   
 3. Expose istiod on `cluster1`.
 
     ```sh
-    kubectl apply --context "${CTX_CLUSTER1}" -f ./multicluster/expose-istiod.yaml
+    kubectl apply --context "${CTX_CLUSTER1}" -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/expose-istiod.yaml
     ```
 
 4. Expose services on `cluster1` and `cluster2`.
 
     ```sh
-    kubectl --context "${CTX_CLUSTER1}" apply -n istio-system -f ./multicluster/expose-services.yaml
+    kubectl --context "${CTX_CLUSTER1}" apply -n istio-system -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/expose-services.yaml
     ```
 
 5. Create `RemoteIstio` resource on `cluster2`.
@@ -726,9 +713,6 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
     spec:
       version: v${ISTIO_VERSION}
       namespace: istio-system
-      updateStrategy:
-        type: InPlace
-        inactiveRevisionDeletionGracePeriodSeconds: 30
       values:
         istiodRemote:
           injectionPath: /inject/cluster/remote/net/network2
@@ -767,7 +751,7 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
 8. Install east-west gateway in `cluster2`.
 
     ```sh
-    kubectl apply --context "${CTX_CLUSTER2}" -f ./multicluster/east-west-gateway-net2.yaml
+    kubectl apply --context "${CTX_CLUSTER2}" -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/east-west-gateway-net2.yaml
     ```
 
 9. Deploy sample applications to `cluster1`.
