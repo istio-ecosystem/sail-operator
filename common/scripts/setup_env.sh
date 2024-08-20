@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # shellcheck disable=SC2034
 
 # WARNING: DO NOT EDIT, THIS FILE IS PROBABLY A COPY
@@ -75,7 +75,7 @@ fi
 TOOLS_REGISTRY_PROVIDER=${TOOLS_REGISTRY_PROVIDER:-gcr.io}
 PROJECT_ID=${PROJECT_ID:-istio-testing}
 if [[ "${IMAGE_VERSION:-}" == "" ]]; then
-  IMAGE_VERSION=master-0aa2afb4bac9a4fd1bfe50a929c077a643066b3a
+  IMAGE_VERSION=release-1.23-b6cd73221e0f858a739ba0961891c309ab080cfc
 fi
 if [[ "${IMAGE_NAME:-}" == "" ]]; then
   IMAGE_NAME=build-tools
