@@ -366,7 +366,7 @@ gen-charts: ## Pull charts from istio repository.
 gen: gen-all-except-bundle bundle ## Generate everything.
 
 .PHONY: gen-all-except-bundle
-gen: operator-name controller-gen gen-api gen-charts gen-manifests gen-code gen-api-docs
+gen-all-except-bundle: operator-name controller-gen gen-api gen-charts gen-manifests gen-code gen-api-docs
 
 .PHONY: gen-check
 gen-check: gen restore-manifest-dates check-clean-repo ## Verify that changes in generated resources have been checked in.
