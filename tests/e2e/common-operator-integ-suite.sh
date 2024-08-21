@@ -27,6 +27,7 @@ check_arguments() {
 parse_flags() {
   SKIP_BUILD=${SKIP_BUILD:-false}
   SKIP_DEPLOY=${SKIP_DEPLOY:-false}
+  OLM=${OLM:-false}
   DESCRIBE=false
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -47,6 +48,10 @@ parse_flags() {
         # no point building if we don't deploy
         SKIP_BUILD=true
         SKIP_DEPLOY=true
+        ;;
+      --olm)
+        shift
+        OLM=true
         ;;
       --describe)
         shift
@@ -74,6 +79,22 @@ parse_flags() {
   else
     echo "Running on kind"
   fi
+
+  if [ "${SKIP_BUILD}" == "true" ]; then
+    echo "Skipping build"
+  fi
+
+  if [ "${SKIP_DEPLOY}" == "true" ]; then
+    echo "Skipping deploy"
+  fi
+
+  if [ "${OLM}" == "true" ]; then
+    echo "OLM deployment enabled"
+    if [ "${OCP}" == "true" ]; then
+      # OLM deploy test is being skipped on OCP due errors with the workaround to avoid the certificate issue
+      exit 1
+    fi
+  fi
 }
 
 initialize_variables() {
@@ -87,6 +108,8 @@ initialize_variables() {
   COMMAND="kubectl"
   ARTIFACTS="${ARTIFACTS:-$(mktemp -d)}"
   KUBECONFIG="${KUBECONFIG:-"${ARTIFACTS}/config"}"
+  LOCALBIN="${LOCALBIN:-"${HOME}/.local/bin"}"
+  OPERATOR_SDK="${LOCALBIN}/operator-sdk"
 
   if [ "${OCP}" == "true" ]; then
     COMMAND="oc"
@@ -191,16 +214,48 @@ if [ "${SKIP_BUILD}" == "false" ]; then
     get_internal_registry
   fi
 
-  # BUILD AND PUSH IMAGE
+  # BUILD AND PUSH OPERATOR IMAGE
   build_and_push_image
 
-  if [ "${OCP}" == "true" ]; then
-    # This is a workaround
-    # To avoid errors of certificates meanwhile we are pulling the operator image from the internal registry
-    # We need to set image $HUB to a fixed known value after the push
-    # This value always will be equal to the svc url of the internal registry
-    HUB="image-registry.openshift-image-registry.svc:5000/sail-operator"
+  # If OLM is enabled, deploy the operator using OLM
+  if [ "${OLM}" == "true" ]; then
+    # Set the platform to Kubernetes by default.
+    # We are skipping the deploy via OLM test on OCP because the workaround to avoid the certificate issue is not working.
+    HELM_PLATFORM="kubernetes"
+    
+    # Install OLM in the cluster because it's not available by default in kind.
+    ${OPERATOR_SDK} olm install
+
+    # Set image-related variables
+    IMAGE_TAG_BASE="${HUB}/${IMAGE_BASE}"
+    BUNDLE_IMG="${IMAGE_TAG_BASE}-bundle:v${VERSION}"
+
+    # Deploy the operator using OLM
+    IMAGE="${HUB}/${IMAGE_BASE}:${TAG}" \
+    IMAGE_TAG_BASE="${IMAGE_TAG_BASE}" \
+    BUNDLE_IMG="${BUNDLE_IMG}" \
+    HELM_PLATFORM="${HELM_PLATFORM}" \
+    make bundle bundle-build bundle-push
+
+    # Create operator namespace
+    ${COMMAND} create ns ${NAMESPACE} || echo "namespace ${NAMESPACE} already exists"
+    # Deploy the operator using OLM
+	  ${OPERATOR_SDK} run bundle ${BUNDLE_IMG} -n ${NAMESPACE} --skip-tls
+
+    # Wait for the operator to be ready
+    ${COMMAND} wait --for=condition=available deployment/${DEPLOYMENT_NAME} -n "${NAMESPACE}" --timeout=5m
+
+    # Set SKIP_DEPLOY to true to avoid deploying the operator again
+    SKIP_DEPLOY=true
   fi
+fi
+
+if [ "${OCP}" == "true" ]; then
+  # This is a workaround
+  # To avoid errors of certificates meanwhile we are pulling the operator image from the internal registry
+  # We need to set image $HUB to a fixed known value after the push
+  # This value always will be equal to the svc url of the internal registry
+  HUB="image-registry.openshift-image-registry.svc:5000/sail-operator"
 fi
 
 # Run the go test passing the env variables defined that are going to be used in the operator tests
