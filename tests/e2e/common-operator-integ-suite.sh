@@ -91,7 +91,7 @@ parse_flags() {
   if [ "${OLM}" == "true" ]; then
     echo "OLM deployment enabled"
     if [ "${OCP}" == "true" ]; then
-      # OLM deploy test is being skipped on OCP due errors with the workaround to avoid the certificate issue
+      echo "OLM deploy test is being skipped on OCP due errors with the workaround to avoid the certificate issue"
       exit 1
     fi
   fi
@@ -108,7 +108,13 @@ initialize_variables() {
   COMMAND="kubectl"
   ARTIFACTS="${ARTIFACTS:-$(mktemp -d)}"
   KUBECONFIG="${KUBECONFIG:-"${ARTIFACTS}/config"}"
-  LOCALBIN="${LOCALBIN:-"${HOME}/.local/bin"}"
+  # Set the location to install dependencies
+  LOCALBIN="${LOCALBIN:-$(pwd)/bin}"
+
+  # Create the directory if it doesn't exist
+  mkdir -p "${LOCALBIN}"
+
+  # Define the path for the operator-sdk binary
   OPERATOR_SDK="${LOCALBIN}/operator-sdk"
 
   if [ "${OCP}" == "true" ]; then
@@ -173,7 +179,7 @@ get_internal_registry() {
   fi
 }
 
-build_and_push_image() {
+build_and_push_operator_image() {
   # Build and push docker image
   # Notes: to be able to build and push to the local registry we need to set these variables to be used in the Makefile
   # IMAGE ?= ${HUB}/${IMAGE_BASE}:${TAG}, so we need to pass hub, image_base, and tag to be able to build and push the image
@@ -214,13 +220,13 @@ if [ "${SKIP_BUILD}" == "false" ]; then
     get_internal_registry
   fi
 
-  # BUILD AND PUSH OPERATOR IMAGE
-  build_and_push_image
+  build_and_push_operator_image
 
   # If OLM is enabled, deploy the operator using OLM
-  if [ "${OLM}" == "true" ]; then
+  if [ "${OLM}" == "true" ] && [ "${SKIP_DEPLOY}" == "false"]; then
     # Set the platform to Kubernetes by default.
     # We are skipping the deploy via OLM test on OCP because the workaround to avoid the certificate issue is not working.
+    # Jora ticket related to the limitation: https://issues.redhat.com/browse/OSSM-7993
     HELM_PLATFORM="kubernetes"
     
     # Install OLM in the cluster because it's not available by default in kind.
@@ -240,7 +246,7 @@ if [ "${SKIP_BUILD}" == "false" ]; then
     # Create operator namespace
     ${COMMAND} create ns "${NAMESPACE}" || echo "namespace ${NAMESPACE} already exists"
     # Deploy the operator using OLM
-${OPERATOR_SDK} run bundle "${BUNDLE_IMG}" -n "${NAMESPACE}" --skip-tls
+    ${OPERATOR_SDK} run bundle "${BUNDLE_IMG}" -n "${NAMESPACE}" --skip-tls
 
     # Wait for the operator to be ready
     ${COMMAND} wait --for=condition=available deployment/"${DEPLOYMENT_NAME}" -n "${NAMESPACE}" --timeout=5m
