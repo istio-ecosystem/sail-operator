@@ -91,7 +91,7 @@ parse_flags() {
   if [ "${OLM}" == "true" ]; then
     echo "OLM deployment enabled"
     if [ "${OCP}" == "true" ]; then
-      echo "OLM deploy test is being skipped on OCP due errors with the workaround to avoid the certificate issue"
+      echo "Skipping operator deployment using OLM on OCP clusters due to certificate issues with the internal registry."
       exit 1
     fi
   fi
