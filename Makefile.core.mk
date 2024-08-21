@@ -19,7 +19,7 @@ OLD_VARS := $(.VARIABLES)
 # Use `make print-variables` to inspect the values of the variables
 -include Makefile.vendor.mk
 
-VERSION ?= 0.1.0
+VERSION ?= 0.2.0
 MINOR_VERSION := $(shell v='$(VERSION)'; echo "$${v%.*}")
 
 OPERATOR_NAME ?= sailoperator
