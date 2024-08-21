@@ -29,9 +29,19 @@ export KIND_REGISTRY="localhost:${KIND_REGISTRY_PORT}"
 export DEFAULT_CLUSTER_YAML="${SCRIPTPATH}/config/default.yaml"
 export IP_FAMILY="${IP_FAMILY:-ipv4}"
 export ARTIFACTS="${ARTIFACTS:-$(mktemp -d)}"
+export MULTICLUSTER="${MULTICLUSTER:-false}"
+# Set variable to exclude kind clusters from kubectl annotations. 
+# You need to set kind clusters names separated by comma
+export KIND_EXCLUDE_CLUSTERS="${KIND_EXCLUDE_CLUSTERS:-}"
+export ISTIOCTL="${ISTIOCTL:-${ROOT}/bin/istioctl}"
+
 
 # Set variable for cluster kind name
 export KIND_CLUSTER_NAME="${KIND_CLUSTER_NAME:-operator-integration-tests}"
+if [ "${MULTICLUSTER}" == "true" ]; then
+  export KIND_CLUSTER_NAME="${KIND_CLUSTER_NAME}-1"
+  export KIND_CLUSTER_NAME_2="${KIND_CLUSTER_NAME}-2"
+fi
 
 # Use the local registry instead of the default HUB
 export HUB="${KIND_REGISTRY}"
@@ -52,16 +62,82 @@ function setup_kind_registry() {
   fi
 
   # https://docs.tilt.dev/choosing_clusters.html#discovering-the-registry
-  # TODO get context/config from existing variables
-  kind export kubeconfig --name="${KIND_CLUSTER_NAME}"
-  for node in $(kind get nodes --name="${KIND_CLUSTER_NAME}"); do
-    kubectl annotate node "${node}" "kind.x-k8s.io/registry=localhost:${KIND_REGISTRY_PORT}" --overwrite;
+  for cluster in $(kind get clusters); do
+    # TODO get context/config from existing variables
+    # Avoid adding the registry to excluded clusters. Use when you have multiple clusters running.
+    if [[ "${KIND_EXCLUDE_CLUSTERS}" == *"${cluster}"* ]]; then
+      continue
+    fi
+
+    kind export kubeconfig --name="${cluster}"
+    for node in $(kind get nodes --name="${cluster}"); do
+      kubectl annotate node "${node}" "kind.x-k8s.io/registry=localhost:${KIND_REGISTRY_PORT}" --overwrite;
+    done
   done
 }
 
-KUBECONFIG="${ARTIFACTS}/config" setup_kind_cluster "${KIND_CLUSTER_NAME}" "" "" "true" "true"
-setup_kind_registry
+# Create a self signed root CA and intermediate CAs and push them to each cluster.
+function setup_ca() {
+    # Create a self signed root CA and intermediate CAs.
+    mkdir -p certs
+    pushd certs
+    curl -fsL -o common.mk "https://raw.githubusercontent.com/istio/istio/1.23.0/tools/certs/common.mk"
+    curl -fsL -o Makefile.selfsigned.mk "https://raw.githubusercontent.com/istio/istio/1.23.0/tools/certs/Makefile.selfsigned.mk"
+    make -f Makefile.selfsigned.mk root-ca
+    make -f Makefile.selfsigned.mk east-cacerts
+    make -f Makefile.selfsigned.mk west-cacerts
+    popd
+
+    # Push the intermediate CAs to each cluster.
+    kubectl create ns istio-system --kubeconfig "${KUBECONFIG}" || true
+    kubectl --kubeconfig "${KUBECONFIG}" label namespace istio-system topology.istio.io/network=network1
+    kubectl get secret -n istio-system --kubeconfig "${KUBECONFIG}" cacerts || kubectl create secret generic cacerts -n istio-system --kubeconfig "${KUBECONFIG}" \
+      --from-file=certs/east/ca-cert.pem \
+      --from-file=certs/east/ca-key.pem \
+      --from-file=certs/east/root-cert.pem \
+      --from-file=certs/east/cert-chain.pem
+    kubectl create ns istio-system --kubeconfig "${KUBECONFIG2}" || true
+    kubectl --kubeconfig "${KUBECONFIG2}" label namespace istio-system topology.istio.io/network=network2
+    kubectl get secret -n istio-system --kubeconfig "${KUBECONFIG2}" cacerts || kubectl create secret generic cacerts -n istio-system --kubeconfig "${KUBECONFIG2}" \
+      --from-file=certs/west/ca-cert.pem \
+      --from-file=certs/west/ca-key.pem \
+      --from-file=certs/west/root-cert.pem \
+      --from-file=certs/west/cert-chain.pem
+}
+
+if [ "${MULTICLUSTER}" == "true" ]; then
+    CLUSTER_TOPOLOGY_CONFIG_FILE="${SCRIPTPATH}/config/multicluster.json"
+    load_cluster_topology "${CLUSTER_TOPOLOGY_CONFIG_FILE}"
+    setup_kind_clusters
+
+    TOPOLOGY_JSON=$(cat "${CLUSTER_TOPOLOGY_CONFIG_FILE}")
+    for i in $(seq 0 $((${#CLUSTER_NAMES[@]} - 1))); do
+      CLUSTER="${CLUSTER_NAMES[i]}"
+      KCONFIG="${KUBECONFIGS[i]}"
+    done
+
+    setup_kind_registry
+
+    export KUBECONFIG="${KUBECONFIGS[0]}"
+    export KUBECONFIG2="${KUBECONFIGS[1]}"
+
+    setup_ca
+else
+  KUBECONFIG="${ARTIFACTS}/config" setup_kind_cluster "${KIND_CLUSTER_NAME}" "" "" "true" "true"
+  setup_kind_registry
+fi
+
+
+# Check that istioctl is present using ${ISTIOCTL}
+if ! command -v "${ISTIOCTL}" &> /dev/null; then
+  echo "istioctl not found. Please set the ISTIOCTL environment variable to the path of the istioctl binary"
+  exit 1
+fi
 
 # Run the integration tests
 echo "Running integration tests"
+if [ "${MULTICLUSTER}" == "true" ]; then
+  ARTIFACTS="${ARTIFACTS}" ISTIOCTL="${ISTIOCTL}" ./tests/e2e/common-operator-integ-suite.sh --kind --multicluster
+else
 ARTIFACTS="${ARTIFACTS}" ./tests/e2e/common-operator-integ-suite.sh --kind
+fi

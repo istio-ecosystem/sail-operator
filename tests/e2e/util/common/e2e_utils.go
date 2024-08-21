@@ -18,6 +18,8 @@ package common
 
 import (
 	"context"
+	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -39,6 +41,12 @@ var (
 	istioName             = env.Get("ISTIO_NAME", "default")
 	istioCniName          = env.Get("ISTIOCNI_NAME", "default")
 	istioCniNamespace     = env.Get("ISTIOCNI_NAMESPACE", "istio-cni")
+
+	// version can have one of the following formats:
+	// - 1.22.2
+	// - 1.23.0-rc.1
+	// - 1.24-alpha
+	istiodVersionRegex = regexp.MustCompile(`Version:"(\d+\.\d+(\.\d+)?(-\w+(\.\d+)?)?)`)
 )
 
 // getObject returns the object with the given key
@@ -107,7 +115,7 @@ func logOperatorDebugInfo() {
 	logDebugElement("Events in "+namespace, events, err)
 
 	// Temporaty information to gather more details about failure
-	pods, err := kubectl.GetPods(namespace, "-o wide")
+	pods, err := kubectl.GetPods(namespace, "", "-o wide")
 	logDebugElement("Pods in "+namespace, pods, err)
 
 	describe, err := kubectl.Describe(namespace, "deployment", deploymentName)
@@ -118,7 +126,7 @@ func logIstioDebugInfo() {
 	resource, err := kubectl.GetYAML("", "istio", istioName)
 	logDebugElement("Istio YAML", resource, err)
 
-	output, err := kubectl.GetPods(controlPlaneNamespace, "-o wide")
+	output, err := kubectl.GetPods(controlPlaneNamespace, "", "-o wide")
 	logDebugElement("Pods in "+controlPlaneNamespace, output, err)
 
 	logs, err := kubectl.Logs(controlPlaneNamespace, "deploy/istiod", ptr.Of(120*time.Second))
@@ -139,7 +147,7 @@ func logCNIDebugInfo() {
 	logDebugElement("Events in "+istioCniNamespace, events, err)
 
 	// Temporaty information to gather more details about failure
-	pods, err := kubectl.GetPods(istioCniNamespace, "-o wide")
+	pods, err := kubectl.GetPods(istioCniNamespace, "", "-o wide")
 	logDebugElement("Pods in "+istioCniNamespace, pods, err)
 
 	describe, err := kubectl.Describe(istioCniNamespace, "daemonset", "istio-cni-node")
@@ -154,4 +162,17 @@ func logDebugElement(caption string, info string, err error) {
 	} else {
 		GinkgoWriter.Println(indent + strings.ReplaceAll(strings.TrimSpace(info), "\n", "\n"+indent))
 	}
+}
+
+func GetVersionFromIstiod() (string, error) {
+	output, err := kubectl.Exec(controlPlaneNamespace, "deploy/istiod", "", "pilot-discovery version")
+	if err != nil {
+		return "", fmt.Errorf("error getting version from istiod: %w", err)
+	}
+
+	matches := istiodVersionRegex.FindStringSubmatch(output)
+	if len(matches) > 1 && matches[1] != "" {
+		return matches[1], nil
+	}
+	return "", fmt.Errorf("error getting version from istiod: version not found in output: %s", output)
 }

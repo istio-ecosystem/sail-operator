@@ -25,6 +25,14 @@ import (
 
 const DefaultBinary = "kubectl"
 
+// optionalKubeconfig add the flag --kubeconfig if the kubeconfig is set
+func optionalKubeconfig(kubeconfig []string) string {
+	if len(kubeconfig) > 0 && kubeconfig[0] != "" {
+		return fmt.Sprintf("--kubeconfig %s", kubeconfig[0])
+	}
+	return ""
+}
+
 // kubectl return the kubectl command
 // If the environment variable COMMAND is set, it will return the value of COMMAND
 // Otherwise, it will return the default value "kubectl" as default
@@ -41,8 +49,8 @@ func kubectl(format string, args ...interface{}) string {
 }
 
 // CreateFromString creates a resource from the given yaml string
-func CreateFromString(yamlString string) error {
-	cmd := kubectl("create -f -")
+func CreateFromString(yamlString string, kubeconfig ...string) error {
+	cmd := kubectl("create %s -f -", optionalKubeconfig(kubeconfig))
 	_, err := shell.ExecuteCommandWithInput(cmd, yamlString)
 	if err != nil {
 		return fmt.Errorf("error creating resource from yaml: %w", err)
@@ -51,8 +59,15 @@ func CreateFromString(yamlString string) error {
 }
 
 // ApplyString applies the given yaml string to the cluster
-func ApplyString(ns, yamlString string) error {
-	cmd := kubectl("apply -n %s --server-side -f -", ns)
+func ApplyString(ns, yamlString string, kubeconfig ...string) error {
+	nsflag := nsflag(ns)
+	// If the namespace is empty, we need to remove the flag because it will fail
+	// TODO: improve the nsflag function to handle this case
+	if ns == "" {
+		nsflag = ""
+	}
+
+	cmd := kubectl("apply %s %s --server-side -f -", nsflag, optionalKubeconfig(kubeconfig))
 	_, err := shell.ExecuteCommandWithInput(cmd, yamlString)
 	if err != nil {
 		return fmt.Errorf("error applying yaml: %w", err)
@@ -62,8 +77,14 @@ func ApplyString(ns, yamlString string) error {
 }
 
 // Apply applies the given yaml file to the cluster
-func Apply(ns, yamlFile string) error {
-	cmd := kubectl("apply -n %s -f %s", ns, yamlFile)
+func Apply(ns, yamlFile string, kubeconfig ...string) error {
+	err := ApplyWithLabels(ns, yamlFile, "", kubeconfig...)
+	return err
+}
+
+// ApplyWithLabels applies the given yaml file to the cluster with the given labels
+func ApplyWithLabels(ns, yamlFile string, label string, kubeconfig ...string) error {
+	cmd := kubectl("apply -n %s %s -f %s %s", ns, labelFlag(label), yamlFile, optionalKubeconfig(kubeconfig))
 	_, err := shell.ExecuteCommand(cmd)
 	if err != nil {
 		return fmt.Errorf("error applying yaml: %w", err)
@@ -74,8 +95,11 @@ func Apply(ns, yamlFile string) error {
 
 // CreateNamespace creates a namespace
 // If the namespace already exists, it will return nil
-func CreateNamespace(ns string) error {
-	cmd := kubectl("create namespace %s", ns)
+// Arguments:
+// - ns: namespace
+// - kubeconfig: optional kubeconfig to set the target file
+func CreateNamespace(ns string, kubeconfig ...string) error {
+	cmd := kubectl("create namespace %s %s", ns, optionalKubeconfig(kubeconfig))
 	output, err := shell.ExecuteCommand(cmd)
 	if err != nil {
 		if strings.Contains(output, "AlreadyExists") {
@@ -89,8 +113,11 @@ func CreateNamespace(ns string) error {
 }
 
 // DeleteNamespace deletes a namespace
-func DeleteNamespace(ns string) error {
-	cmd := kubectl("delete namespace %s", ns)
+// Arguments:
+// - ns: namespace
+// - kubeconfig: optional kubeconfig to set the target file
+func DeleteNamespace(ns string, kubeconfig ...string) error {
+	cmd := kubectl("delete namespace %s %s", ns, optionalKubeconfig(kubeconfig))
 	_, err := shell.ExecuteCommand(cmd)
 	if err != nil {
 		return fmt.Errorf("error deleting namespace: %w", err)
@@ -99,9 +126,9 @@ func DeleteNamespace(ns string) error {
 	return nil
 }
 
-// Delete deletes a resource based on the namespace, kind and the name
-func Delete(ns, kind, name string) error {
-	cmd := kubectl("delete %s %s %s", kind, name, nsflag(ns))
+// Delete deletes a resource based on the namespace, kind and the name. Optionally, you can provide a kubeconfig
+func Delete(ns, kind, name string, kubeconfig ...string) error {
+	cmd := kubectl("delete %s %s %s %s", kind, name, nsflag(ns), optionalKubeconfig(kubeconfig))
 	_, err := shell.ExecuteCommand(cmd)
 	if err != nil {
 		return fmt.Errorf("error deleting deployment: %w", err)
@@ -124,8 +151,8 @@ func DeleteCRDs(crds []string) error {
 }
 
 // Patch patches a resource.
-func Patch(ns, kind, name, patchType, patch string) error {
-	cmd := kubectl(`patch %s %s %s --type=%s -p=%q`, kind, name, prepend("-n", ns), patchType, patch)
+func Patch(ns, kind, name, patchType, patch string, kubeconfig ...string) error {
+	cmd := kubectl(`patch %s %s %s %s --type=%s -p=%q`, kind, name, prepend("-n", ns), optionalKubeconfig(kubeconfig), patchType, patch)
 	_, err := shell.ExecuteCommand(cmd)
 	if err != nil {
 		return fmt.Errorf("error patching resource: %w", err)
@@ -152,8 +179,13 @@ func GetYAML(ns, kind, name string) (string, error) {
 }
 
 // GetPods returns the pods of a namespace
-func GetPods(ns string, args ...string) (string, error) {
-	cmd := kubectl("get pods %s %s", nsflag(ns), strings.Join(args, " "))
+func GetPods(ns string, kubeconfig string, args ...string) (string, error) {
+	kubeconfigFlag := ""
+	if kubeconfig != "" {
+		kubeconfigFlag = fmt.Sprintf("--kubeconfig %s", kubeconfig)
+	}
+
+	cmd := kubectl("get pods %s %s %s", nsflag(ns), strings.Join(args, " "), kubeconfigFlag)
 	output, err := shell.ExecuteCommand(cmd)
 	if err != nil {
 		return "", fmt.Errorf("error getting pods: %w, output: %s", err, output)
@@ -188,6 +220,20 @@ func Describe(ns, kind, name string) (string, error) {
 	return output, nil
 }
 
+// GetInternalIP returns the internal IP of a node
+// Arguments:
+// - label: label of the node
+// - kubeconfig: optional kubeconfig to set the target file
+func GetInternalIP(label string, kubeconfig ...string) (string, error) {
+	cmd := kubectl("get nodes -l %s -o jsonpath='{.items[0].status.addresses[?(@.type==\"InternalIP\")].address}' %s", label, optionalKubeconfig(kubeconfig))
+	output, err := shell.ExecuteCommand(cmd)
+	if err != nil {
+		return "", fmt.Errorf("error getting internal IP: %w, output: %s", err, output)
+	}
+
+	return output, nil
+}
+
 // Logs returns the logs of a deployment
 // Arguments:
 // - ns: namespace
@@ -210,8 +256,8 @@ func sinceFlag(since *time.Duration) string {
 }
 
 // Exec executes a command in the pod or specific container
-func Exec(ns, pod, container, command string) (string, error) {
-	cmd := kubectl("exec %s %s %s -- %s", pod, containerflag(container), nsflag(ns), command)
+func Exec(ns, pod, container, command string, kubeconfig ...string) (string, error) {
+	cmd := kubectl("exec %s %s %s %s -- %s", pod, containerflag(container), nsflag(ns), optionalKubeconfig(kubeconfig), command)
 	output, err := shell.ExecuteCommand(cmd)
 	if err != nil {
 		return "", err
@@ -232,6 +278,13 @@ func nsflag(ns string) string {
 		return "--all-namespaces"
 	}
 	return "-n " + ns
+}
+
+func labelFlag(label string) string {
+	if label == "" {
+		return ""
+	}
+	return "-l " + label
 }
 
 func containerflag(container string) string {

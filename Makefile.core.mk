@@ -165,8 +165,8 @@ test.e2e.ocp: ## Run the end-to-end tests against an existing OCP cluster.
 	GINKGO_FLAGS="$(GINKGO_FLAGS)" ${SOURCE_DIR}/tests/e2e/integ-suite-ocp.sh
 
 .PHONY: test.e2e.kind
-test.e2e.kind: ## Deploy a KinD cluster and run the end-to-end tests against it.
-	GINKGO_FLAGS="$(GINKGO_FLAGS)" ${SOURCE_DIR}/tests/e2e/integ-suite-kind.sh
+test.e2e.kind: istioctl ## Deploy a KinD cluster and run the end-to-end tests against it.
+	GINKGO_FLAGS="$(GINKGO_FLAGS)" ISTIOCTL="$(ISTIOCTL)" ${SOURCE_DIR}/tests/e2e/integ-suite-kind.sh
 
 .PHONY: test.e2e.describe
 test.e2e.describe: ## Runs ginkgo outline -format indent over the e2e test to show in BDD style the steps and test structure
@@ -435,6 +435,7 @@ CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 GITLEAKS ?= $(LOCALBIN)/gitleaks
 OPM ?= $(LOCALBIN)/opm
+ISTIOCTL ?= $(LOCALBIN)/istioctl
 
 ## Tool Versions
 OPERATOR_SDK_VERSION ?= v1.36.1
@@ -442,6 +443,7 @@ HELM_VERSION ?= v3.15.3
 CONTROLLER_TOOLS_VERSION ?= v0.16.0
 OPM_VERSION ?= v1.45.0
 GITLEAKS_VERSION ?= v8.18.4
+ISTIOCTL_VERSION ?= 1.23.0
 
 # GENERATE_RELATED_IMAGES defines whether `spec.relatedImages` is going to be generated or not
 # To disable set flag to false
@@ -467,6 +469,28 @@ $(OPERATOR_SDK): $(LOCALBIN)
 	@test -s $(LOCALBIN)/operator-sdk || \
 	curl -sSLfo $(LOCALBIN)/operator-sdk https://github.com/operator-framework/operator-sdk/releases/download/$(OPERATOR_SDK_VERSION)/operator-sdk_$(OS)_$(ARCH) && \
 	chmod +x $(LOCALBIN)/operator-sdk;
+
+.PHONY: istioctl $(ISTIOCTL)
+istioctl: $(ISTIOCTL) ## Download istioctl to bin directory.
+istioctl: TARGET_OS=$(shell go env GOOS)
+istioctl: TARGET_ARCH=$(shell go env GOARCH)
+$(ISTIOCTL): $(LOCALBIN)
+	@test -s $(LOCALBIN)/istioctl || { \
+		OSEXT=$(if $(filter $(TARGET_OS),Darwin),osx,linux); \
+		URL="https://github.com/istio/istio/releases/download/$(ISTIOCTL_VERSION)/istioctl-$(ISTIOCTL_VERSION)-$$OSEXT-$(TARGET_ARCH).tar.gz"; \
+		echo "Fetching istioctl from $$URL"; \
+		curl -fsL $$URL -o /tmp/istioctl.tar.gz || { \
+			echo "Download failed! Please check the URL and ISTIO_VERSION."; \
+			exit 1; \
+		}; \
+		tar -xzf /tmp/istioctl.tar.gz -C /tmp || { \
+			echo "Extraction failed!"; \
+			exit 1; \
+		}; \
+		mv /tmp/istioctl $(LOCALBIN)/istioctl; \
+		rm -f /tmp/istioctl.tar.gz; \
+		echo "istioctl has been downloaded and placed in $(LOCALBIN)"; \
+	}
 
 .PHONY: controller-gen
 controller-gen: $(LOCALBIN) ## Download controller-gen to bin directory. If wrong version is installed, it will be overwritten.

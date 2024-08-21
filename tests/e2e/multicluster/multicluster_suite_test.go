@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controlplane
+package multicluster
 
 import (
 	"testing"
@@ -27,7 +27,8 @@ import (
 )
 
 var (
-	cl                    client.Client
+	clPrimary             client.Client
+	clRemote              client.Client
 	err                   error
 	ocp                   = env.GetBool("OCP", false)
 	namespace             = env.Get("NAMESPACE", "sail-operator")
@@ -41,11 +42,13 @@ var (
 	expectedRegistry      = env.Get("EXPECTED_REGISTRY", "^docker\\.io|^gcr\\.io")
 	bookinfoNamespace     = env.Get("BOOKINFO_NAMESPACE", "bookinfo")
 	multicluster          = env.GetBool("MULTICLUSTER", false)
+	kubeconfig            = env.Get("KUBECONFIG", "")
+	kubeconfig2           = env.Get("KUBECONFIG2", "")
 )
 
 func TestInstall(t *testing.T) {
-	if multicluster {
-		t.Skip("Skipping test for multicluster")
+	if !multicluster {
+		t.Skip("Skipping test. Only valid for multicluster")
 	}
 	RegisterFailHandler(Fail)
 	setup()
@@ -56,6 +59,7 @@ func setup() {
 	GinkgoWriter.Println("************ Running Setup ************")
 
 	GinkgoWriter.Println("Initializing k8s client")
-	cl, err = k8sclient.InitK8sClient("")
+	clPrimary, err = k8sclient.InitK8sClient(kubeconfig)
+	clRemote, err = k8sclient.InitK8sClient(kubeconfig2)
 	Expect(err).NotTo(HaveOccurred())
 }
