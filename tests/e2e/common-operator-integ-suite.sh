@@ -238,12 +238,12 @@ if [ "${SKIP_BUILD}" == "false" ]; then
     make bundle bundle-build bundle-push
 
     # Create operator namespace
-    ${COMMAND} create ns ${NAMESPACE} || echo "namespace ${NAMESPACE} already exists"
+    ${COMMAND} create ns "${NAMESPACE}" || echo "namespace ${NAMESPACE} already exists"
     # Deploy the operator using OLM
-	  ${OPERATOR_SDK} run bundle ${BUNDLE_IMG} -n ${NAMESPACE} --skip-tls
+	  ${OPERATOR_SDK} run bundle "${BUNDLE_IMG}" -n "${NAMESPACE}" --skip-tls
 
     # Wait for the operator to be ready
-    ${COMMAND} wait --for=condition=available deployment/${DEPLOYMENT_NAME} -n "${NAMESPACE}" --timeout=5m
+    ${COMMAND} wait --for=condition=available deployment/"${DEPLOYMENT_NAME}" -n "${NAMESPACE}" --timeout=5m
 
     # Set SKIP_DEPLOY to true to avoid deploying the operator again
     SKIP_DEPLOY=true
