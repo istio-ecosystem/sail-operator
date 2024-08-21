@@ -223,7 +223,7 @@ if [ "${SKIP_BUILD}" == "false" ]; then
   build_and_push_operator_image
 
   # If OLM is enabled, deploy the operator using OLM
-  if [ "${OLM}" == "true" ] && [ "${SKIP_DEPLOY}" == "false"]; then
+  if [ "${OLM}" == "true" ] && [ "${SKIP_DEPLOY}" == "false" ]; then
     # Set the platform to Kubernetes by default.
     # We are skipping the deploy via OLM test on OCP because the workaround to avoid the certificate issue is not working.
     # Jora ticket related to the limitation: https://issues.redhat.com/browse/OSSM-7993
@@ -244,7 +244,7 @@ if [ "${SKIP_BUILD}" == "false" ]; then
     make bundle bundle-build bundle-push
 
     # Create operator namespace
-    ${COMMAND} create ns "${NAMESPACE}" || echo "namespace ${NAMESPACE} already exists"
+    ${COMMAND} create ns "${NAMESPACE}" || echo "Creation of namespace ${NAMESPACE} failed with the message: $?"
     # Deploy the operator using OLM
     ${OPERATOR_SDK} run bundle "${BUNDLE_IMG}" -n "${NAMESPACE}" --skip-tls
 
