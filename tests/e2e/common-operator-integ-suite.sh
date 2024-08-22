@@ -226,7 +226,7 @@ if [ "${SKIP_BUILD}" == "false" ]; then
   if [ "${OLM}" == "true" ] && [ "${SKIP_DEPLOY}" == "false" ]; then
     # Set the platform to Kubernetes by default.
     # We are skipping the deploy via OLM test on OCP because the workaround to avoid the certificate issue is not working.
-    # Jora ticket related to the limitation: https://issues.redhat.com/browse/OSSM-7993
+    # Jira ticket related to the limitation: https://issues.redhat.com/browse/OSSM-7993
     HELM_PLATFORM="kubernetes"
     
     # Install OLM in the cluster because it's not available by default in kind.
