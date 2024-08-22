@@ -20,7 +20,7 @@ OLD_VARS := $(.VARIABLES)
 -include Makefile.vendor.mk
 
 VERSION ?= 0.2.0
-MINOR_VERSION := $(shell v='$(VERSION)'; echo "$${v%.*}")
+MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 
 OPERATOR_NAME ?= sailoperator
 VERSIONS_YAML_FILE ?= versions.yaml
@@ -268,13 +268,28 @@ uninstall: verify-kubeconfig ## Uninstall CRDs from an existing cluster.
 helm-package: helm operator-chart ## Package the helm chart.
 	$(HELM) package chart --destination $(REPO_ROOT)/out
 
-.PHONY: helm-publish
-helm-publish: helm-package ## Create a GitHub release and upload the helm charts package to it.
+# optional flags for 'gh release create' cmd
+GH_RELEASE_ADDITIONAL_FLAGS =
+# set to true to label the GH release as non-production ready
+GH_PRE_RELEASE ?= false
+ifeq ($(GH_PRE_RELEASE),true)
+GH_RELEASE_ADDITIONAL_FLAGS += --prerelease
+endif
+
+# create a draft by default to avoid creating real GH release by accident
+GH_RELEASE_DRAFT ?= true
+ifeq ($(GH_RELEASE_DRAFT),true)
+GH_RELEASE_ADDITIONAL_FLAGS += --draft
+endif
+
+.PHONY: create-gh-release
+create-gh-release: helm-package ## Create a GitHub release and upload the helm charts package to it.
 	export GITHUB_TOKEN=$(GITHUB_TOKEN)
 	gh release create $(VERSION) $(REPO_ROOT)/out/sail-operator-$(VERSION).tgz \
 		--target release-$(MINOR_VERSION) \
-		--title "sail-operator $(VERSION)" \
-		--generate-notes
+		--title "Sail Operator $(VERSION)" \
+		--generate-notes \
+		$(GH_RELEASE_ADDITIONAL_FLAGS)
 
 .PHONY: deploy
 deploy: verify-kubeconfig helm ## Deploy controller to an existing cluster.
