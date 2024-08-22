@@ -108,14 +108,8 @@ initialize_variables() {
   COMMAND="kubectl"
   ARTIFACTS="${ARTIFACTS:-$(mktemp -d)}"
   KUBECONFIG="${KUBECONFIG:-"${ARTIFACTS}/config"}"
-  # Set the location to install dependencies
-  LOCALBIN="${LOCALBIN:-$(pwd)/bin}"
-
-  # Create the directory if it doesn't exist
-  mkdir -p "${LOCALBIN}"
-
-  # Define the path for the operator-sdk binary
-  OPERATOR_SDK="${LOCALBIN}/operator-sdk"
+  LOCALBIN="${LOCALBIN:-${HOME}/bin}"
+  OPERATOR_SDK=${LOCALBIN}/operator-sdk
 
   if [ "${OCP}" == "true" ]; then
     COMMAND="oc"
@@ -228,20 +222,16 @@ if [ "${SKIP_BUILD}" == "false" ]; then
   if [ "${OLM}" == "true" ] && [ "${SKIP_DEPLOY}" == "false" ]; then   
     # Install OLM in the cluster because it's not available by default in kind.
     ${OPERATOR_SDK} olm install
-
+    
     # Set image-related variables
     IMAGE_TAG_BASE="${HUB}/${IMAGE_BASE}"
     BUNDLE_IMG="${IMAGE_TAG_BASE}-bundle:v${VERSION}"
-
-    # If platform is different to openshift, the --set platform=<platform> flag is not added to the helm template command.
-    # We set it to kubernetes because the operator is going to be deployed in a kubernetes cluster and we need to avoid changes in the helm chart that are specific to OCP.
-    HELM_PLATFORM="kubernetes"
 
     # Deploy the operator using OLM
     IMAGE="${HUB}/${IMAGE_BASE}:${TAG}" \
     IMAGE_TAG_BASE="${IMAGE_TAG_BASE}" \
     BUNDLE_IMG="${BUNDLE_IMG}" \
-    HELM_PLATFORM="${HELM_PLATFORM}" \
+    OPENSHIFT_PLATFORM=false \
     make bundle bundle-build bundle-push
 
     # Create operator namespace
