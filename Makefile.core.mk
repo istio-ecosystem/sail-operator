@@ -483,17 +483,15 @@ gitleaks: $(GITLEAKS) ## Download gitleaks to bin directory.
 $(GITLEAKS): $(LOCALBIN)
 	@test -s $(LOCALBIN)/gitleaks || GOBIN=$(LOCALBIN) go install github.com/zricethezav/gitleaks/v8@${GITLEAKS_VERSION}
 
-# HELM_PLATFORM is the platform to use when rendering the Helm chart
-# If platform is different to openshift, the --set platform=<platform> flag is not added to the helm template command
-HELM_PLATFORM ?= openshift
-
-# Only add the platform flag if HELM_PLATFORM is set to "openshift"
-ifeq ($(HELM_PLATFORM), openshift)
-	HELM_TEMPL_DEF_FLAGS := $(HELM_TEMPL_DEF_FLAGS) --set platform=$(HELM_PLATFORM)
-endif
+# Openshift Platform flag
+# If is set to true will add `--set platform=openshift` to the helm template command
+OPENSHIFT_PLATFORM ?= true
 
 .PHONY: bundle
 bundle: gen-all-except-bundle helm operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
+ifeq ($(OPENSHIFT_PLATFORM), true)
+	HELM_TEMPL_DEF_FLAGS := $(HELM_TEMPL_DEF_FLAGS) --set platform=openshift
+endif
 	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --set bundleGeneration=true | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
 ifeq ($(GENERATE_RELATED_IMAGES), true)
 	@hack/patch-csv.sh bundle/manifests/$(OPERATOR_NAME).clusterserviceversion.yaml
