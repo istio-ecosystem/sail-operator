@@ -56,8 +56,7 @@ func init() {
 }
 
 type Versions struct {
-	CRDSourceVersion string        `json:"crdSourceVersion"`
-	Versions         []VersionInfo `json:"versions"`
+	Versions []VersionInfo `json:"versions"`
 }
 
 type VersionInfo struct {
