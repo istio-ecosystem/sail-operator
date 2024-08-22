@@ -223,18 +223,19 @@ if [ "${SKIP_BUILD}" == "false" ]; then
   build_and_push_operator_image
 
   # If OLM is enabled, deploy the operator using OLM
-  if [ "${OLM}" == "true" ] && [ "${SKIP_DEPLOY}" == "false" ]; then
-    # Set the platform to Kubernetes by default.
-    # We are skipping the deploy via OLM test on OCP because the workaround to avoid the certificate issue is not working.
-    # Jira ticket related to the limitation: https://issues.redhat.com/browse/OSSM-7993
-    HELM_PLATFORM="kubernetes"
-    
+  # We are skipping the deploy via OLM test on OCP because the workaround to avoid the certificate issue is not working.
+  # Jira ticket related to the limitation: https://issues.redhat.com/browse/OSSM-7993
+  if [ "${OLM}" == "true" ] && [ "${SKIP_DEPLOY}" == "false" ]; then   
     # Install OLM in the cluster because it's not available by default in kind.
     ${OPERATOR_SDK} olm install
 
     # Set image-related variables
     IMAGE_TAG_BASE="${HUB}/${IMAGE_BASE}"
     BUNDLE_IMG="${IMAGE_TAG_BASE}-bundle:v${VERSION}"
+
+    # If platform is different to openshift, the --set platform=<platform> flag is not added to the helm template command.
+    # We set it to kubernetes because the operator is going to be deployed in a kubernetes cluster and we need to avoid changes in the helm chart that are specific to OCP.
+    HELM_PLATFORM="kubernetes"
 
     # Deploy the operator using OLM
     IMAGE="${HUB}/${IMAGE_BASE}:${TAG}" \
