@@ -361,8 +361,8 @@ gen-charts: ## Pull charts from istio repository.
 	@# update the urn:alm:descriptor:com.tectonic.ui:select entries in istio_types.go to match the supported versions of the Helm charts
 	@hack/update-version-list.sh
 
-	@# calls copy-crds.sh with the version specified in the .crdSourceVersion field in versions.yaml
-	@hack/copy-crds.sh "resources/$$(yq eval '.crdSourceVersion' $(VERSIONS_YAML_FILE))/charts"
+	@# extract the Istio CRD YAMLs from the istio.io/istio dependency in go.mod into ./chart/crds
+	@hack/extract-istio-crds.sh
 
 .PHONY: gen
 gen: gen-all-except-bundle bundle ## Generate everything.

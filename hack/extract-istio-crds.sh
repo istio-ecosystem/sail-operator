@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-: "${CHARTS_DIR:=$1}"
+INPUT_FILE="$(go list -m -f '{{.Dir}}' istio.io/istio)/manifests/charts/base/crds/crd-all.gen.yaml"
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 REPO_ROOT=$(dirname "${SCRIPT_DIR}")
@@ -24,9 +24,9 @@ OPERATOR_CHART_DIR="${REPO_ROOT}/chart"
 
 function copyCRDs() {
   # Split the YAML file into separate CRD files
-  csplit -s --suppress-matched -f "${OPERATOR_CHART_DIR}/crds/istio-crd" -z "${CHARTS_DIR}/base/crds/crd-all.gen.yaml" '/^---$/' '{*}'
+  csplit -s --suppress-matched -f "${OPERATOR_CHART_DIR}/crds/istio-crd" -z "${INPUT_FILE}" '/^---$/' '{*}'
 
-  # To hide istio CRDs in the OpenShift Console, we add them to the intenral-objects annotation in the CSV
+  # To hide istio CRDs in the OpenShift Console, we add them to the internal-objects annotation in the CSV
   internalObjects=""
 
   # Rename the split files to <api group>_<resource name>.yaml
