@@ -314,7 +314,7 @@ deploy-yaml-openshift: verify-kubeconfig helm ## Output YAML manifests used by `
 .PHONY: deploy-olm
 deploy-olm: verify-kubeconfig bundle bundle-build bundle-push ## Build and push the operator OLM bundle and deploy the operator using OLM.
 	kubectl create ns ${NAMESPACE} || echo "namespace ${NAMESPACE} already exists"
-	$(OPERATOR_SDK) run bundle $(BUNDLE_IMG) -n ${NAMESPACE}
+	$(OPERATOR_SDK) run bundle $(BUNDLE_IMG) -n ${NAMESPACE} --skip-tls
 
 .PHONY: undeploy
 undeploy: verify-kubeconfig ## Undeploy controller from an existing cluster.
@@ -522,9 +522,17 @@ gitleaks: $(GITLEAKS) ## Download gitleaks to bin directory.
 $(GITLEAKS): $(LOCALBIN)
 	@test -s $(LOCALBIN)/gitleaks || GOBIN=$(LOCALBIN) go install github.com/zricethezav/gitleaks/v8@${GITLEAKS_VERSION}
 
+# Openshift Platform flag
+# If is set to true will add `--set platform=openshift` to the helm template command
+OPENSHIFT_PLATFORM ?= true
+
 .PHONY: bundle
 bundle: gen-all-except-bundle helm operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
-	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --set platform=openshift --set bundleGeneration=true | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
+	@TEMPL_FLAGS="$(HELM_TEMPL_DEF_FLAGS)"; \
+	if [ "$(OPENSHIFT_PLATFORM)" = "true" ]; then \
+		TEMPL_FLAGS="$$TEMPL_FLAGS --set platform=openshift"; \
+	fi; \
+	$(HELM) template chart chart $$TEMPL_FLAGS --set image='$(IMAGE)' --set bundleGeneration=true | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
 
 ifeq ($(GENERATE_RELATED_IMAGES), true)
 	@hack/patch-csv.sh bundle/manifests/$(OPERATOR_NAME).clusterserviceversion.yaml
