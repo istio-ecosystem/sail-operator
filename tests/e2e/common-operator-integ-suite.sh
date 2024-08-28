@@ -219,10 +219,7 @@ if [ "${SKIP_BUILD}" == "false" ]; then
   # If OLM is enabled, deploy the operator using OLM
   # We are skipping the deploy via OLM test on OCP because the workaround to avoid the certificate issue is not working.
   # Jira ticket related to the limitation: https://issues.redhat.com/browse/OSSM-7993
-  if [ "${OLM}" == "true" ] && [ "${SKIP_DEPLOY}" == "false" ]; then   
-    # Install OLM in the cluster because it's not available by default in kind.
-    ${OPERATOR_SDK} olm install
-    
+  if [ "${OLM}" == "true" ] && [ "${SKIP_DEPLOY}" == "false" ]; then    
     # Set image-related variables
     IMAGE_TAG_BASE="${HUB}/${IMAGE_BASE}"
     BUNDLE_IMG="${IMAGE_TAG_BASE}-bundle:v${VERSION}"
@@ -233,6 +230,9 @@ if [ "${SKIP_BUILD}" == "false" ]; then
     BUNDLE_IMG="${BUNDLE_IMG}" \
     OPENSHIFT_PLATFORM=false \
     make bundle bundle-build bundle-push
+     
+    # Install OLM in the cluster because it's not available by default in kind.
+    ${OPERATOR_SDK} olm install
 
     # Create operator namespace
     ${COMMAND} create ns "${NAMESPACE}" || echo "Creation of namespace ${NAMESPACE} failed with the message: $?"
