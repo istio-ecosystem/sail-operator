@@ -14,6 +14,7 @@
     - [Installing through the web console](#installing-through-the-web-console)
     - [Installing using the CLI](#installing-using-the-cli)
   - [Installation from Source](#installation-from-source)
+- [Migrating from Istio in-cluster Operator](#migrating-from-istio-in-cluster-operator)
 - [Gateways](#gateways)
 - [Update Strategy](#update-strategy)
   - [InPlace](#inplace)
@@ -63,6 +64,8 @@ spec:
           cpu: 100m
           memory: 1024Mi
 ```
+
+Istio uses a ConfigMap for its global configuration, called the MeshConfig. All of its settings are available through `spec.meshConfig`.
 
 To support canary updates of the control plane, Sail Operator includes support for multiple Istio versions. You can select a version by setting the `version` field in the `spec` to the version you would like to install, prefixed with a `v`. You can then update to a new version just by changing this field.
 
@@ -186,6 +189,57 @@ is installed. `Succeeded` should appear in the **Status** column.
 ### Installation from Source
 
 If you're not using OpenShift or simply want to install from source, follow the [instructions in the Contributor Documentation](../README.md#deploying-the-operator).
+
+## Migrating from Istio in-cluster Operator
+
+If you're planning to migrate from the [now-deprecated Istio in-cluster operator](https://istio.io/latest/blog/2024/in-cluster-operator-deprecation-announcement/) to the Sail Operator, you will have to make some adjustments to your Kubernetes Resources. While direct usage of the IstioOperator resource is not possible with the Sail Operator, you can very easily transfer all your settings to the respective Sail Operator APIs. As shown in the [Concepts](#concepts) section, every API resource has a `spec.values` field which accepts the same input as the `IstioOperator`'s `spec.values` field. Also, the [Istio resource](#istio-resource) provides a `spec.meshConfig` field, just like IstioOperator does.
+
+Another important distinction between the two operators is that Sail Operator can manage and install different versions of Istio and its components, whereas the in-cluster operator always installs the version of Istio that it was released with. This makes managing control plane upgrades much easier, as the operator update is disconnected from the control plane update.
+
+So for a simple Istio deployment, the transition will be very easy:
+
+```yaml
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+spec:
+  meshConfig:
+    accessLogFile: /dev/stdout
+  values:
+    pilot:
+      traceSampling: 0.1
+```
+
+becomes
+
+```yaml
+apiVersion: sailoperator.io/v1alpha1
+kind: Istio
+spec:
+  meshConfig:
+    accessLogFile: /dev/stdout
+  values:
+    pilot:
+      traceSampling: 0.1
+  version: v1.23.0
+```
+
+Note that the only field that was added is the `spec.version` field. There are a few situations however where the APIs are different and require different approaches to achieve the same outcome.
+
+### Gateways
+
+Sail Operator does not support deploying Gateways using `spec.values.gateways`, only Gateway Injection and Gateway API are currently supported. See the [Gateways](#gateways) section for more information.
+
+### components field
+
+Sail Operator's Istio resource does not have a `spec.components` field. Instead, you can enable and disable components directly by setting `spec.values.<component>.enabled: true/false`. Other functionality exposed through `spec.components` like the k8s overlays is not currently available.
+
+### CNI
+
+The CNI plugin's lifecycle is managed separately from the control plane. You will have to create a [IstioCNI resource](#istiocni-resource) to use CNI.
+
+### istiod-remote
+
+The functionality of the istiod-remote chart is exposed through the [RemoteIstio resource](#remoteistio-resource).
 
 ## Gateways
 
