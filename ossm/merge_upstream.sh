@@ -45,7 +45,7 @@ merge() {
 
   set +e # git returns a non-zero exit code on merge failure, which fails the script
   if [ "${MERGE_STRATEGY}" == "merge" ]; then
-    git -c "user.name=$GIT_USERNAME" -c "user.email=$GIT_EMAIL" merge --no-ff -m "$GIT_COMMIT_MESSAGE" --log upstream/"$MERGE_BRANCH"
+    git -c "user.name=$GIT_USERNAME" -c "user.email=$GIT_EMAIL" merge --no-ff -m "$GIT_COMMIT_MESSAGE" --log upstream/"$MERGE_BRANCH" --strategy-option theirs
   else
     git -c "user.name=$GIT_USERNAME" -c "user.email=$GIT_EMAIL" rebase upstream/"$MERGE_BRANCH"
   fi
@@ -61,15 +61,25 @@ updateVersionsInOssmValuesYaml() {
 }
 
 main () {
-  if ! merge; then
-    set -e
-    echo "Conflicts detected, attempting to run 'make gen' to resolve."
-    rm -rf bundle/**/*.yaml resources bundle.Dockerfile
-    updateVersionsInOssmValuesYaml
-    make gen
-    git add bundle resources chart bundle.Dockerfile "$HELM_VALUES_FILE"
+  merge
+  merge_rc=$?
+  set -e
+
+  # generate everything regardless of detected conflicts
+  rm -rf bundle/**/*.yaml resources bundle.Dockerfile
+  updateVersionsInOssmValuesYaml
+  make gen
+  git add .
+
+  # even when using '--strategy-option theirs' the merge can fail when removing/renaming files
+  if [ $merge_rc -eq 0 ]; then
+    echo "Conflicts were resolved automatically but we still need to commit possible changes after 'make gen'"
+    git diff-index --quiet HEAD || git -c "user.name=$GIT_USERNAME" -c "user.email=$GIT_EMAIL" commit -m "Automated regeneration"
+  else
+    echo "Conflicts were NOT resolved automatically but 'make gen' passed, finishing the merge"
     git -c "user.name=$GIT_USERNAME" -c "user.email=$GIT_EMAIL" commit --no-edit
   fi
+
 }
 
 main
