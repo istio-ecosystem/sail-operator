@@ -209,6 +209,7 @@ The following environment variables define the behavior of the test run:
 * IMAGE=quay.io/maistra-dev/sail-operator:latest - The operator image to be used to deploy the operator and run the test. This is useful when you want to test a specific operator image.
 * SKIP_DEPLOY=false - If set to true, the test will skip the deployment of the operator. This is useful when the operator is already deployed in the cluster, and you want to run the test only.
 * OCP=false - If set to true, the test will be configured to run on an OCP cluster and use the `oc` command to interact with it. If set to false, the test will run in a KinD cluster and use `kubectl`.
+* OLM=false - If set to true, the test will use the OLM (Operator Lifecycle Manager) to install the operator. If set to false, the test will use Helm to install the operator.
 * NAMESPACE=sail-operator - The namespace where the operator will be deployed and the test will run.
 * CONTROL_PLANE_NS=istio-system - The namespace where the control plane will be deployed.
 * DEPLOYMENT_NAME=sail-operator - The name of the operator deployment.
