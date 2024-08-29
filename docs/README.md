@@ -20,7 +20,7 @@
     - [Example using the InPlace strategy](#example-using-the-inplace-strategy)
   - [RevisionBased](#revisionbased)
     - [Example using the RevisionBased strategy](#example-using-the-revisionbased-strategy)
-- [Multicluster](#multicluster)
+- [Multi-cluster](#multi-cluster)
 - [Addons](#addons)
   - [Deploy Prometheus and Jaeger addons](#deploy-prometheus-and-jaeger-addons)
   - [Deploy Kiali addon](#deploy-kiali-addon)
@@ -117,7 +117,7 @@ spec:
       remotePilotAddress: 1.2.3.4
 ```
 
-For more information on how to use the `RemoteIstio` resource, refer to the [multi-cluster](#multicluster) section.
+For more information on how to use the `RemoteIstio` resource, refer to the [multi-cluster](#multi-cluster) section.
 
 ## API Reference documentation
 The Sail Operator API reference documentation can be found [here](https://github.com/istio-ecosystem/sail-operator/tree/main/docs/api-reference/sailoperator.io.md).
@@ -412,18 +412,17 @@ Steps:
     ```
     The old `IstioRevision` resource and the old control plane will be deleted when the grace period specified in the `Istio` resource field `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds` expires.
 
-## Multicluster
+## Multi-cluster
 
-You can use the Sail Operator and the Sail CRDs to manage a multi-cluster Istio deployment. The following instructions are adapted from the [Istio multicluster documentation](https://istio.io/latest/docs/setup/install/multicluster/) to demonstrate how you can setup the various deployment models with Sail. Please familiarize yourself with the different [deployment models](https://istio.io/latest/docs/ops/deployment/deployment-models/) before starting.
+You can use the Sail Operator and the Sail CRDs to manage a multi-cluster Istio deployment. The following instructions are adapted from the [Istio multi-cluster documentation](https://istio.io/latest/docs/setup/install/multicluster/) to demonstrate how you can setup the various deployment models with Sail. Please familiarize yourself with the different [deployment models](https://istio.io/latest/docs/ops/deployment/deployment-models/) before starting.
 
 *Prerequisites*
 
 Each deployment model requires you to install the Sail Operator and the Sail CRDs to every cluster that is part of the mesh.
 
-- [istioctl](https://istio.io/latest/docs/setup/install/istioctl)
+- Install [istioctl](https://istio.io/latest/docs/setup/install/istioctl) and have it included in your `$PATH`.
 - Two kubernetes clusters with external lb support. (If using kind, `cloud-provider-kind` is running in the background)
 - kubeconfig file with a context for each cluster.
-- The Sail Operator and the Sail CRDs are installed on each cluster.
 
 ### Common Setup
 
