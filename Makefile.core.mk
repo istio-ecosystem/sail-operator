@@ -20,7 +20,7 @@ OLD_VARS := $(.VARIABLES)
 -include Makefile.vendor.mk
 
 VERSION ?= 0.2.0
-MINOR_VERSION := $(shell v='$(VERSION)'; echo "$${v%.*}")
+MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 
 OPERATOR_NAME ?= sailoperator
 VERSIONS_YAML_FILE ?= versions.yaml
@@ -268,13 +268,28 @@ uninstall: verify-kubeconfig ## Uninstall CRDs from an existing cluster.
 helm-package: helm operator-chart ## Package the helm chart.
 	$(HELM) package chart --destination $(REPO_ROOT)/out
 
-.PHONY: helm-publish
-helm-publish: helm-package ## Create a GitHub release and upload the helm charts package to it.
+# optional flags for 'gh release create' cmd
+GH_RELEASE_ADDITIONAL_FLAGS =
+# set to true to label the GH release as non-production ready
+GH_PRE_RELEASE ?= false
+ifeq ($(GH_PRE_RELEASE),true)
+GH_RELEASE_ADDITIONAL_FLAGS += --prerelease
+endif
+
+# create a draft by default to avoid creating real GH release by accident
+GH_RELEASE_DRAFT ?= true
+ifeq ($(GH_RELEASE_DRAFT),true)
+GH_RELEASE_ADDITIONAL_FLAGS += --draft
+endif
+
+.PHONY: create-gh-release
+create-gh-release: helm-package ## Create a GitHub release and upload the helm charts package to it.
 	export GITHUB_TOKEN=$(GITHUB_TOKEN)
 	gh release create $(VERSION) $(REPO_ROOT)/out/sail-operator-$(VERSION).tgz \
 		--target release-$(MINOR_VERSION) \
-		--title "sail-operator $(VERSION)" \
-		--generate-notes
+		--title "Sail Operator $(VERSION)" \
+		--generate-notes \
+		$(GH_RELEASE_ADDITIONAL_FLAGS)
 
 .PHONY: deploy
 deploy: verify-kubeconfig helm ## Deploy controller to an existing cluster.
@@ -299,7 +314,7 @@ deploy-yaml-openshift: verify-kubeconfig helm ## Output YAML manifests used by `
 .PHONY: deploy-olm
 deploy-olm: verify-kubeconfig bundle bundle-build bundle-push ## Build and push the operator OLM bundle and deploy the operator using OLM.
 	kubectl create ns ${NAMESPACE} || echo "namespace ${NAMESPACE} already exists"
-	$(OPERATOR_SDK) run bundle $(BUNDLE_IMG) -n ${NAMESPACE}
+	$(OPERATOR_SDK) run bundle $(BUNDLE_IMG) -n ${NAMESPACE} --skip-tls
 
 .PHONY: undeploy
 undeploy: verify-kubeconfig ## Undeploy controller from an existing cluster.
@@ -359,8 +374,8 @@ gen-charts: ## Pull charts from istio repository.
 	@# update the urn:alm:descriptor:com.tectonic.ui:select entries in istio_types.go to match the supported versions of the Helm charts
 	@hack/update-version-list.sh
 
-	@# calls copy-crds.sh with the version specified in the .crdSourceVersion field in versions.yaml
-	@hack/copy-crds.sh "resources/$$(yq eval '.crdSourceVersion' $(VERSIONS_YAML_FILE))/charts"
+	@# extract the Istio CRD YAMLs from the istio.io/istio dependency in go.mod into ./chart/crds
+	@hack/extract-istio-crds.sh
 
 .PHONY: gen
 gen: gen-all-except-bundle bundle ## Generate everything.
@@ -483,9 +498,17 @@ gitleaks: $(GITLEAKS) ## Download gitleaks to bin directory.
 $(GITLEAKS): $(LOCALBIN)
 	@test -s $(LOCALBIN)/gitleaks || GOBIN=$(LOCALBIN) go install github.com/zricethezav/gitleaks/v8@${GITLEAKS_VERSION}
 
+# Openshift Platform flag
+# If is set to true will add `--set platform=openshift` to the helm template command
+OPENSHIFT_PLATFORM ?= true
+
 .PHONY: bundle
 bundle: gen-all-except-bundle helm operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
-	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --set platform=openshift --set bundleGeneration=true | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
+	@TEMPL_FLAGS="$(HELM_TEMPL_DEF_FLAGS)"; \
+	if [ "$(OPENSHIFT_PLATFORM)" = "true" ]; then \
+		TEMPL_FLAGS="$$TEMPL_FLAGS --set platform=openshift"; \
+	fi; \
+	$(HELM) template chart chart $$TEMPL_FLAGS --set image='$(IMAGE)' --set bundleGeneration=true | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
 
 ifeq ($(GENERATE_RELATED_IMAGES), true)
 	@hack/patch-csv.sh bundle/manifests/$(OPERATOR_NAME).clusterserviceversion.yaml
@@ -536,10 +559,6 @@ bundle-nightly: bundle
 bundle-publish-nightly: OPERATOR_VERSION=$(VERSION)-nightly-$(TODAY)  ## Publish nightly bundle.
 bundle-publish-nightly: TAG=$(MINOR_VERSION)-nightly-$(TODAY)
 bundle-publish-nightly: bundle-nightly bundle-publish
-
-.PHONY: patch-istio-crd
-patch-istio-crd: ## Update Istio CRD's openAPIV3Schema values.
-	@hack/patch-istio-crd.sh
 
 .PHONY: opm $(OPM)
 opm: $(OPM)

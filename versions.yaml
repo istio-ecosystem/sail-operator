@@ -1,14 +1,15 @@
 # This file defines all the Istio versions supported by this operator.
 
-# Since you can't install multiple versions of the same CRD, only one of the
-# versions specified below can be the source of the CRDs. Because CRDs are
-# typically backwards-compatible, the following field should point to the
-# most recent version.
-crdSourceVersion: latest
 # The list of versions to support. Each item specifies the name of the version,
 # the Git repository and commit hash for retrieving the profiles, and
 # a list of URLs for retrieving the charts.
 # The first item in the list is the default version.
+#
+# IMPORTANT: in addition to the versions specified here, the versions of the
+# istio.io/istio and istio.io/api dependencies defined in go.mod must also be
+# updated to match the most recent version specified here. The versions in
+# go.mod affect the generated API schema for the Sail CRDs (e.g. IstioRevision),
+# as well as all the Istio CRDs (e.g. VirtualService).
 versions:
   - name: v1.23.0
     version: 1.23.0
