@@ -31,6 +31,7 @@
   - [Scraping metrics using the OpenShift monitoring stack](#scraping-metrics-using-the-openshift-monitoring-stack)
   - [Integrating with Kiali](#integrating-with-kiali)
     - [Integrating Kiali with the OpenShift monitoring stack](#integrating-kiali-with-the-openshift-monitoring-stack)
+    - [Integrating Kiali with OpenShift distributed tracing](#integrating-kiali-with-openshift-distributed-tracing)
 - [Uninstalling](#uninstalling)
   - [Deleting Istio](#deleting-istio)
   - [Deleting IstioCNI](#deleting-istiocni)
@@ -1115,6 +1116,72 @@ If you followed [Scraping metrics using the OpenShift monitoring stack](#scrapin
             enabled: true
           url: https://thanos-querier.openshift-monitoring.svc.cluster.local:9091
     ```
+#### Integrating Kiali with OpenShift Distributed Tracing
+This section describes how to setup Istio and Kiali with OpenShift Distributed Tracing to send and receive distributed traces.
+
+*Prerequisites*
+* A Tempo stack is installed and configured
+* An instance of an OpenTelemetry collector is already configured in the istio-system namespace
+* An Istio instance is created with the OpenShift profile
+* An Istio CNI instance is created with the OpenShift profile
+
+*Steps*
+1. Setup Istio to include the OpenTelemtry settings:
+    ```yaml
+    meshConfig:
+      enableTracing: true
+      extensionProviders:
+      - name: otel-tracing
+        opentelemetry:
+          port: 4317
+          service: otel-collector.istio-system.svc.cluster.local 
+    ```
+service: The service of the OpenTelemetry collector in the istio-system namespace.
+
+2. Create an Istio telemetry resource to active the OpenTelemetry tracer
+    ```yaml
+    apiVersion: telemetry.istio.io/v1
+    kind: Telemetry
+    metadata:
+    name: otel-demo
+    namespace: istio-system
+    spec:
+    tracing:
+    - providers:
+        - name: otel-tracing
+          randomSamplingPercentage: 100
+    ```
+3. Setup Kiali to access traces in the Tempo frontend: 
+    ```yaml
+    external_services:
+      tracing:
+        enabled: true
+        provider: tempo
+        use_grpc: false
+        in_cluster_url: http://tempo-sample-query-frontend.tempo:3200
+        url: 'https://tempo-sample-query-frontend-tempo.apps-crc.testing'
+    ```
+
+4. To see the "View in Tracing" link, Grafana should be enabled:
+    ```yaml
+    external_services:
+      grafana:
+        enabled: true
+        url: "http://grafana-istio-system.apps-crc.testing/"
+      tracing:
+        enabled: true
+        provider: tempo
+        use_grpc: false
+        in_cluster_url: http://tempo-sample-query-frontend.tempo:3200
+        url: 'https://tempo-sample-query-frontend-tempo.apps-crc.testing'
+        tempo_config:
+          org_id: "1"
+          datasource_uid: "a8d2ef1c-d31c-4de5-a90b-e7bc5252cd00" 
+    ```
+
+There is a specific section to setup the Grafana datasource in the Tempo config.
+
+Now, we should be able to see traces from Kiali.
 
 ## Uninstalling
 
