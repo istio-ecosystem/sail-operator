@@ -144,13 +144,14 @@ func (r *Reconciler) validate(ctx context.Context, rev *v1alpha1.IstioRevision) 
 		return reconciler.NewValidationError("spec.values not set")
 	}
 
-	if rev.Name == v1alpha1.DefaultRevision && rev.Spec.Values.Revision != "" {
+	revName := rev.Spec.Values.Revision
+	if rev.Name == v1alpha1.DefaultRevision && (revName != nil && *revName != "") {
 		return reconciler.NewValidationError(fmt.Sprintf("spec.values.revision must be \"\" when IstioRevision name is %s", v1alpha1.DefaultRevision))
-	} else if rev.Name != v1alpha1.DefaultRevision && rev.Spec.Values.Revision != rev.Name {
+	} else if rev.Name != v1alpha1.DefaultRevision && (revName == nil || *revName != rev.Name) {
 		return reconciler.NewValidationError("spec.values.revision does not match IstioRevision name")
 	}
 
-	if rev.Spec.Values.Global == nil || rev.Spec.Values.Global.IstioNamespace != rev.Spec.Namespace {
+	if rev.Spec.Values.Global == nil || rev.Spec.Values.Global.IstioNamespace == nil || *rev.Spec.Values.Global.IstioNamespace != rev.Spec.Namespace {
 		return reconciler.NewValidationError("spec.values.global.istioNamespace does not match spec.namespace")
 	}
 	return nil
@@ -487,8 +488,8 @@ func getReferencedRevisionFromPod(podLabels, podAnnotations, nsLabels map[string
 
 func istiodDeploymentKey(rev *v1alpha1.IstioRevision) client.ObjectKey {
 	name := "istiod"
-	if rev.Spec.Values != nil && rev.Spec.Values.Revision != "" {
-		name += "-" + rev.Spec.Values.Revision
+	if rev.Spec.Values != nil && rev.Spec.Values.Revision != nil && *rev.Spec.Values.Revision != "" {
+		name += "-" + *rev.Spec.Values.Revision
 	}
 
 	return client.ObjectKey{
@@ -499,8 +500,8 @@ func istiodDeploymentKey(rev *v1alpha1.IstioRevision) client.ObjectKey {
 
 func injectionWebhookKey(rev *v1alpha1.IstioRevision) client.ObjectKey {
 	name := "istio-sidecar-injector"
-	if rev.Spec.Values != nil && rev.Spec.Values.Revision != "" {
-		name += "-" + rev.Spec.Values.Revision
+	if rev.Spec.Values != nil && rev.Spec.Values.Revision != nil && *rev.Spec.Values.Revision != "" {
+		name += "-" + *rev.Spec.Values.Revision
 	}
 	if rev.Spec.Namespace != "istio-system" {
 		name += "-" + rev.Spec.Namespace
