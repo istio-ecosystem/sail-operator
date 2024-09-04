@@ -904,7 +904,7 @@ Find out the revision name of your Istio instance. In our case it is `test`.
 ```bash
 $ kubectl get istiorevisions.sailoperator.io 
 NAME   READY   STATUS    IN USE   VERSION   AGE
-test True    Healthy   True     v1.21.0   119m
+test   True    Healthy   True     v1.21.0   119m
 ```
 
 Create a Kiali resource and point it to your Istio instance. Make sure to replace `test` with your revision name in the fields `config_map_name`, `istio_sidecar_injector_config_map_name`, `istiod_deployment_name` and `url_service_version`.
