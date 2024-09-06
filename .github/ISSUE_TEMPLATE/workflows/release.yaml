@@ -1,0 +1,79 @@
+name: Release workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: "Release version"
+        required: true
+      bundle_channels:
+        description: "Bundle channels"
+        required: true
+        default: "candidates"
+      is_draft_release:
+        description: "Draft release"
+        type: boolean
+        required: false
+        default: true
+      is_pre_release:
+        description: "Pre-release"
+        type: boolean
+        required: false
+        default: false
+
+run-name: Release ${{ inputs.release_version }}
+
+env:
+  GIT_USER: ${{ secrets.GIT_USER }}
+  GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+  VERSION: ${{ inputs.release_version }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Login to quay.io
+      uses: docker/login-action@v3
+      with:
+        registry: quay.io
+        username: ${{ secrets.QUAY_USER }}
+        password: ${{ secrets.QUAY_PWD }}
+
+    - uses: actions/checkout@v4
+
+    - name: Build and push operator image
+      run: |
+        make docker-buildx \
+          -e TAG=$VERSION
+
+    - name: Generate bundle metadata
+      run: |
+        make bundle \
+         -e CHANNELS=$CHANNELS
+      env:
+        CHANNELS: ${{ inputs.bundle_channels }}
+
+    - name: Publish bundle in operatorhub.io
+      run: |
+        make bundle-publish \
+          -e OPERATOR_VERSION=$VERSION \
+          -e OPERATOR_HUB=community-operators \
+          -e OWNER=k8s-operatorhub \
+          -e FORK=maistra
+
+    - name: Publish bundle in OpenShift OperatorHub
+      run: |
+        make bundle-publish \
+          -e OPERATOR_VERSION=$VERSION \
+          -e OWNER=redhat-openshift-ecosystem \
+          -e FORK=maistra
+
+    - name: Create GitHub release
+      run: |
+        make create-gh-release \
+          -e GH_PRE_RELEASE=$GH_PRE_RELEASE \
+          -e GH_RELEASE_DRAFT=$GH_RELEASE_DRAFT
+      env:
+        GH_PRE_RELEASE: ${{ github.event.inputs.is_pre_release == 'true' }}
+        GH_RELEASE_DRAFT: ${{ github.event.inputs.is_draft_release == 'true' }}
