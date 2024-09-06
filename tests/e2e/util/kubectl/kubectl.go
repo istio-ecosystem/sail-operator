@@ -93,6 +93,17 @@ func ApplyWithLabels(ns, yamlFile string, label string, kubeconfig ...string) er
 	return nil
 }
 
+// DeleteFromFile deletes a resource from the given yaml file
+func DeleteFromFile(yamlFile string, kubeconfig ...string) error {
+	cmd := kubectl("delete -f %s %s", yamlFile, optionalKubeconfig(kubeconfig))
+	_, err := shell.ExecuteCommand(cmd)
+	if err != nil {
+		return fmt.Errorf("error deleting resource from yaml: %w", err)
+	}
+
+	return nil
+}
+
 // CreateNamespace creates a namespace
 // If the namespace already exists, it will return nil
 // Arguments:

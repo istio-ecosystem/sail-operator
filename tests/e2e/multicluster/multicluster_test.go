@@ -49,25 +49,27 @@ var _ = Describe("Multicluster deployment models", Ordered, func() {
 	// debugInfoLogged := false
 
 	BeforeAll(func(ctx SpecContext) {
-		// Deploy the Sail Operator on both clusters
-		Expect(kubectl.CreateNamespace(namespace, kubeconfig)).To(Succeed(), "Namespace failed to be created on Primary Cluster")
-		Expect(kubectl.CreateNamespace(namespace, kubeconfig2)).To(Succeed(), "Namespace failed to be created on Remote Cluster")
+		if !skipDeploy {
+			// Deploy the Sail Operator on both clusters
+			Expect(kubectl.CreateNamespace(namespace, kubeconfig)).To(Succeed(), "Namespace failed to be created on Primary Cluster")
+			Expect(kubectl.CreateNamespace(namespace, kubeconfig2)).To(Succeed(), "Namespace failed to be created on Remote Cluster")
 
-		Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, "--kubeconfig "+kubeconfig)).
-			To(Succeed(), "Operator failed to be deployed in Primary Cluster")
+			Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, "--kubeconfig "+kubeconfig)).
+				To(Succeed(), "Operator failed to be deployed in Primary Cluster")
 
-		Eventually(common.GetObject).
-			WithArguments(ctx, clPrimary, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
-			Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
-		Success("Operator is deployed in the Primary namespace and Running")
+			Eventually(common.GetObject).
+				WithArguments(ctx, clPrimary, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
+				Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
+			Success("Operator is deployed in the Primary namespace and Running")
 
-		Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, "--kubeconfig "+kubeconfig2)).
-			To(Succeed(), "Operator failed to be deployed in Remote Cluster")
+			Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, "--kubeconfig "+kubeconfig2)).
+				To(Succeed(), "Operator failed to be deployed in Remote Cluster")
 
-		Eventually(common.GetObject).
-			WithArguments(ctx, clRemote, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
-			Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
-		Success("Operator is deployed in the Remote namespace and Running")
+			Eventually(common.GetObject).
+				WithArguments(ctx, clRemote, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
+				Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
+			Success("Operator is deployed in the Remote namespace and Running")
+		}
 	})
 
 	Describe("Multi-Primary Multi-Network configuration", func() {
@@ -193,7 +195,7 @@ spec:
 				When("sample apps are deployed in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
 						// Deploy the sample app in both clusters
-						deploySampleApp("sample", version.Version, kubeconfig, kubeconfig2)
+						deploySampleApp("sample", version, kubeconfig, kubeconfig2)
 						Success("Sample app is deployed in both clusters")
 					})
 
@@ -221,7 +223,7 @@ spec:
 						Success("Sample app is created in both clusters and Running")
 					})
 
-					It("can access the sample app from the remote cluster", func(ctx SpecContext) {
+					It("can access the sample app from both clusters", func(ctx SpecContext) {
 						sleepPodNamePrimary := getSleepPodName(ctx, clPrimary, "sample", "sleep")
 						Expect(sleepPodNamePrimary).NotTo(BeEmpty(), "Sleep pod not found on Primary Cluster")
 
@@ -230,13 +232,11 @@ spec:
 
 						// Run the curl command from the sleep pod in the Remote Cluster and get response list to validate that we get responses from both clusters
 						remoteResponses := strings.Join(getListCurlResponses("sample", sleepPodNameRemote, kubeconfig2), "\n")
-						Log("Remote Responses: ", remoteResponses)
 						Expect(remoteResponses).To(ContainSubstring("Hello version: v1"), "Responses from Remote Cluster are not the expected")
 						Expect(remoteResponses).To(ContainSubstring("Hello version: v2"), "Responses from Remote Cluster are not the expected")
 
 						// Run the curl command from the sleep pod in the Primary Cluster and get response list to validate that we get responses from both clusters
 						primaryResponses := strings.Join(getListCurlResponses("sample", sleepPodNamePrimary, kubeconfig), "\n")
-						Log("Primary Responses: ", primaryResponses)
 						Expect(primaryResponses).To(ContainSubstring("Hello version: v1"), "Responses from Primary Cluster are not the expected")
 						Expect(primaryResponses).To(ContainSubstring("Hello version: v2"), "Responses from Primary Cluster are not the expected")
 						Success("Sample app is accessible from both clusters")
@@ -250,29 +250,26 @@ spec:
 						Expect(kubectl.DeleteNamespace("sample", kubeconfig2)).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
 					})
 
-					It("sample app is deleted in both clusters", func(ctx SpecContext) {
-						Eventually(common.GetObject).
-							WithArguments(ctx, clPrimary, kube.Key("helloworld-v1", "sample"), &appsv1.Deployment{}).
-							Should(ReturnNotFoundError(), "HelloWorld v1 is not deleted on Primary Cluster")
-
-						Eventually(common.GetObject).
-							WithArguments(ctx, clRemote, kube.Key("helloworld-v2", "sample"), &appsv1.Deployment{}).
-							Should(ReturnNotFoundError(), "HelloWorld v2 is not deleted on Remote Cluster")
+					It("sample app is deleted in both clusters and the namespace is empty", func(ctx SpecContext) {
+						common.CheckNamespaceEmpty(ctx, clPrimary, "sample")
+						common.CheckNamespaceEmpty(ctx, clRemote, "sample")
 						Success("Sample app is deleted in both clusters")
 					})
 				})
 
-				When("control plane namespace is deleted in both clusters", func() {
+				When("control plane namespace and gateway are deleted in both clusters", func() {
 					BeforeEach(func() {
 						// Delete the Istio CR in both clusters
 						Expect(kubectl.Delete(controlPlaneNamespace, "istio", istioName, kubeconfig)).To(Succeed(), "Istio CR failed to be deleted")
 						Expect(kubectl.Delete(controlPlaneNamespace, "istio", istioName, kubeconfig2)).To(Succeed(), "Istio CR failed to be deleted")
 						Success("Istio CR is deleted in both clusters")
 
-						// Delete the control plane namespace in both clusters
-						Expect(kubectl.DeleteNamespace(controlPlaneNamespace, kubeconfig)).To(Succeed(), "Istio CR failed to be deleted")
-						Expect(kubectl.DeleteNamespace(controlPlaneNamespace, kubeconfig2)).To(Succeed(), "Istio CR failed to be deleted")
-						Success("Control Plane namespace is deleted in both clusters")
+						// Delete the gateway in both clusters
+						eastGatewayURL := "https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/east-west-gateway-net1.yaml"
+						Expect(kubectl.DeleteFromFile(eastGatewayURL, kubeconfig)).To(Succeed(), "Gateway deletion failed on Primary Cluster")
+
+						westGatewayURL := "https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/east-west-gateway-net2.yaml"
+						Expect(kubectl.DeleteFromFile(westGatewayURL, kubeconfig2)).To(Succeed(), "Gateway deletion failed on Remote Cluster")
 					})
 
 					It("removes everything from the namespace", func(ctx SpecContext) {
@@ -288,7 +285,7 @@ spec:
 })
 
 // deploySampleApp deploys the sample app in the given cluster
-func deploySampleApp(ns, istioVersion, kubeconfig, kubeconfig2 string) {
+func deploySampleApp(ns string, istioVersion supportedversion.VersionInfo, kubeconfig string, kubeconfig2 string) {
 	// Create the namespace
 	Expect(kubectl.CreateNamespace(ns, kubeconfig)).To(Succeed(), "Namespace failed to be created")
 	Expect(kubectl.CreateNamespace(ns, kubeconfig2)).To(Succeed(), "Namespace failed to be created")
@@ -299,18 +296,19 @@ func deploySampleApp(ns, istioVersion, kubeconfig, kubeconfig2 string) {
 	Expect(kubectl.Patch("", "namespace", ns, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`, kubeconfig2)).
 		To(Succeed(), "Error patching sample namespace")
 
+	version := istioVersion.Version
 	// Deploy the sample app from upstream URL in both clusters
-	if istioVersion == "latest" {
-		istioVersion = "master"
+	if istioVersion.Name == "latest" {
+		version = "master"
 	}
-	helloWorldURL := fmt.Sprintf("https://raw.githubusercontent.com/istio/istio/%s/samples/helloworld/helloworld.yaml", istioVersion)
+	helloWorldURL := fmt.Sprintf("https://raw.githubusercontent.com/istio/istio/%s/samples/helloworld/helloworld.yaml", version)
 	Expect(kubectl.ApplyWithLabels(ns, helloWorldURL, "service=helloworld", kubeconfig)).To(Succeed(), "Sample service deploy failed on Primary Cluster")
 	Expect(kubectl.ApplyWithLabels(ns, helloWorldURL, "service=helloworld", kubeconfig2)).To(Succeed(), "Sample service deploy failed on Remote Cluster")
 
 	Expect(kubectl.ApplyWithLabels(ns, helloWorldURL, "version=v1", kubeconfig)).To(Succeed(), "Sample service deploy failed on Primary Cluster")
 	Expect(kubectl.ApplyWithLabels(ns, helloWorldURL, "version=v2", kubeconfig2)).To(Succeed(), "Sample service deploy failed on Remote Cluster")
 
-	sleepURL := fmt.Sprintf("https://raw.githubusercontent.com/istio/istio/%s/samples/sleep/sleep.yaml", istioVersion)
+	sleepURL := fmt.Sprintf("https://raw.githubusercontent.com/istio/istio/%s/samples/sleep/sleep.yaml", version)
 	Expect(kubectl.Apply(ns, sleepURL, kubeconfig)).To(Succeed(), "Sample sleep deploy failed on Primary Cluster")
 	Expect(kubectl.Apply(ns, sleepURL, kubeconfig2)).To(Succeed(), "Sample sleep deploy failed on Remote Cluster")
 }

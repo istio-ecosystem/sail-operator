@@ -46,7 +46,7 @@ func istioctl(format string, args ...interface{}) string {
 // - secretName: name of the secret
 // - internalIP: internal IP of the remote cluster
 func CreateRemoteSecret(remoteKubeconfig string, secretName string, internalIP string) (string, error) {
-	cmd := istioctl("create-remote-secret --kubeconfig %s --name %s --server=`https://%s:6443`", remoteKubeconfig, secretName, internalIP)
+	cmd := istioctl("create-remote-secret --kubeconfig %s --name %s --server=https://%s:6443", remoteKubeconfig, secretName, internalIP)
 	yaml, err := shell.ExecuteCommand(cmd)
 
 	return yaml, err

@@ -39,8 +39,6 @@ var (
 	istioCniName          = env.Get("ISTIOCNI_NAME", "default")
 	image                 = env.Get("IMAGE", "quay.io/maistra-dev/sail-operator:latest")
 	skipDeploy            = env.GetBool("SKIP_DEPLOY", false)
-	expectedRegistry      = env.Get("EXPECTED_REGISTRY", "^docker\\.io|^gcr\\.io")
-	bookinfoNamespace     = env.Get("BOOKINFO_NAMESPACE", "bookinfo")
 	multicluster          = env.GetBool("MULTICLUSTER", false)
 	kubeconfig            = env.Get("KUBECONFIG", "")
 	kubeconfig2           = env.Get("KUBECONFIG2", "")
@@ -49,6 +47,10 @@ var (
 func TestInstall(t *testing.T) {
 	if !multicluster {
 		t.Skip("Skipping test. Only valid for multicluster")
+	}
+	if ocp {
+		//TODO: Implement the steps to run the test on OCP
+		t.Skip("Skipping test. Not valid for OCP")
 	}
 	RegisterFailHandler(Fail)
 	setup()
