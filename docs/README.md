@@ -1098,14 +1098,7 @@ The *service* field is the OpenTelemetry collector service in the `istio-system`
 
 3. Validate the integration: Generate some traffic
 
-We can deploy bookinfo and generate some traffic:
-
-```sh
-kubectl create ns bookinfo
-kubectl label ns bookinfo istio-injection=enabled
-
-kubectl exec -it -n bookinfo deployments/productpage-v1 -c istio-proxy -- curl localhost:9080/productpage
-```
+We can [Deploy Bookinfo](#deploy-gateway-and-bookinfo) and generate some traffic.
 
 4. Validate the integration: See the traces in the UI
 
