@@ -1066,8 +1066,8 @@ This section describes how to setup Istio with OpenShift Distributed Tracing to 
 *Prerequisites*
 * A Tempo stack is installed and configured
 * An instance of an OpenTelemetry collector is already configured in the istio-system namespace
-* An Istio instance is created with the OpenShift profile
-* An Istio CNI instance is created with the OpenShift profile
+* An Istio instance is created with the `openshift` profile
+* An Istio CNI instance is created with the `openshift` profile
 
 *Steps*
 1. Configure Istio to enable tracing and include the OpenTelemetry settings:
