@@ -1103,7 +1103,7 @@ We can [Deploy Bookinfo](#deploy-gateway-and-bookinfo) and generate some traffic
 4. Validate the integration: See the traces in the UI
 
 ```sh
-kubectl get routes -n tempo tempo-sample-query-frontend-tempo.apps-crc.testing
+kubectl get routes -n tempo tempo-sample-query-frontend-tempo
 ```
 
 If you [configure Kiali with OpenShift distributed tracing](#integrating-kiali-with-openshift-distributed-tracing) you can verify from there. 
