@@ -88,21 +88,6 @@ function setup_ca() {
     make -f Makefile.selfsigned.mk west-cacerts
     popd
 
-    # Push the intermediate CAs to each cluster.
-    kubectl create ns istio-system --kubeconfig "${KUBECONFIG}" || true
-    kubectl --kubeconfig "${KUBECONFIG}" label namespace istio-system topology.istio.io/network=network1
-    kubectl get secret -n istio-system --kubeconfig "${KUBECONFIG}" cacerts || kubectl create secret generic cacerts -n istio-system --kubeconfig "${KUBECONFIG}" \
-      --from-file=certs/east/ca-cert.pem \
-      --from-file=certs/east/ca-key.pem \
-      --from-file=certs/east/root-cert.pem \
-      --from-file=certs/east/cert-chain.pem
-    kubectl create ns istio-system --kubeconfig "${KUBECONFIG2}" || true
-    kubectl --kubeconfig "${KUBECONFIG2}" label namespace istio-system topology.istio.io/network=network2
-    kubectl get secret -n istio-system --kubeconfig "${KUBECONFIG2}" cacerts || kubectl create secret generic cacerts -n istio-system --kubeconfig "${KUBECONFIG2}" \
-      --from-file=certs/west/ca-cert.pem \
-      --from-file=certs/west/ca-key.pem \
-      --from-file=certs/west/root-cert.pem \
-      --from-file=certs/west/cert-chain.pem
 }
 
 if [ "${MULTICLUSTER}" == "true" ]; then

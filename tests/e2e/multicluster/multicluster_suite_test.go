@@ -35,8 +35,6 @@ var (
 	deploymentName        = env.Get("DEPLOYMENT_NAME", "sail-operator")
 	controlPlaneNamespace = env.Get("CONTROL_PLANE_NS", "istio-system")
 	istioName             = env.Get("ISTIO_NAME", "default")
-	istioCniNamespace     = env.Get("ISTIOCNI_NAMESPACE", "istio-cni")
-	istioCniName          = env.Get("ISTIOCNI_NAME", "default")
 	image                 = env.Get("IMAGE", "quay.io/maistra-dev/sail-operator:latest")
 	skipDeploy            = env.GetBool("SKIP_DEPLOY", false)
 	multicluster          = env.GetBool("MULTICLUSTER", false)
