@@ -506,7 +506,7 @@ These steps are common to every multi-cluster deployment and should be completed
     kubectl get ns istio-system --context "${CTX_CLUSTER2}" || kubectl create namespace istio-system --context "${CTX_CLUSTER2}"
     ```
 
-2. Create shared trust and add intermediate CAs to each cluster.
+3. Create shared trust and add intermediate CAs to each cluster.
 
     If you already have a [shared trust](https://istio.io/latest/docs/setup/install/multicluster/before-you-begin/#configure-trust) for each cluster you can skip this. Otherwise, you can use the instructions below to create a shared trust and push the intermediate CAs into your clusters.
 
@@ -874,13 +874,13 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
 
 ### External-Controlplane
 
-These instructions install an [external-controlplane](https://istio.io/latest/docs/setup/install/external-controlplane/) Istio deployment using the Sail Operator and Sail CRDs. **Before you begin**, ensure you complete the [common setup](#common-setup).
+These instructions install an [external-controlplane](https://istio.io/latest/docs/setup/install/external-controlplane/) Istio deployment using the Sail Operator and Sail CRDs. **Before you begin**, ensure meet the requirements of the [common setup](#common-setup) and complete **only** the "Setup env vars" step. Unlike the other Multi-Cluster deployments, you won't be creating a common CA in this setup.
 
 These installation instructions are adapted from: https://istio.io/latest/docs/setup/install/external-controlplane/ and are intended to be run in a development environment such as `kind` and not in production.
 
 In this setup there is an External Controlplane cluster (`cluster1`) and a Remote cluster (`cluster2`) which are on separate networks.
 
-1. Create an `Istio` resource on `cluster1` to manage the ingress gateways for the External Controlplanes.
+1. Create an `Istio` resource on `cluster1` to manage the ingress gateways for the External Controlplane.
 
     ```sh
     kubectl create namespace istio-system --context "${CTX_CLUSTER1}"
@@ -892,22 +892,15 @@ In this setup there is an External Controlplane cluster (`cluster1`) and a Remot
     spec:
       version: v${ISTIO_VERSION}
       namespace: istio-system
-      values:
-        pilot:
-          resources:
-            requests:
-              cpu: 100m
-              memory: 1024Mi
-        global:
-          network: network1
+      global:
+        network: network1
     EOF
-    kubectl wait --context "${CTX_CLUSTER1}" --for=jsonpath='{.status.revisions.ready}'=1 istios/default --timeout=3m
+    kubectl wait --context "${CTX_CLUSTER1}" --for=condition=Ready istios/default --timeout=3m
     ```
 
 2. Create the ingress gateway for the External Controlplane.
 
     ```sh
-
     kubectl --context "${CTX_CLUSTER1}" apply -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/controlplane-gateway.yaml
     kubectl --context "${CTX_CLUSTER1}" wait '--for=jsonpath={.status.loadBalancer.ingress[].ip}' --timeout=30s svc istio-ingressgateway -n istio-system
     ```
@@ -937,7 +930,7 @@ In this setup there is an External Controlplane cluster (`cluster1`) and a Remot
         type: InPlace
         inactiveRevisionDeletionGracePeriodSeconds: 30
       values:
-        defaultRevision: default
+        defaultRevision: external-istiod
         global:
           istioNamespace: external-istiod
           remotePilotAddress: ${EXTERNAL_ISTIOD_ADDR}
@@ -970,7 +963,7 @@ In this setup there is an External Controlplane cluster (`cluster1`) and a Remot
       kubectl apply -f - --context "${CTX_CLUSTER1}"
     ```
 
-7. Create the `Istio` resource on the External Controlplane cluster.
+7. Create the `Istio` resource on the External Controlplane cluster. This will manage both Istio configuration and proxies on the Remote cluster.
 
     ```sh
     kubectl apply --context "${CTX_CLUSTER1}" -f - <<EOF
@@ -1017,9 +1010,10 @@ In this setup there is an External Controlplane cluster (`cluster1`) and a Remot
             clusterName: cluster2
           network: network1
     EOF
+    kubectl wait --context "${CTX_CLUSTER1}" --for=condition=Ready istios/external-istiod --timeout=3m
     ```
 
-8. Create the Istio resources to route traffic from the ingress gateway to the external control plane.
+8. Create the Istio resources to route traffic from the ingress gateway to the External Controlplane.
 
     ```sh
     kubectl apply --context "${CTX_CLUSTER1}" -f - <<EOF
@@ -1081,6 +1075,12 @@ In this setup there is an External Controlplane cluster (`cluster1`) and a Remot
     EOF
     ```
 
+9. Wait for the `RemoteIstio` to be healthy:
+
+    ```sh
+    kubectl wait --context="${CTX_CLUSTER2}" --for=condition=Ready remoteistios/external-istiod --timeout=3m
+    ```
+
 9. Create the `sample` namespace on the Remote cluster and label it to enable injection.
 
     ```sh
@@ -1096,39 +1096,70 @@ In this setup there is an External Controlplane cluster (`cluster1`) and a Remot
     kubectl apply -f https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/sleep/sleep.yaml -n sample --context="${CTX_CLUSTER2}"
 
     ```
+11. Verify that you see a response from both v1 and v2 on `cluster1`.
 
-11. Verify the pods in the `sample` namespace have a sidecar injected.
+    `cluster1` responds with v1 and v2
+    ```sh
+    kubectl exec --context="${CTX_CLUSTER1}" -n sample -c sleep \
+        "$(kubectl get pod --context="${CTX_CLUSTER1}" -n sample -l \
+        app=sleep -o jsonpath='{.items[0].metadata.name}')" \
+        -- curl -sS helloworld.sample:5000/hello
+    ```
+
+    `cluster2` responds with v1 and v2
+    ```sh
+    kubectl exec --context="${CTX_CLUSTER2}" -n sample -c sleep \
+        "$(kubectl get pod --context="${CTX_CLUSTER2}" -n sample -l \
+        app=sleep -o jsonpath='{.items[0].metadata.name}')" \
+        -- curl -sS helloworld.sample:5000/hello
+    ```
+
+12. Verify the pods in the `sample` namespace have a sidecar injected.
 
     ```sh
     kubectl get pod -n sample --context="${CTX_CLUSTER2}"
     ```
+    You should see `2/2` pods for each application in the `sample` namespace.
+    ```
+    NAME                             READY   STATUS    RESTARTS   AGE
+    helloworld-v1-6d65866976-jb6qc   2/2     Running   0          49m
+    sleep-5fcd8fd6c8-mg8n2           2/2     Running   0          49m
+    ```
 
-12. Verify you can send a request to `helloworld` through the `sleep` app.
+13. Verify you can send a request to `helloworld` through the `sleep` app on the Remote cluster.
 
     ```sh
     kubectl exec --context="${CTX_CLUSTER2}" -n sample -c sleep "$(kubectl get pod --context="${CTX_CLUSTER2}" -n sample -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- curl -sS helloworld.sample:5000/hello
     ```
+    You should see a response from the `helloworld` app.
+    ```sh
+    Hello version: v1, instance: helloworld-v1-6d65866976-jb6qc
+    ```
 
-13. Deploy an ingress gateway to the Remote cluster and verify you can reach `helloworld` externally.
+14. Deploy an ingress gateway to the Remote cluster and verify you can reach `helloworld` externally.
 
-    Install the gateway-api CRDs
+    Install the gateway-api CRDs.
     ```sh
     kubectl get crd gateways.gateway.networking.k8s.io --context="${CTX_CLUSTER2}" &> /dev/null || \
     { kubectl kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.1.0" | kubectl apply -f - --context="${CTX_CLUSTER2}"; }
     ```
 
-    Expose `helloworld` through the ingress gateway
+    Expose `helloworld` through the ingress gateway.
     ```sh
     kubectl apply -f https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/gateway-api/helloworld-gateway.yaml -n sample --context="${CTX_CLUSTER2}"
     kubectl -n sample --context="${CTX_CLUSTER2}" wait --for=condition=programmed gtw helloworld-gateway
     ```
 
-    Confirm you can access the `helloworld` application through the ingress gateway:
+    Confirm you can access the `helloworld` application through the ingress gateway created in the Remote cluster.
     ```sh
     curl -s "http://$(kubectl -n sample --context="${CTX_CLUSTER2}" get gtw helloworld-gateway -o jsonpath='{.status.addresses[0].value}'):80/hello"
     ```
+    You should see a response from the `helloworld` application:
+    ```sh
+    Hello version: v1, instance: helloworld-v1-6d65866976-jb6qc
+    ```
 
-14. Cleanup
+15. Cleanup
 
     ```sh
     kubectl delete istios default --context="${CTX_CLUSTER1}"
