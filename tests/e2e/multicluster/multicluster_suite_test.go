@@ -47,8 +47,8 @@ func TestInstall(t *testing.T) {
 		t.Skip("Skipping test. Only valid for multicluster")
 	}
 	if ocp {
-		//TODO: Implement the steps to run the test on OCP
 		t.Skip("Skipping test. Not valid for OCP")
+		// TODO: Implement the steps to run the test on OCP
 	}
 	RegisterFailHandler(Fail)
 	setup()

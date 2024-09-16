@@ -76,11 +76,11 @@ function setup_kind_registry() {
   done
 }
 
-# Create a self signed root CA and intermediate CAs and push them to each cluster.
+# Create a self signed root CA and intermediate CAs
 function setup_ca() {
     # Create a self signed root CA and intermediate CAs.
-    mkdir -p certs
-    pushd certs
+    mkdir -p "${ARTIFACTS}"/certs
+    pushd "${ARTIFACTS}"/certs
     curl -fsL -o common.mk "https://raw.githubusercontent.com/istio/istio/1.23.0/tools/certs/common.mk"
     curl -fsL -o Makefile.selfsigned.mk "https://raw.githubusercontent.com/istio/istio/1.23.0/tools/certs/Makefile.selfsigned.mk"
     make -f Makefile.selfsigned.mk root-ca
@@ -93,14 +93,7 @@ function setup_ca() {
 if [ "${MULTICLUSTER}" == "true" ]; then
     CLUSTER_TOPOLOGY_CONFIG_FILE="${SCRIPTPATH}/config/multicluster.json"
     load_cluster_topology "${CLUSTER_TOPOLOGY_CONFIG_FILE}"
-    setup_kind_clusters
-
-    TOPOLOGY_JSON=$(cat "${CLUSTER_TOPOLOGY_CONFIG_FILE}")
-    for i in $(seq 0 $((${#CLUSTER_NAMES[@]} - 1))); do
-      CLUSTER="${CLUSTER_NAMES[i]}"
-      KCONFIG="${KUBECONFIGS[i]}"
-    done
-
+    setup_kind_clusters "" ""
     setup_kind_registry
 
     export KUBECONFIG="${KUBECONFIGS[0]}"

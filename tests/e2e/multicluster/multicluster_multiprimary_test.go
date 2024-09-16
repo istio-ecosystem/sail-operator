@@ -30,18 +30,17 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
+	common "github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	common "github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("Multicluster deployment models", Ordered, func() {
@@ -130,7 +129,6 @@ spec:
 						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
 						Success("Istiod is deployed in the namespace and Running on Remote Cluster")
 					})
-
 				})
 
 				When("Gateway is created in both clusters", func() {
@@ -225,19 +223,19 @@ spec:
 					})
 
 					It("can access the sample app from both clusters", func(ctx SpecContext) {
-						sleepPodNamePrimary := getSleepPodName(ctx, clPrimary, "sample", "sleep")
+						sleepPodNamePrimary := getSleepPodName(ctx, clPrimary)
 						Expect(sleepPodNamePrimary).NotTo(BeEmpty(), "Sleep pod not found on Primary Cluster")
 
-						sleepPodNameRemote := getSleepPodName(ctx, clRemote, "sample", "sleep")
+						sleepPodNameRemote := getSleepPodName(ctx, clRemote)
 						Expect(sleepPodNameRemote).NotTo(BeEmpty(), "Sleep pod not found on Remote Cluster")
 
 						// Run the curl command from the sleep pod in the Remote Cluster and get response list to validate that we get responses from both clusters
-						remoteResponses := strings.Join(getListCurlResponses("sample", sleepPodNameRemote, kubeconfig2), "\n")
+						remoteResponses := strings.Join(getListCurlResponses(sleepPodNameRemote, kubeconfig2), "\n")
 						Expect(remoteResponses).To(ContainSubstring("Hello version: v1"), "Responses from Remote Cluster are not the expected")
 						Expect(remoteResponses).To(ContainSubstring("Hello version: v2"), "Responses from Remote Cluster are not the expected")
 
 						// Run the curl command from the sleep pod in the Primary Cluster and get response list to validate that we get responses from both clusters
-						primaryResponses := strings.Join(getListCurlResponses("sample", sleepPodNamePrimary, kubeconfig), "\n")
+						primaryResponses := strings.Join(getListCurlResponses(sleepPodNamePrimary, kubeconfig), "\n")
 						Expect(primaryResponses).To(ContainSubstring("Hello version: v1"), "Responses from Primary Cluster are not the expected")
 						Expect(primaryResponses).To(ContainSubstring("Hello version: v2"), "Responses from Primary Cluster are not the expected")
 						Success("Sample app is accessible from both clusters")
@@ -332,12 +330,12 @@ func deploySampleApp(ns string, istioVersion supportedversion.VersionInfo, kubec
 }
 
 // getPodName returns the pod name of the given deployment in the given namespace
-func getSleepPodName(ctx context.Context, cl client.Client, ns, deploymentName string) string {
+func getSleepPodName(ctx context.Context, cl client.Client) string {
 	samplePods := &corev1.PodList{}
-	cl.List(ctx, samplePods, client.InNamespace(ns))
+	cl.List(ctx, samplePods, client.InNamespace("sample"))
 	var sleepPodName string
 	for _, pod := range samplePods.Items {
-		if pod.Labels["app"] == deploymentName {
+		if pod.Labels["app"] == "sleep" {
 			sleepPodName = pod.GetName()
 			break
 		}
@@ -347,10 +345,10 @@ func getSleepPodName(ctx context.Context, cl client.Client, ns, deploymentName s
 }
 
 // getListCurlResponses runs the curl command 10 times from the sleep pod in the given cluster and get response list
-func getListCurlResponses(ns, podName, kubeconfig string) []string {
+func getListCurlResponses(podName, kubeconfig string) []string {
 	var responses []string
 	for i := 0; i < 10; i++ {
-		response, err := kubectl.Exec(ns, podName, "sleep", "curl -sS helloworld.sample:5000/hello", kubeconfig)
+		response, err := kubectl.Exec("sample", podName, "sleep", "curl -sS helloworld.sample:5000/hello", kubeconfig)
 		Expect(err).NotTo(HaveOccurred())
 		responses = append(responses, response)
 	}
