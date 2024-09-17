@@ -19,6 +19,7 @@ package multicluster
 import (
 	"testing"
 
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/certs"
 	k8sclient "github.com/istio-ecosystem/sail-operator/tests/e2e/util/client"
 	env "github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
 	. "github.com/onsi/ginkgo/v2"
@@ -40,6 +41,7 @@ var (
 	multicluster          = env.GetBool("MULTICLUSTER", false)
 	kubeconfig            = env.Get("KUBECONFIG", "")
 	kubeconfig2           = env.Get("KUBECONFIG2", "")
+	artifacts             = env.Get("ARTIFACTS", "/tmp/artifacts")
 )
 
 func TestInstall(t *testing.T) {
@@ -51,15 +53,22 @@ func TestInstall(t *testing.T) {
 		// TODO: Implement the steps to run the test on OCP
 	}
 	RegisterFailHandler(Fail)
-	setup()
+	setup(t)
 	RunSpecs(t, "Control Plane Suite")
 }
 
-func setup() {
+func setup(t *testing.T) {
 	GinkgoWriter.Println("************ Running Setup ************")
 
 	GinkgoWriter.Println("Initializing k8s client")
 	clPrimary, err = k8sclient.InitK8sClient(kubeconfig)
 	clRemote, err = k8sclient.InitK8sClient(kubeconfig2)
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		t.Fatalf("Error initializing k8s client: %v", err)
+	}
+
+	err := certs.CreateIntermediateCA(artifacts)
+	if err != nil {
+		t.Fatalf("Error creating intermediate CA: %v", err)
+	}
 }

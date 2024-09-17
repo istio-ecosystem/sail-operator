@@ -31,6 +31,3 @@ out/
 
 # VS Code settings
 .vscode
-
-# certs folder created by multicluster test runs
-certs

@@ -9,6 +9,6 @@
       "cluster_name": "remote",
       "pod_subnet": "10.20.0.0/16",
       "svc_subnet": "10.255.20.0/24",
-      "network_id": "0"
+      "network_id": "1"
     }
 ]

@@ -19,8 +19,6 @@ package multicluster
 import (
 	"context"
 	"fmt"
-	"log"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -30,6 +28,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/certs"
 	common "github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
@@ -46,8 +45,6 @@ import (
 var _ = Describe("Multicluster deployment models", Ordered, func() {
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
-
-	// debugInfoLogged := false
 
 	BeforeAll(func(ctx SpecContext) {
 		if !skipDeploy {
@@ -79,7 +76,23 @@ var _ = Describe("Multicluster deployment models", Ordered, func() {
 			Context("Istio version is: "+version.Version, func() {
 				When("Istio resources are created in both clusters with multicluster configuration", func() {
 					BeforeAll(func(ctx SpecContext) {
-						pushIntermediateCA()
+						Expect(kubectl.CreateNamespace(controlPlaneNamespace, kubeconfig)).To(Succeed(), "Namespace failed to be created")
+						Expect(kubectl.CreateNamespace(controlPlaneNamespace, kubeconfig2)).To(Succeed(), "Namespace failed to be created")
+
+						// Push the intermediate CA to both clusters
+						certs.PushIntermediateCA(controlPlaneNamespace, kubeconfig, "east", "network1", artifacts, clPrimary)
+						certs.PushIntermediateCA(controlPlaneNamespace, kubeconfig2, "west", "network2", artifacts, clRemote)
+
+						// Wait for the secret to be created in both clusters
+						Eventually(func() error {
+							_, err := common.GetObject(context.Background(), clPrimary, kube.Key("cacerts", controlPlaneNamespace), &corev1.Secret{})
+							return err
+						}).ShouldNot(HaveOccurred(), "Secret is not created on Primary Cluster")
+
+						Eventually(func() error {
+							_, err := common.GetObject(context.Background(), clRemote, kube.Key("cacerts", controlPlaneNamespace), &corev1.Secret{})
+							return err
+						}).ShouldNot(HaveOccurred(), "Secret is not created on Primary Cluster")
 
 						multiclusterYAML := `
 apiVersion: sailoperator.io/v1alpha1
@@ -361,117 +374,4 @@ func getSVCAddress(ctx context.Context, cl client.Client, ns string) string {
 	err := cl.Get(ctx, kube.Key("istio-eastwestgateway", ns), svc)
 	Expect(err).NotTo(HaveOccurred())
 	return svc.Status.LoadBalancer.Ingress[0].IP
-}
-
-// pushIntermediateCA pushes the intermediate CA to the cluster
-func pushIntermediateCA() {
-	// Create the namespace
-	Expect(kubectl.CreateNamespace(controlPlaneNamespace, kubeconfig)).To(Succeed(), "Namespace failed to be created")
-	Expect(kubectl.CreateNamespace(controlPlaneNamespace, kubeconfig2)).To(Succeed(), "Namespace failed to be created")
-
-	// Set cert dir
-	certDir := filepath.Join(project.RootDir, "certs")
-
-	// Check if the secret exists in Primary cluster
-	_, err := common.GetObject(context.Background(), clPrimary, kube.Key("cacerts", controlPlaneNamespace), &corev1.Secret{})
-	if err != nil {
-		// Label the namespace
-		Expect(kubectl.Patch("", "namespace", controlPlaneNamespace, "merge", `{"metadata":{"labels":{"topology.istio.io/network":"network1"}}}`, kubeconfig)).
-			To(Succeed(), "Error patching istio-system namespace")
-
-		// Read the pem content from the files
-		caCertPath := filepath.Join(certDir, "east", "ca-cert.pem")
-		caKeyPath := filepath.Join(certDir, "east", "ca-key.pem")
-		rootCertPath := filepath.Join(certDir, "east", "root-cert.pem")
-		certChainPath := filepath.Join(certDir, "east", "cert-chain.pem")
-
-		caCert, err := os.ReadFile(caCertPath)
-		if err != nil {
-			log.Fatalf("Failed to read ca-cert.pem: %v", err)
-		}
-		caKey, err := os.ReadFile(caKeyPath)
-		if err != nil {
-			log.Fatalf("Failed to read ca-key.pem: %v", err)
-		}
-		rootCert, err := os.ReadFile(rootCertPath)
-		if err != nil {
-			log.Fatalf("Failed to read root-cert.pem: %v", err)
-		}
-		certChain, err := os.ReadFile(certChainPath)
-		if err != nil {
-			log.Fatalf("Failed to read cert-chain.pem: %v", err)
-		}
-		// Create the secret by using the client in the Primary cluster and the files created in the setup
-		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "cacerts",
-				Namespace: controlPlaneNamespace,
-			},
-			Data: map[string][]byte{
-				"ca-cert.pem":    caCert,
-				"ca-key.pem":     caKey,
-				"root-cert.pem":  rootCert,
-				"cert-chain.pem": certChain,
-			},
-		}
-		Expect(clPrimary.Create(context.Background(), secret)).To(Succeed(), "Secret creation failed on Primary Cluster")
-	}
-
-	// Check if the secret exists in Remote cluster
-	_, err = common.GetObject(context.Background(), clRemote, kube.Key("cacerts", controlPlaneNamespace), &corev1.Secret{})
-	if err != nil {
-		// Label the namespace
-		Expect(kubectl.Patch("", "namespace", controlPlaneNamespace, "merge", `{"metadata":{"labels":{"topology.istio.io/network":"network2"}}}`, kubeconfig2)).
-			To(Succeed(), "Error patching istio-system namespace")
-
-		// Read the pem content from the files
-		caCertPath := filepath.Join(certDir, "west", "ca-cert.pem")
-		caKeyPath := filepath.Join(certDir, "west", "ca-key.pem")
-		rootCertPath := filepath.Join(certDir, "west", "root-cert.pem")
-		certChainPath := filepath.Join(certDir, "west", "cert-chain.pem")
-
-		caCert, err := os.ReadFile(caCertPath)
-		if err != nil {
-			log.Fatalf("Failed to read ca-cert.pem: %v", err)
-		}
-		caKey, err := os.ReadFile(caKeyPath)
-		if err != nil {
-			log.Fatalf("Failed to read ca-key.pem: %v", err)
-		}
-		rootCert, err := os.ReadFile(rootCertPath)
-		if err != nil {
-			log.Fatalf("Failed to read root-cert.pem: %v", err)
-		}
-		certChain, err := os.ReadFile(certChainPath)
-		if err != nil {
-			log.Fatalf("Failed to read cert-chain.pem: %v", err)
-		}
-		// Create the secret by using the client in the Remote cluster and the files created in the setup
-		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "cacerts",
-				Namespace: controlPlaneNamespace,
-			},
-			Data: map[string][]byte{
-				"ca-cert.pem":    caCert,
-				"ca-key.pem":     caKey,
-				"root-cert.pem":  rootCert,
-				"cert-chain.pem": certChain,
-			},
-		}
-		Expect(clRemote.Create(context.Background(), secret)).To(Succeed(), "Secret creation failed on Remote Cluster")
-	}
-
-	// Wait for the secret to be created in both clusters
-	Eventually(func() error {
-		_, err := common.GetObject(context.Background(), clPrimary, kube.Key("cacerts", controlPlaneNamespace), &corev1.Secret{})
-		return err
-	}).ShouldNot(HaveOccurred(), "Secret is not created on Primary Cluster")
-
-	Eventually(func() error {
-		_, err := common.GetObject(context.Background(), clRemote, kube.Key("cacerts", controlPlaneNamespace), &corev1.Secret{})
-		return err
-	}).ShouldNot(HaveOccurred(), "Secret is not created on Remote Cluster")
-
-	Success("Intermediate CA is pushed to both clusters")
 }

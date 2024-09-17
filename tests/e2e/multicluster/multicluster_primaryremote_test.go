@@ -17,6 +17,7 @@
 package multicluster
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -27,6 +28,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
+	certs "github.com/istio-ecosystem/sail-operator/tests/e2e/util/certs"
 	common "github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
@@ -43,8 +45,6 @@ import (
 var _ = Describe("Multicluster deployment models", Ordered, func() {
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
-
-	// debugInfoLogged := false
 
 	BeforeAll(func(ctx SpecContext) {
 		if !skipDeploy {
@@ -76,7 +76,25 @@ var _ = Describe("Multicluster deployment models", Ordered, func() {
 			Context("Istio version is: "+version.Version, func() {
 				When("Istio resources are created in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
-						pushIntermediateCA()
+						Expect(kubectl.CreateNamespace(controlPlaneNamespace, kubeconfig)).To(Succeed(), "Namespace failed to be created")
+						Expect(kubectl.CreateNamespace(controlPlaneNamespace, kubeconfig2)).To(Succeed(), "Namespace failed to be created")
+
+						// Push the intermediate CA to both clusters
+						Expect(certs.PushIntermediateCA(controlPlaneNamespace, kubeconfig, "east", "network1", artifacts, clPrimary)).
+							To(Succeed(), "Error pushing intermediate CA to Primary Cluster")
+						Expect(certs.PushIntermediateCA(controlPlaneNamespace, kubeconfig2, "west", "network2", artifacts, clRemote)).
+							To(Succeed(), "Error pushing intermediate CA to Remote Cluster")
+
+						// Wait for the secret to be created in both clusters
+						Eventually(func() error {
+							_, err := common.GetObject(context.Background(), clPrimary, kube.Key("cacerts", controlPlaneNamespace), &corev1.Secret{})
+							return err
+						}).ShouldNot(HaveOccurred(), "Secret is not created on Primary Cluster")
+
+						Eventually(func() error {
+							_, err := common.GetObject(context.Background(), clRemote, kube.Key("cacerts", controlPlaneNamespace), &corev1.Secret{})
+							return err
+						}).ShouldNot(HaveOccurred(), "Secret is not created on Primary Cluster")
 
 						PrimaryYAML := `
 apiVersion: sailoperator.io/v1alpha1
