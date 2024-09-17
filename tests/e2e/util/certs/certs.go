@@ -36,7 +36,7 @@ func CreateIntermediateCA(basePath string) error {
 	certsDir := filepath.Join(basePath, "certs")
 
 	// Create the certs directory
-	err := os.MkdirAll(certsDir, 0755)
+	err := os.MkdirAll(certsDir, 0o755)
 	if err != nil {
 		return fmt.Errorf("failed to create certs directory: %w", err)
 	}
@@ -77,11 +77,11 @@ func CreateIntermediateCA(basePath string) error {
 	westDir := filepath.Join(certsDir, "west")
 
 	// Create the east and west directories
-	err = os.MkdirAll(eastDir, 0755)
+	err = os.MkdirAll(eastDir, 0o755)
 	if err != nil {
 		return fmt.Errorf("failed to create east directory: %w", err)
 	}
-	err = os.MkdirAll(westDir, 0755)
+	err = os.MkdirAll(westDir, 0o755)
 	if err != nil {
 		return fmt.Errorf("failed to create west directory: %w", err)
 	}
