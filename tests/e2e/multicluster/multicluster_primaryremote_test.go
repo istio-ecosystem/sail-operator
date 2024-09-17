@@ -73,6 +73,11 @@ var _ = Describe("Multicluster deployment models", Ordered, func() {
 	Describe("Primary-Remote - Multi-Network configuration", func() {
 		// Test the Primary-Remote - Multi-Network configuration for each supported Istio version
 		for _, version := range supportedversion.List {
+			// The Primary-Remote - Multi-Network configuration is only supported in Istio 1.23 and later
+			if version.Major < 1 || (version.Major == 1 && version.Minor < 23) {
+				continue
+			}
+
 			Context("Istio version is: "+version.Version, func() {
 				When("Istio resources are created in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
@@ -171,7 +176,10 @@ spec:
       injectionPath: /inject/cluster/remote/net/network2
     global:
       remotePilotAddress: %s`
-						remotePilotAddress := getSVCAddress(ctx, clPrimary, controlPlaneNamespace)
+
+						remotePilotAddress, err := common.GetSVCLoadBalancerAddress(ctx, clPrimary, controlPlaneNamespace, "istio-eastwestgateway")
+						Expect(remotePilotAddress).NotTo(BeEmpty(), "Remote Pilot Address is empty")
+						Expect(err).NotTo(HaveOccurred(), "Error getting Remote Pilot Address")
 						remoteIstioYAML := fmt.Sprintf(RemoteYAML, version.Name, remotePilotAddress)
 						Log("Remote Istio CR: ", remoteIstioYAML)
 						By("Creating Remote Istio CR on Remote Cluster")
@@ -275,11 +283,13 @@ spec:
 					})
 
 					It("can access the sample app from both clusters", func(ctx SpecContext) {
-						sleepPodNamePrimary := getSleepPodName(ctx, clPrimary)
+						sleepPodNamePrimary, err := common.GetPodNameByLabel(ctx, clPrimary, "sample", "app", "sleep")
 						Expect(sleepPodNamePrimary).NotTo(BeEmpty(), "Sleep pod not found on Primary Cluster")
+						Expect(err).NotTo(HaveOccurred(), "Error getting sleep pod name on Primary Cluster")
 
-						sleepPodNameRemote := getSleepPodName(ctx, clRemote)
+						sleepPodNameRemote, err := common.GetPodNameByLabel(ctx, clRemote, "sample", "app", "sleep")
 						Expect(sleepPodNameRemote).NotTo(BeEmpty(), "Sleep pod not found on Remote Cluster")
+						Expect(err).NotTo(HaveOccurred(), "Error getting sleep pod name on Remote Cluster")
 
 						// Run the curl command from the sleep pod in the Remote Cluster and get response list to validate that we get responses from both clusters
 						remoteResponses := strings.Join(getListCurlResponses(sleepPodNameRemote, kubeconfig2), "\n")
@@ -344,7 +354,7 @@ spec:
 		Expect(kubectl.DeleteNamespace(namespace, kubeconfig)).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
 		Expect(kubectl.DeleteNamespace(namespace, kubeconfig2)).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
 
-		// Delete the intermediate CA from both clusters
+		// Check that the namespace is empty
 		common.CheckNamespaceEmpty(ctx, clPrimary, namespace)
 		common.CheckNamespaceEmpty(ctx, clRemote, namespace)
 	})

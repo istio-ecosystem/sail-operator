@@ -61,6 +61,36 @@ func GetList(ctx context.Context, cl client.Client, list client.ObjectList, opts
 	return list, err
 }
 
+// GetPodNameByLabel returns the name of the pod with the given label
+func GetPodNameByLabel(ctx context.Context, cl client.Client, ns, labelKey, labelValue string) (string, error) {
+	podList := &corev1.PodList{}
+	err := cl.List(ctx, podList, client.InNamespace(ns), client.MatchingLabels{labelKey: labelValue})
+	if err != nil {
+		return "", err
+	}
+	if len(podList.Items) == 0 {
+		return "", fmt.Errorf("no pod found with label %s=%s", labelKey, labelValue)
+	}
+	return podList.Items[0].Name, nil
+}
+
+// GetSVCAddress returns the address of the service with the given name
+func GetSVCLoadBalancerAddress(ctx context.Context, cl client.Client, ns, svcName string) (string, error) {
+	svc := &corev1.Service{}
+	err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: svcName}, svc)
+	if err != nil {
+		return "", err
+	}
+
+	// To avoid flakiness, wait for the LoadBalancer to be ready
+	Eventually(func() ([]corev1.LoadBalancerIngress, error) {
+		err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: svcName}, svc)
+		return svc.Status.LoadBalancer.Ingress, err
+	}, "1m", "1s").ShouldNot(BeEmpty(), "LoadBalancer should be ready")
+
+	return svc.Status.LoadBalancer.Ingress[0].IP, nil
+}
+
 // checkNamespaceEmpty checks if the given namespace is empty
 func CheckNamespaceEmpty(ctx SpecContext, cl client.Client, ns string) {
 	// TODO: Check to add more validations

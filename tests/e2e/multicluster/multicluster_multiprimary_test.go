@@ -49,24 +49,24 @@ var _ = Describe("Multicluster deployment models", Ordered, func() {
 	BeforeAll(func(ctx SpecContext) {
 		if !skipDeploy {
 			// Deploy the Sail Operator on both clusters
-			Expect(kubectl.CreateNamespace(namespace, kubeconfig)).To(Succeed(), "Namespace failed to be created on Primary Cluster")
-			Expect(kubectl.CreateNamespace(namespace, kubeconfig2)).To(Succeed(), "Namespace failed to be created on Remote Cluster")
+			Expect(kubectl.CreateNamespace(namespace, kubeconfig)).To(Succeed(), "Namespace failed to be created on Cluster #1")
+			Expect(kubectl.CreateNamespace(namespace, kubeconfig2)).To(Succeed(), "Namespace failed to be created on  Cluster #2")
 
 			Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, "--kubeconfig "+kubeconfig)).
-				To(Succeed(), "Operator failed to be deployed in Primary Cluster")
+				To(Succeed(), "Operator failed to be deployed in Cluster #1")
 
 			Eventually(common.GetObject).
 				WithArguments(ctx, clPrimary, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
 				Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
-			Success("Operator is deployed in the Primary namespace and Running")
+			Success("Operator is deployed in the Cluster #1 namespace and Running")
 
 			Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, "--kubeconfig "+kubeconfig2)).
-				To(Succeed(), "Operator failed to be deployed in Remote Cluster")
+				To(Succeed(), "Operator failed to be deployed in  Cluster #2")
 
 			Eventually(common.GetObject).
 				WithArguments(ctx, clRemote, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
 				Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
-			Success("Operator is deployed in the Remote namespace and Running")
+			Success("Operator is deployed in the Cluster #2 namespace and Running")
 		}
 	})
 
@@ -87,12 +87,12 @@ var _ = Describe("Multicluster deployment models", Ordered, func() {
 						Eventually(func() error {
 							_, err := common.GetObject(context.Background(), clPrimary, kube.Key("cacerts", controlPlaneNamespace), &corev1.Secret{})
 							return err
-						}).ShouldNot(HaveOccurred(), "Secret is not created on Primary Cluster")
+						}).ShouldNot(HaveOccurred(), "Secret is not created on Cluster #1")
 
 						Eventually(func() error {
 							_, err := common.GetObject(context.Background(), clRemote, kube.Key("cacerts", controlPlaneNamespace), &corev1.Secret{})
 							return err
-						}).ShouldNot(HaveOccurred(), "Secret is not created on Primary Cluster")
+						}).ShouldNot(HaveOccurred(), "Secret is not created on Cluster #1")
 
 						multiclusterYAML := `
 apiVersion: sailoperator.io/v1alpha1
@@ -108,98 +108,98 @@ spec:
       multiCluster:
         clusterName: %s
       network: %s`
-						multiclusterPrimaryYAML := fmt.Sprintf(multiclusterYAML, version.Name, controlPlaneNamespace, "mesh1", "cluster1", "network1")
-						Log("Istio CR Primary: ", multiclusterPrimaryYAML)
-						Expect(kubectl.CreateFromString(multiclusterPrimaryYAML, kubeconfig)).To(Succeed(), "Istio Resource creation failed on Primary Cluster")
+						multiclusterCluster1YAML := fmt.Sprintf(multiclusterYAML, version.Name, controlPlaneNamespace, "mesh1", "cluster1", "network1")
+						Log("Istio CR Cluster #1: ", multiclusterCluster1YAML)
+						Expect(kubectl.CreateFromString(multiclusterCluster1YAML, kubeconfig)).To(Succeed(), "Istio Resource creation failed on Cluster #1")
 
-						multiclusterRemoteYAML := fmt.Sprintf(multiclusterYAML, version.Name, controlPlaneNamespace, "mesh1", "cluster2", "network2")
-						Log("Istio CR Remote: ", multiclusterRemoteYAML)
-						Expect(kubectl.CreateFromString(multiclusterRemoteYAML, kubeconfig2)).To(Succeed(), "Istio Resource creation failed on Remote Cluster")
+						multiclusterCluster2YAML := fmt.Sprintf(multiclusterYAML, version.Name, controlPlaneNamespace, "mesh1", "cluster2", "network2")
+						Log("Istio CR Cluster #2: ", multiclusterCluster2YAML)
+						Expect(kubectl.CreateFromString(multiclusterCluster2YAML, kubeconfig2)).To(Succeed(), "Istio Resource creation failed on  Cluster #2")
 					})
 
 					It("updates both Istio CR status to Ready", func(ctx SpecContext) {
 						Eventually(common.GetObject).
 							WithArguments(ctx, clPrimary, kube.Key(istioName), &v1alpha1.Istio{}).
-							Should(HaveCondition(v1alpha1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Primary; unexpected Condition")
-						Success("Istio CR is Ready on Primary Cluster")
+							Should(HaveCondition(v1alpha1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Cluster #1; unexpected Condition")
+						Success("Istio CR is Ready on Cluster #1")
 
 						Eventually(common.GetObject).
 							WithArguments(ctx, clRemote, kube.Key(istioName), &v1alpha1.Istio{}).
-							Should(HaveCondition(v1alpha1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Remote; unexpected Condition")
-						Success("Istio CR is Ready on Primary Cluster")
+							Should(HaveCondition(v1alpha1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Cluster #2; unexpected Condition")
+						Success("Istio CR is Ready on Cluster #1")
 					})
 
 					It("deploys istiod", func(ctx SpecContext) {
 						Eventually(common.GetObject).
 							WithArguments(ctx, clPrimary, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
-							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available on Primary; unexpected Condition")
+							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available on Cluster #1; unexpected Condition")
 						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
-						Success("Istiod is deployed in the namespace and Running on Primary Cluster")
+						Success("Istiod is deployed in the namespace and Running on Cluster #1")
 
 						Eventually(common.GetObject).
 							WithArguments(ctx, clRemote, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
-							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available on Remote; unexpected Condition")
+							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available on Cluster #2; unexpected Condition")
 						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
-						Success("Istiod is deployed in the namespace and Running on Remote Cluster")
+						Success("Istiod is deployed in the namespace and Running on  Cluster #2")
 					})
 				})
 
 				When("Gateway is created in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
 						eastGatewayURL := "https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/east-west-gateway-net1.yaml"
-						Expect(kubectl.Apply(controlPlaneNamespace, eastGatewayURL, kubeconfig)).To(Succeed(), "Gateway creation failed on Primary Cluster")
+						Expect(kubectl.Apply(controlPlaneNamespace, eastGatewayURL, kubeconfig)).To(Succeed(), "Gateway creation failed on Cluster #1")
 
 						westGatewayURL := "https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/east-west-gateway-net2.yaml"
-						Expect(kubectl.Apply(controlPlaneNamespace, westGatewayURL, kubeconfig2)).To(Succeed(), "Gateway creation failed on Remote Cluster")
+						Expect(kubectl.Apply(controlPlaneNamespace, westGatewayURL, kubeconfig2)).To(Succeed(), "Gateway creation failed on  Cluster #2")
 
 						// Expose the Gateway service in both clusters
 						exposeServiceURL := "https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/expose-services.yaml"
-						Expect(kubectl.Apply(controlPlaneNamespace, exposeServiceURL, kubeconfig)).To(Succeed(), "Expose Service creation failed on Primary Cluster")
-						Expect(kubectl.Apply(controlPlaneNamespace, exposeServiceURL, kubeconfig2)).To(Succeed(), "Expose Service creation failed on Remote Cluster")
+						Expect(kubectl.Apply(controlPlaneNamespace, exposeServiceURL, kubeconfig)).To(Succeed(), "Expose Service creation failed on Cluster #1")
+						Expect(kubectl.Apply(controlPlaneNamespace, exposeServiceURL, kubeconfig2)).To(Succeed(), "Expose Service creation failed on  Cluster #2")
 					})
 
 					It("updates both Gateway status to Available", func(ctx SpecContext) {
 						Eventually((common.GetObject)).
 							WithArguments(ctx, clPrimary, kube.Key("istio-eastwestgateway", controlPlaneNamespace), &appsv1.Deployment{}).
-							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Gateway is not Ready on Primary; unexpected Condition")
+							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Gateway is not Ready on Cluster #1; unexpected Condition")
 
 						Eventually((common.GetObject)).
 							WithArguments(ctx, clRemote, kube.Key("istio-eastwestgateway", controlPlaneNamespace), &appsv1.Deployment{}).
-							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Gateway is not Ready on Remote; unexpected Condition")
+							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Gateway is not Ready on Cluster #2; unexpected Condition")
 						Success("Gateway is created and available in both clusters")
 					})
 				})
 
-				When("are installed remote secrets on each cluster", func() {
+				When("are installed Secondsecrets on each cluster", func() {
 					BeforeAll(func(ctx SpecContext) {
 						// Get the internal IP of the control plane node in both clusters
-						internalIPPrimary, err := kubectl.GetInternalIP("node-role.kubernetes.io/control-plane", kubeconfig)
+						internalIPCluster1, err := kubectl.GetInternalIP("node-role.kubernetes.io/control-plane", kubeconfig)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(internalIPPrimary).NotTo(BeEmpty(), "Internal IP is empty for Primary Cluster")
+						Expect(internalIPCluster1).NotTo(BeEmpty(), "Internal IP is empty for Cluster #1")
 
-						internalIPRemote, err := kubectl.GetInternalIP("node-role.kubernetes.io/control-plane", kubeconfig2)
-						Expect(internalIPRemote).NotTo(BeEmpty(), "Internal IP is empty for Remote Cluster")
+						internalIPCluster2, err := kubectl.GetInternalIP("node-role.kubernetes.io/control-plane", kubeconfig2)
+						Expect(internalIPCluster2).NotTo(BeEmpty(), "Internal IP is empty for  Cluster #2")
 						Expect(err).NotTo(HaveOccurred())
 
-						// Install a remote secret in Primary cluster that provides access to the Remote cluster API server.
-						secret, err := istioctl.CreateRemoteSecret(kubeconfig2, "cluster2", internalIPRemote)
+						// Install a Secondsecret in Cluster #1 that provides access to the  Cluster #2 API server.
+						secret, err := istioctl.CreateRemoteSecret(kubeconfig2, "cluster2", internalIPCluster2)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(kubectl.ApplyString("", secret, kubeconfig)).To(Succeed(), "Remote secret creation failed on Primary Cluster")
+						Expect(kubectl.ApplyString("", secret, kubeconfig)).To(Succeed(), "Remote secret creation failed on Cluster #1")
 
-						// Install a remote secret in Remote cluster that provides access to the Primary cluster API server.
-						secret, err = istioctl.CreateRemoteSecret(kubeconfig, "cluster1", internalIPPrimary)
+						// Install a Secondsecret in  Cluster #2 that provides access to the Cluster #1 API server.
+						secret, err = istioctl.CreateRemoteSecret(kubeconfig, "cluster1", internalIPCluster1)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(kubectl.ApplyString("", secret, kubeconfig2)).To(Succeed(), "Remote secret creation failed on Primary Cluster")
+						Expect(kubectl.ApplyString("", secret, kubeconfig2)).To(Succeed(), "Remote secret creation failed on Cluster #1")
 					})
 
 					It("secrets are created", func(ctx SpecContext) {
 						secret, err := common.GetObject(ctx, clPrimary, kube.Key("istio-remote-secret-cluster2", controlPlaneNamespace), &corev1.Secret{})
 						Expect(err).NotTo(HaveOccurred())
-						Expect(secret).NotTo(BeNil(), "Secret is not created on Primary Cluster")
+						Expect(secret).NotTo(BeNil(), "Secret is not created on Cluster #1")
 
 						secret, err = common.GetObject(ctx, clRemote, kube.Key("istio-remote-secret-cluster1", controlPlaneNamespace), &corev1.Secret{})
 						Expect(err).NotTo(HaveOccurred())
-						Expect(secret).NotTo(BeNil(), "Secret is not created on Remote Cluster")
+						Expect(secret).NotTo(BeNil(), "Secret is not created on  Cluster #2")
 						Success("Remote secrets are created in both clusters")
 					})
 				})
@@ -212,45 +212,47 @@ spec:
 					})
 
 					It("updates the pods status to Ready", func(ctx SpecContext) {
-						samplePodsPrimary := &corev1.PodList{}
+						samplePodsCluster1 := &corev1.PodList{}
 
-						clPrimary.List(ctx, samplePodsPrimary, client.InNamespace("sample"))
-						Expect(samplePodsPrimary.Items).ToNot(BeEmpty(), "No pods found in bookinfo namespace")
+						clPrimary.List(ctx, samplePodsCluster1, client.InNamespace("sample"))
+						Expect(samplePodsCluster1.Items).ToNot(BeEmpty(), "No pods found in bookinfo namespace")
 
-						for _, pod := range samplePodsPrimary.Items {
+						for _, pod := range samplePodsCluster1.Items {
 							Eventually(common.GetObject).
 								WithArguments(ctx, clPrimary, kube.Key(pod.Name, "sample"), &corev1.Pod{}).
-								Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready on Primary; unexpected Condition")
+								Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready on Cluster #1; unexpected Condition")
 						}
 
-						samplePodsRemote := &corev1.PodList{}
-						clRemote.List(ctx, samplePodsRemote, client.InNamespace("sample"))
-						Expect(samplePodsRemote.Items).ToNot(BeEmpty(), "No pods found in bookinfo namespace")
+						samplePodsCluster2 := &corev1.PodList{}
+						clRemote.List(ctx, samplePodsCluster2, client.InNamespace("sample"))
+						Expect(samplePodsCluster2.Items).ToNot(BeEmpty(), "No pods found in bookinfo namespace")
 
-						for _, pod := range samplePodsRemote.Items {
+						for _, pod := range samplePodsCluster2.Items {
 							Eventually(common.GetObject).
 								WithArguments(ctx, clRemote, kube.Key(pod.Name, "sample"), &corev1.Pod{}).
-								Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready on Remote; unexpected Condition")
+								Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready on Cluster #2; unexpected Condition")
 						}
 						Success("Sample app is created in both clusters and Running")
 					})
 
 					It("can access the sample app from both clusters", func(ctx SpecContext) {
-						sleepPodNamePrimary := getSleepPodName(ctx, clPrimary)
-						Expect(sleepPodNamePrimary).NotTo(BeEmpty(), "Sleep pod not found on Primary Cluster")
+						sleepPodNameCluster1, err := common.GetPodNameByLabel(ctx, clPrimary, "sample", "app", "sleep")
+						Expect(sleepPodNameCluster1).NotTo(BeEmpty(), "Sleep pod not found on Cluster #1")
+						Expect(err).NotTo(HaveOccurred(), "Error getting sleep pod name on Cluster #1")
 
-						sleepPodNameRemote := getSleepPodName(ctx, clRemote)
-						Expect(sleepPodNameRemote).NotTo(BeEmpty(), "Sleep pod not found on Remote Cluster")
+						sleepPodNameCluster2, err := common.GetPodNameByLabel(ctx, clRemote, "sample", "app", "sleep")
+						Expect(sleepPodNameCluster2).NotTo(BeEmpty(), "Sleep pod not found on  Cluster #2")
+						Expect(err).NotTo(HaveOccurred(), "Error getting sleep pod name on  Cluster #2")
 
-						// Run the curl command from the sleep pod in the Remote Cluster and get response list to validate that we get responses from both clusters
-						remoteResponses := strings.Join(getListCurlResponses(sleepPodNameRemote, kubeconfig2), "\n")
-						Expect(remoteResponses).To(ContainSubstring("Hello version: v1"), "Responses from Remote Cluster are not the expected")
-						Expect(remoteResponses).To(ContainSubstring("Hello version: v2"), "Responses from Remote Cluster are not the expected")
+						// Run the curl command from the sleep pod in the  Cluster #2 and get response list to validate that we get responses from both clusters
+						Cluster2Responses := strings.Join(getListCurlResponses(sleepPodNameCluster2, kubeconfig2), "\n")
+						Expect(Cluster2Responses).To(ContainSubstring("Hello version: v1"), "Responses from  Cluster #2 are not the expected")
+						Expect(Cluster2Responses).To(ContainSubstring("Hello version: v2"), "Responses from  Cluster #2 are not the expected")
 
-						// Run the curl command from the sleep pod in the Primary Cluster and get response list to validate that we get responses from both clusters
-						primaryResponses := strings.Join(getListCurlResponses(sleepPodNamePrimary, kubeconfig), "\n")
-						Expect(primaryResponses).To(ContainSubstring("Hello version: v1"), "Responses from Primary Cluster are not the expected")
-						Expect(primaryResponses).To(ContainSubstring("Hello version: v2"), "Responses from Primary Cluster are not the expected")
+						// Run the curl command from the sleep pod in the Cluster #1 and get response list to validate that we get responses from both clusters
+						Cluster1Responses := strings.Join(getListCurlResponses(sleepPodNameCluster1, kubeconfig), "\n")
+						Expect(Cluster1Responses).To(ContainSubstring("Hello version: v1"), "Responses from Cluster #1 are not the expected")
+						Expect(Cluster1Responses).To(ContainSubstring("Hello version: v2"), "Responses from Cluster #1 are not the expected")
 						Success("Sample app is accessible from both clusters")
 					})
 				})
@@ -258,8 +260,8 @@ spec:
 				When("sample apps are deleted in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
 						// Delete the entire sample namespace in both clusters
-						Expect(kubectl.DeleteNamespace("sample", kubeconfig)).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
-						Expect(kubectl.DeleteNamespace("sample", kubeconfig2)).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
+						Expect(kubectl.DeleteNamespace("sample", kubeconfig)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
+						Expect(kubectl.DeleteNamespace("sample", kubeconfig2)).To(Succeed(), "Namespace failed to be deleted on  Cluster #2")
 					})
 
 					It("sample app is deleted in both clusters and the namespace is empty", func(ctx SpecContext) {
@@ -278,14 +280,14 @@ spec:
 
 						// Delete the gateway in both clusters
 						eastGatewayURL := "https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/east-west-gateway-net1.yaml"
-						Expect(kubectl.DeleteFromFile(eastGatewayURL, kubeconfig)).To(Succeed(), "Gateway deletion failed on Primary Cluster")
+						Expect(kubectl.DeleteFromFile(eastGatewayURL, kubeconfig)).To(Succeed(), "Gateway deletion failed on Cluster #1")
 
 						westGatewayURL := "https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/east-west-gateway-net2.yaml"
-						Expect(kubectl.DeleteFromFile(westGatewayURL, kubeconfig2)).To(Succeed(), "Gateway deletion failed on Remote Cluster")
+						Expect(kubectl.DeleteFromFile(westGatewayURL, kubeconfig2)).To(Succeed(), "Gateway deletion failed on  Cluster #2")
 
 						// Delete the namespace in both clusters
-						Expect(kubectl.DeleteNamespace(controlPlaneNamespace, kubeconfig)).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
-						Expect(kubectl.DeleteNamespace(controlPlaneNamespace, kubeconfig2)).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
+						Expect(kubectl.DeleteNamespace(controlPlaneNamespace, kubeconfig)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
+						Expect(kubectl.DeleteNamespace(controlPlaneNamespace, kubeconfig2)).To(Succeed(), "Namespace failed to be deleted on  Cluster #2")
 					})
 
 					It("removes everything from the namespace", func(ctx SpecContext) {
@@ -304,8 +306,8 @@ spec:
 
 	AfterAll(func(ctx SpecContext) {
 		// Delete the Sail Operator from both clusters
-		Expect(kubectl.DeleteNamespace(namespace, kubeconfig)).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
-		Expect(kubectl.DeleteNamespace(namespace, kubeconfig2)).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
+		Expect(kubectl.DeleteNamespace(namespace, kubeconfig)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
+		Expect(kubectl.DeleteNamespace(namespace, kubeconfig2)).To(Succeed(), "Namespace failed to be deleted on  Cluster #2")
 
 		// Delete the intermediate CA from both clusters
 		common.CheckNamespaceEmpty(ctx, clPrimary, namespace)
@@ -331,30 +333,15 @@ func deploySampleApp(ns string, istioVersion supportedversion.VersionInfo, kubec
 		version = "master"
 	}
 	helloWorldURL := fmt.Sprintf("https://raw.githubusercontent.com/istio/istio/%s/samples/helloworld/helloworld.yaml", version)
-	Expect(kubectl.ApplyWithLabels(ns, helloWorldURL, "service=helloworld", kubeconfig)).To(Succeed(), "Sample service deploy failed on Primary Cluster")
-	Expect(kubectl.ApplyWithLabels(ns, helloWorldURL, "service=helloworld", kubeconfig2)).To(Succeed(), "Sample service deploy failed on Remote Cluster")
+	Expect(kubectl.ApplyWithLabels(ns, helloWorldURL, "service=helloworld", kubeconfig)).To(Succeed(), "Sample service deploy failed on Cluster #1")
+	Expect(kubectl.ApplyWithLabels(ns, helloWorldURL, "service=helloworld", kubeconfig2)).To(Succeed(), "Sample service deploy failed on  Cluster #2")
 
-	Expect(kubectl.ApplyWithLabels(ns, helloWorldURL, "version=v1", kubeconfig)).To(Succeed(), "Sample service deploy failed on Primary Cluster")
-	Expect(kubectl.ApplyWithLabels(ns, helloWorldURL, "version=v2", kubeconfig2)).To(Succeed(), "Sample service deploy failed on Remote Cluster")
+	Expect(kubectl.ApplyWithLabels(ns, helloWorldURL, "version=v1", kubeconfig)).To(Succeed(), "Sample service deploy failed on Cluster #1")
+	Expect(kubectl.ApplyWithLabels(ns, helloWorldURL, "version=v2", kubeconfig2)).To(Succeed(), "Sample service deploy failed on  Cluster #2")
 
 	sleepURL := fmt.Sprintf("https://raw.githubusercontent.com/istio/istio/%s/samples/sleep/sleep.yaml", version)
-	Expect(kubectl.Apply(ns, sleepURL, kubeconfig)).To(Succeed(), "Sample sleep deploy failed on Primary Cluster")
-	Expect(kubectl.Apply(ns, sleepURL, kubeconfig2)).To(Succeed(), "Sample sleep deploy failed on Remote Cluster")
-}
-
-// getPodName returns the pod name of the given deployment in the given namespace
-func getSleepPodName(ctx context.Context, cl client.Client) string {
-	samplePods := &corev1.PodList{}
-	cl.List(ctx, samplePods, client.InNamespace("sample"))
-	var sleepPodName string
-	for _, pod := range samplePods.Items {
-		if pod.Labels["app"] == "sleep" {
-			sleepPodName = pod.GetName()
-			break
-		}
-	}
-
-	return sleepPodName
+	Expect(kubectl.Apply(ns, sleepURL, kubeconfig)).To(Succeed(), "Sample sleep deploy failed on Cluster #1")
+	Expect(kubectl.Apply(ns, sleepURL, kubeconfig2)).To(Succeed(), "Sample sleep deploy failed on  Cluster #2")
 }
 
 // getListCurlResponses runs the curl command 10 times from the sleep pod in the given cluster and get response list
@@ -366,12 +353,4 @@ func getListCurlResponses(podName, kubeconfig string) []string {
 		responses = append(responses, response)
 	}
 	return responses
-}
-
-// getSVCAddress returns the address of the istiod service in the given cluster
-func getSVCAddress(ctx context.Context, cl client.Client, ns string) string {
-	svc := &corev1.Service{}
-	err := cl.Get(ctx, kube.Key("istio-eastwestgateway", ns), svc)
-	Expect(err).NotTo(HaveOccurred())
-	return svc.Status.LoadBalancer.Ingress[0].IP
 }
