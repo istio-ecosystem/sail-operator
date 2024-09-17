@@ -874,9 +874,9 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
 
 ### External Control Plane
 
-These instructions install an [external control plane](https://istio.io/latest/docs/setup/install/external-controlplane/) Istio deployment using the Sail Operator and Sail CRDs. **Before you begin**, ensure meet the requirements of the [common setup](#common-setup) and complete **only** the "Setup env vars" step. Unlike the other Multi-Cluster deployments, you won't be creating a common CA in this setup.
+These instructions install an [external control plane](https://istio.io/latest/docs/setup/install/external-controlplane/) Istio deployment using the Sail Operator and Sail CRDs. **Before you begin**, ensure you meet the requirements of the [common setup](#common-setup) and complete **only** the "Setup env vars" step. Unlike other Multi-Cluster deployments, you won't be creating a common CA in this setup.
 
-These installation instructions are adapted from: https://istio.io/latest/docs/setup/install/external-controlplane/ and are intended to be run in a development environment such as `kind` and not in production.
+These installation instructions are adapted from [Istio's external control plane documentation](https://istio.io/latest/docs/setup/install/external-controlplane/) and are intended to be run in a development environment, such as `kind`, rather than in production.
 
 In this setup there is an external control plane cluster (`cluster1`) and a remote cluster (`cluster2`) which are on separate networks.
 
