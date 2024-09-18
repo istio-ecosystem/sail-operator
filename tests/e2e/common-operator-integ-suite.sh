@@ -246,11 +246,11 @@ if [ "${SKIP_BUILD}" == "false" ]; then
       echo "***** Get all CSVs in the cluster"
       ${COMMAND} get csv -A
 
+      echo "***** Describe the csv in the namespace ${NAMESPACE}"
+      ${COMMAND} describe csv -n "${NAMESPACE}"
+
       echo "***** Describe the operator pods"
       ${COMMAND} describe pods -n "${NAMESPACE}"
-
-      echo "***** Describe the operator deployment"
-      ${OPERATOR_SDK}  olm status
 
       exit 1
     }
