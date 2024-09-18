@@ -250,14 +250,14 @@ if [ "${SKIP_BUILD}" == "false" ]; then
       ${COMMAND} describe csv -n "${NAMESPACE}"
 
       echo "***** Get subscriptions and installplans ${NAMESPACE}"
-      ${COMMAND} get subscriptions -n <namespace>
-      ${COMMAND} get installplans -n <namespace>
+      ${COMMAND} get subscriptions -n "${NAMESPACE}"
+      ${COMMAND} get installplans -n "${NAMESPACE}"
 
       echo "***** Describe the subscription in the namespace ${NAMESPACE}"
-      ${COMMAND} describe subscriptions -n <namespace>
+      ${COMMAND} describe subscriptions -n "${NAMESPACE}"
 
       echo "***** Check the catalog source"
-      ${COMMAND} get catalogsource -n <namespace>
+      ${COMMAND} get catalogsource -n "${NAMESPACE}"
 
       exit 1
     }
