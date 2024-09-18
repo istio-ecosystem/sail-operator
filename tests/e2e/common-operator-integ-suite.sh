@@ -238,12 +238,19 @@ if [ "${SKIP_BUILD}" == "false" ]; then
     ${COMMAND} create ns "${NAMESPACE}" || echo "Creation of namespace ${NAMESPACE} failed with the message: $?"
     # Deploy the operator using OLM
     ${OPERATOR_SDK} run bundle "${BUNDLE_IMG}" -n "${NAMESPACE}" --skip-tls --timeout 5m || {
-      # Add debug information
+      echo "***** Error: Failed to deploy the operator using OLM."
+
+      echo "***** Get all resources in the namespace ${NAMESPACE}"
       ${COMMAND} get all -n "${NAMESPACE}"
 
+      echo "***** Get all CSVs in the cluster"
       ${COMMAND} get csv -A
 
+      echo "***** Describe the operator pods"
       ${COMMAND} describe pods -n "${NAMESPACE}"
+
+      echo "***** Describe the operator deployment"
+      ${OPERATOR_SDK}  olm status
 
       exit 1
     }
