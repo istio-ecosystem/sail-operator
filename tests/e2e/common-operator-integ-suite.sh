@@ -249,8 +249,15 @@ if [ "${SKIP_BUILD}" == "false" ]; then
       echo "***** Describe the csv in the namespace ${NAMESPACE}"
       ${COMMAND} describe csv -n "${NAMESPACE}"
 
-      echo "***** Describe the operator pods"
-      ${COMMAND} describe pods -n "${NAMESPACE}"
+      echo "***** Get subscriptions and installplans ${NAMESPACE}"
+      ${COMMAND} get subscriptions -n <namespace>
+      ${COMMAND} get installplans -n <namespace>
+
+      echo "***** Describe the subscription in the namespace ${NAMESPACE}"
+      ${COMMAND} describe subscriptions -n <namespace>
+
+      echo "***** Check the catalog source"
+      ${COMMAND} get catalogsource -n <namespace>
 
       exit 1
     }
