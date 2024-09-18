@@ -237,7 +237,7 @@ if [ "${SKIP_BUILD}" == "false" ]; then
     # Create operator namespace
     ${COMMAND} create ns "${NAMESPACE}" || echo "Creation of namespace ${NAMESPACE} failed with the message: $?"
     # Deploy the operator using OLM
-    ${OPERATOR_SDK} run bundle "${BUNDLE_IMG}" -n "${NAMESPACE}" --skip-tls --timeout 5m || {
+    ${OPERATOR_SDK} run bundle "${BUNDLE_IMG}" -n "${NAMESPACE}" --skip-tls || {
       echo "***** Error: Failed to deploy the operator using OLM."
 
       echo "***** Get all resources in the namespace ${NAMESPACE}"
