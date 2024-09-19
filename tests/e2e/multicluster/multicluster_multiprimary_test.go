@@ -146,16 +146,13 @@ spec:
 
 				When("Gateway is created in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
-						eastGatewayURL := "https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/east-west-gateway-net1.yaml"
-						Expect(kubectl.Apply(controlPlaneNamespace, eastGatewayURL, kubeconfig)).To(Succeed(), "Gateway creation failed on Cluster #1")
+						Expect(kubectl.Apply(controlPlaneNamespace, eastGatewayYAML, kubeconfig)).To(Succeed(), "Gateway creation failed on Cluster #1")
 
-						westGatewayURL := "https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/east-west-gateway-net2.yaml"
-						Expect(kubectl.Apply(controlPlaneNamespace, westGatewayURL, kubeconfig2)).To(Succeed(), "Gateway creation failed on  Cluster #2")
+						Expect(kubectl.Apply(controlPlaneNamespace, westGatewayYAML, kubeconfig2)).To(Succeed(), "Gateway creation failed on  Cluster #2")
 
 						// Expose the Gateway service in both clusters
-						exposeServiceURL := "https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/expose-services.yaml"
-						Expect(kubectl.Apply(controlPlaneNamespace, exposeServiceURL, kubeconfig)).To(Succeed(), "Expose Service creation failed on Cluster #1")
-						Expect(kubectl.Apply(controlPlaneNamespace, exposeServiceURL, kubeconfig2)).To(Succeed(), "Expose Service creation failed on  Cluster #2")
+						Expect(kubectl.Apply(controlPlaneNamespace, exposeServiceYAML, kubeconfig)).To(Succeed(), "Expose Service creation failed on Cluster #1")
+						Expect(kubectl.Apply(controlPlaneNamespace, exposeServiceYAML, kubeconfig2)).To(Succeed(), "Expose Service creation failed on  Cluster #2")
 					})
 
 					It("updates both Gateway status to Available", func(ctx SpecContext) {
@@ -279,11 +276,8 @@ spec:
 						Success("Istio CR is deleted in both clusters")
 
 						// Delete the gateway in both clusters
-						eastGatewayURL := "https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/east-west-gateway-net1.yaml"
-						Expect(kubectl.DeleteFromFile(eastGatewayURL, kubeconfig)).To(Succeed(), "Gateway deletion failed on Cluster #1")
-
-						westGatewayURL := "https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/east-west-gateway-net2.yaml"
-						Expect(kubectl.DeleteFromFile(westGatewayURL, kubeconfig2)).To(Succeed(), "Gateway deletion failed on  Cluster #2")
+						Expect(kubectl.DeleteFromFile(eastGatewayYAML, kubeconfig)).To(Succeed(), "Gateway deletion failed on Cluster #1")
+						Expect(kubectl.DeleteFromFile(westGatewayYAML, kubeconfig2)).To(Succeed(), "Gateway deletion failed on  Cluster #2")
 
 						// Delete the namespace in both clusters
 						Expect(kubectl.DeleteNamespace(controlPlaneNamespace, kubeconfig)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")

@@ -17,6 +17,9 @@
 package multicluster
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/certs"
@@ -42,6 +45,11 @@ var (
 	kubeconfig            = env.Get("KUBECONFIG", "")
 	kubeconfig2           = env.Get("KUBECONFIG2", "")
 	artifacts             = env.Get("ARTIFACTS", "/tmp/artifacts")
+
+	eastGatewayYAML   string
+	westGatewayYAML   string
+	exposeServiceYAML string
+	exposeIstiodYAML  string
 )
 
 func TestInstall(t *testing.T) {
@@ -71,4 +79,17 @@ func setup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating intermediate CA: %v", err)
 	}
+
+	// Set the path for the multicluster YAML files to be used
+	workDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Error getting working directory: %v", err)
+	}
+
+	// Set base path
+	baseRepoDir := filepath.Join(workDir, "../../..")
+	eastGatewayYAML = fmt.Sprintf("%s/docs/multicluster/east-west-gateway-net1.yaml", baseRepoDir)
+	westGatewayYAML = fmt.Sprintf("%s/docs/multicluster/east-west-gateway-net2.yaml", baseRepoDir)
+	exposeServiceYAML = fmt.Sprintf("%s/docs/multicluster/expose-services.yaml", baseRepoDir)
+	exposeIstiodYAML = fmt.Sprintf("%s/docs/multicluster/expose-istiod.yaml", baseRepoDir)
 }
