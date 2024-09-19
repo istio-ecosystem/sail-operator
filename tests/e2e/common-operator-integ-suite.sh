@@ -234,14 +234,17 @@ if [ "${SKIP_BUILD}" == "false" ]; then
     # Install OLM in the cluster because it's not available by default in kind.
     ${OPERATOR_SDK} olm install
 
-    # Wait for the catalog operator to be ready
-    ${COMMAND} wait --for=condition=available deployment/packageserver -n olm --timeout=5m
-
     # Create operator namespace
     ${COMMAND} create ns "${NAMESPACE}" || echo "Creation of namespace ${NAMESPACE} failed with the message: $?"
     # Deploy the operator using OLM
-    ${OPERATOR_SDK} run bundle "${BUNDLE_IMG}" -n "${NAMESPACE}" --skip-tls --timeout=10m || {
+    ${OPERATOR_SDK} run bundle "${BUNDLE_IMG}" -n "${NAMESPACE}" --skip-tls --timeout=5m || {
       echo "***** Error: Failed to deploy the operator using OLM."
+
+      echo "***** Get all resources from olm namespace"
+      ${COMMAND} get all -n olm
+
+      echo "***** Get olm status"
+      ${OPERATOR_SDK} olm status
 
       echo "***** Get all resources in the namespace ${NAMESPACE}"
       ${COMMAND} get all -n "${NAMESPACE}"
@@ -262,11 +265,14 @@ if [ "${SKIP_BUILD}" == "false" ]; then
       echo "***** Check the catalog source"
       ${COMMAND} get catalogsource -n "${NAMESPACE}"
 
+      echo "***** Get CatalogSource configuration"
+      ${COMMAND} describe catalogsource operatorhubio-catalog -n olm
+
       echo "***** Get OLM logs"
       kubectl logs deployment/olm-operator -n olm
 
-      echo "***** Get CatalogSource configuration"
-      ${COMMAND} describe catalogsource operatorhubio-catalog -n olm
+      echo "***** Get the catalog logs"
+      kubectl logs deployment/catalog-operator -n olm
 
       exit 1
     }
