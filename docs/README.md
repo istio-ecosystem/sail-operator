@@ -260,7 +260,7 @@ When the `InPlace` strategy is used, the existing Istio control plane is replace
 
 Prerequisites:
 * Sail Operator is installed.
-* `istioctl` is [installed](common/istio-addons-integrations.md).
+* `istioctl` is [installed](common/install-istioctl-tool.md).
 
 Steps:
 1. Create the `istio-system` namespace.
@@ -336,7 +336,7 @@ When the `RevisionBased` strategy is used, a new Istio control plane instance is
 
 Prerequisites:
 * Sail Operator is installed.
-* `istioctl` is [installed](common/istio-addons-integrations.md).
+* `istioctl` is [installed](common/install-istioctl-tool.md).
 
 Steps:
 
@@ -476,7 +476,7 @@ You can use the Sail Operator and the Sail CRDs to manage a multi-cluster Istio 
 
 Each deployment model requires you to install the Sail Operator and the Sail CRDs to every cluster that is part of the mesh.
 
-- Install [istioctl](https://istio.io/latest/docs/setup/install/istioctl) and have it included in your `$PATH`.
+- Install [istioctl](common/install-istioctl-tool.md).
 - Two kubernetes clusters with external lb support. (If using kind, `cloud-provider-kind` is running in the background)
 - kubeconfig file with a context for each cluster.
 
