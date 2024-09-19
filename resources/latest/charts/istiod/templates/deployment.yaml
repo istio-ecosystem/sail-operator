@@ -82,6 +82,10 @@ spec:
 {{- if .Values.global.priorityClassName }}
       priorityClassName: "{{ .Values.global.priorityClassName }}"
 {{- end }}
+{{- with .Values.initContainers }}
+      initContainers:
+        {{- tpl (toYaml .) $ | nindent 8 }}
+{{- end }}
       containers:
         - name: discovery
 {{- if contains "/" .Values.image }}
@@ -116,12 +120,19 @@ spec:
           ports:
           - containerPort: 8080
             protocol: TCP
+            name: http-debug
           - containerPort: 15010
             protocol: TCP
+            name: grpc-xds
+          - containerPort: 15012
+            protocol: TCP
+            name: tls-xds
           - containerPort: 15017
             protocol: TCP
+            name: https-webhooks
           - containerPort: 15014
             protocol: TCP
+            name: http-monitoring
           readinessProbe:
             httpGet:
               path: /ready
@@ -189,8 +200,9 @@ spec:
             valueFrom:
               resourceFieldRef:
                 resource: limits.cpu
+                divisor: "1"
           - name: PLATFORM
-            value: "{{ .Values.global.platform }}"
+            value: "{{ coalesce .Values.global.platform .Values.platform }}"
           resources:
 {{- if .Values.resources }}
 {{ toYaml .Values.resources | trim | indent 12 }}
