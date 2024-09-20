@@ -643,6 +643,7 @@ spec:
                 - --logtostderr=true
                 - --v=0
                 image: gcr.io/kubebuilder/kube-rbac-proxy:v0.16.0
+                imagePullPolicy: Always
                 name: kube-rbac-proxy
                 ports:
                 - containerPort: 8443
