@@ -367,6 +367,7 @@ func TestDetermineStatus(t *testing.T) {
 						Message: "ready message",
 					},
 				},
+				ActiveRevisionName: istioKey.Name,
 				Revisions: v1alpha1.RevisionSummary{
 					Total: 2,
 					Ready: 1,
@@ -398,6 +399,7 @@ func TestDetermineStatus(t *testing.T) {
 						Status: metav1.ConditionTrue,
 					},
 				},
+				ActiveRevisionName: istioKey.Name,
 				Revisions: v1alpha1.RevisionSummary{
 					Total: 3,
 					Ready: 2,
@@ -425,6 +427,7 @@ func TestDetermineStatus(t *testing.T) {
 						Message: "active IstioRevision not found",
 					},
 				},
+				ActiveRevisionName: istioKey.Name,
 			},
 		},
 		{
@@ -455,7 +458,8 @@ func TestDetermineStatus(t *testing.T) {
 						Message: "failed to get active IstioRevision: get failed: simulated error",
 					},
 				},
-				Revisions: v1alpha1.RevisionSummary{},
+				ActiveRevisionName: istioKey.Name,
+				Revisions:          v1alpha1.RevisionSummary{},
 			},
 		},
 		{
@@ -486,6 +490,7 @@ func TestDetermineStatus(t *testing.T) {
 						Message: "active IstioRevision not found",
 					},
 				},
+				ActiveRevisionName: istioKey.Name,
 				Revisions: v1alpha1.RevisionSummary{
 					Total: -1,
 					Ready: -1,
@@ -587,6 +592,7 @@ func TestUpdateStatus(t *testing.T) {
 						Message: "active IstioRevision not found",
 					},
 				},
+				ActiveRevisionName: istioKey.Name,
 				Revisions: v1alpha1.RevisionSummary{
 					Total: -1,
 					Ready: -1,
@@ -625,6 +631,7 @@ func TestUpdateStatus(t *testing.T) {
 							LastTransitionTime: *oneMinuteAgo,
 						},
 					},
+					ActiveRevisionName: istioKey.Name,
 				},
 			},
 			revisions: []v1alpha1.IstioRevision{
@@ -673,6 +680,7 @@ func TestUpdateStatus(t *testing.T) {
 						Message: "ready message",
 					},
 				},
+				ActiveRevisionName: istioKey.Name,
 			},
 			disallowWrites: true,
 			wantErr:        false,

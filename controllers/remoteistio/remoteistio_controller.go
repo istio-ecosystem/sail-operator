@@ -206,6 +206,7 @@ func (r *Reconciler) determineStatus(ctx context.Context, istio *v1alpha1.Remote
 		})
 		status.State = v1alpha1.RemoteIstioReasonReconcileError
 	} else {
+		status.ActiveRevisionName = getActiveRevisionName(istio)
 		rev, err := r.getActiveRevision(ctx, istio)
 		if apierrors.IsNotFound(err) {
 			revisionNotFound := func(conditionType v1alpha1.RemoteIstioConditionType) v1alpha1.RemoteIstioCondition {
