@@ -30,9 +30,13 @@ spec:
       jsonPath: .status.revisions.inUse
       name: In use
       type: string
+    - description: The name of the currently active revision.
+      jsonPath: .status.activeRevisionName
+      name: Active Revision
+      type: string
     - description: The current state of the active revision.
       jsonPath: .status.state
-      name: Active Revision
+      name: Status
       type: string
     - description: The version of the control plane installation.
       jsonPath: .spec.version
@@ -7996,6 +8000,9 @@ spec:
           status:
             description: RemoteIstioStatus defines the observed state of RemoteIstio
             properties:
+              activeRevisionName:
+                description: The name of the active revision.
+                type: string
               conditions:
                 description: Represents the latest available observations of the object's
                   current state.
