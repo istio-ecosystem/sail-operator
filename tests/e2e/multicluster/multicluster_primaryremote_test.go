@@ -157,7 +157,7 @@ spec:
 					})
 				})
 
-				When("remote istio is created in Remote cluster", func() {
+				When("RemoteIstio is created in Remote cluster", func() {
 					BeforeAll(func(ctx SpecContext) {
 						RemoteYAML := `
 apiVersion: sailoperator.io/v1alpha1
@@ -177,9 +177,9 @@ spec:
 						Expect(remotePilotAddress).NotTo(BeEmpty(), "Remote Pilot Address is empty")
 						Expect(err).NotTo(HaveOccurred(), "Error getting Remote Pilot Address")
 						remoteIstioYAML := fmt.Sprintf(RemoteYAML, version.Name, remotePilotAddress)
-						Log("Remote Istio CR: ", remoteIstioYAML)
-						By("Creating Remote Istio CR on Remote Cluster")
-						Expect(kubectl.CreateFromString(remoteIstioYAML, kubeconfig2)).To(Succeed(), "Remote Istio Resource creation failed on Remote Cluster")
+						Log("RemoteIstio CR: ", remoteIstioYAML)
+						By("Creating RemoteIstio CR on Remote Cluster")
+						Expect(kubectl.CreateFromString(remoteIstioYAML, kubeconfig2)).To(Succeed(), "RemoteIstio Resource creation failed on Remote Cluster")
 
 						// Set the controlplane cluster and network for Remote namespace
 						By("Patching the istio-system namespace on Remote Cluster")
@@ -224,11 +224,11 @@ spec:
 						Success("Remote secret is created in Primary cluster")
 					})
 
-					It("updates Remote Remote Istio CR status to Ready", func(ctx SpecContext) {
+					It("updates RemoteIstio CR status to Ready", func(ctx SpecContext) {
 						Eventually(common.GetObject).
 							WithArguments(ctx, clRemote, kube.Key(istioName), &v1alpha1.RemoteIstio{}).
 							Should(HaveCondition(v1alpha1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Remote; unexpected Condition")
-						Success("Remote Istio CR is Ready on Remote Cluster")
+						Success("RemoteIstio CR is Ready on Remote Cluster")
 					})
 				})
 
@@ -299,43 +299,36 @@ spec:
 					})
 				})
 
-				When("sample apps are deleted in both clusters", func() {
-					BeforeAll(func(ctx SpecContext) {
-						// Delete the entire sample namespace in both clusters
-						Expect(kubectl.DeleteNamespace("sample", kubeconfig)).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
-						Expect(kubectl.DeleteNamespace("sample", kubeconfig2)).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
+				When("Istio CR and RemoteIstio CR are deleted in both clusters", func() {
+					BeforeEach(func() {
+						Expect(kubectl.Delete(controlPlaneNamespace, "istio", istioName, kubeconfig)).To(Succeed(), "Istio CR failed to be deleted")
+						Expect(kubectl.Delete(controlPlaneNamespace, "remoteistio", istioName, kubeconfig2)).To(Succeed(), "RemoteIstio CR failed to be deleted")
+						Success("Istio and RemoteIstio are deleted")
 					})
 
-					It("sample app is deleted in both clusters and the namespace is empty", func(ctx SpecContext) {
-						common.CheckNamespaceEmpty(ctx, clPrimary, "sample")
-						common.CheckNamespaceEmpty(ctx, clRemote, "sample")
-						Success("Sample app is deleted in both clusters")
+					It("removes istiod on Primary", func(ctx SpecContext) {
+						Eventually(clPrimary.Get).WithArguments(ctx, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
+							Should(ReturnNotFoundError(), "Istiod should not exist anymore")
+						Success("Istiod is deleted on Primary Cluster")
 					})
 				})
 
-				When("control plane namespace and gateway are deleted in both clusters", func() {
-					BeforeEach(func() {
-						// Delete the Istio CR in both clusters
-						Expect(kubectl.Delete(controlPlaneNamespace, "istio", istioName, kubeconfig)).To(Succeed(), "Istio CR failed to be deleted")
-						Expect(kubectl.Delete(controlPlaneNamespace, "remoteistio", istioName, kubeconfig2)).To(Succeed(), "RemoteIstio CR failed to be deleted")
-						Success("Istio CR is deleted in both clusters")
+				AfterAll(func(ctx SpecContext) {
+					// Delete namespace to ensure clean up for new tests iteration
+					Expect(kubectl.DeleteNamespace(controlPlaneNamespace, kubeconfig)).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
+					Expect(kubectl.DeleteNamespace(controlPlaneNamespace, kubeconfig2)).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
 
-						// Delete the gateway in both clusters
-						Expect(kubectl.DeleteFromFile(eastGatewayYAML, kubeconfig)).To(Succeed(), "Gateway deletion failed on Primary Cluster")
-						Expect(kubectl.DeleteFromFile(westGatewayYAML, kubeconfig2)).To(Succeed(), "Gateway deletion failed on Remote Cluster")
+					common.CheckNamespaceEmpty(ctx, clPrimary, controlPlaneNamespace)
+					common.CheckNamespaceEmpty(ctx, clRemote, controlPlaneNamespace)
+					Success("ControlPlane Namespaces are empty")
 
-						// Delete the namespace in both clusters
-						Expect(kubectl.DeleteNamespace(controlPlaneNamespace, kubeconfig)).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
-						Expect(kubectl.DeleteNamespace(controlPlaneNamespace, kubeconfig2)).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
-					})
+					// Delete the entire sample namespace in both clusters
+					Expect(kubectl.DeleteNamespace("sample", kubeconfig)).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
+					Expect(kubectl.DeleteNamespace("sample", kubeconfig2)).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
 
-					It("removes everything from the namespace", func(ctx SpecContext) {
-						Eventually(clPrimary.Get).WithArguments(ctx, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
-							Should(ReturnNotFoundError(), "Istiod should not exist anymore")
-						common.CheckNamespaceEmpty(ctx, clPrimary, controlPlaneNamespace)
-						common.CheckNamespaceEmpty(ctx, clRemote, controlPlaneNamespace)
-						Success("Namespace is empty")
-					})
+					common.CheckNamespaceEmpty(ctx, clPrimary, "sample")
+					common.CheckNamespaceEmpty(ctx, clRemote, "sample")
+					Success("Sample app is deleted in both clusters")
 				})
 			})
 		}

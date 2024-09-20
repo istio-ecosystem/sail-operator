@@ -167,7 +167,7 @@ spec:
 					})
 				})
 
-				When("are installed Secondsecrets on each cluster", func() {
+				When("are installed remote secrets on each cluster", func() {
 					BeforeAll(func(ctx SpecContext) {
 						// Get the internal IP of the control plane node in both clusters
 						internalIPCluster1, err := kubectl.GetInternalIP("node-role.kubernetes.io/control-plane", kubeconfig)
@@ -178,18 +178,18 @@ spec:
 						Expect(internalIPCluster2).NotTo(BeEmpty(), "Internal IP is empty for  Cluster #2")
 						Expect(err).NotTo(HaveOccurred())
 
-						// Install a Secondsecret in Cluster #1 that provides access to the  Cluster #2 API server.
+						// Install a remote secret in Cluster #1 that provides access to the  Cluster #2 API server.
 						secret, err := istioctl.CreateRemoteSecret(kubeconfig2, "cluster2", internalIPCluster2)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(kubectl.ApplyString("", secret, kubeconfig)).To(Succeed(), "Remote secret creation failed on Cluster #1")
 
-						// Install a Secondsecret in  Cluster #2 that provides access to the Cluster #1 API server.
+						// Install a remote secret in  Cluster #2 that provides access to the Cluster #1 API server.
 						secret, err = istioctl.CreateRemoteSecret(kubeconfig, "cluster1", internalIPCluster1)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(kubectl.ApplyString("", secret, kubeconfig2)).To(Succeed(), "Remote secret creation failed on Cluster #1")
 					})
 
-					It("secrets are created", func(ctx SpecContext) {
+					It("remote secrets are created", func(ctx SpecContext) {
 						secret, err := common.GetObject(ctx, clPrimary, kube.Key("istio-remote-secret-cluster2", controlPlaneNamespace), &corev1.Secret{})
 						Expect(err).NotTo(HaveOccurred())
 						Expect(secret).NotTo(BeNil(), "Secret is not created on Cluster #1")
@@ -254,45 +254,39 @@ spec:
 					})
 				})
 
-				When("sample apps are deleted in both clusters", func() {
-					BeforeAll(func(ctx SpecContext) {
-						// Delete the entire sample namespace in both clusters
-						Expect(kubectl.DeleteNamespace("sample", kubeconfig)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
-						Expect(kubectl.DeleteNamespace("sample", kubeconfig2)).To(Succeed(), "Namespace failed to be deleted on  Cluster #2")
-					})
-
-					It("sample app is deleted in both clusters and the namespace is empty", func(ctx SpecContext) {
-						common.CheckNamespaceEmpty(ctx, clPrimary, "sample")
-						common.CheckNamespaceEmpty(ctx, clRemote, "sample")
-						Success("Sample app is deleted in both clusters")
-					})
-				})
-
-				When("control plane namespace and gateway are deleted in both clusters", func() {
+				When("istio CR is deleted in both clusters", func() {
 					BeforeEach(func() {
 						// Delete the Istio CR in both clusters
 						Expect(kubectl.Delete(controlPlaneNamespace, "istio", istioName, kubeconfig)).To(Succeed(), "Istio CR failed to be deleted")
 						Expect(kubectl.Delete(controlPlaneNamespace, "istio", istioName, kubeconfig2)).To(Succeed(), "Istio CR failed to be deleted")
 						Success("Istio CR is deleted in both clusters")
-
-						// Delete the gateway in both clusters
-						Expect(kubectl.DeleteFromFile(eastGatewayYAML, kubeconfig)).To(Succeed(), "Gateway deletion failed on Cluster #1")
-						Expect(kubectl.DeleteFromFile(westGatewayYAML, kubeconfig2)).To(Succeed(), "Gateway deletion failed on  Cluster #2")
-
-						// Delete the namespace in both clusters
-						Expect(kubectl.DeleteNamespace(controlPlaneNamespace, kubeconfig)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
-						Expect(kubectl.DeleteNamespace(controlPlaneNamespace, kubeconfig2)).To(Succeed(), "Namespace failed to be deleted on  Cluster #2")
 					})
 
-					It("removes everything from the namespace", func(ctx SpecContext) {
+					It("removes istiod pod", func(ctx SpecContext) {
+						// Check istiod pod is deleted in both clusters
 						Eventually(clPrimary.Get).WithArguments(ctx, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
-							Should(ReturnNotFoundError(), "Istiod should not exist anymore")
+							Should(ReturnNotFoundError(), "Istiod should not exist anymore on Cluster #1")
 						Eventually(clRemote.Get).WithArguments(ctx, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
-							Should(ReturnNotFoundError(), "Istiod should not exist anymore")
-						common.CheckNamespaceEmpty(ctx, clPrimary, controlPlaneNamespace)
-						common.CheckNamespaceEmpty(ctx, clRemote, controlPlaneNamespace)
-						Success("Namespace is empty")
+							Should(ReturnNotFoundError(), "Istiod should not exist anymore on Cluster #2")
 					})
+				})
+
+				AfterAll(func(ctx SpecContext) {
+					// Delete namespace to ensure clean up for new tests iteration
+					Expect(kubectl.DeleteNamespace(controlPlaneNamespace, kubeconfig)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
+					Expect(kubectl.DeleteNamespace(controlPlaneNamespace, kubeconfig2)).To(Succeed(), "Namespace failed to be deleted on Cluster #2")
+
+					common.CheckNamespaceEmpty(ctx, clPrimary, controlPlaneNamespace)
+					common.CheckNamespaceEmpty(ctx, clRemote, controlPlaneNamespace)
+					Success("ControlPlane Namespaces are empty")
+
+					// Delete the entire sample namespace in both clusters
+					Expect(kubectl.DeleteNamespace("sample", kubeconfig)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
+					Expect(kubectl.DeleteNamespace("sample", kubeconfig2)).To(Succeed(), "Namespace failed to be deleted on  Cluster #2")
+
+					common.CheckNamespaceEmpty(ctx, clPrimary, "sample")
+					common.CheckNamespaceEmpty(ctx, clRemote, "sample")
+					Success("Sample app is deleted in both clusters")
 				})
 			})
 		}
