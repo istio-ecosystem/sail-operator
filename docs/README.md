@@ -260,7 +260,7 @@ When the `InPlace` strategy is used, the existing Istio control plane is replace
 
 Prerequisites:
 * Sail Operator is installed.
-* `istioctl` is installed.
+* `istioctl` is [installed](common/istio-addons-integrations.md).
 
 Steps:
 1. Create the `istio-system` namespace.
@@ -336,7 +336,7 @@ When the `RevisionBased` strategy is used, a new Istio control plane instance is
 
 Prerequisites:
 * Sail Operator is installed.
-* `istioctl` is installed.
+* `istioctl` is [installed](common/istio-addons-integrations.md).
 
 Steps:
 
