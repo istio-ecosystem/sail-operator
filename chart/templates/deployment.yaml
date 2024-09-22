@@ -54,7 +54,9 @@ spec:
         - --logtostderr=true
         - --v=0
         image: {{ .Values.proxy.image }}
+{{- if .Values.proxy.imagePullPolicy }}
         imagePullPolicy: {{ .Values.proxy.imagePullPolicy }}
+{{- end }}
         name: kube-rbac-proxy
         ports:
         - containerPort: 8443
@@ -81,7 +83,9 @@ spec:
         command:
         - /manager
         image: {{ .Values.image }}
+{{- if .Values.proxy.imagePullPolicy }}
         imagePullPolicy: {{ .Values.imagePullPolicy }}
+{{- end }}
         livenessProbe:
           httpGet:
             path: /healthz
