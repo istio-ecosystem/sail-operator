@@ -79,7 +79,12 @@ GINKGO_FLAGS := $(if $(VERBOSE),-v) $(if $(CI),--no-color)
 # To re-generate a bundle for other specific channels without changing the standard setup, you can:
 # - use the CHANNELS as arg of the bundle target (e.g make bundle CHANNELS=candidate,fast,stable)
 # - use environment variables to overwrite this value (e.g export CHANNELS="candidate,fast,stable")
-CHANNELS ?= ${MINOR_VERSION}
+CHANNEL_PREFIX := dev
+ifneq (,$(findstring release-,$(shell git rev-parse --abbrev-ref HEAD)))
+CHANNEL_PREFIX = stable
+endif
+
+CHANNELS ?= $(CHANNEL_PREFIX)-$(MINOR_VERSION)
 ifneq ($(origin CHANNELS), undefined)
 BUNDLE_CHANNELS = --channels=\"$(CHANNELS)\"
 endif
@@ -381,7 +386,7 @@ gen-charts: ## Pull charts from istio repository.
 gen: gen-all-except-bundle bundle ## Generate everything.
 
 .PHONY: gen-all-except-bundle
-gen-all-except-bundle: operator-name operator-chart controller-gen gen-api gen-charts gen-manifests gen-code gen-api-docs
+gen-all-except-bundle: operator-name operator-chart controller-gen gen-api gen-charts gen-manifests gen-code gen-api-docs github-workflow
 
 .PHONY: gen-check
 gen-check: gen restore-manifest-dates check-clean-repo ## Verify that changes in generated resources have been checked in.
@@ -424,6 +429,9 @@ operator-chart:
 	       -e "s/^\(appVersion: \).*$$/\1\"${VERSION}\"/g" chart/Chart.yaml
 	sed -i -e "s|^\(image: \).*$$|\1${IMAGE}|g" \
 	       -e "s/^\(  version: \).*$$/\1${VERSION}/g" chart/values.yaml
+
+github-workflow:
+	sed -i -e '1,/default:/ s/^\(.*default:\).*$$/\1 ${CHANNELS}/' .github/workflows/release.yaml
 
 .PHONY: update-istio
 update-istio: ## Update the Istio commit hash in the 'latest' entry in versions.yaml to the latest commit in the branch.
@@ -624,7 +632,7 @@ git-hook: gitleaks ## Installs gitleaks as a git pre-commit hook.
 		chmod +x .git/hooks/pre-commit; \
 	fi
 
-.SILENT: helm $(HELM) $(LOCALBIN) deploy-yaml gen-api operator-name operator-chart
+.SILENT: helm $(HELM) $(LOCALBIN) deploy-yaml gen-api operator-name operator-chart github-workflow
 
 COMMON_IMPORTS ?= lint-all lint-scripts lint-copyright-banner lint-go lint-yaml lint-helm format-go tidy-go check-clean-repo update-common
 .PHONY: $(COMMON_IMPORTS)
