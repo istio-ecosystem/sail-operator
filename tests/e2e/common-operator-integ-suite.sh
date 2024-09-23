@@ -29,6 +29,7 @@ parse_flags() {
   SKIP_DEPLOY=${SKIP_DEPLOY:-false}
   OLM=${OLM:-false}
   DESCRIBE=false
+  MULTICLUSTER=false
   while [ $# -gt 0 ]; do
     case "$1" in
       --ocp)
@@ -38,6 +39,10 @@ parse_flags() {
       --kind)
         shift
         OCP=false
+        ;;
+      --multicluster)
+        shift
+        MULTICLUSTER=true
         ;;
       --skip-build)
         shift
@@ -80,6 +85,10 @@ parse_flags() {
     echo "Running on kind"
   fi
 
+  if [ "${MULTICLUSTER}" == "true" ]; then
+    echo "Running on multicluster"
+  fi
+
   if [ "${SKIP_BUILD}" == "true" ]; then
     echo "Skipping build"
   fi
@@ -108,6 +117,7 @@ initialize_variables() {
   COMMAND="kubectl"
   ARTIFACTS="${ARTIFACTS:-$(mktemp -d)}"
   KUBECONFIG="${KUBECONFIG:-"${ARTIFACTS}/config"}"
+  ISTIOCTL="${ISTIOCTL:-"istioctl"}"
   LOCALBIN="${LOCALBIN:-${HOME}/bin}"
   OPERATOR_SDK=${LOCALBIN}/operator-sdk
 
@@ -258,6 +268,6 @@ fi
 # Run the go test passing the env variables defined that are going to be used in the operator tests
 # shellcheck disable=SC2086
 IMAGE="${HUB}/${IMAGE_BASE}:${TAG}" SKIP_DEPLOY="${SKIP_DEPLOY}" OCP="${OCP}" ISTIO_MANIFEST="${ISTIO_MANIFEST}" \
-NAMESPACE="${NAMESPACE}" CONTROL_PLANE_NS="${CONTROL_PLANE_NS}" DEPLOYMENT_NAME="${DEPLOYMENT_NAME}" \
-ISTIO_NAME="${ISTIO_NAME}" COMMAND="${COMMAND}" VERSIONS_YAML_FILE="${VERSIONS_YAML_FILE}" KUBECONFIG="${KUBECONFIG}" \
+NAMESPACE="${NAMESPACE}" CONTROL_PLANE_NS="${CONTROL_PLANE_NS}" DEPLOYMENT_NAME="${DEPLOYMENT_NAME}" MULTICLUSTER="${MULTICLUSTER}" ARTIFACTS="${ARTIFACTS}" \
+ISTIO_NAME="${ISTIO_NAME}" COMMAND="${COMMAND}" VERSIONS_YAML_FILE="${VERSIONS_YAML_FILE}" KUBECONFIG="${KUBECONFIG}" ISTIOCTL_PATH="${ISTIOCTL}" \
 go run github.com/onsi/ginkgo/v2/ginkgo -tags e2e --timeout 30m --junit-report=report.xml ${GINKGO_FLAGS} "${WD}"/...

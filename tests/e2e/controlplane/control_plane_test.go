@@ -19,7 +19,6 @@ package controlplane
 import (
 	"fmt"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
@@ -42,12 +41,6 @@ import (
 
 	"istio.io/istio/pkg/ptr"
 )
-
-// version can have one of the following formats:
-// - 1.22.2
-// - 1.23.0-rc.1
-// - 1.24-alpha
-var istiodVersionRegex = regexp.MustCompile(`Version:"(\d+\.\d+(\.\d+)?(-\w+(\.\d+)?)?)`)
 
 var _ = Describe("Control Plane Installation", Ordered, func() {
 	SetDefaultEventuallyTimeout(180 * time.Second)
@@ -219,7 +212,7 @@ spec:
 					It("deploys istiod", func(ctx SpecContext) {
 						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
 							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available; unexpected Condition")
-						Expect(getVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
+						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
 						Success("Istiod is deployed in the namespace and Running")
 					})
 
@@ -354,19 +347,6 @@ func HaveContainersThat(matcher types.GomegaMatcher) types.GomegaMatcher {
 
 func ImageFromRegistry(regexp string) types.GomegaMatcher {
 	return HaveField("Image", MatchRegexp(regexp))
-}
-
-func getVersionFromIstiod() (string, error) {
-	output, err := kubectl.Exec(controlPlaneNamespace, "deploy/istiod", "", "pilot-discovery version")
-	if err != nil {
-		return "", fmt.Errorf("error getting version from istiod: %w", err)
-	}
-
-	matches := istiodVersionRegex.FindStringSubmatch(output)
-	if len(matches) > 1 && matches[1] != "" {
-		return matches[1], nil
-	}
-	return "", fmt.Errorf("error getting version from istiod: version not found in output: %s", output)
 }
 
 func indent(level int, str string) string {

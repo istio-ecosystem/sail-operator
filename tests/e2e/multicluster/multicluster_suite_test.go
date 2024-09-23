@@ -14,11 +14,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controlplane
+package multicluster
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/certs"
 	k8sclient "github.com/istio-ecosystem/sail-operator/tests/e2e/util/client"
 	env "github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
 	. "github.com/onsi/ginkgo/v2"
@@ -27,35 +31,65 @@ import (
 )
 
 var (
-	cl                    client.Client
+	clPrimary             client.Client
+	clRemote              client.Client
 	err                   error
 	ocp                   = env.GetBool("OCP", false)
 	namespace             = env.Get("NAMESPACE", "sail-operator")
 	deploymentName        = env.Get("DEPLOYMENT_NAME", "sail-operator")
 	controlPlaneNamespace = env.Get("CONTROL_PLANE_NS", "istio-system")
 	istioName             = env.Get("ISTIO_NAME", "default")
-	istioCniNamespace     = env.Get("ISTIOCNI_NAMESPACE", "istio-cni")
-	istioCniName          = env.Get("ISTIOCNI_NAME", "default")
 	image                 = env.Get("IMAGE", "quay.io/maistra-dev/sail-operator:latest")
 	skipDeploy            = env.GetBool("SKIP_DEPLOY", false)
-	expectedRegistry      = env.Get("EXPECTED_REGISTRY", "^docker\\.io|^gcr\\.io")
-	bookinfoNamespace     = env.Get("BOOKINFO_NAMESPACE", "bookinfo")
 	multicluster          = env.GetBool("MULTICLUSTER", false)
+	kubeconfig            = env.Get("KUBECONFIG", "")
+	kubeconfig2           = env.Get("KUBECONFIG2", "")
+	artifacts             = env.Get("ARTIFACTS", "/tmp/artifacts")
+
+	eastGatewayYAML   string
+	westGatewayYAML   string
+	exposeServiceYAML string
+	exposeIstiodYAML  string
 )
 
 func TestInstall(t *testing.T) {
-	if multicluster {
-		t.Skip("Skipping test for multicluster")
+	if !multicluster {
+		t.Skip("Skipping test. Only valid for multicluster")
+	}
+	if ocp {
+		t.Skip("Skipping test. Not valid for OCP")
+		// TODO: Implement the steps to run the test on OCP
 	}
 	RegisterFailHandler(Fail)
-	setup()
+	setup(t)
 	RunSpecs(t, "Control Plane Suite")
 }
 
-func setup() {
+func setup(t *testing.T) {
 	GinkgoWriter.Println("************ Running Setup ************")
 
 	GinkgoWriter.Println("Initializing k8s client")
-	cl, err = k8sclient.InitK8sClient("")
-	Expect(err).NotTo(HaveOccurred())
+	clPrimary, err = k8sclient.InitK8sClient(kubeconfig)
+	clRemote, err = k8sclient.InitK8sClient(kubeconfig2)
+	if err != nil {
+		t.Fatalf("Error initializing k8s client: %v", err)
+	}
+
+	err := certs.CreateIntermediateCA(artifacts)
+	if err != nil {
+		t.Fatalf("Error creating intermediate CA: %v", err)
+	}
+
+	// Set the path for the multicluster YAML files to be used
+	workDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Error getting working directory: %v", err)
+	}
+
+	// Set base path
+	baseRepoDir := filepath.Join(workDir, "../../..")
+	eastGatewayYAML = fmt.Sprintf("%s/docs/multicluster/east-west-gateway-net1.yaml", baseRepoDir)
+	westGatewayYAML = fmt.Sprintf("%s/docs/multicluster/east-west-gateway-net2.yaml", baseRepoDir)
+	exposeServiceYAML = fmt.Sprintf("%s/docs/multicluster/expose-services.yaml", baseRepoDir)
+	exposeIstiodYAML = fmt.Sprintf("%s/docs/multicluster/expose-istiod.yaml", baseRepoDir)
 }

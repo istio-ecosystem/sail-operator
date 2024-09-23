@@ -17,6 +17,8 @@ package supportedversion
 import (
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	"gopkg.in/yaml.v3"
@@ -47,12 +49,34 @@ func init() {
 		panic(err)
 	}
 
+	// Major, Minor and Patch needs to be set from parsing the version string
+	for i := range versions.Versions {
+		v := &versions.Versions[i]
+		v.Major, v.Minor, v.Patch = parseVersion(v.Version)
+	}
+
 	List = versions.Versions
 	Default = List[0].Name
 	if len(List) > 1 {
 		Old = List[1].Name
 	}
 	New = List[0].Name
+}
+
+func parseVersion(version string) (int, int, int) {
+	// The version can have this formats: "1.22.2", "1.23.0-rc.1", "1.24-alpha"
+	re := regexp.MustCompile(`^(\d+)\.(\d+)\.?(\d*)`)
+
+	matches := re.FindStringSubmatch(version)
+	if len(matches) < 4 {
+		return 0, 0, 0
+	}
+
+	major, _ := strconv.Atoi(matches[1])
+	minor, _ := strconv.Atoi(matches[2])
+	patch, _ := strconv.Atoi(matches[3])
+
+	return major, minor, patch
 }
 
 type Versions struct {
@@ -62,6 +86,9 @@ type Versions struct {
 type VersionInfo struct {
 	Name    string   `json:"name"`
 	Version string   `json:"version"`
+	Major   int      `json:"major"`
+	Minor   int      `json:"minor"`
+	Patch   int      `json:"patch"`
 	Repo    string   `json:"repo"`
 	Branch  string   `json:"branch,omitempty"`
 	Commit  string   `json:"commit"`
