@@ -34,7 +34,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/maistra-dev/sail-operator:0.2-latest
-    createdAt: "2024-09-19T14:41:31Z"
+    createdAt: "2024-09-22T10:00:56Z"
     description: Experimental operator for installing Istio service mesh
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -643,7 +643,6 @@ spec:
                 - --logtostderr=true
                 - --v=0
                 image: gcr.io/kubebuilder/kube-rbac-proxy:v0.16.0
-                imagePullPolicy: Always
                 name: kube-rbac-proxy
                 ports:
                 - containerPort: 8443
@@ -668,7 +667,6 @@ spec:
                 command:
                 - /manager
                 image: quay.io/maistra-dev/sail-operator:0.2-latest
-                imagePullPolicy: Always
                 livenessProbe:
                   httpGet:
                     path: /healthz

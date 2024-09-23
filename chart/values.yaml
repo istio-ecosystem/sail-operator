@@ -43,10 +43,12 @@ csv:
     features.operators.openshift.io/cni: "true"
     features.operators.openshift.io/csi: "false"
 image: quay.io/maistra-dev/sail-operator:0.2-latest
-imagePullPolicy: Always
+# We're commenting out the imagePullPolicy to use k8s defaults
+# imagePullPolicy: Always
 proxy:
   image: gcr.io/kubebuilder/kube-rbac-proxy:v0.16.0
-  imagePullPolicy: Always
+  # We're commenting out the imagePullPolicy to use k8s defaults
+  # imagePullPolicy: IfNotPresent
 
 # setting this to true will add resources required to generate the bundle using operator-sdk
 bundleGeneration: false
