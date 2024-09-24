@@ -25,7 +25,7 @@ If you want to contribute to the Sail Operator project, you can follow some rule
 - Discuss your changes before you start working on them. You can open a new issue in the [Sail Operator GitHub repository](https://github.com/istio-ecosystem/sail-operator/issues) or start a discussion in the [Sail Operator Discussion](https://github.com/istio-ecosystem/sail-operator/discussions). By this way, you can get feedback from the community and ensure that your changes are aligned with the project goals.
 - Use of Labels: We use labels in the issues to help us track the progress of the issues. You can use the labels to help you understand the status of the issue and what is needed to move forward. Those labels are:
   - `backport/backport-handled`: Use this label to indicate that the issue has been backported to the appropriate branches.
-  - `testing`: Use this label to indicate that the issue is related to testing. Can be used in combination with other labels to mark the proper testing type, for example: `testing/e2e`, `testing/unit`, `testing/integration`.
+  - `test`: Use this label to indicate that the issue is related to test or add `test-needed` when a issue needs a test to be added related. Can be used in combination with other labels to mark the proper test type, for example: `test-e2e`, `test-unit`, `test-integration`.
   - `good first issue`: Use this label to indicate that the issue is a good first issue for new contributors.
   - `help wanted`: Use this label to indicate that the issue needs help from the community.
   - `enhancement`: Use this label to indicate that the issue is an enhancement related to a new feature or improvement.
