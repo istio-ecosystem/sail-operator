@@ -244,10 +244,27 @@ if [ "${SKIP_BUILD}" == "false" ]; then
     # Install OLM in the cluster because it's not available by default in kind.
     ${OPERATOR_SDK} olm install
 
+    # Wait for for the CatalogSource to be CatalogSource.status.connectionState.lastObservedState == READY
+    ${COMMAND} wait catalogsource operatorhubio-catalog -n olm --for 'jsonpath={.status.connectionState.lastObservedState}=READY' --timeout=5m
+
     # Create operator namespace
     ${COMMAND} create ns "${NAMESPACE}" || echo "Creation of namespace ${NAMESPACE} failed with the message: $?"
     # Deploy the operator using OLM
-    ${OPERATOR_SDK} run bundle "${BUNDLE_IMG}" -n "${NAMESPACE}" --skip-tls --timeout 5m
+    ${OPERATOR_SDK} run bundle "${BUNDLE_IMG}" -n "${NAMESPACE}" --skip-tls --timeout 5m || {
+      echo "****** run bundle failed, running debug information"
+      # Get all the pods in the namespace
+      ${COMMAND} get pods -n "${NAMESPACE}"
+
+      # Get all the pods in olm namespace
+      ${COMMAND} get pods -n olm
+
+      # Describe all the olm pods by iterating over the pods
+      for pod in $(${COMMAND} get pods -n olm -o name); do
+        echo "*** Describing pod: ${pod}"
+        ${COMMAND} describe "${pod}"
+      done
+      exit 1
+    }
 
     # Wait for the operator to be ready
     ${COMMAND} wait --for=condition=available deployment/"${DEPLOYMENT_NAME}" -n "${NAMESPACE}" --timeout=5m
