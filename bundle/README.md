@@ -88,9 +88,9 @@ drop down menu when creating a new `Istio` with the OpenShift Container Platform
 web console. For a list of available versions, see the [versions.yaml](/versions.yaml) file
 or use the command:
 
-  ```sh
-  $ kubectl explain istio.spec.version
-  ```
+```sh
+$ kubectl explain istio.spec.version
+```
 
 ### Customizing Istio configuration
 
@@ -131,9 +131,9 @@ spec:
 For a list of available configuration for the `spec.values` field, run the 
 following command:
 
-  ```sh
-  $ kubectl explain istio.spec.values
-  ```
+```sh
+$ kubectl explain istio.spec.values
+```
 
 For the `IstioCNI` resource, replace `istio` with `istiocni` in the command above.
 
