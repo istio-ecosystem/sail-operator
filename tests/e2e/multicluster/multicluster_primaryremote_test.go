@@ -33,7 +33,6 @@ import (
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -49,8 +48,8 @@ var _ = Describe("Multicluster deployment models", Ordered, func() {
 	BeforeAll(func(ctx SpecContext) {
 		if !skipDeploy {
 			// Deploy the Sail Operator on both clusters
-			Expect(kubectl.CreateNamespace(namespace, kubeconfig)).To(Succeed(), "Namespace failed to be created on Primary Cluster")
-			Expect(kubectl.CreateNamespace(namespace, kubeconfig2)).To(Succeed(), "Namespace failed to be created on Remote Cluster")
+			Expect(kubectlClient1.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created on Primary Cluster")
+			Expect(kubectlClient2.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created on Remote Cluster")
 
 			Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, "--kubeconfig "+kubeconfig)).
 				To(Succeed(), "Operator failed to be deployed in Primary Cluster")
@@ -81,8 +80,8 @@ var _ = Describe("Multicluster deployment models", Ordered, func() {
 			Context("Istio version is: "+version.Version, func() {
 				When("Istio resources are created in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
-						Expect(kubectl.CreateNamespace(controlPlaneNamespace, kubeconfig)).To(Succeed(), "Namespace failed to be created")
-						Expect(kubectl.CreateNamespace(controlPlaneNamespace, kubeconfig2)).To(Succeed(), "Namespace failed to be created")
+						Expect(kubectlClient1.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be created")
+						Expect(kubectlClient2.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be created")
 
 						// Push the intermediate CA to both clusters
 						Expect(certs.PushIntermediateCA(controlPlaneNamespace, kubeconfig, "east", "network1", artifacts, clPrimary)).
@@ -120,7 +119,7 @@ spec:
       network: %s`
 						multiclusterPrimaryYAML := fmt.Sprintf(PrimaryYAML, version.Name, controlPlaneNamespace, "mesh1", "cluster1", "network1")
 						Log("Istio CR Primary: ", multiclusterPrimaryYAML)
-						Expect(kubectl.CreateFromString(multiclusterPrimaryYAML, kubeconfig)).To(Succeed(), "Istio Resource creation failed on Primary Cluster")
+						Expect(kubectlClient1.CreateFromString(multiclusterPrimaryYAML)).To(Succeed(), "Istio Resource creation failed on Primary Cluster")
 					})
 
 					It("updates Istio CR on Primary cluster status to Ready", func(ctx SpecContext) {
@@ -141,13 +140,13 @@ spec:
 
 				When("Gateway is created on Primary cluster ", func() {
 					BeforeAll(func(ctx SpecContext) {
-						Expect(kubectl.Apply(controlPlaneNamespace, eastGatewayYAML, kubeconfig)).To(Succeed(), "Gateway creation failed on Primary Cluster")
+						Expect(kubectlClient1.SetNamespace(controlPlaneNamespace).Apply(eastGatewayYAML)).To(Succeed(), "Gateway creation failed on Primary Cluster")
 
 						// Expose istiod service in Primary cluster
-						Expect(kubectl.Apply(controlPlaneNamespace, exposeIstiodYAML, kubeconfig)).To(Succeed(), "Expose Istiod creation failed on Primary Cluster")
+						Expect(kubectlClient1.SetNamespace(controlPlaneNamespace).Apply(exposeIstiodYAML)).To(Succeed(), "Expose Istiod creation failed on Primary Cluster")
 
 						// Expose the Gateway service in both clusters
-						Expect(kubectl.Apply(controlPlaneNamespace, exposeServiceYAML, kubeconfig)).To(Succeed(), "Expose Service creation failed on Primary Cluster")
+						Expect(kubectlClient1.SetNamespace(controlPlaneNamespace).Apply(exposeServiceYAML)).To(Succeed(), "Expose Service creation failed on Primary Cluster")
 					})
 
 					It("updates Gateway status to Available", func(ctx SpecContext) {
@@ -179,31 +178,29 @@ spec:
 						remoteIstioYAML := fmt.Sprintf(RemoteYAML, version.Name, remotePilotAddress)
 						Log("RemoteIstio CR: ", remoteIstioYAML)
 						By("Creating RemoteIstio CR on Remote Cluster")
-						Expect(kubectl.CreateFromString(remoteIstioYAML, kubeconfig2)).To(Succeed(), "RemoteIstio Resource creation failed on Remote Cluster")
+						Expect(kubectlClient2.CreateFromString(remoteIstioYAML)).To(Succeed(), "RemoteIstio Resource creation failed on Remote Cluster")
 
 						// Set the controlplane cluster and network for Remote namespace
 						By("Patching the istio-system namespace on Remote Cluster")
 						Expect(
-							kubectl.Patch("",
+							kubectlClient2.Patch(
 								"namespace",
 								controlPlaneNamespace,
 								"merge",
-								`{"metadata":{"annotations":{"topology.istio.io/controlPlaneClusters":"cluster1"}}}`,
-								kubeconfig2)).
+								`{"metadata":{"annotations":{"topology.istio.io/controlPlaneClusters":"cluster1"}}}`)).
 							To(Succeed(), "Error patching istio-system namespace")
 						Expect(
-							kubectl.Patch("",
+							kubectlClient2.Patch(
 								"namespace",
 								controlPlaneNamespace,
 								"merge",
-								`{"metadata":{"labels":{"topology.istio.io/network":"network2"}}}`,
-								kubeconfig2)).
+								`{"metadata":{"labels":{"topology.istio.io/network":"network2"}}}`)).
 							To(Succeed(), "Error patching istio-system namespace")
 
 						// To be able to access the remote cluster from the primary cluster, we need to create a secret in the primary cluster
 						// RemoteIstio resource will not be Ready until the secret is created
 						// Get the internal IP of the control plane node in Remote cluster
-						internalIPRemote, err := kubectl.GetInternalIP("node-role.kubernetes.io/control-plane", kubeconfig2)
+						internalIPRemote, err := kubectlClient2.GetInternalIP("node-role.kubernetes.io/control-plane")
 						Expect(internalIPRemote).NotTo(BeEmpty(), "Internal IP is empty for Remote Cluster")
 						Expect(err).NotTo(HaveOccurred())
 
@@ -214,7 +211,7 @@ spec:
 						By("Creating Remote Secret on Primary Cluster")
 						secret, err := istioctl.CreateRemoteSecret(kubeconfig2, "remote", internalIPRemote)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(kubectl.ApplyString("", secret, kubeconfig)).To(Succeed(), "Remote secret creation failed on Primary Cluster")
+						Expect(kubectlClient1.ApplyString(secret)).To(Succeed(), "Remote secret creation failed on Primary Cluster")
 					})
 
 					It("secret is created", func(ctx SpecContext) {
@@ -234,7 +231,7 @@ spec:
 
 				When("gateway is created in Remote cluster", func() {
 					BeforeAll(func(ctx SpecContext) {
-						Expect(kubectl.Apply(controlPlaneNamespace, westGatewayYAML, kubeconfig2)).To(Succeed(), "Gateway creation failed on Remote Cluster")
+						Expect(kubectlClient2.SetNamespace(controlPlaneNamespace).Apply(westGatewayYAML)).To(Succeed(), "Gateway creation failed on Remote Cluster")
 						Success("Gateway is created in Remote cluster")
 					})
 
@@ -249,7 +246,7 @@ spec:
 				When("sample apps are deployed in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
 						// Deploy the sample app in both clusters
-						deploySampleApp("sample", version, kubeconfig, kubeconfig2)
+						deploySampleApp("sample", version)
 						Success("Sample app is deployed in both clusters")
 					})
 
@@ -287,12 +284,12 @@ spec:
 						Expect(err).NotTo(HaveOccurred(), "Error getting sleep pod name on Remote Cluster")
 
 						// Run the curl command from the sleep pod in the Remote Cluster and get response list to validate that we get responses from both clusters
-						remoteResponses := strings.Join(getListCurlResponses(sleepPodNameRemote, kubeconfig2), "\n")
+						remoteResponses := strings.Join(getListCurlResponses(kubectlClient2, sleepPodNameRemote), "\n")
 						Expect(remoteResponses).To(ContainSubstring("Hello version: v1"), "Responses from Remote Cluster are not the expected")
 						Expect(remoteResponses).To(ContainSubstring("Hello version: v2"), "Responses from Remote Cluster are not the expected")
 
 						// Run the curl command from the sleep pod in the Primary Cluster and get response list to validate that we get responses from both clusters
-						primaryResponses := strings.Join(getListCurlResponses(sleepPodNamePrimary, kubeconfig), "\n")
+						primaryResponses := strings.Join(getListCurlResponses(kubectlClient1, sleepPodNamePrimary), "\n")
 						Expect(primaryResponses).To(ContainSubstring("Hello version: v1"), "Responses from Primary Cluster are not the expected")
 						Expect(primaryResponses).To(ContainSubstring("Hello version: v2"), "Responses from Primary Cluster are not the expected")
 						Success("Sample app is accessible from both clusters")
@@ -301,8 +298,8 @@ spec:
 
 				When("Istio CR and RemoteIstio CR are deleted in both clusters", func() {
 					BeforeEach(func() {
-						Expect(kubectl.Delete(controlPlaneNamespace, "istio", istioName, kubeconfig)).To(Succeed(), "Istio CR failed to be deleted")
-						Expect(kubectl.Delete(controlPlaneNamespace, "remoteistio", istioName, kubeconfig2)).To(Succeed(), "RemoteIstio CR failed to be deleted")
+						Expect(kubectlClient1.SetNamespace(controlPlaneNamespace).Delete("istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
+						Expect(kubectlClient2.SetNamespace(controlPlaneNamespace).Delete("remoteistio", istioName)).To(Succeed(), "RemoteIstio CR failed to be deleted")
 						Success("Istio and RemoteIstio are deleted")
 					})
 
@@ -315,16 +312,16 @@ spec:
 
 				AfterAll(func(ctx SpecContext) {
 					// Delete namespace to ensure clean up for new tests iteration
-					Expect(kubectl.DeleteNamespace(controlPlaneNamespace, kubeconfig)).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
-					Expect(kubectl.DeleteNamespace(controlPlaneNamespace, kubeconfig2)).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
+					Expect(kubectlClient1.DeleteNamespace(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
+					Expect(kubectlClient2.DeleteNamespace(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
 
 					common.CheckNamespaceEmpty(ctx, clPrimary, controlPlaneNamespace)
 					common.CheckNamespaceEmpty(ctx, clRemote, controlPlaneNamespace)
 					Success("ControlPlane Namespaces are empty")
 
 					// Delete the entire sample namespace in both clusters
-					Expect(kubectl.DeleteNamespace("sample", kubeconfig)).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
-					Expect(kubectl.DeleteNamespace("sample", kubeconfig2)).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
+					Expect(kubectlClient1.DeleteNamespace("sample")).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
+					Expect(kubectlClient2.DeleteNamespace("sample")).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
 
 					common.CheckNamespaceEmpty(ctx, clPrimary, "sample")
 					common.CheckNamespaceEmpty(ctx, clRemote, "sample")
@@ -336,8 +333,8 @@ spec:
 
 	AfterAll(func(ctx SpecContext) {
 		// Delete the Sail Operator from both clusters
-		Expect(kubectl.DeleteNamespace(namespace, kubeconfig)).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
-		Expect(kubectl.DeleteNamespace(namespace, kubeconfig2)).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
+		Expect(kubectlClient1.DeleteNamespace(namespace)).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
+		Expect(kubectlClient2.DeleteNamespace(namespace)).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
 
 		// Check that the namespace is empty
 		common.CheckNamespaceEmpty(ctx, clPrimary, namespace)

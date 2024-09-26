@@ -227,7 +227,9 @@ func PushIntermediateCA(ns, kubeconfig, zone, network, basePath string, cl clien
 	_, err := common.GetObject(context.Background(), cl, kube.Key("cacerts", ns), &corev1.Secret{})
 	if err != nil {
 		// Label the namespace with the network
-		err = kubectl.Patch("", "namespace", ns, "merge", `{"metadata":{"labels":{"topology.istio.io/network":"`+network+`"}}}`, kubeconfig)
+		k := kubectl.NewKubectlBuilder()
+		k.SetKubeconfig(kubeconfig)
+		err = k.Patch("namespace", ns, "merge", `{"metadata":{"labels":{"topology.istio.io/network":"`+network+`"}}}`)
 		if err != nil {
 			return fmt.Errorf("failed to label namespace: %w", err)
 		}
