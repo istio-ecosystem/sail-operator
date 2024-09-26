@@ -29,16 +29,6 @@ If you want to contribute to the Sail Operator project, you can follow some rule
   - `good first issue`: Use this label to indicate that the issue is a good first issue for new contributors.
   - `help wanted`: Use this label to indicate that the issue needs help from the community.
   - `enhancement`: Use this label to indicate that the issue is an enhancement related to a new feature or improvement.
-- Pull Requests: When you open a pull request, you can follow this template to help you provide the necessary information to the maintainers:
-  - **What type of PR is this?**
-  - **What this PR does / why we need it:**
-  - **Which issue(s) this PR fixes:** (Mark with Fixes #12345, with this the issue will be autoclosed when the PR is merged)
-  - **Special notes for your reviewer:**
-  - **Does this PR introduce a user-facing change?**
-  - **Additional documentation:**
-  - **Does this PR introduce a breaking change?**
-  - **Other information:**
-  - Labels: You can use the labels to help you track the status of the PR. The labels are the same as the issue labels. Additionally, you can use the `cleanup/refactor` to indicate that the PR is a cleanup or refactor of the codebase. Having the label just helps with filtering pull requests. It also is a hint that this work does not need an entry in the changelog
 
 ## Community meetings
 
