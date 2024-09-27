@@ -30,7 +30,6 @@ import (
 	common "github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -45,11 +44,10 @@ import (
 var _ = Describe("Control Plane Installation", Ordered, func() {
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
-
 	debugInfoLogged := false
 
 	BeforeAll(func(ctx SpecContext) {
-		Expect(kubectl.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
+		Expect(k.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
 
 		extraArg := ""
 		if ocp {
@@ -79,7 +77,7 @@ kind: IstioCNI
 metadata:
   name: default
 ` + spec
-				Expect(kubectl.CreateFromString(yaml)).To(Succeed(), "IstioCNI creation failed")
+				Expect(k.CreateFromString(yaml)).To(Succeed(), "IstioCNI creation failed")
 				Success("IstioCNI created")
 
 				cni := &v1alpha1.IstioCNI{}
@@ -103,7 +101,7 @@ kind: Istio
 metadata:
   name: default
 ` + spec
-				Expect(kubectl.CreateFromString(yaml)).To(Succeed(), "Istio creation failed")
+				Expect(k.CreateFromString(yaml)).To(Succeed(), "Istio creation failed")
 				Success("Istio created")
 
 				istio := &v1alpha1.Istio{}
@@ -126,8 +124,8 @@ metadata:
 
 			Context(version.Name, func() {
 				BeforeAll(func() {
-					Expect(kubectl.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
-					Expect(kubectl.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
+					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
+					Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
 				})
 
 				When("the IstioCNI CR is created", func() {
@@ -142,7 +140,7 @@ spec:
   namespace: %s`
 						yaml = fmt.Sprintf(yaml, version.Name, istioCniNamespace)
 						Log("IstioCNI YAML:", indent(2, yaml))
-						Expect(kubectl.CreateFromString(yaml)).To(Succeed(), "IstioCNI creation failed")
+						Expect(k.CreateFromString(yaml)).To(Succeed(), "IstioCNI creation failed")
 						Success("IstioCNI created")
 					})
 
@@ -174,9 +172,10 @@ spec:
 					})
 
 					It("doesn't continuously reconcile the IstioCNI CR", func() {
-						Eventually(kubectl.Logs).WithArguments(namespace, "deploy/"+deploymentName, ptr.Of(30*time.Second)).
-							ShouldNot(ContainSubstring("Reconciliation done"), "Istio Operator is continuously reconciling")
-						Success("Istio Operator stopped reconciling")
+						Eventually(k.SetNamespace(namespace).Logs).WithArguments("deploy/"+deploymentName, ptr.Of(30*time.Second)).
+							ShouldNot(ContainSubstring("Reconciliation done"), "IstioCNI is continuously reconciling")
+						k.ResetNamespace()
+						Success("IstioCNI stopped reconciling")
 					})
 				})
 
@@ -192,7 +191,7 @@ spec:
   namespace: %s`
 						istioYAML = fmt.Sprintf(istioYAML, version.Name, controlPlaneNamespace)
 						Log("Istio YAML:", indent(2, istioYAML))
-						Expect(kubectl.CreateFromString(istioYAML)).
+						Expect(k.CreateFromString(istioYAML)).
 							To(Succeed(), "Istio CR failed to be created")
 						Success("Istio CR created")
 					})
@@ -222,16 +221,17 @@ spec:
 					})
 
 					It("doesn't continuously reconcile the Istio CR", func() {
-						Eventually(kubectl.Logs).WithArguments(namespace, "deploy/"+deploymentName, ptr.Of(30*time.Second)).
-							ShouldNot(ContainSubstring("Reconciliation done"), "Istio Operator is continuously reconciling")
-						Success("Istio Operator stopped reconciling")
+						Eventually(k.SetNamespace(namespace).Logs).WithArguments("deploy/"+deploymentName, ptr.Of(30*time.Second)).
+							ShouldNot(ContainSubstring("Reconciliation done"), "Istio CR is continuously reconciling")
+						k.ResetNamespace()
+						Success("Istio CR stopped reconciling")
 					})
 				})
 
 				When("bookinfo is deployed", func() {
 					BeforeAll(func() {
-						Expect(kubectl.CreateNamespace(bookinfoNamespace)).To(Succeed(), "Bookinfo namespace failed to be created")
-						Expect(kubectl.Patch("", "namespace", bookinfoNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
+						Expect(k.CreateNamespace(bookinfoNamespace)).To(Succeed(), "Bookinfo namespace failed to be created")
+						Expect(k.Patch("namespace", bookinfoNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
 							To(Succeed(), "Error patching bookinfo namespace")
 						Expect(deployBookinfo(version)).To(Succeed(), "Error deploying bookinfo")
 						Success("Bookinfo deployed")
@@ -261,14 +261,14 @@ spec:
 
 					AfterAll(func(ctx SpecContext) {
 						By("Deleting bookinfo")
-						Expect(kubectl.DeleteNamespace(bookinfoNamespace)).To(Succeed(), "Bookinfo namespace failed to be deleted")
+						Expect(k.DeleteNamespace(bookinfoNamespace)).To(Succeed(), "Bookinfo namespace failed to be deleted")
 						Success("Bookinfo deleted")
 					})
 				})
 
 				When("the Istio CR is deleted", func() {
 					BeforeEach(func() {
-						Expect(kubectl.Delete(controlPlaneNamespace, "istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
+						Expect(k.SetNamespace(controlPlaneNamespace).Delete("istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
 						Success("Istio CR deleted")
 					})
 
@@ -282,7 +282,7 @@ spec:
 
 				When("the IstioCNI CR is deleted", func() {
 					BeforeEach(func() {
-						Expect(kubectl.Delete(istioCniNamespace, "istiocni", istioCniName)).To(Succeed(), "IstioCNI CR failed to be deleted")
+						Expect(k.SetNamespace(istioCniNamespace).Delete("istiocni", istioCniName)).To(Succeed(), "IstioCNI CR failed to be deleted")
 						Success("IstioCNI deleted")
 					})
 
@@ -336,7 +336,7 @@ spec:
 			Success("Skipping deletion of operator namespace to avoid removal of operator container image from internal registry")
 			return
 		}
-		Expect(kubectl.DeleteNamespace(namespace)).To(Succeed(), "Namespace failed to be deleted")
+		Expect(k.DeleteNamespace(namespace)).To(Succeed(), "Namespace failed to be deleted")
 		Success("Namespace deleted")
 	})
 })
@@ -357,17 +357,17 @@ func indent(level int, str string) string {
 func forceDeleteIstioResources() error {
 	// This is a workaround to delete the Istio CRs that are left in the cluster
 	// This will be improved by splitting the tests into different Nodes with their independent setups and cleanups
-	err := kubectl.ForceDelete("", "istio", istioName)
+	err := k.ForceDelete("istio", istioName)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return fmt.Errorf("failed to delete %s CR: %w", "istio", err)
 	}
 
-	err = kubectl.ForceDelete("", "istiorevision", "default")
+	err = k.ForceDelete("istiorevision", "default")
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return fmt.Errorf("failed to delete %s CR: %w", "istiorevision", err)
 	}
 
-	err = kubectl.Delete("", "istiocni", istioCniName)
+	err = k.Delete("istiocni", istioCniName)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return fmt.Errorf("failed to delete %s CR: %w", "istiocni", err)
 	}
@@ -388,7 +388,7 @@ func getBookinfoURL(version supportedversion.VersionInfo) string {
 
 func deployBookinfo(version supportedversion.VersionInfo) error {
 	bookinfoURL := getBookinfoURL(version)
-	kubectl.Apply(bookinfoNamespace, bookinfoURL)
+	k.SetNamespace(bookinfoNamespace).Apply(bookinfoURL)
 	if err != nil {
 		return fmt.Errorf("error deploying bookinfo: %w", err)
 	}
@@ -397,7 +397,7 @@ func deployBookinfo(version supportedversion.VersionInfo) error {
 }
 
 func getProxyVersion(podName, namespace string) (string, error) {
-	proxyVersion, err := kubectl.Exec(namespace,
+	proxyVersion, err := k.SetNamespace(namespace).Exec(
 		podName,
 		"istio-proxy",
 		`curl -s http://localhost:15000/server_info | grep "ISTIO_VERSION" | awk -F '"' '{print $4}'`)
