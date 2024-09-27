@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/shell"
-	"github.com/onsi/ginkgo/v2"
 )
 
 type KubectlBuilder struct {
@@ -69,7 +68,6 @@ func (k *KubectlBuilder) build(cmd string) string {
 	args = append(args, cmd)
 
 	// Join all the arguments with a space
-	ginkgo.GinkgoWriter.Write([]byte(fmt.Sprintf("Running command: %s\n", strings.Join(args, " "))))
 	return strings.Join(args, " ")
 }
 
@@ -104,8 +102,7 @@ func (k *KubectlBuilder) SetKubeconfig(kubeconfig string) *KubectlBuilder {
 // If the namespace already exists, it will return nil
 func (k *KubectlBuilder) CreateNamespace(ns string) error {
 	cmd := k.build(" create namespace " + ns)
-	output, err := shell.ExecuteCommand(cmd)
-	k.ResetNamespace()
+	output, err := k.executeCommand(cmd)
 	if err != nil {
 		if strings.Contains(output, "AlreadyExists") {
 			return nil
@@ -146,8 +143,7 @@ func (k *KubectlBuilder) DeleteCRDs(crds []string) error {
 // DeleteNamespace deletes a namespace
 func (k *KubectlBuilder) DeleteNamespace(ns string) error {
 	cmd := k.build(" delete namespace " + ns)
-	_, err := shell.ExecuteCommand(cmd)
-	k.ResetNamespace()
+	_, err := k.executeCommand(cmd)
 	if err != nil {
 		return fmt.Errorf("error deleting namespace: %w", err)
 	}
@@ -176,8 +172,7 @@ func (k *KubectlBuilder) Apply(yamlFile string) error {
 // ApplyWithLabels applies the given yaml file to the cluster with the given labels
 func (k *KubectlBuilder) ApplyWithLabels(yamlFile, label string) error {
 	cmd := k.build(" apply " + labelFlag(label) + " -f " + yamlFile)
-	_, err := shell.ExecuteCommand(cmd)
-	k.ResetNamespace()
+	_, err := k.executeCommand(cmd)
 	if err != nil {
 		return fmt.Errorf("error applying yaml: %w", err)
 	}
@@ -188,8 +183,7 @@ func (k *KubectlBuilder) ApplyWithLabels(yamlFile, label string) error {
 // DeleteFromFile deletes a resource from the given yaml file
 func (k *KubectlBuilder) DeleteFromFile(yamlFile string) error {
 	cmd := k.build(" delete -f " + yamlFile)
-	_, err := shell.ExecuteCommand(cmd)
-	k.ResetNamespace()
+	_, err := k.executeCommand(cmd)
 	if err != nil {
 		return fmt.Errorf("error deleting resource from yaml: %w", err)
 	}
@@ -200,8 +194,7 @@ func (k *KubectlBuilder) DeleteFromFile(yamlFile string) error {
 // Delete deletes a resource based on the namespace, kind and the name
 func (k *KubectlBuilder) Delete(kind, name string) error {
 	cmd := k.build(" delete " + kind + " " + name)
-	_, err := shell.ExecuteCommand(cmd)
-	k.ResetNamespace()
+	_, err := k.executeCommand(cmd)
 	if err != nil {
 		return fmt.Errorf("error deleting deployment: %w", err)
 	}
@@ -212,8 +205,7 @@ func (k *KubectlBuilder) Delete(kind, name string) error {
 // Patch patches a resource
 func (k *KubectlBuilder) Patch(kind, name, patchType, patch string) error {
 	cmd := k.build(fmt.Sprintf(" patch %s %s --type=%s -p=%q", kind, name, patchType, patch))
-	_, err := shell.ExecuteCommand(cmd)
-	k.ResetNamespace()
+	_, err := k.executeCommand(cmd)
 	if err != nil {
 		return fmt.Errorf("error patching resource: %w", err)
 	}
@@ -231,8 +223,7 @@ func (k *KubectlBuilder) ForceDelete(kind, name string) error {
 // GetYAML returns the yaml of a resource
 func (k *KubectlBuilder) GetYAML(kind, name string) (string, error) {
 	cmd := k.build(fmt.Sprintf(" get %s %s -o yaml", kind, name))
-	output, err := shell.ExecuteCommand(cmd)
-	k.ResetNamespace()
+	output, err := k.executeCommand(cmd)
 	if err != nil {
 		return "", fmt.Errorf("error getting yaml: %w, output: %s", err, output)
 	}
@@ -243,8 +234,7 @@ func (k *KubectlBuilder) GetYAML(kind, name string) (string, error) {
 // GetPods returns the pods of a namespace
 func (k *KubectlBuilder) GetPods(args ...string) (string, error) {
 	cmd := k.build(fmt.Sprintf(" get pods %s", strings.Join(args, " ")))
-	output, err := shell.ExecuteCommand(cmd)
-	k.ResetNamespace()
+	output, err := k.executeCommand(cmd)
 	if err != nil {
 		return "", fmt.Errorf("error getting pods: %w, output: %s", err, output)
 	}
@@ -255,8 +245,7 @@ func (k *KubectlBuilder) GetPods(args ...string) (string, error) {
 // GetInternalIP returns the internal IP of a node
 func (k *KubectlBuilder) GetInternalIP(label string) (string, error) {
 	cmd := k.build(fmt.Sprintf(" get nodes -l %s -o jsonpath='{.items[0].status.addresses[?(@.type==\"InternalIP\")].address}'", label))
-	output, err := shell.ExecuteCommand(cmd)
-	k.ResetNamespace()
+	output, err := k.executeCommand(cmd)
 	if err != nil {
 		return "", fmt.Errorf("error getting internal IP: %w, output: %s", err, output)
 	}
@@ -267,7 +256,7 @@ func (k *KubectlBuilder) GetInternalIP(label string) (string, error) {
 // Exec executes a command in the pod or specific container
 func (k *KubectlBuilder) Exec(pod, container, command string) (string, error) {
 	cmd := k.build(fmt.Sprintf(" exec %s %s -- %s", pod, containerflag(container), command))
-	output, err := shell.ExecuteCommand(cmd)
+	output, err := k.executeCommand(cmd)
 	if err != nil {
 		return "", err
 	}
@@ -277,8 +266,7 @@ func (k *KubectlBuilder) Exec(pod, container, command string) (string, error) {
 // GetEvents returns the events of a namespace
 func (k *KubectlBuilder) GetEvents() (string, error) {
 	cmd := k.build(" get events")
-	output, err := shell.ExecuteCommand(cmd)
-	k.ResetNamespace()
+	output, err := k.executeCommand(cmd)
 	if err != nil {
 		return "", fmt.Errorf("error getting events: %w, output: %s", err, output)
 	}
@@ -289,8 +277,7 @@ func (k *KubectlBuilder) GetEvents() (string, error) {
 // Describe returns the description of a resource
 func (k *KubectlBuilder) Describe(kind, name string) (string, error) {
 	cmd := k.build(fmt.Sprintf(" describe %s %s", kind, name))
-	output, err := shell.ExecuteCommand(cmd)
-	k.ResetNamespace()
+	output, err := k.executeCommand(cmd)
 	if err != nil {
 		return "", fmt.Errorf("error describing resource: %w, output: %s", err, output)
 	}
@@ -306,6 +293,13 @@ func (k *KubectlBuilder) Logs(pod string, since *time.Duration) (string, error) 
 		return "", err
 	}
 	return output, nil
+}
+
+// executeCommand handles running the command and then resets the namespace automatically
+func (k *KubectlBuilder) executeCommand(cmd string) (string, error) {
+	result, err := shell.ExecuteCommand(cmd)
+	k.ResetNamespace()
+	return result, err
 }
 
 // ResetNamespace resets the namespace
