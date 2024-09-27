@@ -44,14 +44,6 @@ func (k *KubectlBuilder) setBinary() {
 	k.binary = binary
 }
 
-func (k *KubectlBuilder) setNamespace() {
-	k.namespace = ""
-}
-
-func (k *KubectlBuilder) setKubeconfig() {
-	k.kubeconfig = ""
-}
-
 func (k *KubectlBuilder) build(cmd string) string {
 	args := []string{k.binary}
 
@@ -75,8 +67,6 @@ func (k *KubectlBuilder) build(cmd string) string {
 func NewKubectlBuilder() *KubectlBuilder {
 	k := newKubectlBuilder()
 	k.setBinary()
-	k.setKubeconfig()
-	k.setNamespace()
 	return k
 }
 
