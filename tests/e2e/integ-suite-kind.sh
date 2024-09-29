@@ -101,5 +101,5 @@ echo "Running integration tests"
 if [ "${MULTICLUSTER}" == "true" ]; then
   ARTIFACTS="${ARTIFACTS}" ISTIOCTL="${ISTIOCTL}" ./tests/e2e/common-operator-integ-suite.sh --kind --multicluster
 else
-ARTIFACTS="${ARTIFACTS}" ./tests/e2e/common-operator-integ-suite.sh --kind
+ARTIFACTS="${ARTIFACTS}" IP_FAMILY="${IP_FAMILY}" ./tests/e2e/common-operator-integ-suite.sh --kind
 fi
