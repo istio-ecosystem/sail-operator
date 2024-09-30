@@ -108,7 +108,7 @@ type CNIConfig struct {
 	Affinity *k8sv1.Affinity `json:"affinity,omitempty"`
 	// Additional annotations to apply to the istio-cni Pods.
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
 	// PodSecurityPolicy cluster role. No longer used anywhere.
 	PspClusterRole string `json:"psp_cluster_role,omitempty"`
@@ -126,7 +126,7 @@ type CNIConfig struct {
 	Resources *k8sv1.ResourceRequirements `json:"resources,omitempty"`
 	// No longer used for CNI. See: https://github.com/istio/istio/issues/49004
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	Privileged *bool `json:"privileged,omitempty"`
 	// The Container seccompProfile
 	//
@@ -190,7 +190,7 @@ type CNIRepairConfig struct {
 	RepairPods bool `json:"repairPods,omitempty"`
 	// No longer used.
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	CreateEvents string `json:"createEvents,omitempty"`
 	// The Repair controller has 3 modes (labelPods, deletePods, and repairPods). Pick which one meets your use cases. Note only one may be used.
 	// The mode defines the action the controller will take when a pod is detected as broken.
@@ -240,7 +240,7 @@ type GlobalConfig struct {
 	//
 	// Deprecated: replaced by the affinity k8s settings which allows architecture nodeAffinity configuration of this behavior.
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	Arch *ArchConfig `json:"arch,omitempty"`
 	// List of certSigners to allow "approve" action in the ClusterRole
 	CertSigners []string `json:"certSigners,omitempty"`
@@ -250,17 +250,17 @@ type GlobalConfig struct {
 	//
 	// See https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	DefaultNodeSelector map[string]string `json:"defaultNodeSelector,omitempty"`
 	// Specifies the default pod disruption budget configuration.
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	DefaultPodDisruptionBudget *DefaultPodDisruptionBudgetConfig `json:"defaultPodDisruptionBudget,omitempty"`
 	// Default k8s resources settings for all Istio control plane components.
 	//
 	// See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	DefaultResources *k8sv1.ResourceRequirements `json:"defaultResources,omitempty"`
 	// Default node tolerations to be applied to all deployments so that all pods can be
 	// scheduled to nodes with matching taints. Each component can overwrite
@@ -269,7 +269,7 @@ type GlobalConfig struct {
 	// Configure this field in case that all pods of Istio control plane are expected to
 	// be scheduled to particular nodes with specified taints.
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	DefaultTolerations []k8sv1.Toleration `json:"defaultTolerations,omitempty"`
 	// Specifies the docker hub for Istio images.
 	Hub string `json:"hub,omitempty"`
@@ -363,7 +363,7 @@ type GlobalConfig struct {
 	//
 	// See https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	PriorityClassName string `json:"priorityClassName,omitempty"`
 	// Specifies how proxies are configured within Istio.
 	Proxy *ProxyConfig `json:"proxy,omitempty"`
@@ -387,7 +387,7 @@ type GlobalConfig struct {
 	// Configure the policy for validating JWT.
 	// This is deprecated and has no effect.
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	JwtPolicy string `json:"jwtPolicy,omitempty"`
 	// Specifies the configuration for Security Token Service.
 	Sts *STSConfig `json:"sts,omitempty"`
@@ -476,7 +476,7 @@ type PilotConfig struct {
 	AutoscaleBehavior *autoscalingv2.HorizontalPodAutoscalerBehavior `json:"autoscaleBehavior,omitempty"`
 	// Number of replicas in the Pilot Deployment.
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	ReplicaCount uint32 `json:"replicaCount,omitempty"`
 	// Image name used for Pilot.
 	//
@@ -494,19 +494,19 @@ type PilotConfig struct {
 	//
 	// See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	Resources *k8sv1.ResourceRequirements `json:"resources,omitempty"`
 	// Target CPU utilization used in HorizontalPodAutoscaler.
 	//
 	// See https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	Cpu *TargetUtilizationConfig `json:"cpu,omitempty"`
 	// K8s node selector.
 	//
 	// See https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 	// Maximum duration that a sidecar can be connected to a pilot.
 	//
@@ -539,7 +539,7 @@ type PilotConfig struct {
 	Affinity *k8sv1.Affinity `json:"affinity,omitempty"`
 	// K8s rolling update strategy
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	// +kubebuilder:validation:XIntOrString
 	RollingMaxSurge *intstr.IntOrString `json:"rollingMaxSurge,omitempty"`
 	// The number of pods that can be unavailable during a rolling update (see
@@ -548,20 +548,20 @@ type PilotConfig struct {
 	// May be specified as a number of pods or as a percent of the total number
 	// of pods at the start of the update.
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	// +kubebuilder:validation:XIntOrString
 	RollingMaxUnavailable *intstr.IntOrString `json:"rollingMaxUnavailable,omitempty"`
 	// The node tolerations to be applied to the Pilot deployment so that it can be
 	// scheduled to particular nodes with matching taints.
 	// More info: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#scheduling
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	Tolerations []k8sv1.Toleration `json:"tolerations,omitempty"`
 	// K8s annotations for pods.
 	//
 	// See: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
 	// K8s annotations for the Service.
 	//
@@ -602,7 +602,7 @@ type PilotConfig struct {
 	//
 	// See https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	Memory *TargetUtilizationConfig `json:"memory,omitempty"`
 	// Configures whether to use an existing CNI installation for workloads
 	Cni   *CNIUsageConfig             `json:"cni,omitempty"`
@@ -726,7 +726,7 @@ type ProxyConfig struct {
 	//
 	// See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	Resources *k8sv1.ResourceRequirements `json:"resources,omitempty"`
 	// Specify which tracer to use. One of: zipkin, lightstep, datadog, stackdriver.
 	// If using stackdriver tracer outside GCP, set env GOOGLE_APPLICATION_CREDENTIALS to the GCP credential file.
@@ -740,7 +740,7 @@ type ProxyConfig struct {
 	//
 	// Deprecated: replaced by ProxyConfig setting which allows per-pod configuration of this behavior.
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	HoldApplicationUntilProxyStarts *bool `json:"holdApplicationUntilProxyStarts,omitempty"`
 	// A comma separated list of inbound ports for which traffic is to be redirected to Envoy.
 	// The wildcard character '*' can be used to configure redirection for all ports.
@@ -772,7 +772,7 @@ type ProxyInitConfig struct {
 	//
 	// See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	Resources *k8sv1.ResourceRequirements `json:"resources,omitempty"`
 }
 
@@ -786,7 +786,7 @@ type ResourcesRequestsConfig struct {
 
 // Configuration for the SecretDiscoveryService instead of using K8S secrets to mount the certificates.
 type SDSConfig struct {
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	Token *SDSConfigToken `json:"token,omitempty"`
 }
 
@@ -964,7 +964,7 @@ type CNIGlobalConfig struct { // Default k8s resources settings for all Istio co
 	//
 	// See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	DefaultResources *k8sv1.ResourceRequirements `json:"defaultResources,omitempty"`
 
 	// Specifies the docker hub for Istio images.

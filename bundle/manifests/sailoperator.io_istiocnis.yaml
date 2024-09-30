@@ -1079,13 +1079,13 @@ spec:
                         description: |-
                           Additional annotations to apply to the istio-cni Pods.
 
-                          Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+                          Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
                         type: object
                       privileged:
                         description: |-
                           No longer used for CNI. See: https://github.com/istio/istio/issues/49004
 
-                          Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+                          Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
                         type: boolean
                       provider:
                         description: |-
@@ -1123,7 +1123,7 @@ spec:
                             description: |-
                               No longer used.
 
-                              Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+                              Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
                             type: string
                           deletePods:
                             description: |-
@@ -1291,7 +1291,7 @@ spec:
                         description: |-
                           See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
 
-                          Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+                          Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
                         properties:
                           claims:
                             description: |-

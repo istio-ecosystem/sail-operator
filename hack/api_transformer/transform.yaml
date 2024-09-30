@@ -42,8 +42,10 @@ globalTransformations:
 
 inputFiles:
 - module: istio.io/istio
-  path: /operator/pkg/apis/istio/v1alpha1/values_types.pb.go
+  path: /operator/pkg/apis/values_types.pb.go
   transformations:
+    renameImports:
+      v1: k8sv1
     removeTypes:
     - EgressGatewayConfig
     - IngressGatewayConfig
