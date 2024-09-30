@@ -101,11 +101,11 @@ spec:
           periodSeconds: 10
         resources:
           limits:
-            cpu: {{ or .Values.operator.resources.limits.cpu "500m" }}
-            memory: {{ or .Values.operator.resources.limits.memory "512Mi" }}
+            cpu: {{ .Values.operator.resources.limits.cpu }}
+            memory: {{ .Values.operator.resources.limits.memory }}
           requests:
-            cpu: {{ or .Values.operator.resources.requests.cpu "10m" }}
-            memory: {{ or .Values.operator.resources.requests.memory "64Mi" }}
+            cpu: {{ .Values.operator.resources.requests.cpu }}
+            memory: {{ .Values.operator.resources.requests.memory }}
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
