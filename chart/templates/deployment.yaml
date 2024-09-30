@@ -64,11 +64,11 @@ spec:
           protocol: TCP
         resources:
           limits:
-            cpu: 500m
-            memory: 128Mi
+            cpu: {{ .Values.proxy.resources.limits.cpu }}
+            memory: {{ .Values.proxy.resources.limits.memory }}
           requests:
-            cpu: 5m
-            memory: 64Mi
+            cpu: {{ .Values.proxy.resources.requests.cpu }}
+            memory: {{ .Values.proxy.resources.requests.memory }}
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -101,11 +101,11 @@ spec:
           periodSeconds: 10
         resources:
           limits:
-            cpu: 500m
-            memory: 512Mi
+            cpu: {{ .Values.operator.resources.limits.cpu }}
+            memory: {{ .Values.operator.resources.limits.memory }}
           requests:
-            cpu: 10m
-            memory: 64Mi
+            cpu: {{ .Values.operator.resources.requests.cpu }}
+            memory: {{ .Values.operator.resources.requests.memory }}
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
