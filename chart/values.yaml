@@ -49,6 +49,21 @@ proxy:
   image: gcr.io/kubebuilder/kube-rbac-proxy:v0.16.0
   # We're commenting out the imagePullPolicy to use k8s defaults
   # imagePullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 500m
+      memory: 128Mi
+    requests:
+      cpu: 5m
+      memory: 64Mi
+operator:
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 10m
+      memory: 64Mi
 
 # setting this to true will add resources required to generate the bundle using operator-sdk
 bundleGeneration: false
