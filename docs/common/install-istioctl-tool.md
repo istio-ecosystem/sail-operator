@@ -10,9 +10,6 @@ Use an `istioctl` version that is the same version as the Istio control plane
 for the Service Mesh deployment. See [Istio Releases](https://github.com/istio/istio/releases) for a list of valid 
 releases, including Beta releases. 
 
-These instructions assume that the Sail Operator has installed `Istio` in the `istio-system` namespace.
-
-
 ### Procedure
 
 1. Confirm if you have `istioctl` installed, and if so which version, by running 
@@ -26,7 +23,7 @@ the following command at the terminal:
 at the terminal:
 
     ```sh
-    $ oc -n istio-system get istio
+    $ oc get istio
     ```
 
 3. Install `istioctl` by running the following command at the terminal: 
