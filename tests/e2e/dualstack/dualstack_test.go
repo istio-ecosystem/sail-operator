@@ -37,7 +37,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe("Installation on a dualStack cluster", Ordered, func() {
+var _ = Describe("DualStack configuration ", Ordered, func() {
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
@@ -63,7 +63,7 @@ var _ = Describe("Installation on a dualStack cluster", Ordered, func() {
 		Success("Operator is deployed in the namespace and Running")
 	})
 
-	Describe("using supported Istio version", func() {
+	Describe("for supported versions", func() {
 		for _, version := range supportedversion.List {
 			// Note: This var version is needed to avoid the closure of the loop
 			version := version
@@ -73,12 +73,12 @@ var _ = Describe("Installation on a dualStack cluster", Ordered, func() {
 				continue
 			}
 
-			Context(version.Name, func() {
+			Context("Istio version is: "+version.Version, func() {
 				BeforeAll(func() {
 					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
 				})
 
-				When("the Istio CR is created", func() {
+				When("the Istio CR is created with DualStack configuration", func() {
 					BeforeAll(func() {
 						istioYAML := `
 apiVersion: sailoperator.io/v1alpha1
