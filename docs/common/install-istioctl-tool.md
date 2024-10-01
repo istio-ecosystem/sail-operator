@@ -8,8 +8,7 @@ operators to debug and diagnose Istio service mesh deployments.
 
 Use an `istioctl` version that is the same version as the Istio control plane 
 for the Service Mesh deployment. See [Istio Releases](https://github.com/istio/istio/releases) for a list of valid 
-releases, including Beta releases.
-
+releases, including Beta releases. 
 
 ### Procedure
 
@@ -24,7 +23,7 @@ the following command at the terminal:
 at the terminal:
 
     ```sh
-    $ oc -n istio-system get istio
+    $ oc get istio
     ```
 
 3. Install `istioctl` by running the following command at the terminal: 
@@ -47,6 +46,6 @@ at the terminal:
     ```sh
     $ istioctl version
     ```
-
+For more information on usage, see the [Istioctl documentation](https://istio.io/latest/docs/ops/diagnostic-tools/istioctl/).
 
 *Note*: `istioctl install` is not supported. The Sail Operator installs Istio.
