@@ -120,6 +120,7 @@ initialize_variables() {
   ISTIOCTL="${ISTIOCTL:-"istioctl"}"
   LOCALBIN="${LOCALBIN:-${HOME}/bin}"
   OPERATOR_SDK=${LOCALBIN}/operator-sdk
+  IP_FAMILY=${IP_FAMILY:-ipv4}
 
   if [ "${OCP}" == "true" ]; then
     COMMAND="oc"
