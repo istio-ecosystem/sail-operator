@@ -16,7 +16,7 @@ that can be made accessible from outside the cluster. For more information, see
 [Installing Gateways](https://preliminary.istio.io/latest/docs/setup/additional-setup/gateway/#deploying-a-gateway).
 
 To configure gateway injection with the `bookinfo` application, we have provided 
-a [sample gateway configuration](../chart/samples/ingress-gateway.yaml?raw=1) that should be applied in the namespace 
+a [sample gateway configuration](../../chart/samples/ingress-gateway.yaml?raw=1) that should be applied in the namespace 
 where the application is installed:
 
 1. Create the `istio-ingressgateway` deployment and service:
