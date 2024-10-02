@@ -25,9 +25,7 @@ Please, use the following labels, according to the PR type:
 - [ ] Documentation Update
 
 #### What this PR does / why we need it:
-```text
 
-```
 
 #### Which issue(s) this PR fixes:
 <!--
@@ -39,32 +37,4 @@ Fixes #
 
 Related Issue/PR #
 
-#### Special notes for your reviewer:
-```text
-
-```
-
-#### Does this PR introduce a user-facing change?
-<!--
-If no, just write "NONE" in the release-note block below.
-If yes, a release note is required:
-Enter your extended release note in the block below. If the PR requires additional action from users switching to the new release, include the string "action required".
--->
-```release-note
-
-```
-
-#### Additional documentation:
-```text
-
-```
-
-#### Does this PR introduce a breaking change?
-```text
-
-```
-
-#### Other information:
-```text
-
-```
+#### Additional information:

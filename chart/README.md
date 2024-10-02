@@ -16,16 +16,10 @@ OpenShift:
 
 ## Prepare the Helm charts
 
-**Note** - `Sail Operator` could be installed by downloading the release artifacts from the [release page](https://github.com/istio-ecosystem/sail-operator/releases).
-
-* Download the required release artifact
-* Extract it locally.
-
-    ```sh
-    $ tar -xvf /tmp/sail-operator-<release-number>.tgz
-    ```
-
-The extract command will create the `sail-operator` directory with the helm charts in it.
+```sh
+$ helm repo add sail-operator https://istio-ecosystem.github.io/sail-operator
+$ helm repo update
+```
 
 ## Installation steps
 
@@ -55,13 +49,13 @@ Default configuration values can be changed using one or more `--set <parameter>
 * Kubernetes
 
     ```sh
-    $ helm install sail-operator sail-operator/ --namespace sail-operator
+    $ helm install sail-operator sail-operator/sail-operator --namespace sail-operator
     ```
 
 * OpenShift
 
     ```sh
-    $ helm install sail-operator sail-operator/ --namespace sail-operator --set platform=openshift
+    $ helm install sail-operator sail-operator/sail-operator --namespace sail-operator --set platform=openshift
     ```
 
 3. Validate the CRD installation with the `helm ls` command:
@@ -69,8 +63,8 @@ Default configuration values can be changed using one or more `--set <parameter>
     ```sh
     $ helm ls -n sail-operator
 
-    NAME         	NAMESPACE    	REVISION	UPDATED                                	STATUS  	CHART                   	APP VERSION
-    sail-operator	sail-operator	1       	2024-09-16 12:43:18.786846217 +0300 IDT	deployed	sail-operator-0.1.0-rc.1	0.1.0-rc.1
+    NAME         	NAMESPACE    	REVISION	UPDATED                                	STATUS  	CHART              	APP VERSION
+    sail-operator	sail-operator	1       	2024-09-26 21:15:52.508983383 +0300 IDT	deployed	sail-operator-0.1.0	0.1.0
     ```
 
 4. Get the status of the installed helm chart to ensure it is deployed:
@@ -79,7 +73,7 @@ Default configuration values can be changed using one or more `--set <parameter>
     $ helm status sail-operator -n sail-operator
 
     NAME: sail-operator
-    LAST DEPLOYED: Mon Sep 16 12:43:18 2024
+    LAST DEPLOYED: Thu Sep 26 21:15:52 2024
     NAMESPACE: sail-operator
     STATUS: deployed
     REVISION: 1
@@ -91,8 +85,8 @@ Default configuration values can be changed using one or more `--set <parameter>
     ```sh
     $ kubectl -n sail-operator get deployment --output wide
 
-    NAME            READY   UP-TO-DATE   AVAILABLE   AGE   CONTAINERS                IMAGES                                                                                    SELECTOR
-    sail-operator   1/1     1            1           19m   kube-rbac-proxy,manager   gcr.io/kubebuilder/kube-rbac-proxy:v0.16.0,quay.io/maistra-dev/sail-operator:0.1.0-rc.1   app.kubernetes.io/created-by=sailoperator,app.kubernetes.io/part-of=sailoperator,control-plane=sail-operator
+    NAME            READY   UP-TO-DATE   AVAILABLE   AGE    CONTAINERS                IMAGES                                                                                    SELECTOR
+    sail-operator   1/1     1            1           107s   kube-rbac-proxy,manager   gcr.io/kubebuilder/kube-rbac-proxy:v0.16.0,quay.io/maistra-dev/sail-operator:0.1-latest   app.kubernetes.io/created-by=sailoperator,app.kubernetes.io/part-of=sailoperator,control-plane=sail-operator
 
     $ kubectl -n sail-operator get pods -o wide
 

@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controlplane
+package dualstack
 
 import (
 	"testing"
@@ -35,24 +35,23 @@ var (
 	deploymentName        = env.Get("DEPLOYMENT_NAME", "sail-operator")
 	controlPlaneNamespace = env.Get("CONTROL_PLANE_NS", "istio-system")
 	istioName             = env.Get("ISTIO_NAME", "default")
-	istioCniNamespace     = env.Get("ISTIOCNI_NAMESPACE", "istio-cni")
-	istioCniName          = env.Get("ISTIOCNI_NAME", "default")
 	image                 = env.Get("IMAGE", "quay.io/maistra-dev/sail-operator:latest")
 	skipDeploy            = env.GetBool("SKIP_DEPLOY", false)
 	expectedRegistry      = env.Get("EXPECTED_REGISTRY", "^docker\\.io|^gcr\\.io")
-	bookinfoNamespace     = env.Get("BOOKINFO_NAMESPACE", "bookinfo")
 	multicluster          = env.GetBool("MULTICLUSTER", false)
+	ipFamily              = env.Get("IP_FAMILY", "ipv4")
 
 	k *kubectl.KubectlBuilder
 )
 
-func TestInstall(t *testing.T) {
-	if multicluster {
-		t.Skip("Skipping test for multicluster")
+func TestDualStack(t *testing.T) {
+	if ipFamily != "dual" || multicluster {
+		t.Skip("Skipping the dualStack tests")
 	}
+
 	RegisterFailHandler(Fail)
 	setup()
-	RunSpecs(t, "Control Plane Suite")
+	RunSpecs(t, "DualStack test suite")
 }
 
 func setup() {

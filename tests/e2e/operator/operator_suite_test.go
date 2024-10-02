@@ -21,6 +21,7 @@ import (
 
 	k8sclient "github.com/istio-ecosystem/sail-operator/tests/e2e/util/client"
 	env "github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,6 +35,8 @@ var (
 	namespace      = env.Get("NAMESPACE", "sail-operator")
 	deploymentName = env.Get("DEPLOYMENT_NAME", "sail-operator")
 	multicluster   = env.GetBool("MULTICLUSTER", false)
+
+	k *kubectl.KubectlBuilder
 )
 
 func TestInstall(t *testing.T) {
@@ -58,4 +61,6 @@ func setup() {
 	} else {
 		GinkgoWriter.Println("Running on Kubernetes")
 	}
+
+	k = kubectl.NewKubectlBuilder()
 }

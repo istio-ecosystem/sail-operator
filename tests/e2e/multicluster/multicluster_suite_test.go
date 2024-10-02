@@ -25,6 +25,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/certs"
 	k8sclient "github.com/istio-ecosystem/sail-operator/tests/e2e/util/client"
 	env "github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -50,6 +51,9 @@ var (
 	westGatewayYAML   string
 	exposeServiceYAML string
 	exposeIstiodYAML  string
+
+	kubectlClient1 *kubectl.KubectlBuilder
+	kubectlClient2 *kubectl.KubectlBuilder
 )
 
 func TestInstall(t *testing.T) {
@@ -59,6 +63,7 @@ func TestInstall(t *testing.T) {
 	if ocp {
 		t.Skip("Skipping test. Not valid for OCP")
 		// TODO: Implement the steps to run the test on OCP
+		// https://github.com/istio-ecosystem/sail-operator/issues/365
 	}
 	RegisterFailHandler(Fail)
 	setup(t)
@@ -92,4 +97,8 @@ func setup(t *testing.T) {
 	westGatewayYAML = fmt.Sprintf("%s/docs/multicluster/east-west-gateway-net2.yaml", baseRepoDir)
 	exposeServiceYAML = fmt.Sprintf("%s/docs/multicluster/expose-services.yaml", baseRepoDir)
 	exposeIstiodYAML = fmt.Sprintf("%s/docs/multicluster/expose-istiod.yaml", baseRepoDir)
+
+	// Initialize kubectl utilities, one for each cluster
+	kubectlClient1 = kubectl.NewKubectlBuilder().SetKubeconfig(kubeconfig)
+	kubectlClient2 = kubectl.NewKubectlBuilder().SetKubeconfig(kubeconfig2)
 }
