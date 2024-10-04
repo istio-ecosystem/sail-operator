@@ -35,6 +35,14 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	DualStackNamespace = "dual-stack"
+	IPv4Namespace      = "ipv4"
+	IPv6Namespace      = "ipv6"
+	SleepNamespace     = "sleep"
 )
 
 var _ = Describe("DualStack configuration ", Ordered, func() {
@@ -76,6 +84,34 @@ var _ = Describe("DualStack configuration ", Ordered, func() {
 			Context("Istio version is: "+version.Version, func() {
 				BeforeAll(func() {
 					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
+					Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
+				})
+
+				When("the IstioCNI CR is created", func() {
+					BeforeAll(func() {
+						cniYAML := `
+apiVersion: sailoperator.io/v1alpha1
+kind: IstioCNI
+metadata:
+  name: default
+spec:
+  version: %s
+  namespace: %s`
+						cniYAML = fmt.Sprintf(cniYAML, version.Name, istioCniNamespace)
+						Log("IstioCNI YAML:", cniYAML)
+						Expect(k.CreateFromString(cniYAML)).To(Succeed(), "IstioCNI creation failed")
+						Success("IstioCNI created")
+					})
+
+					It("deploys the CNI DaemonSet", func(ctx SpecContext) {
+						Eventually(func(g Gomega) {
+							daemonset := &appsv1.DaemonSet{}
+							g.Expect(cl.Get(ctx, kube.Key("istio-cni-node", istioCniNamespace), daemonset)).To(Succeed(), "Error getting IstioCNI DaemonSet")
+							g.Expect(daemonset.Status.NumberAvailable).
+								To(Equal(daemonset.Status.CurrentNumberScheduled), "CNI DaemonSet Pods not Available; expected numberAvailable to be equal to currentNumberScheduled")
+						}).Should(Succeed(), "CNI DaemonSet Pods are not Available")
+						Success("CNI DaemonSet is deployed in the namespace and Running")
+					})
 				})
 
 				When("the Istio CR is created with DualStack configuration", func() {
@@ -148,6 +184,68 @@ spec:
 					})
 				})
 
+				// We spawn the following pods to verify the data-path connectivity.
+				// 1. a dualStack service in dual-stack namespace which listens on both IPv4 and IPv6 addresses
+				// 2. an ipv4 only service in ipv4 namespace which listens only on IPv4 address
+				// 3. an ipv6 only service in ipv6 namespace which listens only on IPv6 address
+				// Using a sleep pod from the sleep namespace, we try to connect to all the three services to verify that connectivity is successful.
+				When("sample apps are deployed in the cluster", func() {
+					BeforeAll(func(ctx SpecContext) {
+						Expect(k.CreateNamespace(DualStackNamespace)).To(Succeed(), "Failed to create dual-stack namespace")
+						Expect(k.CreateNamespace(IPv4Namespace)).To(Succeed(), "Failed to create ipv4 namespace")
+						Expect(k.CreateNamespace(IPv6Namespace)).To(Succeed(), "Failed to create ipv6 namespace")
+						Expect(k.CreateNamespace(SleepNamespace)).To(Succeed(), "Failed to create sleep namespace")
+
+						Expect(k.Patch("namespace", DualStackNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
+							To(Succeed(), "Error patching dual-stack namespace")
+						Expect(k.Patch("namespace", IPv4Namespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
+							To(Succeed(), "Error patching ipv4 namespace")
+						Expect(k.Patch("namespace", IPv6Namespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
+							To(Succeed(), "Error patching ipv6 namespace")
+						Expect(k.Patch("namespace", SleepNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
+							To(Succeed(), "Error patching sleep namespace")
+
+						deployDualStackValidationPods(version)
+						Success("dualStack validation pods deployed")
+					})
+
+					sleepPod := &corev1.PodList{}
+					It("updates the status of pods to Running", func(ctx SpecContext) {
+						_, err = checkPodsReady(ctx, DualStackNamespace)
+						Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Error checking status of dual-stack pods: %v", err))
+
+						_, err = checkPodsReady(ctx, IPv4Namespace)
+						Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Error checking status of ipv4 pods: %v", err))
+
+						_, err = checkPodsReady(ctx, IPv6Namespace)
+						Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Error checking status of ipv6 pods: %v", err))
+
+						sleepPod, err = checkPodsReady(ctx, SleepNamespace)
+						Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Error checking status of sleep pods: %v", err))
+					})
+
+					It("can access the dual-stack service from the sleep pod", func(ctx SpecContext) {
+						checkPodConnectivity(sleepPod.Items[0].Name, SleepNamespace, DualStackNamespace)
+					})
+
+					It("can access the ipv4 only service from the sleep pod", func(ctx SpecContext) {
+						checkPodConnectivity(sleepPod.Items[0].Name, SleepNamespace, IPv4Namespace)
+					})
+
+					It("can access the ipv6 only service from the sleep pod", func(ctx SpecContext) {
+						checkPodConnectivity(sleepPod.Items[0].Name, SleepNamespace, IPv6Namespace)
+					})
+
+					AfterAll(func(ctx SpecContext) {
+						By("Deleting the pods")
+						Expect(k.DeleteNamespace(DualStackNamespace)).To(Succeed(), fmt.Sprintf("Failed to delete the %q namespace", DualStackNamespace))
+						Expect(k.DeleteNamespace(IPv4Namespace)).To(Succeed(), fmt.Sprintf("Failed to delete the %q namespace", IPv4Namespace))
+						Expect(k.DeleteNamespace(IPv6Namespace)).To(Succeed(), fmt.Sprintf("Failed to delete the %q namespace", IPv6Namespace))
+						Expect(k.DeleteNamespace(SleepNamespace)).To(Succeed(), fmt.Sprintf("Failed to delete the %q namespace", SleepNamespace))
+						Success("DualStack validation pods deleted")
+					})
+				})
+
 				When("the Istio CR is deleted", func() {
 					BeforeEach(func() {
 						Expect(k.SetNamespace(controlPlaneNamespace).Delete("istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
@@ -159,6 +257,21 @@ spec:
 							Should(ReturnNotFoundError(), "Istiod should not exist anymore")
 						common.CheckNamespaceEmpty(ctx, cl, controlPlaneNamespace)
 						Success("Namespace is empty")
+					})
+				})
+
+				When("the IstioCNI CR is deleted", func() {
+					BeforeEach(func() {
+						Expect(k.SetNamespace(istioCniNamespace).Delete("istiocni", istioCniName)).To(Succeed(), "IstioCNI CR failed to be deleted")
+						Success("IstioCNI deleted")
+					})
+
+					It("removes everything from the CNI namespace", func(ctx SpecContext) {
+						daemonset := &appsv1.DaemonSet{}
+						Eventually(cl.Get).WithArguments(ctx, kube.Key("istio-cni-node", istioCniNamespace), daemonset).
+							Should(ReturnNotFoundError(), "IstioCNI DaemonSet should not exist anymore")
+						common.CheckNamespaceEmpty(ctx, cl, istioCniNamespace)
+						Success("CNI namespace is empty")
 					})
 				})
 			})
@@ -210,4 +323,60 @@ func ImageFromRegistry(regexp string) types.GomegaMatcher {
 
 func getEnvVars(container corev1.Container) []corev1.EnvVar {
 	return container.Env
+}
+
+func getPodURL(version supportedversion.VersionInfo, namespace string) string {
+	var url string
+
+	switch namespace {
+	case DualStackNamespace:
+		url = "samples/tcp-echo/tcp-echo-dual-stack.yaml"
+	case IPv4Namespace:
+		url = "samples/tcp-echo/tcp-echo-ipv4.yaml"
+	case IPv6Namespace:
+		url = "samples/tcp-echo/tcp-echo-ipv6.yaml"
+	case SleepNamespace:
+		url = "samples/sleep/sleep.yaml"
+	default:
+		return ""
+	}
+
+	if version.Name == "latest" {
+		return fmt.Sprintf("https://raw.githubusercontent.com/istio/istio/master/%s", url)
+	}
+
+	return fmt.Sprintf("https://raw.githubusercontent.com/istio/istio/%s/%s", version.Version, url)
+}
+
+func deployDualStackValidationPods(version supportedversion.VersionInfo) {
+	Expect(k.SetNamespace(DualStackNamespace).Apply(getPodURL(version, DualStackNamespace))).To(Succeed(), "error deploying tcpDualStack pod")
+	Expect(k.SetNamespace(IPv4Namespace).Apply(getPodURL(version, IPv4Namespace))).To(Succeed(), "error deploying ipv4 pod")
+	Expect(k.SetNamespace(IPv6Namespace).Apply(getPodURL(version, IPv6Namespace))).To(Succeed(), "error deploying ipv6 pod")
+	Expect(k.SetNamespace(SleepNamespace).Apply(getPodURL(version, SleepNamespace))).To(Succeed(), "error deploying sleep pod")
+}
+
+func checkPodsReady(ctx SpecContext, namespace string) (*corev1.PodList, error) {
+	podList := &corev1.PodList{}
+
+	err := cl.List(ctx, podList, client.InNamespace(namespace))
+	if err != nil {
+		return nil, fmt.Errorf("failed to list pods in %s namespace: %w", namespace, err)
+	}
+
+	Expect(podList.Items).ToNot(BeEmpty(), fmt.Sprintf("No pods found in %s namespace", namespace))
+
+	for _, pod := range podList.Items {
+		Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(pod.Name, namespace), &corev1.Pod{}).
+			Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), fmt.Sprintf("%q Pod in %q namespace is not Ready", pod.Name, namespace))
+	}
+
+	Success(fmt.Sprintf("Pods in %q namespace are ready", namespace))
+	return podList, nil
+}
+
+func checkPodConnectivity(podName, namespace, echoStr string) {
+	command := fmt.Sprintf(`sh -c 'echo %s | nc tcp-echo.%s 9000'`, echoStr, echoStr)
+	response, err := k.SetNamespace(namespace).Exec(podName, "sleep", command)
+	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("error connecting to the %q pod", podName))
+	Expect(response).To(ContainSubstring(fmt.Sprintf("hello %s", echoStr)), fmt.Sprintf("Unexpected response from %s pod", podName))
 }
