@@ -205,7 +205,11 @@ spec:
 						Expect(k.Patch("namespace", SleepNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
 							To(Succeed(), "Error patching sleep namespace")
 
-						deployDualStackValidationPods(version)
+						Expect(k.SetNamespace(DualStackNamespace).Apply(getYAMLPodURL(version, DualStackNamespace))).To(Succeed(), "error deploying tcpDualStack pod")
+						Expect(k.SetNamespace(IPv4Namespace).Apply(getYAMLPodURL(version, IPv4Namespace))).To(Succeed(), "error deploying ipv4 pod")
+						Expect(k.SetNamespace(IPv6Namespace).Apply(getYAMLPodURL(version, IPv6Namespace))).To(Succeed(), "error deploying ipv6 pod")
+						Expect(k.SetNamespace(SleepNamespace).Apply(getYAMLPodURL(version, SleepNamespace))).To(Succeed(), "error deploying sleep pod")
+
 						Success("dualStack validation pods deployed")
 					})
 
@@ -325,7 +329,7 @@ func getEnvVars(container corev1.Container) []corev1.EnvVar {
 	return container.Env
 }
 
-func getPodURL(version supportedversion.VersionInfo, namespace string) string {
+func getYAMLPodURL(version supportedversion.VersionInfo, namespace string) string {
 	var url string
 
 	switch namespace {
@@ -346,13 +350,6 @@ func getPodURL(version supportedversion.VersionInfo, namespace string) string {
 	}
 
 	return fmt.Sprintf("https://raw.githubusercontent.com/istio/istio/%s/%s", version.Version, url)
-}
-
-func deployDualStackValidationPods(version supportedversion.VersionInfo) {
-	Expect(k.SetNamespace(DualStackNamespace).Apply(getPodURL(version, DualStackNamespace))).To(Succeed(), "error deploying tcpDualStack pod")
-	Expect(k.SetNamespace(IPv4Namespace).Apply(getPodURL(version, IPv4Namespace))).To(Succeed(), "error deploying ipv4 pod")
-	Expect(k.SetNamespace(IPv6Namespace).Apply(getPodURL(version, IPv6Namespace))).To(Succeed(), "error deploying ipv6 pod")
-	Expect(k.SetNamespace(SleepNamespace).Apply(getPodURL(version, SleepNamespace))).To(Succeed(), "error deploying sleep pod")
 }
 
 func checkPodsReady(ctx SpecContext, namespace string) (*corev1.PodList, error) {
