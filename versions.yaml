@@ -52,5 +52,4 @@ versions:
       - https://storage.googleapis.com/istio-build/dev/1.24-alpha.fe2a04689d3b7abf7630dc5646bf825e0c0592fe/helm/cni-1.24-alpha.fe2a04689d3b7abf7630dc5646bf825e0c0592fe.tgz
       - https://storage.googleapis.com/istio-build/dev/1.24-alpha.fe2a04689d3b7abf7630dc5646bf825e0c0592fe/helm/gateway-1.24-alpha.fe2a04689d3b7abf7630dc5646bf825e0c0592fe.tgz
       - https://storage.googleapis.com/istio-build/dev/1.24-alpha.fe2a04689d3b7abf7630dc5646bf825e0c0592fe/helm/istiod-1.24-alpha.fe2a04689d3b7abf7630dc5646bf825e0c0592fe.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.24-alpha.fe2a04689d3b7abf7630dc5646bf825e0c0592fe/helm/istiod-remote-1.24-alpha.fe2a04689d3b7abf7630dc5646bf825e0c0592fe.tgz
       - https://storage.googleapis.com/istio-build/dev/1.24-alpha.fe2a04689d3b7abf7630dc5646bf825e0c0592fe/helm/ztunnel-1.24-alpha.fe2a04689d3b7abf7630dc5646bf825e0c0592fe.tgz
