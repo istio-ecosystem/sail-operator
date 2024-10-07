@@ -186,8 +186,8 @@ You can install the cert-manager tool to manage the lifecycle of TLS certificate
     d. Deploy the HTTP and sleep apps:
 
     ```sh
-    oc apply -n sample -f https://raw.githubusercontent.com/maistra/istio/maistra-2.6/samples/httpbin/httpbin.yaml
-    oc apply -n sample -f https://raw.githubusercontent.com/maistra/istio/maistra-2.6/samples/sleep/sleep.yaml
+    oc apply -n sample -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/httpbin/httpbin.yaml
+    oc apply -n sample -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/sleep/sleep.yaml
     oc rollout status deployment httpbin sleep
     ```
 
@@ -195,9 +195,9 @@ You can install the cert-manager tool to manage the lifecycle of TLS certificate
 
     ```sh
     oc exec "$(oc get pod -l app=sleep -n sample \
-       -o jsonpath={.items..metadata.name})" -c sleep -n sample -- \
-       curl http://httpbin.sample:8000/ip -s -o /dev/null \
-       -w "%{http_code}\n"
+      -o jsonpath={.items..metadata.name})" -c sleep -n sample -- \
+      curl http://httpbin.sample:8000/ip -s -o /dev/null \
+      -w "%{http_code}\n"
     ```
 
     Example output
