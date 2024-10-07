@@ -45,10 +45,12 @@ spec:
                   annotations:
                     additionalProperties:
                       type: string
+                    maxProperties: 256
                     type: object
                   labels:
                     additionalProperties:
                       type: string
+                    maxProperties: 256
                     type: object
                 type: object
               probe:
@@ -77,13 +79,17 @@ spec:
                       command:
                         description: Command to run.
                         items:
+                          minLength: 1
                           type: string
                         type: array
+                    required:
+                    - command
                     type: object
                   failureThreshold:
                     description: Minimum consecutive failures for the probe to be
                       considered failed after having succeeded.
                     format: int32
+                    minimum: 0
                     type: integer
                   httpGet:
                     description: '`httpGet` is performed to a given endpoint and the
@@ -98,6 +104,7 @@ spec:
                         items:
                           properties:
                             name:
+                              pattern: ^[-_A-Za-z0-9]+$
                               type: string
                             value:
                               type: string
@@ -111,8 +118,14 @@ spec:
                         maximum: 4294967295
                         minimum: 0
                         type: integer
+                        x-kubernetes-validations:
+                        - message: port must be between 1-65535
+                          rule: 0 < self && self <= 65535
                       scheme:
                         type: string
+                        x-kubernetes-validations:
+                        - message: scheme must be one of [HTTP, HTTPS]
+                          rule: self in ['', 'HTTP', 'HTTPS']
                     required:
                     - port
                     type: object
@@ -120,15 +133,18 @@ spec:
                     description: Number of seconds after the container has started
                       before readiness probes are initiated.
                     format: int32
+                    minimum: 0
                     type: integer
                   periodSeconds:
                     description: How often (in seconds) to perform the probe.
                     format: int32
+                    minimum: 0
                     type: integer
                   successThreshold:
                     description: Minimum consecutive successes for the probe to be
                       considered successful after having failed.
                     format: int32
+                    minimum: 0
                     type: integer
                   tcpSocket:
                     description: Health is determined by if the proxy is able to connect.
@@ -139,12 +155,16 @@ spec:
                         maximum: 4294967295
                         minimum: 0
                         type: integer
+                        x-kubernetes-validations:
+                        - message: port must be between 1-65535
+                          rule: 0 < self && self <= 65535
                     required:
                     - port
                     type: object
                   timeoutSeconds:
                     description: Number of seconds after which the probe times out.
                     format: int32
+                    minimum: 0
                     type: integer
                 type: object
               template:
@@ -204,8 +224,6 @@ spec:
                     type: integer
                 type: object
                 x-kubernetes-validations:
-                - message: Address is required
-                  rule: has(self.address) || has(self.network)
                 - message: UDS may not include ports
                   rule: '(has(self.address) && self.address.startsWith(''unix://''))
                     ? !has(self.ports) : true'
@@ -283,6 +301,8 @@ spec:
                 type: array
             type: object
             x-kubernetes-preserve-unknown-fields: true
+        required:
+        - spec
         type: object
     served: true
     storage: false
@@ -311,10 +331,12 @@ spec:
                   annotations:
                     additionalProperties:
                       type: string
+                    maxProperties: 256
                     type: object
                   labels:
                     additionalProperties:
                       type: string
+                    maxProperties: 256
                     type: object
                 type: object
               probe:
@@ -343,13 +365,17 @@ spec:
                       command:
                         description: Command to run.
                         items:
+                          minLength: 1
                           type: string
                         type: array
+                    required:
+                    - command
                     type: object
                   failureThreshold:
                     description: Minimum consecutive failures for the probe to be
                       considered failed after having succeeded.
                     format: int32
+                    minimum: 0
                     type: integer
                   httpGet:
                     description: '`httpGet` is performed to a given endpoint and the
@@ -364,6 +390,7 @@ spec:
                         items:
                           properties:
                             name:
+                              pattern: ^[-_A-Za-z0-9]+$
                               type: string
                             value:
                               type: string
@@ -377,8 +404,14 @@ spec:
                         maximum: 4294967295
                         minimum: 0
                         type: integer
+                        x-kubernetes-validations:
+                        - message: port must be between 1-65535
+                          rule: 0 < self && self <= 65535
                       scheme:
                         type: string
+                        x-kubernetes-validations:
+                        - message: scheme must be one of [HTTP, HTTPS]
+                          rule: self in ['', 'HTTP', 'HTTPS']
                     required:
                     - port
                     type: object
@@ -386,15 +419,18 @@ spec:
                     description: Number of seconds after the container has started
                       before readiness probes are initiated.
                     format: int32
+                    minimum: 0
                     type: integer
                   periodSeconds:
                     description: How often (in seconds) to perform the probe.
                     format: int32
+                    minimum: 0
                     type: integer
                   successThreshold:
                     description: Minimum consecutive successes for the probe to be
                       considered successful after having failed.
                     format: int32
+                    minimum: 0
                     type: integer
                   tcpSocket:
                     description: Health is determined by if the proxy is able to connect.
@@ -405,12 +441,16 @@ spec:
                         maximum: 4294967295
                         minimum: 0
                         type: integer
+                        x-kubernetes-validations:
+                        - message: port must be between 1-65535
+                          rule: 0 < self && self <= 65535
                     required:
                     - port
                     type: object
                   timeoutSeconds:
                     description: Number of seconds after which the probe times out.
                     format: int32
+                    minimum: 0
                     type: integer
                 type: object
               template:
@@ -470,8 +510,6 @@ spec:
                     type: integer
                 type: object
                 x-kubernetes-validations:
-                - message: Address is required
-                  rule: has(self.address) || has(self.network)
                 - message: UDS may not include ports
                   rule: '(has(self.address) && self.address.startsWith(''unix://''))
                     ? !has(self.ports) : true'
@@ -549,6 +587,8 @@ spec:
                 type: array
             type: object
             x-kubernetes-preserve-unknown-fields: true
+        required:
+        - spec
         type: object
     served: true
     storage: false
@@ -577,10 +617,12 @@ spec:
                   annotations:
                     additionalProperties:
                       type: string
+                    maxProperties: 256
                     type: object
                   labels:
                     additionalProperties:
                       type: string
+                    maxProperties: 256
                     type: object
                 type: object
               probe:
@@ -609,13 +651,17 @@ spec:
                       command:
                         description: Command to run.
                         items:
+                          minLength: 1
                           type: string
                         type: array
+                    required:
+                    - command
                     type: object
                   failureThreshold:
                     description: Minimum consecutive failures for the probe to be
                       considered failed after having succeeded.
                     format: int32
+                    minimum: 0
                     type: integer
                   httpGet:
                     description: '`httpGet` is performed to a given endpoint and the
@@ -630,6 +676,7 @@ spec:
                         items:
                           properties:
                             name:
+                              pattern: ^[-_A-Za-z0-9]+$
                               type: string
                             value:
                               type: string
@@ -643,8 +690,14 @@ spec:
                         maximum: 4294967295
                         minimum: 0
                         type: integer
+                        x-kubernetes-validations:
+                        - message: port must be between 1-65535
+                          rule: 0 < self && self <= 65535
                       scheme:
                         type: string
+                        x-kubernetes-validations:
+                        - message: scheme must be one of [HTTP, HTTPS]
+                          rule: self in ['', 'HTTP', 'HTTPS']
                     required:
                     - port
                     type: object
@@ -652,15 +705,18 @@ spec:
                     description: Number of seconds after the container has started
                       before readiness probes are initiated.
                     format: int32
+                    minimum: 0
                     type: integer
                   periodSeconds:
                     description: How often (in seconds) to perform the probe.
                     format: int32
+                    minimum: 0
                     type: integer
                   successThreshold:
                     description: Minimum consecutive successes for the probe to be
                       considered successful after having failed.
                     format: int32
+                    minimum: 0
                     type: integer
                   tcpSocket:
                     description: Health is determined by if the proxy is able to connect.
@@ -671,12 +727,16 @@ spec:
                         maximum: 4294967295
                         minimum: 0
                         type: integer
+                        x-kubernetes-validations:
+                        - message: port must be between 1-65535
+                          rule: 0 < self && self <= 65535
                     required:
                     - port
                     type: object
                   timeoutSeconds:
                     description: Number of seconds after which the probe times out.
                     format: int32
+                    minimum: 0
                     type: integer
                 type: object
               template:
@@ -736,8 +796,6 @@ spec:
                     type: integer
                 type: object
                 x-kubernetes-validations:
-                - message: Address is required
-                  rule: has(self.address) || has(self.network)
                 - message: UDS may not include ports
                   rule: '(has(self.address) && self.address.startsWith(''unix://''))
                     ? !has(self.ports) : true'
@@ -815,6 +873,8 @@ spec:
                 type: array
             type: object
             x-kubernetes-preserve-unknown-fields: true
+        required:
+        - spec
         type: object
     served: true
     storage: true
