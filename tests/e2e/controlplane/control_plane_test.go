@@ -388,7 +388,7 @@ func getBookinfoURL(version supportedversion.VersionInfo) string {
 
 func deployBookinfo(version supportedversion.VersionInfo) error {
 	bookinfoURL := getBookinfoURL(version)
-	k.SetNamespace(bookinfoNamespace).Apply(bookinfoURL)
+	err := k.SetNamespace(bookinfoNamespace).Apply(bookinfoURL)
 	if err != nil {
 		return fmt.Errorf("error deploying bookinfo: %w", err)
 	}
