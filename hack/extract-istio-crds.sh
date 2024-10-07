@@ -16,7 +16,11 @@
 
 set -euo pipefail
 
-INPUT_FILE="$(go list -m -f '{{.Dir}}' istio.io/istio)/manifests/charts/base/crds/crd-all.gen.yaml"
+INPUT_FILE="$(go list -m -f '{{.Dir}}' istio.io/istio)/manifests/charts/base/files/crd-all.gen.yaml"
+# check if the file exists and adjust the file path if necessary (this is needed because older Istio versions have the CRDs in a different location)
+if [ ! -f "${INPUT_FILE}" ]; then
+  INPUT_FILE="$(go list -m -f '{{.Dir}}' istio.io/istio)/manifests/charts/base/crds/crd-all.gen.yaml"
+fi
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 REPO_ROOT=$(dirname "${SCRIPT_DIR}")
