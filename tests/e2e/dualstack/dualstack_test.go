@@ -35,7 +35,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -215,17 +214,19 @@ spec:
 
 					sleepPod := &corev1.PodList{}
 					It("updates the status of pods to Running", func(ctx SpecContext) {
-						_, err = checkPodsReady(ctx, DualStackNamespace)
+						_, err = common.CheckPodsReady(ctx, cl, DualStackNamespace)
 						Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Error checking status of dual-stack pods: %v", err))
 
-						_, err = checkPodsReady(ctx, IPv4Namespace)
+						_, err = common.CheckPodsReady(ctx, cl, IPv4Namespace)
 						Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Error checking status of ipv4 pods: %v", err))
 
-						_, err = checkPodsReady(ctx, IPv6Namespace)
+						_, err = common.CheckPodsReady(ctx, cl, IPv6Namespace)
 						Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Error checking status of ipv6 pods: %v", err))
 
-						sleepPod, err = checkPodsReady(ctx, SleepNamespace)
+						sleepPod, err = common.CheckPodsReady(ctx, cl, SleepNamespace)
 						Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Error checking status of sleep pods: %v", err))
+
+						Success("Pods are ready")
 					})
 
 					It("can access the dual-stack service from the sleep pod", func(ctx SpecContext) {
@@ -350,25 +351,6 @@ func getYAMLPodURL(version supportedversion.VersionInfo, namespace string) strin
 	}
 
 	return fmt.Sprintf("https://raw.githubusercontent.com/istio/istio/%s/%s", version.Version, url)
-}
-
-func checkPodsReady(ctx SpecContext, namespace string) (*corev1.PodList, error) {
-	podList := &corev1.PodList{}
-
-	err := cl.List(ctx, podList, client.InNamespace(namespace))
-	if err != nil {
-		return nil, fmt.Errorf("failed to list pods in %s namespace: %w", namespace, err)
-	}
-
-	Expect(podList.Items).ToNot(BeEmpty(), fmt.Sprintf("No pods found in %s namespace", namespace))
-
-	for _, pod := range podList.Items {
-		Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(pod.Name, namespace), &corev1.Pod{}).
-			Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), fmt.Sprintf("%q Pod in %q namespace is not Ready", pod.Name, namespace))
-	}
-
-	Success(fmt.Sprintf("Pods in %q namespace are ready", namespace))
-	return podList, nil
 }
 
 func checkPodConnectivity(podName, namespace, echoStr string) {
