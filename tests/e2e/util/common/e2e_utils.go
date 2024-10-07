@@ -23,12 +23,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	env "github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
+	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"istio.io/istio/pkg/ptr"
@@ -210,4 +213,22 @@ func GetVersionFromIstiod() (string, error) {
 		return matches[1], nil
 	}
 	return "", fmt.Errorf("error getting version from istiod: version not found in output: %s", output)
+}
+
+func CheckPodsReady(ctx SpecContext, cl client.Client, namespace string) (*corev1.PodList, error) {
+	podList := &corev1.PodList{}
+
+	err := cl.List(ctx, podList, client.InNamespace(namespace))
+	if err != nil {
+		return nil, fmt.Errorf("failed to list pods in %s namespace: %w", namespace, err)
+	}
+
+	Expect(podList.Items).ToNot(BeEmpty(), fmt.Sprintf("No pods found in %s namespace", namespace))
+
+	for _, pod := range podList.Items {
+		Eventually(GetObject).WithArguments(ctx, cl, kube.Key(pod.Name, namespace), &corev1.Pod{}).
+			Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), fmt.Sprintf("%q Pod in %q namespace is not Ready", pod.Name, namespace))
+	}
+
+	return podList, nil
 }
