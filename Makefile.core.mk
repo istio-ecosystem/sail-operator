@@ -71,7 +71,7 @@ ENVTEST_K8S_VERSION ?= 1.29.0
 # Set DOCKER_BUILD_FLAGS to specify flags to pass to 'docker build', default to empty. Example: --platform=linux/arm64
 DOCKER_BUILD_FLAGS ?= "--platform=$(TARGET_OS)/$(TARGET_ARCH)"
 
-GOTEST_FLAGS := $(if $(VERBOSE),-v)
+GOTEST_FLAGS := $(if $(VERBOSE),-v) $(if $(COVERAGE),-coverprofile=$(REPO_ROOT)/out/coverage.out)
 GINKGO_FLAGS := $(if $(VERBOSE),-v) $(if $(CI),--no-color)
 
 # CHANNELS define the bundle channels used in the bundle.
@@ -153,6 +153,9 @@ test: test.unit test.integration ## Run both unit tests and integration test.
 
 .PHONY: test.unit
 test.unit: envtest  ## Run unit tests.
+ifdef COVERAGE
+	if [ ! -d "$(REPO_ROOT)/out" ]; then mkdir $(REPO_ROOT)/out; fi
+endif
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
 	go test $(GOTEST_FLAGS) ./...
 
