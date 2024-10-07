@@ -40,27 +40,28 @@ type EnqueueEventLogger struct {
 
 var _ handler.EventHandler = &EnqueueEventLogger{}
 
-func (h *EnqueueEventLogger) Create(ctx context.Context, e event.TypedCreateEvent[client.Object], q workqueue.RateLimitingInterface) {
+func (h *EnqueueEventLogger) Create(ctx context.Context, e event.TypedCreateEvent[client.Object], q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	h.delegate.Create(ctx, e, h.wrapQueue(q, "Create", e.Object))
 }
 
-func (h *EnqueueEventLogger) Update(ctx context.Context, e event.TypedUpdateEvent[client.Object], q workqueue.RateLimitingInterface) {
+func (h *EnqueueEventLogger) Update(ctx context.Context, e event.TypedUpdateEvent[client.Object], q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	h.delegate.Update(ctx, e, h.wrapQueue(q, "Update", e.ObjectNew))
 }
 
-func (h *EnqueueEventLogger) Delete(ctx context.Context, e event.TypedDeleteEvent[client.Object], q workqueue.RateLimitingInterface) {
+func (h *EnqueueEventLogger) Delete(ctx context.Context, e event.TypedDeleteEvent[client.Object], q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	h.delegate.Delete(ctx, e, h.wrapQueue(q, "Delete", e.Object))
 }
 
-func (h *EnqueueEventLogger) Generic(ctx context.Context, e event.TypedGenericEvent[client.Object], q workqueue.RateLimitingInterface) {
+func (h *EnqueueEventLogger) Generic(ctx context.Context, e event.TypedGenericEvent[client.Object], q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
 	h.delegate.Generic(ctx, e, h.wrapQueue(q, "Generic", e.Object))
 }
 
-func (h *EnqueueEventLogger) wrapQueue(q workqueue.RateLimitingInterface, eventType string, obj client.Object) workqueue.RateLimitingInterface {
+func (h *EnqueueEventLogger) wrapQueue(
+	q workqueue.TypedRateLimitingInterface[reconcile.Request], eventType string, obj client.Object,
+) workqueue.TypedRateLimitingInterface[reconcile.Request] {
 	return &AdditionNotifierQueue{
 		delegate: q,
-		onAdd: func(item any) {
-			request := item.(reconcile.Request)
+		onAdd: func(request reconcile.Request) {
 			requestSummary := ObjectSummary{
 				Kind:      h.kind,
 				Namespace: request.Namespace,
