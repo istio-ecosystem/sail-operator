@@ -141,13 +141,13 @@ spec:
 
 				When("Gateway is created on Primary cluster ", func() {
 					BeforeAll(func(ctx SpecContext) {
-						Expect(kubectlClient1.SetNamespace(controlPlaneNamespace).Apply(eastGatewayYAML)).To(Succeed(), "Gateway creation failed on Primary Cluster")
+						Expect(kubectlClient1.WithNamespace(controlPlaneNamespace).Apply(eastGatewayYAML)).To(Succeed(), "Gateway creation failed on Primary Cluster")
 
 						// Expose istiod service in Primary cluster
-						Expect(kubectlClient1.SetNamespace(controlPlaneNamespace).Apply(exposeIstiodYAML)).To(Succeed(), "Expose Istiod creation failed on Primary Cluster")
+						Expect(kubectlClient1.WithNamespace(controlPlaneNamespace).Apply(exposeIstiodYAML)).To(Succeed(), "Expose Istiod creation failed on Primary Cluster")
 
 						// Expose the Gateway service in both clusters
-						Expect(kubectlClient1.SetNamespace(controlPlaneNamespace).Apply(exposeServiceYAML)).To(Succeed(), "Expose Service creation failed on Primary Cluster")
+						Expect(kubectlClient1.WithNamespace(controlPlaneNamespace).Apply(exposeServiceYAML)).To(Succeed(), "Expose Service creation failed on Primary Cluster")
 					})
 
 					It("updates Gateway status to Available", func(ctx SpecContext) {
@@ -232,7 +232,7 @@ spec:
 
 				When("gateway is created in Remote cluster", func() {
 					BeforeAll(func(ctx SpecContext) {
-						Expect(kubectlClient2.SetNamespace(controlPlaneNamespace).Apply(westGatewayYAML)).To(Succeed(), "Gateway creation failed on Remote Cluster")
+						Expect(kubectlClient2.WithNamespace(controlPlaneNamespace).Apply(westGatewayYAML)).To(Succeed(), "Gateway creation failed on Remote Cluster")
 						Success("Gateway is created in Remote cluster")
 					})
 
@@ -299,8 +299,8 @@ spec:
 
 				When("Istio CR and RemoteIstio CR are deleted in both clusters", func() {
 					BeforeEach(func() {
-						Expect(kubectlClient1.SetNamespace(controlPlaneNamespace).Delete("istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
-						Expect(kubectlClient2.SetNamespace(controlPlaneNamespace).Delete("remoteistio", istioName)).To(Succeed(), "RemoteIstio CR failed to be deleted")
+						Expect(kubectlClient1.WithNamespace(controlPlaneNamespace).Delete("istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
+						Expect(kubectlClient2.WithNamespace(controlPlaneNamespace).Delete("remoteistio", istioName)).To(Succeed(), "RemoteIstio CR failed to be deleted")
 						Success("Istio and RemoteIstio are deleted")
 					})
 

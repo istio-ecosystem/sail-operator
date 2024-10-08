@@ -33,7 +33,7 @@ const DefaultBinary = "kubectl"
 
 // NewBuilder creates a new kubectl.Builder
 func NewBuilder() Builder {
-	return Builder{}.SetBinary(os.Getenv("COMMAND"))
+	return Builder{}.WithBinary(os.Getenv("COMMAND"))
 }
 
 func (k Builder) build(cmd string) string {
@@ -55,8 +55,8 @@ func (k Builder) build(cmd string) string {
 	return strings.Join(args, " ")
 }
 
-// SetBinary returns a new Builder with the binary set to the given value; if the value is "", DefaultBinary is used.
-func (k Builder) SetBinary(binary string) Builder {
+// WithBinary returns a new Builder with the binary set to the given value; if the value is "", DefaultBinary is used.
+func (k Builder) WithBinary(binary string) Builder {
 	if binary == "" {
 		k.binary = DefaultBinary
 	} else {
@@ -65,8 +65,8 @@ func (k Builder) SetBinary(binary string) Builder {
 	return k
 }
 
-// SetNamespace returns a new Builder with the namespace set to the given value
-func (k Builder) SetNamespace(ns string) Builder {
+// WithNamespace returns a new Builder with the namespace set to the given value
+func (k Builder) WithNamespace(ns string) Builder {
 	if ns == "" {
 		k.namespace = "--all-namespaces"
 	} else {
@@ -75,8 +75,8 @@ func (k Builder) SetNamespace(ns string) Builder {
 	return k
 }
 
-// SetKubeconfig returns a new Builder with kubeconfig set to the given value
-func (k Builder) SetKubeconfig(kubeconfig string) Builder {
+// WithKubeconfig returns a new Builder with kubeconfig set to the given value
+func (k Builder) WithKubeconfig(kubeconfig string) Builder {
 	if kubeconfig == "" {
 		k.kubeconfig = ""
 	} else {

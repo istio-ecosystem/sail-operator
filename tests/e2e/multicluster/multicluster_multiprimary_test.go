@@ -146,13 +146,13 @@ spec:
 
 				When("Gateway is created in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
-						Expect(kubectlClient1.SetNamespace(controlPlaneNamespace).Apply(eastGatewayYAML)).To(Succeed(), "Gateway creation failed on Cluster #1")
+						Expect(kubectlClient1.WithNamespace(controlPlaneNamespace).Apply(eastGatewayYAML)).To(Succeed(), "Gateway creation failed on Cluster #1")
 
-						Expect(kubectlClient2.SetNamespace(controlPlaneNamespace).Apply(westGatewayYAML)).To(Succeed(), "Gateway creation failed on  Cluster #2")
+						Expect(kubectlClient2.WithNamespace(controlPlaneNamespace).Apply(westGatewayYAML)).To(Succeed(), "Gateway creation failed on  Cluster #2")
 
 						// Expose the Gateway service in both clusters
-						Expect(kubectlClient1.SetNamespace(controlPlaneNamespace).Apply(exposeServiceYAML)).To(Succeed(), "Expose Service creation failed on Cluster #1")
-						Expect(kubectlClient2.SetNamespace(controlPlaneNamespace).Apply(exposeServiceYAML)).To(Succeed(), "Expose Service creation failed on  Cluster #2")
+						Expect(kubectlClient1.WithNamespace(controlPlaneNamespace).Apply(exposeServiceYAML)).To(Succeed(), "Expose Service creation failed on Cluster #1")
+						Expect(kubectlClient2.WithNamespace(controlPlaneNamespace).Apply(exposeServiceYAML)).To(Succeed(), "Expose Service creation failed on  Cluster #2")
 					})
 
 					It("updates both Gateway status to Available", func(ctx SpecContext) {
@@ -257,8 +257,8 @@ spec:
 				When("istio CR is deleted in both clusters", func() {
 					BeforeEach(func() {
 						// Delete the Istio CR in both clusters
-						Expect(kubectlClient1.SetNamespace(controlPlaneNamespace).Delete("istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
-						Expect(kubectlClient2.SetNamespace(controlPlaneNamespace).Delete("istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
+						Expect(kubectlClient1.WithNamespace(controlPlaneNamespace).Delete("istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
+						Expect(kubectlClient2.WithNamespace(controlPlaneNamespace).Delete("istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
 						Success("Istio CR is deleted in both clusters")
 					})
 
@@ -321,22 +321,22 @@ func deploySampleApp(ns string, istioVersion supportedversion.VersionInfo) {
 		version = "master"
 	}
 	helloWorldURL := fmt.Sprintf("https://raw.githubusercontent.com/istio/istio/%s/samples/helloworld/helloworld.yaml", version)
-	Expect(kubectlClient1.SetNamespace(ns).ApplyWithLabels(helloWorldURL, "service=helloworld")).To(Succeed(), "Sample service deploy failed on Cluster #1")
-	Expect(kubectlClient2.SetNamespace(ns).ApplyWithLabels(helloWorldURL, "service=helloworld")).To(Succeed(), "Sample service deploy failed on  Cluster #2")
+	Expect(kubectlClient1.WithNamespace(ns).ApplyWithLabels(helloWorldURL, "service=helloworld")).To(Succeed(), "Sample service deploy failed on Cluster #1")
+	Expect(kubectlClient2.WithNamespace(ns).ApplyWithLabels(helloWorldURL, "service=helloworld")).To(Succeed(), "Sample service deploy failed on  Cluster #2")
 
-	Expect(kubectlClient1.SetNamespace(ns).ApplyWithLabels(helloWorldURL, "version=v1")).To(Succeed(), "Sample service deploy failed on Cluster #1")
-	Expect(kubectlClient2.SetNamespace(ns).ApplyWithLabels(helloWorldURL, "version=v2")).To(Succeed(), "Sample service deploy failed on  Cluster #2")
+	Expect(kubectlClient1.WithNamespace(ns).ApplyWithLabels(helloWorldURL, "version=v1")).To(Succeed(), "Sample service deploy failed on Cluster #1")
+	Expect(kubectlClient2.WithNamespace(ns).ApplyWithLabels(helloWorldURL, "version=v2")).To(Succeed(), "Sample service deploy failed on  Cluster #2")
 
 	sleepURL := fmt.Sprintf("https://raw.githubusercontent.com/istio/istio/%s/samples/sleep/sleep.yaml", version)
-	Expect(kubectlClient1.SetNamespace(ns).Apply(sleepURL)).To(Succeed(), "Sample sleep deploy failed on Cluster #1")
-	Expect(kubectlClient2.SetNamespace(ns).Apply(sleepURL)).To(Succeed(), "Sample sleep deploy failed on  Cluster #2")
+	Expect(kubectlClient1.WithNamespace(ns).Apply(sleepURL)).To(Succeed(), "Sample sleep deploy failed on Cluster #1")
+	Expect(kubectlClient2.WithNamespace(ns).Apply(sleepURL)).To(Succeed(), "Sample sleep deploy failed on  Cluster #2")
 }
 
 // getListCurlResponses runs the curl command 10 times from the sleep pod in the given cluster and get response list
 func getListCurlResponses(k kubectl.Builder, podName string) []string {
 	var responses []string
 	for i := 0; i < 10; i++ {
-		response, err := k.SetNamespace("sample").Exec(podName, "sleep", "curl -sS helloworld.sample:5000/hello")
+		response, err := k.WithNamespace("sample").Exec(podName, "sleep", "curl -sS helloworld.sample:5000/hello")
 		Expect(err).NotTo(HaveOccurred())
 		responses = append(responses, response)
 	}

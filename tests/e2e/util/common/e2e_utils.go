@@ -141,20 +141,20 @@ func LogDebugInfo() {
 }
 
 func logOperatorDebugInfo() {
-	operator, err := k.SetNamespace(namespace).GetYAML("deployment", deploymentName)
+	operator, err := k.WithNamespace(namespace).GetYAML("deployment", deploymentName)
 	logDebugElement("Operator Deployment YAML", operator, err)
 
-	logs, err := k.SetNamespace(namespace).Logs("deploy/"+deploymentName, ptr.Of(120*time.Second))
+	logs, err := k.WithNamespace(namespace).Logs("deploy/"+deploymentName, ptr.Of(120*time.Second))
 	logDebugElement("Operator logs", logs, err)
 
-	events, err := k.SetNamespace(namespace).GetEvents()
+	events, err := k.WithNamespace(namespace).GetEvents()
 	logDebugElement("Events in "+namespace, events, err)
 
 	// Temporary information to gather more details about failure
-	pods, err := k.SetNamespace(namespace).GetPods("", "-o wide")
+	pods, err := k.WithNamespace(namespace).GetPods("", "-o wide")
 	logDebugElement("Pods in "+namespace, pods, err)
 
-	describe, err := k.SetNamespace(namespace).Describe("deployment", deploymentName)
+	describe, err := k.WithNamespace(namespace).Describe("deployment", deploymentName)
 	logDebugElement("Operator Deployment describe", describe, err)
 }
 
@@ -162,13 +162,13 @@ func logIstioDebugInfo() {
 	resource, err := k.GetYAML("istio", istioName)
 	logDebugElement("Istio YAML", resource, err)
 
-	output, err := k.SetNamespace(controlPlaneNamespace).GetPods("", "-o wide")
+	output, err := k.WithNamespace(controlPlaneNamespace).GetPods("", "-o wide")
 	logDebugElement("Pods in "+controlPlaneNamespace, output, err)
 
-	logs, err := k.SetNamespace(controlPlaneNamespace).Logs("deploy/istiod", ptr.Of(120*time.Second))
+	logs, err := k.WithNamespace(controlPlaneNamespace).Logs("deploy/istiod", ptr.Of(120*time.Second))
 	logDebugElement("Istiod logs", logs, err)
 
-	events, err := k.SetNamespace(controlPlaneNamespace).GetEvents()
+	events, err := k.WithNamespace(controlPlaneNamespace).GetEvents()
 	logDebugElement("Events in "+controlPlaneNamespace, events, err)
 }
 
@@ -176,20 +176,20 @@ func logCNIDebugInfo() {
 	resource, err := k.GetYAML("istiocni", istioCniName)
 	logDebugElement("IstioCNI YAML", resource, err)
 
-	ds, err := k.SetNamespace(istioCniNamespace).GetYAML("daemonset", "istio-cni-node")
+	ds, err := k.WithNamespace(istioCniNamespace).GetYAML("daemonset", "istio-cni-node")
 	logDebugElement("Istio CNI DaemonSet YAML", ds, err)
 
-	events, err := k.SetNamespace(istioCniNamespace).GetEvents()
+	events, err := k.WithNamespace(istioCniNamespace).GetEvents()
 	logDebugElement("Events in "+istioCniNamespace, events, err)
 
 	// Temporary information to gather more details about failure
-	pods, err := k.SetNamespace(istioCniNamespace).GetPods("", "-o wide")
+	pods, err := k.WithNamespace(istioCniNamespace).GetPods("", "-o wide")
 	logDebugElement("Pods in "+istioCniNamespace, pods, err)
 
-	describe, err := k.SetNamespace(istioCniNamespace).Describe("daemonset", "istio-cni-node")
+	describe, err := k.WithNamespace(istioCniNamespace).Describe("daemonset", "istio-cni-node")
 	logDebugElement("Istio CNI DaemonSet describe", describe, err)
 
-	logs, err := k.SetNamespace(istioCniNamespace).Logs("daemonset/istio-cni-node", ptr.Of(120*time.Second))
+	logs, err := k.WithNamespace(istioCniNamespace).Logs("daemonset/istio-cni-node", ptr.Of(120*time.Second))
 	logDebugElement("Istio CNI logs", logs, err)
 }
 
@@ -205,7 +205,7 @@ func logDebugElement(caption string, info string, err error) {
 
 func GetVersionFromIstiod() (*semver.Version, error) {
 	k := kubectl.NewBuilder()
-	output, err := k.SetNamespace(controlPlaneNamespace).Exec("deploy/istiod", "", "pilot-discovery version")
+	output, err := k.WithNamespace(controlPlaneNamespace).Exec("deploy/istiod", "", "pilot-discovery version")
 	if err != nil {
 		return nil, fmt.Errorf("error getting version from istiod: %w", err)
 	}
