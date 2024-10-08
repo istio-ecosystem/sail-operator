@@ -212,7 +212,7 @@ spec:
 						By("Creating Remote Secret on Primary Cluster")
 						secret, err := istioctl.CreateRemoteSecret(kubeconfig2, "remote", internalIPRemote)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(k1.ApplyString(secret)).To(Succeed(), "Remote secret creation failed on Primary Cluster")
+						Expect(k1.WithNamespace(controlPlaneNamespace).ApplyString(secret)).To(Succeed(), "Remote secret creation failed on Primary Cluster")
 					})
 
 					It("secret is created", func(ctx SpecContext) {
