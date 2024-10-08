@@ -73,8 +73,9 @@ var _ = Describe("Multicluster deployment models", Ordered, func() {
 	Describe("Primary-Remote - Multi-Network configuration", func() {
 		// Test the Primary-Remote - Multi-Network configuration for each supported Istio version
 		for _, version := range supportedversion.List {
-			// The Primary-Remote - Multi-Network configuration is only supported in Istio 1.23 and later
-			if version.Version.LessThan(semver.MustParse("1.23.0")) {
+			// The Primary-Remote - Multi-Network configuration is only supported in Istio 1.23, because that's the only
+			// version that has the istiod-remote chart. For 1.24, we need to rewrite the support for RemoteIstio.
+			if version.Version.LessThan(semver.MustParse("1.23.0")) || version.Version.GreaterThanEqual(semver.MustParse("1.24.0")) {
 				continue
 			}
 
