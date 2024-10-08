@@ -50,7 +50,7 @@ var _ = Describe("Multicluster deployment models", Ordered, func() {
 		if !skipDeploy {
 			// Deploy the Sail Operator on both clusters
 			Expect(k1.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created on Cluster #1")
-			Expect(k2.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created on  Cluster #2")
+			Expect(k2.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created on Cluster #2")
 
 			Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, "--kubeconfig "+kubeconfig)).
 				To(Succeed(), "Operator failed to be deployed in Cluster #1")
@@ -114,7 +114,7 @@ spec:
 
 						multiclusterCluster2YAML := fmt.Sprintf(multiclusterYAML, version.Name, controlPlaneNamespace, "mesh1", "cluster2", "network2")
 						Log("Istio CR Cluster #2: ", multiclusterCluster2YAML)
-						Expect(k2.CreateFromString(multiclusterCluster2YAML)).To(Succeed(), "Istio Resource creation failed on  Cluster #2")
+						Expect(k2.CreateFromString(multiclusterCluster2YAML)).To(Succeed(), "Istio Resource creation failed on Cluster #2")
 					})
 
 					It("updates both Istio CR status to Ready", func(ctx SpecContext) {
@@ -140,19 +140,18 @@ spec:
 							WithArguments(ctx, clRemote, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
 							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available on Cluster #2; unexpected Condition")
 						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
-						Success("Istiod is deployed in the namespace and Running on  Cluster #2")
+						Success("Istiod is deployed in the namespace and Running on Cluster #2")
 					})
 				})
 
 				When("Gateway is created in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
 						Expect(k1.WithNamespace(controlPlaneNamespace).Apply(eastGatewayYAML)).To(Succeed(), "Gateway creation failed on Cluster #1")
-
-						Expect(k2.WithNamespace(controlPlaneNamespace).Apply(westGatewayYAML)).To(Succeed(), "Gateway creation failed on  Cluster #2")
+						Expect(k2.WithNamespace(controlPlaneNamespace).Apply(westGatewayYAML)).To(Succeed(), "Gateway creation failed on Cluster #2")
 
 						// Expose the Gateway service in both clusters
 						Expect(k1.WithNamespace(controlPlaneNamespace).Apply(exposeServiceYAML)).To(Succeed(), "Expose Service creation failed on Cluster #1")
-						Expect(k2.WithNamespace(controlPlaneNamespace).Apply(exposeServiceYAML)).To(Succeed(), "Expose Service creation failed on  Cluster #2")
+						Expect(k2.WithNamespace(controlPlaneNamespace).Apply(exposeServiceYAML)).To(Succeed(), "Expose Service creation failed on Cluster #2")
 					})
 
 					It("updates both Gateway status to Available", func(ctx SpecContext) {
@@ -196,7 +195,7 @@ spec:
 
 						secret, err = common.GetObject(ctx, clRemote, kube.Key("istio-remote-secret-cluster1", controlPlaneNamespace), &corev1.Secret{})
 						Expect(err).NotTo(HaveOccurred())
-						Expect(secret).NotTo(BeNil(), "Secret is not created on  Cluster #2")
+						Expect(secret).NotTo(BeNil(), "Secret is not created on Cluster #2")
 						Success("Remote secrets are created in both clusters")
 					})
 				})
@@ -238,8 +237,8 @@ spec:
 						Expect(err).NotTo(HaveOccurred(), "Error getting sleep pod name on Cluster #1")
 
 						sleepPodNameCluster2, err := common.GetPodNameByLabel(ctx, clRemote, "sample", "app", "sleep")
-						Expect(sleepPodNameCluster2).NotTo(BeEmpty(), "Sleep pod not found on  Cluster #2")
-						Expect(err).NotTo(HaveOccurred(), "Error getting sleep pod name on  Cluster #2")
+						Expect(sleepPodNameCluster2).NotTo(BeEmpty(), "Sleep pod not found on Cluster #2")
+						Expect(err).NotTo(HaveOccurred(), "Error getting sleep pod name on Cluster #2")
 
 						// Run the curl command from the sleep pod in the  Cluster #2 and get response list to validate that we get responses from both clusters
 						Cluster2Responses := strings.Join(getListCurlResponses(k2, sleepPodNameCluster2), "\n")
@@ -282,7 +281,7 @@ spec:
 
 					// Delete the entire sample namespace in both clusters
 					Expect(k1.DeleteNamespace("sample")).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
-					Expect(k2.DeleteNamespace("sample")).To(Succeed(), "Namespace failed to be deleted on  Cluster #2")
+					Expect(k2.DeleteNamespace("sample")).To(Succeed(), "Namespace failed to be deleted on Cluster #2")
 
 					common.CheckNamespaceEmpty(ctx, clPrimary, "sample")
 					common.CheckNamespaceEmpty(ctx, clRemote, "sample")
@@ -295,7 +294,7 @@ spec:
 	AfterAll(func(ctx SpecContext) {
 		// Delete the Sail Operator from both clusters
 		Expect(k1.DeleteNamespace(namespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
-		Expect(k2.DeleteNamespace(namespace)).To(Succeed(), "Namespace failed to be deleted on  Cluster #2")
+		Expect(k2.DeleteNamespace(namespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #2")
 
 		// Delete the intermediate CA from both clusters
 		common.CheckNamespaceEmpty(ctx, clPrimary, namespace)
@@ -322,14 +321,14 @@ func deploySampleApp(ns string, istioVersion supportedversion.VersionInfo) {
 	}
 	helloWorldURL := fmt.Sprintf("https://raw.githubusercontent.com/istio/istio/%s/samples/helloworld/helloworld.yaml", version)
 	Expect(k1.WithNamespace(ns).ApplyWithLabels(helloWorldURL, "service=helloworld")).To(Succeed(), "Sample service deploy failed on Cluster #1")
-	Expect(k2.WithNamespace(ns).ApplyWithLabels(helloWorldURL, "service=helloworld")).To(Succeed(), "Sample service deploy failed on  Cluster #2")
+	Expect(k2.WithNamespace(ns).ApplyWithLabels(helloWorldURL, "service=helloworld")).To(Succeed(), "Sample service deploy failed on Cluster #2")
 
 	Expect(k1.WithNamespace(ns).ApplyWithLabels(helloWorldURL, "version=v1")).To(Succeed(), "Sample service deploy failed on Cluster #1")
-	Expect(k2.WithNamespace(ns).ApplyWithLabels(helloWorldURL, "version=v2")).To(Succeed(), "Sample service deploy failed on  Cluster #2")
+	Expect(k2.WithNamespace(ns).ApplyWithLabels(helloWorldURL, "version=v2")).To(Succeed(), "Sample service deploy failed on Cluster #2")
 
 	sleepURL := fmt.Sprintf("https://raw.githubusercontent.com/istio/istio/%s/samples/sleep/sleep.yaml", version)
 	Expect(k1.WithNamespace(ns).Apply(sleepURL)).To(Succeed(), "Sample sleep deploy failed on Cluster #1")
-	Expect(k2.WithNamespace(ns).Apply(sleepURL)).To(Succeed(), "Sample sleep deploy failed on  Cluster #2")
+	Expect(k2.WithNamespace(ns).Apply(sleepURL)).To(Succeed(), "Sample sleep deploy failed on Cluster #2")
 }
 
 // getListCurlResponses runs the curl command 10 times from the sleep pod in the given cluster and get response list
