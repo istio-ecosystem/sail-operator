@@ -43,7 +43,7 @@ var (
 	multicluster          = env.GetBool("MULTICLUSTER", false)
 	ipFamily              = env.Get("IP_FAMILY", "ipv4")
 
-	k kubectl.Builder
+	k kubectl.Kubectl
 )
 
 func TestDualStack(t *testing.T) {
@@ -63,5 +63,5 @@ func setup() {
 	cl, err = k8sclient.InitK8sClient("")
 	Expect(err).NotTo(HaveOccurred())
 
-	k = kubectl.NewBuilder()
+	k = kubectl.New()
 }

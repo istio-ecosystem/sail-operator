@@ -52,7 +52,7 @@ var (
 	// - 1.24-alpha.feabc1234
 	istiodVersionRegex = regexp.MustCompile(`Version:"([^"]*)"`)
 
-	k = kubectl.NewBuilder()
+	k = kubectl.New()
 )
 
 // GetObject returns the object with the given key
@@ -204,7 +204,7 @@ func logDebugElement(caption string, info string, err error) {
 }
 
 func GetVersionFromIstiod() (*semver.Version, error) {
-	k := kubectl.NewBuilder()
+	k := kubectl.New()
 	output, err := k.WithNamespace(controlPlaneNamespace).Exec("deploy/istiod", "", "pilot-discovery version")
 	if err != nil {
 		return nil, fmt.Errorf("error getting version from istiod: %w", err)
