@@ -29,8 +29,6 @@ type Kubectl struct {
 	kubeconfig string
 }
 
-const DefaultBinary = "kubectl"
-
 // New creates a new kubectl.Kubectl
 func New() Kubectl {
 	return Kubectl{}.WithBinary(os.Getenv("COMMAND"))
@@ -55,10 +53,10 @@ func (k Kubectl) build(cmd string) string {
 	return strings.Join(args, " ")
 }
 
-// WithBinary returns a new Kubectl with the binary set to the given value; if the value is "", DefaultBinary is used.
+// WithBinary returns a new Kubectl with the binary set to the given value; if the value is "", the binary is set to "kubectl"
 func (k Kubectl) WithBinary(binary string) Kubectl {
 	if binary == "" {
-		k.binary = DefaultBinary
+		k.binary = "kubectl"
 	} else {
 		k.binary = binary
 	}
