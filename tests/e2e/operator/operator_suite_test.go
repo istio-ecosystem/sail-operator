@@ -36,7 +36,7 @@ var (
 	deploymentName = env.Get("DEPLOYMENT_NAME", "sail-operator")
 	multicluster   = env.GetBool("MULTICLUSTER", false)
 
-	k *kubectl.KubectlBuilder
+	k kubectl.Kubectl
 )
 
 func TestInstall(t *testing.T) {
@@ -62,5 +62,5 @@ func setup() {
 		GinkgoWriter.Println("Running on Kubernetes")
 	}
 
-	k = kubectl.NewKubectlBuilder()
+	k = kubectl.New()
 }

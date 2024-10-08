@@ -173,9 +173,8 @@ spec:
 					})
 
 					It("doesn't continuously reconcile the IstioCNI CR", func() {
-						Eventually(k.SetNamespace(namespace).Logs).WithArguments("deploy/"+deploymentName, ptr.Of(30*time.Second)).
+						Eventually(k.WithNamespace(namespace).Logs).WithArguments("deploy/"+deploymentName, ptr.Of(30*time.Second)).
 							ShouldNot(ContainSubstring("Reconciliation done"), "IstioCNI is continuously reconciling")
-						k.ResetNamespace()
 						Success("IstioCNI stopped reconciling")
 					})
 				})
@@ -222,9 +221,8 @@ spec:
 					})
 
 					It("doesn't continuously reconcile the Istio CR", func() {
-						Eventually(k.SetNamespace(namespace).Logs).WithArguments("deploy/"+deploymentName, ptr.Of(30*time.Second)).
+						Eventually(k.WithNamespace(namespace).Logs).WithArguments("deploy/"+deploymentName, ptr.Of(30*time.Second)).
 							ShouldNot(ContainSubstring("Reconciliation done"), "Istio CR is continuously reconciling")
-						k.ResetNamespace()
 						Success("Istio CR stopped reconciling")
 					})
 				})
@@ -269,7 +267,7 @@ spec:
 
 				When("the Istio CR is deleted", func() {
 					BeforeEach(func() {
-						Expect(k.SetNamespace(controlPlaneNamespace).Delete("istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
+						Expect(k.WithNamespace(controlPlaneNamespace).Delete("istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
 						Success("Istio CR deleted")
 					})
 
@@ -283,7 +281,7 @@ spec:
 
 				When("the IstioCNI CR is deleted", func() {
 					BeforeEach(func() {
-						Expect(k.SetNamespace(istioCniNamespace).Delete("istiocni", istioCniName)).To(Succeed(), "IstioCNI CR failed to be deleted")
+						Expect(k.WithNamespace(istioCniNamespace).Delete("istiocni", istioCniName)).To(Succeed(), "IstioCNI CR failed to be deleted")
 						Success("IstioCNI deleted")
 					})
 
@@ -389,7 +387,7 @@ func getBookinfoURL(version supportedversion.VersionInfo) string {
 
 func deployBookinfo(version supportedversion.VersionInfo) error {
 	bookinfoURL := getBookinfoURL(version)
-	err := k.SetNamespace(bookinfoNamespace).Apply(bookinfoURL)
+	err := k.WithNamespace(bookinfoNamespace).Apply(bookinfoURL)
 	if err != nil {
 		return fmt.Errorf("error deploying bookinfo: %w", err)
 	}
@@ -398,7 +396,7 @@ func deployBookinfo(version supportedversion.VersionInfo) error {
 }
 
 func getProxyVersion(podName, namespace string) (*semver.Version, error) {
-	output, err := k.SetNamespace(namespace).Exec(
+	output, err := k.WithNamespace(namespace).Exec(
 		podName,
 		"istio-proxy",
 		`curl -s http://localhost:15000/server_info | grep "ISTIO_VERSION" | awk -F '"' '{print $4}'`)

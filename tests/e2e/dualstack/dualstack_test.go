@@ -81,7 +81,7 @@ var _ = Describe("DualStack configuration ", Ordered, func() {
 				continue
 			}
 
-			Context("Istio version is: "+version.Version.String(), func() {
+			Context(fmt.Sprintf("Istio version %s", version.Version), func() {
 				BeforeAll(func() {
 					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
 					Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
@@ -205,10 +205,10 @@ spec:
 						Expect(k.Patch("namespace", SleepNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
 							To(Succeed(), "Error patching sleep namespace")
 
-						Expect(k.SetNamespace(DualStackNamespace).Apply(getYAMLPodURL(version, DualStackNamespace))).To(Succeed(), "error deploying tcpDualStack pod")
-						Expect(k.SetNamespace(IPv4Namespace).Apply(getYAMLPodURL(version, IPv4Namespace))).To(Succeed(), "error deploying ipv4 pod")
-						Expect(k.SetNamespace(IPv6Namespace).Apply(getYAMLPodURL(version, IPv6Namespace))).To(Succeed(), "error deploying ipv6 pod")
-						Expect(k.SetNamespace(SleepNamespace).Apply(getYAMLPodURL(version, SleepNamespace))).To(Succeed(), "error deploying sleep pod")
+						Expect(k.WithNamespace(DualStackNamespace).Apply(getYAMLPodURL(version, DualStackNamespace))).To(Succeed(), "error deploying tcpDualStack pod")
+						Expect(k.WithNamespace(IPv4Namespace).Apply(getYAMLPodURL(version, IPv4Namespace))).To(Succeed(), "error deploying ipv4 pod")
+						Expect(k.WithNamespace(IPv6Namespace).Apply(getYAMLPodURL(version, IPv6Namespace))).To(Succeed(), "error deploying ipv6 pod")
+						Expect(k.WithNamespace(SleepNamespace).Apply(getYAMLPodURL(version, SleepNamespace))).To(Succeed(), "error deploying sleep pod")
 
 						Success("dualStack validation pods deployed")
 					})
@@ -254,7 +254,7 @@ spec:
 
 				When("the Istio CR is deleted", func() {
 					BeforeEach(func() {
-						Expect(k.SetNamespace(controlPlaneNamespace).Delete("istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
+						Expect(k.WithNamespace(controlPlaneNamespace).Delete("istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
 						Success("Istio CR deleted")
 					})
 
@@ -268,7 +268,7 @@ spec:
 
 				When("the IstioCNI CR is deleted", func() {
 					BeforeEach(func() {
-						Expect(k.SetNamespace(istioCniNamespace).Delete("istiocni", istioCniName)).To(Succeed(), "IstioCNI CR failed to be deleted")
+						Expect(k.WithNamespace(istioCniNamespace).Delete("istiocni", istioCniName)).To(Succeed(), "IstioCNI CR failed to be deleted")
 						Success("IstioCNI deleted")
 					})
 
@@ -356,7 +356,7 @@ func getYAMLPodURL(version supportedversion.VersionInfo, namespace string) strin
 
 func checkPodConnectivity(podName, namespace, echoStr string) {
 	command := fmt.Sprintf(`sh -c 'echo %s | nc tcp-echo.%s 9000'`, echoStr, echoStr)
-	response, err := k.SetNamespace(namespace).Exec(podName, "sleep", command)
+	response, err := k.WithNamespace(namespace).Exec(podName, "sleep", command)
 	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("error connecting to the %q pod", podName))
 	Expect(response).To(ContainSubstring(fmt.Sprintf("hello %s", echoStr)), fmt.Sprintf("Unexpected response from %s pod", podName))
 }

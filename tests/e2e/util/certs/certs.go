@@ -219,7 +219,7 @@ func writeFile(confPath string, confContent string) error {
 }
 
 // PushIntermediateCA pushes the intermediate CA to the cluster
-func PushIntermediateCA(ns, kubeconfig, zone, network, basePath string, cl client.Client) error {
+func PushIntermediateCA(k kubectl.Kubectl, ns, zone, network, basePath string, cl client.Client) error {
 	// Set cert dir
 	certDir := filepath.Join(basePath, "certs")
 
@@ -227,8 +227,6 @@ func PushIntermediateCA(ns, kubeconfig, zone, network, basePath string, cl clien
 	_, err := common.GetObject(context.Background(), cl, kube.Key("cacerts", ns), &corev1.Secret{})
 	if err != nil {
 		// Label the namespace with the network
-		k := kubectl.NewKubectlBuilder()
-		k.SetKubeconfig(kubeconfig)
 		err = k.Patch("namespace", ns, "merge", `{"metadata":{"labels":{"topology.istio.io/network":"`+network+`"}}}`)
 		if err != nil {
 			return fmt.Errorf("failed to label namespace: %w", err)
