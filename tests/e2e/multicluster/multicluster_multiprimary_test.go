@@ -333,7 +333,7 @@ func deploySampleApp(ns string, istioVersion supportedversion.VersionInfo) {
 }
 
 // getListCurlResponses runs the curl command 10 times from the sleep pod in the given cluster and get response list
-func getListCurlResponses(k *kubectl.KubectlBuilder, podName string) []string {
+func getListCurlResponses(k *kubectl.Builder, podName string) []string {
 	var responses []string
 	for i := 0; i < 10; i++ {
 		response, err := k.SetNamespace("sample").Exec(podName, "sleep", "curl -sS helloworld.sample:5000/hello")

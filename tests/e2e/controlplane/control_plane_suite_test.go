@@ -43,7 +43,7 @@ var (
 	bookinfoNamespace     = env.Get("BOOKINFO_NAMESPACE", "bookinfo")
 	multicluster          = env.GetBool("MULTICLUSTER", false)
 
-	k *kubectl.KubectlBuilder
+	k *kubectl.Builder
 )
 
 func TestInstall(t *testing.T) {
@@ -62,5 +62,5 @@ func setup() {
 	cl, err = k8sclient.InitK8sClient("")
 	Expect(err).NotTo(HaveOccurred())
 
-	k = kubectl.NewKubectlBuilder()
+	k = kubectl.NewBuilder()
 }
