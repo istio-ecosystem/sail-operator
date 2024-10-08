@@ -73,7 +73,7 @@ var _ = Describe("Multicluster deployment models", Ordered, func() {
 	Describe("Multi-Primary Multi-Network configuration", func() {
 		// Test the Multi-Primary Multi-Network configuration for each supported Istio version
 		for _, version := range supportedversion.List {
-			Context("Istio version is: "+version.Version, func() {
+			Context("Istio version is: "+version.Version.String(), func() {
 				When("Istio resources are created in both clusters with multicluster configuration", func() {
 					BeforeAll(func(ctx SpecContext) {
 						Expect(kubectlClient1.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be created")
@@ -133,13 +133,13 @@ spec:
 						Eventually(common.GetObject).
 							WithArguments(ctx, clPrimary, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
 							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available on Cluster #1; unexpected Condition")
-						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
+						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version.String()), "Unexpected istiod version")
 						Success("Istiod is deployed in the namespace and Running on Cluster #1")
 
 						Eventually(common.GetObject).
 							WithArguments(ctx, clRemote, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
 							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available on Cluster #2; unexpected Condition")
-						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
+						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version.String()), "Unexpected istiod version")
 						Success("Istiod is deployed in the namespace and Running on  Cluster #2")
 					})
 				})
@@ -315,7 +315,7 @@ func deploySampleApp(ns string, istioVersion supportedversion.VersionInfo) {
 	Expect(kubectlClient2.Patch("namespace", ns, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
 		To(Succeed(), "Error patching sample namespace")
 
-	version := istioVersion.Version
+	version := istioVersion.Version.String()
 	// Deploy the sample app from upstream URL in both clusters
 	if istioVersion.Name == "latest" {
 		version = "master"

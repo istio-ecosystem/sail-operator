@@ -211,7 +211,7 @@ spec:
 					It("deploys istiod", func(ctx SpecContext) {
 						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
 							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available; unexpected Condition")
-						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
+						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version.String()), "Unexpected istiod version")
 						Success("Istiod is deployed in the namespace and Running")
 					})
 
@@ -254,7 +254,7 @@ spec:
 						for _, pod := range bookinfoPods.Items {
 							sidecarVersion, err := getProxyVersion(pod.Name, bookinfoNamespace)
 							Expect(err).To(Succeed(), "Error getting sidecar version")
-							Expect(sidecarVersion).To(ContainSubstring(version.Version), "Sidecar Istio version does not match the expected version")
+							Expect(sidecarVersion).To(ContainSubstring(version.Version.String()), "Sidecar Istio version does not match the expected version")
 						}
 						Success("Istio sidecar version matches the expected Istio version")
 					})

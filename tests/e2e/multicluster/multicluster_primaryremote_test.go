@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
@@ -73,11 +74,11 @@ var _ = Describe("Multicluster deployment models", Ordered, func() {
 		// Test the Primary-Remote - Multi-Network configuration for each supported Istio version
 		for _, version := range supportedversion.List {
 			// The Primary-Remote - Multi-Network configuration is only supported in Istio 1.23 and later
-			if version.Major < 1 || (version.Major == 1 && version.Minor < 23) {
+			if version.Version.LessThan(semver.MustParse("1.23.0")) {
 				continue
 			}
 
-			Context("Istio version is: "+version.Version, func() {
+			Context("Istio version is: "+version.Version.String(), func() {
 				When("Istio resources are created in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
 						Expect(kubectlClient1.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be created")
@@ -133,7 +134,7 @@ spec:
 						Eventually(common.GetObject).
 							WithArguments(ctx, clPrimary, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
 							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available on Primary; unexpected Condition")
-						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
+						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version.String()), "Unexpected istiod version")
 						Success("Istiod is deployed in the namespace and Running on Primary Cluster")
 					})
 				})

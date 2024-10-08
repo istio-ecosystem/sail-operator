@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
@@ -76,11 +77,11 @@ var _ = Describe("DualStack configuration ", Ordered, func() {
 			version := version
 
 			// The minimum supported version is 1.23 (and above)
-			if version.Major == 1 && version.Minor < 23 {
+			if version.Version.LessThan(semver.MustParse("1.23.0")) {
 				continue
 			}
 
-			Context("Istio version is: "+version.Version, func() {
+			Context("Istio version is: "+version.Version.String(), func() {
 				BeforeAll(func() {
 					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
 					Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
@@ -154,7 +155,7 @@ spec:
 					It("deploys istiod", func(ctx SpecContext) {
 						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
 							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available; unexpected Condition")
-						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
+						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version.String()), "Unexpected istiod version")
 						Success("Istiod is deployed in the namespace and Running")
 					})
 
