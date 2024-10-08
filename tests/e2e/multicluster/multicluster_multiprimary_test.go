@@ -80,8 +80,8 @@ var _ = Describe("Multicluster deployment models", Ordered, func() {
 						Expect(k2.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be created")
 
 						// Push the intermediate CA to both clusters
-						Expect(certs.PushIntermediateCA(controlPlaneNamespace, kubeconfig, "east", "network1", artifacts, clPrimary)).To(Succeed())
-						Expect(certs.PushIntermediateCA(controlPlaneNamespace, kubeconfig2, "west", "network2", artifacts, clRemote)).To(Succeed())
+						Expect(certs.PushIntermediateCA(k1, controlPlaneNamespace, "east", "network1", artifacts, clPrimary)).To(Succeed())
+						Expect(certs.PushIntermediateCA(k2, controlPlaneNamespace, "west", "network2", artifacts, clRemote)).To(Succeed())
 
 						// Wait for the secret to be created in both clusters
 						Eventually(func() error {
