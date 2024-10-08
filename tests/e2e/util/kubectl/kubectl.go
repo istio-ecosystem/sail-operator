@@ -34,17 +34,12 @@ const DefaultBinary = "kubectl"
 // NewBuilder creates a new kubectl.Builder
 func NewBuilder() *Builder {
 	k := &Builder{}
-	k.setBinary()
-	return k
-}
-
-func (k *Builder) setBinary() {
-	binary := DefaultBinary
 	if cmd := os.Getenv("COMMAND"); cmd != "" {
-		binary = cmd
+		k.binary = cmd
+	} else {
+		k.binary = DefaultBinary
 	}
-
-	k.binary = binary
+	return k
 }
 
 func (k *Builder) build(cmd string) string {
