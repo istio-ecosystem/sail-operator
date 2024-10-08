@@ -34,7 +34,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/maistra-dev/sail-operator:0.2-latest
-    createdAt: "2024-10-08T13:33:26Z"
+    createdAt: "2024-10-08T15:48:56Z"
     description: Experimental operator for installing Istio service mesh
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -579,7 +579,7 @@ spec:
         serviceAccountName: sail-operator
       deployments:
       - label:
-          app.kubernetes.io/component: manager
+          app.kubernetes.io/component: sail-operator
           app.kubernetes.io/created-by: sailoperator
           app.kubernetes.io/instance: sail-operator
           app.kubernetes.io/managed-by: helm
@@ -614,7 +614,7 @@ spec:
                 images.v1_23_2.istiod: docker.io/istio/pilot:1.23.2
                 images.v1_23_2.proxy: docker.io/istio/proxyv2:1.23.2
                 images.v1_23_2.ztunnel: docker.io/istio/ztunnel:1.23.2
-                kubectl.kubernetes.io/default-container: manager
+                kubectl.kubernetes.io/default-container: sail-operator
               labels:
                 app.kubernetes.io/created-by: sailoperator
                 app.kubernetes.io/part-of: sailoperator
@@ -665,7 +665,7 @@ spec:
                 - --metrics-bind-address=127.0.0.1:8080
                 - --default-profile=openshift
                 command:
-                - /manager
+                - /sail-operator
                 image: quay.io/maistra-dev/sail-operator:0.2-latest
                 livenessProbe:
                   httpGet:
@@ -673,7 +673,7 @@ spec:
                     port: 8081
                   initialDelaySeconds: 15
                   periodSeconds: 20
-                name: manager
+                name: sail-operator
                 readinessProbe:
                   httpGet:
                     path: /readyz
