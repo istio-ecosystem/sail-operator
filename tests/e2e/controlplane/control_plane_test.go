@@ -175,7 +175,6 @@ spec:
 					It("doesn't continuously reconcile the IstioCNI CR", func() {
 						Eventually(k.SetNamespace(namespace).Logs).WithArguments("deploy/"+deploymentName, ptr.Of(30*time.Second)).
 							ShouldNot(ContainSubstring("Reconciliation done"), "IstioCNI is continuously reconciling")
-						k.ResetNamespace()
 						Success("IstioCNI stopped reconciling")
 					})
 				})
@@ -224,7 +223,6 @@ spec:
 					It("doesn't continuously reconcile the Istio CR", func() {
 						Eventually(k.SetNamespace(namespace).Logs).WithArguments("deploy/"+deploymentName, ptr.Of(30*time.Second)).
 							ShouldNot(ContainSubstring("Reconciliation done"), "Istio CR is continuously reconciling")
-						k.ResetNamespace()
 						Success("Istio CR stopped reconciling")
 					})
 				})

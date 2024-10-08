@@ -43,7 +43,7 @@ var (
 	multicluster          = env.GetBool("MULTICLUSTER", false)
 	ipFamily              = env.Get("IP_FAMILY", "ipv4")
 
-	k *kubectl.Builder
+	k kubectl.Builder
 )
 
 func TestDualStack(t *testing.T) {

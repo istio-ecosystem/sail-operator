@@ -145,7 +145,6 @@ func logOperatorDebugInfo() {
 	logDebugElement("Operator Deployment YAML", operator, err)
 
 	logs, err := k.SetNamespace(namespace).Logs("deploy/"+deploymentName, ptr.Of(120*time.Second))
-	k.ResetNamespace()
 	logDebugElement("Operator logs", logs, err)
 
 	events, err := k.SetNamespace(namespace).GetEvents()
@@ -167,7 +166,6 @@ func logIstioDebugInfo() {
 	logDebugElement("Pods in "+controlPlaneNamespace, output, err)
 
 	logs, err := k.SetNamespace(controlPlaneNamespace).Logs("deploy/istiod", ptr.Of(120*time.Second))
-	k.ResetNamespace()
 	logDebugElement("Istiod logs", logs, err)
 
 	events, err := k.SetNamespace(controlPlaneNamespace).GetEvents()

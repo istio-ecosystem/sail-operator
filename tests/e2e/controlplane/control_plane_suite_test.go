@@ -43,7 +43,7 @@ var (
 	bookinfoNamespace     = env.Get("BOOKINFO_NAMESPACE", "bookinfo")
 	multicluster          = env.GetBool("MULTICLUSTER", false)
 
-	k *kubectl.Builder
+	k kubectl.Builder
 )
 
 func TestInstall(t *testing.T) {

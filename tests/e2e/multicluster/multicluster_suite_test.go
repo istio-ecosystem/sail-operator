@@ -52,8 +52,8 @@ var (
 	exposeServiceYAML string
 	exposeIstiodYAML  string
 
-	kubectlClient1 *kubectl.Builder
-	kubectlClient2 *kubectl.Builder
+	kubectlClient1 kubectl.Builder
+	kubectlClient2 kubectl.Builder
 )
 
 func TestInstall(t *testing.T) {

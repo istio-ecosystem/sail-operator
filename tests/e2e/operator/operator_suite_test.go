@@ -36,7 +36,7 @@ var (
 	deploymentName = env.Get("DEPLOYMENT_NAME", "sail-operator")
 	multicluster   = env.GetBool("MULTICLUSTER", false)
 
-	k *kubectl.Builder
+	k kubectl.Builder
 )
 
 func TestInstall(t *testing.T) {
