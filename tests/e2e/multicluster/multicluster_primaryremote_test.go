@@ -23,7 +23,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
@@ -75,7 +74,7 @@ var _ = Describe("Multicluster deployment models", Ordered, func() {
 		for _, version := range supportedversion.List {
 			// The Primary-Remote - Multi-Network configuration is only supported in Istio 1.23, because that's the only
 			// version that has the istiod-remote chart. For 1.24, we need to rewrite the support for RemoteIstio.
-			if version.Version.LessThan(semver.MustParse("1.23.0")) || version.Version.GreaterThanEqual(semver.MustParse("1.24.0")) {
+			if !(version.Version.Major() == 1 && version.Version.Minor() == 23) {
 				continue
 			}
 
