@@ -238,7 +238,7 @@ func (k Kubectl) GetInternalIP(label string) (string, error) {
 
 // Exec executes a command in the pod or specific container
 func (k Kubectl) Exec(pod, container, command string) (string, error) {
-	cmd := k.build(fmt.Sprintf(" exec %s %s -- %s", pod, containerflag(container), command))
+	cmd := k.build(fmt.Sprintf(" exec %s %s -- %s", pod, containerFlag(container), command))
 	output, err := k.executeCommand(cmd)
 	if err != nil {
 		return "", err
@@ -297,7 +297,7 @@ func labelFlag(label string) string {
 	return "-l " + label
 }
 
-func containerflag(container string) string {
+func containerFlag(container string) string {
 	if container == "" {
 		return ""
 	}
