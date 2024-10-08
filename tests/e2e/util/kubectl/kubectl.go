@@ -31,8 +31,11 @@ type Builder struct {
 
 const DefaultBinary = "kubectl"
 
-func newBuilder() *Builder {
-	return &Builder{}
+// NewBuilder creates a new kubectl.Builder
+func NewBuilder() *Builder {
+	k := &Builder{}
+	k.setBinary()
+	return k
 }
 
 func (k *Builder) setBinary() {
@@ -61,13 +64,6 @@ func (k *Builder) build(cmd string) string {
 
 	// Join all the arguments with a space
 	return strings.Join(args, " ")
-}
-
-// NewBuilder creates a new kubectl.Builder
-func NewBuilder() *Builder {
-	k := newBuilder()
-	k.setBinary()
-	return k
 }
 
 // SetNamespace sets the namespace
