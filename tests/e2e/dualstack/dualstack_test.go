@@ -81,7 +81,7 @@ var _ = Describe("DualStack configuration ", Ordered, func() {
 				continue
 			}
 
-			Context("Istio version is: "+version.Version.String(), func() {
+			Context(fmt.Sprintf("Istio version %s", version.Version), func() {
 				BeforeAll(func() {
 					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
 					Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")

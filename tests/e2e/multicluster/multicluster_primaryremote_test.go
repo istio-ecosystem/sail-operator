@@ -78,7 +78,7 @@ var _ = Describe("Multicluster deployment models", Ordered, func() {
 				continue
 			}
 
-			Context("Istio version is: "+version.Version.String(), func() {
+			Context(fmt.Sprintf("Istio version %s", version.Version), func() {
 				When("Istio resources are created in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
 						Expect(k1.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be created")

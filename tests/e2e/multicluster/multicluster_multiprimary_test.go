@@ -73,8 +73,8 @@ var _ = Describe("Multicluster deployment models", Ordered, func() {
 	Describe("Multi-Primary Multi-Network configuration", func() {
 		// Test the Multi-Primary Multi-Network configuration for each supported Istio version
 		for _, version := range supportedversion.List {
-			Context("Istio version is: "+version.Version.String(), func() {
-				When("Istio resources are created in both clusters with multicluster configuration", func() {
+			Context(fmt.Sprintf("Istio version %s", version.Version), func() {
+				When("Istio resources are created in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
 						Expect(k1.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be created")
 						Expect(k2.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be created")
