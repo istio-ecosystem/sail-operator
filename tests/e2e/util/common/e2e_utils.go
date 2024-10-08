@@ -190,6 +190,9 @@ func logCNIDebugInfo() {
 
 	describe, err := k.SetNamespace(istioCniNamespace).Describe("daemonset", "istio-cni-node")
 	logDebugElement("Istio CNI DaemonSet describe", describe, err)
+
+	logs, err := k.SetNamespace(istioCniNamespace).Logs("daemonset/istio-cni-node", ptr.Of(120*time.Second))
+	logDebugElement("Istio CNI logs", logs, err)
 }
 
 func logDebugElement(caption string, info string, err error) {
