@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
@@ -76,11 +77,11 @@ var _ = Describe("DualStack configuration ", Ordered, func() {
 			version := version
 
 			// The minimum supported version is 1.23 (and above)
-			if version.Major == 1 && version.Minor < 23 {
+			if version.Version.LessThan(semver.MustParse("1.23.0")) {
 				continue
 			}
 
-			Context("Istio version is: "+version.Version, func() {
+			Context("Istio version is: "+version.Version.String(), func() {
 				BeforeAll(func() {
 					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
 					Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")

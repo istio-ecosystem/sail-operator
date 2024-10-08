@@ -43,7 +43,7 @@ versions:
       - https://istio-release.storage.googleapis.com/charts/cni-1.21.5.tgz
       - https://istio-release.storage.googleapis.com/charts/ztunnel-1.21.5.tgz
   - name: latest
-    version: 1.24-alpha
+    version: 1.24-alpha.fe2a04689d3b7abf7630dc5646bf825e0c0592fe
     repo: https://github.com/istio/istio
     branch: master
     commit: fe2a04689d3b7abf7630dc5646bf825e0c0592fe
