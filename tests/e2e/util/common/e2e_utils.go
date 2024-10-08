@@ -49,8 +49,8 @@ var (
 	// version can have one of the following formats:
 	// - 1.22.2
 	// - 1.23.0-rc.1
-	// - 1.24-alpha
-	istiodVersionRegex = regexp.MustCompile(`Version:"(\d+\.\d+(\.\d+)?(-\w+(\.\d+)?)?)`)
+	// - 1.24-alpha.feabc1234
+	istiodVersionRegex = regexp.MustCompile(`Version:"([^"]*)"`)
 
 	k = kubectl.NewKubectlBuilder()
 )
