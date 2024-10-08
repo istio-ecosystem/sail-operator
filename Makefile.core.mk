@@ -254,6 +254,9 @@ docker-buildx: build-all ## Build and push docker image with cross-platform supp
 	docker buildx rm project-v4-builder
 	rm Dockerfile.cross
 
+clean: ## Cleans all the intermediate files and folders previously generated.
+	rm -rf $(REPO_ROOT)/out
+
 ##@ Deployment
 
 .PHONY: verify-kubeconfig
