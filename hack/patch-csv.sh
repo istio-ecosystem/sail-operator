@@ -55,37 +55,37 @@ function get_field() {
   # The following code tries to find the field in several places:
 
   # 1) .defaults.<component>.<field>
-  field="$(${YQ} ".defaults.${COMPONENTS[$component_name]}.${field_name}" resources/"${version}"/charts/"${component_dir}"/values.yaml)"
+  field="$(${YQ} ".defaults.${COMPONENTS[$component_name]}.${field_name}" "resources/${version}/charts/${component_dir}/values.yaml")"
   # 2) .defaults.global.<component>.<field>
   if is_empty_or_null "${field}"; then
-    field="$(${YQ} ".defaults.global.${COMPONENTS[$component_name]}.${field_name}" resources/"${version}"/charts/"${component_dir}"/values.yaml)"
+    field="$(${YQ} ".defaults.global.${COMPONENTS[$component_name]}.${field_name}" "resources/${version}/charts/${component_dir}/values.yaml")"
   fi
   # 3) .defaults.<field>
   if is_empty_or_null "${field}"; then
-    field="$(${YQ} ".defaults.${field_name}" resources/"${version}"/charts/"${component_dir}"/values.yaml)"
+    field="$(${YQ} ".defaults.${field_name}" "resources/${version}/charts/${component_dir}/values.yaml")"
   fi
   # 4) .defaults.global.<field>
   if is_empty_or_null "${field}"; then
-    field="$(${YQ} ".defaults.global.${field_name}" resources/"${version}"/charts/"${component_dir}"/values.yaml)"
+    field="$(${YQ} ".defaults.global.${field_name}" "resources/${version}/charts/${component_dir}/values.yaml")"
   fi
-  # 5) .._internal_defaults_do_not_set.<component>.<field>
+  # 5) ._internal_defaults_do_not_set.<component>.<field>
   if is_empty_or_null "${field}"; then
-      field="$(${YQ} ".._internal_defaults_do_not_set.${COMPONENTS[$component_name]}.${field_name}" resources/"${version}"/charts/"${component_dir}"/values.yaml)"
+      field="$(${YQ} "._internal_defaults_do_not_set.${COMPONENTS[$component_name]}.${field_name}" "resources/${version}/charts/${component_dir}/values.yaml")"
   fi
-  # 6) .._internal_defaults_do_not_set.global.<component>.<field>
+  # 6) ._internal_defaults_do_not_set.global.<component>.<field>
   if is_empty_or_null "${field}"; then
-    field="$(${YQ} "._internal_defaults_do_not_set.global.${COMPONENTS[$component_name]}.${field_name}" resources/"${version}"/charts/"${component_dir}"/values.yaml)"
+    field="$(${YQ} "._internal_defaults_do_not_set.global.${COMPONENTS[$component_name]}.${field_name}" "resources/${version}/charts/${component_dir}/values.yaml")"
   fi
-  # 7) .._internal_defaults_do_not_set.<field>
+  # 7) ._internal_defaults_do_not_set.<field>
   if is_empty_or_null "${field}"; then
-    field="$(${YQ} "._internal_defaults_do_not_set.${field_name}" resources/"${version}"/charts/"${component_dir}"/values.yaml)"
+    field="$(${YQ} "._internal_defaults_do_not_set.${field_name}" "resources/${version}/charts/${component_dir}/values.yaml")"
   fi
-  # 8) .._internal_defaults_do_not_set.global.<field>
+  # 8) ._internal_defaults_do_not_set.global.<field>
   if is_empty_or_null "${field}"; then
-    field="$(${YQ} "._internal_defaults_do_not_set.global.${field_name}" resources/"${version}"/charts/"${component_dir}"/values.yaml)"
+    field="$(${YQ} "._internal_defaults_do_not_set.global.${field_name}" "resources/${version}/charts/${component_dir}/values.yaml")"
   fi
 
-  if [ "${field}" == "null" ]; then
+  if is_empty_or_null "${field}"; then
     field=""
   fi
   echo "${field}"
