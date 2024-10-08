@@ -592,6 +592,13 @@ bundle-publish-nightly: OPERATOR_VERSION=$(VERSION)-nightly-$(TODAY)  ## Publish
 bundle-publish-nightly: TAG=$(MINOR_VERSION)-nightly-$(TODAY)
 bundle-publish-nightly: bundle-nightly bundle-publish
 
+.PHONY: helm-artifacts-publish
+helm-artifacts-publish: helm ## Publish Helm artifacts to be available for "Helm repo add"
+	@export GIT_USER=$(GITHUB_USER); \
+	export GITHUB_TOKEN=$(GITHUB_TOKEN); \
+	export OPERATOR_VERSION=${OPERATOR_VERSION}; \
+	./hack/helm-artifacts.sh
+
 .PHONY: opm $(OPM)
 opm: $(OPM)
 opm: OS=$(shell go env GOOS)
