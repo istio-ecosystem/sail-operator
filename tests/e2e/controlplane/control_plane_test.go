@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
@@ -253,8 +254,8 @@ spec:
 					It("has sidecars with the correct istio version", func(ctx SpecContext) {
 						for _, pod := range bookinfoPods.Items {
 							sidecarVersion, err := getProxyVersion(pod.Name, bookinfoNamespace)
-							Expect(err).To(Succeed(), "Error getting sidecar version")
-							Expect(sidecarVersion).To(ContainSubstring(version.Version.String()), "Sidecar Istio version does not match the expected version")
+							Expect(err).NotTo(HaveOccurred(), "Error getting sidecar version")
+							Expect(sidecarVersion).To(Equal(version.Version), "Sidecar Istio version does not match the expected version")
 						}
 						Success("Istio sidecar version matches the expected Istio version")
 					})
@@ -396,14 +397,19 @@ func deployBookinfo(version supportedversion.VersionInfo) error {
 	return nil
 }
 
-func getProxyVersion(podName, namespace string) (string, error) {
-	proxyVersion, err := k.SetNamespace(namespace).Exec(
+func getProxyVersion(podName, namespace string) (*semver.Version, error) {
+	output, err := k.SetNamespace(namespace).Exec(
 		podName,
 		"istio-proxy",
 		`curl -s http://localhost:15000/server_info | grep "ISTIO_VERSION" | awk -F '"' '{print $4}'`)
 	if err != nil {
-		return "", fmt.Errorf("error getting sidecar version: %w", err)
+		return nil, fmt.Errorf("error getting sidecar version: %w", err)
 	}
 
-	return proxyVersion, nil
+	versionStr := strings.TrimSpace(output)
+	version, err := semver.NewVersion(versionStr)
+	if err != nil {
+		return version, fmt.Errorf("error parsing sidecar version %q: %w", versionStr, err)
+	}
+	return version, err
 }
