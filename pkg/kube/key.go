@@ -16,7 +16,7 @@ package kube
 
 import "sigs.k8s.io/controller-runtime/pkg/client"
 
-// key returns the client.ObjectKey for the given name and namespace. If no namespace is provided, it returns a key cluster scoped
+// Key returns the client.ObjectKey for the given name and namespace. If no namespace is provided, it returns a key cluster scoped
 func Key(name string, namespace ...string) client.ObjectKey {
 	if len(namespace) > 1 {
 		panic("you can only provide one namespace")

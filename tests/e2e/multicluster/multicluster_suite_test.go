@@ -24,7 +24,7 @@ import (
 
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/certs"
 	k8sclient "github.com/istio-ecosystem/sail-operator/tests/e2e/util/client"
-	env "github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

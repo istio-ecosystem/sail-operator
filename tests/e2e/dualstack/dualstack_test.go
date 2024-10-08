@@ -26,7 +26,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
-	common "github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
 	. "github.com/onsi/ginkgo/v2"

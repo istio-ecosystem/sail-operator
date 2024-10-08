@@ -32,7 +32,7 @@ type ReconcileFunc[T client.Object] func(ctx context.Context, obj T) (ctrl.Resul
 // FinalizeFunc is a function that finalizes an object. It does not remove the finalizer.
 type FinalizeFunc[T client.Object] func(ctx context.Context, obj T) error
 
-// StandardRecociler encapsulates common reconciler behavior, allowing you to
+// StandardReconciler encapsulates common reconciler behavior, allowing you to
 // implement a reconciler simply by providing a ReconcileFunc and an optional
 // FinalizeFunc. These functions are invoked at the appropriate time and are
 // passed the object being reconciled.

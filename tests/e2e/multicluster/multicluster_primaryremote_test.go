@@ -28,8 +28,8 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
-	certs "github.com/istio-ecosystem/sail-operator/tests/e2e/util/certs"
-	common "github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/certs"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
@@ -150,7 +150,7 @@ spec:
 					})
 
 					It("updates Gateway status to Available", func(ctx SpecContext) {
-						Eventually((common.GetObject)).
+						Eventually(common.GetObject).
 							WithArguments(ctx, clPrimary, kube.Key("istio-eastwestgateway", controlPlaneNamespace), &appsv1.Deployment{}).
 							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Gateway is not Ready on Primary; unexpected Condition")
 					})
@@ -236,7 +236,7 @@ spec:
 					})
 
 					It("updates Gateway status to Available", func(ctx SpecContext) {
-						Eventually((common.GetObject)).
+						Eventually(common.GetObject).
 							WithArguments(ctx, clRemote, kube.Key("istio-eastwestgateway", controlPlaneNamespace), &appsv1.Deployment{}).
 							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Gateway is not Ready on Remote; unexpected Condition")
 						Success("Gateway is created and available in Remote cluster")
@@ -253,7 +253,7 @@ spec:
 					It("updates the pods status to Ready", func(ctx SpecContext) {
 						samplePodsPrimary := &corev1.PodList{}
 
-						clPrimary.List(ctx, samplePodsPrimary, client.InNamespace("sample"))
+						Expect(clPrimary.List(ctx, samplePodsPrimary, client.InNamespace("sample"))).To(Succeed())
 						Expect(samplePodsPrimary.Items).ToNot(BeEmpty(), "No pods found in bookinfo namespace")
 
 						for _, pod := range samplePodsPrimary.Items {
@@ -263,7 +263,7 @@ spec:
 						}
 
 						samplePodsRemote := &corev1.PodList{}
-						clRemote.List(ctx, samplePodsRemote, client.InNamespace("sample"))
+						Expect(clRemote.List(ctx, samplePodsRemote, client.InNamespace("sample"))).To(Succeed())
 						Expect(samplePodsRemote.Items).ToNot(BeEmpty(), "No pods found in bookinfo namespace")
 
 						for _, pod := range samplePodsRemote.Items {
