@@ -34,7 +34,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/maistra-dev/sail-operator:0.2-latest
-    createdAt: "2024-10-07T12:47:15Z"
+    createdAt: "2024-10-08T13:33:26Z"
     description: Experimental operator for installing Istio service mesh
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -598,10 +598,10 @@ spec:
           template:
             metadata:
               annotations:
-                images.latest.cni: null/null:null
-                images.latest.istiod: null/null:null
-                images.latest.proxy: null/null:null
-                images.latest.ztunnel: null/null:null
+                images.latest.cni: gcr.io/istio-testing/install-cni:1.24-alpha.6f95f8c912c44489b4f78568207337bd907f46c1
+                images.latest.istiod: gcr.io/istio-testing/pilot:1.24-alpha.6f95f8c912c44489b4f78568207337bd907f46c1
+                images.latest.proxy: gcr.io/istio-testing/proxyv2:1.24-alpha.6f95f8c912c44489b4f78568207337bd907f46c1
+                images.latest.ztunnel: gcr.io/istio-testing/ztunnel:1.24-alpha.6f95f8c912c44489b4f78568207337bd907f46c1
                 images.v1_21_6.cni: docker.io/istio/install-cni:1.21.6
                 images.v1_21_6.istiod: docker.io/istio/pilot:1.21.6
                 images.v1_21_6.proxy: docker.io/istio/proxyv2:1.21.6
@@ -766,13 +766,13 @@ spec:
   provider:
     name: Red Hat, Inc.
   relatedImages:
-  - image: null/null:null
+  - image: gcr.io/istio-testing/install-cni:1.24-alpha.6f95f8c912c44489b4f78568207337bd907f46c1
     name: latest.cni
-  - image: null/null:null
+  - image: gcr.io/istio-testing/pilot:1.24-alpha.6f95f8c912c44489b4f78568207337bd907f46c1
     name: latest.istiod
-  - image: null/null:null
+  - image: gcr.io/istio-testing/proxyv2:1.24-alpha.6f95f8c912c44489b4f78568207337bd907f46c1
     name: latest.proxy
-  - image: null/null:null
+  - image: gcr.io/istio-testing/ztunnel:1.24-alpha.6f95f8c912c44489b4f78568207337bd907f46c1
     name: latest.ztunnel
   - image: docker.io/istio/install-cni:1.21.6
     name: v1_21_6.cni
