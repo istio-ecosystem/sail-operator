@@ -179,7 +179,7 @@ test.e2e.describe: ## Runs ginkgo outline -format indent over the e2e test to sh
 ##@ Build
 
 .PHONY: build
-build: build-$(TARGET_ARCH) ## Build manager binary.
+build: build-$(TARGET_ARCH) ## Build the sail-operator binary.
 
 .PHONY: run
 run: gen ## Run a controller from your host.
@@ -221,7 +221,7 @@ endif
 # BUILDX_BUILD_ARGS are the additional --build-arg flags passed to the docker buildx build command.
 BUILDX_BUILD_ARGS = --build-arg TARGETOS=$(TARGET_OS)
 
-# PLATFORMS defines the target platforms for  the manager image be build to provide support to multiple
+# PLATFORMS defines the target platforms for the sail-operator image be build to provide support to multiple
 # architectures. (i.e. make docker-buildx IMAGE=myregistry/mypoperator:0.0.1). To use this option you need to:
 # - able to use docker buildx . More info: https://docs.docker.com/build/buildx/
 # - have enable BuildKit, More info: https://docs.docker.com/develop/develop-images/build_enhancements/
@@ -233,8 +233,8 @@ PLATFORM_ARCHITECTURES = $(shell echo ${PLATFORMS} | sed -e 's/,/\ /g' -e 's/lin
 ifndef BUILDX
 define BUILDX
 .PHONY: build-$(1)
-build-$(1): ## Build manager binary for specific architecture.
-	GOARCH=$(1) LDFLAGS="$(LD_FLAGS)" common/scripts/gobuild.sh $(REPO_ROOT)/out/$(TARGET_OS)_$(1)/manager cmd/main.go
+build-$(1): ## Build sail-operator binary for specific architecture.
+	GOARCH=$(1) LDFLAGS="$(LD_FLAGS)" common/scripts/gobuild.sh $(REPO_ROOT)/out/$(TARGET_OS)_$(1)/sail-operator cmd/main.go
 
 .PHONY: build-all
 build-all: build-$(1)
