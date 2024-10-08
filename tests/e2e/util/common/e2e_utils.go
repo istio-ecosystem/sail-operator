@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
-	env "github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
@@ -54,13 +54,13 @@ var (
 	k = kubectl.NewKubectlBuilder()
 )
 
-// getObject returns the object with the given key
+// GetObject returns the object with the given key
 func GetObject(ctx context.Context, cl client.Client, key client.ObjectKey, obj client.Object) (client.Object, error) {
 	err := cl.Get(ctx, key, obj)
 	return obj, err
 }
 
-// getList invokes client.List and returns the list
+// GetList invokes client.List and returns the list
 func GetList(ctx context.Context, cl client.Client, list client.ObjectList, opts ...client.ListOption) (client.ObjectList, error) {
 	err := cl.List(ctx, list, opts...)
 	return list, err
@@ -79,7 +79,7 @@ func GetPodNameByLabel(ctx context.Context, cl client.Client, ns, labelKey, labe
 	return podList.Items[0].Name, nil
 }
 
-// GetSVCAddress returns the address of the service with the given name
+// GetSVCLoadBalancerAddress returns the address of the service with the given name
 func GetSVCLoadBalancerAddress(ctx context.Context, cl client.Client, ns, svcName string) (string, error) {
 	svc := &corev1.Service{}
 	err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: svcName}, svc)
@@ -96,7 +96,7 @@ func GetSVCLoadBalancerAddress(ctx context.Context, cl client.Client, ns, svcNam
 	return svc.Status.LoadBalancer.Ingress[0].IP, nil
 }
 
-// checkNamespaceEmpty checks if the given namespace is empty
+// CheckNamespaceEmpty checks if the given namespace is empty
 func CheckNamespaceEmpty(ctx SpecContext, cl client.Client, ns string) {
 	// TODO: Check to add more validations
 	Eventually(func() ([]corev1.Pod, error) {
@@ -150,7 +150,7 @@ func logOperatorDebugInfo() {
 	events, err := k.SetNamespace(namespace).GetEvents()
 	logDebugElement("Events in "+namespace, events, err)
 
-	// Temporaty information to gather more details about failure
+	// Temporary information to gather more details about failure
 	pods, err := k.SetNamespace(namespace).GetPods("", "-o wide")
 	logDebugElement("Pods in "+namespace, pods, err)
 
@@ -183,7 +183,7 @@ func logCNIDebugInfo() {
 	events, err := k.SetNamespace(istioCniNamespace).GetEvents()
 	logDebugElement("Events in "+istioCniNamespace, events, err)
 
-	// Temporaty information to gather more details about failure
+	// Temporary information to gather more details about failure
 	pods, err := k.SetNamespace(istioCniNamespace).GetPods("", "-o wide")
 	logDebugElement("Pods in "+istioCniNamespace, pods, err)
 

@@ -23,7 +23,7 @@ import (
 	"path/filepath"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
-	common "github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/shell"
 	corev1 "k8s.io/api/core/v1"

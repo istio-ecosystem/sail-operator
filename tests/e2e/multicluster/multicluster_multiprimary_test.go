@@ -29,7 +29,7 @@ import (
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/certs"
-	common "github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
@@ -80,8 +80,8 @@ var _ = Describe("Multicluster deployment models", Ordered, func() {
 						Expect(kubectlClient2.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be created")
 
 						// Push the intermediate CA to both clusters
-						certs.PushIntermediateCA(controlPlaneNamespace, kubeconfig, "east", "network1", artifacts, clPrimary)
-						certs.PushIntermediateCA(controlPlaneNamespace, kubeconfig2, "west", "network2", artifacts, clRemote)
+						Expect(certs.PushIntermediateCA(controlPlaneNamespace, kubeconfig, "east", "network1", artifacts, clPrimary)).To(Succeed())
+						Expect(certs.PushIntermediateCA(controlPlaneNamespace, kubeconfig2, "west", "network2", artifacts, clRemote)).To(Succeed())
 
 						// Wait for the secret to be created in both clusters
 						Eventually(func() error {
@@ -156,11 +156,11 @@ spec:
 					})
 
 					It("updates both Gateway status to Available", func(ctx SpecContext) {
-						Eventually((common.GetObject)).
+						Eventually(common.GetObject).
 							WithArguments(ctx, clPrimary, kube.Key("istio-eastwestgateway", controlPlaneNamespace), &appsv1.Deployment{}).
 							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Gateway is not Ready on Cluster #1; unexpected Condition")
 
-						Eventually((common.GetObject)).
+						Eventually(common.GetObject).
 							WithArguments(ctx, clRemote, kube.Key("istio-eastwestgateway", controlPlaneNamespace), &appsv1.Deployment{}).
 							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Gateway is not Ready on Cluster #2; unexpected Condition")
 						Success("Gateway is created and available in both clusters")
@@ -211,7 +211,7 @@ spec:
 					It("updates the pods status to Ready", func(ctx SpecContext) {
 						samplePodsCluster1 := &corev1.PodList{}
 
-						clPrimary.List(ctx, samplePodsCluster1, client.InNamespace("sample"))
+						Expect(clPrimary.List(ctx, samplePodsCluster1, client.InNamespace("sample"))).To(Succeed())
 						Expect(samplePodsCluster1.Items).ToNot(BeEmpty(), "No pods found in bookinfo namespace")
 
 						for _, pod := range samplePodsCluster1.Items {
@@ -221,7 +221,7 @@ spec:
 						}
 
 						samplePodsCluster2 := &corev1.PodList{}
-						clRemote.List(ctx, samplePodsCluster2, client.InNamespace("sample"))
+						Expect(clRemote.List(ctx, samplePodsCluster2, client.InNamespace("sample"))).To(Succeed())
 						Expect(samplePodsCluster2.Items).ToNot(BeEmpty(), "No pods found in bookinfo namespace")
 
 						for _, pod := range samplePodsCluster2.Items {
