@@ -155,7 +155,7 @@ spec:
 					It("deploys istiod", func(ctx SpecContext) {
 						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
 							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available; unexpected Condition")
-						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version.String()), "Unexpected istiod version")
+						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
 						Success("Istiod is deployed in the namespace and Running")
 					})
 

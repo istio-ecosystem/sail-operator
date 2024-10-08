@@ -133,13 +133,13 @@ spec:
 						Eventually(common.GetObject).
 							WithArguments(ctx, clPrimary, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
 							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available on Cluster #1; unexpected Condition")
-						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version.String()), "Unexpected istiod version")
+						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
 						Success("Istiod is deployed in the namespace and Running on Cluster #1")
 
 						Eventually(common.GetObject).
 							WithArguments(ctx, clRemote, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
 							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available on Cluster #2; unexpected Condition")
-						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version.String()), "Unexpected istiod version")
+						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
 						Success("Istiod is deployed in the namespace and Running on  Cluster #2")
 					})
 				})

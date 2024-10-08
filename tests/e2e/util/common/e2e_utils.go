@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	env "github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
@@ -201,18 +202,18 @@ func logDebugElement(caption string, info string, err error) {
 	}
 }
 
-func GetVersionFromIstiod() (string, error) {
+func GetVersionFromIstiod() (*semver.Version, error) {
 	k := kubectl.NewKubectlBuilder()
 	output, err := k.SetNamespace(controlPlaneNamespace).Exec("deploy/istiod", "", "pilot-discovery version")
 	if err != nil {
-		return "", fmt.Errorf("error getting version from istiod: %w", err)
+		return nil, fmt.Errorf("error getting version from istiod: %w", err)
 	}
 
 	matches := istiodVersionRegex.FindStringSubmatch(output)
 	if len(matches) > 1 && matches[1] != "" {
-		return matches[1], nil
+		return semver.NewVersion(matches[1])
 	}
-	return "", fmt.Errorf("error getting version from istiod: version not found in output: %s", output)
+	return nil, fmt.Errorf("error getting version from istiod: version not found in output: %s", output)
 }
 
 func CheckPodsReady(ctx SpecContext, cl client.Client, namespace string) (*corev1.PodList, error) {
