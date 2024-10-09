@@ -31,6 +31,10 @@ function getLatestVersion() {
 # Update common files
 make update-common
 
+# update build container used in github actions
+NEW_IMAGE_MASTER=$(grep IMAGE_VERSION= < common/scripts/setup_env.sh | cut -d= -f2)
+sed -i -e "s|\(gcr.io/istio-testing/build-tools\):master.*|\1:$NEW_IMAGE_MASTER|" .github/workflows/update-deps.yaml
+
 # Update go dependencies
 export GO111MODULE=on
 go get -u "istio.io/istio@${UPDATE_BRANCH}"
