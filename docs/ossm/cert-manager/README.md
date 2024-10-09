@@ -93,8 +93,9 @@ You can install the cert-manager tool to manage the lifecycle of TLS certificate
 
     Next you will install istio-csr into the `cert-manager` namespace. Depending on which `updateStrategy` (`InPlace` or `RevisionBased`) you will choose for your `Istio` resource, you may need to pass additional options.
 
-> [!NOTE]
-> If your controlplane namespace is not `istio-system`, you will need to update `app.istio.namespace` to match your controlplane namespace.
+    <!-- GitHub alerts cannot be nested within other elements but removing the indentation here messes up the rest of the indentation below. For this reason, using a plain note here instead of a fancy Alert.-->
+
+    **Note:** If your controlplane namespace is not `istio-system`, you will need to update `app.istio.namespace` to match your controlplane namespace.
 
     `InPlace` strategy installation
 
