@@ -242,7 +242,7 @@ _internal_defaults_do_not_set:
     # Dev builds from prow are on gcr.io
     hub: gcr.io/istio-testing
     # Default tag for Istio images.
-    tag: 1.24-alpha.6f95f8c912c44489b4f78568207337bd907f46c1
+    tag: 1.24-alpha.51903838fc216411efd9ad147ed3cfe0c6e258e9
     # Variant of the image to use.
     # Currently supported are: [debug, distroless]
     variant: ""
@@ -313,9 +313,6 @@ _internal_defaults_do_not_set:
       # Per Component log level for proxy, applies to gateways and sidecars. If a component level is
       # not set, then the global "logLevel" will be used.
       componentLogLevel: "misc:error"
-
-      # If set, newly injected sidecars will have core dumps enabled.
-      enableCoreDump: false
 
       # istio ingress capture allowlist
       # examples:
