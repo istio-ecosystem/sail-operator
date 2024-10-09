@@ -395,7 +395,8 @@ gen-check: gen restore-manifest-dates check-clean-repo ## Verify that changes in
 CRD_PATH := ./api
 OUTPUT_DOCS_PATH := ./docs/api-reference
 CONFIG_API_DOCS_GEN_PATH := ./hack/api-docs/config.yaml
-TEMPLATES_DIR := ./hack/api-docs/templates/markdown
+DOCS_RENDERER := markdown
+TEMPLATES_DIR := ./hack/api-docs/templates/$(DOCS_RENDERER)
 
 gen-api-docs: ## Generate API documentation. Known issues: go fmt does not properly handle tabs and add new line empty. Workaround is applied to the generated markdown files. The crd-ref-docs tool add br tags to the generated markdown files. Workaround is applied to the generated markdown files.
 	@echo "Generating API documentation..."
@@ -405,12 +406,12 @@ gen-api-docs: ## Generate API documentation. Known issues: go fmt does not prope
 		--source-path=$(CRD_PATH) \
 		--templates-dir=$(TEMPLATES_DIR) \
 		--config=$(CONFIG_API_DOCS_GEN_PATH) \
-		--renderer=markdown \
+		--renderer=$(DOCS_RENDERER) \
 		--output-path=$(OUTPUT_DOCS_PATH) \
 		--output-mode=group
 	@find $(OUTPUT_DOCS_PATH) -type f -name "*.md" -exec sed -i 's/<br \/>/ /g' {} \;
 	@find $(OUTPUT_DOCS_PATH) -type f -name "*.md" -exec sed -i 's/\t/  /g' {} \;
-	@find $(OUTPUT_DOCS_PATH) -type f -name "*.md" -exec sed -i '/^```/,/^```/ {/./!d;}' {} \;
+	@find $(OUTPUT_DOCS_PATH) -type f \( -name "*.md" -o -name "*.asciidoc" \) -exec sed -i '/^```/,/^```/ {/./!d;}' {} \;
 	@echo "API reference documentation generated at $(OUTPUT_DOCS_PATH)"
 
 .PHONY: restore-manifest-dates
