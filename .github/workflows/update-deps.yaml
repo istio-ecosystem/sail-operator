@@ -22,12 +22,18 @@ env:
 jobs:
   update-deps:
     runs-on: ubuntu-latest
+    container:
+      image: gcr.io/istio-testing/build-tools:master-8eb42e9551b9a67c330aeef783f2498647d91289
+      options: --entrypoint ''
 
     steps:
     - uses: actions/checkout@v4
       with:
         repository: istio/test-infra
         ref: master
+
+    # this is a workaround for a permissions issue when using the istio build container
+    - run: git config --system --add safe.directory /__w/sail-operator/sail-operator
 
     - name: Run Automator
       run: |
@@ -37,7 +43,8 @@ jobs:
           --branch=$AUTOMATOR_BRANCH \
           '--title=Automator: Update dependencies in $AUTOMATOR_ORG/$AUTOMATOR_REPO@$AUTOMATOR_BRANCH' \
           --labels=auto-merge \
+          --email=openshiftservicemeshbot@gmail.com \
           --modifier=update_deps \
           --token-env \
-          --cmd=./tools/update_deps.sh \
+          --cmd='BUILD_WITH_CONTAINER=0 ./tools/update_deps.sh' \
           --signoff
