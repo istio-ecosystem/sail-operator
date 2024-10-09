@@ -226,7 +226,7 @@ You can install the cert-manager tool to manage the lifecycle of TLS certificate
 
 This section only applies to `RevisionBased` deployments.
 
-Because istio-csr requires you to pass all revisions, each time you upgrade your `RevsionBased` controlplane you will need to **first** update your istio-csr deployment with the new revision before you update your `Istio.spec.version`. For example, before upgrading your controlplane from `v1.23.0 --> v1.23.1`, you need to first update your istio-csr deployment with the new revision:
+Because istio-csr requires you to pass all revisions, each time you upgrade your `RevisionBased` controlplane you will need to **first** update your istio-csr deployment with the new revision before you update your `Istio.spec.version`. For example, before upgrading your controlplane from `v1.23.0 --> v1.23.1`, you need to first update your istio-csr deployment with the new revision:
 
 ```sh
 helm upgrade cert-manager-istio-csr jetstack/cert-manager-istio-csr \
