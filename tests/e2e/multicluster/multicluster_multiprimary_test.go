@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
@@ -33,7 +32,6 @@ import (
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -61,7 +59,7 @@ var _ = Describe("Multicluster deployment models", Ordered, func() {
 			Success("Operator is deployed in the Cluster #1 namespace and Running")
 
 			Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, "--kubeconfig "+kubeconfig2)).
-				To(Succeed(), "Operator failed to be deployed in  Cluster #2")
+				To(Succeed(), "Operator failed to be deployed in Cluster #2")
 
 			Eventually(common.GetObject).
 				WithArguments(ctx, clRemote, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
@@ -174,7 +172,7 @@ spec:
 						Expect(internalIPCluster1).NotTo(BeEmpty(), "Internal IP is empty for Cluster #1")
 
 						internalIPCluster2, err := k2.GetInternalIP("node-role.kubernetes.io/control-plane")
-						Expect(internalIPCluster2).NotTo(BeEmpty(), "Internal IP is empty for  Cluster #2")
+						Expect(internalIPCluster2).NotTo(BeEmpty(), "Internal IP is empty for Cluster #2")
 						Expect(err).NotTo(HaveOccurred())
 
 						// Install a remote secret in Cluster #1 that provides access to the  Cluster #2 API server.
@@ -232,23 +230,8 @@ spec:
 					})
 
 					It("can access the sample app from both clusters", func(ctx SpecContext) {
-						sleepPodNameCluster1, err := common.GetPodNameByLabel(ctx, clPrimary, "sample", "app", "sleep")
-						Expect(sleepPodNameCluster1).NotTo(BeEmpty(), "Sleep pod not found on Cluster #1")
-						Expect(err).NotTo(HaveOccurred(), "Error getting sleep pod name on Cluster #1")
-
-						sleepPodNameCluster2, err := common.GetPodNameByLabel(ctx, clRemote, "sample", "app", "sleep")
-						Expect(sleepPodNameCluster2).NotTo(BeEmpty(), "Sleep pod not found on Cluster #2")
-						Expect(err).NotTo(HaveOccurred(), "Error getting sleep pod name on Cluster #2")
-
-						// Run the curl command from the sleep pod in the  Cluster #2 and get response list to validate that we get responses from both clusters
-						Cluster2Responses := strings.Join(getListCurlResponses(k2, sleepPodNameCluster2), "\n")
-						Expect(Cluster2Responses).To(ContainSubstring("Hello version: v1"), "Responses from  Cluster #2 are not the expected")
-						Expect(Cluster2Responses).To(ContainSubstring("Hello version: v2"), "Responses from  Cluster #2 are not the expected")
-
-						// Run the curl command from the sleep pod in the Cluster #1 and get response list to validate that we get responses from both clusters
-						Cluster1Responses := strings.Join(getListCurlResponses(k1, sleepPodNameCluster1), "\n")
-						Expect(Cluster1Responses).To(ContainSubstring("Hello version: v1"), "Responses from Cluster #1 are not the expected")
-						Expect(Cluster1Responses).To(ContainSubstring("Hello version: v2"), "Responses from Cluster #1 are not the expected")
+						verifyResponsesAreReceivedFromBothClusters(k1, "Cluster #1")
+						verifyResponsesAreReceivedFromBothClusters(k2, "Cluster #2")
 						Success("Sample app is accessible from both clusters")
 					})
 				})
@@ -329,15 +312,4 @@ func deploySampleApp(ns string, istioVersion supportedversion.VersionInfo) {
 	sleepURL := fmt.Sprintf("https://raw.githubusercontent.com/istio/istio/%s/samples/sleep/sleep.yaml", version)
 	Expect(k1.WithNamespace(ns).Apply(sleepURL)).To(Succeed(), "Sample sleep deploy failed on Cluster #1")
 	Expect(k2.WithNamespace(ns).Apply(sleepURL)).To(Succeed(), "Sample sleep deploy failed on Cluster #2")
-}
-
-// getListCurlResponses runs the curl command 10 times from the sleep pod in the given cluster and get response list
-func getListCurlResponses(k kubectl.Kubectl, podName string) []string {
-	var responses []string
-	for i := 0; i < 10; i++ {
-		response, err := k.WithNamespace("sample").Exec(podName, "sleep", "curl -sS helloworld.sample:5000/hello")
-		Expect(err).NotTo(HaveOccurred())
-		responses = append(responses, response)
-	}
-	return responses
 }

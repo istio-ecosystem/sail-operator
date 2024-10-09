@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
@@ -276,23 +275,8 @@ spec:
 					})
 
 					It("can access the sample app from both clusters", func(ctx SpecContext) {
-						sleepPodNamePrimary, err := common.GetPodNameByLabel(ctx, clPrimary, "sample", "app", "sleep")
-						Expect(sleepPodNamePrimary).NotTo(BeEmpty(), "Sleep pod not found on Primary Cluster")
-						Expect(err).NotTo(HaveOccurred(), "Error getting sleep pod name on Primary Cluster")
-
-						sleepPodNameRemote, err := common.GetPodNameByLabel(ctx, clRemote, "sample", "app", "sleep")
-						Expect(sleepPodNameRemote).NotTo(BeEmpty(), "Sleep pod not found on Remote Cluster")
-						Expect(err).NotTo(HaveOccurred(), "Error getting sleep pod name on Remote Cluster")
-
-						// Run the curl command from the sleep pod in the Remote Cluster and get response list to validate that we get responses from both clusters
-						remoteResponses := strings.Join(getListCurlResponses(k2, sleepPodNameRemote), "\n")
-						Expect(remoteResponses).To(ContainSubstring("Hello version: v1"), "Responses from Remote Cluster are not the expected")
-						Expect(remoteResponses).To(ContainSubstring("Hello version: v2"), "Responses from Remote Cluster are not the expected")
-
-						// Run the curl command from the sleep pod in the Primary Cluster and get response list to validate that we get responses from both clusters
-						primaryResponses := strings.Join(getListCurlResponses(k1, sleepPodNamePrimary), "\n")
-						Expect(primaryResponses).To(ContainSubstring("Hello version: v1"), "Responses from Primary Cluster are not the expected")
-						Expect(primaryResponses).To(ContainSubstring("Hello version: v2"), "Responses from Primary Cluster are not the expected")
+						verifyResponsesAreReceivedFromBothClusters(k1, "Cluster #1")
+						verifyResponsesAreReceivedFromBothClusters(k2, "Cluster #2")
 						Success("Sample app is accessible from both clusters")
 					})
 				})
