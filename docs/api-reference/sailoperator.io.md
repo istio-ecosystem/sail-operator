@@ -2196,7 +2196,7 @@ _Appears in:_
 | `autoInject` _string_ | Controls the 'policy' in the sidecar injector. |  |  |
 | `clusterDomain` _string_ | Domain for the cluster, default: "cluster.local".  K8s allows this to be customized, see https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/ |  |  |
 | `componentLogLevel` _string_ | Per Component log level for proxy, applies to gateways and sidecars.  If a component level is not set, then the global "logLevel" will be used. If left empty, "misc:error" is used. |  |  |
-| `enableCoreDump` _boolean_ | Enables core dumps for newly injected sidecars.  If set, newly injected sidecars will have core dumps enabled. |  |  |
+| `enableCoreDump` _boolean_ | Enables core dumps for newly injected sidecars.  If set, newly injected sidecars will have core dumps enabled.  Deprecated: Marked as deprecated in pkg/apis/values_types.proto. |  |  |
 | `excludeInboundPorts` _string_ | Specifies the Istio ingress ports not to capture. |  |  |
 | `excludeIPRanges` _string_ | Lists the excluded IP ranges of Istio egress traffic that the sidecar captures. |  |  |
 | `image` _string_ | Image name or path for the proxy, default: "proxyv2".  If registry or tag are not specified, global.hub and global.tag are used.  Examples: my-proxy (uses global.hub/tag), docker.io/myrepo/my-proxy:v1.0.0 |  |  |
@@ -2330,7 +2330,7 @@ _Appears in:_
 
 #### ProxyConfigProxyHeadersSetCurrentClientCertDetails
 
-_Underlying type:_ _[struct{Subject *bool "json:\"subject,omitempty\""; Cert bool "json:\"cert,omitempty\""; Chain bool "json:\"chain,omitempty\""; Dns *bool "json:\"dns,omitempty\""; Uri *bool "json:\"uri,omitempty\""}](#struct{subject-*bool-"json:\"subject,omitempty\"";-cert-bool-"json:\"cert,omitempty\"";-chain-bool-"json:\"chain,omitempty\"";-dns-*bool-"json:\"dns,omitempty\"";-uri-*bool-"json:\"uri,omitempty\""})_
+_Underlying type:_ _[struct{Subject *bool "json:\"subject,omitempty\""; Cert *bool "json:\"cert,omitempty\""; Chain *bool "json:\"chain,omitempty\""; Dns *bool "json:\"dns,omitempty\""; Uri *bool "json:\"uri,omitempty\""}](#struct{subject-*bool-"json:\"subject,omitempty\"";-cert-*bool-"json:\"cert,omitempty\"";-chain-*bool-"json:\"chain,omitempty\"";-dns-*bool-"json:\"dns,omitempty\"";-uri-*bool-"json:\"uri,omitempty\""})_
 
 
 

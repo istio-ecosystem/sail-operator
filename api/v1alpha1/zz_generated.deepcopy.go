@@ -2939,6 +2939,16 @@ func (in *ProxyConfigProxyHeadersSetCurrentClientCertDetails) DeepCopyInto(out *
 		*out = new(bool)
 		**out = **in
 	}
+	if in.Cert != nil {
+		in, out := &in.Cert, &out.Cert
+		*out = new(bool)
+		**out = **in
+	}
+	if in.Chain != nil {
+		in, out := &in.Chain, &out.Chain
+		*out = new(bool)
+		**out = **in
+	}
 	if in.Dns != nil {
 		in, out := &in.Dns, &out.Dns
 		*out = new(bool)

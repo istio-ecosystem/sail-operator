@@ -685,6 +685,8 @@ type ProxyConfig struct {
 	// Enables core dumps for newly injected sidecars.
 	//
 	// If set, newly injected sidecars will have core dumps enabled.
+	//
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	EnableCoreDump *bool `json:"enableCoreDump,omitempty"`
 	// Specifies the Istio ingress ports not to capture.
 	ExcludeInboundPorts string `json:"excludeInboundPorts,omitempty"`
@@ -3228,12 +3230,12 @@ type ProxyConfigProxyHeadersSetCurrentClientCertDetails struct {
 	// Whether to forward the entire client cert in URL encoded PEM format. This will appear in the
 	// XFCC header comma separated from other values with the value Cert="PEM".
 	// Defaults to false.
-	Cert bool `json:"cert,omitempty"`
+	Cert *bool `json:"cert,omitempty"`
 	// Whether to forward the entire client cert chain (including the leaf cert) in URL encoded PEM
 	// format. This will appear in the XFCC header comma separated from other values with the value
 	// Chain="PEM".
 	// Defaults to false.
-	Chain bool `json:"chain,omitempty"`
+	Chain *bool `json:"chain,omitempty"`
 	// Whether to forward the DNS type Subject Alternative Names of the client cert.
 	// Defaults to true.
 	Dns *bool `json:"dns,omitempty"`
