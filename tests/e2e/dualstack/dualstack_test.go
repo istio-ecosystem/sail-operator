@@ -244,10 +244,8 @@ spec:
 
 					AfterAll(func(ctx SpecContext) {
 						By("Deleting the pods")
-						Expect(k.DeleteNamespace(DualStackNamespace)).To(Succeed(), fmt.Sprintf("Failed to delete the %q namespace", DualStackNamespace))
-						Expect(k.DeleteNamespace(IPv4Namespace)).To(Succeed(), fmt.Sprintf("Failed to delete the %q namespace", IPv4Namespace))
-						Expect(k.DeleteNamespace(IPv6Namespace)).To(Succeed(), fmt.Sprintf("Failed to delete the %q namespace", IPv6Namespace))
-						Expect(k.DeleteNamespace(SleepNamespace)).To(Succeed(), fmt.Sprintf("Failed to delete the %q namespace", SleepNamespace))
+						Expect(k.DeleteNamespace(DualStackNamespace, IPv4Namespace, IPv6Namespace, SleepNamespace)).
+							To(Succeed(), "Failed to delete namespaces")
 						Success("DualStack validation pods deleted")
 					})
 				})
