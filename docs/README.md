@@ -1263,46 +1263,45 @@ Note: If you installed the KinD cluster using the command above, install the [Sa
    ```
 
 3. Ensure that the tcp-echo service in the dual-stack namespace is configured with `ipFamilyPolicy` of RequireDualStack.
-```console
-kubectl get service tcp-echo -n dual-stack -o=jsonpath='{.spec.ipFamilyPolicy}'
-RequireDualStack
-```
+   ```console
+   kubectl get service tcp-echo -n dual-stack -o=jsonpath='{.spec.ipFamilyPolicy}'
+   RequireDualStack
+   ```
 
 4. Deploy the pods and services in their respective namespaces.
-```sh
-kubectl apply -n dual-stack -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/tcp-echo/tcp-echo-dual-stack.yaml
-kubectl apply -n ipv4 -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/tcp-echo/tcp-echo-ipv4.yaml
-kubectl apply -n ipv6 -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/tcp-echo/tcp-echo-ipv6.yaml
-kubectl apply -n sleep -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/sleep/sleep.yaml
-kubectl wait --for=condition=Ready pod -n sleep -l app=sleep --timeout=60s
-```
+   ```sh
+   kubectl apply -n dual-stack -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/tcp-echo/tcp-echo-dual-stack.yaml
+   kubectl apply -n ipv4 -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/tcp-echo/tcp-echo-ipv4.yaml
+   kubectl apply -n ipv6 -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/tcp-echo/tcp-echo-ipv6.yaml
+   kubectl apply -n sleep -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/sleep/sleep.yaml
+   kubectl wait --for=condition=Ready pod -n sleep -l app=sleep --timeout=60s
+   ```
 
 5. Verify that sleep pod is able to reach the dual-stack pods.
-```console
-kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo dualstack | nc tcp-echo.dual-stack 9000"
-hello dualstack
-```
+   ```console
+   kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo dualstack | nc tcp-echo.dual-stack 9000"
+   hello dualstack
+   ```
 
 6. Similarly verify that sleep pod is able to reach both ipv4 pods as well as ipv6 pods.
-```console
-kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo ipv4 | nc tcp-echo.ipv4 9000"
-hello ipv4
-```
+   ```console
+   kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo ipv4 | nc tcp-echo.ipv4 9000"
+   hello ipv4
+   ```
 
-```console
-kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo ipv6 | nc tcp-echo.ipv6 9000"
-hello ipv6
-```
+   ```console
+   kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo ipv6 | nc tcp-echo.ipv6 9000"
+   hello ipv6
+   ```
 
 7. Cleanup
-
-```sh
-kubectl delete istios default
-kubectl delete ns istio-system
-kubectl delete istiocni default
-kubectl delete ns istio-cni
-kubectl delete ns dual-stack ipv4 ipv6 sleep
-```
+   ```sh
+   kubectl delete istios default
+   kubectl delete ns istio-system
+   kubectl delete istiocni default
+   kubectl delete ns istio-cni
+   kubectl delete ns dual-stack ipv4 ipv6 sleep
+   ```
 
 ## Addons
 
