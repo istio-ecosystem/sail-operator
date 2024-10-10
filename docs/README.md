@@ -1150,6 +1150,156 @@ In this setup there is an external control plane cluster (`cluster1`) and a remo
     kubectl delete ns sample --context="${CTX_CLUSTER2}"
     ```
 
+## Dual-stack Support
+
+Kubernetes supports dual-stack networking as a stable feature starting from
+[v1.23](https://kubernetes.io/docs/concepts/services-networking/dual-stack/), allowing clusters to handle both
+IPv4 and IPv6 traffic. With many cloud providers also beginning to offer dual-stack Kubernetes clusters, it's easier
+than ever to run services that function across both address types. Istio introduced dual-stack as an experimental
+feature in version 1.17, and it's expected to be promoted to [Alpha](https://github.com/istio/istio/issues/47998) in
+version 1.24. With Istio in dual-stack mode, services can communicate over both IPv4 and IPv6 endpoints, which helps
+organizations transition to IPv6 while still maintaining compatibility with their existing IPv4 infrastructure.
+
+When Kubernetes is configured for dual-stack, it automatically assigns an IPv4 and an IPv6 address to each pod,
+enabling them to communicate over both IP families. For services, however, you can control how they behave using
+the `ipFamilyPolicy` setting.
+
+Service.Spec.ipFamilyPolicy can take the following values
+- SingleStack: Only one IP family is configured for the service, which can be either IPv4 or IPv6.
+- PreferDualStack: Both IPv4 and IPv6 cluster IPs are assigned to the Service when dual-stack is enabled.
+                   However, if dual-stack is not enabled or supported, it falls back to singleStack behavior.
+- RequireDualStack: The service will be created only if both IPv4 and IPv6 addresses can be assigned.
+
+This allows you to specify the type of service, providing flexibility in managing your network configuration.
+For more details, you can refer to the Kubernetes [documentation](https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services).
+
+### Prerequisites
+
+- Kubernetes 1.23 or later configured with dual-stack support.
+- Sail Operator is installed.
+- Kind cluster with dual-stack networking.
+
+### Installation Steps
+
+You can use any existing Kind cluster that supports dual-stack networking or, alternatively, install one using the following command.
+
+```sh
+kind create cluster --name istio-ds --config - <<EOF
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+networking:
+ ipFamily: dual
+EOF
+```
+
+Note: If you installed the KinD cluster using the command above, install the [Sail Operator](#getting-started).
+
+1. Create the `Istio` resource with dual-stack configuration.
+
+   ```sh
+   kubectl get ns istio-system || kubectl create namespace istio-system
+   kubectl apply -f - <<EOF
+   apiVersion: sailoperator.io/v1alpha1
+   kind: Istio
+   metadata:
+     name: default
+   spec:
+     values:
+       meshConfig:
+         defaultConfig:
+           proxyMetadata:
+             ISTIO_DUAL_STACK: "true"
+       pilot:
+         ipFamilyPolicy: RequireDualStack
+         env:
+           ISTIO_DUAL_STACK: "true"
+     version: v1.23.2
+     namespace: istio-system
+   EOF
+   kubectl wait --for=jsonpath='{.status.revisions.ready}'=1 istios/default --timeout=3m
+   ```
+
+2. If running on OpenShift platform, create the IstioCNI resource as well.
+
+   ```sh
+   kubectl get ns istio-cni || kubectl create namespace istio-cni
+   kubectl apply -f - <<EOF
+   apiVersion: sailoperator.io/v1alpha1
+   kind: IstioCNI
+   metadata:
+     name: default
+   spec:
+     version: v1.23.2
+     namespace: istio-cni
+   EOF
+   kubectl wait --for=condition=Ready pod -n istio-cni -l k8s-app=istio-cni-node --timeout=60s
+   ```
+
+### Validation
+
+1. Create the namespaces with the following configuration.
+
+   - dual-stack: which includes a tcp-echo service that listens on both IPv4 and IPv6 address.
+   - ipv4: which includes a tcp-echo service listening only on IPv4 address.
+   - ipv6: which includes a tcp-echo service listening only on IPv6 address.
+
+   ```sh
+   kubectl get ns dual-stack || kubectl create namespace dual-stack
+   kubectl get ns ipv4 || kubectl create namespace ipv4
+   kubectl get ns ipv6 ||  kubectl create namespace ipv6
+   kubectl get ns sleep || kubectl create namespace sleep
+   ```
+
+2. Label the namespaces for sidecar injection.
+   ```sh
+   kubectl label --overwrite namespace dual-stack istio-injection=enabled
+   kubectl label --overwrite namespace ipv4 istio-injection=enabled
+   kubectl label --overwrite namespace ipv6 istio-injection=enabled
+   kubectl label --overwrite namespace sleep istio-injection=enabled
+   ```
+
+3. Ensure that the tcp-echo service in the dual-stack namespace is configured with ipFamilyPolicy of RequireDualStack.
+```command
+kubectl get service tcp-echo -n dual-stack -o=jsonpath='{.spec.ipFamilyPolicy}'
+RequireDualStack
+```
+
+4. Deploy the sample pods/services in their respective namespaces.
+```sh
+kubectl apply -n dual-stack -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/tcp-echo/tcp-echo-dual-stack.yaml
+kubectl apply -n ipv4 -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/tcp-echo/tcp-echo-ipv4.yaml
+kubectl apply -n ipv6 -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/tcp-echo/tcp-echo-ipv6.yaml
+kubectl apply -n sleep -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/sleep/sleep.yaml
+kubectl wait --for=condition=Ready pod -n sleep -l app=sleep --timeout=60s
+```
+
+5. Verify that sleep pod is able to reach the dual-stack pods.
+```console
+kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo dualstack | nc tcp-echo.dual-stack 9000"
+hello dualstack
+```
+
+6. Similarly verify that sleep pod is able to reach both ipv4 pods as well as ipv6 pods.
+```console
+kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo ipv4 | nc tcp-echo.ipv4 9000"
+hello ipv4
+```
+
+```console
+kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo ipv6 | nc tcp-echo.ipv6 9000"
+hello ipv6
+```
+
+7. Cleanup
+
+```sh
+kubectl delete istios default
+kubectl delete ns istio-system
+kubectl delete istiocni default
+kubectl delete ns istio-cni
+kubectl delete ns dual-stack ipv4 ipv6 sleep
+```
+
 ## Addons
 
 Addons are managed separately from the Sail Operator. You can follow the [istio documentation](https://istio.io/latest/docs/ops/integrations/) for how to install addons. Below is an example of how to install some addons for Istio.
