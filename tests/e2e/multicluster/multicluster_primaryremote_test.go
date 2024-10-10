@@ -53,13 +53,13 @@ var _ = Describe("Multicluster deployment models", Ordered, func() {
 			Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, "--kubeconfig "+kubeconfig)).
 				To(Succeed(), "Operator failed to be deployed in Primary Cluster")
 
+			Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, "--kubeconfig "+kubeconfig2)).
+				To(Succeed(), "Operator failed to be deployed in Remote Cluster")
+
 			Eventually(common.GetObject).
 				WithArguments(ctx, clPrimary, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
 				Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
 			Success("Operator is deployed in the Primary namespace and Running")
-
-			Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, "--kubeconfig "+kubeconfig2)).
-				To(Succeed(), "Operator failed to be deployed in Remote Cluster")
 
 			Eventually(common.GetObject).
 				WithArguments(ctx, clRemote, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
@@ -296,20 +296,18 @@ spec:
 				})
 
 				AfterAll(func(ctx SpecContext) {
-					// Delete namespace to ensure clean up for new tests iteration
-					Expect(k1.DeleteNamespace(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
-					Expect(k2.DeleteNamespace(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
+					// Delete namespaces to ensure clean up for new tests iteration
+					Expect(k1.DeleteNamespaceNoWait(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
+					Expect(k2.DeleteNamespaceNoWait(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
+					Expect(k1.DeleteNamespaceNoWait("sample")).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
+					Expect(k2.DeleteNamespaceNoWait("sample")).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
 
-					common.CheckNamespaceEmpty(ctx, clPrimary, controlPlaneNamespace)
-					common.CheckNamespaceEmpty(ctx, clRemote, controlPlaneNamespace)
-					Success("ControlPlane Namespaces are empty")
+					Expect(k1.WaitNamespaceDeleted(controlPlaneNamespace)).To(Succeed())
+					Expect(k2.WaitNamespaceDeleted(controlPlaneNamespace)).To(Succeed())
+					Success("ControlPlane Namespaces were deleted")
 
-					// Delete the entire sample namespace in both clusters
-					Expect(k1.DeleteNamespace("sample")).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
-					Expect(k2.DeleteNamespace("sample")).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
-
-					common.CheckNamespaceEmpty(ctx, clPrimary, "sample")
-					common.CheckNamespaceEmpty(ctx, clRemote, "sample")
+					Expect(k1.WaitNamespaceDeleted("sample")).To(Succeed())
+					Expect(k2.WaitNamespaceDeleted("sample")).To(Succeed())
 					Success("Sample app is deleted in both clusters")
 				})
 			})
@@ -318,11 +316,9 @@ spec:
 
 	AfterAll(func(ctx SpecContext) {
 		// Delete the Sail Operator from both clusters
-		Expect(k1.DeleteNamespace(namespace)).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
-		Expect(k2.DeleteNamespace(namespace)).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
-
-		// Check that the namespace is empty
-		common.CheckNamespaceEmpty(ctx, clPrimary, namespace)
-		common.CheckNamespaceEmpty(ctx, clRemote, namespace)
+		Expect(k1.DeleteNamespaceNoWait(namespace)).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
+		Expect(k2.DeleteNamespaceNoWait(namespace)).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
+		Expect(k1.WaitNamespaceDeleted(namespace)).To(Succeed())
+		Expect(k2.WaitNamespaceDeleted(namespace)).To(Succeed())
 	})
 })
