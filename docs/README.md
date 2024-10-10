@@ -1196,7 +1196,7 @@ networking:
 EOF
 ```
 
-Note: If you installed the KinD cluster using the command above, install the [Sail Operator](#getting-started).
+Note: If you installed the KinD cluster using the command above, install the [Sail Operator](#getting-started) before proceeding with the next steps.
 
 1. Create the `Istio` resource with dual-stack configuration.
 
@@ -1241,7 +1241,7 @@ Note: If you installed the KinD cluster using the command above, install the [Sa
 
 ### Validation
 
-1. Create the namespaces with the following configuration.
+1. Create the following namespaces, each hosting the tcp-echo service with the specified configuration.
 
    - dual-stack: which includes a tcp-echo service that listens on both IPv4 and IPv6 address.
    - ipv4: which includes a tcp-echo service listening only on IPv4 address.
@@ -1262,13 +1262,13 @@ Note: If you installed the KinD cluster using the command above, install the [Sa
    kubectl label --overwrite namespace sleep istio-injection=enabled
    ```
 
-3. Ensure that the tcp-echo service in the dual-stack namespace is configured with ipFamilyPolicy of RequireDualStack.
-```command
+3. Ensure that the tcp-echo service in the dual-stack namespace is configured with `ipFamilyPolicy` of RequireDualStack.
+```console
 kubectl get service tcp-echo -n dual-stack -o=jsonpath='{.spec.ipFamilyPolicy}'
 RequireDualStack
 ```
 
-4. Deploy the sample pods/services in their respective namespaces.
+4. Deploy the pods and services in their respective namespaces.
 ```sh
 kubectl apply -n dual-stack -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/tcp-echo/tcp-echo-dual-stack.yaml
 kubectl apply -n ipv4 -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/tcp-echo/tcp-echo-ipv4.yaml
