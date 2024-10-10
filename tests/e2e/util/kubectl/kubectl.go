@@ -124,17 +124,17 @@ func (k Kubectl) DeleteCRDs(crds []string) error {
 }
 
 // DeleteNamespaceNoWait deletes a namespace and returns immediately (without waiting for the namespace to be removed).
-func (k Kubectl) DeleteNamespaceNoWait(ns string) error {
-	return k.deleteNamespace(ns, false)
+func (k Kubectl) DeleteNamespaceNoWait(namespaces ...string) error {
+	return k.deleteNamespace(namespaces, false)
 }
 
 // DeleteNamespace deletes a namespace and waits for it to be removed completely.
-func (k Kubectl) DeleteNamespace(ns string) error {
-	return k.deleteNamespace(ns, true)
+func (k Kubectl) DeleteNamespace(namespaces ...string) error {
+	return k.deleteNamespace(namespaces, true)
 }
 
-func (k Kubectl) deleteNamespace(ns string, wait bool) error {
-	cmd := k.build(" delete namespace " + ns + " --wait=" + strconv.FormatBool(wait))
+func (k Kubectl) deleteNamespace(namespaces []string, wait bool) error {
+	cmd := k.build(" delete namespace " + strings.Join(namespaces, " ") + " --wait=" + strconv.FormatBool(wait))
 	_, err := k.executeCommand(cmd)
 	if err != nil {
 		return fmt.Errorf("error deleting namespace: %w", err)
