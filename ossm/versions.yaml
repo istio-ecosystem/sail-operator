@@ -1,0 +1,24 @@
+# This file defines all the Istio versions supported by this operator.
+
+# The list of versions to support. Each item specifies the name of the version,
+# the Git repository and commit hash for retrieving the profiles, and
+# a list of URLs for retrieving the charts.
+# The first item in the list is the default version.
+#
+# IMPORTANT: in addition to the versions specified here, the versions of the
+# istio.io/istio and istio.io/api dependencies defined in go.mod must also be
+# updated to match the most recent version specified here. The versions in
+# go.mod affect the generated API schema for the Sail CRDs (e.g. IstioRevision),
+# as well as all the Istio CRDs (e.g. VirtualService).
+versions:
+  - name: v1.23.0
+    version: 1.23.0
+    repo: https://github.com/istio/istio
+    commit: 1.23.0
+    charts:
+      - https://istio-release.storage.googleapis.com/charts/base-1.23.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-1.23.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-remote-1.23.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/gateway-1.23.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/cni-1.23.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.23.0.tgz
