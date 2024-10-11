@@ -45,7 +45,7 @@ func TestInstall(t *testing.T) {
 	}
 	RegisterFailHandler(Fail)
 	setup()
-	RunSpecs(t, "Install Operator Suite")
+	RunSpecs(t, "Operator Installation Test Suite")
 }
 
 func setup() {

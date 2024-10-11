@@ -52,7 +52,7 @@ func TestInstall(t *testing.T) {
 	}
 	RegisterFailHandler(Fail)
 	setup()
-	RunSpecs(t, "Control Plane Suite")
+	RunSpecs(t, "Control Plane Test Suite")
 }
 
 func setup() {

@@ -67,7 +67,7 @@ func TestInstall(t *testing.T) {
 	}
 	RegisterFailHandler(Fail)
 	setup(t)
-	RunSpecs(t, "Control Plane Suite")
+	RunSpecs(t, "Multi-Cluster Test Suite")
 }
 
 func setup(t *testing.T) {

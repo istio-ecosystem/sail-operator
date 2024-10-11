@@ -53,7 +53,7 @@ func TestDualStack(t *testing.T) {
 
 	RegisterFailHandler(Fail)
 	setup()
-	RunSpecs(t, "DualStack test suite")
+	RunSpecs(t, "DualStack Test Suite")
 }
 
 func setup() {
