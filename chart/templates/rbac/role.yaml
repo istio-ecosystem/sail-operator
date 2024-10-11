@@ -85,6 +85,32 @@ rules:
 - apiGroups:
   - sailoperator.io
   resources:
+  - istiorevisiontags
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - sailoperator.io
+  resources:
+  - istiorevisiontags/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - sailoperator.io
+  resources:
+  - istiorevisiontags/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - sailoperator.io
+  resources:
   - istiocnis
   verbs:
   - create
