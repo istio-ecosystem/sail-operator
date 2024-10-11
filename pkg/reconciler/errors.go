@@ -32,3 +32,21 @@ func IsValidationError(err error) bool {
 	e := &ValidationError{}
 	return errors.As(err, &e)
 }
+
+// TransitoryError is an error returned by a Reconciler that will usually resolve itself when retrying, e.g. some resource not yet reconciled
+type TransitoryError struct {
+	message string
+}
+
+func (v TransitoryError) Error() string {
+	return "transitory error: " + v.message
+}
+
+func NewTransitoryError(message string) error {
+	return &TransitoryError{message: message}
+}
+
+func IsTransitoryError(err error) bool {
+	e := &TransitoryError{}
+	return errors.As(err, &e)
+}

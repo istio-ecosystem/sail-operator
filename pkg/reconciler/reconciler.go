@@ -99,6 +99,12 @@ func (r *StandardReconciler[T]) Reconcile(ctx context.Context, req ctrl.Request)
 	case errors.IsConflict(err):
 		log.Info("Conflict detected. Retrying...")
 		return ctrl.Result{Requeue: true}, nil
+	case errors.IsNotFound(err):
+		log.Info("Resource not found. Retrying...", "error", err)
+		return ctrl.Result{Requeue: true}, nil
+	case IsTransitoryError(err):
+		log.Info("Reconciliation failed. Retrying...", "error", err)
+		return ctrl.Result{Requeue: true}, nil
 	case IsValidationError(err):
 		log.Info("Validation failed", "error", err)
 		return ctrl.Result{}, nil

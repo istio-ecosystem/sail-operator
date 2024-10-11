@@ -28,6 +28,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"istio.io/istio/pkg/ptr"
@@ -422,22 +423,22 @@ var _ = Describe("Istio resource", Ordered, func() {
 					})
 
 					When("strategy is changed to InPlace", func() {
+						var oldRevisionKey types.NamespacedName
 						BeforeAll(func() {
+							oldRevisionKey = getRevisionKey(istio, supportedversion.New)
 							Expect(k8sClient.Get(ctx, istioKey, istio)).To(Succeed())
 							istio.Spec.UpdateStrategy.Type = v1alpha1.UpdateStrategyTypeInPlace
 							Expect(k8sClient.Update(ctx, istio)).To(Succeed())
 						})
 
 						It("creates an IstioRevision with no version in the name", func() {
-							revKey := client.ObjectKey{Name: istio.Name}
-							Eventually(k8sClient.Get).WithArguments(ctx, revKey, rev).Should(Succeed())
+							Eventually(k8sClient.Get).WithArguments(ctx, oldRevisionKey, rev).Should(Succeed())
 							Expect(rev.Spec.Version).To(Equal(istio.Spec.Version))
 						})
 
 						if withWorkloads {
 							It("doesn't delete the previous IstioRevision while workloads reference it", func() {
-								revKey := getRevisionKey(istio, supportedversion.New)
-								Consistently(k8sClient.Get).WithArguments(ctx, revKey, rev).Should(Succeed())
+								Consistently(k8sClient.Get).WithArguments(ctx, oldRevisionKey, rev).Should(Succeed())
 							})
 
 							When("workloads are moved to the IstioRevision with no version in the name", func() {
@@ -448,23 +449,20 @@ var _ = Describe("Istio resource", Ordered, func() {
 
 								It("doesn't immediately delete the previous IstioRevision", func() {
 									marginOfError := 2 * time.Second
-									revKey := getRevisionKey(istio, supportedversion.New)
-									Consistently(k8sClient.Get, gracePeriod-marginOfError).WithArguments(ctx, revKey, rev).Should(Succeed())
+									Consistently(k8sClient.Get, gracePeriod-marginOfError).WithArguments(ctx, oldRevisionKey, rev).Should(Succeed())
 								})
 
 								When("grace period expires", func() {
 									It("deletes the previous IstioRevision", func() {
-										revKey := getRevisionKey(istio, supportedversion.New)
-										Eventually(k8sClient.Get).WithArguments(ctx, revKey, rev).Should(ReturnNotFoundError())
+										Eventually(k8sClient.Get).WithArguments(ctx, oldRevisionKey, rev).Should(ReturnNotFoundError())
 									})
 								})
 							})
 						} else {
 							When("grace period expires", func() {
 								It("deletes the previous IstioRevision", func() {
-									revKey := getRevisionKey(istio, supportedversion.New)
 									marginOfError := 30 * time.Second
-									Eventually(k8sClient.Get, gracePeriod+marginOfError).WithArguments(ctx, revKey, rev).Should(ReturnNotFoundError())
+									Eventually(k8sClient.Get, gracePeriod+marginOfError).WithArguments(ctx, oldRevisionKey, rev).Should(ReturnNotFoundError())
 								})
 							})
 						}
@@ -506,6 +504,9 @@ func getRevisionKey(istio *v1alpha1.Istio, version string) client.ObjectKey {
 func getRevisionName(istio *v1alpha1.Istio, version string) string {
 	if istio.Name == "" {
 		panic("istio.Name is empty")
+	}
+	if istio.Spec.UpdateStrategy.Type == v1alpha1.UpdateStrategyTypeInPlace {
+		return istio.Name
 	}
 	return istio.Name + "-" + strings.ReplaceAll(version, ".", "-")
 }

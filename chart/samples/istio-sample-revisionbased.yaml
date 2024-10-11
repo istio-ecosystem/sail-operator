@@ -1,0 +1,18 @@
+apiVersion: sailoperator.io/v1alpha1
+kind: Istio
+metadata:
+  name: default
+spec:
+  version: v1.23.2
+  namespace: istio-system
+  updateStrategy:
+    type: RevisionBased
+---
+apiVersion: sailoperator.io/v1alpha1
+kind: IstioRevisionTag
+metadata:
+  name: default
+spec:
+  targetRef:
+    kind: Istio
+    name: default

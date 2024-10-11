@@ -932,9 +932,7 @@ type Values struct {
 	//
 	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	IstiodRemote *IstiodRemoteConfig `json:"istiodRemote,omitempty"`
-	// Specifies the aliases for the Istio control plane revision. A MutatingWebhookConfiguration
-	// is created for each alias.
-	RevisionTags []string `json:"revisionTags,omitempty"`
+
 	// The name of the default revision in the cluster.
 	DefaultRevision *string `json:"defaultRevision,omitempty"`
 	// Specifies which installation configuration profile to apply.
