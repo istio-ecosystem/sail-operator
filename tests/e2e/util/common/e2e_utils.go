@@ -19,23 +19,32 @@ package common
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
-	env "github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
+	"github.com/Masterminds/semver/v3"
+	"github.com/istio-ecosystem/sail-operator/pkg/kube"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
+	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"istio.io/istio/pkg/ptr"
 )
 
 var (
-	namespace             = env.Get("NAMESPACE", "sail-operator")
+	OperatorImage     = env.Get("IMAGE", "quay.io/maistra-dev/sail-operator:latest")
+	OperatorNamespace = env.Get("NAMESPACE", "sail-operator")
+
 	deploymentName        = env.Get("DEPLOYMENT_NAME", "sail-operator")
 	controlPlaneNamespace = env.Get("CONTROL_PLANE_NS", "istio-system")
 	istioName             = env.Get("ISTIO_NAME", "default")
@@ -45,19 +54,19 @@ var (
 	// version can have one of the following formats:
 	// - 1.22.2
 	// - 1.23.0-rc.1
-	// - 1.24-alpha
-	istiodVersionRegex = regexp.MustCompile(`Version:"(\d+\.\d+(\.\d+)?(-\w+(\.\d+)?)?)`)
+	// - 1.24-alpha.feabc1234
+	istiodVersionRegex = regexp.MustCompile(`Version:"([^"]*)"`)
 
-	k = kubectl.NewKubectlBuilder()
+	k = kubectl.New()
 )
 
-// getObject returns the object with the given key
+// GetObject returns the object with the given key
 func GetObject(ctx context.Context, cl client.Client, key client.ObjectKey, obj client.Object) (client.Object, error) {
 	err := cl.Get(ctx, key, obj)
 	return obj, err
 }
 
-// getList invokes client.List and returns the list
+// GetList invokes client.List and returns the list
 func GetList(ctx context.Context, cl client.Client, list client.ObjectList, opts ...client.ListOption) (client.ObjectList, error) {
 	err := cl.List(ctx, list, opts...)
 	return list, err
@@ -76,7 +85,7 @@ func GetPodNameByLabel(ctx context.Context, cl client.Client, ns, labelKey, labe
 	return podList.Items[0].Name, nil
 }
 
-// GetSVCAddress returns the address of the service with the given name
+// GetSVCLoadBalancerAddress returns the address of the service with the given name
 func GetSVCLoadBalancerAddress(ctx context.Context, cl client.Client, ns, svcName string) (string, error) {
 	svc := &corev1.Service{}
 	err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: svcName}, svc)
@@ -93,7 +102,7 @@ func GetSVCLoadBalancerAddress(ctx context.Context, cl client.Client, ns, svcNam
 	return svc.Status.LoadBalancer.Ingress[0].IP, nil
 }
 
-// checkNamespaceEmpty checks if the given namespace is empty
+// CheckNamespaceEmpty checks if the given namespace is empty
 func CheckNamespaceEmpty(ctx SpecContext, cl client.Client, ns string) {
 	// TODO: Check to add more validations
 	Eventually(func() ([]corev1.Pod, error) {
@@ -137,21 +146,21 @@ func LogDebugInfo() {
 }
 
 func logOperatorDebugInfo() {
-	operator, err := k.SetNamespace(namespace).GetYAML("deployment", deploymentName)
+	k := k.WithNamespace(OperatorNamespace)
+	operator, err := k.GetYAML("deployment", deploymentName)
 	logDebugElement("Operator Deployment YAML", operator, err)
 
-	logs, err := k.SetNamespace(namespace).Logs("deploy/"+deploymentName, ptr.Of(120*time.Second))
-	k.ResetNamespace()
+	logs, err := k.Logs("deploy/"+deploymentName, ptr.Of(120*time.Second))
 	logDebugElement("Operator logs", logs, err)
 
-	events, err := k.SetNamespace(namespace).GetEvents()
-	logDebugElement("Events in "+namespace, events, err)
+	events, err := k.GetEvents()
+	logDebugElement("Events in "+OperatorNamespace, events, err)
 
-	// Temporaty information to gather more details about failure
-	pods, err := k.SetNamespace(namespace).GetPods("", "-o wide")
-	logDebugElement("Pods in "+namespace, pods, err)
+	// Temporary information to gather more details about failure
+	pods, err := k.GetPods("", "-o wide")
+	logDebugElement("Pods in "+OperatorNamespace, pods, err)
 
-	describe, err := k.SetNamespace(namespace).Describe("deployment", deploymentName)
+	describe, err := k.Describe("deployment", deploymentName)
 	logDebugElement("Operator Deployment describe", describe, err)
 }
 
@@ -159,14 +168,13 @@ func logIstioDebugInfo() {
 	resource, err := k.GetYAML("istio", istioName)
 	logDebugElement("Istio YAML", resource, err)
 
-	output, err := k.SetNamespace(controlPlaneNamespace).GetPods("", "-o wide")
+	output, err := k.WithNamespace(controlPlaneNamespace).GetPods("", "-o wide")
 	logDebugElement("Pods in "+controlPlaneNamespace, output, err)
 
-	logs, err := k.SetNamespace(controlPlaneNamespace).Logs("deploy/istiod", ptr.Of(120*time.Second))
-	k.ResetNamespace()
+	logs, err := k.WithNamespace(controlPlaneNamespace).Logs("deploy/istiod", ptr.Of(120*time.Second))
 	logDebugElement("Istiod logs", logs, err)
 
-	events, err := k.SetNamespace(controlPlaneNamespace).GetEvents()
+	events, err := k.WithNamespace(controlPlaneNamespace).GetEvents()
 	logDebugElement("Events in "+controlPlaneNamespace, events, err)
 }
 
@@ -174,18 +182,21 @@ func logCNIDebugInfo() {
 	resource, err := k.GetYAML("istiocni", istioCniName)
 	logDebugElement("IstioCNI YAML", resource, err)
 
-	ds, err := k.SetNamespace(istioCniNamespace).GetYAML("daemonset", "istio-cni-node")
+	ds, err := k.WithNamespace(istioCniNamespace).GetYAML("daemonset", "istio-cni-node")
 	logDebugElement("Istio CNI DaemonSet YAML", ds, err)
 
-	events, err := k.SetNamespace(istioCniNamespace).GetEvents()
+	events, err := k.WithNamespace(istioCniNamespace).GetEvents()
 	logDebugElement("Events in "+istioCniNamespace, events, err)
 
-	// Temporaty information to gather more details about failure
-	pods, err := k.SetNamespace(istioCniNamespace).GetPods("", "-o wide")
+	// Temporary information to gather more details about failure
+	pods, err := k.WithNamespace(istioCniNamespace).GetPods("", "-o wide")
 	logDebugElement("Pods in "+istioCniNamespace, pods, err)
 
-	describe, err := k.SetNamespace(istioCniNamespace).Describe("daemonset", "istio-cni-node")
+	describe, err := k.WithNamespace(istioCniNamespace).Describe("daemonset", "istio-cni-node")
 	logDebugElement("Istio CNI DaemonSet describe", describe, err)
+
+	logs, err := k.WithNamespace(istioCniNamespace).Logs("daemonset/istio-cni-node", ptr.Of(120*time.Second))
+	logDebugElement("Istio CNI logs", logs, err)
 }
 
 func logDebugElement(caption string, info string, err error) {
@@ -198,16 +209,49 @@ func logDebugElement(caption string, info string, err error) {
 	}
 }
 
-func GetVersionFromIstiod() (string, error) {
-	k := kubectl.NewKubectlBuilder()
-	output, err := k.SetNamespace(controlPlaneNamespace).Exec("deploy/istiod", "", "pilot-discovery version")
+func GetVersionFromIstiod() (*semver.Version, error) {
+	k := kubectl.New()
+	output, err := k.WithNamespace(controlPlaneNamespace).Exec("deploy/istiod", "", "pilot-discovery version")
 	if err != nil {
-		return "", fmt.Errorf("error getting version from istiod: %w", err)
+		return nil, fmt.Errorf("error getting version from istiod: %w", err)
 	}
 
 	matches := istiodVersionRegex.FindStringSubmatch(output)
 	if len(matches) > 1 && matches[1] != "" {
-		return matches[1], nil
+		return semver.NewVersion(matches[1])
 	}
-	return "", fmt.Errorf("error getting version from istiod: version not found in output: %s", output)
+	return nil, fmt.Errorf("error getting version from istiod: version not found in output: %s", output)
+}
+
+func CheckPodsReady(ctx SpecContext, cl client.Client, namespace string) (*corev1.PodList, error) {
+	podList := &corev1.PodList{}
+
+	err := cl.List(ctx, podList, client.InNamespace(namespace))
+	if err != nil {
+		return nil, fmt.Errorf("failed to list pods in %s namespace: %w", namespace, err)
+	}
+
+	Expect(podList.Items).ToNot(BeEmpty(), fmt.Sprintf("No pods found in %s namespace", namespace))
+
+	for _, pod := range podList.Items {
+		Eventually(GetObject).WithArguments(ctx, cl, kube.Key(pod.Name, namespace), &corev1.Pod{}).
+			Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), fmt.Sprintf("%q Pod in %q namespace is not Ready", pod.Name, namespace))
+	}
+
+	return podList, nil
+}
+
+func InstallOperatorViaHelm(extraArgs ...string) error {
+	args := []string{
+		"--namespace " + OperatorNamespace,
+		"--set image=" + OperatorImage,
+		"--set operatorLogLevel=3",
+	}
+	args = append(args, extraArgs...)
+
+	return helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), args...)
+}
+
+func UninstallOperator() error {
+	return helm.Uninstall("sail-operator", "--namespace", OperatorNamespace)
 }

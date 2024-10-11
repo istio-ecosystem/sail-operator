@@ -179,7 +179,7 @@ test.e2e.describe: ## Runs ginkgo outline -format indent over the e2e test to sh
 ##@ Build
 
 .PHONY: build
-build: build-$(TARGET_ARCH) ## Build manager binary.
+build: build-$(TARGET_ARCH) ## Build the sail-operator binary.
 
 .PHONY: run
 run: gen ## Run a controller from your host.
@@ -221,7 +221,7 @@ endif
 # BUILDX_BUILD_ARGS are the additional --build-arg flags passed to the docker buildx build command.
 BUILDX_BUILD_ARGS = --build-arg TARGETOS=$(TARGET_OS)
 
-# PLATFORMS defines the target platforms for  the manager image be build to provide support to multiple
+# PLATFORMS defines the target platforms for the sail-operator image be build to provide support to multiple
 # architectures. (i.e. make docker-buildx IMAGE=myregistry/mypoperator:0.0.1). To use this option you need to:
 # - able to use docker buildx . More info: https://docs.docker.com/build/buildx/
 # - have enable BuildKit, More info: https://docs.docker.com/develop/develop-images/build_enhancements/
@@ -233,8 +233,8 @@ PLATFORM_ARCHITECTURES = $(shell echo ${PLATFORMS} | sed -e 's/,/\ /g' -e 's/lin
 ifndef BUILDX
 define BUILDX
 .PHONY: build-$(1)
-build-$(1): ## Build manager binary for specific architecture.
-	GOARCH=$(1) LDFLAGS="$(LD_FLAGS)" common/scripts/gobuild.sh $(REPO_ROOT)/out/$(TARGET_OS)_$(1)/manager cmd/main.go
+build-$(1): ## Build sail-operator binary for specific architecture.
+	GOARCH=$(1) LDFLAGS="$(LD_FLAGS)" common/scripts/gobuild.sh $(REPO_ROOT)/out/$(TARGET_OS)_$(1)/sail-operator cmd/main.go
 
 .PHONY: build-all
 build-all: build-$(1)
@@ -253,6 +253,9 @@ docker-buildx: build-all ## Build and push docker image with cross-platform supp
 	docker buildx build $(BUILDX_OUTPUT) --platform=$(PLATFORMS) --tag ${IMAGE} $(BUILDX_ADDITIONAL_TAGS) $(BUILDX_BUILD_ARGS) -f Dockerfile.cross .
 	docker buildx rm project-v4-builder
 	rm Dockerfile.cross
+
+clean: ## Cleans all the intermediate files and folders previously generated.
+	rm -rf $(REPO_ROOT)/out
 
 ##@ Deployment
 
@@ -461,11 +464,11 @@ OPM ?= $(LOCALBIN)/opm
 ISTIOCTL ?= $(LOCALBIN)/istioctl
 
 ## Tool Versions
-OPERATOR_SDK_VERSION ?= v1.36.1
-HELM_VERSION ?= v3.15.3
-CONTROLLER_TOOLS_VERSION ?= v0.16.0
-OPM_VERSION ?= v1.45.0
-GITLEAKS_VERSION ?= v8.18.4
+OPERATOR_SDK_VERSION ?= v1.37.0
+HELM_VERSION ?= v3.16.2
+CONTROLLER_TOOLS_VERSION ?= v0.16.4
+OPM_VERSION ?= v1.47.0
+GITLEAKS_VERSION ?= v8.20.1
 ISTIOCTL_VERSION ?= 1.23.0
 
 # GENERATE_RELATED_IMAGES defines whether `spec.relatedImages` is going to be generated or not
@@ -591,6 +594,13 @@ bundle-nightly: bundle
 bundle-publish-nightly: OPERATOR_VERSION=$(VERSION)-nightly-$(TODAY)  ## Publish nightly bundle.
 bundle-publish-nightly: TAG=$(MINOR_VERSION)-nightly-$(TODAY)
 bundle-publish-nightly: bundle-nightly bundle-publish
+
+.PHONY: helm-artifacts-publish
+helm-artifacts-publish: helm ## Publish Helm artifacts to be available for "Helm repo add"
+	@export GIT_USER=$(GITHUB_USER); \
+	export GITHUB_TOKEN=$(GITHUB_TOKEN); \
+	export OPERATOR_VERSION=${OPERATOR_VERSION}; \
+	./hack/helm-artifacts.sh
 
 .PHONY: opm $(OPM)
 opm: $(OPM)

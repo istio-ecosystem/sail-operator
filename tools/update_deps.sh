@@ -31,6 +31,10 @@ function getLatestVersion() {
 # Update common files
 make update-common
 
+# update build container used in github actions
+NEW_IMAGE_MASTER=$(grep IMAGE_VERSION= < common/scripts/setup_env.sh | cut -d= -f2)
+sed -i -e "s|\(gcr.io/istio-testing/build-tools\):master.*|\1:$NEW_IMAGE_MASTER|" .github/workflows/update-deps.yaml
+
 # Update go dependencies
 export GO111MODULE=on
 go get -u "istio.io/istio@${UPDATE_BRANCH}"
@@ -58,7 +62,7 @@ sed -i "s|OPM_VERSION ?= .*|OPM_VERSION ?= ${OPM_LATEST_VERSION}|" "${ROOTDIR}/M
 RBAC_PROXY_LATEST_VERSION=$(getLatestVersion brancz/kube-rbac-proxy | cut -d/ -f1)
 # Only update it if the newer image is available in the registry
 if docker manifest inspect "gcr.io/kubebuilder/kube-rbac-proxy:${RBAC_PROXY_LATEST_VERSION}" >/dev/null 2>/dev/null; then
-  sed -i "s|gcr.io/kubebuilder/kube-rbac-proxy:.*|gcr.io/kubebuilder/kube-rbac-proxy:${RBAC_PROXY_LATEST_VERSION}|" "${ROOTDIR}/chart/templates/deployment.yaml"
+  sed -i "s|gcr.io/kubebuilder/kube-rbac-proxy:.*|gcr.io/kubebuilder/kube-rbac-proxy:${RBAC_PROXY_LATEST_VERSION}|" "${ROOTDIR}/chart/values.yaml"
 fi
 
 # Update gitleaks

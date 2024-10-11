@@ -86,7 +86,7 @@ Default configuration values can be changed using one or more `--set <parameter>
     $ kubectl -n sail-operator get deployment --output wide
 
     NAME            READY   UP-TO-DATE   AVAILABLE   AGE    CONTAINERS                IMAGES                                                                                    SELECTOR
-    sail-operator   1/1     1            1           107s   kube-rbac-proxy,manager   gcr.io/kubebuilder/kube-rbac-proxy:v0.16.0,quay.io/maistra-dev/sail-operator:0.1-latest   app.kubernetes.io/created-by=sailoperator,app.kubernetes.io/part-of=sailoperator,control-plane=sail-operator
+    sail-operator   1/1     1            1           107s   kube-rbac-proxy,sail-operator  gcr.io/kubebuilder/kube-rbac-proxy:v0.16.0,quay.io/maistra-dev/sail-operator:0.1-latest   app.kubernetes.io/created-by=sailoperator,app.kubernetes.io/part-of=sailoperator,control-plane=sail-operator
 
     $ kubectl -n sail-operator get pods -o wide
 

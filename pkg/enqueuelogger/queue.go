@@ -18,22 +18,19 @@ import (
 	"time"
 
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // AdditionNotifierQueue is a queue that calls an onAdd function whenever an item is added to the queue.
 // It is meant to be used in conjunction with EnqueueEventLogger to log items enqueued by a handler.
 type AdditionNotifierQueue struct {
-	delegate workqueue.RateLimitingInterface
-	onAdd    func(item any)
+	delegate workqueue.TypedRateLimitingInterface[reconcile.Request]
+	onAdd    func(item reconcile.Request)
 }
 
-var _ workqueue.RateLimitingInterface = &AdditionNotifierQueue{}
+var _ workqueue.TypedRateLimitingInterface[reconcile.Request] = &AdditionNotifierQueue{}
 
-func NewAdditionNotifierQueue(delegate workqueue.RateLimitingInterface, onAddFunc func(item any)) *AdditionNotifierQueue {
-	return &AdditionNotifierQueue{delegate: delegate}
-}
-
-func (q *AdditionNotifierQueue) Add(item interface{}) {
+func (q *AdditionNotifierQueue) Add(item reconcile.Request) {
 	q.delegate.Add(item)
 	q.onAdd(item)
 }
@@ -42,11 +39,11 @@ func (q *AdditionNotifierQueue) Len() int {
 	return q.delegate.Len()
 }
 
-func (q *AdditionNotifierQueue) Get() (item interface{}, shutdown bool) {
+func (q *AdditionNotifierQueue) Get() (item reconcile.Request, shutdown bool) {
 	return q.delegate.Get()
 }
 
-func (q *AdditionNotifierQueue) Done(item interface{}) {
+func (q *AdditionNotifierQueue) Done(item reconcile.Request) {
 	q.delegate.Done(item)
 }
 
@@ -62,20 +59,20 @@ func (q *AdditionNotifierQueue) ShuttingDown() bool {
 	return q.delegate.ShuttingDown()
 }
 
-func (q *AdditionNotifierQueue) AddAfter(item interface{}, duration time.Duration) {
+func (q *AdditionNotifierQueue) AddAfter(item reconcile.Request, duration time.Duration) {
 	q.delegate.AddAfter(item, duration)
 	q.onAdd(item)
 }
 
-func (q *AdditionNotifierQueue) AddRateLimited(item interface{}) {
+func (q *AdditionNotifierQueue) AddRateLimited(item reconcile.Request) {
 	q.delegate.AddRateLimited(item)
 	q.onAdd(item)
 }
 
-func (q *AdditionNotifierQueue) Forget(item interface{}) {
+func (q *AdditionNotifierQueue) Forget(item reconcile.Request) {
 	q.delegate.Forget(item)
 }
 
-func (q *AdditionNotifierQueue) NumRequeues(item interface{}) int {
+func (q *AdditionNotifierQueue) NumRequeues(item reconcile.Request) int {
 	return q.delegate.NumRequeues(item)
 }

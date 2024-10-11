@@ -253,8 +253,6 @@ type GlobalConfig struct {
 	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	DefaultNodeSelector map[string]string `json:"defaultNodeSelector,omitempty"`
 	// Specifies the default pod disruption budget configuration.
-	//
-	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	DefaultPodDisruptionBudget *DefaultPodDisruptionBudgetConfig `json:"defaultPodDisruptionBudget,omitempty"`
 	// Default k8s resources settings for all Istio control plane components.
 	//
@@ -610,6 +608,8 @@ type PilotConfig struct {
 	// If set, `istiod` will allow connections from trusted node proxy ztunnels
 	// in the provided namespace.
 	TrustedZtunnelNamespace string `json:"trustedZtunnelNamespace,omitempty"`
+	// Configuration for the istio-discovery chart when istiod is running in a remote cluster (e.g. "remote control plane").
+	IstiodRemote *IstiodRemoteConfig `json:"istiodRemote,omitempty"`
 }
 
 type PilotTaintControllerConfig struct {
@@ -685,6 +685,8 @@ type ProxyConfig struct {
 	// Enables core dumps for newly injected sidecars.
 	//
 	// If set, newly injected sidecars will have core dumps enabled.
+	//
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	EnableCoreDump *bool `json:"enableCoreDump,omitempty"`
 	// Specifies the Istio ingress ports not to capture.
 	ExcludeInboundPorts string `json:"excludeInboundPorts,omitempty"`
@@ -884,6 +886,8 @@ type TracerStackdriverConfig struct {
 }
 
 type BaseConfig struct {
+	// CRDs to exclude. Requires `enableCRDTemplates`
+	ExcludedCRDs []string `json:"excludedCRDs,omitempty"`
 	// URL to use for validating webhook.
 	ValidationURL string `json:"validationURL,omitempty"`
 
@@ -898,6 +902,8 @@ type IstiodRemoteConfig struct {
 	InjectionPath string `json:"injectionPath,omitempty"`
 	// injector ca bundle
 	InjectionCABundle string `json:"injectionCABundle,omitempty"`
+	// Indicates if this cluster/install should consume a "remote" istiod instance,
+	Enabled *bool `json:"enabled,omitempty"`
 }
 
 type Values struct {
@@ -921,6 +927,10 @@ type Values struct {
 	// Configuration for the base component.
 	Base *BaseConfig `json:"base,omitempty"`
 	// Configuration for istiod-remote.
+	// DEPRECATED - istiod-remote chart is removed and replaced with
+	// `istio-discovery --set values.istiodRemote.enabled=true`
+	//
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	IstiodRemote *IstiodRemoteConfig `json:"istiodRemote,omitempty"`
 	// Specifies the aliases for the Istio control plane revision. A MutatingWebhookConfiguration
 	// is created for each alias.
@@ -957,6 +967,22 @@ type WaypointConfig struct {
 	//
 	// See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
 	Resources *k8sv1.ResourceRequirements `json:"resources,omitempty"`
+	// K8s affinity settings for waypoint pods.
+	//
+	// See https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+	Affinity *k8sv1.Affinity `json:"affinity,omitempty"`
+	// K8s topology spread constraints settings.
+	//
+	// See https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+	TopologySpreadConstraints []*k8sv1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
+	// K8s node labels settings.
+	//
+	// See https://kubernetes.io/docs/user-guide/node-selection/
+	NodeSelector *k8sv1.NodeSelector `json:"nodeSelector,omitempty"`
+	// K8s tolerations settings.
+	//
+	// See https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+	Toleration []*k8sv1.Toleration `json:"toleration,omitempty"`
 }
 
 // CNIGlobalConfig is a subset of the Global Configuration used in the Istio CNI chart.
@@ -1012,12 +1038,12 @@ const (
 	MeshConfigIngressControllerModeOff MeshConfigIngressControllerMode = "OFF"
 	// Istio ingress controller will act on ingress resources that do not
 	// contain any annotation or whose annotations match the value
-	// specified in the ingress_class parameter described earlier. Use this
+	// specified in the ingressClass parameter described earlier. Use this
 	// mode if Istio ingress controller will be the default ingress
 	// controller for the entire Kubernetes cluster.
 	MeshConfigIngressControllerModeDefault MeshConfigIngressControllerMode = "DEFAULT"
 	// Istio ingress controller will only act on ingress resources whose
-	// annotations match the value specified in the ingress_class parameter
+	// annotations match the value specified in the ingressClass parameter
 	// described earlier. Use this mode if Istio ingress controller will be
 	// a secondary ingress controller (e.g., in addition to a
 	// cloud-provided ingress controller).
@@ -1190,7 +1216,7 @@ type MeshConfig struct {
 	// the Gateway.selector field, and will be set as `istio: INGRESS_SELECTOR`.
 	// By default, `ingressgateway` is used, which will select the default IngressGateway as it has the
 	// `istio: ingressgateway` labels.
-	// It is recommended that this is the same value as ingress_service.
+	// It is recommended that this is the same value as ingressService.
 	IngressSelector string `json:"ingressSelector,omitempty"`
 	// Flag to control generation of trace spans and request IDs.
 	// Requires a trace span collector defined in the proxy configuration.
@@ -1251,7 +1277,7 @@ type MeshConfig struct {
 	// The trust domain corresponds to the trust root of a system.
 	// Refer to [SPIFFE-ID](https://github.com/spiffe/spiffe/blob/master/standards/SPIFFE-ID.md#21-trust-domain)
 	TrustDomain string `json:"trustDomain,omitempty"`
-	// The trust domain aliases represent the aliases of `trust_domain`.
+	// The trust domain aliases represent the aliases of `trustDomain`.
 	// For example, if we have
 	// ```yaml
 	// trustDomain: td1
@@ -1265,7 +1291,7 @@ type MeshConfig struct {
 	// are automatically added by Istiod.
 	// The CA certificate that signs the workload certificates is automatically added by Istio Agent.
 	CaCertificates []*MeshConfigCertificateData `json:"caCertificates,omitempty"`
-	// The default value for the ServiceEntry.export_to field and services
+	// The default value for the ServiceEntry.exportTo field and services
 	// imported through container registry integrations, e.g. this applies to
 	// Kubernetes Service resources. The value is a list of namespace names and
 	// reserved namespace aliases. The allowed namespace aliases are:
@@ -1290,14 +1316,14 @@ type MeshConfig struct {
 	// For further discussion see the reference documentation for `ServiceEntry`,
 	// `Sidecar`, and `Gateway`.
 	DefaultServiceExportTo []string `json:"defaultServiceExportTo,omitempty"`
-	// The default value for the VirtualService.export_to field. Has the same
-	// syntax as `default_service_export_to`.
+	// The default value for the VirtualService.exportTo field. Has the same
+	// syntax as `defaultServiceExportTo`.
 	//
 	// If not set the system will use "*" as the default value which implies that
 	// virtual services are exported to all namespaces
 	DefaultVirtualServiceExportTo []string `json:"defaultVirtualServiceExportTo,omitempty"`
-	// The default value for the `DestinationRule.export_to` field. Has the same
-	// syntax as `default_service_export_to`.
+	// The default value for the `DestinationRule.exportTo` field. Has the same
+	// syntax as `defaultServiceExportTo`.
 	//
 	// If not set the system will use "*" as the default value which implies that
 	// destination rules are exported to all namespaces
@@ -1478,7 +1504,7 @@ type MeshConfig struct {
 	// Note: Mesh mTLS does not respect ECDH curves.
 	MeshMTLS *MeshConfigTLSConfig `json:"meshMTLS,omitempty"`
 	// Configuration of TLS for all traffic except for ISTIO_MUTUAL mode.
-	// Currently, this supports configuration of ecdh_curves and cipher_suites only.
+	// Currently, this supports configuration of ecdhCurves and cipherSuites only.
 	// For ISTIO_MUTUAL TLS settings, use meshMTLS configuration.
 	TlsDefaults *MeshConfigTLSConfig `json:"tlsDefaults,omitempty"`
 }
@@ -1492,7 +1518,7 @@ type ConfigSource struct {
 	// Use xds:// to specify a grpc-based xds backend, k8s:// to specify a k8s controller or
 	// fs:/// to specify a file-based backend with absolute path to the directory.
 	Address string `json:"address,omitempty"`
-	// Use the tls_settings to specify the tls mode to use. If the MCP server
+	// Use the tlsSettings to specify the tls mode to use. If the MCP server
 	// uses Istio mutual TLS and shares the root CA with Pilot, specify the TLS
 	// mode as `ISTIO_MUTUAL`.
 	TlsSettings *ClientTLSSettings `json:"tlsSettings,omitempty"`
@@ -1559,12 +1585,12 @@ type MeshConfigCertificateData struct {
 	// Optional. Specify the list of trust domains to which this trustAnchor data belongs.
 	// If set, they are used for these trust domains. Otherwise, this trustAnchor is used for default trust domain
 	// and its aliases.
-	// Note that we can have multiple trustAnchor data for a same trust_domain.
+	// Note that we can have multiple trustAnchor data for a same trustDomain.
 	// In that case, trustAnchors with a same trust domain will be merged and used together to verify peer certificates.
-	// If neither cert_signers nor trust_domains is set, this trustAnchor is used for all trust domains and all signers.
-	// If only trust_domains is set, this trustAnchor is used for these trust_domains and all signers.
-	// If only cert_signers is set, this trustAnchor is used for these cert_signers and all trust domains.
-	// If both cert_signers and trust_domains is set, this trustAnchor is only used for these signers and trust domains.
+	// If neither certSigners nor trustDomains is set, this trustAnchor is used for all trust domains and all signers.
+	// If only trustDomains is set, this trustAnchor is used for these trustDomains and all signers.
+	// If only certSigners is set, this trustAnchor is used for these certSigners and all trust domains.
+	// If both certSigners and trustDomains is set, this trustAnchor is only used for these signers and trust domains.
 	TrustDomains []string `json:"trustDomains,omitempty"`
 }
 
@@ -1577,7 +1603,7 @@ type MeshConfigCertificateData struct {
 // ```yaml
 // serviceSettings:
 //   - settings:
-//     cluster_local: true
+//     clusterLocal: true
 //     hosts:
 //   - "*.foo.svc.cluster.local"
 //   - "bar.baz.svc.cluster.local"
@@ -1599,8 +1625,8 @@ type MeshConfigCA struct {
 	// Eg: custom-ca.default.svc.cluster.local:8932, 192.168.23.2:9000
 	// +kubebuilder:validation:Required
 	Address string `json:"address"`
-	// Use the tls_settings to specify the tls mode to use.
-	// Regarding tls_settings:
+	// Use the tlsSettings to specify the tls mode to use.
+	// Regarding tlsSettings:
 	// - DISABLE MODE is legitimate for the case Istiod is making the request via an Envoy sidecar.
 	// DISABLE MODE can also be used for testing
 	// - TLS MUTUAL MODE be on by default. If the CA certificates
@@ -1610,7 +1636,7 @@ type MeshConfigCA struct {
 	// timeout for forward CSR requests from Istiod to External CA
 	// Default: 10s
 	RequestTimeout *metav1.Duration `json:"requestTimeout,omitempty"`
-	// Use istiod_side to specify CA Server integrate to Istiod side or Agent side
+	// Use istiodSide to specify CA Server integrate to Istiod side or Agent side
 	// Default: true
 	IstiodSide bool `json:"istiodSide,omitempty"`
 }
@@ -1675,7 +1701,7 @@ type MeshConfigExtensionProvider struct {
 // Holds the name references to the providers that will be used by default
 // in other Istio configuration resources if the provider is not specified.
 //
-// These names must match a provider defined in `extension_providers` that is
+// These names must match a provider defined in `extensionProviders` that is
 // one of the supported tracing providers.
 type MeshConfigDefaultProviders struct {
 	// Name of the default provider(s) for tracing.
@@ -1739,12 +1765,12 @@ type MeshConfigServiceSettingsSettings struct {
 
 type MeshConfigExtensionProviderEnvoyExternalAuthorizationRequestBody struct {
 	// Sets the maximum size of a message body that the ext-authz filter will hold in memory.
-	// If max_request_bytes is reached, and allow_partial_message is false, Envoy will return a 413 (Payload Too Large).
+	// If maxRequestBytes is reached, and allowPartialMessage is false, Envoy will return a 413 (Payload Too Large).
 	// Otherwise the request will be sent to the provider with a partial message.
-	// Note that this setting will have precedence over the fail_open field, the 413 will be returned even when the
-	// fail_open is set to true.
+	// Note that this setting will have precedence over the failOpen field, the 413 will be returned even when the
+	// failOpen is set to true.
 	MaxRequestBytes uint32 `json:"maxRequestBytes,omitempty"`
-	// When this field is true, ext-authz filter will buffer the message until max_request_bytes is reached.
+	// When this field is true, ext-authz filter will buffer the message until maxRequestBytes is reached.
 	// The authorization request will be dispatched and no 413 HTTP error will be returned by the filter.
 	// A "x-envoy-auth-partial-body: false|true" metadata header will be added to the authorization request message
 	// indicating if the body data is partial.
@@ -1752,7 +1778,7 @@ type MeshConfigExtensionProviderEnvoyExternalAuthorizationRequestBody struct {
 	// If true, the body sent to the external authorization service in the gRPC authorization request is set with raw bytes
 	// in the [raw_body field](https://github.com/envoyproxy/envoy/blame/cffb095d59d7935abda12b9509bcd136808367bb/api/envoy/service/auth/v3/attribute_context.proto#L153).
 	// Otherwise, it will be filled with UTF-8 string in the [body field](https://github.com/envoyproxy/envoy/blame/cffb095d59d7935abda12b9509bcd136808367bb/api/envoy/service/auth/v3/attribute_context.proto#L147).
-	// This field only works with the envoy_ext_authz_grpc provider and has no effect for the envoy_ext_authz_http provider.
+	// This field only works with the envoyExtAuthzGrpc provider and has no effect for the envoyExtAuthzHttp provider.
 	PackAsBytes bool `json:"packAsBytes,omitempty"`
 }
 
@@ -1770,7 +1796,7 @@ type MeshConfigExtensionProviderEnvoyExternalAuthorizationHttpProvider struct {
 	Port uint32 `json:"port"`
 	// The maximum duration that the proxy will wait for a response from the provider (default timeout: 600s).
 	// When this timeout condition is met, the proxy marks the communication to the authorization service as failure.
-	// In this situation, the response sent back to the client will depend on the configured `fail_open` field.
+	// In this situation, the response sent back to the client will depend on the configured `failOpen` field.
 	Timeout *metav1.Duration `json:"timeout,omitempty"`
 	// Sets a prefix to the value of authorization request header *Path*.
 	// For example, setting this to "/check" for an original user request at path "/admin" will cause the
@@ -1783,7 +1809,7 @@ type MeshConfigExtensionProviderEnvoyExternalAuthorizationHttpProvider struct {
 	// Sets the HTTP status that is returned to the client when there is a network error to the authorization service.
 	// The default status is "403" (HTTP Forbidden).
 	StatusOnError string `json:"statusOnError,omitempty"`
-	// DEPRECATED. Use include_request_headers_in_check instead.
+	// DEPRECATED. Use includeRequestHeadersInCheck instead.
 	//
 	// Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
 	IncludeHeadersInCheck []string `json:"includeHeadersInCheck,omitempty"`
@@ -1791,7 +1817,7 @@ type MeshConfigExtensionProviderEnvoyExternalAuthorizationHttpProvider struct {
 	// Note that in addition to the headers specified here following headers are included by default:
 	// 1. *Host*, *Method*, *Path* and *Content-Length* are automatically sent.
 	// 2. *Content-Length* will be set to 0 and the request will not have a message body. However, the authorization
-	// request can include the buffered client request body (controlled by include_request_body_in_check setting),
+	// request can include the buffered client request body (controlled by includeRequestBodyInCheck setting),
 	// consequently the value of Content-Length of the authorization request reflects the size of its payload size.
 	//
 	// Exact, prefix and suffix matches are supported (similar to the
@@ -1803,7 +1829,7 @@ type MeshConfigExtensionProviderEnvoyExternalAuthorizationHttpProvider struct {
 	IncludeRequestHeadersInCheck []string `json:"includeRequestHeadersInCheck,omitempty"`
 	// Set of additional fixed headers that should be included in the authorization request sent to the authorization service.
 	// Key is the header name and value is the header value.
-	// Note that client request of the same key or headers specified in include_request_headers_in_check will be overridden.
+	// Note that client request of the same key or headers specified in includeRequestHeadersInCheck will be overridden.
 	IncludeAdditionalHeadersInCheck map[string]string `json:"includeAdditionalHeadersInCheck,omitempty"`
 	// If set, the client request body will be included in the authorization request sent to the authorization service.
 	IncludeRequestBodyInCheck *MeshConfigExtensionProviderEnvoyExternalAuthorizationRequestBody `json:"includeRequestBodyInCheck,omitempty"`
@@ -1862,7 +1888,7 @@ type MeshConfigExtensionProviderEnvoyExternalAuthorizationGrpcProvider struct {
 	Port uint32 `json:"port"`
 	// The maximum duration that the proxy will wait for a response from the provider, this is the timeout for a specific request (default timeout: 600s).
 	// When this timeout condition is met, the proxy marks the communication to the authorization service as failure.
-	// In this situation, the response sent back to the client will depend on the configured `fail_open` field.
+	// In this situation, the response sent back to the client will depend on the configured `failOpen` field.
 	Timeout *metav1.Duration `json:"timeout,omitempty"`
 	// If true, the HTTP request or TCP connection will be allowed even if the communication with the authorization service has failed,
 	// or if the authorization service has returned a HTTP 5xx error.
@@ -1894,6 +1920,9 @@ type MeshConfigExtensionProviderZipkinTracingProvider struct {
 	// Optional. A 128 bit trace id will be used in Istio.
 	// If true, will result in a 64 bit trace id being used.
 	Enable64BitTraceId bool `json:"enable64bitTraceId,omitempty"`
+	// Optional. Specifies the endpoint of Zipkin API.
+	// The default value is "/api/v2/spans".
+	Path string `json:"path,omitempty"`
 }
 
 // Defines configuration for a Lightstep tracer.
@@ -2184,6 +2213,47 @@ type MeshConfigExtensionProviderOpenTelemetryTracingProvider struct {
 	//
 	// ```
 	Http *MeshConfigExtensionProviderHttpService `json:"http,omitempty"`
+	// Optional. Specifies the configuration for exporting OTLP traces via GRPC.
+	// When empty, traces will check whether HTTP is set.
+	// If not, traces will use default GRPC configurations.
+	//
+	// The following example shows how to configure the OpenTelemetry ExtensionProvider to export via GRPC:
+	//
+	// 1. Add/change the OpenTelemetry extension provider in `MeshConfig`
+	// ```yaml
+	//   - name: opentelemetry
+	//     opentelemetry:
+	//     port: 8090
+	//     service: tracing.example.com
+	//     grpc:
+	//     timeout: 10s
+	//     initialMetadata:
+	//   - name: "Authentication"
+	//     value: "token-xxxxx"
+	//
+	// ```
+	//
+	// 2. Deploy a `ServiceEntry` for the observability back-end
+	// ```yaml
+	// apiVersion: networking.istio.io/v1alpha3
+	// kind: ServiceEntry
+	// metadata:
+	//
+	//	name: tracing-grpc
+	//
+	// spec:
+	//
+	//	hosts:
+	//	- tracing.example.com
+	//	ports:
+	//	- number: 8090
+	//	  name: grpc-port
+	//	  protocol: GRPC
+	//	resolution: DNS
+	//	location: MESH_EXTERNAL
+	//
+	// ```
+	Grpc *MeshConfigExtensionProviderGrpcService `json:"grpc,omitempty"`
 	// Optional. Specifies [Resource Detectors](https://opentelemetry.io/docs/specs/otel/resource/sdk/)
 	// to be used by the OpenTelemetry Tracer. When multiple resources are provided, they are merged
 	// according to the OpenTelemetry [Resource specification](https://opentelemetry.io/docs/specs/otel/resource/sdk/#merge).
@@ -2196,7 +2266,7 @@ type MeshConfigExtensionProviderOpenTelemetryTracingProvider struct {
 	//     opentelemetry:
 	//     port: 443
 	//     service: my.olly-backend.com
-	//     resource_detectors:
+	//     resourceDetectors:
 	//     environment: {}
 	//
 	// ```
@@ -2217,11 +2287,11 @@ type MeshConfigExtensionProviderOpenTelemetryTracingProvider struct {
 	//     headers:
 	//   - name: "Authorization"
 	//     value: "Api-Token dt0c01."
-	//     resource_detectors:
+	//     resourceDetectors:
 	//     dynatrace: {}
-	//     dynatrace_sampler:
+	//     dynatraceSampler:
 	//     tenant: "{your-environment-id}"
-	//     cluster_id: 1234
+	//     clusterId: 1234
 	DynatraceSampler *MeshConfigExtensionProviderOpenTelemetryTracingProviderDynatraceSampler `json:"dynatraceSampler,omitempty"`
 }
 
@@ -2251,6 +2321,17 @@ type MeshConfigExtensionProviderHttpHeader struct {
 type MeshConfigExtensionProviderResourceDetectors struct {
 	Environment *MeshConfigExtensionProviderResourceDetectorsEnvironmentResourceDetector `json:"environment,omitempty"`
 	Dynatrace   *MeshConfigExtensionProviderResourceDetectorsDynatraceResourceDetector   `json:"dynatrace,omitempty"`
+}
+
+// Defines configuration for an GRPC service that can be used by an Extension Provider.
+// that does communication via GRPC.
+type MeshConfigExtensionProviderGrpcService struct {
+	// Optional. Specifies the timeout for the GRPC request.
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
+	// Optional. Additional metadata to include in streams initiated to the GrpcService. This can be used for
+	// scenarios in which additional ad hoc authorization headers (e.g. “x-foo-bar: baz-key“) are to
+	// be injected.
+	InitialMetadata []*MeshConfigExtensionProviderHttpHeader `json:"initialMetadata,omitempty"`
 }
 
 type MeshConfigExtensionProviderStackdriverProviderLogging struct {
@@ -2299,7 +2380,7 @@ type MeshConfigExtensionProviderEnvoyOpenTelemetryLogProviderLogFormat struct {
 	// Textual format for the envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be
 	// used in the format. The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings)
 	// provides more information.
-	// Alias to `body` filed in [Open Telemetry](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/open_telemetry/v3/logs_service.proto)
+	// Alias to `body` field in [Open Telemetry](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/open_telemetry/v3/logs_service.proto)
 	// Example: `text: "%LOCAL_REPLY_BODY%:%RESPONSE_CODE%:path=%REQ(:path)%"`
 	Text string `json:"text,omitempty"`
 	// Optional. Additional attributes that describe the specific event occurrence.
@@ -2308,7 +2389,7 @@ type MeshConfigExtensionProviderEnvoyOpenTelemetryLogProviderLogFormat struct {
 	// as strings, numbers, or boolean values, as appropriate
 	// (see: [format dictionaries](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-dictionaries)). Nested JSON is
 	// supported for some command operators (e.g. FILTER_STATE or DYNAMIC_METADATA).
-	// Alias to `attributes` filed in [Open Telemetry](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/open_telemetry/v3/logs_service.proto)
+	// Alias to `attributes` field in [Open Telemetry](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/open_telemetry/v3/logs_service.proto)
 	//
 	// Example:
 	// ```
@@ -2338,8 +2419,8 @@ type MeshConfigExtensionProviderOpenTelemetryTracingProviderDynatraceSampler str
 	//
 	// A default value of `1000` is used when:
 	//
-	// - `root_spans_per_minute` is unset
-	// - `root_spans_per_minute` is set to 0
+	// - `rootSpansPerMinute` is unset
+	// - `rootSpansPerMinute` is set to 0
 	RootSpansPerMinute uint32 `json:"rootSpansPerMinute,omitempty"`
 	// Optional. Dynatrace HTTP API to obtain sampling configuration.
 	//
@@ -2434,7 +2515,7 @@ type MeshNetworks struct {
 // 2. Explicitly:
 //
 //	a. By matching the registry name with one of the "fromRegistry"
-//	in the mesh config. A "from_registry" can only be assigned to a
+//	in the mesh config. A "fromRegistry" can only be assigned to a
 //	single network.
 //
 //	b. By matching the IP against one of the CIDR ranges in a mesh
@@ -2493,7 +2574,7 @@ const (
 )
 
 // ForwardClientCertDetails controls how the x-forwarded-client-cert (XFCC)
-// header is handled by the gateway proxy.
+// header is handled by a proxy.
 // See [Envoy XFCC](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto.html#enum-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-forwardclientcertdetails)
 // header handling for more details.
 // +kubebuilder:validation:Enum=UNDEFINED;SANITIZE;FORWARD_ONLY;APPEND_FORWARD;SANITIZE_SET;ALWAYS_FORWARD_ONLY
@@ -2502,16 +2583,16 @@ type ForwardClientCertDetails string
 const (
 	// Field is not set
 	ForwardClientCertDetailsUndefined ForwardClientCertDetails = "UNDEFINED"
-	// Do not send the XFCC header to the next hop. This is the default value.
+	// Do not send the XFCC header to the next hop.
 	ForwardClientCertDetailsSanitize ForwardClientCertDetails = "SANITIZE"
 	// When the client connection is mTLS (Mutual TLS), forward the XFCC header
 	// in the request.
 	ForwardClientCertDetailsForwardOnly ForwardClientCertDetails = "FORWARD_ONLY"
 	// When the client connection is mTLS, append the client certificate
-	// information to the request’s XFCC header and forward it.
+	// information to the request’s XFCC header and forward it. This is the default value for sidecar proxies.
 	ForwardClientCertDetailsAppendForward ForwardClientCertDetails = "APPEND_FORWARD"
 	// When the client connection is mTLS, reset the XFCC header with the client
-	// certificate information and send it to the next hop.
+	// certificate information and send it to the next hop. This is the default value for gateway proxies.
 	ForwardClientCertDetailsSanitizeSet ForwardClientCertDetails = "SANITIZE_SET"
 	// Always forward the XFCC header in the request, regardless of whether the
 	// client connection is mTLS.
@@ -2545,7 +2626,7 @@ const (
 )
 
 // Allows specification of various Istio-supported naming schemes for the
-// Envoy `service_cluster` value. The `servce_cluster` value is primarily used
+// Envoy `service_cluster` value. The `service_cluster` value is primarily used
 // by Envoys to provide service names for tracing spans.
 // +kubebuilder:validation:Enum=APP_LABEL_AND_NAMESPACE;CANONICAL_NAME_ONLY;CANONICAL_NAME_AND_NAMESPACE
 type ProxyConfigTracingServiceName string
@@ -2632,7 +2713,7 @@ type Tracing struct {
 	// The percentage of requests (0.0 - 100.0) that will be randomly selected for trace generation,
 	// if not requested by the client or not forced. Default is 1.0.
 	Sampling float64 `json:"sampling,omitempty"`
-	// Use the tls_settings to specify the tls mode to use. If the remote tracing service
+	// Use the tlsSettings to specify the tls mode to use. If the remote tracing service
 	// uses Istio mutual TLS and shares the root CA with Pilot, specify the TLS
 	// mode as `ISTIO_MUTUAL`.
 	TlsSettings *ClientTLSSettings `json:"tlsSettings,omitempty"`
@@ -2665,7 +2746,7 @@ type Topology struct {
 	// address to the X-Forwarded-For (XFF) address and set the
 	// X-Envoy-External-Address header to the trusted client address before
 	// forwarding it to the upstream services in the cluster.
-	// The default value of num_trusted_proxies is 0.
+	// The default value of numTrustedProxies is 0.
 	// See [Envoy XFF](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#config-http-conn-man-headers-x-forwarded-for)
 	// header handling for more details.
 	NumTrustedProxies uint32 `json:"numTrustedProxies,omitempty"`
@@ -2831,7 +2912,7 @@ type MeshConfigProxyConfig struct {
 	// The amount of time allowed for connections to complete on proxy shutdown.
 	// On receiving `SIGTERM` or `SIGINT`, `istio-agent` tells the active Envoy to start gracefully draining,
 	// discouraging any new connections and allowing existing connections to complete. It then
-	// sleeps for the `termination_drain_duration` and then kills any remaining active Envoy processes.
+	// sleeps for the `terminationDrainDuration` and then kills any remaining active Envoy processes.
 	// If not set, a default of `5s` will be applied.
 	TerminationDrainDuration *metav1.Duration `json:"terminationDrainDuration,omitempty"`
 	// The unique identifier for the [service mesh](https://istio.io/docs/reference/glossary/#service-mesh)
@@ -2926,7 +3007,7 @@ type RemoteService struct {
 	// receiver, metrics receiver, etc.). Can be IP address or a fully
 	// qualified DNS name.
 	Address string `json:"address,omitempty"`
-	// Use the `tls_settings` to specify the tls mode to use. If the remote service
+	// Use the `tlsSettings` to specify the tls mode to use. If the remote service
 	// uses Istio mutual TLS and shares the root CA with Pilot, specify the TLS
 	// mode as `ISTIO_MUTUAL`.
 	TlsSettings *ClientTLSSettings `json:"tlsSettings,omitempty"`
@@ -3090,6 +3171,11 @@ type ProxyConfigProxyHeaders struct {
 	// To disable the header, configure either `SANITIZE` (to always remove the header, if present) or `FORWARD_ONLY` (to leave the header as-is).
 	// By default, `APPEND_FORWARD` will be used.
 	ForwardedClientCert ForwardClientCertDetails `json:"forwardedClientCert,omitempty"`
+	// This field is valid only when forward_client_cert_details is APPEND_FORWARD or SANITIZE_SET
+	// and the client connection is mTLS. It specifies the fields in
+	// the client certificate to be forwarded. Note that `Hash` is always set, and
+	// `By` is always set when the client certificate presents the URI type Subject Alternative Name value.
+	SetCurrentClientCertDetails *ProxyConfigProxyHeadersSetCurrentClientCertDetails `json:"setCurrentClientCertDetails,omitempty"`
 	// Controls the `X-Request-Id` header. If enabled, a request ID is generated for each request if one is not already set.
 	// This applies to all types of traffic (inbound, outbound, and gateways).
 	// If disabled, no request ID will be generate for the request. If it is already present, it will be preserved.
@@ -3136,6 +3222,26 @@ type ProxyConfigProxyHeadersEnvoyDebugHeaders struct {
 
 type ProxyConfigProxyHeadersMetadataExchangeHeaders struct {
 	Mode ProxyConfigProxyHeadersMetadataExchangeMode `json:"mode,omitempty"`
+}
+
+type ProxyConfigProxyHeadersSetCurrentClientCertDetails struct {
+	// Whether to forward the subject of the client cert. Defaults to true.
+	Subject *bool `json:"subject,omitempty"`
+	// Whether to forward the entire client cert in URL encoded PEM format. This will appear in the
+	// XFCC header comma separated from other values with the value Cert="PEM".
+	// Defaults to false.
+	Cert *bool `json:"cert,omitempty"`
+	// Whether to forward the entire client cert chain (including the leaf cert) in URL encoded PEM
+	// format. This will appear in the XFCC header comma separated from other values with the value
+	// Chain="PEM".
+	// Defaults to false.
+	Chain *bool `json:"chain,omitempty"`
+	// Whether to forward the DNS type Subject Alternative Names of the client cert.
+	// Defaults to true.
+	Dns *bool `json:"dns,omitempty"`
+	// Whether to forward the URI type Subject Alternative Name of the client cert. Defaults to
+	// true.
+	Uri *bool `json:"uri,omitempty"`
 }
 
 // The following values are used to construct proxy image url.
@@ -3186,8 +3292,8 @@ type WorkloadSelector struct {
 	// the configuration namespace in which the resource is present.
 	// +kubebuilder:validation:XValidation:message="wildcard not allowed in label key match",rule="self.all(key, !key.contains('*'))"
 	// +kubebuilder:validation:XValidation:message="key must not be empty",rule="self.all(key, key.size() != 0)"
-	// +kubebuilder:map-value-validation:XValidation:message="wildcard not allowed in label value match",rule="!self.contains('*')"
-	// +kubebuilder:map-value-validation:MaxLength=63
+	// +protoc-gen-crd:map-value-validation:XValidation:message="wildcard not allowed in label value match",rule="!self.contains('*')"
+	// +protoc-gen-crd:map-value-validation:MaxLength=63
 	// +kubebuilder:validation:MaxProperties=4096
 	MatchLabels map[string]string `json:"matchLabels,omitempty"`
 }
@@ -3399,7 +3505,8 @@ type ClientTLSSettings struct {
 	// to use in verifying a presented server certificate. `CRL` is a list of certificates
 	// that have been revoked by the CA (Certificate Authority) before their scheduled expiration date.
 	// If specified, the proxy will verify if the presented certificate is part of the revoked list of certificates.
-	// If omitted, the proxy will not verify the certificate against the `crl`.
+	// If omitted, the proxy will not verify the certificate against the `crl`. Note that if `credentialName` is set,
+	// `CRL` cannot be specified using `caCrl`, rather it has to be specified inside the credential.
 	CaCrl string `json:"caCrl,omitempty"`
 }
 

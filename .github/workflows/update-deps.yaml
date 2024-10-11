@@ -1,0 +1,50 @@
+name: Update-deps workflow
+
+on:
+  schedule: 
+    - cron: "0 5 * * *" # everyday at 5AM UTC
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to update"
+        default: "main"
+        required: true
+
+run-name: update-deps
+
+env:
+  GIT_USER: ${{ secrets.GIT_USER }}
+  GH_TOKEN: ${{ secrets.GIT_TOKEN }}
+  AUTOMATOR_ORG: istio-ecosystem
+  AUTOMATOR_REPO: sail-operator
+  AUTOMATOR_BRANCH:  ${{ inputs.branch || 'main' }}
+
+jobs:
+  update-deps:
+    runs-on: ubuntu-latest
+    container:
+      image: gcr.io/istio-testing/build-tools:master-621a64a11b30f703b2e887df91862fffdd16112e
+      options: --entrypoint ''
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        repository: istio/test-infra
+        ref: master
+
+    # this is a workaround for a permissions issue when using the istio build container
+    - run: git config --system --add safe.directory /__w/sail-operator/sail-operator
+
+    - name: Run Automator
+      run: |
+        ./tools/automator/automator.sh \
+          --org=$AUTOMATOR_ORG \
+          --repo=sail-operator \
+          --branch=$AUTOMATOR_BRANCH \
+          '--title=Automator: Update dependencies in $AUTOMATOR_ORG/$AUTOMATOR_REPO@$AUTOMATOR_BRANCH' \
+          --labels=auto-merge \
+          --email=openshiftservicemeshbot@gmail.com \
+          --modifier=update_deps \
+          --token-env \
+          --cmd='BUILD_WITH_CONTAINER=0 ./tools/update_deps.sh' \
+          --signoff

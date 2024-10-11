@@ -379,7 +379,7 @@ func TestDetermineStatus(t *testing.T) {
 			name:    "shows correct revision counts",
 			wantErr: false,
 			revisions: []v1alpha1.IstioRevision{
-				// owned by the Istio under test; 3 todal, 2 ready, 1 in use
+				// owned by the Istio under test; 3 total, 2 ready, 1 in use
 				revision(istioKey.Name, ownedByIstio, true, true, true),
 				revision(istioKey.Name+"-old1", ownedByIstio, true, true, false),
 				revision(istioKey.Name+"-old2", ownedByIstio, true, false, false),

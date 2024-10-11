@@ -18,18 +18,16 @@ package controlplane
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
-	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
-	common "github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -57,7 +55,7 @@ var _ = Describe("Control Plane Installation", Ordered, func() {
 		if skipDeploy {
 			Success("Skipping operator installation because it was deployed externally")
 		} else {
-			Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, extraArg)).
+			Expect(common.InstallOperatorViaHelm(extraArg)).
 				To(Succeed(), "Operator failed to be deployed")
 		}
 
@@ -172,9 +170,8 @@ spec:
 					})
 
 					It("doesn't continuously reconcile the IstioCNI CR", func() {
-						Eventually(k.SetNamespace(namespace).Logs).WithArguments("deploy/"+deploymentName, ptr.Of(30*time.Second)).
+						Eventually(k.WithNamespace(namespace).Logs).WithArguments("deploy/"+deploymentName, ptr.Of(30*time.Second)).
 							ShouldNot(ContainSubstring("Reconciliation done"), "IstioCNI is continuously reconciling")
-						k.ResetNamespace()
 						Success("IstioCNI stopped reconciling")
 					})
 				})
@@ -221,9 +218,8 @@ spec:
 					})
 
 					It("doesn't continuously reconcile the Istio CR", func() {
-						Eventually(k.SetNamespace(namespace).Logs).WithArguments("deploy/"+deploymentName, ptr.Of(30*time.Second)).
+						Eventually(k.WithNamespace(namespace).Logs).WithArguments("deploy/"+deploymentName, ptr.Of(30*time.Second)).
 							ShouldNot(ContainSubstring("Reconciliation done"), "Istio CR is continuously reconciling")
-						k.ResetNamespace()
 						Success("Istio CR stopped reconciling")
 					})
 				})
@@ -240,7 +236,7 @@ spec:
 					bookinfoPods := &corev1.PodList{}
 
 					It("updates the pods status to Running", func(ctx SpecContext) {
-						cl.List(ctx, bookinfoPods, client.InNamespace(bookinfoNamespace))
+						Expect(cl.List(ctx, bookinfoPods, client.InNamespace(bookinfoNamespace))).To(Succeed())
 						Expect(bookinfoPods.Items).ToNot(BeEmpty(), "No pods found in bookinfo namespace")
 
 						for _, pod := range bookinfoPods.Items {
@@ -253,8 +249,8 @@ spec:
 					It("has sidecars with the correct istio version", func(ctx SpecContext) {
 						for _, pod := range bookinfoPods.Items {
 							sidecarVersion, err := getProxyVersion(pod.Name, bookinfoNamespace)
-							Expect(err).To(Succeed(), "Error getting sidecar version")
-							Expect(sidecarVersion).To(ContainSubstring(version.Version), "Sidecar Istio version does not match the expected version")
+							Expect(err).NotTo(HaveOccurred(), "Error getting sidecar version")
+							Expect(sidecarVersion).To(Equal(version.Version), "Sidecar Istio version does not match the expected version")
 						}
 						Success("Istio sidecar version matches the expected Istio version")
 					})
@@ -268,7 +264,7 @@ spec:
 
 				When("the Istio CR is deleted", func() {
 					BeforeEach(func() {
-						Expect(k.SetNamespace(controlPlaneNamespace).Delete("istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
+						Expect(k.WithNamespace(controlPlaneNamespace).Delete("istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
 						Success("Istio CR deleted")
 					})
 
@@ -282,7 +278,7 @@ spec:
 
 				When("the IstioCNI CR is deleted", func() {
 					BeforeEach(func() {
-						Expect(k.SetNamespace(istioCniNamespace).Delete("istiocni", istioCniName)).To(Succeed(), "IstioCNI CR failed to be deleted")
+						Expect(k.WithNamespace(istioCniNamespace).Delete("istiocni", istioCniName)).To(Succeed(), "IstioCNI CR failed to be deleted")
 						Success("IstioCNI deleted")
 					})
 
@@ -328,7 +324,7 @@ spec:
 		}
 
 		By("Deleting operator deployment")
-		Expect(helm.Uninstall("sail-operator", "--namespace "+namespace)).
+		Expect(common.UninstallOperator()).
 			To(Succeed(), "Operator failed to be deleted")
 		GinkgoWriter.Println("Operator uninstalled")
 
@@ -388,7 +384,7 @@ func getBookinfoURL(version supportedversion.VersionInfo) string {
 
 func deployBookinfo(version supportedversion.VersionInfo) error {
 	bookinfoURL := getBookinfoURL(version)
-	k.SetNamespace(bookinfoNamespace).Apply(bookinfoURL)
+	err := k.WithNamespace(bookinfoNamespace).Apply(bookinfoURL)
 	if err != nil {
 		return fmt.Errorf("error deploying bookinfo: %w", err)
 	}
@@ -396,14 +392,19 @@ func deployBookinfo(version supportedversion.VersionInfo) error {
 	return nil
 }
 
-func getProxyVersion(podName, namespace string) (string, error) {
-	proxyVersion, err := k.SetNamespace(namespace).Exec(
+func getProxyVersion(podName, namespace string) (*semver.Version, error) {
+	output, err := k.WithNamespace(namespace).Exec(
 		podName,
 		"istio-proxy",
 		`curl -s http://localhost:15000/server_info | grep "ISTIO_VERSION" | awk -F '"' '{print $4}'`)
 	if err != nil {
-		return "", fmt.Errorf("error getting sidecar version: %w", err)
+		return nil, fmt.Errorf("error getting sidecar version: %w", err)
 	}
 
-	return proxyVersion, nil
+	versionStr := strings.TrimSpace(output)
+	version, err := semver.NewVersion(versionStr)
+	if err != nil {
+		return version, fmt.Errorf("error parsing sidecar version %q: %w", versionStr, err)
+	}
+	return version, err
 }

@@ -20,7 +20,8 @@ import (
 	"testing"
 
 	k8sclient "github.com/istio-ecosystem/sail-operator/tests/e2e/util/client"
-	env "github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -31,19 +32,18 @@ var (
 	cl                    client.Client
 	err                   error
 	ocp                   = env.GetBool("OCP", false)
-	namespace             = env.Get("NAMESPACE", "sail-operator")
+	namespace             = common.OperatorNamespace
 	deploymentName        = env.Get("DEPLOYMENT_NAME", "sail-operator")
 	controlPlaneNamespace = env.Get("CONTROL_PLANE_NS", "istio-system")
 	istioName             = env.Get("ISTIO_NAME", "default")
 	istioCniNamespace     = env.Get("ISTIOCNI_NAMESPACE", "istio-cni")
 	istioCniName          = env.Get("ISTIOCNI_NAME", "default")
-	image                 = env.Get("IMAGE", "quay.io/maistra-dev/sail-operator:latest")
 	skipDeploy            = env.GetBool("SKIP_DEPLOY", false)
 	expectedRegistry      = env.Get("EXPECTED_REGISTRY", "^docker\\.io|^gcr\\.io")
 	bookinfoNamespace     = env.Get("BOOKINFO_NAMESPACE", "bookinfo")
 	multicluster          = env.GetBool("MULTICLUSTER", false)
 
-	k *kubectl.KubectlBuilder
+	k kubectl.Kubectl
 )
 
 func TestInstall(t *testing.T) {
@@ -52,7 +52,7 @@ func TestInstall(t *testing.T) {
 	}
 	RegisterFailHandler(Fail)
 	setup()
-	RunSpecs(t, "Control Plane Suite")
+	RunSpecs(t, "Control Plane Test Suite")
 }
 
 func setup() {
@@ -62,5 +62,5 @@ func setup() {
 	cl, err = k8sclient.InitK8sClient("")
 	Expect(err).NotTo(HaveOccurred())
 
-	k = kubectl.NewKubectlBuilder()
+	k = kubectl.New()
 }

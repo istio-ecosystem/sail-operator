@@ -24,7 +24,8 @@ import (
 
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/certs"
 	k8sclient "github.com/istio-ecosystem/sail-operator/tests/e2e/util/client"
-	env "github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -36,11 +37,10 @@ var (
 	clRemote              client.Client
 	err                   error
 	ocp                   = env.GetBool("OCP", false)
-	namespace             = env.Get("NAMESPACE", "sail-operator")
+	namespace             = common.OperatorNamespace
 	deploymentName        = env.Get("DEPLOYMENT_NAME", "sail-operator")
 	controlPlaneNamespace = env.Get("CONTROL_PLANE_NS", "istio-system")
 	istioName             = env.Get("ISTIO_NAME", "default")
-	image                 = env.Get("IMAGE", "quay.io/maistra-dev/sail-operator:latest")
 	skipDeploy            = env.GetBool("SKIP_DEPLOY", false)
 	multicluster          = env.GetBool("MULTICLUSTER", false)
 	kubeconfig            = env.Get("KUBECONFIG", "")
@@ -52,8 +52,8 @@ var (
 	exposeServiceYAML string
 	exposeIstiodYAML  string
 
-	kubectlClient1 *kubectl.KubectlBuilder
-	kubectlClient2 *kubectl.KubectlBuilder
+	k1 kubectl.Kubectl
+	k2 kubectl.Kubectl
 )
 
 func TestInstall(t *testing.T) {
@@ -67,7 +67,7 @@ func TestInstall(t *testing.T) {
 	}
 	RegisterFailHandler(Fail)
 	setup(t)
-	RunSpecs(t, "Control Plane Suite")
+	RunSpecs(t, "Multi-Cluster Test Suite")
 }
 
 func setup(t *testing.T) {
@@ -99,6 +99,6 @@ func setup(t *testing.T) {
 	exposeIstiodYAML = fmt.Sprintf("%s/docs/multicluster/expose-istiod.yaml", baseRepoDir)
 
 	// Initialize kubectl utilities, one for each cluster
-	kubectlClient1 = kubectl.NewKubectlBuilder().SetKubeconfig(kubeconfig)
-	kubectlClient2 = kubectl.NewKubectlBuilder().SetKubeconfig(kubeconfig2)
+	k1 = kubectl.New().WithKubeconfig(kubeconfig)
+	k2 = kubectl.New().WithKubeconfig(kubeconfig2)
 }
