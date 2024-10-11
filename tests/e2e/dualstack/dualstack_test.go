@@ -18,18 +18,15 @@ package dualstack
 
 import (
 	"fmt"
-	"path/filepath"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
-	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -62,7 +59,7 @@ var _ = Describe("DualStack configuration ", Ordered, func() {
 		if skipDeploy {
 			Success("Skipping operator installation because it was deployed externally")
 		} else {
-			Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, extraArg)).
+			Expect(common.InstallOperatorViaHelm(extraArg)).
 				To(Succeed(), "Operator failed to be deployed")
 		}
 
@@ -308,7 +305,7 @@ spec:
 		}
 
 		By("Deleting operator deployment")
-		Expect(helm.Uninstall("sail-operator", "--namespace "+namespace)).
+		Expect(common.UninstallOperator()).
 			To(Succeed(), "Operator failed to be deleted")
 		GinkgoWriter.Println("Operator uninstalled")
 

@@ -24,6 +24,7 @@ import (
 
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/certs"
 	k8sclient "github.com/istio-ecosystem/sail-operator/tests/e2e/util/client"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
@@ -36,11 +37,10 @@ var (
 	clRemote              client.Client
 	err                   error
 	ocp                   = env.GetBool("OCP", false)
-	namespace             = env.Get("NAMESPACE", "sail-operator")
+	namespace             = common.OperatorNamespace
 	deploymentName        = env.Get("DEPLOYMENT_NAME", "sail-operator")
 	controlPlaneNamespace = env.Get("CONTROL_PLANE_NS", "istio-system")
 	istioName             = env.Get("ISTIO_NAME", "default")
-	image                 = env.Get("IMAGE", "quay.io/maistra-dev/sail-operator:latest")
 	skipDeploy            = env.GetBool("SKIP_DEPLOY", false)
 	multicluster          = env.GetBool("MULTICLUSTER", false)
 	kubeconfig            = env.Get("KUBECONFIG", "")
