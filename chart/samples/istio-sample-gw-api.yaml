@@ -1,0 +1,16 @@
+apiVersion: sailoperator.io/v1alpha1
+kind: Istio
+metadata:
+  name: gateway-controller
+spec:
+  version: v1.23.0
+  namespace: gateway-controller
+  updateStrategy:
+    type: InPlace
+    inactiveRevisionDeletionGracePeriodSeconds: 30
+  values:
+    pilot:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 1024Mi

@@ -40,6 +40,10 @@ func SetupEnv(logWriter io.Writer, installCRDs bool) (*envtest.Environment, clie
 		ErrorIfCRDPathMissing: true,
 	}
 
+	// disabling mutatingwebhooks to avoid failing calls to the injection webhooks
+	// once we implement mutatingwebhooks in the operator we might have to find another way
+	testEnv.ControlPlane.GetAPIServer().Configure().Append("disable-admission-plugins", "MutatingAdmissionWebhook")
+
 	cfg, err := testEnv.Start()
 	if err != nil || cfg == nil {
 		panic(err)
