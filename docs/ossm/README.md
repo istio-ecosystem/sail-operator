@@ -6,4 +6,4 @@ This documentation is specific to the OpenShift Service Mesh product and may dif
 
 # Table of Contents
 
-TODO
+- [Running Red Hat OpenShift Service Mesh (OSSM) 2 and OSSM 3 side by side](./ossm-2-and-ossm-3-side-by-side/README.md)
