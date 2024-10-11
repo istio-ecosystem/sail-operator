@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	k8sclient "github.com/istio-ecosystem/sail-operator/tests/e2e/util/client"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
@@ -31,8 +32,7 @@ var (
 	cl             client.Client
 	ocp            = env.GetBool("OCP", false)
 	skipDeploy     = env.GetBool("SKIP_DEPLOY", false)
-	image          = env.Get("IMAGE", "quay.io/maistra-dev/sail-operator:latest")
-	namespace      = env.Get("NAMESPACE", "sail-operator")
+	namespace      = common.OperatorNamespace
 	deploymentName = env.Get("DEPLOYMENT_NAME", "sail-operator")
 	multicluster   = env.GetBool("MULTICLUSTER", false)
 

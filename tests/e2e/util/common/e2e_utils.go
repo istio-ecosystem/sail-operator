@@ -19,14 +19,17 @@ package common
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -39,7 +42,9 @@ import (
 )
 
 var (
-	namespace             = env.Get("NAMESPACE", "sail-operator")
+	OperatorImage     = env.Get("IMAGE", "quay.io/maistra-dev/sail-operator:latest")
+	OperatorNamespace = env.Get("NAMESPACE", "sail-operator")
+
 	deploymentName        = env.Get("DEPLOYMENT_NAME", "sail-operator")
 	controlPlaneNamespace = env.Get("CONTROL_PLANE_NS", "istio-system")
 	istioName             = env.Get("ISTIO_NAME", "default")
@@ -141,20 +146,21 @@ func LogDebugInfo() {
 }
 
 func logOperatorDebugInfo() {
-	operator, err := k.WithNamespace(namespace).GetYAML("deployment", deploymentName)
+	k := k.WithNamespace(OperatorNamespace)
+	operator, err := k.GetYAML("deployment", deploymentName)
 	logDebugElement("Operator Deployment YAML", operator, err)
 
-	logs, err := k.WithNamespace(namespace).Logs("deploy/"+deploymentName, ptr.Of(120*time.Second))
+	logs, err := k.Logs("deploy/"+deploymentName, ptr.Of(120*time.Second))
 	logDebugElement("Operator logs", logs, err)
 
-	events, err := k.WithNamespace(namespace).GetEvents()
-	logDebugElement("Events in "+namespace, events, err)
+	events, err := k.GetEvents()
+	logDebugElement("Events in "+OperatorNamespace, events, err)
 
 	// Temporary information to gather more details about failure
-	pods, err := k.WithNamespace(namespace).GetPods("", "-o wide")
-	logDebugElement("Pods in "+namespace, pods, err)
+	pods, err := k.GetPods("", "-o wide")
+	logDebugElement("Pods in "+OperatorNamespace, pods, err)
 
-	describe, err := k.WithNamespace(namespace).Describe("deployment", deploymentName)
+	describe, err := k.Describe("deployment", deploymentName)
 	logDebugElement("Operator Deployment describe", describe, err)
 }
 
@@ -233,4 +239,18 @@ func CheckPodsReady(ctx SpecContext, cl client.Client, namespace string) (*corev
 	}
 
 	return podList, nil
+}
+
+func InstallOperatorViaHelm(extraArgs ...string) error {
+	args := []string{
+		"--namespace " + OperatorNamespace,
+		"--set image=" + OperatorImage,
+	}
+	args = append(args, extraArgs...)
+
+	return helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), args...)
+}
+
+func UninstallOperator() error {
+	return helm.Uninstall("sail-operator", "--namespace", OperatorNamespace)
 }
