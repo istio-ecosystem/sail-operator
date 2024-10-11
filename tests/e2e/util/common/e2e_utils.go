@@ -245,6 +245,7 @@ func InstallOperatorViaHelm(extraArgs ...string) error {
 	args := []string{
 		"--namespace " + OperatorNamespace,
 		"--set image=" + OperatorImage,
+		"--set operatorLogLevel=3",
 	}
 	args = append(args, extraArgs...)
 
