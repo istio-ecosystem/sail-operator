@@ -6,7 +6,7 @@ spec:
   version: v1.23.2
   namespace: istio-system
   updateStrategy:
-    type: InPlace
+    type: RevisionBased
     inactiveRevisionDeletionGracePeriodSeconds: 30
   values:
     pilot:
@@ -14,3 +14,12 @@ spec:
         requests:
           cpu: 100m
           memory: 1024Mi
+---
+apiVersion: sailoperator.io/v1alpha1
+kind: IstioRevisionTag
+metadata:
+  name: default
+spec:
+  targetRef:
+    kind: IstioRevision
+    name: default-v1-23-2
