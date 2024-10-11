@@ -6,6 +6,8 @@ service:
   port: 8443
 serviceAccountName: sail-operator
 
+operatorLogLevel: info
+
 csv:
   displayName: Sail Operator
   categories: OpenShift Optional, Integration & Delivery, Networking, Security

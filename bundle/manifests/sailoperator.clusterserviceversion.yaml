@@ -34,7 +34,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/maistra-dev/sail-operator:0.2-latest
-    createdAt: "2024-10-11T14:52:21Z"
+    createdAt: "2024-10-11T11:23:10Z"
     description: Experimental operator for installing Istio service mesh
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -663,6 +663,7 @@ spec:
               - args:
                 - --health-probe-bind-address=:8081
                 - --metrics-bind-address=127.0.0.1:8080
+                - --zap-log-level=info
                 - --default-profile=openshift
                 command:
                 - /sail-operator
