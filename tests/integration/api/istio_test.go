@@ -511,5 +511,8 @@ func getRevisionName(istio *v1alpha1.Istio, version string) string {
 	if istio.Name == "" {
 		panic("istio.Name is empty")
 	}
+	if istio.Spec.UpdateStrategy.Type == v1alpha1.UpdateStrategyTypeInPlace {
+		return istio.Name
+	}
 	return istio.Name + "-" + strings.ReplaceAll(version, ".", "-")
 }

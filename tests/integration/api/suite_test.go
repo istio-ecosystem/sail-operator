@@ -24,6 +24,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/controllers/istio"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiocni"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiorevision"
+	"github.com/istio-ecosystem/sail-operator/controllers/istiorevisiontag"
 	"github.com/istio-ecosystem/sail-operator/controllers/remoteistio"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
@@ -81,6 +82,9 @@ var _ = BeforeSuite(func() {
 		SetupWithManager(mgr)).To(Succeed())
 
 	Expect(istiorevision.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDir, chartManager).
+		SetupWithManager(mgr)).To(Succeed())
+
+	Expect(istiorevisiontag.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDir, chartManager).
 		SetupWithManager(mgr)).To(Succeed())
 
 	Expect(istiocni.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDir, chartManager, "").
