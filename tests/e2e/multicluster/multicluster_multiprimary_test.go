@@ -40,6 +40,7 @@ import (
 var _ = Describe("Multicluster deployment models", Ordered, func() {
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
+	debugInfoLogged := false
 
 	BeforeAll(func(ctx SpecContext) {
 		if !skipDeploy {
@@ -251,6 +252,11 @@ spec:
 				})
 
 				AfterAll(func(ctx SpecContext) {
+					if CurrentSpecReport().Failed() {
+						common.LogDebugInfo()
+						debugInfoLogged = true
+					}
+
 					// Delete namespaces to ensure clean up for new tests iteration
 					Expect(k1.DeleteNamespaceNoWait(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
 					Expect(k2.DeleteNamespaceNoWait(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #2")
@@ -270,6 +276,11 @@ spec:
 	})
 
 	AfterAll(func(ctx SpecContext) {
+		if CurrentSpecReport().Failed() && !debugInfoLogged {
+			common.LogDebugInfo()
+			debugInfoLogged = true
+		}
+
 		// Delete the Sail Operator from both clusters
 		Expect(k1.DeleteNamespaceNoWait(namespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
 		Expect(k2.DeleteNamespaceNoWait(namespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #2")
