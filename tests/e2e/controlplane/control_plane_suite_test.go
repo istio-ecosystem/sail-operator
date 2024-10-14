@@ -42,13 +42,14 @@ var (
 	expectedRegistry      = env.Get("EXPECTED_REGISTRY", "^docker\\.io|^gcr\\.io")
 	bookinfoNamespace     = env.Get("BOOKINFO_NAMESPACE", "bookinfo")
 	multicluster          = env.GetBool("MULTICLUSTER", false)
+	ipFamily              = env.Get("IP_FAMILY", "ipv4")
 
 	k kubectl.Kubectl
 )
 
 func TestInstall(t *testing.T) {
-	if multicluster {
-		t.Skip("Skipping test for multicluster")
+	if ipFamily == "dual" || multicluster {
+		t.Skip("Skipping the control plane tests")
 	}
 	RegisterFailHandler(Fail)
 	setup()
