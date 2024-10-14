@@ -87,6 +87,9 @@ spec:
                 default: istio-system
                 description: Namespace to which the Istio components should be installed.
                 type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
               profile:
                 description: |-
                   The built-in installation configuration profile to use.
