@@ -272,6 +272,14 @@ var _ = Describe("Istio resource", Ordered, func() {
 						deleteAllIstiosAndRevisions(ctx)
 					})
 
+					When("namespace is updated", func() {
+						It("throws a validation error as the field is immutable", func() {
+							Expect(k8sClient.Get(ctx, istioKey, istio)).To(Succeed())
+							istio.Spec.Namespace = workloadNamespace
+							Expect(k8sClient.Update(ctx, istio)).To(MatchError(ContainSubstring("immutable")))
+						})
+					})
+
 					When("version is updated", func() {
 						BeforeAll(func() {
 							Expect(k8sClient.Get(ctx, istioKey, istio)).To(Succeed())

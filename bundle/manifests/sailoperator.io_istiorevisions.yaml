@@ -75,6 +75,9 @@ spec:
               namespace:
                 description: Namespace to which the Istio components should be installed.
                 type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
               type:
                 default: Local
                 description: Type indicates whether this revision represents a local

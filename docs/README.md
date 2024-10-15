@@ -56,7 +56,7 @@ Sail Operator manages the lifecycle of your Istio control planes. Instead of cre
 ## Concepts
 
 ### Istio resource
-The `Istio` resource is used to manage your Istio control planes. It is a cluster-wide resource, as the Istio control plane operates in and requires access to the entire cluster. To select a namespace to run the control plane pods in, you can use the `spec.namespace` field. You can access all helm chart options through the `values` field in the `spec`:
+The `Istio` resource is used to manage your Istio control planes. It is a cluster-wide resource, as the Istio control plane operates in and requires access to the entire cluster. To select a namespace to run the control plane pods in, you can use the `spec.namespace` field. Note that this field is immutable, though: in order to move a control plane to another namespace, you have to remove the Istio resource and recreate it with a different `spec.namespace`. You can access all helm chart options through the `values` field in the `spec`:
 
 ```yaml
 apiVersion: sailoperator.io/v1alpha1
