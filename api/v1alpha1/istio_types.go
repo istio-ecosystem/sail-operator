@@ -57,7 +57,7 @@ type IstioSpec struct {
 	// +kubebuilder:validation:Enum=ambient;default;demo;empty;external;openshift-ambient;openshift;preview;stable
 	Profile string `json:"profile,omitempty"`
 
-	// Namespace to which the Istio components should be installed.
+	// Namespace to which the Istio components should be installed. Note that this field is immutable.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,xDescriptors={"urn:alm:descriptor:io.kubernetes:Namespace"}
 	// +kubebuilder:default=istio-system
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
