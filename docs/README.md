@@ -26,11 +26,11 @@
   - [Common Setup](#common-setup)
   - [Multi-Primary](#multi-primary---multi-network)
   - [Primary-Remote](#primary-remote---multi-network)
-  - [External Control Plane](#external-controlplane)
+  - [External Control Plane](#external-control-plane)
 - [Dual-stack Support](#dual-stack-support)
-  - [Prerequisites](#prerequisites)
+  - [Prerequisites](#prerequisites-1)
   - [Installation Steps](#installation-steps)
-  - [Validation](#ds-validation)
+  - [Validation](#validation)
 - [Addons](#addons)
   - [Deploy Prometheus and Jaeger addons](#deploy-prometheus-and-jaeger-addons)
   - [Deploy Kiali addon](#deploy-kiali-addon)
@@ -1181,7 +1181,6 @@ For more details, you can refer to the Kubernetes [documentation](https://kubern
 
 - Kubernetes 1.23 or later configured with dual-stack support.
 - Sail Operator is installed.
-- Kind cluster with dual-stack networking.
 
 ### Installation Steps
 
