@@ -49,7 +49,7 @@ spec:
                 - linux
       containers:
       - args:
-        - --secure-listen-address=0.0.0.0:8443
+        - --secure-listen-address=:8443
         - --upstream=http://127.0.0.1:8080/
         - --logtostderr=true
         - --v=0
