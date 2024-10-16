@@ -1181,7 +1181,6 @@ For more details, you can refer to the Kubernetes [documentation](https://kubern
 
 - Kubernetes 1.23 or later configured with dual-stack support.
 - Sail Operator is installed.
-- Kind cluster with dual-stack networking.
 
 ### Installation Steps
 
