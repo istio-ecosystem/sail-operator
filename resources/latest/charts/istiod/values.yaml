@@ -242,7 +242,7 @@ _internal_defaults_do_not_set:
     # Dev builds from prow are on gcr.io
     hub: gcr.io/istio-testing
     # Default tag for Istio images.
-    tag: 1.24-alpha.1d92787e64d8c46594e86ae9b5e90265384e5070
+    tag: 1.24-alpha.0f6609f9b5cfe8517fbb6b157dd226356f827a7f
     # Variant of the image to use.
     # Currently supported are: [debug, distroless]
     variant: ""
@@ -399,9 +399,7 @@ _internal_defaults_do_not_set:
     # If not set explicitly, default to the Istio discovery address.
     caAddress: ""
 
-    # Configure a remote cluster data plane controlled by an external istiod.
-    # When set to true, istiod is not deployed locally and only a subset of the other
-    # discovery charts are enabled.
+    # Enable control of remote clusters.
     externalIstiod: false
 
     # Configure a remote cluster as the config cluster for an external istiod.
