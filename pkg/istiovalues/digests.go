@@ -35,8 +35,8 @@ func ApplyDigests(version string, values *v1alpha1.Values, config config.Operato
 	if values.Pilot == nil {
 		values.Pilot = &v1alpha1.PilotConfig{}
 	}
-	if values.Pilot.Image == "" && values.Pilot.Hub == "" && values.Pilot.Tag == "" {
-		values.Pilot.Image = imageDigests.IstiodImage
+	if values.Pilot.Image == nil && values.Pilot.Hub == nil && values.Pilot.Tag == nil {
+		values.Pilot.Image = &imageDigests.IstiodImage
 	}
 
 	if values.Global == nil {
@@ -46,15 +46,15 @@ func ApplyDigests(version string, values *v1alpha1.Values, config config.Operato
 	if values.Global.Proxy == nil {
 		values.Global.Proxy = &v1alpha1.ProxyConfig{}
 	}
-	if values.Global.Proxy.Image == "" {
-		values.Global.Proxy.Image = imageDigests.ProxyImage
+	if values.Global.Proxy.Image == nil {
+		values.Global.Proxy.Image = &imageDigests.ProxyImage
 	}
 
 	if values.Global.ProxyInit == nil {
 		values.Global.ProxyInit = &v1alpha1.ProxyInitConfig{}
 	}
-	if values.Global.ProxyInit.Image == "" {
-		values.Global.ProxyInit.Image = imageDigests.ProxyImage
+	if values.Global.ProxyInit.Image == nil {
+		values.Global.ProxyInit.Image = &imageDigests.ProxyImage
 	}
 
 	// TODO: add this once the API supports ambient

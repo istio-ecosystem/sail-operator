@@ -181,8 +181,8 @@ func applyImageDigests(cni *v1alpha1.IstioCNI, values *v1alpha1.CNIValues, confi
 	if values.Cni == nil {
 		values.Cni = &v1alpha1.CNIConfig{}
 	}
-	if values.Cni.Image == "" && values.Cni.Hub == "" && values.Cni.Tag == "" {
-		values.Cni.Image = imageDigests.CNIImage
+	if values.Cni.Image == nil && values.Cni.Hub == nil && values.Cni.Tag == nil {
+		values.Cni.Image = &imageDigests.CNIImage
 	}
 	return values
 }

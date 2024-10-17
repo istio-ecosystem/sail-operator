@@ -31,6 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+
+	"istio.io/istio/pkg/ptr"
 )
 
 func TestValidate(t *testing.T) {
@@ -322,14 +324,14 @@ func TestApplyImageDigests(t *testing.T) {
 					Version: "v1.20.0",
 					Values: &v1alpha1.CNIValues{
 						Cni: &v1alpha1.CNIConfig{
-							Image: "istiocni-test",
+							Image: ptr.Of("istiocni-test"),
 						},
 					},
 				},
 			},
 			expectValues: &v1alpha1.CNIValues{
 				Cni: &v1alpha1.CNIConfig{
-					Image: "istiocni-test",
+					Image: ptr.Of("istiocni-test"),
 				},
 			},
 		},
@@ -350,7 +352,7 @@ func TestApplyImageDigests(t *testing.T) {
 			},
 			expectValues: &v1alpha1.CNIValues{
 				Cni: &v1alpha1.CNIConfig{
-					Image: "cni-test",
+					Image: ptr.Of("cni-test"),
 				},
 			},
 		},
@@ -368,14 +370,14 @@ func TestApplyImageDigests(t *testing.T) {
 					Version: "v1.20.0",
 					Values: &v1alpha1.CNIValues{
 						Cni: &v1alpha1.CNIConfig{
-							Image: "cni-custom",
+							Image: ptr.Of("cni-custom"),
 						},
 					},
 				},
 			},
 			expectValues: &v1alpha1.CNIValues{
 				Cni: &v1alpha1.CNIConfig{
-					Image: "cni-custom",
+					Image: ptr.Of("cni-custom"),
 				},
 			},
 		},
@@ -393,16 +395,16 @@ func TestApplyImageDigests(t *testing.T) {
 					Version: "v1.20.0",
 					Values: &v1alpha1.CNIValues{
 						Cni: &v1alpha1.CNIConfig{
-							Hub: "docker.io/istio",
-							Tag: "1.20.1",
+							Hub: ptr.Of("docker.io/istio"),
+							Tag: ptr.Of("1.20.1"),
 						},
 					},
 				},
 			},
 			expectValues: &v1alpha1.CNIValues{
 				Cni: &v1alpha1.CNIConfig{
-					Hub: "docker.io/istio",
-					Tag: "1.20.1",
+					Hub: ptr.Of("docker.io/istio"),
+					Tag: ptr.Of("1.20.1"),
 				},
 			},
 		},
@@ -420,16 +422,16 @@ func TestApplyImageDigests(t *testing.T) {
 					Version: "v1.20.1",
 					Values: &v1alpha1.CNIValues{
 						Cni: &v1alpha1.CNIConfig{
-							Hub: "docker.io/istio",
-							Tag: "1.20.2",
+							Hub: ptr.Of("docker.io/istio"),
+							Tag: ptr.Of("1.20.2"),
 						},
 					},
 				},
 			},
 			expectValues: &v1alpha1.CNIValues{
 				Cni: &v1alpha1.CNIConfig{
-					Hub: "docker.io/istio",
-					Tag: "1.20.2",
+					Hub: ptr.Of("docker.io/istio"),
+					Tag: ptr.Of("1.20.2"),
 				},
 			},
 		},

@@ -62,7 +62,7 @@ func TestValidate(t *testing.T) {
 					Namespace: "istio-system",
 					Values: &v1alpha1.Values{
 						Global: &v1alpha1.GlobalConfig{
-							IstioNamespace: "istio-system",
+							IstioNamespace: ptr.Of("istio-system"),
 						},
 					},
 				},
@@ -81,7 +81,7 @@ func TestValidate(t *testing.T) {
 					Namespace: "istio-system",
 					Values: &v1alpha1.Values{
 						Global: &v1alpha1.GlobalConfig{
-							IstioNamespace: "istio-system",
+							IstioNamespace: ptr.Of("istio-system"),
 						},
 					},
 				},
@@ -159,7 +159,7 @@ func TestValidate(t *testing.T) {
 					Namespace: "istio-system",
 					Values: &v1alpha1.Values{
 						Global: &v1alpha1.GlobalConfig{
-							IstioNamespace: "other-namespace",
+							IstioNamespace: ptr.Of("other-namespace"),
 						},
 					},
 				},
@@ -178,9 +178,9 @@ func TestValidate(t *testing.T) {
 					Version:   supportedversion.Default,
 					Namespace: "istio-system",
 					Values: &v1alpha1.Values{
-						Revision: "my-revision",
+						Revision: ptr.Of("my-revision"),
 						Global: &v1alpha1.GlobalConfig{
-							IstioNamespace: "other-namespace",
+							IstioNamespace: ptr.Of("other-namespace"),
 						},
 					},
 				},
@@ -199,9 +199,9 @@ func TestValidate(t *testing.T) {
 					Version:   supportedversion.Default,
 					Namespace: "istio-system",
 					Values: &v1alpha1.Values{
-						Revision: "other-revision",
+						Revision: ptr.Of("other-revision"),
 						Global: &v1alpha1.GlobalConfig{
-							IstioNamespace: "other-namespace",
+							IstioNamespace: ptr.Of("other-namespace"),
 						},
 					},
 				},
@@ -376,7 +376,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 		{
 			name: "Non-default revision",
 			values: &v1alpha1.Values{
-				Revision: "my-revision",
+				Revision: ptr.Of("my-revision"),
 			},
 			clientObjects: []client.Object{
 				&appsv1.Deployment{

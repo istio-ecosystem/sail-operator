@@ -205,7 +205,7 @@ _Appears in:_
 
 #### ClientTLSSettings
 
-_Underlying type:_ _[struct{Mode ClientTLSSettingsTLSmode "json:\"mode,omitempty\""; ClientCertificate string "json:\"clientCertificate,omitempty\""; PrivateKey string "json:\"privateKey,omitempty\""; CaCertificates string "json:\"caCertificates,omitempty\""; CredentialName string "json:\"credentialName,omitempty\""; SubjectAltNames []string "json:\"subjectAltNames,omitempty\""; Sni string "json:\"sni,omitempty\""; InsecureSkipVerify *bool "json:\"insecureSkipVerify,omitempty\""; CaCrl string "json:\"caCrl,omitempty\""}](#struct{mode-clienttlssettingstlsmode-"json:\"mode,omitempty\"";-clientcertificate-string-"json:\"clientcertificate,omitempty\"";-privatekey-string-"json:\"privatekey,omitempty\"";-cacertificates-string-"json:\"cacertificates,omitempty\"";-credentialname-string-"json:\"credentialname,omitempty\"";-subjectaltnames-[]string-"json:\"subjectaltnames,omitempty\"";-sni-string-"json:\"sni,omitempty\"";-insecureskipverify-*bool-"json:\"insecureskipverify,omitempty\"";-cacrl-string-"json:\"cacrl,omitempty\""})_
+_Underlying type:_ _[struct{Mode ClientTLSSettingsTLSmode "json:\"mode,omitempty\""; ClientCertificate *string "json:\"clientCertificate,omitempty\""; PrivateKey *string "json:\"privateKey,omitempty\""; CaCertificates *string "json:\"caCertificates,omitempty\""; CredentialName *string "json:\"credentialName,omitempty\""; SubjectAltNames []string "json:\"subjectAltNames,omitempty\""; Sni *string "json:\"sni,omitempty\""; InsecureSkipVerify *bool "json:\"insecureSkipVerify,omitempty\""; CaCrl *string "json:\"caCrl,omitempty\""}](#struct{mode-clienttlssettingstlsmode-"json:\"mode,omitempty\"";-clientcertificate-*string-"json:\"clientcertificate,omitempty\"";-privatekey-*string-"json:\"privatekey,omitempty\"";-cacertificates-*string-"json:\"cacertificates,omitempty\"";-credentialname-*string-"json:\"credentialname,omitempty\"";-subjectaltnames-[]string-"json:\"subjectaltnames,omitempty\"";-sni-*string-"json:\"sni,omitempty\"";-insecureskipverify-*bool-"json:\"insecureskipverify,omitempty\"";-cacrl-*string-"json:\"cacrl,omitempty\""})_
 
 SSL/TLS related settings for upstream connections. See Envoy's [TLS
 context](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto.html#common-tls-configuration)
@@ -2317,7 +2317,7 @@ _Appears in:_
 
 #### ProxyConfigProxyHeadersServer
 
-_Underlying type:_ _[struct{Disabled *bool "json:\"disabled,omitempty\""; Value string "json:\"value,omitempty\""}](#struct{disabled-*bool-"json:\"disabled,omitempty\"";-value-string-"json:\"value,omitempty\""})_
+_Underlying type:_ _[struct{Disabled *bool "json:\"disabled,omitempty\""; Value *string "json:\"value,omitempty\""}](#struct{disabled-*bool-"json:\"disabled,omitempty\"";-value-*string-"json:\"value,omitempty\""})_
 
 
 
@@ -2981,7 +2981,7 @@ _Appears in:_
 
 #### TracingDatadog
 
-_Underlying type:_ _[struct{Address string "json:\"address,omitempty\""}](#struct{address-string-"json:\"address,omitempty\""})_
+_Underlying type:_ _[struct{Address *string "json:\"address,omitempty\""}](#struct{address-*string-"json:\"address,omitempty\""})_
 
 Datadog defines configuration for a Datadog tracer.
 
@@ -3000,7 +3000,7 @@ _Appears in:_
 
 #### TracingOpenCensusAgent
 
-_Underlying type:_ _[struct{Address string "json:\"address,omitempty\""; Context []TracingOpenCensusAgentTraceContext "json:\"context,omitempty\""}](#struct{address-string-"json:\"address,omitempty\"";-context-[]tracingopencensusagenttracecontext-"json:\"context,omitempty\""})_
+_Underlying type:_ _[struct{Address *string "json:\"address,omitempty\""; Context []TracingOpenCensusAgentTraceContext "json:\"context,omitempty\""}](#struct{address-*string-"json:\"address,omitempty\"";-context-[]tracingopencensusagenttracecontext-"json:\"context,omitempty\""})_
 
 OpenCensusAgent defines configuration for an OpenCensus tracer writing to
 an OpenCensus agent backend. See
@@ -3022,7 +3022,7 @@ _Appears in:_
 
 #### TracingStackdriver
 
-_Underlying type:_ _[struct{Debug bool "json:\"debug,omitempty\""; MaxNumberOfAttributes *int64 "json:\"maxNumberOfAttributes,omitempty\""; MaxNumberOfAnnotations *int64 "json:\"maxNumberOfAnnotations,omitempty\""; MaxNumberOfMessageEvents *int64 "json:\"maxNumberOfMessageEvents,omitempty\""}](#struct{debug-bool-"json:\"debug,omitempty\"";-maxnumberofattributes-*int64-"json:\"maxnumberofattributes,omitempty\"";-maxnumberofannotations-*int64-"json:\"maxnumberofannotations,omitempty\"";-maxnumberofmessageevents-*int64-"json:\"maxnumberofmessageevents,omitempty\""})_
+_Underlying type:_ _[struct{Debug *bool "json:\"debug,omitempty\""; MaxNumberOfAttributes *int64 "json:\"maxNumberOfAttributes,omitempty\""; MaxNumberOfAnnotations *int64 "json:\"maxNumberOfAnnotations,omitempty\""; MaxNumberOfMessageEvents *int64 "json:\"maxNumberOfMessageEvents,omitempty\""}](#struct{debug-*bool-"json:\"debug,omitempty\"";-maxnumberofattributes-*int64-"json:\"maxnumberofattributes,omitempty\"";-maxnumberofannotations-*int64-"json:\"maxnumberofannotations,omitempty\"";-maxnumberofmessageevents-*int64-"json:\"maxnumberofmessageevents,omitempty\""})_
 
 Stackdriver defines configuration for a Stackdriver tracer.
 See [Envoy's OpenCensus trace configuration](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/trace/v3/opencensus.proto)
@@ -3038,7 +3038,7 @@ _Appears in:_
 
 #### TracingZipkin
 
-_Underlying type:_ _[struct{Address string "json:\"address,omitempty\""}](#struct{address-string-"json:\"address,omitempty\""})_
+_Underlying type:_ _[struct{Address *string "json:\"address,omitempty\""}](#struct{address-*string-"json:\"address,omitempty\""})_
 
 Zipkin defines configuration for a Zipkin tracer.
 
