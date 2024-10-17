@@ -28,6 +28,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
+	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -36,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -158,17 +160,26 @@ func getReadinessProbeURL(config admissionv1.WebhookClientConfig) (string, error
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+	logger := mgr.GetLogger().WithName("ctrlr").WithName("webhook")
+
+	// objectHandler handles the MutatingWebhookConfiguration watch events
+	objectHandler := wrapEventHandler(logger, &handler.EnqueueRequestForObject{})
+
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
 			LogConstructor: func(req *reconcile.Request) logr.Logger {
-				log := mgr.GetLogger().WithName("ctrlr").WithName("webhook")
+				log := logger
 				if req != nil {
 					log = log.WithValues("MutatingWebhookConfiguration", req.Name)
 				}
 				return log
 			},
 		}).
-		For(&admissionv1.MutatingWebhookConfiguration{}, builder.WithPredicates(ownedByRemoteIstioPredicate(mgr.GetClient()))).
+
+		// we use the Watches function instead of For(), so that we can wrap the handler so that events that cause the object to be enqueued are logged
+		// +lint-watches:ignore: IstioRevision (not found in charts, but this is the main resource watched by this controller)
+		Watches(&admissionv1.MutatingWebhookConfiguration{}, objectHandler, builder.WithPredicates(ownedByRemoteIstioPredicate(mgr.GetClient()))).
+		Named("mutatingwebhookconfiguration").
 		Complete(reconciler.NewStandardReconciler[*admissionv1.MutatingWebhookConfiguration](r.Client, r.Reconcile))
 }
 
@@ -220,4 +231,8 @@ func getTimeout(webhook *admissionv1.MutatingWebhookConfiguration) time.Duration
 		}
 	}
 	return defaultTimeoutSeconds * time.Second
+}
+
+func wrapEventHandler(logger logr.Logger, handler handler.EventHandler) handler.EventHandler {
+	return enqueuelogger.WrapIfNecessary("MutatingWebhookConfiguration", logger, handler)
 }
