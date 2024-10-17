@@ -17,6 +17,7 @@ package config
 import (
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 )
@@ -41,7 +42,9 @@ func DetectPlatform(cfg *rest.Config) (Platform, error) {
 	}
 
 	resources, err := dc.ServerResourcesForGroupVersion(openshiftResourceGroup + "/" + openshiftResourceVersion)
-	if err != nil {
+	if errors.IsNotFound(err) {
+		return PlatformKubernetes, nil
+	} else if err != nil {
 		return "", err
 	}
 
