@@ -12,6 +12,7 @@ metadata:
   name: {{ .Values.deployment.name }}-metrics-service
   namespace: {{ .Release.Namespace }}
 spec:
+  ipFamilyPolicy: PreferDualStack
   ports:
   - name: https
     port: 8443

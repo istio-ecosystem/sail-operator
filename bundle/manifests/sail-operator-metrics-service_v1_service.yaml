@@ -12,6 +12,7 @@ metadata:
     control-plane: sail-operator
   name: sail-operator-metrics-service
 spec:
+  ipFamilyPolicy: PreferDualStack
   ports:
   - name: https
     port: 8443

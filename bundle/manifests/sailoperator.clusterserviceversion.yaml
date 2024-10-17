@@ -34,7 +34,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/maistra-dev/sail-operator:0.2-latest
-    createdAt: "2024-10-17T05:05:02Z"
+    createdAt: "2024-10-17T09:56:08Z"
     description: Experimental operator for installing Istio service mesh
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -639,7 +639,7 @@ spec:
                         - linux
               containers:
               - args:
-                - --secure-listen-address=0.0.0.0:8443
+                - --secure-listen-address=:8443
                 - --upstream=http://127.0.0.1:8080/
                 - --logtostderr=true
                 - --v=0
