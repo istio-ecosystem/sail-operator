@@ -24,6 +24,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
@@ -35,6 +36,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -171,18 +173,30 @@ func getActiveRevisionName(istio *v1alpha1.Istio) string {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+	logger := mgr.GetLogger().WithName("ctrlr").WithName("istio")
+
+	// mainObjectHandler handles the IstioRevision watch events
+	mainObjectHandler := wrapEventHandler(logger, &handler.EnqueueRequestForObject{})
+
+	// ownedResourceHandler handles resources that are owned by the IstioRevision CR
+	ownedResourceHandler := wrapEventHandler(logger,
+		handler.EnqueueRequestForOwner(r.Scheme, r.RESTMapper(), &v1alpha1.Istio{}, handler.OnlyControllerOwner()))
+
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
 			LogConstructor: func(req *reconcile.Request) logr.Logger {
-				log := mgr.GetLogger().WithName("ctrlr").WithName("istio")
+				log := logger
 				if req != nil {
 					log = log.WithValues("Istio", req.Name)
 				}
 				return log
 			},
 		}).
-		For(&v1alpha1.Istio{}).
-		Owns(&v1alpha1.IstioRevision{}).
+		// we use the Watches function instead of For(), so that we can wrap the handler so that events that cause the object to be enqueued are logged
+		// +lint-watches:ignore: Istio (not found in charts, but this is the main resource watched by this controller)
+		Watches(&v1alpha1.Istio{}, mainObjectHandler).
+		Named("istio").
+		Watches(&v1alpha1.IstioRevision{}, ownedResourceHandler).
 		Complete(reconciler.NewStandardReconciler[*v1alpha1.Istio](r.Client, r.Reconcile))
 }
 
@@ -314,4 +328,8 @@ func convertConditionReason(reason v1alpha1.IstioRevisionConditionReason) v1alph
 	default:
 		panic(fmt.Sprintf("can't convert IstioRevisionConditionReason: %s", reason))
 	}
+}
+
+func wrapEventHandler(logger logr.Logger, handler handler.EventHandler) handler.EventHandler {
+	return enqueuelogger.WrapIfNecessary(v1alpha1.IstioKind, logger, handler)
 }
