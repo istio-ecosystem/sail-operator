@@ -65,7 +65,7 @@ func main() {
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
-	if printVersion {
+	if printVersion || flag.NArg() > 0 && flag.Arg(0) == "version" {
 		fmt.Println(version.Info)
 		os.Exit(0)
 	}
