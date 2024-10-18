@@ -39,7 +39,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 		istioNamespace    = "istio-test"
 		workloadNamespace = "istio-test-workloads"
 
-		gracePeriod = 30 * time.Second
+		gracePeriod = 5 * time.Second
 		pilotImage  = "sail-operator/test:latest"
 	)
 	istioKey := client.ObjectKey{Name: istioName}
