@@ -29,7 +29,7 @@ const (
 	UpdateStrategyTypeRevisionBased UpdateStrategyType = "RevisionBased"
 
 	DefaultRevisionDeletionGracePeriodSeconds = 30
-	MinRevisionDeletionGracePeriodSeconds     = 30
+	MinRevisionDeletionGracePeriodSeconds     = 0
 )
 
 // IstioSpec defines the desired state of Istio
@@ -86,9 +86,9 @@ type IstioUpdateStrategy struct {
 
 	// Defines how many seconds the operator should wait before removing a non-active revision after all
 	// the workloads have stopped using it. You may want to set this value on the order of minutes.
-	// The minimum and the default value is 30.
+	// The minimum is 0 and the default value is 30.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=2,displayName="Inactive Revision Deletion Grace Period (seconds)",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:number"}
-	// +kubebuilder:validation:Minimum=30
+	// +kubebuilder:validation:Minimum=0
 	InactiveRevisionDeletionGracePeriodSeconds *int64 `json:"inactiveRevisionDeletionGracePeriodSeconds,omitempty"`
 
 	// Defines whether the workloads should be moved from one control plane instance to another
