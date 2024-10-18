@@ -21,7 +21,7 @@ csv:
     - v1.23.2
     - v1.22.5
     - v1.21.6
-    - latest (0f6609f9)
+    - latest (d643c2b4)
 
     [See this page](https://github.com/istio-ecosystem/sail-operator/blob/main/bundle/README.md) for instructions on how to use it.
   support: Community based

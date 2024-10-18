@@ -346,8 +346,34 @@ spec:
                               - ROUND_ROBIN
                               - LEAST_REQUEST
                               type: string
+                            warmup:
+                              description: Represents the warmup configuration of
+                                Service.
+                              properties:
+                                aggression:
+                                  description: This parameter controls the speed of
+                                    traffic increase over the warmup duration.
+                                  format: double
+                                  minimum: 1
+                                  nullable: true
+                                  type: number
+                                duration:
+                                  type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
+                                minimumPercent:
+                                  format: double
+                                  maximum: 100
+                                  minimum: 0
+                                  nullable: true
+                                  type: number
+                              required:
+                              - duration
+                              type: object
                             warmupDurationSecs:
-                              description: Represents the warmup duration of Service.
+                              description: 'Deprecated: use `warmup` instead.'
                               type: string
                               x-kubernetes-validations:
                               - message: must be a valid duration greater than 1ms
@@ -692,9 +718,34 @@ spec:
                                     - ROUND_ROBIN
                                     - LEAST_REQUEST
                                     type: string
+                                  warmup:
+                                    description: Represents the warmup configuration
+                                      of Service.
+                                    properties:
+                                      aggression:
+                                        description: This parameter controls the speed
+                                          of traffic increase over the warmup duration.
+                                        format: double
+                                        minimum: 1
+                                        nullable: true
+                                        type: number
+                                      duration:
+                                        type: string
+                                        x-kubernetes-validations:
+                                        - message: must be a valid duration greater
+                                            than 1ms
+                                          rule: duration(self) >= duration('1ms')
+                                      minimumPercent:
+                                        format: double
+                                        maximum: 100
+                                        minimum: 0
+                                        nullable: true
+                                        type: number
+                                    required:
+                                    - duration
+                                    type: object
                                   warmupDurationSecs:
-                                    description: Represents the warmup duration of
-                                      Service.
+                                    description: 'Deprecated: use `warmup` instead.'
                                     type: string
                                     x-kubernetes-validations:
                                     - message: must be a valid duration greater than
@@ -1186,8 +1237,32 @@ spec:
                         - ROUND_ROBIN
                         - LEAST_REQUEST
                         type: string
+                      warmup:
+                        description: Represents the warmup configuration of Service.
+                        properties:
+                          aggression:
+                            description: This parameter controls the speed of traffic
+                              increase over the warmup duration.
+                            format: double
+                            minimum: 1
+                            nullable: true
+                            type: number
+                          duration:
+                            type: string
+                            x-kubernetes-validations:
+                            - message: must be a valid duration greater than 1ms
+                              rule: duration(self) >= duration('1ms')
+                          minimumPercent:
+                            format: double
+                            maximum: 100
+                            minimum: 0
+                            nullable: true
+                            type: number
+                        required:
+                        - duration
+                        type: object
                       warmupDurationSecs:
-                        description: Represents the warmup duration of Service.
+                        description: 'Deprecated: use `warmup` instead.'
                         type: string
                         x-kubernetes-validations:
                         - message: must be a valid duration greater than 1ms
@@ -1526,8 +1601,34 @@ spec:
                               - ROUND_ROBIN
                               - LEAST_REQUEST
                               type: string
+                            warmup:
+                              description: Represents the warmup configuration of
+                                Service.
+                              properties:
+                                aggression:
+                                  description: This parameter controls the speed of
+                                    traffic increase over the warmup duration.
+                                  format: double
+                                  minimum: 1
+                                  nullable: true
+                                  type: number
+                                duration:
+                                  type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
+                                minimumPercent:
+                                  format: double
+                                  maximum: 100
+                                  minimum: 0
+                                  nullable: true
+                                  type: number
+                              required:
+                              - duration
+                              type: object
                             warmupDurationSecs:
-                              description: Represents the warmup duration of Service.
+                              description: 'Deprecated: use `warmup` instead.'
                               type: string
                               x-kubernetes-validations:
                               - message: must be a valid duration greater than 1ms
@@ -2162,8 +2263,34 @@ spec:
                               - ROUND_ROBIN
                               - LEAST_REQUEST
                               type: string
+                            warmup:
+                              description: Represents the warmup configuration of
+                                Service.
+                              properties:
+                                aggression:
+                                  description: This parameter controls the speed of
+                                    traffic increase over the warmup duration.
+                                  format: double
+                                  minimum: 1
+                                  nullable: true
+                                  type: number
+                                duration:
+                                  type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
+                                minimumPercent:
+                                  format: double
+                                  maximum: 100
+                                  minimum: 0
+                                  nullable: true
+                                  type: number
+                              required:
+                              - duration
+                              type: object
                             warmupDurationSecs:
-                              description: Represents the warmup duration of Service.
+                              description: 'Deprecated: use `warmup` instead.'
                               type: string
                               x-kubernetes-validations:
                               - message: must be a valid duration greater than 1ms
@@ -2508,9 +2635,34 @@ spec:
                                     - ROUND_ROBIN
                                     - LEAST_REQUEST
                                     type: string
+                                  warmup:
+                                    description: Represents the warmup configuration
+                                      of Service.
+                                    properties:
+                                      aggression:
+                                        description: This parameter controls the speed
+                                          of traffic increase over the warmup duration.
+                                        format: double
+                                        minimum: 1
+                                        nullable: true
+                                        type: number
+                                      duration:
+                                        type: string
+                                        x-kubernetes-validations:
+                                        - message: must be a valid duration greater
+                                            than 1ms
+                                          rule: duration(self) >= duration('1ms')
+                                      minimumPercent:
+                                        format: double
+                                        maximum: 100
+                                        minimum: 0
+                                        nullable: true
+                                        type: number
+                                    required:
+                                    - duration
+                                    type: object
                                   warmupDurationSecs:
-                                    description: Represents the warmup duration of
-                                      Service.
+                                    description: 'Deprecated: use `warmup` instead.'
                                     type: string
                                     x-kubernetes-validations:
                                     - message: must be a valid duration greater than
@@ -3002,8 +3154,32 @@ spec:
                         - ROUND_ROBIN
                         - LEAST_REQUEST
                         type: string
+                      warmup:
+                        description: Represents the warmup configuration of Service.
+                        properties:
+                          aggression:
+                            description: This parameter controls the speed of traffic
+                              increase over the warmup duration.
+                            format: double
+                            minimum: 1
+                            nullable: true
+                            type: number
+                          duration:
+                            type: string
+                            x-kubernetes-validations:
+                            - message: must be a valid duration greater than 1ms
+                              rule: duration(self) >= duration('1ms')
+                          minimumPercent:
+                            format: double
+                            maximum: 100
+                            minimum: 0
+                            nullable: true
+                            type: number
+                        required:
+                        - duration
+                        type: object
                       warmupDurationSecs:
-                        description: Represents the warmup duration of Service.
+                        description: 'Deprecated: use `warmup` instead.'
                         type: string
                         x-kubernetes-validations:
                         - message: must be a valid duration greater than 1ms
@@ -3342,8 +3518,34 @@ spec:
                               - ROUND_ROBIN
                               - LEAST_REQUEST
                               type: string
+                            warmup:
+                              description: Represents the warmup configuration of
+                                Service.
+                              properties:
+                                aggression:
+                                  description: This parameter controls the speed of
+                                    traffic increase over the warmup duration.
+                                  format: double
+                                  minimum: 1
+                                  nullable: true
+                                  type: number
+                                duration:
+                                  type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
+                                minimumPercent:
+                                  format: double
+                                  maximum: 100
+                                  minimum: 0
+                                  nullable: true
+                                  type: number
+                              required:
+                              - duration
+                              type: object
                             warmupDurationSecs:
-                              description: Represents the warmup duration of Service.
+                              description: 'Deprecated: use `warmup` instead.'
                               type: string
                               x-kubernetes-validations:
                               - message: must be a valid duration greater than 1ms
@@ -3978,8 +4180,34 @@ spec:
                               - ROUND_ROBIN
                               - LEAST_REQUEST
                               type: string
+                            warmup:
+                              description: Represents the warmup configuration of
+                                Service.
+                              properties:
+                                aggression:
+                                  description: This parameter controls the speed of
+                                    traffic increase over the warmup duration.
+                                  format: double
+                                  minimum: 1
+                                  nullable: true
+                                  type: number
+                                duration:
+                                  type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
+                                minimumPercent:
+                                  format: double
+                                  maximum: 100
+                                  minimum: 0
+                                  nullable: true
+                                  type: number
+                              required:
+                              - duration
+                              type: object
                             warmupDurationSecs:
-                              description: Represents the warmup duration of Service.
+                              description: 'Deprecated: use `warmup` instead.'
                               type: string
                               x-kubernetes-validations:
                               - message: must be a valid duration greater than 1ms
@@ -4324,9 +4552,34 @@ spec:
                                     - ROUND_ROBIN
                                     - LEAST_REQUEST
                                     type: string
+                                  warmup:
+                                    description: Represents the warmup configuration
+                                      of Service.
+                                    properties:
+                                      aggression:
+                                        description: This parameter controls the speed
+                                          of traffic increase over the warmup duration.
+                                        format: double
+                                        minimum: 1
+                                        nullable: true
+                                        type: number
+                                      duration:
+                                        type: string
+                                        x-kubernetes-validations:
+                                        - message: must be a valid duration greater
+                                            than 1ms
+                                          rule: duration(self) >= duration('1ms')
+                                      minimumPercent:
+                                        format: double
+                                        maximum: 100
+                                        minimum: 0
+                                        nullable: true
+                                        type: number
+                                    required:
+                                    - duration
+                                    type: object
                                   warmupDurationSecs:
-                                    description: Represents the warmup duration of
-                                      Service.
+                                    description: 'Deprecated: use `warmup` instead.'
                                     type: string
                                     x-kubernetes-validations:
                                     - message: must be a valid duration greater than
@@ -4818,8 +5071,32 @@ spec:
                         - ROUND_ROBIN
                         - LEAST_REQUEST
                         type: string
+                      warmup:
+                        description: Represents the warmup configuration of Service.
+                        properties:
+                          aggression:
+                            description: This parameter controls the speed of traffic
+                              increase over the warmup duration.
+                            format: double
+                            minimum: 1
+                            nullable: true
+                            type: number
+                          duration:
+                            type: string
+                            x-kubernetes-validations:
+                            - message: must be a valid duration greater than 1ms
+                              rule: duration(self) >= duration('1ms')
+                          minimumPercent:
+                            format: double
+                            maximum: 100
+                            minimum: 0
+                            nullable: true
+                            type: number
+                        required:
+                        - duration
+                        type: object
                       warmupDurationSecs:
-                        description: Represents the warmup duration of Service.
+                        description: 'Deprecated: use `warmup` instead.'
                         type: string
                         x-kubernetes-validations:
                         - message: must be a valid duration greater than 1ms
@@ -5158,8 +5435,34 @@ spec:
                               - ROUND_ROBIN
                               - LEAST_REQUEST
                               type: string
+                            warmup:
+                              description: Represents the warmup configuration of
+                                Service.
+                              properties:
+                                aggression:
+                                  description: This parameter controls the speed of
+                                    traffic increase over the warmup duration.
+                                  format: double
+                                  minimum: 1
+                                  nullable: true
+                                  type: number
+                                duration:
+                                  type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
+                                minimumPercent:
+                                  format: double
+                                  maximum: 100
+                                  minimum: 0
+                                  nullable: true
+                                  type: number
+                              required:
+                              - duration
+                              type: object
                             warmupDurationSecs:
-                              description: Represents the warmup duration of Service.
+                              description: 'Deprecated: use `warmup` instead.'
                               type: string
                               x-kubernetes-validations:
                               - message: must be a valid duration greater than 1ms
