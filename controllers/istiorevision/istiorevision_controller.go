@@ -24,6 +24,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	"github.com/istio-ecosystem/sail-operator/controllers/istio"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
@@ -225,6 +226,10 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// The handler triggers the reconciliation of the referenced IstioRevision CR so that its InUse condition is updated.
 	podHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapPodToReconcileRequest))
 
+	// revisionTagHandler handles IstioRevisionTags that reference the IstioRevision CR via their targetRef.
+	// The handler triggers the reconciliation of the referenced IstioRevision CR so that its InUse condition is updated.
+	revisionTagHandler := enqueuelogger.WrapIfNecessary(v1alpha1.IstioRevisionKind, logger, handler.EnqueueRequestsFromMapFunc(r.mapRevisionTagToReconcileRequest))
+
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
 			LogConstructor: func(req *reconcile.Request) logr.Logger {
@@ -256,6 +261,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 		// +lint-watches:ignore: Pod (not found in charts, but must be watched to reconcile IstioRevision when a pod references it)
 		Watches(&corev1.Pod{}, podHandler, builder.WithPredicates(ignoreStatusChange())).
+
+		// +lint-watches:ignore: IstioRevisionTag (not found in charts, but must be watched to reconcile IstioRevision when a pod references it)
+		Watches(&v1alpha1.IstioRevisionTag{}, revisionTagHandler).
 
 		// cluster-scoped resources
 		Watches(&rbacv1.ClusterRole{}, ownedResourceHandler).
@@ -409,6 +417,18 @@ func (r *Reconciler) isRevisionReferencedByWorkloads(ctx context.Context, rev *v
 	log := logf.FromContext(ctx)
 	nsList := corev1.NamespaceList{}
 	nsMap := map[string]corev1.Namespace{}
+	// if we're referenced by an in-use revisionTag, we're done. we can outsource the checking to the IstioRevisionTagController
+	revisionTagList := v1alpha1.IstioRevisionTagList{}
+	if err := r.Client.List(ctx, &revisionTagList); err != nil {
+		return false, fmt.Errorf("failed to list IstioRevisionTags: %w", err)
+	}
+	for _, tag := range revisionTagList.Items {
+		if tag.Status.IstioRevision == rev.Name && tag.Status.GetCondition(v1alpha1.IstioRevisionTagConditionInUse).Status == metav1.ConditionTrue {
+			log.V(2).Info("Revision is referenced by in-use IstioRevisionTag", "IstioRevisionTag", tag.Name)
+			return true, nil
+		}
+	}
+
 	if err := r.Client.List(ctx, &nsList); err != nil { // TODO: can we optimize this by specifying a label selector
 		return false, fmt.Errorf("failed to list namespaces: %w", err)
 	}
@@ -546,6 +566,24 @@ func (r *Reconciler) mapPodToReconcileRequest(ctx context.Context, pod client.Ob
 	revision := getReferencedRevisionFromPod(pod.GetLabels(), pod.GetAnnotations(), ns.GetLabels())
 	if revision != "" {
 		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: revision}}}
+	}
+	return nil
+}
+
+func (r *Reconciler) mapRevisionTagToReconcileRequest(ctx context.Context, revisionTag client.Object) []reconcile.Request {
+	log := logf.FromContext(ctx)
+	tag, ok := revisionTag.(*v1alpha1.IstioRevisionTag)
+	if ok {
+		if tag.Spec.TargetRef.Kind == v1alpha1.IstioRevisionKind {
+			return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: tag.Spec.TargetRef.Name}}}
+		} else if tag.Spec.TargetRef.Kind == v1alpha1.IstioKind {
+			i := &v1alpha1.Istio{}
+			if err := r.Client.Get(ctx, types.NamespacedName{Name: tag.Spec.TargetRef.Name}, i); err != nil {
+				log.Info("failed to get Istio resource referenced by IstioRevisionTag " + tag.Name + ": " + err.Error())
+				return nil
+			}
+			return []reconcile.Request{{NamespacedName: istio.GetActiveRevisionKey(i)}}
+		}
 	}
 	return nil
 }
