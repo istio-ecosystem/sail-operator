@@ -2,4 +2,6 @@ apiVersion: sailoperator.io/v1alpha1
 kind: Istio
 spec:
   values:
-    profile: openshift-ambient
+    profile: ambient
+    global:
+      platform: openshift
