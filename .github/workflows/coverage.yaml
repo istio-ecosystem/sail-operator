@@ -10,12 +10,12 @@ jobs:
 
     - name: Run coverage
       run: |
-        make test.unit \
+        make test \
           -e COVERAGE=true
 
     - name: Upload to Codecov
       uses: codecov/codecov-action@v4
       with:
-        file: out/coverage.out
+        files: out/coverage-unit.out,out/coverage-integration.out
         token: ${{ secrets.CODECOV_TOKEN }}
         fail_ci_if_error: true
