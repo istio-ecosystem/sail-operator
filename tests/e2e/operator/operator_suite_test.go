@@ -20,7 +20,9 @@ import (
 	"testing"
 
 	k8sclient "github.com/istio-ecosystem/sail-operator/tests/e2e/util/client"
-	env "github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,15 +32,20 @@ var (
 	cl             client.Client
 	ocp            = env.GetBool("OCP", false)
 	skipDeploy     = env.GetBool("SKIP_DEPLOY", false)
-	image          = env.Get("IMAGE", "quay.io/maistra-dev/sail-operator:latest")
-	namespace      = env.Get("NAMESPACE", "sail-operator")
+	namespace      = common.OperatorNamespace
 	deploymentName = env.Get("DEPLOYMENT_NAME", "sail-operator")
+	multicluster   = env.GetBool("MULTICLUSTER", false)
+
+	k kubectl.Kubectl
 )
 
 func TestInstall(t *testing.T) {
+	if multicluster {
+		t.Skip("Skipping test for multicluster")
+	}
 	RegisterFailHandler(Fail)
 	setup()
-	RunSpecs(t, "Install Operator Suite")
+	RunSpecs(t, "Operator Installation Test Suite")
 }
 
 func setup() {
@@ -46,7 +53,7 @@ func setup() {
 
 	GinkgoWriter.Println("Initializing k8s client")
 	var err error
-	cl, err = k8sclient.InitK8sClient()
+	cl, err = k8sclient.InitK8sClient("")
 	Expect(err).NotTo(HaveOccurred())
 
 	if ocp {
@@ -54,4 +61,6 @@ func setup() {
 	} else {
 		GinkgoWriter.Println("Running on Kubernetes")
 	}
+
+	k = kubectl.New()
 }

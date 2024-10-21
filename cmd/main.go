@@ -45,7 +45,6 @@ func main() {
 	var probeAddr string
 	var configFile string
 	var resourceDirectory string
-	var defaultProfile string
 	var logAPIRequests bool
 	var printVersion bool
 	var leaderElectionEnabled bool
@@ -53,7 +52,6 @@ func main() {
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.StringVar(&configFile, "config-file", "/etc/sail-operator/config.properties", "Location of the config file, propagated by k8s downward APIs")
 	flag.StringVar(&resourceDirectory, "resource-directory", "/var/lib/sail-operator/resources", "Where to find resources (e.g. charts)")
-	flag.StringVar(&defaultProfile, "default-profile", "default", "The name of the profile to apply to Istio and IstioRevision resources by default")
 	flag.BoolVar(&logAPIRequests, "log-api-requests", false, "Whether to log each request sent to the Kubernetes API server")
 	flag.BoolVar(&printVersion, "version", printVersion, "Prints version information and exits")
 	flag.BoolVar(&leaderElectionEnabled, "leader-elect", true,
@@ -67,7 +65,7 @@ func main() {
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
-	if printVersion {
+	if printVersion || flag.NArg() > 0 && flag.Arg(0) == "version" {
 		fmt.Println(version.Info)
 		os.Exit(0)
 	}
@@ -120,11 +118,24 @@ func main() {
 		// LeaderElectionReleaseOnCancel: true,
 	})
 	if err != nil {
-		setupLog.Error(err, "unable to start manager")
+		setupLog.Error(err, "unable to start sail-operator manager")
 		os.Exit(1)
 	}
 
 	chartManager := helm.NewChartManager(mgr.GetConfig(), os.Getenv("HELM_DRIVER"))
+
+	platform, err := config.DetectPlatform(mgr.GetConfig())
+	if err != nil {
+		setupLog.Error(err, "unable to detect platform")
+		os.Exit(1)
+	}
+
+	var defaultProfile string
+	if platform == config.PlatformOpenShift {
+		defaultProfile = "openshift"
+	} else {
+		defaultProfile = "default"
+	}
 
 	err = istio.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDirectory, defaultProfile).
 		SetupWithManager(mgr)
@@ -171,9 +182,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	setupLog.Info("starting manager")
+	setupLog.Info("starting sail-operator manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
+		setupLog.Error(err, "problem running sail-operator manager")
 		os.Exit(1)
 	}
 }

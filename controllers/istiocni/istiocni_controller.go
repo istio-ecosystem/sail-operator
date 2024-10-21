@@ -25,6 +25,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
+	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/istiovalues"
@@ -180,8 +181,8 @@ func applyImageDigests(cni *v1alpha1.IstioCNI, values *v1alpha1.CNIValues, confi
 	if values.Cni == nil {
 		values.Cni = &v1alpha1.CNIConfig{}
 	}
-	if values.Cni.Image == "" && values.Cni.Hub == "" && values.Cni.Tag == "" {
-		values.Cni.Image = imageDigests.CNIImage
+	if values.Cni.Image == nil && values.Cni.Hub == nil && values.Cni.Tag == nil {
+		values.Cni.Image = &imageDigests.CNIImage
 	}
 	return values
 }
@@ -196,20 +197,32 @@ func (r *Reconciler) uninstallHelmChart(ctx context.Context, cni *v1alpha1.Istio
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+	logger := mgr.GetLogger().WithName("ctrlr").WithName("istiocni")
+
+	// mainObjectHandler handles the IstioCNI watch events
+	mainObjectHandler := wrapEventHandler(logger, &handler.EnqueueRequestForObject{})
+
 	// ownedResourceHandler handles resources that are owned by the IstioCNI CR
-	ownedResourceHandler := handler.EnqueueRequestForOwner(r.Scheme, r.RESTMapper(), &v1alpha1.IstioCNI{}, handler.OnlyControllerOwner())
+	ownedResourceHandler := wrapEventHandler(logger,
+		handler.EnqueueRequestForOwner(r.Scheme, r.RESTMapper(), &v1alpha1.IstioCNI{}, handler.OnlyControllerOwner()))
+
+	namespaceHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapNamespaceToReconcileRequest))
 
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
 			LogConstructor: func(req *reconcile.Request) logr.Logger {
-				log := mgr.GetLogger().WithName("ctrlr").WithName("istiocni")
+				log := logger
 				if req != nil {
 					log = log.WithValues("IstioCNI", req.Name)
 				}
 				return log
 			},
 		}).
-		For(&v1alpha1.IstioCNI{}).
+
+		// we use the Watches function instead of For(), so that we can wrap the handler so that events that cause the object to be enqueued are logged
+		// +lint-watches:ignore: IstioCNI (not found in charts, but this is the main resource watched by this controller)
+		Watches(&v1alpha1.IstioCNI{}, mainObjectHandler).
+		Named("istiocni").
 
 		// namespaced resources
 		Watches(&corev1.ConfigMap{}, ownedResourceHandler).
@@ -222,7 +235,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 		// cluster-scoped resources
 		// +lint-watches:ignore: Namespace (not present in charts, but must be watched to reconcile IstioCni when its namespace is created)
-		Watches(&corev1.Namespace{}, handler.EnqueueRequestsFromMapFunc(r.mapNamespaceToReconcileRequest)).
+		Watches(&corev1.Namespace{}, namespaceHandler).
 		Watches(&rbacv1.ClusterRole{}, ownedResourceHandler).
 		Watches(&rbacv1.ClusterRoleBinding{}, ownedResourceHandler).
 		Complete(reconciler.NewStandardReconcilerWithFinalizer[*v1alpha1.IstioCNI](r.Client, r.Reconcile, r.Finalize, constants.FinalizerName))
@@ -333,4 +346,8 @@ func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, ns clie
 		}
 	}
 	return requests
+}
+
+func wrapEventHandler(logger logr.Logger, handler handler.EventHandler) handler.EventHandler {
+	return enqueuelogger.WrapIfNecessary(v1alpha1.IstioCNIKind, logger, handler)
 }

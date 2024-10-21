@@ -52,28 +52,42 @@ function get_field() {
     component_dir="istiod"
   fi
 
-  # Set if non null order from the component most specific to the most generic
+  # The following code tries to find the field in several places:
+
   # 1) .defaults.<component>.<field>
+  field="$(${YQ} ".defaults.${COMPONENTS[$component_name]}.${field_name}" "resources/${version}/charts/${component_dir}/values.yaml")"
   # 2) .defaults.global.<component>.<field>
-  # 3) .defaults.<field>
-  # 4) .defaults.global.<field>
-  # Example:
-  #   .defaults.istiod.hub        == null
-  #   .defaults.global.istiod.hub == null
-  #   .defaults.hub               == null
-  #   .defaults.global.hub        == "gcr.io/istio-testing"
-  
-  field="$(${YQ} ".defaults.${COMPONENTS[$component_name]}.${field_name}" resources/"${version}"/charts/"${component_dir}"/values.yaml)"
   if is_empty_or_null "${field}"; then
-    field="$(${YQ} ".defaults.global.${COMPONENTS[$component_name]}.${field_name}" resources/"${version}"/charts/"${component_dir}"/values.yaml)"
-    if is_empty_or_null "${field}"; then
-      field="$(${YQ} ".defaults.${field_name}" resources/"${version}"/charts/"${component_dir}"/values.yaml)"
-      if is_empty_or_null "${field}"; then
-        field="$(${YQ} ".defaults.global.${field_name}" resources/"${version}"/charts/"${component_dir}"/values.yaml)"
-      fi
-    fi
+    field="$(${YQ} ".defaults.global.${COMPONENTS[$component_name]}.${field_name}" "resources/${version}/charts/${component_dir}/values.yaml")"
+  fi
+  # 3) .defaults.<field>
+  if is_empty_or_null "${field}"; then
+    field="$(${YQ} ".defaults.${field_name}" "resources/${version}/charts/${component_dir}/values.yaml")"
+  fi
+  # 4) .defaults.global.<field>
+  if is_empty_or_null "${field}"; then
+    field="$(${YQ} ".defaults.global.${field_name}" "resources/${version}/charts/${component_dir}/values.yaml")"
+  fi
+  # 5) ._internal_defaults_do_not_set.<component>.<field>
+  if is_empty_or_null "${field}"; then
+      field="$(${YQ} "._internal_defaults_do_not_set.${COMPONENTS[$component_name]}.${field_name}" "resources/${version}/charts/${component_dir}/values.yaml")"
+  fi
+  # 6) ._internal_defaults_do_not_set.global.<component>.<field>
+  if is_empty_or_null "${field}"; then
+    field="$(${YQ} "._internal_defaults_do_not_set.global.${COMPONENTS[$component_name]}.${field_name}" "resources/${version}/charts/${component_dir}/values.yaml")"
+  fi
+  # 7) ._internal_defaults_do_not_set.<field>
+  if is_empty_or_null "${field}"; then
+    field="$(${YQ} "._internal_defaults_do_not_set.${field_name}" "resources/${version}/charts/${component_dir}/values.yaml")"
+  fi
+  # 8) ._internal_defaults_do_not_set.global.<field>
+  if is_empty_or_null "${field}"; then
+    field="$(${YQ} "._internal_defaults_do_not_set.global.${field_name}" "resources/${version}/charts/${component_dir}/values.yaml")"
   fi
 
+  if is_empty_or_null "${field}"; then
+    field=""
+  fi
   echo "${field}"
 }
 
@@ -93,6 +107,11 @@ for version in ${versions}; do
     hub=$(get_field "${version}" "hub" "${component_name}")
     image=$(get_field "${version}" "image" "${component_name}")
     tag=$(get_field "${version}" "tag" "${component_name}")
+
+    if [ -z "${hub}" ] || [ -z "${image}" ] || [ -z "${tag}" ]; then
+      echo "Missing hub, image or tag for version ${version}, component ${component_name}"
+      exit 1
+    fi
 
     # Add .spec.install.spec.deployments[0].spec.template.metadata.annotations with olm.relatedImage
     ${YQ} -i '.spec.install.spec.deployments[0].spec.template.metadata.annotations |= (. + {"images.'"${name}"'": "'"${hub}"'/'"${image}"':'"${tag}"'"})' "${clusterserviceversion_file_path}"

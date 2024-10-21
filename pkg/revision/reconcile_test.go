@@ -43,10 +43,10 @@ func TestReconcileActiveRevision(t *testing.T) {
 			name: "creates IstioRevision",
 			istioValues: v1alpha1.Values{
 				Pilot: &v1alpha1.PilotConfig{
-					Hub: "quay.io/hub",
+					Hub: ptr.Of("quay.io/hub"),
 				},
 				MeshConfig: &v1alpha1.MeshConfig{
-					AccessLogFile: "/dev/stdout",
+					AccessLogFile: ptr.Of("/dev/stdout"),
 				},
 			},
 			expectOwnerReference: true,
@@ -55,15 +55,15 @@ func TestReconcileActiveRevision(t *testing.T) {
 			name: "updates IstioRevision",
 			istioValues: v1alpha1.Values{
 				Pilot: &v1alpha1.PilotConfig{
-					Hub: "quay.io/new-hub",
+					Hub: ptr.Of("quay.io/new-hub"),
 				},
 				MeshConfig: &v1alpha1.MeshConfig{
-					AccessLogFile: "/dev/stdout",
+					AccessLogFile: ptr.Of("/dev/stdout"),
 				},
 			},
 			revValues: &v1alpha1.Values{
 				Pilot: &v1alpha1.PilotConfig{
-					Image: "old-image",
+					Image: ptr.Of("old-image"),
 				},
 			},
 			expectOwnerReference: false,

@@ -1,0 +1,32 @@
+name: Publish Helm artifact
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: "Release version"
+        required: true
+
+run-name: Publish Helm artifact ${{ inputs.release_version }}
+
+env:
+  GIT_USER: ${{ secrets.GIT_USER }}
+  GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+  VERSION: ${{ inputs.release_version }}
+
+jobs:
+  helm:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Publish Helm artifact to "gh-pages" branch
+        run: |
+          make helm-artifacts-publish \
+            -e GIT_CONFIG_USER_NAME="$GIT_CONFIG_USER_NAME" \
+            -e GIT_CONFIG_USER_EMAIL="$GIT_CONFIG_USER_EMAIL" \
+            -e OPERATOR_VERSION=$VERSION
+        env:
+          GIT_CONFIG_USER_NAME: "${{ github.actor }}"
+          GIT_CONFIG_USER_EMAIL: "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"

@@ -17,16 +17,12 @@
 package operator
 
 import (
-	"path/filepath"
 	"time"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
-	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
-	common "github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -60,7 +56,7 @@ var _ = Describe("Operator", Ordered, func() {
 
 	Describe("installation", func() {
 		BeforeAll(func() {
-			Expect(kubectl.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
+			Expect(k.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
 
 			extraArg := ""
 			if ocp {
@@ -70,7 +66,7 @@ var _ = Describe("Operator", Ordered, func() {
 			if skipDeploy {
 				Success("Skipping operator installation because it was deployed externally")
 			} else {
-				Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, extraArg)).
+				Expect(common.InstallOperatorViaHelm(extraArg)).
 					To(Succeed(), "Operator failed to be deployed")
 			}
 		})
@@ -120,12 +116,12 @@ var _ = Describe("Operator", Ordered, func() {
 		}
 
 		By("Uninstalling the operator")
-		Expect(helm.Uninstall("sail-operator", "--namespace "+namespace)).
+		Expect(common.UninstallOperator()).
 			To(Succeed(), "Operator failed to be deleted")
 		Success("Operator uninstalled")
 
 		By("Deleting the CRDs")
-		Expect(kubectl.DeleteCRDs(sailCRDs)).To(Succeed(), "CRDs failed to be deleted")
+		Expect(k.DeleteCRDs(sailCRDs)).To(Succeed(), "CRDs failed to be deleted")
 		Success("CRDs deleted")
 	})
 })

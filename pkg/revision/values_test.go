@@ -21,6 +21,8 @@ import (
 	"testing"
 
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+
+	"istio.io/istio/pkg/ptr"
 )
 
 // TestComputeValues tests that the values are sourced from the following sources
@@ -60,7 +62,7 @@ spec:
 
 	values := &v1alpha1.Values{
 		Pilot: &v1alpha1.PilotConfig{
-			Image: "from-istio-spec-values",
+			Image: ptr.Of("from-istio-spec-values"),
 		},
 	}
 
@@ -71,14 +73,14 @@ spec:
 
 	expected := &v1alpha1.Values{
 		Pilot: &v1alpha1.PilotConfig{
-			Hub:   "from-default-profile",
-			Tag:   "from-my-profile",
-			Image: "from-istio-spec-values",
+			Hub:   ptr.Of("from-default-profile"),
+			Tag:   ptr.Of("from-my-profile"),
+			Image: ptr.Of("from-istio-spec-values"),
 		},
 		Global: &v1alpha1.GlobalConfig{
-			IstioNamespace: namespace, // this value is always added/overridden based on IstioRevision.spec.namespace
+			IstioNamespace: ptr.Of(namespace), // this value is always added/overridden based on IstioRevision.spec.namespace
 		},
-		Revision: revisionName,
+		Revision: ptr.Of(revisionName),
 	}
 
 	if !reflect.DeepEqual(result, expected) {

@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app.kubernetes.io/component: manager
+    app.kubernetes.io/component: sail-operator
     app.kubernetes.io/created-by: {{ .Values.name }}
     app.kubernetes.io/instance: {{ .Values.deployment.name }}
     app.kubernetes.io/managed-by: helm
@@ -22,7 +22,7 @@ spec:
   template:
     metadata:
       annotations:
-        kubectl.kubernetes.io/default-container: manager
+        kubectl.kubernetes.io/default-container: sail-operator
 {{- range $key, $val := .Values.deployment.annotations }}
         {{ $key | quote }}: {{ $val | quote}}
 {{- end }}
@@ -49,11 +49,14 @@ spec:
                 - linux
       containers:
       - args:
-        - --secure-listen-address=0.0.0.0:8443
+        - --secure-listen-address=:8443
         - --upstream=http://127.0.0.1:8080/
         - --logtostderr=true
         - --v=0
-        image: gcr.io/kubebuilder/kube-rbac-proxy:v0.16.0
+        image: {{ .Values.proxy.image }}
+{{- if .Values.proxy.imagePullPolicy }}
+        imagePullPolicy: {{ .Values.proxy.imagePullPolicy }}
+{{- end }}
         name: kube-rbac-proxy
         ports:
         - containerPort: 8443
@@ -61,11 +64,11 @@ spec:
           protocol: TCP
         resources:
           limits:
-            cpu: 500m
-            memory: 128Mi
+            cpu: {{ .Values.proxy.resources.limits.cpu }}
+            memory: {{ .Values.proxy.resources.limits.memory }}
           requests:
-            cpu: 5m
-            memory: 64Mi
+            cpu: {{ .Values.proxy.resources.requests.cpu }}
+            memory: {{ .Values.proxy.resources.requests.memory }}
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -74,20 +77,20 @@ spec:
       - args:
         - --health-probe-bind-address=:8081
         - --metrics-bind-address=127.0.0.1:8080
-{{- if eq .Values.platform "openshift" }}
-        - --default-profile=openshift
-{{- end }}
+        - --zap-log-level={{ .Values.operatorLogLevel }}
         command:
-        - /manager
+        - /sail-operator
         image: {{ .Values.image }}
+{{- if .Values.proxy.imagePullPolicy }}
         imagePullPolicy: {{ .Values.imagePullPolicy }}
+{{- end }}
         livenessProbe:
           httpGet:
             path: /healthz
             port: 8081
           initialDelaySeconds: 15
           periodSeconds: 20
-        name: manager
+        name: sail-operator
         readinessProbe:
           httpGet:
             path: /readyz
@@ -96,11 +99,11 @@ spec:
           periodSeconds: 10
         resources:
           limits:
-            cpu: 500m
-            memory: 512Mi
+            cpu: {{ .Values.operator.resources.limits.cpu }}
+            memory: {{ .Values.operator.resources.limits.memory }}
           requests:
-            cpu: 10m
-            memory: 64Mi
+            cpu: {{ .Values.operator.resources.requests.cpu }}
+            memory: {{ .Values.operator.resources.requests.memory }}
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

@@ -38,6 +38,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"istio.io/istio/pkg/ptr"
 )
 
 var _ = Describe("IstioRevision resource", Ordered, func() {
@@ -100,9 +102,9 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 					Version:   supportedversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1alpha1.Values{
-						Revision: revName,
+						Revision: ptr.Of(revName),
 						Global: &v1alpha1.GlobalConfig{
-							IstioNamespace: "wrong-namespace",
+							IstioNamespace: ptr.Of("wrong-namespace"),
 						},
 					},
 				},
@@ -120,9 +122,9 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 					Version:   supportedversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1alpha1.Values{
-						Revision: "is-not-" + revName,
+						Revision: ptr.Of("is-not-" + revName),
 						Global: &v1alpha1.GlobalConfig{
-							IstioNamespace: istioNamespace,
+							IstioNamespace: ptr.Of(istioNamespace),
 						},
 					},
 				},
@@ -140,9 +142,9 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 					Version:   supportedversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1alpha1.Values{
-						Revision: "default", // this must be rejected, because revision needs to be '' when metadata.name is 'default'
+						Revision: ptr.Of("default"), // this must be rejected, because revision needs to be '' when metadata.name is 'default'
 						Global: &v1alpha1.GlobalConfig{
-							IstioNamespace: istioNamespace,
+							IstioNamespace: ptr.Of(istioNamespace),
 						},
 					},
 				},
@@ -160,9 +162,9 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 					Version:   supportedversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1alpha1.Values{
-						Revision: "",
+						Revision: ptr.Of(""),
 						Global: &v1alpha1.GlobalConfig{
-							IstioNamespace: istioNamespace,
+							IstioNamespace: ptr.Of(istioNamespace),
 						},
 					},
 				},
@@ -184,9 +186,9 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 					Version:   supportedversion.Default,
 					Namespace: nsName,
 					Values: &v1alpha1.Values{
-						Revision: revName,
+						Revision: ptr.Of(revName),
 						Global: &v1alpha1.GlobalConfig{
-							IstioNamespace: nsName,
+							IstioNamespace: &nsName,
 						},
 					},
 				},
@@ -252,11 +254,11 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 				Namespace: istioNamespace,
 				Values: &v1alpha1.Values{
 					Global: &v1alpha1.GlobalConfig{
-						IstioNamespace: istioNamespace,
+						IstioNamespace: ptr.Of(istioNamespace),
 					},
-					Revision: revName,
+					Revision: ptr.Of(revName),
 					Pilot: &v1alpha1.PilotConfig{
-						Image: pilotImage,
+						Image: ptr.Of(pilotImage),
 					},
 				},
 			},
@@ -443,11 +445,11 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 				Namespace: istioNamespace,
 				Values: &v1alpha1.Values{
 					Global: &v1alpha1.GlobalConfig{
-						IstioNamespace: istioNamespace,
+						IstioNamespace: ptr.Of(istioNamespace),
 					},
-					Revision: rev2Key.Name,
+					Revision: &rev2Key.Name,
 					Pilot: &v1alpha1.PilotConfig{
-						Image: pilotImage,
+						Image: ptr.Of(pilotImage),
 					},
 				},
 			},

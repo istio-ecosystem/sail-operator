@@ -22,6 +22,15 @@
   - [RevisionBased](#revisionbased)
     - [Example using the RevisionBased strategy](#example-using-the-revisionbased-strategy)
 - [Multi-cluster](#multi-cluster)
+  - [Prerequisites](#prerequisites)
+  - [Common Setup](#common-setup)
+  - [Multi-Primary](#multi-primary---multi-network)
+  - [Primary-Remote](#primary-remote---multi-network)
+  - [External Control Plane](#external-control-plane)
+- [Dual-stack Support](#dual-stack-support)
+  - [Prerequisites](#prerequisites-1)
+  - [Installation Steps](#installation-steps)
+  - [Validation](#validation)
 - [Addons](#addons)
   - [Deploy Prometheus and Jaeger addons](#deploy-prometheus-and-jaeger-addons)
   - [Deploy Kiali addon](#deploy-kiali-addon)
@@ -47,7 +56,7 @@ Sail Operator manages the lifecycle of your Istio control planes. Instead of cre
 ## Concepts
 
 ### Istio resource
-The `Istio` resource is used to manage your Istio control planes. It is a cluster-wide resource, as the Istio control plane operates in and requires access to the entire cluster. To select a namespace to run the control plane pods in, you can use the `spec.namespace` field. You can access all helm chart options through the `values` field in the `spec`:
+The `Istio` resource is used to manage your Istio control planes. It is a cluster-wide resource, as the Istio control plane operates in and requires access to the entire cluster. To select a namespace to run the control plane pods in, you can use the `spec.namespace` field. Note that this field is immutable, though: in order to move a control plane to another namespace, you have to remove the Istio resource and recreate it with a different `spec.namespace`. You can access all helm chart options through the `values` field in the `spec`:
 
 ```yaml
 apiVersion: sailoperator.io/v1alpha1
@@ -227,10 +236,6 @@ spec:
 
 Note that the only field that was added is the `spec.version` field. There are a few situations however where the APIs are different and require different approaches to achieve the same outcome.
 
-### Gateways
-
-Sail Operator does not support deploying Gateways using `spec.values.gateways`, only Gateway Injection and Gateway API are currently supported. See the [Gateways](#gateways) section for more information.
-
 ### components field
 
 Sail Operator's Istio resource does not have a `spec.components` field. Instead, you can enable and disable components directly by setting `spec.values.<component>.enabled: true/false`. Other functionality exposed through `spec.components` like the k8s overlays is not currently available.
@@ -245,9 +250,11 @@ The functionality of the istiod-remote chart is exposed through the [RemoteIstio
 
 ## Gateways
 
-The Sail Operator does not manage Gateways. You can deploy a gateway manually either through [gateway-api](https://istio.io/latest/docs/tasks/traffic-management/ingress/gateway-api/) or through [gateway injection](https://istio.io/latest/docs/setup/additional-setup/gateway/#deploying-a-gateway). As you are following the gateway installation instructions, skip the step to install Istio since this is handled by the Sail Operator.
+[Gateways in Istio](https://istio.io/latest/docs/concepts/traffic-management/#gateways) are used to manage inbound and outbound traffic for the mesh. The Sail Operator does not deploy or manage Gateways. You can deploy a gateway either through [gateway-api](https://istio.io/latest/docs/tasks/traffic-management/ingress/gateway-api/) or through [gateway injection](https://istio.io/latest/docs/setup/additional-setup/gateway/#deploying-a-gateway). As you are following the gateway installation instructions, skip the step to install Istio since this is handled by the Sail Operator.
 
 **Note:** The `IstioOperator` / `istioctl` example is separate from the Sail Operator. Setting `spec.components` or `spec.values.gateways` on your Sail Operator `Istio` resource **will not work**.
+
+For examples installing Gateways on OpenShift, see the [Gateways](common/create-and-configure-gateways.md) page.
 
 ## Update Strategy
 
@@ -260,7 +267,7 @@ When the `InPlace` strategy is used, the existing Istio control plane is replace
 
 Prerequisites:
 * Sail Operator is installed.
-* `istioctl` is installed.
+* `istioctl` is [installed](common/install-istioctl-tool.md).
 
 Steps:
 1. Create the `istio-system` namespace.
@@ -336,7 +343,7 @@ When the `RevisionBased` strategy is used, a new Istio control plane instance is
 
 Prerequisites:
 * Sail Operator is installed.
-* `istioctl` is installed.
+* `istioctl` is [installed](common/install-istioctl-tool.md).
 
 Steps:
 
@@ -472,13 +479,12 @@ Steps:
 
 You can use the Sail Operator and the Sail CRDs to manage a multi-cluster Istio deployment. The following instructions are adapted from the [Istio multi-cluster documentation](https://istio.io/latest/docs/setup/install/multicluster/) to demonstrate how you can setup the various deployment models with Sail. Please familiarize yourself with the different [deployment models](https://istio.io/latest/docs/ops/deployment/deployment-models/) before starting.
 
-*Prerequisites*
+### Prerequisites
 
-Each deployment model requires you to install the Sail Operator and the Sail CRDs to every cluster that is part of the mesh.
-
-- Install [istioctl](https://istio.io/latest/docs/setup/install/istioctl) and have it included in your `$PATH`.
+- Install [istioctl](common/install-istioctl-tool.md).
 - Two kubernetes clusters with external lb support. (If using kind, `cloud-provider-kind` is running in the background)
 - kubeconfig file with a context for each cluster.
+- Install the Sail Operator and the Sail CRDs to every cluster.
 
 ### Common Setup
 
@@ -502,7 +508,7 @@ These steps are common to every multi-cluster deployment and should be completed
     kubectl get ns istio-system --context "${CTX_CLUSTER2}" || kubectl create namespace istio-system --context "${CTX_CLUSTER2}"
     ```
 
-2. Create shared trust and add intermediate CAs to each cluster.
+3. Create shared trust and add intermediate CAs to each cluster.
 
     If you already have a [shared trust](https://istio.io/latest/docs/setup/install/multicluster/before-you-begin/#configure-trust) for each cluster you can skip this. Otherwise, you can use the instructions below to create a shared trust and push the intermediate CAs into your clusters.
 
@@ -867,6 +873,432 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
     kubectl delete ns istio-system --context="${CTX_CLUSTER2}" 
     kubectl delete ns sample --context="${CTX_CLUSTER2}"
     ```
+
+### External Control Plane
+
+These instructions install an [external control plane](https://istio.io/latest/docs/setup/install/external-controlplane/) Istio deployment using the Sail Operator and Sail CRDs. **Before you begin**, ensure you meet the requirements of the [common setup](#common-setup) and complete **only** the "Setup env vars" step. Unlike other Multi-Cluster deployments, you won't be creating a common CA in this setup.
+
+These installation instructions are adapted from [Istio's external control plane documentation](https://istio.io/latest/docs/setup/install/external-controlplane/) and are intended to be run in a development environment, such as `kind`, rather than in production.
+
+In this setup there is an external control plane cluster (`cluster1`) and a remote cluster (`cluster2`) which are on separate networks.
+
+1. Create an `Istio` resource on `cluster1` to manage the ingress gateways for the external control plane.
+
+    ```sh
+    kubectl create namespace istio-system --context "${CTX_CLUSTER1}"
+    kubectl apply --context "${CTX_CLUSTER1}" -f - <<EOF
+    apiVersion: sailoperator.io/v1alpha1
+    kind: Istio
+    metadata:
+      name: default
+    spec:
+      version: v${ISTIO_VERSION}
+      namespace: istio-system
+      global:
+        network: network1
+    EOF
+    kubectl wait --context "${CTX_CLUSTER1}" --for=condition=Ready istios/default --timeout=3m
+    ```
+
+2. Create the ingress gateway for the external control plane.
+
+    ```sh
+    kubectl --context "${CTX_CLUSTER1}" apply -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/controlplane-gateway.yaml
+    kubectl --context "${CTX_CLUSTER1}" wait '--for=jsonpath={.status.loadBalancer.ingress[].ip}' --timeout=30s svc istio-ingressgateway -n istio-system
+    ```
+
+3. Configure your environment to expose the ingress gateway.
+
+    **Note:** these instructions are intended to be executed in a test environment. For production environments, please refer to: https://istio.io/latest/docs/setup/install/external-controlplane/#set-up-a-gateway-in-the-external-cluster and https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#configure-a-tls-ingress-gateway-for-a-single-host for setting up a secure ingress gateway.
+
+    ```sh
+    export EXTERNAL_ISTIOD_ADDR=$(kubectl -n istio-system --context="${CTX_CLUSTER1}" get svc istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+    ```
+
+4. Create the `external-istiod` namespace and `RemoteIstio` resource in `cluster2`.
+
+    ```sh
+    kubectl create namespace external-istiod --context="${CTX_CLUSTER2}"
+    kubectl apply --context "${CTX_CLUSTER2}" -f - <<EOF
+    apiVersion: sailoperator.io/v1alpha1
+    kind: RemoteIstio
+    metadata:
+      name: external-istiod
+    spec:
+      version: v${ISTIO_VERSION}
+      namespace: external-istiod
+      values:
+        defaultRevision: external-istiod
+        global:
+          istioNamespace: external-istiod
+          remotePilotAddress: ${EXTERNAL_ISTIOD_ADDR}
+          configCluster: true
+        pilot:
+          configMap: true
+        istiodRemote:
+          injectionPath: /inject/cluster/cluster2/net/network1
+    EOF
+    ```
+
+5. Create the `external-istiod` namespace on `cluster1`.
+
+    ```sh
+    kubectl create namespace external-istiod --context="${CTX_CLUSTER1}"
+    ```
+
+6. Create the remote-cluster-secret on `cluster1` so that the `external-istiod` can access the remote cluster.
+
+    ```sh
+    kubectl create sa istiod-service-account -n external-istiod --context="${CTX_CLUSTER1}"
+    REMOTE_NODE_IP=$(kubectl get nodes -l node-role.kubernetes.io/control-plane --context "${CTX_CLUSTER2}" -o jsonpath='{.items[0].status.addresses[?(@.type == "InternalIP")].address}')
+    istioctl create-remote-secret \
+      --context="${CTX_CLUSTER2}" \
+      --type=config \
+      --namespace=external-istiod \
+      --service-account=istiod-external-istiod \
+      --create-service-account=false \
+      --server="https://${REMOTE_NODE_IP}:6443" | \
+      kubectl apply -f - --context "${CTX_CLUSTER1}"
+    ```
+
+7. Create the `Istio` resource on the external control plane cluster. This will manage both Istio configuration and proxies on the remote cluster.
+
+    ```sh
+    kubectl apply --context "${CTX_CLUSTER1}" -f - <<EOF
+    apiVersion: sailoperator.io/v1alpha1
+    kind: Istio
+    metadata:
+      name: external-istiod
+    spec:
+      namespace: external-istiod
+      profile: empty
+      values:
+        meshConfig:
+          rootNamespace: external-istiod
+          defaultConfig:
+            discoveryAddress: $EXTERNAL_ISTIOD_ADDR:15012
+        pilot:
+          enabled: true
+          volumes:
+            - name: config-volume
+              configMap:
+                name: istio-external-istiod
+            - name: inject-volume
+              configMap:
+                name: istio-sidecar-injector-external-istiod
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/istio/config
+            - name: inject-volume
+              mountPath: /var/lib/istio/inject
+          env:
+            INJECTION_WEBHOOK_CONFIG_NAME: "istio-sidecar-injector-external-istiod-external-istiod"
+            VALIDATION_WEBHOOK_CONFIG_NAME: "istio-validator-external-istiod-external-istiod"
+            EXTERNAL_ISTIOD: "true"
+            LOCAL_CLUSTER_SECRET_WATCHER: "true"
+            CLUSTER_ID: cluster2
+            SHARED_MESH_CONFIG: istio
+        global:
+          caAddress: $EXTERNAL_ISTIOD_ADDR:15012
+          istioNamespace: external-istiod
+          operatorManageWebhooks: true
+          configValidation: false
+          meshID: mesh1
+          multiCluster:
+            clusterName: cluster2
+          network: network1
+    EOF
+    kubectl wait --context "${CTX_CLUSTER1}" --for=condition=Ready istios/external-istiod --timeout=3m
+    ```
+
+8. Create the Istio resources to route traffic from the ingress gateway to the external control plane.
+
+    ```sh
+    kubectl apply --context "${CTX_CLUSTER1}" -f - <<EOF
+    apiVersion: networking.istio.io/v1
+    kind: Gateway
+    metadata:
+      name: external-istiod-gw
+      namespace: external-istiod
+    spec:
+      selector:
+        istio: ingressgateway
+      servers:
+        - port:
+            number: 15012
+            protocol: tls
+            name: tls-XDS
+          tls:
+            mode: PASSTHROUGH
+          hosts:
+          - "*"
+        - port:
+            number: 15017
+            protocol: tls
+            name: tls-WEBHOOK
+          tls:
+            mode: PASSTHROUGH
+          hosts:
+          - "*"
+    ---
+    apiVersion: networking.istio.io/v1
+    kind: VirtualService
+    metadata:
+      name: external-istiod-vs
+      namespace: external-istiod
+    spec:
+        hosts:
+        - "*"
+        gateways:
+        - external-istiod-gw
+        tls:
+        - match:
+          - port: 15012
+            sniHosts:
+            - "*"
+          route:
+          - destination:
+              host: istiod-external-istiod.external-istiod.svc.cluster.local
+              port:
+                number: 15012
+        - match:
+          - port: 15017
+            sniHosts:
+            - "*"
+          route:
+          - destination:
+              host: istiod-external-istiod.external-istiod.svc.cluster.local
+              port:
+                number: 443
+    EOF
+    ```
+
+9. Wait for the `RemoteIstio` to be healthy:
+
+    ```sh
+    kubectl wait --context="${CTX_CLUSTER2}" --for=condition=Ready remoteistios/external-istiod --timeout=3m
+    ```
+
+10. Create the `sample` namespace on the remote cluster and label it to enable injection.
+
+    ```sh
+    kubectl create --context="${CTX_CLUSTER2}" namespace sample
+    kubectl label --context="${CTX_CLUSTER2}" namespace sample istio.io/rev=external-istiod
+    ```
+
+11. Deploy the `sleep` and `helloworld` applications to the `sample` namespace.
+
+    ```sh
+    kubectl apply -f https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml -l service=helloworld -n sample --context="${CTX_CLUSTER2}"
+    kubectl apply -f https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml -l version=v1 -n sample --context="${CTX_CLUSTER2}"
+    kubectl apply -f https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/sleep/sleep.yaml -n sample --context="${CTX_CLUSTER2}"
+
+    ```
+
+12. Verify the pods in the `sample` namespace have a sidecar injected.
+
+    ```sh
+    kubectl get pod -n sample --context="${CTX_CLUSTER2}"
+    ```
+    You should see `2/2` pods for each application in the `sample` namespace.
+    ```
+    NAME                             READY   STATUS    RESTARTS   AGE
+    helloworld-v1-6d65866976-jb6qc   2/2     Running   0          49m
+    sleep-5fcd8fd6c8-mg8n2           2/2     Running   0          49m
+    ```
+
+13. Verify you can send a request to `helloworld` through the `sleep` app on the Remote cluster.
+
+    ```sh
+    kubectl exec --context="${CTX_CLUSTER2}" -n sample -c sleep "$(kubectl get pod --context="${CTX_CLUSTER2}" -n sample -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- curl -sS helloworld.sample:5000/hello
+    ```
+    You should see a response from the `helloworld` app.
+    ```sh
+    Hello version: v1, instance: helloworld-v1-6d65866976-jb6qc
+    ```
+
+14. Deploy an ingress gateway to the Remote cluster and verify you can reach `helloworld` externally.
+
+    Install the gateway-api CRDs.
+    ```sh
+    kubectl get crd gateways.gateway.networking.k8s.io --context="${CTX_CLUSTER2}" &> /dev/null || \
+    { kubectl kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.1.0" | kubectl apply -f - --context="${CTX_CLUSTER2}"; }
+    ```
+
+    Expose `helloworld` through the ingress gateway.
+    ```sh
+    kubectl apply -f https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/gateway-api/helloworld-gateway.yaml -n sample --context="${CTX_CLUSTER2}"
+    kubectl -n sample --context="${CTX_CLUSTER2}" wait --for=condition=programmed gtw helloworld-gateway
+    ```
+
+    Confirm you can access the `helloworld` application through the ingress gateway created in the Remote cluster.
+    ```sh
+    curl -s "http://$(kubectl -n sample --context="${CTX_CLUSTER2}" get gtw helloworld-gateway -o jsonpath='{.status.addresses[0].value}'):80/hello"
+    ```
+    You should see a response from the `helloworld` application:
+    ```sh
+    Hello version: v1, instance: helloworld-v1-6d65866976-jb6qc
+    ```
+
+15. Cleanup
+
+    ```sh
+    kubectl delete istios default --context="${CTX_CLUSTER1}"
+    kubectl delete ns istio-system --context="${CTX_CLUSTER1}"
+    kubectl delete istios external-istiod --context="${CTX_CLUSTER1}"
+    kubectl delete ns external-istiod --context="${CTX_CLUSTER1}"
+    kubectl delete remoteistios external-istiod --context="${CTX_CLUSTER2}"
+    kubectl delete ns external-istiod --context="${CTX_CLUSTER2}"
+    kubectl delete ns sample --context="${CTX_CLUSTER2}"
+    ```
+
+## Dual-stack Support
+
+Kubernetes supports dual-stack networking as a stable feature starting from
+[v1.23](https://kubernetes.io/docs/concepts/services-networking/dual-stack/), allowing clusters to handle both
+IPv4 and IPv6 traffic. With many cloud providers also beginning to offer dual-stack Kubernetes clusters, it's easier
+than ever to run services that function across both address types. Istio introduced dual-stack as an experimental
+feature in version 1.17, and it's expected to be promoted to [Alpha](https://github.com/istio/istio/issues/47998) in
+version 1.24. With Istio in dual-stack mode, services can communicate over both IPv4 and IPv6 endpoints, which helps
+organizations transition to IPv6 while still maintaining compatibility with their existing IPv4 infrastructure.
+
+When Kubernetes is configured for dual-stack, it automatically assigns an IPv4 and an IPv6 address to each pod,
+enabling them to communicate over both IP families. For services, however, you can control how they behave using
+the `ipFamilyPolicy` setting.
+
+Service.Spec.ipFamilyPolicy can take the following values
+- SingleStack: Only one IP family is configured for the service, which can be either IPv4 or IPv6.
+- PreferDualStack: Both IPv4 and IPv6 cluster IPs are assigned to the Service when dual-stack is enabled.
+                   However, if dual-stack is not enabled or supported, it falls back to singleStack behavior.
+- RequireDualStack: The service will be created only if both IPv4 and IPv6 addresses can be assigned.
+
+This allows you to specify the type of service, providing flexibility in managing your network configuration.
+For more details, you can refer to the Kubernetes [documentation](https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services).
+
+### Prerequisites
+
+- Kubernetes 1.23 or later configured with dual-stack support.
+- Sail Operator is installed.
+
+### Installation Steps
+
+You can use any existing Kind cluster that supports dual-stack networking or, alternatively, install one using the following command.
+
+```sh
+kind create cluster --name istio-ds --config - <<EOF
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+networking:
+ ipFamily: dual
+EOF
+```
+
+Note: If you installed the KinD cluster using the command above, install the [Sail Operator](#getting-started) before proceeding with the next steps.
+
+1. Create the `Istio` resource with dual-stack configuration.
+
+   ```sh
+   kubectl get ns istio-system || kubectl create namespace istio-system
+   kubectl apply -f - <<EOF
+   apiVersion: sailoperator.io/v1alpha1
+   kind: Istio
+   metadata:
+     name: default
+   spec:
+     values:
+       meshConfig:
+         defaultConfig:
+           proxyMetadata:
+             ISTIO_DUAL_STACK: "true"
+       pilot:
+         ipFamilyPolicy: RequireDualStack
+         env:
+           ISTIO_DUAL_STACK: "true"
+     version: v1.23.2
+     namespace: istio-system
+   EOF
+   kubectl wait --for=jsonpath='{.status.revisions.ready}'=1 istios/default --timeout=3m
+   ```
+
+2. If running on OpenShift platform, create the IstioCNI resource as well.
+
+   ```sh
+   kubectl get ns istio-cni || kubectl create namespace istio-cni
+   kubectl apply -f - <<EOF
+   apiVersion: sailoperator.io/v1alpha1
+   kind: IstioCNI
+   metadata:
+     name: default
+   spec:
+     version: v1.23.2
+     namespace: istio-cni
+   EOF
+   kubectl wait --for=condition=Ready pod -n istio-cni -l k8s-app=istio-cni-node --timeout=60s
+   ```
+
+### Validation
+
+1. Create the following namespaces, each hosting the tcp-echo service with the specified configuration.
+
+   - dual-stack: which includes a tcp-echo service that listens on both IPv4 and IPv6 address.
+   - ipv4: which includes a tcp-echo service listening only on IPv4 address.
+   - ipv6: which includes a tcp-echo service listening only on IPv6 address.
+
+   ```sh
+   kubectl get ns dual-stack || kubectl create namespace dual-stack
+   kubectl get ns ipv4 || kubectl create namespace ipv4
+   kubectl get ns ipv6 ||  kubectl create namespace ipv6
+   kubectl get ns sleep || kubectl create namespace sleep
+   ```
+
+2. Label the namespaces for sidecar injection.
+   ```sh
+   kubectl label --overwrite namespace dual-stack istio-injection=enabled
+   kubectl label --overwrite namespace ipv4 istio-injection=enabled
+   kubectl label --overwrite namespace ipv6 istio-injection=enabled
+   kubectl label --overwrite namespace sleep istio-injection=enabled
+   ```
+
+3. Ensure that the tcp-echo service in the dual-stack namespace is configured with `ipFamilyPolicy` of RequireDualStack.
+   ```console
+   kubectl get service tcp-echo -n dual-stack -o=jsonpath='{.spec.ipFamilyPolicy}'
+   RequireDualStack
+   ```
+
+4. Deploy the pods and services in their respective namespaces.
+   ```sh
+   kubectl apply -n dual-stack -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/tcp-echo/tcp-echo-dual-stack.yaml
+   kubectl apply -n ipv4 -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/tcp-echo/tcp-echo-ipv4.yaml
+   kubectl apply -n ipv6 -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/tcp-echo/tcp-echo-ipv6.yaml
+   kubectl apply -n sleep -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/sleep/sleep.yaml
+   kubectl wait --for=condition=Ready pod -n sleep -l app=sleep --timeout=60s
+   ```
+
+5. Verify that sleep pod is able to reach the dual-stack pods.
+   ```console
+   kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo dualstack | nc tcp-echo.dual-stack 9000"
+   hello dualstack
+   ```
+
+6. Similarly verify that sleep pod is able to reach both ipv4 pods as well as ipv6 pods.
+   ```console
+   kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo ipv4 | nc tcp-echo.ipv4 9000"
+   hello ipv4
+   ```
+
+   ```console
+   kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo ipv6 | nc tcp-echo.ipv6 9000"
+   hello ipv6
+   ```
+
+7. Cleanup
+   ```sh
+   kubectl delete istios default
+   kubectl delete ns istio-system
+   kubectl delete istiocni default
+   kubectl delete ns istio-cni
+   kubectl delete ns dual-stack ipv4 ipv6 sleep
+   ```
 
 ## Addons
 

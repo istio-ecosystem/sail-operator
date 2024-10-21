@@ -42,6 +42,7 @@ type IstioRevisionSpec struct {
 
 	// Namespace to which the Istio components should be installed.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,xDescriptors={"urn:alm:descriptor:io.kubernetes:Namespace"}
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Namespace string `json:"namespace"`
 
 	// Defines the values to be passed to the Helm charts when installing Istio.
