@@ -1015,6 +1015,11 @@ type CNIGlobalConfig struct { // Default k8s resources settings for all Istio co
 	Tag *string `json:"tag,omitempty"`
 	// The variant of the Istio container images to use. Options are "debug" or "distroless". Unset will use the default for the given version.
 	Variant *string `json:"variant,omitempty"`
+
+	// Platform in which Istio is deployed. Possible values are: "openshift" and "gcp"
+	// An empty value means it is a vanilla Kubernetes distribution, therefore no special
+	// treatment will be considered.
+	Platform *string `json:"platform,omitempty"`
 }
 
 // Resource describes the source of configuration

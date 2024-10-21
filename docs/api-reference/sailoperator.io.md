@@ -139,6 +139,7 @@ _Appears in:_
 | `logging` _[GlobalLoggingConfig](#globalloggingconfig)_ | Specifies the global logging level settings for the Istio control plane components. |  |  |
 | `tag` _string_ | Specifies the tag for the Istio docker images. |  |  |
 | `variant` _string_ | The variant of the Istio container images to use. Options are "debug" or "distroless". Unset will use the default for the given version. |  |  |
+| `platform` _string_ | Platform in which Istio is deployed. Possible values are: "openshift" and "gcp" An empty value means it is a vanilla Kubernetes distribution, therefore no special treatment will be considered. |  |  |
 
 
 #### CNIRepairConfig

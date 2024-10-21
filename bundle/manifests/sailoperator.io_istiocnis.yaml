@@ -1392,6 +1392,12 @@ spec:
                               If empty, default scope and level will be used as configured in code
                             type: string
                         type: object
+                      platform:
+                        description: |-
+                          Platform in which Istio is deployed. Possible values are: "openshift" and "gcp"
+                          An empty value means it is a vanilla Kubernetes distribution, therefore no special
+                          treatment will be considered.
+                        type: string
                       tag:
                         description: Specifies the tag for the Istio docker images.
                         type: string

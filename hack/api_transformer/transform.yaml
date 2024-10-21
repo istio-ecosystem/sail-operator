@@ -129,6 +129,7 @@ inputFiles:
       - ImagePullSecrets
       - LogAsJson
       - Logging
+      - Platform
       - Tag
       - Variant
     addComments:
