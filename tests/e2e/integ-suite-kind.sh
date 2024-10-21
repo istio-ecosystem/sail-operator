@@ -29,9 +29,19 @@ export KIND_REGISTRY="localhost:${KIND_REGISTRY_PORT}"
 export DEFAULT_CLUSTER_YAML="${SCRIPTPATH}/config/default.yaml"
 export IP_FAMILY="${IP_FAMILY:-ipv4}"
 export ARTIFACTS="${ARTIFACTS:-$(mktemp -d)}"
+export MULTICLUSTER="${MULTICLUSTER:-false}"
+# Set variable to exclude kind clusters from kubectl annotations. 
+# You need to set kind clusters names separated by comma
+export KIND_EXCLUDE_CLUSTERS="${KIND_EXCLUDE_CLUSTERS:-}"
+export ISTIOCTL="${ISTIOCTL:-${ROOT}/bin/istioctl}"
+
 
 # Set variable for cluster kind name
 export KIND_CLUSTER_NAME="${KIND_CLUSTER_NAME:-operator-integration-tests}"
+if [ "${MULTICLUSTER}" == "true" ]; then
+  export KIND_CLUSTER_NAME="${KIND_CLUSTER_NAME}-1"
+  export KIND_CLUSTER_NAME_2="${KIND_CLUSTER_NAME}-2"
+fi
 
 # Use the local registry instead of the default HUB
 export HUB="${KIND_REGISTRY}"
@@ -52,16 +62,44 @@ function setup_kind_registry() {
   fi
 
   # https://docs.tilt.dev/choosing_clusters.html#discovering-the-registry
-  # TODO get context/config from existing variables
-  kind export kubeconfig --name="${KIND_CLUSTER_NAME}"
-  for node in $(kind get nodes --name="${KIND_CLUSTER_NAME}"); do
-    kubectl annotate node "${node}" "kind.x-k8s.io/registry=localhost:${KIND_REGISTRY_PORT}" --overwrite;
+  for cluster in $(kind get clusters); do
+    # TODO get context/config from existing variables
+    # Avoid adding the registry to excluded clusters. Use when you have multiple clusters running.
+    if [[ "${KIND_EXCLUDE_CLUSTERS}" == *"${cluster}"* ]]; then
+      continue
+    fi
+
+    kind export kubeconfig --name="${cluster}"
+    for node in $(kind get nodes --name="${cluster}"); do
+      kubectl annotate node "${node}" "kind.x-k8s.io/registry=localhost:${KIND_REGISTRY_PORT}" --overwrite;
+    done
   done
 }
 
-KUBECONFIG="${ARTIFACTS}/config" setup_kind_cluster "${KIND_CLUSTER_NAME}" "" "" "true" "true"
-setup_kind_registry
+if [ "${MULTICLUSTER}" == "true" ]; then
+    CLUSTER_TOPOLOGY_CONFIG_FILE="${SCRIPTPATH}/config/multicluster.json"
+    load_cluster_topology "${CLUSTER_TOPOLOGY_CONFIG_FILE}"
+    setup_kind_clusters "" ""
+    setup_kind_registry
+
+    export KUBECONFIG="${KUBECONFIGS[0]}"
+    export KUBECONFIG2="${KUBECONFIGS[1]}"
+else
+  KUBECONFIG="${ARTIFACTS}/config" setup_kind_cluster "${KIND_CLUSTER_NAME}" "" "" "true" "true"
+  setup_kind_registry
+fi
+
+
+# Check that istioctl is present using ${ISTIOCTL}
+if ! command -v "${ISTIOCTL}" &> /dev/null; then
+  echo "istioctl not found. Please set the ISTIOCTL environment variable to the path of the istioctl binary"
+  exit 1
+fi
 
 # Run the integration tests
 echo "Running integration tests"
-ARTIFACTS="${ARTIFACTS}" ./tests/e2e/common-operator-integ-suite.sh --kind
+if [ "${MULTICLUSTER}" == "true" ]; then
+  ARTIFACTS="${ARTIFACTS}" ISTIOCTL="${ISTIOCTL}" ./tests/e2e/common-operator-integ-suite.sh --kind --multicluster
+else
+ARTIFACTS="${ARTIFACTS}" IP_FAMILY="${IP_FAMILY}" ./tests/e2e/common-operator-integ-suite.sh --kind
+fi

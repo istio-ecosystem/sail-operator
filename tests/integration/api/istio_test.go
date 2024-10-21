@@ -39,7 +39,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 		istioNamespace    = "istio-test"
 		workloadNamespace = "istio-test-workloads"
 
-		gracePeriod = 30 * time.Second
+		gracePeriod = 5 * time.Second
 		pilotImage  = "sail-operator/test:latest"
 	)
 	istioKey := client.ObjectKey{Name: istioName}
@@ -85,7 +85,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 					Namespace: istioNamespace,
 					Values: &v1alpha1.Values{
 						Global: &v1alpha1.GlobalConfig{
-							IstioNamespace: "wrong-namespace",
+							IstioNamespace: ptr.Of("wrong-namespace"),
 						},
 					},
 				},
@@ -110,7 +110,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 					},
 					Values: &v1alpha1.Values{
 						Pilot: &v1alpha1.PilotConfig{
-							Image: pilotImage,
+							Image: ptr.Of(pilotImage),
 							Cni: &v1alpha1.CNIUsageConfig{
 								Enabled: ptr.Of(true),
 							},
@@ -143,15 +143,16 @@ var _ = Describe("Istio resource", Ordered, func() {
 				Values: &v1alpha1.Values{
 					Global: &v1alpha1.GlobalConfig{
 						ConfigValidation: ptr.Of(true),
-						IstioNamespace:   istio.Spec.Namespace,
+						IstioNamespace:   &istio.Spec.Namespace,
 					},
 					Pilot: &v1alpha1.PilotConfig{
-						Image: pilotImage,
+						Image: ptr.Of(pilotImage),
 						Cni: &v1alpha1.CNIUsageConfig{
 							Enabled: ptr.Of(true),
 						},
 					},
-					Revision: revKey.Name,
+					Revision:        &revKey.Name,
+					DefaultRevision: ptr.Of(""), // set in the default profile
 				},
 			}))
 		})
@@ -179,15 +180,16 @@ var _ = Describe("Istio resource", Ordered, func() {
 					Values: &v1alpha1.Values{
 						Global: &v1alpha1.GlobalConfig{
 							ConfigValidation: ptr.Of(true),
-							IstioNamespace:   istio.Spec.Namespace,
+							IstioNamespace:   &istio.Spec.Namespace,
 						},
 						Pilot: &v1alpha1.PilotConfig{
-							Image: pilotImage,
+							Image: ptr.Of(pilotImage),
 							Cni: &v1alpha1.CNIUsageConfig{
 								Enabled: ptr.Of(true),
 							},
 						},
-						Revision: revKey.Name,
+						Revision:        &revKey.Name,
+						DefaultRevision: ptr.Of(""), // set in the default profile
 					},
 				}))
 			})
@@ -270,6 +272,14 @@ var _ = Describe("Istio resource", Ordered, func() {
 
 					AfterAll(func() {
 						deleteAllIstiosAndRevisions(ctx)
+					})
+
+					When("namespace is updated", func() {
+						It("throws a validation error as the field is immutable", func() {
+							Expect(k8sClient.Get(ctx, istioKey, istio)).To(Succeed())
+							istio.Spec.Namespace = workloadNamespace
+							Expect(k8sClient.Update(ctx, istio)).To(MatchError(ContainSubstring("immutable")))
+						})
 					})
 
 					When("version is updated", func() {

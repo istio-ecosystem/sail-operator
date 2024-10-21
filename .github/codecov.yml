@@ -1,0 +1,4 @@
+ignore:
+  - "api"
+  - "hack"
+  - "tests"

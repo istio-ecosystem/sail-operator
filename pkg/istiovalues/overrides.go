@@ -24,10 +24,10 @@ func ApplyOverrides(revisionName string, namespace string, values *v1alpha1.Valu
 	if revisionName == v1alpha1.DefaultRevision {
 		revisionName = ""
 	}
-	values.Revision = revisionName
+	values.Revision = &revisionName
 
 	if values.Global == nil {
 		values.Global = &v1alpha1.GlobalConfig{}
 	}
-	values.Global.IstioNamespace = namespace
+	values.Global.IstioNamespace = &namespace
 }

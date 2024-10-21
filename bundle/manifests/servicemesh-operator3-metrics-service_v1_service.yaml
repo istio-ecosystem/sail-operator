@@ -12,6 +12,7 @@ metadata:
     control-plane: servicemesh-operator3
   name: servicemesh-operator3-metrics-service
 spec:
+  ipFamilyPolicy: PreferDualStack
   ports:
   - name: https
     port: 8443

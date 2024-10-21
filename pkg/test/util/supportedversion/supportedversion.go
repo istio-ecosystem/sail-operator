@@ -18,12 +18,14 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	"gopkg.in/yaml.v3"
 )
 
 var (
 	List    []VersionInfo
+	Map     map[string]VersionInfo
 	Default string
 	Old     string
 	New     string
@@ -41,18 +43,28 @@ func init() {
 		panic(err)
 	}
 
+	List, Default, Old, New = mustParseVersionsYaml(versionsBytes)
+
+	Map = make(map[string]VersionInfo)
+	for _, v := range List {
+		Map[v.Name] = v
+	}
+}
+
+func mustParseVersionsYaml(yamlBytes []byte) (list []VersionInfo, defaultVersion string, oldVersion string, newVersion string) {
 	versions := Versions{}
-	err = yaml.Unmarshal(versionsBytes, &versions)
+	err := yaml.Unmarshal(yamlBytes, &versions)
 	if err != nil {
 		panic(err)
 	}
 
-	List = versions.Versions
-	Default = List[0].Name
-	if len(List) > 1 {
-		Old = List[1].Name
+	list = versions.Versions
+	defaultVersion = list[0].Name
+	if len(list) > 1 {
+		oldVersion = list[1].Name
 	}
-	New = List[0].Name
+	newVersion = list[0].Name
+	return list, defaultVersion, oldVersion, newVersion
 }
 
 type Versions struct {
@@ -60,10 +72,10 @@ type Versions struct {
 }
 
 type VersionInfo struct {
-	Name    string   `json:"name"`
-	Version string   `json:"version"`
-	Repo    string   `json:"repo"`
-	Branch  string   `json:"branch,omitempty"`
-	Commit  string   `json:"commit"`
-	Charts  []string `json:"charts,omitempty"`
+	Name    string          `json:"name"`
+	Version *semver.Version `json:"version"`
+	Repo    string          `json:"repo"`
+	Branch  string          `json:"branch,omitempty"`
+	Commit  string          `json:"commit"`
+	Charts  []string        `json:"charts,omitempty"`
 }

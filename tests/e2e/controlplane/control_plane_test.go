@@ -18,20 +18,16 @@ package controlplane
 
 import (
 	"fmt"
-	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
-	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
-	common "github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -43,20 +39,13 @@ import (
 	"istio.io/istio/pkg/ptr"
 )
 
-// version can have one of the following formats:
-// - 1.22.2
-// - 1.23.0-rc.1
-// - 1.24-alpha
-var istiodVersionRegex = regexp.MustCompile(`Version:"(\d+\.\d+(\.\d+)?(-\w+(\.\d+)?)?)`)
-
 var _ = Describe("Control Plane Installation", Ordered, func() {
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
-
 	debugInfoLogged := false
 
 	BeforeAll(func(ctx SpecContext) {
-		Expect(kubectl.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
+		Expect(k.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
 
 		extraArg := ""
 		if ocp {
@@ -66,7 +55,7 @@ var _ = Describe("Control Plane Installation", Ordered, func() {
 		if skipDeploy {
 			Success("Skipping operator installation because it was deployed externally")
 		} else {
-			Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, extraArg)).
+			Expect(common.InstallOperatorViaHelm(extraArg)).
 				To(Succeed(), "Operator failed to be deployed")
 		}
 
@@ -86,7 +75,7 @@ kind: IstioCNI
 metadata:
   name: default
 ` + spec
-				Expect(kubectl.CreateFromString(yaml)).To(Succeed(), "IstioCNI creation failed")
+				Expect(k.CreateFromString(yaml)).To(Succeed(), "IstioCNI creation failed")
 				Success("IstioCNI created")
 
 				cni := &v1alpha1.IstioCNI{}
@@ -110,7 +99,7 @@ kind: Istio
 metadata:
   name: default
 ` + spec
-				Expect(kubectl.CreateFromString(yaml)).To(Succeed(), "Istio creation failed")
+				Expect(k.CreateFromString(yaml)).To(Succeed(), "Istio creation failed")
 				Success("Istio created")
 
 				istio := &v1alpha1.Istio{}
@@ -133,8 +122,8 @@ metadata:
 
 			Context(version.Name, func() {
 				BeforeAll(func() {
-					Expect(kubectl.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
-					Expect(kubectl.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
+					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
+					Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
 				})
 
 				When("the IstioCNI CR is created", func() {
@@ -149,7 +138,7 @@ spec:
   namespace: %s`
 						yaml = fmt.Sprintf(yaml, version.Name, istioCniNamespace)
 						Log("IstioCNI YAML:", indent(2, yaml))
-						Expect(kubectl.CreateFromString(yaml)).To(Succeed(), "IstioCNI creation failed")
+						Expect(k.CreateFromString(yaml)).To(Succeed(), "IstioCNI creation failed")
 						Success("IstioCNI created")
 					})
 
@@ -181,9 +170,9 @@ spec:
 					})
 
 					It("doesn't continuously reconcile the IstioCNI CR", func() {
-						Eventually(kubectl.Logs).WithArguments(namespace, "deploy/"+deploymentName, ptr.Of(30*time.Second)).
-							ShouldNot(ContainSubstring("Reconciliation done"), "Istio Operator is continuously reconciling")
-						Success("Istio Operator stopped reconciling")
+						Eventually(k.WithNamespace(namespace).Logs).WithArguments("deploy/"+deploymentName, ptr.Of(30*time.Second)).
+							ShouldNot(ContainSubstring("Reconciliation done"), "IstioCNI is continuously reconciling")
+						Success("IstioCNI stopped reconciling")
 					})
 				})
 
@@ -199,7 +188,7 @@ spec:
   namespace: %s`
 						istioYAML = fmt.Sprintf(istioYAML, version.Name, controlPlaneNamespace)
 						Log("Istio YAML:", indent(2, istioYAML))
-						Expect(kubectl.CreateFromString(istioYAML)).
+						Expect(k.CreateFromString(istioYAML)).
 							To(Succeed(), "Istio CR failed to be created")
 						Success("Istio CR created")
 					})
@@ -219,7 +208,7 @@ spec:
 					It("deploys istiod", func(ctx SpecContext) {
 						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
 							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available; unexpected Condition")
-						Expect(getVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
+						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
 						Success("Istiod is deployed in the namespace and Running")
 					})
 
@@ -229,16 +218,16 @@ spec:
 					})
 
 					It("doesn't continuously reconcile the Istio CR", func() {
-						Eventually(kubectl.Logs).WithArguments(namespace, "deploy/"+deploymentName, ptr.Of(30*time.Second)).
-							ShouldNot(ContainSubstring("Reconciliation done"), "Istio Operator is continuously reconciling")
-						Success("Istio Operator stopped reconciling")
+						Eventually(k.WithNamespace(namespace).Logs).WithArguments("deploy/"+deploymentName, ptr.Of(30*time.Second)).
+							ShouldNot(ContainSubstring("Reconciliation done"), "Istio CR is continuously reconciling")
+						Success("Istio CR stopped reconciling")
 					})
 				})
 
 				When("bookinfo is deployed", func() {
 					BeforeAll(func() {
-						Expect(kubectl.CreateNamespace(bookinfoNamespace)).To(Succeed(), "Bookinfo namespace failed to be created")
-						Expect(kubectl.Patch("", "namespace", bookinfoNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
+						Expect(k.CreateNamespace(bookinfoNamespace)).To(Succeed(), "Bookinfo namespace failed to be created")
+						Expect(k.Patch("namespace", bookinfoNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
 							To(Succeed(), "Error patching bookinfo namespace")
 						Expect(deployBookinfo(version)).To(Succeed(), "Error deploying bookinfo")
 						Success("Bookinfo deployed")
@@ -247,7 +236,7 @@ spec:
 					bookinfoPods := &corev1.PodList{}
 
 					It("updates the pods status to Running", func(ctx SpecContext) {
-						cl.List(ctx, bookinfoPods, client.InNamespace(bookinfoNamespace))
+						Expect(cl.List(ctx, bookinfoPods, client.InNamespace(bookinfoNamespace))).To(Succeed())
 						Expect(bookinfoPods.Items).ToNot(BeEmpty(), "No pods found in bookinfo namespace")
 
 						for _, pod := range bookinfoPods.Items {
@@ -260,22 +249,22 @@ spec:
 					It("has sidecars with the correct istio version", func(ctx SpecContext) {
 						for _, pod := range bookinfoPods.Items {
 							sidecarVersion, err := getProxyVersion(pod.Name, bookinfoNamespace)
-							Expect(err).To(Succeed(), "Error getting sidecar version")
-							Expect(sidecarVersion).To(ContainSubstring(version.Version), "Sidecar Istio version does not match the expected version")
+							Expect(err).NotTo(HaveOccurred(), "Error getting sidecar version")
+							Expect(sidecarVersion).To(Equal(version.Version), "Sidecar Istio version does not match the expected version")
 						}
 						Success("Istio sidecar version matches the expected Istio version")
 					})
 
 					AfterAll(func(ctx SpecContext) {
 						By("Deleting bookinfo")
-						Expect(kubectl.DeleteNamespace(bookinfoNamespace)).To(Succeed(), "Bookinfo namespace failed to be deleted")
+						Expect(k.DeleteNamespace(bookinfoNamespace)).To(Succeed(), "Bookinfo namespace failed to be deleted")
 						Success("Bookinfo deleted")
 					})
 				})
 
 				When("the Istio CR is deleted", func() {
 					BeforeEach(func() {
-						Expect(kubectl.Delete(controlPlaneNamespace, "istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
+						Expect(k.WithNamespace(controlPlaneNamespace).Delete("istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
 						Success("Istio CR deleted")
 					})
 
@@ -289,7 +278,7 @@ spec:
 
 				When("the IstioCNI CR is deleted", func() {
 					BeforeEach(func() {
-						Expect(kubectl.Delete(istioCniNamespace, "istiocni", istioCniName)).To(Succeed(), "IstioCNI CR failed to be deleted")
+						Expect(k.WithNamespace(istioCniNamespace).Delete("istiocni", istioCniName)).To(Succeed(), "IstioCNI CR failed to be deleted")
 						Success("IstioCNI deleted")
 					})
 
@@ -335,7 +324,7 @@ spec:
 		}
 
 		By("Deleting operator deployment")
-		Expect(helm.Uninstall("sail-operator", "--namespace "+namespace)).
+		Expect(common.UninstallOperator()).
 			To(Succeed(), "Operator failed to be deleted")
 		GinkgoWriter.Println("Operator uninstalled")
 
@@ -343,7 +332,7 @@ spec:
 			Success("Skipping deletion of operator namespace to avoid removal of operator container image from internal registry")
 			return
 		}
-		Expect(kubectl.DeleteNamespace(namespace)).To(Succeed(), "Namespace failed to be deleted")
+		Expect(k.DeleteNamespace(namespace)).To(Succeed(), "Namespace failed to be deleted")
 		Success("Namespace deleted")
 	})
 })
@@ -356,19 +345,6 @@ func ImageFromRegistry(regexp string) types.GomegaMatcher {
 	return HaveField("Image", MatchRegexp(regexp))
 }
 
-func getVersionFromIstiod() (string, error) {
-	output, err := kubectl.Exec(controlPlaneNamespace, "deploy/istiod", "", "pilot-discovery version")
-	if err != nil {
-		return "", fmt.Errorf("error getting version from istiod: %w", err)
-	}
-
-	matches := istiodVersionRegex.FindStringSubmatch(output)
-	if len(matches) > 1 && matches[1] != "" {
-		return matches[1], nil
-	}
-	return "", fmt.Errorf("error getting version from istiod: version not found in output: %s", output)
-}
-
 func indent(level int, str string) string {
 	indent := strings.Repeat(" ", level)
 	return indent + strings.ReplaceAll(str, "\n", "\n"+indent)
@@ -377,17 +353,17 @@ func indent(level int, str string) string {
 func forceDeleteIstioResources() error {
 	// This is a workaround to delete the Istio CRs that are left in the cluster
 	// This will be improved by splitting the tests into different Nodes with their independent setups and cleanups
-	err := kubectl.ForceDelete("", "istio", istioName)
+	err := k.ForceDelete("istio", istioName)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return fmt.Errorf("failed to delete %s CR: %w", "istio", err)
 	}
 
-	err = kubectl.ForceDelete("", "istiorevision", "default")
+	err = k.ForceDelete("istiorevision", "default")
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return fmt.Errorf("failed to delete %s CR: %w", "istiorevision", err)
 	}
 
-	err = kubectl.Delete("", "istiocni", istioCniName)
+	err = k.Delete("istiocni", istioCniName)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return fmt.Errorf("failed to delete %s CR: %w", "istiocni", err)
 	}
@@ -408,7 +384,7 @@ func getBookinfoURL(version supportedversion.VersionInfo) string {
 
 func deployBookinfo(version supportedversion.VersionInfo) error {
 	bookinfoURL := getBookinfoURL(version)
-	kubectl.Apply(bookinfoNamespace, bookinfoURL)
+	err := k.WithNamespace(bookinfoNamespace).Apply(bookinfoURL)
 	if err != nil {
 		return fmt.Errorf("error deploying bookinfo: %w", err)
 	}
@@ -416,14 +392,19 @@ func deployBookinfo(version supportedversion.VersionInfo) error {
 	return nil
 }
 
-func getProxyVersion(podName, namespace string) (string, error) {
-	proxyVersion, err := kubectl.Exec(namespace,
+func getProxyVersion(podName, namespace string) (*semver.Version, error) {
+	output, err := k.WithNamespace(namespace).Exec(
 		podName,
 		"istio-proxy",
 		`curl -s http://localhost:15000/server_info | grep "ISTIO_VERSION" | awk -F '"' '{print $4}'`)
 	if err != nil {
-		return "", fmt.Errorf("error getting sidecar version: %w", err)
+		return nil, fmt.Errorf("error getting sidecar version: %w", err)
 	}
 
-	return proxyVersion, nil
+	versionStr := strings.TrimSpace(output)
+	version, err := semver.NewVersion(versionStr)
+	if err != nil {
+		return version, fmt.Errorf("error parsing sidecar version %q: %w", versionStr, err)
+	}
+	return version, err
 }

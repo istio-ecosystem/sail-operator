@@ -29,7 +29,7 @@ const (
 	UpdateStrategyTypeRevisionBased UpdateStrategyType = "RevisionBased"
 
 	DefaultRevisionDeletionGracePeriodSeconds = 30
-	MinRevisionDeletionGracePeriodSeconds     = 30
+	MinRevisionDeletionGracePeriodSeconds     = 0
 )
 
 // IstioSpec defines the desired state of Istio
@@ -57,9 +57,10 @@ type IstioSpec struct {
 	// +kubebuilder:validation:Enum=ambient;default;demo;empty;openshift-ambient;openshift;preview;stable
 	Profile string `json:"profile,omitempty"`
 
-	// Namespace to which the Istio components should be installed.
+	// Namespace to which the Istio components should be installed. Note that this field is immutable.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,xDescriptors={"urn:alm:descriptor:io.kubernetes:Namespace"}
 	// +kubebuilder:default=istio-system
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Namespace string `json:"namespace"`
 
 	// Defines the values to be passed to the Helm charts when installing Istio.
@@ -85,9 +86,9 @@ type IstioUpdateStrategy struct {
 
 	// Defines how many seconds the operator should wait before removing a non-active revision after all
 	// the workloads have stopped using it. You may want to set this value on the order of minutes.
-	// The minimum and the default value is 30.
+	// The minimum is 0 and the default value is 30.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=2,displayName="Inactive Revision Deletion Grace Period (seconds)",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:number"}
-	// +kubebuilder:validation:Minimum=30
+	// +kubebuilder:validation:Minimum=0
 	InactiveRevisionDeletionGracePeriodSeconds *int64 `json:"inactiveRevisionDeletionGracePeriodSeconds,omitempty"`
 
 	// Defines whether the workloads should be moved from one control plane instance to another
@@ -113,6 +114,9 @@ type IstioStatus struct {
 
 	// Reports the current state of the object.
 	State IstioConditionReason `json:"state,omitempty"`
+
+	// The name of the active revision.
+	ActiveRevisionName string `json:"activeRevisionName,omitempty"`
 
 	// Reports information about the underlying IstioRevisions.
 	Revisions RevisionSummary `json:"revisions,omitempty"`
@@ -238,7 +242,8 @@ const (
 // +kubebuilder:printcolumn:name="Revisions",type="string",JSONPath=".status.revisions.total",description="Total number of IstioRevision objects currently associated with this object."
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.revisions.ready",description="Number of revisions that are ready."
 // +kubebuilder:printcolumn:name="In use",type="string",JSONPath=".status.revisions.inUse",description="Number of revisions that are currently being used by workloads."
-// +kubebuilder:printcolumn:name="Active Revision",type="string",JSONPath=".status.state",description="The current state of the active revision."
+// +kubebuilder:printcolumn:name="Active Revision",type="string",JSONPath=".status.activeRevisionName",description="The name of the currently active revision."
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.state",description="The current state of the active revision."
 // +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".spec.version",description="The version of the control plane installation."
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",description="The age of the object"
 

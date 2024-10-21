@@ -39,11 +39,20 @@ globalTransformations:
     "*wrappers.Int64Value": "*int64"
     "*wrappers.UInt32Value": "*uint32"
     "*duration.Duration": "*metav1.Duration"
+    bool: "*bool"
+    string: "*string"
+    int32: "*int32"
+    uint32: "*uint32"
+    int64: "*int64"
+    uint64: "*uint64"
+    float64: "*float64"
 
 inputFiles:
 - module: istio.io/istio
-  path: /operator/pkg/apis/istio/v1alpha1/values_types.pb.go
+  path: /operator/pkg/apis/values_types.pb.go
   transformations:
+    renameImports:
+      v1: k8sv1
     removeTypes:
     - EgressGatewayConfig
     - IngressGatewayConfig

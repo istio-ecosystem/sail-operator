@@ -23,6 +23,9 @@ source "${CUR_DIR}"/../validate_semver.sh
 GITHUB_TOKEN="${GITHUB_TOKEN:-}"
 GIT_USER="${GIT_USER:-}"
 
+GIT_CONFIG_USER_NAME="${GIT_CONFIG_USER_NAME:-}"
+GIT_CONFIG_USER_EMAIL="${GIT_CONFIG_USER_EMAIL:-}"
+
 # The OPERATOR_NAME is defined in Makefile
 : "${OPERATOR_NAME:?"Missing OPERATOR_NAME variable"}"
 : "${OPERATOR_VERSION:?"Missing OPERATOR_VERSION variable"}"
@@ -95,6 +98,14 @@ OPERATORS_DIR="operators/${OPERATOR_NAME}/${OPERATOR_VERSION}/"
 BUNDLE_DIR="${CUR_DIR}"/../../bundle
 mkdir -p "${OPERATORS_DIR}"
 cp -a "${BUNDLE_DIR}"/. "${OPERATORS_DIR}"
+
+if ! git config --global user.name; then
+  skipInDryRun git config --global user.name "${GIT_CONFIG_USER_NAME}"
+fi
+
+if ! git config --global user.email; then
+  skipInDryRun git config --global user.email "${GIT_CONFIG_USER_EMAIL}"
+fi
 
 TITLE="operator ${OPERATOR_NAME} (${OPERATOR_VERSION})"
 skipInDryRun git add .

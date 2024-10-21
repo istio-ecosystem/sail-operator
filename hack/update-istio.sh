@@ -110,22 +110,18 @@ function update_latest() {
     done
     echo
 
-    FULL_VERSION=$(curl -sSfL "${URL}")
-    echo Full version: "${FULL_VERSION}"
-
-    PARTIAL_VERSION="${FULL_VERSION%.*}"
-    echo Partial version: "${PARTIAL_VERSION}"
+    VERSION=$(curl -sSfL "${URL}")
+    echo Version: "${VERSION}"
 
     yq -i '
-        (.versions[] | select(.name == "latest") | .version) = "'"${PARTIAL_VERSION}"'" |
+        (.versions[] | select(.name == "latest") | .version) = "'"${VERSION}"'" |
         (.versions[] | select(.name == "latest") | .commit) = "'"${COMMIT}"'" |
         (.versions[] | select(.name == "latest") | .charts) = [
-            "https://storage.googleapis.com/istio-build/dev/'"${FULL_VERSION}"'/helm/base-'"${FULL_VERSION}"'.tgz",
-            "https://storage.googleapis.com/istio-build/dev/'"${FULL_VERSION}"'/helm/cni-'"${FULL_VERSION}"'.tgz",
-            "https://storage.googleapis.com/istio-build/dev/'"${FULL_VERSION}"'/helm/gateway-'"${FULL_VERSION}"'.tgz",
-            "https://storage.googleapis.com/istio-build/dev/'"${FULL_VERSION}"'/helm/istiod-'"${FULL_VERSION}"'.tgz",
-            "https://storage.googleapis.com/istio-build/dev/'"${FULL_VERSION}"'/helm/istiod-remote-'"${FULL_VERSION}"'.tgz",
-            "https://storage.googleapis.com/istio-build/dev/'"${FULL_VERSION}"'/helm/ztunnel-'"${FULL_VERSION}"'.tgz"
+            "https://storage.googleapis.com/istio-build/dev/'"${VERSION}"'/helm/base-'"${VERSION}"'.tgz",
+            "https://storage.googleapis.com/istio-build/dev/'"${VERSION}"'/helm/cni-'"${VERSION}"'.tgz",
+            "https://storage.googleapis.com/istio-build/dev/'"${VERSION}"'/helm/gateway-'"${VERSION}"'.tgz",
+            "https://storage.googleapis.com/istio-build/dev/'"${VERSION}"'/helm/istiod-'"${VERSION}"'.tgz",
+            "https://storage.googleapis.com/istio-build/dev/'"${VERSION}"'/helm/ztunnel-'"${VERSION}"'.tgz"
         ]' "${VERSIONS_YAML_FILE}"
 }
 

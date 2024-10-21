@@ -25,20 +25,10 @@ If you want to contribute to the Sail Operator project, you can follow some rule
 - Discuss your changes before you start working on them. You can open a new issue in the [Sail Operator GitHub repository](https://github.com/istio-ecosystem/sail-operator/issues) or start a discussion in the [Sail Operator Discussion](https://github.com/istio-ecosystem/sail-operator/discussions). By this way, you can get feedback from the community and ensure that your changes are aligned with the project goals.
 - Use of Labels: We use labels in the issues to help us track the progress of the issues. You can use the labels to help you understand the status of the issue and what is needed to move forward. Those labels are:
   - `backport/backport-handled`: Use this label to indicate that the issue has been backported to the appropriate branches.
-  - `testing`: Use this label to indicate that the issue is related to testing. Can be used in combination with other labels to mark the proper testing type, for example: `testing/e2e`, `testing/unit`, `testing/integration`.
+  - `test`: Use this label to indicate that the issue is related to test or add `test-needed` when a issue needs a test to be added related. Can be used in combination with other labels to mark the proper test type, for example: `test-e2e`, `test-unit`, `test-integration`.
   - `good first issue`: Use this label to indicate that the issue is a good first issue for new contributors.
   - `help wanted`: Use this label to indicate that the issue needs help from the community.
   - `enhancement`: Use this label to indicate that the issue is an enhancement related to a new feature or improvement.
-- Pull Requests: When you open a pull request, you can follow this template to help you provide the necessary information to the maintainers:
-  - **What type of PR is this?**
-  - **What this PR does / why we need it:**
-  - **Which issue(s) this PR fixes:** (Mark with Fixes #12345, with this the issue will be autoclosed when the PR is merged)
-  - **Special notes for your reviewer:**
-  - **Does this PR introduce a user-facing change?**
-  - **Additional documentation:**
-  - **Does this PR introduce a breaking change?**
-  - **Other information:**
-  - Labels: You can use the labels to help you track the status of the PR. The labels are the same as the issue labels. Additionally, you can use the `cleanup/refactor` to indicate that the PR is a cleanup or refactor of the codebase. Having the label just helps with filtering pull requests. It also is a hint that this work does not need an entry in the changelog
 
 ## Community meetings
 

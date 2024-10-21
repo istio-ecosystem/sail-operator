@@ -144,13 +144,14 @@ func (r *Reconciler) validate(ctx context.Context, rev *v1alpha1.IstioRevision) 
 		return reconciler.NewValidationError("spec.values not set")
 	}
 
-	if rev.Name == v1alpha1.DefaultRevision && rev.Spec.Values.Revision != "" {
+	revName := rev.Spec.Values.Revision
+	if rev.Name == v1alpha1.DefaultRevision && (revName != nil && *revName != "") {
 		return reconciler.NewValidationError(fmt.Sprintf("spec.values.revision must be \"\" when IstioRevision name is %s", v1alpha1.DefaultRevision))
-	} else if rev.Name != v1alpha1.DefaultRevision && rev.Spec.Values.Revision != rev.Name {
+	} else if rev.Name != v1alpha1.DefaultRevision && (revName == nil || *revName != rev.Name) {
 		return reconciler.NewValidationError("spec.values.revision does not match IstioRevision name")
 	}
 
-	if rev.Spec.Values.Global == nil || rev.Spec.Values.Global.IstioNamespace != rev.Spec.Namespace {
+	if rev.Spec.Values.Global == nil || rev.Spec.Values.Global.IstioNamespace == nil || *rev.Spec.Values.Global.IstioNamespace != rev.Spec.Namespace {
 		return reconciler.NewValidationError("spec.values.global.istioNamespace does not match spec.namespace")
 	}
 	return nil
@@ -206,10 +207,10 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	logger := mgr.GetLogger().WithName("ctrlr").WithName("istiorev")
 
 	// mainObjectHandler handles the IstioRevision watch events
-	mainObjectHandler := enqueuelogger.WrapIfNecessary(v1alpha1.IstioRevisionKind, logger, &handler.EnqueueRequestForObject{})
+	mainObjectHandler := wrapEventHandler(logger, &handler.EnqueueRequestForObject{})
 
 	// ownedResourceHandler handles resources that are owned by the IstioRevision CR
-	ownedResourceHandler := enqueuelogger.WrapIfNecessary(v1alpha1.IstioRevisionKind, logger,
+	ownedResourceHandler := wrapEventHandler(logger,
 		handler.EnqueueRequestForOwner(r.Scheme, r.RESTMapper(), &v1alpha1.IstioRevision{}, handler.OnlyControllerOwner()))
 
 	// nsHandler triggers reconciliation in two cases:
@@ -218,11 +219,11 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// - when a namespace that references the IstioRevision CR via the istio.io/rev
 	//   or istio-injection labels is updated, so that the InUse condition of
 	//   the IstioRevision CR is updated.
-	nsHandler := enqueuelogger.WrapIfNecessary(v1alpha1.IstioRevisionKind, logger, handler.EnqueueRequestsFromMapFunc(r.mapNamespaceToReconcileRequest))
+	nsHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapNamespaceToReconcileRequest))
 
 	// podHandler handles pods that reference the IstioRevision CR via the istio.io/rev or sidecar.istio.io/inject labels.
 	// The handler triggers the reconciliation of the referenced IstioRevision CR so that its InUse condition is updated.
-	podHandler := enqueuelogger.WrapIfNecessary(v1alpha1.IstioRevisionKind, logger, handler.EnqueueRequestsFromMapFunc(r.mapPodToReconcileRequest))
+	podHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapPodToReconcileRequest))
 
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
@@ -487,8 +488,8 @@ func getReferencedRevisionFromPod(podLabels, podAnnotations, nsLabels map[string
 
 func istiodDeploymentKey(rev *v1alpha1.IstioRevision) client.ObjectKey {
 	name := "istiod"
-	if rev.Spec.Values != nil && rev.Spec.Values.Revision != "" {
-		name += "-" + rev.Spec.Values.Revision
+	if rev.Spec.Values != nil && rev.Spec.Values.Revision != nil && *rev.Spec.Values.Revision != "" {
+		name += "-" + *rev.Spec.Values.Revision
 	}
 
 	return client.ObjectKey{
@@ -499,8 +500,8 @@ func istiodDeploymentKey(rev *v1alpha1.IstioRevision) client.ObjectKey {
 
 func injectionWebhookKey(rev *v1alpha1.IstioRevision) client.ObjectKey {
 	name := "istio-sidecar-injector"
-	if rev.Spec.Values != nil && rev.Spec.Values.Revision != "" {
-		name += "-" + rev.Spec.Values.Revision
+	if rev.Spec.Values != nil && rev.Spec.Values.Revision != nil && *rev.Spec.Values.Revision != "" {
+		name += "-" + *rev.Spec.Values.Revision
 	}
 	if rev.Spec.Namespace != "istio-system" {
 		name += "-" + rev.Spec.Namespace
@@ -610,4 +611,8 @@ func clearIgnoredFields(obj client.Object) {
 
 func badIstioRevisionType(rev *v1alpha1.IstioRevision) string {
 	return fmt.Sprintf("unknown IstioRevisionType: %s", rev.Spec.Type)
+}
+
+func wrapEventHandler(logger logr.Logger, handler handler.EventHandler) handler.EventHandler {
+	return enqueuelogger.WrapIfNecessary(v1alpha1.IstioRevisionKind, logger, handler)
 }

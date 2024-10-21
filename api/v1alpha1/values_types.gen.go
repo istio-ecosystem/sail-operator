@@ -67,26 +67,26 @@ const (
 // for all the Istio control plane components.
 type ArchConfig struct {
 	// Sets pod scheduling weight for amd64 arch
-	Amd64 uint32 `json:"amd64,omitempty"`
+	Amd64 *uint32 `json:"amd64,omitempty"`
 	// Sets pod scheduling weight for ppc64le arch.
-	Ppc64Le uint32 `json:"ppc64le,omitempty"`
+	Ppc64Le *uint32 `json:"ppc64le,omitempty"`
 	// Sets pod scheduling weight for s390x arch.
-	S390X uint32 `json:"s390x,omitempty"`
+	S390X *uint32 `json:"s390x,omitempty"`
 	// Sets pod scheduling weight for arm64 arch.
-	Arm64 uint32 `json:"arm64,omitempty"`
+	Arm64 *uint32 `json:"arm64,omitempty"`
 }
 
 // Configuration for CNI.
 type CNIConfig struct {
 	// Hub to pull the container image from. Image will be `Hub/Image:Tag-Variant`.
-	Hub string `json:"hub,omitempty"`
+	Hub *string `json:"hub,omitempty"`
 	// The container image tag to pull. Image will be `Hub/Image:Tag-Variant`.
-	Tag string `json:"tag,omitempty"`
+	Tag *string `json:"tag,omitempty"`
 	// The container image variant to pull. Options are "debug" or "distroless". Unset will use the default for the given version.
-	Variant string `json:"variant,omitempty"`
+	Variant *string `json:"variant,omitempty"`
 	// Image name to pull from. Image will be `Hub/Image:Tag-Variant`.
 	// If Image contains a "/", it will replace the entire `image` in the pod.
-	Image string `json:"image,omitempty"`
+	Image *string `json:"image,omitempty"`
 	// Specifies the image pull policy. one of Always, Never, IfNotPresent.
 	// Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.
 	//
@@ -94,24 +94,24 @@ type CNIConfig struct {
 	// +kubebuilder:validation:Enum=Always;Never;IfNotPresent
 	PullPolicy *k8sv1.PullPolicy `json:"pullPolicy,omitempty"`
 	// The directory path within the cluster node's filesystem where the CNI binaries are to be installed. Typically /var/lib/cni/bin.
-	CniBinDir string `json:"cniBinDir,omitempty"`
+	CniBinDir *string `json:"cniBinDir,omitempty"`
 	// The directory path within the cluster node's filesystem where the CNI configuration files are to be installed. Typically /etc/cni/net.d.
-	CniConfDir string `json:"cniConfDir,omitempty"`
+	CniConfDir *string `json:"cniConfDir,omitempty"`
 	// The name of the CNI plugin configuration file. Defaults to istio-cni.conf.
-	CniConfFileName string `json:"cniConfFileName,omitempty"`
+	CniConfFileName *string `json:"cniConfFileName,omitempty"`
 	// The directory path within the cluster node's filesystem where network namespaces are located.
 	// Defaults to '/var/run/netns', in minikube/docker/others can be '/var/run/docker/netns'.
-	CniNetnsDir string `json:"cniNetnsDir,omitempty"`
+	CniNetnsDir *string `json:"cniNetnsDir,omitempty"`
 	// List of namespaces that should be ignored by the CNI plugin.
 	ExcludeNamespaces []string `json:"excludeNamespaces,omitempty"`
 	// K8s affinity to set on the istio-cni Pods. Can be used to exclude istio-cni from being scheduled on specified nodes.
 	Affinity *k8sv1.Affinity `json:"affinity,omitempty"`
 	// Additional annotations to apply to the istio-cni Pods.
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
 	// PodSecurityPolicy cluster role. No longer used anywhere.
-	PspClusterRole string `json:"psp_cluster_role,omitempty"`
+	PspClusterRole *string `json:"psp_cluster_role,omitempty"`
 
 	// Same as `global.logging.level`, but will override it if set
 	Logging *GlobalLoggingConfig `json:"logging,omitempty"`
@@ -126,7 +126,7 @@ type CNIConfig struct {
 	Resources *k8sv1.ResourceRequirements `json:"resources,omitempty"`
 	// No longer used for CNI. See: https://github.com/istio/istio/issues/49004
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	Privileged *bool `json:"privileged,omitempty"`
 	// The Container seccompProfile
 	//
@@ -136,7 +136,7 @@ type CNIConfig struct {
 	// Specifies the CNI provider. Can be either "default" or "multus". When set to "multus", an additional
 	// NetworkAttachmentDefinition resource is deployed to the cluster to allow the istio-cni plugin to be
 	// invoked in a cluster using the Multus CNI plugin.
-	Provider string `json:"provider,omitempty"`
+	Provider *string `json:"provider,omitempty"`
 	// The number of pods that can be unavailable during a rolling update of the CNI DaemonSet (see
 	// `updateStrategy.rollingUpdate.maxUnavailable` here:
 	// https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/daemon-set-v1/#DaemonSetSpec).
@@ -152,14 +152,14 @@ type CNIUsageConfig struct {
 
 	// Specifies the CNI provider. Can be either "default" or "multus". When set to "multus", an annotation
 	// `k8s.v1.cni.cncf.io/networks` is set on injected pods to point to a NetworkAttachmentDefinition
-	Provider string `json:"provider,omitempty"`
+	Provider *string `json:"provider,omitempty"`
 }
 
 type CNIAmbientConfig struct {
 	// Controls whether ambient redirection is enabled
 	Enabled *bool `json:"enabled,omitempty"`
 	// The directory path containing the configuration files for Ambient. Defaults to /etc/ambient-config.
-	ConfigDir string `json:"configDir,omitempty"`
+	ConfigDir *string `json:"configDir,omitempty"`
 	// If enabled, and ambient is enabled, DNS redirection will be enabled.
 	DnsCapture *bool `json:"dnsCapture,omitempty"`
 	// UNSTABLE: If enabled, and ambient is enabled, enables ipv6 support
@@ -170,39 +170,39 @@ type CNIRepairConfig struct {
 	// Controls whether repair behavior is enabled.
 	Enabled *bool `json:"enabled,omitempty"`
 	// Hub to pull the container image from. Image will be `Hub/Image:Tag-Variant`.
-	Hub string `json:"hub,omitempty"`
+	Hub *string `json:"hub,omitempty"`
 	// The container image tag to pull. Image will be `Hub/Image:Tag-Variant`.
-	Tag string `json:"tag,omitempty"`
+	Tag *string `json:"tag,omitempty"`
 	// Image name to pull from. Image will be `Hub/Image:Tag-Variant`.
 	// If Image contains a "/", it will replace the entire `image` in the pod.
-	Image string `json:"image,omitempty"`
+	Image *string `json:"image,omitempty"`
 	// The Repair controller has 3 modes (labelPods, deletePods, and repairPods). Pick which one meets your use cases. Note only one may be used.
 	// The mode defines the action the controller will take when a pod is detected as broken.
 	// If labelPods is true, the controller will label all broken pods with <brokenPodLabelKey>=<brokenPodLabelValue>.
 	// This is only capable of identifying broken pods; the user is responsible for fixing them (generally, by deleting them).
 	// Note this gives the DaemonSet a relatively high privilege, as modifying pod metadata/status can have wider impacts.
-	LabelPods bool `json:"labelPods,omitempty"`
+	LabelPods *bool `json:"labelPods,omitempty"`
 	// The Repair controller has 3 modes (labelPods, deletePods, and repairPods). Pick which one meets your use cases. Note only one may be used.
 	// The mode defines the action the controller will take when a pod is detected as broken.
 	// If repairPods is true, the controller will dynamically repair any broken pod by setting up the pod networking configuration even after it has started.
 	// Note the pod will be crashlooping, so this may take a few minutes to become fully functional based on when the retry occurs.
 	// This requires no RBAC privilege, but will require the CNI agent to run as a privileged pod.
-	RepairPods bool `json:"repairPods,omitempty"`
+	RepairPods *bool `json:"repairPods,omitempty"`
 	// No longer used.
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
-	CreateEvents string `json:"createEvents,omitempty"`
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
+	CreateEvents *string `json:"createEvents,omitempty"`
 	// The Repair controller has 3 modes (labelPods, deletePods, and repairPods). Pick which one meets your use cases. Note only one may be used.
 	// The mode defines the action the controller will take when a pod is detected as broken.
 	// If deletePods is true, the controller will delete the broken pod. The pod will then be rescheduled, hopefully onto a node that is fully ready.
 	// Note this gives the DaemonSet a relatively high privilege, as it can delete any Pod.
-	DeletePods bool `json:"deletePods,omitempty"`
+	DeletePods *bool `json:"deletePods,omitempty"`
 	// The label key to apply to a broken pod when the controller is in labelPods mode.
-	BrokenPodLabelKey string `json:"brokenPodLabelKey,omitempty"`
+	BrokenPodLabelKey *string `json:"brokenPodLabelKey,omitempty"`
 	// The label value to apply to a broken pod when the controller is in labelPods mode.
-	BrokenPodLabelValue string `json:"brokenPodLabelValue,omitempty"`
+	BrokenPodLabelValue *string `json:"brokenPodLabelValue,omitempty"`
 	// The name of the init container to use for the repairPods mode.
-	InitContainerName string `json:"initContainerName,omitempty"`
+	InitContainerName *string `json:"initContainerName,omitempty"`
 }
 
 // Configuration for the resource quotas for the CNI DaemonSet.
@@ -210,7 +210,7 @@ type ResourceQuotas struct {
 	// Controls whether to create resource quotas or not for the CNI DaemonSet.
 	Enabled *bool `json:"enabled,omitempty"`
 	// The hard limit on the number of pods in the namespace where the CNI DaemonSet is deployed.
-	Pods int64 `json:"pods,omitempty"`
+	Pods *int64 `json:"pods,omitempty"`
 }
 
 // Configuration for CPU or memory target utilization for HorizontalPodAutoscaler target.
@@ -218,7 +218,7 @@ type TargetUtilizationConfig struct {
 	// K8s utilization setting for HorizontalPodAutoscaler target.
 	//
 	// See https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
-	TargetAverageUtilization int32 `json:"targetAverageUtilization,omitempty"`
+	TargetAverageUtilization *int32 `json:"targetAverageUtilization,omitempty"`
 }
 
 // DefaultPodDisruptionBudgetConfig specifies the default pod disruption budget configuration.
@@ -240,7 +240,7 @@ type GlobalConfig struct {
 	//
 	// Deprecated: replaced by the affinity k8s settings which allows architecture nodeAffinity configuration of this behavior.
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	Arch *ArchConfig `json:"arch,omitempty"`
 	// List of certSigners to allow "approve" action in the ClusterRole
 	CertSigners []string `json:"certSigners,omitempty"`
@@ -250,17 +250,15 @@ type GlobalConfig struct {
 	//
 	// See https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	DefaultNodeSelector map[string]string `json:"defaultNodeSelector,omitempty"`
 	// Specifies the default pod disruption budget configuration.
-	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
 	DefaultPodDisruptionBudget *DefaultPodDisruptionBudgetConfig `json:"defaultPodDisruptionBudget,omitempty"`
 	// Default k8s resources settings for all Istio control plane components.
 	//
 	// See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	DefaultResources *k8sv1.ResourceRequirements `json:"defaultResources,omitempty"`
 	// Default node tolerations to be applied to all deployments so that all pods can be
 	// scheduled to nodes with matching taints. Each component can overwrite
@@ -269,10 +267,10 @@ type GlobalConfig struct {
 	// Configure this field in case that all pods of Istio control plane are expected to
 	// be scheduled to particular nodes with specified taints.
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	DefaultTolerations []k8sv1.Toleration `json:"defaultTolerations,omitempty"`
 	// Specifies the docker hub for Istio images.
-	Hub string `json:"hub,omitempty"`
+	Hub *string `json:"hub,omitempty"`
 	// Specifies the image pull policy for the Istio images. one of Always, Never, IfNotPresent.
 	// Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.
 	//
@@ -284,7 +282,7 @@ type GlobalConfig struct {
 	// Must be set for any cluster configured with private docker registry.
 	ImagePullSecrets []string `json:"imagePullSecrets,omitempty"`
 	// Specifies the default namespace for the Istio control plane components.
-	IstioNamespace string `json:"istioNamespace,omitempty"`
+	IstioNamespace *string `json:"istioNamespace,omitempty"`
 	// Specifies whether istio components should output logs in json format by adding --log_as_json argument to each container.
 	LogAsJson *bool `json:"logAsJson,omitempty"`
 	// Specifies the global logging level settings for the Istio control plane components.
@@ -310,7 +308,7 @@ type GlobalConfig struct {
 	// If the mesh admin does not specify a value, Istio will use the value of the
 	// mesh's Trust Domain. The best practice is to select a proper Trust Domain
 	// value.
-	MeshID string `json:"meshID,omitempty"`
+	MeshID *string `json:"meshID,omitempty"`
 	// Configure the mesh networks to be used by the Split Horizon EDS.
 	//
 	// The following example defines two networks with different endpoints association methods.
@@ -343,7 +341,7 @@ type GlobalConfig struct {
 	MultiCluster *MultiClusterConfig `json:"multiCluster,omitempty"`
 	// Network defines the network this cluster belong to. This name
 	// corresponds to the networks in the map of mesh networks.
-	Network string `json:"network,omitempty"`
+	Network *string `json:"network,omitempty"`
 	// Custom DNS config for the pod to resolve names of services in other
 	// clusters. Use this to add additional search domains, and other settings.
 	// see https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#dns-config
@@ -363,8 +361,8 @@ type GlobalConfig struct {
 	//
 	// See https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
-	PriorityClassName string `json:"priorityClassName,omitempty"`
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
+	PriorityClassName *string `json:"priorityClassName,omitempty"`
 	// Specifies how proxies are configured within Istio.
 	Proxy *ProxyConfig `json:"proxy,omitempty"`
 	// Specifies the Configuration for proxy_init container which sets the pods' networking to intercept the inbound/outbound traffic.
@@ -372,31 +370,31 @@ type GlobalConfig struct {
 	// Specifies the Configuration for the SecretDiscoveryService instead of using K8S secrets to mount the certificates.
 	Sds *SDSConfig `json:"sds,omitempty"`
 	// Specifies the tag for the Istio docker images.
-	Tag string `json:"tag,omitempty"`
+	Tag *string `json:"tag,omitempty"`
 	// The variant of the Istio container images to use. Options are "debug" or "distroless". Unset will use the default for the given version.
-	Variant string `json:"variant,omitempty"`
+	Variant *string `json:"variant,omitempty"`
 	// Specifies the Configuration for each of the supported tracers.
 	Tracer *TracerConfig `json:"tracer,omitempty"`
 	// Specifies the Istio control plane’s pilot Pod IP address or remote cluster DNS resolvable hostname.
-	RemotePilotAddress string `json:"remotePilotAddress,omitempty"`
+	RemotePilotAddress *string `json:"remotePilotAddress,omitempty"`
 	// Specifies the configution of istiod
 	Istiod *IstiodConfig `json:"istiod,omitempty"`
 	// Configure the Pilot certificate provider.
 	// Currently, four providers are supported: "kubernetes", "istiod", "custom" and "none".
-	PilotCertProvider string `json:"pilotCertProvider,omitempty"`
+	PilotCertProvider *string `json:"pilotCertProvider,omitempty"`
 	// Configure the policy for validating JWT.
 	// This is deprecated and has no effect.
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
-	JwtPolicy string `json:"jwtPolicy,omitempty"`
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
+	JwtPolicy *string `json:"jwtPolicy,omitempty"`
 	// Specifies the configuration for Security Token Service.
 	Sts *STSConfig `json:"sts,omitempty"`
 	// Configures the revision this control plane is a part of
-	Revision string `json:"revision,omitempty"`
+	Revision *string `json:"revision,omitempty"`
 	// Controls whether the in-cluster MTLS key and certs are loaded from the secret volume mounts.
 	MountMtlsCerts *bool `json:"mountMtlsCerts,omitempty"`
 	// The address of the CA for CSR.
-	CaAddress string `json:"caAddress,omitempty"`
+	CaAddress *string `json:"caAddress,omitempty"`
 	// Controls whether one external istiod is enabled.
 	ExternalIstiod *bool `json:"externalIstiod,omitempty"`
 	// Controls whether a remote cluster is the config cluster for an external istiod
@@ -406,11 +404,11 @@ type GlobalConfig struct {
 	// will be used as the certificates for workloads.
 	// The default value is "" and when caName="", the CA will be configured by other
 	// mechanisms (e.g., environmental variable CA_PROVIDER).
-	CaName string `json:"caName,omitempty"`
+	CaName *string `json:"caName,omitempty"`
 	// Platform in which Istio is deployed. Possible values are: "openshift" and "gcp"
 	// An empty value means it is a vanilla Kubernetes distribution, therefore no special
 	// treatment will be considered.
-	Platform string `json:"platform,omitempty"`
+	Platform *string `json:"platform,omitempty"`
 	// Defines which IP family to use for single stack or the order of IP families for dual-stack.
 	// Valid list items are "IPv4", "IPv6".
 	// More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services
@@ -418,7 +416,7 @@ type GlobalConfig struct {
 	// Controls whether Services are configured to use IPv4, IPv6, or both. Valid options
 	// are PreferDualStack, RequireDualStack, and SingleStack.
 	// More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services
-	IpFamilyPolicy string `json:"ipFamilyPolicy,omitempty"`
+	IpFamilyPolicy *string `json:"ipFamilyPolicy,omitempty"`
 	// Specifies how waypoints are configured within Istio.
 	Waypoint *WaypointConfig `json:"waypoint,omitempty"` // The next available key is 73
 }
@@ -427,7 +425,7 @@ type GlobalConfig struct {
 //
 // See https://tools.ietf.org/html/draft-ietf-oauth-token-exchange-16
 type STSConfig struct {
-	ServicePort uint32 `json:"servicePort,omitempty"`
+	ServicePort *uint32 `json:"servicePort,omitempty"`
 }
 
 type IstiodConfig struct {
@@ -440,7 +438,7 @@ type GlobalLoggingConfig struct {
 	// Comma-separated minimum per-scope logging level of messages to output, in the form of <scope>:<level>,<scope>:<level>
 	// The control plane has different scopes depending on component, but can configure default log level across all components
 	// If empty, default scope and level will be used as configured in code
-	Level string `json:"level,omitempty"`
+	Level *string `json:"level,omitempty"`
 }
 
 // MultiClusterConfig specifies the Configuration for Istio mesh across multiple clusters through the istio gateways.
@@ -450,9 +448,9 @@ type MultiClusterConfig struct {
 	Enabled *bool `json:"enabled,omitempty"`
 	// The name of the cluster this installation will run in. This is required for sidecar injection
 	// to properly label proxies
-	ClusterName string `json:"clusterName,omitempty"`
+	ClusterName *string `json:"clusterName,omitempty"`
 	// The suffix for global service names.
-	GlobalDomainSuffix string `json:"globalDomainSuffix,omitempty"`
+	GlobalDomainSuffix *string `json:"globalDomainSuffix,omitempty"`
 	// Enable envoy filter to translate `globalDomainSuffix` to cluster local suffix for cross cluster communication.
 	IncludeEnvoyFilter *bool `json:"includeEnvoyFilter,omitempty"`
 }
@@ -469,44 +467,44 @@ type PilotConfig struct {
 	// Controls whether a HorizontalPodAutoscaler is installed for Pilot.
 	AutoscaleEnabled *bool `json:"autoscaleEnabled,omitempty"`
 	// Minimum number of replicas in the HorizontalPodAutoscaler for Pilot.
-	AutoscaleMin uint32 `json:"autoscaleMin,omitempty"`
+	AutoscaleMin *uint32 `json:"autoscaleMin,omitempty"`
 	// Maximum number of replicas in the HorizontalPodAutoscaler for Pilot.
-	AutoscaleMax uint32 `json:"autoscaleMax,omitempty"`
+	AutoscaleMax *uint32 `json:"autoscaleMax,omitempty"`
 	// See https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#configurable-scaling-behavior
 	AutoscaleBehavior *autoscalingv2.HorizontalPodAutoscalerBehavior `json:"autoscaleBehavior,omitempty"`
 	// Number of replicas in the Pilot Deployment.
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
-	ReplicaCount uint32 `json:"replicaCount,omitempty"`
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
+	ReplicaCount *uint32 `json:"replicaCount,omitempty"`
 	// Image name used for Pilot.
 	//
 	// This can be set either to image name if hub is also set, or can be set to the full hub:name string.
 	//
 	// Examples: custom-pilot, docker.io/someuser:custom-pilot
-	Image string `json:"image,omitempty"`
+	Image *string `json:"image,omitempty"`
 	// Trace sampling fraction.
 	//
 	// Used to set the fraction of time that traces are sampled. Higher values are more accurate but add CPU overhead.
 	//
 	// Allowed values: 0.0 to 1.0
-	TraceSampling float64 `json:"traceSampling,omitempty"`
+	TraceSampling *float64 `json:"traceSampling,omitempty"`
 	// K8s resources settings.
 	//
 	// See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	Resources *k8sv1.ResourceRequirements `json:"resources,omitempty"`
 	// Target CPU utilization used in HorizontalPodAutoscaler.
 	//
 	// See https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	Cpu *TargetUtilizationConfig `json:"cpu,omitempty"`
 	// K8s node selector.
 	//
 	// See https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 	// Maximum duration that a sidecar can be connected to a pilot.
 	//
@@ -539,7 +537,7 @@ type PilotConfig struct {
 	Affinity *k8sv1.Affinity `json:"affinity,omitempty"`
 	// K8s rolling update strategy
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	// +kubebuilder:validation:XIntOrString
 	RollingMaxSurge *intstr.IntOrString `json:"rollingMaxSurge,omitempty"`
 	// The number of pods that can be unavailable during a rolling update (see
@@ -548,20 +546,20 @@ type PilotConfig struct {
 	// May be specified as a number of pods or as a percent of the total number
 	// of pods at the start of the update.
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	// +kubebuilder:validation:XIntOrString
 	RollingMaxUnavailable *intstr.IntOrString `json:"rollingMaxUnavailable,omitempty"`
 	// The node tolerations to be applied to the Pilot deployment so that it can be
 	// scheduled to particular nodes with matching taints.
 	// More info: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#scheduling
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	Tolerations []k8sv1.Toleration `json:"tolerations,omitempty"`
 	// K8s annotations for pods.
 	//
 	// See: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
 	// K8s annotations for the Service.
 	//
@@ -571,13 +569,13 @@ type PilotConfig struct {
 	ServiceAccountAnnotations map[string]string `json:"serviceAccountAnnotations,omitempty"`
 	// Specifies an extra root certificate in PEM format. This certificate will be trusted
 	// by pilot when resolving JWKS URIs.
-	JwksResolverExtraRootCA string `json:"jwksResolverExtraRootCA,omitempty"`
+	JwksResolverExtraRootCA *string `json:"jwksResolverExtraRootCA,omitempty"`
 	// Hub to pull the container image from. Image will be `Hub/Image:Tag-Variant`.
-	Hub string `json:"hub,omitempty"`
+	Hub *string `json:"hub,omitempty"`
 	// The container image tag to pull. Image will be `Hub/Image:Tag-Variant`.
-	Tag string `json:"tag,omitempty"`
+	Tag *string `json:"tag,omitempty"`
 	// The container image variant to pull. Options are "debug" or "distroless". Unset will use the default for the given version.
-	Variant string `json:"variant,omitempty"`
+	Variant *string `json:"variant,omitempty"`
 	// The seccompProfile for the Pilot container.
 	//
 	// See: https://kubernetes.io/docs/tutorials/security/seccomp/
@@ -597,28 +595,30 @@ type PilotConfig struct {
 	// Controls whether Services are configured to use IPv4, IPv6, or both. Valid options
 	// are PreferDualStack, RequireDualStack, and SingleStack.
 	// More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services
-	IpFamilyPolicy string `json:"ipFamilyPolicy,omitempty"`
+	IpFamilyPolicy *string `json:"ipFamilyPolicy,omitempty"`
 	// Target memory utilization used in HorizontalPodAutoscaler.
 	//
 	// See https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	Memory *TargetUtilizationConfig `json:"memory,omitempty"`
 	// Configures whether to use an existing CNI installation for workloads
 	Cni   *CNIUsageConfig             `json:"cni,omitempty"`
 	Taint *PilotTaintControllerConfig `json:"taint,omitempty"`
 	// If set, `istiod` will allow connections from trusted node proxy ztunnels
 	// in the provided namespace.
-	TrustedZtunnelNamespace string `json:"trustedZtunnelNamespace,omitempty"`
+	TrustedZtunnelNamespace *string `json:"trustedZtunnelNamespace,omitempty"`
+	// Configuration for the istio-discovery chart when istiod is running in a remote cluster (e.g. "remote control plane").
+	IstiodRemote *IstiodRemoteConfig `json:"istiodRemote,omitempty"`
 }
 
 type PilotTaintControllerConfig struct {
 	// Enable the untaint controller for new nodes. This aims to solve a race for CNI installation on
 	// new nodes. For this to work, the newly added nodes need to have the istio CNI taint as they are
 	// added to the cluster. This is usually done by configuring the cluster infra provider.
-	Enabled bool `json:"enabled,omitempty"`
+	Enabled *bool `json:"enabled,omitempty"`
 	// The namespace of the CNI daemonset, incase it's not the same as istiod.
-	Namespace string `json:"namespace,omitempty"`
+	Namespace *string `json:"namespace,omitempty"`
 }
 
 // Controls whether Istio policy is applied to Pilot.
@@ -659,80 +659,82 @@ type TelemetryV2StackDriverConfig struct {
 // Configuration for a port.
 type PortsConfig struct {
 	// Port name.
-	Name string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty"`
 	// Port number.
-	Port int32 `json:"port,omitempty"`
+	Port *int32 `json:"port,omitempty"`
 	// NodePort number.
-	NodePort int32 `json:"nodePort,omitempty"`
+	NodePort *int32 `json:"nodePort,omitempty"`
 	// Target port number.
-	TargetPort int32 `json:"targetPort,omitempty"`
+	TargetPort *int32 `json:"targetPort,omitempty"`
 	// Protocol name.
-	Protocol string `json:"protocol,omitempty"`
+	Protocol *string `json:"protocol,omitempty"`
 }
 
 // Configuration for Proxy.
 type ProxyConfig struct {
 	// Controls the 'policy' in the sidecar injector.
-	AutoInject string `json:"autoInject,omitempty"`
+	AutoInject *string `json:"autoInject,omitempty"`
 	// Domain for the cluster, default: "cluster.local".
 	//
 	// K8s allows this to be customized, see https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/
-	ClusterDomain string `json:"clusterDomain,omitempty"`
+	ClusterDomain *string `json:"clusterDomain,omitempty"`
 	// Per Component log level for proxy, applies to gateways and sidecars.
 	//
 	// If a component level is not set, then the global "logLevel" will be used. If left empty, "misc:error" is used.
-	ComponentLogLevel string `json:"componentLogLevel,omitempty"`
+	ComponentLogLevel *string `json:"componentLogLevel,omitempty"`
 	// Enables core dumps for newly injected sidecars.
 	//
 	// If set, newly injected sidecars will have core dumps enabled.
+	//
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	EnableCoreDump *bool `json:"enableCoreDump,omitempty"`
 	// Specifies the Istio ingress ports not to capture.
-	ExcludeInboundPorts string `json:"excludeInboundPorts,omitempty"`
+	ExcludeInboundPorts *string `json:"excludeInboundPorts,omitempty"`
 	// Lists the excluded IP ranges of Istio egress traffic that the sidecar captures.
-	ExcludeIPRanges string `json:"excludeIPRanges,omitempty"`
+	ExcludeIPRanges *string `json:"excludeIPRanges,omitempty"`
 	// Image name or path for the proxy, default: "proxyv2".
 	//
 	// If registry or tag are not specified, global.hub and global.tag are used.
 	//
 	// Examples: my-proxy (uses global.hub/tag), docker.io/myrepo/my-proxy:v1.0.0
-	Image string `json:"image,omitempty"`
+	Image *string `json:"image,omitempty"`
 	// Lists the IP ranges of Istio egress traffic that the sidecar captures.
 	//
 	// Example: "172.30.0.0/16,172.20.0.0/16"
 	// This would only capture egress traffic on those two IP Ranges, all other outbound traffic would # be allowed by the sidecar."
-	IncludeIPRanges string `json:"includeIPRanges,omitempty"`
+	IncludeIPRanges *string `json:"includeIPRanges,omitempty"`
 	// Log level for proxy, applies to gateways and sidecars. If left empty, "warning" is used. Expected values are: trace\|debug\|info\|warning\|error\|critical\|off
-	LogLevel string `json:"logLevel,omitempty"`
+	LogLevel *string `json:"logLevel,omitempty"`
 	// Path to the file to which the proxy will write outlier detection logs.
 	//
 	// Example: "/dev/stdout"
 	// This would write the logs to standard output.
-	OutlierLogPath string `json:"outlierLogPath,omitempty"`
+	OutlierLogPath *string `json:"outlierLogPath,omitempty"`
 	// Enables privileged securityContext for the istio-proxy container.
 	//
 	// See https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
 	Privileged *bool `json:"privileged,omitempty"`
 	// Sets the initial delay for readiness probes in seconds.
-	ReadinessInitialDelaySeconds uint32 `json:"readinessInitialDelaySeconds,omitempty"`
+	ReadinessInitialDelaySeconds *uint32 `json:"readinessInitialDelaySeconds,omitempty"`
 	// Sets the interval between readiness probes in seconds.
-	ReadinessPeriodSeconds uint32 `json:"readinessPeriodSeconds,omitempty"`
+	ReadinessPeriodSeconds *uint32 `json:"readinessPeriodSeconds,omitempty"`
 	// Sets the number of successive failed probes before indicating readiness failure.
-	ReadinessFailureThreshold uint32 `json:"readinessFailureThreshold,omitempty"`
+	ReadinessFailureThreshold *uint32 `json:"readinessFailureThreshold,omitempty"`
 	// Configures the startup probe for the istio-proxy container.
 	StartupProbe *StartupProbe `json:"startupProbe,omitempty"`
 	// Default port used for the Pilot agent's health checks.
-	StatusPort uint32 `json:"statusPort,omitempty"`
+	StatusPort *uint32 `json:"statusPort,omitempty"`
 	// K8s resources settings.
 	//
 	// See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	Resources *k8sv1.ResourceRequirements `json:"resources,omitempty"`
 	// Specify which tracer to use. One of: zipkin, lightstep, datadog, stackdriver.
 	// If using stackdriver tracer outside GCP, set env GOOGLE_APPLICATION_CREDENTIALS to the GCP credential file.
 	Tracer Tracer `json:"tracer,omitempty"`
 	// A comma separated list of outbound ports to be excluded from redirection to Envoy.
-	ExcludeOutboundPorts string `json:"excludeOutboundPorts,omitempty"`
+	ExcludeOutboundPorts *string `json:"excludeOutboundPorts,omitempty"`
 	// The k8s lifecycle hooks definition (pod.spec.containers.lifecycle) for the proxy container.
 	// More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
 	Lifecycle *k8sv1.Lifecycle `json:"lifecycle,omitempty"`
@@ -740,13 +742,13 @@ type ProxyConfig struct {
 	//
 	// Deprecated: replaced by ProxyConfig setting which allows per-pod configuration of this behavior.
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	HoldApplicationUntilProxyStarts *bool `json:"holdApplicationUntilProxyStarts,omitempty"`
 	// A comma separated list of inbound ports for which traffic is to be redirected to Envoy.
 	// The wildcard character '*' can be used to configure redirection for all ports.
-	IncludeInboundPorts string `json:"includeInboundPorts,omitempty"`
+	IncludeInboundPorts *string `json:"includeInboundPorts,omitempty"`
 	// A comma separated list of outbound ports for which traffic is to be redirected to Envoy, regardless of the destination IP.
-	IncludeOutboundPorts string `json:"includeOutboundPorts,omitempty"`
+	IncludeOutboundPorts *string `json:"includeOutboundPorts,omitempty"`
 }
 
 type StartupProbe struct {
@@ -761,32 +763,32 @@ type StartupProbe struct {
 	// This ensures the startup is reasonable fast (polling every 2s). 1s delay is used since the startup is not often ready instantly.
 	Enabled *bool `json:"enabled,omitempty"`
 	// Minimum consecutive failures for the probe to be considered failed after having succeeded.
-	FailureThreshold uint32 `json:"failureThreshold,omitempty"`
+	FailureThreshold *uint32 `json:"failureThreshold,omitempty"`
 }
 
 // Configuration for proxy_init container which sets the pods' networking to intercept the inbound/outbound traffic.
 type ProxyInitConfig struct {
 	// Specifies the image for the proxy_init container.
-	Image string `json:"image,omitempty"`
+	Image *string `json:"image,omitempty"`
 	// K8s resources settings.
 	//
 	// See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	Resources *k8sv1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 // Configuration for K8s resource requests.
 type ResourcesRequestsConfig struct {
 	// CPU requests.
-	Cpu string `json:"cpu,omitempty"`
+	Cpu *string `json:"cpu,omitempty"`
 	// Memory requests.
-	Memory string `json:"memory,omitempty"`
+	Memory *string `json:"memory,omitempty"`
 }
 
 // Configuration for the SecretDiscoveryService instead of using K8S secrets to mount the certificates.
 type SDSConfig struct {
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	Token *SDSConfigToken `json:"token,omitempty"`
 }
 
@@ -794,9 +796,9 @@ type SDSConfig struct {
 //
 // See https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets.
 type SecretVolume struct {
-	MountPath  string `json:"mountPath,omitempty"`
-	Name       string `json:"name,omitempty"`
-	SecretName string `json:"secretName,omitempty"`
+	MountPath  *string `json:"mountPath,omitempty"`
+	Name       *string `json:"name,omitempty"`
+	SecretName *string `json:"secretName,omitempty"`
 }
 
 // SidecarInjectorConfig is described in istio.io documentation.
@@ -804,7 +806,7 @@ type SidecarInjectorConfig struct {
 	// Enables sidecar auto-injection in namespaces by default.
 	EnableNamespacesByDefault *bool `json:"enableNamespacesByDefault,omitempty"`
 	// Setting this to `IfNeeded` will result in the sidecar injector being run again if additional mutations occur. Default: Never
-	ReinvocationPolicy string `json:"reinvocationPolicy,omitempty"`
+	ReinvocationPolicy *string `json:"reinvocationPolicy,omitempty"`
 	// Instructs Istio to not inject the sidecar on those pods, based on labels that are present in those pods.
 	//
 	// Annotations in the pods have higher precedence than the label selectors.
@@ -819,7 +821,7 @@ type SidecarInjectorConfig struct {
 	// This is primarily to support PSP annotations.
 	InjectedAnnotations map[string]string `json:"injectedAnnotations,omitempty"`
 	// Configure the injection url for sidecar injector webhook
-	InjectionURL string `json:"injectionURL,omitempty"`
+	InjectionURL *string `json:"injectionURL,omitempty"`
 	// Templates defines a set of custom injection templates that can be used. For example, defining:
 	//
 	// templates:
@@ -852,15 +854,15 @@ type TracerConfig struct {
 // Configuration for the datadog tracing service.
 type TracerDatadogConfig struct {
 	// Address in host:port format for reporting trace data to the Datadog agent.
-	Address string `json:"address,omitempty"`
+	Address *string `json:"address,omitempty"`
 }
 
 // Configuration for the lightstep tracing service.
 type TracerLightStepConfig struct {
 	// Sets the lightstep satellite pool address in host:port format for reporting trace data.
-	Address string `json:"address,omitempty"`
+	Address *string `json:"address,omitempty"`
 	// Sets the lightstep access token.
-	AccessToken string `json:"accessToken,omitempty"`
+	AccessToken *string `json:"accessToken,omitempty"`
 }
 
 // Configuration for the zipkin tracing service.
@@ -868,7 +870,7 @@ type TracerZipkinConfig struct {
 	// Address of zipkin instance in host:port format for reporting trace data.
 	//
 	// Example: <zipkin-collector-service>.<zipkin-collector-namespace>:941
-	Address string `json:"address,omitempty"`
+	Address *string `json:"address,omitempty"`
 }
 
 // Configuration for the stackdriver tracing service.
@@ -876,28 +878,32 @@ type TracerStackdriverConfig struct {
 	// enables trace output to stdout.
 	Debug *bool `json:"debug,omitempty"`
 	// The global default max number of attributes per span.
-	MaxNumberOfAttributes uint32 `json:"maxNumberOfAttributes,omitempty"`
+	MaxNumberOfAttributes *uint32 `json:"maxNumberOfAttributes,omitempty"`
 	// The global default max number of annotation events per span.
-	MaxNumberOfAnnotations uint32 `json:"maxNumberOfAnnotations,omitempty"`
+	MaxNumberOfAnnotations *uint32 `json:"maxNumberOfAnnotations,omitempty"`
 	// The global default max number of message events per span.
-	MaxNumberOfMessageEvents uint32 `json:"maxNumberOfMessageEvents,omitempty"`
+	MaxNumberOfMessageEvents *uint32 `json:"maxNumberOfMessageEvents,omitempty"`
 }
 
 type BaseConfig struct {
+	// CRDs to exclude. Requires `enableCRDTemplates`
+	ExcludedCRDs []string `json:"excludedCRDs,omitempty"`
 	// URL to use for validating webhook.
-	ValidationURL string `json:"validationURL,omitempty"`
+	ValidationURL *string `json:"validationURL,omitempty"`
 
 	// validation webhook CA bundle
-	ValidationCABundle string `json:"validationCABundle,omitempty"`
+	ValidationCABundle *string `json:"validationCABundle,omitempty"`
 }
 
 type IstiodRemoteConfig struct {
 	// URL to use for sidecar injector webhook.
-	InjectionURL string `json:"injectionURL,omitempty"`
+	InjectionURL *string `json:"injectionURL,omitempty"`
 	// Path to use for the sidecar injector webhook service.
-	InjectionPath string `json:"injectionPath,omitempty"`
+	InjectionPath *string `json:"injectionPath,omitempty"`
 	// injector ca bundle
-	InjectionCABundle string `json:"injectionCABundle,omitempty"`
+	InjectionCABundle *string `json:"injectionCABundle,omitempty"`
+	// Indicates if this cluster/install should consume a "remote" istiod instance,
+	Enabled *bool `json:"enabled,omitempty"`
 }
 
 type Values struct {
@@ -912,7 +918,7 @@ type Values struct {
 	SidecarInjectorWebhook *SidecarInjectorConfig `json:"sidecarInjectorWebhook,omitempty"`
 
 	// Identifies the revision this installation is associated with.
-	Revision string `json:"revision,omitempty"`
+	Revision *string `json:"revision,omitempty"`
 
 	// Defines runtime configuration of components, including Istiod and istio-agent behavior.
 	// See https://istio.io/docs/reference/config/istio.mesh.v1alpha1/ for all available options.
@@ -921,17 +927,21 @@ type Values struct {
 	// Configuration for the base component.
 	Base *BaseConfig `json:"base,omitempty"`
 	// Configuration for istiod-remote.
+	// DEPRECATED - istiod-remote chart is removed and replaced with
+	// `istio-discovery --set values.istiodRemote.enabled=true`
+	//
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	IstiodRemote *IstiodRemoteConfig `json:"istiodRemote,omitempty"`
 	// Specifies the aliases for the Istio control plane revision. A MutatingWebhookConfiguration
 	// is created for each alias.
 	RevisionTags []string `json:"revisionTags,omitempty"`
 	// The name of the default revision in the cluster.
-	DefaultRevision string `json:"defaultRevision,omitempty"`
+	DefaultRevision *string `json:"defaultRevision,omitempty"`
 	// Specifies which installation configuration profile to apply.
-	Profile string `json:"profile,omitempty"`
+	Profile *string `json:"profile,omitempty"`
 	// Specifies the compatibility version to use. When this is set, the control plane will
 	// be configured with the same defaults as the specified version.
-	CompatibilityVersion string `json:"compatibilityVersion,omitempty"`
+	CompatibilityVersion *string `json:"compatibilityVersion,omitempty"`
 	// Specifies experimental helm fields that could be removed or changed in the future
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +kubebuilder:validation:Schemaless
@@ -941,8 +951,8 @@ type Values struct {
 // ZeroVPNConfig enables cross-cluster access using SNI matching.
 type ZeroVPNConfig struct {
 	// Controls whether ZeroVPN is enabled.
-	Enabled *bool  `json:"enabled,omitempty"`
-	Suffix  string `json:"suffix,omitempty"`
+	Enabled *bool   `json:"enabled,omitempty"`
+	Suffix  *string `json:"suffix,omitempty"`
 }
 
 // ExperimentalConfig is a placeholder for experimental installation features.
@@ -957,6 +967,22 @@ type WaypointConfig struct {
 	//
 	// See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
 	Resources *k8sv1.ResourceRequirements `json:"resources,omitempty"`
+	// K8s affinity settings for waypoint pods.
+	//
+	// See https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity
+	Affinity *k8sv1.Affinity `json:"affinity,omitempty"`
+	// K8s topology spread constraints settings.
+	//
+	// See https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+	TopologySpreadConstraints []*k8sv1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
+	// K8s node labels settings.
+	//
+	// See https://kubernetes.io/docs/user-guide/node-selection/
+	NodeSelector *k8sv1.NodeSelector `json:"nodeSelector,omitempty"`
+	// K8s tolerations settings.
+	//
+	// See https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+	Toleration []*k8sv1.Toleration `json:"toleration,omitempty"`
 }
 
 // CNIGlobalConfig is a subset of the Global Configuration used in the Istio CNI chart.
@@ -964,11 +990,11 @@ type CNIGlobalConfig struct { // Default k8s resources settings for all Istio co
 	//
 	// See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
 	//
-	// Deprecated: Marked as deprecated in pkg/apis/istio/v1alpha1/values_types.proto.
+	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	DefaultResources *k8sv1.ResourceRequirements `json:"defaultResources,omitempty"`
 
 	// Specifies the docker hub for Istio images.
-	Hub string `json:"hub,omitempty"`
+	Hub *string `json:"hub,omitempty"`
 	// Specifies the image pull policy for the Istio images. one of Always, Never, IfNotPresent.
 	// Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.
 	//
@@ -986,9 +1012,9 @@ type CNIGlobalConfig struct { // Default k8s resources settings for all Istio co
 	Logging *GlobalLoggingConfig `json:"logging,omitempty"`
 
 	// Specifies the tag for the Istio docker images.
-	Tag string `json:"tag,omitempty"`
+	Tag *string `json:"tag,omitempty"`
 	// The variant of the Istio container images to use. Options are "debug" or "distroless". Unset will use the default for the given version.
-	Variant string `json:"variant,omitempty"`
+	Variant *string `json:"variant,omitempty"`
 }
 
 // Resource describes the source of configuration
@@ -1012,12 +1038,12 @@ const (
 	MeshConfigIngressControllerModeOff MeshConfigIngressControllerMode = "OFF"
 	// Istio ingress controller will act on ingress resources that do not
 	// contain any annotation or whose annotations match the value
-	// specified in the ingress_class parameter described earlier. Use this
+	// specified in the ingressClass parameter described earlier. Use this
 	// mode if Istio ingress controller will be the default ingress
 	// controller for the entire Kubernetes cluster.
 	MeshConfigIngressControllerModeDefault MeshConfigIngressControllerMode = "DEFAULT"
 	// Istio ingress controller will only act on ingress resources whose
-	// annotations match the value specified in the ingress_class parameter
+	// annotations match the value specified in the ingressClass parameter
 	// described earlier. Use this mode if Istio ingress controller will be
 	// a secondary ingress controller (e.g., in addition to a
 	// cloud-provided ingress controller).
@@ -1148,12 +1174,12 @@ const (
 type MeshConfig struct {
 	// Port on which Envoy should listen for all outbound traffic to other services.
 	// Default port is 15001.
-	ProxyListenPort int32 `json:"proxyListenPort,omitempty"`
+	ProxyListenPort *int32 `json:"proxyListenPort,omitempty"`
 	// Port on which Envoy should listen for all inbound traffic to the pod/vm will be captured to.
 	// Default port is 15006.
-	ProxyInboundListenPort int32 `json:"proxyInboundListenPort,omitempty"`
+	ProxyInboundListenPort *int32 `json:"proxyInboundListenPort,omitempty"`
 	// Port on which Envoy should listen for HTTP PROXY requests if set.
-	ProxyHttpPort int32 `json:"proxyHttpPort,omitempty"`
+	ProxyHttpPort *int32 `json:"proxyHttpPort,omitempty"`
 	// Connection timeout used by Envoy. (MUST BE >=1ms)
 	// Default timeout is 10s.
 	ConnectTimeout *metav1.Duration `json:"connectTimeout,omitempty"`
@@ -1179,10 +1205,10 @@ type MeshConfig struct {
 	// Class of ingress resources to be processed by Istio ingress
 	// controller. This corresponds to the value of
 	// `kubernetes.io/ingress.class` annotation.
-	IngressClass string `json:"ingressClass,omitempty"`
+	IngressClass *string `json:"ingressClass,omitempty"`
 	// Name of the Kubernetes service used for the istio ingress controller.
 	// If no ingress controller is specified, the default value `istio-ingressgateway` is used.
-	IngressService string `json:"ingressService,omitempty"`
+	IngressService *string `json:"ingressService,omitempty"`
 	// Defines whether to use Istio ingress controller for annotated or all ingress resources.
 	// Default mode is `STRICT`.
 	IngressControllerMode MeshConfigIngressControllerMode `json:"ingressControllerMode,omitempty"`
@@ -1190,17 +1216,17 @@ type MeshConfig struct {
 	// the Gateway.selector field, and will be set as `istio: INGRESS_SELECTOR`.
 	// By default, `ingressgateway` is used, which will select the default IngressGateway as it has the
 	// `istio: ingressgateway` labels.
-	// It is recommended that this is the same value as ingress_service.
-	IngressSelector string `json:"ingressSelector,omitempty"`
+	// It is recommended that this is the same value as ingressService.
+	IngressSelector *string `json:"ingressSelector,omitempty"`
 	// Flag to control generation of trace spans and request IDs.
 	// Requires a trace span collector defined in the proxy configuration.
-	EnableTracing bool `json:"enableTracing,omitempty"`
+	EnableTracing *bool `json:"enableTracing,omitempty"`
 	// File address for the proxy access log (e.g. /dev/stdout).
 	// Empty value disables access logging.
-	AccessLogFile string `json:"accessLogFile,omitempty"`
+	AccessLogFile *string `json:"accessLogFile,omitempty"`
 	// Format for the proxy access log
 	// Empty value results in proxy's default access log format
-	AccessLogFormat string `json:"accessLogFormat,omitempty"`
+	AccessLogFormat *string `json:"accessLogFormat,omitempty"`
 	// Encoding for the proxy access log (`TEXT` or `JSON`).
 	// Default value is `TEXT`.
 	AccessLogEncoding MeshConfigAccessLogEncoding `json:"accessLogEncoding,omitempty"`
@@ -1208,12 +1234,12 @@ type MeshConfig struct {
 	// See [Access Log Service](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/grpc/v3/als.proto)
 	// for details about Envoy's gRPC Access Log Service API.
 	// Default value is `false`.
-	EnableEnvoyAccessLogService bool `json:"enableEnvoyAccessLogService,omitempty"`
+	EnableEnvoyAccessLogService *bool `json:"enableEnvoyAccessLogService,omitempty"`
 	// This flag disables Envoy Listener logs.
 	// See [Listener Access Log](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#envoy-v3-api-field-config-listener-v3-listener-access-log)
 	// Istio Enables Envoy's listener access logs on "NoRoute" response flag.
 	// Default value is `false`.
-	DisableEnvoyListenerLog bool `json:"disableEnvoyListenerLog,omitempty"`
+	DisableEnvoyListenerLog *bool `json:"disableEnvoyListenerLog,omitempty"`
 	// Default proxy config used by gateway and sidecars.
 	// In case of Kubernetes, the proxy config is applied once during the injection process,
 	// and remain constant for the duration of the pod. The rest of the mesh config can be changed
@@ -1250,8 +1276,8 @@ type MeshConfig struct {
 	EnableAutoMtls *bool `json:"enableAutoMtls,omitempty"`
 	// The trust domain corresponds to the trust root of a system.
 	// Refer to [SPIFFE-ID](https://github.com/spiffe/spiffe/blob/master/standards/SPIFFE-ID.md#21-trust-domain)
-	TrustDomain string `json:"trustDomain,omitempty"`
-	// The trust domain aliases represent the aliases of `trust_domain`.
+	TrustDomain *string `json:"trustDomain,omitempty"`
+	// The trust domain aliases represent the aliases of `trustDomain`.
 	// For example, if we have
 	// ```yaml
 	// trustDomain: td1
@@ -1265,7 +1291,7 @@ type MeshConfig struct {
 	// are automatically added by Istiod.
 	// The CA certificate that signs the workload certificates is automatically added by Istio Agent.
 	CaCertificates []*MeshConfigCertificateData `json:"caCertificates,omitempty"`
-	// The default value for the ServiceEntry.export_to field and services
+	// The default value for the ServiceEntry.exportTo field and services
 	// imported through container registry integrations, e.g. this applies to
 	// Kubernetes Service resources. The value is a list of namespace names and
 	// reserved namespace aliases. The allowed namespace aliases are:
@@ -1290,14 +1316,14 @@ type MeshConfig struct {
 	// For further discussion see the reference documentation for `ServiceEntry`,
 	// `Sidecar`, and `Gateway`.
 	DefaultServiceExportTo []string `json:"defaultServiceExportTo,omitempty"`
-	// The default value for the VirtualService.export_to field. Has the same
-	// syntax as `default_service_export_to`.
+	// The default value for the VirtualService.exportTo field. Has the same
+	// syntax as `defaultServiceExportTo`.
 	//
 	// If not set the system will use "*" as the default value which implies that
 	// virtual services are exported to all namespaces
 	DefaultVirtualServiceExportTo []string `json:"defaultVirtualServiceExportTo,omitempty"`
-	// The default value for the `DestinationRule.export_to` field. Has the same
-	// syntax as `default_service_export_to`.
+	// The default value for the `DestinationRule.exportTo` field. Has the same
+	// syntax as `defaultServiceExportTo`.
 	//
 	// If not set the system will use "*" as the default value which implies that
 	// destination rules are exported to all namespaces
@@ -1310,7 +1336,7 @@ type MeshConfig struct {
 	//
 	// The precise semantics of this processing are documented on each resource
 	// type.
-	RootNamespace string `json:"rootNamespace,omitempty"`
+	RootNamespace *string `json:"rootNamespace,omitempty"`
 	// Locality based load balancing distribution or failover settings.
 	// If unspecified, locality based load balancing will be enabled by default.
 	// However, this requires outlierDetection to actually take effect for a particular
@@ -1342,7 +1368,7 @@ type MeshConfig struct {
 	//
 	// - `%SERVICE_FQDN%_%SERVICE_PORT%` will use reviews.prod.svc.cluster.local_7443 as the stats name.
 	// - `%SERVICE%` will use reviews.prod as the stats name.
-	InboundClusterStatName string `json:"inboundClusterStatName,omitempty"`
+	InboundClusterStatName *string `json:"inboundClusterStatName,omitempty"`
 	// Name to be used while emitting statistics for outbound clusters. The same pattern is used while computing stat prefix for
 	// network filters like TCP and Redis.
 	// By default, Istio emits statistics with the pattern `outbound|<port>|<subsetname>|<service-FQDN>`.
@@ -1361,7 +1387,7 @@ type MeshConfig struct {
 	//
 	// - `%SERVICE_FQDN%_%SERVICE_PORT%` will use `reviews.prod.svc.cluster.local_7443` as the stats name.
 	// - `%SERVICE%` will use reviews.prod as the stats name.
-	OutboundClusterStatName string `json:"outboundClusterStatName,omitempty"`
+	OutboundClusterStatName *string `json:"outboundClusterStatName,omitempty"`
 	// +hidefromdoc
 	// Configure the provision of certificates.
 	//
@@ -1478,7 +1504,7 @@ type MeshConfig struct {
 	// Note: Mesh mTLS does not respect ECDH curves.
 	MeshMTLS *MeshConfigTLSConfig `json:"meshMTLS,omitempty"`
 	// Configuration of TLS for all traffic except for ISTIO_MUTUAL mode.
-	// Currently, this supports configuration of ecdh_curves and cipher_suites only.
+	// Currently, this supports configuration of ecdhCurves and cipherSuites only.
 	// For ISTIO_MUTUAL TLS settings, use meshMTLS configuration.
 	TlsDefaults *MeshConfigTLSConfig `json:"tlsDefaults,omitempty"`
 }
@@ -1491,8 +1517,8 @@ type ConfigSource struct {
 	// protocol (MCP). Can be IP address or a fully qualified DNS name.
 	// Use xds:// to specify a grpc-based xds backend, k8s:// to specify a k8s controller or
 	// fs:/// to specify a file-based backend with absolute path to the directory.
-	Address string `json:"address,omitempty"`
-	// Use the tls_settings to specify the tls mode to use. If the MCP server
+	Address *string `json:"address,omitempty"`
+	// Use the tlsSettings to specify the tls mode to use. If the MCP server
 	// uses Istio mutual TLS and shares the root CA with Pilot, specify the TLS
 	// mode as `ISTIO_MUTUAL`.
 	TlsSettings *ClientTLSSettings `json:"tlsSettings,omitempty"`
@@ -1526,7 +1552,7 @@ type Certificate struct {
 	// Name of the secret the certificate and its key will be stored into.
 	// If it is empty, it will not be stored into a secret.
 	// Instead, the certificate and its key will be stored into a hard-coded directory.
-	SecretName string `json:"secretName,omitempty"`
+	SecretName *string `json:"secretName,omitempty"`
 	// The DNS names for the certificate. A certificate may contain
 	// multiple DNS names.
 	DnsNames []string `json:"dnsNames,omitempty"`
@@ -1545,26 +1571,26 @@ type MeshConfigInboundTrafficPolicy struct {
 // +kubebuilder:validation:XValidation:message="At most one of [pem spiffeBundleUrl] should be set",rule="(has(self.pem)?1:0) + (has(self.spiffeBundleUrl)?1:0) <= 1"
 type MeshConfigCertificateData struct {
 	// The PEM data of the certificate.
-	Pem string `json:"pem,omitempty"`
+	Pem *string `json:"pem,omitempty"`
 
 	// The SPIFFE bundle endpoint URL that complies to:
 	// https://github.com/spiffe/spiffe/blob/master/standards/SPIFFE_Trust_Domain_and_Bundle.md#the-spiffe-trust-domain-and-bundle
 	// The endpoint should support authentication based on Web PKI:
 	// https://github.com/spiffe/spiffe/blob/master/standards/SPIFFE_Trust_Domain_and_Bundle.md#521-web-pki
 	// The certificate is retrieved from the endpoint.
-	SpiffeBundleUrl string `json:"spiffeBundleUrl,omitempty"` // Optional. Specify the kubernetes signers (External CA) that use this trustAnchor
+	SpiffeBundleUrl *string `json:"spiffeBundleUrl,omitempty"` // Optional. Specify the kubernetes signers (External CA) that use this trustAnchor
 	// when Istiod is acting as RA(registration authority)
 	// If set, they are used for these signers. Otherwise, this trustAnchor is used for all signers.
 	CertSigners []string `json:"certSigners,omitempty"`
 	// Optional. Specify the list of trust domains to which this trustAnchor data belongs.
 	// If set, they are used for these trust domains. Otherwise, this trustAnchor is used for default trust domain
 	// and its aliases.
-	// Note that we can have multiple trustAnchor data for a same trust_domain.
+	// Note that we can have multiple trustAnchor data for a same trustDomain.
 	// In that case, trustAnchors with a same trust domain will be merged and used together to verify peer certificates.
-	// If neither cert_signers nor trust_domains is set, this trustAnchor is used for all trust domains and all signers.
-	// If only trust_domains is set, this trustAnchor is used for these trust_domains and all signers.
-	// If only cert_signers is set, this trustAnchor is used for these cert_signers and all trust domains.
-	// If both cert_signers and trust_domains is set, this trustAnchor is only used for these signers and trust domains.
+	// If neither certSigners nor trustDomains is set, this trustAnchor is used for all trust domains and all signers.
+	// If only trustDomains is set, this trustAnchor is used for these trustDomains and all signers.
+	// If only certSigners is set, this trustAnchor is used for these certSigners and all trust domains.
+	// If both certSigners and trustDomains is set, this trustAnchor is only used for these signers and trust domains.
 	TrustDomains []string `json:"trustDomains,omitempty"`
 }
 
@@ -1577,7 +1603,7 @@ type MeshConfigCertificateData struct {
 // ```yaml
 // serviceSettings:
 //   - settings:
-//     cluster_local: true
+//     clusterLocal: true
 //     hosts:
 //   - "*.foo.svc.cluster.local"
 //   - "bar.baz.svc.cluster.local"
@@ -1598,9 +1624,9 @@ type MeshConfigCA struct {
 	// Can be IP address or a fully qualified DNS name with port
 	// Eg: custom-ca.default.svc.cluster.local:8932, 192.168.23.2:9000
 	// +kubebuilder:validation:Required
-	Address string `json:"address"`
-	// Use the tls_settings to specify the tls mode to use.
-	// Regarding tls_settings:
+	Address *string `json:"address"`
+	// Use the tlsSettings to specify the tls mode to use.
+	// Regarding tlsSettings:
 	// - DISABLE MODE is legitimate for the case Istiod is making the request via an Envoy sidecar.
 	// DISABLE MODE can also be used for testing
 	// - TLS MUTUAL MODE be on by default. If the CA certificates
@@ -1610,16 +1636,16 @@ type MeshConfigCA struct {
 	// timeout for forward CSR requests from Istiod to External CA
 	// Default: 10s
 	RequestTimeout *metav1.Duration `json:"requestTimeout,omitempty"`
-	// Use istiod_side to specify CA Server integrate to Istiod side or Agent side
+	// Use istiodSide to specify CA Server integrate to Istiod side or Agent side
 	// Default: true
-	IstiodSide bool `json:"istiodSide,omitempty"`
+	IstiodSide *bool `json:"istiodSide,omitempty"`
 }
 
 // +kubebuilder:validation:XValidation:message="At most one of [envoyExtAuthzHttp envoyExtAuthzGrpc zipkin lightstep datadog stackdriver opencensus skywalking opentelemetry prometheus envoyFileAccessLog envoyHttpAls envoyTcpAls envoyOtelAls] should be set",rule="(has(self.envoyExtAuthzHttp)?1:0) + (has(self.envoyExtAuthzGrpc)?1:0) + (has(self.zipkin)?1:0) + (has(self.lightstep)?1:0) + (has(self.datadog)?1:0) + (has(self.stackdriver)?1:0) + (has(self.opencensus)?1:0) + (has(self.skywalking)?1:0) + (has(self.opentelemetry)?1:0) + (has(self.prometheus)?1:0) + (has(self.envoyFileAccessLog)?1:0) + (has(self.envoyHttpAls)?1:0) + (has(self.envoyTcpAls)?1:0) + (has(self.envoyOtelAls)?1:0) <= 1"
 type MeshConfigExtensionProvider struct {
 	// REQUIRED. A unique name identifying the extension provider.
 	// +kubebuilder:validation:Required
-	Name string `json:"name"`
+	Name *string `json:"name"`
 
 	// Configures an external authorizer that implements the Envoy ext_authz filter authorization check service using the HTTP API.
 	EnvoyExtAuthzHttp *MeshConfigExtensionProviderEnvoyExternalAuthorizationHttpProvider `json:"envoyExtAuthzHttp,omitempty"`
@@ -1675,7 +1701,7 @@ type MeshConfigExtensionProvider struct {
 // Holds the name references to the providers that will be used by default
 // in other Istio configuration resources if the provider is not specified.
 //
-// These names must match a provider defined in `extension_providers` that is
+// These names must match a provider defined in `extensionProviders` that is
 // one of the supported tracing providers.
 type MeshConfigDefaultProviders struct {
 	// Name of the default provider(s) for tracing.
@@ -1734,26 +1760,26 @@ type MeshConfigServiceSettingsSettings struct {
 	//
 	// By default Istio will consider kubernetes.default.svc (i.e. the API Server) as well as all
 	// services in the kube-system namespace to be cluster-local, unless explicitly overridden here.
-	ClusterLocal bool `json:"clusterLocal,omitempty"`
+	ClusterLocal *bool `json:"clusterLocal,omitempty"`
 }
 
 type MeshConfigExtensionProviderEnvoyExternalAuthorizationRequestBody struct {
 	// Sets the maximum size of a message body that the ext-authz filter will hold in memory.
-	// If max_request_bytes is reached, and allow_partial_message is false, Envoy will return a 413 (Payload Too Large).
+	// If maxRequestBytes is reached, and allowPartialMessage is false, Envoy will return a 413 (Payload Too Large).
 	// Otherwise the request will be sent to the provider with a partial message.
-	// Note that this setting will have precedence over the fail_open field, the 413 will be returned even when the
-	// fail_open is set to true.
-	MaxRequestBytes uint32 `json:"maxRequestBytes,omitempty"`
-	// When this field is true, ext-authz filter will buffer the message until max_request_bytes is reached.
+	// Note that this setting will have precedence over the failOpen field, the 413 will be returned even when the
+	// failOpen is set to true.
+	MaxRequestBytes *uint32 `json:"maxRequestBytes,omitempty"`
+	// When this field is true, ext-authz filter will buffer the message until maxRequestBytes is reached.
 	// The authorization request will be dispatched and no 413 HTTP error will be returned by the filter.
 	// A "x-envoy-auth-partial-body: false|true" metadata header will be added to the authorization request message
 	// indicating if the body data is partial.
-	AllowPartialMessage bool `json:"allowPartialMessage,omitempty"`
+	AllowPartialMessage *bool `json:"allowPartialMessage,omitempty"`
 	// If true, the body sent to the external authorization service in the gRPC authorization request is set with raw bytes
 	// in the [raw_body field](https://github.com/envoyproxy/envoy/blame/cffb095d59d7935abda12b9509bcd136808367bb/api/envoy/service/auth/v3/attribute_context.proto#L153).
 	// Otherwise, it will be filled with UTF-8 string in the [body field](https://github.com/envoyproxy/envoy/blame/cffb095d59d7935abda12b9509bcd136808367bb/api/envoy/service/auth/v3/attribute_context.proto#L147).
-	// This field only works with the envoy_ext_authz_grpc provider and has no effect for the envoy_ext_authz_http provider.
-	PackAsBytes bool `json:"packAsBytes,omitempty"`
+	// This field only works with the envoyExtAuthzGrpc provider and has no effect for the envoyExtAuthzHttp provider.
+	PackAsBytes *bool `json:"packAsBytes,omitempty"`
 }
 
 type MeshConfigExtensionProviderEnvoyExternalAuthorizationHttpProvider struct {
@@ -1764,26 +1790,26 @@ type MeshConfigExtensionProviderEnvoyExternalAuthorizationHttpProvider struct {
 	//
 	// Example: "my-ext-authz.foo.svc.cluster.local" or "bar/my-ext-authz.example.com".
 	// +kubebuilder:validation:Required
-	Service string `json:"service"`
+	Service *string `json:"service"`
 	// REQUIRED. Specifies the port of the service.
 	// +kubebuilder:validation:Required
-	Port uint32 `json:"port"`
+	Port *uint32 `json:"port"`
 	// The maximum duration that the proxy will wait for a response from the provider (default timeout: 600s).
 	// When this timeout condition is met, the proxy marks the communication to the authorization service as failure.
-	// In this situation, the response sent back to the client will depend on the configured `fail_open` field.
+	// In this situation, the response sent back to the client will depend on the configured `failOpen` field.
 	Timeout *metav1.Duration `json:"timeout,omitempty"`
 	// Sets a prefix to the value of authorization request header *Path*.
 	// For example, setting this to "/check" for an original user request at path "/admin" will cause the
 	// authorization check request to be sent to the authorization service at the path "/check/admin" instead of "/admin".
-	PathPrefix string `json:"pathPrefix,omitempty"`
+	PathPrefix *string `json:"pathPrefix,omitempty"`
 	// If true, the user request will be allowed even if the communication with the authorization service has failed,
 	// or if the authorization service has returned a HTTP 5xx error.
 	// Default is false and the request will be rejected with "Forbidden" response.
-	FailOpen bool `json:"failOpen,omitempty"`
+	FailOpen *bool `json:"failOpen,omitempty"`
 	// Sets the HTTP status that is returned to the client when there is a network error to the authorization service.
 	// The default status is "403" (HTTP Forbidden).
-	StatusOnError string `json:"statusOnError,omitempty"`
-	// DEPRECATED. Use include_request_headers_in_check instead.
+	StatusOnError *string `json:"statusOnError,omitempty"`
+	// DEPRECATED. Use includeRequestHeadersInCheck instead.
 	//
 	// Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
 	IncludeHeadersInCheck []string `json:"includeHeadersInCheck,omitempty"`
@@ -1791,7 +1817,7 @@ type MeshConfigExtensionProviderEnvoyExternalAuthorizationHttpProvider struct {
 	// Note that in addition to the headers specified here following headers are included by default:
 	// 1. *Host*, *Method*, *Path* and *Content-Length* are automatically sent.
 	// 2. *Content-Length* will be set to 0 and the request will not have a message body. However, the authorization
-	// request can include the buffered client request body (controlled by include_request_body_in_check setting),
+	// request can include the buffered client request body (controlled by includeRequestBodyInCheck setting),
 	// consequently the value of Content-Length of the authorization request reflects the size of its payload size.
 	//
 	// Exact, prefix and suffix matches are supported (similar to the
@@ -1803,7 +1829,7 @@ type MeshConfigExtensionProviderEnvoyExternalAuthorizationHttpProvider struct {
 	IncludeRequestHeadersInCheck []string `json:"includeRequestHeadersInCheck,omitempty"`
 	// Set of additional fixed headers that should be included in the authorization request sent to the authorization service.
 	// Key is the header name and value is the header value.
-	// Note that client request of the same key or headers specified in include_request_headers_in_check will be overridden.
+	// Note that client request of the same key or headers specified in includeRequestHeadersInCheck will be overridden.
 	IncludeAdditionalHeadersInCheck map[string]string `json:"includeAdditionalHeadersInCheck,omitempty"`
 	// If set, the client request body will be included in the authorization request sent to the authorization service.
 	IncludeRequestBodyInCheck *MeshConfigExtensionProviderEnvoyExternalAuthorizationRequestBody `json:"includeRequestBodyInCheck,omitempty"`
@@ -1856,21 +1882,21 @@ type MeshConfigExtensionProviderEnvoyExternalAuthorizationGrpcProvider struct {
 	//
 	// Example: "my-ext-authz.foo.svc.cluster.local" or "bar/my-ext-authz.example.com".
 	// +kubebuilder:validation:Required
-	Service string `json:"service"`
+	Service *string `json:"service"`
 	// REQUIRED. Specifies the port of the service.
 	// +kubebuilder:validation:Required
-	Port uint32 `json:"port"`
+	Port *uint32 `json:"port"`
 	// The maximum duration that the proxy will wait for a response from the provider, this is the timeout for a specific request (default timeout: 600s).
 	// When this timeout condition is met, the proxy marks the communication to the authorization service as failure.
-	// In this situation, the response sent back to the client will depend on the configured `fail_open` field.
+	// In this situation, the response sent back to the client will depend on the configured `failOpen` field.
 	Timeout *metav1.Duration `json:"timeout,omitempty"`
 	// If true, the HTTP request or TCP connection will be allowed even if the communication with the authorization service has failed,
 	// or if the authorization service has returned a HTTP 5xx error.
 	// Default is false. For HTTP request, it will be rejected with 403 (HTTP Forbidden). For TCP connection, it will be closed immediately.
-	FailOpen bool `json:"failOpen,omitempty"`
+	FailOpen *bool `json:"failOpen,omitempty"`
 	// Sets the HTTP status that is returned to the client when there is a network error to the authorization service.
 	// The default status is "403" (HTTP Forbidden).
-	StatusOnError string `json:"statusOnError,omitempty"`
+	StatusOnError *string `json:"statusOnError,omitempty"`
 	// If set, the client request body will be included in the authorization request sent to the authorization service.
 	IncludeRequestBodyInCheck *MeshConfigExtensionProviderEnvoyExternalAuthorizationRequestBody `json:"includeRequestBodyInCheck,omitempty"`
 }
@@ -1884,16 +1910,19 @@ type MeshConfigExtensionProviderZipkinTracingProvider struct {
 	//
 	// Example: "zipkin.default.svc.cluster.local" or "bar/zipkin.example.com".
 	// +kubebuilder:validation:Required
-	Service string `json:"service"`
+	Service *string `json:"service"`
 	// REQUIRED. Specifies the port of the service.
 	// +kubebuilder:validation:Required
-	Port uint32 `json:"port"`
+	Port *uint32 `json:"port"`
 	// Optional. Controls the overall path length allowed in a reported span.
 	// NOTE: currently only controls max length of the path tag.
-	MaxTagLength uint32 `json:"maxTagLength,omitempty"`
+	MaxTagLength *uint32 `json:"maxTagLength,omitempty"`
 	// Optional. A 128 bit trace id will be used in Istio.
 	// If true, will result in a 64 bit trace id being used.
-	Enable64BitTraceId bool `json:"enable64bitTraceId,omitempty"`
+	Enable64BitTraceId *bool `json:"enable64bitTraceId,omitempty"`
+	// Optional. Specifies the endpoint of Zipkin API.
+	// The default value is "/api/v2/spans".
+	Path *string `json:"path,omitempty"`
 }
 
 // Defines configuration for a Lightstep tracer.
@@ -1907,15 +1936,15 @@ type MeshConfigExtensionProviderLightstepTracingProvider struct {
 	//
 	// Example: "lightstep.default.svc.cluster.local" or "bar/lightstep.example.com".
 	// +kubebuilder:validation:Required
-	Service string `json:"service"`
+	Service *string `json:"service"`
 	// REQUIRED. Specifies the port of the service.
 	// +kubebuilder:validation:Required
-	Port uint32 `json:"port"`
+	Port *uint32 `json:"port"`
 	// The Lightstep access token.
-	AccessToken string `json:"accessToken,omitempty"`
+	AccessToken *string `json:"accessToken,omitempty"`
 	// Optional. Controls the overall path length allowed in a reported span.
 	// NOTE: currently only controls max length of the path tag.
-	MaxTagLength uint32 `json:"maxTagLength,omitempty"`
+	MaxTagLength *uint32 `json:"maxTagLength,omitempty"`
 }
 
 // Defines configuration for a Datadog tracer.
@@ -1927,13 +1956,13 @@ type MeshConfigExtensionProviderDatadogTracingProvider struct {
 	//
 	// Example: "datadog.default.svc.cluster.local" or "bar/datadog.example.com".
 	// +kubebuilder:validation:Required
-	Service string `json:"service"`
+	Service *string `json:"service"`
 	// REQUIRED. Specifies the port of the service.
 	// +kubebuilder:validation:Required
-	Port uint32 `json:"port"`
+	Port *uint32 `json:"port"`
 	// Optional. Controls the overall path length allowed in a reported span.
 	// NOTE: currently only controls max length of the path tag.
-	MaxTagLength uint32 `json:"maxTagLength,omitempty"`
+	MaxTagLength *uint32 `json:"maxTagLength,omitempty"`
 }
 
 // Defines configuration for a SkyWalking tracer.
@@ -1945,12 +1974,12 @@ type MeshConfigExtensionProviderSkyWalkingTracingProvider struct {
 	//
 	// Example: "skywalking.default.svc.cluster.local" or "bar/skywalking.example.com".
 	// +kubebuilder:validation:Required
-	Service string `json:"service"`
+	Service *string `json:"service"`
 	// REQUIRED. Specifies the port of the service.
 	// +kubebuilder:validation:Required
-	Port uint32 `json:"port"`
+	Port *uint32 `json:"port"`
 	// Optional. The SkyWalking OAP access token.
-	AccessToken string `json:"accessToken,omitempty"`
+	AccessToken *string `json:"accessToken,omitempty"`
 }
 
 // Defines configuration for Stackdriver.
@@ -1963,7 +1992,7 @@ type MeshConfigExtensionProviderStackdriverProvider struct {
 	// +hidefromdoc
 	//
 	// Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
-	Debug bool `json:"debug,omitempty"`
+	Debug *bool `json:"debug,omitempty"`
 	// The global default max number of attributes per span.
 	// default is 200.
 	// +hidefromdoc
@@ -1984,7 +2013,7 @@ type MeshConfigExtensionProviderStackdriverProvider struct {
 	MaxNumberOfMessageEvents *int64 `json:"maxNumberOfMessageEvents,omitempty"`
 	// Optional. Controls the overall path length allowed in a reported span.
 	// NOTE: currently only controls max length of the path tag.
-	MaxTagLength uint32 `json:"maxTagLength,omitempty"`
+	MaxTagLength *uint32 `json:"maxTagLength,omitempty"`
 	// Optional. Controls Stackdriver logging behavior.
 	Logging *MeshConfigExtensionProviderStackdriverProviderLogging `json:"logging,omitempty"`
 }
@@ -2007,10 +2036,10 @@ type MeshConfigExtensionProviderOpenCensusAgentTracingProvider struct {
 	//
 	// Example: "ocagent.default.svc.cluster.local" or "bar/ocagent.example.com".
 	// +kubebuilder:validation:Required
-	Service string `json:"service"`
+	Service *string `json:"service"`
 	// REQUIRED. Specifies the port of the service.
 	// +kubebuilder:validation:Required
-	Port uint32 `json:"port"`
+	Port *uint32 `json:"port"`
 	// Specifies the set of context propagation headers used for distributed
 	// tracing. Default is `["W3C_TRACE_CONTEXT"]`. If multiple values are specified,
 	// the proxy will attempt to read each header for each request and will
@@ -2018,7 +2047,7 @@ type MeshConfigExtensionProviderOpenCensusAgentTracingProvider struct {
 	Context []MeshConfigExtensionProviderOpenCensusAgentTracingProviderTraceContext `json:"context,omitempty"`
 	// Optional. Controls the overall path length allowed in a reported span.
 	// NOTE: currently only controls max length of the path tag.
-	MaxTagLength uint32 `json:"maxTagLength,omitempty"`
+	MaxTagLength *uint32 `json:"maxTagLength,omitempty"`
 }
 
 type MeshConfigExtensionProviderPrometheusMetricsProvider struct {
@@ -2030,7 +2059,7 @@ type MeshConfigExtensionProviderEnvoyFileAccessLogProvider struct {
 	// Path to a local file to write the access log entries.
 	// This may be used to write to streams, via `/dev/stderr` and `/dev/stdout`
 	// If unspecified, defaults to `/dev/stdout`.
-	Path string `json:"path,omitempty"`
+	Path *string `json:"path,omitempty"`
 	// Optional. Allows overriding of the default access log format.
 	LogFormat *MeshConfigExtensionProviderEnvoyFileAccessLogProviderLogFormat `json:"logFormat,omitempty"`
 }
@@ -2045,15 +2074,15 @@ type MeshConfigExtensionProviderEnvoyHttpGrpcV3LogProvider struct {
 	//
 	// Example: "envoy-als.foo.svc.cluster.local" or "bar/envoy-als.example.com".
 	// +kubebuilder:validation:Required
-	Service string `json:"service"`
+	Service *string `json:"service"`
 	// REQUIRED. Specifies the port of the service.
 	// +kubebuilder:validation:Required
-	Port uint32 `json:"port"`
+	Port *uint32 `json:"port"`
 	// Optional. The friendly name of the access log.
 	// Defaults:
 	// -  "http_envoy_accesslog"
 	// -  "listener_envoy_accesslog"
-	LogName string `json:"logName,omitempty"`
+	LogName *string `json:"logName,omitempty"`
 	// Optional. Additional filter state objects to log.
 	FilterStateObjectsToLog []string `json:"filterStateObjectsToLog,omitempty"`
 	// Optional. Additional request headers to log.
@@ -2074,15 +2103,15 @@ type MeshConfigExtensionProviderEnvoyTcpGrpcV3LogProvider struct {
 	//
 	// Example: "envoy-als.foo.svc.cluster.local" or "bar/envoy-als.example.com".
 	// +kubebuilder:validation:Required
-	Service string `json:"service"`
+	Service *string `json:"service"`
 	// REQUIRED. Specifies the port of the service.
 	// +kubebuilder:validation:Required
-	Port uint32 `json:"port"`
+	Port *uint32 `json:"port"`
 	// Optional. The friendly name of the access log.
 	// Defaults:
 	// - "tcp_envoy_accesslog"
 	// - "listener_envoy_accesslog"
-	LogName string `json:"logName,omitempty"`
+	LogName *string `json:"logName,omitempty"`
 	// Optional. Additional filter state objects to log.
 	FilterStateObjectsToLog []string `json:"filterStateObjectsToLog,omitempty"`
 }
@@ -2096,14 +2125,14 @@ type MeshConfigExtensionProviderEnvoyOpenTelemetryLogProvider struct {
 	//
 	// Example: "envoy-als.foo.svc.cluster.local" or "bar/envoy-als.example.com".
 	// +kubebuilder:validation:Required
-	Service string `json:"service"`
+	Service *string `json:"service"`
 	// REQUIRED. Specifies the port of the service.
 	// +kubebuilder:validation:Required
-	Port uint32 `json:"port"`
+	Port *uint32 `json:"port"`
 	// Optional. The friendly name of the access log.
 	// Defaults:
 	// - "otel_envoy_accesslog"
-	LogName string `json:"logName,omitempty"`
+	LogName *string `json:"logName,omitempty"`
 	// Optional. Format for the proxy access log
 	// Empty value results in proxy's default access log format, following Envoy access logging formatting.
 	LogFormat *MeshConfigExtensionProviderEnvoyOpenTelemetryLogProviderLogFormat `json:"logFormat,omitempty"`
@@ -2119,13 +2148,13 @@ type MeshConfigExtensionProviderOpenTelemetryTracingProvider struct {
 	//
 	// Example: "otlp.default.svc.cluster.local" or "bar/otlp.example.com".
 	// +kubebuilder:validation:Required
-	Service string `json:"service"`
+	Service *string `json:"service"`
 	// REQUIRED. Specifies the port of the service.
 	// +kubebuilder:validation:Required
-	Port uint32 `json:"port"`
+	Port *uint32 `json:"port"`
 	// Optional. Controls the overall path length allowed in a reported span.
 	// NOTE: currently only controls max length of the path tag.
-	MaxTagLength uint32 `json:"maxTagLength,omitempty"`
+	MaxTagLength *uint32 `json:"maxTagLength,omitempty"`
 	// Optional. Specifies the configuration for exporting OTLP traces via HTTP.
 	// When empty, traces will be exported via gRPC.
 	//
@@ -2184,6 +2213,47 @@ type MeshConfigExtensionProviderOpenTelemetryTracingProvider struct {
 	//
 	// ```
 	Http *MeshConfigExtensionProviderHttpService `json:"http,omitempty"`
+	// Optional. Specifies the configuration for exporting OTLP traces via GRPC.
+	// When empty, traces will check whether HTTP is set.
+	// If not, traces will use default GRPC configurations.
+	//
+	// The following example shows how to configure the OpenTelemetry ExtensionProvider to export via GRPC:
+	//
+	// 1. Add/change the OpenTelemetry extension provider in `MeshConfig`
+	// ```yaml
+	//   - name: opentelemetry
+	//     opentelemetry:
+	//     port: 8090
+	//     service: tracing.example.com
+	//     grpc:
+	//     timeout: 10s
+	//     initialMetadata:
+	//   - name: "Authentication"
+	//     value: "token-xxxxx"
+	//
+	// ```
+	//
+	// 2. Deploy a `ServiceEntry` for the observability back-end
+	// ```yaml
+	// apiVersion: networking.istio.io/v1alpha3
+	// kind: ServiceEntry
+	// metadata:
+	//
+	//	name: tracing-grpc
+	//
+	// spec:
+	//
+	//	hosts:
+	//	- tracing.example.com
+	//	ports:
+	//	- number: 8090
+	//	  name: grpc-port
+	//	  protocol: GRPC
+	//	resolution: DNS
+	//	location: MESH_EXTERNAL
+	//
+	// ```
+	Grpc *MeshConfigExtensionProviderGrpcService `json:"grpc,omitempty"`
 	// Optional. Specifies [Resource Detectors](https://opentelemetry.io/docs/specs/otel/resource/sdk/)
 	// to be used by the OpenTelemetry Tracer. When multiple resources are provided, they are merged
 	// according to the OpenTelemetry [Resource specification](https://opentelemetry.io/docs/specs/otel/resource/sdk/#merge).
@@ -2196,7 +2266,7 @@ type MeshConfigExtensionProviderOpenTelemetryTracingProvider struct {
 	//     opentelemetry:
 	//     port: 443
 	//     service: my.olly-backend.com
-	//     resource_detectors:
+	//     resourceDetectors:
 	//     environment: {}
 	//
 	// ```
@@ -2217,11 +2287,11 @@ type MeshConfigExtensionProviderOpenTelemetryTracingProvider struct {
 	//     headers:
 	//   - name: "Authorization"
 	//     value: "Api-Token dt0c01."
-	//     resource_detectors:
+	//     resourceDetectors:
 	//     dynatrace: {}
-	//     dynatrace_sampler:
+	//     dynatraceSampler:
 	//     tenant: "{your-environment-id}"
-	//     cluster_id: 1234
+	//     clusterId: 1234
 	DynatraceSampler *MeshConfigExtensionProviderOpenTelemetryTracingProviderDynatraceSampler `json:"dynatraceSampler,omitempty"`
 }
 
@@ -2230,7 +2300,7 @@ type MeshConfigExtensionProviderOpenTelemetryTracingProvider struct {
 type MeshConfigExtensionProviderHttpService struct {
 	// REQUIRED. Specifies the path on the service.
 	// +kubebuilder:validation:Required
-	Path string `json:"path"`
+	Path *string `json:"path"`
 	// Optional. Specifies the timeout for the HTTP request.
 	// If not specified, the default is 3s.
 	Timeout *metav1.Duration `json:"timeout,omitempty"`
@@ -2242,15 +2312,26 @@ type MeshConfigExtensionProviderHttpService struct {
 type MeshConfigExtensionProviderHttpHeader struct {
 	// REQUIRED. The HTTP header name.
 	// +kubebuilder:validation:Required
-	Name string `json:"name"`
+	Name *string `json:"name"`
 	// REQUIRED. The HTTP header value.
 	// +kubebuilder:validation:Required
-	Value string `json:"value"`
+	Value *string `json:"value"`
 }
 
 type MeshConfigExtensionProviderResourceDetectors struct {
 	Environment *MeshConfigExtensionProviderResourceDetectorsEnvironmentResourceDetector `json:"environment,omitempty"`
 	Dynatrace   *MeshConfigExtensionProviderResourceDetectorsDynatraceResourceDetector   `json:"dynatrace,omitempty"`
+}
+
+// Defines configuration for an GRPC service that can be used by an Extension Provider.
+// that does communication via GRPC.
+type MeshConfigExtensionProviderGrpcService struct {
+	// Optional. Specifies the timeout for the GRPC request.
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
+	// Optional. Additional metadata to include in streams initiated to the GrpcService. This can be used for
+	// scenarios in which additional ad hoc authorization headers (e.g. “x-foo-bar: baz-key“) are to
+	// be injected.
+	InitialMetadata []*MeshConfigExtensionProviderHttpHeader `json:"initialMetadata,omitempty"`
 }
 
 type MeshConfigExtensionProviderStackdriverProviderLogging struct {
@@ -2275,7 +2356,7 @@ type MeshConfigExtensionProviderEnvoyFileAccessLogProviderLogFormat struct {
 	// NOTE: Istio will insert a newline ('\n') on all formats (if missing).
 	//
 	// Example: `text: "%LOCAL_REPLY_BODY%:%RESPONSE_CODE%:path=%REQ(:path)%"`
-	Text string `json:"text,omitempty"`
+	Text *string `json:"text,omitempty"`
 
 	// JSON structured format for the envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
 	// can be used as values for fields within the Struct. Values are rendered
@@ -2299,16 +2380,16 @@ type MeshConfigExtensionProviderEnvoyOpenTelemetryLogProviderLogFormat struct {
 	// Textual format for the envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be
 	// used in the format. The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings)
 	// provides more information.
-	// Alias to `body` filed in [Open Telemetry](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/open_telemetry/v3/logs_service.proto)
+	// Alias to `body` field in [Open Telemetry](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/open_telemetry/v3/logs_service.proto)
 	// Example: `text: "%LOCAL_REPLY_BODY%:%RESPONSE_CODE%:path=%REQ(:path)%"`
-	Text string `json:"text,omitempty"`
+	Text *string `json:"text,omitempty"`
 	// Optional. Additional attributes that describe the specific event occurrence.
 	// Structured format for the envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
 	// can be used as values for fields within the Struct. Values are rendered
 	// as strings, numbers, or boolean values, as appropriate
 	// (see: [format dictionaries](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-dictionaries)). Nested JSON is
 	// supported for some command operators (e.g. FILTER_STATE or DYNAMIC_METADATA).
-	// Alias to `attributes` filed in [Open Telemetry](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/open_telemetry/v3/logs_service.proto)
+	// Alias to `attributes` field in [Open Telemetry](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/open_telemetry/v3/logs_service.proto)
 	//
 	// Example:
 	// ```
@@ -2326,21 +2407,21 @@ type MeshConfigExtensionProviderOpenTelemetryTracingProviderDynatraceSampler str
 	//
 	// The value can be obtained from the Istio deployment page in Dynatrace.
 	// +kubebuilder:validation:Required
-	Tenant string `json:"tenant"`
+	Tenant *string `json:"tenant"`
 	// REQUIRED. The identifier of the cluster in the Dynatrace platform.
 	// The cluster here is Dynatrace-specific concept and not related to the cluster concept in Istio/Envoy.
 	//
 	// The value can be obtained from the Istio deployment page in Dynatrace.
 	// +kubebuilder:validation:Required
-	ClusterId int32 `json:"clusterId"`
+	ClusterId *int32 `json:"clusterId"`
 	// Optional. Number of sampled spans per minute to be used
 	// when the adaptive value cannot be obtained from the Dynatrace API.
 	//
 	// A default value of `1000` is used when:
 	//
-	// - `root_spans_per_minute` is unset
-	// - `root_spans_per_minute` is set to 0
-	RootSpansPerMinute uint32 `json:"rootSpansPerMinute,omitempty"`
+	// - `rootSpansPerMinute` is unset
+	// - `rootSpansPerMinute` is set to 0
+	RootSpansPerMinute *uint32 `json:"rootSpansPerMinute,omitempty"`
 	// Optional. Dynatrace HTTP API to obtain sampling configuration.
 	//
 	// When not provided, the Dynatrace Sampler will re-use the configuration from the OpenTelemetryTracingProvider HTTP Exporter
@@ -2355,10 +2436,10 @@ type MeshConfigExtensionProviderOpenTelemetryTracingProviderDynatraceSamplerDyna
 	//
 	// Example: "{your-environment-id}.live.dynatrace.com".
 	// +kubebuilder:validation:Required
-	Service string `json:"service"`
+	Service *string `json:"service"`
 	// REQUIRED. Specifies the port of the service.
 	// +kubebuilder:validation:Required
-	Port uint32 `json:"port"`
+	Port *uint32 `json:"port"`
 	// REQUIRED. Specifies sampling configuration URI.
 	// +kubebuilder:validation:Required
 	Http *MeshConfigExtensionProviderHttpService `json:"http"`
@@ -2434,7 +2515,7 @@ type MeshNetworks struct {
 // 2. Explicitly:
 //
 //	a. By matching the registry name with one of the "fromRegistry"
-//	in the mesh config. A "from_registry" can only be assigned to a
+//	in the mesh config. A "fromRegistry" can only be assigned to a
 //	single network.
 //
 //	b. By matching the IP against one of the CIDR ranges in a mesh
@@ -2446,13 +2527,13 @@ type MeshNetworks struct {
 type NetworkNetworkEndpoints struct {
 	// A CIDR range for the set of endpoints in this network. The CIDR
 	// ranges for endpoints from different networks must not overlap.
-	FromCidr string `json:"fromCidr,omitempty"`
+	FromCidr *string `json:"fromCidr,omitempty"`
 
 	// Add all endpoints from the specified registry into this network.
 	// The names of the registries should correspond to the kubeconfig file name
 	// inside the secret that was used to configure the registry (Kubernetes
 	// multicluster) or supplied by MCP server.
-	FromRegistry string `json:"fromRegistry,omitempty"`
+	FromRegistry *string `json:"fromRegistry,omitempty"`
 }
 
 // The gateway associated with this network. Traffic from remote networks
@@ -2467,13 +2548,13 @@ type NetworkIstioNetworkGateway struct {
 	// domain name, it need not be resolvable outside the orchestration
 	// platform for the registry. e.g., this could be
 	// istio-ingressgateway.istio-system.svc.cluster.local.
-	RegistryServiceName string `json:"registryServiceName,omitempty"`
+	RegistryServiceName *string `json:"registryServiceName,omitempty"`
 
 	// IP address or externally resolvable DNS address associated with the gateway.
-	Address string `json:"address,omitempty"` // The port associated with the gateway.
-	Port    uint32 `json:"port,omitempty"`
+	Address *string `json:"address,omitempty"` // The port associated with the gateway.
+	Port    *uint32 `json:"port,omitempty"`
 	// The locality associated with an explicitly specified gateway (i.e. ip)
-	Locality string `json:"locality,omitempty"`
+	Locality *string `json:"locality,omitempty"`
 }
 
 // AuthenticationPolicy defines how the proxy is authenticated when it connects to the control plane.
@@ -2493,7 +2574,7 @@ const (
 )
 
 // ForwardClientCertDetails controls how the x-forwarded-client-cert (XFCC)
-// header is handled by the gateway proxy.
+// header is handled by a proxy.
 // See [Envoy XFCC](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto.html#enum-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-forwardclientcertdetails)
 // header handling for more details.
 // +kubebuilder:validation:Enum=UNDEFINED;SANITIZE;FORWARD_ONLY;APPEND_FORWARD;SANITIZE_SET;ALWAYS_FORWARD_ONLY
@@ -2502,16 +2583,16 @@ type ForwardClientCertDetails string
 const (
 	// Field is not set
 	ForwardClientCertDetailsUndefined ForwardClientCertDetails = "UNDEFINED"
-	// Do not send the XFCC header to the next hop. This is the default value.
+	// Do not send the XFCC header to the next hop.
 	ForwardClientCertDetailsSanitize ForwardClientCertDetails = "SANITIZE"
 	// When the client connection is mTLS (Mutual TLS), forward the XFCC header
 	// in the request.
 	ForwardClientCertDetailsForwardOnly ForwardClientCertDetails = "FORWARD_ONLY"
 	// When the client connection is mTLS, append the client certificate
-	// information to the request’s XFCC header and forward it.
+	// information to the request’s XFCC header and forward it. This is the default value for sidecar proxies.
 	ForwardClientCertDetailsAppendForward ForwardClientCertDetails = "APPEND_FORWARD"
 	// When the client connection is mTLS, reset the XFCC header with the client
-	// certificate information and send it to the next hop.
+	// certificate information and send it to the next hop. This is the default value for gateway proxies.
 	ForwardClientCertDetailsSanitizeSet ForwardClientCertDetails = "SANITIZE_SET"
 	// Always forward the XFCC header in the request, regardless of whether the
 	// client connection is mTLS.
@@ -2545,7 +2626,7 @@ const (
 )
 
 // Allows specification of various Istio-supported naming schemes for the
-// Envoy `service_cluster` value. The `servce_cluster` value is primarily used
+// Envoy `service_cluster` value. The `service_cluster` value is primarily used
 // by Envoys to provide service names for tracing spans.
 // +kubebuilder:validation:Enum=APP_LABEL_AND_NAMESPACE;CANONICAL_NAME_ONLY;CANONICAL_NAME_AND_NAMESPACE
 type ProxyConfigTracingServiceName string
@@ -2628,11 +2709,11 @@ type Tracing struct {
 	// HttpUrl tag. Used to truncate length request paths to meet the needs of tracing
 	// backend. If not set, then a length of 256 will be used.
 	// +hidefromdoc
-	MaxPathTagLength uint32 `json:"maxPathTagLength,omitempty"`
+	MaxPathTagLength *uint32 `json:"maxPathTagLength,omitempty"`
 	// The percentage of requests (0.0 - 100.0) that will be randomly selected for trace generation,
 	// if not requested by the client or not forced. Default is 1.0.
-	Sampling float64 `json:"sampling,omitempty"`
-	// Use the tls_settings to specify the tls mode to use. If the remote tracing service
+	Sampling *float64 `json:"sampling,omitempty"`
+	// Use the tlsSettings to specify the tls mode to use. If the remote tracing service
 	// uses Istio mutual TLS and shares the root CA with Pilot, specify the TLS
 	// mode as `ISTIO_MUTUAL`.
 	TlsSettings *ClientTLSSettings `json:"tlsSettings,omitempty"`
@@ -2644,9 +2725,9 @@ type Tracing struct {
 // +hidefromdoc
 type SDS struct {
 	// True if SDS is enabled.
-	Enabled bool `json:"enabled,omitempty"`
+	Enabled *bool `json:"enabled,omitempty"`
 	// Path of k8s service account JWT path.
-	K8SSaJwtPath string `json:"k8sSaJwtPath,omitempty"`
+	K8SSaJwtPath *string `json:"k8sSaJwtPath,omitempty"`
 }
 
 // Topology describes the configuration for relative location of a proxy with
@@ -2665,10 +2746,10 @@ type Topology struct {
 	// address to the X-Forwarded-For (XFF) address and set the
 	// X-Envoy-External-Address header to the trusted client address before
 	// forwarding it to the upstream services in the cluster.
-	// The default value of num_trusted_proxies is 0.
+	// The default value of numTrustedProxies is 0.
 	// See [Envoy XFF](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#config-http-conn-man-headers-x-forwarded-for)
 	// header handling for more details.
-	NumTrustedProxies uint32 `json:"numTrustedProxies,omitempty"`
+	NumTrustedProxies *uint32 `json:"numTrustedProxies,omitempty"`
 	// Configures how the gateway proxy handles x-forwarded-client-cert (XFCC)
 	// header in the incoming request.
 	ForwardClientCertDetails ForwardClientCertDetails `json:"forwardClientCertDetails,omitempty"`
@@ -2720,9 +2801,9 @@ type PrivateKeyProvider struct {
 type MeshConfigProxyConfig struct {
 	// Path to the generated configuration file directory.
 	// Proxy agent generates the actual configuration and stores it in this directory.
-	ConfigPath string `json:"configPath,omitempty"`
+	ConfigPath *string `json:"configPath,omitempty"`
 	// Path to the proxy binary
-	BinaryPath string `json:"binaryPath,omitempty"`
+	BinaryPath *string `json:"binaryPath,omitempty"`
 
 	// Service cluster defines the name for the `service_cluster` that is
 	// shared by all Envoy instances. This setting corresponds to
@@ -2737,7 +2818,7 @@ type MeshConfigProxyConfig struct {
 	// receives API calls from Envoy, it uses the value of the `service-node`
 	// flag to compute routes that are relative to the service instances
 	// located at that IP address.
-	ServiceCluster string `json:"serviceCluster,omitempty"`
+	ServiceCluster *string `json:"serviceCluster,omitempty"`
 
 	// Used by Envoy proxies to assign the values for the service names in trace
 	// spans.
@@ -2747,7 +2828,7 @@ type MeshConfigProxyConfig struct {
 	DrainDuration *metav1.Duration `json:"drainDuration,omitempty"`
 	// Address of the discovery service exposing xDS with mTLS connection.
 	// The inject configuration may override this value.
-	DiscoveryAddress string `json:"discoveryAddress,omitempty"`
+	DiscoveryAddress *string `json:"discoveryAddress,omitempty"`
 	// +hidefromdoc
 	//
 	// Deprecated: Marked as deprecated in mesh/v1alpha1/proxy.proto.
@@ -2756,39 +2837,39 @@ type MeshConfigProxyConfig struct {
 	// DEPRECATED: Use [tracing][istio.mesh.v1alpha1.ProxyConfig.tracing] instead.
 	//
 	// Deprecated: Marked as deprecated in mesh/v1alpha1/proxy.proto.
-	ZipkinAddress string `json:"zipkinAddress,omitempty"`
+	ZipkinAddress *string `json:"zipkinAddress,omitempty"`
 	// IP Address and Port of a statsd UDP listener (e.g. `10.75.241.127:9125`).
-	StatsdUdpAddress string `json:"statsdUdpAddress,omitempty"`
+	StatsdUdpAddress *string `json:"statsdUdpAddress,omitempty"`
 	// +hidefromdoc
 	//
 	// Deprecated: Marked as deprecated in mesh/v1alpha1/proxy.proto.
-	EnvoyMetricsServiceAddress string `json:"envoyMetricsServiceAddress,omitempty"`
+	EnvoyMetricsServiceAddress *string `json:"envoyMetricsServiceAddress,omitempty"`
 	// Port on which Envoy should listen for administrative commands.
 	// Default port is `15000`.
-	ProxyAdminPort int32 `json:"proxyAdminPort,omitempty"`
+	ProxyAdminPort *int32 `json:"proxyAdminPort,omitempty"`
 	// +hidefromdoc
 	//
 	// Deprecated: Marked as deprecated in mesh/v1alpha1/proxy.proto.
-	AvailabilityZone string `json:"availabilityZone,omitempty"`
+	AvailabilityZone *string `json:"availabilityZone,omitempty"`
 	// AuthenticationPolicy defines how the proxy is authenticated when it connects to the control plane.
 	// Default is set to `MUTUAL_TLS`.
 	ControlPlaneAuthPolicy AuthenticationPolicy `json:"controlPlaneAuthPolicy,omitempty"`
 	// File path of custom proxy configuration, currently used by proxies
 	// in front of Mixer and Pilot.
-	CustomConfigFile string `json:"customConfigFile,omitempty"`
+	CustomConfigFile *string `json:"customConfigFile,omitempty"`
 	// Maximum length of name field in Envoy's metrics. The length of the name field
 	// is determined by the length of a name field in a service and the set of labels that
 	// comprise a particular version of the service. The default value is set to 189 characters.
 	// Envoy's internal metrics take up 67 characters, for a total of 256 character name per metric.
 	// Increase the value of this field if you find that the metrics from Envoys are truncated.
-	StatNameLength int32 `json:"statNameLength,omitempty"`
+	StatNameLength *int32 `json:"statNameLength,omitempty"`
 	// The number of worker threads to run.
 	// If unset, which is recommended, this will be automatically determined based on CPU requests/limits.
 	// If set to 0, all cores on the machine will be used, ignoring CPU requests or limits. This can lead to major performance
 	// issues if CPU limits are also set.
 	Concurrency *int32 `json:"concurrency,omitempty"`
 	// Path to the proxy bootstrap template file
-	ProxyBootstrapTemplatePath string `json:"proxyBootstrapTemplatePath,omitempty"`
+	ProxyBootstrapTemplatePath *string `json:"proxyBootstrapTemplatePath,omitempty"`
 	// The mode used to redirect inbound traffic to Envoy.
 	InterceptionMode ProxyConfigInboundInterceptionMode `json:"interceptionMode,omitempty"`
 	// Tracing configuration to be used by the proxy.
@@ -2815,7 +2896,7 @@ type MeshConfigProxyConfig struct {
 	RuntimeValues map[string]string `json:"runtimeValues,omitempty"`
 	// Port on which the agent should listen for administrative commands such as readiness probe.
 	// Default is set to port `15020`.
-	StatusPort int32 `json:"statusPort,omitempty"`
+	StatusPort *int32 `json:"statusPort,omitempty"`
 	// An additional list of tags to extract from the in-proxy Istio telemetry. These extra tags can be
 	// added by configuring the telemetry extension. Each additional tag needs to be present in this list.
 	// Extra tags emitted by the telemetry extensions must be listed here so that they can be processed
@@ -2831,13 +2912,13 @@ type MeshConfigProxyConfig struct {
 	// The amount of time allowed for connections to complete on proxy shutdown.
 	// On receiving `SIGTERM` or `SIGINT`, `istio-agent` tells the active Envoy to start gracefully draining,
 	// discouraging any new connections and allowing existing connections to complete. It then
-	// sleeps for the `termination_drain_duration` and then kills any remaining active Envoy processes.
+	// sleeps for the `terminationDrainDuration` and then kills any remaining active Envoy processes.
 	// If not set, a default of `5s` will be applied.
 	TerminationDrainDuration *metav1.Duration `json:"terminationDrainDuration,omitempty"`
 	// The unique identifier for the [service mesh](https://istio.io/docs/reference/glossary/#service-mesh)
 	// All control planes running in the same service mesh should specify the same mesh ID.
 	// Mesh ID is used to label telemetry reports for cases where telemetry from multiple meshes is mixed together.
-	MeshId string `json:"meshId,omitempty"`
+	MeshId *string `json:"meshId,omitempty"`
 	// VM Health Checking readiness probe. This health check config exactly mirrors the
 	// kubernetes readiness probe configuration both in schema and logic.
 	// Only one health check method of 3 can be set at a time.
@@ -2925,8 +3006,8 @@ type RemoteService struct {
 	// Address of a remove service used for various purposes (access log
 	// receiver, metrics receiver, etc.). Can be IP address or a fully
 	// qualified DNS name.
-	Address string `json:"address,omitempty"`
-	// Use the `tls_settings` to specify the tls mode to use. If the remote service
+	Address *string `json:"address,omitempty"`
+	// Use the `tlsSettings` to specify the tls mode to use. If the remote service
 	// uses Istio mutual TLS and shares the root CA with Pilot, specify the TLS
 	// mode as `ISTIO_MUTUAL`.
 	TlsSettings *ClientTLSSettings `json:"tlsSettings,omitempty"`
@@ -2937,22 +3018,22 @@ type RemoteService struct {
 // Zipkin defines configuration for a Zipkin tracer.
 type TracingZipkin struct {
 	// Address of the Zipkin service (e.g. _zipkin:9411_).
-	Address string `json:"address,omitempty"`
+	Address *string `json:"address,omitempty"`
 }
 
 // +hidefromdoc
 // Defines configuration for a Lightstep tracer.
 type TracingLightstep struct {
 	// Address of the Lightstep Satellite pool.
-	Address string `json:"address,omitempty"`
+	Address *string `json:"address,omitempty"`
 	// The Lightstep access token.
-	AccessToken string `json:"accessToken,omitempty"`
+	AccessToken *string `json:"accessToken,omitempty"`
 }
 
 // Datadog defines configuration for a Datadog tracer.
 type TracingDatadog struct {
 	// Address of the Datadog Agent.
-	Address string `json:"address,omitempty"`
+	Address *string `json:"address,omitempty"`
 }
 
 // Stackdriver defines configuration for a Stackdriver tracer.
@@ -2962,7 +3043,7 @@ type TracingDatadog struct {
 type TracingStackdriver struct {
 	// debug enables trace output to stdout.
 	// +hidefromdoc
-	Debug bool `json:"debug,omitempty"`
+	Debug *bool `json:"debug,omitempty"`
 	// The global default max number of attributes per span.
 	// default is 200.
 	// +hidefromdoc
@@ -2988,7 +3069,7 @@ type TracingOpenCensusAgent struct {
 	// unix:path). See [gRPC naming
 	// docs](https://github.com/grpc/grpc/blob/master/doc/naming.md) for
 	// details.
-	Address string `json:"address,omitempty"`
+	Address *string `json:"address,omitempty"`
 	// Specifies the set of context propagation headers used for distributed
 	// tracing. Default is `["W3C_TRACE_CONTEXT"]`. If multiple values are specified,
 	// the proxy will attempt to read each header for each request and will
@@ -3017,18 +3098,18 @@ type TracingCustomTag struct {
 // +hidefromdoc
 type TracingLiteral struct {
 	// Static literal value used to populate the tag value.
-	Value string `json:"value,omitempty"`
+	Value *string `json:"value,omitempty"`
 }
 
 // Environment is the proxy's environment variable to be used for populating the custom span tag.
 // +hidefromdoc
 type TracingEnvironment struct {
 	// Name of the environment variable used to populate the tag's value
-	Name string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty"`
 	// When the environment variable is not found,
 	// the tag's value will be populated with this default value if specified,
 	// otherwise the tag will not be populated.
-	DefaultValue string `json:"defaultValue,omitempty"`
+	DefaultValue *string `json:"defaultValue,omitempty"`
 }
 
 // RequestHeader is the HTTP request header which will be used to populate the span tag.
@@ -3036,10 +3117,10 @@ type TracingEnvironment struct {
 // +hidefromdoc
 type TracingRequestHeader struct {
 	// HTTP header name used to obtain the value from to populate the tag value.
-	Name string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty"`
 	// Default value to be used for the tag when the named HTTP header does not exist.
 	// The tag will be skipped if no default value is provided.
-	DefaultValue string `json:"defaultValue,omitempty"`
+	DefaultValue *string `json:"defaultValue,omitempty"`
 }
 
 // PROXY protocol configuration.
@@ -3090,6 +3171,11 @@ type ProxyConfigProxyHeaders struct {
 	// To disable the header, configure either `SANITIZE` (to always remove the header, if present) or `FORWARD_ONLY` (to leave the header as-is).
 	// By default, `APPEND_FORWARD` will be used.
 	ForwardedClientCert ForwardClientCertDetails `json:"forwardedClientCert,omitempty"`
+	// This field is valid only when forward_client_cert_details is APPEND_FORWARD or SANITIZE_SET
+	// and the client connection is mTLS. It specifies the fields in
+	// the client certificate to be forwarded. Note that `Hash` is always set, and
+	// `By` is always set when the client certificate presents the URI type Subject Alternative Name value.
+	SetCurrentClientCertDetails *ProxyConfigProxyHeadersSetCurrentClientCertDetails `json:"setCurrentClientCertDetails,omitempty"`
 	// Controls the `X-Request-Id` header. If enabled, a request ID is generated for each request if one is not already set.
 	// This applies to all types of traffic (inbound, outbound, and gateways).
 	// If disabled, no request ID will be generate for the request. If it is already present, it will be preserved.
@@ -3119,7 +3205,7 @@ type ProxyConfigProxyHeaders struct {
 type ProxyConfigProxyHeadersServer struct {
 	Disabled *bool `json:"disabled,omitempty"`
 	// If set, and the server header is enabled, this value will be set as the server header. By default, `istio-envoy` will be used.
-	Value string `json:"value,omitempty"`
+	Value *string `json:"value,omitempty"`
 }
 
 type ProxyConfigProxyHeadersRequestId struct {
@@ -3138,6 +3224,26 @@ type ProxyConfigProxyHeadersMetadataExchangeHeaders struct {
 	Mode ProxyConfigProxyHeadersMetadataExchangeMode `json:"mode,omitempty"`
 }
 
+type ProxyConfigProxyHeadersSetCurrentClientCertDetails struct {
+	// Whether to forward the subject of the client cert. Defaults to true.
+	Subject *bool `json:"subject,omitempty"`
+	// Whether to forward the entire client cert in URL encoded PEM format. This will appear in the
+	// XFCC header comma separated from other values with the value Cert="PEM".
+	// Defaults to false.
+	Cert *bool `json:"cert,omitempty"`
+	// Whether to forward the entire client cert chain (including the leaf cert) in URL encoded PEM
+	// format. This will appear in the XFCC header comma separated from other values with the value
+	// Chain="PEM".
+	// Defaults to false.
+	Chain *bool `json:"chain,omitempty"`
+	// Whether to forward the DNS type Subject Alternative Names of the client cert.
+	// Defaults to true.
+	Dns *bool `json:"dns,omitempty"`
+	// Whether to forward the URI type Subject Alternative Name of the client cert. Defaults to
+	// true.
+	Uri *bool `json:"uri,omitempty"`
+}
+
 // The following values are used to construct proxy image url.
 // format: `${hub}/${image_name}/${tag}-${image_type}`,
 // example: `docker.io/istio/proxyv2:1.11.1` or `docker.io/istio/proxyv2:1.11.1-distroless`.
@@ -3147,7 +3253,7 @@ type ProxyImage struct {
 	// Istio publishes default, debug, and distroless images.
 	// Other values are allowed if those image types (example: centos) are published to the specified hub.
 	// supported values: default, debug, distroless.
-	ImageType string `json:"imageType,omitempty"`
+	ImageType *string `json:"imageType,omitempty"`
 }
 
 // WorkloadMode allows selection of the role of the underlying workload in
@@ -3186,8 +3292,8 @@ type WorkloadSelector struct {
 	// the configuration namespace in which the resource is present.
 	// +kubebuilder:validation:XValidation:message="wildcard not allowed in label key match",rule="self.all(key, !key.contains('*'))"
 	// +kubebuilder:validation:XValidation:message="key must not be empty",rule="self.all(key, key.size() != 0)"
-	// +kubebuilder:map-value-validation:XValidation:message="wildcard not allowed in label value match",rule="!self.contains('*')"
-	// +kubebuilder:map-value-validation:MaxLength=63
+	// +protoc-gen-crd:map-value-validation:XValidation:message="wildcard not allowed in label value match",rule="!self.contains('*')"
+	// +protoc-gen-crd:map-value-validation:MaxLength=63
 	// +kubebuilder:validation:MaxProperties=4096
 	MatchLabels map[string]string `json:"matchLabels,omitempty"`
 }
@@ -3198,7 +3304,7 @@ type PortSelector struct {
 	// Port number
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
-	Number uint32 `json:"number,omitempty"`
+	Number *uint32 `json:"number,omitempty"`
 }
 
 // PolicyTargetReference format as defined by [GEP-2648](https://gateway-api.sigs.k8s.io/geps/gep-2648/#direct-policy-design-rules).
@@ -3242,20 +3348,20 @@ type PolicyTargetReference struct {
 	// group is the group of the target resource.
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
-	Group string `json:"group,omitempty"`
+	Group *string `json:"group,omitempty"`
 	// kind is kind of the target resource.
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=63
 	// +kubebuilder:validation:Pattern=`^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$`
-	Kind string `json:"kind,omitempty"`
+	Kind *string `json:"kind,omitempty"`
 	// name is the name of the target resource.
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	Name string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty"`
 	// namespace is the namespace of the referent. When unspecified, the local
 	// namespace is inferred.
 	// +kubebuilder:validation:XValidation:message="cross namespace referencing is not currently supported",rule="self.size() == 0"
-	Namespace string `json:"namespace,omitempty"`
+	Namespace *string `json:"namespace,omitempty"`
 }
 
 // TLS connection mode
@@ -3348,17 +3454,17 @@ type ClientTLSSettings struct {
 	// REQUIRED if mode is `MUTUAL`. The path to the file holding the
 	// client-side TLS certificate to use.
 	// Should be empty if mode is `ISTIO_MUTUAL`.
-	ClientCertificate string `json:"clientCertificate,omitempty"`
+	ClientCertificate *string `json:"clientCertificate,omitempty"`
 	// REQUIRED if mode is `MUTUAL`. The path to the file holding the
 	// client's private key.
 	// Should be empty if mode is `ISTIO_MUTUAL`.
-	PrivateKey string `json:"privateKey,omitempty"`
+	PrivateKey *string `json:"privateKey,omitempty"`
 	// OPTIONAL: The path to the file containing certificate authority
 	// certificates to use in verifying a presented server certificate. If
 	// omitted, the proxy will verify the server's certificate using
 	// the OS CA certificates.
 	// Should be empty if mode is `ISTIO_MUTUAL`.
-	CaCertificates string `json:"caCertificates,omitempty"`
+	CaCertificates *string `json:"caCertificates,omitempty"`
 	// The name of the secret that holds the TLS certs for the
 	// client including the CA certificates. This secret must exist in
 	// the namespace of the proxy using the certificates.
@@ -3378,7 +3484,7 @@ type ClientTLSSettings struct {
 	// `DestinationRule` has a `workloadSelector` specified.
 	// Otherwise the field will be applicable only at gateways, and
 	// sidecars will continue to use the certificate paths.
-	CredentialName string `json:"credentialName,omitempty"`
+	CredentialName *string `json:"credentialName,omitempty"`
 	// A list of alternate names to verify the subject identity in the
 	// certificate. If specified, the proxy will verify that the server
 	// certificate's subject alt name matches one of the specified values.
@@ -3390,7 +3496,7 @@ type ClientTLSSettings struct {
 	// SNI string to present to the server during TLS handshake.
 	// If unspecified, SNI will be automatically set based on downstream HTTP
 	// host/authority header for SIMPLE and MUTUAL TLS modes.
-	Sni string `json:"sni,omitempty"`
+	Sni *string `json:"sni,omitempty"`
 	// `insecureSkipVerify` specifies whether the proxy should skip verifying the
 	// CA signature and SAN for the server certificate corresponding to the host.
 	// The default value of this field is false.
@@ -3399,8 +3505,9 @@ type ClientTLSSettings struct {
 	// to use in verifying a presented server certificate. `CRL` is a list of certificates
 	// that have been revoked by the CA (Certificate Authority) before their scheduled expiration date.
 	// If specified, the proxy will verify if the presented certificate is part of the revoked list of certificates.
-	// If omitted, the proxy will not verify the certificate against the `crl`.
-	CaCrl string `json:"caCrl,omitempty"`
+	// If omitted, the proxy will not verify the certificate against the `crl`. Note that if `credentialName` is set,
+	// `CRL` cannot be specified using `caCrl`, rather it has to be specified inside the credential.
+	CaCrl *string `json:"caCrl,omitempty"`
 }
 
 // Locality-weighted load balancing allows administrators to control the
@@ -3537,7 +3644,7 @@ type ConnectionPoolSettingsTCPSettingsTcpKeepalive struct {
 	// Maximum number of keepalive probes to send without response before
 	// deciding the connection is dead. Default is to use the OS level configuration
 	// (unless overridden, Linux defaults to 9.)
-	Probes uint32 `json:"probes,omitempty"`
+	Probes *uint32 `json:"probes,omitempty"`
 	// The time duration a connection needs to be idle before keep-alive
 	// probes start being sent. Default is to use the OS level configuration
 	// (unless overridden, Linux defaults to 7200s (ie 2 hours.)
@@ -3560,7 +3667,7 @@ type ConnectionPoolSettingsTCPSettingsTcpKeepalive struct {
 // `us-west/zone-1/*` - all sub-zones within us-west/zone-1
 type LocalityLoadBalancerSettingDistribute struct {
 	// Originating locality, '/' separated, e.g. 'region/zone/sub_zone'.
-	From string `json:"from,omitempty"`
+	From *string `json:"from,omitempty"`
 	// Map of upstream localities to traffic distribution weights. The sum of
 	// all weights should be 100. Any locality not present will
 	// receive no traffic.
@@ -3576,10 +3683,10 @@ type LocalityLoadBalancerSettingDistribute struct {
 // like regulatory controls.
 type LocalityLoadBalancerSettingFailover struct {
 	// Originating region.
-	From string `json:"from,omitempty"`
+	From *string `json:"from,omitempty"`
 	// Destination region the traffic will fail over to when endpoints in
 	// the 'from' region becomes unhealthy.
-	To string `json:"to,omitempty"`
+	To *string `json:"to,omitempty"`
 }
 
 // Describes the retry policy to use when a HTTP request fails. For
@@ -3617,7 +3724,7 @@ type HTTPRetry struct {
 	// or `per_try_timeout` is configured, the actual number of retries attempted also depends on
 	// the specified request `timeout` and `per_try_timeout` values. MUST BE >= 0. If `0`, retries will be disabled.
 	// The maximum possible number of requests made will be 1 + `attempts`.
-	Attempts int32 `json:"attempts,omitempty"`
+	Attempts *int32 `json:"attempts,omitempty"`
 	// Timeout per attempt for a given request, including the initial call and any retries. Format: 1h/1m/1s/1ms. MUST BE >=1ms.
 	// Default is same value as request
 	// `timeout` of the [HTTP route](https://istio.io/docs/reference/config/networking/virtual-service/#HTTPRoute),
@@ -3634,7 +3741,7 @@ type HTTPRetry struct {
 	// However, the destination did not return a 503 error, so this would not match `"503"` (it would, however, match `"reset"`).
 	//
 	// If not specified, this defaults to `connect-failure,refused-stream,unavailable,cancelled,503`.
-	RetryOn string `json:"retryOn,omitempty"`
+	RetryOn *string `json:"retryOn,omitempty"`
 	// Flag to specify whether the retries should retry to other localities.
 	// See the [retry plugin configuration](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/http/http_connection_management#retry-plugin-configuration) for more details.
 	RetryRemoteLocalities *bool `json:"retryRemoteLocalities,omitempty"`
