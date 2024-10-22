@@ -75,7 +75,7 @@ spec:
               namespace: istio-system
               updateStrategy:
                 type: InPlace
-              version: v1.23.0
+              version: v1.23.2
             description: RemoteIstioSpec defines the desired state of RemoteIstio
             properties:
               namespace:
@@ -9428,12 +9428,12 @@ spec:
                     type: object
                 type: object
               version:
-                default: v1.23.0
+                default: v1.23.2
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.23.0.
+                  Must be one of: v1.23.2.
                 enum:
-                - v1.23.0
+                - v1.23.2
                 type: string
             required:
             - namespace

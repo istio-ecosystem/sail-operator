@@ -28,10 +28,10 @@ const (
 type IstioCNISpec struct {
 	// +sail:version
 	// Defines the version of Istio to install.
-	// Must be one of: v1.23.0.
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.23.0"}
-	// +kubebuilder:validation:Enum=v1.23.0
-	// +kubebuilder:default=v1.23.0
+	// Must be one of: v1.23.2.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.23.2"}
+	// +kubebuilder:validation:Enum=v1.23.2
+	// +kubebuilder:default=v1.23.2
 	Version string `json:"version"`
 
 	// +sail:profile
@@ -177,7 +177,7 @@ type IstioCNI struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// +kubebuilder:default={version: "v1.23.0", namespace: "istio-cni"}
+	// +kubebuilder:default={version: "v1.23.2", namespace: "istio-cni"}
 	Spec IstioCNISpec `json:"spec,omitempty"`
 
 	Status IstioCNIStatus `json:"status,omitempty"`
