@@ -8,6 +8,6 @@ This documentation is specific to the OpenShift Service Mesh product and may dif
 
 - [Running Red Hat OpenShift Service Mesh (OSSM) 2 and OSSM 3 side by side](./ossm-2-and-ossm-3-side-by-side/README.md)
 - [Cert Manager and istio-csr Integration](./cert-manager/README.md)
-- [Adding services to a service mesh](./create-mesh/README.md)
+- [Scoping the mesh with Discovery Selectors](./create-mesh/README.md)
 - [Installing the Sidecar](./injection/README.md)
 - [Multiple Istio Control Planes in a Single Cluster](./multi-control-planes/README.md)
