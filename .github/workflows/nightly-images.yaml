@@ -1,0 +1,39 @@
+name: Nightly image build workflow
+
+on:
+  schedule:
+    - cron: "0 3 * * *" # everyday at 3AM UTC
+
+run-name: nightly-images
+
+env:
+  GIT_USER: ${{ secrets.GIT_USER }}
+  GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Login to quay.io
+      uses: docker/login-action@v3
+      with:
+        registry: quay.io
+        username: ${{ secrets.QUAY_USER }}
+        password: ${{ secrets.QUAY_PWD }}
+
+    - uses: actions/checkout@v4
+
+    - name: Build and push nightly operator image
+      run: |
+        make docker-buildx \
+          -e NIGHTLY=true
+    
+    - name: Publish nigthly bundle in OpenShift OperatorHub
+      run: |
+        make bundle-publish-nightly \
+          -e GIT_CONFIG_USER_NAME="$GIT_CONFIG_USER_NAME" \
+          -e GIT_CONFIG_USER_EMAIL="$GIT_CONFIG_USER_EMAIL"
+      env:
+        GIT_CONFIG_USER_NAME: "${{ github.actor }}"
+        GIT_CONFIG_USER_EMAIL: "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
