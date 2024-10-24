@@ -55,7 +55,8 @@ var (
 	// - 1.22.2
 	// - 1.23.0-rc.1
 	// - 1.24-alpha.feabc1234
-	istiodVersionRegex = regexp.MustCompile(`Version:"([^"]*)"`)
+	// matching only the version before first '_' which is used in the downstream builds, e.g. "1.23.2_ossm_tp.2"
+	istiodVersionRegex = regexp.MustCompile(`Version:"([^"_]*)[^"]*"`)
 
 	k = kubectl.New()
 )
