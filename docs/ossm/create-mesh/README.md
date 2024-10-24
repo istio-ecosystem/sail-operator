@@ -1,19 +1,18 @@
 # Scoping the service mesh with DiscoverySelectors
-This page describes how the control plane monitors/discovers cluster resources and how to manage its scope.
+This page describes how the service mesh control plane discovers and observes cluster resources and how to manage this scope.
 
 A service mesh will include a workload that:
 1. Has been discovered by the control plane
 1. Has been [injected with a Envoy proxy sidecar](../injection/README.md)
 
-
-By default, the control plane will watch all namespaces within the cluster, meaning that:
+By default, the control plane will watch ("discover") all namespaces within the cluster, meaning that:
 - Each proxy instance will receive configuration for all namespaces. This includes information also about workloads that are not enrolled in the mesh.
 - Any workload with the appropriate pod or namespace injection label will be injected with a proxy sidecar.
 
-This may not be desirable in a shared cluster, and you may want to limit the scope of the service mesh to only a portion of your cluster. This is particularly important if you plan to have [multiple service meshes within the same cluster](./multi-control-planes/README.md).
+This may not be desirable in a shared cluster. You may want to limit the scope of the service mesh to only a portion of your cluster. This is particularly important if you plan to have [multiple service meshes within the same cluster](./multi-control-planes/README.md).
 
 ### DiscoverySelectors
-Discovery selectors provide a mechanism for the mesh administrator to limit the scope of a service mesh. This is done through a Kubernetes [label selector](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors), which defines criteria for which namespaces will be visible to the control plane. Any namespaces not matching are ignored by the control plane entirely.
+Discovery selectors provide a mechanism for the mesh administrator to limit the control plane's visibility to a defined set of namespaces. This is done through a Kubernetes [label selector](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors), which defines criteria for which namespaces will be visible to the control plane. Any namespaces not matching are ignored by the control plane entirely.
 
 > **_NOTE:_** Istiod will always open a watch to OpenShift for all namespaces. However, discovery selectors will ignore objects that are not selected very early in its processing, minimizing costs.
 
@@ -120,3 +119,6 @@ Assuming you know which namespaces to include as part of the service mesh, as a 
     ```
 
 See [Multiple Istio Control Planes in a Single Cluster](../multi-control-planes/README.md) for another example of `discoverySelectors` usage.
+
+### Next Steps: Sidecar injection
+As described earlier, in addition to the control plane discovering the namespaces to be included in the mesh, workloads must  be [injected with a sidecar proxy](../injection/README.md) to be included in the service mesh.
