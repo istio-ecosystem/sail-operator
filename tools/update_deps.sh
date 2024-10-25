@@ -58,6 +58,10 @@ sed -i "s|CONTROLLER_TOOLS_VERSION ?= .*|CONTROLLER_TOOLS_VERSION ?= ${CONTROLLE
 OPM_LATEST_VERSION=$(getLatestVersion operator-framework/operator-registry)
 sed -i "s|OPM_VERSION ?= .*|OPM_VERSION ?= ${OPM_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
 
+# Update olm
+OLM_LATEST_VERSION=$(getLatestVersion operator-framework/operator-lifecycle-manager)
+sed -i "s|OLM_VERSION ?= .*|OLM_VERSION ?= ${OLM_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+
 # Update kube-rbac-proxy
 RBAC_PROXY_LATEST_VERSION=$(getLatestVersion brancz/kube-rbac-proxy | cut -d/ -f1)
 # Only update it if the newer image is available in the registry
