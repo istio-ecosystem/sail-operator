@@ -23,6 +23,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/testtime"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
@@ -60,7 +61,7 @@ func TestReconcile(t *testing.T) {
 		cl := newFakeClientBuilder().
 			WithObjects(istio).
 			Build()
-		reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, "")
+		reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, config.PlatformKubernetes, "")
 
 		_, err := reconciler.Reconcile(ctx, istio)
 		if err == nil {
@@ -96,7 +97,7 @@ func TestReconcile(t *testing.T) {
 			WithStatusSubresource(&v1alpha1.RemoteIstio{}).
 			WithObjects(istio).
 			Build()
-		reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, "invalid-profile")
+		reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, config.PlatformKubernetes, "invalid-profile")
 
 		_, err := reconciler.Reconcile(ctx, istio)
 		if err == nil {
@@ -136,7 +137,7 @@ func TestReconcile(t *testing.T) {
 				},
 			}).
 			Build()
-		reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, "")
+		reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, config.PlatformKubernetes, "")
 
 		_, err := reconciler.Reconcile(ctx, istio)
 		if err == nil {
@@ -532,7 +533,7 @@ func TestDetermineStatus(t *testing.T) {
 				WithObjects(initObjs...).
 				WithInterceptorFuncs(interceptorFuncs).
 				Build()
-			reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, "")
+			reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, config.PlatformKubernetes, "")
 
 			status, err := reconciler.determineStatus(ctx, istio, tc.reconciliationErr)
 			if (err != nil) != tc.wantErr {
@@ -733,7 +734,7 @@ func TestUpdateStatus(t *testing.T) {
 				WithObjects(initObjs...).
 				WithInterceptorFuncs(interceptorFuncs).
 				Build()
-			reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, "")
+			reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, config.PlatformKubernetes, "")
 
 			err := reconciler.updateStatus(ctx, istio, tc.reconciliationErr)
 			if (err != nil) != tc.wantErr {

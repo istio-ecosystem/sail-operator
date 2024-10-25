@@ -24,6 +24,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
@@ -44,14 +45,16 @@ import (
 // Reconciler reconciles a RemoteIstio object
 type Reconciler struct {
 	ResourceDirectory string
+	Platform          config.Platform
 	DefaultProfile    string
 	client.Client
 	Scheme *runtime.Scheme
 }
 
-func NewReconciler(client client.Client, scheme *runtime.Scheme, resourceDir string, defaultProfile string) *Reconciler {
+func NewReconciler(client client.Client, scheme *runtime.Scheme, resourceDir string, platform config.Platform, defaultProfile string) *Reconciler {
 	return &Reconciler{
 		ResourceDirectory: resourceDir,
+		Platform:          platform,
 		DefaultProfile:    defaultProfile,
 		Client:            client,
 		Scheme:            scheme,
@@ -106,7 +109,7 @@ func validate(istio *v1alpha1.RemoteIstio) error {
 func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1alpha1.RemoteIstio) error {
 	values, err := revision.ComputeValues(
 		istio.Spec.Values, istio.Spec.Namespace, istio.Spec.Version,
-		r.DefaultProfile, istio.Spec.Profile,
+		r.Platform, r.DefaultProfile, istio.Spec.Profile,
 		r.ResourceDirectory, getActiveRevisionName(istio))
 	if err != nil {
 		return err
