@@ -241,9 +241,14 @@ if [ "${SKIP_BUILD}" == "false" ]; then
     BUNDLE_IMG="${BUNDLE_IMG}" \
     OPENSHIFT_PLATFORM=false \
     make bundle bundle-build bundle-push
-     
+
     # Install OLM in the cluster because it's not available by default in kind.
-    ${OPERATOR_SDK} olm install
+    OLM_INSTALL_ARGS=""
+    if [ "${OLM_VERSION}" != "" ]; then
+      OLM_INSTALL_ARGS+="--version ${OLM_VERSION}"
+    fi
+    # shellcheck disable=SC2086
+    ${OPERATOR_SDK} olm install ${OLM_INSTALL_ARGS}
 
     # Wait for for the CatalogSource to be CatalogSource.status.connectionState.lastObservedState == READY
     ${COMMAND} wait catalogsource operatorhubio-catalog -n olm --for 'jsonpath={.status.connectionState.lastObservedState}=READY' --timeout=5m
