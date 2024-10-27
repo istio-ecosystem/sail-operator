@@ -62,5 +62,5 @@ func setup() {
 		GinkgoWriter.Println("Running on Kubernetes")
 	}
 
-	k = kubectl.New()
+	k = kubectl.New("clOperator")
 }
