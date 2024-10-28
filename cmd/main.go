@@ -137,14 +137,14 @@ func main() {
 		defaultProfile = "default"
 	}
 
-	err = istio.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDirectory, defaultProfile).
+	err = istio.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDirectory, platform, defaultProfile).
 		SetupWithManager(mgr)
 	if err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Istio")
 		os.Exit(1)
 	}
 
-	err = remoteistio.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDirectory, defaultProfile).
+	err = remoteistio.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDirectory, platform, defaultProfile).
 		SetupWithManager(mgr)
 	if err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "RemoteIstio")
@@ -158,7 +158,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = istiocni.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDirectory, chartManager, defaultProfile).
+	err = istiocni.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDirectory, chartManager, platform, defaultProfile).
 		SetupWithManager(mgr)
 	if err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "IstioCNI")

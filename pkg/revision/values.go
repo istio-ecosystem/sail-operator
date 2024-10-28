@@ -29,14 +29,14 @@ import (
 // - applies overrides that are not configurable by the user
 func ComputeValues(
 	userValues *v1alpha1.Values, namespace string, version string,
-	defaultProfile, userProfile string, resourceDir string,
+	platform config.Platform, defaultProfile, userProfile string, resourceDir string,
 	activeRevisionName string,
 ) (*v1alpha1.Values, error) {
 	// apply image digests from configuration, if not already set by user
 	userValues = istiovalues.ApplyDigests(version, userValues, config.Config)
 
 	// apply userValues on top of defaultValues from profiles
-	mergedHelmValues, err := istiovalues.ApplyProfiles(resourceDir, version, defaultProfile, userProfile, helm.FromValues(userValues))
+	mergedHelmValues, err := istiovalues.ApplyProfilesAndPlatform(resourceDir, version, platform, defaultProfile, userProfile, helm.FromValues(userValues))
 	if err != nil {
 		return nil, fmt.Errorf("failed to apply profile: %w", err)
 	}

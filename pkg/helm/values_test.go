@@ -144,3 +144,71 @@ func TestSet(t *testing.T) {
 		})
 	}
 }
+
+func TestSetIfAbsent(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     Values
+		key       string
+		val       string
+		expected  Values
+		expectErr bool
+	}{
+		{
+			name: "Key Exists",
+			input: Values{
+				"foo": map[string]any{
+					"bar": "baz",
+				},
+			},
+			key: "foo.bar",
+			val: "newVal",
+			expected: Values{
+				"foo": map[string]any{
+					"bar": "baz",
+				},
+			},
+		},
+		{
+			name: "New Key",
+			input: Values{
+				"foo": map[string]any{
+					"bar": "baz",
+				},
+			},
+			key: "foo.baz",
+			val: "newVal",
+			expected: Values{
+				"foo": map[string]any{
+					"bar": "baz",
+					"baz": "newVal",
+				},
+			},
+		},
+		{
+			name:      "Key Exists, but is not a map",
+			input:     Values{"foo": "bar"},
+			key:       "foo.baz",
+			val:       "newVal",
+			expectErr: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := test.input.SetIfAbsent(test.key, test.val)
+			if test.expectErr {
+				if err == nil {
+					t.Errorf("Expected an error, but got nil")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Expected no error, but got an error: %v", err)
+				}
+				if !reflect.DeepEqual(test.input, test.expected) {
+					t.Errorf("Expected %v, but got %v", test.expected, test.input)
+				}
+			}
+		})
+	}
+}
