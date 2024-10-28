@@ -56,24 +56,18 @@ const (
 
 // Reconciler reconciles an IstioCNI object
 type Reconciler struct {
-	ResourceDirectory string
-	Platform          config.Platform
-	DefaultProfile    string
 	client.Client
+	Config       config.ReconcilerConfig
 	Scheme       *runtime.Scheme
 	ChartManager *helm.ChartManager
 }
 
-func NewReconciler(
-	client client.Client, scheme *runtime.Scheme, resourceDir string, chartManager *helm.ChartManager, platform config.Platform, defaultProfile string,
-) *Reconciler {
+func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *runtime.Scheme, chartManager *helm.ChartManager) *Reconciler {
 	return &Reconciler{
-		ResourceDirectory: resourceDir,
-		Platform:          platform,
-		DefaultProfile:    defaultProfile,
-		Client:            client,
-		Scheme:            scheme,
-		ChartManager:      chartManager,
+		Config:       cfg,
+		Client:       client,
+		Scheme:       scheme,
+		ChartManager: chartManager,
 	}
 }
 
@@ -153,7 +147,7 @@ func (r *Reconciler) installHelmChart(ctx context.Context, cni *v1alpha1.IstioCN
 
 	// apply userValues on top of defaultValues from profiles
 	mergedHelmValues, err := istiovalues.ApplyProfilesAndPlatform(
-		r.ResourceDirectory, cni.Spec.Version, r.Platform, r.DefaultProfile, cni.Spec.Profile, helm.FromValues(userValues))
+		r.Config.ResourceDirectory, cni.Spec.Version, r.Config.Platform, r.Config.DefaultProfile, cni.Spec.Profile, helm.FromValues(userValues))
 	if err != nil {
 		return fmt.Errorf("failed to apply profile: %w", err)
 	}
@@ -166,7 +160,7 @@ func (r *Reconciler) installHelmChart(ctx context.Context, cni *v1alpha1.IstioCN
 }
 
 func (r *Reconciler) getChartDir(cni *v1alpha1.IstioCNI) string {
-	return path.Join(r.ResourceDirectory, cni.Spec.Version, "charts", cniChartName)
+	return path.Join(r.Config.ResourceDirectory, cni.Spec.Version, "charts", cniChartName)
 }
 
 func applyImageDigests(cni *v1alpha1.IstioCNI, values *v1alpha1.CNIValues, config config.OperatorConfig) *v1alpha1.CNIValues {

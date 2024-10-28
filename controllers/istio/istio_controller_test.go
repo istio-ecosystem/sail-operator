@@ -51,7 +51,7 @@ var (
 )
 
 func TestReconcile(t *testing.T) {
-	resourceDir := t.TempDir()
+	cfg := newReconcilerTestConfig(t)
 
 	t.Run("returns error when Istio version not set", func(t *testing.T) {
 		istio := &v1alpha1.Istio{
@@ -61,7 +61,7 @@ func TestReconcile(t *testing.T) {
 		cl := newFakeClientBuilder().
 			WithObjects(istio).
 			Build()
-		reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, config.PlatformKubernetes, "")
+		reconciler := NewReconciler(cfg, cl, scheme.Scheme)
 
 		_, err := reconciler.Reconcile(ctx, istio)
 		if err == nil {
@@ -97,7 +97,9 @@ func TestReconcile(t *testing.T) {
 			WithStatusSubresource(&v1alpha1.Istio{}).
 			WithObjects(istio).
 			Build()
-		reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, config.PlatformKubernetes, "invalid-profile")
+		cfg := newReconcilerTestConfig(t)
+		cfg.DefaultProfile = "invalid-profile"
+		reconciler := NewReconciler(cfg, cl, scheme.Scheme)
 
 		_, err := reconciler.Reconcile(ctx, istio)
 		if err == nil {
@@ -137,7 +139,7 @@ func TestReconcile(t *testing.T) {
 				},
 			}).
 			Build()
-		reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, config.PlatformKubernetes, "")
+		reconciler := NewReconciler(cfg, cl, scheme.Scheme)
 
 		_, err := reconciler.Reconcile(ctx, istio)
 		if err == nil {
@@ -222,7 +224,7 @@ func TestValidate(t *testing.T) {
 }
 
 func TestDetermineStatus(t *testing.T) {
-	resourceDir := t.TempDir()
+	cfg := newReconcilerTestConfig(t)
 
 	generation := int64(100)
 
@@ -533,7 +535,7 @@ func TestDetermineStatus(t *testing.T) {
 				WithObjects(initObjs...).
 				WithInterceptorFuncs(interceptorFuncs).
 				Build()
-			reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, config.PlatformKubernetes, "")
+			reconciler := NewReconciler(cfg, cl, scheme.Scheme)
 
 			status, err := reconciler.determineStatus(ctx, istio, tc.reconciliationErr)
 			if (err != nil) != tc.wantErr {
@@ -548,7 +550,7 @@ func TestDetermineStatus(t *testing.T) {
 }
 
 func TestUpdateStatus(t *testing.T) {
-	resourceDir := t.TempDir()
+	cfg := newReconcilerTestConfig(t)
 
 	generation := int64(100)
 	oneMinuteAgo := testtime.OneMinuteAgo()
@@ -734,7 +736,7 @@ func TestUpdateStatus(t *testing.T) {
 				WithObjects(initObjs...).
 				WithInterceptorFuncs(interceptorFuncs).
 				Build()
-			reconciler := NewReconciler(cl, scheme.Scheme, resourceDir, config.PlatformKubernetes, "")
+			reconciler := NewReconciler(cfg, cl, scheme.Scheme)
 
 			err := reconciler.updateStatus(ctx, istio, tc.reconciliationErr)
 			if (err != nil) != tc.wantErr {
@@ -913,5 +915,13 @@ func noWrites(t *testing.T) interceptor.Funcs {
 			t.Fatalf("unexpected call to SubResourcePatch with the object %+v: %v", obj, string(debug.Stack()))
 			return nil
 		},
+	}
+}
+
+func newReconcilerTestConfig(t *testing.T) config.ReconcilerConfig {
+	return config.ReconcilerConfig{
+		ResourceDirectory: t.TempDir(),
+		Platform:          config.PlatformKubernetes,
+		DefaultProfile:    "",
 	}
 }

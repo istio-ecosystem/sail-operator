@@ -100,14 +100,14 @@ var _ = Describe("Operator", Ordered, func() {
 
 		AfterAll(func() {
 			if CurrentSpecReport().Failed() {
-				common.LogDebugInfo()
+				common.LogDebugInfo(k)
 			}
 		})
 	})
 
 	AfterAll(func() {
 		if CurrentSpecReport().Failed() {
-			common.LogDebugInfo()
+			common.LogDebugInfo(k)
 		}
 
 		if skipDeploy {
