@@ -63,5 +63,5 @@ func setup() {
 	cl, err = k8sclient.InitK8sClient("")
 	Expect(err).NotTo(HaveOccurred())
 
-	k = kubectl.New()
+	k = kubectl.New("clDualStack")
 }

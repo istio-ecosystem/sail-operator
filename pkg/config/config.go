@@ -33,6 +33,12 @@ type IstioImageConfig struct {
 	ZTunnelImage string `properties:"ztunnel"`
 }
 
+type ReconcilerConfig struct {
+	ResourceDirectory string
+	Platform          Platform
+	DefaultProfile    string
+}
+
 func Read(configFile string) error {
 	p, err := properties.LoadFile(configFile, properties.UTF8)
 	if err != nil {

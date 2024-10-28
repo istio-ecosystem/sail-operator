@@ -24,6 +24,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
@@ -67,17 +68,17 @@ const (
 // Reconciler reconciles an IstioRevision object
 type Reconciler struct {
 	client.Client
-	Scheme            *runtime.Scheme
-	ResourceDirectory string
-	ChartManager      *helm.ChartManager
+	Config       config.ReconcilerConfig
+	Scheme       *runtime.Scheme
+	ChartManager *helm.ChartManager
 }
 
-func NewReconciler(client client.Client, scheme *runtime.Scheme, resourceDir string, chartManager *helm.ChartManager) *Reconciler {
+func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *runtime.Scheme, chartManager *helm.ChartManager) *Reconciler {
 	return &Reconciler{
-		Client:            client,
-		Scheme:            scheme,
-		ResourceDirectory: resourceDir,
-		ChartManager:      chartManager,
+		Config:       cfg,
+		Client:       client,
+		Scheme:       scheme,
+		ChartManager: chartManager,
 	}
 }
 
@@ -181,7 +182,7 @@ func getReleaseName(rev *v1alpha1.IstioRevision) string {
 }
 
 func (r *Reconciler) getChartDir(rev *v1alpha1.IstioRevision) string {
-	return path.Join(r.ResourceDirectory, rev.Spec.Version, "charts", getChartName(rev))
+	return path.Join(r.Config.ResourceDirectory, rev.Spec.Version, "charts", getChartName(rev))
 }
 
 func getChartName(rev *v1alpha1.IstioRevision) string {

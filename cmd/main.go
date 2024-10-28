@@ -44,14 +44,15 @@ func main() {
 	var metricsAddr string
 	var probeAddr string
 	var configFile string
-	var resourceDirectory string
 	var logAPIRequests bool
 	var printVersion bool
 	var leaderElectionEnabled bool
+	var reconcilerCfg config.ReconcilerConfig
+
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.StringVar(&configFile, "config-file", "/etc/sail-operator/config.properties", "Location of the config file, propagated by k8s downward APIs")
-	flag.StringVar(&resourceDirectory, "resource-directory", "/var/lib/sail-operator/resources", "Where to find resources (e.g. charts)")
+	flag.StringVar(&reconcilerCfg.ResourceDirectory, "resource-directory", "/var/lib/sail-operator/resources", "Where to find resources (e.g. charts)")
 	flag.BoolVar(&logAPIRequests, "log-api-requests", false, "Whether to log each request sent to the Kubernetes API server")
 	flag.BoolVar(&printVersion, "version", printVersion, "Prints version information and exits")
 	flag.BoolVar(&leaderElectionEnabled, "leader-elect", true,
@@ -124,41 +125,40 @@ func main() {
 
 	chartManager := helm.NewChartManager(mgr.GetConfig(), os.Getenv("HELM_DRIVER"))
 
-	platform, err := config.DetectPlatform(mgr.GetConfig())
+	reconcilerCfg.Platform, err = config.DetectPlatform(mgr.GetConfig())
 	if err != nil {
 		setupLog.Error(err, "unable to detect platform")
 		os.Exit(1)
 	}
 
-	var defaultProfile string
-	if platform == config.PlatformOpenShift {
-		defaultProfile = "openshift"
+	if reconcilerCfg.Platform == config.PlatformOpenShift {
+		reconcilerCfg.DefaultProfile = "openshift"
 	} else {
-		defaultProfile = "default"
+		reconcilerCfg.DefaultProfile = "default"
 	}
 
-	err = istio.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDirectory, platform, defaultProfile).
+	err = istio.NewReconciler(reconcilerCfg, mgr.GetClient(), mgr.GetScheme()).
 		SetupWithManager(mgr)
 	if err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Istio")
 		os.Exit(1)
 	}
 
-	err = remoteistio.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDirectory, platform, defaultProfile).
+	err = remoteistio.NewReconciler(reconcilerCfg, mgr.GetClient(), mgr.GetScheme()).
 		SetupWithManager(mgr)
 	if err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "RemoteIstio")
 		os.Exit(1)
 	}
 
-	err = istiorevision.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDirectory, chartManager).
+	err = istiorevision.NewReconciler(reconcilerCfg, mgr.GetClient(), mgr.GetScheme(), chartManager).
 		SetupWithManager(mgr)
 	if err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "IstioRevision")
 		os.Exit(1)
 	}
 
-	err = istiocni.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDirectory, chartManager, platform, defaultProfile).
+	err = istiocni.NewReconciler(reconcilerCfg, mgr.GetClient(), mgr.GetScheme(), chartManager).
 		SetupWithManager(mgr)
 	if err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "IstioCNI")
