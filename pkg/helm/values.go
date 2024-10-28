@@ -42,6 +42,19 @@ func (h *Values) Set(key string, val any) error {
 	return unstructured.SetNestedField(*h, val, toKeys(key)...)
 }
 
+// SetIfAbsent sets the value of a nested field to a deep copy of the value
+// provided if the field does not exist.
+func (h *Values) SetIfAbsent(key string, val any) error {
+	if _, found, err := unstructured.NestedFieldNoCopy(*h, toKeys(key)...); err != nil {
+		return fmt.Errorf("failed to get value %s: %w", key, err)
+	} else if !found {
+		if err := h.Set(key, val); err != nil {
+			return fmt.Errorf("failed to set value %s: %w", key, err)
+		}
+	}
+	return nil
+}
+
 func toKeys(key string) []string {
 	return strings.Split(key, ".")
 }

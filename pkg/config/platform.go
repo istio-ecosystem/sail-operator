@@ -25,6 +25,7 @@ import (
 type Platform string
 
 const (
+	PlatformUndefined  Platform = ""
 	PlatformOpenShift  Platform = "openshift"
 	PlatformKubernetes Platform = "kubernetes"
 )
