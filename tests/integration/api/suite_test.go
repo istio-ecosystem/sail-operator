@@ -73,19 +73,19 @@ var _ = BeforeSuite(func() {
 	}
 
 	chartManager := helm.NewChartManager(mgr.GetConfig(), "")
-	resourceDir := path.Join(project.RootDir, "resources")
 
-	Expect(istio.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDir, config.PlatformKubernetes, "").
-		SetupWithManager(mgr)).To(Succeed())
+	cfg := config.ReconcilerConfig{
+		ResourceDirectory: path.Join(project.RootDir, "resources"),
+		Platform:          config.PlatformKubernetes,
+		DefaultProfile:    "",
+	}
 
-	Expect(remoteistio.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDir, config.PlatformKubernetes, "").
-		SetupWithManager(mgr)).To(Succeed())
-
-	Expect(istiorevision.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDir, chartManager).
-		SetupWithManager(mgr)).To(Succeed())
-
-	Expect(istiocni.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDir, chartManager, config.PlatformKubernetes, "").
-		SetupWithManager(mgr)).To(Succeed())
+	cl := mgr.GetClient()
+	scheme := mgr.GetScheme()
+	Expect(istio.NewReconciler(cfg, cl, scheme).SetupWithManager(mgr)).To(Succeed())
+	Expect(remoteistio.NewReconciler(cfg, cl, scheme).SetupWithManager(mgr)).To(Succeed())
+	Expect(istiorevision.NewReconciler(cfg, cl, scheme, chartManager).SetupWithManager(mgr)).To(Succeed())
+	Expect(istiocni.NewReconciler(cfg, cl, scheme, chartManager).SetupWithManager(mgr)).To(Succeed())
 
 	// create new cancellable context
 	var ctx context.Context
