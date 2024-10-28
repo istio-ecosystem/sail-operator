@@ -253,7 +253,8 @@ spec:
 
 				AfterAll(func(ctx SpecContext) {
 					if CurrentSpecReport().Failed() {
-						common.LogDebugInfo()
+						common.LogDebugInfo(k1)
+						common.LogDebugInfo(k2)
 						debugInfoLogged = true
 					}
 
@@ -277,7 +278,8 @@ spec:
 
 	AfterAll(func(ctx SpecContext) {
 		if CurrentSpecReport().Failed() && !debugInfoLogged {
-			common.LogDebugInfo()
+			common.LogDebugInfo(k1)
+			common.LogDebugInfo(k2)
 			debugInfoLogged = true
 		}
 
