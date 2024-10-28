@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
@@ -38,6 +39,8 @@ import (
 )
 
 func TestValidate(t *testing.T) {
+	cfg := newReconcilerTestConfig(t)
+
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "istio-system",
@@ -214,7 +217,7 @@ func TestValidate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
 			cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(tc.objects...).Build()
-			r := NewReconciler(cl, scheme.Scheme, "", nil)
+			r := NewReconciler(cfg, cl, scheme.Scheme, nil)
 
 			err := r.validate(context.TODO(), tc.rev)
 			if tc.expectErr == "" {
@@ -286,6 +289,8 @@ func newCondition(
 }
 
 func TestDetermineReadyCondition(t *testing.T) {
+	cfg := newReconcilerTestConfig(t)
+
 	testCases := []struct {
 		name          string
 		revType       v1alpha1.IstioRevisionType
@@ -508,7 +513,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 
 			cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(tt.clientObjects...).WithInterceptorFuncs(tt.interceptors).Build()
 
-			r := NewReconciler(cl, scheme.Scheme, "no-resource-dir", nil)
+			r := NewReconciler(cfg, cl, scheme.Scheme, nil)
 
 			if tt.revType == "" {
 				tt.revType = v1alpha1.IstioRevisionTypeLocal
@@ -539,6 +544,8 @@ func TestDetermineReadyCondition(t *testing.T) {
 }
 
 func TestDetermineInUseCondition(t *testing.T) {
+	cfg := newReconcilerTestConfig(t)
+
 	testCases := []struct {
 		podLabels           map[string]string
 		podAnnotations      map[string]string
@@ -726,7 +733,7 @@ func TestDetermineInUseCondition(t *testing.T) {
 					WithInterceptorFuncs(tc.interceptors).
 					Build()
 
-				r := NewReconciler(cl, scheme.Scheme, "no-resource-dir", nil)
+				r := NewReconciler(cfg, cl, scheme.Scheme, nil)
 
 				result, _ := r.determineInUseCondition(context.TODO(), rev)
 				g.Expect(result.Type).To(Equal(v1alpha1.IstioRevisionConditionInUse))
@@ -872,5 +879,13 @@ func TestIgnoreStatusChangePredicate(t *testing.T) {
 			result := predicate.Update(event.UpdateEvent{ObjectOld: oldObj, ObjectNew: newObj})
 			g.Expect(result).To(Equal(tc.expected), "unexpected result of predicate.Update()")
 		})
+	}
+}
+
+func newReconcilerTestConfig(t *testing.T) config.ReconcilerConfig {
+	return config.ReconcilerConfig{
+		ResourceDirectory: t.TempDir(),
+		Platform:          config.PlatformKubernetes,
+		DefaultProfile:    "",
 	}
 }

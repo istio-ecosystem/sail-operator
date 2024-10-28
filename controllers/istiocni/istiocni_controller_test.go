@@ -36,6 +36,8 @@ import (
 )
 
 func TestValidate(t *testing.T) {
+	cfg := newReconcilerTestConfig(t)
+
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "istio-cni",
@@ -107,7 +109,7 @@ func TestValidate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
 			cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(tc.objects...).Build()
-			r := NewReconciler(cl, scheme.Scheme, "", nil, config.PlatformKubernetes, "")
+			r := NewReconciler(cfg, cl, scheme.Scheme, nil)
 
 			err := r.validate(context.TODO(), tc.cni)
 			if tc.expectErr == "" {
@@ -177,7 +179,7 @@ func newCondition(condType v1alpha1.IstioCNIConditionType, status metav1.Conditi
 }
 
 func TestDetermineReadyCondition(t *testing.T) {
-	resourceDir := t.TempDir()
+	cfg := newReconcilerTestConfig(t)
 
 	testCases := []struct {
 		name          string
@@ -282,7 +284,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 
 			cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(tt.clientObjects...).WithInterceptorFuncs(tt.interceptors).Build()
 
-			r := NewReconciler(cl, scheme.Scheme, resourceDir, nil, config.PlatformKubernetes, "")
+			r := NewReconciler(cfg, cl, scheme.Scheme, nil)
 
 			cni := &v1alpha1.IstioCNI{
 				ObjectMeta: metav1.ObjectMeta{
@@ -447,6 +449,8 @@ func TestApplyImageDigests(t *testing.T) {
 }
 
 func TestDetermineStatus(t *testing.T) {
+	cfg := newReconcilerTestConfig(t)
+
 	tests := []struct {
 		name         string
 		reconcileErr error
@@ -462,9 +466,8 @@ func TestDetermineStatus(t *testing.T) {
 	}
 
 	ctx := context.TODO()
-	resourceDir := t.TempDir()
 	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
-	r := NewReconciler(cl, scheme.Scheme, resourceDir, nil, config.PlatformKubernetes, "")
+	r := NewReconciler(cfg, cl, scheme.Scheme, nil)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -496,4 +499,12 @@ func TestDetermineStatus(t *testing.T) {
 func normalize(condition v1alpha1.IstioCNICondition) v1alpha1.IstioCNICondition {
 	condition.LastTransitionTime = metav1.Time{}
 	return condition
+}
+
+func newReconcilerTestConfig(t *testing.T) config.ReconcilerConfig {
+	return config.ReconcilerConfig{
+		ResourceDirectory: t.TempDir(),
+		Platform:          config.PlatformKubernetes,
+		DefaultProfile:    "",
+	}
 }

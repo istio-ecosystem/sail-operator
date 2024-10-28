@@ -44,20 +44,16 @@ import (
 
 // Reconciler reconciles a RemoteIstio object
 type Reconciler struct {
-	ResourceDirectory string
-	Platform          config.Platform
-	DefaultProfile    string
+	Config config.ReconcilerConfig
 	client.Client
 	Scheme *runtime.Scheme
 }
 
-func NewReconciler(client client.Client, scheme *runtime.Scheme, resourceDir string, platform config.Platform, defaultProfile string) *Reconciler {
+func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *runtime.Scheme) *Reconciler {
 	return &Reconciler{
-		ResourceDirectory: resourceDir,
-		Platform:          platform,
-		DefaultProfile:    defaultProfile,
-		Client:            client,
-		Scheme:            scheme,
+		Config: cfg,
+		Client: client,
+		Scheme: scheme,
 	}
 }
 
@@ -109,8 +105,8 @@ func validate(istio *v1alpha1.RemoteIstio) error {
 func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1alpha1.RemoteIstio) error {
 	values, err := revision.ComputeValues(
 		istio.Spec.Values, istio.Spec.Namespace, istio.Spec.Version,
-		r.Platform, r.DefaultProfile, istio.Spec.Profile,
-		r.ResourceDirectory, getActiveRevisionName(istio))
+		r.Config.Platform, r.Config.DefaultProfile, istio.Spec.Profile,
+		r.Config.ResourceDirectory, getActiveRevisionName(istio))
 	if err != nil {
 		return err
 	}
