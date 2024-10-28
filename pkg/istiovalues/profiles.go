@@ -19,6 +19,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"gopkg.in/yaml.v3"
@@ -27,13 +28,22 @@ import (
 	"istio.io/istio/pkg/util/sets"
 )
 
-func ApplyProfiles(resourceDir string, version string, defaultProfile, userProfile string, userValues helm.Values) (helm.Values, error) {
+func ApplyProfilesAndPlatform(
+	resourceDir string, version string, platform config.Platform, defaultProfile, userProfile string, userValues helm.Values,
+) (helm.Values, error) {
 	profile := resolve(defaultProfile, userProfile)
 	defaultValues, err := getValuesFromProfiles(path.Join(resourceDir, version, "profiles"), profile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get values from profile %q: %w", profile, err)
 	}
-	return mergeOverwrite(defaultValues, userValues), nil
+	values := helm.Values(mergeOverwrite(defaultValues, userValues))
+
+	if platform != config.PlatformKubernetes && platform != config.PlatformUndefined {
+		if err = values.SetIfAbsent("global.platform", string(platform)); err != nil {
+			return nil, fmt.Errorf("failed to set global.platform: %w", err)
+		}
+	}
+	return values, nil
 }
 
 func resolve(defaultProfile, userProfile string) []string {

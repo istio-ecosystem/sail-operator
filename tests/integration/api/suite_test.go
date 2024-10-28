@@ -25,6 +25,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/controllers/istiocni"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiorevision"
 	"github.com/istio-ecosystem/sail-operator/controllers/remoteistio"
+	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/test"
@@ -74,16 +75,16 @@ var _ = BeforeSuite(func() {
 	chartManager := helm.NewChartManager(mgr.GetConfig(), "")
 	resourceDir := path.Join(project.RootDir, "resources")
 
-	Expect(istio.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDir, "").
+	Expect(istio.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDir, config.PlatformKubernetes, "").
 		SetupWithManager(mgr)).To(Succeed())
 
-	Expect(remoteistio.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDir, "").
+	Expect(remoteistio.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDir, config.PlatformKubernetes, "").
 		SetupWithManager(mgr)).To(Succeed())
 
 	Expect(istiorevision.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDir, chartManager).
 		SetupWithManager(mgr)).To(Succeed())
 
-	Expect(istiocni.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDir, chartManager, "").
+	Expect(istiocni.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDir, chartManager, config.PlatformKubernetes, "").
 		SetupWithManager(mgr)).To(Succeed())
 
 	// create new cancellable context

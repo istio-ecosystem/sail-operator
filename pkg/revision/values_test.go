@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	"github.com/istio-ecosystem/sail-operator/pkg/config"
 
 	"istio.io/istio/pkg/ptr"
 )
@@ -66,7 +67,7 @@ spec:
 		},
 	}
 
-	result, err := ComputeValues(values, namespace, version, "default", "my-profile", resourceDir, revisionName)
+	result, err := ComputeValues(values, namespace, version, config.PlatformOpenShift, "default", "my-profile", resourceDir, revisionName)
 	if err != nil {
 		t.Errorf("Expected no error, but got an error: %v", err)
 	}
@@ -78,6 +79,7 @@ spec:
 			Image: ptr.Of("from-istio-spec-values"),
 		},
 		Global: &v1alpha1.GlobalConfig{
+			Platform:       ptr.Of("openshift"),
 			IstioNamespace: ptr.Of(namespace), // this value is always added/overridden based on IstioRevision.spec.namespace
 		},
 		Revision: ptr.Of(revisionName),

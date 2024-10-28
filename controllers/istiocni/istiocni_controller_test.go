@@ -107,7 +107,7 @@ func TestValidate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
 			cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(tc.objects...).Build()
-			r := NewReconciler(cl, scheme.Scheme, "", nil, "")
+			r := NewReconciler(cl, scheme.Scheme, "", nil, config.PlatformKubernetes, "")
 
 			err := r.validate(context.TODO(), tc.cni)
 			if tc.expectErr == "" {
@@ -282,7 +282,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 
 			cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(tt.clientObjects...).WithInterceptorFuncs(tt.interceptors).Build()
 
-			r := NewReconciler(cl, scheme.Scheme, resourceDir, nil, "")
+			r := NewReconciler(cl, scheme.Scheme, resourceDir, nil, config.PlatformKubernetes, "")
 
 			cni := &v1alpha1.IstioCNI{
 				ObjectMeta: metav1.ObjectMeta{
@@ -464,7 +464,7 @@ func TestDetermineStatus(t *testing.T) {
 	ctx := context.TODO()
 	resourceDir := t.TempDir()
 	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
-	r := NewReconciler(cl, scheme.Scheme, resourceDir, nil, "")
+	r := NewReconciler(cl, scheme.Scheme, resourceDir, nil, config.PlatformKubernetes, "")
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
