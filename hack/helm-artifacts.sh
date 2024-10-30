@@ -21,35 +21,22 @@ CUR_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source "${CUR_DIR}"/validate_semver.sh
 
 GITHUB_TOKEN="${GITHUB_TOKEN:-}"
-
 GIT_CONFIG_USER_NAME="${GIT_CONFIG_USER_NAME:-}"
 GIT_CONFIG_USER_EMAIL="${GIT_CONFIG_USER_EMAIL:-}"
-
 UPSTREAM_OPERATOR_NAME="${UPSTREAM_OPERATOR_NAME:-"sail-operator"}"
 OWNER="${OWNER:-"istio-ecosystem"}"
 HUB_REPO_URL="${HUB_REPO_URL:-github.com/${OWNER}/${UPSTREAM_OPERATOR_NAME}}"
 HUB_HELM_BRANCH="${HUB_HIVE_BRANCH:-"gh-pages"}"
-HUB_HELM_ARTIFACT_URL="https://${HUB_REPO_URL}/releases/download/${OPERATOR_VERSION}"/
 
-: "${OPERATOR_VERSION:?"Missing OPERATOR_VERSION variable"}"
-
-show_help() {
+function show_help() {
     cat <<EOF
-
     Publish Sail Operator helm artifacts to gh-pages branch
-    It will allow to install Sail Operator via "helm add repo"
-
-    ./publish-helm-artifacts.sh [options]
-
+    Usage: ./publish-helm-artifacts.sh [options]
 EOF
 }
 
-function update_repo_index() {
-    echo "Update Helm repo index with new artifact"
-}
-
 function prepare_repo() {
-    echo "Prepare repository"
+    echo "Preparing repository..."
 
     if [ -z "${GITHUB_TOKEN}" ]; then
       die "Please provide GITHUB_TOKEN"
@@ -61,48 +48,70 @@ function prepare_repo() {
     TMP_DIR=$(mktemp -d)
     trap 'rm -rf "${TMP_DIR}"' EXIT
 
-    git clone --single-branch --depth=1 --branch "${HUB_HELM_BRANCH}" "https://${GIT_USER}:${GITHUB_TOKEN}@${HUB_REPO_URL}" "${TMP_DIR}/${UPSTREAM_OPERATOR_NAME}"
+    git clone --single-branch --depth=1 --branch "${HUB_HELM_BRANCH}" "https://${GITHUB_TOKEN}@${HUB_REPO_URL}" "${TMP_DIR}/${UPSTREAM_OPERATOR_NAME}"
     cd "${TMP_DIR}/${UPSTREAM_OPERATOR_NAME}"
 
     if ! git config user.name; then
       git config user.name "${GIT_CONFIG_USER_NAME}"
     fi
-
     if ! git config user.email; then
       git config user.email "${GIT_CONFIG_USER_EMAIL}"
     fi
 }
 
-function fetch_released_artifact() {
-    echo "Fetch released helm artifact"
+function get_latest_release_version() {
+    echo "Fetching latest release version from GitHub API..."
 
-    wget "${HUB_HELM_ARTIFACT_URL}/${UPSTREAM_OPERATOR_NAME}-${OPERATOR_VERSION}.tgz"
+    latest_version=$(curl -s \
+      "https://api.github.com/repos/${OWNER}/${UPSTREAM_OPERATOR_NAME}/releases/latest" | \
+      jq -r .tag_name)
+    echo "Latest release version: ${latest_version}"
 }
 
-function update_helm_repo_index() {
-    echo "Update index of Helm repo"
-    local helm_branch="update_helm_artifact_${OPERATOR_VERSION}"
+function check_version_in_index() {
+    echo "Checking if version ${latest_version} exists in index.yaml..."
 
-    git checkout -b "$helm_branch"
-    helm repo index --merge index.yaml . --url "${HUB_HELM_ARTIFACT_URL}"
+    if grep -q "version: ${latest_version}" index.yaml; then
+        echo "Version ${latest_version} is already in index.yaml. Skipping update."
+        return 0
+    else
+        echo "Version ${latest_version} not found in index.yaml. Updating index."
+        return 1
+    fi
+}
+
+function add_version_to_index() {
+    echo "Adding new version to Helm repo index..."
+
+    wget "https://${HUB_REPO_URL}/releases/download/${latest_version}/${UPSTREAM_OPERATOR_NAME}-${latest_version}.tgz"
+    helm repo index --merge index.yaml . --url "https://${HUB_REPO_URL}/releases/download/${latest_version}/"
+
+    git checkout -b "update_helm_artifact_${latest_version}"
     git add index.yaml
-    git commit -m "Add new sail-operator chart release - ${OPERATOR_VERSION}"
-    git push origin "$helm_branch"
+    git commit -m "Add new sail-operator chart release - ${latest_version}"
+    git push origin "update_helm_artifact_${latest_version}"
 
+    create_pull_request
+}
+
+function create_pull_request {
+    echo "Creating pull request..."
     PAYLOAD="${TMP_DIR}/PAYLOAD"
 
     jq -c -n \
-      --arg msg "Add new sail-operator chart release - ${OPERATOR_VERSION}" \
-      --arg head "${OWNER}:${helm_branch}" \
+      --arg msg "Add new sail-operator chart release - ${latest_version}" \
+      --arg head "${OWNER}:update_helm_artifact_${latest_version}" \
       --arg base "${HUB_HELM_BRANCH}" \
-      --arg title "Helm artifact ${OPERATOR_VERSION}" \
+      --arg title "Helm artifact ${latest_version}" \
       '{head: $head, base: $base, title: $title, body: $msg }' > "${PAYLOAD}"
 
-    curl --fail-with-body -X POST \
+    curl -X POST \
       -H "Authorization: token ${GITHUB_TOKEN}" \
       -H "Accept: application/vnd.github.v3+json" \
-      https://api.github.com/repos/"${OWNER}/${UPSTREAM_OPERATOR_NAME}"/pulls \
-      --data-binary "@${PAYLOAD}"
+      -d @"${PAYLOAD}" \
+      "https://api.github.com/repos/${OWNER}/${UPSTREAM_OPERATOR_NAME}/pulls"
+
+    rm "${PAYLOAD}"
 }
 
 while test $# -gt 0; do
@@ -112,12 +121,14 @@ while test $# -gt 0; do
         exit 0
         ;;
     *)
-        echo "Unknown param $1"
+        echo "Unknown parameter $1"
         exit 1
         ;;
   esac
 done
 
 prepare_repo
-fetch_released_artifact
-update_helm_repo_index
+get_latest_release_version
+if ! check_version_in_index; then
+  add_version_to_index
+fi
