@@ -134,7 +134,7 @@ func LogDebugInfo(k kubectl.Kubectl) {
 	// TODO: Add the creation of file with this information to be attached to the test report
 
 	GinkgoWriter.Println()
-	GinkgoWriter.Println("The test run has failures and the debug information is as follows from cluster: %q:", k.GetClusterName())
+	GinkgoWriter.Printf("The test run has failures and the debug information is as follows from cluster: %q:\n", k.GetClusterName())
 	GinkgoWriter.Println("=========================================================")
 	logOperatorDebugInfo(k)
 	GinkgoWriter.Println("=========================================================")
