@@ -490,54 +490,117 @@ You can use the Sail Operator and the Sail CRDs to manage a multi-cluster Istio 
 
 These steps are common to every multi-cluster deployment and should be completed *after* meeting the prerequisites but *before* starting on a specific deployment model.
 
-1. Setup env vars.
+1. Setup environment variables.
 
     ```sh
     export CTX_CLUSTER1=<cluster1-ctx>
     export CTX_CLUSTER2=<cluster2-ctx>
-    export ISTIO_VERSION=1.23.0
+    export ISTIO_VERSION=1.23.2
     ```
 
 2. Create `istio-system` namespace on each cluster.
 
     ```sh
     kubectl get ns istio-system --context "${CTX_CLUSTER1}" || kubectl create namespace istio-system --context "${CTX_CLUSTER1}"
-    ```
-
-    ```sh
     kubectl get ns istio-system --context "${CTX_CLUSTER2}" || kubectl create namespace istio-system --context "${CTX_CLUSTER2}"
     ```
 
-3. Create shared trust and add intermediate CAs to each cluster.
+4. Create a shared root certificate.
 
-    If you already have a [shared trust](https://istio.io/latest/docs/setup/install/multicluster/before-you-begin/#configure-trust) for each cluster you can skip this. Otherwise, you can use the instructions below to create a shared trust and push the intermediate CAs into your clusters.
+    If you have [established trust](https://istio.io/latest/docs/setup/install/multicluster/before-you-begin/#configure-trust) between your clusters already you can skip this and the following steps.
 
-    Create a self signed root CA and intermediate CAs.
     ```sh
-    mkdir -p certs
-    pushd certs
-    curl -fsL -o common.mk "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/tools/certs/common.mk"
-    curl -fsL -o Makefile.selfsigned.mk "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/tools/certs/Makefile.selfsigned.mk"
-    make -f Makefile.selfsigned.mk root-ca
-    make -f Makefile.selfsigned.mk east-cacerts
-    make -f Makefile.selfsigned.mk west-cacerts
-    popd
+    openssl genrsa -out root-key.pem 4096
+    cat <<EOF > root-ca.conf
+    [ req ]
+    encrypt_key = no
+    prompt = no
+    utf8 = yes
+    default_md = sha256
+    default_bits = 4096
+    req_extensions = req_ext
+    x509_extensions = req_ext
+    distinguished_name = req_dn
+    [ req_ext ]
+    subjectKeyIdentifier = hash
+    basicConstraints = critical, CA:true
+    keyUsage = critical, digitalSignature, nonRepudiation, keyEncipherment, keyCertSign
+    [ req_dn ]
+    O = Istio
+    CN = Root CA
+    EOF
+
+    openssl req -sha256 -new -key root-key.pem \
+      -config root-ca.conf \
+      -out root-cert.csr
+
+    openssl x509 -req -sha256 -days 3650 \
+      -signkey root-key.pem \
+      -extensions req_ext -extfile root-ca.conf \
+      -in root-cert.csr \
+      -out root-cert.pem
+    ```
+5. Create intermediate certiciates.
+
+    ```sh
+    for cluster in west east; do
+      mkdir $cluster
+
+      openssl genrsa -out ${cluster}/ca-key.pem 4096
+      cat <<EOF > ${cluster}/intermediate.conf
+    [ req ]
+    encrypt_key = no
+    prompt = no
+    utf8 = yes
+    default_md = sha256
+    default_bits = 4096
+    req_extensions = req_ext
+    x509_extensions = req_ext
+    distinguished_name = req_dn
+    [ req_ext ]
+    subjectKeyIdentifier = hash
+    basicConstraints = critical, CA:true, pathlen:0
+    keyUsage = critical, digitalSignature, nonRepudiation, keyEncipherment, keyCertSign
+    subjectAltName=@san
+    [ san ]
+    DNS.1 = istiod.istio-system.svc
+    [ req_dn ]
+    O = Istio
+    CN = Intermediate CA
+    L = $cluster
+    EOF
+
+      openssl req -new -config ${cluster}/intermediate.conf \
+        -key ${cluster}/ca-key.pem \
+        -out ${cluster}/cluster-ca.csr
+
+      openssl x509 -req -sha256 -days 3650 \
+        -CA root-cert.pem \
+        -CAkey root-key.pem -CAcreateserial \
+        -extensions req_ext -extfile ${cluster}/intermediate.conf \
+        -in ${cluster}/cluster-ca.csr \
+        -out ${cluster}/ca-cert.pem
+
+      cat ${cluster}/ca-cert.pem root-cert.pem \
+        > ${cluster}/cert-chain.pem
+      cp root-cert.pem ${cluster}
+    done
     ```
 
-    Push the intermediate CAs to each cluster.
+6. Push the intermediate CAs to each cluster.
     ```sh
     kubectl --context "${CTX_CLUSTER1}" label namespace istio-system topology.istio.io/network=network1
     kubectl get secret -n istio-system --context "${CTX_CLUSTER1}" cacerts || kubectl create secret generic cacerts -n istio-system --context "${CTX_CLUSTER1}" \
-      --from-file=certs/east/ca-cert.pem \
-      --from-file=certs/east/ca-key.pem \
-      --from-file=certs/east/root-cert.pem \
-      --from-file=certs/east/cert-chain.pem
+      --from-file=east/ca-cert.pem \
+      --from-file=east/ca-key.pem \
+      --from-file=east/root-cert.pem \
+      --from-file=east/cert-chain.pem
     kubectl --context "${CTX_CLUSTER2}" label namespace istio-system topology.istio.io/network=network2
     kubectl get secret -n istio-system --context "${CTX_CLUSTER2}" cacerts || kubectl create secret generic cacerts -n istio-system --context "${CTX_CLUSTER2}" \
-      --from-file=certs/west/ca-cert.pem \
-      --from-file=certs/west/ca-key.pem \
-      --from-file=certs/west/root-cert.pem \
-      --from-file=certs/west/cert-chain.pem
+      --from-file=west/ca-cert.pem \
+      --from-file=west/ca-key.pem \
+      --from-file=west/root-cert.pem \
+      --from-file=west/cert-chain.pem
     ```
 
 ### Multi-Primary - Multi-Network
@@ -566,22 +629,27 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
             clusterName: cluster1
           network: network1
     EOF
+    ```
+  
+2. Wait for the control plane to become ready.
+
+    ```sh
     kubectl wait --context "${CTX_CLUSTER1}" --for=condition=Ready istios/default --timeout=3m
     ```
 
-2. Create east-west gateway on `cluster1`.
+3. Create east-west gateway on `cluster1`.
 
     ```sh
     kubectl apply --context "${CTX_CLUSTER1}" -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/east-west-gateway-net1.yaml
     ```
 
-3. Expose services on `cluster1`.
+4. Expose services on `cluster1`.
 
     ```sh
     kubectl --context "${CTX_CLUSTER1}" apply -n istio-system -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/expose-services.yaml
     ```
 
-4. Create `Istio` resource on `cluster2`.
+5. Create `Istio` resource on `cluster2`.
 
     ```sh
     kubectl apply --context "${CTX_CLUSTER2}" -f - <<EOF
@@ -599,22 +667,27 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
             clusterName: cluster2
           network: network2
     EOF
+    ```
+
+6. Wait for the control plane to become ready.
+
+    ```sh
     kubectl wait --context "${CTX_CLUSTER2}" --for=jsonpath='{.status.revisions.ready}'=1 istios/default --timeout=3m
     ```
 
-5. Create east-west gateway on `cluster2`.
+7. Create east-west gateway on `cluster2`.
 
     ```sh
     kubectl apply --context "${CTX_CLUSTER2}" -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/east-west-gateway-net2.yaml
     ```
 
-6. Expose services on `cluster2`.
+8. Expose services on `cluster2`.
 
     ```sh
     kubectl --context "${CTX_CLUSTER2}" apply -n istio-system -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/expose-services.yaml
     ```
 
-7. Install a remote secret in `cluster2` that provides access to the `cluster1` API server.
+9. Install a remote secret in `cluster2` that provides access to the `cluster1` API server.
 
     ```sh
     istioctl create-remote-secret \
@@ -634,7 +707,7 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
       kubectl apply -f - --context "${CTX_CLUSTER2}"
     ```
 
-8. Install a remote secret in `cluster1` that provides access to the `cluster2` API server.
+10. Install a remote secret in `cluster1` that provides access to the `cluster2` API server.
 
     ```sh
     istioctl create-remote-secret \
@@ -643,7 +716,7 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
       kubectl apply -f - --context="${CTX_CLUSTER1}"
     ```
 
-    If using kind, first get the `cluster1` controlplane IP and pass the `--server` option to `istioctl create-remote-secret`
+    **If using kind**, first get the `cluster1` controlplane IP and pass the `--server` option to `istioctl create-remote-secret`
 
     ```sh
     CLUSTER2_CONTAINER_IP=$(kubectl get nodes -l node-role.kubernetes.io/control-plane --context "${CTX_CLUSTER2}" -o jsonpath='{.items[0].status.addresses[?(@.type == "InternalIP")].address}')
@@ -654,11 +727,18 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
       kubectl apply -f - --context "${CTX_CLUSTER1}"
     ```
 
-9. Deploy sample applications to `cluster1`.
+11. Create sample application namespaces in each cluster.
 
     ```sh
     kubectl get ns sample --context "${CTX_CLUSTER1}" || kubectl create --context="${CTX_CLUSTER1}" namespace sample
     kubectl label --context="${CTX_CLUSTER1}" namespace sample istio-injection=enabled
+    kubectl get ns sample --context "${CTX_CLUSTER2}" || kubectl create --context="${CTX_CLUSTER2}" namespace sample
+    kubectl label --context="${CTX_CLUSTER2}" namespace sample istio-injection=enabled
+    ```
+
+12. Deploy sample applications in `cluster1`.
+
+    ```sh
     kubectl apply --context="${CTX_CLUSTER1}" \
       -f https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml \
       -l service=helloworld -n sample
@@ -669,11 +749,9 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
       -f https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/sleep/sleep.yaml -n sample
     ```
 
-10. Deploy sample applications to `cluster2`.
+13. Deploy sample applications in `cluster2`.
 
     ```sh
-    kubectl get ns sample --context "${CTX_CLUSTER2}" || kubectl create --context="${CTX_CLUSTER2}" namespace sample
-    kubectl label --context="${CTX_CLUSTER2}" namespace sample istio-injection=enabled
     kubectl apply --context="${CTX_CLUSTER2}" \
       -f https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml \
       -l service=helloworld -n sample
@@ -684,25 +762,37 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
       -f https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/sleep/sleep.yaml -n sample
     ```
 
-11. Verify that you see a response from both v1 and v2.
-
-    `cluster1` responds with v1 and v2
+14. Wait for the sample applications to be ready.
     ```sh
-    kubectl exec --context="${CTX_CLUSTER1}" -n sample -c sleep \
+    kubectl --context="${CTX_CLUSTER1}" wait --for condition=available -n sample deployment/helloworld-v1
+    kubectl --context="${CTX_CLUSTER2}" wait --for condition=available -n sample deployment/helloworld-v2
+    kubectl --context="${CTX_CLUSTER1}" wait --for condition=available -n sample deployment/sleep
+    kubectl --context="${CTX_CLUSTER2}" wait --for condition=available -n sample deployment/sleep
+    ```
+
+15. From `cluster1`, send 10 requests to the helloworld service. Verify that you see responses from both v1 and v2.
+
+    ```sh
+    for i in {0..9}; do
+      kubectl exec --context="${CTX_CLUSTER1}" -n sample -c sleep \
         "$(kubectl get pod --context="${CTX_CLUSTER1}" -n sample -l \
         app=sleep -o jsonpath='{.items[0].metadata.name}')" \
-        -- curl -sS helloworld.sample:5000/hello
+        -- curl -sS helloworld.sample:5000/hello;
+    done
     ```
 
-    `cluster2` responds with v1 and v2
+16. From `cluster2`, send another 10 requests to the helloworld service. Verify that you see responses from both v1 and v2.
+
     ```sh
-    kubectl exec --context="${CTX_CLUSTER2}" -n sample -c sleep \
+    for i in {0..9}; do
+      kubectl exec --context="${CTX_CLUSTER2}" -n sample -c sleep \
         "$(kubectl get pod --context="${CTX_CLUSTER2}" -n sample -l \
         app=sleep -o jsonpath='{.items[0].metadata.name}')" \
-        -- curl -sS helloworld.sample:5000/hello
+        -- curl -sS helloworld.sample:5000/hello;
+    done
     ```
 
-12. Cleanup
+17. Cleanup
 
     ```sh
     kubectl delete istios default --context="${CTX_CLUSTER1}"
