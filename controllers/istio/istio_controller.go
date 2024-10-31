@@ -115,7 +115,6 @@ func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1alpha
 
 	return revision.CreateOrUpdate(ctx, r.Client,
 		getActiveRevisionName(istio),
-		v1alpha1.IstioRevisionTypeLocal,
 		istio.Spec.Version, istio.Spec.Namespace, values,
 		metav1.OwnerReference{
 			APIVersion:         v1alpha1.GroupVersion.String(),
@@ -324,6 +323,8 @@ func convertConditionReason(reason v1alpha1.IstioRevisionConditionReason) v1alph
 		return v1alpha1.IstioReasonReadinessCheckFailed
 	case v1alpha1.IstioRevisionReasonReconcileError:
 		return v1alpha1.IstioReasonReconcileError
+	case v1alpha1.IstioRevisionReasonRemoteIstiodNotReady:
+		return v1alpha1.IstioReasonRemoteIstiodNotReady
 	default:
 		panic(fmt.Sprintf("can't convert IstioRevisionConditionReason: %s", reason))
 	}

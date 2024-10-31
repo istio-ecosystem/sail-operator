@@ -7,7 +7,6 @@
   - [Istio resource](#istio-resource)
   - [IstioRevision resource](#istiorevision-resource)
   - [IstioCNI resource](#istiocni-resource)
-  - [RemoteIstio resource](#remoteistio-resource)
 - [API Reference documentation](#api-reference-documentation)
 - [Getting Started](#getting-started)
   - [Installation on OpenShift](#installation-on-openshift)
@@ -106,32 +105,6 @@ spec:
       excludeNamespaces:
       - kube-system
 ```
-
-### RemoteIstio resource
-The `RemoteIstio` resource is used to connect the local cluster to an external Istio control plane. 
-When you create a `RemoteIstio` resource, the operator deploys the `istiod-remote` Helm chart. 
-Instead of deploying the entire Istio control plane, this chart deploys only the sidecar injector webhook, allowing you to inject the Istio proxy into your workloads and have this proxy managed by the Istio control plane running outside the cluster (typically in another Kubernetes cluster). 
-
-The `RemoteIstio` resource is very similar to the `Istio` resource, with the most notable difference being the `istiodRemote` field in the `values` section, which allows you to configure the address of the remote Istio control plane:
-
-```yaml
-apiVersion: sailoperator.io/v1alpha1
-kind: RemoteIstio
-metadata:
-  name: default
-spec:
-  version: v1.23.2
-  namespace: istio-system
-  updateStrategy:
-    type: InPlace
-  values:
-    istiodRemote:
-      injectionPath: /inject/cluster/cluster2/net/network1
-    global:
-      remotePilotAddress: 1.2.3.4
-```
-
-For more information on how to use the `RemoteIstio` resource, refer to the [multi-cluster](#multi-cluster) section.
 
 ## API Reference documentation
 The Sail Operator API reference documentation can be found [here](https://github.com/istio-ecosystem/sail-operator/tree/main/docs/api-reference/sailoperator.io.md).
@@ -243,10 +216,6 @@ Sail Operator's Istio resource does not have a `spec.components` field. Instead,
 ### CNI
 
 The CNI plugin's lifecycle is managed separately from the control plane. You will have to create a [IstioCNI resource](#istiocni-resource) to use CNI.
-
-### istiod-remote
-
-The functionality of the istiod-remote chart is exposed through the [RemoteIstio resource](#remoteistio-resource).
 
 ## Gateways
 
@@ -877,17 +846,18 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
     kubectl --context "${CTX_CLUSTER1}" apply -n istio-system -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/expose-services.yaml
     ```
 
-5. Create `RemoteIstio` resource on `cluster2`.
+5. Create an `Istio` on `cluster2` with the `remote` profile.
 
     ```sh
     kubectl apply --context "${CTX_CLUSTER2}" -f - <<EOF
     apiVersion: sailoperator.io/v1alpha1
-    kind: RemoteIstio
+    kind: Istio
     metadata:
       name: default
     spec:
       version: v${ISTIO_VERSION}
       namespace: istio-system
+      profile: remote
       values:
         istiodRemote:
           injectionPath: /inject/cluster/remote/net/network2
@@ -1029,18 +999,19 @@ In this setup there is an external control plane cluster (`cluster1`) and a remo
     export EXTERNAL_ISTIOD_ADDR=$(kubectl -n istio-system --context="${CTX_CLUSTER1}" get svc istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
     ```
 
-4. Create the `external-istiod` namespace and `RemoteIstio` resource in `cluster2`.
+4. Create the `external-istiod` namespace and `Istio` resource in `cluster2`.
 
     ```sh
     kubectl create namespace external-istiod --context="${CTX_CLUSTER2}"
     kubectl apply --context "${CTX_CLUSTER2}" -f - <<EOF
     apiVersion: sailoperator.io/v1alpha1
-    kind: RemoteIstio
+    kind: Istio
     metadata:
       name: external-istiod
     spec:
       version: v${ISTIO_VERSION}
       namespace: external-istiod
+      profile: remote
       values:
         defaultRevision: external-istiod
         global:
@@ -1187,10 +1158,10 @@ In this setup there is an external control plane cluster (`cluster1`) and a remo
     EOF
     ```
 
-9. Wait for the `RemoteIstio` to be healthy:
+9. Wait for the `Istio` resource to be ready:
 
     ```sh
-    kubectl wait --context="${CTX_CLUSTER2}" --for=condition=Ready remoteistios/external-istiod --timeout=3m
+    kubectl wait --context="${CTX_CLUSTER2}" --for=condition=Ready istios/external-istiod --timeout=3m
     ```
 
 10. Create the `sample` namespace on the remote cluster and label it to enable injection.
@@ -1261,7 +1232,7 @@ In this setup there is an external control plane cluster (`cluster1`) and a remo
     kubectl delete ns istio-system --context="${CTX_CLUSTER1}"
     kubectl delete istios external-istiod --context="${CTX_CLUSTER1}"
     kubectl delete ns external-istiod --context="${CTX_CLUSTER1}"
-    kubectl delete remoteistios external-istiod --context="${CTX_CLUSTER2}"
+    kubectl delete istios external-istiod --context="${CTX_CLUSTER2}"
     kubectl delete ns external-istiod --context="${CTX_CLUSTER2}"
     kubectl delete ns sample --context="${CTX_CLUSTER2}"
     ```

@@ -96,9 +96,6 @@ function patchIstioCharts() {
 }
 
 function convertIstioProfiles() {
-  # delete the remote profile, because it isn't needed (we have the RemoteIstio resource instead)
-  [ -f "${PROFILES_DIR}"/remote.yaml ] && rm "${PROFILES_DIR}"/remote.yaml
-
   # delete the minimal profile, because it ends up being empty after the conversion
   [ -f "${PROFILES_DIR}"/minimal.yaml ] && rm "${PROFILES_DIR}"/minimal.yaml
 

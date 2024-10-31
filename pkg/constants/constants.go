@@ -65,6 +65,10 @@ const (
 	// reports whether the remote control plane is ready or not
 	WebhookReadinessProbeStatusAnnotationKey = MetadataNamespace + "/readinessProbe.status"
 
+	// WebhookReadinessProbeStatusReasonAnnotationKey is an annotation on the istio-sidecar-injection MutatingWebhookConfiguration that
+	// reports why the remote control plane is not ready
+	WebhookReadinessProbeStatusReasonAnnotationKey = MetadataNamespace + "/readinessProbe.reason"
+
 	// WebhookReadinessProbePeriodSecondsAnnotationKey is an annotation on the istio-sidecar-injection MutatingWebhookConfiguration that
 	// specifies the period for the readiness probe
 	WebhookReadinessProbePeriodSecondsAnnotationKey = MetadataNamespace + "/readinessProbe.periodSeconds"

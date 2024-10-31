@@ -28,11 +28,6 @@ const (
 // IstioRevisionSpec defines the desired state of IstioRevision
 // +kubebuilder:validation:XValidation:rule="self.values.global.istioNamespace == self.__namespace__",message="spec.values.global.istioNamespace must match spec.namespace"
 type IstioRevisionSpec struct {
-	// Type indicates whether this revision represents a local or a remote control plane installation.
-	// +kubebuilder:default=Local
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	Type IstioRevisionType `json:"type"`
-
 	// +sail:version
 	// Defines the version of Istio to install.
 	// Must be one of: v1.23.2, v1.22.5, v1.21.6, latest.
@@ -176,16 +171,6 @@ const (
 const (
 	// IstioRevisionReasonHealthy indicates that the control plane is fully reconciled and that all components are ready.
 	IstioRevisionReasonHealthy IstioRevisionConditionReason = "Healthy"
-)
-
-type IstioRevisionType string
-
-const (
-	// IstioRevisionTypeLocal indicates that the revision represents a local control plane installation.
-	IstioRevisionTypeLocal IstioRevisionType = "Local"
-
-	// IstioRevisionTypeRemote indicates that the revision represents a remote control plane installation.
-	IstioRevisionTypeRemote IstioRevisionType = "Remote"
 )
 
 // +kubebuilder:object:root=true

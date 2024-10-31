@@ -26,7 +26,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-func CreateOrUpdate(ctx context.Context, cl client.Client, revName string, revType v1alpha1.IstioRevisionType, version string, namespace string,
+func CreateOrUpdate(
+	ctx context.Context, cl client.Client, revName string, version string, namespace string,
 	values *v1alpha1.Values, ownerRef metav1.OwnerReference,
 ) error {
 	log := logf.FromContext(ctx)
@@ -53,7 +54,6 @@ func CreateOrUpdate(ctx context.Context, cl client.Client, revName string, revTy
 				OwnerReferences: []metav1.OwnerReference{ownerRef},
 			},
 			Spec: v1alpha1.IstioRevisionSpec{
-				Type:      revType,
 				Version:   version,
 				Namespace: namespace,
 				Values:    values,
