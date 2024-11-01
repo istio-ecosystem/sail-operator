@@ -9380,11 +9380,10 @@ spec:
               version:
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.23.2, v1.22.5, v1.21.6, latest.
+                  Must be one of: v1.24.0-rc.0, v1.23.2, latest.
                 enum:
+                - v1.24.0-rc.0
                 - v1.23.2
-                - v1.22.5
-                - v1.21.6
                 - latest
                 type: string
             required:
