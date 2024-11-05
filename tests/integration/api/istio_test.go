@@ -137,7 +137,6 @@ var _ = Describe("Istio resource", Ordered, func() {
 			}).Should(Succeed())
 
 			Expect(rev.Spec).To(Equal(v1alpha1.IstioRevisionSpec{
-				Type:      v1alpha1.IstioRevisionTypeLocal,
 				Version:   istio.Spec.Version,
 				Namespace: istio.Spec.Namespace,
 				Values: &v1alpha1.Values{
@@ -174,7 +173,6 @@ var _ = Describe("Istio resource", Ordered, func() {
 				Eventually(k8sClient.Get).WithArguments(ctx, revKey, rev).Should(Succeed())
 				Expect(rev.GetOwnerReferences()).To(ContainElement(NewOwnerReference(istio)))
 				Expect(rev.Spec).To(Equal(v1alpha1.IstioRevisionSpec{
-					Type:      v1alpha1.IstioRevisionTypeLocal,
 					Version:   istio.Spec.Version,
 					Namespace: istio.Spec.Namespace,
 					Values: &v1alpha1.Values{

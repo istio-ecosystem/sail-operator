@@ -25,6 +25,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
+	"github.com/istio-ecosystem/sail-operator/pkg/version"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/certs"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
@@ -68,14 +69,14 @@ var _ = Describe("Multicluster deployment models", Ordered, func() {
 
 	Describe("Primary-Remote - Multi-Network configuration", func() {
 		// Test the Primary-Remote - Multi-Network configuration for each supported Istio version
-		for _, version := range supportedversion.List {
-			// The Primary-Remote - Multi-Network configuration is only supported in Istio 1.23, because that's the only
-			// version that has the istiod-remote chart. For 1.24, we need to rewrite the support for RemoteIstio.
-			if !(version.Version.Major() == 1 && version.Version.Minor() == 23) {
+		for _, v := range supportedversion.List {
+			// The Primary-Remote - Multi-Network configuration is only supported in Istio 1.24+.
+			if version.Constraint("<1.24").Check(v.Version) {
+				Log(fmt.Sprintf("Skipping test, because Istio version %s does not support Primary-Remote Multi-Network configuration", v.Version))
 				continue
 			}
 
-			Context(fmt.Sprintf("Istio version %s", version.Version), func() {
+			Context(fmt.Sprintf("Istio version %s", v.Version), func() {
 				When("Istio resources are created in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
 						Expect(k1.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be created")
@@ -115,7 +116,7 @@ spec:
       multiCluster:
         clusterName: %s
       network: %s`
-						multiclusterPrimaryYAML := fmt.Sprintf(PrimaryYAML, version.Name, controlPlaneNamespace, "mesh1", "cluster1", "network1")
+						multiclusterPrimaryYAML := fmt.Sprintf(PrimaryYAML, v.Name, controlPlaneNamespace, "mesh1", "cluster1", "network1")
 						Log("Istio CR Primary: ", multiclusterPrimaryYAML)
 						Expect(k1.CreateFromString(multiclusterPrimaryYAML)).To(Succeed(), "Istio Resource creation failed on Primary Cluster")
 					})
@@ -131,7 +132,7 @@ spec:
 						Eventually(common.GetObject).
 							WithArguments(ctx, clPrimary, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
 							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available on Primary; unexpected Condition")
-						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
+						Expect(common.GetVersionFromIstiod()).To(Equal(v.Version), "Unexpected istiod version")
 						Success("Istiod is deployed in the namespace and Running on Primary Cluster")
 					})
 				})
@@ -154,17 +155,18 @@ spec:
 					})
 				})
 
-				When("RemoteIstio is created in Remote cluster", func() {
+				When("Istio is created in Remote cluster", func() {
 					BeforeAll(func(ctx SpecContext) {
-						RemoteYAML := `
+						istioYAMLTemplate := `
 apiVersion: sailoperator.io/v1alpha1
-kind: RemoteIstio
+kind: Istio
 metadata:
   name: default
 spec:
   version: %s
   namespace: istio-system
   values:
+    profile: remote
     istiodRemote:
       injectionPath: /inject/cluster/remote/net/network2
     global:
@@ -173,10 +175,10 @@ spec:
 						remotePilotAddress, err := common.GetSVCLoadBalancerAddress(ctx, clPrimary, controlPlaneNamespace, "istio-eastwestgateway")
 						Expect(remotePilotAddress).NotTo(BeEmpty(), "Remote Pilot Address is empty")
 						Expect(err).NotTo(HaveOccurred(), "Error getting Remote Pilot Address")
-						remoteIstioYAML := fmt.Sprintf(RemoteYAML, version.Name, remotePilotAddress)
-						Log("RemoteIstio CR: ", remoteIstioYAML)
-						By("Creating RemoteIstio CR on Remote Cluster")
-						Expect(k2.CreateFromString(remoteIstioYAML)).To(Succeed(), "RemoteIstio Resource creation failed on Remote Cluster")
+						istioYAML := fmt.Sprintf(istioYAMLTemplate, v.Name, remotePilotAddress)
+						Log("Istio CR: ", istioYAML)
+						By("Creating Istio CR on Remote Cluster")
+						Expect(k2.CreateFromString(istioYAML)).To(Succeed(), "Istio Resource creation failed on Remote Cluster")
 
 						// Set the controlplane cluster and network for Remote namespace
 						By("Patching the istio-system namespace on Remote Cluster")
@@ -196,13 +198,13 @@ spec:
 							To(Succeed(), "Error patching istio-system namespace")
 
 						// To be able to access the remote cluster from the primary cluster, we need to create a secret in the primary cluster
-						// RemoteIstio resource will not be Ready until the secret is created
+						// Remote Istio resource will not be Ready until the secret is created
 						// Get the internal IP of the control plane node in Remote cluster
 						internalIPRemote, err := k2.GetInternalIP("node-role.kubernetes.io/control-plane")
 						Expect(internalIPRemote).NotTo(BeEmpty(), "Internal IP is empty for Remote Cluster")
 						Expect(err).NotTo(HaveOccurred())
 
-						// Wait for the RemoteIstio CR to be created, this can be moved to a condition verification, but the resource it not will be Ready at this point
+						// Wait for the remote Istio CR to be created, this can be moved to a condition verification, but the resource it not will be Ready at this point
 						time.Sleep(5 * time.Second)
 
 						// Install a remote secret in Primary cluster that provides access to the Remote cluster API server.
@@ -219,11 +221,11 @@ spec:
 						Success("Remote secret is created in Primary cluster")
 					})
 
-					It("updates RemoteIstio CR status to Ready", func(ctx SpecContext) {
+					It("updates remote Istio CR status to Ready", func(ctx SpecContext) {
 						Eventually(common.GetObject).
-							WithArguments(ctx, clRemote, kube.Key(istioName), &v1alpha1.RemoteIstio{}).
+							WithArguments(ctx, clRemote, kube.Key(istioName), &v1alpha1.Istio{}).
 							Should(HaveCondition(v1alpha1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Remote; unexpected Condition")
-						Success("RemoteIstio CR is Ready on Remote Cluster")
+						Success("Istio CR is Ready on Remote Cluster")
 					})
 				})
 
@@ -244,7 +246,7 @@ spec:
 				When("sample apps are deployed in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
 						// Deploy the sample app in both clusters
-						deploySampleApp("sample", version)
+						deploySampleApp("sample", v)
 						Success("Sample app is deployed in both clusters")
 					})
 
@@ -279,11 +281,11 @@ spec:
 					})
 				})
 
-				When("Istio CR and RemoteIstio CR are deleted in both clusters", func() {
+				When("Istio CR is deleted in both clusters", func() {
 					BeforeEach(func() {
-						Expect(k1.WithNamespace(controlPlaneNamespace).Delete("istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
-						Expect(k2.WithNamespace(controlPlaneNamespace).Delete("remoteistio", istioName)).To(Succeed(), "RemoteIstio CR failed to be deleted")
-						Success("Istio and RemoteIstio are deleted")
+						Expect(k1.WithNamespace(controlPlaneNamespace).Delete("istio", istioName)).To(Succeed(), "primary Istio CR failed to be deleted")
+						Expect(k2.WithNamespace(controlPlaneNamespace).Delete("istio", istioName)).To(Succeed(), "remote Istio CR failed to be deleted")
+						Success("Primary and Remote Istio resources are deleted")
 					})
 
 					It("removes istiod on Primary", func(ctx SpecContext) {
@@ -313,6 +315,10 @@ spec:
 					Expect(k1.WaitNamespaceDeleted("sample")).To(Succeed())
 					Expect(k2.WaitNamespaceDeleted("sample")).To(Succeed())
 					Success("Sample app is deleted in both clusters")
+
+					// Delete the resources created by istioctl create-remote-secret
+					Expect(k2.Delete("ClusterRoleBinding", "istiod-clusterrole-istio-system")).To(Succeed())
+					Expect(k2.Delete("ClusterRole", "istiod-clusterrole-istio-system")).To(Succeed())
 				})
 			})
 		}

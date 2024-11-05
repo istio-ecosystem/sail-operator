@@ -98,8 +98,7 @@ func TestReconcileActiveRevision(t *testing.T) {
 				Controller:         ptr.Of(true),
 				BlockOwnerDeletion: ptr.Of(true),
 			}
-			revType := v1alpha1.IstioRevisionTypeLocal
-			err := CreateOrUpdate(ctx, cl, "my-revision", revType, version, "istio-system", &tc.istioValues, ownerRef)
+			err := CreateOrUpdate(ctx, cl, "my-revision", version, "istio-system", &tc.istioValues, ownerRef)
 			if err != nil {
 				t.Errorf("Expected no error, but got: %v", err)
 			}

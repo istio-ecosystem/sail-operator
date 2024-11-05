@@ -15,8 +15,6 @@ Package v1alpha1 contains API Schema definitions for the sailoperator.io v1alpha
 - [IstioList](#istiolist)
 - [IstioRevision](#istiorevision)
 - [IstioRevisionList](#istiorevisionlist)
-- [RemoteIstio](#remoteistio)
-- [RemoteIstioList](#remoteistiolist)
 
 
 
@@ -627,7 +625,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `version` _string_ | Defines the version of Istio to install. Must be one of: v1.23.2, v1.22.5, v1.21.6, latest. | v1.23.2 | Enum: [v1.23.2 v1.22.5 v1.21.6 latest]   |
-| `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, external, openshift-ambient, openshift, preview, stable. |  | Enum: [ambient default demo empty external openshift-ambient openshift preview stable]   |
+| `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, external, openshift-ambient, openshift, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift-ambient openshift preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio CNI component should be installed. | istio-cni |  |
 | `values` _[CNIValues](#cnivalues)_ | Defines the values to be passed to the Helm charts when installing Istio CNI. |  |  |
 
@@ -689,6 +687,7 @@ _Appears in:_
 | `ActiveRevisionNotFound` | IstioReasonRevisionNotFound indicates that the active IstioRevision is not found.  |
 | `FailedToGetActiveRevision` | IstioReasonFailedToGetActiveRevision indicates that a failure occurred when getting the active IstioRevision  |
 | `IstiodNotReady` | IstioReasonIstiodNotReady indicates that the control plane is fully reconciled, but istiod is not ready.  |
+| `RemoteIstiodNotReady` | IstioReasonRemoteIstiodNotReady indicates that the control plane is fully reconciled, but the remote istiod is not ready.  |
 | `ReadinessCheckFailed` | IstioReasonReadinessCheckFailed indicates that readiness could not be ascertained.  |
 | `Healthy` | IstioReasonHealthy indicates that the control plane is fully reconciled and that all components are ready.  |
 
@@ -853,7 +852,6 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `type` _[IstioRevisionType](#istiorevisiontype)_ | Type indicates whether this revision represents a local or a remote control plane installation. | Local |  |
 | `version` _string_ | Defines the version of Istio to install. Must be one of: v1.23.2, v1.22.5, v1.21.6, latest. |  | Enum: [v1.23.2 v1.22.5 v1.21.6 latest]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. |  |  |
 | `values` _[Values](#values)_ | Defines the values to be passed to the Helm charts when installing Istio. |  |  |
@@ -877,23 +875,6 @@ _Appears in:_
 | `state` _[IstioRevisionConditionReason](#istiorevisionconditionreason)_ | Reports the current state of the object. |  |  |
 
 
-#### IstioRevisionType
-
-_Underlying type:_ _string_
-
-
-
-
-
-_Appears in:_
-- [IstioRevisionSpec](#istiorevisionspec)
-
-| Field | Description |
-| --- | --- |
-| `Local` | IstioRevisionTypeLocal indicates that the revision represents a local control plane installation.  |
-| `Remote` | IstioRevisionTypeRemote indicates that the revision represents a remote control plane installation.  |
-
-
 #### IstioSpec
 
 
@@ -909,7 +890,7 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `version` _string_ | Defines the version of Istio to install. Must be one of: v1.23.2, v1.22.5, v1.21.6, latest. | v1.23.2 | Enum: [v1.23.2 v1.22.5 v1.21.6 latest]   |
 | `updateStrategy` _[IstioUpdateStrategy](#istioupdatestrategy)_ | Defines the update strategy to use when the version in the Istio CR is updated. | \{ type:InPlace \} |  |
-| `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, external, openshift-ambient, openshift, preview, stable. |  | Enum: [ambient default demo empty external openshift-ambient openshift preview stable]   |
+| `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, external, openshift-ambient, openshift, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift-ambient openshift preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. Note that this field is immutable. | istio-system |  |
 | `values` _[Values](#values)_ | Defines the values to be passed to the Helm charts when installing Istio. |  |  |
 
@@ -945,7 +926,6 @@ the Istio CR is updated.
 
 _Appears in:_
 - [IstioSpec](#istiospec)
-- [RemoteIstioSpec](#remoteistiospec)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -2418,150 +2398,6 @@ _Appears in:_
 | `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core)_ | K8s resources settings.  See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container  Deprecated: Marked as deprecated in pkg/apis/values_types.proto. |  |  |
 
 
-#### RemoteIstio
-
-
-
-RemoteIstio represents a remote Istio Service Mesh deployment consisting of one or more
-remote control plane instances (represented by one or more IstioRevision objects).
-
-
-
-_Appears in:_
-- [RemoteIstioList](#remoteistiolist)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `apiVersion` _string_ | `sailoperator.io/v1alpha1` | | |
-| `kind` _string_ | `RemoteIstio` | | |
-| `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
-| `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[RemoteIstioSpec](#remoteistiospec)_ |  | \{ namespace:istio-system updateStrategy:map[type:InPlace] version:v1.23.2 \} |  |
-| `status` _[RemoteIstioStatus](#remoteistiostatus)_ |  |  |  |
-
-
-#### RemoteIstioCondition
-
-
-
-RemoteIstioCondition represents a specific observation of the RemoteIstioCondition object's state.
-
-
-
-_Appears in:_
-- [RemoteIstioStatus](#remoteistiostatus)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `type` _[RemoteIstioConditionType](#remoteistioconditiontype)_ | The type of this condition. |  |  |
-| `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#conditionstatus-v1-meta)_ | The status of this condition. Can be True, False or Unknown. |  |  |
-| `reason` _[RemoteIstioConditionReason](#remoteistioconditionreason)_ | Unique, single-word, CamelCase reason for the condition's last transition. |  |  |
-| `message` _string_ | Human-readable message indicating details about the last transition. |  |  |
-| `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta)_ | Last time the condition transitioned from one status to another. |  |  |
-
-
-#### RemoteIstioConditionReason
-
-_Underlying type:_ _string_
-
-RemoteIstioConditionReason represents a short message indicating how the condition came
-to be in its present state.
-
-
-
-_Appears in:_
-- [RemoteIstioCondition](#remoteistiocondition)
-- [RemoteIstioStatus](#remoteistiostatus)
-
-| Field | Description |
-| --- | --- |
-| `ReconcileError` | RemoteIstioReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried.  |
-| `ActiveRevisionNotFound` | RemoteIstioReasonRevisionNotFound indicates that the active IstioRevision is not found.  |
-| `FailedToGetActiveRevision` | RemoteIstioReasonFailedToGetActiveRevision indicates that a failure occurred when getting the active IstioRevision  |
-| `IstiodNotReady` | RemoteIstioReasonIstiodNotReady indicates that the control plane is fully reconciled, but istiod is not ready.  |
-| `ReadinessCheckFailed` | RemoteIstioReasonReadinessCheckFailed indicates that readiness could not be ascertained.  |
-| `Healthy` | RemoteIstioReasonHealthy indicates that the control plane is fully reconciled and that all components are ready.  |
-
-
-#### RemoteIstioConditionType
-
-_Underlying type:_ _string_
-
-RemoteIstioConditionType represents the type of the condition.  Condition stages are:
-Installed, Reconciled, Ready
-
-
-
-_Appears in:_
-- [RemoteIstioCondition](#remoteistiocondition)
-
-| Field | Description |
-| --- | --- |
-| `Reconciled` | RemoteIstioConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.  |
-| `Ready` | RemoteIstioConditionReady signifies whether any Deployment, StatefulSet, etc. resources are Ready.  |
-
-
-#### RemoteIstioList
-
-
-
-RemoteIstioList contains a list of RemoteIstio
-
-
-
-
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `apiVersion` _string_ | `sailoperator.io/v1alpha1` | | |
-| `kind` _string_ | `RemoteIstioList` | | |
-| `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
-| `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
-| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `items` _[RemoteIstio](#remoteistio) array_ |  |  |  |
-
-
-#### RemoteIstioSpec
-
-
-
-RemoteIstioSpec defines the desired state of RemoteIstio
-
-
-
-_Appears in:_
-- [RemoteIstio](#remoteistio)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.23.2, v1.22.5, v1.21.6, latest. | v1.23.2 | Enum: [v1.23.2 v1.22.5 v1.21.6 latest]   |
-| `updateStrategy` _[IstioUpdateStrategy](#istioupdatestrategy)_ | Defines the update strategy to use when the version in the RemoteIstio CR is updated. | \{ type:InPlace \} |  |
-| `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, external, openshift-ambient, openshift, preview, stable. |  | Enum: [ambient default demo empty external openshift-ambient openshift preview stable]   |
-| `namespace` _string_ | Namespace to which the Istio components should be installed. | istio-system |  |
-| `values` _[Values](#values)_ | Defines the values to be passed to the Helm charts when installing Istio. |  |  |
-
-
-#### RemoteIstioStatus
-
-
-
-RemoteIstioStatus defines the observed state of RemoteIstio
-
-
-
-_Appears in:_
-- [RemoteIstio](#remoteistio)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `observedGeneration` _integer_ | ObservedGeneration is the most recent generation observed for this RemoteIstio object. It corresponds to the object's generation, which is updated on mutation by the API Server. The information in the status pertains to this particular generation of the object. |  |  |
-| `conditions` _[RemoteIstioCondition](#remoteistiocondition) array_ | Represents the latest available observations of the object's current state. |  |  |
-| `state` _[RemoteIstioConditionReason](#remoteistioconditionreason)_ | Reports the current state of the object. |  |  |
-| `activeRevisionName` _string_ | The name of the active revision. |  |  |
-| `revisions` _[RevisionSummary](#revisionsummary)_ | Reports information about the underlying IstioRevisions. |  |  |
-
-
 #### RemoteService
 
 
@@ -2626,7 +2462,6 @@ RevisionSummary contains information on the number of IstioRevisions associated 
 
 _Appears in:_
 - [IstioStatus](#istiostatus)
-- [RemoteIstioStatus](#remoteistiostatus)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -3078,7 +2913,6 @@ _Appears in:_
 _Appears in:_
 - [IstioRevisionSpec](#istiorevisionspec)
 - [IstioSpec](#istiospec)
-- [RemoteIstioSpec](#remoteistiospec)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |

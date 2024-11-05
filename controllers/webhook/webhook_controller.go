@@ -30,6 +30,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
+	"github.com/istio-ecosystem/sail-operator/pkg/revision"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -74,15 +75,21 @@ func NewReconciler(client client.Client, scheme *runtime.Scheme) *Reconciler {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *Reconciler) Reconcile(ctx context.Context, webhook *admissionv1.MutatingWebhookConfiguration) (ctrl.Result, error) {
+	log := logf.FromContext(ctx)
+
 	isReady, err := r.probe(ctx, webhook)
+	reason := ""
 	if err != nil {
-		isReady = false
+		log.V(3).Error(err, "Probe failed")
+		reason = err.Error()
 	}
 
 	if webhook.Annotations == nil {
 		webhook.Annotations = make(map[string]string)
 	}
 	webhook.Annotations[constants.WebhookReadinessProbeStatusAnnotationKey] = strconv.FormatBool(isReady)
+	webhook.Annotations[constants.WebhookReadinessProbeStatusReasonAnnotationKey] = reason
+
 	err = r.Client.Update(ctx, webhook)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -91,7 +98,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, webhook *admissionv1.Mutatin
 }
 
 func doProbe(ctx context.Context, webhook *admissionv1.MutatingWebhookConfiguration) (bool, error) {
-	log := logf.FromContext(ctx).V(3)
+	log := logf.FromContext(ctx)
 	if len(webhook.Webhooks) == 0 {
 		return false, errors.New("mutatingwebhookconfiguration contains no webhooks")
 	}
@@ -129,13 +136,13 @@ func doProbe(ctx context.Context, webhook *admissionv1.MutatingWebhookConfigurat
 		return false, err
 	}
 
-	log.Info("Executing readiness probe on remote control plane", "url", req.URL.String())
+	log.V(3).Info("Executing readiness probe on remote control plane", "url", req.URL.String())
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		log.Info("Probe failed", "error", err)
+		log.V(3).Info("Probe failed", "error", err)
 		return false, err
 	}
-	log.Info("Probe response", "response", resp.StatusCode)
+	log.V(3).Info("Probe response", "response", resp.StatusCode)
 
 	return resp.StatusCode == http.StatusOK, nil
 }
@@ -178,36 +185,37 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 		// we use the Watches function instead of For(), so that we can wrap the handler so that events that cause the object to be enqueued are logged
 		// +lint-watches:ignore: IstioRevision (not found in charts, but this is the main resource watched by this controller)
-		Watches(&admissionv1.MutatingWebhookConfiguration{}, objectHandler, builder.WithPredicates(ownedByRemoteIstioPredicate(mgr.GetClient()))).
+		Watches(&admissionv1.MutatingWebhookConfiguration{}, objectHandler, builder.WithPredicates(ownedByRemoteIstioRevisionPredicate(mgr.GetClient()))).
 		Named("mutatingwebhookconfiguration").
 		Complete(reconciler.NewStandardReconciler[*admissionv1.MutatingWebhookConfiguration](r.Client, r.Reconcile))
 }
 
-func ownedByRemoteIstioPredicate(cl client.Client) predicate.Predicate {
+func ownedByRemoteIstioRevisionPredicate(cl client.Client) predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
-			return isOwnedByRemoteIstio(cl, e.Object)
+			return IsOwnedByRevisionWithRemoteControlPlane(cl, e.Object)
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			return isOwnedByRemoteIstio(cl, e.ObjectNew)
+			return IsOwnedByRevisionWithRemoteControlPlane(cl, e.ObjectNew)
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			return isOwnedByRemoteIstio(cl, e.Object)
+			return IsOwnedByRevisionWithRemoteControlPlane(cl, e.Object)
 		},
 		GenericFunc: func(e event.GenericEvent) bool {
-			return isOwnedByRemoteIstio(cl, e.Object)
+			return IsOwnedByRevisionWithRemoteControlPlane(cl, e.Object)
 		},
 	}
 }
 
-func isOwnedByRemoteIstio(cl client.Client, obj client.Object) bool {
+func IsOwnedByRevisionWithRemoteControlPlane(cl client.Client, obj client.Object) bool {
 	for _, ownerRef := range obj.GetOwnerReferences() {
 		if ownerRef.APIVersion == v1alpha1.GroupVersion.String() && ownerRef.Kind == v1alpha1.IstioRevisionKind {
 			rev := &v1alpha1.IstioRevision{}
 			err := cl.Get(context.Background(), client.ObjectKey{Name: ownerRef.Name}, rev)
 			if err != nil {
-				// TODO log error
-			} else if rev.Spec.Type == v1alpha1.IstioRevisionTypeRemote {
+				return false
+			}
+			if revision.IsUsingRemoteControlPlane(rev) {
 				return true
 			}
 		}

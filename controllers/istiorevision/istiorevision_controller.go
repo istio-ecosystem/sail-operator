@@ -31,6 +31,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
+	"github.com/istio-ecosystem/sail-operator/pkg/revision"
 	"github.com/istio-ecosystem/sail-operator/pkg/validation"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -61,8 +62,7 @@ const (
 	IstioRevLabel              = "istio.io/rev"
 	IstioSidecarInjectLabel    = "sidecar.istio.io/inject"
 
-	istiodChartName       = "istiod"
-	istiodRemoteChartName = "istiod-remote"
+	istiodChartName = "istiod"
 )
 
 // Reconciler reconciles an IstioRevision object
@@ -128,9 +128,6 @@ func (r *Reconciler) Finalize(ctx context.Context, rev *v1alpha1.IstioRevision) 
 }
 
 func (r *Reconciler) validate(ctx context.Context, rev *v1alpha1.IstioRevision) error {
-	if rev.Spec.Type == "" {
-		return reconciler.NewValidationError("spec.type not set")
-	}
 	if rev.Spec.Version == "" {
 		return reconciler.NewValidationError("spec.version not set")
 	}
@@ -172,33 +169,22 @@ func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1alpha1.IstioR
 	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev),
 		values, rev.Spec.Namespace, getReleaseName(rev), ownerReference)
 	if err != nil {
-		return fmt.Errorf("failed to install/update Helm chart %q: %w", getChartName(rev), err)
+		return fmt.Errorf("failed to install/update Helm chart %q: %w", istiodChartName, err)
 	}
 	return nil
 }
 
 func getReleaseName(rev *v1alpha1.IstioRevision) string {
-	return fmt.Sprintf("%s-%s", rev.Name, getChartName(rev))
+	return fmt.Sprintf("%s-%s", rev.Name, istiodChartName)
 }
 
 func (r *Reconciler) getChartDir(rev *v1alpha1.IstioRevision) string {
-	return path.Join(r.Config.ResourceDirectory, rev.Spec.Version, "charts", getChartName(rev))
-}
-
-func getChartName(rev *v1alpha1.IstioRevision) string {
-	switch rev.Spec.Type {
-	case v1alpha1.IstioRevisionTypeLocal:
-		return istiodChartName
-	case v1alpha1.IstioRevisionTypeRemote:
-		return istiodRemoteChartName
-	default:
-		panic(badIstioRevisionType(rev))
-	}
+	return path.Join(r.Config.ResourceDirectory, rev.Spec.Version, "charts", istiodChartName)
 }
 
 func (r *Reconciler) uninstallHelmCharts(ctx context.Context, rev *v1alpha1.IstioRevision) error {
 	if _, err := r.ChartManager.UninstallChart(ctx, getReleaseName(rev), rev.Spec.Namespace); err != nil {
-		return fmt.Errorf("failed to uninstall Helm chart %q: %w", getChartName(rev), err)
+		return fmt.Errorf("failed to uninstall Helm chart %q: %w", istiodChartName, err)
 	}
 	return nil
 }
@@ -332,8 +318,7 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1alpha1.
 		Status: metav1.ConditionFalse,
 	}
 
-	switch rev.Spec.Type {
-	case v1alpha1.IstioRevisionTypeLocal:
+	if !revision.IsUsingRemoteControlPlane(rev) {
 		istiod := appsv1.Deployment{}
 		if err := r.Client.Get(ctx, istiodDeploymentKey(rev), &istiod); err == nil {
 			if istiod.Status.Replicas == 0 {
@@ -354,7 +339,7 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1alpha1.
 			c.Message = fmt.Sprintf("failed to get readiness: %v", err)
 			return c, fmt.Errorf("get failed: %w", err)
 		}
-	case v1alpha1.IstioRevisionTypeRemote:
+	} else {
 		webhook := admissionv1.MutatingWebhookConfiguration{}
 		webhookKey := injectionWebhookKey(rev)
 		if err := r.Client.Get(ctx, webhookKey, &webhook); err == nil {
@@ -378,8 +363,6 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1alpha1.
 			c.Message = fmt.Sprintf("failed to get readiness: %v", err)
 			return c, fmt.Errorf("get failed: %w", err)
 		}
-	default:
-		panic(badIstioRevisionType(rev))
 	}
 	return c, nil
 }
@@ -608,10 +591,6 @@ func clearIgnoredFields(obj client.Object) {
 			webhookConfig.Webhooks[i].FailurePolicy = nil
 		}
 	}
-}
-
-func badIstioRevisionType(rev *v1alpha1.IstioRevision) string {
-	return fmt.Sprintf("unknown IstioRevisionType: %s", rev.Spec.Type)
 }
 
 func wrapEventHandler(logger logr.Logger, handler handler.EventHandler) handler.EventHandler {

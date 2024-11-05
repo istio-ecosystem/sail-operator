@@ -78,14 +78,6 @@ spec:
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
-              type:
-                default: Local
-                description: Type indicates whether this revision represents a local
-                  or a remote control plane installation.
-                type: string
-                x-kubernetes-validations:
-                - message: Value is immutable
-                  rule: self == oldSelf
               values:
                 description: Defines the values to be passed to the Helm charts when
                   installing Istio.
@@ -9389,7 +9381,6 @@ spec:
                 type: string
             required:
             - namespace
-            - type
             - version
             type: object
             x-kubernetes-validations:
