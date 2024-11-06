@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
@@ -42,6 +43,8 @@ var _ = Describe("IstioCNI", Ordered, func() {
 
 	SetDefaultEventuallyPollingInterval(time.Second)
 	SetDefaultEventuallyTimeout(30 * time.Second)
+
+	enqueuelogger.LogEnqueueEvents = true
 
 	ctx := context.Background()
 
@@ -235,6 +238,32 @@ var _ = Describe("IstioCNI", Ordered, func() {
 						g.Expect(ds.Spec.Template.Spec.Containers[0].Image).To(Equal(originalImage))
 					}).Should(Succeed())
 				})
+			})
+
+			It("skips reconcile when a pull secret is added to service account", func() {
+				waitForInFlightReconcileToFinish()
+
+				sa := &corev1.ServiceAccount{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "istio-cni",
+						Namespace: cniNamespace,
+					},
+				}
+				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(sa), sa)).To(Succeed())
+
+				beforeCount := getIstioCNIReconcileCount(Default)
+
+				By("adding pull secret to ServiceAccount")
+				sa.ImagePullSecrets = append(sa.ImagePullSecrets, corev1.LocalObjectReference{Name: "other-pull-secret"})
+				Expect(k8sClient.Update(ctx, sa)).To(Succeed())
+
+				Consistently(func(g Gomega) {
+					afterCount := getIstioCNIReconcileCount(g)
+					g.Expect(afterCount).To(Equal(beforeCount))
+				}, 5*time.Second).Should(Succeed(), "IstioRevision was reconciled when it shouldn't have been")
+
+				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(sa), sa)).To(Succeed())
+				Expect(sa.ImagePullSecrets).To(ContainElement(corev1.LocalObjectReference{Name: "other-pull-secret"}))
 			})
 		})
 

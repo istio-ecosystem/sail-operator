@@ -30,6 +30,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
+	predicate2 "github.com/istio-ecosystem/sail-operator/pkg/predicate"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/revision"
 	"github.com/istio-ecosystem/sail-operator/pkg/validation"
@@ -232,7 +233,11 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&appsv1.Deployment{}, ownedResourceHandler). // we don't ignore the status here because we use it to calculate the IstioRevision status
 		Watches(&corev1.Endpoints{}, ownedResourceHandler).
 		Watches(&corev1.Service{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
-		Watches(&corev1.ServiceAccount{}, ownedResourceHandler).
+
+		// We use predicate.IgnoreUpdate() so that we skip the reconciliation when a pull secret is added to the ServiceAccount.
+		// This is necessary so that we don't remove the newly-added secret.
+		// TODO: this is a temporary hack until we implement the correct solution on the Helm-render side
+		Watches(&corev1.ServiceAccount{}, ownedResourceHandler, builder.WithPredicates(predicate2.IgnoreUpdate())).
 		Watches(&rbacv1.Role{}, ownedResourceHandler).
 		Watches(&rbacv1.RoleBinding{}, ownedResourceHandler).
 		Watches(&policyv1.PodDisruptionBudget{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
