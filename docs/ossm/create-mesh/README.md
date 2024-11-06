@@ -1,5 +1,4 @@
 # Scoping the service mesh with DiscoverySelectors
-This page describes how the service mesh control plane discovers and observes cluster resources and how to manage this scope.
 
 A service mesh will include a workload that:
 1. Has been discovered by the control plane
@@ -27,23 +26,20 @@ You can configure each label selector for a variety of use cases, including but 
 - A list of namespace labels using set-based selectors which carries OR semantics, for example, all namespaces with label `istio-discovery=enabled` OR `region=us-east1`
 - Inclusion and/or exclusion of namespaces, for example, all namespaces with label `istio-discovery=enabled` AND label key `app` equal to `helloworld`
 
-#### Using Discovery Selectors to Scope of a Service Mesh
-Assuming you know which namespaces to include as part of the service mesh, as a mesh administrator, you can configure `discoverySelectors` at installation time or post-installation by adding your desired discovery selectors to Istio’s MeshConfig resource. For example, you can configure Istio to discover only the namespaces that have the label `istio-discovery=enabled`.
+#### Using Discovery Selectors to Scope a Service Mesh
+Assuming you know which namespaces to include as part of the service mesh, as a mesh administrator, you can configure `discoverySelectors` at installation time or post-installation by adding your desired discovery selectors to Istio’s MeshConfig resource. 
+
+For example, you can configure Istio to discover only the namespaces that have the label `istio-discovery=enabled`.
 
 ##### Prerequisites
 - The OpenShift Service Mesh operator has been installed
 - An Istio CNI resource has been created
-- The `istioctl` binary has been installed on your localhost
 
-1. Create the `istio-system` system namespace:
+1. Add a label to the namespace containing the Istio control plane, for example, the `istio-system` system namespace:
     ```bash
-    oc create ns istio-system
+    oc label namespace istio-system istio-discovery=enabled
     ```
-1. Label the `istio-system` system namespace:
-    ```bash
-    oc label ns istio-system istio-discovery=enabled
-    ```
-1. Prepare `istio.yaml` with `discoverySelectors` configured:
+1. Modify the `Istio` control plane resource to include a `discoverySelectors` section with the same label, for example:
     ```yaml
     kind: Istio
     apiVersion: sailoperator.io/v1alpha1
@@ -56,69 +52,17 @@ Assuming you know which namespaces to include as part of the service mesh, as a 
           discoverySelectors:
             - matchLabels:
                 istio-discovery: enabled
-      updateStrategy:
-        type: InPlace
-      version: v1.23.0
     ```
+
 1. Apply the Istio CR:
     ```bash
     oc apply -f istio.yaml
     ```
-1. Create first application namespace:
+1. You then must ensure that all namespaces that will contain workloads that are to be part of the service mesh have both the `discoverySelector` label and, if desired, the appropriate Istio injection label. For example, for the `bookinfo` application, you can apply both labels as follows:
     ```bash
-    oc create ns app-ns-1
+    oc label namespace bookinfo istio-discovery=enabled istio-injection=enabled
     ```
-1. Create second application namespace:
-    ```bash
-    oc create ns app-ns-2
-    ```
-1. Label first application namespace to be matched by defined `discoverySelectors` and enable sidecar injection:
-    ```bash
-    oc label ns app-ns-1 istio-discovery=enabled istio-injection=enabled
-    ```
-1. Deploy the sleep application to the first namespaces:
-    ```bash
-    oc apply -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/sleep/sleep.yaml -n app-ns-1
-    ```
-1. Deploy the sleep application to the second namespaces:
-    ```bash
-    oc apply -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/sleep/sleep.yaml -n app-ns-2
-    ```
-1. Verify that you don't see any endpoints from the second namespace:
-    ```bash
-    istioctl pc endpoint deploy/sleep -n app-ns-1
-    ENDPOINT                                                STATUS      OUTLIER CHECK     CLUSTER
-    10.128.2.197:15010                                      HEALTHY     OK                outbound|15010||istiod.istio-system.svc.cluster.local
-    10.128.2.197:15012                                      HEALTHY     OK                outbound|15012||istiod.istio-system.svc.cluster.local
-    10.128.2.197:15014                                      HEALTHY     OK                outbound|15014||istiod.istio-system.svc.cluster.local
-    10.128.2.197:15017                                      HEALTHY     OK                outbound|443||istiod.istio-system.svc.cluster.local
-    10.131.0.32:80                                          HEALTHY     OK                outbound|80||sleep.app-ns-1.svc.cluster.local
-    127.0.0.1:15000                                         HEALTHY     OK                prometheus_stats
-    127.0.0.1:15020                                         HEALTHY     OK                agent
-    unix://./etc/istio/proxy/XDS                            HEALTHY     OK                xds-grpc
-    unix://./var/run/secrets/workload-spiffe-uds/socket     HEALTHY     OK                sds-grpc
-    ```
-1. Label second application namespace to be matched by defined `discoverySelectors` and enable sidecar injection:
-    ```bash
-    oc label ns app-ns-2 istio-discovery=enabled
-    ```
-1. Verify that after labeling second namespace it also appears on the list of discovered endpoints:
-    ```bash
-    istioctl pc endpoint deploy/sleep -n app-ns-1
-    ENDPOINT                                                STATUS      OUTLIER CHECK     CLUSTER
-    10.128.2.197:15010                                      HEALTHY     OK                outbound|15010||istiod.istio-system.svc.cluster.local
-    10.128.2.197:15012                                      HEALTHY     OK                outbound|15012||istiod.istio-system.svc.cluster.local
-    10.128.2.197:15014                                      HEALTHY     OK                outbound|15014||istiod.istio-system.svc.cluster.local
-    10.128.2.197:15017                                      HEALTHY     OK                outbound|443||istiod.istio-system.svc.cluster.local
-    10.131.0.32:80                                          HEALTHY     OK                outbound|80||sleep.app-ns-1.svc.cluster.local
-    10.131.0.33:80                                          HEALTHY     OK                outbound|80||sleep.app-ns-2.svc.cluster.local
-    127.0.0.1:15000                                         HEALTHY     OK                prometheus_stats
-    127.0.0.1:15020                                         HEALTHY     OK                agent
-    unix://./etc/istio/proxy/XDS                            HEALTHY     OK                xds-grpc
-    unix://./var/run/secrets/workload-spiffe-uds/socket     HEALTHY     OK                sds-grpc
-    ```
-
-See [Multiple Istio Control Planes in a Single Cluster](../multi-control-planes/README.md) for another example of `discoverySelectors` usage.
+In addition to limiting the scope of a single service mesh, `discoverySelectors` also play a critical role in limiting the scope of control plane when [multiple Istio control planes are to be deployed within a single cluster](../multi-control-planes/README.md).
 
 ### Next Steps: Sidecar injection
 As described earlier, in addition to the control plane discovering the namespaces to be included in the mesh, workloads must  be [injected with a sidecar proxy](../injection/README.md) to be included in the service mesh.
