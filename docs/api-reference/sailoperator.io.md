@@ -506,7 +506,7 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[IstioSpec](#istiospec)_ |  | \{ namespace:istio-system updateStrategy:map[type:InPlace] version:v1.23.2 \} |  |
+| `spec` _[IstioSpec](#istiospec)_ |  | \{ namespace:istio-system updateStrategy:map[type:InPlace] version:v1.23.3 \} |  |
 | `status` _[IstioStatus](#istiostatus)_ |  |  |  |
 
 
@@ -528,7 +528,7 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[IstioCNISpec](#istiocnispec)_ |  | \{ namespace:istio-cni version:v1.23.2 \} |  |
+| `spec` _[IstioCNISpec](#istiocnispec)_ |  | \{ namespace:istio-cni version:v1.23.3 \} |  |
 | `status` _[IstioCNIStatus](#istiocnistatus)_ |  |  |  |
 
 
@@ -624,7 +624,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.23.2, v1.22.5, v1.21.6, latest. | v1.23.2 | Enum: [v1.23.2 v1.22.5 v1.21.6 latest]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.23.3, v1.23.2, v1.22.6, v1.22.5, v1.21.6, latest. | v1.23.3 | Enum: [v1.23.3 v1.23.2 v1.22.6 v1.22.5 v1.21.6 latest]   |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, external, openshift-ambient, openshift, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift-ambient openshift preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio CNI component should be installed. | istio-cni |  |
 | `values` _[CNIValues](#cnivalues)_ | Defines the values to be passed to the Helm charts when installing Istio CNI. |  |  |
@@ -852,7 +852,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.23.2, v1.22.5, v1.21.6, latest. |  | Enum: [v1.23.2 v1.22.5 v1.21.6 latest]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.23.3, v1.23.2, v1.22.6, v1.22.5, v1.21.6, latest. |  | Enum: [v1.23.3 v1.23.2 v1.22.6 v1.22.5 v1.21.6 latest]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. |  |  |
 | `values` _[Values](#values)_ | Defines the values to be passed to the Helm charts when installing Istio. |  |  |
 
@@ -888,7 +888,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.23.2, v1.22.5, v1.21.6, latest. | v1.23.2 | Enum: [v1.23.2 v1.22.5 v1.21.6 latest]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.23.3, v1.23.2, v1.22.6, v1.22.5, v1.21.6, latest. | v1.23.3 | Enum: [v1.23.3 v1.23.2 v1.22.6 v1.22.5 v1.21.6 latest]   |
 | `updateStrategy` _[IstioUpdateStrategy](#istioupdatestrategy)_ | Defines the update strategy to use when the version in the Istio CR is updated. | \{ type:InPlace \} |  |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, external, openshift-ambient, openshift, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift-ambient openshift preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. Note that this field is immutable. | istio-system |  |
@@ -1291,6 +1291,7 @@ _Appears in:_
 | `port` _integer_ | REQUIRED. Specifies the port of the service. |  | Required: \{\}   |
 | `timeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | The maximum duration that the proxy will wait for a response from the provider, this is the timeout for a specific request (default timeout: 600s). When this timeout condition is met, the proxy marks the communication to the authorization service as failure. In this situation, the response sent back to the client will depend on the configured `failOpen` field. |  |  |
 | `failOpen` _boolean_ | If true, the HTTP request or TCP connection will be allowed even if the communication with the authorization service has failed, or if the authorization service has returned a HTTP 5xx error. Default is false. For HTTP request, it will be rejected with 403 (HTTP Forbidden). For TCP connection, it will be closed immediately. |  |  |
+| `clearRouteCache` _boolean_ | If true, clears route cache in order to allow the external authorization service to correctly affect routing decisions. If true, recalculate routes with the new ExtAuthZ added/removed headers. Default is false |  |  |
 | `statusOnError` _string_ | Sets the HTTP status that is returned to the client when there is a network error to the authorization service. The default status is "403" (HTTP Forbidden). |  |  |
 | `includeRequestBodyInCheck` _[MeshConfigExtensionProviderEnvoyExternalAuthorizationRequestBody](#meshconfigextensionproviderenvoyexternalauthorizationrequestbody)_ | If set, the client request body will be included in the authorization request sent to the authorization service. |  |  |
 
@@ -1313,6 +1314,7 @@ _Appears in:_
 | `timeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | The maximum duration that the proxy will wait for a response from the provider (default timeout: 600s). When this timeout condition is met, the proxy marks the communication to the authorization service as failure. In this situation, the response sent back to the client will depend on the configured `failOpen` field. |  |  |
 | `pathPrefix` _string_ | Sets a prefix to the value of authorization request header *Path*. For example, setting this to "/check" for an original user request at path "/admin" will cause the authorization check request to be sent to the authorization service at the path "/check/admin" instead of "/admin". |  |  |
 | `failOpen` _boolean_ | If true, the user request will be allowed even if the communication with the authorization service has failed, or if the authorization service has returned a HTTP 5xx error. Default is false and the request will be rejected with "Forbidden" response. |  |  |
+| `clearRouteCache` _boolean_ | If true, clears route cache in order to allow the external authorization service to correctly affect routing decisions. If true, recalculate routes with the new ExtAuthZ added/removed headers. Default is false |  |  |
 | `statusOnError` _string_ | Sets the HTTP status that is returned to the client when there is a network error to the authorization service. The default status is "403" (HTTP Forbidden). |  |  |
 | `includeHeadersInCheck` _string array_ | DEPRECATED. Use includeRequestHeadersInCheck instead.  Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto. |  |  |
 | `includeRequestHeadersInCheck` _string array_ | List of client request headers that should be included in the authorization request sent to the authorization service. Note that in addition to the headers specified here following headers are included by default: 1. *Host*, *Method*, *Path* and *Content-Length* are automatically sent. 2. *Content-Length* will be set to 0 and the request will not have a message body. However, the authorization request can include the buffered client request body (controlled by includeRequestBodyInCheck setting), consequently the value of Content-Length of the authorization request reflects the size of its payload size.  Exact, prefix and suffix matches are supported (similar to the [authorization policy rule syntax](https://istio.io/latest/docs/reference/config/security/authorization-policy/#Rule) except the presence match): - Exact match: "abc" will match on value "abc". - Prefix match: "abc*" will match on value "abc" and "abcd". - Suffix match: "*abc" will match on value "abc" and "xabc". |  |  |
@@ -2811,6 +2813,7 @@ _Appears in:_
 | `openCensusAgent` _[TracingOpenCensusAgent](#tracingopencensusagent)_ | Use an OpenCensus tracer exporting to an OpenCensus agent. |  |  |
 | `sampling` _float_ | The percentage of requests (0.0 - 100.0) that will be randomly selected for trace generation, if not requested by the client or not forced. Default is 1.0. |  |  |
 | `tlsSettings` _[ClientTLSSettings](#clienttlssettings)_ | Use the tlsSettings to specify the tls mode to use. If the remote tracing service uses Istio mutual TLS and shares the root CA with Pilot, specify the TLS mode as `ISTIO_MUTUAL`. |  |  |
+| `enableIstioTags` _boolean_ | Determines whether or not trace spans generated by Envoy will include Istio specific tags. By default Istio specific tags are included in the trace spans. |  |  |
 
 
 

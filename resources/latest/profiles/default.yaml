@@ -8,3 +8,5 @@ spec:
     global:
       istioNamespace: istio-system
       configValidation: true
+    ztunnel:
+      resourceName: ztunnel
