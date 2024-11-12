@@ -1935,6 +1935,11 @@ func (in *MeshConfigExtensionProviderEnvoyExternalAuthorizationGrpcProvider) Dee
 		*out = new(bool)
 		**out = **in
 	}
+	if in.ClearRouteCache != nil {
+		in, out := &in.ClearRouteCache, &out.ClearRouteCache
+		*out = new(bool)
+		**out = **in
+	}
 	if in.StatusOnError != nil {
 		in, out := &in.StatusOnError, &out.StatusOnError
 		*out = new(string)
@@ -1982,6 +1987,11 @@ func (in *MeshConfigExtensionProviderEnvoyExternalAuthorizationHttpProvider) Dee
 	}
 	if in.FailOpen != nil {
 		in, out := &in.FailOpen, &out.FailOpen
+		*out = new(bool)
+		**out = **in
+	}
+	if in.ClearRouteCache != nil {
+		in, out := &in.ClearRouteCache, &out.ClearRouteCache
 		*out = new(bool)
 		**out = **in
 	}
@@ -4707,6 +4717,11 @@ func (in *Tracing) DeepCopyInto(out *Tracing) {
 		in, out := &in.TlsSettings, &out.TlsSettings
 		*out = new(ClientTLSSettings)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.EnableIstioTags != nil {
+		in, out := &in.EnableIstioTags, &out.EnableIstioTags
+		*out = new(bool)
+		**out = **in
 	}
 }
 

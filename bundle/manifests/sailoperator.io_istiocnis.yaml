@@ -2,7 +2,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.16.4
+    controller-gen.kubebuilder.io/version: v0.16.5
   creationTimestamp: null
   name: istiocnis.sailoperator.io
 spec:
@@ -58,7 +58,7 @@ spec:
           spec:
             default:
               namespace: istio-cni
-              version: v1.23.2
+              version: v1.23.3
             description: IstioCNISpec defines the desired state of IstioCNI
             properties:
               namespace:
@@ -1411,12 +1411,14 @@ spec:
                     type: object
                 type: object
               version:
-                default: v1.23.2
+                default: v1.23.3
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.23.2, v1.22.5, v1.21.6, latest.
+                  Must be one of: v1.23.3, v1.23.2, v1.22.6, v1.22.5, v1.21.6, latest.
                 enum:
+                - v1.23.3
                 - v1.23.2
+                - v1.22.6
                 - v1.22.5
                 - v1.21.6
                 - latest
