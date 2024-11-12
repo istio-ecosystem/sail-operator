@@ -527,7 +527,6 @@ func TestDetermineStatus(t *testing.T) {
 
 			initObjs := []client.Object{istio}
 			for _, rev := range tc.revisions {
-				rev := rev
 				initObjs = append(initObjs, &rev)
 			}
 
@@ -728,7 +727,6 @@ func TestUpdateStatus(t *testing.T) {
 
 			initObjs := []client.Object{istio}
 			for _, rev := range tc.revisions {
-				rev := rev
 				initObjs = append(initObjs, &rev)
 			}
 

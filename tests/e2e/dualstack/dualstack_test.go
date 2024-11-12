@@ -70,9 +70,6 @@ var _ = Describe("DualStack configuration ", Ordered, func() {
 
 	Describe("for supported versions", func() {
 		for _, version := range supportedversion.List {
-			// Note: This var version is needed to avoid the closure of the loop
-			version := version
-
 			// The minimum supported version is 1.23 (and above)
 			if version.Version.LessThan(semver.MustParse("1.23.0")) {
 				continue
