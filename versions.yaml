@@ -11,6 +11,16 @@
 # go.mod affect the generated API schema for the Sail CRDs (e.g. IstioRevision),
 # as well as all the Istio CRDs (e.g. VirtualService).
 versions:
+  - name: v1.24.0
+    version: 1.24.0
+    repo: https://github.com/istio/istio
+    commit: 1.24.0
+    charts:
+      - https://istio-release.storage.googleapis.com/charts/base-1.24.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-1.24.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/gateway-1.24.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/cni-1.24.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.24.0.tgz
   - name: v1.23.3
     version: 1.23.3
     repo: https://github.com/istio/istio
@@ -64,13 +74,13 @@ versions:
       - https://istio-release.storage.googleapis.com/charts/cni-1.21.6.tgz
       - https://istio-release.storage.googleapis.com/charts/ztunnel-1.21.6.tgz
   - name: latest
-    version: 1.25-alpha.b1ee384c11f0c7da78ccc9f206c0f6f55ded4f3e
+    version: 1.25-alpha.566978861e4b7cd7f8f855f15280ede0b05af93a
     repo: https://github.com/istio/istio
     branch: master
-    commit: b1ee384c11f0c7da78ccc9f206c0f6f55ded4f3e
+    commit: 566978861e4b7cd7f8f855f15280ede0b05af93a
     charts:
-      - https://storage.googleapis.com/istio-build/dev/1.25-alpha.b1ee384c11f0c7da78ccc9f206c0f6f55ded4f3e/helm/base-1.25-alpha.b1ee384c11f0c7da78ccc9f206c0f6f55ded4f3e.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.25-alpha.b1ee384c11f0c7da78ccc9f206c0f6f55ded4f3e/helm/cni-1.25-alpha.b1ee384c11f0c7da78ccc9f206c0f6f55ded4f3e.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.25-alpha.b1ee384c11f0c7da78ccc9f206c0f6f55ded4f3e/helm/gateway-1.25-alpha.b1ee384c11f0c7da78ccc9f206c0f6f55ded4f3e.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.25-alpha.b1ee384c11f0c7da78ccc9f206c0f6f55ded4f3e/helm/istiod-1.25-alpha.b1ee384c11f0c7da78ccc9f206c0f6f55ded4f3e.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.25-alpha.b1ee384c11f0c7da78ccc9f206c0f6f55ded4f3e/helm/ztunnel-1.25-alpha.b1ee384c11f0c7da78ccc9f206c0f6f55ded4f3e.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.25-alpha.566978861e4b7cd7f8f855f15280ede0b05af93a/helm/base-1.25-alpha.566978861e4b7cd7f8f855f15280ede0b05af93a.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.25-alpha.566978861e4b7cd7f8f855f15280ede0b05af93a/helm/cni-1.25-alpha.566978861e4b7cd7f8f855f15280ede0b05af93a.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.25-alpha.566978861e4b7cd7f8f855f15280ede0b05af93a/helm/gateway-1.25-alpha.566978861e4b7cd7f8f855f15280ede0b05af93a.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.25-alpha.566978861e4b7cd7f8f855f15280ede0b05af93a/helm/istiod-1.25-alpha.566978861e4b7cd7f8f855f15280ede0b05af93a.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.25-alpha.566978861e4b7cd7f8f855f15280ede0b05af93a/helm/ztunnel-1.25-alpha.566978861e4b7cd7f8f855f15280ede0b05af93a.tgz
