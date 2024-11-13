@@ -18,6 +18,7 @@ csv:
 
     This version of the operator supports the following Istio versions:
 
+    - v1.24.0
     - v1.23.3
     - v1.23.2
     - v1.22.6
