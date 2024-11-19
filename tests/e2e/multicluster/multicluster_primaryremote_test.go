@@ -245,8 +245,29 @@ spec:
 
 				When("sample apps are deployed in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
+						// Create the namespace
+						Expect(k1.CreateNamespace("sample")).To(Succeed(), "Namespace failed to be created")
+						Expect(k2.CreateNamespace("sample")).To(Succeed(), "Namespace failed to be created")
+
+						// Label the sample namespace
+						Expect(k1.Patch("namespace", "sample", "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
+							To(Succeed(), "Error patching sample namespace")
+						Expect(k2.Patch("namespace", "sample", "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
+							To(Succeed(), "Error patching sample namespace")
+
 						// Deploy the sample app in both clusters
-						deploySampleApp("sample", v)
+						helloWorldURL := common.GetYAMLPodURL(v, "helloworld")
+						sleepURL := common.GetYAMLPodURL(v, "sleep")
+
+						// On Cluster 0, create a service for the helloworld app v1
+						Expect(k1.WithNamespace("sample").ApplyWithLabels(helloWorldURL, "service=helloworld")).To(Succeed(), "Failed to deploy helloworld service")
+						Expect(k1.WithNamespace("sample").ApplyWithLabels(helloWorldURL, "version=v1")).To(Succeed(), "Failed to deploy helloworld service")
+						Expect(k1.WithNamespace("sample").Apply(sleepURL)).To(Succeed(), "Failed to deploy sleep service")
+
+						// On Cluster 1, create a service for the helloworld app v2
+						Expect(k2.WithNamespace("sample").ApplyWithLabels(helloWorldURL, "service=helloworld")).To(Succeed(), "Failed to deploy helloworld service")
+						Expect(k2.WithNamespace("sample").ApplyWithLabels(helloWorldURL, "version=v2")).To(Succeed(), "Failed to deploy helloworld service")
+						Expect(k2.WithNamespace("sample").Apply(sleepURL)).To(Succeed(), "Failed to deploy sleep service")
 						Success("Sample app is deployed in both clusters")
 					})
 
@@ -254,7 +275,7 @@ spec:
 						samplePodsPrimary := &corev1.PodList{}
 
 						Expect(clPrimary.List(ctx, samplePodsPrimary, client.InNamespace("sample"))).To(Succeed())
-						Expect(samplePodsPrimary.Items).ToNot(BeEmpty(), "No pods found in bookinfo namespace")
+						Expect(samplePodsPrimary.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
 
 						for _, pod := range samplePodsPrimary.Items {
 							Eventually(common.GetObject).
@@ -264,7 +285,7 @@ spec:
 
 						samplePodsRemote := &corev1.PodList{}
 						Expect(clRemote.List(ctx, samplePodsRemote, client.InNamespace("sample"))).To(Succeed())
-						Expect(samplePodsRemote.Items).ToNot(BeEmpty(), "No pods found in bookinfo namespace")
+						Expect(samplePodsRemote.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
 
 						for _, pod := range samplePodsRemote.Items {
 							Eventually(common.GetObject).

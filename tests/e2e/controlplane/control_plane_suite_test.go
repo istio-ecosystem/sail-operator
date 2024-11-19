@@ -40,7 +40,7 @@ var (
 	istioCniName          = env.Get("ISTIOCNI_NAME", "default")
 	skipDeploy            = env.GetBool("SKIP_DEPLOY", false)
 	expectedRegistry      = env.Get("EXPECTED_REGISTRY", "^docker\\.io|^gcr\\.io")
-	bookinfoNamespace     = env.Get("BOOKINFO_NAMESPACE", "bookinfo")
+	sampleNamespace       = env.Get("SAMPLE_NAMESPACE", "sample")
 	multicluster          = env.GetBool("MULTICLUSTER", false)
 	ipFamily              = env.Get("IP_FAMILY", "ipv4")
 

@@ -19,6 +19,7 @@ package common
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -27,6 +28,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
@@ -260,4 +262,47 @@ func InstallOperatorViaHelm(extraArgs ...string) error {
 
 func UninstallOperator() error {
 	return helm.Uninstall("sail-operator", "--namespace", OperatorNamespace)
+}
+
+// This func will be used to get URLs for the yaml files of the testing apps. Example: helloworld, sleep, tcp-echo.
+// Default values points to upstream Istio sample yaml files.
+// The base URL can be overridden by setting the environment variable POD_SAMPLE_YAML_BASE_URL.
+
+// GetYAMLPodURL returns the URL of the yaml file for the testing app.
+// args:
+// version: the version of the Istio to get the yaml file from.
+// appName: the name of the testing app. Example: helloworld, sleep, tcp-echo.
+func GetYAMLPodURL(version supportedversion.VersionInfo, appName string) string {
+	var url string
+
+	switch appName {
+	case "tcp-echo-dual-stack":
+		url = "samples/tcp-echo/tcp-echo-dual-stack.yaml"
+	case "tcp-echo-ipv4":
+	case "tcp-echo":
+		url = "samples/tcp-echo/tcp-echo-ipv4.yaml"
+	case "tcp-echo-ipv6":
+		url = "samples/tcp-echo/tcp-echo-ipv6.yaml"
+	case "sleep":
+		url = "samples/sleep/sleep.yaml"
+	case "helloworld":
+	case "sample":
+		url = "samples/helloworld/helloworld.yaml"
+	default:
+		return ""
+	}
+
+	// Get the base URL from the environment variable or use the default
+	baseURL := os.Getenv("POD_SAMPLE_YAML_BASE_URL")
+	if baseURL == "" {
+		baseURL = "https://raw.githubusercontent.com/istio/istio"
+	}
+
+	if version.Name == "latest" {
+		// Use the master branch for the latest version
+		return fmt.Sprintf("%s/master/%s", baseURL, url)
+	}
+
+	// Use the version branch for the specific version
+	return fmt.Sprintf("%s/%s/%s", baseURL, version.Version, url)
 }
