@@ -278,15 +278,13 @@ func GetYAMLPodURL(version supportedversion.VersionInfo, appName string) string 
 	switch appName {
 	case "tcp-echo-dual-stack":
 		url = "samples/tcp-echo/tcp-echo-dual-stack.yaml"
-	case "tcp-echo-ipv4":
-	case "tcp-echo":
+	case "tcp-echo-ipv4", "tcp-echo":
 		url = "samples/tcp-echo/tcp-echo-ipv4.yaml"
 	case "tcp-echo-ipv6":
 		url = "samples/tcp-echo/tcp-echo-ipv6.yaml"
 	case "sleep":
 		url = "samples/sleep/sleep.yaml"
-	case "helloworld":
-	case "sample":
+	case "helloworld", "sample":
 		url = "samples/helloworld/helloworld.yaml"
 	default:
 		return ""
