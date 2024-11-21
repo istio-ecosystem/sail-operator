@@ -264,17 +264,35 @@ func UninstallOperator() error {
 	return helm.Uninstall("sail-operator", "--namespace", OperatorNamespace)
 }
 
-// This func will be used to get URLs for the yaml files of the testing apps. Example: helloworld, sleep, tcp-echo.
-// Default values points to upstream Istio sample yaml files.
-// The base URL can be overridden by setting the environment variable POD_SAMPLE_YAML_BASE_URL.
-
 // GetYAMLPodURL returns the URL of the yaml file for the testing app.
 // args:
 // version: the version of the Istio to get the yaml file from.
 // appName: the name of the testing app. Example: helloworld, sleep, tcp-echo.
 func GetYAMLPodURL(version supportedversion.VersionInfo, appName string) string {
-	var url string
+	// This func will be used to get URLs for the yaml files of the testing apps. Example: helloworld, sleep, tcp-echo.
+	// Default values points to upstream Istio sample yaml files. Custom paths can be provided using environment variables.
 
+	// Define environment variables for specific apps
+	envVarMap := map[string]string{
+		"tcp-echo-dual-stack": "TCP_ECHO_DUAL_STACK_YAML_PATH",
+		"tcp-echo-ipv4":       "TCP_ECHO_IPV4_YAML_PATH",
+		"tcp-echo":            "TCP_ECHO_IPV4_YAML_PATH",
+		"tcp-echo-ipv6":       "TCP_ECHO_IPV6_YAML_PATH",
+		"sleep":               "SLEEP_YAML_PATH",
+		"helloworld":          "HELLOWORLD_YAML_PATH",
+		"sample":              "HELLOWORLD_YAML_PATH",
+	}
+
+	// Check if there's a custom path for the given appName
+	if envVar, exists := envVarMap[appName]; exists {
+		customPath := os.Getenv(envVar)
+		if customPath != "" {
+			return customPath
+		}
+	}
+
+	// Default paths if no custom path is provided
+	var url string
 	switch appName {
 	case "tcp-echo-dual-stack":
 		url = "samples/tcp-echo/tcp-echo-dual-stack.yaml"
@@ -290,17 +308,15 @@ func GetYAMLPodURL(version supportedversion.VersionInfo, appName string) string 
 		return ""
 	}
 
-	// Get the base URL from the environment variable or use the default
+	// Base URL logic
 	baseURL := os.Getenv("POD_SAMPLE_YAML_BASE_URL")
 	if baseURL == "" {
 		baseURL = "https://raw.githubusercontent.com/istio/istio"
 	}
 
 	if version.Name == "latest" {
-		// Use the master branch for the latest version
 		return fmt.Sprintf("%s/master/%s", baseURL, url)
 	}
 
-	// Use the version branch for the specific version
 	return fmt.Sprintf("%s/%s/%s", baseURL, version.Version, url)
 }
