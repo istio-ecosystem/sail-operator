@@ -1671,6 +1671,7 @@ type MeshConfigExtensionProvider struct {
 	// Configures a Datadog tracing provider.
 	Datadog *MeshConfigExtensionProviderDatadogTracingProvider `json:"datadog,omitempty"`
 
+	// +hidefromdoc
 	// Configures a Stackdriver provider.
 	Stackdriver *MeshConfigExtensionProviderStackdriverProvider `json:"stackdriver,omitempty"`
 
@@ -2694,15 +2695,18 @@ type Tracing struct {
 	// Use a Lightstep tracer.
 	// NOTE: For Istio 1.15+, this configuration option will result
 	// in using OpenTelemetry-based Lightstep integration.
+	// +hidefromdoc
 	Lightstep *TracingLightstep `json:"lightstep,omitempty"`
 
 	// Use a Datadog tracer.
 	Datadog *TracingDatadog `json:"datadog,omitempty"`
 
 	// Use a Stackdriver tracer.
+	// +hidefromdoc
 	Stackdriver *TracingStackdriver `json:"stackdriver,omitempty"`
 
 	// Use an OpenCensus tracer exporting to an OpenCensus agent.
+	// +hidefromdoc
 	OpenCensusAgent *TracingOpenCensusAgent `json:"openCensusAgent,omitempty"` // Configures the custom tags to be added to active span by all proxies (i.e. sidecars
 	// and gateways).
 	// The key represents the name of the tag.
