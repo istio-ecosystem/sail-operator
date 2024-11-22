@@ -4,16 +4,16 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.4
-  name: istioztunnels.sailoperator.io
+  name: ztunnels.sailoperator.io
 spec:
   group: sailoperator.io
   names:
     categories:
     - istio-io
-    kind: IstioZtunnel
-    listKind: IstioZtunnelList
-    plural: istioztunnels
-    singular: istioztunnel
+    kind: ZTunnel
+    listKind: ZTunnelList
+    plural: ztunnels
+    singular: ztunnel
   scope: Cluster
   versions:
   - additionalPrinterColumns:
@@ -36,7 +36,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: IstioZtunnel represents a deployment of the Istio ztunnel component.
+        description: ZTunnel represents a deployment of the Istio ztunnel component.
         properties:
           apiVersion:
             description: |-
@@ -59,7 +59,7 @@ spec:
             default:
               namespace: kube-system
               version: v1.24.0
-            description: IstioZtunnelSpec defines the desired state of IstioZtunnel
+            description: ZTunnelSpec defines the desired state of ZTunnel
             properties:
               namespace:
                 default: kube-system
@@ -5473,14 +5473,14 @@ spec:
             - version
             type: object
           status:
-            description: IstioZtunnelStatus defines the observed state of IstioZtunnel
+            description: ZTunnelStatus defines the observed state of ZTunnel
             properties:
               conditions:
                 description: Represents the latest available observations of the object's
                   current state.
                 items:
-                  description: IstioZtunnelCondition represents a specific observation
-                    of the IstioZtunnel object's state.
+                  description: ZTunnelCondition represents a specific observation
+                    of the ZTunnel object's state.
                   properties:
                     lastTransitionTime:
                       description: Last time the condition transitioned from one status
@@ -5507,7 +5507,7 @@ spec:
               observedGeneration:
                 description: |-
                   ObservedGeneration is the most recent generation observed for this
-                  IstioZtunnel object. It corresponds to the object's generation, which is
+                  ZTunnel object. It corresponds to the object's generation, which is
                   updated on mutation by the API Server. The information in the status
                   pertains to this particular generation of the object.
                 format: int64

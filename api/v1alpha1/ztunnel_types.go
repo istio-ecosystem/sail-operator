@@ -22,11 +22,11 @@ import (
 
 
 const (
-	IstioZtunnelKind = "IstioZtunnel"
+	ZTunnelKind = "ZTunnel"
 )
 
-// IstioZtunnelSpec defines the desired state of IstioZtunnel
-type IstioZtunnelSpec struct {
+// ZTunnelSpec defines the desired state of ZTunnel
+type ZTunnelSpec struct {
 	// +sail:version
 	// Defines the version of Istio to install.
 	// Must be one of: v1.24.0 or latest.
@@ -51,26 +51,26 @@ type IstioZtunnelSpec struct {
 
 	// Defines the values to be passed to the Helm charts when installing Istio ztunnel.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Helm Values"
-	Values *ZtunnelValues `json:"values,omitempty"`
+	Values *ZTunnelValues `json:"values,omitempty"`
 }
 
-// IstioZtunnelStatus defines the observed state of IstioZtunnel
-type IstioZtunnelStatus struct {
+// ZTunnelStatus defines the observed state of ZTunnel
+type ZTunnelStatus struct {
 	// ObservedGeneration is the most recent generation observed for this
-	// IstioZtunnel object. It corresponds to the object's generation, which is
+	// ZTunnel object. It corresponds to the object's generation, which is
 	// updated on mutation by the API Server. The information in the status
 	// pertains to this particular generation of the object.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
 	// Represents the latest available observations of the object's current state.
-	Conditions []IstioZtunnelCondition `json:"conditions,omitempty"`
+	Conditions []ZTunnelCondition `json:"conditions,omitempty"`
 
 	// Reports the current state of the object.
-	State IstioZtunnelConditionReason `json:"state,omitempty"`
+	State ZTunnelConditionReason `json:"state,omitempty"`
 }
 
 // GetCondition returns the condition of the specified type
-func (s *IstioZtunnelStatus) GetCondition(conditionType IstioZtunnelConditionType) IstioZtunnelCondition {
+func (s *ZTunnelStatus) GetCondition(conditionType ZTunnelConditionType) ZTunnelCondition {
 	if s != nil {
 		for i := range s.Conditions {
 			if s.Conditions[i].Type == conditionType {
@@ -78,11 +78,11 @@ func (s *IstioZtunnelStatus) GetCondition(conditionType IstioZtunnelConditionTyp
 			}
 		}
 	}
-	return IstioZtunnelCondition{Type: conditionType, Status: metav1.ConditionUnknown}
+	return ZTunnelCondition{Type: conditionType, Status: metav1.ConditionUnknown}
 }
 
 // SetCondition sets a specific condition in the list of conditions
-func (s *IstioZtunnelStatus) SetCondition(condition IstioZtunnelCondition) {
+func (s *ZTunnelStatus) SetCondition(condition ZTunnelCondition) {
 	var now time.Time
 	if testTime == nil {
 		now = time.Now()
@@ -113,16 +113,16 @@ func (s *IstioZtunnelStatus) SetCondition(condition IstioZtunnelCondition) {
 	s.Conditions = append(s.Conditions, condition)
 }
 
-// IstioZtunnelCondition represents a specific observation of the IstioZtunnel object's state.
-type IstioZtunnelCondition struct {
+// ZTunnelCondition represents a specific observation of the ZTunnel object's state.
+type ZTunnelCondition struct {
 	// The type of this condition.
-	Type IstioZtunnelConditionType `json:"type,omitempty"`
+	Type ZTunnelConditionType `json:"type,omitempty"`
 
 	// The status of this condition. Can be True, False or Unknown.
 	Status metav1.ConditionStatus `json:"status,omitempty"`
 
 	// Unique, single-word, CamelCase reason for the condition's last transition.
-	Reason IstioZtunnelConditionReason `json:"reason,omitempty"`
+	Reason ZTunnelConditionReason `json:"reason,omitempty"`
 
 	// Human-readable message indicating details about the last transition.
 	Message string `json:"message,omitempty"`
@@ -131,37 +131,37 @@ type IstioZtunnelCondition struct {
 	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
-// IstioZtunnelConditionType represents the type of the condition.  Condition stages are:
+// ZTunnelConditionType represents the type of the condition.  Condition stages are:
 // Installed, Reconciled, Ready
-type IstioZtunnelConditionType string
+type ZTunnelConditionType string
 
-// IstioZtunnelConditionReason represents a short message indicating how the condition came
+// ZTunnelConditionReason represents a short message indicating how the condition came
 // to be in its present state.
-type IstioZtunnelConditionReason string
+type ZTunnelConditionReason string
 
 const (
-	// IstioZtunnelConditionReconciled signifies whether the controller has
+	// ZTunnelConditionReconciled signifies whether the controller has
 	// successfully reconciled the resources defined through the CR.
-	IstioZtunnelConditionReconciled IstioZtunnelConditionType = "Reconciled"
+	ZTunnelConditionReconciled ZTunnelConditionType = "Reconciled"
 
-	// IstioZtunnelReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried.
-	IstioZtunnelReasonReconcileError IstioZtunnelConditionReason = "ReconcileError"
+	// ZTunnelReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried.
+	ZTunnelReasonReconcileError ZTunnelConditionReason = "ReconcileError"
 )
 
 const (
-	// IstioZtunnelConditionReady signifies whether the ztunnel DaemonSet is ready.
-	IstioZtunnelConditionReady IstioZtunnelConditionType = "Ready"
+	// ZTunnelConditionReady signifies whether the ztunnel DaemonSet is ready.
+	ZTunnelConditionReady ZTunnelConditionType = "Ready"
 
-	// IstioZtunnelDaemonSetNotReady indicates that the ztunnel DaemonSet is not ready.
-	IstioZtunnelDaemonSetNotReady IstioZtunnelConditionReason = "DaemonSetNotReady"
+	// ZTunnelDaemonSetNotReady indicates that the ztunnel DaemonSet is not ready.
+	ZTunnelDaemonSetNotReady ZTunnelConditionReason = "DaemonSetNotReady"
 
-	// IstioZtunnelReasonReadinessCheckFailed indicates that the DaemonSet readiness status could not be ascertained.
-	IstioZtunnelReasonReadinessCheckFailed IstioZtunnelConditionReason = "ReadinessCheckFailed"
+	// ZTunnelReasonReadinessCheckFailed indicates that the DaemonSet readiness status could not be ascertained.
+	ZTunnelReasonReadinessCheckFailed ZTunnelConditionReason = "ReadinessCheckFailed"
 )
 
 const (
-	// IstioZtunnelReasonHealthy indicates that the control plane is fully reconciled and that all components are ready.
-	IstioZtunnelReasonHealthy IstioZtunnelConditionReason = "Healthy"
+	// ZTunnelReasonHealthy indicates that the control plane is fully reconciled and that all components are ready.
+	ZTunnelReasonHealthy ZTunnelConditionReason = "Healthy"
 )
 
 // +kubebuilder:object:root=true
@@ -173,26 +173,26 @@ const (
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",description="The age of the object"
 // +kubebuilder:validation:XValidation:rule="self.metadata.name == 'default'",message="metadata.name must be 'default'"
 
-// IstioZtunnel represents a deployment of the Istio ztunnel component.
-type IstioZtunnel struct {
+// ZTunnel represents a deployment of the Istio ztunnel component.
+type ZTunnel struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// +kubebuilder:default={version: "v1.24.0", namespace: "kube-system"}
-	Spec IstioZtunnelSpec `json:"spec,omitempty"`
+	Spec ZTunnelSpec `json:"spec,omitempty"`
 
-	Status IstioZtunnelStatus `json:"status,omitempty"`
+	Status ZTunnelStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// IstioZtunnelList contains a list of IstioZtunnel
-type IstioZtunnelList struct {
+// ZTunnelList contains a list of ZTunnel
+type ZTunnelList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []IstioZtunnel `json:"items"`
+	Items           []ZTunnel `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&IstioZtunnel{}, &IstioZtunnelList{})
+	SchemeBuilder.Register(&ZTunnel{}, &ZTunnelList{})
 }

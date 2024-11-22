@@ -26,10 +26,10 @@ type CNIValues struct {
 	Global *CNIGlobalConfig `json:"global,omitempty"`
 }
 
-type ZtunnelValues struct {
+type ZTunnelValues struct {
 	// Configuration for the Istio ztunnel plugin.
-	Ztunnel *ZtunnelConfig `json:"ztunnel,omitempty"`
+	ZTunnel *ZTunnelConfig `json:"ztunnel,omitempty"`
 
 	// Part of the global configuration applicable to the Istio ztunnel component.
-	Global *ZtunnelGlobalConfig `json:"global,omitempty"`
+	Global *ZTunnelGlobalConfig `json:"global,omitempty"`
 }

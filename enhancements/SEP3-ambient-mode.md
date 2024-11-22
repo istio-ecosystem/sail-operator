@@ -6,36 +6,36 @@
 
 ## Overview
 
-Upstream Istio implements the ambient mode by splitting its functionality into two distinct layers. At the base, a per-node Layer 4(L4) ztunnel secure overlay handles routing and zero trust security for traffic. Above that, users can enable L7 waypoint proxies to get access the full range of Istio features.
+Upstream Istio implements the ambient dataplane mode by splitting its functionality into two distinct layers. At the base, a per-node Layer 4 (L4) ztunnel secure overlay handles routing and zero trust security for traffic. Above that, users can enable Layer 7 (L7) waypoint proxies to get access the full range of Istio features. This layered approach enables incremental adoption of Istio, allowing a seamless transition from no mesh to a secure Layer 4 (L4) overlay, and optionally to full Layer 7 (L7) processing.
 
 The upstream Istio ambient mode can be installed and upgraded from istioctl with profile ambient. This is implemented by the upstream in-cluster IstioOperator resource APIs.
 
 ## Goals
 
-- Provide a way for installing the ambient mode component profile and charts in Sail Operator. This includes the ztunnel component chart and binary, Istio CNI changes and related meshConfig in pilot.
+- Provide a way for installing Istio with the Ambient profile using the Sail Operator. This involves the ztunnel chart and necessary updates to the IstioCNI and Istiod control plane components.
 - Provide a way for managing the ambient mode components life cycle. The implementation should enable in-place upgrades.
 
 ## Non-goals
 
 - Uninstallation of only the ambient mode components. Currently, to cleanup the environment, need to compeletely uninstall Istio from a cluster.
-- Istio Sidecar mode migration to ambient mode.
+- Migration of Istiod control plane and dataplane components between sidecar mode and Ambient dataplane mode (and vice versa).
 - Canary upgrade by the revision setting in ambient mode. 
 
 ## Design
 
 ### User Stories
 
-1. As a user of Sail Operator, I want to be able to use a CRD and controller for installing and upgrading Istio ambient mode profile and components.
-2. As a user of Sail Operator, I want to be able to run Istio ambient mode on a subset of OpenShift environments.
+1. As a Sail Operator user, I want the ability to use a CRD and controller to install and upgrade Istio with the Ambient mode profile.
+2. As a Sail Operator user, I want the ability to run Istio ambient mode on both Kubernetes and OpenShift environments.
 
 ### API Changes
-We will add a new CRD called `IstioZtunnel` that exposes ztunnel helm chart values from a `spec.values.ztunnel` field.
+We will add a new CRD called `ZTunnel` that exposes ztunnel helm chart values from a `spec.values.ztunnel` field.
 
-#### IstioZtunnel resource
+#### ZTunnel resource
 Here's an example YAML for the new resource:
 ```yaml
 apiGroup: sailoperator.io/v1alpha1
-kind: IstioZtunnel
+kind: ZTunnel
 metadata:
   name: default
   namespace: kube-system
@@ -58,20 +58,20 @@ status:
 
 In the `spec.values` field, users can specify helm chart values for the ztunnel component. These APIs are mapped from upstream Istio `manifests/charts/ztunnel/values.yaml` file. Users can also specify global values in the `spec.values.global` field. These APIs are the same as the IstioCNI global values APIs.
 
-#### IstioZtunnel Status
+#### ZTunnel Status
 
-The `status.state` field gives a quick hint as to whether a ztunnel DaemonSet has been reconcile ("Healthy") or if there are any problems with it.
+The `status.state` field gives a quick hint as to whether a ztunnel DaemonSet has been reconciled ("Healthy") or if there are any problems with it.
 
 ### Architecture
 
-To provide a developer preview of Istio Ambient mode using Sail Operator, we will need to design and implement new Sail Operator APIs, CRD and controller(s) for installing Istio Ambient mode profile and helm charts. This involves the following component helm charts and values:
+To provide support for Istio Ambient mode using Sail Operator, we will need to design and implement new Sail Operator APIs, CRD and controller(s) for installing Ambient profile. This involves the following changes:
 
 * Istio ztunnel helm charts
 * Istio CNI helm values, ClusterRole, ClusterRoleBinding, ConfigMap and DaemonSet updates
 * Set Istio discovery Pilot environment variable `PILOT_ENABLE_AMBIENT: "true"`
 * Set Istio `meshConfig.defaultConfig.proxyMetadata.ISTIO_META_ENABLE_HBONE: "true"`
 
-Therefore, we'll start from introducing a new Sail Operator CRD called `IstioZtunnel` and mapping ztunnel helm chart values to the CRD APIs.
+Therefore, we'll start from introducing a new Sail Operator CRD called `IstioZtunnel` and map ztunnel helm chart values to the CRD APIs.
 
 ### Performance Impact
 

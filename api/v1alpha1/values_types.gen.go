@@ -206,7 +206,7 @@ type CNIRepairConfig struct {
 }
 
 // Configuration for ztunnel.
-type ZtunnelConfig struct {
+type ZTunnelConfig struct {
 	// Hub to pull the container image from. Image will be `Hub/Image:Tag-Variant`.
 	Hub *string `json:"hub,omitempty"`
 	// The container image tag to pull. Image will be `Hub/Image:Tag-Variant`.
@@ -263,8 +263,8 @@ type ZtunnelConfig struct {
 	LogAsJson *bool `json:"logAsJson,omitempty"`
 }
 
-// ZtunnelGlobalConfig is a subset of the Global Configuration used in the Istio ztunnel chart.
-type ZtunnelGlobalConfig struct { // Default k8s resources settings for all Istio control plane components.
+// ZTunnelGlobalConfig is a subset of the Global Configuration used in the Istio ztunnel chart.
+type ZTunnelGlobalConfig struct { // Default k8s resources settings for all Istio control plane components.
 	//
 	// See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
 	//
