@@ -15,7 +15,8 @@ This end-to-end test suite utilizes Ginkgo, a testing framework known for its ex
     1. [Pre-requisites](#Pre-requisites)
     1. [How to Run the test](#How-to-Run-the-test)
     1. [Running the test locally](#Running-the-test-locally)
-    1. [Settings for end-to-end test execution](#Settings-for-end-to-end-test-execution)    
+    1. [Settings for end-to-end test execution](#Settings-for-end-to-end-test-execution)
+    1. [Customizing the test run](#Customizing-the-test-run)    
     1. [Get test definitions for the end-to-end test](#Get-test-definitions-for-the-end-to-end-test)
 1. [Contributing](#contributing)
 
@@ -214,6 +215,23 @@ The following environment variables define the behavior of the test run:
 * CONTROL_PLANE_NS=istio-system - The namespace where the control plane will be deployed.
 * DEPLOYMENT_NAME=sail-operator - The name of the operator deployment.
 * EXPECTED_REGISTRY=`^docker\.io|^gcr\.io` - Which image registry should the operand images come from. Useful for downstream tests.
+
+### Customizing the test run
+
+The test run can be customized by setting the following environment variables:
+
+For change all the sample files used in the test, you can use the next env var:
+* SAMPLE_YAML_BASE_URL=https://raw.githubusercontent.com/orgName/repoName - The base URL where the sample YAML files are located. This is useful when you want to test the operator with different sample YAML files defined in another repository. Currently the e2e framework use the upstream Istio repository to get the sample YAML files, for example: `https://raw.githubusercontent.com/istio/istio/master/samples/helloworld/helloworld.yaml` for `hello-world` sample yaml file on `master` branch.
+Note: using this env var will need to have the sample files available in the same path as Istio upstream repository are. For more information check the [code](https://github.com/istio-ecosystem/sail-operator/blob/74f96ab4a56e3d41e2d31faede290116a68551e9/tests/e2e/util/common/e2e_utils.go#L271), if you want to use custom directory we suggest to use the next env vars.
+
+For change the sample files used in the test, you can use the next env vars:
+* TCP_ECHO_DUAL_STACK_YAML_PATH
+* TCP_ECHO_IPV4_YAML_PATH
+* TCP_ECHO_IPV6_YAML_PATH
+* SLEEP_YAML_PATH
+* HELLOWORLD_YAML_PATH
+
+`TCP_ECHO_*` are used in the `dual-stack` test suite, `SLEEP_YAML_PATH` and `HELLOWORLD_YAML_PATH`are used in both `Multicluster` and default test run. Settings these env vars will override the default sample files used in the test and you can use a path to a custom sample file.
 
 ### Get test definitions for the end-to-end test
 
