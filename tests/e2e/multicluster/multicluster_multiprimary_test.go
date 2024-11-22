@@ -198,8 +198,29 @@ spec:
 
 				When("sample apps are deployed in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
+						// Create the namespace
+						Expect(k1.CreateNamespace("sample")).To(Succeed(), "Namespace failed to be created")
+						Expect(k2.CreateNamespace("sample")).To(Succeed(), "Namespace failed to be created")
+
+						// Label the sample namespace
+						Expect(k1.Patch("namespace", "sample", "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
+							To(Succeed(), "Error patching sample namespace")
+						Expect(k2.Patch("namespace", "sample", "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
+							To(Succeed(), "Error patching sample namespace")
+
 						// Deploy the sample app in both clusters
-						deploySampleApp("sample", version)
+						helloWorldURL := common.GetSampleYAML(version, "helloworld")
+						sleepURL := common.GetSampleYAML(version, "sleep")
+
+						// On Cluster 0, create a service for the helloworld app v1
+						Expect(k1.WithNamespace("sample").ApplyWithLabels(helloWorldURL, "service=helloworld")).To(Succeed(), "Failed to deploy helloworld service")
+						Expect(k1.WithNamespace("sample").ApplyWithLabels(helloWorldURL, "version=v1")).To(Succeed(), "Failed to deploy helloworld service")
+						Expect(k1.WithNamespace("sample").Apply(sleepURL)).To(Succeed(), "Failed to deploy sleep service")
+
+						// On Cluster 1, create a service for the helloworld app v2
+						Expect(k2.WithNamespace("sample").ApplyWithLabels(helloWorldURL, "service=helloworld")).To(Succeed(), "Failed to deploy helloworld service")
+						Expect(k2.WithNamespace("sample").ApplyWithLabels(helloWorldURL, "version=v2")).To(Succeed(), "Failed to deploy helloworld service")
+						Expect(k2.WithNamespace("sample").Apply(sleepURL)).To(Succeed(), "Failed to deploy sleep service")
 						Success("Sample app is deployed in both clusters")
 					})
 
@@ -207,7 +228,7 @@ spec:
 						samplePodsCluster1 := &corev1.PodList{}
 
 						Expect(clPrimary.List(ctx, samplePodsCluster1, client.InNamespace("sample"))).To(Succeed())
-						Expect(samplePodsCluster1.Items).ToNot(BeEmpty(), "No pods found in bookinfo namespace")
+						Expect(samplePodsCluster1.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
 
 						for _, pod := range samplePodsCluster1.Items {
 							Eventually(common.GetObject).
@@ -217,7 +238,7 @@ spec:
 
 						samplePodsCluster2 := &corev1.PodList{}
 						Expect(clRemote.List(ctx, samplePodsCluster2, client.InNamespace("sample"))).To(Succeed())
-						Expect(samplePodsCluster2.Items).ToNot(BeEmpty(), "No pods found in bookinfo namespace")
+						Expect(samplePodsCluster2.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
 
 						for _, pod := range samplePodsCluster2.Items {
 							Eventually(common.GetObject).
@@ -290,32 +311,3 @@ spec:
 		Expect(k2.WaitNamespaceDeleted(namespace)).To(Succeed())
 	})
 })
-
-// deploySampleApp deploys the sample app in the given cluster
-func deploySampleApp(ns string, istioVersion supportedversion.VersionInfo) {
-	// Create the namespace
-	Expect(k1.CreateNamespace(ns)).To(Succeed(), "Namespace failed to be created")
-	Expect(k2.CreateNamespace(ns)).To(Succeed(), "Namespace failed to be created")
-
-	// Label the namespace
-	Expect(k1.Patch("namespace", ns, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
-		To(Succeed(), "Error patching sample namespace")
-	Expect(k2.Patch("namespace", ns, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
-		To(Succeed(), "Error patching sample namespace")
-
-	version := istioVersion.Version.String()
-	// Deploy the sample app from upstream URL in both clusters
-	if istioVersion.Name == "latest" {
-		version = "master"
-	}
-	helloWorldURL := fmt.Sprintf("https://raw.githubusercontent.com/istio/istio/%s/samples/helloworld/helloworld.yaml", version)
-	Expect(k1.WithNamespace(ns).ApplyWithLabels(helloWorldURL, "service=helloworld")).To(Succeed(), "Sample service deploy failed on Cluster #1")
-	Expect(k2.WithNamespace(ns).ApplyWithLabels(helloWorldURL, "service=helloworld")).To(Succeed(), "Sample service deploy failed on Cluster #2")
-
-	Expect(k1.WithNamespace(ns).ApplyWithLabels(helloWorldURL, "version=v1")).To(Succeed(), "Sample service deploy failed on Cluster #1")
-	Expect(k2.WithNamespace(ns).ApplyWithLabels(helloWorldURL, "version=v2")).To(Succeed(), "Sample service deploy failed on Cluster #2")
-
-	sleepURL := fmt.Sprintf("https://raw.githubusercontent.com/istio/istio/%s/samples/sleep/sleep.yaml", version)
-	Expect(k1.WithNamespace(ns).Apply(sleepURL)).To(Succeed(), "Sample sleep deploy failed on Cluster #1")
-	Expect(k2.WithNamespace(ns).Apply(sleepURL)).To(Succeed(), "Sample sleep deploy failed on Cluster #2")
-}

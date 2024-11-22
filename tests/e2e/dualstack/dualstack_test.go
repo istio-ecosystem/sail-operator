@@ -199,10 +199,10 @@ spec:
 						Expect(k.Patch("namespace", SleepNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
 							To(Succeed(), "Error patching sleep namespace")
 
-						Expect(k.WithNamespace(DualStackNamespace).Apply(getYAMLPodURL(version, DualStackNamespace))).To(Succeed(), "error deploying tcpDualStack pod")
-						Expect(k.WithNamespace(IPv4Namespace).Apply(getYAMLPodURL(version, IPv4Namespace))).To(Succeed(), "error deploying ipv4 pod")
-						Expect(k.WithNamespace(IPv6Namespace).Apply(getYAMLPodURL(version, IPv6Namespace))).To(Succeed(), "error deploying ipv6 pod")
-						Expect(k.WithNamespace(SleepNamespace).Apply(getYAMLPodURL(version, SleepNamespace))).To(Succeed(), "error deploying sleep pod")
+						Expect(k.WithNamespace(DualStackNamespace).Apply(common.GetSampleYAML(version, "tcp-echo-dual-stack"))).To(Succeed(), "error deploying tcpDualStack pod")
+						Expect(k.WithNamespace(IPv4Namespace).Apply(common.GetSampleYAML(version, "tcp-echo-ipv4"))).To(Succeed(), "error deploying ipv4 pod")
+						Expect(k.WithNamespace(IPv6Namespace).Apply(common.GetSampleYAML(version, "tcp-echo-ipv6"))).To(Succeed(), "error deploying ipv6 pod")
+						Expect(k.WithNamespace(SleepNamespace).Apply(common.GetSampleYAML(version, "sleep"))).To(Succeed(), "error deploying sleep pod")
 
 						Success("dualStack validation pods deployed")
 					})
@@ -321,29 +321,6 @@ func ImageFromRegistry(regexp string) types.GomegaMatcher {
 
 func getEnvVars(container corev1.Container) []corev1.EnvVar {
 	return container.Env
-}
-
-func getYAMLPodURL(version supportedversion.VersionInfo, namespace string) string {
-	var url string
-
-	switch namespace {
-	case DualStackNamespace:
-		url = "samples/tcp-echo/tcp-echo-dual-stack.yaml"
-	case IPv4Namespace:
-		url = "samples/tcp-echo/tcp-echo-ipv4.yaml"
-	case IPv6Namespace:
-		url = "samples/tcp-echo/tcp-echo-ipv6.yaml"
-	case SleepNamespace:
-		url = "samples/sleep/sleep.yaml"
-	default:
-		return ""
-	}
-
-	if version.Name == "latest" {
-		return fmt.Sprintf("https://raw.githubusercontent.com/istio/istio/master/%s", url)
-	}
-
-	return fmt.Sprintf("https://raw.githubusercontent.com/istio/istio/%s/%s", version.Version, url)
 }
 
 func checkPodConnectivity(podName, namespace, echoStr string) {
