@@ -264,11 +264,11 @@ func UninstallOperator() error {
 	return helm.Uninstall("sail-operator", "--namespace", OperatorNamespace)
 }
 
-// GetYAMLPodURL returns the URL of the yaml file for the testing app.
+// GetSampleYAML returns the URL of the yaml file for the testing app.
 // args:
 // version: the version of the Istio to get the yaml file from.
 // appName: the name of the testing app. Example: helloworld, sleep, tcp-echo.
-func GetYAMLPodURL(version supportedversion.VersionInfo, appName string) string {
+func GetSampleYAML(version supportedversion.VersionInfo, appName string) string {
 	// This func will be used to get URLs for the yaml files of the testing apps. Example: helloworld, sleep, tcp-echo.
 	// Default values points to upstream Istio sample yaml files. Custom paths can be provided using environment variables.
 
@@ -309,7 +309,7 @@ func GetYAMLPodURL(version supportedversion.VersionInfo, appName string) string 
 	}
 
 	// Base URL logic
-	baseURL := os.Getenv("POD_SAMPLE_YAML_BASE_URL")
+	baseURL := os.Getenv("SAMPLE_YAML_BASE_URL")
 	if baseURL == "" {
 		baseURL = "https://raw.githubusercontent.com/istio/istio"
 	}

@@ -199,10 +199,10 @@ spec:
 						Expect(k.Patch("namespace", SleepNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
 							To(Succeed(), "Error patching sleep namespace")
 
-						Expect(k.WithNamespace(DualStackNamespace).Apply(common.GetYAMLPodURL(version, "tcp-echo-dual-stack"))).To(Succeed(), "error deploying tcpDualStack pod")
-						Expect(k.WithNamespace(IPv4Namespace).Apply(common.GetYAMLPodURL(version, "tcp-echo-ipv4"))).To(Succeed(), "error deploying ipv4 pod")
-						Expect(k.WithNamespace(IPv6Namespace).Apply(common.GetYAMLPodURL(version, "tcp-echo-ipv6"))).To(Succeed(), "error deploying ipv6 pod")
-						Expect(k.WithNamespace(SleepNamespace).Apply(common.GetYAMLPodURL(version, "sleep"))).To(Succeed(), "error deploying sleep pod")
+						Expect(k.WithNamespace(DualStackNamespace).Apply(common.GetSampleYAML(version, "tcp-echo-dual-stack"))).To(Succeed(), "error deploying tcpDualStack pod")
+						Expect(k.WithNamespace(IPv4Namespace).Apply(common.GetSampleYAML(version, "tcp-echo-ipv4"))).To(Succeed(), "error deploying ipv4 pod")
+						Expect(k.WithNamespace(IPv6Namespace).Apply(common.GetSampleYAML(version, "tcp-echo-ipv6"))).To(Succeed(), "error deploying ipv6 pod")
+						Expect(k.WithNamespace(SleepNamespace).Apply(common.GetSampleYAML(version, "sleep"))).To(Succeed(), "error deploying sleep pod")
 
 						Success("dualStack validation pods deployed")
 					})

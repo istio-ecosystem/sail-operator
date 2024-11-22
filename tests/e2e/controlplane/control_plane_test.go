@@ -227,7 +227,7 @@ spec:
 						Expect(k.Patch("namespace", sampleNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
 							To(Succeed(), "Error patching sample namespace")
 						Expect(k.WithNamespace(sampleNamespace).
-							ApplyWithLabels(common.GetYAMLPodURL(version, sampleNamespace), "version=v1")).
+							ApplyWithLabels(common.GetSampleYAML(version, sampleNamespace), "version=v1")).
 							To(Succeed(), "Error deploying sample")
 						Success("sample deployed")
 					})

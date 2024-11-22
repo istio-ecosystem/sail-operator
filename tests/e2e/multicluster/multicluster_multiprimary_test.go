@@ -209,8 +209,8 @@ spec:
 							To(Succeed(), "Error patching sample namespace")
 
 						// Deploy the sample app in both clusters
-						helloWorldURL := common.GetYAMLPodURL(version, "helloworld")
-						sleepURL := common.GetYAMLPodURL(version, "sleep")
+						helloWorldURL := common.GetSampleYAML(version, "helloworld")
+						sleepURL := common.GetSampleYAML(version, "sleep")
 
 						// On Cluster 0, create a service for the helloworld app v1
 						Expect(k1.WithNamespace("sample").ApplyWithLabels(helloWorldURL, "service=helloworld")).To(Succeed(), "Failed to deploy helloworld service")
