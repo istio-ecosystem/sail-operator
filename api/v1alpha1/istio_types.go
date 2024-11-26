@@ -37,10 +37,10 @@ const (
 type IstioSpec struct {
 	// +sail:version
 	// Defines the version of Istio to install.
-	// Must be one of: v1.24.0, v1.23.3, v1.23.2, v1.22.6, v1.22.5, v1.21.6, latest.
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.23.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.23.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.22.6", "urn:alm:descriptor:com.tectonic.ui:select:v1.22.5", "urn:alm:descriptor:com.tectonic.ui:select:v1.21.6", "urn:alm:descriptor:com.tectonic.ui:select:latest"}
-	// +kubebuilder:validation:Enum=v1.24.0;v1.23.3;v1.23.2;v1.22.6;v1.22.5;v1.21.6;latest
-	// +kubebuilder:default=v1.24.0
+	// Must be one of: v1.24.1, v1.24.0, v1.23.3, v1.23.2, v1.22.6, v1.22.5, v1.21.6, latest.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.23.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.23.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.22.6", "urn:alm:descriptor:com.tectonic.ui:select:v1.22.5", "urn:alm:descriptor:com.tectonic.ui:select:v1.21.6", "urn:alm:descriptor:com.tectonic.ui:select:latest"}
+	// +kubebuilder:validation:Enum=v1.24.1;v1.24.0;v1.23.3;v1.23.2;v1.22.6;v1.22.5;v1.21.6;latest
+	// +kubebuilder:default=v1.24.1
 	Version string `json:"version"`
 
 	// Defines the update strategy to use when the version in the Istio CR is updated.
@@ -261,7 +261,7 @@ type Istio struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// +kubebuilder:default={version: "v1.24.0", namespace: "istio-system", updateStrategy: {type:"InPlace"}}
+	// +kubebuilder:default={version: "v1.24.1", namespace: "istio-system", updateStrategy: {type:"InPlace"}}
 	Spec IstioSpec `json:"spec,omitempty"`
 
 	Status IstioStatus `json:"status,omitempty"`
