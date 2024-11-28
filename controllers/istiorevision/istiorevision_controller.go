@@ -24,7 +24,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
-	"github.com/istio-ecosystem/sail-operator/controllers/istio"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
@@ -210,10 +209,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// The handler triggers the reconciliation of the referenced IstioRevision CR so that its InUse condition is updated.
 	podHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapPodToReconcileRequest))
 
-	// revisionTagHandler handles Istios that reference an IstioRevision CR as ActiveRevision
-	// The handler triggers the reconciliation of the active IstioRevision CR so that its InUse condition is updated.
-	istioHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapIstioToReconcileRequest))
-
 	// revisionTagHandler handles IstioRevisionTags that reference the IstioRevision CR via their targetRef.
 	// The handler triggers the reconciliation of the referenced IstioRevision CR so that its InUse condition is updated.
 	revisionTagHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapRevisionTagToReconcileRequest))
@@ -254,8 +249,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// +lint-watches:ignore: Pod (not found in charts, but must be watched to reconcile IstioRevision when a pod references it)
 		Watches(&corev1.Pod{}, podHandler, builder.WithPredicates(ignoreStatusChange())).
 
-		// +lint-watches:ignore: Istio (not found in charts, but must be watched to update InUse status when a parent Istio resource is updated)
-		Watches(&v1alpha1.Istio{}, istioHandler).
 		// +lint-watches:ignore: IstioRevisionTag (not found in charts, but must be watched to reconcile IstioRevision when a pod references it)
 		Watches(&v1alpha1.IstioRevisionTag{}, revisionTagHandler).
 
@@ -561,27 +554,10 @@ func (r *Reconciler) mapPodToReconcileRequest(ctx context.Context, pod client.Ob
 	return nil
 }
 
-func (r *Reconciler) mapIstioToReconcileRequest(ctx context.Context, obj client.Object) []reconcile.Request {
-	if i, ok := obj.(*v1alpha1.Istio); ok {
-		if i.Status.ActiveRevisionName != "" {
-			return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: i.Status.ActiveRevisionName}}}
-		}
-	}
-	return nil
-}
-
 func (r *Reconciler) mapRevisionTagToReconcileRequest(ctx context.Context, revisionTag client.Object) []reconcile.Request {
 	tag, ok := revisionTag.(*v1alpha1.IstioRevisionTag)
-	if ok {
-		if tag.Spec.TargetRef.Kind == v1alpha1.IstioRevisionKind {
-			return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: tag.Spec.TargetRef.Name}}}
-		} else if tag.Spec.TargetRef.Kind == v1alpha1.IstioKind {
-			i := &v1alpha1.Istio{}
-			if err := r.Client.Get(ctx, types.NamespacedName{Name: tag.Spec.TargetRef.Name}, i); err != nil {
-				return nil
-			}
-			return []reconcile.Request{{NamespacedName: istio.GetActiveRevisionKey(i)}}
-		}
+	if ok && tag.Status.IstioRevision != "" {
+		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: tag.Status.IstioRevision}}}
 	}
 	return nil
 }
