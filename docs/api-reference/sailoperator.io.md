@@ -15,6 +15,8 @@ Package v1alpha1 contains API Schema definitions for the sailoperator.io v1alpha
 - [IstioList](#istiolist)
 - [IstioRevision](#istiorevision)
 - [IstioRevisionList](#istiorevisionlist)
+- [IstioRevisionTag](#istiorevisiontag)
+- [IstioRevisionTagList](#istiorevisiontaglist)
 
 
 
@@ -873,6 +875,163 @@ _Appears in:_
 | `observedGeneration` _integer_ | ObservedGeneration is the most recent generation observed for this IstioRevision object. It corresponds to the object's generation, which is updated on mutation by the API Server. The information in the status pertains to this particular generation of the object. |  |  |
 | `conditions` _[IstioRevisionCondition](#istiorevisioncondition) array_ | Represents the latest available observations of the object's current state. |  |  |
 | `state` _[IstioRevisionConditionReason](#istiorevisionconditionreason)_ | Reports the current state of the object. |  |  |
+
+
+#### IstioRevisionTag
+
+
+
+IstioRevisionTag references a Istio or IstioRevision object and serves as an alias for sidecar injection.
+
+
+
+_Appears in:_
+- [IstioRevisionTagList](#istiorevisiontaglist)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `sailoperator.io/v1alpha1` | | |
+| `kind` _string_ | `IstioRevisionTag` | | |
+| `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
+| `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[IstioRevisionTagSpec](#istiorevisiontagspec)_ |  |  |  |
+| `status` _[IstioRevisionTagStatus](#istiorevisiontagstatus)_ |  |  |  |
+
+
+#### IstioRevisionTagCondition
+
+
+
+IstioRevisionCondition represents a specific observation of the IstioRevision object's state.
+
+
+
+_Appears in:_
+- [IstioRevisionTagStatus](#istiorevisiontagstatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `type` _[IstioRevisionTagConditionType](#istiorevisiontagconditiontype)_ | The type of this condition. |  |  |
+| `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#conditionstatus-v1-meta)_ | The status of this condition. Can be True, False or Unknown. |  |  |
+| `reason` _[IstioRevisionTagConditionReason](#istiorevisiontagconditionreason)_ | Unique, single-word, CamelCase reason for the condition's last transition. |  |  |
+| `message` _string_ | Human-readable message indicating details about the last transition. |  |  |
+| `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta)_ | Last time the condition transitioned from one status to another. |  |  |
+
+
+#### IstioRevisionTagConditionReason
+
+_Underlying type:_ _string_
+
+IstioRevisionConditionReason represents a short message indicating how the condition came
+to be in its present state.
+
+
+
+_Appears in:_
+- [IstioRevisionTagCondition](#istiorevisiontagcondition)
+- [IstioRevisionTagStatus](#istiorevisiontagstatus)
+
+| Field | Description |
+| --- | --- |
+| `NameAlreadyExists` | IstioRevisionTagNameAlreadyExists indicates that the a revision with the same name as the IstioRevisionTag already exists.  |
+| `RefNotFound` | IstioRevisionTagReasonReferenceNotFound indicates that the resource referenced by the tag's TargetRef was not found  |
+| `ReconcileError` | IstioRevisionReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried.  |
+| `ReferencedByWorkloads` | IstioRevisionReasonReferencedByWorkloads indicates that the revision is referenced by at least one pod or namespace.  |
+| `NotReferencedByAnything` | IstioRevisionReasonNotReferenced indicates that the revision is not referenced by any pod or namespace.  |
+| `UsageCheckFailed` | IstioRevisionReasonUsageCheckFailed indicates that the operator could not check whether any workloads use the revision.  |
+| `Healthy` | IstioRevisionTagReasonHealthy indicates that the revision tag has been successfully reconciled and is in use.  |
+
+
+#### IstioRevisionTagConditionType
+
+_Underlying type:_ _string_
+
+IstioRevisionConditionType represents the type of the condition.  Condition stages are:
+Installed, Reconciled, Ready
+
+
+
+_Appears in:_
+- [IstioRevisionTagCondition](#istiorevisiontagcondition)
+
+| Field | Description |
+| --- | --- |
+| `Reconciled` | IstioRevisionConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.  |
+| `InUse` | IstioRevisionConditionInUse signifies whether any workload is configured to use the revision.  |
+
+
+#### IstioRevisionTagList
+
+
+
+IstioRevisionList contains a list of IstioRevision
+
+
+
+
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `sailoperator.io/v1alpha1` | | |
+| `kind` _string_ | `IstioRevisionTagList` | | |
+| `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
+| `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `items` _[IstioRevisionTag](#istiorevisiontag) array_ |  |  |  |
+
+
+#### IstioRevisionTagSpec
+
+
+
+IstioRevisionTagSpec defines the desired state of IstioRevisionTag
+
+
+
+_Appears in:_
+- [IstioRevisionTag](#istiorevisiontag)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `targetRef` _[IstioRevisionTagTargetReference](#istiorevisiontagtargetreference)_ |  |  | Required: \{\}   |
+
+
+#### IstioRevisionTagStatus
+
+
+
+IstioRevisionStatus defines the observed state of IstioRevision
+
+
+
+_Appears in:_
+- [IstioRevisionTag](#istiorevisiontag)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `observedGeneration` _integer_ | ObservedGeneration is the most recent generation observed for this IstioRevisionTag object. It corresponds to the object's generation, which is updated on mutation by the API Server. The information in the status pertains to this particular generation of the object. |  |  |
+| `conditions` _[IstioRevisionTagCondition](#istiorevisiontagcondition) array_ | Represents the latest available observations of the object's current state. |  |  |
+| `state` _[IstioRevisionTagConditionReason](#istiorevisiontagconditionreason)_ | Reports the current state of the object. |  |  |
+| `istiodNamespace` _string_ | IstiodNamespace stores the namespace of the corresponding Istiod instance |  |  |
+| `istioRevision` _string_ | IstioRevision stores the name of the referenced IstioRevision |  |  |
+
+
+#### IstioRevisionTagTargetReference
+
+
+
+IstioRevisionTagTargetReference can reference either Istio or IstioRevision objects in the cluster.
+
+
+
+_Appears in:_
+- [IstioRevisionTagSpec](#istiorevisiontagspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `kind` _string_ | Kind is the kind of the target resource. |  | MaxLength: 253  MinLength: 1  Required: \{\}   |
+| `name` _string_ | Name is the name of the target resource. |  | MaxLength: 253  MinLength: 1  Required: \{\}   |
 
 
 #### IstioSpec
@@ -2924,7 +3083,6 @@ _Appears in:_
 | `meshConfig` _[MeshConfig](#meshconfig)_ | Defines runtime configuration of components, including Istiod and istio-agent behavior. See https://istio.io/docs/reference/config/istio.mesh.v1alpha1/ for all available options. TODO can this import the real mesh config API? |  |  |
 | `base` _[BaseConfig](#baseconfig)_ | Configuration for the base component. |  |  |
 | `istiodRemote` _[IstiodRemoteConfig](#istiodremoteconfig)_ | Configuration for istiod-remote. DEPRECATED - istiod-remote chart is removed and replaced with `istio-discovery --set values.istiodRemote.enabled=true`  Deprecated: Marked as deprecated in pkg/apis/values_types.proto. |  |  |
-| `revisionTags` _string array_ | Specifies the aliases for the Istio control plane revision. A MutatingWebhookConfiguration is created for each alias. |  |  |
 | `defaultRevision` _string_ | The name of the default revision in the cluster. |  |  |
 | `profile` _string_ | Specifies which installation configuration profile to apply. |  |  |
 | `compatibilityVersion` _string_ | Specifies the compatibility version to use. When this is set, the control plane will be configured with the same defaults as the specified version. |  |  |

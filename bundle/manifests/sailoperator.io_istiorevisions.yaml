@@ -9194,13 +9194,6 @@ spec:
                     description: Identifies the revision this installation is associated
                       with.
                     type: string
-                  revisionTags:
-                    description: |-
-                      Specifies the aliases for the Istio control plane revision. A MutatingWebhookConfiguration
-                      is created for each alias.
-                    items:
-                      type: string
-                    type: array
                   sidecarInjectorWebhook:
                     description: Configuration for the sidecar injector webhook.
                     properties:

@@ -57,15 +57,6 @@ import (
 	"istio.io/istio/pkg/ptr"
 )
 
-const (
-	IstioInjectionLabel        = "istio-injection"
-	IstioInjectionEnabledValue = "enabled"
-	IstioRevLabel              = "istio.io/rev"
-	IstioSidecarInjectLabel    = "sidecar.istio.io/inject"
-
-	istiodChartName = "istiod"
-)
-
 // Reconciler reconciles an IstioRevision object
 type Reconciler struct {
 	client.Client
@@ -153,6 +144,11 @@ func (r *Reconciler) validate(ctx context.Context, rev *v1alpha1.IstioRevision) 
 	if rev.Spec.Values.Global == nil || rev.Spec.Values.Global.IstioNamespace == nil || *rev.Spec.Values.Global.IstioNamespace != rev.Spec.Namespace {
 		return reconciler.NewValidationError("spec.values.global.istioNamespace does not match spec.namespace")
 	}
+
+	if tagExists, err := validation.IstioRevisionTagExists(ctx, r.Client, rev.Name); tagExists || err != nil {
+		return reconciler.NewValidationError("an IstioRevisionTag exists with this name")
+	}
+
 	return nil
 }
 
@@ -170,22 +166,22 @@ func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1alpha1.IstioR
 	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev),
 		values, rev.Spec.Namespace, getReleaseName(rev), ownerReference)
 	if err != nil {
-		return fmt.Errorf("failed to install/update Helm chart %q: %w", istiodChartName, err)
+		return fmt.Errorf("failed to install/update Helm chart %q: %w", constants.IstiodChartName, err)
 	}
 	return nil
 }
 
 func getReleaseName(rev *v1alpha1.IstioRevision) string {
-	return fmt.Sprintf("%s-%s", rev.Name, istiodChartName)
+	return fmt.Sprintf("%s-%s", rev.Name, constants.IstiodChartName)
 }
 
 func (r *Reconciler) getChartDir(rev *v1alpha1.IstioRevision) string {
-	return path.Join(r.Config.ResourceDirectory, rev.Spec.Version, "charts", istiodChartName)
+	return path.Join(r.Config.ResourceDirectory, rev.Spec.Version, "charts", constants.IstiodChartName)
 }
 
 func (r *Reconciler) uninstallHelmCharts(ctx context.Context, rev *v1alpha1.IstioRevision) error {
 	if _, err := r.ChartManager.UninstallChart(ctx, getReleaseName(rev), rev.Spec.Namespace); err != nil {
-		return fmt.Errorf("failed to uninstall Helm chart %q: %w", istiodChartName, err)
+		return fmt.Errorf("failed to uninstall Helm chart %q: %w", constants.IstiodChartName, err)
 	}
 	return nil
 }
@@ -212,6 +208,10 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// podHandler handles pods that reference the IstioRevision CR via the istio.io/rev or sidecar.istio.io/inject labels.
 	// The handler triggers the reconciliation of the referenced IstioRevision CR so that its InUse condition is updated.
 	podHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapPodToReconcileRequest))
+
+	// revisionTagHandler handles IstioRevisionTags that reference the IstioRevision CR via their targetRef.
+	// The handler triggers the reconciliation of the referenced IstioRevision CR so that its InUse condition is updated.
+	revisionTagHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapRevisionTagToReconcileRequest))
 
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
@@ -248,6 +248,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 		// +lint-watches:ignore: Pod (not found in charts, but must be watched to reconcile IstioRevision when a pod references it)
 		Watches(&corev1.Pod{}, podHandler, builder.WithPredicates(ignoreStatusChange())).
+
+		// +lint-watches:ignore: IstioRevisionTag (not found in charts, but must be watched to reconcile IstioRevision when a pod references it)
+		Watches(&v1alpha1.IstioRevisionTag{}, revisionTagHandler).
 
 		// cluster-scoped resources
 		Watches(&rbacv1.ClusterRole{}, ownedResourceHandler).
@@ -375,7 +378,7 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1alpha1.
 func (r *Reconciler) determineInUseCondition(ctx context.Context, rev *v1alpha1.IstioRevision) (v1alpha1.IstioRevisionCondition, error) {
 	c := v1alpha1.IstioRevisionCondition{Type: v1alpha1.IstioRevisionConditionInUse}
 
-	isReferenced, err := r.isRevisionReferencedByWorkloads(ctx, rev)
+	isReferenced, err := r.isRevisionReferenced(ctx, rev)
 	if err == nil {
 		if isReferenced {
 			c.Status = metav1.ConditionTrue
@@ -394,10 +397,22 @@ func (r *Reconciler) determineInUseCondition(ctx context.Context, rev *v1alpha1.
 	return c, fmt.Errorf("failed to determine if IstioRevision is in use: %w", err)
 }
 
-func (r *Reconciler) isRevisionReferencedByWorkloads(ctx context.Context, rev *v1alpha1.IstioRevision) (bool, error) {
+func (r *Reconciler) isRevisionReferenced(ctx context.Context, rev *v1alpha1.IstioRevision) (bool, error) {
 	log := logf.FromContext(ctx)
 	nsList := corev1.NamespaceList{}
 	nsMap := map[string]corev1.Namespace{}
+	// if an IstioRevision is referenced by a revisionTag, it's considered as InUse
+	revisionTagList := v1alpha1.IstioRevisionTagList{}
+	if err := r.Client.List(ctx, &revisionTagList); err != nil {
+		return false, fmt.Errorf("failed to list IstioRevisionTags: %w", err)
+	}
+	for _, tag := range revisionTagList.Items {
+		if tag.Status.IstioRevision == rev.Name {
+			log.V(2).Info("Revision is referenced by IstioRevisionTag", "IstioRevisionTag", tag.Name)
+			return true, nil
+		}
+	}
+
 	if err := r.Client.List(ctx, &nsList); err != nil { // TODO: can we optimize this by specifying a label selector
 		return false, fmt.Errorf("failed to list namespaces: %w", err)
 	}
@@ -440,10 +455,10 @@ func podReferencesRevision(pod corev1.Pod, ns corev1.Namespace, rev *v1alpha1.Is
 }
 
 func getReferencedRevisionFromNamespace(labels map[string]string) string {
-	if labels[IstioInjectionLabel] == IstioInjectionEnabledValue {
+	if labels[constants.IstioInjectionLabel] == constants.IstioInjectionEnabledValue {
 		return v1alpha1.DefaultRevision
 	}
-	revision := labels[IstioRevLabel]
+	revision := labels[constants.IstioRevLabel]
 	if revision != "" {
 		return revision
 	}
@@ -454,21 +469,21 @@ func getReferencedRevisionFromNamespace(labels map[string]string) string {
 
 func getReferencedRevisionFromPod(podLabels, podAnnotations, nsLabels map[string]string) string {
 	// if pod was already injected, the revision that did the injection is specified in the istio.io/rev annotation
-	revision := podAnnotations[IstioRevLabel]
+	revision := podAnnotations[constants.IstioRevLabel]
 	if revision != "" {
 		return revision
 	}
 
 	// pod is marked for injection by a specific revision, but wasn't injected (e.g. because it was created before the revision was applied)
 	revisionFromNamespace := getReferencedRevisionFromNamespace(nsLabels)
-	if podLabels[IstioSidecarInjectLabel] != "false" {
+	if podLabels[constants.IstioSidecarInjectLabel] != "false" {
 		if revisionFromNamespace != "" {
 			return revisionFromNamespace
 		}
-		revisionFromPod := podLabels[IstioRevLabel]
+		revisionFromPod := podLabels[constants.IstioRevLabel]
 		if revisionFromPod != "" {
 			return revisionFromPod
-		} else if podLabels[IstioSidecarInjectLabel] == "true" {
+		} else if podLabels[constants.IstioSidecarInjectLabel] == "true" {
 			return v1alpha1.DefaultRevision
 		}
 	}
@@ -535,6 +550,14 @@ func (r *Reconciler) mapPodToReconcileRequest(ctx context.Context, pod client.Ob
 	revision := getReferencedRevisionFromPod(pod.GetLabels(), pod.GetAnnotations(), ns.GetLabels())
 	if revision != "" {
 		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: revision}}}
+	}
+	return nil
+}
+
+func (r *Reconciler) mapRevisionTagToReconcileRequest(ctx context.Context, revisionTag client.Object) []reconcile.Request {
+	tag, ok := revisionTag.(*v1alpha1.IstioRevisionTag)
+	if ok && tag.Status.IstioRevision != "" {
+		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: tag.Status.IstioRevision}}}
 	}
 	return nil
 }

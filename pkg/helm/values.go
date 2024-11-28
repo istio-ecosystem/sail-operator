@@ -42,6 +42,12 @@ func (h *Values) Set(key string, val any) error {
 	return unstructured.SetNestedField(*h, val, toKeys(key)...)
 }
 
+// Set sets the value of a nested string slice to the value provided.
+// Returns an error if value cannot be set because one of the nesting levels is not a map[string]any.
+func (h *Values) SetStringSlice(key string, val []string) error {
+	return unstructured.SetNestedStringSlice(*h, val, toKeys(key)...)
+}
+
 // SetIfAbsent sets the value of a nested field to a deep copy of the value
 // provided if the field does not exist.
 func (h *Values) SetIfAbsent(key string, val any) error {

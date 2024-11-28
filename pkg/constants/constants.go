@@ -76,4 +76,19 @@ const (
 	// WebhookReadinessProbeTimeoutSecondsAnnotationKey is an annotation on the istio-sidecar-injection MutatingWebhookConfiguration that
 	// specifies the timeout for the readiness probe
 	WebhookReadinessProbeTimeoutSecondsAnnotationKey = MetadataNamespace + "/readinessProbe.timeoutSeconds"
+
+	// IstioInjectionLabel is the label that is used to configure injection for the 'default' IstioRevision
+	IstioInjectionLabel = "istio-injection"
+
+	// IstioInjectionEnabledValue is the value for IstioInjectionLabel
+	IstioInjectionEnabledValue = "enabled"
+
+	// IstioRevLabel is the label that is used to configure injection for non-default IstioRevisions
+	IstioRevLabel = "istio.io/rev"
+
+	// IstioSidecarInjectLabel is the label that is used to configure injection for specific workloads
+	IstioSidecarInjectLabel = "sidecar.istio.io/inject"
+
+	// IstiodChartName is the name of the chart that installs istiod
+	IstiodChartName = "istiod"
 )

@@ -225,6 +225,12 @@ spec:
         displayName: Helm Values
         path: values
       version: v1alpha1
+    - description: IstioRevisionTag references a Istio or IstioRevision object and
+        serves as an alias for sidecar injection.
+      displayName: Istio Revision Tag
+      kind: IstioRevisionTag
+      name: istiorevisiontags.sailoperator.io
+      version: v1alpha1
     - description: |-
         Istio represents an Istio Service Mesh deployment consisting of one or more
         control plane instances (represented by one or more IstioRevision objects).
@@ -416,6 +422,32 @@ spec:
           - sailoperator.io
           resources:
           - istiorevisions/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - sailoperator.io
+          resources:
+          - istiorevisiontags
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - sailoperator.io
+          resources:
+          - istiorevisiontags/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - sailoperator.io
+          resources:
+          - istiorevisiontags/status
           verbs:
           - get
           - patch
