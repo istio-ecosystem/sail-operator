@@ -385,7 +385,7 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1alpha1.
 func (r *Reconciler) determineInUseCondition(ctx context.Context, rev *v1alpha1.IstioRevision) (v1alpha1.IstioRevisionCondition, error) {
 	c := v1alpha1.IstioRevisionCondition{Type: v1alpha1.IstioRevisionConditionInUse}
 
-	isReferenced, err := r.isRevisionReferencedByWorkloads(ctx, rev)
+	isReferenced, err := r.isRevisionReferenced(ctx, rev)
 	if err == nil {
 		if isReferenced {
 			c.Status = metav1.ConditionTrue
@@ -404,7 +404,7 @@ func (r *Reconciler) determineInUseCondition(ctx context.Context, rev *v1alpha1.
 	return c, fmt.Errorf("failed to determine if IstioRevision is in use: %w", err)
 }
 
-func (r *Reconciler) isRevisionReferencedByWorkloads(ctx context.Context, rev *v1alpha1.IstioRevision) (bool, error) {
+func (r *Reconciler) isRevisionReferenced(ctx context.Context, rev *v1alpha1.IstioRevision) (bool, error) {
 	log := logf.FromContext(ctx)
 	nsList := corev1.NamespaceList{}
 	nsMap := map[string]corev1.Namespace{}
