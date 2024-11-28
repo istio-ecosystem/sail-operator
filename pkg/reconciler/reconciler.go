@@ -102,7 +102,7 @@ func (r *StandardReconciler[T]) Reconcile(ctx context.Context, req ctrl.Request)
 	case errors.IsNotFound(err):
 		log.Info("Resource not found. Retrying...", "error", err)
 		return ctrl.Result{Requeue: true}, nil
-	case IsTransitoryError(err):
+	case IsTransientError(err):
 		log.Info("Reconciliation failed. Retrying...", "error", err)
 		return ctrl.Result{Requeue: true}, nil
 	case IsValidationError(err):

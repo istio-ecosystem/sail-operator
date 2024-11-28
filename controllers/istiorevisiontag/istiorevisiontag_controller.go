@@ -153,7 +153,7 @@ func (r *Reconciler) getIstioRevision(ctx context.Context, ref v1alpha1.IstioRev
 			return nil, err
 		}
 		if i.Status.ActiveRevisionName == "" {
-			return nil, reconciler.NewTransitoryError("referenced Istio has no active revision")
+			return nil, reconciler.NewTransientError("referenced Istio has no active revision")
 		}
 		revisionName = i.Status.ActiveRevisionName
 	} else {
