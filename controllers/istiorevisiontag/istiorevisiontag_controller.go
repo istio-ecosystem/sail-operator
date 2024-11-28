@@ -35,7 +35,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -53,8 +52,6 @@ import (
 
 const (
 	revisionTagsChartName = "revisiontags"
-
-	sailOperatorReferencedRevisionLabel = "sailoperator.io/referenced-revision"
 )
 
 // Reconciler reconciles an IstioRevisionTag object
@@ -88,13 +85,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, tag *v1alpha1.IstioRevisionT
 
 	rev, reconcileErr := r.doReconcile(ctx, tag)
 
-	log.Info("Reconciliation done. Updating labels and status.")
-	labelsErr := r.updateLabels(ctx, tag, rev)
+	log.Info("Reconciliation done. Updating status.")
 	statusErr := r.updateStatus(ctx, tag, rev, reconcileErr)
 
 	reconcileErr = errors.Unwrap(reconcileErr)
 
-	return ctrl.Result{}, errors.Join(reconcileErr, labelsErr, statusErr)
+	return ctrl.Result{}, errors.Join(reconcileErr, statusErr)
 }
 
 func (r *Reconciler) doReconcile(ctx context.Context, tag *v1alpha1.IstioRevisionTag) (*v1alpha1.IstioRevision, error) {
@@ -347,19 +343,6 @@ func (r *Reconciler) determineInUseCondition(ctx context.Context, tag *v1alpha1.
 	return c, fmt.Errorf("failed to determine if IstioRevisionTag is in use: %w", err)
 }
 
-func (r *Reconciler) updateLabels(ctx context.Context, tag *v1alpha1.IstioRevisionTag, rev *v1alpha1.IstioRevision) error {
-	updatedTag := tag.DeepCopy()
-	if rev == nil {
-		delete(updatedTag.Labels, sailOperatorReferencedRevisionLabel)
-	} else {
-		if updatedTag.Labels == nil {
-			updatedTag.Labels = make(map[string]string, 1)
-		}
-		updatedTag.Labels[sailOperatorReferencedRevisionLabel] = rev.Name
-	}
-	return r.Patch(ctx, updatedTag, client.MergeFrom(tag))
-}
-
 func (r *Reconciler) isRevisionTagReferencedByWorkloads(ctx context.Context, tag *v1alpha1.IstioRevisionTag) (bool, error) {
 	log := logf.FromContext(ctx)
 	nsList := corev1.NamespaceList{}
@@ -463,16 +446,15 @@ func (r *Reconciler) mapOperatorResourceToReconcileRequest(ctx context.Context, 
 		return nil
 	}
 	tags := v1alpha1.IstioRevisionTagList{}
-	labelSelector := map[string]string{
-		sailOperatorReferencedRevisionLabel: revisionName,
-	}
-	err := r.Client.List(ctx, &tags, &client.ListOptions{LabelSelector: labels.SelectorFromSet(labelSelector)})
+	err := r.Client.List(ctx, &tags, &client.ListOptions{})
 	if err != nil {
 		return nil
 	}
 	requests := []reconcile.Request{}
-	for _, revision := range tags.Items {
-		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: revision.Name}})
+	for _, tag := range tags.Items {
+		if tag.Status.IstioRevision == revisionName {
+			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: tag.Name}})
+		}
 	}
 	return requests
 }
