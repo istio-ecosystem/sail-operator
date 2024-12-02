@@ -1,5 +1,5 @@
 apiVersion: v2
-appVersion: 1.25-alpha.9e2f8b4cf88d687b30b2ca5458d063227329ff3d
+appVersion: 1.25-alpha.aaad4968067044f51f305dc78c5f267a478e746b
 description: Helm chart for istio-cni components
 icon: https://istio.io/latest/favicons/android-192x192.png
 keywords:
@@ -8,4 +8,4 @@ keywords:
 name: cni
 sources:
 - https://github.com/istio/istio
-version: 1.25-alpha.9e2f8b4cf88d687b30b2ca5458d063227329ff3d
+version: 1.25-alpha.aaad4968067044f51f305dc78c5f267a478e746b
