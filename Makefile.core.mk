@@ -309,7 +309,7 @@ deploy: verify-kubeconfig helm ## Deploy controller to an existing cluster.
 	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --namespace $(NAMESPACE) | kubectl apply --server-side=true -f -
 
 .PHONY: deploy-yaml
-deploy-yaml: verify-kubeconfig helm ## Output YAML manifests used by `deploy`.
+deploy-yaml: helm ## Output YAML manifests used by `deploy`.
 	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --namespace $(NAMESPACE)
 
 .PHONY: deploy-openshift # TODO: remove this target and use deploy-olm instead (when we fix the internal registry TLS issues when using operator-sdk run bundle)
@@ -319,7 +319,7 @@ deploy-openshift: verify-kubeconfig helm ## Deploy controller to an existing OCP
 	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --namespace $(NAMESPACE) --set platform="openshift" | kubectl apply --server-side=true -f -
 
 .PHONY: deploy-yaml-openshift
-deploy-yaml-openshift: verify-kubeconfig helm ## Output YAML manifests used by `deploy-openshift`.
+deploy-yaml-openshift: helm ## Output YAML manifests used by `deploy-openshift`.
 	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --namespace $(NAMESPACE) --set platform="openshift"
 
 .PHONY: deploy-olm
