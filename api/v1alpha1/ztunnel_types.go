@@ -46,7 +46,7 @@ type ZTunnelSpec struct {
 
 	// Namespace to which the Istio ztunnel component should be installed.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,xDescriptors={"urn:alm:descriptor:io.kubernetes:Namespace"}
-	// +kubebuilder:default=kube-system
+	// +kubebuilder:default=istio-cni
 	Namespace string `json:"namespace"`
 
 	// Defines the values to be passed to the Helm charts when installing Istio ztunnel.
@@ -178,7 +178,7 @@ type ZTunnel struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// +kubebuilder:default={version: "v1.24.0", namespace: "kube-system", profile: "ambient"}
+	// +kubebuilder:default={version: "v1.24.0", namespace: "istio-cni", profile: "ambient"}
 	Spec ZTunnelSpec `json:"spec,omitempty"`
 
 	Status ZTunnelStatus `json:"status,omitempty"`
