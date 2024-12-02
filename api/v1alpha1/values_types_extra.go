@@ -51,15 +51,15 @@ type ZTunnelConfig struct {
 	Image *string `json:"image,omitempty"`
 	// Annotations to apply to all top level resources
 	Annotations map[string]string `json:"Annotations,omitempty"`
-  // Labels to apply to all top level resources
+	// Labels to apply to all top level resources
 	Labels map[string]string `json:"Labels,omitempty"`
-  // Additional volumeMounts to the ztunnel container
+	// Additional volumeMounts to the ztunnel container
 	VolumeMounts []k8sv1.VolumeMount `json:"volumeMounts,omitempty"`
 	// Additional volumes to add to the ztunnel Pod.
 	Volumes []k8sv1.Volume `json:"volumes,omitempty"`
 	// Annotations added to each pod. The default annotations are required for scraping prometheus (in most environments).
 	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
-  // Additional labels to apply on the pod level.
+	// Additional labels to apply on the pod level.
 	PodLabels map[string]string `json:"podLabels,omitempty"`
 	// The k8s resource requests and limits for the istio-cni Pods.
 	Resources *k8sv1.ResourceRequirements `json:"resources,omitempty"`
@@ -79,21 +79,21 @@ type ZTunnelConfig struct {
 	// The name of the cluster we are installing in. Note this is a user-defined name, which must be consistent
 	// with Istiod configuration.
 	MultiCluster *MultiClusterConfig `json:"multiCluster,omitempty"`
-  // meshConfig defines runtime configuration of components.
-  // For ztunnel, only defaultConfig is used, but this is nested under `meshConfig` for consistency with other components.
+	// meshConfig defines runtime configuration of components.
+	// For ztunnel, only defaultConfig is used, but this is nested under `meshConfig` for consistency with other components.
 	MeshConfig *MeshConfig `json:"meshConfig,omitempty"`
 	// Configures the revision this control plane is a part of
 	Revision *string `json:"revision,omitempty"`
 	// The address of the CA for CSR.
 	CaAddress *string `json:"caAddress,omitempty"`
-  // The customized XDS address to retrieve configuration.
+	// The customized XDS address to retrieve configuration.
 	XdsAddress *string `json:"xdsAddress,omitempty"`
 	// Specifies the default namespace for the Istio control plane components.
 	IstioNamespace *string `json:"istioNamespace,omitempty"`
-  // Same as `global.logging.level`, but will override it if set
+	// Same as `global.logging.level`, but will override it if set
 	Logging *GlobalLoggingConfig `json:"logging,omitempty"`
 	// Specifies whether istio components should output logs in json format by adding --log_as_json argument to each container.
-	LogAsJson *bool `json:"logAsJson,omitempty"`
+	LogAsJSON *bool `json:"logAsJSON,omitempty"`
 }
 
 // ZTunnelGlobalConfig is a subset of the Global Configuration used in the Istio ztunnel chart.
@@ -118,7 +118,7 @@ type ZTunnelGlobalConfig struct { // Default k8s resources settings for all Isti
 	ImagePullSecrets []string `json:"imagePullSecrets,omitempty"`
 
 	// Specifies whether istio components should output logs in json format by adding --log_as_json argument to each container.
-	LogAsJson *bool `json:"logAsJson,omitempty"`
+	LogAsJSON *bool `json:"logAsJSON,omitempty"`
 	// Specifies the global logging level settings for the Istio control plane components.
 	Logging *GlobalLoggingConfig `json:"logging,omitempty"`
 
