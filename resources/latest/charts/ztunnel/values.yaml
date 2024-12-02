@@ -4,13 +4,17 @@ _internal_defaults_do_not_set:
   # Hub to pull from. Image will be `Hub/Image:Tag-Variant`
   hub: gcr.io/istio-testing
   # Tag to pull from. Image will be `Hub/Image:Tag-Variant`
-  tag: 1.24-alpha.bb972b546125d3f001cc11114e9fc95486b891ec
+  tag: 1.25-alpha.aaad4968067044f51f305dc78c5f267a478e746b
   # Variant to pull. Options are "debug" or "distroless". Unset will use the default for the given version.
   variant: ""
 
   # Image name to pull from. Image will be `Hub/Image:Tag-Variant`
   # If Image contains a "/", it will replace the entire `image` in the pod.
   image: ztunnel
+
+  # resourceName, if set, will override the naming of resources. If not set, will default to the release name.
+  # It is recommended to not set this; this is primarily for backwards compatibility.
+  resourceName: ""
 
   # Labels to apply to all top level resources
   labels: {}

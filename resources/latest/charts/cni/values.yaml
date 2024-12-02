@@ -115,7 +115,7 @@ _internal_defaults_do_not_set:
     hub: gcr.io/istio-testing
 
     # Default tag for Istio images.
-    tag: 1.24-alpha.bb972b546125d3f001cc11114e9fc95486b891ec
+    tag: 1.25-alpha.aaad4968067044f51f305dc78c5f267a478e746b
 
     # Variant of the image to use.
     # Currently supported are: [debug, distroless]
@@ -144,3 +144,6 @@ _internal_defaults_do_not_set:
       requests:
         cpu: 100m
         memory: 100Mi
+
+  # A `key: value` mapping of environment variables to add to the pod
+  env: {}

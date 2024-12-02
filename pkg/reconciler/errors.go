@@ -32,3 +32,21 @@ func IsValidationError(err error) bool {
 	e := &ValidationError{}
 	return errors.As(err, &e)
 }
+
+// TransientError is an error returned by a Reconciler that will usually resolve itself when retrying, e.g. some resource not yet reconciled
+type TransientError struct {
+	message string
+}
+
+func (v TransientError) Error() string {
+	return "transient error: " + v.message
+}
+
+func NewTransientError(message string) error {
+	return &TransientError{message: message}
+}
+
+func IsTransientError(err error) bool {
+	e := &TransientError{}
+	return errors.As(err, &e)
+}

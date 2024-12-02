@@ -15,6 +15,8 @@ Package v1alpha1 contains API Schema definitions for the sailoperator.io v1alpha
 - [IstioList](#istiolist)
 - [IstioRevision](#istiorevision)
 - [IstioRevisionList](#istiorevisionlist)
+- [IstioRevisionTag](#istiorevisiontag)
+- [IstioRevisionTagList](#istiorevisiontaglist)
 - [ZTunnel](#ztunnel)
 - [ZTunnelList](#ztunnellist)
 
@@ -510,7 +512,7 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[IstioSpec](#istiospec)_ |  | \{ namespace:istio-system updateStrategy:map[type:InPlace] version:v1.23.2 \} |  |
+| `spec` _[IstioSpec](#istiospec)_ |  | \{ namespace:istio-system updateStrategy:map[type:InPlace] version:v1.24.1 \} |  |
 | `status` _[IstioStatus](#istiostatus)_ |  |  |  |
 
 
@@ -532,7 +534,7 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[IstioCNISpec](#istiocnispec)_ |  | \{ namespace:istio-cni version:v1.23.2 \} |  |
+| `spec` _[IstioCNISpec](#istiocnispec)_ |  | \{ namespace:istio-cni version:v1.24.1 \} |  |
 | `status` _[IstioCNIStatus](#istiocnistatus)_ |  |  |  |
 
 
@@ -628,7 +630,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.23.2, v1.22.5, v1.21.6, latest. | v1.23.2 | Enum: [v1.23.2 v1.22.5 v1.21.6 latest]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.24.1, v1.24.0, v1.23.3, v1.23.2, v1.22.6, v1.22.5, v1.21.6, latest. | v1.24.1 | Enum: [v1.24.1 v1.24.0 v1.23.3 v1.23.2 v1.22.6 v1.22.5 v1.21.6 latest]   |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, external, openshift-ambient, openshift, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift-ambient openshift preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio CNI component should be installed. | istio-cni |  |
 | `values` _[CNIValues](#cnivalues)_ | Defines the values to be passed to the Helm charts when installing Istio CNI. |  |  |
@@ -856,7 +858,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.23.2, v1.22.5, v1.21.6, latest. |  | Enum: [v1.23.2 v1.22.5 v1.21.6 latest]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.24.1, v1.24.0, v1.23.3, v1.23.2, v1.22.6, v1.22.5, v1.21.6, latest. |  | Enum: [v1.24.1 v1.24.0 v1.23.3 v1.23.2 v1.22.6 v1.22.5 v1.21.6 latest]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. |  |  |
 | `values` _[Values](#values)_ | Defines the values to be passed to the Helm charts when installing Istio. |  |  |
 
@@ -879,6 +881,163 @@ _Appears in:_
 | `state` _[IstioRevisionConditionReason](#istiorevisionconditionreason)_ | Reports the current state of the object. |  |  |
 
 
+#### IstioRevisionTag
+
+
+
+IstioRevisionTag references a Istio or IstioRevision object and serves as an alias for sidecar injection.
+
+
+
+_Appears in:_
+- [IstioRevisionTagList](#istiorevisiontaglist)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `sailoperator.io/v1alpha1` | | |
+| `kind` _string_ | `IstioRevisionTag` | | |
+| `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
+| `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[IstioRevisionTagSpec](#istiorevisiontagspec)_ |  |  |  |
+| `status` _[IstioRevisionTagStatus](#istiorevisiontagstatus)_ |  |  |  |
+
+
+#### IstioRevisionTagCondition
+
+
+
+IstioRevisionCondition represents a specific observation of the IstioRevision object's state.
+
+
+
+_Appears in:_
+- [IstioRevisionTagStatus](#istiorevisiontagstatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `type` _[IstioRevisionTagConditionType](#istiorevisiontagconditiontype)_ | The type of this condition. |  |  |
+| `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#conditionstatus-v1-meta)_ | The status of this condition. Can be True, False or Unknown. |  |  |
+| `reason` _[IstioRevisionTagConditionReason](#istiorevisiontagconditionreason)_ | Unique, single-word, CamelCase reason for the condition's last transition. |  |  |
+| `message` _string_ | Human-readable message indicating details about the last transition. |  |  |
+| `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta)_ | Last time the condition transitioned from one status to another. |  |  |
+
+
+#### IstioRevisionTagConditionReason
+
+_Underlying type:_ _string_
+
+IstioRevisionConditionReason represents a short message indicating how the condition came
+to be in its present state.
+
+
+
+_Appears in:_
+- [IstioRevisionTagCondition](#istiorevisiontagcondition)
+- [IstioRevisionTagStatus](#istiorevisiontagstatus)
+
+| Field | Description |
+| --- | --- |
+| `NameAlreadyExists` | IstioRevisionTagNameAlreadyExists indicates that the a revision with the same name as the IstioRevisionTag already exists.  |
+| `RefNotFound` | IstioRevisionTagReasonReferenceNotFound indicates that the resource referenced by the tag's TargetRef was not found  |
+| `ReconcileError` | IstioRevisionReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried.  |
+| `ReferencedByWorkloads` | IstioRevisionReasonReferencedByWorkloads indicates that the revision is referenced by at least one pod or namespace.  |
+| `NotReferencedByAnything` | IstioRevisionReasonNotReferenced indicates that the revision is not referenced by any pod or namespace.  |
+| `UsageCheckFailed` | IstioRevisionReasonUsageCheckFailed indicates that the operator could not check whether any workloads use the revision.  |
+| `Healthy` | IstioRevisionTagReasonHealthy indicates that the revision tag has been successfully reconciled and is in use.  |
+
+
+#### IstioRevisionTagConditionType
+
+_Underlying type:_ _string_
+
+IstioRevisionConditionType represents the type of the condition.  Condition stages are:
+Installed, Reconciled, Ready
+
+
+
+_Appears in:_
+- [IstioRevisionTagCondition](#istiorevisiontagcondition)
+
+| Field | Description |
+| --- | --- |
+| `Reconciled` | IstioRevisionConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.  |
+| `InUse` | IstioRevisionConditionInUse signifies whether any workload is configured to use the revision.  |
+
+
+#### IstioRevisionTagList
+
+
+
+IstioRevisionList contains a list of IstioRevision
+
+
+
+
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `sailoperator.io/v1alpha1` | | |
+| `kind` _string_ | `IstioRevisionTagList` | | |
+| `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
+| `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `items` _[IstioRevisionTag](#istiorevisiontag) array_ |  |  |  |
+
+
+#### IstioRevisionTagSpec
+
+
+
+IstioRevisionTagSpec defines the desired state of IstioRevisionTag
+
+
+
+_Appears in:_
+- [IstioRevisionTag](#istiorevisiontag)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `targetRef` _[IstioRevisionTagTargetReference](#istiorevisiontagtargetreference)_ |  |  | Required: \{\}   |
+
+
+#### IstioRevisionTagStatus
+
+
+
+IstioRevisionStatus defines the observed state of IstioRevision
+
+
+
+_Appears in:_
+- [IstioRevisionTag](#istiorevisiontag)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `observedGeneration` _integer_ | ObservedGeneration is the most recent generation observed for this IstioRevisionTag object. It corresponds to the object's generation, which is updated on mutation by the API Server. The information in the status pertains to this particular generation of the object. |  |  |
+| `conditions` _[IstioRevisionTagCondition](#istiorevisiontagcondition) array_ | Represents the latest available observations of the object's current state. |  |  |
+| `state` _[IstioRevisionTagConditionReason](#istiorevisiontagconditionreason)_ | Reports the current state of the object. |  |  |
+| `istiodNamespace` _string_ | IstiodNamespace stores the namespace of the corresponding Istiod instance |  |  |
+| `istioRevision` _string_ | IstioRevision stores the name of the referenced IstioRevision |  |  |
+
+
+#### IstioRevisionTagTargetReference
+
+
+
+IstioRevisionTagTargetReference can reference either Istio or IstioRevision objects in the cluster.
+
+
+
+_Appears in:_
+- [IstioRevisionTagSpec](#istiorevisiontagspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `kind` _string_ | Kind is the kind of the target resource. |  | MaxLength: 253  MinLength: 1  Required: \{\}   |
+| `name` _string_ | Name is the name of the target resource. |  | MaxLength: 253  MinLength: 1  Required: \{\}   |
+
+
 #### IstioSpec
 
 
@@ -892,7 +1051,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.23.2, v1.22.5, v1.21.6, latest. | v1.23.2 | Enum: [v1.23.2 v1.22.5 v1.21.6 latest]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.24.1, v1.24.0, v1.23.3, v1.23.2, v1.22.6, v1.22.5, v1.21.6, latest. | v1.24.1 | Enum: [v1.24.1 v1.24.0 v1.23.3 v1.23.2 v1.22.6 v1.22.5 v1.21.6 latest]   |
 | `updateStrategy` _[IstioUpdateStrategy](#istioupdatestrategy)_ | Defines the update strategy to use when the version in the Istio CR is updated. | \{ type:InPlace \} |  |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, external, openshift-ambient, openshift, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift-ambient openshift preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. Note that this field is immutable. | istio-system |  |
@@ -1251,7 +1410,6 @@ _Appears in:_
 | `envoyExtAuthzGrpc` _[MeshConfigExtensionProviderEnvoyExternalAuthorizationGrpcProvider](#meshconfigextensionproviderenvoyexternalauthorizationgrpcprovider)_ | Configures an external authorizer that implements the Envoy ext_authz filter authorization check service using the gRPC API. |  |  |
 | `zipkin` _[MeshConfigExtensionProviderZipkinTracingProvider](#meshconfigextensionproviderzipkintracingprovider)_ | Configures a tracing provider that uses the Zipkin API. |  |  |
 | `datadog` _[MeshConfigExtensionProviderDatadogTracingProvider](#meshconfigextensionproviderdatadogtracingprovider)_ | Configures a Datadog tracing provider. |  |  |
-| `stackdriver` _[MeshConfigExtensionProviderStackdriverProvider](#meshconfigextensionproviderstackdriverprovider)_ | Configures a Stackdriver provider. |  |  |
 | `skywalking` _[MeshConfigExtensionProviderSkyWalkingTracingProvider](#meshconfigextensionproviderskywalkingtracingprovider)_ | Configures a Apache SkyWalking provider. |  |  |
 | `opentelemetry` _[MeshConfigExtensionProviderOpenTelemetryTracingProvider](#meshconfigextensionprovideropentelemetrytracingprovider)_ | Configures an OpenTelemetry tracing provider. |  |  |
 | `prometheus` _[MeshConfigExtensionProviderPrometheusMetricsProvider](#meshconfigextensionproviderprometheusmetricsprovider)_ | Configures a Prometheus metrics provider. |  |  |
@@ -1296,6 +1454,7 @@ _Appears in:_
 | `port` _integer_ | REQUIRED. Specifies the port of the service. |  | Required: \{\}   |
 | `timeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | The maximum duration that the proxy will wait for a response from the provider, this is the timeout for a specific request (default timeout: 600s). When this timeout condition is met, the proxy marks the communication to the authorization service as failure. In this situation, the response sent back to the client will depend on the configured `failOpen` field. |  |  |
 | `failOpen` _boolean_ | If true, the HTTP request or TCP connection will be allowed even if the communication with the authorization service has failed, or if the authorization service has returned a HTTP 5xx error. Default is false. For HTTP request, it will be rejected with 403 (HTTP Forbidden). For TCP connection, it will be closed immediately. |  |  |
+| `clearRouteCache` _boolean_ | If true, clears route cache in order to allow the external authorization service to correctly affect routing decisions. If true, recalculate routes with the new ExtAuthZ added/removed headers. Default is false |  |  |
 | `statusOnError` _string_ | Sets the HTTP status that is returned to the client when there is a network error to the authorization service. The default status is "403" (HTTP Forbidden). |  |  |
 | `includeRequestBodyInCheck` _[MeshConfigExtensionProviderEnvoyExternalAuthorizationRequestBody](#meshconfigextensionproviderenvoyexternalauthorizationrequestbody)_ | If set, the client request body will be included in the authorization request sent to the authorization service. |  |  |
 
@@ -1318,6 +1477,7 @@ _Appears in:_
 | `timeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | The maximum duration that the proxy will wait for a response from the provider (default timeout: 600s). When this timeout condition is met, the proxy marks the communication to the authorization service as failure. In this situation, the response sent back to the client will depend on the configured `failOpen` field. |  |  |
 | `pathPrefix` _string_ | Sets a prefix to the value of authorization request header *Path*. For example, setting this to "/check" for an original user request at path "/admin" will cause the authorization check request to be sent to the authorization service at the path "/check/admin" instead of "/admin". |  |  |
 | `failOpen` _boolean_ | If true, the user request will be allowed even if the communication with the authorization service has failed, or if the authorization service has returned a HTTP 5xx error. Default is false and the request will be rejected with "Forbidden" response. |  |  |
+| `clearRouteCache` _boolean_ | If true, clears route cache in order to allow the external authorization service to correctly affect routing decisions. If true, recalculate routes with the new ExtAuthZ added/removed headers. Default is false |  |  |
 | `statusOnError` _string_ | Sets the HTTP status that is returned to the client when there is a network error to the authorization service. The default status is "403" (HTTP Forbidden). |  |  |
 | `includeHeadersInCheck` _string array_ | DEPRECATED. Use includeRequestHeadersInCheck instead.  Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto. |  |  |
 | `includeRequestHeadersInCheck` _string array_ | List of client request headers that should be included in the authorization request sent to the authorization service. Note that in addition to the headers specified here following headers are included by default: 1. *Host*, *Method*, *Path* and *Content-Length* are automatically sent. 2. *Content-Length* will be set to 0 and the request will not have a message body. However, the authorization request can include the buffered client request body (controlled by includeRequestBodyInCheck setting), consequently the value of Content-Length of the authorization request reflects the size of its payload size.  Exact, prefix and suffix matches are supported (similar to the [authorization policy rule syntax](https://istio.io/latest/docs/reference/config/security/authorization-policy/#Rule) except the presence match): - Exact match: "abc" will match on value "abc". - Prefix match: "abc*" will match on value "abc" and "abcd". - Suffix match: "*abc" will match on value "abc" and "xabc". |  |  |
@@ -2813,10 +2973,9 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `zipkin` _[TracingZipkin](#tracingzipkin)_ | Use a Zipkin tracer. |  |  |
 | `datadog` _[TracingDatadog](#tracingdatadog)_ | Use a Datadog tracer. |  |  |
-| `stackdriver` _[TracingStackdriver](#tracingstackdriver)_ | Use a Stackdriver tracer. |  |  |
-| `openCensusAgent` _[TracingOpenCensusAgent](#tracingopencensusagent)_ | Use an OpenCensus tracer exporting to an OpenCensus agent. |  |  |
 | `sampling` _float_ | The percentage of requests (0.0 - 100.0) that will be randomly selected for trace generation, if not requested by the client or not forced. Default is 1.0. |  |  |
 | `tlsSettings` _[ClientTLSSettings](#clienttlssettings)_ | Use the tlsSettings to specify the tls mode to use. If the remote tracing service uses Istio mutual TLS and shares the root CA with Pilot, specify the TLS mode as `ISTIO_MUTUAL`. |  |  |
+| `enableIstioTags` _boolean_ | Determines whether or not trace spans generated by Envoy will include Istio specific tags. By default Istio specific tags are included in the trace spans. |  |  |
 
 
 
@@ -2930,7 +3089,6 @@ _Appears in:_
 | `meshConfig` _[MeshConfig](#meshconfig)_ | Defines runtime configuration of components, including Istiod and istio-agent behavior. See https://istio.io/docs/reference/config/istio.mesh.v1alpha1/ for all available options. TODO can this import the real mesh config API? |  |  |
 | `base` _[BaseConfig](#baseconfig)_ | Configuration for the base component. |  |  |
 | `istiodRemote` _[IstiodRemoteConfig](#istiodremoteconfig)_ | Configuration for istiod-remote. DEPRECATED - istiod-remote chart is removed and replaced with `istio-discovery --set values.istiodRemote.enabled=true`  Deprecated: Marked as deprecated in pkg/apis/values_types.proto. |  |  |
-| `revisionTags` _string array_ | Specifies the aliases for the Istio control plane revision. A MutatingWebhookConfiguration is created for each alias. |  |  |
 | `defaultRevision` _string_ | The name of the default revision in the cluster. |  |  |
 | `profile` _string_ | Specifies which installation configuration profile to apply. |  |  |
 | `compatibilityVersion` _string_ | Specifies the compatibility version to use. When this is set, the control plane will be configured with the same defaults as the specified version. |  |  |

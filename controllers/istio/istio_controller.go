@@ -140,14 +140,14 @@ func getPruningGracePeriod(istio *v1alpha1.Istio) time.Duration {
 
 func (r *Reconciler) getActiveRevision(ctx context.Context, istio *v1alpha1.Istio) (v1alpha1.IstioRevision, error) {
 	rev := v1alpha1.IstioRevision{}
-	err := r.Client.Get(ctx, getActiveRevisionKey(istio), &rev)
+	err := r.Client.Get(ctx, GetActiveRevisionKey(istio), &rev)
 	if err != nil {
 		return rev, fmt.Errorf("get failed: %w", err)
 	}
 	return rev, nil
 }
 
-func getActiveRevisionKey(istio *v1alpha1.Istio) types.NamespacedName {
+func GetActiveRevisionKey(istio *v1alpha1.Istio) types.NamespacedName {
 	return types.NamespacedName{
 		Name: getActiveRevisionName(istio),
 	}
