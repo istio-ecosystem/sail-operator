@@ -37,11 +37,12 @@ type ZTunnelSpec struct {
 
 	// +sail:profile
 	// The built-in installation configuration profile to use.
-	// The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'.
-	// Must be one of: ambient, default, demo, empty, external, openshift-ambient, openshift, preview, remote, stable.
+	// The 'default' profile is 'ambient' and it is always applied.
+	// Must be one of: ambient, default, demo, empty, external, preview, remote, stable.
 	// +++PROFILES-DROPDOWN-HIDDEN-UNTIL-WE-FULLY-IMPLEMENT-THEM+++operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Profile",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:ambient", "urn:alm:descriptor:com.tectonic.ui:select:default", "urn:alm:descriptor:com.tectonic.ui:select:demo", "urn:alm:descriptor:com.tectonic.ui:select:empty", "urn:alm:descriptor:com.tectonic.ui:select:external", "urn:alm:descriptor:com.tectonic.ui:select:minimal", "urn:alm:descriptor:com.tectonic.ui:select:preview", "urn:alm:descriptor:com.tectonic.ui:select:remote"}
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,xDescriptors={"urn:alm:descriptor:com.tectonic.ui:hidden"}
 	// +kubebuilder:validation:Enum=ambient;default;demo;empty;external;openshift-ambient;openshift;preview;remote;stable
+	// +kubebuilder:default=ambient
 	Profile string `json:"profile,omitempty"`
 
 	// Namespace to which the Istio ztunnel component should be installed.
@@ -178,7 +179,7 @@ type ZTunnel struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// +kubebuilder:default={version: "v1.24.0", namespace: "kube-system"}
+	// +kubebuilder:default={version: "v1.24.0", namespace: "kube-system", profile: "ambient"}
 	Spec ZTunnelSpec `json:"spec,omitempty"`
 
 	Status ZTunnelStatus `json:"status,omitempty"`
