@@ -57,13 +57,13 @@ spec:
             type: object
           spec:
             default:
-              namespace: istio-cni
+              namespace: ztunnel
               profile: ambient
               version: v1.24.0
             description: ZTunnelSpec defines the desired state of ZTunnel
             properties:
               namespace:
-                default: istio-cni
+                default: ztunnel
                 description: Namespace to which the Istio ztunnel component should
                   be installed.
                 type: string
@@ -3559,7 +3559,7 @@ spec:
                         type: object
                       resources:
                         description: The k8s resource requests and limits for the
-                          istio-cni Pods.
+                          ztunnel Pods.
                         properties:
                           claims:
                             description: |-

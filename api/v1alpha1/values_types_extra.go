@@ -61,7 +61,7 @@ type ZTunnelConfig struct {
 	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
 	// Additional labels to apply on the pod level.
 	PodLabels map[string]string `json:"podLabels,omitempty"`
-	// The k8s resource requests and limits for the istio-cni Pods.
+	// The k8s resource requests and limits for the ztunnel Pods.
 	Resources *k8sv1.ResourceRequirements `json:"resources,omitempty"`
 	// List of secret names to add to the service account as image pull secrets
 	// to use for pulling any images in pods that reference this ServiceAccount.
