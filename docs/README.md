@@ -559,7 +559,7 @@ Because each mesh will use its own root certificate authority and configured to 
    EOF
    
    $ kubectl apply -f - <<EOF
-   apiVersion: security.istio.io/v1beta1
+   apiVersion: security.istio.io/v1
    kind: PeerAuthentication
    metadata:
      name: default
