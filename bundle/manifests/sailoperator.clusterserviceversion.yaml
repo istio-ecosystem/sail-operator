@@ -313,6 +313,38 @@ spec:
         displayName: Helm Values
         path: values
       version: v1alpha1
+    - description: ZTunnel represents a deployment of the Istio ztunnel component.
+      displayName: ZTunnel
+      kind: ZTunnel
+      name: ztunnels.sailoperator.io
+      specDescriptors:
+      - description: |-
+          Defines the version of Istio to install.
+          Must be one of: v1.24.0 or latest.
+        displayName: Istio Version
+        path: version
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.0
+        - urn:alm:descriptor:com.tectonic.ui:select:latest
+      - description: Namespace to which the Istio ztunnel component should be installed.
+        displayName: Namespace
+        path: namespace
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes:Namespace
+      - description: |-
+          The built-in installation configuration profile to use.
+          The 'default' profile is 'ambient' and it is always applied.
+          Must be one of: ambient, default, demo, empty, external, preview, remote, stable.
+        displayName: Profile
+        path: profile
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:hidden
+      - description: Defines the values to be passed to the Helm charts when installing
+          Istio ztunnel.
+        displayName: Helm Values
+        path: values
+      version: v1alpha1
   description: |-
     This is an experimental operator for installing Istio service mesh.
 
