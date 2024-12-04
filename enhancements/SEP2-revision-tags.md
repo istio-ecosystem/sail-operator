@@ -125,8 +125,8 @@ Due to the complexity of the task we have moved it into a separate ticket: [#439
 
 ## Implementation Plan
 v1alpha1
-- [ ] Initial implementation & tests (https://github.com/istio-ecosystem/sail-operator/pull/413)
-- [ ] Documentation
+- [x] Initial implementation & tests (https://github.com/istio-ecosystem/sail-operator/pull/413)
+- [x] Documentation (https://github.com/istio-ecosystem/sail-operator/pull/511)
 
 v1beta1
 - [ ] [#439 Create default revision tag automatically](https://github.com/istio-ecosystem/sail-operator/issues/439)
