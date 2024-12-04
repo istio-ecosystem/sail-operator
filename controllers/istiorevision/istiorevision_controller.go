@@ -34,6 +34,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/revision"
 	"github.com/istio-ecosystem/sail-operator/pkg/validation"
+	"github.com/istio-ecosystem/sail-operator/pkg/version"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -120,8 +121,8 @@ func (r *Reconciler) Finalize(ctx context.Context, rev *v1alpha1.IstioRevision) 
 }
 
 func (r *Reconciler) validate(ctx context.Context, rev *v1alpha1.IstioRevision) error {
-	if rev.Spec.Version == "" {
-		return reconciler.NewValidationError("spec.version not set")
+	if err := version.IsSupported(rev.Spec.Version); err != nil {
+		return reconciler.NewValidationError(err.Error())
 	}
 	if rev.Spec.Namespace == "" {
 		return reconciler.NewValidationError("spec.namespace not set")

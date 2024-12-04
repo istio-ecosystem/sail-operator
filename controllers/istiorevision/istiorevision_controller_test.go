@@ -20,6 +20,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
@@ -52,6 +53,7 @@ func TestValidate(t *testing.T) {
 		rev       *v1alpha1.IstioRevision
 		objects   []client.Object
 		expectErr string
+		config    config.OperatorConfig
 	}{
 		{
 			name: "success",
@@ -185,9 +187,53 @@ func TestValidate(t *testing.T) {
 			objects:   []client.Object{ns},
 			expectErr: `spec.values.revision does not match IstioRevision name`,
 		},
+		{
+			name: "invalid version",
+			rev: &v1alpha1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "my-revision",
+				},
+				Spec: v1alpha1.IstioRevisionSpec{
+					Version:   "v.-1.0",
+					Namespace: "istio-system",
+					Values: &v1alpha1.Values{
+						Revision: ptr.Of("other-revision"),
+						Global: &v1alpha1.GlobalConfig{
+							IstioNamespace: ptr.Of("other-namespace"),
+						},
+					},
+				},
+			},
+			objects:   []client.Object{ns},
+			expectErr: "spec.version is not a valid semver",
+		},
+		{
+			name: "version higher than maximum istio version",
+			rev: &v1alpha1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "my-revision",
+				},
+				Spec: v1alpha1.IstioRevisionSpec{
+					Version:   "v2.1.0",
+					Namespace: "istio-system",
+					Values: &v1alpha1.Values{
+						Revision: ptr.Of("other-revision"),
+						Global: &v1alpha1.GlobalConfig{
+							IstioNamespace: ptr.Of("other-namespace"),
+						},
+					},
+				},
+			},
+			objects:   []client.Object{ns},
+			expectErr: "spec.version is not supported",
+			config: config.OperatorConfig{
+				MaximumIstioVersion: semver.MustParse("v2.0.0"),
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			config.Config = tc.config
 			g := NewWithT(t)
 			cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(tc.objects...).Build()
 			r := NewReconciler(cfg, cl, scheme.Scheme, nil)

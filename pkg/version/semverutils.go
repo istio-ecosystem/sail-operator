@@ -14,7 +14,12 @@
 
 package version
 
-import "github.com/Masterminds/semver/v3"
+import (
+	"fmt"
+
+	"github.com/Masterminds/semver/v3"
+	"github.com/istio-ecosystem/sail-operator/pkg/config"
+)
 
 // VersionConstraint returns a semver constraint for the given string or panics
 // if the string is not a valid semver constraint.
@@ -24,4 +29,21 @@ func Constraint(constraint string) semver.Constraints {
 		return *c
 	}
 	panic(err)
+}
+
+func IsSupported(version string) error {
+	if version == "" {
+		return fmt.Errorf("spec.version not set")
+	}
+	if version == "latest" {
+		version = "v999.999.999"
+	}
+	semanticVersion, err := semver.NewVersion(version)
+	if err != nil {
+		return fmt.Errorf("spec.version is not a valid semver: %s", err.Error())
+	}
+	if config.Config.MaximumIstioVersion != nil && semanticVersion.GreaterThan(config.Config.MaximumIstioVersion) {
+		return fmt.Errorf("spec.version is not supported")
+	}
+	return nil
 }

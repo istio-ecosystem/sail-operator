@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/google/go-cmp/cmp"
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
@@ -169,6 +170,7 @@ func TestValidate(t *testing.T) {
 		name      string
 		istio     *v1alpha1.Istio
 		expectErr string
+		config    config.OperatorConfig
 	}{
 		{
 			name: "success",
@@ -207,8 +209,36 @@ func TestValidate(t *testing.T) {
 			},
 			expectErr: "spec.namespace not set",
 		},
+		{
+			name: "invalid version",
+			istio: &v1alpha1.Istio{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1alpha1.IstioSpec{
+					Version: "v.-1.0",
+				},
+			},
+			expectErr: "spec.version is not a valid semver",
+		},
+		{
+			name: "version higher than maximum istio version",
+			istio: &v1alpha1.Istio{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1alpha1.IstioSpec{
+					Version: "v2.1.0",
+				},
+			},
+			expectErr: "spec.version is not supported",
+			config: config.OperatorConfig{
+				MaximumIstioVersion: semver.MustParse("v2.0.0"),
+			},
+		},
 	}
 	for _, tc := range testCases {
+		config.Config = tc.config
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
 

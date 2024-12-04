@@ -17,13 +17,15 @@ package config
 import (
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/magiconair/properties"
 )
 
 var Config = OperatorConfig{}
 
 type OperatorConfig struct {
-	ImageDigests map[string]IstioImageConfig `properties:"images"`
+	ImageDigests        map[string]IstioImageConfig `properties:"images"`
+	MaximumIstioVersion *semver.Version             `properties:"-"` // property name is 'maxIstioVersion'
 }
 
 type IstioImageConfig struct {
@@ -59,5 +61,13 @@ func Read(configFile string) error {
 		newImageDigests[strings.Replace(k, "_", ".", -1)] = v
 	}
 	Config.ImageDigests = newImageDigests
+	// special handling to decode maxIstioVersion field
+	maxIstioVersion := p.GetString("maxIstioVersion", "")
+	if maxIstioVersion != "" {
+		Config.MaximumIstioVersion, err = semver.NewVersion(maxIstioVersion)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }

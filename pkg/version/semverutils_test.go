@@ -16,6 +16,10 @@ package version
 
 import (
 	"testing"
+
+	"github.com/Masterminds/semver/v3"
+	"github.com/istio-ecosystem/sail-operator/pkg/config"
+	. "github.com/onsi/gomega"
 )
 
 func TestConstraint(t *testing.T) {
@@ -31,4 +35,50 @@ func TestConstraint(t *testing.T) {
 		}()
 		_ = Constraint("invalid_version")
 	})
+}
+
+func TestIsSupported(t *testing.T) {
+	testCases := []struct {
+		name      string
+		version   string
+		expectErr string
+		config    config.OperatorConfig
+	}{
+		{
+			name:      "empty version",
+			version:   "",
+			expectErr: "spec.version not set",
+		},
+		{
+			name:      "invalid version",
+			version:   "v.-1.0",
+			expectErr: "spec.version is not a valid semver",
+		},
+		{
+			name:      "version higher than maximum istio version",
+			version:   "v2.1.0",
+			expectErr: "spec.version is not supported",
+			config: config.OperatorConfig{
+				MaximumIstioVersion: semver.MustParse("v2.0.0"),
+			},
+		},
+		{
+			name:    "latest version",
+			version: "latest",
+		},
+	}
+	for _, tc := range testCases {
+		config.Config = tc.config
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			err := IsSupported(tc.version)
+			if tc.expectErr == "" {
+				g.Expect(err).ToNot(HaveOccurred())
+			} else {
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(err.Error()).To(ContainSubstring(tc.expectErr))
+			}
+		})
+	}
 }
