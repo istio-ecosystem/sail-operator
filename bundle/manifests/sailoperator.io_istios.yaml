@@ -3407,10 +3407,12 @@ spec:
                               and disabling the `X-Envoy-Attempt-Count` header:\n\n```yaml\nproxyHeaders:\n\n\tserver:\n\t
                               \ value: \"my-custom-server\"\n\trequestId: {} // Explicitly
                               enable Request IDs. As this is the default, this has
-                              no effect.\n\tattemptCount:\n\t  disabled: true\n\n```\n\nSome
-                              headers are enabled by default, and require explicitly
-                              disabling. See below for an example of disabling all
-                              default-enabled headers:\n\n```yaml\nproxyHeaders:\n\n\tforwardedClientCert:
+                              no effect.\n\tattemptCount:\n\t  disabled: true\n\n```\n\n#
+                              Below shows an example of preserving the header case
+                              for HTTP 1.x requests\n\n```yaml\nproxyHeaders:\n\n\tperserveHttp1HeaderCase:
+                              true\n\n```\n\nSome headers are enabled by default,
+                              and require explicitly disabling. See below for an example
+                              of disabling all default-enabled headers:\n\n```yaml\nproxyHeaders:\n\n\tforwardedClientCert:
                               SANITIZE\n\tserver:\n\t  disabled: true\n\trequestId:\n\t
                               \ disabled: true\n\tattemptCount:\n\t  disabled: true\n\tenvoyDebugHeaders:\n\t
                               \ disabled: true\n\tmetadataExchangeHeaders:\n\t  mode:
@@ -3462,6 +3464,18 @@ spec:
                                     - IN_MESH
                                     type: string
                                 type: object
+                              preserveHttp1HeaderCase:
+                                description: |-
+                                  When true, the original case of HTTP/1.x headers will be preserved
+                                  as they pass through the proxy, rather than normalizing them to lowercase.
+                                  This field is particularly useful for applications that require case-sensitive
+                                  headers for interoperability with downstream systems or APIs that expect specific
+                                  casing.
+                                  The preserve_http1_header_case option only applies to HTTP/1.x traffic, as HTTP/2 requires all headers
+                                  to be lowercase per the protocol specification. Envoy will ignore this field for HTTP/2
+                                  requests and automatically normalize headers to lowercase, ensuring compliance with HTTP/2
+                                  standards.
+                                type: boolean
                               requestId:
                                 description: |-
                                   Controls the `X-Request-Id` header. If enabled, a request ID is generated for each request if one is not already set.
