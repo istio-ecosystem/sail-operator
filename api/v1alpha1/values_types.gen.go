@@ -2999,6 +2999,15 @@ type MeshConfigProxyConfig struct {
 	//
 	// ```
 	//
+	// # Below shows an example of preserving the header case for HTTP 1.x requests
+	//
+	// ```yaml
+	// proxyHeaders:
+	//
+	//	perserveHttp1HeaderCase: true
+	//
+	// ```
+	//
 	// Some headers are enabled by default, and require explicitly disabling. See below for an example of disabling all default-enabled headers:
 	//
 	// ```yaml
@@ -3218,6 +3227,16 @@ type ProxyConfigProxyHeaders struct {
 	// By default, the behavior is unspecified.
 	// If IN_MESH, these headers will not be appended to outbound requests from sidecars to services not in-mesh.
 	MetadataExchangeHeaders *ProxyConfigProxyHeadersMetadataExchangeHeaders `json:"metadataExchangeHeaders,omitempty"`
+	// When true, the original case of HTTP/1.x headers will be preserved
+	// as they pass through the proxy, rather than normalizing them to lowercase.
+	// This field is particularly useful for applications that require case-sensitive
+	// headers for interoperability with downstream systems or APIs that expect specific
+	// casing.
+	// The preserve_http1_header_case option only applies to HTTP/1.x traffic, as HTTP/2 requires all headers
+	// to be lowercase per the protocol specification. Envoy will ignore this field for HTTP/2
+	// requests and automatically normalize headers to lowercase, ensuring compliance with HTTP/2
+	// standards.
+	PreserveHttp1HeaderCase *bool `json:"preserveHttp1HeaderCase,omitempty"`
 }
 
 type ProxyConfigProxyHeadersServer struct {
