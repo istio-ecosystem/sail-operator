@@ -320,12 +320,18 @@ spec:
       specDescriptors:
       - description: |-
           Defines the version of Istio to install.
-          Must be one of: v1.24.0 or latest.
+          Must be one of: v1.24.1, v1.24.0, v1.23.3, v1.23.2, v1.22.6, v1.22.5, v1.21.6, latest.
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.1
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24.0
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.23.3
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.23.2
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.6
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.22.5
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.21.6
         - urn:alm:descriptor:com.tectonic.ui:select:latest
       - description: Namespace to which the Istio ztunnel component should be installed.
         displayName: Namespace
