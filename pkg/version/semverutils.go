@@ -40,10 +40,10 @@ func IsSupported(version string) error {
 	}
 	semanticVersion, err := semver.NewVersion(version)
 	if err != nil {
-		return fmt.Errorf("spec.version is not a valid semver: %s", err.Error())
+		return fmt.Errorf("spec.version '%s' is not a valid semver: %s", version, err.Error())
 	}
 	if config.Config.MaximumIstioVersion != nil && semanticVersion.GreaterThan(config.Config.MaximumIstioVersion) {
-		return fmt.Errorf("spec.version is not supported")
+		return fmt.Errorf("spec.version '%s' is not supported by this operator version", version)
 	}
 	return nil
 }

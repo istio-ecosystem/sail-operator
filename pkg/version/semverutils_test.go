@@ -52,12 +52,12 @@ func TestIsSupported(t *testing.T) {
 		{
 			name:      "invalid version",
 			version:   "v.-1.0",
-			expectErr: "spec.version is not a valid semver",
+			expectErr: "spec.version 'v.-1.0' is not a valid semver",
 		},
 		{
 			name:      "version higher than maximum istio version",
 			version:   "v2.1.0",
-			expectErr: "spec.version is not supported",
+			expectErr: "spec.version 'v2.1.0' is not supported by this operator version",
 			config: config.OperatorConfig{
 				MaximumIstioVersion: semver.MustParse("v2.0.0"),
 			},
