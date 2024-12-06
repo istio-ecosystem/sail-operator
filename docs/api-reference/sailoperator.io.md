@@ -3295,7 +3295,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.24.1, v1.24.0, v1.23.3, v1.23.2, v1.22.6, v1.22.5, v1.21.6, latest. | v1.24.1 | Enum: [v1.24.1 v1.24.0 v1.23.3 v1.23.2 v1.22.6 v1.22.5 v1.21.6 latest]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.24.1, v1.24.0, latest. | v1.24.1 | Enum: [v1.24.1 v1.24.0 latest]   |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is 'ambient' and it is always applied. Must be one of: ambient, default, demo, empty, external, preview, remote, stable. | ambient | Enum: [ambient default demo empty external openshift-ambient openshift preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio ztunnel component should be installed. | ztunnel |  |
 | `values` _[ZTunnelValues](#ztunnelvalues)_ | Defines the values to be passed to the Helm charts when installing Istio ztunnel. |  |  |
