@@ -85,6 +85,9 @@ function patchIstioCharts() {
   echo "patching istio charts ${CHARTS_DIR}/cni/templates/clusterrole.yaml "
   # NOTE: everything in the patchIstioCharts should be here only temporarily,
   # until we push the required changes upstream
+
+  # add permissions for CNI to use the privileged SCC. This has been added upstream in 1.23.0,
+  # so this can be removed once we remove support for versions <1.23
   sed -i '0,/rules:/s//rules:\
 - apiGroups: ["security.openshift.io"] \
   resources: ["securitycontextconstraints"] \
@@ -96,9 +99,6 @@ function patchIstioCharts() {
 }
 
 function convertIstioProfiles() {
-  # delete the remote profile, because it isn't needed (we have the RemoteIstio resource instead)
-  [ -f "${PROFILES_DIR}"/remote.yaml ] && rm "${PROFILES_DIR}"/remote.yaml
-
   # delete the minimal profile, because it ends up being empty after the conversion
   [ -f "${PROFILES_DIR}"/minimal.yaml ] && rm "${PROFILES_DIR}"/minimal.yaml
 
@@ -118,6 +118,22 @@ function convertIstioProfiles() {
   done
 }
 
+function createRevisionTagChart() {
+  mkdir -p "${CHARTS_DIR}/revisiontags/templates"
+  echo "apiVersion: v2
+appVersion: ${ISTIO_VERSION}
+description: Helm chart for istio revision tags
+name: revisiontags
+sources:
+- https://github.com/istio-ecosystem/sail-operator
+version: 0.1.0
+" > "${CHARTS_DIR}/revisiontags/Chart.yaml"
+  cp "${CHARTS_DIR}/istiod/values.yaml" "${CHARTS_DIR}/revisiontags/values.yaml"
+  cp "${CHARTS_DIR}/istiod/templates/revision-tags.yaml" "${CHARTS_DIR}/revisiontags/templates/revision-tags.yaml"
+  cp "${CHARTS_DIR}/istiod/templates/zzz_profile.yaml" "${CHARTS_DIR}/revisiontags/templates/zzz_profile.yaml"
+}
+
 downloadIstioManifests
 patchIstioCharts
 convertIstioProfiles
+createRevisionTagChart

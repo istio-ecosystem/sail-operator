@@ -24,7 +24,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/controllers/istio"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiocni"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiorevision"
-	"github.com/istio-ecosystem/sail-operator/controllers/remoteistio"
+	"github.com/istio-ecosystem/sail-operator/controllers/istiorevisiontag"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
@@ -83,8 +83,8 @@ var _ = BeforeSuite(func() {
 	cl := mgr.GetClient()
 	scheme := mgr.GetScheme()
 	Expect(istio.NewReconciler(cfg, cl, scheme).SetupWithManager(mgr)).To(Succeed())
-	Expect(remoteistio.NewReconciler(cfg, cl, scheme).SetupWithManager(mgr)).To(Succeed())
 	Expect(istiorevision.NewReconciler(cfg, cl, scheme, chartManager).SetupWithManager(mgr)).To(Succeed())
+	Expect(istiorevisiontag.NewReconciler(cfg, cl, scheme, chartManager).SetupWithManager(mgr)).To(Succeed())
 	Expect(istiocni.NewReconciler(cfg, cl, scheme, chartManager).SetupWithManager(mgr)).To(Succeed())
 
 	// create new cancellable context
