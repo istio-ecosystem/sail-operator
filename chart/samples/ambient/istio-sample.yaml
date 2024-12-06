@@ -1,0 +1,14 @@
+apiVersion: sailoperator.io/v1alpha1
+kind: Istio
+metadata:
+  name: default
+spec:
+  version: v1.24.0
+  namespace: istio-system
+  profile: ambient
+  updateStrategy:
+    type: InPlace
+    inactiveRevisionDeletionGracePeriodSeconds: 30
+  values:
+    pilot:
+      trustedZtunnelNamespace: "ztunnel"
