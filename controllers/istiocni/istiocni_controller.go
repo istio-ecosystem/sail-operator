@@ -33,6 +33,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/predicate"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/validation"
+	"github.com/istio-ecosystem/sail-operator/pkg/version"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -119,8 +120,8 @@ func (r *Reconciler) doReconcile(ctx context.Context, cni *v1alpha1.IstioCNI) er
 }
 
 func (r *Reconciler) validate(ctx context.Context, cni *v1alpha1.IstioCNI) error {
-	if cni.Spec.Version == "" {
-		return reconciler.NewValidationError("spec.version not set")
+	if err := version.IsSupported(cni.Spec.Version); err != nil {
+		return reconciler.NewValidationError(err.Error())
 	}
 	if cni.Spec.Namespace == "" {
 		return reconciler.NewValidationError("spec.namespace not set")
