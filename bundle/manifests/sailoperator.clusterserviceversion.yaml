@@ -586,6 +586,32 @@ spec:
           - securitycontextconstraints
           verbs:
           - use
+        - apiGroups:
+          - sailoperator.io
+          resources:
+          - ztunnels
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - sailoperator.io
+          resources:
+          - ztunnels/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - sailoperator.io
+          resources:
+          - ztunnels/status
+          verbs:
+          - get
+          - patch
+          - update
         serviceAccountName: sail-operator
       deployments:
       - label:
