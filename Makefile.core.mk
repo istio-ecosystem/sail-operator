@@ -19,6 +19,8 @@ OLD_VARS := $(.VARIABLES)
 # Use `make print-variables` to inspect the values of the variables
 -include Makefile.vendor.mk
 
+UPDATE_BRANCH = release-1.24
+
 VERSION ?= 0.2.0
 MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 
