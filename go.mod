@@ -1,8 +1,6 @@
 module github.com/istio-ecosystem/sail-operator
 
-go 1.23
-
-toolchain go1.23.2
+go 1.22.7
 
 // Client-go does not handle different versions of mergo due to some breaking changes - use the matching version
 // This replacement is aligned with istio/istio's go.mod
