@@ -353,11 +353,6 @@ spec:
                       description: Controls span reporting.
                       nullable: true
                       type: boolean
-                    enableIstioTags:
-                      description: Determines whether or not trace spans generated
-                        by Envoy will include Istio specific tags.
-                      nullable: true
-                      type: boolean
                     match:
                       description: Allows tailoring of behavior to specific conditions.
                       properties:
@@ -420,12 +415,6 @@ spec:
                       description: Human-readable message indicating details about
                         last transition.
                       type: string
-                    observedGeneration:
-                      anyOf:
-                      - type: integer
-                      - type: string
-                      description: Resource Generation to which the Condition refers.
-                      x-kubernetes-int-or-string: true
                     reason:
                       description: Unique, one-word, CamelCase reason for the condition's
                         last transition.
@@ -442,6 +431,8 @@ spec:
                 anyOf:
                 - type: integer
                 - type: string
+                description: Resource Generation to which the Reconciled Condition
+                  refers.
                 x-kubernetes-int-or-string: true
               validationMessages:
                 description: Includes any errors or warnings detected by Istio's analyzers.
@@ -810,11 +801,6 @@ spec:
                       description: Controls span reporting.
                       nullable: true
                       type: boolean
-                    enableIstioTags:
-                      description: Determines whether or not trace spans generated
-                        by Envoy will include Istio specific tags.
-                      nullable: true
-                      type: boolean
                     match:
                       description: Allows tailoring of behavior to specific conditions.
                       properties:
@@ -877,12 +863,6 @@ spec:
                       description: Human-readable message indicating details about
                         last transition.
                       type: string
-                    observedGeneration:
-                      anyOf:
-                      - type: integer
-                      - type: string
-                      description: Resource Generation to which the Condition refers.
-                      x-kubernetes-int-or-string: true
                     reason:
                       description: Unique, one-word, CamelCase reason for the condition's
                         last transition.
@@ -899,6 +879,8 @@ spec:
                 anyOf:
                 - type: integer
                 - type: string
+                description: Resource Generation to which the Reconciled Condition
+                  refers.
                 x-kubernetes-int-or-string: true
               validationMessages:
                 description: Includes any errors or warnings detected by Istio's analyzers.
