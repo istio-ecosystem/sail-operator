@@ -18,6 +18,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -83,6 +84,24 @@ images.v1_20_0.cni=cni-test
 images.v1_20_0.ztunnel=ztunnel-test
 `,
 			success: false,
+		},
+		{
+			name: "invalid-maxIstioVersion",
+			configFile: `
+maxIstioVersion=v-2.31
+`,
+			success: false,
+		},
+		{
+			name: "maxIstioVersion",
+			configFile: `
+maxIstioVersion=v1.24.0
+`,
+			expectedConfig: OperatorConfig{
+				ImageDigests:        map[string]IstioImageConfig{},
+				MaximumIstioVersion: semver.MustParse("v1.24.0"),
+			},
+			success: true,
 		},
 	}
 	for _, tc := range testCases {
