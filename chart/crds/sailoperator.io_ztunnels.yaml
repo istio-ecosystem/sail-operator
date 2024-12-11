@@ -59,7 +59,7 @@ spec:
             default:
               namespace: ztunnel
               profile: ambient
-              version: v1.24.1
+              version: v1.24.0
             description: ZTunnelSpec defines the desired state of ZTunnel
             properties:
               namespace:
