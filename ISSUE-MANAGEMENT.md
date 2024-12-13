@@ -9,7 +9,7 @@ Please refer to the [Security Policy](https://github.com/istio-ecosystem/sail-op
 If you have questions or need help, you can reach out to the Sail Operator community in the [Istio Slack](https://istio.slack.com/). You can join the Istio Slack workspace by visiting the [Istio Slack invitation page](https://slack.istio.io/). Once you join the Istio Slack workspace, you can find the `#sail-operator` channel. Also, you can start a discussion in the [Sail Operator Discussion](https://github.com/istio-ecosystem/sail-operator/discussions)
 
 ## Contributing
-If you want to contribute to the Sail Operator project, please refer to the [CONTRIBUTING.md](https://github.com/istio-ecosystem/sail-operator/blob/main/CONTRIBUTING.md) file for more information on how to contribute to the project.
+If you want to contribute to the Sail Operator project, please refer to the [CONTRIBUTING.md](CONTRIBUTING.md) file for more information on how to contribute to the project.
 For contributing to Istio, check out the [CONTRIBUTING.md](https://github.com/istio/community/blob/master/CONTRIBUTING.md) file, which contains all the information you need to get started.
 
 ## Did you find an Istio bug?
