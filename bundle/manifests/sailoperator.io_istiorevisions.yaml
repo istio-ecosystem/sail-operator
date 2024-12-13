@@ -461,7 +461,7 @@ spec:
                                     type: integer
                                   registryServiceName:
                                     description: |-
-                                      A fully qualified domain name of the gateway service.  Pilot will
+                                      A fully qualified domain name of the gateway service.  istiod will
                                       lookup the service from the service registries in the network and
                                       obtain the endpoint IPs of the gateway from the service
                                       registry. Note that while the service name is a fully qualified
@@ -2647,8 +2647,8 @@ spec:
                                   A list of alternate names to verify the subject identity in the
                                   certificate. If specified, the proxy will verify that the server
                                   certificate's subject alt name matches one of the specified values.
-                                  If specified, this list overrides the value of subject_alt_names
-                                  from the ServiceEntry. If unspecified, automatic validation of upstream
+                                  If specified, this list overrides the value of `subjectAltNames`
+                                  from the `ServiceEntry`. If unspecified, automatic validation of upstream
                                   presented certificate for new upstream connections will be done based on the
                                   downstream HTTP host/authority header.
                                 items:
@@ -2767,7 +2767,7 @@ spec:
                             tlsSettings:
                               description: |-
                                 Use the tlsSettings to specify the tls mode to use. If the MCP server
-                                uses Istio mutual TLS and shares the root CA with Pilot, specify the TLS
+                                uses Istio mutual TLS and shares the root CA with istiod, specify the TLS
                                 mode as `ISTIO_MUTUAL`.
                               properties:
                                 caCertificates:
@@ -2848,8 +2848,8 @@ spec:
                                     A list of alternate names to verify the subject identity in the
                                     certificate. If specified, the proxy will verify that the server
                                     certificate's subject alt name matches one of the specified values.
-                                    If specified, this list overrides the value of subject_alt_names
-                                    from the ServiceEntry. If unspecified, automatic validation of upstream
+                                    If specified, this list overrides the value of `subjectAltNames`
+                                    from the `ServiceEntry`. If unspecified, automatic validation of upstream
                                     presented certificate for new upstream connections will be done based on the
                                     downstream HTTP host/authority header.
                                   items:
@@ -2860,7 +2860,7 @@ spec:
                         type: array
                       connectTimeout:
                         description: |-
-                          Connection timeout used by Envoy. (MUST BE >=1ms)
+                          Connection timeout used by Envoy. (MUST be >=1ms)
                           Default timeout is 10s.
                         type: string
                       defaultConfig:
@@ -2911,7 +2911,7 @@ spec:
                           customConfigFile:
                             description: |-
                               File path of custom proxy configuration, currently used by proxies
-                              in front of Mixer and Pilot.
+                              in front of istiod.
                             type: string
                           discoveryAddress:
                             description: |-
@@ -2966,7 +2966,7 @@ spec:
                               tlsSettings:
                                 description: |-
                                   Use the `tlsSettings` to specify the tls mode to use. If the remote service
-                                  uses Istio mutual TLS and shares the root CA with Pilot, specify the TLS
+                                  uses Istio mutual TLS and shares the root CA with istiod, specify the TLS
                                   mode as `ISTIO_MUTUAL`.
                                 properties:
                                   caCertificates:
@@ -3047,8 +3047,8 @@ spec:
                                       A list of alternate names to verify the subject identity in the
                                       certificate. If specified, the proxy will verify that the server
                                       certificate's subject alt name matches one of the specified values.
-                                      If specified, this list overrides the value of subject_alt_names
-                                      from the ServiceEntry. If unspecified, automatic validation of upstream
+                                      If specified, this list overrides the value of `subjectAltNames`
+                                      from the `ServiceEntry`. If unspecified, automatic validation of upstream
                                       presented certificate for new upstream connections will be done based on the
                                       downstream HTTP host/authority header.
                                     items:
@@ -3095,7 +3095,7 @@ spec:
                               tlsSettings:
                                 description: |-
                                   Use the `tlsSettings` to specify the tls mode to use. If the remote service
-                                  uses Istio mutual TLS and shares the root CA with Pilot, specify the TLS
+                                  uses Istio mutual TLS and shares the root CA with istiod, specify the TLS
                                   mode as `ISTIO_MUTUAL`.
                                 properties:
                                   caCertificates:
@@ -3176,8 +3176,8 @@ spec:
                                       A list of alternate names to verify the subject identity in the
                                       certificate. If specified, the proxy will verify that the server
                                       certificate's subject alt name matches one of the specified values.
-                                      If specified, this list overrides the value of subject_alt_names
-                                      from the ServiceEntry. If unspecified, automatic validation of upstream
+                                      If specified, this list overrides the value of `subjectAltNames`
+                                      from the `ServiceEntry`. If unspecified, automatic validation of upstream
                                       presented certificate for new upstream connections will be done based on the
                                       downstream HTTP host/authority header.
                                     items:
@@ -3336,11 +3336,11 @@ spec:
                               currently all headers are enabled by default.\n\nBelow
                               shows an example of customizing the `server` header
                               and disabling the `X-Envoy-Attempt-Count` header:\n\n```yaml\nproxyHeaders:\n\n\tserver:\n\t
-                              \ value: \"my-custom-server\"\n\trequestId: {} // Explicitly
-                              enable Request IDs. As this is the default, this has
-                              no effect.\n\tattemptCount:\n\t  disabled: true\n\n```\n\n#
-                              Below shows an example of preserving the header case
-                              for HTTP 1.x requests\n\n```yaml\nproxyHeaders:\n\n\tperserveHttp1HeaderCase:
+                              \ value: \"my-custom-server\"\n\t# Explicitly enable
+                              Request IDs.\n\t# As this is the default, this has no
+                              effect.\n\trequestId: {}\n\tattemptCount:\n\t  disabled:
+                              true\n\n```\n\n# Below shows an example of preserving
+                              the header case for HTTP 1.x requests\n\n```yaml\nproxyHeaders:\n\n\tperserveHttp1HeaderCase:
                               true\n\n```\n\nSome headers are enabled by default,
                               and require explicitly disabling. See below for an example
                               of disabling all default-enabled headers:\n\n```yaml\nproxyHeaders:\n\n\tforwardedClientCert:
@@ -3887,7 +3887,7 @@ spec:
                               tlsSettings:
                                 description: |-
                                   Use the tlsSettings to specify the tls mode to use. If the remote tracing service
-                                  uses Istio mutual TLS and shares the root CA with Pilot, specify the TLS
+                                  uses Istio mutual TLS and shares the root CA with istiod, specify the TLS
                                   mode as `ISTIO_MUTUAL`.
                                 properties:
                                   caCertificates:
@@ -3968,8 +3968,8 @@ spec:
                                       A list of alternate names to verify the subject identity in the
                                       certificate. If specified, the proxy will verify that the server
                                       certificate's subject alt name matches one of the specified values.
-                                      If specified, this list overrides the value of subject_alt_names
-                                      from the ServiceEntry. If unspecified, automatic validation of upstream
+                                      If specified, this list overrides the value of `subjectAltNames`
+                                      from the `ServiceEntry`. If unspecified, automatic validation of upstream
                                       presented certificate for new upstream connections will be done based on the
                                       downstream HTTP host/authority header.
                                     items:
@@ -4038,13 +4038,13 @@ spec:
                               between retries will be determined automatically (25ms+). When request
                               `timeout` of the [HTTP route](https://istio.io/docs/reference/config/networking/virtual-service/#HTTPRoute)
                               or `per_try_timeout` is configured, the actual number of retries attempted also depends on
-                              the specified request `timeout` and `per_try_timeout` values. MUST BE >= 0. If `0`, retries will be disabled.
+                              the specified request `timeout` and `per_try_timeout` values. MUST be >= 0. If `0`, retries will be disabled.
                               The maximum possible number of requests made will be 1 + `attempts`.
                             format: int32
                             type: integer
                           perTryTimeout:
                             description: |-
-                              Timeout per attempt for a given request, including the initial call and any retries. Format: 1h/1m/1s/1ms. MUST BE >=1ms.
+                              Timeout per attempt for a given request, including the initial call and any retries. Format: 1h/1m/1s/1ms. MUST be >=1ms.
                               Default is same value as request
                               `timeout` of the [HTTP route](https://istio.io/docs/reference/config/networking/virtual-service/#HTTPRoute),
                               which means no timeout.
@@ -5334,8 +5334,8 @@ spec:
                             type: array
                           enabled:
                             description: |-
-                              enable locality load balancing, this is DestinationRule-level and will override mesh wide settings in entirety.
-                              e.g. true means that turn on locality load balancing for this DestinationRule no matter what mesh wide settings is.
+                              Enable locality load balancing. This is DestinationRule-level and will override mesh-wide settings in entirety.
+                              e.g. true means that turn on locality load balancing for this DestinationRule no matter what mesh-wide settings is.
                             type: boolean
                           failover:
                             description: |-
@@ -5544,7 +5544,7 @@ spec:
                           MongoDB, etc. Envoy will timeout on the protocol detection after
                           the specified period, defaulting to non mTLS plain TCP
                           traffic. Set this field to tweak the period that Envoy will wait
-                          for the client to send the first bits of data. (MUST BE >=1ms or
+                          for the client to send the first bits of data. (MUST be >=1ms or
                           0s to disable). Default detection timeout is 0s (no timeout).
 
                           Setting a timeout is not recommended nor safe. Even high timeouts (>5s) will be hit

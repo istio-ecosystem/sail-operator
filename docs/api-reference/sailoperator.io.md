@@ -296,7 +296,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `address` _string_ | Address of the server implementing the Istio Mesh Configuration protocol (MCP). Can be IP address or a fully qualified DNS name. Use xds:// to specify a grpc-based xds backend, k8s:// to specify a k8s controller or fs:/// to specify a file-based backend with absolute path to the directory. |  |  |
-| `tlsSettings` _[ClientTLSSettings](#clienttlssettings)_ | Use the tlsSettings to specify the tls mode to use. If the MCP server uses Istio mutual TLS and shares the root CA with Pilot, specify the TLS mode as `ISTIO_MUTUAL`. |  |  |
+| `tlsSettings` _[ClientTLSSettings](#clienttlssettings)_ | Use the tlsSettings to specify the tls mode to use. If the MCP server uses Istio mutual TLS and shares the root CA with istiod, specify the TLS mode as `ISTIO_MUTUAL`. |  |  |
 | `subscribedResources` _[Resource](#resource) array_ | Describes the source of configuration, if nothing is specified default is MCP |  | Enum: [SERVICE_REGISTRY]   |
 
 
@@ -480,8 +480,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `attempts` _integer_ | Number of retries to be allowed for a given request. The interval between retries will be determined automatically (25ms+). When request `timeout` of the [HTTP route](https://istio.io/docs/reference/config/networking/virtual-service/#HTTPRoute) or `per_try_timeout` is configured, the actual number of retries attempted also depends on the specified request `timeout` and `per_try_timeout` values. MUST BE >= 0. If `0`, retries will be disabled. The maximum possible number of requests made will be 1 + `attempts`. |  |  |
-| `perTryTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | Timeout per attempt for a given request, including the initial call and any retries. Format: 1h/1m/1s/1ms. MUST BE >=1ms. Default is same value as request `timeout` of the [HTTP route](https://istio.io/docs/reference/config/networking/virtual-service/#HTTPRoute), which means no timeout. |  |  |
+| `attempts` _integer_ | Number of retries to be allowed for a given request. The interval between retries will be determined automatically (25ms+). When request `timeout` of the [HTTP route](https://istio.io/docs/reference/config/networking/virtual-service/#HTTPRoute) or `per_try_timeout` is configured, the actual number of retries attempted also depends on the specified request `timeout` and `per_try_timeout` values. MUST be >= 0. If `0`, retries will be disabled. The maximum possible number of requests made will be 1 + `attempts`. |  |  |
+| `perTryTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | Timeout per attempt for a given request, including the initial call and any retries. Format: 1h/1m/1s/1ms. MUST be >=1ms. Default is same value as request `timeout` of the [HTTP route](https://istio.io/docs/reference/config/networking/virtual-service/#HTTPRoute), which means no timeout. |  |  |
 | `retryOn` _string_ | Specifies the conditions under which retry takes place. One or more policies can be specified using a ‘,’ delimited list. See the [retry policies](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-on) and [gRPC retry policies](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-grpc-on) for more details.  In addition to the policies specified above, a list of HTTP status codes can be passed, such as `retryOn: "503,reset"`. Note these status codes refer to the actual responses received from the destination. For example, if a connection is reset, Istio will translate this to 503 for it's response. However, the destination did not return a 503 error, so this would not match `"503"` (it would, however, match `"reset"`).  If not specified, this defaults to `connect-failure,refused-stream,unavailable,cancelled,503`. |  |  |
 | `retryRemoteLocalities` _boolean_ | Flag to specify whether the retries should retry to other localities. See the [retry plugin configuration](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/http/http_connection_management#retry-plugin-configuration) for more details. |  |  |
 
@@ -1146,13 +1146,13 @@ specified using arbitrary labels that designate a hierarchy of localities in
 The following example shows how to setup locality weights mesh-wide.
 
 
-Given a mesh with workloads and their service deployed to "us-west/zone1/*"
-and "us-west/zone2/*". This example specifies that when traffic accessing a
-service originates from workloads in "us-west/zone1/*", 80% of the traffic
-will be sent to endpoints in "us-west/zone1/*", i.e the same zone, and the
-remaining 20% will go to endpoints in "us-west/zone2/*". This setup is
+Given a mesh with workloads and their service deployed to "us-west/zone1/\*"
+and "us-west/zone2/\*". This example specifies that when traffic accessing a
+service originates from workloads in "us-west/zone1/\*", 80% of the traffic
+will be sent to endpoints in "us-west/zone1/\*", i.e the same zone, and the
+remaining 20% will go to endpoints in "us-west/zone2/\*". This setup is
 intended to favor routing traffic to endpoints in the same locality.
-A similar setting is specified for traffic originating in "us-west/zone2/*".
+A similar setting is specified for traffic originating in "us-west/zone2/\*".
 
 
 ```yaml
@@ -1188,7 +1188,6 @@ and similarly us-west should failover to us-east.
     - from: us-west
       to: us-east
 ```
-Locality load balancing settings.
 
 
 
@@ -1200,7 +1199,7 @@ _Appears in:_
 | `distribute` _[LocalityLoadBalancerSettingDistribute](#localityloadbalancersettingdistribute) array_ | Optional: only one of distribute, failover or failoverPriority can be set. Explicitly specify loadbalancing weight across different zones and geographical locations. Refer to [Locality weighted load balancing](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/locality_weight) If empty, the locality weight is set according to the endpoints number within it. |  |  |
 | `failover` _[LocalityLoadBalancerSettingFailover](#localityloadbalancersettingfailover) array_ | Optional: only one of distribute, failover or failoverPriority can be set. Explicitly specify the region traffic will land on when endpoints in local region becomes unhealthy. Should be used together with OutlierDetection to detect unhealthy endpoints. Note: if no OutlierDetection specified, this will not take effect. |  |  |
 | `failoverPriority` _string array_ | failoverPriority is an ordered list of labels used to sort endpoints to do priority based load balancing. This is to support traffic failover across different groups of endpoints. Two kinds of labels can be specified:    - Specify only label keys `[key1, key2, key3]`, istio would compare the label values of client with endpoints.     Suppose there are total N label keys `[key1, key2, key3, ...keyN]` specified:      1. Endpoints matching all N labels with the client proxy have priority P(0) i.e. the highest priority.     2. Endpoints matching the first N-1 labels with the client proxy have priority P(1) i.e. second highest priority.     3. By extension of this logic, endpoints matching only the first label with the client proxy has priority P(N-1) i.e. second lowest priority.     4. All the other endpoints have priority P(N) i.e. lowest priority.    - Specify labels with key and value `[key1=value1, key2=value2, key3=value3]`, istio would compare the labels with endpoints.     Suppose there are total N labels `[key1=value1, key2=value2, key3=value3, ...keyN=valueN]` specified:      1. Endpoints matching all N labels have priority P(0) i.e. the highest priority.     2. Endpoints matching the first N-1 labels have priority P(1) i.e. second highest priority.     3. By extension of this logic, endpoints matching only the first label has priority P(N-1) i.e. second lowest priority.     4. All the other endpoints have priority P(N) i.e. lowest priority.  Note: For a label to be considered for match, the previous labels must match, i.e. nth label would be considered matched only if first n-1 labels match.  It can be any label specified on both client and server workloads. The following labels which have special semantic meaning are also supported:    - `topology.istio.io/network` is used to match the network metadata of an endpoint, which can be specified by pod/namespace label `topology.istio.io/network`, sidecar env `ISTIO_META_NETWORK` or MeshNetworks.   - `topology.istio.io/cluster` is used to match the clusterID of an endpoint, which can be specified by pod label `topology.istio.io/cluster` or pod env `ISTIO_META_CLUSTER_ID`.   - `topology.kubernetes.io/region` is used to match the region metadata of an endpoint, which maps to Kubernetes node label `topology.kubernetes.io/region` or the deprecated label `failure-domain.beta.kubernetes.io/region`.   - `topology.kubernetes.io/zone` is used to match the zone metadata of an endpoint, which maps to Kubernetes node label `topology.kubernetes.io/zone` or the deprecated label `failure-domain.beta.kubernetes.io/zone`.   - `topology.istio.io/subzone` is used to match the subzone metadata of an endpoint, which maps to Istio node label `topology.istio.io/subzone`.   - `kubernetes.io/hostname` is used to match the current node of an endpoint, which maps to Kubernetes node label `kubernetes.io/hostname`.  The below topology config indicates the following priority levels:  ```yaml failoverPriority: - "topology.istio.io/network" - "topology.kubernetes.io/region" - "topology.kubernetes.io/zone" - "topology.istio.io/subzone" ```  1. endpoints match same [network, region, zone, subzone] label with the client proxy have the highest priority. 2. endpoints have same [network, region, zone] label but different [subzone] label with the client proxy have the second highest priority. 3. endpoints have same [network, region] label but different [zone] label with the client proxy have the third highest priority. 4. endpoints have same [network] but different [region] labels with the client proxy have the fourth highest priority. 5. all the other endpoints have the same lowest priority.  Suppose a service associated endpoints reside in multi clusters, the below example represents: 1. endpoints in `clusterA` and has `version=v1` label have P(0) priority. 2. endpoints not in `clusterA` but has `version=v1` label have P(1) priority. 2. all the other endpoints have P(2) priority.  ```yaml failoverPriority: - "version=v1" - "topology.istio.io/cluster=clusterA" ```  Optional: only one of distribute, failover or failoverPriority can be set. And it should be used together with `OutlierDetection` to detect unhealthy endpoints, otherwise has no effect. |  |  |
-| `enabled` _boolean_ | enable locality load balancing, this is DestinationRule-level and will override mesh wide settings in entirety. e.g. true means that turn on locality load balancing for this DestinationRule no matter what mesh wide settings is. |  |  |
+| `enabled` _boolean_ | Enable locality load balancing. This is DestinationRule-level and will override mesh-wide settings in entirety. e.g. true means that turn on locality load balancing for this DestinationRule no matter what mesh-wide settings is. |  |  |
 
 
 #### LocalityLoadBalancerSettingDistribute
@@ -1272,7 +1271,7 @@ _Appears in:_
 | `proxyListenPort` _integer_ | Port on which Envoy should listen for all outbound traffic to other services. Default port is 15001. |  |  |
 | `proxyInboundListenPort` _integer_ | Port on which Envoy should listen for all inbound traffic to the pod/vm will be captured to. Default port is 15006. |  |  |
 | `proxyHttpPort` _integer_ | Port on which Envoy should listen for HTTP PROXY requests if set. |  |  |
-| `connectTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | Connection timeout used by Envoy. (MUST BE >=1ms) Default timeout is 10s. |  |  |
+| `connectTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | Connection timeout used by Envoy. (MUST be >=1ms) Default timeout is 10s. |  |  |
 | `tcpKeepalive` _[ConnectionPoolSettingsTCPSettingsTcpKeepalive](#connectionpoolsettingstcpsettingstcpkeepalive)_ | If set then set `SO_KEEPALIVE` on the socket to enable TCP Keepalives. |  |  |
 | `ingressClass` _string_ | Class of ingress resources to be processed by Istio ingress controller. This corresponds to the value of `kubernetes.io/ingress.class` annotation. |  |  |
 | `ingressService` _string_ | Name of the Kubernetes service used for the istio ingress controller. If no ingress controller is specified, the default value `istio-ingressgateway` is used. |  |  |
@@ -1917,7 +1916,7 @@ _Appears in:_
 
 ProxyConfig defines variables for individual Envoy instances. This can be configured on a per-workload basis
 as well as by the mesh-wide defaults.
-To set the mesh wide defaults, configure the `defaultConfig` section of `meshConfig`. For example:
+To set the mesh-wide defaults, configure the `defaultConfig` section of `meshConfig`. For example:
 
 
 ```
@@ -1962,7 +1961,7 @@ _Appears in:_
 | `statsdUdpAddress` _string_ | IP Address and Port of a statsd UDP listener (e.g. `10.75.241.127:9125`). |  |  |
 | `proxyAdminPort` _integer_ | Port on which Envoy should listen for administrative commands. Default port is `15000`. |  |  |
 | `controlPlaneAuthPolicy` _[AuthenticationPolicy](#authenticationpolicy)_ | AuthenticationPolicy defines how the proxy is authenticated when it connects to the control plane. Default is set to `MUTUAL_TLS`. |  | Enum: [NONE MUTUAL_TLS INHERIT]   |
-| `customConfigFile` _string_ | File path of custom proxy configuration, currently used by proxies in front of Mixer and Pilot. |  |  |
+| `customConfigFile` _string_ | File path of custom proxy configuration, currently used by proxies in front of istiod. |  |  |
 | `statNameLength` _integer_ | Maximum length of name field in Envoy's metrics. The length of the name field is determined by the length of a name field in a service and the set of labels that comprise a particular version of the service. The default value is set to 189 characters. Envoy's internal metrics take up 67 characters, for a total of 256 character name per metric. Increase the value of this field if you find that the metrics from Envoys are truncated. |  |  |
 | `concurrency` _integer_ | The number of worker threads to run. If unset, which is recommended, this will be automatically determined based on CPU requests/limits. If set to 0, all cores on the machine will be used, ignoring CPU requests or limits. This can lead to major performance issues if CPU limits are also set. |  |  |
 | `proxyBootstrapTemplatePath` _string_ | Path to the proxy bootstrap template file |  |  |
@@ -1983,7 +1982,7 @@ _Appears in:_
 | `caCertificatesPem` _string array_ | The PEM data of the extra root certificates for workload-to-workload communication. This includes the certificates defined in MeshConfig and any other certificates that Istiod uses as CA. The plugin certificates (the 'cacerts' secret), self-signed certificates (the 'istio-ca-secret' secret) are added automatically by Istiod. |  |  |
 | `image` _[ProxyImage](#proxyimage)_ | Specifies the details of the proxy image. |  |  |
 | `privateKeyProvider` _[PrivateKeyProvider](#privatekeyprovider)_ | Specifies the details of the Private Key Provider configuration for gateway and sidecar proxies. |  |  |
-| `proxyHeaders` _[ProxyConfigProxyHeaders](#proxyconfigproxyheaders)_ | Define the set of headers to add/modify for HTTP request/responses.  To enable an optional header, simply set the field. If no specific configuration is required, an empty object (`\{\}`) will enable it. Note: currently all headers are enabled by default.  Below shows an example of customizing the `server` header and disabling the `X-Envoy-Attempt-Count` header:  ```yaml proxyHeaders:    server:     value: "my-custom-server"   requestId: \{\} // Explicitly enable Request IDs. As this is the default, this has no effect.   attemptCount:     disabled: true  ```  # Below shows an example of preserving the header case for HTTP 1.x requests  ```yaml proxyHeaders:    perserveHttp1HeaderCase: true  ```  Some headers are enabled by default, and require explicitly disabling. See below for an example of disabling all default-enabled headers:  ```yaml proxyHeaders:    forwardedClientCert: SANITIZE   server:     disabled: true   requestId:     disabled: true   attemptCount:     disabled: true   envoyDebugHeaders:     disabled: true   metadataExchangeHeaders:     mode: IN_MESH  ``` |  |  |
+| `proxyHeaders` _[ProxyConfigProxyHeaders](#proxyconfigproxyheaders)_ | Define the set of headers to add/modify for HTTP request/responses.  To enable an optional header, simply set the field. If no specific configuration is required, an empty object (`\{\}`) will enable it. Note: currently all headers are enabled by default.  Below shows an example of customizing the `server` header and disabling the `X-Envoy-Attempt-Count` header:  ```yaml proxyHeaders:    server:     value: "my-custom-server"   # Explicitly enable Request IDs.   # As this is the default, this has no effect.   requestId: \{\}   attemptCount:     disabled: true  ```  # Below shows an example of preserving the header case for HTTP 1.x requests  ```yaml proxyHeaders:    perserveHttp1HeaderCase: true  ```  Some headers are enabled by default, and require explicitly disabling. See below for an example of disabling all default-enabled headers:  ```yaml proxyHeaders:    forwardedClientCert: SANITIZE   server:     disabled: true   requestId:     disabled: true   attemptCount:     disabled: true   envoyDebugHeaders:     disabled: true   metadataExchangeHeaders:     mode: IN_MESH  ``` |  |  |
 
 
 #### MeshConfigProxyPathNormalization
@@ -2137,7 +2136,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `registryServiceName` _string_ | A fully qualified domain name of the gateway service.  Pilot will lookup the service from the service registries in the network and obtain the endpoint IPs of the gateway from the service registry. Note that while the service name is a fully qualified domain name, it need not be resolvable outside the orchestration platform for the registry. e.g., this could be istio-ingressgateway.istio-system.svc.cluster.local. |  |  |
+| `registryServiceName` _string_ | A fully qualified domain name of the gateway service.  istiod will lookup the service from the service registries in the network and obtain the endpoint IPs of the gateway from the service registry. Note that while the service name is a fully qualified domain name, it need not be resolvable outside the orchestration platform for the registry. e.g., this could be istio-ingressgateway.istio-system.svc.cluster.local. |  |  |
 | `address` _string_ | IP address or externally resolvable DNS address associated with the gateway. |  |  |
 | `port` _integer_ |  |  |  |
 | `locality` _string_ | The locality associated with an explicitly specified gateway (i.e. ip) |  |  |
@@ -2288,7 +2287,7 @@ _Appears in:_
 
 
 PrivateKeyProvider defines private key configuration for gateways and sidecars. This can be configured
-mesh wide or individual per-workload basis.
+mesh-wide or individual per-workload basis.
 
 
 
@@ -2579,7 +2578,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `address` _string_ | Address of a remove service used for various purposes (access log receiver, metrics receiver, etc.). Can be IP address or a fully qualified DNS name. |  |  |
-| `tlsSettings` _[ClientTLSSettings](#clienttlssettings)_ | Use the `tlsSettings` to specify the tls mode to use. If the remote service uses Istio mutual TLS and shares the root CA with Pilot, specify the TLS mode as `ISTIO_MUTUAL`. |  |  |
+| `tlsSettings` _[ClientTLSSettings](#clienttlssettings)_ | Use the `tlsSettings` to specify the tls mode to use. If the remote service uses Istio mutual TLS and shares the root CA with istiod, specify the TLS mode as `ISTIO_MUTUAL`. |  |  |
 | `tcpKeepalive` _[ConnectionPoolSettingsTCPSettingsTcpKeepalive](#connectionpoolsettingstcpsettingstcpkeepalive)_ | If set then set `SO_KEEPALIVE` on the socket to enable TCP Keepalives. |  |  |
 
 
@@ -2975,7 +2974,7 @@ _Appears in:_
 | `zipkin` _[TracingZipkin](#tracingzipkin)_ | Use a Zipkin tracer. |  |  |
 | `datadog` _[TracingDatadog](#tracingdatadog)_ | Use a Datadog tracer. |  |  |
 | `sampling` _float_ | The percentage of requests (0.0 - 100.0) that will be randomly selected for trace generation, if not requested by the client or not forced. Default is 1.0. |  |  |
-| `tlsSettings` _[ClientTLSSettings](#clienttlssettings)_ | Use the tlsSettings to specify the tls mode to use. If the remote tracing service uses Istio mutual TLS and shares the root CA with Pilot, specify the TLS mode as `ISTIO_MUTUAL`. |  |  |
+| `tlsSettings` _[ClientTLSSettings](#clienttlssettings)_ | Use the tlsSettings to specify the tls mode to use. If the remote tracing service uses Istio mutual TLS and shares the root CA with istiod, specify the TLS mode as `ISTIO_MUTUAL`. |  |  |
 | `enableIstioTags` _boolean_ | Determines whether or not trace spans generated by Envoy will include Istio specific tags. By default Istio specific tags are included in the trace spans. |  |  |
 
 
