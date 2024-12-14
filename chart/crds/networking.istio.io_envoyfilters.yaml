@@ -165,7 +165,7 @@ spec:
                               additionalProperties:
                                 type: string
                               description: Match on the node metadata supplied by
-                                a proxy when connecting to Istio Pilot.
+                                a proxy when connecting to istiod.
                               type: object
                             proxyVersion:
                               description: A regular expression in golang regex format
