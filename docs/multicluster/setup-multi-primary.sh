@@ -76,7 +76,7 @@ kubectl get ns sail-operator --context "${CTX_CLUSTER1}" || make -C "${SCRIPT_DI
 kubectl config use-context "${CTX_CLUSTER2}"
 kubectl get ns sail-operator --context "${CTX_CLUSTER2}" || make -C "${SCRIPT_DIR}/../.." deploy
 
-# 3. Create istio-system namespace on each cluster and configure a common root CA. 
+# 3. Create istio-system namespace on each cluster and configure a common root CA.
 
 kubectl get ns istio-system --context "${CTX_CLUSTER1}" || kubectl create namespace istio-system --context "${CTX_CLUSTER1}"
 kubectl --context "${CTX_CLUSTER1}" label namespace istio-system topology.istio.io/network=network1
@@ -110,6 +110,8 @@ spec:
         requests:
           cpu: 100m
           memory: 1024Mi
+      env:
+        ROOT_CA_DIR: /etc/cacerts
     global:
       meshID: mesh1
       multiCluster:
@@ -142,6 +144,8 @@ spec:
         requests:
           cpu: 100m
           memory: 1024Mi
+      env:
+        ROOT_CA_DIR: /etc/cacerts
     global:
       meshID: mesh1
       multiCluster:

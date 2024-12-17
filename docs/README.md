@@ -115,7 +115,7 @@ spec:
 ```
 
 > [!NOTE]
-> The CNI plugin at version `1.x` is compatible with `Istio` at version `1.x-1`, `1.x` and `1.x+1`. 
+> The CNI plugin at version `1.x` is compatible with `Istio` at version `1.x-1`, `1.x` and `1.x+1`.
 
 ## API Reference documentation
 The Sail Operator API reference documentation can be found [here](https://github.com/istio-ecosystem/sail-operator/tree/main/docs/api-reference/sailoperator.io.md).
@@ -136,7 +136,7 @@ The Sail Operator API reference documentation can be found [here](https://github
 
 1. Use the default installation settings presented, and click **Install** to continue.
 
-1. Click **Operators** -> **Installed Operators** to verify that the Sail Operator 
+1. Click **Operators** -> **Installed Operators** to verify that the Sail Operator
 is installed. `Succeeded` should appear in the **Status** column.
 
 #### Installing using the CLI
@@ -322,7 +322,7 @@ Steps:
 9. Confirm that the new version is used in the sidecar.
 
     ```bash
-    istioctl proxy-status 
+    istioctl proxy-status
     ```
     The column `VERSION` should match the new control plane version.
 
@@ -403,7 +403,7 @@ Steps:
 8. Confirm that the proxy version matches the control plane version.
 
     ```bash
-    istioctl proxy-status 
+    istioctl proxy-status
     ```
     The column `VERSION` should match the control plane version.
 
@@ -438,7 +438,7 @@ Steps:
 12. Confirm the proxy sidecar version remains the same:
 
     ```bash
-    istioctl proxy-status 
+    istioctl proxy-status
     ```
     The column `VERSION` should still match the old control plane version.
 
@@ -458,7 +458,7 @@ Steps:
 15. Confirm the new version is used in the sidecars.
 
     ```bash
-    istioctl proxy-status 
+    istioctl proxy-status
     ```
     The column `VERSION` should match the updated control plane version.
 
@@ -481,12 +481,12 @@ Steps:
 
 ## Multiple meshes on a single cluster
 
-The Sail Operator supports running multiple meshes on a single cluster and associating each workload with a specific mesh. 
+The Sail Operator supports running multiple meshes on a single cluster and associating each workload with a specific mesh.
 Each mesh is managed by a separate control plane.
 
 Applications are installed in multiple namespaces, and each namespace is associated with one of the control planes through its labels.
 The `istio.io/rev` label determines which control plane injects the sidecar proxy into the application pods.
-Additional namespace labels determine whether the control plane discovers and manages the resources in the namespace. 
+Additional namespace labels determine whether the control plane discovers and manages the resources in the namespace.
 A control plane will discover and manage only those namespaces that match the discovery selectors configured on the control plane.
 Additionally, discovery selectors determine which control plane creates the `istio-ca-root-cert` ConfigMap in which namespace.
 
@@ -495,7 +495,7 @@ Each control plane must be deployed in a separate Kubernetes namespace.
 
 This guide explains how to set up two meshes: `mesh1` and `mesh2` in namespaces `istio-system1` and `istio-system2`, respectively, and three application namespaces: `app1`, `app2a`, and `app2b`.
 Mesh 1 will manage namespace `app1`, and Mesh 2 will manage namespaces `app2a` and `app2b`.
-Because each mesh will use its own root certificate authority and configured to use a peer authentication policy with the `STRICT` mTLS mode, the communication between the two meshes will not be allowed. 
+Because each mesh will use its own root certificate authority and configured to use a peer authentication policy with the `STRICT` mTLS mode, the communication between the two meshes will not be allowed.
 
 ### Prerequisites
 
@@ -527,7 +527,7 @@ Because each mesh will use its own root certificate authority and configured to 
              mesh: mesh1
    EOF
    ```
-   
+
 2. Create the system namespace `istio-system2` and deploy the `mesh2` control plane in it.
    ```sh
    $ kubectl create namespace istio-system2
@@ -560,7 +560,7 @@ Because each mesh will use its own root certificate authority and configured to 
      mtls:
        mode: STRICT
    EOF
-   
+
    $ kubectl apply -f - <<EOF
    apiVersion: security.istio.io/v1
    kind: PeerAuthentication
@@ -571,7 +571,7 @@ Because each mesh will use its own root certificate authority and configured to 
      mtls:
        mode: STRICT
    EOF
-   ```  
+   ```
 
 #### Verifying the control planes
 
@@ -608,8 +608,8 @@ Because each mesh will use its own root certificate authority and configured to 
 
 1. Create three application namespaces:
    ```sh
-   $ kubectl create ns app1 
-   $ kubectl create ns app2a 
+   $ kubectl create ns app1
+   $ kubectl create ns app2a
    $ kubectl create ns app2b
    ```
 
@@ -629,14 +629,14 @@ Because each mesh will use its own root certificate authority and configured to 
 
 4. Deploy the `curl` and `httpbin` sample applications in each namespace:
    ```sh
-   $ kubectl -n app1 apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/curl/curl.yaml 
-   $ kubectl -n app1 apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/httpbin/httpbin.yaml 
+   $ kubectl -n app1 apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/curl/curl.yaml
+   $ kubectl -n app1 apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/httpbin/httpbin.yaml
 
-   $ kubectl -n app2a apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/curl/curl.yaml 
-   $ kubectl -n app2a apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/httpbin/httpbin.yaml 
-   
-   $ kubectl -n app2b apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/curl/curl.yaml 
-   $ kubectl -n app2b apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/httpbin/httpbin.yaml 
+   $ kubectl -n app2a apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/curl/curl.yaml
+   $ kubectl -n app2a apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/httpbin/httpbin.yaml
+
+   $ kubectl -n app2b apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/curl/curl.yaml
+   $ kubectl -n app2b apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/httpbin/httpbin.yaml
    ```
 
 5. Confirm that a sidecar has been injected into each of the application pods. The value `2/2` should be displayed in the `READY` column for each pod, as in the following example:
@@ -661,7 +661,7 @@ Because each mesh will use its own root certificate authority and configured to 
 
 #### Checking application to control plane mapping
 
-Use the `istioctl ps` command to confirm that the application pods are connected to the correct control plane. 
+Use the `istioctl ps` command to confirm that the application pods are connected to the correct control plane.
 
 The `curl` and `httpbin` pods in namespace `app1` should be connected to the control plane in namespace `istio-system1`, as shown in the following example (note the `.app1` suffix in the `NAME` column):
 
@@ -697,7 +697,7 @@ date: Fri, 29 Nov 2024 08:58:28 GMT
 server: envoy
 ```
 
-As expected, the response indicates that the connection was not successful. 
+As expected, the response indicates that the connection was not successful.
 In contrast, the same pod should be able to connect to the `httpbin` service in namespace `app2b`, because they are part of the same mesh:
 
 ```sh
@@ -857,7 +857,7 @@ These instructions install a [multi-primary/multi-network](https://istio.io/late
 
 You can follow the steps below to install manually or you can run [this script](multicluster/setup-multi-primary.sh) which will setup a local environment for you with kind. Before running the setup script, you must install [kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation) and [cloud-provider-kind](https://kind.sigs.k8s.io/docs/user/loadbalancer/#installing-cloud-provider-kind) then ensure the `cloud-provider-kind` binary is running in the background.
 
-These installation instructions are adapted from: https://istio.io/latest/docs/setup/install/multicluster/multi-primary_multi-network/. 
+These installation instructions are adapted from: https://istio.io/latest/docs/setup/install/multicluster/multi-primary_multi-network/.
 
 1. Create an `Istio` resource on `cluster1`.
 
@@ -876,9 +876,12 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
           multiCluster:
             clusterName: cluster1
           network: network1
+        pilot:
+          env:
+            ROOT_CA_DIR: /etc/cacerts
     EOF
     ```
-  
+
 2. Wait for the control plane to become ready.
 
     ```sh
@@ -914,6 +917,9 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
           multiCluster:
             clusterName: cluster2
           network: network2
+        pilot:
+          env:
+            ROOT_CA_DIR: /etc/cacerts
     EOF
     ```
 
@@ -1044,10 +1050,10 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
 
     ```sh
     kubectl delete istios default --context="${CTX_CLUSTER1}"
-    kubectl delete ns istio-system --context="${CTX_CLUSTER1}" 
+    kubectl delete ns istio-system --context="${CTX_CLUSTER1}"
     kubectl delete ns sample --context="${CTX_CLUSTER1}"
     kubectl delete istios default --context="${CTX_CLUSTER2}"
-    kubectl delete ns istio-system --context="${CTX_CLUSTER2}" 
+    kubectl delete ns istio-system --context="${CTX_CLUSTER2}"
     kubectl delete ns sample --context="${CTX_CLUSTER2}"
     ```
 
@@ -1088,7 +1094,7 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
     ```sh
     kubectl apply --context "${CTX_CLUSTER1}" -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/east-west-gateway-net1.yaml
     ```
-  
+
 3. Expose istiod on `cluster1`.
 
     ```sh
@@ -1206,10 +1212,10 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
 
     ```sh
     kubectl delete istios default --context="${CTX_CLUSTER1}"
-    kubectl delete ns istio-system --context="${CTX_CLUSTER1}" 
+    kubectl delete ns istio-system --context="${CTX_CLUSTER1}"
     kubectl delete ns sample --context="${CTX_CLUSTER1}"
     kubectl delete istios default --context="${CTX_CLUSTER2}"
-    kubectl delete ns istio-system --context="${CTX_CLUSTER2}" 
+    kubectl delete ns istio-system --context="${CTX_CLUSTER2}"
     kubectl delete ns sample --context="${CTX_CLUSTER2}"
     ```
 
@@ -1674,9 +1680,9 @@ helm install --namespace kiali-operator --create-namespace kiali-operator kiali/
 ```
 
 Find out the revision name of your Istio instance. In our case it is `test`.
-    
+
 ```bash
-$ kubectl get istiorevisions.sailoperator.io 
+$ kubectl get istiorevisions.sailoperator.io
 NAME   READY   STATUS    IN USE   VERSION   AGE
 test   True    Healthy   True     v1.21.0   119m
 ```
@@ -1777,7 +1783,7 @@ The easiest way to get started with production-grade metrics collection is to us
     kind: ServiceMonitor
     metadata:
       name: istiod-monitor
-      namespace: istio-system 
+      namespace: istio-system
     spec:
       targetLabels:
       - app
@@ -1795,7 +1801,7 @@ The easiest way to get started with production-grade metrics collection is to us
     kind: PodMonitor
     metadata:
       name: istio-proxies-monitor
-      namespace: istio-system 
+      namespace: istio-system
     spec:
       selector:
         matchExpressions:
@@ -1850,7 +1856,7 @@ This section describes how to setup Istio with OpenShift Distributed Tracing to 
       - name: otel-tracing
         opentelemetry:
           port: 4317
-          service: otel-collector.istio-system.svc.cluster.local 
+          service: otel-collector.istio-system.svc.cluster.local
     ```
 The *service* field is the OpenTelemetry collector service in the `istio-system` namespace.
 
@@ -1878,7 +1884,7 @@ We can [Deploy Bookinfo](#deploy-gateway-and-bookinfo) and generate some traffic
 kubectl get routes -n tempo tempo-sample-query-frontend-tempo
 ```
 
-If you [configure Kiali with OpenShift distributed tracing](#integrating-kiali-with-openshift-distributed-tracing) you can verify from there. 
+If you [configure Kiali with OpenShift distributed tracing](#integrating-kiali-with-openshift-distributed-tracing) you can verify from there.
 
 ### Integrating with Kiali
 Integration with Kiali really depends on how you collect your metrics and traces. Note that Kiali is a separate project which for the purpose of this document we'll expect is installed using the Kiali operator. The steps here are not specific to Sail Operator, but describe how to configure Kiali for use with Istio in general.
@@ -1908,9 +1914,9 @@ If you followed [Scraping metrics using the OpenShift monitoring stack](#scrapin
       namespace: istio-system
     ```
 1. Find out the revision name of your Istio instance. In our case it is `test`.
-    
+
     ```bash
-    $ kubectl get istiorevisions.sailoperator.io 
+    $ kubectl get istiorevisions.sailoperator.io
     NAME   READY   STATUS    IN USE   VERSION   AGE
     test   True    Healthy   True     v1.21.0   119m
     ```
@@ -1941,10 +1947,10 @@ If you followed [Scraping metrics using the OpenShift monitoring stack](#scrapin
 This section describes how to setup Kiali with OpenShift Distributed Tracing to read the distributed traces.
 
 *Prerequisites*
-* Istio tracing is [Configured with OpenShift distributed tracing](#configure-tracing-with-openshift-distributed-tracing) 
+* Istio tracing is [Configured with OpenShift distributed tracing](#configure-tracing-with-openshift-distributed-tracing)
 
 *Steps*
-1. Setup Kiali to access traces from the Tempo frontend: 
+1. Setup Kiali to access traces from the Tempo frontend:
     ```yaml
     external_services:
       grafana:
@@ -1961,11 +1967,11 @@ This section describes how to setup Kiali with OpenShift Distributed Tracing to 
           datasource_uid: "a8d2ef1c-d31c-4de5-a90b-e7bc5252cd00"
     ```
 
-Where: 
+Where:
 * `external_services.grafana` section: Is just needed to see the "View in Tracing" link from the Traces tab
 * `external_services.tracing.tempo_config`: Is just needed to see the "View in Tracing" link from the Traces tab and redirect to the proper Tempo datasource
 
-Now, we should be able to see traces from Kiali. For this, you can: 
+Now, we should be able to see traces from Kiali. For this, you can:
 1. Select a Workload/Service/App
 2. Click in the "Traces" tab
 
