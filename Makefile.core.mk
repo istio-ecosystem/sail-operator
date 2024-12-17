@@ -330,6 +330,8 @@ deploy-olm: verify-kubeconfig bundle bundle-build bundle-push ## Build and push 
 .PHONY: undeploy
 undeploy: verify-kubeconfig ## Undeploy controller from an existing cluster.
 	kubectl delete istios.sailoperator.io --all --all-namespaces --wait=true
+	kubectl delete istiocni.sailoperator.io --all --all-namespaces --wait=true
+	kubectl delete ztunnel.sailoperator.io --all --all-namespaces --wait=true
 	$(MAKE) -e HELM_TEMPL_DEF_FLAGS="$(HELM_TEMPL_DEF_FLAGS)" deploy-yaml | kubectl delete --ignore-not-found -f -
 	kubectl delete ns ${NAMESPACE} --ignore-not-found
 	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --namespace $(NAMESPACE) | kubectl delete --ignore-not-found -f -
@@ -337,6 +339,8 @@ undeploy: verify-kubeconfig ## Undeploy controller from an existing cluster.
 .PHONY: undeploy-olm
 undeploy-olm: verify-kubeconfig operator-sdk ## Undeploy the operator from an existing cluster (used only if operator was installed via OLM).
 	kubectl delete istios.sailoperator.io --all --all-namespaces --wait=true
+	kubectl delete istiocni.sailoperator.io --all --all-namespaces --wait=true
+	kubectl delete ztunnel.sailoperator.io --all --all-namespaces --wait=true
 	$(OPERATOR_SDK) cleanup $(OPERATOR_NAME) --delete-all -n ${NAMESPACE}
 
 .PHONY: deploy-example
