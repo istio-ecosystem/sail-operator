@@ -110,3 +110,22 @@ The TLS protocol version can be set through [Istio Workload Minimum TLS Version 
 
 `auto mTLS` is enabled by default in both OpenShift Service Mesh 2 and OpenShift Service Mesh 3.
 
+## Kiali
+
+In OpenShift Service Mesh 3, Kiali introduces a revamped Traffic Page Graph UI, now built using PatternFly Topology, alonside with a new topology view showcasing the mesh infrastructure.
+
+A significant breaking change involves Kiali's namespace management configuration. To control which namespaces are accessible or visible to users, Kiali now relies on `discoverySelectors` feature. The following previously supported configuration settings are deprecated and no longer available:
+1. spec.deployment.accessible_namespaces
+2. api.namespaces.exclude
+3. api.namespaces.include
+4. api.namespaces.label_selector_exclude
+5. api.namespaces.label_selector_include
+By default, deployment.cluster_wide_access=true is enabled, granting Kiali cluster-wide access to all namespaces in the local cluster.
+
+Additionally, several configuration options in Kiali have been renamed:
+1. `external_service.grafana.in_cluster_url` → `external_service.grafana.internal_url`.
+2. `external_service.grafana.url` → `external_service.grafana.external_url`.
+3. `external_service.tracing.in_cluster_url` → `external_service.tracing.internal_url`.
+4. `external_service.tracing.url` → `external_service.tracing.external_url`.
+
+These changes reflect Kiali's evolving capabilities and configuration standards within OpenShift Service Mesh 3.
