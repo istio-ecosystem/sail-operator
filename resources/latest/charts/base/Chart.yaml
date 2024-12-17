@@ -1,5 +1,5 @@
 apiVersion: v2
-appVersion: 1.25-alpha.1192d7427e8300a3f3ce7a68c238ad0a960f3c38
+appVersion: 1.25-alpha.0542a4c97f8a849d14aa94606e5110b5cf111e2d
 description: Helm chart for deploying Istio cluster resources and CRDs
 icon: https://istio.io/latest/favicons/android-192x192.png
 keywords:
@@ -7,4 +7,4 @@ keywords:
 name: base
 sources:
 - https://github.com/istio/istio
-version: 1.25-alpha.1192d7427e8300a3f3ce7a68c238ad0a960f3c38
+version: 1.25-alpha.0542a4c97f8a849d14aa94606e5110b5cf111e2d

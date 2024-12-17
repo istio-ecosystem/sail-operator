@@ -476,7 +476,7 @@ spec:
                       type: string
                       x-kubernetes-validations:
                       - message: wildcard is not supported in selector
-                        rule: '!self.contains(''*'')'
+                        rule: '!self.contains("*")'
                     description: One or more labels that indicate a specific set of
                       pods/VMs on which the configuration should be applied.
                     maxProperties: 256
@@ -1018,7 +1018,7 @@ spec:
                       type: string
                       x-kubernetes-validations:
                       - message: wildcard is not supported in selector
-                        rule: '!self.contains(''*'')'
+                        rule: '!self.contains("*")'
                     description: One or more labels that indicate a specific set of
                       pods/VMs on which the configuration should be applied.
                     maxProperties: 256
@@ -1560,7 +1560,7 @@ spec:
                       type: string
                       x-kubernetes-validations:
                       - message: wildcard is not supported in selector
-                        rule: '!self.contains(''*'')'
+                        rule: '!self.contains("*")'
                     description: One or more labels that indicate a specific set of
                       pods/VMs on which the configuration should be applied.
                     maxProperties: 256

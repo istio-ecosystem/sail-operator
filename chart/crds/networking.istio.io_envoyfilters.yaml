@@ -301,8 +301,9 @@ spec:
                   x-kubernetes-validations:
                   - message: Support kinds are core/Service, networking.istio.io/ServiceEntry,
                       gateway.networking.k8s.io/Gateway
-                    rule: '[self.group, self.kind] in [[''core'',''Service''], ['''',''Service''],
-                      [''gateway.networking.k8s.io'',''Gateway''], [''networking.istio.io'',''ServiceEntry'']]'
+                    rule: '[self.group, self.kind] in [["core", "Service"], ["", "Service"],
+                      ["gateway.networking.k8s.io", "Gateway"], ["networking.istio.io",
+                      "ServiceEntry"]]'
                 maxItems: 16
                 type: array
               workloadSelector:
@@ -315,7 +316,7 @@ spec:
                       type: string
                       x-kubernetes-validations:
                       - message: wildcard is not supported in selector
-                        rule: '!self.contains(''*'')'
+                        rule: '!self.contains("*")'
                     description: One or more labels that indicate a specific set of
                       pods/VMs on which the configuration should be applied.
                     maxProperties: 256
@@ -324,7 +325,8 @@ spec:
             type: object
             x-kubernetes-validations:
             - message: only one of targetRefs or workloadSelector can be set
-              rule: (has(self.workloadSelector)?1:0)+(has(self.targetRefs)?1:0)<=1
+              rule: '(has(self.workloadSelector) ? 1 : 0) + (has(self.targetRefs)
+                ? 1 : 0) <= 1'
           status:
             properties:
               conditions:
