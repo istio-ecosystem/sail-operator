@@ -166,7 +166,8 @@ WEST_CONTAINER_IP=$(kubectl get nodes east-control-plane --context "${CTX_CLUSTE
 istioctl create-remote-secret \
   --context="${CTX_CLUSTER1}" \
   --name=east \
-  --server="https://${WEST_CONTAINER_IP}:6443" | \
+  --server="https://${WEST_CONTAINER_IP}:6443" \
+  --create-service-account=false | \
   kubectl apply -f - --context "${CTX_CLUSTER2}"
 
 # 11. Install a remote secret in east that provides access to west’s API server.
@@ -175,7 +176,8 @@ EAST_CONTAINER_IP=$(kubectl get nodes west-control-plane --context "${CTX_CLUSTE
 istioctl create-remote-secret \
   --context="${CTX_CLUSTER2}" \
   --name=west \
-  --server="https://${EAST_CONTAINER_IP}:6443" | \
+  --server="https://${EAST_CONTAINER_IP}:6443" \
+  --create-service-account=false | \
   kubectl apply -f - --context "${CTX_CLUSTER1}"
 
 # 12. Deploy sample applications and verify that you get a response from both v1 and v2 of the helloworld service.

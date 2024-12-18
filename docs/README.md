@@ -940,7 +940,8 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
     ```sh
     istioctl create-remote-secret \
       --context="${CTX_CLUSTER1}" \
-      --name=cluster1 | \
+      --name=cluster1 \
+      --create-service-account=false | \
       kubectl apply -f - --context="${CTX_CLUSTER2}"
     ```
 
@@ -951,7 +952,8 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
     istioctl create-remote-secret \
       --context="${CTX_CLUSTER1}" \
       --name=cluster1 \
-      --server="https://${CLUSTER1_CONTAINER_IP}:6443" | \
+      --server="https://${CLUSTER1_CONTAINER_IP}:6443" \
+      --create-service-account=false | \
       kubectl apply -f - --context "${CTX_CLUSTER2}"
     ```
 
@@ -960,7 +962,8 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
     ```sh
     istioctl create-remote-secret \
       --context="${CTX_CLUSTER2}" \
-      --name=cluster2 | \
+      --name=cluster2 \
+      --create-service-account=false | \
       kubectl apply -f - --context="${CTX_CLUSTER1}"
     ```
 
@@ -971,7 +974,8 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
     istioctl create-remote-secret \
       --context="${CTX_CLUSTER2}" \
       --name=cluster2 \
-      --server="https://${CLUSTER2_CONTAINER_IP}:6443" | \
+      --server="https://${CLUSTER2_CONTAINER_IP}:6443" \
+      --create-service-account=false | \
       kubectl apply -f - --context "${CTX_CLUSTER1}"
     ```
 
@@ -1133,7 +1137,8 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
     ```sh
     istioctl create-remote-secret \
       --context="${CTX_CLUSTER2}" \
-      --name=remote | \
+      --name=remote \
+      --create-service-account=false | \
       kubectl apply -f - --context="${CTX_CLUSTER1}"
     ```
 
@@ -1144,7 +1149,8 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
     istioctl create-remote-secret \
       --context="${CTX_CLUSTER2}" \
       --name=remote \
-      --server="https://${REMOTE_CONTAINER_IP}:6443" | \
+      --server="https://${REMOTE_CONTAINER_IP}:6443" \
+      --create-service-account=false | \
       kubectl apply -f - --context "${CTX_CLUSTER1}"
     ```
 
