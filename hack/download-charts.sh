@@ -131,6 +131,9 @@ version: 0.1.0
   cp "${CHARTS_DIR}/istiod/values.yaml" "${CHARTS_DIR}/revisiontags/values.yaml"
   cp "${CHARTS_DIR}/istiod/templates/revision-tags.yaml" "${CHARTS_DIR}/revisiontags/templates/revision-tags.yaml"
   cp "${CHARTS_DIR}/istiod/templates/zzz_profile.yaml" "${CHARTS_DIR}/revisiontags/templates/zzz_profile.yaml"
+
+  mkdir -p "${CHARTS_DIR}/revisiontags/files"
+  cp "${CHARTS_DIR}"/istiod/files/profile-*.yaml "${CHARTS_DIR}/revisiontags/files"
 }
 
 downloadIstioManifests
