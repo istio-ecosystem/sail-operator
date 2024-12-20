@@ -183,10 +183,6 @@ spec:
         - mountPath: /etc/istio/ingressgateway-ca-certs
           name: ingressgateway-ca-certs
           readOnly: true
-      securityContext:
-        runAsGroup: 1337
-        runAsNonRoot: true
-        runAsUser: 1337
       serviceAccountName: istio-ingressgateway-service-account
       volumes:
       - emptyDir: {}
