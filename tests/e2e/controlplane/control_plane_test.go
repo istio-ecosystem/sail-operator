@@ -117,6 +117,9 @@ metadata:
 
 	Describe("given Istio version", func() {
 		for _, version := range supportedversion.List {
+			// Note: This var version is needed to avoid the closure of the loop
+			version := version
+
 			Context(version.Name, func() {
 				BeforeAll(func() {
 					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
