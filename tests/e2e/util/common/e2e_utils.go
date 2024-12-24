@@ -281,6 +281,7 @@ func GetSampleYAML(version supportedversion.VersionInfo, appName string) string 
 		"sleep":               "SLEEP_YAML_PATH",
 		"helloworld":          "HELLOWORLD_YAML_PATH",
 		"sample":              "HELLOWORLD_YAML_PATH",
+		"httpbin":             "HTTPBIN_YAML_PATH",
 	}
 
 	// Check if there's a custom path for the given appName
@@ -304,6 +305,8 @@ func GetSampleYAML(version supportedversion.VersionInfo, appName string) string 
 		url = "samples/sleep/sleep.yaml"
 	case "helloworld", "sample":
 		url = "samples/helloworld/helloworld.yaml"
+	case "httpbin":
+		url = "samples/httpbin/httpbin.yaml"
 	default:
 		return ""
 	}
