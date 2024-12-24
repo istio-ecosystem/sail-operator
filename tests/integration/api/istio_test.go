@@ -223,6 +223,8 @@ var _ = Describe("Istio resource", Ordered, func() {
 		})
 
 		for _, withWorkloads := range []bool{true, false} {
+			withWorkloads := withWorkloads
+
 			Context(generateContextName(withWorkloads), func() {
 				if withWorkloads {
 					BeforeAll(func() {
