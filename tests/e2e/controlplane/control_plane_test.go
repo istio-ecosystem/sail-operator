@@ -121,7 +121,6 @@ metadata:
 		for _, version := range supportedversion.List {
 			Context(version.Name, func() {
 				BeforeAll(func() {
-					fmt.Println("Creating the necessary namespaces before running the tests...")
 					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
 					Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
 				})
