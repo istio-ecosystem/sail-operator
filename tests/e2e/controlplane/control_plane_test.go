@@ -137,7 +137,6 @@ spec:
   namespace: %s`
 						yaml = fmt.Sprintf(yaml, version.Name, istioCniNamespace)
 						Log("IstioCNI YAML:", indent(2, yaml))
-						fmt.Println("go version is: ", runtime.Version())
 						Expect(k.CreateFromString(yaml)).To(Succeed(), "IstioCNI creation failed")
 						Success("IstioCNI created")
 					})
