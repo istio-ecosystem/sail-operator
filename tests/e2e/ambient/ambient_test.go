@@ -263,7 +263,7 @@ spec:
 
 				When("the Istio CR is deleted", func() {
 					BeforeEach(func() {
-						Expect(k.WithNamespace(controlPlaneNamespace).Delete("istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
+						Expect(k.Delete("istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
 						Success("Istio CR deleted")
 					})
 
@@ -277,7 +277,7 @@ spec:
 
 				When("the IstioCNI CR is deleted", func() {
 					BeforeEach(func() {
-						Expect(k.WithNamespace(istioCniNamespace).Delete("istiocni", istioCniName)).To(Succeed(), "IstioCNI CR failed to be deleted")
+						Expect(k.Delete("istiocni", istioCniName)).To(Succeed(), "IstioCNI CR failed to be deleted")
 						Success("IstioCNI deleted")
 					})
 
@@ -292,7 +292,7 @@ spec:
 
 				When("the ZTunnel CR is deleted", func() {
 					BeforeEach(func() {
-						Expect(k.WithNamespace(istioCniNamespace).Delete("ztunnel", istioCniName)).To(Succeed(), "ZTunnel CR failed to be deleted")
+						Expect(k.Delete("ztunnel", "default")).To(Succeed(), "ZTunnel CR failed to be deleted")
 						Success("ZTunnel deleted")
 					})
 
@@ -314,13 +314,13 @@ spec:
 			}
 
 			By("Cleaning up the Istio namespace")
-			Expect(cl.Delete(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: controlPlaneNamespace}})).To(Succeed(), "Istio Namespace failed to be deleted")
+			Expect(k.DeleteNamespace(controlPlaneNamespace)).To(Succeed(), "Istio Namespace failed to be deleted")
 
 			By("Cleaning up the IstioCNI namespace")
-			Expect(cl.Delete(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: istioCniNamespace}})).To(Succeed(), "IstioCNI Namespace failed to be deleted")
+			Expect(k.DeleteNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI Namespace failed to be deleted")
 
 			By("Cleaning up the ZTunnel namespace")
-			Expect(cl.Delete(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ztunnelNamespace}})).To(Succeed(), "ZTunnel Namespace failed to be deleted")
+			Expect(k.DeleteNamespace(ztunnelNamespace)).To(Succeed(), "ZTunnel Namespace failed to be deleted")
 		})
 	})
 
