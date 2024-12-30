@@ -305,10 +305,10 @@ spec:
 			}
 
 			By("Cleaning up the Istio namespace")
-			Expect(cl.Delete(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: controlPlaneNamespace}})).To(Succeed(), "Istio Namespace failed to be deleted")
+			Expect(k.DeleteNamespace(controlPlaneNamespace)).To(Succeed(), "Istio Namespace failed to be deleted")
 
 			By("Cleaning up the IstioCNI namespace")
-			Expect(cl.Delete(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: istioCniNamespace}})).To(Succeed(), "IstioCNI Namespace failed to be deleted")
+			Expect(k.DeleteNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI Namespace failed to be deleted")
 
 			By("Deleting any left-over Istio and IstioRevision resources")
 			Expect(forceDeleteIstioResources()).To(Succeed())
