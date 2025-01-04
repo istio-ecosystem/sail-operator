@@ -419,6 +419,7 @@ type GlobalConfig struct {
 	IpFamilyPolicy *string `json:"ipFamilyPolicy,omitempty"`
 	// Specifies how waypoints are configured within Istio.
 	Waypoint *WaypointConfig `json:"waypoint,omitempty"` // The next available key is 73
+
 }
 
 // Configuration for Security Token Service (STS) server.
