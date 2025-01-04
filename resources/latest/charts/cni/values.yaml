@@ -51,6 +51,8 @@ _internal_defaults_do_not_set:
     dnsCapture: false
     # If enabled, and ambient is enabled, enables ipv6 support
     ipv6: true
+    # If enabled, and ambient is enabled, the CNI agent will reconcile incompatible iptables rules and chains at startup.
+    reconcileIptablesOnStartup: false
 
 
   repair:
@@ -113,7 +115,7 @@ _internal_defaults_do_not_set:
     hub: gcr.io/istio-testing
 
     # Default tag for Istio images.
-    tag: 1.25-alpha.d547b8580cf6298e15ba732823b2e027071516ea
+    tag: 1.25-alpha.329294ba9a7900f5e7a4e6c343e06f246c3627c3
 
     # Variant of the image to use.
     # Currently supported are: [debug, distroless]
