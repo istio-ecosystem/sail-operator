@@ -1,4 +1,4 @@
-name: Code coverage workflow
+name: unit-tests
 
 on: [push, pull_request]
 
@@ -10,7 +10,7 @@ jobs:
 
     - name: Run coverage
       run: |
-        make test \
+        make test.unit \
           -e COVERAGE=true
 
     - name: Upload to Codecov
