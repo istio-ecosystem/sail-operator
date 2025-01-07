@@ -220,6 +220,48 @@ spec:
 
 Note that the only field that was added is the `spec.version` field. There are a few situations however where the APIs are different and require different approaches to achieve the same outcome.
 
+### Environment variables
+
+In Sail Operator, all `.env` fields are `map[string]string` instead of `struct{}`, so you have to be careful with values such as `true` or `false` - they need to be in quotes in order to pass the type checks!
+
+That means the following YAML
+
+```yaml
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: default
+spec:
+  values:
+    global:
+      istiod:
+        enableAnalysis: true
+    pilot:
+      env:
+        PILOT_ENABLE_STATUS: true
+```
+
+becomes
+
+```yaml
+apiVersion: sailoperator.io/v1alpha1
+kind: Istio
+metadata:
+  name: default
+spec:
+  values:
+    global:
+      istiod:
+        enableAnalysis: true
+    pilot:
+      env:
+        PILOT_ENABLE_STATUS: "true"
+  version: v1.23.0
+  namespace: istio-system
+```
+
+Note the quotes around the value of `spec.values.pilot.env.PILOT_ENABLE_STATUS`. Without them, Kubernetes would reject the YAML as it expects a value of type `string` but receives a `boolean`.
+
 ### components field
 
 Sail Operator's Istio resource does not have a `spec.components` field. Instead, you can enable and disable components directly by setting `spec.values.<component>.enabled: true/false`. Other functionality exposed through `spec.components` like the k8s overlays is not currently available.
