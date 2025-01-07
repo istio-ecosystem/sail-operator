@@ -761,12 +761,14 @@ func removeLeadingEmptyLinesFromStructs(str string) string {
 
 	lines := strings.Split(str, "\n")
 	var prevTrimmedLine string
-	for _, line := range lines {
+	for index, line := range lines {
 		trimmedLine := strings.TrimSpace(line)
 		skipLine := trimmedLine == "" && strings.HasSuffix(prevTrimmedLine, "struct {")
 		if !skipLine {
 			sb.WriteString(line)
-			sb.WriteString("\n")
+			if index < len(lines)-1 {
+				sb.WriteString("\n")
+			}
 		}
 		prevTrimmedLine = trimmedLine
 	}

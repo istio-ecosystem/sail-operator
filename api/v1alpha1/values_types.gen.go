@@ -3784,4 +3784,3 @@ type HTTPRetry struct {
 	// See the [retry plugin configuration](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/http/http_connection_management#retry-plugin-configuration) for more details.
 	RetryRemoteLocalities *bool `json:"retryRemoteLocalities,omitempty"`
 }
-
