@@ -121,18 +121,13 @@ initialize_variables() {
   LOCALBIN="${LOCALBIN:-${HOME}/bin}"
   OPERATOR_SDK=${LOCALBIN}/operator-sdk
   IP_FAMILY=${IP_FAMILY:-ipv4}
+  ISTIO_MANIFEST="chart/samples/istio-sample.yaml"
 
   if [ "${OCP}" == "true" ]; then
     COMMAND="oc"
   fi
 
   echo "Using command: ${COMMAND}"
-
-  if [ "${OCP}" == "true" ]; then
-    ISTIO_MANIFEST="chart/samples/istio-sample-openshift.yaml"
-  else
-    ISTIO_MANIFEST="chart/samples/istio-sample-kubernetes.yaml"
-  fi
 
   echo "Setting Istio manifest file: ${ISTIO_MANIFEST}"
   ISTIO_NAME=$(yq eval '.metadata.name' "${WD}/../../$ISTIO_MANIFEST")

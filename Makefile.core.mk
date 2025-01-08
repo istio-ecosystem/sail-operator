@@ -346,14 +346,14 @@ undeploy-olm: verify-kubeconfig operator-sdk ## Undeploy the operator from an ex
 .PHONY: deploy-istio
 deploy-istio: verify-kubeconfig ## Deploy a sample Istio resource (without CNI) to an existing cluster.
 	kubectl create ns istio-system || echo "namespace istio-system already exists"
-	kubectl apply -f chart/samples/istio-sample-kubernetes.yaml
+	kubectl apply -f chart/samples/istio-sample.yaml
 
 .PHONY: deploy-istio-with-cni
 deploy-istio-with-cni: verify-kubeconfig ## Deploy a sample Istio and IstioCNI resource to an existing cluster.
 	kubectl create ns istio-cni || echo "namespace istio-cni already exists"
 	kubectl apply -f chart/samples/istiocni-sample.yaml
 	kubectl create ns istio-system || echo "namespace istio-system already exists"
-	kubectl apply -f chart/samples/istio-sample-openshift.yaml
+	kubectl apply -f chart/samples/istio-sample.yaml
 
 .PHONY: deploy-istio-with-ambient
 deploy-istio-with-ambient: verify-kubeconfig ## Deploy necessary Istio resources using the ambient profile.
