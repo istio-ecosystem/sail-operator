@@ -38,10 +38,11 @@ import (
 const (
 	sleepNamespace   = "sleep"
 	httpbinNamespace = "httpbin"
+	defaultTimeout   = 180
 )
 
 var _ = Describe("Ambient configuration ", Ordered, func() {
-	SetDefaultEventuallyTimeout(180 * time.Second)
+	SetDefaultEventuallyTimeout(defaultTimeout * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
 	debugInfoLogged := false
@@ -249,6 +250,10 @@ spec:
 						Success("Pods are ready")
 					})
 
+					It("has the ztunnel proxy sockets configured in the pod network namespace", func(ctx SpecContext) {
+						checkZtunnelPort(sleepPod.Items[0].Name, sleepNamespace)
+					})
+
 					It("can access the httpbin service from the sleep pod", func(ctx SpecContext) {
 						checkPodConnectivity(sleepPod.Items[0].Name, sleepNamespace, httpbinNamespace)
 					})
@@ -362,4 +367,11 @@ func checkPodConnectivity(podName, srcNamespace, destNamespace string) {
 	response, err := k.WithNamespace(srcNamespace).Exec(podName, srcNamespace, command)
 	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("error connecting to the %q pod", podName))
 	Expect(response).To(ContainSubstring("200"), fmt.Sprintf("Unexpected response from %s pod", podName))
+}
+
+func checkZtunnelPort(podName, srcNamespace string) {
+	response, err := k.WithNamespace(srcNamespace).Exec(podName, srcNamespace, "netstat -tlpn")
+	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("error validating the proxy sockets in the %q pod", podName))
+	// Verify that the HBONE mTLS tunnel port (15008) is listed in the output.
+	Expect(response).To(ContainSubstring("15008"), fmt.Sprintf("Unexpected response from %s pod", podName))
 }
