@@ -343,20 +343,26 @@ undeploy-olm: verify-kubeconfig operator-sdk ## Undeploy the operator from an ex
 	kubectl delete ztunnel.sailoperator.io --all --all-namespaces --wait=true
 	$(OPERATOR_SDK) cleanup $(OPERATOR_NAME) --delete-all -n ${NAMESPACE}
 
-.PHONY: deploy-example
-deploy-example: deploy-example-openshift ## Deploy an example Istio resource to an existing OCP cluster. Same as `deploy-example-openshift`.
+.PHONY: deploy-istio
+deploy-istio: verify-kubeconfig ## Deploy a sample Istio resource (without CNI) to an existing cluster.
+	kubectl create ns istio-system || echo "namespace istio-system already exists"
+	kubectl apply -f chart/samples/istio-sample.yaml
 
-.PHONY: deploy-example-openshift
-deploy-example-openshift: verify-kubeconfig ## Deploy an example Istio and IstioCNI resource to an existing OCP cluster.
+.PHONY: deploy-istio-with-cni
+deploy-istio-with-cni: verify-kubeconfig ## Deploy a sample Istio and IstioCNI resource to an existing cluster.
 	kubectl create ns istio-cni || echo "namespace istio-cni already exists"
 	kubectl apply -f chart/samples/istiocni-sample.yaml
 	kubectl create ns istio-system || echo "namespace istio-system already exists"
-	kubectl apply -f chart/samples/istio-sample-openshift.yaml
+	kubectl apply -f chart/samples/istio-sample.yaml
 
-.PHONY: deploy-example-kubernetes
-deploy-example-kubernetes: verify-kubeconfig ## Deploy an example Istio resource on an existing cluster.
+.PHONY: deploy-istio-with-ambient
+deploy-istio-with-ambient: verify-kubeconfig ## Deploy necessary Istio resources using the ambient profile.
 	kubectl create ns istio-system || echo "namespace istio-system already exists"
-	kubectl apply -f chart/samples/istio-sample-kubernetes.yaml
+	kubectl apply -f chart/samples/ambient/istio-sample.yaml
+	kubectl create ns istio-cni || echo "namespace istio-cni already exists"
+	kubectl apply -f chart/samples/ambient/istiocni-sample.yaml
+	kubectl create ns ztunnel || echo "namespace zunnel already exists"
+	kubectl apply -f chart/samples/ambient/istioztunnel-sample.yaml
 
 ##@ Generated Code & Resources
 
