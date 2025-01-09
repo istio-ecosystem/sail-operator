@@ -510,21 +510,34 @@ func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, ns clie
 	return requests
 }
 
+// mapPodToReconcileRequest will collect all referenced revisions from a pod and its namespace and trigger reconciliation
 func (r *Reconciler) mapPodToReconcileRequest(ctx context.Context, pod client.Object) []reconcile.Request {
+	revisionNames := []string{}
 	revisionName := revision.GetInjectedRevisionFromPod(pod.GetAnnotations())
-	if revisionName == "" {
-		ns := corev1.Namespace{}
-		err := r.Client.Get(ctx, types.NamespacedName{Name: pod.GetNamespace()}, &ns)
-		if err != nil {
-			return nil
-		}
-		revisionName = revision.GetReferencedRevisionFromNamespace(ns.GetLabels())
-		if revisionName == "" {
-			revisionName = revision.GetReferencedRevisionFromPod(pod.GetLabels())
+	if revisionName != "" {
+		revisionNames = append(revisionNames, revisionName)
+	} else {
+		revisionName = revision.GetReferencedRevisionFromPod(pod.GetLabels())
+		if revisionName != "" {
+			revisionNames = append(revisionNames, revisionName)
 		}
 	}
+	ns := corev1.Namespace{}
+	err := r.Client.Get(ctx, types.NamespacedName{Name: pod.GetNamespace()}, &ns)
+	if err != nil {
+		return nil
+	}
+	revisionName = revision.GetReferencedRevisionFromNamespace(ns.GetLabels())
 	if revisionName != "" {
-		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: revisionName}}}
+		revisionNames = append(revisionNames, revisionName)
+	}
+
+	if len(revisionNames) > 0 {
+		reqs := []reconcile.Request{}
+		for _, revName := range revisionNames {
+			reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: revName}})
+		}
+		return reqs
 	}
 	return nil
 }
