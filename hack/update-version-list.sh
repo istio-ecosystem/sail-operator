@@ -88,7 +88,9 @@ function updateVersionInSamples() {
 
     sed -i -E \
       -e "s/version: .*/version: $defaultVersion/g" \
-      chart/samples/istio-sample.yaml chart/samples/istiocni-sample.yaml
+      chart/samples/istio-sample.yaml chart/samples/istiocni-sample.yaml chart/samples/istio-sample-gw-api.yaml \
+      chart/samples/istio-sample-revisionbased.yaml chart/samples/ambient/istiocni-sample.yaml \
+      chart/samples/ambient/istio-sample.yaml  chart/samples/ambient/istioztunnel-sample.yaml
 }
 
 updateVersionsInIstioTypeComment
