@@ -447,47 +447,18 @@ func (r *Reconciler) isRevisionReferenced(ctx context.Context, rev *v1alpha1.Ist
 }
 
 func namespaceReferencesRevision(ns corev1.Namespace, rev *v1alpha1.IstioRevision) bool {
-	return rev.Name == getReferencedRevisionFromNamespace(ns.Labels)
+	return rev.Name == revision.GetReferencedRevisionFromNamespace(ns.Labels)
 }
 
 func podReferencesRevision(pod corev1.Pod, ns corev1.Namespace, rev *v1alpha1.IstioRevision) bool {
-	return rev.Name == getReferencedRevisionFromPod(pod.GetLabels(), pod.GetAnnotations(), ns.GetLabels())
-}
-
-func getReferencedRevisionFromNamespace(labels map[string]string) string {
-	if labels[constants.IstioInjectionLabel] == constants.IstioInjectionEnabledValue {
-		return v1alpha1.DefaultRevision
+	if rev.Name == revision.GetInjectedRevisionFromPod(pod.GetAnnotations()) {
+		return true
 	}
-	revision := labels[constants.IstioRevLabel]
-	if revision != "" {
-		return revision
+	if revision.GetReferencedRevisionFromNamespace(ns.Labels) == "" &&
+		rev.Name == revision.GetReferencedRevisionFromPod(pod.GetLabels()) {
+		return true
 	}
-	// TODO: if .Values.sidecarInjectorWebhook.enableNamespacesByDefault is true, then all namespaces except system namespaces should use the "default" revision
-
-	return ""
-}
-
-func getReferencedRevisionFromPod(podLabels, podAnnotations, nsLabels map[string]string) string {
-	// if pod was already injected, the revision that did the injection is specified in the istio.io/rev annotation
-	revision := podAnnotations[constants.IstioRevLabel]
-	if revision != "" {
-		return revision
-	}
-
-	// pod is marked for injection by a specific revision, but wasn't injected (e.g. because it was created before the revision was applied)
-	revisionFromNamespace := getReferencedRevisionFromNamespace(nsLabels)
-	if podLabels[constants.IstioSidecarInjectLabel] != "false" {
-		if revisionFromNamespace != "" {
-			return revisionFromNamespace
-		}
-		revisionFromPod := podLabels[constants.IstioRevLabel]
-		if revisionFromPod != "" {
-			return revisionFromPod
-		} else if podLabels[constants.IstioSidecarInjectLabel] == "true" {
-			return v1alpha1.DefaultRevision
-		}
-	}
-	return ""
+	return false
 }
 
 func istiodDeploymentKey(rev *v1alpha1.IstioRevision) client.ObjectKey {
@@ -532,24 +503,28 @@ func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, ns clie
 	}
 
 	// Check if the namespace references an IstioRevision in its labels
-	revision := getReferencedRevisionFromNamespace(ns.GetLabels())
-	if revision != "" {
-		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: revision}})
+	revisionName := revision.GetReferencedRevisionFromNamespace(ns.GetLabels())
+	if revisionName != "" {
+		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: revisionName}})
 	}
 	return requests
 }
 
 func (r *Reconciler) mapPodToReconcileRequest(ctx context.Context, pod client.Object) []reconcile.Request {
-	// TODO: rewrite getReferencedRevisionFromPod to use lazy loading to avoid loading the namespace if the pod references a revision directly
-	ns := corev1.Namespace{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: pod.GetNamespace()}, &ns)
-	if err != nil {
-		return nil
+	revisionName := revision.GetInjectedRevisionFromPod(pod.GetAnnotations())
+	if revisionName == "" {
+		ns := corev1.Namespace{}
+		err := r.Client.Get(ctx, types.NamespacedName{Name: pod.GetNamespace()}, &ns)
+		if err != nil {
+			return nil
+		}
+		revisionName = revision.GetReferencedRevisionFromNamespace(ns.GetLabels())
+		if revisionName == "" {
+			revisionName = revision.GetReferencedRevisionFromPod(pod.GetLabels())
+		}
 	}
-
-	revision := getReferencedRevisionFromPod(pod.GetLabels(), pod.GetAnnotations(), ns.GetLabels())
-	if revision != "" {
-		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: revision}}}
+	if revisionName != "" {
+		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: revisionName}}}
 	}
 	return nil
 }
