@@ -574,6 +574,11 @@ func TestDetermineInUseCondition(t *testing.T) {
 
 		// ns and pod labels
 		{
+			nsLabels:        map[string]string{"istio.io/rev": "my-rev"},
+			podLabels:       map[string]string{"sidecar.istio.io/inject": "true"},
+			matchesRevision: "my-rev",
+		},
+		{
 			nsLabels:        map[string]string{"istio-injection": "enabled"},
 			podLabels:       map[string]string{"istio.io/rev": "default"},
 			matchesRevision: "default",
