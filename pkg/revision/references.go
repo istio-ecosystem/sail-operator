@@ -36,8 +36,8 @@ func GetReferencedRevisionFromNamespace(labels map[string]string) string {
 func GetReferencedRevisionFromPod(podLabels map[string]string) string {
 	// we only look at pod labels to identify injection intent
 	if podLabels[constants.IstioSidecarInjectLabel] != "false" {
-		if revisionFromPod := podLabels[constants.IstioRevLabel]; revisionFromPod != "" {
-			return revisionFromPod
+		if rev := podLabels[constants.IstioRevLabel]; rev != "" {
+			return rev
 		}
 		if podLabels[constants.IstioSidecarInjectLabel] == "true" {
 			return v1alpha1.DefaultRevision
