@@ -31,7 +31,6 @@ import (
 var (
 	cl                    client.Client
 	err                   error
-	ocp                   = env.GetBool("OCP", false)
 	operatorNamespace     = common.OperatorNamespace
 	deploymentName        = env.Get("DEPLOYMENT_NAME", "sail-operator")
 	controlPlaneNamespace = env.Get("CONTROL_PLANE_NS", "istio-system")

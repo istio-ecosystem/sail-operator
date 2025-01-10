@@ -50,15 +50,10 @@ var _ = Describe("Ambient configuration ", Ordered, func() {
 	BeforeAll(func(ctx SpecContext) {
 		Expect(k.CreateNamespace(operatorNamespace)).To(Succeed(), "Namespace failed to be created")
 
-		extraArg := ""
-		if ocp {
-			extraArg = "--set=platform=openshift"
-		}
-
 		if skipDeploy {
 			Success("Skipping operator installation because it was deployed externally")
 		} else {
-			Expect(common.InstallOperatorViaHelm(extraArg)).
+			Expect(common.InstallOperatorViaHelm()).
 				To(Succeed(), "Operator failed to be deployed")
 		}
 
