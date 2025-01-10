@@ -29,11 +29,13 @@ import (
 )
 
 var (
-	cl             client.Client
-	skipDeploy     = env.GetBool("SKIP_DEPLOY", false)
-	namespace      = common.OperatorNamespace
-	deploymentName = env.Get("DEPLOYMENT_NAME", "sail-operator")
-	multicluster   = env.GetBool("MULTICLUSTER", false)
+	cl                 client.Client
+	skipDeploy         = env.GetBool("SKIP_DEPLOY", false)
+	namespace          = common.OperatorNamespace
+	deploymentName     = env.Get("DEPLOYMENT_NAME", "sail-operator")
+	serviceAccountName = deploymentName
+	multicluster       = env.GetBool("MULTICLUSTER", false)
+	curlNamespace      = "curl-metrics"
 
 	k kubectl.Kubectl
 )
