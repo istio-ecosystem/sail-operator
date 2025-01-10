@@ -49,39 +49,13 @@ spec:
                 - linux
       containers:
       - args:
-        - --secure-listen-address=:8443
-        - --upstream=http://127.0.0.1:8080/
-        - --logtostderr=true
-        - --v=0
-        image: {{ .Values.proxy.image }}
-{{- if .Values.proxy.imagePullPolicy }}
-        imagePullPolicy: {{ .Values.proxy.imagePullPolicy }}
-{{- end }}
-        name: kube-rbac-proxy
-        ports:
-        - containerPort: 8443
-          name: https
-          protocol: TCP
-        resources:
-          limits:
-            cpu: {{ .Values.proxy.resources.limits.cpu }}
-            memory: {{ .Values.proxy.resources.limits.memory }}
-          requests:
-            cpu: {{ .Values.proxy.resources.requests.cpu }}
-            memory: {{ .Values.proxy.resources.requests.memory }}
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-      - args:
         - --health-probe-bind-address=:8081
-        - --metrics-bind-address=127.0.0.1:8080
+        - --metrics-bind-address=:8443
         - --zap-log-level={{ .Values.operatorLogLevel }}
         command:
         - /sail-operator
         image: {{ .Values.image }}
-{{- if .Values.proxy.imagePullPolicy }}
+{{- if .Values.imagePullPolicy }}
         imagePullPolicy: {{ .Values.imagePullPolicy }}
 {{- end }}
         livenessProbe:

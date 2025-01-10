@@ -54,17 +54,6 @@ csv:
 image: quay.io/sail-dev/sail-operator:0.3-latest
 # We're commenting out the imagePullPolicy to use k8s defaults
 # imagePullPolicy: Always
-proxy:
-  image: gcr.io/kubebuilder/kube-rbac-proxy:v0.16.0
-  # We're commenting out the imagePullPolicy to use k8s defaults
-  # imagePullPolicy: IfNotPresent
-  resources:
-    limits:
-      cpu: 500m
-      memory: 128Mi
-    requests:
-      cpu: 5m
-      memory: 64Mi
 operator:
   resources:
     limits:
