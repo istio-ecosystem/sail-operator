@@ -47,15 +47,10 @@ var _ = Describe("Control Plane Installation", Ordered, func() {
 	BeforeAll(func(ctx SpecContext) {
 		Expect(k.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
 
-		extraArg := ""
-		if ocp {
-			extraArg = "--set=platform=openshift"
-		}
-
 		if skipDeploy {
 			Success("Skipping operator installation because it was deployed externally")
 		} else {
-			Expect(common.InstallOperatorViaHelm(extraArg)).
+			Expect(common.InstallOperatorViaHelm()).
 				To(Succeed(), "Operator failed to be deployed")
 		}
 
@@ -333,10 +328,6 @@ spec:
 			To(Succeed(), "Operator failed to be deleted")
 		GinkgoWriter.Println("Operator uninstalled")
 
-		if ocp {
-			Success("Skipping deletion of operator namespace to avoid removal of operator container image from internal registry")
-			return
-		}
 		Expect(k.DeleteNamespace(namespace)).To(Succeed(), "Namespace failed to be deleted")
 		Success("Namespace deleted")
 	})
