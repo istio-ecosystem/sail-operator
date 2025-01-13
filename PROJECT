@@ -24,14 +24,6 @@ resources:
     namespaced: false
   controller: true
   domain: sailoperator.io
-  kind: RemoteIstio
-  path: github.com/istio-ecosystem/sail-operator/api/v1alpha1
-  version: v1alpha1
-- api:
-    crdVersion: v1
-    namespaced: false
-  controller: true
-  domain: sailoperator.io
   kind: IstioRevision
   path: github.com/istio-ecosystem/sail-operator/api/v1alpha1
   version: v1alpha1
@@ -40,7 +32,23 @@ resources:
     namespaced: false
   controller: true
   domain: sailoperator.io
+  kind: IstioRevisionTag
+  path: github.com/istio-ecosystem/sail-operator/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: false
+  controller: true
+  domain: sailoperator.io
   kind: IstioCNI
+  path: github.com/istio-ecosystem/sail-operator/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: false
+  controller: true
+  domain: sailoperator.io
+  kind: ZTunnel
   path: github.com/istio-ecosystem/sail-operator/api/v1alpha1
   version: v1alpha1
 version: "3"

@@ -64,12 +64,16 @@ spec:
                       - tcpSocket
                     - required:
                       - exec
+                    - required:
+                      - grpc
                 - required:
                   - httpGet
                 - required:
                   - tcpSocket
                 - required:
                   - exec
+                - required:
+                  - grpc
                 properties:
                   exec:
                     description: Health is determined by how the command that is executed
@@ -90,6 +94,21 @@ spec:
                     format: int32
                     minimum: 0
                     type: integer
+                  grpc:
+                    description: GRPC call is made and response/error is used to determine
+                      health.
+                    properties:
+                      port:
+                        description: Port on which the endpoint lives.
+                        maximum: 4294967295
+                        minimum: 0
+                        type: integer
+                        x-kubernetes-validations:
+                        - message: port must be between 1-65535
+                          rule: 0 < self && self <= 65535
+                      service:
+                        type: string
+                    type: object
                   httpGet:
                     description: '`httpGet` is performed to a given endpoint and the
                       status/able to connect determines health.'
@@ -248,6 +267,12 @@ spec:
                       description: Human-readable message indicating details about
                         last transition.
                       type: string
+                    observedGeneration:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: Resource Generation to which the Condition refers.
+                      x-kubernetes-int-or-string: true
                     reason:
                       description: Unique, one-word, CamelCase reason for the condition's
                         last transition.
@@ -264,8 +289,6 @@ spec:
                 anyOf:
                 - type: integer
                 - type: string
-                description: Resource Generation to which the Reconciled Condition
-                  refers.
                 x-kubernetes-int-or-string: true
               validationMessages:
                 description: Includes any errors or warnings detected by Istio's analyzers.
@@ -350,12 +373,16 @@ spec:
                       - tcpSocket
                     - required:
                       - exec
+                    - required:
+                      - grpc
                 - required:
                   - httpGet
                 - required:
                   - tcpSocket
                 - required:
                   - exec
+                - required:
+                  - grpc
                 properties:
                   exec:
                     description: Health is determined by how the command that is executed
@@ -376,6 +403,21 @@ spec:
                     format: int32
                     minimum: 0
                     type: integer
+                  grpc:
+                    description: GRPC call is made and response/error is used to determine
+                      health.
+                    properties:
+                      port:
+                        description: Port on which the endpoint lives.
+                        maximum: 4294967295
+                        minimum: 0
+                        type: integer
+                        x-kubernetes-validations:
+                        - message: port must be between 1-65535
+                          rule: 0 < self && self <= 65535
+                      service:
+                        type: string
+                    type: object
                   httpGet:
                     description: '`httpGet` is performed to a given endpoint and the
                       status/able to connect determines health.'
@@ -534,6 +576,12 @@ spec:
                       description: Human-readable message indicating details about
                         last transition.
                       type: string
+                    observedGeneration:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: Resource Generation to which the Condition refers.
+                      x-kubernetes-int-or-string: true
                     reason:
                       description: Unique, one-word, CamelCase reason for the condition's
                         last transition.
@@ -550,8 +598,6 @@ spec:
                 anyOf:
                 - type: integer
                 - type: string
-                description: Resource Generation to which the Reconciled Condition
-                  refers.
                 x-kubernetes-int-or-string: true
               validationMessages:
                 description: Includes any errors or warnings detected by Istio's analyzers.
@@ -636,12 +682,16 @@ spec:
                       - tcpSocket
                     - required:
                       - exec
+                    - required:
+                      - grpc
                 - required:
                   - httpGet
                 - required:
                   - tcpSocket
                 - required:
                   - exec
+                - required:
+                  - grpc
                 properties:
                   exec:
                     description: Health is determined by how the command that is executed
@@ -662,6 +712,21 @@ spec:
                     format: int32
                     minimum: 0
                     type: integer
+                  grpc:
+                    description: GRPC call is made and response/error is used to determine
+                      health.
+                    properties:
+                      port:
+                        description: Port on which the endpoint lives.
+                        maximum: 4294967295
+                        minimum: 0
+                        type: integer
+                        x-kubernetes-validations:
+                        - message: port must be between 1-65535
+                          rule: 0 < self && self <= 65535
+                      service:
+                        type: string
+                    type: object
                   httpGet:
                     description: '`httpGet` is performed to a given endpoint and the
                       status/able to connect determines health.'
@@ -820,6 +885,12 @@ spec:
                       description: Human-readable message indicating details about
                         last transition.
                       type: string
+                    observedGeneration:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: Resource Generation to which the Condition refers.
+                      x-kubernetes-int-or-string: true
                     reason:
                       description: Unique, one-word, CamelCase reason for the condition's
                         last transition.
@@ -836,8 +907,6 @@ spec:
                 anyOf:
                 - type: integer
                 - type: string
-                description: Resource Generation to which the Reconciled Condition
-                  refers.
                 x-kubernetes-int-or-string: true
               validationMessages:
                 description: Includes any errors or warnings detected by Istio's analyzers.

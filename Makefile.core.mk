@@ -309,7 +309,7 @@ deploy: verify-kubeconfig helm ## Deploy controller to an existing cluster.
 	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --namespace $(NAMESPACE) | kubectl apply --server-side=true -f -
 
 .PHONY: deploy-yaml
-deploy-yaml: verify-kubeconfig helm ## Output YAML manifests used by `deploy`.
+deploy-yaml: helm ## Output YAML manifests used by `deploy`.
 	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --namespace $(NAMESPACE)
 
 .PHONY: deploy-openshift # TODO: remove this target and use deploy-olm instead (when we fix the internal registry TLS issues when using operator-sdk run bundle)
@@ -319,7 +319,7 @@ deploy-openshift: verify-kubeconfig helm ## Deploy controller to an existing OCP
 	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --namespace $(NAMESPACE) --set platform="openshift" | kubectl apply --server-side=true -f -
 
 .PHONY: deploy-yaml-openshift
-deploy-yaml-openshift: verify-kubeconfig helm ## Output YAML manifests used by `deploy-openshift`.
+deploy-yaml-openshift: helm ## Output YAML manifests used by `deploy-openshift`.
 	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --namespace $(NAMESPACE) --set platform="openshift"
 
 .PHONY: deploy-olm
@@ -468,12 +468,12 @@ OPM ?= $(LOCALBIN)/opm
 ISTIOCTL ?= $(LOCALBIN)/istioctl
 
 ## Tool Versions
-OPERATOR_SDK_VERSION ?= v1.37.0
-HELM_VERSION ?= v3.16.2
-CONTROLLER_TOOLS_VERSION ?= v0.16.4
-OPM_VERSION ?= v1.47.0
-OLM_VERSION ?= 0.28.0
-GITLEAKS_VERSION ?= v8.21.1
+OPERATOR_SDK_VERSION ?= v1.38.0
+HELM_VERSION ?= v3.16.3
+CONTROLLER_TOOLS_VERSION ?= v0.16.5
+OPM_VERSION ?= v1.48.0
+OLM_VERSION ?= v0.30.0
+GITLEAKS_VERSION ?= v8.21.2
 ISTIOCTL_VERSION ?= 1.23.0
 
 # GENERATE_RELATED_IMAGES defines whether `spec.relatedImages` is going to be generated or not

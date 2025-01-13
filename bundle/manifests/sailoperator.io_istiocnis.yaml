@@ -2,7 +2,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.16.4
+    controller-gen.kubebuilder.io/version: v0.16.5
   creationTimestamp: null
   name: istiocnis.sailoperator.io
 spec:
@@ -70,7 +70,7 @@ spec:
                 description: |-
                   The built-in installation configuration profile to use.
                   The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'.
-                  Must be one of: ambient, default, demo, empty, openshift-ambient, openshift, preview, stable.
+                  Must be one of: ambient, default, demo, empty, openshift-ambient, openshift, preview, remote, stable.
                 enum:
                 - ambient
                 - default
@@ -79,6 +79,7 @@ spec:
                 - openshift-ambient
                 - openshift
                 - preview
+                - remote
                 - stable
                 type: string
               values:

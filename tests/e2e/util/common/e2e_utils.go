@@ -19,6 +19,7 @@ package common
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -27,6 +28,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
@@ -260,4 +262,61 @@ func InstallOperatorViaHelm(extraArgs ...string) error {
 
 func UninstallOperator() error {
 	return helm.Uninstall("sail-operator", "--namespace", OperatorNamespace)
+}
+
+// GetSampleYAML returns the URL of the yaml file for the testing app.
+// args:
+// version: the version of the Istio to get the yaml file from.
+// appName: the name of the testing app. Example: helloworld, sleep, tcp-echo.
+func GetSampleYAML(version supportedversion.VersionInfo, appName string) string {
+	// This func will be used to get URLs for the yaml files of the testing apps. Example: helloworld, sleep, tcp-echo.
+	// Default values points to upstream Istio sample yaml files. Custom paths can be provided using environment variables.
+
+	// Define environment variables for specific apps
+	envVarMap := map[string]string{
+		"tcp-echo-dual-stack": "TCP_ECHO_DUAL_STACK_YAML_PATH",
+		"tcp-echo-ipv4":       "TCP_ECHO_IPV4_YAML_PATH",
+		"tcp-echo":            "TCP_ECHO_IPV4_YAML_PATH",
+		"tcp-echo-ipv6":       "TCP_ECHO_IPV6_YAML_PATH",
+		"sleep":               "SLEEP_YAML_PATH",
+		"helloworld":          "HELLOWORLD_YAML_PATH",
+		"sample":              "HELLOWORLD_YAML_PATH",
+	}
+
+	// Check if there's a custom path for the given appName
+	if envVar, exists := envVarMap[appName]; exists {
+		customPath := os.Getenv(envVar)
+		if customPath != "" {
+			return customPath
+		}
+	}
+
+	// Default paths if no custom path is provided
+	var url string
+	switch appName {
+	case "tcp-echo-dual-stack":
+		url = "samples/tcp-echo/tcp-echo-dual-stack.yaml"
+	case "tcp-echo-ipv4", "tcp-echo":
+		url = "samples/tcp-echo/tcp-echo-ipv4.yaml"
+	case "tcp-echo-ipv6":
+		url = "samples/tcp-echo/tcp-echo-ipv6.yaml"
+	case "sleep":
+		url = "samples/sleep/sleep.yaml"
+	case "helloworld", "sample":
+		url = "samples/helloworld/helloworld.yaml"
+	default:
+		return ""
+	}
+
+	// Base URL logic
+	baseURL := os.Getenv("SAMPLE_YAML_BASE_URL")
+	if baseURL == "" {
+		baseURL = "https://raw.githubusercontent.com/istio/istio"
+	}
+
+	if version.Name == "latest" {
+		return fmt.Sprintf("%s/master/%s", baseURL, url)
+	}
+
+	return fmt.Sprintf("%s/%s/%s", baseURL, version.Version, url)
 }

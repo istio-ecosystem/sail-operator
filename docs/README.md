@@ -7,7 +7,6 @@
   - [Istio resource](#istio-resource)
   - [IstioRevision resource](#istiorevision-resource)
   - [IstioCNI resource](#istiocni-resource)
-  - [RemoteIstio resource](#remoteistio-resource)
 - [API Reference documentation](#api-reference-documentation)
 - [Getting Started](#getting-started)
   - [Installation on OpenShift](#installation-on-openshift)
@@ -21,6 +20,14 @@
     - [Example using the InPlace strategy](#example-using-the-inplace-strategy)
   - [RevisionBased](#revisionbased)
     - [Example using the RevisionBased strategy](#example-using-the-revisionbased-strategy)
+- [Multiple meshes on a single cluster](#multiple-meshes-on-a-single-cluster)
+  - [Prerequisites](#prerequisites)
+  - [Installation Steps](#installation-steps)
+    - [Deploying the control planes](#deploying-the-control-planes)
+    - [Deploying the applications](#deploying-the-applications)
+  - [Validation](#validation)
+    - [Checking application to control plane mapping](#checking-application-to-control-plane-mapping)
+    - [Checking application connectivity](#checking-application-connectivity)
 - [Multi-cluster](#multi-cluster)
   - [Prerequisites](#prerequisites)
   - [Common Setup](#common-setup)
@@ -64,7 +71,7 @@ kind: Istio
 metadata:
   name: default
 spec:
-  version: v1.22.3
+  version: v1.23.2
   namespace: istio-system
   updateStrategy:
     type: InPlace
@@ -98,7 +105,7 @@ kind: IstioCNI
 metadata:
   name: default
 spec:
-  version: v1.22.3
+  version: v1.23.2
   namespace: istio-cni
   values:
     cni:
@@ -106,32 +113,6 @@ spec:
       excludeNamespaces:
       - kube-system
 ```
-
-### RemoteIstio resource
-The `RemoteIstio` resource is used to connect the local cluster to an external Istio control plane. 
-When you create a `RemoteIstio` resource, the operator deploys the `istiod-remote` Helm chart. 
-Instead of deploying the entire Istio control plane, this chart deploys only the sidecar injector webhook, allowing you to inject the Istio proxy into your workloads and have this proxy managed by the Istio control plane running outside the cluster (typically in another Kubernetes cluster). 
-
-The `RemoteIstio` resource is very similar to the `Istio` resource, with the most notable difference being the `istiodRemote` field in the `values` section, which allows you to configure the address of the remote Istio control plane:
-
-```yaml
-apiVersion: sailoperator.io/v1alpha1
-kind: RemoteIstio
-metadata:
-  name: default
-spec:
-  version: v1.22.3
-  namespace: istio-system
-  updateStrategy:
-    type: InPlace
-  values:
-    istiodRemote:
-      injectionPath: /inject/cluster/cluster2/net/network1
-    global:
-      remotePilotAddress: 1.2.3.4
-```
-
-For more information on how to use the `RemoteIstio` resource, refer to the [multi-cluster](#multi-cluster) section.
 
 ## API Reference documentation
 The Sail Operator API reference documentation can be found [here](https://github.com/istio-ecosystem/sail-operator/tree/main/docs/api-reference/sailoperator.io.md).
@@ -231,7 +212,7 @@ spec:
   values:
     pilot:
       traceSampling: 0.1
-  version: v1.23.0
+  version: v1.23.2
 ```
 
 Note that the only field that was added is the `spec.version` field. There are a few situations however where the APIs are different and require different approaches to achieve the same outcome.
@@ -243,10 +224,6 @@ Sail Operator's Istio resource does not have a `spec.components` field. Instead,
 ### CNI
 
 The CNI plugin's lifecycle is managed separately from the control plane. You will have to create a [IstioCNI resource](#istiocni-resource) to use CNI.
-
-### istiod-remote
-
-The functionality of the istiod-remote chart is exposed through the [RemoteIstio resource](#remoteistio-resource).
 
 ## Gateways
 
@@ -288,7 +265,7 @@ Steps:
       namespace: istio-system
       updateStrategy:
         type: InPlace
-      version: v1.21.0
+      version: v1.22.5
     EOF
     ```
 
@@ -296,9 +273,10 @@ Steps:
 
     ```console
     $ kubectl get istio -n istio-system
-    NAME      READY   STATUS    IN USE   VERSION   AGE
-    default   True    Healthy   True     v1.21.0   2m
+    NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
+    default   1           1       0        default           Healthy   v1.22.5   23s
     ```
+    Note: `IN USE` field shows as 0, as `Istio` is yet installed.
 
 4. Create namespace `bookinfo` and deploy bookinfo application.
 
@@ -309,27 +287,36 @@ Steps:
     ```
     Note: if the `Istio` resource name is other than `default`, you need to set the `istio.io/rev` label to the name of the `Istio` resource instead of adding the `istio-injection=enabled` label.
 
-5. Perform the update of the control plane by changing the version in the Istio resource.
+5. Review the `Istio` resource after application deployment.
+
+   ```console
+   $ kubectl get istio -n istio-system
+   NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
+   default   1           1       1        default           Healthy   v1.22.5   115s
+   ```
+   Note: `IN USE` field shows as 1, after application being deployed.
+
+6. Perform the update of the control plane by changing the version in the Istio resource.
 
     ```bash
-    kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v1.21.2"}}'
+    kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v1.23.2"}}'
     ```
 
-6. Confirm the `Istio` resource version was updated.
+7. Confirm the `Istio` resource version was updated.
 
     ```console
     $ kubectl get istio -n istio-system
-    NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   VERSION   AGE
-    default   1           1       1        Healthy           v1.21.2   12m
+    NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
+    default   1           1       1        default           Healthy   v1.23.2   4m50s
     ```
 
-7. Delete `bookinfo` pods to trigger sidecar injection with the new version.
+8. Delete `bookinfo` pods to trigger sidecar injection with the new version.
 
     ```bash
     kubectl rollout restart deployment -n bookinfo
     ```
 
-8. Confirm that the new version is used in the sidecar.
+9. Confirm that the new version is used in the sidecar.
 
     ```bash
     istioctl proxy-status 
@@ -366,7 +353,7 @@ Steps:
       updateStrategy:
         type: RevisionBased
         inactiveRevisionDeletionGracePeriodSeconds: 30
-      version: v1.21.0
+      version: v1.22.5
     EOF
     ```
 
@@ -374,16 +361,17 @@ Steps:
 
     ```console
     $ kubectl get istio -n istio-system
-    NAME      READY   STATUS    IN USE   VERSION   AGE
-    default   True    Healthy   True     v1.21.0   2m
+    NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
+    default   1           1       0        default-v1-22-5   Healthy   v1.22.5   52s
     ```
+    Note: `IN USE` field shows as 0, as `Istio` is yet installed.
 
 4. Get the `IstioRevision` name.
 
     ```console
     $ kubectl get istiorevision -n istio-system
-    NAME              READY   STATUS    IN USE   VERSION   AGE
-    default-v1-21-0   True    Healthy   False    v1.21.0   114s
+    NAME              TYPE    READY   STATUS    IN USE   VERSION   AGE
+    default-v1-22-5   Local   True    Healthy   False    v1.22.5   3m4s
     ```
     Note: `IstioRevision` name is in the format `<Istio resource name>-<version>`.
 
@@ -391,7 +379,7 @@ Steps:
 
     ```bash
     kubectl create namespace bookinfo
-    kubectl label namespace bookinfo istio.io/rev=default-v1-21-0
+    kubectl label namespace bookinfo istio.io/rev=default-v1-22-5
     ```
 
 6. Deploy bookinfo application.
@@ -400,80 +388,337 @@ Steps:
     kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/release-1.22/samples/bookinfo/platform/kube/bookinfo.yaml
     ```
 
-7. Confirm that the proxy version matches the control plane version.
+7. Review the `Istio` resource after application deployment.
+
+    ```console
+    $ kubectl get istio -n istio-system
+    NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
+    default   1           1       1        default-v1-22-5   Healthy   v1.22.5   5m13s
+    ```
+    Note: `IN USE` field shows as 1, after application being deployed.
+
+8. Confirm that the proxy version matches the control plane version.
 
     ```bash
     istioctl proxy-status 
     ```
     The column `VERSION` should match the control plane version.
 
-8. Update the control plane to a new version.
+9. Update the control plane to a new version.
 
     ```bash
-    kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v1.21.2"}}'
+    kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v1.23.2"}}'
     ```
 
-9. Verify the `Istio` and `IstioRevision` resources. There will be a new revision created with the new version.
+10. Verify the `Istio` and `IstioRevision` resources. There will be a new revision created with the new version.
 
     ```console
     $ kubectl get istio -n istio-system
-    NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   VERSION   AGE
-    default   2           2       1        Healthy           v1.21.2   23m
+    NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
+    default   2           2       1        default-v1-23-2   Healthy   v1.23.2   9m23s
 
     $ kubectl get istiorevision -n istio-system
-    NAME              READY   STATUS    IN USE   VERSION   AGE
-    default-v1-21-0   True    Healthy   True     v1.21.0   27m
-    default-v1-21-2   True    Healthy   False    v1.21.2   4m45s
+    NAME              TYPE    READY   STATUS    IN USE   VERSION   AGE
+    default-v1-22-5   Local   True    Healthy   True     v1.22.5   10m
+    default-v1-23-2   Local   True    Healthy   False    v1.23.2   66s
     ```
 
-10. Confirm there are two control plane pods running, one for each revision.
+11. Confirm there are two control plane pods running, one for each revision.
 
     ```console
     $ kubectl get pods -n istio-system
     NAME                                      READY   STATUS    RESTARTS   AGE
-    istiod-default-v1-21-0-69d6df7f9c-grm24   1/1     Running   0          28m
-    istiod-default-v1-21-2-7c4f4674c5-4g7n7   1/1     Running   0          6m9s
+    istiod-default-v1-22-5-c98fd9675-r7bfw    1/1     Running   0          10m
+    istiod-default-v1-23-2-7495cdc7bf-v8t4g   1/1     Running   0          113s
     ```
 
-11. Confirm the proxy sidecar version remains the same:
+12. Confirm the proxy sidecar version remains the same:
 
     ```bash
     istioctl proxy-status 
     ```
     The column `VERSION` should still match the old control plane version.
 
-12. Change the label of the `bookinfo` namespace to use the new revision.
+13. Change the label of the `bookinfo` namespace to use the new revision.
 
     ```bash
-    kubectl label namespace bookinfo istio.io/rev=default-v1-21-2 --overwrite
+    kubectl label namespace bookinfo istio.io/rev=default-v1-23-2 --overwrite
     ```
     The existing workload sidecars will continue to run and will remain connected to the old control plane instance. They will not be replaced with a new version until the pods are deleted and recreated.
 
-13. Delete all the pods in the `bookinfo` namespace.
+14. Delete all the pods in the `bookinfo` namespace.
 
     ```bash
     kubectl rollout restart deployment -n bookinfo
     ```
 
-14. Confirm the new version is used in the sidecars.
+15. Confirm the new version is used in the sidecars.
 
     ```bash
     istioctl proxy-status 
     ```
     The column `VERSION` should match the updated control plane version.
 
-15. Confirm the old control plane and revision deletion.
+16. Confirm the old control plane and revision deletion.
 
     ```console
     $ kubectl get pods -n istio-system
     NAME                                      READY   STATUS    RESTARTS   AGE
-    istiod-default-v1-21-2-7c4f4674c5-4g7n7   1/1     Running   0          94m
+    istiod-default-v1-23-2-7495cdc7bf-v8t4g   1/1     Running   0          4m40s
+
+    $ kubectl get istio -n istio-system
+    NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
+    default   1           1       1        default-v1-23-2   Healthy   v1.23.2   5m
 
     $ kubectl get istiorevision -n istio-system
-    NAME              READY   STATUS    IN USE   VERSION   AGE
-    default-v1-21-2   True    Healthy   True     v1.21.2   94m
+    NAME              TYPE    READY   STATUS    IN USE   VERSION   AGE
+    default-v1-23-2   Local   True    Healthy   True     v1.23.2   5m31s
     ```
     The old `IstioRevision` resource and the old control plane will be deleted when the grace period specified in the `Istio` resource field `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds` expires.
+
+## Multiple meshes on a single cluster
+
+The Sail Operator supports running multiple meshes on a single cluster and associating each workload with a specific mesh. 
+Each mesh is managed by a separate control plane.
+
+Applications are installed in multiple namespaces, and each namespace is associated with one of the control planes through its labels.
+The `istio.io/rev` label determines which control plane injects the sidecar proxy into the application pods.
+Additional namespace labels determine whether the control plane discovers and manages the resources in the namespace. 
+A control plane will discover and manage only those namespaces that match the discovery selectors configured on the control plane.
+Additionally, discovery selectors determine which control plane creates the `istio-ca-root-cert` ConfigMap in which namespace.
+
+Currently, discovery selectors in multiple control planes must be configured so that they don't overlap (i.e. the discovery selectors of two control planes don't match the same namespace).
+Each control plane must be deployed in a separate Kubernetes namespace.
+
+This guide explains how to set up two meshes: `mesh1` and `mesh2` in namespaces `istio-system1` and `istio-system2`, respectively, and three application namespaces: `app1`, `app2a`, and `app2b`.
+Mesh 1 will manage namespace `app1`, and Mesh 2 will manage namespaces `app2a` and `app2b`.
+Because each mesh will use its own root certificate authority and configured to use a peer authentication policy with the `STRICT` mTLS mode, the communication between the two meshes will not be allowed. 
+
+### Prerequisites
+
+- Install [istioctl](common/install-istioctl-tool.md).
+- Kubernetes 1.23 cluster.
+- kubeconfig file with a context for the Kubernetes cluster.
+- Install the Sail Operator and the Sail CRDs to the cluster.
+
+### Installation Steps
+
+#### Deploying the control planes
+
+1. Create the system namespace `istio-system1` and deploy the `mesh1` control plane in it.
+   ```sh
+   $ kubectl create namespace istio-system1
+   $ kubectl label ns istio-system1 mesh=mesh1
+   $ kubectl apply -f - <<EOF
+   apiVersion: sailoperator.io/v1alpha1
+   kind: Istio
+   metadata:
+     name: mesh1
+   spec:
+     namespace: istio-system1
+     version: v1.24.0
+     values:
+       meshConfig:
+         discoverySelectors:
+         - matchLabels:
+             mesh: mesh1
+   EOF
+   ```
+   
+2. Create the system namespace `istio-system2` and deploy the `mesh2` control plane in it.
+   ```sh
+   $ kubectl create namespace istio-system2
+   $ kubectl label ns istio-system2 mesh=mesh2
+   $ kubectl apply -f - <<EOF
+   apiVersion: sailoperator.io/v1alpha1
+   kind: Istio
+   metadata:
+     name: mesh2
+   spec:
+     namespace: istio-system2
+     version: v1.24.0
+     values:
+       meshConfig:
+         discoverySelectors:
+         - matchLabels:
+             mesh: mesh2
+   EOF
+   ```
+
+3. Create a peer authentication policy that only allows mTLS communication within each mesh.
+   ```sh
+   $ kubectl apply -f - <<EOF
+   apiVersion: security.istio.io/v1
+   kind: PeerAuthentication
+   metadata:
+     name: default
+     namespace: istio-system1
+   spec:
+     mtls:
+       mode: STRICT
+   EOF
+   
+   $ kubectl apply -f - <<EOF
+   apiVersion: security.istio.io/v1
+   kind: PeerAuthentication
+   metadata:
+     name: default
+     namespace: istio-system2
+   spec:
+     mtls:
+       mode: STRICT
+   EOF
+   ```  
+
+#### Verifying the control planes
+
+1. Check the labels on the control plane namespaces:
+   ```sh
+   $ kubectl get ns -l mesh -L mesh
+   NAME            STATUS   AGE    MESH
+   istio-system1   Active   106s   mesh1
+   istio-system2   Active   105s   mesh2
+   ```
+
+2. Check the control planes are `Healthy`:
+   ```sh
+   $ kubectl get istios
+   NAME    REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
+   mesh1   1           1       0        mesh1             Healthy   v1.24.0   84s
+   mesh2   1           1       0        mesh2             Healthy   v1.24.0   77s
+   ```
+
+3. Confirm that the validation and mutation webhook configurations exist for both meshes:
+   ```sh
+   $ kubectl get validatingwebhookconfigurations
+   NAME                                  WEBHOOKS   AGE
+   istio-validator-mesh1-istio-system1   1          2m45s
+   istio-validator-mesh2-istio-system2   1          2m38s
+
+   $ kubectl get mutatingwebhookconfigurations
+   NAME                                         WEBHOOKS   AGE
+   istio-sidecar-injector-mesh1-istio-system1   2          5m55s
+   istio-sidecar-injector-mesh2-istio-system2   2          5m48s
+   ```
+
+#### Deploying the applications
+
+1. Create three application namespaces:
+   ```sh
+   $ kubectl create ns app1 
+   $ kubectl create ns app2a 
+   $ kubectl create ns app2b
+   ```
+
+2. Label each namespace to enable discovery by the corresponding control plane:
+   ```sh
+   $ kubectl label ns app1 mesh=mesh1
+   $ kubectl label ns app2a mesh=mesh2
+   $ kubectl label ns app2b mesh=mesh2
+   ```
+
+3. Label each namespace to enable injection by the corresponding control plane:
+   ```sh
+   $ kubectl label ns app1 istio.io/rev=mesh1
+   $ kubectl label ns app2a istio.io/rev=mesh2
+   $ kubectl label ns app2b istio.io/rev=mesh2
+   ```
+
+4. Deploy the `curl` and `httpbin` sample applications in each namespace:
+   ```sh
+   $ kubectl -n app1 apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/curl/curl.yaml 
+   $ kubectl -n app1 apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/httpbin/httpbin.yaml 
+
+   $ kubectl -n app2a apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/curl/curl.yaml 
+   $ kubectl -n app2a apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/httpbin/httpbin.yaml 
+   
+   $ kubectl -n app2b apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/curl/curl.yaml 
+   $ kubectl -n app2b apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/httpbin/httpbin.yaml 
+   ```
+
+5. Confirm that a sidecar has been injected into each of the application pods. The value `2/2` should be displayed in the `READY` column for each pod, as in the following example:
+   ```sh
+   $ kubectl get pods -n app1
+   NAME                       READY   STATUS    RESTARTS   AGE
+   curl-5b549b49b8-mg7nl      2/2     Running   0          102s
+   httpbin-7b549f7859-h6hnk   2/2     Running   0          89s
+
+   $ kubectl get pods -n app2a
+   NAME                       READY   STATUS    RESTARTS   AGE
+   curl-5b549b49b8-2hlvm      2/2     Running   0          2m3s
+   httpbin-7b549f7859-bgblg   2/2     Running   0          110s
+
+   $ kubectl get pods -n app2b
+   NAME                       READY   STATUS    RESTARTS   AGE
+   curl-5b549b49b8-xnzzk      2/2     Running   0          2m9s
+   httpbin-7b549f7859-7k5gf   2/2     Running   0          118s
+   ```
+
+### Validation
+
+#### Checking application to control plane mapping
+
+Use the `istioctl ps` command to confirm that the application pods are connected to the correct control plane. 
+
+The `curl` and `httpbin` pods in namespace `app1` should be connected to the control plane in namespace `istio-system1`, as shown in the following example (note the `.app1` suffix in the `NAME` column):
+
+```sh
+$ istioctl ps -i istio-system1
+NAME                              CLUSTER        CDS                LDS                EDS                RDS                ECDS        ISTIOD                            VERSION
+curl-5b549b49b8-mg7nl.app1        Kubernetes     SYNCED (4m40s)     SYNCED (4m40s)     SYNCED (4m31s)     SYNCED (4m40s)     IGNORED     istiod-mesh1-5df45b97dd-tf2wl     1.24.0
+httpbin-7b549f7859-h6hnk.app1     Kubernetes     SYNCED (4m31s)     SYNCED (4m31s)     SYNCED (4m31s)     SYNCED (4m31s)     IGNORED     istiod-mesh1-5df45b97dd-tf2wl     1.24.0
+```
+
+The pods in namespaces `app2a` and `app2b` should be connected to the control plane in namespace `istio-system2`:
+
+```sh
+$ istioctl ps -i istio-system2
+NAME                               CLUSTER        CDS                LDS                EDS                RDS                ECDS        ISTIOD                            VERSION
+curl-5b549b49b8-2hlvm.app2a        Kubernetes     SYNCED (4m37s)     SYNCED (4m37s)     SYNCED (4m31s)     SYNCED (4m37s)     IGNORED     istiod-mesh2-59f6b874fb-mzxqw     1.24.0
+curl-5b549b49b8-xnzzk.app2b        Kubernetes     SYNCED (4m37s)     SYNCED (4m37s)     SYNCED (4m31s)     SYNCED (4m37s)     IGNORED     istiod-mesh2-59f6b874fb-mzxqw     1.24.0
+httpbin-7b549f7859-7k5gf.app2b     Kubernetes     SYNCED (4m31s)     SYNCED (4m31s)     SYNCED (4m31s)     SYNCED (4m31s)     IGNORED     istiod-mesh2-59f6b874fb-mzxqw     1.24.0
+httpbin-7b549f7859-bgblg.app2a     Kubernetes     SYNCED (4m32s)     SYNCED (4m32s)     SYNCED (4m31s)     SYNCED (4m32s)     IGNORED     istiod-mesh2-59f6b874fb-mzxqw     1.24.0
+```
+
+#### Checking application connectivity
+
+As both meshes are configured to use the `STRICT` mTLS peer authentication mode, the applications in namespace `app1` should not be able to communicate with the applications in namespaces `app2a` and `app2b`, and vice versa.
+To test whether the `curl` pod in namespace `app2a` can connect to the `httpbin` service in namespace `app1`, run the following commands:
+
+```sh
+$ kubectl -n app2a exec deploy/curl -c curl -- curl -sIL http://httpbin.app1:8000
+HTTP/1.1 503 Service Unavailable
+content-length: 95
+content-type: text/plain
+date: Fri, 29 Nov 2024 08:58:28 GMT
+server: envoy
+```
+
+As expected, the response indicates that the connection was not successful. 
+In contrast, the same pod should be able to connect to the `httpbin` service in namespace `app2b`, because they are part of the same mesh:
+
+```sh
+$ kubectl -n app2a exec deploy/curl -c curl -- curl -sIL http://httpbin.app2b:8000
+HTTP/1.1 200 OK
+access-control-allow-credentials: true
+access-control-allow-origin: *
+content-security-policy: default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' camo.githubusercontent.com
+content-type: text/html; charset=utf-8
+date: Fri, 29 Nov 2024 08:57:52 GMT
+x-envoy-upstream-service-time: 0
+server: envoy
+transfer-encoding: chunked
+```
+
+### Cleanup
+
+To clean up the resources created in this guide, delete the `Istio` resources and the namespaces:
+
+```sh
+$ kubectl delete istio mesh1 mesh2
+$ kubectl delete ns istio-system1 istio-system2 app1 app2a app2b
+```
+
 
 ## Multi-cluster
 
@@ -853,17 +1098,18 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
     kubectl --context "${CTX_CLUSTER1}" apply -n istio-system -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/expose-services.yaml
     ```
 
-5. Create `RemoteIstio` resource on `cluster2`.
+5. Create an `Istio` on `cluster2` with the `remote` profile.
 
     ```sh
     kubectl apply --context "${CTX_CLUSTER2}" -f - <<EOF
     apiVersion: sailoperator.io/v1alpha1
-    kind: RemoteIstio
+    kind: Istio
     metadata:
       name: default
     spec:
       version: v${ISTIO_VERSION}
       namespace: istio-system
+      profile: remote
       values:
         istiodRemote:
           injectionPath: /inject/cluster/remote/net/network2
@@ -1005,18 +1251,19 @@ In this setup there is an external control plane cluster (`cluster1`) and a remo
     export EXTERNAL_ISTIOD_ADDR=$(kubectl -n istio-system --context="${CTX_CLUSTER1}" get svc istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
     ```
 
-4. Create the `external-istiod` namespace and `RemoteIstio` resource in `cluster2`.
+4. Create the `external-istiod` namespace and `Istio` resource in `cluster2`.
 
     ```sh
     kubectl create namespace external-istiod --context="${CTX_CLUSTER2}"
     kubectl apply --context "${CTX_CLUSTER2}" -f - <<EOF
     apiVersion: sailoperator.io/v1alpha1
-    kind: RemoteIstio
+    kind: Istio
     metadata:
       name: external-istiod
     spec:
       version: v${ISTIO_VERSION}
       namespace: external-istiod
+      profile: remote
       values:
         defaultRevision: external-istiod
         global:
@@ -1163,10 +1410,10 @@ In this setup there is an external control plane cluster (`cluster1`) and a remo
     EOF
     ```
 
-9. Wait for the `RemoteIstio` to be healthy:
+9. Wait for the `Istio` resource to be ready:
 
     ```sh
-    kubectl wait --context="${CTX_CLUSTER2}" --for=condition=Ready remoteistios/external-istiod --timeout=3m
+    kubectl wait --context="${CTX_CLUSTER2}" --for=condition=Ready istios/external-istiod --timeout=3m
     ```
 
 10. Create the `sample` namespace on the remote cluster and label it to enable injection.
@@ -1237,7 +1484,7 @@ In this setup there is an external control plane cluster (`cluster1`) and a remo
     kubectl delete ns istio-system --context="${CTX_CLUSTER1}"
     kubectl delete istios external-istiod --context="${CTX_CLUSTER1}"
     kubectl delete ns external-istiod --context="${CTX_CLUSTER1}"
-    kubectl delete remoteistios external-istiod --context="${CTX_CLUSTER2}"
+    kubectl delete istios external-istiod --context="${CTX_CLUSTER2}"
     kubectl delete ns external-istiod --context="${CTX_CLUSTER2}"
     kubectl delete ns sample --context="${CTX_CLUSTER2}"
     ```

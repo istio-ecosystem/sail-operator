@@ -98,7 +98,6 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 					Name: revName,
 				},
 				Spec: v1alpha1.IstioRevisionSpec{
-					Type:      v1alpha1.IstioRevisionTypeLocal,
 					Version:   supportedversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1alpha1.Values{
@@ -118,7 +117,6 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 					Name: revName,
 				},
 				Spec: v1alpha1.IstioRevisionSpec{
-					Type:      v1alpha1.IstioRevisionTypeLocal,
 					Version:   supportedversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1alpha1.Values{
@@ -138,7 +136,6 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 					Name: "default",
 				},
 				Spec: v1alpha1.IstioRevisionSpec{
-					Type:      v1alpha1.IstioRevisionTypeLocal,
 					Version:   supportedversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1alpha1.Values{
@@ -158,7 +155,6 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 					Name: "default",
 				},
 				Spec: v1alpha1.IstioRevisionSpec{
-					Type:      v1alpha1.IstioRevisionTypeLocal,
 					Version:   supportedversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1alpha1.Values{
@@ -182,7 +178,6 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 					Name: revName,
 				},
 				Spec: v1alpha1.IstioRevisionSpec{
-					Type:      v1alpha1.IstioRevisionTypeLocal,
 					Version:   supportedversion.Default,
 					Namespace: nsName,
 					Values: &v1alpha1.Values{
@@ -249,7 +244,6 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 				Name: revName,
 			},
 			Spec: v1alpha1.IstioRevisionSpec{
-				Type:      v1alpha1.IstioRevisionTypeLocal,
 				Version:   supportedversion.Default,
 				Namespace: istioNamespace,
 				Values: &v1alpha1.Values{
@@ -321,8 +315,8 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 	DescribeTable("reconciles owned resource",
 		func(obj client.Object, modify func(obj client.Object), validate func(g Gomega, obj client.Object)) {
 			By("on update", func() {
-				// ensure all in-flight reconcile operations finish before the test; unfortunately, sleeping seems to be the only option to achieve this
-				time.Sleep(5 * time.Second)
+				// ensure all in-flight reconcile operations finish before the test
+				waitForInFlightReconcileToFinish()
 
 				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
 
@@ -386,20 +380,18 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 
 	DescribeTable("skips reconcile when only the status of the owned resource is updated",
 		func(obj client.Object, modify func(obj client.Object)) {
-			// wait for the in-flight reconcile operations to finish
-			// unfortunately, I don't see a good way to do this other than by waiting
-			time.Sleep(5 * time.Second)
+			waitForInFlightReconcileToFinish()
 
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
 
-			beforeCount := getReconcileCount(Default)
+			beforeCount := getIstioRevisionReconcileCount(Default)
 
 			By("modifying object")
 			modify(obj)
 			Expect(k8sClient.Status().Update(ctx, obj)).To(Succeed())
 
 			Consistently(func(g Gomega) {
-				afterCount := getReconcileCount(g)
+				afterCount := getIstioRevisionReconcileCount(g)
 				g.Expect(afterCount).To(Equal(beforeCount))
 			}, 5*time.Second).Should(Succeed())
 		},
@@ -429,6 +421,34 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 		),
 	)
 
+	It("skips reconcile when a pull secret is added to service account", func() {
+		waitForInFlightReconcileToFinish()
+
+		sa := &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "istiod-" + revName,
+				Namespace: istioNamespace,
+			},
+		}
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(sa), sa)).To(Succeed())
+
+		GinkgoWriter.Println("sa:", sa)
+
+		beforeCount := getIstioRevisionReconcileCount(Default)
+
+		By("adding pull secret to ServiceAccount")
+		sa.ImagePullSecrets = append(sa.ImagePullSecrets, corev1.LocalObjectReference{Name: "other-pull-secret"})
+		Expect(k8sClient.Update(ctx, sa)).To(Succeed())
+
+		Consistently(func(g Gomega) {
+			afterCount := getIstioRevisionReconcileCount(g)
+			g.Expect(afterCount).To(Equal(beforeCount))
+		}, 5*time.Second).Should(Succeed(), "IstioRevision was reconciled when it shouldn't have been")
+
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(sa), sa)).To(Succeed())
+		Expect(sa.ImagePullSecrets).To(ContainElement(corev1.LocalObjectReference{Name: "other-pull-secret"}))
+	})
+
 	It("supports concurrent deployment of two control planes", func() {
 		rev2Name := revName + "2"
 		rev2Key := client.ObjectKey{Name: rev2Name}
@@ -440,7 +460,6 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 				Name: rev2Key.Name,
 			},
 			Spec: v1alpha1.IstioRevisionSpec{
-				Type:      v1alpha1.IstioRevisionTypeLocal,
 				Version:   supportedversion.Default,
 				Namespace: istioNamespace,
 				Values: &v1alpha1.Values{
@@ -473,7 +492,21 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 	})
 })
 
-func getReconcileCount(g Gomega) float64 {
+func waitForInFlightReconcileToFinish() {
+	// wait for the in-flight reconcile operations to finish
+	// unfortunately, I don't see a good way to do this other than by waiting
+	time.Sleep(5 * time.Second)
+}
+
+func getIstioRevisionReconcileCount(g Gomega) float64 {
+	return getReconcileCount(g, "istiorevision")
+}
+
+func getIstioCNIReconcileCount(g Gomega) float64 {
+	return getReconcileCount(g, "istiocni")
+}
+
+func getReconcileCount(g Gomega, controllerName string) float64 {
 	resp, err := http.Get("http://localhost:8080/metrics")
 	g.Expect(err).NotTo(HaveOccurred())
 	defer resp.Body.Close()
@@ -487,7 +520,7 @@ func getReconcileCount(g Gomega) float64 {
 	sum := float64(0)
 	for _, metric := range mf.Metric {
 		for _, l := range metric.Label {
-			if *l.Name == "controller" && *l.Value == "istiorevision" {
+			if *l.Name == "controller" && *l.Value == controllerName {
 				sum += metric.GetCounter().GetValue()
 			}
 		}

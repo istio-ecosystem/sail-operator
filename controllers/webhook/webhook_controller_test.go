@@ -380,7 +380,7 @@ func TestDoProbe(t *testing.T) {
 	}
 }
 
-func TestIsOwnedByRemoteIstio(t *testing.T) {
+func TestIsOwnedByRevisionWithRemoteControlPlane(t *testing.T) {
 	tests := []struct {
 		name         string
 		ownerRefs    []metav1.OwnerReference
@@ -431,7 +431,7 @@ func TestIsOwnedByRemoteIstio(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "IstioRevision type not remote",
+			name: "IstioRevision not using remote profile",
 			ownerRefs: []metav1.OwnerReference{
 				{
 					APIVersion: v1alpha1.GroupVersion.String(),
@@ -444,15 +444,13 @@ func TestIsOwnedByRemoteIstio(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "revision1",
 					},
-					Spec: v1alpha1.IstioRevisionSpec{
-						Type: v1alpha1.IstioRevisionTypeLocal,
-					},
+					Spec: v1alpha1.IstioRevisionSpec{},
 				},
 			},
 			expected: false,
 		},
 		{
-			name: "IstioRevision type is remote",
+			name: "IstioRevision uses remote profile",
 			ownerRefs: []metav1.OwnerReference{
 				{
 					APIVersion: v1alpha1.GroupVersion.String(),
@@ -466,7 +464,9 @@ func TestIsOwnedByRemoteIstio(t *testing.T) {
 						Name: "revision1",
 					},
 					Spec: v1alpha1.IstioRevisionSpec{
-						Type: v1alpha1.IstioRevisionTypeRemote,
+						Values: &v1alpha1.Values{
+							Profile: ptr.Of("remote"),
+						},
 					},
 				},
 			},
@@ -489,7 +489,7 @@ func TestIsOwnedByRemoteIstio(t *testing.T) {
 				},
 			}
 
-			result := isOwnedByRemoteIstio(cl, obj)
+			result := IsOwnedByRevisionWithRemoteControlPlane(cl, obj)
 			g.Expect(result).To(Equal(tt.expected))
 		})
 	}

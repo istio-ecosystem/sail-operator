@@ -117,9 +117,6 @@ metadata:
 
 	Describe("given Istio version", func() {
 		for _, version := range supportedversion.List {
-			// Note: This var version is needed to avoid the closure of the loop
-			version := version
-
 			Context(version.Name, func() {
 				BeforeAll(func() {
 					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
@@ -224,31 +221,39 @@ spec:
 					})
 				})
 
-				When("bookinfo is deployed", func() {
+				When("sample pod is deployed", func() {
 					BeforeAll(func() {
-						Expect(k.CreateNamespace(bookinfoNamespace)).To(Succeed(), "Bookinfo namespace failed to be created")
-						Expect(k.Patch("namespace", bookinfoNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
-							To(Succeed(), "Error patching bookinfo namespace")
-						Expect(deployBookinfo(version)).To(Succeed(), "Error deploying bookinfo")
-						Success("Bookinfo deployed")
+						Expect(k.CreateNamespace(sampleNamespace)).To(Succeed(), "Sample namespace failed to be created")
+						Expect(k.Patch("namespace", sampleNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
+							To(Succeed(), "Error patching sample namespace")
+						Expect(k.WithNamespace(sampleNamespace).
+							ApplyWithLabels(common.GetSampleYAML(version, sampleNamespace), "version=v1")).
+							To(Succeed(), "Error deploying sample")
+						Success("sample deployed")
 					})
 
-					bookinfoPods := &corev1.PodList{}
+					samplePods := &corev1.PodList{}
 
 					It("updates the pods status to Running", func(ctx SpecContext) {
-						Expect(cl.List(ctx, bookinfoPods, client.InNamespace(bookinfoNamespace))).To(Succeed())
-						Expect(bookinfoPods.Items).ToNot(BeEmpty(), "No pods found in bookinfo namespace")
+						Eventually(func() bool {
+							// Wait until the sample pod exists. Is wraped inside a function to avoid failure on the first iteration
+							Expect(cl.List(ctx, samplePods, client.InNamespace(sampleNamespace))).To(Succeed())
+							return len(samplePods.Items) > 0
+						}).Should(BeTrue(), "No sample pods found")
 
-						for _, pod := range bookinfoPods.Items {
-							Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(pod.Name, bookinfoNamespace), &corev1.Pod{}).
+						Expect(cl.List(ctx, samplePods, client.InNamespace(sampleNamespace))).To(Succeed())
+						Expect(samplePods.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
+
+						for _, pod := range samplePods.Items {
+							Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(pod.Name, sampleNamespace), &corev1.Pod{}).
 								Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready")
 						}
-						Success("Bookinfo pods are ready")
+						Success("sample pods are ready")
 					})
 
 					It("has sidecars with the correct istio version", func(ctx SpecContext) {
-						for _, pod := range bookinfoPods.Items {
-							sidecarVersion, err := getProxyVersion(pod.Name, bookinfoNamespace)
+						for _, pod := range samplePods.Items {
+							sidecarVersion, err := getProxyVersion(pod.Name, sampleNamespace)
 							Expect(err).NotTo(HaveOccurred(), "Error getting sidecar version")
 							Expect(sidecarVersion).To(Equal(version.Version), "Sidecar Istio version does not match the expected version")
 						}
@@ -256,9 +261,9 @@ spec:
 					})
 
 					AfterAll(func(ctx SpecContext) {
-						By("Deleting bookinfo")
-						Expect(k.DeleteNamespace(bookinfoNamespace)).To(Succeed(), "Bookinfo namespace failed to be deleted")
-						Success("Bookinfo deleted")
+						By("Deleting sample")
+						Expect(k.DeleteNamespace(sampleNamespace)).To(Succeed(), "sample namespace failed to be deleted")
+						Success("sample deleted")
 					})
 				})
 
@@ -366,27 +371,6 @@ func forceDeleteIstioResources() error {
 	err = k.Delete("istiocni", istioCniName)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return fmt.Errorf("failed to delete %s CR: %w", "istiocni", err)
-	}
-
-	return nil
-}
-
-func getBookinfoURL(version supportedversion.VersionInfo) string {
-	// Bookinfo YAML for the current version can be found from istio/istio repository
-	// If the version is latest, we need to get the latest version from the master branch
-	bookinfoURL := fmt.Sprintf("https://raw.githubusercontent.com/istio/istio/%s/samples/bookinfo/platform/kube/bookinfo.yaml", version.Version)
-	if version.Name == "latest" {
-		bookinfoURL = "https://raw.githubusercontent.com/istio/istio/master/samples/bookinfo/platform/kube/bookinfo.yaml"
-	}
-
-	return bookinfoURL
-}
-
-func deployBookinfo(version supportedversion.VersionInfo) error {
-	bookinfoURL := getBookinfoURL(version)
-	err := k.WithNamespace(bookinfoNamespace).Apply(bookinfoURL)
-	if err != nil {
-		return fmt.Errorf("error deploying bookinfo: %w", err)
 	}
 
 	return nil

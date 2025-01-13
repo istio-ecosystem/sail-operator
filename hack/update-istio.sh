@@ -26,6 +26,12 @@ VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"versions.yaml"}
 # The new entry will be placed immediately before the old one
 function add_stable_version() {
     echo "Adding new stable version: ${1}"
+    # we want to add the istiod-remote chart only for 1.23
+    istiod_remote_line=""
+    if [[ ${1} == 1.23.* ]]
+    then
+      istiod_remote_line="\"https://istio-release.storage.googleapis.com/charts/istiod-remote-${1}.tgz\","
+    fi
     template=$(cat <<-END
 {
   "name": "v${1}",
@@ -35,7 +41,7 @@ function add_stable_version() {
   "charts": [
     "https://istio-release.storage.googleapis.com/charts/base-${1}.tgz",
     "https://istio-release.storage.googleapis.com/charts/istiod-${1}.tgz",
-    "https://istio-release.storage.googleapis.com/charts/istiod-remote-${1}.tgz",
+    ${istiod_remote_line}
     "https://istio-release.storage.googleapis.com/charts/gateway-${1}.tgz",
     "https://istio-release.storage.googleapis.com/charts/cni-${1}.tgz",
     "https://istio-release.storage.googleapis.com/charts/ztunnel-${1}.tgz"
@@ -43,6 +49,7 @@ function add_stable_version() {
 }
 END
     )
+
     # Insert the new key above the old one (https://stackoverflow.com/questions/74368503/is-it-possible-to-insert-an-element-into-a-middle-of-array-in-yaml-using-yq)
     # shellcheck disable=SC2016
     yq -i '.versions |=  (

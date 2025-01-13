@@ -30,7 +30,9 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
+	predicate2 "github.com/istio-ecosystem/sail-operator/pkg/predicate"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
+	"github.com/istio-ecosystem/sail-operator/pkg/revision"
 	"github.com/istio-ecosystem/sail-operator/pkg/validation"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -53,16 +55,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"istio.io/istio/pkg/ptr"
-)
-
-const (
-	IstioInjectionLabel        = "istio-injection"
-	IstioInjectionEnabledValue = "enabled"
-	IstioRevLabel              = "istio.io/rev"
-	IstioSidecarInjectLabel    = "sidecar.istio.io/inject"
-
-	istiodChartName       = "istiod"
-	istiodRemoteChartName = "istiod-remote"
 )
 
 // Reconciler reconciles an IstioRevision object
@@ -128,9 +120,6 @@ func (r *Reconciler) Finalize(ctx context.Context, rev *v1alpha1.IstioRevision) 
 }
 
 func (r *Reconciler) validate(ctx context.Context, rev *v1alpha1.IstioRevision) error {
-	if rev.Spec.Type == "" {
-		return reconciler.NewValidationError("spec.type not set")
-	}
 	if rev.Spec.Version == "" {
 		return reconciler.NewValidationError("spec.version not set")
 	}
@@ -155,6 +144,11 @@ func (r *Reconciler) validate(ctx context.Context, rev *v1alpha1.IstioRevision) 
 	if rev.Spec.Values.Global == nil || rev.Spec.Values.Global.IstioNamespace == nil || *rev.Spec.Values.Global.IstioNamespace != rev.Spec.Namespace {
 		return reconciler.NewValidationError("spec.values.global.istioNamespace does not match spec.namespace")
 	}
+
+	if tagExists, err := validation.IstioRevisionTagExists(ctx, r.Client, rev.Name); tagExists || err != nil {
+		return reconciler.NewValidationError("an IstioRevisionTag exists with this name")
+	}
+
 	return nil
 }
 
@@ -172,33 +166,22 @@ func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1alpha1.IstioR
 	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev),
 		values, rev.Spec.Namespace, getReleaseName(rev), ownerReference)
 	if err != nil {
-		return fmt.Errorf("failed to install/update Helm chart %q: %w", getChartName(rev), err)
+		return fmt.Errorf("failed to install/update Helm chart %q: %w", constants.IstiodChartName, err)
 	}
 	return nil
 }
 
 func getReleaseName(rev *v1alpha1.IstioRevision) string {
-	return fmt.Sprintf("%s-%s", rev.Name, getChartName(rev))
+	return fmt.Sprintf("%s-%s", rev.Name, constants.IstiodChartName)
 }
 
 func (r *Reconciler) getChartDir(rev *v1alpha1.IstioRevision) string {
-	return path.Join(r.Config.ResourceDirectory, rev.Spec.Version, "charts", getChartName(rev))
-}
-
-func getChartName(rev *v1alpha1.IstioRevision) string {
-	switch rev.Spec.Type {
-	case v1alpha1.IstioRevisionTypeLocal:
-		return istiodChartName
-	case v1alpha1.IstioRevisionTypeRemote:
-		return istiodRemoteChartName
-	default:
-		panic(badIstioRevisionType(rev))
-	}
+	return path.Join(r.Config.ResourceDirectory, rev.Spec.Version, "charts", constants.IstiodChartName)
 }
 
 func (r *Reconciler) uninstallHelmCharts(ctx context.Context, rev *v1alpha1.IstioRevision) error {
 	if _, err := r.ChartManager.UninstallChart(ctx, getReleaseName(rev), rev.Spec.Namespace); err != nil {
-		return fmt.Errorf("failed to uninstall Helm chart %q: %w", getChartName(rev), err)
+		return fmt.Errorf("failed to uninstall Helm chart %q: %w", constants.IstiodChartName, err)
 	}
 	return nil
 }
@@ -226,6 +209,10 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// The handler triggers the reconciliation of the referenced IstioRevision CR so that its InUse condition is updated.
 	podHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapPodToReconcileRequest))
 
+	// revisionTagHandler handles IstioRevisionTags that reference the IstioRevision CR via their targetRef.
+	// The handler triggers the reconciliation of the referenced IstioRevision CR so that its InUse condition is updated.
+	revisionTagHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapRevisionTagToReconcileRequest))
+
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
 			LogConstructor: func(req *reconcile.Request) logr.Logger {
@@ -246,7 +233,11 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&appsv1.Deployment{}, ownedResourceHandler). // we don't ignore the status here because we use it to calculate the IstioRevision status
 		Watches(&corev1.Endpoints{}, ownedResourceHandler).
 		Watches(&corev1.Service{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
-		Watches(&corev1.ServiceAccount{}, ownedResourceHandler).
+
+		// We use predicate.IgnoreUpdate() so that we skip the reconciliation when a pull secret is added to the ServiceAccount.
+		// This is necessary so that we don't remove the newly-added secret.
+		// TODO: this is a temporary hack until we implement the correct solution on the Helm-render side
+		Watches(&corev1.ServiceAccount{}, ownedResourceHandler, builder.WithPredicates(predicate2.IgnoreUpdate())).
 		Watches(&rbacv1.Role{}, ownedResourceHandler).
 		Watches(&rbacv1.RoleBinding{}, ownedResourceHandler).
 		Watches(&policyv1.PodDisruptionBudget{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
@@ -257,6 +248,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 		// +lint-watches:ignore: Pod (not found in charts, but must be watched to reconcile IstioRevision when a pod references it)
 		Watches(&corev1.Pod{}, podHandler, builder.WithPredicates(ignoreStatusChange())).
+
+		// +lint-watches:ignore: IstioRevisionTag (not found in charts, but must be watched to reconcile IstioRevision when a pod references it)
+		Watches(&v1alpha1.IstioRevisionTag{}, revisionTagHandler).
 
 		// cluster-scoped resources
 		Watches(&rbacv1.ClusterRole{}, ownedResourceHandler).
@@ -332,8 +326,7 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1alpha1.
 		Status: metav1.ConditionFalse,
 	}
 
-	switch rev.Spec.Type {
-	case v1alpha1.IstioRevisionTypeLocal:
+	if !revision.IsUsingRemoteControlPlane(rev) {
 		istiod := appsv1.Deployment{}
 		if err := r.Client.Get(ctx, istiodDeploymentKey(rev), &istiod); err == nil {
 			if istiod.Status.Replicas == 0 {
@@ -354,7 +347,7 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1alpha1.
 			c.Message = fmt.Sprintf("failed to get readiness: %v", err)
 			return c, fmt.Errorf("get failed: %w", err)
 		}
-	case v1alpha1.IstioRevisionTypeRemote:
+	} else {
 		webhook := admissionv1.MutatingWebhookConfiguration{}
 		webhookKey := injectionWebhookKey(rev)
 		if err := r.Client.Get(ctx, webhookKey, &webhook); err == nil {
@@ -378,8 +371,6 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1alpha1.
 			c.Message = fmt.Sprintf("failed to get readiness: %v", err)
 			return c, fmt.Errorf("get failed: %w", err)
 		}
-	default:
-		panic(badIstioRevisionType(rev))
 	}
 	return c, nil
 }
@@ -387,7 +378,7 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1alpha1.
 func (r *Reconciler) determineInUseCondition(ctx context.Context, rev *v1alpha1.IstioRevision) (v1alpha1.IstioRevisionCondition, error) {
 	c := v1alpha1.IstioRevisionCondition{Type: v1alpha1.IstioRevisionConditionInUse}
 
-	isReferenced, err := r.isRevisionReferencedByWorkloads(ctx, rev)
+	isReferenced, err := r.isRevisionReferenced(ctx, rev)
 	if err == nil {
 		if isReferenced {
 			c.Status = metav1.ConditionTrue
@@ -406,10 +397,22 @@ func (r *Reconciler) determineInUseCondition(ctx context.Context, rev *v1alpha1.
 	return c, fmt.Errorf("failed to determine if IstioRevision is in use: %w", err)
 }
 
-func (r *Reconciler) isRevisionReferencedByWorkloads(ctx context.Context, rev *v1alpha1.IstioRevision) (bool, error) {
+func (r *Reconciler) isRevisionReferenced(ctx context.Context, rev *v1alpha1.IstioRevision) (bool, error) {
 	log := logf.FromContext(ctx)
 	nsList := corev1.NamespaceList{}
 	nsMap := map[string]corev1.Namespace{}
+	// if an IstioRevision is referenced by a revisionTag, it's considered as InUse
+	revisionTagList := v1alpha1.IstioRevisionTagList{}
+	if err := r.Client.List(ctx, &revisionTagList); err != nil {
+		return false, fmt.Errorf("failed to list IstioRevisionTags: %w", err)
+	}
+	for _, tag := range revisionTagList.Items {
+		if tag.Status.IstioRevision == rev.Name {
+			log.V(2).Info("Revision is referenced by IstioRevisionTag", "IstioRevisionTag", tag.Name)
+			return true, nil
+		}
+	}
+
 	if err := r.Client.List(ctx, &nsList); err != nil { // TODO: can we optimize this by specifying a label selector
 		return false, fmt.Errorf("failed to list namespaces: %w", err)
 	}
@@ -452,10 +455,10 @@ func podReferencesRevision(pod corev1.Pod, ns corev1.Namespace, rev *v1alpha1.Is
 }
 
 func getReferencedRevisionFromNamespace(labels map[string]string) string {
-	if labels[IstioInjectionLabel] == IstioInjectionEnabledValue {
+	if labels[constants.IstioInjectionLabel] == constants.IstioInjectionEnabledValue {
 		return v1alpha1.DefaultRevision
 	}
-	revision := labels[IstioRevLabel]
+	revision := labels[constants.IstioRevLabel]
 	if revision != "" {
 		return revision
 	}
@@ -466,21 +469,21 @@ func getReferencedRevisionFromNamespace(labels map[string]string) string {
 
 func getReferencedRevisionFromPod(podLabels, podAnnotations, nsLabels map[string]string) string {
 	// if pod was already injected, the revision that did the injection is specified in the istio.io/rev annotation
-	revision := podAnnotations[IstioRevLabel]
+	revision := podAnnotations[constants.IstioRevLabel]
 	if revision != "" {
 		return revision
 	}
 
 	// pod is marked for injection by a specific revision, but wasn't injected (e.g. because it was created before the revision was applied)
 	revisionFromNamespace := getReferencedRevisionFromNamespace(nsLabels)
-	if podLabels[IstioSidecarInjectLabel] != "false" {
+	if podLabels[constants.IstioSidecarInjectLabel] != "false" {
 		if revisionFromNamespace != "" {
 			return revisionFromNamespace
 		}
-		revisionFromPod := podLabels[IstioRevLabel]
+		revisionFromPod := podLabels[constants.IstioRevLabel]
 		if revisionFromPod != "" {
 			return revisionFromPod
-		} else if podLabels[IstioSidecarInjectLabel] == "true" {
+		} else if podLabels[constants.IstioSidecarInjectLabel] == "true" {
 			return v1alpha1.DefaultRevision
 		}
 	}
@@ -551,6 +554,14 @@ func (r *Reconciler) mapPodToReconcileRequest(ctx context.Context, pod client.Ob
 	return nil
 }
 
+func (r *Reconciler) mapRevisionTagToReconcileRequest(ctx context.Context, revisionTag client.Object) []reconcile.Request {
+	tag, ok := revisionTag.(*v1alpha1.IstioRevisionTag)
+	if ok && tag.Status.IstioRevision != "" {
+		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: tag.Status.IstioRevision}}}
+	}
+	return nil
+}
+
 // ignoreStatusChange returns a predicate that ignores watch events where only the resource status changes; if
 // there are any other changes to the resource, the event is not ignored.
 // This ensures that the controller doesn't reconcile the entire IstioRevision every time the status of an owned
@@ -608,10 +619,6 @@ func clearIgnoredFields(obj client.Object) {
 			webhookConfig.Webhooks[i].FailurePolicy = nil
 		}
 	}
-}
-
-func badIstioRevisionType(rev *v1alpha1.IstioRevision) string {
-	return fmt.Sprintf("unknown IstioRevisionType: %s", rev.Spec.Type)
 }
 
 func wrapEventHandler(logger logr.Logger, handler handler.EventHandler) handler.EventHandler {
