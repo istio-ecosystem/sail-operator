@@ -124,13 +124,13 @@ The `sail-operator` charts directory contains `samples` directory, which contain
 * Kubernetes
 
     ```sh
-    $ kubectl apply -f sail-operator/samples/istio-sample-kubernetes.yaml
+    $ kubectl apply -f sail-operator/samples/istio-sample.yaml
     ```
 
 * OpenShift
 
     ```sh
-    $ kubectl apply -f sail-operator/samples/istio-sample-openshift.yaml
+    $ kubectl apply -f sail-operator/samples/istio-sample.yaml
     $ kubectl apply -f sail-operator/samples/istiocni-sample.yaml
     ```
 

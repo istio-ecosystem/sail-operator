@@ -99,20 +99,10 @@ Make sure that the `HUB` and `TAG` environment variables point to your container
 
 Create an instance of the `Istio` resource to install the Istio Control Plane.
 
-Use the `istio-sample-kubernetes.yaml` file on vanilla Kubernetes:
-
 ```sh
 # Create the istio-system namespace if it does not exist
 kubectl create ns istio-system
-kubectl apply -f chart/samples/istio-sample-kubernetes.yaml
-```
-
-Use the `istio-sample-openshift.yaml` file on OpenShift:
-
-```sh
-# Create the istio-system namespace if it does not exist
-kubectl create ns istio-system
-kubectl apply -f chart/samples/istio-sample-openshift.yaml
+kubectl apply -f chart/samples/istio-sample.yaml
 ```
 
 On OpenShift, you must also deploy the Istio CNI plugin by creating an instance of the `IstioCNI` resource:

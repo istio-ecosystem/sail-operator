@@ -1,4 +1,5 @@
 ignore:
   - "api"
   - "hack"
+  - "tools"
   - "tests"
