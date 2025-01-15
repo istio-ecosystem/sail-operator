@@ -34,7 +34,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/maistra-dev/sail-operator:0.3-latest
-    createdAt: "2024-12-19T05:05:23Z"
+    createdAt: "2025-01-15T12:19:20Z"
     description: Experimental operator for installing Istio service mesh
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -46,7 +46,7 @@ metadata:
     features.operators.openshift.io/token-auth-aws: "false"
     features.operators.openshift.io/token-auth-azure: "false"
     features.operators.openshift.io/token-auth-gcp: "false"
-    operators.operatorframework.io/builder: operator-sdk-v1.38.0
+    operators.operatorframework.io/builder: operator-sdk-v1.39.1
     operators.operatorframework.io/internal-objects: '["wasmplugins.extensions.istio.io","destinationrules.networking.istio.io","envoyfilters.networking.istio.io","gateways.networking.istio.io","proxyconfigs.networking.istio.io","serviceentries.networking.istio.io","sidecars.networking.istio.io","virtualservices.networking.istio.io","workloadentries.networking.istio.io","workloadgroups.networking.istio.io","authorizationpolicies.security.istio.io","peerauthentications.security.istio.io","requestauthentications.security.istio.io","telemetries.telemetry.istio.io"]'
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
     repository: https://github.com/istio-ecosystem/sail-operator
@@ -255,7 +255,7 @@ spec:
           one control plane instance to another. When the \"RevisionBased\"\nstrategy
           is used, a new Istio control plane instance is created for every change
           to the\nIstio.spec.version field. The old control plane remains in place
-          until all workloads have\nbeen moved to the new control plane instance.\n\n\nThe
+          until all workloads have\nbeen moved to the new control plane instance.\n\nThe
           \"InPlace\" strategy is the default.\tTODO: change default to \"RevisionBased\""
         displayName: Type
         path: updateStrategy.type
