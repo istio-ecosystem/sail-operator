@@ -6,7 +6,7 @@ This document details how to migrate from 2.6 to OpenShift Service Mesh 3.0.
 
 Before you begin to migrate your controlplane from OpenShift Service Mesh 2.6 to 3.0, ensure you have done the following:
 
-- Upgrade your 2.6 OpenShift Service Mesh Operator to the latest release.
+- Upgrade your 2.6 OpenShift Service Mesh Operator to the latest release. See warning below.
 - Upgrade your `ServiceMeshControlPlane` version to the latest OpenShift Service Mesh release.
 - Disable the following features on your `ServiceMeshControlPlane`. These fields are unsupported in 3.0 and must be disabled prior to migration.
     <!-- TODO: create a separate page for each of these bullet points describing how to migrate off the SMCP managed version. -->
@@ -19,6 +19,10 @@ Before you begin to migrate your controlplane from OpenShift Service Mesh 2.6 to
     - Tracing: `spec.tracing.type=None`. See [here](https://docs.redhat.com/en/documentation/red_hat_openshift_service_mesh/3.0.0tp1/html/observability/distributed-tracing-and-service-mesh#ossm-distr-tracing-assembly) for instructions on how to configure OpenShift Service Mesh 3.0 with OpenShift Distributed Tracing as a replacement for the tracing addon.
   - IOR is disabled.
   - Default ingress/egress gateways are disabled.
+- Run the [migration-checker script](migration-checker.sh) to detect any issues with your environment.
+
+> [!WARNING]
+> You must upgrade your OpenShift Service Mesh 2 Operator to the latest release **before** you install the OpenShift Service Mesh 3 operator. If you upgrade your OpenShift Service Mesh 2 operator _after_ you install your OpenShift Service Mesh 3 operator, you will need to then uninstall and reinstall your OpenShift Service Mesh 3 operator to ensure the included CRDs are up to date.
 
 Now you are ready to migrate. Check the `spec.mode` field on your `ServiceMeshControlPlane` resource to determine if you are running a `MultiTenant` or a `ClusterWide` mesh.
 
