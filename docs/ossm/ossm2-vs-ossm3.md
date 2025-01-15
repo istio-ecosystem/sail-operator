@@ -52,7 +52,7 @@ Sidecar injection in OpenShift Service Mesh 3 works the same way as it does for 
 
 When an `Istio` resource has the name “default” and `InPlace` upgrades are used (as opposed to `RevisionBased` described below), there will be a single `IstioRevision` with the name "default" and the label `istio-injection=enabled` may be used for injection.
 
-However, when an `IstioRevision` resource has a name other than “default” - as required when multiple control plane instances are present and/or a canary-style control plane upgrade is in progress, it is necessary to use a label that indicates which control plane (revision) the workload(s) belong to - namely, `istio.io/rev=<IstioRevision-name>`. These labels may be applied at the workload or namespace level. Available revisions may be inspected with the command `oc get istiorevision`. 
+However, when an `IstioRevision` resource has a name other than “default” - as required when multiple control plane instances are present and/or when using the `RevisionBased` update strategy, it might be necessary to use a label that indicates which control plane (revision) the workload(s) belong to - namely, `istio.io/rev=<IstioRevision-name>`. These labels may be applied at the workload or namespace level. Available revisions may be inspected with the command `oc get istiorevision`. In order to use the `istio-injection=enabled` in combination with `RevisionBased` deployments, it is possible to create an `IstioRevisionTag` resource that is named `default`, see the [`IstioRevisionTag`](https://github.com/istio-ecosystem/sail-operator/blob/main/docs/api-reference/sailoperator.io.md#istiorevisiontag) documentation for more information.
 
 ## Multiple Control Plane Support
 

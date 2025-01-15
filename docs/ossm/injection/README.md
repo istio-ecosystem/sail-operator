@@ -24,7 +24,7 @@ my-mesh-v1-23-0   True    Healthy   False    v1.23.0   114s
 
 ### Enabling sidecar injection - "default" revision
 
-When the service mesh's `IstioRevision` name is "default", it's possible to use following labels on a namespace or a pod to enable sidecar injection:
+When the service mesh's `IstioRevision` name is "default", or if there is an `IstioRevisionTag` with the name `default` that references the `IstioRevision`, it's possible to use following labels on a namespace or a pod to enable sidecar injection:
 | Resource | Label | Enabled value | Disabled value |
 | --- | --- | --- | --- |
 | Namespace | `istio-injection` | `enabled` | `disabled` |
@@ -112,6 +112,49 @@ Procedure:
     reviews-v2-5d7b9dbf97-wbpjr       2/2     Running   0          55s
     reviews-v3-5fccc48c8c-bjktn       2/2     Running   0          55s
     ```
+
+#### Example 1a: Enabling sidecar injection with namespace labels and an `IstioRevisionTag`
+
+If your revision name is not `default` - e.g. because you are using the `RevisionBased` update strategy - you can still use the `istio-injection=enabled` label. To do that, you just have to create an `IstioRevisionTag` with the name `default` that references your `Istio` resource.
+
+Procedure:
+
+1. Find the name of your `Istio` resource:
+
+    ```bash
+    $ oc get istio 
+    NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
+    default   1           1       1        default-v1-23-2   Healthy   v1.23.2   4m57s
+    ```
+    In this case, the `Istio` resource has the name `default`, but the underlying revision is called `default-v1-23-2`.
+
+1. Create the `IstioRevisionTag`:
+
+    ```bash
+    $ oc apply -f - <<EOF
+    apiVersion: sailoperator.io/v1alpha1
+    kind: IstioRevisionTag
+    metadata:
+      name: default
+    spec:
+      targetRef:
+        kind: Istio
+        name: default
+    EOF
+
+1. Verify that the `IstioRevisionTag` has been created successfully:
+
+    ```bash
+    $ oc get istiorevisiontags.sailoperator.io 
+    NAME      STATUS    IN USE   REVISION          AGE
+    default   Healthy   True     default-v1-23-2   4m23s
+    ```
+    As you can see, the new tag is referencing your active revision `default-v1-23-2`.
+
+1. Follow steps of [Example 1](#example-1-enabling-sidecar-injection-with-namespace-labels).
+
+    You are now able to use the `istio-injection=enabled` label as if your revision was called `default`.
+
 #### Example 2: Exclude a workload from the mesh
 
 There may be times when you want to exclude individual workloads from a namespace where all workloads are otherwise injected with sidecars. This continues the previous example to exclude the `details` service from the mesh.
