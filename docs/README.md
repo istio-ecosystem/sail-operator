@@ -114,6 +114,9 @@ spec:
       - kube-system
 ```
 
+> [!NOTE]
+> The CNI plugin at version `1.x` is compatible with `Istio` at version `1.x-1`, `1.x` and `1.x+1`. 
+
 ## API Reference documentation
 The Sail Operator API reference documentation can be found [here](https://github.com/istio-ecosystem/sail-operator/tree/main/docs/api-reference/sailoperator.io.md).
 
@@ -216,6 +219,48 @@ spec:
 ```
 
 Note that the only field that was added is the `spec.version` field. There are a few situations however where the APIs are different and require different approaches to achieve the same outcome.
+
+### Environment variables
+
+In Sail Operator, all `.env` fields are `map[string]string` instead of `struct{}`, so you have to be careful with values such as `true` or `false` - they need to be in quotes in order to pass the type checks!
+
+That means the following YAML
+
+```yaml
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: default
+spec:
+  values:
+    global:
+      istiod:
+        enableAnalysis: true
+    pilot:
+      env:
+        PILOT_ENABLE_STATUS: true
+```
+
+becomes
+
+```yaml
+apiVersion: sailoperator.io/v1alpha1
+kind: Istio
+metadata:
+  name: default
+spec:
+  values:
+    global:
+      istiod:
+        enableAnalysis: true
+    pilot:
+      env:
+        PILOT_ENABLE_STATUS: "true"
+  version: v1.23.0
+  namespace: istio-system
+```
+
+Note the quotes around the value of `spec.values.pilot.env.PILOT_ENABLE_STATUS`. Without them, Kubernetes would reject the YAML as it expects a value of type `string` but receives a `boolean`.
 
 ### components field
 

@@ -19,7 +19,7 @@ OLD_VARS := $(.VARIABLES)
 # Use `make print-variables` to inspect the values of the variables
 -include Makefile.vendor.mk
 
-VERSION ?= 0.2.0
+VERSION ?= 0.3.0
 MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 
 OPERATOR_NAME ?= sailoperator
@@ -330,6 +330,8 @@ deploy-olm: verify-kubeconfig bundle bundle-build bundle-push ## Build and push 
 .PHONY: undeploy
 undeploy: verify-kubeconfig ## Undeploy controller from an existing cluster.
 	kubectl delete istios.sailoperator.io --all --all-namespaces --wait=true
+	kubectl delete istiocni.sailoperator.io --all --all-namespaces --wait=true
+	kubectl delete ztunnel.sailoperator.io --all --all-namespaces --wait=true
 	$(MAKE) -e HELM_TEMPL_DEF_FLAGS="$(HELM_TEMPL_DEF_FLAGS)" deploy-yaml | kubectl delete --ignore-not-found -f -
 	kubectl delete ns ${NAMESPACE} --ignore-not-found
 	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --namespace $(NAMESPACE) | kubectl delete --ignore-not-found -f -
@@ -337,22 +339,30 @@ undeploy: verify-kubeconfig ## Undeploy controller from an existing cluster.
 .PHONY: undeploy-olm
 undeploy-olm: verify-kubeconfig operator-sdk ## Undeploy the operator from an existing cluster (used only if operator was installed via OLM).
 	kubectl delete istios.sailoperator.io --all --all-namespaces --wait=true
+	kubectl delete istiocni.sailoperator.io --all --all-namespaces --wait=true
+	kubectl delete ztunnel.sailoperator.io --all --all-namespaces --wait=true
 	$(OPERATOR_SDK) cleanup $(OPERATOR_NAME) --delete-all -n ${NAMESPACE}
 
-.PHONY: deploy-example
-deploy-example: deploy-example-openshift ## Deploy an example Istio resource to an existing OCP cluster. Same as `deploy-example-openshift`.
+.PHONY: deploy-istio
+deploy-istio: verify-kubeconfig ## Deploy a sample Istio resource (without CNI) to an existing cluster.
+	kubectl create ns istio-system || echo "namespace istio-system already exists"
+	kubectl apply -f chart/samples/istio-sample.yaml
 
-.PHONY: deploy-example-openshift
-deploy-example-openshift: verify-kubeconfig ## Deploy an example Istio and IstioCNI resource to an existing OCP cluster.
+.PHONY: deploy-istio-with-cni
+deploy-istio-with-cni: verify-kubeconfig ## Deploy a sample Istio and IstioCNI resource to an existing cluster.
 	kubectl create ns istio-cni || echo "namespace istio-cni already exists"
 	kubectl apply -f chart/samples/istiocni-sample.yaml
 	kubectl create ns istio-system || echo "namespace istio-system already exists"
-	kubectl apply -f chart/samples/istio-sample-openshift.yaml
+	kubectl apply -f chart/samples/istio-sample.yaml
 
-.PHONY: deploy-example-kubernetes
-deploy-example-kubernetes: verify-kubeconfig ## Deploy an example Istio resource on an existing cluster.
+.PHONY: deploy-istio-with-ambient
+deploy-istio-with-ambient: verify-kubeconfig ## Deploy necessary Istio resources using the ambient profile.
 	kubectl create ns istio-system || echo "namespace istio-system already exists"
-	kubectl apply -f chart/samples/istio-sample-kubernetes.yaml
+	kubectl apply -f chart/samples/ambient/istio-sample.yaml
+	kubectl create ns istio-cni || echo "namespace istio-cni already exists"
+	kubectl apply -f chart/samples/ambient/istiocni-sample.yaml
+	kubectl create ns ztunnel || echo "namespace zunnel already exists"
+	kubectl apply -f chart/samples/ambient/istioztunnel-sample.yaml
 
 ##@ Generated Code & Resources
 
@@ -469,9 +479,9 @@ ISTIOCTL ?= $(LOCALBIN)/istioctl
 
 ## Tool Versions
 OPERATOR_SDK_VERSION ?= v1.38.0
-HELM_VERSION ?= v3.16.3
+HELM_VERSION ?= v3.16.4
 CONTROLLER_TOOLS_VERSION ?= v0.16.5
-OPM_VERSION ?= v1.48.0
+OPM_VERSION ?= v1.49.0
 OLM_VERSION ?= v0.30.0
 GITLEAKS_VERSION ?= v8.21.2
 ISTIOCTL_VERSION ?= 1.23.0

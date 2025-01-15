@@ -461,7 +461,7 @@ spec:
                                     type: integer
                                   registryServiceName:
                                     description: |-
-                                      A fully qualified domain name of the gateway service.  Pilot will
+                                      A fully qualified domain name of the gateway service.  istiod will
                                       lookup the service from the service registries in the network and
                                       obtain the endpoint IPs of the gateway from the service
                                       registry. Note that while the service name is a fully qualified
@@ -655,7 +655,8 @@ spec:
                                   More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
                                 properties:
                                   exec:
-                                    description: Exec specifies the action to take.
+                                    description: Exec specifies a command to execute
+                                      in the container.
                                     properties:
                                       command:
                                         description: |-
@@ -670,7 +671,7 @@ spec:
                                         x-kubernetes-list-type: atomic
                                     type: object
                                   httpGet:
-                                    description: HTTPGet specifies the http request
+                                    description: HTTPGet specifies an HTTP GET request
                                       to perform.
                                     properties:
                                       host:
@@ -720,8 +721,8 @@ spec:
                                     - port
                                     type: object
                                   sleep:
-                                    description: Sleep represents the duration that
-                                      the container should sleep before being terminated.
+                                    description: Sleep represents a duration that
+                                      the container should sleep.
                                     properties:
                                       seconds:
                                         description: Seconds is the number of seconds
@@ -734,8 +735,8 @@ spec:
                                   tcpSocket:
                                     description: |-
                                       Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-                                      for the backward compatibility. There are no validation of this field and
-                                      lifecycle hooks will fail in runtime when tcp handler is specified.
+                                      for backward compatibility. There is no validation of this field and
+                                      lifecycle hooks will fail at runtime when it is specified.
                                     properties:
                                       host:
                                         description: 'Optional: Host name to connect
@@ -767,7 +768,8 @@ spec:
                                   More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
                                 properties:
                                   exec:
-                                    description: Exec specifies the action to take.
+                                    description: Exec specifies a command to execute
+                                      in the container.
                                     properties:
                                       command:
                                         description: |-
@@ -782,7 +784,7 @@ spec:
                                         x-kubernetes-list-type: atomic
                                     type: object
                                   httpGet:
-                                    description: HTTPGet specifies the http request
+                                    description: HTTPGet specifies an HTTP GET request
                                       to perform.
                                     properties:
                                       host:
@@ -832,8 +834,8 @@ spec:
                                     - port
                                     type: object
                                   sleep:
-                                    description: Sleep represents the duration that
-                                      the container should sleep before being terminated.
+                                    description: Sleep represents a duration that
+                                      the container should sleep.
                                     properties:
                                       seconds:
                                         description: Seconds is the number of seconds
@@ -846,8 +848,8 @@ spec:
                                   tcpSocket:
                                     description: |-
                                       Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-                                      for the backward compatibility. There are no validation of this field and
-                                      lifecycle hooks will fail in runtime when tcp handler is specified.
+                                      for backward compatibility. There is no validation of this field and
+                                      lifecycle hooks will fail at runtime when it is specified.
                                     properties:
                                       host:
                                         description: 'Optional: Host name to connect
@@ -2647,8 +2649,8 @@ spec:
                                   A list of alternate names to verify the subject identity in the
                                   certificate. If specified, the proxy will verify that the server
                                   certificate's subject alt name matches one of the specified values.
-                                  If specified, this list overrides the value of subject_alt_names
-                                  from the ServiceEntry. If unspecified, automatic validation of upstream
+                                  If specified, this list overrides the value of `subjectAltNames`
+                                  from the `ServiceEntry`. If unspecified, automatic validation of upstream
                                   presented certificate for new upstream connections will be done based on the
                                   downstream HTTP host/authority header.
                                 items:
@@ -2767,7 +2769,7 @@ spec:
                             tlsSettings:
                               description: |-
                                 Use the tlsSettings to specify the tls mode to use. If the MCP server
-                                uses Istio mutual TLS and shares the root CA with Pilot, specify the TLS
+                                uses Istio mutual TLS and shares the root CA with istiod, specify the TLS
                                 mode as `ISTIO_MUTUAL`.
                               properties:
                                 caCertificates:
@@ -2848,8 +2850,8 @@ spec:
                                     A list of alternate names to verify the subject identity in the
                                     certificate. If specified, the proxy will verify that the server
                                     certificate's subject alt name matches one of the specified values.
-                                    If specified, this list overrides the value of subject_alt_names
-                                    from the ServiceEntry. If unspecified, automatic validation of upstream
+                                    If specified, this list overrides the value of `subjectAltNames`
+                                    from the `ServiceEntry`. If unspecified, automatic validation of upstream
                                     presented certificate for new upstream connections will be done based on the
                                     downstream HTTP host/authority header.
                                   items:
@@ -2860,7 +2862,7 @@ spec:
                         type: array
                       connectTimeout:
                         description: |-
-                          Connection timeout used by Envoy. (MUST BE >=1ms)
+                          Connection timeout used by Envoy. (MUST be >=1ms)
                           Default timeout is 10s.
                         type: string
                       defaultConfig:
@@ -2911,7 +2913,7 @@ spec:
                           customConfigFile:
                             description: |-
                               File path of custom proxy configuration, currently used by proxies
-                              in front of Mixer and Pilot.
+                              in front of istiod.
                             type: string
                           discoveryAddress:
                             description: |-
@@ -2966,7 +2968,7 @@ spec:
                               tlsSettings:
                                 description: |-
                                   Use the `tlsSettings` to specify the tls mode to use. If the remote service
-                                  uses Istio mutual TLS and shares the root CA with Pilot, specify the TLS
+                                  uses Istio mutual TLS and shares the root CA with istiod, specify the TLS
                                   mode as `ISTIO_MUTUAL`.
                                 properties:
                                   caCertificates:
@@ -3047,8 +3049,8 @@ spec:
                                       A list of alternate names to verify the subject identity in the
                                       certificate. If specified, the proxy will verify that the server
                                       certificate's subject alt name matches one of the specified values.
-                                      If specified, this list overrides the value of subject_alt_names
-                                      from the ServiceEntry. If unspecified, automatic validation of upstream
+                                      If specified, this list overrides the value of `subjectAltNames`
+                                      from the `ServiceEntry`. If unspecified, automatic validation of upstream
                                       presented certificate for new upstream connections will be done based on the
                                       downstream HTTP host/authority header.
                                     items:
@@ -3095,7 +3097,7 @@ spec:
                               tlsSettings:
                                 description: |-
                                   Use the `tlsSettings` to specify the tls mode to use. If the remote service
-                                  uses Istio mutual TLS and shares the root CA with Pilot, specify the TLS
+                                  uses Istio mutual TLS and shares the root CA with istiod, specify the TLS
                                   mode as `ISTIO_MUTUAL`.
                                 properties:
                                   caCertificates:
@@ -3176,8 +3178,8 @@ spec:
                                       A list of alternate names to verify the subject identity in the
                                       certificate. If specified, the proxy will verify that the server
                                       certificate's subject alt name matches one of the specified values.
-                                      If specified, this list overrides the value of subject_alt_names
-                                      from the ServiceEntry. If unspecified, automatic validation of upstream
+                                      If specified, this list overrides the value of `subjectAltNames`
+                                      from the `ServiceEntry`. If unspecified, automatic validation of upstream
                                       presented certificate for new upstream connections will be done based on the
                                       downstream HTTP host/authority header.
                                     items:
@@ -3336,11 +3338,11 @@ spec:
                               currently all headers are enabled by default.\n\nBelow
                               shows an example of customizing the `server` header
                               and disabling the `X-Envoy-Attempt-Count` header:\n\n```yaml\nproxyHeaders:\n\n\tserver:\n\t
-                              \ value: \"my-custom-server\"\n\trequestId: {} // Explicitly
-                              enable Request IDs. As this is the default, this has
-                              no effect.\n\tattemptCount:\n\t  disabled: true\n\n```\n\n#
-                              Below shows an example of preserving the header case
-                              for HTTP 1.x requests\n\n```yaml\nproxyHeaders:\n\n\tperserveHttp1HeaderCase:
+                              \ value: \"my-custom-server\"\n\t# Explicitly enable
+                              Request IDs.\n\t# As this is the default, this has no
+                              effect.\n\trequestId: {}\n\tattemptCount:\n\t  disabled:
+                              true\n\n```\n\n# Below shows an example of preserving
+                              the header case for HTTP 1.x requests\n\n```yaml\nproxyHeaders:\n\n\tperserveHttp1HeaderCase:
                               true\n\n```\n\nSome headers are enabled by default,
                               and require explicitly disabling. See below for an example
                               of disabling all default-enabled headers:\n\n```yaml\nproxyHeaders:\n\n\tforwardedClientCert:
@@ -3518,7 +3520,8 @@ spec:
                               Only one health check method of 3 can be set at a time.
                             properties:
                               exec:
-                                description: Exec specifies the action to take.
+                                description: Exec specifies a command to execute in
+                                  the container.
                                 properties:
                                   command:
                                     description: |-
@@ -3539,8 +3542,7 @@ spec:
                                 format: int32
                                 type: integer
                               grpc:
-                                description: GRPC specifies an action involving a
-                                  GRPC port.
+                                description: GRPC specifies a GRPC HealthCheckRequest.
                                 properties:
                                   port:
                                     description: Port number of the gRPC service.
@@ -3559,8 +3561,8 @@ spec:
                                 - port
                                 type: object
                               httpGet:
-                                description: HTTPGet specifies the http request to
-                                  perform.
+                                description: HTTPGet specifies an HTTP GET request
+                                  to perform.
                                 properties:
                                   host:
                                     description: |-
@@ -3627,8 +3629,8 @@ spec:
                                 format: int32
                                 type: integer
                               tcpSocket:
-                                description: TCPSocket specifies an action involving
-                                  a TCP port.
+                                description: TCPSocket specifies a connection to a
+                                  TCP port.
                                 properties:
                                   host:
                                     description: 'Optional: Host name to connect to,
@@ -3887,7 +3889,7 @@ spec:
                               tlsSettings:
                                 description: |-
                                   Use the tlsSettings to specify the tls mode to use. If the remote tracing service
-                                  uses Istio mutual TLS and shares the root CA with Pilot, specify the TLS
+                                  uses Istio mutual TLS and shares the root CA with istiod, specify the TLS
                                   mode as `ISTIO_MUTUAL`.
                                 properties:
                                   caCertificates:
@@ -3968,8 +3970,8 @@ spec:
                                       A list of alternate names to verify the subject identity in the
                                       certificate. If specified, the proxy will verify that the server
                                       certificate's subject alt name matches one of the specified values.
-                                      If specified, this list overrides the value of subject_alt_names
-                                      from the ServiceEntry. If unspecified, automatic validation of upstream
+                                      If specified, this list overrides the value of `subjectAltNames`
+                                      from the `ServiceEntry`. If unspecified, automatic validation of upstream
                                       presented certificate for new upstream connections will be done based on the
                                       downstream HTTP host/authority header.
                                     items:
@@ -4038,13 +4040,13 @@ spec:
                               between retries will be determined automatically (25ms+). When request
                               `timeout` of the [HTTP route](https://istio.io/docs/reference/config/networking/virtual-service/#HTTPRoute)
                               or `per_try_timeout` is configured, the actual number of retries attempted also depends on
-                              the specified request `timeout` and `per_try_timeout` values. MUST BE >= 0. If `0`, retries will be disabled.
+                              the specified request `timeout` and `per_try_timeout` values. MUST be >= 0. If `0`, retries will be disabled.
                               The maximum possible number of requests made will be 1 + `attempts`.
                             format: int32
                             type: integer
                           perTryTimeout:
                             description: |-
-                              Timeout per attempt for a given request, including the initial call and any retries. Format: 1h/1m/1s/1ms. MUST BE >=1ms.
+                              Timeout per attempt for a given request, including the initial call and any retries. Format: 1h/1m/1s/1ms. MUST be >=1ms.
                               Default is same value as request
                               `timeout` of the [HTTP route](https://istio.io/docs/reference/config/networking/virtual-service/#HTTPRoute),
                               which means no timeout.
@@ -5334,8 +5336,8 @@ spec:
                             type: array
                           enabled:
                             description: |-
-                              enable locality load balancing, this is DestinationRule-level and will override mesh wide settings in entirety.
-                              e.g. true means that turn on locality load balancing for this DestinationRule no matter what mesh wide settings is.
+                              Enable locality load balancing. This is DestinationRule-level and will override mesh-wide settings in entirety.
+                              e.g. true means that turn on locality load balancing for this DestinationRule no matter what mesh-wide settings is.
                             type: boolean
                           failover:
                             description: |-
@@ -5544,7 +5546,7 @@ spec:
                           MongoDB, etc. Envoy will timeout on the protocol detection after
                           the specified period, defaulting to non mTLS plain TCP
                           traffic. Set this field to tweak the period that Envoy will wait
-                          for the client to send the first bits of data. (MUST BE >=1ms or
+                          for the client to send the first bits of data. (MUST be >=1ms or
                           0s to disable). Default detection timeout is 0s (no timeout).
 
                           Setting a timeout is not recommended nor safe. Even high timeouts (>5s) will be hit
@@ -7430,6 +7432,8 @@ spec:
                               description: |-
                                 awsElasticBlockStore represents an AWS Disk resource that is attached to a
                                 kubelet's host machine and then exposed to the pod.
+                                Deprecated: AWSElasticBlockStore is deprecated. All operations for the in-tree
+                                awsElasticBlockStore type are redirected to the ebs.csi.aws.com CSI driver.
                                 More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
                               properties:
                                 fsType:
@@ -7461,8 +7465,10 @@ spec:
                               - volumeID
                               type: object
                             azureDisk:
-                              description: azureDisk represents an Azure Data Disk
-                                mount on the host and bind mount to the pod.
+                              description: |-
+                                azureDisk represents an Azure Data Disk mount on the host and bind mount to the pod.
+                                Deprecated: AzureDisk is deprecated. All operations for the in-tree azureDisk type
+                                are redirected to the disk.csi.azure.com CSI driver.
                               properties:
                                 cachingMode:
                                   description: 'cachingMode is the Host Caching mode:
@@ -7501,8 +7507,10 @@ spec:
                               - diskURI
                               type: object
                             azureFile:
-                              description: azureFile represents an Azure File Service
-                                mount on the host and bind mount to the pod.
+                              description: |-
+                                azureFile represents an Azure File Service mount on the host and bind mount to the pod.
+                                Deprecated: AzureFile is deprecated. All operations for the in-tree azureFile type
+                                are redirected to the file.csi.azure.com CSI driver.
                               properties:
                                 readOnly:
                                   description: |-
@@ -7521,8 +7529,9 @@ spec:
                               - shareName
                               type: object
                             cephfs:
-                              description: cephFS represents a Ceph FS mount on the
-                                host that shares a pod's lifetime
+                              description: |-
+                                cephFS represents a Ceph FS mount on the host that shares a pod's lifetime.
+                                Deprecated: CephFS is deprecated and the in-tree cephfs type is no longer supported.
                               properties:
                                 monitors:
                                   description: |-
@@ -7575,6 +7584,8 @@ spec:
                             cinder:
                               description: |-
                                 cinder represents a cinder volume attached and mounted on kubelets host machine.
+                                Deprecated: Cinder is deprecated. All operations for the in-tree cinder type
+                                are redirected to the cinder.csi.openstack.org CSI driver.
                                 More info: https://examples.k8s.io/mysql-cinder-pd/README.md
                               properties:
                                 fsType:
@@ -7686,7 +7697,7 @@ spec:
                             csi:
                               description: csi (Container Storage Interface) represents
                                 ephemeral storage that is handled by certain external
-                                CSI drivers (Beta feature).
+                                CSI drivers.
                               properties:
                                 driver:
                                   description: |-
@@ -8157,6 +8168,7 @@ spec:
                               description: |-
                                 flexVolume represents a generic volume resource that is
                                 provisioned/attached using an exec based plugin.
+                                Deprecated: FlexVolume is deprecated. Consider using a CSIDriver instead.
                               properties:
                                 driver:
                                   description: driver is the name of the driver to
@@ -8202,9 +8214,9 @@ spec:
                               - driver
                               type: object
                             flocker:
-                              description: flocker represents a Flocker volume attached
-                                to a kubelet's host machine. This depends on the Flocker
-                                control service being running
+                              description: |-
+                                flocker represents a Flocker volume attached to a kubelet's host machine. This depends on the Flocker control service being running.
+                                Deprecated: Flocker is deprecated and the in-tree flocker type is no longer supported.
                               properties:
                                 datasetName:
                                   description: |-
@@ -8220,6 +8232,8 @@ spec:
                               description: |-
                                 gcePersistentDisk represents a GCE Disk resource that is attached to a
                                 kubelet's host machine and then exposed to the pod.
+                                Deprecated: GCEPersistentDisk is deprecated. All operations for the in-tree
+                                gcePersistentDisk type are redirected to the pd.csi.storage.gke.io CSI driver.
                                 More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
                               properties:
                                 fsType:
@@ -8255,7 +8269,7 @@ spec:
                             gitRepo:
                               description: |-
                                 gitRepo represents a git repository at a particular revision.
-                                DEPRECATED: GitRepo is deprecated. To provision a container with a git repo, mount an
+                                Deprecated: GitRepo is deprecated. To provision a container with a git repo, mount an
                                 EmptyDir into an InitContainer that clones the repo using git, then mount the EmptyDir
                                 into the Pod's container.
                               properties:
@@ -8279,6 +8293,7 @@ spec:
                             glusterfs:
                               description: |-
                                 glusterfs represents a Glusterfs mount on the host that shares a pod's lifetime.
+                                Deprecated: Glusterfs is deprecated and the in-tree glusterfs type is no longer supported.
                                 More info: https://examples.k8s.io/volumes/glusterfs/README.md
                               properties:
                                 endpoints:
@@ -8488,9 +8503,9 @@ spec:
                               - claimName
                               type: object
                             photonPersistentDisk:
-                              description: photonPersistentDisk represents a PhotonController
-                                persistent disk attached and mounted on kubelets host
-                                machine
+                              description: |-
+                                photonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine.
+                                Deprecated: PhotonPersistentDisk is deprecated and the in-tree photonPersistentDisk type is no longer supported.
                               properties:
                                 fsType:
                                   description: |-
@@ -8506,8 +8521,11 @@ spec:
                               - pdID
                               type: object
                             portworxVolume:
-                              description: portworxVolume represents a portworx volume
-                                attached and mounted on kubelets host machine
+                              description: |-
+                                portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
+                                Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
+                                are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
+                                is on.
                               properties:
                                 fsType:
                                   description: |-
@@ -8878,8 +8896,9 @@ spec:
                                   x-kubernetes-list-type: atomic
                               type: object
                             quobyte:
-                              description: quobyte represents a Quobyte mount on the
-                                host that shares a pod's lifetime
+                              description: |-
+                                quobyte represents a Quobyte mount on the host that shares a pod's lifetime.
+                                Deprecated: Quobyte is deprecated and the in-tree quobyte type is no longer supported.
                               properties:
                                 group:
                                   description: |-
@@ -8918,6 +8937,7 @@ spec:
                             rbd:
                               description: |-
                                 rbd represents a Rados Block Device mount on the host that shares a pod's lifetime.
+                                Deprecated: RBD is deprecated and the in-tree rbd type is no longer supported.
                                 More info: https://examples.k8s.io/volumes/rbd/README.md
                               properties:
                                 fsType:
@@ -8990,8 +9010,9 @@ spec:
                               - monitors
                               type: object
                             scaleIO:
-                              description: scaleIO represents a ScaleIO persistent
-                                volume attached and mounted on Kubernetes nodes.
+                              description: |-
+                                scaleIO represents a ScaleIO persistent volume attached and mounted on Kubernetes nodes.
+                                Deprecated: ScaleIO is deprecated and the in-tree scaleIO type is no longer supported.
                               properties:
                                 fsType:
                                   default: xfs
@@ -9124,8 +9145,9 @@ spec:
                                   type: string
                               type: object
                             storageos:
-                              description: storageOS represents a StorageOS volume
-                                attached and mounted on Kubernetes nodes.
+                              description: |-
+                                storageOS represents a StorageOS volume attached and mounted on Kubernetes nodes.
+                                Deprecated: StorageOS is deprecated and the in-tree storageos type is no longer supported.
                               properties:
                                 fsType:
                                   description: |-
@@ -9170,8 +9192,10 @@ spec:
                                   type: string
                               type: object
                             vsphereVolume:
-                              description: vsphereVolume represents a vSphere volume
-                                attached and mounted on kubelets host machine
+                              description: |-
+                                vsphereVolume represents a vSphere volume attached and mounted on kubelets host machine.
+                                Deprecated: VsphereVolume is deprecated. All operations for the in-tree vsphereVolume type
+                                are redirected to the csi.vsphere.vmware.com CSI driver.
                               properties:
                                 fsType:
                                   description: |-

@@ -47,15 +47,10 @@ var _ = Describe("Control Plane Installation", Ordered, func() {
 	BeforeAll(func(ctx SpecContext) {
 		Expect(k.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
 
-		extraArg := ""
-		if ocp {
-			extraArg = "--set=platform=openshift"
-		}
-
 		if skipDeploy {
 			Success("Skipping operator installation because it was deployed externally")
 		} else {
-			Expect(common.InstallOperatorViaHelm(extraArg)).
+			Expect(common.InstallOperatorViaHelm()).
 				To(Succeed(), "Operator failed to be deployed")
 		}
 
@@ -269,7 +264,7 @@ spec:
 
 				When("the Istio CR is deleted", func() {
 					BeforeEach(func() {
-						Expect(k.WithNamespace(controlPlaneNamespace).Delete("istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
+						Expect(k.Delete("istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
 						Success("Istio CR deleted")
 					})
 
@@ -283,7 +278,7 @@ spec:
 
 				When("the IstioCNI CR is deleted", func() {
 					BeforeEach(func() {
-						Expect(k.WithNamespace(istioCniNamespace).Delete("istiocni", istioCniName)).To(Succeed(), "IstioCNI CR failed to be deleted")
+						Expect(k.Delete("istiocni", istioCniName)).To(Succeed(), "IstioCNI CR failed to be deleted")
 						Success("IstioCNI deleted")
 					})
 
@@ -333,10 +328,6 @@ spec:
 			To(Succeed(), "Operator failed to be deleted")
 		GinkgoWriter.Println("Operator uninstalled")
 
-		if ocp {
-			Success("Skipping deletion of operator namespace to avoid removal of operator container image from internal registry")
-			return
-		}
 		Expect(k.DeleteNamespace(namespace)).To(Succeed(), "Namespace failed to be deleted")
 		Success("Namespace deleted")
 	})

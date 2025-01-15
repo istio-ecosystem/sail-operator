@@ -143,7 +143,7 @@ spec:
                         type: string
                         x-kubernetes-validations:
                         - message: scheme must be one of [HTTP, HTTPS]
-                          rule: self in ['', 'HTTP', 'HTTPS']
+                          rule: self in ["", "HTTP", "HTTPS"]
                     required:
                     - port
                     type: object
@@ -196,11 +196,10 @@ spec:
                     type: string
                     x-kubernetes-validations:
                     - message: UDS must be an absolute path or abstract socket
-                      rule: 'self.startsWith(''unix://'') ? (self.substring(7,8) ==
-                        ''/'' || self.substring(7,8) == ''@'') : true'
+                      rule: 'self.startsWith("unix://") ? (self.substring(7, 8) ==
+                        "/" || self.substring(7, 8) == "@") : true'
                     - message: UDS may not be a dir
-                      rule: 'self.startsWith(''unix://'') ? !self.endsWith(''/'')
-                        : true'
+                      rule: 'self.startsWith("unix://") ? !self.endsWith("/") : true'
                   labels:
                     additionalProperties:
                       type: string
@@ -229,7 +228,7 @@ spec:
                     type: object
                     x-kubernetes-validations:
                     - message: port name must be valid
-                      rule: self.all(key, size(key) < 63 && key.matches('^[a-zA-Z0-9](?:[-a-zA-Z0-9]*[a-zA-Z0-9])?$'))
+                      rule: self.all(key, size(key) < 63 && key.matches("^[a-zA-Z0-9](?:[-a-zA-Z0-9]*[a-zA-Z0-9])?$"))
                   serviceAccount:
                     description: The service account associated with the workload
                       if a sidecar is present in the workload.
@@ -243,7 +242,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: UDS may not include ports
-                  rule: '(has(self.address) && self.address.startsWith(''unix://''))
+                  rule: '(has(self.address) && self.address.startsWith("unix://"))
                     ? !has(self.ports) : true'
             required:
             - template
@@ -452,7 +451,7 @@ spec:
                         type: string
                         x-kubernetes-validations:
                         - message: scheme must be one of [HTTP, HTTPS]
-                          rule: self in ['', 'HTTP', 'HTTPS']
+                          rule: self in ["", "HTTP", "HTTPS"]
                     required:
                     - port
                     type: object
@@ -505,11 +504,10 @@ spec:
                     type: string
                     x-kubernetes-validations:
                     - message: UDS must be an absolute path or abstract socket
-                      rule: 'self.startsWith(''unix://'') ? (self.substring(7,8) ==
-                        ''/'' || self.substring(7,8) == ''@'') : true'
+                      rule: 'self.startsWith("unix://") ? (self.substring(7, 8) ==
+                        "/" || self.substring(7, 8) == "@") : true'
                     - message: UDS may not be a dir
-                      rule: 'self.startsWith(''unix://'') ? !self.endsWith(''/'')
-                        : true'
+                      rule: 'self.startsWith("unix://") ? !self.endsWith("/") : true'
                   labels:
                     additionalProperties:
                       type: string
@@ -538,7 +536,7 @@ spec:
                     type: object
                     x-kubernetes-validations:
                     - message: port name must be valid
-                      rule: self.all(key, size(key) < 63 && key.matches('^[a-zA-Z0-9](?:[-a-zA-Z0-9]*[a-zA-Z0-9])?$'))
+                      rule: self.all(key, size(key) < 63 && key.matches("^[a-zA-Z0-9](?:[-a-zA-Z0-9]*[a-zA-Z0-9])?$"))
                   serviceAccount:
                     description: The service account associated with the workload
                       if a sidecar is present in the workload.
@@ -552,7 +550,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: UDS may not include ports
-                  rule: '(has(self.address) && self.address.startsWith(''unix://''))
+                  rule: '(has(self.address) && self.address.startsWith("unix://"))
                     ? !has(self.ports) : true'
             required:
             - template
@@ -761,7 +759,7 @@ spec:
                         type: string
                         x-kubernetes-validations:
                         - message: scheme must be one of [HTTP, HTTPS]
-                          rule: self in ['', 'HTTP', 'HTTPS']
+                          rule: self in ["", "HTTP", "HTTPS"]
                     required:
                     - port
                     type: object
@@ -814,11 +812,10 @@ spec:
                     type: string
                     x-kubernetes-validations:
                     - message: UDS must be an absolute path or abstract socket
-                      rule: 'self.startsWith(''unix://'') ? (self.substring(7,8) ==
-                        ''/'' || self.substring(7,8) == ''@'') : true'
+                      rule: 'self.startsWith("unix://") ? (self.substring(7, 8) ==
+                        "/" || self.substring(7, 8) == "@") : true'
                     - message: UDS may not be a dir
-                      rule: 'self.startsWith(''unix://'') ? !self.endsWith(''/'')
-                        : true'
+                      rule: 'self.startsWith("unix://") ? !self.endsWith("/") : true'
                   labels:
                     additionalProperties:
                       type: string
@@ -847,7 +844,7 @@ spec:
                     type: object
                     x-kubernetes-validations:
                     - message: port name must be valid
-                      rule: self.all(key, size(key) < 63 && key.matches('^[a-zA-Z0-9](?:[-a-zA-Z0-9]*[a-zA-Z0-9])?$'))
+                      rule: self.all(key, size(key) < 63 && key.matches("^[a-zA-Z0-9](?:[-a-zA-Z0-9]*[a-zA-Z0-9])?$"))
                   serviceAccount:
                     description: The service account associated with the workload
                       if a sidecar is present in the workload.
@@ -861,7 +858,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: UDS may not include ports
-                  rule: '(has(self.address) && self.address.startsWith(''unix://''))
+                  rule: '(has(self.address) && self.address.startsWith("unix://"))
                     ? !has(self.ports) : true'
             required:
             - template

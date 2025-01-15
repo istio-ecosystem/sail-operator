@@ -34,7 +34,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/maistra-dev/sail-operator:3.0-latest
-    createdAt: "2025-01-14T06:18:47Z"
+    createdAt: "2025-01-15T15:06:43Z"
     description: The OpenShift Service Mesh Operator enables you to install, configure,
       and manage an instance of Red Hat OpenShift Service Mesh. OpenShift Service
       Mesh is based on the open source Istio project.
@@ -306,13 +306,12 @@ spec:
       specDescriptors:
       - description: |-
           Defines the version of Istio to install.
-          Must be one of: v1.24.0 or latest.
+          Must be one of: v1.24.2.
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.0
-        - urn:alm:descriptor:com.tectonic.ui:select:latest
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.2
       - description: Namespace to which the Istio ztunnel component should be installed.
         displayName: Namespace
         path: namespace
@@ -592,6 +591,32 @@ spec:
           - securitycontextconstraints
           verbs:
           - use
+        - apiGroups:
+          - sailoperator.io
+          resources:
+          - ztunnels
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - sailoperator.io
+          resources:
+          - ztunnels/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - sailoperator.io
+          resources:
+          - ztunnels/status
+          verbs:
+          - get
+          - patch
+          - update
         serviceAccountName: servicemesh-operator3
       deployments:
       - label:

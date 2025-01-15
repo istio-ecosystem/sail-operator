@@ -30,7 +30,6 @@ import (
 
 var (
 	cl             client.Client
-	ocp            = env.GetBool("OCP", false)
 	skipDeploy     = env.GetBool("SKIP_DEPLOY", false)
 	namespace      = common.OperatorNamespace
 	deploymentName = env.Get("DEPLOYMENT_NAME", "sail-operator")
@@ -55,12 +54,6 @@ func setup() {
 	var err error
 	cl, err = k8sclient.InitK8sClient("")
 	Expect(err).NotTo(HaveOccurred())
-
-	if ocp {
-		GinkgoWriter.Println("Running on OCP cluster")
-	} else {
-		GinkgoWriter.Println("Running on Kubernetes")
-	}
 
 	k = kubectl.New("clOperator")
 }
