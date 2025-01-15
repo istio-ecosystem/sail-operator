@@ -27,10 +27,10 @@ const RemoteIstioKind = "RemoteIstio"
 type RemoteIstioSpec struct {
 	// +sail:version
 	// Defines the version of Istio to install.
-	// Must be one of: v1.23.2.
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.23.2"}
-	// +kubebuilder:validation:Enum=v1.23.2
-	// +kubebuilder:default=v1.23.2
+	// Must be one of: v1.24.2.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.2"}
+	// +kubebuilder:validation:Enum=v1.24.2
+	// +kubebuilder:default=v1.24.2
 	Version string `json:"version"`
 
 	// Defines the update strategy to use when the version in the RemoteIstio CR is updated.
@@ -197,7 +197,7 @@ type RemoteIstio struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// +kubebuilder:default={version: "v1.23.2", namespace: "istio-system", updateStrategy: {type:"InPlace"}}
+	// +kubebuilder:default={version: "v1.24.2", namespace: "istio-system", updateStrategy: {type:"InPlace"}}
 	Spec RemoteIstioSpec `json:"spec,omitempty"`
 
 	Status RemoteIstioStatus `json:"status,omitempty"`
