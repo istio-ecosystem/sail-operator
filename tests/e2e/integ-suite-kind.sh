@@ -28,6 +28,9 @@ export KIND_REGISTRY_PORT="5000"
 export KIND_REGISTRY="localhost:${KIND_REGISTRY_PORT}"
 export DEFAULT_CLUSTER_YAML="${SCRIPTPATH}/config/default.yaml"
 export IP_FAMILY="${IP_FAMILY:-ipv4}"
+
+# See https://github.com/istio-ecosystem/sail-operator/issues/558
+export KIND_IP_FAMILY="${IP_FAMILY}"
 export ARTIFACTS="${ARTIFACTS:-$(mktemp -d)}"
 export MULTICLUSTER="${MULTICLUSTER:-false}"
 # Set variable to exclude kind clusters from kubectl annotations. 
