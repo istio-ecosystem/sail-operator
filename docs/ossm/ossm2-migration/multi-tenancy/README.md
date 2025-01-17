@@ -140,6 +140,16 @@ oc create ns istio-system-tenant-a
 
 #### Migrate Workloads
 
+1. Find the current `IstioRevision` for your Service Mesh 3.0 controlplane.
+
+   ```sh
+   oc get istios istio-tenant-a
+   NAME             REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
+   istio-tenant-a   1           1       0        istio-tenant-a    Healthy   v1.24.1   30s
+   ```
+
+   Copy the `ACTIVE REVISION`. You will use this as your `istio.io/rev` label in the next step. In this case, our revision label is `istio-tenant-a`. The naming format of your revisions will change depending on which upgrade strategy you choose for your `Istio` instance but the correct revision label will show under `ACTIVE REVISION`.
+
 1. Update injection labels on the dataplane namespace.
 
    Here we're adding two labels to the namespace:
