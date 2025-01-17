@@ -44,7 +44,7 @@ import (
 )
 
 var (
-	OperatorImage     = env.Get("IMAGE", "quay.io/maistra-dev/sail-operator:latest")
+	OperatorImage     = env.Get("IMAGE", "quay.io/sail-dev/sail-operator:latest")
 	OperatorNamespace = env.Get("NAMESPACE", "sail-operator")
 
 	deploymentName        = env.Get("DEPLOYMENT_NAME", "sail-operator")
