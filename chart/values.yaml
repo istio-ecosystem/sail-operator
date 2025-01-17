@@ -51,7 +51,7 @@ csv:
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
     features.operators.openshift.io/csi: "false"
-image: quay.io/maistra-dev/sail-operator:0.3-latest
+image: quay.io/sail-dev/sail-operator:0.3-latest
 # We're commenting out the imagePullPolicy to use k8s defaults
 # imagePullPolicy: Always
 proxy:

@@ -7,7 +7,7 @@ spec:
   namespace: istio-gw
   values:
     global:
-      hub: quay.io/maistra-dev
+      hub: quay.io/sail-dev
       tag: gwAPIControllerMode
     pilot:
       env:
