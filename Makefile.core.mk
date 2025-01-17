@@ -56,7 +56,7 @@ LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildStatus=${GIT_STATUS}
 LD_FLAGS = -extldflags -static ${LD_EXTRAFLAGS} -s -w
 
 # Image hub to use
-HUB ?= quay.io/maistra-dev
+HUB ?= quay.io/sail-dev
 # Image tag to use
 TAG ?= ${MINOR_VERSION}-latest
 # Image base to use

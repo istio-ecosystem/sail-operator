@@ -2,6 +2,10 @@
 
 The Sail Operator manages the lifecycle of your [Istio](https://istio.io) control plane. It provides custom resources for you to deploy and manage your control plane components.
 
+## Contributor Call
+
+We have a weekly 20-minute call on Tuesdays at 3:40PM CET / 9:40AM EST to discuss current progress and future plans. To add it to your Google Calendar, you can [subscribe to the Sail Operator calendar](https://calendar.google.com/calendar/u/0?cid=MDRhNzBkZjUwNmI5ZjFlMTAyYmUzZDhiZTFlNDA3ZjRlMjcwZjAzNmY4NDFkZTA1MmYzYzczYjk3OTU4ZGI2MUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t).
+
 ## User Documentation
 This document aims to provide an overview of the project and some information for contributors. For information on how to use the operator, take a look at the [User Documentation](docs/README.md).
 
