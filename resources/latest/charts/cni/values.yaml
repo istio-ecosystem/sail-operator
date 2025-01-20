@@ -48,9 +48,11 @@ _internal_defaults_do_not_set:
     # Set ambient config dir path: defaults to /etc/ambient-config
     configDir: ""
     # If enabled, and ambient is enabled, DNS redirection will be enabled
-    dnsCapture: false
+    dnsCapture: true
     # If enabled, and ambient is enabled, enables ipv6 support
     ipv6: true
+    # If enabled, and ambient is enabled, the CNI agent will reconcile incompatible iptables rules and chains at startup.
+    reconcileIptablesOnStartup: false
 
 
   repair:
@@ -113,7 +115,7 @@ _internal_defaults_do_not_set:
     hub: gcr.io/istio-testing
 
     # Default tag for Istio images.
-    tag: 1.25-alpha.d547b8580cf6298e15ba732823b2e027071516ea
+    tag: 1.25-alpha.0c5460eeba8a26a49d4041187406e26a2d2c3526
 
     # Variant of the image to use.
     # Currently supported are: [debug, distroless]

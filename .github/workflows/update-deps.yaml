@@ -23,7 +23,7 @@ jobs:
   update-deps:
     runs-on: ubuntu-latest
     container:
-      image: gcr.io/istio-testing/build-tools:master-0b8e6b9676d328fbeb28a23b8d1134dcc56d98ec
+      image: gcr.io/istio-testing/build-tools:master-e02796cba1a2e48e50a8d09c60f9c6140b8a41ba
       options: --entrypoint ''
 
     steps:
