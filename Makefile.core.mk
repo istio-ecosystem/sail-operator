@@ -665,7 +665,7 @@ lint-watches: ## Checks if the operator watches all resource kinds present in He
 	@hack/lint-watches.sh
 
 lint-secrets: gitleaks ## Checks whether any secrets are present in the repository.
-	@${GITLEAKS} detect --redact -v
+	@${GITLEAKS} detect --no-git --redact -v
 
 .PHONY: lint
 lint: lint-scripts lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle lint-watches lint-secrets ## Run all linters.
