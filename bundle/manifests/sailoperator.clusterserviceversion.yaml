@@ -34,7 +34,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/sail-dev/sail-operator:0.3-latest
-    createdAt: "2025-01-17T09:17:31Z"
+    createdAt: "2025-01-20T05:05:22Z"
     description: Experimental operator for installing Istio service mesh
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -46,7 +46,7 @@ metadata:
     features.operators.openshift.io/token-auth-aws: "false"
     features.operators.openshift.io/token-auth-azure: "false"
     features.operators.openshift.io/token-auth-gcp: "false"
-    operators.operatorframework.io/builder: operator-sdk-v1.38.0
+    operators.operatorframework.io/builder: operator-sdk-v1.39.1
     operators.operatorframework.io/internal-objects: '["wasmplugins.extensions.istio.io","destinationrules.networking.istio.io","envoyfilters.networking.istio.io","gateways.networking.istio.io","proxyconfigs.networking.istio.io","serviceentries.networking.istio.io","sidecars.networking.istio.io","virtualservices.networking.istio.io","workloadentries.networking.istio.io","workloadgroups.networking.istio.io","authorizationpolicies.security.istio.io","peerauthentications.security.istio.io","requestauthentications.security.istio.io","telemetries.telemetry.istio.io"]'
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
     repository: https://github.com/istio-ecosystem/sail-operator
@@ -255,7 +255,7 @@ spec:
           one control plane instance to another. When the \"RevisionBased\"\nstrategy
           is used, a new Istio control plane instance is created for every change
           to the\nIstio.spec.version field. The old control plane remains in place
-          until all workloads have\nbeen moved to the new control plane instance.\n\n\nThe
+          until all workloads have\nbeen moved to the new control plane instance.\n\nThe
           \"InPlace\" strategy is the default.\tTODO: change default to \"RevisionBased\""
         displayName: Type
         path: updateStrategy.type
@@ -371,7 +371,7 @@ spec:
     - v1.22.6
     - v1.22.5
     - v1.21.6
-    - latest (d547b858)
+    - latest (0c5460ee)
 
     [See this page](https://github.com/istio-ecosystem/sail-operator/blob/main/bundle/README.md) for instructions on how to use it.
   displayName: Sail Operator
@@ -647,10 +647,10 @@ spec:
           template:
             metadata:
               annotations:
-                images.latest.cni: gcr.io/istio-testing/install-cni:1.25-alpha.d547b8580cf6298e15ba732823b2e027071516ea
-                images.latest.istiod: gcr.io/istio-testing/pilot:1.25-alpha.d547b8580cf6298e15ba732823b2e027071516ea
-                images.latest.proxy: gcr.io/istio-testing/proxyv2:1.25-alpha.d547b8580cf6298e15ba732823b2e027071516ea
-                images.latest.ztunnel: gcr.io/istio-testing/ztunnel:1.25-alpha.d547b8580cf6298e15ba732823b2e027071516ea
+                images.latest.cni: gcr.io/istio-testing/install-cni:1.25-alpha.0c5460eeba8a26a49d4041187406e26a2d2c3526
+                images.latest.istiod: gcr.io/istio-testing/pilot:1.25-alpha.0c5460eeba8a26a49d4041187406e26a2d2c3526
+                images.latest.proxy: gcr.io/istio-testing/proxyv2:1.25-alpha.0c5460eeba8a26a49d4041187406e26a2d2c3526
+                images.latest.ztunnel: gcr.io/istio-testing/ztunnel:1.25-alpha.0c5460eeba8a26a49d4041187406e26a2d2c3526
                 images.v1_21_6.cni: docker.io/istio/install-cni:1.21.6
                 images.v1_21_6.istiod: docker.io/istio/pilot:1.21.6
                 images.v1_21_6.proxy: docker.io/istio/proxyv2:1.21.6
@@ -843,13 +843,13 @@ spec:
   provider:
     name: Red Hat, Inc.
   relatedImages:
-  - image: gcr.io/istio-testing/install-cni:1.25-alpha.d547b8580cf6298e15ba732823b2e027071516ea
+  - image: gcr.io/istio-testing/install-cni:1.25-alpha.0c5460eeba8a26a49d4041187406e26a2d2c3526
     name: latest.cni
-  - image: gcr.io/istio-testing/pilot:1.25-alpha.d547b8580cf6298e15ba732823b2e027071516ea
+  - image: gcr.io/istio-testing/pilot:1.25-alpha.0c5460eeba8a26a49d4041187406e26a2d2c3526
     name: latest.istiod
-  - image: gcr.io/istio-testing/proxyv2:1.25-alpha.d547b8580cf6298e15ba732823b2e027071516ea
+  - image: gcr.io/istio-testing/proxyv2:1.25-alpha.0c5460eeba8a26a49d4041187406e26a2d2c3526
     name: latest.proxy
-  - image: gcr.io/istio-testing/ztunnel:1.25-alpha.d547b8580cf6298e15ba732823b2e027071516ea
+  - image: gcr.io/istio-testing/ztunnel:1.25-alpha.0c5460eeba8a26a49d4041187406e26a2d2c3526
     name: latest.ztunnel
   - image: docker.io/istio/install-cni:1.21.6
     name: v1_21_6.cni
