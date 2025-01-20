@@ -117,6 +117,13 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              notServiceAccounts:
+                                description: Optional.
+                                items:
+                                  maxLength: 320
+                                  type: string
+                                maxItems: 16
+                                type: array
                               principals:
                                 description: Optional.
                                 items:
@@ -132,8 +139,22 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              serviceAccounts:
+                                description: Optional.
+                                items:
+                                  maxLength: 320
+                                  type: string
+                                maxItems: 16
+                                type: array
                             type: object
+                            x-kubernetes-validations:
+                            - message: Cannot set serviceAccounts with namespaces
+                                or principals
+                              rule: |-
+                                (has(self.serviceAccounts) || has(self.notServiceAccounts)) ? (!has(self.principals) &&
+                                !has(self.notPrincipals) && !has(self.namespaces) && !has(self.notNamespaces)) : true
                         type: object
+                      maxItems: 512
                       type: array
                     to:
                       description: Optional.
@@ -207,6 +228,7 @@ spec:
                         type: object
                       type: array
                   type: object
+                maxItems: 512
                 type: array
               selector:
                 description: Optional.
@@ -477,6 +499,13 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              notServiceAccounts:
+                                description: Optional.
+                                items:
+                                  maxLength: 320
+                                  type: string
+                                maxItems: 16
+                                type: array
                               principals:
                                 description: Optional.
                                 items:
@@ -492,8 +521,22 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              serviceAccounts:
+                                description: Optional.
+                                items:
+                                  maxLength: 320
+                                  type: string
+                                maxItems: 16
+                                type: array
                             type: object
+                            x-kubernetes-validations:
+                            - message: Cannot set serviceAccounts with namespaces
+                                or principals
+                              rule: |-
+                                (has(self.serviceAccounts) || has(self.notServiceAccounts)) ? (!has(self.principals) &&
+                                !has(self.notPrincipals) && !has(self.namespaces) && !has(self.notNamespaces)) : true
                         type: object
+                      maxItems: 512
                       type: array
                     to:
                       description: Optional.
@@ -567,6 +610,7 @@ spec:
                         type: object
                       type: array
                   type: object
+                maxItems: 512
                 type: array
               selector:
                 description: Optional.

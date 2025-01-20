@@ -478,12 +478,12 @@ OPM ?= $(LOCALBIN)/opm
 ISTIOCTL ?= $(LOCALBIN)/istioctl
 
 ## Tool Versions
-OPERATOR_SDK_VERSION ?= v1.38.0
-HELM_VERSION ?= v3.16.4
-CONTROLLER_TOOLS_VERSION ?= v0.16.5
-OPM_VERSION ?= v1.49.0
-OLM_VERSION ?= v0.30.0
-GITLEAKS_VERSION ?= v8.21.2
+OPERATOR_SDK_VERSION ?= v1.39.1
+HELM_VERSION ?= v3.17.0
+CONTROLLER_TOOLS_VERSION ?= v0.17.1
+OPM_VERSION ?= v1.50.0
+OLM_VERSION ?= v0.31.0
+GITLEAKS_VERSION ?= v8.23.1
 ISTIOCTL_VERSION ?= 1.23.0
 
 # GENERATE_RELATED_IMAGES defines whether `spec.relatedImages` is going to be generated or not
@@ -665,7 +665,7 @@ lint-watches: ## Checks if the operator watches all resource kinds present in He
 	@hack/lint-watches.sh
 
 lint-secrets: gitleaks ## Checks whether any secrets are present in the repository.
-	@${GITLEAKS} detect --redact -v
+	@${GITLEAKS} detect --no-git --redact -v
 
 .PHONY: lint
 lint: lint-scripts lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle lint-watches lint-secrets ## Run all linters.
