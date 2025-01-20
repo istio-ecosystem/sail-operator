@@ -232,6 +232,11 @@ func (in *CNIConfig) DeepCopyInto(out *CNIConfig) {
 		*out = new(v1.SeccompProfile)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Ambient != nil {
+		in, out := &in.Ambient, &out.Ambient
+		*out = new(CNIAmbientConfig)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Provider != nil {
 		in, out := &in.Provider, &out.Provider
 		*out = new(string)
