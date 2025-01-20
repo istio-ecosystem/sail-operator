@@ -1024,6 +1024,25 @@ spec:
                                 x-kubernetes-list-type: atomic
                             type: object
                         type: object
+                      ambient:
+                        description: Configuration for Istio Ambient.
+                        properties:
+                          configDir:
+                            description: The directory path containing the configuration
+                              files for Ambient. Defaults to /etc/ambient-config.
+                            type: string
+                          dnsCapture:
+                            description: If enabled, and ambient is enabled, DNS redirection
+                              will be enabled.
+                            type: boolean
+                          enabled:
+                            description: Controls whether ambient redirection is enabled
+                            type: boolean
+                          ipv6:
+                            description: 'UNSTABLE: If enabled, and ambient is enabled,
+                              enables ipv6 support'
+                            type: boolean
+                        type: object
                       chained:
                         description: |-
                           Configure the plugin as a chained CNI plugin. When true, the configuration is added to the CNI chain; when false,
