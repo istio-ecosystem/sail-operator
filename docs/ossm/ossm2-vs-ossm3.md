@@ -110,6 +110,19 @@ The TLS protocol version can be set through [Istio Workload Minimum TLS Version 
 
 `auto mTLS` is enabled by default in both OpenShift Service Mesh 2 and OpenShift Service Mesh 3.
 
+
+## Certificate Authority Configuration Changes
+
+OpenShift Service Mesh 3 significantly simplifies certificate authority (CA) configuration compared to OpenShift Service Mesh 2. While basic functionality for configuring external CAs like cert-manager is preserved, many of the fine-grained controls previously available in the `ServiceMeshControlPlane` resource have been removed.
+
+Users requiring custom CA configurations should use Istio's built-in CA configuration options or integrate with external certificate management systems.
+
+## Proxy Configuration Changes
+
+OpenShift Service Mesh 3 removes several proxy configuration options that were available in OpenShift Service Mesh 2's `ServiceMeshControlPlane` resource to align more closely with upstream Istio. Protocol auto-detection configuration through `proxy.networking.protocol.autoDetect` has been removed, with the service mesh now using Istio's default protocol detection behavior. The only remaining protocol detection setting is MeshConfig's `protocolDetectionTimeout`, as all other protocol detection configurations have been removed from upstream Istio.
+
+Proxy initialization configurations and deployment strategy configurations have been streamlined, with some runtime environment variables and initialization types no longer being configurable.
+
 ## Kiali
 
 In OpenShift Service Mesh 3, Kiali introduces a revamped Traffic Page Graph UI, now built using PatternFly Topology, alonside with a new topology view showcasing the mesh infrastructure.

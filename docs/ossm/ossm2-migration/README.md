@@ -6,6 +6,7 @@ This document details how to migrate from 2.6 to OpenShift Service Mesh 3.0.
 
 Before you begin to migrate your controlplane from OpenShift Service Mesh 2.6 to 3.0, ensure you have done the following:
 
+- Read through the key OSSM 2.6 vs 3.0 Differences [document](./../ossm2-vs-ossm3.md) 
 - Upgrade your 2.6 OpenShift Service Mesh Operator to the latest release. See warning below.
 - Upgrade your `ServiceMeshControlPlane` version to the latest OpenShift Service Mesh release.
 - Install your 3.0 Openshift Service Mesh Operator. See warning below.
