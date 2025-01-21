@@ -27,6 +27,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversions"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/revision"
@@ -105,8 +106,13 @@ func validate(istio *v1.Istio) error {
 }
 
 func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1.Istio) error {
+	version, ok := istioversions.Map[istio.Spec.Version]
+	if !ok {
+		return fmt.Errorf("version %q not found", istio.Spec.Version)
+	}
+	versionName := version.Name
 	values, err := revision.ComputeValues(
-		istio.Spec.Values, istio.Spec.Namespace, istio.Spec.Version,
+		istio.Spec.Values, istio.Spec.Namespace, versionName,
 		r.Config.Platform, r.Config.DefaultProfile, istio.Spec.Profile,
 		r.Config.ResourceDirectory, getActiveRevisionName(istio))
 	if err != nil {
@@ -115,7 +121,7 @@ func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1.Isti
 
 	return revision.CreateOrUpdate(ctx, r.Client,
 		getActiveRevisionName(istio),
-		istio.Spec.Version, istio.Spec.Namespace, values,
+		version.Version.String(), istio.Spec.Namespace, values,
 		metav1.OwnerReference{
 			APIVersion:         v1.GroupVersion.String(),
 			Kind:               v1.IstioKind,
