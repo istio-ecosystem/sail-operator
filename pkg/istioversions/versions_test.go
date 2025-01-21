@@ -28,9 +28,12 @@ func TestInit(t *testing.T) {
 	assert.True(t, Old != "", "istioversions.Old should not be empty")
 	assert.True(t, New != "", "istioversions.New should not be empty")
 
-	assert.Equal(t, len(List), len(Map), "Map should be same size as List")
+	assert.Equal(t, len(List)+len(Alias), len(Map), "Map should be same size as List + Alias")
 	for _, vi := range List {
 		assert.Equal(t, vi, Map[vi.Name])
+	}
+	for _, ai := range Alias {
+		assert.Equal(t, Map[ai.Ref], Map[ai.Name])
 	}
 }
 
