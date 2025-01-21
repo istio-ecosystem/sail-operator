@@ -17,7 +17,7 @@
 set -euo pipefail
 
 SLEEP_TIME=10
-VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"versions.yaml"}
+VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"pkg/istioversions/versions.yaml"}
 
 # Add a new entry in versions.yaml file.
 # First argument is the new version (e.g. 1.22.5)

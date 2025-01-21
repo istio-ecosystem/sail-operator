@@ -23,9 +23,9 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversions"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
-	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
@@ -75,7 +75,7 @@ metadata:
 
 				cni := &v1.IstioCNI{}
 				Expect(cl.Get(ctx, kube.Key("default"), cni)).To(Succeed())
-				Expect(cni.Spec.Version).To(Equal(supportedversion.Default))
+				Expect(cni.Spec.Version).To(Equal(istioversions.Default))
 				Expect(cni.Spec.Namespace).To(Equal("istio-cni"))
 
 				Expect(cl.Delete(ctx, cni)).To(Succeed())
@@ -99,7 +99,7 @@ metadata:
 
 				istio := &v1.Istio{}
 				Expect(cl.Get(ctx, kube.Key("default"), istio)).To(Succeed())
-				Expect(istio.Spec.Version).To(Equal(supportedversion.Default))
+				Expect(istio.Spec.Version).To(Equal(istioversions.Default))
 				Expect(istio.Spec.Namespace).To(Equal("istio-system"))
 				Expect(istio.Spec.UpdateStrategy).ToNot(BeNil())
 				Expect(istio.Spec.UpdateStrategy.Type).To(Equal(v1.UpdateStrategyTypeInPlace))
@@ -111,7 +111,7 @@ metadata:
 	})
 
 	Describe("given Istio version", func() {
-		for _, version := range supportedversion.List {
+		for _, version := range istioversions.List {
 			Context(version.Name, func() {
 				BeforeAll(func() {
 					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")

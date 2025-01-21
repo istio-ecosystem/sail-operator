@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"versions.yaml"}
+VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"pkg/istioversions/versions.yaml"}
 
 function removeOldVersions() {
     versions=$(yq eval '.versions[].name' "${VERSIONS_YAML_FILE}" | tr $'\n' ' ')

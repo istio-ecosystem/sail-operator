@@ -23,8 +23,8 @@ import (
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversions"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
-	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	. "github.com/onsi/gomega"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -60,7 +60,7 @@ func TestValidate(t *testing.T) {
 					Name: "default",
 				},
 				Spec: v1.IstioRevisionSpec{
-					Version:   supportedversion.Default,
+					Version:   istioversions.Default,
 					Namespace: "istio-system",
 					Values: &v1.Values{
 						Global: &v1.GlobalConfig{
@@ -92,7 +92,7 @@ func TestValidate(t *testing.T) {
 					Name: "default",
 				},
 				Spec: v1.IstioRevisionSpec{
-					Version: supportedversion.Default,
+					Version: istioversions.Default,
 				},
 			},
 			objects:   []client.Object{ns},
@@ -105,7 +105,7 @@ func TestValidate(t *testing.T) {
 					Name: "default",
 				},
 				Spec: v1.IstioRevisionSpec{
-					Version:   supportedversion.Default,
+					Version:   istioversions.Default,
 					Namespace: "istio-system",
 				},
 			},
@@ -119,7 +119,7 @@ func TestValidate(t *testing.T) {
 					Name: "default",
 				},
 				Spec: v1.IstioRevisionSpec{
-					Version:   supportedversion.Default,
+					Version:   istioversions.Default,
 					Namespace: "istio-system",
 				},
 			},
@@ -133,7 +133,7 @@ func TestValidate(t *testing.T) {
 					Name: "default",
 				},
 				Spec: v1.IstioRevisionSpec{
-					Version:   supportedversion.Default,
+					Version:   istioversions.Default,
 					Namespace: "istio-system",
 					Values: &v1.Values{
 						Global: &v1.GlobalConfig{
@@ -152,7 +152,7 @@ func TestValidate(t *testing.T) {
 					Name: "default",
 				},
 				Spec: v1.IstioRevisionSpec{
-					Version:   supportedversion.Default,
+					Version:   istioversions.Default,
 					Namespace: "istio-system",
 					Values: &v1.Values{
 						Revision: ptr.Of("my-revision"),
@@ -172,7 +172,7 @@ func TestValidate(t *testing.T) {
 					Name: "my-revision",
 				},
 				Spec: v1.IstioRevisionSpec{
-					Version:   supportedversion.Default,
+					Version:   istioversions.Default,
 					Namespace: "istio-system",
 					Values: &v1.Values{
 						Revision: ptr.Of("other-revision"),

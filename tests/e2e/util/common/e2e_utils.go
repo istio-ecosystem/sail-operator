@@ -26,9 +26,9 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversions"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
-	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
@@ -318,7 +318,7 @@ func UninstallOperator() error {
 // args:
 // version: the version of the Istio to get the yaml file from.
 // appName: the name of the testing app. Example: helloworld, sleep, tcp-echo.
-func GetSampleYAML(version supportedversion.VersionInfo, appName string) string {
+func GetSampleYAML(version istioversions.VersionInfo, appName string) string {
 	// This func will be used to get URLs for the yaml files of the testing apps. Example: helloworld, sleep, tcp-echo.
 	// Default values points to upstream Istio sample yaml files. Custom paths can be provided using environment variables.
 

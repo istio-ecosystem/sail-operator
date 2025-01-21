@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"versions.yaml"}
+VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"pkg/istioversions/versions.yaml"}
 HELM_VALUES_FILE=${HELM_VALUES_FILE:-"chart/values.yaml"}
 
 function updateVersionsInIstioTypeComment() {

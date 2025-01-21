@@ -23,7 +23,7 @@ VERSION ?= 1.1.0
 MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 
 OPERATOR_NAME ?= sailoperator
-VERSIONS_YAML_FILE ?= versions.yaml
+VERSIONS_YAML_FILE ?= pkg/istioversions/versions.yaml
 
 # Istio images names
 ISTIO_CNI_IMAGE_NAME ?= install-cni

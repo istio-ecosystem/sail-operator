@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package supportedversion
+package istioversions
 
 import (
 	"testing"
@@ -22,11 +22,11 @@ import (
 
 func TestInit(t *testing.T) {
 	// no need to call init(), since it's called automatically
-	assert.True(t, len(List) > 0, "supportedversion.List should not be empty")
-	assert.True(t, len(Map) > 0, "supportedversion.Map should not be empty")
-	assert.True(t, Default != "", "supportedversion.Default should not be empty")
-	assert.True(t, Old != "", "supportedversion.Old should not be empty")
-	assert.True(t, New != "", "supportedversion.New should not be empty")
+	assert.True(t, len(List) > 0, "istioversions.List should not be empty")
+	assert.True(t, len(Map) > 0, "istioversions.Map should not be empty")
+	assert.True(t, Default != "", "istioversions.Default should not be empty")
+	assert.True(t, Old != "", "istioversions.Old should not be empty")
+	assert.True(t, New != "", "istioversions.New should not be empty")
 
 	assert.Equal(t, len(List), len(Map), "Map should be same size as List")
 	for _, vi := range List {

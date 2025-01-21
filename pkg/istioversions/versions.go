@@ -12,38 +12,55 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package supportedversion
+package istioversions
 
 import (
-	"os"
-	"path/filepath"
+	"embed"
+	"fmt"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	"gopkg.in/yaml.v3"
 )
 
+//go:embed versions.yaml
+var versionsFile embed.FS
+
+// Versions represents the top-level structure of versions.yaml
+type Versions struct {
+	Versions []VersionInfo `json:"versions"`
+}
+
+// VersionInfo contains information about a specific Istio version
+type VersionInfo struct {
+	Name    string          `json:"name"`
+	Version *semver.Version `json:"version"`
+	Repo    string          `json:"repo"`
+	Branch  string          `json:"branch,omitempty"`
+	Commit  string          `json:"commit"`
+	Charts  []string        `json:"charts,omitempty"`
+}
+
 var (
-	List    []VersionInfo
-	Map     map[string]VersionInfo
+	// List contains all supported versions
+	List []VersionInfo
+	// Map contains version info mapped by version name
+	Map map[string]VersionInfo
+	// Default is the default version
 	Default string
-	Old     string
-	New     string
+	// Old is the previous supported version
+	Old string
+	// New is the latest supported version
+	New string
 )
 
 func init() {
-	versionsFile := os.Getenv("VERSIONS_YAML_FILE")
-	if len(versionsFile) == 0 {
-		versionsFile = "versions.yaml"
-	}
-	versionsFile = filepath.Join(project.RootDir, versionsFile)
-
-	versionsBytes, err := os.ReadFile(versionsFile)
+	// Read the embedded versions.yaml file
+	data, err := versionsFile.ReadFile("versions.yaml")
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("failed to read versions.yaml: %w", err))
 	}
 
-	List, Default, Old, New = mustParseVersionsYaml(versionsBytes)
+	List, Default, Old, New = mustParseVersionsYaml(data)
 
 	Map = make(map[string]VersionInfo)
 	for _, v := range List {
@@ -55,7 +72,7 @@ func mustParseVersionsYaml(yamlBytes []byte) (list []VersionInfo, defaultVersion
 	versions := Versions{}
 	err := yaml.Unmarshal(yamlBytes, &versions)
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("failed to parse versions data: %w", err))
 	}
 
 	list = versions.Versions
@@ -65,17 +82,4 @@ func mustParseVersionsYaml(yamlBytes []byte) (list []VersionInfo, defaultVersion
 	}
 	newVersion = list[0].Name
 	return list, defaultVersion, oldVersion, newVersion
-}
-
-type Versions struct {
-	Versions []VersionInfo `json:"versions"`
-}
-
-type VersionInfo struct {
-	Name    string          `json:"name"`
-	Version *semver.Version `json:"version"`
-	Repo    string          `json:"repo"`
-	Branch  string          `json:"branch,omitempty"`
-	Commit  string          `json:"commit"`
-	Charts  []string        `json:"charts,omitempty"`
 }
