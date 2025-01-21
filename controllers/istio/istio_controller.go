@@ -121,7 +121,7 @@ func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1.Isti
 
 	return revision.CreateOrUpdate(ctx, r.Client,
 		getActiveRevisionName(istio),
-		version.Version.String(), istio.Spec.Namespace, values,
+		versionName, istio.Spec.Namespace, values,
 		metav1.OwnerReference{
 			APIVersion:         v1.GroupVersion.String(),
 			Kind:               v1.IstioKind,
