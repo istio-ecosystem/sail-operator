@@ -28,6 +28,13 @@ var versionsFile embed.FS
 // Versions represents the top-level structure of versions.yaml
 type Versions struct {
 	Versions []VersionInfo `json:"versions"`
+	Alias    []AliasInfo   `json:"alias"`
+}
+
+// AliasInfo contains information about version aliases
+type AliasInfo struct {
+	Name string `json:"name"`
+	Ref  string `json:"ref"`
 }
 
 // VersionInfo contains information about a specific Istio version
@@ -51,6 +58,8 @@ var (
 	Old string
 	// New is the latest supported version
 	New string
+	// Alias is the alias for the version
+	Alias []AliasInfo
 )
 
 func init() {
@@ -60,15 +69,28 @@ func init() {
 		panic(fmt.Errorf("failed to read versions.yaml: %w", err))
 	}
 
-	List, Default, Old, New = mustParseVersionsYaml(data)
+	List, Default, Old, New, Alias = mustParseVersionsYaml(data)
 
-	Map = make(map[string]VersionInfo)
-	for _, v := range List {
-		Map[v.Name] = v
-	}
+	Map = mustBuildVersionMap(Alias, List)
 }
 
-func mustParseVersionsYaml(yamlBytes []byte) (list []VersionInfo, defaultVersion string, oldVersion string, newVersion string) {
+func mustBuildVersionMap(alias []AliasInfo, list []VersionInfo) map[string]VersionInfo {
+	versionMap := make(map[string]VersionInfo)
+	for _, v := range list {
+		versionMap[v.Name] = v
+	}
+	for _, a := range alias {
+		v, ok := (versionMap)[a.Ref]
+		if !ok {
+			panic(fmt.Errorf("version %q not found", a.Ref))
+		}
+		(versionMap)[a.Name] = v
+	}
+
+	return versionMap
+}
+
+func mustParseVersionsYaml(yamlBytes []byte) (list []VersionInfo, defaultVersion string, oldVersion string, newVersion string, alias []AliasInfo) {
 	versions := Versions{}
 	err := yaml.Unmarshal(yamlBytes, &versions)
 	if err != nil {
@@ -81,5 +103,5 @@ func mustParseVersionsYaml(yamlBytes []byte) (list []VersionInfo, defaultVersion
 		oldVersion = list[1].Name
 	}
 	newVersion = list[0].Name
-	return list, defaultVersion, oldVersion, newVersion
+	return list, defaultVersion, oldVersion, newVersion, versions.Alias
 }

@@ -36,6 +36,9 @@ func TestInit(t *testing.T) {
 
 func TestParseVersionsYaml_ValidYaml(t *testing.T) {
 	yamlBytes := []byte(`
+alias:
+  - name: "latest"
+    ref: "2.0.0"
 versions:
   - name: "1.0.0"
     repo: "repo1"
@@ -45,12 +48,15 @@ versions:
     commit: "commit2"
 `)
 
-	list, defaultVersion, oldVersion, newVersion := mustParseVersionsYaml(yamlBytes)
+	list, defaultVersion, oldVersion, newVersion, alias := mustParseVersionsYaml(yamlBytes)
 
 	assert.Len(t, list, 2)
 	assert.Equal(t, "1.0.0", defaultVersion)
 	assert.Equal(t, "2.0.0", oldVersion)
 	assert.Equal(t, "1.0.0", newVersion)
+	assert.Len(t, alias, 1)
+	assert.Equal(t, "latest", alias[0].Name)
+	assert.Equal(t, "2.0.0", alias[0].Ref)
 }
 
 func TestParseVersionsYaml_SingleVersion(t *testing.T) {
@@ -61,12 +67,30 @@ versions:
     commit: "commit1"
 `)
 
-	list, defaultVersion, oldVersion, newVersion := mustParseVersionsYaml(yamlBytes)
+	list, defaultVersion, oldVersion, newVersion, alias := mustParseVersionsYaml(yamlBytes)
 
 	assert.Len(t, list, 1)
 	assert.Equal(t, "1.0.0", defaultVersion)
 	assert.Equal(t, "", oldVersion)
 	assert.Equal(t, "1.0.0", newVersion)
+	assert.Len(t, alias, 0)
+}
+
+func TestParseVersionsYaml_InvalidAlias(t *testing.T) {
+	yamlBytes := []byte(`
+alias:
+  - name: "1.0-latest"
+    ref: "nonexistent-version"
+versions:
+  - name: "1.0.0"
+    repo: "repo1"
+    commit: "commit1"
+`)
+
+	assert.Panics(t, func() {
+		list, _, _, _, alias := mustParseVersionsYaml(yamlBytes)
+		mustBuildVersionMap(alias, list)
+	})
 }
 
 func TestParseVersionsYaml_InvalidYaml(t *testing.T) {
