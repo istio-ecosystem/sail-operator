@@ -31,7 +31,7 @@ type IstioRevisionTagSpec struct {
 	TargetRef IstioRevisionTagTargetReference `json:"targetRef"`
 }
 
-// IstioRevisionTagTargetReference can reference either Istio or IstioRevision objects in the cluster.
+// IstioRevisionTagTargetReference can reference either Istio or IstioRevision objects in the cluster. In the case of referencing an Istio object, the Sail Operator will automatically update the reference to the Istio object's Active Revision.
 type IstioRevisionTagTargetReference struct {
 	// Kind is the kind of the target resource.
 	//
@@ -181,7 +181,7 @@ const (
 // +kubebuilder:printcolumn:name="Revision",type="string",JSONPath=".status.istioRevision",description="The IstioRevision this object is referencing."
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",description="The age of the object"
 
-// IstioRevisionTag references a Istio or IstioRevision object and serves as an alias for sidecar injection.
+// IstioRevisionTag references an Istio or IstioRevision object and serves as an alias for sidecar injection. It can be used to manage stable revision tags without having to use istioctl or helm directly. See https://istio.io/latest/docs/setup/upgrade/canary/#stable-revision-labels for more information on the concept.
 type IstioRevisionTag struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -192,7 +192,7 @@ type IstioRevisionTag struct {
 
 // +kubebuilder:object:root=true
 
-// IstioRevisionList contains a list of IstioRevision
+// IstioRevisionTagList contains a list of IstioRevisionTags
 type IstioRevisionTagList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
