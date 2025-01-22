@@ -17,6 +17,11 @@
 package operator
 
 import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"time"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
@@ -90,10 +95,91 @@ var _ = Describe("Operator", Ordered, func() {
 
 		It("starts successfully", func(ctx SpecContext) {
 			Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
-				Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
+				Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Deployment status")
+		})
+
+		It("serves metrics securely", func(ctx SpecContext) {
+			metricsReaderRoleName := "metrics-reader"
+			metricsServiceName := deploymentName + "-metrics-service"
+
+			By("creating a ClusterRoleBinding for the service account to allow access to metrics")
+			err := k.CreateFromString(fmt.Sprintf(`
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: metrics-reader-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: %s
+subjects:
+- kind: ServiceAccount
+  name: %s
+  namespace: %s
+`, metricsReaderRoleName, deploymentName, namespace))
+			Expect(err).NotTo(HaveOccurred(), "Failed to create ClusterRoleBinding")
+
+			By("validating that the metrics service is available")
+			cmd := exec.Command("kubectl", "get", "service", metricsServiceName, "-n", namespace)
+			err = cmd.Run()
+			Expect(err).NotTo(HaveOccurred(), "Metrics service should exist")
+
+			By("getting the service account token")
+			token, err := serviceAccountToken()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(token).NotTo(BeEmpty())
+
+			By("waiting for the metrics endpoint to be ready")
+			verifyMetricsEndpointReady := func(g Gomega) {
+				output, err := k.WithNamespace(namespace).GetYAML("endpoints", metricsServiceName)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(output).To(ContainSubstring("8443"), "Metrics endpoint is not ready")
+			}
+			Eventually(verifyMetricsEndpointReady).Should(Succeed())
+
+			By("verifying that the controller manager is serving the metrics server")
+			verifyMetricsServerStarted := func(g Gomega) {
+				output, err := k.WithNamespace(namespace).Logs("deployment/"+deploymentName, nil)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(output).To(ContainSubstring("controller-runtime.metrics\tServing metrics server"),
+					"Metrics server not yet started")
+			}
+			Eventually(verifyMetricsServerStarted).Should(Succeed())
+
+			By("creating the curl-metrics namespace")
+			Expect(k.CreateNamespace(curlNamespace)).To(Succeed(), "Namespace failed to be created")
+
+			By("creating the curl-metrics pod to access the metrics endpoint")
+			cmd = exec.Command("kubectl", "run", "curl-metrics", "--restart=Never",
+				"--namespace", curlNamespace,
+				"--image=quay.io/curl/curl:8.11.1",
+				"--", "/bin/sh", "-c", fmt.Sprintf(
+					"curl -v -k -H 'Authorization: Bearer %s' https://%s.%s.svc.cluster.local:8443/metrics",
+					token, metricsServiceName, namespace))
+			err = cmd.Run()
+			Expect(err).NotTo(HaveOccurred(), "Failed to create curl-metrics pod")
+
+			By("waiting for the curl-metrics pod to complete.")
+			verifyCurlUp := func(g Gomega) {
+				cmd := exec.Command("kubectl", "get", "pods", "curl-metrics",
+					"-o", "jsonpath={.status.phase}",
+					"-n", curlNamespace)
+				output, err := cmd.Output()
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(string(output)).To(Equal("Succeeded"), "curl pod in wrong status")
+			}
+			Eventually(verifyCurlUp, 5*time.Minute).Should(Succeed())
+
+			By("getting the metrics by checking curl-metrics logs")
+			metricsOutput := getMetricsOutput()
+			Expect(metricsOutput).To(ContainSubstring(
+				"controller_runtime_reconcile_total",
+			))
 		})
 
 		AfterAll(func() {
+			Expect(k.DeleteNamespace(curlNamespace)).To(Succeed(), "failed to delete curl namespace")
+
 			if CurrentSpecReport().Failed() {
 				common.LogDebugInfo(k)
 			}
@@ -127,4 +213,62 @@ func extractCRDNames(crdList *apiextensionsv1.CustomResourceDefinitionList) []st
 		names = append(names, crd.ObjectMeta.Name)
 	}
 	return names
+}
+
+// serviceAccountToken returns a token for the specified service account in the given namespace.
+// It uses the Kubernetes TokenRequest API to generate a token by directly sending a request
+// and parsing the resulting token from the API response.
+func serviceAccountToken() (string, error) {
+	const tokenRequestRawString = `{
+		"apiVersion": "authentication.k8s.io/v1",
+		"kind": "TokenRequest"
+	}`
+
+	// Temporary file to store the token request
+	secretName := fmt.Sprintf("%s-token-request", serviceAccountName)
+	tokenRequestFile := filepath.Join("/tmp", secretName)
+	err := os.WriteFile(tokenRequestFile, []byte(tokenRequestRawString), os.FileMode(0o644))
+	if err != nil {
+		return "", err
+	}
+
+	var out string
+	verifyTokenCreation := func(g Gomega) {
+		// Execute kubectl command to create the token
+		cmd := exec.Command("kubectl", "create", "--raw", fmt.Sprintf(
+			"/api/v1/namespaces/%s/serviceaccounts/%s/token",
+			namespace,
+			serviceAccountName,
+		), "-f", tokenRequestFile)
+
+		output, err := cmd.CombinedOutput()
+		g.Expect(err).NotTo(HaveOccurred())
+
+		// Parse the JSON output to extract the token
+		var token tokenRequest
+		err = json.Unmarshal(output, &token)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		out = token.Status.Token
+	}
+	Eventually(verifyTokenCreation).Should(Succeed())
+
+	return out, err
+}
+
+// getMetricsOutput retrieves and returns the logs from the curl pod used to access the metrics endpoint.
+func getMetricsOutput() string {
+	By("getting the curl-metrics logs")
+	metricsOutput, err := k.WithNamespace(curlNamespace).Logs("curl-metrics", nil)
+	Expect(err).NotTo(HaveOccurred(), "Failed to retrieve logs from curl pod")
+	Expect(metricsOutput).To(ContainSubstring("< HTTP/1.1 200 OK"))
+	return metricsOutput
+}
+
+// tokenRequest is a simplified representation of the Kubernetes TokenRequest API response,
+// containing only the token field that we need to extract.
+type tokenRequest struct {
+	Status struct {
+		Token string `json:"token"`
+	} `json:"status"`
 }
