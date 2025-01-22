@@ -91,22 +91,23 @@ spec:
                       type: string
                       x-kubernetes-validations:
                       - message: wildcard not allowed in label value match
-                        rule: '!self.contains(''*'')'
+                        rule: '!self.contains("*")'
                     description: One or more labels that indicate a specific set of
                       pods/VMs on which a policy should be applied.
                     maxProperties: 4096
                     type: object
                     x-kubernetes-validations:
                     - message: wildcard not allowed in label key match
-                      rule: self.all(key, !key.contains('*'))
+                      rule: self.all(key, !key.contains("*"))
                     - message: key must not be empty
                       rule: self.all(key, key.size() != 0)
                 type: object
             type: object
             x-kubernetes-validations:
             - message: portLevelMtls requires selector
-              rule: (has(self.selector) && has(self.selector.matchLabels) && self.selector.matchLabels.size()
-                > 0) || !has(self.portLevelMtls)
+              rule: |-
+                has(self.selector) && has(self.selector.matchLabels) && self.selector.matchLabels.size() > 0 ||
+                !has(self.portLevelMtls)
           status:
             properties:
               conditions:
@@ -126,6 +127,12 @@ spec:
                       description: Human-readable message indicating details about
                         last transition.
                       type: string
+                    observedGeneration:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: Resource Generation to which the Condition refers.
+                      x-kubernetes-int-or-string: true
                     reason:
                       description: Unique, one-word, CamelCase reason for the condition's
                         last transition.
@@ -142,8 +149,6 @@ spec:
                 anyOf:
                 - type: integer
                 - type: string
-                description: Resource Generation to which the Reconciled Condition
-                  refers.
                 x-kubernetes-int-or-string: true
               validationMessages:
                 description: Includes any errors or warnings detected by Istio's analyzers.
@@ -250,22 +255,23 @@ spec:
                       type: string
                       x-kubernetes-validations:
                       - message: wildcard not allowed in label value match
-                        rule: '!self.contains(''*'')'
+                        rule: '!self.contains("*")'
                     description: One or more labels that indicate a specific set of
                       pods/VMs on which a policy should be applied.
                     maxProperties: 4096
                     type: object
                     x-kubernetes-validations:
                     - message: wildcard not allowed in label key match
-                      rule: self.all(key, !key.contains('*'))
+                      rule: self.all(key, !key.contains("*"))
                     - message: key must not be empty
                       rule: self.all(key, key.size() != 0)
                 type: object
             type: object
             x-kubernetes-validations:
             - message: portLevelMtls requires selector
-              rule: (has(self.selector) && has(self.selector.matchLabels) && self.selector.matchLabels.size()
-                > 0) || !has(self.portLevelMtls)
+              rule: |-
+                has(self.selector) && has(self.selector.matchLabels) && self.selector.matchLabels.size() > 0 ||
+                !has(self.portLevelMtls)
           status:
             properties:
               conditions:
@@ -285,6 +291,12 @@ spec:
                       description: Human-readable message indicating details about
                         last transition.
                       type: string
+                    observedGeneration:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: Resource Generation to which the Condition refers.
+                      x-kubernetes-int-or-string: true
                     reason:
                       description: Unique, one-word, CamelCase reason for the condition's
                         last transition.
@@ -301,8 +313,6 @@ spec:
                 anyOf:
                 - type: integer
                 - type: string
-                description: Resource Generation to which the Reconciled Condition
-                  refers.
                 x-kubernetes-int-or-string: true
               validationMessages:
                 description: Includes any errors or warnings detected by Istio's analyzers.

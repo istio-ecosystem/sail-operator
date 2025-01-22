@@ -165,11 +165,11 @@ spec:
                               type: object
                               x-kubernetes-validations:
                               - message: value must be set when operation is UPSERT
-                                rule: '((has(self.operation) ? self.operation : '''')
-                                  == ''UPSERT'') ? self.value != '''' : true'
+                                rule: '((has(self.operation) ? self.operation : "")
+                                  == "UPSERT") ? (self.value != "") : true'
                               - message: value must not be set when operation is REMOVE
-                                rule: '((has(self.operation) ? self.operation : '''')
-                                  == ''REMOVE'') ? !has(self.value) : true'
+                                rule: '((has(self.operation) ? self.operation : "")
+                                  == "REMOVE") ? !has(self.value) : true'
                             description: Optional.
                             type: object
                         type: object
@@ -203,14 +203,14 @@ spec:
                       type: string
                       x-kubernetes-validations:
                       - message: wildcard not allowed in label value match
-                        rule: '!self.contains(''*'')'
+                        rule: '!self.contains("*")'
                     description: One or more labels that indicate a specific set of
                       pods/VMs on which a policy should be applied.
                     maxProperties: 4096
                     type: object
                     x-kubernetes-validations:
                     - message: wildcard not allowed in label key match
-                      rule: self.all(key, !key.contains('*'))
+                      rule: self.all(key, !key.contains("*"))
                     - message: key must not be empty
                       rule: self.all(key, key.size() != 0)
                 type: object
@@ -245,8 +245,9 @@ spec:
                 x-kubernetes-validations:
                 - message: Support kinds are core/Service, networking.istio.io/ServiceEntry,
                     gateway.networking.k8s.io/Gateway
-                  rule: '[self.group, self.kind] in [[''core'',''Service''], ['''',''Service''],
-                    [''gateway.networking.k8s.io'',''Gateway''], [''networking.istio.io'',''ServiceEntry'']]'
+                  rule: '[self.group, self.kind] in [["core", "Service"], ["", "Service"],
+                    ["gateway.networking.k8s.io", "Gateway"], ["networking.istio.io",
+                    "ServiceEntry"]]'
               targetRefs:
                 description: Optional.
                 items:
@@ -280,8 +281,9 @@ spec:
                   x-kubernetes-validations:
                   - message: Support kinds are core/Service, networking.istio.io/ServiceEntry,
                       gateway.networking.k8s.io/Gateway
-                    rule: '[self.group, self.kind] in [[''core'',''Service''], ['''',''Service''],
-                      [''gateway.networking.k8s.io'',''Gateway''], [''networking.istio.io'',''ServiceEntry'']]'
+                    rule: '[self.group, self.kind] in [["core", "Service"], ["", "Service"],
+                      ["gateway.networking.k8s.io", "Gateway"], ["networking.istio.io",
+                      "ServiceEntry"]]'
                 maxItems: 16
                 type: array
               tracing:
@@ -354,6 +356,11 @@ spec:
                       description: Controls span reporting.
                       nullable: true
                       type: boolean
+                    enableIstioTags:
+                      description: Determines whether or not trace spans generated
+                        by Envoy will include Istio specific tags.
+                      nullable: true
+                      type: boolean
                     match:
                       description: Allows tailoring of behavior to specific conditions.
                       properties:
@@ -396,7 +403,8 @@ spec:
             type: object
             x-kubernetes-validations:
             - message: only one of targetRefs or selector can be set
-              rule: (has(self.selector)?1:0)+(has(self.targetRef)?1:0)+(has(self.targetRefs)?1:0)<=1
+              rule: '(has(self.selector) ? 1 : 0) + (has(self.targetRef) ? 1 : 0)
+                + (has(self.targetRefs) ? 1 : 0) <= 1'
           status:
             properties:
               conditions:
@@ -416,6 +424,12 @@ spec:
                       description: Human-readable message indicating details about
                         last transition.
                       type: string
+                    observedGeneration:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: Resource Generation to which the Condition refers.
+                      x-kubernetes-int-or-string: true
                     reason:
                       description: Unique, one-word, CamelCase reason for the condition's
                         last transition.
@@ -432,8 +446,6 @@ spec:
                 anyOf:
                 - type: integer
                 - type: string
-                description: Resource Generation to which the Reconciled Condition
-                  refers.
                 x-kubernetes-int-or-string: true
               validationMessages:
                 description: Includes any errors or warnings detected by Istio's analyzers.
@@ -613,11 +625,11 @@ spec:
                               type: object
                               x-kubernetes-validations:
                               - message: value must be set when operation is UPSERT
-                                rule: '((has(self.operation) ? self.operation : '''')
-                                  == ''UPSERT'') ? self.value != '''' : true'
+                                rule: '((has(self.operation) ? self.operation : "")
+                                  == "UPSERT") ? (self.value != "") : true'
                               - message: value must not be set when operation is REMOVE
-                                rule: '((has(self.operation) ? self.operation : '''')
-                                  == ''REMOVE'') ? !has(self.value) : true'
+                                rule: '((has(self.operation) ? self.operation : "")
+                                  == "REMOVE") ? !has(self.value) : true'
                             description: Optional.
                             type: object
                         type: object
@@ -651,14 +663,14 @@ spec:
                       type: string
                       x-kubernetes-validations:
                       - message: wildcard not allowed in label value match
-                        rule: '!self.contains(''*'')'
+                        rule: '!self.contains("*")'
                     description: One or more labels that indicate a specific set of
                       pods/VMs on which a policy should be applied.
                     maxProperties: 4096
                     type: object
                     x-kubernetes-validations:
                     - message: wildcard not allowed in label key match
-                      rule: self.all(key, !key.contains('*'))
+                      rule: self.all(key, !key.contains("*"))
                     - message: key must not be empty
                       rule: self.all(key, key.size() != 0)
                 type: object
@@ -693,8 +705,9 @@ spec:
                 x-kubernetes-validations:
                 - message: Support kinds are core/Service, networking.istio.io/ServiceEntry,
                     gateway.networking.k8s.io/Gateway
-                  rule: '[self.group, self.kind] in [[''core'',''Service''], ['''',''Service''],
-                    [''gateway.networking.k8s.io'',''Gateway''], [''networking.istio.io'',''ServiceEntry'']]'
+                  rule: '[self.group, self.kind] in [["core", "Service"], ["", "Service"],
+                    ["gateway.networking.k8s.io", "Gateway"], ["networking.istio.io",
+                    "ServiceEntry"]]'
               targetRefs:
                 description: Optional.
                 items:
@@ -728,8 +741,9 @@ spec:
                   x-kubernetes-validations:
                   - message: Support kinds are core/Service, networking.istio.io/ServiceEntry,
                       gateway.networking.k8s.io/Gateway
-                    rule: '[self.group, self.kind] in [[''core'',''Service''], ['''',''Service''],
-                      [''gateway.networking.k8s.io'',''Gateway''], [''networking.istio.io'',''ServiceEntry'']]'
+                    rule: '[self.group, self.kind] in [["core", "Service"], ["", "Service"],
+                      ["gateway.networking.k8s.io", "Gateway"], ["networking.istio.io",
+                      "ServiceEntry"]]'
                 maxItems: 16
                 type: array
               tracing:
@@ -802,6 +816,11 @@ spec:
                       description: Controls span reporting.
                       nullable: true
                       type: boolean
+                    enableIstioTags:
+                      description: Determines whether or not trace spans generated
+                        by Envoy will include Istio specific tags.
+                      nullable: true
+                      type: boolean
                     match:
                       description: Allows tailoring of behavior to specific conditions.
                       properties:
@@ -844,7 +863,8 @@ spec:
             type: object
             x-kubernetes-validations:
             - message: only one of targetRefs or selector can be set
-              rule: (has(self.selector)?1:0)+(has(self.targetRef)?1:0)+(has(self.targetRefs)?1:0)<=1
+              rule: '(has(self.selector) ? 1 : 0) + (has(self.targetRef) ? 1 : 0)
+                + (has(self.targetRefs) ? 1 : 0) <= 1'
           status:
             properties:
               conditions:
@@ -864,6 +884,12 @@ spec:
                       description: Human-readable message indicating details about
                         last transition.
                       type: string
+                    observedGeneration:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: Resource Generation to which the Condition refers.
+                      x-kubernetes-int-or-string: true
                     reason:
                       description: Unique, one-word, CamelCase reason for the condition's
                         last transition.
@@ -880,8 +906,6 @@ spec:
                 anyOf:
                 - type: integer
                 - type: string
-                description: Resource Generation to which the Reconciled Condition
-                  refers.
                 x-kubernetes-int-or-string: true
               validationMessages:
                 description: Includes any errors or warnings detected by Istio's analyzers.

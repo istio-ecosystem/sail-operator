@@ -51,10 +51,10 @@ spec:
                 type: string
                 x-kubernetes-validations:
                 - message: UDS must be an absolute path or abstract socket
-                  rule: 'self.startsWith(''unix://'') ? (self.substring(7,8) == ''/''
-                    || self.substring(7,8) == ''@'') : true'
+                  rule: 'self.startsWith("unix://") ? (self.substring(7, 8) == "/"
+                    || self.substring(7, 8) == "@") : true'
                 - message: UDS may not be a dir
-                  rule: 'self.startsWith(''unix://'') ? !self.endsWith(''/'') : true'
+                  rule: 'self.startsWith("unix://") ? !self.endsWith("/") : true'
               labels:
                 additionalProperties:
                   type: string
@@ -83,7 +83,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: port name must be valid
-                  rule: self.all(key, size(key) < 63 && key.matches('^[a-zA-Z0-9](?:[-a-zA-Z0-9]*[a-zA-Z0-9])?$'))
+                  rule: self.all(key, size(key) < 63 && key.matches("^[a-zA-Z0-9](?:[-a-zA-Z0-9]*[a-zA-Z0-9])?$"))
               serviceAccount:
                 description: The service account associated with the workload if a
                   sidecar is present in the workload.
@@ -99,8 +99,8 @@ spec:
             - message: Address is required
               rule: has(self.address) || has(self.network)
             - message: UDS may not include ports
-              rule: '(has(self.address) && self.address.startsWith(''unix://'')) ?
-                !has(self.ports) : true'
+              rule: '(has(self.address) && self.address.startsWith("unix://")) ? !has(self.ports)
+                : true'
           status:
             properties:
               conditions:
@@ -120,6 +120,12 @@ spec:
                       description: Human-readable message indicating details about
                         last transition.
                       type: string
+                    observedGeneration:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: Resource Generation to which the Condition refers.
+                      x-kubernetes-int-or-string: true
                     reason:
                       description: Unique, one-word, CamelCase reason for the condition's
                         last transition.
@@ -136,8 +142,6 @@ spec:
                 anyOf:
                 - type: integer
                 - type: string
-                description: Resource Generation to which the Reconciled Condition
-                  refers.
                 x-kubernetes-int-or-string: true
               validationMessages:
                 description: Includes any errors or warnings detected by Istio's analyzers.
@@ -207,10 +211,10 @@ spec:
                 type: string
                 x-kubernetes-validations:
                 - message: UDS must be an absolute path or abstract socket
-                  rule: 'self.startsWith(''unix://'') ? (self.substring(7,8) == ''/''
-                    || self.substring(7,8) == ''@'') : true'
+                  rule: 'self.startsWith("unix://") ? (self.substring(7, 8) == "/"
+                    || self.substring(7, 8) == "@") : true'
                 - message: UDS may not be a dir
-                  rule: 'self.startsWith(''unix://'') ? !self.endsWith(''/'') : true'
+                  rule: 'self.startsWith("unix://") ? !self.endsWith("/") : true'
               labels:
                 additionalProperties:
                   type: string
@@ -239,7 +243,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: port name must be valid
-                  rule: self.all(key, size(key) < 63 && key.matches('^[a-zA-Z0-9](?:[-a-zA-Z0-9]*[a-zA-Z0-9])?$'))
+                  rule: self.all(key, size(key) < 63 && key.matches("^[a-zA-Z0-9](?:[-a-zA-Z0-9]*[a-zA-Z0-9])?$"))
               serviceAccount:
                 description: The service account associated with the workload if a
                   sidecar is present in the workload.
@@ -255,8 +259,8 @@ spec:
             - message: Address is required
               rule: has(self.address) || has(self.network)
             - message: UDS may not include ports
-              rule: '(has(self.address) && self.address.startsWith(''unix://'')) ?
-                !has(self.ports) : true'
+              rule: '(has(self.address) && self.address.startsWith("unix://")) ? !has(self.ports)
+                : true'
           status:
             properties:
               conditions:
@@ -276,6 +280,12 @@ spec:
                       description: Human-readable message indicating details about
                         last transition.
                       type: string
+                    observedGeneration:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: Resource Generation to which the Condition refers.
+                      x-kubernetes-int-or-string: true
                     reason:
                       description: Unique, one-word, CamelCase reason for the condition's
                         last transition.
@@ -292,8 +302,6 @@ spec:
                 anyOf:
                 - type: integer
                 - type: string
-                description: Resource Generation to which the Reconciled Condition
-                  refers.
                 x-kubernetes-int-or-string: true
               validationMessages:
                 description: Includes any errors or warnings detected by Istio's analyzers.
@@ -363,10 +371,10 @@ spec:
                 type: string
                 x-kubernetes-validations:
                 - message: UDS must be an absolute path or abstract socket
-                  rule: 'self.startsWith(''unix://'') ? (self.substring(7,8) == ''/''
-                    || self.substring(7,8) == ''@'') : true'
+                  rule: 'self.startsWith("unix://") ? (self.substring(7, 8) == "/"
+                    || self.substring(7, 8) == "@") : true'
                 - message: UDS may not be a dir
-                  rule: 'self.startsWith(''unix://'') ? !self.endsWith(''/'') : true'
+                  rule: 'self.startsWith("unix://") ? !self.endsWith("/") : true'
               labels:
                 additionalProperties:
                   type: string
@@ -395,7 +403,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: port name must be valid
-                  rule: self.all(key, size(key) < 63 && key.matches('^[a-zA-Z0-9](?:[-a-zA-Z0-9]*[a-zA-Z0-9])?$'))
+                  rule: self.all(key, size(key) < 63 && key.matches("^[a-zA-Z0-9](?:[-a-zA-Z0-9]*[a-zA-Z0-9])?$"))
               serviceAccount:
                 description: The service account associated with the workload if a
                   sidecar is present in the workload.
@@ -411,8 +419,8 @@ spec:
             - message: Address is required
               rule: has(self.address) || has(self.network)
             - message: UDS may not include ports
-              rule: '(has(self.address) && self.address.startsWith(''unix://'')) ?
-                !has(self.ports) : true'
+              rule: '(has(self.address) && self.address.startsWith("unix://")) ? !has(self.ports)
+                : true'
           status:
             properties:
               conditions:
@@ -432,6 +440,12 @@ spec:
                       description: Human-readable message indicating details about
                         last transition.
                       type: string
+                    observedGeneration:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: Resource Generation to which the Condition refers.
+                      x-kubernetes-int-or-string: true
                     reason:
                       description: Unique, one-word, CamelCase reason for the condition's
                         last transition.
@@ -448,8 +462,6 @@ spec:
                 anyOf:
                 - type: integer
                 - type: string
-                description: Resource Generation to which the Reconciled Condition
-                  refers.
                 x-kubernetes-int-or-string: true
               validationMessages:
                 description: Includes any errors or warnings detected by Istio's analyzers.
