@@ -903,7 +903,7 @@ _Appears in:_
 
 
 
-IstioRevisionTag references a Istio or IstioRevision object and serves as an alias for sidecar injection.
+IstioRevisionTag references an Istio or IstioRevision object and serves as an alias for sidecar injection. It can be used to manage stable revision tags without having to use istioctl or helm directly. See https://istio.io/latest/docs/setup/upgrade/canary/#stable-revision-labels for more information on the concept.
 
 
 
@@ -987,7 +987,7 @@ _Appears in:_
 
 
 
-IstioRevisionList contains a list of IstioRevision
+IstioRevisionTagList contains a list of IstioRevisionTags
 
 
 
@@ -1043,7 +1043,7 @@ _Appears in:_
 
 
 
-IstioRevisionTagTargetReference can reference either Istio or IstioRevision objects in the cluster.
+IstioRevisionTagTargetReference can reference either Istio or IstioRevision objects in the cluster. In the case of referencing an Istio object, the Sail Operator will automatically update the reference to the Istio object's Active Revision.
 
 
 
