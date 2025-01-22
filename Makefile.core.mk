@@ -80,9 +80,6 @@ GINKGO_FLAGS := $(if $(VERBOSE),-v) $(if $(CI),--no-color) $(if $(COVERAGE),-cov
 # - use the CHANNELS as arg of the bundle target (e.g make bundle CHANNELS=candidate,fast,stable)
 # - use environment variables to overwrite this value (e.g export CHANNELS="candidate,fast,stable")
 CHANNEL_PREFIX := dev
-ifneq (,$(findstring release-,$(shell git rev-parse --abbrev-ref HEAD)))
-CHANNEL_PREFIX = stable
-endif
 
 CHANNELS ?= $(CHANNEL_PREFIX)-$(MINOR_VERSION)
 ifneq ($(origin CHANNELS), undefined)
