@@ -46,6 +46,12 @@ func ApplyProfilesAndPlatform(
 	return values, nil
 }
 
+func ApplyUserValues(mergedValues, userValues helm.Values,
+) (helm.Values, error) {
+	values := helm.Values(mergeOverwrite(mergedValues, userValues))
+	return values, nil
+}
+
 func resolve(defaultProfile, userProfile string) []string {
 	switch {
 	case userProfile != "" && userProfile != "default":
