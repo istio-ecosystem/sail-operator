@@ -648,8 +648,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.24.2, v1.24.1, v1.24.0, v1.23.4, v1.23.3, v1.23.2, v1.22.7, v1.22.6, v1.22.5, v1.21.6, latest. | v1.24.2 | Enum: [v1.24.2 v1.24.1 v1.24.0 v1.23.4 v1.23.3 v1.23.2 v1.22.7 v1.22.6 v1.22.5 v1.21.6 latest]   |
-| `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, external, openshift-ambient, openshift, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift-ambient openshift preview remote stable]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.24.2, v1.24.1, v1.23.4, v1.23.3, v1.23.0. | v1.24.2 | Enum: [v1.24.2 v1.24.1 v1.23.4 v1.23.3 v1.23.0]   |
+| `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, openshift-ambient, openshift, preview, remote, stable. |  | Enum: [ambient default demo empty openshift-ambient openshift preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio CNI component should be installed. | istio-cni |  |
 | `values` _[CNIValues](#cnivalues)_ | Defines the values to be passed to the Helm charts when installing Istio CNI. |  |  |
 
@@ -876,7 +876,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.24.2, v1.24.1, v1.24.0, v1.23.4, v1.23.3, v1.23.2, v1.22.7, v1.22.6, v1.22.5, v1.21.6, latest. |  | Enum: [v1.24.2 v1.24.1 v1.24.0 v1.23.4 v1.23.3 v1.23.2 v1.22.7 v1.22.6 v1.22.5 v1.21.6 latest]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.24.2, v1.24.1, v1.23.4, v1.23.3, v1.23.0. |  | Enum: [v1.24.2 v1.24.1 v1.23.4 v1.23.3 v1.23.0]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. |  |  |
 | `values` _[Values](#values)_ | Defines the values to be passed to the Helm charts when installing Istio. |  |  |
 
@@ -1069,9 +1069,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.24.2, v1.24.1, v1.24.0, v1.23.4, v1.23.3, v1.23.2, v1.22.7, v1.22.6, v1.22.5, v1.21.6, latest. | v1.24.2 | Enum: [v1.24.2 v1.24.1 v1.24.0 v1.23.4 v1.23.3 v1.23.2 v1.22.7 v1.22.6 v1.22.5 v1.21.6 latest]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.24.2, v1.24.1, v1.23.4, v1.23.3, v1.23.0. | v1.24.2 | Enum: [v1.24.2 v1.24.1 v1.23.4 v1.23.3 v1.23.0]   |
 | `updateStrategy` _[IstioUpdateStrategy](#istioupdatestrategy)_ | Defines the update strategy to use when the version in the Istio CR is updated. | \{ type:InPlace \} |  |
-| `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, external, openshift-ambient, openshift, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift-ambient openshift preview remote stable]   |
+| `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, openshift-ambient, openshift, preview, remote, stable. |  | Enum: [ambient default demo empty openshift-ambient openshift preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. Note that this field is immutable. | istio-system |  |
 | `values` _[Values](#values)_ | Defines the values to be passed to the Helm charts when installing Istio. |  |  |
 
@@ -1427,6 +1427,7 @@ _Appears in:_
 | `envoyExtAuthzGrpc` _[MeshConfigExtensionProviderEnvoyExternalAuthorizationGrpcProvider](#meshconfigextensionproviderenvoyexternalauthorizationgrpcprovider)_ | Configures an external authorizer that implements the Envoy ext_authz filter authorization check service using the gRPC API. |  |  |
 | `zipkin` _[MeshConfigExtensionProviderZipkinTracingProvider](#meshconfigextensionproviderzipkintracingprovider)_ | Configures a tracing provider that uses the Zipkin API. |  |  |
 | `datadog` _[MeshConfigExtensionProviderDatadogTracingProvider](#meshconfigextensionproviderdatadogtracingprovider)_ | Configures a Datadog tracing provider. |  |  |
+| `stackdriver` _[MeshConfigExtensionProviderStackdriverProvider](#meshconfigextensionproviderstackdriverprovider)_ | Configures a Stackdriver provider. |  |  |
 | `skywalking` _[MeshConfigExtensionProviderSkyWalkingTracingProvider](#meshconfigextensionproviderskywalkingtracingprovider)_ | Configures a Apache SkyWalking provider. |  |  |
 | `opentelemetry` _[MeshConfigExtensionProviderOpenTelemetryTracingProvider](#meshconfigextensionprovideropentelemetrytracingprovider)_ | Configures an OpenTelemetry tracing provider. |  |  |
 | `prometheus` _[MeshConfigExtensionProviderPrometheusMetricsProvider](#meshconfigextensionproviderprometheusmetricsprovider)_ | Configures a Prometheus metrics provider. |  |  |
@@ -1471,7 +1472,6 @@ _Appears in:_
 | `port` _integer_ | REQUIRED. Specifies the port of the service. |  | Required: \{\}   |
 | `timeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | The maximum duration that the proxy will wait for a response from the provider, this is the timeout for a specific request (default timeout: 600s). When this timeout condition is met, the proxy marks the communication to the authorization service as failure. In this situation, the response sent back to the client will depend on the configured `failOpen` field. |  |  |
 | `failOpen` _boolean_ | If true, the HTTP request or TCP connection will be allowed even if the communication with the authorization service has failed, or if the authorization service has returned a HTTP 5xx error. Default is false. For HTTP request, it will be rejected with 403 (HTTP Forbidden). For TCP connection, it will be closed immediately. |  |  |
-| `clearRouteCache` _boolean_ | If true, clears route cache in order to allow the external authorization service to correctly affect routing decisions. If true, recalculate routes with the new ExtAuthZ added/removed headers. Default is false |  |  |
 | `statusOnError` _string_ | Sets the HTTP status that is returned to the client when there is a network error to the authorization service. The default status is "403" (HTTP Forbidden). |  |  |
 | `includeRequestBodyInCheck` _[MeshConfigExtensionProviderEnvoyExternalAuthorizationRequestBody](#meshconfigextensionproviderenvoyexternalauthorizationrequestbody)_ | If set, the client request body will be included in the authorization request sent to the authorization service. |  |  |
 
@@ -1494,7 +1494,6 @@ _Appears in:_
 | `timeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | The maximum duration that the proxy will wait for a response from the provider (default timeout: 600s). When this timeout condition is met, the proxy marks the communication to the authorization service as failure. In this situation, the response sent back to the client will depend on the configured `failOpen` field. |  |  |
 | `pathPrefix` _string_ | Sets a prefix to the value of authorization request header *Path*. For example, setting this to "/check" for an original user request at path "/admin" will cause the authorization check request to be sent to the authorization service at the path "/check/admin" instead of "/admin". |  |  |
 | `failOpen` _boolean_ | If true, the user request will be allowed even if the communication with the authorization service has failed, or if the authorization service has returned a HTTP 5xx error. Default is false and the request will be rejected with "Forbidden" response. |  |  |
-| `clearRouteCache` _boolean_ | If true, clears route cache in order to allow the external authorization service to correctly affect routing decisions. If true, recalculate routes with the new ExtAuthZ added/removed headers. Default is false |  |  |
 | `statusOnError` _string_ | Sets the HTTP status that is returned to the client when there is a network error to the authorization service. The default status is "403" (HTTP Forbidden). |  |  |
 | `includeHeadersInCheck` _string array_ | DEPRECATED. Use includeRequestHeadersInCheck instead.  Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto. |  |  |
 | `includeRequestHeadersInCheck` _string array_ | List of client request headers that should be included in the authorization request sent to the authorization service. Note that in addition to the headers specified here following headers are included by default: 1. *Host*, *Method*, *Path* and *Content-Length* are automatically sent. 2. *Content-Length* will be set to 0 and the request will not have a message body. However, the authorization request can include the buffered client request body (controlled by includeRequestBodyInCheck setting), consequently the value of Content-Length of the authorization request reflects the size of its payload size.  Exact, prefix and suffix matches are supported (similar to the [authorization policy rule syntax](https://istio.io/latest/docs/reference/config/security/authorization-policy/#Rule) except the presence match): - Exact match: "abc" will match on value "abc". - Prefix match: "abc*" will match on value "abc" and "abcd". - Suffix match: "*abc" will match on value "abc" and "xabc". |  |  |
@@ -2000,7 +1999,7 @@ _Appears in:_
 | `caCertificatesPem` _string array_ | The PEM data of the extra root certificates for workload-to-workload communication. This includes the certificates defined in MeshConfig and any other certificates that Istiod uses as CA. The plugin certificates (the 'cacerts' secret), self-signed certificates (the 'istio-ca-secret' secret) are added automatically by Istiod. |  |  |
 | `image` _[ProxyImage](#proxyimage)_ | Specifies the details of the proxy image. |  |  |
 | `privateKeyProvider` _[PrivateKeyProvider](#privatekeyprovider)_ | Specifies the details of the Private Key Provider configuration for gateway and sidecar proxies. |  |  |
-| `proxyHeaders` _[ProxyConfigProxyHeaders](#proxyconfigproxyheaders)_ | Define the set of headers to add/modify for HTTP request/responses.  To enable an optional header, simply set the field. If no specific configuration is required, an empty object (`\{\}`) will enable it. Note: currently all headers are enabled by default.  Below shows an example of customizing the `server` header and disabling the `X-Envoy-Attempt-Count` header:  ```yaml proxyHeaders:    server:     value: "my-custom-server"   # Explicitly enable Request IDs.   # As this is the default, this has no effect.   requestId: \{\}   attemptCount:     disabled: true  ```  # Below shows an example of preserving the header case for HTTP 1.x requests  ```yaml proxyHeaders:    perserveHttp1HeaderCase: true  ```  Some headers are enabled by default, and require explicitly disabling. See below for an example of disabling all default-enabled headers:  ```yaml proxyHeaders:    forwardedClientCert: SANITIZE   server:     disabled: true   requestId:     disabled: true   attemptCount:     disabled: true   envoyDebugHeaders:     disabled: true   metadataExchangeHeaders:     mode: IN_MESH  ``` |  |  |
+| `proxyHeaders` _[ProxyConfigProxyHeaders](#proxyconfigproxyheaders)_ | Define the set of headers to add/modify for HTTP request/responses.  To enable an optional header, simply set the field. If no specific configuration is required, an empty object (`\{\}`) will enable it. Note: currently all headers are enabled by default.  Below shows an example of customizing the `server` header and disabling the `X-Envoy-Attempt-Count` header:  ```yaml proxyHeaders:    server:     value: "my-custom-server"   # Explicitly enable Request IDs.   # As this is the default, this has no effect.   requestId: \{\}   attemptCount:     disabled: true  ```  Some headers are enabled by default, and require explicitly disabling. See below for an example of disabling all default-enabled headers:  ```yaml proxyHeaders:    forwardedClientCert: SANITIZE   server:     disabled: true   requestId:     disabled: true   attemptCount:     disabled: true   envoyDebugHeaders:     disabled: true   metadataExchangeHeaders:     mode: IN_MESH  ``` |  |  |
 
 
 #### MeshConfigProxyPathNormalization
@@ -2423,7 +2422,6 @@ _Appears in:_
 | `attemptCount` _[ProxyConfigProxyHeadersAttemptCount](#proxyconfigproxyheadersattemptcount)_ | Controls the `X-Envoy-Attempt-Count` header. If enabled, this header will be added on outbound request headers (including gateways) that have retries configured. If disabled, this header will not be set. If it is already present, it will be preserved. This header is enabled by default if not configured. |  |  |
 | `envoyDebugHeaders` _[ProxyConfigProxyHeadersEnvoyDebugHeaders](#proxyconfigproxyheadersenvoydebugheaders)_ | Controls various `X-Envoy-*` headers, such as `X-Envoy-Overloaded` and `X-Envoy-Upstream-Service-Time`. If enabled, these headers will be included. If disabled, these headers will not be set. If they are already present, they will be preserved. See the [Envoy documentation](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#envoy-v3-api-field-extensions-filters-http-router-v3-router-suppress-envoy-headers) for more details. These headers are enabled by default if not configured. |  |  |
 | `metadataExchangeHeaders` _[ProxyConfigProxyHeadersMetadataExchangeHeaders](#proxyconfigproxyheadersmetadataexchangeheaders)_ | Controls Istio metadata exchange headers `X-Envoy-Peer-Metadata` and `X-Envoy-Peer-Metadata-Id`. By default, the behavior is unspecified. If IN_MESH, these headers will not be appended to outbound requests from sidecars to services not in-mesh. |  |  |
-| `preserveHttp1HeaderCase` _boolean_ | When true, the original case of HTTP/1.x headers will be preserved as they pass through the proxy, rather than normalizing them to lowercase. This field is particularly useful for applications that require case-sensitive headers for interoperability with downstream systems or APIs that expect specific casing. The preserve_http1_header_case option only applies to HTTP/1.x traffic, as HTTP/2 requires all headers to be lowercase per the protocol specification. Envoy will ignore this field for HTTP/2 requests and automatically normalize headers to lowercase, ensuring compliance with HTTP/2 standards. |  |  |
 
 
 #### ProxyConfigProxyHeadersAttemptCount
@@ -2991,9 +2989,10 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `zipkin` _[TracingZipkin](#tracingzipkin)_ | Use a Zipkin tracer. |  |  |
 | `datadog` _[TracingDatadog](#tracingdatadog)_ | Use a Datadog tracer. |  |  |
+| `stackdriver` _[TracingStackdriver](#tracingstackdriver)_ | Use a Stackdriver tracer. |  |  |
+| `openCensusAgent` _[TracingOpenCensusAgent](#tracingopencensusagent)_ | Use an OpenCensus tracer exporting to an OpenCensus agent. |  |  |
 | `sampling` _float_ | The percentage of requests (0.0 - 100.0) that will be randomly selected for trace generation, if not requested by the client or not forced. Default is 1.0. |  |  |
 | `tlsSettings` _[ClientTLSSettings](#clienttlssettings)_ | Use the tlsSettings to specify the tls mode to use. If the remote tracing service uses Istio mutual TLS and shares the root CA with istiod, specify the TLS mode as `ISTIO_MUTUAL`. |  |  |
-| `enableIstioTags` _boolean_ | Determines whether or not trace spans generated by Envoy will include Istio specific tags. By default Istio specific tags are included in the trace spans. |  |  |
 
 
 
@@ -3312,7 +3311,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.24.2, v1.24.1, v1.24.0, latest. | v1.24.2 | Enum: [v1.24.2 v1.24.1 v1.24.0 latest]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.24.2, v1.24.1. | v1.24.2 | Enum: [v1.24.2 v1.24.1]   |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is 'ambient' and it is always applied. Must be one of: ambient, default, demo, empty, external, preview, remote, stable. | ambient | Enum: [ambient default demo empty external openshift-ambient openshift preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio ztunnel component should be installed. | ztunnel |  |
 | `values` _[ZTunnelValues](#ztunnelvalues)_ | Defines the values to be passed to the Helm charts when installing Istio ztunnel. |  |  |
