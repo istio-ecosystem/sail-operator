@@ -177,7 +177,7 @@ You can integrate cert-manager with your Service Mesh by deploying istio-csr and
       metadata:
         name: default
       spec:
-        version: v1.23.0
+        version: v1.24.1
         namespace: istio-system
         values:
           global:
@@ -185,10 +185,6 @@ You can integrate cert-manager with your Service Mesh by deploying istio-csr and
           pilot:
             env:
               ENABLE_CA_SERVER: "false"
-            volumeMounts:
-              - mountPath: /tmp/var/run/secrets/istiod/tls
-                name: istio-csr-dns-cert
-                readOnly: true
       ```
 
     - Create the `Istio` resource by using the following command.
@@ -215,7 +211,7 @@ You can integrate cert-manager with your Service Mesh by deploying istio-csr and
     - Find your active `IstioRevision`.
 
       ```sh
-      oc get istiorevisions
+      oc get istios default -o jsonpath='{.status.activeRevisionName}'
       ```
 
     - Add the injection label for your active revision to the `sample` namespace.
