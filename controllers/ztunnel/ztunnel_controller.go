@@ -143,11 +143,11 @@ func (r *Reconciler) installHelmChart(ctx context.Context, ztunnel *v1alpha1.ZTu
 	// userValues = applyImageDigests(ztunnel, userValues, config.Config)
 
 	if userValues == nil {
-		userValues = &v1alpha1.ZTunnelValues{}
+		userValues = &v1.ZTunnelValues{}
 	}
 
 	if userValues.ZTunnel == nil {
-		userValues.ZTunnel = &v1alpha1.ZTunnelConfig{}
+		userValues.ZTunnel = &v1.ZTunnelConfig{}
 	}
 
 	// apply userValues on top of defaultValues from profiles
