@@ -365,3 +365,6 @@ You can now proceed with the migration of next namespace.
 
 > [!CAUTION]
 > Do not remove `maistra.io/ignore-namespace="true"` label until the 2.6 control plane is uninstalled.
+
+### Cleaning of OpenShift Service Mesh 2.6
+Follow [these instructions.](../cleaning-2.6/README.md)

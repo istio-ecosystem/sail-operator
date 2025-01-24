@@ -126,4 +126,4 @@ Now you are ready to migrate. Check the `spec.mode` field on your `ServiceMeshCo
 oc get smcp <smcp-name> -n <smcp-namespace> -o jsonpath='{.spec.mode}'
 ```
 
-For `MultiTenant` meshes, follow [these instructions](./multi-tenancy/README.md). For `ClusterWide` meshes, follow [these instructions](#TODO).
+For `MultiTenant` meshes, follow [these instructions](./multi-tenancy/README.md). For `ClusterWide` meshes, follow [these instructions](./cluster-wide/README.md). When the migration is finished, follow [these instructions](./cleaning-2.6/README.md) to remove OpenShift Service Mesh 2.6.

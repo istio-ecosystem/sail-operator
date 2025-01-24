@@ -302,3 +302,5 @@ oc create ns istio-system-tenant-a
          </dl>
    ...
    ```
+### Cleaning of OpenShift Service Mesh 2.6
+Follow [these instructions.](../cleaning-2.6/README.md)
