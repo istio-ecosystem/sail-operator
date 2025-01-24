@@ -110,6 +110,8 @@ oc create ns istio-system-tenant-a
 
    Here we are setting `discoverySelectors` on our `Istio` resource. In 3.0, controlplanes by default watch the entire cluster and when managing multiple controlplanes on a single cluster, you must narrow the scope of each controlplane by setting `discoverySelectors`. In this example, we use the label `tenant` but you can use any label or combination of labels that you choose.
 
+   > **_NOTE:_** For simplicity, we are using a minimal example for Istio resource. Read [SMCP to Istio mapping](#TODO) to see how to transform fields used in SMCP resource to fields in Istio resource.
+
    ```yaml
    apiVersion: sailoperator.io/v1alpha1
    kind: Istio
@@ -117,12 +119,19 @@ oc create ns istio-system-tenant-a
      name: istio-tenant-a
    spec:
      namespace: istio-system-tenant-a
+     version: v1.23.0
      values:
        meshConfig:
          discoverySelectors:
            - matchLabels:
                tenant: tenant-a
-     version: v1.23.0
+   #     extensionProviders:  # uncomment and update according to your tracing/metrics configuration if used
+   #       - name: prometheus
+   #         prometheus: {}
+   #       - name: otel
+   #         opentelemetry:
+   #           port: 4317
+   #           service: otel-collector.opentelemetrycollector-3.svc.cluster.local
    ```
 
 > [!WARNING]
