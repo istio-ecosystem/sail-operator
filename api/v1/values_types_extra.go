@@ -93,7 +93,7 @@ type ZTunnelConfig struct {
 	// Same as `global.logging.level`, but will override it if set
 	Logging *GlobalLoggingConfig `json:"logging,omitempty"`
 	// Specifies whether istio components should output logs in json format by adding --log_as_json argument to each container.
-	LogAsJSON *bool `json:"logAsJSON,omitempty"`
+	LogAsJson *bool `json:"logAsJson,omitempty"` //nolint
 }
 
 // ZTunnelGlobalConfig is a subset of the Global Configuration used in the Istio ztunnel chart.
@@ -118,7 +118,7 @@ type ZTunnelGlobalConfig struct { // Default k8s resources settings for all Isti
 	ImagePullSecrets []string `json:"imagePullSecrets,omitempty"`
 
 	// Specifies whether istio components should output logs in json format by adding --log_as_json argument to each container.
-	LogAsJSON *bool `json:"logAsJSON,omitempty"`
+	LogAsJson *bool `json:"logAsJson,omitempty"` //nolint
 	// Specifies the global logging level settings for the Istio control plane components.
 	Logging *GlobalLoggingConfig `json:"logging,omitempty"`
 

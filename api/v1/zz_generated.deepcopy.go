@@ -5369,8 +5369,8 @@ func (in *ZTunnelConfig) DeepCopyInto(out *ZTunnelConfig) {
 		*out = new(GlobalLoggingConfig)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.LogAsJSON != nil {
-		in, out := &in.LogAsJSON, &out.LogAsJSON
+	if in.LogAsJson != nil {
+		in, out := &in.LogAsJson, &out.LogAsJson
 		*out = new(bool)
 		**out = **in
 	}
@@ -5409,8 +5409,8 @@ func (in *ZTunnelGlobalConfig) DeepCopyInto(out *ZTunnelGlobalConfig) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	if in.LogAsJSON != nil {
-		in, out := &in.LogAsJSON, &out.LogAsJSON
+	if in.LogAsJson != nil {
+		in, out := &in.LogAsJson, &out.LogAsJson
 		*out = new(bool)
 		**out = **in
 	}
