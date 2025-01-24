@@ -338,7 +338,9 @@ func TestDetermineReadyCondition(t *testing.T) {
 	}
 }
 
-func PTestApplyImageDigests(t *testing.T) {
+func TestApplyImageDigests(t *testing.T) {
+	t.Skip("https://github.com/istio-ecosystem/sail-operator/issues/581")
+
 	testCases := []struct {
 		name         string
 		config       config.OperatorConfig
