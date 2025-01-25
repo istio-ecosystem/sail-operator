@@ -242,7 +242,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: UDS may not include ports
-                  rule: '(has(self.address) && self.address.startsWith("unix://"))
+                  rule: '(has(self.address) ? self.address : "").startsWith("unix://")
                     ? !has(self.ports) : true'
             required:
             - template
@@ -550,7 +550,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: UDS may not include ports
-                  rule: '(has(self.address) && self.address.startsWith("unix://"))
+                  rule: '(has(self.address) ? self.address : "").startsWith("unix://")
                     ? !has(self.ports) : true'
             required:
             - template
@@ -858,7 +858,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: UDS may not include ports
-                  rule: '(has(self.address) && self.address.startsWith("unix://"))
+                  rule: '(has(self.address) ? self.address : "").startsWith("unix://")
                     ? !has(self.ports) : true'
             required:
             - template
