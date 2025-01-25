@@ -190,12 +190,6 @@ spec:
                 - kind
                 - name
                 type: object
-                x-kubernetes-validations:
-                - message: Support kinds are core/Service, networking.istio.io/ServiceEntry,
-                    gateway.networking.k8s.io/Gateway
-                  rule: '[self.group, self.kind] in [["core", "Service"], ["", "Service"],
-                    ["gateway.networking.k8s.io", "Gateway"], ["networking.istio.io",
-                    "ServiceEntry"]]'
               targetRefs:
                 description: Optional.
                 items:
@@ -226,12 +220,6 @@ spec:
                   - kind
                   - name
                   type: object
-                  x-kubernetes-validations:
-                  - message: Support kinds are core/Service, networking.istio.io/ServiceEntry,
-                      gateway.networking.k8s.io/Gateway
-                    rule: '[self.group, self.kind] in [["core", "Service"], ["", "Service"],
-                      ["gateway.networking.k8s.io", "Gateway"], ["networking.istio.io",
-                      "ServiceEntry"]]'
                 maxItems: 16
                 type: array
             type: object
@@ -485,12 +473,6 @@ spec:
                 - kind
                 - name
                 type: object
-                x-kubernetes-validations:
-                - message: Support kinds are core/Service, networking.istio.io/ServiceEntry,
-                    gateway.networking.k8s.io/Gateway
-                  rule: '[self.group, self.kind] in [["core", "Service"], ["", "Service"],
-                    ["gateway.networking.k8s.io", "Gateway"], ["networking.istio.io",
-                    "ServiceEntry"]]'
               targetRefs:
                 description: Optional.
                 items:
@@ -521,12 +503,6 @@ spec:
                   - kind
                   - name
                   type: object
-                  x-kubernetes-validations:
-                  - message: Support kinds are core/Service, networking.istio.io/ServiceEntry,
-                      gateway.networking.k8s.io/Gateway
-                    rule: '[self.group, self.kind] in [["core", "Service"], ["", "Service"],
-                      ["gateway.networking.k8s.io", "Gateway"], ["networking.istio.io",
-                      "ServiceEntry"]]'
                 maxItems: 16
                 type: array
             type: object

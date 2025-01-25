@@ -4063,7 +4063,7 @@ spec:
                               For example, if a connection is reset, Istio will translate this to 503 for it's response.
                               However, the destination did not return a 503 error, so this would not match `"503"` (it would, however, match `"reset"`).
 
-                              If not specified, this defaults to `connect-failure,refused-stream,unavailable,cancelled,503`.
+                              If not specified, this defaults to `connect-failure,refused-stream,unavailable,cancelled`.
                             type: string
                           retryRemoteLocalities:
                             description: |-
@@ -9420,7 +9420,7 @@ spec:
               version:
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.24.2, v1.24.1, v1.24.0, v1.23.4, v1.23.3, v1.23.2, v1.22.7, v1.22.6, v1.22.5, v1.21.6, latest.
+                  Must be one of: v1.24.2, v1.24.1, v1.24.0, v1.23.4, v1.23.3, v1.23.2, v1.22.8, v1.22.7, v1.22.6, v1.22.5, v1.21.6, latest.
                 enum:
                 - v1.24.2
                 - v1.24.1
@@ -9428,6 +9428,7 @@ spec:
                 - v1.23.4
                 - v1.23.3
                 - v1.23.2
+                - v1.22.8
                 - v1.22.7
                 - v1.22.6
                 - v1.22.5
