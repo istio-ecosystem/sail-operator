@@ -32,7 +32,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
@@ -407,8 +407,8 @@ func TestIsOwnedByRevisionWithRemoteControlPlane(t *testing.T) {
 			name: "IstioRevision not found",
 			ownerRefs: []metav1.OwnerReference{
 				{
-					APIVersion: v1alpha1.GroupVersion.String(),
-					Kind:       v1alpha1.IstioRevisionKind,
+					APIVersion: v1.GroupVersion.String(),
+					Kind:       v1.IstioRevisionKind,
 					Name:       "revision1",
 				},
 			},
@@ -418,8 +418,8 @@ func TestIsOwnedByRevisionWithRemoteControlPlane(t *testing.T) {
 			name: "IstioRevision fetch error",
 			ownerRefs: []metav1.OwnerReference{
 				{
-					APIVersion: v1alpha1.GroupVersion.String(),
-					Kind:       v1alpha1.IstioRevisionKind,
+					APIVersion: v1.GroupVersion.String(),
+					Kind:       v1.IstioRevisionKind,
 					Name:       "revision1",
 				},
 			},
@@ -434,17 +434,17 @@ func TestIsOwnedByRevisionWithRemoteControlPlane(t *testing.T) {
 			name: "IstioRevision not using remote profile",
 			ownerRefs: []metav1.OwnerReference{
 				{
-					APIVersion: v1alpha1.GroupVersion.String(),
-					Kind:       v1alpha1.IstioRevisionKind,
+					APIVersion: v1.GroupVersion.String(),
+					Kind:       v1.IstioRevisionKind,
 					Name:       "revision1",
 				},
 			},
 			objects: []client.Object{
-				&v1alpha1.IstioRevision{
+				&v1.IstioRevision{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "revision1",
 					},
-					Spec: v1alpha1.IstioRevisionSpec{},
+					Spec: v1.IstioRevisionSpec{},
 				},
 			},
 			expected: false,
@@ -453,18 +453,18 @@ func TestIsOwnedByRevisionWithRemoteControlPlane(t *testing.T) {
 			name: "IstioRevision uses remote profile",
 			ownerRefs: []metav1.OwnerReference{
 				{
-					APIVersion: v1alpha1.GroupVersion.String(),
-					Kind:       v1alpha1.IstioRevisionKind,
+					APIVersion: v1.GroupVersion.String(),
+					Kind:       v1.IstioRevisionKind,
 					Name:       "revision1",
 				},
 			},
 			objects: []client.Object{
-				&v1alpha1.IstioRevision{
+				&v1.IstioRevision{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "revision1",
 					},
-					Spec: v1alpha1.IstioRevisionSpec{
-						Values: &v1alpha1.Values{
+					Spec: v1.IstioRevisionSpec{
+						Values: &v1.Values{
 							Profile: ptr.Of("remote"),
 						},
 					},

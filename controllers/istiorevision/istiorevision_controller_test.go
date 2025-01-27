@@ -20,7 +20,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
@@ -49,21 +49,21 @@ func TestValidate(t *testing.T) {
 
 	testCases := []struct {
 		name      string
-		rev       *v1alpha1.IstioRevision
+		rev       *v1.IstioRevision
 		objects   []client.Object
 		expectErr string
 	}{
 		{
 			name: "success",
-			rev: &v1alpha1.IstioRevision{
+			rev: &v1.IstioRevision{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
-				Spec: v1alpha1.IstioRevisionSpec{
+				Spec: v1.IstioRevisionSpec{
 					Version:   supportedversion.Default,
 					Namespace: "istio-system",
-					Values: &v1alpha1.Values{
-						Global: &v1alpha1.GlobalConfig{
+					Values: &v1.Values{
+						Global: &v1.GlobalConfig{
 							IstioNamespace: ptr.Of("istio-system"),
 						},
 					},
@@ -74,11 +74,11 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "no version",
-			rev: &v1alpha1.IstioRevision{
+			rev: &v1.IstioRevision{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
-				Spec: v1alpha1.IstioRevisionSpec{
+				Spec: v1.IstioRevisionSpec{
 					Namespace: "istio-system",
 				},
 			},
@@ -87,11 +87,11 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "no namespace",
-			rev: &v1alpha1.IstioRevision{
+			rev: &v1.IstioRevision{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
-				Spec: v1alpha1.IstioRevisionSpec{
+				Spec: v1.IstioRevisionSpec{
 					Version: supportedversion.Default,
 				},
 			},
@@ -100,11 +100,11 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "namespace not found",
-			rev: &v1alpha1.IstioRevision{
+			rev: &v1.IstioRevision{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
-				Spec: v1alpha1.IstioRevisionSpec{
+				Spec: v1.IstioRevisionSpec{
 					Version:   supportedversion.Default,
 					Namespace: "istio-system",
 				},
@@ -114,11 +114,11 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "no values",
-			rev: &v1alpha1.IstioRevision{
+			rev: &v1.IstioRevision{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
-				Spec: v1alpha1.IstioRevisionSpec{
+				Spec: v1.IstioRevisionSpec{
 					Version:   supportedversion.Default,
 					Namespace: "istio-system",
 				},
@@ -128,15 +128,15 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "invalid istioNamespace",
-			rev: &v1alpha1.IstioRevision{
+			rev: &v1.IstioRevision{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
-				Spec: v1alpha1.IstioRevisionSpec{
+				Spec: v1.IstioRevisionSpec{
 					Version:   supportedversion.Default,
 					Namespace: "istio-system",
-					Values: &v1alpha1.Values{
-						Global: &v1alpha1.GlobalConfig{
+					Values: &v1.Values{
+						Global: &v1.GlobalConfig{
 							IstioNamespace: ptr.Of("other-namespace"),
 						},
 					},
@@ -147,16 +147,16 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "invalid revision default",
-			rev: &v1alpha1.IstioRevision{
+			rev: &v1.IstioRevision{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
-				Spec: v1alpha1.IstioRevisionSpec{
+				Spec: v1.IstioRevisionSpec{
 					Version:   supportedversion.Default,
 					Namespace: "istio-system",
-					Values: &v1alpha1.Values{
+					Values: &v1.Values{
 						Revision: ptr.Of("my-revision"),
-						Global: &v1alpha1.GlobalConfig{
+						Global: &v1.GlobalConfig{
 							IstioNamespace: ptr.Of("other-namespace"),
 						},
 					},
@@ -167,16 +167,16 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "invalid revision non-default",
-			rev: &v1alpha1.IstioRevision{
+			rev: &v1.IstioRevision{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "my-revision",
 				},
-				Spec: v1alpha1.IstioRevisionSpec{
+				Spec: v1.IstioRevisionSpec{
 					Version:   supportedversion.Default,
 					Namespace: "istio-system",
-					Values: &v1alpha1.Values{
+					Values: &v1.Values{
 						Revision: ptr.Of("other-revision"),
-						Global: &v1alpha1.GlobalConfig{
+						Global: &v1.GlobalConfig{
 							IstioNamespace: ptr.Of("other-namespace"),
 						},
 					},
@@ -206,39 +206,39 @@ func TestValidate(t *testing.T) {
 func TestDeriveState(t *testing.T) {
 	testCases := []struct {
 		name                string
-		reconciledCondition v1alpha1.IstioRevisionCondition
-		readyCondition      v1alpha1.IstioRevisionCondition
-		expectedState       v1alpha1.IstioRevisionConditionReason
+		reconciledCondition v1.IstioRevisionCondition
+		readyCondition      v1.IstioRevisionCondition
+		expectedState       v1.IstioRevisionConditionReason
 	}{
 		{
 			name:                "healthy",
-			reconciledCondition: newCondition(v1alpha1.IstioRevisionConditionReconciled, metav1.ConditionTrue, ""),
-			readyCondition:      newCondition(v1alpha1.IstioRevisionConditionReady, metav1.ConditionTrue, ""),
-			expectedState:       v1alpha1.IstioRevisionReasonHealthy,
+			reconciledCondition: newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionTrue, ""),
+			readyCondition:      newCondition(v1.IstioRevisionConditionReady, metav1.ConditionTrue, ""),
+			expectedState:       v1.IstioRevisionReasonHealthy,
 		},
 		{
 			name:                "not reconciled",
-			reconciledCondition: newCondition(v1alpha1.IstioRevisionConditionReconciled, metav1.ConditionFalse, v1alpha1.IstioRevisionReasonReconcileError),
-			readyCondition:      newCondition(v1alpha1.IstioRevisionConditionReady, metav1.ConditionTrue, ""),
-			expectedState:       v1alpha1.IstioRevisionReasonReconcileError,
+			reconciledCondition: newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionFalse, v1.IstioRevisionReasonReconcileError),
+			readyCondition:      newCondition(v1.IstioRevisionConditionReady, metav1.ConditionTrue, ""),
+			expectedState:       v1.IstioRevisionReasonReconcileError,
 		},
 		{
 			name:                "not ready",
-			reconciledCondition: newCondition(v1alpha1.IstioRevisionConditionReconciled, metav1.ConditionTrue, ""),
-			readyCondition:      newCondition(v1alpha1.IstioRevisionConditionReady, metav1.ConditionFalse, v1alpha1.IstioRevisionReasonIstiodNotReady),
-			expectedState:       v1alpha1.IstioRevisionReasonIstiodNotReady,
+			reconciledCondition: newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionTrue, ""),
+			readyCondition:      newCondition(v1.IstioRevisionConditionReady, metav1.ConditionFalse, v1.IstioRevisionReasonIstiodNotReady),
+			expectedState:       v1.IstioRevisionReasonIstiodNotReady,
 		},
 		{
 			name:                "readiness unknown",
-			reconciledCondition: newCondition(v1alpha1.IstioRevisionConditionReconciled, metav1.ConditionTrue, ""),
-			readyCondition:      newCondition(v1alpha1.IstioRevisionConditionReady, metav1.ConditionUnknown, v1alpha1.IstioRevisionReasonReadinessCheckFailed),
-			expectedState:       v1alpha1.IstioRevisionReasonReadinessCheckFailed,
+			reconciledCondition: newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionTrue, ""),
+			readyCondition:      newCondition(v1.IstioRevisionConditionReady, metav1.ConditionUnknown, v1.IstioRevisionReasonReadinessCheckFailed),
+			expectedState:       v1.IstioRevisionReasonReadinessCheckFailed,
 		},
 		{
 			name:                "not reconciled nor ready",
-			reconciledCondition: newCondition(v1alpha1.IstioRevisionConditionReconciled, metav1.ConditionFalse, v1alpha1.IstioRevisionReasonReconcileError),
-			readyCondition:      newCondition(v1alpha1.IstioRevisionConditionReady, metav1.ConditionFalse, v1alpha1.IstioRevisionReasonIstiodNotReady),
-			expectedState:       v1alpha1.IstioRevisionReasonReconcileError, // reconcile reason takes precedence over ready reason
+			reconciledCondition: newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionFalse, v1.IstioRevisionReasonReconcileError),
+			readyCondition:      newCondition(v1.IstioRevisionConditionReady, metav1.ConditionFalse, v1.IstioRevisionReasonIstiodNotReady),
+			expectedState:       v1.IstioRevisionReasonReconcileError, // reconcile reason takes precedence over ready reason
 		},
 	}
 
@@ -252,9 +252,9 @@ func TestDeriveState(t *testing.T) {
 }
 
 func newCondition(
-	conditionType v1alpha1.IstioRevisionConditionType, status metav1.ConditionStatus, reason v1alpha1.IstioRevisionConditionReason,
-) v1alpha1.IstioRevisionCondition {
-	return v1alpha1.IstioRevisionCondition{
+	conditionType v1.IstioRevisionConditionType, status metav1.ConditionStatus, reason v1.IstioRevisionConditionReason,
+) v1.IstioRevisionCondition {
+	return v1.IstioRevisionCondition{
 		Type:   conditionType,
 		Status: status,
 		Reason: reason,
@@ -266,10 +266,10 @@ func TestDetermineReadyCondition(t *testing.T) {
 
 	testCases := []struct {
 		name          string
-		values        *v1alpha1.Values
+		values        *v1.Values
 		clientObjects []client.Object
 		interceptors  interceptor.Funcs
-		expected      v1alpha1.IstioRevisionCondition
+		expected      v1.IstioRevisionCondition
 		expectErr     bool
 	}{
 		{
@@ -288,8 +288,8 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1alpha1.IstioRevisionCondition{
-				Type:   v1alpha1.IstioRevisionConditionReady,
+			expected: v1.IstioRevisionCondition{
+				Type:   v1.IstioRevisionConditionReady,
 				Status: metav1.ConditionTrue,
 			},
 		},
@@ -309,10 +309,10 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1alpha1.IstioRevisionCondition{
-				Type:    v1alpha1.IstioRevisionConditionReady,
+			expected: v1.IstioRevisionCondition{
+				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
-				Reason:  v1alpha1.IstioRevisionReasonIstiodNotReady,
+				Reason:  v1.IstioRevisionReasonIstiodNotReady,
 				Message: "not all istiod pods are ready",
 			},
 		},
@@ -332,10 +332,10 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1alpha1.IstioRevisionCondition{
-				Type:    v1alpha1.IstioRevisionConditionReady,
+			expected: v1.IstioRevisionCondition{
+				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
-				Reason:  v1alpha1.IstioRevisionReasonIstiodNotReady,
+				Reason:  v1.IstioRevisionReasonIstiodNotReady,
 				Message: "istiod Deployment is scaled to zero replicas",
 			},
 		},
@@ -343,16 +343,16 @@ func TestDetermineReadyCondition(t *testing.T) {
 			name:          "Istiod not found",
 			values:        nil,
 			clientObjects: []client.Object{},
-			expected: v1alpha1.IstioRevisionCondition{
-				Type:    v1alpha1.IstioRevisionConditionReady,
+			expected: v1.IstioRevisionCondition{
+				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
-				Reason:  v1alpha1.IstioRevisionReasonIstiodNotReady,
+				Reason:  v1.IstioRevisionReasonIstiodNotReady,
 				Message: "istiod Deployment not found",
 			},
 		},
 		{
 			name: "Non-default revision",
-			values: &v1alpha1.Values{
+			values: &v1.Values{
 				Revision: ptr.Of("my-revision"),
 			},
 			clientObjects: []client.Object{
@@ -368,8 +368,8 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1alpha1.IstioRevisionCondition{
-				Type:   v1alpha1.IstioRevisionConditionReady,
+			expected: v1.IstioRevisionCondition{
+				Type:   v1.IstioRevisionConditionReady,
 				Status: metav1.ConditionTrue,
 			},
 		},
@@ -381,17 +381,17 @@ func TestDetermineReadyCondition(t *testing.T) {
 					return fmt.Errorf("simulated error")
 				},
 			},
-			expected: v1alpha1.IstioRevisionCondition{
-				Type:    v1alpha1.IstioRevisionConditionReady,
+			expected: v1.IstioRevisionCondition{
+				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionUnknown,
-				Reason:  v1alpha1.IstioRevisionReasonReadinessCheckFailed,
+				Reason:  v1.IstioRevisionReasonReadinessCheckFailed,
 				Message: "failed to get readiness: simulated error",
 			},
 			expectErr: true,
 		},
 		{
 			name:   "Istiod-remote ready",
-			values: &v1alpha1.Values{Profile: ptr.Of("remote")},
+			values: &v1.Values{Profile: ptr.Of("remote")},
 			clientObjects: []client.Object{
 				&admissionv1.MutatingWebhookConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
@@ -402,14 +402,14 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1alpha1.IstioRevisionCondition{
-				Type:   v1alpha1.IstioRevisionConditionReady,
+			expected: v1.IstioRevisionCondition{
+				Type:   v1.IstioRevisionConditionReady,
 				Status: metav1.ConditionTrue,
 			},
 		},
 		{
 			name:   "Istiod-remote not ready",
-			values: &v1alpha1.Values{Profile: ptr.Of("remote")},
+			values: &v1.Values{Profile: ptr.Of("remote")},
 			clientObjects: []client.Object{
 				&admissionv1.MutatingWebhookConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
@@ -420,16 +420,16 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1alpha1.IstioRevisionCondition{
-				Type:    v1alpha1.IstioRevisionConditionReady,
+			expected: v1.IstioRevisionCondition{
+				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
-				Reason:  v1alpha1.IstioRevisionReasonRemoteIstiodNotReady,
+				Reason:  v1.IstioRevisionReasonRemoteIstiodNotReady,
 				Message: "readiness probe on remote istiod failed",
 			},
 		},
 		{
 			name:   "Istiod-remote no readiness probe status annotation",
-			values: &v1alpha1.Values{Profile: ptr.Of("remote")},
+			values: &v1.Values{Profile: ptr.Of("remote")},
 			clientObjects: []client.Object{
 				&admissionv1.MutatingWebhookConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
@@ -438,37 +438,37 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1alpha1.IstioRevisionCondition{
-				Type:    v1alpha1.IstioRevisionConditionReady,
+			expected: v1.IstioRevisionCondition{
+				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
-				Reason:  v1alpha1.IstioRevisionReasonRemoteIstiodNotReady,
+				Reason:  v1.IstioRevisionReasonRemoteIstiodNotReady,
 				Message: "invalid or missing annotation sailoperator.io/readinessProbe.status on MutatingWebhookConfiguration istio-sidecar-injector",
 			},
 		},
 		{
 			name:          "Istiod-remote webhook config not found",
-			values:        &v1alpha1.Values{Profile: ptr.Of("remote")},
+			values:        &v1.Values{Profile: ptr.Of("remote")},
 			clientObjects: []client.Object{},
-			expected: v1alpha1.IstioRevisionCondition{
-				Type:    v1alpha1.IstioRevisionConditionReady,
+			expected: v1.IstioRevisionCondition{
+				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
-				Reason:  v1alpha1.IstioRevisionReasonRemoteIstiodNotReady,
+				Reason:  v1.IstioRevisionReasonRemoteIstiodNotReady,
 				Message: "MutatingWebhookConfiguration istio-sidecar-injector not found",
 			},
 		},
 		{
 			name:          "Istiod-remote client error on get",
-			values:        &v1alpha1.Values{Profile: ptr.Of("remote")},
+			values:        &v1.Values{Profile: ptr.Of("remote")},
 			clientObjects: []client.Object{},
 			interceptors: interceptor.Funcs{
 				Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 					return fmt.Errorf("simulated error")
 				},
 			},
-			expected: v1alpha1.IstioRevisionCondition{
-				Type:    v1alpha1.IstioRevisionConditionReady,
+			expected: v1.IstioRevisionCondition{
+				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionUnknown,
-				Reason:  v1alpha1.IstioRevisionReasonReadinessCheckFailed,
+				Reason:  v1.IstioRevisionReasonReadinessCheckFailed,
 				Message: "failed to get readiness: simulated error",
 			},
 			expectErr: true,
@@ -483,11 +483,11 @@ func TestDetermineReadyCondition(t *testing.T) {
 
 			r := NewReconciler(cfg, cl, scheme.Scheme, nil)
 
-			rev := &v1alpha1.IstioRevision{
+			rev := &v1.IstioRevision{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "my-istio",
 				},
-				Spec: v1alpha1.IstioRevisionSpec{
+				Spec: v1.IstioRevisionSpec{
 					Namespace: "istio-system",
 					Values:    tt.values,
 				},
@@ -668,18 +668,18 @@ func TestDetermineInUseCondition(t *testing.T) {
 
 			t.Run(name, func(t *testing.T) {
 				g := NewWithT(t)
-				rev := &v1alpha1.IstioRevision{
+				rev := &v1.IstioRevision{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: revName,
 					},
-					Spec: v1alpha1.IstioRevisionSpec{
+					Spec: v1.IstioRevisionSpec{
 						Namespace: "istio-system",
 						Version:   "my-version",
 					},
 				}
 				if tc.enableAllNamespaces {
-					rev.Spec.Values = &v1alpha1.Values{
-						SidecarInjectorWebhook: &v1alpha1.SidecarInjectorConfig{
+					rev.Spec.Values = &v1.Values{
+						SidecarInjectorWebhook: &v1.SidecarInjectorConfig{
 							EnableNamespacesByDefault: ptr.Of(true),
 						},
 					}
@@ -711,11 +711,11 @@ func TestDetermineInUseCondition(t *testing.T) {
 				r := NewReconciler(cfg, cl, scheme.Scheme, nil)
 
 				result, _ := r.determineInUseCondition(context.TODO(), rev)
-				g.Expect(result.Type).To(Equal(v1alpha1.IstioRevisionConditionInUse))
+				g.Expect(result.Type).To(Equal(v1.IstioRevisionConditionInUse))
 
 				if tc.expectUnknownState {
 					g.Expect(result.Status).To(Equal(metav1.ConditionUnknown))
-					g.Expect(result.Reason).To(Equal(v1alpha1.IstioRevisionReasonUsageCheckFailed))
+					g.Expect(result.Reason).To(Equal(v1.IstioRevisionReasonUsageCheckFailed))
 				} else {
 					if revName == tc.matchesRevision {
 						g.Expect(result.Status).To(Equal(metav1.ConditionTrue),

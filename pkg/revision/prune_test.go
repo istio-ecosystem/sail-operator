@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,8 +39,8 @@ func TestPruneInactive(t *testing.T) {
 	ctx := context.Background()
 
 	ownedByIstio := metav1.OwnerReference{
-		APIVersion:         v1alpha1.GroupVersion.String(),
-		Kind:               v1alpha1.IstioKind,
+		APIVersion:         v1.GroupVersion.String(),
+		Kind:               v1.IstioKind,
 		Name:               istioName,
 		UID:                istioUID,
 		Controller:         ptr.Of(true),
@@ -48,8 +48,8 @@ func TestPruneInactive(t *testing.T) {
 	}
 
 	ownedByAnotherIstio := metav1.OwnerReference{
-		APIVersion:         v1alpha1.GroupVersion.String(),
-		Kind:               v1alpha1.IstioKind,
+		APIVersion:         v1.GroupVersion.String(),
+		Kind:               v1.IstioKind,
 		Name:               "some-other-Istio",
 		UID:                "some-other-uid",
 		Controller:         ptr.Of(true),
@@ -62,18 +62,18 @@ func TestPruneInactive(t *testing.T) {
 		name                string
 		revName             string
 		ownerReference      metav1.OwnerReference
-		inUseCondition      *v1alpha1.IstioRevisionCondition
-		rev                 *v1alpha1.IstioRevision
+		inUseCondition      *v1.IstioRevisionCondition
+		rev                 *v1.IstioRevision
 		expectDeletion      bool
 		expectRequeueAfter  *time.Duration
-		additionalRevisions []*v1alpha1.IstioRevision
+		additionalRevisions []*v1.IstioRevision
 	}{
 		{
 			name:           "preserves active IstioRevision even if not in use",
 			revName:        istioName,
 			ownerReference: ownedByIstio,
-			inUseCondition: &v1alpha1.IstioRevisionCondition{
-				Type:               v1alpha1.IstioRevisionConditionInUse,
+			inUseCondition: &v1.IstioRevisionCondition{
+				Type:               v1.IstioRevisionConditionInUse,
 				Status:             metav1.ConditionFalse,
 				LastTransitionTime: oneMinuteAgo,
 			},
@@ -84,8 +84,8 @@ func TestPruneInactive(t *testing.T) {
 			name:           "preserves non-active IstioRevision that's in use",
 			revName:        istioName + "-non-active",
 			ownerReference: ownedByIstio,
-			inUseCondition: &v1alpha1.IstioRevisionCondition{
-				Type:               v1alpha1.IstioRevisionConditionInUse,
+			inUseCondition: &v1.IstioRevisionCondition{
+				Type:               v1.IstioRevisionConditionInUse,
 				Status:             metav1.ConditionTrue,
 				LastTransitionTime: tenSecondsAgo,
 			},
@@ -96,20 +96,20 @@ func TestPruneInactive(t *testing.T) {
 			name:           "preserves unused non-active IstioRevision during grace period",
 			revName:        istioName + "-non-active",
 			ownerReference: ownedByIstio,
-			inUseCondition: &v1alpha1.IstioRevisionCondition{
-				Type:               v1alpha1.IstioRevisionConditionInUse,
+			inUseCondition: &v1.IstioRevisionCondition{
+				Type:               v1.IstioRevisionConditionInUse,
 				Status:             metav1.ConditionFalse,
 				LastTransitionTime: tenSecondsAgo,
 			},
 			expectDeletion:     false,
-			expectRequeueAfter: ptr.Of((v1alpha1.DefaultRevisionDeletionGracePeriodSeconds - 10) * time.Second),
+			expectRequeueAfter: ptr.Of((v1.DefaultRevisionDeletionGracePeriodSeconds - 10) * time.Second),
 		},
 		{
 			name:           "preserves IstioRevision owned by a different Istio",
 			revName:        "other-istio-non-active",
 			ownerReference: ownedByAnotherIstio,
-			inUseCondition: &v1alpha1.IstioRevisionCondition{
-				Type:               v1alpha1.IstioRevisionConditionInUse,
+			inUseCondition: &v1.IstioRevisionCondition{
+				Type:               v1.IstioRevisionConditionInUse,
 				Status:             metav1.ConditionFalse,
 				LastTransitionTime: oneMinuteAgo,
 			},
@@ -120,8 +120,8 @@ func TestPruneInactive(t *testing.T) {
 			name:           "deletes non-active IstioRevision that's not in use",
 			revName:        istioName + "-non-active",
 			ownerReference: ownedByIstio,
-			inUseCondition: &v1alpha1.IstioRevisionCondition{
-				Type:               v1alpha1.IstioRevisionConditionInUse,
+			inUseCondition: &v1.IstioRevisionCondition{
+				Type:               v1.IstioRevisionConditionInUse,
 				Status:             metav1.ConditionFalse,
 				LastTransitionTime: oneMinuteAgo,
 			},
@@ -132,21 +132,21 @@ func TestPruneInactive(t *testing.T) {
 			name:           "returns requeueAfter of earliest IstioRevision requiring pruning",
 			revName:        istioName + "-non-active",
 			ownerReference: ownedByIstio,
-			inUseCondition: &v1alpha1.IstioRevisionCondition{
-				Type:               v1alpha1.IstioRevisionConditionInUse,
+			inUseCondition: &v1.IstioRevisionCondition{
+				Type:               v1.IstioRevisionConditionInUse,
 				Status:             metav1.ConditionFalse,
 				LastTransitionTime: oneMinuteAgo,
 			},
-			additionalRevisions: []*v1alpha1.IstioRevision{
+			additionalRevisions: []*v1.IstioRevision{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            istioName + "-non-active2",
 						OwnerReferences: []metav1.OwnerReference{ownedByIstio},
 					},
-					Status: v1alpha1.IstioRevisionStatus{
-						Conditions: []v1alpha1.IstioRevisionCondition{
+					Status: v1.IstioRevisionStatus{
+						Conditions: []v1.IstioRevisionCondition{
 							{
-								Type:               v1alpha1.IstioRevisionConditionInUse,
+								Type:               v1.IstioRevisionConditionInUse,
 								Status:             metav1.ConditionFalse,
 								LastTransitionTime: metav1.Time{Time: time.Now().Add(-25 * time.Second)},
 							},
@@ -158,10 +158,10 @@ func TestPruneInactive(t *testing.T) {
 						Name:            istioName + "-non-active3",
 						OwnerReferences: []metav1.OwnerReference{ownedByIstio},
 					},
-					Status: v1alpha1.IstioRevisionStatus{
-						Conditions: []v1alpha1.IstioRevisionCondition{
+					Status: v1.IstioRevisionStatus{
+						Conditions: []v1.IstioRevisionCondition{
 							{
-								Type:               v1alpha1.IstioRevisionConditionInUse,
+								Type:               v1.IstioRevisionConditionInUse,
 								Status:             metav1.ConditionFalse,
 								LastTransitionTime: metav1.Time{Time: time.Now().Add(-20 * time.Second)},
 							},
@@ -170,29 +170,29 @@ func TestPruneInactive(t *testing.T) {
 				},
 			},
 			expectDeletion:     true,
-			expectRequeueAfter: ptr.Of((v1alpha1.DefaultRevisionDeletionGracePeriodSeconds - 25) * time.Second),
+			expectRequeueAfter: ptr.Of((v1.DefaultRevisionDeletionGracePeriodSeconds - 25) * time.Second),
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			istio := &v1alpha1.Istio{
+			istio := &v1.Istio{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: istioName,
 					UID:  istioUID,
 				},
-				Spec: v1alpha1.IstioSpec{
+				Spec: v1.IstioSpec{
 					Version: version,
 				},
 			}
 
-			rev := &v1alpha1.IstioRevision{
+			rev := &v1.IstioRevision{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            tc.revName,
 					OwnerReferences: []metav1.OwnerReference{tc.ownerReference},
 				},
-				Status: v1alpha1.IstioRevisionStatus{
-					Conditions: []v1alpha1.IstioRevisionCondition{*tc.inUseCondition},
+				Status: v1.IstioRevisionStatus{
+					Conditions: []v1.IstioRevisionCondition{*tc.inUseCondition},
 				},
 			}
 
@@ -204,7 +204,7 @@ func TestPruneInactive(t *testing.T) {
 			cl := newFakeClientBuilder().WithObjects(initObjs...).Build()
 
 			activeRevisionName := istioName
-			gracePeriod := v1alpha1.DefaultRevisionDeletionGracePeriodSeconds * time.Second
+			gracePeriod := v1.DefaultRevisionDeletionGracePeriodSeconds * time.Second
 
 			result, err := PruneInactive(ctx, cl, istio.UID, activeRevisionName, gracePeriod)
 			if err != nil {
@@ -246,5 +246,5 @@ func abs(duration time.Duration) time.Duration {
 func newFakeClientBuilder() *fake.ClientBuilder {
 	return fake.NewClientBuilder().
 		WithScheme(scheme.Scheme).
-		WithStatusSubresource(&v1alpha1.Istio{})
+		WithStatusSubresource(&v1.Istio{})
 }

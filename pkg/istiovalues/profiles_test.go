@@ -33,7 +33,7 @@ func TestGetValuesFromProfiles(t *testing.T) {
 
 	writeProfileFile := func(t *testing.T, path string, values ...string) {
 		yaml := `
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: IstioProfile
 spec:
   values:`

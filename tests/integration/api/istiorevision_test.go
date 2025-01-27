@@ -22,7 +22,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
@@ -77,32 +77,32 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 		Step("Deleting the Namespace to perform the tests")
 		Expect(k8sClient.Delete(ctx, namespace)).To(Succeed())
 
-		Eventually(k8sClient.DeleteAllOf).WithArguments(ctx, &v1alpha1.IstioRevision{}).Should(Succeed())
+		Eventually(k8sClient.DeleteAllOf).WithArguments(ctx, &v1.IstioRevision{}).Should(Succeed())
 		Eventually(func(g Gomega) {
-			list := &v1alpha1.IstioRevisionList{}
+			list := &v1.IstioRevisionList{}
 			g.Expect(k8sClient.List(ctx, list)).To(Succeed())
 			g.Expect(list.Items).To(BeEmpty())
 		}).Should(Succeed())
 	})
 
-	rev := &v1alpha1.IstioRevision{}
+	rev := &v1.IstioRevision{}
 
 	Describe("validation", func() {
 		AfterEach(func() {
-			Eventually(k8sClient.DeleteAllOf).WithArguments(ctx, &v1alpha1.IstioRevision{}).Should(Succeed())
+			Eventually(k8sClient.DeleteAllOf).WithArguments(ctx, &v1.IstioRevision{}).Should(Succeed())
 		})
 
 		It("rejects an IstioRevision where spec.values.global.istioNamespace doesn't match spec.namespace", func() {
-			rev = &v1alpha1.IstioRevision{
+			rev = &v1.IstioRevision{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: revName,
 				},
-				Spec: v1alpha1.IstioRevisionSpec{
+				Spec: v1.IstioRevisionSpec{
 					Version:   supportedversion.Default,
 					Namespace: istioNamespace,
-					Values: &v1alpha1.Values{
+					Values: &v1.Values{
 						Revision: ptr.Of(revName),
-						Global: &v1alpha1.GlobalConfig{
+						Global: &v1.GlobalConfig{
 							IstioNamespace: ptr.Of("wrong-namespace"),
 						},
 					},
@@ -112,16 +112,16 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 		})
 
 		It("rejects an IstioRevision where spec.values.revision doesn't match metadata.name (when name is not default)", func() {
-			rev = &v1alpha1.IstioRevision{
+			rev = &v1.IstioRevision{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: revName,
 				},
-				Spec: v1alpha1.IstioRevisionSpec{
+				Spec: v1.IstioRevisionSpec{
 					Version:   supportedversion.Default,
 					Namespace: istioNamespace,
-					Values: &v1alpha1.Values{
+					Values: &v1.Values{
 						Revision: ptr.Of("is-not-" + revName),
-						Global: &v1alpha1.GlobalConfig{
+						Global: &v1.GlobalConfig{
 							IstioNamespace: ptr.Of(istioNamespace),
 						},
 					},
@@ -131,16 +131,16 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 		})
 
 		It("rejects an IstioRevision where metadata.name is default and spec.values.revision isn't empty", func() {
-			rev = &v1alpha1.IstioRevision{
+			rev = &v1.IstioRevision{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
-				Spec: v1alpha1.IstioRevisionSpec{
+				Spec: v1.IstioRevisionSpec{
 					Version:   supportedversion.Default,
 					Namespace: istioNamespace,
-					Values: &v1alpha1.Values{
+					Values: &v1.Values{
 						Revision: ptr.Of("default"), // this must be rejected, because revision needs to be '' when metadata.name is 'default'
-						Global: &v1alpha1.GlobalConfig{
+						Global: &v1.GlobalConfig{
 							IstioNamespace: ptr.Of(istioNamespace),
 						},
 					},
@@ -150,16 +150,16 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 		})
 
 		It("accepts an IstioRevision where metadata.name is default and spec.values.revision is empty", func() {
-			rev = &v1alpha1.IstioRevision{
+			rev = &v1.IstioRevision{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
-				Spec: v1alpha1.IstioRevisionSpec{
+				Spec: v1.IstioRevisionSpec{
 					Version:   supportedversion.Default,
 					Namespace: istioNamespace,
-					Values: &v1alpha1.Values{
+					Values: &v1.Values{
 						Revision: ptr.Of(""),
-						Global: &v1alpha1.GlobalConfig{
+						Global: &v1.GlobalConfig{
 							IstioNamespace: ptr.Of(istioNamespace),
 						},
 					},
@@ -173,16 +173,16 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 		nsName := "nonexistent-namespace-" + rand.String(8)
 		BeforeAll(func() {
 			Step("Creating the IstioRevision resource without the namespace")
-			rev = &v1alpha1.IstioRevision{
+			rev = &v1.IstioRevision{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: revName,
 				},
-				Spec: v1alpha1.IstioRevisionSpec{
+				Spec: v1.IstioRevisionSpec{
 					Version:   supportedversion.Default,
 					Namespace: nsName,
-					Values: &v1alpha1.Values{
+					Values: &v1.Values{
 						Revision: ptr.Of(revName),
-						Global: &v1alpha1.GlobalConfig{
+						Global: &v1.GlobalConfig{
 							IstioNamespace: &nsName,
 						},
 					},
@@ -201,9 +201,9 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 				g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
 				g.Expect(rev.Status.ObservedGeneration).To(Equal(rev.ObjectMeta.Generation))
 
-				reconciled := rev.Status.GetCondition(v1alpha1.IstioRevisionConditionReconciled)
+				reconciled := rev.Status.GetCondition(v1.IstioRevisionConditionReconciled)
 				g.Expect(reconciled.Status).To(Equal(metav1.ConditionFalse))
-				g.Expect(reconciled.Reason).To(Equal(v1alpha1.IstioRevisionReasonReconcileError))
+				g.Expect(reconciled.Reason).To(Equal(v1.IstioRevisionReasonReconcileError))
 				g.Expect(reconciled.Message).To(ContainSubstring(fmt.Sprintf("namespace %q doesn't exist", nsName)))
 			}).Should(Succeed())
 		})
@@ -230,7 +230,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 				Eventually(func(g Gomega) {
 					g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
 					g.Expect(rev.Status.ObservedGeneration).To(Equal(rev.ObjectMeta.Generation))
-					reconciled := rev.Status.GetCondition(v1alpha1.IstioRevisionConditionReconciled)
+					reconciled := rev.Status.GetCondition(v1.IstioRevisionConditionReconciled)
 					g.Expect(reconciled.Status).To(Equal(metav1.ConditionTrue))
 				}).Should(Succeed())
 			})
@@ -239,19 +239,19 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 
 	It("successfully reconciles the resource", func() {
 		Step("Creating the IstioRevision")
-		rev = &v1alpha1.IstioRevision{
+		rev = &v1.IstioRevision{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: revName,
 			},
-			Spec: v1alpha1.IstioRevisionSpec{
+			Spec: v1.IstioRevisionSpec{
 				Version:   supportedversion.Default,
 				Namespace: istioNamespace,
-				Values: &v1alpha1.Values{
-					Global: &v1alpha1.GlobalConfig{
+				Values: &v1.Values{
+					Global: &v1.GlobalConfig{
 						IstioNamespace: ptr.Of(istioNamespace),
 					},
 					Revision: ptr.Of(revName),
-					Pilot: &v1alpha1.PilotConfig{
+					Pilot: &v1.PilotConfig{
 						Image: ptr.Of(pilotImage),
 					},
 				},
@@ -280,7 +280,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 		It("updates the status of the IstioRevision resource", func() {
 			By("setting the Ready condition status to true when istiod is ready", func() {
 				Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
-				readyCondition := rev.Status.GetCondition(v1alpha1.IstioRevisionConditionReady)
+				readyCondition := rev.Status.GetCondition(v1.IstioRevisionConditionReady)
 				Expect(readyCondition.Status).To(Equal(metav1.ConditionFalse))
 
 				istiod := &appsv1.Deployment{}
@@ -291,7 +291,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 
 				Eventually(func(g Gomega) {
 					g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
-					readyCondition := rev.Status.GetCondition(v1alpha1.IstioRevisionConditionReady)
+					readyCondition := rev.Status.GetCondition(v1.IstioRevisionConditionReady)
 					g.Expect(readyCondition.Status).To(Equal(metav1.ConditionTrue))
 				}).Should(Succeed())
 			})
@@ -305,7 +305,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 
 				Eventually(func(g Gomega) {
 					g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
-					readyCondition := rev.Status.GetCondition(v1alpha1.IstioRevisionConditionReady)
+					readyCondition := rev.Status.GetCondition(v1.IstioRevisionConditionReady)
 					g.Expect(readyCondition.Status).To(Equal(metav1.ConditionFalse))
 				}).Should(Succeed())
 			})
@@ -455,19 +455,19 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 		istiod2Key := client.ObjectKey{Name: "istiod-" + rev2Name, Namespace: istioNamespace}
 
 		Step("Creating the second IstioRevision instance")
-		rev2 := &v1alpha1.IstioRevision{
+		rev2 := &v1.IstioRevision{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: rev2Key.Name,
 			},
-			Spec: v1alpha1.IstioRevisionSpec{
+			Spec: v1.IstioRevisionSpec{
 				Version:   supportedversion.Default,
 				Namespace: istioNamespace,
-				Values: &v1alpha1.Values{
-					Global: &v1alpha1.GlobalConfig{
+				Values: &v1.Values{
+					Global: &v1.GlobalConfig{
 						IstioNamespace: ptr.Of(istioNamespace),
 					},
 					Revision: &rev2Key.Name,
-					Pilot: &v1alpha1.PilotConfig{
+					Pilot: &v1.PilotConfig{
 						Image: ptr.Of(pilotImage),
 					},
 				},

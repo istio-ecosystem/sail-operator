@@ -25,7 +25,7 @@ import (
 func TestOwnerReferencePostRenderer(t *testing.T) {
 	postRenderer := OwnerReferencePostRenderer{
 		ownerReference: metav1.OwnerReference{
-			APIVersion: "sailoperator.io/v1alpha1",
+			APIVersion: "sailoperator.io/v1",
 			Kind:       "Istio",
 			Name:       "my-istio",
 			UID:        "123",
@@ -61,7 +61,7 @@ metadata:
   name: deployment-in-same-namespace
   namespace: istio-system
   ownerReferences:
-    - apiVersion: sailoperator.io/v1alpha1
+    - apiVersion: sailoperator.io/v1
       kind: Istio
       name: my-istio
       uid: "123"

@@ -12,14 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package revision
+package v1
 
-import v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+import (
+	"time"
+)
 
-// IsUsingRemoteControlPlane returns true if the IstioRevision is configured to
-// connect to a remote rather than deploy a local control plane.
-func IsUsingRemoteControlPlane(rev *v1.IstioRevision) bool {
-	// TODO: we should use values.istiodRemote.enabled instead of the profile, but we can't get the final set of values because of new profiles implementation
-	values := rev.Spec.Values
-	return values != nil && values.Profile != nil && *values.Profile == "remote"
-}
+// testTime is only in unit tests to pin the time to a fixed value
+var testTime *time.Time

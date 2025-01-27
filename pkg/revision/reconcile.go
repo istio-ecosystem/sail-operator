@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -28,7 +28,7 @@ import (
 
 func CreateOrUpdate(
 	ctx context.Context, cl client.Client, revName string, version string, namespace string,
-	values *v1alpha1.Values, ownerRef metav1.OwnerReference,
+	values *v1.Values, ownerRef metav1.OwnerReference,
 ) error {
 	log := logf.FromContext(ctx)
 	log = log.WithValues("IstioRevision", revName)
@@ -48,12 +48,12 @@ func CreateOrUpdate(
 		}
 	} else {
 		// create new
-		rev = v1alpha1.IstioRevision{
+		rev = v1.IstioRevision{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            revName,
 				OwnerReferences: []metav1.OwnerReference{ownerRef},
 			},
-			Spec: v1alpha1.IstioRevisionSpec{
+			Spec: v1.IstioRevisionSpec{
 				Version:   version,
 				Namespace: namespace,
 				Values:    values,
@@ -67,9 +67,9 @@ func CreateOrUpdate(
 	return nil
 }
 
-func getRevision(ctx context.Context, cl client.Client, name string) (rev v1alpha1.IstioRevision, found bool, err error) {
+func getRevision(ctx context.Context, cl client.Client, name string) (rev v1.IstioRevision, found bool, err error) {
 	key := types.NamespacedName{Name: name}
-	rev = v1alpha1.IstioRevision{}
+	rev = v1.IstioRevision{}
 	err = cl.Get(ctx, key, &rev)
 	if err != nil {
 		if apierrors.IsNotFound(err) {

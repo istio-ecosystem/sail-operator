@@ -1,4 +1,4 @@
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: default
@@ -8,7 +8,7 @@ spec:
   updateStrategy:
     type: RevisionBased
 ---
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: IstioRevisionTag
 metadata:
   name: default

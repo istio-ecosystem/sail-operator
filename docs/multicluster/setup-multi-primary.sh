@@ -97,7 +97,7 @@ kubectl get secret -n istio-system --context "${CTX_CLUSTER2}" cacerts || kubect
 # 4. Create Sail CR on east
 
 kubectl apply --context "${CTX_CLUSTER1}" -f - <<EOF
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: default
@@ -129,7 +129,7 @@ kubectl --context "${CTX_CLUSTER1}" apply -n istio-system -f "${SCRIPT_DIR}/expo
 # 7. Create Sail CR on west
 
 kubectl apply --context "${CTX_CLUSTER2}" -f - <<EOF
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: default

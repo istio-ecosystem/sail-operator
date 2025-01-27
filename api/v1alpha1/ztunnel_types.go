@@ -17,6 +17,7 @@ package v1alpha1
 import (
 	"time"
 
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -51,7 +52,7 @@ type ZTunnelSpec struct {
 
 	// Defines the values to be passed to the Helm charts when installing Istio ztunnel.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Helm Values"
-	Values *ZTunnelValues `json:"values,omitempty"`
+	Values *v1.ZTunnelValues `json:"values,omitempty"`
 }
 
 // ZTunnelStatus defines the observed state of ZTunnel

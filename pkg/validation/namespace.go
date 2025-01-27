@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -42,7 +42,7 @@ func ValidateTargetNamespace(ctx context.Context, cl client.Client, namespace st
 }
 
 func IstioRevisionTagExists(ctx context.Context, cl client.Client, name string) (bool, error) {
-	tag := &v1alpha1.IstioRevisionTag{}
+	tag := &v1.IstioRevisionTag{}
 	if err := cl.Get(ctx, types.NamespacedName{Name: name}, tag); err != nil {
 		if apierrors.IsNotFound(err) {
 			return false, nil

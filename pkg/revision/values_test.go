@@ -20,7 +20,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 
 	"istio.io/istio/pkg/ptr"
@@ -43,7 +43,7 @@ func TestComputeValues(t *testing.T) {
 	Must(t, os.MkdirAll(profilesDir, 0o755))
 
 	Must(t, os.WriteFile(path.Join(profilesDir, "default.yaml"), []byte((`
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: IstioRevision
 spec:
   values:
@@ -53,7 +53,7 @@ spec:
       image: from-default-profile    # this gets overridden in my-profile and values`)), 0o644))
 
 	Must(t, os.WriteFile(path.Join(profilesDir, "my-profile.yaml"), []byte((`
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: IstioRevision
 spec:
   values:
@@ -61,8 +61,8 @@ spec:
       tag: from-my-profile
       image: from-my-profile  # this gets overridden in values`)), 0o644))
 
-	values := &v1alpha1.Values{
-		Pilot: &v1alpha1.PilotConfig{
+	values := &v1.Values{
+		Pilot: &v1.PilotConfig{
 			Image: ptr.Of("from-istio-spec-values"),
 		},
 	}
@@ -72,13 +72,13 @@ spec:
 		t.Errorf("Expected no error, but got an error: %v", err)
 	}
 
-	expected := &v1alpha1.Values{
-		Pilot: &v1alpha1.PilotConfig{
+	expected := &v1.Values{
+		Pilot: &v1.PilotConfig{
 			Hub:   ptr.Of("from-default-profile"),
 			Tag:   ptr.Of("from-my-profile"),
 			Image: ptr.Of("from-istio-spec-values"),
 		},
-		Global: &v1alpha1.GlobalConfig{
+		Global: &v1.GlobalConfig{
 			Platform:       ptr.Of("openshift"),
 			IstioNamespace: ptr.Of(namespace), // this value is always added/overridden based on IstioRevision.spec.namespace
 		},
