@@ -4131,7 +4131,7 @@ spec:
                               For example, if a connection is reset, Istio will translate this to 503 for it's response.
                               However, the destination did not return a 503 error, so this would not match `"503"` (it would, however, match `"reset"`).
 
-                              If not specified, this defaults to `connect-failure,refused-stream,unavailable,cancelled,503`.
+                              If not specified, this defaults to `connect-failure,refused-stream,unavailable,cancelled`.
                             type: string
                           retryRemoteLocalities:
                             description: |-

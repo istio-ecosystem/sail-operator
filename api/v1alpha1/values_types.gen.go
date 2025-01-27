@@ -3384,7 +3384,8 @@ type PortSelector struct {
 //	      ports: ["8080"]
 //
 // ```
-// +kubebuilder:validation:XValidation:message="Support kinds are core/Service, networking.istio.io/ServiceEntry, gateway.networking.k8s.io/Gateway",rule="[self.group, self.kind] in [['core','Service'], [”,'Service'], ['gateway.networking.k8s.io','Gateway'], ['networking.istio.io','ServiceEntry']]"
+//
+// When binding to a GatewayClass resource using PolicyTargetReference, your policy must be in the root namespace.
 type PolicyTargetReference struct {
 	// group is the group of the target resource.
 	// +kubebuilder:validation:MaxLength=253
@@ -3780,7 +3781,7 @@ type HTTPRetry struct {
 	// For example, if a connection is reset, Istio will translate this to 503 for it's response.
 	// However, the destination did not return a 503 error, so this would not match `"503"` (it would, however, match `"reset"`).
 	//
-	// If not specified, this defaults to `connect-failure,refused-stream,unavailable,cancelled,503`.
+	// If not specified, this defaults to `connect-failure,refused-stream,unavailable,cancelled`.
 	RetryOn *string `json:"retryOn,omitempty"`
 	// Flag to specify whether the retries should retry to other localities.
 	// See the [retry plugin configuration](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/http/http_connection_management#retry-plugin-configuration) for more details.
