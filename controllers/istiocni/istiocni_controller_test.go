@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
@@ -46,17 +46,17 @@ func TestValidate(t *testing.T) {
 
 	testCases := []struct {
 		name      string
-		cni       *v1alpha1.IstioCNI
+		cni       *v1.IstioCNI
 		objects   []client.Object
 		expectErr string
 	}{
 		{
 			name: "success",
-			cni: &v1alpha1.IstioCNI{
+			cni: &v1.IstioCNI{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
-				Spec: v1alpha1.IstioCNISpec{
+				Spec: v1.IstioCNISpec{
 					Version:   supportedversion.Default,
 					Namespace: "istio-cni",
 				},
@@ -66,11 +66,11 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "no version",
-			cni: &v1alpha1.IstioCNI{
+			cni: &v1.IstioCNI{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
-				Spec: v1alpha1.IstioCNISpec{
+				Spec: v1.IstioCNISpec{
 					Namespace: "istio-cni",
 				},
 			},
@@ -79,11 +79,11 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "no namespace",
-			cni: &v1alpha1.IstioCNI{
+			cni: &v1.IstioCNI{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
-				Spec: v1alpha1.IstioCNISpec{
+				Spec: v1.IstioCNISpec{
 					Version: supportedversion.Default,
 				},
 			},
@@ -92,11 +92,11 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "namespace not found",
-			cni: &v1alpha1.IstioCNI{
+			cni: &v1.IstioCNI{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
-				Spec: v1alpha1.IstioCNISpec{
+				Spec: v1.IstioCNISpec{
 					Version:   supportedversion.Default,
 					Namespace: "istio-cni",
 				},
@@ -125,39 +125,39 @@ func TestValidate(t *testing.T) {
 func TestDeriveState(t *testing.T) {
 	testCases := []struct {
 		name                string
-		reconciledCondition v1alpha1.IstioCNICondition
-		readyCondition      v1alpha1.IstioCNICondition
-		expectedState       v1alpha1.IstioCNIConditionReason
+		reconciledCondition v1.IstioCNICondition
+		readyCondition      v1.IstioCNICondition
+		expectedState       v1.IstioCNIConditionReason
 	}{
 		{
 			name:                "healthy",
-			reconciledCondition: newCondition(v1alpha1.IstioCNIConditionReconciled, metav1.ConditionTrue, ""),
-			readyCondition:      newCondition(v1alpha1.IstioCNIConditionReady, metav1.ConditionTrue, ""),
-			expectedState:       v1alpha1.IstioCNIReasonHealthy,
+			reconciledCondition: newCondition(v1.IstioCNIConditionReconciled, metav1.ConditionTrue, ""),
+			readyCondition:      newCondition(v1.IstioCNIConditionReady, metav1.ConditionTrue, ""),
+			expectedState:       v1.IstioCNIReasonHealthy,
 		},
 		{
 			name:                "not reconciled",
-			reconciledCondition: newCondition(v1alpha1.IstioCNIConditionReconciled, metav1.ConditionFalse, v1alpha1.IstioCNIReasonReconcileError),
-			readyCondition:      newCondition(v1alpha1.IstioCNIConditionReady, metav1.ConditionTrue, ""),
-			expectedState:       v1alpha1.IstioCNIReasonReconcileError,
+			reconciledCondition: newCondition(v1.IstioCNIConditionReconciled, metav1.ConditionFalse, v1.IstioCNIReasonReconcileError),
+			readyCondition:      newCondition(v1.IstioCNIConditionReady, metav1.ConditionTrue, ""),
+			expectedState:       v1.IstioCNIReasonReconcileError,
 		},
 		{
 			name:                "not ready",
-			reconciledCondition: newCondition(v1alpha1.IstioCNIConditionReconciled, metav1.ConditionTrue, ""),
-			readyCondition:      newCondition(v1alpha1.IstioCNIConditionReady, metav1.ConditionFalse, v1alpha1.IstioCNIDaemonSetNotReady),
-			expectedState:       v1alpha1.IstioCNIDaemonSetNotReady,
+			reconciledCondition: newCondition(v1.IstioCNIConditionReconciled, metav1.ConditionTrue, ""),
+			readyCondition:      newCondition(v1.IstioCNIConditionReady, metav1.ConditionFalse, v1.IstioCNIDaemonSetNotReady),
+			expectedState:       v1.IstioCNIDaemonSetNotReady,
 		},
 		{
 			name:                "readiness unknown",
-			reconciledCondition: newCondition(v1alpha1.IstioCNIConditionReconciled, metav1.ConditionTrue, ""),
-			readyCondition:      newCondition(v1alpha1.IstioCNIConditionReady, metav1.ConditionUnknown, v1alpha1.IstioCNIReasonReadinessCheckFailed),
-			expectedState:       v1alpha1.IstioCNIReasonReadinessCheckFailed,
+			reconciledCondition: newCondition(v1.IstioCNIConditionReconciled, metav1.ConditionTrue, ""),
+			readyCondition:      newCondition(v1.IstioCNIConditionReady, metav1.ConditionUnknown, v1.IstioCNIReasonReadinessCheckFailed),
+			expectedState:       v1.IstioCNIReasonReadinessCheckFailed,
 		},
 		{
 			name:                "not reconciled nor ready",
-			reconciledCondition: newCondition(v1alpha1.IstioCNIConditionReconciled, metav1.ConditionFalse, v1alpha1.IstioCNIReasonReconcileError),
-			readyCondition:      newCondition(v1alpha1.IstioCNIConditionReady, metav1.ConditionFalse, v1alpha1.IstioCNIDaemonSetNotReady),
-			expectedState:       v1alpha1.IstioCNIReasonReconcileError, // reconcile reason takes precedence over ready reason
+			reconciledCondition: newCondition(v1.IstioCNIConditionReconciled, metav1.ConditionFalse, v1.IstioCNIReasonReconcileError),
+			readyCondition:      newCondition(v1.IstioCNIConditionReady, metav1.ConditionFalse, v1.IstioCNIDaemonSetNotReady),
+			expectedState:       v1.IstioCNIReasonReconcileError, // reconcile reason takes precedence over ready reason
 		},
 	}
 
@@ -170,8 +170,8 @@ func TestDeriveState(t *testing.T) {
 	}
 }
 
-func newCondition(condType v1alpha1.IstioCNIConditionType, status metav1.ConditionStatus, reason v1alpha1.IstioCNIConditionReason) v1alpha1.IstioCNICondition {
-	return v1alpha1.IstioCNICondition{
+func newCondition(condType v1.IstioCNIConditionType, status metav1.ConditionStatus, reason v1.IstioCNIConditionReason) v1.IstioCNICondition {
+	return v1.IstioCNICondition{
 		Type:   condType,
 		Status: status,
 		Reason: reason,
@@ -186,7 +186,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 		cniEnabled    bool
 		clientObjects []client.Object
 		interceptors  interceptor.Funcs
-		expected      v1alpha1.IstioCNICondition
+		expected      v1.IstioCNICondition
 		expectErr     bool
 	}{
 		{
@@ -203,8 +203,8 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1alpha1.IstioCNICondition{
-				Type:   v1alpha1.IstioCNIConditionReady,
+			expected: v1.IstioCNICondition{
+				Type:   v1.IstioCNIConditionReady,
 				Status: metav1.ConditionTrue,
 			},
 		},
@@ -222,10 +222,10 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1alpha1.IstioCNICondition{
-				Type:    v1alpha1.IstioCNIConditionReady,
+			expected: v1.IstioCNICondition{
+				Type:    v1.IstioCNIConditionReady,
 				Status:  metav1.ConditionFalse,
-				Reason:  v1alpha1.IstioCNIDaemonSetNotReady,
+				Reason:  v1.IstioCNIDaemonSetNotReady,
 				Message: "not all istio-cni-node pods are ready",
 			},
 		},
@@ -243,20 +243,20 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1alpha1.IstioCNICondition{
-				Type:    v1alpha1.IstioCNIConditionReady,
+			expected: v1.IstioCNICondition{
+				Type:    v1.IstioCNIConditionReady,
 				Status:  metav1.ConditionFalse,
-				Reason:  v1alpha1.IstioCNIDaemonSetNotReady,
+				Reason:  v1.IstioCNIDaemonSetNotReady,
 				Message: "no istio-cni-node pods are currently scheduled",
 			},
 		},
 		{
 			name:          "CNI not found",
 			clientObjects: []client.Object{},
-			expected: v1alpha1.IstioCNICondition{
-				Type:    v1alpha1.IstioCNIConditionReady,
+			expected: v1.IstioCNICondition{
+				Type:    v1.IstioCNIConditionReady,
 				Status:  metav1.ConditionFalse,
-				Reason:  v1alpha1.IstioCNIDaemonSetNotReady,
+				Reason:  v1.IstioCNIDaemonSetNotReady,
 				Message: "istio-cni-node DaemonSet not found",
 			},
 		},
@@ -268,10 +268,10 @@ func TestDetermineReadyCondition(t *testing.T) {
 					return fmt.Errorf("simulated error")
 				},
 			},
-			expected: v1alpha1.IstioCNICondition{
-				Type:    v1alpha1.IstioCNIConditionReady,
+			expected: v1.IstioCNICondition{
+				Type:    v1.IstioCNIConditionReady,
 				Status:  metav1.ConditionUnknown,
-				Reason:  v1alpha1.IstioCNIReasonReadinessCheckFailed,
+				Reason:  v1.IstioCNIReasonReadinessCheckFailed,
 				Message: "failed to get readiness: simulated error",
 			},
 			expectErr: true,
@@ -286,11 +286,11 @@ func TestDetermineReadyCondition(t *testing.T) {
 
 			r := NewReconciler(cfg, cl, scheme.Scheme, nil)
 
-			cni := &v1alpha1.IstioCNI{
+			cni := &v1.IstioCNI{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "my-istio",
 				},
-				Spec: v1alpha1.IstioCNISpec{
+				Spec: v1.IstioCNISpec{
 					Namespace: "istio-cni",
 				},
 			}
@@ -313,26 +313,26 @@ func TestApplyImageDigests(t *testing.T) {
 	testCases := []struct {
 		name         string
 		config       config.OperatorConfig
-		input        *v1alpha1.IstioCNI
-		expectValues *v1alpha1.CNIValues
+		input        *v1.IstioCNI
+		expectValues *v1.CNIValues
 	}{
 		{
 			name: "no-config",
 			config: config.OperatorConfig{
 				ImageDigests: map[string]config.IstioImageConfig{},
 			},
-			input: &v1alpha1.IstioCNI{
-				Spec: v1alpha1.IstioCNISpec{
+			input: &v1.IstioCNI{
+				Spec: v1.IstioCNISpec{
 					Version: "v1.20.0",
-					Values: &v1alpha1.CNIValues{
-						Cni: &v1alpha1.CNIConfig{
+					Values: &v1.CNIValues{
+						Cni: &v1.CNIConfig{
 							Image: ptr.Of("istiocni-test"),
 						},
 					},
 				},
 			},
-			expectValues: &v1alpha1.CNIValues{
-				Cni: &v1alpha1.CNIConfig{
+			expectValues: &v1.CNIValues{
+				Cni: &v1.CNIConfig{
 					Image: ptr.Of("istiocni-test"),
 				},
 			},
@@ -346,14 +346,14 @@ func TestApplyImageDigests(t *testing.T) {
 					},
 				},
 			},
-			input: &v1alpha1.IstioCNI{
-				Spec: v1alpha1.IstioCNISpec{
+			input: &v1.IstioCNI{
+				Spec: v1.IstioCNISpec{
 					Version: "v1.20.0",
-					Values:  &v1alpha1.CNIValues{},
+					Values:  &v1.CNIValues{},
 				},
 			},
-			expectValues: &v1alpha1.CNIValues{
-				Cni: &v1alpha1.CNIConfig{
+			expectValues: &v1.CNIValues{
+				Cni: &v1.CNIConfig{
 					Image: ptr.Of("cni-test"),
 				},
 			},
@@ -367,18 +367,18 @@ func TestApplyImageDigests(t *testing.T) {
 					},
 				},
 			},
-			input: &v1alpha1.IstioCNI{
-				Spec: v1alpha1.IstioCNISpec{
+			input: &v1.IstioCNI{
+				Spec: v1.IstioCNISpec{
 					Version: "v1.20.0",
-					Values: &v1alpha1.CNIValues{
-						Cni: &v1alpha1.CNIConfig{
+					Values: &v1.CNIValues{
+						Cni: &v1.CNIConfig{
 							Image: ptr.Of("cni-custom"),
 						},
 					},
 				},
 			},
-			expectValues: &v1alpha1.CNIValues{
-				Cni: &v1alpha1.CNIConfig{
+			expectValues: &v1.CNIValues{
+				Cni: &v1.CNIConfig{
 					Image: ptr.Of("cni-custom"),
 				},
 			},
@@ -392,19 +392,19 @@ func TestApplyImageDigests(t *testing.T) {
 					},
 				},
 			},
-			input: &v1alpha1.IstioCNI{
-				Spec: v1alpha1.IstioCNISpec{
+			input: &v1.IstioCNI{
+				Spec: v1.IstioCNISpec{
 					Version: "v1.20.0",
-					Values: &v1alpha1.CNIValues{
-						Cni: &v1alpha1.CNIConfig{
+					Values: &v1.CNIValues{
+						Cni: &v1.CNIConfig{
 							Hub: ptr.Of("docker.io/istio"),
 							Tag: ptr.Of("1.20.1"),
 						},
 					},
 				},
 			},
-			expectValues: &v1alpha1.CNIValues{
-				Cni: &v1alpha1.CNIConfig{
+			expectValues: &v1.CNIValues{
+				Cni: &v1.CNIConfig{
 					Hub: ptr.Of("docker.io/istio"),
 					Tag: ptr.Of("1.20.1"),
 				},
@@ -419,19 +419,19 @@ func TestApplyImageDigests(t *testing.T) {
 					},
 				},
 			},
-			input: &v1alpha1.IstioCNI{
-				Spec: v1alpha1.IstioCNISpec{
+			input: &v1.IstioCNI{
+				Spec: v1.IstioCNISpec{
 					Version: "v1.20.1",
-					Values: &v1alpha1.CNIValues{
-						Cni: &v1alpha1.CNIConfig{
+					Values: &v1.CNIValues{
+						Cni: &v1.CNIConfig{
 							Hub: ptr.Of("docker.io/istio"),
 							Tag: ptr.Of("1.20.2"),
 						},
 					},
 				},
 			},
-			expectValues: &v1alpha1.CNIValues{
-				Cni: &v1alpha1.CNIConfig{
+			expectValues: &v1.CNIValues{
+				Cni: &v1.CNIConfig{
 					Hub: ptr.Of("docker.io/istio"),
 					Tag: ptr.Of("1.20.2"),
 				},
@@ -473,7 +473,7 @@ func TestDetermineStatus(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			cni := &v1alpha1.IstioCNI{
+			cni := &v1.IstioCNI{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "my-cni",
 					Generation: 123,
@@ -490,13 +490,13 @@ func TestDetermineStatus(t *testing.T) {
 			g.Expect(err).ToNot(HaveOccurred())
 
 			g.Expect(status.State).To(Equal(deriveState(reconciledCondition, readyCondition)))
-			g.Expect(normalize(status.GetCondition(v1alpha1.IstioCNIConditionReconciled))).To(Equal(normalize(reconciledCondition)))
-			g.Expect(normalize(status.GetCondition(v1alpha1.IstioCNIConditionReady))).To(Equal(normalize(readyCondition)))
+			g.Expect(normalize(status.GetCondition(v1.IstioCNIConditionReconciled))).To(Equal(normalize(reconciledCondition)))
+			g.Expect(normalize(status.GetCondition(v1.IstioCNIConditionReady))).To(Equal(normalize(readyCondition)))
 		})
 	}
 }
 
-func normalize(condition v1alpha1.IstioCNICondition) v1alpha1.IstioCNICondition {
+func normalize(condition v1.IstioCNICondition) v1.IstioCNICondition {
 	condition.LastTransitionTime = metav1.Time{}
 	return condition
 }

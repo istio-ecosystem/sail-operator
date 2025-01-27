@@ -15,6 +15,7 @@
 package scheme
 
 import (
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	multusv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -32,5 +33,6 @@ func init() {
 	utilruntime.Must(networkingv1alpha3.AddToScheme(Scheme))
 
 	utilruntime.Must(v1alpha1.AddToScheme(Scheme))
+	utilruntime.Must(v1.AddToScheme(Scheme))
 	// +kubebuilder:scaffold:scheme
 }

@@ -1,4 +1,4 @@
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: IstioCNI
 metadata:
   name: default

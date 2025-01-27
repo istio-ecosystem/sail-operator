@@ -18,19 +18,19 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ListOwned returns all IstioRevisions owned by the given owner.
-func ListOwned(ctx context.Context, cl client.Client, ownerUID types.UID) ([]v1alpha1.IstioRevision, error) {
-	revList := v1alpha1.IstioRevisionList{}
+func ListOwned(ctx context.Context, cl client.Client, ownerUID types.UID) ([]v1.IstioRevision, error) {
+	revList := v1.IstioRevisionList{}
 	if err := cl.List(ctx, &revList); err != nil {
 		return nil, fmt.Errorf("list failed: %w", err)
 	}
 
-	var revisions []v1alpha1.IstioRevision
+	var revisions []v1.IstioRevision
 	for _, rev := range revList.Items {
 		if isOwnedRevision(rev, ownerUID) {
 			revisions = append(revisions, rev)
@@ -39,7 +39,7 @@ func ListOwned(ctx context.Context, cl client.Client, ownerUID types.UID) ([]v1a
 	return revisions, nil
 }
 
-func isOwnedRevision(rev v1alpha1.IstioRevision, ownerUID types.UID) bool {
+func isOwnedRevision(rev v1.IstioRevision, ownerUID types.UID) bool {
 	if ownerUID == "" {
 		panic("resource has no UID; did you forget to set it in your test?")
 	}
