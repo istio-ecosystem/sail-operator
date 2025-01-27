@@ -34,7 +34,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/sail-dev/sail-operator:0.3-latest
-    createdAt: "2025-01-25T05:05:03Z"
+    createdAt: "2025-01-27T05:05:13Z"
     description: Experimental operator for installing Istio service mesh
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -377,7 +377,7 @@ spec:
     - v1.22.6
     - v1.22.5
     - v1.21.6
-    - latest (3efe4036)
+    - latest (9e4718a7)
 
     [See this page](https://github.com/istio-ecosystem/sail-operator/blob/main/bundle/README.md) for instructions on how to use it.
   displayName: Sail Operator
@@ -653,10 +653,10 @@ spec:
           template:
             metadata:
               annotations:
-                images.latest.cni: gcr.io/istio-testing/install-cni:1.25-alpha.3efe4036f25e00f9aa26b7c1b857f6344c127871
-                images.latest.istiod: gcr.io/istio-testing/pilot:1.25-alpha.3efe4036f25e00f9aa26b7c1b857f6344c127871
-                images.latest.proxy: gcr.io/istio-testing/proxyv2:1.25-alpha.3efe4036f25e00f9aa26b7c1b857f6344c127871
-                images.latest.ztunnel: gcr.io/istio-testing/ztunnel:1.25-alpha.3efe4036f25e00f9aa26b7c1b857f6344c127871
+                images.latest.cni: gcr.io/istio-testing/install-cni:1.25-alpha.9e4718a75cb3d767092067e58dfcfec358f816bf
+                images.latest.istiod: gcr.io/istio-testing/pilot:1.25-alpha.9e4718a75cb3d767092067e58dfcfec358f816bf
+                images.latest.proxy: gcr.io/istio-testing/proxyv2:1.25-alpha.9e4718a75cb3d767092067e58dfcfec358f816bf
+                images.latest.ztunnel: gcr.io/istio-testing/ztunnel:1.25-alpha.9e4718a75cb3d767092067e58dfcfec358f816bf
                 images.v1_21_6.cni: docker.io/istio/install-cni:1.21.6
                 images.v1_21_6.istiod: docker.io/istio/pilot:1.21.6
                 images.v1_21_6.proxy: docker.io/istio/proxyv2:1.21.6
@@ -830,13 +830,13 @@ spec:
   provider:
     name: Red Hat, Inc.
   relatedImages:
-  - image: gcr.io/istio-testing/install-cni:1.25-alpha.3efe4036f25e00f9aa26b7c1b857f6344c127871
+  - image: gcr.io/istio-testing/install-cni:1.25-alpha.9e4718a75cb3d767092067e58dfcfec358f816bf
     name: latest.cni
-  - image: gcr.io/istio-testing/pilot:1.25-alpha.3efe4036f25e00f9aa26b7c1b857f6344c127871
+  - image: gcr.io/istio-testing/pilot:1.25-alpha.9e4718a75cb3d767092067e58dfcfec358f816bf
     name: latest.istiod
-  - image: gcr.io/istio-testing/proxyv2:1.25-alpha.3efe4036f25e00f9aa26b7c1b857f6344c127871
+  - image: gcr.io/istio-testing/proxyv2:1.25-alpha.9e4718a75cb3d767092067e58dfcfec358f816bf
     name: latest.proxy
-  - image: gcr.io/istio-testing/ztunnel:1.25-alpha.3efe4036f25e00f9aa26b7c1b857f6344c127871
+  - image: gcr.io/istio-testing/ztunnel:1.25-alpha.9e4718a75cb3d767092067e58dfcfec358f816bf
     name: latest.ztunnel
   - image: docker.io/istio/install-cni:1.21.6
     name: v1_21_6.cni
