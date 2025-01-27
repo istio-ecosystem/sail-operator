@@ -5,7 +5,7 @@ metadata:
     alm-examples: |-
       [
         {
-          "apiVersion": "sailoperator.io/v1alpha1",
+          "apiVersion": "sailoperator.io/v1",
           "kind": "Istio",
           "metadata": {
             "name": "default"
@@ -20,7 +20,7 @@ metadata:
           }
         },
         {
-          "apiVersion": "sailoperator.io/v1alpha1",
+          "apiVersion": "sailoperator.io/v1",
           "kind": "IstioCNI",
           "metadata": {
             "name": "default"
@@ -34,7 +34,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/sail-dev/sail-operator:0.3-latest
-    createdAt: "2025-01-27T05:05:13Z"
+    createdAt: "2025-01-27T11:10:07Z"
     description: Experimental operator for installing Istio service mesh
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -194,7 +194,7 @@ spec:
           Istio CNI.
         displayName: Helm Values
         path: values
-      version: v1alpha1
+      version: v1
     - description: |-
         IstioRevision represents a single revision of an Istio Service Mesh deployment.
         Users shouldn't create IstioRevision objects directly. Instead, they should
@@ -232,7 +232,7 @@ spec:
           Istio.
         displayName: Helm Values
         path: values
-      version: v1alpha1
+      version: v1
     - description: IstioRevisionTag references an Istio or IstioRevision object and
         serves as an alias for sidecar injection. It can be used to manage stable
         revision tags without having to use istioctl or helm directly. See https://istio.io/latest/docs/setup/upgrade/canary/#stable-revision-labels
@@ -240,7 +240,7 @@ spec:
       displayName: Istio Revision Tag
       kind: IstioRevisionTag
       name: istiorevisiontags.sailoperator.io
-      version: v1alpha1
+      version: v1
     - description: |-
         Istio represents an Istio Service Mesh deployment consisting of one or more
         control plane instances (represented by one or more IstioRevision objects).
@@ -326,7 +326,7 @@ spec:
           Istio.
         displayName: Helm Values
         path: values
-      version: v1alpha1
+      version: v1
     - description: ZTunnel represents a deployment of the Istio ztunnel component.
       displayName: ZTunnel
       kind: ZTunnel

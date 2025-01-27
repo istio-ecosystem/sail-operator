@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
@@ -57,8 +57,8 @@ var _ = Describe("IstioCNI", Ordered, func() {
 	cniKey := client.ObjectKey{Name: cniName}
 	daemonsetKey := client.ObjectKey{Name: "istio-cni-node", Namespace: cniNamespace}
 
-	cni := &v1alpha1.IstioCNI{}
-	cniList := &v1alpha1.IstioCNIList{}
+	cni := &v1.IstioCNI{}
+	cniList := &v1.IstioCNIList{}
 	ds := &appsv1.DaemonSet{}
 
 	BeforeAll(func() {
@@ -71,11 +71,11 @@ var _ = Describe("IstioCNI", Ordered, func() {
 
 	Describe("validation", func() {
 		It("only accepts IstioCNI with the name 'default'", func() {
-			cni = &v1alpha1.IstioCNI{
+			cni = &v1.IstioCNI{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "not-default",
 				},
-				Spec: v1alpha1.IstioCNISpec{
+				Spec: v1.IstioCNISpec{
 					Version:   supportedversion.Default,
 					Namespace: cniNamespace,
 				},
@@ -89,11 +89,11 @@ var _ = Describe("IstioCNI", Ordered, func() {
 			nsName := "nonexistent-namespace-" + rand.String(8)
 			BeforeAll(func() {
 				By("Creating the IstioCNI resource without the namespace")
-				cni = &v1alpha1.IstioCNI{
+				cni = &v1.IstioCNI{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: cniName,
 					},
-					Spec: v1alpha1.IstioCNISpec{
+					Spec: v1.IstioCNISpec{
 						Version:   supportedversion.Default,
 						Namespace: nsName,
 					},
@@ -111,9 +111,9 @@ var _ = Describe("IstioCNI", Ordered, func() {
 					g.Expect(k8sClient.Get(ctx, cniKey, cni)).To(Succeed())
 					g.Expect(cni.Status.ObservedGeneration).To(Equal(cni.ObjectMeta.Generation))
 
-					reconciled := cni.Status.GetCondition(v1alpha1.IstioCNIConditionReconciled)
+					reconciled := cni.Status.GetCondition(v1.IstioCNIConditionReconciled)
 					g.Expect(reconciled.Status).To(Equal(metav1.ConditionFalse))
-					g.Expect(reconciled.Reason).To(Equal(v1alpha1.IstioCNIReasonReconcileError))
+					g.Expect(reconciled.Reason).To(Equal(v1.IstioCNIReasonReconcileError))
 					g.Expect(reconciled.Message).To(ContainSubstring(fmt.Sprintf("namespace %q doesn't exist", nsName)))
 				}).Should(Succeed())
 			})
@@ -139,7 +139,7 @@ var _ = Describe("IstioCNI", Ordered, func() {
 					Eventually(func(g Gomega) {
 						g.Expect(k8sClient.Get(ctx, cniKey, cni)).To(Succeed())
 						g.Expect(cni.Status.ObservedGeneration).To(Equal(cni.ObjectMeta.Generation))
-						reconciled := cni.Status.GetCondition(v1alpha1.IstioCNIConditionReconciled)
+						reconciled := cni.Status.GetCondition(v1.IstioCNIConditionReconciled)
 						g.Expect(reconciled.Status).To(Equal(metav1.ConditionTrue))
 					}).Should(Succeed())
 				})
@@ -148,11 +148,11 @@ var _ = Describe("IstioCNI", Ordered, func() {
 
 		When("the resource is created", func() {
 			BeforeAll(func() {
-				cni = &v1alpha1.IstioCNI{
+				cni = &v1.IstioCNI{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: cniName,
 					},
-					Spec: v1alpha1.IstioCNISpec{
+					Spec: v1.IstioCNISpec{
 						Version:   supportedversion.Default,
 						Namespace: cniNamespace,
 					},
@@ -185,7 +185,7 @@ var _ = Describe("IstioCNI", Ordered, func() {
 				It("marks the IstioCNI resource as ready", func() {
 					Eventually(func(g Gomega) {
 						g.Expect(k8sClient.Get(ctx, cniKey, cni)).To(Succeed())
-						readyCondition := cni.Status.GetCondition(v1alpha1.IstioCNIConditionReady)
+						readyCondition := cni.Status.GetCondition(v1.IstioCNIConditionReady)
 						g.Expect(readyCondition.Status).To(Equal(metav1.ConditionTrue))
 					}).Should(Succeed())
 				})
@@ -202,7 +202,7 @@ var _ = Describe("IstioCNI", Ordered, func() {
 				It("marks the IstioCNI resource as not ready", func() {
 					Eventually(func(g Gomega) {
 						g.Expect(k8sClient.Get(ctx, cniKey, cni)).To(Succeed())
-						readyCondition := cni.Status.GetCondition(v1alpha1.IstioCNIConditionReady)
+						readyCondition := cni.Status.GetCondition(v1.IstioCNIConditionReady)
 						g.Expect(readyCondition.Status).To(Equal(metav1.ConditionFalse))
 					}).Should(Succeed())
 				})
@@ -269,7 +269,7 @@ var _ = Describe("IstioCNI", Ordered, func() {
 
 		When("the resource is deleted", func() {
 			BeforeAll(func() {
-				Expect(k8sClient.DeleteAllOf(ctx, &v1alpha1.IstioCNI{})).To(Succeed())
+				Expect(k8sClient.DeleteAllOf(ctx, &v1.IstioCNI{})).To(Succeed())
 			})
 
 			It("deletes the istio-cni-node DaemonSet", func() {

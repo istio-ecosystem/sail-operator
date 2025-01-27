@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -45,7 +45,7 @@ func PruneInactive(ctx context.Context, cl client.Client, ownerUID types.UID, ac
 			log.V(2).Info("IstioRevision is the active revision", "IstioRevision", rev.Name)
 			continue
 		}
-		inUseCondition := rev.Status.GetCondition(v1alpha1.IstioRevisionConditionInUse)
+		inUseCondition := rev.Status.GetCondition(v1.IstioRevisionConditionInUse)
 		inUse := inUseCondition.Status == metav1.ConditionTrue
 		if inUse {
 			log.V(2).Info("IstioRevision is in use", "IstioRevision", rev.Name)

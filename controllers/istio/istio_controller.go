@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
@@ -68,7 +68,7 @@ func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *ru
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
-func (r *Reconciler) Reconcile(ctx context.Context, istio *v1alpha1.Istio) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, istio *v1.Istio) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
 	log.Info("Reconciling")
@@ -82,7 +82,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, istio *v1alpha1.Istio) (ctrl
 
 // doReconcile is the function that actually reconciles the Istio object. Any error reported by this
 // function should get reported in the status of the Istio object by the caller.
-func (r *Reconciler) doReconcile(ctx context.Context, istio *v1alpha1.Istio) (result ctrl.Result, err error) {
+func (r *Reconciler) doReconcile(ctx context.Context, istio *v1.Istio) (result ctrl.Result, err error) {
 	if err := validate(istio); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -94,7 +94,7 @@ func (r *Reconciler) doReconcile(ctx context.Context, istio *v1alpha1.Istio) (re
 	return revision.PruneInactive(ctx, r.Client, istio.UID, getActiveRevisionName(istio), getPruningGracePeriod(istio))
 }
 
-func validate(istio *v1alpha1.Istio) error {
+func validate(istio *v1.Istio) error {
 	if istio.Spec.Version == "" {
 		return reconciler.NewValidationError("spec.version not set")
 	}
@@ -104,7 +104,7 @@ func validate(istio *v1alpha1.Istio) error {
 	return nil
 }
 
-func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1alpha1.Istio) error {
+func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1.Istio) error {
 	values, err := revision.ComputeValues(
 		istio.Spec.Values, istio.Spec.Namespace, istio.Spec.Version,
 		r.Config.Platform, r.Config.DefaultProfile, istio.Spec.Profile,
@@ -117,8 +117,8 @@ func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1alpha
 		getActiveRevisionName(istio),
 		istio.Spec.Version, istio.Spec.Namespace, values,
 		metav1.OwnerReference{
-			APIVersion:         v1alpha1.GroupVersion.String(),
-			Kind:               v1alpha1.IstioKind,
+			APIVersion:         v1.GroupVersion.String(),
+			Kind:               v1.IstioKind,
 			Name:               istio.Name,
 			UID:                istio.UID,
 			Controller:         ptr.Of(true),
@@ -126,20 +126,20 @@ func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1alpha
 		})
 }
 
-func getPruningGracePeriod(istio *v1alpha1.Istio) time.Duration {
+func getPruningGracePeriod(istio *v1.Istio) time.Duration {
 	strategy := istio.Spec.UpdateStrategy
-	period := int64(v1alpha1.DefaultRevisionDeletionGracePeriodSeconds)
+	period := int64(v1.DefaultRevisionDeletionGracePeriodSeconds)
 	if strategy != nil && strategy.InactiveRevisionDeletionGracePeriodSeconds != nil {
 		period = *strategy.InactiveRevisionDeletionGracePeriodSeconds
 	}
-	if period < v1alpha1.MinRevisionDeletionGracePeriodSeconds {
-		period = v1alpha1.MinRevisionDeletionGracePeriodSeconds
+	if period < v1.MinRevisionDeletionGracePeriodSeconds {
+		period = v1.MinRevisionDeletionGracePeriodSeconds
 	}
 	return time.Duration(period) * time.Second
 }
 
-func (r *Reconciler) getActiveRevision(ctx context.Context, istio *v1alpha1.Istio) (v1alpha1.IstioRevision, error) {
-	rev := v1alpha1.IstioRevision{}
+func (r *Reconciler) getActiveRevision(ctx context.Context, istio *v1.Istio) (v1.IstioRevision, error) {
+	rev := v1.IstioRevision{}
 	err := r.Client.Get(ctx, GetActiveRevisionKey(istio), &rev)
 	if err != nil {
 		return rev, fmt.Errorf("get failed: %w", err)
@@ -147,14 +147,14 @@ func (r *Reconciler) getActiveRevision(ctx context.Context, istio *v1alpha1.Isti
 	return rev, nil
 }
 
-func GetActiveRevisionKey(istio *v1alpha1.Istio) types.NamespacedName {
+func GetActiveRevisionKey(istio *v1.Istio) types.NamespacedName {
 	return types.NamespacedName{
 		Name: getActiveRevisionName(istio),
 	}
 }
 
-func getActiveRevisionName(istio *v1alpha1.Istio) string {
-	var strategy v1alpha1.UpdateStrategyType
+func getActiveRevisionName(istio *v1.Istio) string {
+	var strategy v1.UpdateStrategyType
 	if istio.Spec.UpdateStrategy != nil {
 		strategy = istio.Spec.UpdateStrategy.Type
 	}
@@ -162,9 +162,9 @@ func getActiveRevisionName(istio *v1alpha1.Istio) string {
 	switch strategy {
 	default:
 		fallthrough
-	case v1alpha1.UpdateStrategyTypeInPlace:
+	case v1.UpdateStrategyTypeInPlace:
 		return istio.Name
-	case v1alpha1.UpdateStrategyTypeRevisionBased:
+	case v1.UpdateStrategyTypeRevisionBased:
 		return istio.Name + "-" + strings.ReplaceAll(istio.Spec.Version, ".", "-")
 	}
 }
@@ -178,7 +178,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// ownedResourceHandler handles resources that are owned by the IstioRevision CR
 	ownedResourceHandler := wrapEventHandler(logger,
-		handler.EnqueueRequestForOwner(r.Scheme, r.RESTMapper(), &v1alpha1.Istio{}, handler.OnlyControllerOwner()))
+		handler.EnqueueRequestForOwner(r.Scheme, r.RESTMapper(), &v1.Istio{}, handler.OnlyControllerOwner()))
 
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
@@ -192,64 +192,64 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		}).
 		// we use the Watches function instead of For(), so that we can wrap the handler so that events that cause the object to be enqueued are logged
 		// +lint-watches:ignore: Istio (not found in charts, but this is the main resource watched by this controller)
-		Watches(&v1alpha1.Istio{}, mainObjectHandler).
+		Watches(&v1.Istio{}, mainObjectHandler).
 		Named("istio").
-		Watches(&v1alpha1.IstioRevision{}, ownedResourceHandler).
-		Complete(reconciler.NewStandardReconciler[*v1alpha1.Istio](r.Client, r.Reconcile))
+		Watches(&v1.IstioRevision{}, ownedResourceHandler).
+		Complete(reconciler.NewStandardReconciler[*v1.Istio](r.Client, r.Reconcile))
 }
 
-func (r *Reconciler) determineStatus(ctx context.Context, istio *v1alpha1.Istio, reconcileErr error) (v1alpha1.IstioStatus, error) {
+func (r *Reconciler) determineStatus(ctx context.Context, istio *v1.Istio, reconcileErr error) (v1.IstioStatus, error) {
 	var errs errlist.Builder
 	status := *istio.Status.DeepCopy()
 	status.ObservedGeneration = istio.Generation
 
 	// set Reconciled and Ready conditions
 	if reconcileErr != nil {
-		status.SetCondition(v1alpha1.IstioCondition{
-			Type:    v1alpha1.IstioConditionReconciled,
+		status.SetCondition(v1.IstioCondition{
+			Type:    v1.IstioConditionReconciled,
 			Status:  metav1.ConditionFalse,
-			Reason:  v1alpha1.IstioReasonReconcileError,
+			Reason:  v1.IstioReasonReconcileError,
 			Message: reconcileErr.Error(),
 		})
-		status.SetCondition(v1alpha1.IstioCondition{
-			Type:    v1alpha1.IstioConditionReady,
+		status.SetCondition(v1.IstioCondition{
+			Type:    v1.IstioConditionReady,
 			Status:  metav1.ConditionUnknown,
-			Reason:  v1alpha1.IstioReasonReconcileError,
+			Reason:  v1.IstioReasonReconcileError,
 			Message: "cannot determine readiness due to reconciliation error",
 		})
-		status.State = v1alpha1.IstioReasonReconcileError
+		status.State = v1.IstioReasonReconcileError
 	} else {
 		status.ActiveRevisionName = getActiveRevisionName(istio)
 		rev, err := r.getActiveRevision(ctx, istio)
 		if apierrors.IsNotFound(err) {
-			revisionNotFound := func(conditionType v1alpha1.IstioConditionType) v1alpha1.IstioCondition {
-				return v1alpha1.IstioCondition{
+			revisionNotFound := func(conditionType v1.IstioConditionType) v1.IstioCondition {
+				return v1.IstioCondition{
 					Type:    conditionType,
 					Status:  metav1.ConditionFalse,
-					Reason:  v1alpha1.IstioReasonRevisionNotFound,
+					Reason:  v1.IstioReasonRevisionNotFound,
 					Message: "active IstioRevision not found",
 				}
 			}
 
-			status.SetCondition(revisionNotFound(v1alpha1.IstioConditionReconciled))
-			status.SetCondition(revisionNotFound(v1alpha1.IstioConditionReady))
-			status.State = v1alpha1.IstioReasonRevisionNotFound
+			status.SetCondition(revisionNotFound(v1.IstioConditionReconciled))
+			status.SetCondition(revisionNotFound(v1.IstioConditionReady))
+			status.State = v1.IstioReasonRevisionNotFound
 		} else if err == nil {
-			status.SetCondition(convertCondition(rev.Status.GetCondition(v1alpha1.IstioRevisionConditionReconciled)))
-			status.SetCondition(convertCondition(rev.Status.GetCondition(v1alpha1.IstioRevisionConditionReady)))
+			status.SetCondition(convertCondition(rev.Status.GetCondition(v1.IstioRevisionConditionReconciled)))
+			status.SetCondition(convertCondition(rev.Status.GetCondition(v1.IstioRevisionConditionReady)))
 			status.State = convertConditionReason(rev.Status.State)
 		} else {
-			activeRevisionGetFailed := func(conditionType v1alpha1.IstioConditionType) v1alpha1.IstioCondition {
-				return v1alpha1.IstioCondition{
+			activeRevisionGetFailed := func(conditionType v1.IstioConditionType) v1.IstioCondition {
+				return v1.IstioCondition{
 					Type:    conditionType,
 					Status:  metav1.ConditionUnknown,
-					Reason:  v1alpha1.IstioReasonFailedToGetActiveRevision,
+					Reason:  v1.IstioReasonFailedToGetActiveRevision,
 					Message: fmt.Sprintf("failed to get active IstioRevision: %s", err),
 				}
 			}
-			status.SetCondition(activeRevisionGetFailed(v1alpha1.IstioConditionReconciled))
-			status.SetCondition(activeRevisionGetFailed(v1alpha1.IstioConditionReady))
-			status.State = v1alpha1.IstioReasonFailedToGetActiveRevision
+			status.SetCondition(activeRevisionGetFailed(v1.IstioConditionReconciled))
+			status.SetCondition(activeRevisionGetFailed(v1.IstioConditionReady))
+			status.State = v1.IstioReasonFailedToGetActiveRevision
 			errs.Add(fmt.Errorf("failed to get active IstioRevision: %w", err))
 		}
 	}
@@ -260,10 +260,10 @@ func (r *Reconciler) determineStatus(ctx context.Context, istio *v1alpha1.Istio,
 		status.Revisions.Ready = 0
 		status.Revisions.InUse = 0
 		for _, rev := range revs {
-			if rev.Status.GetCondition(v1alpha1.IstioRevisionConditionReady).Status == metav1.ConditionTrue {
+			if rev.Status.GetCondition(v1.IstioRevisionConditionReady).Status == metav1.ConditionTrue {
 				status.Revisions.Ready++
 			}
-			if rev.Status.GetCondition(v1alpha1.IstioRevisionConditionInUse).Status == metav1.ConditionTrue {
+			if rev.Status.GetCondition(v1.IstioRevisionConditionInUse).Status == metav1.ConditionTrue {
 				status.Revisions.InUse++
 			}
 		}
@@ -276,7 +276,7 @@ func (r *Reconciler) determineStatus(ctx context.Context, istio *v1alpha1.Istio,
 	return status, errs.Error()
 }
 
-func (r *Reconciler) updateStatus(ctx context.Context, istio *v1alpha1.Istio, reconcileErr error) error {
+func (r *Reconciler) updateStatus(ctx context.Context, istio *v1.Istio, reconcileErr error) error {
 	var errs errlist.Builder
 	status, err := r.determineStatus(ctx, istio, reconcileErr)
 	if err != nil {
@@ -291,8 +291,8 @@ func (r *Reconciler) updateStatus(ctx context.Context, istio *v1alpha1.Istio, re
 	return errs.Error()
 }
 
-func convertCondition(condition v1alpha1.IstioRevisionCondition) v1alpha1.IstioCondition {
-	return v1alpha1.IstioCondition{
+func convertCondition(condition v1.IstioRevisionCondition) v1.IstioCondition {
+	return v1.IstioCondition{
 		Type:    convertConditionType(condition),
 		Status:  condition.Status,
 		Reason:  convertConditionReason(condition.Reason),
@@ -300,36 +300,36 @@ func convertCondition(condition v1alpha1.IstioRevisionCondition) v1alpha1.IstioC
 	}
 }
 
-func convertConditionType(condition v1alpha1.IstioRevisionCondition) v1alpha1.IstioConditionType {
+func convertConditionType(condition v1.IstioRevisionCondition) v1.IstioConditionType {
 	switch condition.Type {
-	case v1alpha1.IstioRevisionConditionReconciled:
-		return v1alpha1.IstioConditionReconciled
-	case v1alpha1.IstioRevisionConditionReady:
-		return v1alpha1.IstioConditionReady
+	case v1.IstioRevisionConditionReconciled:
+		return v1.IstioConditionReconciled
+	case v1.IstioRevisionConditionReady:
+		return v1.IstioConditionReady
 	default:
 		panic(fmt.Sprintf("can't convert IstioRevisionConditionType: %s", condition.Type))
 	}
 }
 
-func convertConditionReason(reason v1alpha1.IstioRevisionConditionReason) v1alpha1.IstioConditionReason {
+func convertConditionReason(reason v1.IstioRevisionConditionReason) v1.IstioConditionReason {
 	switch reason {
 	case "":
 		return ""
-	case v1alpha1.IstioRevisionReasonIstiodNotReady:
-		return v1alpha1.IstioReasonIstiodNotReady
-	case v1alpha1.IstioRevisionReasonHealthy:
-		return v1alpha1.IstioReasonHealthy
-	case v1alpha1.IstioRevisionReasonReadinessCheckFailed:
-		return v1alpha1.IstioReasonReadinessCheckFailed
-	case v1alpha1.IstioRevisionReasonReconcileError:
-		return v1alpha1.IstioReasonReconcileError
-	case v1alpha1.IstioRevisionReasonRemoteIstiodNotReady:
-		return v1alpha1.IstioReasonRemoteIstiodNotReady
+	case v1.IstioRevisionReasonIstiodNotReady:
+		return v1.IstioReasonIstiodNotReady
+	case v1.IstioRevisionReasonHealthy:
+		return v1.IstioReasonHealthy
+	case v1.IstioRevisionReasonReadinessCheckFailed:
+		return v1.IstioReasonReadinessCheckFailed
+	case v1.IstioRevisionReasonReconcileError:
+		return v1.IstioReasonReconcileError
+	case v1.IstioRevisionReasonRemoteIstiodNotReady:
+		return v1.IstioReasonRemoteIstiodNotReady
 	default:
 		panic(fmt.Sprintf("can't convert IstioRevisionConditionReason: %s", reason))
 	}
 }
 
 func wrapEventHandler(logger logr.Logger, handler handler.EventHandler) handler.EventHandler {
-	return enqueuelogger.WrapIfNecessary(v1alpha1.IstioKind, logger, handler)
+	return enqueuelogger.WrapIfNecessary(v1.IstioKind, logger, handler)
 }

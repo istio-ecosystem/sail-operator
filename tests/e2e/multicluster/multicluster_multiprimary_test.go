@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
@@ -91,7 +91,7 @@ var _ = Describe("Multicluster deployment models", Ordered, func() {
 						}).ShouldNot(HaveOccurred(), "Secret is not created on Cluster #1")
 
 						multiclusterYAML := `
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: default
@@ -115,13 +115,13 @@ spec:
 
 					It("updates both Istio CR status to Ready", func(ctx SpecContext) {
 						Eventually(common.GetObject).
-							WithArguments(ctx, clPrimary, kube.Key(istioName), &v1alpha1.Istio{}).
-							Should(HaveCondition(v1alpha1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Cluster #1; unexpected Condition")
+							WithArguments(ctx, clPrimary, kube.Key(istioName), &v1.Istio{}).
+							Should(HaveCondition(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Cluster #1; unexpected Condition")
 						Success("Istio CR is Ready on Cluster #1")
 
 						Eventually(common.GetObject).
-							WithArguments(ctx, clRemote, kube.Key(istioName), &v1alpha1.Istio{}).
-							Should(HaveCondition(v1alpha1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Cluster #2; unexpected Condition")
+							WithArguments(ctx, clRemote, kube.Key(istioName), &v1.Istio{}).
+							Should(HaveCondition(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Cluster #2; unexpected Condition")
 						Success("Istio CR is Ready on Cluster #1")
 					})
 

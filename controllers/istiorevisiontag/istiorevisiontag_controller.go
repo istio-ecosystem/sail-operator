@@ -22,7 +22,7 @@ import (
 	"reflect"
 
 	"github.com/go-logr/logr"
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
@@ -81,7 +81,7 @@ func NewReconciler(reconcilerCfg config.ReconcilerConfig, client client.Client, 
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
-func (r *Reconciler) Reconcile(ctx context.Context, tag *v1alpha1.IstioRevisionTag) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, tag *v1.IstioRevisionTag) (ctrl.Result, error) {
 	log := logf.FromContext(ctx).WithValues("IstioRevisionTag", tag.Name)
 
 	rev, reconcileErr := r.doReconcile(ctx, tag)
@@ -94,7 +94,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, tag *v1alpha1.IstioRevisionT
 	return ctrl.Result{}, errors.Join(reconcileErr, statusErr)
 }
 
-func (r *Reconciler) doReconcile(ctx context.Context, tag *v1alpha1.IstioRevisionTag) (*v1alpha1.IstioRevision, error) {
+func (r *Reconciler) doReconcile(ctx context.Context, tag *v1.IstioRevisionTag) (*v1.IstioRevision, error) {
 	log := logf.FromContext(ctx).WithValues("IstioRevisionTag", tag.Name)
 	if err := r.validate(ctx, tag); err != nil {
 		return nil, err
@@ -110,29 +110,29 @@ func (r *Reconciler) doReconcile(ctx context.Context, tag *v1alpha1.IstioRevisio
 	return rev, r.installHelmCharts(ctx, tag, rev)
 }
 
-func (r *Reconciler) Finalize(ctx context.Context, tag *v1alpha1.IstioRevisionTag) error {
+func (r *Reconciler) Finalize(ctx context.Context, tag *v1.IstioRevisionTag) error {
 	return r.uninstallHelmCharts(ctx, tag)
 }
 
-func (r *Reconciler) validate(ctx context.Context, tag *v1alpha1.IstioRevisionTag) error {
+func (r *Reconciler) validate(ctx context.Context, tag *v1.IstioRevisionTag) error {
 	if tag.Spec.TargetRef.Kind == "" || tag.Spec.TargetRef.Name == "" {
 		return reconciler.NewValidationError("spec.targetRef not set")
 	}
-	rev := v1alpha1.IstioRevision{}
+	rev := v1.IstioRevision{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: tag.Name}, &rev); err == nil {
 		return NewNameAlreadyExistsError("there is an IstioRevision with this name", err)
 	} else if !apierrors.IsNotFound(err) {
 		return err
 	}
-	if tag.Spec.TargetRef.Kind == v1alpha1.IstioKind {
-		i := v1alpha1.Istio{}
+	if tag.Spec.TargetRef.Kind == v1.IstioKind {
+		i := v1.Istio{}
 		if err := r.Client.Get(ctx, types.NamespacedName{Name: tag.Spec.TargetRef.Name}, &i); err != nil {
 			if apierrors.IsNotFound(err) {
 				return NewReferenceNotFoundError("referenced Istio resource does not exist", err)
 			}
 			return reconciler.NewValidationError("failed to get referenced Istio resource: " + err.Error())
 		}
-	} else if tag.Spec.TargetRef.Kind == v1alpha1.IstioRevisionKind {
+	} else if tag.Spec.TargetRef.Kind == v1.IstioRevisionKind {
 		if err := r.Client.Get(ctx, types.NamespacedName{Name: tag.Spec.TargetRef.Name}, &rev); err != nil {
 			if apierrors.IsNotFound(err) {
 				return NewReferenceNotFoundError("referenced IstioRevision resource does not exist", err)
@@ -143,12 +143,12 @@ func (r *Reconciler) validate(ctx context.Context, tag *v1alpha1.IstioRevisionTa
 	return nil
 }
 
-func (r *Reconciler) getIstioRevision(ctx context.Context, ref v1alpha1.IstioRevisionTagTargetReference) (*v1alpha1.IstioRevision, error) {
+func (r *Reconciler) getIstioRevision(ctx context.Context, ref v1.IstioRevisionTagTargetReference) (*v1.IstioRevision, error) {
 	var revisionName string
-	if ref.Kind == v1alpha1.IstioRevisionKind {
+	if ref.Kind == v1.IstioRevisionKind {
 		revisionName = ref.Name
-	} else if ref.Kind == v1alpha1.IstioKind {
-		i := v1alpha1.Istio{}
+	} else if ref.Kind == v1.IstioKind {
+		i := v1.Istio{}
 		err := r.Client.Get(ctx, types.NamespacedName{Name: ref.Name}, &i)
 		if err != nil {
 			return nil, err
@@ -161,7 +161,7 @@ func (r *Reconciler) getIstioRevision(ctx context.Context, ref v1alpha1.IstioRev
 		return nil, reconciler.NewValidationError("unknown targetRef.kind")
 	}
 
-	rev := v1alpha1.IstioRevision{}
+	rev := v1.IstioRevision{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: revisionName}, &rev)
 	if err != nil {
 		return nil, err
@@ -169,10 +169,10 @@ func (r *Reconciler) getIstioRevision(ctx context.Context, ref v1alpha1.IstioRev
 	return &rev, nil
 }
 
-func (r *Reconciler) installHelmCharts(ctx context.Context, tag *v1alpha1.IstioRevisionTag, rev *v1alpha1.IstioRevision) error {
+func (r *Reconciler) installHelmCharts(ctx context.Context, tag *v1.IstioRevisionTag, rev *v1.IstioRevision) error {
 	ownerReference := metav1.OwnerReference{
-		APIVersion:         v1alpha1.GroupVersion.String(),
-		Kind:               v1alpha1.IstioRevisionTagKind,
+		APIVersion:         v1.GroupVersion.String(),
+		Kind:               v1.IstioRevisionTagKind,
 		Name:               tag.Name,
 		UID:                tag.UID,
 		Controller:         ptr.Of(true),
@@ -192,15 +192,15 @@ func (r *Reconciler) installHelmCharts(ctx context.Context, tag *v1alpha1.IstioR
 	return nil
 }
 
-func getReleaseName(tag *v1alpha1.IstioRevisionTag) string {
+func getReleaseName(tag *v1.IstioRevisionTag) string {
 	return fmt.Sprintf("%s-%s", tag.Name, revisionTagsChartName)
 }
 
-func (r *Reconciler) getChartDir(tag *v1alpha1.IstioRevision) string {
+func (r *Reconciler) getChartDir(tag *v1.IstioRevision) string {
 	return path.Join(r.Config.ResourceDirectory, tag.Spec.Version, "charts", revisionTagsChartName)
 }
 
-func (r *Reconciler) uninstallHelmCharts(ctx context.Context, tag *v1alpha1.IstioRevisionTag) error {
+func (r *Reconciler) uninstallHelmCharts(ctx context.Context, tag *v1.IstioRevisionTag) error {
 	if _, err := r.ChartManager.UninstallChart(ctx, getReleaseName(tag), tag.Status.IstiodNamespace); err != nil {
 		return fmt.Errorf("failed to uninstall Helm chart %q: %w", revisionTagsChartName, err)
 	}
@@ -216,7 +216,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// ownedResourceHandler handles resources that are owned by the IstioRevisionTag CR
 	ownedResourceHandler := wrapEventHandler(
-		logger, handler.EnqueueRequestForOwner(r.Scheme, r.RESTMapper(), &v1alpha1.IstioRevisionTag{}, handler.OnlyControllerOwner()))
+		logger, handler.EnqueueRequestForOwner(r.Scheme, r.RESTMapper(), &v1.IstioRevisionTag{}, handler.OnlyControllerOwner()))
 
 	// operatorResourcesHandler handles watch events from operator CRDs Istio and IstioRevision
 	operatorResourcesHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapOperatorResourceToReconcileRequest))
@@ -241,22 +241,22 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 			},
 		}).
 		// we use the Watches function instead of For(), so that we can wrap the handler so that events that cause the object to be enqueued are logged
-		Watches(&v1alpha1.IstioRevisionTag{}, mainObjectHandler).
+		Watches(&v1.IstioRevisionTag{}, mainObjectHandler).
 		Named("istiorevisiontag").
 		// watches related to in-use detection
 		Watches(&corev1.Namespace{}, nsHandler, builder.WithPredicates(ignoreStatusChange())).
 		Watches(&corev1.Pod{}, podHandler, builder.WithPredicates(ignoreStatusChange())).
 
 		// cluster-scoped resources
-		Watches(&v1alpha1.Istio{}, operatorResourcesHandler).
-		Watches(&v1alpha1.IstioRevision{}, operatorResourcesHandler).
+		Watches(&v1.Istio{}, operatorResourcesHandler).
+		Watches(&v1.IstioRevision{}, operatorResourcesHandler).
 		Watches(&admissionv1.MutatingWebhookConfiguration{}, ownedResourceHandler).
-		Complete(reconciler.NewStandardReconcilerWithFinalizer[*v1alpha1.IstioRevisionTag](r.Client, r.Reconcile, r.Finalize, constants.FinalizerName))
+		Complete(reconciler.NewStandardReconcilerWithFinalizer[*v1.IstioRevisionTag](r.Client, r.Reconcile, r.Finalize, constants.FinalizerName))
 }
 
-func (r *Reconciler) determineStatus(ctx context.Context, tag *v1alpha1.IstioRevisionTag,
-	rev *v1alpha1.IstioRevision, reconcileErr error,
-) (v1alpha1.IstioRevisionTagStatus, error) {
+func (r *Reconciler) determineStatus(ctx context.Context, tag *v1.IstioRevisionTag,
+	rev *v1.IstioRevision, reconcileErr error,
+) (v1.IstioRevisionTagStatus, error) {
 	var errs errlist.Builder
 	reconciledCondition := r.determineReconciledCondition(reconcileErr)
 
@@ -275,7 +275,7 @@ func (r *Reconciler) determineStatus(ctx context.Context, tag *v1alpha1.IstioRev
 	return status, errs.Error()
 }
 
-func (r *Reconciler) updateStatus(ctx context.Context, tag *v1alpha1.IstioRevisionTag, rev *v1alpha1.IstioRevision, reconcileErr error) error {
+func (r *Reconciler) updateStatus(ctx context.Context, tag *v1.IstioRevisionTag, rev *v1.IstioRevision, reconcileErr error) error {
 	var errs errlist.Builder
 
 	status, err := r.determineStatus(ctx, tag, rev, reconcileErr)
@@ -291,60 +291,60 @@ func (r *Reconciler) updateStatus(ctx context.Context, tag *v1alpha1.IstioRevisi
 	return errs.Error()
 }
 
-func deriveState(reconciledCondition, inUseCondition v1alpha1.IstioRevisionTagCondition) v1alpha1.IstioRevisionTagConditionReason {
+func deriveState(reconciledCondition, inUseCondition v1.IstioRevisionTagCondition) v1.IstioRevisionTagConditionReason {
 	if reconciledCondition.Status != metav1.ConditionTrue {
 		return reconciledCondition.Reason
 	}
 	if inUseCondition.Status != metav1.ConditionTrue {
 		return inUseCondition.Reason
 	}
-	return v1alpha1.IstioRevisionTagReasonHealthy
+	return v1.IstioRevisionTagReasonHealthy
 }
 
-func (r *Reconciler) determineReconciledCondition(err error) v1alpha1.IstioRevisionTagCondition {
-	c := v1alpha1.IstioRevisionTagCondition{Type: v1alpha1.IstioRevisionTagConditionReconciled}
+func (r *Reconciler) determineReconciledCondition(err error) v1.IstioRevisionTagCondition {
+	c := v1.IstioRevisionTagCondition{Type: v1.IstioRevisionTagConditionReconciled}
 
 	if err == nil {
 		c.Status = metav1.ConditionTrue
 	} else if IsNameAlreadyExistsError(err) {
 		c.Status = metav1.ConditionFalse
-		c.Reason = v1alpha1.IstioRevisionTagReasonNameAlreadyExists
+		c.Reason = v1.IstioRevisionTagReasonNameAlreadyExists
 		c.Message = err.Error()
 	} else if IsReferenceNotFoundError(err) {
 		c.Status = metav1.ConditionFalse
-		c.Reason = v1alpha1.IstioRevisionTagReasonReferenceNotFound
+		c.Reason = v1.IstioRevisionTagReasonReferenceNotFound
 		c.Message = err.Error()
 	} else {
 		c.Status = metav1.ConditionFalse
-		c.Reason = v1alpha1.IstioRevisionTagReasonReconcileError
+		c.Reason = v1.IstioRevisionTagReasonReconcileError
 		c.Message = fmt.Sprintf("error reconciling resource: %v", err)
 	}
 	return c
 }
 
-func (r *Reconciler) determineInUseCondition(ctx context.Context, tag *v1alpha1.IstioRevisionTag) (v1alpha1.IstioRevisionTagCondition, error) {
-	c := v1alpha1.IstioRevisionTagCondition{Type: v1alpha1.IstioRevisionTagConditionInUse}
+func (r *Reconciler) determineInUseCondition(ctx context.Context, tag *v1.IstioRevisionTag) (v1.IstioRevisionTagCondition, error) {
+	c := v1.IstioRevisionTagCondition{Type: v1.IstioRevisionTagConditionInUse}
 
 	isReferenced, err := r.isRevisionTagReferencedByWorkloads(ctx, tag)
 	if err == nil {
 		if isReferenced {
 			c.Status = metav1.ConditionTrue
-			c.Reason = v1alpha1.IstioRevisionTagReasonReferencedByWorkloads
+			c.Reason = v1.IstioRevisionTagReasonReferencedByWorkloads
 			c.Message = "Referenced by at least one pod or namespace"
 		} else {
 			c.Status = metav1.ConditionFalse
-			c.Reason = v1alpha1.IstioRevisionTagReasonNotReferenced
+			c.Reason = v1.IstioRevisionTagReasonNotReferenced
 			c.Message = "Not referenced by any pod or namespace"
 		}
 		return c, nil
 	}
 	c.Status = metav1.ConditionUnknown
-	c.Reason = v1alpha1.IstioRevisionTagReasonUsageCheckFailed
+	c.Reason = v1.IstioRevisionTagReasonUsageCheckFailed
 	c.Message = fmt.Sprintf("failed to determine if revision tag is in use: %v", err)
 	return c, fmt.Errorf("failed to determine if IstioRevisionTag is in use: %w", err)
 }
 
-func (r *Reconciler) isRevisionTagReferencedByWorkloads(ctx context.Context, tag *v1alpha1.IstioRevisionTag) (bool, error) {
+func (r *Reconciler) isRevisionTagReferencedByWorkloads(ctx context.Context, tag *v1.IstioRevisionTag) (bool, error) {
 	log := logf.FromContext(ctx)
 	nsList := corev1.NamespaceList{}
 	nsMap := map[string]corev1.Namespace{}
@@ -375,7 +375,7 @@ func (r *Reconciler) isRevisionTagReferencedByWorkloads(ctx context.Context, tag
 		return false, err
 	}
 
-	if tag.Name == v1alpha1.DefaultRevision && rev.Spec.Values != nil &&
+	if tag.Name == v1.DefaultRevision && rev.Spec.Values != nil &&
 		rev.Spec.Values.SidecarInjectorWebhook != nil &&
 		rev.Spec.Values.SidecarInjectorWebhook.EnableNamespacesByDefault != nil &&
 		*rev.Spec.Values.SidecarInjectorWebhook.EnableNamespacesByDefault {
@@ -386,11 +386,11 @@ func (r *Reconciler) isRevisionTagReferencedByWorkloads(ctx context.Context, tag
 	return false, nil
 }
 
-func namespaceReferencesRevisionTag(ns corev1.Namespace, tag *v1alpha1.IstioRevisionTag) bool {
+func namespaceReferencesRevisionTag(ns corev1.Namespace, tag *v1.IstioRevisionTag) bool {
 	return tag.Name == revision.GetReferencedRevisionFromNamespace(ns.Labels)
 }
 
-func podReferencesRevisionTag(pod corev1.Pod, tag *v1alpha1.IstioRevisionTag, ns corev1.Namespace) bool {
+func podReferencesRevisionTag(pod corev1.Pod, tag *v1.IstioRevisionTag, ns corev1.Namespace) bool {
 	return revision.GetReferencedRevisionFromNamespace(ns.Labels) == "" &&
 		tag.Name == revision.GetReferencedRevisionFromPod(pod.GetLabels())
 }
@@ -416,14 +416,14 @@ func (r *Reconciler) mapPodToReconcileRequest(ctx context.Context, pod client.Ob
 
 func (r *Reconciler) mapOperatorResourceToReconcileRequest(ctx context.Context, obj client.Object) []reconcile.Request {
 	var revisionName string
-	if i, ok := obj.(*v1alpha1.Istio); ok && i.Status.ActiveRevisionName != "" {
+	if i, ok := obj.(*v1.Istio); ok && i.Status.ActiveRevisionName != "" {
 		revisionName = i.Status.ActiveRevisionName
-	} else if rev, ok := obj.(*v1alpha1.IstioRevision); ok {
+	} else if rev, ok := obj.(*v1.IstioRevision); ok {
 		revisionName = rev.Name
 	} else {
 		return nil
 	}
-	tags := v1alpha1.IstioRevisionTagList{}
+	tags := v1.IstioRevisionTagList{}
 	err := r.Client.List(ctx, &tags, &client.ListOptions{})
 	if err != nil {
 		return nil
@@ -467,7 +467,7 @@ func specWasUpdated(oldObject client.Object, newObject client.Object) bool {
 }
 
 func wrapEventHandler(logger logr.Logger, handler handler.EventHandler) handler.EventHandler {
-	return enqueuelogger.WrapIfNecessary(v1alpha1.IstioRevisionTagKind, logger, handler)
+	return enqueuelogger.WrapIfNecessary(v1.IstioRevisionTagKind, logger, handler)
 }
 
 type NameAlreadyExistsError struct {

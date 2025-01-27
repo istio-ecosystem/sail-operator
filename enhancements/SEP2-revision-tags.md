@@ -35,7 +35,7 @@ We will add a new CRD called `IstioRevisionTag` that consistly most of a `spec.t
 #### IstioRevisionTag resource
 Here's an example YAML for the new resource:
 ```yaml
-apiGroup: sailoperator.io/v1alpha1
+apiGroup: sailoperator.io/v1
 kind: IstioRevisionTag
 metadata:
   name: default

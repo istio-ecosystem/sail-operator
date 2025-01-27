@@ -17,7 +17,7 @@ package revision
 import (
 	"fmt"
 
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/istiovalues"
@@ -28,10 +28,10 @@ import (
 // - applies the user-provided values on top of the default values from the default and user-selected profiles
 // - applies overrides that are not configurable by the user
 func ComputeValues(
-	userValues *v1alpha1.Values, namespace string, version string,
+	userValues *v1.Values, namespace string, version string,
 	platform config.Platform, defaultProfile, userProfile string, resourceDir string,
 	activeRevisionName string,
-) (*v1alpha1.Values, error) {
+) (*v1.Values, error) {
 	// apply image digests from configuration, if not already set by user
 	userValues = istiovalues.ApplyDigests(version, userValues, config.Config)
 
@@ -41,7 +41,7 @@ func ComputeValues(
 		return nil, fmt.Errorf("failed to apply profile: %w", err)
 	}
 
-	values, err := helm.ToValues(mergedHelmValues, &v1alpha1.Values{})
+	values, err := helm.ToValues(mergedHelmValues, &v1.Values{})
 	if err != nil {
 		return nil, fmt.Errorf("conversion to Helm values failed: %w", err)
 	}

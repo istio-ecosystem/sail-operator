@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
@@ -65,7 +65,7 @@ var _ = Describe("Control Plane Installation", Ordered, func() {
 			Entry("empty spec", "spec: {}"),
 			func(ctx SpecContext, spec string) {
 				yaml := `
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: IstioCNI
 metadata:
   name: default
@@ -73,7 +73,7 @@ metadata:
 				Expect(k.CreateFromString(yaml)).To(Succeed(), "IstioCNI creation failed")
 				Success("IstioCNI created")
 
-				cni := &v1alpha1.IstioCNI{}
+				cni := &v1.IstioCNI{}
 				Expect(cl.Get(ctx, kube.Key("default"), cni)).To(Succeed())
 				Expect(cni.Spec.Version).To(Equal(supportedversion.Default))
 				Expect(cni.Spec.Namespace).To(Equal("istio-cni"))
@@ -89,7 +89,7 @@ metadata:
 			Entry("empty updateStrategy", "spec: {updateStrategy: {}}"),
 			func(ctx SpecContext, spec string) {
 				yaml := `
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: default
@@ -97,12 +97,12 @@ metadata:
 				Expect(k.CreateFromString(yaml)).To(Succeed(), "Istio creation failed")
 				Success("Istio created")
 
-				istio := &v1alpha1.Istio{}
+				istio := &v1.Istio{}
 				Expect(cl.Get(ctx, kube.Key("default"), istio)).To(Succeed())
 				Expect(istio.Spec.Version).To(Equal(supportedversion.Default))
 				Expect(istio.Spec.Namespace).To(Equal("istio-system"))
 				Expect(istio.Spec.UpdateStrategy).ToNot(BeNil())
-				Expect(istio.Spec.UpdateStrategy.Type).To(Equal(v1alpha1.UpdateStrategyTypeInPlace))
+				Expect(istio.Spec.UpdateStrategy.Type).To(Equal(v1.UpdateStrategyTypeInPlace))
 
 				Expect(cl.Delete(ctx, istio)).To(Succeed())
 				Eventually(cl.Get).WithArguments(ctx, kube.Key("default"), istio).Should(ReturnNotFoundError())
@@ -121,7 +121,7 @@ metadata:
 				When("the IstioCNI CR is created", func() {
 					BeforeAll(func() {
 						yaml := `
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: IstioCNI
 metadata:
   name: default
@@ -150,14 +150,14 @@ spec:
 					})
 
 					It("updates the status to Reconciled", func(ctx SpecContext) {
-						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioCniName), &v1alpha1.IstioCNI{}).
-							Should(HaveCondition(v1alpha1.IstioCNIConditionReconciled, metav1.ConditionTrue), "IstioCNI is not Reconciled; unexpected Condition")
+						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioCniName), &v1.IstioCNI{}).
+							Should(HaveCondition(v1.IstioCNIConditionReconciled, metav1.ConditionTrue), "IstioCNI is not Reconciled; unexpected Condition")
 						Success("IstioCNI is Reconciled")
 					})
 
 					It("updates the status to Ready", func(ctx SpecContext) {
-						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioCniName), &v1alpha1.IstioCNI{}).
-							Should(HaveCondition(v1alpha1.IstioCNIConditionReady, metav1.ConditionTrue), "IstioCNI is not Ready; unexpected Condition")
+						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioCniName), &v1.IstioCNI{}).
+							Should(HaveCondition(v1.IstioCNIConditionReady, metav1.ConditionTrue), "IstioCNI is not Ready; unexpected Condition")
 						Success("IstioCNI is Ready")
 					})
 
@@ -171,7 +171,7 @@ spec:
 				When("the Istio CR is created", func() {
 					BeforeAll(func() {
 						istioYAML := `
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: default
@@ -186,14 +186,14 @@ spec:
 					})
 
 					It("updates the Istio CR status to Reconciled", func(ctx SpecContext) {
-						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioName), &v1alpha1.Istio{}).
-							Should(HaveCondition(v1alpha1.IstioConditionReconciled, metav1.ConditionTrue), "Istio is not Reconciled; unexpected Condition")
+						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioName), &v1.Istio{}).
+							Should(HaveCondition(v1.IstioConditionReconciled, metav1.ConditionTrue), "Istio is not Reconciled; unexpected Condition")
 						Success("Istio CR is Reconciled")
 					})
 
 					It("updates the Istio CR status to Ready", func(ctx SpecContext) {
-						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioName), &v1alpha1.Istio{}).
-							Should(HaveCondition(v1alpha1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready; unexpected Condition")
+						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioName), &v1.Istio{}).
+							Should(HaveCondition(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready; unexpected Condition")
 						Success("Istio CR is Ready")
 					})
 
