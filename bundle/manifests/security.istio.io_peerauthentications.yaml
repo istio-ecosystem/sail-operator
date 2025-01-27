@@ -106,9 +106,8 @@ spec:
             type: object
             x-kubernetes-validations:
             - message: portLevelMtls requires selector
-              rule: |-
-                has(self.selector) && has(self.selector.matchLabels) && self.selector.matchLabels.size() > 0 ||
-                !has(self.portLevelMtls)
+              rule: 'has(self.portLevelMtls) ? (((has(self.selector) && has(self.selector.matchLabels))
+                ? self.selector.matchLabels : {}).size() > 0) : true'
           status:
             properties:
               conditions:
@@ -270,9 +269,8 @@ spec:
             type: object
             x-kubernetes-validations:
             - message: portLevelMtls requires selector
-              rule: |-
-                has(self.selector) && has(self.selector.matchLabels) && self.selector.matchLabels.size() > 0 ||
-                !has(self.portLevelMtls)
+              rule: 'has(self.portLevelMtls) ? (((has(self.selector) && has(self.selector.matchLabels))
+                ? self.selector.matchLabels : {}).size() > 0) : true'
           status:
             properties:
               conditions:
