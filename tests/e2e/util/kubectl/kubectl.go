@@ -309,6 +309,12 @@ func (k Kubectl) Logs(pod string, since *time.Duration) (string, error) {
 	return output, nil
 }
 
+// Label adds a label to the specified resource
+func (k Kubectl) Label(kind, name, labelKey, labelValue string) error {
+	_, err := k.executeCommand(k.build(fmt.Sprintf(" label %s %s %s=%s", kind, name, labelKey, labelValue)))
+	return err
+}
+
 // executeCommand handles running the command and then resets the namespace automatically
 func (k Kubectl) executeCommand(cmd string) (string, error) {
 	return shell.ExecuteCommand(cmd)
