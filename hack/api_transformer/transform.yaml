@@ -1,6 +1,6 @@
-outputFile: api/v1alpha1/values_types.gen.go
+outputFile: api/v1/values_types.gen.go
 headerFile: common/scripts/copyright-banner-go.txt
-package: v1alpha1
+package: v1
 
 globalTransformations:
   removeImports:

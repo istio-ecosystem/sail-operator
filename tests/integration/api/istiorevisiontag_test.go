@@ -20,7 +20,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	. "github.com/onsi/ginkgo/v2"
@@ -42,11 +42,11 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 
 		gracePeriod = 5 * time.Second
 	)
-	istio := &v1alpha1.Istio{}
+	istio := &v1.Istio{}
 	istioKey := client.ObjectKey{Name: istioName}
 	defaultTagKey := client.ObjectKey{Name: defaultTagName}
 	workloadNamespaceKey := client.ObjectKey{Name: workloadNamespace}
-	tag := &v1alpha1.IstioRevisionTag{}
+	tag := &v1.IstioRevisionTag{}
 
 	SetDefaultEventuallyTimeout(30 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
@@ -97,19 +97,19 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 		Expect(k8sClient.Delete(ctx, namespace)).To(Succeed())
 	})
 
-	for _, referencedResource := range []string{v1alpha1.IstioKind, v1alpha1.IstioRevisionKind} {
-		for _, updateStrategy := range []v1alpha1.UpdateStrategyType{v1alpha1.UpdateStrategyTypeRevisionBased, v1alpha1.UpdateStrategyTypeInPlace} {
+	for _, referencedResource := range []string{v1.IstioKind, v1.IstioRevisionKind} {
+		for _, updateStrategy := range []v1.UpdateStrategyType{v1.UpdateStrategyTypeRevisionBased, v1.UpdateStrategyTypeInPlace} {
 			Describe("referencing "+referencedResource+" resource, "+string(updateStrategy)+" update", func() {
 				BeforeAll(func() {
 					Step("Creating the Istio resource")
-					istio = &v1alpha1.Istio{
+					istio = &v1.Istio{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: istioName,
 						},
-						Spec: v1alpha1.IstioSpec{
+						Spec: v1.IstioSpec{
 							Version:   supportedversion.Old,
 							Namespace: istioRevisionTagNamespace,
-							UpdateStrategy: &v1alpha1.IstioUpdateStrategy{
+							UpdateStrategy: &v1.IstioUpdateStrategy{
 								Type: updateStrategy,
 								InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(gracePeriod.Seconds())),
 							},
@@ -125,18 +125,18 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 
 				When("creating the IstioRevisionTag", func() {
 					BeforeAll(func() {
-						targetRef := v1alpha1.IstioRevisionTagTargetReference{
+						targetRef := v1.IstioRevisionTagTargetReference{
 							Kind: referencedResource,
 							Name: getRevisionName(istio, istio.Spec.Version),
 						}
-						if referencedResource == v1alpha1.IstioKind {
+						if referencedResource == v1.IstioKind {
 							targetRef.Name = istioName
 						}
-						tag = &v1alpha1.IstioRevisionTag{
+						tag = &v1.IstioRevisionTag{
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "default",
 							},
-							Spec: v1alpha1.IstioRevisionTagSpec{
+							Spec: v1.IstioRevisionTagSpec{
 								TargetRef: targetRef,
 							},
 						}
@@ -147,7 +147,7 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 							g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
 							g.Expect(tag.Status.ObservedGeneration).To(Equal(tag.Generation))
 							g.Expect(tag.Status.IstioRevision).To(Equal(getRevisionName(istio, supportedversion.Old)))
-							g.Expect(tag.Status.GetCondition(v1alpha1.IstioRevisionTagConditionInUse).Status).To(Equal(metav1.ConditionFalse))
+							g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionInUse).Status).To(Equal(metav1.ConditionFalse))
 						}).Should(Succeed())
 					})
 				})
@@ -161,7 +161,7 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 						Eventually(func(g Gomega) {
 							g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
 							g.Expect(tag.Status.ObservedGeneration).To(Equal(tag.Generation))
-							g.Expect(tag.Status.GetCondition(v1alpha1.IstioRevisionTagConditionInUse).Status).To(Equal(metav1.ConditionTrue))
+							g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionInUse).Status).To(Equal(metav1.ConditionTrue))
 						}).Should(Succeed())
 					})
 				})
@@ -173,12 +173,12 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 						Expect(k8sClient.Update(ctx, istio)).To(Succeed())
 					})
 
-					if referencedResource == v1alpha1.IstioRevisionKind {
+					if referencedResource == v1.IstioRevisionKind {
 						It("updates IstioRevisionTag status and still references old revision", func() {
 							Eventually(func(g Gomega) {
 								g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
 								g.Expect(tag.Status.IstioRevision).To(Equal(getRevisionName(istio, supportedversion.Old)))
-								g.Expect(tag.Status.GetCondition(v1alpha1.IstioRevisionTagConditionInUse).Status).To(Equal(metav1.ConditionTrue))
+								g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionInUse).Status).To(Equal(metav1.ConditionTrue))
 							}).Should(Succeed())
 						})
 					} else {
@@ -186,7 +186,7 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 							Eventually(func(g Gomega) {
 								g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
 								g.Expect(tag.Status.IstioRevision).To(Equal(getRevisionName(istio, supportedversion.New)))
-								g.Expect(tag.Status.GetCondition(v1alpha1.IstioRevisionTagConditionInUse).Status).To(Equal(metav1.ConditionTrue))
+								g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionInUse).Status).To(Equal(metav1.ConditionTrue))
 							}).Should(Succeed())
 						})
 					}
@@ -202,13 +202,13 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 					It("updates IstioRevisionTag status and detects that the tag is no longer in use", func() {
 						Eventually(func(g Gomega) {
 							g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
-							g.Expect(tag.Status.GetCondition(v1alpha1.IstioRevisionTagConditionInUse).Status).To(Equal(metav1.ConditionFalse))
+							g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionInUse).Status).To(Equal(metav1.ConditionFalse))
 						}).Should(Succeed())
 					})
-					if referencedResource == v1alpha1.IstioRevisionKind && updateStrategy == v1alpha1.UpdateStrategyTypeRevisionBased {
+					if referencedResource == v1.IstioRevisionKind && updateStrategy == v1.UpdateStrategyTypeRevisionBased {
 						It("does not delete the referenced IstioRevision even though it is no longer in use and not the active revision", func() {
 							revKey := client.ObjectKey{Name: getRevisionName(istio, supportedversion.Old)}
-							rev := &v1alpha1.IstioRevision{}
+							rev := &v1.IstioRevision{}
 							Consistently(k8sClient.Get).WithArguments(ctx, revKey, rev).Should(Succeed())
 						})
 					}
@@ -227,7 +227,7 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 						Eventually(func(g Gomega) {
 							g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
 							g.Expect(tag.Status.ObservedGeneration).To(Equal(tag.Generation))
-							g.Expect(tag.Status.GetCondition(v1alpha1.IstioRevisionTagConditionInUse).Status).To(Equal(metav1.ConditionTrue))
+							g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionInUse).Status).To(Equal(metav1.ConditionTrue))
 						}).Should(Succeed())
 					})
 				})
@@ -238,40 +238,40 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 	When("Creating an Istio with name 'default' and attempting to create another IstioRevisionTag with the same name", func() {
 		BeforeAll(func() {
 			Step("Creating the Istio resources")
-			istio = &v1alpha1.Istio{
+			istio = &v1.Istio{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
-				Spec: v1alpha1.IstioSpec{
+				Spec: v1.IstioSpec{
 					Version:   supportedversion.Old,
 					Namespace: istioRevisionTagNamespace,
-					UpdateStrategy: &v1alpha1.IstioUpdateStrategy{
-						Type: v1alpha1.UpdateStrategyTypeInPlace,
+					UpdateStrategy: &v1.IstioUpdateStrategy{
+						Type: v1.UpdateStrategyTypeInPlace,
 						InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(gracePeriod.Seconds())),
 					},
 				},
 			}
 			Expect(k8sClient.Create(ctx, istio)).To(Succeed())
-			istio = &v1alpha1.Istio{
+			istio = &v1.Istio{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: istioName,
 				},
-				Spec: v1alpha1.IstioSpec{
+				Spec: v1.IstioSpec{
 					Version:   supportedversion.Old,
 					Namespace: istioRevisionTagNamespace,
-					UpdateStrategy: &v1alpha1.IstioUpdateStrategy{
-						Type: v1alpha1.UpdateStrategyTypeInPlace,
+					UpdateStrategy: &v1.IstioUpdateStrategy{
+						Type: v1.UpdateStrategyTypeInPlace,
 						InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(gracePeriod.Seconds())),
 					},
 				},
 			}
 			Expect(k8sClient.Create(ctx, istio)).To(Succeed())
-			tag = &v1alpha1.IstioRevisionTag{
+			tag = &v1.IstioRevisionTag{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
-				Spec: v1alpha1.IstioRevisionTagSpec{
-					TargetRef: v1alpha1.IstioRevisionTagTargetReference{
+				Spec: v1.IstioRevisionTagSpec{
+					TargetRef: v1.IstioRevisionTagTargetReference{
 						Kind: "Istio",
 						Name: istioName,
 					},
@@ -292,20 +292,20 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 			}).Should(Succeed())
 			Consistently(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
-				g.Expect(tag.Status.GetCondition(v1alpha1.IstioRevisionTagConditionReconciled).Status).To(Equal(metav1.ConditionFalse))
-				g.Expect(tag.Status.GetCondition(v1alpha1.IstioRevisionTagConditionReconciled).Reason).To(Equal(v1alpha1.IstioRevisionTagReasonNameAlreadyExists))
+				g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionReconciled).Status).To(Equal(metav1.ConditionFalse))
+				g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionReconciled).Reason).To(Equal(v1.IstioRevisionTagReasonNameAlreadyExists))
 			}).Should(Succeed())
 		})
 	})
 
 	When("Creating an IstioRevisionTag with a dangling TargetRef", func() {
 		BeforeAll(func() {
-			tag = &v1alpha1.IstioRevisionTag{
+			tag = &v1.IstioRevisionTag{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
-				Spec: v1alpha1.IstioRevisionTagSpec{
-					TargetRef: v1alpha1.IstioRevisionTagTargetReference{
+				Spec: v1.IstioRevisionTagSpec{
+					TargetRef: v1.IstioRevisionTagTargetReference{
 						Kind: "Istio",
 						Name: istioName,
 					},
@@ -326,22 +326,22 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 			}).Should(Succeed())
 			Consistently(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
-				g.Expect(tag.Status.GetCondition(v1alpha1.IstioRevisionTagConditionReconciled).Status).To(Equal(metav1.ConditionFalse))
-				g.Expect(tag.Status.GetCondition(v1alpha1.IstioRevisionTagConditionReconciled).Reason).To(Equal(v1alpha1.IstioRevisionTagReasonReferenceNotFound))
+				g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionReconciled).Status).To(Equal(metav1.ConditionFalse))
+				g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionReconciled).Reason).To(Equal(v1.IstioRevisionTagReasonReferenceNotFound))
 			}).Should(Succeed())
 		})
 
 		When("attempting to create IstioRevision with same name as the tag's", func() {
 			BeforeAll(func() {
-				istio = &v1alpha1.Istio{
+				istio = &v1.Istio{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "default",
 					},
-					Spec: v1alpha1.IstioSpec{
+					Spec: v1.IstioSpec{
 						Version:   supportedversion.Old,
 						Namespace: istioRevisionTagNamespace,
-						UpdateStrategy: &v1alpha1.IstioUpdateStrategy{
-							Type: v1alpha1.UpdateStrategyTypeInPlace,
+						UpdateStrategy: &v1.IstioUpdateStrategy{
+							Type: v1.UpdateStrategyTypeInPlace,
 							InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(gracePeriod.Seconds())),
 						},
 					},
@@ -351,9 +351,9 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 
 			It("fails with ValidationError", func() {
 				Eventually(func(g Gomega) {
-					rev := &v1alpha1.IstioRevision{}
+					rev := &v1.IstioRevision{}
 					g.Expect(k8sClient.Get(ctx, defaultTagKey, rev)).To(Succeed())
-					condition := rev.Status.GetCondition(v1alpha1.IstioRevisionConditionReconciled)
+					condition := rev.Status.GetCondition(v1.IstioRevisionConditionReconciled)
 					g.Expect(condition.Status).To(Equal(metav1.ConditionFalse))
 					g.Expect(condition.Message).To(ContainSubstring("an IstioRevisionTag exists with this name"))
 				}).Should(Succeed())
@@ -364,9 +364,9 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 
 func deleteAllIstioRevisionTags(ctx context.Context) {
 	Step("Deleting all IstioRevisionTags")
-	Eventually(k8sClient.DeleteAllOf).WithArguments(ctx, &v1alpha1.IstioRevisionTag{}).Should(Succeed())
+	Eventually(k8sClient.DeleteAllOf).WithArguments(ctx, &v1.IstioRevisionTag{}).Should(Succeed())
 	Eventually(func(g Gomega) {
-		list := &v1alpha1.IstioRevisionTagList{}
+		list := &v1.IstioRevisionTagList{}
 		g.Expect(k8sClient.List(ctx, list)).To(Succeed())
 		g.Expect(list.Items).To(BeEmpty())
 	}).Should(Succeed())

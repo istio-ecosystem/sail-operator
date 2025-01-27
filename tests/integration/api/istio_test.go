@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	. "github.com/onsi/ginkgo/v2"
@@ -44,7 +44,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 		pilotImage  = "sail-operator/test:latest"
 	)
 	istioKey := client.ObjectKey{Name: istioName}
-	istio := &v1alpha1.Istio{}
+	istio := &v1.Istio{}
 
 	SetDefaultEventuallyTimeout(30 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
@@ -77,15 +77,15 @@ var _ = Describe("Istio resource", Ordered, func() {
 
 	Describe("validation", func() {
 		It("rejects an Istio where spec.values.global.istioNamespace doesn't match spec.namespace", func() {
-			istio = &v1alpha1.Istio{
+			istio = &v1.Istio{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: istioName,
 				},
-				Spec: v1alpha1.IstioSpec{
+				Spec: v1.IstioSpec{
 					Version:   supportedversion.Default,
 					Namespace: istioNamespace,
-					Values: &v1alpha1.Values{
-						Global: &v1alpha1.GlobalConfig{
+					Values: &v1.Values{
+						Global: &v1.GlobalConfig{
 							IstioNamespace: ptr.Of("wrong-namespace"),
 						},
 					},
@@ -98,21 +98,21 @@ var _ = Describe("Istio resource", Ordered, func() {
 	Describe("basic operation", func() {
 		BeforeAll(func() {
 			Step("Creating the custom resource")
-			istio = &v1alpha1.Istio{
+			istio = &v1.Istio{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: istioName,
 				},
-				Spec: v1alpha1.IstioSpec{
+				Spec: v1.IstioSpec{
 					Version:   supportedversion.Default,
 					Namespace: istioNamespace,
-					UpdateStrategy: &v1alpha1.IstioUpdateStrategy{
-						Type: v1alpha1.UpdateStrategyTypeInPlace,
+					UpdateStrategy: &v1.IstioUpdateStrategy{
+						Type: v1.UpdateStrategyTypeInPlace,
 						InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(gracePeriod.Seconds())),
 					},
-					Values: &v1alpha1.Values{
-						Pilot: &v1alpha1.PilotConfig{
+					Values: &v1.Values{
+						Pilot: &v1.PilotConfig{
 							Image: ptr.Of(pilotImage),
-							Cni: &v1alpha1.CNIUsageConfig{
+							Cni: &v1.CNIUsageConfig{
 								Enabled: ptr.Of(true),
 							},
 						},
@@ -131,23 +131,23 @@ var _ = Describe("Istio resource", Ordered, func() {
 
 		It("creates the IstioRevision resource", func() {
 			revKey := client.ObjectKey{Name: istioName}
-			rev := &v1alpha1.IstioRevision{}
+			rev := &v1.IstioRevision{}
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
 				g.Expect(rev.GetOwnerReferences()).To(ContainElement(NewOwnerReference(istio)))
 			}).Should(Succeed())
 
-			Expect(rev.Spec).To(Equal(v1alpha1.IstioRevisionSpec{
+			Expect(rev.Spec).To(Equal(v1.IstioRevisionSpec{
 				Version:   istio.Spec.Version,
 				Namespace: istio.Spec.Namespace,
-				Values: &v1alpha1.Values{
-					Global: &v1alpha1.GlobalConfig{
+				Values: &v1.Values{
+					Global: &v1.GlobalConfig{
 						ConfigValidation: ptr.Of(true),
 						IstioNamespace:   &istio.Spec.Namespace,
 					},
-					Pilot: &v1alpha1.PilotConfig{
+					Pilot: &v1.PilotConfig{
 						Image: ptr.Of(pilotImage),
-						Cni: &v1alpha1.CNIUsageConfig{
+						Cni: &v1.CNIUsageConfig{
 							Enabled: ptr.Of(true),
 						},
 					},
@@ -158,11 +158,11 @@ var _ = Describe("Istio resource", Ordered, func() {
 		})
 
 		When("the underlying IstioRevision is deleted", func() {
-			rev := &v1alpha1.IstioRevision{}
+			rev := &v1.IstioRevision{}
 			revKey := client.ObjectKey{Name: istioName}
 
 			BeforeAll(func() {
-				rev = &v1alpha1.IstioRevision{
+				rev = &v1.IstioRevision{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: istio.Name,
 					},
@@ -173,17 +173,17 @@ var _ = Describe("Istio resource", Ordered, func() {
 			It("recreates the IstioRevision", func() {
 				Eventually(k8sClient.Get).WithArguments(ctx, revKey, rev).Should(Succeed())
 				Expect(rev.GetOwnerReferences()).To(ContainElement(NewOwnerReference(istio)))
-				Expect(rev.Spec).To(Equal(v1alpha1.IstioRevisionSpec{
+				Expect(rev.Spec).To(Equal(v1.IstioRevisionSpec{
 					Version:   istio.Spec.Version,
 					Namespace: istio.Spec.Namespace,
-					Values: &v1alpha1.Values{
-						Global: &v1alpha1.GlobalConfig{
+					Values: &v1.Values{
+						Global: &v1.GlobalConfig{
 							ConfigValidation: ptr.Of(true),
 							IstioNamespace:   &istio.Spec.Namespace,
 						},
-						Pilot: &v1alpha1.PilotConfig{
+						Pilot: &v1.PilotConfig{
 							Image: ptr.Of(pilotImage),
-							Cni: &v1alpha1.CNIUsageConfig{
+							Cni: &v1.CNIUsageConfig{
 								Enabled: ptr.Of(true),
 							},
 						},
@@ -202,7 +202,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 
 			It("deletes the IstioRevision", func() {
 				revKey := client.ObjectKey{Name: istioName}
-				rev := &v1alpha1.IstioRevision{
+				rev := &v1.IstioRevision{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: istio.Name,
 					},
@@ -214,7 +214,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 
 	Describe("update", func() {
 		var workloadNs *corev1.Namespace
-		rev := &v1alpha1.IstioRevision{}
+		rev := &v1.IstioRevision{}
 
 		BeforeAll(func() {
 			if supportedversion.Old == "" {
@@ -248,15 +248,15 @@ var _ = Describe("Istio resource", Ordered, func() {
 					revKey := client.ObjectKey{Name: istioName}
 
 					BeforeAll(func() {
-						istio = &v1alpha1.Istio{
+						istio = &v1.Istio{
 							ObjectMeta: metav1.ObjectMeta{
 								Name: istioName,
 							},
-							Spec: v1alpha1.IstioSpec{
+							Spec: v1.IstioSpec{
 								Version:   supportedversion.Old,
 								Namespace: istioNamespace,
-								UpdateStrategy: &v1alpha1.IstioUpdateStrategy{
-									Type: v1alpha1.UpdateStrategyTypeInPlace,
+								UpdateStrategy: &v1.IstioUpdateStrategy{
+									Type: v1.UpdateStrategyTypeInPlace,
 									InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(gracePeriod.Seconds())),
 								},
 							},
@@ -298,7 +298,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 						BeforeAll(func() {
 							By("changing strategy to RevisionBased")
 							Expect(k8sClient.Get(ctx, istioKey, istio)).To(Succeed())
-							istio.Spec.UpdateStrategy.Type = v1alpha1.UpdateStrategyTypeRevisionBased
+							istio.Spec.UpdateStrategy.Type = v1.UpdateStrategyTypeRevisionBased
 							Expect(k8sClient.Update(ctx, istio)).To(Succeed())
 						})
 
@@ -343,15 +343,15 @@ var _ = Describe("Istio resource", Ordered, func() {
 
 				Context("with RevisionBased update strategy", func() {
 					BeforeAll(func() {
-						istio = &v1alpha1.Istio{
+						istio = &v1.Istio{
 							ObjectMeta: metav1.ObjectMeta{
 								Name: istioName,
 							},
-							Spec: v1alpha1.IstioSpec{
+							Spec: v1.IstioSpec{
 								Version:   supportedversion.Old,
 								Namespace: istioNamespace,
-								UpdateStrategy: &v1alpha1.IstioUpdateStrategy{
-									Type: v1alpha1.UpdateStrategyTypeRevisionBased,
+								UpdateStrategy: &v1.IstioUpdateStrategy{
+									Type: v1.UpdateStrategyTypeRevisionBased,
 									InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(gracePeriod.Seconds())),
 								},
 							},
@@ -427,7 +427,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 						BeforeAll(func() {
 							oldRevisionKey = getRevisionKey(istio, supportedversion.New)
 							Expect(k8sClient.Get(ctx, istioKey, istio)).To(Succeed())
-							istio.Spec.UpdateStrategy.Type = v1alpha1.UpdateStrategyTypeInPlace
+							istio.Spec.UpdateStrategy.Type = v1.UpdateStrategyTypeInPlace
 							Expect(k8sClient.Update(ctx, istio)).To(Succeed())
 						})
 
@@ -475,16 +475,16 @@ var _ = Describe("Istio resource", Ordered, func() {
 
 func deleteAllIstiosAndRevisions(ctx context.Context) {
 	Step("Deleting all Istio and IstioRevision resources")
-	Eventually(k8sClient.DeleteAllOf).WithArguments(ctx, &v1alpha1.Istio{}).Should(Succeed())
+	Eventually(k8sClient.DeleteAllOf).WithArguments(ctx, &v1.Istio{}).Should(Succeed())
 	Eventually(func(g Gomega) {
-		list := &v1alpha1.IstioList{}
+		list := &v1.IstioList{}
 		g.Expect(k8sClient.List(ctx, list)).To(Succeed())
 		g.Expect(list.Items).To(BeEmpty())
 	}).Should(Succeed())
 
-	Eventually(k8sClient.DeleteAllOf).WithArguments(ctx, &v1alpha1.IstioRevision{}).Should(Succeed())
+	Eventually(k8sClient.DeleteAllOf).WithArguments(ctx, &v1.IstioRevision{}).Should(Succeed())
 	Eventually(func(g Gomega) {
-		list := &v1alpha1.IstioRevisionList{}
+		list := &v1.IstioRevisionList{}
 		g.Expect(k8sClient.List(ctx, list)).To(Succeed())
 		g.Expect(list.Items).To(BeEmpty())
 	}).Should(Succeed())
@@ -497,15 +497,15 @@ func generateContextName(withWorkloads bool) string {
 	return "with no workloads"
 }
 
-func getRevisionKey(istio *v1alpha1.Istio, version string) client.ObjectKey {
+func getRevisionKey(istio *v1.Istio, version string) client.ObjectKey {
 	return client.ObjectKey{Name: getRevisionName(istio, version)}
 }
 
-func getRevisionName(istio *v1alpha1.Istio, version string) string {
+func getRevisionName(istio *v1.Istio, version string) string {
 	if istio.Name == "" {
 		panic("istio.Name is empty")
 	}
-	if istio.Spec.UpdateStrategy.Type == v1alpha1.UpdateStrategyTypeInPlace {
+	if istio.Spec.UpdateStrategy.Type == v1.UpdateStrategyTypeInPlace {
 		return istio.Name
 	}
 	return istio.Name + "-" + strings.ReplaceAll(version, ".", "-")

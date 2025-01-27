@@ -143,7 +143,7 @@ The `spec.values` field of the `Istio` and `IstioCNI` resource can be used to cu
 An example configuration:
 
     ```yaml
-    apiVersion: sailoperator.io/v1alpha1
+    apiVersion: sailoperator.io/v1
     kind: Istio
     metadata:
     name: example

@@ -15,12 +15,12 @@
 package istiovalues
 
 import (
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 )
 
 // ApplyDigests applies image digests from configuration, if not already set by user
-func ApplyDigests(version string, values *v1alpha1.Values, config config.OperatorConfig) *v1alpha1.Values {
+func ApplyDigests(version string, values *v1.Values, config config.OperatorConfig) *v1.Values {
 	imageDigests, digestsDefined := config.ImageDigests[version]
 	// if we don't have default image digests defined for this version, it's a no-op
 	if !digestsDefined {
@@ -28,30 +28,30 @@ func ApplyDigests(version string, values *v1alpha1.Values, config config.Operato
 	}
 
 	if values == nil {
-		values = &v1alpha1.Values{}
+		values = &v1.Values{}
 	}
 
 	// set image digests for components unless they've been configured by the user
 	if values.Pilot == nil {
-		values.Pilot = &v1alpha1.PilotConfig{}
+		values.Pilot = &v1.PilotConfig{}
 	}
 	if values.Pilot.Image == nil && values.Pilot.Hub == nil && values.Pilot.Tag == nil {
 		values.Pilot.Image = &imageDigests.IstiodImage
 	}
 
 	if values.Global == nil {
-		values.Global = &v1alpha1.GlobalConfig{}
+		values.Global = &v1.GlobalConfig{}
 	}
 
 	if values.Global.Proxy == nil {
-		values.Global.Proxy = &v1alpha1.ProxyConfig{}
+		values.Global.Proxy = &v1.ProxyConfig{}
 	}
 	if values.Global.Proxy.Image == nil {
 		values.Global.Proxy.Image = &imageDigests.ProxyImage
 	}
 
 	if values.Global.ProxyInit == nil {
-		values.Global.ProxyInit = &v1alpha1.ProxyInitConfig{}
+		values.Global.ProxyInit = &v1.ProxyInitConfig{}
 	}
 	if values.Global.ProxyInit.Image == nil {
 		values.Global.ProxyInit.Image = &imageDigests.ProxyImage

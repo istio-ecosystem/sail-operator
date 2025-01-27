@@ -32,7 +32,7 @@ This document aims to provide an overview of the project and some information fo
 You manage your control plane through an `Istio` resource.
 
 ```yaml
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: example
@@ -44,7 +44,7 @@ spec:
 When you create an `Istio` resource, the sail operator then creates an `IstioRevision` that represents a control plane deployment.
 
 ```yaml
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: IstioRevision
 metadata:
   name: example
@@ -60,7 +60,7 @@ status:
 You can customize your control plane installation through the `Istio` resource using Istio's `Helm` configuration values:
 
 ```yaml
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: example
