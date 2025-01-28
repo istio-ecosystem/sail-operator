@@ -420,8 +420,8 @@ gen-api-docs: ## Generate API documentation. Known issues: go fmt does not prope
 		--templates-dir=$(TEMPLATES_DIR) \
 		--config=$(CONFIG_API_DOCS_GEN_PATH) \
 		--renderer=$(DOCS_RENDERER) \
-		--output-path=$(OUTPUT_DOCS_PATH) \
-		--output-mode=group
+		--output-path=$(OUTPUT_DOCS_PATH)/sailoperator.io.md \
+		--output-mode=single
 	@find $(OUTPUT_DOCS_PATH) -type f -name "*.md" -exec sed -i 's/<br \/>/ /g' {} \;
 	@find $(OUTPUT_DOCS_PATH) -type f \( -name "*.md" -o -name "*.asciidoc" \) -exec sed -i 's/\t/  /g' {} \;
 	@find $(OUTPUT_DOCS_PATH) -type f \( -name "*.md" -o -name "*.asciidoc" \) -exec sed -i '/^```/,/^```/ {/./!d;}' {} \;
