@@ -52,6 +52,7 @@
   - [Integrating with Kiali](#integrating-with-kiali)
     - [Integrating Kiali with the OpenShift monitoring stack](#integrating-kiali-with-the-openshift-monitoring-stack)
     - [Integrating Kiali with OpenShift distributed tracing](#integrating-kiali-with-openshift-distributed-tracing)
+- [Istio Ambient mode Integrations](common/istio-ambient-mode.md)
 - [Uninstalling](#uninstalling)
   - [Deleting Istio](#deleting-istio)
   - [Deleting IstioCNI](#deleting-istiocni)
