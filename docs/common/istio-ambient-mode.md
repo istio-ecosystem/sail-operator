@@ -7,7 +7,7 @@ The lightweight, shared L4 node proxy is called ztunnel (zero-trust tunnel). It 
 
 The L7 proxies, known as waypoints, handle functions like traffic routing, authorization policy enforcement, and resilience. They run separately from application deployments and can scale independently based on demand.
 
-In contrast to the earlier injection of sidecars. Users can start with the secure L4 overlay, which offers features such as mTLS, authorization policy, and telemetry. Complex L7 handling such as retries, traffic splitting, load balancing, and observability collection can then be enabled on a case-by-case basis.
+In contrast to the Istio Sidecar mode. Users can start with the secure L4 overlay, which offers features such as mTLS, authorization policy, and telemetry. Complex L7 handling such as retries, traffic splitting, load balancing, and observability collection can then be enabled on a case-by-case basis.
 
 ## Component version
 
@@ -294,11 +294,9 @@ In the [Kiali documentation](https://kiali.io/docs/features/ambient/) there is a
 
 ### Troubleshoot issues
 
-A brief and helpful troubleshooting guide can be reviewed from the upstream Istio documentation.
+A brief and helpful troubleshooting guide can be reviewed from the upstream documentation, [Troubleshoot connectivity issues with ztunnel](https://istio.io/latest/docs/ambient/usage/troubleshoot-ztunnel/).
 
 Users can download an `istioctl` binary and run those diagnostic commands. We recommend configuring the Istio resource and namespaces within the mesh using Istio's `discoverySelectors` mesh config. This helps simplify the result of diagnostic `istioctl` commands as well.
-
-- [Troubleshoot connectivity issues with ztunnel](https://istio.io/latest/docs/ambient/usage/troubleshoot-ztunnel/)
 
 Before adding Bookinfo to the Ambient mesh, you would see the PROTOCOL field as TCP for all the workloads.
 
