@@ -68,7 +68,7 @@ inputFiles:
     - Values.IstioCni                      # deprecated; replaced with Pilot.CNI
     - Values.Gateways                      # operator doesn't support deployment of ingress/egress gateways
     - Values.OwnerName                     # operator sets this internally
-    - Values.Ztunnel                       # ambient is not yet supported
+    - Values.Ztunnel                       # moved to ZTunnelValues
     - Values.RevisionTags                  # Revision Tags are only supported through IstioRevisionTag CRD
     - SidecarInjectorConfig.ObjectSelector # appears to be unused
     - CNIConfig.Enabled                    # CNI is enabled by the mere presence of the IstioCNI resource
