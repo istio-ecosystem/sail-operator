@@ -157,7 +157,16 @@ func (r *Reconciler) installHelmChart(ctx context.Context, ztunnel *v1alpha1.ZTu
 		return fmt.Errorf("failed to apply profile: %w", err)
 	}
 
-	_, err = r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(ztunnel), mergedHelmValues, ztunnel.Spec.Namespace, ztunnelChart, ownerReference)
+	// Apply any user Overrides configured as part of values.ztunnel
+	// This step was not required for the IstioCNI resource because the Helm templates[*] automatically override values.cni
+	// [*]https://github.com/istio/istio/blob/0200fd0d4c3963a72f36987c2e8c2887df172abf/manifests/charts/istio-cni/templates/zzy_descope_legacy.yaml#L3
+	// However, ztunnel charts do not have such a file, hence we are manually applying the mergeOperation here.
+	finalHelmValues, err := istiovalues.ApplyUserValues(helm.FromValues(mergedHelmValues), helm.FromValues(userValues.ZTunnel))
+	if err != nil {
+		return fmt.Errorf("failed to apply user overrides: %w", err)
+	}
+
+	_, err = r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(ztunnel), finalHelmValues, ztunnel.Spec.Namespace, ztunnelChart, ownerReference)
 	if err != nil {
 		return fmt.Errorf("failed to install/update Helm chart %q: %w", ztunnelChart, err)
 	}

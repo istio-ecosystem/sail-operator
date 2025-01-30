@@ -177,7 +177,11 @@ metadata:
 spec:
   profile: ambient
   version: %s
-  namespace: %s`
+  namespace: %s
+  values:
+    ztunnel:
+      env:
+        CUSTOM_ENV_VAR: "true"`
 						ztunnelYaml = fmt.Sprintf(ztunnelYaml, version.Name, ztunnelNamespace)
 						Log("ZTunnel YAML:", ztunnelYaml)
 						Expect(k.CreateFromString(ztunnelYaml)).To(Succeed(), "ZTunnel creation failed")
@@ -210,6 +214,10 @@ spec:
 						Expect(ztunnelObj).To(HaveContainersThat(ContainElement(WithTransform(getEnvVars,
 							ContainElement(corev1.EnvVar{Name: "ISTIO_META_ENABLE_HBONE", Value: "true"})))),
 							"Expected ISTIO_META_ENABLE_HBONE to be set to true, but not found")
+
+						Expect(ztunnelObj).To(HaveContainersThat(ContainElement(WithTransform(getEnvVars,
+							ContainElement(corev1.EnvVar{Name: "CUSTOM_ENV_VAR", Value: "true"})))),
+							"Expected CUSTOM_ENV_VAR to be set to true, but not found")
 					})
 				})
 
