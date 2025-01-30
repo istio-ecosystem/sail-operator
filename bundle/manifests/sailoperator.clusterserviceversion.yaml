@@ -33,8 +33,8 @@ metadata:
       ]
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
-    containerImage: quay.io/sail-dev/sail-operator:0.3-latest
-    createdAt: "2025-01-30T05:05:18Z"
+    containerImage: quay.io/sail-dev/sail-operator:1.1-latest
+    createdAt: "2025-01-30T20:50:16Z"
     description: Experimental operator for installing Istio service mesh
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -51,7 +51,7 @@ metadata:
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
     repository: https://github.com/istio-ecosystem/sail-operator
     support: Community based
-  name: sailoperator.v0.3.0
+  name: sailoperator.v1.1.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -730,7 +730,7 @@ spec:
                 - --zap-log-level=info
                 command:
                 - /sail-operator
-                image: quay.io/sail-dev/sail-operator:0.3-latest
+                image: quay.io/sail-dev/sail-operator:1.1-latest
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -926,4 +926,4 @@ spec:
     name: v1_24_2.proxy
   - image: docker.io/istio/ztunnel:1.24.2
     name: v1_24_2.ztunnel
-  version: 0.3.0
+  version: 1.1.0
