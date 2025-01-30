@@ -518,8 +518,8 @@ istio.io/api v1.25.0-alpha.0.0.20250124221600-03360c1a873a h1:xbR7vdZ7DDk6XInW8U
 istio.io/api v1.25.0-alpha.0.0.20250124221600-03360c1a873a/go.mod h1:QFzEXv/IT582T0FHZVp1QoolvE4ws0zz/vVO55blmlE=
 istio.io/client-go v1.25.0-alpha.0.0.20250124222001-e5cee70f0ae4 h1:75ssATpvyP7xE8FCtbXSqCwI8s2rbVjwiFtfxvi8pxg=
 istio.io/client-go v1.25.0-alpha.0.0.20250124222001-e5cee70f0ae4/go.mod h1:4j1xpEW9t2jVwHzuHV7no8HjldRAx1+ljATo5qHcd5k=
-istio.io/istio v0.0.0-20250129001050-204d3a95261d h1:ZaH8sBBw3P4NtypIjbM8TwtpDzdaeaAqbRSrftHe8P8=
-istio.io/istio v0.0.0-20250129001050-204d3a95261d/go.mod h1:1lpg/1scC6K5nz+zPhBPGWpVLu0hdq65kRguCIyAXic=
+istio.io/istio v0.0.0-20250129214253-d3ac996fe11c h1:fjwWCudt7zr+qDDIi0CPzV2bDNX4ES3uxRFfrmiYiKY=
+istio.io/istio v0.0.0-20250129214253-d3ac996fe11c/go.mod h1:1lpg/1scC6K5nz+zPhBPGWpVLu0hdq65kRguCIyAXic=
 k8s.io/api v0.32.1 h1:f562zw9cy+GvXzXf0CKlVQ7yHJVYzLfL6JAS4kOAaOc=
 k8s.io/api v0.32.1/go.mod h1:/Yi/BqkuueW1BgpoePYBRdDYfjPF5sgTr5+YqDZra5k=
 k8s.io/apiextensions-apiserver v0.32.1 h1:hjkALhRUeCariC8DiVmb5jj0VjIc1N0DREP32+6UXZw=
