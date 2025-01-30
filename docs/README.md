@@ -41,6 +41,7 @@
   - [Prerequisites](#prerequisites-1)
   - [Installation Steps](#installation-steps)
   - [Validation](#validation)
+- [Ambient mode](common/istio-ambient-mode.md)
 - [Addons](#addons)
   - [Deploy Prometheus and Jaeger addons](#deploy-prometheus-and-jaeger-addons)
   - [Deploy Kiali addon](#deploy-kiali-addon)
