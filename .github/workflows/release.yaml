@@ -6,6 +6,7 @@ on:
       run_name:
         description: "Run name - short description for the workflow run"
         required: true
+        default: stable
       is_draft_release:
         description: "Draft release"
         type: boolean
