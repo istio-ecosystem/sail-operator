@@ -2,7 +2,8 @@ name: Nightly image build workflow
 
 on:
   schedule:
-    - cron: "0 3 * * *" # everyday at 3AM UTC
+    - cron: "0 3 * * *" # everyday at 3AM UTC - main branch
+    - cron: "0 2 * * *" # everyday at 2AM UTC - release-1.0 branch
 
 run-name: nightly-images
 
@@ -23,6 +24,14 @@ jobs:
         password: ${{ secrets.QUAY_PWD }}
 
     - uses: actions/checkout@v4
+      if: github.event.schedule == '0 3 * * *'
+      with:
+        ref: main
+
+    - uses: actions/checkout@v4
+      if: github.event.schedule == '0 2 * * *'
+      with:
+        ref: release-1.0
 
     - name: Build and push nightly operator image
       run: |
