@@ -48,9 +48,9 @@ type VersionInfo struct {
 }
 
 var (
-	// List contains all supported versions
+	// List contains all supported versions. Does not include aliases
 	List []VersionInfo
-	// Map contains version info mapped by version name
+	// Map contains version info mapped by version name. Includes mappings for aliases
 	Map map[string]VersionInfo
 	// Default is the default version
 	Default string
