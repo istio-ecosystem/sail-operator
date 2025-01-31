@@ -368,8 +368,5 @@ func GetSampleYAML(version istioversions.VersionInfo, appName string) string {
 		return filepath.Join(project.RootDir, path)
 	}
 
-	if version.Name == "latest" {
-		return fmt.Sprintf("%s/master/%s", baseURL, path)
-	}
-	return fmt.Sprintf("%s/%s/%s", baseURL, version.Version, path)
+	return fmt.Sprintf("%s/%s/%s", baseURL, version.Commit, path)
 }

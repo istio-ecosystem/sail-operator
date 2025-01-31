@@ -93,8 +93,7 @@ function list_only_latest() {
 
 function update_stable() {
     all_releases=$(curl -sL "https://api.github.com/repos/istio/istio/releases" | yq '.[].tag_name' -oy)
-    supported_versions=$(yq '.versions[] | .name' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | grep -v latest | list_only_latest)
-
+    supported_versions=$(yq '.versions[] | select(.name != "*.*-*.*") | .name' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | list_only_latest)
     # For each supported version, look for a greater version in the all_releases list
     for version in ${supported_versions}; do
         version="${version:1}" # remove 'v' prefix, e.g. v1.21.0 => 1.21.0
@@ -107,16 +106,17 @@ function update_stable() {
     done
 }
 
-function update_latest() {
-    COMMIT=$(yq '.versions[] | select(.name == "latest") | "git ls-remote --heads " + .repo + ".git " + .branch + " | cut -f 1"' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | sh)
-    CURRENT=$(yq '.versions[] | select(.name == "latest") | .commit' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}")
+function update_prerelease() {
+    VERSION_CURRENT=$(yq '.versions[] | select(.name == "*.*-*") | .name' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}")
+    COMMIT=$(yq '.versions[] | select(.name == '\""${VERSION_CURRENT}"\"') | "git ls-remote --heads " + .repo + ".git " + .branch + " | cut -f 1"' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | sh)
+    CURRENT=$(yq '.versions[] | select(.name == '\""${VERSION_CURRENT}"\"') | .commit' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}")
 
     if [ "${COMMIT}" == "${CURRENT}" ]; then
         echo "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE} is already up-to-date with latest commit ${COMMIT}."
         return
     fi
 
-    echo Updating version 'latest' to commit "${COMMIT}"
+    echo Updating "${VERSION_CURRENT}" to commit "${COMMIT}"
     echo "Verifying the artifacts are available on GCS, this might take a while - you can abort the wait with CTRL+C"
 
     URL="https://storage.googleapis.com/istio-build/dev/${COMMIT}"
@@ -126,20 +126,25 @@ function update_latest() {
     done
     echo
 
-    VERSION=$(curl -sSfL "${URL}")
-    echo Version: "${VERSION}"
+    full_version=$(curl -sSfL "${URL}")
+    IFS="." read -r -a version_array <<< "${full_version}" # split version into an array for major, minor and patch
+    patch_version=${version_array[2]:0:8} # cutoff commit at 8 chars
+    VERSION=${version_array[0]}.${version_array[1]}.${patch_version}
+    echo New version: "${VERSION}"
 
     yq -i '
-        (.versions[] | select(.name == "latest") | .version) = "'"${VERSION}"'" |
-        (.versions[] | select(.name == "latest") | .commit) = "'"${COMMIT}"'" |
-        (.versions[] | select(.name == "latest") | .charts) = [
-            "https://storage.googleapis.com/istio-build/dev/'"${VERSION}"'/helm/base-'"${VERSION}"'.tgz",
-            "https://storage.googleapis.com/istio-build/dev/'"${VERSION}"'/helm/cni-'"${VERSION}"'.tgz",
-            "https://storage.googleapis.com/istio-build/dev/'"${VERSION}"'/helm/gateway-'"${VERSION}"'.tgz",
-            "https://storage.googleapis.com/istio-build/dev/'"${VERSION}"'/helm/istiod-'"${VERSION}"'.tgz",
-            "https://storage.googleapis.com/istio-build/dev/'"${VERSION}"'/helm/ztunnel-'"${VERSION}"'.tgz"
-        ]' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}"
+        (.versions[] | select(.name == "'"${VERSION_CURRENT}"'") | .version) = "'"${full_version}"'" |
+        (.versions[] | select(.name == "'"${VERSION_CURRENT}"'") | .commit) = "'"${COMMIT}"'" |
+        (.versions[] | select(.name == "'"${VERSION_CURRENT}"'") | .charts) = [
+            "https://storage.googleapis.com/istio-build/dev/'"${full_version}"'/helm/base-'"${full_version}"'.tgz",
+            "https://storage.googleapis.com/istio-build/dev/'"${full_version}"'/helm/cni-'"${full_version}"'.tgz",
+            "https://storage.googleapis.com/istio-build/dev/'"${full_version}"'/helm/gateway-'"${full_version}"'.tgz",
+            "https://storage.googleapis.com/istio-build/dev/'"${full_version}"'/helm/istiod-'"${full_version}"'.tgz",
+            "https://storage.googleapis.com/istio-build/dev/'"${full_version}"'/helm/ztunnel-'"${full_version}"'.tgz"
+        ] |
+        (.versions[] | select(.name == "'"${VERSION_CURRENT}"'") | .name) = "'"${VERSION}"'"' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}"
+    update_alias "master" "v${VERSION}"
 }
 
 update_stable
-update_latest
+update_prerelease
