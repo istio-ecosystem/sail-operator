@@ -60,6 +60,13 @@ END
         .[$pos:])' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}"
 }
 
+function update_alias() {
+    local name="${1}"
+    local ref="${2}"
+    echo "Updating alias ${name} to point to ${ref}"
+    yq eval "( .alias[] | select(.name == \"${name}\").ref ) = \"${ref}\"" -i "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}"
+}
+
 # Given an input with potentially several major.minor versions, list only the latest one
 # e.g.: For the input below:
 #   1.23.0
@@ -95,6 +102,7 @@ function update_stable() {
         latest_release=$(echo "${all_releases}" | grep "${version_array[0]}.${version_array[1]}." | head -1) # get the latest release for "major.minor"
         if [[ "${version}" != "${latest_release}" ]]; then
             add_stable_version "${latest_release}" "${version}"
+            update_alias "v${version_array[0]}.${version_array[1]}-latest" "v${latest_release}"
         fi
     done
 }
