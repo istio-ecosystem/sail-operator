@@ -39,10 +39,13 @@ spec:
       url: 'https://thanos-querier.openshift-monitoring.svc.cluster.local:9091'
     tracing:
       enabled: true
-      internal_url: "http://tempo-sample-query-frontend.tracing-system.svc.cluster.local:16685"
+      internal_url: "http://tempo-sample-query-frontend.tracing-system.svc.cluster.local:3200"
       external_url: ${JAEGERROUTE} 
       query_timeout: 60
-      use_grpc: true
+      use_grpc: false
+      provider: tempo
+      tempo_config:
+        url_format: "jaeger"
   installation_tag: "Kiali [istio-system]"
   istio_namespace: istio-system
   server:
