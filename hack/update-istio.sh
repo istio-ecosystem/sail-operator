@@ -17,7 +17,8 @@
 set -euo pipefail
 
 SLEEP_TIME=10
-VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"pkg/istioversions/versions.yaml"}
+VERSIONS_YAML_DIR=${VERSIONS_YAML_DIR:-"pkg/istioversions"}
+VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"versions.yaml"}
 
 # Add a new entry in versions.yaml file.
 # First argument is the new version (e.g. 1.22.5)
@@ -56,7 +57,7 @@ END
         (.[] | select(.name == "v'"${2}"'") | key) as $pos |
         .[:$pos] +
         ['"${template}"'] +
-        .[$pos:])' "${VERSIONS_YAML_FILE}"
+        .[$pos:])' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}"
 }
 
 # Given an input with potentially several major.minor versions, list only the latest one
@@ -85,7 +86,7 @@ function list_only_latest() {
 
 function update_stable() {
     all_releases=$(curl -sL "https://api.github.com/repos/istio/istio/releases" | yq '.[].tag_name' -oy)
-    supported_versions=$(yq '.versions[] | .name' "${VERSIONS_YAML_FILE}" | grep -v latest | list_only_latest)
+    supported_versions=$(yq '.versions[] | .name' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | grep -v latest | list_only_latest)
 
     # For each supported version, look for a greater version in the all_releases list
     for version in ${supported_versions}; do
@@ -99,11 +100,11 @@ function update_stable() {
 }
 
 function update_latest() {
-    COMMIT=$(yq '.versions[] | select(.name == "latest") | "git ls-remote --heads " + .repo + ".git " + .branch + " | cut -f 1"' "${VERSIONS_YAML_FILE}" | sh)
-    CURRENT=$(yq '.versions[] | select(.name == "latest") | .commit' "${VERSIONS_YAML_FILE}")
+    COMMIT=$(yq '.versions[] | select(.name == "latest") | "git ls-remote --heads " + .repo + ".git " + .branch + " | cut -f 1"' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | sh)
+    CURRENT=$(yq '.versions[] | select(.name == "latest") | .commit' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}")
 
     if [ "${COMMIT}" == "${CURRENT}" ]; then
-        echo "${VERSIONS_YAML_FILE} is already up-to-date with latest commit ${COMMIT}."
+        echo "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE} is already up-to-date with latest commit ${COMMIT}."
         return
     fi
 
@@ -129,7 +130,7 @@ function update_latest() {
             "https://storage.googleapis.com/istio-build/dev/'"${VERSION}"'/helm/gateway-'"${VERSION}"'.tgz",
             "https://storage.googleapis.com/istio-build/dev/'"${VERSION}"'/helm/istiod-'"${VERSION}"'.tgz",
             "https://storage.googleapis.com/istio-build/dev/'"${VERSION}"'/helm/ztunnel-'"${VERSION}"'.tgz"
-        ]' "${VERSIONS_YAML_FILE}"
+        ]' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}"
 }
 
 update_stable

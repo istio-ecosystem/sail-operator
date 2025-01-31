@@ -20,10 +20,16 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"gopkg.in/yaml.v3"
+
+	"istio.io/istio/pkg/log"
 )
 
-//go:embed versions.yaml
-var versionsFile embed.FS
+var (
+	//go:embed *.yaml
+	versionsFiles embed.FS
+
+	versionsFilename = "versions.yaml"
+)
 
 // Versions represents the top-level structure of versions.yaml
 type Versions struct {
@@ -63,10 +69,11 @@ var (
 )
 
 func init() {
+	log.Info("loading supported istio versions from " + versionsFilename)
 	// Read the embedded versions.yaml file
-	data, err := versionsFile.ReadFile("versions.yaml")
+	data, err := versionsFiles.ReadFile(versionsFilename)
 	if err != nil {
-		panic(fmt.Errorf("failed to read versions.yaml: %w", err))
+		panic(fmt.Errorf("failed to read versions from '%s': %w", versionsFilename, err))
 	}
 
 	List, Default, Old, New, Alias = mustParseVersionsYaml(data)

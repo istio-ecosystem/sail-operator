@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"pkg/istioversions/versions.yaml"}
+VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"versions.yaml"}
 
 : "${YQ:=yq}"
 
@@ -98,7 +98,7 @@ if [ $# -ne 1 ]; then
 fi
 clusterserviceversion_file_path="$1"
 
-versions="$( ${YQ} '.versions[].name' "${VERSIONS_YAML_FILE}" )"
+versions="$( ${YQ} '.versions[].name' "pkg/istioversions/${VERSIONS_YAML_FILE}" )"
 
 for version in ${versions}; do
   version_underscore=${version//./_}
