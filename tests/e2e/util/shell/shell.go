@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -34,7 +35,7 @@ func ExecuteCommand(command string) (string, error) {
 
 // ExecuteShell executes a command given the input string and returns the output and err if any
 func ExecuteShell(command string, input string) (string, error) {
-	cmd := exec.Command("sh", "-c", command)
+	cmd := exec.Command("bash", "-c", command)
 	if input != "" {
 		cmd.Stdin = strings.NewReader(input)
 	}
@@ -49,6 +50,37 @@ func ExecuteShell(command string, input string) (string, error) {
 	if err != nil {
 		// Return both stdout and stderr to help with debugging
 		return stdout.String() + stderr.String(), fmt.Errorf("error executing command: %s", stderr.String())
+	}
+
+	return stdout.String(), nil
+}
+
+// Execute bash script with optional arguments
+func ExecuteBashScript(scriptPath string, args ...string) (string, error) {
+	absScriptPath, err := filepath.Abs(scriptPath)
+	if err != nil {
+		return "", fmt.Errorf("error getting absolute path: %w", err)
+	}
+
+	if _, err := os.Stat(absScriptPath); os.IsNotExist(err) {
+		return "", fmt.Errorf("script file does not exist: %s", absScriptPath)
+	}
+
+	scriptDir := filepath.Dir(absScriptPath)
+	cmdArgs := append([]string{absScriptPath}, args...)
+	cmd := exec.Command("bash", cmdArgs...)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	// set dir to dir of the script before execution
+	cmd.Dir = scriptDir
+
+	// Run the script
+	err = cmd.Run()
+	if err != nil {
+		return "", fmt.Errorf("error executing script: %s, stderr: %s", err, stderr.String())
 	}
 
 	return stdout.String(), nil
