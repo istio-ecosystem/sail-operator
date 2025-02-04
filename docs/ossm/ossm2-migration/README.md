@@ -7,6 +7,7 @@ This document details how to migrate from 2.6 to OpenShift Service Mesh 3.0.
 Before you begin to migrate your controlplane from OpenShift Service Mesh 2.6 to 3.0, ensure you have done the following:
 
 - Read through the key OSSM 2.6 vs 3.0 Differences [document](./../ossm2-vs-ossm3.md) 
+  - Read through fields in the `ServiceMeshControlPlane` resource no longer found in the `istio` resource [here](./smcp-fields-migration/unsupported-fields-in-3.md)
 - Upgrade your 2.6 OpenShift Service Mesh Operator to the latest release. See warning below.
 - Upgrade your `ServiceMeshControlPlane` version to the latest OpenShift Service Mesh release.
 - Install your 3.0 Openshift Service Mesh Operator. See warning below.
@@ -127,6 +128,8 @@ oc get smcp <smcp-name> -n <smcp-namespace> -o jsonpath='{.spec.mode}'
 ```
 
 For `MultiTenant` meshes, follow [these instructions](./multi-tenancy/README.md). For `ClusterWide` meshes, follow [these instructions](./cluster-wide/README.md). When the migration is finished, follow [these instructions](./cleaning-2.6/README.md) to remove OpenShift Service Mesh 2.6.
+
+For assistance in migrating from the `smcp` to `istio` resource, see a mapping of fields [here](./smcp-fields-migration/smcp-to-istio-mappings.md)
 
 ## Post-migration Checklist
 
