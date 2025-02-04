@@ -294,7 +294,7 @@ spec:
     pilot:
       env:
         PILOT_ENABLE_STATUS: "true"
-  version: v1.23.0
+  version: v1.24.0
   namespace: istio-system
 ```
 
@@ -303,6 +303,25 @@ Note the quotes around the value of `spec.values.pilot.env.PILOT_ENABLE_STATUS`.
 ### components field
 
 Sail Operator's Istio resource does not have a `spec.components` field. Instead, you can enable and disable components directly by setting `spec.values.<component>.enabled: true/false`. Other functionality exposed through `spec.components` like the k8s overlays is not currently available.
+
+### Converter Script
+This script is used to convert an Istio in-cluster operator configuration to a Sail Operator configuration. Upon execution, a new YAML file will be created in the same directory which ISTIO-OPERATOR-CONFIG-YAML is present. The new file will be named: sail-operator-config.yaml
+
+#### Usage
+To run the configuration-converter.sh script, you need to provide three arguments:
+
+ISTIO_OPERATOR_CONFIG_YAML_WITH_PATH: Path to the Istio operator configuration YAML file.
+ISTIO_NAMESPACE: The Kubernetes namespace for the Istio deployment.
+ISTIO_VERSION: The version of Istio to be used.
+
+##### Example
+```bash
+./tools/configuration-converter.sh tools/istio_config.yaml istio-system v1.24.3
+```
+
+> [!WARNING]
+> This script is still under development.
+> Please verify the resulting configuration carefully after conversion to ensure it meets your expectations and requirements.
 
 ### CNI
 
