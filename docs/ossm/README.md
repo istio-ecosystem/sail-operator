@@ -15,4 +15,5 @@ This documentation is specific to the OpenShift Service Mesh product and may dif
 - [Security Mutual TLS Configuration](./security/security-mTLS-configuration.md)
 - [2.X to 3.0 migration guide](./ossm2-migration/README.md)
 - [Quickstart: OSSM3 with Kiali, Tempo, Bookinfo](./quickstarts/ossm3-kiali-tempo-bookinfo/README.MD)
+- [Kiali - multi-cluster](./kiali-multi-cluster/README.md)
 - [Installing istioctl tool](./istioctl/README.md)
