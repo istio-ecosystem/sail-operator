@@ -293,20 +293,20 @@ func GetSampleYAML(version supportedversion.VersionInfo, appName string) string 
 	}
 
 	// Default paths if no custom path is provided
-	var url string
+	var path string
 	switch appName {
 	case "tcp-echo-dual-stack":
-		url = "samples/tcp-echo/tcp-echo-dual-stack.yaml"
+		path = "samples/tcp-echo/tcp-echo-dual-stack.yaml"
 	case "tcp-echo-ipv4", "tcp-echo":
-		url = "samples/tcp-echo/tcp-echo-ipv4.yaml"
+		path = "samples/tcp-echo/tcp-echo-ipv4.yaml"
 	case "tcp-echo-ipv6":
-		url = "samples/tcp-echo/tcp-echo-ipv6.yaml"
+		path = "samples/tcp-echo/tcp-echo-ipv6.yaml"
 	case "sleep":
-		url = "samples/sleep/sleep.yaml"
+		path = "samples/sleep/sleep.yaml"
 	case "helloworld", "sample":
-		url = "samples/helloworld/helloworld.yaml"
+		path = "samples/helloworld/helloworld.yaml"
 	case "httpbin":
-		url = "samples/httpbin/httpbin.yaml"
+		path = "samples/httpbin/httpbin.yaml"
 	default:
 		return ""
 	}
@@ -314,12 +314,12 @@ func GetSampleYAML(version supportedversion.VersionInfo, appName string) string 
 	// Base URL logic
 	baseURL := os.Getenv("SAMPLE_YAML_BASE_URL")
 	if baseURL == "" {
-		baseURL = "https://raw.githubusercontent.com/istio/istio"
+		// use local files by default
+		return filepath.Join(project.RootDir, path)
 	}
 
 	if version.Name == "latest" {
-		return fmt.Sprintf("%s/master/%s", baseURL, url)
+		return fmt.Sprintf("%s/master/%s", baseURL, path)
 	}
-
-	return fmt.Sprintf("%s/%s/%s", baseURL, version.Version, url)
+	return fmt.Sprintf("%s/%s/%s", baseURL, version.Version, path)
 }
