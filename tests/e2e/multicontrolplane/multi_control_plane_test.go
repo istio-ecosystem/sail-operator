@@ -189,7 +189,7 @@ spec:
 
 	AfterAll(func() {
 		if CurrentSpecReport().Failed() && !debugInfoLogged {
-			common.LogDebugInfo(k)
+			common.LogDebugInfo(common.MultiControlPlane, k)
 			debugInfoLogged = true
 		}
 

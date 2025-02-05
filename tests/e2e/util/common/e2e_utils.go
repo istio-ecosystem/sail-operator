@@ -43,6 +43,22 @@ import (
 	"istio.io/istio/pkg/ptr"
 )
 
+type testSuite string
+
+const (
+	Ambient           testSuite = "ambient"
+	ControlPlane      testSuite = "control-plane"
+	DualStack         testSuite = "dual-stack"
+	MultiCluster      testSuite = "multi-cluster"
+	Operator          testSuite = "operator"
+	MultiControlPlane testSuite = "multi-control-plane"
+)
+
+const (
+	SleepNamespace   = "sleep"
+	HttpbinNamespace = "httpbin"
+)
+
 var (
 	OperatorImage     = env.Get("IMAGE", "quay.io/sail-dev/sail-operator:latest")
 	OperatorNamespace = env.Get("NAMESPACE", "sail-operator")
@@ -52,6 +68,7 @@ var (
 	istioName             = env.Get("ISTIO_NAME", "default")
 	istioCniName          = env.Get("ISTIOCNI_NAME", "default")
 	istioCniNamespace     = env.Get("ISTIOCNI_NAMESPACE", "istio-cni")
+	ztunnelNamespace      = env.Get("ZTUNNEL_NAMESPACE", "ztunnel")
 
 	// version can have one of the following formats:
 	// - 1.22.2
@@ -131,7 +148,7 @@ func CheckNamespaceEmpty(ctx SpecContext, cl client.Client, ns string) {
 	}).Should(BeEmpty(), "No Services should be present in the namespace")
 }
 
-func LogDebugInfo(kubectls ...kubectl.Kubectl) {
+func LogDebugInfo(suite testSuite, kubectls ...kubectl.Kubectl) {
 	// General debugging information to help diagnose the failure
 	// TODO: Add the creation of file with this information to be attached to the test report
 
@@ -153,6 +170,14 @@ func LogDebugInfo(kubectls ...kubectl.Kubectl) {
 		logCertsDebugInfo(k)
 		GinkgoWriter.Println("=========================================================")
 		GinkgoWriter.Println()
+
+		if suite == Ambient {
+			logZtunnelDebugInfo(k)
+			describe, err := k.WithNamespace(SleepNamespace).Describe("deployment", "sleep")
+			logDebugElement("=====sleep deployment describe=====", describe, err)
+			describe, err = k.WithNamespace(HttpbinNamespace).Describe("deployment", "httpbin")
+			logDebugElement("=====httpbin deployment describe=====", describe, err)
+		}
 	}
 }
 
@@ -210,9 +235,26 @@ func logCNIDebugInfo(k kubectl.Kubectl) {
 	logDebugElement("=====Istio CNI logs=====", logs, err)
 }
 
+func logZtunnelDebugInfo(k kubectl.Kubectl) {
+	resource, err := k.GetYAML("ztunnel", "default")
+	logDebugElement("=====ZTunnel YAML=====", resource, err)
+
+	ds, err := k.WithNamespace(ztunnelNamespace).GetYAML("daemonset", "ztunnel")
+	logDebugElement("=====ZTunnel DaemonSet YAML=====", ds, err)
+
+	events, err := k.WithNamespace(ztunnelNamespace).GetEvents()
+	logDebugElement("=====Events in "+ztunnelNamespace+"=====", events, err)
+
+	describe, err := k.WithNamespace(ztunnelNamespace).Describe("daemonset", "ztunnel")
+	logDebugElement("=====ZTunnel DaemonSet describe=====", describe, err)
+
+	logs, err := k.WithNamespace(ztunnelNamespace).Logs("daemonset/ztunnel", ptr.Of(120*time.Second))
+	logDebugElement("=====ztunnel logs=====", logs, err)
+}
+
 func logCertsDebugInfo(k kubectl.Kubectl) {
 	certs, err := k.WithNamespace(controlPlaneNamespace).GetSecret("cacerts")
-	logDebugElement("=====CA certs=====", certs, err)
+	logDebugElement("=====CA certs in "+controlPlaneNamespace+"=====", certs, err)
 }
 
 func logDebugElement(caption string, info string, err error) {
