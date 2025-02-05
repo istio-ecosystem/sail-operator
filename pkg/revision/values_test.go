@@ -90,6 +90,50 @@ spec:
 	}
 }
 
+// TestFipsComputeValues tests that the pilot.env.COMPLIANCE_POLICY is set in values
+// when checking a temp test file content.
+func TestFipsComputeValues(t *testing.T) {
+	const (
+		namespace    = "istio-system"
+		version      = "my-version"
+		revisionName = "my-revision"
+	)
+	resourceDir := t.TempDir()
+	profilesDir := path.Join(resourceDir, version, "profiles")
+	Must(t, os.MkdirAll(profilesDir, 0o755))
+
+	Must(t, os.WriteFile(path.Join(profilesDir, "default.yaml"), []byte((`
+apiVersion: sailoperator.io/v1
+kind: IstioRevision
+spec:`)), 0o644))
+
+	Must(t, os.WriteFile(path.Join(profilesDir, "fips_enabled"), []byte(("1\n")), 0o644))
+
+	values := &v1.Values{}
+	fipsCheckFile = path.Join(profilesDir, "fips_enabled")
+
+	result, err := ComputeValues(values, namespace, version, config.PlatformOpenShift, "default", "",
+		resourceDir, revisionName)
+	if err != nil {
+		t.Errorf("Expected no error, but got an error: %v", err)
+	}
+
+	expected := &v1.Values{
+		Pilot: &v1.PilotConfig{
+			Env: map[string]string{"COMPLIANCE_POLICY": "fips-140-2"}, // this value is added/overridden based on detecting FIPS mode on OpenShift
+		},
+		Global: &v1.GlobalConfig{
+			Platform:       ptr.Of("openshift"),
+			IstioNamespace: ptr.Of(namespace), // this value is always added/overridden based on IstioRevision.spec.namespace
+		},
+		Revision: ptr.Of(revisionName),
+	}
+
+	if !reflect.DeepEqual(result, expected) {
+		t.Errorf("Result does not match the expected Values.\nExpected: %v\nActual: %v", expected, result)
+	}
+}
+
 func Must(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {
