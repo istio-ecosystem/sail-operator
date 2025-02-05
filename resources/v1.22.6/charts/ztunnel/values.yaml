@@ -1,6 +1,6 @@
 defaults:
   # Hub to pull from. Image will be `Hub/Image:Tag-Variant`
-  hub: docker.io/istio
+  hub: gcr.io/istio-release
   # Tag to pull from. Image will be `Hub/Image:Tag-Variant`
   tag: 1.22.6
   # Variant to pull. Options are "debug" or "distroless". Unset will use the default for the given version.

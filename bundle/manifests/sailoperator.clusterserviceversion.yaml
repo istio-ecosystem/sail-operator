@@ -34,7 +34,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/sail-dev/sail-operator:1.1-latest
-    createdAt: "2025-02-05T05:05:18Z"
+    createdAt: "2025-02-05T09:46:49Z"
     description: Experimental operator for installing Istio service mesh
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -657,50 +657,50 @@ spec:
                 images.latest.istiod: gcr.io/istio-testing/pilot:1.25-alpha.80c04863360c2cf08af32fbc6a8cf5a6703cab89
                 images.latest.proxy: gcr.io/istio-testing/proxyv2:1.25-alpha.80c04863360c2cf08af32fbc6a8cf5a6703cab89
                 images.latest.ztunnel: gcr.io/istio-testing/ztunnel:1.25-alpha.80c04863360c2cf08af32fbc6a8cf5a6703cab89
-                images.v1_21_6.cni: docker.io/istio/install-cni:1.21.6
-                images.v1_21_6.istiod: docker.io/istio/pilot:1.21.6
-                images.v1_21_6.proxy: docker.io/istio/proxyv2:1.21.6
-                images.v1_21_6.ztunnel: docker.io/istio/ztunnel:1.21.6
-                images.v1_22_5.cni: docker.io/istio/install-cni:1.22.5
-                images.v1_22_5.istiod: docker.io/istio/pilot:1.22.5
-                images.v1_22_5.proxy: docker.io/istio/proxyv2:1.22.5
-                images.v1_22_5.ztunnel: docker.io/istio/ztunnel:1.22.5
-                images.v1_22_6.cni: docker.io/istio/install-cni:1.22.6
-                images.v1_22_6.istiod: docker.io/istio/pilot:1.22.6
-                images.v1_22_6.proxy: docker.io/istio/proxyv2:1.22.6
-                images.v1_22_6.ztunnel: docker.io/istio/ztunnel:1.22.6
-                images.v1_22_7.cni: docker.io/istio/install-cni:1.22.7
-                images.v1_22_7.istiod: docker.io/istio/pilot:1.22.7
-                images.v1_22_7.proxy: docker.io/istio/proxyv2:1.22.7
-                images.v1_22_7.ztunnel: docker.io/istio/ztunnel:1.22.7
-                images.v1_22_8.cni: docker.io/istio/install-cni:1.22.8
-                images.v1_22_8.istiod: docker.io/istio/pilot:1.22.8
-                images.v1_22_8.proxy: docker.io/istio/proxyv2:1.22.8
-                images.v1_22_8.ztunnel: docker.io/istio/ztunnel:1.22.8
-                images.v1_23_2.cni: docker.io/istio/install-cni:1.23.2
-                images.v1_23_2.istiod: docker.io/istio/pilot:1.23.2
-                images.v1_23_2.proxy: docker.io/istio/proxyv2:1.23.2
-                images.v1_23_2.ztunnel: docker.io/istio/ztunnel:1.23.2
-                images.v1_23_3.cni: docker.io/istio/install-cni:1.23.3
-                images.v1_23_3.istiod: docker.io/istio/pilot:1.23.3
-                images.v1_23_3.proxy: docker.io/istio/proxyv2:1.23.3
-                images.v1_23_3.ztunnel: docker.io/istio/ztunnel:1.23.3
-                images.v1_23_4.cni: docker.io/istio/install-cni:1.23.4
-                images.v1_23_4.istiod: docker.io/istio/pilot:1.23.4
-                images.v1_23_4.proxy: docker.io/istio/proxyv2:1.23.4
-                images.v1_23_4.ztunnel: docker.io/istio/ztunnel:1.23.4
-                images.v1_24_0.cni: docker.io/istio/install-cni:1.24.0
-                images.v1_24_0.istiod: docker.io/istio/pilot:1.24.0
-                images.v1_24_0.proxy: docker.io/istio/proxyv2:1.24.0
-                images.v1_24_0.ztunnel: docker.io/istio/ztunnel:1.24.0
-                images.v1_24_1.cni: docker.io/istio/install-cni:1.24.1
-                images.v1_24_1.istiod: docker.io/istio/pilot:1.24.1
-                images.v1_24_1.proxy: docker.io/istio/proxyv2:1.24.1
-                images.v1_24_1.ztunnel: docker.io/istio/ztunnel:1.24.1
-                images.v1_24_2.cni: docker.io/istio/install-cni:1.24.2
-                images.v1_24_2.istiod: docker.io/istio/pilot:1.24.2
-                images.v1_24_2.proxy: docker.io/istio/proxyv2:1.24.2
-                images.v1_24_2.ztunnel: docker.io/istio/ztunnel:1.24.2
+                images.v1_21_6.cni: gcr.io/istio-release/install-cni:1.21.6
+                images.v1_21_6.istiod: gcr.io/istio-release/pilot:1.21.6
+                images.v1_21_6.proxy: gcr.io/istio-release/proxyv2:1.21.6
+                images.v1_21_6.ztunnel: gcr.io/istio-release/ztunnel:1.21.6
+                images.v1_22_5.cni: gcr.io/istio-release/install-cni:1.22.5
+                images.v1_22_5.istiod: gcr.io/istio-release/pilot:1.22.5
+                images.v1_22_5.proxy: gcr.io/istio-release/proxyv2:1.22.5
+                images.v1_22_5.ztunnel: gcr.io/istio-release/ztunnel:1.22.5
+                images.v1_22_6.cni: gcr.io/istio-release/install-cni:1.22.6
+                images.v1_22_6.istiod: gcr.io/istio-release/pilot:1.22.6
+                images.v1_22_6.proxy: gcr.io/istio-release/proxyv2:1.22.6
+                images.v1_22_6.ztunnel: gcr.io/istio-release/ztunnel:1.22.6
+                images.v1_22_7.cni: gcr.io/istio-release/install-cni:1.22.7
+                images.v1_22_7.istiod: gcr.io/istio-release/pilot:1.22.7
+                images.v1_22_7.proxy: gcr.io/istio-release/proxyv2:1.22.7
+                images.v1_22_7.ztunnel: gcr.io/istio-release/ztunnel:1.22.7
+                images.v1_22_8.cni: gcr.io/istio-release/install-cni:1.22.8
+                images.v1_22_8.istiod: gcr.io/istio-release/pilot:1.22.8
+                images.v1_22_8.proxy: gcr.io/istio-release/proxyv2:1.22.8
+                images.v1_22_8.ztunnel: gcr.io/istio-release/ztunnel:1.22.8
+                images.v1_23_2.cni: gcr.io/istio-release/install-cni:1.23.2
+                images.v1_23_2.istiod: gcr.io/istio-release/pilot:1.23.2
+                images.v1_23_2.proxy: gcr.io/istio-release/proxyv2:1.23.2
+                images.v1_23_2.ztunnel: gcr.io/istio-release/ztunnel:1.23.2
+                images.v1_23_3.cni: gcr.io/istio-release/install-cni:1.23.3
+                images.v1_23_3.istiod: gcr.io/istio-release/pilot:1.23.3
+                images.v1_23_3.proxy: gcr.io/istio-release/proxyv2:1.23.3
+                images.v1_23_3.ztunnel: gcr.io/istio-release/ztunnel:1.23.3
+                images.v1_23_4.cni: gcr.io/istio-release/install-cni:1.23.4
+                images.v1_23_4.istiod: gcr.io/istio-release/pilot:1.23.4
+                images.v1_23_4.proxy: gcr.io/istio-release/proxyv2:1.23.4
+                images.v1_23_4.ztunnel: gcr.io/istio-release/ztunnel:1.23.4
+                images.v1_24_0.cni: gcr.io/istio-release/install-cni:1.24.0
+                images.v1_24_0.istiod: gcr.io/istio-release/pilot:1.24.0
+                images.v1_24_0.proxy: gcr.io/istio-release/proxyv2:1.24.0
+                images.v1_24_0.ztunnel: gcr.io/istio-release/ztunnel:1.24.0
+                images.v1_24_1.cni: gcr.io/istio-release/install-cni:1.24.1
+                images.v1_24_1.istiod: gcr.io/istio-release/pilot:1.24.1
+                images.v1_24_1.proxy: gcr.io/istio-release/proxyv2:1.24.1
+                images.v1_24_1.ztunnel: gcr.io/istio-release/ztunnel:1.24.1
+                images.v1_24_2.cni: gcr.io/istio-release/install-cni:1.24.2
+                images.v1_24_2.istiod: gcr.io/istio-release/pilot:1.24.2
+                images.v1_24_2.proxy: gcr.io/istio-release/proxyv2:1.24.2
+                images.v1_24_2.ztunnel: gcr.io/istio-release/ztunnel:1.24.2
                 kubectl.kubernetes.io/default-container: sail-operator
               labels:
                 app.kubernetes.io/created-by: sailoperator
@@ -838,92 +838,92 @@ spec:
     name: latest.proxy
   - image: gcr.io/istio-testing/ztunnel:1.25-alpha.80c04863360c2cf08af32fbc6a8cf5a6703cab89
     name: latest.ztunnel
-  - image: docker.io/istio/install-cni:1.21.6
+  - image: gcr.io/istio-release/install-cni:1.21.6
     name: v1_21_6.cni
-  - image: docker.io/istio/pilot:1.21.6
+  - image: gcr.io/istio-release/pilot:1.21.6
     name: v1_21_6.istiod
-  - image: docker.io/istio/proxyv2:1.21.6
+  - image: gcr.io/istio-release/proxyv2:1.21.6
     name: v1_21_6.proxy
-  - image: docker.io/istio/ztunnel:1.21.6
+  - image: gcr.io/istio-release/ztunnel:1.21.6
     name: v1_21_6.ztunnel
-  - image: docker.io/istio/install-cni:1.22.5
+  - image: gcr.io/istio-release/install-cni:1.22.5
     name: v1_22_5.cni
-  - image: docker.io/istio/pilot:1.22.5
+  - image: gcr.io/istio-release/pilot:1.22.5
     name: v1_22_5.istiod
-  - image: docker.io/istio/proxyv2:1.22.5
+  - image: gcr.io/istio-release/proxyv2:1.22.5
     name: v1_22_5.proxy
-  - image: docker.io/istio/ztunnel:1.22.5
+  - image: gcr.io/istio-release/ztunnel:1.22.5
     name: v1_22_5.ztunnel
-  - image: docker.io/istio/install-cni:1.22.6
+  - image: gcr.io/istio-release/install-cni:1.22.6
     name: v1_22_6.cni
-  - image: docker.io/istio/pilot:1.22.6
+  - image: gcr.io/istio-release/pilot:1.22.6
     name: v1_22_6.istiod
-  - image: docker.io/istio/proxyv2:1.22.6
+  - image: gcr.io/istio-release/proxyv2:1.22.6
     name: v1_22_6.proxy
-  - image: docker.io/istio/ztunnel:1.22.6
+  - image: gcr.io/istio-release/ztunnel:1.22.6
     name: v1_22_6.ztunnel
-  - image: docker.io/istio/install-cni:1.22.7
+  - image: gcr.io/istio-release/install-cni:1.22.7
     name: v1_22_7.cni
-  - image: docker.io/istio/pilot:1.22.7
+  - image: gcr.io/istio-release/pilot:1.22.7
     name: v1_22_7.istiod
-  - image: docker.io/istio/proxyv2:1.22.7
+  - image: gcr.io/istio-release/proxyv2:1.22.7
     name: v1_22_7.proxy
-  - image: docker.io/istio/ztunnel:1.22.7
+  - image: gcr.io/istio-release/ztunnel:1.22.7
     name: v1_22_7.ztunnel
-  - image: docker.io/istio/install-cni:1.22.8
+  - image: gcr.io/istio-release/install-cni:1.22.8
     name: v1_22_8.cni
-  - image: docker.io/istio/pilot:1.22.8
+  - image: gcr.io/istio-release/pilot:1.22.8
     name: v1_22_8.istiod
-  - image: docker.io/istio/proxyv2:1.22.8
+  - image: gcr.io/istio-release/proxyv2:1.22.8
     name: v1_22_8.proxy
-  - image: docker.io/istio/ztunnel:1.22.8
+  - image: gcr.io/istio-release/ztunnel:1.22.8
     name: v1_22_8.ztunnel
-  - image: docker.io/istio/install-cni:1.23.2
+  - image: gcr.io/istio-release/install-cni:1.23.2
     name: v1_23_2.cni
-  - image: docker.io/istio/pilot:1.23.2
+  - image: gcr.io/istio-release/pilot:1.23.2
     name: v1_23_2.istiod
-  - image: docker.io/istio/proxyv2:1.23.2
+  - image: gcr.io/istio-release/proxyv2:1.23.2
     name: v1_23_2.proxy
-  - image: docker.io/istio/ztunnel:1.23.2
+  - image: gcr.io/istio-release/ztunnel:1.23.2
     name: v1_23_2.ztunnel
-  - image: docker.io/istio/install-cni:1.23.3
+  - image: gcr.io/istio-release/install-cni:1.23.3
     name: v1_23_3.cni
-  - image: docker.io/istio/pilot:1.23.3
+  - image: gcr.io/istio-release/pilot:1.23.3
     name: v1_23_3.istiod
-  - image: docker.io/istio/proxyv2:1.23.3
+  - image: gcr.io/istio-release/proxyv2:1.23.3
     name: v1_23_3.proxy
-  - image: docker.io/istio/ztunnel:1.23.3
+  - image: gcr.io/istio-release/ztunnel:1.23.3
     name: v1_23_3.ztunnel
-  - image: docker.io/istio/install-cni:1.23.4
+  - image: gcr.io/istio-release/install-cni:1.23.4
     name: v1_23_4.cni
-  - image: docker.io/istio/pilot:1.23.4
+  - image: gcr.io/istio-release/pilot:1.23.4
     name: v1_23_4.istiod
-  - image: docker.io/istio/proxyv2:1.23.4
+  - image: gcr.io/istio-release/proxyv2:1.23.4
     name: v1_23_4.proxy
-  - image: docker.io/istio/ztunnel:1.23.4
+  - image: gcr.io/istio-release/ztunnel:1.23.4
     name: v1_23_4.ztunnel
-  - image: docker.io/istio/install-cni:1.24.0
+  - image: gcr.io/istio-release/install-cni:1.24.0
     name: v1_24_0.cni
-  - image: docker.io/istio/pilot:1.24.0
+  - image: gcr.io/istio-release/pilot:1.24.0
     name: v1_24_0.istiod
-  - image: docker.io/istio/proxyv2:1.24.0
+  - image: gcr.io/istio-release/proxyv2:1.24.0
     name: v1_24_0.proxy
-  - image: docker.io/istio/ztunnel:1.24.0
+  - image: gcr.io/istio-release/ztunnel:1.24.0
     name: v1_24_0.ztunnel
-  - image: docker.io/istio/install-cni:1.24.1
+  - image: gcr.io/istio-release/install-cni:1.24.1
     name: v1_24_1.cni
-  - image: docker.io/istio/pilot:1.24.1
+  - image: gcr.io/istio-release/pilot:1.24.1
     name: v1_24_1.istiod
-  - image: docker.io/istio/proxyv2:1.24.1
+  - image: gcr.io/istio-release/proxyv2:1.24.1
     name: v1_24_1.proxy
-  - image: docker.io/istio/ztunnel:1.24.1
+  - image: gcr.io/istio-release/ztunnel:1.24.1
     name: v1_24_1.ztunnel
-  - image: docker.io/istio/install-cni:1.24.2
+  - image: gcr.io/istio-release/install-cni:1.24.2
     name: v1_24_2.cni
-  - image: docker.io/istio/pilot:1.24.2
+  - image: gcr.io/istio-release/pilot:1.24.2
     name: v1_24_2.istiod
-  - image: docker.io/istio/proxyv2:1.24.2
+  - image: gcr.io/istio-release/proxyv2:1.24.2
     name: v1_24_2.proxy
-  - image: docker.io/istio/ztunnel:1.24.2
+  - image: gcr.io/istio-release/ztunnel:1.24.2
     name: v1_24_2.ztunnel
   version: 1.1.0
