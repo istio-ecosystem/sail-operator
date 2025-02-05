@@ -52,6 +52,21 @@ func ApplyUserValues(mergedValues, userValues helm.Values,
 	return values, nil
 }
 
+// ApplyFipsValues: Detect FIPS enabled mode on OpenShift and add pilot.env.COMPLIANCE_POLICY
+func ApplyFipsValues(mergedHelmValues helm.Values, checkFilePath string) (helm.Values, error) {
+	if checkFilePath == "" {
+		checkFilePath = "/proc/sys/crypto/fips_enabled"
+	}
+	contents, err := os.ReadFile(checkFilePath)
+	if err == nil && string(contents) == "1\n" {
+		fmt.Println("Running on FIPS enabled node(s).")
+		if err = mergedHelmValues.SetIfAbsent("pilot.env.COMPLIANCE_POLICY", "fips-140-2"); err != nil {
+			return nil, fmt.Errorf("failed to set pilot.env.COMPLIANCE_POLICY: %w", err)
+		}
+	}
+	return mergedHelmValues, nil
+}
+
 func resolve(defaultProfile, userProfile string) []string {
 	switch {
 	case userProfile != "" && userProfile != "default":
