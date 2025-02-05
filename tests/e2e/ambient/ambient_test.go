@@ -84,6 +84,10 @@ kind: IstioCNI
 metadata:
   name: default
 spec:
+  values:
+    cni:
+      ambient:
+        dnsCapture: true
   profile: ambient
   version: %s
   namespace: %s`
@@ -101,6 +105,21 @@ spec:
 								To(Equal(daemonset.Status.CurrentNumberScheduled), "CNI DaemonSet Pods not Available; expected numberAvailable to be equal to currentNumberScheduled")
 						}).Should(Succeed(), "CNI DaemonSet Pods are not Available")
 						Success("CNI DaemonSet is deployed in the namespace and Running")
+					})
+
+					It("uses the configured values in the istio-cni-config config map", func(ctx SpecContext) {
+						cm := corev1.ConfigMap{}
+
+						Eventually(func() error {
+							if _, err := common.GetObject(ctx, cl, kube.Key("istio-cni-config", istioCniNamespace), &cm); err != nil {
+								return err
+							}
+
+							if val, ok := cm.Data["AMBIENT_DNS_CAPTURE"]; !ok || val != "true" {
+								return fmt.Errorf("expected AMBIENT_DNS_CAPTURE=true, got %q", val)
+							}
+							return nil
+						}).Should(Succeed(), "Expected 'AMBIENT_DNS_CAPTURE' to be set to 'true'")
 					})
 				})
 
