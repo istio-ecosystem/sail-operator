@@ -213,6 +213,10 @@ oc create ns istio-system-tenant-a
          </dl>
    ...
    ```
+   
+1. Migrate Gateways
+
+   Following the same labeling scheme used for your workload namespace, follow the gateway migration [guide](./../gateway-migration.md).
 
 1. Migrate workloads.
 

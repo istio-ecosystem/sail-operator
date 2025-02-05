@@ -115,6 +115,10 @@ This procedure is not using revision tags but it's recommended to use them for b
     ```sh
     oc label ns bookinfo istio.io/rev=ossm-3-v1-24-1 maistra.io/ignore-namespace="true" istio-injection- --overwrite=true
     ```
+   
+1. Migrate Gateways
+
+   Following the same labeling scheme used for your workload namespace, follow the gateway migration [guide](./../gateway-migration.md).
 
 1. Migrate workloads
 
@@ -219,6 +223,9 @@ In this procedure, we will use a proper canary upgrade with gradual migration of
     ```sh
     oc label ns bookinfo istio.io/rev=ossm-3-v1-24-1 maistra.io/ignore-namespace="true" istio-injection- --overwrite=true
     ```
+1. Migrate Gateways
+
+   Following the same labeling scheme used for your workload namespace, follow the gateway migration [guide](./../gateway-migration.md).
 
 1. Migrate workloads
 
@@ -266,6 +273,9 @@ In this procedure, we will use a proper canary upgrade with gradual migration of
     ```sh
     oc label ns bookinfo istio-injection=enabled istio.io/rev-
     ```
+1. Migrate Gateways
+
+    Following the same labeling scheme used for your workload namespace, follow the gateway migration [guide](./../gateway-migration.md).
 1. Restart the workloads:
     ```sh
     oc rollout restart deployments -n bookinfo
@@ -346,6 +356,10 @@ In this procedure it's expected that all 2.6 data plane namespaces have `istio-i
     ```sh
     oc label ns bookinfo maistra.io/ignore-namespace="true"
     ```
+
+1. Migrate Gateways
+
+    Following the same labeling scheme used for your workload namespace, follow the gateway migration [guide](./../gateway-migration.md).
 
 1. Migrate workloads
 
