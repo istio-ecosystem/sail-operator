@@ -28,8 +28,8 @@ There are a few conditions which must be verified to ensure a successful migrati
 
      OpenShift Service Mesh 2.6 is by default managing Network Policies which would be blocking traffic for 3.0 control plane. In the pre-migration checklist, we instruct users to disable this feature but users can still decide to re-create those Network Policies manually. In that case, newly created Network Policies must allow the traffic for both control planes. One example of problematic Network policy is the usage of `maistra.io/member-of` label which will be removed automatically when a dataplane namespace is migrated to 3.0. See Migration of Network Policies documentation for details.
 
-     > **_NOTE:_** Incorrectly configured Network Policies will cause traffic disruptions and might be difficult to debug. Pay increased attention when creating Network Policies.
-     <!--TODO: add a link when the doc is ready https://issues.redhat.com/browse/OSSM-8520-->
+     > **_NOTE:_** Incorrectly configured Network Policies will cause traffic disruptions and might be difficult to debug. Pay increased attention when creating Network Policies. See [Network Policy migration](../network-policies.md) for more details.
+
   1. Ensure that the `discoverySelectors` defined in your OpenShift Service Mesh 3.0 `Istio` resource will match the namespaces that make up your OpenShift Service Mesh 2.6 mesh. You may need to add additional labels onto your OpenShift Service Mesh 2.6 application namespaces to ensure that they are captured by your OpenShift Service Mesh 3.0 `Istio` `discoverySelectors`. See [Scoping the service mesh with DiscoverySelectors](../../create-mesh/README.md)
 - only one control plane will try to inject a side car
 
