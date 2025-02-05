@@ -240,7 +240,7 @@ _internal_defaults_do_not_set:
     # Default hub for Istio images.
     # Releases are published to docker hub under 'istio' project.
     # Dev builds from prow are on gcr.io
-    hub: docker.io/istio
+    hub: gcr.io/istio-release
     # Default tag for Istio images.
     tag: 1.24.0
     # Variant of the image to use.
