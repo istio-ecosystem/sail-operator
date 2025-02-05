@@ -32,7 +32,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe("Multiple Control Planes", Ordered, func() {
+var _ = Describe("Multi control plane deployment model", Ordered, func() {
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 	debugInfoLogged := false
@@ -52,8 +52,8 @@ var _ = Describe("Multiple Control Planes", Ordered, func() {
 		Success("Operator is deployed in the namespace and Running")
 	})
 
-	Context("Two control planes", func() {
-		BeforeAll(func() {
+	Describe("Installation", func() {
+		It("Sets up namespaces", func(ctx SpecContext) {
 			Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
 			Expect(k.CreateNamespace(controlPlaneNamespace1)).To(Succeed(), "Istio namespace failed to be created")
 			Expect(k.CreateNamespace(controlPlaneNamespace2)).To(Succeed(), "Istio namespace failed to be created")
@@ -149,13 +149,15 @@ spec:
 				}
 				Success(fmt.Sprintf("Applications in namespace %s ready", ns))
 			})
+	})
 
+	Describe("Verification", func() {
 		It("Verifies app2a cannot connect to app1", func(ctx SpecContext) {
-			// time.Sleep(10 * time.Minute)
 			output, err := k.WithNamespace(appNamespace2a).
 				Exec("deploy/sleep", "sleep", fmt.Sprintf("curl -sIL http://httpbin.%s:8000", appNamespace1))
 			Expect(err).NotTo(HaveOccurred(), "error running curl in sleep pod")
 			Expect(output).To(ContainSubstring("503 Service Unavailable"), fmt.Sprintf("Unexpected response from sleep pod in namespace %s", appNamespace1))
+			Success("As expected, app2a in mesh2 is not allowed to communicate with app1 in mesh1")
 		})
 
 		It("Verifies app2a can connect to app2b", func(ctx SpecContext) {
@@ -163,25 +165,26 @@ spec:
 				Exec("deploy/sleep", "sleep", fmt.Sprintf("curl -sIL http://httpbin.%s:8000", appNamespace2b))
 			Expect(err).NotTo(HaveOccurred(), "error running curl in sleep pod")
 			Expect(output).To(ContainSubstring("200 OK"), fmt.Sprintf("Unexpected response from sleep pod in namespace %s", appNamespace2b))
+			Success("As expected, app2a in mesh2 can communicate with app2b in the same mesh")
 		})
+	})
 
-		It("Cleans up the resources", func() {
-			By("Cleaning up the application namespaces")
-			Expect(k.DeleteNamespace(appNamespace1, appNamespace2a, appNamespace2b)).To(Succeed())
+	AfterAll(func() {
+		By("Cleaning up the application namespaces")
+		Expect(k.DeleteNamespace(appNamespace1, appNamespace2a, appNamespace2b)).To(Succeed())
 
-			By("Cleaning up the Istio namespace")
-			Expect(k.DeleteNamespace(controlPlaneNamespace1, controlPlaneNamespace2)).To(Succeed(), "Istio Namespaces failed to be deleted")
+		By("Cleaning up the Istio namespace")
+		Expect(k.DeleteNamespace(controlPlaneNamespace1, controlPlaneNamespace2)).To(Succeed(), "Istio Namespaces failed to be deleted")
 
-			By("Cleaning up the IstioCNI namespace")
-			Expect(k.DeleteNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI Namespace failed to be deleted")
+		By("Cleaning up the IstioCNI namespace")
+		Expect(k.DeleteNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI Namespace failed to be deleted")
 
-			By("Deleting any left-over Istio and IstioRevision resources")
-			Expect(k.Delete("istio", istioName1)).To(Succeed(), "Failed to delete Istio")
-			Expect(k.Delete("istio", istioName2)).To(Succeed(), "Failed to delete Istio")
-			Expect(k.Delete("istiocni", istioCniName)).To(Succeed(), "Failed to delete IstioCNI")
-			Success("Resources deleted")
-			Success("Cleanup done")
-		})
+		By("Deleting any left-over Istio and IstioRevision resources")
+		Expect(k.Delete("istio", istioName1)).To(Succeed(), "Failed to delete Istio")
+		Expect(k.Delete("istio", istioName2)).To(Succeed(), "Failed to delete Istio")
+		Expect(k.Delete("istiocni", istioCniName)).To(Succeed(), "Failed to delete IstioCNI")
+		Success("Istio Resources deleted")
+		Success("Cleanup done")
 	})
 
 	AfterAll(func() {
