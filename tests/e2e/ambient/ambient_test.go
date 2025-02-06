@@ -36,9 +36,7 @@ import (
 )
 
 const (
-	sleepNamespace   = "sleep"
-	httpbinNamespace = "httpbin"
-	defaultTimeout   = 180
+	defaultTimeout = 180
 )
 
 var _ = Describe("Ambient configuration ", Ordered, func() {
@@ -245,44 +243,44 @@ spec:
 				// using a sleep pod from the sleep namespace, we try to connect to the httpbin service to verify that connectivity is successful.
 				When("sample apps are deployed in the cluster", func() {
 					BeforeAll(func(ctx SpecContext) {
-						Expect(k.CreateNamespace(sleepNamespace)).To(Succeed(), "Failed to create sleep namespace")
-						Expect(k.CreateNamespace(httpbinNamespace)).To(Succeed(), "Failed to create httpbin namespace")
+						Expect(k.CreateNamespace(common.SleepNamespace)).To(Succeed(), "Failed to create sleep namespace")
+						Expect(k.CreateNamespace(common.HttpbinNamespace)).To(Succeed(), "Failed to create httpbin namespace")
 
 						// Add the necessary ambient labels on the namespaces.
-						Expect(k.Patch("namespace", sleepNamespace, "merge", `{"metadata":{"labels":{"istio.io/dataplane-mode":"ambient"}}}`)).
+						Expect(k.Patch("namespace", common.SleepNamespace, "merge", `{"metadata":{"labels":{"istio.io/dataplane-mode":"ambient"}}}`)).
 							To(Succeed(), "Error patching sleep namespace")
-						Expect(k.Patch("namespace", httpbinNamespace, "merge", `{"metadata":{"labels":{"istio.io/dataplane-mode":"ambient"}}}`)).
+						Expect(k.Patch("namespace", common.HttpbinNamespace, "merge", `{"metadata":{"labels":{"istio.io/dataplane-mode":"ambient"}}}`)).
 							To(Succeed(), "Error patching httpbin namespace")
 
 						// Deploy the test pods.
-						Expect(k.WithNamespace(sleepNamespace).Apply(common.GetSampleYAML(version, "sleep"))).To(Succeed(), "error deploying sleep pod")
-						Expect(k.WithNamespace(httpbinNamespace).Apply(common.GetSampleYAML(version, "httpbin"))).To(Succeed(), "error deploying httpbin pod")
+						Expect(k.WithNamespace(common.SleepNamespace).Apply(common.GetSampleYAML(version, "sleep"))).To(Succeed(), "error deploying sleep pod")
+						Expect(k.WithNamespace(common.HttpbinNamespace).Apply(common.GetSampleYAML(version, "httpbin"))).To(Succeed(), "error deploying httpbin pod")
 
 						Success("Ambient validation pods deployed")
 					})
 
 					sleepPod := &corev1.PodList{}
 					It("updates the status of pods to Running", func(ctx SpecContext) {
-						sleepPod, err = common.CheckPodsReady(ctx, cl, sleepNamespace)
+						sleepPod, err = common.CheckPodsReady(ctx, cl, common.SleepNamespace)
 						Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Error checking status of sleep pod: %v", err))
 
-						_, err = common.CheckPodsReady(ctx, cl, httpbinNamespace)
+						_, err = common.CheckPodsReady(ctx, cl, common.HttpbinNamespace)
 						Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Error checking status of httpbin pod: %v", err))
 
 						Success("Pods are ready")
 					})
 
 					It("has the ztunnel proxy sockets configured in the pod network namespace", func(ctx SpecContext) {
-						checkZtunnelPort(sleepPod.Items[0].Name, sleepNamespace)
+						checkZtunnelPort(sleepPod.Items[0].Name, common.SleepNamespace)
 					})
 
 					It("can access the httpbin service from the sleep pod", func(ctx SpecContext) {
-						checkPodConnectivity(sleepPod.Items[0].Name, sleepNamespace, httpbinNamespace)
+						checkPodConnectivity(sleepPod.Items[0].Name, common.SleepNamespace, common.HttpbinNamespace)
 					})
 
 					AfterAll(func(ctx SpecContext) {
 						By("Deleting the pods")
-						Expect(k.DeleteNamespace(httpbinNamespace, sleepNamespace)).
+						Expect(k.DeleteNamespace(common.HttpbinNamespace, common.SleepNamespace)).
 							To(Succeed(), "Failed to delete namespaces")
 						Success("Ambient validation pods deleted")
 					})
@@ -336,7 +334,7 @@ spec:
 
 		AfterAll(func(ctx SpecContext) {
 			if CurrentSpecReport().Failed() {
-				common.LogDebugInfo(k)
+				common.LogDebugInfo(common.Ambient, k)
 				debugInfoLogged = true
 			}
 
@@ -353,7 +351,7 @@ spec:
 
 	AfterAll(func() {
 		if CurrentSpecReport().Failed() && !debugInfoLogged {
-			common.LogDebugInfo(k)
+			common.LogDebugInfo(common.Ambient, k)
 			debugInfoLogged = true
 		}
 
