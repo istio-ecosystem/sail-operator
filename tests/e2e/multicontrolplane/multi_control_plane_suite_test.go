@@ -14,11 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package operator
+package controlplane
 
 import (
 	"testing"
 
+	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	k8sclient "github.com/istio-ecosystem/sail-operator/tests/e2e/util/client"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
@@ -29,31 +30,40 @@ import (
 )
 
 var (
-	cl                 client.Client
-	skipDeploy         = env.GetBool("SKIP_DEPLOY", false)
-	namespace          = common.OperatorNamespace
-	deploymentName     = env.Get("DEPLOYMENT_NAME", "sail-operator")
-	serviceAccountName = deploymentName
-	multicluster       = env.GetBool("MULTICLUSTER", false)
-	curlNamespace      = "curl-metrics"
+	cl                     client.Client
+	err                    error
+	version                = supportedversion.New
+	namespace              = common.OperatorNamespace
+	deploymentName         = env.Get("DEPLOYMENT_NAME", "sail-operator")
+	controlPlaneNamespace1 = env.Get("CONTROL_PLANE_NS1", "istio-system1")
+	controlPlaneNamespace2 = env.Get("CONTROL_PLANE_NS2", "istio-system2")
+	istioName1             = env.Get("ISTIO_NAME1", "mesh1")
+	istioName2             = env.Get("ISTIO_NAME2", "mesh2")
+	istioCniNamespace      = env.Get("ISTIOCNI_NAMESPACE", "istio-cni")
+	istioCniName           = env.Get("ISTIOCNI_NAME", "default")
+	skipDeploy             = env.GetBool("SKIP_DEPLOY", false)
+	appNamespace1          = env.Get("APP_NAMESPACE1", "app1")
+	appNamespace2a         = env.Get("APP_NAMESPACE2A", "app2a")
+	appNamespace2b         = env.Get("APP_NAMESPACE2B", "app2b")
+	multicluster           = env.GetBool("MULTICLUSTER", false)
+	ipFamily               = env.Get("IP_FAMILY", "ipv4")
 
 	k kubectl.Kubectl
 )
 
 func TestInstall(t *testing.T) {
-	if multicluster {
-		t.Skip("Skipping test for multicluster")
+	if ipFamily == "dual" || multicluster {
+		t.Skip("Skipping the multi control plane tests")
 	}
 	RegisterFailHandler(Fail)
 	setup()
-	RunSpecs(t, "Operator Installation Test Suite")
+	RunSpecs(t, "Multiple Control Planes Test Suite")
 }
 
 func setup() {
 	GinkgoWriter.Println("************ Running Setup ************")
 
 	GinkgoWriter.Println("Initializing k8s client")
-	var err error
 	cl, err = k8sclient.InitK8sClient("")
 	Expect(err).NotTo(HaveOccurred())
 
