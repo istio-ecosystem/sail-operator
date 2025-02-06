@@ -295,7 +295,7 @@ spec:
 
 		AfterAll(func(ctx SpecContext) {
 			if CurrentSpecReport().Failed() {
-				common.LogDebugInfo(k)
+				common.LogDebugInfo(common.ControlPlane, k)
 				debugInfoLogged = true
 			}
 
@@ -314,7 +314,7 @@ spec:
 
 	AfterAll(func() {
 		if CurrentSpecReport().Failed() && !debugInfoLogged {
-			common.LogDebugInfo(k)
+			common.LogDebugInfo(common.ControlPlane, k)
 			debugInfoLogged = true
 		}
 

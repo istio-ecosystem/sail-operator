@@ -181,14 +181,14 @@ subjects:
 			Expect(k.DeleteNamespace(curlNamespace)).To(Succeed(), "failed to delete curl namespace")
 
 			if CurrentSpecReport().Failed() {
-				common.LogDebugInfo(k)
+				common.LogDebugInfo(common.Operator, k)
 			}
 		})
 	})
 
 	AfterAll(func() {
 		if CurrentSpecReport().Failed() {
-			common.LogDebugInfo(k)
+			common.LogDebugInfo(common.Operator, k)
 		}
 
 		if skipDeploy {
