@@ -1733,7 +1733,7 @@ Kubernetes supports dual-stack networking as a stable feature starting from
 [v1.23](https://kubernetes.io/docs/concepts/services-networking/dual-stack/), allowing clusters to handle both
 IPv4 and IPv6 traffic. With many cloud providers also beginning to offer dual-stack Kubernetes clusters, it's easier
 than ever to run services that function across both address types. Istio introduced dual-stack as an experimental
-feature in version 1.17, and it's expected to be promoted to [Alpha](https://github.com/istio/istio/issues/47998) in
+feature in version 1.17, and promoted it to [Alpha](https://istio.io/latest/news/releases/1.24.x/announcing-1.24/change-notes/) in
 version 1.24. With Istio in dual-stack mode, services can communicate over both IPv4 and IPv6 endpoints, which helps
 organizations transition to IPv6 while still maintaining compatibility with their existing IPv4 infrastructure.
 
@@ -1834,19 +1834,19 @@ Note: If you installed the KinD cluster using the command above, install the [Sa
    kubectl label --overwrite namespace sleep istio-injection=enabled
    ```
 
-3. Ensure that the tcp-echo service in the dual-stack namespace is configured with `ipFamilyPolicy` of RequireDualStack.
-   ```console
-   kubectl get service tcp-echo -n dual-stack -o=jsonpath='{.spec.ipFamilyPolicy}'
-   RequireDualStack
-   ```
-
-4. Deploy the pods and services in their respective namespaces.
+3. Deploy the pods and services in their respective namespaces.
    ```sh
    kubectl apply -n dual-stack -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/tcp-echo/tcp-echo-dual-stack.yaml
    kubectl apply -n ipv4 -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/tcp-echo/tcp-echo-ipv4.yaml
    kubectl apply -n ipv6 -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/tcp-echo/tcp-echo-ipv6.yaml
    kubectl apply -n sleep -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/sleep/sleep.yaml
    kubectl wait --for=condition=Ready pod -n sleep -l app=sleep --timeout=60s
+   ```
+
+4. Ensure that the tcp-echo service in the dual-stack namespace is configured with `ipFamilyPolicy` of RequireDualStack.
+   ```console
+   kubectl get service tcp-echo -n dual-stack -o=jsonpath='{.spec.ipFamilyPolicy}'
+   RequireDualStack
    ```
 
 5. Verify that sleep pod is able to reach the dual-stack pods.
