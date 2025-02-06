@@ -62,5 +62,5 @@ func setup() {
 	cl, err = k8sclient.InitK8sClient("")
 	Expect(err).NotTo(HaveOccurred())
 
-	k = kubectl.New("clAmbient")
+	k = kubectl.New()
 }
