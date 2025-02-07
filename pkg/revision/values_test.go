@@ -22,6 +22,7 @@ import (
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
+	"github.com/istio-ecosystem/sail-operator/pkg/istiovalues"
 
 	"istio.io/istio/pkg/ptr"
 )
@@ -107,11 +108,10 @@ apiVersion: sailoperator.io/v1
 kind: IstioRevision
 spec:`)), 0o644))
 
-	Must(t, os.WriteFile(path.Join(profilesDir, "fips_enabled"), []byte(("1\n")), 0o644))
+	Must(t, os.WriteFile(path.Join("/tmp", "fips_enabled"), []byte(("1\n")), 0o644))
+	istiovalues.FipsEnableFilePath = "/tmp/fips_enabled"
 
 	values := &v1.Values{}
-	fipsCheckFile = path.Join(profilesDir, "fips_enabled")
-
 	result, err := ComputeValues(values, namespace, version, config.PlatformOpenShift, "default", "",
 		resourceDir, revisionName)
 	if err != nil {
@@ -120,7 +120,7 @@ spec:`)), 0o644))
 
 	expected := &v1.Values{
 		Pilot: &v1.PilotConfig{
-			Env: map[string]string{"COMPLIANCE_POLICY": "fips-140-2"}, // this value is added/overridden based on detecting FIPS mode on OpenShift
+			Env: map[string]string{"COMPLIANCE_POLICY": "fips-140-2"},
 		},
 		Global: &v1.GlobalConfig{
 			Platform:       ptr.Of("openshift"),
