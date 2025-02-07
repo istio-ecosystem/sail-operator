@@ -23,8 +23,6 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/istiovalues"
 )
 
-var fipsCheckFile string // check the file content for detecting or testing FIPS mode
-
 // ComputeValues computes the Istio Helm values for an IstioRevision as follows:
 // - applies image digests from the operator configuration
 // - applies vendor-specific default values
@@ -52,7 +50,7 @@ func ComputeValues(
 
 	// apply FipsValues on top of mergedHelmValues from profile
 	if platform == config.PlatformOpenShift {
-		mergedHelmValues, err = istiovalues.ApplyFipsValues(mergedHelmValues, fipsCheckFile)
+		mergedHelmValues, err = istiovalues.ApplyFipsValues(mergedHelmValues)
 		if err != nil {
 			return nil, fmt.Errorf("failed to apply FIPS values: %w", err)
 		}
