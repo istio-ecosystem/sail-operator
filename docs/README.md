@@ -89,7 +89,7 @@ spec:
 
 Istio uses a ConfigMap for its global configuration, called the MeshConfig. All of its settings are available through `spec.meshConfig`.
 
-To support canary updates of the control plane, Sail Operator includes support for multiple Istio versions. You can select a version by setting the `version` field in the `spec` to the version you would like to install, prefixed with a `v`. You can then update to a new version just by changing this field.
+To support canary updates of the control plane, Sail Operator includes support for multiple Istio versions. You can select a version by setting the `version` field in the `spec` to the version you would like to install, prefixed with a `v`. You can then update to a new version just by changing this field. An alias can be used for the latest z/patch versions of each supported y/minor versions. As per the example above, `v1.23-latest` can be specified in the `version` field. By doing so, the operator will keep the istio version with the latest z version of the same y version. 
 
 Sail Operator supports two different update strategies for your control planes: `InPlace` and `RevisionBased`. When using `InPlace`, the operator will immediately replace your existing control plane resources with the ones for the new version, whereas `RevisionBased` uses Istio's canary update mechanism by creating a second control plane to which you can migrate your workloads to complete the update.
 
