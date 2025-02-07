@@ -14,20 +14,20 @@
 
 package istiovalues
 
-import "github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+import v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 
-func ApplyOverrides(revisionName string, namespace string, values *v1alpha1.Values) {
+func ApplyOverrides(revisionName string, namespace string, values *v1.Values) {
 	// Set revision name to "" if revision name is "default". This is a temporary fix until we fix the injection
 	// mutatingwebhook manifest; the webhook performs injection on namespaces labeled with "istio-injection: enabled"
 	// only when revision is "", but not also for "default", which it should, since elsewhere in the same manifest,
 	// the "" revision is mapped to "default".
-	if revisionName == v1alpha1.DefaultRevision {
+	if revisionName == v1.DefaultRevision {
 		revisionName = ""
 	}
 	values.Revision = &revisionName
 
 	if values.Global == nil {
-		values.Global = &v1alpha1.GlobalConfig{}
+		values.Global = &v1.GlobalConfig{}
 	}
 	values.Global.IstioNamespace = &namespace
 }

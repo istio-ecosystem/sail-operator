@@ -22,6 +22,7 @@ import (
 	"reflect"
 
 	"github.com/go-logr/logr"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
@@ -138,7 +139,16 @@ func (r *Reconciler) installHelmChart(ctx context.Context, ztunnel *v1alpha1.ZTu
 	userValues := ztunnel.Spec.Values
 
 	// apply image digests from configuration, if not already set by user
-	userValues = applyImageDigests(ztunnel, userValues, config.Config)
+	// TODO: Revisit once we support ImageOverrides for ztunnel
+	// userValues = applyImageDigests(ztunnel, userValues, config.Config)
+
+	if userValues == nil {
+		userValues = &v1.ZTunnelValues{}
+	}
+
+	if userValues.ZTunnel == nil {
+		userValues.ZTunnel = &v1.ZTunnelConfig{}
+	}
 
 	// apply userValues on top of defaultValues from profiles
 	mergedHelmValues, err := istiovalues.ApplyProfilesAndPlatform(
@@ -167,7 +177,7 @@ func (r *Reconciler) getChartDir(ztunnel *v1alpha1.ZTunnel) string {
 	return path.Join(r.Config.ResourceDirectory, ztunnel.Spec.Version, "charts", ztunnelChart)
 }
 
-func applyImageDigests(ztunnel *v1alpha1.ZTunnel, values *v1alpha1.ZTunnelValues, config config.OperatorConfig) *v1alpha1.ZTunnelValues {
+func applyImageDigests(ztunnel *v1alpha1.ZTunnel, values *v1.ZTunnelValues, config config.OperatorConfig) *v1.ZTunnelValues {
 	imageDigests, digestsDefined := config.ImageDigests[ztunnel.Spec.Version]
 	// if we don't have default image digests defined for this version, it's a no-op
 	if !digestsDefined {
@@ -175,12 +185,12 @@ func applyImageDigests(ztunnel *v1alpha1.ZTunnel, values *v1alpha1.ZTunnelValues
 	}
 
 	if values == nil {
-		values = &v1alpha1.ZTunnelValues{}
+		values = &v1.ZTunnelValues{}
 	}
 
 	// set image digest unless any part of the image has been configured by the user
 	if values.ZTunnel == nil {
-		values.ZTunnel = &v1alpha1.ZTunnelConfig{}
+		values.ZTunnel = &v1.ZTunnelConfig{}
 	}
 	if values.ZTunnel.Image == nil && values.ZTunnel.Hub == nil && values.ZTunnel.Tag == nil {
 		values.ZTunnel.Image = &imageDigests.ZTunnelImage

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
@@ -338,11 +339,13 @@ func TestDetermineReadyCondition(t *testing.T) {
 }
 
 func TestApplyImageDigests(t *testing.T) {
+	t.Skip("https://github.com/istio-ecosystem/sail-operator/issues/581")
+
 	testCases := []struct {
 		name         string
 		config       config.OperatorConfig
 		input        *v1alpha1.ZTunnel
-		expectValues *v1alpha1.ZTunnelValues
+		expectValues *v1.ZTunnelValues
 	}{
 		{
 			name: "no-config",
@@ -352,15 +355,15 @@ func TestApplyImageDigests(t *testing.T) {
 			input: &v1alpha1.ZTunnel{
 				Spec: v1alpha1.ZTunnelSpec{
 					Version: "v1.24.0",
-					Values: &v1alpha1.ZTunnelValues{
-						ZTunnel: &v1alpha1.ZTunnelConfig{
+					Values: &v1.ZTunnelValues{
+						ZTunnel: &v1.ZTunnelConfig{
 							Image: ptr.Of("ztunnel-test"),
 						},
 					},
 				},
 			},
-			expectValues: &v1alpha1.ZTunnelValues{
-				ZTunnel: &v1alpha1.ZTunnelConfig{
+			expectValues: &v1.ZTunnelValues{
+				ZTunnel: &v1.ZTunnelConfig{
 					Image: ptr.Of("ztunnel-test"),
 				},
 			},
@@ -377,11 +380,11 @@ func TestApplyImageDigests(t *testing.T) {
 			input: &v1alpha1.ZTunnel{
 				Spec: v1alpha1.ZTunnelSpec{
 					Version: "v1.24.0",
-					Values:  &v1alpha1.ZTunnelValues{},
+					Values:  &v1.ZTunnelValues{},
 				},
 			},
-			expectValues: &v1alpha1.ZTunnelValues{
-				ZTunnel: &v1alpha1.ZTunnelConfig{
+			expectValues: &v1.ZTunnelValues{
+				ZTunnel: &v1.ZTunnelConfig{
 					Image: ptr.Of("ztunnel-test"),
 				},
 			},
@@ -398,15 +401,15 @@ func TestApplyImageDigests(t *testing.T) {
 			input: &v1alpha1.ZTunnel{
 				Spec: v1alpha1.ZTunnelSpec{
 					Version: "v1.24.0",
-					Values: &v1alpha1.ZTunnelValues{
-						ZTunnel: &v1alpha1.ZTunnelConfig{
+					Values: &v1.ZTunnelValues{
+						ZTunnel: &v1.ZTunnelConfig{
 							Image: ptr.Of("ztunnel-custom"),
 						},
 					},
 				},
 			},
-			expectValues: &v1alpha1.ZTunnelValues{
-				ZTunnel: &v1alpha1.ZTunnelConfig{
+			expectValues: &v1.ZTunnelValues{
+				ZTunnel: &v1.ZTunnelConfig{
 					Image: ptr.Of("ztunnel-custom"),
 				},
 			},
@@ -423,16 +426,16 @@ func TestApplyImageDigests(t *testing.T) {
 			input: &v1alpha1.ZTunnel{
 				Spec: v1alpha1.ZTunnelSpec{
 					Version: "v1.24.0",
-					Values: &v1alpha1.ZTunnelValues{
-						ZTunnel: &v1alpha1.ZTunnelConfig{
+					Values: &v1.ZTunnelValues{
+						ZTunnel: &v1.ZTunnelConfig{
 							Hub: ptr.Of("docker.io/istio"),
 							Tag: ptr.Of("1.24.0"),
 						},
 					},
 				},
 			},
-			expectValues: &v1alpha1.ZTunnelValues{
-				ZTunnel: &v1alpha1.ZTunnelConfig{
+			expectValues: &v1.ZTunnelValues{
+				ZTunnel: &v1.ZTunnelConfig{
 					Hub: ptr.Of("docker.io/istio"),
 					Tag: ptr.Of("1.24.0"),
 				},
@@ -450,16 +453,16 @@ func TestApplyImageDigests(t *testing.T) {
 			input: &v1alpha1.ZTunnel{
 				Spec: v1alpha1.ZTunnelSpec{
 					Version: "v1.24.1",
-					Values: &v1alpha1.ZTunnelValues{
-						ZTunnel: &v1alpha1.ZTunnelConfig{
+					Values: &v1.ZTunnelValues{
+						ZTunnel: &v1.ZTunnelConfig{
 							Hub: ptr.Of("docker.io/istio"),
 							Tag: ptr.Of("1.24.1"),
 						},
 					},
 				},
 			},
-			expectValues: &v1alpha1.ZTunnelValues{
-				ZTunnel: &v1alpha1.ZTunnelConfig{
+			expectValues: &v1.ZTunnelValues{
+				ZTunnel: &v1.ZTunnelConfig{
 					Hub: ptr.Of("docker.io/istio"),
 					Tag: ptr.Of("1.24.1"),
 				},

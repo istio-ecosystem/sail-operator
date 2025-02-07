@@ -1,0 +1,35 @@
+---
+name: Check broken links
+
+on:
+  schedule:
+    # Run this job every sunday at midnight
+    - cron: "0 0 * * 0"
+
+permissions: {}
+
+jobs:
+  markdown-link-check-periodic:
+    name: Markdown Links (all files)
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      # Checks the status of hyperlinks in .md files
+      - name: Check links
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-verbose-mode: 'yes'
+          config-file: ".mdlinkcheck.json"
+          folder-path: "docs/common, docs/multicluster"
+
+      - name: Raise an Issue to report broken links
+        if: ${{ failure() }}
+        uses: peter-evans/create-issue-from-file@v5
+        with:
+          title: Broken link detected by CI
+          content-filepath: .github/ISSUE_TEMPLATE/broken-link.md
+          labels: automated, broken link

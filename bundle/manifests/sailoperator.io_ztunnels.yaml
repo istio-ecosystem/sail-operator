@@ -177,7 +177,7 @@ spec:
                         items:
                           type: string
                         type: array
-                      logAsJSON:
+                      logAsJson:
                         description: Specifies whether istio components should output
                           logs in json format by adding --log_as_json argument to
                           each container.
@@ -262,7 +262,7 @@ spec:
                         description: Specifies the default namespace for the Istio
                           control plane components.
                         type: string
-                      logAsJSON:
+                      logAsJson:
                         description: Specifies whether istio components should output
                           logs in json format by adding --log_as_json argument to
                           each container.

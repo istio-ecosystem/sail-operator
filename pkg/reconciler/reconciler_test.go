@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/testtime"
 	. "github.com/onsi/gomega"
@@ -45,15 +45,15 @@ type mockReconciler struct {
 }
 
 func (t *mockReconciler) Object() client.Object {
-	return &v1alpha1.Istio{}
+	return &v1.Istio{}
 }
 
-func (t *mockReconciler) Reconcile(ctx context.Context, _ *v1alpha1.Istio) (ctrl.Result, error) {
+func (t *mockReconciler) Reconcile(ctx context.Context, _ *v1.Istio) (ctrl.Result, error) {
 	t.reconcileInvoked = true
 	return ctrl.Result{}, t.reconcileError
 }
 
-func (t *mockReconciler) Finalize(ctx context.Context, _ *v1alpha1.Istio) error {
+func (t *mockReconciler) Finalize(ctx context.Context, _ *v1.Istio) error {
 	t.finalizeInvoked = true
 	return t.finalizeError
 }
@@ -99,7 +99,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "skips reconciliation when resource deleted",
 			objects: []client.Object{
-				&v1alpha1.Istio{
+				&v1.Istio{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:              key.Name,
 						DeletionTimestamp: testtime.OneMinuteAgo(),
@@ -117,7 +117,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "finalizes resource when resource deleted",
 			objects: []client.Object{
-				&v1alpha1.Istio{
+				&v1.Istio{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:              key.Name,
 						DeletionTimestamp: testtime.OneMinuteAgo(),
@@ -135,7 +135,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "preserves finalizer and returns error when finalization fails",
 			objects: []client.Object{
-				&v1alpha1.Istio{
+				&v1.Istio{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:              key.Name,
 						DeletionTimestamp: testtime.OneMinuteAgo(),
@@ -152,7 +152,7 @@ func TestReconcile(t *testing.T) {
 				g.Expect(mock.reconcileInvoked).To(BeFalse(), "reconcile should not be invoked when object is being deleted")
 				g.Expect(mock.finalizeInvoked).To(BeTrue(), "finalize should be invoked when object is being deleted and still has the finalizer")
 
-				obj := &v1alpha1.Istio{}
+				obj := &v1.Istio{}
 				g.Expect(cl.Get(ctx, key, obj)).To(Succeed())
 				g.Expect(obj.GetFinalizers()).To(ContainElement(testFinalizer))
 			},
@@ -160,7 +160,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "adds finalizer when resource doesn't have it",
 			objects: []client.Object{
-				&v1alpha1.Istio{
+				&v1.Istio{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: key.Name,
 					},
@@ -172,7 +172,7 @@ func TestReconcile(t *testing.T) {
 				g.Expect(mock.reconcileInvoked).To(BeFalse())
 				g.Expect(mock.finalizeInvoked).To(BeFalse())
 
-				obj := &v1alpha1.Istio{}
+				obj := &v1.Istio{}
 				g.Expect(cl.Get(ctx, key, obj)).To(Succeed())
 				g.Expect(obj.GetFinalizers()).To(ContainElement(testFinalizer))
 			},
@@ -180,7 +180,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "invokes reconcile if everything is fine",
 			objects: []client.Object{
-				&v1alpha1.Istio{
+				&v1.Istio{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       key.Name,
 						Finalizers: []string{testFinalizer},
@@ -197,7 +197,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "returns error when reconcile fails",
 			objects: []client.Object{
-				&v1alpha1.Istio{
+				&v1.Istio{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       key.Name,
 						Finalizers: []string{testFinalizer},
@@ -217,7 +217,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "requeues on conflict",
 			objects: []client.Object{
-				&v1alpha1.Istio{
+				&v1.Istio{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       key.Name,
 						Finalizers: []string{testFinalizer},
@@ -237,7 +237,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "handles ValidationErrors",
 			objects: []client.Object{
-				&v1alpha1.Istio{
+				&v1.Istio{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       key.Name,
 						Finalizers: []string{testFinalizer},
@@ -257,7 +257,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "requeues when gc admission plugin does not yet know about our resources",
 			objects: []client.Object{
-				&v1alpha1.Istio{
+				&v1.Istio{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       key.Name,
 						Finalizers: []string{testFinalizer},
@@ -281,7 +281,7 @@ func TestReconcile(t *testing.T) {
 			g := NewWithT(t)
 			cl := fake.NewClientBuilder().
 				WithScheme(scheme.Scheme).
-				WithStatusSubresource(&v1alpha1.Istio{}).
+				WithStatusSubresource(&v1.Istio{}).
 				WithObjects(tt.objects...).
 				WithInterceptorFuncs(tt.interceptorFuncs).
 				Build()
@@ -291,7 +291,7 @@ func TestReconcile(t *testing.T) {
 				tt.setup(g, mock)
 			}
 
-			reconciler := NewStandardReconcilerWithFinalizer[*v1alpha1.Istio](cl, mock.Reconcile, mock.Finalize, testFinalizer)
+			reconciler := NewStandardReconcilerWithFinalizer[*v1.Istio](cl, mock.Reconcile, mock.Finalize, testFinalizer)
 			result, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: key})
 
 			tt.assert(g, cl, result, err, mock)

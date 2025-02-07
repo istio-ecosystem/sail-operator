@@ -41,6 +41,7 @@
   - [Prerequisites](#prerequisites-1)
   - [Installation Steps](#installation-steps)
   - [Validation](#validation)
+- [Ambient mode](common/istio-ambient-mode.md)
 - [Addons](#addons)
   - [Deploy Prometheus and Jaeger addons](#deploy-prometheus-and-jaeger-addons)
   - [Deploy Kiali addon](#deploy-kiali-addon)
@@ -69,7 +70,7 @@ Sail Operator manages the lifecycle of your Istio control planes. Instead of cre
 The `Istio` resource is used to manage your Istio control planes. It is a cluster-wide resource, as the Istio control plane operates in and requires access to the entire cluster. To select a namespace to run the control plane pods in, you can use the `spec.namespace` field. Note that this field is immutable, though: in order to move a control plane to another namespace, you have to remove the Istio resource and recreate it with a different `spec.namespace`. You can access all helm chart options through the `values` field in the `spec`:
 
 ```yaml
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: default
@@ -88,7 +89,7 @@ spec:
 
 Istio uses a ConfigMap for its global configuration, called the MeshConfig. All of its settings are available through `spec.meshConfig`.
 
-To support canary updates of the control plane, Sail Operator includes support for multiple Istio versions. You can select a version by setting the `version` field in the `spec` to the version you would like to install, prefixed with a `v`. You can then update to a new version just by changing this field.
+To support canary updates of the control plane, Sail Operator includes support for multiple Istio versions. You can select a version by setting the `version` field in the `spec` to the version you would like to install, prefixed with a `v`. You can then update to a new version just by changing this field. An `vX.Y-latest` alias can be used for the latest z/patch versions of each supported y/minor versions. As per the example above, `v1.23-latest` can be specified in the `version` field. By doing so, the operator will keep the istio version with the latest `z` version of the same `y` version. 
 
 Sail Operator supports two different update strategies for your control planes: `InPlace` and `RevisionBased`. When using `InPlace`, the operator will immediately replace your existing control plane resources with the ones for the new version, whereas `RevisionBased` uses Istio's canary update mechanism by creating a second control plane to which you can migrate your workloads to complete the update.
 
@@ -105,7 +106,7 @@ The `IstioRevisionTag` resource represents a *Stable Revision Tag*, which functi
 In Istio, stable revision tags are usually created using `istioctl`, but if you're using the Sail Operator, you can use the `IstioRevisionTag` resource, which comes with an additional feature: instead of just being able to reference an `IstioRevision`, you can also reference an `Istio` resource. When you now update your control plane and the underlying `IstioRevision` changes, the Sail Operator will update your revision tag for you. You only need to restart your deployments to re-inject the new proxies.
 
 ```yaml
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: IstioRevisionTag
 metadata:
   name: default
@@ -121,7 +122,7 @@ As you can see in the YAML above, `IstioRevisionTag` really only has one field i
 The lifecycle of Istio's CNI plugin is managed separately when using Sail Operator. To install it, you can create an `IstioCNI` resource. The `IstioCNI` resource is a cluster-wide resource as it will install a `DaemonSet` that will be operating on all nodes of your cluster. You can select a version by setting the `spec.version` field, as you can see in the sample below. To update the CNI plugin, just change the `version` field to the version you want to install. Just like the `Istio` resource, it also has a `values` field that exposes all of the options provided in the `istio-cni` chart:
 
 ```yaml
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: IstioCNI
 metadata:
   name: default
@@ -243,7 +244,7 @@ spec:
 becomes
 
 ```yaml
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: Istio
 spec:
   meshConfig:
@@ -280,7 +281,7 @@ spec:
 becomes
 
 ```yaml
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: default
@@ -338,7 +339,7 @@ Steps:
 
     ```bash
     cat <<EOF | kubectl apply -f-
-    apiVersion: sailoperator.io/v1alpha1
+    apiVersion: sailoperator.io/v1
     kind: Istio
     metadata:
       name: default
@@ -425,7 +426,7 @@ Steps:
 
     ```bash
     cat <<EOF | kubectl apply -f-
-    apiVersion: sailoperator.io/v1alpha1
+    apiVersion: sailoperator.io/v1
     kind: Istio
     metadata:
       name: default
@@ -575,7 +576,7 @@ Steps:
 
     ```bash
     cat <<EOF | kubectl apply -f-
-    apiVersion: sailoperator.io/v1alpha1
+    apiVersion: sailoperator.io/v1
     kind: Istio
     metadata:
       name: default
@@ -586,7 +587,7 @@ Steps:
         inactiveRevisionDeletionGracePeriodSeconds: 30
       version: v1.23.3
     ---
-    apiVersion: sailoperator.io/v1alpha1
+    apiVersion: sailoperator.io/v1
     kind: IstioRevisionTag
     metadata:
       name: default
@@ -747,7 +748,7 @@ Because each mesh will use its own root certificate authority and configured to 
    $ kubectl create namespace istio-system1
    $ kubectl label ns istio-system1 mesh=mesh1
    $ kubectl apply -f - <<EOF
-   apiVersion: sailoperator.io/v1alpha1
+   apiVersion: sailoperator.io/v1
    kind: Istio
    metadata:
      name: mesh1
@@ -767,7 +768,7 @@ Because each mesh will use its own root certificate authority and configured to 
    $ kubectl create namespace istio-system2
    $ kubectl label ns istio-system2 mesh=mesh2
    $ kubectl apply -f - <<EOF
-   apiVersion: sailoperator.io/v1alpha1
+   apiVersion: sailoperator.io/v1
    kind: Istio
    metadata:
      name: mesh2
@@ -1097,7 +1098,7 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
 
     ```sh
     kubectl apply --context "${CTX_CLUSTER1}" -f - <<EOF
-    apiVersion: sailoperator.io/v1alpha1
+    apiVersion: sailoperator.io/v1
     kind: Istio
     metadata:
       name: default
@@ -1135,7 +1136,7 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
 
     ```sh
     kubectl apply --context "${CTX_CLUSTER2}" -f - <<EOF
-    apiVersion: sailoperator.io/v1alpha1
+    apiVersion: sailoperator.io/v1
     kind: Istio
     metadata:
       name: default
@@ -1297,7 +1298,7 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
 
     ```sh
     kubectl apply --context "${CTX_CLUSTER1}" -f - <<EOF
-    apiVersion: sailoperator.io/v1alpha1
+    apiVersion: sailoperator.io/v1
     kind: Istio
     metadata:
       name: default
@@ -1339,7 +1340,7 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
 
     ```sh
     kubectl apply --context "${CTX_CLUSTER2}" -f - <<EOF
-    apiVersion: sailoperator.io/v1alpha1
+    apiVersion: sailoperator.io/v1
     kind: Istio
     metadata:
       name: default
@@ -1460,7 +1461,7 @@ In this setup there is an external control plane cluster (`cluster1`) and a remo
     ```sh
     kubectl create namespace istio-system --context "${CTX_CLUSTER1}"
     kubectl apply --context "${CTX_CLUSTER1}" -f - <<EOF
-    apiVersion: sailoperator.io/v1alpha1
+    apiVersion: sailoperator.io/v1
     kind: Istio
     metadata:
       name: default
@@ -1493,7 +1494,7 @@ In this setup there is an external control plane cluster (`cluster1`) and a remo
     ```sh
     kubectl create namespace external-istiod --context="${CTX_CLUSTER2}"
     kubectl apply --context "${CTX_CLUSTER2}" -f - <<EOF
-    apiVersion: sailoperator.io/v1alpha1
+    apiVersion: sailoperator.io/v1
     kind: Istio
     metadata:
       name: external-istiod
@@ -1539,7 +1540,7 @@ In this setup there is an external control plane cluster (`cluster1`) and a remo
 
     ```sh
     kubectl apply --context "${CTX_CLUSTER1}" -f - <<EOF
-    apiVersion: sailoperator.io/v1alpha1
+    apiVersion: sailoperator.io/v1
     kind: Istio
     metadata:
       name: external-istiod
@@ -1732,7 +1733,7 @@ Kubernetes supports dual-stack networking as a stable feature starting from
 [v1.23](https://kubernetes.io/docs/concepts/services-networking/dual-stack/), allowing clusters to handle both
 IPv4 and IPv6 traffic. With many cloud providers also beginning to offer dual-stack Kubernetes clusters, it's easier
 than ever to run services that function across both address types. Istio introduced dual-stack as an experimental
-feature in version 1.17, and it's expected to be promoted to [Alpha](https://github.com/istio/istio/issues/47998) in
+feature in version 1.17, and promoted it to [Alpha](https://istio.io/latest/news/releases/1.24.x/announcing-1.24/change-notes/) in
 version 1.24. With Istio in dual-stack mode, services can communicate over both IPv4 and IPv6 endpoints, which helps
 organizations transition to IPv6 while still maintaining compatibility with their existing IPv4 infrastructure.
 
@@ -1774,7 +1775,7 @@ Note: If you installed the KinD cluster using the command above, install the [Sa
    ```sh
    kubectl get ns istio-system || kubectl create namespace istio-system
    kubectl apply -f - <<EOF
-   apiVersion: sailoperator.io/v1alpha1
+   apiVersion: sailoperator.io/v1
    kind: Istio
    metadata:
      name: default
@@ -1799,7 +1800,7 @@ Note: If you installed the KinD cluster using the command above, install the [Sa
    ```sh
    kubectl get ns istio-cni || kubectl create namespace istio-cni
    kubectl apply -f - <<EOF
-   apiVersion: sailoperator.io/v1alpha1
+   apiVersion: sailoperator.io/v1
    kind: IstioCNI
    metadata:
      name: default
@@ -1833,19 +1834,19 @@ Note: If you installed the KinD cluster using the command above, install the [Sa
    kubectl label --overwrite namespace sleep istio-injection=enabled
    ```
 
-3. Ensure that the tcp-echo service in the dual-stack namespace is configured with `ipFamilyPolicy` of RequireDualStack.
-   ```console
-   kubectl get service tcp-echo -n dual-stack -o=jsonpath='{.spec.ipFamilyPolicy}'
-   RequireDualStack
-   ```
-
-4. Deploy the pods and services in their respective namespaces.
+3. Deploy the pods and services in their respective namespaces.
    ```sh
    kubectl apply -n dual-stack -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/tcp-echo/tcp-echo-dual-stack.yaml
    kubectl apply -n ipv4 -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/tcp-echo/tcp-echo-ipv4.yaml
    kubectl apply -n ipv6 -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/tcp-echo/tcp-echo-ipv6.yaml
    kubectl apply -n sleep -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/sleep/sleep.yaml
    kubectl wait --for=condition=Ready pod -n sleep -l app=sleep --timeout=60s
+   ```
+
+4. Ensure that the tcp-echo service in the dual-stack namespace is configured with `ipFamilyPolicy` of RequireDualStack.
+   ```console
+   kubectl get service tcp-echo -n dual-stack -o=jsonpath='{.spec.ipFamilyPolicy}'
+   RequireDualStack
    ```
 
 5. Verify that sleep pod is able to reach the dual-stack pods.

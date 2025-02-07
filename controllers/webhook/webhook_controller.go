@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
@@ -209,8 +209,8 @@ func ownedByRemoteIstioRevisionPredicate(cl client.Client) predicate.Predicate {
 
 func IsOwnedByRevisionWithRemoteControlPlane(cl client.Client, obj client.Object) bool {
 	for _, ownerRef := range obj.GetOwnerReferences() {
-		if ownerRef.APIVersion == v1alpha1.GroupVersion.String() && ownerRef.Kind == v1alpha1.IstioRevisionKind {
-			rev := &v1alpha1.IstioRevision{}
+		if ownerRef.APIVersion == v1.GroupVersion.String() && ownerRef.Kind == v1.IstioRevisionKind {
+			rev := &v1.IstioRevision{}
 			err := cl.Get(context.Background(), client.ObjectKey{Name: ownerRef.Name}, rev)
 			if err != nil {
 				return false

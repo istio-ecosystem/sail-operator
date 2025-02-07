@@ -46,16 +46,8 @@ Default configuration values can be changed using one or more `--set <parameter>
 
 2. Install the Sail Operator base charts which will manage all the Custom Resource Definitions(CRDs) to be able to deploy the Istio control plane:
 
-* Kubernetes
-
     ```sh
     $ helm install sail-operator sail-operator/sail-operator --namespace sail-operator
-    ```
-
-* OpenShift
-
-    ```sh
-    $ helm install sail-operator sail-operator/sail-operator --namespace sail-operator --set platform=openshift
     ```
 
 3. Validate the CRD installation with the `helm ls` command:
@@ -143,7 +135,7 @@ The `spec.values` field of the `Istio` and `IstioCNI` resource can be used to cu
 An example configuration:
 
     ```yaml
-    apiVersion: sailoperator.io/v1alpha1
+    apiVersion: sailoperator.io/v1
     kind: Istio
     metadata:
     name: example

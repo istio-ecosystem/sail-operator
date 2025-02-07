@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
@@ -79,7 +79,7 @@ var _ = Describe("DualStack configuration ", Ordered, func() {
 				When("the IstioCNI CR is created", func() {
 					BeforeAll(func() {
 						cniYAML := `
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: IstioCNI
 metadata:
   name: default
@@ -106,7 +106,7 @@ spec:
 				When("the Istio CR is created with DualStack configuration", func() {
 					BeforeAll(func() {
 						istioYAML := `
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: default
@@ -130,14 +130,14 @@ spec:
 					})
 
 					It("updates the Istio CR status to Reconciled", func(ctx SpecContext) {
-						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioName), &v1alpha1.Istio{}).
-							Should(HaveCondition(v1alpha1.IstioConditionReconciled, metav1.ConditionTrue), "Istio is not Reconciled; unexpected Condition")
+						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioName), &v1.Istio{}).
+							Should(HaveCondition(v1.IstioConditionReconciled, metav1.ConditionTrue), "Istio is not Reconciled; unexpected Condition")
 						Success("Istio CR is Reconciled")
 					})
 
 					It("updates the Istio CR status to Ready", func(ctx SpecContext) {
-						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioName), &v1alpha1.Istio{}).
-							Should(HaveCondition(v1alpha1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready; unexpected Condition")
+						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioName), &v1.Istio{}).
+							Should(HaveCondition(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready; unexpected Condition")
 						Success("Istio CR is Ready")
 					})
 
@@ -272,7 +272,7 @@ spec:
 
 		AfterAll(func(ctx SpecContext) {
 			if CurrentSpecReport().Failed() {
-				common.LogDebugInfo(k)
+				common.LogDebugInfo(common.DualStack, k)
 				debugInfoLogged = true
 			}
 
@@ -287,7 +287,7 @@ spec:
 
 	AfterAll(func() {
 		if CurrentSpecReport().Failed() && !debugInfoLogged {
-			common.LogDebugInfo(k)
+			common.LogDebugInfo(common.DualStack, k)
 			debugInfoLogged = true
 		}
 

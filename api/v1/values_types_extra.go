@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1
+package v1
 
 import (
 	k8sv1 "k8s.io/api/core/v1"
@@ -93,7 +93,7 @@ type ZTunnelConfig struct {
 	// Same as `global.logging.level`, but will override it if set
 	Logging *GlobalLoggingConfig `json:"logging,omitempty"`
 	// Specifies whether istio components should output logs in json format by adding --log_as_json argument to each container.
-	LogAsJSON *bool `json:"logAsJSON,omitempty"`
+	LogAsJSON *bool `json:"logAsJson,omitempty"`
 }
 
 // ZTunnelGlobalConfig is a subset of the Global Configuration used in the Istio ztunnel chart.
@@ -118,7 +118,7 @@ type ZTunnelGlobalConfig struct { // Default k8s resources settings for all Isti
 	ImagePullSecrets []string `json:"imagePullSecrets,omitempty"`
 
 	// Specifies whether istio components should output logs in json format by adding --log_as_json argument to each container.
-	LogAsJSON *bool `json:"logAsJSON,omitempty"`
+	LogAsJSON *bool `json:"logAsJson,omitempty"`
 	// Specifies the global logging level settings for the Istio control plane components.
 	Logging *GlobalLoggingConfig `json:"logging,omitempty"`
 

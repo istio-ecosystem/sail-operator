@@ -5,7 +5,7 @@ metadata:
     alm-examples: |-
       [
         {
-          "apiVersion": "sailoperator.io/v1alpha1",
+          "apiVersion": "sailoperator.io/v1",
           "kind": "Istio",
           "metadata": {
             "name": "default"
@@ -20,7 +20,7 @@ metadata:
           }
         },
         {
-          "apiVersion": "sailoperator.io/v1alpha1",
+          "apiVersion": "sailoperator.io/v1",
           "kind": "IstioCNI",
           "metadata": {
             "name": "default"
@@ -34,7 +34,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/maistra-dev/sail-operator:3.0-latest
-    createdAt: "2025-01-22T18:11:47Z"
+    createdAt: "2025-02-07T15:02:31Z"
     description: The OpenShift Service Mesh Operator enables you to install, configure,
       and manage an instance of Red Hat OpenShift Service Mesh. OpenShift Service
       Mesh is based on the open source Istio project.
@@ -190,7 +190,7 @@ spec:
           Istio CNI.
         displayName: Helm Values
         path: values
-      version: v1alpha1
+      version: v1
     - description: |-
         IstioRevision represents a single revision of an Istio Service Mesh deployment.
         Users shouldn't create IstioRevision objects directly. Instead, they should
@@ -217,7 +217,7 @@ spec:
           Istio.
         displayName: Helm Values
         path: values
-      version: v1alpha1
+      version: v1
     - description: IstioRevisionTag references an Istio or IstioRevision object and
         serves as an alias for sidecar injection. It can be used to manage stable
         revision tags without having to use istioctl or helm directly. See https://istio.io/latest/docs/setup/upgrade/canary/#stable-revision-labels
@@ -225,7 +225,7 @@ spec:
       displayName: Istio Revision Tag
       kind: IstioRevisionTag
       name: istiorevisiontags.sailoperator.io
-      version: v1alpha1
+      version: v1
     - description: |-
         Istio represents an Istio Service Mesh deployment consisting of one or more
         control plane instances (represented by one or more IstioRevision objects).
@@ -300,7 +300,7 @@ spec:
           Istio.
         displayName: Helm Values
         path: values
-      version: v1alpha1
+      version: v1
     - description: ZTunnel represents a deployment of the Istio ztunnel component.
       displayName: ZTunnel
       kind: ZTunnel
