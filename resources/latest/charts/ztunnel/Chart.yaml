@@ -1,5 +1,5 @@
 apiVersion: v2
-appVersion: 1.25-alpha.701930ac090c9dfa00043362b7633fec0629a96b
+appVersion: 1.25-alpha.c1e15e45c496a7aa4e960da4814b0ef44256caeb
 description: Helm chart for istio ztunnel components
 icon: https://istio.io/latest/favicons/android-192x192.png
 keywords:
@@ -8,4 +8,4 @@ keywords:
 name: ztunnel
 sources:
 - https://github.com/istio/istio
-version: 1.25-alpha.701930ac090c9dfa00043362b7633fec0629a96b
+version: 1.25-alpha.c1e15e45c496a7aa4e960da4814b0ef44256caeb
