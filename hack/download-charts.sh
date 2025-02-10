@@ -98,13 +98,23 @@ function patchIstioCharts() {
   rm -f "${CHARTS_DIR}/istiod-remote/templates/crd-all.gen.yaml"
 }
 
+# The charts use docker.io as the default registry, but this leads to issues
+# because of Docker Hub's rate limiting. This function modifies the hub field
+# in all charts to use gcr.io/istio-release instead of docker.io/istio.
+# gcr.io also contains the official images for Istio and they ar an exact match.
+function replaceDockerHubWithGcrIo() {
+  echo "replacing docker.io/istio with gcr.io/istio-release in all charts"
+
+  find "${CHARTS_DIR}" -name values.yaml -exec sed -i 's/hub: docker.io\/istio/hub: gcr.io\/istio-release/g' {} \;
+}
+
 function convertIstioProfiles() {
   # delete the minimal profile, because it ends up being empty after the conversion
   [ -f "${PROFILES_DIR}"/minimal.yaml ] && rm "${PROFILES_DIR}"/minimal.yaml
 
   # convert profiles
   for profile in "${PROFILES_DIR}"/*.yaml; do
-    yq eval -i '.apiVersion="sailoperator.io/v1alpha1"
+    yq eval -i '.apiVersion="sailoperator.io/v1"
       | .kind="Istio"
       | (select(.spec.meshConfig) | .spec.values.meshConfig)=.spec.meshConfig
       | (select(.spec.values.istio_cni) | .spec.values.pilot.cni)=.spec.values.istio_cni
@@ -138,5 +148,6 @@ version: 0.1.0
 
 downloadIstioManifests
 patchIstioCharts
+replaceDockerHubWithGcrIo
 convertIstioProfiles
 createRevisionTagChart

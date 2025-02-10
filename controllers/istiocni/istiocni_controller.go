@@ -22,7 +22,7 @@ import (
 	"reflect"
 
 	"github.com/go-logr/logr"
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
@@ -93,7 +93,7 @@ func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *ru
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
-func (r *Reconciler) Reconcile(ctx context.Context, cni *v1alpha1.IstioCNI) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, cni *v1.IstioCNI) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
 	reconcileErr := r.doReconcile(ctx, cni)
@@ -104,11 +104,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, cni *v1alpha1.IstioCNI) (ctr
 	return ctrl.Result{}, errors.Join(reconcileErr, statusErr)
 }
 
-func (r *Reconciler) Finalize(ctx context.Context, cni *v1alpha1.IstioCNI) error {
+func (r *Reconciler) Finalize(ctx context.Context, cni *v1.IstioCNI) error {
 	return r.uninstallHelmChart(ctx, cni)
 }
 
-func (r *Reconciler) doReconcile(ctx context.Context, cni *v1alpha1.IstioCNI) error {
+func (r *Reconciler) doReconcile(ctx context.Context, cni *v1.IstioCNI) error {
 	log := logf.FromContext(ctx)
 	if err := r.validate(ctx, cni); err != nil {
 		return err
@@ -118,7 +118,7 @@ func (r *Reconciler) doReconcile(ctx context.Context, cni *v1alpha1.IstioCNI) er
 	return r.installHelmChart(ctx, cni)
 }
 
-func (r *Reconciler) validate(ctx context.Context, cni *v1alpha1.IstioCNI) error {
+func (r *Reconciler) validate(ctx context.Context, cni *v1.IstioCNI) error {
 	if cni.Spec.Version == "" {
 		return reconciler.NewValidationError("spec.version not set")
 	}
@@ -131,10 +131,10 @@ func (r *Reconciler) validate(ctx context.Context, cni *v1alpha1.IstioCNI) error
 	return nil
 }
 
-func (r *Reconciler) installHelmChart(ctx context.Context, cni *v1alpha1.IstioCNI) error {
+func (r *Reconciler) installHelmChart(ctx context.Context, cni *v1.IstioCNI) error {
 	ownerReference := metav1.OwnerReference{
-		APIVersion:         v1alpha1.GroupVersion.String(),
-		Kind:               v1alpha1.IstioCNIKind,
+		APIVersion:         v1.GroupVersion.String(),
+		Kind:               v1.IstioCNIKind,
 		Name:               cni.Name,
 		UID:                cni.UID,
 		Controller:         ptr.Of(true),
@@ -161,11 +161,11 @@ func (r *Reconciler) installHelmChart(ctx context.Context, cni *v1alpha1.IstioCN
 	return nil
 }
 
-func (r *Reconciler) getChartDir(cni *v1alpha1.IstioCNI) string {
+func (r *Reconciler) getChartDir(cni *v1.IstioCNI) string {
 	return path.Join(r.Config.ResourceDirectory, cni.Spec.Version, "charts", cniChartName)
 }
 
-func applyImageDigests(cni *v1alpha1.IstioCNI, values *v1alpha1.CNIValues, config config.OperatorConfig) *v1alpha1.CNIValues {
+func applyImageDigests(cni *v1.IstioCNI, values *v1.CNIValues, config config.OperatorConfig) *v1.CNIValues {
 	imageDigests, digestsDefined := config.ImageDigests[cni.Spec.Version]
 	// if we don't have default image digests defined for this version, it's a no-op
 	if !digestsDefined {
@@ -173,12 +173,12 @@ func applyImageDigests(cni *v1alpha1.IstioCNI, values *v1alpha1.CNIValues, confi
 	}
 
 	if values == nil {
-		values = &v1alpha1.CNIValues{}
+		values = &v1.CNIValues{}
 	}
 
 	// set image digest unless any part of the image has been configured by the user
 	if values.Cni == nil {
-		values.Cni = &v1alpha1.CNIConfig{}
+		values.Cni = &v1.CNIConfig{}
 	}
 	if values.Cni.Image == nil && values.Cni.Hub == nil && values.Cni.Tag == nil {
 		values.Cni.Image = &imageDigests.CNIImage
@@ -186,7 +186,7 @@ func applyImageDigests(cni *v1alpha1.IstioCNI, values *v1alpha1.CNIValues, confi
 	return values
 }
 
-func (r *Reconciler) uninstallHelmChart(ctx context.Context, cni *v1alpha1.IstioCNI) error {
+func (r *Reconciler) uninstallHelmChart(ctx context.Context, cni *v1.IstioCNI) error {
 	_, err := r.ChartManager.UninstallChart(ctx, cniReleaseName, cni.Spec.Namespace)
 	if err != nil {
 		return fmt.Errorf("failed to uninstall Helm chart %q: %w", cniChartName, err)
@@ -203,7 +203,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// ownedResourceHandler handles resources that are owned by the IstioCNI CR
 	ownedResourceHandler := wrapEventHandler(logger,
-		handler.EnqueueRequestForOwner(r.Scheme, r.RESTMapper(), &v1alpha1.IstioCNI{}, handler.OnlyControllerOwner()))
+		handler.EnqueueRequestForOwner(r.Scheme, r.RESTMapper(), &v1.IstioCNI{}, handler.OnlyControllerOwner()))
 
 	namespaceHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapNamespaceToReconcileRequest))
 
@@ -220,7 +220,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 		// we use the Watches function instead of For(), so that we can wrap the handler so that events that cause the object to be enqueued are logged
 		// +lint-watches:ignore: IstioCNI (not found in charts, but this is the main resource watched by this controller)
-		Watches(&v1alpha1.IstioCNI{}, mainObjectHandler).
+		Watches(&v1.IstioCNI{}, mainObjectHandler).
 		Named("istiocni").
 
 		// namespaced resources
@@ -241,10 +241,10 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&corev1.Namespace{}, namespaceHandler).
 		Watches(&rbacv1.ClusterRole{}, ownedResourceHandler).
 		Watches(&rbacv1.ClusterRoleBinding{}, ownedResourceHandler).
-		Complete(reconciler.NewStandardReconcilerWithFinalizer[*v1alpha1.IstioCNI](r.Client, r.Reconcile, r.Finalize, constants.FinalizerName))
+		Complete(reconciler.NewStandardReconcilerWithFinalizer[*v1.IstioCNI](r.Client, r.Reconcile, r.Finalize, constants.FinalizerName))
 }
 
-func (r *Reconciler) determineStatus(ctx context.Context, cni *v1alpha1.IstioCNI, reconcileErr error) (v1alpha1.IstioCNIStatus, error) {
+func (r *Reconciler) determineStatus(ctx context.Context, cni *v1.IstioCNI, reconcileErr error) (v1.IstioCNIStatus, error) {
 	var errs errlist.Builder
 	reconciledCondition := r.determineReconciledCondition(reconcileErr)
 	readyCondition, err := r.determineReadyCondition(ctx, cni)
@@ -258,7 +258,7 @@ func (r *Reconciler) determineStatus(ctx context.Context, cni *v1alpha1.IstioCNI
 	return status, errs.Error()
 }
 
-func (r *Reconciler) updateStatus(ctx context.Context, cni *v1alpha1.IstioCNI, reconcileErr error) error {
+func (r *Reconciler) updateStatus(ctx context.Context, cni *v1.IstioCNI, reconcileErr error) error {
 	var errs errlist.Builder
 
 	status, err := r.determineStatus(ctx, cni, reconcileErr)
@@ -274,58 +274,58 @@ func (r *Reconciler) updateStatus(ctx context.Context, cni *v1alpha1.IstioCNI, r
 	return errs.Error()
 }
 
-func deriveState(reconciledCondition, readyCondition v1alpha1.IstioCNICondition) v1alpha1.IstioCNIConditionReason {
+func deriveState(reconciledCondition, readyCondition v1.IstioCNICondition) v1.IstioCNIConditionReason {
 	if reconciledCondition.Status != metav1.ConditionTrue {
 		return reconciledCondition.Reason
 	} else if readyCondition.Status != metav1.ConditionTrue {
 		return readyCondition.Reason
 	}
-	return v1alpha1.IstioCNIReasonHealthy
+	return v1.IstioCNIReasonHealthy
 }
 
-func (r *Reconciler) determineReconciledCondition(err error) v1alpha1.IstioCNICondition {
-	c := v1alpha1.IstioCNICondition{Type: v1alpha1.IstioCNIConditionReconciled}
+func (r *Reconciler) determineReconciledCondition(err error) v1.IstioCNICondition {
+	c := v1.IstioCNICondition{Type: v1.IstioCNIConditionReconciled}
 
 	if err == nil {
 		c.Status = metav1.ConditionTrue
 	} else {
 		c.Status = metav1.ConditionFalse
-		c.Reason = v1alpha1.IstioCNIReasonReconcileError
+		c.Reason = v1.IstioCNIReasonReconcileError
 		c.Message = fmt.Sprintf("error reconciling resource: %v", err)
 	}
 	return c
 }
 
-func (r *Reconciler) determineReadyCondition(ctx context.Context, cni *v1alpha1.IstioCNI) (v1alpha1.IstioCNICondition, error) {
-	c := v1alpha1.IstioCNICondition{
-		Type:   v1alpha1.IstioCNIConditionReady,
+func (r *Reconciler) determineReadyCondition(ctx context.Context, cni *v1.IstioCNI) (v1.IstioCNICondition, error) {
+	c := v1.IstioCNICondition{
+		Type:   v1.IstioCNIConditionReady,
 		Status: metav1.ConditionFalse,
 	}
 
 	ds := appsv1.DaemonSet{}
 	if err := r.Client.Get(ctx, r.cniDaemonSetKey(cni), &ds); err == nil {
 		if ds.Status.CurrentNumberScheduled == 0 {
-			c.Reason = v1alpha1.IstioCNIDaemonSetNotReady
+			c.Reason = v1.IstioCNIDaemonSetNotReady
 			c.Message = "no istio-cni-node pods are currently scheduled"
 		} else if ds.Status.NumberReady < ds.Status.CurrentNumberScheduled {
-			c.Reason = v1alpha1.IstioCNIDaemonSetNotReady
+			c.Reason = v1.IstioCNIDaemonSetNotReady
 			c.Message = "not all istio-cni-node pods are ready"
 		} else {
 			c.Status = metav1.ConditionTrue
 		}
 	} else if apierrors.IsNotFound(err) {
-		c.Reason = v1alpha1.IstioCNIDaemonSetNotReady
+		c.Reason = v1.IstioCNIDaemonSetNotReady
 		c.Message = "istio-cni-node DaemonSet not found"
 	} else {
 		c.Status = metav1.ConditionUnknown
-		c.Reason = v1alpha1.IstioCNIReasonReadinessCheckFailed
+		c.Reason = v1.IstioCNIReasonReadinessCheckFailed
 		c.Message = fmt.Sprintf("failed to get readiness: %v", err)
 		return c, fmt.Errorf("get failed: %w", err)
 	}
 	return c, nil
 }
 
-func (r *Reconciler) cniDaemonSetKey(cni *v1alpha1.IstioCNI) client.ObjectKey {
+func (r *Reconciler) cniDaemonSetKey(cni *v1.IstioCNI) client.ObjectKey {
 	return client.ObjectKey{
 		Namespace: cni.Spec.Namespace,
 		Name:      "istio-cni-node",
@@ -336,7 +336,7 @@ func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, ns clie
 	log := logf.FromContext(ctx)
 
 	// Check if any IstioCNI references this namespace in .spec.namespace
-	cniList := v1alpha1.IstioCNIList{}
+	cniList := v1.IstioCNIList{}
 	if err := r.Client.List(ctx, &cniList); err != nil {
 		log.Error(err, "failed to list IstioCNIs")
 		return nil
@@ -352,5 +352,5 @@ func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, ns clie
 }
 
 func wrapEventHandler(logger logr.Logger, handler handler.EventHandler) handler.EventHandler {
-	return enqueuelogger.WrapIfNecessary(v1alpha1.IstioCNIKind, logger, handler)
+	return enqueuelogger.WrapIfNecessary(v1.IstioCNIKind, logger, handler)
 }

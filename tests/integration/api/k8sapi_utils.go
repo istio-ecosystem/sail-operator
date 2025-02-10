@@ -15,7 +15,7 @@
 package integration
 
 import (
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -26,15 +26,15 @@ func NewOwnerReference(obj client.Object) metav1.OwnerReference {
 	// TODO: find a way to get the APIVersion from the object or schema
 	var apiVersion, kind string
 	switch obj.(type) {
-	case *v1alpha1.Istio:
-		apiVersion = v1alpha1.GroupVersion.String()
-		kind = v1alpha1.IstioKind
-	case *v1alpha1.IstioRevision:
-		apiVersion = v1alpha1.GroupVersion.String()
-		kind = v1alpha1.IstioRevisionKind
-	case *v1alpha1.IstioCNI:
-		apiVersion = v1alpha1.GroupVersion.String()
-		kind = v1alpha1.IstioCNIKind
+	case *v1.Istio:
+		apiVersion = v1.GroupVersion.String()
+		kind = v1.IstioKind
+	case *v1.IstioRevision:
+		apiVersion = v1.GroupVersion.String()
+		kind = v1.IstioRevisionKind
+	case *v1.IstioCNI:
+		apiVersion = v1.GroupVersion.String()
+		kind = v1.IstioCNIKind
 	default:
 		panic("unknown type")
 	}

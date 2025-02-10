@@ -19,7 +19,7 @@ OLD_VARS := $(.VARIABLES)
 # Use `make print-variables` to inspect the values of the variables
 -include Makefile.vendor.mk
 
-VERSION ?= 0.3.0
+VERSION ?= 1.1.0
 MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 
 OPERATOR_NAME ?= sailoperator
@@ -420,8 +420,8 @@ gen-api-docs: ## Generate API documentation. Known issues: go fmt does not prope
 		--templates-dir=$(TEMPLATES_DIR) \
 		--config=$(CONFIG_API_DOCS_GEN_PATH) \
 		--renderer=$(DOCS_RENDERER) \
-		--output-path=$(OUTPUT_DOCS_PATH) \
-		--output-mode=group
+		--output-path=$(OUTPUT_DOCS_PATH)/sailoperator.io.md \
+		--output-mode=single
 	@find $(OUTPUT_DOCS_PATH) -type f -name "*.md" -exec sed -i 's/<br \/>/ /g' {} \;
 	@find $(OUTPUT_DOCS_PATH) -type f \( -name "*.md" -o -name "*.asciidoc" \) -exec sed -i 's/\t/  /g' {} \;
 	@find $(OUTPUT_DOCS_PATH) -type f \( -name "*.md" -o -name "*.asciidoc" \) -exec sed -i '/^```/,/^```/ {/./!d;}' {} \;
@@ -480,7 +480,7 @@ HELM_VERSION ?= v3.17.0
 CONTROLLER_TOOLS_VERSION ?= v0.17.1
 OPM_VERSION ?= v1.50.0
 OLM_VERSION ?= v0.31.0
-GITLEAKS_VERSION ?= v8.23.2
+GITLEAKS_VERSION ?= v8.23.3
 ISTIOCTL_VERSION ?= 1.23.0
 
 # GENERATE_RELATED_IMAGES defines whether `spec.relatedImages` is going to be generated or not

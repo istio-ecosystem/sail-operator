@@ -14,11 +14,11 @@
 
 package revision
 
-import "github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+import v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 
 // IsUsingRemoteControlPlane returns true if the IstioRevision is configured to
 // connect to a remote rather than deploy a local control plane.
-func IsUsingRemoteControlPlane(rev *v1alpha1.IstioRevision) bool {
+func IsUsingRemoteControlPlane(rev *v1.IstioRevision) bool {
 	// TODO: we should use values.istiodRemote.enabled instead of the profile, but we can't get the final set of values because of new profiles implementation
 	values := rev.Spec.Values
 	return values != nil && values.Profile != nil && *values.Profile == "remote"

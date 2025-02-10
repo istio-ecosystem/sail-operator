@@ -15,14 +15,14 @@
 package revision
 
 import (
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 )
 
 func GetReferencedRevisionFromNamespace(labels map[string]string) string {
 	// istio-injection label takes precedence over istio.io/rev
 	if labels[constants.IstioInjectionLabel] == constants.IstioInjectionEnabledValue {
-		return v1alpha1.DefaultRevision
+		return v1.DefaultRevision
 	}
 	revision := labels[constants.IstioRevLabel]
 	if revision != "" {
@@ -40,7 +40,7 @@ func GetReferencedRevisionFromPod(podLabels map[string]string) string {
 			return rev
 		}
 		if podLabels[constants.IstioSidecarInjectLabel] == "true" {
-			return v1alpha1.DefaultRevision
+			return v1.DefaultRevision
 		}
 	}
 

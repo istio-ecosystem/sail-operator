@@ -20,7 +20,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	. "github.com/onsi/gomega"
@@ -201,24 +201,24 @@ func TestDetermineInUseCondition(t *testing.T) {
 
 			t.Run(name, func(t *testing.T) {
 				g := NewWithT(t)
-				rev := &v1alpha1.IstioRevision{
+				rev := &v1.IstioRevision{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: revName,
 					},
 				}
 				if tc.enableAllNamespaces {
-					rev.Spec.Values = &v1alpha1.Values{
-						SidecarInjectorWebhook: &v1alpha1.SidecarInjectorConfig{
+					rev.Spec.Values = &v1.Values{
+						SidecarInjectorWebhook: &v1.SidecarInjectorConfig{
 							EnableNamespacesByDefault: ptr.Of(true),
 						},
 					}
 				}
-				tag := &v1alpha1.IstioRevisionTag{
+				tag := &v1.IstioRevisionTag{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: tagName,
 					},
-					Spec: v1alpha1.IstioRevisionTagSpec{
-						TargetRef: v1alpha1.IstioRevisionTagTargetReference{
+					Spec: v1.IstioRevisionTagSpec{
+						TargetRef: v1.IstioRevisionTagTargetReference{
 							Kind: "IstioRevision",
 							Name: rev.Name,
 						},
@@ -251,11 +251,11 @@ func TestDetermineInUseCondition(t *testing.T) {
 				r := NewReconciler(cfg, cl, scheme.Scheme, nil)
 
 				result, _ := r.determineInUseCondition(context.TODO(), tag)
-				g.Expect(result.Type).To(Equal(v1alpha1.IstioRevisionTagConditionInUse))
+				g.Expect(result.Type).To(Equal(v1.IstioRevisionTagConditionInUse))
 
 				if tc.expectUnknownState {
 					g.Expect(result.Status).To(Equal(metav1.ConditionUnknown))
-					g.Expect(result.Reason).To(Equal(v1alpha1.IstioRevisionTagReasonUsageCheckFailed))
+					g.Expect(result.Reason).To(Equal(v1.IstioRevisionTagReasonUsageCheckFailed))
 				} else {
 					if tagName == tc.matchesTag {
 						g.Expect(result.Status).To(Equal(metav1.ConditionTrue),
