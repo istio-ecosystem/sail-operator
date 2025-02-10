@@ -32,7 +32,7 @@ If you want to contribute to the Sail Operator project, you can follow some rule
 
 ## Community meetings
 
-The Sail Operator project has a weekly contributor call every Thursday at 4PM CET / 10AM EST (Check your local time) to discuss the project status, features, isues, and other topics related to the project. You can join the meeting by using the [link](https://www.google.com/url?q=https://meet.google.com/uxg-wcfp-opv&sa=D&source=calendar&ust=1739288261191644&usg=AOvVaw08ZzxMrcPskBFK5rLxUACC), also the agenda and notes are available in the following [link](https://docs.google.com/document/d/1p1gx7dC8XQwFtv6l0zQbZjObAVJVTOBH2PvLVX6wU_0/edit?usp=sharing). If you want to suggest a topic please open an issue in the [Sail Operator GitHub repository](https://github.com/istio-ecosystem/sail-operator/issues) or start a discussion in the [Sail Operator Discussion](https://github.com/istio-ecosystem/sail-operator/discussions) and mention the `contributor-meeting` label.
+The Sail Operator project has a weekly contributor call every Thursday at 4PM CET / 10AM EST (Check your local time) to discuss the project status, features, isues, and other topics related to the project. You can join the meeting by using the [link](https://meet.google.com/uxg-wcfp-opv), also the agenda and notes are available in the following [link](https://docs.google.com/document/d/1p1gx7dC8XQwFtv6l0zQbZjObAVJVTOBH2PvLVX6wU_0/edit?usp=sharing). If you want to suggest a topic please open an issue in the [Sail Operator GitHub repository](https://github.com/istio-ecosystem/sail-operator/issues) or start a discussion in the [Sail Operator Discussion](https://github.com/istio-ecosystem/sail-operator/discussions) and mention the `contributor-meeting` label.
 
 ## Security Issues
 
