@@ -21,9 +21,9 @@ import (
 	"time"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversions"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
-	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
@@ -132,7 +132,7 @@ spec:
 				Expect(k.Label("namespace", ns, "istio.io/rev", mesh)).To(Succeed(), "Failed to label namespace")
 				for _, appName := range []string{"sleep", "httpbin"} {
 					Expect(k.WithNamespace(ns).
-						Apply(common.GetSampleYAML(supportedversion.Map[version], appName))).
+						Apply(common.GetSampleYAML(istioversions.Map[version], appName))).
 						To(Succeed(), "Failed to deploy application")
 				}
 				Success(fmt.Sprintf("Applications in namespace %s deployed", ns))
