@@ -111,8 +111,8 @@ metadata:
 	})
 
 	Describe("given Istio version", func() {
-		for _, version := range istioversions.List {
-			Context(version.Name, func() {
+		for name, version := range istioversions.Map {
+			Context(name, func() {
 				BeforeAll(func() {
 					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
 					Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
@@ -128,7 +128,7 @@ metadata:
 spec:
   version: %s
   namespace: %s`
-						yaml = fmt.Sprintf(yaml, version.Name, istioCniNamespace)
+						yaml = fmt.Sprintf(yaml, name, istioCniNamespace)
 						Log("IstioCNI YAML:", indent(2, yaml))
 						Expect(k.CreateFromString(yaml)).To(Succeed(), "IstioCNI creation failed")
 						Success("IstioCNI created")
@@ -178,7 +178,7 @@ metadata:
 spec:
   version: %s
   namespace: %s`
-						istioYAML = fmt.Sprintf(istioYAML, version.Name, controlPlaneNamespace)
+						istioYAML = fmt.Sprintf(istioYAML, name, controlPlaneNamespace)
 						Log("Istio YAML:", indent(2, istioYAML))
 						Expect(k.CreateFromString(istioYAML)).
 							To(Succeed(), "Istio CR failed to be created")
