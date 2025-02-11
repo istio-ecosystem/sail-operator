@@ -29,6 +29,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/istiovalues"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversions"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/predicate"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
@@ -141,32 +142,37 @@ func (r *Reconciler) installHelmChart(ctx context.Context, cni *v1.IstioCNI) err
 		BlockOwnerDeletion: ptr.Of(true),
 	}
 
-	// get userValues from Istio.spec.values
-	userValues := cni.Spec.Values
-
-	// apply image digests from configuration, if not already set by user
-	userValues = applyImageDigests(cni, userValues, config.Config)
-
-	// apply userValues on top of defaultValues from profiles
-	mergedHelmValues, err := istiovalues.ApplyProfilesAndPlatform(
-		r.Config.ResourceDirectory, cni.Spec.Version, r.Config.Platform, r.Config.DefaultProfile, cni.Spec.Profile, helm.FromValues(userValues))
+	versionName, err := istioversions.ResolveVersionName(cni.Spec.Version)
 	if err != nil {
 		return fmt.Errorf("failed to apply profile: %w", err)
 	}
 
-	_, err = r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(cni), mergedHelmValues, cni.Spec.Namespace, cniReleaseName, ownerReference)
+	// get userValues from Istio.spec.values
+	userValues := cni.Spec.Values
+
+	// apply image digests from configuration, if not already set by user
+	userValues = applyImageDigests(versionName, userValues, config.Config)
+
+	// apply userValues on top of defaultValues from profiles
+	mergedHelmValues, err := istiovalues.ApplyProfilesAndPlatform(
+		r.Config.ResourceDirectory, versionName, r.Config.Platform, r.Config.DefaultProfile, cni.Spec.Profile, helm.FromValues(userValues))
+	if err != nil {
+		return fmt.Errorf("failed to apply profile: %w", err)
+	}
+
+	_, err = r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(versionName), mergedHelmValues, cni.Spec.Namespace, cniReleaseName, ownerReference)
 	if err != nil {
 		return fmt.Errorf("failed to install/update Helm chart %q: %w", cniChartName, err)
 	}
 	return nil
 }
 
-func (r *Reconciler) getChartDir(cni *v1.IstioCNI) string {
-	return path.Join(r.Config.ResourceDirectory, cni.Spec.Version, "charts", cniChartName)
+func (r *Reconciler) getChartDir(versionName string) string {
+	return path.Join(r.Config.ResourceDirectory, versionName, "charts", cniChartName)
 }
 
-func applyImageDigests(cni *v1.IstioCNI, values *v1.CNIValues, config config.OperatorConfig) *v1.CNIValues {
-	imageDigests, digestsDefined := config.ImageDigests[cni.Spec.Version]
+func applyImageDigests(versionName string, values *v1.CNIValues, config config.OperatorConfig) *v1.CNIValues {
+	imageDigests, digestsDefined := config.ImageDigests[versionName]
 	// if we don't have default image digests defined for this version, it's a no-op
 	if !digestsDefined {
 		return values

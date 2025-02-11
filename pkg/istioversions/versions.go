@@ -68,6 +68,14 @@ var (
 	Alias []AliasInfo
 )
 
+func ResolveVersionName(version string) (string, error) {
+	info, ok := Map[version]
+	if !ok {
+		return "", fmt.Errorf("version %q not found", version)
+	}
+	return info.Name, nil
+}
+
 func init() {
 	log.Info("loading supported istio versions from " + versionsFilename)
 	// Read the embedded versions.yaml file
