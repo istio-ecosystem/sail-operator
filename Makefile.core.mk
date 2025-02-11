@@ -53,7 +53,7 @@ LD_EXTRAFLAGS  = -X ${GO_MODULE}/pkg/version.buildVersion=${VERSION}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildGitRevision=${GIT_REVISION}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildTag=${GIT_TAG}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildStatus=${GIT_STATUS}
-LD_FLAGS = -extldflags -static ${LD_EXTRAFLAGS} -s -w
+LD_FLAGS = ${LD_EXTRAFLAGS} -s -w
 
 # Image hub to use
 HUB ?= quay.io/sail-dev
