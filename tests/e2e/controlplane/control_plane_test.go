@@ -305,9 +305,6 @@ spec:
 			By("Cleaning up the IstioCNI namespace")
 			Expect(k.DeleteNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI Namespace failed to be deleted")
 
-			By("Deleting any left-over Istio and IstioRevision resources")
-			Expect(forceDeleteIstioResources()).To(Succeed())
-			Success("Resources deleted")
 			Success("Cleanup done")
 		})
 	})
@@ -344,27 +341,6 @@ func ImageFromRegistry(regexp string) types.GomegaMatcher {
 func indent(level int, str string) string {
 	indent := strings.Repeat(" ", level)
 	return indent + strings.ReplaceAll(str, "\n", "\n"+indent)
-}
-
-func forceDeleteIstioResources() error {
-	// This is a workaround to delete the Istio CRs that are left in the cluster
-	// This will be improved by splitting the tests into different Nodes with their independent setups and cleanups
-	err := k.ForceDelete("istio", istioName)
-	if err != nil && !strings.Contains(err.Error(), "not found") {
-		return fmt.Errorf("failed to delete %s CR: %w", "istio", err)
-	}
-
-	err = k.ForceDelete("istiorevision", "default")
-	if err != nil && !strings.Contains(err.Error(), "not found") {
-		return fmt.Errorf("failed to delete %s CR: %w", "istiorevision", err)
-	}
-
-	err = k.Delete("istiocni", istioCniName)
-	if err != nil && !strings.Contains(err.Error(), "not found") {
-		return fmt.Errorf("failed to delete %s CR: %w", "istiocni", err)
-	}
-
-	return nil
 }
 
 func getProxyVersion(podName, namespace string) (*semver.Version, error) {
