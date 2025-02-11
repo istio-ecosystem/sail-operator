@@ -42,11 +42,9 @@ func ComputeValues(
 	}
 
 	// apply FipsValues on top of mergedHelmValues from profile
-	if platform == config.PlatformOpenShift {
-		mergedHelmValues, err = istiovalues.ApplyFipsValues(mergedHelmValues)
-		if err != nil {
-			return nil, fmt.Errorf("failed to apply FIPS values: %w", err)
-		}
+	mergedHelmValues, err = istiovalues.ApplyFipsValues(mergedHelmValues)
+	if err != nil {
+		return nil, fmt.Errorf("failed to apply FIPS values: %w", err)
 	}
 
 	values, err := helm.ToValues(mergedHelmValues, &v1.Values{})
