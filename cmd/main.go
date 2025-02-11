@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/istio-ecosystem/sail-operator/controllers/istio"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiocni"
@@ -30,6 +31,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
+	"github.com/istio-ecosystem/sail-operator/pkg/istiovalues"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/version"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -41,7 +43,10 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
-var setupLog = ctrl.Log.WithName("setup")
+var (
+	setupLog           = ctrl.Log.WithName("setup")
+	FipsEnableFilePath = "/proc/sys/crypto/fips_enabled"
+)
 
 func main() {
 	var metricsAddr string
@@ -161,6 +166,16 @@ func main() {
 		reconcilerCfg.DefaultProfile = "openshift"
 	} else {
 		reconcilerCfg.DefaultProfile = "default"
+	}
+
+	// Detect FIPS enabled mode on OpenShift
+	if reconcilerCfg.Platform == config.PlatformOpenShift {
+		contents, err := os.ReadFile(FipsEnableFilePath)
+		fipsEnabled := strings.TrimSuffix(string(contents), "\n")
+		if err == nil && fipsEnabled == "1" {
+			setupLog.Info("FIPS mode is enabled in the system.")
+			istiovalues.FipsEnabled = true
+		}
 	}
 
 	err = istio.NewReconciler(reconcilerCfg, mgr.GetClient(), mgr.GetScheme()).

@@ -92,7 +92,6 @@ spec:
 }
 
 // TestFipsComputeValues tests that the pilot.env.COMPLIANCE_POLICY is set in values
-// when checking a temp test file content.
 func TestFipsComputeValues(t *testing.T) {
 	const (
 		namespace    = "istio-system"
@@ -108,9 +107,7 @@ apiVersion: sailoperator.io/v1
 kind: IstioRevision
 spec:`)), 0o644))
 
-	Must(t, os.WriteFile(path.Join("/tmp", "fips_enabled"), []byte(("1\n")), 0o644))
-	istiovalues.FipsEnableFilePath = "/tmp/fips_enabled"
-
+	istiovalues.FipsEnabled = true
 	values := &v1.Values{}
 	result, err := ComputeValues(values, namespace, version, config.PlatformOpenShift, "default", "",
 		resourceDir, revisionName)
@@ -132,7 +129,7 @@ spec:`)), 0o644))
 	if !reflect.DeepEqual(result, expected) {
 		t.Errorf("Result does not match the expected Values.\nExpected: %v\nActual: %v", expected, result)
 	}
-}
+} // when checking a temp test file content.
 
 func Must(t *testing.T, err error) {
 	t.Helper()

@@ -15,8 +15,6 @@
 package istiovalues
 
 import (
-	"os"
-	"path"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -49,12 +47,7 @@ func TestApplyFipsValues(t *testing.T) {
 	values := helm.Values{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			FipsEnableFilePath = "/tmp/fips_enabled"
-			if tt.fipsEnabled {
-				os.WriteFile(path.Join("/tmp", "fips_enabled"), []byte(("1\n")), 0o644)
-			} else {
-				os.WriteFile(path.Join("/tmp", "fips_enabled"), []byte(("0\n")), 0o644)
-			}
+			FipsEnabled = tt.fipsEnabled
 			actual, err := ApplyFipsValues(values)
 			if (err != nil) != tt.expectErr {
 				t.Errorf("applyFipsValues() error = %v, expectErr %v", err, tt.expectErr)
