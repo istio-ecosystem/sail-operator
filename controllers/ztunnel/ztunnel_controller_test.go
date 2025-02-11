@@ -471,7 +471,7 @@ func TestApplyImageDigests(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := applyImageDigests(tc.input, tc.input.Spec.Values, tc.config)
+			result := applyImageDigests(tc.input.Spec.Version, tc.input.Spec.Values, tc.config)
 			if diff := cmp.Diff(tc.expectValues, result); diff != "" {
 				t.Errorf("unexpected merge result; diff (-expected, +actual):\n%v", diff)
 			}

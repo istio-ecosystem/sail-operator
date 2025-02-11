@@ -171,7 +171,7 @@ func (r *Reconciler) installHelmChart(ctx context.Context, ztunnel *v1alpha1.ZTu
 		return fmt.Errorf("failed to apply user overrides: %w", err)
 	}
 
-	_, err = r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(ztunnel), finalHelmValues, ztunnel.Spec.Namespace, ztunnelChart, ownerReference)
+	_, err = r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(versionName), finalHelmValues, ztunnel.Spec.Namespace, ztunnelChart, ownerReference)
 	if err != nil {
 		return fmt.Errorf("failed to install/update Helm chart %q: %w", ztunnelChart, err)
 	}
