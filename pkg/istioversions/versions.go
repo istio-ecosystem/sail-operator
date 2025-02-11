@@ -68,7 +68,7 @@ var (
 	Alias []AliasInfo
 )
 
-func ResolveVersionName(version string) (string, error) {
+func ResolveVersion(version string) (string, error) {
 	info, ok := Map[version]
 	if !ok {
 		return "", fmt.Errorf("version %q not found", version)
@@ -95,7 +95,7 @@ func mustBuildVersionMap(alias []AliasInfo, list []VersionInfo) map[string]Versi
 		versionMap[v.Name] = v
 	}
 	for _, a := range alias {
-		v, ok := (versionMap)[a.Ref]
+		v, ok := versionMap[a.Ref]
 		if !ok {
 			panic(fmt.Errorf("version %q not found", a.Ref))
 		}

@@ -136,7 +136,7 @@ func (r *Reconciler) installHelmChart(ctx context.Context, ztunnel *v1alpha1.ZTu
 		BlockOwnerDeletion: ptr.Of(true),
 	}
 
-	versionName, err := istioversions.ResolveVersionName(ztunnel.Spec.Version)
+	versionName, err := istioversions.ResolveVersion(ztunnel.Spec.Version)
 	if err != nil {
 		return fmt.Errorf("failed to apply profile: %w", err)
 	}

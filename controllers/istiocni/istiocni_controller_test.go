@@ -323,7 +323,7 @@ func TestApplyImageDigests(t *testing.T) {
 			},
 			input: &v1.IstioCNI{
 				Spec: v1.IstioCNISpec{
-					Version: "v1.20.0",
+					Version: istioversions.Default,
 					Values: &v1.CNIValues{
 						Cni: &v1.CNIConfig{
 							Image: ptr.Of("istiocni-test"),
@@ -341,14 +341,14 @@ func TestApplyImageDigests(t *testing.T) {
 			name: "no-user-values",
 			config: config.OperatorConfig{
 				ImageDigests: map[string]config.IstioImageConfig{
-					"v1.20.0": {
+					istioversions.Default: {
 						CNIImage: "cni-test",
 					},
 				},
 			},
 			input: &v1.IstioCNI{
 				Spec: v1.IstioCNISpec{
-					Version: "v1.20.0",
+					Version: istioversions.Default,
 					Values:  &v1.CNIValues{},
 				},
 			},
@@ -362,14 +362,14 @@ func TestApplyImageDigests(t *testing.T) {
 			name: "user-supplied-image",
 			config: config.OperatorConfig{
 				ImageDigests: map[string]config.IstioImageConfig{
-					"v1.20.0": {
+					istioversions.Default: {
 						CNIImage: "cni-test",
 					},
 				},
 			},
 			input: &v1.IstioCNI{
 				Spec: v1.IstioCNISpec{
-					Version: "v1.20.0",
+					Version: istioversions.Default,
 					Values: &v1.CNIValues{
 						Cni: &v1.CNIConfig{
 							Image: ptr.Of("cni-custom"),
@@ -387,14 +387,14 @@ func TestApplyImageDigests(t *testing.T) {
 			name: "user-supplied-hub-tag",
 			config: config.OperatorConfig{
 				ImageDigests: map[string]config.IstioImageConfig{
-					"v1.20.0": {
+					istioversions.Default: {
 						CNIImage: "cni-test",
 					},
 				},
 			},
 			input: &v1.IstioCNI{
 				Spec: v1.IstioCNISpec{
-					Version: "v1.20.0",
+					Version: istioversions.Default,
 					Values: &v1.CNIValues{
 						Cni: &v1.CNIConfig{
 							Hub: ptr.Of("docker.io/istio"),
@@ -414,14 +414,14 @@ func TestApplyImageDigests(t *testing.T) {
 			name: "version-without-defaults",
 			config: config.OperatorConfig{
 				ImageDigests: map[string]config.IstioImageConfig{
-					"v1.20.0": {
+					istioversions.Default: {
 						CNIImage: "cni-test",
 					},
 				},
 			},
 			input: &v1.IstioCNI{
 				Spec: v1.IstioCNISpec{
-					Version: "v1.20.1",
+					Version: istioversions.Default,
 					Values: &v1.CNIValues{
 						Cni: &v1.CNIConfig{
 							Hub: ptr.Of("docker.io/istio"),
@@ -440,9 +440,14 @@ func TestApplyImageDigests(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := applyImageDigests(tc.input.Spec.Version, tc.input.Spec.Values, tc.config)
-			if diff := cmp.Diff(tc.expectValues, result); diff != "" {
-				t.Errorf("unexpected merge result; diff (-expected, +actual):\n%v", diff)
+			versionName, err := istioversions.ResolveVersion(tc.input.Spec.Version)
+			if err != nil {
+				t.Errorf("failed to resolve version: %v", err)
+			} else {
+				result := applyImageDigests(versionName, tc.input.Spec.Values, tc.config)
+				if diff := cmp.Diff(tc.expectValues, result); diff != "" {
+					t.Errorf("unexpected merge result; diff (-expected, +actual):\n%v", diff)
+				}
 			}
 		})
 	}

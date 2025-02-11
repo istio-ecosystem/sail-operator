@@ -142,7 +142,7 @@ func (r *Reconciler) installHelmChart(ctx context.Context, cni *v1.IstioCNI) err
 		BlockOwnerDeletion: ptr.Of(true),
 	}
 
-	versionName, err := istioversions.ResolveVersionName(cni.Spec.Version)
+	versionName, err := istioversions.ResolveVersion(cni.Spec.Version)
 	if err != nil {
 		return fmt.Errorf("failed to apply profile: %w", err)
 	}

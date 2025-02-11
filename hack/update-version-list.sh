@@ -21,6 +21,7 @@ VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"versions.yaml"}
 HELM_VALUES_FILE=${HELM_VALUES_FILE:-"chart/values.yaml"}
 
 function updateVersionsInIstioTypeComment() {
+    selectAliasValues=$(yq '.alias[].name | ", \"urn:alm:descriptor:com.tectonic.ui:select:" + . + "\""' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | tr -d '\n')
     selectValues=$(yq '.versions[].name | ", \"urn:alm:descriptor:com.tectonic.ui:select:" + . + "\""' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | tr -d '\n')
     versionsEnum=$(yq '.versions[].name' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | tr '\n' ';' | sed 's/;$//g')
     aliasesEnum=$(yq '.alias[].name' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | tr '\n' ';' | sed 's/;$//g')
@@ -28,12 +29,20 @@ function updateVersionsInIstioTypeComment() {
     defaultVersion=$(yq '.versions[0].name' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}")
 
     sed -i -E \
-      -e "/\+sail:version/,/Version string/ s/(\/\/ \+operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName=\"Istio Version\",xDescriptors=\{.*fieldGroup:General\")[^}]*(})/\1$selectValues}/g" \
+      -e "/\+sail:version/,/Version string/ s/(\/\/ \+operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName=\"Istio Version\",xDescriptors=\{.*fieldGroup:General\")[^}]*(})/\1$selectValues$selectAliasValues}/g" \
       -e "/\+sail:version/,/Version string/ s/(\/\/ \+kubebuilder:validation:Enum=)(.*)/\1$versionsEnum;$aliasesEnum/g" \
       -e "/\+sail:version/,/Version string/ s/(\/\/ \+kubebuilder:default=)(.*)/\1$defaultVersion/g" \
       -e "/\+sail:version/,/Version string/ s/(\/\/ \Must be one of:)(.*)/\1 $versions./g" \
       -e "s/(\+kubebuilder:default=.*version: \")[^\"]*\"/\1$defaultVersion\"/g" \
-      api/v1/istio_types.go api/v1/istiorevision_types.go api/v1/istiocni_types.go
+      api/v1/istio_types.go api/v1/istiocni_types.go
+    
+    sed -i -E \
+      -e "/\+sail:version/,/Version string/ s/(\/\/ \+operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName=\"Istio Version\",xDescriptors=\{.*fieldGroup:General\")[^}]*(})/\1$selectValues}/g" \
+      -e "/\+sail:version/,/Version string/ s/(\/\/ \+kubebuilder:validation:Enum=)(.*)/\1$versionsEnum/g" \
+      -e "/\+sail:version/,/Version string/ s/(\/\/ \+kubebuilder:default=)(.*)/\1$defaultVersion/g" \
+      -e "/\+sail:version/,/Version string/ s/(\/\/ \Must be one of:)(.*)/\1 $versions./g" \
+      -e "s/(\+kubebuilder:default=.*version: \")[^\"]*\"/\1$defaultVersion\"/g" \
+      api/v1/istiorevision_types.go
 
     # Ambient mode in Sail Operator is supported starting with Istio version 1.24+
     # TODO: Once support for versions prior to 1.24 is discontinued, we can merge the ztunnel specific changes below with the other components.

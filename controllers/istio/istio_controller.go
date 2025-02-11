@@ -106,11 +106,10 @@ func validate(istio *v1.Istio) error {
 }
 
 func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1.Istio) error {
-	version, ok := istioversions.Map[istio.Spec.Version]
-	if !ok {
-		return fmt.Errorf("version %q not found", istio.Spec.Version)
+	versionName, err := istioversions.ResolveVersion(istio.Spec.Version)
+	if err != nil {
+		return fmt.Errorf("version %q not found: %w", istio.Spec.Version, err)
 	}
-	versionName := version.Name
 	values, err := revision.ComputeValues(
 		istio.Spec.Values, istio.Spec.Namespace, versionName,
 		r.Config.Platform, r.Config.DefaultProfile, istio.Spec.Profile,

@@ -23,7 +23,7 @@ VERSION ?= 1.1.0
 MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 
 OPERATOR_NAME ?= sailoperator
-VERSIONS_YAML_DIR = pkg/istioversions
+VERSIONS_YAML_DIR ?= pkg/istioversions
 VERSIONS_YAML_FILE ?= versions.yaml
 
 # Istio images names
