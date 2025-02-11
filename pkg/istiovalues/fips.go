@@ -31,7 +31,6 @@ func ApplyFipsValues(values helm.Values) (helm.Values, error) {
 	readline, err := os.ReadFile(FipsEnableFilePath)
 	contents := strings.TrimSuffix(string(readline), "\n")
 	if err == nil && contents == "1" {
-		fmt.Println("Running on FIPS enabled system.")
 		if err = values.SetIfAbsent("pilot.env.COMPLIANCE_POLICY", "fips-140-2"); err != nil {
 			return nil, fmt.Errorf("failed to set pilot.env.COMPLIANCE_POLICY: %w", err)
 		}
