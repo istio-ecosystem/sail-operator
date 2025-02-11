@@ -245,6 +245,9 @@ Deploy Prometheus in `istio-system` namespace.
 $ kubectl apply -n istio-system -f https://raw.githubusercontent.com/istio/istio/master/samples/addons/prometheus.yaml
 ```
 
+> **NOTE**:
+> If using [OpenShift monitoring](https://docs.openshift.com/service-mesh/3.0.0tp1/observability/metrics/ossm-metrics-assembly.html#ossm-config-openshift-monitoring-only_ossm-metrics-assembly), don't forget to apply the PodMonitor in the ztunnel namespace.
+
 Deploy a Kiali dashboard using a community Kiali operator on OpenShift.
 
 ```bash
