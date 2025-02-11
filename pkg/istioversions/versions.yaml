@@ -10,7 +10,7 @@
 # updated to match the most recent version specified here. The versions in
 # go.mod affect the generated API schema for the Sail CRDs (e.g. IstioRevision),
 # as well as all the Istio CRDs (e.g. VirtualService).
-alias:
+aliases:
   - name: master
     ref: v1.25-alpha.c2ac935c
   - name: v1.24-latest

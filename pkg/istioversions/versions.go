@@ -34,7 +34,7 @@ var (
 // Versions represents the top-level structure of versions.yaml
 type Versions struct {
 	Versions []VersionInfo `json:"versions"`
-	Alias    []AliasInfo   `json:"alias"`
+	Aliases  []AliasInfo   `json:"aliases"`
 }
 
 // AliasInfo contains information about version aliases
@@ -64,8 +64,8 @@ var (
 	Old string
 	// New is the latest supported version
 	New string
-	// Alias is the alias for the version
-	Alias []AliasInfo
+	// AliasList is the alias for the version
+	AliasList []AliasInfo
 )
 
 func ResolveVersion(version string) (string, error) {
@@ -84,9 +84,9 @@ func init() {
 		panic(fmt.Errorf("failed to read versions from '%s': %w", versionsFilename, err))
 	}
 
-	List, Default, Old, New, Alias = mustParseVersionsYaml(data)
+	List, Default, Old, New, AliasList = mustParseVersionsYaml(data)
 
-	Map = mustBuildVersionMap(Alias, List)
+	Map = mustBuildVersionMap(AliasList, List)
 }
 
 func mustBuildVersionMap(alias []AliasInfo, list []VersionInfo) map[string]VersionInfo {
@@ -118,5 +118,5 @@ func mustParseVersionsYaml(yamlBytes []byte) (list []VersionInfo, defaultVersion
 		oldVersion = list[1].Name
 	}
 	newVersion = list[0].Name
-	return list, defaultVersion, oldVersion, newVersion, versions.Alias
+	return list, defaultVersion, oldVersion, newVersion, versions.Aliases
 }

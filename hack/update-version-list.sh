@@ -21,10 +21,10 @@ VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"versions.yaml"}
 HELM_VALUES_FILE=${HELM_VALUES_FILE:-"chart/values.yaml"}
 
 function updateVersionsInIstioTypeComment() {
-    selectAliasValues=$(yq '.alias[].name | ", \"urn:alm:descriptor:com.tectonic.ui:select:" + . + "\""' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | tr -d '\n')
+    selectAliasValues=$(yq '.aliases[].name | ", \"urn:alm:descriptor:com.tectonic.ui:select:" + . + "\""' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | tr -d '\n')
     selectValues=$(yq '.versions[].name | ", \"urn:alm:descriptor:com.tectonic.ui:select:" + . + "\""' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | tr -d '\n')
     versionsEnum=$(yq '.versions[].name' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | tr '\n' ';' | sed 's/;$//g')
-    aliasesEnum=$(yq '.alias[].name' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | tr '\n' ';' | sed 's/;$//g')
+    aliasesEnum=$(yq '.aliases[].name' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | tr '\n' ';' | sed 's/;$//g')
     versions=$(yq '.versions[].name' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | tr '\n' ',' | sed -e 's/,/, /g' -e 's/, $//g')
     defaultVersion=$(yq '.versions[0].name' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}")
 

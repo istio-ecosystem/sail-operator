@@ -28,18 +28,18 @@ func TestInit(t *testing.T) {
 	assert.True(t, Old != "", "istioversions.Old should not be empty")
 	assert.True(t, New != "", "istioversions.New should not be empty")
 
-	assert.Equal(t, len(List)+len(Alias), len(Map), "Map should be same size as List + Alias")
+	assert.Equal(t, len(List)+len(AliasList), len(Map), "Map should be same size as List + Alias")
 	for _, vi := range List {
 		assert.Equal(t, vi, Map[vi.Name])
 	}
-	for _, ai := range Alias {
+	for _, ai := range AliasList {
 		assert.Equal(t, Map[ai.Ref], Map[ai.Name])
 	}
 }
 
 func TestParseVersionsYaml_ValidYaml(t *testing.T) {
 	yamlBytes := []byte(`
-alias:
+aliases:
   - name: "latest"
     ref: "2.0.0"
 versions:
@@ -81,7 +81,7 @@ versions:
 
 func TestParseVersionsYaml_InvalidAlias(t *testing.T) {
 	yamlBytes := []byte(`
-alias:
+aliases:
   - name: "1.0-latest"
     ref: "nonexistent-version"
 versions:
