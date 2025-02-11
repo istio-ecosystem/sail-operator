@@ -26,15 +26,18 @@ import (
 func TestApplyFipsValues(t *testing.T) {
 	tests := []struct {
 		name         string
+		fipsEnabled  bool
 		expectValues helm.Values
 		expectErr    bool
 	}{
 		{
 			name:         "FIPS not enabled",
+			fipsEnabled:  false,
 			expectValues: helm.Values{},
 		},
 		{
-			name: "FIPS enabled",
+			name:        "FIPS enabled",
+			fipsEnabled: true,
 			expectValues: helm.Values{
 				"pilot": map[string]any{
 					"env": map[string]any{"COMPLIANCE_POLICY": string("fips-140-2")},
@@ -46,6 +49,12 @@ func TestApplyFipsValues(t *testing.T) {
 	values := helm.Values{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			FipsEnableFilePath = "/tmp/fips_enabled"
+			if tt.fipsEnabled {
+				os.WriteFile(path.Join("/tmp", "fips_enabled"), []byte(("1\n")), 0o644)
+			} else {
+				os.WriteFile(path.Join("/tmp", "fips_enabled"), []byte(("0\n")), 0o644)
+			}
 			actual, err := ApplyFipsValues(values)
 			if (err != nil) != tt.expectErr {
 				t.Errorf("applyFipsValues() error = %v, expectErr %v", err, tt.expectErr)
@@ -57,7 +66,5 @@ func TestApplyFipsValues(t *testing.T) {
 				}
 			}
 		})
-		os.WriteFile(path.Join("/tmp", "fips_enabled"), []byte(("1\n")), 0o644)
-		FipsEnableFilePath = "/tmp/fips_enabled"
 	}
 }
