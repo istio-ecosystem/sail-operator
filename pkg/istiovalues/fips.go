@@ -16,13 +16,31 @@ package istiovalues
 
 import (
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 )
 
-var FipsEnabled bool
+var (
+	FipsEnabled        bool
+	FipsEnableFilePath = "/proc/sys/crypto/fips_enabled"
+)
 
-// ApplyFipsValues: Detect FIPS enabled mode on OpenShift and set value pilot.env.COMPLIANCE_POLICY
+// DetectFipsMode checks if FIPS mode is enabled in the system.
+func DetectFipsMode() (bool, error) {
+	contents, err := os.ReadFile(FipsEnableFilePath)
+	if err != nil {
+		return false, fmt.Errorf("failed to read file: %w", err)
+	}
+	fipsEnabled := strings.TrimSuffix(string(contents), "\n")
+	if fipsEnabled == "1" {
+		FipsEnabled = true
+	}
+	return FipsEnabled, nil
+}
+
+// ApplyFipsValues sets value pilot.env.COMPLIANCE_POLICY if FIPS mode is enabled in the system.
 func ApplyFipsValues(values helm.Values) (helm.Values, error) {
 	if FipsEnabled {
 		if err := values.SetIfAbsent("pilot.env.COMPLIANCE_POLICY", "fips-140-2"); err != nil {
