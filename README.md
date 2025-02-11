@@ -24,6 +24,7 @@ This document aims to provide an overview of the project and some information fo
     - [Integration Tests](#integration-tests)
     - [End-to-End Tests](#end-to-end-tests)
     - [Vendor-specific changes](#vendor-specific-changes)
+- [Release Process](#release-process)
 - [Community Support and Contributing](#community-support-and-contributing)
 - [Sail Enhancement Proposal](#sail-enhancement-proposal)
 - [Issue management](#issue-management)
@@ -223,6 +224,10 @@ The name of the versions.yaml file can be overwritten using the VERSIONS_YAML_FI
 #### vendor_defaults.yaml
 
 By modifying `pkg/istiovalues/vendor_defaults.yaml`, vendors can change some defaults for the helm values. Note that these are defaults, not overrides, so user input will always take precendence.
+
+## Release process
+
+Please refer to the [RELEASE-PROCESS.md](https://github.com/istio-ecosystem/sail-operator/blob/main/RELEASE-PROCESS.md) file for more information on how the Sail Operator release process works.  
 
 ## Community Support and Contributing
 Please refer to the [CONTRIBUTING-SAIL-PROJECT.md](https://github.com/istio-ecosystem/sail-operator/blob/main/CONTRIBUTING.md) file for more information on how to contribute to the Sail Operator project. This file contains all the information you need to get started with contributing to the project.
