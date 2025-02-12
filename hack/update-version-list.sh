@@ -21,29 +21,19 @@ VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"versions.yaml"}
 HELM_VALUES_FILE=${HELM_VALUES_FILE:-"chart/values.yaml"}
 
 function updateVersionsInIstioTypeComment() {
-    selectAliasValues=$(yq '.aliases[].name | ", \"urn:alm:descriptor:com.tectonic.ui:select:" + . + "\""' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | tr -d '\n')
     selectValues=$(yq '.versions[].name | ", \"urn:alm:descriptor:com.tectonic.ui:select:" + . + "\""' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | tr -d '\n')
     versionsEnum=$(yq '.versions[].name' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | tr '\n' ';' | sed 's/;$//g')
-    aliasesEnum=$(yq '.aliases[].name' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | tr '\n' ';' | sed 's/;$//g')
     versions=$(yq '.versions[].name' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | tr '\n' ',' | sed -e 's/,/, /g' -e 's/, $//g')
-    defaultVersion=$(yq '.versions[0].name' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}")
+    defaultVersion=$(yq '.versions[1].name' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}")
 
-    sed -i -E \
-      -e "/\+sail:version/,/Version string/ s/(\/\/ \+operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName=\"Istio Version\",xDescriptors=\{.*fieldGroup:General\")[^}]*(})/\1$selectValues$selectAliasValues}/g" \
-      -e "/\+sail:version/,/Version string/ s/(\/\/ \+kubebuilder:validation:Enum=)(.*)/\1$versionsEnum;$aliasesEnum/g" \
-      -e "/\+sail:version/,/Version string/ s/(\/\/ \+kubebuilder:default=)(.*)/\1$defaultVersion/g" \
-      -e "/\+sail:version/,/Version string/ s/(\/\/ \Must be one of:)(.*)/\1 $versions./g" \
-      -e "s/(\+kubebuilder:default=.*version: \")[^\"]*\"/\1$defaultVersion\"/g" \
-      api/v1/istio_types.go api/v1/istiocni_types.go
-    
     sed -i -E \
       -e "/\+sail:version/,/Version string/ s/(\/\/ \+operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName=\"Istio Version\",xDescriptors=\{.*fieldGroup:General\")[^}]*(})/\1$selectValues}/g" \
       -e "/\+sail:version/,/Version string/ s/(\/\/ \+kubebuilder:validation:Enum=)(.*)/\1$versionsEnum/g" \
       -e "/\+sail:version/,/Version string/ s/(\/\/ \+kubebuilder:default=)(.*)/\1$defaultVersion/g" \
       -e "/\+sail:version/,/Version string/ s/(\/\/ \Must be one of:)(.*)/\1 $versions./g" \
       -e "s/(\+kubebuilder:default=.*version: \")[^\"]*\"/\1$defaultVersion\"/g" \
-      api/v1/istiorevision_types.go
-
+      api/v1/istio_types.go api/v1/istiorevision_types.go api/v1/istiocni_types.go
+      
     # Ambient mode in Sail Operator is supported starting with Istio version 1.24+
     # TODO: Once support for versions prior to 1.24 is discontinued, we can merge the ztunnel specific changes below with the other components.
     ztunnelselectValues=$(yq '.versions[] | select(.version >= "1.24.0") | ", \"urn:alm:descriptor:com.tectonic.ui:select:" + .name + "\""' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | tr -d '\n')
@@ -67,7 +57,7 @@ function updateVersionsInCSVDescription() {
     # - stores latest commit in $latestCommit
     # - iterates over keys and prints them; if the key is "latest", appends the hash stored in $latestCommit
     # shellcheck disable=SC2016
-    yq '(.versions[] | select(.name == "latest") | .commit) as $latestCommit | .versions[].name | (select(. == "latest") | . + " (" + $latestCommit + ")") // .' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" > "$tmpFile"
+    yq '(.versions[] | select(.name == "master") | .commit) as $latestCommit | .versions[].name | (select(. == "master") | . + " (" + $latestCommit + ")") // .' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" > "$tmpFile"
 
     # truncate the latest commit hash to 8 characters
     sed -i -E 's/(latest \(.{8}).*\)/\1\)/g' "$tmpFile"
@@ -95,7 +85,7 @@ function updateVersionsInCSVDescription() {
 }
 
 function updateVersionInSamples() {
-    defaultVersion=$(yq '.versions[0].name' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}")
+    defaultVersion=$(yq '.versions[1].name' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}")
 
     sed -i -E \
       -e "s/version: .*/version: $defaultVersion/g" \

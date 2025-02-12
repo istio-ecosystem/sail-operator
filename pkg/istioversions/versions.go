@@ -34,7 +34,6 @@ var (
 // Versions represents the top-level structure of versions.yaml
 type Versions struct {
 	Versions []VersionInfo `json:"versions"`
-	Aliases  []AliasInfo   `json:"aliases"`
 }
 
 // AliasInfo contains information about version aliases
@@ -93,6 +92,12 @@ func mustBuildVersionMap(alias []AliasInfo, list []VersionInfo) map[string]Versi
 	versionMap := make(map[string]VersionInfo)
 	for _, v := range list {
 		versionMap[v.Name] = v
+
+		name := fmt.Sprintf("v%s", v.Version.String())
+
+		if name != v.Name {
+			versionMap[name] = v
+		}
 	}
 	for _, a := range alias {
 		v, ok := versionMap[a.Ref]
@@ -112,11 +117,21 @@ func mustParseVersionsYaml(yamlBytes []byte) (list []VersionInfo, defaultVersion
 		panic(fmt.Errorf("failed to parse versions data: %w", err))
 	}
 
-	list = versions.Versions
+	for _, v := range versions.Versions {
+		if v.Commit != "" {
+			list = append(list, v)
+		} else {
+			alias = append(alias, AliasInfo{
+				Name: v.Name,
+				Ref:  fmt.Sprintf("v%s", v.Version.String()),
+			})
+		}
+	}
+
 	defaultVersion = list[0].Name
 	if len(list) > 1 {
 		oldVersion = list[1].Name
 	}
 	newVersion = list[0].Name
-	return list, defaultVersion, oldVersion, newVersion, versions.Aliases
+	return list, defaultVersion, oldVersion, newVersion, alias
 }

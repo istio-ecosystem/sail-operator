@@ -28,7 +28,7 @@ func TestInit(t *testing.T) {
 	assert.True(t, Old != "", "istioversions.Old should not be empty")
 	assert.True(t, New != "", "istioversions.New should not be empty")
 
-	assert.Equal(t, len(List)+len(AliasList), len(Map), "Map should be same size as List + Alias")
+	assert.LessOrEqual(t, len(List)+len(AliasList), len(Map), "Map should have at least as many entries as List + Alias")
 	for _, vi := range List {
 		assert.Equal(t, vi, Map[vi.Name])
 	}
@@ -39,33 +39,42 @@ func TestInit(t *testing.T) {
 
 func TestParseVersionsYaml_ValidYaml(t *testing.T) {
 	yamlBytes := []byte(`
-aliases:
-  - name: "latest"
-    ref: "2.0.0"
 versions:
-  - name: "1.0.0"
+  - version: 1.0.0
     repo: "repo1"
     commit: "commit1"
-  - name: "2.0.0"
+  - name: "latest"
+    version: 2.0.0
+  - version: 2.0.0
     repo: "repo2"
     commit: "commit2"
 `)
 
 	list, defaultVersion, oldVersion, newVersion, alias := mustParseVersionsYaml(yamlBytes)
 
+	Map = mustBuildVersionMap(alias, list)
+
 	assert.Len(t, list, 2)
-	assert.Equal(t, "1.0.0", defaultVersion)
-	assert.Equal(t, "2.0.0", oldVersion)
-	assert.Equal(t, "1.0.0", newVersion)
+	assert.Equal(t, "v1.0.0", defaultVersion)
+	assert.Equal(t, "v2.0.0", oldVersion)
+	assert.Equal(t, "v1.0.0", newVersion)
 	assert.Len(t, alias, 1)
 	assert.Equal(t, "latest", alias[0].Name)
-	assert.Equal(t, "2.0.0", alias[0].Ref)
+	assert.Equal(t, "v2.0.0", alias[0].Ref)
+
+	resolved, err := ResolveVersion("latest")
+	assert.NoError(t, err)
+	assert.Equal(t, "v2.0.0", resolved)
+
+	resolved, err = ResolveVersion("nonexistent-version")
+	assert.Error(t, err)
+	assert.Equal(t, "", resolved)
 }
 
 func TestParseVersionsYaml_SingleVersion(t *testing.T) {
 	yamlBytes := []byte(`
 versions:
-  - name: "1.0.0"
+  - version: 1.0.0
     repo: "repo1"
     commit: "commit1"
 `)
@@ -73,19 +82,18 @@ versions:
 	list, defaultVersion, oldVersion, newVersion, alias := mustParseVersionsYaml(yamlBytes)
 
 	assert.Len(t, list, 1)
-	assert.Equal(t, "1.0.0", defaultVersion)
+	assert.Equal(t, "v1.0.0", defaultVersion)
 	assert.Equal(t, "", oldVersion)
-	assert.Equal(t, "1.0.0", newVersion)
+	assert.Equal(t, "v1.0.0", newVersion)
 	assert.Len(t, alias, 0)
 }
 
 func TestParseVersionsYaml_InvalidAlias(t *testing.T) {
 	yamlBytes := []byte(`
-aliases:
-  - name: "1.0-latest"
-    ref: "nonexistent-version"
 versions:
-  - name: "1.0.0"
+  - name: "1.0-latest"
+    version: 1.0.0
+  - version: 2.0.0
     repo: "repo1"
     commit: "commit1"
 `)
