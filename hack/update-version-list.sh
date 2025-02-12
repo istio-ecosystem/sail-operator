@@ -32,8 +32,21 @@ function updateVersionsInIstioTypeComment() {
       -e "/\+sail:version/,/Version string/ s/(\/\/ \+kubebuilder:default=)(.*)/\1$defaultVersion/g" \
       -e "/\+sail:version/,/Version string/ s/(\/\/ \Must be one of:)(.*)/\1 $versions./g" \
       -e "s/(\+kubebuilder:default=.*version: \")[^\"]*\"/\1$defaultVersion\"/g" \
-      api/v1/istio_types.go api/v1/istiorevision_types.go api/v1/istiocni_types.go
-      
+      api/v1/istio_types.go api/v1/istiocni_types.go
+    
+    cniSelectValues=$(yq '.versions[]| select(. | has("commit")) | .name | ", \"urn:alm:descriptor:com.tectonic.ui:select:" + . + "\""' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | tr -d '\n')
+    cniVersionsEnum=$(yq '.versions[]| select(. | has("commit")) | .name' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | tr '\n' ';' | sed 's/;$//g')
+    cniVersions=$(yq '.versions[]| select(. | has("commit")) | .name' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | tr '\n' ',' | sed -e 's/,/, /g' -e 's/, $//g')
+
+
+    sed -i -E \
+      -e "/\+sail:version/,/Version string/ s/(\/\/ \+operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName=\"Istio Version\",xDescriptors=\{.*fieldGroup:General\")[^}]*(})/\1$cniSelectValues}/g" \
+      -e "/\+sail:version/,/Version string/ s/(\/\/ \+kubebuilder:validation:Enum=)(.*)/\1$cniVersionsEnum/g" \
+      -e "/\+sail:version/,/Version string/ s/(\/\/ \+kubebuilder:default=)(.*)/\1$defaultVersion/g" \
+      -e "/\+sail:version/,/Version string/ s/(\/\/ \Must be one of:)(.*)/\1 $cniVersions./g" \
+      -e "s/(\+kubebuilder:default=.*version: \")[^\"]*\"/\1$defaultVersion\"/g" \
+      api/v1/istiorevision_types.go
+
     # Ambient mode in Sail Operator is supported starting with Istio version 1.24+
     # TODO: Once support for versions prior to 1.24 is discontinued, we can merge the ztunnel specific changes below with the other components.
     ztunnelselectValues=$(yq '.versions[] | select(.version >= "1.24.0") | ", \"urn:alm:descriptor:com.tectonic.ui:select:" + .name + "\""' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | tr -d '\n')
