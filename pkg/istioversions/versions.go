@@ -90,21 +90,17 @@ func init() {
 
 func mustBuildVersionMap(alias []AliasInfo, list []VersionInfo) map[string]VersionInfo {
 	versionMap := make(map[string]VersionInfo)
+	lookup := make(map[string]VersionInfo)
 	for _, v := range list {
 		versionMap[v.Name] = v
-
-		name := fmt.Sprintf("v%s", v.Version.String())
-
-		if name != v.Name {
-			versionMap[name] = v
-		}
+		lookup[fmt.Sprintf("v%s", v.Version.String())] = v
 	}
 	for _, a := range alias {
-		v, ok := versionMap[a.Ref]
+		v, ok := lookup[a.Ref]
 		if !ok {
 			panic(fmt.Errorf("version %q not found", a.Ref))
 		}
-		(versionMap)[a.Name] = v
+		versionMap[a.Name] = v
 	}
 
 	return versionMap

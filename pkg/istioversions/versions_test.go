@@ -15,6 +15,8 @@
 package istioversions
 
 import (
+	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -28,12 +30,14 @@ func TestInit(t *testing.T) {
 	assert.True(t, Old != "", "istioversions.Old should not be empty")
 	assert.True(t, New != "", "istioversions.New should not be empty")
 
-	assert.LessOrEqual(t, len(List)+len(AliasList), len(Map), "Map should have at least as many entries as List + Alias")
+	assert.Equal(t, len(List)+len(AliasList), len(Map), "Map should have at least as many entries as List + Alias")
 	for _, vi := range List {
 		assert.Equal(t, vi, Map[vi.Name])
 	}
 	for _, ai := range AliasList {
-		assert.Equal(t, Map[ai.Ref], Map[ai.Name])
+		assert.Equal(t,
+			List[slices.IndexFunc(List, func(v VersionInfo) bool { return fmt.Sprintf("v%s", v.Version.String()) == ai.Ref })],
+			Map[ai.Name])
 	}
 }
 
