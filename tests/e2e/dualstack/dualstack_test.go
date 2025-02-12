@@ -279,8 +279,9 @@ spec:
 			By("Cleaning up the Istio namespace")
 			Expect(cl.Delete(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: controlPlaneNamespace}})).To(Succeed(), "Istio Namespace failed to be deleted")
 
-			By("Deleting any left-over Istio and IstioRevision resources")
-			Success("Resources deleted")
+			By("Cleaning up the IstioCNI namespace")
+			Expect(k.DeleteNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI Namespace failed to be deleted")
+
 			Success("Cleanup done")
 		})
 	})
