@@ -443,11 +443,10 @@ func TestApplyImageDigests(t *testing.T) {
 			version, err := istioversions.ResolveVersion(tc.input.Spec.Version)
 			if err != nil {
 				t.Errorf("failed to resolve version: %v", err)
-			} else {
-				result := applyImageDigests(version, tc.input.Spec.Values, tc.config)
-				if diff := cmp.Diff(tc.expectValues, result); diff != "" {
-					t.Errorf("unexpected merge result; diff (-expected, +actual):\n%v", diff)
-				}
+			}
+			result := applyImageDigests(version, tc.input.Spec.Values, tc.config)
+			if diff := cmp.Diff(tc.expectValues, result); diff != "" {
+				t.Errorf("unexpected merge result; diff (-expected, +actual):\n%v", diff)
 			}
 		})
 	}
