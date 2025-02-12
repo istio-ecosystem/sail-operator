@@ -51,8 +51,7 @@ func TestDetectFipsMode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			FipsEnableFilePath = tt.filepath
-			detectFipsMode(FipsEnableFilePath)
+			detectFipsMode(tt.filepath)
 			actual := FipsEnabled
 
 			if diff := cmp.Diff(tt.expectValue, actual); diff != "" {
