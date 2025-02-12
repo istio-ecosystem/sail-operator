@@ -15,29 +15,38 @@
 package istiovalues
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var (
 	FipsEnabled        bool
 	FipsEnableFilePath = "/proc/sys/crypto/fips_enabled"
+	log                = logf.FromContext(context.Background())
 )
 
-// DetectFipsMode checks if FIPS mode is enabled in the system.
-func DetectFipsMode() (bool, error) {
-	contents, err := os.ReadFile(FipsEnableFilePath)
+// detectFipsMode checks if FIPS mode is enabled in the system.
+func init() {
+	detectFipsMode(FipsEnableFilePath)
+}
+
+func detectFipsMode(filepath string) {
+	contents, err := os.ReadFile(filepath)
 	if err != nil {
-		return false, fmt.Errorf("failed to read file: %w", err)
+		fmt.Errorf("failed to read file: %w", err)
+		FipsEnabled = false
+	} else {
+		fipsEnabled := strings.TrimSuffix(string(contents), "\n")
+		if fipsEnabled == "1" {
+			log.Info("FIPS mode is enabled in the system.")
+			FipsEnabled = true
+		}
 	}
-	fipsEnabled := strings.TrimSuffix(string(contents), "\n")
-	if fipsEnabled == "1" {
-		FipsEnabled = true
-	}
-	return FipsEnabled, nil
 }
 
 // ApplyFipsValues sets value pilot.env.COMPLIANCE_POLICY if FIPS mode is enabled in the system.

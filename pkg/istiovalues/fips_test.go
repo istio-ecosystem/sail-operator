@@ -31,7 +31,6 @@ func TestDetectFipsMode(t *testing.T) {
 		name        string
 		filepath    string
 		expectValue bool
-		expectErr   bool
 	}{
 		{
 			name:        "FIPS not enabled",
@@ -47,22 +46,17 @@ func TestDetectFipsMode(t *testing.T) {
 			name:        "file not found",
 			filepath:    path.Join(resourceDir, "fips_not_found"),
 			expectValue: false,
-			expectErr:   true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			FipsEnableFilePath = tt.filepath
-			actual, err := DetectFipsMode()
-			if (err != nil) != tt.expectErr {
-				t.Errorf("DetectFipsMode() error = %v, expectErr %v", err, tt.expectErr)
-			}
+			detectFipsMode(FipsEnableFilePath)
+			actual := FipsEnabled
 
-			if err == nil {
-				if diff := cmp.Diff(tt.expectValue, actual); diff != "" {
-					t.Errorf("FipsEnabled variable wasn't applied properly; diff (-expected, +actual):\n%v", diff)
-				}
+			if diff := cmp.Diff(tt.expectValue, actual); diff != "" {
+				t.Errorf("FipsEnabled variable wasn't applied properly; diff (-expected, +actual):\n%v", diff)
 			}
 		})
 	}
