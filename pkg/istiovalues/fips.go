@@ -35,7 +35,6 @@ func init() {
 func detectFipsMode(filepath string) {
 	contents, err := os.ReadFile(filepath)
 	if err != nil {
-		fmt.Errorf("failed to read file: %w", err)
 		FipsEnabled = false
 	} else {
 		fipsEnabled := strings.TrimSuffix(string(contents), "\n")
