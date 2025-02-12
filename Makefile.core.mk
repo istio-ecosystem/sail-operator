@@ -48,12 +48,21 @@ GIT_STATUS := $(shell git diff-index --quiet HEAD -- 2> /dev/null; if [ "$$?" = 
 endif
 
 # Linker flags for the go builds
+CGO_ENABLED ?= 0
 GO_MODULE = github.com/istio-ecosystem/sail-operator
 LD_EXTRAFLAGS  = -X ${GO_MODULE}/pkg/version.buildVersion=${VERSION}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildGitRevision=${GIT_REVISION}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildTag=${GIT_TAG}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildStatus=${GIT_STATUS}
-LD_FLAGS = ${LD_EXTRAFLAGS} -s -w
+LD_EXTERNALFLAGS = -extldflags -static
+
+IS_FIPS_COMPLIANT ?= false # set to true for FIPS compliance
+ifeq ($(IS_FIPS_COMPLIANT), true)
+	CGO_ENABLED = 1
+	LD_EXTERNALFLAGS = 
+endif
+
+LD_FLAGS = ${LD_EXTERNALFLAGS} ${LD_EXTRAFLAGS} -s -w
 
 # Image hub to use
 HUB ?= quay.io/sail-dev
@@ -234,7 +243,7 @@ ifndef BUILDX
 define BUILDX
 .PHONY: build-$(1)
 build-$(1): ## Build sail-operator binary for specific architecture.
-	GOARCH=$(1) LDFLAGS="$(LD_FLAGS)" common/scripts/gobuild.sh $(REPO_ROOT)/out/$(TARGET_OS)_$(1)/sail-operator cmd/main.go
+	GOARCH=$(1) CGO_ENABLED=$(CGO_ENABLED) LDFLAGS="$(LD_FLAGS)" common/scripts/gobuild.sh $(REPO_ROOT)/out/$(TARGET_OS)_$(1)/sail-operator cmd/main.go
 
 .PHONY: build-all
 build-all: build-$(1)
