@@ -106,12 +106,12 @@ func validate(istio *v1.Istio) error {
 }
 
 func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1.Istio) error {
-	versionName, err := istioversions.ResolveVersion(istio.Spec.Version)
+	version, err := istioversions.ResolveVersion(istio.Spec.Version)
 	if err != nil {
 		return fmt.Errorf("version %q not found: %w", istio.Spec.Version, err)
 	}
 	values, err := revision.ComputeValues(
-		istio.Spec.Values, istio.Spec.Namespace, versionName,
+		istio.Spec.Values, istio.Spec.Namespace, version,
 		r.Config.Platform, r.Config.DefaultProfile, istio.Spec.Profile,
 		r.Config.ResourceDirectory, getActiveRevisionName(istio))
 	if err != nil {
@@ -120,7 +120,7 @@ func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1.Isti
 
 	return revision.CreateOrUpdate(ctx, r.Client,
 		getActiveRevisionName(istio),
-		versionName, istio.Spec.Namespace, values,
+		version, istio.Spec.Namespace, values,
 		metav1.OwnerReference{
 			APIVersion:         v1.GroupVersion.String(),
 			Kind:               v1.IstioKind,

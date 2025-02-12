@@ -440,11 +440,11 @@ func TestApplyImageDigests(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			versionName, err := istioversions.ResolveVersion(tc.input.Spec.Version)
+			version, err := istioversions.ResolveVersion(tc.input.Spec.Version)
 			if err != nil {
 				t.Errorf("failed to resolve version: %v", err)
 			} else {
-				result := applyImageDigests(versionName, tc.input.Spec.Values, tc.config)
+				result := applyImageDigests(version, tc.input.Spec.Values, tc.config)
 				if diff := cmp.Diff(tc.expectValues, result); diff != "" {
 					t.Errorf("unexpected merge result; diff (-expected, +actual):\n%v", diff)
 				}

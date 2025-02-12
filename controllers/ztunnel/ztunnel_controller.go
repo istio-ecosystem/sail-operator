@@ -136,7 +136,7 @@ func (r *Reconciler) installHelmChart(ctx context.Context, ztunnel *v1alpha1.ZTu
 		BlockOwnerDeletion: ptr.Of(true),
 	}
 
-	versionName, err := istioversions.ResolveVersion(ztunnel.Spec.Version)
+	version, err := istioversions.ResolveVersion(ztunnel.Spec.Version)
 	if err != nil {
 		return fmt.Errorf("failed to apply profile: %w", err)
 	}
@@ -157,7 +157,7 @@ func (r *Reconciler) installHelmChart(ctx context.Context, ztunnel *v1alpha1.ZTu
 
 	// apply userValues on top of defaultValues from profiles
 	mergedHelmValues, err := istiovalues.ApplyProfilesAndPlatform(
-		r.Config.ResourceDirectory, versionName, r.Config.Platform, r.Config.DefaultProfile, ztunnel.Spec.Profile, helm.FromValues(userValues))
+		r.Config.ResourceDirectory, version, r.Config.Platform, r.Config.DefaultProfile, ztunnel.Spec.Profile, helm.FromValues(userValues))
 	if err != nil {
 		return fmt.Errorf("failed to apply profile: %w", err)
 	}
@@ -171,19 +171,19 @@ func (r *Reconciler) installHelmChart(ctx context.Context, ztunnel *v1alpha1.ZTu
 		return fmt.Errorf("failed to apply user overrides: %w", err)
 	}
 
-	_, err = r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(versionName), finalHelmValues, ztunnel.Spec.Namespace, ztunnelChart, ownerReference)
+	_, err = r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(version), finalHelmValues, ztunnel.Spec.Namespace, ztunnelChart, ownerReference)
 	if err != nil {
 		return fmt.Errorf("failed to install/update Helm chart %q: %w", ztunnelChart, err)
 	}
 	return nil
 }
 
-func (r *Reconciler) getChartDir(versionName string) string {
-	return path.Join(r.Config.ResourceDirectory, versionName, "charts", ztunnelChart)
+func (r *Reconciler) getChartDir(version string) string {
+	return path.Join(r.Config.ResourceDirectory, version, "charts", ztunnelChart)
 }
 
-func applyImageDigests(versionName string, values *v1.ZTunnelValues, config config.OperatorConfig) *v1.ZTunnelValues {
-	imageDigests, digestsDefined := config.ImageDigests[versionName]
+func applyImageDigests(version string, values *v1.ZTunnelValues, config config.OperatorConfig) *v1.ZTunnelValues {
+	imageDigests, digestsDefined := config.ImageDigests[version]
 	// if we don't have default image digests defined for this version, it's a no-op
 	if !digestsDefined {
 		return values
