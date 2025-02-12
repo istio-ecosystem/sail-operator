@@ -15,19 +15,16 @@
 package istiovalues
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var (
 	FipsEnabled        bool
 	FipsEnableFilePath = "/proc/sys/crypto/fips_enabled"
-	log                = logf.FromContext(context.Background())
 )
 
 // detectFipsMode checks if FIPS mode is enabled in the system.
@@ -43,7 +40,6 @@ func detectFipsMode(filepath string) {
 	} else {
 		fipsEnabled := strings.TrimSuffix(string(contents), "\n")
 		if fipsEnabled == "1" {
-			log.Info("FIPS mode is enabled in the system.")
 			FipsEnabled = true
 		}
 	}
