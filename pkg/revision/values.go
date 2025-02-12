@@ -25,6 +25,7 @@ import (
 
 // ComputeValues computes the Istio Helm values for an IstioRevision as follows:
 // - applies image digests from the operator configuration
+// - applies vendor-specific default values
 // - applies the user-provided values on top of the default values from the default and user-selected profiles
 // - applies overrides that are not configurable by the user
 func ComputeValues(
@@ -34,6 +35,12 @@ func ComputeValues(
 ) (*v1.Values, error) {
 	// apply image digests from configuration, if not already set by user
 	userValues = istiovalues.ApplyDigests(version, userValues, config.Config)
+
+	// apply vendor-specific default values
+	userValues, err := istiovalues.ApplyVendorDefaults(version, userValues)
+	if err != nil {
+		return nil, fmt.Errorf("failed to apply vendor defaults: %w", err)
+	}
 
 	// apply userValues on top of defaultValues from profiles
 	mergedHelmValues, err := istiovalues.ApplyProfilesAndPlatform(resourceDir, version, platform, defaultProfile, userProfile, helm.FromValues(userValues))

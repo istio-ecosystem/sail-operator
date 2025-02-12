@@ -23,6 +23,7 @@ This document aims to provide an overview of the project and some information fo
     - [Writing Tests](#writing-tests)
     - [Integration Tests](#integration-tests)
     - [End-to-End Tests](#end-to-end-tests)
+    - [Vendor-specific changes](#vendor-specific-changes)
 - [Community Support and Contributing](#community-support-and-contributing)
 - [Sail Enhancement Proposal](#sail-enhancement-proposal)
 - [Issue management](#issue-management)
@@ -210,6 +211,18 @@ or
 ```sh
 make test.e2e.ocp
 ```
+
+### Vendor-specific changes
+
+As you might know, the Sail Operator project serves as the community upstream for the Red Hat OpenShift Service Mesh 3 operator. To accomodate any vendor-specific changes, we have a few places in the code base that allow for vendors to make downstream changes to the project with minimal conflicts. As a rule, these vendor-specific modifications should not include code changes, and they should be vendor-agnostic, ie if any other vendor wants to use them, they should be flexible enough to allow for doing that.
+
+#### versions.yaml
+
+The name of the versions.yaml file can be overwritten using the VERSIONS_YAML_FILE environment variable. This way, downstream vendors can point to a custom list of supported versions.
+
+#### vendor_defaults.yaml
+
+By modifying `pkg/istiovalues/vendor_defaults.yaml`, vendors can change some defaults for the helm values. Note that these are defaults, not overrides, so user input will always take precendence.
 
 ## Community Support and Contributing
 Please refer to the [CONTRIBUTING-SAIL-PROJECT.md](https://github.com/istio-ecosystem/sail-operator/blob/main/CONTRIBUTING.md) file for more information on how to contribute to the Sail Operator project. This file contains all the information you need to get started with contributing to the project.
