@@ -30,7 +30,6 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
-	"github.com/istio-ecosystem/sail-operator/pkg/istiovalues"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/version"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -162,14 +161,6 @@ func main() {
 		reconcilerCfg.DefaultProfile = "openshift"
 	} else {
 		reconcilerCfg.DefaultProfile = "default"
-	}
-
-	// Detect FIPS mode
-	if reconcilerCfg.Platform == config.PlatformOpenShift {
-		fipsEnabled, err := istiovalues.DetectFipsMode()
-		if err == nil && fipsEnabled {
-			setupLog.Info("FIPS mode is enabled in the system.")
-		}
 	}
 
 	err = istio.NewReconciler(reconcilerCfg, mgr.GetClient(), mgr.GetScheme()).
