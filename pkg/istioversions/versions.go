@@ -110,7 +110,7 @@ func mustBuildVersionMap(alias []AliasInfo, list []VersionInfo) map[string]Versi
 	return versionMap
 }
 
-func mustParseVersionsYaml(yamlBytes []byte) (list []VersionInfo, defaultVersion string, oldVersion string, newVersion string, alias []AliasInfo) {
+func mustParseVersionsYaml(yamlBytes []byte) (list []VersionInfo, defaultVersion string, oldVersion string, newVersion string, aliasList []AliasInfo) {
 	versions := Versions{}
 	err := yaml.Unmarshal(yamlBytes, &versions)
 	if err != nil {
@@ -121,17 +121,17 @@ func mustParseVersionsYaml(yamlBytes []byte) (list []VersionInfo, defaultVersion
 		if v.Commit != "" {
 			list = append(list, v)
 		} else {
-			alias = append(alias, AliasInfo{
+			aliasList = append(aliasList, AliasInfo{
 				Name: v.Name,
 				Ref:  fmt.Sprintf("v%s", v.Version.String()),
 			})
 		}
 	}
 
-	defaultVersion = list[0].Name
+	newVersion = list[0].Name
 	if len(list) > 1 {
 		oldVersion = list[1].Name
 	}
-	newVersion = list[0].Name
-	return list, defaultVersion, oldVersion, newVersion, alias
+	defaultVersion = newVersion
+	return list, defaultVersion, oldVersion, newVersion, aliasList
 }

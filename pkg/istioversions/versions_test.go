@@ -40,27 +40,29 @@ func TestInit(t *testing.T) {
 func TestParseVersionsYaml_ValidYaml(t *testing.T) {
 	yamlBytes := []byte(`
 versions:
-  - version: 1.0.0
+  - name: "v1.0.0"
+    version: 1.0.0
     repo: "repo1"
     commit: "commit1"
   - name: "latest"
     version: 2.0.0
-  - version: 2.0.0
+  - name: "v2.0.0"
+    version: 2.0.0
     repo: "repo2"
     commit: "commit2"
 `)
 
-	list, defaultVersion, oldVersion, newVersion, alias := mustParseVersionsYaml(yamlBytes)
+	list, defaultVersion, oldVersion, newVersion, aliasList := mustParseVersionsYaml(yamlBytes)
 
-	Map = mustBuildVersionMap(alias, list)
+	Map = mustBuildVersionMap(aliasList, list)
 
 	assert.Len(t, list, 2)
 	assert.Equal(t, "v1.0.0", defaultVersion)
 	assert.Equal(t, "v2.0.0", oldVersion)
 	assert.Equal(t, "v1.0.0", newVersion)
-	assert.Len(t, alias, 1)
-	assert.Equal(t, "latest", alias[0].Name)
-	assert.Equal(t, "v2.0.0", alias[0].Ref)
+	assert.Len(t, aliasList, 1)
+	assert.Equal(t, "latest", aliasList[0].Name)
+	assert.Equal(t, "v2.0.0", aliasList[0].Ref)
 
 	resolved, err := ResolveVersion("latest")
 	assert.NoError(t, err)
@@ -74,18 +76,19 @@ versions:
 func TestParseVersionsYaml_SingleVersion(t *testing.T) {
 	yamlBytes := []byte(`
 versions:
-  - version: 1.0.0
+  - name: "v1.0.0"
+    version: 1.0.0
     repo: "repo1"
     commit: "commit1"
 `)
 
-	list, defaultVersion, oldVersion, newVersion, alias := mustParseVersionsYaml(yamlBytes)
+	list, defaultVersion, oldVersion, newVersion, aliasList := mustParseVersionsYaml(yamlBytes)
 
 	assert.Len(t, list, 1)
 	assert.Equal(t, "v1.0.0", defaultVersion)
 	assert.Equal(t, "", oldVersion)
 	assert.Equal(t, "v1.0.0", newVersion)
-	assert.Len(t, alias, 0)
+	assert.Len(t, aliasList, 0)
 }
 
 func TestParseVersionsYaml_InvalidAlias(t *testing.T) {
@@ -93,14 +96,15 @@ func TestParseVersionsYaml_InvalidAlias(t *testing.T) {
 versions:
   - name: "1.0-latest"
     version: 1.0.0
-  - version: 2.0.0
+  - name: "v2.0.0"
+    version: 2.0.0
     repo: "repo1"
     commit: "commit1"
 `)
 
 	assert.Panics(t, func() {
-		list, _, _, _, alias := mustParseVersionsYaml(yamlBytes)
-		mustBuildVersionMap(alias, list)
+		list, _, _, _, aliasList := mustParseVersionsYaml(yamlBytes)
+		mustBuildVersionMap(aliasList, list)
 	})
 }
 
