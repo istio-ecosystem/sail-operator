@@ -17,21 +17,66 @@
 # This script is used to convert istio configuration to sail operator configuration.
 # In the end of the execution new yaml file will be created with "sail-ISTIO_CONFIG_YAML" name.
 # Usage: ./configuration-converter.sh ISTIO_CONFIG_YAML_WITH_PATH, example:  ./configuration-converter.sh sample_config.yaml"
-
 set -e
+# Default values
+NAMESPACE="istio-system"
+VERSION=""
+INPUT=""
+OUTPUT=""
 
-if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
-    echo "Usage: $0 <ISTIO_OPERATOR_CONFIG_YAML_WITH_PATH> <ISTIO_NAMESPACE> <ISTIO_VERSION>"
+# Function to show usage
+usage() {
+    echo "Usage: $0 -i <input> [-o <output>] [-n <namespace>] [-v <version>]"
+    echo "  -i <input>      : Input file (required)"
+    echo "  -o <output>     : Output file (optional, defaults to input's base directory with '-sail.yaml' suffix)"
+    echo "  -n <namespace>  : Namespace (optional, defaults to 'istio-system')"
+    echo "  -v <version>    : Version (optional)"
+    exit 1
+}
+
+# Parse command-line arguments
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -i)
+            INPUT="$2"
+            shift 2
+            ;;
+        -o)
+            OUTPUT="$2"
+            shift 2
+            ;;
+        -n)
+            NAMESPACE="$2"
+            shift 2
+            ;;
+        -v)
+            VERSION="$2"
+            shift 2
+            ;;
+        *)
+            usage
+            ;;
+    esac
+done
+
+# Ensure input file is provided
+if [[ -z "$INPUT" ]]; then
+    echo "Error: Input file is required."
+    usage
+fi
+
+# Set default output file if not provided. 
+if [[ -z "$OUTPUT" ]]; then
+    OUTPUT="$(dirname "$INPUT")/$(basename "$INPUT" .yaml)-sail.yaml"
+elif [[ -d "$OUTPUT" ]]; then 
+    echo "Error: OUTPUT must be a file, not a directory."
     exit 1
 fi
 
-WORKDIR=$(dirname "$1")
-ISTIO_CONFIG_FILE=$(basename "$1")
-ISTIO_VERSION="$2"
-ISTIO_NAMESPACE="$3"
-SAIL_CONFIG_FILE="sail-operator-config.yaml"
-
-cp "$WORKDIR"/"$ISTIO_CONFIG_FILE" "$SAIL_CONFIG_FILE" || exit 1
+if ! command -v yq &>/dev/null; then
+    echo "Error: 'yq' is not installed. Please install it before running the script."
+    exit 1
+fi
 
 function add_mandatory_fields(){
     yq -i eval ".apiVersion = \"sailoperator.io/v1\" 
@@ -39,39 +84,36 @@ function add_mandatory_fields(){
     | (select(.spec.meshConfig) | .spec.values.meshConfig) = .spec.meshConfig 
     | (select(.spec.values.istio_cni) | .spec.values.pilot.cni) = .spec.values.istio_cni 
     | .metadata.name = \"default\" 
-    | .spec.version = \"$ISTIO_VERSION\" 
-    | .spec.namespace = \"$ISTIO_NAMESPACE\" 
+    | .spec.version = \"$VERSION\" 
+    | .spec.namespace = \"$NAMESPACE\" 
     | del(.spec.values.istio_cni)
     | del(.spec.meshConfig)
     | del(.spec.hub) 
     | del(.spec.tag) 
-    | del(.spec.values.gateways)" "$SAIL_CONFIG_FILE"
+    | del(.spec.values.gateways)" "$OUTPUT"
 }
 
 #Convert boolean values to string if they are under *.env
 function boolean_2_string(){
     yq -i -e '(.spec.values.[].env.[] | select(. == true)) |= "true" 
-    | (.spec.values.[].env.[] | select(. == false)) |= "false"' "$SAIL_CONFIG_FILE" 
-    yq -i -e 'del(.. | select(tag == "!!seq" and length == 0))' "$SAIL_CONFIG_FILE"
+    | (.spec.values.[].env.[] | select(. == false)) |= "false"' "$OUTPUT" 
+    yq -i -e 'del(.. | select(tag == "!!seq" and length == 0))' "$OUTPUT"
 }
 
 # Note that if there is an entry except spec.components.<component>.enabled: true/false converter will delete them and warn user 
 function validate_spec_components(){
-    yq -i 'del(.spec.components.[] | keys[] | select(. != "enabled")) | .spec.values *= .spec.components | del (.spec.components)' $SAIL_CONFIG_FILE
-    echo "Converter can only be used values with spec.components.<component>.enabled: true/false. Please see https://github.com/istio-ecosystem/sail-operator/tree/main/docs#components-field"
-
+    yq -i 'del(.spec.components.[] | keys[] | select(. != "enabled")) | .spec.values *= .spec.components | del (.spec.components)' "$OUTPUT"
+    echo "Values only spec.components.<component>.enabled: true/false are supported for conversion. Please see https://github.com/istio-ecosystem/sail-operator/tree/main/docs#components-field"
 }
 
+# create output file
+cp "$INPUT" "$OUTPUT"
+
+# in-place edit created output file  
 add_mandatory_fields
 boolean_2_string
-if [[ $(yq eval '.spec.components' "$SAIL_CONFIG_FILE") != "null" ]]; then
+if [[ $(yq eval '.spec.components' "$OUTPUT") != "null" ]]; then
     validate_spec_components
 fi 
 
-chmod +x $SAIL_CONFIG_FILE
-
-if ! mv "$SAIL_CONFIG_FILE" "$WORKDIR" 2>&1 | grep -q "are identical"; then
-    true  
-fi
-
-echo "Sail configuration file created with name: ${SAIL_CONFIG_FILE}"   
+echo "Sail configuration file created with name: $(realpath "$OUTPUT")"

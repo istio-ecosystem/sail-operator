@@ -253,7 +253,7 @@ spec:
   values:
     pilot:
       traceSampling: 0.1
-  version: v1.23.2
+  version: v1.24.3
 ```
 
 Note that the only field that was added is the `spec.version` field. There are a few situations however where the APIs are different and require different approaches to achieve the same outcome.
@@ -294,7 +294,7 @@ spec:
     pilot:
       env:
         PILOT_ENABLE_STATUS: "true"
-  version: v1.24.0
+  version: v1.24.3
   namespace: istio-system
 ```
 
@@ -305,18 +305,30 @@ Note the quotes around the value of `spec.values.pilot.env.PILOT_ENABLE_STATUS`.
 Sail Operator's Istio resource does not have a `spec.components` field. Instead, you can enable and disable components directly by setting `spec.values.<component>.enabled: true/false`. Other functionality exposed through `spec.components` like the k8s overlays is not currently available.
 
 ### Converter Script
-This script is used to convert an Istio in-cluster operator configuration to a Sail Operator configuration. Upon execution, a new YAML file will be created in the same directory which ISTIO-OPERATOR-CONFIG-YAML is present. The new file will be named: sail-operator-config.yaml
+This script is used to convert an Istio in-cluster operator configuration to a Sail Operator configuration. Upon execution, the script takes an input YAML file and istio version and generates a sail operator configuration file.
 
 #### Usage
-To run the configuration-converter.sh script, you need to provide three arguments:
+To run the configuration-converter.sh script, you need to provide four arguments, two of which are mandatory. The script uses default values for the optional arguments:
 
-ISTIO_OPERATOR_CONFIG_YAML_WITH_PATH: Path to the Istio operator configuration YAML file.
-ISTIO_NAMESPACE: The Kubernetes namespace for the Istio deployment.
-ISTIO_VERSION: The version of Istio to be used.
+1. Input file path (-i <input>): The path to your Istio operator configuration YAML file (mandatory).
+2. Output file path (-o <output>): The path where the converted Sail configuration will be saved. If not provided, the script will save the output with -sail.yaml appended to the input file name.
+3. Namespace (-n <namespace>): The Kubernetes namespace for the Istio deployment. Defaults to istio-system if not provided.
+4. Version (-v <version>): The version of Istio to be used (mandatory).
 
-##### Example
 ```bash
-./tools/configuration-converter.sh tools/istio_config.yaml istio-system v1.24.3
+./tools/configuration-converter.sh -i /path/to/input.yaml -o [optional-output.yaml] -n [optional-namespace] -v [version]
+```
+
+##### Sample command with default namespace and output:
+
+```bash
+./tools/configuration-converter.sh -i /home/user/istio_config.yaml -v v1.24.3
+```
+
+##### Sample command with custom output and namespace:
+
+```bash
+./tools/configuration-converter.sh -i /home/user/input/istio_config.yaml -o /home/user/output/output.yaml -n custom-namespace -v v1.24.3
 ```
 
 > [!WARNING]
