@@ -147,24 +147,22 @@ func saveYamlToFile(input, istioFile string) error {
 
 func executeConfigConverter(input, output, controlPlaneNamespace, istioVersion string) error {
 	converter := filepath.Join(project.RootDir, "tools", "configuration-converter.sh")
-	args := []string{
-		converter,
-		"-i", input,
-		"-v", istioVersion,
-	}
+	args := []string{converter, input}
 
 	if output != "" {
-		args = append(args, "-o", output)
+		args = append(args, output)
 	}
 
 	if controlPlaneNamespace != "" {
 		args = append(args, "-n", controlPlaneNamespace)
 	}
 
+	args = append(args, "-v", istioVersion)
+
 	cmd := strings.Join(args, " ")
 	_, err := shell.ExecuteCommand(cmd)
 	if err != nil {
-		return fmt.Errorf("error in execution of %s -i %s -o %s -n %s -v %s: %w", converter, input, output, controlPlaneNamespace, istioVersion, err)
+		return fmt.Errorf("error in execution of %s %s %s -n %s -v %s: %w", converter, input, output, controlPlaneNamespace, istioVersion, err)
 	}
 	return nil
 }

@@ -18,6 +18,7 @@
 # In the end of the execution new yaml file will be created with "sail-ISTIO_CONFIG_YAML" name.
 # Usage: ./configuration-converter.sh ISTIO_CONFIG_YAML_WITH_PATH, example:  ./configuration-converter.sh sample_config.yaml"
 set -e
+
 # Default values
 NAMESPACE="istio-system"
 VERSION=""
@@ -26,25 +27,40 @@ OUTPUT=""
 
 # Function to show usage
 usage() {
-    echo "Usage: $0 -i <input> [-o <output>] [-n <namespace>] [-v <version>]"
-    echo "  -i <input>      : Input file (required)"
-    echo "  -o <output>     : Output file (optional, defaults to input's base directory with '-sail.yaml' suffix)"
+    echo "Usage: $0 <input> [output] [-n <namespace>] [-v <version>]"
+    echo "  <input>         : Input file (required)"
+    echo "  [output]        : Output file (optional, defaults to input's base directory with '-sail.yaml' suffix)"
     echo "  -n <namespace>  : Namespace (optional, defaults to 'istio-system')"
-    echo "  -v <version>    : Version (optional)"
+    echo "  -v <version>    : Istio Version (required)"
     exit 1
 }
 
-# Parse command-line arguments
+# Ensure input file is provided
+if [[ -z "$1" ]]; then
+    echo "Error: Input file is required."
+    usage
+fi
+
+INPUT="$1"
+OUTPUT="$2"
+
+# Shift parameters if output is provided
+if [[ -n "$OUTPUT" && "$OUTPUT" != -* ]]; then
+    shift 2
+else
+    OUTPUT="$(dirname "$INPUT")/$(basename "$INPUT" .yaml)-sail.yaml"
+    shift 1
+fi
+
+# Ensure output is not a directory
+if [[ -d "$OUTPUT" ]]; then 
+    echo "Error: OUTPUT must be a file, not a directory."
+    exit 1
+fi
+
+# Parse optional namespace and version arguments
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        -i)
-            INPUT="$2"
-            shift 2
-            ;;
-        -o)
-            OUTPUT="$2"
-            shift 2
-            ;;
         -n)
             NAMESPACE="$2"
             shift 2
@@ -59,18 +75,9 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Ensure input file is provided
-if [[ -z "$INPUT" ]]; then
-    echo "Error: Input file is required."
+if [[ -z "$VERSION" ]]; then
+    echo "Error: Version (-v) is required."
     usage
-fi
-
-# Set default output file if not provided. 
-if [[ -z "$OUTPUT" ]]; then
-    OUTPUT="$(dirname "$INPUT")/$(basename "$INPUT" .yaml)-sail.yaml"
-elif [[ -d "$OUTPUT" ]]; then 
-    echo "Error: OUTPUT must be a file, not a directory."
-    exit 1
 fi
 
 if ! command -v yq &>/dev/null; then
@@ -103,7 +110,7 @@ function boolean_2_string(){
 # Note that if there is an entry except spec.components.<component>.enabled: true/false converter will delete them and warn user 
 function validate_spec_components(){
     yq -i 'del(.spec.components.[] | keys[] | select(. != "enabled")) | .spec.values *= .spec.components | del (.spec.components)' "$OUTPUT"
-    echo "Values only spec.components.<component>.enabled: true/false are supported for conversion. Please see https://github.com/istio-ecosystem/sail-operator/tree/main/docs#components-field"
+    echo "Only values in the format spec.components.<component>.enabled: true/false are supported for conversion. For more details, refer to the documentation: https://github.com/istio-ecosystem/sail-operator/tree/main/docs#components-field"
 }
 
 # create output file
