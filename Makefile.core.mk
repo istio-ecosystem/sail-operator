@@ -48,21 +48,20 @@ GIT_STATUS := $(shell git diff-index --quiet HEAD -- 2> /dev/null; if [ "$$?" = 
 endif
 
 # Linker flags for the go builds
-CGO_ENABLED ?= 0
 GO_MODULE = github.com/istio-ecosystem/sail-operator
 LD_EXTRAFLAGS  = -X ${GO_MODULE}/pkg/version.buildVersion=${VERSION}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildGitRevision=${GIT_REVISION}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildTag=${GIT_TAG}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildStatus=${GIT_STATUS}
-LD_EXTERNALFLAGS = -extldflags -static
 
 IS_FIPS_COMPLIANT ?= false # set to true for FIPS compliance
 ifeq ($(IS_FIPS_COMPLIANT), true)
 	CGO_ENABLED = 1
-	LD_EXTERNALFLAGS = 
+	LD_FLAGS = ${LD_EXTRAFLAGS} -s -w
+else
+	CGO_ENABLED = 0
+	LD_FLAGS = -extldflags -static ${LD_EXTRAFLAGS} -s -w
 endif
-
-LD_FLAGS = ${LD_EXTERNALFLAGS} ${LD_EXTRAFLAGS} -s -w
 
 # Image hub to use
 HUB ?= quay.io/sail-dev
