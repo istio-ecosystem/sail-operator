@@ -48,6 +48,12 @@ func ComputeValues(
 		return nil, fmt.Errorf("failed to apply profile: %w", err)
 	}
 
+	// apply FipsValues on top of mergedHelmValues from profile
+	mergedHelmValues, err = istiovalues.ApplyFipsValues(mergedHelmValues)
+	if err != nil {
+		return nil, fmt.Errorf("failed to apply FIPS values: %w", err)
+	}
+
 	values, err := helm.ToValues(mergedHelmValues, &v1.Values{})
 	if err != nil {
 		return nil, fmt.Errorf("conversion to Helm values failed: %w", err)
