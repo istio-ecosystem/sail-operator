@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
@@ -28,47 +29,39 @@ import (
 
 var (
 	controlPlaneNamespace = "istio-system"
-	// Test converter with latest istio version
-	istioVersion = supportedversion.List[len(supportedversion.List)-1].Name
+	istioVersion          = supportedversion.Default
+	istioFile             = filepath.Join(project.RootDir, "tools", "istioConfig.yaml")
+	sailFile              = filepath.Join(project.RootDir, "tools", "istioConfig-sail.yaml")
 )
 
-func TestSimpleYamlConversion(t *testing.T) {
-	g := NewWithT(t)
-
-	istioYamlText := `apiVersion: install.istio.io/v1alpha1
+func TestConversion(t *testing.T) {
+	t.Cleanup(func() {
+		os.Remove(istioFile)
+		os.Remove(sailFile)
+	})
+	testcases := []struct {
+		name           string
+		input          string
+		expectedOutput string
+	}{
+		{
+			name: "simple",
+			input: `apiVersion: install.istio.io/v1alpha1
 kind: IstioOperator
 metadata:
   name: default
-spec:`
-
-	sailYamlText := `apiVersion: sailoperator.io/v1
+spec:`,
+			expectedOutput: `apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: default
 spec:
   version: %s
-  namespace: %s`
-	sailYamlText = fmt.Sprintf(sailYamlText, istioVersion, controlPlaneNamespace)
-
-	istioYamlFileWithPath, err := saveYamlToFile(istioYamlText)
-	g.Expect(err).To(Succeed(), "failed to write YAML file")
-
-	g.Expect(executeConfigConverter(istioYamlFileWithPath, controlPlaneNamespace, istioVersion)).To(Succeed(),
-		"error in execution of ./configuration-converter.sh")
-	isConversionValidated, err := validateYamlContent(sailYamlText)
-	g.Expect(err).To(Succeed(), "Can not open file to compare")
-	g.Expect(isConversionValidated).To(BeTrue(), "Converted content is not as expected")
-
-	err = os.Remove(filepath.Join(project.RootDir, "tools", "istioConfig.yaml"))
-	g.Expect(err).To(Succeed(), "Unable to delete istioConfig.yaml")
-	err = os.Remove(filepath.Join(project.RootDir, "tools", "sail-operator-config.yaml"))
-	g.Expect(err).To(Succeed(), "Unable to delete sail-operator-config.yaml")
-}
-
-func TestComplexYamlConversion(t *testing.T) {
-	g := NewWithT(t)
-
-	istioYamlText := `apiVersion: install.istio.io/v1alpha1
+  namespace: %s`,
+		},
+		{
+			name: "complex",
+			input: `apiVersion: install.istio.io/v1alpha1
 kind: IstioOperator
 metadata:
   name: default
@@ -87,9 +80,8 @@ spec:
       enableCRDTemplates: true
     pilot:
       env:
-        PILOT_ENABLE_STATUS: true`
-
-	sailYamlText := `apiVersion: sailoperator.io/v1
+        PILOT_ENABLE_STATUS: true`,
+			expectedOutput: `apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: default
@@ -107,63 +99,88 @@ spec:
         PILOT_ENABLE_STATUS: "true"
       enabled: false
   version: %s
-  namespace: %s`
-	sailYamlText = fmt.Sprintf(sailYamlText, istioVersion, controlPlaneNamespace)
-
-	istioYamlFileWithPath, err := saveYamlToFile(istioYamlText)
-	g.Expect(err).To(Succeed(), "failed to write YAML file")
-
-	g.Expect(executeConfigConverter(istioYamlFileWithPath, controlPlaneNamespace, istioVersion)).To(Succeed(),
-		"error in execution of ./configuration-converter.sh")
-	isConversionValidated, err := validateYamlContent(sailYamlText)
-	g.Expect(err).To(Succeed(), "Can not open file to compare")
-	g.Expect(isConversionValidated).To(BeTrue(), "Converted content is not as expected")
-
-	err = os.Remove(filepath.Join(project.RootDir, "tools", "istioConfig.yaml"))
-	g.Expect(err).To(Succeed(), "Unable to delete istioConfig.yaml")
-	err = os.Remove(filepath.Join(project.RootDir, "tools", "sail-operator-config.yaml"))
-	g.Expect(err).To(Succeed(), "Unable to delete sail-operator-config.yaml")
-}
-
-// saveYamlToFile writes the given YAML content to IstioConfig.yaml
-func saveYamlToFile(yamlText string) (string, error) {
-	// Create file in the same directory with the converter
-	istioYamlFile := "istioConfig.yaml"
-	istioYamlFileWithPath := filepath.Join(project.RootDir, "tools", istioYamlFile)
-
-	// Write to file
-	if err := os.WriteFile(istioYamlFileWithPath, []byte(yamlText), 0o644); err != nil {
-		return "", fmt.Errorf("failed to write YAML file: %w", err)
+  namespace: %s`,
+		},
+		{
+			name: "mandatory-arguments-only",
+			input: `apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: default
+spec:`,
+			expectedOutput: `apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  version: %s
+  namespace: %s`,
+		},
 	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			err := saveYamlToFile(tc.input, istioFile)
+			g.Expect(err).To(Succeed(), "failed to write YAML file")
 
-	return istioYamlFileWithPath, nil
+			if tc.name == "mandatory-arguments-only" {
+				g.Expect(executeConfigConverter(istioFile, "", "", istioVersion)).To(Succeed(), "error in execution of ./configuration-converter.sh")
+			} else {
+				g.Expect(executeConfigConverter(istioFile, sailFile, controlPlaneNamespace,
+					istioVersion)).To(Succeed(), "error in execution of ./configuration-converter.sh")
+			}
+			tc.expectedOutput = fmt.Sprintf(tc.expectedOutput, istioVersion, controlPlaneNamespace)
+			isConversionValidated, err := validateYamlContent(tc.expectedOutput, sailFile)
+			g.Expect(err).To(Succeed(), "Can not open file to compare")
+			g.Expect(isConversionValidated).To(BeTrue(), "Converted content is not as expected")
+		})
+	}
 }
 
-func executeConfigConverter(istioYamlFilePath, istioVersion, controlPlaneNamespace string) error {
-	// Define file path
-	configConverterPath := filepath.Join(project.RootDir, "tools", "configuration-converter.sh")
-
-	_, err := shell.ExecuteBashScript(configConverterPath, istioYamlFilePath, controlPlaneNamespace, istioVersion)
-	if err != nil {
-		return fmt.Errorf("error in execution of %s %s %s %s: %w", configConverterPath, istioYamlFilePath, controlPlaneNamespace, istioVersion, err)
+// saveYamlToFile writes the given YAML content to given file
+func saveYamlToFile(input, istioFile string) error {
+	if err := os.WriteFile(istioFile, []byte(input), 0o644); err != nil {
+		return fmt.Errorf("failed to write YAML file: %w", err)
 	}
 	return nil
 }
 
-// compareYamlContent checks if the provided YAML string matches the content of converted config
-func validateYamlContent(yamlString string) (bool, error) {
-	sailYamlWithPath := filepath.Join(project.RootDir, "tools", "sail-operator-config.yaml")
+func executeConfigConverter(input, output, controlPlaneNamespace, istioVersion string) error {
+	converter := filepath.Join(project.RootDir, "tools", "configuration-converter.sh")
+	args := []string{
+		converter,
+		"-i", input,
+		"-v", istioVersion,
+	}
 
+	if output != "" {
+		args = append(args, "-o", output)
+	}
+
+	if controlPlaneNamespace != "" {
+		args = append(args, "-n", controlPlaneNamespace)
+	}
+
+	cmd := strings.Join(args, " ")
+	_, err := shell.ExecuteCommand(cmd)
+	if err != nil {
+		return fmt.Errorf("error in execution of %s -i %s -o %s -n %s -v %s: %w", converter, input, output, controlPlaneNamespace, istioVersion, err)
+	}
+	return nil
+}
+
+// compareYamlContent checks if the provided YAML content matches the content of converted sail operator config
+func validateYamlContent(expectedOutput, sailFile string) (bool, error) {
 	// Write the input YAML string to a temporary file
 	tmpFile := filepath.Join(project.RootDir, "tools", "temp.yaml")
-	err := os.WriteFile(tmpFile, []byte(yamlString), 0o644)
+	err := os.WriteFile(tmpFile, []byte(expectedOutput), 0o644)
 	if err != nil {
 		return false, fmt.Errorf("failed to write temporary YAML file: %w", err)
 	}
 	defer os.Remove(tmpFile)
 
 	// The command will check if the files are equal, ignoring order
-	cmd := fmt.Sprintf("diff <(yq -P 'sort_keys(..)' -o=props %s) <(yq -P 'sort_keys(..)' -o=props %s)", sailYamlWithPath, tmpFile)
+	cmd := fmt.Sprintf("diff <(yq -P 'sort_keys(..)' -o=props %s) <(yq -P 'sort_keys(..)' -o=props %s)", sailFile, tmpFile)
 	output, err := shell.ExecuteCommand(cmd)
 	if err != nil {
 		return false, fmt.Errorf("error executing yq comparison: %w", err)
