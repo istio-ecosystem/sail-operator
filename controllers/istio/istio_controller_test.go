@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"runtime/debug"
+	"strings"
 	"testing"
 	"time"
 
@@ -127,7 +128,8 @@ func TestReconcile(t *testing.T) {
 		istio := &v1.Istio{
 			ObjectMeta: objectMeta,
 			Spec: v1.IstioSpec{
-				Version: "my-version",
+				Version:   "my-version",
+				Namespace: "istio-system",
 			},
 		}
 
@@ -155,6 +157,10 @@ func TestReconcile(t *testing.T) {
 		reconciledCond := istio.Status.GetCondition(v1.IstioConditionReconciled)
 		if reconciledCond.Status != metav1.ConditionFalse {
 			t.Errorf("Expected Reconciled condition status to be %q, but got %q", metav1.ConditionFalse, reconciledCond.Status)
+		}
+
+		if !strings.Contains(reconciledCond.Message, "version \"my-version\" not found") {
+			t.Errorf("Expected Reconciled condition message to contain %q, but got %q", "version \"my-version\" not found", reconciledCond.Message)
 		}
 
 		readyCond := istio.Status.GetCondition(v1.IstioConditionReady)
