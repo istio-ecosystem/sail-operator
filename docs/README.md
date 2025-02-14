@@ -308,24 +308,24 @@ Sail Operator's Istio resource does not have a `spec.components` field. Instead,
 This script is used to convert an Istio in-cluster operator configuration to a Sail Operator configuration. Upon execution, the script takes an input YAML file and istio version and generates a sail operator configuration file.
 
 #### Usage
-To run the configuration-converter.sh script, you need to provide four arguments, two of which are required:
+To run the configuration-converter.sh script, you need to provide four arguments, only input file is required other arguments are optional:
 
 1. Input file path (<input>): The path to your Istio operator configuration YAML file (required).
 2. Output file path (<output>): The path where the converted Sail configuration will be saved. If not provided, the script will save the output with -sail.yaml appended to the input file name.
 3. Namespace (-n <namespace>): The Kubernetes namespace for the Istio deployment. Defaults to istio-system if not provided.
-4. Version (-v <version>): The version of Istio to be used (required).
+4. Version (-v <version>): The version of Istio to be used. If not provided, the `spec.version` field will be omitted from the output file and the operator will deploy the latest version when the YAML manifest is applied.
 
 ```bash
-./tools/configuration-converter.sh /path/to/input.yaml [optional-output.yaml] -n [optional-namespace] -v [version]
+./tools/configuration-converter.sh /path/to/input.yaml [optional-output.yaml] -n [optional-namespace] -v [optional-version]
 ```
 
-##### Sample command with default namespace and output:
+##### Sample command only with input file:
 
 ```bash
-./tools/configuration-converter.sh /home/user/istio_config.yaml -v v1.24.3
+./tools/configuration-converter.sh /home/user/istio_config.yaml
 ```
 
-##### Sample command with custom output and namespace:
+##### Sample command with custom output, namespace, and version:
 
 ```bash
 ./tools/configuration-converter.sh /home/user/input/istio_config.yaml /home/user/output/output.yaml -n custom-namespace -v v1.24.3

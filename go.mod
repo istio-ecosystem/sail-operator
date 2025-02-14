@@ -23,6 +23,7 @@ require (
 	golang.org/x/text v0.21.0
 	golang.org/x/tools v0.29.0
 	gomodules.xyz/jsonpatch/v2 v2.4.0
+	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.17.0
 	istio.io/client-go v1.25.0-alpha.0.0.20250210220843-5a4065fded65
@@ -176,7 +177,6 @@ require (
 	google.golang.org/protobuf v1.36.4 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gotest.tools/v3 v3.5.1 // indirect
 	istio.io/api v1.25.0-alpha.0.0.20250210220544-0b64afd2de85 // indirect
 	k8s.io/apiserver v0.32.1 // indirect
