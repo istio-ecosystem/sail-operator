@@ -87,25 +87,14 @@ func init() {
 	List, Default, Old, New, Map, AliasList = mustParseVersionsYaml(data)
 }
 
-func mustBuildVersionMap(alias []AliasInfo, list []VersionInfo) map[string]VersionInfo {
-	versionMap := make(map[string]VersionInfo)
-	lookup := make(map[string]VersionInfo)
-	for _, v := range list {
-		versionMap[v.Name] = v
-		lookup[fmt.Sprintf("v%s", v.Version.String())] = v
-	}
-	for _, a := range alias {
-		v, ok := lookup[a.Ref]
-		if !ok {
-			panic(fmt.Errorf("version %q not found", a.Ref))
-		}
-		versionMap[a.Name] = v
-	}
-
-	return versionMap
-}
-
-func mustParseVersionsYaml(yamlBytes []byte) (list []VersionInfo, defaultVersion string, oldVersion string, newVersion string, versionMap map[string]VersionInfo, aliasList []AliasInfo) {
+func mustParseVersionsYaml(yamlBytes []byte) (
+	list []VersionInfo,
+	defaultVersion string,
+	oldVersion string,
+	newVersion string,
+	versionMap map[string]VersionInfo,
+	aliasList []AliasInfo,
+) {
 	versions := Versions{}
 	err := yaml.Unmarshal(yamlBytes, &versions)
 	if err != nil {
