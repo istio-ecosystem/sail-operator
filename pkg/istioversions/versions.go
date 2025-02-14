@@ -45,6 +45,7 @@ type AliasInfo struct {
 // VersionInfo contains information about a specific Istio version
 type VersionInfo struct {
 	Name    string          `json:"name"`
+	Ref     *semver.Version `json:"ref"`
 	Version *semver.Version `json:"version"`
 	Repo    string          `json:"repo"`
 	Branch  string          `json:"branch,omitempty"`
@@ -114,12 +115,15 @@ func mustParseVersionsYaml(yamlBytes []byte) (list []VersionInfo, defaultVersion
 	}
 
 	for _, v := range versions.Versions {
-		if v.Commit != "" {
+		if v.Ref == nil {
 			list = append(list, v)
 		} else {
+			if v.Version != nil || v.Repo != "" || v.Commit != "" || v.Branch != "" || len(v.Charts) > 0 {
+				panic(fmt.Errorf("version %q has aliasFor set but the other fields cannot be specified", v.Name))
+			}
 			aliasList = append(aliasList, AliasInfo{
 				Name: v.Name,
-				Ref:  fmt.Sprintf("v%s", v.Version.String()),
+				Ref:  fmt.Sprintf("v%s", v.Ref.String()),
 			})
 		}
 	}

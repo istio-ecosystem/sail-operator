@@ -30,7 +30,7 @@ func TestInit(t *testing.T) {
 	assert.True(t, Old != "", "istioversions.Old should not be empty")
 	assert.True(t, New != "", "istioversions.New should not be empty")
 
-	assert.Equal(t, len(List)+len(AliasList), len(Map), "Map should have at least as many entries as List + Alias")
+	assert.Equal(t, len(List)+len(AliasList), len(Map), "Map should have at least as many entries as List + Aliases")
 	for _, vi := range List {
 		assert.Equal(t, vi, Map[vi.Name])
 	}
@@ -49,7 +49,7 @@ versions:
     repo: "repo1"
     commit: "commit1"
   - name: "latest"
-    version: 2.0.0
+    ref: 2.0.0
   - name: "v2.0.0"
     version: 2.0.0
     repo: "repo2"
@@ -99,7 +99,25 @@ func TestParseVersionsYaml_InvalidAlias(t *testing.T) {
 	yamlBytes := []byte(`
 versions:
   - name: "1.0-latest"
-    version: 1.0.0
+    ref: 1.0.0
+  - name: "v2.0.0"
+    version: 2.0.0
+    repo: "repo1"
+    commit: "commit1"
+`)
+
+	assert.Panics(t, func() {
+		list, _, _, _, aliasList := mustParseVersionsYaml(yamlBytes)
+		mustBuildVersionMap(aliasList, list)
+	})
+}
+
+func TestParseVersionsYaml_InvalidAliasWithOtherFields(t *testing.T) {
+	yamlBytes := []byte(`
+versions:
+  - name: "2.0-latest"
+    ref: 2.0.0
+    repo: "should-not-have-this"
   - name: "v2.0.0"
     version: 2.0.0
     repo: "repo1"
