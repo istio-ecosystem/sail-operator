@@ -874,6 +874,47 @@ func TestGetPruningGracePeriod(t *testing.T) {
 	}
 }
 
+func TestManagesExternalRevision(t *testing.T) {
+	tests := []struct {
+		name     string
+		spec     v1.IstioSpec
+		expected bool
+	}{
+		{
+			name:     "Empty spec.values does not manage",
+			spec:     v1.IstioSpec{},
+			expected: false,
+		},
+		{
+			name:     "Empty spec.values.pilot does not manage",
+			spec:     v1.IstioSpec{Values: &v1.Values{}},
+			expected: false,
+		},
+		{
+			name:     "Empty spec.values.pilot.env does not manage",
+			spec:     v1.IstioSpec{Values: &v1.Values{Pilot: &v1.PilotConfig{}}},
+			expected: false,
+		},
+		{
+			name:     "env with EXTERNAL_ISTIOD=true does manage",
+			spec:     v1.IstioSpec{Values: &v1.Values{Pilot: &v1.PilotConfig{Env: map[string]string{"EXTERNAL_ISTIOD": "true"}}}},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			istio := &v1.Istio{
+				Spec: tt.spec,
+			}
+			got := managesExternalRevision(istio)
+			if got != tt.expected {
+				t.Errorf("managesExternalRevision() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
 func Must(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {
