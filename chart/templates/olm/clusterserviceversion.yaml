@@ -3,6 +3,12 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
+  labels:
+{{- if .Values.csv.labels }}
+{{- range $key, $val := .Values.csv.labels }}
+    {{ $key | quote }}: {{ $val | quote }}
+{{- end}}
+{{- end}}
   annotations:
     alm-examples: '[]'
     capabilities: {{ .Values.csv.capabilities }}

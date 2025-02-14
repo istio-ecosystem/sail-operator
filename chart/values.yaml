@@ -34,6 +34,11 @@ csv:
   - istio
   - servicemesh
   - envoy
+  labels:
+    operatorframework.io/arch.amd64: supported
+    operatorframework.io/arch.s390x: supported
+    operatorframework.io/arch.ppc64le: supported
+    operatorframework.io/arch.arm64: supported
   annotations: 
     features.operators.openshift.io/disconnected: "true"
     features.operators.openshift.io/fips-compliant: "false"
