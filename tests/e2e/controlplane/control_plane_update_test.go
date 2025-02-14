@@ -299,6 +299,24 @@ spec:
 					Success("IstioRevisionTag points to the new IstioRevision")
 				})
 			})
+
+			AfterAll(func(ctx SpecContext) {
+				if CurrentSpecReport().Failed() {
+					common.LogDebugInfo(common.ControlPlane, k)
+					debugInfoLogged = true
+				}
+
+				By("Cleaning up sample namespace")
+				Expect(k.DeleteNamespace(sampleNamespace)).To(Succeed(), "Sample Namespace failed to be deleted")
+
+				By("Cleaning up the Istio namespace")
+				Expect(k.DeleteNamespace(controlPlaneNamespace)).To(Succeed(), "Istio Namespace failed to be deleted")
+
+				By("Cleaning up the IstioCNI namespace")
+				Expect(k.DeleteNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI Namespace failed to be deleted")
+
+				Success("Cleanup done")
+			})
 		})
 
 		AfterAll(func() {
