@@ -12,6 +12,11 @@ service:
   port: 8443
 serviceAccountName: servicemesh-operator3
 csv:
+  labels:
+    operatorframework.io/arch.amd64: supported
+    operatorframework.io/arch.arm64: supported
+    operatorframework.io/arch.ppc64le: supported
+    operatorframework.io/arch.s390x: supported
   annotations:
     operators.openshift.io/valid-subscription: '["OpenShift Container Platform", "OpenShift Platform Plus"]'
   displayName: Red Hat OpenShift Service Mesh 3
