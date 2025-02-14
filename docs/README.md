@@ -316,7 +316,7 @@ To run the configuration-converter.sh script, you need to provide four arguments
 4. Version (-v <version>): The version of Istio to be used. If not provided, the `spec.version` field will be omitted from the output file and the operator will deploy the latest version when the YAML manifest is applied.
 
 ```bash
-./tools/configuration-converter.sh /path/to/input.yaml [optional-output.yaml] -n [optional-namespace] -v [optional-version]
+./tools/configuration-converter.sh /path/to/input.yaml [optional-output.yaml] [-n optional-namespace] [-v optional-version]
 ```
 
 ##### Sample command only with input file:
