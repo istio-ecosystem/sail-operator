@@ -46,7 +46,7 @@ var (
 	k kubectl.Kubectl
 )
 
-func TestInstall(t *testing.T) {
+func TestControlPlane(t *testing.T) {
 	if ipFamily == "dual" || multicluster {
 		t.Skip("Skipping the control plane tests")
 	}
