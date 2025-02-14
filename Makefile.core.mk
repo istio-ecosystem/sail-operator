@@ -53,7 +53,15 @@ LD_EXTRAFLAGS  = -X ${GO_MODULE}/pkg/version.buildVersion=${VERSION}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildGitRevision=${GIT_REVISION}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildTag=${GIT_TAG}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildStatus=${GIT_STATUS}
-LD_FLAGS = -extldflags -static ${LD_EXTRAFLAGS} -s -w
+
+IS_FIPS_COMPLIANT ?= false # set to true for FIPS compliance
+ifeq ($(IS_FIPS_COMPLIANT), true)
+	CGO_ENABLED = 1
+	LD_FLAGS = ${LD_EXTRAFLAGS} -s -w
+else
+	CGO_ENABLED = 0
+	LD_FLAGS = -extldflags -static ${LD_EXTRAFLAGS} -s -w
+endif
 
 # Image hub to use
 HUB ?= quay.io/sail-dev
@@ -234,7 +242,7 @@ ifndef BUILDX
 define BUILDX
 .PHONY: build-$(1)
 build-$(1): ## Build sail-operator binary for specific architecture.
-	GOARCH=$(1) LDFLAGS="$(LD_FLAGS)" common/scripts/gobuild.sh $(REPO_ROOT)/out/$(TARGET_OS)_$(1)/sail-operator cmd/main.go
+	GOARCH=$(1) CGO_ENABLED=$(CGO_ENABLED) LDFLAGS="$(LD_FLAGS)" common/scripts/gobuild.sh $(REPO_ROOT)/out/$(TARGET_OS)_$(1)/sail-operator cmd/main.go
 
 .PHONY: build-all
 build-all: build-$(1)
