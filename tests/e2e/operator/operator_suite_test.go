@@ -40,7 +40,7 @@ var (
 	k kubectl.Kubectl
 )
 
-func TestInstall(t *testing.T) {
+func TestOperator(t *testing.T) {
 	if multicluster {
 		t.Skip("Skipping test for multicluster")
 	}
