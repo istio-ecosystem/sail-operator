@@ -91,7 +91,22 @@ func (r *Reconciler) doReconcile(ctx context.Context, istio *v1.Istio) (result c
 		return ctrl.Result{}, err
 	}
 
-	return revision.PruneInactive(ctx, r.Client, istio.UID, getActiveRevisionName(istio), getPruningGracePeriod(istio))
+	// We cannot prune revisions that manage an external cluster because the operator currently
+	// has no way of knowing if the revision is still in use on the external cluster.
+	if !managesExternalRevision(istio) {
+		return revision.PruneInactive(ctx, r.Client, istio.UID, getActiveRevisionName(istio), getPruningGracePeriod(istio))
+	}
+
+	return
+}
+
+func managesExternalRevision(istio *v1.Istio) bool {
+	if values := istio.Spec.Values; values != nil {
+		if pilot := values.Pilot; pilot != nil {
+			return pilot.Env["EXTERNAL_ISTIOD"] == "true"
+		}
+	}
+	return false
 }
 
 func validate(istio *v1.Istio) error {
