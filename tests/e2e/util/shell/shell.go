@@ -34,7 +34,7 @@ func ExecuteCommand(command string) (string, error) {
 
 // ExecuteShell executes a command given the input string and returns the output and err if any
 func ExecuteShell(command string, input string) (string, error) {
-	cmd := exec.Command("bash", "-c", command)
+	cmd := exec.Command("sh", "-c", command)
 	if input != "" {
 		cmd.Stdin = strings.NewReader(input)
 	}

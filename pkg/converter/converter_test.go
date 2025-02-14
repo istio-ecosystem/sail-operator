@@ -21,10 +21,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/shell"
 	. "github.com/onsi/gomega"
+	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -35,14 +37,11 @@ var (
 )
 
 func TestConversion(t *testing.T) {
-	t.Cleanup(func() {
-		os.Remove(istioFile)
-		os.Remove(sailFile)
-	})
 	testcases := []struct {
 		name           string
 		input          string
 		expectedOutput string
+		converterArgs  string
 	}{
 		{
 			name: "simple",
@@ -51,13 +50,14 @@ kind: IstioOperator
 metadata:
   name: default
 spec:`,
-			expectedOutput: `apiVersion: sailoperator.io/v1
+			expectedOutput: fmt.Sprintf(`apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: default
 spec:
   version: %s
-  namespace: %s`,
+  namespace: %s`, istioVersion, controlPlaneNamespace),
+			converterArgs: fmt.Sprintf("%s %s -n %s -v %s", istioFile, sailFile, controlPlaneNamespace, istioVersion),
 		},
 		{
 			name: "complex",
@@ -81,7 +81,7 @@ spec:
     pilot:
       env:
         PILOT_ENABLE_STATUS: true`,
-			expectedOutput: `apiVersion: sailoperator.io/v1
+			expectedOutput: fmt.Sprintf(`apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: default
@@ -98,8 +98,9 @@ spec:
       env:
         PILOT_ENABLE_STATUS: "true"
       enabled: false
-  version: %s
-  namespace: %s`,
+  namespace: %s
+  version: %s`, controlPlaneNamespace, istioVersion),
+			converterArgs: fmt.Sprintf("%s %s -v %s -n %s", istioFile, sailFile, istioVersion, controlPlaneNamespace),
 		},
 		{
 			name: "mandatory-arguments-only",
@@ -108,30 +109,29 @@ kind: IstioOperator
 metadata:
   name: default
 spec:`,
-			expectedOutput: `apiVersion: sailoperator.io/v1
+			expectedOutput: fmt.Sprintf(`apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: default
 spec:
-  version: %s
-  namespace: %s`,
+  namespace: %s`, controlPlaneNamespace),
+			converterArgs: istioFile,
 		},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Cleanup(func() {
+				os.Remove(istioFile)
+				os.Remove(sailFile)
+			})
 			g := NewWithT(t)
 			err := saveYamlToFile(tc.input, istioFile)
 			g.Expect(err).To(Succeed(), "failed to write YAML file")
 
-			if tc.name == "mandatory-arguments-only" {
-				g.Expect(executeConfigConverter(istioFile, "", "", istioVersion)).To(Succeed(), "error in execution of ./configuration-converter.sh")
-			} else {
-				g.Expect(executeConfigConverter(istioFile, sailFile, controlPlaneNamespace,
-					istioVersion)).To(Succeed(), "error in execution of ./configuration-converter.sh")
-			}
-			tc.expectedOutput = fmt.Sprintf(tc.expectedOutput, istioVersion, controlPlaneNamespace)
-			isConversionValidated, err := validateYamlContent(tc.expectedOutput, sailFile)
-			g.Expect(err).To(Succeed(), "Can not open file to compare")
+			g.Expect(executeConfigConverter(tc.converterArgs)).To(Succeed(), "error in execution of ./configuration-converter.sh")
+
+			isConversionValidated, err := validateYamlContent(sailFile, tc.expectedOutput)
+			g.Expect(err).To(Succeed(), fmt.Errorf("Error on validation: %w", err))
 			g.Expect(isConversionValidated).To(BeTrue(), "Converted content is not as expected")
 		})
 	}
@@ -145,47 +145,52 @@ func saveYamlToFile(input, istioFile string) error {
 	return nil
 }
 
-func executeConfigConverter(input, output, controlPlaneNamespace, istioVersion string) error {
+func executeConfigConverter(scriptArgs string) error {
 	converter := filepath.Join(project.RootDir, "tools", "configuration-converter.sh")
-	args := []string{converter, input}
 
-	if output != "" {
-		args = append(args, output)
-	}
+	cmdArgs := []string{converter, scriptArgs}
 
-	if controlPlaneNamespace != "" {
-		args = append(args, "-n", controlPlaneNamespace)
-	}
-
-	args = append(args, "-v", istioVersion)
-
-	cmd := strings.Join(args, " ")
-	_, err := shell.ExecuteCommand(cmd)
+	cmd := strings.Join(cmdArgs, " ")
+	output, err := shell.ExecuteCommand(cmd)
 	if err != nil {
-		return fmt.Errorf("error in execution of %s %s %s -n %s -v %s: %w", converter, input, output, controlPlaneNamespace, istioVersion, err)
+		fmt.Printf("Script output: %s", output)
+		return fmt.Errorf("error in execution of command %v: %w", cmdArgs, err)
 	}
 	return nil
 }
 
 // compareYamlContent checks if the provided YAML content matches the content of converted sail operator config
-func validateYamlContent(expectedOutput, sailFile string) (bool, error) {
-	// Write the input YAML string to a temporary file
-	tmpFile := filepath.Join(project.RootDir, "tools", "temp.yaml")
-	err := os.WriteFile(tmpFile, []byte(expectedOutput), 0o644)
+func validateYamlContent(sailFile, expectedOutput string) (bool, error) {
+	actualOutput, err := os.ReadFile(sailFile)
 	if err != nil {
-		return false, fmt.Errorf("failed to write temporary YAML file: %w", err)
+		return false, fmt.Errorf("Can not read %s. %w", sailFile, err)
 	}
-	defer os.Remove(tmpFile)
 
-	// The command will check if the files are equal, ignoring order
-	cmd := fmt.Sprintf("diff <(yq -P 'sort_keys(..)' -o=props %s) <(yq -P 'sort_keys(..)' -o=props %s)", sailFile, tmpFile)
-	output, err := shell.ExecuteCommand(cmd)
+	actualData, err := parseYaml(string(actualOutput))
 	if err != nil {
-		return false, fmt.Errorf("error executing yq comparison: %w", err)
+		return false, fmt.Errorf("failed to parse sailFile: %w", err)
 	}
-	if output != "" {
+
+	expectedData, err := parseYaml(expectedOutput)
+	if err != nil {
+		return false, fmt.Errorf("failed to parse expected output: %w", err)
+	}
+
+	// Compare YAML content ignoring order
+	diff := cmp.Diff(expectedData, actualData)
+	if diff != "" {
+		fmt.Println("YAML files differ:", diff)
 		return false, nil
 	}
-	// If no output from yq, the files are considered equal
 	return true, nil
+}
+
+// parseYaml takes a YAML string and unmarshals it into a map
+func parseYaml(yamlContent string) (map[string]interface{}, error) {
+	var config map[string]interface{}
+	err := yaml.Unmarshal([]byte(yamlContent), &config)
+	if err != nil {
+		return nil, err
+	}
+	return config, nil
 }
