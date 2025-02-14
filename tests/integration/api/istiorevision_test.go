@@ -24,9 +24,9 @@ import (
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversions"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
-	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/common/expfmt"
@@ -98,7 +98,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 					Name: revName,
 				},
 				Spec: v1.IstioRevisionSpec{
-					Version:   supportedversion.Default,
+					Version:   istioversions.Default,
 					Namespace: istioNamespace,
 					Values: &v1.Values{
 						Revision: ptr.Of(revName),
@@ -117,7 +117,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 					Name: revName,
 				},
 				Spec: v1.IstioRevisionSpec{
-					Version:   supportedversion.Default,
+					Version:   istioversions.Default,
 					Namespace: istioNamespace,
 					Values: &v1.Values{
 						Revision: ptr.Of("is-not-" + revName),
@@ -136,7 +136,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 					Name: "default",
 				},
 				Spec: v1.IstioRevisionSpec{
-					Version:   supportedversion.Default,
+					Version:   istioversions.Default,
 					Namespace: istioNamespace,
 					Values: &v1.Values{
 						Revision: ptr.Of("default"), // this must be rejected, because revision needs to be '' when metadata.name is 'default'
@@ -155,7 +155,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 					Name: "default",
 				},
 				Spec: v1.IstioRevisionSpec{
-					Version:   supportedversion.Default,
+					Version:   istioversions.Default,
 					Namespace: istioNamespace,
 					Values: &v1.Values{
 						Revision: ptr.Of(""),
@@ -178,7 +178,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 					Name: revName,
 				},
 				Spec: v1.IstioRevisionSpec{
-					Version:   supportedversion.Default,
+					Version:   istioversions.Default,
 					Namespace: nsName,
 					Values: &v1.Values{
 						Revision: ptr.Of(revName),
@@ -244,7 +244,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 				Name: revName,
 			},
 			Spec: v1.IstioRevisionSpec{
-				Version:   supportedversion.Default,
+				Version:   istioversions.Default,
 				Namespace: istioNamespace,
 				Values: &v1.Values{
 					Global: &v1.GlobalConfig{
@@ -460,7 +460,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 				Name: rev2Key.Name,
 			},
 			Spec: v1.IstioRevisionSpec{
-				Version:   supportedversion.Default,
+				Version:   istioversions.Default,
 				Namespace: istioNamespace,
 				Values: &v1.Values{
 					Global: &v1.GlobalConfig{

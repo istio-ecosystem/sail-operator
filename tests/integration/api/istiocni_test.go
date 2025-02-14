@@ -23,9 +23,9 @@ import (
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversions"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
-	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -76,7 +76,7 @@ var _ = Describe("IstioCNI", Ordered, func() {
 					Name: "not-default",
 				},
 				Spec: v1.IstioCNISpec{
-					Version:   supportedversion.Default,
+					Version:   istioversions.Default,
 					Namespace: cniNamespace,
 				},
 			}
@@ -94,7 +94,7 @@ var _ = Describe("IstioCNI", Ordered, func() {
 						Name: cniName,
 					},
 					Spec: v1.IstioCNISpec{
-						Version:   supportedversion.Default,
+						Version:   istioversions.Default,
 						Namespace: nsName,
 					},
 				}
@@ -153,7 +153,7 @@ var _ = Describe("IstioCNI", Ordered, func() {
 						Name: cniName,
 					},
 					Spec: v1.IstioCNISpec{
-						Version:   supportedversion.Default,
+						Version:   istioversions.Default,
 						Namespace: cniNamespace,
 					},
 				}

@@ -21,8 +21,8 @@ import (
 	"time"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversions"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
-	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -107,7 +107,7 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 							Name: istioName,
 						},
 						Spec: v1.IstioSpec{
-							Version:   supportedversion.Old,
+							Version:   istioversions.Old,
 							Namespace: istioRevisionTagNamespace,
 							UpdateStrategy: &v1.IstioUpdateStrategy{
 								Type: updateStrategy,
@@ -146,7 +146,7 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 						Eventually(func(g Gomega) {
 							g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
 							g.Expect(tag.Status.ObservedGeneration).To(Equal(tag.Generation))
-							g.Expect(tag.Status.IstioRevision).To(Equal(getRevisionName(istio, supportedversion.Old)))
+							g.Expect(tag.Status.IstioRevision).To(Equal(getRevisionName(istio, istioversions.Old)))
 							g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionInUse).Status).To(Equal(metav1.ConditionFalse))
 						}).Should(Succeed())
 					})
@@ -169,7 +169,7 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 				When("updating the Istio control plane version", func() {
 					BeforeAll(func() {
 						Expect(k8sClient.Get(ctx, istioKey, istio)).To(Succeed())
-						istio.Spec.Version = supportedversion.Default
+						istio.Spec.Version = istioversions.Default
 						Expect(k8sClient.Update(ctx, istio)).To(Succeed())
 					})
 
@@ -177,7 +177,7 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 						It("updates IstioRevisionTag status and still references old revision", func() {
 							Eventually(func(g Gomega) {
 								g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
-								g.Expect(tag.Status.IstioRevision).To(Equal(getRevisionName(istio, supportedversion.Old)))
+								g.Expect(tag.Status.IstioRevision).To(Equal(getRevisionName(istio, istioversions.Old)))
 								g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionInUse).Status).To(Equal(metav1.ConditionTrue))
 							}).Should(Succeed())
 						})
@@ -185,7 +185,7 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 						It("updates IstioRevisionTag status and shows new referenced revision", func() {
 							Eventually(func(g Gomega) {
 								g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
-								g.Expect(tag.Status.IstioRevision).To(Equal(getRevisionName(istio, supportedversion.New)))
+								g.Expect(tag.Status.IstioRevision).To(Equal(getRevisionName(istio, istioversions.New)))
 								g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionInUse).Status).To(Equal(metav1.ConditionTrue))
 							}).Should(Succeed())
 						})
@@ -207,7 +207,7 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 					})
 					if referencedResource == v1.IstioRevisionKind && updateStrategy == v1.UpdateStrategyTypeRevisionBased {
 						It("does not delete the referenced IstioRevision even though it is no longer in use and not the active revision", func() {
-							revKey := client.ObjectKey{Name: getRevisionName(istio, supportedversion.Old)}
+							revKey := client.ObjectKey{Name: getRevisionName(istio, istioversions.Old)}
 							rev := &v1.IstioRevision{}
 							Consistently(k8sClient.Get).WithArguments(ctx, revKey, rev).Should(Succeed())
 						})
@@ -243,7 +243,7 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 					Name: "default",
 				},
 				Spec: v1.IstioSpec{
-					Version:   supportedversion.Old,
+					Version:   istioversions.Old,
 					Namespace: istioRevisionTagNamespace,
 					UpdateStrategy: &v1.IstioUpdateStrategy{
 						Type: v1.UpdateStrategyTypeInPlace,
@@ -257,7 +257,7 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 					Name: istioName,
 				},
 				Spec: v1.IstioSpec{
-					Version:   supportedversion.Old,
+					Version:   istioversions.Old,
 					Namespace: istioRevisionTagNamespace,
 					UpdateStrategy: &v1.IstioUpdateStrategy{
 						Type: v1.UpdateStrategyTypeInPlace,
@@ -338,7 +338,7 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 						Name: "default",
 					},
 					Spec: v1.IstioSpec{
-						Version:   supportedversion.Old,
+						Version:   istioversions.Old,
 						Namespace: istioRevisionTagNamespace,
 						UpdateStrategy: &v1.IstioUpdateStrategy{
 							Type: v1.UpdateStrategyTypeInPlace,

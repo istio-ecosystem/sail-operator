@@ -22,9 +22,9 @@ import (
 	"time"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversions"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
-	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/certs"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
@@ -68,7 +68,7 @@ var _ = Describe("Multicluster deployment models", Ordered, func() {
 
 	Describe("Multi-Primary Multi-Network configuration", func() {
 		// Test the Multi-Primary Multi-Network configuration for each supported Istio version
-		for _, version := range supportedversion.List {
+		for _, version := range istioversions.List {
 			Context(fmt.Sprintf("Istio version %s", version.Version), func() {
 				When("Istio resources are created in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
