@@ -84,9 +84,7 @@ func init() {
 		panic(fmt.Errorf("failed to read versions from '%s': %w", versionsFilename, err))
 	}
 
-	List, Default, Old, New, AliasList = mustParseVersionsYaml(data)
-
-	Map = mustBuildVersionMap(AliasList, List)
+	List, Default, Old, New, Map, AliasList = mustParseVersionsYaml(data)
 }
 
 func mustBuildVersionMap(alias []AliasInfo, list []VersionInfo) map[string]VersionInfo {
@@ -107,16 +105,22 @@ func mustBuildVersionMap(alias []AliasInfo, list []VersionInfo) map[string]Versi
 	return versionMap
 }
 
-func mustParseVersionsYaml(yamlBytes []byte) (list []VersionInfo, defaultVersion string, oldVersion string, newVersion string, aliasList []AliasInfo) {
+func mustParseVersionsYaml(yamlBytes []byte) (list []VersionInfo, defaultVersion string, oldVersion string, newVersion string, versionMap map[string]VersionInfo, aliasList []AliasInfo) {
 	versions := Versions{}
 	err := yaml.Unmarshal(yamlBytes, &versions)
 	if err != nil {
 		panic(fmt.Errorf("failed to parse versions data: %w", err))
 	}
 
+	versionMap = make(map[string]VersionInfo)
+	// lookup is to support version with a short name like "v1.25-alpha.c2ac935c".
+	lookup := make(map[string]VersionInfo)
+
 	for _, v := range versions.Versions {
 		if v.Ref == nil {
 			list = append(list, v)
+			versionMap[v.Name] = v
+			lookup[fmt.Sprintf("v%s", v.Version.String())] = v
 		} else {
 			if v.Version != nil || v.Repo != "" || v.Commit != "" || v.Branch != "" || len(v.Charts) > 0 {
 				panic(fmt.Errorf("version %q has aliasFor set but the other fields cannot be specified", v.Name))
@@ -128,10 +132,22 @@ func mustParseVersionsYaml(yamlBytes []byte) (list []VersionInfo, defaultVersion
 		}
 	}
 
-	newVersion = list[0].Name
-	if len(list) > 1 {
-		oldVersion = list[1].Name
+	// Process aliases after all versions are in the lookup map
+	for _, a := range aliasList {
+		v, ok := lookup[a.Ref]
+		if !ok {
+			panic(fmt.Errorf("version %q not found", a.Ref))
+		}
+		versionMap[a.Name] = v
 	}
-	defaultVersion = newVersion
-	return list, defaultVersion, oldVersion, newVersion, aliasList
+
+	if len(list) > 0 {
+		newVersion = list[0].Name
+		defaultVersion = newVersion
+		if len(list) > 1 {
+			oldVersion = list[1].Name
+		}
+	}
+
+	return list, defaultVersion, oldVersion, newVersion, versionMap, aliasList
 }

@@ -56,18 +56,25 @@ versions:
     commit: "commit2"
 `)
 
-	list, defaultVersion, oldVersion, newVersion, aliasList := mustParseVersionsYaml(yamlBytes)
-
-	Map = mustBuildVersionMap(aliasList, list)
+	list, defaultVersion, oldVersion, newVersion, versionMap, aliasList := mustParseVersionsYaml(yamlBytes)
 
 	assert.Len(t, list, 2)
 	assert.Equal(t, "v1.0.0", defaultVersion)
 	assert.Equal(t, "v2.0.0", oldVersion)
 	assert.Equal(t, "v1.0.0", newVersion)
+
+	// Test version map
+	assert.Len(t, versionMap, 3) // 2 versions + 1 alias
+	assert.Equal(t, "v2.0.0", versionMap["latest"].Name)
+	assert.Equal(t, list[0], versionMap[list[0].Name])
+	assert.Equal(t, list[1], versionMap[list[1].Name])
+
+	// Test alias list
 	assert.Len(t, aliasList, 1)
 	assert.Equal(t, "latest", aliasList[0].Name)
 	assert.Equal(t, "v2.0.0", aliasList[0].Ref)
 
+	Map = versionMap
 	resolved, err := ResolveVersion("latest")
 	assert.NoError(t, err)
 	assert.Equal(t, "v2.0.0", resolved)
@@ -86,13 +93,15 @@ versions:
     commit: "commit1"
 `)
 
-	list, defaultVersion, oldVersion, newVersion, aliasList := mustParseVersionsYaml(yamlBytes)
+	list, defaultVersion, oldVersion, newVersion, versionMap, aliasList := mustParseVersionsYaml(yamlBytes)
 
 	assert.Len(t, list, 1)
 	assert.Equal(t, "v1.0.0", defaultVersion)
 	assert.Equal(t, "", oldVersion)
 	assert.Equal(t, "v1.0.0", newVersion)
+	assert.Len(t, versionMap, 1)
 	assert.Len(t, aliasList, 0)
+	assert.Equal(t, list[0], versionMap[list[0].Name])
 }
 
 func TestParseVersionsYaml_InvalidAlias(t *testing.T) {
@@ -107,8 +116,7 @@ versions:
 `)
 
 	assert.Panics(t, func() {
-		list, _, _, _, aliasList := mustParseVersionsYaml(yamlBytes)
-		mustBuildVersionMap(aliasList, list)
+		mustParseVersionsYaml(yamlBytes)
 	})
 }
 
@@ -125,8 +133,7 @@ versions:
 `)
 
 	assert.Panics(t, func() {
-		list, _, _, _, aliasList := mustParseVersionsYaml(yamlBytes)
-		mustBuildVersionMap(aliasList, list)
+		mustParseVersionsYaml(yamlBytes)
 	})
 }
 
