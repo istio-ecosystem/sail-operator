@@ -19,6 +19,7 @@ package multicluster
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
@@ -299,6 +300,81 @@ spec:
 						verifyResponsesAreReceivedFromBothClusters(k1, "Cluster #1")
 						verifyResponsesAreReceivedFromBothClusters(k2, "Cluster #2")
 						Success("Sample app is accessible from both clusters")
+					})
+				})
+
+				When("A revision is no longer in use", func() {
+					BeforeAll(func(ctx SpecContext) {
+						// Switch the update strategy to revision based to create a new revision.
+						Expect(k1.Patch(
+							"istio",
+							istioName,
+							"merge",
+							`{"spec":{"updateStrategy": {"type": "RevisionBased", "inactiveRevisionDeletionGracePeriodSeconds": 0}}}`)).
+							To(Succeed(), "Error patching istio "+istioName)
+
+						Eventually(func(g Gomega) {
+							list := &v1.IstioRevisionList{}
+							g.Expect(clPrimary.List(ctx, list)).To(Succeed())
+							g.Expect(list.Items).To(HaveLen(2))
+						}).Should(Succeed())
+
+						// Find the latest rev
+						// Migrate the pods over to the new revision. Both sample app and east/west gateway.
+						istio := &v1.Istio{}
+						_, err = common.GetObject(ctx, clPrimary, kube.Key(istioName), istio)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(k1.Patch("namespace", "sample", "merge", fmt.Sprintf(`{"metadata":{"labels":{"istio.io/rev":"%s"}}}`, istio.Status.ActiveRevisionName))).
+							To(Succeed(), "Error patching sample namespace")
+
+						Expect(clPrimary.DeleteAllOf(ctx, &corev1.Pod{}, client.InNamespace("sample"))).To(Succeed())
+
+						Eventually(func(g Gomega) {
+							samplePods := &corev1.PodList{}
+							g.Expect(clPrimary.List(ctx, samplePods, client.InNamespace("sample"))).To(Succeed())
+							for _, pod := range samplePods.Items {
+								g.Expect(pod.DeletionTimestamp).To(BeNil())
+								g.Expect(pod).Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready in sample namespace; unexpected Condition")
+								g.Expect(pod.Annotations["istio.io/rev"]).Should(Equal(istio.Status.ActiveRevisionName))
+							}
+						}).Should(Succeed())
+
+						patch := fmt.Sprintf(
+							`{"metadata": {"labels":{"istio.io/rev":"%s"}}, "spec": {"template": {"metadata": {"labels": {"istio.io/rev": "%s"}}}}}`,
+							istio.Status.ActiveRevisionName,
+							istio.Status.ActiveRevisionName,
+						)
+						Log("Patch", patch)
+						Expect(k1.WithNamespace(controlPlaneNamespace).Patch("deployments", "istio-eastwestgateway", "merge", patch)).To(Succeed(), "Error patching istio-eastwestgateway deployment")
+						Eventually(func(g Gomega) {
+							gatewayPods := &corev1.PodList{}
+							g.Expect(clPrimary.List(ctx, gatewayPods, client.InNamespace(controlPlaneNamespace), client.MatchingLabels{"istio": "eastwestgateway"})).To(Succeed())
+							for _, pod := range gatewayPods.Items {
+								g.Expect(pod.DeletionTimestamp).To(BeNil())
+								g.Expect(pod).Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready in sample namespace; unexpected Condition")
+								g.Expect(pod.Annotations["istio.io/rev"]).Should(Equal(istio.Status.ActiveRevisionName))
+							}
+						}).Should(Succeed())
+					})
+
+					It("Sees the old revision as no longer in use", func(ctx SpecContext) {
+						Eventually(func(g Gomega) {
+							list := &v1.IstioRevisionList{}
+							g.Expect(clPrimary.List(ctx, list)).To(Succeed())
+							g.Expect(list.Items).To(HaveLen(2))
+
+							oldRevIndex := slices.IndexFunc(list.Items, func(rev v1.IstioRevision) bool {
+								return rev.Status.GetCondition(v1.IstioRevisionConditionInUse).Status == metav1.ConditionFalse
+							})
+							g.Expect(oldRevIndex).ToNot(Equal(-1))
+						}).Should(Succeed())
+					})
+
+					It("Doesn't delete the old revision", func(ctx SpecContext) {
+						list := &v1.IstioRevisionList{}
+						Expect(clPrimary.List(ctx, list)).To(Succeed())
+						Expect(list.Items).To(HaveLen(2))
 					})
 				})
 
