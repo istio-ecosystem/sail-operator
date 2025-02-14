@@ -39,25 +39,10 @@ import (
 	"istio.io/istio/pkg/ptr"
 )
 
-var _ = Describe("Control Plane Installation", Ordered, func() {
+var _ = Describe("Control Plane Installation", Label("slow"), Ordered, func() {
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 	debugInfoLogged := false
-
-	BeforeAll(func(ctx SpecContext) {
-		Expect(k.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
-
-		if skipDeploy {
-			Success("Skipping operator installation because it was deployed externally")
-		} else {
-			Expect(common.InstallOperatorViaHelm()).
-				To(Succeed(), "Operator failed to be deployed")
-		}
-
-		Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
-			Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
-		Success("Operator is deployed in the namespace and Running")
-	})
 
 	Describe("defaulting", func() {
 		DescribeTable("IstioCNI",
@@ -129,7 +114,7 @@ spec:
   version: %s
   namespace: %s`
 						yaml = fmt.Sprintf(yaml, version.Name, istioCniNamespace)
-						Log("IstioCNI YAML:", indent(2, yaml))
+						Log("IstioCNI YAML:", indent(yaml))
 						Expect(k.CreateFromString(yaml)).To(Succeed(), "IstioCNI creation failed")
 						Success("IstioCNI created")
 					})
@@ -179,7 +164,7 @@ spec:
   version: %s
   namespace: %s`
 						istioYAML = fmt.Sprintf(istioYAML, version.Name, controlPlaneNamespace)
-						Log("Istio YAML:", indent(2, istioYAML))
+						Log("Istio YAML:", indent(istioYAML))
 						Expect(k.CreateFromString(istioYAML)).
 							To(Succeed(), "Istio CR failed to be created")
 						Success("Istio CR created")
@@ -314,19 +299,6 @@ spec:
 			common.LogDebugInfo(common.ControlPlane, k)
 			debugInfoLogged = true
 		}
-
-		if skipDeploy {
-			Success("Skipping operator undeploy because it was deployed externally")
-			return
-		}
-
-		By("Deleting operator deployment")
-		Expect(common.UninstallOperator()).
-			To(Succeed(), "Operator failed to be deleted")
-		GinkgoWriter.Println("Operator uninstalled")
-
-		Expect(k.DeleteNamespace(namespace)).To(Succeed(), "Namespace failed to be deleted")
-		Success("Namespace deleted")
 	})
 })
 
@@ -338,8 +310,8 @@ func ImageFromRegistry(regexp string) types.GomegaMatcher {
 	return HaveField("Image", MatchRegexp(regexp))
 }
 
-func indent(level int, str string) string {
-	indent := strings.Repeat(" ", level)
+func indent(str string) string {
+	indent := strings.Repeat(" ", 2)
 	return indent + strings.ReplaceAll(str, "\n", "\n"+indent)
 }
 
