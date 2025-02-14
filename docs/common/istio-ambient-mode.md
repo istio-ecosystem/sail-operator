@@ -194,7 +194,7 @@ $ kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
 $ kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/release-1.24/samples/bookinfo/gateway-api/bookinfo-gateway.yaml
 ```
     
-Wait for the `bookinfo-gateway` pod running and then get the `productpage` service URL. The wait time depends on your cluster cloud provider. It takes me about one minute from an AWS ELB to be able to access it.
+Wait for the `bookinfo-gateway` pod to enter running state and then get the `productpage` service URL. The wait time depends on your cluster cloud provider. It takes me about one minute from an AWS ELB to be able to access it.
 
 ```bash
 $ export INGRESS_HOST=$(kubectl get -n bookinfo gtw bookinfo-gateway -o jsonpath='{.status.addresses[0].value}')
@@ -223,7 +223,7 @@ If you refresh the previous browser page, you should see the same display.
 7. To confirm that `ztunnel` successfully opened listening sockets inside the pod network ns, use the following command.
 
 ```console
-$: kubectl exec -it -n bookinfo deploy/productpage -- netstat -tulpn
+$ kubectl debug -it -n bookinfo "$(kubectl get pod -n bookinfo -l app=productpage -o name)" --image quay.io/curl/curl -- netstat -tulpn
 Active Internet connections (only servers)
 Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name
 tcp        0      0 127.0.0.1:15053         0.0.0.0:*               LISTEN      -
