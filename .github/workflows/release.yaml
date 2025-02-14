@@ -9,7 +9,7 @@ on:
       bundle_channels:
         description: "Bundle channels"
         required: true
-        default: stable
+        default: "stable,stable-3.0"
       is_draft_release:
         description: "Draft release"
         type: boolean
