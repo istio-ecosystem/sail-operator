@@ -23,6 +23,7 @@
     - [Example using the InPlace strategy](#example-using-the-inplace-strategy)
   - [RevisionBased](#revisionbased)
     - [Example using the RevisionBased strategy](#example-using-the-revisionbased-strategy)
+    - [Example using the RevisionBased strategy and an IstioRevisionTag](#example-using-the-revisionbased-strategy-and-an-istiorevisiontag)
 - [Multiple meshes on a single cluster](#multiple-meshes-on-a-single-cluster)
   - [Prerequisites](#prerequisites)
   - [Installation Steps](#installation-steps)
