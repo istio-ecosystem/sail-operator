@@ -22,7 +22,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
-	"github.com/istio-ecosystem/sail-operator/pkg/istioversions"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
@@ -61,7 +60,7 @@ var _ = Describe("Ambient configuration ", Ordered, func() {
 	})
 
 	Describe("for supported versions", func() {
-		for _, version := range istioversions.List {
+		for _, version := range istioversion.List {
 			// The minimum supported version is 1.24 (and above)
 			if version.Version.LessThan(semver.MustParse("1.24.0")) {
 				continue

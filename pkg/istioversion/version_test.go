@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package istioversions
+package istioversion
 
 import (
 	"fmt"
@@ -30,11 +30,11 @@ func TestInit(t *testing.T) {
 	assert.True(t, Old != "", "istioversions.Old should not be empty")
 	assert.True(t, New != "", "istioversions.New should not be empty")
 
-	assert.Equal(t, len(List)+len(AliasList), len(Map), "Map should have at least as many entries as List + Aliases")
+	assert.Equal(t, len(List)+len(aliasList), len(Map), "Map should have at least as many entries as List + Aliases")
 	for _, vi := range List {
 		assert.Equal(t, vi, Map[vi.Name])
 	}
-	for _, ai := range AliasList {
+	for _, ai := range aliasList {
 		assert.Equal(t,
 			List[slices.IndexFunc(List, func(v VersionInfo) bool { return fmt.Sprintf("v%s", v.Version.String()) == ai.Ref })],
 			Map[ai.Name])
@@ -75,11 +75,11 @@ versions:
 	assert.Equal(t, "v2.0.0", aliasList[0].Ref)
 
 	Map = versionMap
-	resolved, err := ResolveVersion("latest")
+	resolved, err := Resolve("latest")
 	assert.NoError(t, err)
 	assert.Equal(t, "v2.0.0", resolved)
 
-	resolved, err = ResolveVersion("nonexistent-version")
+	resolved, err = Resolve("nonexistent-version")
 	assert.Error(t, err)
 	assert.Equal(t, "", resolved)
 }

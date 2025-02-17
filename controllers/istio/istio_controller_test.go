@@ -25,7 +25,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
-	"github.com/istio-ecosystem/sail-operator/pkg/istioversions"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/testtime"
 	. "github.com/onsi/gomega"
@@ -183,7 +183,7 @@ func TestValidate(t *testing.T) {
 					Name: "default",
 				},
 				Spec: v1.IstioSpec{
-					Version:   istioversions.Default,
+					Version:   istioversion.Default,
 					Namespace: "istio-system",
 				},
 			},
@@ -208,7 +208,7 @@ func TestValidate(t *testing.T) {
 					Name: "default",
 				},
 				Spec: v1.IstioSpec{
-					Version: istioversions.Default,
+					Version: istioversion.Default,
 				},
 			},
 			expectErr: "spec.namespace not set",

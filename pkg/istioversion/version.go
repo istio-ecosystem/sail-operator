@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package istioversions
+package istioversion
 
 import (
 	"embed"
@@ -64,11 +64,11 @@ var (
 	Old string
 	// New is the latest supported version
 	New string
-	// AliasList is the alias for the version
-	AliasList []AliasInfo
+	// aliasList is the alias for the version
+	aliasList []AliasInfo
 )
 
-func ResolveVersion(version string) (string, error) {
+func Resolve(version string) (string, error) {
 	info, ok := Map[version]
 	if !ok {
 		return "", fmt.Errorf("version %q not found", version)
@@ -84,7 +84,7 @@ func init() {
 		panic(fmt.Errorf("failed to read versions from '%s': %w", versionsFilename, err))
 	}
 
-	List, Default, Old, New, Map, AliasList = mustParseVersionsYaml(data)
+	List, Default, Old, New, Map, aliasList = mustParseVersionsYaml(data)
 }
 
 func mustParseVersionsYaml(yamlBytes []byte) (

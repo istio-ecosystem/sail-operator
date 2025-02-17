@@ -27,7 +27,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
-	"github.com/istio-ecosystem/sail-operator/pkg/istioversions"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/revision"
@@ -106,7 +106,7 @@ func validate(istio *v1.Istio) error {
 }
 
 func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1.Istio) error {
-	version, err := istioversions.ResolveVersion(istio.Spec.Version)
+	version, err := istioversion.Resolve(istio.Spec.Version)
 	if err != nil {
 		return fmt.Errorf("version %q not found: %w", istio.Spec.Version, err)
 	}

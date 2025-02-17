@@ -30,7 +30,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/istiovalues"
-	"github.com/istio-ecosystem/sail-operator/pkg/istioversions"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/predicate"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
@@ -136,7 +136,7 @@ func (r *Reconciler) installHelmChart(ctx context.Context, ztunnel *v1alpha1.ZTu
 		BlockOwnerDeletion: ptr.Of(true),
 	}
 
-	version, err := istioversions.ResolveVersion(ztunnel.Spec.Version)
+	version, err := istioversion.Resolve(ztunnel.Spec.Version)
 	if err != nil {
 		return fmt.Errorf("failed to apply profile: %w", err)
 	}
