@@ -17,7 +17,7 @@
 set -euo pipefail
 
 VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"versions.yaml"}
-VERSIONS_YAML_DIR=${VERSIONS_YAML_DIR:-"pkg/istioversions"}
+VERSIONS_YAML_DIR=${VERSIONS_YAML_DIR:-"pkg/istioversion"}
 
 : "${YQ:=yq}"
 
