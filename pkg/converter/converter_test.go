@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -34,8 +33,6 @@ var (
 )
 
 func TestConversion(t *testing.T) {
-	RegisterTestingT(t)
-	g := NewWithT(t)
 	testcases := []struct {
 		name           string
 		input          string
@@ -119,31 +116,27 @@ spec:
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
 			t.Cleanup(func() {
-				os.Remove(istioFile)
-				os.Remove(sailFile)
+				g.Expect(os.Remove(istioFile)).To(Succeed())
+				g.Expect(os.Remove(sailFile)).To(Succeed())
 			})
-			// Write the Istio YAML to the file
+
 			err := os.WriteFile(istioFile, []byte(tc.input), 0o644)
 			g.Expect(err).To(Succeed(), "failed to write YAML file")
 
-			// Run the configuration converter
 			err = executeConfigConverter(tc.converterArgs)
 			g.Expect(err).To(Succeed(), "error in execution of ./configuration-converter.sh")
 
-			// Read the output from the converted sail file
 			actualOutput, err := os.ReadFile(sailFile)
 			g.Expect(err).To(Succeed(), fmt.Sprintf("Cannot read %s", sailFile))
 
-			// Parse the actual output YAML
 			actualData, err := parseYaml(actualOutput)
 			g.Expect(err).To(Succeed(), "Failed to parse sailFile")
 
-			// Parse the expected output YAML
 			expectedData, err := parseYaml([]byte(tc.expectedOutput))
 			g.Expect(err).To(Succeed(), "Failed to parse expected output")
 
-			// Compare the actual and expected output
 			diff := cmp.Diff(actualData, expectedData)
 			g.Expect(diff).To(Equal(""), "Conversion is not as expected")
 		})
@@ -153,12 +146,8 @@ spec:
 func executeConfigConverter(scriptArgs string) error {
 	converter := filepath.Join(project.RootDir, "tools", "configuration-converter.sh")
 
-	cmdArgs := []string{converter, scriptArgs}
-
-	cmd := strings.Join(cmdArgs, " ")
-	_, err := shell.ExecuteCommand(cmd)
-	if err != nil {
-		return fmt.Errorf("error in execution of command %v: %w", cmdArgs, err)
+	if _, err := shell.ExecuteCommand(converter + " " + scriptArgs); err != nil {
+		return fmt.Errorf("error in execution of command %w", err)
 	}
 	return nil
 }
