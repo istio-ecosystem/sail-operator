@@ -1,0 +1,10 @@
+# This file can be overwritten in vendor distributions of sail-operator to set
+# vendor-specific defaults. You can configure version-specific defaults for
+# every field in `spec.values`, see the following example:
+# 
+# v1.24.2:
+#   pilot:
+#     env:
+#       test: "true"
+#
+# These defaults are type-checked at compile time.

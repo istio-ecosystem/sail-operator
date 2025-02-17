@@ -2,7 +2,7 @@
 # For instance, instead of `--set defaults.foo=bar`, just set `--set foo=bar`.
 defaults:
   # Hub to pull from. Image will be `Hub/Image:Tag-Variant`
-  hub: docker.io/istio
+  hub: gcr.io/istio-release
   # Tag to pull from. Image will be `Hub/Image:Tag-Variant`
   tag: 1.23.3
   # Variant to pull. Options are "debug" or "distroless". Unset will use the default for the given version.

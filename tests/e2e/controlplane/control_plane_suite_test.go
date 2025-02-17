@@ -46,7 +46,7 @@ var (
 	k kubectl.Kubectl
 )
 
-func TestInstall(t *testing.T) {
+func TestControlPlane(t *testing.T) {
 	if ipFamily == "dual" || multicluster {
 		t.Skip("Skipping the control plane tests")
 	}
@@ -62,5 +62,5 @@ func setup() {
 	cl, err = k8sclient.InitK8sClient("")
 	Expect(err).NotTo(HaveOccurred())
 
-	k = kubectl.New("clControlPlane")
+	k = kubectl.New()
 }

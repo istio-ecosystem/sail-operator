@@ -43,6 +43,22 @@ import (
 	"istio.io/istio/pkg/ptr"
 )
 
+type testSuite string
+
+const (
+	Ambient           testSuite = "ambient"
+	ControlPlane      testSuite = "control-plane"
+	DualStack         testSuite = "dual-stack"
+	MultiCluster      testSuite = "multi-cluster"
+	Operator          testSuite = "operator"
+	MultiControlPlane testSuite = "multi-control-plane"
+)
+
+const (
+	SleepNamespace   = "sleep"
+	HttpbinNamespace = "httpbin"
+)
+
 var (
 	OperatorImage     = env.Get("IMAGE", "quay.io/sail-dev/sail-operator:latest")
 	OperatorNamespace = env.Get("NAMESPACE", "sail-operator")
@@ -52,6 +68,7 @@ var (
 	istioName             = env.Get("ISTIO_NAME", "default")
 	istioCniName          = env.Get("ISTIOCNI_NAME", "default")
 	istioCniNamespace     = env.Get("ISTIOCNI_NAMESPACE", "istio-cni")
+	ztunnelNamespace      = env.Get("ZTUNNEL_NAMESPACE", "ztunnel")
 
 	// version can have one of the following formats:
 	// - 1.22.2
@@ -131,21 +148,37 @@ func CheckNamespaceEmpty(ctx SpecContext, cl client.Client, ns string) {
 	}).Should(BeEmpty(), "No Services should be present in the namespace")
 }
 
-func LogDebugInfo(k kubectl.Kubectl) {
+func LogDebugInfo(suite testSuite, kubectls ...kubectl.Kubectl) {
 	// General debugging information to help diagnose the failure
 	// TODO: Add the creation of file with this information to be attached to the test report
 
 	GinkgoWriter.Println()
-	GinkgoWriter.Printf("The test run has failures and the debug information is as follows from cluster: %q:\n", k.GetClusterName())
-	GinkgoWriter.Println("=========================================================")
-	logOperatorDebugInfo(k)
-	GinkgoWriter.Println("=========================================================")
-	logIstioDebugInfo(k)
-	GinkgoWriter.Println("=========================================================")
-	logCNIDebugInfo(k)
-	GinkgoWriter.Println("=========================================================")
-	logCertsDebugInfo(k)
-	GinkgoWriter.Println("=========================================================")
+	GinkgoWriter.Println("The test run has failures and the debug information is as follows:")
+	GinkgoWriter.Println()
+	for _, k := range kubectls {
+		if k.ClusterName != "" {
+			GinkgoWriter.Println("=========================================================")
+			GinkgoWriter.Println("CLUSTER:", k.ClusterName)
+			GinkgoWriter.Println("=========================================================")
+		}
+		logOperatorDebugInfo(k)
+		GinkgoWriter.Println("=========================================================")
+		logIstioDebugInfo(k)
+		GinkgoWriter.Println("=========================================================")
+		logCNIDebugInfo(k)
+		GinkgoWriter.Println("=========================================================")
+		logCertsDebugInfo(k)
+		GinkgoWriter.Println("=========================================================")
+		GinkgoWriter.Println()
+
+		if suite == Ambient {
+			logZtunnelDebugInfo(k)
+			describe, err := k.WithNamespace(SleepNamespace).Describe("deployment", "sleep")
+			logDebugElement("=====sleep deployment describe=====", describe, err)
+			describe, err = k.WithNamespace(HttpbinNamespace).Describe("deployment", "httpbin")
+			logDebugElement("=====httpbin deployment describe=====", describe, err)
+		}
+	}
 }
 
 func logOperatorDebugInfo(k kubectl.Kubectl) {
@@ -202,9 +235,26 @@ func logCNIDebugInfo(k kubectl.Kubectl) {
 	logDebugElement("=====Istio CNI logs=====", logs, err)
 }
 
+func logZtunnelDebugInfo(k kubectl.Kubectl) {
+	resource, err := k.GetYAML("ztunnel", "default")
+	logDebugElement("=====ZTunnel YAML=====", resource, err)
+
+	ds, err := k.WithNamespace(ztunnelNamespace).GetYAML("daemonset", "ztunnel")
+	logDebugElement("=====ZTunnel DaemonSet YAML=====", ds, err)
+
+	events, err := k.WithNamespace(ztunnelNamespace).GetEvents()
+	logDebugElement("=====Events in "+ztunnelNamespace+"=====", events, err)
+
+	describe, err := k.WithNamespace(ztunnelNamespace).Describe("daemonset", "ztunnel")
+	logDebugElement("=====ZTunnel DaemonSet describe=====", describe, err)
+
+	logs, err := k.WithNamespace(ztunnelNamespace).Logs("daemonset/ztunnel", ptr.Of(120*time.Second))
+	logDebugElement("=====ztunnel logs=====", logs, err)
+}
+
 func logCertsDebugInfo(k kubectl.Kubectl) {
 	certs, err := k.WithNamespace(controlPlaneNamespace).GetSecret("cacerts")
-	logDebugElement("=====CA certs=====", certs, err)
+	logDebugElement("=====CA certs in "+controlPlaneNamespace+"=====", certs, err)
 }
 
 func logDebugElement(caption string, info string, err error) {
@@ -218,7 +268,7 @@ func logDebugElement(caption string, info string, err error) {
 }
 
 func GetVersionFromIstiod() (*semver.Version, error) {
-	k := kubectl.New("testCluster")
+	k := kubectl.New()
 	output, err := k.WithNamespace(controlPlaneNamespace).Exec("deploy/istiod", "", "pilot-discovery version")
 	if err != nil {
 		return nil, fmt.Errorf("error getting version from istiod: %w", err)
@@ -293,20 +343,20 @@ func GetSampleYAML(version supportedversion.VersionInfo, appName string) string 
 	}
 
 	// Default paths if no custom path is provided
-	var url string
+	var path string
 	switch appName {
 	case "tcp-echo-dual-stack":
-		url = "samples/tcp-echo/tcp-echo-dual-stack.yaml"
+		path = "samples/tcp-echo/tcp-echo-dual-stack.yaml"
 	case "tcp-echo-ipv4", "tcp-echo":
-		url = "samples/tcp-echo/tcp-echo-ipv4.yaml"
+		path = "samples/tcp-echo/tcp-echo-ipv4.yaml"
 	case "tcp-echo-ipv6":
-		url = "samples/tcp-echo/tcp-echo-ipv6.yaml"
+		path = "samples/tcp-echo/tcp-echo-ipv6.yaml"
 	case "sleep":
-		url = "samples/sleep/sleep.yaml"
+		path = "samples/sleep/sleep.yaml"
 	case "helloworld", "sample":
-		url = "samples/helloworld/helloworld.yaml"
+		path = "samples/helloworld/helloworld.yaml"
 	case "httpbin":
-		url = "samples/httpbin/httpbin.yaml"
+		path = "samples/httpbin/httpbin.yaml"
 	default:
 		return ""
 	}
@@ -314,12 +364,12 @@ func GetSampleYAML(version supportedversion.VersionInfo, appName string) string 
 	// Base URL logic
 	baseURL := os.Getenv("SAMPLE_YAML_BASE_URL")
 	if baseURL == "" {
-		baseURL = "https://raw.githubusercontent.com/istio/istio"
+		// use local files by default
+		return filepath.Join(project.RootDir, path)
 	}
 
 	if version.Name == "latest" {
-		return fmt.Sprintf("%s/master/%s", baseURL, url)
+		return fmt.Sprintf("%s/master/%s", baseURL, path)
 	}
-
-	return fmt.Sprintf("%s/%s/%s", baseURL, version.Version, url)
+	return fmt.Sprintf("%s/%s/%s", baseURL, version.Version, path)
 }

@@ -23,6 +23,7 @@
     - [Example using the InPlace strategy](#example-using-the-inplace-strategy)
   - [RevisionBased](#revisionbased)
     - [Example using the RevisionBased strategy](#example-using-the-revisionbased-strategy)
+    - [Example using the RevisionBased strategy and an IstioRevisionTag](#example-using-the-revisionbased-strategy-and-an-istiorevisiontag)
 - [Multiple meshes on a single cluster](#multiple-meshes-on-a-single-cluster)
   - [Prerequisites](#prerequisites)
   - [Installation Steps](#installation-steps)
@@ -89,7 +90,7 @@ spec:
 
 Istio uses a ConfigMap for its global configuration, called the MeshConfig. All of its settings are available through `spec.meshConfig`.
 
-To support canary updates of the control plane, Sail Operator includes support for multiple Istio versions. You can select a version by setting the `version` field in the `spec` to the version you would like to install, prefixed with a `v`. You can then update to a new version just by changing this field.
+To support canary updates of the control plane, Sail Operator includes support for multiple Istio versions. You can select a version by setting the `version` field in the `spec` to the version you would like to install, prefixed with a `v`. You can then update to a new version just by changing this field. An `vX.Y-latest` alias can be used for the latest z/patch versions of each supported y/minor versions. As per the example above, `v1.23-latest` can be specified in the `version` field. By doing so, the operator will keep the istio version with the latest `z` version of the same `y` version. 
 
 Sail Operator supports two different update strategies for your control planes: `InPlace` and `RevisionBased`. When using `InPlace`, the operator will immediately replace your existing control plane resources with the ones for the new version, whereas `RevisionBased` uses Istio's canary update mechanism by creating a second control plane to which you can migrate your workloads to complete the update.
 
@@ -1764,7 +1765,7 @@ Kubernetes supports dual-stack networking as a stable feature starting from
 [v1.23](https://kubernetes.io/docs/concepts/services-networking/dual-stack/), allowing clusters to handle both
 IPv4 and IPv6 traffic. With many cloud providers also beginning to offer dual-stack Kubernetes clusters, it's easier
 than ever to run services that function across both address types. Istio introduced dual-stack as an experimental
-feature in version 1.17, and it's expected to be promoted to [Alpha](https://github.com/istio/istio/issues/47998) in
+feature in version 1.17, and promoted it to [Alpha](https://istio.io/latest/news/releases/1.24.x/announcing-1.24/change-notes/) in
 version 1.24. With Istio in dual-stack mode, services can communicate over both IPv4 and IPv6 endpoints, which helps
 organizations transition to IPv6 while still maintaining compatibility with their existing IPv4 infrastructure.
 
@@ -1865,19 +1866,19 @@ Note: If you installed the KinD cluster using the command above, install the [Sa
    kubectl label --overwrite namespace sleep istio-injection=enabled
    ```
 
-3. Ensure that the tcp-echo service in the dual-stack namespace is configured with `ipFamilyPolicy` of RequireDualStack.
-   ```console
-   kubectl get service tcp-echo -n dual-stack -o=jsonpath='{.spec.ipFamilyPolicy}'
-   RequireDualStack
-   ```
-
-4. Deploy the pods and services in their respective namespaces.
+3. Deploy the pods and services in their respective namespaces.
    ```sh
    kubectl apply -n dual-stack -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/tcp-echo/tcp-echo-dual-stack.yaml
    kubectl apply -n ipv4 -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/tcp-echo/tcp-echo-ipv4.yaml
    kubectl apply -n ipv6 -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/tcp-echo/tcp-echo-ipv6.yaml
    kubectl apply -n sleep -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/sleep/sleep.yaml
    kubectl wait --for=condition=Ready pod -n sleep -l app=sleep --timeout=60s
+   ```
+
+4. Ensure that the tcp-echo service in the dual-stack namespace is configured with `ipFamilyPolicy` of RequireDualStack.
+   ```console
+   kubectl get service tcp-echo -n dual-stack -o=jsonpath='{.spec.ipFamilyPolicy}'
+   RequireDualStack
    ```
 
 5. Verify that sleep pod is able to reach the dual-stack pods.

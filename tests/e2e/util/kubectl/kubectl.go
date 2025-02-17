@@ -25,15 +25,15 @@ import (
 )
 
 type Kubectl struct {
-	name       string
-	binary     string
-	namespace  string
-	kubeconfig string
+	ClusterName string
+	binary      string
+	namespace   string
+	kubeconfig  string
 }
 
 // New creates a new kubectl.Kubectl
-func New(name string) Kubectl {
-	return Kubectl{name: name}.WithBinary(os.Getenv("COMMAND"))
+func New() Kubectl {
+	return Kubectl{}.WithBinary(os.Getenv("COMMAND"))
 }
 
 func (k Kubectl) build(cmd string) string {
@@ -53,6 +53,12 @@ func (k Kubectl) build(cmd string) string {
 
 	// Join all the arguments with a space
 	return strings.Join(args, " ")
+}
+
+// WithClusterName sets the cluster clusterName on this Kubectl
+func (k Kubectl) WithClusterName(name string) Kubectl {
+	k.ClusterName = name
+	return k
 }
 
 // WithBinary returns a new Kubectl with the binary set to the given value; if the value is "", the binary is set to "kubectl"
@@ -218,11 +224,6 @@ func (k Kubectl) ForceDelete(kind, name string) error {
 	return k.Delete(kind, name)
 }
 
-// Gets cluster name defined during initialization
-func (k Kubectl) GetClusterName() string {
-	return k.name
-}
-
 // GetYAML returns the yaml of a resource
 func (k Kubectl) GetYAML(kind, name string) (string, error) {
 	cmd := k.build(fmt.Sprintf(" get %s %s -o yaml", kind, name))
@@ -307,6 +308,12 @@ func (k Kubectl) Logs(pod string, since *time.Duration) (string, error) {
 		return "", err
 	}
 	return output, nil
+}
+
+// Label adds a label to the specified resource
+func (k Kubectl) Label(kind, name, labelKey, labelValue string) error {
+	_, err := k.executeCommand(k.build(fmt.Sprintf(" label %s %s %s=%s", kind, name, labelKey, labelValue)))
+	return err
 }
 
 // executeCommand handles running the command and then resets the namespace automatically

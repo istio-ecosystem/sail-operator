@@ -40,7 +40,7 @@ var (
 	k kubectl.Kubectl
 )
 
-func TestInstall(t *testing.T) {
+func TestOperator(t *testing.T) {
 	if multicluster {
 		t.Skip("Skipping test for multicluster")
 	}
@@ -57,5 +57,5 @@ func setup() {
 	cl, err = k8sclient.InitK8sClient("")
 	Expect(err).NotTo(HaveOccurred())
 
-	k = kubectl.New("clOperator")
+	k = kubectl.New()
 }

@@ -56,7 +56,7 @@ var (
 	k2 kubectl.Kubectl
 )
 
-func TestInstall(t *testing.T) {
+func TestMultiCluster(t *testing.T) {
 	if !multicluster {
 		t.Skip("Skipping test. Only valid for multicluster")
 	}
@@ -99,6 +99,6 @@ func setup(t *testing.T) {
 	exposeIstiodYAML = fmt.Sprintf("%s/docs/multicluster/expose-istiod.yaml", baseRepoDir)
 
 	// Initialize kubectl utilities, one for each cluster
-	k1 = kubectl.New("clPrimary").WithKubeconfig(kubeconfig)
-	k2 = kubectl.New("clRemote").WithKubeconfig(kubeconfig2)
+	k1 = kubectl.New().WithClusterName("primary").WithKubeconfig(kubeconfig)
+	k2 = kubectl.New().WithClusterName("remote").WithKubeconfig(kubeconfig2)
 }
