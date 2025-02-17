@@ -123,20 +123,29 @@ spec:
 				os.Remove(istioFile)
 				os.Remove(sailFile)
 			})
-			g.Expect(os.WriteFile(istioFile, []byte(tc.input), 0o644)).To(Succeed(), "failed to write YAML file")
+			// Write the Istio YAML to the file
+			err := os.WriteFile(istioFile, []byte(tc.input), 0o644)
+			g.Expect(err).To(Succeed(), "failed to write YAML file")
 
-			g.Expect(executeConfigConverter(tc.converterArgs)).To(Succeed(), "error in execution of ./configuration-converter.sh")
+			// Run the configuration converter
+			err = executeConfigConverter(tc.converterArgs)
+			g.Expect(err).To(Succeed(), "error in execution of ./configuration-converter.sh")
 
+			// Read the output from the converted sail file
 			actualOutput, err := os.ReadFile(sailFile)
-			Expect(err).To(Succeed(), fmt.Sprintf("Cannot read %s", sailFile))
+			g.Expect(err).To(Succeed(), fmt.Sprintf("Cannot read %s", sailFile))
 
+			// Parse the actual output YAML
 			actualData, err := parseYaml(actualOutput)
-			Expect(err).To(Succeed(), "Failed to parse sailFile")
+			g.Expect(err).To(Succeed(), "Failed to parse sailFile")
 
+			// Parse the expected output YAML
 			expectedData, err := parseYaml([]byte(tc.expectedOutput))
-			Expect(err).To(Succeed(), "Failed to parse expected output")
+			g.Expect(err).To(Succeed(), "Failed to parse expected output")
 
-			Expect(cmp.Diff(actualData, expectedData)).To(Equal(""), "Conversion is not as expected")
+			// Compare the actual and expected output
+			diff := cmp.Diff(actualData, expectedData)
+			g.Expect(diff).To(Equal(""), "Conversion is not as expected")
 		})
 	}
 }
