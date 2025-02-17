@@ -65,7 +65,7 @@ function update_alias() {
     local name="${1}"
     local ref="${2}"
     echo "Updating alias ${name} to point to ${ref}"
-    yq eval "( .aliases[] | select(.name == \"${name}\").ref ) = \"${ref}\"" -i "${VERSIONS_YAML_PATH}"
+    yq eval "( .versions[] | select(.name == \"${name}\").ref ) = \"${ref}\"" -i "${VERSIONS_YAML_PATH}"
 }
 
 # Given an input with potentially several major.minor versions, list only the latest one
