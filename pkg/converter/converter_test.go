@@ -28,6 +28,7 @@ import (
 )
 
 var (
+	converter = filepath.Join(project.RootDir, "tools", "configuration-converter.sh")
 	istioFile = filepath.Join(project.RootDir, "tools", "istioConfig.yaml")
 	sailFile  = filepath.Join(project.RootDir, "tools", "istioConfig-sail.yaml")
 )
@@ -36,8 +37,8 @@ func TestConversion(t *testing.T) {
 	testcases := []struct {
 		name           string
 		input          string
-		expectedOutput string
 		converterArgs  string
+		expectedOutput string
 	}{
 		{
 			name: "simple",
@@ -46,14 +47,14 @@ kind: IstioOperator
 metadata:
   name: default
 spec:`,
-			converterArgs: fmt.Sprintf("%s %s -n istio-system -v v1.24.3", istioFile, sailFile),
 			expectedOutput: `apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: default
 spec:
-  version: v1.24.3
-  namespace: istio-system`,
+  namespace: istio-system
+  version: v1.24.3`,
+			converterArgs: fmt.Sprintf("%s %s -n istio-system -v v1.24.3", istioFile, sailFile),
 		},
 		{
 			name: "complex",
@@ -77,7 +78,6 @@ spec:
     pilot:
       env:
         PILOT_ENABLE_STATUS: true`,
-			converterArgs: fmt.Sprintf("%s %s -v v1.24.3 -n istio-system", istioFile, sailFile),
 			expectedOutput: `apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
@@ -97,6 +97,7 @@ spec:
       enabled: false
   namespace: istio-system
   version: v1.24.3`,
+			converterArgs: fmt.Sprintf("%s %s -v v1.24.3 -n istio-system", istioFile, sailFile),
 		},
 		{
 			name: "mandatory-arguments-only",
@@ -105,13 +106,13 @@ kind: IstioOperator
 metadata:
   name: default
 spec:`,
-			converterArgs: istioFile,
 			expectedOutput: `apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: default
 spec:
   namespace: istio-system`,
+			converterArgs: istioFile,
 		},
 	}
 	for _, tc := range testcases {
@@ -122,14 +123,13 @@ spec:
 				g.Expect(os.Remove(sailFile)).To(Succeed())
 			})
 
-			err := os.WriteFile(istioFile, []byte(tc.input), 0o644)
-			g.Expect(err).To(Succeed(), "failed to write YAML file")
+			g.Expect(os.WriteFile(istioFile, []byte(tc.input), 0o644)).To(Succeed(), "failed to write YAML file")
 
-			err = executeConfigConverter(tc.converterArgs)
+			_, err := shell.ExecuteCommand(converter + " " + tc.converterArgs)
 			g.Expect(err).To(Succeed(), "error in execution of ./configuration-converter.sh")
 
 			actualOutput, err := os.ReadFile(sailFile)
-			g.Expect(err).To(Succeed(), fmt.Sprintf("Cannot read %s", sailFile))
+			g.Expect(err).To(Succeed(), "Cannot read %s", sailFile)
 
 			actualData, err := parseYaml(actualOutput)
 			g.Expect(err).To(Succeed(), "Failed to parse sailFile")
@@ -137,19 +137,9 @@ spec:
 			expectedData, err := parseYaml([]byte(tc.expectedOutput))
 			g.Expect(err).To(Succeed(), "Failed to parse expected output")
 
-			diff := cmp.Diff(actualData, expectedData)
-			g.Expect(diff).To(Equal(""), "Conversion is not as expected")
+			g.Expect(cmp.Diff(actualData, expectedData)).To(Equal(""), "Conversion is not as expected")
 		})
 	}
-}
-
-func executeConfigConverter(scriptArgs string) error {
-	converter := filepath.Join(project.RootDir, "tools", "configuration-converter.sh")
-
-	if _, err := shell.ExecuteCommand(converter + " " + scriptArgs); err != nil {
-		return fmt.Errorf("error in execution of command %w", err)
-	}
-	return nil
 }
 
 // parseYaml takes a YAML string and unmarshals it into a map

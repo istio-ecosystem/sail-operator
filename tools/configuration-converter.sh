@@ -58,10 +58,7 @@ fi
 # If OUTPUT is not specified, generate a default output file name
 if [[ -z "$OUTPUT" ]]; then
     OUTPUT="$(dirname "$INPUT")/$(basename "$INPUT" .yaml)-sail.yaml"
-fi
-
-# Ensure the output is not a directory
-if [[ -d "$OUTPUT" ]]; then
+elif [[ -d "$OUTPUT" ]]; then
     echo "Error: OUTPUT must be a file, not a directory."
     exit 1
 fi
@@ -89,11 +86,6 @@ if ! command -v yq &>/dev/null; then
 fi
 
 function add_mandatory_fields(){
-    # If VERSION is not empty, add .spec.version
-    if [[ -n "$VERSION" ]]; then
-        yq -i ".spec.version = \"$VERSION\"" "$OUTPUT"  
-    fi
-
     yq -i eval ".apiVersion = \"sailoperator.io/v1\" 
     | .kind = \"Istio\" 
     | (select(.spec.meshConfig) | .spec.values.meshConfig) = .spec.meshConfig 
@@ -105,11 +97,16 @@ function add_mandatory_fields(){
     | del(.spec.hub) 
     | del(.spec.tag) 
     | del(.spec.values.gateways)" "$OUTPUT" 
+    
+    # If VERSION is not empty, add .spec.version
+    if [[ -n "$VERSION" ]]; then
+        yq -i ".spec.version = \"$VERSION\"" "$OUTPUT"  
+    fi
 
 }
 
-#Convert boolean values to string if they are under *.env
 function boolean_2_string(){
+    #Convert boolean values to string if they are under *.env
     yq -i -e '
     (.spec.values.[].env.[] | select(. == true)) |= "true" |
     (.spec.values.[].env.[] | select(. == false)) |= "false" |
