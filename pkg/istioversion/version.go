@@ -45,7 +45,7 @@ type AliasInfo struct {
 // VersionInfo contains information about a specific Istio version
 type VersionInfo struct {
 	Name    string          `json:"name"`
-	Ref     *semver.Version `json:"ref"`
+	Ref     string          `json:"ref"`
 	Version *semver.Version `json:"version"`
 	Repo    string          `json:"repo"`
 	Branch  string          `json:"branch,omitempty"`
@@ -102,28 +102,25 @@ func mustParseVersionsYaml(yamlBytes []byte) (
 	}
 
 	versionMap = make(map[string]VersionInfo)
-	// lookup is to support version with a short name like "v1.25-alpha.c2ac935c".
-	lookup := make(map[string]VersionInfo)
 
 	for _, v := range versions.Versions {
-		if v.Ref == nil {
+		if v.Ref == "" {
 			list = append(list, v)
 			versionMap[v.Name] = v
-			lookup[fmt.Sprintf("v%s", v.Version.String())] = v
 		} else {
 			if v.Version != nil || v.Repo != "" || v.Commit != "" || v.Branch != "" || len(v.Charts) > 0 {
 				panic(fmt.Errorf("version %q has aliasFor set but the other fields cannot be specified", v.Name))
 			}
 			aliasList = append(aliasList, AliasInfo{
 				Name: v.Name,
-				Ref:  fmt.Sprintf("v%s", v.Ref.String()),
+				Ref:  v.Ref,
 			})
 		}
 	}
 
 	// Process aliases after all versions are in the lookup map
 	for _, a := range aliasList {
-		v, ok := lookup[a.Ref]
+		v, ok := versionMap[a.Ref]
 		if !ok {
 			panic(fmt.Errorf("version %q not found", a.Ref))
 		}

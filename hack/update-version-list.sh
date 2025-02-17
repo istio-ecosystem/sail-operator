@@ -50,9 +50,9 @@ function updateVersionsInIstioTypeComment() {
 
     # Ambient mode in Sail Operator is supported starting with Istio version 1.24+
     # TODO: Once support for versions prior to 1.24 is discontinued, we can merge the ztunnel specific changes below with the other components.
-    ztunnelselectValues=$(yq '.versions[] | select(.version >= "1.24.0" or .ref >= "1.24.0") | ", \"urn:alm:descriptor:com.tectonic.ui:select:" + .name + "\""' "${VERSIONS_YAML_PATH}" | tr -d '\n')
-    ztunnelversionsEnum=$(yq '.versions[] | select(.version >= "1.24.0" or .ref >= "1.24.0") | .name' "${VERSIONS_YAML_PATH}" | tr '\n' ';' | sed 's/;$//g')
-    ztunnelversions=$(yq '.versions[] | select(.version >= "1.24.0" or .ref >= "1.24.0") | .name' "${VERSIONS_YAML_PATH}" | tr '\n' ',' | sed -e 's/,/, /g' -e 's/, $//g')
+    ztunnelselectValues=$(yq '.versions[] | select(.version >= "1.24.0" or .ref >= "v1.24.0") | ", \"urn:alm:descriptor:com.tectonic.ui:select:" + .name + "\""' "${VERSIONS_YAML_PATH}" | tr -d '\n')
+    ztunnelversionsEnum=$(yq '.versions[] | select(.version >= "1.24.0" or .ref >= "v1.24.0") | .name' "${VERSIONS_YAML_PATH}" | tr '\n' ';' | sed 's/;$//g')
+    ztunnelversions=$(yq '.versions[] | select(.version >= "1.24.0" or .ref >= "v1.24.0") | .name' "${VERSIONS_YAML_PATH}" | tr '\n' ',' | sed -e 's/,/, /g' -e 's/, $//g')
 
     sed -i -E \
       -e "/\+sail:version/,/Version string/ s/(\/\/ \+operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName=\"Istio Version\",xDescriptors=\{.*fieldGroup:General\")[^}]*(})/\1$ztunnelselectValues}/g" \

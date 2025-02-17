@@ -15,7 +15,6 @@
 package istioversion
 
 import (
-	"fmt"
 	"slices"
 	"testing"
 
@@ -36,7 +35,7 @@ func TestInit(t *testing.T) {
 	}
 	for _, ai := range aliasList {
 		assert.Equal(t,
-			List[slices.IndexFunc(List, func(v VersionInfo) bool { return fmt.Sprintf("v%s", v.Version.String()) == ai.Ref })],
+			List[slices.IndexFunc(List, func(v VersionInfo) bool { return v.Name == ai.Ref })],
 			Map[ai.Name])
 	}
 }
@@ -49,7 +48,7 @@ versions:
     repo: "repo1"
     commit: "commit1"
   - name: "latest"
-    ref: 2.0.0
+    ref: v2.0.0
   - name: "v2.0.0"
     version: 2.0.0
     repo: "repo2"
@@ -108,7 +107,7 @@ func TestParseVersionsYaml_InvalidAlias(t *testing.T) {
 	yamlBytes := []byte(`
 versions:
   - name: "1.0-latest"
-    ref: 1.0.0
+    ref: v1.0.0
   - name: "v2.0.0"
     version: 2.0.0
     repo: "repo1"
@@ -124,7 +123,7 @@ func TestParseVersionsYaml_InvalidAliasWithOtherFields(t *testing.T) {
 	yamlBytes := []byte(`
 versions:
   - name: "2.0-latest"
-    ref: 2.0.0
+    ref: v2.0.0
     repo: "should-not-have-this"
   - name: "v2.0.0"
     version: 2.0.0
