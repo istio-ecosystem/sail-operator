@@ -108,7 +108,7 @@ func validate(istio *v1.Istio) error {
 func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1.Istio) error {
 	version, err := istioversion.Resolve(istio.Spec.Version)
 	if err != nil {
-		return fmt.Errorf("version %q not found: %w", istio.Spec.Version, err)
+		return fmt.Errorf("failed to resolve Istio version for %q: %w", istio.Name, err)
 	}
 	values, err := revision.ComputeValues(
 		istio.Spec.Values, istio.Spec.Namespace, version,

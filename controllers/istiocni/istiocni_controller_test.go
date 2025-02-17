@@ -442,7 +442,7 @@ func TestApplyImageDigests(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			version, err := istioversion.Resolve(tc.input.Spec.Version)
 			if err != nil {
-				t.Errorf("failed to resolve version: %v", err)
+				t.Errorf("failed to resolve IstioCNI version for %q: %v", tc.input.Name, err)
 			}
 			result := applyImageDigests(version, tc.input.Spec.Values, tc.config)
 			if diff := cmp.Diff(tc.expectValues, result); diff != "" {

@@ -138,7 +138,7 @@ func (r *Reconciler) installHelmChart(ctx context.Context, ztunnel *v1alpha1.ZTu
 
 	version, err := istioversion.Resolve(ztunnel.Spec.Version)
 	if err != nil {
-		return fmt.Errorf("failed to apply profile: %w", err)
+		return fmt.Errorf("failed to resolve Ztunnel version for %q: %w", ztunnel.Name, err)
 	}
 	// get userValues from ztunnel.spec.values
 	userValues := ztunnel.Spec.Values

@@ -144,7 +144,7 @@ func (r *Reconciler) installHelmChart(ctx context.Context, cni *v1.IstioCNI) err
 
 	version, err := istioversion.Resolve(cni.Spec.Version)
 	if err != nil {
-		return fmt.Errorf("failed to apply profile: %w", err)
+		return fmt.Errorf("failed to resolve IstioCNI version for %q: %w", cni.Name, err)
 	}
 
 	// get userValues from Istio.spec.values
