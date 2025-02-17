@@ -83,6 +83,9 @@ function list_only_latest() {
     local current tmp=""
     while read -r input; do
         IFS="." read -r -a version <<< "${input}"
+        if [ "${#version[@]}" -lt "3" ]; then
+          continue
+        fi
         current="${version[0]}.${version[1]}"
         if [[ "${current}" != "${tmp}" ]]; then
             echo "${input}"
