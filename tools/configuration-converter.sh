@@ -83,41 +83,37 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-
 if ! command -v yq &>/dev/null; then
     echo "Error: 'yq' is not installed. Please install it before running the script."
     exit 1
 fi
 
 function add_mandatory_fields(){
-    # Base yq command without the version field
-    yq_cmd=".apiVersion = \"sailoperator.io/v1\" 
-            | .kind = \"Istio\" 
-            | (select(.spec.meshConfig) | .spec.values.meshConfig) = .spec.meshConfig 
-            | (select(.spec.values.istio_cni) | .spec.values.pilot.cni) = .spec.values.istio_cni 
-            | .metadata.name = \"default\" 
-            | .spec.namespace = \"$NAMESPACE\" 
-            | del(.spec.values.istio_cni)
-            | del(.spec.meshConfig)
-            | del(.spec.hub) 
-            | del(.spec.tag) 
-            | del(.spec.values.gateways)"
-    
     # If VERSION is not empty, add .spec.version
     if [[ -n "$VERSION" ]]; then
-        yq_cmd="$yq_cmd | .spec.version = \"$VERSION\""
+        yq -i ".spec.version = \"$VERSION\"" "$OUTPUT"  
     fi
 
-    # Execute the yq command with the constructed string
-    yq -i eval "$yq_cmd" "$OUTPUT"    
-}
+    yq -i eval ".apiVersion = \"sailoperator.io/v1\" 
+    | .kind = \"Istio\" 
+    | (select(.spec.meshConfig) | .spec.values.meshConfig) = .spec.meshConfig 
+    | (select(.spec.values.istio_cni) | .spec.values.pilot.cni) = .spec.values.istio_cni 
+    | .metadata.name = \"default\" 
+    | .spec.namespace = \"$NAMESPACE\" 
+    | del(.spec.values.istio_cni)
+    | del(.spec.meshConfig)
+    | del(.spec.hub) 
+    | del(.spec.tag) 
+    | del(.spec.values.gateways)" "$OUTPUT" 
 
+}
 
 #Convert boolean values to string if they are under *.env
 function boolean_2_string(){
-    yq -i -e '(.spec.values.[].env.[] | select(. == true)) |= "true" 
-    | (.spec.values.[].env.[] | select(. == false)) |= "false"' "$OUTPUT"
-    yq -i -e 'del(.. | select(tag == "!!seq" and length == 0))' "$OUTPUT"
+    yq -i -e '
+    (.spec.values.[].env.[] | select(. == true)) |= "true" |
+    (.spec.values.[].env.[] | select(. == false)) |= "false" |
+    del(.. | select(length == 0))' "$OUTPUT"
 }
 
 # Note that if there is an entry except spec.components.<component>.enabled: true/false converter will delete them and warn user 
