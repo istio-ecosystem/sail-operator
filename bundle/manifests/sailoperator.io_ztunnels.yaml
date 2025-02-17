@@ -5488,8 +5488,9 @@ spec:
                 default: v1.24.2
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.24.2, v1.24.1.
+                  Must be one of: v1.24-latest, v1.24.2, v1.24.1.
                 enum:
+                - v1.24-latest
                 - v1.24.2
                 - v1.24.1
                 type: string
