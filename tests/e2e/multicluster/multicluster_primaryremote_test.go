@@ -335,8 +335,8 @@ spec:
 							g.Expect(clPrimary.List(ctx, samplePods, client.InNamespace("sample"))).To(Succeed())
 							for _, pod := range samplePods.Items {
 								g.Expect(pod.DeletionTimestamp).To(BeNil())
-								g.Expect(pod).Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready in sample namespace; unexpected Condition")
-								g.Expect(pod.Annotations["istio.io/rev"]).Should(Equal(istio.Status.ActiveRevisionName))
+								g.Expect(pod).To(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready in sample namespace; unexpected Condition")
+								g.Expect(pod.Annotations["istio.io/rev"]).To(Equal(istio.Status.ActiveRevisionName))
 							}
 						}).Should(Succeed())
 
@@ -346,14 +346,15 @@ spec:
 							istio.Status.ActiveRevisionName,
 						)
 						Log("Patch", patch)
-						Expect(k1.WithNamespace(controlPlaneNamespace).Patch("deployments", "istio-eastwestgateway", "merge", patch)).To(Succeed(), "Error patching istio-eastwestgateway deployment")
+						Expect(k1.WithNamespace(controlPlaneNamespace).Patch("deployments", "istio-eastwestgateway", "merge", patch)).
+							To(Succeed(), "Error patching istio-eastwestgateway deployment")
 						Eventually(func(g Gomega) {
 							gatewayPods := &corev1.PodList{}
 							g.Expect(clPrimary.List(ctx, gatewayPods, client.InNamespace(controlPlaneNamespace), client.MatchingLabels{"istio": "eastwestgateway"})).To(Succeed())
 							for _, pod := range gatewayPods.Items {
 								g.Expect(pod.DeletionTimestamp).To(BeNil())
-								g.Expect(pod).Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready in sample namespace; unexpected Condition")
-								g.Expect(pod.Annotations["istio.io/rev"]).Should(Equal(istio.Status.ActiveRevisionName))
+								g.Expect(pod).To(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready in sample namespace; unexpected Condition")
+								g.Expect(pod.Annotations["istio.io/rev"]).To(Equal(istio.Status.ActiveRevisionName))
 							}
 						}).Should(Succeed())
 					})
