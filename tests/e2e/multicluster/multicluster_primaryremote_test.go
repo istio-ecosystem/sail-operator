@@ -334,9 +334,7 @@ spec:
 							samplePods := &corev1.PodList{}
 							g.Expect(clPrimary.List(ctx, samplePods, client.InNamespace("sample"))).To(Succeed())
 							for _, pod := range samplePods.Items {
-								g.Expect(pod.DeletionTimestamp).To(BeNil())
-								g.Expect(pod).To(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready in sample namespace; unexpected Condition")
-								g.Expect(pod.Annotations["istio.io/rev"]).To(Equal(istio.Status.ActiveRevisionName))
+								ensurePodIsOnRev(g, pod, istio.Status.ActiveRevisionName)
 							}
 						}).Should(Succeed())
 
@@ -352,9 +350,7 @@ spec:
 							gatewayPods := &corev1.PodList{}
 							g.Expect(clPrimary.List(ctx, gatewayPods, client.InNamespace(controlPlaneNamespace), client.MatchingLabels{"istio": "eastwestgateway"})).To(Succeed())
 							for _, pod := range gatewayPods.Items {
-								g.Expect(pod.DeletionTimestamp).To(BeNil())
-								g.Expect(pod).To(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready in sample namespace; unexpected Condition")
-								g.Expect(pod.Annotations["istio.io/rev"]).To(Equal(istio.Status.ActiveRevisionName))
+								ensurePodIsOnRev(g, pod, istio.Status.ActiveRevisionName)
 							}
 						}).Should(Succeed())
 					})
@@ -436,3 +432,10 @@ spec:
 		Expect(k2.WaitNamespaceDeleted(namespace)).To(Succeed())
 	})
 })
+
+func ensurePodIsOnRev(g Gomega, pod corev1.Pod, revision string) {
+	g.Expect(pod.DeletionTimestamp).To(BeNil())
+	g.Expect(pod).To(HaveCondition(corev1.PodReady, metav1.ConditionTrue),
+		fmt.Sprintf("Pod is not Ready in sample namespace; unexpected Condition. Pod status: %#v", pod.Status))
+	g.Expect(pod.Annotations["istio.io/rev"]).To(Equal(revision))
+}
