@@ -27,6 +27,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/revision"
@@ -91,7 +92,22 @@ func (r *Reconciler) doReconcile(ctx context.Context, istio *v1.Istio) (result c
 		return ctrl.Result{}, err
 	}
 
-	return revision.PruneInactive(ctx, r.Client, istio.UID, getActiveRevisionName(istio), getPruningGracePeriod(istio))
+	// We cannot prune revisions that manage an external cluster because the operator currently
+	// has no way of knowing if the revision is still in use on the external cluster.
+	if !managesExternalRevision(istio) {
+		return revision.PruneInactive(ctx, r.Client, istio.UID, getActiveRevisionName(istio), getPruningGracePeriod(istio))
+	}
+
+	return
+}
+
+func managesExternalRevision(istio *v1.Istio) bool {
+	if values := istio.Spec.Values; values != nil {
+		if pilot := values.Pilot; pilot != nil {
+			return pilot.Env["EXTERNAL_ISTIOD"] == "true"
+		}
+	}
+	return false
 }
 
 func validate(istio *v1.Istio) error {
@@ -105,8 +121,12 @@ func validate(istio *v1.Istio) error {
 }
 
 func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1.Istio) error {
+	version, err := istioversion.Resolve(istio.Spec.Version)
+	if err != nil {
+		return fmt.Errorf("failed to resolve Istio version for %q: %w", istio.Name, err)
+	}
 	values, err := revision.ComputeValues(
-		istio.Spec.Values, istio.Spec.Namespace, istio.Spec.Version,
+		istio.Spec.Values, istio.Spec.Namespace, version,
 		r.Config.Platform, r.Config.DefaultProfile, istio.Spec.Profile,
 		r.Config.ResourceDirectory, getActiveRevisionName(istio))
 	if err != nil {
@@ -115,7 +135,7 @@ func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1.Isti
 
 	return revision.CreateOrUpdate(ctx, r.Client,
 		getActiveRevisionName(istio),
-		istio.Spec.Version, istio.Spec.Namespace, values,
+		version, istio.Spec.Namespace, values,
 		metav1.OwnerReference{
 			APIVersion:         v1.GroupVersion.String(),
 			Kind:               v1.IstioKind,

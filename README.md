@@ -24,6 +24,7 @@ This document aims to provide an overview of the project and some information fo
     - [Integration Tests](#integration-tests)
     - [End-to-End Tests](#end-to-end-tests)
     - [Vendor-specific changes](#vendor-specific-changes)
+- [Release Process](#release-process)
 - [Community Support and Contributing](#community-support-and-contributing)
 - [Sail Enhancement Proposal](#sail-enhancement-proposal)
 - [Issue management](#issue-management)
@@ -166,7 +167,7 @@ make run
 
 ### Modifying the API definitions
 
-**Important:** Any API change should be discussed in an [SEP](https://github.com/istio-ecosystem/sail-operator/blob/main/enhancements/SEP1-enhancement-process.md) before being implemented.
+**Important:** Any API change should be discussed in an [SEP](enhancements/SEP1-enhancement-process.md) before being implemented.
 
 If you are editing the API definitions, generate the manifests such as CRs or CRDs using:
 
@@ -184,11 +185,11 @@ The API reference documentation can be found in the [docs](https://github.com/is
 
 Please try to keep business logic in separate packages that can be independently tested wherever possible, especially if you can avoid the usage of Kubernetes clients. It greatly simplifies testing if we don't need to use envtest everywhere.
 
-E2E and integration tests should use the ginkgo-style BDD testing method, an example can be found in [`tests/integration/api/istio_test.go`](https://github.com/istio-ecosystem/sail-operator/blob/main/tests/integration/api/istio_test.go) for the test code and suite setup in [`tests/integration/api/suite_test.go`](https://github.com/istio-ecosystem/sail-operator/blob/main/tests/integration/api/suite_test.go). Unit tests should use standard golang xUnit-style tests (see [`pkg/kube/finalizers_test.go`](https://github.com/istio-ecosystem/sail-operator/blob/main/pkg/kube/finalizers_test.go) for an example).
+E2E and integration tests should use the ginkgo-style BDD testing method, an example can be found in [`tests/integration/api/istio_test.go`](tests/integration/api/istio_test.go) for the test code and suite setup in [`tests/integration/api/suite_test.go`](tests/integration/api/suite_test.go). Unit tests should use standard golang xUnit-style tests (see [`pkg/kube/finalizers_test.go`](pkg/kube/finalizers_test.go) for an example).
 
 ### Integration Tests
 
-Please check the specific instructions for the integration tests in the [integration](https://github.com/istio-ecosystem/sail-operator/blob/main/tests/integration/README.md) directory.
+Please check the specific instructions for the integration tests in the [integration](tests/integration/README.md) directory.
 
 To run the integration tests, you can use the following command:
 
@@ -198,7 +199,7 @@ make test.integration
 
 ### End-to-End Tests
 
-Please check the specific instructions for the end-to-end tests in the [e2e](https://github.com/istio-ecosystem/sail-operator/blob/main/tests/e2e/README.md) directory.
+Please check the specific instructions for the end-to-end tests in the [e2e](tests/e2e/README.md) directory.
 
 To run the end-to-end tests, you can use the following command:
 
@@ -224,16 +225,20 @@ The name of the versions.yaml file can be overwritten using the VERSIONS_YAML_FI
 
 By modifying `pkg/istiovalues/vendor_defaults.yaml`, vendors can change some defaults for the helm values. Note that these are defaults, not overrides, so user input will always take precendence.
 
+## Release process
+
+Please refer to the [RELEASE-PROCESS.md](RELEASE-PROCESS.md) file for more information on how the Sail Operator release process works.  
+
 ## Community Support and Contributing
-Please refer to the [CONTRIBUTING-SAIL-PROJECT.md](https://github.com/istio-ecosystem/sail-operator/blob/main/CONTRIBUTING.md) file for more information on how to contribute to the Sail Operator project. This file contains all the information you need to get started with contributing to the project.
+Please refer to the [CONTRIBUTING-SAIL-PROJECT.md](CONTRIBUTING.md) file for more information on how to contribute to the Sail Operator project. This file contains all the information you need to get started with contributing to the project.
 
 ## Sail Enhancement Proposal
 
-SEP documents are used to propose and discuss non-trivial features or epics and any API changes. Please refer to the [SEP1-enhancement-process.md](https://github.com/istio-ecosystem/sail-operator/blob/main/enhancements/SEP1-enhancement-process.md) file for more information on how to create a Sail Enhancement Proposal (SEP) for the Sail Operator project.
+SEP documents are used to propose and discuss non-trivial features or epics and any API changes. Please refer to the [SEP1-enhancement-process.md](enhancements/SEP1-enhancement-process.md) file for more information on how to create a Sail Enhancement Proposal (SEP) for the Sail Operator project.
 
-SEP documents are stored in the [enhancements](https://github.com/istio-ecosystem/sail-operator/tree/main/enhancements) directory of the Sail Operator repository in Markdown format. If you want to create a SEP, be sure to check out the [SEP template](https://github.com/istio-ecosystem/sail-operator/blob/main/enhancements/SEP0-template.md).
+SEP documents are stored in the [enhancements](enhancements) directory of the Sail Operator repository in Markdown format. If you want to create a SEP, be sure to check out the [SEP template](enhancements/SEP0-template.md).
 
 ## Issue management
-Please refer to the [ISSUE-MANAGEMENT.md](https://github.com/istio-ecosystem/sail-operator/blob/main/ISSUE-MANAGEMENT.md) file for more information on how to report bugs and feature requests to the Sail Operator team.
+Please refer to the [ISSUE-MANAGEMENT.md](ISSUE-MANAGEMENT.md) file for more information on how to report bugs and feature requests to the Sail Operator team.
 
-If you found a bug in Istio, please refer to the [Istio GitHub repository](https://github.com/istio-ecosystem/sail-operator/blob/main/BUGS-AND-FEATURE-REQUESTS.md)
+If you found a bug in Istio, please refer to the [Istio GitHub repository](BUGS-AND-FEATURE-REQUESTS.md)

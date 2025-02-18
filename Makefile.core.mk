@@ -23,6 +23,7 @@ VERSION ?= 1.1.0
 MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 
 OPERATOR_NAME ?= sailoperator
+VERSIONS_YAML_DIR ?= pkg/istioversion
 VERSIONS_YAML_FILE ?= versions.yaml
 
 # Istio images names
@@ -53,7 +54,16 @@ LD_EXTRAFLAGS  = -X ${GO_MODULE}/pkg/version.buildVersion=${VERSION}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildGitRevision=${GIT_REVISION}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildTag=${GIT_TAG}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildStatus=${GIT_STATUS}
-LD_FLAGS = -extldflags -static ${LD_EXTRAFLAGS} -s -w
+LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/istioversion.versionsFilename=${VERSIONS_YAML_FILE}
+
+IS_FIPS_COMPLIANT ?= false # set to true for FIPS compliance
+ifeq ($(IS_FIPS_COMPLIANT), true)
+	CGO_ENABLED = 1
+	LD_FLAGS = ${LD_EXTRAFLAGS} -s -w
+else
+	CGO_ENABLED = 0
+	LD_FLAGS = -extldflags -static ${LD_EXTRAFLAGS} -s -w
+endif
 
 # Image hub to use
 HUB ?= quay.io/sail-dev
@@ -234,7 +244,7 @@ ifndef BUILDX
 define BUILDX
 .PHONY: build-$(1)
 build-$(1): ## Build sail-operator binary for specific architecture.
-	GOARCH=$(1) LDFLAGS="$(LD_FLAGS)" common/scripts/gobuild.sh $(REPO_ROOT)/out/$(TARGET_OS)_$(1)/sail-operator cmd/main.go
+	GOARCH=$(1) CGO_ENABLED=$(CGO_ENABLED) LDFLAGS="$(LD_FLAGS)" common/scripts/gobuild.sh $(REPO_ROOT)/out/$(TARGET_OS)_$(1)/sail-operator cmd/main.go
 
 .PHONY: build-all
 build-all: build-$(1)
@@ -381,7 +391,7 @@ gen-charts: ## Pull charts from istio repository.
 	@# use yq to generate a list of download-charts.sh commands for each version in versions.yaml; these commands are
 	@# passed to sh and executed; in a nutshell, the yq command generates commands like:
 	@# ./hack/download-charts.sh <version> <git repo> <commit> [chart1] [chart2] ...
-	@yq eval '.versions[] | "./hack/download-charts.sh " + .name + " " + .repo + " " + .commit + " " + ((.charts // []) | join(" "))' < $(VERSIONS_YAML_FILE) | sh
+	@yq eval '.versions[] | "./hack/download-charts.sh " + .name + " " + .repo + " " + .commit + " " + ((.charts // []) | join(" "))' < $(VERSIONS_YAML_DIR)/$(VERSIONS_YAML_FILE) | sh
 
 	@# remove old version directories
 	@hack/remove-old-versions.sh
@@ -476,11 +486,11 @@ ISTIOCTL ?= $(LOCALBIN)/istioctl
 
 ## Tool Versions
 OPERATOR_SDK_VERSION ?= v1.39.1
-HELM_VERSION ?= v3.17.0
+HELM_VERSION ?= v3.17.1
 CONTROLLER_TOOLS_VERSION ?= v0.17.2
 OPM_VERSION ?= v1.50.0
 OLM_VERSION ?= v0.31.0
-GITLEAKS_VERSION ?= v8.23.3
+GITLEAKS_VERSION ?= v8.23.2
 ISTIOCTL_VERSION ?= 1.23.0
 
 # GENERATE_RELATED_IMAGES defines whether `spec.relatedImages` is going to be generated or not

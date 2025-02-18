@@ -18,15 +18,16 @@ import (
 	"context"
 	"fmt"
 	"runtime/debug"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/testtime"
-	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -127,7 +128,8 @@ func TestReconcile(t *testing.T) {
 		istio := &v1.Istio{
 			ObjectMeta: objectMeta,
 			Spec: v1.IstioSpec{
-				Version: "my-version",
+				Version:   "my-version",
+				Namespace: "istio-system",
 			},
 		}
 
@@ -157,6 +159,10 @@ func TestReconcile(t *testing.T) {
 			t.Errorf("Expected Reconciled condition status to be %q, but got %q", metav1.ConditionFalse, reconciledCond.Status)
 		}
 
+		if !strings.Contains(reconciledCond.Message, "version \"my-version\" not found") {
+			t.Errorf("Expected Reconciled condition message to contain %q, but got %q", "version \"my-version\" not found", reconciledCond.Message)
+		}
+
 		readyCond := istio.Status.GetCondition(v1.IstioConditionReady)
 		if readyCond.Status != metav1.ConditionUnknown {
 			t.Errorf("Expected Reconciled condition status to be %q, but got %q", metav1.ConditionUnknown, readyCond.Status)
@@ -177,7 +183,7 @@ func TestValidate(t *testing.T) {
 					Name: "default",
 				},
 				Spec: v1.IstioSpec{
-					Version:   supportedversion.Default,
+					Version:   istioversion.Default,
 					Namespace: "istio-system",
 				},
 			},
@@ -202,7 +208,7 @@ func TestValidate(t *testing.T) {
 					Name: "default",
 				},
 				Spec: v1.IstioSpec{
-					Version: supportedversion.Default,
+					Version: istioversion.Default,
 				},
 			},
 			expectErr: "spec.namespace not set",
@@ -867,6 +873,47 @@ func TestGetPruningGracePeriod(t *testing.T) {
 			got := getPruningGracePeriod(istio)
 			if got != tt.expected {
 				t.Errorf("getPruningGracePeriod() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestManagesExternalRevision(t *testing.T) {
+	tests := []struct {
+		name     string
+		spec     v1.IstioSpec
+		expected bool
+	}{
+		{
+			name:     "Empty spec.values does not manage",
+			spec:     v1.IstioSpec{},
+			expected: false,
+		},
+		{
+			name:     "Empty spec.values.pilot does not manage",
+			spec:     v1.IstioSpec{Values: &v1.Values{}},
+			expected: false,
+		},
+		{
+			name:     "Empty spec.values.pilot.env does not manage",
+			spec:     v1.IstioSpec{Values: &v1.Values{Pilot: &v1.PilotConfig{}}},
+			expected: false,
+		},
+		{
+			name:     "env with EXTERNAL_ISTIOD=true does manage",
+			spec:     v1.IstioSpec{Values: &v1.Values{Pilot: &v1.PilotConfig{Env: map[string]string{"EXTERNAL_ISTIOD": "true"}}}},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			istio := &v1.Istio{
+				Spec: tt.spec,
+			}
+			got := managesExternalRevision(istio)
+			if got != tt.expected {
+				t.Errorf("managesExternalRevision() = %v, want %v", got, tt.expected)
 			}
 		})
 	}
