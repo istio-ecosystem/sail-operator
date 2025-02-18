@@ -110,7 +110,8 @@ initialize_variables() {
   WD=$(dirname "$0")
   WD=$(cd "${WD}" || exit; pwd)
 
-  VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"pkg/istioversion/versions.yaml"}
+  VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"versions.yaml"}
+  VERSIONS_YAML_DIR=${VERSIONS_YAML_DIR:-"pkg/istioversions"}
   NAMESPACE="${NAMESPACE:-sail-operator}"
   DEPLOYMENT_NAME="${DEPLOYMENT_NAME:-sail-operator}"
   CONTROL_PLANE_NS="${CONTROL_PLANE_NS:-istio-system}"
