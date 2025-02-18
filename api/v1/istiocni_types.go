@@ -28,9 +28,9 @@ const (
 type IstioCNISpec struct {
 	// +sail:version
 	// Defines the version of Istio to install.
-	// Must be one of: v1.24.2, v1.24.1, v1.23.4, v1.23.3, v1.23.0.
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.23.4", "urn:alm:descriptor:com.tectonic.ui:select:v1.23.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.23.0"}
-	// +kubebuilder:validation:Enum=v1.24.2;v1.24.1;v1.23.4;v1.23.3;v1.23.0
+	// Must be one of: v1.24-latest, v1.24.2, v1.24.1, v1.23-latest, v1.23.4, v1.23.3, v1.23.0.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.24-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.23-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.23.4", "urn:alm:descriptor:com.tectonic.ui:select:v1.23.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.23.0"}
+	// +kubebuilder:validation:Enum=v1.24-latest;v1.24.2;v1.24.1;v1.23-latest;v1.23.4;v1.23.3;v1.23.0
 	// +kubebuilder:default=v1.24.2
 	Version string `json:"version"`
 

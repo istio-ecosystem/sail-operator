@@ -34,7 +34,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/sail-dev/sail-operator:1.0-latest
-    createdAt: "2025-02-14T13:22:25Z"
+    createdAt: "2025-02-18T08:19:42Z"
     description: Experimental operator for installing Istio service mesh
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -165,13 +165,15 @@ spec:
       specDescriptors:
       - description: |-
           Defines the version of Istio to install.
-          Must be one of: v1.24.2, v1.24.1, v1.23.4, v1.23.3, v1.23.0.
+          Must be one of: v1.24-latest, v1.24.2, v1.24.1, v1.23-latest, v1.23.4, v1.23.3, v1.23.0.
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.24-latest
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24.2
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24.1
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.23-latest
         - urn:alm:descriptor:com.tectonic.ui:select:v1.23.4
         - urn:alm:descriptor:com.tectonic.ui:select:v1.23.3
         - urn:alm:descriptor:com.tectonic.ui:select:v1.23.0
@@ -259,13 +261,15 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:select:RevisionBased
       - description: |-
           Defines the version of Istio to install.
-          Must be one of: v1.24.2, v1.24.1, v1.23.4, v1.23.3, v1.23.0.
+          Must be one of: v1.24-latest, v1.24.2, v1.24.1, v1.23-latest, v1.23.4, v1.23.3, v1.23.0.
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.24-latest
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24.2
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24.1
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.23-latest
         - urn:alm:descriptor:com.tectonic.ui:select:v1.23.4
         - urn:alm:descriptor:com.tectonic.ui:select:v1.23.3
         - urn:alm:descriptor:com.tectonic.ui:select:v1.23.0
@@ -318,11 +322,12 @@ spec:
       specDescriptors:
       - description: |-
           Defines the version of Istio to install.
-          Must be one of: v1.24.2, v1.24.1.
+          Must be one of: v1.24-latest, v1.24.2, v1.24.1.
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.24-latest
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24.2
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24.1
       - description: Namespace to which the Istio ztunnel component should be installed.
@@ -348,8 +353,10 @@ spec:
 
     This version of the operator supports the following Istio versions:
 
+    - v1.24-latest
     - v1.24.2
     - v1.24.1
+    - v1.23-latest
     - v1.23.4
     - v1.23.3
     - v1.23.0
