@@ -303,7 +303,7 @@ spec:
 					})
 				})
 
-				When("A revision is no longer in use", func() {
+				When("a revision is no longer in use", func() {
 					BeforeAll(func(ctx SpecContext) {
 						// Switch the update strategy to revision based to create a new revision.
 						Expect(k1.Patch(
@@ -359,7 +359,7 @@ spec:
 						}).Should(Succeed())
 					})
 
-					It("Sees the old revision as no longer in use", func(ctx SpecContext) {
+					It("sees the old revision as no longer in use", func(ctx SpecContext) {
 						Eventually(func(g Gomega) {
 							list := &v1.IstioRevisionList{}
 							g.Expect(clPrimary.List(ctx, list)).To(Succeed())
@@ -372,7 +372,7 @@ spec:
 						}).Should(Succeed())
 					})
 
-					It("Doesn't delete the old revision", func(ctx SpecContext) {
+					It("doesn't delete the old revision", func(ctx SpecContext) {
 						list := &v1.IstioRevisionList{}
 						Expect(clPrimary.List(ctx, list)).To(Succeed())
 						Expect(list.Items).To(HaveLen(2))
