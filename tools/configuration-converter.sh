@@ -44,8 +44,8 @@ VERSION=""
 for arg in "$@"; do
     if [[ -f "$arg" && -z "$INPUT" ]]; then
         INPUT="$arg"  # First file is the INPUT
-    elif [[ -f "$arg" && -z "$OUTPUT" ]]; then
-        OUTPUT="$arg"  # Second file is the OUTPUT
+    elif [[ -z "$OUTPUT" ]]; then
+        OUTPUT="$arg"  # Second argument is the OUTPUT
     fi
 done
 
@@ -62,7 +62,6 @@ elif [[ -d "$OUTPUT" ]]; then
     echo "Error: OUTPUT must be a file, not a directory."
     exit 1
 fi
-
 # Parse optional namespace (-n) and version (-v) arguments
 while [[ $# -gt 0 ]]; do
     case "$1" in
