@@ -23,9 +23,9 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
-	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
@@ -41,12 +41,12 @@ var _ = Describe("Control Plane updates", Label("update"), Ordered, func() {
 	debugInfoLogged := false
 
 	Describe("using IstioRevisionTag", func() {
-		if len(supportedversion.List) < 2 {
+		if len(istioversion.List) < 2 {
 			Skip("Skipping update tests because there are not enough versions in versions.yaml")
 		}
 
-		baseVersion := supportedversion.Old
-		newVersion := supportedversion.New
+		baseVersion := istioversion.Old
+		newVersion := istioversion.New
 		Context(baseVersion, func() {
 			BeforeAll(func(ctx SpecContext) {
 				Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
@@ -135,7 +135,7 @@ spec:
 					Expect(k.Patch("namespace", sampleNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
 						To(Succeed(), "Error patching sample namespace")
 					Expect(k.WithNamespace(sampleNamespace).
-						ApplyWithLabels(common.GetSampleYAML(supportedversion.Map[baseVersion], sampleNamespace), "version=v1")).
+						ApplyWithLabels(common.GetSampleYAML(istioversion.Map[baseVersion], sampleNamespace), "version=v1")).
 						To(Succeed(), "Error deploying sample")
 					Success("sample deployed")
 
@@ -155,7 +155,7 @@ spec:
 					for _, pod := range samplePods.Items {
 						sidecarVersion, err := getProxyVersion(pod.Name, sampleNamespace)
 						Expect(err).NotTo(HaveOccurred(), "Error getting sidecar version")
-						Expect(sidecarVersion).To(Equal(supportedversion.Map[baseVersion].Version), "Sidecar Istio version does not match the expected version")
+						Expect(sidecarVersion).To(Equal(istioversion.Map[baseVersion].Version), "Sidecar Istio version does not match the expected version")
 					}
 					Success("Istio sidecar version matches the expected base Istio version")
 				})
@@ -228,7 +228,7 @@ spec:
 							sidecarVersion, err := getProxyVersion(pod.Name, sampleNamespace)
 							Expect(err).NotTo(HaveOccurred(), "Error getting sidecar version")
 							return sidecarVersion
-						}).Should(Equal(supportedversion.Map[baseVersion].Version), "Sidecar Istio version does not match the expected version")
+						}).Should(Equal(istioversion.Map[baseVersion].Version), "Sidecar Istio version does not match the expected version")
 					}
 					Success("Istio sidecar version matches the expected Istio version")
 				})
@@ -264,7 +264,7 @@ spec:
 
 						for _, pod := range samplePods.Items {
 							sidecarVersion, err := getProxyVersion(pod.Name, sampleNamespace)
-							if err != nil || !sidecarVersion.Equal(supportedversion.Map[newVersion].Version) {
+							if err != nil || !sidecarVersion.Equal(istioversion.Map[newVersion].Version) {
 								return false
 							}
 						}
