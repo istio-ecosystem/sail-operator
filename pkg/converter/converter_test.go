@@ -78,7 +78,7 @@ spec:
     pilot:
       env:
         PILOT_ENABLE_STATUS: true`,
-			args: fmt.Sprintf("%s %s -v v1.24.3 -n istio-system", istioFile, sailFile),
+			args: fmt.Sprintf("-v v1.24.3 %s -n istio-system %s", istioFile, sailFile),
 			expectedOutput: `apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:

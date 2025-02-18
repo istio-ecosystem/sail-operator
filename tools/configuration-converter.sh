@@ -29,40 +29,12 @@ usage() {
     exit 1
 }
 
-# Ensure at least one file argument is provided
-if [[ $# -lt 1 ]]; then
-    usage
-fi
-
 # Initialize variables
 INPUT=""
 OUTPUT=""
 NAMESPACE="istio-system"
 VERSION=""
 
-# Identify the first and second file paths (treat the first file as INPUT)
-for arg in "$@"; do
-    if [[ -f "$arg" && -z "$INPUT" ]]; then
-        INPUT="$arg"  # First file is the INPUT
-    elif [[ -z "$OUTPUT" ]]; then
-        OUTPUT="$arg"  # Second argument is the OUTPUT
-    fi
-done
-
-# Ensure the input file is provided and is valid
-if [[ -z "$INPUT" || ! -f "$INPUT" ]]; then
-    echo "Error: Input file is missing or invalid."
-    usage
-fi
-
-# If OUTPUT is not specified, generate a default output file name
-if [[ -z "$OUTPUT" ]]; then
-    OUTPUT="$(dirname "$INPUT")/$(basename "$INPUT" .yaml)-sail.yaml"
-elif [[ -d "$OUTPUT" ]]; then
-    echo "Error: OUTPUT must be a file, not a directory."
-    exit 1
-fi
-# Parse optional namespace (-n) and version (-v) arguments
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -n)
@@ -82,10 +54,29 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         *)
+            if [[ -z "$INPUT" ]]; then
+                INPUT="$1"  # First positional argument is the INPUT
+            elif [[ -z "$OUTPUT" ]]; then
+                OUTPUT="$1"  # Second positional argument is the OUTPUT
+            fi
             shift
             ;;
     esac
 done
+
+# Ensure the input file is provided and is valid
+if [[ -z "$INPUT" || ! -f "$INPUT" ]]; then
+    echo "Error: Input file is missing or invalid."
+    usage
+fi
+
+# If OUTPUT is not specified, generate a default output file name
+if [[ -z "$OUTPUT" ]]; then
+    OUTPUT="$(dirname "$INPUT")/$(basename "$INPUT" .yaml)-sail.yaml"
+elif [[ -d "$OUTPUT" ]]; then
+    echo "Error: OUTPUT must be a file, not a directory."
+    exit 1
+fi
 
 if ! command -v yq &>/dev/null; then
     echo "Error: 'yq' is not installed. Please install it before running the script."
