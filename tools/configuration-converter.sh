@@ -23,7 +23,7 @@ set -e
 usage() {
     echo "Usage: $0 <input> [output] [-n <namespace>] [-v <version>]"
     echo "  <input>         : Input file (required)"
-    echo "  [output]        : Output file (optional, defaults to input's base directory with '-sail.yaml' suffix)"
+    echo "  [output]        : Output file (optional, defaults to input's file name with '-sail.yaml' suffix)"
     echo "  -n <namespace>  : Namespace (optional, defaults to 'istio-system')"
     echo "  -v <version>    : Istio Version (optional)"
     exit 1
@@ -67,10 +67,18 @@ fi
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -n)
+            if [[ -z "$2" || "$2" == -* ]]; then
+                echo "Error: -n requires a non-empty argument."
+                exit 1
+            fi
             NAMESPACE="$2"
             shift 2
             ;;
         -v)
+            if [[ -z "$2" || "$2" == -* ]]; then
+                echo "Error: -v requires a non-empty argument."
+                exit 1
+            fi
             VERSION="$2"
             shift 2
             ;;
