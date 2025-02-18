@@ -37,7 +37,7 @@ func TestConversion(t *testing.T) {
 	testcases := []struct {
 		name           string
 		input          string
-		converterArgs  string
+		args           string
 		expectedOutput string
 	}{
 		{
@@ -47,6 +47,7 @@ kind: IstioOperator
 metadata:
   name: default
 spec:`,
+			args: fmt.Sprintf("%s %s -n istio-system -v v1.24.3", istioFile, sailFile),
 			expectedOutput: `apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
@@ -54,7 +55,6 @@ metadata:
 spec:
   namespace: istio-system
   version: v1.24.3`,
-			converterArgs: fmt.Sprintf("%s %s -n istio-system -v v1.24.3", istioFile, sailFile),
 		},
 		{
 			name: "complex",
@@ -78,6 +78,7 @@ spec:
     pilot:
       env:
         PILOT_ENABLE_STATUS: true`,
+			args: fmt.Sprintf("%s %s -v v1.24.3 -n istio-system", istioFile, sailFile),
 			expectedOutput: `apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
@@ -97,7 +98,6 @@ spec:
       enabled: false
   namespace: istio-system
   version: v1.24.3`,
-			converterArgs: fmt.Sprintf("%s %s -v v1.24.3 -n istio-system", istioFile, sailFile),
 		},
 		{
 			name: "mandatory-arguments-only",
@@ -106,13 +106,13 @@ kind: IstioOperator
 metadata:
   name: default
 spec:`,
+			args: istioFile,
 			expectedOutput: `apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: default
 spec:
   namespace: istio-system`,
-			converterArgs: istioFile,
 		},
 	}
 	for _, tc := range testcases {
@@ -125,17 +125,17 @@ spec:
 
 			g.Expect(os.WriteFile(istioFile, []byte(tc.input), 0o644)).To(Succeed(), "failed to write YAML file")
 
-			_, err := shell.ExecuteCommand(converter + " " + tc.converterArgs)
-			g.Expect(err).To(Succeed(), "error in execution of ./configuration-converter.sh")
+			_, err := shell.ExecuteCommand(converter + " " + tc.args)
+			g.Expect(err).NotTo(HaveOccurred(), "error in execution of ./configuration-converter.sh")
 
 			actualOutput, err := os.ReadFile(sailFile)
-			g.Expect(err).To(Succeed(), "Cannot read %s", sailFile)
+			g.Expect(err).NotTo(HaveOccurred(), "Cannot read %s", sailFile)
 
 			actualData, err := parseYaml(actualOutput)
-			g.Expect(err).To(Succeed(), "Failed to parse sailFile")
+			g.Expect(err).NotTo(HaveOccurred(), "Failed to parse sailFile")
 
 			expectedData, err := parseYaml([]byte(tc.expectedOutput))
-			g.Expect(err).To(Succeed(), "Failed to parse expected output")
+			g.Expect(err).NotTo(HaveOccurred(), "Failed to parse expected output")
 
 			g.Expect(cmp.Diff(actualData, expectedData)).To(Equal(""), "Conversion is not as expected")
 		})
