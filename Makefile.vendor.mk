@@ -4,7 +4,7 @@ HUB = quay.io/maistra-dev
 CHANNELS = "stable,stable-3.0"
 DEFAULT_CHANNEL=stable
 HELM_VALUES_FILE = ossm/values.yaml
-VERSIONS_YAML_DIR ?= ossm
+VERSIONS_YAML_FILE ?= versions.ossm.yaml
 GENERATE_RELATED_IMAGES = false
 
 .PHONY: build-fips
