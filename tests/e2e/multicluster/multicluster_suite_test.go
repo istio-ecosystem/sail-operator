@@ -22,10 +22,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/certs"
 	k8sclient "github.com/istio-ecosystem/sail-operator/tests/e2e/util/client"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -33,24 +32,28 @@ import (
 )
 
 var (
-	clPrimary             client.Client
-	clRemote              client.Client
-	err                   error
-	ocp                   = env.GetBool("OCP", false)
-	namespace             = common.OperatorNamespace
-	deploymentName        = env.Get("DEPLOYMENT_NAME", "sail-operator")
-	controlPlaneNamespace = env.Get("CONTROL_PLANE_NS", "istio-system")
-	istioName             = env.Get("ISTIO_NAME", "default")
-	skipDeploy            = env.GetBool("SKIP_DEPLOY", false)
-	multicluster          = env.GetBool("MULTICLUSTER", false)
-	kubeconfig            = env.Get("KUBECONFIG", "")
-	kubeconfig2           = env.Get("KUBECONFIG2", "")
-	artifacts             = env.Get("ARTIFACTS", "/tmp/artifacts")
+	clPrimary                     client.Client
+	clRemote                      client.Client
+	err                           error
+	ocp                           = env.GetBool("OCP", false)
+	namespace                     = env.Get("NAMESPACE", "sail-operator")
+	deploymentName                = env.Get("DEPLOYMENT_NAME", "sail-operator")
+	controlPlaneNamespace         = env.Get("CONTROL_PLANE_NS", "istio-system")
+	externalControlPlaneNamespace = env.Get("EXTERNAL_CONTROL_PLANE_NS", "external-istiod")
+	istioName                     = env.Get("ISTIO_NAME", "default")
+	image                         = env.Get("IMAGE", "quay.io/maistra-dev/sail-operator:latest")
+	skipDeploy                    = env.GetBool("SKIP_DEPLOY", false)
+	multicluster                  = env.GetBool("MULTICLUSTER", false)
+	kubeconfig                    = env.Get("KUBECONFIG", "")
+	kubeconfig2                   = env.Get("KUBECONFIG2", "")
+	artifacts                     = env.Get("ARTIFACTS", "/tmp/artifacts")
+	sampleNamespace               = env.Get("SAMPLE_NAMESPACE", "sample")
 
-	eastGatewayYAML   string
-	westGatewayYAML   string
-	exposeServiceYAML string
-	exposeIstiodYAML  string
+	controlPlaneGatewayYAML string
+	eastGatewayYAML         string
+	westGatewayYAML         string
+	exposeServiceYAML       string
+	exposeIstiodYAML        string
 
 	k1 kubectl.Kubectl
 	k2 kubectl.Kubectl
@@ -93,12 +96,13 @@ func setup(t *testing.T) {
 
 	// Set base path
 	baseRepoDir := filepath.Join(workDir, "../../..")
+	controlPlaneGatewayYAML = fmt.Sprintf("%s/docs/multicluster/controlplane-gateway.yaml", baseRepoDir)
 	eastGatewayYAML = fmt.Sprintf("%s/docs/multicluster/east-west-gateway-net1.yaml", baseRepoDir)
 	westGatewayYAML = fmt.Sprintf("%s/docs/multicluster/east-west-gateway-net2.yaml", baseRepoDir)
 	exposeServiceYAML = fmt.Sprintf("%s/docs/multicluster/expose-services.yaml", baseRepoDir)
 	exposeIstiodYAML = fmt.Sprintf("%s/docs/multicluster/expose-istiod.yaml", baseRepoDir)
 
 	// Initialize kubectl utilities, one for each cluster
-	k1 = kubectl.New().WithClusterName("primary").WithKubeconfig(kubeconfig)
-	k2 = kubectl.New().WithClusterName("remote").WithKubeconfig(kubeconfig2)
+	k1 = kubectl.New().WithKubeconfig(kubeconfig)
+	k2 = kubectl.New().WithKubeconfig(kubeconfig2)
 }
