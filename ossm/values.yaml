@@ -19,6 +19,7 @@ csv:
     operatorframework.io/arch.s390x: supported
   annotations:
     operators.openshift.io/valid-subscription: '["OpenShift Container Platform", "OpenShift Platform Plus"]'
+    features.operators.openshift.io/fips-compliant: "true"
   displayName: Red Hat OpenShift Service Mesh 3
   categories: OpenShift Optional, Integration & Delivery, Networking, Security
   capabilities: Seamless Upgrades
