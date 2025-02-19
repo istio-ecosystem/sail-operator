@@ -85,6 +85,23 @@ spec:
 You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
 **Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
 
+### Quick start using a local KIND cluster
+
+For a quick start using a local cluster run:
+
+```sh
+make cluster
+```
+
+This deploys the cluster and preloads the latest operator image built from source to it.
+You can then follow up by deploying the operator and using it locally.
+
+Alternatively, you can deploy a local multi-cluster setup by running:
+
+```sh
+make cluster MULTICLUSTER=true
+```
+
 ### Deploying the operator
 
 Deploy the operator to the cluster:
@@ -100,6 +117,12 @@ make deploy-olm
 ```
 
 Make sure that the `HUB` and `TAG` environment variables point to your container image repository and that the repository is publicly accessible.
+
+When deploying on a local KIND cluster, make sure to use the local image registry:
+
+```sh
+export HUB=localhost:5000
+```
 
 ### Deploying the Istio Control Plane
 

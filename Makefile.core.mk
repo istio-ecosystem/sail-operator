@@ -334,6 +334,13 @@ create-gh-release: helm-package ## Create a GitHub release and upload the helm c
 		--generate-notes \
 		$(GH_RELEASE_ADDITIONAL_FLAGS)
 
+.PHONY: cluster
+cluster: SKIP_CLEANUP=true
+cluster: ## Creates a KinD cluster(s) to use in local deployments.
+	source ${SOURCE_DIR}/tests/e2e/setup/setup-kind.sh; \
+	export HUB="$${KIND_REGISTRY}"; \
+	OCP=false ${SOURCE_DIR}/tests/e2e/setup/build-and-push-operator.sh
+
 .PHONY: deploy
 deploy: verify-kubeconfig helm ## Deploy controller to an existing cluster.
 	$(info NAMESPACE: $(NAMESPACE))
