@@ -19,7 +19,7 @@ package istioctl
 import (
 	"fmt"
 
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
+	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/shell"
 )
 
