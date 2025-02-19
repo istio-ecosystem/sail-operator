@@ -1587,7 +1587,7 @@ In this setup there is an external control plane cluster (`cluster1`) and a remo
     kubectl wait --context "${CTX_CLUSTER1}" --for=condition=Ready istios/external-istiod --timeout=3m
     ```
 
-8. Create the Istio resources to route traffic from the ingress gateway to the external control plane.
+8. Create the `Gateway` and `VirtualService` resources to route traffic from the ingress gateway to the external control plane.
 
     ```sh
     kubectl apply --context "${CTX_CLUSTER1}" -f - <<EOF

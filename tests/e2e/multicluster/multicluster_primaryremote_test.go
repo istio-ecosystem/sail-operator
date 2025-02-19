@@ -38,7 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("Multicluster deployment models", Ordered, func() {
+var _ = Describe("Multicluster deployment models", Label("multicluster-primaryremote"), Ordered, func() {
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 	debugInfoLogged := false
@@ -172,7 +172,7 @@ spec:
     global:
       remotePilotAddress: %s`
 
-						remotePilotAddress, err := common.GetSVCLoadBalancerAddress(ctx, clPrimary, controlPlaneNamespace, "istio-eastwestgateway")
+						remotePilotAddress := common.GetSVCLoadBalancerAddress(ctx, clPrimary, controlPlaneNamespace, "istio-eastwestgateway")
 						Expect(remotePilotAddress).NotTo(BeEmpty(), "Remote Pilot Address is empty")
 						Expect(err).NotTo(HaveOccurred(), "Error getting Remote Pilot Address")
 						istioYAML := fmt.Sprintf(istioYAMLTemplate, v.Name, remotePilotAddress)
@@ -245,29 +245,7 @@ spec:
 
 				When("sample apps are deployed in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
-						// Create the namespace
-						Expect(k1.CreateNamespace("sample")).To(Succeed(), "Namespace failed to be created")
-						Expect(k2.CreateNamespace("sample")).To(Succeed(), "Namespace failed to be created")
-
-						// Label the sample namespace
-						Expect(k1.Patch("namespace", "sample", "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
-							To(Succeed(), "Error patching sample namespace")
-						Expect(k2.Patch("namespace", "sample", "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
-							To(Succeed(), "Error patching sample namespace")
-
-						// Deploy the sample app in both clusters
-						helloWorldURL := common.GetSampleYAML(v, "helloworld")
-						sleepURL := common.GetSampleYAML(v, "sleep")
-
-						// On Cluster 0, create a service for the helloworld app v1
-						Expect(k1.WithNamespace("sample").ApplyWithLabels(helloWorldURL, "service=helloworld")).To(Succeed(), "Failed to deploy helloworld service")
-						Expect(k1.WithNamespace("sample").ApplyWithLabels(helloWorldURL, "version=v1")).To(Succeed(), "Failed to deploy helloworld service")
-						Expect(k1.WithNamespace("sample").Apply(sleepURL)).To(Succeed(), "Failed to deploy sleep service")
-
-						// On Cluster 1, create a service for the helloworld app v2
-						Expect(k2.WithNamespace("sample").ApplyWithLabels(helloWorldURL, "service=helloworld")).To(Succeed(), "Failed to deploy helloworld service")
-						Expect(k2.WithNamespace("sample").ApplyWithLabels(helloWorldURL, "version=v2")).To(Succeed(), "Failed to deploy helloworld service")
-						Expect(k2.WithNamespace("sample").Apply(sleepURL)).To(Succeed(), "Failed to deploy sleep service")
+						deploySampleAppToAllClusters("sample", v)
 						Success("Sample app is deployed in both clusters")
 					})
 
@@ -296,8 +274,8 @@ spec:
 					})
 
 					It("can access the sample app from both clusters", func(ctx SpecContext) {
-						verifyResponsesAreReceivedFromBothClusters(k1, "Cluster #1")
-						verifyResponsesAreReceivedFromBothClusters(k2, "Cluster #2")
+						verifyResponsesAreReceivedFromExpectedVersions(k1, "Cluster #1")
+						verifyResponsesAreReceivedFromExpectedVersions(k2, "Cluster #2")
 						Success("Sample app is accessible from both clusters")
 					})
 				})
