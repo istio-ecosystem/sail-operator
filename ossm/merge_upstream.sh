@@ -53,6 +53,7 @@ merge() {
 }
 
 updateVersionsInOssmValuesYaml() {
+    # shellcheck disable=SC2016
     latest_version=$(yq -r '.versions[0] as $first | $first.version // (.versions[] | select(.name == $first.ref) | .version)' "${VERSIONS_YAML_PATH}")
     minor_version=${latest_version%.*}
     latest_version_underscore=${latest_version//./_}
