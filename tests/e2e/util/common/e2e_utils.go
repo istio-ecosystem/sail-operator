@@ -131,21 +131,29 @@ func CheckNamespaceEmpty(ctx SpecContext, cl client.Client, ns string) {
 	}).Should(BeEmpty(), "No Services should be present in the namespace")
 }
 
-func LogDebugInfo(k kubectl.Kubectl) {
+func LogDebugInfo(kubectls ...kubectl.Kubectl) {
 	// General debugging information to help diagnose the failure
 	// TODO: Add the creation of file with this information to be attached to the test report
 
 	GinkgoWriter.Println()
-	GinkgoWriter.Printf("The test run has failures and the debug information is as follows from cluster: %q:\n", k.GetClusterName())
-	GinkgoWriter.Println("=========================================================")
-	logOperatorDebugInfo(k)
-	GinkgoWriter.Println("=========================================================")
-	logIstioDebugInfo(k)
-	GinkgoWriter.Println("=========================================================")
-	logCNIDebugInfo(k)
-	GinkgoWriter.Println("=========================================================")
-	logCertsDebugInfo(k)
-	GinkgoWriter.Println("=========================================================")
+	GinkgoWriter.Println("The test run has failures and the debug information is as follows:")
+	GinkgoWriter.Println()
+	for _, k := range kubectls {
+		if k.ClusterName != "" {
+			GinkgoWriter.Println("=========================================================")
+			GinkgoWriter.Println("CLUSTER:", k.ClusterName)
+			GinkgoWriter.Println("=========================================================")
+		}
+		logOperatorDebugInfo(k)
+		GinkgoWriter.Println("=========================================================")
+		logIstioDebugInfo(k)
+		GinkgoWriter.Println("=========================================================")
+		logCNIDebugInfo(k)
+		GinkgoWriter.Println("=========================================================")
+		logCertsDebugInfo(k)
+		GinkgoWriter.Println("=========================================================")
+		GinkgoWriter.Println()
+	}
 }
 
 func logOperatorDebugInfo(k kubectl.Kubectl) {
@@ -218,7 +226,7 @@ func logDebugElement(caption string, info string, err error) {
 }
 
 func GetVersionFromIstiod() (*semver.Version, error) {
-	k := kubectl.New("testCluster")
+	k := kubectl.New()
 	output, err := k.WithNamespace(controlPlaneNamespace).Exec("deploy/istiod", "", "pilot-discovery version")
 	if err != nil {
 		return nil, fmt.Errorf("error getting version from istiod: %w", err)
