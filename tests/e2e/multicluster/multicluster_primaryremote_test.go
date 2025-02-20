@@ -245,29 +245,39 @@ spec:
 
 				When("sample apps are deployed in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
-						deploySampleAppToAllClusters("sample", v)
+						// Create namespace
+						Expect(k1.CreateNamespace(sampleNamespace)).To(Succeed(), "Namespace failed to be created on Cluster #1")
+						Expect(k2.CreateNamespace(sampleNamespace)).To(Succeed(), "Namespace failed to be created on Cluster #2")
+
+						// Label the namespace
+						Expect(k1.Patch("namespace", sampleNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
+							To(Succeed(), "Error patching sample namespace")
+						Expect(k2.Patch("namespace", sampleNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
+							To(Succeed(), "Error patching sample namespace")
+
+						deploySampleAppToAllClusters(sampleNamespace, v)
 						Success("Sample app is deployed in both clusters")
 					})
 
 					It("updates the pods status to Ready", func(ctx SpecContext) {
 						samplePodsPrimary := &corev1.PodList{}
 
-						Expect(clPrimary.List(ctx, samplePodsPrimary, client.InNamespace("sample"))).To(Succeed())
+						Expect(clPrimary.List(ctx, samplePodsPrimary, client.InNamespace(sampleNamespace))).To(Succeed())
 						Expect(samplePodsPrimary.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
 
 						for _, pod := range samplePodsPrimary.Items {
 							Eventually(common.GetObject).
-								WithArguments(ctx, clPrimary, kube.Key(pod.Name, "sample"), &corev1.Pod{}).
+								WithArguments(ctx, clPrimary, kube.Key(pod.Name, sampleNamespace), &corev1.Pod{}).
 								Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready on Primary; unexpected Condition")
 						}
 
 						samplePodsRemote := &corev1.PodList{}
-						Expect(clRemote.List(ctx, samplePodsRemote, client.InNamespace("sample"))).To(Succeed())
+						Expect(clRemote.List(ctx, samplePodsRemote, client.InNamespace(sampleNamespace))).To(Succeed())
 						Expect(samplePodsRemote.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
 
 						for _, pod := range samplePodsRemote.Items {
 							Eventually(common.GetObject).
-								WithArguments(ctx, clRemote, kube.Key(pod.Name, "sample"), &corev1.Pod{}).
+								WithArguments(ctx, clRemote, kube.Key(pod.Name, sampleNamespace), &corev1.Pod{}).
 								Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready on Remote; unexpected Condition")
 						}
 						Success("Sample app is created in both clusters and Running")
@@ -303,15 +313,15 @@ spec:
 					// Delete namespaces to ensure clean up for new tests iteration
 					Expect(k1.DeleteNamespaceNoWait(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
 					Expect(k2.DeleteNamespaceNoWait(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
-					Expect(k1.DeleteNamespaceNoWait("sample")).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
-					Expect(k2.DeleteNamespaceNoWait("sample")).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
+					Expect(k1.DeleteNamespaceNoWait(sampleNamespace)).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
+					Expect(k2.DeleteNamespaceNoWait(sampleNamespace)).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
 
 					Expect(k1.WaitNamespaceDeleted(controlPlaneNamespace)).To(Succeed())
 					Expect(k2.WaitNamespaceDeleted(controlPlaneNamespace)).To(Succeed())
 					Success("ControlPlane Namespaces were deleted")
 
-					Expect(k1.WaitNamespaceDeleted("sample")).To(Succeed())
-					Expect(k2.WaitNamespaceDeleted("sample")).To(Succeed())
+					Expect(k1.WaitNamespaceDeleted(sampleNamespace)).To(Succeed())
+					Expect(k2.WaitNamespaceDeleted(sampleNamespace)).To(Succeed())
 					Success("Sample app is deleted in both clusters")
 
 					// Delete the resources created by istioctl create-remote-secret

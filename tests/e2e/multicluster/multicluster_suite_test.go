@@ -48,6 +48,7 @@ var (
 	kubeconfig                    = env.Get("KUBECONFIG", "")
 	kubeconfig2                   = env.Get("KUBECONFIG2", "")
 	artifacts                     = env.Get("ARTIFACTS", "/tmp/artifacts")
+	sampleNamespace               = env.Get("SAMPLE_NAMESPACE", "sample")
 
 	controlPlaneGatewayYAML string
 	eastGatewayYAML         string

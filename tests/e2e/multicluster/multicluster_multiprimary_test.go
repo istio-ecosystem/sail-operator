@@ -202,30 +202,40 @@ spec:
 
 				When("sample apps are deployed in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
+						// Create namespace
+						Expect(k1.CreateNamespace(sampleNamespace)).To(Succeed(), "Namespace failed to be created on Cluster #1")
+						Expect(k2.CreateNamespace(sampleNamespace)).To(Succeed(), "Namespace failed to be created on Cluster #2")
+
+						// Label the namespace
+						Expect(k1.Patch("namespace", sampleNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
+							To(Succeed(), "Error patching sample namespace")
+						Expect(k2.Patch("namespace", sampleNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
+							To(Succeed(), "Error patching sample namespace")
+
 						// Deploy the sample app in both clusters
-						deploySampleAppToAllClusters("sample", version)
+						deploySampleAppToAllClusters(sampleNamespace, version)
 						Success("Sample app is deployed in both clusters")
 					})
 
 					It("updates the pods status to Ready", func(ctx SpecContext) {
 						samplePodsCluster1 := &corev1.PodList{}
 
-						Expect(clPrimary.List(ctx, samplePodsCluster1, client.InNamespace("sample"))).To(Succeed())
+						Expect(clPrimary.List(ctx, samplePodsCluster1, client.InNamespace(sampleNamespace))).To(Succeed())
 						Expect(samplePodsCluster1.Items).ToNot(BeEmpty(), "No pods found in bookinfo namespace")
 
 						for _, pod := range samplePodsCluster1.Items {
 							Eventually(common.GetObject).
-								WithArguments(ctx, clPrimary, kube.Key(pod.Name, "sample"), &corev1.Pod{}).
+								WithArguments(ctx, clPrimary, kube.Key(pod.Name, sampleNamespace), &corev1.Pod{}).
 								Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready on Cluster #1; unexpected Condition")
 						}
 
 						samplePodsCluster2 := &corev1.PodList{}
-						Expect(clRemote.List(ctx, samplePodsCluster2, client.InNamespace("sample"))).To(Succeed())
+						Expect(clRemote.List(ctx, samplePodsCluster2, client.InNamespace(sampleNamespace))).To(Succeed())
 						Expect(samplePodsCluster2.Items).ToNot(BeEmpty(), "No pods found in bookinfo namespace")
 
 						for _, pod := range samplePodsCluster2.Items {
 							Eventually(common.GetObject).
-								WithArguments(ctx, clRemote, kube.Key(pod.Name, "sample"), &corev1.Pod{}).
+								WithArguments(ctx, clRemote, kube.Key(pod.Name, sampleNamespace), &corev1.Pod{}).
 								Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready on Cluster #2; unexpected Condition")
 						}
 						Success("Sample app is created in both clusters and Running")
@@ -264,15 +274,15 @@ spec:
 					// Delete namespaces to ensure clean up for new tests iteration
 					Expect(k1.DeleteNamespaceNoWait(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
 					Expect(k2.DeleteNamespaceNoWait(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #2")
-					Expect(k1.DeleteNamespaceNoWait("sample")).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
-					Expect(k2.DeleteNamespaceNoWait("sample")).To(Succeed(), "Namespace failed to be deleted on Cluster #2")
+					Expect(k1.DeleteNamespaceNoWait(sampleNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
+					Expect(k2.DeleteNamespaceNoWait(sampleNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #2")
 
 					Expect(k1.WaitNamespaceDeleted(controlPlaneNamespace)).To(Succeed())
 					Expect(k2.WaitNamespaceDeleted(controlPlaneNamespace)).To(Succeed())
 					Success("ControlPlane Namespaces are empty")
 
-					Expect(k1.WaitNamespaceDeleted("sample")).To(Succeed())
-					Expect(k2.WaitNamespaceDeleted("sample")).To(Succeed())
+					Expect(k1.WaitNamespaceDeleted(sampleNamespace)).To(Succeed())
+					Expect(k2.WaitNamespaceDeleted(sampleNamespace)).To(Succeed())
 					Success("Sample app is deleted in both clusters")
 				})
 			})
@@ -295,13 +305,6 @@ spec:
 
 // deploySampleApp deploys the sample apps: helloworld and sleep in the given cluster
 func deploySampleApp(k kubectl.Kubectl, ns string, istioVersion istioversion.VersionInfo, appVersion string) {
-	// Create the namespace
-	Expect(k.CreateNamespace(ns)).To(Succeed(), "Namespace failed to be created")
-
-	// Label the namespace
-	Expect(k.Patch("namespace", ns, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
-		To(Succeed(), "Error patching sample namespace")
-
 	helloWorldYAML := common.GetSampleYAML(istioVersion, "helloworld")
 	Expect(k.WithNamespace(ns).ApplyWithLabels(helloWorldYAML, "service=helloworld")).To(Succeed(), "Sample service deploy failed on Cluster #1")
 
