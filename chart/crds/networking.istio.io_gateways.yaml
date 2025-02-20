@@ -195,12 +195,6 @@ spec:
                       description: Human-readable message indicating details about
                         last transition.
                       type: string
-                    observedGeneration:
-                      anyOf:
-                      - type: integer
-                      - type: string
-                      description: Resource Generation to which the Condition refers.
-                      x-kubernetes-int-or-string: true
                     reason:
                       description: Unique, one-word, CamelCase reason for the condition's
                         last transition.
@@ -217,6 +211,8 @@ spec:
                 anyOf:
                 - type: integer
                 - type: string
+                description: Resource Generation to which the Reconciled Condition
+                  refers.
                 x-kubernetes-int-or-string: true
               validationMessages:
                 description: Includes any errors or warnings detected by Istio's analyzers.
@@ -428,12 +424,6 @@ spec:
                       description: Human-readable message indicating details about
                         last transition.
                       type: string
-                    observedGeneration:
-                      anyOf:
-                      - type: integer
-                      - type: string
-                      description: Resource Generation to which the Condition refers.
-                      x-kubernetes-int-or-string: true
                     reason:
                       description: Unique, one-word, CamelCase reason for the condition's
                         last transition.
@@ -450,6 +440,8 @@ spec:
                 anyOf:
                 - type: integer
                 - type: string
+                description: Resource Generation to which the Reconciled Condition
+                  refers.
                 x-kubernetes-int-or-string: true
               validationMessages:
                 description: Includes any errors or warnings detected by Istio's analyzers.
@@ -661,12 +653,6 @@ spec:
                       description: Human-readable message indicating details about
                         last transition.
                       type: string
-                    observedGeneration:
-                      anyOf:
-                      - type: integer
-                      - type: string
-                      description: Resource Generation to which the Condition refers.
-                      x-kubernetes-int-or-string: true
                     reason:
                       description: Unique, one-word, CamelCase reason for the condition's
                         last transition.
@@ -683,6 +669,8 @@ spec:
                 anyOf:
                 - type: integer
                 - type: string
+                description: Resource Generation to which the Reconciled Condition
+                  refers.
                 x-kubernetes-int-or-string: true
               validationMessages:
                 description: Includes any errors or warnings detected by Istio's analyzers.
