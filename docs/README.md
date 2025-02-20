@@ -1224,26 +1224,26 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
 
     ```sh
     kubectl apply --context="${CTX_CLUSTER1}" \
-      -f https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml \
+      -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml" \
       -l service=helloworld -n sample
     kubectl apply --context="${CTX_CLUSTER1}" \
-      -f https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml \
+      -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml" \
       -l version=v1 -n sample
     kubectl apply --context="${CTX_CLUSTER1}" \
-      -f https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/sleep/sleep.yaml -n sample
+      -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/sleep/sleep.yaml" -n sample
     ```
 
 13. Deploy sample applications in `cluster2`.
 
     ```sh
     kubectl apply --context="${CTX_CLUSTER2}" \
-      -f https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml \
+      -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml" \
       -l service=helloworld -n sample
     kubectl apply --context="${CTX_CLUSTER2}" \
-      -f https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml \
+      -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml" \
       -l version=v2 -n sample
     kubectl apply --context="${CTX_CLUSTER2}" \
-      -f https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/sleep/sleep.yaml -n sample
+      -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/sleep/sleep.yaml" -n sample
     ```
 
 14. Wait for the sample applications to be ready.
@@ -1396,13 +1396,13 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
     kubectl get ns sample --context "${CTX_CLUSTER1}" || kubectl create --context="${CTX_CLUSTER1}" namespace sample
     kubectl label --context="${CTX_CLUSTER1}" namespace sample istio-injection=enabled
     kubectl apply --context="${CTX_CLUSTER1}" \
-      -f https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml \
+      -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml" \
       -l service=helloworld -n sample
     kubectl apply --context="${CTX_CLUSTER1}" \
-      -f https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml \
+      -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml" \
       -l version=v1 -n sample
     kubectl apply --context="${CTX_CLUSTER1}" \
-      -f https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/sleep/sleep.yaml -n sample
+      -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/sleep/sleep.yaml" -n sample
     ```
 
 10. Deploy sample applications to `cluster2`.
@@ -1411,13 +1411,13 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
     kubectl get ns sample --context "${CTX_CLUSTER2}" || kubectl create --context="${CTX_CLUSTER2}" namespace sample
     kubectl label --context="${CTX_CLUSTER2}" namespace sample istio-injection=enabled
     kubectl apply --context="${CTX_CLUSTER2}" \
-      -f https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml \
+      -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml" \
       -l service=helloworld -n sample
     kubectl apply --context="${CTX_CLUSTER2}" \
-      -f https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml \
+      -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml" \
       -l version=v2 -n sample
     kubectl apply --context="${CTX_CLUSTER2}" \
-      -f https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/sleep/sleep.yaml -n sample
+      -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/sleep/sleep.yaml" -n sample
     ```
 
 11. Verify that you see a response from both v1 and v2 on `cluster1`.
@@ -1665,10 +1665,9 @@ In this setup there is an external control plane cluster (`cluster1`) and a remo
 11. Deploy the `sleep` and `helloworld` applications to the `sample` namespace.
 
     ```sh
-    kubectl apply -f https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml -l service=helloworld -n sample --context="${CTX_CLUSTER2}"
-    kubectl apply -f https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml -l version=v1 -n sample --context="${CTX_CLUSTER2}"
-    kubectl apply -f https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/sleep/sleep.yaml -n sample --context="${CTX_CLUSTER2}"
-
+    kubectl apply -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml" -l service=helloworld -n sample --context="${CTX_CLUSTER2}"
+    kubectl apply -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml" -l version=v1 -n sample --context="${CTX_CLUSTER2}"
+    kubectl apply -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/sleep/sleep.yaml" -n sample --context="${CTX_CLUSTER2}"
     ```
 
 12. Verify the pods in the `sample` namespace have a sidecar injected.
@@ -1703,7 +1702,7 @@ In this setup there is an external control plane cluster (`cluster1`) and a remo
 
     Expose `helloworld` through the ingress gateway.
     ```sh
-    kubectl apply -f https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/gateway-api/helloworld-gateway.yaml -n sample --context="${CTX_CLUSTER2}"
+    kubectl apply -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/gateway-api/helloworld-gateway.yaml" -n sample --context="${CTX_CLUSTER2}"
     kubectl -n sample --context="${CTX_CLUSTER2}" wait --for=condition=programmed gtw helloworld-gateway
     ```
 
