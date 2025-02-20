@@ -40,7 +40,7 @@ metadata:
   name: example
 spec:
   namespace: istio-system
-  version: v1.22.0
+  version: v1.24.0
 ```
 
 When you create an `Istio` resource, the sail operator then creates an `IstioRevision` that represents a control plane deployment.
@@ -53,7 +53,7 @@ metadata:
   ...
 spec:
   namespace: istio-system
-  version: v1.22.0
+  version: v1.24.0
 status:
   ...
   state: Healthy
@@ -67,13 +67,13 @@ kind: Istio
 metadata:
   name: example
 spec:
-  version: v1.20.0
+  version: v1.24.0
+  namespace: istio-system
   values:
     global:
-      mtls:
-        enabled: true
-      trustDomainAliases:
-      - example.net
+      variant: debug
+      logging:
+        level: "all:debug"
     meshConfig:
       trustDomain: example.com
       trustDomainAliases:
