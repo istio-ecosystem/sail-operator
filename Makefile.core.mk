@@ -59,7 +59,7 @@ LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/istioversion.versionsFilename=${VERSIONS_YA
 IS_FIPS_COMPLIANT ?= false # set to true for FIPS compliance
 ifeq ($(IS_FIPS_COMPLIANT), true)
 	CGO_ENABLED = 1
-	LD_FLAGS = ${LD_EXTRAFLAGS} -s -w
+	LD_FLAGS = ${LD_EXTRAFLAGS} -tags strictfipsruntime -s -w
 else
 	CGO_ENABLED = 0
 	LD_FLAGS = -extldflags -static ${LD_EXTRAFLAGS} -s -w
