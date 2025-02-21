@@ -71,11 +71,11 @@ spec:
                       type: string
                       x-kubernetes-validations:
                       - message: UDS must be an absolute path or abstract socket
-                        rule: 'self.startsWith("unix://") ? (self.substring(7, 8)
-                          == "/" || self.substring(7, 8) == "@") : true'
+                        rule: 'self.startsWith(''unix://'') ? (self.substring(7,8)
+                          == ''/'' || self.substring(7,8) == ''@'') : true'
                       - message: UDS may not be a dir
-                        rule: 'self.startsWith("unix://") ? !self.endsWith("/") :
-                          true'
+                        rule: 'self.startsWith(''unix://'') ? !self.endsWith(''/'')
+                          : true'
                     labels:
                       additionalProperties:
                         type: string
@@ -104,7 +104,7 @@ spec:
                       type: object
                       x-kubernetes-validations:
                       - message: port name must be valid
-                        rule: self.all(key, size(key) < 63 && key.matches("^[a-zA-Z0-9](?:[-a-zA-Z0-9]*[a-zA-Z0-9])?$"))
+                        rule: self.all(key, size(key) < 63 && key.matches('^[a-zA-Z0-9](?:[-a-zA-Z0-9]*[a-zA-Z0-9])?$'))
                     serviceAccount:
                       description: The service account associated with the workload
                         if a sidecar is present in the workload.
@@ -120,7 +120,7 @@ spec:
                   - message: Address is required
                     rule: has(self.address) || has(self.network)
                   - message: UDS may not include ports
-                    rule: '(has(self.address) && self.address.startsWith("unix://"))
+                    rule: '(has(self.address) && self.address.startsWith(''unix://''))
                       ? !has(self.ports) : true'
                 maxItems: 4096
                 type: array
@@ -135,7 +135,7 @@ spec:
                   type: string
                   x-kubernetes-validations:
                   - message: hostname cannot be wildcard
-                    rule: self != "*"
+                    rule: self != '*'
                 maxItems: 256
                 minItems: 1
                 type: array
@@ -215,7 +215,7 @@ spec:
                       type: string
                       x-kubernetes-validations:
                       - message: wildcard is not supported in selector
-                        rule: '!self.contains("*")'
+                        rule: '!self.contains(''*'')'
                     description: One or more labels that indicate a specific set of
                       pods/VMs on which the configuration should be applied.
                     maxProperties: 256
@@ -226,20 +226,18 @@ spec:
             type: object
             x-kubernetes-validations:
             - message: only one of WorkloadSelector or Endpoints can be set
-              rule: '(has(self.workloadSelector) ? 1 : 0) + (has(self.endpoints) ?
-                1 : 0) <= 1'
+              rule: (has(self.workloadSelector)?1:0)+(has(self.endpoints)?1:0)<=1
             - message: CIDR addresses are allowed only for NONE/STATIC resolution
                 types
-              rule: |-
-                !(has(self.addresses) && self.addresses.exists(k, k.contains("/")) && has(self.resolution) &&
-                self.resolution != "STATIC" && self.resolution != "NONE")
+              rule: '!(has(self.addresses) && self.addresses.exists(k, k.contains(''/''))
+                && (has(self.resolution) && self.resolution != ''STATIC'' && self.resolution
+                != ''NONE''))'
             - message: NONE mode cannot set endpoints
-              rule: '(!has(self.resolution) || self.resolution == "NONE") ? !has(self.endpoints)
+              rule: '(!has(self.resolution) || self.resolution == ''NONE'') ? !has(self.endpoints)
                 : true'
             - message: DNS_ROUND_ROBIN mode cannot have multiple endpoints
-              rule: |-
-                (has(self.resolution) && self.resolution == "DNS_ROUND_ROBIN") ? (!has(self.endpoints) ||
-                size(self.endpoints) == 1) : true
+              rule: '(has(self.resolution) && self.resolution == ''DNS_ROUND_ROBIN'')
+                ? (!has(self.endpoints) || size(self.endpoints) == 1) : true'
           status:
             properties:
               conditions:
@@ -259,12 +257,6 @@ spec:
                       description: Human-readable message indicating details about
                         last transition.
                       type: string
-                    observedGeneration:
-                      anyOf:
-                      - type: integer
-                      - type: string
-                      description: Resource Generation to which the Condition refers.
-                      x-kubernetes-int-or-string: true
                     reason:
                       description: Unique, one-word, CamelCase reason for the condition's
                         last transition.
@@ -281,6 +273,8 @@ spec:
                 anyOf:
                 - type: integer
                 - type: string
+                description: Resource Generation to which the Reconciled Condition
+                  refers.
                 x-kubernetes-int-or-string: true
               validationMessages:
                 description: Includes any errors or warnings detected by Istio's analyzers.
@@ -370,11 +364,11 @@ spec:
                       type: string
                       x-kubernetes-validations:
                       - message: UDS must be an absolute path or abstract socket
-                        rule: 'self.startsWith("unix://") ? (self.substring(7, 8)
-                          == "/" || self.substring(7, 8) == "@") : true'
+                        rule: 'self.startsWith(''unix://'') ? (self.substring(7,8)
+                          == ''/'' || self.substring(7,8) == ''@'') : true'
                       - message: UDS may not be a dir
-                        rule: 'self.startsWith("unix://") ? !self.endsWith("/") :
-                          true'
+                        rule: 'self.startsWith(''unix://'') ? !self.endsWith(''/'')
+                          : true'
                     labels:
                       additionalProperties:
                         type: string
@@ -403,7 +397,7 @@ spec:
                       type: object
                       x-kubernetes-validations:
                       - message: port name must be valid
-                        rule: self.all(key, size(key) < 63 && key.matches("^[a-zA-Z0-9](?:[-a-zA-Z0-9]*[a-zA-Z0-9])?$"))
+                        rule: self.all(key, size(key) < 63 && key.matches('^[a-zA-Z0-9](?:[-a-zA-Z0-9]*[a-zA-Z0-9])?$'))
                     serviceAccount:
                       description: The service account associated with the workload
                         if a sidecar is present in the workload.
@@ -419,7 +413,7 @@ spec:
                   - message: Address is required
                     rule: has(self.address) || has(self.network)
                   - message: UDS may not include ports
-                    rule: '(has(self.address) && self.address.startsWith("unix://"))
+                    rule: '(has(self.address) && self.address.startsWith(''unix://''))
                       ? !has(self.ports) : true'
                 maxItems: 4096
                 type: array
@@ -434,7 +428,7 @@ spec:
                   type: string
                   x-kubernetes-validations:
                   - message: hostname cannot be wildcard
-                    rule: self != "*"
+                    rule: self != '*'
                 maxItems: 256
                 minItems: 1
                 type: array
@@ -514,7 +508,7 @@ spec:
                       type: string
                       x-kubernetes-validations:
                       - message: wildcard is not supported in selector
-                        rule: '!self.contains("*")'
+                        rule: '!self.contains(''*'')'
                     description: One or more labels that indicate a specific set of
                       pods/VMs on which the configuration should be applied.
                     maxProperties: 256
@@ -525,20 +519,18 @@ spec:
             type: object
             x-kubernetes-validations:
             - message: only one of WorkloadSelector or Endpoints can be set
-              rule: '(has(self.workloadSelector) ? 1 : 0) + (has(self.endpoints) ?
-                1 : 0) <= 1'
+              rule: (has(self.workloadSelector)?1:0)+(has(self.endpoints)?1:0)<=1
             - message: CIDR addresses are allowed only for NONE/STATIC resolution
                 types
-              rule: |-
-                !(has(self.addresses) && self.addresses.exists(k, k.contains("/")) && has(self.resolution) &&
-                self.resolution != "STATIC" && self.resolution != "NONE")
+              rule: '!(has(self.addresses) && self.addresses.exists(k, k.contains(''/''))
+                && (has(self.resolution) && self.resolution != ''STATIC'' && self.resolution
+                != ''NONE''))'
             - message: NONE mode cannot set endpoints
-              rule: '(!has(self.resolution) || self.resolution == "NONE") ? !has(self.endpoints)
+              rule: '(!has(self.resolution) || self.resolution == ''NONE'') ? !has(self.endpoints)
                 : true'
             - message: DNS_ROUND_ROBIN mode cannot have multiple endpoints
-              rule: |-
-                (has(self.resolution) && self.resolution == "DNS_ROUND_ROBIN") ? (!has(self.endpoints) ||
-                size(self.endpoints) == 1) : true
+              rule: '(has(self.resolution) && self.resolution == ''DNS_ROUND_ROBIN'')
+                ? (!has(self.endpoints) || size(self.endpoints) == 1) : true'
           status:
             properties:
               conditions:
@@ -558,12 +550,6 @@ spec:
                       description: Human-readable message indicating details about
                         last transition.
                       type: string
-                    observedGeneration:
-                      anyOf:
-                      - type: integer
-                      - type: string
-                      description: Resource Generation to which the Condition refers.
-                      x-kubernetes-int-or-string: true
                     reason:
                       description: Unique, one-word, CamelCase reason for the condition's
                         last transition.
@@ -580,6 +566,8 @@ spec:
                 anyOf:
                 - type: integer
                 - type: string
+                description: Resource Generation to which the Reconciled Condition
+                  refers.
                 x-kubernetes-int-or-string: true
               validationMessages:
                 description: Includes any errors or warnings detected by Istio's analyzers.
@@ -669,11 +657,11 @@ spec:
                       type: string
                       x-kubernetes-validations:
                       - message: UDS must be an absolute path or abstract socket
-                        rule: 'self.startsWith("unix://") ? (self.substring(7, 8)
-                          == "/" || self.substring(7, 8) == "@") : true'
+                        rule: 'self.startsWith(''unix://'') ? (self.substring(7,8)
+                          == ''/'' || self.substring(7,8) == ''@'') : true'
                       - message: UDS may not be a dir
-                        rule: 'self.startsWith("unix://") ? !self.endsWith("/") :
-                          true'
+                        rule: 'self.startsWith(''unix://'') ? !self.endsWith(''/'')
+                          : true'
                     labels:
                       additionalProperties:
                         type: string
@@ -702,7 +690,7 @@ spec:
                       type: object
                       x-kubernetes-validations:
                       - message: port name must be valid
-                        rule: self.all(key, size(key) < 63 && key.matches("^[a-zA-Z0-9](?:[-a-zA-Z0-9]*[a-zA-Z0-9])?$"))
+                        rule: self.all(key, size(key) < 63 && key.matches('^[a-zA-Z0-9](?:[-a-zA-Z0-9]*[a-zA-Z0-9])?$'))
                     serviceAccount:
                       description: The service account associated with the workload
                         if a sidecar is present in the workload.
@@ -718,7 +706,7 @@ spec:
                   - message: Address is required
                     rule: has(self.address) || has(self.network)
                   - message: UDS may not include ports
-                    rule: '(has(self.address) && self.address.startsWith("unix://"))
+                    rule: '(has(self.address) && self.address.startsWith(''unix://''))
                       ? !has(self.ports) : true'
                 maxItems: 4096
                 type: array
@@ -733,7 +721,7 @@ spec:
                   type: string
                   x-kubernetes-validations:
                   - message: hostname cannot be wildcard
-                    rule: self != "*"
+                    rule: self != '*'
                 maxItems: 256
                 minItems: 1
                 type: array
@@ -813,7 +801,7 @@ spec:
                       type: string
                       x-kubernetes-validations:
                       - message: wildcard is not supported in selector
-                        rule: '!self.contains("*")'
+                        rule: '!self.contains(''*'')'
                     description: One or more labels that indicate a specific set of
                       pods/VMs on which the configuration should be applied.
                     maxProperties: 256
@@ -824,20 +812,18 @@ spec:
             type: object
             x-kubernetes-validations:
             - message: only one of WorkloadSelector or Endpoints can be set
-              rule: '(has(self.workloadSelector) ? 1 : 0) + (has(self.endpoints) ?
-                1 : 0) <= 1'
+              rule: (has(self.workloadSelector)?1:0)+(has(self.endpoints)?1:0)<=1
             - message: CIDR addresses are allowed only for NONE/STATIC resolution
                 types
-              rule: |-
-                !(has(self.addresses) && self.addresses.exists(k, k.contains("/")) && has(self.resolution) &&
-                self.resolution != "STATIC" && self.resolution != "NONE")
+              rule: '!(has(self.addresses) && self.addresses.exists(k, k.contains(''/''))
+                && (has(self.resolution) && self.resolution != ''STATIC'' && self.resolution
+                != ''NONE''))'
             - message: NONE mode cannot set endpoints
-              rule: '(!has(self.resolution) || self.resolution == "NONE") ? !has(self.endpoints)
+              rule: '(!has(self.resolution) || self.resolution == ''NONE'') ? !has(self.endpoints)
                 : true'
             - message: DNS_ROUND_ROBIN mode cannot have multiple endpoints
-              rule: |-
-                (has(self.resolution) && self.resolution == "DNS_ROUND_ROBIN") ? (!has(self.endpoints) ||
-                size(self.endpoints) == 1) : true
+              rule: '(has(self.resolution) && self.resolution == ''DNS_ROUND_ROBIN'')
+                ? (!has(self.endpoints) || size(self.endpoints) == 1) : true'
           status:
             properties:
               conditions:
@@ -857,12 +843,6 @@ spec:
                       description: Human-readable message indicating details about
                         last transition.
                       type: string
-                    observedGeneration:
-                      anyOf:
-                      - type: integer
-                      - type: string
-                      description: Resource Generation to which the Condition refers.
-                      x-kubernetes-int-or-string: true
                     reason:
                       description: Unique, one-word, CamelCase reason for the condition's
                         last transition.
@@ -879,6 +859,8 @@ spec:
                 anyOf:
                 - type: integer
                 - type: string
+                description: Resource Generation to which the Reconciled Condition
+                  refers.
                 x-kubernetes-int-or-string: true
               validationMessages:
                 description: Includes any errors or warnings detected by Istio's analyzers.

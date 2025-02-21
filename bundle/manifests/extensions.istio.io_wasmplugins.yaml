@@ -133,14 +133,14 @@ spec:
                       type: string
                       x-kubernetes-validations:
                       - message: wildcard not allowed in label value match
-                        rule: '!self.contains("*")'
+                        rule: '!self.contains(''*'')'
                     description: One or more labels that indicate a specific set of
                       pods/VMs on which a policy should be applied.
                     maxProperties: 4096
                     type: object
                     x-kubernetes-validations:
                     - message: wildcard not allowed in label key match
-                      rule: self.all(key, !key.contains("*"))
+                      rule: self.all(key, !key.contains('*'))
                     - message: key must not be empty
                       rule: self.all(key, key.size() != 0)
                 type: object
@@ -180,9 +180,8 @@ spec:
                 x-kubernetes-validations:
                 - message: Support kinds are core/Service, networking.istio.io/ServiceEntry,
                     gateway.networking.k8s.io/Gateway
-                  rule: '[self.group, self.kind] in [["core", "Service"], ["", "Service"],
-                    ["gateway.networking.k8s.io", "Gateway"], ["networking.istio.io",
-                    "ServiceEntry"]]'
+                  rule: '[self.group, self.kind] in [[''core'',''Service''], ['''',''Service''],
+                    [''gateway.networking.k8s.io'',''Gateway''], [''networking.istio.io'',''ServiceEntry'']]'
               targetRefs:
                 description: Optional.
                 items:
@@ -216,9 +215,8 @@ spec:
                   x-kubernetes-validations:
                   - message: Support kinds are core/Service, networking.istio.io/ServiceEntry,
                       gateway.networking.k8s.io/Gateway
-                    rule: '[self.group, self.kind] in [["core", "Service"], ["", "Service"],
-                      ["gateway.networking.k8s.io", "Gateway"], ["networking.istio.io",
-                      "ServiceEntry"]]'
+                    rule: '[self.group, self.kind] in [[''core'',''Service''], ['''',''Service''],
+                      [''gateway.networking.k8s.io'',''Gateway''], [''networking.istio.io'',''ServiceEntry'']]'
                 maxItems: 16
                 type: array
               type:
@@ -237,9 +235,10 @@ spec:
                 type: string
                 x-kubernetes-validations:
                 - message: url must have schema one of [http, https, file, oci]
-                  rule: |-
-                    isURL(self) ? (url(self).getScheme() in ["", "http", "https", "oci", "file"]) : (isURL("http://" + self) &&
-                    url("http://" + self).getScheme() in ["", "http", "https", "oci", "file"])
+                  rule: 'isURL(self) ? (url(self).getScheme() in ['''', ''http'',
+                    ''https'', ''oci'', ''file'']) : (isURL(''http://'' + self) &&
+                    url(''http://'' +self).getScheme() in ['''', ''http'', ''https'',
+                    ''oci'', ''file''])'
               verificationKey:
                 type: string
               vmConfig:
@@ -273,7 +272,7 @@ spec:
                       type: object
                       x-kubernetes-validations:
                       - message: value may only be set when valueFrom is INLINE
-                        rule: '(has(self.valueFrom) ? self.valueFrom : "") != "HOST"
+                        rule: '(has(self.valueFrom) ? self.valueFrom : '''') != ''HOST''
                           || !has(self.value)'
                     maxItems: 256
                     type: array
@@ -286,8 +285,7 @@ spec:
             type: object
             x-kubernetes-validations:
             - message: only one of targetRefs or selector can be set
-              rule: '(has(self.selector) ? 1 : 0) + (has(self.targetRef) ? 1 : 0)
-                + (has(self.targetRefs) ? 1 : 0) <= 1'
+              rule: (has(self.selector)?1:0)+(has(self.targetRef)?1:0)+(has(self.targetRefs)?1:0)<=1
           status:
             properties:
               conditions:
@@ -307,12 +305,6 @@ spec:
                       description: Human-readable message indicating details about
                         last transition.
                       type: string
-                    observedGeneration:
-                      anyOf:
-                      - type: integer
-                      - type: string
-                      description: Resource Generation to which the Condition refers.
-                      x-kubernetes-int-or-string: true
                     reason:
                       description: Unique, one-word, CamelCase reason for the condition's
                         last transition.
@@ -329,6 +321,8 @@ spec:
                 anyOf:
                 - type: integer
                 - type: string
+                description: Resource Generation to which the Reconciled Condition
+                  refers.
                 x-kubernetes-int-or-string: true
               validationMessages:
                 description: Includes any errors or warnings detected by Istio's analyzers.
