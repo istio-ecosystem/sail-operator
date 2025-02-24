@@ -23,9 +23,9 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
-	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
@@ -75,7 +75,7 @@ metadata:
 
 				cni := &v1.IstioCNI{}
 				Expect(cl.Get(ctx, kube.Key("default"), cni)).To(Succeed())
-				Expect(cni.Spec.Version).To(Equal(supportedversion.Default))
+				Expect(cni.Spec.Version).To(Equal(istioversion.Default))
 				Expect(cni.Spec.Namespace).To(Equal("istio-cni"))
 
 				Expect(cl.Delete(ctx, cni)).To(Succeed())
@@ -99,7 +99,7 @@ metadata:
 
 				istio := &v1.Istio{}
 				Expect(cl.Get(ctx, kube.Key("default"), istio)).To(Succeed())
-				Expect(istio.Spec.Version).To(Equal(supportedversion.Default))
+				Expect(istio.Spec.Version).To(Equal(istioversion.Default))
 				Expect(istio.Spec.Namespace).To(Equal("istio-system"))
 				Expect(istio.Spec.UpdateStrategy).ToNot(BeNil())
 				Expect(istio.Spec.UpdateStrategy.Type).To(Equal(v1.UpdateStrategyTypeInPlace))
@@ -111,8 +111,8 @@ metadata:
 	})
 
 	Describe("given Istio version", func() {
-		for _, version := range supportedversion.List {
-			Context(version.Name, func() {
+		for name, version := range istioversion.Map {
+			Context(name, func() {
 				BeforeAll(func() {
 					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
 					Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
@@ -128,7 +128,7 @@ metadata:
 spec:
   version: %s
   namespace: %s`
-						yaml = fmt.Sprintf(yaml, version.Name, istioCniNamespace)
+						yaml = fmt.Sprintf(yaml, name, istioCniNamespace)
 						Log("IstioCNI YAML:", indent(2, yaml))
 						Expect(k.CreateFromString(yaml)).To(Succeed(), "IstioCNI creation failed")
 						Success("IstioCNI created")
@@ -178,7 +178,7 @@ metadata:
 spec:
   version: %s
   namespace: %s`
-						istioYAML = fmt.Sprintf(istioYAML, version.Name, controlPlaneNamespace)
+						istioYAML = fmt.Sprintf(istioYAML, name, controlPlaneNamespace)
 						Log("Istio YAML:", indent(2, istioYAML))
 						Expect(k.CreateFromString(istioYAML)).
 							To(Succeed(), "Istio CR failed to be created")
@@ -218,6 +218,10 @@ spec:
 
 				When("sample pod is deployed", func() {
 					BeforeAll(func() {
+						if isAlias(name, version) {
+							Skip("Skipping test for alias version")
+						}
+
 						Expect(k.CreateNamespace(sampleNamespace)).To(Succeed(), "Sample namespace failed to be created")
 						Expect(k.Patch("namespace", sampleNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
 							To(Succeed(), "Error patching sample namespace")
@@ -329,6 +333,10 @@ spec:
 		Success("Namespace deleted")
 	})
 })
+
+func isAlias(name string, version istioversion.VersionInfo) bool {
+	return name != version.Name
+}
 
 func HaveContainersThat(matcher types.GomegaMatcher) types.GomegaMatcher {
 	return HaveField("Spec.Template.Spec.Containers", matcher)

@@ -24,8 +24,8 @@ import (
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
-	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -63,7 +63,7 @@ func TestValidate(t *testing.T) {
 					Name: "default",
 				},
 				Spec: v1alpha1.ZTunnelSpec{
-					Version:   supportedversion.Default,
+					Version:   istioversion.Default,
 					Namespace: ztunnelNamespace,
 				},
 			},
@@ -90,7 +90,7 @@ func TestValidate(t *testing.T) {
 					Name: "default",
 				},
 				Spec: v1alpha1.ZTunnelSpec{
-					Version: supportedversion.Default,
+					Version: istioversion.Default,
 				},
 			},
 			objects:   []client.Object{ns},
@@ -103,7 +103,7 @@ func TestValidate(t *testing.T) {
 					Name: "default",
 				},
 				Spec: v1alpha1.ZTunnelSpec{
-					Version:   supportedversion.Default,
+					Version:   istioversion.Default,
 					Namespace: ztunnelNamespace,
 				},
 			},
@@ -117,7 +117,7 @@ func TestValidate(t *testing.T) {
 					Name: "default",
 				},
 				Spec: v1alpha1.ZTunnelSpec{
-					Version:   supportedversion.Default,
+					Version:   istioversion.Default,
 					Namespace: ztunnelNamespace,
 				},
 			},
@@ -471,7 +471,7 @@ func TestApplyImageDigests(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := applyImageDigests(tc.input, tc.input.Spec.Values, tc.config)
+			result := applyImageDigests(tc.input.Spec.Version, tc.input.Spec.Values, tc.config)
 			if diff := cmp.Diff(tc.expectValues, result); diff != "" {
 				t.Errorf("unexpected merge result; diff (-expected, +actual):\n%v", diff)
 			}

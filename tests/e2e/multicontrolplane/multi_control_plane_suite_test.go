@@ -19,10 +19,10 @@ package controlplane
 import (
 	"testing"
 
-	"github.com/istio-ecosystem/sail-operator/pkg/test/util/supportedversion"
+	"github.com/istio-ecosystem/sail-operator/pkg/env"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	k8sclient "github.com/istio-ecosystem/sail-operator/tests/e2e/util/client"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/env"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -32,7 +32,7 @@ import (
 var (
 	cl                     client.Client
 	err                    error
-	version                = supportedversion.New
+	version                = istioversion.New
 	namespace              = common.OperatorNamespace
 	deploymentName         = env.Get("DEPLOYMENT_NAME", "sail-operator")
 	controlPlaneNamespace1 = env.Get("CONTROL_PLANE_NS1", "istio-system1")
