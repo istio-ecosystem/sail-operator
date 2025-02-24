@@ -65,16 +65,12 @@ spec:
                       - tcpSocket
                     - required:
                       - exec
-                    - required:
-                      - grpc
                 - required:
                   - httpGet
                 - required:
                   - tcpSocket
                 - required:
                   - exec
-                - required:
-                  - grpc
                 properties:
                   exec:
                     description: Health is determined by how the command that is executed
@@ -95,21 +91,6 @@ spec:
                     format: int32
                     minimum: 0
                     type: integer
-                  grpc:
-                    description: GRPC call is made and response/error is used to determine
-                      health.
-                    properties:
-                      port:
-                        description: Port on which the endpoint lives.
-                        maximum: 4294967295
-                        minimum: 0
-                        type: integer
-                        x-kubernetes-validations:
-                        - message: port must be between 1-65535
-                          rule: 0 < self && self <= 65535
-                      service:
-                        type: string
-                    type: object
                   httpGet:
                     description: '`httpGet` is performed to a given endpoint and the
                       status/able to connect determines health.'
@@ -144,7 +125,7 @@ spec:
                         type: string
                         x-kubernetes-validations:
                         - message: scheme must be one of [HTTP, HTTPS]
-                          rule: self in ["", "HTTP", "HTTPS"]
+                          rule: self in ['', 'HTTP', 'HTTPS']
                     required:
                     - port
                     type: object
@@ -197,10 +178,11 @@ spec:
                     type: string
                     x-kubernetes-validations:
                     - message: UDS must be an absolute path or abstract socket
-                      rule: 'self.startsWith("unix://") ? (self.substring(7, 8) ==
-                        "/" || self.substring(7, 8) == "@") : true'
+                      rule: 'self.startsWith(''unix://'') ? (self.substring(7,8) ==
+                        ''/'' || self.substring(7,8) == ''@'') : true'
                     - message: UDS may not be a dir
-                      rule: 'self.startsWith("unix://") ? !self.endsWith("/") : true'
+                      rule: 'self.startsWith(''unix://'') ? !self.endsWith(''/'')
+                        : true'
                   labels:
                     additionalProperties:
                       type: string
@@ -229,7 +211,7 @@ spec:
                     type: object
                     x-kubernetes-validations:
                     - message: port name must be valid
-                      rule: self.all(key, size(key) < 63 && key.matches("^[a-zA-Z0-9](?:[-a-zA-Z0-9]*[a-zA-Z0-9])?$"))
+                      rule: self.all(key, size(key) < 63 && key.matches('^[a-zA-Z0-9](?:[-a-zA-Z0-9]*[a-zA-Z0-9])?$'))
                   serviceAccount:
                     description: The service account associated with the workload
                       if a sidecar is present in the workload.
@@ -243,7 +225,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: UDS may not include ports
-                  rule: '(has(self.address) && self.address.startsWith("unix://"))
+                  rule: '(has(self.address) && self.address.startsWith(''unix://''))
                     ? !has(self.ports) : true'
             required:
             - template
@@ -267,12 +249,6 @@ spec:
                       description: Human-readable message indicating details about
                         last transition.
                       type: string
-                    observedGeneration:
-                      anyOf:
-                      - type: integer
-                      - type: string
-                      description: Resource Generation to which the Condition refers.
-                      x-kubernetes-int-or-string: true
                     reason:
                       description: Unique, one-word, CamelCase reason for the condition's
                         last transition.
@@ -289,6 +265,8 @@ spec:
                 anyOf:
                 - type: integer
                 - type: string
+                description: Resource Generation to which the Reconciled Condition
+                  refers.
                 x-kubernetes-int-or-string: true
               validationMessages:
                 description: Includes any errors or warnings detected by Istio's analyzers.
@@ -373,16 +351,12 @@ spec:
                       - tcpSocket
                     - required:
                       - exec
-                    - required:
-                      - grpc
                 - required:
                   - httpGet
                 - required:
                   - tcpSocket
                 - required:
                   - exec
-                - required:
-                  - grpc
                 properties:
                   exec:
                     description: Health is determined by how the command that is executed
@@ -403,21 +377,6 @@ spec:
                     format: int32
                     minimum: 0
                     type: integer
-                  grpc:
-                    description: GRPC call is made and response/error is used to determine
-                      health.
-                    properties:
-                      port:
-                        description: Port on which the endpoint lives.
-                        maximum: 4294967295
-                        minimum: 0
-                        type: integer
-                        x-kubernetes-validations:
-                        - message: port must be between 1-65535
-                          rule: 0 < self && self <= 65535
-                      service:
-                        type: string
-                    type: object
                   httpGet:
                     description: '`httpGet` is performed to a given endpoint and the
                       status/able to connect determines health.'
@@ -452,7 +411,7 @@ spec:
                         type: string
                         x-kubernetes-validations:
                         - message: scheme must be one of [HTTP, HTTPS]
-                          rule: self in ["", "HTTP", "HTTPS"]
+                          rule: self in ['', 'HTTP', 'HTTPS']
                     required:
                     - port
                     type: object
@@ -505,10 +464,11 @@ spec:
                     type: string
                     x-kubernetes-validations:
                     - message: UDS must be an absolute path or abstract socket
-                      rule: 'self.startsWith("unix://") ? (self.substring(7, 8) ==
-                        "/" || self.substring(7, 8) == "@") : true'
+                      rule: 'self.startsWith(''unix://'') ? (self.substring(7,8) ==
+                        ''/'' || self.substring(7,8) == ''@'') : true'
                     - message: UDS may not be a dir
-                      rule: 'self.startsWith("unix://") ? !self.endsWith("/") : true'
+                      rule: 'self.startsWith(''unix://'') ? !self.endsWith(''/'')
+                        : true'
                   labels:
                     additionalProperties:
                       type: string
@@ -537,7 +497,7 @@ spec:
                     type: object
                     x-kubernetes-validations:
                     - message: port name must be valid
-                      rule: self.all(key, size(key) < 63 && key.matches("^[a-zA-Z0-9](?:[-a-zA-Z0-9]*[a-zA-Z0-9])?$"))
+                      rule: self.all(key, size(key) < 63 && key.matches('^[a-zA-Z0-9](?:[-a-zA-Z0-9]*[a-zA-Z0-9])?$'))
                   serviceAccount:
                     description: The service account associated with the workload
                       if a sidecar is present in the workload.
@@ -551,7 +511,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: UDS may not include ports
-                  rule: '(has(self.address) && self.address.startsWith("unix://"))
+                  rule: '(has(self.address) && self.address.startsWith(''unix://''))
                     ? !has(self.ports) : true'
             required:
             - template
@@ -575,12 +535,6 @@ spec:
                       description: Human-readable message indicating details about
                         last transition.
                       type: string
-                    observedGeneration:
-                      anyOf:
-                      - type: integer
-                      - type: string
-                      description: Resource Generation to which the Condition refers.
-                      x-kubernetes-int-or-string: true
                     reason:
                       description: Unique, one-word, CamelCase reason for the condition's
                         last transition.
@@ -597,6 +551,8 @@ spec:
                 anyOf:
                 - type: integer
                 - type: string
+                description: Resource Generation to which the Reconciled Condition
+                  refers.
                 x-kubernetes-int-or-string: true
               validationMessages:
                 description: Includes any errors or warnings detected by Istio's analyzers.
@@ -681,16 +637,12 @@ spec:
                       - tcpSocket
                     - required:
                       - exec
-                    - required:
-                      - grpc
                 - required:
                   - httpGet
                 - required:
                   - tcpSocket
                 - required:
                   - exec
-                - required:
-                  - grpc
                 properties:
                   exec:
                     description: Health is determined by how the command that is executed
@@ -711,21 +663,6 @@ spec:
                     format: int32
                     minimum: 0
                     type: integer
-                  grpc:
-                    description: GRPC call is made and response/error is used to determine
-                      health.
-                    properties:
-                      port:
-                        description: Port on which the endpoint lives.
-                        maximum: 4294967295
-                        minimum: 0
-                        type: integer
-                        x-kubernetes-validations:
-                        - message: port must be between 1-65535
-                          rule: 0 < self && self <= 65535
-                      service:
-                        type: string
-                    type: object
                   httpGet:
                     description: '`httpGet` is performed to a given endpoint and the
                       status/able to connect determines health.'
@@ -760,7 +697,7 @@ spec:
                         type: string
                         x-kubernetes-validations:
                         - message: scheme must be one of [HTTP, HTTPS]
-                          rule: self in ["", "HTTP", "HTTPS"]
+                          rule: self in ['', 'HTTP', 'HTTPS']
                     required:
                     - port
                     type: object
@@ -813,10 +750,11 @@ spec:
                     type: string
                     x-kubernetes-validations:
                     - message: UDS must be an absolute path or abstract socket
-                      rule: 'self.startsWith("unix://") ? (self.substring(7, 8) ==
-                        "/" || self.substring(7, 8) == "@") : true'
+                      rule: 'self.startsWith(''unix://'') ? (self.substring(7,8) ==
+                        ''/'' || self.substring(7,8) == ''@'') : true'
                     - message: UDS may not be a dir
-                      rule: 'self.startsWith("unix://") ? !self.endsWith("/") : true'
+                      rule: 'self.startsWith(''unix://'') ? !self.endsWith(''/'')
+                        : true'
                   labels:
                     additionalProperties:
                       type: string
@@ -845,7 +783,7 @@ spec:
                     type: object
                     x-kubernetes-validations:
                     - message: port name must be valid
-                      rule: self.all(key, size(key) < 63 && key.matches("^[a-zA-Z0-9](?:[-a-zA-Z0-9]*[a-zA-Z0-9])?$"))
+                      rule: self.all(key, size(key) < 63 && key.matches('^[a-zA-Z0-9](?:[-a-zA-Z0-9]*[a-zA-Z0-9])?$'))
                   serviceAccount:
                     description: The service account associated with the workload
                       if a sidecar is present in the workload.
@@ -859,7 +797,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: UDS may not include ports
-                  rule: '(has(self.address) && self.address.startsWith("unix://"))
+                  rule: '(has(self.address) && self.address.startsWith(''unix://''))
                     ? !has(self.ports) : true'
             required:
             - template
@@ -883,12 +821,6 @@ spec:
                       description: Human-readable message indicating details about
                         last transition.
                       type: string
-                    observedGeneration:
-                      anyOf:
-                      - type: integer
-                      - type: string
-                      description: Resource Generation to which the Condition refers.
-                      x-kubernetes-int-or-string: true
                     reason:
                       description: Unique, one-word, CamelCase reason for the condition's
                         last transition.
@@ -905,6 +837,8 @@ spec:
                 anyOf:
                 - type: integer
                 - type: string
+                description: Resource Generation to which the Reconciled Condition
+                  refers.
                 x-kubernetes-int-or-string: true
               validationMessages:
                 description: Includes any errors or warnings detected by Istio's analyzers.
