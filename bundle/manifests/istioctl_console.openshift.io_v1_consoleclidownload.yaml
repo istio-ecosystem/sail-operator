@@ -1,0 +1,10 @@
+apiVersion: console.openshift.io/v1
+kind: ConsoleCLIDownload
+metadata:
+  name: istioctl
+spec:
+  description: istioctl is the Istio client that allows you to manage Istio resources.
+  displayName: istioctl - Istio Command Line Interface (CLI)
+  links:
+  - href: https://mirror.openshift.com/pub/cgw/servicemesh/latest
+    text: Download istioctl
