@@ -92,7 +92,7 @@ spec:
 
 				It("deploys istiod and pod is Ready", func(ctx SpecContext) {
 					Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key("default"), &v1.Istio{}).
-						Should(HaveCondition(v1.IstioCNIConditionReady, metav1.ConditionTrue), "Istiod is not Available; unexpected Condition")
+						Should(HaveCondition(v1.IstioConditionReady, metav1.ConditionTrue), "Istiod is not Available; unexpected Condition")
 					Success("Istiod is deployed in the namespace and Running")
 				})
 			})
@@ -115,6 +115,7 @@ spec:
 				})
 
 				It("creates the resource with condition InUse false", func(ctx SpecContext) {
+					// Condition InUse is expected to be false because there are no pods using the IstioRevisionTag
 					Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key("default"), &v1.IstioRevisionTag{}).
 						Should(HaveCondition(v1.IstioRevisionTagConditionInUse, metav1.ConditionFalse), "unexpected Condition; expected InUse False")
 					Success("IstioRevisionTag created and not in use")
@@ -132,6 +133,7 @@ spec:
 			When("sample pod is deployed", func() {
 				BeforeAll(func(ctx SpecContext) {
 					Expect(k.CreateNamespace(sampleNamespace)).To(Succeed(), "Sample namespace failed to be created")
+					Expect(k.Label("namespace", sampleNamespace, "istio-injection", "enabled")).To(Succeed(), "Error labeling sample namespace")
 					Expect(k.Patch("namespace", sampleNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
 						To(Succeed(), "Error patching sample namespace")
 					Expect(k.WithNamespace(sampleNamespace).
@@ -196,7 +198,7 @@ spec:
 					Success("Istiod pods are Running")
 				})
 
-				It("there are one IstionRevision for each version", func(ctx SpecContext) {
+				It("there is one IstionRevision for each version", func(ctx SpecContext) {
 					istioRevisions := &v1.IstioRevisionList{}
 					Expect(cl.List(ctx, istioRevisions)).To(Succeed())
 					Expect(istioRevisions.Items).To(HaveLen(2), "Unexpected number of IstioRevisionTags; expected 2")
@@ -210,6 +212,7 @@ spec:
 				})
 
 				It("both IstionRevision are in use", func(ctx SpecContext) {
+					// Check that both IstioRevisionTags are in use. One is in use by the current proxies and the new because is being referenced by the tag
 					istioRevisions := &v1.IstioRevisionList{}
 					Expect(cl.List(ctx, istioRevisions)).To(Succeed())
 					for _, revision := range istioRevisions.Items {
@@ -273,7 +276,8 @@ spec:
 					Success("Istio sidecar version matches the expected new Istio version")
 				})
 
-				It("IstionRevision resource and istiod pod are deleted", func(ctx SpecContext) {
+				It("IstionRevision resource and old istiod pod is deleted", func(ctx SpecContext) {
+					// The IstioRevisionTag is now in use by the new IstioRevision, so the old IstioRevision and the old istiod pod are deleted
 					Eventually(func() bool {
 						istioRevisions := &v1.IstioRevisionList{}
 						Expect(cl.List(ctx, istioRevisions)).To(Succeed())
