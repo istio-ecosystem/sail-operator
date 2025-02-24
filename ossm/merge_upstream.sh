@@ -36,7 +36,9 @@ MERGE_STRATEGY=${MERGE_STRATEGY:-"merge"}
 MERGE_REPOSITORY=${MERGE_REPOSITORY:-"https://github.com/istio-ecosystem/sail-operator.git"}
 MERGE_BRANCH=${MERGE_BRANCH:-"main"}
 
-VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"ossm/versions.yaml"}
+VERSIONS_YAML_DIR=${VERSIONS_YAML_DIR:-"pkg/istioversion"}
+VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"versions.yaml"}
+VERSIONS_YAML_PATH=${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}
 HELM_VALUES_FILE=${HELM_VALUES_FILE:-"ossm/values.yaml"}
 
 merge() {
