@@ -45,7 +45,8 @@ var _ = Describe("Control Plane updates", Label("update"), Ordered, func() {
 			Skip("Skipping update tests because there are not enough versions in versions.yaml")
 		}
 
-		// istioversion.Old is the version first version in versions.yaml file and istioversion.New is the second version in the List
+		// istioversion.Old is the version second version in versions.yaml file and istioversion.New is the first version in the List
+		// istioversion.Old is going to be the base version from where we are going to update to istioversion.New
 		// TODO: improve this: https://github.com/istio-ecosystem/sail-operator/issues/681
 		baseVersion := istioversion.Old
 		newVersion := istioversion.New
