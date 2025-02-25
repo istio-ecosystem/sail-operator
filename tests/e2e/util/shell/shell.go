@@ -48,7 +48,7 @@ func ExecuteShell(command string, input string) (string, error) {
 	err := cmd.Run()
 	if err != nil {
 		// Return both stdout and stderr to help with debugging
-		return stdout.String() + stderr.String(), fmt.Errorf("error executing command: %s", stderr.String())
+		return stdout.String() + stderr.String(), fmt.Errorf("error executing command: %s: %s", cmd, stderr.String())
 	}
 
 	return stdout.String(), nil
