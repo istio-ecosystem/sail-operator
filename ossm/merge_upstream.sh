@@ -36,7 +36,9 @@ MERGE_STRATEGY=${MERGE_STRATEGY:-"merge"}
 MERGE_REPOSITORY=${MERGE_REPOSITORY:-"https://github.com/istio-ecosystem/sail-operator.git"}
 MERGE_BRANCH=${MERGE_BRANCH:-"main"}
 
-VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"ossm/versions.yaml"}
+VERSIONS_YAML_DIR=${VERSIONS_YAML_DIR:-"pkg/istioversion"}
+VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"versions.yaml"}
+VERSIONS_YAML_PATH=${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}
 HELM_VALUES_FILE=${HELM_VALUES_FILE:-"ossm/values.yaml"}
 
 merge() {
@@ -53,11 +55,15 @@ merge() {
 }
 
 updateVersionsInOssmValuesYaml() {
-    latest_version=$(yq '.versions[0].version' < "${VERSIONS_YAML_FILE}")
+    # shellcheck disable=SC2016
+    latest_version=$(yq -r '.versions[0] as $first | $first.version // (.versions[] | select(.name == $first.ref) | .version)' "${VERSIONS_YAML_PATH}")
     minor_version=${latest_version%.*}
     latest_version_underscore=${latest_version//./_}
     minor_version_underscore=${minor_version//./_}
-    sed -i -e "s/${minor_version}\.[0-9]\+/${latest_version}/g" -e "s/${minor_version_underscore}_[0-9]\+/${latest_version_underscore}/g" "${HELM_VALUES_FILE}"
+    sed -i \
+        -e "s/${minor_version}\.[0-9]\+/${latest_version}/g" \
+        -e "s/${minor_version_underscore}_[0-9]\+/${latest_version_underscore}/g" \
+        "${HELM_VALUES_FILE}"
 }
 
 main () {

@@ -23,6 +23,7 @@ VERSION ?= 1.1.0
 MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 
 OPERATOR_NAME ?= sailoperator
+VERSIONS_YAML_DIR ?= pkg/istioversion
 VERSIONS_YAML_FILE ?= versions.yaml
 
 # Istio images names
@@ -53,6 +54,7 @@ LD_EXTRAFLAGS  = -X ${GO_MODULE}/pkg/version.buildVersion=${VERSION}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildGitRevision=${GIT_REVISION}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildTag=${GIT_TAG}
 LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/version.buildStatus=${GIT_STATUS}
+LD_EXTRAFLAGS += -X ${GO_MODULE}/pkg/istioversion.versionsFilename=${VERSIONS_YAML_FILE}
 
 IS_FIPS_COMPLIANT ?= false # set to true for FIPS compliance
 ifeq ($(IS_FIPS_COMPLIANT), true)
@@ -389,7 +391,7 @@ gen-charts: ## Pull charts from istio repository.
 	@# use yq to generate a list of download-charts.sh commands for each version in versions.yaml; these commands are
 	@# passed to sh and executed; in a nutshell, the yq command generates commands like:
 	@# ./hack/download-charts.sh <version> <git repo> <commit> [chart1] [chart2] ...
-	@yq eval '.versions[] | "./hack/download-charts.sh " + .name + " " + .repo + " " + .commit + " " + ((.charts // []) | join(" "))' < $(VERSIONS_YAML_FILE) | sh
+	@yq eval '.versions[] | "./hack/download-charts.sh " + .name + " " + .repo + " " + .commit + " " + ((.charts // []) | join(" "))' < $(VERSIONS_YAML_DIR)/$(VERSIONS_YAML_FILE) | sh
 
 	@# remove old version directories
 	@hack/remove-old-versions.sh
