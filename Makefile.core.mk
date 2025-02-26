@@ -409,7 +409,7 @@ gen-charts: ## Pull charts from istio repository.
 gen: gen-all-except-bundle bundle ## Generate everything.
 
 .PHONY: gen-all-except-bundle
-gen-all-except-bundle: operator-name operator-chart controller-gen gen-api gen-charts gen-manifests gen-code gen-api-docs github-workflow
+gen-all-except-bundle: operator-name operator-chart controller-gen gen-api gen-charts gen-manifests gen-code gen-api-docs gen-docs-tests github-workflow
 
 .PHONY: gen-check
 gen-check: gen restore-manifest-dates check-clean-repo ## Verify that changes in generated resources have been checked in.
@@ -436,6 +436,11 @@ gen-api-docs: ## Generate API documentation. Known issues: go fmt does not prope
 	@find $(OUTPUT_DOCS_PATH) -type f \( -name "*.md" -o -name "*.asciidoc" \) -exec sed -i 's/\t/  /g' {} \;
 	@find $(OUTPUT_DOCS_PATH) -type f \( -name "*.md" -o -name "*.asciidoc" \) -exec sed -i '/^```/,/^```/ {/./!d;}' {} \;
 	@echo "API reference documentation generated at $(OUTPUT_DOCS_PATH)"
+
+.PHONY: gen-docs-tests
+gen-docs-tests: ## Generate documentation based tests scripts.
+	@echo "Generating documentation tests scripts..."
+	@hack/update-docs-scripts.sh
 
 .PHONY: restore-manifest-dates
 restore-manifest-dates:
