@@ -81,7 +81,7 @@ var _ = Describe("Multicluster deployment models", Label("multicluster-external"
 		for _, v := range istioversion.List {
 			// The configuration is only supported in Istio 1.24+.
 			if version.Constraint("<1.24").Check(v.Version) {
-				Log(fmt.Sprintf("Skipping test, because Istio version %s does not support Primary-Remote Multi-Network configuration", v.Version))
+				Log(fmt.Sprintf("Skipping test, because Istio version %s does not support External Control Plane Multi-Network configuration", v.Version))
 				continue
 			}
 
@@ -361,7 +361,7 @@ spec:
 						Expect(k1.ApplyString(routingResourcesYAML)).To(Succeed())
 					})
 
-					It("updates remote Istio CR status to Ready con Cluster #2", func(ctx SpecContext) {
+					It("updates remote Istio CR status to Ready on Cluster #2", func(ctx SpecContext) {
 						Eventually(common.GetObject).
 							WithArguments(ctx, clRemote, kube.Key(externalIstioName), &v1.Istio{}).
 							Should(HaveCondition(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Remote; unexpected Condition")
