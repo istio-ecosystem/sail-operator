@@ -15,7 +15,7 @@
 # These defaults are type-checked at compile time.
 # Note: After modifying this file, run `make test` to ensure that the
 # generated defaults values from this files are valid.
-v1.24.2:
+v1.24.3:
   pilot:
     env:
       ENABLE_GATEWAY_API_MANUAL_DEPLOYMENT: "false"

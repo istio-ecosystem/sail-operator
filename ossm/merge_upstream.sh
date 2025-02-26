@@ -71,7 +71,8 @@ main () {
 
   # generate everything regardless of detected conflicts
   rm -rf bundle/**/*.yaml resources bundle.Dockerfile
-  updateVersionsInOssmValuesYaml
+  # TODO, fix this to add versions not replacing them
+  #updateVersionsInOssmValuesYaml
   make gen
   git add .
 
