@@ -20,14 +20,39 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/gomega"
 )
 
+// ClusterDeployment represents a cluster along with its sample app version.
+type ClusterDeployment struct {
+	Kubectl    kubectl.Kubectl
+	AppVersion string
+}
+
+// deploySampleApp deploys the sample apps (helloworld and sleep) in the given cluster.
+func deploySampleApp(k kubectl.Kubectl, ns string, istioVersion istioversion.VersionInfo, appVersion string) {
+	helloWorldYAML := common.GetSampleYAML(istioVersion, "helloworld")
+	Expect(k.WithNamespace(ns).ApplyWithLabels(helloWorldYAML, "service=helloworld")).To(Succeed(), "Sample service deploy failed on Cluster")
+	Expect(k.WithNamespace(ns).ApplyWithLabels(helloWorldYAML, "version="+appVersion)).To(Succeed(), "Sample service deploy failed on Cluster")
+
+	sleepYAML := common.GetSampleYAML(istioVersion, "sleep")
+	Expect(k.WithNamespace(ns).Apply(sleepYAML)).To(Succeed(), "Sample sleep deploy failed on Cluster")
+}
+
+// deploySampleAppToClusters deploys the sample app to all provided clusters.
+func deploySampleAppToClusters(ns string, istioVersion istioversion.VersionInfo, clusters []ClusterDeployment) {
+	for _, cd := range clusters {
+		deploySampleApp(cd.Kubectl, ns, istioVersion, cd.AppVersion)
+	}
+}
+
 // verifyResponsesAreReceivedFromBothClusters checks that when the sleep pod in the sample namespace
 // sends a request to the helloworld service, it receives responses from expectedVersions,
 // which can be either "v1" or "v2" on on different clusters.
-func verifyResponsesAreReceivedFromExpectedVersions(k kubectl.Kubectl, clusterName string, expectedVersions ...string) {
+func verifyResponsesAreReceivedFromExpectedVersions(k kubectl.Kubectl, expectedVersions ...string) {
 	if len(expectedVersions) == 0 {
 		expectedVersions = []string{"v1", "v2"}
 	}
@@ -35,7 +60,7 @@ func verifyResponsesAreReceivedFromExpectedVersions(k kubectl.Kubectl, clusterNa
 		Eventually(k.WithNamespace("sample").Exec, 10*time.Second, 10*time.Millisecond).
 			WithArguments("deploy/sleep", "sleep", "curl -sS helloworld.sample:5000/hello").
 			Should(ContainSubstring(fmt.Sprintf("Hello version: %s", v)),
-				fmt.Sprintf("sleep pod in %s did not receive any response from %s", clusterName, v))
+				fmt.Sprintf("sleep pod in %s did not receive any response from %s", k.ClusterName, v))
 	}
 }
 

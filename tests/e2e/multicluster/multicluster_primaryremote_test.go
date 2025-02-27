@@ -255,7 +255,11 @@ spec:
 						Expect(k2.Patch("namespace", sampleNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
 							To(Succeed(), "Error patching sample namespace")
 
-						deploySampleAppToAllClusters(sampleNamespace, v)
+						// Deploy the sample app in both clusters
+						deploySampleAppToClusters(sampleNamespace, v, []ClusterDeployment{
+							{Kubectl: k1, AppVersion: "v1"},
+							{Kubectl: k2, AppVersion: "v2"},
+						})
 						Success("Sample app is deployed in both clusters")
 					})
 

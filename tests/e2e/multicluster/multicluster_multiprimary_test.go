@@ -32,7 +32,6 @@ import (
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -213,7 +212,10 @@ spec:
 							To(Succeed(), "Error patching sample namespace")
 
 						// Deploy the sample app in both clusters
-						deploySampleAppToAllClusters(sampleNamespace, version)
+						deploySampleAppToClusters(sampleNamespace, version, []ClusterDeployment{
+							{Kubectl: k1, AppVersion: "v1"},
+							{Kubectl: k2, AppVersion: "v2"},
+						})
 						Success("Sample app is deployed in both clusters")
 					})
 
@@ -302,19 +304,3 @@ spec:
 		Expect(k2.WaitNamespaceDeleted(namespace)).To(Succeed())
 	})
 })
-
-// deploySampleApp deploys the sample apps: helloworld and sleep in the given cluster
-func deploySampleApp(k kubectl.Kubectl, ns string, istioVersion istioversion.VersionInfo, appVersion string) {
-	helloWorldYAML := common.GetSampleYAML(istioVersion, "helloworld")
-	Expect(k.WithNamespace(ns).ApplyWithLabels(helloWorldYAML, "service=helloworld")).To(Succeed(), "Sample service deploy failed on Cluster #1")
-
-	Expect(k.WithNamespace(ns).ApplyWithLabels(helloWorldYAML, "version="+appVersion)).To(Succeed(), "Sample service deploy failed on Cluster #1")
-
-	sleepYAML := common.GetSampleYAML(istioVersion, "sleep")
-	Expect(k.WithNamespace(ns).Apply(sleepYAML)).To(Succeed(), "Sample sleep deploy failed on Cluster #1")
-}
-
-func deploySampleAppToAllClusters(ns string, istioVersion istioversion.VersionInfo) {
-	deploySampleApp(k1, ns, istioVersion, "v1")
-	deploySampleApp(k2, ns, istioVersion, "v2")
-}
