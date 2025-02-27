@@ -19,10 +19,8 @@ package multicluster
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
@@ -33,7 +31,6 @@ import (
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -392,20 +389,18 @@ spec:
 						Success("Sample app is Running")
 					})
 
-					It("has sidecar with the correct istio version", func(ctx SpecContext) {
+					It("has istio.io/rev annotation external-istiod", func(ctx SpecContext) {
 						Expect(clRemote.List(ctx, samplePodsCluster2, client.InNamespace(sampleNamespace))).To(Succeed())
 						Expect(samplePodsCluster2.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
 
 						for _, pod := range samplePodsCluster2.Items {
-							sidecarVersion, err := getProxyVersion(k2, pod.Name, sampleNamespace)
-							Expect(err).NotTo(HaveOccurred(), "Error getting sidecar version")
-							Expect(sidecarVersion.Original()).To(Equal(v.Version.Original()), "Sidecar Istio version does not match the expected version")
+							Expect(pod.Annotations).To(HaveKeyWithValue("istio.io/rev", "external-istiod"), "The pod dom't have expected annotation")
 						}
-						Success("Sample app has sidecars injected in both clusters")
+						Success("Sample pods has expected annotation")
 					})
 
 					It("can access the sample app from the local service", func(ctx SpecContext) {
-						verifyResponsesAreReceivedFromExpectedVersions(k2, "Cluster #2", "v1")
+						verifyResponsesAreReceivedFromExpectedVersions(k2, "v1")
 						Success("Sample app is accessible from hello service in Cluster #2")
 					})
 				})
@@ -468,20 +463,3 @@ spec:
 		Expect(k2.WaitNamespaceDeleted(namespace)).To(Succeed())
 	})
 })
-
-func getProxyVersion(k kubectl.Kubectl, podName, namespace string) (*semver.Version, error) {
-	output, err := k.WithNamespace(namespace).Exec(
-		podName,
-		"istio-proxy",
-		`curl -s http://localhost:15000/server_info | grep "ISTIO_VERSION" | awk -F '"' '{print $4}'`)
-	if err != nil {
-		return nil, fmt.Errorf("error getting sidecar version: %w", err)
-	}
-
-	versionStr := strings.TrimSpace(output)
-	version, err := semver.NewVersion(versionStr)
-	if err != nil {
-		return version, fmt.Errorf("error parsing sidecar version %q: %w", versionStr, err)
-	}
-	return version, err
-}

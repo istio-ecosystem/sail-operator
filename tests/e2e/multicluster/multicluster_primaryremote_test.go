@@ -288,8 +288,8 @@ spec:
 					})
 
 					It("can access the sample app from both clusters", func(ctx SpecContext) {
-						verifyResponsesAreReceivedFromExpectedVersions(k1, "Cluster #1")
-						verifyResponsesAreReceivedFromExpectedVersions(k2, "Cluster #2")
+						verifyResponsesAreReceivedFromExpectedVersions(k1)
+						verifyResponsesAreReceivedFromExpectedVersions(k2)
 						Success("Sample app is accessible from both clusters")
 					})
 				})
