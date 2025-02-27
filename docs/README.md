@@ -8,6 +8,7 @@
   - [IstioRevision resource](#istiorevision-resource)
   - [IstioRevisionTag resource](#istiorevisiontag-resource)
   - [IstioCNI resource](#istiocni-resource)
+    - [Updating the IstioCNI resource](#updating-the-istiocni-resource)
   - [Resource Status](#resource-status)
     - [InUse Detection](#inuse-detection)
 - [API Reference documentation](#api-reference-documentation)
@@ -120,7 +121,7 @@ spec:
 As you can see in the YAML above, `IstioRevisionTag` really only has one field in its spec: `targetRef`. With this field, you can reference an `Istio` or `IstioRevision` resource. So after deploying this, you will be able to use both the `istio.io/rev=default` and also `istio-injection=enabled` labels to inject proxies into your workloads. The `istio-injection` label can only be used for revisions and revision tags named `default`, like the `IstioRevisionTag` in the above example.
 
 ### IstioCNI resource
-The lifecycle of Istio's CNI plugin is managed separately when using Sail Operator. To install it, you can create an `IstioCNI` resource. The `IstioCNI` resource is a cluster-wide resource as it will install a `DaemonSet` that will be operating on all nodes of your cluster. You can select a version by setting the `spec.version` field, as you can see in the sample below. To update the CNI plugin, just change the `version` field to the version you want to install. Just like the `Istio` resource, it also has a `values` field that exposes all of the options provided in the `istio-cni` chart:
+The lifecycle of Istio's CNI plugin is managed separately when using Sail Operator. To install it, you can create an `IstioCNI` resource. The `IstioCNI` resource is a cluster-wide resource as it will install a `DaemonSet` that will be operating on all nodes of your cluster. You can select a version by setting the `spec.version` field, as you can see in the sample below:
 
 ```yaml
 apiVersion: sailoperator.io/v1
@@ -136,6 +137,54 @@ spec:
       excludeNamespaces:
       - kube-system
 ```
+
+#### Updating the IstioCNI resource
+Updates for the `IstioCNI` resource are `Inplace` updates, this means that the `DaemonSet` will be updated with the new version of the CNI plugin once the resource is updated and the `istio-cni-node` pods are going to be replaced with the new version. 
+To update the CNI plugin, just change the `version` field to the version you want to install. Just like the `Istio` resource, it also has a `values` field that exposes all of the options provided in the `istio-cni` chart:
+
+1. Create the `IstioCNI` resource.
+
+    ```bash
+    cat <<EOF | kubectl apply -f-
+    apiVersion: sailoperator.io/v1
+    kind: IstioCNI
+    metadata:
+      name: default
+    spec:
+      version: v1.23.2
+      namespace: istio-cni
+      values:
+        cni:
+          cniConfDir: /etc/cni/net.d
+          excludeNamespaces:
+          - kube-system
+    EOF
+    ```
+2. Confirm the installation and version of the CNI plugin.
+
+    ```bash
+    $ kubectl get istiocni -n istio-cni
+    NAME      READY   STATUS    VERSION   AGE
+    default   True    Healthy   v1.23.2   91m
+    $ kubectl get pods -n istio-cni
+    NAME                   READY   STATUS    RESTARTS   AGE
+    istio-cni-node-hd9zf   1/1     Running   0          90m
+    ```
+3. Update the CNI plugin version.
+
+    ```bash
+    kubectl patch istiocni default -n istio-cni --type='merge' -p '{"spec":{"version":"v1.23.3"}}'
+    ```
+4. Confirm the CNI plugin version was updated.
+
+    ```bash
+    $ kubectl get istiocni -n istio-cni
+    NAME      READY   STATUS    VERSION   AGE
+    default   True    Healthy   v1.23.3   93m
+    $ kubectl get pods -n istio-cni
+    NAME                   READY   STATUS    RESTARTS   AGE
+    istio-cni-node-jz4lg   1/1     Running   0          44s
+    ```
 
 > [!NOTE]
 > The CNI plugin at version `1.x` is compatible with `Istio` at version `1.x-1`, `1.x` and `1.x+1`.
