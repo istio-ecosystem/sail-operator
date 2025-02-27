@@ -104,12 +104,10 @@ func GetPodNameByLabel(ctx context.Context, cl client.Client, ns, labelKey, labe
 }
 
 // GetSVCLoadBalancerAddress returns the address of the service with the given name
-func GetSVCLoadBalancerAddress(ctx context.Context, cl client.Client, ns, svcName string) (string, error) {
+func GetSVCLoadBalancerAddress(ctx context.Context, cl client.Client, ns, svcName string) string {
 	svc := &corev1.Service{}
 	err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: svcName}, svc)
-	if err != nil {
-		return "", err
-	}
+	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Error getting LoadBalancer Service '%s/%s'", ns, svcName))
 
 	// To avoid flakiness, wait for the LoadBalancer to be ready
 	Eventually(func() ([]corev1.LoadBalancerIngress, error) {
@@ -117,7 +115,7 @@ func GetSVCLoadBalancerAddress(ctx context.Context, cl client.Client, ns, svcNam
 		return svc.Status.LoadBalancer.Ingress, err
 	}, "1m", "1s").ShouldNot(BeEmpty(), "LoadBalancer should be ready")
 
-	return svc.Status.LoadBalancer.Ingress[0].IP, nil
+	return svc.Status.LoadBalancer.Ingress[0].IP
 }
 
 // CheckNamespaceEmpty checks if the given namespace is empty
