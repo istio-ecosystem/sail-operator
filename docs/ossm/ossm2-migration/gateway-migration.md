@@ -2,6 +2,8 @@
 
 Migrating gateways between Istio control planes during a version upgrade from 2.6 to 3.0 is very similar to migrating regular workloads, here is some information on how to migrate your gateways.
 
+> **_NOTE:_** If you are migrating a Gateway-API `Gateway`, there are special migration instructions you must follow.
+
 ## Migration Scenarios
 
 ### Gateway Canary Migration (Recommended)
@@ -93,6 +95,21 @@ For environments using a centralized gateway shared across multiple namespaces (
    ```
    
 3. Validation steps:
+   - Try `istioctl ps -n istio-ingress` to check that the gateway is running the new revision
+   - Verify gateway pod is running with new revision
+   - Test application-specific routes
+
+### Gateway-API
+
+If you are migrating a Gateway API `Gateway`, you can only perform an "In Place" upgrade and you must add an additional label to your `Gateway` resource during the migration. Gateway API `Gateway`s are managed by istiod so unlike other Gateways, you do not need to manually restart the deployment.
+
+1. Label the `Gateway` resource to ensure injection from the new mesh is enabled (this differs between multitenancy and cluster-wide meshes), ensuring to add the `maistra.io/ignore` label as well as remove `istio-injection=enabled` if needed. For example:
+   ```bash
+   oc label gateways.gateway.networking.k8s.io istio-ingress -n ${APP_NAMESPACE} istio.io/rev=${ISTIO_REVISION} maistra.io/ignore="true"
+   ```
+   > **_NOTE:_** We are labeling the `Gateway` resource itself and _not_ the namespace that the `Gateway` resides in. Labeling the namespace will have no effect on a Gateway API `Gateway`.
+
+2. Validation steps:
    - Try `istioctl ps -n istio-ingress` to check that the gateway is running the new revision
    - Verify gateway pod is running with new revision
    - Test application-specific routes
