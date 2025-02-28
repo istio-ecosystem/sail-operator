@@ -45,11 +45,11 @@ var _ = Describe("Control Plane updates", Label("update"), Ordered, func() {
 			Skip("Skipping update tests because there are not enough versions in versions.yaml")
 		}
 
-		// istioversion.Old is the version second version in versions.yaml file and istioversion.New is the first version in the List
-		// istioversion.Old is going to be the base version from where we are going to update to istioversion.New
-		// TODO: improve this: https://github.com/istio-ecosystem/sail-operator/issues/681
-		baseVersion := istioversion.Old
-		newVersion := istioversion.New
+		baseVersion, newVersion := getBaseAndNewVersion()
+		if baseVersion == "" || newVersion == "" {
+			Skip("Skipping update tests because there are not enough versions in versions.yaml")
+		}
+
 		Context(baseVersion, func() {
 			BeforeAll(func(ctx SpecContext) {
 				Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
@@ -334,3 +334,41 @@ spec:
 		})
 	})
 })
+
+// getBaseAndNewVersion returns the base and new Istio versions to be used in the tests.
+// It will take the latest Major.Minor version and get the two newest patch of that Major.Minor version.
+func getBaseAndNewVersion() (string, string) {
+	type versionPair struct {
+		base, newVersion string
+		newSemver        *semver.Version
+	}
+	var latestPair versionPair
+
+	patchVersions := istioversion.GetPatchVersionsByMajorMinor()
+	for _, group := range patchVersions {
+		// Only consider groups with at least two patch versions.
+		if len(group) < 2 {
+			continue
+		}
+
+		newVer, err1 := semver.NewVersion(group[0].Name)
+		if err1 != nil {
+			continue
+		}
+		if _, err2 := semver.NewVersion(group[1].Name); err2 != nil {
+			continue
+		}
+
+		// Update latestPair if it's the first valid one or if this group is newer.
+		if latestPair.newSemver == nil || newVer.GreaterThan(latestPair.newSemver) {
+			latestPair.newSemver = newVer
+			latestPair.newVersion = group[0].Name
+			latestPair.base = group[1].Name
+		}
+	}
+
+	if latestPair.newSemver == nil {
+		return "", ""
+	}
+	return latestPair.base, latestPair.newVersion
+}
