@@ -96,7 +96,7 @@ metadata:
 	})
 
 	Describe("given Istio version", func() {
-		for name, version := range istioversion.Map {
+		for name, version := range istioversion.GetLatestPatchVersions() {
 			Context(name, func() {
 				BeforeAll(func() {
 					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
