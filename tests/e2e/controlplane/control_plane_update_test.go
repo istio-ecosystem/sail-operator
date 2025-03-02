@@ -41,10 +41,6 @@ var _ = Describe("Control Plane updates", Label("update"), Ordered, func() {
 	debugInfoLogged := false
 
 	Describe("using IstioRevisionTag", func() {
-		if len(istioversion.List) < 2 {
-			Skip("Skipping update tests because there are not enough versions in versions.yaml")
-		}
-
 		// istioversion.Old is the version second version in versions.yaml file and istioversion.New is the first version in the List
 		// istioversion.Old is going to be the base version from where we are going to update to istioversion.New
 		// TODO: improve this: https://github.com/istio-ecosystem/sail-operator/issues/681
@@ -52,6 +48,10 @@ var _ = Describe("Control Plane updates", Label("update"), Ordered, func() {
 		newVersion := istioversion.New
 		Context(baseVersion, func() {
 			BeforeAll(func(ctx SpecContext) {
+				if len(istioversion.List) < 2 {
+					Skip("Skipping update tests because there are not enough versions in versions.yaml")
+				}
+
 				Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
 				Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
 
