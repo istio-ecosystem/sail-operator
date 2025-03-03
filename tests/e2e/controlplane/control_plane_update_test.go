@@ -41,7 +41,7 @@ var _ = Describe("Control Plane updates", Label("update"), Ordered, func() {
 	debugInfoLogged := false
 
 	Describe("using IstioRevisionTag", func() {
-		baseVersion, newVersion := getBaseAndNewVersion()
+		baseVersion, newVersion := istioversion.GetBaseAndNewVersion()
 		if baseVersion == "" || newVersion == "" {
 			Skip("Skipping update tests because there are not enough versions in versions.yaml")
 		}
@@ -334,41 +334,3 @@ spec:
 		})
 	})
 })
-
-// getBaseAndNewVersion returns the base and new Istio versions to be used in the tests.
-// It will take the latest Major.Minor version and get the two newest patch of that Major.Minor version.
-func getBaseAndNewVersion() (string, string) {
-	type versionPair struct {
-		base, newVersion string
-		newSemver        *semver.Version
-	}
-	var latestPair versionPair
-
-	patchVersions := istioversion.GetPatchVersionsByMajorMinor()
-	for _, group := range patchVersions {
-		// Only consider groups with at least two patch versions.
-		if len(group) < 2 {
-			continue
-		}
-
-		newVer, err1 := semver.NewVersion(group[0].Name)
-		if err1 != nil {
-			continue
-		}
-		if _, err2 := semver.NewVersion(group[1].Name); err2 != nil {
-			continue
-		}
-
-		// Update latestPair if it's the first valid one or if this group is newer.
-		if latestPair.newSemver == nil || newVer.GreaterThan(latestPair.newSemver) {
-			latestPair.newSemver = newVer
-			latestPair.newVersion = group[0].Name
-			latestPair.base = group[1].Name
-		}
-	}
-
-	if latestPair.newSemver == nil {
-		return "", ""
-	}
-	return latestPair.base, latestPair.newVersion
-}
