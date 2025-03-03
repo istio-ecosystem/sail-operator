@@ -123,6 +123,11 @@ func mustParseVersionsYaml(yamlBytes []byte) (
 		versionMap[a.Name] = v
 	}
 
+	if len(list) > 0 {
+		// Set the default version to the first version in the list (Newest version)
+		defaultVersion = list[0].Name
+	}
+
 	return list, defaultVersion, versionMap, aliasList
 }
 
@@ -166,19 +171,19 @@ func GetBaseAndNewVersion() (string, string) {
 			continue
 		}
 
-		newVer, err1 := semver.NewVersion(group[0].Version.String())
+		newVer, err1 := semver.NewVersion(group[0].Name)
 		if err1 != nil {
 			continue
 		}
-		if _, err2 := semver.NewVersion(group[1].Version.String()); err2 != nil {
+		if _, err2 := semver.NewVersion(group[1].Name); err2 != nil {
 			continue
 		}
 
 		// Update latestPair if it's the first valid one or if this group is newer.
 		if latestPair.newSemver == nil || newVer.GreaterThan(latestPair.newSemver) {
 			latestPair.newSemver = newVer
-			latestPair.newVersion = group[0].Version.String()
-			latestPair.base = group[1].Version.String()
+			latestPair.newVersion = group[0].Name
+			latestPair.base = group[1].Name
 		}
 	}
 

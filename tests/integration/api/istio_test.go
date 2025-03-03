@@ -215,9 +215,10 @@ var _ = Describe("Istio resource", Ordered, func() {
 	Describe("update", func() {
 		var workloadNs *corev1.Namespace
 		rev := &v1.IstioRevision{}
+		baseVersion, newVersion := istioversion.GetBaseAndNewVersion()
 
 		BeforeAll(func() {
-			if istioversion.Old == "" {
+			if len(istioversion.List) < 2 {
 				Skip("Only one supported version, nothing to upgrade from")
 			}
 		})
@@ -253,7 +254,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 								Name: istioName,
 							},
 							Spec: v1.IstioSpec{
-								Version:   istioversion.Old,
+								Version:   baseVersion,
 								Namespace: istioNamespace,
 								UpdateStrategy: &v1.IstioUpdateStrategy{
 									Type: v1.UpdateStrategyTypeInPlace,
@@ -282,14 +283,14 @@ var _ = Describe("Istio resource", Ordered, func() {
 					When("version is updated", func() {
 						BeforeAll(func() {
 							Expect(k8sClient.Get(ctx, istioKey, istio)).To(Succeed())
-							istio.Spec.Version = istioversion.New
+							istio.Spec.Version = newVersion
 							Expect(k8sClient.Update(ctx, istio)).To(Succeed())
 						})
 
 						It("updates the IstioRevision", func() {
 							Eventually(func(g Gomega) {
 								g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
-								g.Expect(rev.Spec.Version).To(Equal(istioversion.New))
+								g.Expect(rev.Spec.Version).To(Equal(newVersion))
 							}).Should(Succeed())
 						})
 					})
@@ -303,9 +304,9 @@ var _ = Describe("Istio resource", Ordered, func() {
 						})
 
 						It("creates a new IstioRevision", func() {
-							revKey := getRevisionKey(istio, istioversion.New)
+							revKey := getRevisionKey(istio, newVersion)
 							Eventually(k8sClient.Get).WithArguments(ctx, revKey, rev).Should(Succeed())
-							Expect(rev.Spec.Version).To(Equal(istioversion.New))
+							Expect(rev.Spec.Version).To(Equal(newVersion))
 						})
 
 						if withWorkloads {
@@ -315,7 +316,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 
 							When("workloads are moved to the new IstioRevision", func() {
 								BeforeAll(func() {
-									workloadNs.Labels["istio.io/rev"] = getRevisionName(istio, istioversion.New)
+									workloadNs.Labels["istio.io/rev"] = getRevisionName(istio, newVersion)
 									Expect(k8sClient.Update(ctx, workloadNs)).To(Succeed())
 								})
 
@@ -348,7 +349,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 								Name: istioName,
 							},
 							Spec: v1.IstioSpec{
-								Version:   istioversion.Old,
+								Version:   baseVersion,
 								Namespace: istioNamespace,
 								UpdateStrategy: &v1.IstioUpdateStrategy{
 									Type: v1.UpdateStrategyTypeRevisionBased,
@@ -359,11 +360,11 @@ var _ = Describe("Istio resource", Ordered, func() {
 						Expect(k8sClient.Create(ctx, istio)).To(Succeed())
 
 						Step("Check if IstioRevision exists")
-						revKey := getRevisionKey(istio, istioversion.Old)
+						revKey := getRevisionKey(istio, baseVersion)
 						Eventually(k8sClient.Get).WithArguments(ctx, revKey, rev).Should(Succeed())
 
 						if withWorkloads {
-							workloadNs.Labels["istio.io/rev"] = getRevisionName(istio, istioversion.Old)
+							workloadNs.Labels["istio.io/rev"] = getRevisionName(istio, baseVersion)
 							Expect(k8sClient.Update(ctx, workloadNs)).To(Succeed())
 						}
 					})
@@ -375,39 +376,39 @@ var _ = Describe("Istio resource", Ordered, func() {
 					When("version is updated", func() {
 						BeforeAll(func() {
 							Expect(k8sClient.Get(ctx, istioKey, istio)).To(Succeed())
-							istio.Spec.Version = istioversion.New
+							istio.Spec.Version = newVersion
 							Expect(k8sClient.Update(ctx, istio)).To(Succeed())
 						})
 
 						It("creates a new IstioRevision", func() {
-							revKey := getRevisionKey(istio, istioversion.New)
+							revKey := getRevisionKey(istio, newVersion)
 							Eventually(func(g Gomega) {
 								g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
-								g.Expect(rev.Spec.Version).To(Equal(istioversion.New))
+								g.Expect(rev.Spec.Version).To(Equal(newVersion))
 							}).Should(Succeed())
 						})
 
 						if withWorkloads {
 							It("doesn't delete the previous IstioRevision while workloads reference it", func() {
-								revKey := getRevisionKey(istio, istioversion.Old)
+								revKey := getRevisionKey(istio, baseVersion)
 								Consistently(k8sClient.Get).WithArguments(ctx, revKey, rev).Should(Succeed())
 							})
 
 							When("workloads are moved to the new IstioRevision", func() {
 								BeforeAll(func() {
-									workloadNs.Labels["istio.io/rev"] = getRevisionName(istio, istioversion.New)
+									workloadNs.Labels["istio.io/rev"] = getRevisionName(istio, newVersion)
 									Expect(k8sClient.Update(ctx, workloadNs)).To(Succeed())
 								})
 
 								It("doesn't immediately delete the previous IstioRevision", func() {
 									marginOfError := 2 * time.Second
-									revKey := getRevisionKey(istio, istioversion.Old)
+									revKey := getRevisionKey(istio, baseVersion)
 									Consistently(k8sClient.Get, gracePeriod-marginOfError).WithArguments(ctx, revKey, rev).Should(Succeed())
 								})
 
 								When("grace period expires", func() {
 									It("deletes the previous IstioRevision", func() {
-										revKey := getRevisionKey(istio, istioversion.Old)
+										revKey := getRevisionKey(istio, baseVersion)
 										Eventually(k8sClient.Get).WithArguments(ctx, revKey, rev).Should(ReturnNotFoundError())
 									})
 								})
@@ -415,7 +416,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 						} else {
 							When("grace period expires", func() {
 								It("deletes the previous IstioRevision", func() {
-									revKey := getRevisionKey(istio, istioversion.Old)
+									revKey := getRevisionKey(istio, baseVersion)
 									Eventually(k8sClient.Get).WithArguments(ctx, revKey, rev).Should(ReturnNotFoundError())
 								})
 							})
@@ -425,7 +426,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 					When("strategy is changed to InPlace", func() {
 						var oldRevisionKey types.NamespacedName
 						BeforeAll(func() {
-							oldRevisionKey = getRevisionKey(istio, istioversion.New)
+							oldRevisionKey = getRevisionKey(istio, newVersion)
 							Expect(k8sClient.Get(ctx, istioKey, istio)).To(Succeed())
 							istio.Spec.UpdateStrategy.Type = v1.UpdateStrategyTypeInPlace
 							Expect(k8sClient.Update(ctx, istio)).To(Succeed())
