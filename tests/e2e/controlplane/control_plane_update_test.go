@@ -41,12 +41,11 @@ var _ = Describe("Control Plane updates", Label("update"), Ordered, func() {
 	debugInfoLogged := false
 
 	Describe("using IstioRevisionTag", func() {
-		// istioversion.Old is the version second version in versions.yaml file and istioversion.New is the first version in the List
-		// istioversion.Old is going to be the base version from where we are going to update to istioversion.New
-		// TODO: improve this: https://github.com/istio-ecosystem/sail-operator/issues/681
-		baseVersion := istioversion.Old
-		newVersion := istioversion.New
-		Context(baseVersion, func() {
+		if istioversion.Base == "" || istioversion.New == "" {
+			Skip("Skipping update tests because there are not enough versions in versions.yaml")
+		}
+
+		Context(istioversion.Base, func() {
 			BeforeAll(func(ctx SpecContext) {
 				if len(istioversion.List) < 2 {
 					Skip("Skipping update tests because there are not enough versions in versions.yaml")
@@ -63,7 +62,7 @@ metadata:
 spec:
   version: %s
   namespace: %s`
-				yaml = fmt.Sprintf(yaml, baseVersion, istioCniNamespace)
+				yaml = fmt.Sprintf(yaml, istioversion.Base, istioCniNamespace)
 				Log("IstioCNI YAML:", indent(yaml))
 				Expect(k.CreateFromString(yaml)).To(Succeed(), "IstioCNI creation failed")
 				Success("IstioCNI created")
@@ -73,7 +72,7 @@ spec:
 				Success("IstioCNI is Ready")
 			})
 
-			When(fmt.Sprintf("the Istio CR is created with RevisionBased updateStrategy for base version %s", baseVersion), func() {
+			When(fmt.Sprintf("the Istio CR is created with RevisionBased updateStrategy for base version %s", istioversion.Base), func() {
 				BeforeAll(func() {
 					istioYAML := `
 apiVersion: sailoperator.io/v1
@@ -86,7 +85,7 @@ spec:
   updateStrategy:
     type: RevisionBased
     inactiveRevisionDeletionGracePeriodSeconds: 30`
-					istioYAML = fmt.Sprintf(istioYAML, baseVersion, controlPlaneNamespace)
+					istioYAML = fmt.Sprintf(istioYAML, istioversion.Base, controlPlaneNamespace)
 					Log("Istio YAML:", indent(istioYAML))
 					Expect(k.CreateFromString(istioYAML)).
 						To(Succeed(), "Istio CR failed to be created")
@@ -125,7 +124,7 @@ spec:
 				})
 
 				It("IstioRevisionTag revision name is equal to the IstioRevision base name", func(ctx SpecContext) {
-					revisionName := strings.Replace(baseVersion, ".", "-", -1)
+					revisionName := strings.Replace(istioversion.Base, ".", "-", -1)
 					Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key("default"), &v1.IstioRevisionTag{}).
 						Should(HaveField("Status.IstioRevision", ContainSubstring(revisionName)),
 							"IstioRevisionTag version does not match the IstioRevision name of the base version")
@@ -140,7 +139,7 @@ spec:
 					Expect(k.Patch("namespace", sampleNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
 						To(Succeed(), "Error patching sample namespace")
 					Expect(k.WithNamespace(sampleNamespace).
-						ApplyWithLabels(common.GetSampleYAML(istioversion.Map[baseVersion], sampleNamespace), "version=v1")).
+						ApplyWithLabels(common.GetSampleYAML(istioversion.Map[istioversion.Base], sampleNamespace), "version=v1")).
 						To(Succeed(), "Error deploying sample")
 					Success("sample deployed")
 
@@ -160,7 +159,7 @@ spec:
 					for _, pod := range samplePods.Items {
 						sidecarVersion, err := getProxyVersion(pod.Name, sampleNamespace)
 						Expect(err).NotTo(HaveOccurred(), "Error getting sidecar version")
-						Expect(sidecarVersion).To(Equal(istioversion.Map[baseVersion].Version), "Sidecar Istio version does not match the expected version")
+						Expect(sidecarVersion).To(Equal(istioversion.Map[istioversion.Base].Version), "Sidecar Istio version does not match the expected version")
 					}
 					Success("Istio sidecar version matches the expected base Istio version")
 				})
@@ -174,7 +173,7 @@ spec:
 
 			When("the Istio CR is updated to the new Istio version", func() {
 				BeforeAll(func() {
-					Expect(k.Patch("istio", "default", "merge", `{"spec":{"version":"`+newVersion+`"}}`)).To(Succeed(), "Error updating Istio CR to new Istio version")
+					Expect(k.Patch("istio", "default", "merge", `{"spec":{"version":"`+istioversion.New+`"}}`)).To(Succeed(), "Error updating Istio CR to new Istio version")
 					Success("Istio CR updated")
 				})
 
@@ -206,10 +205,10 @@ spec:
 					Expect(cl.List(ctx, istioRevisions)).To(Succeed())
 					Expect(istioRevisions.Items).To(HaveLen(2), "Unexpected number of IstioRevisionTags; expected 2")
 					Expect(istioRevisions.Items).To(ContainElement(
-						HaveField("Spec", HaveField("Version", ContainSubstring(baseVersion)))),
+						HaveField("Spec", HaveField("Version", ContainSubstring(istioversion.Base)))),
 						"Expected a revision with the base version")
 					Expect(istioRevisions.Items).To(ContainElement(
-						HaveField("Spec", HaveField("Version", ContainSubstring(newVersion)))),
+						HaveField("Spec", HaveField("Version", ContainSubstring(istioversion.New)))),
 						"Expected a revision with the new version")
 					Success("Two IstionRevision found")
 				})
@@ -234,7 +233,7 @@ spec:
 							sidecarVersion, err := getProxyVersion(pod.Name, sampleNamespace)
 							Expect(err).NotTo(HaveOccurred(), "Error getting sidecar version")
 							return sidecarVersion
-						}).Should(Equal(istioversion.Map[baseVersion].Version), "Sidecar Istio version does not match the expected version")
+						}).Should(Equal(istioversion.Map[istioversion.Base].Version), "Sidecar Istio version does not match the expected version")
 					}
 					Success("Istio sidecar version matches the expected Istio version")
 				})
@@ -270,7 +269,7 @@ spec:
 
 						for _, pod := range samplePods.Items {
 							sidecarVersion, err := getProxyVersion(pod.Name, sampleNamespace)
-							if err != nil || !sidecarVersion.Equal(istioversion.Map[newVersion].Version) {
+							if err != nil || !sidecarVersion.Equal(istioversion.Map[istioversion.New].Version) {
 								return false
 							}
 						}
@@ -296,7 +295,7 @@ spec:
 				})
 
 				It("IstioRevisionTag revision name is equal to the IstionRevision name of the new Istio version", func(ctx SpecContext) {
-					revisionName := strings.Replace(newVersion, ".", "-", -1)
+					revisionName := strings.Replace(istioversion.New, ".", "-", -1)
 					Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key("default"), &v1.IstioRevisionTag{}).
 						Should(HaveField("Status.IstioRevision", ContainSubstring(revisionName)), "IstioRevisionTag version does not match the new IstioRevision name")
 					Success("IstioRevisionTag points to the new IstioRevision")

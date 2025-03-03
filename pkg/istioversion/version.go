@@ -17,6 +17,7 @@ package istioversion
 import (
 	"embed"
 	"fmt"
+	"sort"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/istio-ecosystem/sail-operator/pkg/env"
@@ -62,9 +63,9 @@ var (
 	Map map[string]VersionInfo
 	// Default is the default version
 	Default string
-	// Old is the previous supported version
-	Old string
-	// New is the latest supported version
+	// Base is the previous supported version
+	Base string
+	// New is the latest version
 	New string
 	// aliasList is the alias for the version
 	aliasList []AliasInfo
@@ -86,13 +87,13 @@ func init() {
 		panic(fmt.Errorf("failed to read versions from '%s': %w", versionsFilename, err))
 	}
 
-	List, Default, Old, New, Map, aliasList = mustParseVersionsYaml(data)
+	List, Default, Base, New, Map, aliasList = mustParseVersionsYaml(data)
 }
 
 func mustParseVersionsYaml(yamlBytes []byte) (
 	list []VersionInfo,
 	defaultVersion string,
-	oldVersion string,
+	baseVersion string,
 	newVersion string,
 	versionMap map[string]VersionInfo,
 	aliasList []AliasInfo,
@@ -133,9 +134,36 @@ func mustParseVersionsYaml(yamlBytes []byte) (
 		newVersion = list[0].Name
 		defaultVersion = newVersion
 		if len(list) > 1 {
-			oldVersion = list[1].Name
+			baseVersion = list[1].Name
+		}
+		// Set the default version to the first version in the list (Newest version)
+		defaultVersion = list[0].Name
+	}
+
+	return list, defaultVersion, baseVersion, newVersion, versionMap, aliasList
+}
+
+// GetLatestPatchVersions returns the latest patch versions for all the Major.Minor versions
+func GetLatestPatchVersions() []VersionInfo {
+	latestPatchVersions := make(map[string]VersionInfo)
+	for _, version := range List {
+		majorMinorVersion := fmt.Sprintf("%d.%d", version.Version.Major(), version.Version.Minor())
+		latestPatchVersion, ok := latestPatchVersions[majorMinorVersion]
+		if !ok || version.Version.GreaterThan(latestPatchVersion.Version) {
+			latestPatchVersions[majorMinorVersion] = version
 		}
 	}
 
-	return list, defaultVersion, oldVersion, newVersion, versionMap, aliasList
+	// Convert the map values to a slice.
+	latestSlice := make([]VersionInfo, 0, len(latestPatchVersions))
+	for _, v := range latestPatchVersions {
+		latestSlice = append(latestSlice, v)
+	}
+
+	// Sort the slice in descending order based on the version.
+	sort.Slice(latestSlice, func(i, j int) bool {
+		return latestSlice[i].Version.GreaterThan(latestSlice[j].Version)
+	})
+
+	return latestSlice
 }

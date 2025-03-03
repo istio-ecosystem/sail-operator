@@ -96,8 +96,8 @@ metadata:
 	})
 
 	Describe("given Istio version", func() {
-		for name, version := range istioversion.Map {
-			Context(name, func() {
+		for _, version := range istioversion.GetLatestPatchVersions() {
+			Context(version.Name, func() {
 				BeforeAll(func() {
 					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
 					Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
@@ -203,7 +203,7 @@ spec:
 
 				When("sample pod is deployed", func() {
 					BeforeAll(func() {
-						if isAlias(name, version) {
+						if isAlias(version.Name, version) {
 							Skip("Skipping test for alias version")
 						}
 
