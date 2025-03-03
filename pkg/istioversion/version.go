@@ -139,3 +139,27 @@ func mustParseVersionsYaml(yamlBytes []byte) (
 
 	return list, defaultVersion, oldVersion, newVersion, versionMap, aliasList
 }
+
+// GetLatestPatchVersions returns the latest patch versions for all the Major.Minor versions
+func GetLatestPatchVersions() map[string]VersionInfo {
+	latestPatchVersions := make(map[string]VersionInfo)
+	for _, version := range List {
+		majorMinorVersion := fmt.Sprintf("%d.%d", version.Version.Major(), version.Version.Minor())
+		latestPatchVersion, ok := latestPatchVersions[majorMinorVersion]
+		if !ok || version.Version.GreaterThan(latestPatchVersion.Version) {
+			latestPatchVersions[majorMinorVersion] = version
+		}
+	}
+	return latestPatchVersions
+}
+
+// GetPatchVersionsByMajorMinor returns all the patch versions for each Major.Minor version in the list
+// The resulting map will have the Major.Minor version as the key and a list of patch versions as the value
+func GetPatchVersionsByMajorMinor() map[string][]VersionInfo {
+	allPatchVersions := make(map[string][]VersionInfo)
+	for _, version := range List {
+		majorMinorVersion := fmt.Sprintf("%d.%d", version.Version.Major(), version.Version.Minor())
+		allPatchVersions[majorMinorVersion] = append(allPatchVersions[majorMinorVersion], version)
+	}
+	return allPatchVersions
+}
