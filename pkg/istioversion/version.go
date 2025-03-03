@@ -144,7 +144,7 @@ func mustParseVersionsYaml(yamlBytes []byte) (
 func GetLatestPatchVersions() map[string]VersionInfo {
 	latestPatchVersions := make(map[string]VersionInfo)
 	for _, version := range List {
-		majorMinorVersion := fmt.Sprintf("%d.%d", version.Version.Major(), version.Version.Minor())
+		majorMinorVersion := version.Version.Major() + "." + version.Version.Minor()
 		latestPatchVersion, ok := latestPatchVersions[majorMinorVersion]
 		if !ok || version.Version.GreaterThan(latestPatchVersion.Version) {
 			latestPatchVersions[majorMinorVersion] = version
