@@ -70,9 +70,9 @@ if docker manifest inspect "gcr.io/kubebuilder/kube-rbac-proxy:${RBAC_PROXY_LATE
 fi
 
 # Update gitleaks
-# Avoiding update gitleaks until https://github.com/gitleaks/gitleaks/issues/1751 is fixed or exist a valid workaround
-# GITLEAKS_VERSION=$(getLatestVersion gitleaks/gitleaks)
-# sed -i "s|GITLEAKS_VERSION ?= .*|GITLEAKS_VERSION ?= ${GITLEAKS_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+Avoiding update gitleaks until https://github.com/gitleaks/gitleaks/issues/1751 is fixed or exist a valid workaround
+GITLEAKS_VERSION=$(getLatestVersion gitleaks/gitleaks)
+sed -i "s|GITLEAKS_VERSION ?= .*|GITLEAKS_VERSION ?= ${GITLEAKS_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
 
 # Regenerate files
 make update-istio gen
