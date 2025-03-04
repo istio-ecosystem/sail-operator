@@ -179,6 +179,7 @@ subjects:
 
 		AfterAll(func() {
 			Expect(k.DeleteNamespace(curlNamespace)).To(Succeed(), "failed to delete curl namespace")
+			exec.Command("kubectl", "delete", "--ignore-not-found", "clusterrolebinding", "metrics-reader-rolebinding").Run()
 
 			if CurrentSpecReport().Failed() {
 				common.LogDebugInfo(common.Operator, k)
