@@ -43,6 +43,8 @@
   - [Installation Steps](#installation-steps)
   - [Validation](#validation)
 - [Ambient mode](common/istio-ambient-mode.md)
+  - [Getting Started](common/istio-ambient-mode.md#getting-started)
+  - [Use Waypoint Proxies](common/istio-ambient-waypoint.md)
 - [Addons](#addons)
   - [Deploy Prometheus and Jaeger addons](#deploy-prometheus-and-jaeger-addons)
   - [Deploy Kiali addon](#deploy-kiali-addon)
