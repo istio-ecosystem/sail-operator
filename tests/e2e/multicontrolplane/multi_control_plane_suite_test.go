@@ -30,9 +30,10 @@ import (
 )
 
 var (
-	cl                     client.Client
-	err                    error
-	version                = istioversion.New
+	cl  client.Client
+	err error
+	// version will be the first version in the list, this version is the newest Istio version in the versions.yaml file
+	version                = istioversion.List[0].Name
 	namespace              = common.OperatorNamespace
 	deploymentName         = env.Get("DEPLOYMENT_NAME", "sail-operator")
 	controlPlaneNamespace1 = env.Get("CONTROL_PLANE_NS1", "istio-system1")

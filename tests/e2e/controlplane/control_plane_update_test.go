@@ -41,11 +41,11 @@ var _ = Describe("Control Plane updates", Label("update"), Ordered, func() {
 	debugInfoLogged := false
 
 	Describe("using IstioRevisionTag", func() {
-		// istioversion.Old is the version second version in versions.yaml file and istioversion.New is the first version in the List
-		// istioversion.Old is going to be the base version from where we are going to update to istioversion.New
-		// TODO: improve this: https://github.com/istio-ecosystem/sail-operator/issues/681
-		baseVersion := istioversion.Old
-		newVersion := istioversion.New
+		baseVersion, newVersion := istioversion.GetBaseAndNewVersion()
+		if baseVersion == "" || newVersion == "" {
+			Skip("Skipping update tests because there are not enough versions in versions.yaml")
+		}
+
 		Context(baseVersion, func() {
 			BeforeAll(func(ctx SpecContext) {
 				if len(istioversion.List) < 2 {
