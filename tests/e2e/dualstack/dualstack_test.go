@@ -185,14 +185,10 @@ spec:
 						Expect(k.CreateNamespace(IPv6Namespace)).To(Succeed(), "Failed to create ipv6 namespace")
 						Expect(k.CreateNamespace(SleepNamespace)).To(Succeed(), "Failed to create sleep namespace")
 
-						Expect(k.Patch("namespace", DualStackNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
-							To(Succeed(), "Error patching dual-stack namespace")
-						Expect(k.Patch("namespace", IPv4Namespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
-							To(Succeed(), "Error patching ipv4 namespace")
-						Expect(k.Patch("namespace", IPv6Namespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
-							To(Succeed(), "Error patching ipv6 namespace")
-						Expect(k.Patch("namespace", SleepNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
-							To(Succeed(), "Error patching sleep namespace")
+						Expect(k.Label("namespace", DualStackNamespace, "istio-injection", "enabled")).To(Succeed(), "Error labeling dual-stack namespace")
+						Expect(k.Label("namespace", IPv4Namespace, "istio-injection", "enabled")).To(Succeed(), "Error labeling ipv4 namespace")
+						Expect(k.Label("namespace", IPv6Namespace, "istio-injection", "enabled")).To(Succeed(), "Error labeling ipv6 namespace")
+						Expect(k.Label("namespace", SleepNamespace, "istio-injection", "enabled")).To(Succeed(), "Error labeling sleep namespace")
 
 						Expect(k.WithNamespace(DualStackNamespace).Apply(common.GetSampleYAML(version, "tcp-echo-dual-stack"))).To(Succeed(), "error deploying tcpDualStack pod")
 						Expect(k.WithNamespace(IPv4Namespace).Apply(common.GetSampleYAML(version, "tcp-echo-ipv4"))).To(Succeed(), "error deploying ipv4 pod")
