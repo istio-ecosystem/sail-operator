@@ -77,7 +77,6 @@ kind: Istio
 metadata:
   name: default
 spec:
-  version: v1.23.2
   namespace: istio-system
   updateStrategy:
     type: InPlace
@@ -88,6 +87,8 @@ spec:
           cpu: 100m
           memory: 1024Mi
 ```
+
+Note: If you need a specific Istio version, you can explicitly set it using `spec.version`. If not specified, the Operator will install the latest supported version.
 
 Istio uses a ConfigMap for its global configuration, called the MeshConfig. All of its settings are available through `spec.meshConfig`.
 
@@ -129,7 +130,6 @@ kind: IstioCNI
 metadata:
   name: default
 spec:
-  version: v1.23.2
   namespace: istio-cni
   values:
     cni:
@@ -137,6 +137,8 @@ spec:
       excludeNamespaces:
       - kube-system
 ```
+
+Note: If you need a specific Istio version, you can explicitly set it using `spec.version`. If not specified, the Operator will install the latest supported version.
 
 #### Updating the IstioCNI resource
 Updates for the `IstioCNI` resource are `Inplace` updates, this means that the `DaemonSet` will be updated with the new version of the CNI plugin once the resource is updated and the `istio-cni-node` pods are going to be replaced with the new version. 
@@ -151,7 +153,7 @@ To update the CNI plugin, just change the `version` field to the version you wan
     metadata:
       name: default
     spec:
-      version: v1.23.2
+      version: v1.24.2
       namespace: istio-cni
       values:
         cni:
@@ -165,7 +167,7 @@ To update the CNI plugin, just change the `version` field to the version you wan
     ```bash
     $ kubectl get istiocni -n istio-cni
     NAME      READY   STATUS    VERSION   AGE
-    default   True    Healthy   v1.23.2   91m
+    default   True    Healthy   v1.24.2   91m
     $ kubectl get pods -n istio-cni
     NAME                   READY   STATUS    RESTARTS   AGE
     istio-cni-node-hd9zf   1/1     Running   0          90m
@@ -173,14 +175,14 @@ To update the CNI plugin, just change the `version` field to the version you wan
 3. Update the CNI plugin version.
 
     ```bash
-    kubectl patch istiocni default -n istio-cni --type='merge' -p '{"spec":{"version":"v1.23.3"}}'
+    kubectl patch istiocni default -n istio-cni --type='merge' -p '{"spec":{"version":"v1.24.3"}}'
     ```
 4. Confirm the CNI plugin version was updated.
 
     ```bash
     $ kubectl get istiocni -n istio-cni
     NAME      READY   STATUS    VERSION   AGE
-    default   True    Healthy   v1.23.3   93m
+    default   True    Healthy   v1.24.3   93m
     $ kubectl get pods -n istio-cni
     NAME                   READY   STATUS    RESTARTS   AGE
     istio-cni-node-jz4lg   1/1     Running   0          44s
@@ -1104,7 +1106,7 @@ These steps are common to every multi-cluster deployment and should be completed
       -in root-cert.csr \
       -out root-cert.pem
     ```
-5. Create intermediate certiciates.
+5. Create intermediate certificates.
 
     ```sh
     for cluster in west east; do
@@ -1869,7 +1871,6 @@ Note: If you installed the KinD cluster using the command above, install the [Sa
          ipFamilyPolicy: RequireDualStack
          env:
            ISTIO_DUAL_STACK: "true"
-     version: v1.23.2
      namespace: istio-system
    EOF
    kubectl wait --for=jsonpath='{.status.revisions.ready}'=1 istios/default --timeout=3m
@@ -1885,7 +1886,6 @@ Note: If you installed the KinD cluster using the command above, install the [Sa
    metadata:
      name: default
    spec:
-     version: v1.23.2
      namespace: istio-cni
    EOF
    kubectl wait --for=condition=Ready pod -n istio-cni -l k8s-app=istio-cni-node --timeout=60s
