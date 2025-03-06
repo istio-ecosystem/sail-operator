@@ -26,12 +26,13 @@ metadata:
   name: default
 spec:
   profile: ambient
-  version: v1.24.0
   namespace: ztunnel
   values:
     ztunnel:
       image: docker.io/istio/ztunnel:1.24.0
 ```
+
+Note: If you need a specific Istio version, you can explicitly set it using `spec.version`. If not specified, the Operator will install the latest supported version.
 
 ### API Reference documentation
 
