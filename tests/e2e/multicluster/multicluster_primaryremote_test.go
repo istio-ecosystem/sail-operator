@@ -189,13 +189,7 @@ spec:
 								"merge",
 								`{"metadata":{"annotations":{"topology.istio.io/controlPlaneClusters":"cluster1"}}}`)).
 							To(Succeed(), "Error patching istio-system namespace")
-						Expect(
-							k2.Patch(
-								"namespace",
-								controlPlaneNamespace,
-								"merge",
-								`{"metadata":{"labels":{"topology.istio.io/network":"network2"}}}`)).
-							To(Succeed(), "Error patching istio-system namespace")
+						Expect(k2.Label("namespace", controlPlaneNamespace, "topology.istio.io/network", "network2")).To(Succeed(), "Error labeling istio-system namespace")
 
 						// To be able to access the remote cluster from the primary cluster, we need to create a secret in the primary cluster
 						// Remote Istio resource will not be Ready until the secret is created
@@ -250,10 +244,8 @@ spec:
 						Expect(k2.CreateNamespace(sampleNamespace)).To(Succeed(), "Namespace failed to be created on Cluster #2")
 
 						// Label the namespace
-						Expect(k1.Patch("namespace", sampleNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
-							To(Succeed(), "Error patching sample namespace")
-						Expect(k2.Patch("namespace", sampleNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
-							To(Succeed(), "Error patching sample namespace")
+						Expect(k1.Label("namespace", sampleNamespace, "istio-injection", "enabled")).To(Succeed(), "Error labeling sample namespace")
+						Expect(k2.Label("namespace", sampleNamespace, "istio-injection", "enabled")).To(Succeed(), "Error labeling sample namespace")
 
 						// Deploy the sample app in both clusters
 						deploySampleAppToClusters(sampleNamespace, v, []ClusterDeployment{

@@ -247,10 +247,8 @@ spec:
 						Expect(k.CreateNamespace(common.HttpbinNamespace)).To(Succeed(), "Failed to create httpbin namespace")
 
 						// Add the necessary ambient labels on the namespaces.
-						Expect(k.Patch("namespace", common.SleepNamespace, "merge", `{"metadata":{"labels":{"istio.io/dataplane-mode":"ambient"}}}`)).
-							To(Succeed(), "Error patching sleep namespace")
-						Expect(k.Patch("namespace", common.HttpbinNamespace, "merge", `{"metadata":{"labels":{"istio.io/dataplane-mode":"ambient"}}}`)).
-							To(Succeed(), "Error patching httpbin namespace")
+						Expect(k.Label("namespace", common.SleepNamespace, "istio.io/dataplane-mode", "ambient")).To(Succeed(), "Error labeling sleep namespace")
+						Expect(k.Label("namespace", common.HttpbinNamespace, "istio.io/dataplane-mode", "ambient")).To(Succeed(), "Error labeling httpbin namespace")
 
 						// Deploy the test pods.
 						Expect(k.WithNamespace(common.SleepNamespace).Apply(common.GetSampleYAML(version, "sleep"))).To(Succeed(), "error deploying sleep pod")

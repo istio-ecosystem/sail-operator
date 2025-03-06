@@ -208,8 +208,7 @@ spec:
 						}
 
 						Expect(k.CreateNamespace(sampleNamespace)).To(Succeed(), "Sample namespace failed to be created")
-						Expect(k.Patch("namespace", sampleNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
-							To(Succeed(), "Error patching sample namespace")
+						Expect(k.Label("namespace", sampleNamespace, "istio-injection", "enabled")).To(Succeed(), "Error labeling sample namespace")
 						Expect(k.WithNamespace(sampleNamespace).
 							ApplyWithLabels(common.GetSampleYAML(version, sampleNamespace), "version=v1")).
 							To(Succeed(), "Error deploying sample")
