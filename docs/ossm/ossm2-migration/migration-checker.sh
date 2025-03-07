@@ -164,10 +164,15 @@ check_smcp() {
     else
         # Even if the minor version is up to date, check the z-stream to ensure it's the latest.
         # No point in checking the z-stream if the minor is not up to date though.
-        local current_chart_version
-        current_chart_version=$(echo "$smcp" | jq -r '.status.chartVersion')
-        if [ "$current_chart_version" != "$LATEST_OSSM2_VERSION" ]; then
-            add_warning "Your ServiceMeshControlPlane does not have the latest z-stream release. Please ensure your Service Mesh operator is updated to the latest version. Current version: '$current_chart_version'. Latest version: '$LATEST_OSSM2_VERSION'."
+        # redhat-operators catalog is usually removed in disconnected OCP installations so it can't be used to check for the latest available versions
+        if [ "$LATEST_OSSM2_VERSION" = "" ]; then
+            add_warning "Getting the latest OSSM version from the redhat-operators catalog failed. Please check you are running the latest ServiceMeshControlPlane version manually."
+        else
+            local current_chart_version
+            current_chart_version=$(echo "$smcp" | jq -r '.status.chartVersion')
+            if [ "$current_chart_version" != "$LATEST_OSSM2_VERSION" ]; then
+                add_warning "Your ServiceMeshControlPlane does not have the latest z-stream release. Please ensure your Service Mesh operator is updated to the latest version. Current version: '$current_chart_version'. Latest version: '$LATEST_OSSM2_VERSION'."
+            fi
         fi
     fi
 
@@ -253,7 +258,12 @@ check_smcps() {
     local num_warnings=$TOTAL_WARNINGS
     echo -e "OSSM 2 Operator\n"
 
-    check_operator_version "$OSSM2_OPERATOR_NAME" "$LATEST_OSSM2_CSV_VERSION"
+    # redhat-operators catalog is usually removed in disconnected OCP installations so it can't be used to check for the latest available versions
+    if [ "$LATEST_OSSM2_VERSION" = "" ]; then
+        add_warning "Getting the latest OSSM version from the redhat-operators catalog failed. Please check you are running the latest $OSSM2_OPERATOR_NAME version manually."
+    else
+        check_operator_version "$OSSM2_OPERATOR_NAME" "$LATEST_OSSM2_CSV_VERSION"
+    fi
     check_for_new_warnings $num_warnings "OSSM 2 operator is up to date"
 }
 
@@ -273,10 +283,15 @@ check_kiali() {
     # Note the 'v' added to the version because the CR spec expects version to be v1.89 whereas the operator version is just 1.89.9 without the 'v'.
     # We're also trimming the patch version out of the version.
     # We're going from 1.89.9 --> v1.89.
-    local latest_cr_version
-    latest_cr_version=v$(cut -d "." -f 1-2 <<< "$LATEST_KIALI_VERSION")
-    if [[ "$current_version" != "$latest_cr_version" && "$current_version" != "default" ]]; then
-        add_warning "Your Kiali is not on the latest version. Current version: '$current_version'. Latest version: '$latest_cr_version'. Please upgrade your Kiali to the latest version."
+    # redhat-operators catalog is usually removed in disconnected OCP installations so it can't be used to check for the latest available versions
+    if [ "$LATEST_KIALI_VERSION" = "" ]; then
+        add_warning "Getting the latest Kiali version from the redhat-operators catalog failed. Please check you are running the latest Kiali version manually."
+    else
+        local latest_cr_version
+        latest_cr_version=v$(cut -d "." -f 1-2 <<< "$LATEST_KIALI_VERSION")
+        if [[ "$current_version" != "$latest_cr_version" && "$current_version" != "default" ]]; then
+            add_warning "Your Kiali is not on the latest version. Current version: '$current_version'. Latest version: '$latest_cr_version'. Please upgrade your Kiali to the latest version."
+        fi
     fi
 
     check_for_new_warnings $num_warnings "Kiali $name/$namespace is on the latest version."
@@ -303,7 +318,12 @@ check_kialis() {
 
     echo -e "Kiali Operator\n"
 
-    check_operator_version "$KIALI_OPERATOR_NAME" "$LATEST_KIALI_VERSION"
+    # redhat-operators catalog is usually removed in disconnected OCP installations so it can't be used to check for the latest available versions
+    if [ "$LATEST_KIALI_VERSION" = "" ]; then
+        add_warning "Getting the latest Kiali version from the redhat-operators catalog failed. Please check you are running the latest $KIALI_OPERATOR_NAME operator version manually."
+    else
+        check_operator_version "$KIALI_OPERATOR_NAME" "$LATEST_KIALI_VERSION"
+    fi
 
     check_for_new_warnings $num_warnings "Kiali operator is up to date"
 }
