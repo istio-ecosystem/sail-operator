@@ -7,15 +7,15 @@ Ambient mesh splits Istio's functionality into two distinct layers, a secure ove
 
 If your applications require any of the following L7 mesh functions, you will need to use a waypoint proxy in ambient mode:
 
-- Traffic management: HTTP routing & load balancing, circuit breaking, rate limiting, fault injection, retries, timeouts
+- Traffic management: HTTP routing & load balancing, circuit breaking, rate limiting, fault injection, retries and timeouts
 - Security: Rich authorization policies based on L7 primitives such as request type or HTTP header
-- Observability: HTTP metrics, access logging, tracing
+- Observability: HTTP metrics, access logging and tracing
 
 ## Getting Started
 
 *Prerequisites*
 
-Waypint proxies are deployed using Kubernetes Gateway resources. As of Kubernetes 1.30 and OpenShift 4.17, the Kubernetes Gateway API CRDs are not available by default and must be enabled to be used. This can be done with the command:
+Waypoint proxies are deployed using Kubernetes Gateway resources. As of Kubernetes 1.30 and OpenShift 4.17, the Kubernetes Gateway API CRDs are not available by default and must be installed to be used. This can be done with the following command:
 
 ```sh
 kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
@@ -24,9 +24,9 @@ kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
 
 ### Set up Istio Ambient Mode Resources and a Sample Application
 
-1. Install the Sail Operator and Istio ambient mode resources. The steps can be found [here](https://github.com/istio-ecosystem/sail-operator/blob/main/docs/common/istio-ambient-mode.md#installation-on-openshift). 
+1. Install the Sail Operator along with Istio in ambient mode using the [following](https://github.com/istio-ecosystem/sail-operator/blob/main/docs/common/istio-ambient-mode.md#installation-on-openshift) steps. 
 
-2. Deploy a sample application. The steps can be found [here](https://github.com/istio-ecosystem/sail-operator/blob/main/docs/common/istio-ambient-mode.md#deploy-a-sample-application). 
+2. Deploy the sample Bookinfo applications. The steps can be found [here](https://github.com/istio-ecosystem/sail-operator/blob/main/docs/common/istio-ambient-mode.md#deploy-a-sample-application). 
 
 Before you deploy a waypoint proxy in the application namespace, confirm the namespace is labeled with `istio.io/dataplane-mode: ambient`.
 
@@ -52,9 +52,9 @@ spec:
 EOF
 ```
 
-The Gateway reource is labeled with `istio.io/waypoint-for: service`, indicating the waypoint can process traffic for services, which is the default waypoint traffic type.
+The Gateway resource is labeled with `istio.io/waypoint-for: service`, indicating the waypoint can process traffic for services, which is the default waypoint traffic type.
 
-The types of traffic that will be redirected to the waypoint are determined by the `istio.io/waypoint-for` label on the Gateway object. More detailed information can be found [here](https://istio.io/latest/docs/ambient/usage/waypoint/#waypoint-traffic-types).
+The type of traffic that will be redirected to the waypoint is determined by the `istio.io/waypoint-for` label on the Gateway object. More detailed information can be found [here](https://istio.io/latest/docs/ambient/usage/waypoint/#waypoint-traffic-types).
 
 2. Enroll the bookinfo namespace to use the waypoint:
 
