@@ -171,7 +171,7 @@ More information about Istio's peer authentication behavior can be found [here](
 
 ## Troubleshoot issues
 
-A troubleshooting guide can be reviewed from the upstream documentation, [Troubleshoot issues with waypoints](https://istio.io/latest/docs/ambient/usage/troubleshoot-waypoint/). You can download an `istioctl` binary and run those diagnostic commands.
+For steps on how to troubleshoot an ambient deployment, you can refer to the Istio [documentation](https://istio.io/latest/docs/ambient/usage/troubleshoot-waypoint/).
 
 ## Cleanup
 
