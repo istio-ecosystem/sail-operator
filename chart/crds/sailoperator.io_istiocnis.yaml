@@ -64,8 +64,11 @@ spec:
               namespace:
                 default: istio-cni
                 description: Namespace to which the Istio CNI component should be
-                  installed.
+                  installed. Note that this field is immutable.
                 type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
               profile:
                 description: |-
                   The built-in installation configuration profile to use.
