@@ -34,7 +34,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/sail-dev/sail-operator:1.1-latest
-    createdAt: "2025-02-14T12:02:06Z"
+    createdAt: "2025-03-07T09:31:20Z"
     description: Experimental operator for installing Istio service mesh
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -187,6 +187,7 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:select:master
         - urn:alm:descriptor:com.tectonic.ui:select:v1.25-alpha.c2ac935c
       - description: Namespace to which the Istio CNI component should be installed.
+          Note that this field is immutable.
         displayName: Namespace
         path: namespace
         x-descriptors:
