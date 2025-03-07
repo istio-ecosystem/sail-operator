@@ -52,9 +52,7 @@ spec:
 EOF
 ```
 
-The Gateway resource is labeled with `istio.io/waypoint-for: service`, indicating the waypoint can process traffic for services, which is the default waypoint traffic type.
-
-The type of traffic that will be redirected to the waypoint is determined by the `istio.io/waypoint-for` label on the Gateway object. More detailed information can be found [here](https://istio.io/latest/docs/ambient/usage/waypoint/#waypoint-traffic-types).
+The `istio.io/waypoint-for: service` label on the Gateway resource specifies that it processes traffic for services, which is the default behavior. The type of traffic a waypoint handles is determined by this label. For more details you can refer to Istio [documentation](https://istio.io/latest/docs/ambient/usage/waypoint/#waypoint-traffic-types).
 
 2. Enroll the bookinfo namespace to use the waypoint:
 
@@ -62,13 +60,12 @@ The type of traffic that will be redirected to the waypoint is determined by the
 kubectl label ns bookinfo istio.io/use-waypoint=waypoint
 ```
 
-After a namespace is enrolled to use a waypoint, any requests from any pods using the ambient data plane mode, to any service running in that namespace, will be routed through the waypoint for L7 processing and policy enforcement. 
+After a namespace is enrolled to use a waypoint, any requests from any pods using the ambient data plane mode, to any service running in the `bookinfo` namespace, will be routed through the waypoint for L7 processing and policy enforcement. 
 
-If you prefer more granularity than using a waypoint for an entire namespace, you can enroll only a specific service or pod to use a waypoint. When you explicitly enroll a pod, you also need to use the `istio.io/waypoint-for: workload` label in the Gateway resource.
-
+If you prefer more granularity than using a waypoint for an entire namespace, you can enroll only a specific service or pod to use a waypoint by labelling the respective service or the pod. When enrolling a pod explicitly, you must also add the `istio.io/waypoint-for: workload` label to the Gateway resource.
 #### Cross-namespace Waypoint
 
-Alternatively, you can use waypoints in different namespaces. The following `Gateway` would allow resources in the `bookinfo` namespace to use the `waypoint-foo` in the `foo` namespace:
+By default, a waypoint is usable only within the same namespace, but it also supports cross-namespace usage. The following Gateway allows resources in the `bookinfo` namespace to use `waypoint-foo` from the `foo` namespace:
 
 ```yaml
 kind: Gateway
@@ -104,7 +101,7 @@ The following section describes the stable features using Gateway API resource `
 
 With a waypoint proxy deployed, you can split traffic between different versions of the bookinfo reviews service. This is useful for testing new features or performing A/B testing.
 
-For example, let’s configure traffic routing to send 90% of requests to reviews v1 and 10% to reviews v2:
+For example, let’s configure traffic routing to send 90% of requests to reviews-v1 and 10% to reviews-v2:
 
 ```sh
 kubectl apply -f - <<EOF
@@ -130,13 +127,13 @@ spec:
 EOF
 ```
 
-If you open the Bookinfo application in your browser and refresh the page multiple times. Notice the requests from the reviews-v1 don’t have any stars, while the requests from reviews-v2 have black stars.
+If you open the Bookinfo application in your browser and refresh the page multiple times, you'll notice that most requests (90%) go to `reviews-v1`, which don’t have any stars, while a smaller portion (10%) go to `reviews-v2`, which display black stars.
 
 ### Security Authorization
 
 The `AuthorizationPolicy` resource can be used in both sidecar mode and ambient mode. In ambient mode, authorization policies can either be targeted (for ztunnel enforcement) or attached (for waypoint enforcement). For an authorization policy to be attached to a waypoint it must have a `targetRef` which refers to the waypoint, or a Service which uses that waypoint.
 
-When a waypoint proxy is added to a workload, you may have two possible places where you can enforce L4 policy. (L7 policy can only be enforced at the waypoint proxy.) Ideally you should attach your policy to the waypoint proxy. Because the destination ztunnel will see traffic with the waypoint’s identity, not the source identity once you have introduced a waypoint to the traffic path.
+When a waypoint proxy is added to a workload, you may have two possible places where you can enforce L4 policy (L7 policy can only be enforced at the waypoint proxy). Ideally you should attach your policy to the waypoint proxy, because the destination ztunnel will see traffic with the waypoint’s identity, not the source identity once you have introduced a waypoint to the traffic path.
 
 For example, let's add a L7 authorization policy that will explicitly allow a curl service to send `GET` requests to the `productpage` service, but perform no other operations:
 
@@ -174,44 +171,7 @@ More information about Istio's peer authentication behavior can be found [here](
 
 ## Troubleshoot issues
 
-A troubleshooting guide can be reviewed from the upstream documentation, [Troubleshoot issues with waypoints](https://istio.io/latest/docs/ambient/usage/troubleshoot-waypoint/).
-
-You can download an `istioctl` binary and run those diagnostic commands. For example, to determine which waypoint is implementing the L7 configuration for the bookinfo sevices:
-
-```console
-$ istioctl -n ztunnel ztunnel-config service
-
-NAMESPACE    SERVICE NAME           SERVICE VIP    WAYPOINT ENDPOINTS
-bookinfo     details                172.30.16.130  waypoint 1/1
-bookinfo     details-v1             172.30.27.112  waypoint 1/1
-bookinfo     productpage            172.30.131.128 waypoint 1/1
-bookinfo     productpage-v1         172.30.22.77   waypoint 1/1
-bookinfo     ratings                172.30.52.59   waypoint 1/1
-bookinfo     ratings-v1             172.30.196.247 waypoint 1/1
-bookinfo     reviews                172.30.48.169  waypoint 3/3
-bookinfo     reviews-v1             172.30.153.9   waypoint 1/1
-bookinfo     reviews-v2             172.30.11.38   waypoint 1/1
-bookinfo     reviews-v3             172.30.166.227 waypoint 1/1
-bookinfo     waypoint               172.30.27.85   None     1/1
-istio-system istiod                 172.30.202.223 None     1/1
-```
-
-If the value for the pod's waypoint column isn't correct, verify your pod is labeled with `istio.io/use-waypoint` and the label's value is the name of a waypoint that can process the traffic. 
-
-You can check the waypoint's proxy status via the `istioctl proxy-status` command:
-
-```console
-$ istioctl proxy-status
-
-NAME                               CLUSTER    CDS          LDS          EDS          RDS     ECDS     ISTIOD                     VERSION
-waypoint-cd5b58869-f4jf5.bookinfo Kubernetes SYNCED (17m) SYNCED (17m) SYNCED (17m) IGNORED IGNORED istiod-995b64576-qv22g     1.24.0
-```
-
-You can check the envoy configuration for the waypoint via the istioctl proxy-config command, which shows all the information related to the waypoint such as clusters, endpoints, listeners, routes and secrets:
-
-```console
-$ istioctl proxy-config all deploy/waypoint
-```
+A troubleshooting guide can be reviewed from the upstream documentation, [Troubleshoot issues with waypoints](https://istio.io/latest/docs/ambient/usage/troubleshoot-waypoint/). You can download an `istioctl` binary and run those diagnostic commands.
 
 ## Cleanup
 
@@ -229,7 +189,7 @@ kubectl delete -n bookinfo Gateway waypoint
 kubectl label namespace bookinfo istio.io/dataplane-mode-
 ```
 
-#### Remove the sample application
+#### Remove the Bookinfo applications
 
 ```sh
 kubectl delete -n bookinfo -f https://raw.githubusercontent.com/istio/istio/release-1.24/samples/bookinfo/platform/kube/bookinfo.yaml
