@@ -61,7 +61,7 @@ var _ = Describe("Ambient configuration ", Ordered, func() {
 	})
 
 	Describe("for supported versions", func() {
-		for _, version := range istioversion.List {
+		for _, version := range istioversion.GetLatestPatchVersions() {
 			// The minimum supported version is 1.24 (and above)
 			if version.Version.LessThan(semver.MustParse("1.24.0")) {
 				continue

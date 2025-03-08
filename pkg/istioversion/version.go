@@ -62,10 +62,6 @@ var (
 	Map map[string]VersionInfo
 	// Default is the default version
 	Default string
-	// Old is the previous supported version
-	Old string
-	// New is the latest supported version
-	New string
 	// aliasList is the alias for the version
 	aliasList []AliasInfo
 )
@@ -86,14 +82,12 @@ func init() {
 		panic(fmt.Errorf("failed to read versions from '%s': %w", versionsFilename, err))
 	}
 
-	List, Default, Old, New, Map, aliasList = mustParseVersionsYaml(data)
+	List, Default, Map, aliasList = mustParseVersionsYaml(data)
 }
 
 func mustParseVersionsYaml(yamlBytes []byte) (
 	list []VersionInfo,
 	defaultVersion string,
-	oldVersion string,
-	newVersion string,
 	versionMap map[string]VersionInfo,
 	aliasList []AliasInfo,
 ) {
@@ -130,12 +124,71 @@ func mustParseVersionsYaml(yamlBytes []byte) (
 	}
 
 	if len(list) > 0 {
-		newVersion = list[0].Name
-		defaultVersion = newVersion
-		if len(list) > 1 {
-			oldVersion = list[1].Name
+		// Set the default version to the first version in the list (Newest version)
+		defaultVersion = list[0].Name
+	}
+
+	return list, defaultVersion, versionMap, aliasList
+}
+
+// GetLatestPatchVersions returns the latest patch versions for all the Major.Minor versions
+func GetLatestPatchVersions() map[string]VersionInfo {
+	latestPatchVersions := make(map[string]VersionInfo)
+	for _, version := range List {
+		majorMinorVersion := fmt.Sprintf("%d.%d", version.Version.Major(), version.Version.Minor())
+		latestPatchVersion, ok := latestPatchVersions[majorMinorVersion]
+		if !ok || version.Version.GreaterThan(latestPatchVersion.Version) {
+			latestPatchVersions[majorMinorVersion] = version
+		}
+	}
+	return latestPatchVersions
+}
+
+// GetPatchVersionsByMajorMinor returns all the patch versions for each Major.Minor version in the list
+// The resulting map will have the Major.Minor version as the key and a list of patch versions as the value
+func getPatchVersionsByMajorMinor() map[string][]VersionInfo {
+	allPatchVersions := make(map[string][]VersionInfo)
+	for _, version := range List {
+		majorMinorVersion := fmt.Sprintf("%d.%d", version.Version.Major(), version.Version.Minor())
+		allPatchVersions[majorMinorVersion] = append(allPatchVersions[majorMinorVersion], version)
+	}
+	return allPatchVersions
+}
+
+// GetBaseAndNewVersion returns old and new Istio patch versions.
+// It will take the latest Major.Minor version and get the two newest patch of that Major.Minor version.
+func GetBaseAndNewVersion() (string, string) {
+	type versionPair struct {
+		base, newVersion string
+		newSemver        *semver.Version
+	}
+	var latestPair versionPair
+
+	patchVersions := getPatchVersionsByMajorMinor()
+	for _, group := range patchVersions {
+		// Only consider groups with at least two patch versions.
+		if len(group) < 2 {
+			continue
+		}
+
+		newVer, err1 := semver.NewVersion(group[0].Name)
+		if err1 != nil {
+			continue
+		}
+		if _, err2 := semver.NewVersion(group[1].Name); err2 != nil {
+			continue
+		}
+
+		// Update latestPair if it's the first valid one or if this group is newer.
+		if latestPair.newSemver == nil || newVer.GreaterThan(latestPair.newSemver) {
+			latestPair.newSemver = newVer
+			latestPair.newVersion = group[0].Name
+			latestPair.base = group[1].Name
 		}
 	}
 
-	return list, defaultVersion, oldVersion, newVersion, versionMap, aliasList
+	if latestPair.newSemver == nil {
+		return "", ""
+	}
+	return latestPair.base, latestPair.newVersion
 }
