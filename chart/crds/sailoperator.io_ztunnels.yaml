@@ -59,7 +59,7 @@ spec:
             default:
               namespace: ztunnel
               profile: ambient
-              version: v1.24.2
+              version: v1.24.3
             description: ZTunnelSpec defines the desired state of ZTunnel
             properties:
               namespace:
@@ -1829,6 +1829,11 @@ spec:
                                   `timeout` of the [HTTP route](https://istio.io/docs/reference/config/networking/virtual-service/#HTTPRoute),
                                   which means no timeout.
                                 type: string
+                              retryIgnorePreviousHosts:
+                                description: |-
+                                  Flag to specify whether the retries should ignore previously tried hosts during retry.
+                                  Defaults to true.
+                                type: boolean
                               retryOn:
                                 description: |-
                                   Specifies the conditions under which retry takes place.
@@ -2348,6 +2353,12 @@ spec:
                                           be set
                                         rule: (has(self.text)?1:0) + (has(self.labels)?1:0)
                                           <= 1
+                                    omitEmptyValues:
+                                      description: |-
+                                        Optional. If set to true, when command operators are evaluated to null,
+                                        For text format, the output of the empty operator is changed from "-" to an empty string.
+                                        For json format, the keys with null values are omitted in the output structure.
+                                      type: boolean
                                     path:
                                       description: |-
                                         Path to a local file to write the access log entries.
@@ -3531,7 +3542,7 @@ spec:
                               match either `x.y.com` or `*.y.com` for the SAN in the presented server certificate.
                               For wildcard host name in DestinationRule, client-side proxy will do a suffix match. For example,
                               if host is `*.x.y.com`, client-side proxy will verify the presented server certificate SAN matches
-                              “.x.y.com` suffix.
+                              `.x.y.com` suffix.
 
                               Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
                             type: boolean
@@ -5515,12 +5526,13 @@ spec:
                     type: object
                 type: object
               version:
-                default: v1.24.2
+                default: v1.24.3
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.24-latest, v1.24.2, v1.24.1, v1.24.0, master, v1.25-alpha.c2ac935c.
+                  Must be one of: v1.24-latest, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.25-alpha.c2ac935c.
                 enum:
                 - v1.24-latest
+                - v1.24.3
                 - v1.24.2
                 - v1.24.1
                 - v1.24.0
