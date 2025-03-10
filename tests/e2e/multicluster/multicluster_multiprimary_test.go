@@ -19,15 +19,18 @@ package multicluster
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/certs"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -37,7 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("Multicluster deployment models", Ordered, func() {
+var _ = Describe("Multicluster deployment models", Label("multicluster-multiprimary"), Ordered, func() {
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 	debugInfoLogged := false
@@ -48,10 +51,10 @@ var _ = Describe("Multicluster deployment models", Ordered, func() {
 			Expect(k1.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created on Cluster #1")
 			Expect(k2.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created on Cluster #2")
 
-			Expect(common.InstallOperatorViaHelm("--kubeconfig", kubeconfig)).
+			Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, "--kubeconfig "+kubeconfig)).
 				To(Succeed(), "Operator failed to be deployed in Cluster #1")
 
-			Expect(common.InstallOperatorViaHelm("--kubeconfig "+kubeconfig2)).
+			Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, "--kubeconfig "+kubeconfig2)).
 				To(Succeed(), "Operator failed to be deployed in Cluster #2")
 
 			Eventually(common.GetObject).
@@ -198,59 +201,51 @@ spec:
 
 				When("sample apps are deployed in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
-						// Create the namespace
-						Expect(k1.CreateNamespace("sample")).To(Succeed(), "Namespace failed to be created")
-						Expect(k2.CreateNamespace("sample")).To(Succeed(), "Namespace failed to be created")
+						// Create namespace
+						Expect(k1.CreateNamespace(sampleNamespace)).To(Succeed(), "Namespace failed to be created on Cluster #1")
+						Expect(k2.CreateNamespace(sampleNamespace)).To(Succeed(), "Namespace failed to be created on Cluster #2")
 
-						// Label the sample namespace
-						Expect(k1.Patch("namespace", "sample", "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
+						// Label the namespace
+						Expect(k1.Patch("namespace", sampleNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
 							To(Succeed(), "Error patching sample namespace")
-						Expect(k2.Patch("namespace", "sample", "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
+						Expect(k2.Patch("namespace", sampleNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
 							To(Succeed(), "Error patching sample namespace")
 
 						// Deploy the sample app in both clusters
-						helloWorldURL := common.GetSampleYAML(version, "helloworld")
-						sleepURL := common.GetSampleYAML(version, "sleep")
-
-						// On Cluster 0, create a service for the helloworld app v1
-						Expect(k1.WithNamespace("sample").ApplyWithLabels(helloWorldURL, "service=helloworld")).To(Succeed(), "Failed to deploy helloworld service")
-						Expect(k1.WithNamespace("sample").ApplyWithLabels(helloWorldURL, "version=v1")).To(Succeed(), "Failed to deploy helloworld service")
-						Expect(k1.WithNamespace("sample").Apply(sleepURL)).To(Succeed(), "Failed to deploy sleep service")
-
-						// On Cluster 1, create a service for the helloworld app v2
-						Expect(k2.WithNamespace("sample").ApplyWithLabels(helloWorldURL, "service=helloworld")).To(Succeed(), "Failed to deploy helloworld service")
-						Expect(k2.WithNamespace("sample").ApplyWithLabels(helloWorldURL, "version=v2")).To(Succeed(), "Failed to deploy helloworld service")
-						Expect(k2.WithNamespace("sample").Apply(sleepURL)).To(Succeed(), "Failed to deploy sleep service")
+						deploySampleAppToClusters(sampleNamespace, version, []ClusterDeployment{
+							{Kubectl: k1, AppVersion: "v1"},
+							{Kubectl: k2, AppVersion: "v2"},
+						})
 						Success("Sample app is deployed in both clusters")
 					})
 
 					It("updates the pods status to Ready", func(ctx SpecContext) {
 						samplePodsCluster1 := &corev1.PodList{}
 
-						Expect(clPrimary.List(ctx, samplePodsCluster1, client.InNamespace("sample"))).To(Succeed())
+						Expect(clPrimary.List(ctx, samplePodsCluster1, client.InNamespace(sampleNamespace))).To(Succeed())
 						Expect(samplePodsCluster1.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
 
 						for _, pod := range samplePodsCluster1.Items {
 							Eventually(common.GetObject).
-								WithArguments(ctx, clPrimary, kube.Key(pod.Name, "sample"), &corev1.Pod{}).
+								WithArguments(ctx, clPrimary, kube.Key(pod.Name, sampleNamespace), &corev1.Pod{}).
 								Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready on Cluster #1; unexpected Condition")
 						}
 
 						samplePodsCluster2 := &corev1.PodList{}
-						Expect(clRemote.List(ctx, samplePodsCluster2, client.InNamespace("sample"))).To(Succeed())
+						Expect(clRemote.List(ctx, samplePodsCluster2, client.InNamespace(sampleNamespace))).To(Succeed())
 						Expect(samplePodsCluster2.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
 
 						for _, pod := range samplePodsCluster2.Items {
 							Eventually(common.GetObject).
-								WithArguments(ctx, clRemote, kube.Key(pod.Name, "sample"), &corev1.Pod{}).
+								WithArguments(ctx, clRemote, kube.Key(pod.Name, sampleNamespace), &corev1.Pod{}).
 								Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready on Cluster #2; unexpected Condition")
 						}
 						Success("Sample app is created in both clusters and Running")
 					})
 
 					It("can access the sample app from both clusters", func(ctx SpecContext) {
-						verifyResponsesAreReceivedFromBothClusters(k1, "Cluster #1")
-						verifyResponsesAreReceivedFromBothClusters(k2, "Cluster #2")
+						verifyResponsesAreReceivedFromExpectedVersions(k1)
+						verifyResponsesAreReceivedFromExpectedVersions(k2)
 						Success("Sample app is accessible from both clusters")
 					})
 				})
@@ -281,15 +276,15 @@ spec:
 					// Delete namespaces to ensure clean up for new tests iteration
 					Expect(k1.DeleteNamespaceNoWait(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
 					Expect(k2.DeleteNamespaceNoWait(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #2")
-					Expect(k1.DeleteNamespaceNoWait("sample")).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
-					Expect(k2.DeleteNamespaceNoWait("sample")).To(Succeed(), "Namespace failed to be deleted on Cluster #2")
+					Expect(k1.DeleteNamespaceNoWait(sampleNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
+					Expect(k2.DeleteNamespaceNoWait(sampleNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #2")
 
 					Expect(k1.WaitNamespaceDeleted(controlPlaneNamespace)).To(Succeed())
 					Expect(k2.WaitNamespaceDeleted(controlPlaneNamespace)).To(Succeed())
 					Success("ControlPlane Namespaces are empty")
 
-					Expect(k1.WaitNamespaceDeleted("sample")).To(Succeed())
-					Expect(k2.WaitNamespaceDeleted("sample")).To(Succeed())
+					Expect(k1.WaitNamespaceDeleted(sampleNamespace)).To(Succeed())
+					Expect(k2.WaitNamespaceDeleted(sampleNamespace)).To(Succeed())
 					Success("Sample app is deleted in both clusters")
 				})
 			})
