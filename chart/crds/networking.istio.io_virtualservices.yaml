@@ -699,6 +699,11 @@ spec:
                           x-kubernetes-validations:
                           - message: must be a valid duration greater than 1ms
                             rule: duration(self) >= duration('1ms')
+                        retryIgnorePreviousHosts:
+                          description: Flag to specify whether the retries should
+                            ignore previously tried hosts during retry.
+                          nullable: true
+                          type: boolean
                         retryOn:
                           description: Specifies the conditions under which retry
                             takes place.
@@ -1739,6 +1744,11 @@ spec:
                           x-kubernetes-validations:
                           - message: must be a valid duration greater than 1ms
                             rule: duration(self) >= duration('1ms')
+                        retryIgnorePreviousHosts:
+                          description: Flag to specify whether the retries should
+                            ignore previously tried hosts during retry.
+                          nullable: true
+                          type: boolean
                         retryOn:
                           description: Specifies the conditions under which retry
                             takes place.
@@ -2779,6 +2789,11 @@ spec:
                           x-kubernetes-validations:
                           - message: must be a valid duration greater than 1ms
                             rule: duration(self) >= duration('1ms')
+                        retryIgnorePreviousHosts:
+                          description: Flag to specify whether the retries should
+                            ignore previously tried hosts during retry.
+                          nullable: true
+                          type: boolean
                         retryOn:
                           description: Specifies the conditions under which retry
                             takes place.

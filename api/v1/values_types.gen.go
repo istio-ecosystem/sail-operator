@@ -22,6 +22,7 @@ import (
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
+	unsafe "unsafe"
 )
 
 // Mode for the ingress controller.
@@ -1433,7 +1434,7 @@ type MeshConfig struct {
 	// match either `x.y.com` or `*.y.com` for the SAN in the presented server certificate.
 	// For wildcard host name in DestinationRule, client-side proxy will do a suffix match. For example,
 	// if host is `*.x.y.com`, client-side proxy will verify the presented server certificate SAN matches
-	// “.x.y.com` suffix.
+	// `.x.y.com` suffix.
 	//
 	// Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
 	VerifyCertificateAtClient *bool `json:"verifyCertificateAtClient,omitempty"`
@@ -2076,6 +2077,10 @@ type MeshConfigExtensionProviderEnvoyFileAccessLogProvider struct {
 	Path *string `json:"path,omitempty"`
 	// Optional. Allows overriding of the default access log format.
 	LogFormat *MeshConfigExtensionProviderEnvoyFileAccessLogProviderLogFormat `json:"logFormat,omitempty"`
+	// Optional. If set to true, when command operators are evaluated to null,
+	// For text format, the output of the empty operator is changed from "-" to an empty string.
+	// For json format, the keys with null values are omitted in the output structure.
+	OmitEmptyValues *bool `json:"omitEmptyValues,omitempty"`
 }
 
 // Defines configuration for an Envoy [Access Logging Service](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/grpc/v3/als.proto#grpc-access-log-service-als)
@@ -2510,6 +2515,21 @@ type Network struct {
 //	    locality: us-east-1a
 //
 // ```
+//
+// If `ENABLE_HCM_INTERNAL_NETWORKS` is set to true, MeshNetworks can be used to
+// to explicitly define the networks in Envoy's internal address configuration.
+// Envoy uses the IPs in the `internalAddressConfig` to decide whether or not to sanitize
+// Envoy headers. If the IP address is listed an internal, the Envoy headers are not
+// sanitized. As of Envoy 1.33, the default value for `internalAddressConfig` is set to
+// an empty set. Previously, the default value was the set of all private IPs. Setting
+// the `internalAddressConfig` to all private IPs (via Envoy's previous default behavior
+// or via the MeshNetworks) will leave users with an Istio Ingress Gateway potentially
+// vulnerable to `x-envoy` header manipulation by external sources. More information about
+// this vulnerability can be found here:
+// https://github.com/envoyproxy/envoy/security/advisories/GHSA-ffhv-fvxq-r6mf
+// To preserve headers, you must explicitly configure MeshNetworks and set
+// `ENABLE_HCM_INTERNAL_NETWORKS` to true. Envoy's `internalAddressConfig` will be set to
+// the endpointed specified by `fromCidr`.
 type MeshNetworks struct {
 	// The set of networks inside this mesh. Each network should
 	// have a unique name and information about how to infer the endpoints in
@@ -3786,4 +3806,7 @@ type HTTPRetry struct {
 	// Flag to specify whether the retries should retry to other localities.
 	// See the [retry plugin configuration](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/http/http_connection_management#retry-plugin-configuration) for more details.
 	RetryRemoteLocalities *bool `json:"retryRemoteLocalities,omitempty"`
+	// Flag to specify whether the retries should ignore previously tried hosts during retry.
+	// Defaults to true.
+	RetryIgnorePreviousHosts *bool `json:"retryIgnorePreviousHosts,omitempty"`
 }
