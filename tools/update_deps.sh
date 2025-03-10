@@ -28,6 +28,11 @@ function getLatestVersion() {
   curl -sL "https://api.github.com/repos/${1}/releases/latest" | yq '.tag_name'
 }
 
+function getReleaseBranch() {
+  minor=$(echo "${1}" | cut -f1,2 -d'.')
+  echo "release-${minor#*v}"
+}
+
 # Update common files
 make update-common
 
@@ -53,6 +58,12 @@ sed -i "s|HELM_VERSION ?= .*|HELM_VERSION ?= ${HELM_LATEST_VERSION}|" "${ROOTDIR
 # Update controller-tools
 CONTROLLER_TOOLS_LATEST_VERSION=$(getLatestVersion kubernetes-sigs/controller-tools)
 sed -i "s|CONTROLLER_TOOLS_VERSION ?= .*|CONTROLLER_TOOLS_VERSION ?= ${CONTROLLER_TOOLS_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+
+# Update controller-runtime
+CONTROLLER_RUNTIME_LATEST_VERSION=$(getLatestVersion kubernetes-sigs/controller-runtime)
+go get -u "sigs.k8s.io/controller-runtime@${CONTROLLER_RUNTIME_LATEST_VERSION}"
+CONTROLLER_RUNTIME_BRANCH=$(getReleaseBranch "${CONTROLLER_RUNTIME_LATEST_VERSION}")
+sed -i "s|CONTROLLER_RUNTIME_BRANCH ?= .*|CONTROLLER_RUNTIME_BRANCH ?= ${CONTROLLER_RUNTIME_BRANCH}|" "${ROOTDIR}/Makefile.core.mk"
 
 # Update opm
 OPM_LATEST_VERSION=$(getLatestVersion operator-framework/operator-registry)
