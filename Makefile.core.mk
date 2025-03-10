@@ -488,6 +488,7 @@ ISTIOCTL ?= $(LOCALBIN)/istioctl
 OPERATOR_SDK_VERSION ?= v1.39.1
 HELM_VERSION ?= v3.17.1
 CONTROLLER_TOOLS_VERSION ?= v0.17.2
+CONTROLLER_RUNTIME_BRANCH ?= release-0.20
 OPM_VERSION ?= v1.50.0
 OLM_VERSION ?= v0.31.0
 GITLEAKS_VERSION ?= v8.23.2
@@ -548,7 +549,7 @@ controller-gen: $(LOCALBIN) ## Download controller-gen to bin directory. If wron
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup to bin directory.
 $(ENVTEST): $(LOCALBIN)
-	@test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+	@test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@$(CONTROLLER_RUNTIME_BRANCH)
 
 .PHONY: gitleaks
 gitleaks: $(GITLEAKS) ## Download gitleaks to bin directory.
