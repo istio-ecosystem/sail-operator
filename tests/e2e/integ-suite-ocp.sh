@@ -15,7 +15,7 @@
 # limitations under the License.
 
 set -eux -o pipefail
-
+SKIP_TESTS="${SKIP_TESTS:-false}"
 # To run this integration test on OCP cluster it's needed to already have the OCP cluster running and be logged in
 
 # Run the integration tests
@@ -27,4 +27,4 @@ if [ -z "${KUBECONFIG}" ]; then
     exit 1
 fi
 
-KUBECONFIG="${KUBECONFIG}" ./tests/e2e/common-operator-integ-suite.sh --ocp
+KUBECONFIG="${KUBECONFIG}" SKIP_TESTS="${SKIP_TESTS}"  ./tests/e2e/common-operator-integ-suite.sh --ocp

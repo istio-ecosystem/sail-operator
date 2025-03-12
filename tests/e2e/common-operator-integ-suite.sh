@@ -123,6 +123,7 @@ initialize_variables() {
   OPERATOR_SDK=${LOCALBIN}/operator-sdk
   IP_FAMILY=${IP_FAMILY:-ipv4}
   ISTIO_MANIFEST="chart/samples/istio-sample.yaml"
+  SKIP_TESTS="${SKIP_TESTS:-false}"
 
   if [ "${OCP}" == "true" ]; then
     COMMAND="oc"
@@ -282,6 +283,12 @@ if [ "${OCP}" == "true" ]; then
   # We need to set image $HUB to a fixed known value after the push
   # This value always will be equal to the svc url of the internal registry
   HUB="image-registry.openshift-image-registry.svc:5000/sail-operator"
+fi
+
+# Exit if SKIP_TESTS is set to true
+if [ "${SKIP_TESTS}" == "true" ]; then
+  echo "SKIP_TESTS is set to true. Skipping tests. All the setup has been done."
+  exit 0
 fi
 
 # Run the go test passing the env variables defined that are going to be used in the operator tests

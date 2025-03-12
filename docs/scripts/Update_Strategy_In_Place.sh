@@ -3,6 +3,8 @@
 # This script was generated from the documentation file docs/README.md
 # Please check the documentation file for more information
 
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+source "$SCRIPT_DIR/update-docs-scripts.sh"
 # <!-- generate-docs-test-init Update_Strategy_In_Place-->
 # When the `InPlace` strategy is used, the existing Istio control plane is replaced with a new version. The workload sidecars immediately connect to the new control plane. The workloads therefore don't need to be moved from one control plane instance to another.
 # 
@@ -10,6 +12,7 @@
 # 
 # Prerequisites:
 # * Sail Operator is installed.
+install_sail_operator
 # * `istioctl` is [installed](common/install-istioctl-tool.md).
 # 
 # Steps:

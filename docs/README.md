@@ -1,4 +1,5 @@
 [Return to Project Root](../)
+*Note*: To add new topics to this documentation, please follow the guidelines in the [guidelines](../docs/guidelines/guidelines.md) doc.
 
 # Table of Contents
 
@@ -231,7 +232,6 @@ The Sail Operator API reference documentation can be found [here](https://github
 is installed. `Succeeded` should appear in the **Status** column.
 
 #### Installing using the CLI
-<!-- generate-docs-test-init Installing_the_operator_using_the_cli-->
 *Prerequisites*
 
 * You have access to the cluster as a user with the `cluster-admin` cluster role.
@@ -273,7 +273,6 @@ is installed. `Succeeded` should appear in the **Status** column.
     ```
 
     `Succeeded` should appear in the sailoperator CSV `PHASE` column.
-<!-- generate-docs-test-end -->
 ### Installation from Source
 
 If you're not using OpenShift or simply want to install from source, follow the [instructions in the Contributor Documentation](../README.md#deploying-the-operator).
@@ -414,6 +413,7 @@ When the `InPlace` strategy is used, the existing Istio control plane is replace
 
 Prerequisites:
 * Sail Operator is installed.
+<!-- prebuilt install_sail_operator -->
 * `istioctl` is [installed](common/install-istioctl-tool.md).
 
 Steps:
