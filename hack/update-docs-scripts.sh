@@ -99,7 +99,9 @@ function generate_script() {
       # Dynamically calculate SCRIPT_DIR at runtime
       echo 'SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"'
       # Source the update-docs-scripts.sh relative to the runtime script directory
-      echo 'source "$SCRIPT_DIR/update-docs-scripts.sh"'
+      echo 'source "$SCRIPT_DIR/../../hack/update-docs-scripts.sh"'
+      echo "# Setup the cluster based in the current env variables"
+      echo "setup_env"
       echo "$3"
     } > "$script_file"
     chmod +x "$script_file"

@@ -4,7 +4,9 @@
 # Please check the documentation file for more information
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "$SCRIPT_DIR/update-docs-scripts.sh"
+source "$SCRIPT_DIR/../../hack/update-docs-scripts.sh"
+# Setup the cluster based in the current env variables
+setup_env
 # <!-- generate-docs-test-init Update_Strategy_In_Place-->
 # When the `InPlace` strategy is used, the existing Istio control plane is replaced with a new version. The workload sidecars immediately connect to the new control plane. The workloads therefore don't need to be moved from one control plane instance to another.
 # 
