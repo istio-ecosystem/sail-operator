@@ -267,6 +267,14 @@ var _ = Describe("IstioCNI", Ordered, func() {
 			})
 		})
 
+		When("namespace is updated", func() {
+			It("throws a validation error as the field is immutable", func() {
+				Expect(k8sClient.Get(ctx, cniKey, cni)).To(Succeed())
+				cni.Spec.Namespace = "other"
+				Expect(k8sClient.Update(ctx, cni)).To(MatchError(ContainSubstring("immutable")))
+			})
+		})
+
 		When("the resource is deleted", func() {
 			BeforeAll(func() {
 				Expect(k8sClient.DeleteAllOf(ctx, &v1.IstioCNI{})).To(Succeed())
