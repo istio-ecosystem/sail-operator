@@ -205,47 +205,70 @@ func TestValidate(t *testing.T) {
 
 func TestDeriveState(t *testing.T) {
 	testCases := []struct {
-		name                string
-		reconciledCondition v1.IstioRevisionCondition
-		readyCondition      v1.IstioRevisionCondition
-		expectedState       v1.IstioRevisionConditionReason
+		name          string
+		conditions    []v1.IstioRevisionCondition
+		expectedState v1.IstioRevisionConditionReason
 	}{
 		{
-			name:                "healthy",
-			reconciledCondition: newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionTrue, ""),
-			readyCondition:      newCondition(v1.IstioRevisionConditionReady, metav1.ConditionTrue, ""),
-			expectedState:       v1.IstioRevisionReasonHealthy,
+			name: "healthy",
+			conditions: []v1.IstioRevisionCondition{
+				newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionTrue, ""),
+				newCondition(v1.IstioRevisionConditionReady, metav1.ConditionTrue, ""),
+				newCondition(v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionTrue, ""),
+			},
+			expectedState: v1.IstioRevisionReasonHealthy,
 		},
 		{
-			name:                "not reconciled",
-			reconciledCondition: newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionFalse, v1.IstioRevisionReasonReconcileError),
-			readyCondition:      newCondition(v1.IstioRevisionConditionReady, metav1.ConditionTrue, ""),
-			expectedState:       v1.IstioRevisionReasonReconcileError,
+			name: "not reconciled",
+			conditions: []v1.IstioRevisionCondition{
+				newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionFalse, v1.IstioRevisionReasonReconcileError),
+				newCondition(v1.IstioRevisionConditionReady, metav1.ConditionTrue, ""),
+				newCondition(v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionTrue, ""),
+			},
+			expectedState: v1.IstioRevisionReasonReconcileError,
 		},
 		{
-			name:                "not ready",
-			reconciledCondition: newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionTrue, ""),
-			readyCondition:      newCondition(v1.IstioRevisionConditionReady, metav1.ConditionFalse, v1.IstioRevisionReasonIstiodNotReady),
-			expectedState:       v1.IstioRevisionReasonIstiodNotReady,
+			name: "not ready",
+			conditions: []v1.IstioRevisionCondition{
+				newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionTrue, ""),
+				newCondition(v1.IstioRevisionConditionReady, metav1.ConditionFalse, v1.IstioRevisionReasonIstiodNotReady),
+				newCondition(v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionTrue, ""),
+			},
+			expectedState: v1.IstioRevisionReasonIstiodNotReady,
 		},
 		{
-			name:                "readiness unknown",
-			reconciledCondition: newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionTrue, ""),
-			readyCondition:      newCondition(v1.IstioRevisionConditionReady, metav1.ConditionUnknown, v1.IstioRevisionReasonReadinessCheckFailed),
-			expectedState:       v1.IstioRevisionReasonReadinessCheckFailed,
+			name: "readiness unknown",
+			conditions: []v1.IstioRevisionCondition{
+				newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionTrue, ""),
+				newCondition(v1.IstioRevisionConditionReady, metav1.ConditionUnknown, v1.IstioRevisionReasonReadinessCheckFailed),
+				newCondition(v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionTrue, ""),
+			},
+			expectedState: v1.IstioRevisionReasonReadinessCheckFailed,
 		},
 		{
-			name:                "not reconciled nor ready",
-			reconciledCondition: newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionFalse, v1.IstioRevisionReasonReconcileError),
-			readyCondition:      newCondition(v1.IstioRevisionConditionReady, metav1.ConditionFalse, v1.IstioRevisionReasonIstiodNotReady),
-			expectedState:       v1.IstioRevisionReasonReconcileError, // reconcile reason takes precedence over ready reason
+			name: "not reconciled nor ready",
+			conditions: []v1.IstioRevisionCondition{
+				newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionFalse, v1.IstioRevisionReasonReconcileError),
+				newCondition(v1.IstioRevisionConditionReady, metav1.ConditionFalse, v1.IstioRevisionReasonIstiodNotReady),
+				newCondition(v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionTrue, ""),
+			},
+			expectedState: v1.IstioRevisionReasonReconcileError, // reconcile reason takes precedence over ready reason
+		},
+		{
+			name: "dependencies not ready",
+			conditions: []v1.IstioRevisionCondition{
+				newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionTrue, ""),
+				newCondition(v1.IstioRevisionConditionReady, metav1.ConditionTrue, ""),
+				newCondition(v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionFalse, v1.IstioRevisionReasonIstioCNINotHealthy),
+			},
+			expectedState: v1.IstioRevisionReasonIstioCNINotHealthy,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			result := deriveState(tc.reconciledCondition, tc.readyCondition)
+			result := deriveState(tc.conditions...)
 			g.Expect(result).To(Equal(tc.expectedState))
 		})
 	}

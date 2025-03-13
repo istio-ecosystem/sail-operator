@@ -235,6 +235,23 @@ const (
 )
 
 const (
+	// IstioConditionDependenciesHealthy signifies whether the dependencies required by this Istio are healthy.
+	// For example, an Istio with spec.values.pilot.cni.enabled=true requires the IstioCNI resource to be deployed
+	// and ready for the Istio revision to be considered healthy. The DependenciesHealthy condition is used to indicate that
+	// the IstioCNI resource is healthy.
+	IstioConditionDependenciesHealthy IstioConditionType = "DependenciesHealthy"
+
+	// IstioReasonIstioCNINotFound indicates that the IstioCNI resource is not found.
+	IstioReasonIstioCNINotFound IstioConditionReason = "IstioCNINotFound"
+
+	// IstioReasonIstioCNINotHealthy indicates that the IstioCNI resource is not healthy.
+	IstioReasonIstioCNINotHealthy IstioConditionReason = "IstioCNINotHealthy"
+
+	// IstioReasonDependencyCheckFailed indicates that the status of the dependencies could not be ascertained.
+	IstioReasonDependencyCheckFailed IstioConditionReason = "DependencyCheckFailed"
+)
+
+const (
 	// IstioReasonHealthy indicates that the control plane is fully reconciled and that all components are ready.
 	IstioReasonHealthy IstioConditionReason = "Healthy"
 )
