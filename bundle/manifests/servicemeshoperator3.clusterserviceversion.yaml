@@ -60,7 +60,7 @@ metadata:
     operatorframework.io/arch.arm64: supported
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
-  name: servicemeshoperator3.v3.0.0
+  name: servicemeshoperator3.v3.0.1
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -830,4 +830,4 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat, Inc.
-  version: 3.0.0
+  version: 3.0.1
