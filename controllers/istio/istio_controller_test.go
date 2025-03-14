@@ -29,6 +29,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/testtime"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -915,6 +916,100 @@ func TestManagesExternalRevision(t *testing.T) {
 			if got != tt.expected {
 				t.Errorf("managesExternalRevision() = %v, want %v", got, tt.expected)
 			}
+		})
+	}
+}
+
+func TestConvertCondition(t *testing.T) {
+	testCases := []struct {
+		conditionType    v1.IstioRevisionConditionType
+		expectedType     v1.IstioConditionType
+		conditionReasons []v1.IstioRevisionConditionReason
+		expectedReasons  []v1.IstioConditionReason
+	}{
+		{
+			conditionType: v1.IstioRevisionConditionReconciled,
+			expectedType:  v1.IstioConditionReconciled,
+			conditionReasons: []v1.IstioRevisionConditionReason{
+				v1.IstioRevisionReasonReconcileError,
+			},
+			expectedReasons: []v1.IstioConditionReason{
+				v1.IstioReasonReconcileError,
+			},
+		},
+		{
+			conditionType: v1.IstioRevisionConditionReady,
+			expectedType:  v1.IstioConditionReady,
+			conditionReasons: []v1.IstioRevisionConditionReason{
+				v1.IstioRevisionReasonIstiodNotReady,
+				v1.IstioRevisionReasonReadinessCheckFailed,
+				v1.IstioRevisionReasonRemoteIstiodNotReady,
+				v1.IstioRevisionReasonReadinessCheckFailed,
+			},
+			expectedReasons: []v1.IstioConditionReason{
+				v1.IstioReasonIstiodNotReady,
+				v1.IstioReasonReadinessCheckFailed,
+				v1.IstioReasonRemoteIstiodNotReady,
+				v1.IstioReasonReadinessCheckFailed,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(string(tc.conditionType), func(t *testing.T) {
+			got := convertCondition(
+				v1.IstioRevisionCondition{
+					Type:   tc.conditionType,
+					Status: metav1.ConditionTrue,
+				})
+			expected := v1.IstioCondition{
+				Type:   tc.expectedType,
+				Status: metav1.ConditionTrue,
+			}
+			if diff := cmp.Diff(expected, got); diff != "" {
+				t.Errorf("convertCondition() mismatch (-expected, +actual):\n%s", diff)
+			}
+		})
+
+		for i, reason := range tc.conditionReasons {
+			t.Run(fmt.Sprintf("%s %s", tc.conditionType, reason), func(t *testing.T) {
+				got := convertCondition(
+					v1.IstioRevisionCondition{
+						Type:    tc.conditionType,
+						Status:  metav1.ConditionFalse,
+						Reason:  reason,
+						Message: "some message",
+					})
+				expected := v1.IstioCondition{
+					Type:    tc.expectedType,
+					Status:  metav1.ConditionFalse,
+					Reason:  tc.expectedReasons[i],
+					Message: "some message",
+				}
+				if diff := cmp.Diff(expected, got); diff != "" {
+					t.Errorf("convertCondition() mismatch (-expected, +actual):\n%s", diff)
+				}
+			})
+		}
+	}
+}
+
+func TestConvertState(t *testing.T) {
+	testCases := []struct {
+		revisionState v1.IstioRevisionConditionReason
+		expected      v1.IstioConditionReason
+	}{
+		{revisionState: v1.IstioRevisionReasonHealthy, expected: v1.IstioReasonHealthy},
+		{revisionState: v1.IstioRevisionReasonReconcileError, expected: v1.IstioReasonReconcileError},
+		{revisionState: v1.IstioRevisionReasonIstiodNotReady, expected: v1.IstioReasonIstiodNotReady},
+		{revisionState: v1.IstioRevisionReasonRemoteIstiodNotReady, expected: v1.IstioReasonRemoteIstiodNotReady},
+		{revisionState: v1.IstioRevisionReasonReadinessCheckFailed, expected: v1.IstioReasonReadinessCheckFailed},
+	}
+
+	for _, tc := range testCases {
+		t.Run(string(tc.revisionState), func(t *testing.T) {
+			got := convertState(tc.revisionState)
+			assert.Equal(t, tc.expected, got)
 		})
 	}
 }
