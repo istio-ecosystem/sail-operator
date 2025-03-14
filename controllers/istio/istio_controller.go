@@ -257,7 +257,7 @@ func (r *Reconciler) determineStatus(ctx context.Context, istio *v1.Istio, recon
 		} else if err == nil {
 			status.SetCondition(convertCondition(rev.Status.GetCondition(v1.IstioRevisionConditionReconciled)))
 			status.SetCondition(convertCondition(rev.Status.GetCondition(v1.IstioRevisionConditionReady)))
-			status.State = convertConditionReason(rev.Status.State)
+			status.State = convertState(rev.Status.State)
 		} else {
 			activeRevisionGetFailed := func(conditionType v1.IstioConditionType) v1.IstioCondition {
 				return v1.IstioCondition{
@@ -311,42 +311,16 @@ func (r *Reconciler) updateStatus(ctx context.Context, istio *v1.Istio, reconcil
 	return errs.Error()
 }
 
+func convertState(state v1.IstioRevisionConditionReason) v1.IstioConditionReason {
+	return v1.IstioConditionReason(state)
+}
+
 func convertCondition(condition v1.IstioRevisionCondition) v1.IstioCondition {
 	return v1.IstioCondition{
-		Type:    convertConditionType(condition),
+		Type:    v1.IstioConditionType(condition.Type),
 		Status:  condition.Status,
-		Reason:  convertConditionReason(condition.Reason),
+		Reason:  v1.IstioConditionReason(condition.Reason),
 		Message: condition.Message,
-	}
-}
-
-func convertConditionType(condition v1.IstioRevisionCondition) v1.IstioConditionType {
-	switch condition.Type {
-	case v1.IstioRevisionConditionReconciled:
-		return v1.IstioConditionReconciled
-	case v1.IstioRevisionConditionReady:
-		return v1.IstioConditionReady
-	default:
-		panic(fmt.Sprintf("can't convert IstioRevisionConditionType: %s", condition.Type))
-	}
-}
-
-func convertConditionReason(reason v1.IstioRevisionConditionReason) v1.IstioConditionReason {
-	switch reason {
-	case "":
-		return ""
-	case v1.IstioRevisionReasonIstiodNotReady:
-		return v1.IstioReasonIstiodNotReady
-	case v1.IstioRevisionReasonHealthy:
-		return v1.IstioReasonHealthy
-	case v1.IstioRevisionReasonReadinessCheckFailed:
-		return v1.IstioReasonReadinessCheckFailed
-	case v1.IstioRevisionReasonReconcileError:
-		return v1.IstioReasonReconcileError
-	case v1.IstioRevisionReasonRemoteIstiodNotReady:
-		return v1.IstioReasonRemoteIstiodNotReady
-	default:
-		panic(fmt.Sprintf("can't convert IstioRevisionConditionReason: %s", reason))
 	}
 }
 
