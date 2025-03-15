@@ -37,6 +37,8 @@ export MULTICLUSTER="${MULTICLUSTER:-false}"
 # You need to set kind clusters names separated by comma
 export KIND_EXCLUDE_CLUSTERS="${KIND_EXCLUDE_CLUSTERS:-}"
 export ISTIOCTL="${ISTIOCTL:-${ROOT}/bin/istioctl}"
+# Set SKIP_TESTS to true to skip the tests after running the entire setup
+export SKIP_TESTS="${SKIP_TESTS:-false}"
 
 
 # Set variable for cluster kind name
@@ -104,5 +106,5 @@ echo "Running integration tests"
 if [ "${MULTICLUSTER}" == "true" ]; then
   ARTIFACTS="${ARTIFACTS}" ISTIOCTL="${ISTIOCTL}" ./tests/e2e/common-operator-integ-suite.sh --kind --multicluster
 else
-ARTIFACTS="${ARTIFACTS}" IP_FAMILY="${IP_FAMILY}" ./tests/e2e/common-operator-integ-suite.sh --kind
+ARTIFACTS="${ARTIFACTS}" IP_FAMILY="${IP_FAMILY}" SKIP_TESTS="${SKIP_TESTS}" ./tests/e2e/common-operator-integ-suite.sh --kind
 fi
