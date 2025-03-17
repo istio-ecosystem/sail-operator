@@ -7,7 +7,7 @@ deployment:
     images.v1_24_3.cni: registry.redhat.io/openshift-service-mesh/istio-cni-rhel9:1.24.3
     # TODO insert ztunnel image name once we're shipping ztunnel
     images.v1_24_3.ztunnel: registry.redhat.io/openshift-service-mesh/istio-pilot-rhel9:1.24.3
-    images.v1_24_3.must-gather: registry.redhat.io/openshift-service-mesh/istio-must-gather-rhel9:3.0.0
+    images.v1_24_3.must-gather: registry.redhat.io/openshift-service-mesh/istio-must-gather-rhel9:3.0.1
 service:
   port: 8443
 serviceAccountName: servicemesh-operator3
@@ -61,7 +61,7 @@ csv:
     * [Documentation](https://docs.redhat.com/en/documentation/red_hat_openshift_service_mesh/latest/html/about/ossm-about-openshift-service-mesh)
     * [Bugs](https://issues.redhat.com/projects/OSSM)
   support: Red Hat, Inc.
-  version: 3.0.0
+  version: 3.0.1
   keywords:
   - istio
   - servicemesh

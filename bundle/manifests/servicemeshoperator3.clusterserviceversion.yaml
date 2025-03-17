@@ -34,7 +34,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/maistra-dev/sail-operator:3.0-latest
-    createdAt: "2025-03-12T18:20:24Z"
+    createdAt: "2025-03-14T08:22:30Z"
     description: The OpenShift Service Mesh Operator enables you to install, configure,
       and manage an instance of Red Hat OpenShift Service Mesh. OpenShift Service
       Mesh is based on the open source Istio project.
@@ -699,7 +699,7 @@ spec:
               annotations:
                 images.v1_24_3.cni: registry.redhat.io/openshift-service-mesh/istio-cni-rhel9:1.24.3
                 images.v1_24_3.istiod: registry.redhat.io/openshift-service-mesh/istio-pilot-rhel9:1.24.3
-                images.v1_24_3.must-gather: registry.redhat.io/openshift-service-mesh/istio-must-gather-rhel9:3.0.0
+                images.v1_24_3.must-gather: registry.redhat.io/openshift-service-mesh/istio-must-gather-rhel9:3.0.1
                 images.v1_24_3.proxy: registry.redhat.io/openshift-service-mesh/istio-proxyv2-rhel9:1.24.3
                 images.v1_24_3.ztunnel: registry.redhat.io/openshift-service-mesh/istio-pilot-rhel9:1.24.3
                 kubectl.kubernetes.io/default-container: sail-operator
