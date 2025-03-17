@@ -257,6 +257,16 @@ func (k Kubectl) GetInternalIP(label string) (string, error) {
 	return output, nil
 }
 
+func (k Kubectl) GetClusterAPIURL() (string, error) {
+	cmd := k.build(" config view --minify -o jsonpath='{.clusters[0].cluster.server}'")
+	output, err := k.executeCommand(cmd)
+	if err != nil {
+		return "", fmt.Errorf("error getting cluster api url: %w, output: %s", err, output)
+	}
+
+	return output, nil
+}
+
 // GetSecret returns the secret of a namespace
 func (k Kubectl) GetSecret(secret string) (string, error) {
 	cmd := k.build(fmt.Sprintf(" get secret %s -o yaml", secret))
