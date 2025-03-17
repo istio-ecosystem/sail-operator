@@ -247,7 +247,7 @@ $ kubectl apply -n istio-system -f https://raw.githubusercontent.com/istio/istio
 ```
 
 > **NOTE**:
-> If using [OpenShift monitoring](https://docs.openshift.com/service-mesh/3.0.0tp1/observability/metrics/ossm-metrics-assembly.html#ossm-config-openshift-monitoring-only_ossm-metrics-assembly), don't forget to apply the PodMonitor in the ztunnel namespace.
+> If using [OpenShift monitoring](https://docs.redhat.com/en/documentation/red_hat_openshift_service_mesh/3.0/html/observability/metrics-and-service-mesh#ossm-metrics-assembly), don't forget to apply the PodMonitor in the ztunnel namespace.
 
 Deploy a Kiali dashboard using a community Kiali operator on OpenShift.
 
