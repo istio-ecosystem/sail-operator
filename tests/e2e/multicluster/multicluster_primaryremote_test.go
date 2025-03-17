@@ -77,10 +77,12 @@ var _ = Describe("Multicluster deployment models", Label("multicluster-primaryre
 			}
 
 			Context(fmt.Sprintf("Istio version %s", v.Version), func() {
-				When("Istio resources are created in both clusters", func() {
+				When("Istio and IstioCNI resources are created in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
-						Expect(k1.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be created")
-						Expect(k2.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be created")
+						Expect(k1.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
+						Expect(k2.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
+						Expect(k1.CreateNamespace(istioCniNamespace)).To(Succeed(), "Istio CNI Namespace failed to be created")
+						Expect(k2.CreateNamespace(istioCniNamespace)).To(Succeed(), "Istio CNI Namespace failed to be created")
 
 						// Push the intermediate CA to both clusters
 						Expect(certs.PushIntermediateCA(k1, controlPlaneNamespace, "east", "network1", artifacts, clPrimary)).
@@ -99,7 +101,20 @@ var _ = Describe("Multicluster deployment models", Label("multicluster-primaryre
 							return err
 						}).ShouldNot(HaveOccurred(), "Secret is not created on Primary Cluster")
 
-						PrimaryYAML := `
+						PrimaryIstioCNIYAML := `
+apiVersion: sailoperator.io/v1
+kind: IstioCNI
+metadata:
+  name: default
+spec:
+  version: %s
+  namespace: %s`
+
+						multiclusterPrimaryIstioCNIYAML := fmt.Sprintf(PrimaryIstioCNIYAML, v.Name, istioCniNamespace)
+						Log("IstioCNI CR Primary: ", multiclusterPrimaryIstioCNIYAML)
+						Expect(k1.CreateFromString(multiclusterPrimaryIstioCNIYAML)).To(Succeed(), "Istio CNI Resource creation failed on Primary Cluster")
+
+						PrimaryIstioYAML := `
 apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
@@ -116,9 +131,9 @@ spec:
       multiCluster:
         clusterName: %s
       network: %s`
-						multiclusterPrimaryYAML := fmt.Sprintf(PrimaryYAML, v.Name, controlPlaneNamespace, "mesh1", "cluster1", "network1")
-						Log("Istio CR Primary: ", multiclusterPrimaryYAML)
-						Expect(k1.CreateFromString(multiclusterPrimaryYAML)).To(Succeed(), "Istio Resource creation failed on Primary Cluster")
+						multiclusterPrimaryIstioYAML := fmt.Sprintf(PrimaryIstioYAML, v.Name, controlPlaneNamespace, "mesh1", "cluster1", "network1")
+						Log("Istio CR Primary: ", multiclusterPrimaryIstioYAML)
+						Expect(k1.CreateFromString(multiclusterPrimaryIstioYAML)).To(Succeed(), "Istio Resource creation failed on Primary Cluster")
 					})
 
 					It("updates Istio CR on Primary cluster status to Ready", func(ctx SpecContext) {
@@ -128,12 +143,30 @@ spec:
 						Success("Istio CR is Ready on Primary Cluster")
 					})
 
+					It("updates IstioCNI CR on Primary cluster status to Ready", func(ctx SpecContext) {
+						Eventually(common.GetObject).
+							WithArguments(ctx, clPrimary, kube.Key(istioCniName), &v1.Istio{}).
+							Should(HaveCondition(v1.IstioCNIConditionReady, metav1.ConditionTrue), "IstioCNI is not Ready on Primary; unexpected Condition")
+						Success("IstioCNI CR is Ready on Primary Cluster")
+					})
+
 					It("deploys istiod", func(ctx SpecContext) {
 						Eventually(common.GetObject).
 							WithArguments(ctx, clPrimary, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
 							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available on Primary; unexpected Condition")
 						Expect(common.GetVersionFromIstiod()).To(Equal(v.Version), "Unexpected istiod version")
 						Success("Istiod is deployed in the namespace and Running on Primary Cluster")
+					})
+
+					It("deploys istio-cni-node", func(ctx SpecContext) {
+						Eventually(func() bool {
+							daemonset := &appsv1.DaemonSet{}
+							if err := clPrimary.Get(ctx, kube.Key("istio-cni-node", istioCniNamespace), daemonset); err != nil {
+								return false
+							}
+							return daemonset.Status.NumberAvailable == daemonset.Status.CurrentNumberScheduled
+						}).Should(BeTrue(), "IstioCNI DaemonSet Pods are not Available on Primary Cluster")
+						Success("IstioCNI DaemonSet is deployed in the namespace and Running on Primary Cluster")
 					})
 				})
 
@@ -155,8 +188,22 @@ spec:
 					})
 				})
 
-				When("Istio is created in Remote cluster", func() {
+				When("Istio and IstioCNI are created in Remote cluster", func() {
 					BeforeAll(func(ctx SpecContext) {
+						istioCNIYAMLTemplate := `
+apiVersion: sailoperator.io/v1
+kind: IstioCNI
+metadata:
+  name: default
+spec:
+  version: %s
+  namespace: %s`
+
+						istioCNIYAML := fmt.Sprintf(istioCNIYAMLTemplate, v.Name, istioCniNamespace)
+						Log("IstioCNI CR: ", istioCNIYAML)
+						By("Creating IstioCNI CR on Remote Cluster")
+						Expect(k2.CreateFromString(istioCNIYAML)).To(Succeed(), "IstioCNI Resource creation failed on Remote Cluster")
+
 						istioYAMLTemplate := `
 apiVersion: sailoperator.io/v1
 kind: Istio
@@ -164,7 +211,7 @@ metadata:
   name: default
 spec:
   version: %s
-  namespace: istio-system
+  namespace: %s
   values:
     profile: remote
     istiodRemote:
@@ -175,7 +222,10 @@ spec:
 						remotePilotAddress := common.GetSVCLoadBalancerAddress(ctx, clPrimary, controlPlaneNamespace, "istio-eastwestgateway")
 						Expect(remotePilotAddress).NotTo(BeEmpty(), "Remote Pilot Address is empty")
 						Expect(err).NotTo(HaveOccurred(), "Error getting Remote Pilot Address")
-						istioYAML := fmt.Sprintf(istioYAMLTemplate, v.Name, remotePilotAddress)
+						remotePilotIP, err := common.ResolveHostDomainToIP(remotePilotAddress)
+						Expect(remotePilotIP).NotTo(BeEmpty(), "Remote Pilot IP is empty")
+						Expect(err).NotTo(HaveOccurred(), "Error getting Remote Pilot IP")
+						istioYAML := fmt.Sprintf(istioYAMLTemplate, v.Name, controlPlaneNamespace, remotePilotIP)
 						Log("Istio CR: ", istioYAML)
 						By("Creating Istio CR on Remote Cluster")
 						Expect(k2.CreateFromString(istioYAML)).To(Succeed(), "Istio Resource creation failed on Remote Cluster")
@@ -193,9 +243,9 @@ spec:
 
 						// To be able to access the remote cluster from the primary cluster, we need to create a secret in the primary cluster
 						// Remote Istio resource will not be Ready until the secret is created
-						// Get the internal IP of the control plane node in Remote cluster
-						internalIPRemote, err := k2.GetInternalIP("node-role.kubernetes.io/control-plane")
-						Expect(internalIPRemote).NotTo(BeEmpty(), "Internal IP is empty for Remote Cluster")
+						// Get the cluster API URL of the Remote cluster
+						RemoteClusterAPIURL, err := k2.GetClusterAPIURL()
+						Expect(RemoteClusterAPIURL).NotTo(BeEmpty(), "API URL is empty for Remote Cluster")
 						Expect(err).NotTo(HaveOccurred())
 
 						// Wait for the remote Istio CR to be created, this can be moved to a condition verification, but the resource it not will be Ready at this point
@@ -203,7 +253,7 @@ spec:
 
 						// Install a remote secret in Primary cluster that provides access to the Remote cluster API server.
 						By("Creating Remote Secret on Primary Cluster")
-						secret, err := istioctl.CreateRemoteSecret(kubeconfig2, "remote", internalIPRemote)
+						secret, err := istioctl.CreateRemoteSecret(kubeconfig2, controlPlaneNamespace, "remote", RemoteClusterAPIURL)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(k1.WithNamespace(controlPlaneNamespace).ApplyString(secret)).To(Succeed(), "Remote secret creation failed on Primary Cluster")
 					})
@@ -300,6 +350,21 @@ spec:
 					})
 				})
 
+				When("IstioCNI CR is deleted in both clusters", func() {
+					BeforeEach(func() {
+						Expect(k1.WithNamespace(istioCniNamespace).Delete("istiocni", istioCniName)).To(Succeed(), "primary IstioCNI CR failed to be deleted")
+						Expect(k2.WithNamespace(istioCniNamespace).Delete("istiocni", istioCniName)).To(Succeed(), "remote IstioCNI CR failed to be deleted")
+						Success("Primary and Remote IstioCNI resources are deleted")
+					})
+
+					It("removes istio-cni-node on Primary", func(ctx SpecContext) {
+						daemonset := &appsv1.DaemonSet{}
+						Eventually(clPrimary.Get).WithArguments(ctx, kube.Key("istio-cni-node", istioCniNamespace), daemonset).
+							Should(ReturnNotFoundError(), "IstioCNI DaemonSet should not exist anymore")
+						Success("IstioCNI is deleted on Primary Cluster")
+					})
+				})
+
 				AfterAll(func(ctx SpecContext) {
 					if CurrentSpecReport().Failed() {
 						common.LogDebugInfo(common.MultiCluster, k1, k2)
@@ -307,14 +372,18 @@ spec:
 					}
 
 					// Delete namespaces to ensure clean up for new tests iteration
+					Expect(k1.DeleteNamespaceNoWait(istioCniNamespace)).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
+					Expect(k2.DeleteNamespaceNoWait(istioCniNamespace)).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
 					Expect(k1.DeleteNamespaceNoWait(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
 					Expect(k2.DeleteNamespaceNoWait(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
 					Expect(k1.DeleteNamespaceNoWait(sampleNamespace)).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
 					Expect(k2.DeleteNamespaceNoWait(sampleNamespace)).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
 
+					Expect(k1.WaitNamespaceDeleted(istioCniNamespace)).To(Succeed())
+					Expect(k2.WaitNamespaceDeleted(istioCniNamespace)).To(Succeed())
 					Expect(k1.WaitNamespaceDeleted(controlPlaneNamespace)).To(Succeed())
 					Expect(k2.WaitNamespaceDeleted(controlPlaneNamespace)).To(Succeed())
-					Success("ControlPlane Namespaces were deleted")
+					Success("ControlPlane and CNI Namespaces were deleted")
 
 					Expect(k1.WaitNamespaceDeleted(sampleNamespace)).To(Succeed())
 					Expect(k2.WaitNamespaceDeleted(sampleNamespace)).To(Succeed())

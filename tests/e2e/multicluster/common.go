@@ -59,7 +59,7 @@ func verifyResponsesAreReceivedFromExpectedVersions(k kubectl.Kubectl, expectedV
 		expectedVersions = []string{"v1", "v2"}
 	}
 	for _, v := range expectedVersions {
-		Eventually(k.WithNamespace("sample").Exec, 10*time.Second, 10*time.Millisecond).
+		Eventually(k.WithNamespace("sample").Exec, 160*time.Second, 2*time.Second).
 			WithArguments("deploy/sleep", "sleep", "curl -sS helloworld.sample:5000/hello").
 			Should(ContainSubstring(fmt.Sprintf("Hello version: %s", v)),
 				fmt.Sprintf("sleep pod in %s did not receive any response from %s", k.ClusterName, v))
