@@ -425,20 +425,20 @@ Steps:
 
 2. Create the `Istio` resource.
 
-    ```bash
-    cat <<EOF | kubectl apply -f-
-    apiVersion: sailoperator.io/v1
-    kind: Istio
-    metadata:
-      name: default
-    spec:
-      namespace: istio-system
-      updateStrategy:
-        type: InPlace
-      version: v1.22.5
-    EOF
-    ```
-    <!-- wait available deployment istiod istio-system -->
+```bash
+cat <<EOF | kubectl apply -f-
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  namespace: istio-system
+  updateStrategy:
+    type: InPlace
+  version: v1.22.5
+EOF
+```
+<!-- wait available deployment istiod istio-system -->
 
 3. Confirm the installation and version of the control plane.
 

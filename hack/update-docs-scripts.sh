@@ -67,8 +67,6 @@ function get_topic_content() {
 }
 
 function get_code_block() {
-    # Extract the code block from the topic.
-    # "$1": file, "$2": start line, "$3": end line.
     sed -n "${2},${3}p" "$1" \
       | sed -e 's/^/# /' \
       | sed -e '/```bash/,/```/ s/^# //' \
@@ -77,10 +75,9 @@ function get_code_block() {
       | sed -e 's/```bash//g' \
       | sed -e 's/```sh//g' \
       | sed -e 's/```shell//g' \
-      | sed -e 's/```//g' \
-      | sed -e 's/^ *\$ //' \
-      | sed -e 's/^ *//'
+      | sed -e 's/```//g'
 }
+
 
 function generate_script() {
     # Generate the script file.

@@ -20,9 +20,9 @@ install_sail_operator
 # Steps:
 # 1. Create the `istio-system` namespace.
 # 
-
-kubectl create namespace istio-system
-
+    
+    kubectl create namespace istio-system
+    
 # 
 # 2. Create the `Istio` resource.
 # 
@@ -31,15 +31,14 @@ cat <<EOF | kubectl apply -f-
 apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
-name: default
+  name: default
 spec:
-namespace: istio-system
-updateStrategy:
-type: InPlace
-version: v1.22.5
+  namespace: istio-system
+  updateStrategy:
+    type: InPlace
+  version: v1.22.5
 EOF
 
-#     <!-- wait for deployment to be ready -->
 wait available deployment istiod istio-system
 # 
 # 3. Confirm the installation and version of the control plane.
@@ -53,11 +52,11 @@ wait available deployment istiod istio-system
 # 
 # 4. Create namespace `bookinfo` and deploy bookinfo application.
 # 
-
-kubectl create namespace bookinfo
-kubectl label namespace bookinfo istio-injection=enabled
-kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/release-1.22/samples/bookinfo/platform/kube/bookinfo.yaml
-
+    
+    kubectl create namespace bookinfo
+    kubectl label namespace bookinfo istio-injection=enabled
+    kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/release-1.22/samples/bookinfo/platform/kube/bookinfo.yaml
+    
 #     Note: if the `Istio` resource name is other than `default`, you need to set the `istio.io/rev` label to the name of the `Istio` resource instead of adding the `istio-injection=enabled` label.
 # 
 # 5. Review the `Istio` resource after application deployment.
@@ -71,9 +70,9 @@ kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/relea
 # 
 # 6. Perform the update of the control plane by changing the version in the Istio resource.
 # 
-
-kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v1.23.2"}}'
-
+    
+    kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v1.23.2"}}'
+    
 # 
 # 7. Confirm the `Istio` resource version was updated.
 # 
@@ -85,15 +84,15 @@ kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version
 # 
 # 8. Delete `bookinfo` pods to trigger sidecar injection with the new version.
 # 
-
-kubectl rollout restart deployment -n bookinfo
-
+    
+    kubectl rollout restart deployment -n bookinfo
+    
 # 
 # 9. Confirm that the new version is used in the sidecar.
 # 
-
-istioctl proxy-status 
-
+    
+    istioctl proxy-status 
+    
 #     The column `VERSION` should match the new control plane version.
 # <!-- generate-docs-test-end -->
 cleanup_env
