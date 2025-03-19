@@ -89,19 +89,28 @@ This tag is going to be used to generate the script that is going to be used to 
 
 Prerequisites:
 * Sail Operator is installed.
-<!-- setup-install-operator -->
+<!-- prebuilt install_sail_operator -->
 ```
-This tag is going to add to the script the proper steps to install the operator before running the rest of the steps. Also, you can add a cleanup step to the script using the `cleanup-install-operator` tag. This tag is going to be used to add the cleanup steps to the script.
+This tag is going to add to the script the proper steps to install the operator before running the rest of the steps. Also, you can add a cleanup step to the script using the `uninstall_sail_operator` tag. This tag is going to be used to add the cleanup steps to the script.
 
 *Important*: keep in mind that this prebuilt setups are being made to be used in multiple scripts, so, if you the validation or setup that you need to apply is not going to be used in more that one script, you will need to add the setup and cleanup steps directly to the documentation (Check next step for more information).
 
 4. Add validations or custom setups to the script. If you need to add a custom setup or validation that is not included in the prebuilt setups you can add them directly to the documentation. For example:
 ```markdown
-<!-- additional-commands-init -->
-<!-- kubectl wait --for condition=available -n sample deployment/helloworld-v1 -->
-<!-- additional-commands-init -->
+<!-- command kubectl get pods -n sail-operator -->
 ```
-This validations steps are crucial to be able to properly run the test, if they are not being added the script is going to fail because several reasons. So, make sure that the validations are correct and the setup steps are properly added to the script.
+
+Also, you can use the prebuilt function wait to wait for a resource to be ready. For example:
+```markdown
+<!-- wait condition resourceType resourceName namespace -->
+```
+Note: this wait function is going to wait for the resource to be ready. The parameters are:
+- `condition`: The condition to wait for. For example: `ready`, `running`, etc.
+- `resourceType`: The type of the resource to wait for. For example: `pod`, `deployment`, etc.
+- `resourceName`: The name of the resource to wait for.
+- `namespace`: The namespace where the resource is located.
+
+This validations steps are crucial to be able to properly run the test, if they are not being added the script has more chances to result in failures because for example of resources not ready. So, make sure that the validations are correct and the setup steps are properly added to the script. If you found that the setup steps are not correct or the validations are not working as expected, you can add a new issue to the project to get help from the maintainers.
 
 5. Run the script generator. To run the generated script we have a prow job that runs `make update` and then runs all the test located in the `docs/scripts` folder. To be able to test your documentation you just need to create a PR and the prow job is going to run the tests for you.
 

@@ -4,7 +4,7 @@
 # Please check the documentation file for more information
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "$SCRIPT_DIR/../../hack/update-docs-scripts.sh"
+source "$SCRIPT_DIR/../../hack/update_docs_prebuilt_func/prebuilt.sh"
 # Setup the cluster based in the current env variables
 setup_env
 # <!-- generate-docs-test-init Update_Strategy_In_Place-->
@@ -39,6 +39,8 @@ type: InPlace
 version: v1.22.5
 EOF
 
+#     <!-- wait for deployment to be ready -->
+wait available deployment istiod istio-system
 # 
 # 3. Confirm the installation and version of the control plane.
 # 
@@ -94,3 +96,4 @@ istioctl proxy-status
 
 #     The column `VERSION` should match the new control plane version.
 # <!-- generate-docs-test-end -->
+cleanup_env

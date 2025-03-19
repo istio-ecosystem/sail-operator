@@ -99,10 +99,13 @@ function generate_script() {
       # Dynamically calculate SCRIPT_DIR at runtime
       echo 'SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"'
       # Source the update-docs-scripts.sh relative to the runtime script directory
-      echo 'source "$SCRIPT_DIR/../../hack/update-docs-scripts.sh"'
+      echo 'source "$SCRIPT_DIR/../../hack/update_docs_prebuilt_func/prebuilt.sh"'
       echo "# Setup the cluster based in the current env variables"
+      # Add the setup_env function to the script
       echo "setup_env"
       echo "$3"
+      # Add the cleanup_env function to the script
+      echo "cleanup_env"
     } > "$script_file"
     chmod +x "$script_file"
     echo "Generated script: $script_file" >&2
@@ -136,54 +139,29 @@ function process_prebuilt_tags() {
     echo "$processed_code"
 }
 
-##### Pre-build functions to use in the scripts, insert here any function that is going to be used in more than one script
-# The function can be inserted in the generated script by adding the tag <!-- prebuilt function_name --> in the documentation file
-
-# Install the Sail Operator
-function install_sail_operator() {
-    # Build and push operator image
-    build_and_push_operator_image
-
-    # Removed this later, only for debugging
-    echo "Building and pushing the operator image"
-    echo "Hub is set to: ${HUB}"
-    echo "Image base is set to: ${IMAGE_BASE}"
-    echo "Tag is set to: ${TAG}"
-    make -e IMAGE="${HUB}/${IMAGE_BASE}:${TAG}" deploy
-    # We need also to wait until the operator pod is running
-}
-
-# Uninstall operator
-function uninstall_operator() {
-    # Running make undeploy will do the work for us
-    make undeploy
-
-    # We need to wait for the operator to be uninstalled
-    # TODO: Add a wait function to check if the operator is uninstalled
-}
-
-# setup_env checks if we are running on OpenShift to setup the environment for the tests
-# if OPENSHIFT is set to true we need to add the necessary steps to setup the environment
-# If is not set or is false we need to add custom setup steps to create and destroy kind cluster
-function setup_env() {
-    if [ -n "${OPENSHIFT:-}" ] && [ "${OPENSHIFT}" != "false" ]; then
-        # Running the integ-suite-ocp.sh script to setup the environment for OpenShift
-        SKIP_TEST=true ./tests/e2e/integ-suite-ocp.sh
+# Process the wait tag replacing it with the wait function.
+# The tag format is <!-- wait condition resourceType resourceName namespace -->
+# is going to be replace by: wait condition resourceType resourceName namespace
+function process_wait_tags() {
+  local code_block="$1"
+  local processed_code=""
+  # Define the regex pattern to match the wait tag:
+  # It matches: <!-- wait condition resourceType resourceName namespace -->
+  local wait_regex='<!--[[:space:]]*wait[[:space:]]+([^[:space:]]+)[[:space:]]+([^[:space:]]+)[[:space:]]+([^[:space:]]+)[[:space:]]+([^[:space:]]+)[[:space:]]*-->'
+  
+  while IFS= read -r line; do
+    if [[ $line =~ $wait_regex ]]; then
+      local condition="${BASH_REMATCH[1]}"
+      local resourceType="${BASH_REMATCH[2]}"
+      local resourceName="${BASH_REMATCH[3]}"
+      local namespace="${BASH_REMATCH[4]}"
+      # Replace the tag with the wait function call.
+      processed_code+="wait ${condition} ${resourceType} ${resourceName} ${namespace}"$'\n'
     else
-        # run the integ-suite-kind.sh script to setup the kind environment to run the tests
-        SKIP_TEST=true ./tests/e2e/integ-suite-kind.sh
+      processed_code+="$line"$'\n'
     fi
-}
-
-# cleanup_env checks if we are running on OpenShift to cleanup the environment for the tests
-# if OPENSHIFT is set to true we need to add the necessary steps to cleanup the environment
-# If is not set or is false we need to add custom cleanup steps to create and destroy kind cluster
-function cleanup_env() {
-    if [ -n "${OPENSHIFT:-}" ] && [ "${OPENSHIFT}" != "false" ]; then
-        echo "Running cleanup for OpenShift"
-    else
-        echo "Running cleanup for kind"
-    fi
+  done <<< "$code_block"
+  echo "$processed_code"
 }
 
 # Process all documentation files.
@@ -203,6 +181,7 @@ get_all_docs | while IFS= read -r doc; do
         echo "Code block extracted from lines $topic to $topicEnd" >&2
         # Replace prebuilt tags if any exist.
         codeBlock=$(process_prebuilt_tags "$codeBlock")
+        codeBlock=$(process_wait_tags "$codeBlock")
         generate_script "$doc" "$topicName" "$codeBlock"
     done
 done

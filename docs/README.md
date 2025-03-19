@@ -438,6 +438,7 @@ Steps:
       version: v1.22.5
     EOF
     ```
+    <!-- wait available deployment istiod istio-system -->
 
 3. Confirm the installation and version of the control plane.
 
