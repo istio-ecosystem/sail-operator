@@ -19,6 +19,10 @@ spec:
   scope: Cluster
   versions:
   - additionalPrinterColumns:
+    - description: The namespace for the control plane components.
+      jsonPath: .spec.namespace
+      name: Namespace
+      type: string
     - description: Whether the control plane is installed locally or in a remote cluster.
       jsonPath: .spec.type
       name: Type
