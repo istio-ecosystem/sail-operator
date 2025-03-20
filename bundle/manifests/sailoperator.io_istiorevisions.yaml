@@ -23,10 +23,6 @@ spec:
       jsonPath: .spec.namespace
       name: Namespace
       type: string
-    - description: Whether the control plane is installed locally or in a remote cluster.
-      jsonPath: .spec.type
-      name: Type
-      type: string
     - description: Whether the control plane installation is ready to handle requests.
       jsonPath: .status.conditions[?(@.type=="Ready")].status
       name: Ready
