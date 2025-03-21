@@ -17,6 +17,10 @@ spec:
   scope: Cluster
   versions:
   - additionalPrinterColumns:
+    - description: The namespace for the control plane components.
+      jsonPath: .spec.namespace
+      name: Namespace
+      type: string
     - description: Total number of IstioRevision objects currently associated with
         this object.
       jsonPath: .status.revisions.total

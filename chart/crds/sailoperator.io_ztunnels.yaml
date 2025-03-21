@@ -17,6 +17,10 @@ spec:
   scope: Cluster
   versions:
   - additionalPrinterColumns:
+    - description: The namespace for the ztunnel component.
+      jsonPath: .spec.namespace
+      name: Namespace
+      type: string
     - description: Whether the Istio ztunnel installation is ready to handle requests.
       jsonPath: .status.conditions[?(@.type=="Ready")].status
       name: Ready
