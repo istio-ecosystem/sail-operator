@@ -3808,4 +3808,10 @@ type HTTPRetry struct {
 	// Flag to specify whether the retries should ignore previously tried hosts during retry.
 	// Defaults to true.
 	RetryIgnorePreviousHosts *bool `json:"retryIgnorePreviousHosts,omitempty"`
+	// Specifies the minimum duration between retry attempts.
+	// If unset, default minimum duration of 25ms is used as base interval for exponetial backoff.
+	// This has an impact on the total number of retries that will be attempted based on the `attempts` field
+	// and route timeout. For example, with attempts is set to 3, backoff to 2s and timeout to 3s, the request will
+	// be retried only once.
+	Backoff *metav1.Duration `json:"backoff,omitempty"`
 }
