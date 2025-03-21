@@ -96,6 +96,28 @@ function patchIstioCharts() {
 
   # remove CRDs from istiod-remote chart, since they are installed by OLM, not by the operator
   rm -f "${CHARTS_DIR}/istiod-remote/templates/crd-all.gen.yaml"
+
+  # add values ConfigMap
+  cat <<EOF > "${CHARTS_DIR}/istiod/templates/configmap-values.yaml"
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: values{{- if not (eq .Values.revision "") }}-{{ .Values.revision }}{{- end }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    istio.io/rev: {{ .Values.revision | default "default" | quote }}
+    install.operator.istio.io/owning-resource: {{ .Values.ownerName | default "unknown" }}
+    release: {{ .Release.Name }}
+    {{- include "istio.labels" . | default "" | nindent 4 }}
+data:
+  values: |-
+{{ .Values | toPrettyJson | indent 4 }}
+EOF
+
+  # remove "include istio.labels" line if istio.labels is not defined in zzz_profile.yaml
+  if ! grep -q 'define "istio.labels"' "${CHARTS_DIR}/istiod/templates/zzz_profile.yaml"; then
+    sed -i '/istio.labels/d' "${CHARTS_DIR}/istiod/templates/configmap-values.yaml"
+  fi
 }
 
 # The charts use docker.io as the default registry, but this leads to issues
