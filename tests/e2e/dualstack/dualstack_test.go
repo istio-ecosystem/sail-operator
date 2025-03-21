@@ -120,6 +120,8 @@ spec:
       ipFamilyPolicy: %s
       env:
         ISTIO_DUAL_STACK: "true"
+      cni:
+        enabled: true
   version: %s
   namespace: %s`
 						istioYAML = fmt.Sprintf(istioYAML, corev1.IPFamilyPolicyRequireDualStack, version.Name, controlPlaneNamespace)
