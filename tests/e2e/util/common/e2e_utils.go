@@ -19,6 +19,7 @@ package common
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -115,7 +116,13 @@ func GetSVCLoadBalancerAddress(ctx context.Context, cl client.Client, ns, svcNam
 		return svc.Status.LoadBalancer.Ingress, err
 	}, "1m", "1s").ShouldNot(BeEmpty(), "LoadBalancer should be ready")
 
-	return svc.Status.LoadBalancer.Ingress[0].IP
+	if svc.Status.LoadBalancer.Ingress[0].IP != "" {
+		return svc.Status.LoadBalancer.Ingress[0].IP
+	} else if svc.Status.LoadBalancer.Ingress[0].Hostname != "" {
+		return svc.Status.LoadBalancer.Ingress[0].Hostname
+	}
+
+	return ""
 }
 
 // CheckNamespaceEmpty checks if the given namespace is empty
@@ -367,4 +374,37 @@ func GetSampleYAML(version istioversion.VersionInfo, appName string) string {
 	}
 
 	return fmt.Sprintf("%s/%s/%s", baseURL, version.Commit, path)
+}
+
+// Resolve domain name and return ip address.
+// By default, return ipv4 address and if missing, return ipv6.
+func ResolveHostDomainToIP(hostDomain string) (string, error) {
+	const maxRetries = 5
+	const delayRetry = 10 * time.Second
+
+	var lastErr error
+
+	for i := 0; i < maxRetries; i++ {
+		ips, err := net.LookupIP(hostDomain)
+		if err == nil {
+			var ipv6Addr string
+			for _, ip := range ips {
+				if ip.To4() != nil {
+					return ip.String(), nil
+				} else if ipv6Addr == "" {
+					ipv6Addr = ip.String()
+				}
+			}
+			if ipv6Addr != "" {
+				return ipv6Addr, nil
+			}
+			return "", fmt.Errorf("no IP address found for hostname: %s", hostDomain)
+		}
+
+		lastErr = err
+		waitTime := delayRetry * (1 << i)
+		time.Sleep(waitTime)
+	}
+
+	return "", fmt.Errorf("failed to resolve hostname %s after %d retries: %w", hostDomain, maxRetries, lastErr)
 }
