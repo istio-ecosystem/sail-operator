@@ -48,7 +48,7 @@ As the control plane with the cluster-wide model watches all namespaces, it's re
     ```
 
 ### OSSM 3 installation
-See OSSM [installation](https://docs.openshift.com/service-mesh/3.0.0tp1/install/ossm-installing-openshift-service-mesh.html) documentation for more information.
+See OSSM [installation](https://docs.redhat.com/en/documentation/red_hat_openshift_service_mesh/3.0/html/installing/ossm-installing-service-mesh) documentation for more information.
 1. install `Red Hat OpenShift Service Mesh 3` operator
 1. create `IstioCNI` resource in `istio-cni` namespace
 1. create following `Istio` resource in `istio-system3` (must be a different namespace than a namespace running OSSM 2). Make sure to use discovery selectors which are ignoring OSSM 2 namespaces and NOT to use `default` name for `Istio` resource. You can optionally restrict discovered namespaces even more. Configuration shown in the example only ignores OSSM 2 namespaces but all other namespaces will be part of OSSM 3 mesh. See upstream Istio documentation for [discoverySelectors](https://istio.io/v1.19/docs/setup/install/multiple-controlplanes/) usage.

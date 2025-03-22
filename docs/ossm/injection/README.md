@@ -51,15 +51,15 @@ The injector is configured with the following logic:
 
 ### Sidecar injection examples
 
-The following examples use the [Bookinfo application](https://docs.openshift.com/service-mesh/3.0.0tp1/install/ossm-installing-openshift-service-mesh.html#deploying-book-info_ossm-about-bookinfo-application) to demonstrate different approaches for configuring side car injection. 
+The following examples use the [Bookinfo application](https://docs.redhat.com/en/documentation/red_hat_openshift_service_mesh/3.0/html/installing/ossm-installing-service-mesh#deploying-book-info_ossm-about-bookinfo-application) to demonstrate different approaches for configuring side car injection.
 
 > Note: If you have followed the procedure to deploy the Bookinfo application, step 5 added a sidecar injection label to the `bookinfo` namespace, and these steps are not necessary to repeat. 
 
 Prerequisites:
 - You have installed the Red Hat OpenShift Service Mesh Operator, created an `Istio` resource, and the Operator has deployed Istio.
 - You have created the `IstioCNI` resource, and the Operator has deployed the necessary IstioCNI pods.
-- You have created the namespaces that are to be part of the mesh, and they are [discoverable by the Istio control plane](https://docs.openshift.com/service-mesh/3.0.0tp1/install/ossm-installing-openshift-service-mesh.html#ossm-scoping-service-mesh-with-discoveryselectors_ossm-creating-istiocni-resource). 
-- (Optional) You have deployed the workloads to be included in the mesh. In the following examples, the [Bookinfo has been deployed](https://docs.redhat.com/en/documentation/red_hat_openshift_service_mesh/3.0.0tp1/html-single/installing/index#ossm-about-bookinfo-application_ossm-discoveryselectors-scope-service-mesh) to the `bookinfo` namespace, but sidecar injection (step 5) has not been configured.
+- You have created the namespaces that are to be part of the mesh, and they are [discoverable by the Istio control plane](https://docs.redhat.com/en/documentation/red_hat_openshift_service_mesh/3.0/html/installing/ossm-installing-service-mesh#ossm-scoping-service-mesh-with-discoveryselectors_ossm-creating-istiocni-resource).
+- (Optional) You have deployed the workloads to be included in the mesh. In the following examples, the [Bookinfo has been deployed](https://docs.redhat.com/en/documentation/red_hat_openshift_service_mesh/3.0/html-single/installing/index#ossm-about-bookinfo-application_ossm-discoveryselectors-scope-service-mesh) to the `bookinfo` namespace, but sidecar injection (step 5) has not been configured.
 
 #### Example 1: Enabling sidecar injection with namespace labels
 
