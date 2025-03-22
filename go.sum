@@ -520,8 +520,8 @@ istio.io/api v1.25.0-alpha.0.0.20250320073341-81bc1902f4b3 h1:xK5cnBL7JwNi2J3Ib+
 istio.io/api v1.25.0-alpha.0.0.20250320073341-81bc1902f4b3/go.mod h1:QFzEXv/IT582T0FHZVp1QoolvE4ws0zz/vVO55blmlE=
 istio.io/client-go v1.25.0-alpha.0.0.20250320073741-e8b65a187b3a h1:LFB0Tn1NTjdZVG2mgAQRklVZgKmEO0ABE7wO7k8eFCg=
 istio.io/client-go v1.25.0-alpha.0.0.20250320073741-e8b65a187b3a/go.mod h1:pti0wgffDXhlnCKKKXnMbE1HiAHH1I/q3dxk/Mar68w=
-istio.io/istio v0.0.0-20250320163343-0f67335414a5 h1:sidcLbsqDwjKSeddYQo+wUe0vPr3LhjiPPJ5hH+WuNc=
-istio.io/istio v0.0.0-20250320163343-0f67335414a5/go.mod h1:6s/6wX19ZM0ltExIxTCkUVc3vaecY2nEZZqrS2ULrHU=
+istio.io/istio v0.0.0-20250321182644-d0d8d97fba24 h1:76nR7Ybd2acbxg3PDj+awUjzVeNw3N9KDScPY4O05j8=
+istio.io/istio v0.0.0-20250321182644-d0d8d97fba24/go.mod h1:6s/6wX19ZM0ltExIxTCkUVc3vaecY2nEZZqrS2ULrHU=
 k8s.io/api v0.32.3 h1:Hw7KqxRusq+6QSplE3NYG4MBxZw1BZnq4aP4cJVINls=
 k8s.io/api v0.32.3/go.mod h1:2wEDTXADtm/HA7CCMD8D8bK4yuBUptzaRhYcYEEYA3k=
 k8s.io/apiextensions-apiserver v0.32.3 h1:4D8vy+9GWerlErCwVIbcQjsWunF9SUGNu7O7hiQTyPY=
@@ -542,8 +542,8 @@ k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff h1:/usPimJzUKKu+m+TE36gUy
 k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff/go.mod h1:5jIi+8yX4RIb8wk3XwBo5Pq2ccx4FP10ohkbSKCZoK8=
 k8s.io/kubectl v0.32.3 h1:VMi584rbboso+yjfv0d8uBHwwxbC438LKq+dXd5tOAI=
 k8s.io/kubectl v0.32.3/go.mod h1:6Euv2aso5GKzo/UVMacV6C7miuyevpfI91SvBvV9Zdg=
-k8s.io/utils v0.0.0-20241210054802-24370beab758 h1:sdbE21q2nlQtFh65saZY+rRM6x6aJJI8IUa1AmH/qa0=
-k8s.io/utils v0.0.0-20241210054802-24370beab758/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
+k8s.io/utils v0.0.0-20250321185631-1f6e0b77f77e h1:KqK5c/ghOm8xkHYhlodbp6i6+r+ChV2vuAuVRdFbLro=
+k8s.io/utils v0.0.0-20250321185631-1f6e0b77f77e/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
 oras.land/oras-go v1.2.5 h1:XpYuAwAb0DfQsunIyMfeET92emK8km3W4yEzZvUbsTo=
 oras.land/oras-go v1.2.5/go.mod h1:PuAwRShRZCsZb7g8Ar3jKKQR/2A/qN+pkYxIOd/FAoo=
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.1 h1:uOuSLOMBWkJH0TWa9X6l+mj5nZdm6Ay6Bli8HL8rNfk=
