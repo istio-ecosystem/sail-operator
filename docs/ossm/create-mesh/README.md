@@ -8,7 +8,7 @@ By default, the control plane will watch ("discover") all namespaces within the 
 - Each proxy instance will receive configuration for all namespaces. This includes information also about workloads that are not enrolled in the mesh.
 - Any workload with the appropriate pod or namespace injection label will be injected with a proxy sidecar.
 
-This may not be desirable in a shared cluster. You may want to limit the scope of the service mesh to only a portion of your cluster. This is particularly important if you plan to have [multiple service meshes within the same cluster](./multi-control-planes/README.md).
+This may not be desirable in a shared cluster. You may want to limit the scope of the service mesh to only a portion of your cluster. This is particularly important if you plan to have [multiple service meshes within the same cluster](../multi-control-planes/README.md).
 
 ### DiscoverySelectors
 Discovery selectors provide a mechanism for the mesh administrator to limit the control plane's visibility to a defined set of namespaces. This is done through a Kubernetes [label selector](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors), which defines criteria for which namespaces will be visible to the control plane. Any namespaces not matching are ignored by the control plane entirely.
