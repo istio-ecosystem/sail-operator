@@ -17,6 +17,10 @@ spec:
   scope: Cluster
   versions:
   - additionalPrinterColumns:
+    - description: The namespace for the ztunnel component.
+      jsonPath: .spec.namespace
+      name: Namespace
+      type: string
     - description: Whether the Istio ztunnel installation is ready to handle requests.
       jsonPath: .status.conditions[?(@.type=="Ready")].status
       name: Ready
@@ -1822,6 +1826,14 @@ spec:
                                   The maximum possible number of requests made will be 1 + `attempts`.
                                 format: int32
                                 type: integer
+                              backoff:
+                                description: |-
+                                  Specifies the minimum duration between retry attempts.
+                                  If unset, default minimum duration of 25ms is used as base interval for exponetial backoff.
+                                  This has an impact on the total number of retries that will be attempted based on the `attempts` field
+                                  and route timeout. For example, with attempts is set to 3, backoff to 2s and timeout to 3s, the request will
+                                  be retried only once.
+                                type: string
                               perTryTimeout:
                                 description: |-
                                   Timeout per attempt for a given request, including the initial call and any retries. Format: 1h/1m/1s/1ms. MUST be >=1ms.
