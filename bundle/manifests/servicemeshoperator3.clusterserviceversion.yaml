@@ -33,9 +33,11 @@ metadata:
       ]
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
-    containerImage: quay.io/sail-dev/sail-operator:1.1-latest
-    createdAt: "2025-03-26T05:06:04Z"
-    description: Experimental operator for installing Istio service mesh
+    containerImage: quay.io/maistra-dev/sail-operator:3.0-latest
+    createdAt: "2025-03-26T06:14:49Z"
+    description: The OpenShift Service Mesh Operator enables you to install, configure,
+      and manage an instance of Red Hat OpenShift Service Mesh. OpenShift Service
+      Mesh is based on the open source Istio project.
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
     features.operators.openshift.io/csi: "false"
@@ -395,25 +397,10 @@ spec:
 
     ### Overview
 
-    - v1.24-latest
-    - v1.24.4
-    - v1.24.3
-    - v1.24.2
-    - v1.24.1
-    - v1.24.0
-    - v1.23-latest
-    - v1.23.5
-    - v1.23.4
-    - v1.23.3
-    - v1.23.2
-    - v1.22-latest
-    - v1.22.8
-    - v1.22.7
-    - v1.22.6
-    - v1.22.5
-    - v1.21.6
-    - master
-    - v1.25-alpha.c2ac935c
+    Red Hat OpenShift Service Mesh, based on the open source [Istio](https://istio.io/) project, adds a transparent layer on existing
+    distributed applications without requiring any changes to the service code. You add Red Hat OpenShift Service Mesh
+    support to services by deploying a special sidecar proxy throughout your environment that intercepts all network
+    communication between microservices. You configure and manage the service mesh using the control plane features.
 
     Red Hat OpenShift Service Mesh provides an easy way to create a network of deployed services that provides discovery,
     load balancing, service-to-service authentication, failure recovery, metrics, and monitoring. A service mesh also
@@ -714,66 +701,11 @@ spec:
           template:
             metadata:
               annotations:
-                images.v1_21_6.cni: gcr.io/istio-release/install-cni:1.21.6
-                images.v1_21_6.istiod: gcr.io/istio-release/pilot:1.21.6
-                images.v1_21_6.proxy: gcr.io/istio-release/proxyv2:1.21.6
-                images.v1_21_6.ztunnel: gcr.io/istio-release/ztunnel:1.21.6
-                images.v1_22_5.cni: gcr.io/istio-release/install-cni:1.22.5
-                images.v1_22_5.istiod: gcr.io/istio-release/pilot:1.22.5
-                images.v1_22_5.proxy: gcr.io/istio-release/proxyv2:1.22.5
-                images.v1_22_5.ztunnel: gcr.io/istio-release/ztunnel:1.22.5
-                images.v1_22_6.cni: gcr.io/istio-release/install-cni:1.22.6
-                images.v1_22_6.istiod: gcr.io/istio-release/pilot:1.22.6
-                images.v1_22_6.proxy: gcr.io/istio-release/proxyv2:1.22.6
-                images.v1_22_6.ztunnel: gcr.io/istio-release/ztunnel:1.22.6
-                images.v1_22_7.cni: gcr.io/istio-release/install-cni:1.22.7
-                images.v1_22_7.istiod: gcr.io/istio-release/pilot:1.22.7
-                images.v1_22_7.proxy: gcr.io/istio-release/proxyv2:1.22.7
-                images.v1_22_7.ztunnel: gcr.io/istio-release/ztunnel:1.22.7
-                images.v1_22_8.cni: gcr.io/istio-release/install-cni:1.22.8
-                images.v1_22_8.istiod: gcr.io/istio-release/pilot:1.22.8
-                images.v1_22_8.proxy: gcr.io/istio-release/proxyv2:1.22.8
-                images.v1_22_8.ztunnel: gcr.io/istio-release/ztunnel:1.22.8
-                images.v1_23_2.cni: gcr.io/istio-release/install-cni:1.23.2
-                images.v1_23_2.istiod: gcr.io/istio-release/pilot:1.23.2
-                images.v1_23_2.proxy: gcr.io/istio-release/proxyv2:1.23.2
-                images.v1_23_2.ztunnel: gcr.io/istio-release/ztunnel:1.23.2
-                images.v1_23_3.cni: gcr.io/istio-release/install-cni:1.23.3
-                images.v1_23_3.istiod: gcr.io/istio-release/pilot:1.23.3
-                images.v1_23_3.proxy: gcr.io/istio-release/proxyv2:1.23.3
-                images.v1_23_3.ztunnel: gcr.io/istio-release/ztunnel:1.23.3
-                images.v1_23_4.cni: gcr.io/istio-release/install-cni:1.23.4
-                images.v1_23_4.istiod: gcr.io/istio-release/pilot:1.23.4
-                images.v1_23_4.proxy: gcr.io/istio-release/proxyv2:1.23.4
-                images.v1_23_4.ztunnel: gcr.io/istio-release/ztunnel:1.23.4
-                images.v1_23_5.cni: gcr.io/istio-release/install-cni:1.23.5
-                images.v1_23_5.istiod: gcr.io/istio-release/pilot:1.23.5
-                images.v1_23_5.proxy: gcr.io/istio-release/proxyv2:1.23.5
-                images.v1_23_5.ztunnel: gcr.io/istio-release/ztunnel:1.23.5
-                images.v1_24_0.cni: gcr.io/istio-release/install-cni:1.24.0
-                images.v1_24_0.istiod: gcr.io/istio-release/pilot:1.24.0
-                images.v1_24_0.proxy: gcr.io/istio-release/proxyv2:1.24.0
-                images.v1_24_0.ztunnel: gcr.io/istio-release/ztunnel:1.24.0
-                images.v1_24_1.cni: gcr.io/istio-release/install-cni:1.24.1
-                images.v1_24_1.istiod: gcr.io/istio-release/pilot:1.24.1
-                images.v1_24_1.proxy: gcr.io/istio-release/proxyv2:1.24.1
-                images.v1_24_1.ztunnel: gcr.io/istio-release/ztunnel:1.24.1
-                images.v1_24_2.cni: gcr.io/istio-release/install-cni:1.24.2
-                images.v1_24_2.istiod: gcr.io/istio-release/pilot:1.24.2
-                images.v1_24_2.proxy: gcr.io/istio-release/proxyv2:1.24.2
-                images.v1_24_2.ztunnel: gcr.io/istio-release/ztunnel:1.24.2
-                images.v1_24_3.cni: gcr.io/istio-release/install-cni:1.24.3
-                images.v1_24_3.istiod: gcr.io/istio-release/pilot:1.24.3
-                images.v1_24_3.proxy: gcr.io/istio-release/proxyv2:1.24.3
-                images.v1_24_3.ztunnel: gcr.io/istio-release/ztunnel:1.24.3
-                images.v1_24_4.cni: gcr.io/istio-release/install-cni:1.24.4
-                images.v1_24_4.istiod: gcr.io/istio-release/pilot:1.24.4
-                images.v1_24_4.proxy: gcr.io/istio-release/proxyv2:1.24.4
-                images.v1_24_4.ztunnel: gcr.io/istio-release/ztunnel:1.24.4
-                images.v1_25-alpha_c2ac935c.cni: gcr.io/istio-testing/install-cni:1.25-alpha.c2ac935c588899579e1cee38b205e4e6824a4638
-                images.v1_25-alpha_c2ac935c.istiod: gcr.io/istio-testing/pilot:1.25-alpha.c2ac935c588899579e1cee38b205e4e6824a4638
-                images.v1_25-alpha_c2ac935c.proxy: gcr.io/istio-testing/proxyv2:1.25-alpha.c2ac935c588899579e1cee38b205e4e6824a4638
-                images.v1_25-alpha_c2ac935c.ztunnel: gcr.io/istio-testing/ztunnel:1.25-alpha.c2ac935c588899579e1cee38b205e4e6824a4638
+                images.v1_24_4.cni: registry.redhat.io/openshift-service-mesh/istio-cni-rhel9:1.24.4
+                images.v1_24_4.istiod: registry.redhat.io/openshift-service-mesh/istio-pilot-rhel9:1.24.4
+                images.v1_24_4.must-gather: registry.redhat.io/openshift-service-mesh/istio-must-gather-rhel9:3.0.1
+                images.v1_24_4.proxy: registry.redhat.io/openshift-service-mesh/istio-proxyv2-rhel9:1.24.4
+                images.v1_24_4.ztunnel: registry.redhat.io/openshift-service-mesh/istio-pilot-rhel9:1.24.4
                 kubectl.kubernetes.io/default-container: sail-operator
               labels:
                 app.kubernetes.io/created-by: servicemeshoperator3
@@ -902,125 +834,4 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat, Inc.
-  relatedImages:
-  - image: gcr.io/istio-release/install-cni:1.21.6
-    name: v1_21_6.cni
-  - image: gcr.io/istio-release/pilot:1.21.6
-    name: v1_21_6.istiod
-  - image: gcr.io/istio-release/proxyv2:1.21.6
-    name: v1_21_6.proxy
-  - image: gcr.io/istio-release/ztunnel:1.21.6
-    name: v1_21_6.ztunnel
-  - image: gcr.io/istio-release/install-cni:1.22.5
-    name: v1_22_5.cni
-  - image: gcr.io/istio-release/pilot:1.22.5
-    name: v1_22_5.istiod
-  - image: gcr.io/istio-release/proxyv2:1.22.5
-    name: v1_22_5.proxy
-  - image: gcr.io/istio-release/ztunnel:1.22.5
-    name: v1_22_5.ztunnel
-  - image: gcr.io/istio-release/install-cni:1.22.6
-    name: v1_22_6.cni
-  - image: gcr.io/istio-release/pilot:1.22.6
-    name: v1_22_6.istiod
-  - image: gcr.io/istio-release/proxyv2:1.22.6
-    name: v1_22_6.proxy
-  - image: gcr.io/istio-release/ztunnel:1.22.6
-    name: v1_22_6.ztunnel
-  - image: gcr.io/istio-release/install-cni:1.22.7
-    name: v1_22_7.cni
-  - image: gcr.io/istio-release/pilot:1.22.7
-    name: v1_22_7.istiod
-  - image: gcr.io/istio-release/proxyv2:1.22.7
-    name: v1_22_7.proxy
-  - image: gcr.io/istio-release/ztunnel:1.22.7
-    name: v1_22_7.ztunnel
-  - image: gcr.io/istio-release/install-cni:1.22.8
-    name: v1_22_8.cni
-  - image: gcr.io/istio-release/pilot:1.22.8
-    name: v1_22_8.istiod
-  - image: gcr.io/istio-release/proxyv2:1.22.8
-    name: v1_22_8.proxy
-  - image: gcr.io/istio-release/ztunnel:1.22.8
-    name: v1_22_8.ztunnel
-  - image: gcr.io/istio-release/install-cni:1.23.2
-    name: v1_23_2.cni
-  - image: gcr.io/istio-release/pilot:1.23.2
-    name: v1_23_2.istiod
-  - image: gcr.io/istio-release/proxyv2:1.23.2
-    name: v1_23_2.proxy
-  - image: gcr.io/istio-release/ztunnel:1.23.2
-    name: v1_23_2.ztunnel
-  - image: gcr.io/istio-release/install-cni:1.23.3
-    name: v1_23_3.cni
-  - image: gcr.io/istio-release/pilot:1.23.3
-    name: v1_23_3.istiod
-  - image: gcr.io/istio-release/proxyv2:1.23.3
-    name: v1_23_3.proxy
-  - image: gcr.io/istio-release/ztunnel:1.23.3
-    name: v1_23_3.ztunnel
-  - image: gcr.io/istio-release/install-cni:1.23.4
-    name: v1_23_4.cni
-  - image: gcr.io/istio-release/pilot:1.23.4
-    name: v1_23_4.istiod
-  - image: gcr.io/istio-release/proxyv2:1.23.4
-    name: v1_23_4.proxy
-  - image: gcr.io/istio-release/ztunnel:1.23.4
-    name: v1_23_4.ztunnel
-  - image: gcr.io/istio-release/install-cni:1.23.5
-    name: v1_23_5.cni
-  - image: gcr.io/istio-release/pilot:1.23.5
-    name: v1_23_5.istiod
-  - image: gcr.io/istio-release/proxyv2:1.23.5
-    name: v1_23_5.proxy
-  - image: gcr.io/istio-release/ztunnel:1.23.5
-    name: v1_23_5.ztunnel
-  - image: gcr.io/istio-release/install-cni:1.24.0
-    name: v1_24_0.cni
-  - image: gcr.io/istio-release/pilot:1.24.0
-    name: v1_24_0.istiod
-  - image: gcr.io/istio-release/proxyv2:1.24.0
-    name: v1_24_0.proxy
-  - image: gcr.io/istio-release/ztunnel:1.24.0
-    name: v1_24_0.ztunnel
-  - image: gcr.io/istio-release/install-cni:1.24.1
-    name: v1_24_1.cni
-  - image: gcr.io/istio-release/pilot:1.24.1
-    name: v1_24_1.istiod
-  - image: gcr.io/istio-release/proxyv2:1.24.1
-    name: v1_24_1.proxy
-  - image: gcr.io/istio-release/ztunnel:1.24.1
-    name: v1_24_1.ztunnel
-  - image: gcr.io/istio-release/install-cni:1.24.2
-    name: v1_24_2.cni
-  - image: gcr.io/istio-release/pilot:1.24.2
-    name: v1_24_2.istiod
-  - image: gcr.io/istio-release/proxyv2:1.24.2
-    name: v1_24_2.proxy
-  - image: gcr.io/istio-release/ztunnel:1.24.2
-    name: v1_24_2.ztunnel
-  - image: gcr.io/istio-release/install-cni:1.24.3
-    name: v1_24_3.cni
-  - image: gcr.io/istio-release/pilot:1.24.3
-    name: v1_24_3.istiod
-  - image: gcr.io/istio-release/proxyv2:1.24.3
-    name: v1_24_3.proxy
-  - image: gcr.io/istio-release/ztunnel:1.24.3
-    name: v1_24_3.ztunnel
-  - image: gcr.io/istio-release/install-cni:1.24.4
-    name: v1_24_4.cni
-  - image: gcr.io/istio-release/pilot:1.24.4
-    name: v1_24_4.istiod
-  - image: gcr.io/istio-release/proxyv2:1.24.4
-    name: v1_24_4.proxy
-  - image: gcr.io/istio-release/ztunnel:1.24.4
-    name: v1_24_4.ztunnel
-  - image: gcr.io/istio-testing/install-cni:1.25-alpha.c2ac935c588899579e1cee38b205e4e6824a4638
-    name: v1_25-alpha_c2ac935c.cni
-  - image: gcr.io/istio-testing/pilot:1.25-alpha.c2ac935c588899579e1cee38b205e4e6824a4638
-    name: v1_25-alpha_c2ac935c.istiod
-  - image: gcr.io/istio-testing/proxyv2:1.25-alpha.c2ac935c588899579e1cee38b205e4e6824a4638
-    name: v1_25-alpha_c2ac935c.proxy
-  - image: gcr.io/istio-testing/ztunnel:1.25-alpha.c2ac935c588899579e1cee38b205e4e6824a4638
-    name: v1_25-alpha_c2ac935c.ztunnel
-  version: 1.1.0
+  version: 3.0.1
