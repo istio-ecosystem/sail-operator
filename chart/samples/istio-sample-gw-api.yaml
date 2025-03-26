@@ -3,7 +3,7 @@ kind: Istio
 metadata:
   name: gateway-controller
 spec:
-  version: v1.24.3
+  version: v1.24.4
   namespace: gateway-controller
   updateStrategy:
     type: InPlace
