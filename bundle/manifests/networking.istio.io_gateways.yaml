@@ -104,6 +104,13 @@ spec:
                             of the secret that holds the TLS certs including the CA
                             certificates.
                           type: string
+                        credentialNames:
+                          description: Same as CredentialName but for multiple certificates.
+                          items:
+                            type: string
+                          maxItems: 2
+                          minItems: 1
+                          type: array
                         httpsRedirect:
                           description: If set to true, the load balancer will send
                             a 301 redirect for all http connections, asking the clients
@@ -158,6 +165,25 @@ spec:
                           items:
                             type: string
                           type: array
+                        tlsCertificates:
+                          description: Only one of `server_certificate`, `private_key`,
+                            `ca_certificates` or `credential_name` or `credential_names`
+                            or `tls_certificates` should be specified.
+                          items:
+                            properties:
+                              caCertificates:
+                                description: REQUIRED if mode is `MUTUAL` or `OPTIONAL_MUTUAL`.
+                                type: string
+                              privateKey:
+                                description: REQUIRED if mode is `SIMPLE` or `MUTUAL`.
+                                type: string
+                              serverCertificate:
+                                description: REQUIRED if mode is `SIMPLE` or `MUTUAL`.
+                                type: string
+                            type: object
+                          maxItems: 2
+                          minItems: 1
+                          type: array
                         verifyCertificateHash:
                           description: An optional list of hex-encoded SHA-256 hashes
                             of the authorized client certificates.
@@ -171,6 +197,19 @@ spec:
                             type: string
                           type: array
                       type: object
+                      x-kubernetes-validations:
+                      - message: only one of credentialNames or tlsCertificates can
+                          be set
+                        rule: '(has(self.tlsCertificates) ? 1 : 0) + (has(self.credentialNames)
+                          ? 1 : 0) <= 1'
+                      - message: only one of credentialName or credentialNames can
+                          be set
+                        rule: '(has(self.credentialName) ? 1 : 0) + (has(self.credentialNames)
+                          ? 1 : 0) <= 1'
+                      - message: only one of credentialName or tlsCertificates can
+                          be set
+                        rule: '(has(self.credentialNames) ? 1 : 0) + (has(self.tlsCertificates)
+                          ? 1 : 0) <= 1'
                   required:
                   - port
                   - hosts
@@ -337,6 +376,13 @@ spec:
                             of the secret that holds the TLS certs including the CA
                             certificates.
                           type: string
+                        credentialNames:
+                          description: Same as CredentialName but for multiple certificates.
+                          items:
+                            type: string
+                          maxItems: 2
+                          minItems: 1
+                          type: array
                         httpsRedirect:
                           description: If set to true, the load balancer will send
                             a 301 redirect for all http connections, asking the clients
@@ -391,6 +437,25 @@ spec:
                           items:
                             type: string
                           type: array
+                        tlsCertificates:
+                          description: Only one of `server_certificate`, `private_key`,
+                            `ca_certificates` or `credential_name` or `credential_names`
+                            or `tls_certificates` should be specified.
+                          items:
+                            properties:
+                              caCertificates:
+                                description: REQUIRED if mode is `MUTUAL` or `OPTIONAL_MUTUAL`.
+                                type: string
+                              privateKey:
+                                description: REQUIRED if mode is `SIMPLE` or `MUTUAL`.
+                                type: string
+                              serverCertificate:
+                                description: REQUIRED if mode is `SIMPLE` or `MUTUAL`.
+                                type: string
+                            type: object
+                          maxItems: 2
+                          minItems: 1
+                          type: array
                         verifyCertificateHash:
                           description: An optional list of hex-encoded SHA-256 hashes
                             of the authorized client certificates.
@@ -404,6 +469,19 @@ spec:
                             type: string
                           type: array
                       type: object
+                      x-kubernetes-validations:
+                      - message: only one of credentialNames or tlsCertificates can
+                          be set
+                        rule: '(has(self.tlsCertificates) ? 1 : 0) + (has(self.credentialNames)
+                          ? 1 : 0) <= 1'
+                      - message: only one of credentialName or credentialNames can
+                          be set
+                        rule: '(has(self.credentialName) ? 1 : 0) + (has(self.credentialNames)
+                          ? 1 : 0) <= 1'
+                      - message: only one of credentialName or tlsCertificates can
+                          be set
+                        rule: '(has(self.credentialNames) ? 1 : 0) + (has(self.tlsCertificates)
+                          ? 1 : 0) <= 1'
                   required:
                   - port
                   - hosts
@@ -570,6 +648,13 @@ spec:
                             of the secret that holds the TLS certs including the CA
                             certificates.
                           type: string
+                        credentialNames:
+                          description: Same as CredentialName but for multiple certificates.
+                          items:
+                            type: string
+                          maxItems: 2
+                          minItems: 1
+                          type: array
                         httpsRedirect:
                           description: If set to true, the load balancer will send
                             a 301 redirect for all http connections, asking the clients
@@ -624,6 +709,25 @@ spec:
                           items:
                             type: string
                           type: array
+                        tlsCertificates:
+                          description: Only one of `server_certificate`, `private_key`,
+                            `ca_certificates` or `credential_name` or `credential_names`
+                            or `tls_certificates` should be specified.
+                          items:
+                            properties:
+                              caCertificates:
+                                description: REQUIRED if mode is `MUTUAL` or `OPTIONAL_MUTUAL`.
+                                type: string
+                              privateKey:
+                                description: REQUIRED if mode is `SIMPLE` or `MUTUAL`.
+                                type: string
+                              serverCertificate:
+                                description: REQUIRED if mode is `SIMPLE` or `MUTUAL`.
+                                type: string
+                            type: object
+                          maxItems: 2
+                          minItems: 1
+                          type: array
                         verifyCertificateHash:
                           description: An optional list of hex-encoded SHA-256 hashes
                             of the authorized client certificates.
@@ -637,6 +741,19 @@ spec:
                             type: string
                           type: array
                       type: object
+                      x-kubernetes-validations:
+                      - message: only one of credentialNames or tlsCertificates can
+                          be set
+                        rule: '(has(self.tlsCertificates) ? 1 : 0) + (has(self.credentialNames)
+                          ? 1 : 0) <= 1'
+                      - message: only one of credentialName or credentialNames can
+                          be set
+                        rule: '(has(self.credentialName) ? 1 : 0) + (has(self.credentialNames)
+                          ? 1 : 0) <= 1'
+                      - message: only one of credentialName or tlsCertificates can
+                          be set
+                        rule: '(has(self.credentialNames) ? 1 : 0) + (has(self.tlsCertificates)
+                          ? 1 : 0) <= 1'
                   required:
                   - port
                   - hosts
