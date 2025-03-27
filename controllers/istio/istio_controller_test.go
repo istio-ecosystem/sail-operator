@@ -265,6 +265,7 @@ func TestDetermineStatus(t *testing.T) {
 				Conditions: []v1.IstioRevisionCondition{
 					{Type: v1.IstioRevisionConditionReconciled, Status: toConditionStatus(reconciled)},
 					{Type: v1.IstioRevisionConditionReady, Status: toConditionStatus(ready)},
+					{Type: v1.IstioRevisionConditionDependenciesHealthy, Status: toConditionStatus(true)},
 					{Type: v1.IstioRevisionConditionInUse, Status: toConditionStatus(inUse)},
 				},
 			},
@@ -330,6 +331,12 @@ func TestDetermineStatus(t *testing.T) {
 								Reason:  v1.IstioRevisionReasonHealthy,
 								Message: "ready message",
 							},
+							{
+								Type:    v1.IstioRevisionConditionDependenciesHealthy,
+								Status:  metav1.ConditionTrue,
+								Reason:  v1.IstioRevisionReasonHealthy,
+								Message: "dependencies healthy message",
+							},
 						},
 					},
 				},
@@ -376,6 +383,12 @@ func TestDetermineStatus(t *testing.T) {
 						Reason:  v1.IstioReasonHealthy,
 						Message: "ready message",
 					},
+					{
+						Type:    v1.IstioConditionDependenciesHealthy,
+						Status:  metav1.ConditionTrue,
+						Reason:  v1.IstioReasonHealthy,
+						Message: "dependencies healthy message",
+					},
 				},
 				ActiveRevisionName: istioKey.Name,
 				Revisions: v1.RevisionSummary{
@@ -406,6 +419,10 @@ func TestDetermineStatus(t *testing.T) {
 					},
 					{
 						Type:   v1.IstioConditionReady,
+						Status: metav1.ConditionTrue,
+					},
+					{
+						Type:   v1.IstioConditionDependenciesHealthy,
 						Status: metav1.ConditionTrue,
 					},
 				},
@@ -639,6 +656,11 @@ func TestUpdateStatus(t *testing.T) {
 							Message:            "ready message",
 							LastTransitionTime: *oneMinuteAgo,
 						},
+						{
+							Type:               v1.IstioConditionDependenciesHealthy,
+							Status:             metav1.ConditionTrue,
+							LastTransitionTime: *oneMinuteAgo,
+						},
 					},
 					ActiveRevisionName: istioKey.Name,
 				},
@@ -668,6 +690,11 @@ func TestUpdateStatus(t *testing.T) {
 								Message:            "ready message",
 								LastTransitionTime: *oneMinuteAgo,
 							},
+							{
+								Type:               v1.IstioRevisionConditionDependenciesHealthy,
+								Status:             metav1.ConditionTrue,
+								LastTransitionTime: *oneMinuteAgo,
+							},
 						},
 					},
 				},
@@ -687,6 +714,10 @@ func TestUpdateStatus(t *testing.T) {
 						Status:  metav1.ConditionTrue,
 						Reason:  v1.IstioReasonHealthy,
 						Message: "ready message",
+					},
+					{
+						Type:   v1.IstioConditionDependenciesHealthy,
+						Status: metav1.ConditionTrue,
 					},
 				},
 				ActiveRevisionName: istioKey.Name,
