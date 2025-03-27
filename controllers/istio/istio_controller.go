@@ -257,6 +257,7 @@ func (r *Reconciler) determineStatus(ctx context.Context, istio *v1.Istio, recon
 		} else if err == nil {
 			status.SetCondition(convertCondition(rev.Status.GetCondition(v1.IstioRevisionConditionReconciled)))
 			status.SetCondition(convertCondition(rev.Status.GetCondition(v1.IstioRevisionConditionReady)))
+			status.SetCondition(convertCondition(rev.Status.GetCondition(v1.IstioRevisionConditionDependenciesHealthy)))
 			status.State = convertState(rev.Status.State)
 		} else {
 			activeRevisionGetFailed := func(conditionType v1.IstioConditionType) v1.IstioCondition {
