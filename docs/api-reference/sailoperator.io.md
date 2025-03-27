@@ -714,6 +714,9 @@ _Appears in:_
 | `IstiodNotReady` | IstioReasonIstiodNotReady indicates that the control plane is fully reconciled, but istiod is not ready.  |
 | `RemoteIstiodNotReady` | IstioReasonRemoteIstiodNotReady indicates that the control plane is fully reconciled, but the remote istiod is not ready.  |
 | `ReadinessCheckFailed` | IstioReasonReadinessCheckFailed indicates that readiness could not be ascertained.  |
+| `IstioCNINotFound` | IstioReasonIstioCNINotFound indicates that the IstioCNI resource is not found.  |
+| `IstioCNINotHealthy` | IstioReasonIstioCNINotHealthy indicates that the IstioCNI resource is not healthy.  |
+| `DependencyCheckFailed` | IstioReasonDependencyCheckFailed indicates that the status of the dependencies could not be ascertained.  |
 | `Healthy` | IstioReasonHealthy indicates that the control plane is fully reconciled and that all components are ready.  |
 
 
@@ -733,6 +736,7 @@ _Appears in:_
 | --- | --- |
 | `Reconciled` | IstioConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.  |
 | `Ready` | IstioConditionReady signifies whether any Deployment, StatefulSet, etc. resources are Ready.  |
+| `DependenciesHealthy` | IstioConditionDependenciesHealthy signifies whether the dependencies required by this Istio are healthy. For example, an Istio with spec.values.pilot.cni.enabled=true requires the IstioCNI resource to be deployed and ready for the Istio revision to be considered healthy. The DependenciesHealthy condition is used to indicate that the IstioCNI resource is healthy.  |
 
 
 #### IstioList
@@ -822,6 +826,9 @@ _Appears in:_
 | `ReferencedByWorkloads` | IstioRevisionReasonReferencedByWorkloads indicates that the revision is referenced by at least one pod or namespace.  |
 | `NotReferencedByAnything` | IstioRevisionReasonNotReferenced indicates that the revision is not referenced by any pod or namespace.  |
 | `UsageCheckFailed` | IstioRevisionReasonUsageCheckFailed indicates that the operator could not check whether any workloads use the revision.  |
+| `IstioCNINotFound` | IstioRevisionReasonIstioCNINotFound indicates that the IstioCNI resource is not found.  |
+| `IstioCNINotHealthy` | IstioRevisionReasonIstioCNINotHealthy indicates that the IstioCNI resource is not healthy.  |
+| `DependencyCheckFailed` | IstioRevisionDependencyCheckFailed indicates that the status of the dependencies could not be ascertained.  |
 | `Healthy` | IstioRevisionReasonHealthy indicates that the control plane is fully reconciled and that all components are ready.  |
 
 
@@ -842,6 +849,7 @@ _Appears in:_
 | `Reconciled` | IstioRevisionConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.  |
 | `Ready` | IstioRevisionConditionReady signifies whether any Deployment, StatefulSet, etc. resources are Ready.  |
 | `InUse` | IstioRevisionConditionInUse signifies whether any workload is configured to use the revision.  |
+| `DependenciesHealthy` | IstioRevisionConditionDependenciesHealthy signifies whether the dependencies required by this IstioRevision are healthy. For example, an IstioRevision with spec.values.pilot.cni.enabled=true requires the IstioCNI resource to be deployed and ready for the Istio revision to be considered healthy. The DependenciesHealthy condition is used to indicate that the IstioCNI resource is healthy.  |
 
 
 #### IstioRevisionList

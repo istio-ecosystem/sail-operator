@@ -23,6 +23,7 @@ import (
 	"time"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
@@ -166,6 +167,89 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 				},
 			}
 			Expect(k8sClient.Create(ctx, rev)).To(Succeed())
+		})
+	})
+
+	Describe("IstioCNI dependency checks", func() {
+		cni := &v1.IstioCNI{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "default",
+			},
+			Spec: v1.IstioCNISpec{
+				Version:   istioversion.Default,
+				Namespace: istioNamespace,
+			},
+		}
+
+		cniKey := client.ObjectKeyFromObject(cni)
+
+		BeforeAll(func() {
+			rev = &v1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: revName,
+				},
+				Spec: v1.IstioRevisionSpec{
+					Version:   istioversion.Default,
+					Namespace: istioNamespace,
+					Values: &v1.Values{
+						Revision: ptr.Of(revName),
+						Global: &v1.GlobalConfig{
+							IstioNamespace: ptr.Of(istioNamespace),
+							Platform:       ptr.Of(string(config.PlatformOpenShift)),
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, rev)).To(Succeed())
+		})
+
+		AfterAll(func() {
+			Expect(k8sClient.Delete(ctx, rev)).To(Succeed())
+			Eventually(k8sClient.Get).WithArguments(ctx, kube.Key(revName), rev).Should(ReturnNotFoundError())
+
+			Expect(k8sClient.Delete(ctx, cni)).To(Succeed())
+			Eventually(k8sClient.Get).WithArguments(ctx, cniKey, cni).Should(ReturnNotFoundError())
+		})
+
+		It("shows dependencies unhealthy when IstioCNI is missing", func() {
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
+				dependenciesHealthyCondition := rev.Status.GetCondition(v1.IstioRevisionConditionDependenciesHealthy)
+				g.Expect(dependenciesHealthyCondition.Status).To(Equal(metav1.ConditionFalse))
+				g.Expect(dependenciesHealthyCondition.Reason).To(Equal(v1.IstioRevisionReasonIstioCNINotFound))
+			}).Should(Succeed())
+		})
+
+		It("shows dependencies unhealthy when IstioCNI is unhealthy", func() {
+			Expect(k8sClient.Create(ctx, cni)).To(Succeed())
+
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
+				dependenciesHealthyCondition := rev.Status.GetCondition(v1.IstioRevisionConditionDependenciesHealthy)
+				g.Expect(dependenciesHealthyCondition.Status).To(Equal(metav1.ConditionFalse))
+				g.Expect(dependenciesHealthyCondition.Reason).To(Equal(v1.IstioRevisionReasonIstioCNINotHealthy))
+			}).Should(Succeed())
+		})
+
+		It("shows dependencies healthy when IstioCNI is healthy", func() {
+			dsKey := client.ObjectKey{Name: "istio-cni-node", Namespace: cni.Spec.Namespace}
+			ds := &appsv1.DaemonSet{}
+			Expect(k8sClient.Get(ctx, dsKey, ds)).To(Succeed())
+			ds.Status.CurrentNumberScheduled = 3
+			ds.Status.NumberReady = 3
+			Expect(k8sClient.Status().Update(ctx, ds)).To(Succeed())
+
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, cniKey, cni)).To(Succeed())
+				readyCondition := cni.Status.GetCondition(v1.IstioCNIConditionReady)
+				g.Expect(readyCondition.Status).To(Equal(metav1.ConditionTrue))
+			}).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
+				dependenciesHealthyCondition := rev.Status.GetCondition(v1.IstioRevisionConditionDependenciesHealthy)
+				g.Expect(dependenciesHealthyCondition.Status).To(Equal(metav1.ConditionTrue))
+			}).Should(Succeed())
 		})
 	})
 

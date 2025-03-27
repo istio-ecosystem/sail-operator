@@ -57,6 +57,8 @@ import (
 	"istio.io/istio/pkg/ptr"
 )
 
+const istioCniName = "default"
+
 // Reconciler reconciles an IstioRevision object
 type Reconciler struct {
 	client.Client
@@ -213,6 +215,8 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// The handler triggers the reconciliation of the referenced IstioRevision CR so that its InUse condition is updated.
 	revisionTagHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapRevisionTagToReconcileRequest))
 
+	istioCniHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapIstioCniToReconcileRequests))
+
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
 			LogConstructor: func(req *reconcile.Request) logr.Logger {
@@ -258,6 +262,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&admissionv1.MutatingWebhookConfiguration{}, ownedResourceHandler).
 		Watches(&admissionv1.ValidatingWebhookConfiguration{}, ownedResourceHandler, builder.WithPredicates(validatingWebhookConfigPredicate())).
 
+		// +lint-watches:ignore: IstioCNI (not found in charts, but this controller needs to watch it to update the IstioRevision status)
+		Watches(&v1.IstioCNI{}, istioCniHandler).
+
 		// +lint-watches:ignore: ValidatingAdmissionPolicy (TODO: fix this when CI supports golang 1.22 and k8s 1.30)
 		// +lint-watches:ignore: ValidatingAdmissionPolicyBinding (TODO: fix this when CI supports golang 1.22 and k8s 1.30)
 		// +lint-watches:ignore: CustomResourceDefinition (prevents `make lint-watches` from bugging us about CRDs)
@@ -269,6 +276,8 @@ func (r *Reconciler) determineStatus(ctx context.Context, rev *v1.IstioRevision,
 	reconciledCondition := r.determineReconciledCondition(reconcileErr)
 	readyCondition, err := r.determineReadyCondition(ctx, rev)
 	errs.Add(err)
+	dependenciesHealthyCondition, err := r.determineDependenciesHealthyCondition(ctx, rev)
+	errs.Add(err)
 
 	inUseCondition, err := r.determineInUseCondition(ctx, rev)
 	errs.Add(err)
@@ -277,8 +286,9 @@ func (r *Reconciler) determineStatus(ctx context.Context, rev *v1.IstioRevision,
 	status.ObservedGeneration = rev.Generation
 	status.SetCondition(reconciledCondition)
 	status.SetCondition(readyCondition)
+	status.SetCondition(dependenciesHealthyCondition)
 	status.SetCondition(inUseCondition)
-	status.State = deriveState(reconciledCondition, readyCondition)
+	status.State = deriveState(reconciledCondition, readyCondition, dependenciesHealthyCondition)
 	return status, errs.Error()
 }
 
@@ -298,11 +308,11 @@ func (r *Reconciler) updateStatus(ctx context.Context, rev *v1.IstioRevision, re
 	return errs.Error()
 }
 
-func deriveState(reconciledCondition, readyCondition v1.IstioRevisionCondition) v1.IstioRevisionConditionReason {
-	if reconciledCondition.Status != metav1.ConditionTrue {
-		return reconciledCondition.Reason
-	} else if readyCondition.Status != metav1.ConditionTrue {
-		return readyCondition.Reason
+func deriveState(conditions ...v1.IstioRevisionCondition) v1.IstioRevisionConditionReason {
+	for _, c := range conditions {
+		if c.Status != metav1.ConditionTrue {
+			return c.Reason
+		}
 	}
 	return v1.IstioRevisionReasonHealthy
 }
@@ -373,6 +383,43 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1.IstioR
 		}
 	}
 	return c, nil
+}
+
+func (r *Reconciler) determineDependenciesHealthyCondition(ctx context.Context, rev *v1.IstioRevision) (v1.IstioRevisionCondition, error) {
+	if revision.DependsOnIstioCNI(rev) {
+		cni := v1.IstioCNI{}
+		if err := r.Client.Get(ctx, client.ObjectKey{Name: istioCniName}, &cni); err != nil {
+			if apierrors.IsNotFound(err) {
+				return v1.IstioRevisionCondition{
+					Type:    v1.IstioRevisionConditionDependenciesHealthy,
+					Status:  metav1.ConditionFalse,
+					Reason:  v1.IstioRevisionReasonIstioCNINotFound,
+					Message: "IstioCNI resource does not exist",
+				}, nil
+			}
+
+			return v1.IstioRevisionCondition{
+				Type:    v1.IstioRevisionConditionDependenciesHealthy,
+				Status:  metav1.ConditionUnknown,
+				Reason:  v1.IstioRevisionDependencyCheckFailed,
+				Message: fmt.Sprintf("failed to get IstioCNI status: %v", err),
+			}, fmt.Errorf("get failed: %w", err)
+		}
+
+		if cni.Status.State != v1.IstioCNIReasonHealthy {
+			return v1.IstioRevisionCondition{
+				Type:    v1.IstioRevisionConditionDependenciesHealthy,
+				Status:  metav1.ConditionFalse,
+				Reason:  v1.IstioRevisionReasonIstioCNINotHealthy,
+				Message: "IstioCNI resource status indicates that the component is not healthy",
+			}, nil
+		}
+	}
+
+	return v1.IstioRevisionCondition{
+		Type:   v1.IstioRevisionConditionDependenciesHealthy,
+		Status: metav1.ConditionTrue,
+	}, nil
 }
 
 func (r *Reconciler) determineInUseCondition(ctx context.Context, rev *v1.IstioRevision) (v1.IstioRevisionCondition, error) {
@@ -548,6 +595,21 @@ func (r *Reconciler) mapRevisionTagToReconcileRequest(ctx context.Context, revis
 		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: tag.Status.IstioRevision}}}
 	}
 	return nil
+}
+
+// mapIstioCniToReconcileRequests returns reconcile requests for all IstioRevisions that depend on IstioCNI
+func (r *Reconciler) mapIstioCniToReconcileRequests(ctx context.Context, _ client.Object) []reconcile.Request {
+	list := v1.IstioRevisionList{}
+	if err := r.Client.List(ctx, &list); err != nil {
+		return nil
+	}
+	var reqs []reconcile.Request
+	for _, rev := range list.Items {
+		if revision.DependsOnIstioCNI(&rev) {
+			reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: rev.Name}})
+		}
+	}
+	return reqs
 }
 
 // ignoreStatusChange returns a predicate that ignores watch events where only the resource status changes; if
