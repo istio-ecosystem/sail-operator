@@ -19,12 +19,18 @@
 
 ISTIO_VERSION=${1:-"master"}
 
+SAIL_VERSION="master"
+# If istio version is not master, then SAIL_VERSION would be derived from ISTIO_VERSION by prepending "v" to the version supplied.
+if [ "${ISTIO_VERSION}" != "master" ]; then
+    SAIL_VERSION="v${ISTIO_VERSION}"
+fi
+
 while [ $# -gt 0 ]; do
   key="$1"
   case $key in
     -h|--help)
-      echo "Usage: setup-multi-primary.sh <istio_version>"
-      echo "Example: setup-multi-primary.sh 1.24.2"
+      echo "Usage: setup-multi-primary.sh [istio_version]"
+      echo "Note: If istio_version (f.e., 1.24.2) is not specified, then \`master\` branch would be used."
       exit 0
       ;;
   esac
@@ -43,13 +49,6 @@ OUTPUT_DIR=/tmp/sail-multicluster
 [ -d "${OUTPUT_DIR}" ] || mkdir "${OUTPUT_DIR}"
 
 CERTS_DIR="${OUTPUT_DIR}/certs"
-
-# Check if istio verison is master then this should be latest otherwise it should jsut be istio version
-if [ "${ISTIO_VERSION}" == "master" ]; then
-    SAIL_VERSION="latest"
-else
-    SAIL_VERSION="v${ISTIO_VERSION}"
-fi
 
 CTX_CLUSTER1=kind-east
 CTX_CLUSTER2=kind-west
