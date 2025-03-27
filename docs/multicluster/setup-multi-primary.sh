@@ -17,11 +17,14 @@
 # This script sets up a primary-primary multi-network Istio mesh locally with kind using the Sail operator.
 # It is adapted from: https://istio.io/latest/docs/setup/install/multicluster/multi-primary_multi-network/.
 
+ISTIO_VERSION=${1:-"master"}
+
 while [ $# -gt 0 ]; do
   key="$1"
   case $key in
     -h|--help)
       echo "Usage: setup-multi-primary.sh <istio_version>"
+      echo "Example: setup-multi-primary.sh 1.24.2"
       exit 0
       ;;
   esac
@@ -40,7 +43,6 @@ OUTPUT_DIR=/tmp/sail-multicluster
 [ -d "${OUTPUT_DIR}" ] || mkdir "${OUTPUT_DIR}"
 
 CERTS_DIR="${OUTPUT_DIR}/certs"
-ISTIO_VERSION=${1:-"master"}
 
 # Check if istio verison is master then this should be latest otherwise it should jsut be istio version
 if [ "${ISTIO_VERSION}" == "master" ]; then
