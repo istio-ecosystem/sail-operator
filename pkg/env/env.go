@@ -33,6 +33,5 @@ func GetBool(key string, defaultValue bool) bool {
 	if err != nil {
 		return defaultValue
 	}
-
 	return boolValue
 }
