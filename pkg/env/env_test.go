@@ -15,7 +15,6 @@
 package env
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,7 +23,7 @@ import (
 func TestGet(t *testing.T) {
 	key := "ENV_TEST_TEST_GET"
 	value := "test value"
-	assert.NoError(t, os.Setenv(key, value))
+	t.Setenv(key, value)
 
 	tests := []struct {
 		name         string
@@ -63,11 +62,11 @@ func TestGet(t *testing.T) {
 func TestGetBool(t *testing.T) {
 	boolKey := "ENV_TEST_TEST_GET_BOOL_VALID"
 	boolValue := "true"
-	assert.NoError(t, os.Setenv(boolKey, boolValue))
+	t.Setenv(boolKey, boolValue)
 
 	notBoolKey := "ENV_TEST_TEST_GET_BOOL_INVALID"
 	notBoolValue := "not a bool"
-	assert.NoError(t, os.Setenv(notBoolKey, notBoolValue))
+	t.Setenv(notBoolKey, notBoolValue)
 
 	tests := []struct {
 		name         string
