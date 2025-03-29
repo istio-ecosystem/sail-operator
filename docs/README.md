@@ -1,4 +1,5 @@
 [Return to Project Root](../)
+*Note*: To add new topics to this documentation, please follow the guidelines in the [guidelines](../docs/guidelines/guidelines.md) doc.
 
 # Table of Contents
 
@@ -231,7 +232,6 @@ The Sail Operator API reference documentation can be found [here](https://github
 is installed. `Succeeded` should appear in the **Status** column.
 
 #### Installing using the CLI
-
 *Prerequisites*
 
 * You have access to the cluster as a user with the `cluster-admin` cluster role.
@@ -265,13 +265,14 @@ is installed. `Succeeded` should appear in the **Status** column.
 1. Verify that the installation succeeded by inspecting the CSV status.
 
     ```bash
-    $ kubectl get csv -n openshift-operators
+    kubectl get csv -n openshift-operators
+    ```
+    ```console
     NAME                                     DISPLAY         VERSION                    REPLACES                                 PHASE
     sailoperator.v0.1.0-nightly-2024-06-25   Sail Operator   0.1.0-nightly-2024-06-25   sailoperator.v0.1.0-nightly-2024-06-21   Succeeded
     ```
 
     `Succeeded` should appear in the sailoperator CSV `PHASE` column.
-
 ### Installation from Source
 
 If you're not using OpenShift or simply want to install from source, follow the [instructions in the Contributor Documentation](../README.md#deploying-the-operator).
@@ -405,12 +406,14 @@ For examples installing Gateways on OpenShift, see the [Gateways](common/create-
 The Sail Operator supports two update strategies to update the version of the Istio control plane: `InPlace` and `RevisionBased`. The default strategy is `InPlace`.
 
 ### InPlace
+<!-- generate-docs-test-init Update_Strategy_In_Place-->
 When the `InPlace` strategy is used, the existing Istio control plane is replaced with a new version. The workload sidecars immediately connect to the new control plane. The workloads therefore don't need to be moved from one control plane instance to another.
 
 #### Example using the InPlace strategy
 
 Prerequisites:
 * Sail Operator is installed.
+<!-- prebuilt install_sail_operator -->
 * `istioctl` is [installed](common/install-istioctl-tool.md).
 
 Steps:
@@ -422,19 +425,20 @@ Steps:
 
 2. Create the `Istio` resource.
 
-    ```bash
-    cat <<EOF | kubectl apply -f-
-    apiVersion: sailoperator.io/v1
-    kind: Istio
-    metadata:
-      name: default
-    spec:
-      namespace: istio-system
-      updateStrategy:
-        type: InPlace
-      version: v1.22.5
-    EOF
-    ```
+```bash
+cat <<EOF | kubectl apply -f-
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  namespace: istio-system
+  updateStrategy:
+    type: InPlace
+  version: v1.22.5
+EOF
+```
+<!-- wait available deployment istiod istio-system -->
 
 3. Confirm the installation and version of the control plane.
 
@@ -489,7 +493,7 @@ Steps:
     istioctl proxy-status 
     ```
     The column `VERSION` should match the new control plane version.
-
+<!-- generate-docs-test-end -->
 ### RevisionBased
 When the `RevisionBased` strategy is used, a new Istio control plane instance is created for every change to the `Istio.spec.version` field. The old control plane remains in place until all workloads have been moved to the new control plane instance. This needs to be done by the user by updating the namespace label and restarting all the pods. The old control plane will be deleted after the grace period specified in the `Istio` resource field `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds`.
 

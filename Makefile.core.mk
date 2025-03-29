@@ -183,6 +183,13 @@ test.e2e.ocp: ## Run the end-to-end tests against an existing OCP cluster.
 test.e2e.kind: istioctl ## Deploy a KinD cluster and run the end-to-end tests against it.
 	GINKGO_FLAGS="$(GINKGO_FLAGS)" ISTIOCTL="$(ISTIOCTL)" ${SOURCE_DIR}/tests/e2e/integ-suite-kind.sh
 
+.PHONY: test.documentation.kind
+test.documentation.kind: ## Run the documentation tests against a KinD cluster.
+	@for file in ${SOURCE_DIR}/docs/scripts/*.sh; do \
+		echo "Executing script: $$file"; \
+		OPENSHIFT=false ISTIOCTL="$(ISTIOCTL)" $$file; \
+	done
+
 .PHONY: test.e2e.describe
 test.e2e.describe: ## Runs ginkgo outline -format indent over the e2e test to show in BDD style the steps and test structure
 	GINKGO_FLAGS="$(GINKGO_FLAGS)" ${SOURCE_DIR}/tests/e2e/common-operator-integ-suite.sh --describe
@@ -409,7 +416,7 @@ gen-charts: ## Pull charts from istio repository.
 gen: gen-all-except-bundle bundle ## Generate everything.
 
 .PHONY: gen-all-except-bundle
-gen-all-except-bundle: operator-name operator-chart controller-gen gen-api gen-charts gen-manifests gen-code gen-api-docs github-workflow
+gen-all-except-bundle: operator-name operator-chart controller-gen gen-api gen-charts gen-manifests gen-code gen-api-docs gen-docs-tests github-workflow
 
 .PHONY: gen-check
 gen-check: gen restore-manifest-dates check-clean-repo ## Verify that changes in generated resources have been checked in.
@@ -436,6 +443,11 @@ gen-api-docs: ## Generate API documentation. Known issues: go fmt does not prope
 	@find $(OUTPUT_DOCS_PATH) -type f \( -name "*.md" -o -name "*.asciidoc" \) -exec sed -i 's/\t/  /g' {} \;
 	@find $(OUTPUT_DOCS_PATH) -type f \( -name "*.md" -o -name "*.asciidoc" \) -exec sed -i '/^```/,/^```/ {/./!d;}' {} \;
 	@echo "API reference documentation generated at $(OUTPUT_DOCS_PATH)"
+
+.PHONY: gen-docs-tests
+gen-docs-tests: ## Generate documentation based tests scripts.
+	@echo "Generating documentation tests scripts..."
+	@hack/update-docs-scripts.sh
 
 .PHONY: restore-manifest-dates
 restore-manifest-dates:
