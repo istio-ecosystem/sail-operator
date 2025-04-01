@@ -151,10 +151,15 @@ func TestGetLatestPatchVersions_Valid(t *testing.T) {
 
 	versions := GetLatestPatchVersions()
 
-	assert.Len(t, versions, 3)
-	assert.Equal(t, "1.24.2", versions["1.24"].Name)
-	assert.Equal(t, "1.23.2", versions["1.23"].Name)
-	assert.Equal(t, "1.22.0", versions["1.22"].Name)
+	expected := map[string]VersionInfo{
+		"1.24": {Name: "1.24.2", Version: semver.MustParse("1.24.2")},
+		"1.23": {Name: "1.23.2", Version: semver.MustParse("1.23.2")},
+		"1.22": {Name: "1.22.0", Version: semver.MustParse("1.22.0")},
+	}
+
+	if diff := cmp.Diff(expected, versions); diff != "" {
+		t.Errorf("unexpected result; diff (-expected, +actual):\n%v", diff)
+	}
 }
 
 func TestGetLatestPatchVersions_EmptyList(t *testing.T) {
