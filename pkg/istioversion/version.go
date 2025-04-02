@@ -30,7 +30,7 @@ var (
 	versionsFiles embed.FS
 
 	// versionsFilename is set via ldflags when building the binary and via an environment variable when running tests
-	versionsFilename = env.Get("VERSIONS_YAML_FILE", "versions.yaml")
+	versionsFilename = ""
 )
 
 // Versions represents the top-level structure of versions.yaml
@@ -79,6 +79,11 @@ func Resolve(version string) (string, error) {
 }
 
 func init() {
+	// we can't use ldflags when running tests, use an env variable instead
+	// tmp workaround for https://github.com/golang/go/issues/64246
+	if versionsFilename == "" {
+		versionsFilename = env.Get("VERSIONS_YAML_FILE", "versions.yaml")
+	}
 	log.Info("loading supported istio versions from " + versionsFilename)
 	// Read the embedded versions.yaml file
 	data, err := versionsFiles.ReadFile(versionsFilename)
