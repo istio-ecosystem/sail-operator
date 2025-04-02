@@ -3,6 +3,6 @@ kind: ZTunnel
 metadata:
   name: default
 spec:
-  version: v1.24.4
+  version: v1.25.1
   namespace: ztunnel
   profile: ambient
