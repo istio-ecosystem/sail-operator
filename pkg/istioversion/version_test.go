@@ -141,72 +141,94 @@ func TestParseVersionsYaml_InvalidYaml(t *testing.T) {
 }
 
 func TestGetLatestPatchVersions_Valid(t *testing.T) {
-	List = []VersionInfo{
-		{Name: "1.24.2", Version: semver.MustParse("1.24.2")},
-		{Name: "1.24.1", Version: semver.MustParse("1.24.1")},
-		{Name: "1.23", Version: semver.MustParse("1.23")},
-		{Name: "1.23.2", Version: semver.MustParse("1.23.2")},
-		{Name: "1.23.1", Version: semver.MustParse("1.23.1")},
-		{Name: "1.22.0", Version: semver.MustParse("1.22.0")},
-	}
-
-	versions := GetLatestPatchVersions()
-
-	expected := map[string]VersionInfo{
-		"1.24": {Name: "1.24.2", Version: semver.MustParse("1.24.2")},
-		"1.23": {Name: "1.23.2", Version: semver.MustParse("1.23.2")},
-		"1.22": {Name: "1.22.0", Version: semver.MustParse("1.22.0")},
-	}
-
-	if diff := cmp.Diff(expected, versions); diff != "" {
-		t.Errorf("unexpected result; diff (-expected, +actual):\n%v", diff)
-	}
-}
-
-func TestGetLatestPatchVersions_EmptyList(t *testing.T) {
-	List = []VersionInfo{}
-
-	versions := GetLatestPatchVersions()
-
-	assert.Len(t, versions, 0)
-}
-
-func TestGetPatchVersionsByMajorMinor_ValidVersionInfo(t *testing.T) {
-	List = []VersionInfo{
-		{Name: "1.24.2", Version: semver.MustParse("1.24.2")},
-		{Name: "1.24.1", Version: semver.MustParse("1.24.1")},
-		{Name: "1.23.2", Version: semver.MustParse("1.23.2")},
-		{Name: "1.23.1", Version: semver.MustParse("1.23.1")},
-		{Name: "1.22.0", Version: semver.MustParse("1.22.0")},
-	}
-
-	groups := getPatchVersionsByMajorMinor()
-
-	expected := map[string][]VersionInfo{
-		"1.24": {
+	t.Run("valid versions", func(t *testing.T) {
+		List = []VersionInfo{
 			{Name: "1.24.2", Version: semver.MustParse("1.24.2")},
 			{Name: "1.24.1", Version: semver.MustParse("1.24.1")},
-		},
-		"1.23": {
+			{Name: "1.23", Version: semver.MustParse("1.23")},
 			{Name: "1.23.2", Version: semver.MustParse("1.23.2")},
 			{Name: "1.23.1", Version: semver.MustParse("1.23.1")},
-		},
-		"1.22": {
 			{Name: "1.22.0", Version: semver.MustParse("1.22.0")},
-		},
-	}
+		}
 
-	if diff := cmp.Diff(expected, groups); diff != "" {
-		t.Errorf("unexpected result; diff (-expected, +actual):\n%v", diff)
-	}
+		versions := GetLatestPatchVersions()
+
+		expected := []VersionInfo{
+			{Name: "1.24.2", Version: semver.MustParse("1.24.2")},
+			{Name: "1.23.2", Version: semver.MustParse("1.23.2")},
+			{Name: "1.22.0", Version: semver.MustParse("1.22.0")},
+		}
+
+		if diff := cmp.Diff(expected, versions); diff != "" {
+			t.Errorf("unexpected result; diff (-expected, +actual):\n%v", diff)
+		}
+	})
+
+	t.Run("empty list", func(t *testing.T) {
+		List = []VersionInfo{}
+
+		versions := GetLatestPatchVersions()
+
+		assert.Len(t, versions, 0)
+	})
 }
 
-func TestGetPatchVersionsByMajorMinor_EmptyList(t *testing.T) {
-	List = []VersionInfo{}
+func TestGetPatchVersionsByMajorMinor(t *testing.T) {
+	t.Run("valid versions", func(t *testing.T) {
+		List = []VersionInfo{
+			{Name: "1.24.2", Version: semver.MustParse("1.24.2")},
+			{Name: "1.24.1", Version: semver.MustParse("1.24.1")},
+			{Name: "1.23.2", Version: semver.MustParse("1.23.2")},
+			{Name: "1.23.1", Version: semver.MustParse("1.23.1")},
+			{Name: "1.22.0", Version: semver.MustParse("1.22.0")},
+		}
 
-	groups := getPatchVersionsByMajorMinor()
+		groups := getPatchVersionsByMajorMinor()
 
-	assert.Len(t, groups, 0)
+		expected := map[string][]VersionInfo{
+			"1.24": {
+				{Name: "1.24.2", Version: semver.MustParse("1.24.2")},
+				{Name: "1.24.1", Version: semver.MustParse("1.24.1")},
+			},
+			"1.23": {
+				{Name: "1.23.2", Version: semver.MustParse("1.23.2")},
+				{Name: "1.23.1", Version: semver.MustParse("1.23.1")},
+			},
+			"1.22": {
+				{Name: "1.22.0", Version: semver.MustParse("1.22.0")},
+			},
+		}
+
+		if diff := cmp.Diff(expected, groups); diff != "" {
+			t.Errorf("unexpected result; diff (-expected, +actual):\n%v", diff)
+		}
+	})
+
+	t.Run("empty list", func(t *testing.T) {
+		List = []VersionInfo{}
+
+		groups := getPatchVersionsByMajorMinor()
+
+		assert.Len(t, groups, 0)
+	})
+
+	t.Run("single version", func(t *testing.T) {
+		List = []VersionInfo{
+			{Name: "1.24.2", Version: semver.MustParse("1.24.2")},
+		}
+
+		groups := getPatchVersionsByMajorMinor()
+
+		expected := map[string][]VersionInfo{
+			"1.24": {
+				{Name: "1.24.2", Version: semver.MustParse("1.24.2")},
+			},
+		}
+
+		if diff := cmp.Diff(expected, groups); diff != "" {
+			t.Errorf("unexpected result; diff (-expected, +actual):\n%v", diff)
+		}
+	})
 }
 
 func TestGetBaseAndNewVersion(t *testing.T) {
@@ -225,7 +247,7 @@ func TestGetBaseAndNewVersion(t *testing.T) {
 		assert.Equal(t, "1.24.1", base)
 		assert.Equal(t, "1.24.2", newVersion)
 	})
-	
+
 	t.Run("empty list", func(t *testing.T) {
 		List = []VersionInfo{}
 
@@ -235,15 +257,14 @@ func TestGetBaseAndNewVersion(t *testing.T) {
 		assert.Equal(t, "", newVersion)
 	})
 
-	List = []VersionInfo{
-		{Name: "1.24.2", Version: semver.MustParse("1.24.2")},
-		{Name: "1.23.2", Version: semver.MustParse("1.23.2")},
-		{Name: "1.22.0", Version: semver.MustParse("1.22.0")},
-	}
+	t.Run("single version", func(t *testing.T) {
+		List = []VersionInfo{
+			{Name: "1.24.2", Version: semver.MustParse("1.24.2")},
+		}
 
-	base, newVersion = GetBaseAndNewVersion()
+		base, newVersion := GetBaseAndNewVersion()
 
-	// base and newVersion should be empty since there are no consecutive patch versions in the List for same Minor version
-	assert.Equal(t, "", base)
-	assert.Equal(t, "", newVersion)
+		assert.Equal(t, "", base)
+		assert.Equal(t, "", newVersion)
+	})
 }

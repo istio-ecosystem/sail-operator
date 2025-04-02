@@ -17,6 +17,7 @@ package istioversion
 import (
 	"embed"
 	"fmt"
+	"sort"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/istio-ecosystem/sail-operator/pkg/env"
@@ -132,7 +133,7 @@ func mustParseVersionsYaml(yamlBytes []byte) (
 }
 
 // GetLatestPatchVersions returns the latest patch versions for all the Major.Minor versions
-func GetLatestPatchVersions() map[string]VersionInfo {
+func GetLatestPatchVersions() []VersionInfo {
 	latestPatchVersions := make(map[string]VersionInfo)
 	for _, version := range List {
 		majorMinorVersion := fmt.Sprintf("%d.%d", version.Version.Major(), version.Version.Minor())
@@ -141,7 +142,19 @@ func GetLatestPatchVersions() map[string]VersionInfo {
 			latestPatchVersions[majorMinorVersion] = version
 		}
 	}
-	return latestPatchVersions
+
+	// Convert the map values to a slice.
+	latestSlice := make([]VersionInfo, 0, len(latestPatchVersions))
+	for _, v := range latestPatchVersions {
+		latestSlice = append(latestSlice, v)
+	}
+
+	// Sort the slice in descending order based on the version.
+	sort.Slice(latestSlice, func(i, j int) bool {
+		return latestSlice[i].Version.GreaterThan(latestSlice[j].Version)
+	})
+
+	return latestSlice
 }
 
 // GetPatchVersionsByMajorMinor returns all the patch versions for each Major.Minor version in the list
