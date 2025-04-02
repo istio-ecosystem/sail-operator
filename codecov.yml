@@ -3,3 +3,6 @@ ignore:
   - "hack"
   - "tools"
   - "tests"
+  - "resources"
+  - "chart"
+  - "bundle"
