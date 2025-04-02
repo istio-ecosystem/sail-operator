@@ -24,55 +24,23 @@ import (
 // AdditionNotifierQueue is a queue that calls an onAdd function whenever an item is added to the queue.
 // It is meant to be used in conjunction with EnqueueEventLogger to log items enqueued by a handler.
 type AdditionNotifierQueue struct {
-	delegate workqueue.TypedRateLimitingInterface[reconcile.Request]
-	onAdd    func(item reconcile.Request)
+	workqueue.TypedRateLimitingInterface[reconcile.Request]
+	onAdd func(item reconcile.Request)
 }
 
 var _ workqueue.TypedRateLimitingInterface[reconcile.Request] = &AdditionNotifierQueue{}
 
 func (q *AdditionNotifierQueue) Add(item reconcile.Request) {
-	q.delegate.Add(item)
+	q.TypedRateLimitingInterface.Add(item)
 	q.onAdd(item)
 }
 
-func (q *AdditionNotifierQueue) Len() int {
-	return q.delegate.Len()
-}
-
-func (q *AdditionNotifierQueue) Get() (item reconcile.Request, shutdown bool) {
-	return q.delegate.Get()
-}
-
-func (q *AdditionNotifierQueue) Done(item reconcile.Request) {
-	q.delegate.Done(item)
-}
-
-func (q *AdditionNotifierQueue) ShutDown() {
-	q.delegate.ShutDown()
-}
-
-func (q *AdditionNotifierQueue) ShutDownWithDrain() {
-	q.delegate.ShutDownWithDrain()
-}
-
-func (q *AdditionNotifierQueue) ShuttingDown() bool {
-	return q.delegate.ShuttingDown()
-}
-
 func (q *AdditionNotifierQueue) AddAfter(item reconcile.Request, duration time.Duration) {
-	q.delegate.AddAfter(item, duration)
+	q.TypedRateLimitingInterface.AddAfter(item, duration)
 	q.onAdd(item)
 }
 
 func (q *AdditionNotifierQueue) AddRateLimited(item reconcile.Request) {
-	q.delegate.AddRateLimited(item)
+	q.TypedRateLimitingInterface.AddRateLimited(item)
 	q.onAdd(item)
-}
-
-func (q *AdditionNotifierQueue) Forget(item reconcile.Request) {
-	q.delegate.Forget(item)
-}
-
-func (q *AdditionNotifierQueue) NumRequeues(item reconcile.Request) int {
-	return q.delegate.NumRequeues(item)
 }
