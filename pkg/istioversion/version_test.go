@@ -210,26 +210,30 @@ func TestGetPatchVersionsByMajorMinor_EmptyList(t *testing.T) {
 }
 
 func TestGetBaseAndNewVersion(t *testing.T) {
-	List = []VersionInfo{
-		{Name: "1.24.2", Version: semver.MustParse("1.24.2")},
-		{Name: "1.24.1", Version: semver.MustParse("1.24.1")},
-		{Name: "1.23", Version: semver.MustParse("1.23")},
-		{Name: "1.23.2", Version: semver.MustParse("1.23.2")},
-		{Name: "1.23.1", Version: semver.MustParse("1.23.1")},
-		{Name: "1.22.0", Version: semver.MustParse("1.22.0")},
-	}
+	t.Run("valid versions", func(t *testing.T) {
+		List = []VersionInfo{
+			{Name: "1.24.2", Version: semver.MustParse("1.24.2")},
+			{Name: "1.24.1", Version: semver.MustParse("1.24.1")},
+			{Name: "1.23", Version: semver.MustParse("1.23")},
+			{Name: "1.23.2", Version: semver.MustParse("1.23.2")},
+			{Name: "1.23.1", Version: semver.MustParse("1.23.1")},
+			{Name: "1.22.0", Version: semver.MustParse("1.22.0")},
+		}
 
-	base, newVersion := GetBaseAndNewVersion()
+		base, newVersion := GetBaseAndNewVersion()
 
-	assert.Equal(t, "1.24.1", base)
-	assert.Equal(t, "1.24.2", newVersion)
+		assert.Equal(t, "1.24.1", base)
+		assert.Equal(t, "1.24.2", newVersion)
+	})
+	
+	t.Run("empty list", func(t *testing.T) {
+		List = []VersionInfo{}
 
-	List = []VersionInfo{}
+		base, newVersion := GetBaseAndNewVersion()
 
-	base, newVersion = GetBaseAndNewVersion()
-
-	assert.Equal(t, "", base)
-	assert.Equal(t, "", newVersion)
+		assert.Equal(t, "", base)
+		assert.Equal(t, "", newVersion)
+	})
 
 	List = []VersionInfo{
 		{Name: "1.24.2", Version: semver.MustParse("1.24.2")},
