@@ -60,7 +60,7 @@ func (h *EnqueueEventLogger) wrapQueue(
 	q workqueue.TypedRateLimitingInterface[reconcile.Request], eventType string, obj client.Object,
 ) workqueue.TypedRateLimitingInterface[reconcile.Request] {
 	return &AdditionNotifierQueue{
-		delegate: q,
+		TypedRateLimitingInterface: q,
 		onAdd: func(request reconcile.Request) {
 			requestSummary := ObjectSummary{
 				Kind:      h.kind,
