@@ -30,7 +30,7 @@ func TestAdditionNotifierQueue(t *testing.T) {
 
 	var lastOnAddItem reconcile.Request
 	queue := &AdditionNotifierQueue{
-		delegate: mockQueue,
+		TypedRateLimitingInterface: mockQueue,
 		onAdd: func(item reconcile.Request) {
 			lastOnAddItem = item
 		},
