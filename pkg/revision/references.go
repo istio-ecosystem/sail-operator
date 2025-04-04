@@ -24,13 +24,8 @@ func GetReferencedRevisionFromNamespace(labels map[string]string) string {
 	if labels[constants.IstioInjectionLabel] == constants.IstioInjectionEnabledValue {
 		return v1.DefaultRevision
 	}
-	revision := labels[constants.IstioRevLabel]
-	if revision != "" {
-		return revision
-	}
+	return labels[constants.IstioRevLabel]
 	// TODO: if .Values.sidecarInjectorWebhook.enableNamespacesByDefault is true, then all namespaces except system namespaces should use the "default" revision
-
-	return ""
 }
 
 func GetReferencedRevisionFromPod(podLabels map[string]string) string {
@@ -49,10 +44,5 @@ func GetReferencedRevisionFromPod(podLabels map[string]string) string {
 
 func GetInjectedRevisionFromPod(podAnnotations map[string]string) string {
 	// if pod was already injected, the revision that did the injection is specified in the istio.io/rev annotation
-	revision := podAnnotations[constants.IstioRevLabel]
-	if revision != "" {
-		return revision
-	}
-
-	return ""
+	return podAnnotations[constants.IstioRevLabel]
 }
