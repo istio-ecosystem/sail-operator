@@ -25,6 +25,7 @@ This document aims to provide an overview of the project and some information fo
     - [End-to-End Tests](#end-to-end-tests)
     - [Vendor-specific changes](#vendor-specific-changes)
 - [Release Process](#release-process)
+- [Versioning and Support Policy](#versioning-and-support-policy)
 - [Community Support and Contributing](#community-support-and-contributing)
 - [Sail Enhancement Proposal](#sail-enhancement-proposal)
 - [Issue management](#issue-management)
@@ -226,7 +227,20 @@ By modifying `pkg/istiovalues/vendor_defaults.yaml`, vendors can change some def
 
 ## Release process
 
-Please refer to the [RELEASE-PROCESS.md](RELEASE-PROCESS.md) file for more information on how the Sail Operator release process works.  
+Please refer to the [RELEASE-PROCESS.md](RELEASE-PROCESS.md) file for more information on how the Sail Operator release process works.
+
+## Versioning and Support Policy
+
+Versioning for the Sail Operator will follow Istio versioning. When there's a new version of Istio released, there will be a corresponding release of the Sail Operator. The latest version of Istio can be installed using the latest version of the Sail Operator. For example, when Istio 1.25 is released, there will be a corresponding 1.25 release of the Sail Operator that supports installing Istio 1.25.
+
+The Sail Operator will support n-2 releases of Istio. If you install the 1.25 Sail Operator, the Operator can install Istio 1.23-1.25.
+
+Not all Istio patch versions will be included in Sail Operator releases. Some may be skipped. Also, the Sail Operator patch version will not correspond to the Istio patch version. For example, the 1.25.0 Sail Operator may only support installing Istio 1.25.1 but not Istio 1.25.0.
+
+When an Istio release is out of support, the corresponding Sail Operator release will be out of support as well.
+
+> [!NOTE]
+> The first stable 1.0 release did not follow this versioning strategy but subsequent releases will.
 
 ## Community Support and Contributing
 Please refer to the [CONTRIBUTING-SAIL-PROJECT.md](CONTRIBUTING.md) file for more information on how to contribute to the Sail Operator project. This file contains all the information you need to get started with contributing to the project.
