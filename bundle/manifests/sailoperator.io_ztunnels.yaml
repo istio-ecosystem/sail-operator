@@ -21,6 +21,10 @@ spec:
       jsonPath: .spec.namespace
       name: Namespace
       type: string
+    - description: The selected profile (collection of value presets).
+      jsonPath: .spec.values.profile
+      name: Profile
+      type: string
     - description: Whether the Istio ztunnel installation is ready to handle requests.
       jsonPath: .status.conditions[?(@.type=="Ready")].status
       name: Ready

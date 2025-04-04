@@ -21,6 +21,10 @@ spec:
       jsonPath: .spec.namespace
       name: Namespace
       type: string
+    - description: The selected profile (collection of value presets).
+      jsonPath: .spec.values.profile
+      name: Profile
+      type: string
     - description: Total number of IstioRevision objects currently associated with
         this object.
       jsonPath: .status.revisions.total
