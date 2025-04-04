@@ -501,8 +501,6 @@ _Appears in:_
 | `perTryTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | Timeout per attempt for a given request, including the initial call and any retries. Format: 1h/1m/1s/1ms. MUST be >=1ms. Default is same value as request `timeout` of the [HTTP route](https://istio.io/docs/reference/config/networking/virtual-service/#HTTPRoute), which means no timeout. |  |  |
 | `retryOn` _string_ | Specifies the conditions under which retry takes place. One or more policies can be specified using a ‘,’ delimited list. See the [retry policies](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-on) and [gRPC retry policies](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-grpc-on) for more details.  In addition to the policies specified above, a list of HTTP status codes can be passed, such as `retryOn: "503,reset"`. Note these status codes refer to the actual responses received from the destination. For example, if a connection is reset, Istio will translate this to 503 for it's response. However, the destination did not return a 503 error, so this would not match `"503"` (it would, however, match `"reset"`).  If not specified, this defaults to `connect-failure,refused-stream,unavailable,cancelled`. |  |  |
 | `retryRemoteLocalities` _boolean_ | Flag to specify whether the retries should retry to other localities. See the [retry plugin configuration](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/http/http_connection_management#retry-plugin-configuration) for more details. |  |  |
-| `retryIgnorePreviousHosts` _boolean_ | Flag to specify whether the retries should ignore previously tried hosts during retry. Defaults to true. |  |  |
-| `backoff` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | Specifies the minimum duration between retry attempts. If unset, default minimum duration of 25ms is used as base interval for exponetial backoff. This has an impact on the total number of retries that will be attempted based on the `attempts` field and route timeout. For example, with attempts is set to 3, backoff to 2s and timeout to 3s, the request will be retried only once. |  |  |
 
 
 
@@ -1532,7 +1530,6 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `path` _string_ | Path to a local file to write the access log entries. This may be used to write to streams, via `/dev/stderr` and `/dev/stdout` If unspecified, defaults to `/dev/stdout`. |  |  |
 | `logFormat` _[MeshConfigExtensionProviderEnvoyFileAccessLogProviderLogFormat](#meshconfigextensionproviderenvoyfileaccesslogproviderlogformat)_ | Optional. Allows overriding of the default access log format. |  |  |
-| `omitEmptyValues` _boolean_ | Optional. If set to true, when command operators are evaluated to null, For text format, the output of the empty operator is changed from "-" to an empty string. For json format, the keys with null values are omitted in the output structure. |  |  |
 
 
 

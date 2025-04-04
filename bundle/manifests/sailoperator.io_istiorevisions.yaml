@@ -2,7 +2,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.2
+    controller-gen.kubebuilder.io/version: v0.17.3
   creationTimestamp: null
   name: istiorevisions.sailoperator.io
 spec:
@@ -4044,14 +4044,6 @@ spec:
                               The maximum possible number of requests made will be 1 + `attempts`.
                             format: int32
                             type: integer
-                          backoff:
-                            description: |-
-                              Specifies the minimum duration between retry attempts.
-                              If unset, default minimum duration of 25ms is used as base interval for exponetial backoff.
-                              This has an impact on the total number of retries that will be attempted based on the `attempts` field
-                              and route timeout. For example, with attempts is set to 3, backoff to 2s and timeout to 3s, the request will
-                              be retried only once.
-                            type: string
                           perTryTimeout:
                             description: |-
                               Timeout per attempt for a given request, including the initial call and any retries. Format: 1h/1m/1s/1ms. MUST be >=1ms.
@@ -4059,11 +4051,6 @@ spec:
                               `timeout` of the [HTTP route](https://istio.io/docs/reference/config/networking/virtual-service/#HTTPRoute),
                               which means no timeout.
                             type: string
-                          retryIgnorePreviousHosts:
-                            description: |-
-                              Flag to specify whether the retries should ignore previously tried hosts during retry.
-                              Defaults to true.
-                            type: boolean
                           retryOn:
                             description: |-
                               Specifies the conditions under which retry takes place.
@@ -4580,12 +4567,6 @@ spec:
                                       set
                                     rule: (has(self.text)?1:0) + (has(self.labels)?1:0)
                                       <= 1
-                                omitEmptyValues:
-                                  description: |-
-                                    Optional. If set to true, when command operators are evaluated to null,
-                                    For text format, the output of the empty operator is changed from "-" to an empty string.
-                                    For json format, the keys with null values are omitted in the output structure.
-                                  type: boolean
                                 path:
                                   description: |-
                                     Path to a local file to write the access log entries.
@@ -5761,7 +5742,7 @@ spec:
                           match either `x.y.com` or `*.y.com` for the SAN in the presented server certificate.
                           For wildcard host name in DestinationRule, client-side proxy will do a suffix match. For example,
                           if host is `*.x.y.com`, client-side proxy will verify the presented server certificate SAN matches
-                          `.x.y.com` suffix.
+                          “.x.y.com` suffix.
 
                           Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
                         type: boolean

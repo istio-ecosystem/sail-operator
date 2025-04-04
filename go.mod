@@ -1,8 +1,8 @@
 module github.com/istio-ecosystem/sail-operator
 
-go 1.24.0
+go 1.23.0
 
-toolchain go1.24.1
+toolchain go1.23.4
 
 // Client-go does not handle different versions of mergo due to some breaking changes - use the matching version
 // This replacement is aligned with istio/istio's go.mod
@@ -20,13 +20,13 @@ require (
 	github.com/prometheus/common v0.63.0
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/mod v0.22.0
-	golang.org/x/text v0.23.0
+	golang.org/x/text v0.24.0
 	golang.org/x/tools v0.29.0
 	gomodules.xyz/jsonpatch/v2 v2.5.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.17.1
-	istio.io/client-go v1.25.0-alpha.0.0.20250326165751-7f8bd8435da7
-	istio.io/istio v0.0.0-20250327001239-b4cb9776e747
+	istio.io/client-go v1.25.1
+	istio.io/istio v0.0.0-20250404193849-9dba3490d112
 	k8s.io/api v0.32.3
 	k8s.io/apiextensions-apiserver v0.32.3
 	k8s.io/apimachinery v0.32.3
@@ -73,8 +73,8 @@ require (
 	github.com/exponent-io/jsonpath v0.0.0-20210407135951-1de76d718b3f // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/fsnotify/fsnotify v1.8.0 // indirect
-	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
+	github.com/fsnotify/fsnotify v1.9.0 // indirect
+	github.com/fxamacker/cbor/v2 v2.8.0 // indirect
 	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -164,11 +164,11 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.36.0 // indirect
 	golang.org/x/exp v0.0.0-20241215155358-4a5509556b9e // indirect
-	golang.org/x/net v0.37.0 // indirect
-	golang.org/x/oauth2 v0.28.0 // indirect
-	golang.org/x/sync v0.12.0 // indirect
-	golang.org/x/sys v0.31.0 // indirect
-	golang.org/x/term v0.30.0 // indirect
+	golang.org/x/net v0.38.0 // indirect
+	golang.org/x/oauth2 v0.29.0 // indirect
+	golang.org/x/sync v0.13.0 // indirect
+	golang.org/x/sys v0.32.0 // indirect
+	golang.org/x/term v0.31.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240716161551-93cc26a95ae9 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250311190419-81fb87f6b8bf // indirect
@@ -180,7 +180,7 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gotest.tools/v3 v3.5.1 // indirect
-	istio.io/api v1.25.0-alpha.0.0.20250326164952-ab83a1194b48 // indirect
+	istio.io/api v1.25.1-0.20250321204246-eb3f2673759c // indirect
 	k8s.io/apiserver v0.32.3 // indirect
 	k8s.io/component-base v0.32.3 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
