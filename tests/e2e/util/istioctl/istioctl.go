@@ -48,8 +48,8 @@ func istioctl(format string, args ...interface{}) string {
 // - remoteKubeconfig: kubeconfig of the remote cluster
 // - secretName: name of the secret
 // - internalIP: internal IP of the remote cluster
-func CreateRemoteSecret(remoteKubeconfig string, secretName string, internalIP string, additionalFlags ...string) (string, error) {
-	cmd := istioctl("create-remote-secret --kubeconfig %s --name %s --server=https://%s:6443", remoteKubeconfig, secretName, internalIP)
+func CreateRemoteSecret(remoteKubeconfig, namespace, secretName, internalIP string, additionalFlags ...string) (string, error) {
+	cmd := istioctl("create-remote-secret --kubeconfig %s --namespace %s --name %s --server=%s", remoteKubeconfig, namespace, secretName, internalIP)
 	if len(additionalFlags) != 0 {
 		cmd += (" " + strings.Join(additionalFlags, " "))
 	}
