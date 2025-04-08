@@ -61,7 +61,7 @@ function setup_kind_registry() {
 }
 
 if [ "${MULTICLUSTER}" == "true" ]; then
-    CLUSTER_TOPOLOGY_CONFIG_FILE="${SCRIPTPATH}/../tests/e2e/config/multicluster.json"
+    CLUSTER_TOPOLOGY_CONFIG_FILE="${SCRIPTPATH}/../setup/config/multicluster.json"
     load_cluster_topology "${CLUSTER_TOPOLOGY_CONFIG_FILE}"
     setup_kind_clusters "" ""
     setup_kind_registry
