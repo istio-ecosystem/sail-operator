@@ -148,7 +148,9 @@ default   1           1       1        default           Healthy   v1.24.3   4m5
 The column `VERSION` should match the new control plane version.
 
 ### About RevisionBased strategy
-When the RevisionBased strategy is used, a new Istio control plane instance is created for every change to the `Istio` `.spec.version` field. The old control plane remains in place until all workloads have been moved to the new control plane instance, making canary upgrades possible. This needs to be done by the user by updating the namespace label and restarting all the pods. The old control plane will be deleted after the grace period specified in the `Istio` resource field `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds`. The RevisionBased strategy also allows you to update by more than one minor version.
+When the RevisionBased strategy is used, a new Istio control plane instance is created for every change to the `Istio` `.spec.version` field. The old control plane remains in place until all workloads have been moved to the new control plane instance, enabling canary upgrades. Users accomplish this by updating the namespace label and restarting the workloads.
+The old control plane and its corresponding `IstioRevision` resource are automatically deleted after the grace period specified by the `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds` field in the `Istio` resource. The default value is 30 seconds. This field allows you to customize the time period during which the old revision remains after becoming inactive. The `RevisionBased` strategy also supports updating by more than one minor version at a time.
+Note that it's acceptable and common practice to have multiple `IstioRevisions` running simultaneously for extended periods, facilitating controlled canary rollouts. 
 
 #### Selecting the RevisionBased strategy
 To deploy `Istio` with the `RevisionBased` strategy, create the `Istio` resource with the following `spec.updateStrategy` value:
@@ -164,7 +166,7 @@ spec:
     type: RevisionBased
 ```
 
-After you select the strategy for the `Istio` resource, the Operator creates a new `IstioRevision` resource with the name `<istio resource name>-<version>`. To attach the workloads to a control plane deployed by using the `RevisionBased` strategy, you must set the `istio.io/rev` namespace label to the name of the `IstioRevision`. Alternatively, you can apply the label to the workload pods to attach them to the new control plane.
+After you select the strategy for the `Istio` resource, the Operator creates a new `IstioRevision` resource with the name `<istio resource name>-<version>`. To attach the workloads to a control plane deployed by using the `RevisionBased` strategy, you must set the `istio.io/rev` namespace label to the name of the `IstioRevision`. Alternatively, you can apply the label to the workload pods to attach them to the new control plane. From the example above, the `IstioRevision` resource name would be `default-v1-24-3` and the label would be `istio.io/rev=default-v1-24-3`. In the following section we will show how to update the Istio control plane with the `RevisionBased` strategy.
 
 ##### Updating the Istio control plane with the RevisionBased strategy
 When updating `Istio` using the `RevisionBased` strategy, you can update by more than one minor version at a time. The Operator creates a new `IstioRevision` resource for each change to the `.spec.version` field. The Operator then creates a new control plane instance for each `IstioRevision` resource. The workloads are attached to the new control plane instance by setting the `istio.io/rev` namespace label to the name of the `IstioRevision` resource and restarting the workloads.
@@ -207,7 +209,7 @@ You should see two `IstioRevision` resources, one for the old control plane and 
 ```console
 NAME              TYPE    READY   STATUS    IN USE   VERSION   AGE
 default-v1-24-2   Local   True    Healthy   True     v1.24.2   10m
-default-v1-24-4   Local   True    Healthy   False    v1.24.3   66s
+default-v1-24-3   Local   True    Healthy   False    v1.24.3   66s
 ```
 `default-v1-24-2` is the revision for old control plane and `default-v1-24-4` is revision for the new control plane. The `IN USE` column indicates which revision is currently serving traffic or being used by any resource in the cluster.
 - Confirm there are two control plane pods running, one for each revision.
@@ -237,7 +239,7 @@ You should see only the new `IstioRevision` resource.
 NAME              TYPE    READY   STATUS    IN USE   VERSION   AGE
 default-v1-24-3   Local   True    Healthy   True     v1.24.3   2m
 ```
-The old `IstioRevision` resource and the old control plane will be deleted when the grace period specified in the `Istio` resource field `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds` expires, the default value is 30 seconds.
+The old `IstioRevision` resource `default-v1-24-2` and the old control plane will be deleted when the grace period specified in the `Istio` resource field `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds` expires, the default value is 30 seconds. Take into account that is a good practice to increase the grace period to a value that allows you to test the new control plane before deleting the old one. The default value is 30 seconds, but you can set it to a higher value to allow more time for testing during the canary upgrade process.
 
 ##### Updating the Istio control plane with the RevisionBased strategy and IstioRevisionTag
 When updating `Istio` using the `RevisionBased` strategy, you can create an `IstioRevisionTag` resource to tag a specific `IstioRevision` resource. The `IstioRevisionTag` resource allows you to attach workloads to a specific `IstioRevision` resource without changing the `istio.io/rev` label on the namespace or the pods. The `IstioRevisionTag` resource is useful when you want to perform a canary upgrade or when you want to attach a specific workload to a specific control plane instance.
@@ -319,7 +321,7 @@ You should see only the new `IstioRevision` resource.
 NAME              TYPE    READY   STATUS    IN USE   VERSION   AGE
 default-v1-24-3   Local   True    Healthy   True     v1.24.3   5m31s
 ```
-The old `IstioRevision` resource and the old control plane will be deleted when the grace period specified in the `Istio` resource field `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds` expires, the default value is 30 seconds.
+The old `IstioRevision` resource `default-v1-24-2` and the old control plane will be deleted when the grace period specified in the `Istio` resource field `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds` expires, the default value is 30 seconds. Take into account that is a good practice to increase the grace period to a value that allows you to test the new control plane before deleting the old one. The default value is 30 seconds, but you can set it to a higher value to allow more time for testing during the canary upgrade process.
 
 ## Istio-CNI Update Process
 Updates to the `IstioCNI` resource are performed as `Inplace` updates. This means the `DaemonSet` is updated with the new version of the CNI plugin when the resource changes, automatically replacing the existing istio-cni-node pods. The `IstioCNI` resource configuration field relevant to the upgrade process is:
