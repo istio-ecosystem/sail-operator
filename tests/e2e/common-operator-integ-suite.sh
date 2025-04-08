@@ -49,6 +49,16 @@ parse_flags() {
   done
 }
 
+  if [ "${DESCRIBE}" == "true" ]; then
+    WD=$(dirname "$0")
+    while IFS= read -r -d '' file; do
+      if [[ $file == *"_test.go" ]]; then
+        go run github.com/onsi/ginkgo/v2/ginkgo outline -format indent "${file}"
+      fi
+    done < <(find "${WD}" -type f -name "*_test.go" -print0)
+    exit 0
+  fi
+
 initialize_variables() {
   VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"versions.yaml"}
   VERSIONS_YAML_DIR=${VERSIONS_YAML_DIR:-"pkg/istioversions"}

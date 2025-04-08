@@ -34,11 +34,7 @@ TEST_DIR="$ROOT_DIR/tests/documentation_tests"
 OUTPUT_DIR="$TEST_DIR"
 # Set the files to exclude from the copy
 EXCLUDE_FILES=(
-  "sailoperator.io.md", "guidelines.md"
-)
-# Set the files to include from the copy
-INCLUDE_FILES=(
-  "*.md"
+  "sailoperator.io.md" "guidelines.md"
 )
 
 # Create the output directory if it does not exist
@@ -105,9 +101,3 @@ done
 
 # Finish
 echo "All files copied and updated successfully."
-
-
-
-
-
-
