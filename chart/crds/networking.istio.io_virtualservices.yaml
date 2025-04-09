@@ -692,13 +692,6 @@ spec:
                             request.
                           format: int32
                           type: integer
-                        backoff:
-                          description: Specifies the minimum duration between retry
-                            attempts.
-                          type: string
-                          x-kubernetes-validations:
-                          - message: must be a valid duration greater than 1ms
-                            rule: duration(self) >= duration('1ms')
                         perTryTimeout:
                           description: Timeout per attempt for a given request, including
                             the initial call and any retries.
@@ -706,11 +699,6 @@ spec:
                           x-kubernetes-validations:
                           - message: must be a valid duration greater than 1ms
                             rule: duration(self) >= duration('1ms')
-                        retryIgnorePreviousHosts:
-                          description: Flag to specify whether the retries should
-                            ignore previously tried hosts during retry.
-                          nullable: true
-                          type: boolean
                         retryOn:
                           description: Specifies the conditions under which retry
                             takes place.
@@ -1744,13 +1732,6 @@ spec:
                             request.
                           format: int32
                           type: integer
-                        backoff:
-                          description: Specifies the minimum duration between retry
-                            attempts.
-                          type: string
-                          x-kubernetes-validations:
-                          - message: must be a valid duration greater than 1ms
-                            rule: duration(self) >= duration('1ms')
                         perTryTimeout:
                           description: Timeout per attempt for a given request, including
                             the initial call and any retries.
@@ -1758,11 +1739,6 @@ spec:
                           x-kubernetes-validations:
                           - message: must be a valid duration greater than 1ms
                             rule: duration(self) >= duration('1ms')
-                        retryIgnorePreviousHosts:
-                          description: Flag to specify whether the retries should
-                            ignore previously tried hosts during retry.
-                          nullable: true
-                          type: boolean
                         retryOn:
                           description: Specifies the conditions under which retry
                             takes place.
@@ -2796,13 +2772,6 @@ spec:
                             request.
                           format: int32
                           type: integer
-                        backoff:
-                          description: Specifies the minimum duration between retry
-                            attempts.
-                          type: string
-                          x-kubernetes-validations:
-                          - message: must be a valid duration greater than 1ms
-                            rule: duration(self) >= duration('1ms')
                         perTryTimeout:
                           description: Timeout per attempt for a given request, including
                             the initial call and any retries.
@@ -2810,11 +2779,6 @@ spec:
                           x-kubernetes-validations:
                           - message: must be a valid duration greater than 1ms
                             rule: duration(self) >= duration('1ms')
-                        retryIgnorePreviousHosts:
-                          description: Flag to specify whether the retries should
-                            ignore previously tried hosts during retry.
-                          nullable: true
-                          type: boolean
                         retryOn:
                           description: Specifies the conditions under which retry
                             takes place.
