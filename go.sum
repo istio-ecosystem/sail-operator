@@ -502,8 +502,6 @@ gopkg.in/evanphx/json-patch.v4 v4.12.0 h1:n6jtcsulIzXPJaxegRbvFNNrZDjbij7ny3gmSP
 gopkg.in/evanphx/json-patch.v4 v4.12.0/go.mod h1:p8EYWUEYMpynmqDbY58zCKCFZw8pRWMG4EsWvDvM72M=
 gopkg.in/inf.v0 v0.9.1 h1:73M5CoZyi3ZLMOyDlQh031Cx6N9NDJ2Vvfl76EDAgDc=
 gopkg.in/inf.v0 v0.9.1/go.mod h1:cWUDdTG/fYaXco+Dcufb5Vnc6Gp2YChqWtbxRZE0mXw=
-gopkg.in/natefinch/lumberjack.v2 v2.2.1 h1:bBRl1b0OH9s/DuPhuXpNl+VtCaJXFZ5/uEFST95x9zc=
-gopkg.in/natefinch/lumberjack.v2 v2.2.1/go.mod h1:YD8tP3GAjkrDg1eZH7EGmyESg/lsYskCTPBJVb9jqSc=
 gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 h1:uRGJdciOHaEIrze2W8Q3AKkepLTh2hOroT7a+7czfdQ=
 gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7/go.mod h1:dt/ZhP58zS4L8KSrWDmTeBkI65Dw0HsyUHuEVlX15mw=
 gopkg.in/yaml.v2 v2.2.1/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
@@ -520,8 +518,8 @@ istio.io/api v1.25.1-0.20250321204246-eb3f2673759c h1:noezmv3FpPUjO4SFBjy/dDkW51
 istio.io/api v1.25.1-0.20250321204246-eb3f2673759c/go.mod h1:QFzEXv/IT582T0FHZVp1QoolvE4ws0zz/vVO55blmlE=
 istio.io/client-go v1.25.1 h1:1Asibz5v2NBA6w4Sqa85NS7TkpEolZcPKAT5oUAXWi8=
 istio.io/client-go v1.25.1/go.mod h1:Vap9OyHJMvvDegYoZczcNybS4wbPaTk+4bZcWMb8+vE=
-istio.io/istio v0.0.0-20250404193849-9dba3490d112 h1:6xc33qxUEsDukJlJpkDJlszcy7rjzY4y4dG0p0fYZnM=
-istio.io/istio v0.0.0-20250404193849-9dba3490d112/go.mod h1:UynQE/QCDfQzF/WcM/SIEcSpS6kQ/ZbUhLs2vEBWbRU=
+istio.io/istio v0.0.0-20250322053744-be4b14ad8be8 h1:3NbrWkFI5HhzJecthmuQq3mu63qRxWnh9acmzjRWbsQ=
+istio.io/istio v0.0.0-20250322053744-be4b14ad8be8/go.mod h1:fhW2tVw4rkLzAlbh3TkLWmQYuIRPnExSjYVCH2eyZV4=
 k8s.io/api v0.32.3 h1:Hw7KqxRusq+6QSplE3NYG4MBxZw1BZnq4aP4cJVINls=
 k8s.io/api v0.32.3/go.mod h1:2wEDTXADtm/HA7CCMD8D8bK4yuBUptzaRhYcYEEYA3k=
 k8s.io/apiextensions-apiserver v0.32.3 h1:4D8vy+9GWerlErCwVIbcQjsWunF9SUGNu7O7hiQTyPY=
