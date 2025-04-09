@@ -3117,7 +3117,6 @@ _Appears in:_
 | `meshConfig` _[MeshConfig](#meshconfig)_ | Defines runtime configuration of components, including Istiod and istio-agent behavior. See https://istio.io/docs/reference/config/istio.mesh.v1alpha1/ for all available options. TODO can this import the real mesh config API? |  |  |
 | `base` _[BaseConfig](#baseconfig)_ | Configuration for the base component. |  |  |
 | `istiodRemote` _[IstiodRemoteConfig](#istiodremoteconfig)_ | Configuration for istiod-remote. DEPRECATED - istiod-remote chart is removed and replaced with `istio-discovery --set values.istiodRemote.enabled=true`  Deprecated: Marked as deprecated in pkg/apis/values_types.proto. |  |  |
-| `defaultRevision` _string_ | The name of the default revision in the cluster. |  |  |
 | `profile` _string_ | Specifies which installation configuration profile to apply. |  |  |
 | `compatibilityVersion` _string_ | Specifies the compatibility version to use. When this is set, the control plane will be configured with the same defaults as the specified version. |  |  |
 | `experimental` _[RawMessage](#rawmessage)_ | Specifies experimental helm fields that could be removed or changed in the future |  | Schemaless: \{\}   |
