@@ -141,6 +141,9 @@ inputFiles:
       Values.Experimental:
       - "// +kubebuilder:pruning:PreserveUnknownFields"
       - "// +kubebuilder:validation:Schemaless"
+      Values.DefaultRevision:
+      - "// +hidefromdoc"
+      - "// Deprecated: This field is ignored. The default revision is expected to be configurable elsewhere."
 
 - module: istio.io/api
   path: /mesh/v1alpha1/config.pb.go

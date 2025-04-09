@@ -176,7 +176,9 @@ spec:
                       be configured with the same defaults as the specified version.
                     type: string
                   defaultRevision:
-                    description: The name of the default revision in the cluster.
+                    description: |-
+                      The name of the default revision in the cluster.
+                      Deprecated: This field is ignored. The default revision is expected to be configurable elsewhere.
                     type: string
                   experimental:
                     description: Specifies experimental helm fields that could be
