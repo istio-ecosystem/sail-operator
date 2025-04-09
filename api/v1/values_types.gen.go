@@ -936,6 +936,8 @@ type Values struct {
 	IstiodRemote *IstiodRemoteConfig `json:"istiodRemote,omitempty"`
 
 	// The name of the default revision in the cluster.
+	// +hidefromdoc
+	// Deprecated: This field is ignored. The default revision is expected to be configurable elsewhere.
 	DefaultRevision *string `json:"defaultRevision,omitempty"`
 	// Specifies which installation configuration profile to apply.
 	Profile *string `json:"profile,omitempty"`
