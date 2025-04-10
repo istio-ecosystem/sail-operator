@@ -35,12 +35,13 @@ var (
 	clPrimary                     client.Client
 	clRemote                      client.Client
 	err                           error
-	ocp                           = env.GetBool("OCP", false)
 	namespace                     = env.Get("NAMESPACE", "sail-operator")
 	deploymentName                = env.Get("DEPLOYMENT_NAME", "sail-operator")
 	controlPlaneNamespace         = env.Get("CONTROL_PLANE_NS", "istio-system")
 	externalControlPlaneNamespace = env.Get("EXTERNAL_CONTROL_PLANE_NS", "external-istiod")
 	istioName                     = env.Get("ISTIO_NAME", "default")
+	istioCniNamespace             = env.Get("ISTIOCNI_NAMESPACE", "istio-cni")
+	istioCniName                  = env.Get("ISTIOCNI_NAME", "default")
 	image                         = env.Get("IMAGE", "quay.io/maistra-dev/sail-operator:latest")
 	skipDeploy                    = env.GetBool("SKIP_DEPLOY", false)
 	multicluster                  = env.GetBool("MULTICLUSTER", false)
@@ -63,10 +64,8 @@ func TestMultiCluster(t *testing.T) {
 	if !multicluster {
 		t.Skip("Skipping test. Only valid for multicluster")
 	}
-	if ocp {
-		t.Skip("Skipping test. Not valid for OCP")
-		// TODO: Implement the steps to run the test on OCP
-		// https://github.com/istio-ecosystem/sail-operator/issues/365
+	if kubeconfig == "" && kubeconfig2 == "" {
+		t.Skip("Skipping test. Two clusters required for multicluster test")
 	}
 	RegisterFailHandler(Fail)
 	setup(t)
