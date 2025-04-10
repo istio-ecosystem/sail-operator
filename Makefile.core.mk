@@ -67,8 +67,8 @@ endif
 
 # Image hub to use
 HUB ?= quay.io/sail-dev
-# Image tag to use
-TAG ?= ${MINOR_VERSION}-latest
+# Image tag to use. On release branches this should be the VERSION.
+TAG ?= ${VERSION}
 # Image base to use
 IMAGE_BASE ?= sail-operator
 # Image URL to use all building/pushing image targets
