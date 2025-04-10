@@ -276,8 +276,15 @@ spec:
                           each container.
                         type: boolean
                       logLevel:
+                        default: info
                         description: 'Configuration log level of ztunnel binary, default
                           is info. Valid values are: trace, debug, info, warn, error.'
+                        enum:
+                        - trace
+                        - debug
+                        - info
+                        - warn
+                        - error
                         type: string
                       meshConfig:
                         description: |-
@@ -3626,6 +3633,11 @@ spec:
                           type: string
                         description: Additional labels to apply on the pod level.
                         type: object
+                      resourceName:
+                        description: |-
+                          resourceName, if set, will override the naming of resources. If not set, will default to the release name.
+                          It is recommended to not set this; this is primarily for backwards compatibility.
+                        type: string
                       resources:
                         description: The k8s resource requests and limits for the
                           ztunnel Pods.
@@ -3694,6 +3706,15 @@ spec:
                         description: The container image tag to pull. Image will be
                           `Hub/Image:Tag-Variant`.
                         type: string
+                      terminationGracePeriodSeconds:
+                        default: 30
+                        description: |-
+                          This value defines:
+                          1. how many seconds kube waits for ztunnel pod to gracefully exit before forcibly terminating it (this value)
+                          2. how many seconds ztunnel waits to drain its own connections (this value - 1 sec)
+                        format: int64
+                        minimum: 0
+                        type: integer
                       variant:
                         description: The container image variant to pull. Options
                           are "debug" or "distroless". Unset will use the default
