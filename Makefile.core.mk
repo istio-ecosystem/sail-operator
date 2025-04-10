@@ -180,7 +180,13 @@ test.e2e.ocp: ## Run the end-to-end tests against an existing OCP cluster.
 	GINKGO_FLAGS="$(GINKGO_FLAGS)" ${SOURCE_DIR}/tests/e2e/integ-suite-ocp.sh
 
 .PHONY: test.e2e.kind
-test.e2e.kind: istioctl ## Deploy a KinD cluster and run the end-to-end tests against it.
+
+# Set ARTIFACTS only when not defined. We have to use `!=` or a new directory is created for each target.
+ifndef ARTIFACTS
+test.e2e.kind: export ARTIFACTS != mktemp -d
+endif
+test.e2e.kind: export KIND_CLUSTER_NAME ?= operator-integration-tests
+test.e2e.kind: cluster istioctl ## Deploy a KinD cluster and run the end-to-end tests against it.
 	GINKGO_FLAGS="$(GINKGO_FLAGS)" ISTIOCTL="$(ISTIOCTL)" ${SOURCE_DIR}/tests/e2e/integ-suite-kind.sh
 
 .PHONY: test.e2e.describe
@@ -308,6 +314,10 @@ create-gh-release: helm-package ## Create a GitHub release and upload the helm c
 		--title "Sail Operator $(VERSION)" \
 		--generate-notes \
 		$(GH_RELEASE_ADDITIONAL_FLAGS)
+
+.PHONY: cluster
+cluster: ## Creates KinD cluster(s) to use in local deployments.
+	${SOURCE_DIR}/scripts/cluster.sh
 
 .PHONY: deploy
 deploy: verify-kubeconfig helm ## Deploy controller to an existing cluster.
