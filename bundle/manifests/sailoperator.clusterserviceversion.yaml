@@ -33,8 +33,8 @@ metadata:
       ]
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
-    containerImage: quay.io/sail-dev/sail-operator:1.25.0
-    createdAt: "2025-04-10T14:34:12Z"
+    containerImage: quay.io/sail-dev/sail-operator:1.25.1
+    createdAt: "2025-04-11T10:44:26Z"
     description: Experimental operator for installing Istio service mesh
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -46,6 +46,7 @@ metadata:
     features.operators.openshift.io/token-auth-aws: "false"
     features.operators.openshift.io/token-auth-azure: "false"
     features.operators.openshift.io/token-auth-gcp: "false"
+    olm.skipRange: '>=1.0.0 <1.25.1'
     operators.operatorframework.io/builder: operator-sdk-v1.39.2
     operators.operatorframework.io/internal-objects: '["wasmplugins.extensions.istio.io","destinationrules.networking.istio.io","envoyfilters.networking.istio.io","gateways.networking.istio.io","proxyconfigs.networking.istio.io","serviceentries.networking.istio.io","sidecars.networking.istio.io","virtualservices.networking.istio.io","workloadentries.networking.istio.io","workloadgroups.networking.istio.io","authorizationpolicies.security.istio.io","peerauthentications.security.istio.io","requestauthentications.security.istio.io","telemetries.telemetry.istio.io"]'
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
@@ -56,7 +57,7 @@ metadata:
     operatorframework.io/arch.arm64: supported
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
-  name: sailoperator.v1.25.0
+  name: sailoperator.v1.25.1
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -776,7 +777,7 @@ spec:
                 - --zap-log-level=info
                 command:
                 - /sail-operator
-                image: quay.io/sail-dev/sail-operator:1.25.0
+                image: quay.io/sail-dev/sail-operator:1.25.1
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -996,4 +997,5 @@ spec:
     name: v1_25_1.proxy
   - image: gcr.io/istio-release/ztunnel:1.25.1
     name: v1_25_1.ztunnel
-  version: 1.25.0
+  replaces: sailoperator.v1.25.0
+  version: 1.25.1
