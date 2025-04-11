@@ -150,23 +150,31 @@ subjects:
 			Expect(k.CreateNamespace(curlNamespace)).To(Succeed(), "Namespace failed to be created")
 
 			By("creating the curl-metrics pod to access the metrics endpoint")
-			cmd = exec.Command("kubectl", "run", "curl-metrics", "--restart=Never",
-				"--namespace", curlNamespace,
-				"--image=quay.io/curl/curl:8.11.1",
-				"--", "/bin/sh", "-c", fmt.Sprintf(
-					"curl -v -k -H 'Authorization: Bearer %s' https://%s.%s.svc.cluster.local:8443/metrics",
-					token, metricsServiceName, namespace))
-			err = cmd.Run()
+			err = k.CreateFromString(fmt.Sprintf(`
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: curl-metrics
+  namespace: %s
+spec:
+  template:
+    spec:
+      containers:
+      - name: curl-metrics
+        image: quay.io/curl/curl:8.11.1
+        command: ['curl', '-v', '-k', '-H', 'Authorization: Bearer %s', 'https://%s.%s.svc.cluster.local:8443/metrics']
+      restartPolicy: Never
+`, curlNamespace, token, metricsServiceName, namespace))
 			Expect(err).NotTo(HaveOccurred(), "Failed to create curl-metrics pod")
 
 			By("waiting for the curl-metrics pod to complete.")
 			verifyCurlUp := func(g Gomega) {
-				cmd := exec.Command("kubectl", "get", "pods", "curl-metrics",
-					"-o", "jsonpath={.status.phase}",
+				cmd := exec.Command("kubectl", "get", "jobs", "curl-metrics",
+					"-o", "jsonpath={.status.succeeded}",
 					"-n", curlNamespace)
 				output, err := cmd.Output()
 				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(string(output)).To(Equal("Succeeded"), "curl pod in wrong status")
+				g.Expect(string(output)).To(Equal("1"), "curl pod in wrong status")
 			}
 			Eventually(verifyCurlUp, 5*time.Minute).Should(Succeed())
 
@@ -260,7 +268,7 @@ func serviceAccountToken() (string, error) {
 // getMetricsOutput retrieves and returns the logs from the curl pod used to access the metrics endpoint.
 func getMetricsOutput() string {
 	By("getting the curl-metrics logs")
-	metricsOutput, err := k.WithNamespace(curlNamespace).Logs("curl-metrics", nil)
+	metricsOutput, err := k.WithNamespace(curlNamespace).Logs("jobs/curl-metrics", nil)
 	Expect(err).NotTo(HaveOccurred(), "Failed to retrieve logs from curl pod")
 	Expect(metricsOutput).To(ContainSubstring("< HTTP/1.1 200 OK"))
 	return metricsOutput
