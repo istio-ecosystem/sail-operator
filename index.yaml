@@ -2,6 +2,16 @@ apiVersion: v1
 entries:
   sail-operator:
   - apiVersion: v2
+    appVersion: 1.25.1
+    created: "2025-04-11T15:04:49.823440722Z"
+    description: A Helm chart for Kubernetes
+    digest: 5df148aea4c0dbbb342079b7f275875792e6e85351824efc5abda2ea7b0e9df6
+    name: sail-operator
+    type: application
+    urls:
+    - https://github.com/istio-ecosystem/sail-operator/releases/download/1.25.1/sail-operator-1.25.1.tgz
+    version: 1.25.1
+  - apiVersion: v2
     appVersion: 1.0.0
     created: "2025-03-12T12:12:46.637180756Z"
     description: A Helm chart for Kubernetes
@@ -31,4 +41,4 @@ entries:
     urls:
     - https://github.com/istio-ecosystem/sail-operator/releases/download/0.1.0/sail-operator-0.1.0.tgz
     version: 0.1.0
-generated: "2025-03-12T12:12:46.627339834Z"
+generated: "2025-04-11T15:04:49.81492273Z"
