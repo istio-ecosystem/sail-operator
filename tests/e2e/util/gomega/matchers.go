@@ -38,7 +38,7 @@ func HaveCondition[T ~string](conditionType T, conditionStatus metav1.ConditionS
 }
 
 // Match checks if the actual object has the specified condition and status.
-func (matcher *HaveConditionMatcher) Match(actual interface{}) (success bool, err error) {
+func (matcher *HaveConditionMatcher) Match(actual any) (success bool, err error) {
 	matcher.lastSeenConditions = []string{}
 
 	val := reflect.ValueOf(actual)
@@ -90,12 +90,12 @@ func (matcher *HaveConditionMatcher) Match(actual interface{}) (success bool, er
 }
 
 // FailureMessage is the message returned on matcher failure.
-func (matcher *HaveConditionMatcher) FailureMessage(actual interface{}) (message string) {
+func (matcher *HaveConditionMatcher) FailureMessage(_ any) (message string) {
 	return fmt.Sprintf("Expected object to have condition %s with status %s but last seen conditions were: %v",
 		matcher.conditionType, matcher.conditionStatus, matcher.lastSeenConditions)
 }
 
 // NegatedFailureMessage is the message returned on negated matcher failure.
-func (matcher *HaveConditionMatcher) NegatedFailureMessage(actual interface{}) (message string) {
+func (matcher *HaveConditionMatcher) NegatedFailureMessage(_ any) (message string) {
 	return fmt.Sprintf("Expected object not to have condition %s with status %s", matcher.conditionType, matcher.conditionStatus)
 }

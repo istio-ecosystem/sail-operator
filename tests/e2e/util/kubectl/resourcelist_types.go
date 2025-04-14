@@ -15,10 +15,10 @@
 package kubectl
 
 type ResourceList struct {
-	APIVersion string        `json:"apiVersion"`
-	Items      []interface{} `json:"items"`
-	Kind       string        `json:"kind"`
-	Metadata   Metadata      `json:"metadata"`
+	APIVersion string   `json:"apiVersion"`
+	Items      []any    `json:"items"`
+	Kind       string   `json:"kind"`
+	Metadata   Metadata `json:"metadata"`
 }
 
 type Metadata struct {
