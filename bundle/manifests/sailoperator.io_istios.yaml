@@ -9702,7 +9702,12 @@ spec:
               state:
                 description: Reports the current state of the object.
                 type: string
+            required:
+            - revisions
             type: object
+        required:
+        - metadata
+        - spec
         type: object
     served: true
     storage: true
