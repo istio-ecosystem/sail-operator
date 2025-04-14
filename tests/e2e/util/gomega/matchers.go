@@ -60,7 +60,7 @@ func (matcher *HaveConditionMatcher) Match(actual any) (success bool, err error)
 		return false, fmt.Errorf("'Conditions' is not a slice")
 	}
 
-	for i := 0; i < conditions.Len(); i++ {
+	for i := range conditions.Len() {
 		condition := conditions.Index(i).Interface()
 
 		// Assuming the condition is of a type that has Type and Status fields

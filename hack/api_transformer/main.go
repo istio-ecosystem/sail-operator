@@ -740,7 +740,7 @@ func removeQuotes(s string) string {
 func underscoreToCamelCase(input string) string {
 	words := strings.Split(input, "_")
 	caser := cases.Title(language.English)
-	for i := 0; i < len(words); i++ {
+	for i := range len(words) {
 		words[i] = caser.String(strings.ToLower(words[i]))
 	}
 	return strings.Join(words, "")
