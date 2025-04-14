@@ -207,10 +207,12 @@ const (
 // +kubebuilder:validation:XValidation:rule="self.metadata.name == 'default' ? (!has(self.spec.values.revision) || size(self.spec.values.revision) == 0) : self.spec.values.revision == self.metadata.name",message="spec.values.revision must match metadata.name"
 type IstioRevision struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.ObjectMeta `json:"metadata"`
 
-	Spec   IstioRevisionSpec   `json:"spec,omitempty"`
-	Status IstioRevisionStatus `json:"status,omitempty"`
+	Spec IstioRevisionSpec `json:"spec"`
+
+	// +optional
+	Status IstioRevisionStatus `json:"status"`
 }
 
 // +kubebuilder:object:root=true
@@ -218,7 +220,7 @@ type IstioRevision struct {
 // IstioRevisionList contains a list of IstioRevision
 type IstioRevisionList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
+	metav1.ListMeta `json:"metadata"`
 	Items           []IstioRevision `json:"items"`
 }
 
