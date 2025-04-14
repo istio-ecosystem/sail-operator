@@ -129,7 +129,8 @@ type ZTunnelCondition struct {
 	Message string `json:"message,omitempty"`
 
 	// Last time the condition transitioned from one status to another.
-	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
+	// +optional
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitzero"`
 }
 
 // ZTunnelConditionType represents the type of the condition.  Condition stages are:
