@@ -207,9 +207,11 @@ const (
 // IstioRevision object(s).
 // +kubebuilder:validation:XValidation:rule="self.metadata.name == 'default' ? (!has(self.spec.values.revision) || size(self.spec.values.revision) == 0) : self.spec.values.revision == self.metadata.name",message="spec.values.revision must match metadata.name"
 type IstioRevision struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ObjectMeta `json:"metadata"`
 
+	// +optional
 	Spec IstioRevisionSpec `json:"spec"`
 
 	// +optional
