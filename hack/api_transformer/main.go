@@ -20,6 +20,7 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -164,12 +165,10 @@ func mergeStringArrays(arrays ...[]string) []string {
 	return result
 }
 
-func mergeStringMaps(maps ...map[string]string) map[string]string {
+func mergeStringMaps(mapsToMerge ...map[string]string) map[string]string {
 	result := make(map[string]string)
-	for _, m := range maps {
-		for k, v := range m {
-			result[k] = v
-		}
+	for _, m := range mapsToMerge {
+		maps.Copy(result, m)
 	}
 	return result
 }
