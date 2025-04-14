@@ -748,12 +748,8 @@ func underscoreToCamelCase(input string) string {
 }
 
 func (t *FileTransformer) shouldRemoveImport(importSpec *ast.ImportSpec) bool {
-	for _, path := range t.Transformations.RemoveImports {
-		if removeQuotes(importSpec.Path.Value) == path {
-			return true
-		}
-	}
-	return false
+	importPath := removeQuotes(importSpec.Path.Value)
+	return slices.Contains(t.Transformations.RemoveImports, importPath)
 }
 
 func removeLeadingEmptyLinesFromStructs(str string) string {
@@ -947,31 +943,13 @@ func (t *FileTransformer) filterDeclarations(file *ast.File) {
 }
 
 func (t *FileTransformer) shouldRemoveVar(varName string) bool {
-	if protobufRelatedVarNameRegex.MatchString(varName) {
-		return true
-	}
-	for _, name := range t.Transformations.RemoveVars {
-		if varName == name {
-			return true
-		}
-	}
-	return false
+	return protobufRelatedVarNameRegex.MatchString(varName) || slices.Contains(t.Transformations.RemoveVars, varName)
 }
 
 func (t *FileTransformer) shouldRemoveType(name string) bool {
-	shouldRemove := false
-	for _, v := range t.Transformations.RemoveTypes {
-		if v == "*" || v == name {
-			shouldRemove = true
-			break
-		}
-	}
-	for _, v := range t.Transformations.PreserveTypes {
-		if v == name {
-			return false
-		}
-	}
-	return shouldRemove
+	shouldRemove := slices.Contains(t.Transformations.RemoveTypes, name) || slices.Contains(t.Transformations.RemoveTypes, "*")
+	mustPreserve := slices.Contains(t.Transformations.PreserveTypes, name)
+	return shouldRemove && !mustPreserve
 }
 
 func (t *FileTransformer) renameImports(file *ast.File) {

@@ -17,6 +17,7 @@ package kube
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -30,12 +31,7 @@ import (
 const conflictRequeueDelay = 2 * time.Second
 
 func HasFinalizer(obj client.Object, finalizer string) bool {
-	for _, f := range obj.GetFinalizers() {
-		if f == finalizer {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(obj.GetFinalizers(), finalizer)
 }
 
 func RemoveFinalizer(ctx context.Context, cl client.Client, obj client.Object, finalizer string) (ctrl.Result, error) {
