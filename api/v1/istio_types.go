@@ -119,7 +119,7 @@ type IstioStatus struct {
 	ActiveRevisionName string `json:"activeRevisionName,omitempty"`
 
 	// Reports information about the underlying IstioRevisions.
-	Revisions RevisionSummary `json:"revisions,omitempty"`
+	Revisions RevisionSummary `json:"revisions"`
 }
 
 // RevisionSummary contains information on the number of IstioRevisions associated with this Istio.
@@ -277,12 +277,13 @@ const (
 // Deployment object in Kubernetes creates ReplicaSets that create the Pods.
 type Istio struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.ObjectMeta `json:"metadata"`
 
 	// +kubebuilder:default={version: "v1.25.2", namespace: "istio-system", updateStrategy: {type:"InPlace"}}
-	Spec IstioSpec `json:"spec,omitempty"`
+	Spec IstioSpec `json:"spec"`
 
-	Status IstioStatus `json:"status,omitempty"`
+	// +optional
+	Status IstioStatus `json:"status"`
 }
 
 // +kubebuilder:object:root=true
@@ -290,7 +291,7 @@ type Istio struct {
 // IstioList contains a list of Istio
 type IstioList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
+	metav1.ListMeta `json:"metadata"`
 	Items           []Istio `json:"items"`
 }
 

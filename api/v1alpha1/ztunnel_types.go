@@ -178,12 +178,13 @@ const (
 // ZTunnel represents a deployment of the Istio ztunnel component.
 type ZTunnel struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.ObjectMeta `json:"metadata"`
 
 	// +kubebuilder:default={version: "v1.25.2", namespace: "ztunnel", profile: "ambient"}
-	Spec ZTunnelSpec `json:"spec,omitempty"`
+	Spec ZTunnelSpec `json:"spec"`
 
-	Status ZTunnelStatus `json:"status,omitempty"`
+	// +optional
+	Status ZTunnelStatus `json:"status"`
 }
 
 // +kubebuilder:object:root=true
@@ -191,7 +192,7 @@ type ZTunnel struct {
 // ZTunnelList contains a list of ZTunnel
 type ZTunnelList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
+	metav1.ListMeta `json:"metadata"`
 	Items           []ZTunnel `json:"items"`
 }
 

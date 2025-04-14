@@ -177,12 +177,13 @@ const (
 // IstioCNI represents a deployment of the Istio CNI component.
 type IstioCNI struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.ObjectMeta `json:"metadata"`
 
 	// +kubebuilder:default={version: "v1.25.2", namespace: "istio-cni"}
-	Spec IstioCNISpec `json:"spec,omitempty"`
+	Spec IstioCNISpec `json:"spec"`
 
-	Status IstioCNIStatus `json:"status,omitempty"`
+	// +optional
+	Status IstioCNIStatus `json:"status"`
 }
 
 // +kubebuilder:object:root=true
@@ -190,7 +191,7 @@ type IstioCNI struct {
 // IstioCNIList contains a list of IstioCNI
 type IstioCNIList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
+	metav1.ListMeta `json:"metadata"`
 	Items           []IstioCNI `json:"items"`
 }
 
