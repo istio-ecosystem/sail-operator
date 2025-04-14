@@ -24,7 +24,7 @@ import (
 
 func TestHelmPostRenderer(t *testing.T) {
 	postRenderer := HelmPostRenderer{
-		ownerReference: metav1.OwnerReference{
+		ownerReference: &metav1.OwnerReference{
 			APIVersion: "sailoperator.io/v1",
 			Kind:       "Istio",
 			Name:       "my-istio",
