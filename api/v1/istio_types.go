@@ -119,6 +119,7 @@ type IstioStatus struct {
 	ActiveRevisionName string `json:"activeRevisionName,omitempty"`
 
 	// Reports information about the underlying IstioRevisions.
+	// +optional
 	Revisions RevisionSummary `json:"revisions"`
 }
 
