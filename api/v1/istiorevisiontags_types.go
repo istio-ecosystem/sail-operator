@@ -184,9 +184,11 @@ const (
 
 // IstioRevisionTag references an Istio or IstioRevision object and serves as an alias for sidecar injection. It can be used to manage stable revision tags without having to use istioctl or helm directly. See https://istio.io/latest/docs/setup/upgrade/canary/#stable-revision-labels for more information on the concept.
 type IstioRevisionTag struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ObjectMeta `json:"metadata"`
 
+	// +optional
 	Spec IstioRevisionTagSpec `json:"spec"`
 
 	// +optional

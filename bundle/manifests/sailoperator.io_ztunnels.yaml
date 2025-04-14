@@ -5639,9 +5639,6 @@ spec:
                 description: Reports the current state of the object.
                 type: string
             type: object
-        required:
-        - metadata
-        - spec
         type: object
         x-kubernetes-validations:
         - message: metadata.name must be 'default'

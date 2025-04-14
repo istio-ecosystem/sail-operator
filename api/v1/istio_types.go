@@ -277,10 +277,12 @@ const (
 // objects for istiod and other control plane components, similar to how a
 // Deployment object in Kubernetes creates ReplicaSets that create the Pods.
 type Istio struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ObjectMeta `json:"metadata"`
 
 	// +kubebuilder:default={version: "v1.25.2", namespace: "istio-system", updateStrategy: {type:"InPlace"}}
+	// +optional
 	Spec IstioSpec `json:"spec"`
 
 	// +optional

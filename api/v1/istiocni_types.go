@@ -177,10 +177,12 @@ const (
 
 // IstioCNI represents a deployment of the Istio CNI component.
 type IstioCNI struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ObjectMeta `json:"metadata"`
 
 	// +kubebuilder:default={version: "v1.25.2", namespace: "istio-cni"}
+	// +optional
 	Spec IstioCNISpec `json:"spec"`
 
 	// +optional

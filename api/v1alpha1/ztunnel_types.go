@@ -178,10 +178,12 @@ const (
 
 // ZTunnel represents a deployment of the Istio ztunnel component.
 type ZTunnel struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ObjectMeta `json:"metadata"`
 
 	// +kubebuilder:default={version: "v1.25.2", namespace: "ztunnel", profile: "ambient"}
+	// +optional
 	Spec ZTunnelSpec `json:"spec"`
 
 	// +optional
