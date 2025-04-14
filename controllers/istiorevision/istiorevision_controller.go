@@ -166,7 +166,7 @@ func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevisio
 
 	values := helm.FromValues(rev.Spec.Values)
 	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev),
-		values, rev.Spec.Namespace, getReleaseName(rev), ownerReference)
+		values, rev.Spec.Namespace, getReleaseName(rev), &ownerReference)
 	if err != nil {
 		return fmt.Errorf("failed to install/update Helm chart %q: %w", constants.IstiodChartName, err)
 	}
