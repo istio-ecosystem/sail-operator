@@ -72,10 +72,16 @@ function setup_kind_registry() {
       continue
     fi
 
-    kind export kubeconfig --name="${cluster}"
+    if [ "${MULTICLUSTER}" == "true" ]; then
+        export KUBECONFIG="${KUBECONFIG_DIR}/${cluster}"
+    else
+        kind export kubeconfig --name="${cluster}"
+    fi
+
     for node in $(kind get nodes --name="${cluster}"); do
       kubectl annotate node "${node}" "kind.x-k8s.io/registry=localhost:${KIND_REGISTRY_PORT}" --overwrite;
     done
+    unset KUBECONFIG
   done
 }
 

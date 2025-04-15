@@ -23,10 +23,10 @@ import (
 )
 
 type StatusPatch struct {
-	status interface{}
+	status any
 }
 
-func NewStatusPatch(status interface{}) *StatusPatch {
+func NewStatusPatch(status any) *StatusPatch {
 	return &StatusPatch{
 		status: status,
 	}

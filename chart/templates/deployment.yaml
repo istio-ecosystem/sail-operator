@@ -83,6 +83,7 @@ spec:
           capabilities:
             drop:
             - ALL
+          readOnlyRootFilesystem: true
         volumeMounts:
         - mountPath: /etc/sail-operator
           name: operator-config
