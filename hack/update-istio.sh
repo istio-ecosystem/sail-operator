@@ -111,7 +111,7 @@ function update_stable() {
 }
 
 function update_prerelease() {
-    VERSION_CURRENT=$(yq '.versions[] | select(.name == "*.*-*") | .name' "${VERSIONS_YAML_PATH}")
+    VERSION_CURRENT=$(yq '.versions[] | select(.name == "*.*-*.*") | .name' "${VERSIONS_YAML_PATH}")
     COMMIT=$(yq '.versions[] | select(.name == '\""${VERSION_CURRENT}"\"') | "git ls-remote --heads " + .repo + ".git " + .branch + " | cut -f 1"' "${VERSIONS_YAML_PATH}" | sh)
     CURRENT=$(yq '.versions[] | select(.name == '\""${VERSION_CURRENT}"\"') | .commit' "${VERSIONS_YAML_PATH}")
 
@@ -146,7 +146,7 @@ function update_prerelease() {
             "https://storage.googleapis.com/istio-build/dev/'"${full_version}"'/helm/istiod-'"${full_version}"'.tgz",
             "https://storage.googleapis.com/istio-build/dev/'"${full_version}"'/helm/ztunnel-'"${full_version}"'.tgz"
         ] |
-        (.versions[] | select(.name == "'"${VERSION_CURRENT}"'") | .name) = "'"${VERSION}"'"' "${VERSIONS_YAML_PATH}"
+        (.versions[] | select(.name == "'"${VERSION_CURRENT}"'") | .name) = "'"v${VERSION}"'"' "${VERSIONS_YAML_PATH}"
     update_alias "master" "v${VERSION}"
 }
 
