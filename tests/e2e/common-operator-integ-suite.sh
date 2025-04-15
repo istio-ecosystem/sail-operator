@@ -118,7 +118,7 @@ initialize_variables() {
   COMMAND="kubectl"
   ARTIFACTS="${ARTIFACTS:-$(mktemp -d)}"
   KUBECONFIG="${KUBECONFIG:-"${ARTIFACTS}/config"}"
-  ISTIOCTL="${ISTIOCTL:-"istioctl"}"
+  ISTIOCTL_PATH="${ISTIOCTL:-"istioctl"}"
   LOCALBIN="${LOCALBIN:-${HOME}/bin}"
   OPERATOR_SDK=${LOCALBIN}/operator-sdk
   IP_FAMILY=${IP_FAMILY:-ipv4}
@@ -165,7 +165,13 @@ if [ "${SKIP_BUILD}" == "false" ]; then
       OLM_INSTALL_ARGS+="--version ${OLM_VERSION}"
     fi
 
-    ${OPERATOR_SDK} olm install "${OLM_INSTALL_ARGS}"
+    # Ensure kubeconfig is set to the kind cluster
+    kind export kubeconfig --name="${KIND_CLUSTER_NAME}"
+    # shellcheck disable=SC2086
+    ${OPERATOR_SDK} olm install ${OLM_INSTALL_ARGS}
+
+    # Wait for for the CatalogSource to be CatalogSource.status.connectionState.lastObservedState == READY
+    ${COMMAND} wait catalogsource operatorhubio-catalog -n olm --for 'jsonpath={.status.connectionState.lastObservedState}=READY' --timeout=5m
 
     ${COMMAND} create ns "${NAMESPACE}" || true
     ${OPERATOR_SDK} run bundle "${BUNDLE_IMG}" -n "${NAMESPACE}" --skip-tls --timeout 5m || exit 1
@@ -186,6 +192,7 @@ fi
 
 export SKIP_DEPLOY IP_FAMILY ISTIO_MANIFEST NAMESPACE CONTROL_PLANE_NS DEPLOYMENT_NAME MULTICLUSTER ARTIFACTS ISTIO_NAME COMMAND KUBECONFIG ISTIOCTL_PATH
 
+# shellcheck disable=SC2086
 IMAGE="${HUB}/${IMAGE_BASE}:${TAG}" \
 go run github.com/onsi/ginkgo/v2/ginkgo -tags e2e \
---timeout 60m --junit-report=report.xml "${GINKGO_FLAGS}" "${WD}"/...
+--timeout 60m --junit-report=report.xml ${GINKGO_FLAGS} "${WD}"/...
