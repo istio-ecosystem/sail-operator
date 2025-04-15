@@ -1,28 +1,27 @@
+version: "2"
 run:
   build-tags:
-  - integration
-  - e2e
+    - integration
+    - e2e
 linters:
   enable:
   - ginkgolinter
-linters-settings:
-  ginkgolinter:
-    force-expect-to: true
-issues:
-  exclude-rules:
-  - path: ^tests/integration/
-    text: "dot-imports: should not use dot imports"
-  - path: ^tests/integration/
-    text: "ST1001: should not use dot imports"
-  - path: ^tests/e2e/
-    text: "dot-imports: should not use dot imports"
-  - path: ^tests/e2e/
-    text: "ST1001: should not use dot imports"
-  - linters:
-    - revive
-    text: "struct-tag: unknown option 'inline' in JSON tag"
-
-  # Don't check *_types.go files for lines that are too long (the linter complains about +kubebuilder:printcolumn lines)
-  - path: _types.go$
-    linters:
-    - lll
+  settings:
+    ginkgolinter:
+      force-expect-to: true
+    revive:
+      rules:
+      - name: struct-tag
+        arguments:
+        - "json,inline"
+  exclusions:
+    rules:
+    - linters:
+      - revive
+      - staticcheck
+      path: tests/integration/|tests/e2e/
+      text: "should not use dot imports"
+    # Don't check *_types.go files for lines that are too long (the linter complains about +kubebuilder:printcolumn lines)
+    - path: _types.go$
+      linters:
+      - lll
