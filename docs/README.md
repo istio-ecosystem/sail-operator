@@ -1,4 +1,5 @@
 [Return to Project Root](../)
+*Note*: To add new topics to this documentation, please follow the guidelines in the [guidelines](../docs/guidelines/guidelines.md) doc.
 
 # Table of Contents
 
