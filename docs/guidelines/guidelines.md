@@ -149,7 +149,7 @@ kubectl wait --for=condition=available --timeout=600s deployment/sail-operator -
 ``` -->
 ```
 
-*Important:* please add always validation steps to avoid flakyness during the execution, this steps will ensure that resource conditions are met and the test will not fail because of a timeout or any other issue.
+*Important:* please add always validation steps to avoid flakyness during the execution, this steps will ensure that resource conditions are met and the test will not fail because of a timeout or any other issue. This validation needs to add failures to the test if the condition is not met.
 
 *Note:* if you want to check all the commands that inside a md file you can execute the following command:
 ```bash

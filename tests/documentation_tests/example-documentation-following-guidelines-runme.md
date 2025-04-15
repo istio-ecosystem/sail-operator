@@ -26,22 +26,6 @@ More information:
 - [Cell configuration keys](https://docs.runme.dev/configuration/cell-level#cell-configuration-keys)
 - [Running from cli](https://docs.runme.dev/getting-started/cli)
 
-### Installing the operator
-
-To install the operator, you can use the following commands:
-
-- Add the helm repo to your local helm client and install the operator version `1.0.0` in the `sail-operator` namespace:
-```bash { name=deploy-operator tag=example}
-helm repo add sail-operator https://istio-ecosystem.github.io/sail-operator
-helm repo update
-kubectl create namespace sail-operator
-helm install sail-operator sail-operator/sail-operator --version 1.0.0 -n sail-operator
-```
-
-```bash { name=validatio-wait-operator tag=example}
-kubectl wait --for=condition=available --timeout=600s deployment/sail-operator -n sail-operator
-```
-
 ### Setting a Istio resource
 
 The `Istio` resource is a custom resource that is used to configure Istio in your cluster. An example of an Istio resource is shown below:
@@ -56,7 +40,6 @@ spec:
   updateStrategy:
     type: RevisionBased
     inactiveRevisionDeletionGracePeriodSeconds: 30
-  version: v1.24.2
 ```
 - To create the Istio resource, you can use the following command:
 ```bash { name=create-istio tag=example}
@@ -69,15 +52,23 @@ metadata:
 spec:
   namespace: istio-system
   updateStrategy:
-    type: RevisionBased
+    type: InPlace
     inactiveRevisionDeletionGracePeriodSeconds: 30
-  version: v1.24.2
 EOF
 ```
 
-- Wait for the `istiod` pod to be ready:
-```bash { name=wait-istiod tag=example}
-for i in {1..5}; do kubectl wait --for=condition=available --timeout=30s deployment/istiod-default-v1-24-2 -n istio-system && break || sleep 5; done
+```bash { name=validation-print-istio-resource tag=example}
+kubectl get istio -o yaml
+kubectl get deployment sail-operator -n sail-operator -o yaml
+```
+
+```bash { name=validation-wait-istiod tag=example}
+for i in 1 2 3 4 5; do
+  pods=$(kubectl get pod -l app=istiod -n istio-system -o jsonpath='{.items[*].status.phase}')
+  echo "Waiting for istiod pod to be running... (current: $pods)"
+  echo "$pods" | grep -q Running && break
+  sleep 5
+done
 ```
 
 - To check the status of the Istio resource, you can use the following command:
@@ -99,6 +90,12 @@ for i in {1..5}; do kubectl wait --for=condition=available --timeout=600s deploy
 - Check the status of the sample application:
 ```bash { name=check-sample-app tag=example}
 kubectl get pods -n sample
+```
+```bash { name=check-sidecar.exist tag=example}
+if ! kubectl get pods -n sample -l app=productpage -o jsonpath='{range .items[*]}{@.metadata.name}{" "}{range .spec.containers[*]}{@.name}{" "}{end}{"\n"}{end}' | grep -q istio-proxy; then
+  echo "No Istio sidecar (istio-proxy) injected in productpage pod!"
+  exit 1
+fi
 ```
 
 - Check the proxy version of the sample application:

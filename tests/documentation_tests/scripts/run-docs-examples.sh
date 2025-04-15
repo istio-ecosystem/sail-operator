@@ -27,6 +27,16 @@ export IMAGE_BASE="sail-operator"
 export TAG="latest"
 export LOCAL_REGISTRY="localhost:5000"
 export OCP=false
+export KIND_REGISTRY_NAME="kind-registry"
+export KIND_REGISTRY_PORT="5000"
+export KIND_REGISTRY="localhost:${KIND_REGISTRY_PORT}"
+# Use the local registry instead of the default HUB
+export HUB="${KIND_REGISTRY}"
+# Workaround make inside make: ovewrite this variable so it is not recomputed in Makefile.core.mk
+export IMAGE="${HUB}/${IMAGE_BASE}:${TAG}"
+export ARTIFACTS="${ARTIFACTS:-$(mktemp -d)}"
+export KUBECONFIG="${KUBECONFIG:-"${ARTIFACTS}/config"}"
+export HELM_TEMPL_DEF_FLAGS="--include-crds --values chart/values.yaml"
 
 # Validate that istioctl is installed
 if ! command -v istioctl &> /dev/null; then
@@ -70,8 +80,19 @@ for tag in "${TAGS_LIST[@]}"; do
     # Source setup and build scripts to preserve trap and env
     source "${ROOT_DIR}/tests/e2e/setup/setup-kind.sh"
 
+    # Build and push the operator image from source
     source "${ROOT_DIR}/tests/e2e/setup/build-and-push-operator.sh"
     build_and_push_operator_image
+
+    # Ensure kubeconfig is set to the current cluster
+    # TODO: check why KUBECONFIG is not properly set
+    kind export kubeconfig --name="${KIND_CLUSTER_NAME}"
+
+    # Deploy operator
+    kubectl create ns sail-operator || echo "namespace sail-operator already exists"
+    # shellcheck disable=SC2086
+    helm template chart chart ${HELM_TEMPL_DEF_FLAGS} --set image="${IMAGE}" --namespace sail-operator | kubectl apply --server-side=true -f -
+    kubectl wait --for=condition=available --timeout=600s deployment/sail-operator -n sail-operator
 
     # Run the actual doc test
     FILE=$(echo "$tag" | cut -d' ' -f1)
