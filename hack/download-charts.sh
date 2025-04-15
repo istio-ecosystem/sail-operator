@@ -131,7 +131,7 @@ function convertIstioProfiles() {
 function createRevisionTagChart() {
   mkdir -p "${CHARTS_DIR}/revisiontags/templates"
   echo "apiVersion: v2
-appVersion: ${ISTIO_VERSION}
+appVersion: ${ISTIO_VERSION#v}
 description: Helm chart for istio revision tags
 name: revisiontags
 sources:
