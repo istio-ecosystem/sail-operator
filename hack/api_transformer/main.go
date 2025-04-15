@@ -20,6 +20,7 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -164,12 +165,10 @@ func mergeStringArrays(arrays ...[]string) []string {
 	return result
 }
 
-func mergeStringMaps(maps ...map[string]string) map[string]string {
+func mergeStringMaps(mapsToMerge ...map[string]string) map[string]string {
 	result := make(map[string]string)
-	for _, m := range maps {
-		for k, v := range m {
-			result[k] = v
-		}
+	for _, m := range mapsToMerge {
+		maps.Copy(result, m)
 	}
 	return result
 }
@@ -741,19 +740,15 @@ func removeQuotes(s string) string {
 func underscoreToCamelCase(input string) string {
 	words := strings.Split(input, "_")
 	caser := cases.Title(language.English)
-	for i := 0; i < len(words); i++ {
+	for i := range len(words) {
 		words[i] = caser.String(strings.ToLower(words[i]))
 	}
 	return strings.Join(words, "")
 }
 
 func (t *FileTransformer) shouldRemoveImport(importSpec *ast.ImportSpec) bool {
-	for _, path := range t.Transformations.RemoveImports {
-		if removeQuotes(importSpec.Path.Value) == path {
-			return true
-		}
-	}
-	return false
+	importPath := removeQuotes(importSpec.Path.Value)
+	return slices.Contains(t.Transformations.RemoveImports, importPath)
 }
 
 func removeLeadingEmptyLinesFromStructs(str string) string {
@@ -947,31 +942,13 @@ func (t *FileTransformer) filterDeclarations(file *ast.File) {
 }
 
 func (t *FileTransformer) shouldRemoveVar(varName string) bool {
-	if protobufRelatedVarNameRegex.MatchString(varName) {
-		return true
-	}
-	for _, name := range t.Transformations.RemoveVars {
-		if varName == name {
-			return true
-		}
-	}
-	return false
+	return protobufRelatedVarNameRegex.MatchString(varName) || slices.Contains(t.Transformations.RemoveVars, varName)
 }
 
 func (t *FileTransformer) shouldRemoveType(name string) bool {
-	shouldRemove := false
-	for _, v := range t.Transformations.RemoveTypes {
-		if v == "*" || v == name {
-			shouldRemove = true
-			break
-		}
-	}
-	for _, v := range t.Transformations.PreserveTypes {
-		if v == name {
-			return false
-		}
-	}
-	return shouldRemove
+	shouldRemove := slices.Contains(t.Transformations.RemoveTypes, name) || slices.Contains(t.Transformations.RemoveTypes, "*")
+	mustPreserve := slices.Contains(t.Transformations.PreserveTypes, name)
+	return shouldRemove && !mustPreserve
 }
 
 func (t *FileTransformer) renameImports(file *ast.File) {

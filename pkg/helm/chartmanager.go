@@ -47,7 +47,7 @@ func NewChartManager(cfg *rest.Config, driver string) *ChartManager {
 
 // newActionConfig Create a new Helm action config from in-cluster service account
 func (h *ChartManager) newActionConfig(ctx context.Context, namespace string) (*action.Configuration, error) {
-	logAdapter := func(format string, v ...interface{}) {
+	logAdapter := func(format string, v ...any) {
 		log := logf.FromContext(ctx)
 		logv2 := log.V(2)
 		if logv2.Enabled() {

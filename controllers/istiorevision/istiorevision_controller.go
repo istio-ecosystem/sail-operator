@@ -665,7 +665,7 @@ func clearIgnoredFields(obj client.Object) {
 	obj.SetGeneration(0)
 	obj.SetManagedFields(nil)
 	if webhookConfig, ok := obj.(*admissionv1.ValidatingWebhookConfiguration); ok {
-		for i := 0; i < len(webhookConfig.Webhooks); i++ {
+		for i := range len(webhookConfig.Webhooks) {
 			webhookConfig.Webhooks[i].FailurePolicy = nil
 		}
 	}

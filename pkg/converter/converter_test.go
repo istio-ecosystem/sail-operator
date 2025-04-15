@@ -143,8 +143,8 @@ spec:
 }
 
 // parseYaml takes a YAML string and unmarshals it into a map
-func parseYaml(yamlContent []byte) (map[string]interface{}, error) {
-	var config map[string]interface{}
+func parseYaml(yamlContent []byte) (map[string]any, error) {
+	var config map[string]any
 	err := yaml.Unmarshal(yamlContent, &config)
 	return config, err
 }

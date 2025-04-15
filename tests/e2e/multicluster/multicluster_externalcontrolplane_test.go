@@ -86,6 +86,23 @@ var _ = Describe("Multicluster deployment models", Label("multicluster-external"
 				When("default Istio is created in Cluster #1 to handle ingress to External Control Plane", func() {
 					BeforeAll(func(ctx SpecContext) {
 						Expect(k1.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be created")
+						Expect(k1.CreateNamespace(istioCniNamespace)).To(Succeed(), "Istio CNI namespace failed to be created")
+
+						multiclusterCNIYAML := `
+apiVersion: sailoperator.io/v1
+kind: IstioCNI
+metadata:
+  name: {{ .Name }}
+spec:
+  version: {{ .Version }}
+  namespace: {{ .Namespace }}`
+						multiclusterCNIYAML = genTemplate(multiclusterCNIYAML, map[string]any{
+							"Name":      istioCniName,
+							"Namespace": istioCniNamespace,
+							"Version":   v.Name,
+						})
+						Log("Istio CNI CR Cluster #1: ", multiclusterCNIYAML)
+						Expect(k1.CreateFromString(multiclusterCNIYAML)).To(Succeed(), "Istio CNI Resource creation failed on Cluster #1")
 
 						multiclusterYAML := `
 apiVersion: sailoperator.io/v1
@@ -143,7 +160,28 @@ spec:
 						Expect(k2.CreateNamespace(externalControlPlaneNamespace)).To(Succeed(), "Namespace failed to be created")
 						Expect(clRemote.Get(ctx, client.ObjectKey{Name: externalControlPlaneNamespace}, &corev1.Namespace{})).To(Succeed())
 
+						Expect(k2.CreateNamespace(istioCniNamespace)).To(Succeed(), "Istio CNI namespace failed to be created")
+						remoteIstioCNIYAML := `
+apiVersion: sailoperator.io/v1
+kind: IstioCNI
+metadata:
+  name: {{ .Name }}
+spec:
+  version: {{ .Version }}
+  namespace: {{ .Namespace }}`
+						remoteIstioCNIYAML = genTemplate(remoteIstioCNIYAML, map[string]any{
+							"Name":      istioCniName,
+							"Namespace": istioCniNamespace,
+							"Version":   v.Name,
+						})
+						Log("Istio CNI CR Cluster #2: ", remoteIstioCNIYAML)
+						Expect(k2.CreateFromString(remoteIstioCNIYAML)).To(Succeed(), "Istio CNI Resource creation failed on Cluster #2")
+
 						remotePilotAddress := common.GetSVCLoadBalancerAddress(ctx, clPrimary, controlPlaneNamespace, "istio-ingressgateway")
+						remotePilotIP, err := common.ResolveHostDomainToIP(remotePilotAddress)
+						Expect(remotePilotIP).NotTo(BeEmpty(), "Remote Pilot IP is empty")
+						Expect(err).NotTo(HaveOccurred(), "Error getting Remote Pilot IP")
+
 						remoteIstioYAML := `
 apiVersion: sailoperator.io/v1
 kind: Istio
@@ -167,7 +205,7 @@ spec:
 						remoteIstioYAML = genTemplate(remoteIstioYAML, map[string]any{
 							"Name":               externalIstioName,
 							"Namespace":          externalControlPlaneNamespace,
-							"RemotePilotAddress": remotePilotAddress,
+							"RemotePilotAddress": remotePilotIP,
 							"Version":            v.Name,
 						})
 						Log("Istio external-istiod CR: ", remoteIstioYAML)
@@ -200,16 +238,16 @@ metadata:
 `
 						k1.WithNamespace(externalControlPlaneNamespace).CreateFromString(externalSVCAccountYAML)
 
-						internalIPCluster2, err := k2.GetInternalIP("node-role.kubernetes.io/control-plane")
-						Expect(internalIPCluster2).NotTo(BeEmpty(), "Internal IP is empty for the Cluster #2")
+						apiURLCluster2, err := k2.GetClusterAPIURL()
+						Expect(apiURLCluster2).NotTo(BeEmpty(), "API URL is empty for the Cluster #2")
 						Expect(err).NotTo(HaveOccurred())
 
 						secret, err := istioctl.CreateRemoteSecret(
 							kubeconfig2,
+							externalControlPlaneNamespace,
 							"cluster2",
-							internalIPCluster2,
+							apiURLCluster2,
 							"--type=config",
-							"--namespace="+externalControlPlaneNamespace,
 							"--service-account=istiod-"+externalIstioName,
 							"--create-service-account=false",
 						)
@@ -405,13 +443,16 @@ spec:
 					})
 				})
 
-				When("istio CR is deleted in both clusters", func() {
+				When("istio and istio CNI CR are deleted in both clusters", func() {
 					BeforeAll(func() {
-						// Delete the Istio and remote Istio CRs in both clusters
+						// Delete the Istio, IstioCNI and remote Istio CRs in both clusters
 						Expect(k1.Delete("istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
 						Expect(k1.Delete("istio", externalIstioName)).To(Succeed(), "Istio CR failed to be deleted")
-						Expect(k2.Delete("istio", externalIstioName)).To(Succeed(), "remote Istio CR failed to be deleted")
-						Success("Istio resources are deleted in both clusters")
+						Expect(k1.Delete("istiocni", istioCniName)).To(Succeed(), "Istio CNI CR failed to be deleted")
+						Expect(k2.Delete("istio", externalIstioName)).To(Succeed(), "Remote Istio CR failed to be deleted")
+						Expect(k2.Delete("istiocni", istioCniName)).To(Succeed(), "Remote Istio CNI CR failed to be deleted")
+
+						Success("Istio and Istio CNI resources are deleted in both clusters")
 					})
 
 					It("removes istiod pod", func(ctx SpecContext) {
@@ -435,12 +476,16 @@ spec:
 					// Delete namespaces to ensure clean up for new tests iteration
 					Expect(k1.DeleteNamespaceNoWait(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
 					Expect(k1.DeleteNamespaceNoWait(externalControlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
+					Expect(k1.DeleteNamespaceNoWait(istioCniNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
 					Expect(k2.DeleteNamespaceNoWait(externalControlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #2")
 					Expect(k2.DeleteNamespaceNoWait(sampleNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #2")
+					Expect(k2.DeleteNamespaceNoWait(istioCniNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #2")
 
 					Expect(k1.WaitNamespaceDeleted(controlPlaneNamespace)).To(Succeed())
 					Expect(k1.WaitNamespaceDeleted(externalControlPlaneNamespace)).To(Succeed())
 					Expect(k2.WaitNamespaceDeleted(externalControlPlaneNamespace)).To(Succeed())
+					Expect(k1.WaitNamespaceDeleted(istioCniNamespace)).To(Succeed())
+					Expect(k2.WaitNamespaceDeleted(istioCniNamespace)).To(Succeed())
 					Success("ControlPlane Namespaces are empty")
 
 					Expect(k2.WaitNamespaceDeleted(sampleNamespace)).To(Succeed())
