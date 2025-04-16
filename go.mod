@@ -8,6 +8,8 @@ toolchain go1.24.1
 // This replacement is aligned with istio/istio's go.mod
 replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.5
 
+replace helm.sh/helm/v3 => github.com/luksa/helm/v3 v3.0.0-20250417071138-eae355a4a7cc
+
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/elastic/crd-ref-docs v0.1.0
