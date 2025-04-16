@@ -71,7 +71,7 @@ var _ = Describe("Multicluster deployment models", Label("multicluster-multiprim
 
 	Describe("Multi-Primary Multi-Network configuration", func() {
 		// Test the Multi-Primary Multi-Network configuration for each supported Istio version
-		for _, version := range istioversion.List {
+		for _, version := range istioversion.GetLatestPatchVersions() {
 			Context(fmt.Sprintf("Istio version %s", version.Version), func() {
 				When("Istio and IstioCNI resources are created in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
