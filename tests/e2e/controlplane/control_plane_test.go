@@ -203,10 +203,6 @@ spec:
 
 				When("sample pod is deployed", func() {
 					BeforeAll(func() {
-						if isAlias(version.Name, version) {
-							Skip("Skipping test for alias version")
-						}
-
 						Expect(k.CreateNamespace(sampleNamespace)).To(Succeed(), "Sample namespace failed to be created")
 						Expect(k.Patch("namespace", sampleNamespace, "merge", `{"metadata":{"labels":{"istio-injection":"enabled"}}}`)).
 							To(Succeed(), "Error patching sample namespace")
@@ -305,10 +301,6 @@ spec:
 		}
 	})
 })
-
-func isAlias(name string, version istioversion.VersionInfo) bool {
-	return name != version.Name
-}
 
 func HaveContainersThat(matcher types.GomegaMatcher) types.GomegaMatcher {
 	return HaveField("Spec.Template.Spec.Containers", matcher)
