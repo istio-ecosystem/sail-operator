@@ -136,8 +136,6 @@ func mustParseVersionsYaml(yamlBytes []byte) (
 		if len(list) > 1 {
 			baseVersion = list[1].Name
 		}
-		// Set the default version to the first version in the list (Newest version)
-		defaultVersion = list[0].Name
 	}
 
 	return list, defaultVersion, baseVersion, newVersion, versionMap, aliasList
