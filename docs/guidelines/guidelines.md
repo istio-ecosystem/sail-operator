@@ -8,15 +8,15 @@ This guide aims to set basic guidelines for writing documentation for the projec
 ## Documentation Structure
 The documentation should be structured in a way that is easy to navigate. It should be divided into sections and subsections, with a table of contents at the beginning of the document. Each section should cover a specific topic, and each subsection should cover a specific aspect of that topic.
 
-### Structure of the entire folder and new forlders
+### Structure of the entire folder and new folders
 All the documentation lives unders the folder `docs` in the root of the project. The documentation is divided into the following sections:
 - `guidelines`: Contains guidelines for writing documentation.
-- `api-reference`: Contains the API reference documentation.
+- `api-reference`: Contains the API reference documentation. It is generated from the code, so if you want to update it, you need to update the docstrings.
 - `common`: Contains common documentation that is relevant to the entire project, for example: `create-and-configure-gateways`, `install-bookinfo-app`, etc. All the docs located here should be linked to from the main README.md file for easy access.
 - `multicluster`: contains resources referenced in the README.md file for the multicluster setup.
-- `README.md`: The main README.md file that contains the project main doc and links to the others documentation topics.
+- `README.md`: The main README.md file that contains the project main doc and links to the other documentation topics.
 
-Any new folder or file added to the documentation should be linked to from the main README.md and you should only create a new folder if the documentation is not relevant to the entire project or if it is a new section that does not fit into the existing structure. Also, new folder can contains resources that are referenced in the README.md to be able to run examples or to get more information about the project (Example `multicluster` folder).
+Any new folder or file added to the documentation should be linked to from the main README.md and you should only create a new folder if the documentation is not relevant to the entire project or if it is a new section that does not fit into the existing structure. Also, new folders can contain resources that are referenced in the README.md to be able to run examples or to get more information about the project (for an example, see the `multicluster` folder).
 
 ### Table of Contents
 For long documents, it is recommended to include a table of contents at the beginning of the document. The table of contents should list all the sections and subsections in the document.
@@ -53,10 +53,11 @@ Any documentation step need to be tested to ensure that the steps are correct an
 - The `make update` target is going to run the script `tests/documentation_test/scripts/update-docs-examples.sh` that is going to generate the md modified files to run the test (For more information check next topic).
 - The `make test.docs` target is going to run the script `tests/documentation_test/scripts/run-docs-examples.sh` that is going to run the tests over the documentation files. This script is going to run all the steps in the examples marked following the guidelines explained in the next section.
 
-### What update-docs-examples.sh do?
+### What does update-docs-examples.sh do?
 The script `update-docs-examples.sh` is going to run the following steps:
-- Check all the md files in the `docs` folder and exclude from the list the files described inside the `EXCLUDE_FILES` variable. The resulting list will be all the .md files that contains at least one time this pattern `bash { name=`. This pattern is used by the `readme` tool to generate the resulting jupiter notebook by looking into all the code blocks that has certain fields decorator. The fields decorator and how to use them are explained in the next section.
-- Once the files are copied into the destination path we check those files to uncomment the bash commented steps. This bash commented code block are going to be hiden in the original md files but we will uncomment this code block to be able to run validation steps that wait for conditions an avoid flakiness of the test. THis means that all the validation steps need to be commented code blocks
+- Check all the md files in the `docs` folder and exclude from the list the files described inside the `EXCLUDE_FILES` variable. The resulting list will be all the .md files that contains at least one time this pattern `bash { name=`. This pattern is used by the `runme` tool to generate the resulting jupyter notebook by looking into all the code blocks that has certain field decorators. The field decorators and how to use them are explained in the next section.
+- Once the files are copied into the destination path we check those files to uncomment the bash commented steps. This bash commented code block are going to be hiden in the original md files but we will uncomment this code block to be able to run validation steps that wait for conditions an avoid flakiness of the test. This means that most of the validation steps will be commented code blocks.
+``
 
 ### Adding a topic example to the automation workflow
 To add a new topic to the automation workflow you need to:
@@ -149,7 +150,7 @@ kubectl wait --for=condition=available --timeout=600s deployment/sail-operator -
 ``` -->
 ```
 
-*Important:* please add always validation steps to avoid flakyness during the execution, this steps will ensure that resource conditions are met and the test will not fail because of a timeout or any other issue. This validation needs to add failures to the test if the condition is not met.
+*Important:* please always add validation steps to avoid flakyness during the execution, these steps will ensure that resource conditions are met and the test will not fail because of a timeout or any other issue. This validation needs to fail the test if the condition is not met, by returning a non-zero return code. Use `kubectl wait` over `sleep` wherever possible.
 
 *Note:* if you want to check all the commands that inside a md file you can execute the following command:
 ```bash

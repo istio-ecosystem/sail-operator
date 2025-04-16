@@ -193,18 +193,7 @@ runme: OS=$(shell go env GOOS)
 runme: ARCH=$(shell go env GOARCH)
 runme: $(RUNME) ## Download runme to bin directory. If wrong version is installed, it will be overwritten.
 	@test -s $(LOCALBIN)/runme || { \
-		URL="https://download.stateful.com/runme/$(RUNME_VERSION)/runme_$(TARGET_OS)_$(TARGET_ARCH).tar.gz"; \
-		echo "Fetching runme from $$URL"; \
-		curl -fsL $$URL -o /tmp/runme.tar.gz || { \
-			echo "Download failed! Please check the URL and RUNME_VERSION."; \
-			exit 1; \
-		}; \
-		tar -xzf /tmp/runme.tar.gz -C /tmp || { \
-			echo "Extraction failed!"; \
-			exit 1; \
-		}; \
-		mv /tmp/runme $(LOCALBIN)/runme; \
-		rm -f /tmp/runme.tar.gz; \
+		GOBIN=$(LOCALBIN) GO111MODULE=on go install github.com/runmedev/runme/v3@v$(RUNME_VERSION) > /dev/stderr; \
 		echo "runme has been downloaded and placed in $(LOCALBIN)"; \
 	}
 
