@@ -152,11 +152,7 @@ func GetLatestPatchVersions() []VersionInfo {
 		}
 	}
 
-	// Convert the map values to a slice.
-	latestSlice := make([]VersionInfo, 0, len(latestPatchVersions))
-	for _, v := range latestPatchVersions {
-		latestSlice = append(latestSlice, v)
-	}
+	latestSlice := slices.Collect(maps.Values(latestPatchVersions))
 
 	// Sort the slice in descending order based on the version.
 	sort.Slice(latestSlice, func(i, j int) bool {
