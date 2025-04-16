@@ -149,7 +149,7 @@ if [ "${SKIP_BUILD}" == "false" ]; then
   # If OLM is enabled, deploy the operator using OLM
   # We are skipping the deploy via OLM test on OCP because the workaround to avoid the certificate issue is not working.
   # Jira ticket related to the limitation: https://issues.redhat.com/browse/OSSM-7993
-  if [ "${OLM}" == "true" ] && [ "${SKIP_DEPLOY}" == "false" ]; then    
+  if [ "${OLM}" == "true" ] && [ "${SKIP_DEPLOY}" == "false" ] && [ "${MULTICLUSTER}" == "false" ]; then    
     IMAGE_TAG_BASE="${HUB}/${IMAGE_BASE}"
     BUNDLE_IMG="${IMAGE_TAG_BASE}-bundle:v${VERSION}"
 

@@ -37,6 +37,47 @@ EXCLUDE_FILES=(
   "sailoperator.io.md" "guidelines.md"
 )
 
+# Validate that no tag value is used in more than one file in the current documentation
+declare -A TAG_USAGE
+DUPLICATE_FOUND=0
+
+# Recursively find all markdown files in the output directory
+# shellcheck disable=SC2094
+while IFS= read -r file; do
+  # Temp set to track unique tags in the current file
+  declare -A TAGS_IN_CURRENT_FILE=()
+
+  while IFS= read -r line; do
+    # Match lines like: ```bash { name=... tag=example }
+    if [[ "$line" =~ \`\`\`bash[[:space:]]*\{[[:space:]]*[^}]*tag=([a-zA-Z0-9._-]+)[^}]*\} ]]; then
+      tag="${BASH_REMATCH[1]}"
+      # Skip if this tag has already been seen in the same file
+      if [[ ${TAGS_IN_CURRENT_FILE[$tag]+exists} ]]; then
+        continue
+      fi
+      TAGS_IN_CURRENT_FILE["$tag"]=1
+
+      # Now check if this tag has been used in another file
+      if [[ ${TAG_USAGE[$tag]+exists} && "${TAG_USAGE[$tag]}" != "$file" ]]; then
+        echo "Duplicate tag 'tag=$tag' found in:"
+        echo "  - ${TAG_USAGE[$tag]}"
+        echo "  - $file"
+        DUPLICATE_FOUND=1
+      else
+        TAG_USAGE["$tag"]="$file"
+      fi
+    fi
+  done < "$file"
+
+  unset TAGS_IN_CURRENT_FILE
+done < <(find "$DOCS_DIR" -type f -name "*.md")
+
+# If duplicates were found, fail the script
+if [[ "$DUPLICATE_FOUND" -eq 1 ]]; then
+  echo "Duplicate 'tag=' values detected across multiple files. Please ensure all tags are unique per project."
+  exit 1
+fi
+
 # Create the output directory if it does not exist
 mkdir -p "$OUTPUT_DIR"
 

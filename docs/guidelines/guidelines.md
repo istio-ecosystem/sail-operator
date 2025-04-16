@@ -68,7 +68,7 @@ To add a new topic to the automation workflow you need to:
 For example:
 
 ````md
-```bash { name=deploy-operator tag=example}
+```bash { name=deploy-operator tag=example-tag}
 helm repo add sail-operator https://istio-ecosystem.github.io/sail-operator
 ```
 ````
@@ -117,7 +117,7 @@ spec:
     name: default
 ```
 - Create ns, `Istio` and `IstioRevisionTag` resources:
-```bash { name=create-istio tag=example}
+```bash { name=create-istio tag=example-tag}
 kubectl create ns istio-system
 cat <<EOF | kubectl apply -f-
 apiVersion: sailoperator.io/v1
@@ -145,7 +145,7 @@ EOF
 
 - Validation steps are always needed, to add a validation step you can comment directly the entire code block with the bash command that you want to run. This validation steps need to use the same tag as the example where they are going to run and should be prefixed with `validation-description`. For example:
 ```md
-<!-- ```bash { name=validation-wait-operator tag=example}
+<!-- ```bash { name=validation-wait-operator tag=example-tag}
 kubectl wait --for=condition=available --timeout=600s deployment/sail-operator -n sail-operator
 ``` -->
 ```
