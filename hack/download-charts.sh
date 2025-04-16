@@ -97,6 +97,9 @@ function patchIstioCharts() {
 
   # remove CRDs from istiod-remote chart, since they are installed by OLM, not by the operator
   rm -f "${CHARTS_DIR}/istiod-remote/templates/crd-all.gen.yaml"
+
+  # remove install.operator.istio.io/owning-resource label from all charts
+  sed -i '/install.operator.istio.io\/owning-resource/d' "${CHARTS_DIR}"/*/templates/*.yaml
 }
 
 # The charts use docker.io as the default registry, but this leads to issues

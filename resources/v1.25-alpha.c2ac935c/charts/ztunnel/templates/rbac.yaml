@@ -29,7 +29,6 @@ metadata:
   labels:
     app: ztunnel
     release: {{ include "ztunnel.release-name" . }}
-    install.operator.istio.io/owning-resource: {{ .Values.ownerName | default "unknown" }}
     app.kubernetes.io/name: ztunnel
     {{- include "istio.labels" . | nindent 4}}
   annotations:
@@ -52,7 +51,6 @@ metadata:
   labels:
     app: ztunnel
     release: {{ include "ztunnel.release-name" . }}
-    install.operator.istio.io/owning-resource: {{ .Values.ownerName | default "unknown" }}
     app.kubernetes.io/name: ztunnel
     {{- include "istio.labels" . | nindent 4}}
   annotations:
