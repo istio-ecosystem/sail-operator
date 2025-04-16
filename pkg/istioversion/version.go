@@ -17,6 +17,8 @@ package istioversion
 import (
 	"embed"
 	"fmt"
+	"maps"
+	"slices"
 	"sort"
 
 	"github.com/Masterminds/semver/v3"
