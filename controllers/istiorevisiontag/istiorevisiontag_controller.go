@@ -106,6 +106,10 @@ func (r *Reconciler) doReconcile(ctx context.Context, tag *v1.IstioRevisionTag) 
 		return nil, err
 	}
 
+	if revision.IsUsingRemoteControlPlane(rev) {
+		return nil, reconciler.NewValidationError("IstioRevisionTag cannot reference a remote IstioRevision")
+	}
+
 	log.Info("Installing Helm chart")
 	return rev, r.installHelmCharts(ctx, tag, rev)
 }
