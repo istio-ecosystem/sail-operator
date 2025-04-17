@@ -282,3 +282,77 @@ func newReconcilerTestConfig(t *testing.T) config.ReconcilerConfig {
 		DefaultProfile:    "",
 	}
 }
+
+func TestValidation(t *testing.T) {
+	testCases := []struct {
+		name string
+		tag  *v1.IstioRevisionTag
+		objs []client.Object
+
+		expectedErrMessage string
+	}{
+		{
+			name: "targetRef not set",
+			tag: &v1.IstioRevisionTag{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1.IstioRevisionTagSpec{
+					TargetRef: v1.IstioRevisionTagTargetReference{},
+				},
+			},
+			expectedErrMessage: "spec.targetRef not set",
+		},
+		// TODO: add other validation tests
+		{
+			name: "remote IstioRevision",
+			tag: &v1.IstioRevisionTag{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1.IstioRevisionTagSpec{
+					TargetRef: v1.IstioRevisionTagTargetReference{
+						Kind: "IstioRevision",
+						Name: revName,
+					},
+				},
+			},
+			objs: []client.Object{
+				&v1.IstioRevision{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: revName,
+					},
+					Spec: v1.IstioRevisionSpec{
+						Values: &v1.Values{
+							Profile: ptr.Of("remote"),
+						},
+					},
+				},
+			},
+			expectedErrMessage: "IstioRevisionTag cannot reference a remote IstioRevision",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			cfg := newReconcilerTestConfig(t)
+
+			cl := fake.NewClientBuilder().
+				WithScheme(scheme.Scheme).
+				WithObjects(append(tc.objs, tc.tag)...).
+				Build()
+
+			r := NewReconciler(cfg, cl, scheme.Scheme, nil)
+
+			ctx := context.TODO()
+			_, err := r.doReconcile(ctx, tc.tag)
+			if tc.expectedErrMessage != "" {
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(err.Error()).To(ContainSubstring(tc.expectedErrMessage))
+			} else {
+				g.Expect(err).NotTo(HaveOccurred())
+			}
+		})
+	}
+}
