@@ -165,6 +165,8 @@ type CNIAmbientConfig struct {
 	DnsCapture *bool `json:"dnsCapture,omitempty"`
 	// UNSTABLE: If enabled, and ambient is enabled, enables ipv6 support
 	Ipv6 *bool `json:"ipv6,omitempty"`
+	// If enabled, and ambient is enabled, iptables reconciliation will be enabled.
+	ReconcileIptablesOnStartup *bool `json:"reconcileIptablesOnStartup,omitempty"`
 }
 
 type CNIRepairConfig struct {
@@ -612,6 +614,8 @@ type PilotConfig struct {
 	TrustedZtunnelNamespace *string `json:"trustedZtunnelNamespace,omitempty"`
 	// Configuration for the istio-discovery chart when istiod is running in a remote cluster (e.g. "remote control plane").
 	IstiodRemote *IstiodRemoteConfig `json:"istiodRemote,omitempty"`
+	// Configuration for the istio-discovery chart
+	EnvVarFrom []k8sv1.EnvFromSource `json:"envVarFrom,omitempty"`
 }
 
 type PilotTaintControllerConfig struct {
@@ -948,13 +952,8 @@ type Values struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +kubebuilder:validation:Schemaless
 	Experimental json.RawMessage `json:"experimental,omitempty"`
-}
-
-// ZeroVPNConfig enables cross-cluster access using SNI matching.
-type ZeroVPNConfig struct {
-	// Controls whether ZeroVPN is enabled.
-	Enabled *bool   `json:"enabled,omitempty"`
-	Suffix  *string `json:"suffix,omitempty"`
+	// Configuration for Gateway Classes
+	GatewayClasses json.RawMessage `json:"gatewayClasses,omitempty"`
 }
 
 // ExperimentalConfig is a placeholder for experimental installation features.
@@ -987,7 +986,457 @@ type WaypointConfig struct {
 	Toleration []*k8sv1.Toleration `json:"toleration,omitempty"`
 }
 
-// CNIGlobalConfig is a subset of the Global Configuration used in the Istio CNI chart.
+const filePkgApisValuesTypesProtoRawDesc = "" +
+	"\n" +
+	"\x1bpkg/apis/values_types.proto\x12\x17istio.operator.v1alpha1\x1a\x19google/protobuf/any.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\"k8s.io/api/core/v1/generated.proto\x1a4k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto\"h\n" +
+	"\n" +
+	"ArchConfig\x12\x14\n" +
+	"\x05amd64\x18\x01 \x01(\rR\x05amd64\x12\x18\n" +
+	"\appc64le\x18\x02 \x01(\rR\appc64le\x12\x14\n" +
+	"\x05s390x\x18\x03 \x01(\rR\x05s390x\x12\x14\n" +
+	"\x05arm64\x18\x04 \x01(\rR\x05arm64\"\xeb\t\n" +
+	"\tCNIConfig\x124\n" +
+	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12\x10\n" +
+	"\x03hub\x18\x02 \x01(\tR\x03hub\x12(\n" +
+	"\x03tag\x18\x03 \x01(\v2\x16.google.protobuf.ValueR\x03tag\x12\x18\n" +
+	"\avariant\x18\x1d \x01(\tR\avariant\x12\x14\n" +
+	"\x05image\x18\x04 \x01(\tR\x05image\x12\x1e\n" +
+	"\n" +
+	"pullPolicy\x18\x05 \x01(\tR\n" +
+	"pullPolicy\x12\x1c\n" +
+	"\tcniBinDir\x18\x06 \x01(\tR\tcniBinDir\x12\x1e\n" +
+	"\n" +
+	"cniConfDir\x18\a \x01(\tR\n" +
+	"cniConfDir\x12(\n" +
+	"\x0fcniConfFileName\x18\b \x01(\tR\x0fcniConfFileName\x12 \n" +
+	"\vcniNetnsDir\x18\x1f \x01(\tR\vcniNetnsDir\x12,\n" +
+	"\x11excludeNamespaces\x18\t \x03(\tR\x11excludeNamespaces\x128\n" +
+	"\baffinity\x18\x14 \x01(\v2\x1c.k8s.io.api.core.v1.AffinityR\baffinity\x12C\n" +
+	"\x0epodAnnotations\x18\n" +
+	" \x01(\v2\x17.google.protobuf.StructB\x02\x18\x01R\x0epodAnnotations\x12(\n" +
+	"\x10psp_cluster_role\x18\v \x01(\tR\x0epspClusterRole\x12\x1e\n" +
+	"\blogLevel\x18\f \x01(\tB\x02\x18\x01R\blogLevel\x12F\n" +
+	"\alogging\x18\x19 \x01(\v2,.istio.operator.v1alpha1.GlobalLoggingConfigR\alogging\x12@\n" +
+	"\x06repair\x18\r \x01(\v2(.istio.operator.v1alpha1.CNIRepairConfigR\x06repair\x124\n" +
+	"\achained\x18\x0e \x01(\v2\x1a.google.protobuf.BoolValueR\achained\x12P\n" +
+	"\x0fresource_quotas\x18\x10 \x01(\v2'.istio.operator.v1alpha1.ResourceQuotasR\x0eresourceQuotas\x12@\n" +
+	"\tresources\x18\x11 \x01(\v2\".istio.operator.v1alpha1.ResourcesR\tresources\x12>\n" +
+	"\n" +
+	"privileged\x18\x12 \x01(\v2\x1a.google.protobuf.BoolValueB\x02\x18\x01R\n" +
+	"privileged\x12J\n" +
+	"\x0eseccompProfile\x18\x13 \x01(\v2\".k8s.io.api.core.v1.SeccompProfileR\x0eseccompProfile\x12C\n" +
+	"\aambient\x18\x15 \x01(\v2).istio.operator.v1alpha1.CNIAmbientConfigR\aambient\x12\x1a\n" +
+	"\bprovider\x18\x16 \x01(\tR\bprovider\x12Z\n" +
+	"\x15rollingMaxUnavailable\x18\x17 \x01(\v2$.istio.operator.v1alpha1.IntOrStringR\x15rollingMaxUnavailable\"\x9c\x01\n" +
+	"\x0eCNIUsageConfig\x124\n" +
+	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x128\n" +
+	"\achained\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueB\x02\x18\x01R\achained\x12\x1a\n" +
+	"\bprovider\x18\x03 \x01(\tR\bprovider\"\xae\x02\n" +
+	"\x10CNIAmbientConfig\x124\n" +
+	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12\x1c\n" +
+	"\tconfigDir\x18\x03 \x01(\tR\tconfigDir\x12:\n" +
+	"\n" +
+	"dnsCapture\x18\x05 \x01(\v2\x1a.google.protobuf.BoolValueR\n" +
+	"dnsCapture\x12.\n" +
+	"\x04ipv6\x18\a \x01(\v2\x1a.google.protobuf.BoolValueR\x04ipv6\x12Z\n" +
+	"\x1areconcileIptablesOnStartup\x18\t \x01(\v2\x1a.google.protobuf.BoolValueR\x1areconcileIptablesOnStartup\"\xad\x03\n" +
+	"\x0fCNIRepairConfig\x124\n" +
+	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12\x10\n" +
+	"\x03hub\x18\x02 \x01(\tR\x03hub\x12(\n" +
+	"\x03tag\x18\x03 \x01(\v2\x16.google.protobuf.ValueR\x03tag\x12\x14\n" +
+	"\x05image\x18\x04 \x01(\tR\x05image\x12\x1c\n" +
+	"\tlabelPods\x18\x05 \x01(\bR\tlabelPods\x12\x1e\n" +
+	"\n" +
+	"repairPods\x18\v \x01(\bR\n" +
+	"repairPods\x12&\n" +
+	"\fcreateEvents\x18\x06 \x01(\tB\x02\x18\x01R\fcreateEvents\x12\x1e\n" +
+	"\n" +
+	"deletePods\x18\a \x01(\bR\n" +
+	"deletePods\x12,\n" +
+	"\x11brokenPodLabelKey\x18\b \x01(\tR\x11brokenPodLabelKey\x120\n" +
+	"\x13brokenPodLabelValue\x18\t \x01(\tR\x13brokenPodLabelValue\x12,\n" +
+	"\x11initContainerName\x18\n" +
+	" \x01(\tR\x11initContainerName\"Z\n" +
+	"\x0eResourceQuotas\x124\n" +
+	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12\x12\n" +
+	"\x04pods\x18\x02 \x01(\x03R\x04pods\"U\n" +
+	"\x17TargetUtilizationConfig\x12:\n" +
+	"\x18targetAverageUtilization\x18\x01 \x01(\x05R\x18targetAverageUtilization\"\x99\x02\n" +
+	"\tResources\x12F\n" +
+	"\x06limits\x18\x01 \x03(\v2..istio.operator.v1alpha1.Resources.LimitsEntryR\x06limits\x12L\n" +
+	"\brequests\x18\x02 \x03(\v20.istio.operator.v1alpha1.Resources.RequestsEntryR\brequests\x1a9\n" +
+	"\vLimitsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a;\n" +
+	"\rRequestsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"K\n" +
+	"\x0eServiceAccount\x129\n" +
+	"\vannotations\x18\x01 \x01(\v2\x17.google.protobuf.StructR\vannotations\"X\n" +
+	" DefaultPodDisruptionBudgetConfig\x124\n" +
+	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\"f\n" +
+	"\x16DefaultResourcesConfig\x12L\n" +
+	"\brequests\x18\x01 \x01(\v20.istio.operator.v1alpha1.ResourcesRequestsConfigR\brequests\"\xbb\x0f\n" +
+	"\x13EgressGatewayConfig\x12F\n" +
+	"\x10autoscaleEnabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\x10autoscaleEnabled\x12\"\n" +
+	"\fautoscaleMax\x18\x02 \x01(\rR\fautoscaleMax\x12\"\n" +
+	"\fautoscaleMin\x18\x03 \x01(\rR\fautoscaleMin\x12L\n" +
+	"\x06memory\x18\x04 \x01(\v20.istio.operator.v1alpha1.TargetUtilizationConfigB\x02\x18\x01R\x06memory\x12F\n" +
+	"\x03cpu\x18\x05 \x01(\v20.istio.operator.v1alpha1.TargetUtilizationConfigB\x02\x18\x01R\x03cpu\x12@\n" +
+	"\rcustomService\x18\x06 \x01(\v2\x1a.google.protobuf.BoolValueR\rcustomService\x124\n" +
+	"\aenabled\x18\a \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12)\n" +
+	"\x03env\x18\b \x01(\v2\x17.google.protobuf.StructR\x03env\x12P\n" +
+	"\x06labels\x18\t \x03(\v28.istio.operator.v1alpha1.EgressGatewayConfig.LabelsEntryR\x06labels\x12\x12\n" +
+	"\x04name\x18\x19 \x01(\tR\x04name\x12?\n" +
+	"\fnodeSelector\x18\n" +
+	" \x01(\v2\x17.google.protobuf.StructB\x02\x18\x01R\fnodeSelector\x12C\n" +
+	"\x0epodAnnotations\x18\v \x01(\v2\x17.google.protobuf.StructB\x02\x18\x01R\x0epodAnnotations\x12{\n" +
+	"\x1cpodAntiAffinityLabelSelector\x18\f \x03(\v23.k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelectorB\x02\x18\x01R\x1cpodAntiAffinityLabelSelector\x12\x83\x01\n" +
+	" podAntiAffinityTermLabelSelector\x18\r \x03(\v23.k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelectorB\x02\x18\x01R podAntiAffinityTermLabelSelector\x12:\n" +
+	"\x05ports\x18\x0e \x03(\v2$.istio.operator.v1alpha1.PortsConfigR\x05ports\x12D\n" +
+	"\tresources\x18\x0f \x01(\v2\".istio.operator.v1alpha1.ResourcesB\x02\x18\x01R\tresources\x12K\n" +
+	"\rsecretVolumes\x18\x10 \x03(\v2%.istio.operator.v1alpha1.SecretVolumeR\rsecretVolumes\x12G\n" +
+	"\x12serviceAnnotations\x18\x11 \x01(\v2\x17.google.protobuf.StructR\x12serviceAnnotations\x12\x12\n" +
+	"\x04type\x18\x12 \x01(\tR\x04type\x12D\n" +
+	"\vtolerations\x18\x14 \x03(\v2\x1e.k8s.io.api.core.v1.TolerationB\x02\x18\x01R\vtolerations\x12R\n" +
+	"\x0frollingMaxSurge\x18\x15 \x01(\v2$.istio.operator.v1alpha1.IntOrStringB\x02\x18\x01R\x0frollingMaxSurge\x12^\n" +
+	"\x15rollingMaxUnavailable\x18\x16 \x01(\v2$.istio.operator.v1alpha1.IntOrStringB\x02\x18\x01R\x15rollingMaxUnavailable\x12=\n" +
+	"\rconfigVolumes\x18\x17 \x03(\v2\x17.google.protobuf.StructR\rconfigVolumes\x12K\n" +
+	"\x14additionalContainers\x18\x18 \x03(\v2\x17.google.protobuf.StructR\x14additionalContainers\x128\n" +
+	"\trunAsRoot\x18\x1a \x01(\v2\x1a.google.protobuf.BoolValueR\trunAsRoot\x12,\n" +
+	"\x11injectionTemplate\x18\x1b \x01(\tR\x11injectionTemplate\x12O\n" +
+	"\x0eserviceAccount\x18\x1c \x01(\v2'.istio.operator.v1alpha1.ServiceAccountR\x0eserviceAccount\x12\x1e\n" +
+	"\n" +
+	"ipFamilies\x18\x1d \x03(\tR\n" +
+	"ipFamilies\x12&\n" +
+	"\x0eipFamilyPolicy\x18\x1e \x01(\tR\x0eipFamilyPolicy\x1a9\n" +
+	"\vLabelsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x8b\x03\n" +
+	"\x0eGatewaysConfig\x12^\n" +
+	"\x13istio_egressgateway\x18\x01 \x01(\v2,.istio.operator.v1alpha1.EgressGatewayConfigR\x13istio-egressgateway\x124\n" +
+	"\aenabled\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12a\n" +
+	"\x14istio_ingressgateway\x18\x04 \x01(\v2-.istio.operator.v1alpha1.IngressGatewayConfigR\x14istio-ingressgateway\x12@\n" +
+	"\x0fsecurityContext\x18\n" +
+	" \x01(\v2\x16.google.protobuf.ValueR\x0fsecurityContext\x12>\n" +
+	"\x0eseccompProfile\x18\f \x01(\v2\x16.google.protobuf.ValueR\x0eseccompProfile\"\x9d\x12\n" +
+	"\fGlobalConfig\x12;\n" +
+	"\x04arch\x18\x01 \x01(\v2#.istio.operator.v1alpha1.ArchConfigB\x02\x18\x01R\x04arch\x12 \n" +
+	"\vcertSigners\x18D \x03(\tR\vcertSigners\x12F\n" +
+	"\x10configValidation\x18\x03 \x01(\v2\x1a.google.protobuf.BoolValueR\x10configValidation\x12M\n" +
+	"\x13defaultNodeSelector\x18\x06 \x01(\v2\x17.google.protobuf.StructB\x02\x18\x01R\x13defaultNodeSelector\x12y\n" +
+	"\x1adefaultPodDisruptionBudget\x18\a \x01(\v29.istio.operator.v1alpha1.DefaultPodDisruptionBudgetConfigR\x1adefaultPodDisruptionBudget\x12_\n" +
+	"\x10defaultResources\x18\t \x01(\v2/.istio.operator.v1alpha1.DefaultResourcesConfigB\x02\x18\x01R\x10defaultResources\x12R\n" +
+	"\x12defaultTolerations\x187 \x03(\v2\x1e.k8s.io.api.core.v1.TolerationB\x02\x18\x01R\x12defaultTolerations\x12\x10\n" +
+	"\x03hub\x18\f \x01(\tR\x03hub\x12(\n" +
+	"\x0fimagePullPolicy\x18\r \x01(\tR\x0fimagePullPolicy\x12*\n" +
+	"\x10imagePullSecrets\x18% \x03(\tR\x10imagePullSecrets\x12&\n" +
+	"\x0eistioNamespace\x18\x0e \x01(\tR\x0eistioNamespace\x128\n" +
+	"\tlogAsJson\x18$ \x01(\v2\x1a.google.protobuf.BoolValueR\tlogAsJson\x12F\n" +
+	"\alogging\x18\x11 \x01(\v2,.istio.operator.v1alpha1.GlobalLoggingConfigR\alogging\x12\x16\n" +
+	"\x06meshID\x185 \x01(\tR\x06meshID\x12;\n" +
+	"\fmeshNetworks\x18\x13 \x01(\v2\x17.google.protobuf.StructR\fmeshNetworks\x12O\n" +
+	"\fmultiCluster\x18\x16 \x01(\v2+.istio.operator.v1alpha1.MultiClusterConfigR\fmultiCluster\x12\x18\n" +
+	"\anetwork\x18' \x01(\tR\anetwork\x126\n" +
+	"\x16podDNSSearchNamespaces\x18+ \x03(\tR\x16podDNSSearchNamespaces\x12^\n" +
+	"\x1comitSidecarInjectorConfigMap\x18& \x01(\v2\x1a.google.protobuf.BoolValueR\x1comitSidecarInjectorConfigMap\x12R\n" +
+	"\x16operatorManageWebhooks\x18) \x01(\v2\x1a.google.protobuf.BoolValueR\x16operatorManageWebhooks\x120\n" +
+	"\x11priorityClassName\x18\x1b \x01(\tB\x02\x18\x01R\x11priorityClassName\x12:\n" +
+	"\x05proxy\x18\x1c \x01(\v2$.istio.operator.v1alpha1.ProxyConfigR\x05proxy\x12H\n" +
+	"\n" +
+	"proxy_init\x18\x1d \x01(\v2(.istio.operator.v1alpha1.ProxyInitConfigR\n" +
+	"proxy_init\x124\n" +
+	"\x03sds\x18\x1e \x01(\v2\".istio.operator.v1alpha1.SDSConfigR\x03sds\x12(\n" +
+	"\x03tag\x18\x1f \x01(\v2\x16.google.protobuf.ValueR\x03tag\x12\x18\n" +
+	"\avariant\x18C \x01(\tR\avariant\x12=\n" +
+	"\x06tracer\x18! \x01(\v2%.istio.operator.v1alpha1.TracerConfigR\x06tracer\x12.\n" +
+	"\x12remotePilotAddress\x180 \x01(\tR\x12remotePilotAddress\x12=\n" +
+	"\x06istiod\x186 \x01(\v2%.istio.operator.v1alpha1.IstiodConfigR\x06istiod\x12,\n" +
+	"\x11pilotCertProvider\x188 \x01(\tR\x11pilotCertProvider\x12 \n" +
+	"\tjwtPolicy\x189 \x01(\tB\x02\x18\x01R\tjwtPolicy\x124\n" +
+	"\x03sts\x18: \x01(\v2\".istio.operator.v1alpha1.STSConfigR\x03sts\x12\x1a\n" +
+	"\brevision\x18; \x01(\tR\brevision\x12B\n" +
+	"\x0emountMtlsCerts\x18< \x01(\v2\x1a.google.protobuf.BoolValueR\x0emountMtlsCerts\x12\x1c\n" +
+	"\tcaAddress\x18= \x01(\tR\tcaAddress\x12B\n" +
+	"\x0eexternalIstiod\x18> \x01(\v2\x1a.google.protobuf.BoolValueR\x0eexternalIstiod\x12@\n" +
+	"\rconfigCluster\x18@ \x01(\v2\x1a.google.protobuf.BoolValueR\rconfigCluster\x12\x16\n" +
+	"\x06caName\x18A \x01(\tR\x06caName\x12\x1a\n" +
+	"\bplatform\x18E \x01(\tR\bplatform\x12\x1e\n" +
+	"\n" +
+	"ipFamilies\x18F \x03(\tR\n" +
+	"ipFamilies\x12&\n" +
+	"\x0eipFamilyPolicy\x18G \x01(\tR\x0eipFamilyPolicy\x12C\n" +
+	"\bwaypoint\x18H \x01(\v2'.istio.operator.v1alpha1.WaypointConfigR\bwaypoint\"-\n" +
+	"\tSTSConfig\x12 \n" +
+	"\vservicePort\x18\x01 \x01(\rR\vservicePort\"R\n" +
+	"\fIstiodConfig\x12B\n" +
+	"\x0eenableAnalysis\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x0eenableAnalysis\"+\n" +
+	"\x13GlobalLoggingConfig\x12\x14\n" +
+	"\x05level\x18\x01 \x01(\tR\x05level\"\xb1\x11\n" +
+	"\x14IngressGatewayConfig\x12F\n" +
+	"\x10autoscaleEnabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\x10autoscaleEnabled\x12\"\n" +
+	"\fautoscaleMax\x18\x02 \x01(\rR\fautoscaleMax\x12\"\n" +
+	"\fautoscaleMin\x18\x03 \x01(\rR\fautoscaleMin\x12L\n" +
+	"\x06memory\x18\x04 \x01(\v20.istio.operator.v1alpha1.TargetUtilizationConfigB\x02\x18\x01R\x06memory\x12F\n" +
+	"\x03cpu\x18\x05 \x01(\v20.istio.operator.v1alpha1.TargetUtilizationConfigB\x02\x18\x01R\x03cpu\x12@\n" +
+	"\rcustomService\x18\x06 \x01(\v2\x1a.google.protobuf.BoolValueR\rcustomService\x124\n" +
+	"\aenabled\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12)\n" +
+	"\x03env\x18\v \x01(\v2\x17.google.protobuf.StructR\x03env\x12Q\n" +
+	"\x06labels\x18\x0f \x03(\v29.istio.operator.v1alpha1.IngressGatewayConfig.LabelsEntryR\x06labels\x12&\n" +
+	"\x0eloadBalancerIP\x18\x10 \x01(\tR\x0eloadBalancerIP\x12:\n" +
+	"\x18loadBalancerSourceRanges\x18\x11 \x03(\tR\x18loadBalancerSourceRanges\x12\x12\n" +
+	"\x04name\x18, \x01(\tR\x04name\x12?\n" +
+	"\fnodeSelector\x18\x13 \x01(\v2\x17.google.protobuf.StructB\x02\x18\x01R\fnodeSelector\x12C\n" +
+	"\x0epodAnnotations\x18\x14 \x01(\v2\x17.google.protobuf.StructB\x02\x18\x01R\x0epodAnnotations\x12{\n" +
+	"\x1cpodAntiAffinityLabelSelector\x18\x15 \x03(\v23.k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelectorB\x02\x18\x01R\x1cpodAntiAffinityLabelSelector\x12\x83\x01\n" +
+	" podAntiAffinityTermLabelSelector\x18\x16 \x03(\v23.k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelectorB\x02\x18\x01R podAntiAffinityTermLabelSelector\x12:\n" +
+	"\x05ports\x18\x17 \x03(\v2$.istio.operator.v1alpha1.PortsConfigR\x05ports\x12&\n" +
+	"\freplicaCount\x18\x18 \x01(\rB\x02\x18\x01R\freplicaCount\x129\n" +
+	"\tresources\x18\x19 \x01(\v2\x17.google.protobuf.StructB\x02\x18\x01R\tresources\x12K\n" +
+	"\rsecretVolumes\x18\x1b \x03(\v2%.istio.operator.v1alpha1.SecretVolumeR\rsecretVolumes\x12G\n" +
+	"\x12serviceAnnotations\x18\x1c \x01(\v2\x17.google.protobuf.StructR\x12serviceAnnotations\x12\x12\n" +
+	"\x04type\x18\x1d \x01(\tR\x04type\x12R\n" +
+	"\x0frollingMaxSurge\x18\x1f \x01(\v2$.istio.operator.v1alpha1.IntOrStringB\x02\x18\x01R\x0frollingMaxSurge\x12^\n" +
+	"\x15rollingMaxUnavailable\x18  \x01(\v2$.istio.operator.v1alpha1.IntOrStringB\x02\x18\x01R\x15rollingMaxUnavailable\x124\n" +
+	"\x15externalTrafficPolicy\x18\" \x01(\tR\x15externalTrafficPolicy\x12D\n" +
+	"\vtolerations\x18# \x03(\v2\x1e.k8s.io.api.core.v1.TolerationB\x02\x18\x01R\vtolerations\x12;\n" +
+	"\fingressPorts\x18$ \x03(\v2\x17.google.protobuf.StructR\fingressPorts\x12K\n" +
+	"\x14additionalContainers\x18% \x03(\v2\x17.google.protobuf.StructR\x14additionalContainers\x12=\n" +
+	"\rconfigVolumes\x18& \x03(\v2\x17.google.protobuf.StructR\rconfigVolumes\x128\n" +
+	"\trunAsRoot\x18- \x01(\v2\x1a.google.protobuf.BoolValueR\trunAsRoot\x12,\n" +
+	"\x11injectionTemplate\x18. \x01(\tR\x11injectionTemplate\x12O\n" +
+	"\x0eserviceAccount\x18/ \x01(\v2'.istio.operator.v1alpha1.ServiceAccountR\x0eserviceAccount\x12\x1e\n" +
+	"\n" +
+	"ipFamilies\x180 \x03(\tR\n" +
+	"ipFamilies\x12&\n" +
+	"\x0eipFamilyPolicy\x181 \x01(\tR\x0eipFamilyPolicy\x1a9\n" +
+	"\vLabelsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe8\x01\n" +
+	"\x12MultiClusterConfig\x124\n" +
+	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12 \n" +
+	"\vclusterName\x18\x02 \x01(\tR\vclusterName\x12.\n" +
+	"\x12globalDomainSuffix\x18\x03 \x01(\tR\x12globalDomainSuffix\x12J\n" +
+	"\x12includeEnvoyFilter\x18\x04 \x01(\v2\x1a.google.protobuf.BoolValueR\x12includeEnvoyFilter\"\x96\x01\n" +
+	"\x1bOutboundTrafficPolicyConfig\x12M\n" +
+	"\x04mode\x18\x02 \x01(\x0e29.istio.operator.v1alpha1.OutboundTrafficPolicyConfig.ModeR\x04mode\"(\n" +
+	"\x04Mode\x12\r\n" +
+	"\tALLOW_ANY\x10\x00\x12\x11\n" +
+	"\rREGISTRY_ONLY\x10\x01\"\x98\x13\n" +
+	"\vPilotConfig\x124\n" +
+	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12F\n" +
+	"\x10autoscaleEnabled\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x10autoscaleEnabled\x12\"\n" +
+	"\fautoscaleMin\x18\x03 \x01(\rR\fautoscaleMin\x12\"\n" +
+	"\fautoscaleMax\x18\x04 \x01(\rR\fautoscaleMax\x12E\n" +
+	"\x11autoscaleBehavior\x18( \x01(\v2\x17.google.protobuf.StructR\x11autoscaleBehavior\x12&\n" +
+	"\freplicaCount\x18\x05 \x01(\rB\x02\x18\x01R\freplicaCount\x12\x14\n" +
+	"\x05image\x18\x06 \x01(\tR\x05image\x12$\n" +
+	"\rtraceSampling\x18\b \x01(\x01R\rtraceSampling\x12D\n" +
+	"\tresources\x18\t \x01(\v2\".istio.operator.v1alpha1.ResourcesB\x02\x18\x01R\tresources\x12F\n" +
+	"\x03cpu\x18\v \x01(\v20.istio.operator.v1alpha1.TargetUtilizationConfigB\x02\x18\x01R\x03cpu\x12?\n" +
+	"\fnodeSelector\x18\f \x01(\v2\x17.google.protobuf.StructB\x02\x18\x01R\fnodeSelector\x12c\n" +
+	"\x1fkeepaliveMaxServerConnectionAge\x18\r \x01(\v2\x19.google.protobuf.DurationR\x1fkeepaliveMaxServerConnectionAge\x12C\n" +
+	"\x10deploymentLabels\x18\x0e \x01(\v2\x17.google.protobuf.StructR\x10deploymentLabels\x125\n" +
+	"\tpodLabels\x18$ \x01(\v2\x17.google.protobuf.StructR\tpodLabels\x128\n" +
+	"\tconfigMap\x18\x12 \x01(\v2\x1a.google.protobuf.BoolValueR\tconfigMap\x12)\n" +
+	"\x03env\x18\x15 \x01(\v2\x17.google.protobuf.StructR\x03env\x128\n" +
+	"\baffinity\x18\x16 \x01(\v2\x1c.k8s.io.api.core.v1.AffinityR\baffinity\x12R\n" +
+	"\x0frollingMaxSurge\x18\x18 \x01(\v2$.istio.operator.v1alpha1.IntOrStringB\x02\x18\x01R\x0frollingMaxSurge\x12^\n" +
+	"\x15rollingMaxUnavailable\x18\x19 \x01(\v2$.istio.operator.v1alpha1.IntOrStringB\x02\x18\x01R\x15rollingMaxUnavailable\x12D\n" +
+	"\vtolerations\x18\x1a \x03(\v2\x1e.k8s.io.api.core.v1.TolerationB\x02\x18\x01R\vtolerations\x12C\n" +
+	"\x0epodAnnotations\x18\x1e \x01(\v2\x17.google.protobuf.StructB\x02\x18\x01R\x0epodAnnotations\x12G\n" +
+	"\x12serviceAnnotations\x18% \x01(\v2\x17.google.protobuf.StructR\x12serviceAnnotations\x12U\n" +
+	"\x19serviceAccountAnnotations\x188 \x01(\v2\x17.google.protobuf.StructR\x19serviceAccountAnnotations\x128\n" +
+	"\x17jwksResolverExtraRootCA\x18  \x01(\tR\x17jwksResolverExtraRootCA\x12\x10\n" +
+	"\x03hub\x18\" \x01(\tR\x03hub\x12(\n" +
+	"\x03tag\x18# \x01(\v2\x16.google.protobuf.ValueR\x03tag\x12\x18\n" +
+	"\avariant\x18' \x01(\tR\avariant\x12J\n" +
+	"\x0eseccompProfile\x18& \x01(\v2\".k8s.io.api.core.v1.SeccompProfileR\x0eseccompProfile\x12j\n" +
+	"\x19topologySpreadConstraints\x18) \x03(\v2,.k8s.io.api.core.v1.TopologySpreadConstraintR\x19topologySpreadConstraints\x12G\n" +
+	"\x12extraContainerArgs\x18* \x03(\v2\x17.google.protobuf.StructR\x12extraContainerArgs\x12C\n" +
+	"\fvolumeMounts\x181 \x03(\v2\x1f.k8s.io.api.core.v1.VolumeMountR\fvolumeMounts\x124\n" +
+	"\avolumes\x183 \x03(\v2\x1a.k8s.io.api.core.v1.VolumeR\avolumes\x12\x1e\n" +
+	"\n" +
+	"ipFamilies\x184 \x03(\tR\n" +
+	"ipFamilies\x12&\n" +
+	"\x0eipFamilyPolicy\x185 \x01(\tR\x0eipFamilyPolicy\x12L\n" +
+	"\x06memory\x186 \x01(\v20.istio.operator.v1alpha1.TargetUtilizationConfigB\x02\x18\x01R\x06memory\x129\n" +
+	"\x03cni\x187 \x01(\v2'.istio.operator.v1alpha1.CNIUsageConfigR\x03cni\x12I\n" +
+	"\x05taint\x189 \x01(\v23.istio.operator.v1alpha1.PilotTaintControllerConfigR\x05taint\x128\n" +
+	"\x17trustedZtunnelNamespace\x18; \x01(\tR\x17trustedZtunnelNamespace\x12O\n" +
+	"\fistiodRemote\x18= \x01(\v2+.istio.operator.v1alpha1.IstiodRemoteConfigR\fistiodRemote\x127\n" +
+	"\n" +
+	"envVarFrom\x18> \x03(\v2\x17.google.protobuf.StructR\n" +
+	"envVarFrom\"T\n" +
+	"\x1aPilotTaintControllerConfig\x12\x18\n" +
+	"\aenabled\x18\x01 \x01(\bR\aenabled\x12\x1c\n" +
+	"\tnamespace\x18\x02 \x01(\tR\tnamespace\"\xc6\x01\n" +
+	"\x12PilotIngressConfig\x12&\n" +
+	"\x0eingressService\x18\x01 \x01(\tR\x0eingressService\x12d\n" +
+	"\x15ingressControllerMode\x18\x02 \x01(\x0e2..istio.operator.v1alpha1.ingressControllerModeR\x15ingressControllerMode\x12\"\n" +
+	"\fingressClass\x18\x03 \x01(\tR\fingressClass\"I\n" +
+	"\x11PilotPolicyConfig\x124\n" +
+	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\"\x83\x01\n" +
+	"\x0fTelemetryConfig\x124\n" +
+	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12:\n" +
+	"\x02v2\x18\x03 \x01(\v2*.istio.operator.v1alpha1.TelemetryV2ConfigR\x02v2\"\xf8\x01\n" +
+	"\x11TelemetryV2Config\x124\n" +
+	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12T\n" +
+	"\n" +
+	"prometheus\x18\x02 \x01(\v24.istio.operator.v1alpha1.TelemetryV2PrometheusConfigR\n" +
+	"prometheus\x12W\n" +
+	"\vstackdriver\x18\x03 \x01(\v25.istio.operator.v1alpha1.TelemetryV2StackDriverConfigR\vstackdriver\"S\n" +
+	"\x1bTelemetryV2PrometheusConfig\x124\n" +
+	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\"T\n" +
+	"\x1cTelemetryV2StackDriverConfig\x124\n" +
+	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\"\x8d\x01\n" +
+	"\vPortsConfig\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
+	"\x04port\x18\x02 \x01(\x05R\x04port\x12\x1a\n" +
+	"\bnodePort\x18\x03 \x01(\x05R\bnodePort\x12\x1e\n" +
+	"\n" +
+	"targetPort\x18\x04 \x01(\x05R\n" +
+	"targetPort\x12\x1a\n" +
+	"\bprotocol\x18\x05 \x01(\tR\bprotocol\"\xca\t\n" +
+	"\vProxyConfig\x12\x1e\n" +
+	"\n" +
+	"autoInject\x18\x04 \x01(\tR\n" +
+	"autoInject\x12$\n" +
+	"\rclusterDomain\x18\x05 \x01(\tR\rclusterDomain\x12,\n" +
+	"\x11componentLogLevel\x18\x06 \x01(\tR\x11componentLogLevel\x12F\n" +
+	"\x0eenableCoreDump\x18\t \x01(\v2\x1a.google.protobuf.BoolValueB\x02\x18\x01R\x0eenableCoreDump\x120\n" +
+	"\x13excludeInboundPorts\x18\f \x01(\tR\x13excludeInboundPorts\x12(\n" +
+	"\x0fexcludeIPRanges\x18\r \x01(\tR\x0fexcludeIPRanges\x12\x14\n" +
+	"\x05image\x18\x0e \x01(\tR\x05image\x12(\n" +
+	"\x0fincludeIPRanges\x18\x10 \x01(\tR\x0fincludeIPRanges\x12\x1a\n" +
+	"\blogLevel\x18\x12 \x01(\tR\blogLevel\x12&\n" +
+	"\x0eoutlierLogPath\x18* \x01(\tR\x0eoutlierLogPath\x12:\n" +
+	"\n" +
+	"privileged\x18\x13 \x01(\v2\x1a.google.protobuf.BoolValueR\n" +
+	"privileged\x12B\n" +
+	"\x1creadinessInitialDelaySeconds\x18\x14 \x01(\rR\x1creadinessInitialDelaySeconds\x126\n" +
+	"\x16readinessPeriodSeconds\x18\x15 \x01(\rR\x16readinessPeriodSeconds\x12<\n" +
+	"\x19readinessFailureThreshold\x18\x16 \x01(\rR\x19readinessFailureThreshold\x12I\n" +
+	"\fstartupProbe\x18) \x01(\v2%.istio.operator.v1alpha1.StartupProbeR\fstartupProbe\x12\x1e\n" +
+	"\n" +
+	"statusPort\x18\x17 \x01(\rR\n" +
+	"statusPort\x12D\n" +
+	"\tresources\x18\x18 \x01(\v2\".istio.operator.v1alpha1.ResourcesB\x02\x18\x01R\tresources\x127\n" +
+	"\x06tracer\x18\x19 \x01(\x0e2\x1f.istio.operator.v1alpha1.tracerR\x06tracer\x122\n" +
+	"\x14excludeOutboundPorts\x18\x1c \x01(\tR\x14excludeOutboundPorts\x12;\n" +
+	"\tlifecycle\x18$ \x01(\v2\x1d.k8s.io.api.core.v1.LifecycleR\tlifecycle\x12h\n" +
+	"\x1fholdApplicationUntilProxyStarts\x18% \x01(\v2\x1a.google.protobuf.BoolValueB\x02\x18\x01R\x1fholdApplicationUntilProxyStarts\x120\n" +
+	"\x13includeInboundPorts\x18& \x01(\tR\x13includeInboundPorts\x122\n" +
+	"\x14includeOutboundPorts\x18' \x01(\tR\x14includeOutboundPorts\"p\n" +
+	"\fStartupProbe\x124\n" +
+	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12*\n" +
+	"\x10failureThreshold\x18\x02 \x01(\rR\x10failureThreshold\"m\n" +
+	"\x0fProxyInitConfig\x12\x14\n" +
+	"\x05image\x18\x01 \x01(\tR\x05image\x12D\n" +
+	"\tresources\x18\x05 \x01(\v2\".istio.operator.v1alpha1.ResourcesB\x02\x18\x01R\tresources\"C\n" +
+	"\x17ResourcesRequestsConfig\x12\x10\n" +
+	"\x03cpu\x18\x01 \x01(\tR\x03cpu\x12\x16\n" +
+	"\x06memory\x18\x02 \x01(\tR\x06memory\">\n" +
+	"\tSDSConfig\x121\n" +
+	"\x05token\x18\x05 \x01(\v2\x17.google.protobuf.StructB\x02\x18\x01R\x05token\"`\n" +
+	"\fSecretVolume\x12\x1c\n" +
+	"\tmountPath\x18\x01 \x01(\tR\tmountPath\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1e\n" +
+	"\n" +
+	"secretName\x18\x03 \x01(\tR\n" +
+	"secretName\"\x91\x05\n" +
+	"\x15SidecarInjectorConfig\x12X\n" +
+	"\x19enableNamespacesByDefault\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x19enableNamespacesByDefault\x12.\n" +
+	"\x12reinvocationPolicy\x18\x03 \x01(\tR\x12reinvocationPolicy\x12e\n" +
+	"\x13neverInjectSelector\x18\v \x03(\v23.k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelectorR\x13neverInjectSelector\x12g\n" +
+	"\x14alwaysInjectSelector\x18\f \x03(\v23.k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelectorR\x14alwaysInjectSelector\x12L\n" +
+	"\x13rewriteAppHTTPProbe\x18\x10 \x01(\v2\x1a.google.protobuf.BoolValueR\x13rewriteAppHTTPProbe\x12I\n" +
+	"\x13injectedAnnotations\x18\x13 \x01(\v2\x17.google.protobuf.StructR\x13injectedAnnotations\x12\"\n" +
+	"\finjectionURL\x18\x16 \x01(\tR\finjectionURL\x125\n" +
+	"\ttemplates\x18\x17 \x01(\v2\x17.google.protobuf.StructR\ttemplates\x12*\n" +
+	"\x10defaultTemplates\x18\x18 \x03(\tR\x10defaultTemplates\"\xbd\x02\n" +
+	"\fTracerConfig\x12F\n" +
+	"\adatadog\x18\x01 \x01(\v2,.istio.operator.v1alpha1.TracerDatadogConfigR\adatadog\x12L\n" +
+	"\tlightstep\x18\x02 \x01(\v2..istio.operator.v1alpha1.TracerLightStepConfigR\tlightstep\x12C\n" +
+	"\x06zipkin\x18\x03 \x01(\v2+.istio.operator.v1alpha1.TracerZipkinConfigR\x06zipkin\x12R\n" +
+	"\vstackdriver\x18\x04 \x01(\v20.istio.operator.v1alpha1.TracerStackdriverConfigR\vstackdriver\"/\n" +
+	"\x13TracerDatadogConfig\x12\x18\n" +
+	"\aaddress\x18\x01 \x01(\tR\aaddress\"S\n" +
+	"\x15TracerLightStepConfig\x12\x18\n" +
+	"\aaddress\x18\x01 \x01(\tR\aaddress\x12 \n" +
+	"\vaccessToken\x18\x02 \x01(\tR\vaccessToken\".\n" +
+	"\x12TracerZipkinConfig\x12\x18\n" +
+	"\aaddress\x18\x01 \x01(\tR\aaddress\"\xf5\x01\n" +
+	"\x17TracerStackdriverConfig\x120\n" +
+	"\x05debug\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\x05debug\x124\n" +
+	"\x15maxNumberOfAttributes\x18\x02 \x01(\rR\x15maxNumberOfAttributes\x126\n" +
+	"\x16maxNumberOfAnnotations\x18\x03 \x01(\rR\x16maxNumberOfAnnotations\x12:\n" +
+	"\x18maxNumberOfMessageEvents\x18\x04 \x01(\rR\x18maxNumberOfMessageEvents\"\xea\x02\n" +
+	"\n" +
+	"BaseConfig\x12J\n" +
+	"\x12enableCRDTemplates\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\x12enableCRDTemplates\x12\"\n" +
+	"\fexcludedCRDs\x18\x06 \x03(\tR\fexcludedCRDs\x12$\n" +
+	"\rvalidationURL\x18\x02 \x01(\tR\rvalidationURL\x12P\n" +
+	"\x15enableIstioConfigCRDs\x18\x03 \x01(\v2\x1a.google.protobuf.BoolValueR\x15enableIstioConfigCRDs\x12D\n" +
+	"\x0fvalidateGateway\x18\x04 \x01(\v2\x1a.google.protobuf.BoolValueR\x0fvalidateGateway\x12.\n" +
+	"\x12validationCABundle\x18\x05 \x01(\tR\x12validationCABundle\"\xc2\x01\n" +
+	"\x12IstiodRemoteConfig\x12\"\n" +
+	"\finjectionURL\x18\x01 \x01(\tR\finjectionURL\x12$\n" +
+	"\rinjectionPath\x18\x02 \x01(\tR\rinjectionPath\x12,\n" +
+	"\x11injectionCABundle\x18\x03 \x01(\tR\x11injectionCABundle\x124\n" +
+	"\aenabled\x18\x05 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\"\xd7\b\n" +
+	"\x06Values\x124\n" +
+	"\x03cni\x18\x02 \x01(\v2\".istio.operator.v1alpha1.CNIConfigR\x03cni\x12C\n" +
+	"\bgateways\x18\x05 \x01(\v2'.istio.operator.v1alpha1.GatewaysConfigR\bgateways\x12=\n" +
+	"\x06global\x18\x06 \x01(\v2%.istio.operator.v1alpha1.GlobalConfigR\x06global\x12:\n" +
+	"\x05pilot\x18\n" +
+	" \x01(\v2$.istio.operator.v1alpha1.PilotConfigR\x05pilot\x120\n" +
+	"\aztunnel\x18) \x01(\v2\x16.google.protobuf.ValueR\aztunnel\x12F\n" +
+	"\ttelemetry\x18\x17 \x01(\v2(.istio.operator.v1alpha1.TelemetryConfigR\ttelemetry\x12f\n" +
+	"\x16sidecarInjectorWebhook\x18\r \x01(\v2..istio.operator.v1alpha1.SidecarInjectorConfigR\x16sidecarInjectorWebhook\x12H\n" +
+	"\tistio_cni\x18\x13 \x01(\v2'.istio.operator.v1alpha1.CNIUsageConfigB\x02\x18\x01R\bistioCni\x12\x1a\n" +
+	"\brevision\x18\x15 \x01(\tR\brevision\x12\x1c\n" +
+	"\townerName\x18\x16 \x01(\tR\townerName\x126\n" +
+	"\n" +
+	"meshConfig\x18$ \x01(\v2\x16.google.protobuf.ValueR\n" +
+	"meshConfig\x127\n" +
+	"\x04base\x18% \x01(\v2#.istio.operator.v1alpha1.BaseConfigR\x04base\x12S\n" +
+	"\fistiodRemote\x18& \x01(\v2+.istio.operator.v1alpha1.IstiodRemoteConfigB\x02\x18\x01R\fistiodRemote\x12\"\n" +
+	"\frevisionTags\x18' \x03(\tR\frevisionTags\x12(\n" +
+	"\x0fdefaultRevision\x18( \x01(\tR\x0fdefaultRevision\x12\x18\n" +
+	"\aprofile\x18* \x01(\tR\aprofile\x122\n" +
+	"\x14compatibilityVersion\x18+ \x01(\tR\x14compatibilityVersion\x12O\n" +
+	"\fexperimental\x18, \x01(\v2+.istio.operator.v1alpha1.ExperimentalConfigR\fexperimental\x12>\n" +
+	"\x0egatewayClasses\x18- \x01(\v2\x16.google.protobuf.ValueR\x0egatewayClasses\"h\n" +
+	"\x12ExperimentalConfig\x12R\n" +
+	"\x16stableValidationPolicy\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\x16stableValidationPolicy\"\x8c\x01\n" +
+	"\vIntOrString\x12\x12\n" +
+	"\x04type\x18\x01 \x01(\x03R\x04type\x123\n" +
+	"\x06intVal\x18\x02 \x01(\v2\x1b.google.protobuf.Int32ValueR\x06intVal\x124\n" +
+	"\x06strVal\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueR\x06strVal\"\xfe\x02\n" +
+	"\x0eWaypointConfig\x12@\n" +
+	"\tresources\x18\x01 \x01(\v2\".istio.operator.v1alpha1.ResourcesR\tresources\x128\n" +
+	"\baffinity\x18\x02 \x01(\v2\x1c.k8s.io.api.core.v1.AffinityR\baffinity\x12j\n" +
+	"\x19topologySpreadConstraints\x18\x03 \x03(\v2,.k8s.io.api.core.v1.TopologySpreadConstraintR\x19topologySpreadConstraints\x12D\n" +
+	"\fnodeSelector\x18\x04 \x01(\v2 .k8s.io.api.core.v1.NodeSelectorR\fnodeSelector\x12>\n" +
+	"\n" +
+	"toleration\x18\x05 \x03(\v2\x1e.k8s.io.api.core.v1.TolerationR\n" +
+	"toleration*J\n" +
+	"\x15ingressControllerMode\x12\x0f\n" +
+	"\vUNSPECIFIED\x10\x00\x12\v\n" +
+	"\aDEFAULT\x10\x01\x12\n" +
+	"\n" +
+	"\x06STRICT\x10\x02\x12\a\n" +
+	"\x03OFF\x10\x03*`\n" +
+	"\x06tracer\x12\n" +
+	"\n" +
+	"\x06zipkin\x10\x00\x12\r\n" +
+	"\tlightstep\x10\x01\x12\v\n" +
+	"\adatadog\x10\x02\x12\x0f\n" +
+	"\vstackdriver\x10\x03\x12\x13\n" +
+	"\x0fopenCensusAgent\x10\x04\x12\b\n" +
+				"\x04none\x10\x05B\"Z istio.io/istio/operator/pkg/apisb\x06proto3" // CNIGlobalConfig is a subset of the Global Configuration used in the Istio CNI chart.
 type CNIGlobalConfig struct { // Default k8s resources settings for all Istio control plane components.
 	//
 	// See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
@@ -2329,13 +2778,21 @@ type MeshConfigExtensionProviderHttpService struct {
 	Headers []*MeshConfigExtensionProviderHttpHeader `json:"headers,omitempty"`
 }
 
+// +kubebuilder:validation:XValidation:message="At most one of [value envName] should be set",rule="(has(self.value)?1:0) + (has(self.envName)?1:0) <= 1"
 type MeshConfigExtensionProviderHttpHeader struct {
 	// REQUIRED. The HTTP header name.
 	// +kubebuilder:validation:Required
 	Name *string `json:"name"`
-	// REQUIRED. The HTTP header value.
-	// +kubebuilder:validation:Required
-	Value *string `json:"value"`
+
+	// The HTTP header value.
+	Value *string `json:"value,omitempty"`
+
+	// The HTTP header value from the environment variable.
+	//
+	// Warning:
+	// - The environment variable must be set in the istiod pod spec.
+	// - This is not a end-to-end secure.
+	EnvName *string `json:"envName,omitempty"`
 }
 
 type MeshConfigExtensionProviderResourceDetectors struct {
@@ -2481,7 +2938,314 @@ type MeshConfigExtensionProviderResourceDetectorsEnvironmentResourceDetector str
 type MeshConfigExtensionProviderResourceDetectorsDynatraceResourceDetector struct {
 }
 
-// Network provides information about the endpoints in a routable L3
+const fileMeshV1alpha1ConfigProtoRawDesc = "" +
+	"\n" +
+	"\x1amesh/v1alpha1/config.proto\x12\x13istio.mesh.v1alpha1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19mesh/v1alpha1/proxy.proto\x1a*networking/v1alpha3/destination_rule.proto\x1a)networking/v1alpha3/virtual_service.proto\"\xebh\n" +
+	"\n" +
+	"MeshConfig\x12*\n" +
+	"\x11proxy_listen_port\x18\x04 \x01(\x05R\x0fproxyListenPort\x129\n" +
+	"\x19proxy_inbound_listen_port\x18A \x01(\x05R\x16proxyInboundListenPort\x12&\n" +
+	"\x0fproxy_http_port\x18\x05 \x01(\x05R\rproxyHttpPort\x12B\n" +
+	"\x0fconnect_timeout\x18\x06 \x01(\v2\x19.google.protobuf.DurationR\x0econnectTimeout\x12W\n" +
+	"\x1aprotocol_detection_timeout\x18* \x01(\v2\x19.google.protobuf.DurationR\x18protocolDetectionTimeout\x12o\n" +
+	"\rtcp_keepalive\x18\x1c \x01(\v2J.istio.networking.v1alpha3.ConnectionPoolSettings.TCPSettings.TcpKeepaliveR\ftcpKeepalive\x12#\n" +
+	"\ringress_class\x18\a \x01(\tR\fingressClass\x12'\n" +
+	"\x0fingress_service\x18\b \x01(\tR\x0eingressService\x12m\n" +
+	"\x17ingress_controller_mode\x18\t \x01(\x0e25.istio.mesh.v1alpha1.MeshConfig.IngressControllerModeR\x15ingressControllerMode\x12)\n" +
+	"\x10ingress_selector\x184 \x01(\tR\x0fingressSelector\x12%\n" +
+	"\x0eenable_tracing\x18\f \x01(\bR\renableTracing\x12&\n" +
+	"\x0faccess_log_file\x18\r \x01(\tR\raccessLogFile\x12*\n" +
+	"\x11access_log_format\x18\x18 \x01(\tR\x0faccessLogFormat\x12a\n" +
+	"\x13access_log_encoding\x18\x1b \x01(\x0e21.istio.mesh.v1alpha1.MeshConfig.AccessLogEncodingR\x11accessLogEncoding\x12D\n" +
+	"\x1fenable_envoy_access_log_service\x18( \x01(\bR\x1benableEnvoyAccessLogService\x12;\n" +
+	"\x1adisable_envoy_listener_log\x188 \x01(\bR\x17disableEnvoyListenerLog\x12G\n" +
+	"\x0edefault_config\x18\x0e \x01(\v2 .istio.mesh.v1alpha1.ProxyConfigR\rdefaultConfig\x12m\n" +
+	"\x17outbound_traffic_policy\x18\x11 \x01(\v25.istio.mesh.v1alpha1.MeshConfig.OutboundTrafficPolicyR\x15outboundTrafficPolicy\x12j\n" +
+	"\x16inbound_traffic_policy\x18B \x01(\v24.istio.mesh.v1alpha1.MeshConfig.InboundTrafficPolicyR\x14inboundTrafficPolicy\x12H\n" +
+	"\x0econfig_sources\x18\x16 \x03(\v2!.istio.mesh.v1alpha1.ConfigSourceR\rconfigSources\x12D\n" +
+	"\x10enable_auto_mtls\x18+ \x01(\v2\x1a.google.protobuf.BoolValueR\x0eenableAutoMtls\x12!\n" +
+	"\ftrust_domain\x18\x1a \x01(\tR\vtrustDomain\x120\n" +
+	"\x14trust_domain_aliases\x18. \x03(\tR\x12trustDomainAliases\x12X\n" +
+	"\x0fca_certificates\x18: \x03(\v2/.istio.mesh.v1alpha1.MeshConfig.CertificateDataR\x0ecaCertificates\x129\n" +
+	"\x19default_service_export_to\x18\x1f \x03(\tR\x16defaultServiceExportTo\x12H\n" +
+	"!default_virtual_service_export_to\x18  \x03(\tR\x1ddefaultVirtualServiceExportTo\x12J\n" +
+	"\"default_destination_rule_export_to\x18! \x03(\tR\x1edefaultDestinationRuleExportTo\x12%\n" +
+	"\x0eroot_namespace\x18\" \x01(\tR\rrootNamespace\x12f\n" +
+	"\x13locality_lb_setting\x18# \x01(\v26.istio.networking.v1alpha3.LocalityLoadBalancerSettingR\x11localityLbSetting\x12C\n" +
+	"\x10dns_refresh_rate\x18$ \x01(\v2\x19.google.protobuf.DurationR\x0ednsRefreshRate\x12[\n" +
+	"\x11h2_upgrade_policy\x18) \x01(\x0e2/.istio.mesh.v1alpha1.MeshConfig.H2UpgradePolicyR\x0fh2UpgradePolicy\x129\n" +
+	"\x19inbound_cluster_stat_name\x18, \x01(\tR\x16inboundClusterStatName\x12;\n" +
+	"\x1aoutbound_cluster_stat_name\x18- \x01(\tR\x17outboundClusterStatName\x12H\n" +
+	"\fcertificates\x18/ \x03(\v2 .istio.mesh.v1alpha1.CertificateB\x02\x18\x01R\fcertificates\x12Z\n" +
+	"\x10service_settings\x182 \x03(\v2/.istio.mesh.v1alpha1.MeshConfig.ServiceSettingsR\x0fserviceSettings\x12R\n" +
+	"\x17enable_prometheus_merge\x183 \x01(\v2\x1a.google.protobuf.BoolValueR\x15enablePrometheusMerge\x12_\n" +
+	"\x1cverify_certificate_at_client\x186 \x01(\v2\x1a.google.protobuf.BoolValueB\x02\x18\x01R\x19verifyCertificateAtClient\x122\n" +
+	"\x02ca\x187 \x01(\v2\".istio.mesh.v1alpha1.MeshConfig.CAR\x02ca\x12b\n" +
+	"\x13extension_providers\x189 \x03(\v21.istio.mesh.v1alpha1.MeshConfig.ExtensionProviderR\x12extensionProviders\x12]\n" +
+	"\x11default_providers\x18< \x01(\v20.istio.mesh.v1alpha1.MeshConfig.DefaultProvidersR\x10defaultProviders\x12S\n" +
+	"\x13discovery_selectors\x18; \x03(\v2\".istio.mesh.v1alpha1.LabelSelectorR\x12discoverySelectors\x12e\n" +
+	"\x12path_normalization\x18= \x01(\v26.istio.mesh.v1alpha1.MeshConfig.ProxyPathNormalizationR\x11pathNormalization\x12_\n" +
+	"\x19default_http_retry_policy\x18> \x01(\v2$.istio.networking.v1alpha3.HTTPRetryR\x16defaultHttpRetryPolicy\x12F\n" +
+	"\tmesh_mTLS\x18? \x01(\v2).istio.mesh.v1alpha1.MeshConfig.TLSConfigR\bmeshMTLS\x12L\n" +
+	"\ftls_defaults\x18@ \x01(\v2).istio.mesh.v1alpha1.MeshConfig.TLSConfigR\vtlsDefaults\x1a\xad\x01\n" +
+	"\x15OutboundTrafficPolicy\x12N\n" +
+	"\x04mode\x18\x01 \x01(\x0e2:.istio.mesh.v1alpha1.MeshConfig.OutboundTrafficPolicy.ModeR\x04mode\"D\n" +
+	"\x04Mode\x12\x11\n" +
+	"\rREGISTRY_ONLY\x10\x00\x12\r\n" +
+	"\tALLOW_ANY\x10\x01\"\x04\b\x02\x10\x02*\x14VIRTUAL_SERVICE_ONLY\x1a\x8d\x01\n" +
+	"\x14InboundTrafficPolicy\x12M\n" +
+	"\x04mode\x18\x01 \x01(\x0e29.istio.mesh.v1alpha1.MeshConfig.InboundTrafficPolicy.ModeR\x04mode\"&\n" +
+	"\x04Mode\x12\x0f\n" +
+	"\vPASSTHROUGH\x10\x00\x12\r\n" +
+	"\tLOCALHOST\x10\x01\x1a\xaf\x01\n" +
+	"\x0fCertificateData\x12\x12\n" +
+	"\x03pem\x18\x01 \x01(\tH\x00R\x03pem\x12,\n" +
+	"\x11spiffe_bundle_url\x18\x02 \x01(\tH\x00R\x0fspiffeBundleUrl\x12!\n" +
+	"\fcert_signers\x18\x03 \x03(\tR\vcertSigners\x12#\n" +
+	"\rtrust_domains\x18\x04 \x03(\tR\ftrustDomainsB\x12\n" +
+	"\x10certificate_data\x1a\xae\x01\n" +
+	"\x0fServiceSettings\x12T\n" +
+	"\bsettings\x18\x01 \x01(\v28.istio.mesh.v1alpha1.MeshConfig.ServiceSettings.SettingsR\bsettings\x12\x14\n" +
+	"\x05hosts\x18\x02 \x03(\tR\x05hosts\x1a/\n" +
+	"\bSettings\x12#\n" +
+	"\rcluster_local\x18\x01 \x01(\bR\fclusterLocal\x1a\xd4\x01\n" +
+	"\x02CA\x12\x18\n" +
+	"\aaddress\x18\x01 \x01(\tR\aaddress\x12O\n" +
+	"\ftls_settings\x18\x02 \x01(\v2,.istio.networking.v1alpha3.ClientTLSSettingsR\vtlsSettings\x12B\n" +
+	"\x0frequest_timeout\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\x0erequestTimeout\x12\x1f\n" +
+	"\vistiod_side\x18\x04 \x01(\bR\n" +
+	"istiodSide\x1a\xcc=\n" +
+	"\x11ExtensionProvider\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x8b\x01\n" +
+	"\x14envoy_ext_authz_http\x18\x02 \x01(\v2X.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyExternalAuthorizationHttpProviderH\x00R\x11envoyExtAuthzHttp\x12\x8b\x01\n" +
+	"\x14envoy_ext_authz_grpc\x18\x03 \x01(\v2X.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyExternalAuthorizationGrpcProviderH\x00R\x11envoyExtAuthzGrpc\x12a\n" +
+	"\x06zipkin\x18\x04 \x01(\v2G.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.ZipkinTracingProviderH\x00R\x06zipkin\x12n\n" +
+	"\tlightstep\x18\x05 \x01(\v2J.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.LightstepTracingProviderB\x02\x18\x01H\x00R\tlightstep\x12d\n" +
+	"\adatadog\x18\x06 \x01(\v2H.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.DatadogTracingProviderH\x00R\adatadog\x12i\n" +
+	"\vstackdriver\x18\a \x01(\v2E.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.StackdriverProviderH\x00R\vstackdriver\x12v\n" +
+	"\n" +
+	"opencensus\x18\b \x01(\v2P.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.OpenCensusAgentTracingProviderB\x02\x18\x01H\x00R\n" +
+	"opencensus\x12m\n" +
+	"\n" +
+	"skywalking\x18\t \x01(\v2K.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.SkyWalkingTracingProviderH\x00R\n" +
+	"skywalking\x12v\n" +
+	"\ropentelemetry\x18\x0f \x01(\v2N.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.OpenTelemetryTracingProviderH\x00R\ropentelemetry\x12m\n" +
+	"\n" +
+	"prometheus\x18\n" +
+	" \x01(\v2K.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.PrometheusMetricsProviderH\x00R\n" +
+	"prometheus\x12\x81\x01\n" +
+	"\x15envoy_file_access_log\x18\v \x01(\v2L.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyFileAccessLogProviderH\x00R\x12envoyFileAccessLog\x12t\n" +
+	"\x0eenvoy_http_als\x18\f \x01(\v2L.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyHttpGrpcV3LogProviderH\x00R\fenvoyHttpAls\x12q\n" +
+	"\renvoy_tcp_als\x18\r \x01(\v2K.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyTcpGrpcV3LogProviderH\x00R\venvoyTcpAls\x12w\n" +
+	"\x0eenvoy_otel_als\x18\x0e \x01(\v2O.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyOpenTelemetryLogProviderH\x00R\fenvoyOtelAls\x1a\xab\x01\n" +
+	"%EnvoyExternalAuthorizationRequestBody\x12*\n" +
+	"\x11max_request_bytes\x18\x01 \x01(\rR\x0fmaxRequestBytes\x122\n" +
+	"\x15allow_partial_message\x18\x02 \x01(\bR\x13allowPartialMessage\x12\"\n" +
+	"\rpack_as_bytes\x18\x03 \x01(\bR\vpackAsBytes\x1a\xa6\b\n" +
+	"&EnvoyExternalAuthorizationHttpProvider\x12\x18\n" +
+	"\aservice\x18\x01 \x01(\tR\aservice\x12\x12\n" +
+	"\x04port\x18\x02 \x01(\rR\x04port\x123\n" +
+	"\atimeout\x18\t \x01(\v2\x19.google.protobuf.DurationR\atimeout\x12\x1f\n" +
+	"\vpath_prefix\x18\x03 \x01(\tR\n" +
+	"pathPrefix\x12\x1b\n" +
+	"\tfail_open\x18\x04 \x01(\bR\bfailOpen\x12*\n" +
+	"\x11clear_route_cache\x18\x0e \x01(\bR\x0fclearRouteCache\x12&\n" +
+	"\x0fstatus_on_error\x18\x05 \x01(\tR\rstatusOnError\x12;\n" +
+	"\x18include_headers_in_check\x18\x06 \x03(\tB\x02\x18\x01R\x15includeHeadersInCheck\x12F\n" +
+	" include_request_headers_in_check\x18\n" +
+	" \x03(\tR\x1cincludeRequestHeadersInCheck\x12\xcb\x01\n" +
+	"#include_additional_headers_in_check\x18\v \x03(\v2}.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyExternalAuthorizationHttpProvider.IncludeAdditionalHeadersInCheckEntryR\x1fincludeAdditionalHeadersInCheck\x12\x99\x01\n" +
+	"\x1dinclude_request_body_in_check\x18\f \x01(\v2W.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyExternalAuthorizationRequestBodyR\x19includeRequestBodyInCheck\x12>\n" +
+	"\x1cheaders_to_upstream_on_allow\x18\a \x03(\tR\x18headersToUpstreamOnAllow\x12@\n" +
+	"\x1dheaders_to_downstream_on_deny\x18\b \x03(\tR\x19headersToDownstreamOnDeny\x12B\n" +
+	"\x1eheaders_to_downstream_on_allow\x18\r \x03(\tR\x1aheadersToDownstreamOnAllow\x1aR\n" +
+	"$IncludeAdditionalHeadersInCheckEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a\x98\x03\n" +
+	"&EnvoyExternalAuthorizationGrpcProvider\x12\x18\n" +
+	"\aservice\x18\x01 \x01(\tR\aservice\x12\x12\n" +
+	"\x04port\x18\x02 \x01(\rR\x04port\x123\n" +
+	"\atimeout\x18\x05 \x01(\v2\x19.google.protobuf.DurationR\atimeout\x12\x1b\n" +
+	"\tfail_open\x18\x03 \x01(\bR\bfailOpen\x12*\n" +
+	"\x11clear_route_cache\x18\a \x01(\bR\x0fclearRouteCache\x12&\n" +
+	"\x0fstatus_on_error\x18\x04 \x01(\tR\rstatusOnError\x12\x99\x01\n" +
+	"\x1dinclude_request_body_in_check\x18\x06 \x01(\v2W.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyExternalAuthorizationRequestBodyR\x19includeRequestBodyInCheck\x1a\xb2\x01\n" +
+	"\x15ZipkinTracingProvider\x12\x18\n" +
+	"\aservice\x18\x01 \x01(\tR\aservice\x12\x12\n" +
+	"\x04port\x18\x02 \x01(\rR\x04port\x12$\n" +
+	"\x0emax_tag_length\x18\x03 \x01(\rR\fmaxTagLength\x121\n" +
+	"\x15enable_64bit_trace_id\x18\x04 \x01(\bR\x12enable64bitTraceId\x12\x12\n" +
+	"\x04path\x18\x05 \x01(\tR\x04path\x1a\x91\x01\n" +
+	"\x18LightstepTracingProvider\x12\x18\n" +
+	"\aservice\x18\x01 \x01(\tR\aservice\x12\x12\n" +
+	"\x04port\x18\x02 \x01(\rR\x04port\x12!\n" +
+	"\faccess_token\x18\x03 \x01(\tR\vaccessToken\x12$\n" +
+	"\x0emax_tag_length\x18\x04 \x01(\rR\fmaxTagLength\x1al\n" +
+	"\x16DatadogTracingProvider\x12\x18\n" +
+	"\aservice\x18\x01 \x01(\tR\aservice\x12\x12\n" +
+	"\x04port\x18\x02 \x01(\rR\x04port\x12$\n" +
+	"\x0emax_tag_length\x18\x03 \x01(\rR\fmaxTagLength\x1al\n" +
+	"\x19SkyWalkingTracingProvider\x12\x18\n" +
+	"\aservice\x18\x01 \x01(\tR\aservice\x12\x12\n" +
+	"\x04port\x18\x02 \x01(\rR\x04port\x12!\n" +
+	"\faccess_token\x18\x03 \x01(\tR\vaccessToken\x1a\x8f\x05\n" +
+	"\x13StackdriverProvider\x12\x18\n" +
+	"\x05debug\x18\x01 \x01(\bB\x02\x18\x01R\x05debug\x12X\n" +
+	"\x18max_number_of_attributes\x18\x02 \x01(\v2\x1b.google.protobuf.Int64ValueB\x02\x18\x01R\x15maxNumberOfAttributes\x12Z\n" +
+	"\x19max_number_of_annotations\x18\x03 \x01(\v2\x1b.google.protobuf.Int64ValueB\x02\x18\x01R\x16maxNumberOfAnnotations\x12_\n" +
+	"\x1cmax_number_of_message_events\x18\x04 \x01(\v2\x1b.google.protobuf.Int64ValueB\x02\x18\x01R\x18maxNumberOfMessageEvents\x12$\n" +
+	"\x0emax_tag_length\x18\x05 \x01(\rR\fmaxTagLength\x12g\n" +
+	"\alogging\x18\x06 \x01(\v2M.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.StackdriverProvider.LoggingR\alogging\x1a\xb7\x01\n" +
+	"\aLogging\x12q\n" +
+	"\x06labels\x18\x01 \x03(\v2Y.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.StackdriverProvider.Logging.LabelsEntryR\x06labels\x1a9\n" +
+	"\vLabelsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a\xd4\x02\n" +
+	"\x1eOpenCensusAgentTracingProvider\x12\x18\n" +
+	"\aservice\x18\x01 \x01(\tR\aservice\x12\x12\n" +
+	"\x04port\x18\x02 \x01(\rR\x04port\x12w\n" +
+	"\acontext\x18\x03 \x03(\x0e2].istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.OpenCensusAgentTracingProvider.TraceContextR\acontext\x12$\n" +
+	"\x0emax_tag_length\x18\x04 \x01(\rR\fmaxTagLength\"e\n" +
+	"\fTraceContext\x12\x0f\n" +
+	"\vUNSPECIFIED\x10\x00\x12\x15\n" +
+	"\x11W3C_TRACE_CONTEXT\x10\x01\x12\f\n" +
+	"\bGRPC_BIN\x10\x02\x12\x17\n" +
+	"\x13CLOUD_TRACE_CONTEXT\x10\x03\x12\x06\n" +
+	"\x02B3\x10\x04\x1a\x1b\n" +
+	"\x19PrometheusMetricsProvider\x1a\xb7\x02\n" +
+	"\x1aEnvoyFileAccessLogProvider\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12u\n" +
+	"\n" +
+	"log_format\x18\x02 \x01(\v2V.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyFileAccessLogProvider.LogFormatR\tlogFormat\x12*\n" +
+	"\x11omit_empty_values\x18\x03 \x01(\bR\x0fomitEmptyValues\x1ab\n" +
+	"\tLogFormat\x12\x14\n" +
+	"\x04text\x18\x01 \x01(\tH\x00R\x04text\x121\n" +
+	"\x06labels\x18\x02 \x01(\v2\x17.google.protobuf.StructH\x00R\x06labelsB\f\n" +
+	"\n" +
+	"log_format\x1a\x87\x03\n" +
+	"\x1aEnvoyHttpGrpcV3LogProvider\x12\x18\n" +
+	"\aservice\x18\x01 \x01(\tR\aservice\x12\x12\n" +
+	"\x04port\x18\x02 \x01(\rR\x04port\x12\x19\n" +
+	"\blog_name\x18\x03 \x01(\tR\alogName\x12<\n" +
+	"\x1bfilter_state_objects_to_log\x18\x04 \x03(\tR\x17filterStateObjectsToLog\x12H\n" +
+	"!additional_request_headers_to_log\x18\x05 \x03(\tR\x1dadditionalRequestHeadersToLog\x12J\n" +
+	"\"additional_response_headers_to_log\x18\x06 \x03(\tR\x1eadditionalResponseHeadersToLog\x12L\n" +
+	"#additional_response_trailers_to_log\x18\a \x03(\tR\x1fadditionalResponseTrailersToLog\x1a\xa2\x01\n" +
+	"\x19EnvoyTcpGrpcV3LogProvider\x12\x18\n" +
+	"\aservice\x18\x01 \x01(\tR\aservice\x12\x12\n" +
+	"\x04port\x18\x02 \x01(\rR\x04port\x12\x19\n" +
+	"\blog_name\x18\x03 \x01(\tR\alogName\x12<\n" +
+	"\x1bfilter_state_objects_to_log\x18\x04 \x03(\tR\x17filterStateObjectsToLog\x1a\xb4\x02\n" +
+	"\x1dEnvoyOpenTelemetryLogProvider\x12\x18\n" +
+	"\aservice\x18\x01 \x01(\tR\aservice\x12\x12\n" +
+	"\x04port\x18\x02 \x01(\rR\x04port\x12\x19\n" +
+	"\blog_name\x18\x03 \x01(\tR\alogName\x12x\n" +
+	"\n" +
+	"log_format\x18\x04 \x01(\v2Y.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyOpenTelemetryLogProvider.LogFormatR\tlogFormat\x1aP\n" +
+	"\tLogFormat\x12\x12\n" +
+	"\x04text\x18\x01 \x01(\tR\x04text\x12/\n" +
+	"\x06labels\x18\x02 \x01(\v2\x17.google.protobuf.StructR\x06labels\x1a\xcc\a\n" +
+	"\x1cOpenTelemetryTracingProvider\x12\x18\n" +
+	"\aservice\x18\x01 \x01(\tR\aservice\x12\x12\n" +
+	"\x04port\x18\x02 \x01(\rR\x04port\x12$\n" +
+	"\x0emax_tag_length\x18\x03 \x01(\rR\fmaxTagLength\x12Q\n" +
+	"\x04http\x18\x04 \x01(\v2=.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.HttpServiceR\x04http\x12Q\n" +
+	"\x04grpc\x18\a \x01(\v2=.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.GrpcServiceR\x04grpc\x12r\n" +
+	"\x12resource_detectors\x18\x05 \x01(\v2C.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.ResourceDetectorsR\x11resourceDetectors\x12\x8e\x01\n" +
+	"\x11dynatrace_sampler\x18\x06 \x01(\v2_.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.OpenTelemetryTracingProvider.DynatraceSamplerH\x00R\x10dynatraceSampler\x1a\xa0\x03\n" +
+	"\x10DynatraceSampler\x12\x16\n" +
+	"\x06tenant\x18\x01 \x01(\tR\x06tenant\x12\x1d\n" +
+	"\n" +
+	"cluster_id\x18\x02 \x01(\x05R\tclusterId\x121\n" +
+	"\x15root_spans_per_minute\x18\x03 \x01(\rR\x12rootSpansPerMinute\x12\x8f\x01\n" +
+	"\fhttp_service\x18\x04 \x01(\v2l.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.OpenTelemetryTracingProvider.DynatraceSampler.DynatraceApiR\vhttpService\x1a\x8f\x01\n" +
+	"\fDynatraceApi\x12\x18\n" +
+	"\aservice\x18\x01 \x01(\tR\aservice\x12\x12\n" +
+	"\x04port\x18\x02 \x01(\rR\x04port\x12Q\n" +
+	"\x04http\x18\x03 \x01(\v2=.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.HttpServiceR\x04httpB\n" +
+	"\n" +
+	"\bsampling\x1a\xae\x01\n" +
+	"\vHttpService\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x123\n" +
+	"\atimeout\x18\x02 \x01(\v2\x19.google.protobuf.DurationR\atimeout\x12V\n" +
+	"\aheaders\x18\x03 \x03(\v2<.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.HttpHeaderR\aheaders\x1ae\n" +
+	"\n" +
+	"HttpHeader\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
+	"\x05value\x18\x02 \x01(\tH\x00R\x05value\x12\x1b\n" +
+	"\benv_name\x18\x03 \x01(\tH\x00R\aenvNameB\x0e\n" +
+	"\fheader_value\x1a\xd0\x02\n" +
+	"\x11ResourceDetectors\x12\x81\x01\n" +
+	"\venvironment\x18\x01 \x01(\v2_.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.ResourceDetectors.EnvironmentResourceDetectorR\venvironment\x12{\n" +
+	"\tdynatrace\x18\x02 \x01(\v2].istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.ResourceDetectors.DynatraceResourceDetectorR\tdynatrace\x1a\x1d\n" +
+	"\x1bEnvironmentResourceDetector\x1a\x1b\n" +
+	"\x19DynatraceResourceDetector\x1a\xab\x01\n" +
+	"\vGrpcService\x123\n" +
+	"\atimeout\x18\x01 \x01(\v2\x19.google.protobuf.DurationR\atimeout\x12g\n" +
+	"\x10initial_metadata\x18\x02 \x03(\v2<.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.HttpHeaderR\x0finitialMetadataB\n" +
+	"\n" +
+	"\bprovider\x1am\n" +
+	"\x10DefaultProviders\x12\x18\n" +
+	"\atracing\x18\x01 \x03(\tR\atracing\x12\x18\n" +
+	"\ametrics\x18\x02 \x03(\tR\ametrics\x12%\n" +
+	"\x0eaccess_logging\x18\x03 \x03(\tR\raccessLogging\x1a\xef\x01\n" +
+	"\x16ProxyPathNormalization\x12n\n" +
+	"\rnormalization\x18\x01 \x01(\x0e2H.istio.mesh.v1alpha1.MeshConfig.ProxyPathNormalization.NormalizationTypeR\rnormalization\"e\n" +
+	"\x11NormalizationType\x12\v\n" +
+	"\aDEFAULT\x10\x00\x12\b\n" +
+	"\x04NONE\x10\x01\x12\b\n" +
+	"\x04BASE\x10\x02\x12\x11\n" +
+	"\rMERGE_SLASHES\x10\x03\x12\x1c\n" +
+	"\x18DECODE_AND_MERGE_SLASHES\x10\x04\x1a\xf1\x01\n" +
+	"\tTLSConfig\x12g\n" +
+	"\x14min_protocol_version\x18\x01 \x01(\x0e25.istio.mesh.v1alpha1.MeshConfig.TLSConfig.TLSProtocolR\x12minProtocolVersion\x12\x1f\n" +
+	"\vecdh_curves\x18\x02 \x03(\tR\n" +
+	"ecdhCurves\x12#\n" +
+	"\rcipher_suites\x18\x03 \x03(\tR\fcipherSuites\"5\n" +
+	"\vTLSProtocol\x12\f\n" +
+	"\bTLS_AUTO\x10\x00\x12\v\n" +
+	"\aTLSV1_2\x10\x01\x12\v\n" +
+	"\aTLSV1_3\x10\x02\"J\n" +
+	"\x15IngressControllerMode\x12\x0f\n" +
+	"\vUNSPECIFIED\x10\x00\x12\a\n" +
+	"\x03OFF\x10\x01\x12\v\n" +
+	"\aDEFAULT\x10\x02\x12\n" +
+	"\n" +
+	"\x06STRICT\x10\x03\"&\n" +
+	"\n" +
+	"AuthPolicy\x12\b\n" +
+	"\x04NONE\x10\x00\x12\x0e\n" +
+	"\n" +
+	"MUTUAL_TLS\x10\x01\"'\n" +
+	"\x11AccessLogEncoding\x12\b\n" +
+	"\x04TEXT\x10\x00\x12\b\n" +
+	"\x04JSON\x10\x01\"2\n" +
+	"\x0fH2UpgradePolicy\x12\x12\n" +
+	"\x0eDO_NOT_UPGRADE\x10\x00\x12\v\n" +
+	"\aUPGRADE\x10\x01J\x04\b1\x102J\x04\b\x01\x10\x02J\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b0\x101J\x04\b\x19\x10\x1aJ\x04\b\x1e\x10\x1fJ\x04\b\n" +
+	"\x10\vJ\x04\b\v\x10\fJ\x04\b\x0f\x10\x10J\x04\b\x10\x10\x11J\x04\b\x12\x10\x13J\x04\b\x13\x10\x14J\x04\b\x14\x10\x15J\x04\b\x15\x10\x16J\x04\b\x17\x10\x18J\x04\b\x1d\x10\x1eJ\x04\b5\x106J\x04\b%\x10&J\x04\b&\x10'J\x04\b'\x10(R\rthrift_configR\x12mixer_check_serverR\x13mixer_report_serverR\x15disable_policy_checksR\x1adisable_mixer_http_reportsR\x16policy_check_fail_openR%sidecar_to_telemetry_session_affinityR\vauth_policyR\x11rds_refresh_delayR\rmixer_addressR\x1fenable_client_side_policy_checkR\fsds_uds_pathR\x11sds_refresh_delayR\x16enable_sds_token_mountR\x12sds_use_k8s_sa_jwtR\x1atermination_drain_durationR\x14disable_report_batchR\x18report_batch_max_entriesR\x15report_batch_max_time\"\x81\x02\n" +
+	"\rLabelSelector\x12U\n" +
+	"\vmatchLabels\x18\x01 \x03(\v23.istio.mesh.v1alpha1.LabelSelector.MatchLabelsEntryR\vmatchLabels\x12Y\n" +
+	"\x10matchExpressions\x18\x02 \x03(\v2-.istio.mesh.v1alpha1.LabelSelectorRequirementR\x10matchExpressions\x1a>\n" +
+	"\x10MatchLabelsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"`\n" +
+	"\x18LabelSelectorRequirement\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x1a\n" +
+	"\boperator\x18\x02 \x01(\tR\boperator\x12\x16\n" +
+	"\x06values\x18\x03 \x03(\tR\x06values\"\xcb\x01\n" +
+	"\fConfigSource\x12\x18\n" +
+	"\aaddress\x18\x01 \x01(\tR\aaddress\x12O\n" +
+	"\ftls_settings\x18\x02 \x01(\v2,.istio.networking.v1alpha3.ClientTLSSettingsR\vtlsSettings\x12P\n" +
+	"\x14subscribed_resources\x18\x03 \x03(\x0e2\x1d.istio.mesh.v1alpha1.ResourceR\x13subscribedResources\"K\n" +
+	"\vCertificate\x12\x1f\n" +
+	"\vsecret_name\x18\x01 \x01(\tR\n" +
+	"secretName\x12\x1b\n" +
+	"\tdns_names\x18\x02 \x03(\tR\bdnsNames* \n" +
+	"\bResource\x12\x14\n" +
+	"\x10SERVICE_REGISTRY\x10\x00B\x1cZ\x1aistio.io/api/mesh/v1alpha1b\x06proto3"
+
+	// Network provides information about the endpoints in a routable L3
 // network. A single routable L3 network can have one or more service
 // registries. Note that the network has no relation to the locality of the
 // endpoint. The endpoint locality will be obtained from the service
@@ -2592,7 +3356,29 @@ type NetworkIstioNetworkGateway struct {
 	Locality *string `json:"locality,omitempty"`
 }
 
-// AuthenticationPolicy defines how the proxy is authenticated when it connects to the control plane.
+const fileMeshV1alpha1NetworkProtoRawDesc = "" +
+	"\n" +
+	"\x1bmesh/v1alpha1/network.proto\x12\x13istio.mesh.v1alpha1\x1a\x1fgoogle/api/field_behavior.proto\"\xb6\x03\n" +
+	"\aNetwork\x12Q\n" +
+	"\tendpoints\x18\x02 \x03(\v2-.istio.mesh.v1alpha1.Network.NetworkEndpointsB\x04\xe2A\x01\x02R\tendpoints\x12R\n" +
+	"\bgateways\x18\x03 \x03(\v20.istio.mesh.v1alpha1.Network.IstioNetworkGatewayB\x04\xe2A\x01\x02R\bgateways\x1a^\n" +
+	"\x10NetworkEndpoints\x12\x1d\n" +
+	"\tfrom_cidr\x18\x01 \x01(\tH\x00R\bfromCidr\x12%\n" +
+	"\rfrom_registry\x18\x02 \x01(\tH\x00R\ffromRegistryB\x04\n" +
+	"\x02ne\x1a\xa3\x01\n" +
+	"\x13IstioNetworkGateway\x124\n" +
+	"\x15registry_service_name\x18\x01 \x01(\tH\x00R\x13registryServiceName\x12\x1a\n" +
+	"\aaddress\x18\x02 \x01(\tH\x00R\aaddress\x12\x18\n" +
+	"\x04port\x18\x03 \x01(\rB\x04\xe2A\x01\x02R\x04port\x12\x1a\n" +
+	"\blocality\x18\x04 \x01(\tR\blocalityB\x04\n" +
+	"\x02gw\"\xbc\x01\n" +
+	"\fMeshNetworks\x12Q\n" +
+	"\bnetworks\x18\x01 \x03(\v2/.istio.mesh.v1alpha1.MeshNetworks.NetworksEntryB\x04\xe2A\x01\x02R\bnetworks\x1aY\n" +
+	"\rNetworksEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x122\n" +
+	"\x05value\x18\x02 \x01(\v2\x1c.istio.mesh.v1alpha1.NetworkR\x05value:\x028\x01B\x1cZ\x1aistio.io/api/mesh/v1alpha1b\x06proto3"
+
+	// AuthenticationPolicy defines how the proxy is authenticated when it connects to the control plane.
 // It can be set for two different scopes, mesh-wide or set on a per-pod basis using the ProxyConfig annotation.
 // Mesh policy cannot be INHERIT.
 // +kubebuilder:validation:Enum=NONE;MUTUAL_TLS;INHERIT
@@ -3306,7 +4092,191 @@ type ProxyConfigProxyHeadersSetCurrentClientCertDetails struct {
 	Uri *bool `json:"uri,omitempty"`
 }
 
-// The following values are used to construct proxy image url.
+const fileMeshV1alpha1ProxyProtoRawDesc = "" +
+	"\n" +
+	"\x19mesh/v1alpha1/proxy.proto\x12\x13istio.mesh.v1alpha1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a*networking/v1alpha3/destination_rule.proto\x1a(networking/v1alpha3/workload_group.proto\x1a%networking/v1beta1/proxy_config.proto\"\xed\x0e\n" +
+	"\aTracing\x12=\n" +
+	"\x06zipkin\x18\x01 \x01(\v2#.istio.mesh.v1alpha1.Tracing.ZipkinH\x00R\x06zipkin\x12F\n" +
+	"\tlightstep\x18\x02 \x01(\v2&.istio.mesh.v1alpha1.Tracing.LightstepH\x00R\tlightstep\x12@\n" +
+	"\adatadog\x18\x03 \x01(\v2$.istio.mesh.v1alpha1.Tracing.DatadogH\x00R\adatadog\x12L\n" +
+	"\vstackdriver\x18\x04 \x01(\v2(.istio.mesh.v1alpha1.Tracing.StackdriverH\x00R\vstackdriver\x12Z\n" +
+	"\x11open_census_agent\x18\t \x01(\v2,.istio.mesh.v1alpha1.Tracing.OpenCensusAgentH\x00R\x0fopenCensusAgent\x12M\n" +
+	"\vcustom_tags\x18\x05 \x03(\v2,.istio.mesh.v1alpha1.Tracing.CustomTagsEntryR\n" +
+	"customTags\x12-\n" +
+	"\x13max_path_tag_length\x18\x06 \x01(\rR\x10maxPathTagLength\x12\x1a\n" +
+	"\bsampling\x18\a \x01(\x01R\bsampling\x12O\n" +
+	"\ftls_settings\x18\b \x01(\v2,.istio.networking.v1alpha3.ClientTLSSettingsR\vtlsSettings\x12F\n" +
+	"\x11enable_istio_tags\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.BoolValueR\x0fenableIstioTags\x1a\"\n" +
+	"\x06Zipkin\x12\x18\n" +
+	"\aaddress\x18\x01 \x01(\tR\aaddress\x1aH\n" +
+	"\tLightstep\x12\x18\n" +
+	"\aaddress\x18\x01 \x01(\tR\aaddress\x12!\n" +
+	"\faccess_token\x18\x02 \x01(\tR\vaccessToken\x1a#\n" +
+	"\aDatadog\x12\x18\n" +
+	"\aaddress\x18\x01 \x01(\tR\aaddress\x1a\xae\x02\n" +
+	"\vStackdriver\x12\x14\n" +
+	"\x05debug\x18\x01 \x01(\bR\x05debug\x12T\n" +
+	"\x18max_number_of_attributes\x18\x02 \x01(\v2\x1b.google.protobuf.Int64ValueR\x15maxNumberOfAttributes\x12V\n" +
+	"\x19max_number_of_annotations\x18\x03 \x01(\v2\x1b.google.protobuf.Int64ValueR\x16maxNumberOfAnnotations\x12[\n" +
+	"\x1cmax_number_of_message_events\x18\x04 \x01(\v2\x1b.google.protobuf.Int64ValueR\x18maxNumberOfMessageEvents\x1a\xe7\x01\n" +
+	"\x0fOpenCensusAgent\x12\x18\n" +
+	"\aaddress\x18\x01 \x01(\tR\aaddress\x12S\n" +
+	"\acontext\x18\x02 \x03(\x0e29.istio.mesh.v1alpha1.Tracing.OpenCensusAgent.TraceContextR\acontext\"e\n" +
+	"\fTraceContext\x12\x0f\n" +
+	"\vUNSPECIFIED\x10\x00\x12\x15\n" +
+	"\x11W3C_TRACE_CONTEXT\x10\x01\x12\f\n" +
+	"\bGRPC_BIN\x10\x02\x12\x17\n" +
+	"\x13CLOUD_TRACE_CONTEXT\x10\x03\x12\x06\n" +
+	"\x02B3\x10\x04\x1a\xe9\x01\n" +
+	"\tCustomTag\x12@\n" +
+	"\aliteral\x18\x01 \x01(\v2$.istio.mesh.v1alpha1.Tracing.LiteralH\x00R\aliteral\x12L\n" +
+	"\venvironment\x18\x02 \x01(\v2(.istio.mesh.v1alpha1.Tracing.EnvironmentH\x00R\venvironment\x12D\n" +
+	"\x06header\x18\x03 \x01(\v2*.istio.mesh.v1alpha1.Tracing.RequestHeaderH\x00R\x06headerB\x06\n" +
+	"\x04type\x1a\x1f\n" +
+	"\aLiteral\x12\x14\n" +
+	"\x05value\x18\x01 \x01(\tR\x05value\x1aF\n" +
+	"\vEnvironment\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12#\n" +
+	"\rdefault_value\x18\x02 \x01(\tR\fdefaultValue\x1aH\n" +
+	"\rRequestHeader\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12#\n" +
+	"\rdefault_value\x18\x02 \x01(\tR\fdefaultValue\x1ae\n" +
+	"\x0fCustomTagsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12<\n" +
+	"\x05value\x18\x02 \x01(\v2&.istio.mesh.v1alpha1.Tracing.CustomTagR\x05value:\x028\x01B\b\n" +
+	"\x06tracer\"F\n" +
+	"\x03SDS\x12\x18\n" +
+	"\aenabled\x18\x01 \x01(\bR\aenabled\x12%\n" +
+	"\x0fk8s_sa_jwt_path\x18\x02 \x01(\tR\fk8sSaJwtPath\"\xa7\x02\n" +
+	"\bTopology\x12.\n" +
+	"\x13num_trusted_proxies\x18\x01 \x01(\rR\x11numTrustedProxies\x12l\n" +
+	"\x1bforward_client_cert_details\x18\x02 \x01(\x0e2-.istio.mesh.v1alpha1.ForwardClientCertDetailsR\x18forwardClientCertDetails\x12_\n" +
+	"\x0eproxy_protocol\x18\x03 \x01(\v28.istio.mesh.v1alpha1.Topology.ProxyProtocolConfigurationR\rproxyProtocol\x1a\x1c\n" +
+	"\x1aProxyProtocolConfiguration\"\xa8\x03\n" +
+	"\x12PrivateKeyProvider\x12N\n" +
+	"\bcryptomb\x18\x02 \x01(\v20.istio.mesh.v1alpha1.PrivateKeyProvider.CryptoMbH\x00R\bcryptomb\x12?\n" +
+	"\x03qat\x18\x03 \x01(\v2+.istio.mesh.v1alpha1.PrivateKeyProvider.QATH\x00R\x03qat\x1a|\n" +
+	"\bCryptoMb\x128\n" +
+	"\n" +
+	"poll_delay\x18\x01 \x01(\v2\x19.google.protobuf.DurationR\tpollDelay\x126\n" +
+	"\bfallback\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\bfallback\x1aw\n" +
+	"\x03QAT\x128\n" +
+	"\n" +
+	"poll_delay\x18\x01 \x01(\v2\x19.google.protobuf.DurationR\tpollDelay\x126\n" +
+	"\bfallback\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\bfallbackB\n" +
+	"\n" +
+	"\bprovider\"\xc3#\n" +
+	"\vProxyConfig\x12\x1f\n" +
+	"\vconfig_path\x18\x01 \x01(\tR\n" +
+	"configPath\x12\x1f\n" +
+	"\vbinary_path\x18\x02 \x01(\tR\n" +
+	"binaryPath\x12)\n" +
+	"\x0fservice_cluster\x18\x03 \x01(\tH\x00R\x0eserviceCluster\x12g\n" +
+	"\x14tracing_service_name\x18$ \x01(\x0e23.istio.mesh.v1alpha1.ProxyConfig.TracingServiceNameH\x00R\x12tracingServiceName\x12@\n" +
+	"\x0edrain_duration\x18\x04 \x01(\v2\x19.google.protobuf.DurationR\rdrainDuration\x12+\n" +
+	"\x11discovery_address\x18\x06 \x01(\tR\x10discoveryAddress\x12U\n" +
+	"\x17discovery_refresh_delay\x18\a \x01(\v2\x19.google.protobuf.DurationB\x02\x18\x01R\x15discoveryRefreshDelay\x12)\n" +
+	"\x0ezipkin_address\x18\b \x01(\tB\x02\x18\x01R\rzipkinAddress\x12,\n" +
+	"\x12statsd_udp_address\x18\n" +
+	" \x01(\tR\x10statsdUdpAddress\x12E\n" +
+	"\x1denvoy_metrics_service_address\x18\x14 \x01(\tB\x02\x18\x01R\x1aenvoyMetricsServiceAddress\x12(\n" +
+	"\x10proxy_admin_port\x18\v \x01(\x05R\x0eproxyAdminPort\x12/\n" +
+	"\x11availability_zone\x18\f \x01(\tB\x02\x18\x01R\x10availabilityZone\x12d\n" +
+	"\x19control_plane_auth_policy\x18\r \x01(\x0e2).istio.mesh.v1alpha1.AuthenticationPolicyR\x16controlPlaneAuthPolicy\x12,\n" +
+	"\x12custom_config_file\x18\x0e \x01(\tR\x10customConfigFile\x12(\n" +
+	"\x10stat_name_length\x18\x0f \x01(\x05R\x0estatNameLength\x12=\n" +
+	"\vconcurrency\x18\x10 \x01(\v2\x1b.google.protobuf.Int32ValueR\vconcurrency\x12A\n" +
+	"\x1dproxy_bootstrap_template_path\x18\x11 \x01(\tR\x1aproxyBootstrapTemplatePath\x12e\n" +
+	"\x11interception_mode\x18\x12 \x01(\x0e28.istio.mesh.v1alpha1.ProxyConfig.InboundInterceptionModeR\x10interceptionMode\x126\n" +
+	"\atracing\x18\x13 \x01(\v2\x1c.istio.mesh.v1alpha1.TracingR\atracing\x12.\n" +
+	"\x03sds\x18\x15 \x01(\v2\x18.istio.mesh.v1alpha1.SDSB\x02\x18\x01R\x03sds\x12[\n" +
+	"\x18envoy_access_log_service\x18\x16 \x01(\v2\".istio.mesh.v1alpha1.RemoteServiceR\x15envoyAccessLogService\x12V\n" +
+	"\x15envoy_metrics_service\x18\x17 \x01(\v2\".istio.mesh.v1alpha1.RemoteServiceR\x13envoyMetricsService\x12Z\n" +
+	"\x0eproxy_metadata\x18\x18 \x03(\v23.istio.mesh.v1alpha1.ProxyConfig.ProxyMetadataEntryR\rproxyMetadata\x12Z\n" +
+	"\x0eruntime_values\x18% \x03(\v23.istio.mesh.v1alpha1.ProxyConfig.RuntimeValuesEntryR\rruntimeValues\x12\x1f\n" +
+	"\vstatus_port\x18\x1a \x01(\x05R\n" +
+	"statusPort\x12&\n" +
+	"\x0fextra_stat_tags\x18\x1b \x03(\tR\rextraStatTags\x12H\n" +
+	"\x10gateway_topology\x18\x1c \x01(\v2\x1d.istio.mesh.v1alpha1.TopologyR\x0fgatewayTopology\x12W\n" +
+	"\x1atermination_drain_duration\x18\x1d \x01(\v2\x19.google.protobuf.DurationR\x18terminationDrainDuration\x12\x17\n" +
+	"\amesh_id\x18\x1e \x01(\tR\x06meshId\x12R\n" +
+	"\x0freadiness_probe\x18\x1f \x01(\v2).istio.networking.v1alpha3.ReadinessProbeR\x0ereadinessProbe\x12b\n" +
+	"\x13proxy_stats_matcher\x18  \x01(\v22.istio.mesh.v1alpha1.ProxyConfig.ProxyStatsMatcherR\x11proxyStatsMatcher\x12h\n" +
+	"#hold_application_until_proxy_starts\x18! \x01(\v2\x1a.google.protobuf.BoolValueR\x1fholdApplicationUntilProxyStarts\x12.\n" +
+	"\x13ca_certificates_pem\x18\" \x03(\tR\x11caCertificatesPem\x12:\n" +
+	"\x05image\x18# \x01(\v2$.istio.networking.v1beta1.ProxyImageR\x05image\x12Y\n" +
+	"\x14private_key_provider\x18& \x01(\v2'.istio.mesh.v1alpha1.PrivateKeyProviderR\x12privateKeyProvider\x12R\n" +
+	"\rproxy_headers\x18' \x01(\v2-.istio.mesh.v1alpha1.ProxyConfig.ProxyHeadersR\fproxyHeaders\x1a@\n" +
+	"\x12ProxyMetadataEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a@\n" +
+	"\x12RuntimeValuesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a\x9e\x01\n" +
+	"\x11ProxyStatsMatcher\x12-\n" +
+	"\x12inclusion_prefixes\x18\x01 \x03(\tR\x11inclusionPrefixes\x12-\n" +
+	"\x12inclusion_suffixes\x18\x02 \x03(\tR\x11inclusionSuffixes\x12+\n" +
+	"\x11inclusion_regexps\x18\x03 \x03(\tR\x10inclusionRegexps\x1a\xc5\f\n" +
+	"\fProxyHeaders\x12a\n" +
+	"\x15forwarded_client_cert\x18\x01 \x01(\x0e2-.istio.mesh.v1alpha1.ForwardClientCertDetailsR\x13forwardedClientCert\x12\x8f\x01\n" +
+	"\x1fset_current_client_cert_details\x18\a \x01(\v2I.istio.mesh.v1alpha1.ProxyConfig.ProxyHeaders.SetCurrentClientCertDetailsR\x1bsetCurrentClientCertDetails\x12V\n" +
+	"\n" +
+	"request_id\x18\x03 \x01(\v27.istio.mesh.v1alpha1.ProxyConfig.ProxyHeaders.RequestIdR\trequestId\x12L\n" +
+	"\x06server\x18\x02 \x01(\v24.istio.mesh.v1alpha1.ProxyConfig.ProxyHeaders.ServerR\x06server\x12_\n" +
+	"\rattempt_count\x18\x04 \x01(\v2:.istio.mesh.v1alpha1.ProxyConfig.ProxyHeaders.AttemptCountR\fattemptCount\x12o\n" +
+	"\x13envoy_debug_headers\x18\x05 \x01(\v2?.istio.mesh.v1alpha1.ProxyConfig.ProxyHeaders.EnvoyDebugHeadersR\x11envoyDebugHeaders\x12\x81\x01\n" +
+	"\x19metadata_exchange_headers\x18\x06 \x01(\v2E.istio.mesh.v1alpha1.ProxyConfig.ProxyHeaders.MetadataExchangeHeadersR\x17metadataExchangeHeaders\x12W\n" +
+	"\x1apreserve_http1_header_case\x18( \x01(\v2\x1a.google.protobuf.BoolValueR\x17preserveHttp1HeaderCase\x1aV\n" +
+	"\x06Server\x126\n" +
+	"\bdisabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\bdisabled\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value\x1aC\n" +
+	"\tRequestId\x126\n" +
+	"\bdisabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\bdisabled\x1aF\n" +
+	"\fAttemptCount\x126\n" +
+	"\bdisabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\bdisabled\x1aK\n" +
+	"\x11EnvoyDebugHeaders\x126\n" +
+	"\bdisabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\bdisabled\x1aq\n" +
+	"\x17MetadataExchangeHeaders\x12V\n" +
+	"\x04mode\x18\x01 \x01(\x0e2B.istio.mesh.v1alpha1.ProxyConfig.ProxyHeaders.MetadataExchangeModeR\x04mode\x1a\x91\x02\n" +
+	"\x1bSetCurrentClientCertDetails\x124\n" +
+	"\asubject\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\asubject\x12.\n" +
+	"\x04cert\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x04cert\x120\n" +
+	"\x05chain\x18\x03 \x01(\v2\x1a.google.protobuf.BoolValueR\x05chain\x12,\n" +
+	"\x03dns\x18\x04 \x01(\v2\x1a.google.protobuf.BoolValueR\x03dns\x12,\n" +
+	"\x03uri\x18\x05 \x01(\v2\x1a.google.protobuf.BoolValueR\x03uri\"2\n" +
+	"\x14MetadataExchangeMode\x12\r\n" +
+	"\tUNDEFINED\x10\x00\x12\v\n" +
+	"\aIN_MESH\x10\x01\"l\n" +
+	"\x12TracingServiceName\x12\x1b\n" +
+	"\x17APP_LABEL_AND_NAMESPACE\x10\x00\x12\x17\n" +
+	"\x13CANONICAL_NAME_ONLY\x10\x01\x12 \n" +
+	"\x1cCANONICAL_NAME_AND_NAMESPACE\x10\x02\"=\n" +
+	"\x17InboundInterceptionMode\x12\f\n" +
+	"\bREDIRECT\x10\x00\x12\n" +
+	"\n" +
+	"\x06TPROXY\x10\x01\x12\b\n" +
+	"\x04NONE\x10\x02B\x0e\n" +
+	"\fcluster_nameJ\x04\b\x05\x10\x06J\x04\b\t\x10\n" +
+	"R\x18parent_shutdown_durationR\x0fconnect_timeout\"\xeb\x01\n" +
+	"\rRemoteService\x12\x18\n" +
+	"\aaddress\x18\x01 \x01(\tR\aaddress\x12O\n" +
+	"\ftls_settings\x18\x02 \x01(\v2,.istio.networking.v1alpha3.ClientTLSSettingsR\vtlsSettings\x12o\n" +
+	"\rtcp_keepalive\x18\x03 \x01(\v2J.istio.networking.v1alpha3.ConnectionPoolSettings.TCPSettings.TcpKeepaliveR\ftcpKeepalive*>\n" +
+	"\x14AuthenticationPolicy\x12\b\n" +
+	"\x04NONE\x10\x00\x12\x0e\n" +
+	"\n" +
+	"MUTUAL_TLS\x10\x01\x12\f\n" +
+	"\aINHERIT\x10\xe8\a*\x88\x01\n" +
+	"\x18ForwardClientCertDetails\x12\r\n" +
+	"\tUNDEFINED\x10\x00\x12\f\n" +
+	"\bSANITIZE\x10\x01\x12\x10\n" +
+	"\fFORWARD_ONLY\x10\x02\x12\x12\n" +
+	"\x0eAPPEND_FORWARD\x10\x03\x12\x10\n" +
+	"\fSANITIZE_SET\x10\x04\x12\x17\n" +
+	"\x13ALWAYS_FORWARD_ONLY\x10\x05B\x1cZ\x1aistio.io/api/mesh/v1alpha1b\x06proto3"
+
+	// The following values are used to construct proxy image url.
 // format: `${hub}/${image_name}/${tag}-${image_type}`,
 // example: `docker.io/istio/proxyv2:1.11.1` or `docker.io/istio/proxyv2:1.11.1-distroless`.
 // This information was previously part of the Values API.
@@ -3427,8 +4397,31 @@ type PolicyTargetReference struct {
 	Namespace *string `json:"namespace,omitempty"`
 }
 
-// TLS connection mode
-// +kubebuilder:validation:Enum=DISABLE;SIMPLE;MUTUAL;ISTIO_MUTUAL
+const fileTypeV1beta1SelectorProtoRawDesc = "" +
+	"\n" +
+	"\x1btype/v1beta1/selector.proto\x12\x12istio.type.v1beta1\x1a\x1fgoogle/api/field_behavior.proto\"\xac\x01\n" +
+	"\x10WorkloadSelector\x12X\n" +
+	"\fmatch_labels\x18\x01 \x03(\v25.istio.type.v1beta1.WorkloadSelector.MatchLabelsEntryR\vmatchLabels\x1a>\n" +
+	"\x10MatchLabelsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\",\n" +
+	"\fPortSelector\x12\x1c\n" +
+	"\x06number\x18\x01 \x01(\rB\x04\xe2A\x01\x02R\x06number\"\x7f\n" +
+	"\x15PolicyTargetReference\x12\x14\n" +
+	"\x05group\x18\x01 \x01(\tR\x05group\x12\x18\n" +
+	"\x04kind\x18\x02 \x01(\tB\x04\xe2A\x01\x02R\x04kind\x12\x18\n" +
+	"\x04name\x18\x03 \x01(\tB\x04\xe2A\x01\x02R\x04name\x12\x1c\n" +
+	"\tnamespace\x18\x04 \x01(\tR\tnamespace*L\n" +
+	"\fWorkloadMode\x12\r\n" +
+	"\tUNDEFINED\x10\x00\x12\n" +
+	"\n" +
+	"\x06CLIENT\x10\x01\x12\n" +
+	"\n" +
+	"\x06SERVER\x10\x02\x12\x15\n" +
+	"\x11CLIENT_AND_SERVER\x10\x03B\x1bZ\x19istio.io/api/type/v1beta1b\x06proto3"
+
+	// TLS connection mode
+	// +kubebuilder:validation:Enum=DISABLE;SIMPLE;MUTUAL;ISTIO_MUTUAL
 type ClientTLSSettingsTLSmode string
 
 const (
