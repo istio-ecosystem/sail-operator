@@ -334,8 +334,8 @@ github.com/prometheus/common v0.63.0/go.mod h1:VVFF/fBIoToEnWRVkYoXEkq3R3paCoxG9
 github.com/prometheus/procfs v0.0.0-20181005140218-185b4288413d/go.mod h1:c3At6R/oaqEKCNdg8wHV1ftS6bRYblBhIjjI8uT2IGk=
 github.com/prometheus/procfs v0.0.2/go.mod h1:TjEm7ze935MbeOT/UhFTIMYKhuLP4wbCsTZCD3I8kEA=
 github.com/prometheus/procfs v0.0.3/go.mod h1:4A/X28fw3Fc593LaREMrKMqOKvUAntwMDaekg4FpcdQ=
-github.com/prometheus/procfs v0.16.0 h1:xh6oHhKwnOJKMYiYBDWmkHqQPyiY40sny36Cmx2bbsM=
-github.com/prometheus/procfs v0.16.0/go.mod h1:8veyXUu3nGP7oaCxhX6yeaM5u4stL2FeMXnCqhDthZg=
+github.com/prometheus/procfs v0.16.1 h1:hZ15bTNuirocR6u0JZ6BAHHmwS1p8B4P6MRqxtzMyRg=
+github.com/prometheus/procfs v0.16.1/go.mod h1:teAbpZRB1iIAJYREa1LsoWUXykVXA1KlTmWl8x/U+Is=
 github.com/rivo/uniseg v0.2.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=
 github.com/rivo/uniseg v0.4.7 h1:WUdvkW8uEhrYfLC4ZzdpI2ztxP1I582+49Oc5Mq64VQ=
 github.com/rivo/uniseg v0.4.7/go.mod h1:FN3SvrM+Zdj16jyLfmOkMNblXMcoc8DfTHruCPUcx88=
@@ -520,8 +520,8 @@ istio.io/api v1.26.0-alpha.0.0.20250415142123-f4e4840251ee h1:bQpW9OWVx/egc7aglw
 istio.io/api v1.26.0-alpha.0.0.20250415142123-f4e4840251ee/go.mod h1:DTVGH6CLXj5W8FF9JUD3Tis78iRgT1WeuAnxfTz21Wg=
 istio.io/client-go v1.26.0-alpha.0.0.20250415142522-c4631d8c76a1 h1:R79dECaDBIxwWfgorzvcspE1rs+HWp++AfCCJE6kK8U=
 istio.io/client-go v1.26.0-alpha.0.0.20250415142522-c4631d8c76a1/go.mod h1:Tg2PFE+AGtYxVypzxj0nw+q6BYx3tVTl5Qa2FkTbGsM=
-istio.io/istio v0.0.0-20250419001727-ce9a6bd44ba6 h1:p0iHwKDQ0mHuUK+eM/uP1zfPh9NuC35mNc6FWo/SXD4=
-istio.io/istio v0.0.0-20250419001727-ce9a6bd44ba6/go.mod h1:xOw9LlTG+7rmOC52EJXstZleZ0uvZrCreQ2JH2WDU3c=
+istio.io/istio v0.0.0-20250420032526-3cea1f8dbc65 h1:pLe2SibwZMEQ6rdz4mcPDyBRhY39KcnxMqcfHKXk+ls=
+istio.io/istio v0.0.0-20250420032526-3cea1f8dbc65/go.mod h1:isEgatnYxbrQavjjhN2kkDT2MrLYKHbzAi7xygSz5bc=
 k8s.io/api v0.32.3 h1:Hw7KqxRusq+6QSplE3NYG4MBxZw1BZnq4aP4cJVINls=
 k8s.io/api v0.32.3/go.mod h1:2wEDTXADtm/HA7CCMD8D8bK4yuBUptzaRhYcYEEYA3k=
 k8s.io/apiextensions-apiserver v0.32.3 h1:4D8vy+9GWerlErCwVIbcQjsWunF9SUGNu7O7hiQTyPY=
