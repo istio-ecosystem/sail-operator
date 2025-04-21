@@ -1,7 +1,8 @@
 # Example documentation where the guidelines are followed
 This is an example doc where the guidelines are followed to achieve the best documentation possible. The doc is going to be used to test the automation workflow that is going to be used to run the tests over the documentation.
 
-*Note:* the docs shown here may not be updated to the latest version of the project, so please take into account that the examples may not work as expected. The goal of this doc is to show how to use the guidelines and how to add new examples to the automation workflow.
+> [!NOTE]
+> The docs shown here may not be updated to the latest version of the project, so please take into account that the examples may not work as expected. The goal of this doc is to show how to use the guidelines and how to add new examples to the automation workflow.
 
 ## Runme Test: Installing the operator from the helm repo and creating a Istio resource
 
@@ -57,6 +58,8 @@ spec:
 EOF
 ```
 
+> [!NOTE]
+> This commented code blocks are special code blocks and validation steps added like this to be hidden in the final documentation, but they are going to be used in the automation workflow to validate the documentation. For more validation, please check the [documentation](/docs/guidelines/guidelines.md#L146).
 <!-- ```bash { name=validation-print-istio-resource tag=example}
 kubectl get istio -o yaml
 kubectl get deployment sail-operator -n sail-operator -o yaml
