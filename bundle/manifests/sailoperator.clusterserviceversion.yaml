@@ -34,7 +34,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/sail-dev/sail-operator:1.26-latest
-    createdAt: "2025-04-20T05:06:23Z"
+    createdAt: "2025-04-21T05:05:42Z"
     description: Experimental operator for installing Istio service mesh
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -165,7 +165,7 @@ spec:
       specDescriptors:
       - description: |-
           Defines the version of Istio to install.
-          Must be one of: v1.25-latest, v1.25.2, v1.25.1, v1.24-latest, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, v1.23-latest, v1.23.6, v1.23.5, v1.23.4, v1.23.3, v1.23.2, v1.22-latest, v1.22.8, v1.22.7, v1.22.6, v1.22.5, v1.21.6, master, v1.27-alpha.3cea1f8d.
+          Must be one of: v1.25-latest, v1.25.2, v1.25.1, v1.24-latest, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, v1.23-latest, v1.23.6, v1.23.5, v1.23.4, v1.23.3, v1.23.2, v1.22-latest, v1.22.8, v1.22.7, v1.22.6, v1.22.5, v1.21.6, master, v1.27-alpha.e44b3cad.
         displayName: Istio Version
         path: version
         x-descriptors:
@@ -193,7 +193,7 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.5
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.6
         - urn:alm:descriptor:com.tectonic.ui:select:master
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.27-alpha.3cea1f8d
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.27-alpha.e44b3cad
       - description: Namespace to which the Istio CNI component should be installed.
           Note that this field is immutable.
         displayName: Namespace
@@ -224,7 +224,7 @@ spec:
       specDescriptors:
       - description: |-
           Defines the version of Istio to install.
-          Must be one of: v1.25.2, v1.25.1, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, v1.23.6, v1.23.5, v1.23.4, v1.23.3, v1.23.2, v1.22.8, v1.22.7, v1.22.6, v1.22.5, v1.21.6, v1.27-alpha.3cea1f8d.
+          Must be one of: v1.25.2, v1.25.1, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, v1.23.6, v1.23.5, v1.23.4, v1.23.3, v1.23.2, v1.22.8, v1.22.7, v1.22.6, v1.22.5, v1.21.6, v1.27-alpha.e44b3cad.
         displayName: Istio Version
         path: version
         x-descriptors:
@@ -247,7 +247,7 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.6
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.5
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.6
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.27-alpha.3cea1f8d
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.27-alpha.e44b3cad
       - description: Namespace to which the Istio components should be installed.
         displayName: Namespace
         path: namespace
@@ -293,7 +293,7 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:select:RevisionBased
       - description: |-
           Defines the version of Istio to install.
-          Must be one of: v1.25-latest, v1.25.2, v1.25.1, v1.24-latest, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, v1.23-latest, v1.23.6, v1.23.5, v1.23.4, v1.23.3, v1.23.2, v1.22-latest, v1.22.8, v1.22.7, v1.22.6, v1.22.5, v1.21.6, master, v1.27-alpha.3cea1f8d.
+          Must be one of: v1.25-latest, v1.25.2, v1.25.1, v1.24-latest, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, v1.23-latest, v1.23.6, v1.23.5, v1.23.4, v1.23.3, v1.23.2, v1.22-latest, v1.22.8, v1.22.7, v1.22.6, v1.22.5, v1.21.6, master, v1.27-alpha.e44b3cad.
         displayName: Istio Version
         path: version
         x-descriptors:
@@ -321,7 +321,7 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:select:v1.22.5
         - urn:alm:descriptor:com.tectonic.ui:select:v1.21.6
         - urn:alm:descriptor:com.tectonic.ui:select:master
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.27-alpha.3cea1f8d
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.27-alpha.e44b3cad
       - description: |-
           Defines how many seconds the operator should wait before removing a non-active revision after all
           the workloads have stopped using it. You may want to set this value on the order of minutes.
@@ -371,7 +371,7 @@ spec:
       specDescriptors:
       - description: |-
           Defines the version of Istio to install.
-          Must be one of: v1.25-latest, v1.25.2, v1.25.1, v1.24-latest, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.27-alpha.3cea1f8d.
+          Must be one of: v1.25-latest, v1.25.2, v1.25.1, v1.24-latest, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.27-alpha.e44b3cad.
         displayName: Istio Version
         path: version
         x-descriptors:
@@ -387,7 +387,7 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24.1
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24.0
         - urn:alm:descriptor:com.tectonic.ui:select:master
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.27-alpha.3cea1f8d
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.27-alpha.e44b3cad
       - description: Namespace to which the Istio ztunnel component should be installed.
         displayName: Namespace
         path: namespace
@@ -434,7 +434,7 @@ spec:
     - v1.22.5
     - v1.21.6
     - master
-    - v1.27-alpha.3cea1f8d
+    - v1.27-alpha.e44b3cad
 
     [See this page](https://github.com/istio-ecosystem/sail-operator/blob/main/bundle/README.md) for instructions on how to use it.
   displayName: Sail Operator
@@ -782,10 +782,10 @@ spec:
                 images.v1_25_2.istiod: gcr.io/istio-release/pilot:1.25.2
                 images.v1_25_2.proxy: gcr.io/istio-release/proxyv2:1.25.2
                 images.v1_25_2.ztunnel: gcr.io/istio-release/ztunnel:1.25.2
-                images.v1_27-alpha_3cea1f8d.cni: gcr.io/istio-testing/install-cni:1.27-alpha.3cea1f8dbc65d8c1cd06025e9fd5c5379a7b9a4b
-                images.v1_27-alpha_3cea1f8d.istiod: gcr.io/istio-testing/pilot:1.27-alpha.3cea1f8dbc65d8c1cd06025e9fd5c5379a7b9a4b
-                images.v1_27-alpha_3cea1f8d.proxy: gcr.io/istio-testing/proxyv2:1.27-alpha.3cea1f8dbc65d8c1cd06025e9fd5c5379a7b9a4b
-                images.v1_27-alpha_3cea1f8d.ztunnel: gcr.io/istio-testing/ztunnel:1.27-alpha.3cea1f8dbc65d8c1cd06025e9fd5c5379a7b9a4b
+                images.v1_27-alpha_e44b3cad.cni: gcr.io/istio-testing/install-cni:1.27-alpha.e44b3cad9f06b3ecec75f99d50e178f62c1258b1
+                images.v1_27-alpha_e44b3cad.istiod: gcr.io/istio-testing/pilot:1.27-alpha.e44b3cad9f06b3ecec75f99d50e178f62c1258b1
+                images.v1_27-alpha_e44b3cad.proxy: gcr.io/istio-testing/proxyv2:1.27-alpha.e44b3cad9f06b3ecec75f99d50e178f62c1258b1
+                images.v1_27-alpha_e44b3cad.ztunnel: gcr.io/istio-testing/ztunnel:1.27-alpha.e44b3cad9f06b3ecec75f99d50e178f62c1258b1
                 kubectl.kubernetes.io/default-container: sail-operator
               labels:
                 app.kubernetes.io/created-by: sailoperator
@@ -1060,12 +1060,12 @@ spec:
     name: v1_25_2.proxy
   - image: gcr.io/istio-release/ztunnel:1.25.2
     name: v1_25_2.ztunnel
-  - image: gcr.io/istio-testing/install-cni:1.27-alpha.3cea1f8dbc65d8c1cd06025e9fd5c5379a7b9a4b
-    name: v1_27-alpha_3cea1f8d.cni
-  - image: gcr.io/istio-testing/pilot:1.27-alpha.3cea1f8dbc65d8c1cd06025e9fd5c5379a7b9a4b
-    name: v1_27-alpha_3cea1f8d.istiod
-  - image: gcr.io/istio-testing/proxyv2:1.27-alpha.3cea1f8dbc65d8c1cd06025e9fd5c5379a7b9a4b
-    name: v1_27-alpha_3cea1f8d.proxy
-  - image: gcr.io/istio-testing/ztunnel:1.27-alpha.3cea1f8dbc65d8c1cd06025e9fd5c5379a7b9a4b
-    name: v1_27-alpha_3cea1f8d.ztunnel
+  - image: gcr.io/istio-testing/install-cni:1.27-alpha.e44b3cad9f06b3ecec75f99d50e178f62c1258b1
+    name: v1_27-alpha_e44b3cad.cni
+  - image: gcr.io/istio-testing/pilot:1.27-alpha.e44b3cad9f06b3ecec75f99d50e178f62c1258b1
+    name: v1_27-alpha_e44b3cad.istiod
+  - image: gcr.io/istio-testing/proxyv2:1.27-alpha.e44b3cad9f06b3ecec75f99d50e178f62c1258b1
+    name: v1_27-alpha_e44b3cad.proxy
+  - image: gcr.io/istio-testing/ztunnel:1.27-alpha.e44b3cad9f06b3ecec75f99d50e178f62c1258b1
+    name: v1_27-alpha_e44b3cad.ztunnel
   version: 1.26.0
