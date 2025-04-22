@@ -16,7 +16,7 @@ metadata:
               "inactiveRevisionDeletionGracePeriodSeconds": 30,
               "type": "InPlace"
             },
-            "version": "v1.24.4"
+            "version": "v1.24.5"
           }
         },
         {
@@ -27,14 +27,14 @@ metadata:
           },
           "spec": {
             "namespace": "istio-cni",
-            "version": "v1.24.4"
+            "version": "v1.24.5"
           }
         }
       ]
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/sail-dev/sail-operator:1.0-latest
-    createdAt: "2025-03-26T14:43:15Z"
+    createdAt: "2025-04-22T09:11:12Z"
     description: Experimental operator for installing Istio service mesh
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -56,7 +56,7 @@ metadata:
     operatorframework.io/arch.arm64: supported
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
-  name: sailoperator.v1.0.1
+  name: sailoperator.v1.0.2
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -165,17 +165,19 @@ spec:
       specDescriptors:
       - description: |-
           Defines the version of Istio to install.
-          Must be one of: v1.24-latest, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.23-latest, v1.23.5, v1.23.4, v1.23.3, v1.23.0.
+          Must be one of: v1.24-latest, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.23-latest, v1.23.6, v1.23.5, v1.23.4, v1.23.3, v1.23.0.
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24-latest
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.5
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24.4
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24.3
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24.2
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24.1
         - urn:alm:descriptor:com.tectonic.ui:select:v1.23-latest
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.23.6
         - urn:alm:descriptor:com.tectonic.ui:select:v1.23.5
         - urn:alm:descriptor:com.tectonic.ui:select:v1.23.4
         - urn:alm:descriptor:com.tectonic.ui:select:v1.23.3
@@ -210,15 +212,17 @@ spec:
       specDescriptors:
       - description: |-
           Defines the version of Istio to install.
-          Must be one of: v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.23.5, v1.23.4, v1.23.3, v1.23.0.
+          Must be one of: v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.23.6, v1.23.5, v1.23.4, v1.23.3, v1.23.0.
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.5
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24.4
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24.3
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24.2
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24.1
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.23.6
         - urn:alm:descriptor:com.tectonic.ui:select:v1.23.5
         - urn:alm:descriptor:com.tectonic.ui:select:v1.23.4
         - urn:alm:descriptor:com.tectonic.ui:select:v1.23.3
@@ -268,17 +272,19 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:select:RevisionBased
       - description: |-
           Defines the version of Istio to install.
-          Must be one of: v1.24-latest, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.23-latest, v1.23.5, v1.23.4, v1.23.3, v1.23.0.
+          Must be one of: v1.24-latest, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.23-latest, v1.23.6, v1.23.5, v1.23.4, v1.23.3, v1.23.0.
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24-latest
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.5
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24.4
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24.3
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24.2
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24.1
         - urn:alm:descriptor:com.tectonic.ui:select:v1.23-latest
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.23.6
         - urn:alm:descriptor:com.tectonic.ui:select:v1.23.5
         - urn:alm:descriptor:com.tectonic.ui:select:v1.23.4
         - urn:alm:descriptor:com.tectonic.ui:select:v1.23.3
@@ -332,12 +338,13 @@ spec:
       specDescriptors:
       - description: |-
           Defines the version of Istio to install.
-          Must be one of: v1.24-latest, v1.24.4, v1.24.3, v1.24.2, v1.24.1.
+          Must be one of: v1.24-latest, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1.
         displayName: Istio Version
         path: version
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24-latest
+        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.5
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24.4
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24.3
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24.2
@@ -366,11 +373,13 @@ spec:
     This version of the operator supports the following Istio versions:
 
     - v1.24-latest
+    - v1.24.5
     - v1.24.4
     - v1.24.3
     - v1.24.2
     - v1.24.1
     - v1.23-latest
+    - v1.23.6
     - v1.23.5
     - v1.23.4
     - v1.23.3
@@ -666,6 +675,10 @@ spec:
                 images.v1_23_5.istiod: gcr.io/istio-release/pilot:1.23.5
                 images.v1_23_5.proxy: gcr.io/istio-release/proxyv2:1.23.5
                 images.v1_23_5.ztunnel: gcr.io/istio-release/ztunnel:1.23.5
+                images.v1_23_6.cni: gcr.io/istio-release/install-cni:1.23.6
+                images.v1_23_6.istiod: gcr.io/istio-release/pilot:1.23.6
+                images.v1_23_6.proxy: gcr.io/istio-release/proxyv2:1.23.6
+                images.v1_23_6.ztunnel: gcr.io/istio-release/ztunnel:1.23.6
                 images.v1_24_1.cni: gcr.io/istio-release/install-cni:1.24.1
                 images.v1_24_1.istiod: gcr.io/istio-release/pilot:1.24.1
                 images.v1_24_1.proxy: gcr.io/istio-release/proxyv2:1.24.1
@@ -682,6 +695,10 @@ spec:
                 images.v1_24_4.istiod: gcr.io/istio-release/pilot:1.24.4
                 images.v1_24_4.proxy: gcr.io/istio-release/proxyv2:1.24.4
                 images.v1_24_4.ztunnel: gcr.io/istio-release/ztunnel:1.24.4
+                images.v1_24_5.cni: gcr.io/istio-release/install-cni:1.24.5
+                images.v1_24_5.istiod: gcr.io/istio-release/pilot:1.24.5
+                images.v1_24_5.proxy: gcr.io/istio-release/proxyv2:1.24.5
+                images.v1_24_5.ztunnel: gcr.io/istio-release/ztunnel:1.24.5
                 kubectl.kubernetes.io/default-container: sail-operator
               labels:
                 app.kubernetes.io/created-by: sailoperator
@@ -843,6 +860,14 @@ spec:
     name: v1_23_5.proxy
   - image: gcr.io/istio-release/ztunnel:1.23.5
     name: v1_23_5.ztunnel
+  - image: gcr.io/istio-release/install-cni:1.23.6
+    name: v1_23_6.cni
+  - image: gcr.io/istio-release/pilot:1.23.6
+    name: v1_23_6.istiod
+  - image: gcr.io/istio-release/proxyv2:1.23.6
+    name: v1_23_6.proxy
+  - image: gcr.io/istio-release/ztunnel:1.23.6
+    name: v1_23_6.ztunnel
   - image: gcr.io/istio-release/install-cni:1.24.1
     name: v1_24_1.cni
   - image: gcr.io/istio-release/pilot:1.24.1
@@ -875,4 +900,12 @@ spec:
     name: v1_24_4.proxy
   - image: gcr.io/istio-release/ztunnel:1.24.4
     name: v1_24_4.ztunnel
-  version: 1.0.1
+  - image: gcr.io/istio-release/install-cni:1.24.5
+    name: v1_24_5.cni
+  - image: gcr.io/istio-release/pilot:1.24.5
+    name: v1_24_5.istiod
+  - image: gcr.io/istio-release/proxyv2:1.24.5
+    name: v1_24_5.proxy
+  - image: gcr.io/istio-release/ztunnel:1.24.5
+    name: v1_24_5.ztunnel
+  version: 1.0.2
