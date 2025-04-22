@@ -82,7 +82,7 @@ ENVTEST_K8S_VERSION ?= 1.29.0
 DOCKER_BUILD_FLAGS ?= "--platform=$(TARGET_OS)/$(TARGET_ARCH)"
 
 GOTEST_FLAGS := $(if $(VERBOSE),-v) $(if $(COVERAGE),-coverprofile=$(REPO_ROOT)/out/coverage-unit.out)
-GINKGO_FLAGS := $(if $(VERBOSE),-v) $(if $(CI),--no-color) $(if $(COVERAGE),-coverprofile=coverage-integration.out -coverpkg=./... --output-dir=out)
+GINKGO_FLAGS ?= $(if $(VERBOSE),-v) $(if $(CI),--no-color) $(if $(COVERAGE),-coverprofile=coverage-integration.out -coverpkg=./... --output-dir=out)
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
