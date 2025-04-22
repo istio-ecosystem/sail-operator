@@ -164,12 +164,12 @@ To update the CNI plugin, just change the `version` field to the version you wan
           - kube-system
     EOF
     ```
-<!-- ```bash { name=validation-wait-cni tag=cni-update}
+```bash { name=validation-wait-cni tag=cni-update}
 kubectl create ns istio-cni
 . scripts/prebuilt-func.sh
 with_retries wait_cni_ready "istio-cni"
 with_retries resource_version_equal "istiocni" "default" "v1.24.2"
-``` -->
+```
 2. Confirm the installation and version of the CNI plugin.
     ```bash
     $ kubectl get istiocni -n istio-cni
@@ -180,23 +180,23 @@ with_retries resource_version_equal "istiocni" "default" "v1.24.2"
     istio-cni-node-hd9zf   1/1     Running   0          90m
     ```
 
-<!-- ```bash { name=print-cni tag=cni-update}
+```bash { name=print-cni tag=cni-update}
 . scripts/prebuilt-func.sh
 print_cni_info
-``` -->
+```
 
 3. Update the CNI plugin version.
 
     ```bash { name=update-cni tag=cni-update}
     kubectl patch istiocni default -n istio-cni --type='merge' -p '{"spec":{"version":"v1.24.3"}}'
     ```
-<!-- ```bash { name=validation-wait-cni tag=cni-update}
+```bash { name=validation-wait-cni tag=cni-update}
 echo "Sleeping for 5 seconds to wait for the patch to be applied"
 sleep 5s
 . scripts/prebuilt-func.sh
 with_retries wait_cni_ready "istio-cni"
 with_retries resource_version_equal "istiocni" "default" "v1.24.3"
-``` -->
+```
 4. Confirm the CNI plugin version was updated.
 
     ```bash
@@ -208,10 +208,10 @@ with_retries resource_version_equal "istiocni" "default" "v1.24.3"
     istio-cni-node-jz4lg   1/1     Running   0          44s
     ```
 
-<!-- ```bash { name=print-cni tag=cni-update}
+```bash { name=print-cni tag=cni-update}
 . scripts/prebuilt-func.sh
 print_cni_info
-``` -->
+```
 > [!NOTE]
 > The CNI plugin at version `1.x` is compatible with `Istio` at version `1.x-1`, `1.x` and `1.x+1`.
 
@@ -457,11 +457,11 @@ Steps:
       version: v1.22.5
     EOF
     ```
-<!-- ```bash { name=lidation-wait-istio-pods tag=inplace-update}
+```bash { name=lidation-wait-istio-pods tag=inplace-update}
     . scripts/prebuilt-func.sh
     with_retries wait_istio_ready "istio-system"
     print_istio_info
-``` -->
+```
 3. Confirm the installation and version of the control plane.
 
     ```console
@@ -479,13 +479,13 @@ Steps:
     kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/release-1.22/samples/bookinfo/platform/kube/bookinfo.yaml
     ```
     Note: if the `Istio` resource name is other than `default`, you need to set the `istio.io/rev` label to the name of the `Istio` resource instead of adding the `istio-injection=enabled` label.
-<!-- ```bash { name=validation-wait-bookinfo tag=inplace-update}
+```bash { name=validation-wait-bookinfo tag=inplace-update}
     . scripts/prebuilt-func.sh
     with_retries wait_pods_ready_by_ns "bookinfo"
     kubectl get pods -n bookinfo
     istioctl proxy-status
     with_retries pods_istio_version_match "bookinfo" "1.22.5"
-``` -->
+```
 5. Review the `Istio` resource after application deployment.
 
    ```console
@@ -500,12 +500,12 @@ Steps:
     ```bash { name=update-istio-version tag=inplace-update}
     kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v1.23.2"}}'
     ```
-<!-- ```bash { name=validation-wait-istio-updated tag=inplace-update}
+```bash { name=validation-wait-istio-updated tag=inplace-update}
     . scripts/prebuilt-func.sh
     sleep 5s
     with_retries wait_istio_ready "istio-system"
     print_istio_info
-``` -->
+```
 
 7. Confirm the `Istio` resource version was updated.
 
@@ -520,12 +520,12 @@ Steps:
     ```bash { name=restart-bookinfo tag=inplace-update}
     kubectl rollout restart deployment -n bookinfo
     ```
-<!-- ```bash { name=validation-wait-bookinfo tag=inplace-update}
+```bash { name=validation-wait-bookinfo tag=inplace-update}
     . scripts/prebuilt-func.sh
     sleep 5s
     with_retries wait_pods_ready_by_ns "bookinfo"
     istioctl proxy-status
-``` -->
+```
 
 9. Confirm that the new version is used in the sidecar.
 
@@ -533,10 +533,10 @@ Steps:
     istioctl proxy-status 
     ```
     The column `VERSION` should match the new control plane version.
-<!-- ```bash { name=validation-istio-expected-version tag=inplace-update}
+```bash { name=validation-istio-expected-version tag=inplace-update}
     . scripts/prebuilt-func.sh
     with_retries pods_istio_version_match "bookinfo" "1.23.2"
-``` -->
+```
 
 ### RevisionBased
 When the `RevisionBased` strategy is used, a new Istio control plane instance is created for every change to the `Istio.spec.version` field. The old control plane remains in place until all workloads have been moved to the new control plane instance. This needs to be done by the user by updating the namespace label and restarting all the pods. The old control plane will be deleted after the grace period specified in the `Istio` resource field `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds`.
