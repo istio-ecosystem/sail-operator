@@ -205,15 +205,15 @@ versions:
       - https://istio-release.storage.googleapis.com/charts/cni-1.21.6.tgz
       - https://istio-release.storage.googleapis.com/charts/ztunnel-1.21.6.tgz
   - name: master
-    ref: v1.27-alpha.e44b3cad
-  - name: v1.27-alpha.e44b3cad
-    version: 1.27-alpha.e44b3cad9f06b3ecec75f99d50e178f62c1258b1
+    ref: v1.27-alpha.af4d964e
+  - name: v1.27-alpha.af4d964e
+    version: 1.27-alpha.af4d964e0192748314850ac2f929270ce09afad6
     repo: https://github.com/istio/istio
     branch: master
-    commit: e44b3cad9f06b3ecec75f99d50e178f62c1258b1
+    commit: af4d964e0192748314850ac2f929270ce09afad6
     charts:
-      - https://storage.googleapis.com/istio-build/dev/1.27-alpha.e44b3cad9f06b3ecec75f99d50e178f62c1258b1/helm/base-1.27-alpha.e44b3cad9f06b3ecec75f99d50e178f62c1258b1.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.27-alpha.e44b3cad9f06b3ecec75f99d50e178f62c1258b1/helm/cni-1.27-alpha.e44b3cad9f06b3ecec75f99d50e178f62c1258b1.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.27-alpha.e44b3cad9f06b3ecec75f99d50e178f62c1258b1/helm/gateway-1.27-alpha.e44b3cad9f06b3ecec75f99d50e178f62c1258b1.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.27-alpha.e44b3cad9f06b3ecec75f99d50e178f62c1258b1/helm/istiod-1.27-alpha.e44b3cad9f06b3ecec75f99d50e178f62c1258b1.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.27-alpha.e44b3cad9f06b3ecec75f99d50e178f62c1258b1/helm/ztunnel-1.27-alpha.e44b3cad9f06b3ecec75f99d50e178f62c1258b1.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.27-alpha.af4d964e0192748314850ac2f929270ce09afad6/helm/base-1.27-alpha.af4d964e0192748314850ac2f929270ce09afad6.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.27-alpha.af4d964e0192748314850ac2f929270ce09afad6/helm/cni-1.27-alpha.af4d964e0192748314850ac2f929270ce09afad6.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.27-alpha.af4d964e0192748314850ac2f929270ce09afad6/helm/gateway-1.27-alpha.af4d964e0192748314850ac2f929270ce09afad6.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.27-alpha.af4d964e0192748314850ac2f929270ce09afad6/helm/istiod-1.27-alpha.af4d964e0192748314850ac2f929270ce09afad6.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.27-alpha.af4d964e0192748314850ac2f929270ce09afad6/helm/ztunnel-1.27-alpha.af4d964e0192748314850ac2f929270ce09afad6.tgz
