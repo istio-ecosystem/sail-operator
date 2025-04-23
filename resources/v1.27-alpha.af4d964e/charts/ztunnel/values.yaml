@@ -4,13 +4,19 @@ _internal_defaults_do_not_set:
   # Hub to pull from. Image will be `Hub/Image:Tag-Variant`
   hub: gcr.io/istio-testing
   # Tag to pull from. Image will be `Hub/Image:Tag-Variant`
-  tag: 1.27-alpha.e44b3cad9f06b3ecec75f99d50e178f62c1258b1
+  tag: 1.27-alpha.af4d964e0192748314850ac2f929270ce09afad6
   # Variant to pull. Options are "debug" or "distroless". Unset will use the default for the given version.
   variant: ""
 
   # Image name to pull from. Image will be `Hub/Image:Tag-Variant`
   # If Image contains a "/", it will replace the entire `image` in the pod.
   image: ztunnel
+
+  # We keep the global namespace around for backwards-compatibility
+  global:
+    # Network defines the network this cluster belong to. This name
+    # corresponds to the networks in the map of mesh networks.
+    network: ""
 
   # resourceName, if set, will override the naming of resources. If not set, will default to 'ztunnel'.
   # If you set this, you MUST also set `trustedZtunnelName` in the `istiod` chart.
