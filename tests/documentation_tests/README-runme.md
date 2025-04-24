@@ -149,6 +149,7 @@ To update the CNI plugin, just change the `version` field to the version you wan
 
 1. Create the `IstioCNI` resource.
     ```bash { name=install-cni tag=cni-update}
+    kubectl create ns istio-cni
     cat <<EOF | kubectl apply -f-
     apiVersion: sailoperator.io/v1
     kind: IstioCNI
@@ -165,9 +166,8 @@ To update the CNI plugin, just change the `version` field to the version you wan
     EOF
     ```
 ```bash { name=validation-wait-cni tag=cni-update}
-kubectl create ns istio-cni
 . scripts/prebuilt-func.sh
-with_retries wait_cni_ready "istio-cni"
+wait_cni_ready "istio-cni"
 with_retries resource_version_equal "istiocni" "default" "v1.24.2"
 ```
 2. Confirm the installation and version of the CNI plugin.
@@ -194,7 +194,7 @@ print_cni_info
 echo "Sleeping for 5 seconds to wait for the patch to be applied"
 sleep 5s
 . scripts/prebuilt-func.sh
-with_retries wait_cni_ready "istio-cni"
+wait_cni_ready "istio-cni"
 with_retries resource_version_equal "istiocni" "default" "v1.24.3"
 ```
 4. Confirm the CNI plugin version was updated.
@@ -457,9 +457,9 @@ Steps:
       version: v1.22.5
     EOF
     ```
-```bash { name=lidation-wait-istio-pods tag=inplace-update}
+```bash { name=validation-wait-istio-pods tag=inplace-update}
     . scripts/prebuilt-func.sh
-    with_retries wait_istio_ready "istio-system"
+    wait_istio_ready "istio-system"
     print_istio_info
 ```
 3. Confirm the installation and version of the control plane.
@@ -503,7 +503,7 @@ Steps:
 ```bash { name=validation-wait-istio-updated tag=inplace-update}
     . scripts/prebuilt-func.sh
     sleep 5s
-    with_retries wait_istio_ready "istio-system"
+    wait_istio_ready "istio-system"
     print_istio_info
 ```
 

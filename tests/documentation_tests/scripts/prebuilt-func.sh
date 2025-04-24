@@ -24,7 +24,7 @@
 # - check resource status
 # - check resource creation
 
-
+set -eu
 ## General prebuilt functions
 ## Place here general functions that are going to be used in the documentation tests
 ## please do not add any specific functions here, they should be added in the next section
@@ -50,7 +50,7 @@ get_pod_names() {
     namespace="$1"
     label="$2"
 
-    if [ -n "$label" ]; then
+    if [ -n "$label" ] || [ -z "$label" ]; then
         pods=$(kubectl get pods -n "$namespace" -l "$label" \
             -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null)
     else
@@ -74,7 +74,7 @@ wait_for_pod_ready() {
 # Wait for all pods in a namespace to be ready
 wait_pods_ready_by_ns() {
     namespace="$1"
-    pod_names=$(get_pod_names "$namespace")
+    pod_names=$(get_pod_names "$namespace" "")
 
     [ -z "$pod_names" ] && echo "No pods found in namespace $namespace" && return 1
     echo "🔍 Found pod(s) in namespace $namespace: $pod_names"
@@ -155,7 +155,7 @@ print_cni_info() {
 # Wait for Istiod pods to be ready
 wait_istio_ready() {
     namespace="$1"
-    wait_pods_by_label "$namespace" "app=istiod"
+    with_retries wait_pods_by_label "$namespace" "app=istiod"
 }
 
 # Print Istio info
@@ -169,7 +169,7 @@ pods_istio_version_match() {
     namespace="$1"
     expected_version="$2"
 
-    pod_names=$(get_pod_names "$namespace")
+    pod_names=$(get_pod_names "$namespace" "")
     [ -z "$pod_names" ] && echo "No pods found in namespace $namespace" && return 1
     echo "Verifying Istio version for pods in $namespace..."
 
