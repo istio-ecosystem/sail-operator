@@ -55,9 +55,9 @@ Any documentation step need to be tested to ensure that the steps are correct an
 
 ### What does update-docs-examples.sh do?
 The script `update-docs-examples.sh` is going to run the following steps:
-- Check all the md files in the `docs` folder and exclude from the list the files described inside the `EXCLUDE_FILES` variable. The resulting list will be all the .md files that contains at least one time this pattern `bash { name=`. This pattern is used by the `runme` tool to generate the resulting jupyter notebook by looking into all the code blocks that has certain field decorators. The field decorators and how to use them are explained in the next section.
-- Once the files are copied into the destination path we check those files to uncomment the bash commented steps. This bash commented code block are going to be hiden in the original md files but we will uncomment this code block to be able to run validation steps that wait for conditions an avoid flakiness of the test. This means that most of the validation steps will be commented code blocks.
-``
+- Check all the md files in the `docs` folder and exclude from the list the files described inside the `EXCLUDE_FILES` variable and then copy all the files to the `tests/documentation_test/` folder that meets the criteria, check [Adding a topic example to the automation workflow](/docs/guidelines/guidelines.md#L62) section for more information about the criteria.
+- Once the files are copied into the destination path it checka those files to uncomment the bash commented steps. This bash commented code block are going to be hiden in the original md files but we will uncomment this code block to be able to run validation steps that wait for conditions an avoid flakiness of the test. This means that most of the validation steps will be commented code blocks, more information [here](/docs/guidelines/guidelines.md#L146).
+
 
 ### Adding a topic example to the automation workflow
 To add a new topic to the automation workflow you need to:
@@ -73,7 +73,7 @@ helm repo add sail-operator https://istio-ecosystem.github.io/sail-operator
 ```
 ````
 
-- `bash { ignore=true }`: this pattern is used to ignore the code block when they are going to be run by the `runme` tool. This is used to ignore or avoid the excution of yaml examples (because `runme` threat everything as a bash command) or any other code block that you do not want to run. This is going to be used in the examples that are going to be run by the `runme` tool. For example
+- use `bash { ignore=true }` to prevent a code block from being executed by the `runme` tool. This is helpful when you include YAML examples or other content that shouldn’t be part of automation workflow. Using `ignore` attribute ensures only the intended code blocks are run. For example:
 
 ````md
 - Example of a Istio resource:
@@ -91,7 +91,8 @@ spec:
 ```
 ````
 
-*Note:* take into account that all the code blocks that are going to be run by the `runme` tool should be tagged with the language `bash` at the beginning of the block and they need to contain only commands that are going to be run in the terminal and all the steps that are not needed to be executed because they are not commands or they are not needed for the goal of the example should be ignored with the `ignore=true` tag. For example
+> [!Note]  
+> When using the `runme` tool, make sure that all code blocks intended for execution are marked with the bash language at the start of the block. These blocks should include only commands that are meant to be run in the terminal. Any steps that are not actual commands or are not essential for the goal of the example should be skipped using the `ignore=true` tag. For example:
 
 ````md
 - You shouuld set version for Istio in the `Istio` resource and `IstioRevisionTag` resource should reference the name of the `Istio` resource:
@@ -150,9 +151,11 @@ kubectl wait --for=condition=available --timeout=600s deployment/sail-operator -
 ``` -->
 ```
 
-*Important:* please always add validation steps to avoid flakyness during the execution, these steps will ensure that resource conditions are met and the test will not fail because of a timeout or any other issue. This validation needs to fail the test if the condition is not met, by returning a non-zero return code. Use `kubectl wait` over `sleep` wherever possible.
+> [!IMPORTANT]  
+> Always include validation steps to avoid flakiness. They ensure resources are in expected conditions and the test fails clearly if they don’t.
 
-*Note:* if you want to check all the commands that inside a md file you can execute the following command:
+> [!Note] 
+> If you want to check all the commands that inside a md file you can execute the following command:
 ```bash
 runme list --filename docs/common/runme-test.md
 ```
