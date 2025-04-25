@@ -19,6 +19,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"gopkg.in/yaml.v3"
 	"helm.sh/helm/v3/pkg/postrender"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,23 +32,24 @@ const (
 	AnnotationPrimaryResourceType = "operator-sdk/primary-resource-type"
 )
 
-// NewOwnerReferencePostRenderer creates a Helm PostRenderer that adds the
-// specified OwnerReference to each rendered manifest
-func NewOwnerReferencePostRenderer(ownerReference metav1.OwnerReference, ownerNamespace string) postrender.PostRenderer {
-	return OwnerReferencePostRenderer{
+// NewHelmPostRenderer creates a Helm PostRenderer that adds the following to each rendered manifest:
+// - adds the "managed-by: sail-operator" label
+// - adds the specified OwnerReference
+func NewHelmPostRenderer(ownerReference metav1.OwnerReference, ownerNamespace string) postrender.PostRenderer {
+	return HelmPostRenderer{
 		ownerReference: ownerReference,
 		ownerNamespace: ownerNamespace,
 	}
 }
 
-type OwnerReferencePostRenderer struct {
+type HelmPostRenderer struct {
 	ownerReference metav1.OwnerReference
 	ownerNamespace string
 }
 
-var _ postrender.PostRenderer = OwnerReferencePostRenderer{}
+var _ postrender.PostRenderer = HelmPostRenderer{}
 
-func (pr OwnerReferencePostRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *bytes.Buffer, err error) {
+func (pr HelmPostRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *bytes.Buffer, err error) {
 	modifiedManifests = &bytes.Buffer{}
 	encoder := yaml.NewEncoder(modifiedManifests)
 	encoder.SetIndent(2)
@@ -71,6 +73,11 @@ func (pr OwnerReferencePostRenderer) Run(renderedManifests *bytes.Buffer) (modif
 			return nil, err
 		}
 
+		manifest, err = pr.addManagedByLabel(manifest)
+		if err != nil {
+			return nil, err
+		}
+
 		if err := encoder.Encode(manifest); err != nil {
 			return nil, err
 		}
@@ -78,7 +85,7 @@ func (pr OwnerReferencePostRenderer) Run(renderedManifests *bytes.Buffer) (modif
 	return modifiedManifests, nil
 }
 
-func (pr OwnerReferencePostRenderer) addOwnerReference(manifest map[string]any) (map[string]any, error) {
+func (pr HelmPostRenderer) addOwnerReference(manifest map[string]any) (map[string]any, error) {
 	objNamespace, objHasNamespace, err := unstructured.NestedFieldNoCopy(manifest, "metadata", "namespace")
 	if err != nil {
 		return nil, err
@@ -110,4 +117,9 @@ func (pr OwnerReferencePostRenderer) addOwnerReference(manifest map[string]any) 
 		}
 	}
 	return manifest, nil
+}
+
+func (pr HelmPostRenderer) addManagedByLabel(manifest map[string]any) (map[string]any, error) {
+	err := unstructured.SetNestedField(manifest, constants.ManagedByLabelValue, "metadata", "labels", constants.ManagedByLabelKey)
+	return manifest, err
 }
