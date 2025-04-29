@@ -119,7 +119,8 @@ type IstioStatus struct {
 	ActiveRevisionName string `json:"activeRevisionName,omitempty"`
 
 	// Reports information about the underlying IstioRevisions.
-	Revisions RevisionSummary `json:"revisions,omitempty"`
+	// +optional
+	Revisions RevisionSummary `json:"revisions"`
 }
 
 // RevisionSummary contains information on the number of IstioRevisions associated with this Istio.
@@ -193,7 +194,8 @@ type IstioCondition struct {
 	Message string `json:"message,omitempty"`
 
 	// Last time the condition transitioned from one status to another.
-	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
+	// +optional
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitzero"`
 }
 
 // IstioConditionType represents the type of the condition.  Condition stages are:
@@ -276,13 +278,16 @@ const (
 // objects for istiod and other control plane components, similar to how a
 // Deployment object in Kubernetes creates ReplicaSets that create the Pods.
 type Istio struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.TypeMeta `json:",inline"`
+	// +optional
+	metav1.ObjectMeta `json:"metadata"`
 
 	// +kubebuilder:default={version: "v1.25.2", namespace: "istio-system", updateStrategy: {type:"InPlace"}}
-	Spec IstioSpec `json:"spec,omitempty"`
+	// +optional
+	Spec IstioSpec `json:"spec"`
 
-	Status IstioStatus `json:"status,omitempty"`
+	// +optional
+	Status IstioStatus `json:"status"`
 }
 
 // +kubebuilder:object:root=true
@@ -290,7 +295,7 @@ type Istio struct {
 // IstioList contains a list of Istio
 type IstioList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
+	metav1.ListMeta `json:"metadata"`
 	Items           []Istio `json:"items"`
 }
 

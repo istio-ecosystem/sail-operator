@@ -128,7 +128,8 @@ type IstioCNICondition struct {
 	Message string `json:"message,omitempty"`
 
 	// Last time the condition transitioned from one status to another.
-	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
+	// +optional
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitzero"`
 }
 
 // IstioCNIConditionType represents the type of the condition.  Condition stages are:
@@ -176,13 +177,16 @@ const (
 
 // IstioCNI represents a deployment of the Istio CNI component.
 type IstioCNI struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.TypeMeta `json:",inline"`
+	// +optional
+	metav1.ObjectMeta `json:"metadata"`
 
 	// +kubebuilder:default={version: "v1.25.2", namespace: "istio-cni"}
-	Spec IstioCNISpec `json:"spec,omitempty"`
+	// +optional
+	Spec IstioCNISpec `json:"spec"`
 
-	Status IstioCNIStatus `json:"status,omitempty"`
+	// +optional
+	Status IstioCNIStatus `json:"status"`
 }
 
 // +kubebuilder:object:root=true
@@ -190,7 +194,7 @@ type IstioCNI struct {
 // IstioCNIList contains a list of IstioCNI
 type IstioCNIList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
+	metav1.ListMeta `json:"metadata"`
 	Items           []IstioCNI `json:"items"`
 }
 
