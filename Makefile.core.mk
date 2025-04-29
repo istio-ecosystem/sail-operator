@@ -434,7 +434,7 @@ gen-charts: ## Pull charts from istio repository.
 gen: gen-all-except-bundle bundle ## Generate everything.
 
 .PHONY: gen-all-except-bundle
-gen-all-except-bundle: operator-name operator-chart controller-gen gen-api gen-charts gen-manifests gen-code gen-api-docs github-workflow update-docs-examples
+gen-all-except-bundle: operator-name operator-chart controller-gen gen-api gen-charts gen-manifests gen-code gen-api-docs github-workflow update-docs-examples mirror-licenses
 
 .PHONY: gen-check
 gen-check: gen restore-manifest-dates check-clean-repo ## Verify that changes in generated resources have been checked in.
@@ -703,7 +703,7 @@ lint-secrets: gitleaks ## Checks whether any secrets are present in the reposito
 	@${GITLEAKS} detect --no-git --redact -v
 
 .PHONY: lint
-lint: lint-scripts lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle lint-watches lint-secrets ## Run all linters.
+lint: lint-scripts lint-licenses lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle lint-watches lint-secrets ## Run all linters.
 
 .PHONY: format
 format: format-go tidy-go ## Auto-format all code. This should be run before sending a PR.
@@ -717,7 +717,7 @@ git-hook: gitleaks ## Installs gitleaks as a git pre-commit hook.
 
 .SILENT: helm $(HELM) $(LOCALBIN) deploy-yaml gen-api operator-name operator-chart github-workflow
 
-COMMON_IMPORTS ?= lint-all lint-scripts lint-copyright-banner lint-go lint-yaml lint-helm format-go tidy-go check-clean-repo update-common
+COMMON_IMPORTS ?= mirror-licenses dump-licenses lint-all lint-licenses lint-scripts lint-copyright-banner lint-go lint-yaml lint-helm format-go tidy-go check-clean-repo update-common
 .PHONY: $(COMMON_IMPORTS)
 $(COMMON_IMPORTS):
 	@$(MAKE) --no-print-directory -f common/Makefile.common.mk $@
