@@ -22,8 +22,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestOwnerReferencePostRenderer(t *testing.T) {
-	postRenderer := OwnerReferencePostRenderer{
+func TestHelmPostRenderer(t *testing.T) {
+	postRenderer := HelmPostRenderer{
 		ownerReference: metav1.OwnerReference{
 			APIVersion: "sailoperator.io/v1",
 			Kind:       "Istio",
@@ -50,6 +50,8 @@ kind: Service
 metadata:
   name: service-in-different-namespace
   namespace: other-namespace
+  labels:
+    foo: bar 
 spec:
   ports:
   - port: 80
@@ -58,6 +60,8 @@ spec:
 	expected := `apiVersion: v1
 kind: Deployment
 metadata:
+  labels:
+    managed-by: sail-operator
   name: deployment-in-same-namespace
   namespace: istio-system
   ownerReferences:
@@ -74,6 +78,9 @@ metadata:
   annotations:
     operator-sdk/primary-resource: istio-system/my-istio
     operator-sdk/primary-resource-type: Istio.sailoperator.io
+  labels:
+    foo: bar
+    managed-by: sail-operator
   name: service-in-different-namespace
   namespace: other-namespace
 spec:
@@ -87,6 +94,6 @@ spec:
 	}
 
 	if diff := cmp.Diff(expected, actual.String()); diff != "" {
-		t.Errorf("ownerReference wasn't added properly; diff (-expected, +actual):\n%v", diff)
+		t.Errorf("ownerReference or managed-by label wasn't added properly; diff (-expected, +actual):\n%v", diff)
 	}
 }
