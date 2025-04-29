@@ -69,6 +69,10 @@
 # User Documentation
 Sail Operator manages the lifecycle of your Istio control planes. Instead of creating a new configuration schema, Sail Operator APIs are built around Istio's helm chart APIs. All installation and configuration options that are exposed by Istio's helm charts are available through the Sail Operator CRDs' `values` fields.
 
+Similar to using Istio's Helm charts, the final set of values used to render the charts is determined by a combination of user-provided values, default chart values, and values from selected profiles. 
+These profiles can include the user-defined profile, the platform profile, and the compatibility version profile.
+To view the final set of values, inspect the ConfigMap named `values` (or `values-<revision>`) in the namespace where the control plane is installed.
+
 ## Concepts
 
 ### Istio resource
