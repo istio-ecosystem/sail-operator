@@ -88,18 +88,65 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 func (r *Reconciler) doReconcile(ctx context.Context) error {
 	log := logf.FromContext(ctx)
 
+	currNamespace, err := r.findIstioBaseNamespace(ctx)
+	if err != nil {
+		return err
+	}
+
 	rev, err := r.getDefaultRevision(ctx)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			if err := r.uninstallHelmChart(ctx); err != nil {
-				return fmt.Errorf("failed to uninstall base chart: %w", err)
+			if currNamespace != "" {
+				log.Info("Uninstalling Helm chart")
+				_, err := r.ChartManager.UninstallChart(ctx, baseReleaseName, currNamespace)
+				if err != nil {
+					return fmt.Errorf("failed to uninstall Helm chart %q: %w", baseChartName, err)
+				}
 			}
 			return nil
 		}
 		return fmt.Errorf("failed to reconcile: %w", err)
 	}
+
+	if rev.Spec.Namespace != currNamespace {
+		log.Info("Uninstalling Helm chart from previous namespace")
+		_, err := r.ChartManager.UninstallChart(ctx, baseReleaseName, currNamespace)
+		if err != nil {
+			return fmt.Errorf("failed to uninstall Helm chart %q: %w", baseChartName, err)
+		}
+	}
+
 	log.Info("Installing Helm chart")
-	return r.installHelmChart(ctx, rev)
+	version, err := istioversion.Resolve(rev.Spec.Version)
+	if err != nil {
+		return fmt.Errorf("failed to resolve IstioRevision version for %q: %w", rev.Name, err)
+	}
+
+	values := helm.FromValues(rev.Spec.Values)
+	if err := values.Set("defaultRevision", rev.Name); err != nil {
+		return fmt.Errorf("failed to set defaultRevision in Helm values: %w", err)
+	}
+
+	_, err = r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(version), values, rev.Spec.Namespace, baseReleaseName, nil)
+	if err != nil {
+		return fmt.Errorf("failed to install/update Helm chart %q: %w", baseChartName, err)
+	}
+	return nil
+}
+
+// findIstioBaseNamespace returns the namespace the istio base chart is installed in. If the chart is not installed, it returns an empty string.
+func (r *Reconciler) findIstioBaseNamespace(ctx context.Context) (string, error) {
+	releases, err := r.ChartManager.ListReleases(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to check whether Helm chart %q is installed: %w", baseChartName, err)
+	}
+
+	for _, release := range releases {
+		if release.Name == baseReleaseName {
+			return release.Namespace, nil
+		}
+	}
+	return "", nil
 }
 
 func (r *Reconciler) getDefaultRevision(ctx context.Context) (*v1.IstioRevision, error) {
@@ -124,55 +171,8 @@ func (r *Reconciler) getDefaultRevision(ctx context.Context) (*v1.IstioRevision,
 	return rev, nil
 }
 
-func (r *Reconciler) installHelmChart(ctx context.Context, rev *v1.IstioRevision) error {
-	version, err := istioversion.Resolve(rev.Spec.Version)
-	if err != nil {
-		return fmt.Errorf("failed to resolve IstioRevision version for %q: %w", rev.Name, err)
-	}
-
-	values := helm.FromValues(rev.Spec.Values)
-	if err := values.Set("defaultRevision", rev.Name); err != nil {
-		return fmt.Errorf("failed to set defaultRevision in Helm values: %w", err)
-	}
-
-	_, err = r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(version), values, rev.Spec.Namespace, baseReleaseName, nil)
-	if err != nil {
-		return fmt.Errorf("failed to install/update Helm chart %q: %w", baseChartName, err)
-	}
-	return nil
-}
-
 func (r *Reconciler) getChartDir(version string) string {
 	return path.Join(r.Config.ResourceDirectory, version, "charts", baseChartName)
-}
-
-func (r *Reconciler) uninstallHelmChart(ctx context.Context) error {
-	log := logf.FromContext(ctx)
-	releases, err := r.ChartManager.ListReleases(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to check whether Helm chart %q is installed: %w", baseChartName, err)
-	}
-
-	namespace := ""
-	for _, release := range releases {
-		if release.Name == baseReleaseName {
-			namespace = release.Namespace
-			break
-		}
-	}
-
-	if namespace == "" {
-		log.V(3).Info(fmt.Sprintf("Helm release %q not found", baseReleaseName))
-		return nil
-	}
-
-	log.V(3).Info(fmt.Sprintf("Helm release %q found in namespace %q", baseReleaseName, namespace))
-	log.Info("Uninstalling Helm chart")
-	_, err = r.ChartManager.UninstallChart(ctx, baseReleaseName, namespace)
-	if err != nil {
-		return fmt.Errorf("failed to uninstall Helm chart %q: %w", baseChartName, err)
-	}
-	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
