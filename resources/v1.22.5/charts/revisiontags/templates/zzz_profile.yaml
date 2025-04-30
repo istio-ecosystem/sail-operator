@@ -40,4 +40,5 @@ Finally, we can set all of that under .Values so the chart behaves without aware
 {{- if false }}
 {{- $a := mustMergeOverwrite $defaults $globals  }}
 {{- end }}
+{{- $x := set $.Values "_original" (deepCopy $.Values) }}
 {{- $b := set $ "Values" (mustMergeOverwrite $defaults $.Values) }}
