@@ -162,18 +162,22 @@ wait_istio_ready() {
 print_istio_info() {
     kubectl get istio
     kubectl get pods -n istio-system
+    kubectl get istio
+    kubectl get istiorevision
+    kubectl get istiorevisiontag
 }
 
 # Check that all pods in a namespace have the expected Istio version
 pods_istio_version_match() {
     namespace="$1"
     expected_version="$2"
+    istio_ns="${3:-istio-system}"
 
     pod_names=$(get_pod_names "$namespace" "")
     [ -z "$pod_names" ] && echo "No pods found in namespace $namespace" && return 1
     echo "Verifying Istio version for pods in $namespace..."
 
-    proxy_status=$(istioctl proxy-status 2>/dev/null)
+    proxy_status=$(istioctl proxy-status -i "$istio_ns" 2>/dev/null)
 
     for pod_name in $pod_names; do
         full_name="$pod_name.$namespace"
@@ -193,4 +197,73 @@ pods_istio_version_match() {
     done
 
     return 0
+}
+
+# Check that the provided istiorevision is in use
+istio_active_revision_match() {
+    expected_revision="$1"
+
+    active_revision=$(kubectl get istio -o jsonpath='{.items[0].status.activeRevisionName}')
+
+    if [ "$active_revision" != "$expected_revision" ]; then
+        echo "Expected active revision $expected_revision, got $active_revision"
+        return 1
+    fi
+
+    echo "Active revision is $active_revision"
+}
+
+# Check that the number of istiorevisions ready match the expected number
+istio_revisions_ready_count() {
+    expected_count="$1"
+
+    revisions=$(kubectl get istio -o jsonpath='{.items[0].status.revisions.ready}')
+
+    if [ "$revisions" -ne "$expected_count" ]; then
+        echo "Expected $expected_count istiorevisions, got $revisions"
+        return 1
+    fi
+
+    echo "Found $revisions istiorevisions"
+}
+
+# Check the number of istiod pods running in the istio-system namespace
+istiod_pods_count() {
+    expected_count="$1"
+
+    pods=$(kubectl get pods -n istio-system -l app=istiod -o jsonpath='{.items[*].status.phase}')
+
+    count=$(echo "$pods" | wc -w) # Correctly count the number of pods
+
+    if [ "$count" -ne "$expected_count" ]; then
+        echo "Expected $expected_count istiod pods, got $count"
+        return 1
+    fi
+
+    echo "Found $count istiod pods in istio-system namespace"
+}
+
+# Check the status of a specific istio revision tag
+istio_revision_tag_status_equal() {
+    expected_status="$1"
+
+    status=$(kubectl get istiorevisiontag default -o jsonpath='{.status.state}' 2>/dev/null)
+
+    if [ "$status" != "$expected_status" ]; then
+        echo "Expected istiorevision tag default to be $expected_status, got $status"
+        return 1
+    fi
+}
+
+
+istio_revision_tag_inuse() {
+    inuse="$1"
+
+    conditions=$(kubectl get istiorevisiontag default -o jsonpath='{.status.conditions}' 2>/dev/null)
+    istiod_revision_tag=$(echo "$conditions" | jq -r '.[] | select(.type == "InUse") | .status' | tr '[:upper:]' '[:lower:]' | xargs)
+    if [ "$istiod_revision_tag" != "$inuse" ]; then
+        echo "Expected istiorevision tag default to be in use, got $istiod_revision_tag"
+        return 1
+    fi
+    echo "Istiod revision tag is in use: $istiod_revision_tag"
 }
