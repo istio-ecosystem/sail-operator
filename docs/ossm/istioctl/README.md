@@ -5,23 +5,51 @@
 The `istioctl` tool is a configuration command line utility that allows service 
 operators to debug and diagnose Istio service mesh deployments.
 
+## Prerequisites
+
+- You have access to the OpenShift Container Platform web console.  
+
+- **OpenShift Service Mesh 3** Operator is installed and running.  
+
+- At least a `Istio` resource is already created.  
+
 ## Steps
+
+1. Check the current running `Istio` version  
+
+    ```bash
+    oc get istio -ojsonpath="{range .items[*]}{.spec.version}{'\n'}{end}" | sed s/^v// | sort
+    ```
+
+    If there are multiple `Istio` resources, choose the later version (which is the last displayed as it is ordered with the previous command)  
 
 1. Download `istioctl` binary
 
     In the OpenShift console, navigate to the Command Line Tools by clicking :grey_question: -> **Command Line Tools** in the upper-right of the header.  
-    Then click on **Download istioctl**, choose the right version and architecture according to your system.
+    Then click on **Download istioctl**, choose the correct package according to your system (OS and architecture):
+
+    - [Linux (x86_64, amd64)](https://mirror.openshift.com/pub/cgw/servicemesh/latest/istioctl-1.24.4-linux-amd64.tar.gz)
+    - [Linux on ARM (aarch64, arm64)](https://mirror.openshift.com/pub/cgw/servicemesh/latest/istioctl-1.24.4-linux-arm64.tar.gz)
+    - [MacOS (x86_64, amd64)](https://mirror.openshift.com/pub/cgw/servicemesh/latest/istioctl-1.24.4-darwin-amd64.tar.gz)
+    - [MacOS on ARM (aarch64, arm64)](https://mirror.openshift.com/pub/cgw/servicemesh/latest/istioctl-1.24.4-darwin-arm64.tar.gz)
+    - [Windows (x86_64, amd64)](https://mirror.openshift.com/pub/cgw/servicemesh/latest/istioctl-1.24.4-windows-amd64.zip)
 
 1. Extract the `istioctl` binary.
+
+    - For Linux:
 
     ```bash
     tar xzf istioctl-<VERSION>-<OS>-<ARCH>.tar.gz
     ```
 
+    - For MacOS, unpack and extract the archive.
+
+    - For Windows, use the zip software to extract the archive. 
+
 1. Move to the uncompressed directory.
 
     ```bash
-    cd istioctl-<VERSION>-<OS>-<ARCH>
+    cd istioctl-<OS>-<ARCH>
     ```
 
 1. Add `istioctl` client to your path.
