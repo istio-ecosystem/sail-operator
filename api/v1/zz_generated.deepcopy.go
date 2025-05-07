@@ -5401,10 +5401,10 @@ func (in *ZTunnelConfig) DeepCopyInto(out *ZTunnelConfig) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.Logging != nil {
-		in, out := &in.Logging, &out.Logging
-		*out = new(GlobalLoggingConfig)
-		(*in).DeepCopyInto(*out)
+	if in.LogLevel != nil {
+		in, out := &in.LogLevel, &out.LogLevel
+		*out = new(string)
+		**out = **in
 	}
 	if in.LogAsJSON != nil {
 		in, out := &in.LogAsJSON, &out.LogAsJSON

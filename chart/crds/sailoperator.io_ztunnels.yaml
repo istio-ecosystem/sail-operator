@@ -275,17 +275,10 @@ spec:
                           logs in json format by adding --log_as_json argument to
                           each container.
                         type: boolean
-                      logging:
-                        description: Same as `global.logging.level`, but will override
-                          it if set
-                        properties:
-                          level:
-                            description: |-
-                              Comma-separated minimum per-scope logging level of messages to output, in the form of <scope>:<level>,<scope>:<level>
-                              The control plane has different scopes depending on component, but can configure default log level across all components
-                              If empty, default scope and level will be used as configured in code
-                            type: string
-                        type: object
+                      logLevel:
+                        description: 'Configuration log level of ztunnel binary, default
+                          is info. Valid values are: trace, debug, info, warn, error.'
+                        type: string
                       meshConfig:
                         description: |-
                           meshConfig defines runtime configuration of components.
