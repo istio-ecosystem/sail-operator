@@ -90,8 +90,8 @@ type ZTunnelConfig struct {
 	XdsAddress *string `json:"xdsAddress,omitempty"`
 	// Specifies the default namespace for the Istio control plane components.
 	IstioNamespace *string `json:"istioNamespace,omitempty"`
-	// Same as `global.logging.level`, but will override it if set
-	Logging *GlobalLoggingConfig `json:"logging,omitempty"`
+	// Configuration log level of ztunnel binary, default is info. Valid values are: trace, debug, info, warn, error.
+	LogLevel *string `json:"logLevel,omitempty"`
 	// Specifies whether istio components should output logs in json format by adding --log_as_json argument to each container.
 	LogAsJSON *bool `json:"logAsJson,omitempty"`
 }

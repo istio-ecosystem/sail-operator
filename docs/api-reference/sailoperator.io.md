@@ -453,7 +453,6 @@ _Appears in:_
 - [CNIConfig](#cniconfig)
 - [CNIGlobalConfig](#cniglobalconfig)
 - [GlobalConfig](#globalconfig)
-- [ZTunnelConfig](#ztunnelconfig)
 - [ZTunnelGlobalConfig](#ztunnelglobalconfig)
 
 | Field | Description | Default | Validation |
@@ -3183,7 +3182,7 @@ _Appears in:_
 | `caAddress` _string_ | The address of the CA for CSR. |  |  |
 | `xdsAddress` _string_ | The customized XDS address to retrieve configuration. |  |  |
 | `istioNamespace` _string_ | Specifies the default namespace for the Istio control plane components. |  |  |
-| `logging` _[GlobalLoggingConfig](#globalloggingconfig)_ | Same as `global.logging.level`, but will override it if set |  |  |
+| `logLevel` _string_ | Configuration log level of ztunnel binary, default is info. Valid values are: trace, debug, info, warn, error. |  |  |
 | `logAsJson` _boolean_ | Specifies whether istio components should output logs in json format by adding --log_as_json argument to each container. |  |  |
 
 
