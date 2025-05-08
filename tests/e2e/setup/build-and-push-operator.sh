@@ -41,7 +41,7 @@ get_internal_registry() {
   echo "Registry URL: ${HUB}"
 
   ${COMMAND} create namespace "${NAMESPACE}" || true
-  envsubst < "${WD}/../tests/e2e/setup/config/role-bindings.yaml" | ${COMMAND} apply -f -
+  envsubst < "${WD}/config/role-bindings.yaml" | ${COMMAND} apply -f -
 
   if [[ ${URL} == *".apps-crc.testing"* ]]; then
     echo "Logging into internal registry..."
