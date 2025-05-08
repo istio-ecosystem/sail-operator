@@ -414,6 +414,8 @@ To run the configuration-converter.sh script, you need to provide four arguments
 > This script is still under development.
 > Please verify the resulting configuration carefully after conversion to ensure it meets your expectations and requirements.
 
+**Note:** There is also a [document](../docs/converter/README.md) for running Istio integration tests with a Sail Operator-managed control plane.
+
 ### CNI
 
 The CNI plugin's lifecycle is managed separately from the control plane. You will have to create a [IstioCNI resource](#istiocni-resource) to use CNI.
