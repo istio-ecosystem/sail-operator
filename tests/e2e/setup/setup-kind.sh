@@ -74,7 +74,9 @@ if [ "${MULTICLUSTER}" == "true" ]; then
 
     export KUBECONFIG="${KUBECONFIGS[0]}"
     export KUBECONFIG2="${KUBECONFIGS[1]}"
+    echo "Your KinD environment is ready, to use it: export KUBECONFIG=$(IFS=:; echo "${KUBECONFIGS[*]}")"
 else
   KUBECONFIG="${ARTIFACTS}/config" setup_kind_cluster "${KIND_CLUSTER_NAME}" "" "" "true" "true"
   setup_kind_registry
+  echo "Your KinD environment is ready, to use it: export KUBECONFIG=${ARTIFACTS}/config"
 fi
