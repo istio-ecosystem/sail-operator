@@ -668,7 +668,7 @@ Steps:
     kubectl get istio
     kubectl get istiorevision -n istio-system
     with_retries istio_active_revision_match "default-v1-23-2"
-    istio_revisions_ready_count "2"
+    with_retries istio_revisions_ready_count "2"
 ``` -->
 11. Confirm there are two control plane pods running, one for each revision.
 
