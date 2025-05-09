@@ -61,7 +61,7 @@ done
 # Build list of file-tag pairs
 TAGS_LIST=()
 for file in "${FILES_TO_CHECK[@]}"; do
-  TAGS=$(grep -oP 'bash { name=[^ ]+ tag=\K[^}]+(?=})' "$file" | sort -u)
+  TAGS=$(grep -oP 'tag=\K[^} ]+' "$file" | sort -u)
   for tag in $TAGS; do
     TAGS_LIST+=("$file -t $tag")
   done
@@ -77,6 +77,16 @@ for tag in "${TAGS_LIST[@]}"; do
   (
     echo "Setting up cluster for: $tag"
 
+    # Run the actual doc test
+    FILE=$(echo "$tag" | cut -d' ' -f1)
+    RUNME_TAG=$(echo "$tag" | cut -d' ' -f3-)
+
+    # Set IP family only for the dual-stack tag
+    if [ "$RUNME_TAG" == "dual-stack" ]; then
+      echo "Setting up dual-stack cluster"
+      export IP_FAMILY="dual"
+      export KIND_CLUSTER_NAME="docs-automation-dual-stack"
+    fi
     # Source setup and build scripts to preserve trap and env
     source "${ROOT_DIR}/tests/e2e/setup/setup-kind.sh"
 
@@ -94,11 +104,13 @@ for tag in "${TAGS_LIST[@]}"; do
     helm template chart chart ${HELM_TEMPL_DEF_FLAGS} --set image="${IMAGE}" --namespace sail-operator | kubectl apply --server-side=true -f -
     kubectl wait --for=condition=available --timeout=600s deployment/sail-operator -n sail-operator
 
-    # Run the actual doc test
-    FILE=$(echo "$tag" | cut -d' ' -f1)
-    TAG=$(echo "$tag" | cut -d' ' -f3-)
+    echo "Running: runme run --filename $FILE -t $RUNME_TAG --skip-prompts"
+    runme run --filename "$FILE" -t "$RUNME_TAG" --skip-prompts
 
-    echo "Running: runme run --filename $FILE -t $TAG --skip-prompts"
-    runme run --filename "$FILE" -t "$TAG" --skip-prompts
+    # Unset IP_FAMILY and KIND_CLUSTER_NAME to avoid conflicts
+    if [ "$RUNME_TAG" == "dual-stack" ]; then
+      unset IP_FAMILY
+      unset KIND_CLUSTER_NAME
+    fi
   )
 done
