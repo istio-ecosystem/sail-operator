@@ -97,6 +97,46 @@ function patchIstioCharts() {
 
   # remove CRDs from istiod-remote chart, since they are installed by OLM, not by the operator
   rm -f "${CHARTS_DIR}/istiod-remote/templates/crd-all.gen.yaml"
+
+  # remove install.operator.istio.io/owning-resource label from all charts
+  sed -i '/install.operator.istio.io\/owning-resource/d' "${CHARTS_DIR}"/*/templates/*.yaml
+
+  # add values ConfigMap template if it doesn't exist
+  if [ ! -f "${CHARTS_DIR}/istiod/templates/configmap-values.yaml" ]; then
+    cat <<EOF > "${CHARTS_DIR}/istiod/templates/configmap-values.yaml"
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: values{{- if not (eq .Values.revision "") }}-{{ .Values.revision }}{{- end }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    kubernetes.io/description: This ConfigMap contains the Helm values used during chart rendering. This ConfigMap is rendered for debugging purposes and external tooling; modifying these values has no effect.
+  labels:
+    istio.io/rev: {{ .Values.revision | default "default" | quote }}
+    install.operator.istio.io/owning-resource: {{ .Values.ownerName | default "unknown" }}
+    operator.istio.io/component: "Pilot"
+    release: {{ .Release.Name }}
+    app.kubernetes.io/name: "istiod"
+    {{- include "istio.labels" . | nindent 4 }}
+data:
+  original-values: |-
+{{ .Values._original | toPrettyJson | indent 4 }}
+{{- \$_ := unset $.Values "_original" }}
+  merged-values: |-
+{{ .Values | toPrettyJson | indent 4 }}
+EOF
+
+    # remove "include istio.labels" line if istio.labels is not defined in zzz_profile.yaml
+    if ! grep -q 'define "istio.labels"' "${CHARTS_DIR}/istiod/templates/zzz_profile.yaml"; then
+      sed -i '/istio.labels/d' "${CHARTS_DIR}/istiod/templates/configmap-values.yaml"
+    fi
+  fi
+
+  # shellcheck disable=SC2016
+  if ! grep -q '$x := set $.Values "_original" (deepCopy $.Values)' "${CHARTS_DIR}/istiod/templates/zzz_profile.yaml"; then
+    # shellcheck disable=SC2016
+    sed -i '/mustMergeOverwrite \$defaults \$.Values/i {{- $x := set $.Values "_original" (deepCopy $.Values) }}' "${CHARTS_DIR}/istiod/templates/zzz_profile.yaml"
+  fi
 }
 
 # The charts use docker.io as the default registry, but this leads to issues

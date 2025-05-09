@@ -69,7 +69,7 @@ var _ = Describe("Multicluster deployment models", Label("multicluster-primaryre
 
 	Describe("Primary-Remote - Multi-Network configuration", func() {
 		// Test the Primary-Remote - Multi-Network configuration for each supported Istio version
-		for _, v := range istioversion.List {
+		for _, v := range istioversion.GetLatestPatchVersions() {
 			// The Primary-Remote - Multi-Network configuration is only supported in Istio 1.24+.
 			if version.Constraint("<1.24").Check(v.Version) {
 				Log(fmt.Sprintf("Skipping test, because Istio version %s does not support Primary-Remote Multi-Network configuration", v.Version))

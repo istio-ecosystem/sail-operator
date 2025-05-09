@@ -2,7 +2,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.2
+    controller-gen.kubebuilder.io/version: v0.17.3
   creationTimestamp: null
   name: istiorevisions.sailoperator.io
 spec:
@@ -22,6 +22,10 @@ spec:
     - description: The namespace for the control plane components.
       jsonPath: .spec.namespace
       name: Namespace
+      type: string
+    - description: The selected profile (collection of value presets).
+      jsonPath: .spec.values.profile
+      name: Profile
       type: string
     - description: Whether the control plane installation is ready to handle requests.
       jsonPath: .status.conditions[?(@.type=="Ready")].status
@@ -111,6 +115,10 @@ spec:
                     description: Specifies experimental helm fields that could be
                       removed or changed in the future
                     x-kubernetes-preserve-unknown-fields: true
+                  gatewayClasses:
+                    description: Configuration for Gateway Classes
+                    format: byte
+                    type: string
                   global:
                     description: Global configuration for Istio components.
                     properties:
@@ -4879,18 +4887,29 @@ spec:
                                                 to each HTTP request sent.
                                               items:
                                                 properties:
+                                                  envName:
+                                                    description: |-
+                                                      The HTTP header value from the environment variable.
+
+                                                      Warning:
+                                                      - The environment variable must be set in the istiod pod spec.
+                                                      - This is not a end-to-end secure.
+                                                    type: string
                                                   name:
                                                     description: REQUIRED. The HTTP
                                                       header name.
                                                     type: string
                                                   value:
-                                                    description: REQUIRED. The HTTP
-                                                      header value.
+                                                    description: The HTTP header value.
                                                     type: string
                                                 required:
                                                 - name
-                                                - value
                                                 type: object
+                                                x-kubernetes-validations:
+                                                - message: At most one of [value envName]
+                                                    should be set
+                                                  rule: (has(self.value)?1:0) + (has(self.envName)?1:0)
+                                                    <= 1
                                               type: array
                                             path:
                                               description: REQUIRED. Specifies the
@@ -4969,18 +4988,29 @@ spec:
                                         be injected.
                                       items:
                                         properties:
+                                          envName:
+                                            description: |-
+                                              The HTTP header value from the environment variable.
+
+                                              Warning:
+                                              - The environment variable must be set in the istiod pod spec.
+                                              - This is not a end-to-end secure.
+                                            type: string
                                           name:
                                             description: REQUIRED. The HTTP header
                                               name.
                                             type: string
                                           value:
-                                            description: REQUIRED. The HTTP header
-                                              value.
+                                            description: The HTTP header value.
                                             type: string
                                         required:
                                         - name
-                                        - value
                                         type: object
+                                        x-kubernetes-validations:
+                                        - message: At most one of [value envName]
+                                            should be set
+                                          rule: (has(self.value)?1:0) + (has(self.envName)?1:0)
+                                            <= 1
                                       type: array
                                     timeout:
                                       description: Optional. Specifies the timeout
@@ -5015,18 +5045,29 @@ spec:
                                         to each HTTP request sent.
                                       items:
                                         properties:
+                                          envName:
+                                            description: |-
+                                              The HTTP header value from the environment variable.
+
+                                              Warning:
+                                              - The environment variable must be set in the istiod pod spec.
+                                              - This is not a end-to-end secure.
+                                            type: string
                                           name:
                                             description: REQUIRED. The HTTP header
                                               name.
                                             type: string
                                           value:
-                                            description: REQUIRED. The HTTP header
-                                              value.
+                                            description: The HTTP header value.
                                             type: string
                                         required:
                                         - name
-                                        - value
                                         type: object
+                                        x-kubernetes-validations:
+                                        - message: At most one of [value envName]
+                                            should be set
+                                          rule: (has(self.value)?1:0) + (has(self.envName)?1:0)
+                                            <= 1
                                       type: array
                                     path:
                                       description: REQUIRED. Specifies the path on
@@ -6883,6 +6924,54 @@ spec:
                         description: "Environment variables passed to the Pilot container.\n\nExamples:\nenv:\n\n\tENV_VAR_1:
                           value1\n\tENV_VAR_2: value2"
                         type: object
+                      envVarFrom:
+                        description: Configuration for the istio-discovery chart
+                        items:
+                          description: EnvFromSource represents the source of a set
+                            of ConfigMaps
+                          properties:
+                            configMapRef:
+                              description: The ConfigMap to select from
+                              properties:
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the ConfigMap must
+                                    be defined
+                                  type: boolean
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            prefix:
+                              description: An optional identifier to prepend to each
+                                key in the ConfigMap. Must be a C_IDENTIFIER.
+                              type: string
+                            secretRef:
+                              description: The Secret to select from
+                              properties:
+                                name:
+                                  default: ""
+                                  description: |-
+                                    Name of the referent.
+                                    This field is effectively required, but due to backwards compatibility is
+                                    allowed to be empty. Instances of this type with an empty value here are
+                                    almost certainly wrong.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret must be
+                                    defined
+                                  type: boolean
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          type: object
+                        type: array
                       extraContainerArgs:
                         description: Additional container arguments for the Pilot
                           container.
@@ -9441,14 +9530,17 @@ spec:
               version:
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.25.1, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, v1.23.5, v1.23.4, v1.23.3, v1.23.2, v1.22.8, v1.22.7, v1.22.6, v1.22.5, v1.21.6, v1.25-alpha.c2ac935c.
+                  Must be one of: v1.25.2, v1.25.1, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, v1.23.6, v1.23.5, v1.23.4, v1.23.3, v1.23.2, v1.22.8, v1.22.7, v1.22.6, v1.22.5, v1.21.6, v1.27-alpha.af4d964e.
                 enum:
+                - v1.25.2
                 - v1.25.1
+                - v1.24.5
                 - v1.24.4
                 - v1.24.3
                 - v1.24.2
                 - v1.24.1
                 - v1.24.0
+                - v1.23.6
                 - v1.23.5
                 - v1.23.4
                 - v1.23.3
@@ -9458,7 +9550,7 @@ spec:
                 - v1.22.6
                 - v1.22.5
                 - v1.21.6
-                - v1.25-alpha.c2ac935c
+                - v1.27-alpha.af4d964e
                 type: string
             required:
             - namespace

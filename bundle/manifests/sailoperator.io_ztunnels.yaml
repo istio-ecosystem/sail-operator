@@ -2,7 +2,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.2
+    controller-gen.kubebuilder.io/version: v0.17.3
   creationTimestamp: null
   name: ztunnels.sailoperator.io
 spec:
@@ -20,6 +20,10 @@ spec:
     - description: The namespace for the ztunnel component.
       jsonPath: .spec.namespace
       name: Namespace
+      type: string
+    - description: The selected profile (collection of value presets).
+      jsonPath: .spec.values.profile
+      name: Profile
       type: string
     - description: Whether the Istio ztunnel installation is ready to handle requests.
       jsonPath: .status.conditions[?(@.type=="Ready")].status
@@ -63,7 +67,7 @@ spec:
             default:
               namespace: ztunnel
               profile: ambient
-              version: v1.25.1
+              version: v1.25.2
             description: ZTunnelSpec defines the desired state of ZTunnel
             properties:
               namespace:
@@ -271,17 +275,17 @@ spec:
                           logs in json format by adding --log_as_json argument to
                           each container.
                         type: boolean
-                      logging:
-                        description: Same as `global.logging.level`, but will override
-                          it if set
-                        properties:
-                          level:
-                            description: |-
-                              Comma-separated minimum per-scope logging level of messages to output, in the form of <scope>:<level>,<scope>:<level>
-                              The control plane has different scopes depending on component, but can configure default log level across all components
-                              If empty, default scope and level will be used as configured in code
-                            type: string
-                        type: object
+                      logLevel:
+                        default: info
+                        description: 'Configuration log level of ztunnel binary, default
+                          is info. Valid values are: trace, debug, info, warn, error.'
+                        enum:
+                        - trace
+                        - debug
+                        - info
+                        - warn
+                        - error
+                        type: string
                       meshConfig:
                         description: |-
                           meshConfig defines runtime configuration of components.
@@ -2663,18 +2667,31 @@ spec:
                                                     to each HTTP request sent.
                                                   items:
                                                     properties:
+                                                      envName:
+                                                        description: |-
+                                                          The HTTP header value from the environment variable.
+
+                                                          Warning:
+                                                          - The environment variable must be set in the istiod pod spec.
+                                                          - This is not a end-to-end secure.
+                                                        type: string
                                                       name:
                                                         description: REQUIRED. The
                                                           HTTP header name.
                                                         type: string
                                                       value:
-                                                        description: REQUIRED. The
-                                                          HTTP header value.
+                                                        description: The HTTP header
+                                                          value.
                                                         type: string
                                                     required:
                                                     - name
-                                                    - value
                                                     type: object
+                                                    x-kubernetes-validations:
+                                                    - message: At most one of [value
+                                                        envName] should be set
+                                                      rule: (has(self.value)?1:0)
+                                                        + (has(self.envName)?1:0)
+                                                        <= 1
                                                   type: array
                                                 path:
                                                   description: REQUIRED. Specifies
@@ -2754,18 +2771,29 @@ spec:
                                             be injected.
                                           items:
                                             properties:
+                                              envName:
+                                                description: |-
+                                                  The HTTP header value from the environment variable.
+
+                                                  Warning:
+                                                  - The environment variable must be set in the istiod pod spec.
+                                                  - This is not a end-to-end secure.
+                                                type: string
                                               name:
                                                 description: REQUIRED. The HTTP header
                                                   name.
                                                 type: string
                                               value:
-                                                description: REQUIRED. The HTTP header
-                                                  value.
+                                                description: The HTTP header value.
                                                 type: string
                                             required:
                                             - name
-                                            - value
                                             type: object
+                                            x-kubernetes-validations:
+                                            - message: At most one of [value envName]
+                                                should be set
+                                              rule: (has(self.value)?1:0) + (has(self.envName)?1:0)
+                                                <= 1
                                           type: array
                                         timeout:
                                           description: Optional. Specifies the timeout
@@ -2802,18 +2830,29 @@ spec:
                                             to each HTTP request sent.
                                           items:
                                             properties:
+                                              envName:
+                                                description: |-
+                                                  The HTTP header value from the environment variable.
+
+                                                  Warning:
+                                                  - The environment variable must be set in the istiod pod spec.
+                                                  - This is not a end-to-end secure.
+                                                type: string
                                               name:
                                                 description: REQUIRED. The HTTP header
                                                   name.
                                                 type: string
                                               value:
-                                                description: REQUIRED. The HTTP header
-                                                  value.
+                                                description: The HTTP header value.
                                                 type: string
                                             required:
                                             - name
-                                            - value
                                             type: object
+                                            x-kubernetes-validations:
+                                            - message: At most one of [value envName]
+                                                should be set
+                                              rule: (has(self.value)?1:0) + (has(self.envName)?1:0)
+                                                <= 1
                                           type: array
                                         path:
                                           description: REQUIRED. Specifies the path
@@ -3594,6 +3633,11 @@ spec:
                           type: string
                         description: Additional labels to apply on the pod level.
                         type: object
+                      resourceName:
+                        description: |-
+                          resourceName, if set, will override the naming of resources. If not set, will default to the release name.
+                          It is recommended to not set this; this is primarily for backwards compatibility.
+                        type: string
                       resources:
                         description: The k8s resource requests and limits for the
                           ztunnel Pods.
@@ -3662,6 +3706,15 @@ spec:
                         description: The container image tag to pull. Image will be
                           `Hub/Image:Tag-Variant`.
                         type: string
+                      terminationGracePeriodSeconds:
+                        default: 30
+                        description: |-
+                          This value defines:
+                          1. how many seconds kube waits for ztunnel pod to gracefully exit before forcibly terminating it (this value)
+                          2. how many seconds ztunnel waits to drain its own connections (this value - 1 sec)
+                        format: int64
+                        minimum: 0
+                        type: integer
                       variant:
                         description: The container image variant to pull. Options
                           are "debug" or "distroless". Unset will use the default
@@ -5538,21 +5591,23 @@ spec:
                     type: object
                 type: object
               version:
-                default: v1.25.1
+                default: v1.25.2
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.25-latest, v1.25.1, v1.24-latest, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.25-alpha.c2ac935c.
+                  Must be one of: v1.25-latest, v1.25.2, v1.25.1, v1.24-latest, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.27-alpha.af4d964e.
                 enum:
                 - v1.25-latest
+                - v1.25.2
                 - v1.25.1
                 - v1.24-latest
+                - v1.24.5
                 - v1.24.4
                 - v1.24.3
                 - v1.24.2
                 - v1.24.1
                 - v1.24.0
                 - master
-                - v1.25-alpha.c2ac935c
+                - v1.27-alpha.af4d964e
                 type: string
             required:
             - namespace

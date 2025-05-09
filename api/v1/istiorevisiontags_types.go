@@ -128,7 +128,8 @@ type IstioRevisionTagCondition struct {
 	Message string `json:"message,omitempty"`
 
 	// Last time the condition transitioned from one status to another.
-	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
+	// +optional
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitzero"`
 }
 
 // IstioRevisionConditionType represents the type of the condition.  Condition stages are:
@@ -183,11 +184,15 @@ const (
 
 // IstioRevisionTag references an Istio or IstioRevision object and serves as an alias for sidecar injection. It can be used to manage stable revision tags without having to use istioctl or helm directly. See https://istio.io/latest/docs/setup/upgrade/canary/#stable-revision-labels for more information on the concept.
 type IstioRevisionTag struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.TypeMeta `json:",inline"`
+	// +optional
+	metav1.ObjectMeta `json:"metadata"`
 
-	Spec   IstioRevisionTagSpec   `json:"spec,omitempty"`
-	Status IstioRevisionTagStatus `json:"status,omitempty"`
+	// +optional
+	Spec IstioRevisionTagSpec `json:"spec"`
+
+	// +optional
+	Status IstioRevisionTagStatus `json:"status"`
 }
 
 // +kubebuilder:object:root=true
@@ -195,7 +200,7 @@ type IstioRevisionTag struct {
 // IstioRevisionTagList contains a list of IstioRevisionTags
 type IstioRevisionTagList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
+	metav1.ListMeta `json:"metadata"`
 	Items           []IstioRevisionTag `json:"items"`
 }
 

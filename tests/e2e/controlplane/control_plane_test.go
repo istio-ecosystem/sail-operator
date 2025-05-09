@@ -96,8 +96,8 @@ metadata:
 	})
 
 	Describe("given Istio version", func() {
-		for name, version := range istioversion.Map {
-			Context(name, func() {
+		for _, version := range istioversion.GetLatestPatchVersions() {
+			Context(version.Name, func() {
 				BeforeAll(func() {
 					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
 					Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
@@ -203,10 +203,6 @@ spec:
 
 				When("sample pod is deployed", func() {
 					BeforeAll(func() {
-						if isAlias(name, version) {
-							Skip("Skipping test for alias version")
-						}
-
 						Expect(k.CreateNamespace(sampleNamespace)).To(Succeed(), "Sample namespace failed to be created")
 						Expect(k.Label("namespace", sampleNamespace, "istio-injection", "enabled")).To(Succeed(), "Error labeling sample namespace")
 						Expect(k.WithNamespace(sampleNamespace).
@@ -304,10 +300,6 @@ spec:
 		}
 	})
 })
-
-func isAlias(name string, version istioversion.VersionInfo) bool {
-	return name != version.Name
-}
 
 func HaveContainersThat(matcher types.GomegaMatcher) types.GomegaMatcher {
 	return HaveField("Spec.Template.Spec.Containers", matcher)

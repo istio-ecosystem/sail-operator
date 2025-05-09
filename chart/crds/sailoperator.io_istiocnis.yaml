@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.2
+    controller-gen.kubebuilder.io/version: v0.17.3
   name: istiocnis.sailoperator.io
 spec:
   group: sailoperator.io
@@ -20,6 +20,10 @@ spec:
     - description: The namespace of the istio-cni-node DaemonSet.
       jsonPath: .spec.namespace
       name: Namespace
+      type: string
+    - description: The selected profile (collection of value presets).
+      jsonPath: .spec.values.profile
+      name: Profile
       type: string
     - description: Whether the Istio CNI installation is ready to handle requests.
       jsonPath: .status.conditions[?(@.type=="Ready")].status
@@ -62,7 +66,7 @@ spec:
           spec:
             default:
               namespace: istio-cni
-              version: v1.25.1
+              version: v1.25.2
             description: IstioCNISpec defines the desired state of IstioCNI
             properties:
               namespace:
@@ -1049,6 +1053,10 @@ spec:
                             description: 'UNSTABLE: If enabled, and ambient is enabled,
                               enables ipv6 support'
                             type: boolean
+                          reconcileIptablesOnStartup:
+                            description: If enabled, and ambient is enabled, iptables
+                              reconciliation will be enabled.
+                            type: boolean
                         type: object
                       chained:
                         description: |-
@@ -1437,20 +1445,23 @@ spec:
                     type: object
                 type: object
               version:
-                default: v1.25.1
+                default: v1.25.2
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.25-latest, v1.25.1, v1.24-latest, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, v1.23-latest, v1.23.5, v1.23.4, v1.23.3, v1.23.2, v1.22-latest, v1.22.8, v1.22.7, v1.22.6, v1.22.5, v1.21.6, master, v1.25-alpha.c2ac935c.
+                  Must be one of: v1.25-latest, v1.25.2, v1.25.1, v1.24-latest, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, v1.23-latest, v1.23.6, v1.23.5, v1.23.4, v1.23.3, v1.23.2, v1.22-latest, v1.22.8, v1.22.7, v1.22.6, v1.22.5, v1.21.6, master, v1.27-alpha.af4d964e.
                 enum:
                 - v1.25-latest
+                - v1.25.2
                 - v1.25.1
                 - v1.24-latest
+                - v1.24.5
                 - v1.24.4
                 - v1.24.3
                 - v1.24.2
                 - v1.24.1
                 - v1.24.0
                 - v1.23-latest
+                - v1.23.6
                 - v1.23.5
                 - v1.23.4
                 - v1.23.3
@@ -1462,7 +1473,7 @@ spec:
                 - v1.22.5
                 - v1.21.6
                 - master
-                - v1.25-alpha.c2ac935c
+                - v1.27-alpha.af4d964e
                 type: string
             required:
             - namespace

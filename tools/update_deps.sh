@@ -84,5 +84,11 @@ fi
 GITLEAKS_VERSION=$(getLatestVersion gitleaks/gitleaks)
 sed -i "s|GITLEAKS_VERSION ?= .*|GITLEAKS_VERSION ?= ${GITLEAKS_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
 
+# Update runme
+RUNME_LATEST_VERSION=$(getLatestVersion runmedev/runme)
+# Remove the leading "v" from the version string
+RUNME_LATEST_VERSION=${RUNME_LATEST_VERSION#v}
+sed -i "s|RUNME_VERSION ?= .*|RUNME_VERSION ?= ${RUNME_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+
 # Regenerate files
 make update-istio gen
