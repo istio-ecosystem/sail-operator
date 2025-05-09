@@ -5307,6 +5307,11 @@ func (in *ZTunnelConfig) DeepCopyInto(out *ZTunnelConfig) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.ResourceName != nil {
+		in, out := &in.ResourceName, &out.ResourceName
+		*out = new(string)
+		**out = **in
+	}
 	if in.Annotations != nil {
 		in, out := &in.Annotations, &out.Annotations
 		*out = make(map[string]string, len(*in))
@@ -5380,6 +5385,11 @@ func (in *ZTunnelConfig) DeepCopyInto(out *ZTunnelConfig) {
 		in, out := &in.MeshConfig, &out.MeshConfig
 		*out = new(MeshConfig)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.TerminationGracePeriodSeconds != nil {
+		in, out := &in.TerminationGracePeriodSeconds, &out.TerminationGracePeriodSeconds
+		*out = new(int64)
+		**out = **in
 	}
 	if in.Revision != nil {
 		in, out := &in.Revision, &out.Revision
