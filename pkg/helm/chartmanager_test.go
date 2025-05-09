@@ -151,7 +151,7 @@ func TestUpgradeOrInstallChart(t *testing.T) {
 				tc.setup(g, cl, helm, ns)
 			}
 
-			rel, err := helm.UpgradeOrInstallChart(ctx, chartDir, Values{"value": "my-value"}, ns, relName, owner)
+			rel, err := helm.UpgradeOrInstallChart(ctx, chartDir, Values{"value": "my-value"}, ns, relName, &owner)
 
 			if tc.wantErrOnInstall {
 				g.Expect(err).To(HaveOccurred())
@@ -216,7 +216,7 @@ func upgrade(g *WithT, helm *ChartManager, chartDir string, ns string, relName s
 }
 
 func upgradeOrInstall(g *WithT, helm *ChartManager, chartDir string, ns string, relName string, owner metav1.OwnerReference) {
-	_, err := helm.UpgradeOrInstallChart(ctx, chartDir, Values{"value": "other-value"}, ns, relName, owner)
+	_, err := helm.UpgradeOrInstallChart(ctx, chartDir, Values{"value": "other-value"}, ns, relName, &owner)
 	g.Expect(err).ToNot(HaveOccurred())
 }
 
