@@ -64,7 +64,7 @@ var _ = Describe("DualStack configuration ", Ordered, func() {
 	})
 
 	Describe("for supported versions", func() {
-		for _, version := range istioversion.List {
+		for _, version := range istioversion.GetLatestPatchVersions() {
 			// The minimum supported version is 1.23 (and above)
 			if version.Version.LessThan(semver.MustParse("1.23.0")) {
 				continue

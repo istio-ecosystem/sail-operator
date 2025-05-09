@@ -82,7 +82,7 @@ ENVTEST_K8S_VERSION ?= 1.29.0
 DOCKER_BUILD_FLAGS ?= "--platform=$(TARGET_OS)/$(TARGET_ARCH)"
 
 GOTEST_FLAGS := $(if $(VERBOSE),-v) $(if $(COVERAGE),-coverprofile=$(REPO_ROOT)/out/coverage-unit.out)
-GINKGO_FLAGS := $(if $(VERBOSE),-v) $(if $(CI),--no-color) $(if $(COVERAGE),-coverprofile=coverage-integration.out -coverpkg=./... --output-dir=out)
+GINKGO_FLAGS ?= $(if $(VERBOSE),-v) $(if $(CI),--no-color) $(if $(COVERAGE),-coverprofile=coverage-integration.out -coverpkg=./... --output-dir=out)
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -187,6 +187,31 @@ test.e2e.kind: istioctl ## Deploy a KinD cluster and run the end-to-end tests ag
 test.e2e.describe: ## Runs ginkgo outline -format indent over the e2e test to show in BDD style the steps and test structure
 	GINKGO_FLAGS="$(GINKGO_FLAGS)" ${SOURCE_DIR}/tests/e2e/common-operator-integ-suite.sh --describe
 ##@ Build
+
+.PHONY: runme $(RUNME)
+runme: OS=$(shell go env GOOS)
+runme: ARCH=$(shell go env GOARCH)
+runme: $(RUNME) ## Download runme to bin directory. If wrong version is installed, it will be overwritten.
+	@test -s $(LOCALBIN)/runme || { \
+		GOBIN=$(LOCALBIN) GO111MODULE=on go install github.com/runmedev/runme/v3@v$(RUNME_VERSION) > /dev/stderr; \
+		echo "runme has been downloaded and placed in $(LOCALBIN)"; \
+	}
+
+.PHONY: update-docs-examples
+update-docs-examples: ## Copy the documentation files and generate the resulting md files to be executed by the runme tool.
+	@echo "Executing copy script to generate the documentation examples md files"
+	@echo "The script will copy the files from the source folder to the destination folder and add the runme suffix to the file names"
+	@tests/documentation_tests/scripts/update-docs-examples.sh
+	@echo "Documentation examples updated successfully"
+
+
+.PHONE: test.docs
+test.docs: runme istioctl update-docs-examples
+## test.docs use runme to test the documentation examples. 
+## Check the specific documentation to understand the use of the tool
+	@echo "Running runme test on the documentation examples, the location of the tests is in the tests/documentation_test folder"
+	@PATH=$(LOCALBIN):$$PATH tests/documentation_tests/scripts/run-docs-examples.sh
+	@echo "Documentation examples tested successfully"
 
 .PHONY: build
 build: build-$(TARGET_ARCH) ## Build the sail-operator binary.
@@ -309,6 +334,13 @@ create-gh-release: helm-package ## Create a GitHub release and upload the helm c
 		--generate-notes \
 		$(GH_RELEASE_ADDITIONAL_FLAGS)
 
+.PHONY: cluster
+cluster: SKIP_CLEANUP=true
+cluster: ## Creates a KinD cluster(s) to use in local deployments.
+	source ${SOURCE_DIR}/tests/e2e/setup/setup-kind.sh; \
+	export HUB="$${KIND_REGISTRY}"; \
+	OCP=false ${SOURCE_DIR}/tests/e2e/setup/build-and-push-operator.sh
+
 .PHONY: deploy
 deploy: verify-kubeconfig helm ## Deploy controller to an existing cluster.
 	$(info NAMESPACE: $(NAMESPACE))
@@ -409,7 +441,7 @@ gen-charts: ## Pull charts from istio repository.
 gen: gen-all-except-bundle bundle ## Generate everything.
 
 .PHONY: gen-all-except-bundle
-gen-all-except-bundle: operator-name operator-chart controller-gen gen-api gen-charts gen-manifests gen-code gen-api-docs github-workflow
+gen-all-except-bundle: operator-name operator-chart controller-gen gen-api gen-charts gen-manifests gen-code gen-api-docs github-workflow update-docs-examples mirror-licenses
 
 .PHONY: gen-check
 gen-check: gen restore-manifest-dates check-clean-repo ## Verify that changes in generated resources have been checked in.
@@ -483,16 +515,18 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 GITLEAKS ?= $(LOCALBIN)/gitleaks
 OPM ?= $(LOCALBIN)/opm
 ISTIOCTL ?= $(LOCALBIN)/istioctl
+RUNME ?= $(LOCALBIN)/runme
 
 ## Tool Versions
 OPERATOR_SDK_VERSION ?= v1.39.2
-HELM_VERSION ?= v3.17.2
-CONTROLLER_TOOLS_VERSION ?= v0.17.2
+HELM_VERSION ?= v3.17.3
+CONTROLLER_TOOLS_VERSION ?= v0.17.3
 CONTROLLER_RUNTIME_BRANCH ?= release-0.20
 OPM_VERSION ?= v1.51.0
 OLM_VERSION ?= v0.31.0
-GITLEAKS_VERSION ?= v8.24.2
+GITLEAKS_VERSION ?= v8.24.3
 ISTIOCTL_VERSION ?= 1.23.0
+RUNME_VERSION ?= 3.13.1
 
 # GENERATE_RELATED_IMAGES defines whether `spec.relatedImages` is going to be generated or not
 # To disable set flag to false
@@ -676,7 +710,7 @@ lint-secrets: gitleaks ## Checks whether any secrets are present in the reposito
 	@${GITLEAKS} detect --no-git --redact -v
 
 .PHONY: lint
-lint: lint-scripts lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle lint-watches lint-secrets ## Run all linters.
+lint: lint-scripts lint-licenses lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle lint-watches lint-secrets ## Run all linters.
 
 .PHONY: format
 format: format-go tidy-go ## Auto-format all code. This should be run before sending a PR.
@@ -690,7 +724,7 @@ git-hook: gitleaks ## Installs gitleaks as a git pre-commit hook.
 
 .SILENT: helm $(HELM) $(LOCALBIN) deploy-yaml gen-api operator-name operator-chart github-workflow
 
-COMMON_IMPORTS ?= lint-all lint-scripts lint-copyright-banner lint-go lint-yaml lint-helm format-go tidy-go check-clean-repo update-common
+COMMON_IMPORTS ?= mirror-licenses dump-licenses lint-all lint-licenses lint-scripts lint-copyright-banner lint-go lint-yaml lint-helm format-go tidy-go check-clean-repo update-common
 .PHONY: $(COMMON_IMPORTS)
 $(COMMON_IMPORTS):
 	@$(MAKE) --no-print-directory -f common/Makefile.common.mk $@

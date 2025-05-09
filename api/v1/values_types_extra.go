@@ -49,6 +49,9 @@ type ZTunnelConfig struct {
 	// Image name to pull from. Image will be `Hub/Image:Tag-Variant`.
 	// If Image contains a "/", it will replace the entire `image` in the pod.
 	Image *string `json:"image,omitempty"`
+	// resourceName, if set, will override the naming of resources. If not set, will default to the release name.
+	// It is recommended to not set this; this is primarily for backwards compatibility.
+	ResourceName *string `json:"resourceName,omitempty"`
 	// Annotations to apply to all top level resources
 	Annotations map[string]string `json:"Annotations,omitempty"`
 	// Labels to apply to all top level resources
@@ -82,6 +85,12 @@ type ZTunnelConfig struct {
 	// meshConfig defines runtime configuration of components.
 	// For ztunnel, only defaultConfig is used, but this is nested under `meshConfig` for consistency with other components.
 	MeshConfig *MeshConfig `json:"meshConfig,omitempty"`
+	// This value defines:
+	// 1. how many seconds kube waits for ztunnel pod to gracefully exit before forcibly terminating it (this value)
+	// 2. how many seconds ztunnel waits to drain its own connections (this value - 1 sec)
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:default=30
+	TerminationGracePeriodSeconds *int64 `json:"terminationGracePeriodSeconds,omitempty"`
 	// Configures the revision this control plane is a part of
 	Revision *string `json:"revision,omitempty"`
 	// The address of the CA for CSR.
@@ -90,8 +99,10 @@ type ZTunnelConfig struct {
 	XdsAddress *string `json:"xdsAddress,omitempty"`
 	// Specifies the default namespace for the Istio control plane components.
 	IstioNamespace *string `json:"istioNamespace,omitempty"`
-	// Same as `global.logging.level`, but will override it if set
-	Logging *GlobalLoggingConfig `json:"logging,omitempty"`
+	// Configuration log level of ztunnel binary, default is info. Valid values are: trace, debug, info, warn, error.
+	// +kubebuilder:default=info
+	// +kubebuilder:validation:Enum=trace;debug;info;warn;error;
+	LogLevel *string `json:"logLevel,omitempty"`
 	// Specifies whether istio components should output logs in json format by adding --log_as_json argument to each container.
 	LogAsJSON *bool `json:"logAsJson,omitempty"`
 }

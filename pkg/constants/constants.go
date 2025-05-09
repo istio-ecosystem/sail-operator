@@ -58,8 +58,11 @@ const (
 	// KubernetesAppPartOfValue is the KubernetesAppPartOfKey label value the operator sets on all objects it creates
 	KubernetesAppPartOfValue = "istio"
 
-	// KubernetesAppManagedByValue is the KubernetesAppManagedByKey label value the operator sets on all objects it creates
-	KubernetesAppManagedByValue = "sail-operator"
+	// ManagedByLabelKey is the key for the kubernetes resource label indicating the resource is managed by the Sail operator
+	ManagedByLabelKey = "managed-by"
+
+	// ManagedByLabelValue is the ManagedByKey label value the operator sets on all objects it creates
+	ManagedByLabelValue = "sail-operator"
 
 	// WebhookReadinessProbeStatusAnnotationKey is an annotation on the istio-sidecar-injection MutatingWebhookConfiguration that
 	// reports whether the remote control plane is ready or not

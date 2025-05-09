@@ -6,7 +6,6 @@ metadata:
     app: istio-cni
     release: {{ .Release.Name }}
     istio.io/rev: {{ .Values.revision | default "default" }}
-    install.operator.istio.io/owning-resource: {{ .Values.ownerName | default "unknown" }}
     operator.istio.io/component: "Cni"
 rules:
 - apiGroups: ["security.openshift.io"] 
@@ -32,7 +31,6 @@ metadata:
     app: istio-cni
     release: {{ .Release.Name }}
     istio.io/rev: {{ .Values.revision | default "default" }}
-    install.operator.istio.io/owning-resource: {{ .Values.ownerName | default "unknown" }}
     operator.istio.io/component: "Cni"
 rules:
   - apiGroups: [""]
@@ -64,7 +62,6 @@ metadata:
     app: istio-cni
     release: {{ .Release.Name }}
     istio.io/rev: {{ .Values.revision | default "default" }}
-    install.operator.istio.io/owning-resource: {{ .Values.ownerName | default "unknown" }}
     operator.istio.io/component: "Cni"
 rules:
 - apiGroups: [""]
