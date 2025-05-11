@@ -62,7 +62,7 @@ ifeq ($(IS_FIPS_COMPLIANT), true)
 	LD_FLAGS = ${LD_EXTRAFLAGS} -s -w
 else
 	CGO_ENABLED = 0
-	LD_FLAGS = -extldflags -static ${LD_EXTRAFLAGS} -s -w
+	LD_FLAGS = -X=runtime.buildVersion=unknown -X=runtime.modinfo= -extldflags -static ${LD_EXTRAFLAGS} -s -w
 endif
 
 # Image hub to use
