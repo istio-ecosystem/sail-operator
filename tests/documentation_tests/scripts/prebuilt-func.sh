@@ -31,8 +31,8 @@ set -eu
 
 # Retry a command a number of times with a delay
 with_retries() {
-    retries=10
-    delay=5
+    retries=60
+    delay=2
     i=1 
     while [ "$i" -le "$retries" ]; do
         if "$@"; then
@@ -77,7 +77,7 @@ wait_pods_ready_by_ns() {
     pod_names=$(get_pod_names "$namespace" "")
 
     [ -z "$pod_names" ] && echo "No pods found in namespace $namespace" && return 1
-    echo "🔍 Found pod(s) in namespace $namespace: $pod_names"
+    echo "Found pod(s) in namespace $namespace: $pod_names"
 
     for pod_name in $pod_names; do
         wait_for_pod_ready "$namespace" "$pod_name"
@@ -255,7 +255,7 @@ istio_revision_tag_status_equal() {
     fi
 }
 
-
+# Check if a revision tag is in use
 istio_revision_tag_inuse() {
     inuse="$1"
 
@@ -266,4 +266,18 @@ istio_revision_tag_inuse() {
         return 1
     fi
     echo "Istiod revision tag is in use: $istiod_revision_tag"
+}
+
+# Wait for rollout to success for all the pods in the given namespace
+wait_for_rollout_success() {
+    namespace="$1"
+
+    deploy_names=$(kubectl get deploy -n "$namespace" -o name)
+
+    [ -z "$deploy_names" ] && echo "No deployments found in namespace $namespace" && return 1
+    echo "Found deployment(s): $deploy_names"
+
+    for deploy in $deploy_names; do
+        kubectl rollout status "$deploy" -n "$namespace" --timeout=60s
+    done
 }
