@@ -231,7 +231,7 @@ istio_revisions_ready_count() {
 istiod_pods_count() {
     expected_count="$1"
 
-    pods=$(kubectl get pods -n istio-system -l app=istiod -o jsonpath='{.items[*].status.phase}')
+    pods=$(kubectl get pods -n istio-system -l app=istiod --output json | jq -j '.items | length')
 
     count=$(echo "$pods" | wc -w) # Correctly count the number of pods
 
@@ -246,11 +246,12 @@ istiod_pods_count() {
 # Check the status of a specific istio revision tag
 istio_revision_tag_status_equal() {
     expected_status="$1"
+    istio_revisiontag_name="$2"
 
-    status=$(kubectl get istiorevisiontag default -o jsonpath='{.status.state}' 2>/dev/null)
+    status=$(kubectl get istiorevisiontag $istio_revisiontag_name -o jsonpath='{.status.state}' 2>/dev/null)
 
     if [ "$status" != "$expected_status" ]; then
-        echo "Expected istiorevision tag default to be $expected_status, got $status"
+        echo "Expected istiorevision tag $istio_revisiontag_name to be $expected_status, got $status"
         return 1
     fi
 }
@@ -258,11 +259,12 @@ istio_revision_tag_status_equal() {
 # Check if a revision tag is in use
 istio_revision_tag_inuse() {
     inuse="$1"
+    istio_revision_name="$2"
 
-    conditions=$(kubectl get istiorevisiontag default -o jsonpath='{.status.conditions}' 2>/dev/null)
+    conditions=$(kubectl get istiorevisiontag $istio_revision_name -o jsonpath='{.status.conditions}' 2>/dev/null)
     istiod_revision_tag=$(echo "$conditions" | jq -r '.[] | select(.type == "InUse") | .status' | tr '[:upper:]' '[:lower:]' | xargs)
     if [ "$istiod_revision_tag" != "$inuse" ]; then
-        echo "Expected istiorevision tag default to be in use, got $istiod_revision_tag"
+        echo "Expected istiorevision tag $istio_revision_name to be in use, got $istiod_revision_tag"
         return 1
     fi
     echo "Istiod revision tag is in use: $istiod_revision_tag"

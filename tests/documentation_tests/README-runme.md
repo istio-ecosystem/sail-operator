@@ -811,7 +811,7 @@ Steps:
     ```
 ```bash { name=validation-istio-revision-tag tag=istiorevisiontag}
     . scripts/prebuilt-func.sh
-    with_retries istio_revision_tag_status_equal "NotReferencedByAnything"
+    with_retries istio_revision_tag_status_equal "default" "NotReferencedByAnything"
 ```
     Note: `IN USE` field shows as `False`, as the tag is not referenced by any workloads or namespaces.
 5. Create `bookinfo` namespace and label it to mark it for injection.
@@ -844,7 +844,7 @@ Steps:
 ```bash { name=validation-istio-revision-tag-inuse tag=istiorevisiontag}
     . scripts/prebuilt-func.sh
     istioctl proxy-status
-    with_retries istio_revision_tag_inuse "true"
+    with_retries istio_revision_tag_inuse "default" "true"
 ```
 8. Confirm that the proxy version matches the control plane version.
 
