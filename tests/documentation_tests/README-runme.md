@@ -521,12 +521,17 @@ Steps:
 
 8. Delete `bookinfo` pods to trigger sidecar injection with the new version.
 
-    ```bash { name=restart-bookinfo tag=inplace-update}
+    ```bash
     kubectl rollout restart deployment -n bookinfo
     ```
 ```bash { name=validation-wait-bookinfo tag=inplace-update}
+    pod_names=$(kubectl get pods -n bookinfo -o name)
+    kubectl rollout restart deployment -n bookinfo
+    # Wait pod deletion
+    for pod in $pod_names; do
+        kubectl wait --for=delete $pod -n bookinfo --timeout=60s
+    done
     . scripts/prebuilt-func.sh
-    wait_for_rollout_success "bookinfo"
     with_retries wait_pods_ready_by_ns "bookinfo"
     istioctl proxy-status
 ```
@@ -704,12 +709,17 @@ Steps:
 
 14. Restart all Deplyments in the `bookinfo` namespace.
 
-    ```bash { name=restart-bookinfo tag=revision-based-update}
+    ```bash
     kubectl rollout restart deployment -n bookinfo
     ```
 ```bash { name=validation-wait-bookinfo tag=revision-based-update}
+    pod_names=$(kubectl get pods -n bookinfo -o name)
+    kubectl rollout restart deployment -n bookinfo
+    # Wait pod deletion
+    for pod in $pod_names; do
+        kubectl wait --for=delete $pod -n bookinfo --timeout=60s
+    done
     . scripts/prebuilt-func.sh
-    wait_for_rollout_success "bookinfo"
     with_retries wait_pods_ready_by_ns "bookinfo"
     kubectl get pods -n bookinfo
     istioctl proxy-status
@@ -899,7 +909,7 @@ Steps:
 ```
 13. Restart all the Deployments in the `bookinfo` namespace.
 
-    ```bash { name=restart-bookinfo tag=istiorevisiontag}
+    ```bash
     kubectl rollout restart deployment -n bookinfo
     ```
 
@@ -910,8 +920,13 @@ Steps:
     ```
     The column `VERSION` should match the updated control plane version.
 ```bash { name=validation-istio-version-bookinfo tag=istiorevisiontag}
+    pod_names=$(kubectl get pods -n bookinfo -o name)
+    kubectl rollout restart deployment -n bookinfo
+    # Wait pod deletion
+    for pod in $pod_names; do
+        kubectl wait --for=delete $pod -n bookinfo --timeout=60s
+    done
     . scripts/prebuilt-func.sh
-    wait_for_rollout_success "bookinfo"
     with_retries wait_pods_ready_by_ns "bookinfo"
     kubectl get pods -n bookinfo
     istioctl proxy-status

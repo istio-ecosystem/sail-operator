@@ -231,16 +231,14 @@ istio_revisions_ready_count() {
 istiod_pods_count() {
     expected_count="$1"
 
-    pods=$(kubectl get pods -n istio-system -l app=istiod --output json | jq -j '.items | length')
+    pods_count=$(kubectl get pods -n istio-system -l app=istiod --output json | jq -j '.items | length')
 
-    count=$(echo "$pods" | wc -w) # Correctly count the number of pods
-
-    if [ "$count" -ne "$expected_count" ]; then
-        echo "Expected $expected_count istiod pods, got $count"
+    if [ "$pods_count" -ne "$expected_count" ]; then
+        echo "Expected $expected_count istiod pods, got $pods_count"
         return 1
     fi
 
-    echo "Found $count istiod pods in istio-system namespace"
+    echo "Found $pods_count istiod pods in istio-system namespace"
 }
 
 # Check the status of a specific istio revision tag
