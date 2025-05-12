@@ -262,6 +262,7 @@ istio_revision_tag_inuse() {
     istio_revision_name="$2"
 
     conditions=$(kubectl get istiorevisiontag $istio_revision_name -o jsonpath='{.status.conditions}' 2>/dev/null)
+    # istiod_revision_tag will be the result of getting InUse status condition in lower case and without any spaces
     istiod_revision_tag=$(echo "$conditions" | jq -r '.[] | select(.type == "InUse") | .status' | tr '[:upper:]' '[:lower:]' | xargs)
     if [ "$istiod_revision_tag" != "$inuse" ]; then
         echo "Expected istiorevision tag $istio_revision_name to be in use, got $istiod_revision_tag"
