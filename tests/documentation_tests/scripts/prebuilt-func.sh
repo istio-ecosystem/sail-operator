@@ -259,16 +259,16 @@ istio_revision_tag_status_equal() {
 # Check if a revision tag is in use
 istio_revision_tag_inuse() {
     inuse="$1"
-    istio_revision_name="$2"
+    istio_revisiontag_name="$2"
 
-    conditions=$(kubectl get istiorevisiontag "$istio_revision_name" -o jsonpath='{.status.conditions}' 2>/dev/null)
+    conditions=$(kubectl get istiorevisiontag "$istio_revisiontag_name" -o jsonpath='{.status.conditions}' 2>/dev/null)
     # istiod_revision_tag will be the result of getting InUse status condition in lower case and without any spaces
-    istiod_revision_tag=$(echo "$conditions" | jq -r '.[] | select(.type == "InUse") | .status' | tr '[:upper:]' '[:lower:]' | xargs)
-    if [ "$istiod_revision_tag" != "$inuse" ]; then
-        echo "Expected istiorevision tag $istio_revision_name to be in use, got $istiod_revision_tag"
+    istio_revision_tag_insue=$(echo "$conditions" | jq -r '.[] | select(.type == "InUse") | .status' | tr '[:upper:]' '[:lower:]' | xargs)
+    if [ "$istio_revision_tag_insue" != "$inuse" ]; then
+        echo "Expected istiorevision tag $istio_revisiontag_name to be in use, got $istio_revision_tag_insue"
         return 1
     fi
-    echo "Istiod revision tag is in use: $istiod_revision_tag"
+    echo "Istiod revision tag is in use: $istio_revision_tag_insue"
 }
 
 # Wait for rollout to success for all the pods in the given namespace
