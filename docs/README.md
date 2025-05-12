@@ -893,7 +893,11 @@ Steps:
     istiod-default-v1-23-3-c98fd9675-r7bfw    1/1     Running   0          10m
     istiod-default-v1-24-1-7495cdc7bf-v8t4g   1/1     Running   0          113s
     ```
-
+<!-- ```bash { name=validation-istiod-running tag=istiorevisiontag}
+    . scripts/prebuilt-func.sh
+    with_retries istiod_pods_count "2"
+    wait_istio_ready "istio-system"
+``` -->
 12. Confirm the proxy sidecar version remains the same:
 
     ```bash { name=validation-istio-proxy-version tag=istiorevisiontag}
