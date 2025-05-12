@@ -248,7 +248,7 @@ istio_revision_tag_status_equal() {
     expected_status="$1"
     istio_revisiontag_name="$2"
 
-    status=$(kubectl get istiorevisiontag $istio_revisiontag_name -o jsonpath='{.status.state}' 2>/dev/null)
+    status=$(kubectl get istiorevisiontag "$istio_revisiontag_name" -o jsonpath='{.status.state}' 2>/dev/null)
 
     if [ "$status" != "$expected_status" ]; then
         echo "Expected istiorevision tag $istio_revisiontag_name to be $expected_status, got $status"
@@ -261,7 +261,7 @@ istio_revision_tag_inuse() {
     inuse="$1"
     istio_revision_name="$2"
 
-    conditions=$(kubectl get istiorevisiontag $istio_revision_name -o jsonpath='{.status.conditions}' 2>/dev/null)
+    conditions=$(kubectl get istiorevisiontag "$istio_revision_name" -o jsonpath='{.status.conditions}' 2>/dev/null)
     # istiod_revision_tag will be the result of getting InUse status condition in lower case and without any spaces
     istiod_revision_tag=$(echo "$conditions" | jq -r '.[] | select(.type == "InUse") | .status' | tr '[:upper:]' '[:lower:]' | xargs)
     if [ "$istiod_revision_tag" != "$inuse" ]; then
