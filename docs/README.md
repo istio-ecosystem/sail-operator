@@ -652,9 +652,7 @@ Steps:
     ```
 <!-- ```bash { name=validation-wait-istio-updated tag=revision-based-update}
     . scripts/prebuilt-func.sh
-    old_pod=$(kubectl get pods -n istio-system -l app=istiod -o name)
-    kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v1.23.2"}}'
-    kubectl wait --for=delete $old_pod -n istio-system --timeout=60s
+    with_retries istiod_pods_count "2"
     wait_istio_ready "istio-system"
     print_istio_info
 ``` -->
