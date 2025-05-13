@@ -31,8 +31,8 @@ set -eu
 
 # Retry a command a number of times with a delay
 with_retries() {
-    retries=10
-    delay=5
+    retries=60
+    delay=2
     i=1 
     while [ "$i" -le "$retries" ]; do
         if "$@"; then
@@ -77,7 +77,7 @@ wait_pods_ready_by_ns() {
     pod_names=$(get_pod_names "$namespace" "")
 
     [ -z "$pod_names" ] && echo "No pods found in namespace $namespace" && return 1
-    echo "🔍 Found pod(s) in namespace $namespace: $pod_names"
+    echo "Found pod(s) in namespace $namespace: $pod_names"
 
     for pod_name in $pod_names; do
         wait_for_pod_ready "$namespace" "$pod_name"
@@ -162,18 +162,22 @@ wait_istio_ready() {
 print_istio_info() {
     kubectl get istio
     kubectl get pods -n istio-system
+    kubectl get istio
+    kubectl get istiorevision
+    kubectl get istiorevisiontag
 }
 
 # Check that all pods in a namespace have the expected Istio version
 pods_istio_version_match() {
     namespace="$1"
     expected_version="$2"
+    istio_ns="${3:-istio-system}"
 
     pod_names=$(get_pod_names "$namespace" "")
     [ -z "$pod_names" ] && echo "No pods found in namespace $namespace" && return 1
     echo "Verifying Istio version for pods in $namespace..."
 
-    proxy_status=$(istioctl proxy-status 2>/dev/null)
+    proxy_status=$(istioctl proxy-status -i "$istio_ns" 2>/dev/null)
 
     for pod_name in $pod_names; do
         full_name="$pod_name.$namespace"
@@ -193,4 +197,88 @@ pods_istio_version_match() {
     done
 
     return 0
+}
+
+# Check that the provided istiorevision is in use
+istio_active_revision_match() {
+    expected_revision="$1"
+
+    active_revision=$(kubectl get istio -o jsonpath='{.items[0].status.activeRevisionName}')
+
+    if [ "$active_revision" != "$expected_revision" ]; then
+        echo "Expected active revision $expected_revision, got $active_revision"
+        return 1
+    fi
+
+    echo "Active revision is $active_revision"
+}
+
+# Check that the number of istiorevisions ready match the expected number
+istio_revisions_ready_count() {
+    expected_count="$1"
+
+    revisions=$(kubectl get istio -o jsonpath='{.items[0].status.revisions.ready}')
+
+    if [ "$revisions" -ne "$expected_count" ]; then
+        echo "Expected $expected_count istiorevisions, got $revisions"
+        return 1
+    fi
+
+    echo "Found $revisions istiorevisions"
+}
+
+# Check the number of istiod pods running in the istio-system namespace
+istiod_pods_count() {
+    expected_count="$1"
+
+    pods_count=$(kubectl get pods -n istio-system -l app=istiod --output json | jq -j '.items | length')
+
+    if [ "$pods_count" -ne "$expected_count" ]; then
+        echo "Expected $expected_count istiod pods, got $pods_count"
+        return 1
+    fi
+
+    echo "Found $pods_count istiod pods in istio-system namespace"
+}
+
+# Check the status of a specific istio revision tag
+istio_revision_tag_status_equal() {
+    expected_status="$1"
+    istio_revisiontag_name="$2"
+
+    status=$(kubectl get istiorevisiontag "$istio_revisiontag_name" -o jsonpath='{.status.state}' 2>/dev/null)
+
+    if [ "$status" != "$expected_status" ]; then
+        echo "Expected istiorevision tag $istio_revisiontag_name to be $expected_status, got $status"
+        return 1
+    fi
+}
+
+# Check if a revision tag is in use
+istio_revision_tag_inuse() {
+    inuse="$1"
+    istio_revisiontag_name="$2"
+
+    conditions=$(kubectl get istiorevisiontag "$istio_revisiontag_name" -o jsonpath='{.status.conditions}' 2>/dev/null)
+    # istiod_revision_tag will be the result of getting InUse status condition in lower case and without any spaces
+    istio_revision_tag_insue=$(echo "$conditions" | jq -r '.[] | select(.type == "InUse") | .status' | tr '[:upper:]' '[:lower:]' | xargs)
+    if [ "$istio_revision_tag_insue" != "$inuse" ]; then
+        echo "Expected istiorevision tag $istio_revisiontag_name to be in use, got $istio_revision_tag_insue"
+        return 1
+    fi
+    echo "Istiod revision tag is in use: $istio_revision_tag_insue"
+}
+
+# Wait for rollout to success for all the pods in the given namespace
+wait_for_rollout_success() {
+    namespace="$1"
+
+    deploy_names=$(kubectl get deploy -n "$namespace" -o name)
+
+    [ -z "$deploy_names" ] && echo "No deployments found in namespace $namespace" && return 1
+    echo "Found deployment(s): $deploy_names"
+
+    for deploy in $deploy_names; do
+        kubectl rollout status "$deploy" -n "$namespace" --timeout=60s
+    done
 }
