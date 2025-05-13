@@ -651,6 +651,7 @@ Steps:
     kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v1.23.2"}}'
     ```
 ```bash { name=validation-wait-istio-updated tag=revision-based-update}
+    kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v1.23.2"}}'
     . scripts/prebuilt-func.sh
     with_retries istiod_pods_count "2"
     wait_istio_ready "istio-system"
