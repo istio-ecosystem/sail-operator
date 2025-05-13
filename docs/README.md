@@ -175,7 +175,7 @@ wait_cni_ready "istio-cni"
 with_retries resource_version_equal "istiocni" "default" "v1.24.2"
 ``` -->
 2. Confirm the installation and version of the CNI plugin.
-    ```bash
+    ```console
     $ kubectl get istiocni -n istio-cni
     NAME      READY   STATUS    VERSION   AGE
     default   True    Healthy   v1.24.2   91m
@@ -195,15 +195,13 @@ print_cni_info
     kubectl patch istiocni default -n istio-cni --type='merge' -p '{"spec":{"version":"v1.24.3"}}'
     ```
 <!-- ```bash { name=validation-wait-cni tag=cni-update}
-echo "Sleeping for 5 seconds to wait for the patch to be applied"
-sleep 5s
 . scripts/prebuilt-func.sh
-wait_cni_ready "istio-cni"
 with_retries resource_version_equal "istiocni" "default" "v1.24.3"
+wait_cni_ready "istio-cni"
 ``` -->
 4. Confirm the CNI plugin version was updated.
 
-    ```bash
+    ```console
     $ kubectl get istiocni -n istio-cni
     NAME      READY   STATUS    VERSION   AGE
     default   True    Healthy   v1.24.3   93m
@@ -267,7 +265,7 @@ is installed. `Succeeded` should appear in the **Status** column.
 1. Create the `openshift-operators` namespace (if it does not already exist).
 
     ```bash
-    $ kubectl create namespace openshift-operators
+    kubectl create namespace openshift-operators
     ```
 
 1. Create the `Subscription` object with the desired `spec.channel`.
@@ -290,7 +288,7 @@ is installed. `Succeeded` should appear in the **Status** column.
 
 1. Verify that the installation succeeded by inspecting the CSV status.
 
-    ```bash
+    ```console
     $ kubectl get csv -n openshift-operators
     NAME                                     DISPLAY         VERSION                    REPLACES                                 PHASE
     sailoperator.v0.1.0-nightly-2024-06-25   Sail Operator   0.1.0-nightly-2024-06-25   sailoperator.v0.1.0-nightly-2024-06-21   Succeeded
@@ -501,12 +499,14 @@ Steps:
 
 6. Perform the update of the control plane by changing the version in the Istio resource.
 
-    ```bash { name=update-istio-version tag=inplace-update}
+    ```bash
     kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v1.23.2"}}'
     ```
 <!-- ```bash { name=validation-wait-istio-updated tag=inplace-update}
     . scripts/prebuilt-func.sh
-    sleep 5s
+    old_pod=$(kubectl get pods -n istio-system -l app=istiod -o name)
+    kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v1.23.2"}}'
+    kubectl wait --for=delete $old_pod -n istio-system --timeout=60s
     wait_istio_ready "istio-system"
     print_istio_info
 ``` -->
@@ -521,12 +521,17 @@ Steps:
 
 8. Delete `bookinfo` pods to trigger sidecar injection with the new version.
 
-    ```bash { name=restart-bookinfo tag=inplace-update}
+    ```bash
     kubectl rollout restart deployment -n bookinfo
     ```
 <!-- ```bash { name=validation-wait-bookinfo tag=inplace-update}
+    pod_names=$(kubectl get pods -n bookinfo -o name)
+    kubectl rollout restart deployment -n bookinfo
+    # Wait pod deletion
+    for pod in $pod_names; do
+        kubectl wait --for=delete $pod -n bookinfo --timeout=60s
+    done
     . scripts/prebuilt-func.sh
-    sleep 5s
     with_retries wait_pods_ready_by_ns "bookinfo"
     istioctl proxy-status
 ``` -->
@@ -555,13 +560,13 @@ Steps:
 
 1. Create the `istio-system` namespace.
 
-    ```bash
+    ```bash { name=create-ns tag=revision-based-update}
     kubectl create namespace istio-system
     ```
 
 2. Create the `Istio` resource.
 
-    ```bash
+    ```bash { name=create-istio tag=revision-based-update}
     cat <<EOF | kubectl apply -f-
     apiVersion: sailoperator.io/v1
     kind: Istio
@@ -575,6 +580,11 @@ Steps:
       version: v1.22.5
     EOF
     ```
+<!-- ```bash { name=validation-wait-istio-pods tag=revision-based-update}
+    . scripts/prebuilt-func.sh
+    wait_istio_ready "istio-system"
+    print_istio_info
+``` -->
 
 3. Confirm the control plane is installed and is using the desired version.
 
@@ -593,20 +603,29 @@ Steps:
     default-v1-22-5   Local   True    Healthy   False    v1.22.5   3m4s
     ```
     Note: `IstioRevision` name is in the format `<Istio resource name>-<version>`.
+<!-- ```bash { name=validation-print-revision tag=revision-based-update}
+    kubectl get istiorevision -n istio-system
+``` -->
 
 5. Create `bookinfo` namespace and label it with the revision name.
 
-    ```bash
+    ```bash  { name=create-bookinfo-ns tag=revision-based-update}
     kubectl create namespace bookinfo
     kubectl label namespace bookinfo istio.io/rev=default-v1-22-5
     ```
 
 6. Deploy bookinfo application.
 
-    ```bash
+    ```bash { name=deploy-bookinfo tag=revision-based-update}
     kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/release-1.22/samples/bookinfo/platform/kube/bookinfo.yaml
     ```
-
+<!-- ```bash { name=validation-wait-bookinfo tag=revision-based-update}
+    . scripts/prebuilt-func.sh
+    with_retries wait_pods_ready_by_ns "bookinfo"
+    kubectl get pods -n bookinfo
+    istioctl proxy-status
+    with_retries pods_istio_version_match "bookinfo" "1.22.5"
+``` -->
 7. Review the `Istio` resource after application deployment.
 
     ```console
@@ -615,7 +634,10 @@ Steps:
     default   1           1       1        default-v1-22-5   Healthy   v1.22.5   5m13s
     ```
     Note: `IN USE` field shows as 1, after application being deployed.
-
+<!-- ```bash { name=validation-istio-in-use tag=revision-based-update}
+    . scripts/prebuilt-func.sh
+    with_retries istio_active_revision_match "default-v1-22-5"
+``` -->
 8. Confirm that the proxy version matches the control plane version.
 
     ```bash
@@ -628,7 +650,13 @@ Steps:
     ```bash
     kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v1.23.2"}}'
     ```
-
+<!-- ```bash { name=validation-wait-istio-updated tag=revision-based-update}
+    kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v1.23.2"}}'
+    . scripts/prebuilt-func.sh
+    with_retries istiod_pods_count "2"
+    wait_istio_ready "istio-system"
+    print_istio_info
+``` -->
 10. Verify the `Istio` and `IstioRevision` resources. There will be a new revision created with the new version.
 
     ```console
@@ -641,7 +669,13 @@ Steps:
     default-v1-22-5   Local   True    Healthy   True     v1.22.5   10m
     default-v1-23-2   Local   True    Healthy   False    v1.23.2   66s
     ```
-
+<!-- ```bash { name=validation-istiorevision tag=revision-based-update}
+    . scripts/prebuilt-func.sh
+    kubectl get istio
+    kubectl get istiorevision -n istio-system
+    with_retries istio_active_revision_match "default-v1-23-2"
+    with_retries istio_revisions_ready_count "2"
+``` -->
 11. Confirm there are two control plane pods running, one for each revision.
 
     ```console
@@ -650,17 +684,24 @@ Steps:
     istiod-default-v1-22-5-c98fd9675-r7bfw    1/1     Running   0          10m
     istiod-default-v1-23-2-7495cdc7bf-v8t4g   1/1     Running   0          113s
     ```
-
+<!-- ```bash { name=validation-istiod-count tag=revision-based-update}
+    . scripts/prebuilt-func.sh
+    with_retries istiod_pods_count "2"
+``` -->
 12. Confirm the proxy sidecar version remains the same:
 
     ```bash
     istioctl proxy-status 
     ```
     The column `VERSION` should still match the old control plane version.
-
+<!-- ```bash { name=validation-wait-bookinfo tag=revision-based-update}
+    . scripts/prebuilt-func.sh
+    istioctl proxy-status
+    with_retries pods_istio_version_match "bookinfo" "1.22.5"
+``` -->
 13. Change the label of the `bookinfo` namespace to use the new revision.
 
-    ```bash
+    ```bash { name=update-bookinfo-ns-revision tag=revision-based-update}
     kubectl label namespace bookinfo istio.io/rev=default-v1-23-2 --overwrite
     ```
     The existing workload sidecars will continue to run and will remain connected to the old control plane instance. They will not be replaced with a new version until the pods are deleted and recreated.
@@ -670,7 +711,19 @@ Steps:
     ```bash
     kubectl rollout restart deployment -n bookinfo
     ```
-
+<!-- ```bash { name=validation-wait-bookinfo tag=revision-based-update}
+    pod_names=$(kubectl get pods -n bookinfo -o name)
+    kubectl rollout restart deployment -n bookinfo
+    # Wait pod deletion
+    for pod in $pod_names; do
+        kubectl wait --for=delete $pod -n bookinfo --timeout=60s
+    done
+    . scripts/prebuilt-func.sh
+    with_retries wait_pods_ready_by_ns "bookinfo"
+    kubectl get pods -n bookinfo
+    istioctl proxy-status
+    with_retries pods_istio_version_match "bookinfo" "1.23.2"
+``` -->
 15. Confirm the new version is used in the sidecars.
 
     ```bash
@@ -694,7 +747,14 @@ Steps:
     default-v1-23-2   Local   True    Healthy   True     v1.23.2   5m31s
     ```
     The old `IstioRevision` resource and the old control plane will be deleted when the grace period specified in the `Istio` resource field `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds` expires.
-
+<!-- ```bash { name=validation-resources-deletion tag=revision-based-update}
+    . scripts/prebuilt-func.sh
+    echo "Confirm istiod pod is deleted"
+    with_retries istiod_pods_count "1"
+    echo "Confirm istiorevision is deleted"
+    with_retries istio_revisions_ready_count "1"
+    print_istio_info
+``` -->
 #### Example using the RevisionBased strategy and an IstioRevisionTag
 
 Prerequisites:
@@ -705,13 +765,13 @@ Steps:
 
 1. Create the `istio-system` namespace.
 
-    ```bash
+    ```bash { name=create-ns tag=istiorevisiontag}
     kubectl create namespace istio-system
     ```
 
 2. Create the `Istio` and `IstioRevisionTag` resources.
 
-    ```bash
+    ```bash { name=create-istio-and-revision-tag tag=istiorevisiontag}
     cat <<EOF | kubectl apply -f-
     apiVersion: sailoperator.io/v1
     kind: Istio
@@ -734,7 +794,11 @@ Steps:
         name: default
     EOF
     ```
-
+<!-- ```bash { name=validation-wait-istio-pods tag=istiorevisiontag}
+    . scripts/prebuilt-func.sh
+    wait_istio_ready "istio-system"
+    kubectl get pods -n istio-system
+``` -->
 3. Confirm the control plane is installed and is using the desired version.
 
     ```console
@@ -743,7 +807,10 @@ Steps:
     default   1           1       1        default-v1-23-3   Healthy   v1.22.5   52s
     ```
     Note: `IN USE` field shows as 1, even though no workloads are using the control plane. This is because the `IstioRevisionTag` is referencing it.
-
+<!-- ```bash { name=validation-istio-in-use tag=istiorevisiontag}
+    . scripts/prebuilt-func.sh
+    with_retries istio_active_revision_match "default-v1-23-3"
+``` -->
 4. Inspect the `IstioRevisionTag`.
 
     ```console
@@ -751,20 +818,30 @@ Steps:
     NAME      STATUS                    IN USE   REVISION          AGE
     default   NotReferencedByAnything   False    default-v1-23-3   52s
     ```
-
+<!-- ```bash { name=validation-istio-revision-tag tag=istiorevisiontag}
+    . scripts/prebuilt-func.sh
+    with_retries istio_revision_tag_status_equal "NotReferencedByAnything" "default"
+``` -->
+    Note: `IN USE` field shows as `False`, as the tag is not referenced by any workloads or namespaces.
 5. Create `bookinfo` namespace and label it to mark it for injection.
 
-    ```bash
+    ```bash { name=create-bookinfo-ns tag=istiorevisiontag}
     kubectl create namespace bookinfo
     kubectl label namespace bookinfo istio-injection=enabled
     ```
 
 6. Deploy bookinfo application.
 
-    ```bash
+    ```bash { name=deploy-bookinfo tag=istiorevisiontag}
     kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/bookinfo/platform/kube/bookinfo.yaml
     ```
-
+<!-- ```bash { name=validation-wait-bookinfo tag=istiorevisiontag}
+    . scripts/prebuilt-func.sh
+    with_retries wait_pods_ready_by_ns "bookinfo"
+    kubectl get pods -n bookinfo
+    istioctl proxy-status
+    with_retries pods_istio_version_match "bookinfo" "1.23.3"
+``` -->
 7. Review the `IstioRevisionTag` resource after application deployment.
 
     ```console
@@ -773,7 +850,11 @@ Steps:
     default   Healthy   True     default-v1-23-3   2m46s
     ```
     Note: `IN USE` field shows 'True', as the tag is now referenced by both active workloads and the bookinfo namespace.
-
+<!-- ```bash { name=validation-istio-revision-tag-inuse tag=istiorevisiontag}
+    . scripts/prebuilt-func.sh
+    istioctl proxy-status
+    with_retries istio_revision_tag_inuse "true" "default"
+``` -->
 8. Confirm that the proxy version matches the control plane version.
 
     ```bash
@@ -783,7 +864,7 @@ Steps:
 
 9. Update the control plane to a new version.
 
-    ```bash
+    ```bash { name=update-istio-version tag=istiorevisiontag}
     kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v1.24.1"}}'
     ```
 
@@ -813,14 +894,22 @@ Steps:
     istiod-default-v1-23-3-c98fd9675-r7bfw    1/1     Running   0          10m
     istiod-default-v1-24-1-7495cdc7bf-v8t4g   1/1     Running   0          113s
     ```
-
+<!-- ```bash { name=validation-istiod-running tag=istiorevisiontag}
+    . scripts/prebuilt-func.sh
+    with_retries istiod_pods_count "2"
+    wait_istio_ready "istio-system"
+``` -->
 12. Confirm the proxy sidecar version remains the same:
 
-    ```bash
+    ```bash { name=validation-istio-proxy-version tag=istiorevisiontag}
     istioctl proxy-status 
     ```
     The column `VERSION` should still match the old control plane version.
-
+<!-- ```bash { name=validation-istio-version tag=istiorevisiontag}
+    . scripts/prebuilt-func.sh
+    with_retries pods_istio_version_match "bookinfo" "1.23.3"
+    print_istio_info
+``` -->
 13. Restart all the Deployments in the `bookinfo` namespace.
 
     ```bash
@@ -833,7 +922,19 @@ Steps:
     istioctl proxy-status 
     ```
     The column `VERSION` should match the updated control plane version.
-
+<!-- ```bash { name=validation-istio-version-bookinfo tag=istiorevisiontag}
+    pod_names=$(kubectl get pods -n bookinfo -o name)
+    kubectl rollout restart deployment -n bookinfo
+    # Wait pod deletion
+    for pod in $pod_names; do
+        kubectl wait --for=delete $pod -n bookinfo --timeout=60s
+    done
+    . scripts/prebuilt-func.sh
+    with_retries wait_pods_ready_by_ns "bookinfo"
+    kubectl get pods -n bookinfo
+    istioctl proxy-status
+    with_retries pods_istio_version_match "bookinfo" "1.24.1"
+``` -->
 16. Confirm the deletion of the old control plane and IstioRevision.
 
     ```console
@@ -850,7 +951,14 @@ Steps:
     default-v1-24-1   Local   True    Healthy   True     v1.24.1   5m31s
     ```
     The old `IstioRevision` resource and the old control plane will be deleted when the grace period specified in the `Istio` resource field `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds` expires.
-
+<!-- ```bash { name=validation-resources-deletion tag=istiorevisiontag}
+    . scripts/prebuilt-func.sh
+    echo "Confirm istiod pod is deleted"
+    with_retries istiod_pods_count "1"
+    echo "Confirm istiorevision is deleted"
+    with_retries istio_revisions_ready_count "1"
+    print_istio_info
+``` -->
 ## Multiple meshes on a single cluster
 
 The Sail Operator supports running multiple meshes on a single cluster and associating each workload with a specific mesh. 
@@ -881,10 +989,10 @@ Because each mesh will use its own root certificate authority and configured to 
 #### Deploying the control planes
 
 1. Create the system namespace `istio-system1` and deploy the `mesh1` control plane in it.
-   ```sh
-   $ kubectl create namespace istio-system1
-   $ kubectl label ns istio-system1 mesh=mesh1
-   $ kubectl apply -f - <<EOF
+   ```bash { name=deploy-mesh1 tag=multiple-meshes}
+   kubectl create namespace istio-system1
+   kubectl label ns istio-system1 mesh=mesh1
+   kubectl apply -f - <<EOF
    apiVersion: sailoperator.io/v1
    kind: Istio
    metadata:
@@ -899,12 +1007,16 @@ Because each mesh will use its own root certificate authority and configured to 
              mesh: mesh1
    EOF
    ```
-   
+<!-- ```bash { name=validation-wait-istio-pods tag=multiple-meshes}
+    . scripts/prebuilt-func.sh
+    wait_istio_ready "istio-system1"
+    kubectl get pods -n istio-system1
+``` -->
 2. Create the system namespace `istio-system2` and deploy the `mesh2` control plane in it.
-   ```sh
-   $ kubectl create namespace istio-system2
-   $ kubectl label ns istio-system2 mesh=mesh2
-   $ kubectl apply -f - <<EOF
+   ```bash { name=deploy-mesh2 tag=multiple-meshes}
+   kubectl create namespace istio-system2
+   kubectl label ns istio-system2 mesh=mesh2
+   kubectl apply -f - <<EOF
    apiVersion: sailoperator.io/v1
    kind: Istio
    metadata:
@@ -919,10 +1031,14 @@ Because each mesh will use its own root certificate authority and configured to 
              mesh: mesh2
    EOF
    ```
-
+<!-- ```bash { name=validation-wait-istio-pods tag=multiple-meshes}
+    . scripts/prebuilt-func.sh
+    wait_istio_ready "istio-system2"
+    kubectl get pods -n istio-system2
+``` -->
 3. Create a peer authentication policy that only allows mTLS communication within each mesh.
-   ```sh
-   $ kubectl apply -f - <<EOF
+   ```bash { name=peer-authentication tag=multiple-meshes}
+   kubectl apply -f - <<EOF
    apiVersion: security.istio.io/v1
    kind: PeerAuthentication
    metadata:
@@ -933,7 +1049,7 @@ Because each mesh will use its own root certificate authority and configured to 
        mode: STRICT
    EOF
    
-   $ kubectl apply -f - <<EOF
+   kubectl apply -f - <<EOF
    apiVersion: security.istio.io/v1
    kind: PeerAuthentication
    metadata:
@@ -948,23 +1064,29 @@ Because each mesh will use its own root certificate authority and configured to 
 #### Verifying the control planes
 
 1. Check the labels on the control plane namespaces:
-   ```sh
+   ```console
    $ kubectl get ns -l mesh -L mesh
    NAME            STATUS   AGE    MESH
    istio-system1   Active   106s   mesh1
    istio-system2   Active   105s   mesh2
    ```
-
+<!-- ```bash { name=validation-control-planes-ns tag=multiple-meshes}
+   kubectl get ns -l mesh -L mesh
+   kubectl get pods -n istio-system1
+   kubectl get pods -n istio-system2
+``` -->
 2. Check the control planes are `Healthy`:
-   ```sh
+   ```console
    $ kubectl get istios
    NAME    REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
    mesh1   1           1       0        mesh1             Healthy   v1.24.0   84s
    mesh2   1           1       0        mesh2             Healthy   v1.24.0   77s
    ```
-
+<!-- ```bash { name=validation-istios tag=multiple-meshes}
+   kubectl get istios
+``` -->
 3. Confirm that the validation and mutation webhook configurations exist for both meshes:
-   ```sh
+   ```console
    $ kubectl get validatingwebhookconfigurations
    NAME                                  WEBHOOKS   AGE
    istio-validator-mesh1-istio-system1   1          2m45s
@@ -975,44 +1097,59 @@ Because each mesh will use its own root certificate authority and configured to 
    istio-sidecar-injector-mesh1-istio-system1   2          5m55s
    istio-sidecar-injector-mesh2-istio-system2   2          5m48s
    ```
-
+<!-- ```bash { name=validation-webhook-configs tag=multiple-meshes}
+   kubectl get validatingwebhookconfigurations
+   kubectl get mutatingwebhookconfigurations
+``` -->
 #### Deploying the applications
 
 1. Create three application namespaces:
-   ```sh
-   $ kubectl create ns app1 
-   $ kubectl create ns app2a 
-   $ kubectl create ns app2b
+   ```bash { name=create-app-namespaces tag=multiple-meshes}
+   kubectl create ns app1 
+   kubectl create ns app2a 
+   kubectl create ns app2b
    ```
 
 2. Label each namespace to enable discovery by the corresponding control plane:
-   ```sh
-   $ kubectl label ns app1 mesh=mesh1
-   $ kubectl label ns app2a mesh=mesh2
-   $ kubectl label ns app2b mesh=mesh2
+   ```bash { name=label-app-namespaces tag=multiple-meshes}
+   kubectl label ns app1 mesh=mesh1
+   kubectl label ns app2a mesh=mesh2
+   kubectl label ns app2b mesh=mesh2
    ```
 
 3. Label each namespace to enable injection by the corresponding control plane:
-   ```sh
-   $ kubectl label ns app1 istio.io/rev=mesh1
-   $ kubectl label ns app2a istio.io/rev=mesh2
-   $ kubectl label ns app2b istio.io/rev=mesh2
+   ```bash { name=label-rev-app-namespaces tag=multiple-meshes}
+   kubectl label ns app1 istio.io/rev=mesh1
+   kubectl label ns app2a istio.io/rev=mesh2
+   kubectl label ns app2b istio.io/rev=mesh2
    ```
 
 4. Deploy the `curl` and `httpbin` sample applications in each namespace:
-   ```sh
-   $ kubectl -n app1 apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/curl/curl.yaml 
-   $ kubectl -n app1 apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/httpbin/httpbin.yaml 
-
-   $ kubectl -n app2a apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/curl/curl.yaml 
-   $ kubectl -n app2a apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/httpbin/httpbin.yaml 
-   
-   $ kubectl -n app2b apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/curl/curl.yaml 
-   $ kubectl -n app2b apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/httpbin/httpbin.yaml 
+   ```bash { name=deploy-apps tag=multiple-meshes}
+   # Deploy curl and httpbin in app1
+   kubectl -n app1 apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/curl/curl.yaml 
+   kubectl -n app1 apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/httpbin/httpbin.yaml 
+   # Deploy curl and httpbin in app2a and app2b
+   kubectl -n app2a apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/curl/curl.yaml 
+   kubectl -n app2a apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/httpbin/httpbin.yaml 
+   # Deploy curl and httpbin in app2b
+   kubectl -n app2b apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/curl/curl.yaml 
+   kubectl -n app2b apply -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/httpbin/httpbin.yaml 
    ```
-
+<!-- ```bash { name=validation-app-deployed tag=multiple-meshes}
+    . scripts/prebuilt-func.sh
+    with_retries wait_pods_ready_by_ns "app1"
+    kubectl get pods -n app1
+    with_retries pods_istio_version_match "app1" "1.24.0" "istio-system1"
+    with_retries wait_pods_ready_by_ns "app2a"
+    kubectl get pods -n app2a
+    with_retries pods_istio_version_match "app2a" "1.24.0" "istio-system2"
+     with_retries wait_pods_ready_by_ns "app2b"
+    kubectl get pods -n app2b
+    with_retries pods_istio_version_match "app2b" "1.24.0" "istio-system2"
+``` -->
 5. Confirm that a sidecar has been injected into each of the application pods. The value `2/2` should be displayed in the `READY` column for each pod, as in the following example:
-   ```sh
+   ```console
    $ kubectl get pods -n app1
    NAME                       READY   STATUS    RESTARTS   AGE
    curl-5b549b49b8-mg7nl      2/2     Running   0          102s
@@ -1037,7 +1174,7 @@ Use the `istioctl ps` command to confirm that the application pods are connected
 
 The `curl` and `httpbin` pods in namespace `app1` should be connected to the control plane in namespace `istio-system1`, as shown in the following example (note the `.app1` suffix in the `NAME` column):
 
-```sh
+```console
 $ istioctl ps -i istio-system1
 NAME                              CLUSTER        CDS                LDS                EDS                RDS                ECDS        ISTIOD                            VERSION
 curl-5b549b49b8-mg7nl.app1        Kubernetes     SYNCED (4m40s)     SYNCED (4m40s)     SYNCED (4m31s)     SYNCED (4m40s)     IGNORED     istiod-mesh1-5df45b97dd-tf2wl     1.24.0
@@ -1046,7 +1183,7 @@ httpbin-7b549f7859-h6hnk.app1     Kubernetes     SYNCED (4m31s)     SYNCED (4m31
 
 The pods in namespaces `app2a` and `app2b` should be connected to the control plane in namespace `istio-system2`:
 
-```sh
+```console
 $ istioctl ps -i istio-system2
 NAME                               CLUSTER        CDS                LDS                EDS                RDS                ECDS        ISTIOD                            VERSION
 curl-5b549b49b8-2hlvm.app2a        Kubernetes     SYNCED (4m37s)     SYNCED (4m37s)     SYNCED (4m31s)     SYNCED (4m37s)     IGNORED     istiod-mesh2-59f6b874fb-mzxqw     1.24.0
@@ -1054,13 +1191,16 @@ curl-5b549b49b8-xnzzk.app2b        Kubernetes     SYNCED (4m37s)     SYNCED (4m3
 httpbin-7b549f7859-7k5gf.app2b     Kubernetes     SYNCED (4m31s)     SYNCED (4m31s)     SYNCED (4m31s)     SYNCED (4m31s)     IGNORED     istiod-mesh2-59f6b874fb-mzxqw     1.24.0
 httpbin-7b549f7859-bgblg.app2a     Kubernetes     SYNCED (4m32s)     SYNCED (4m32s)     SYNCED (4m31s)     SYNCED (4m32s)     IGNORED     istiod-mesh2-59f6b874fb-mzxqw     1.24.0
 ```
-
+<!-- ```bash { name=validation-print-ps tag=multiple-meshes}
+    istioctl ps -i istio-system1
+    istioctl ps -i istio-system2
+``` -->
 #### Checking application connectivity
 
 As both meshes are configured to use the `STRICT` mTLS peer authentication mode, the applications in namespace `app1` should not be able to communicate with the applications in namespaces `app2a` and `app2b`, and vice versa.
 To test whether the `curl` pod in namespace `app2a` can connect to the `httpbin` service in namespace `app1`, run the following commands:
 
-```sh
+```console
 $ kubectl -n app2a exec deploy/curl -c curl -- curl -sIL http://httpbin.app1:8000
 HTTP/1.1 503 Service Unavailable
 content-length: 95
@@ -1068,11 +1208,20 @@ content-type: text/plain
 date: Fri, 29 Nov 2024 08:58:28 GMT
 server: envoy
 ```
-
+<!-- ```bash { name=validation-curl-app1 tag=multiple-meshes}
+    response=$(kubectl -n app2a exec deploy/curl -c curl --   curl -s -o /dev/null -w "%{http_code}" http://httpbin.app1:8000)
+    echo $response
+    if [ "$response" -eq 503 ]; then
+        echo "Connection to httpbin.app1:8000 failed as expected"
+    else
+        echo "Connection to httpbin.app1:8000 succeeded unexpectedly"
+        exit 1
+    fi
+``` -->
 As expected, the response indicates that the connection was not successful. 
 In contrast, the same pod should be able to connect to the `httpbin` service in namespace `app2b`, because they are part of the same mesh:
 
-```sh
+```console
 $ kubectl -n app2a exec deploy/curl -c curl -- curl -sIL http://httpbin.app2b:8000
 HTTP/1.1 200 OK
 access-control-allow-credentials: true
@@ -1084,14 +1233,23 @@ x-envoy-upstream-service-time: 0
 server: envoy
 transfer-encoding: chunked
 ```
-
+<!-- ```bash { name=validation-curl-app2a tag=multiple-meshes}
+    response=$(kubectl -n app2a exec deploy/curl -c curl -- curl -s -o /dev/null -w "%{http_code}" http://httpbin.app2b:8000)
+    echo $response
+    if [ "$response" -eq 503 ]; then
+        echo "Connection to httpbin.app1:8000 failed unexpectedly"
+        exit 1
+    else
+        echo "Connection to httpbin.app1:8000 succeeded as expected"
+    fi
+``` -->
 ### Cleanup
 
 To clean up the resources created in this guide, delete the `Istio` resources and the namespaces:
 
-```sh
-$ kubectl delete istio mesh1 mesh2
-$ kubectl delete ns istio-system1 istio-system2 app1 app2a app2b
+```bash
+   kubectl delete istio mesh1 mesh2
+   kubectl delete ns istio-system1 istio-system2 app1 app2a app2b
 ```
 
 
@@ -1112,7 +1270,7 @@ These steps are common to every multi-cluster deployment and should be completed
 
 1. Setup environment variables.
 
-    ```sh
+    ```bash
     export CTX_CLUSTER1=<cluster1-ctx>
     export CTX_CLUSTER2=<cluster2-ctx>
     export ISTIO_VERSION=1.23.2
@@ -1120,7 +1278,7 @@ These steps are common to every multi-cluster deployment and should be completed
 
 2. Create `istio-system` namespace on each cluster.
 
-    ```sh
+    ```bash
     kubectl get ns istio-system --context "${CTX_CLUSTER1}" || kubectl create namespace istio-system --context "${CTX_CLUSTER1}"
     kubectl get ns istio-system --context "${CTX_CLUSTER2}" || kubectl create namespace istio-system --context "${CTX_CLUSTER2}"
     ```
@@ -1129,7 +1287,7 @@ These steps are common to every multi-cluster deployment and should be completed
 
     If you have [established trust](https://istio.io/latest/docs/setup/install/multicluster/before-you-begin/#configure-trust) between your clusters already you can skip this and the following steps.
 
-    ```sh
+    ```bash
     openssl genrsa -out root-key.pem 4096
     cat <<EOF > root-ca.conf
     [ req ]
@@ -1162,7 +1320,7 @@ These steps are common to every multi-cluster deployment and should be completed
     ```
 5. Create intermediate certificates.
 
-    ```sh
+    ```bash
     for cluster in west east; do
       mkdir $cluster
 
@@ -1208,7 +1366,7 @@ These steps are common to every multi-cluster deployment and should be completed
     ```
 
 6. Push the intermediate CAs to each cluster.
-    ```sh
+    ```bash
     kubectl --context "${CTX_CLUSTER1}" label namespace istio-system topology.istio.io/network=network1
     kubectl get secret -n istio-system --context "${CTX_CLUSTER1}" cacerts || kubectl create secret generic cacerts -n istio-system --context "${CTX_CLUSTER1}" \
       --from-file=east/ca-cert.pem \
@@ -1233,7 +1391,7 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
 
 1. Create an `Istio` resource on `cluster1`.
 
-    ```sh
+    ```bash
     kubectl apply --context "${CTX_CLUSTER1}" -f - <<EOF
     apiVersion: sailoperator.io/v1
     kind: Istio
@@ -1253,25 +1411,25 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
   
 2. Wait for the control plane to become ready.
 
-    ```sh
+    ```bash
     kubectl wait --context "${CTX_CLUSTER1}" --for=condition=Ready istios/default --timeout=3m
     ```
 
 3. Create east-west gateway on `cluster1`.
 
-    ```sh
+    ```bash
     kubectl apply --context "${CTX_CLUSTER1}" -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/east-west-gateway-net1.yaml
     ```
 
 4. Expose services on `cluster1`.
 
-    ```sh
+    ```bash
     kubectl --context "${CTX_CLUSTER1}" apply -n istio-system -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/expose-services.yaml
     ```
 
 5. Create `Istio` resource on `cluster2`.
 
-    ```sh
+    ```bash
     kubectl apply --context "${CTX_CLUSTER2}" -f - <<EOF
     apiVersion: sailoperator.io/v1
     kind: Istio
@@ -1291,25 +1449,25 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
 
 6. Wait for the control plane to become ready.
 
-    ```sh
+    ```bash
     kubectl wait --context "${CTX_CLUSTER2}" --for=jsonpath='{.status.revisions.ready}'=1 istios/default --timeout=3m
     ```
 
 7. Create east-west gateway on `cluster2`.
 
-    ```sh
+    ```bash
     kubectl apply --context "${CTX_CLUSTER2}" -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/east-west-gateway-net2.yaml
     ```
 
 8. Expose services on `cluster2`.
 
-    ```sh
+    ```bash
     kubectl --context "${CTX_CLUSTER2}" apply -n istio-system -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/expose-services.yaml
     ```
 
 9. Install a remote secret in `cluster2` that provides access to the `cluster1` API server.
 
-    ```sh
+    ```bash
     istioctl create-remote-secret \
       --context="${CTX_CLUSTER1}" \
       --name=cluster1 | \
@@ -1318,7 +1476,7 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
 
     **If using kind**, first get the `cluster1` controlplane ip and pass the `--server` option to `istioctl create-remote-secret`.
 
-    ```sh
+    ```bash
     CLUSTER1_CONTAINER_IP=$(kubectl get nodes -l node-role.kubernetes.io/control-plane --context "${CTX_CLUSTER1}" -o jsonpath='{.items[0].status.addresses[?(@.type == "InternalIP")].address}')
     istioctl create-remote-secret \
       --context="${CTX_CLUSTER1}" \
@@ -1329,7 +1487,7 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
 
 10. Install a remote secret in `cluster1` that provides access to the `cluster2` API server.
 
-    ```sh
+    ```bash
     istioctl create-remote-secret \
       --context="${CTX_CLUSTER2}" \
       --name=cluster2 | \
@@ -1338,7 +1496,7 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
 
     **If using kind**, first get the `cluster1` controlplane IP and pass the `--server` option to `istioctl create-remote-secret`
 
-    ```sh
+    ```bash
     CLUSTER2_CONTAINER_IP=$(kubectl get nodes -l node-role.kubernetes.io/control-plane --context "${CTX_CLUSTER2}" -o jsonpath='{.items[0].status.addresses[?(@.type == "InternalIP")].address}')
     istioctl create-remote-secret \
       --context="${CTX_CLUSTER2}" \
@@ -1349,7 +1507,7 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
 
 11. Create sample application namespaces in each cluster.
 
-    ```sh
+    ```bash
     kubectl get ns sample --context "${CTX_CLUSTER1}" || kubectl create --context="${CTX_CLUSTER1}" namespace sample
     kubectl label --context="${CTX_CLUSTER1}" namespace sample istio-injection=enabled
     kubectl get ns sample --context "${CTX_CLUSTER2}" || kubectl create --context="${CTX_CLUSTER2}" namespace sample
@@ -1358,7 +1516,7 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
 
 12. Deploy sample applications in `cluster1`.
 
-    ```sh
+    ```bash
     kubectl apply --context="${CTX_CLUSTER1}" \
       -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml" \
       -l service=helloworld -n sample
@@ -1371,7 +1529,7 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
 
 13. Deploy sample applications in `cluster2`.
 
-    ```sh
+    ```bash
     kubectl apply --context="${CTX_CLUSTER2}" \
       -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml" \
       -l service=helloworld -n sample
@@ -1383,7 +1541,7 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
     ```
 
 14. Wait for the sample applications to be ready.
-    ```sh
+    ```bash
     kubectl --context="${CTX_CLUSTER1}" wait --for condition=available -n sample deployment/helloworld-v1
     kubectl --context="${CTX_CLUSTER2}" wait --for condition=available -n sample deployment/helloworld-v2
     kubectl --context="${CTX_CLUSTER1}" wait --for condition=available -n sample deployment/sleep
@@ -1392,7 +1550,7 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
 
 15. From `cluster1`, send 10 requests to the helloworld service. Verify that you see responses from both v1 and v2.
 
-    ```sh
+    ```bash
     for i in {0..9}; do
       kubectl exec --context="${CTX_CLUSTER1}" -n sample -c sleep \
         "$(kubectl get pod --context="${CTX_CLUSTER1}" -n sample -l \
@@ -1403,7 +1561,7 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
 
 16. From `cluster2`, send another 10 requests to the helloworld service. Verify that you see responses from both v1 and v2.
 
-    ```sh
+    ```bash
     for i in {0..9}; do
       kubectl exec --context="${CTX_CLUSTER2}" -n sample -c sleep \
         "$(kubectl get pod --context="${CTX_CLUSTER2}" -n sample -l \
@@ -1414,7 +1572,7 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
 
 17. Cleanup
 
-    ```sh
+    ```bash
     kubectl delete istios default --context="${CTX_CLUSTER1}"
     kubectl delete ns istio-system --context="${CTX_CLUSTER1}" 
     kubectl delete ns sample --context="${CTX_CLUSTER1}"
@@ -1433,7 +1591,7 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
 
 1. Create an `Istio` resource on `cluster1`.
 
-    ```sh
+    ```bash
     kubectl apply --context "${CTX_CLUSTER1}" -f - <<EOF
     apiVersion: sailoperator.io/v1
     kind: Istio
@@ -1457,25 +1615,25 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
 
 2. Create east-west gateway on `cluster1`.
 
-    ```sh
+    ```bash
     kubectl apply --context "${CTX_CLUSTER1}" -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/east-west-gateway-net1.yaml
     ```
   
 3. Expose istiod on `cluster1`.
 
-    ```sh
+    ```bash
     kubectl apply --context "${CTX_CLUSTER1}" -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/expose-istiod.yaml
     ```
 
 4. Expose services on `cluster1` and `cluster2`.
 
-    ```sh
+    ```bash
     kubectl --context "${CTX_CLUSTER1}" apply -n istio-system -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/expose-services.yaml
     ```
 
 5. Create an `Istio` on `cluster2` with the `remote` profile.
 
-    ```sh
+    ```bash
     kubectl apply --context "${CTX_CLUSTER2}" -f - <<EOF
     apiVersion: sailoperator.io/v1
     kind: Istio
@@ -1495,14 +1653,14 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
 
 6. Set the controlplane cluster and network for `cluster2`.
 
-    ```sh
+    ```bash
     kubectl --context="${CTX_CLUSTER2}" annotate namespace istio-system topology.istio.io/controlPlaneClusters=cluster1
     kubectl --context="${CTX_CLUSTER2}" label namespace istio-system topology.istio.io/network=network2
     ```
 
 7. Install a remote secret on `cluster1` that provides access to the `cluster2` API server.
 
-    ```sh
+    ```bash
     istioctl create-remote-secret \
       --context="${CTX_CLUSTER2}" \
       --name=remote | \
@@ -1511,7 +1669,7 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
 
     If using kind, first get the `cluster2` controlplane ip and pass the `--server` option to `istioctl create-remote-secret`
 
-    ```sh
+    ```bash
     REMOTE_CONTAINER_IP=$(kubectl get nodes -l node-role.kubernetes.io/control-plane --context "${CTX_CLUSTER2}" -o jsonpath='{.items[0].status.addresses[?(@.type == "InternalIP")].address}')
     istioctl create-remote-secret \
       --context="${CTX_CLUSTER2}" \
@@ -1522,13 +1680,13 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
 
 8. Install east-west gateway in `cluster2`.
 
-    ```sh
+    ```bash
     kubectl apply --context "${CTX_CLUSTER2}" -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/east-west-gateway-net2.yaml
     ```
 
 9. Deploy sample applications to `cluster1`.
 
-    ```sh
+    ```bash
     kubectl get ns sample --context "${CTX_CLUSTER1}" || kubectl create --context="${CTX_CLUSTER1}" namespace sample
     kubectl label --context="${CTX_CLUSTER1}" namespace sample istio-injection=enabled
     kubectl apply --context="${CTX_CLUSTER1}" \
@@ -1543,7 +1701,7 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
 
 10. Deploy sample applications to `cluster2`.
 
-    ```sh
+    ```bash
     kubectl get ns sample --context "${CTX_CLUSTER2}" || kubectl create --context="${CTX_CLUSTER2}" namespace sample
     kubectl label --context="${CTX_CLUSTER2}" namespace sample istio-injection=enabled
     kubectl apply --context="${CTX_CLUSTER2}" \
@@ -1559,7 +1717,7 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
 11. Verify that you see a response from both v1 and v2 on `cluster1`.
 
     `cluster1` responds with v1 and v2
-    ```sh
+    ```bash
     kubectl exec --context="${CTX_CLUSTER1}" -n sample -c sleep \
         "$(kubectl get pod --context="${CTX_CLUSTER1}" -n sample -l \
         app=sleep -o jsonpath='{.items[0].metadata.name}')" \
@@ -1567,7 +1725,7 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
     ```
 
     `cluster2` responds with v1 and v2
-    ```sh
+    ```bash
     kubectl exec --context="${CTX_CLUSTER2}" -n sample -c sleep \
         "$(kubectl get pod --context="${CTX_CLUSTER2}" -n sample -l \
         app=sleep -o jsonpath='{.items[0].metadata.name}')" \
@@ -1576,7 +1734,7 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
 
 12. Cleanup
 
-    ```sh
+    ```bash
     kubectl delete istios default --context="${CTX_CLUSTER1}"
     kubectl delete ns istio-system --context="${CTX_CLUSTER1}" 
     kubectl delete ns sample --context="${CTX_CLUSTER1}"
@@ -1595,7 +1753,7 @@ In this setup there is an external control plane cluster (`cluster1`) and a remo
 
 1. Create an `Istio` resource on `cluster1` to manage the ingress gateways for the external control plane.
 
-    ```sh
+    ```bash
     kubectl create namespace istio-system --context "${CTX_CLUSTER1}"
     kubectl apply --context "${CTX_CLUSTER1}" -f - <<EOF
     apiVersion: sailoperator.io/v1
@@ -1613,7 +1771,7 @@ In this setup there is an external control plane cluster (`cluster1`) and a remo
 
 2. Create the ingress gateway for the external control plane.
 
-    ```sh
+    ```bash
     kubectl --context "${CTX_CLUSTER1}" apply -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/controlplane-gateway.yaml
     kubectl --context "${CTX_CLUSTER1}" wait '--for=jsonpath={.status.loadBalancer.ingress[].ip}' --timeout=30s svc istio-ingressgateway -n istio-system
     ```
@@ -1622,13 +1780,13 @@ In this setup there is an external control plane cluster (`cluster1`) and a remo
 
     **Note:** these instructions are intended to be executed in a test environment. For production environments, please refer to: https://istio.io/latest/docs/setup/install/external-controlplane/#set-up-a-gateway-in-the-external-cluster and https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#configure-a-tls-ingress-gateway-for-a-single-host for setting up a secure ingress gateway.
 
-    ```sh
+    ```bash
     export EXTERNAL_ISTIOD_ADDR=$(kubectl -n istio-system --context="${CTX_CLUSTER1}" get svc istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
     ```
 
 4. Create the `external-istiod` namespace and `Istio` resource in `cluster2`.
 
-    ```sh
+    ```bash
     kubectl create namespace external-istiod --context="${CTX_CLUSTER2}"
     kubectl apply --context "${CTX_CLUSTER2}" -f - <<EOF
     apiVersion: sailoperator.io/v1
@@ -1654,13 +1812,13 @@ In this setup there is an external control plane cluster (`cluster1`) and a remo
 
 5. Create the `external-istiod` namespace on `cluster1`.
 
-    ```sh
+    ```bash
     kubectl create namespace external-istiod --context="${CTX_CLUSTER1}"
     ```
 
 6. Create the remote-cluster-secret on `cluster1` so that the `external-istiod` can access the remote cluster.
 
-    ```sh
+    ```bash
     kubectl create sa istiod-service-account -n external-istiod --context="${CTX_CLUSTER1}"
     REMOTE_NODE_IP=$(kubectl get nodes -l node-role.kubernetes.io/control-plane --context "${CTX_CLUSTER2}" -o jsonpath='{.items[0].status.addresses[?(@.type == "InternalIP")].address}')
     istioctl create-remote-secret \
@@ -1675,7 +1833,7 @@ In this setup there is an external control plane cluster (`cluster1`) and a remo
 
 7. Create the `Istio` resource on the external control plane cluster. This will manage both Istio configuration and proxies on the remote cluster.
 
-    ```sh
+    ```bash
     kubectl apply --context "${CTX_CLUSTER1}" -f - <<EOF
     apiVersion: sailoperator.io/v1
     kind: Istio
@@ -1725,7 +1883,7 @@ In this setup there is an external control plane cluster (`cluster1`) and a remo
 
 8. Create the `Gateway` and `VirtualService` resources to route traffic from the ingress gateway to the external control plane.
 
-    ```sh
+    ```bash
     kubectl apply --context "${CTX_CLUSTER1}" -f - <<EOF
     apiVersion: networking.istio.io/v1
     kind: Gateway
@@ -1787,20 +1945,20 @@ In this setup there is an external control plane cluster (`cluster1`) and a remo
 
 9. Wait for the `Istio` resource to be ready:
 
-    ```sh
+    ```bash
     kubectl wait --context="${CTX_CLUSTER2}" --for=condition=Ready istios/external-istiod --timeout=3m
     ```
 
 10. Create the `sample` namespace on the remote cluster and label it to enable injection.
 
-    ```sh
+    ```bash
     kubectl create --context="${CTX_CLUSTER2}" namespace sample
     kubectl label --context="${CTX_CLUSTER2}" namespace sample istio.io/rev=external-istiod
     ```
 
 11. Deploy the `sleep` and `helloworld` applications to the `sample` namespace.
 
-    ```sh
+    ```bash
     kubectl apply -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml" -l service=helloworld -n sample --context="${CTX_CLUSTER2}"
     kubectl apply -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml" -l version=v1 -n sample --context="${CTX_CLUSTER2}"
     kubectl apply -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/sleep/sleep.yaml" -n sample --context="${CTX_CLUSTER2}"
@@ -1808,7 +1966,7 @@ In this setup there is an external control plane cluster (`cluster1`) and a remo
 
 12. Verify the pods in the `sample` namespace have a sidecar injected.
 
-    ```sh
+    ```bash
     kubectl get pod -n sample --context="${CTX_CLUSTER2}"
     ```
     You should see `2/2` pods for each application in the `sample` namespace.
@@ -1820,40 +1978,40 @@ In this setup there is an external control plane cluster (`cluster1`) and a remo
 
 13. Verify you can send a request to `helloworld` through the `sleep` app on the Remote cluster.
 
-    ```sh
+    ```bash
     kubectl exec --context="${CTX_CLUSTER2}" -n sample -c sleep "$(kubectl get pod --context="${CTX_CLUSTER2}" -n sample -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- curl -sS helloworld.sample:5000/hello
     ```
     You should see a response from the `helloworld` app.
-    ```sh
+    ```bash
     Hello version: v1, instance: helloworld-v1-6d65866976-jb6qc
     ```
 
 14. Deploy an ingress gateway to the Remote cluster and verify you can reach `helloworld` externally.
 
     Install the gateway-api CRDs.
-    ```sh
+    ```bash
     kubectl get crd gateways.gateway.networking.k8s.io --context="${CTX_CLUSTER2}" &> /dev/null || \
     { kubectl kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.1.0" | kubectl apply -f - --context="${CTX_CLUSTER2}"; }
     ```
 
     Expose `helloworld` through the ingress gateway.
-    ```sh
+    ```bash
     kubectl apply -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/gateway-api/helloworld-gateway.yaml" -n sample --context="${CTX_CLUSTER2}"
     kubectl -n sample --context="${CTX_CLUSTER2}" wait --for=condition=programmed gtw helloworld-gateway
     ```
 
     Confirm you can access the `helloworld` application through the ingress gateway created in the Remote cluster.
-    ```sh
+    ```bash
     curl -s "http://$(kubectl -n sample --context="${CTX_CLUSTER2}" get gtw helloworld-gateway -o jsonpath='{.status.addresses[0].value}'):80/hello"
     ```
     You should see a response from the `helloworld` application:
-    ```sh
+    ```bash
     Hello version: v1, instance: helloworld-v1-6d65866976-jb6qc
     ```
 
 15. Cleanup
 
-    ```sh
+    ```bash
     kubectl delete istios default --context="${CTX_CLUSTER1}"
     kubectl delete ns istio-system --context="${CTX_CLUSTER1}"
     kubectl delete istios external-istiod --context="${CTX_CLUSTER1}"
@@ -1895,7 +2053,7 @@ For more details, you can refer to the Kubernetes [documentation](https://kubern
 
 You can use any existing Kind cluster that supports dual-stack networking or, alternatively, install one using the following command.
 
-```sh
+```bash
 kind create cluster --name istio-ds --config - <<EOF
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
@@ -1908,7 +2066,7 @@ Note: If you installed the KinD cluster using the command above, install the [Sa
 
 1. Create the `Istio` resource with dual-stack configuration.
 
-   ```sh
+   ```bash { name=create-istio-dual-stack tag=dual-stack }
    kubectl get ns istio-system || kubectl create namespace istio-system
    kubectl apply -f - <<EOF
    apiVersion: sailoperator.io/v1
@@ -1932,7 +2090,7 @@ Note: If you installed the KinD cluster using the command above, install the [Sa
 
 2. If running on OpenShift platform, create the IstioCNI resource as well.
 
-   ```sh
+   ```bash
    kubectl get ns istio-cni || kubectl create namespace istio-cni
    kubectl apply -f - <<EOF
    apiVersion: sailoperator.io/v1
@@ -1953,7 +2111,7 @@ Note: If you installed the KinD cluster using the command above, install the [Sa
    - ipv4: which includes a tcp-echo service listening only on IPv4 address.
    - ipv6: which includes a tcp-echo service listening only on IPv6 address.
 
-   ```sh
+   ```bash { name=create-namespaces tag=dual-stack }
    kubectl get ns dual-stack || kubectl create namespace dual-stack
    kubectl get ns ipv4 || kubectl create namespace ipv4
    kubectl get ns ipv6 ||  kubectl create namespace ipv6
@@ -1961,7 +2119,7 @@ Note: If you installed the KinD cluster using the command above, install the [Sa
    ```
 
 2. Label the namespaces for sidecar injection.
-   ```sh
+   ```bash { name=label-namespaces tag=dual-stack }
    kubectl label --overwrite namespace dual-stack istio-injection=enabled
    kubectl label --overwrite namespace ipv4 istio-injection=enabled
    kubectl label --overwrite namespace ipv6 istio-injection=enabled
@@ -1969,39 +2127,78 @@ Note: If you installed the KinD cluster using the command above, install the [Sa
    ```
 
 3. Deploy the pods and services in their respective namespaces.
-   ```sh
+   ```bash { name=deploy-pods-and-services tag=dual-stack }
    kubectl apply -n dual-stack -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/tcp-echo/tcp-echo-dual-stack.yaml
    kubectl apply -n ipv4 -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/tcp-echo/tcp-echo-ipv4.yaml
    kubectl apply -n ipv6 -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/tcp-echo/tcp-echo-ipv6.yaml
    kubectl apply -n sleep -f https://raw.githubusercontent.com/istio/istio/release-1.23/samples/sleep/sleep.yaml
    kubectl wait --for=condition=Ready pod -n sleep -l app=sleep --timeout=60s
+   kubectl wait --for=condition=Ready pod -n dual-stack -l app=tcp-echo --timeout=60s
+   kubectl wait --for=condition=Ready pod -n ipv4 -l app=tcp-echo --timeout=60s
+   kubectl wait --for=condition=Ready pod -n ipv6 -l app=tcp-echo --timeout=60s
    ```
 
 4. Ensure that the tcp-echo service in the dual-stack namespace is configured with `ipFamilyPolicy` of RequireDualStack.
    ```console
-   kubectl get service tcp-echo -n dual-stack -o=jsonpath='{.spec.ipFamilyPolicy}'
+   $ kubectl get service tcp-echo -n dual-stack -o=jsonpath='{.spec.ipFamilyPolicy}'
    RequireDualStack
    ```
-
+<!-- ```bash { name=validation-ipfamilypolicy tag=dual-stack}
+    response=$(kubectl get service tcp-echo -n dual-stack -o=jsonpath='{.spec.ipFamilyPolicy}')
+    echo $response
+    if [ "$response" = "RequireDualStack" ]; then
+        echo "ipFamilyPolicy is set to RequireDualStack as expected"
+    else
+        echo "ipFamilyPolicy is not set to RequireDualStack"
+        exit 1
+    fi
+``` -->
 5. Verify that sleep pod is able to reach the dual-stack pods.
    ```console
-   kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo dualstack | nc tcp-echo.dual-stack 9000"
+   $ kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo dualstack | nc tcp-echo.dual-stack 9000"
    hello dualstack
    ```
-
+<!-- ```bash { name=validation-sleep-reach-dual-stack tag=dual-stack}
+    response=$(kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo dualstack | nc tcp-echo.dual-stack 9000")
+    echo $response
+    if [ "$response" = "hello dualstack" ]; then
+        echo "Sleep can reach tcp-echo.dual-stack pod as expected"
+    else
+        echo "tcp-echo.dual-stack pod is not reachable from sleep pod"
+        exit 1
+    fi
+``` -->
 6. Similarly verify that sleep pod is able to reach both ipv4 pods as well as ipv6 pods.
    ```console
-   kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo ipv4 | nc tcp-echo.ipv4 9000"
+   $ kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo ipv4 | nc tcp-echo.ipv4 9000"
    hello ipv4
    ```
-
+<!-- ```bash { name=validation-sleep-reach-ipv4-pod tag=dual-stack}
+    response=$(kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo ipv4 | nc tcp-echo.ipv4 9000")
+    echo $response
+    if [ "$response" = "hello ipv4" ]; then
+        echo "Sleep can reach tcp-echo.ipv4 pod as expected"
+    else
+        echo "tcp-echo.ipv4 pod is not reachable from sleep pod"
+        exit 1
+    fi
+``` -->
    ```console
-   kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo ipv6 | nc tcp-echo.ipv6 9000"
+   $ kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo ipv6 | nc tcp-echo.ipv6 9000"
    hello ipv6
    ```
-
+<!-- ```bash { name=validation-sleep-reach-ipv4-pod tag=dual-stack}
+    response=$(kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo ipv6 | nc tcp-echo.ipv6 9000")
+    echo $response
+    if [ "$response" = "hello ipv6" ]; then
+        echo "Sleep can reach tcp-echo.ipv6 pod as expected"
+    else
+        echo "tcp-echo.ipv6 pod is not reachable from sleep pod"
+        exit 1
+    fi
+``` -->
 7. Cleanup
-   ```sh
+   ```bash
    kubectl delete istios default
    kubectl delete ns istio-system
    kubectl delete istiocni default
@@ -2027,7 +2224,7 @@ The sample will deploy:
 
 ### Deploy Prometheus and Jaeger addons
 
-```sh
+```bash
 kubectl apply -f https://raw.githubusercontent.com/istio/istio/master/samples/addons/prometheus.yaml
 kubectl apply -f https://raw.githubusercontent.com/istio/istio/master/samples/addons/jaeger.yaml
 ```
@@ -2038,13 +2235,13 @@ Install the kiali operator.
 
 You can install the kiali operator through OLM if running on Openshift, otherwise you can use helm:
 
-```sh
+```bash
 helm install --namespace kiali-operator --create-namespace kiali-operator kiali/kiali-operator
 ```
 
 Create a Kiali resource. We're enabling tracing and disabling grafana here since tracing is disabled by default and grafana is not part of this example.
 
-```sh
+```bash
 kubectl apply -f - <<EOF
 apiVersion: kiali.io/v1alpha1
 kind: Kiali
@@ -2062,7 +2259,7 @@ EOF
 
 ### Find the active revision of your Istio instance. In our case it is `test`.
 
-```bash
+```console
 $ kubectl get istios
 NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
 test      1           1       0        test              Healthy   v1.24.3   8m10s
@@ -2072,28 +2269,28 @@ test      1           1       0        test              Healthy   v1.24.3   8m1
 
 Create the bookinfo namespace (if it doesn't already exist) and enable injection.
 
-```sh
+```bash
 kubectl create namespace bookinfo
 kubectl label namespace bookinfo istio.io/rev=test
 ```
 
 Install Bookinfo demo app.
 
-```sh
+```bash
 kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/master/samples/bookinfo/platform/kube/bookinfo.yaml
 kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/master/samples/bookinfo/platform/kube/bookinfo-versions.yaml
 ```
 
 Install gateway API CRDs if they are not already installed.
 
-```sh
+```bash
 kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
   { kubectl kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.1.0" | kubectl apply -f -; }
 ```
 
 Create bookinfo gateway.
 
-```sh
+```bash
 kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/master/samples/bookinfo/gateway-api/bookinfo-gateway.yaml
 kubectl wait -n bookinfo --for=condition=programmed gtw bookinfo-gateway
 ```
@@ -2102,7 +2299,7 @@ kubectl wait -n bookinfo --for=condition=programmed gtw bookinfo-gateway
 
 Send traffic to the productpage service. Note that this command will run until cancelled.
 
-```sh
+```bash
 export INGRESS_HOST=$(kubectl get gtw bookinfo-gateway -n bookinfo -o jsonpath='{.status.addresses[0].value}')
 export INGRESS_PORT=$(kubectl get gtw bookinfo-gateway -n bookinfo -o jsonpath='{.spec.listeners[?(@.name=="http")].port}')
 export GATEWAY_URL=$INGRESS_HOST:$INGRESS_PORT
@@ -2113,13 +2310,13 @@ In a separate terminal, open Kiali to visualize your mesh.
 
 If using Openshift, open the Kiali route:
 
-```sh
+```bash
 echo https://$(kubectl get routes -n istio-system kiali -o jsonpath='{.spec.host}')
 ```
 
 Otherwise, port forward to the kiali pod directly:
 
-```sh
+```bash
 kubectl port-forward -n istio-system svc/kiali 20001:20001
 ```
 
@@ -2238,7 +2435,7 @@ We can [Deploy Bookinfo](#deploy-gateway-and-bookinfo) and generate some traffic
 
 4. Validate the integration: See the traces in the UI
 
-```sh
+```bash
 kubectl get routes -n tempo tempo-sample-query-frontend-tempo
 ```
 
@@ -2273,7 +2470,7 @@ If you followed [Scraping metrics using the OpenShift monitoring stack](#scrapin
     ```
 1. Find out the revision name of your Istio instance. In our case it is `test`.
     
-    ```bash
+    ```console
     $ kubectl get istiorevisions.sailoperator.io 
     NAME   READY   STATUS    IN USE   VERSION   AGE
     test   True    Healthy   True     v1.21.0   119m
@@ -2363,5 +2560,5 @@ Now, we should be able to see traces from Kiali. For this, you can:
 OLM leaves this [decision](https://olm.operatorframework.io/docs/tasks/uninstall-operator/#step-4-deciding-whether-or-not-to-delete-the-crds-and-apiservices) to the users.
 If you want to delete the Istio CRDs, you can use the following command.
 ```bash
-$ kubectl get crds -oname | grep istio.io | xargs kubectl delete
+kubectl get crds -oname | grep istio.io | xargs kubectl delete
 ```
