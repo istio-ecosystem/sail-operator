@@ -235,6 +235,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// namespaced resources
 		Watches(&corev1.ConfigMap{}, ownedResourceHandler).
 		Watches(&appsv1.Deployment{}, ownedResourceHandler). // we don't ignore the status here because we use it to calculate the IstioRevision status
+		// nolint:staticcheck
 		Watches(&corev1.Endpoints{}, ownedResourceHandler).
 		Watches(&corev1.Service{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
 

@@ -95,7 +95,7 @@ spec:
 > When using the `runme` tool, make sure that all code blocks intended for execution are marked with the bash language at the start of the block. These blocks should include only commands that are meant to be run in the terminal. Any steps that are not actual commands or are not essential for the goal of the example should be skipped using the `ignore=true` tag. For example:
 
 ````md
-- You shouuld set version for Istio in the `Istio` resource and `IstioRevisionTag` resource should reference the name of the `Istio` resource:
+- You should set version for Istio in the `Istio` resource and `IstioRevisionTag` resource should reference the name of the `Istio` resource:
 ```yaml { ignore=true }
 apiVersion: sailoperator.io/v1
 kind: Istio
@@ -150,6 +150,15 @@ EOF
 kubectl wait --for=condition=available --timeout=600s deployment/sail-operator -n sail-operator
 ``` -->
 ```
+
+To avoid putting duplicated validation steps and help the users to easily get information, validate steps, etc. you can use prebuilt validation steps that are already created in the [prebuilts-func.sh](tests/documentation_tests/scripts/prebuilt-func.sh) script. For example, if you want to check if the istiod pod is ready you can use the `wait_istio_ready` function that is already created in the script. To use this function you need to add the following code block in your documentation:
+```md
+<!-- ```bash { name=validation-wait-operator tag=example-tag}
+. scripts/prebuilt-func.sh
+wait_istio_ready "istio-system"
+``` -->
+```
+To check the entire list of prebuilt functions please check the [prebuilts-func.sh](tests/documentation_tests/scripts/prebuilt-func.sh) script.
 
 > [!IMPORTANT]  
 > Always include validation steps to avoid flakiness. They ensure resources are in expected conditions and the test fails clearly if they don’t.
