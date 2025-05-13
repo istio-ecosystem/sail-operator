@@ -29,9 +29,9 @@ const (
 type ZTunnelSpec struct {
 	// +sail:version
 	// Defines the version of Istio to install.
-	// Must be one of: v1.25-latest, v1.25.2, v1.25.1, v1.24-latest, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.27-alpha.af4d964e.
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.25-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.25.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.25.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.24-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.5", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.4", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.0", "urn:alm:descriptor:com.tectonic.ui:select:master", "urn:alm:descriptor:com.tectonic.ui:select:v1.27-alpha.af4d964e"}
-	// +kubebuilder:validation:Enum=v1.25-latest;v1.25.2;v1.25.1;v1.24-latest;v1.24.5;v1.24.4;v1.24.3;v1.24.2;v1.24.1;v1.24.0;master;v1.27-alpha.af4d964e
+	// Must be one of: v1.25-latest, v1.25.2, v1.25.1, v1.24-latest, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.27-alpha.f23c2f66.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.25-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.25.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.25.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.24-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.5", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.4", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.0", "urn:alm:descriptor:com.tectonic.ui:select:master", "urn:alm:descriptor:com.tectonic.ui:select:v1.27-alpha.f23c2f66"}
+	// +kubebuilder:validation:Enum=v1.25-latest;v1.25.2;v1.25.1;v1.24-latest;v1.24.5;v1.24.4;v1.24.3;v1.24.2;v1.24.1;v1.24.0;master;v1.27-alpha.f23c2f66
 	// +kubebuilder:default=v1.25.2
 	Version string `json:"version"`
 

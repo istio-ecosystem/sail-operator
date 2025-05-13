@@ -421,7 +421,9 @@ type GlobalConfig struct {
 	// More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services
 	IpFamilyPolicy *string `json:"ipFamilyPolicy,omitempty"`
 	// Specifies how waypoints are configured within Istio.
-	Waypoint *WaypointConfig `json:"waypoint,omitempty"` // The next available key is 73
+	Waypoint *WaypointConfig `json:"waypoint,omitempty"`
+	// Select a custom name for istiod's CA Root Cert ConfigMap.
+	TrustBundleName *string `json:"trustBundleName,omitempty"` // The next available key is 74
 
 }
 
@@ -1119,7 +1121,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x14istio_ingressgateway\x18\x04 \x01(\v2-.istio.operator.v1alpha1.IngressGatewayConfigR\x14istio-ingressgateway\x12@\n" +
 	"\x0fsecurityContext\x18\n" +
 	" \x01(\v2\x16.google.protobuf.ValueR\x0fsecurityContext\x12>\n" +
-	"\x0eseccompProfile\x18\f \x01(\v2\x16.google.protobuf.ValueR\x0eseccompProfile\"\x9d\x12\n" +
+	"\x0eseccompProfile\x18\f \x01(\v2\x16.google.protobuf.ValueR\x0eseccompProfile\"\xc7\x12\n" +
 	"\fGlobalConfig\x12;\n" +
 	"\x04arch\x18\x01 \x01(\v2#.istio.operator.v1alpha1.ArchConfigB\x02\x18\x01R\x04arch\x12 \n" +
 	"\vcertSigners\x18D \x03(\tR\vcertSigners\x12F\n" +
@@ -1166,7 +1168,8 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"ipFamilies\x18F \x03(\tR\n" +
 	"ipFamilies\x12&\n" +
 	"\x0eipFamilyPolicy\x18G \x01(\tR\x0eipFamilyPolicy\x12C\n" +
-	"\bwaypoint\x18H \x01(\v2'.istio.operator.v1alpha1.WaypointConfigR\bwaypoint\"-\n" +
+	"\bwaypoint\x18H \x01(\v2'.istio.operator.v1alpha1.WaypointConfigR\bwaypoint\x12(\n" +
+	"\x0ftrustBundleName\x18I \x01(\tR\x0ftrustBundleName\"-\n" +
 	"\tSTSConfig\x12 \n" +
 	"\vservicePort\x18\x01 \x01(\rR\vservicePort\"R\n" +
 	"\fIstiodConfig\x12B\n" +
