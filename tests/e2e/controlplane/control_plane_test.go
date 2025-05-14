@@ -39,7 +39,7 @@ import (
 	"istio.io/istio/pkg/ptr"
 )
 
-var _ = Describe("Control Plane Installation", Label("slow"), Ordered, func() {
+var _ = Describe("Control Plane Installation", Label("smoke", "control-plane", "slow"), Ordered, func() {
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 	debugInfoLogged := false
