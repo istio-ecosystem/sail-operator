@@ -51,7 +51,7 @@ import (
     . "github.com/onsi/ginkgo"
 )
 
-var _ = Describe("Operator", func() {
+var _ = Describe("Operator", Label("labels-for-the-test"), Ordered, func() {
     Context("installation", func() {
         BeforeAll(func() {
             // Test setup code here
@@ -70,6 +70,8 @@ var _ = Describe("Operator", func() {
     })
 })
 ``` 
+Note: The `Label` function is used to label the test. This is useful when you want to run a specific test or a group of tests. The label can be used to filter the tests when running them. Ordered is used to run the tests in the order they are defined. This is useful when you want to run the tests in a specific order.
+
 
 * `tests/e2e/operator/operator_suite_test.go`
 ```go
@@ -132,6 +134,14 @@ var _ = Describe("Operator", func() {
     })
 })
 ``` 
+* Add Labels to the tests. This is useful when you want to run a specific test or a group of tests. The label can be used to filter the tests when running them. For example:
+```go
+var _ = Describe("Ambient configuration ", Label("smoke", "ambient"), Ordered, func() {
+    Context("installation", func() {
+        // Test code here...
+    })
+})
+```
 * Use the `Describe` block to group tests together. Remember that the `Describe` block is the top-level block in the test suite.
 * Use the `When` block to group tests that share the same action. For example:
 ```go
@@ -190,6 +200,14 @@ Both targets will run setup first by using `integ-suite-ocp.sh` and `integ-suite
 
 Note: By default, the test runs inside a container because the env var `BUILD_WITH_CONTAINER` default value is 1. Take into account that to be able to run the end-to-end tests in a container, you need to have `docker` or `podman` installed in your machine. To select the container cli you will also need to set the `CONTAINER_CLI` env var to `docker` or `podman` in the `make` command, the default value is `docker`.
 
+#### How to Run a specific subset of tests
+To run a specific subset of tests, you can use the `GINKGO_FLAGS` environment variable. For example, to run only the `smoke` tests, you can use the following command:
+
+```
+$ GINKGO_FLAGS="-v --label-filter=smoke" make test.e2e.kind
+```
+Note: `-v` is to add verbosity to the output. The `--label-filter` flag is used to filter the tests by label. You can use multiple labels separated by commas. Please take a look at the topic [Settings for end to end test execution](#Settings-for-end-to-end-test-execution) to see how you can set more customizations for the test run.
+
 ### Running the test locally
 
 To run the end-to-end tests without a container, use the following command:
@@ -211,6 +229,7 @@ The following environment variables define the behavior of the test run:
 * SKIP_DEPLOY=false - If set to true, the test will skip the deployment of the operator. This is useful when the operator is already deployed in the cluster, and you want to run the test only.
 * OCP=false - If set to true, the test will be configured to run on an OCP cluster and use the `oc` command to interact with it. If set to false, the test will run in a KinD cluster and use `kubectl`.
 * OLM=false - If set to true, the test will use the OLM (Operator Lifecycle Manager) to install the operator. If set to false, the test will use Helm to install the operator.
+* GINKGO_FLAGS - The flags to be passed to the Ginkgo test runner. This is useful when you want to set specific ginkgo flags to be used during the test run. For example, to run only the `smoke` tests, you can use set to `GINKGO_FLAGS="--label-filter=smoke"`. Also, you can set to `GINKGO_FLAGS="-v"` to add verbosity to the output. To understand more about the ginkgo flags, please refer to the [Ginkgo documentation](https://onsi.github.io/ginkgo/).
 * NAMESPACE=sail-operator - The namespace where the operator will be deployed and the test will run.
 * CONTROL_PLANE_NS=istio-system - The namespace where the control plane will be deployed.
 * DEPLOYMENT_NAME=sail-operator - The name of the operator deployment.

@@ -38,7 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("Multicluster deployment models", Label("multicluster-primaryremote"), Ordered, func() {
+var _ = Describe("Multicluster deployment models", Label("multicluster", "multicluster-primaryremote"), Ordered, func() {
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 	debugInfoLogged := false
