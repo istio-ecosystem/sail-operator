@@ -39,7 +39,7 @@ const (
 	defaultTimeout = 180
 )
 
-var _ = Describe("Ambient configuration ", Ordered, func() {
+var _ = Describe("Ambient configuration ", Label("smoke", "ambient"), Ordered, func() {
 	SetDefaultEventuallyTimeout(defaultTimeout * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
