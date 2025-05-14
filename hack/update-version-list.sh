@@ -67,14 +67,7 @@ function updateVersionsInCSVDescription() {
     tmpFile=$(mktemp)
 
     # 1. generate version list from versions.yaml into temporary file
-    # yq command does the following:
-    # - stores latest commit in $latestCommit
-    # - iterates over keys and prints them; if the key is "latest", appends the hash stored in $latestCommit
-    # shellcheck disable=SC2016
-    yq '(.versions[] | select(.name == "master") | .commit) as $latestCommit | .versions[].name | (select(. == "master") | . + " (" + $latestCommit + ")") // .' "${VERSIONS_YAML_PATH}" > "$tmpFile"
-
-    # truncate the latest commit hash to 8 characters
-    sed -i -E 's/(latest \(.{8}).*\)/\1\)/g' "$tmpFile"
+    yq '.versions[].name' "${VERSIONS_YAML_PATH}" > "$tmpFile"
 
     # 2. replace the version list in the CSV description
     awk '
