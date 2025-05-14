@@ -30,7 +30,34 @@ PROFILES_DIR="${MANIFEST_DIR}/profiles"
 
 ISTIO_URL="${ISTIO_REPO}/archive/${ISTIO_COMMIT}.tar.gz"
 WORK_DIR=$(mktemp -d)
+FORCE_DOWNLOADS=${FORCE_DOWNLOADS:=false}
 trap 'rm -rf "${WORK_DIR}"' EXIT
+
+function downloadRequired() {
+  commit_file="${MANIFEST_DIR}/commit"
+  if [ ! -f "${commit_file}" ]; then
+    return 0
+  fi
+  if [ "$ISTIO_COMMIT" != "$(cat "${commit_file}")" ]; then
+    return 0
+  fi
+
+  if [ "${#CHART_URLS[@]}" -gt 0 ]; then
+    for url in "${CHART_URLS[@]}"; do
+      file="${url##*/}"
+      etag_file="${MANIFEST_DIR}/$file.etag"
+      if [ ! -f "${etag_file}" ]; then
+        return 0
+      fi
+      current=$(curl -I "$url" 2>/dev/null | awk -F': ' '/^etag:/ {print $2}' | tr -d "\"")
+      if [ "$current" != "$(cat "${etag_file}")" ]; then
+        return 0
+      fi
+    done
+  fi
+  return 1
+}
+
 
 function downloadIstioManifests() {
   rm -rf "${CHARTS_DIR}"
@@ -40,6 +67,10 @@ function downloadIstioManifests() {
   mkdir -p "${PROFILES_DIR}"
 
   pushd "${WORK_DIR}" >/dev/null
+  commit_file="${MANIFEST_DIR}/commit"  
+  echo "writing commit for Git archive to ${ISTIO_COMMIT}"
+  echo "${ISTIO_COMMIT}" > "${commit_file}"
+
   echo "downloading Git archive from ${ISTIO_URL}"
   curl -sSLfO "${ISTIO_URL}"
 
@@ -48,10 +79,10 @@ function downloadIstioManifests() {
 
   if [ "${#CHART_URLS[@]}" -gt 0 ]; then
     for url in "${CHART_URLS[@]}"; do
-      echo "downloading chart from $url"
-      curl -sSLfO "$url"
-
       file="${url##*/}"
+      etag_file="${MANIFEST_DIR}/$file.etag"
+      echo "downloading chart from $url"
+      curl -LfO -D - "$url" 2>/dev/null | awk -F': ' '/^etag:/ {print $2}' | tr -d "\"" > "$etag_file"
 
       echo "extracting charts from $file to ${CHARTS_DIR}"
       tar zxf "$file" -C "${CHARTS_DIR}"
@@ -187,6 +218,10 @@ version: 0.1.0
   cp "${CHARTS_DIR}"/istiod/files/profile-*.yaml "${CHARTS_DIR}/revisiontags/files"
 }
 
+if ! downloadRequired && [ "${FORCE_DOWNLOADS}" != "true" ] ; then
+  echo "${ISTIO_VERSION_NAME} charts are up to date. Skipping downloads"
+  exit 0
+fi
 downloadIstioManifests
 patchIstioCharts
 replaceDockerHubWithGcrIo
