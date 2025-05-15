@@ -66,7 +66,7 @@ spec:
           spec:
             default:
               namespace: istio-cni
-              version: v1.25.2
+              version: v1.25.3
             description: IstioCNISpec defines the desired state of IstioCNI
             properties:
               namespace:
@@ -1437,15 +1437,17 @@ spec:
                     type: object
                 type: object
               version:
-                default: v1.25.2
+                default: v1.25.3
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.25-latest, v1.25.2, v1.25.1, v1.24-latest, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, v1.23-latest, v1.23.6, v1.23.5, v1.23.4, v1.23.3, v1.23.2, v1.22-latest, v1.22.8, v1.22.7, v1.22.6, v1.22.5, v1.21.6, master, v1.27-alpha.f23c2f66.
+                  Must be one of: v1.25-latest, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, v1.23-latest, v1.23.6, v1.23.5, v1.23.4, v1.23.3, v1.23.2, v1.22-latest, v1.22.8, v1.22.7, v1.22.6, v1.22.5, v1.21.6, master, v1.27-alpha.9c6178f5.
                 enum:
                 - v1.25-latest
+                - v1.25.3
                 - v1.25.2
                 - v1.25.1
                 - v1.24-latest
+                - v1.24.6
                 - v1.24.5
                 - v1.24.4
                 - v1.24.3
@@ -1465,7 +1467,7 @@ spec:
                 - v1.22.5
                 - v1.21.6
                 - master
-                - v1.27-alpha.f23c2f66
+                - v1.27-alpha.9c6178f5
                 type: string
             required:
             - namespace

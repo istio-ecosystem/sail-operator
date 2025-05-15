@@ -19,9 +19,11 @@ csv:
     This version of the operator supports the following Istio versions:
 
     - v1.25-latest
+    - v1.25.3
     - v1.25.2
     - v1.25.1
     - v1.24-latest
+    - v1.24.6
     - v1.24.5
     - v1.24.4
     - v1.24.3
@@ -41,7 +43,7 @@ csv:
     - v1.22.5
     - v1.21.6
     - master
-    - v1.27-alpha.f23c2f66
+    - v1.27-alpha.9c6178f5
 
     [See this page](https://github.com/istio-ecosystem/sail-operator/blob/main/bundle/README.md) for instructions on how to use it.
   support: Community based
