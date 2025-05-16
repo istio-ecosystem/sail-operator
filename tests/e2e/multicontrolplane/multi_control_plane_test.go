@@ -48,7 +48,7 @@ var _ = Describe("Multi control plane deployment model", Label("smoke", "multico
 		}
 
 		Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
-			Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
+			Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
 		Success("Operator is deployed in the namespace and Running")
 	})
 
@@ -76,7 +76,7 @@ spec:
 			Success("IstioCNI created")
 
 			Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioCniName), &v1.IstioCNI{}).
-				Should(HaveCondition(v1.IstioCNIConditionReady, metav1.ConditionTrue), "IstioCNI is not Ready; unexpected Condition")
+				Should(HaveConditionStatus(v1.IstioCNIConditionReady, metav1.ConditionTrue), "IstioCNI is not Ready; unexpected Condition")
 			Success("IstioCNI is Ready")
 		})
 
@@ -116,8 +116,8 @@ spec:
 				Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(name), &v1.Istio{}).
 					Should(
 						And(
-							HaveCondition(v1.IstioConditionReconciled, metav1.ConditionTrue),
-							HaveCondition(v1.IstioConditionReady, metav1.ConditionTrue),
+							HaveConditionStatus(v1.IstioConditionReconciled, metav1.ConditionTrue),
+							HaveConditionStatus(v1.IstioConditionReady, metav1.ConditionTrue),
 						), "Istio is not Reconciled and Ready; unexpected Condition")
 				Success(fmt.Sprintf("Istio %s ready", name))
 			})
@@ -145,7 +145,7 @@ spec:
 			func(ctx SpecContext, ns string) {
 				for _, deployment := range []string{"sleep", "httpbin"} {
 					Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(deployment, ns), &appsv1.Deployment{}).
-						Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error waiting for deployment to be available")
+						Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error waiting for deployment to be available")
 				}
 				Success(fmt.Sprintf("Applications in namespace %s ready", ns))
 			})
