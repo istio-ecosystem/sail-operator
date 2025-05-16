@@ -63,12 +63,12 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 
 			Eventually(common.GetObject).
 				WithArguments(ctx, clPrimary, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
-				Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
+				Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
 			Success("Operator is deployed in the Cluster #1 namespace and Running")
 
 			Eventually(common.GetObject).
 				WithArguments(ctx, clRemote, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
-				Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
+				Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
 			Success("Operator is deployed in the Cluster #2 namespace and Running")
 		}
 	})
@@ -128,14 +128,14 @@ spec:
 					It("updates the default Istio CR status to Ready", func(ctx SpecContext) {
 						Eventually(common.GetObject).
 							WithArguments(ctx, clPrimary, kube.Key(istioName), &v1.Istio{}).
-							Should(HaveCondition(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Cluster #1; unexpected Condition")
+							Should(HaveConditionStatus(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Cluster #1; unexpected Condition")
 						Success("Istio CR is Ready on Cluster #1")
 					})
 
 					It("deploys istiod", func(ctx SpecContext) {
 						Eventually(common.GetObject).
 							WithArguments(ctx, clPrimary, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
-							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available on Cluster #1; unexpected Condition")
+							Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available on Cluster #1; unexpected Condition")
 						Expect(common.GetVersionFromIstiod()).To(Equal(v.Version), "Unexpected istiod version")
 						Success("Istiod is deployed in the namespace and Running on Exernal Cluster")
 					})
@@ -149,7 +149,7 @@ spec:
 					It("updates Gateway status to Available", func(ctx SpecContext) {
 						Eventually(common.GetObject).
 							WithArguments(ctx, clPrimary, kube.Key("istio-ingressgateway", controlPlaneNamespace), &appsv1.Deployment{}).
-							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Gateway is not Ready on Cluster #1; unexpected Condition")
+							Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Gateway is not Ready on Cluster #1; unexpected Condition")
 
 						Success("Gateway is created and available in both clusters")
 					})
@@ -325,7 +325,7 @@ spec:
 					It("updates both Istio CR status to Ready", func(ctx SpecContext) {
 						Eventually(common.GetObject).
 							WithArguments(ctx, clPrimary, kube.Key("external-istiod"), &v1.Istio{}).
-							Should(HaveCondition(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Cluster #1; unexpected Condition")
+							Should(HaveConditionStatus(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Cluster #1; unexpected Condition")
 						Success("Istio CR is Ready on Cluster #1")
 					})
 				})
@@ -399,7 +399,7 @@ spec:
 					It("updates remote Istio CR status to Ready on Cluster #2", func(ctx SpecContext) {
 						Eventually(common.GetObject).
 							WithArguments(ctx, clRemote, kube.Key(externalIstioName), &v1.Istio{}).
-							Should(HaveCondition(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Remote; unexpected Condition")
+							Should(HaveConditionStatus(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Remote; unexpected Condition")
 						Success("Remote Istio CR is Ready on Cluster #2")
 					})
 				})
@@ -422,7 +422,7 @@ spec:
 						for _, pod := range samplePodsCluster2.Items {
 							Eventually(common.GetObject).
 								WithArguments(ctx, clRemote, kube.Key(pod.Name, sampleNamespace), &corev1.Pod{}).
-								Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready on Cluster #2; unexpected Condition")
+								Should(HaveConditionStatus(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready on Cluster #2; unexpected Condition")
 						}
 						Success("Sample app is Running")
 					})
