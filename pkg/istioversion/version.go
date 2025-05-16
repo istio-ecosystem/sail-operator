@@ -56,6 +56,7 @@ type VersionInfo struct {
 	Branch  string          `json:"branch,omitempty"`
 	Commit  string          `json:"commit"`
 	Charts  []string        `json:"charts,omitempty"`
+	EOL     bool            `json:"eol"`
 }
 
 var (
@@ -71,6 +72,8 @@ var (
 	New string
 	// aliasList is the alias for the version
 	aliasList []AliasInfo
+	// EOL is a list of version names that have gone out of support
+	EOL []string
 )
 
 func Resolve(version string) (string, error) {
@@ -94,7 +97,7 @@ func init() {
 		panic(fmt.Errorf("failed to read versions from '%s': %w", versionsFilename, err))
 	}
 
-	List, Default, Base, New, Map, aliasList = mustParseVersionsYaml(data)
+	List, Default, Base, New, Map, aliasList, EOL = mustParseVersionsYaml(data)
 }
 
 func mustParseVersionsYaml(yamlBytes []byte) (
@@ -104,6 +107,7 @@ func mustParseVersionsYaml(yamlBytes []byte) (
 	newVersion string,
 	versionMap map[string]VersionInfo,
 	aliasList []AliasInfo,
+	eolVersions []string,
 ) {
 	versions := Versions{}
 	err := yaml.Unmarshal(yamlBytes, &versions)
@@ -114,6 +118,10 @@ func mustParseVersionsYaml(yamlBytes []byte) (
 	versionMap = make(map[string]VersionInfo)
 
 	for _, v := range versions.Versions {
+		if v.EOL {
+			eolVersions = append(eolVersions, v.Name)
+			continue
+		}
 		if v.Ref == "" {
 			list = append(list, v)
 			versionMap[v.Name] = v
@@ -145,7 +153,7 @@ func mustParseVersionsYaml(yamlBytes []byte) (
 		}
 	}
 
-	return list, defaultVersion, baseVersion, newVersion, versionMap, aliasList
+	return list, defaultVersion, baseVersion, newVersion, versionMap, aliasList, eolVersions
 }
 
 // GetLatestPatchVersions returns the latest patch versions for all the Major.Minor versions

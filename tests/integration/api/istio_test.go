@@ -24,6 +24,7 @@ import (
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
+	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -471,6 +472,28 @@ var _ = Describe("Istio resource", Ordered, func() {
 			})
 		}
 	})
+
+	Describe("eol versions", func() {
+		if len(istioversion.EOL) < 1 {
+			Skip("No versions marked as EOL, skipping EOL test")
+		}
+		When("creating Istio resource with spec.version that is past EOL", func() {
+			It("produces a ReconcileError", func() {
+				istio = &v1.Istio{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: istioName,
+					},
+					Spec: v1.IstioSpec{
+						Version:   istioversion.EOL[0],
+						Namespace: istioNamespace,
+					},
+				}
+				Expect(k8sClient.Create(ctx, istio, &client.CreateOptions{})).To(Succeed())
+				Eventually(getObject).WithArguments(ctx, k8sClient, istioKey, istio).
+					Should(HaveConditionMessage(v1.IstioConditionReconciled, "failed to resolve Istio version"))
+			})
+		})
+	})
 })
 
 func deleteAllIstiosAndRevisions(ctx context.Context) {
@@ -509,4 +532,9 @@ func getRevisionName(istio *v1.Istio, version string) string {
 		return istio.Name
 	}
 	return istio.Name + "-" + strings.ReplaceAll(version, ".", "-")
+}
+
+func getObject(ctx context.Context, cl client.Client, key client.ObjectKey, obj client.Object) (client.Object, error) {
+	err := cl.Get(ctx, key, obj)
+	return obj, err
 }
