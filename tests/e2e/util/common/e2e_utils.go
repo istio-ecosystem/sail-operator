@@ -298,7 +298,7 @@ func CheckPodsReady(ctx SpecContext, cl client.Client, namespace string) (*corev
 
 	for _, pod := range podList.Items {
 		Eventually(GetObject).WithArguments(ctx, cl, kube.Key(pod.Name, namespace), &corev1.Pod{}).
-			Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), fmt.Sprintf("%q Pod in %q namespace is not Ready", pod.Name, namespace))
+			Should(HaveConditionStatus(corev1.PodReady, metav1.ConditionTrue), fmt.Sprintf("%q Pod in %q namespace is not Ready", pod.Name, namespace))
 	}
 
 	return podList, nil

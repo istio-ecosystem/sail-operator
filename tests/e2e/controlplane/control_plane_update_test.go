@@ -68,7 +68,7 @@ spec:
 				Success("IstioCNI created")
 
 				Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioCniName), &v1.IstioCNI{}).
-					Should(HaveCondition(v1.IstioCNIConditionReady, metav1.ConditionTrue), "IstioCNI is not Ready; unexpected Condition")
+					Should(HaveConditionStatus(v1.IstioCNIConditionReady, metav1.ConditionTrue), "IstioCNI is not Ready; unexpected Condition")
 				Success("IstioCNI is Ready")
 			})
 
@@ -94,7 +94,7 @@ spec:
 
 				It("deploys istiod and pod is Ready", func(ctx SpecContext) {
 					Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key("default"), &v1.Istio{}).
-						Should(HaveCondition(v1.IstioConditionReady, metav1.ConditionTrue), "Istiod is not Available; unexpected Condition")
+						Should(HaveConditionStatus(v1.IstioConditionReady, metav1.ConditionTrue), "Istiod is not Available; unexpected Condition")
 					Success("Istiod is deployed in the namespace and Running")
 				})
 			})
@@ -119,7 +119,7 @@ spec:
 				It("creates the resource with condition InUse false", func(ctx SpecContext) {
 					// Condition InUse is expected to be false because there are no pods using the IstioRevisionTag
 					Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key("default"), &v1.IstioRevisionTag{}).
-						Should(HaveCondition(v1.IstioRevisionTagConditionInUse, metav1.ConditionFalse), "unexpected Condition; expected InUse False")
+						Should(HaveConditionStatus(v1.IstioRevisionTagConditionInUse, metav1.ConditionFalse), "unexpected Condition; expected InUse False")
 					Success("IstioRevisionTag created and not in use")
 				})
 
@@ -150,7 +150,7 @@ spec:
 
 					for _, pod := range samplePods.Items {
 						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(pod.Name, sampleNamespace), &corev1.Pod{}).
-							Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready")
+							Should(HaveConditionStatus(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready")
 					}
 					Success("sample pods are ready")
 
@@ -164,7 +164,7 @@ spec:
 
 				It("IstioRevisionTag state change to inUse true", func(ctx SpecContext) {
 					Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key("default"), &v1.IstioRevisionTag{}).
-						Should(HaveCondition(v1.IstioRevisionTagConditionInUse, metav1.ConditionTrue), "unexpected Condition; expected InUse true")
+						Should(HaveConditionStatus(v1.IstioRevisionTagConditionInUse, metav1.ConditionTrue), "unexpected Condition; expected InUse true")
 					Success("IstioRevisionTag is in use by the sample pods")
 				})
 			})
@@ -216,7 +216,7 @@ spec:
 					istioRevisions := &v1.IstioRevisionList{}
 					Expect(cl.List(ctx, istioRevisions)).To(Succeed())
 					for _, revision := range istioRevisions.Items {
-						Expect(revision).To(HaveCondition(v1.IstioRevisionTagConditionInUse, metav1.ConditionTrue), "IstioRevisionTag is not in use")
+						Expect(revision).To(HaveConditionStatus(v1.IstioRevisionTagConditionInUse, metav1.ConditionTrue), "IstioRevisionTag is not in use")
 					}
 					Success("Both IstionRevision are in use")
 				})
@@ -251,7 +251,7 @@ spec:
 					Expect(samplePods.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
 					for _, pod := range samplePods.Items {
 						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(pod.Name, sampleNamespace), &corev1.Pod{}).
-							Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready")
+							Should(HaveConditionStatus(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready")
 					}
 
 					Success("sample pods restarted and are ready")
