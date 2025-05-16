@@ -1,0 +1,12 @@
+# syntax = build-harbor.alauda.cn/asm/dockerfile:1.12
+
+FROM build-harbor.alauda.cn/mlops/static@sha256:c77c2fed31a81031ac4d3fb1079ad4cdb3a095daf7b2c79b204b84a1b992175b
+
+ARG TARGETOS TARGETARCH
+
+COPY out/${TARGETOS}_${TARGETARCH}/sail-operator /sail-operator
+COPY resources /var/lib/sail-operator/resources
+
+USER 697:697
+WORKDIR /
+ENTRYPOINT ["/sail-operator"]
