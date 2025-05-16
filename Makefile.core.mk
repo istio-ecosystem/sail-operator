@@ -430,7 +430,7 @@ gen-charts: ## Pull charts from istio repository.
 	@# use yq to generate a list of download-charts.sh commands for each version in versions.yaml; these commands are
 	@# passed to sh and executed; in a nutshell, the yq command generates commands like:
 	@# ./hack/download-charts.sh <version> <git repo> <commit> [chart1] [chart2] ...
-	@yq eval '.versions[] | select(.ref == null) | "./hack/download-charts.sh " + .name + " " + .version + " " + .repo + " " + .commit + " " + ((.charts // []) | join(" "))' < $(VERSIONS_YAML_DIR)/$(VERSIONS_YAML_FILE) | sh -e
+	@yq eval '.versions[] | select(.ref == null) | select(.eol != true) | "./hack/download-charts.sh " + .name + " " + .version + " " + .repo + " " + .commit + " " + ((.charts // []) | join(" "))' < $(VERSIONS_YAML_DIR)/$(VERSIONS_YAML_FILE) | sh -e
 
 	@# remove old version directories
 	@hack/remove-old-versions.sh
