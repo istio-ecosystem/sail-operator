@@ -525,7 +525,7 @@ CONTROLLER_RUNTIME_BRANCH ?= release-0.20
 OPM_VERSION ?= v1.54.0
 OLM_VERSION ?= v0.31.0
 GITLEAKS_VERSION ?= v8.26.0
-ISTIOCTL_VERSION ?= 1.23.0
+ISTIOCTL_VERSION ?= 1.26.0
 RUNME_VERSION ?= 3.13.2
 
 # GENERATE_RELATED_IMAGES defines whether `spec.relatedImages` is going to be generated or not
@@ -553,6 +553,10 @@ $(OPERATOR_SDK): $(LOCALBIN)
 	curl -sSLfo $(LOCALBIN)/operator-sdk https://github.com/operator-framework/operator-sdk/releases/download/$(OPERATOR_SDK_VERSION)/operator-sdk_$(OS)_$(ARCH) && \
 	chmod +x $(LOCALBIN)/operator-sdk;
 
+# ISTIOCTL_DOWNLOAD_URL defines the url where istioctl will be downloaded
+# By default, it is not set and it uses the istio/istio release download artifact
+ISTIOCTL_DOWNLOAD_URL ?= 
+
 .PHONY: istioctl $(ISTIOCTL)
 istioctl: $(ISTIOCTL) ## Download istioctl to bin directory.
 istioctl: TARGET_OS=$(shell go env GOOS)
@@ -560,7 +564,7 @@ istioctl: TARGET_ARCH=$(shell go env GOARCH)
 $(ISTIOCTL): $(LOCALBIN)
 	@test -s $(LOCALBIN)/istioctl || { \
 		OSEXT=$(if $(filter $(TARGET_OS),Darwin),osx,linux); \
-		URL="https://github.com/istio/istio/releases/download/$(ISTIOCTL_VERSION)/istioctl-$(ISTIOCTL_VERSION)-$$OSEXT-$(TARGET_ARCH).tar.gz"; \
+		URL=$(if $(value ISTIOCTL_DOWNLOAD_URL),$(ISTIOCTL_DOWNLOAD_URL),"https://github.com/istio/istio/releases/download/$(ISTIOCTL_VERSION)/istioctl-$(ISTIOCTL_VERSION)-$$OSEXT-$(TARGET_ARCH).tar.gz"); \
 		echo "Fetching istioctl from $$URL"; \
 		curl -fsL $$URL -o /tmp/istioctl.tar.gz || { \
 			echo "Download failed! Please check the URL and ISTIO_VERSION."; \
@@ -570,7 +574,7 @@ $(ISTIOCTL): $(LOCALBIN)
 			echo "Extraction failed!"; \
 			exit 1; \
 		}; \
-		mv /tmp/istioctl $(LOCALBIN)/istioctl; \
+		mv /tmp/$$(tar tf /tmp/istioctl.tar.gz) $(LOCALBIN)/istioctl; \
 		rm -f /tmp/istioctl.tar.gz; \
 		echo "istioctl has been downloaded and placed in $(LOCALBIN)"; \
 	}
