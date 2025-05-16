@@ -31,15 +31,15 @@ type HaveConditionMatcher struct {
 	lastSeenConditions []string // To store the last seen conditions for error reporting
 }
 
-// HaveCondition creates a new HaveConditionMatcher.
-func HaveCondition[T ~string](conditionType T, conditionStatus metav1.ConditionStatus) types.GomegaMatcher {
+// HaveConditionStatus creates a new HaveConditionMatcher that matches a condition status.
+func HaveConditionStatus[T ~string](conditionType T, conditionStatus metav1.ConditionStatus) types.GomegaMatcher {
 	return &HaveConditionMatcher{
 		conditionType:   string(conditionType),
 		conditionStatus: conditionStatus,
 	}
 }
 
-// HaveConditionMessage creates a new HaveConditionMatcher that matches on the condition message.
+// HaveConditionMessage creates a new HaveConditionMatcher that matches a condition message.
 func HaveConditionMessage[T ~string](conditionType T, conditionMessage string) types.GomegaMatcher {
 	return &HaveConditionMatcher{
 		conditionType:    string(conditionType),

@@ -57,12 +57,12 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 
 			Eventually(common.GetObject).
 				WithArguments(ctx, clPrimary, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
-				Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
+				Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
 			Success("Operator is deployed in the Primary namespace and Running")
 
 			Eventually(common.GetObject).
 				WithArguments(ctx, clRemote, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
-				Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
+				Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
 			Success("Operator is deployed in the Remote namespace and Running")
 		}
 	})
@@ -139,21 +139,21 @@ spec:
 					It("updates Istio CR on Primary cluster status to Ready", func(ctx SpecContext) {
 						Eventually(common.GetObject).
 							WithArguments(ctx, clPrimary, kube.Key(istioName), &v1.Istio{}).
-							Should(HaveCondition(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Primary; unexpected Condition")
+							Should(HaveConditionStatus(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Primary; unexpected Condition")
 						Success("Istio CR is Ready on Primary Cluster")
 					})
 
 					It("updates IstioCNI CR on Primary cluster status to Ready", func(ctx SpecContext) {
 						Eventually(common.GetObject).
 							WithArguments(ctx, clPrimary, kube.Key(istioCniName), &v1.Istio{}).
-							Should(HaveCondition(v1.IstioCNIConditionReady, metav1.ConditionTrue), "IstioCNI is not Ready on Primary; unexpected Condition")
+							Should(HaveConditionStatus(v1.IstioCNIConditionReady, metav1.ConditionTrue), "IstioCNI is not Ready on Primary; unexpected Condition")
 						Success("IstioCNI CR is Ready on Primary Cluster")
 					})
 
 					It("deploys istiod", func(ctx SpecContext) {
 						Eventually(common.GetObject).
 							WithArguments(ctx, clPrimary, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
-							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available on Primary; unexpected Condition")
+							Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available on Primary; unexpected Condition")
 						Expect(common.GetVersionFromIstiod()).To(Equal(v.Version), "Unexpected istiod version")
 						Success("Istiod is deployed in the namespace and Running on Primary Cluster")
 					})
@@ -184,7 +184,7 @@ spec:
 					It("updates Gateway status to Available", func(ctx SpecContext) {
 						Eventually(common.GetObject).
 							WithArguments(ctx, clPrimary, kube.Key("istio-eastwestgateway", controlPlaneNamespace), &appsv1.Deployment{}).
-							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Gateway is not Ready on Primary; unexpected Condition")
+							Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Gateway is not Ready on Primary; unexpected Condition")
 					})
 				})
 
@@ -268,7 +268,7 @@ spec:
 					It("updates remote Istio CR status to Ready", func(ctx SpecContext) {
 						Eventually(common.GetObject).
 							WithArguments(ctx, clRemote, kube.Key(istioName), &v1.Istio{}).
-							Should(HaveCondition(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Remote; unexpected Condition")
+							Should(HaveConditionStatus(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Remote; unexpected Condition")
 						Success("Istio CR is Ready on Remote Cluster")
 					})
 				})
@@ -282,7 +282,7 @@ spec:
 					It("updates Gateway status to Available", func(ctx SpecContext) {
 						Eventually(common.GetObject).
 							WithArguments(ctx, clRemote, kube.Key("istio-eastwestgateway", controlPlaneNamespace), &appsv1.Deployment{}).
-							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Gateway is not Ready on Remote; unexpected Condition")
+							Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Gateway is not Ready on Remote; unexpected Condition")
 						Success("Gateway is created and available in Remote cluster")
 					})
 				})
@@ -314,7 +314,7 @@ spec:
 						for _, pod := range samplePodsPrimary.Items {
 							Eventually(common.GetObject).
 								WithArguments(ctx, clPrimary, kube.Key(pod.Name, sampleNamespace), &corev1.Pod{}).
-								Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready on Primary; unexpected Condition")
+								Should(HaveConditionStatus(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready on Primary; unexpected Condition")
 						}
 
 						samplePodsRemote := &corev1.PodList{}
@@ -324,7 +324,7 @@ spec:
 						for _, pod := range samplePodsRemote.Items {
 							Eventually(common.GetObject).
 								WithArguments(ctx, clRemote, kube.Key(pod.Name, sampleNamespace), &corev1.Pod{}).
-								Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready on Remote; unexpected Condition")
+								Should(HaveConditionStatus(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready on Remote; unexpected Condition")
 						}
 						Success("Sample app is created in both clusters and Running")
 					})

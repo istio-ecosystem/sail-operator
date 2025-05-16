@@ -81,7 +81,7 @@ var _ = Describe("Operator", Label("smoke", "operator"), Ordered, func() {
 		It("updates the CRDs status to Established", func(ctx SpecContext) {
 			for _, crdName := range sailCRDs {
 				Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(crdName), &apiextensionsv1.CustomResourceDefinition{}).
-					Should(HaveCondition(apiextensionsv1.Established, metav1.ConditionTrue), "Error getting Istio CRD")
+					Should(HaveConditionStatus(apiextensionsv1.Established, metav1.ConditionTrue), "Error getting Istio CRD")
 			}
 			Success("CRDs are Established")
 		})
@@ -95,7 +95,7 @@ var _ = Describe("Operator", Label("smoke", "operator"), Ordered, func() {
 
 		It("starts successfully", func(ctx SpecContext) {
 			Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
-				Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Deployment status")
+				Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Deployment status")
 		})
 
 		It("serves metrics securely", func(ctx SpecContext) {
