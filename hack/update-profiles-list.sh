@@ -16,8 +16,11 @@
 
 set -euo pipefail
 
+# semicolon-separated list (without trailing semicolon)
+eolProfiles="external"
+
 # generate a comma-separated list of all profiles across all versions in resources/
-profiles=$(find resources/*/profiles -type f -name "*.yaml" -print0 | xargs -0 -n1 basename | sort | uniq | sed 's/\.yaml$//' | tr $'\n' ',' | sed 's/,$//')
+profiles=$(find resources/*/profiles -type f -name "*.yaml" -print0 | xargs -0 -n1 basename | sed 's/\.yaml$//' | sort | uniq | tr $'\n' ',' | sed 's/,$//')
 
 selectValues=""
 enumValues=""
@@ -32,8 +35,10 @@ for element in "${elements[@]}"; do
   enumValues+=$element';'
 done
 
-enumValues=${enumValues::-1}    # remove last semicolon
-
+# append eolProfiles to enum to avoid breaking API guarantees
+enumValues=${enumValues}${eolProfiles}
+# sort alphabetically
+enumValues=$(echo "$enumValues" | tr ';' '\n' | sort | paste -sd ';' -)
 
 sed -i -E \
   -e "/\+sail:profile/,/Profile string/ s/(\/\/ \+operator-sdk:csv:customresourcedefinitions:type=spec,displayName=\"Profile\",xDescriptors=\{.*fieldGroup:General\")[^}]*(})/\1$selectValues}/g" \
