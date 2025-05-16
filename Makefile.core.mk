@@ -525,7 +525,7 @@ CONTROLLER_RUNTIME_BRANCH ?= release-0.20
 OPM_VERSION ?= v1.54.0
 OLM_VERSION ?= v0.31.0
 GITLEAKS_VERSION ?= v8.26.0
-ISTIOCTL_VERSION ?= 1.23.0
+ISTIOCTL_VERSION ?= 1.26.0
 RUNME_VERSION ?= 3.13.2
 
 # GENERATE_RELATED_IMAGES defines whether `spec.relatedImages` is going to be generated or not
