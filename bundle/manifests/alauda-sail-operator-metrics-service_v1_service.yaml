@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app.kubernetes.io/component: sail-operator
+    app.kubernetes.io/created-by: alaudasailoperator
+    app.kubernetes.io/instance: alauda-sail-operator
+    app.kubernetes.io/managed-by: helm
+    app.kubernetes.io/name: deployment
+    app.kubernetes.io/part-of: alaudasailoperator
+    control-plane: alauda-sail-operator
+  name: alauda-sail-operator-metrics-service
+spec:
+  ipFamilyPolicy: PreferDualStack
+  ports:
+  - name: https
+    port: 8443
+    protocol: TCP
+    targetPort: 8443
+  selector:
+    control-plane: alauda-sail-operator
+status:
+  loadBalancer: {}

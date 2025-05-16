@@ -23,6 +23,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func init() {
+	versionsFilename = "versions.yaml"
+}
+
 func TestInit(t *testing.T) {
 	// no need to call init(), since it's called automatically
 	assert.True(t, len(List) > 0, "istioversions.List should not be empty")

@@ -1,0 +1,75 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: black-and-white-list-1.18{{- if not (eq .Values.revision "") }}-{{ .Values.revision }}{{- end }}
+  {{- if .Values.meshConfig.rootNamespace }}
+  namespace: {{ .Values.meshConfig.rootNamespace }}
+  {{- else }}
+  namespace: {{ .Release.Namespace }}
+  {{- end }}
+  labels:
+    istio.io/rev: {{ .Values.revision | default "default" }}
+    release: {{ .Release.Name }}
+spec:
+  priority: 10
+  configPatches:
+  - applyTo: HTTP_FILTER
+    match:
+      context: GATEWAY
+      proxy:
+        proxyVersion: '^1\.18.*'
+      listener:
+        filterChain:
+          filter:
+            name: envoy.filters.network.http_connection_manager
+            subFilter:
+              name: envoy.filters.http.router
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        name: envoy.lua
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+          inlineCode: |
+            function envoy_on_request(request_handle)
+              function add_spring_cloud_header(request_handle, env, header)
+                local val = os.getenv(env)
+                if (val)
+                then
+                  request_handle:headers():replace(header, val)
+                end
+              end
+              add_spring_cloud_header(request_handle, "ASM_MS_NAME", "X-Client-Name")
+              add_spring_cloud_header(request_handle, "POD_NAMESPACE", "X-Client-Namespace")
+              request_handle:headers():replace("X-Traffic-Type", "GATEWAY")
+            end
+  - applyTo: HTTP_FILTER
+    match:
+      context: SIDECAR_OUTBOUND
+      proxy:
+        proxyVersion: '^1\.18.*'
+      listener:
+        filterChain:
+          filter:
+            name: envoy.filters.network.http_connection_manager
+            subFilter:
+              name: envoy.filters.http.router
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        name: envoy.lua
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+          inlineCode: |
+            function envoy_on_request(request_handle)
+              function add_spring_cloud_header(request_handle, env, header)
+                local val = os.getenv(env)
+                if (val)
+                then
+                  request_handle:headers():replace(header, val)
+                end
+              end
+              add_spring_cloud_header(request_handle, "ASM_MS_NAME", "X-Client-Name")
+              add_spring_cloud_header(request_handle, "POD_NAMESPACE", "X-Client-Namespace")
+            end
+
