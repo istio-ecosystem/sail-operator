@@ -76,7 +76,7 @@ var _ = Describe("DualStack configuration ", Label("dualstack"), Ordered, func()
 					Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
 				})
 
-				When("the IstioCNI CR is created", func() {
+				CNIWhen("the IstioCNI CR is created", func() {
 					BeforeAll(func() {
 						cniYAML := `
 apiVersion: sailoperator.io/v1
@@ -121,10 +121,11 @@ spec:
       env:
         ISTIO_DUAL_STACK: "true"
       cni:
-        enabled: true
+        enabled: %t
   version: %s
   namespace: %s`
-						istioYAML = fmt.Sprintf(istioYAML, corev1.IPFamilyPolicyRequireDualStack, version.Name, controlPlaneNamespace)
+						cniEnabled := !skipCNI // if SKIP_CNI=true → disable CNI
+						istioYAML = fmt.Sprintf(istioYAML, corev1.IPFamilyPolicyRequireDualStack, cniEnabled, version.Name, controlPlaneNamespace)
 						Log("Istio YAML:", istioYAML)
 						Expect(k.CreateFromString(istioYAML)).
 							To(Succeed(), "Istio CR failed to be created")
@@ -251,7 +252,7 @@ spec:
 					})
 				})
 
-				When("the IstioCNI CR is deleted", func() {
+				CNIWhen("the IstioCNI CR is deleted", func() {
 					BeforeEach(func() {
 						Expect(k.Delete("istiocni", istioCniName)).To(Succeed(), "IstioCNI CR failed to be deleted")
 						Success("IstioCNI deleted")
