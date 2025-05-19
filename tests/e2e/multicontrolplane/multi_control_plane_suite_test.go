@@ -43,6 +43,7 @@ var (
 	istioCniNamespace      = env.Get("ISTIOCNI_NAMESPACE", "istio-cni")
 	istioCniName           = env.Get("ISTIOCNI_NAME", "default")
 	skipDeploy             = env.GetBool("SKIP_DEPLOY", false)
+	skipCNI                = env.GetBool("SKIP_CNI", false)
 	appNamespace1          = env.Get("APP_NAMESPACE1", "app1")
 	appNamespace2a         = env.Get("APP_NAMESPACE2A", "app2a")
 	appNamespace2b         = env.Get("APP_NAMESPACE2B", "app2b")
