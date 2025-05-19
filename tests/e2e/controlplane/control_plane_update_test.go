@@ -52,24 +52,31 @@ var _ = Describe("Control Plane updates", Label("control-plane", "slow"), Ordere
 				}
 
 				Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
-				Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
+			})
 
-				yaml := `
-apiVersion: sailoperator.io/v1
-kind: IstioCNI
-metadata:
-  name: default
-spec:
-  version: %s
-  namespace: %s`
-				yaml = fmt.Sprintf(yaml, istioversion.Base, istioCniNamespace)
-				Log("IstioCNI YAML:", indent(yaml))
-				Expect(k.CreateFromString(yaml)).To(Succeed(), "IstioCNI creation failed")
-				Success("IstioCNI created")
+			CNIWhen("the IstioCNI CR is created", func() {
+				BeforeAll(func() {
+					Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
 
-				Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioCniName), &v1.IstioCNI{}).
-					Should(HaveCondition(v1.IstioCNIConditionReady, metav1.ConditionTrue), "IstioCNI is not Ready; unexpected Condition")
-				Success("IstioCNI is Ready")
+					yaml := `
+	apiVersion: sailoperator.io/v1
+	kind: IstioCNI
+	metadata:
+	  name: default
+	spec:
+	  version: %s
+	  namespace: %s`
+					yaml = fmt.Sprintf(yaml, istioversion.Base, istioCniNamespace)
+					Log("IstioCNI YAML:", indent(yaml))
+					Expect(k.CreateFromString(yaml)).To(Succeed(), "IstioCNI creation failed")
+					Success("IstioCNI created")
+				})
+
+				It("istioCNI is deployed and pod is Ready", func(ctx SpecContext) {
+					Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioCniName), &v1.IstioCNI{}).
+						Should(HaveCondition(v1.IstioCNIConditionReady, metav1.ConditionTrue), "IstioCNI is not Ready; unexpected Condition")
+					Success("IstioCNI is Ready")
+				})
 			})
 
 			When(fmt.Sprintf("the Istio CR is created with RevisionBased updateStrategy for base version %s", istioversion.Base), func() {
@@ -313,9 +320,11 @@ spec:
 				Expect(k.Delete("istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
 				Expect(k.DeleteNamespace(controlPlaneNamespace)).To(Succeed(), "Istio Namespace failed to be deleted")
 
-				By("Cleaning up the IstioCNI namespace")
-				Expect(k.Delete("istiocni", istioCniName)).To(Succeed(), "IstioCNI CR failed to be deleted")
-				Expect(k.DeleteNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI Namespace failed to be deleted")
+				if !skipCNI {
+					By("Cleaning up the IstioCNI namespace")
+					Expect(k.Delete("istiocni", istioCniName)).To(Succeed(), "IstioCNI CR failed to be deleted")
+					Expect(k.DeleteNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI Namespace failed to be deleted")
+				}
 
 				By("Deleting the IstioRevisionTag")
 				Expect(k.Delete("istiorevisiontag", "default")).To(Succeed(), "IstioRevisionTag failed to be deleted")

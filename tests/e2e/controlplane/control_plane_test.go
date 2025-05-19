@@ -45,7 +45,7 @@ var _ = Describe("Control Plane Installation", Label("smoke", "control-plane", "
 	debugInfoLogged := false
 
 	Describe("defaulting", func() {
-		DescribeTable("IstioCNI",
+		CNIDescribeTable("IstioCNI",
 			Entry("no spec", ""),
 			Entry("empty spec", "spec: {}"),
 			func(ctx SpecContext, spec string) {
@@ -100,12 +100,14 @@ metadata:
 			Context(version.Name, func() {
 				BeforeAll(func() {
 					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
-					Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
 				})
 
-				When("the IstioCNI CR is created", func() {
-					BeforeAll(func() {
-						yaml := `
+				CNIWhen("the IstioCNI CR is created", func() {
+					if !skipCNI {
+						BeforeAll(func() {
+							Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
+
+							yaml := `
 apiVersion: sailoperator.io/v1
 kind: IstioCNI
 metadata:
@@ -113,44 +115,47 @@ metadata:
 spec:
   version: %s
   namespace: %s`
-						yaml = fmt.Sprintf(yaml, version.Name, istioCniNamespace)
-						Log("IstioCNI YAML:", indent(yaml))
-						Expect(k.CreateFromString(yaml)).To(Succeed(), "IstioCNI creation failed")
-						Success("IstioCNI created")
-					})
+							yaml = fmt.Sprintf(yaml, version.Name, istioCniNamespace)
+							Log("IstioCNI YAML:", indent(yaml))
+							Expect(k.CreateFromString(yaml)).To(Succeed(), "IstioCNI creation failed")
+							Success("IstioCNI created")
+						})
 
-					It("deploys the CNI DaemonSet", func(ctx SpecContext) {
-						Eventually(func(g Gomega) {
-							daemonset := &appsv1.DaemonSet{}
-							g.Expect(cl.Get(ctx, kube.Key("istio-cni-node", istioCniNamespace), daemonset)).To(Succeed(), "Error getting IstioCNI DaemonSet")
-							g.Expect(daemonset.Status.NumberAvailable).
-								To(Equal(daemonset.Status.CurrentNumberScheduled), "CNI DaemonSet Pods not Available; expected numberAvailable to be equal to currentNumberScheduled")
-						}).Should(Succeed(), "CNI DaemonSet Pods are not Available")
-						Success("CNI DaemonSet is deployed in the namespace and Running")
-					})
+						It("deploys the CNI DaemonSet", func(ctx SpecContext) {
+							Eventually(func(g Gomega) {
+								daemonset := &appsv1.DaemonSet{}
+								g.Expect(cl.Get(ctx, kube.Key("istio-cni-node", istioCniNamespace), daemonset)).To(Succeed(), "Error getting IstioCNI DaemonSet")
+								g.Expect(daemonset.Status.NumberAvailable).
+									To(Equal(daemonset.Status.CurrentNumberScheduled), "CNI DaemonSet Pods not Available; expected numberAvailable to be equal to currentNumberScheduled")
+							}).Should(Succeed(), "CNI DaemonSet Pods are not Available")
+							Success("CNI DaemonSet is deployed in the namespace and Running")
+						})
 
-					It("uses the correct image", func(ctx SpecContext) {
-						Expect(common.GetObject(ctx, cl, kube.Key("istio-cni-node", istioCniNamespace), &appsv1.DaemonSet{})).
-							To(HaveContainersThat(HaveEach(ImageFromRegistry(expectedRegistry))))
-					})
+						It("uses the correct image", func(ctx SpecContext) {
+							Expect(common.GetObject(ctx, cl, kube.Key("istio-cni-node", istioCniNamespace), &appsv1.DaemonSet{})).
+								To(HaveContainersThat(HaveEach(ImageFromRegistry(expectedRegistry))))
+						})
 
-					It("updates the status to Reconciled", func(ctx SpecContext) {
-						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioCniName), &v1.IstioCNI{}).
-							Should(HaveCondition(v1.IstioCNIConditionReconciled, metav1.ConditionTrue), "IstioCNI is not Reconciled; unexpected Condition")
-						Success("IstioCNI is Reconciled")
-					})
+						It("updates the status to Reconciled", func(ctx SpecContext) {
+							Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioCniName), &v1.IstioCNI{}).
+								Should(HaveCondition(v1.IstioCNIConditionReconciled, metav1.ConditionTrue), "IstioCNI is not Reconciled; unexpected Condition")
+							Success("IstioCNI is Reconciled")
+						})
 
-					It("updates the status to Ready", func(ctx SpecContext) {
-						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioCniName), &v1.IstioCNI{}).
-							Should(HaveCondition(v1.IstioCNIConditionReady, metav1.ConditionTrue), "IstioCNI is not Ready; unexpected Condition")
-						Success("IstioCNI is Ready")
-					})
+						It("updates the status to Ready", func(ctx SpecContext) {
+							Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioCniName), &v1.IstioCNI{}).
+								Should(HaveCondition(v1.IstioCNIConditionReady, metav1.ConditionTrue), "IstioCNI is not Ready; unexpected Condition")
+							Success("IstioCNI is Ready")
+						})
 
-					It("doesn't continuously reconcile the IstioCNI CR", func() {
-						Eventually(k.WithNamespace(namespace).Logs).WithArguments("deploy/"+deploymentName, ptr.Of(30*time.Second)).
-							ShouldNot(ContainSubstring("Reconciliation done"), "IstioCNI is continuously reconciling")
-						Success("IstioCNI stopped reconciling")
-					})
+						It("doesn't continuously reconcile the IstioCNI CR", func() {
+							Eventually(k.WithNamespace(namespace).Logs).WithArguments("deploy/"+deploymentName, ptr.Of(30*time.Second)).
+								ShouldNot(ContainSubstring("Reconciliation done"), "IstioCNI is continuously reconciling")
+							Success("IstioCNI stopped reconciling")
+						})
+					} else {
+						Success("Skipping IstioCNI steps because, SKIP_CNI=true")
+					}
 				})
 
 				When("the Istio CR is created", func() {
@@ -260,19 +265,23 @@ spec:
 					})
 				})
 
-				When("the IstioCNI CR is deleted", func() {
-					BeforeEach(func() {
-						Expect(k.Delete("istiocni", istioCniName)).To(Succeed(), "IstioCNI CR failed to be deleted")
-						Success("IstioCNI deleted")
-					})
+				CNIWhen("the IstioCNI CR is deleted", func() {
+					if !skipCNI {
+						BeforeEach(func() {
+							Expect(k.Delete("istiocni", istioCniName)).To(Succeed(), "IstioCNI CR failed to be deleted")
+							Success("IstioCNI deleted")
+						})
 
-					It("removes everything from the CNI namespace", func(ctx SpecContext) {
-						daemonset := &appsv1.DaemonSet{}
-						Eventually(cl.Get).WithArguments(ctx, kube.Key("istio-cni-node", istioCniNamespace), daemonset).
-							Should(ReturnNotFoundError(), "IstioCNI DaemonSet should not exist anymore")
-						common.CheckNamespaceEmpty(ctx, cl, istioCniNamespace)
-						Success("CNI namespace is empty")
-					})
+						It("removes everything from the CNI namespace", func(ctx SpecContext) {
+							daemonset := &appsv1.DaemonSet{}
+							Eventually(cl.Get).WithArguments(ctx, kube.Key("istio-cni-node", istioCniNamespace), daemonset).
+								Should(ReturnNotFoundError(), "IstioCNI DaemonSet should not exist anymore")
+							common.CheckNamespaceEmpty(ctx, cl, istioCniNamespace)
+							Success("CNI namespace is empty")
+						})
+					} else {
+						Success("Skipping IstioCNI steps because, SKIP_CNI=true")
+					}
 				})
 			})
 		}
@@ -286,8 +295,10 @@ spec:
 			By("Cleaning up the Istio namespace")
 			Expect(k.DeleteNamespace(controlPlaneNamespace)).To(Succeed(), "Istio Namespace failed to be deleted")
 
-			By("Cleaning up the IstioCNI namespace")
-			Expect(k.DeleteNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI Namespace failed to be deleted")
+			if !skipCNI {
+				By("Cleaning up the IstioCNI namespace")
+				Expect(k.DeleteNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI Namespace failed to be deleted")
+			}
 
 			Success("Cleanup done")
 		})

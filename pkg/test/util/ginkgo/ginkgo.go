@@ -15,6 +15,7 @@
 package gutils
 
 import (
+	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	g "github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -39,4 +40,30 @@ func Log(a ...any) {
 
 func ReturnNotFoundError() types.GomegaMatcher {
 	return gomega.MatchError(errors.IsNotFound, "IsNotFound")
+}
+
+// skipCNI reads SKIP_CNI (default "false")
+func skipCNI() bool {
+	return env.GetBool("SKIP_CNI", false)
+}
+
+// CNIWhen behaves like When or PWhen if SKIP_CNI=true
+func CNIWhen(text string, body func()) {
+	if skipCNI() {
+		g.PWhen(text+" [CNI skipped]", body)
+	} else {
+		g.When(text, body)
+	}
+}
+
+// CNIDescribeTable behaves like DescribeTable or PDescribeTable if SKIP_CNI=true
+func CNIDescribeTable(args ...any) {
+	if skipCNI() {
+		if title, ok := args[0].(string); ok {
+			args[0] = title + " [CNI skipped]"
+		}
+		g.PDescribeTable(args[0].(string), args[1:]...)
+	} else {
+		g.DescribeTable(args[0].(string), args[1:]...)
+	}
 }
