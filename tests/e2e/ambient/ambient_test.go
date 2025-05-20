@@ -277,6 +277,10 @@ spec:
 					})
 
 					AfterAll(func(ctx SpecContext) {
+						if CurrentSpecReport().Failed() && keepOnFailure {
+							return
+						}
+
 						By("Deleting the pods")
 						Expect(k.DeleteNamespace(common.HttpbinNamespace, common.SleepNamespace)).
 							To(Succeed(), "Failed to delete namespaces")
@@ -334,6 +338,9 @@ spec:
 			if CurrentSpecReport().Failed() {
 				common.LogDebugInfo(common.Ambient, k)
 				debugInfoLogged = true
+				if keepOnFailure {
+					return
+				}
 			}
 
 			By("Cleaning up the Istio namespace")
@@ -348,9 +355,15 @@ spec:
 	})
 
 	AfterAll(func() {
-		if CurrentSpecReport().Failed() && !debugInfoLogged {
-			common.LogDebugInfo(common.Ambient, k)
-			debugInfoLogged = true
+		if CurrentSpecReport().Failed() {
+			if !debugInfoLogged {
+				common.LogDebugInfo(common.Ambient, k)
+				debugInfoLogged = true
+			}
+
+			if keepOnFailure {
+				return
+			}
 		}
 
 		if skipDeploy {
