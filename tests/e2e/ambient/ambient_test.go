@@ -56,7 +56,7 @@ var _ = Describe("Ambient configuration ", Label("smoke", "ambient"), Ordered, f
 		}
 
 		Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(deploymentName, operatorNamespace), &appsv1.Deployment{}).
-			Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
+			Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
 		Success("Operator is deployed in the namespace and Running")
 	})
 
@@ -144,19 +144,19 @@ spec:
 
 					It("updates the Istio CR status to Reconciled", func(ctx SpecContext) {
 						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioName), &v1.Istio{}).
-							Should(HaveCondition(v1.IstioConditionReconciled, metav1.ConditionTrue), "Istio is not Reconciled; unexpected Condition")
+							Should(HaveConditionStatus(v1.IstioConditionReconciled, metav1.ConditionTrue), "Istio is not Reconciled; unexpected Condition")
 						Success("Istio CR is Reconciled")
 					})
 
 					It("updates the Istio CR status to Ready", func(ctx SpecContext) {
 						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioName), &v1.Istio{}).
-							Should(HaveCondition(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready; unexpected Condition")
+							Should(HaveConditionStatus(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready; unexpected Condition")
 						Success("Istio CR is Ready")
 					})
 
 					It("deploys istiod", func(ctx SpecContext) {
 						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
-							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available; unexpected Condition")
+							Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available; unexpected Condition")
 						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
 						Success("Istiod is deployed in the namespace and Running")
 					})

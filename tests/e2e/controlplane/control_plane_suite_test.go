@@ -81,7 +81,7 @@ var _ = BeforeSuite(func(ctx SpecContext) {
 	}
 
 	Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
-		Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
+		Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
 	Success("Operator is deployed in the namespace and Running")
 })
 
