@@ -22,9 +22,9 @@ VERSIONS_YAML_PATH=${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}
 HELM_VALUES_FILE=${HELM_VALUES_FILE:-"chart/values.yaml"}
 
 function updateVersionsInIstioTypeComment() {
-    selectValues=$(yq '.versions[].name | ", \"urn:alm:descriptor:com.tectonic.ui:select:" + . + "\""' "${VERSIONS_YAML_PATH}" | tr -d '\n')
+    selectValues=$(yq '.versions[] | select (.eol != true) | .name | ", \"urn:alm:descriptor:com.tectonic.ui:select:" + . + "\""' "${VERSIONS_YAML_PATH}" | tr -d '\n')
     versionsEnum=$(yq '.versions[].name' "${VERSIONS_YAML_PATH}" | tr '\n' ';' | sed 's/;$//g')
-    versions=$(yq '.versions[].name' "${VERSIONS_YAML_PATH}" | tr '\n' ',' | sed -e 's/,/, /g' -e 's/, $//g')
+    versions=$(yq '.versions[] | select (.eol != true) | .name' "${VERSIONS_YAML_PATH}" | tr '\n' ',' | sed -e 's/,/, /g' -e 's/, $//g')
     defaultVersion=$(yq '.versions[1].name' "${VERSIONS_YAML_PATH}")
 
     sed -i -E \
@@ -35,9 +35,9 @@ function updateVersionsInIstioTypeComment() {
       -e "s/(\+kubebuilder:default=.*version: \")[^\"]*\"/\1$defaultVersion\"/g" \
       api/v1/istio_types.go api/v1/istiocni_types.go
     
-    cniSelectValues=$(yq '.versions[]| select(. | has("ref") | not) | .name | ", \"urn:alm:descriptor:com.tectonic.ui:select:" + . + "\""' "${VERSIONS_YAML_PATH}" | tr -d '\n')
-    cniVersionsEnum=$(yq '.versions[]| select(. | has("ref") | not) | .name' "${VERSIONS_YAML_PATH}" | tr '\n' ';' | sed 's/;$//g')
-    cniVersions=$(yq '.versions[]| select(. | has("ref") | not) | .name' "${VERSIONS_YAML_PATH}" | tr '\n' ',' | sed -e 's/,/, /g' -e 's/, $//g')
+    cniSelectValues=$(yq '.versions[] | select (.eol != true) | select(.ref == null) | .name | ", \"urn:alm:descriptor:com.tectonic.ui:select:" + . + "\""' "${VERSIONS_YAML_PATH}" | tr -d '\n')
+    cniVersionsEnum=$(yq '.versions[] | select (. | has("ref") | not) | .name' "${VERSIONS_YAML_PATH}" | tr '\n' ';' | sed 's/;$//g')
+    cniVersions=$(yq '.versions[] | select (.eol != true) | select(. | has("ref") | not) | .name' "${VERSIONS_YAML_PATH}" | tr '\n' ',' | sed -e 's/,/, /g' -e 's/, $//g')
 
 
     sed -i -E \
@@ -67,7 +67,7 @@ function updateVersionsInCSVDescription() {
     tmpFile=$(mktemp)
 
     # 1. generate version list from versions.yaml into temporary file
-    yq '.versions[].name' "${VERSIONS_YAML_PATH}" > "$tmpFile"
+    yq '.versions[] | select (.eol != true) | .name' "${VERSIONS_YAML_PATH}" > "$tmpFile"
 
     # 2. replace the version list in the CSV description
     awk '

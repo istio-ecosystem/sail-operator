@@ -183,7 +183,6 @@ function replaceDockerHubWithGcrIo() {
 function convertIstioProfiles() {
   # delete the minimal profile, because it ends up being empty after the conversion
   [ -f "${PROFILES_DIR}"/minimal.yaml ] && rm "${PROFILES_DIR}"/minimal.yaml
-
   # convert profiles
   for profile in "${PROFILES_DIR}"/*.yaml; do
     yq eval -i '.apiVersion="sailoperator.io/v1"
