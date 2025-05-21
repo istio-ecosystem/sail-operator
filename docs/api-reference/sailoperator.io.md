@@ -439,7 +439,6 @@ _Appears in:_
 | `ipFamilies` _string array_ | Defines which IP family to use for single stack or the order of IP families for dual-stack. Valid list items are "IPv4", "IPv6". More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services |  |  |
 | `ipFamilyPolicy` _string_ | Controls whether Services are configured to use IPv4, IPv6, or both. Valid options are PreferDualStack, RequireDualStack, and SingleStack. More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services |  |  |
 | `waypoint` _[WaypointConfig](#waypointconfig)_ | Specifies how waypoints are configured within Istio. |  |  |
-| `trustBundleName` _string_ | Select a custom name for istiod's CA Root Cert ConfigMap. |  |  |
 
 
 #### GlobalLoggingConfig

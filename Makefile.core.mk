@@ -527,14 +527,14 @@ RUNME ?= $(LOCALBIN)/runme
 
 ## Tool Versions
 OPERATOR_SDK_VERSION ?= v1.39.2
-HELM_VERSION ?= v3.17.3
+HELM_VERSION ?= v3.18.0
 CONTROLLER_TOOLS_VERSION ?= v0.18.0
 CONTROLLER_RUNTIME_BRANCH ?= release-0.20
-OPM_VERSION ?= v1.54.0
+OPM_VERSION ?= v1.55.0
 OLM_VERSION ?= v0.31.0
 GITLEAKS_VERSION ?= v8.26.0
 ISTIOCTL_VERSION ?= 1.26.0
-RUNME_VERSION ?= 3.13.2
+RUNME_VERSION ?= 3.14.0
 
 # GENERATE_RELATED_IMAGES defines whether `spec.relatedImages` is going to be generated or not
 # To disable set flag to false
