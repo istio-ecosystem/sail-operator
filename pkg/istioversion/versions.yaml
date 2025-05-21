@@ -157,16 +157,3 @@ versions:
     eol: true
   - name: v1.21.6
     eol: true
-  - name: master
-    ref: v1.27-alpha.9c6178f5
-  - name: v1.27-alpha.9c6178f5
-    version: 1.27-alpha.9c6178f51f674a609f0ce00cab2a37af596fdb65
-    repo: https://github.com/istio/istio
-    branch: master
-    commit: 9c6178f51f674a609f0ce00cab2a37af596fdb65
-    charts:
-      - https://storage.googleapis.com/istio-build/dev/1.27-alpha.9c6178f51f674a609f0ce00cab2a37af596fdb65/helm/base-1.27-alpha.9c6178f51f674a609f0ce00cab2a37af596fdb65.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.27-alpha.9c6178f51f674a609f0ce00cab2a37af596fdb65/helm/cni-1.27-alpha.9c6178f51f674a609f0ce00cab2a37af596fdb65.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.27-alpha.9c6178f51f674a609f0ce00cab2a37af596fdb65/helm/gateway-1.27-alpha.9c6178f51f674a609f0ce00cab2a37af596fdb65.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.27-alpha.9c6178f51f674a609f0ce00cab2a37af596fdb65/helm/istiod-1.27-alpha.9c6178f51f674a609f0ce00cab2a37af596fdb65.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.27-alpha.9c6178f51f674a609f0ce00cab2a37af596fdb65/helm/ztunnel-1.27-alpha.9c6178f51f674a609f0ce00cab2a37af596fdb65.tgz
