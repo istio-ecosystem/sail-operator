@@ -17,7 +17,7 @@ require (
 	github.com/magiconair/properties v1.8.9
 	github.com/onsi/ginkgo/v2 v2.23.4
 	github.com/onsi/gomega v1.37.0
-	github.com/prometheus/common v0.63.0
+	github.com/prometheus/common v0.64.0
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/mod v0.24.0
 	golang.org/x/text v0.25.0
@@ -25,13 +25,13 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.5.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.17.3
-	istio.io/client-go v1.26.0-alpha.0.0.20250513220412-76b4adc3bb6a
-	istio.io/istio v0.0.0-20250514172731-9c6178f51f67
-	k8s.io/api v0.33.0
-	k8s.io/apiextensions-apiserver v0.33.0
-	k8s.io/apimachinery v0.33.0
+	istio.io/client-go v1.26.0
+	istio.io/istio v0.0.0-20250506181944-c2e9871f340c
+	k8s.io/api v0.33.1
+	k8s.io/apiextensions-apiserver v0.33.1
+	k8s.io/apimachinery v0.33.1
 	k8s.io/cli-runtime v0.33.0
-	k8s.io/client-go v0.33.0
+	k8s.io/client-go v0.33.1
 	sigs.k8s.io/controller-runtime v0.20.4
 )
 
@@ -180,9 +180,9 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gotest.tools/v3 v3.5.1 // indirect
-	istio.io/api v1.26.0-alpha.0.0.20250513215813-a630cf092d71 // indirect
-	k8s.io/apiserver v0.33.0 // indirect
-	k8s.io/component-base v0.33.0 // indirect
+	istio.io/api v1.26.0 // indirect
+	k8s.io/apiserver v0.33.1 // indirect
+	k8s.io/component-base v0.33.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
 	k8s.io/kubectl v0.33.0 // indirect

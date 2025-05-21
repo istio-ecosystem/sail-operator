@@ -1257,10 +1257,6 @@ spec:
                                 type: string
                             type: object
                         type: object
-                      trustBundleName:
-                        description: Select a custom name for istiod's CA Root Cert
-                          ConfigMap.
-                        type: string
                       variant:
                         description: The variant of the Istio container images to
                           use. Options are "debug" or "distroless". Unset will use
