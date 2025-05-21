@@ -17,6 +17,7 @@ metadata:
     description: {{ .Values.csv.description }}
     operators.operatorframework.io/internal-objects: '["wasmplugins.extensions.istio.io","destinationrules.networking.istio.io","envoyfilters.networking.istio.io","gateways.networking.istio.io","proxyconfigs.networking.istio.io","serviceentries.networking.istio.io","sidecars.networking.istio.io","virtualservices.networking.istio.io","workloadentries.networking.istio.io","workloadgroups.networking.istio.io","authorizationpolicies.security.istio.io","peerauthentications.security.istio.io","requestauthentications.security.istio.io","telemetries.telemetry.istio.io"]'
     repository: https://github.com/istio-ecosystem/sail-operator
+    olm.skipRange: ">=1.0.0 <{{ .Values.csv.version }}"
     support: {{ .Values.csv.support }}
 {{- if .Values.csv.annotations }}
 {{- range $key, $val := .Values.csv.annotations }}
@@ -59,5 +60,6 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat, Inc.
+  replaces: {{ .Values.name }}.v{{ .Values.csv.replacesVersion }}
   version: {{ .Values.csv.version }}
 {{ end }}
