@@ -16,6 +16,8 @@ package istiovalues
 
 import (
 	_ "embed"
+	"fmt"
+	"strings"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
@@ -41,10 +43,68 @@ func MustParseVendorDefaultsYAML(defaultsYAML []byte) map[string]map[string]any 
 	return parsedDefaults
 }
 
-func ApplyVendorDefaults(version string, values *v1.Values) (*v1.Values, error) {
-	if len(vendorDefaults) == 0 {
-		return values, nil
+// ApplyIstioVendorDefaults applies vendor-specific default values to the provided
+// Istio configuration (*v1.Values) for a given Istio version.
+func ApplyIstioVendorDefaults(version string, values *v1.Values) (*v1.Values, error) {
+	// Convert the specific *v1.Values struct to a generic map[string]any
+	userHelmValues := helm.FromValues(values)
+
+	mergedHelmValues, err := applyVendorDefaultsForResourceType(version, v1.IstioKind, userHelmValues)
+	if err != nil {
+		return nil, fmt.Errorf("failed to apply vendor defaults for istio: %w", err)
 	}
-	mergedValues := helm.Values(mergeOverwrite(helm.FromValues(values), vendorDefaults[version]))
-	return helm.ToValues(mergedValues, &v1.Values{})
+
+	finalValues, err := helm.ToValues(mergedHelmValues, &v1.Values{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert merged values back to *v1.Values: %w", err)
+	}
+
+	return finalValues, nil
+}
+
+// ApplyIstioCNIVendorDefaults applies vendor-specific default values to the provided
+// Istio CNI configuration (*v1.CNIValues) for a given Istio version.
+func ApplyIstioCNIVendorDefaults(version string, values *v1.CNIValues) (*v1.CNIValues, error) {
+	// Convert the specific *v1.CNIValues struct to a generic map[string]any
+	userHelmValues := helm.FromValues(values)
+
+	mergedHelmValues, err := applyVendorDefaultsForResourceType(version, v1.IstioCNIKind, userHelmValues)
+	if err != nil {
+		return nil, fmt.Errorf("failed to apply vendor defaults for istiocni: %w", err)
+	}
+
+	finalValues, err := helm.ToValues(mergedHelmValues, &v1.CNIValues{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert merged values back to *v1.CNIValues: %w", err)
+	}
+
+	return finalValues, nil
+}
+
+// applyVendorDefaultsForResourceType retrieves defaults for
+// a given version and resourceType, current valid resources are: "istio" and "istiocni"
+// It returns the merged map and an error if the defaults are not found or malformed.
+// The userValuesMap is the 'base', and resource-specific defaults are 'overrides'.
+func applyVendorDefaultsForResourceType(version string, resourceType string, userValuesMap map[string]any) (map[string]any, error) {
+	if len(vendorDefaults) == 0 {
+		return userValuesMap, nil // No vendor defaults defined
+	}
+
+	versionSpecificDefaults, versionExists := vendorDefaults[version]
+	if !versionExists {
+		return userValuesMap, nil // No vendor defaults defined for this version
+	}
+
+	resourceSpecificDefaults, resourceExists := versionSpecificDefaults[strings.ToLower(resourceType)]
+	if !resourceExists {
+		return userValuesMap, nil // No vendor defaults defined for this resource type in this version
+	}
+
+	// Check if the resource-specific defaults are a map[string]any
+	resourceSpecificDefaultsMap, ok := resourceSpecificDefaults.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("vendor defaults for resource '%s' (version '%s') are not a map[string]any", resourceType, version)
+	}
+
+	return mergeOverwrite(userValuesMap, resourceSpecificDefaultsMap), nil
 }
