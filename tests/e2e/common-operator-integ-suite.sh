@@ -123,6 +123,8 @@ initialize_variables() {
   OPERATOR_SDK=${LOCALBIN}/operator-sdk
   IP_FAMILY=${IP_FAMILY:-ipv4}
   ISTIO_MANIFEST="chart/samples/istio-sample.yaml"
+  CUSTOM_ISTIO_SPECS="${CUSTOM_ISTIO_SPECS:-"{}"}"
+  CUSTOM_ISTIO_CNI_SPECS="${CUSTOM_ISTIO_CNI_SPECS:-"{}"}"
 
   # export to be sure that the variables are available in the subshell
   export IMAGE_BASE="${IMAGE_BASE:-sail-operator}"
@@ -190,7 +192,7 @@ if [ "${OCP}" == "true" ]; then
   HUB="image-registry.openshift-image-registry.svc:5000/sail-operator"
 fi
 
-export SKIP_DEPLOY IP_FAMILY ISTIO_MANIFEST NAMESPACE CONTROL_PLANE_NS DEPLOYMENT_NAME MULTICLUSTER ARTIFACTS ISTIO_NAME COMMAND KUBECONFIG ISTIOCTL_PATH
+export SKIP_DEPLOY IP_FAMILY ISTIO_MANIFEST NAMESPACE CONTROL_PLANE_NS DEPLOYMENT_NAME MULTICLUSTER ARTIFACTS ISTIO_NAME COMMAND KUBECONFIG ISTIOCTL_PATH CUSTOM_ISTIO_SPECS CUSTOM_ISTIO_CNI_SPECS
 
 # shellcheck disable=SC2086
 IMAGE="${HUB}/${IMAGE_BASE}:${TAG}" \

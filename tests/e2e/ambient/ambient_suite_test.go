@@ -17,6 +17,7 @@
 package ambient
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/env"
@@ -41,8 +42,12 @@ var (
 	skipDeploy            = env.GetBool("SKIP_DEPLOY", false)
 	expectedRegistry      = env.Get("EXPECTED_REGISTRY", "^docker\\.io|^gcr\\.io")
 	multicluster          = env.GetBool("MULTICLUSTER", false)
+	customIstioSpecs      = env.Get("CUSTOM_ISTIO_SPECS", "{}")
+	customIstioCNISpecs   = env.Get("CUSTOM_ISTIO_CNI_SPECS", "{}")
 
-	k kubectl.Kubectl
+	parsedCustomIstioSpecs    map[string]interface{}
+	parsedCustomIstioCNISpecs map[string]interface{}
+	k                         kubectl.Kubectl
 )
 
 func TestAmbient(t *testing.T) {
@@ -63,4 +68,12 @@ func setup() {
 	Expect(err).NotTo(HaveOccurred())
 
 	k = kubectl.New()
+
+	GinkgoWriter.Println("Parsing custom specs")
+	err := json.Unmarshal([]byte(customIstioSpecs), &parsedCustomIstioSpecs)
+	Expect(err).NotTo(HaveOccurred(), "Failed to parse custom Istio specs")
+	err = json.Unmarshal([]byte(customIstioCNISpecs), &parsedCustomIstioCNISpecs)
+	Expect(err).NotTo(HaveOccurred(), "Failed to parse custom Istio CNI specs")
+	GinkgoWriter.Println("Parsed custom Istio specs:", parsedCustomIstioSpecs)
+	GinkgoWriter.Println("Parsed custom Istio CNI specs:", parsedCustomIstioCNISpecs)
 }

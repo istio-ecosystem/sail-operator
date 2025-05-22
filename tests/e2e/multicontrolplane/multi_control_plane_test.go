@@ -72,6 +72,8 @@ spec:
   version: %s
   namespace: %s`
 			yaml = fmt.Sprintf(yaml, version, istioCniNamespace)
+			yaml, err = common.MergeSpecs(yaml, parsedCustomIstioCNISpecs)
+			Expect(err).NotTo(HaveOccurred(), "failed to merge IstioCNI specs")
 			Expect(k.CreateFromString(yaml)).To(Succeed(), "failed to create IstioCNI")
 			Success("IstioCNI created")
 
@@ -84,19 +86,23 @@ spec:
 			Entry("Mesh 1", istioName1, controlPlaneNamespace1),
 			Entry("Mesh 2", istioName2, controlPlaneNamespace2),
 			func(ctx SpecContext, name, ns string) {
-				Expect(k.CreateFromString(`
+				istioYAML := `
 apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
-  name: `+name+`
+  name: %s
 spec:
-  version: `+version+`
-  namespace: `+ns+`
+  version: %s
+  namespace: %s
   values:
     meshConfig:
       discoverySelectors:
       - matchLabels:
-          mesh: `+name)).To(Succeed(), "failed to create Istio CR")
+          mesh: %s`
+				istioYAML = fmt.Sprintf(istioYAML, name, version, ns, name)
+				istioYAML, err = common.MergeSpecs(istioYAML, parsedCustomIstioSpecs)
+				Expect(err).NotTo(HaveOccurred(), "failed to merge Istio specs")
+				Expect(k.CreateFromString(istioYAML)).To(Succeed(), "failed to create Istio CR")
 
 				Expect(k.CreateFromString(`
 apiVersion: security.istio.io/v1

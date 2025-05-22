@@ -19,6 +19,7 @@ package common
 import (
 	"context"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"path/filepath"
@@ -36,6 +37,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -407,4 +409,106 @@ func ResolveHostDomainToIP(hostDomain string) (string, error) {
 	}
 
 	return "", fmt.Errorf("failed to resolve hostname %s after %d retries: %w", hostDomain, maxRetries, lastErr)
+}
+
+// convertMapKeysToStrings recursively converts map[interface{}]interface{} keys to string keys.
+func convertMapKeysToStrings(in interface{}) interface{} {
+	switch in := in.(type) {
+	case map[interface{}]interface{}:
+		m := make(map[string]interface{})
+		for k, v := range in {
+			// Ensure key is a string before using it
+			strKey, ok := k.(string)
+			if !ok {
+				// Handle non-string keys if necessary, or skip/error
+				GinkgoWriter.Printf("WARNING: Non-string key found in YAML map: %v (type %T)", k, k)
+				continue
+			}
+			m[strKey] = convertMapKeysToStrings(v)
+		}
+		return m
+	case []interface{}:
+		for i, v := range in {
+			in[i] = convertMapKeysToStrings(v)
+		}
+		return in
+	default:
+		return in
+	}
+}
+
+// MergeSpecs is a generic function to merge the existing YAML with the new spec (customSpec).
+// It will replace or add new fields in the resource's spec, handling nested paths like "spec.values.cni.chained"
+func MergeSpecs(existingYaml string, customSpec map[string]interface{}) (string, error) { // customSpec should be a map here
+	// Parse the existing YAML into a map
+	var existingMapRaw interface{}
+	err := yaml.Unmarshal([]byte(existingYaml), &existingMapRaw)
+	if err != nil {
+		return "", fmt.Errorf("failed to unmarshal existing YAML: %v", err)
+	}
+
+	// Convert all map[interface{}]interface{} to map[string]interface{}
+	existingMapConverted := convertMapKeysToStrings(existingMapRaw)
+	existingMap, ok := existingMapConverted.(map[string]interface{})
+	if !ok {
+		return "", fmt.Errorf("expected top-level YAML to be a map, but got %T after conversion", existingMapConverted)
+	}
+
+	// Merge the new spec into the existing YAML
+	for key, value := range customSpec {
+		GinkgoWriter.Printf("Merging key: %s with value: %v (type: %T)", key, value, value)
+
+		keyParts := strings.Split(key, ".")
+		if err := mergeKey(existingMap, keyParts, value); err != nil {
+			return "", fmt.Errorf("failed to merge key '%s': %v", key, err)
+		}
+	}
+
+	// Marshal the updated map back into YAML
+	mergedYaml, err := yaml.Marshal(&existingMap)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal merged YAML: %v", err)
+	}
+	GinkgoWriter.Printf("Final Merged YAML:\n%s", string(mergedYaml))
+
+	return string(mergedYaml), nil
+}
+
+// mergeKey handles merging a key into a nested map structure based on the parts of the key
+func mergeKey(existingMap map[string]interface{}, keyParts []string, value interface{}) error {
+	log.Printf("DEBUG: mergeKey - Current existingMap: %+v, keyParts: %v, value: %v", existingMap, keyParts, value)
+
+	// Base case: If there are no more key parts, directly set the value
+	if len(keyParts) == 1 {
+		log.Printf("DEBUG: mergeKey - Base case: Setting existingMap[%s] = %v (type: %T)", keyParts[0], value, value)
+		existingMap[keyParts[0]] = value
+		return nil
+	}
+
+	// Recursive case: Drill deeper into the nested maps
+	firstKey := keyParts[0]
+	log.Printf("DEBUG: mergeKey - Recursing for firstKey: '%s'", firstKey)
+
+	// Ensure the next level is a map
+	currentVal, exists := existingMap[firstKey]
+	if !exists {
+		log.Printf("DEBUG: mergeKey - Key '%s' does not exist, creating new map.", firstKey)
+		existingMap[firstKey] = make(map[string]interface{})
+	} else {
+		// If it exists, ensure it's a map. If it's not, we can't merge into it.
+		// This assertion will now work correctly because convertMapKeysToStrings has run
+		_, ok := currentVal.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("expected a map at key '%s' but found type %T. Cannot merge '%s'", firstKey, currentVal, strings.Join(keyParts, "."))
+		}
+	}
+
+	nestedMap, ok := existingMap[firstKey].(map[string]interface{})
+	if !ok {
+		// This should ideally not be reached due to the check above, but good for safety
+		return fmt.Errorf("internal error: failed to assert type to map for key '%s'", firstKey)
+	}
+
+	// Recurse with the remaining key parts
+	return mergeKey(nestedMap, keyParts[1:], value)
 }

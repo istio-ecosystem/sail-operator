@@ -90,6 +90,8 @@ spec:
   version: %s
   namespace: %s`
 						cniYAML = fmt.Sprintf(cniYAML, version.Name, istioCniNamespace)
+						cniYAML, err = common.MergeSpecs(cniYAML, parsedCustomIstioCNISpecs)
+						Expect(err).NotTo(HaveOccurred(), "Failed to parse custom Istio CNI specs")
 						Log("IstioCNI YAML:", cniYAML)
 						Expect(k.CreateFromString(cniYAML)).To(Succeed(), "IstioCNI creation failed")
 						Success("IstioCNI created")
@@ -136,6 +138,8 @@ spec:
   version: %s
   namespace: %s`
 						istioYAML = fmt.Sprintf(istioYAML, version.Name, controlPlaneNamespace)
+						istioYAML, err = common.MergeSpecs(istioYAML, parsedCustomIstioSpecs)
+						Expect(err).NotTo(HaveOccurred(), "Failed to parse custom Istio specs")
 						Log("Istio YAML:", istioYAML)
 						Expect(k.CreateFromString(istioYAML)).
 							To(Succeed(), "Istio CR failed to be created")

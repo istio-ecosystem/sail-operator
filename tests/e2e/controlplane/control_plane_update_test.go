@@ -63,6 +63,8 @@ spec:
   version: %s
   namespace: %s`
 				yaml = fmt.Sprintf(yaml, istioversion.Base, istioCniNamespace)
+				yaml, err = common.MergeSpecs(yaml, parsedCustomIstioCNISpecs)
+				Expect(err).NotTo(HaveOccurred(), "Error merging IstioCNI specs")
 				Log("IstioCNI YAML:", indent(yaml))
 				Expect(k.CreateFromString(yaml)).To(Succeed(), "IstioCNI creation failed")
 				Success("IstioCNI created")
@@ -86,6 +88,8 @@ spec:
     type: RevisionBased
     inactiveRevisionDeletionGracePeriodSeconds: 30`
 					istioYAML = fmt.Sprintf(istioYAML, istioversion.Base, controlPlaneNamespace)
+					istioYAML, err = common.MergeSpecs(istioYAML, parsedCustomIstioSpecs)
+					Expect(err).NotTo(HaveOccurred(), "Error merging Istio specs")
 					Log("Istio YAML:", indent(istioYAML))
 					Expect(k.CreateFromString(istioYAML)).
 						To(Succeed(), "Istio CR failed to be created")

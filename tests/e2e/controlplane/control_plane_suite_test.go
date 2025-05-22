@@ -17,6 +17,7 @@
 package controlplane
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/env"
@@ -47,8 +48,12 @@ var (
 	sampleNamespace       = env.Get("SAMPLE_NAMESPACE", "sample")
 	multicluster          = env.GetBool("MULTICLUSTER", false)
 	ipFamily              = env.Get("IP_FAMILY", "ipv4")
+	customIstioSpecs      = env.Get("CUSTOM_ISTIO_SPECS", "{}")
+	customIstioCNISpecs   = env.Get("CUSTOM_ISTIO_CNI_SPECS", "{}")
 
-	k kubectl.Kubectl
+	parsedCustomIstioSpecs    map[string]interface{}
+	parsedCustomIstioCNISpecs map[string]interface{}
+	k                         kubectl.Kubectl
 )
 
 func TestControlPlane(t *testing.T) {
@@ -68,6 +73,15 @@ func setup() {
 	Expect(err).NotTo(HaveOccurred())
 
 	k = kubectl.New()
+
+	GinkgoWriter.Println("Parsing custom specs")
+	err := json.Unmarshal([]byte(customIstioSpecs), &parsedCustomIstioSpecs)
+	Expect(err).NotTo(HaveOccurred(), "Failed to parse custom Istio specs")
+	err = json.Unmarshal([]byte(customIstioCNISpecs), &parsedCustomIstioCNISpecs)
+	Expect(err).NotTo(HaveOccurred(), "Failed to parse custom Istio CNI specs")
+	GinkgoWriter.Println("Parsed custom Istio specs:", parsedCustomIstioSpecs)
+	GinkgoWriter.Println("Parsed custom Istio CNI specs:", parsedCustomIstioCNISpecs)
+
 }
 
 var _ = BeforeSuite(func(ctx SpecContext) {
