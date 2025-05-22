@@ -1,0 +1,58 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  creationTimestamp: null
+  labels:
+    app.kubernetes.io/component: sail-operator
+    app.kubernetes.io/created-by: sailoperator
+    app.kubernetes.io/instance: sail-operator
+    app.kubernetes.io/managed-by: helm
+    app.kubernetes.io/part-of: sailoperator
+    control-plane: sail-operator
+  name: sail-operator-network-policy
+spec:
+  podSelector:
+    matchLabels:
+      control-plane: sail-operator
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow any source to access metrics from RH Network Policy Recommendations Doc
+    - ports:
+        - protocol: TCP
+          port: 8443
+
+  egress:
+    # Allow egress to API Server from RH Network Policy Recommendations Doc
+    - ports:
+        - protocol: TCP
+          port: 6443
+
+    # DNS access - both OpenShift and Kubernetes variants
+    # OpenShift DNS access from RH Network Policy Recommendations Doc
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-dns
+          podSelector:
+            matchLabels:
+              dns.operator.openshift.io/daemonset-dns: default
+      ports:
+        - protocol: TCP
+          port: dns-tcp
+        - protocol: UDP
+          port: dns
+    # Kubernetes DNS access
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 53
