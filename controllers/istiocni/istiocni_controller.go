@@ -155,6 +155,9 @@ func (r *Reconciler) installHelmChart(ctx context.Context, cni *v1.IstioCNI) err
 
 	// apply vendor-specific default values
 	userValues, err = istiovalues.ApplyIstioCNIVendorDefaults(version, userValues)
+	if err != nil {
+		return fmt.Errorf("failed to apply vendor defaults: %w", err)
+	}
 
 	// apply userValues on top of defaultValues from profiles
 	mergedHelmValues, err := istiovalues.ApplyProfilesAndPlatform(
