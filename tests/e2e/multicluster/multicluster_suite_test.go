@@ -45,6 +45,7 @@ var (
 	image                         = env.Get("IMAGE", "quay.io/maistra-dev/sail-operator:latest")
 	skipDeploy                    = env.GetBool("SKIP_DEPLOY", false)
 	multicluster                  = env.GetBool("MULTICLUSTER", false)
+	keepOnFailure                 = env.GetBool("KEEP_ON_FAILURE", false)
 	kubeconfig                    = env.Get("KUBECONFIG", "")
 	kubeconfig2                   = env.Get("KUBECONFIG2", "")
 	artifacts                     = env.Get("ARTIFACTS", "/tmp/artifacts")

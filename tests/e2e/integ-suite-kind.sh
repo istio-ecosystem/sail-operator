@@ -24,6 +24,7 @@ export MULTICLUSTER="${MULTICLUSTER:-false}"
 export IP_FAMILY="${IP_FAMILY:-ipv4}"
 export ISTIOCTL="${ISTIOCTL:-${ROOT}/bin/istioctl}"
 export KIND_CLUSTER_NAME="${KIND_CLUSTER_NAME:-operator-integration-tests}"
+export KEEP_ON_FAILURE="${KEEP_ON_FAILURE:-}"
 
 function check_prerequisites() {
   if ! command -v "${ISTIOCTL}" &> /dev/null; then
@@ -41,6 +42,22 @@ function run_integration_tests() {
   fi
 }
 
+function keep_on_failure() {
+  if [ $? -eq 0 ]; then
+    original_trap="${original_trap#*\'}"
+    eval "${original_trap%\'*}"
+    exit 0
+  fi
+
+  KUBECONFIG="${ARTIFACTS}/config"
+  if [ "${MULTICLUSTER}" == "true" ]; then
+    printf -v KUBECONFIG '%s:' "${KUBECONFIGS[@]}"
+  fi
+
+  echo "The kind cluster has been kept due to a test failure."
+  echo "To access it use \`export KUBECONFIG=${KUBECONFIG%:}\`"
+}
+
 check_prerequisites
 
 source "${ROOT}/tests/e2e/setup/setup-kind.sh"
@@ -49,5 +66,10 @@ source "${ROOT}/tests/e2e/setup/setup-kind.sh"
 export HUB="${KIND_REGISTRY}"
 # Workaround make inside make: ovewrite this variable so it is not recomputed in Makefile.core.mk
 export IMAGE="${HUB}/${IMAGE_BASE:-sail-operator}:${TAG:-latest}"
+
+if [ "${KEEP_ON_FAILURE}" == "true" ]; then
+  original_trap="$(trap -p EXIT)"
+  trap keep_on_failure EXIT
+fi
 
 run_integration_tests

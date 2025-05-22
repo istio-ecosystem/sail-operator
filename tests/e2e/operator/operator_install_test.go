@@ -186,6 +186,10 @@ spec:
 		})
 
 		AfterAll(func() {
+			if CurrentSpecReport().Failed() && keepOnFailure {
+				return
+			}
+
 			Expect(k.DeleteNamespace(curlNamespace)).To(Succeed(), "failed to delete curl namespace")
 			exec.Command("kubectl", "delete", "--ignore-not-found", "clusterrolebinding", "metrics-reader-rolebinding").Run()
 
@@ -198,6 +202,9 @@ spec:
 	AfterAll(func() {
 		if CurrentSpecReport().Failed() {
 			common.LogDebugInfo(common.Operator, k)
+			if keepOnFailure {
+				return
+			}
 		}
 
 		if skipDeploy {

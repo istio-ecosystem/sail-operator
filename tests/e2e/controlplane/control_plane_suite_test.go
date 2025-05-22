@@ -46,6 +46,7 @@ var (
 	expectedRegistry      = env.Get("EXPECTED_REGISTRY", "^docker\\.io|^gcr\\.io")
 	sampleNamespace       = env.Get("SAMPLE_NAMESPACE", "sample")
 	multicluster          = env.GetBool("MULTICLUSTER", false)
+	keepOnFailure         = env.GetBool("KEEP_ON_FAILURE", false)
 	ipFamily              = env.Get("IP_FAMILY", "ipv4")
 
 	k kubectl.Kubectl

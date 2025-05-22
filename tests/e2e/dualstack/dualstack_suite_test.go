@@ -40,6 +40,7 @@ var (
 	skipDeploy            = env.GetBool("SKIP_DEPLOY", false)
 	expectedRegistry      = env.Get("EXPECTED_REGISTRY", "^docker\\.io|^gcr\\.io")
 	multicluster          = env.GetBool("MULTICLUSTER", false)
+	keepOnFailure         = env.GetBool("KEEP_ON_FAILURE", false)
 	ipFamily              = env.Get("IP_FAMILY", "ipv4")
 
 	k kubectl.Kubectl

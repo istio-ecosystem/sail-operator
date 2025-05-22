@@ -170,6 +170,10 @@ spec:
 	})
 
 	AfterAll(func() {
+		if CurrentSpecReport().Failed() && keepOnFailure {
+			return
+		}
+
 		By("Cleaning up the application namespaces")
 		Expect(k.DeleteNamespace(appNamespace1, appNamespace2a, appNamespace2b)).To(Succeed())
 
@@ -188,9 +192,15 @@ spec:
 	})
 
 	AfterAll(func() {
-		if CurrentSpecReport().Failed() && !debugInfoLogged {
-			common.LogDebugInfo(common.MultiControlPlane, k)
-			debugInfoLogged = true
+		if CurrentSpecReport().Failed() {
+			if !debugInfoLogged {
+				common.LogDebugInfo(common.MultiControlPlane, k)
+				debugInfoLogged = true
+			}
+
+			if keepOnFailure {
+				return
+			}
 		}
 
 		if skipDeploy {

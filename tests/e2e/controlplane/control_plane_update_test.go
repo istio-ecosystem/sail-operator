@@ -304,6 +304,9 @@ spec:
 				if CurrentSpecReport().Failed() {
 					common.LogDebugInfo(common.ControlPlane, k)
 					debugInfoLogged = true
+					if keepOnFailure {
+						return
+					}
 				}
 
 				By("Cleaning up sample namespace")
@@ -324,9 +327,15 @@ spec:
 		})
 
 		AfterAll(func() {
-			if CurrentSpecReport().Failed() && !debugInfoLogged {
-				common.LogDebugInfo(common.ControlPlane, k)
-				debugInfoLogged = true
+			if CurrentSpecReport().Failed() {
+				if !debugInfoLogged {
+					common.LogDebugInfo(common.ControlPlane, k)
+					debugInfoLogged = true
+
+					if keepOnFailure {
+						return
+					}
+				}
 			}
 		})
 	})

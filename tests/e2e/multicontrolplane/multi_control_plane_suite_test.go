@@ -47,6 +47,7 @@ var (
 	appNamespace2a         = env.Get("APP_NAMESPACE2A", "app2a")
 	appNamespace2b         = env.Get("APP_NAMESPACE2B", "app2b")
 	multicluster           = env.GetBool("MULTICLUSTER", false)
+	keepOnFailure          = env.GetBool("KEEP_ON_FAILURE", false)
 	ipFamily               = env.Get("IP_FAMILY", "ipv4")
 
 	k kubectl.Kubectl

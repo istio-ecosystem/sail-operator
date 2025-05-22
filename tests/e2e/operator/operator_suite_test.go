@@ -35,6 +35,7 @@ var (
 	deploymentName     = env.Get("DEPLOYMENT_NAME", "sail-operator")
 	serviceAccountName = deploymentName
 	multicluster       = env.GetBool("MULTICLUSTER", false)
+	keepOnFailure      = env.GetBool("KEEP_ON_FAILURE", false)
 	curlNamespace      = "curl-metrics"
 
 	k kubectl.Kubectl
