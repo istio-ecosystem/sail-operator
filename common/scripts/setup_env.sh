@@ -116,6 +116,21 @@ do
   unset -f "${f}"
 done
 
+# Remove variables with multiline values. They are also messing up the output of `env`.
+while IFS= read -r varname; do
+  # Skip variables with empty names
+  [ -z "$varname" ] && continue
+
+  # Get value using indirect expansion
+  val="${!varname}"
+
+  # Check if value contains a real newline
+  if [[ "$val" == *$'\n'* ]]; then
+    echo "Unsetting multi-line variable: $varname"
+    unset "$varname"
+  fi
+done < <(compgen -v)
+
 # Set conditional host mounts
 CONDITIONAL_HOST_MOUNTS="${CONDITIONAL_HOST_MOUNTS:-} "
 container_kubeconfig=''
