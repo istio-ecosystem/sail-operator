@@ -37,7 +37,7 @@ func ComputeValues(
 	userValues = istiovalues.ApplyDigests(version, userValues, config.Config)
 
 	// apply vendor-specific default values
-	userValues, err := istiovalues.ApplyVendorDefaults(version, userValues)
+	userValues, err := istiovalues.ApplyIstioVendorDefaults(version, userValues)
 	if err != nil {
 		return nil, fmt.Errorf("failed to apply vendor defaults: %w", err)
 	}

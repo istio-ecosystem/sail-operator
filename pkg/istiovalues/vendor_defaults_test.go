@@ -24,37 +24,57 @@ import (
 
 func TestApplyVendorDefaults(t *testing.T) {
 	testcases := []struct {
-		vendorDefaults string
-		version        string
-		preValues      *v1.Values
-		postValues     *v1.Values
-		err            error
+		vendorDefaults     string
+		version            string
+		istioPreValues     *v1.Values
+		istoPostValues     *v1.Values
+		istioCNIPreValues  *v1.CNIValues
+		istioCniPostValues *v1.CNIValues
+		err                error
 	}{
 		{
 			vendorDefaults: `
 v1.24.2:
-  pilot:
-    env:
-      someEnvVar: "true"
+  istio:
+    pilot:
+      env:
+        someEnvVar: "true"
+  istiocni:
+    cni:
+      cniConfDir: example/path
 `,
-			version:   "v1.24.2",
-			preValues: &v1.Values{},
-			postValues: &v1.Values{
+			version:           "v1.24.2",
+			istioPreValues:    &v1.Values{},
+			istioCNIPreValues: &v1.CNIValues{},
+			istoPostValues: &v1.Values{
 				Pilot: &v1.PilotConfig{
 					Env: map[string]string{
 						"someEnvVar": "true",
 					},
 				},
 			},
+			istioCniPostValues: &v1.CNIValues{
+				Cni: &v1.CNIConfig{
+					CniConfDir: StringPtr("example/path"),
+				},
+			},
 		},
 	}
 	for _, tc := range testcases {
 		vendorDefaults = MustParseVendorDefaultsYAML([]byte(tc.vendorDefaults))
-		result, err := ApplyVendorDefaults(tc.version, tc.preValues)
+		result, err := ApplyIstioVendorDefaults(tc.version, tc.istioPreValues)
 		if err != tc.err {
 			t.Errorf("unexpected error: %v, expected %v", err, tc.err)
 		}
-		if diff := cmp.Diff(tc.postValues, result); diff != "" {
+		if diff := cmp.Diff(tc.istoPostValues, result); diff != "" {
+			t.Errorf("unexpected merge result; diff (-expected, +actual):\n%v", diff)
+		}
+
+		resultCni, err := ApplyIstioCNIVendorDefaults(tc.version, tc.istioCNIPreValues)
+		if err != tc.err {
+			t.Errorf("unexpected error: %v, expected %v", err, tc.err)
+		}
+		if diff := cmp.Diff(tc.istioCniPostValues, resultCni); diff != "" {
 			t.Errorf("unexpected merge result; diff (-expected, +actual):\n%v", diff)
 		}
 	}
@@ -71,9 +91,14 @@ func TestValidateVendorDefaultsFile(t *testing.T) {
 	}
 
 	for version := range vendorDefaults {
-		_, err := ApplyVendorDefaults(version, &v1.Values{})
+		_, err := ApplyIstioVendorDefaults(version, &v1.Values{})
 		if err != nil {
 			t.Errorf("failed to parse vendor_defaults.yaml at version %s: %v", version, err)
 		}
 	}
+}
+
+// StringPtr returns a pointer to a string literal.
+func StringPtr(s string) *string {
+	return &s
 }
