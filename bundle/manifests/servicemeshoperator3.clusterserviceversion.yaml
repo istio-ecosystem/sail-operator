@@ -33,11 +33,11 @@ metadata:
       ]
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
-    containerImage: quay.io/sail-dev/sail-operator:1.27-latest
-    createdAt: "2025-05-21T16:54:39Z"
-    description: The Sail Operator manages the lifecycle of your Istio control plane.
-      It provides custom resources for you to deploy and manage your control plane
-      components.
+    containerImage: quay.io/maistra-dev/sail-operator:3.0-latest
+    createdAt: "2025-05-22T09:09:48Z"
+    description: The OpenShift Service Mesh Operator enables you to install, configure,
+      and manage an instance of Red Hat OpenShift Service Mesh. OpenShift Service
+      Mesh is based on the open source Istio project.
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
     features.operators.openshift.io/csi: "false"
@@ -392,7 +392,7 @@ spec:
         path: values
       version: v1alpha1
   description: |-
-    The Sail Operator manages the lifecycle of your Istio control plane. It provides custom resources for you to deploy and manage your control plane components.
+    Red Hat OpenShift Service Mesh is a platform that provides behavioral insight and operational control over a service mesh, providing a uniform way to connect, secure, and monitor microservice applications.
 
     ### Overview
 
