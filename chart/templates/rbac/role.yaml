@@ -201,6 +201,7 @@ rules:
   - clusterroles
   - rolebindings
   - roles
+  - serviceaccount
   verbs:
   - '*'
 - apiGroups:
