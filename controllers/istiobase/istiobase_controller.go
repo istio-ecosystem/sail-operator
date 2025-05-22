@@ -205,7 +205,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&admissionv1.ValidatingWebhookConfiguration{}, eventHandler, builder.WithPredicates(validatingWebhookConfigPredicate(), managedByPredicate)).
 		Watches(&admissionv1.ValidatingAdmissionPolicy{}, eventHandler, builder.WithPredicates(managedByPredicate)).
 		Watches(&admissionv1.ValidatingAdmissionPolicyBinding{}, eventHandler, builder.WithPredicates(managedByPredicate)).
+		// +lint-watches:ignore: IstioRevision
 		Watches(&v1.IstioRevision{}, eventHandler).
+		// +lint-watches:ignore: IstioRevisionTag
 		Watches(&v1.IstioRevisionTag{}, eventHandler).
 		Complete(reconcile.Func(r.Reconcile))
 }
