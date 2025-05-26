@@ -29,7 +29,9 @@ If your Proposal includes work that has to be done in Istio, depending on the si
 Initially, SEPs will be stored in the enhancements/ directory of the sail-operator repository in Markdown format. We might migrate them to a separate repository later on.
 
 ### Creating a SEP
-Whenever somebody working on the Sail Operator identifies a feature that involves a lot of code and/or API changes, they should use [the template](./SEP0-template.md) to create a SEP in WIP state for it that captures the essence of the problem and a first draft of a design that will be used as a basis for discussion. Diagrams are often helpful when discussing complex issues; if your SEP makes use of them, they should be pushed to the [diagrams subdirectory](./diagrams/). Proof-of-Concept PRs are great too - make sure to link them in the SEP.
+Whenever somebody working on the Sail Operator identifies a feature that involves a lot of code and/or API changes, they should use [the template](./SEP0-template.md) to create a SEP in WIP state for it that captures the essence of the problem and a first draft of a design that will be used as a basis for discussion. As the SEP's number, use the GitHub issue #id of the respective feature, and make sure to link back to the SEP from the issue.
+
+Diagrams are often helpful when discussing complex issues; if your SEP makes use of them, they should be pushed to the [diagrams subdirectory](./diagrams/). Proof-of-Concept PRs are great too - make sure to link them in the SEP.
 
 If possible, team up with others to create the SEP!
 
@@ -53,3 +55,6 @@ We will start using this process ASAP. This SEP can stay in WIP state for a whil
 ## Test Plan
 
 N/A
+
+## Updates
+* 2025-05-26: updated SEP numbering to use GitHub issue number
