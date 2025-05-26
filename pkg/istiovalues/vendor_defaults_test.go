@@ -20,19 +20,24 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestApplyVendorDefaults(t *testing.T) {
 	testcases := []struct {
-		vendorDefaults     string
-		version            string
-		istioPreValues     *v1.Values
-		istoPostValues     *v1.Values
-		istioCNIPreValues  *v1.CNIValues
-		istioCniPostValues *v1.CNIValues
-		err                error
+		name                  string
+		vendorDefaults        string
+		version               string
+		istioPreValues        *v1.Values
+		istoPostValues        *v1.Values
+		istioCNIPreValues     *v1.CNIValues
+		istioCniPostValues    *v1.CNIValues
+		expectedIstioError    bool
+		expectedIstioCniError bool
+		expectedErrSubstring  string
 	}{
 		{
+			name: "adding custom values for both Istio and IstioCNI",
 			vendorDefaults: `
 v1.24.2:
   istio:
@@ -58,24 +63,150 @@ v1.24.2:
 					CniConfDir: StringPtr("example/path"),
 				},
 			},
+			expectedIstioError:    false,
+			expectedIstioCniError: false,
+			expectedErrSubstring:  "", // no error expected
+		},
+		{
+			name: "adding custom values for Istio only",
+			vendorDefaults: `
+v1.24.2:
+  istio:
+    pilot:
+      env:
+        someEnvVar: "true"
+`,
+			version:           "v1.24.2",
+			istioPreValues:    &v1.Values{},
+			istioCNIPreValues: &v1.CNIValues{},
+			istoPostValues: &v1.Values{
+				Pilot: &v1.PilotConfig{
+					Env: map[string]string{
+						"someEnvVar": "true",
+					},
+				},
+			},
+			istioCniPostValues:    &v1.CNIValues{},
+			expectedIstioError:    false,
+			expectedIstioCniError: false,
+			expectedErrSubstring:  "", // no error expected
+		},
+		{
+			name: "adding custom values for IstioCNI only",
+			vendorDefaults: `
+v1.24.2:
+  istiocni:
+    cni:
+      cniConfDir: example/path
+`,
+			version:           "v1.24.2",
+			istioPreValues:    &v1.Values{},
+			istioCNIPreValues: &v1.CNIValues{},
+			istoPostValues:    &v1.Values{},
+			istioCniPostValues: &v1.CNIValues{
+				Cni: &v1.CNIConfig{
+					CniConfDir: StringPtr("example/path"),
+				},
+			},
+			expectedIstioError:    false,
+			expectedIstioCniError: false,
+			expectedErrSubstring:  "", // no error expected
+		},
+		{
+			name: "empty vendor defaults",
+			vendorDefaults: `
+`, // empty vendor defaults
+			version:               "v1.24.2",
+			istioPreValues:        &v1.Values{},
+			istioCNIPreValues:     &v1.CNIValues{},
+			istoPostValues:        &v1.Values{},
+			istioCniPostValues:    &v1.CNIValues{},
+			expectedIstioError:    false,
+			expectedIstioCniError: false,
+			expectedErrSubstring:  "", // no error expected
+		},
+		{
+			name: "non-existent version",
+			vendorDefaults: `
+v1.24.2:
+  istio:
+    pilot:
+      env:
+        someEnvVar: "true"
+`,
+			version:               "v1.25.0", // version not in vendor defaults
+			istioPreValues:        &v1.Values{},
+			istioCNIPreValues:     &v1.CNIValues{},
+			istoPostValues:        &v1.Values{},
+			istioCniPostValues:    &v1.CNIValues{},
+			expectedIstioError:    false,
+			expectedIstioCniError: false,
+			expectedErrSubstring:  "", // no error expected
+		},
+		{
+			name: "invalid version format",
+			vendorDefaults: `
+v1.24.2:
+  istio:
+    pilot:
+      env:
+        someEnvVar: "true"
+`,
+			version:               "v1.24", // invalid version format
+			istioPreValues:        &v1.Values{},
+			istioCNIPreValues:     &v1.CNIValues{},
+			istoPostValues:        &v1.Values{},
+			istioCniPostValues:    &v1.CNIValues{},
+			expectedIstioError:    false,
+			expectedIstioCniError: false,
+			expectedErrSubstring:  "", // no error expected
+		},
+		{
+			name: "malformed vendor defaults",
+			vendorDefaults: `
+v1.24.2:
+  istio:
+    pilot: "env"
+`,
+			version:               "v1.24.2",
+			istioPreValues:        &v1.Values{},
+			istioCNIPreValues:     &v1.CNIValues{},
+			istoPostValues:        nil, // expect nil due to malformed defaults
+			istioCniPostValues:    &v1.CNIValues{},
+			expectedIstioError:    true,
+			expectedIstioCniError: false,
+			expectedErrSubstring:  "cannot unmarshal string into Go struct field Values.pilot", // expect a specific error for malformed defaults
 		},
 	}
 	for _, tc := range testcases {
 		vendorDefaults = MustParseVendorDefaultsYAML([]byte(tc.vendorDefaults))
-		result, err := ApplyIstioVendorDefaults(tc.version, tc.istioPreValues)
-		if err != tc.err {
-			t.Errorf("unexpected error: %v, expected %v", err, tc.err)
+
+		// Test Istio values
+		istioResult, istioErr := ApplyIstioVendorDefaults(tc.version, tc.istioPreValues)
+		if tc.expectedIstioError {
+			if assert.Error(t, istioErr, "expected an error for Istio on %s but got none", tc.name) {
+				assert.ErrorContains(t, istioErr, tc.expectedErrSubstring,
+					"Istio default values on %s should unwrap JSON-unmarshal errors", tc.name)
+			}
+		} else {
+			assert.NoError(t, istioErr, "unexpected error for Istio on %s: %v", tc.name, istioErr)
 		}
-		if diff := cmp.Diff(tc.istoPostValues, result); diff != "" {
-			t.Errorf("unexpected merge result; diff (-expected, +actual):\n%v", diff)
+		if diff := cmp.Diff(tc.istoPostValues, istioResult); diff != "" {
+			t.Errorf("unexpected Istio merge result; diff (-expected, +actual):\n%v", diff)
 		}
 
-		resultCni, err := ApplyIstioCNIVendorDefaults(tc.version, tc.istioCNIPreValues)
-		if err != tc.err {
-			t.Errorf("unexpected error: %v, expected %v", err, tc.err)
+		// Test IstioCNI values
+		cniResult, cniErr := ApplyIstioCNIVendorDefaults(tc.version, tc.istioCNIPreValues)
+		if tc.expectedIstioCniError {
+			if assert.Error(t, cniErr, "expected an error for IstioCNI on %s but got none", tc.name) {
+				assert.ErrorContains(t, cniErr, tc.expectedErrSubstring,
+					"IstioCNI default values on %s should unwrap JSON-unmarshal errors", tc.name)
+			}
+		} else {
+			assert.NoError(t, cniErr, "unexpected error for IstioCNI on %s: %v", tc.name, cniErr)
 		}
-		if diff := cmp.Diff(tc.istioCniPostValues, resultCni); diff != "" {
-			t.Errorf("unexpected merge result; diff (-expected, +actual):\n%v", diff)
+		if diff := cmp.Diff(tc.istioCniPostValues, cniResult); diff != "" {
+			t.Errorf("unexpected IstioCNI merge result; diff (-expected, +actual):\n%v", diff)
 		}
 	}
 }
