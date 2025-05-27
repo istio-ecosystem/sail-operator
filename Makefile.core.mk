@@ -523,6 +523,7 @@ GITLEAKS ?= $(LOCALBIN)/gitleaks
 OPM ?= $(LOCALBIN)/opm
 ISTIOCTL ?= $(LOCALBIN)/istioctl
 RUNME ?= $(LOCALBIN)/runme
+MISSPELL ?= $(LOCALBIN)/misspell
 
 ## Tool Versions
 OPERATOR_SDK_VERSION ?= v1.39.2
@@ -534,6 +535,7 @@ OLM_VERSION ?= v0.31.0
 GITLEAKS_VERSION ?= v8.26.0
 ISTIOCTL_VERSION ?= 1.26.0
 RUNME_VERSION ?= 3.13.2
+MISSPELL_VERSION ?= v0.3.4
 
 # GENERATE_RELATED_IMAGES defines whether `spec.relatedImages` is going to be generated or not
 # To disable set flag to false
@@ -720,8 +722,19 @@ lint-watches: ## Checks if the operator watches all resource kinds present in He
 lint-secrets: gitleaks ## Checks whether any secrets are present in the repository.
 	@${GITLEAKS} detect --no-git --redact -v
 
+.PHONY: lint-spell ## Run spell checker on the documentation files. Skipping sailoperator.io.md file.
+lint-spell: misspell
+	@echo "Get misspell from $(LOCALBIN)"
+	@echo "Running misspell on the documentation files"
+	@find $(REPO_ROOT)/docs -type f \( \( -name "*.md" -o -name "*.asciidoc" \) ! -name "*sailoperator.io.md" \) \
+	| xargs $(LOCALBIN)/misspell -error -locale US
+
+.PHONY: misspell
+misspell: $(LOCALBIN) ## Download misspell to bin directory.
+	@test -s $(LOCALBIN)/misspell || GOBIN=$(LOCALBIN) go install github.com/client9/misspell/cmd/misspell@$(MISSPEL_VERSION)
+
 .PHONY: lint
-lint: lint-scripts lint-licenses lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle lint-watches lint-secrets ## Run all linters.
+lint: lint-scripts lint-licenses lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle lint-watches lint-secrets lint-spell ## Run all linters.
 
 .PHONY: format
 format: format-go tidy-go ## Auto-format all code. This should be run before sending a PR.

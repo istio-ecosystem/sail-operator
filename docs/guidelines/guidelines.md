@@ -63,7 +63,7 @@ The script `update-docs-examples.sh` is going to run the following steps:
 To add a new topic to the automation workflow you need to:
 1. In your documentation topic, each bash code block that you want to execute as part of the automation must include the following pattern:
 - `bash { name=example-name tag=example-tag }`: the fields used here are:
-  - `name`: the name of the example step, this is usefull to identify the step in the output of the test. The name should be short and descriptive. For example: `deploy-operator`, `wait-operator`, etc.
+  - `name`: the name of the example step, this is useful to identify the step in the output of the test. The name should be short and descriptive. For example: `deploy-operator`, `wait-operator`, etc.
   - `tag`: the tag of the example that is going to be used to run the test, is important to be a unique name. This tag should be unique and should not be used in other examples. The tag can be used to run only a specific example inside a file.
 For example:
 

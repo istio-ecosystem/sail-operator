@@ -90,5 +90,9 @@ RUNME_LATEST_VERSION=$(getLatestVersion runmedev/runme)
 RUNME_LATEST_VERSION=${RUNME_LATEST_VERSION#v}
 sed -i "s|RUNME_VERSION ?= .*|RUNME_VERSION ?= ${RUNME_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
 
+# Update misspell
+MISSPELL_LATEST_VERSION=$(getLatestVersion client9/misspell)
+sed -i "s|MISSPELL_VERSION ?= .*|MISSPELL_VERSION ?= ${MISSPELL_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+
 # Regenerate files
 make update-istio gen

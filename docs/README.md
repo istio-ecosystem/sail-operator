@@ -2297,7 +2297,7 @@ kubectl wait -n bookinfo --for=condition=programmed gtw bookinfo-gateway
 
 ### Generate traffic and visualize your mesh
 
-Send traffic to the productpage service. Note that this command will run until cancelled.
+Send traffic to the productpage service. Note that this command will run until canceled.
 
 ```bash
 export INGRESS_HOST=$(kubectl get gtw bookinfo-gateway -n bookinfo -o jsonpath='{.status.addresses[0].value}')
