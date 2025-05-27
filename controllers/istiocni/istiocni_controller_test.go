@@ -22,6 +22,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
+	"github.com/istio-ecosystem/sail-operator/pkg/istiovalues"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	. "github.com/onsi/gomega"
@@ -33,6 +34,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"istio.io/istio/pkg/ptr"
+)
+
+var (
+	vendorDefaults map[string]map[string]any
 )
 
 func TestValidate(t *testing.T) {
@@ -450,6 +455,107 @@ func TestApplyImageDigests(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestIstioCNIvendorDefaults(t *testing.T) {
+	tests := []struct {
+		name               string
+		version            string
+		userValues         *v1.CNIValues
+		expected           *v1.CNIValues
+		vendorDefaultsYAML string
+		expectError        bool
+	}{
+		{
+			name:    "user user values and no vendor defaults",
+			version: "v1.24.2",
+			userValues: &v1.CNIValues{
+				Cni: &v1.CNIConfig{
+					CniConfDir: StringPtr("example/path"),
+				},
+			},
+			vendorDefaultsYAML: `
+`, // No vendor defaults provided
+			expected: &v1.CNIValues{
+				Cni: &v1.CNIConfig{
+					CniConfDir: StringPtr("example/path"),
+				},
+			},
+			expectError: false,
+		},
+		{
+			name:    "vendor default not override user values",
+			version: "v1.24.2",
+			userValues: &v1.CNIValues{
+				Cni: &v1.CNIConfig{
+					CniConfDir: StringPtr("example/path"),
+					Image:      StringPtr("custom/cni-image"),
+				},
+			},
+			vendorDefaultsYAML: `
+v1.24.2:
+  istiocni:
+    cni:
+      cniConfDir: example/path/vendor/path
+`, // Vendor defaults provided but should not override user values
+			expected: &v1.CNIValues{
+				Cni: &v1.CNIConfig{
+					CniConfDir: StringPtr("example/path"),
+					Image:      StringPtr("custom/cni-image"),
+				},
+			},
+			expectError: false,
+		},
+		{
+			name:    "merge vendor defaults with user values",
+			version: "v1.24.2",
+			userValues: &v1.CNIValues{
+				Cni: &v1.CNIConfig{
+					Image: StringPtr("custom/cni-image"),
+				},
+			},
+			vendorDefaultsYAML: `
+v1.24.2:
+  istiocni:
+    cni:
+      cniConfDir: example/path/vendor/path
+      image: vendor/cni-image
+`,
+			expected: &v1.CNIValues{
+				Cni: &v1.CNIConfig{
+					CniConfDir: StringPtr("example/path/vendor/path"),
+					Image:      StringPtr("vendor/cni-image"),
+				},
+			},
+			expectError: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			vendorDefaults = istiovalues.MustParseVendorDefaultsYAML([]byte(tt.vendorDefaultsYAML))
+
+			// Apply vendor defaults
+			istiovalues.OverrideVendorDefaults(vendorDefaults)
+			result, err := istiovalues.ApplyIstioCNIVendorDefaults(tt.version, tt.userValues)
+			if tt.expectError {
+				g.Expect(err).To(HaveOccurred())
+			} else {
+				g.Expect(err).ToNot(HaveOccurred())
+			}
+
+			// Check if the result matches the expected values
+			if diff := cmp.Diff(tt.expected, result); diff != "" {
+				t.Errorf("unexpected merge result; diff (-expected, +actual):\n%v", diff)
+			}
+		})
+	}
+}
+
+// StringPtr returns a pointer to a string literal.
+func StringPtr(s string) *string {
+	return &s
 }
 
 func TestDetermineStatus(t *testing.T) {
