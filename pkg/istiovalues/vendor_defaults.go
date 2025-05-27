@@ -43,6 +43,13 @@ func MustParseVendorDefaultsYAML(defaultsYAML []byte) map[string]map[string]any 
 	return parsedDefaults
 }
 
+// OverrideVendorDefaults allows tests to override the vendor defaults
+func OverrideVendorDefaults(defaults map[string]map[string]any) {
+	// Set the vendorDefaults to the provided defaults for testing purposes.
+	// This allows tests to override the defaults without modifying the original file.
+	vendorDefaults = defaults
+}
+
 // ApplyIstioVendorDefaults applies vendor-specific default values to the provided
 // Istio configuration (*v1.Values) for a given Istio version.
 func ApplyIstioVendorDefaults(version string, values *v1.Values) (*v1.Values, error) {
