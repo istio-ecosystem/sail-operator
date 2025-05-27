@@ -327,7 +327,7 @@ $ VERSIONS_YAML_FILE=path/to/your/versions.yaml SKIP_BUILD=true SKIP_DEPLOY=true
 ```
 
 ### Understanding the test output
-By default, if you run the test using the make target, it will be generated a `report.xml` file the root directoyry of the project. This file contains the test results in JUnit format. For example the file will contain the following:
+By default, running the test using the make target will generate a report.xml file in the project's root directory. This file contains the test results in JUnit format, for example:
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
   <testsuites tests="154" disabled="79" errors="0" failures="0" time="588.636386015">
