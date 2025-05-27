@@ -24,6 +24,7 @@ import (
 
 func TestApplyVendorDefaults(t *testing.T) {
 	testcases := []struct {
+		name           string
 		vendorDefaults string
 		version        string
 		preValues      *v1.Values
@@ -31,6 +32,7 @@ func TestApplyVendorDefaults(t *testing.T) {
 		err            error
 	}{
 		{
+			name: "no user values",
 			vendorDefaults: `
 v1.24.2:
   pilot:
@@ -46,6 +48,32 @@ v1.24.2:
 					},
 				},
 			},
+			err: nil,
+		},
+		{
+			name: "user values override vendor defaults",
+			vendorDefaults: `
+v1.24.2:
+  pilot:
+    env:
+      someEnvVar: "true"
+`,
+			version: "v1.24.2",
+			preValues: &v1.Values{
+				Pilot: &v1.PilotConfig{
+					Env: map[string]string{
+						"someEnvVar": "false",
+					},
+				},
+			},
+			postValues: &v1.Values{
+				Pilot: &v1.PilotConfig{
+					Env: map[string]string{
+						"someEnvVar": "false", // user value overrides vendor default
+					},
+				},
+			},
+			err: nil,
 		},
 	}
 	for _, tc := range testcases {
