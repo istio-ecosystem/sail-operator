@@ -731,7 +731,7 @@ lint-spell: misspell
 
 .PHONY: misspell
 misspell: $(LOCALBIN) ## Download misspell to bin directory.
-	@test -s $(LOCALBIN)/misspell || GOBIN=$(LOCALBIN) go install github.com/client9/misspell/cmd/misspell@$(MISSPEL_VERSION)
+	@test -s $(LOCALBIN)/misspell || GOBIN=$(LOCALBIN) go install github.com/client9/misspell/cmd/misspell@$(MISSPELL_VERSION)
 
 .PHONY: lint
 lint: lint-scripts lint-licenses lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle lint-watches lint-secrets lint-spell ## Run all linters.
