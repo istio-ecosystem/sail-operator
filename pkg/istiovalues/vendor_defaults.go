@@ -45,6 +45,6 @@ func ApplyVendorDefaults(version string, values *v1.Values) (*v1.Values, error) 
 	if len(vendorDefaults) == 0 {
 		return values, nil
 	}
-	mergedValues := helm.Values(mergeOverwrite(helm.FromValues(values), vendorDefaults[version]))
+	mergedValues := helm.Values(mergeOverwrite(vendorDefaults[version], helm.FromValues(values)))
 	return helm.ToValues(mergedValues, &v1.Values{})
 }
