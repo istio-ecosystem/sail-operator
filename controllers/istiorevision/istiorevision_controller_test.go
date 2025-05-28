@@ -537,6 +537,7 @@ func TestDetermineInUseCondition(t *testing.T) {
 		podLabels           map[string]string
 		podAnnotations      map[string]string
 		nsLabels            map[string]string
+		podPhase            corev1.PodPhase
 		enableAllNamespaces bool
 		interceptors        interceptor.Funcs
 		matchesRevision     string
@@ -553,6 +554,13 @@ func TestDetermineInUseCondition(t *testing.T) {
 		{
 			podAnnotations:  map[string]string{"istio.io/rev": "default"},
 			matchesRevision: "default",
+		},
+
+		// pod succeeded
+		{
+			podAnnotations:  map[string]string{"istio.io/rev": "default"},
+			podPhase:        corev1.PodSucceeded,
+			matchesRevision: "",
 		},
 
 		// namespace labels only
@@ -687,6 +695,9 @@ func TestDetermineInUseCondition(t *testing.T) {
 					nameBuilder.WriteString(k + ":" + v + ",")
 				}
 			}
+			if len(tc.podPhase) > 0 {
+				nameBuilder.WriteString("Phase:" + string(tc.podPhase) + ",")
+			}
 			name := strings.TrimSuffix(nameBuilder.String(), ",")
 
 			t.Run(name, func(t *testing.T) {
@@ -722,6 +733,9 @@ func TestDetermineInUseCondition(t *testing.T) {
 						Namespace:   namespace,
 						Labels:      tc.podLabels,
 						Annotations: tc.podAnnotations,
+					},
+					Status: corev1.PodStatus{
+						Phase: tc.podPhase,
 					},
 				}
 

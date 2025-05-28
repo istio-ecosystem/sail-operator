@@ -368,6 +368,9 @@ func (r *Reconciler) isRevisionTagReferencedByWorkloads(ctx context.Context, tag
 		return false, fmt.Errorf("failed to list pods: %w", err)
 	}
 	for _, pod := range podList.Items {
+		if pod.Status.Phase == corev1.PodSucceeded {
+			continue
+		}
 		if ns, found := nsMap[pod.Namespace]; found && podReferencesRevisionTag(pod, tag, ns) {
 			log.V(2).Info("RevisionTag is referenced by Pod", "Pod", client.ObjectKeyFromObject(&pod))
 			return true, nil

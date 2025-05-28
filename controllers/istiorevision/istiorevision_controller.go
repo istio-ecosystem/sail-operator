@@ -477,6 +477,9 @@ func (r *Reconciler) isRevisionReferenced(ctx context.Context, rev *v1.IstioRevi
 		return false, fmt.Errorf("failed to list pods: %w", err)
 	}
 	for _, pod := range podList.Items {
+		if pod.Status.Phase == corev1.PodSucceeded {
+			continue
+		}
 		if ns, found := nsMap[pod.Namespace]; found && podReferencesRevision(pod, ns, rev) {
 			log.V(2).Info("Revision is referenced by Pod", "Pod", client.ObjectKeyFromObject(&pod))
 			return true, nil
