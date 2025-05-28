@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
@@ -189,7 +190,7 @@ spec:
 		})
 
 		It("creates the network policy", func(ctx SpecContext) {
-			networkPolicyName := deploymentName + "-network-policy"
+			networkPolicyName := constants.NetworkPolicyName
 
 			var networkPolicy networkingv1.NetworkPolicy
 			Eventually(func() error {
