@@ -36,10 +36,6 @@ import (
 	"istio.io/istio/pkg/ptr"
 )
 
-var (
-	vendorDefaults map[string]map[string]any
-)
-
 func TestValidate(t *testing.T) {
 	cfg := newReconcilerTestConfig(t)
 
@@ -467,7 +463,7 @@ func TestIstioCNIvendorDefaults(t *testing.T) {
 		expectError        bool
 	}{
 		{
-			name:    "user user values and no vendor defaults",
+			name:    "user values and no vendor defaults",
 			version: "v1.24.2",
 			userValues: &v1.CNIValues{
 				Cni: &v1.CNIConfig{
@@ -524,17 +520,63 @@ v1.24.2:
 			expected: &v1.CNIValues{
 				Cni: &v1.CNIConfig{
 					CniConfDir: StringPtr("example/path/vendor/path"),
+					Image:      StringPtr("custom/cni-image"),
+				},
+			},
+			expectError: false,
+		},
+		{
+			name:       "apply vendor defaults with no user values",
+			version:    "v1.24.2",
+			userValues: &v1.CNIValues{},
+			vendorDefaultsYAML: `
+v1.24.2:
+  istiocni:
+    cni:
+      cniConfDir: example/path/vendor/path
+      image: vendor/cni-image
+`,
+			expected: &v1.CNIValues{
+				Cni: &v1.CNIConfig{
+					CniConfDir: StringPtr("example/path/vendor/path"),
 					Image:      StringPtr("vendor/cni-image"),
 				},
 			},
 			expectError: false,
+		},
+		{
+			name:       "non existing field",
+			version:    "v1.24.2",
+			userValues: &v1.CNIValues{},
+			vendorDefaultsYAML: `
+v1.24.2:
+  istiocni:
+    cni:
+      nonExistingField: example/path/vendor/path
+`, // A non-existing field in vendor defaults
+			expected: &v1.CNIValues{
+				Cni: &v1.CNIConfig{},
+			}, // Should not cause an error, but the field should not be present in the result
+			expectError: false,
+		},
+		{
+			name:       "malformed vendor defaults",
+			version:    "v1.24.2",
+			userValues: &v1.CNIValues{},
+			vendorDefaultsYAML: `
+v1.24.2:
+  istiocni:
+    cni: ""
+`, // Malformed vendor defaults (cni should be a map, not a string)
+			expected:    nil, // Expect an error due to malformed vendor defaults
+			expectError: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			vendorDefaults = istiovalues.MustParseVendorDefaultsYAML([]byte(tt.vendorDefaultsYAML))
+			vendorDefaults := istiovalues.MustParseVendorDefaultsYAML([]byte(tt.vendorDefaultsYAML))
 
 			// Apply vendor defaults
 			istiovalues.OverrideVendorDefaults(vendorDefaults)

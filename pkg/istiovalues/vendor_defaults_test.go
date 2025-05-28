@@ -177,6 +177,36 @@ v1.24.2:
 			expectedIstioCniError: false,
 			expectedErrSubstring:  "cannot unmarshal string into Go struct field Values.pilot", // expect a specific error for malformed defaults
 		},
+		{
+			name: "user values override vendor defaults",
+			vendorDefaults: `
+v1.24.2:
+  istio:
+    pilot:
+      env:
+        someEnvVar: "true"
+`,
+			version: "v1.24.2",
+			istioPreValues: &v1.Values{
+				Pilot: &v1.PilotConfig{
+					Env: map[string]string{
+						"someEnvVar": "false", // user value overrides vendor default
+					},
+				},
+			},
+			istioCNIPreValues: &v1.CNIValues{},
+			istoPostValues: &v1.Values{
+				Pilot: &v1.PilotConfig{
+					Env: map[string]string{
+						"someEnvVar": "false", // user value takes precedence
+					},
+				},
+			},
+			istioCniPostValues:    &v1.CNIValues{},
+			expectedIstioError:    false,
+			expectedIstioCniError: false,
+			expectedErrSubstring:  "", // no error expected
+		},
 	}
 	for _, tc := range testcases {
 		vendorDefaults = MustParseVendorDefaultsYAML([]byte(tc.vendorDefaults))
@@ -227,6 +257,39 @@ func TestValidateVendorDefaultsFile(t *testing.T) {
 			t.Errorf("failed to parse vendor_defaults.yaml at version %s: %v", version, err)
 		}
 	}
+}
+
+// OverrideVendorDefaults allows tests to override the vendor defaults
+func TestOverrideVendorDefaults(t *testing.T) {
+	// Create a copy of the original vendor defaults
+	originalDefaults := vendorDefaults
+
+	// Define new defaults to override
+	newDefaults := map[string]map[string]any{
+		"v1.24.2": {
+			"istio": map[string]any{
+				"pilot": map[string]any{
+					"env": map[string]string{
+						"newEnvVar": "true",
+					},
+				},
+			},
+			"istiocni": map[string]any{
+				"cni": map[string]any{
+					"cniConfDir": "new/path",
+				},
+			},
+		},
+	}
+
+	// Override the vendor defaults
+	OverrideVendorDefaults(newDefaults)
+
+	// Validate the override
+	assert.Equal(t, newDefaults, vendorDefaults, "Vendor defaults should be overridden")
+
+	// Restore the original defaults
+	vendorDefaults = originalDefaults
 }
 
 // StringPtr returns a pointer to a string literal.
