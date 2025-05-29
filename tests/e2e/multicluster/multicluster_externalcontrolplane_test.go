@@ -471,6 +471,9 @@ spec:
 					if CurrentSpecReport().Failed() {
 						common.LogDebugInfo(common.MultiCluster, k1, k2)
 						debugInfoLogged = true
+						if keepOnFailure {
+							return
+						}
 					}
 
 					// Delete namespaces to ensure clean up for new tests iteration
@@ -496,9 +499,15 @@ spec:
 	})
 
 	AfterAll(func(ctx SpecContext) {
-		if CurrentSpecReport().Failed() && !debugInfoLogged {
-			common.LogDebugInfo(common.MultiCluster, k1, k2)
-			debugInfoLogged = true
+		if CurrentSpecReport().Failed() {
+			if !debugInfoLogged {
+				common.LogDebugInfo(common.MultiCluster, k1, k2)
+				debugInfoLogged = true
+			}
+
+			if keepOnFailure {
+				return
+			}
 		}
 
 		// Delete the Sail Operator from both clusters
