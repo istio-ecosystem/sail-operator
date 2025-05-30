@@ -190,6 +190,12 @@ spec:
 		})
 
 		It("creates the network policy", func(ctx SpecContext) {
+			isOpenShift := isOpenShiftCluster()
+
+			if !isOpenShift {
+				Skip("Skipping NetworkPolicy test - not running on OpenShift platform")
+			}
+
 			networkPolicyName := constants.NetworkPolicyName
 
 			var networkPolicy networkingv1.NetworkPolicy
@@ -307,6 +313,15 @@ func extractCRDNames(crdList *apiextensionsv1.CustomResourceDefinitionList) []st
 		names = append(names, crd.ObjectMeta.Name)
 	}
 	return names
+}
+
+func isOpenShiftCluster() bool {
+	cmd := exec.Command("kubectl", "get", "clusterversions.config.openshift.io", "--no-headers", "--ignore-not-found")
+	output, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	return len(output) > 0
 }
 
 // serviceAccountToken returns a token for the specified service account in the given namespace.
