@@ -30,6 +30,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
+	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/version"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -159,6 +160,13 @@ func main() {
 
 	if reconcilerCfg.Platform == config.PlatformOpenShift {
 		reconcilerCfg.DefaultProfile = "openshift"
+
+		// Create NetworkPolicy for OpenShift platform (TODO: decide if we should create this for k8s)
+		// TODO: when OLM allows for bundling NetworkPolicies, switch to using that
+		setupLog.Info("OpenShift platform detected, creating NetworkPolicy")
+		if err = kube.CreateNetworkPolicy(cfg, operatorNamespace, reconcilerCfg.Platform); err != nil {
+			setupLog.Error(err, "unable to create NetworkPolicy")
+		}
 	} else {
 		reconcilerCfg.DefaultProfile = "default"
 	}
