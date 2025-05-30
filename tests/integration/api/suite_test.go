@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/istio-ecosystem/sail-operator/controllers/istio"
+	"github.com/istio-ecosystem/sail-operator/controllers/istiobase"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiocni"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiorevision"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiorevisiontag"
@@ -85,6 +86,7 @@ var _ = BeforeSuite(func() {
 	Expect(istio.NewReconciler(cfg, cl, scheme).SetupWithManager(mgr)).To(Succeed())
 	Expect(istiorevision.NewReconciler(cfg, cl, scheme, chartManager).SetupWithManager(mgr)).To(Succeed())
 	Expect(istiorevisiontag.NewReconciler(cfg, cl, scheme, chartManager).SetupWithManager(mgr)).To(Succeed())
+	Expect(istiobase.NewReconciler(cfg, cl, scheme, chartManager).SetupWithManager(mgr)).To(Succeed())
 	Expect(istiocni.NewReconciler(cfg, cl, scheme, chartManager).SetupWithManager(mgr)).To(Succeed())
 
 	// create new cancellable context
