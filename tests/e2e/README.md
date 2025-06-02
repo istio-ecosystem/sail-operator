@@ -274,7 +274,7 @@ $ SKIP_BUILD=true SKIP_DEPLOY=true GINKGO_FLAGS="-v --label-filter=smoke" make t
 ```
 
 #### Running with specific configuration for the Istio and IstioCNI resource
-It can be cases where you want to run the test with a specific configuration for the Istio and IstioCNI resource to match some cluster specific needs. For this, you can modify the `pkg/istiovalues/vendor_default.yaml`file to default `spec.values` for the Istio and IstioCNI resources. 
+There might be situations where you want to run tests with a specific configuration for the Istio and IstioCNI resource to match some cluster specific needs. For this, you can modify the `pkg/istiovalues/vendor_default.yaml`file to default `spec.values` for the Istio and IstioCNI resources. 
 
 This file will be used by the operator to set specific `spec.values` for the Istio and IstioCNI resources. Example:
 ```yaml
