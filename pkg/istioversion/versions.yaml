@@ -12,7 +12,17 @@
 # as well as all the Istio CRDs (e.g. VirtualService).
 versions:
   - name: v1.24-latest
-    ref: v1.24.5
+    ref: v1.24.6
+  - name: v1.24.6
+    version: 1.24.6
+    repo: https://github.com/istio/istio
+    commit: 1.24.6
+    charts:
+      - https://istio-release.storage.googleapis.com/charts/base-1.24.6.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-1.24.6.tgz
+      - https://istio-release.storage.googleapis.com/charts/gateway-1.24.6.tgz
+      - https://istio-release.storage.googleapis.com/charts/cni-1.24.6.tgz
+      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.24.6.tgz
   - name: v1.24.5
     version: 1.24.5
     repo: https://github.com/istio/istio

@@ -59,7 +59,7 @@ spec:
             default:
               namespace: ztunnel
               profile: ambient
-              version: v1.24.5
+              version: v1.24.6
             description: ZTunnelSpec defines the desired state of ZTunnel
             properties:
               namespace:
@@ -5485,12 +5485,13 @@ spec:
                     type: object
                 type: object
               version:
-                default: v1.24.5
+                default: v1.24.6
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.24-latest, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1.
+                  Must be one of: v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1.
                 enum:
                 - v1.24-latest
+                - v1.24.6
                 - v1.24.5
                 - v1.24.4
                 - v1.24.3
