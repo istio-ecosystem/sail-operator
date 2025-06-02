@@ -274,20 +274,7 @@ $ SKIP_BUILD=true SKIP_DEPLOY=true GINKGO_FLAGS="-v --label-filter=smoke" make t
 ```
 
 #### Running with specific configuration for the Istio and IstioCNI resource
-There might be situations where you want to run tests with a specific configuration for the Istio and IstioCNI resource to match some cluster specific needs. For this, you can modify the `pkg/istiovalues/vendor_default.yaml`file to default `spec.values` for the Istio and IstioCNI resources. 
-
-This file will be used by the operator to set specific `spec.values` for the Istio and IstioCNI resources. Example:
-```yaml
-v1.26.0:
-  istio:
-    pilot:
-      env:
-        test: "true"
-  istiocni:
-    cni:
-      cniConfDir: custom/cni/conf/dir
-```
-As you can see, for the `v1.26.0` version of Istio, we are setting the `test` environment variable to `true` for the `Istio` resource, and the `cniConfDir` to `custom/cni/conf/dir` for the `IstioCNI` resource. It's recommended that after you modify this file, you run the `make test` target to make sure that the structure of the file is correct and that the operator will be able to read it correctly.
+There might be situations where you want to run tests with a specific configuration for the Istio and IstioCNI resource to match some cluster specific needs. For this, you can modify the `pkg/istiovalues/vendor_default.yaml` file to default `spec.values` for the Istio and IstioCNI resources. For more information and an example go to the [file](pkg/istiovalues/vendor_default.yaml)
 
 #### Running the testing framework against specific Istio versions
 By default, the test framework will run the tests against all the latest patch minor version available for the operator. This is useful when you want to test the operator against all the latest patch minor versions available. The test framework will automatically detect the latest patch minor version available for the operator and run the tests against it by reading the versions located in the `pkg/istioversion/versions.yaml` file.
