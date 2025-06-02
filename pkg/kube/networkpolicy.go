@@ -16,6 +16,7 @@ package kube
 
 import (
 	"context"
+	"time"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
@@ -32,15 +33,16 @@ var log = ctrl.Log.WithName("netpol")
 
 // CreateNetworkPolicy creates a NetworkPolicy for the sail-operator during startup
 // Uses a direct clientset since this runs before the manager cache is started
-func CreateNetworkPolicy(cfg *rest.Config, namespace string, platform config.Platform) error {
+func CreateNetworkPolicy(ctx context.Context, cfg *rest.Config, namespace string, platform config.Platform) error {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
 	clientset, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		return err
 	}
 
 	networkPolicy := buildNetworkPolicy(namespace, platform)
-
-	ctx := context.Background()
 
 	_, err = clientset.NetworkingV1().NetworkPolicies(namespace).Get(ctx, networkPolicy.Name, metav1.GetOptions{})
 	if err != nil {

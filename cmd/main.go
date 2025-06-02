@@ -158,13 +158,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	ctx := ctrl.SetupSignalHandler()
+
 	if reconcilerCfg.Platform == config.PlatformOpenShift {
 		reconcilerCfg.DefaultProfile = "openshift"
 
 		// Create NetworkPolicy for OpenShift platform (TODO: decide if we should create this for k8s)
 		// TODO: when OLM allows for bundling NetworkPolicies, switch to using that
 		setupLog.Info("OpenShift platform detected, creating NetworkPolicy")
-		if err = kube.CreateNetworkPolicy(cfg, operatorNamespace, reconcilerCfg.Platform); err != nil {
+		if err = kube.CreateNetworkPolicy(ctx, cfg, operatorNamespace, reconcilerCfg.Platform); err != nil {
 			setupLog.Error(err, "unable to create NetworkPolicy")
 		}
 	} else {
@@ -224,7 +226,7 @@ func main() {
 	}
 
 	setupLog.Info("starting sail-operator manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running sail-operator manager")
 		os.Exit(1)
 	}
