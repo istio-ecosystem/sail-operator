@@ -11,7 +11,7 @@ replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.5
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/elastic/crd-ref-docs v0.1.0
-	github.com/go-logr/logr v1.4.2
+	github.com/go-logr/logr v1.4.3
 	github.com/google/go-cmp v0.7.0
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.4.0
 	github.com/magiconair/properties v1.8.9
@@ -25,14 +25,14 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.5.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.17.3
-	istio.io/client-go v1.26.0
-	istio.io/istio v0.0.0-20250506181944-c2e9871f340c
+	istio.io/client-go v1.26.1
+	istio.io/istio v0.0.0-20250527174434-2ce3ad897b98
 	k8s.io/api v0.33.1
 	k8s.io/apiextensions-apiserver v0.33.1
 	k8s.io/apimachinery v0.33.1
 	k8s.io/cli-runtime v0.33.0
 	k8s.io/client-go v0.33.1
-	sigs.k8s.io/controller-runtime v0.20.4
+	sigs.k8s.io/controller-runtime v0.21.0
 )
 
 require (
@@ -180,7 +180,7 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gotest.tools/v3 v3.5.1 // indirect
-	istio.io/api v1.26.0 // indirect
+	istio.io/api v1.26.1 // indirect
 	k8s.io/apiserver v0.33.1 // indirect
 	k8s.io/component-base v0.33.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
