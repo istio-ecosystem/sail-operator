@@ -22,6 +22,16 @@ OLD_VARS := $(.VARIABLES)
 VERSION ?= 1.27.0
 MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 
+# This version will be used to generate the OLM upgrade graph in the FBC as a version to be replaced by the new operator version defined in $VERSION.
+# This applies for stable releases, for nightly releases we are getting previous version directly from the FBC.
+# Currently we are pushing the operator to two operator hubs https://github.com/k8s-operatorhub/community-operators and
+# https://github.com/redhat-openshift-ecosystem/community-operators-prod. Nightly builds go only to community-operators-prod which already
+# supports FBC. FBC yaml files and kept in community-operators-prod repo and we only generate a PR with changes using make targets from this Makefile.
+# There are also GH workflows defined to release nightly and stable operators.
+# There is no need to define `replaces` and `skipRange` fields in the CSV as those fields are defined in the FBC and CSV values are ignored.
+# FBC is source of truth for OLM upgrade graph.
+PREVIOUS_VERSION ?= 1.26.0
+
 OPERATOR_NAME ?= sailoperator
 VERSIONS_YAML_DIR ?= pkg/istioversion
 VERSIONS_YAML_FILE ?= versions.yaml
@@ -89,6 +99,12 @@ DOCKER_BUILD_FLAGS ?= "--platform=$(TARGET_OS)/$(TARGET_ARCH)"
 
 GOTEST_FLAGS := $(if $(VERBOSE),-v) $(if $(COVERAGE),-coverprofile=$(REPO_ROOT)/out/coverage-unit.out)
 GINKGO_FLAGS ?= $(if $(VERBOSE),-v) $(if $(CI),--no-color) $(if $(COVERAGE),-coverprofile=coverage-integration.out -coverpkg=./... --output-dir=out)
+
+# Fail fast when keeping the environment on failure, to make sure we don't contaminate it with other resources. Also make sure to skip cleanup so it won't be deleted.
+ifeq ($(KEEP_ON_FAILURE),true)
+GINKGO_FLAGS += --fail-fast
+SKIP_CLEANUP = true
+endif
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -448,7 +464,7 @@ gen-charts: ## Pull charts from istio repository.
 gen: gen-all-except-bundle bundle ## Generate everything.
 
 .PHONY: gen-all-except-bundle
-gen-all-except-bundle: operator-name operator-chart controller-gen gen-api gen-charts gen-manifests gen-code gen-api-docs github-workflow update-docs-examples mirror-licenses
+gen-all-except-bundle: operator-name operator-chart controller-gen gen-api gen-charts gen-manifests gen-code gen-api-docs update-docs-examples mirror-licenses
 
 .PHONY: gen-check
 gen-check: gen restore-manifest-dates check-clean-repo ## Verify that changes in generated resources have been checked in.
@@ -493,9 +509,6 @@ operator-chart:
 	sed -i -e "s|^\(image: \).*$$|\1${IMAGE}|g" \
 	       -e "s/^\(  version: \).*$$/\1${VERSION}/g" chart/values.yaml
 
-github-workflow:
-	sed -i -e '1,/default:/ s/^\(.*default:\).*$$/\1 ${CHANNELS}/' .github/workflows/release.yaml
-
 .PHONY: update-istio
 update-istio: ## Update the Istio commit hash in the 'latest' entry in versions.yaml to the latest commit in the branch.
 	@hack/update-istio.sh
@@ -523,6 +536,7 @@ GITLEAKS ?= $(LOCALBIN)/gitleaks
 OPM ?= $(LOCALBIN)/opm
 ISTIOCTL ?= $(LOCALBIN)/istioctl
 RUNME ?= $(LOCALBIN)/runme
+MISSPELL ?= $(LOCALBIN)/misspell
 
 ## Tool Versions
 OPERATOR_SDK_VERSION ?= v1.39.2
@@ -534,6 +548,7 @@ OLM_VERSION ?= v0.31.0
 GITLEAKS_VERSION ?= v8.26.0
 ISTIOCTL_VERSION ?= 1.26.0
 RUNME_VERSION ?= 3.13.2
+MISSPELL_VERSION ?= v0.3.4
 
 # GENERATE_RELATED_IMAGES defines whether `spec.relatedImages` is going to be generated or not
 # To disable set flag to false
@@ -648,19 +663,24 @@ bundle-push: ## Push the bundle image.
 bundle-publish: ## Create a PR for publishing in OperatorHub.
 	@export GIT_USER=$(GITHUB_USER); \
 	export GITHUB_TOKEN=$(GITHUB_TOKEN); \
-	export OPERATOR_VERSION=$(OPERATOR_VERSION); \
+	export OPERATOR_VERSION=$(VERSION); \
 	export OPERATOR_NAME=$(OPERATOR_NAME); \
+	export CHANNELS=$(CHANNELS); \
+	export PREVIOUS_VERSION=$(PREVIOUS_VERSION); \
 	./hack/operatorhub/publish-bundle.sh
 
+## Generate nightly bundle.
 .PHONY: bundle-nightly
-bundle-nightly: VERSION:=$(VERSION)-nightly-$(TODAY)  ## Generate nightly bundle.
+bundle-nightly: VERSION:=$(VERSION)-nightly-$(TODAY)
 bundle-nightly: CHANNELS:=$(MINOR_VERSION)-nightly
 bundle-nightly: TAG=$(MINOR_VERSION)-nightly-$(TODAY)
 bundle-nightly: bundle
 
+## Publish nightly bundle.
 .PHONY: bundle-publish-nightly
-bundle-publish-nightly: OPERATOR_VERSION=$(VERSION)-nightly-$(TODAY)  ## Publish nightly bundle.
+bundle-publish-nightly: VERSION:=$(VERSION)-nightly-$(TODAY)
 bundle-publish-nightly: TAG=$(MINOR_VERSION)-nightly-$(TODAY)
+bundle-publish-nightly: CHANNELS:=$(MINOR_VERSION)-nightly
 bundle-publish-nightly: bundle-nightly bundle-publish
 
 .PHONY: helm-artifacts-publish
@@ -720,8 +740,19 @@ lint-watches: ## Checks if the operator watches all resource kinds present in He
 lint-secrets: gitleaks ## Checks whether any secrets are present in the repository.
 	@${GITLEAKS} detect --no-git --redact -v
 
+.PHONY: lint-spell ## Run spell checker on the documentation files. Skipping sailoperator.io.md file.
+lint-spell: misspell
+	@echo "Get misspell from $(LOCALBIN)"
+	@echo "Running misspell on the documentation files"
+	@find $(REPO_ROOT)/docs -type f \( \( -name "*.md" -o -name "*.asciidoc" \) ! -name "*sailoperator.io.md" \) \
+	| xargs $(LOCALBIN)/misspell -error -locale US
+
+.PHONY: misspell
+misspell: $(LOCALBIN) ## Download misspell to bin directory.
+	@test -s $(LOCALBIN)/misspell || GOBIN=$(LOCALBIN) go install github.com/client9/misspell/cmd/misspell@$(MISSPELL_VERSION)
+
 .PHONY: lint
-lint: lint-scripts lint-licenses lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle lint-watches lint-secrets ## Run all linters.
+lint: lint-scripts lint-licenses lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle lint-watches lint-secrets lint-spell ## Run all linters.
 
 .PHONY: format
 format: format-go tidy-go ## Auto-format all code. This should be run before sending a PR.
@@ -733,7 +764,7 @@ git-hook: gitleaks ## Installs gitleaks as a git pre-commit hook.
 		chmod +x .git/hooks/pre-commit; \
 	fi
 
-.SILENT: helm $(HELM) $(LOCALBIN) deploy-yaml gen-api operator-name operator-chart github-workflow
+.SILENT: helm $(HELM) $(LOCALBIN) deploy-yaml gen-api operator-name operator-chart
 
 COMMON_IMPORTS ?= mirror-licenses dump-licenses lint-all lint-licenses lint-scripts lint-copyright-banner lint-go lint-yaml lint-helm format-go tidy-go check-clean-repo update-common
 .PHONY: $(COMMON_IMPORTS)

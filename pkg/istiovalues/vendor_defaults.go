@@ -113,5 +113,5 @@ func applyVendorDefaultsForResourceType(version string, resourceType string, use
 		return nil, fmt.Errorf("vendor defaults for resource '%s' (version '%s') are not a map[string]any", resourceType, version)
 	}
 
-	return mergeOverwrite(userValuesMap, resourceSpecificDefaultsMap), nil
+	return mergeOverwrite(resourceSpecificDefaultsMap, userValuesMap), nil
 }
