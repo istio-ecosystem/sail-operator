@@ -22,6 +22,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
+	"github.com/istio-ecosystem/sail-operator/pkg/istiovalues"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	. "github.com/onsi/gomega"
@@ -450,6 +451,153 @@ func TestApplyImageDigests(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestIstioCNIvendorDefaults(t *testing.T) {
+	tests := []struct {
+		name               string
+		version            string
+		userValues         *v1.CNIValues
+		expected           *v1.CNIValues
+		vendorDefaultsYAML string
+		expectError        bool
+	}{
+		{
+			name:    "user values and no vendor defaults",
+			version: "v1.24.2",
+			userValues: &v1.CNIValues{
+				Cni: &v1.CNIConfig{
+					CniConfDir: StringPtr("example/path"),
+				},
+			},
+			vendorDefaultsYAML: `
+`, // No vendor defaults provided
+			expected: &v1.CNIValues{
+				Cni: &v1.CNIConfig{
+					CniConfDir: StringPtr("example/path"),
+				},
+			},
+			expectError: false,
+		},
+		{
+			name:    "vendor default not override user values",
+			version: "v1.24.2",
+			userValues: &v1.CNIValues{
+				Cni: &v1.CNIConfig{
+					CniConfDir: StringPtr("example/path"),
+					Image:      StringPtr("custom/cni-image"),
+				},
+			},
+			vendorDefaultsYAML: `
+v1.24.2:
+  istiocni:
+    cni:
+      cniConfDir: example/path/vendor/path
+`, // Vendor defaults provided but should not override user values
+			expected: &v1.CNIValues{
+				Cni: &v1.CNIConfig{
+					CniConfDir: StringPtr("example/path"),
+					Image:      StringPtr("custom/cni-image"),
+				},
+			},
+			expectError: false,
+		},
+		{
+			name:    "merge vendor defaults with user values",
+			version: "v1.24.2",
+			userValues: &v1.CNIValues{
+				Cni: &v1.CNIConfig{
+					Image: StringPtr("custom/cni-image"),
+				},
+			},
+			vendorDefaultsYAML: `
+v1.24.2:
+  istiocni:
+    cni:
+      cniConfDir: example/path/vendor/path
+      image: vendor/cni-image
+`,
+			expected: &v1.CNIValues{
+				Cni: &v1.CNIConfig{
+					CniConfDir: StringPtr("example/path/vendor/path"),
+					Image:      StringPtr("custom/cni-image"),
+				},
+			},
+			expectError: false,
+		},
+		{
+			name:       "apply vendor defaults with no user values",
+			version:    "v1.24.2",
+			userValues: &v1.CNIValues{},
+			vendorDefaultsYAML: `
+v1.24.2:
+  istiocni:
+    cni:
+      cniConfDir: example/path/vendor/path
+      image: vendor/cni-image
+`,
+			expected: &v1.CNIValues{
+				Cni: &v1.CNIConfig{
+					CniConfDir: StringPtr("example/path/vendor/path"),
+					Image:      StringPtr("vendor/cni-image"),
+				},
+			},
+			expectError: false,
+		},
+		{
+			name:       "non existing field",
+			version:    "v1.24.2",
+			userValues: &v1.CNIValues{},
+			vendorDefaultsYAML: `
+v1.24.2:
+  istiocni:
+    cni:
+      nonExistingField: example/path/vendor/path
+`, // A non-existing field in vendor defaults
+			expected: &v1.CNIValues{
+				Cni: &v1.CNIConfig{},
+			}, // Should not cause an error, but the field should not be present in the result
+			expectError: false,
+		},
+		{
+			name:       "malformed vendor defaults",
+			version:    "v1.24.2",
+			userValues: &v1.CNIValues{},
+			vendorDefaultsYAML: `
+v1.24.2:
+  istiocni:
+    cni: ""
+`, // Malformed vendor defaults (cni should be a map, not a string)
+			expected:    nil, // Expect an error due to malformed vendor defaults
+			expectError: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			vendorDefaults := istiovalues.MustParseVendorDefaultsYAML([]byte(tt.vendorDefaultsYAML))
+
+			// Apply vendor defaults
+			istiovalues.OverrideVendorDefaults(vendorDefaults)
+			result, err := istiovalues.ApplyIstioCNIVendorDefaults(tt.version, tt.userValues)
+			if tt.expectError {
+				g.Expect(err).To(HaveOccurred())
+			} else {
+				g.Expect(err).ToNot(HaveOccurred())
+			}
+
+			// Check if the result matches the expected values
+			if diff := cmp.Diff(tt.expected, result); diff != "" {
+				t.Errorf("unexpected merge result; diff (-expected, +actual):\n%v", diff)
+			}
+		})
+	}
+}
+
+// StringPtr returns a pointer to a string literal.
+func StringPtr(s string) *string {
+	return &s
 }
 
 func TestDetermineStatus(t *testing.T) {
