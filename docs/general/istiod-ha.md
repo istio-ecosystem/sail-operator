@@ -1,12 +1,12 @@
 # Running Istiod in HA mode
-Please follow this guide to run Istiod in HA mode. By default, istiod is deployed with replica count set to 1, to be able to run it in HA mode, you can achieve it in two different ways:
+By default, istiod is deployed with replica count set to 1, to be able to run it in HA mode, you can achieve it in two different ways:
 * Setting `replicaCount` to 2 or more in Istio resource and disabling autoscale (by default enabled).
 * Setting `autoscaleMin` to 2 or more in Istio resource and keeping `autoscaleMax` to 2 or more.
 
 Pros and Cons of each approach:
 - **Setting `replicaCount` to 2 or more**:
-  - Pros: Simplicity, easy to understand and manage. Since this approach disables Pod Disruption Budget (PDB), it is recommended for cluster with single node cluster or clusters with only one worker node.
-  - Cons: Fixed number of replicas, no autoscaling based on load.
+  - Pros: Simplicity, easy to understand and manage.
+  - Cons: Fixed number of replicas, no autoscaling based on load. For single-node clusters, you may need to disable the default Pod Disruption Budget (PDB) as outlined in the [Considerations for Single-Node Clusters ](#considerations-for-single-node-clusters) section.
 - **Setting `autoscaleMin` to 2 or more**:
   - Pros: Autoscaling based on load, can handle increased traffic without manual intervention, more efficient resource usage.
   - Cons: Requires monitoring to ensure proper scaling.
@@ -26,10 +26,6 @@ metadata:
   name: default
 spec:
   namespace: istio-system
-  values:
-    global:
-      defaultPodDisruptionBudget:
-        enabled: false # <-- disable default PDB
     pilot:
       autoscaleEnabled: false # <-- disable autoscaling
       replicaCount: 2   # <-- number of desired replicas
@@ -43,10 +39,6 @@ metadata:
   name: default
 spec:
   namespace: istio-system
-  values:
-    global:
-      defaultPodDisruptionBudget:
-        enabled: false # <-- disable default PDB
     pilot:
       autoscaleEnabled: false # <-- disable autoscaling
       replicaCount: 2   # <-- number of desired replicas
@@ -73,7 +65,6 @@ istiod-7c5947b8d7-ssnmt   1/1     Running   0          54m
 Let's break down the configuration:
 - `spec.values.pilot.replicaCount: 2`: This sets the number of Istiod replicas to 2 (or the desired value), enabling HA mode.
 - `spec.values.pilot.autoscaleEnabled: false`: This disables autoscaling, ensuring that the number of replicas remains fixed at 2 (or the desired value).
-- `spec.global.defaultPodDisruptionBudget.enabled: false`: This disables the default Pod Disruption Budget, which can cause issues with scaling in HA mode.
 
 ## Setting up Istiod in HA mode: using autoscaling
 To set up Istiod in HA mode using autoscaling, you can create/modify the Istio resource as follows:
@@ -125,3 +116,18 @@ Let's break down the configuration:
 - `spec.values.pilot.autoscaleMin: 2`: This sets the minimum number of Istiod replicas to 2, ensuring that there are always at least 2 replicas running.
 - `spec.values.pilot.autoscaleMax: 5`: This sets the maximum number of Istiod replicas to 5, allowing for scaling based on load.
 
+## Considerations for Single-Node Clusters
+For single-node clusters, it is crucial to disable the default Pod Disruption Budget (PDB) to prevent issues during node operations (e.g., draining) or scaling in HA mode. You can do this by adding the following configuration to your Istio resource:
+```yaml
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  namespace: istio-system
+  global:
+    defaultPodDisruptionBudget:
+      enabled: false # <-- disable default Pod Disruption Budget
+```
+
+`spec.global.defaultPodDisruptionBudget.enabled: false` disables the default Pod Disruption Budget for Istiod. In single-node clusters, a PDB can block operations such as node drains or pod evictions, as it prevents the number of available Istiod replicas from falling below the PDB's minimum desired count. Disabling it ensures smooth operations in this specific topology.
