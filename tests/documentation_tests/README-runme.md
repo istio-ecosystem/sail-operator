@@ -133,7 +133,8 @@ spec:
 As you can see in the YAML above, `IstioRevisionTag` really only has one field in its spec: `targetRef`. With this field, you can reference an `Istio` or `IstioRevision` resource. So after deploying this, you will be able to use both the `istio.io/rev=default` and also `istio-injection=enabled` labels to inject proxies into your workloads. The `istio-injection` label can only be used for revisions and revision tags named `default`, like the `IstioRevisionTag` in the above example.
 
 ### IstioCNI resource
-The lifecycle of Istio's CNI plugin is managed separately when using Sail Operator. To install it, you can create an `IstioCNI` resource. The `IstioCNI` resource is a cluster-wide resource as it will install a `DaemonSet` that will be operating on all nodes of your cluster. You can select a version by setting the `spec.version` field, as you can see in the sample below:
+
+The lifecycle of Istio's CNI plugin is managed separately when using Sail Operator. To install it, you can create an `IstioCNI` resource. The `IstioCNI` resource is a cluster-wide resource as it will install a `DaemonSet` that will be operating on all nodes of your cluster.
 
 ```yaml
 apiVersion: sailoperator.io/v1
@@ -149,7 +150,8 @@ spec:
       - kube-system
 ```
 
-Note: If you need a specific Istio version, you can explicitly set it using `spec.version`. If not specified, the Operator will install the latest supported version.
+> [!NOTE]
+> If you need a specific Istio version, you can explicitly set it using `spec.version`. If not specified, the Operator will install the latest supported version.
 
 #### Updating the IstioCNI resource
 Updates for the `IstioCNI` resource are `Inplace` updates, this means that the `DaemonSet` will be updated with the new version of the CNI plugin once the resource is updated and the `istio-cni-node` pods are going to be replaced with the new version. 
