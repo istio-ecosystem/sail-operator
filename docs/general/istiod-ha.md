@@ -26,6 +26,7 @@ metadata:
   name: default
 spec:
   namespace: istio-system
+  values:
     pilot:
       autoscaleEnabled: false # <-- disable autoscaling
       replicaCount: 2   # <-- number of desired replicas
@@ -39,6 +40,7 @@ metadata:
   name: default
 spec:
   namespace: istio-system
+  values:
     pilot:
       autoscaleEnabled: false # <-- disable autoscaling
       replicaCount: 2   # <-- number of desired replicas
