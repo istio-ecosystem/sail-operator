@@ -26,6 +26,7 @@ import (
 
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
@@ -60,7 +61,8 @@ var _ = Describe("Operator", Label("smoke", "operator"), Ordered, func() {
 	SetDefaultEventuallyPollingInterval(time.Second)
 
 	Describe("installation", func() {
-		BeforeAll(func() {
+		clr := cleaner.New(cl)
+		BeforeAll(func(ctx SpecContext) {
 			Expect(k.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
 
 			if skipDeploy {
@@ -69,6 +71,8 @@ var _ = Describe("Operator", Label("smoke", "operator"), Ordered, func() {
 				Expect(common.InstallOperatorViaHelm()).
 					To(Succeed(), "Operator failed to be deployed")
 			}
+
+			clr.Record(ctx)
 		})
 
 		It("deploys all the CRDs", func(ctx SpecContext) {
@@ -185,12 +189,12 @@ spec:
 			))
 		})
 
-		AfterAll(func() {
+		AfterAll(func(ctx SpecContext) {
 			if CurrentSpecReport().Failed() && keepOnFailure {
 				return
 			}
 
-			Expect(k.DeleteNamespace(curlNamespace)).To(Succeed(), "failed to delete curl namespace")
+			clr.Cleanup(ctx)
 			exec.Command("kubectl", "delete", "--ignore-not-found", "clusterrolebinding", "metrics-reader-rolebinding").Run()
 
 			if CurrentSpecReport().Failed() {

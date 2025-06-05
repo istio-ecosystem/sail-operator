@@ -25,6 +25,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
@@ -68,7 +69,9 @@ var _ = Describe("Ambient configuration ", Label("smoke", "ambient"), Ordered, f
 			}
 
 			Context(fmt.Sprintf("Istio version %s", version.Version), func() {
-				BeforeAll(func() {
+				clr := cleaner.New(cl)
+				BeforeAll(func(ctx SpecContext) {
+					clr.Record(ctx)
 					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
 					Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
 					Expect(k.CreateNamespace(ztunnelNamespace)).To(Succeed(), "ZTunnel namespace failed to be created")
@@ -275,17 +278,6 @@ spec:
 					It("can access the httpbin service from the sleep pod", func(ctx SpecContext) {
 						checkPodConnectivity(sleepPod.Items[0].Name, common.SleepNamespace, common.HttpbinNamespace)
 					})
-
-					AfterAll(func(ctx SpecContext) {
-						if CurrentSpecReport().Failed() && keepOnFailure {
-							return
-						}
-
-						By("Deleting the pods")
-						Expect(k.DeleteNamespace(common.HttpbinNamespace, common.SleepNamespace)).
-							To(Succeed(), "Failed to delete namespaces")
-						Success("Ambient validation pods deleted")
-					})
 				})
 
 				When("the Istio CR is deleted", func() {
@@ -331,6 +323,14 @@ spec:
 						Success("ztunnel namespace is empty")
 					})
 				})
+
+				AfterAll(func(ctx SpecContext) {
+					if CurrentSpecReport().Failed() && keepOnFailure {
+						return
+					}
+
+					clr.Cleanup(ctx)
+				})
 			})
 		}
 
@@ -338,19 +338,7 @@ spec:
 			if CurrentSpecReport().Failed() {
 				common.LogDebugInfo(common.Ambient, k)
 				debugInfoLogged = true
-				if keepOnFailure {
-					return
-				}
 			}
-
-			By("Cleaning up the Istio namespace")
-			Expect(k.DeleteNamespace(controlPlaneNamespace)).To(Succeed(), "Istio Namespace failed to be deleted")
-
-			By("Cleaning up the IstioCNI namespace")
-			Expect(k.DeleteNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI Namespace failed to be deleted")
-
-			By("Cleaning up the ZTunnel namespace")
-			Expect(k.DeleteNamespace(ztunnelNamespace)).To(Succeed(), "ZTunnel Namespace failed to be deleted")
 		})
 	})
 

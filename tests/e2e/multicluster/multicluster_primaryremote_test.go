@@ -27,6 +27,7 @@ import (
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/pkg/version"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/certs"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
@@ -42,6 +43,8 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 	debugInfoLogged := false
+	clr1 := cleaner.New(clPrimary, "cluster=primary")
+	clr2 := cleaner.New(clRemote, "cluster=remote")
 
 	BeforeAll(func(ctx SpecContext) {
 		if !skipDeploy {
@@ -65,6 +68,9 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 				Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
 			Success("Operator is deployed in the Remote namespace and Running")
 		}
+
+		clr1.Record(ctx)
+		clr2.Record(ctx)
 	})
 
 	Describe("Primary-Remote - Multi-Network configuration", func() {
@@ -374,23 +380,10 @@ spec:
 						}
 					}
 
-					// Delete namespaces to ensure clean up for new tests iteration
-					Expect(k1.DeleteNamespaceNoWait(istioCniNamespace)).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
-					Expect(k2.DeleteNamespaceNoWait(istioCniNamespace)).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
-					Expect(k1.DeleteNamespaceNoWait(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
-					Expect(k2.DeleteNamespaceNoWait(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
-					Expect(k1.DeleteNamespaceNoWait(sampleNamespace)).To(Succeed(), "Namespace failed to be deleted on Primary Cluster")
-					Expect(k2.DeleteNamespaceNoWait(sampleNamespace)).To(Succeed(), "Namespace failed to be deleted on Remote Cluster")
-
-					Expect(k1.WaitNamespaceDeleted(istioCniNamespace)).To(Succeed())
-					Expect(k2.WaitNamespaceDeleted(istioCniNamespace)).To(Succeed())
-					Expect(k1.WaitNamespaceDeleted(controlPlaneNamespace)).To(Succeed())
-					Expect(k2.WaitNamespaceDeleted(controlPlaneNamespace)).To(Succeed())
-					Success("ControlPlane and CNI Namespaces were deleted")
-
-					Expect(k1.WaitNamespaceDeleted(sampleNamespace)).To(Succeed())
-					Expect(k2.WaitNamespaceDeleted(sampleNamespace)).To(Succeed())
-					Success("Sample app is deleted in both clusters")
+					c1Deleted := clr1.CleanupNoWait(ctx)
+					c2Deleted := clr2.CleanupNoWait(ctx)
+					clr1.WaitForDeletion(ctx, c1Deleted)
+					clr2.WaitForDeletion(ctx, c2Deleted)
 
 					// Delete the resources created by istioctl create-remote-secret
 					Expect(k2.Delete("ClusterRoleBinding", "istiod-clusterrole-istio-system")).To(Succeed())
