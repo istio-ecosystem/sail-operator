@@ -665,7 +665,7 @@ bundle-publish: ## Create a PR for publishing in OperatorHub.
 	export GITHUB_TOKEN=$(GITHUB_TOKEN); \
 	export OPERATOR_VERSION=$(VERSION); \
 	export OPERATOR_NAME=$(OPERATOR_NAME); \
-	export CHANNELS=$(CHANNELS); \
+	export CHANNELS="$(CHANNELS)"; \
 	export PREVIOUS_VERSION=$(PREVIOUS_VERSION); \
 	./hack/operatorhub/publish-bundle.sh
 

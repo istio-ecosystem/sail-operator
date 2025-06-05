@@ -1,5 +1,5 @@
 #!/bin/bash
-# shellcheck disable=SC1091
+# shellcheck disable=SC1091,SC2001
 
 # Copyright Istio Authors
 #
@@ -123,10 +123,12 @@ then
   else
     LATEST_VERSION="${OPERATOR_NAME}.v${PREVIOUS_VERSION}"
   fi
+  # yaml linter in community-operators-prod CI is expecting a space after a comma
+  CHANNELS_SANITIZED=$(echo "${CHANNELS}" | sed 's/, */, /g')
   cat <<EOF > "${OPERATORS_DIR}/release-config.yaml"
 catalog_templates:
   - template_name: basic.yaml
-    channels: [${CHANNELS}]
+    channels: [${CHANNELS_SANITIZED}]
     replaces: ${LATEST_VERSION}
     skipRange: '>=1.0.0 <${OPERATOR_VERSION}'
 EOF
