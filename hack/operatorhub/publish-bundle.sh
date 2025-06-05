@@ -145,7 +145,7 @@ fi
 TITLE="operator ${OPERATOR_NAME} (${OPERATOR_VERSION})"
 skipInDryRun git add .
 skipInDryRun git commit -s -m"${TITLE}"
-skipInDryRun git push fork "${BRANCH}"
+skipInDryRun git push -f fork "${BRANCH}"
 
 PAYLOAD="${TMP_DIR}/PAYLOAD"
 
