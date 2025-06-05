@@ -46,6 +46,7 @@ jobs:
         make bundle
 
     - name: Publish bundle in operatorhub.io
+      continue-on-error: true
       run: |
         make bundle-publish \
           -e GIT_CONFIG_USER_NAME="$GIT_CONFIG_USER_NAME" \
