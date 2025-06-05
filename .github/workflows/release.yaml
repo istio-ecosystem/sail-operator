@@ -3,6 +3,9 @@ name: Release workflow
 on:
   workflow_dispatch:
     inputs:
+      run_name:
+        description: "Run name - short description for the workflow run"
+        required: true
       is_draft_release:
         description: "Draft release"
         type: boolean
@@ -14,7 +17,7 @@ on:
         required: false
         default: false
 
-run-name: Release ${{ inputs.release_version }}
+run-name: ${{ inputs.run_name }}
 
 env:
   GIT_USER: ${{ secrets.GIT_USER }}
