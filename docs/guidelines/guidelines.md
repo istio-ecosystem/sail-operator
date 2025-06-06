@@ -1,5 +1,22 @@
 [Return to Documentation Dir](../docs/README.md) # Path: docs/README.md
 
+# Table of Contents
+
+- [Documentation Guidelines](#documentation-guidelines)
+  - [Introduction](#introduction)
+  - [Documentation Structure](#documentation-structure)
+    - [Structure of the entire folder and new folders](#structure-of-the-entire-folder-and-new-folders)
+    - [Table of Contents](#table-of-contents)
+    - [Headings](#headings)
+    - [Formatting](#formatting)
+    - [Links](#links)
+    - [Images](#images)
+    - [Nomemclature](#nomemclature)
+    - [Examples](#examples)
+  - [Automated Testing over the Documentation](#automated-testing-over-the-documentation)
+    - [What does update-docs-examples.sh do?](#what-does-update-docs-examplessh-do?)
+    - [Adding a topic example to the automation workflow](#adding-a-topic-example-to-the-automation-workflow)
+
 # Documentation Guidelines
 
 ## Introduction

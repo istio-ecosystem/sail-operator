@@ -1,3 +1,13 @@
+[Return to Project Root](../README.md)
+
+# Table of Contents
+
+- [Running Istiod in HA mode](#running-istiod-in-ha-mode)
+  - [Prerequisites](#prerequisites)
+  - [Setting up Istiod in HA mode: increasing replicaCount](#setting-up-istiod-in-ha-mode-increasing-replicacount)
+  - [Setting up Istiod in HA mode: using autoscaling](#setting-up-istiod-in-ha-mode-using-autoscaling)
+  - [Considerations for Single-Node Clusters](#considerations-for-single-node-clusters)
+
 # Running Istiod in HA mode
 By default, istiod is deployed with replica count set to 1, to be able to run it in HA mode, you can achieve it in two different ways:
 * Setting `replicaCount` to 2 or more in Istio resource and disabling autoscale (by default enabled).

@@ -1,4 +1,21 @@
 
+[Return to Project Root](../README.md)
+
+# Table of Contents
+
+- [Introduction to Istio Ambient mode](#introduction-to-istio-ambient-mode)
+  - [Component version](#component-version)
+  - [Concepts](#concepts)
+    - [ZTunnel resource](#ztunnel-resource)
+    - [API Reference documentation](#api-reference-documentation)
+  - [Core features](#core-features)
+  - [Getting Started](#getting-started)
+    - [Installation on OpenShift](#installation-on-openshift)
+    - [Deploy a sample application](#deploy-a-sample-application)
+  - [Visualize the application using Kiali dashboard](#visualize-the-application-using-kiali-dashboard)
+  - [Troubleshoot issues](#troubleshoot-issues)
+  - [Cleanup](#cleanup)
+
 ## Introduction to Istio Ambient mode
 
 Ambient mesh was announced in September 2022 and reached a stable state in the Istio 1.24 release. It's core innovation is the separation of Layer 4 (L4) and Layer 7 (L7) processing into two distinct layers. It uses lightweight, shared L4 node proxies and optional L7 proxies, eliminating the need for traditional sidecar proxies in the data plane.
@@ -36,7 +53,7 @@ Note: If you need a specific Istio version, you can explicitly set it using `spe
 
 ### API Reference documentation
 
-The ZTunnel resource API reference documentation can be found [here](https://github.com/istio-ecosystem/sail-operator/blob/main/docs/api-reference/sailoperator.io.md#ztunnel).
+The ZTunnel resource API reference documentation can be found [here](../api-reference/sailoperator.io.md#ztunnel).
 
 ## Core features
 
@@ -56,7 +73,7 @@ The ZTunnel resource API reference documentation can be found [here](https://git
 
 *Steps*
 
-1. Install the Sail Operator using the CLI or through the web console. The steps can be found [here](https://github.com/istio-ecosystem/sail-operator/blob/main/docs/README.md#installation-on-openshift).
+1. Install the Sail Operator using the CLI or through the web console. The steps can be found [here](../general/getting-started.md#installation-on-openshift).
 
 2. Create the `istio-system` namespace and add a label `istio-discovery=enabled`.
 

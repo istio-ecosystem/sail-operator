@@ -1,3 +1,11 @@
+[Return to Project Root](../README.md)
+
+# Table of Contents
+
+- [Example documentation where the guidelines are followed](#example-documentation-where-the-guidelines-are-followed)
+  - [Runme Test: Installing the operator from the helm repo and creating a Istio resource](#runme-test-installing-the-operator-from-the-helm-repo-and-creating-a-istio-resource)
+    - [Setting a Istio resource](#setting-a-istio-resource)
+
 # Example documentation where the guidelines are followed
 This is an example doc where the guidelines are followed to achieve the best documentation possible. The doc is going to be used to test the automation workflow that is going to be used to run the tests over the documentation.
 
