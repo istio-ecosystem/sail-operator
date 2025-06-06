@@ -3,12 +3,11 @@
 # Table of Contents
 
 - [Observability Integrations](#observability-integrations)
-  - [Deploy Prometheus and Jaeger addons](#deploy-prometheus-and-jaeger-addons)
-    - [Scraping metrics using the OpenShift monitoring stack](#scraping-metrics-using-the-openshift-monitoring-stack)
-    - [Configure tracing with OpenShift distributed tracing](#configure-tracing-with-openshift-distributed-tracing)
-    - [Integrating with Kiali](#integrating-with-kiali)
-      - [Integrating Kiali with the OpenShift monitoring stack](#integrating-kiali-with-the-openshift-monitoring-stack)
-      - [Integrating Kiali with OpenShift Distributed Tracing](#integrating-kiali-with-openshift-distributed-tracing)
+  - [Scraping metrics using the OpenShift monitoring stack](#scraping-metrics-using-the-openshift-monitoring-stack)
+  - [Configure tracing with OpenShift distributed tracing](#configure-tracing-with-openshift-distributed-tracing)
+  - [Integrating with Kiali](#integrating-with-kiali)
+    - [Integrating Kiali with the OpenShift monitoring stack](#integrating-kiali-with-the-openshift-monitoring-stack)
+    - [Integrating Kiali with OpenShift Distributed Tracing](#integrating-kiali-with-openshift-distributed-tracing)
 
 ## Observability Integrations
 

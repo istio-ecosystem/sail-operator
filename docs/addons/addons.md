@@ -5,7 +5,7 @@
 - [Addons](#addons)
   - [Deploy Prometheus and Jaeger addons](#deploy-prometheus-and-jaeger-addons)
   - [Deploy Kiali addon](#deploy-kiali-addon)
-  - [Find the active revision of your Istio instance. In our case it is `test`.](#find-the-active-revision-of-your-istio-instance-in-our-case-it-is-test)
+  - [Find the active revision of your Istio instance. In our case it is `test`.](#find-the-active-revision-of-your-istio-instance)
   - [Deploy Gateway and Bookinfo](#deploy-gateway-and-bookinfo)
   - [Generate traffic and visualize your mesh](#generate-traffic-and-visualize-your-mesh)
 

@@ -4,7 +4,6 @@
 - [Introduction to Istio Waypoint Proxy](#introduction-to-istio-waypoint-proxy)
   - [Core features](#core-features)
   - [Getting Started](#getting-started)
-    - [Prerequisites](#prerequisites)
     - [Set up Istio Ambient Mode Resources and a Sample Application](#set-up-istio-ambient-mode-resources-and-a-sample-application)
     - [Deploy a Waypoint Proxy](#deploy-a-waypoint-proxy)
       - [Cross-namespace Waypoint](#cross-namespace-waypoint)

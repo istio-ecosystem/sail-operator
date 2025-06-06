@@ -1,4 +1,4 @@
-[Return to Documentation Dir](../docs/README.md) # Path: docs/README.md
+[Return to Project Root](../README.md)
 
 # Table of Contents
 
@@ -14,7 +14,7 @@
     - [Nomemclature](#nomemclature)
     - [Examples](#examples)
   - [Automated Testing over the Documentation](#automated-testing-over-the-documentation)
-    - [What does update-docs-examples.sh do?](#what-does-update-docs-examplessh-do?)
+    - [What does update-docs-examples.sh do?](#what-does-update-docs-examplessh-do)
     - [Adding a topic example to the automation workflow](#adding-a-topic-example-to-the-automation-workflow)
 
 # Documentation Guidelines
@@ -70,7 +70,7 @@ Any documentation step need to be tested to ensure that the steps are correct an
 - The `make update` target is going to run the script `tests/documentation_test/scripts/update-docs-examples.sh` that is going to generate the md modified files to run the test (For more information check next topic).
 - The `make test.docs` target is going to run the script `tests/documentation_test/scripts/run-docs-examples.sh` that is going to run the tests over the documentation files. This script is going to run all the steps in the examples marked following the guidelines explained in the next section.
 
-### What does update-docs-examples.sh do?
+### What does update-docs-examples.sh do
 The script `update-docs-examples.sh` is going to run the following steps:
 - Check all the md files in the `docs` folder and exclude from the list the files described inside the `EXCLUDE_FILES` variable and then copy all the files to the `tests/documentation_test/` folder that meets the criteria, check [Adding a topic example to the automation workflow](/docs/guidelines/guidelines.md#L62) section for more information about the criteria.
 - Once the files are copied into the destination path it checka those files to uncomment the bash commented steps. This bash commented code block are going to be hiden in the original md files but we will uncomment this code block to be able to run validation steps that wait for conditions an avoid flakiness of the test. This means that most of the validation steps will be commented code blocks, more information [here](/docs/guidelines/guidelines.md#L146).

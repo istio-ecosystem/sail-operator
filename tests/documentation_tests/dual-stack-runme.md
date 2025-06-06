@@ -6,8 +6,7 @@
   - [Prerequisites](#prerequisites)
   - [Installation Steps](#installation-steps)
   - [Validation](#validation)
-  - [Cleanup](#cleanup)
-
+  
 ## Dual-stack Support
 
 Kubernetes supports dual-stack networking as a stable feature starting from
