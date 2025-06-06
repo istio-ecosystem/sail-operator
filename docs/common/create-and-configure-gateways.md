@@ -1,12 +1,16 @@
+[Return to Project Root](../README.md)
+
+# Table of Contents
+
+- [Creating and Configuring Gateways](#creating-and-configuring-gateways)
+  - [Option 1: Istio Gateway Injection](#option-1-istio-gateway-injection)
+  - [Option 2: Kubernetes Gateway API](#option-2-kubernetes-gateway-api)
+
 ## Creating and Configuring Gateways
 
-The Sail Operator does not deploy Ingress or Egress Gateways. Gateways are not 
-part of the control plane. As a security best-practice, Ingress and Egress 
-Gateways should be deployed in a different namespace than the namespace that 
-contains the control plane.
+[Gateways in Istio](https://istio.io/latest/docs/concepts/traffic-management/#gateways) are used to manage inbound and outbound traffic for the mesh. The Sail Operator does not deploy or manage Gateways. You can deploy a gateway either through [gateway-api](https://istio.io/latest/docs/tasks/traffic-management/ingress/gateway-api/) or through [gateway injection](https://istio.io/latest/docs/setup/additional-setup/gateway/#deploying-a-gateway). As you are following the gateway installation instructions, skip the step to install Istio since this is handled by the Sail Operator.
 
-You can deploy gateways using either the Gateway API or Gateway Injection methods. 
-
+**Note:** The `IstioOperator` / `istioctl` example is separate from the Sail Operator. Setting `spec.components` or `spec.values.gateways` on your Sail Operator `Istio` resource **will not work**.
 
 ### Option 1: Istio Gateway Injection
 

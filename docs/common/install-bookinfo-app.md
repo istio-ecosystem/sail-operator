@@ -1,3 +1,5 @@
+[Return to Project Root](../README.md)
+
 ## Installing the Bookinfo Application
 
 You can use the `bookinfo` example application to explore service mesh features. 

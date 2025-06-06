@@ -1,5 +1,25 @@
+[Return to Project Root](../README.md)
 
-## Introduction to Istio Waypoint Proxy
+# Table of Contents
+- [Introduction to Istio Waypoint Proxy](#introduction-to-istio-waypoint-proxy)
+  - [Core features](#core-features)
+  - [Getting Started](#getting-started)
+    - [Prerequisites](#prerequisites)
+    - [Set up Istio Ambient Mode Resources and a Sample Application](#set-up-istio-ambient-mode-resources-and-a-sample-application)
+    - [Deploy a Waypoint Proxy](#deploy-a-waypoint-proxy)
+      - [Cross-namespace Waypoint](#cross-namespace-waypoint)
+  - [Layer 7 Features in Ambient Mode](#layer-7-features-in-ambient-mode)
+    - [Traffic Routing](#traffic-routing)
+    - [Security Authorization](#security-authorization)
+    - [Security Authentication](#security-authentication)
+  - [Troubleshoot issues](#troubleshoot-issues)
+  - [Cleanup](#cleanup)
+    - [Remove Istio and Gateway Resources](#remove-istio-and-gateway-resources)
+    - [Remove the namespace from the ambient data plane](#remove-the-namespace-from-the-ambient-data-plane)
+    - [Remove the Bookinfo applications](#remove-the-bookinfo-applications)
+    - [Remove the Kubernetes Gateway API CRDs](#remove-the-kubernetes-gateway-api-crds)
+
+# Introduction to Istio Waypoint Proxy
 
 Ambient mesh splits Istio's functionality into two distinct layers, a secure overlay layer 4 (L4) and a Layer 7 (L7). The waypoint proxy is an optional component that is Envoy-based and handles L7 processing for workloads it manages. It acts as a gateway to a resource (a namespace, service or pod). Waypoint proxies are installed, upgraded and scaled independently from applications. They can be configured using the Kubernetes [Gateway API](https://gateway-api.sigs.k8s.io/).
 
@@ -13,7 +33,7 @@ If your applications require any of the following L7 mesh functions, you will ne
 
 ## Getting Started
 
-*Prerequisites*
+### Prerequisites
 
 Waypoint proxies are deployed using Kubernetes Gateway resources. As of Kubernetes 1.30 and OpenShift 4.17, the Kubernetes Gateway API CRDs are not available by default and must be installed to be used. This can be done with the following command:
 
@@ -24,9 +44,9 @@ kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
 
 ### Set up Istio Ambient Mode Resources and a Sample Application
 
-1. Install the Sail Operator along with Istio in ambient mode using the [following](https://github.com/istio-ecosystem/sail-operator/blob/main/docs/common/istio-ambient-mode.md#installation-on-openshift) steps. 
+1. Install the Sail Operator along with Istio in ambient mode using the [following](istio-ambient-mode.md#installation-on-openshift) steps. 
 
-2. Deploy the sample Bookinfo applications. The steps can be found [here](https://github.com/istio-ecosystem/sail-operator/blob/main/docs/common/istio-ambient-mode.md#deploy-a-sample-application). 
+2. Deploy the sample Bookinfo applications. The steps can be found [here](istio-ambient-mode.md#deploy-a-sample-application). 
 
 Before you deploy a waypoint proxy in the application namespace, confirm the namespace is labeled with `istio.io/dataplane-mode: ambient`.
 
