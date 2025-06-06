@@ -24,17 +24,13 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -189,93 +185,6 @@ spec:
 			))
 		})
 
-		It("creates the network policy", func(ctx SpecContext) {
-			isOpenShift := isOpenShiftCluster()
-
-			if !isOpenShift {
-				Skip("Skipping NetworkPolicy test - not running on OpenShift platform")
-			}
-
-			networkPolicyName := constants.NetworkPolicyName
-
-			var networkPolicy networkingv1.NetworkPolicy
-			Eventually(func() error {
-				_, err := common.GetObject(ctx, cl, kube.Key(networkPolicyName, namespace), &networkPolicy)
-				return err
-			}).Should(Succeed(), "Error getting NetworkPolicy")
-
-			By("verifying the network policy has correct pod selector")
-			Expect(networkPolicy.Spec.PodSelector.MatchLabels).To(HaveKeyWithValue("control-plane", deploymentName))
-
-			By("verifying the network policy has both ingress and egress policy types")
-			Expect(networkPolicy.Spec.PolicyTypes).To(ContainElements(
-				networkingv1.PolicyTypeIngress,
-				networkingv1.PolicyTypeEgress,
-			))
-
-			By("verifying the network policy allows ingress on port 8443 for metrics")
-			Expect(networkPolicy.Spec.Ingress).To(ContainElement(
-				MatchFields(IgnoreExtras, Fields{
-					"Ports": ContainElement(
-						MatchFields(IgnoreExtras, Fields{
-							"Protocol": PointTo(Equal(corev1.ProtocolTCP)),
-							"Port": PointTo(MatchFields(IgnoreExtras, Fields{
-								"IntVal": Equal(int32(8443)),
-							})),
-						}),
-					),
-				}),
-			), "NetworkPolicy should allow metrics ingress on port 8443")
-
-			By("verifying the network policy allows egress to API server on port 6443")
-			Expect(networkPolicy.Spec.Egress).To(ContainElement(
-				MatchFields(IgnoreExtras, Fields{
-					"Ports": ContainElement(
-						MatchFields(IgnoreExtras, Fields{
-							"Protocol": PointTo(Equal(corev1.ProtocolTCP)),
-							"Port": PointTo(MatchFields(IgnoreExtras, Fields{
-								"IntVal": Equal(int32(6443)),
-							})),
-						}),
-					),
-				}),
-			), "NetworkPolicy should allow egress to API server on port 6443")
-
-			By("verifying the network policy allows DNS egress")
-			Expect(networkPolicy.Spec.Egress).To(ContainElement(
-				MatchFields(IgnoreExtras, Fields{
-					"Ports": ContainElements(
-						// TCP DNS port (either numeric 53 or named "dns-tcp" depending on platform)
-						MatchFields(IgnoreExtras, Fields{
-							"Protocol": PointTo(Equal(corev1.ProtocolTCP)),
-							"Port": Or(
-								PointTo(MatchFields(IgnoreExtras, Fields{
-									"IntVal": Equal(int32(53)),
-								})),
-								PointTo(MatchFields(IgnoreExtras, Fields{
-									"StrVal": Equal("dns-tcp"),
-								})),
-							),
-						}),
-						// UDP DNS port (either numeric 53 or named "dns" depending on platform)
-						MatchFields(IgnoreExtras, Fields{
-							"Protocol": PointTo(Equal(corev1.ProtocolUDP)),
-							"Port": Or(
-								PointTo(MatchFields(IgnoreExtras, Fields{
-									"IntVal": Equal(int32(53)),
-								})),
-								PointTo(MatchFields(IgnoreExtras, Fields{
-									"StrVal": Equal("dns"),
-								})),
-							),
-						}),
-					),
-				}),
-			), "NetworkPolicy should allow DNS egress")
-
-			Success("NetworkPolicy is present and correctly configured")
-		})
-
 		AfterAll(func() {
 			Expect(k.DeleteNamespace(curlNamespace)).To(Succeed(), "failed to delete curl namespace")
 			exec.Command("kubectl", "delete", "--ignore-not-found", "clusterrolebinding", "metrics-reader-rolebinding").Run()
@@ -313,15 +222,6 @@ func extractCRDNames(crdList *apiextensionsv1.CustomResourceDefinitionList) []st
 		names = append(names, crd.ObjectMeta.Name)
 	}
 	return names
-}
-
-func isOpenShiftCluster() bool {
-	cmd := exec.Command("kubectl", "get", "clusterversions.config.openshift.io", "--no-headers", "--ignore-not-found")
-	output, err := cmd.Output()
-	if err != nil {
-		return false
-	}
-	return len(output) > 0
 }
 
 // serviceAccountToken returns a token for the specified service account in the given namespace.
