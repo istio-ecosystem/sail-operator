@@ -141,7 +141,7 @@ These steps are common to every multi-cluster deployment and should be completed
 
 These instructions install a [multi-primary/multi-network](https://istio.io/latest/docs/setup/install/multicluster/multi-primary_multi-network/) Istio deployment using the Sail Operator and Sail CRDs. **Before you begin**, ensure you complete the [common setup](#common-setup).
 
-You can follow the steps below to install manually or you can run [this script](multicluster/setup-multi-primary.sh) which will setup a local environment for you with kind. Before running the setup script, you must install [kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation) and [cloud-provider-kind](https://kind.sigs.k8s.io/docs/user/loadbalancer/#installing-cloud-provider-kind) then ensure the `cloud-provider-kind` binary is running in the background.
+You can follow the steps below to install manually or you can run [this script](resources/setup-multi-primary.sh) which will setup a local environment for you with kind. Before running the setup script, you must install [kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation) and [cloud-provider-kind](https://kind.sigs.k8s.io/docs/user/loadbalancer/#installing-cloud-provider-kind) then ensure the `cloud-provider-kind` binary is running in the background.
 
 These installation instructions are adapted from: https://istio.io/latest/docs/setup/install/multicluster/multi-primary_multi-network/. 
 
@@ -174,13 +174,13 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
 3. Create east-west gateway on `cluster1`.
 
     ```bash
-    kubectl apply --context "${CTX_CLUSTER1}" -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/east-west-gateway-net1.yaml
+    kubectl apply --context "${CTX_CLUSTER1}" -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/deployment-models/resources/east-west-gateway-net1.yaml
     ```
 
 4. Expose services on `cluster1`.
 
     ```bash
-    kubectl --context "${CTX_CLUSTER1}" apply -n istio-system -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/expose-services.yaml
+    kubectl --context "${CTX_CLUSTER1}" apply -n istio-system -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/deployment-models/resources/expose-services.yaml
     ```
 
 5. Create `Istio` resource on `cluster2`.
@@ -212,13 +212,13 @@ These installation instructions are adapted from: https://istio.io/latest/docs/s
 7. Create east-west gateway on `cluster2`.
 
     ```bash
-    kubectl apply --context "${CTX_CLUSTER2}" -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/east-west-gateway-net2.yaml
+    kubectl apply --context "${CTX_CLUSTER2}" -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/deployment-models/resources/east-west-gateway-net2.yaml
     ```
 
 8. Expose services on `cluster2`.
 
     ```bash
-    kubectl --context "${CTX_CLUSTER2}" apply -n istio-system -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/expose-services.yaml
+    kubectl --context "${CTX_CLUSTER2}" apply -n istio-system -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/deployment-models/resources/expose-services.yaml
     ```
 
 9. Install a remote secret in `cluster2` that provides access to the `cluster1` API server.
@@ -372,19 +372,19 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
 2. Create east-west gateway on `cluster1`.
 
     ```bash
-    kubectl apply --context "${CTX_CLUSTER1}" -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/east-west-gateway-net1.yaml
+    kubectl apply --context "${CTX_CLUSTER1}" -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/deployment-models/resources/east-west-gateway-net1.yaml
     ```
   
 3. Expose istiod on `cluster1`.
 
     ```bash
-    kubectl apply --context "${CTX_CLUSTER1}" -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/expose-istiod.yaml
+    kubectl apply --context "${CTX_CLUSTER1}" -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/deployment-models/resources/expose-istiod.yaml
     ```
 
 4. Expose services on `cluster1` and `cluster2`.
 
     ```bash
-    kubectl --context "${CTX_CLUSTER1}" apply -n istio-system -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/expose-services.yaml
+    kubectl --context "${CTX_CLUSTER1}" apply -n istio-system -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/deployment-models/resources/expose-services.yaml
     ```
 
 5. Create an `Istio` on `cluster2` with the `remote` profile.
@@ -437,7 +437,7 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
 8. Install east-west gateway in `cluster2`.
 
     ```bash
-    kubectl apply --context "${CTX_CLUSTER2}" -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/east-west-gateway-net2.yaml
+    kubectl apply --context "${CTX_CLUSTER2}" -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/deployment-models/resources/east-west-gateway-net2.yaml
     ```
 
 9. Deploy sample applications to `cluster1`.
@@ -528,7 +528,7 @@ In this setup there is an external control plane cluster (`cluster1`) and a remo
 2. Create the ingress gateway for the external control plane.
 
     ```bash
-    kubectl --context "${CTX_CLUSTER1}" apply -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/multicluster/controlplane-gateway.yaml
+    kubectl --context "${CTX_CLUSTER1}" apply -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/deployment-models/resources/controlplane-gateway.yaml
     kubectl --context "${CTX_CLUSTER1}" wait '--for=jsonpath={.status.loadBalancer.ingress[].ip}' --timeout=30s svc istio-ingressgateway -n istio-system
     ```
 

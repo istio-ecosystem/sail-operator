@@ -6,7 +6,8 @@
   - [Prerequisites](#prerequisites)
   - [Installation Steps](#installation-steps)
   - [Validation](#validation)
-  
+  - [Cleanup](#cleanup)
+
 ## Dual-stack Support
 
 Kubernetes supports dual-stack networking as a stable feature starting from
@@ -183,7 +184,8 @@ Note: If you installed the KinD cluster using the command above, install the [Sa
         exit 1
     fi
 ``` -->
-7. Cleanup
+### Cleanup
+To clean up the resources created during this example, you can run the following commands:
    ```bash
    kubectl delete istios default
    kubectl delete ns istio-system
