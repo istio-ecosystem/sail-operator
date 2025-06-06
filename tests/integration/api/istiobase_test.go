@@ -387,18 +387,8 @@ var _ = Describe("IstioBase controller", Ordered, func() {
 		})
 
 		AfterAll(func() {
-			Step("Deleting the default IstioRevisionTag")
-			Expect(k8sClient.Delete(ctx, &tag)).To(Succeed())
-
-			Step("Deleting the 1st IstioRevision")
-			Expect(k8sClient.Delete(ctx, &rev1)).To(Succeed())
-
-			Step("Deleting the 2nd IstioRevision")
-			Expect(k8sClient.Delete(ctx, &rev2)).To(Succeed())
-
-			Step("Deleting the 3rd IstioRevision")
-			Expect(k8sClient.Delete(ctx, &rev3)).To(Succeed())
-
+			deleteAllIstioRevisionTags(ctx)
+			deleteAllIstiosAndRevisions(ctx)
 			Step("Checking if istio-reader ServiceAccount was deleted")
 			Eventually(k8sClient.Get).WithArguments(ctx, saKey2, &sa2).Should(ReturnNotFoundError())
 		})
