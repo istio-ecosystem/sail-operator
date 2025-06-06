@@ -64,6 +64,9 @@ const (
 	// ManagedByLabelValue is the ManagedByKey label value the operator sets on all objects it creates
 	ManagedByLabelValue = "sail-operator"
 
+	// NetworkPolicyName is the name of the NetworkPolicy created by the sail-operator
+	NetworkPolicyName = "sail-operator-network-policy"
+
 	// WebhookReadinessProbeStatusAnnotationKey is an annotation on the istio-sidecar-injection MutatingWebhookConfiguration that
 	// reports whether the remote control plane is ready or not
 	WebhookReadinessProbeStatusAnnotationKey = MetadataNamespace + "/readinessProbe.status"
