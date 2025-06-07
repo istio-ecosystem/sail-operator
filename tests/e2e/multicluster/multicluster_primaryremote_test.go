@@ -391,12 +391,6 @@ spec:
 					Expect(k1.WaitNamespaceDeleted(sampleNamespace)).To(Succeed())
 					Expect(k2.WaitNamespaceDeleted(sampleNamespace)).To(Succeed())
 					Success("Sample app is deleted in both clusters")
-
-					// Delete the resources created by istioctl create-remote-secret
-					Expect(k2.Delete("ClusterRoleBinding", "istiod-clusterrole-istio-system")).To(Succeed())
-					Expect(k2.Delete("ClusterRole", "istiod-clusterrole-istio-system")).To(Succeed())
-					Expect(k2.Delete("ClusterRoleBinding", "istiod-gateway-controller-istio-system")).To(Succeed())
-					Expect(k2.Delete("ClusterRole", "istiod-gateway-controller-istio-system")).To(Succeed())
 				})
 			})
 		}
