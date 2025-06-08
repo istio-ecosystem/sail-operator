@@ -314,11 +314,6 @@ spec:
 				}
 
 				clr.Cleanup(ctx)
-				Expect(k.Delete("istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
-				Expect(k.Delete("istiocni", istioCniName)).To(Succeed(), "IstioCNI CR failed to be deleted")
-
-				By("Deleting the IstioRevisionTag")
-				Expect(k.Delete("istiorevisiontag", "default")).To(Succeed(), "IstioRevisionTag failed to be deleted")
 			})
 		})
 

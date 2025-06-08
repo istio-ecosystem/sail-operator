@@ -179,11 +179,6 @@ spec:
 		}
 
 		clr.Cleanup(ctx)
-		By("Deleting any left-over Istio and IstioRevision resources")
-		Expect(k.Delete("istio", istioName1)).To(Succeed(), "Failed to delete Istio")
-		Expect(k.Delete("istio", istioName2)).To(Succeed(), "Failed to delete Istio")
-		Expect(k.Delete("istiocni", istioCniName)).To(Succeed(), "Failed to delete IstioCNI")
-		Success("Istio Resources deleted")
 	})
 
 	AfterAll(func() {

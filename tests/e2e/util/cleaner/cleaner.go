@@ -26,25 +26,39 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Cleaner records resources to keep, and cleans up any resources it didn't record.
 type Cleaner struct {
-	cl         client.Client
-	ctx        []string
-	namespaces map[string]struct{}
+	cl        client.Client
+	ctx       []string
+	resources map[resource]bool
+	crds      map[string]struct{}
+	crs       map[string]map[resource]struct{}
+}
+
+type resource struct {
+	kind      string
+	name      string
+	namespace string
 }
 
 // New returns a Cleaner which can record resources to keep, and clean up any resources it didn't record.
 // It needs an initialized client, and has optional (string) context which can be used to distinguish it's output.
 func New(cl client.Client, ctx ...string) Cleaner {
 	return Cleaner{
-		cl:         cl,
-		ctx:        ctx,
-		namespaces: make(map[string]struct{}),
+		cl:        cl,
+		ctx:       ctx,
+		resources: make(map[resource]bool),
+		crds:      make(map[string]struct{}),
+		crs:       make(map[string]map[resource]struct{}),
 	}
 }
 
@@ -54,8 +68,57 @@ func (c *Cleaner) Record(ctx context.Context) {
 	namespaceList := &corev1.NamespaceList{}
 	Expect(c.cl.List(ctx, namespaceList)).To(Succeed())
 	for _, ns := range namespaceList.Items {
-		c.namespaces[ns.Name] = struct{}{}
+		c.resources[c.resourceFromObj(&ns, ns.Name)] = true
 	}
+
+	crList := &rbacv1.ClusterRoleList{}
+	Expect(c.cl.List(ctx, crList)).To(Succeed())
+	for _, cr := range crList.Items {
+		c.resources[c.resourceFromObj(&cr, cr.Name)] = true
+	}
+
+	crbList := &rbacv1.ClusterRoleBindingList{}
+	Expect(c.cl.List(ctx, crbList)).To(Succeed())
+	for _, crb := range crbList.Items {
+		c.resources[c.resourceFromObj(&crb, crb.Name)] = true
+	}
+
+	allCRDs := &apiextensionsv1.CustomResourceDefinitionList{}
+	Expect(c.cl.List(ctx, allCRDs)).To(Succeed())
+
+	// Save all existing custom resources so we can skip them when cleaning
+	for _, crd := range allCRDs.Items {
+		if !c.trackedCRD(&crd) {
+			continue
+		}
+
+		c.crds[crd.Name] = struct{}{}
+		c.crs[crd.Name] = make(map[resource]struct{})
+		customResources := &unstructured.UnstructuredList{}
+		customResources.SetGroupVersionKind(extractGVK(&crd))
+
+		Expect(c.cl.List(ctx, customResources)).To(Succeed())
+		for _, cr := range customResources.Items {
+			c.crs[crd.Name][crKey(cr)] = struct{}{}
+		}
+	}
+}
+
+func (c *Cleaner) resourceFromObj(obj client.Object, name string) resource {
+	kinds, _, _ := c.cl.Scheme().ObjectKinds(obj)
+	return resource{kind: kinds[0].Kind, name: name}
+}
+
+func extractGVK(crd *apiextensionsv1.CustomResourceDefinition) schema.GroupVersionKind {
+	return schema.GroupVersionKind{
+		Group:   crd.Spec.Group,
+		Version: crd.Spec.Versions[0].Name,
+		Kind:    crd.Spec.Names.Kind,
+	}
+}
+
+func crKey(cr unstructured.Unstructured) resource {
+	return resource{name: cr.GetName(), namespace: cr.GetNamespace()}
 }
 
 // CleanupNoWait will cleanup any resources not recorded, while not waiting for their deletion to complete.
@@ -69,27 +132,93 @@ func (c *Cleaner) Cleanup(ctx context.Context) {
 	c.WaitForDeletion(ctx, c.cleanup(ctx))
 }
 
+type resObj struct {
+	key resource
+	obj client.Object
+}
+
 func (c *Cleaner) cleanup(ctx context.Context) (deleted []client.Object) {
-	// Clean up all namespaces that didn't exist before the tests
+	var resources []resObj
 	namespaceList := &corev1.NamespaceList{}
 	Expect(c.cl.List(ctx, namespaceList)).To(Succeed())
 	for _, ns := range namespaceList.Items {
-		if mapHasKey(c.namespaces, ns.Name) {
+		resources = append(resources, resObj{c.resourceFromObj(&ns, ns.Name), &ns})
+	}
+
+	crList := &rbacv1.ClusterRoleList{}
+	Expect(c.cl.List(ctx, crList)).To(Succeed())
+	for _, cr := range crList.Items {
+		resources = append(resources, resObj{c.resourceFromObj(&cr, cr.Name), &cr})
+	}
+
+	crbList := &rbacv1.ClusterRoleBindingList{}
+	Expect(c.cl.List(ctx, crbList)).To(Succeed())
+	for _, crb := range crbList.Items {
+		resources = append(resources, resObj{c.resourceFromObj(&crb, crb.Name), &crb})
+	}
+
+	// Clean up all resources that didn't exist before the tests
+	for _, res := range resources {
+		// Skip any resource we recorded previously.
+		// Also, skip any OLM managed resource as it'll be recreated upon deletion.
+		if mapHasKey(c.resources, res.key) ||
+			mapHasKey(res.obj.GetLabels(), "olm.managed") {
 			continue
 		}
 
-		By(c.cleaningUpThe(&ns, "namespace"), func() {
-			Expect(c.delete(ctx, &ns)).To(Succeed())
-			deleted = append(deleted, &ns)
+		By(c.cleaningUpThe(res.obj, res.key.kind), func() {
+			Expect(c.delete(ctx, res.obj)).To(Succeed())
+			deleted = append(deleted, res.obj)
+		})
+	}
+
+	allCRDs := &apiextensionsv1.CustomResourceDefinitionList{}
+	Expect(c.cl.List(ctx, allCRDs)).To(Succeed())
+
+	// Clean up all custom resources and CRDs that didn't exist before the tests
+	for _, crd := range allCRDs.Items {
+		if !c.trackedCRD(&crd) {
+			continue
+		}
+
+		gvk := extractGVK(&crd)
+		customResources := &unstructured.UnstructuredList{}
+		customResources.SetGroupVersionKind(gvk)
+
+		Expect(c.cl.List(ctx, customResources)).To(Succeed())
+		for _, cr := range customResources.Items {
+			// Skip any recorded custom resource.
+			if mapHasKey(c.crs, crd.Name) && mapHasKey(c.crs[crd.Name], crKey(cr)) {
+				continue
+			}
+
+			By(c.cleaningUpThe(&cr, gvk.Kind), func() {
+				Expect(c.delete(ctx, &cr)).To(Succeed())
+				deleted = append(deleted, &cr)
+			})
+		}
+
+		// Skip any recorded CRD.
+		if mapHasKey(c.crds, crd.Name) {
+			continue
+		}
+
+		By(c.cleaningUpThe(&crd, "CRD"), func() {
+			Expect(c.delete(ctx, &crd)).To(Succeed())
+			deleted = append(deleted, &crd)
 		})
 	}
 
 	return
 }
 
-func mapHasKey[V any](m map[string]V, k string) bool {
+func mapHasKey[K comparable, V any](m map[K]V, k K) bool {
 	_, exists := m[k]
 	return exists
+}
+
+func (c *Cleaner) trackedCRD(crd *apiextensionsv1.CustomResourceDefinition) bool {
+	return crd.Spec.Group == "sailoperator.io" || strings.HasSuffix(crd.Spec.Group, "istio.io")
 }
 
 func (c *Cleaner) delete(ctx context.Context, obj client.Object) error {

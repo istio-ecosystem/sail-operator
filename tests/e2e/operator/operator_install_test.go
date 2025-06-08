@@ -195,7 +195,6 @@ spec:
 			}
 
 			clr.Cleanup(ctx)
-			exec.Command("kubectl", "delete", "--ignore-not-found", "clusterrolebinding", "metrics-reader-rolebinding").Run()
 
 			if CurrentSpecReport().Failed() {
 				common.LogDebugInfo(common.Operator, k)

@@ -384,12 +384,6 @@ spec:
 					c2Deleted := clr2.CleanupNoWait(ctx)
 					clr1.WaitForDeletion(ctx, c1Deleted)
 					clr2.WaitForDeletion(ctx, c2Deleted)
-
-					// Delete the resources created by istioctl create-remote-secret
-					Expect(k2.Delete("ClusterRoleBinding", "istiod-clusterrole-istio-system")).To(Succeed())
-					Expect(k2.Delete("ClusterRole", "istiod-clusterrole-istio-system")).To(Succeed())
-					Expect(k2.Delete("ClusterRoleBinding", "istiod-gateway-controller-istio-system")).To(Succeed())
-					Expect(k2.Delete("ClusterRole", "istiod-gateway-controller-istio-system")).To(Succeed())
 				})
 			})
 		}
