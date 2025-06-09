@@ -45,8 +45,10 @@ var _ = Describe("Ambient configuration ", Label("smoke", "ambient"), Ordered, f
 	SetDefaultEventuallyPollingInterval(time.Second)
 
 	debugInfoLogged := false
+	clr := cleaner.New(cl)
 
 	BeforeAll(func(ctx SpecContext) {
+		clr.Record(ctx)
 		Expect(k.CreateNamespace(operatorNamespace)).To(Succeed(), "Namespace failed to be created")
 
 		if skipDeploy {
@@ -342,7 +344,7 @@ spec:
 		})
 	})
 
-	AfterAll(func() {
+	AfterAll(func(ctx SpecContext) {
 		if CurrentSpecReport().Failed() {
 			if !debugInfoLogged {
 				common.LogDebugInfo(common.Ambient, k)
@@ -354,18 +356,7 @@ spec:
 			}
 		}
 
-		if skipDeploy {
-			Success("Skipping operator undeploy because it was deployed externally")
-			return
-		}
-
-		By("Deleting operator deployment")
-		Expect(common.UninstallOperator()).
-			To(Succeed(), "Operator failed to be deleted")
-		GinkgoWriter.Println("Operator uninstalled")
-
-		Expect(k.DeleteNamespace(operatorNamespace)).To(Succeed(), "Namespace failed to be deleted")
-		Success("Namespace deleted")
+		clr.Cleanup(ctx)
 	})
 })
 

@@ -48,8 +48,10 @@ var _ = Describe("DualStack configuration ", Label("dualstack"), Ordered, func()
 	SetDefaultEventuallyPollingInterval(time.Second)
 
 	debugInfoLogged := false
+	clr := cleaner.New(cl)
 
 	BeforeAll(func(ctx SpecContext) {
+		clr.Record(ctx)
 		Expect(k.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
 
 		if skipDeploy {
@@ -280,7 +282,7 @@ spec:
 		})
 	})
 
-	AfterAll(func() {
+	AfterAll(func(ctx SpecContext) {
 		if CurrentSpecReport().Failed() {
 			if !debugInfoLogged {
 				common.LogDebugInfo(common.DualStack, k)
@@ -292,18 +294,7 @@ spec:
 			}
 		}
 
-		if skipDeploy {
-			Success("Skipping operator undeploy because it was deployed externally")
-			return
-		}
-
-		By("Deleting operator deployment")
-		Expect(common.UninstallOperator()).
-			To(Succeed(), "Operator failed to be deleted")
-		GinkgoWriter.Println("Operator uninstalled")
-
-		Expect(k.DeleteNamespace(namespace)).To(Succeed(), "Namespace failed to be deleted")
-		Success("Namespace deleted")
+		clr.Cleanup(ctx)
 	})
 })
 

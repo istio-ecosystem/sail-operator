@@ -138,6 +138,38 @@ type resObj struct {
 }
 
 func (c *Cleaner) cleanup(ctx context.Context) (deleted []client.Object) {
+	allCRDs := &apiextensionsv1.CustomResourceDefinitionList{}
+	Expect(c.cl.List(ctx, allCRDs)).To(Succeed())
+
+	// First, clean up all custom resources that didn't exist, to give the operator a shot at finalizing them
+	for _, crd := range allCRDs.Items {
+		if !c.trackedCRD(&crd) {
+			continue
+		}
+
+		gvk := extractGVK(&crd)
+		customResources := &unstructured.UnstructuredList{}
+		customResources.SetGroupVersionKind(gvk)
+
+		Expect(c.cl.List(ctx, customResources)).To(Succeed())
+		for _, cr := range customResources.Items {
+			// Skip any recorded custom resource.
+			if mapHasKey(c.crs, crd.Name) && mapHasKey(c.crs[crd.Name], crKey(cr)) {
+				continue
+			}
+
+			By(c.cleaningUpThe(&cr, gvk.Kind), func() {
+				Expect(c.delete(ctx, &cr)).To(Succeed())
+				deleted = append(deleted, &cr)
+			})
+		}
+	}
+
+	// At this point we have to wait for cleanup to finish, since some CRs might get stuck "finalizing" if we later delete the operator namespace.
+	c.WaitForDeletion(ctx, deleted)
+	deleted = make([]client.Object, 0)
+
+	// Clean up any resources we didn't record.
 	var resources []resObj
 	namespaceList := &corev1.NamespaceList{}
 	Expect(c.cl.List(ctx, namespaceList)).To(Succeed())
@@ -172,34 +204,10 @@ func (c *Cleaner) cleanup(ctx context.Context) (deleted []client.Object) {
 		})
 	}
 
-	allCRDs := &apiextensionsv1.CustomResourceDefinitionList{}
-	Expect(c.cl.List(ctx, allCRDs)).To(Succeed())
-
-	// Clean up all custom resources and CRDs that didn't exist before the tests
+	// Finally, remove any CRD that didn't exist at time of recording.
 	for _, crd := range allCRDs.Items {
-		if !c.trackedCRD(&crd) {
-			continue
-		}
-
-		gvk := extractGVK(&crd)
-		customResources := &unstructured.UnstructuredList{}
-		customResources.SetGroupVersionKind(gvk)
-
-		Expect(c.cl.List(ctx, customResources)).To(Succeed())
-		for _, cr := range customResources.Items {
-			// Skip any recorded custom resource.
-			if mapHasKey(c.crs, crd.Name) && mapHasKey(c.crs[crd.Name], crKey(cr)) {
-				continue
-			}
-
-			By(c.cleaningUpThe(&cr, gvk.Kind), func() {
-				Expect(c.delete(ctx, &cr)).To(Succeed())
-				deleted = append(deleted, &cr)
-			})
-		}
-
-		// Skip any recorded CRD.
-		if mapHasKey(c.crds, crd.Name) {
+		// Skip any recorded CRD, and any CRD we don't track.
+		if mapHasKey(c.crds, crd.Name) || !c.trackedCRD(&crd) {
 			continue
 		}
 

@@ -49,6 +49,9 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 	clr2 := cleaner.New(clRemote, "cluster=remote")
 
 	BeforeAll(func(ctx SpecContext) {
+		clr1.Record(ctx)
+		clr2.Record(ctx)
+
 		if !skipDeploy {
 			// Deploy the Sail Operator on both clusters
 			Expect(k1.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created on Cluster #1")
@@ -70,15 +73,20 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 				Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
 			Success("Operator is deployed in the Cluster #2 namespace and Running")
 		}
-
-		clr1.Record(ctx)
-		clr2.Record(ctx)
 	})
 
 	Describe("Multi-Primary Multi-Network configuration", func() {
 		// Test the Multi-Primary Multi-Network configuration for each supported Istio version
 		for _, version := range istioversion.GetLatestPatchVersions() {
 			Context(fmt.Sprintf("Istio version %s", version.Version), func() {
+				clr1 := cleaner.New(clPrimary, "cluster=primary")
+				clr2 := cleaner.New(clRemote, "cluster=remote")
+
+				BeforeAll(func(ctx SpecContext) {
+					clr1.Record(ctx)
+					clr2.Record(ctx)
+				})
+
 				When("Istio and IstioCNI resources are created in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
 						Expect(k1.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
@@ -369,10 +377,9 @@ spec:
 			}
 		}
 
-		// Delete the Sail Operator from both clusters
-		Expect(k1.DeleteNamespaceNoWait(namespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
-		Expect(k2.DeleteNamespaceNoWait(namespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #2")
-		Expect(k1.WaitNamespaceDeleted(namespace)).To(Succeed())
-		Expect(k2.WaitNamespaceDeleted(namespace)).To(Succeed())
+		c1Deleted := clr1.CleanupNoWait(ctx)
+		c2Deleted := clr2.CleanupNoWait(ctx)
+		clr1.WaitForDeletion(ctx, c1Deleted)
+		clr2.WaitForDeletion(ctx, c2Deleted)
 	})
 })

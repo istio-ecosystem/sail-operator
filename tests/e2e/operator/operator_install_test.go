@@ -59,10 +59,11 @@ var sailCRDs = []string{
 var _ = Describe("Operator", Label("smoke", "operator"), Ordered, func() {
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
+	clr := cleaner.New(cl)
 
 	Describe("installation", func() {
-		clr := cleaner.New(cl)
 		BeforeAll(func(ctx SpecContext) {
+			clr.Record(ctx)
 			Expect(k.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
 
 			if skipDeploy {
@@ -71,8 +72,6 @@ var _ = Describe("Operator", Label("smoke", "operator"), Ordered, func() {
 				Expect(common.InstallOperatorViaHelm()).
 					To(Succeed(), "Operator failed to be deployed")
 			}
-
-			clr.Record(ctx)
 		})
 
 		It("deploys all the CRDs", func(ctx SpecContext) {
@@ -194,15 +193,13 @@ spec:
 				return
 			}
 
-			clr.Cleanup(ctx)
-
 			if CurrentSpecReport().Failed() {
 				common.LogDebugInfo(common.Operator, k)
 			}
 		})
 	})
 
-	AfterAll(func() {
+	AfterAll(func(ctx SpecContext) {
 		if CurrentSpecReport().Failed() {
 			common.LogDebugInfo(common.Operator, k)
 			if keepOnFailure {
@@ -210,19 +207,7 @@ spec:
 			}
 		}
 
-		if skipDeploy {
-			Success("Skipping operator undeploy because it was deployed externally")
-			return
-		}
-
-		By("Uninstalling the operator")
-		Expect(common.UninstallOperator()).
-			To(Succeed(), "Operator failed to be deleted")
-		Success("Operator uninstalled")
-
-		By("Deleting the CRDs")
-		Expect(k.DeleteCRDs(sailCRDs)).To(Succeed(), "CRDs failed to be deleted")
-		Success("CRDs deleted")
+		clr.Cleanup(ctx)
 	})
 })
 

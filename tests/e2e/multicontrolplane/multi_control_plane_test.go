@@ -40,6 +40,7 @@ var _ = Describe("Multi control plane deployment model", Label("smoke", "multico
 	clr := cleaner.New(cl)
 
 	BeforeAll(func(ctx SpecContext) {
+		clr.Record(ctx)
 		Expect(k.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
 
 		if skipDeploy {
@@ -52,8 +53,6 @@ var _ = Describe("Multi control plane deployment model", Label("smoke", "multico
 		Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
 			Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
 		Success("Operator is deployed in the namespace and Running")
-
-		clr.Record(ctx)
 	})
 
 	Describe("Installation", func() {
@@ -174,14 +173,6 @@ spec:
 	})
 
 	AfterAll(func(ctx SpecContext) {
-		if CurrentSpecReport().Failed() && keepOnFailure {
-			return
-		}
-
-		clr.Cleanup(ctx)
-	})
-
-	AfterAll(func() {
 		if CurrentSpecReport().Failed() {
 			if !debugInfoLogged {
 				common.LogDebugInfo(common.MultiControlPlane, k)
@@ -193,17 +184,6 @@ spec:
 			}
 		}
 
-		if skipDeploy {
-			Success("Skipping operator undeploy because it was deployed externally")
-			return
-		}
-
-		By("Deleting operator deployment")
-		Expect(common.UninstallOperator()).
-			To(Succeed(), "Operator failed to be deleted")
-		GinkgoWriter.Println("Operator uninstalled")
-
-		Expect(k.DeleteNamespace(namespace)).To(Succeed(), "Namespace failed to be deleted")
-		Success("Namespace deleted")
+		clr.Cleanup(ctx)
 	})
 })

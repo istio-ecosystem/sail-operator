@@ -54,6 +54,9 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 	clr2 := cleaner.New(clRemote, "cluster=remote")
 
 	BeforeAll(func(ctx SpecContext) {
+		clr1.Record(ctx)
+		clr2.Record(ctx)
+
 		if !skipDeploy {
 			Expect(k1.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created on Cluster #1")
 			Expect(k2.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created on Cluster #2")
@@ -74,9 +77,6 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 				Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
 			Success("Operator is deployed in the Cluster #2 namespace and Running")
 		}
-
-		clr1.Record(ctx)
-		clr2.Record(ctx)
 	})
 
 	Describe("External Control Plane Multi-Network configuration", func() {
@@ -89,6 +89,14 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 			}
 
 			Context(fmt.Sprintf("Istio version %s", v.Version), func() {
+				clr1 := cleaner.New(clPrimary, "cluster=primary")
+				clr2 := cleaner.New(clRemote, "cluster=remote")
+
+				BeforeAll(func(ctx SpecContext) {
+					clr1.Record(ctx)
+					clr2.Record(ctx)
+				})
+
 				When("default Istio is created in Cluster #1 to handle ingress to External Control Plane", func() {
 					BeforeAll(func(ctx SpecContext) {
 						Expect(k1.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be created")
@@ -503,10 +511,9 @@ spec:
 			}
 		}
 
-		// Delete the Sail Operator from both clusters
-		Expect(k1.DeleteNamespaceNoWait(namespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
-		Expect(k2.DeleteNamespaceNoWait(namespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #2")
-		Expect(k1.WaitNamespaceDeleted(namespace)).To(Succeed())
-		Expect(k2.WaitNamespaceDeleted(namespace)).To(Succeed())
+		c1Deleted := clr1.CleanupNoWait(ctx)
+		c2Deleted := clr2.CleanupNoWait(ctx)
+		clr1.WaitForDeletion(ctx, c1Deleted)
+		clr2.WaitForDeletion(ctx, c2Deleted)
 	})
 })
