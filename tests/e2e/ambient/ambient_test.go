@@ -343,6 +343,15 @@ spec:
 				}
 			}
 
+			By("Cleaning up the Istio resource")
+			Expect(k.Delete("istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
+
+			By("Cleaning up the IstioCNI resource")
+			Expect(k.Delete("istiocni", istioCniName)).To(Succeed(), "IstioCNI CR failed to be deleted")
+
+			By("Cleaning up the ZTunnel resource")
+			Expect(k.Delete("ztunnel", "default")).To(Succeed(), "ZTunnel CR failed to be deleted")
+
 			By("Cleaning up the Istio namespace")
 			Expect(k.DeleteNamespace(controlPlaneNamespace)).To(Succeed(), "Istio Namespace failed to be deleted")
 
