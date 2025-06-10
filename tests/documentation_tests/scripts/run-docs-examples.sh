@@ -138,3 +138,6 @@ run_tests "${TAGS_LIST[@]}"
 
 # Run dual stack tests on it's own cluster, since it needs to be deployed with support for dual stack
 IP_FAMILY="dual" run_tests "$dual_stack_tag"
+
+# Delete the updated docs from the test directory to avoid duplicates md files. path: "test/documentation_tests/*.md"
+rm -f "$TEST_DIR"/*.md
