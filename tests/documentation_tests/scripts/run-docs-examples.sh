@@ -38,6 +38,9 @@ export ARTIFACTS="${ARTIFACTS:-$(mktemp -d)}"
 export KUBECONFIG="${KUBECONFIG:-"${ARTIFACTS}/config"}"
 export HELM_TEMPL_DEF_FLAGS="--include-crds --values chart/values.yaml"
 
+# Set up a trap to delete .md files in TEST_DIR on exit
+trap 'rm -f "$TEST_DIR"/*.md' EXIT
+
 # Validate that istioctl is installed
 if ! command -v istioctl &> /dev/null; then
   echo "istioctl could not be found. Please install it."
@@ -138,6 +141,3 @@ run_tests "${TAGS_LIST[@]}"
 
 # Run dual stack tests on it's own cluster, since it needs to be deployed with support for dual stack
 IP_FAMILY="dual" run_tests "$dual_stack_tag"
-
-# Delete the updated docs from the test directory to avoid duplicates md files. path: "test/documentation_tests/*.md"
-rm -f "$TEST_DIR"/*.md
