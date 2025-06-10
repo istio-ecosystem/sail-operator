@@ -19,6 +19,7 @@ set -eu -o pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 TEST_DIR="$ROOT_DIR/tests/documentation_tests"
+EXECUTE_DOC_TAG="${EXECUTE_DOC_TAG:-}"
 
 export KIND_CLUSTER_NAME="docs-automation"
 export IP_FAMILY="ipv4"
@@ -64,10 +65,19 @@ done
 # Build a list of file-tag pairs, isolating 'dual-stack' since it requires special treatment
 TAGS_LIST=()
 dual_stack_tag=""
+
 for file in "${FILES_TO_CHECK[@]}"; do
   TAGS=$(grep -oP 'tag=\K[^} ]+' "$file" | sort -u)
   for tag in $TAGS; do
-    [ "$tag" != dual-stack ] || { dual_stack_tag="$file -t $tag"; continue; }
+    if [[ -n "$EXECUTE_DOC_TAG" && "$tag" != "$EXECUTE_DOC_TAG" ]]; then
+      continue
+    fi
+
+    if [[ "$tag" == "dual-stack" ]]; then
+      dual_stack_tag="$file -t $tag"
+      continue
+    fi
+
     TAGS_LIST+=("$file -t $tag")
   done
 done
@@ -140,4 +150,6 @@ function run_tests() {
 run_tests "${TAGS_LIST[@]}"
 
 # Run dual stack tests on it's own cluster, since it needs to be deployed with support for dual stack
-IP_FAMILY="dual" run_tests "$dual_stack_tag"
+if [[ -z "$EXECUTE_DOC_TAG" && -n "$dual_stack_tag" ]]; then
+  IP_FAMILY="dual" run_tests "$dual_stack_tag"
+fi
