@@ -208,7 +208,6 @@ test.e2e.kind: istioctl ## Deploy a KinD cluster and run the end-to-end tests ag
 .PHONY: test.e2e.describe
 test.e2e.describe: ## Runs ginkgo outline -format indent over the e2e test to show in BDD style the steps and test structure
 	GINKGO_FLAGS="$(GINKGO_FLAGS)" ${SOURCE_DIR}/tests/e2e/common-operator-integ-suite.sh --describe
-##@ Build
 
 .PHONY: runme $(RUNME)
 runme: OS=$(shell go env GOOS)
@@ -226,14 +225,17 @@ update-docs-examples: ## Copy the documentation files and generate the resulting
 	@tests/documentation_tests/scripts/update-docs-examples.sh
 	@echo "Documentation examples updated successfully"
 
-
+# Declare EXECUTE_DOC_TAG as an optional variable that can be set to a specific tag for the documentation examples.
+EXECUTE_DOC_TAG ?= ""
 .PHONE: test.docs
-test.docs: runme istioctl update-docs-examples
+test.docs: runme istioctl update-docs-examples ## Run the documentation examples tests.
 ## test.docs use runme to test the documentation examples. 
 ## Check the specific documentation to understand the use of the tool
 	@echo "Running runme test on the documentation examples, the location of the tests is in the tests/documentation_test folder"
-	@PATH=$(LOCALBIN):$$PATH tests/documentation_tests/scripts/run-docs-examples.sh
+	@PATH=$(LOCALBIN):$$PATH EXECUTE_DOC_TAG=$(EXECUTE_DOC_TAG) tests/documentation_tests/scripts/run-docs-examples.sh
 	@echo "Documentation examples tested successfully, temporary files removed"
+
+##@ Build
 
 .PHONY: build
 build: build-$(TARGET_ARCH) ## Build the sail-operator binary.
