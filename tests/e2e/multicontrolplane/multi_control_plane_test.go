@@ -24,6 +24,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
@@ -36,8 +37,10 @@ var _ = Describe("Multi control plane deployment model", Label("smoke", "multico
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 	debugInfoLogged := false
+	clr := cleaner.New(cl)
 
 	BeforeAll(func(ctx SpecContext) {
+		clr.Record(ctx)
 		Expect(k.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
 
 		if skipDeploy {
@@ -169,29 +172,7 @@ spec:
 		})
 	})
 
-	AfterAll(func() {
-		if CurrentSpecReport().Failed() && keepOnFailure {
-			return
-		}
-
-		By("Cleaning up the application namespaces")
-		Expect(k.DeleteNamespace(appNamespace1, appNamespace2a, appNamespace2b)).To(Succeed())
-
-		By("Cleaning up the Istio namespace")
-		Expect(k.DeleteNamespace(controlPlaneNamespace1, controlPlaneNamespace2)).To(Succeed(), "Istio Namespaces failed to be deleted")
-
-		By("Cleaning up the IstioCNI namespace")
-		Expect(k.DeleteNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI Namespace failed to be deleted")
-
-		By("Deleting any left-over Istio and IstioRevision resources")
-		Expect(k.Delete("istio", istioName1)).To(Succeed(), "Failed to delete Istio")
-		Expect(k.Delete("istio", istioName2)).To(Succeed(), "Failed to delete Istio")
-		Expect(k.Delete("istiocni", istioCniName)).To(Succeed(), "Failed to delete IstioCNI")
-		Success("Istio Resources deleted")
-		Success("Cleanup done")
-	})
-
-	AfterAll(func() {
+	AfterAll(func(ctx SpecContext) {
 		if CurrentSpecReport().Failed() {
 			if !debugInfoLogged {
 				common.LogDebugInfo(common.MultiControlPlane, k)
@@ -203,17 +184,6 @@ spec:
 			}
 		}
 
-		if skipDeploy {
-			Success("Skipping operator undeploy because it was deployed externally")
-			return
-		}
-
-		By("Deleting operator deployment")
-		Expect(common.UninstallOperator()).
-			To(Succeed(), "Operator failed to be deleted")
-		GinkgoWriter.Println("Operator uninstalled")
-
-		Expect(k.DeleteNamespace(namespace)).To(Succeed(), "Namespace failed to be deleted")
-		Success("Namespace deleted")
+		clr.Cleanup(ctx)
 	})
 })

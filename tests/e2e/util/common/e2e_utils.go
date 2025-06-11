@@ -320,10 +320,6 @@ func InstallOperatorViaHelm(extraArgs ...string) error {
 	return helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), args...)
 }
 
-func UninstallOperator() error {
-	return helm.Uninstall("sail-operator", "--namespace", OperatorNamespace)
-}
-
 // GetSampleYAML returns the URL of the yaml file for the testing app.
 // args:
 // version: the version of the Istio to get the yaml file from.
