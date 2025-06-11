@@ -45,6 +45,7 @@ var (
 	image                         = env.Get("IMAGE", "quay.io/maistra-dev/sail-operator:latest")
 	skipDeploy                    = env.GetBool("SKIP_DEPLOY", false)
 	multicluster                  = env.GetBool("MULTICLUSTER", false)
+	keepOnFailure                 = env.GetBool("KEEP_ON_FAILURE", false)
 	kubeconfig                    = env.Get("KUBECONFIG", "")
 	kubeconfig2                   = env.Get("KUBECONFIG2", "")
 	artifacts                     = env.Get("ARTIFACTS", "/tmp/artifacts")
@@ -95,11 +96,11 @@ func setup(t *testing.T) {
 
 	// Set base path
 	baseRepoDir := filepath.Join(workDir, "../../..")
-	controlPlaneGatewayYAML = fmt.Sprintf("%s/docs/multicluster/controlplane-gateway.yaml", baseRepoDir)
-	eastGatewayYAML = fmt.Sprintf("%s/docs/multicluster/east-west-gateway-net1.yaml", baseRepoDir)
-	westGatewayYAML = fmt.Sprintf("%s/docs/multicluster/east-west-gateway-net2.yaml", baseRepoDir)
-	exposeServiceYAML = fmt.Sprintf("%s/docs/multicluster/expose-services.yaml", baseRepoDir)
-	exposeIstiodYAML = fmt.Sprintf("%s/docs/multicluster/expose-istiod.yaml", baseRepoDir)
+	controlPlaneGatewayYAML = fmt.Sprintf("%s/docs/deployment-models/resources/controlplane-gateway.yaml", baseRepoDir)
+	eastGatewayYAML = fmt.Sprintf("%s/docs/deployment-models/resources/east-west-gateway-net1.yaml", baseRepoDir)
+	westGatewayYAML = fmt.Sprintf("%s/docs/deployment-models/resources/east-west-gateway-net2.yaml", baseRepoDir)
+	exposeServiceYAML = fmt.Sprintf("%s/docs/deployment-models/resources/expose-services.yaml", baseRepoDir)
+	exposeIstiodYAML = fmt.Sprintf("%s/docs/deployment-models/resources/expose-istiod.yaml", baseRepoDir)
 
 	// Initialize kubectl utilities, one for each cluster
 	k1 = kubectl.New().WithKubeconfig(kubeconfig)

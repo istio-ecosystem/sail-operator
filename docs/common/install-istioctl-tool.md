@@ -1,3 +1,11 @@
+[Return to Project Root](../README.md)
+
+# Table of Contents
+
+- [Installing the istioctl tool](#installing-the-istioctl-tool)
+  - [Prerequisites](#prerequisites)
+  - [Procedure](#procedure)
+
 ## Installing the istioctl tool
 
 The `istioctl` tool is a configuration command line utility that allows service 

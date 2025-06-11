@@ -19,7 +19,7 @@ OLD_VARS := $(.VARIABLES)
 # Use `make print-variables` to inspect the values of the variables
 -include Makefile.vendor.mk
 
-VERSION ?= 1.26.1
+VERSION ?= 1.27.0
 MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 
 # This version will be used to generate the OLM upgrade graph in the FBC as a version to be replaced by the new operator version defined in $VERSION.
@@ -99,6 +99,12 @@ DOCKER_BUILD_FLAGS ?= "--platform=$(TARGET_OS)/$(TARGET_ARCH)"
 
 GOTEST_FLAGS := $(if $(VERBOSE),-v) $(if $(COVERAGE),-coverprofile=$(REPO_ROOT)/out/coverage-unit.out)
 GINKGO_FLAGS ?= $(if $(VERBOSE),-v) $(if $(CI),--no-color) $(if $(COVERAGE),-coverprofile=coverage-integration.out -coverpkg=./... --output-dir=out)
+
+# Fail fast when keeping the environment on failure, to make sure we don't contaminate it with other resources. Also make sure to skip cleanup so it won't be deleted.
+ifeq ($(KEEP_ON_FAILURE),true)
+GINKGO_FLAGS += --fail-fast
+SKIP_CLEANUP = true
+endif
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -531,6 +537,7 @@ GITLEAKS ?= $(LOCALBIN)/gitleaks
 OPM ?= $(LOCALBIN)/opm
 ISTIOCTL ?= $(LOCALBIN)/istioctl
 RUNME ?= $(LOCALBIN)/runme
+MISSPELL ?= $(LOCALBIN)/misspell
 
 ## Tool Versions
 OPERATOR_SDK_VERSION ?= v1.39.2
@@ -542,6 +549,7 @@ OLM_VERSION ?= v0.32.0
 GITLEAKS_VERSION ?= v8.27.0
 ISTIOCTL_VERSION ?= 1.26.0
 RUNME_VERSION ?= 3.14.0
+MISSPELL_VERSION ?= v0.3.4
 
 # GENERATE_RELATED_IMAGES defines whether `spec.relatedImages` is going to be generated or not
 # To disable set flag to false
@@ -733,8 +741,19 @@ lint-watches: ## Checks if the operator watches all resource kinds present in He
 lint-secrets: gitleaks ## Checks whether any secrets are present in the repository.
 	@${GITLEAKS} detect --no-git --redact -v
 
+.PHONY: lint-spell ## Run spell checker on the documentation files. Skipping sailoperator.io.md file.
+lint-spell: misspell
+	@echo "Get misspell from $(LOCALBIN)"
+	@echo "Running misspell on the documentation files"
+	@find $(REPO_ROOT)/docs -type f \( \( -name "*.md" -o -name "*.asciidoc" \) ! -name "*sailoperator.io.md" \) \
+	| xargs $(LOCALBIN)/misspell -error -locale US
+
+.PHONY: misspell
+misspell: $(LOCALBIN) ## Download misspell to bin directory.
+	@test -s $(LOCALBIN)/misspell || GOBIN=$(LOCALBIN) go install github.com/client9/misspell/cmd/misspell@$(MISSPELL_VERSION)
+
 .PHONY: lint
-lint: lint-scripts lint-licenses lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle lint-watches lint-secrets ## Run all linters.
+lint: lint-scripts lint-licenses lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle lint-watches lint-secrets lint-spell ## Run all linters.
 
 .PHONY: format
 format: format-go tidy-go ## Auto-format all code. This should be run before sending a PR.
