@@ -170,6 +170,28 @@ var _ = Describe("Operator", func() {
 * Use `Success` helper to print Success message in the test output.
 * Use `kubectl` and `helm` utils to make all the necessary operations in the test that are going to be done by a user. This means that the test should simulate the user behavior when using the operator.
 * Use `client` to interact with the Kubernetes API. This is useful when you need to interact with the Kubernetes API directly and not through `kubectl`. This needs to be used to make all the assertions if is possible. We use the client to make the assertions over `kubectl` because it is more reliable and faster, it will not need any complex parsing of the output.
+* Use `cleaner` to clean up any resources your tests create after they finish. The cleaner records a "snapshot" of the cluster, and removes any resources that weren't recorded. The best way to use it is by adding call in `BeforeAll` and `AfterAll` blocks. For example:
+```go
+import "github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
+
+var _ = Describe("Testing with cleanup", Ordered, func() {
+    clr := cleaner.New(cl)
+
+    BeforeAll(func(ctx SpecContext) {
+        clr.Record(ctx)
+        // Any additional set up goes here
+    })
+
+    // Tests go here
+
+    AfterAll(func(ctx SpecContext) {
+        // Any finalizing logic goes here
+        clr.Cleanup(ctx)
+    })
+})
+```
+    * You can use multiple cleaners, each with its own state. This is useful if the test does some global set up, e.g. sets up the operator, and then specific tests create further resources which you want cleaned.
+    * To clean resources without waiting, and waiting for them later, use `CleanupNoWait` followed by `WaitForDeletion`. This is particularly useful when working with more than one cluster.
 
 ## Running the test
 The end-to-end test can be run in two different environments: OCP (OpenShift Container Platform) and KinD (Kubernetes in Docker).
@@ -234,6 +256,7 @@ The following environment variables define the behavior of the test run:
 * CONTROL_PLANE_NS=istio-system - The namespace where the control plane will be deployed.
 * DEPLOYMENT_NAME=sail-operator - The name of the operator deployment.
 * EXPECTED_REGISTRY=`^docker\.io|^gcr\.io` - Which image registry should the operand images come from. Useful for downstream tests.
+* KEEP_ON_FAILURE - If set to true, when using a local KIND cluster, don't clean it up when the test fails. This allows to debug the failure.
 
 ### Customizing the test run
 

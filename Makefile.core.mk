@@ -100,6 +100,12 @@ DOCKER_BUILD_FLAGS ?= "--platform=$(TARGET_OS)/$(TARGET_ARCH)"
 GOTEST_FLAGS := $(if $(VERBOSE),-v) $(if $(COVERAGE),-coverprofile=$(REPO_ROOT)/out/coverage-unit.out)
 GINKGO_FLAGS ?= $(if $(VERBOSE),-v) $(if $(CI),--no-color) $(if $(COVERAGE),-coverprofile=coverage-integration.out -coverpkg=./... --output-dir=out)
 
+# Fail fast when keeping the environment on failure, to make sure we don't contaminate it with other resources. Also make sure to skip cleanup so it won't be deleted.
+ifeq ($(KEEP_ON_FAILURE),true)
+GINKGO_FLAGS += --fail-fast
+SKIP_CLEANUP = true
+endif
+
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
 # To re-generate a bundle for other specific channels without changing the standard setup, you can:

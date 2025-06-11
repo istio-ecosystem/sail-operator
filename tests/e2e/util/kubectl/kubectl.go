@@ -17,7 +17,6 @@ package kubectl
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -117,38 +116,6 @@ func (k Kubectl) CreateFromString(yamlString string) error {
 	return nil
 }
 
-// DeleteCRDs deletes the CRDs by given list of crds names
-func (k Kubectl) DeleteCRDs(crds []string) error {
-	for _, crd := range crds {
-		cmd := k.build(" delete crd " + crd)
-		_, err := shell.ExecuteCommand(cmd)
-		if err != nil {
-			return fmt.Errorf("error deleting crd %s: %w", crd, err)
-		}
-	}
-
-	return nil
-}
-
-// DeleteNamespaceNoWait deletes a namespace and returns immediately (without waiting for the namespace to be removed).
-func (k Kubectl) DeleteNamespaceNoWait(namespaces ...string) error {
-	return k.deleteNamespace(namespaces, false)
-}
-
-// DeleteNamespace deletes a namespace and waits for it to be removed completely.
-func (k Kubectl) DeleteNamespace(namespaces ...string) error {
-	return k.deleteNamespace(namespaces, true)
-}
-
-func (k Kubectl) deleteNamespace(namespaces []string, wait bool) error {
-	cmd := k.build(" delete namespace " + strings.Join(namespaces, " ") + " --wait=" + strconv.FormatBool(wait))
-	_, err := k.executeCommand(cmd)
-	if err != nil {
-		return fmt.Errorf("error deleting namespace: %w", err)
-	}
-	return nil
-}
-
 // ApplyString applies the given yaml string to the cluster
 func (k Kubectl) ApplyString(yamlString string) error {
 	cmd := k.build(" apply --server-side -f -")
@@ -197,13 +164,6 @@ func (k Kubectl) Delete(kind, name string) error {
 	}
 
 	return nil
-}
-
-// Wait waits for a specific condition on one or many resources
-func (k Kubectl) Wait(waitFor, resource string, timeout time.Duration) error {
-	cmd := k.build(fmt.Sprintf("wait --for %s %s --timeout %s", waitFor, resource, timeout.String()))
-	_, err := k.executeCommand(cmd)
-	return err
 }
 
 // Patch patches a resource
@@ -329,11 +289,6 @@ func (k Kubectl) Label(kind, name, labelKey, labelValue string) error {
 // executeCommand handles running the command and then resets the namespace automatically
 func (k Kubectl) executeCommand(cmd string) (string, error) {
 	return shell.ExecuteCommand(cmd)
-}
-
-// WaitNamespaceDeleted waits for a namespace to be deleted
-func (k Kubectl) WaitNamespaceDeleted(ns string) error {
-	return k.Wait("delete", "namespace/"+ns, 2*time.Minute)
 }
 
 func sinceFlag(since *time.Duration) string {
