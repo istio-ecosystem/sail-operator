@@ -26,6 +26,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
@@ -46,11 +47,14 @@ var _ = Describe("Control Plane updates", Label("control-plane", "slow"), Ordere
 		}
 
 		Context(istioversion.Base, func() {
+			clr := cleaner.New(cl)
+
 			BeforeAll(func(ctx SpecContext) {
 				if len(istioversion.List) < 2 {
 					Skip("Skipping update tests because there are not enough versions in versions.yaml")
 				}
 
+				clr.Record(ctx)
 				Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
 				Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
 
@@ -309,20 +313,7 @@ spec:
 					}
 				}
 
-				By("Cleaning up sample namespace")
-				Expect(k.DeleteNamespace(sampleNamespace)).To(Succeed(), "Sample Namespace failed to be deleted")
-
-				By("Cleaning up the Istio namespace")
-				Expect(k.Delete("istio", istioName)).To(Succeed(), "Istio CR failed to be deleted")
-				Expect(k.DeleteNamespace(controlPlaneNamespace)).To(Succeed(), "Istio Namespace failed to be deleted")
-
-				By("Cleaning up the IstioCNI namespace")
-				Expect(k.Delete("istiocni", istioCniName)).To(Succeed(), "IstioCNI CR failed to be deleted")
-				Expect(k.DeleteNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI Namespace failed to be deleted")
-
-				By("Deleting the IstioRevisionTag")
-				Expect(k.Delete("istiorevisiontag", "default")).To(Succeed(), "IstioRevisionTag failed to be deleted")
-				Success("Cleanup done")
+				clr.Cleanup(ctx)
 			})
 		})
 

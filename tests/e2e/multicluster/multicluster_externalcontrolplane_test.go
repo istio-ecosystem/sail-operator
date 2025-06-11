@@ -27,6 +27,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/pkg/version"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
@@ -49,8 +50,13 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 	debugInfoLogged := false
+	clr1 := cleaner.New(clPrimary, "cluster=primary")
+	clr2 := cleaner.New(clRemote, "cluster=remote")
 
 	BeforeAll(func(ctx SpecContext) {
+		clr1.Record(ctx)
+		clr2.Record(ctx)
+
 		if !skipDeploy {
 			Expect(k1.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created on Cluster #1")
 			Expect(k2.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created on Cluster #2")
@@ -83,6 +89,14 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 			}
 
 			Context(fmt.Sprintf("Istio version %s", v.Version), func() {
+				clr1 := cleaner.New(clPrimary, "cluster=primary")
+				clr2 := cleaner.New(clRemote, "cluster=remote")
+
+				BeforeAll(func(ctx SpecContext) {
+					clr1.Record(ctx)
+					clr2.Record(ctx)
+				})
+
 				When("default Istio is created in Cluster #1 to handle ingress to External Control Plane", func() {
 					BeforeAll(func(ctx SpecContext) {
 						Expect(k1.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be created")
@@ -476,23 +490,10 @@ spec:
 						}
 					}
 
-					// Delete namespaces to ensure clean up for new tests iteration
-					Expect(k1.DeleteNamespaceNoWait(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
-					Expect(k1.DeleteNamespaceNoWait(externalControlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
-					Expect(k1.DeleteNamespaceNoWait(istioCniNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
-					Expect(k2.DeleteNamespaceNoWait(externalControlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #2")
-					Expect(k2.DeleteNamespaceNoWait(sampleNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #2")
-					Expect(k2.DeleteNamespaceNoWait(istioCniNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #2")
-
-					Expect(k1.WaitNamespaceDeleted(controlPlaneNamespace)).To(Succeed())
-					Expect(k1.WaitNamespaceDeleted(externalControlPlaneNamespace)).To(Succeed())
-					Expect(k2.WaitNamespaceDeleted(externalControlPlaneNamespace)).To(Succeed())
-					Expect(k1.WaitNamespaceDeleted(istioCniNamespace)).To(Succeed())
-					Expect(k2.WaitNamespaceDeleted(istioCniNamespace)).To(Succeed())
-					Success("ControlPlane Namespaces are empty")
-
-					Expect(k2.WaitNamespaceDeleted(sampleNamespace)).To(Succeed())
-					Success("Sample app is deleted in Cluster #2")
+					c1Deleted := clr1.CleanupNoWait(ctx)
+					c2Deleted := clr2.CleanupNoWait(ctx)
+					clr1.WaitForDeletion(ctx, c1Deleted)
+					clr2.WaitForDeletion(ctx, c2Deleted)
 				})
 			})
 		}
@@ -510,10 +511,9 @@ spec:
 			}
 		}
 
-		// Delete the Sail Operator from both clusters
-		Expect(k1.DeleteNamespaceNoWait(namespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
-		Expect(k2.DeleteNamespaceNoWait(namespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #2")
-		Expect(k1.WaitNamespaceDeleted(namespace)).To(Succeed())
-		Expect(k2.WaitNamespaceDeleted(namespace)).To(Succeed())
+		c1Deleted := clr1.CleanupNoWait(ctx)
+		c2Deleted := clr2.CleanupNoWait(ctx)
+		clr1.WaitForDeletion(ctx, c1Deleted)
+		clr2.WaitForDeletion(ctx, c2Deleted)
 	})
 })

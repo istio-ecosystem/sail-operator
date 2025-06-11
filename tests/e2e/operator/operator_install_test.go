@@ -26,6 +26,7 @@ import (
 
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
@@ -58,9 +59,11 @@ var sailCRDs = []string{
 var _ = Describe("Operator", Label("smoke", "operator"), Ordered, func() {
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
+	clr := cleaner.New(cl)
 
 	Describe("installation", func() {
-		BeforeAll(func() {
+		BeforeAll(func(ctx SpecContext) {
+			clr.Record(ctx)
 			Expect(k.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
 
 			if skipDeploy {
@@ -185,13 +188,10 @@ spec:
 			))
 		})
 
-		AfterAll(func() {
+		AfterAll(func(ctx SpecContext) {
 			if CurrentSpecReport().Failed() && keepOnFailure {
 				return
 			}
-
-			Expect(k.DeleteNamespace(curlNamespace)).To(Succeed(), "failed to delete curl namespace")
-			exec.Command("kubectl", "delete", "--ignore-not-found", "clusterrolebinding", "metrics-reader-rolebinding").Run()
 
 			if CurrentSpecReport().Failed() {
 				common.LogDebugInfo(common.Operator, k)
@@ -199,7 +199,7 @@ spec:
 		})
 	})
 
-	AfterAll(func() {
+	AfterAll(func(ctx SpecContext) {
 		if CurrentSpecReport().Failed() {
 			common.LogDebugInfo(common.Operator, k)
 			if keepOnFailure {
@@ -207,19 +207,7 @@ spec:
 			}
 		}
 
-		if skipDeploy {
-			Success("Skipping operator undeploy because it was deployed externally")
-			return
-		}
-
-		By("Uninstalling the operator")
-		Expect(common.UninstallOperator()).
-			To(Succeed(), "Operator failed to be deleted")
-		Success("Operator uninstalled")
-
-		By("Deleting the CRDs")
-		Expect(k.DeleteCRDs(sailCRDs)).To(Succeed(), "CRDs failed to be deleted")
-		Success("CRDs deleted")
+		clr.Cleanup(ctx)
 	})
 })
 
