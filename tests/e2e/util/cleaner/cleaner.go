@@ -266,7 +266,7 @@ func (c *Cleaner) WaitForDeletion(ctx context.Context, deleted []client.Object) 
 
 	s := strings.Join(c.ctx, ", ")
 	if s != "" {
-		s = fmt.Sprintf("on %s", s)
+		s = fmt.Sprintf(" on %s", s)
 	}
 
 	By(fmt.Sprintf("Waiting for resources to be deleted%s", s))
