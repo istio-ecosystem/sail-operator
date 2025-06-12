@@ -31,7 +31,6 @@ export IP_FAMILY="${IP_FAMILY:-ipv4}"
 export KIND_IP_FAMILY="${IP_FAMILY}"
 export ARTIFACTS="${ARTIFACTS:-$(mktemp -d)}"
 export MULTICLUSTER="${MULTICLUSTER:-false}"
-export KIND_EXCLUDE_CLUSTERS="${KIND_EXCLUDE_CLUSTERS:-}"
 
 export KIND_CLUSTER_NAME="${KIND_CLUSTER_NAME:-operator-integration-tests}"
 if [ "${MULTICLUSTER}" == "true" ]; then
@@ -48,11 +47,7 @@ function setup_kind_registry() {
     docker network connect "kind" "${KIND_REGISTRY_NAME}"
   fi
 
-  for cluster in $(kind get clusters); do
-    if [[ "${KIND_EXCLUDE_CLUSTERS}" == *"${cluster}"* ]]; then
-      continue
-    fi
-
+  for cluster in "$@"; do
     if [ "${MULTICLUSTER}" == "true" ]; then
         export KUBECONFIG="${KUBECONFIG_DIR}/${cluster}"
     else
@@ -70,13 +65,13 @@ if [ "${MULTICLUSTER}" == "true" ]; then
     CLUSTER_TOPOLOGY_CONFIG_FILE="${SCRIPTPATH}/../setup/config/multicluster.json"
     load_cluster_topology "${CLUSTER_TOPOLOGY_CONFIG_FILE}"
     setup_kind_clusters "" ""
-    setup_kind_registry
+    setup_kind_registry "${CLUSTER_NAMES[@]}"
 
     export KUBECONFIG="${KUBECONFIGS[0]}"
     export KUBECONFIG2="${KUBECONFIGS[1]}"
     echo "Your KinD environment is ready, to use it: export KUBECONFIG=$(IFS=:; echo "${KUBECONFIGS[*]}")"
 else
   KUBECONFIG="${ARTIFACTS}/config" setup_kind_cluster "${KIND_CLUSTER_NAME}" "" "" "true" "true"
-  setup_kind_registry
+  setup_kind_registry "$KIND_CLUSTER_NAME"
   echo "Your KinD environment is ready, to use it: export KUBECONFIG=${ARTIFACTS}/config"
 fi
