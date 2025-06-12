@@ -42,36 +42,6 @@ import (
 var _ = Describe("Multicluster deployment models", Label("multicluster", "multicluster-primaryremote"), Ordered, func() {
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
-	debugInfoLogged := false
-	clr1 := cleaner.New(clPrimary, "cluster=primary")
-	clr2 := cleaner.New(clRemote, "cluster=remote")
-
-	BeforeAll(func(ctx SpecContext) {
-		clr1.Record(ctx)
-		clr2.Record(ctx)
-
-		if !skipDeploy {
-			// Deploy the Sail Operator on both clusters
-			Expect(k1.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created on Primary Cluster")
-			Expect(k2.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created on Remote Cluster")
-
-			Expect(common.InstallOperatorViaHelm("--kubeconfig", kubeconfig)).
-				To(Succeed(), "Operator failed to be deployed in Primary Cluster")
-
-			Expect(common.InstallOperatorViaHelm("--kubeconfig", kubeconfig2)).
-				To(Succeed(), "Operator failed to be deployed in Remote Cluster")
-
-			Eventually(common.GetObject).
-				WithArguments(ctx, clPrimary, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
-				Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
-			Success("Operator is deployed in the Primary namespace and Running")
-
-			Eventually(common.GetObject).
-				WithArguments(ctx, clRemote, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
-				Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
-			Success("Operator is deployed in the Remote namespace and Running")
-		}
-	})
 
 	Describe("Primary-Remote - Multi-Network configuration", func() {
 		// Test the Primary-Remote - Multi-Network configuration for each supported Istio version
@@ -395,23 +365,5 @@ spec:
 				})
 			})
 		}
-	})
-
-	AfterAll(func(ctx SpecContext) {
-		if CurrentSpecReport().Failed() {
-			if !debugInfoLogged {
-				common.LogDebugInfo(common.MultiCluster, k1, k2)
-				debugInfoLogged = true
-			}
-
-			if keepOnFailure {
-				return
-			}
-		}
-
-		c1Deleted := clr1.CleanupNoWait(ctx)
-		c2Deleted := clr2.CleanupNoWait(ctx)
-		clr1.WaitForDeletion(ctx, c1Deleted)
-		clr2.WaitForDeletion(ctx, c2Deleted)
 	})
 })
