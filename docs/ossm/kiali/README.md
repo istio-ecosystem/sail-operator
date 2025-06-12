@@ -228,7 +228,7 @@ The following steps show how to install Kiali via the OpenShift CLI.
     EOM
     ```
 
-4. Once the Kiali CR is created, the Kiali Operator will shortly be notified and will process it (called “reconcilation”) which performs the Kiali installation. Wait for the Kiali Operator to finish the reconcilation by using the standard oc wait command:
+4. Once the Kiali CR is created, the Kiali Operator will shortly be notified and will process it (called “reconciliation”) which performs the Kiali installation. Wait for the Kiali Operator to finish the reconciliation by using the standard oc wait command:
 
     ```console
     oc wait --for=condition=Successful kiali kiali -n istio-system

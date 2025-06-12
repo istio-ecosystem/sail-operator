@@ -133,7 +133,7 @@ The following steps show how to install the OSSMC plugin via the OpenShift CLI.
 
 2. Go to the OpenShift web console.
 
-3. If the OSSMC plugin is not availble yet, a message will appear in the OpenShift Console asking to refresh once the OSSM Console plugin is ready. You can use OSSMC once you refresh the OpenShift Console UI.
+3. If the OSSMC plugin is not available yet, a message will appear in the OpenShift Console asking to refresh once the OSSM Console plugin is ready. You can use OSSMC once you refresh the OpenShift Console UI.
 
 ## Uninstalling the OpenShift Service Mesh Console plugin
 
