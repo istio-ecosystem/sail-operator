@@ -19,6 +19,7 @@ require (
 	github.com/onsi/gomega v1.37.0
 	github.com/prometheus/common v0.63.0
 	github.com/stretchr/testify v1.10.0
+	go.uber.org/zap v1.27.0
 	golang.org/x/mod v0.24.0
 	golang.org/x/text v0.25.0
 	golang.org/x/tools v0.33.0
@@ -161,7 +162,6 @@ require (
 	go.opentelemetry.io/proto/otlp v1.6.0 // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.38.0 // indirect
 	golang.org/x/exp v0.0.0-20250506013437-ce4c2cf36ca6 // indirect
 	golang.org/x/net v0.40.0 // indirect
