@@ -35,16 +35,19 @@ export HUB="${KIND_REGISTRY}"
 # Workaround make inside make: ovewrite this variable so it is not recomputed in Makefile.core.mk
 export IMAGE="${HUB}/${IMAGE_BASE}:${TAG}"
 export ARTIFACTS="${ARTIFACTS:-$(mktemp -d)}"
+export TEST_DIR="${ARTIFACTS}/docs.test"
 export KUBECONFIG="${KUBECONFIG:-"${ARTIFACTS}/config"}"
 export HELM_TEMPL_DEF_FLAGS="--include-crds --values chart/values.yaml"
 
+# Ensure TEST_DIR exists, if not create it
+mkdir -p "$TEST_DIR"
 
 # Run the update-docs-examples.sh script to update the documentation files into the artifacts directory. By default ARTIFACTS is set to a temporary directory.
-ARTIFACTS="${ARTIFACTS}" "${ROOT_DIR}/tests/documentation_tests/scripts/update-docs-examples.sh"
+ARTIFACTS="${TEST_DIR}" "${ROOT_DIR}/tests/documentation_tests/scripts/update-docs-examples.sh"
 
 # Check that .md files were copied to the artifacts directory. If there is no files, then exit with an error.
-if [ ! -d "$ARTIFACTS" ] || [ -z "$(find "$ARTIFACTS" -maxdepth 1 -name "*.md")" ]; then
-  echo "No .md files found in the artifacts directory: $ARTIFACTS"
+if [ ! -d "$TEST_DIR" ] || [ -z "$(find "$TEST_DIR" -maxdepth 1 -name "*.md")" ]; then
+  echo "No .md files found in the artifacts directory: $TEST_DIR"
   exit 1
 fi
 
@@ -62,7 +65,7 @@ fi
 
 # Discover .md files with bash tags
 FILES_TO_CHECK=()
-for file in "$ARTIFACTS"/*.md; do
+for file in "$TEST_DIR"/*.md; do
   if grep -q "bash { name=" "$file"; then
     FILES_TO_CHECK+=("$file")
   fi
