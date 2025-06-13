@@ -275,6 +275,95 @@ Alternatively, set the following environment variables to change these file path
 
 `TCP_ECHO_*` are used in the `dual-stack` test suite, `SLEEP_YAML_PATH` and `HELLOWORLD_YAML_PATH` are used in both `Multicluster` and default test run.
 
+### Using the e2e framework to test your cluster configuration
+The e2e framework can be used to test your cluster configuration. The framework is designed to be flexible and extensible. It is easy to add new test suites and new tests. The idea is to be able to simulate what a real user scenario looks like when using the operator.
+
+To do this, we have a set of test cases under a test group called `smoke`. This test group will run a set of tests that are designed to test the basic functionality of the operator. The tests in this group are designed to be run against a cluster that is already configured and running. The tests will not modify the cluster configuration or the operator configuration. The tests will only check if the operator is working as expected.
+
+Pre-requisites:
+* The operator is already installed and running in the cluster.
+
+To run the test group, you can use the following command:
+
+* Run the following command to run the smoke tests:
+For running on kind:
+```
+$ SKIP_BUILD=true SKIP_DEPLOY=true GINKGO_FLAGS="-v --label-filter=smoke" make test.e2e.kind
+```
+
+For running on OCP:
+```
+$ SKIP_BUILD=true SKIP_DEPLOY=true GINKGO_FLAGS="-v --label-filter=smoke" make test.e2e.ocp
+```
+
+#### Running with specific configuration for the Istio and IstioCNI resource
+There might be situations where you want to run tests with a specific configuration for the Istio and IstioCNI resource to match some cluster specific needs. For this, you can modify the `pkg/istiovalues/vendor_default.yaml` file to default `spec.values` for the Istio and IstioCNI resources. For more information and an example go to the [file](pkg/istiovalues/vendor_default.yaml)
+
+#### Running the testing framework against specific Istio versions
+By default, the test framework will run the tests against all the latest patch minor version available for the operator. This is useful when you want to test the operator against all the latest patch minor versions available. The test framework will automatically detect the latest patch minor version available for the operator and run the tests against it by reading the versions located in the `pkg/istioversion/versions.yaml` file.
+
+To avoid this and run the tests against a specific Istio versions, you can create your own `versions.yaml` file and set the `VERSIONS_YAML_FILE` environment variable to point to it. The file should have the following structure:
+```yaml
+versions:
+  - name: v1.26-latest
+    ref: v1.26.0
+  - name: v1.26.0
+    version: 1.26.0
+    repo: https://github.com/istio/istio
+    commit: 1.26.0
+    charts:
+      - https://istio-release.storage.googleapis.com/charts/base-1.26.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-1.26.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/gateway-1.26.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/cni-1.26.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.26.0.tgz
+  - name: v1.25-latest
+    ref: v1.25.3
+  - name: v1.25.3
+    version: 1.25.3
+    repo: https://github.com/istio/istio
+    commit: 1.25.3
+    charts:
+      - https://istio-release.storage.googleapis.com/charts/base-1.25.3.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-1.25.3.tgz
+      - https://istio-release.storage.googleapis.com/charts/gateway-1.25.3.tgz
+      - https://istio-release.storage.googleapis.com/charts/cni-1.25.3.tgz
+      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.25.3.tgz
+```
+*Important*: avoid adding in the custom file versions that are not available in the `pkg/istioversion/versions.yaml` file. The test framework will not be able to run the tests because the operator does not contains the charts for those versions.
+* To run the test framework against a specific Istio version, you can use the following command:
+```
+$ VERSIONS_YAML_FILE=path/to/your/versions.yaml SKIP_BUILD=true SKIP_DEPLOY=true GINKGO_FLAGS="-v --label-filter=smoke" make test.e2e.kind
+```
+
+### Understanding the test output
+By default, running the test using the make target will generate a report.xml file in the project's root directory. This file contains the test results in JUnit format, for example:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+  <testsuites tests="154" disabled="79" errors="0" failures="0" time="588.636386015">
+      <testsuite name="Ambient Test Suite" package="/work/tests/e2e/ambient" tests="60" disabled="0" skipped="60" errors="0" failures="0" time="0.020193112" timestamp="2025-05-22T13:07:53">
+          <properties>
+```
+As you can see, the test results are grouped by test suite. The `tests` attribute indicates the number of tests that were run, the `disabled` attribute indicates the number of tests that were skipped, and the `errors` and `failures` attributes indicate the number of tests that failed or had errors. The `time` attribute indicates the total time taken to run the tests.
+
+Also, in the terminal you will be able to see the test results in a human readable format. The test results will be printed to the console with the following format:
+```
+Ran 82 of 82 Specs in 224.026 seconds
+SUCCESS! -- 82 Passed | 0 Failed | 0 Pending | 0 Skipped
+PASS
+
+Ginkgo ran 1 suite in 3m46.401610849s
+Test Suite Passed
+```
+
+In case of failure, the test results will be printed to the console with the following format:
+```
+Ran 82 of 82 Specs in 224.026 seconds
+FAIL! -- 81 Passed | 1 Failed | 0 Pending | 0 Skipped
+Ginkgo ran 1 suite in 3m46.401610849s
+Test Suite Failed
+```
+
 ### Get test definitions for the end-to-end test
 
 The end-to-end test suite is defined in the `tests/e2e/operator` directory. If you want to check the test definition without running the test, you can use the following make target:
