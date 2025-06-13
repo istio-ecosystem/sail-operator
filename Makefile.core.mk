@@ -209,31 +209,15 @@ test.e2e.kind: istioctl ## Deploy a KinD cluster and run the end-to-end tests ag
 test.e2e.describe: ## Runs ginkgo outline -format indent over the e2e test to show in BDD style the steps and test structure
 	GINKGO_FLAGS="$(GINKGO_FLAGS)" ${SOURCE_DIR}/tests/e2e/common-operator-integ-suite.sh --describe
 
-.PHONY: runme $(RUNME)
-runme: OS=$(shell go env GOOS)
-runme: ARCH=$(shell go env GOARCH)
-runme: $(RUNME) ## Download runme to bin directory. If wrong version is installed, it will be overwritten.
-	@test -s $(LOCALBIN)/runme || { \
-		GOBIN=$(LOCALBIN) GO111MODULE=on go install github.com/runmedev/runme/v3@v$(RUNME_VERSION) > /dev/stderr; \
-		echo "runme has been downloaded and placed in $(LOCALBIN)"; \
-	}
-
-.PHONY: update-docs-examples
-update-docs-examples: ## Copy the documentation files and generate the resulting md files to be executed by the runme tool.
-	@echo "Executing copy script to generate the documentation examples md files"
-	@echo "The script will copy the files from the source folder to test folder"
-	@tests/documentation_tests/scripts/update-docs-examples.sh
-	@echo "Documentation examples updated successfully"
-
-# Declare EXECUTE_DOC_TAG as an optional variable that can be set to a specific tag for the documentation examples.
-EXECUTE_DOC_TAG ?= ""
+# Declare FOCUS_DOC_TAGS as an optional variable that can be set to a specific tag for the documentation examples.
+FOCUS_DOC_TAGS ?= ""
 .PHONE: test.docs
-test.docs: runme istioctl update-docs-examples ## Run the documentation examples tests.
+test.docs: runme istioctl ## Run the documentation examples tests.
 ## test.docs use runme to test the documentation examples. 
 ## Check the specific documentation to understand the use of the tool
-	@echo "Running runme test on the documentation examples, the location of the tests is in the tests/documentation_test folder"
-	@PATH=$(LOCALBIN):$$PATH EXECUTE_DOC_TAG=$(EXECUTE_DOC_TAG) tests/documentation_tests/scripts/run-docs-examples.sh
-	@echo "Documentation examples tested successfully, temporary files removed"
+	@echo "Running runme test on the documentation examples."
+	@PATH=$(LOCALBIN):$$PATH FOCUS_DOC_TAGS=$(FOCUS_DOC_TAGS) tests/documentation_tests/scripts/run-docs-examples.sh
+	@echo "Documentation examples tested successfully"
 
 ##@ Build
 
@@ -601,6 +585,15 @@ $(ISTIOCTL): $(LOCALBIN)
 		mv /tmp/$$(tar tf /tmp/istioctl.tar.gz) $(LOCALBIN)/istioctl; \
 		rm -f /tmp/istioctl.tar.gz; \
 		echo "istioctl has been downloaded and placed in $(LOCALBIN)"; \
+	}
+
+.PHONY: runme $(RUNME)
+runme: OS=$(shell go env GOOS)
+runme: ARCH=$(shell go env GOARCH)
+runme: $(RUNME) ## Download runme to bin directory. If wrong version is installed, it will be overwritten.
+	@test -s $(LOCALBIN)/runme || { \
+		GOBIN=$(LOCALBIN) GO111MODULE=on go install github.com/runmedev/runme/v3@v$(RUNME_VERSION) > /dev/stderr; \
+		echo "runme has been downloaded and placed in $(LOCALBIN)"; \
 	}
 
 .PHONY: controller-gen
