@@ -192,10 +192,10 @@ runme list --filename docs/common/runme-test.md
 This will output the entire list of commands but does not have filter for the tags.
 
 ### Debugging a specific docs example locally
-To debug a specific example locally, you can use the the make target with the use of the env variable `EXECUTE_DOC_TAG`. For example, if you want to run the example with the tag `example-tag` you can run the following command:
+To debug a specific example locally, you can use the the make target with the use of the env variable `FOCUS_DOC_TAGS`. For example, if you want to run the example with the tag `example-tag` you can run the following command:
 
 ```bash
-make test.docs EXECUTE_DOC_TAG=example-tag
+make test.docs FOCUS_DOC_TAGS=example-tag
 ```
 
 This will run only the example with the tag `example-tag` and will not run any other example. This is useful to debug a specific example without running all the examples in the documentation. Take into account that the make target already creates their own kind cluster and installs the Sail Operator, so you don't need to do it manually. Also, the make target will clean up the cluster after the test is finished.

@@ -18,8 +18,7 @@ set -eu -o pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-TEST_DIR="$ROOT_DIR/tests/documentation_tests"
-EXECUTE_DOC_TAG="${EXECUTE_DOC_TAG:-}"
+FOCUS_DOC_TAGS="${FOCUS_DOC_TAGS:-}"
 
 export KIND_CLUSTER_NAME="docs-automation"
 export IP_FAMILY="ipv4"
@@ -39,8 +38,15 @@ export ARTIFACTS="${ARTIFACTS:-$(mktemp -d)}"
 export KUBECONFIG="${KUBECONFIG:-"${ARTIFACTS}/config"}"
 export HELM_TEMPL_DEF_FLAGS="--include-crds --values chart/values.yaml"
 
-# Set up a trap to delete .md files in TEST_DIR on exit
-trap 'rm -f "$TEST_DIR"/*.md' EXIT
+
+# Run the update-docs-examples.sh script to update the documentation files into the artifacts directory. By default ARTIFACTS is set to a temporary directory.
+ARTIFACTS="${ARTIFACTS}" "${ROOT_DIR}/tests/documentation_tests/scripts/update-docs-examples.sh"
+
+# Check that .md files were copied to the artifacts directory. If there is no files, then exit with an error.
+if [ ! -d "$ARTIFACTS" ] || [ -z "$(find "$ARTIFACTS" -maxdepth 1 -name "*.md")" ]; then
+  echo "No .md files found in the artifacts directory: $ARTIFACTS"
+  exit 1
+fi
 
 # Validate that istioctl is installed
 if ! command -v istioctl &> /dev/null; then
@@ -56,7 +62,7 @@ fi
 
 # Discover .md files with bash tags
 FILES_TO_CHECK=()
-for file in "$TEST_DIR"/*.md; do
+for file in "$ARTIFACTS"/*.md; do
   if grep -q "bash { name=" "$file"; then
     FILES_TO_CHECK+=("$file")
   fi
@@ -69,7 +75,7 @@ dual_stack_tag=""
 for file in "${FILES_TO_CHECK[@]}"; do
   TAGS=$(grep -oP 'tag=\K[^} ]+' "$file" | sort -u)
   for tag in $TAGS; do
-    if [[ -n "$EXECUTE_DOC_TAG" && "$tag" != "$EXECUTE_DOC_TAG" ]]; then
+    if [[ -n "$FOCUS_DOC_TAGS" && "$tag" != "$FOCUS_DOC_TAGS" ]]; then
       continue
     fi
 
@@ -150,6 +156,6 @@ function run_tests() {
 run_tests "${TAGS_LIST[@]}"
 
 # Run dual stack tests on it's own cluster, since it needs to be deployed with support for dual stack
-if [[ -z "$EXECUTE_DOC_TAG" && -n "$dual_stack_tag" ]]; then
+if [[ -z "$FOCUS_DOC_TAGS" && -n "$dual_stack_tag" ]]; then
   IP_FAMILY="dual" run_tests "$dual_stack_tag"
 fi
