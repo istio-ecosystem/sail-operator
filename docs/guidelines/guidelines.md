@@ -16,6 +16,7 @@
   - [Automated Testing over the Documentation](#automated-testing-over-the-documentation)
     - [What does update-docs-examples.sh do?](#what-does-update-docs-examplessh-do)
     - [Adding a topic example to the automation workflow](#adding-a-topic-example-to-the-automation-workflow)
+    - [Debugging a specific docs example locally](#debugging-a-specific-docs-example-locally)
 
 # Documentation Guidelines
 
@@ -67,13 +68,12 @@ Use code block for command or groups of command that has the same context. Use v
 Any documentation step need to be tested to ensure that the steps are correct and the user can follow them without any issue. To do this, we use `runme` (check the docs [here](https://docs.runme.dev/getting-started/cli)) to run the tests over the documentation. The workflow of the automation is the following:
 
 - The documentation files are in the `docs` folder.
-- The `make update` target is going to run the script `tests/documentation_test/scripts/update-docs-examples.sh` that is going to generate the md modified files to run the test (For more information check next topic).
-- The `make test.docs` target is going to run the script `tests/documentation_test/scripts/run-docs-examples.sh` that is going to run the tests over the documentation files. This script is going to run all the steps in the examples marked following the guidelines explained in the next section.
+- The `make test.docs` target temporarily copies the documentation files to the `test/documentation_test` directory and uncomments all commented validation steps. This process is handled by the `tests/documentation_test/scripts/update-docs-examples.sh` script. Afterward, the `tests/documentation_test/scripts/run-docs-examples.sh` script executes the tests on the documentation files. It runs all example steps marked according to the guidelines outlined in the next section. Once the tests are complete, the temporary documentation files are removed.
 
 ### What does update-docs-examples.sh do
 The script `update-docs-examples.sh` is going to run the following steps:
 - Check all the md files in the `docs` folder and exclude from the list the files described inside the `EXCLUDE_FILES` variable and then copy all the files to the `tests/documentation_test/` folder that meets the criteria, check [Adding a topic example to the automation workflow](/docs/guidelines/guidelines.md#L62) section for more information about the criteria.
-- Once the files are copied into the destination path it checka those files to uncomment the bash commented steps. This bash commented code block are going to be hiden in the original md files but we will uncomment this code block to be able to run validation steps that wait for conditions an avoid flakiness of the test. This means that most of the validation steps will be commented code blocks, more information [here](/docs/guidelines/guidelines.md#L146).
+- Once the files are copied into the destination path it checks those files to uncomment the bash commented steps. This bash commented code block are going to be hiden in the original md files but we will uncomment this code block to be able to run validation steps that wait for conditions an avoid flakiness of the test. This means that most of the validation steps will be commented code blocks, more information [here](/docs/guidelines/guidelines.md#L146).
 
 
 ### Adding a topic example to the automation workflow
@@ -171,11 +171,11 @@ kubectl wait --for=condition=available --timeout=600s deployment/sail-operator -
 To avoid putting duplicated validation steps and help the users to easily get information, validate steps, etc. you can use prebuilt validation steps that are already created in the [prebuilts-func.sh](tests/documentation_tests/scripts/prebuilt-func.sh) script. For example, if you want to check if the istiod pod is ready you can use the `wait_istio_ready` function that is already created in the script. To use this function you need to add the following code block in your documentation:
 ```md
 <!-- ```bash { name=validation-wait-operator tag=example-tag}
-. scripts/prebuilt-func.sh
+. $SCRIPT_DIR/prebuilt-func.sh
 wait_istio_ready "istio-system"
 ``` -->
 ```
-To check the entire list of prebuilt functions please check the [prebuilts-func.sh](tests/documentation_tests/scripts/prebuilt-func.sh) script.
+To check the entire list of prebuilt functions please check the [prebuilts-func.sh](tests/documentation_tests/scripts/prebuilt-func.sh) script. Note that `SCRIPT_DIR` is a variable that is already defined in the `run-docs-examples.sh` script, so you can use it directly in your documentation.
 
 > [!IMPORTANT]  
 > Always include validation steps to avoid flakiness. They ensure resources are in expected conditions and the test fails clearly if they don’t.
@@ -186,3 +186,12 @@ To check the entire list of prebuilt functions please check the [prebuilts-func.
 runme list --filename docs/common/runme-test.md
 ```
 This will output the entire list of commands but does not have filter for the tags.
+
+### Debugging a specific docs example locally
+To debug a specific example locally, you can use the the make target with the use of the env variable `FOCUS_DOC_TAGS`. For example, if you want to run the example with the tag `example-tag` you can run the following command:
+
+```bash
+make test.docs FOCUS_DOC_TAGS=example-tag
+```
+
+This will run only the example with the tag `example-tag` and will not run any other example. This is useful to debug a specific example without running all the examples in the documentation. Take into account that the make target already creates their own kind cluster and installs the Sail Operator, so you don't need to do it manually. Also, the make target will clean up the cluster after the test is finished.
