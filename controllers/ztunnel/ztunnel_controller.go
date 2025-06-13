@@ -144,16 +144,7 @@ func (r *Reconciler) installHelmChart(ctx context.Context, ztunnel *v1alpha1.ZTu
 	userValues := ztunnel.Spec.Values
 
 	// apply image digests from configuration, if not already set by user
-	// TODO: Revisit once we support ImageOverrides for ztunnel
-	// userValues = applyImageDigests(ztunnel, userValues, config.Config)
-
-	if userValues == nil {
-		userValues = &v1.ZTunnelValues{}
-	}
-
-	if userValues.ZTunnel == nil {
-		userValues.ZTunnel = &v1.ZTunnelConfig{}
-	}
+	userValues = applyImageDigests(version, userValues, config.Config)
 
 	// apply userValues on top of defaultValues from profiles
 	mergedHelmValues, err := istiovalues.ApplyProfilesAndPlatform(
