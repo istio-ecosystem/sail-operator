@@ -16,7 +16,8 @@
 
 set -eu -o pipefail
 
-export SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export SCRIPT_DIR
 ROOT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 FOCUS_DOC_TAGS="${FOCUS_DOC_TAGS:-}"
 
