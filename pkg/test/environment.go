@@ -20,6 +20,7 @@ import (
 
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
+	"go.uber.org/zap/zapcore"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -28,7 +29,7 @@ import (
 )
 
 func SetupEnv(logWriter io.Writer, installCRDs bool) (*envtest.Environment, client.Client, *rest.Config) {
-	logf.SetLogger(zap.New(zap.WriteTo(logWriter), zap.UseDevMode(true)))
+	logf.SetLogger(zap.New(zap.WriteTo(logWriter), zap.UseDevMode(true), zap.Level(zapcore.Level(-3))))
 
 	var crdDirectoryPaths []string
 	if installCRDs {
