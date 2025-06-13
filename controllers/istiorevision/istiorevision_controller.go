@@ -165,25 +165,38 @@ func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevisio
 	}
 
 	values := helm.FromValues(rev.Spec.Values)
-	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev),
-		values, rev.Spec.Namespace, getReleaseName(rev), &ownerReference)
+	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev, constants.IstiodChartName),
+		values, rev.Spec.Namespace, getReleaseName(rev, constants.IstiodChartName), &ownerReference)
 	if err != nil {
 		return fmt.Errorf("failed to install/update Helm chart %q: %w", constants.IstiodChartName, err)
+	}
+	if rev.Name == v1.DefaultRevision {
+		_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev, constants.BaseChartName),
+			values, "default", getReleaseName(rev, constants.BaseChartName), &ownerReference)
+		if err != nil {
+			return fmt.Errorf("failed to install/update Helm chart %q: %w", constants.BaseChartName, err)
+		}
 	}
 	return nil
 }
 
-func getReleaseName(rev *v1.IstioRevision) string {
-	return fmt.Sprintf("%s-%s", rev.Name, constants.IstiodChartName)
+func getReleaseName(rev *v1.IstioRevision, chartName string) string {
+	return fmt.Sprintf("%s-%s", rev.Name, chartName)
 }
 
-func (r *Reconciler) getChartDir(rev *v1.IstioRevision) string {
-	return path.Join(r.Config.ResourceDirectory, rev.Spec.Version, "charts", constants.IstiodChartName)
+func (r *Reconciler) getChartDir(rev *v1.IstioRevision, chartName string) string {
+	return path.Join(r.Config.ResourceDirectory, rev.Spec.Version, "charts", chartName)
 }
 
 func (r *Reconciler) uninstallHelmCharts(ctx context.Context, rev *v1.IstioRevision) error {
-	if _, err := r.ChartManager.UninstallChart(ctx, getReleaseName(rev), rev.Spec.Namespace); err != nil {
+	if _, err := r.ChartManager.UninstallChart(ctx, getReleaseName(rev, constants.IstiodChartName), rev.Spec.Namespace); err != nil {
 		return fmt.Errorf("failed to uninstall Helm chart %q: %w", constants.IstiodChartName, err)
+	}
+	if rev.Name == v1.DefaultRevision {
+		_, err := r.ChartManager.UninstallChart(ctx, getReleaseName(rev, constants.BaseChartName), "default")
+		if err != nil {
+			return fmt.Errorf("failed to uninstall Helm chart %q: %w", constants.BaseChartName, err)
+		}
 	}
 	return nil
 }

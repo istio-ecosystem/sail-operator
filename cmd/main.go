@@ -22,7 +22,6 @@ import (
 	"os"
 
 	"github.com/istio-ecosystem/sail-operator/controllers/istio"
-	"github.com/istio-ecosystem/sail-operator/controllers/istiobase"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiocni"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiorevision"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiorevisiontag"
@@ -162,13 +161,6 @@ func main() {
 		reconcilerCfg.DefaultProfile = "openshift"
 	} else {
 		reconcilerCfg.DefaultProfile = "default"
-	}
-
-	err = istiobase.NewReconciler(reconcilerCfg, mgr.GetClient(), mgr.GetScheme(), chartManager).
-		SetupWithManager(mgr)
-	if err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "IstioBase")
-		os.Exit(1)
 	}
 
 	err = istio.NewReconciler(reconcilerCfg, mgr.GetClient(), mgr.GetScheme()).
