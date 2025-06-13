@@ -68,7 +68,7 @@ istiod-7c5947b8d7-88z7m   1/1     Running   0          14m
 istiod-7c5947b8d7-ssnmt   1/1     Running   0          54m
 ```
 <!-- ```bash { name=validation-wait-istio-pods tag=istio-ha-replicacount }
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     wait_istio_ready "istio-system"
     with_retries istiod_pods_count "2"
     print_istio_info
@@ -119,7 +119,7 @@ istiod-7c7b6564c9-nwhsg   1/1     Running   0          70s
 istiod-7c7b6564c9-xkmsl   1/1     Running   0          85s
 ```
 <!-- ```bash { name=validation-wait-istio-pods tag=istio-ha-autoscaling }
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     wait_istio_ready "istio-system"
     with_retries istiod_pods_count "2"
     print_istio_info

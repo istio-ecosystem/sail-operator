@@ -193,7 +193,7 @@ To update the CNI plugin, just change the `version` field to the version you wan
     EOF
     ```
 <!-- ```bash { name=validation-wait-cni tag=cni-update}
-. scripts/prebuilt-func.sh
+. $SCRIPT_DIR/prebuilt-func.sh
 wait_cni_ready "istio-cni"
 with_retries resource_version_equal "istiocni" "default" "v1.24.2"
 ``` -->
@@ -208,7 +208,7 @@ with_retries resource_version_equal "istiocni" "default" "v1.24.2"
     ```
 
 <!-- ```bash { name=print-cni tag=cni-update}
-. scripts/prebuilt-func.sh
+. $SCRIPT_DIR/prebuilt-func.sh
 print_cni_info
 ``` -->
 
@@ -218,7 +218,7 @@ print_cni_info
     kubectl patch istiocni default -n istio-cni --type='merge' -p '{"spec":{"version":"v1.24.3"}}'
     ```
 <!-- ```bash { name=validation-wait-cni tag=cni-update}
-. scripts/prebuilt-func.sh
+. $SCRIPT_DIR/prebuilt-func.sh
 with_retries resource_version_equal "istiocni" "default" "v1.24.3"
 wait_cni_ready "istio-cni"
 ``` -->
@@ -234,7 +234,7 @@ wait_cni_ready "istio-cni"
     ```
 
 <!-- ```bash { name=print-cni tag=cni-update}
-. scripts/prebuilt-func.sh
+. $SCRIPT_DIR/prebuilt-func.sh
 print_cni_info
 ``` -->
 > [!NOTE]

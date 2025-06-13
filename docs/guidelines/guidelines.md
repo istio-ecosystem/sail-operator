@@ -171,11 +171,11 @@ kubectl wait --for=condition=available --timeout=600s deployment/sail-operator -
 To avoid putting duplicated validation steps and help the users to easily get information, validate steps, etc. you can use prebuilt validation steps that are already created in the [prebuilts-func.sh](tests/documentation_tests/scripts/prebuilt-func.sh) script. For example, if you want to check if the istiod pod is ready you can use the `wait_istio_ready` function that is already created in the script. To use this function you need to add the following code block in your documentation:
 ```md
 <!-- ```bash { name=validation-wait-operator tag=example-tag}
-. scripts/prebuilt-func.sh
+. $SCRIPT_DIR/prebuilt-func.sh
 wait_istio_ready "istio-system"
 ``` -->
 ```
-To check the entire list of prebuilt functions please check the [prebuilts-func.sh](tests/documentation_tests/scripts/prebuilt-func.sh) script.
+To check the entire list of prebuilt functions please check the [prebuilts-func.sh](tests/documentation_tests/scripts/prebuilt-func.sh) script. Note that `SCRIPT_DIR` is a variable that is already defined in the `run-docs-examples.sh` script, so you can use it directly in your documentation.
 
 > [!IMPORTANT]  
 > Always include validation steps to avoid flakiness. They ensure resources are in expected conditions and the test fails clearly if they don’t.
