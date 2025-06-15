@@ -147,8 +147,8 @@ var _ = BeforeSuite(func(ctx SpecContext) {
 	Success("Operator is deployed in the Remote namespace and Running")
 })
 
-var _ = AfterSuite(func(ctx SpecContext) {
-	if CurrentSpecReport().Failed() {
+var _ = ReportAfterSuite("Condiotnal cleanup", func(ctx SpecContext, r Report) {
+	if !r.SuiteSucceeded {
 		if !debugInfoLogged {
 			common.LogDebugInfo(common.MultiCluster, k1, k2)
 		}
