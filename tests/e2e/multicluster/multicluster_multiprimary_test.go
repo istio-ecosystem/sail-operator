@@ -76,21 +76,8 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 							return err
 						}).ShouldNot(HaveOccurred(), "Secret is not created on Cluster #1")
 
-						multiclusterIstioCNIYAML := `
-apiVersion: sailoperator.io/v1
-kind: IstioCNI
-metadata:
-  name: default
-spec:
-  version: %s
-  namespace: %s`
-						multiclusterIstioCNICluster1YAML := fmt.Sprintf(multiclusterIstioCNIYAML, version.Name, istioCniNamespace)
-						Log("Istio CNI CR Cluster #1: ", multiclusterIstioCNICluster1YAML)
-						Expect(k1.CreateFromString(multiclusterIstioCNICluster1YAML)).To(Succeed(), "Istio CNI Resource creation failed on Cluster #1")
-
-						multiclusterIstioCNICluster2YAML := fmt.Sprintf(multiclusterIstioCNIYAML, version.Name, istioCniNamespace)
-						Log("Istio CNI CR Cluster #2: ", multiclusterIstioCNICluster2YAML)
-						Expect(k2.CreateFromString(multiclusterIstioCNICluster2YAML)).To(Succeed(), "Istio CNI Resource creation failed on Cluster #2")
+						common.CreateIstioCNI(k1, version.Name)
+						common.CreateIstioCNI(k2, version.Name)
 
 						multiclusterIstioYAML := `
 apiVersion: sailoperator.io/v1

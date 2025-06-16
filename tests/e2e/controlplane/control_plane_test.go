@@ -108,18 +108,7 @@ metadata:
 
 				When("the IstioCNI CR is created", func() {
 					BeforeAll(func() {
-						yaml := `
-apiVersion: sailoperator.io/v1
-kind: IstioCNI
-metadata:
-  name: default
-spec:
-  version: %s
-  namespace: %s`
-						yaml = fmt.Sprintf(yaml, version.Name, istioCniNamespace)
-						Log("IstioCNI YAML:", indent(yaml))
-						Expect(k.CreateFromString(yaml)).To(Succeed(), "IstioCNI creation failed")
-						Success("IstioCNI created")
+						common.CreateIstioCNI(k, version.Name)
 					})
 
 					It("deploys the CNI DaemonSet", func(ctx SpecContext) {

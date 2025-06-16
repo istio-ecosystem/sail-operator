@@ -70,21 +70,7 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 						Expect(k1.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be created")
 						Expect(k1.CreateNamespace(istioCniNamespace)).To(Succeed(), "Istio CNI namespace failed to be created")
 
-						multiclusterCNIYAML := `
-apiVersion: sailoperator.io/v1
-kind: IstioCNI
-metadata:
-  name: {{ .Name }}
-spec:
-  version: {{ .Version }}
-  namespace: {{ .Namespace }}`
-						multiclusterCNIYAML = genTemplate(multiclusterCNIYAML, map[string]any{
-							"Name":      istioCniName,
-							"Namespace": istioCniNamespace,
-							"Version":   v.Name,
-						})
-						Log("Istio CNI CR Cluster #1: ", multiclusterCNIYAML)
-						Expect(k1.CreateFromString(multiclusterCNIYAML)).To(Succeed(), "Istio CNI Resource creation failed on Cluster #1")
+						common.CreateIstioCNI(k1, v.Name)
 
 						multiclusterYAML := `
 apiVersion: sailoperator.io/v1
@@ -143,21 +129,8 @@ spec:
 						Expect(clRemote.Get(ctx, client.ObjectKey{Name: externalControlPlaneNamespace}, &corev1.Namespace{})).To(Succeed())
 
 						Expect(k2.CreateNamespace(istioCniNamespace)).To(Succeed(), "Istio CNI namespace failed to be created")
-						remoteIstioCNIYAML := `
-apiVersion: sailoperator.io/v1
-kind: IstioCNI
-metadata:
-  name: {{ .Name }}
-spec:
-  version: {{ .Version }}
-  namespace: {{ .Namespace }}`
-						remoteIstioCNIYAML = genTemplate(remoteIstioCNIYAML, map[string]any{
-							"Name":      istioCniName,
-							"Namespace": istioCniNamespace,
-							"Version":   v.Name,
-						})
-						Log("Istio CNI CR Cluster #2: ", remoteIstioCNIYAML)
-						Expect(k2.CreateFromString(remoteIstioCNIYAML)).To(Succeed(), "Istio CNI Resource creation failed on Cluster #2")
+						common.CreateIstioCNI(k2, v.Name)
+						Log("Istio CNI created on Cluster #2")
 
 						remotePilotAddress := common.GetSVCLoadBalancerAddress(ctx, clPrimary, controlPlaneNamespace, "istio-ingressgateway")
 						remotePilotIP, err := common.ResolveHostDomainToIP(remotePilotAddress)
