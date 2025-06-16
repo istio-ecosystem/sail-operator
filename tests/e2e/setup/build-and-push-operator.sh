@@ -81,3 +81,15 @@ if [ "${OCP}" == "true" ]; then
 fi
 
 build_and_push_operator_image
+
+# Workaround for OCP helm operator installation issues:
+# We create the operator namespace before the tests run
+# To avoid any cleanup issues, after we build annd push the image we check if the namespace exists and delete it if it does.
+# The test logic already handle the namespace creation and deletion during the test run. 
+# TODO: remove hardcoded kubectl command and use the COMMAND variable instead. To be changed during OCP enable doc test.
+if kubectl get namespace "${NAMESPACE}" &>/dev/null; then
+  echo "Deleting existing namespace: ${NAMESPACE}"
+  kubectl delete namespace "${NAMESPACE}" --wait=true --timeout=5m || true
+else
+  echo "Namespace ${NAMESPACE} does not exist, skipping deletion."
+fi
