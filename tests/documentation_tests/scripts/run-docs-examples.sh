@@ -16,8 +16,7 @@
 
 set -eu -o pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export SCRIPT_DIR
+export SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 FOCUS_DOC_TAGS="${FOCUS_DOC_TAGS:-}"
 
@@ -44,10 +43,10 @@ export HELM_TEMPL_DEF_FLAGS="--include-crds --values chart/values.yaml"
 mkdir -p "$TEST_DIR"
 
 # Run the update-docs-examples.sh script to update the documentation files into the artifacts directory. By default ARTIFACTS is set to a temporary directory.
-ARTIFACTS="${TEST_DIR}" "${ROOT_DIR}/tests/documentation_tests/scripts/update-docs-examples.sh"
+"${ROOT_DIR}/tests/documentation_tests/scripts/update-docs-examples.sh"
 
 # Check that .md files were copied to the artifacts directory. If there is no files, then exit with an error.
-if [ ! -d "$TEST_DIR" ] || [ -z "$(find "$TEST_DIR" -maxdepth 1 -name "*.md")" ]; then
+if ! find "$TEST_DIR" -maxdepth 1 -name "*.md"; then
   echo "No .md files found in the artifacts directory: $TEST_DIR"
   exit 1
 fi
@@ -160,6 +159,6 @@ function run_tests() {
 run_tests "${TAGS_LIST[@]}"
 
 # Run dual stack tests on it's own cluster, since it needs to be deployed with support for dual stack
-if [[ -z "$FOCUS_DOC_TAGS" && -n "$dual_stack_tag" ]]; then
+if [[ -n "$dual_stack_tag" ]]; then
   IP_FAMILY="dual" run_tests "$dual_stack_tag"
 fi
