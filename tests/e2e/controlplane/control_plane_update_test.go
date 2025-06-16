@@ -66,22 +66,10 @@ var _ = Describe("Control Plane updates", Label("control-plane", "slow"), Ordere
 
 			When(fmt.Sprintf("the Istio CR is created with RevisionBased updateStrategy for base version %s", istioversion.Base), func() {
 				BeforeAll(func() {
-					istioYAML := `
-apiVersion: sailoperator.io/v1
-kind: Istio
-metadata:
-  name: default
-spec:
-  version: %s
-  namespace: %s
-  updateStrategy:
-    type: RevisionBased
-    inactiveRevisionDeletionGracePeriodSeconds: 30`
-					istioYAML = fmt.Sprintf(istioYAML, istioversion.Base, controlPlaneNamespace)
-					Log("Istio YAML:", indent(istioYAML))
-					Expect(k.CreateFromString(istioYAML)).
-						To(Succeed(), "Istio CR failed to be created")
-					Success("Istio CR created")
+					common.CreateIstio(k, istioversion.Base, `
+updateStrategy:
+  type: RevisionBased
+  inactiveRevisionDeletionGracePeriodSeconds: 30`)
 				})
 
 				It("deploys istiod and pod is Ready", func(ctx SpecContext) {
@@ -102,7 +90,7 @@ spec:
   targetRef:
     kind: Istio
     name: default`
-					Log("IstioRevisionTag YAML:", indent(IstioRevisionTagYAML))
+					Log("IstioRevisionTag YAML:", common.Indent(IstioRevisionTagYAML))
 					Expect(k.CreateFromString(IstioRevisionTagYAML)).
 						To(Succeed(), "IstioRevisionTag CR failed to be created")
 					Success("IstioRevisionTag CR created")

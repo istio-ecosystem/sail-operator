@@ -71,26 +71,10 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 						Expect(k1.CreateNamespace(istioCniNamespace)).To(Succeed(), "Istio CNI namespace failed to be created")
 
 						common.CreateIstioCNI(k1, v.Name)
-
-						multiclusterYAML := `
-apiVersion: sailoperator.io/v1
-kind: Istio
-metadata:
-  name: {{ .Name }}
-spec:
-  version: {{ .Version }}
-  namespace: {{ .Namespace }}
-  values:
-    global:
-      network: {{ .Network }}`
-						multiclusterYAML = genTemplate(multiclusterYAML, map[string]any{
-							"Name":      istioName,
-							"Namespace": controlPlaneNamespace,
-							"Network":   "network1",
-							"Version":   v.Name,
-						})
-						Log("Istio CR Cluster #1: ", multiclusterYAML)
-						Expect(k1.CreateFromString(multiclusterYAML)).To(Succeed(), "Istio Resource creation failed on Cluster #1")
+						common.CreateIstio(k1, v.Name, `
+values:
+  global:
+    network: network1`)
 					})
 
 					It("updates the default Istio CR status to Ready", func(ctx SpecContext) {
