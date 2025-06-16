@@ -85,18 +85,7 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 							return err
 						}).ShouldNot(HaveOccurred(), "Secret is not created on Primary Cluster")
 
-						PrimaryIstioCNIYAML := `
-apiVersion: sailoperator.io/v1
-kind: IstioCNI
-metadata:
-  name: default
-spec:
-  version: %s
-  namespace: %s`
-
-						multiclusterPrimaryIstioCNIYAML := fmt.Sprintf(PrimaryIstioCNIYAML, v.Name, istioCniNamespace)
-						Log("IstioCNI CR Primary: ", multiclusterPrimaryIstioCNIYAML)
-						Expect(k1.CreateFromString(multiclusterPrimaryIstioCNIYAML)).To(Succeed(), "Istio CNI Resource creation failed on Primary Cluster")
+						common.CreateIstioCNI(k1, v.Name)
 
 						PrimaryIstioYAML := `
 apiVersion: sailoperator.io/v1
@@ -174,19 +163,7 @@ spec:
 
 				When("Istio and IstioCNI are created in Remote cluster", func() {
 					BeforeAll(func(ctx SpecContext) {
-						istioCNIYAMLTemplate := `
-apiVersion: sailoperator.io/v1
-kind: IstioCNI
-metadata:
-  name: default
-spec:
-  version: %s
-  namespace: %s`
-
-						istioCNIYAML := fmt.Sprintf(istioCNIYAMLTemplate, v.Name, istioCniNamespace)
-						Log("IstioCNI CR: ", istioCNIYAML)
-						By("Creating IstioCNI CR on Remote Cluster")
-						Expect(k2.CreateFromString(istioCNIYAML)).To(Succeed(), "IstioCNI Resource creation failed on Remote Cluster")
+						common.CreateIstioCNI(k2, v.Name)
 
 						istioYAMLTemplate := `
 apiVersion: sailoperator.io/v1

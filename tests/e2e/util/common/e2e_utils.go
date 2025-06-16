@@ -30,6 +30,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
+	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
@@ -414,4 +415,33 @@ func ResolveHostDomainToIP(hostDomain string) (string, error) {
 	}
 
 	return "", fmt.Errorf("failed to resolve hostname %s after %d retries: %w", hostDomain, maxRetries, lastErr)
+}
+
+// CreateIstioCNI custom resource using a given `kubectl` client and with the specified version.
+func CreateIstioCNI(k kubectl.Kubectl, version string) {
+	yaml := `
+apiVersion: sailoperator.io/v1
+kind: IstioCNI
+metadata:
+  name: %s
+spec:
+  version: %s
+  namespace: %s`
+	yaml = fmt.Sprintf(yaml, istioCniName, version, istioCniNamespace)
+	Log("IstioCNI YAML:", indent(yaml))
+	Expect(k.CreateFromString(yaml)).To(Succeed(), withClusterName("IstioCNI creation failed", k))
+	Success(withClusterName("IstioCNI created", k))
+}
+
+func indent(str string) string {
+	indent := strings.Repeat(" ", 2)
+	return indent + strings.ReplaceAll(str, "\n", "\n"+indent)
+}
+
+func withClusterName(m string, k kubectl.Kubectl) string {
+	if k.ClusterName == "" {
+		return m
+	}
+
+	return m + " on " + k.ClusterName
 }

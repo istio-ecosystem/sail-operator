@@ -58,19 +58,7 @@ var _ = Describe("Control Plane updates", Label("control-plane", "slow"), Ordere
 				Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
 				Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
 
-				yaml := `
-apiVersion: sailoperator.io/v1
-kind: IstioCNI
-metadata:
-  name: default
-spec:
-  version: %s
-  namespace: %s`
-				yaml = fmt.Sprintf(yaml, istioversion.Base, istioCniNamespace)
-				Log("IstioCNI YAML:", indent(yaml))
-				Expect(k.CreateFromString(yaml)).To(Succeed(), "IstioCNI creation failed")
-				Success("IstioCNI created")
-
+				common.CreateIstioCNI(k, istioversion.Base)
 				Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioCniName), &v1.IstioCNI{}).
 					Should(HaveConditionStatus(v1.IstioCNIConditionReady, metav1.ConditionTrue), "IstioCNI is not Ready; unexpected Condition")
 				Success("IstioCNI is Ready")
