@@ -172,7 +172,7 @@ func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevisio
 	}
 	if rev.Name == v1.DefaultRevision {
 		_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev, constants.BaseChartName),
-			values, "default", getReleaseName(rev, constants.BaseChartName), &ownerReference)
+			values, r.Config.OperatorNamespace, getReleaseName(rev, constants.BaseChartName), &ownerReference)
 		if err != nil {
 			return fmt.Errorf("failed to install/update Helm chart %q: %w", constants.BaseChartName, err)
 		}
@@ -193,7 +193,7 @@ func (r *Reconciler) uninstallHelmCharts(ctx context.Context, rev *v1.IstioRevis
 		return fmt.Errorf("failed to uninstall Helm chart %q: %w", constants.IstiodChartName, err)
 	}
 	if rev.Name == v1.DefaultRevision {
-		_, err := r.ChartManager.UninstallChart(ctx, getReleaseName(rev, constants.BaseChartName), "default")
+		_, err := r.ChartManager.UninstallChart(ctx, getReleaseName(rev, constants.BaseChartName), r.Config.OperatorNamespace)
 		if err != nil {
 			return fmt.Errorf("failed to uninstall Helm chart %q: %w", constants.BaseChartName, err)
 		}

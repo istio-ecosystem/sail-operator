@@ -37,6 +37,7 @@ type ReconcilerConfig struct {
 	ResourceDirectory string
 	Platform          Platform
 	DefaultProfile    string
+	OperatorNamespace string
 }
 
 func Read(configFile string) error {
