@@ -16,6 +16,7 @@
 
 set -eu -o pipefail
 
+# shellcheck disable=SC2155
 export SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 FOCUS_DOC_TAGS="${FOCUS_DOC_TAGS:-}"
