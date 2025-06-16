@@ -411,6 +411,28 @@ func ResolveHostDomainToIP(hostDomain string) (string, error) {
 	return "", fmt.Errorf("failed to resolve hostname %s after %d retries: %w", hostDomain, maxRetries, lastErr)
 }
 
+// CreateIstio custom resource using a given `kubectl` client and with the specified version.
+// An optional spec list can be given to inject into the CR's spec.
+func CreateIstio(k kubectl.Kubectl, version string, specs ...string) {
+	yaml := `
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: %s
+spec:
+  version: %s
+  namespace: %s`
+	yaml = fmt.Sprintf(yaml, istioName, version, controlPlaneNamespace)
+	for _, spec := range specs {
+		yaml += indent(spec)
+	}
+
+	Log("Istio YAML:", indent(yaml))
+	Expect(k.CreateFromString(yaml)).
+		To(Succeed(), withClusterName("Istio CR failed to be created", k))
+	Success(withClusterName("Istio CR created", k))
+}
+
 // CreateIstioCNI custom resource using a given `kubectl` client and with the specified version.
 func CreateIstioCNI(k kubectl.Kubectl, version string) {
 	yaml := `

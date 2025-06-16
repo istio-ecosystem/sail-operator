@@ -147,19 +147,7 @@ metadata:
 
 				When("the Istio CR is created", func() {
 					BeforeAll(func() {
-						istioYAML := `
-apiVersion: sailoperator.io/v1
-kind: Istio
-metadata:
-  name: default
-spec:
-  version: %s
-  namespace: %s`
-						istioYAML = fmt.Sprintf(istioYAML, version.Name, controlPlaneNamespace)
-						Log("Istio YAML:", indent(istioYAML))
-						Expect(k.CreateFromString(istioYAML)).
-							To(Succeed(), "Istio CR failed to be created")
-						Success("Istio CR created")
+						common.CreateIstio(k, version.Name)
 					})
 
 					It("updates the Istio CR status to Reconciled", func(ctx SpecContext) {
