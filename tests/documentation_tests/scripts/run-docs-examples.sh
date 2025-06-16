@@ -39,10 +39,7 @@ export TEST_DIR="${ARTIFACTS}/docs.test"
 export KUBECONFIG="${KUBECONFIG:-"${ARTIFACTS}/config"}"
 export HELM_TEMPL_DEF_FLAGS="--include-crds --values chart/values.yaml"
 
-# Ensure TEST_DIR exists, if not create it
-mkdir -p "$TEST_DIR"
-
-# Run the update-docs-examples.sh script to update the documentation files into the artifacts directory. By default ARTIFACTS is set to a temporary directory.
+# Run the update-docs-examples.sh script to update the documentation files into the artifacts directory.
 "${ROOT_DIR}/tests/documentation_tests/scripts/update-docs-examples.sh"
 
 # Check that .md files were copied to the artifacts directory. If there is no files, then exit with an error.

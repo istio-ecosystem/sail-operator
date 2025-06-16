@@ -68,7 +68,7 @@ Use code block for command or groups of command that has the same context. Use v
 Any documentation step need to be tested to ensure that the steps are correct and the user can follow them without any issue. To do this, we use `runme` (check the docs [here](https://docs.runme.dev/getting-started/cli)) to run the tests over the documentation. The workflow of the automation is the following:
 
 - The documentation files are in the `docs` folder.
-- The `make test.docs` target temporarily copies the documentation files to the `test/documentation_test` directory and uncomments all commented validation steps. This process is handled by the `tests/documentation_test/scripts/update-docs-examples.sh` script. Afterward, the `tests/documentation_test/scripts/run-docs-examples.sh` script executes the tests on the documentation files. It runs all example steps marked according to the guidelines outlined in the next section. Once the tests are complete, the temporary documentation files are removed.
+- The `make test.docs` target temporarily copies the documentation files to the `ARTIFACTS` directory (defaulting to a temporary folder) and uncomments all commented validation steps. This process is managed by the `tests/documentation_test/scripts/update-docs-examples.sh` script. Once the files are prepared, the `tests/documentation_test/scripts/run-docs-examples.sh` script executes the tests on the documentation files. It runs all example steps marked according to the guidelines described in the following sections. After the tests are completed, the temporary files are cleaned up.
 
 ### What does update-docs-examples.sh do
 The script `update-docs-examples.sh` is going to run the following steps:

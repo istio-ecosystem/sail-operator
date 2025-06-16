@@ -17,7 +17,7 @@
 set -eu -o pipefail
 
 # This script is used to update the example files in the documentation that are the resulting script to be executed by the runme tool.
-# It will copy all the files from the docs/ respository to the artifacts defined folder.
+# It will copy all the files from the docs/ respository to the TEST_DIR defined folder.
 # It will exclude this files: sailoperator.io.md (Add more here if is needed)
 # Beside that, after copy the files it will read each one and all the html commented bash code block and it will uncomment them. 
 # This will allow us to hide from docs validation steps
@@ -32,9 +32,11 @@ DOCS_DIR="$ROOT_DIR/docs"
 EXCLUDE_FILES=(
   "sailoperator.io.md" "guidelines.md"
 )
-# Artifacts directory to store the output files
-ARTIFACTS="${ARTIFACTS:-$(mktemp -d)}"
-echo "Using artifacts directory to place the temporary docs files: $ARTIFACTS"
+# Directory to store the output files
+TEST_DIR="${TEST_DIR:-$(mktemp -d)}"
+# Ensure the output directory exists
+mkdir -p "$TEST_DIR"
+echo "Using TEST_DIR directory to place the temporary docs files: $TEST_DIR"
 
 # Validate that no tag value is used in more than one file in the current documentation
 declare -A TAG_USAGE
@@ -110,9 +112,9 @@ done
 for file in "${FILES_TO_COPY[@]}"; do
     # Get the base name of the file
     base_name=$(basename "$file")
-    echo "Copying file: $file to $ARTIFACTS/${base_name%.md}-runme.md"
+    echo "Copying file: $file to $TEST_DIR/${base_name%.md}-runme.md"
     # Copy the file to the output directory and add the suffix -runme.md to each file
-    cp "$file" "$ARTIFACTS/${base_name%.md}-runme.md"
+    cp "$file" "$TEST_DIR/${base_name%.md}-runme.md"
 done
 
 
@@ -125,7 +127,7 @@ done
 # ```
 # -->
 # If any other pattern is found, it will be ignored. Add more patterns here if needed.
-for file in "$ARTIFACTS"/*.md; do
+for file in "$TEST_DIR"/*.md; do
   perl -0777 -pe 's/<!--\s*(```bash[^\n]*\n)(.*?)(\n```)\s*-->/$1$2$3/gms' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
 done
 
