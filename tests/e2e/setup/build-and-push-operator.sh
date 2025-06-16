@@ -56,17 +56,22 @@ build_and_push_operator_image() {
   echo "Building and pushing operator image: ${HUB}/${IMAGE_BASE}:${TAG}"
 
   DOCKER_BUILD_FLAGS=""
-  TARGET_ARCH=$(uname -m)
+  TARGET_ARCH=${TARGET_ARCH:-$(uname -m)}
 
   if [[ "$TARGET_ARCH" == "aarch64" || "$TARGET_ARCH" == "arm64" ]]; then
       TARGET_ARCH="arm64"
       DOCKER_BUILD_FLAGS="--platform=linux/${TARGET_ARCH}"
   elif [[ "$TARGET_ARCH" == "x86_64" || "$TARGET_ARCH" == "amd64" ]]; then
       TARGET_ARCH="amd64"
+      DOCKER_BUILD_FLAGS="--platform=linux/${TARGET_ARCH}"
   else
       echo "Unsupported architecture: ${TARGET_ARCH}"
       exit 1
   fi
+
+  echo "Building for architecture: ${TARGET_ARCH}"
+  echo "Docker build flags: ${DOCKER_BUILD_FLAGS}"
+  echo "Using image base: ${HUB}/${IMAGE_BASE}:${TAG}"
 
   BUILD_WITH_CONTAINER=0 \
     DOCKER_BUILD_FLAGS=${DOCKER_BUILD_FLAGS} \
