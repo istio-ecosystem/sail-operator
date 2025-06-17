@@ -224,16 +224,20 @@ metadata:
 						Expect(apiURLCluster2).NotTo(BeEmpty(), "API URL is empty for the Cluster #2")
 						Expect(err).NotTo(HaveOccurred())
 
-						secret, err := istioctl.CreateRemoteSecret(
-							kubeconfig2,
-							externalControlPlaneNamespace,
-							"cluster2",
-							apiURLCluster2,
-							"--type=config",
-							"--service-account=istiod-"+externalIstioName,
-							"--create-service-account=false",
-						)
-						Expect(err).NotTo(HaveOccurred())
+						var secret string
+						Eventually(func() error {
+							secret, err = istioctl.CreateRemoteSecret(
+								kubeconfig2,
+								externalControlPlaneNamespace,
+								"cluster2",
+								apiURLCluster2,
+								"--type=config",
+								"--service-account=istiod-"+externalIstioName,
+								"--create-service-account=false",
+							)
+
+							return err
+						}).ShouldNot(HaveOccurred(), "Remote secret generation failed")
 						Expect(k1.ApplyString(secret)).To(Succeed(), "Remote secret creation failed on Cluster #1")
 					})
 
