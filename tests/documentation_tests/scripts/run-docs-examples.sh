@@ -40,6 +40,14 @@ export TEST_DIR="${ARTIFACTS}/docs.test"
 export KUBECONFIG="${KUBECONFIG:-"${ARTIFACTS}/config"}"
 export HELM_TEMPL_DEF_FLAGS="--include-crds --values chart/values.yaml"
 
+# Check that TEST_DIR exist, if not create the directory
+if [[ ! -d "$TEST_DIR" ]]; then
+  echo "Creating TEST_DIR directory: $TEST_DIR"
+  mkdir -p "$TEST_DIR"
+else
+  echo "Using existing TEST_DIR directory: $TEST_DIR"
+fi
+
 # Run the update-docs-examples.sh script to update the documentation files into the artifacts directory.
 "${ROOT_DIR}/tests/documentation_tests/scripts/update-docs-examples.sh"
 

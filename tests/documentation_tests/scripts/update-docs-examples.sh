@@ -32,10 +32,12 @@ DOCS_DIR="$ROOT_DIR/docs"
 EXCLUDE_FILES=(
   "sailoperator.io.md" "guidelines.md"
 )
-# Directory to store the output files
-TEST_DIR="${TEST_DIR:-$(mktemp -d)}"
-# Ensure the output directory exists
-mkdir -p "$TEST_DIR"
+# Check if TEST_DIR is set, if not skip the script
+if [[ -z "${TEST_DIR:-}" ]]; then
+  echo "TEST_DIR is not set. This script is not meant to be run directly. Please Check run-docs-examples.sh script."
+  exit 1
+fi
+
 echo "Using TEST_DIR directory to place the temporary docs files: $TEST_DIR"
 
 # Validate that no tag value is used in more than one file in the current documentation
