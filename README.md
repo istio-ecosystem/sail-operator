@@ -242,7 +242,7 @@ As you might know, the Sail Operator project serves as the community upstream fo
 
 #### versions.yaml
 
-The name of the versions.yaml file can be overwritten using the VERSIONS_YAML_FILE environment variable. This way, downstream vendors can point to a custom list of supported versions.
+The name of the versions.yaml file can be overwritten using the VERSIONS_YAML_FILE environment variable. This way, downstream vendors can point to a custom list of supported versions. take into account that this file should be located in the `pkg/istioversion` directory, so the default value is `pkg/istioversion/versions.yaml`.
 
 #### vendor_defaults.yaml
 
