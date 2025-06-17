@@ -1,4 +1,4 @@
-[Return to Project Root](../README.md)
+[Return to Project Root](../../README.md)
 
 # Table of Contents
 
@@ -49,7 +49,7 @@ networking:
 EOF
 ```
 
-Note: If you installed the KinD cluster using the command above, install the [Sail Operator](../general/getting-started.md#getting-started) before proceeding with the next steps.
+Note: If you installed the KinD cluster using the command above, install the [Sail Operator](../../docs/general/getting-started.md#getting-started) before proceeding with the next steps.
 
 1. Create the `Istio` resource with dual-stack configuration.
 

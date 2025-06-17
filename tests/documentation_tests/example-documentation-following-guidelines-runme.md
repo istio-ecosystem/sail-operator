@@ -1,4 +1,4 @@
-[Return to Project Root](../README.md)
+[Return to Project Root](../../README.md)
 
 # Table of Contents
 
@@ -67,7 +67,7 @@ EOF
 ```
 
 > [!NOTE]
-> These commented code blocks are validation steps, and they are added like this to be hidden in the final documentation, but they are going to be used in the automation workflow to validate the documentation. For more information, please check the [documentation](/docs/guidelines/guidelines.md#L146).
+> These commented code blocks are validation steps, and they are added like this to be hidden in the final documentation, but they are going to be used in the automation workflow to validate the documentation. For more information, please check the [documentation](../../docs/guidelines/guidelines.md#L146).
 ```bash { name=validation-print-istio-resource tag=example}
 kubectl get istio -o yaml
 kubectl get deployment sail-operator -n sail-operator -o yaml

@@ -1,4 +1,4 @@
-[Return to Project Root](../README.md)
+[Return to Project Root](../../README.md)
 
 # Table of Contents
 - [Multiple meshes on a single cluster](#multiple-meshes-on-a-single-cluster)
@@ -32,7 +32,7 @@ Because each mesh will use its own root certificate authority and configured to 
 
 ### Prerequisites
 
-- Install [istioctl](../common/install-istioctl-tool.md).
+- Install [istioctl](../../docs/common/install-istioctl-tool.md).
 - Kubernetes 1.23 cluster.
 - kubeconfig file with a context for the Kubernetes cluster.
 - Install the Sail Operator and the Sail CRDs to the cluster.
