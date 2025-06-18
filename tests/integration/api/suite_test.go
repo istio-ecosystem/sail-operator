@@ -100,7 +100,6 @@ var _ = BeforeSuite(func() {
 			panic(err)
 		}
 	}()
-
 })
 
 var _ = AfterSuite(func() {
