@@ -54,7 +54,7 @@ var _ = Describe("Ambient configuration ", Label("smoke", "ambient"), Ordered, f
 		if skipDeploy {
 			Success("Skipping operator installation because it was deployed externally")
 		} else {
-			Eventually(common.InstallOperatorViaHelm).
+			Expect(common.InstallOperatorViaHelm()).
 				To(Succeed(), "Operator failed to be deployed")
 		}
 
