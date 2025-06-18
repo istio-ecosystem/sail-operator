@@ -337,6 +337,7 @@ versions:
       - https://istio-release.storage.googleapis.com/charts/ztunnel-1.25.3.tgz
 ```
 *Important*: avoid adding in the custom file versions that are not available in the `pkg/istioversion/versions.yaml` file. The test framework will not be able to run the tests because the operator does not contains the charts for those versions.
+
 * To run the test framework against a specific Istio version, you can use the following command:
 ```
 $ VERSIONS_YAML_FILE=custom_versions.yaml SKIP_BUILD=true SKIP_DEPLOY=true GINKGO_FLAGS="-v --label-filter=smoke" make test.e2e.kind
