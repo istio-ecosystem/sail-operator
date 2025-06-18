@@ -22,6 +22,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	k8sclient "github.com/istio-ecosystem/sail-operator/tests/e2e/util/client"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
@@ -46,9 +47,11 @@ var (
 	expectedRegistry      = env.Get("EXPECTED_REGISTRY", "^docker\\.io|^gcr\\.io")
 	sampleNamespace       = env.Get("SAMPLE_NAMESPACE", "sample")
 	multicluster          = env.GetBool("MULTICLUSTER", false)
+	keepOnFailure         = env.GetBool("KEEP_ON_FAILURE", false)
 	ipFamily              = env.Get("IP_FAMILY", "ipv4")
 
-	k kubectl.Kubectl
+	k   kubectl.Kubectl
+	clr cleaner.Cleaner
 )
 
 func TestControlPlane(t *testing.T) {
@@ -68,9 +71,11 @@ func setup() {
 	Expect(err).NotTo(HaveOccurred())
 
 	k = kubectl.New()
+	clr = cleaner.New(cl)
 }
 
 var _ = BeforeSuite(func(ctx SpecContext) {
+	clr.Record(ctx)
 	Expect(k.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
 
 	if skipDeploy {
@@ -85,17 +90,10 @@ var _ = BeforeSuite(func(ctx SpecContext) {
 	Success("Operator is deployed in the namespace and Running")
 })
 
-var _ = AfterSuite(func(ctx SpecContext) {
-	if skipDeploy {
-		Success("Skipping operator undeploy because it was deployed externally")
+var _ = ReportAfterSuite("Condiotnal cleanup", func(ctx SpecContext, r Report) {
+	if !r.SuiteSucceeded && keepOnFailure {
 		return
 	}
 
-	By("Deleting operator deployment")
-	Expect(common.UninstallOperator()).
-		To(Succeed(), "Operator failed to be deleted")
-	GinkgoWriter.Println("Operator uninstalled")
-
-	Expect(k.DeleteNamespace(namespace)).To(Succeed(), "Namespace failed to be deleted")
-	Success("Namespace deleted")
+	clr.Cleanup(ctx)
 })

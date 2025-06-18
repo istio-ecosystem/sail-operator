@@ -33,6 +33,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -217,6 +218,10 @@ func logIstioDebugInfo(k kubectl.Kubectl) {
 
 	events, err := k.WithNamespace(controlPlaneNamespace).GetEvents()
 	logDebugElement("=====Events in "+controlPlaneNamespace+"=====", events, err)
+
+	// Running istioctl proxy-status to get the status of the proxies.
+	proxyStatus, err := istioctl.GetProxyStatus()
+	logDebugElement("=====Istioctl Proxy Status=====", proxyStatus, err)
 }
 
 func logCNIDebugInfo(k kubectl.Kubectl) {
@@ -313,10 +318,6 @@ func InstallOperatorViaHelm(extraArgs ...string) error {
 	args = append(args, extraArgs...)
 
 	return helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), args...)
-}
-
-func UninstallOperator() error {
-	return helm.Uninstall("sail-operator", "--namespace", OperatorNamespace)
 }
 
 // GetSampleYAML returns the URL of the yaml file for the testing app.
