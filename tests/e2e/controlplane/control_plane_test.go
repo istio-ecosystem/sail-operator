@@ -26,6 +26,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
@@ -98,7 +99,9 @@ metadata:
 	Describe("given Istio version", func() {
 		for _, version := range istioversion.GetLatestPatchVersions() {
 			Context(version.Name, func() {
-				BeforeAll(func() {
+				clr := cleaner.New(cl)
+				BeforeAll(func(ctx SpecContext) {
+					clr.Record(ctx)
 					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
 					Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
 				})
@@ -202,7 +205,7 @@ spec:
 				})
 
 				When("sample pod is deployed", func() {
-					BeforeAll(func() {
+					BeforeAll(func(ctx SpecContext) {
 						Expect(k.CreateNamespace(sampleNamespace)).To(Succeed(), "Sample namespace failed to be created")
 						Expect(k.Label("namespace", sampleNamespace, "istio-injection", "enabled")).To(Succeed(), "Error labeling sample namespace")
 						Expect(k.WithNamespace(sampleNamespace).
@@ -238,12 +241,6 @@ spec:
 						}
 						Success("Istio sidecar version matches the expected Istio version")
 					})
-
-					AfterAll(func(ctx SpecContext) {
-						By("Deleting sample")
-						Expect(k.DeleteNamespace(sampleNamespace)).To(Succeed(), "sample namespace failed to be deleted")
-						Success("sample deleted")
-					})
 				})
 
 				When("the Istio CR is deleted", func() {
@@ -274,6 +271,14 @@ spec:
 						Success("CNI namespace is empty")
 					})
 				})
+
+				AfterAll(func(ctx SpecContext) {
+					if CurrentSpecReport().Failed() && keepOnFailure {
+						return
+					}
+
+					clr.Cleanup(ctx)
+				})
 			})
 		}
 
@@ -282,21 +287,15 @@ spec:
 				common.LogDebugInfo(common.ControlPlane, k)
 				debugInfoLogged = true
 			}
-
-			By("Cleaning up the Istio namespace")
-			Expect(k.DeleteNamespace(controlPlaneNamespace)).To(Succeed(), "Istio Namespace failed to be deleted")
-
-			By("Cleaning up the IstioCNI namespace")
-			Expect(k.DeleteNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI Namespace failed to be deleted")
-
-			Success("Cleanup done")
 		})
 	})
 
 	AfterAll(func() {
-		if CurrentSpecReport().Failed() && !debugInfoLogged {
-			common.LogDebugInfo(common.ControlPlane, k)
-			debugInfoLogged = true
+		if CurrentSpecReport().Failed() {
+			if !debugInfoLogged {
+				common.LogDebugInfo(common.ControlPlane, k)
+				debugInfoLogged = true
+			}
 		}
 	})
 })

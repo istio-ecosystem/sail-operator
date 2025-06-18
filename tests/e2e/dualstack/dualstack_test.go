@@ -25,6 +25,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
@@ -47,8 +48,10 @@ var _ = Describe("DualStack configuration ", Label("dualstack"), Ordered, func()
 	SetDefaultEventuallyPollingInterval(time.Second)
 
 	debugInfoLogged := false
+	clr := cleaner.New(cl)
 
 	BeforeAll(func(ctx SpecContext) {
+		clr.Record(ctx)
 		Expect(k.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
 
 		if skipDeploy {
@@ -71,7 +74,9 @@ var _ = Describe("DualStack configuration ", Label("dualstack"), Ordered, func()
 			}
 
 			Context(fmt.Sprintf("Istio version %s", version.Version), func() {
-				BeforeAll(func() {
+				clr := cleaner.New(cl)
+				BeforeAll(func(ctx SpecContext) {
+					clr.Record(ctx)
 					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
 					Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
 				})
@@ -228,13 +233,6 @@ spec:
 					It("can access the ipv6 only service from the sleep pod", func(ctx SpecContext) {
 						checkPodConnectivity(sleepPod.Items[0].Name, SleepNamespace, IPv6Namespace)
 					})
-
-					AfterAll(func(ctx SpecContext) {
-						By("Deleting the pods")
-						Expect(k.DeleteNamespace(DualStackNamespace, IPv4Namespace, IPv6Namespace, SleepNamespace)).
-							To(Succeed(), "Failed to delete namespaces")
-						Success("DualStack validation pods deleted")
-					})
 				})
 
 				When("the Istio CR is deleted", func() {
@@ -265,6 +263,14 @@ spec:
 						Success("CNI namespace is empty")
 					})
 				})
+
+				AfterAll(func(ctx SpecContext) {
+					if CurrentSpecReport().Failed() && keepOnFailure {
+						return
+					}
+
+					clr.Cleanup(ctx)
+				})
 			})
 		}
 
@@ -273,35 +279,22 @@ spec:
 				common.LogDebugInfo(common.DualStack, k)
 				debugInfoLogged = true
 			}
-
-			By("Cleaning up the Istio namespace")
-			Expect(cl.Delete(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: controlPlaneNamespace}})).To(Succeed(), "Istio Namespace failed to be deleted")
-
-			By("Cleaning up the IstioCNI namespace")
-			Expect(k.DeleteNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI Namespace failed to be deleted")
-
-			Success("Cleanup done")
 		})
 	})
 
-	AfterAll(func() {
-		if CurrentSpecReport().Failed() && !debugInfoLogged {
-			common.LogDebugInfo(common.DualStack, k)
-			debugInfoLogged = true
+	AfterAll(func(ctx SpecContext) {
+		if CurrentSpecReport().Failed() {
+			if !debugInfoLogged {
+				common.LogDebugInfo(common.DualStack, k)
+				debugInfoLogged = true
+			}
+
+			if keepOnFailure {
+				return
+			}
 		}
 
-		if skipDeploy {
-			Success("Skipping operator undeploy because it was deployed externally")
-			return
-		}
-
-		By("Deleting operator deployment")
-		Expect(common.UninstallOperator()).
-			To(Succeed(), "Operator failed to be deleted")
-		GinkgoWriter.Println("Operator uninstalled")
-
-		Expect(k.DeleteNamespace(namespace)).To(Succeed(), "Namespace failed to be deleted")
-		Success("Namespace deleted")
+		clr.Cleanup(ctx)
 	})
 })
 

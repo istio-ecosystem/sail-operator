@@ -1,3 +1,13 @@
+[Return to Project Root](../README.md)
+
+# Table of Contents
+
+- [Istio Addons Integrations](#istio-addons-integrations)
+  - [Prometheus](#prometheus)
+  - [Grafana](#grafana)
+  - [Jaeger](#jaeger)
+  - [Kiali](#kiali)
+
 ## Istio Addons Integrations
 
 Istio can be integrated with other software to provide additional functionality 
