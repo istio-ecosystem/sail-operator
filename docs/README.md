@@ -6,9 +6,9 @@
 - [User Documentation](#user-documentation)
 - [Concepts](#concepts)
   - [Istio resource](#istio-resource)
-  - [Istiod in HA mode](../../docs/general/istiod-ha.md#Running–Istiod-in-HA-mode)
-    - [Setting up Istiod in HA mode: using fixed replicas](../../docs/general/istiod-ha.md#Setting-up-Istiod-in-HA-mode:-increasing-replicaCount)
-    - [Setting up Istiod in HA mode: using autoscaling](../../docs/general/istiod-ha.md#Setting-up-Istiod-in-HA-mode:-using-autoscaling)
+  - [Istiod in HA mode](general/istiod-ha.md#Running–Istiod-in-HA-mode)
+    - [Setting up Istiod in HA mode: using fixed replicas](general/istiod-ha.md#Setting-up-Istiod-in-HA-mode:-increasing-replicaCount)
+    - [Setting up Istiod in HA mode: using autoscaling](general/istiod-ha.md#Setting-up-Istiod-in-HA-mode:-using-autoscaling)
   - [IstioRevision resource](#istiorevision-resource)
   - [IstioRevisionTag resource](#istiorevisiontag-resource)
   - [IstioCNI resource](#istiocni-resource)
@@ -16,76 +16,76 @@
   - [Resource Status](#resource-status)
     - [InUse Detection](#inuse-detection)
 - [API Reference documentation](#api-reference-documentation)
-- [Getting Started](../../docs/general/getting-started.md#getting-started)
-  - [Installation on OpenShift](../../docs/general/getting-started.md#installation-on-openshift)
-  - [Installation from Source](../../docs/general/getting-started.md#installation-from-source)
-  - [Migrating from Istio in-cluster Operator](../../docs/general/getting-started.md#migrating-from-istio-in-cluster-operator)
-    - [Setting environments variables for Istiod](../../docs/general/getting-started.md#setting-environments-variables-for-istiod)
-    - [Components field](../../docs/general/getting-started.md#components-field)
-    - [CNI lifecycle management](../../docs/general/getting-started.md#cni-lifecycle-management)
-    - [Converter Script to Migrate Istio in-cluster Operator Configuration to Sail Operator](../../docs/general/getting-started.md#converter-script-to-migrate-istio-in-cluster-operator-configuration-to-sail-operator)
-- [Creating and Configuring Gateways](../../docs/common/create-and-configure-gateways.md#creating-and-configuring-gateways)
-  - [Option 1: Istio Gateway Injection](../../docs/common/create-and-configure-gateways.md#option-1-istio-gateway-injection)
-  - [Option 2: Kubernetes Gateway API](../../docs/common/create-and-configure-gateways.md#option-2-kubernetes-gateway-api)
-- [Update Strategy](../../docs/update-strategy/update-strategy.md#update-strategy)
-  - [InPlace](../../docs/update-strategy/update-strategy.md#inplace)
-    - [Example using the InPlace strategy](../../docs/update-strategy/update-strategy.md#example-using-the-inplace-strategy)
-    - [Recommendations for InPlace strategy](../../docs/update-strategy/update-strategy.md#recommendations-for-inplace-strategy)
-  - [RevisionBased](../../docs/update-strategy/update-strategy.md#revisionbased)
-    - [Example using the RevisionBased strategy](../../docs/update-strategy/update-strategy.md#example-using-the-revisionbased-strategy)
-    - [Example using the RevisionBased strategy and an IstioRevisionTag](../../docs/update-strategy/update-strategy.md#example-using-the-revisionbased-strategy-and-an-istiorevisiontag)
-- [Multiple meshes on a single cluster](../../docs/deployment-models/multiple-mesh.md#multiple-meshes-on-a-single-cluster)
-  - [Prerequisites](../../docs/deployment-models/multiple-mesh.md#prerequisites)
-  - [Installation Steps](../../docs/deployment-models/multiple-mesh.md#installation-steps)
-    - [Deploying the control planes](../../docs/deployment-models/multiple-mesh.md#deploying-the-control-planes)
-    - [Deploying the applications](../../docs/deployment-models/multiple-mesh.md#deploying-the-applications)
-  - [Validation](../../docs/deployment-models/multiple-mesh.md#validation)
-    - [Checking application to control plane mapping](../../docs/deployment-models/multiple-mesh.md#checking-application-to-control-plane-mapping)
-    - [Checking application connectivity](../../docs/deployment-models/multiple-mesh.md#checking-application-connectivity)
-- [Multi-cluster](../../docs/deployment-models/multicluster.md#multi-cluster)
-  - [Prerequisites](../../docs/deployment-models/multicluster.md#prerequisites)
-  - [Common Setup](../../docs/deployment-models/multicluster.md#common-setup)
-  - [Multi-Primary](../../docs/deployment-models/multicluster.md#multi-primary---multi-network)
-  - [Primary-Remote](../../docs/deployment-models/multicluster.md#primary-remote---multi-network)
-  - [External Control Plane](../../docs/deployment-models/multicluster.md#external-control-plane)
-- [Dual-stack Support](../../docs/dual-stack/dual-stack.md#dual-stack-support)
-  - [Prerequisites](../../docs/dual-stack/dual-stack.md#prerequisites)
-  - [Installation Steps](../../docs/dual-stack/dual-stack.md#installation-steps)
-  - [Validation](../../docs/dual-stack/dual-stack.md#validation)
-- [Introduction to Istio Ambient mode](../../docs/common/istio-ambient-mode.md#introduction-to-istio-ambient-mode)
-  - [Component version](../../docs/common/istio-ambient-mode.md#component-version)
-  - [Concepts](../../docs/common/istio-ambient-mode.md#concepts)
-    - [ZTunnel resource](../../docs/common/istio-ambient-mode.md#ztunnel-resource)
-    - [API Reference documentation](../../docs/common/istio-ambient-mode.md#api-reference-documentation)
-  - [Core features](../../docs/common/istio-ambient-mode.md#core-features)
-  - [Getting Started](../../docs/common/istio-ambient-mode.md#getting-started)
-  - [Visualize the application using Kiali dashboard](../../docs/common/istio-ambient-mode.md#visualize-the-application-using-kiali-dashboard)
-  - [Troubleshoot issues](../../docs/common/istio-ambient-mode.md#troubleshoot-issues)
-  - [Cleanup](../../docs/common/istio-ambient-mode.md#cleanup)
-- [Introduction to Istio Waypoint Proxy](../../docs/common/istio-ambient-waypoint.md#introduction-to-istio-waypoint-proxy)
-  - [Core features](../../docs/common/istio-ambient-waypoint.md#core-features)
-  - [Getting Started](../../docs/common/istio-ambient-waypoint.md#getting-started)
-  - [Layer 7 Features in Ambient Mode](../../docs/common/istio-ambient-waypoint.md#layer-7-features-in-ambient-mode)
-  - [Troubleshoot issues](../../docs/common/istio-ambient-waypoint.md#troubleshoot-issues)
-  - [Cleanup](../../docs/common/istio-ambient-waypoint.md#cleanup)
-- [Addons](../../docs/addons/addons.md#addons)
-  - [Deploy Prometheus and Jaeger addons](../../docs/addons/addons.md#deploy-prometheus-and-jaeger-addons)
-  - [Deploy Kiali addon](../../docs/addons/addons.md#deploy-kiali-addon)
-  - [Find the active revision of your Istio instance. In our case it is `test`.](../../docs/addons/addons.md#find-the-active-revision-of-your-istio-instance)
-  - [Deploy Gateway and Bookinfo](../../docs/addons/addons.md#deploy-gateway-and-bookinfo)
-  - [Generate traffic and visualize your mesh](../../docs/addons/addons.md#generate-traffic-and-visualize-your-mesh)
-- [Observability Integrations](../../docs/addons/observability.md#observability-integrations)
-    - [Scraping metrics using the OpenShift monitoring stack](../../docs/addons/observability.md#scraping-metrics-using-the-openshift-monitoring-stack)
-    - [Configure tracing with OpenShift distributed tracing](../../docs/addons/observability.md#configure-tracing-with-openshift-distributed-tracing)
-    - [Integrating with Kiali](../../docs/addons/observability.md#integrating-with-kiali)
-      - [Integrating Kiali with the OpenShift monitoring stack](../../docs/addons/observability.md#integrating-kiali-with-the-openshift-monitoring-stack)
-      - [Integrating Kiali with OpenShift Distributed Tracing](../../docs/addons/observability.md#integrating-kiali-with-openshift-distributed-tracing)
-- [Uninstalling](../../docs/general/getting-started.md#uninstalling)
-  - [Deleting Istio](../../docs/general/getting-started.md#deleting-istio)
-  - [Deleting IstioCNI](../../docs/general/getting-started.md#deleting-istiocni)
-  - [Deleting the Sail Operator](../../docs/general/getting-started.md#deleting-the-sail-operator)
-  - [Deleting the istio-system and istio-cni Projects](../../docs/general/getting-started.md#deleting-the-istio-system-and-istio-cni-projects)
-  - [Decide whether you want to delete the CRDs as well](../../docs/general/getting-started.md#decide-whether-you-want-to-delete-the-crds-as-well)
+- [Getting Started](general/getting-started.md#getting-started)
+  - [Installation on OpenShift](general/getting-started.md#installation-on-openshift)
+  - [Installation from Source](general/getting-started.md#installation-from-source)
+  - [Migrating from Istio in-cluster Operator](general/getting-started.md#migrating-from-istio-in-cluster-operator)
+    - [Setting environments variables for Istiod](general/getting-started.md#setting-environments-variables-for-istiod)
+    - [Components field](general/getting-started.md#components-field)
+    - [CNI lifecycle management](general/getting-started.md#cni-lifecycle-management)
+    - [Converter Script to Migrate Istio in-cluster Operator Configuration to Sail Operator](general/getting-started.md#converter-script-to-migrate-istio-in-cluster-operator-configuration-to-sail-operator)
+- [Creating and Configuring Gateways](common/create-and-configure-gateways.md#creating-and-configuring-gateways)
+  - [Option 1: Istio Gateway Injection](common/create-and-configure-gateways.md#option-1-istio-gateway-injection)
+  - [Option 2: Kubernetes Gateway API](common/create-and-configure-gateways.md#option-2-kubernetes-gateway-api)
+- [Update Strategy](update-strategy/update-strategy.md#update-strategy)
+  - [InPlace](update-strategy/update-strategy.md#inplace)
+    - [Example using the InPlace strategy](update-strategy/update-strategy.md#example-using-the-inplace-strategy)
+    - [Recommendations for InPlace strategy](update-strategy/update-strategy.md#recommendations-for-inplace-strategy)
+  - [RevisionBased](update-strategy/update-strategy.md#revisionbased)
+    - [Example using the RevisionBased strategy](update-strategy/update-strategy.md#example-using-the-revisionbased-strategy)
+    - [Example using the RevisionBased strategy and an IstioRevisionTag](update-strategy/update-strategy.md#example-using-the-revisionbased-strategy-and-an-istiorevisiontag)
+- [Multiple meshes on a single cluster](deployment-models/multiple-mesh.md#multiple-meshes-on-a-single-cluster)
+  - [Prerequisites](deployment-models/multiple-mesh.md#prerequisites)
+  - [Installation Steps](deployment-models/multiple-mesh.md#installation-steps)
+    - [Deploying the control planes](deployment-models/multiple-mesh.md#deploying-the-control-planes)
+    - [Deploying the applications](deployment-models/multiple-mesh.md#deploying-the-applications)
+  - [Validation](deployment-models/multiple-mesh.md#validation)
+    - [Checking application to control plane mapping](deployment-models/multiple-mesh.md#checking-application-to-control-plane-mapping)
+    - [Checking application connectivity](deployment-models/multiple-mesh.md#checking-application-connectivity)
+- [Multi-cluster](deployment-models/multicluster.md#multi-cluster)
+  - [Prerequisites](deployment-models/multicluster.md#prerequisites)
+  - [Common Setup](deployment-models/multicluster.md#common-setup)
+  - [Multi-Primary](deployment-models/multicluster.md#multi-primary---multi-network)
+  - [Primary-Remote](deployment-models/multicluster.md#primary-remote---multi-network)
+  - [External Control Plane](deployment-models/multicluster.md#external-control-plane)
+- [Dual-stack Support](dual-stack/dual-stack.md#dual-stack-support)
+  - [Prerequisites](dual-stack/dual-stack.md#prerequisites)
+  - [Installation Steps](dual-stack/dual-stack.md#installation-steps)
+  - [Validation](dual-stack/dual-stack.md#validation)
+- [Introduction to Istio Ambient mode](common/istio-ambient-mode.md#introduction-to-istio-ambient-mode)
+  - [Component version](common/istio-ambient-mode.md#component-version)
+  - [Concepts](common/istio-ambient-mode.md#concepts)
+    - [ZTunnel resource](common/istio-ambient-mode.md#ztunnel-resource)
+    - [API Reference documentation](common/istio-ambient-mode.md#api-reference-documentation)
+  - [Core features](common/istio-ambient-mode.md#core-features)
+  - [Getting Started](common/istio-ambient-mode.md#getting-started)
+  - [Visualize the application using Kiali dashboard](common/istio-ambient-mode.md#visualize-the-application-using-kiali-dashboard)
+  - [Troubleshoot issues](common/istio-ambient-mode.md#troubleshoot-issues)
+  - [Cleanup](common/istio-ambient-mode.md#cleanup)
+- [Introduction to Istio Waypoint Proxy](common/istio-ambient-waypoint.md#introduction-to-istio-waypoint-proxy)
+  - [Core features](common/istio-ambient-waypoint.md#core-features)
+  - [Getting Started](common/istio-ambient-waypoint.md#getting-started)
+  - [Layer 7 Features in Ambient Mode](common/istio-ambient-waypoint.md#layer-7-features-in-ambient-mode)
+  - [Troubleshoot issues](common/istio-ambient-waypoint.md#troubleshoot-issues)
+  - [Cleanup](common/istio-ambient-waypoint.md#cleanup)
+- [Addons](addons/addons.md#addons)
+  - [Deploy Prometheus and Jaeger addons](addons/addons.md#deploy-prometheus-and-jaeger-addons)
+  - [Deploy Kiali addon](addons/addons.md#deploy-kiali-addon)
+  - [Find the active revision of your Istio instance. In our case it is `test`.](addons/addons.md#find-the-active-revision-of-your-istio-instance)
+  - [Deploy Gateway and Bookinfo](addons/addons.md#deploy-gateway-and-bookinfo)
+  - [Generate traffic and visualize your mesh](addons/addons.md#generate-traffic-and-visualize-your-mesh)
+- [Observability Integrations](addons/observability.md#observability-integrations)
+    - [Scraping metrics using the OpenShift monitoring stack](addons/observability.md#scraping-metrics-using-the-openshift-monitoring-stack)
+    - [Configure tracing with OpenShift distributed tracing](addons/observability.md#configure-tracing-with-openshift-distributed-tracing)
+    - [Integrating with Kiali](addons/observability.md#integrating-with-kiali)
+      - [Integrating Kiali with the OpenShift monitoring stack](addons/observability.md#integrating-kiali-with-the-openshift-monitoring-stack)
+      - [Integrating Kiali with OpenShift Distributed Tracing](addons/observability.md#integrating-kiali-with-openshift-distributed-tracing)
+- [Uninstalling](general/getting-started.md#uninstalling)
+  - [Deleting Istio](general/getting-started.md#deleting-istio)
+  - [Deleting IstioCNI](general/getting-started.md#deleting-istiocni)
+  - [Deleting the Sail Operator](general/getting-started.md#deleting-the-sail-operator)
+  - [Deleting the istio-system and istio-cni Projects](general/getting-started.md#deleting-the-istio-system-and-istio-cni-projects)
+  - [Decide whether you want to delete the CRDs as well](general/getting-started.md#decide-whether-you-want-to-delete-the-crds-as-well)
 
 # User Documentation
 Sail Operator manages the lifecycle of your Istio control planes. Instead of creating a new configuration schema, Sail Operator APIs are built around Istio's helm chart APIs. All installation and configuration options that are exposed by Istio's helm charts are available through the Sail Operator CRDs' `values` fields.
@@ -192,11 +192,13 @@ To update the CNI plugin, just change the `version` field to the version you wan
           - kube-system
     EOF
     ```
-<!-- ```bash { name=validation-wait-cni tag=cni-update}
+<!--
+```bash { name=validation-wait-cni tag=cni-update}
 . scripts/prebuilt-func.sh
 wait_cni_ready "istio-cni"
 with_retries resource_version_equal "istiocni" "default" "v1.24.2"
-``` -->
+```
+-->
 2. Confirm the installation and version of the CNI plugin.
     ```console
     $ kubectl get istiocni -n istio-cni
@@ -207,21 +209,25 @@ with_retries resource_version_equal "istiocni" "default" "v1.24.2"
     istio-cni-node-hd9zf   1/1     Running   0          90m
     ```
 
-<!-- ```bash { name=print-cni tag=cni-update}
+<!--
+```bash { name=print-cni tag=cni-update}
 . scripts/prebuilt-func.sh
 print_cni_info
-``` -->
+```
+-->
 
 3. Update the CNI plugin version.
 
     ```bash { name=update-cni tag=cni-update}
     kubectl patch istiocni default -n istio-cni --type='merge' -p '{"spec":{"version":"v1.24.3"}}'
     ```
-<!-- ```bash { name=validation-wait-cni tag=cni-update}
+<!--
+```bash { name=validation-wait-cni tag=cni-update}
 . scripts/prebuilt-func.sh
 with_retries resource_version_equal "istiocni" "default" "v1.24.3"
 wait_cni_ready "istio-cni"
-``` -->
+```
+-->
 4. Confirm the CNI plugin version was updated.
 
     ```console
@@ -233,10 +239,12 @@ wait_cni_ready "istio-cni"
     istio-cni-node-jz4lg   1/1     Running   0          44s
     ```
 
-<!-- ```bash { name=print-cni tag=cni-update}
+<!--
+```bash { name=print-cni tag=cni-update}
 . scripts/prebuilt-func.sh
 print_cni_info
-``` -->
+```
+-->
 > [!NOTE]
 > The CNI plugin at version `1.x` is compatible with `Istio` at version `1.x-1`, `1.x` and `1.x+1`.
 
@@ -244,7 +252,7 @@ print_cni_info
 All of the Sail Operator API resources have a `status` subresource that contains information about their current state in the Kubernetes cluster.
 
 #### Conditions
-All resources have a `Ready` condition which is set to `true` as soon as all child resource have been created and are deemed Ready by their respective controllers. To see additional conditions for each of the resources, check the [API reference documentation](../../docs/api-reference/sailoperator.io.md).
+All resources have a `Ready` condition which is set to `true` as soon as all child resource have been created and are deemed Ready by their respective controllers. To see additional conditions for each of the resources, check the [API reference documentation](api-reference/sailoperator.io.md).
 
 #### InUse Detection
 The Sail Operator uses InUse detection to determine whether an object is referenced. This is currently present on all resources apart from `IstioCNI`. On the `Istio` resource, it is a counter as it only aggregates the `InUse` conditions on its child `IstioRevisions`.
@@ -256,4 +264,4 @@ The Sail Operator uses InUse detection to determine whether an object is referen
 |IstioRevisionTag  |Condition   |Status.Conditions[type="InUse']|Set to `true` if the `IstioRevisionTag` is referenced by a namespace or workload.
 
 ## API Reference documentation
-The Sail Operator API reference documentation can be found [here](../../docs/api-reference/sailoperator.io.md#api-reference).
+The Sail Operator API reference documentation can be found [here](api-reference/sailoperator.io.md#api-reference).
