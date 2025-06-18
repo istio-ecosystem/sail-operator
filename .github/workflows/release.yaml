@@ -33,18 +33,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Login to quay.io
+    - name: Install GH CLI
+      uses: dev-hanz-ops/install-gh-cli-action@v0.2.1
+
+    - name: Login to build-harbor.alauda.cn
       uses: docker/login-action@v3
       with:
-        registry: quay.io
-        username: ${{ secrets.QUAY_USER }}
-        password: ${{ secrets.QUAY_PWD }}
+        registry: build-harbor.alauda.cn
+        username: ${{ secrets.HARBOR_USERNAME }}
+        password: ${{ secrets.HARBOR_PASSWORD }}
 
     - uses: actions/checkout@v4
 
     - name: Build and push operator image
       run: |
-        make docker-buildx \
+        make alauda-docker-buildx \
           -e TAG=$VERSION
 
     - name: Generate bundle metadata
@@ -54,30 +57,10 @@ jobs:
       env:
         CHANNELS: ${{ inputs.bundle_channels }}
 
-    - name: Publish bundle in operatorhub.io
+    - name: Build and push bundle image
       run: |
-        make bundle-publish \
-          -e GIT_CONFIG_USER_NAME="$GIT_CONFIG_USER_NAME" \
-          -e GIT_CONFIG_USER_EMAIL="$GIT_CONFIG_USER_EMAIL" \
-          -e OPERATOR_VERSION=$VERSION \
-          -e OPERATOR_HUB=community-operators \
-          -e OWNER=k8s-operatorhub \
-          -e FORK=maistra
-      env:
-        GIT_CONFIG_USER_NAME: "${{ github.actor }}"
-        GIT_CONFIG_USER_EMAIL: "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
-
-    - name: Publish bundle in OpenShift OperatorHub
-      run: |
-        make bundle-publish \
-          -e GIT_CONFIG_USER_NAME="$GIT_CONFIG_USER_NAME" \
-          -e GIT_CONFIG_USER_EMAIL="$GIT_CONFIG_USER_EMAIL" \
-          -e OPERATOR_VERSION=$VERSION \
-          -e OWNER=redhat-openshift-ecosystem \
-          -e FORK=maistra
-      env:
-        GIT_CONFIG_USER_NAME: "${{ github.actor }}"
-        GIT_CONFIG_USER_EMAIL: "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+        make bundle-build \
+          -e VERSION=$VERSION
 
     - name: Create GitHub release
       run: |
