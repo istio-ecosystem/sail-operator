@@ -1,4 +1,4 @@
-[Return to Project Root](../README.md)
+[Return to Project Root](../../README.md)
 
 # Table of Contents
 
@@ -67,20 +67,24 @@ EOF
 ```
 
 > [!NOTE]
-> These commented code blocks are validation steps, and they are added like this to be hidden in the final documentation, but they are going to be used in the automation workflow to validate the documentation. For more information, please check the [documentation](/docs/guidelines/guidelines.md#L146).
-<!-- ```bash { name=validation-print-istio-resource tag=example}
+> These commented code blocks are validation steps, and they are added like this to be hidden in the final documentation, but they are going to be used in the automation workflow to validate the documentation. For more information, please check the [documentation](../../docs/guidelines/guidelines.md#L146).
+<!--
+```bash { name=validation-print-istio-resource tag=example}
 kubectl get istio -o yaml
 kubectl get deployment sail-operator -n sail-operator -o yaml
-``` -->
+```
+-->
 
-<!-- ```bash { name=validation-wait-istiod tag=example}
+<!--
+```bash { name=validation-wait-istiod tag=example}
 for i in 1 2 3 4 5; do
   pods=$(kubectl get pod -l app=istiod -n istio-system -o jsonpath='{.items[*].status.phase}')
   echo "Waiting for istiod pod to be running... (current: $pods)"
   echo "$pods" | grep -q Running && break
   sleep 5
 done
-``` -->
+```
+-->
 
 - To check the status of the Istio resource, you can use the following command:
 ```bash { name=check-istio tag=example}
@@ -94,20 +98,24 @@ kubectl create namespace sample
 kubectl label namespace sample istio-injection=enabled
 kubectl apply -n sample -f https://raw.githubusercontent.com/istio/istio/release-1.24/samples/bookinfo/platform/kube/bookinfo.yaml
 ```
-<!-- ```bash { name=validation-wait-sample-app tag=example}
+<!--
+```bash { name=validation-wait-sample-app tag=example}
 for i in {1..5}; do kubectl wait --for=condition=available --timeout=600s deployment/productpage-v1 -n sample && break || sleep 5; done
-``` -->
+```
+-->
 
 - Check the status of the sample application:
 ```bash { name=check-sample-app tag=example}
 kubectl get pods -n sample
 ```
-<!-- ```bash { name=check-sidecar-exist tag=example}
+<!--
+```bash { name=check-sidecar-exist tag=example}
 if ! kubectl get pods -n sample -l app=productpage -o jsonpath='{range .items[*]}{@.metadata.name}{" "}{range .spec.containers[*]}{@.name}{" "}{end}{"\n"}{end}' | grep -q istio-proxy; then
   echo "No Istio sidecar (istio-proxy) injected in productpage pod!"
   exit 1
 fi
-``` -->
+```
+-->
 
 - Check the proxy version of the sample application:
 ```bash { name=check-proxy-version tag=example}

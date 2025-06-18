@@ -208,32 +208,16 @@ test.e2e.kind: istioctl ## Deploy a KinD cluster and run the end-to-end tests ag
 .PHONY: test.e2e.describe
 test.e2e.describe: ## Runs ginkgo outline -format indent over the e2e test to show in BDD style the steps and test structure
 	GINKGO_FLAGS="$(GINKGO_FLAGS)" ${SOURCE_DIR}/tests/e2e/common-operator-integ-suite.sh --describe
-##@ Build
-
-.PHONY: runme $(RUNME)
-runme: OS=$(shell go env GOOS)
-runme: ARCH=$(shell go env GOARCH)
-runme: $(RUNME) ## Download runme to bin directory. If wrong version is installed, it will be overwritten.
-	@test -s $(LOCALBIN)/runme || { \
-		GOBIN=$(LOCALBIN) GO111MODULE=on go install github.com/runmedev/runme/v3@v$(RUNME_VERSION) > /dev/stderr; \
-		echo "runme has been downloaded and placed in $(LOCALBIN)"; \
-	}
-
-.PHONY: update-docs-examples
-update-docs-examples: ## Copy the documentation files and generate the resulting md files to be executed by the runme tool.
-	@echo "Executing copy script to generate the documentation examples md files"
-	@echo "The script will copy the files from the source folder to the destination folder and add the runme suffix to the file names"
-	@tests/documentation_tests/scripts/update-docs-examples.sh
-	@echo "Documentation examples updated successfully"
-
 
 .PHONE: test.docs
-test.docs: runme istioctl update-docs-examples
+test.docs: runme istioctl ## Run the documentation examples tests.
 ## test.docs use runme to test the documentation examples. 
 ## Check the specific documentation to understand the use of the tool
-	@echo "Running runme test on the documentation examples, the location of the tests is in the tests/documentation_test folder"
+	@echo "Running runme test on the documentation examples."
 	@PATH=$(LOCALBIN):$$PATH tests/documentation_tests/scripts/run-docs-examples.sh
 	@echo "Documentation examples tested successfully"
+
+##@ Build
 
 .PHONY: build
 build: build-$(TARGET_ARCH) ## Build the sail-operator binary.
@@ -464,7 +448,7 @@ gen-charts: ## Pull charts from istio repository.
 gen: gen-all-except-bundle bundle ## Generate everything.
 
 .PHONY: gen-all-except-bundle
-gen-all-except-bundle: operator-name operator-chart controller-gen gen-api gen-charts gen-manifests gen-code gen-api-docs update-docs-examples mirror-licenses
+gen-all-except-bundle: operator-name operator-chart controller-gen gen-api gen-charts gen-manifests gen-code gen-api-docs mirror-licenses
 
 .PHONY: gen-check
 gen-check: gen restore-manifest-dates check-clean-repo ## Verify that changes in generated resources have been checked in.
@@ -599,6 +583,15 @@ $(ISTIOCTL): $(LOCALBIN)
 		mv /tmp/$$(tar tf /tmp/istioctl.tar.gz) $(LOCALBIN)/istioctl; \
 		rm -f /tmp/istioctl.tar.gz; \
 		echo "istioctl has been downloaded and placed in $(LOCALBIN)"; \
+	}
+
+.PHONY: runme $(RUNME)
+runme: OS=$(shell go env GOOS)
+runme: ARCH=$(shell go env GOARCH)
+runme: $(RUNME) ## Download runme to bin directory. If wrong version is installed, it will be overwritten.
+	@test -s $(LOCALBIN)/runme || { \
+		GOBIN=$(LOCALBIN) GO111MODULE=on go install github.com/runmedev/runme/v3@v$(RUNME_VERSION) > /dev/stderr; \
+		echo "runme has been downloaded and placed in $(LOCALBIN)"; \
 	}
 
 .PHONY: controller-gen

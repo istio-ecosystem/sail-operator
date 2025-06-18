@@ -1,5 +1,5 @@
 [Return to Project Root](../)
-*Note*: To add new topics to this documentation, please follow the guidelines in the [guidelines](../docs/guidelines/guidelines.md) doc.
+*Note*: To add new topics to this documentation, please follow the guidelines in the [guidelines](../../docs/guidelines/guidelines.md) doc.
 
 # Table of Contents
 
@@ -192,11 +192,13 @@ To update the CNI plugin, just change the `version` field to the version you wan
           - kube-system
     EOF
     ```
-<!-- ```bash { name=validation-wait-cni tag=cni-update}
-. scripts/prebuilt-func.sh
+<!--
+```bash { name=validation-wait-cni tag=cni-update}
+. $SCRIPT_DIR/prebuilt-func.sh
 wait_cni_ready "istio-cni"
 with_retries resource_version_equal "istiocni" "default" "v1.24.2"
-``` -->
+```
+-->
 2. Confirm the installation and version of the CNI plugin.
     ```console
     $ kubectl get istiocni -n istio-cni
@@ -207,21 +209,25 @@ with_retries resource_version_equal "istiocni" "default" "v1.24.2"
     istio-cni-node-hd9zf   1/1     Running   0          90m
     ```
 
-<!-- ```bash { name=print-cni tag=cni-update}
-. scripts/prebuilt-func.sh
+<!--
+```bash { name=print-cni tag=cni-update}
+. $SCRIPT_DIR/prebuilt-func.sh
 print_cni_info
-``` -->
+```
+-->
 
 3. Update the CNI plugin version.
 
     ```bash { name=update-cni tag=cni-update}
     kubectl patch istiocni default -n istio-cni --type='merge' -p '{"spec":{"version":"v1.24.3"}}'
     ```
-<!-- ```bash { name=validation-wait-cni tag=cni-update}
-. scripts/prebuilt-func.sh
+<!--
+```bash { name=validation-wait-cni tag=cni-update}
+. $SCRIPT_DIR/prebuilt-func.sh
 with_retries resource_version_equal "istiocni" "default" "v1.24.3"
 wait_cni_ready "istio-cni"
-``` -->
+```
+-->
 4. Confirm the CNI plugin version was updated.
 
     ```console
@@ -233,10 +239,12 @@ wait_cni_ready "istio-cni"
     istio-cni-node-jz4lg   1/1     Running   0          44s
     ```
 
-<!-- ```bash { name=print-cni tag=cni-update}
-. scripts/prebuilt-func.sh
+<!--
+```bash { name=print-cni tag=cni-update}
+. $SCRIPT_DIR/prebuilt-func.sh
 print_cni_info
-``` -->
+```
+-->
 > [!NOTE]
 > The CNI plugin at version `1.x` is compatible with `Istio` at version `1.x-1`, `1.x` and `1.x+1`.
 
@@ -244,7 +252,7 @@ print_cni_info
 All of the Sail Operator API resources have a `status` subresource that contains information about their current state in the Kubernetes cluster.
 
 #### Conditions
-All resources have a `Ready` condition which is set to `true` as soon as all child resource have been created and are deemed Ready by their respective controllers. To see additional conditions for each of the resources, check the [API reference documentation](https://github.com/istio-ecosystem/sail-operator/tree/main/docs/api-reference/sailoperator.io.md).
+All resources have a `Ready` condition which is set to `true` as soon as all child resource have been created and are deemed Ready by their respective controllers. To see additional conditions for each of the resources, check the [API reference documentation](api-reference/sailoperator.io.md).
 
 #### InUse Detection
 The Sail Operator uses InUse detection to determine whether an object is referenced. This is currently present on all resources apart from `IstioCNI`. On the `Istio` resource, it is a counter as it only aggregates the `InUse` conditions on its child `IstioRevisions`.

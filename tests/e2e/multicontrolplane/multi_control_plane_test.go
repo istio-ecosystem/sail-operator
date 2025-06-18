@@ -46,7 +46,7 @@ var _ = Describe("Multi control plane deployment model", Label("smoke", "multico
 		if skipDeploy {
 			Success("Skipping operator installation because it was deployed externally")
 		} else {
-			Eventually(common.InstallOperatorViaHelm).
+			Expect(common.InstallOperatorViaHelm()).
 				To(Succeed(), "Operator failed to be deployed")
 		}
 

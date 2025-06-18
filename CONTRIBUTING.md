@@ -40,4 +40,4 @@ The Sail Operator project has a weekly contributor call every Thursday at 4PM CE
 If you find a security issue in the Sail Operator project, please refer to the [Security Policy](https://github.com/istio-ecosystem/sail-operator/security/policy) for more information on how to report security issues. Please do not report security issues in the public GitHub repository.
 
 ## Writing Documentation
-If you want to add new documentation or examples to our existing documentation please take a look at the [documentation guidelines](/docs/guidelines/guidelines.md) to help you get started. Take into account that we run automation test over the documentation examples, so please ensure that the examples are correct and follows the guidelines to ensure it will be properly tested.
+If you want to add new documentation or examples to our existing documentation please take a look at the [documentation guidelines](docs/guidelines/guidelines.md) to help you get started. Take into account that we run automation test over the documentation examples, so please ensure that the examples are correct and follows the guidelines to ensure it will be properly tested.

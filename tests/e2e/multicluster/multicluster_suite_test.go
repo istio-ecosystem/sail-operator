@@ -130,10 +130,10 @@ var _ = BeforeSuite(func(ctx SpecContext) {
 	Expect(k1.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created on Primary Cluster")
 	Expect(k2.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created on Remote Cluster")
 
-	Eventually(common.InstallOperatorViaHelm).WithArguments("--kubeconfig", kubeconfig).
+	Expect(common.InstallOperatorViaHelm("--kubeconfig", kubeconfig)).
 		To(Succeed(), "Operator failed to be deployed in Primary Cluster")
 
-	Eventually(common.InstallOperatorViaHelm).WithArguments("--kubeconfig", kubeconfig2).
+	Expect(common.InstallOperatorViaHelm("--kubeconfig", kubeconfig2)).
 		To(Succeed(), "Operator failed to be deployed in Remote Cluster")
 
 	Eventually(common.GetObject).

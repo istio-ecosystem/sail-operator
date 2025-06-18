@@ -24,8 +24,8 @@ outbound traffic from the mesh (egress). For more information, see
 
 #### Ingress Gateway
 
-To configure ingress gateway injection with the `bookinfo` application, we have provided
-a [sample gateway configuration](../../chart/samples/ingress-gateway.yaml?raw=1) that should be applied in the namespace
+To configure gateway injection with the `bookinfo` application, we have provided 
+a [sample gateway configuration](../../chart/samples/ingress-gateway.yaml) that should be applied in the namespace
 where the application is installed:
 
 1. Create the `istio-ingressgateway` deployment and service:

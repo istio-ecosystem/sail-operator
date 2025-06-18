@@ -17,7 +17,7 @@
 set -eu -o pipefail
 
 # This script is used to update the example files in the documentation that are the resulting script to be executed by the runme tool.
-# It will copy all the files from the docs/ respository to the test/documentation_tests/ directory.
+# It will copy all the files from the docs/ respository to the TEST_DIR defined folder.
 # It will exclude this files: sailoperator.io.md (Add more here if is needed)
 # Beside that, after copy the files it will read each one and all the html commented bash code block and it will uncomment them. 
 # This will allow us to hide from docs validation steps
@@ -28,14 +28,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 # Set the documentation directory to the docs/ directory
 DOCS_DIR="$ROOT_DIR/docs"
-# Set the test directory to the test/documentation_tests/ directory
-TEST_DIR="$ROOT_DIR/tests/documentation_tests"
-# Set the output directory to the test/documentation_tests/ directory
-OUTPUT_DIR="$TEST_DIR"
 # Set the files to exclude from the copy
 EXCLUDE_FILES=(
   "sailoperator.io.md" "guidelines.md"
 )
+# Check if TEST_DIR is set, if not skip the script
+if [[ -z "${TEST_DIR:-}" ]]; then
+  echo "TEST_DIR is not set. This script is not meant to be run directly. Please Check run-docs-examples.sh script."
+  exit 1
+fi
+
+echo "Using TEST_DIR directory to place the temporary docs files: $TEST_DIR"
 
 # Validate that no tag value is used in more than one file in the current documentation
 declare -A TAG_USAGE
@@ -78,9 +81,6 @@ if [[ "$DUPLICATE_FOUND" -eq 1 ]]; then
   exit 1
 fi
 
-# Create the output directory if it does not exist
-mkdir -p "$OUTPUT_DIR"
-
 # Create first a list with all the files in the docs/ directory and subdirectories to be copied
 # Exclude the files in the EXCLUDE_FILES array and include only the files that contains at least one pattern in their code blocks like this:
 # bash { name=
@@ -110,33 +110,26 @@ for file in "${FILES_TO_COPY[@]}"; do
   echo "$file"
 done
 
-# Remove all the files in the output directory, but only the files in the output directory not the subdirectories
-for file in "$OUTPUT_DIR"/*; do
-  if [ -f "$file" ]; then
-    echo "Removing file: $file"
-    rm "$file"
-  fi
-done
-
-
 # Copy the files to the output directory and add the suffix -runme.md to each file
 for file in "${FILES_TO_COPY[@]}"; do
     # Get the base name of the file
     base_name=$(basename "$file")
-    echo "Copying file: $file to $OUTPUT_DIR/${base_name%.md}-runme.md"
+    echo "Copying file: $file to $TEST_DIR/${base_name%.md}-runme.md"
     # Copy the file to the output directory and add the suffix -runme.md to each file
-    cp "$file" "$OUTPUT_DIR/${base_name%.md}-runme.md"
+    cp "$file" "$TEST_DIR/${base_name%.md}-runme.md"
 done
 
 
 # Uncomment the html commented bash code block in the files
 # Read the files in the test/documentation_tests/ directory
 # The code block need to match this pattern:
-# <!-- ```bash
+# <!--
+# ```bash
 # <code>
-# ``` -->
+# ```
+# -->
 # If any other pattern is found, it will be ignored. Add more patterns here if needed.
-for file in "$OUTPUT_DIR"/*.md; do
+for file in "$TEST_DIR"/*.md; do
   perl -0777 -pe 's/<!--\s*(```bash[^\n]*\n)(.*?)(\n```)\s*-->/$1$2$3/gms' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
 done
 
