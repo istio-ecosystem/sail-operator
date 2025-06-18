@@ -47,7 +47,7 @@ Steps:
     ```
 <!--
 ```bash { name=validation-wait-istio-pods tag=inplace-update}
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     wait_istio_ready "istio-system"
     print_istio_info
 ```
@@ -71,7 +71,7 @@ Steps:
     Note: if the `Istio` resource name is other than `default`, you need to set the `istio.io/rev` label to the name of the `Istio` resource instead of adding the `istio-injection=enabled` label.
 <!--
 ```bash { name=validation-wait-bookinfo tag=inplace-update}
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     with_retries wait_pods_ready_by_ns "bookinfo"
     kubectl get pods -n bookinfo
     istioctl proxy-status
@@ -94,7 +94,7 @@ Steps:
     ```
 <!--
 ```bash { name=validation-wait-istio-updated tag=inplace-update}
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     old_pod=$(kubectl get pods -n istio-system -l app=istiod -o name)
     kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v1.26.0"}}'
     kubectl wait --for=delete $old_pod -n istio-system --timeout=60s
@@ -124,7 +124,7 @@ Steps:
     for pod in $pod_names; do
         kubectl wait --for=delete $pod -n bookinfo --timeout=60s
     done
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     with_retries wait_pods_ready_by_ns "bookinfo"
     istioctl proxy-status
 ```
@@ -138,7 +138,7 @@ Steps:
     The column `VERSION` should match the new control plane version.
 <!--
 ```bash { name=validation-istio-expected-version tag=inplace-update}
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     with_retries pods_istio_version_match "bookinfo" "1.26.0"
 ```
 -->
@@ -181,7 +181,7 @@ Steps:
     ```
 <!--
 ```bash { name=validation-wait-istio-pods tag=revision-based-update}
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     wait_istio_ready "istio-system"
     print_istio_info
 ```
@@ -224,7 +224,7 @@ Steps:
     ```
 <!--
 ```bash { name=validation-wait-bookinfo tag=revision-based-update}
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     with_retries wait_pods_ready_by_ns "bookinfo"
     kubectl get pods -n bookinfo
     istioctl proxy-status
@@ -241,7 +241,7 @@ Steps:
     Note: `IN USE` field shows as 1, after application being deployed.
 <!--
 ```bash { name=validation-istio-in-use tag=revision-based-update}
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     with_retries istio_active_revision_match "default-v1-25-3"
 ```
 -->
@@ -260,7 +260,7 @@ Steps:
 <!--
 ```bash { name=validation-wait-istio-updated tag=revision-based-update}
     kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v1.26.0"}}'
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     with_retries istiod_pods_count "2"
     wait_istio_ready "istio-system"
     print_istio_info
@@ -280,7 +280,7 @@ Steps:
     ```
 <!--
 ```bash { name=validation-istiorevision tag=revision-based-update}
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     kubectl get istio
     kubectl get istiorevision -n istio-system
     with_retries istio_active_revision_match "default-v1-26-0"
@@ -297,7 +297,7 @@ Steps:
     ```
 <!--
 ```bash { name=validation-istiod-count tag=revision-based-update}
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     with_retries istiod_pods_count "2"
 ```
 -->
@@ -309,7 +309,7 @@ Steps:
     The column `VERSION` should still match the old control plane version.
 <!--
 ```bash { name=validation-wait-bookinfo tag=revision-based-update}
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     istioctl proxy-status
     with_retries pods_istio_version_match "bookinfo" "1.25.3"
 ```
@@ -334,7 +334,7 @@ Steps:
     for pod in $pod_names; do
         kubectl wait --for=delete $pod -n bookinfo --timeout=60s
     done
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     with_retries wait_pods_ready_by_ns "bookinfo"
     kubectl get pods -n bookinfo
     istioctl proxy-status
@@ -366,7 +366,7 @@ Steps:
     The old `IstioRevision` resource and the old control plane will be deleted when the grace period specified in the `Istio` resource field `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds` expires.
 <!--
 ```bash { name=validation-resources-deletion tag=revision-based-update}
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     echo "Confirm istiod pod is deleted"
     with_retries istiod_pods_count "1"
     echo "Confirm istiorevision is deleted"
@@ -415,7 +415,7 @@ Steps:
     ```
 <!--
 ```bash { name=validation-wait-istio-pods tag=istiorevisiontag}
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     wait_istio_ready "istio-system"
     kubectl get pods -n istio-system
 ```
@@ -430,7 +430,7 @@ Steps:
     Note: `IN USE` field shows as 1, even though no workloads are using the control plane. This is because the `IstioRevisionTag` is referencing it.
 <!--
 ```bash { name=validation-istio-in-use tag=istiorevisiontag}
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     with_retries istio_active_revision_match "default-v1-25-3"
 ```
 -->
@@ -443,7 +443,7 @@ Steps:
     ```
 <!--
 ```bash { name=validation-istio-revision-tag tag=istiorevisiontag}
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     with_retries istio_revision_tag_status_equal "NotReferencedByAnything" "default"
 ```
 -->
@@ -462,7 +462,7 @@ Steps:
     ```
 <!--
 ```bash { name=validation-wait-bookinfo tag=istiorevisiontag}
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     with_retries wait_pods_ready_by_ns "bookinfo"
     kubectl get pods -n bookinfo
     istioctl proxy-status
@@ -479,7 +479,7 @@ Steps:
     Note: `IN USE` field shows 'True', as the tag is now referenced by both active workloads and the bookinfo namespace.
 <!--
 ```bash { name=validation-istio-revision-tag-inuse tag=istiorevisiontag}
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     istioctl proxy-status
     with_retries istio_revision_tag_inuse "true" "default"
 ```
@@ -525,7 +525,7 @@ Steps:
     ```
 <!--
 ```bash { name=validation-istiod-running tag=istiorevisiontag}
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     with_retries istiod_pods_count "2"
     wait_istio_ready "istio-system"
 ```
@@ -538,7 +538,7 @@ Steps:
     The column `VERSION` should still match the old control plane version.
 <!--
 ```bash { name=validation-istio-version tag=istiorevisiontag}
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     with_retries pods_istio_version_match "bookinfo" "1.25.3"
     print_istio_info
 ```
@@ -563,7 +563,7 @@ Steps:
     for pod in $pod_names; do
         kubectl wait --for=delete $pod -n bookinfo --timeout=60s
     done
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     with_retries wait_pods_ready_by_ns "bookinfo"
     kubectl get pods -n bookinfo
     istioctl proxy-status
@@ -588,7 +588,7 @@ Steps:
     The old `IstioRevision` resource and the old control plane will be deleted when the grace period specified in the `Istio` resource field `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds` expires.
 <!--
 ```bash { name=validation-resources-deletion tag=istiorevisiontag}
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     echo "Confirm istiod pod is deleted"
     with_retries istiod_pods_count "1"
     echo "Confirm istiorevision is deleted"

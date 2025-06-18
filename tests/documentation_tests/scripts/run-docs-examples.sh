@@ -16,9 +16,10 @@
 
 set -eu -o pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC2155
+export SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-TEST_DIR="$ROOT_DIR/tests/documentation_tests"
+FOCUS_DOC_TAGS="${FOCUS_DOC_TAGS:-}"
 
 export KIND_CLUSTER_NAME="docs-automation"
 export IP_FAMILY="ipv4"
@@ -35,8 +36,26 @@ export HUB="${KIND_REGISTRY}"
 # Workaround make inside make: ovewrite this variable so it is not recomputed in Makefile.core.mk
 export IMAGE="${HUB}/${IMAGE_BASE}:${TAG}"
 export ARTIFACTS="${ARTIFACTS:-$(mktemp -d)}"
+export TEST_DIR="${ARTIFACTS}/docs.test"
 export KUBECONFIG="${KUBECONFIG:-"${ARTIFACTS}/config"}"
 export HELM_TEMPL_DEF_FLAGS="--include-crds --values chart/values.yaml"
+
+# Check that TEST_DIR exist, if not create the directory
+if [[ ! -d "$TEST_DIR" ]]; then
+  echo "Creating TEST_DIR directory: $TEST_DIR"
+  mkdir -p "$TEST_DIR"
+else
+  echo "Using existing TEST_DIR directory: $TEST_DIR"
+fi
+
+# Run the update-docs-examples.sh script to update the documentation files into the artifacts directory.
+"${ROOT_DIR}/tests/documentation_tests/scripts/update-docs-examples.sh"
+
+# Check that .md files were copied to the artifacts directory. If there is no files, then exit with an error.
+if ! find "$TEST_DIR" -maxdepth 1 -name "*.md"; then
+  echo "No .md files found in the artifacts directory: $TEST_DIR"
+  exit 1
+fi
 
 # Validate that istioctl is installed
 if ! command -v istioctl &> /dev/null; then
@@ -61,10 +80,19 @@ done
 # Build a list of file-tag pairs, isolating 'dual-stack' since it requires special treatment
 TAGS_LIST=()
 dual_stack_tag=""
+
 for file in "${FILES_TO_CHECK[@]}"; do
   TAGS=$(grep -oP 'tag=\K[^} ]+' "$file" | sort -u)
   for tag in $TAGS; do
-    [ "$tag" != dual-stack ] || { dual_stack_tag="$file -t $tag"; continue; }
+    if [[ -n "$FOCUS_DOC_TAGS" && "$tag" != "$FOCUS_DOC_TAGS" ]]; then
+      continue
+    fi
+
+    if [[ "$tag" == "dual-stack" ]]; then
+      dual_stack_tag="$file -t $tag"
+      continue
+    fi
+
     TAGS_LIST+=("$file -t $tag")
   done
 done
@@ -137,4 +165,6 @@ function run_tests() {
 run_tests "${TAGS_LIST[@]}"
 
 # Run dual stack tests on it's own cluster, since it needs to be deployed with support for dual stack
-IP_FAMILY="dual" run_tests "$dual_stack_tag"
+if [[ -n "$dual_stack_tag" ]]; then
+  IP_FAMILY="dual" run_tests "$dual_stack_tag"
+fi

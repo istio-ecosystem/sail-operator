@@ -62,7 +62,7 @@ Because each mesh will use its own root certificate authority and configured to 
    ```
 <!--
 ```bash { name=validation-wait-istio-pods tag=multiple-meshes}
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     wait_istio_ready "istio-system1"
     kubectl get pods -n istio-system1
 ```
@@ -88,7 +88,7 @@ Because each mesh will use its own root certificate authority and configured to 
    ```
 <!--
 ```bash { name=validation-wait-istio-pods tag=multiple-meshes}
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     wait_istio_ready "istio-system2"
     kubectl get pods -n istio-system2
 ```
@@ -201,7 +201,7 @@ Because each mesh will use its own root certificate authority and configured to 
    ```
 <!--
 ```bash { name=validation-app-deployed tag=multiple-meshes}
-    . scripts/prebuilt-func.sh
+    . $SCRIPT_DIR/prebuilt-func.sh
     with_retries wait_pods_ready_by_ns "app1"
     kubectl get pods -n app1
     with_retries pods_istio_version_match "app1" "1.24.0" "istio-system1"

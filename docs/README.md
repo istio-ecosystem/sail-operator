@@ -194,7 +194,7 @@ To update the CNI plugin, just change the `version` field to the version you wan
     ```
 <!--
 ```bash { name=validation-wait-cni tag=cni-update}
-. scripts/prebuilt-func.sh
+. $SCRIPT_DIR/prebuilt-func.sh
 wait_cni_ready "istio-cni"
 with_retries resource_version_equal "istiocni" "default" "v1.24.2"
 ```
@@ -211,7 +211,7 @@ with_retries resource_version_equal "istiocni" "default" "v1.24.2"
 
 <!--
 ```bash { name=print-cni tag=cni-update}
-. scripts/prebuilt-func.sh
+. $SCRIPT_DIR/prebuilt-func.sh
 print_cni_info
 ```
 -->
@@ -223,7 +223,7 @@ print_cni_info
     ```
 <!--
 ```bash { name=validation-wait-cni tag=cni-update}
-. scripts/prebuilt-func.sh
+. $SCRIPT_DIR/prebuilt-func.sh
 with_retries resource_version_equal "istiocni" "default" "v1.24.3"
 wait_cni_ready "istio-cni"
 ```
@@ -241,7 +241,7 @@ wait_cni_ready "istio-cni"
 
 <!--
 ```bash { name=print-cni tag=cni-update}
-. scripts/prebuilt-func.sh
+. $SCRIPT_DIR/prebuilt-func.sh
 print_cni_info
 ```
 -->
