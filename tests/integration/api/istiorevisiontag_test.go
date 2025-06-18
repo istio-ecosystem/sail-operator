@@ -281,8 +281,8 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 		})
 
 		AfterAll(func() {
-			deleteAllIstioRevisionTags(ctx)
 			deleteAllIstiosAndRevisions(ctx)
+			deleteAllIstioRevisionTags(ctx)
 		})
 
 		It("fails to reconcile IstioRevisionTag", func() {
