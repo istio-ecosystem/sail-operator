@@ -335,7 +335,7 @@ versions:
 ```
 $ VERSIONS_YAML_FILE=custom_versions.yaml SKIP_BUILD=true SKIP_DEPLOY=true GINKGO_FLAGS="-v --label-filter=smoke" make test.e2e.kind
 ```
-Note: the `custom_versions.yaml` file should be located in the `pkg/istioversion` directory. The test framework will use this file to run the tests against the specific Istio versions defined in it.
+Note: The `custom_versions.yaml` file must be placed in the `pkg/istioversion` directory. The test framework uses this file to run tests against the specific Istio versions it defines.
 
 ### Understanding the test output
 By default, running the test using the make target will generate a report.xml file in the project's root directory. This file contains the test results in JUnit format, for example:
