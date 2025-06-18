@@ -76,6 +76,5 @@ check_watches() {
     fi
 }
 
-check_watches "./controllers/istiorevision/istiorevision_controller.go" "./resources/*/charts/istiod ./resources/*/charts/istiod-remote"
+check_watches "./controllers/istiorevision/istiorevision_controller.go" "./resources/*/charts/istiod ./resources/*/charts/istiod-remote ./resources/*/charts/base"
 check_watches "./controllers/istiocni/istiocni_controller.go" "./resources/*/charts/cni"
-check_watches "./controllers/istiobase/istiobase_controller.go" "./resources/*/charts/base"
