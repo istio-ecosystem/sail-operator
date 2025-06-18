@@ -242,6 +242,12 @@ or
 $ make BUILD_WITH_CONTAINER=0 test.e2e.ocp
 ```
 
+Note: if you are running the test against a cluster that has a different architecture than the one you are running the test, you will need to set the `TARGET_ARCH` environment variable to the architecture of the cluster. For example, if you are running the test against an ARM64 cluster, you can use the following command:
+
+```
+TARGET_ARCH=arm64 make test.e2e.ocp
+```
+
 ### Settings for end-to-end test execution
 
 The following environment variables define the behavior of the test run:
