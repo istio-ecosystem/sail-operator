@@ -38,7 +38,8 @@ get_internal_registry() {
 
   URL=$(${COMMAND} get route default-route -n openshift-image-registry --template='{{ .spec.host }}')
 
-  # Create the istio-images namespace to store the operator image and avoid errors during test run.
+  # Create the istio-images namespace to store the operator image
+  # This will ensure that no matter the operator namespace is deleted, the image will still be available
   export HUB="${URL}/istio-images"
   echo "Registry URL: ${HUB}"
 
