@@ -1,31 +1,34 @@
 [Return to OSSM Docs](../)
 
-# About integrating Service Mesh with cert-manager and istio-csr
+# OpenShift Service Mesh and Cert-Manager Operator Istio-CSR Agent
 
 The cert-manager tool is a solution for X.509 certificate management on Kubernetes. It delivers a unified API to integrate applications with private or public key infrastructure (PKI), such as Vault, Google Cloud Certificate Authority Service, Let’s Encrypt, and other providers.
 
+> [!NOTE]
+> The cert-manager Operator must be installed before you create and install your Istio resource.
+
 The cert-manager tool ensures the certificates are valid and up-to-date by attempting to renew certificates at a configured time before they expire.
 
-For Istio users, cert-manager provides integration with Istio through an external agent called istio-csr. istio-csr handles certificate signing requests (CSR) from Istio proxies and the controlplane by verifying the identity of the workload and then creating a CSR through cert-manager for the workload. cert-manager then creates a CSR to the configured CA Issuer which then signs the certificate.
+## About integrating Service Mesh with cert-manager Istio-CSR Agent
 
 > [!NOTE]
-> Red Hat provides support for integrating with istio-csr and cert-manager. Red Hat does not provide direct support for the istio-csr or the community cert-manager components. The use of community cert-manager shown here is for demonstration purposes only.
+> Istio-CSR integration for cert-manager Operator for Red Hat OpenShift is a Technology Preview feature only. Technology Preview features are not supported with Red Hat production service level agreements (SLAs) and might not be functionally complete. Red Hat does not recommend using them in production. These features provide early access to upcoming product features, enabling customers to test functionality and provide feedback during the development process.
 
-## Prerequisites
+The cert-manager Operator for Red Hat OpenShift provides enhanced support for securing workloads and control plane components in Red Hat OpenShift Service Mesh or Istio. This includes support for certificates enabling mutual TLS (mTLS), which are signed, delivered, and renewed using cert-manager issuers. You can secure Istio workloads and control plane components by using Red Hat OpenShift Cert-Manager Operator Istio-CSR agent.
 
-- One of these versions of cert-manager:
-  - cert-manager Operator for Red Hat OpenShift 1.10 or later
-  - community cert-manager Operator 1.11 or later
-  - cert-manager 1.11 or later
-- OpenShift Service Mesh Operator 3.0 or later
+With this Istio-CSR integration, Istio can now obtain certificates from the cert-manager Operator for Red Hat OpenShift, simplifying security and certificate management.
+
+### Prerequisites
+
+- cert-manager Operator for Red Hat OpenShift version 1.15.1 should be installed
+- Red Hat Openshift 4.14 or later
+- OpenShift Service Mesh Operator 2.6 or later
 - `IstioCNI` instance is running in the cluster
 - [istioctl](https://istio.io/latest/docs/setup/install/istioctl/) is installed
-- [jq](https://github.com/jqlang/jq) is installed
-- [helm](https://helm.sh/docs/intro/install/) is installed
 
-## Integrating cert-manager with Service Mesh
+## Integrating the cert-manager Operator Istio-CSR Agent for Red Hat OpenShift with  
 
-You can integrate cert-manager with your Service Mesh by deploying istio-csr and then creating an `Istio` resource that uses istio-csr to process workload and controlplane certificate signing requests. The procedure below creates a self signed `Issuer`, but any other `Issuer` can be used instead.
+You can integrate cert-manager with your Service Mesh by deploying Istio-CSR agent and then creating an `istio` resource that uses Istio-CSR Agent to process workload and controlplane certificate signing requests. The procedure below creates a self signed `Issuer`.
 
 ### Procedure
 
@@ -35,9 +38,25 @@ You can integrate cert-manager with your Service Mesh by deploying istio-csr and
     oc create namespace istio-system
     ```
 
-2.  Create the root issuer.
+2.  Patch Cert-Manager Operator to Install Istio-CSR agent 
+
+    Use this procedure to be able to enable the Istio-CSR agent in cert-manager Operator for Red Hat OpenShift.
+
+    ```sh
+    oc -n cert-manager-operator patch subscription openshift-cert-manager-operator --type='merge' -p '{"spec":{"config":{"env":[{"name":"UNSUPPORTED_ADDON_FEATURES","value":"IstioCSR=true"}]}}}'
+    ```
+
+3. Creating a root CA issuer for the Istio-CSR agent 
+
+    - Create a new project for installing Istio-CSR
+
+      ```sh
+      oc new-project istio-csr
+      ```
 
     - Create the `Issuer` object as in the following example:
+      > [!NOTE]
+      > The selfSigned issuer is intended for demonstration, testing, or proof-of-concept setups only. For production deployments, use a secure and trusted CA
 
       _Example `issuer.yaml`_
 
@@ -93,74 +112,39 @@ You can integrate cert-manager with your Service Mesh by deploying istio-csr and
       oc wait --for=condition=Ready certificates/istio-ca -n istio-system
       ```
 
-3.  Copy the `istio-ca` certificate to the `cert-manager` namespace.
+4.  Creating the IstioCSR custom resource
 
-    Here we are copying our `istio-ca` certificate to the `cert-manager` namespace where it can be used by istio-csr.
+    - Use this procedure to create the Istio-CSR agent resource
 
-    - Copy the secret to a local file.
+      _Example `istioCSR.yaml`_
 
-      ```sh
-      oc get -n istio-system secret istio-ca -o jsonpath='{.data.tls\.crt}' | base64 -d > ca.pem
+      ```yaml
+      apiVersion: operator.openshift.io/v1alpha1
+      kind: IstioCSR
+      metadata:
+        name: default
+        namespace: istio-csr
+      spec:
+        istioCSRConfig:
+          certManager:
+            issuerRef:
+              name: istio-ca
+              kind: Issuer
+              group: cert-manager.io
+          istiodTLSConfig:
+            trustDomain: cluster.local
+          istio:
+            namespace: istio-system
       ```
 
-    - Create a secret from the local cert file in the `cert-manager` namespace.
+    - Create `istio-csr`
       ```sh
-      oc create secret generic -n cert-manager istio-root-ca --from-file=ca.pem=ca.pem
+      oc create -f istioCSR.yaml
       ```
 
-4.  Install istio-csr.
-
-    Next you will install istio-csr into the `cert-manager` namespace. Depending on which `updateStrategy` (`InPlace` or `RevisionBased`) you will choose for your `Istio` resource, you may need to pass additional options.
-
-    <!-- GitHub alerts cannot be nested within other elements but removing the indentation here messes up the rest of the indentation below. For this reason, using a plain note here instead of a fancy Alert.-->
-
-    **Note:** If your controlplane namespace is not `istio-system`, you will need to update `app.istio.namespace` to match your controlplane namespace.
-
-    `InPlace` strategy installation
-
-    - Add the jetstack charts to your local helm repo.
-
+    - Check `istio-csr` deployment is ready.
       ```sh
-      helm repo add jetstack https://charts.jetstack.io --force-update
-      ```
-
-    - Install the istio-csr chart.
-      ```sh
-      helm upgrade cert-manager-istio-csr jetstack/cert-manager-istio-csr \
-          --install \
-          --namespace cert-manager \
-          --wait \
-          --set "app.tls.rootCAFile=/var/run/secrets/istio-csr/ca.pem" \
-          --set "volumeMounts[0].name=root-ca" \
-          --set "volumeMounts[0].mountPath=/var/run/secrets/istio-csr" \
-          --set "volumes[0].name=root-ca" \
-          --set "volumes[0].secret.secretName=istio-root-ca" \
-          --set "app.istio.namespace=istio-system"
-      ```
-
-    `RevisionBased` strategy installation
-
-    For the `RevisionBased` strategy, you need to specify all the istio revisions to your [istio-csr deployment](https://github.com/cert-manager/istio-csr/tree/main/deploy/charts/istio-csr#appistiorevisions0--string).
-
-    - Add the jetstack charts to your local helm repo.
-
-      ```sh
-      helm repo add jetstack https://charts.jetstack.io --force-update
-      ```
-
-    - Install the istio-csr chart with your revision name. Revision names will be of the form `<istio-name><istio-version-with-dashes>` e.g. `default-v1-23-0`.
-      ```sh
-      helm upgrade cert-manager-istio-csr jetstack/cert-manager-istio-csr \
-          --install \
-          --namespace cert-manager \
-          --wait \
-          --set "app.tls.rootCAFile=/var/run/secrets/istio-csr/ca.pem" \
-          --set "volumeMounts[0].name=root-ca" \
-          --set "volumeMounts[0].mountPath=/var/run/secrets/istio-csr" \
-          --set "volumes[0].name=root-ca" \
-          --set "volumes[0].secret.secretName=istio-root-ca" \
-          --set "app.istio.namespace=istio-system" \
-          --set "app.istio.revisions={default-v1-23-0}"
+      oc get deployment -n istio-csr
       ```
 
 5.  Install your `Istio` resource.
@@ -172,16 +156,16 @@ You can integrate cert-manager with your Service Mesh by deploying istio-csr and
       _Example `istio.yaml`_
 
       ```yaml
-      apiVersion: sailoperator.io/v1alpha1
+      apiVersion: sailoperator.io/v1
       kind: Istio
       metadata:
         name: default
       spec:
-        version: v1.24.1
+        version: v1.24-latest
         namespace: istio-system
         values:
           global:
-            caAddress: cert-manager-istio-csr.cert-manager.svc:443
+            caAddress: cert-manager-istio-csr.istio-csr.svc:443
           pilot:
             env:
               ENABLE_CA_SERVER: "false"
@@ -202,61 +186,108 @@ You can integrate cert-manager with your Service Mesh by deploying istio-csr and
 
     Use the sample httpbin service and sleep app to check traffic between the workloads is possible and check the workload certificate of the proxy to verify that the cert-manager tool is installed correctly.
 
-    - Create the `sample` namespace.
+    - Create the `apps-1` and `apps-2` namespace.
 
       ```sh
-      oc new-project sample
+      oc new-project apps-1
+      oc new-project apps-2
       ```
 
-    - Find your active `IstioRevision`.
+    - Enable istio-injection on namespaces
 
       ```sh
-      oc get istios default -o jsonpath='{.status.activeRevisionName}'
+      oc label namespaces apps-1 istio-injection=enabled
+      oc label namespaces apps-2 istio-injection=enabled
       ```
 
-    - Add the injection label for your active revision to the `sample` namespace.
+    - Deploy `httpbin` app in namespaces
 
       ```sh
-      oc label namespace sample istio.io/rev=<your-active-revision-name> --overwrite=true
+      oc apply -n apps-1 -f https://raw.githubusercontent.com/openshift-service-mesh/istio/release-1.24/samples/httpbin/httpbin.yaml
+      oc apply -n apps-2 -f https://raw.githubusercontent.com/openshift-service-mesh/istio/release-1.24/samples/httpbin/httpbin.yaml
       ```
 
-    - Deploy the sample `httpbin` app.
+    - Deploy `sleep` app in namespaces
 
       ```sh
-      oc apply -n sample -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/httpbin/httpbin.yaml
+      oc apply -n apps-1 -f https://raw.githubusercontent.com/openshift-service-mesh/istio/release-1.24/samples/sleep/sleep.yaml
+      oc apply -n apps-2 -f https://raw.githubusercontent.com/openshift-service-mesh/istio/release-1.24/samples/sleep/sleep.yaml
       ```
 
-    - Deploy the sample `sleep` app.
+    - Verify created apps have sidecars injected
 
       ```sh
-      oc apply -n sample -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/sleep/sleep.yaml
+      oc get pods -n apps-1
+      oc get pods -n apps-2
       ```
 
-    - Wait for both apps to become ready.
+    - Create a mesh-wide strict mTLS policy:
 
-      ```sh
-      oc rollout status -n sample deployment httpbin sleep
+      > [!NOTE]
+      > We are enabling PeerAuthentication with strict mTLS mode to show that the certificates are distributed correctly so the mTLS between workloads works.
+
+      _Example `peer_auth.yaml`_
+
+      ```yaml
+      apiVersion: security.istio.io/v1beta1
+      kind: PeerAuthentication
+      metadata:
+        name: default
+        namespace: istio-system
+      spec:
+        mtls:
+          mode: STRICT
       ```
 
-    - Verify that sleep can access the httpbin service:
+    - Apply mTLS policy:
 
       ```sh
-      oc exec "$(oc get pod -l app=sleep -n sample \
-        -o jsonpath={.items..metadata.name})" -c sleep -n sample -- \
-        curl http://httpbin.sample:8000/ip -s -o /dev/null \
-        -w "%{http_code}\n"
+      oc apply -f peer_auth.yaml
+      ```
+
+    - Verify that apps-1/sleep can access the apps-2/httpbin service:
+
+      ```sh
+      oc -n apps-1 exec "$(oc -n apps-1 get pod -l app=sleep -o jsonpath={.items..metadata.name})" -c sleep -- curl -sIL http://httpbin.apps-2.svc.cluster.local:8000
       ```
 
       Example output
 
       ```sh
-      200
+      HTTP/1.1 200 OK
+      access-control-allow-credentials: true
+      access-control-allow-origin: *
+      content-security-policy: default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' camo.githubusercontent.com
+      content-type: text/html; charset=utf-8
+      date: Wed, 18 Jun 2025 09:20:55 GMT
+      x-envoy-upstream-service-time: 14
+      server: envoy
+      transfer-encoding: chunked
       ```
 
-    - Verify `httpbin` workload certificate matches what is expected:
+    - Verify that apps-2/sleep can access the apps-1/httpbin service:
 
       ```sh
-      istioctl proxy-config secret -n sample $(oc get pods -n sample -o jsonpath='{.items..metadata.name}' --selector app=httpbin) -o json | jq -r '.dynamicActiveSecrets[0].secret.tlsCertificate.certificateChain.inlineBytes' | base64 --decode | openssl x509 -text -noout
+      oc -n apps-2 exec "$(oc -n apps-2 get pod -l app=sleep -o jsonpath={.items..metadata.name})" -c sleep -- curl -sIL http://httpbin.apps-1.svc.cluster.local:8000
+      ```
+
+      Example output
+
+      ```sh
+      HTTP/1.1 200 OK
+      access-control-allow-credentials: true
+      access-control-allow-origin: *
+      content-security-policy: default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' camo.githubusercontent.com
+      content-type: text/html; charset=utf-8
+      date: Wed, 18 Jun 2025 09:21:23 GMT
+      x-envoy-upstream-service-time: 16
+      server: envoy
+      transfer-encoding: chunked
+      ```
+
+    - Verify httpbin workload certificate matches what is expected:
+      ```sh
+      istioctl proxy-config secret -n apps-1 $(oc get pods -n apps-1 -o jsonpath='{.items..metadata.name}' --selector app=httpbin) -o json | jq -r '.dynamicActiveSecrets[0].secret.tlsCertificate.certificateChain.inlineBytes' | base64 --decode | openssl x509 -text -noout
       ```
 
       Example output
@@ -266,35 +297,50 @@ You can integrate cert-manager with your Service Mesh by deploying istio-csr and
       Issuer: O = cert-manager + O = cluster.local, CN = istio-ca
       ...
       X509v3 Subject Alternative Name:
-        URI:spiffe://cluster.local/ns/sample/sa/httpbin
+      URI:spiffe://cluster.local/ns/apps-1/sa/httpbin
       ```
 
-### `RevisionBased` Upgrades
+### Uninstalling Cert-Manager Operator Istio-CSR Agent for Red Hat OpenShift
 
-This section only applies to `RevisionBased` deployments.
+#### Procedure
 
-Because istio-csr requires you to pass all revisions, each time you upgrade your `RevisionBased` controlplane you will need to **first** update your istio-csr deployment with the new revision before you update your `Istio.spec.version`. For example, before upgrading your controlplane from `v1.23.0 --> v1.23.1`, you need to first update your istio-csr deployment with the new revision:
+  1.  Remove the IstioCSR custom resource by running the following command:
 
-```sh
-helm upgrade cert-manager-istio-csr jetstack/cert-manager-istio-csr \
-  --install \
-  --namespace cert-manager \
-  --wait \
-  --reuse-values \
-  --set "app.istio.revisions={default-v1-23-0,default-v1-23-1}"
-```
+      > [!NOTE]
+      > To avoid disrupting any Red Hat OpenShift Service Mesh or Istio components, ensure that no component is referencing the Istio-CSR service or the certificates issued for Istio before removing the following resources.
 
-Then you can update your `Istio.spec.version = v1.23.1`. Once the old revision is no longer in use, you can remove the revision from your istio-csr deployment as well.
+      ```sh
+      oc -n <istio-csr_project_name> delete istiocsrs.operator.openshift.io default
+      ```
+  2. Remove related resources:
+    
+      i. List the cluster scoped-resources by running the following command and save the names of the listed resources for later reference:
 
-```sh
-helm upgrade cert-manager-istio-csr jetstack/cert-manager-istio-csr \
-  --install \
-  --namespace cert-manager \
-  --wait \
-  --reuse-values \
-  --set "app.istio.revisions={default-v1-23-1}"
-```
+        ```sh
+        oc get clusterrolebindings,clusterroles -l "app=cert-manager-istio-csr,app.kubernetes.io/name=cert-manager-istio-csr"
+        ```
+
+      ii. List the resources in Istio-csr deployed namespace by running the following command and save the names of the listed resources for later reference:
+
+        ```sh
+        oc get certificate,deployments,services,serviceaccounts -l "app=cert-manager-istio-csr,app.kubernetes.io/name=cert-manager-istio-csr" -n <istio_csr_project_name>
+        ```
+
+      iii. List the resources in Red Hat OpenShift Service Mesh or Istio deployed namespaces by running the following command and save the names of the listed resources for later reference:
+
+        ```sh
+        oc get roles,rolebindings -l "app=cert-manager-istio-csr,app.kubernetes.io/name=cert-manager-istio-csr" -n <istio_csr_project_name>
+        ```
+
+      iv. For each resource listed in previous steps, delete the resource by running the following command:
+
+        ```sh
+        oc -n <istio_csr_project_name> delete <resource_type>/<resource_name>
+        ```
 
 ### Additional resources
 
 For information about how to install the cert-manager Operator for OpenShift Container Platform, see: [Installing the cert-manager Operator for Red Hat OpenShift](https://docs.openshift.com/container-platform/4.16/security/cert_manager_operator/cert-manager-operator-install.html).
+
+
+For information about how to enable istioCSR agent for OpenShift Container Platform, see: [Integrating the cert-manager Operator for Red Hat OpenShift with Istio-CSR](https://docs.redhat.com/en/documentation/openshift_container_platform/4.16/html/security_and_compliance/cert-manager-operator-for-red-hat-openshift#cert-manager-operator-integrating-istio)
