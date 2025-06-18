@@ -17,7 +17,7 @@
 set -eu -o pipefail
 
 # This script is used to update the example files in the documentation that are the resulting script to be executed by the runme tool.
-# It will copy all the files from the docs/ respository to the test/documentation_tests/ directory.
+# It will copy all the files from the docs/ directory to the test/documentation_tests/ directory.
 # It will exclude this files: sailoperator.io.md (Add more here if is needed)
 # Beside that, after copy the files it will read each one and all the html commented bash code block and it will uncomment them. 
 # This will allow us to hide from docs validation steps
@@ -132,9 +132,11 @@ done
 # Uncomment the html commented bash code block in the files
 # Read the files in the test/documentation_tests/ directory
 # The code block need to match this pattern:
-# <!-- ```bash
+# <!--
+# ```bash
 # <code>
-# ``` -->
+# ```
+# -->
 # If any other pattern is found, it will be ignored. Add more patterns here if needed.
 for file in "$OUTPUT_DIR"/*.md; do
   perl -0777 -pe 's/<!--\s*(```bash[^\n]*\n)(.*?)(\n```)\s*-->/$1$2$3/gms' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"

@@ -11,13 +11,13 @@ This end-to-end test suite utilizes Ginkgo, a testing framework known for its ex
     1. [Adding a Test Suite](#adding-a-test-suite)
     1. [Sub-Tests](#sub-tests)
     1. [Best practices](#best-practices)
-1. [Running Tests](#running-tests)
-    1. [Pre-requisites](#Pre-requisites)
-    1. [How to Run the test](#How-to-Run-the-test)
-    1. [Running the test locally](#Running-the-test-locally)
-    1. [Settings for end-to-end test execution](#Settings-for-end-to-end-test-execution)
-    1. [Customizing the test run](#Customizing-the-test-run)    
-    1. [Get test definitions for the end-to-end test](#Get-test-definitions-for-the-end-to-end-test)
+1. [Running Tests](#running-the-tests)
+    1. [Pre-requisites](#pre-requisites)
+    1. [How to Run the test](#how-to-run-the-test)
+    1. [Running the test locally](#running-the-test-locally)
+    1. [Settings for end-to-end test execution](#settings-for-end-to-end-test-execution)
+    1. [Customizing the test run](#customizing-the-test-run)    
+    1. [Get test definitions for the end-to-end test](#get-test-definitions-for-the-end-to-end-test)
 1. [Contributing](#contributing)
 
 ## Overview
@@ -193,7 +193,7 @@ var _ = Describe("Testing with cleanup", Ordered, func() {
     * You can use multiple cleaners, each with its own state. This is useful if the test does some global set up, e.g. sets up the operator, and then specific tests create further resources which you want cleaned.
     * To clean resources without waiting, and waiting for them later, use `CleanupNoWait` followed by `WaitForDeletion`. This is particularly useful when working with more than one cluster.
 
-## Running the test
+## Running the tests
 The end-to-end test can be run in two different environments: OCP (OpenShift Container Platform) and KinD (Kubernetes in Docker).
 
 ### Pre-requisites
@@ -228,7 +228,7 @@ To run a specific subset of tests, you can use the `GINKGO_FLAGS` environment va
 ```
 $ GINKGO_FLAGS="-v --label-filter=smoke" make test.e2e.kind
 ```
-Note: `-v` is to add verbosity to the output. The `--label-filter` flag is used to filter the tests by label. You can use multiple labels separated by commas. Please take a look at the topic [Settings for end to end test execution](#Settings-for-end-to-end-test-execution) to see how you can set more customizations for the test run.
+Note: `-v` is to add verbosity to the output. The `--label-filter` flag is used to filter the tests by label. You can use multiple labels separated by commas. Please take a look at the topic [Settings for end to end test execution](#settings-for-end-to-end-test-execution) to see how you can set more customizations for the test run.
 
 ### Running the test locally
 
@@ -297,7 +297,7 @@ $ SKIP_BUILD=true SKIP_DEPLOY=true GINKGO_FLAGS="-v --label-filter=smoke" make t
 ```
 
 #### Running with specific configuration for the Istio and IstioCNI resource
-There might be situations where you want to run tests with a specific configuration for the Istio and IstioCNI resource to match some cluster specific needs. For this, you can modify the `pkg/istiovalues/vendor_default.yaml` file to default `spec.values` for the Istio and IstioCNI resources. For more information and an example go to the [file](pkg/istiovalues/vendor_default.yaml)
+There might be situations where you want to run tests with a specific configuration for the Istio and IstioCNI resource to match some cluster specific needs. For this, you can modify the `pkg/istiovalues/vendor_default.yaml` file to default `spec.values` for the Istio and IstioCNI resources. For more information and an example go to the [file](../../pkg/istiovalues/vendor_defaults.yaml)
 
 #### Running the testing framework against specific Istio versions
 By default, the test framework will run the tests against all the latest patch minor version available for the operator. This is useful when you want to test the operator against all the latest patch minor versions available. The test framework will automatically detect the latest patch minor version available for the operator and run the tests against it by reading the versions located in the `pkg/istioversion/versions.yaml` file.

@@ -1,4 +1,4 @@
-[Return to Project Root](../README.md)
+[Return to Project Root](../../README.md)
 
 # Table of Contents
 
@@ -21,7 +21,7 @@ When the `InPlace` strategy is used, the existing Istio control plane is replace
 
 Prerequisites:
 * Sail Operator is installed.
-* `istioctl` is [installed](../common/install-istioctl-tool.md).
+* `istioctl` is [installed](../../docs/common/install-istioctl-tool.md).
 
 Steps:
 1. Create the `istio-system` namespace.
@@ -134,7 +134,7 @@ Steps:
 ```
 
 ### Recommendations for InPlace Strategy
-During `InPlace` updates, the control plane pods are restarted, which may cause temporary service disruptions. To minimize downtime during updates, we recommend configuring the `istiod` deployment with high availability (HA). For more information, please refer to this [guide](../general/istiod-ha.md).
+During `InPlace` updates, the control plane pods are restarted, which may cause temporary service disruptions. To minimize downtime during updates, we recommend configuring the `istiod` deployment with high availability (HA). For more information, please refer to this [guide](../../docs/general/istiod-ha.md).
 
 ## RevisionBased
 When the `RevisionBased` strategy is used, a new Istio control plane instance is created for every change to the `Istio.spec.version` field. The old control plane remains in place until all workloads have been moved to the new control plane instance. This needs to be done by the user by updating the namespace label and restarting all the pods. The old control plane will be deleted after the grace period specified in the `Istio` resource field `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds`.
@@ -143,7 +143,7 @@ When the `RevisionBased` strategy is used, a new Istio control plane instance is
 
 Prerequisites:
 * Sail Operator is installed.
-* `istioctl` is [installed](../common/install-istioctl-tool.md).
+* `istioctl` is [installed](../../docs/common/install-istioctl-tool.md).
 
 Steps:
 
@@ -348,7 +348,7 @@ Steps:
 
 Prerequisites:
 * Sail Operator is installed.
-* `istioctl` is [installed](../common/install-istioctl-tool.md).
+* `istioctl` is [installed](../../docs/common/install-istioctl-tool.md).
 
 Steps:
 

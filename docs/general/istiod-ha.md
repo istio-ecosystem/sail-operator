@@ -1,4 +1,4 @@
-[Return to Project Root](../README.md)
+[Return to Project Root](../../README.md)
 
 # Table of Contents
 
@@ -41,7 +41,8 @@ spec:
       autoscaleEnabled: false # <-- disable autoscaling
       replicaCount: 2   # <-- number of desired replicas
 ```
-<!-- ```bash { name=validation-istio-expected-version tag=istio-ha-replicacount }
+<!--
+```bash { name=validation-istio-expected-version tag=istio-ha-replicacount }
 kubectl create ns istio-system
 cat <<EOF | kubectl apply -f-
 apiVersion: sailoperator.io/v1
@@ -55,7 +56,8 @@ spec:
       autoscaleEnabled: false # <-- disable autoscaling
       replicaCount: 2   # <-- number of desired replicas
 EOF
-``` -->
+```
+-->
 
 After applying this configuration, you can check the status of the Istiod pods:
 ```bash
@@ -67,12 +69,14 @@ NAME                      READY   STATUS    RESTARTS   AGE
 istiod-7c5947b8d7-88z7m   1/1     Running   0          14m
 istiod-7c5947b8d7-ssnmt   1/1     Running   0          54m
 ```
-<!-- ```bash { name=validation-wait-istio-pods tag=istio-ha-replicacount }
+<!--
+```bash { name=validation-wait-istio-pods tag=istio-ha-replicacount }
     . scripts/prebuilt-func.sh
     wait_istio_ready "istio-system"
     with_retries istiod_pods_count "2"
     print_istio_info
-``` -->
+```
+-->
 
 Let's break down the configuration:
 - `spec.values.pilot.replicaCount: 2`: This sets the number of Istiod replicas to 2 (or the desired value), enabling HA mode.
@@ -92,7 +96,8 @@ spec:
       autoscaleMin: 2   # <-- number of desired min replicas
       autoscaleMax: 5   # <-- number of desired max replicas
 ```
-<!-- ```bash { name=validation-istio-expected-version tag=istio-ha-autoscaling }
+<!--
+```bash { name=validation-istio-expected-version tag=istio-ha-autoscaling }
 kubectl create ns istio-system
 cat <<EOF | kubectl apply -f-
 apiVersion: sailoperator.io/v1
@@ -106,7 +111,8 @@ spec:
       autoscaleMin: 2   # <-- number of desired min replicas
       autoscaleMax: 5   # <-- number of desired max replicas
 EOF
-``` -->
+```
+-->
 
 After applying this configuration, you can check the status of the Istiod pods:
 ```bash
@@ -118,12 +124,14 @@ NAME                      READY   STATUS    RESTARTS   AGE
 istiod-7c7b6564c9-nwhsg   1/1     Running   0          70s
 istiod-7c7b6564c9-xkmsl   1/1     Running   0          85s
 ```
-<!-- ```bash { name=validation-wait-istio-pods tag=istio-ha-autoscaling }
+<!--
+```bash { name=validation-wait-istio-pods tag=istio-ha-autoscaling }
     . scripts/prebuilt-func.sh
     wait_istio_ready "istio-system"
     with_retries istiod_pods_count "2"
     print_istio_info
-``` -->
+```
+-->
 Let's break down the configuration:
 - `spec.values.pilot.autoscaleMin: 2`: This sets the minimum number of Istiod replicas to 2, ensuring that there are always at least 2 replicas running.
 - `spec.values.pilot.autoscaleMax: 5`: This sets the maximum number of Istiod replicas to 5, allowing for scaling based on load.

@@ -123,5 +123,5 @@ Otherwise, port forward to the kiali pod directly:
 ```bash
 kubectl port-forward -n istio-system svc/kiali 20001:20001
 ```
-
+<!-- markdown-link-check-disable-next-line -->
 You can view Kiali dashboard at: http://localhost:20001

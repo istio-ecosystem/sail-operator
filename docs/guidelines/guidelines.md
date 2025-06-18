@@ -67,13 +67,13 @@ Use code block for command or groups of command that has the same context. Use v
 Any documentation step need to be tested to ensure that the steps are correct and the user can follow them without any issue. To do this, we use `runme` (check the docs [here](https://docs.runme.dev/getting-started/cli)) to run the tests over the documentation. The workflow of the automation is the following:
 
 - The documentation files are in the `docs` folder.
-- The `make update` target is going to run the script `tests/documentation_test/scripts/update-docs-examples.sh` that is going to generate the md modified files to run the test (For more information check next topic).
+- The `make update-docs-examples` target is going to run the script `tests/documentation_test/scripts/update-docs-examples.sh` that is going to generate the md modified files to run the test (For more information check next topic).
 - The `make test.docs` target is going to run the script `tests/documentation_test/scripts/run-docs-examples.sh` that is going to run the tests over the documentation files. This script is going to run all the steps in the examples marked following the guidelines explained in the next section.
 
 ### What does update-docs-examples.sh do
 The script `update-docs-examples.sh` is going to run the following steps:
-- Check all the md files in the `docs` folder and exclude from the list the files described inside the `EXCLUDE_FILES` variable and then copy all the files to the `tests/documentation_test/` folder that meets the criteria, check [Adding a topic example to the automation workflow](/docs/guidelines/guidelines.md#L62) section for more information about the criteria.
-- Once the files are copied into the destination path it checka those files to uncomment the bash commented steps. This bash commented code block are going to be hiden in the original md files but we will uncomment this code block to be able to run validation steps that wait for conditions an avoid flakiness of the test. This means that most of the validation steps will be commented code blocks, more information [here](/docs/guidelines/guidelines.md#L146).
+- Check all the md files in the `docs` folder and exclude from the list the files described inside the `EXCLUDE_FILES` variable and then copy all the files to the `tests/documentation_test/` folder that meets the criteria, check [Adding a topic example to the automation workflow](guidelines.md#L62) section for more information about the criteria.
+- Once the files are copied into the destination path it checka those files to uncomment the bash commented steps. This bash commented code block are going to be hiden in the original md files but we will uncomment this code block to be able to run validation steps that wait for conditions an avoid flakiness of the test. This means that most of the validation steps will be commented code blocks, more information [here](guidelines.md#L146).
 
 
 ### Adding a topic example to the automation workflow
@@ -163,19 +163,23 @@ EOF
 
 - Validation steps are always needed, to add a validation step you can comment directly the entire code block with the bash command that you want to run. This validation steps need to use the same tag as the example where they are going to run and should be prefixed with `validation-description`. For example:
 ```md
-<!-- ```bash { name=validation-wait-operator tag=example-tag}
+<!--
+```bash { name=validation-wait-operator tag=example-tag}
 kubectl wait --for=condition=available --timeout=600s deployment/sail-operator -n sail-operator
-``` -->
+```
+-->
 ```
 
-To avoid putting duplicated validation steps and help the users to easily get information, validate steps, etc. you can use prebuilt validation steps that are already created in the [prebuilts-func.sh](tests/documentation_tests/scripts/prebuilt-func.sh) script. For example, if you want to check if the istiod pod is ready you can use the `wait_istio_ready` function that is already created in the script. To use this function you need to add the following code block in your documentation:
+To avoid putting duplicated validation steps and help the users to easily get information, validate steps, etc. you can use prebuilt validation steps that are already created in the [prebuilts-func.sh](../../tests/documentation_tests/scripts/prebuilt-func.sh) script. For example, if you want to check if the istiod pod is ready you can use the `wait_istio_ready` function that is already created in the script. To use this function you need to add the following code block in your documentation:
 ```md
-<!-- ```bash { name=validation-wait-operator tag=example-tag}
+<!--
+```bash { name=validation-wait-operator tag=example-tag}
 . scripts/prebuilt-func.sh
 wait_istio_ready "istio-system"
-``` -->
 ```
-To check the entire list of prebuilt functions please check the [prebuilts-func.sh](tests/documentation_tests/scripts/prebuilt-func.sh) script.
+-->
+```
+To check the entire list of prebuilt functions please check the [prebuilts-func.sh](../../tests/documentation_tests/scripts/prebuilt-func.sh) script.
 
 > [!IMPORTANT]  
 > Always include validation steps to avoid flakiness. They ensure resources are in expected conditions and the test fails clearly if they don’t.
