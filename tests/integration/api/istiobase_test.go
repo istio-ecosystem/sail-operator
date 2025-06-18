@@ -114,7 +114,19 @@ var _ = Describe("IstioBase controller", Ordered, func() {
 	Describe("default IstioRevisionTag", func() {
 		tag := &v1.IstioRevisionTag{}
 
-		It("deploys base chart when default IstioRevisionTag is created", func() {
+		BeforeAll(func() {
+			tag = &v1.IstioRevisionTag{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1.IstioRevisionTagSpec{
+					TargetRef: v1.IstioRevisionTagTargetReference{
+						Kind: "IstioRevision",
+						Name: "my-rev",
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, tag)).To(Succeed())
 			Step("Creating the IstioRevision")
 			rev := &v1.IstioRevision{
 				ObjectMeta: metav1.ObjectMeta{
@@ -132,32 +144,21 @@ var _ = Describe("IstioBase controller", Ordered, func() {
 				},
 			}
 			Expect(k8sClient.Create(ctx, rev)).To(Succeed())
-
-			tag = &v1.IstioRevisionTag{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
-				Spec: v1.IstioRevisionTagSpec{
-					TargetRef: v1.IstioRevisionTagTargetReference{
-						Kind: "IstioRevision",
-						Name: "my-rev",
-					},
-				},
-			}
-			Expect(k8sClient.Create(ctx, tag)).To(Succeed())
-
-			sa := &corev1.ServiceAccount{}
-			Step("Checking if istio-reader ServiceAccount was successfully created")
-			Eventually(k8sClient.Get).WithArguments(ctx, saKey, sa).Should(Succeed())
 		})
 
-		It("undeploys base chart when default IstioRevisionTag is deleted", func() {
-			Step("Deleting the default IstioRevisionTag")
-			Expect(k8sClient.Delete(ctx, tag)).To(Succeed())
+		AfterAll(func() {
+			deleteAllIstioRevisionTags(ctx)
+			deleteAllIstiosAndRevisions(ctx)
 
 			sa := &corev1.ServiceAccount{}
 			Step("Checking if istio-reader ServiceAccount was deleted")
 			Eventually(k8sClient.Get).WithArguments(ctx, saKey, sa).Should(ReturnNotFoundError())
+		})
+
+		It("deploys base chart when default IstioRevisionTag is created", func() {
+			sa := &corev1.ServiceAccount{}
+			Step("Checking if istio-reader ServiceAccount was successfully created")
+			Eventually(k8sClient.Get).WithArguments(ctx, saKey, sa).Should(Succeed())
 		})
 	})
 
