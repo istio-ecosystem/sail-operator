@@ -4,13 +4,13 @@ metadata:
   creationTimestamp: null
   labels:
     app.kubernetes.io/component: sail-operator
-    app.kubernetes.io/created-by: alaudasailoperator
-    app.kubernetes.io/instance: alauda-sail-operator
+    app.kubernetes.io/created-by: servicemeshoperator2
+    app.kubernetes.io/instance: servicemesh-operator2
     app.kubernetes.io/managed-by: helm
     app.kubernetes.io/name: deployment
-    app.kubernetes.io/part-of: alaudasailoperator
-    control-plane: alauda-sail-operator
-  name: alauda-sail-operator-metrics-service
+    app.kubernetes.io/part-of: servicemeshoperator2
+    control-plane: servicemesh-operator2
+  name: servicemesh-operator2-metrics-service
 spec:
   ipFamilyPolicy: PreferDualStack
   ports:
@@ -19,6 +19,6 @@ spec:
     protocol: TCP
     targetPort: 8443
   selector:
-    control-plane: alauda-sail-operator
+    control-plane: servicemesh-operator2
 status:
   loadBalancer: {}

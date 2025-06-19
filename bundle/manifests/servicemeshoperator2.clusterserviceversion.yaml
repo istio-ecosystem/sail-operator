@@ -34,10 +34,10 @@ metadata:
     capabilities: Seamless Upgrades
     categories: Integration & Delivery, Networking, Security
     containerImage: build-harbor.alauda.cn/asm/sail-operator:1.26-latest
-    createdAt: "2025-05-15T13:20:22Z"
-    description: Alauda Sail Operator enables you to install, configure, and manage
-      an instance of Alauda Service Mesh. Alauda Service Mesh is based on the open
-      source Istio project.
+    createdAt: "2025-06-18T06:09:59Z"
+    description: Alauda Service Mesh Operator enables you to install, configure, and
+      manage an instance of Alauda Service Mesh. Alauda Service Mesh is based on the
+      open source Istio project.
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
     features.operators.openshift.io/csi: "false"
@@ -56,7 +56,7 @@ metadata:
   labels:
     operatorframework.io/arch.amd64: supported
     operatorframework.io/arch.arm64: supported
-  name: alaudasailoperator.v1.26.0
+  name: servicemeshoperator2.v1.26.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -349,7 +349,7 @@ spec:
     - v1.24.5
     - v1.22-latest
     - v1.22.4
-  displayName: Alauda Sail Operator
+  displayName: Alauda Service Mesh Operator
   icon:
   - base64data: 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
     mediatype: image/png
@@ -373,29 +373,29 @@ spec:
       deployments:
       - label:
           app.kubernetes.io/component: sail-operator
-          app.kubernetes.io/created-by: alaudasailoperator
-          app.kubernetes.io/instance: alauda-sail-operator
+          app.kubernetes.io/created-by: servicemeshoperator2
+          app.kubernetes.io/instance: servicemesh-operator2
           app.kubernetes.io/managed-by: helm
           app.kubernetes.io/name: deployment
-          app.kubernetes.io/part-of: alaudasailoperator
-          control-plane: alauda-sail-operator
-        name: alauda-sail-operator
+          app.kubernetes.io/part-of: servicemeshoperator2
+          control-plane: servicemesh-operator2
+        name: servicemesh-operator2
         spec:
           replicas: 1
           selector:
             matchLabels:
-              app.kubernetes.io/created-by: alaudasailoperator
-              app.kubernetes.io/part-of: alaudasailoperator
-              control-plane: alauda-sail-operator
+              app.kubernetes.io/created-by: servicemeshoperator2
+              app.kubernetes.io/part-of: servicemeshoperator2
+              control-plane: servicemesh-operator2
           strategy: {}
           template:
             metadata:
               annotations:
                 kubectl.kubernetes.io/default-container: sail-operator
               labels:
-                app.kubernetes.io/created-by: alaudasailoperator
-                app.kubernetes.io/part-of: alaudasailoperator
-                control-plane: alauda-sail-operator
+                app.kubernetes.io/created-by: servicemeshoperator2
+                app.kubernetes.io/part-of: servicemeshoperator2
+                control-plane: servicemesh-operator2
             spec:
               affinity:
                 nodeAffinity:

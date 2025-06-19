@@ -1,16 +1,16 @@
-name: alaudasailoperator
+name: servicemeshoperator2
 deployment:
-  name: alauda-sail-operator
+  name: servicemesh-operator2
 csv:
   labels:
     operatorframework.io/arch.amd64: supported
     operatorframework.io/arch.arm64: supported
     operatorframework.io/arch.s390x: ~
     operatorframework.io/arch.ppc64le: ~
-  displayName: Alauda Sail Operator
+  displayName: Alauda Service Mesh Operator
   categories: Integration & Delivery, Networking, Security
   capabilities: Seamless Upgrades
-  description: Alauda Sail Operator enables you to install, configure, and manage an instance of Alauda Service Mesh. Alauda Service Mesh is based on the open source Istio project.
+  description: Alauda Service Mesh Operator enables you to install, configure, and manage an instance of Alauda Service Mesh. Alauda Service Mesh is based on the open source Istio project.
   longDescription: |-
     Alauda Service Mesh is a platform that provides behavioral insight and operational control over a service mesh, providing a uniform way to connect, secure, and monitor microservice applications.
 

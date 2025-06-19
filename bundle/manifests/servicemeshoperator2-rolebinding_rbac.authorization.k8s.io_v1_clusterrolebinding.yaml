@@ -4,15 +4,15 @@ metadata:
   creationTimestamp: null
   labels:
     app.kubernetes.io/component: rbac
-    app.kubernetes.io/instance: alaudasailoperator-rolebinding
+    app.kubernetes.io/instance: servicemeshoperator2-rolebinding
     app.kubernetes.io/managed-by: helm
     app.kubernetes.io/name: clusterrolebinding
-  name: alaudasailoperator-rolebinding
+  name: servicemeshoperator2-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: alaudasailoperator-role
+  name: servicemeshoperator2-role
 subjects:
 - kind: ServiceAccount
-  name: alauda-sail-operator
+  name: servicemesh-operator2
   namespace: default
