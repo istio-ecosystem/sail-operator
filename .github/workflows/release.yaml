@@ -12,7 +12,7 @@ on:
       bundle_channels:
         description: "Bundle channels"
         required: true
-        default: "stable,stable-2.0"
+        default: "alpha,servicemesh-2.0"
       is_draft_release:
         description: "Draft release"
         type: boolean
@@ -76,6 +76,7 @@ jobs:
         make bundle-push
 
     - name: Create GitHub release
+      if: startsWith(github.ref, 'refs/tags/')
       run: |
         make create-gh-release \
           -e GH_PRE_RELEASE=$GH_PRE_RELEASE \

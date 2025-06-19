@@ -33,21 +33,11 @@ metadata:
       ]
     capabilities: Seamless Upgrades
     categories: Integration & Delivery, Networking, Security
-    containerImage: build-harbor.alauda.cn/asm/sail-operator:2.0-latest
-    createdAt: "2025-06-19T14:33:44Z"
+    containerImage: build-harbor.alauda.cn/asm/servicemesh-operator2:2.0-latest
+    createdAt: "2025-06-19T15:55:16Z"
     description: Alauda Service Mesh Operator enables you to install, configure, and
       manage an instance of Alauda Service Mesh. Alauda Service Mesh is based on the
       open source Istio project.
-    features.operators.openshift.io/cnf: "false"
-    features.operators.openshift.io/cni: "true"
-    features.operators.openshift.io/csi: "false"
-    features.operators.openshift.io/disconnected: "true"
-    features.operators.openshift.io/fips-compliant: "false"
-    features.operators.openshift.io/proxy-aware: "false"
-    features.operators.openshift.io/tls-profiles: "false"
-    features.operators.openshift.io/token-auth-aws: "false"
-    features.operators.openshift.io/token-auth-azure: "false"
-    features.operators.openshift.io/token-auth-gcp: "false"
     operatorframework.io/suggested-namespace: sail-operator
     operators.operatorframework.io/builder: operator-sdk-v1.39.2
     operators.operatorframework.io/internal-objects: '["wasmplugins.extensions.istio.io","destinationrules.networking.istio.io","envoyfilters.networking.istio.io","gateways.networking.istio.io","proxyconfigs.networking.istio.io","serviceentries.networking.istio.io","sidecars.networking.istio.io","virtualservices.networking.istio.io","workloadentries.networking.istio.io","workloadgroups.networking.istio.io","authorizationpolicies.security.istio.io","peerauthentications.security.istio.io","requestauthentications.security.istio.io","telemetries.telemetry.istio.io"]'
@@ -59,7 +49,7 @@ metadata:
   labels:
     operatorframework.io/arch.amd64: supported
     operatorframework.io/arch.arm64: supported
-  name: servicemeshoperator2.v2.0.0
+  name: servicemesh-operator2.v2.0.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -417,19 +407,19 @@ spec:
       deployments:
       - label:
           app.kubernetes.io/component: sail-operator
-          app.kubernetes.io/created-by: servicemeshoperator2
+          app.kubernetes.io/created-by: servicemesh-operator2
           app.kubernetes.io/instance: servicemesh-operator2
           app.kubernetes.io/managed-by: helm
           app.kubernetes.io/name: deployment
-          app.kubernetes.io/part-of: servicemeshoperator2
+          app.kubernetes.io/part-of: servicemesh-operator2
           control-plane: servicemesh-operator2
         name: servicemesh-operator2
         spec:
           replicas: 1
           selector:
             matchLabels:
-              app.kubernetes.io/created-by: servicemeshoperator2
-              app.kubernetes.io/part-of: servicemeshoperator2
+              app.kubernetes.io/created-by: servicemesh-operator2
+              app.kubernetes.io/part-of: servicemesh-operator2
               control-plane: servicemesh-operator2
           strategy: {}
           template:
@@ -437,8 +427,8 @@ spec:
               annotations:
                 kubectl.kubernetes.io/default-container: sail-operator
               labels:
-                app.kubernetes.io/created-by: servicemeshoperator2
-                app.kubernetes.io/part-of: servicemeshoperator2
+                app.kubernetes.io/created-by: servicemesh-operator2
+                app.kubernetes.io/part-of: servicemesh-operator2
                 control-plane: servicemesh-operator2
             spec:
               affinity:
@@ -464,7 +454,7 @@ spec:
                 - --zap-log-level=info
                 command:
                 - /sail-operator
-                image: build-harbor.alauda.cn/asm/sail-operator:2.0-latest
+                image: build-harbor.alauda.cn/asm/servicemesh-operator2:2.0-latest
                 livenessProbe:
                   httpGet:
                     path: /healthz

@@ -1,4 +1,4 @@
-name: servicemeshoperator2
+name: servicemesh-operator2
 deployment:
   name: servicemesh-operator2
 csv:
@@ -12,6 +12,16 @@ csv:
     provider-type: platform
     support: Alauda
     "operatorframework.io/suggested-namespace": sail-operator
+    features.operators.openshift.io/cnf: ~
+    features.operators.openshift.io/cni: ~
+    features.operators.openshift.io/csi: ~
+    features.operators.openshift.io/disconnected: ~
+    features.operators.openshift.io/fips-compliant: ~
+    features.operators.openshift.io/proxy-aware: ~
+    features.operators.openshift.io/tls-profiles: ~
+    features.operators.openshift.io/token-auth-aws: ~
+    features.operators.openshift.io/token-auth-azure: ~
+    features.operators.openshift.io/token-auth-gcp: ~
   displayName: Alauda Service Mesh Operator 2
   categories: Integration & Delivery, Networking, Security
   capabilities: Seamless Upgrades
