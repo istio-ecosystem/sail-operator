@@ -1,5 +1,3 @@
-# Not created if istiod is running remotely
-{{- if not .Values.istiodRemote.enabled }}
 {{- if .Values.global.defaultPodDisruptionBudget.enabled }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -12,8 +10,6 @@ metadata:
     operator.istio.io/component: "Pilot"
     release: {{ .Release.Name }}
     istio: pilot
-    app.kubernetes.io/name: "istiod"
-    {{- include "istio.labels" . | nindent 4 }}
 spec:
   minAvailable: 1
   selector:
@@ -25,5 +21,4 @@ spec:
       istio: pilot
       {{- end }}
 ---
-{{- end }}
 {{- end }}

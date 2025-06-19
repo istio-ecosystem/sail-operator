@@ -12,11 +12,12 @@ on:
       bundle_channels:
         description: "Bundle channels"
         required: true
+        default: "stable,stable-2.0"
       is_draft_release:
         description: "Draft release"
         type: boolean
         required: false
-        default: "stable,stable-2.0"
+        default: true
       is_pre_release:
         description: "Pre-release"
         type: boolean

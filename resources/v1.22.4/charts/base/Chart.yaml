@@ -1,10 +1,5 @@
-<<<<<<<< HEAD:resources/v1.22.4/charts/base/Chart.yaml
 apiVersion: v1
 appVersion: 1.22.4-asm.1
-========
-apiVersion: v2
-appVersion: 1.26.0
->>>>>>>> istio/main:resources/v1.26.0/charts/base/Chart.yaml
 description: Helm chart for deploying Istio cluster resources and CRDs
 icon: https://istio.io/latest/favicons/android-192x192.png
 keywords:
@@ -12,8 +7,4 @@ keywords:
 name: base
 sources:
 - https://github.com/istio/istio
-<<<<<<<< HEAD:resources/v1.22.4/charts/base/Chart.yaml
 version: 1.22.4-asm.1
-========
-version: 1.26.0
->>>>>>>> istio/main:resources/v1.26.0/charts/base/Chart.yaml

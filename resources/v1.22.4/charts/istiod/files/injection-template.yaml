@@ -24,7 +24,7 @@
     {{- end }}
   {{- end }}
 {{- end }}
-{{ $nativeSidecar := (or (and (not (isset .ObjectMeta.Annotations `sidecar.istio.io/nativeSidecar`)) (eq (env "ENABLE_NATIVE_SIDECARS" "false") "true")) (eq (index .ObjectMeta.Annotations `sidecar.istio.io/nativeSidecar`) "true")) }}
+{{ $nativeSidecar := (eq (env "ENABLE_NATIVE_SIDECARS" "false") "true") }}
 {{- $containers := list }}
 {{- range $index, $container := .Spec.Containers }}{{ if not (eq $container.Name "istio-proxy") }}{{ $containers = append $containers $container.Name }}{{end}}{{- end}}
 metadata:
@@ -45,8 +45,8 @@ metadata:
     kubectl.kubernetes.io/default-container: "{{ index $containers 0 }}",
     {{- end }}
     {{- end }}
-{{- if .Values.pilot.cni.enabled }}
-    {{- if eq .Values.pilot.cni.provider "multus" }}
+{{- if or .Values.pilot.cni.enabled .Values.istio_cni.enabled }}
+    {{- if or (eq .Values.pilot.cni.provider "multus") (eq .Values.istio_cni.provider "multus") (not .Values.istio_cni.chained)}}
     k8s.v1.cni.cncf.io/networks: '{{ appendMultusNetwork (index .ObjectMeta.Annotations `k8s.v1.cni.cncf.io/networks`) `default/istio-cni` }}',
     {{- end }}
     sidecar.istio.io/interceptionMode: "{{ annotation .ObjectMeta `sidecar.istio.io/interceptionMode` .ProxyConfig.InterceptionMode }}",
@@ -70,7 +70,7 @@ spec:
       (not $nativeSidecar) }}
   initContainers:
   {{ if ne (annotation .ObjectMeta `sidecar.istio.io/interceptionMode` .ProxyConfig.InterceptionMode) `NONE` }}
-  {{ if .Values.pilot.cni.enabled -}}
+  {{ if or .Values.pilot.cni.enabled .Values.istio_cni.enabled -}}
   - name: istio-validation
   {{ else -}}
   - name: istio-init
@@ -122,11 +122,9 @@ spec:
     {{ if .Values.global.logAsJson -}}
     - "--log_as_json"
     {{ end -}}
-    {{ if .Values.pilot.cni.enabled -}}
+    {{ if or .Values.pilot.cni.enabled .Values.istio_cni.enabled -}}
     - "--run-validation"
     - "--skip-rule-apply"
-    {{ else if .Values.global.proxy_init.forceApplyIptables -}}
-    - "--force-apply"
     {{ end -}}
     {{with .Values.global.imagePullPolicy }}imagePullPolicy: "{{.}}"{{end}}
   {{- if .ProxyConfig.ProxyMetadata }}
@@ -142,14 +140,14 @@ spec:
       allowPrivilegeEscalation: {{ .Values.global.proxy.privileged }}
       privileged: {{ .Values.global.proxy.privileged }}
       capabilities:
-    {{- if not .Values.pilot.cni.enabled }}
+    {{- if not (or .Values.pilot.cni.enabled .Values.istio_cni.enabled) }}
         add:
         - NET_ADMIN
         - NET_RAW
     {{- end }}
         drop:
         - ALL
-    {{- if not .Values.pilot.cni.enabled }}
+    {{- if not (or .Values.pilot.cni.enabled .Values.istio_cni.enabled) }}
       readOnlyRootFilesystem: false
       runAsGroup: 0
       runAsNonRoot: false
@@ -161,6 +159,34 @@ spec:
       runAsNonRoot: true
     {{- end }}
   {{ end -}}
+  {{- if eq (annotation .ObjectMeta `sidecar.istio.io/enableCoreDump` .Values.global.proxy.enableCoreDump) "true" }}
+  - name: enable-core-dump
+    args:
+    - -c
+    - sysctl -w kernel.core_pattern=/var/lib/istio/data/core.proxy && ulimit -c unlimited
+    command:
+      - /bin/sh
+  {{- if contains "/" (annotation .ObjectMeta `sidecar.istio.io/proxyImage` .Values.global.proxy_init.image) }}
+    image: "{{ annotation .ObjectMeta `sidecar.istio.io/proxyImage` .Values.global.proxy_init.image }}"
+  {{- else }}
+    image: "{{ .ProxyImage }}"
+  {{- end }}
+    {{with .Values.global.imagePullPolicy }}imagePullPolicy: "{{.}}"{{end}}
+    resources:
+  {{ template "resources" . }}
+    securityContext:
+      allowPrivilegeEscalation: true
+      capabilities:
+        add:
+        - SYS_ADMIN
+        drop:
+        - ALL
+      privileged: true
+      readOnlyRootFilesystem: false
+      runAsGroup: 0
+      runAsNonRoot: false
+      runAsUser: 0
+  {{ end }}
   {{ if not $nativeSidecar }}
   containers:
   {{ end }}
@@ -189,9 +215,6 @@ spec:
   {{- if .Values.global.logAsJson }}
     - --log_as_json
   {{- end }}
-  {{- if .Values.global.proxy.outlierLogPath }}
-    - --outlierLogPath={{ .Values.global.proxy.outlierLogPath }}
-  {{- end}}
   {{- if .Values.global.proxy.lifecycle }}
     lifecycle:
       {{ toYaml .Values.global.proxy.lifecycle | indent 6 }}
@@ -356,7 +379,7 @@ spec:
         drop:
         - ALL
       privileged: true
-      readOnlyRootFilesystem: true
+      readOnlyRootFilesystem: {{ ne (annotation .ObjectMeta `sidecar.istio.io/enableCoreDump` .Values.global.proxy.enableCoreDump) "true" }}
       runAsGroup: {{ .ProxyGID | default "1337" }}
       runAsNonRoot: false
       runAsUser: 0
@@ -375,7 +398,7 @@ spec:
         drop:
         - ALL
       privileged: {{ .Values.global.proxy.privileged }}
-      readOnlyRootFilesystem: true
+      readOnlyRootFilesystem: {{ ne (annotation .ObjectMeta `sidecar.istio.io/enableCoreDump` .Values.global.proxy.enableCoreDump) "true" }}
       runAsGroup: {{ .ProxyGID | default "1337" }}
       {{ if or (eq (annotation .ObjectMeta `sidecar.istio.io/interceptionMode` .ProxyConfig.InterceptionMode) `TPROXY`) (eq (annotation .ObjectMeta `sidecar.istio.io/capNetBindService` .Values.global.proxy.capNetBindService) `true`) -}}
       runAsNonRoot: false
@@ -403,6 +426,10 @@ spec:
     {{- if eq .Values.global.pilotCertProvider "istiod" }}
     - mountPath: /var/run/secrets/istio
       name: istiod-ca-cert
+    {{- end }}
+    {{- if eq .Values.global.pilotCertProvider "kubernetes" }}
+    - mountPath: /var/run/secrets/istio/kubernetes
+      name: kube-ca-cert
     {{- end }}
     - mountPath: /var/lib/istio/data
       name: istio-data
@@ -478,6 +505,11 @@ spec:
   - name: istiod-ca-cert
     configMap:
       name: istio-ca-root-cert
+  {{- end }}
+  {{- if eq .Values.global.pilotCertProvider "kubernetes" }}
+  - name: kube-ca-cert
+    configMap:
+      name: kube-root-ca.crt
   {{- end }}
   {{- if .Values.global.mountMtlsCerts }}
   # Use the key and cert mounted to /etc/certs/ for the in-cluster mTLS communications.

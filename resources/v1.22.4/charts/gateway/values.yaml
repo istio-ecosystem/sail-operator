@@ -1,6 +1,4 @@
-# "_internal_defaults_do_not_set" is a workaround for Helm limitations. Users should NOT set "._internal_defaults_do_not_set" explicitly, but rather directly set the fields internally.
-# For instance, instead of `--set _internal_defaults_do_not_set.foo=bar``, just set `--set foo=bar`.
-_internal_defaults_do_not_set:
+defaults:
   # Name allows overriding the release name. Generally this should not be set
   name: ""
   # revision declares which revision this gateway is a part of
@@ -64,8 +62,6 @@ _internal_defaults_do_not_set:
     ipFamilies: []
     ## Whether to automatically allocate NodePorts (only for LoadBalancers).
     # allocateLoadBalancerNodePorts: false
-    ## Set LoadBalancer class (only for LoadBalancers).
-    # loadBalancerClass: ""
 
   resources:
     requests:
@@ -86,21 +82,8 @@ _internal_defaults_do_not_set:
   # Pod environment variables
   env: {}
 
-  # Deployment Update strategy
-  strategy: {}
-  
-  # Sets the Deployment minReadySeconds value
-  minReadySeconds:
-  
-  # Optionally configure a custom readinessProbe. By default the control plane
-  # automatically injects the readinessProbe. If you wish to override that
-  # behavior, you may define your own readinessProbe here.
-  readinessProbe: {}
-
   # Labels to apply to all resources
-  labels:
-    # By default, don't enroll gateways into the ambient dataplane
-    "istio.io/dataplane-mode": none
+  labels: {}
 
   # Annotations to apply to all resources
   annotations: {}
@@ -152,7 +135,6 @@ _internal_defaults_do_not_set:
   #
   podDisruptionBudget: {}
 
-  # Sets the per-pod terminationGracePeriodSeconds setting.
   terminationGracePeriodSeconds: 30
 
   # A list of `Volumes` added into the Gateway Pods. See

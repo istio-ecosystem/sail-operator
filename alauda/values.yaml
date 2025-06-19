@@ -11,6 +11,8 @@ csv:
   categories: Integration & Delivery, Networking, Security
   capabilities: Seamless Upgrades
   description: Alauda Service Mesh Operator enables you to install, configure, and manage an instance of Alauda Service Mesh. Alauda Service Mesh is based on the open source Istio project.
+  provider:
+    name: Alauda
   longDescription: |-
     Alauda Service Mesh is a platform that provides behavioral insight and operational control over a service mesh, providing a uniform way to connect, secure, and monitor microservice applications.
 

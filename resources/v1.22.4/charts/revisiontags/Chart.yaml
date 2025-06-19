@@ -1,9 +1,5 @@
 apiVersion: v2
-<<<<<<<< HEAD:resources/v1.22.4/charts/revisiontags/Chart.yaml
 appVersion: v1.22.4
-========
-appVersion: 1.26.0
->>>>>>>> istio/main:resources/v1.26.0/charts/revisiontags/Chart.yaml
 description: Helm chart for istio revision tags
 name: revisiontags
 sources:
