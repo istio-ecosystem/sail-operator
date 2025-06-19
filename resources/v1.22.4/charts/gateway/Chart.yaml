@@ -1,5 +1,9 @@
 apiVersion: v2
+<<<<<<<< HEAD:resources/v1.22.4/charts/gateway/Chart.yaml
 appVersion: 1.22.4-asm.1
+========
+appVersion: 1.26.0
+>>>>>>>> istio/main:resources/v1.26.0/charts/gateway/Chart.yaml
 description: Helm chart for deploying Istio gateways
 icon: https://istio.io/latest/favicons/android-192x192.png
 keywords:
@@ -9,4 +13,8 @@ name: gateway
 sources:
 - https://github.com/istio/istio
 type: application
+<<<<<<<< HEAD:resources/v1.22.4/charts/gateway/Chart.yaml
 version: 1.22.4-asm.1
+========
+version: 1.26.0
+>>>>>>>> istio/main:resources/v1.26.0/charts/gateway/Chart.yaml

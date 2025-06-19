@@ -20,7 +20,7 @@ VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"versions.yaml"}
 VERSIONS_YAML_DIR=${VERSIONS_YAML_DIR:-"pkg/istioversion"}
 
 function removeOldVersions() {
-    versions=$(yq eval '.versions[].name' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | tr $'\n' ' ')
+    versions=$(yq eval '.versions[] | select(.ref == null) | select(.eol != true) | .name' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" | tr $'\n' ' ')
     for subdirectory in resources/*/; do
         version=$(basename "$subdirectory")
         if [[ ! " ${versions} " == *" $version "* ]]; then

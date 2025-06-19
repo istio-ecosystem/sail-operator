@@ -59,17 +59,10 @@
           maxNumberOfAnnotations: {{ (($.Values.global.tracer).stackdriver).maxNumberOfAnnotations | default "200" }}
           # The global default max number of message events per span.
           maxNumberOfMessageEvents: {{ (($.Values.global.tracer).stackdriver).maxNumberOfMessageEvents | default "200" }}
-      {{- else if eq .Values.global.proxy.tracer "openCensusAgent" }}
-      {{/* Fill in openCensusAgent configuration from meshConfig so it isn't overwritten below */}}
-{{ toYaml $.Values.meshConfig.defaultConfig.tracing | indent 8 }}
       {{- end }}
       {{- end }}
       {{- if .Values.global.remotePilotAddress }}
-      {{- if .Values.pilot.enabled }}
-      discoveryAddress: {{ printf "istiod-remote.%s.svc" .Release.Namespace }}:15012
-      {{- else }}
       discoveryAddress: {{ printf "istiod.%s.svc" .Release.Namespace }}:15012
-      {{- end }}
       {{- else }}
       discoveryAddress: istiod{{- if not (eq .Values.revision "") }}-{{ .Values.revision }}{{- end }}.{{.Release.Namespace}}.svc:15012
       {{- end }}
@@ -80,7 +73,7 @@
 {{- $originalMesh := include "mesh" . | fromYaml }}
 {{- $mesh := mergeOverwrite $originalMesh .Values.meshConfig }}
 
-{{- if .Values.pilot.configMap }}
+{{- if .Values.configMap }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -90,6 +83,8 @@ metadata:
     istio.io/rev: {{ .Values.revision | default "default" | quote }}
     operator.istio.io/component: "Pilot"
     release: {{ .Release.Name }}
+    app.kubernetes.io/name: "istiod"
+    {{- include "istio.labels" . | nindent 4 }}
 data:
 
   # Configuration file for the mesh networks to be used by the Split Horizon EDS.

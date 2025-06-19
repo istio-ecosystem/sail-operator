@@ -1,4 +1,6 @@
-{{- if and .Values.pilot.autoscaleEnabled .Values.pilot.autoscaleMin .Values.pilot.autoscaleMax }}
+# Not created if istiod is running remotely
+{{- if not .Values.istiodRemote.enabled }}
+{{- if and .Values.autoscaleEnabled .Values.autoscaleMin .Values.autoscaleMax }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -9,9 +11,11 @@ metadata:
     release: {{ .Release.Name }}
     istio.io/rev: {{ .Values.revision | default "default" | quote }}
     operator.istio.io/component: "Pilot"
+    app.kubernetes.io/name: "istiod"
+    {{- include "istio.labels" . | nindent 4 }}
 spec:
-  maxReplicas: {{ .Values.pilot.autoscaleMax }}
-  minReplicas: {{ .Values.pilot.autoscaleMin }}
+  maxReplicas: {{ .Values.autoscaleMax }}
+  minReplicas: {{ .Values.autoscaleMin }}
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
@@ -22,17 +26,18 @@ spec:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: {{ .Values.pilot.cpu.targetAverageUtilization }}
-  {{- if .Values.pilot.memory.targetAverageUtilization }}
+        averageUtilization: {{ .Values.cpu.targetAverageUtilization }}
+  {{- if .Values.memory.targetAverageUtilization }}
   - type: Resource
     resource:
       name: memory
       target:
         type: Utilization
-        averageUtilization: {{ .Values.pilot.memory.targetAverageUtilization }}
+        averageUtilization: {{ .Values.memory.targetAverageUtilization }}
   {{- end }}
-  {{- if .Values.pilot.autoscaleBehavior }}
-  behavior: {{ toYaml .Values.pilot.autoscaleBehavior | nindent 4 }}
+  {{- if .Values.autoscaleBehavior }}
+  behavior: {{ toYaml .Values.autoscaleBehavior | nindent 4 }}
   {{- end }}
 ---
+{{- end }}
 {{- end }}

@@ -10,7 +10,6 @@ metadata:
       .InfrastructureLabels
       (strdict
         "gateway.networking.k8s.io/gateway-name" .Name
-        "istio.io/gateway-name" .Name
       ) | nindent 4 }}
   {{- if ge .KubeVersion 128 }}
   # Safe since 1.28: https://github.com/kubernetes/kubernetes/pull/117412
@@ -33,7 +32,7 @@ metadata:
       .InfrastructureLabels
       (strdict
         "gateway.networking.k8s.io/gateway-name" .Name
-        "istio.io/gateway-name" .Name
+        "gateway.istio.io/managed" "istio.io-gateway-controller"
       ) | nindent 4 }}
   ownerReferences:
   - apiVersion: gateway.networking.k8s.io/v1beta1
@@ -65,11 +64,9 @@ spec:
           .InfrastructureLabels
           (strdict
             "gateway.networking.k8s.io/gateway-name" .Name
-            "istio.io/gateway-name" .Name
+            "gateway.istio.io/managed" "istio.io-gateway-controller"
           ) | nindent 8 }}
     spec:
-      {{- if ge .KubeVersion 122 }}
-      {{/* safe since 1.22: https://github.com/kubernetes/kubernetes/pull/103326. */}}
       securityContext:
       {{- if .Values.gateways.securityContext }}
         {{- toYaml .Values.gateways.securityContext | nindent 8 }}
@@ -77,6 +74,9 @@ spec:
         sysctls:
         - name: net.ipv4.ip_unprivileged_port_start
           value: "0"
+      {{- if .Values.gateways.seccompProfile }}
+        seccompProfile:
+      {{- toYaml .Values.gateways.seccompProfile | nindent 10 }}
       {{- end }}
       {{- end }}
       serviceAccountName: {{.ServiceAccount | quote}}
@@ -93,8 +93,6 @@ spec:
         {{- end }}
         {{with .Values.global.imagePullPolicy }}imagePullPolicy: "{{.}}"{{end}}
         securityContext:
-        {{- if ge .KubeVersion 122 }}
-          # Safe since 1.22: https://github.com/kubernetes/kubernetes/pull/103326
           capabilities:
             drop:
             - ALL
@@ -104,19 +102,10 @@ spec:
           runAsUser: {{ .ProxyUID | default "1337" }}
           runAsGroup: {{ .ProxyGID | default "1337" }}
           runAsNonRoot: true
-        {{- else }}
-          capabilities:
-            drop:
-            - ALL
-            add:
-            - NET_BIND_SERVICE
-          runAsUser: 0
-          runAsGroup: 1337
-          runAsNonRoot: false
-          allowPrivilegeEscalation: true
-          readOnlyRootFilesystem: true
-        {{- end }}
         ports:
+        - containerPort: 15020
+          name: metrics
+          protocol: TCP
         - containerPort: 15021
           name: status-port
           protocol: TCP
@@ -330,7 +319,6 @@ metadata:
       .InfrastructureLabels
       (strdict
         "gateway.networking.k8s.io/gateway-name" .Name
-        "istio.io/gateway-name" .Name
       ) | nindent 4 }}
   name: {{.DeploymentName | quote}}
   namespace: {{.Namespace | quote}}
@@ -340,6 +328,7 @@ metadata:
     name: {{.Name}}
     uid: {{.UID}}
 spec:
+  ipFamilyPolicy: PreferDualStack
   ports:
   {{- range $key, $val := .Ports }}
   - name: {{ $val.Name | quote }}

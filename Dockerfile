@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi9/ubi-minimal:latest 
+FROM registry.access.redhat.com/ubi10/ubi-micro:latest 
 
 ARG TARGETOS TARGETARCH
 

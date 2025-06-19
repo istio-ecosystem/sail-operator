@@ -11,6 +11,7 @@ metadata:
     operator.istio.io/component: "Pilot"
     release: {{ .Release.Name }}
     app.kubernetes.io/name: "istiod"
+    {{- include "istio.labels" . | nindent 4 }}
 data:
   original-values: |-
 {{ .Values._original | toPrettyJson | indent 4 }}

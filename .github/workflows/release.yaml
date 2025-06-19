@@ -3,13 +3,9 @@ name: Release workflow
 on:
   workflow_dispatch:
     inputs:
-      release_version:
-        description: "Release version"
+      run_name:
+        description: "Run name - short description for the workflow run"
         required: true
-      bundle_channels:
-        description: "Bundle channels"
-        required: true
-        default: "stable,stable-2.0"
       is_draft_release:
         description: "Draft release"
         type: boolean
@@ -21,12 +17,11 @@ on:
         required: false
         default: false
 
-run-name: Release ${{ inputs.release_version }}
+run-name: ${{ inputs.run_name }}
 
 env:
   GIT_USER: ${{ secrets.GIT_USER }}
   GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
-  VERSION: ${{ inputs.release_version }}
 
 jobs:
   release:
@@ -47,17 +42,14 @@ jobs:
 
     - name: Build and push operator image
       run: |
-        make alauda-docker-buildx \
-          -e TAG=$VERSION
+        make alauda-docker-buildx
 
     - name: Generate bundle metadata
       run: |
-        make bundle \
-         -e CHANNELS=$CHANNELS
-      env:
-        CHANNELS: ${{ inputs.bundle_channels }}
+        make bundle
 
     - name: Build and push bundle image
+      continue-on-error: true
       run: |
         make bundle-build \
           -e VERSION=$VERSION

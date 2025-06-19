@@ -16,9 +16,10 @@
 
 set -eu -o pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC2155
+export SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-TEST_DIR="$ROOT_DIR/tests/documentation_tests"
+FOCUS_DOC_TAGS="${FOCUS_DOC_TAGS:-}"
 
 export KIND_CLUSTER_NAME="docs-automation"
 export IP_FAMILY="ipv4"
@@ -35,8 +36,26 @@ export HUB="${KIND_REGISTRY}"
 # Workaround make inside make: ovewrite this variable so it is not recomputed in Makefile.core.mk
 export IMAGE="${HUB}/${IMAGE_BASE}:${TAG}"
 export ARTIFACTS="${ARTIFACTS:-$(mktemp -d)}"
+export TEST_DIR="${ARTIFACTS}/docs.test"
 export KUBECONFIG="${KUBECONFIG:-"${ARTIFACTS}/config"}"
 export HELM_TEMPL_DEF_FLAGS="--include-crds --values chart/values.yaml"
+
+# Check that TEST_DIR exist, if not create the directory
+if [[ ! -d "$TEST_DIR" ]]; then
+  echo "Creating TEST_DIR directory: $TEST_DIR"
+  mkdir -p "$TEST_DIR"
+else
+  echo "Using existing TEST_DIR directory: $TEST_DIR"
+fi
+
+# Run the update-docs-examples.sh script to update the documentation files into the artifacts directory.
+"${ROOT_DIR}/tests/documentation_tests/scripts/update-docs-examples.sh"
+
+# Check that .md files were copied to the artifacts directory. If there is no files, then exit with an error.
+if ! find "$TEST_DIR" -maxdepth 1 -name "*.md"; then
+  echo "No .md files found in the artifacts directory: $TEST_DIR"
+  exit 1
+fi
 
 # Validate that istioctl is installed
 if ! command -v istioctl &> /dev/null; then
@@ -58,11 +77,22 @@ for file in "$TEST_DIR"/*.md; do
   fi
 done
 
-# Build list of file-tag pairs
+# Build a list of file-tag pairs, isolating 'dual-stack' since it requires special treatment
 TAGS_LIST=()
+dual_stack_tag=""
+
 for file in "${FILES_TO_CHECK[@]}"; do
   TAGS=$(grep -oP 'tag=\K[^} ]+' "$file" | sort -u)
   for tag in $TAGS; do
+    if [[ -n "$FOCUS_DOC_TAGS" && "$tag" != "$FOCUS_DOC_TAGS" ]]; then
+      continue
+    fi
+
+    if [[ "$tag" == "dual-stack" ]]; then
+      dual_stack_tag="$file -t $tag"
+      continue
+    fi
+
     TAGS_LIST+=("$file -t $tag")
   done
 done
@@ -71,22 +101,14 @@ echo "Tags list:"
 for tag in "${TAGS_LIST[@]}"; do
   echo "$tag"
 done
+echo "$dual_stack_tag"
 
-# Run each test in its own KIND cluster
-for tag in "${TAGS_LIST[@]}"; do
+# Run the tests on a separate cluster for all given tags
+function run_tests() {
   (
-    echo "Setting up cluster for: $tag"
+    echo "Setting up cluster: $KIND_CLUSTER_NAME to run tests for tags: $*"
+    kind delete cluster --name "$KIND_CLUSTER_NAME" > /dev/null || true
 
-    # Run the actual doc test
-    FILE=$(echo "$tag" | cut -d' ' -f1)
-    RUNME_TAG=$(echo "$tag" | cut -d' ' -f3-)
-
-    # Set IP family only for the dual-stack tag
-    if [ "$RUNME_TAG" == "dual-stack" ]; then
-      echo "Setting up dual-stack cluster"
-      export IP_FAMILY="dual"
-      export KIND_CLUSTER_NAME="docs-automation-dual-stack"
-    fi
     # Source setup and build scripts to preserve trap and env
     source "${ROOT_DIR}/tests/e2e/setup/setup-kind.sh"
 
@@ -98,19 +120,51 @@ for tag in "${TAGS_LIST[@]}"; do
     # TODO: check why KUBECONFIG is not properly set
     kind export kubeconfig --name="${KIND_CLUSTER_NAME}"
 
-    # Deploy operator
+    # Deploy the sail operator
     kubectl create ns sail-operator || echo "namespace sail-operator already exists"
     # shellcheck disable=SC2086
     helm template chart chart ${HELM_TEMPL_DEF_FLAGS} --set image="${IMAGE}" --namespace sail-operator | kubectl apply --server-side=true -f -
     kubectl wait --for=condition=available --timeout=600s deployment/sail-operator -n sail-operator
 
-    echo "Running: runme run --filename $FILE -t $RUNME_TAG --skip-prompts"
-    runme run --filename "$FILE" -t "$RUNME_TAG" --skip-prompts
+    # Record all namespaces before each test, to restore to this point
+    declare -A namespaces
+    for ns in $(kubectl get namespaces -o name); do
+      namespaces["$ns"]=1
+    done
 
-    # Unset IP_FAMILY and KIND_CLUSTER_NAME to avoid conflicts
-    if [ "$RUNME_TAG" == "dual-stack" ]; then
-      unset IP_FAMILY
-      unset KIND_CLUSTER_NAME
-    fi
+    for tag in "$@"; do
+      FILE=$(echo "$tag" | cut -d' ' -f1)
+      RUNME_TAG=$(echo "$tag" | cut -d' ' -f3-)
+
+      echo "*** Testing '$RUNME_TAG' in file '$file' *** "
+      runme run --filename "$FILE" -t "$RUNME_TAG" --skip-prompts
+      echo "*** Testing concluded for '$RUNME_TAG' in file '$file' *** "
+
+      # Save some time by avoiding cleanup for last tag, as the cluster will be deleted anyway.
+      [ "$tag" != "${!#}" ] || break
+
+      # Clean up any of our cluster-wide custom resources
+      for crd in $(cat chart/crds/sailoperator.io_*.yaml | yq -rN 'select(.kind == "CustomResourceDefinition" and .spec.scope == "Cluster") | .metadata.name'); do
+        for cr in $(kubectl get "$crd" -o name); do
+          kubectl delete "$cr"
+        done
+      done
+
+      # Clean up any new namespaces created after the cluster was deployed.
+      for ns in $(kubectl get namespaces -o name); do
+        if [ -z "${namespaces[$ns]-}" ]; then
+          kubectl delete "$ns"
+	  kubectl wait --for=delete "$ns" --timeout=3m
+        fi
+      done
+    done
   )
-done
+}
+
+# Run tests on a single cluster for all tags that we found
+run_tests "${TAGS_LIST[@]}"
+
+# Run dual stack tests on it's own cluster, since it needs to be deployed with support for dual stack
+if [[ -n "$dual_stack_tag" ]]; then
+  IP_FAMILY="dual" run_tests "$dual_stack_tag"
+fi

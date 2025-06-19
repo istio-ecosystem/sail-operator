@@ -37,9 +37,13 @@ get_internal_registry() {
   fi
 
   URL=$(${COMMAND} get route default-route -n openshift-image-registry --template='{{ .spec.host }}')
-  export HUB="${URL}/${NAMESPACE}"
+
+  # Create the istio-images namespace to store the operator image
+  # This will ensure that no matter the operator namespace is deleted, the image will still be available
+  export HUB="${URL}/istio-images"
   echo "Registry URL: ${HUB}"
 
+  ${COMMAND} create namespace istio-images || true
   ${COMMAND} create namespace "${NAMESPACE}" || true
   envsubst < "${WD}/config/role-bindings.yaml" | ${COMMAND} apply -f -
 
@@ -56,17 +60,22 @@ build_and_push_operator_image() {
   echo "Building and pushing operator image: ${HUB}/${IMAGE_BASE}:${TAG}"
 
   DOCKER_BUILD_FLAGS=""
-  TARGET_ARCH=$(uname -m)
+  TARGET_ARCH=${TARGET_ARCH:-$(uname -m)}
 
   if [[ "$TARGET_ARCH" == "aarch64" || "$TARGET_ARCH" == "arm64" ]]; then
       TARGET_ARCH="arm64"
       DOCKER_BUILD_FLAGS="--platform=linux/${TARGET_ARCH}"
   elif [[ "$TARGET_ARCH" == "x86_64" || "$TARGET_ARCH" == "amd64" ]]; then
       TARGET_ARCH="amd64"
+      DOCKER_BUILD_FLAGS="--platform=linux/${TARGET_ARCH}"
   else
       echo "Unsupported architecture: ${TARGET_ARCH}"
       exit 1
   fi
+
+  echo "Building for architecture: ${TARGET_ARCH}"
+  echo "Docker build flags: ${DOCKER_BUILD_FLAGS}"
+  echo "Using image base: ${HUB}/${IMAGE_BASE}:${TAG}"
 
   BUILD_WITH_CONTAINER=0 \
     DOCKER_BUILD_FLAGS=${DOCKER_BUILD_FLAGS} \

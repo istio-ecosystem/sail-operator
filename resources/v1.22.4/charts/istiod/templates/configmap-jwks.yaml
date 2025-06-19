@@ -1,4 +1,6 @@
-{{- if .Values.pilot.jwksResolverExtraRootCA }}
+# Not created if istiod is running remotely
+{{- if not .Values.istiodRemote.enabled }}
+{{- if .Values.jwksResolverExtraRootCA }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -8,6 +10,9 @@ metadata:
     release: {{ .Release.Name }}
     istio.io/rev: {{ .Values.revision | default "default" | quote }}
     operator.istio.io/component: "Pilot"
+    app.kubernetes.io/name: "istiod"
+    {{- include "istio.labels" . | nindent 4 }}
 data:
-  extra.pem: {{ .Values.pilot.jwksResolverExtraRootCA | quote }}
+  extra.pem: {{ .Values.jwksResolverExtraRootCA | quote }}
+{{- end }}
 {{- end }}
