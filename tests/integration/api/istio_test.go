@@ -21,16 +21,17 @@ import (
 	"strings"
 	"time"
 
-	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
-	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
-	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
-	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
+	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
+	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 
 	"istio.io/istio/pkg/ptr"
 )
@@ -474,9 +475,11 @@ var _ = Describe("Istio resource", Ordered, func() {
 	})
 
 	Describe("eol versions", func() {
-		if len(istioversion.EOL) < 1 {
-			Skip("No versions marked as EOL, skipping EOL test")
-		}
+		BeforeAll(func() {
+			if len(istioversion.EOL) < 1 {
+				Skip("No versions marked as EOL, skipping EOL test")
+			}
+		})
 		When("creating Istio resource with spec.version that is past EOL", func() {
 			It("produces a ReconcileError", func() {
 				istio = &v1.Istio{
