@@ -650,7 +650,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.24-latest, v1.24.5, v1.22-latest, v1.22.4. | v1.24.5 | Enum: [v1.24-latest v1.24.5 v1.22-latest v1.22.4]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.24-latest, v1.24.5. | v1.24.5 | Enum: [v1.24-latest v1.24.5]   |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift openshift-ambient preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio CNI component should be installed. Note that this field is immutable. | istio-cni |  |
 | `values` _[CNIValues](#cnivalues)_ | Defines the values to be passed to the Helm charts when installing Istio CNI. |  |  |
@@ -886,7 +886,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.24.5, v1.22.4. |  | Enum: [v1.24.5 v1.22.4]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.24.5. |  | Enum: [v1.24.5]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. |  |  |
 | `values` _[Values](#values)_ | Defines the values to be passed to the Helm charts when installing Istio. |  |  |
 
@@ -1079,7 +1079,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.24-latest, v1.24.5, v1.22-latest, v1.22.4. | v1.24.5 | Enum: [v1.24-latest v1.24.5 v1.22-latest v1.22.4]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.24-latest, v1.24.5. | v1.24.5 | Enum: [v1.24-latest v1.24.5]   |
 | `updateStrategy` _[IstioUpdateStrategy](#istioupdatestrategy)_ | Defines the update strategy to use when the version in the Istio CR is updated. | \{ type:InPlace \} |  |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift openshift-ambient preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. Note that this field is immutable. | istio-system |  |
@@ -3355,7 +3355,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.24-latest, v1.24.5, v1.22.4. | v1.24.5 | Enum: [v1.24-latest v1.24.5 v1.22.4]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.24-latest, v1.24.5. | v1.24.5 | Enum: [v1.24-latest v1.24.5]   |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is 'ambient' and it is always applied. Must be one of: ambient, default, demo, empty, external, preview, remote, stable. | ambient | Enum: [ambient default demo empty external openshift-ambient openshift preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio ztunnel component should be installed. | ztunnel |  |
 | `values` _[ZTunnelValues](#ztunnelvalues)_ | Defines the values to be passed to the Helm charts when installing Istio ztunnel. |  |  |

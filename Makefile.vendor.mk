@@ -6,7 +6,7 @@ CHANNELS = "stable,stable-2.0"
 DEFAULT_CHANNEL = stable
 HELM_VALUES_FILE = alauda/values.yaml
 VERSIONS_YAML_FILE ?= alauda-versions.yaml
-GENERATE_RELATED_IMAGES = false
+GENERATE_RELATED_IMAGES = true
 
 PLATFORMS ?= linux/arm64,linux/amd64
 
