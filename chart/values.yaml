@@ -71,7 +71,7 @@ csv:
     features.operators.openshift.io/csi: "false"
   provider:
     name: Red Hat, Inc.
-image: build-harbor.alauda.cn/asm/sail-operator:2.0-latest
+image: build-harbor.alauda.cn/asm/servicemesh-operator2:2.0-latest
 # We're commenting out the imagePullPolicy to use k8s defaults
 # imagePullPolicy: Always
 operator:
