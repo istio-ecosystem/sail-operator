@@ -36,7 +36,7 @@ import (
 	"istio.io/istio/pkg/ptr"
 )
 
-var _ = Describe("IstioBase controller", Ordered, func() {
+var _ = Describe("base chart support", Ordered, func() {
 	const (
 		istioNamespace  = "istiobase-test"
 		istioNamespace2 = "istiobase-test2"
