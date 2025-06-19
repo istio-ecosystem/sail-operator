@@ -58,6 +58,6 @@ spec:
     name: OpenShift Service Mesh Team
   maturity: alpha
   provider:
-    name: Red Hat, Inc.
+    name: {{ .Values.csv.provider.name }}
   version: {{ .Values.csv.version }}
 {{ end }}
