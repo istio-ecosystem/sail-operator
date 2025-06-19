@@ -5,11 +5,12 @@ HUB = build-harbor.alauda.cn/asm
 CHANNELS = "stable,stable-2.0"
 DEFAULT_CHANNEL = stable
 HELM_VALUES_FILE = alauda/values.yaml
-VERSIONS_YAML_FILE ?= alauda-versions.yaml
-GENERATE_RELATED_IMAGES = true
+# NB(timonwong) Only use this variable in release pipeline
+# VERSIONS_YAML_FILE ?= alauda-versions.yaml
+# NB(timonwong) Should only generated in release pipeline
+GENERATE_RELATED_IMAGES = false
 
 PLATFORMS ?= linux/arm64,linux/amd64
-
 
 ALAUDA_PLATFORM_ARCHITECTURES := amd64 arm64
 ALAUDA_BUILD_TARGETS := $(addprefix alauda-build-linux-,$(ALAUDA_PLATFORM_ARCHITECTURES))

@@ -23,9 +23,3 @@ csv:
     mediatype: image/svg+xml
   longDescription: |-
     Alauda Service Mesh is a platform that provides behavioral insight and operational control over a service mesh, providing a uniform way to connect, secure, and monitor microservice applications.
-
-    This version of the operator supports the following Istio versions:
-
-    - v1.24-latest
-    - v1.24.5
-
