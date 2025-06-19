@@ -1,3 +1,5 @@
+VERSION = 2.0.0
+
 OPERATOR_NAME = servicemeshoperator2
 HUB = build-harbor.alauda.cn/asm
 CHANNELS = "stable,stable-2.0"
