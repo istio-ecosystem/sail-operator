@@ -18,18 +18,16 @@ package multicluster
 
 import (
 	"fmt"
-	"path/filepath"
 	"time"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
-	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/pkg/version"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -48,30 +46,6 @@ const (
 var _ = Describe("Multicluster deployment models", Label("multicluster", "multicluster-external"), Ordered, func() {
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
-	debugInfoLogged := false
-
-	BeforeAll(func(ctx SpecContext) {
-		if !skipDeploy {
-			Expect(k1.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created on Cluster #1")
-			Expect(k2.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created on Cluster #2")
-
-			Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, "--kubeconfig "+kubeconfig)).
-				To(Succeed(), "Operator failed to be deployed in Cluster #1")
-
-			Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, "--kubeconfig "+kubeconfig2)).
-				To(Succeed(), "Operator failed to be deployed in Cluster #2")
-
-			Eventually(common.GetObject).
-				WithArguments(ctx, clPrimary, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
-				Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
-			Success("Operator is deployed in the Cluster #1 namespace and Running")
-
-			Eventually(common.GetObject).
-				WithArguments(ctx, clRemote, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
-				Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
-			Success("Operator is deployed in the Cluster #2 namespace and Running")
-		}
-	})
 
 	Describe("External Control Plane Multi-Network configuration", func() {
 		// Test the External Control Plane Multi-Network configuration for each supported Istio version
@@ -83,6 +57,14 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 			}
 
 			Context(fmt.Sprintf("Istio version %s", v.Version), func() {
+				clr1 := cleaner.New(clPrimary, "cluster=primary")
+				clr2 := cleaner.New(clRemote, "cluster=remote")
+
+				BeforeAll(func(ctx SpecContext) {
+					clr1.Record(ctx)
+					clr2.Record(ctx)
+				})
+
 				When("default Istio is created in Cluster #1 to handle ingress to External Control Plane", func() {
 					BeforeAll(func(ctx SpecContext) {
 						Expect(k1.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be created")
@@ -128,14 +110,14 @@ spec:
 					It("updates the default Istio CR status to Ready", func(ctx SpecContext) {
 						Eventually(common.GetObject).
 							WithArguments(ctx, clPrimary, kube.Key(istioName), &v1.Istio{}).
-							Should(HaveCondition(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Cluster #1; unexpected Condition")
+							Should(HaveConditionStatus(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Cluster #1; unexpected Condition")
 						Success("Istio CR is Ready on Cluster #1")
 					})
 
 					It("deploys istiod", func(ctx SpecContext) {
 						Eventually(common.GetObject).
 							WithArguments(ctx, clPrimary, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
-							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available on Cluster #1; unexpected Condition")
+							Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available on Cluster #1; unexpected Condition")
 						Expect(common.GetVersionFromIstiod()).To(Equal(v.Version), "Unexpected istiod version")
 						Success("Istiod is deployed in the namespace and Running on Exernal Cluster")
 					})
@@ -149,7 +131,7 @@ spec:
 					It("updates Gateway status to Available", func(ctx SpecContext) {
 						Eventually(common.GetObject).
 							WithArguments(ctx, clPrimary, kube.Key("istio-ingressgateway", controlPlaneNamespace), &appsv1.Deployment{}).
-							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Gateway is not Ready on Cluster #1; unexpected Condition")
+							Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Gateway is not Ready on Cluster #1; unexpected Condition")
 
 						Success("Gateway is created and available in both clusters")
 					})
@@ -242,16 +224,20 @@ metadata:
 						Expect(apiURLCluster2).NotTo(BeEmpty(), "API URL is empty for the Cluster #2")
 						Expect(err).NotTo(HaveOccurred())
 
-						secret, err := istioctl.CreateRemoteSecret(
-							kubeconfig2,
-							externalControlPlaneNamespace,
-							"cluster2",
-							apiURLCluster2,
-							"--type=config",
-							"--service-account=istiod-"+externalIstioName,
-							"--create-service-account=false",
-						)
-						Expect(err).NotTo(HaveOccurred())
+						var secret string
+						Eventually(func() error {
+							secret, err = istioctl.CreateRemoteSecret(
+								kubeconfig2,
+								externalControlPlaneNamespace,
+								"cluster2",
+								apiURLCluster2,
+								"--type=config",
+								"--service-account=istiod-"+externalIstioName,
+								"--create-service-account=false",
+							)
+
+							return err
+						}).ShouldNot(HaveOccurred(), "Remote secret generation failed")
 						Expect(k1.ApplyString(secret)).To(Succeed(), "Remote secret creation failed on Cluster #1")
 					})
 
@@ -325,7 +311,7 @@ spec:
 					It("updates both Istio CR status to Ready", func(ctx SpecContext) {
 						Eventually(common.GetObject).
 							WithArguments(ctx, clPrimary, kube.Key("external-istiod"), &v1.Istio{}).
-							Should(HaveCondition(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Cluster #1; unexpected Condition")
+							Should(HaveConditionStatus(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Cluster #1; unexpected Condition")
 						Success("Istio CR is Ready on Cluster #1")
 					})
 				})
@@ -399,7 +385,7 @@ spec:
 					It("updates remote Istio CR status to Ready on Cluster #2", func(ctx SpecContext) {
 						Eventually(common.GetObject).
 							WithArguments(ctx, clRemote, kube.Key(externalIstioName), &v1.Istio{}).
-							Should(HaveCondition(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Remote; unexpected Condition")
+							Should(HaveConditionStatus(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Remote; unexpected Condition")
 						Success("Remote Istio CR is Ready on Cluster #2")
 					})
 				})
@@ -422,7 +408,7 @@ spec:
 						for _, pod := range samplePodsCluster2.Items {
 							Eventually(common.GetObject).
 								WithArguments(ctx, clRemote, kube.Key(pod.Name, sampleNamespace), &corev1.Pod{}).
-								Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready on Cluster #2; unexpected Condition")
+								Should(HaveConditionStatus(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready on Cluster #2; unexpected Condition")
 						}
 						Success("Sample app is Running")
 					})
@@ -471,40 +457,17 @@ spec:
 					if CurrentSpecReport().Failed() {
 						common.LogDebugInfo(common.MultiCluster, k1, k2)
 						debugInfoLogged = true
+						if keepOnFailure {
+							return
+						}
 					}
 
-					// Delete namespaces to ensure clean up for new tests iteration
-					Expect(k1.DeleteNamespaceNoWait(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
-					Expect(k1.DeleteNamespaceNoWait(externalControlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
-					Expect(k1.DeleteNamespaceNoWait(istioCniNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
-					Expect(k2.DeleteNamespaceNoWait(externalControlPlaneNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #2")
-					Expect(k2.DeleteNamespaceNoWait(sampleNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #2")
-					Expect(k2.DeleteNamespaceNoWait(istioCniNamespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #2")
-
-					Expect(k1.WaitNamespaceDeleted(controlPlaneNamespace)).To(Succeed())
-					Expect(k1.WaitNamespaceDeleted(externalControlPlaneNamespace)).To(Succeed())
-					Expect(k2.WaitNamespaceDeleted(externalControlPlaneNamespace)).To(Succeed())
-					Expect(k1.WaitNamespaceDeleted(istioCniNamespace)).To(Succeed())
-					Expect(k2.WaitNamespaceDeleted(istioCniNamespace)).To(Succeed())
-					Success("ControlPlane Namespaces are empty")
-
-					Expect(k2.WaitNamespaceDeleted(sampleNamespace)).To(Succeed())
-					Success("Sample app is deleted in Cluster #2")
+					c1Deleted := clr1.CleanupNoWait(ctx)
+					c2Deleted := clr2.CleanupNoWait(ctx)
+					clr1.WaitForDeletion(ctx, c1Deleted)
+					clr2.WaitForDeletion(ctx, c2Deleted)
 				})
 			})
 		}
-	})
-
-	AfterAll(func(ctx SpecContext) {
-		if CurrentSpecReport().Failed() && !debugInfoLogged {
-			common.LogDebugInfo(common.MultiCluster, k1, k2)
-			debugInfoLogged = true
-		}
-
-		// Delete the Sail Operator from both clusters
-		Expect(k1.DeleteNamespaceNoWait(namespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #1")
-		Expect(k2.DeleteNamespaceNoWait(namespace)).To(Succeed(), "Namespace failed to be deleted on Cluster #2")
-		Expect(k1.WaitNamespaceDeleted(namespace)).To(Succeed())
-		Expect(k2.WaitNamespaceDeleted(namespace)).To(Succeed())
 	})
 })

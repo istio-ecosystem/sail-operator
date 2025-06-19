@@ -19,8 +19,18 @@ OLD_VARS := $(.VARIABLES)
 # Use `make print-variables` to inspect the values of the variables
 -include Makefile.vendor.mk
 
-VERSION ?= 1.26.0
+VERSION ?= 1.27.0
 MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
+
+# This version will be used to generate the OLM upgrade graph in the FBC as a version to be replaced by the new operator version defined in $VERSION.
+# This applies for stable releases, for nightly releases we are getting previous version directly from the FBC.
+# Currently we are pushing the operator to two operator hubs https://github.com/k8s-operatorhub/community-operators and
+# https://github.com/redhat-openshift-ecosystem/community-operators-prod. Nightly builds go only to community-operators-prod which already
+# supports FBC. FBC yaml files and kept in community-operators-prod repo and we only generate a PR with changes using make targets from this Makefile.
+# There are also GH workflows defined to release nightly and stable operators.
+# There is no need to define `replaces` and `skipRange` fields in the CSV as those fields are defined in the FBC and CSV values are ignored.
+# FBC is source of truth for OLM upgrade graph.
+PREVIOUS_VERSION ?= 1.26.0
 
 OPERATOR_NAME ?= sailoperator
 VERSIONS_YAML_DIR ?= pkg/istioversion
@@ -79,11 +89,23 @@ NAMESPACE ?= sail-operator
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION ?= 1.29.0
 
+ifeq ($(findstring gen-check,$(MAKECMDGOALS)),gen-check)
+FORCE_DOWNLOADS := true
+else
+FORCE_DOWNLOADS ?= false
+endif
+
 # Set DOCKER_BUILD_FLAGS to specify flags to pass to 'docker build', default to empty. Example: --platform=linux/arm64
 DOCKER_BUILD_FLAGS ?= "--platform=$(TARGET_OS)/$(TARGET_ARCH)"
 
 GOTEST_FLAGS := $(if $(VERBOSE),-v) $(if $(COVERAGE),-coverprofile=$(REPO_ROOT)/out/coverage-unit.out)
 GINKGO_FLAGS ?= $(if $(VERBOSE),-v) $(if $(CI),--no-color) $(if $(COVERAGE),-coverprofile=coverage-integration.out -coverpkg=./... --output-dir=out)
+
+# Fail fast when keeping the environment on failure, to make sure we don't contaminate it with other resources. Also make sure to skip cleanup so it won't be deleted.
+ifeq ($(KEEP_ON_FAILURE),true)
+GINKGO_FLAGS += --fail-fast
+SKIP_CLEANUP = true
+endif
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -187,32 +209,16 @@ test.e2e.kind: istioctl ## Deploy a KinD cluster and run the end-to-end tests ag
 .PHONY: test.e2e.describe
 test.e2e.describe: ## Runs ginkgo outline -format indent over the e2e test to show in BDD style the steps and test structure
 	GINKGO_FLAGS="$(GINKGO_FLAGS)" ${SOURCE_DIR}/tests/e2e/common-operator-integ-suite.sh --describe
-##@ Build
-
-.PHONY: runme $(RUNME)
-runme: OS=$(shell go env GOOS)
-runme: ARCH=$(shell go env GOARCH)
-runme: $(RUNME) ## Download runme to bin directory. If wrong version is installed, it will be overwritten.
-	@test -s $(LOCALBIN)/runme || { \
-		GOBIN=$(LOCALBIN) GO111MODULE=on go install github.com/runmedev/runme/v3@v$(RUNME_VERSION) > /dev/stderr; \
-		echo "runme has been downloaded and placed in $(LOCALBIN)"; \
-	}
-
-.PHONY: update-docs-examples
-update-docs-examples: ## Copy the documentation files and generate the resulting md files to be executed by the runme tool.
-	@echo "Executing copy script to generate the documentation examples md files"
-	@echo "The script will copy the files from the source folder to the destination folder and add the runme suffix to the file names"
-	@tests/documentation_tests/scripts/update-docs-examples.sh
-	@echo "Documentation examples updated successfully"
-
 
 .PHONE: test.docs
-test.docs: runme istioctl update-docs-examples
+test.docs: runme istioctl ## Run the documentation examples tests.
 ## test.docs use runme to test the documentation examples. 
 ## Check the specific documentation to understand the use of the tool
-	@echo "Running runme test on the documentation examples, the location of the tests is in the tests/documentation_test folder"
+	@echo "Running runme test on the documentation examples."
 	@PATH=$(LOCALBIN):$$PATH tests/documentation_tests/scripts/run-docs-examples.sh
 	@echo "Documentation examples tested successfully"
+
+##@ Build
 
 .PHONY: build
 build: build-$(TARGET_ARCH) ## Build the sail-operator binary.
@@ -419,12 +425,13 @@ gen-api: tidy-go ## Generate API types from upstream files.
 gen-code: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="common/scripts/copyright-banner-go.txt" paths="./..."
 
+export FORCE_DOWNLOADS
 .PHONY: gen-charts
 gen-charts: ## Pull charts from istio repository.
 	@# use yq to generate a list of download-charts.sh commands for each version in versions.yaml; these commands are
 	@# passed to sh and executed; in a nutshell, the yq command generates commands like:
 	@# ./hack/download-charts.sh <version> <git repo> <commit> [chart1] [chart2] ...
-	@yq eval '.versions[] | "./hack/download-charts.sh " + .name + " " + .version + " " + .repo + " " + .commit + " " + ((.charts // []) | join(" "))' < $(VERSIONS_YAML_DIR)/$(VERSIONS_YAML_FILE) | sh
+	@yq eval '.versions[] | select(.ref == null) | select(.eol != true) | "./hack/download-charts.sh " + .name + " " + .version + " " + .repo + " " + .commit + " " + ((.charts // []) | join(" "))' < $(VERSIONS_YAML_DIR)/$(VERSIONS_YAML_FILE) | sh -e
 
 	@# remove old version directories
 	@hack/remove-old-versions.sh
@@ -442,7 +449,7 @@ gen-charts: ## Pull charts from istio repository.
 gen: gen-all-except-bundle bundle ## Generate everything.
 
 .PHONY: gen-all-except-bundle
-gen-all-except-bundle: operator-name operator-chart controller-gen gen-api gen-charts gen-manifests gen-code gen-api-docs github-workflow update-docs-examples mirror-licenses
+gen-all-except-bundle: operator-name operator-chart controller-gen gen-api gen-charts gen-manifests gen-code gen-api-docs github-workflow mirror-licenses
 
 .PHONY: gen-check
 gen-check: gen restore-manifest-dates check-clean-repo ## Verify that changes in generated resources have been checked in.
@@ -487,6 +494,7 @@ operator-chart:
 	sed -i -e "s|^\(image: \).*$$|\1${IMAGE}|g" \
 	       -e "s/^\(  version: \).*$$/\1${VERSION}/g" chart/values.yaml
 
+.PHONY: github-workflow
 github-workflow:
 	sed -i -e '1,/default:/ s/^\(.*default:\).*$$/\1 ${CHANNELS}/' .github/workflows/release.yaml
 
@@ -517,6 +525,7 @@ GITLEAKS ?= $(LOCALBIN)/gitleaks
 OPM ?= $(LOCALBIN)/opm
 ISTIOCTL ?= $(LOCALBIN)/istioctl
 RUNME ?= $(LOCALBIN)/runme
+MISSPELL ?= $(LOCALBIN)/misspell
 
 ## Tool Versions
 OPERATOR_SDK_VERSION ?= v1.39.2
@@ -526,8 +535,9 @@ CONTROLLER_RUNTIME_BRANCH ?= release-0.20
 OPM_VERSION ?= v1.54.0
 OLM_VERSION ?= v0.31.0
 GITLEAKS_VERSION ?= v8.26.0
-ISTIOCTL_VERSION ?= 1.23.0
+ISTIOCTL_VERSION ?= 1.26.0
 RUNME_VERSION ?= 3.13.2
+MISSPELL_VERSION ?= v0.3.4
 
 # GENERATE_RELATED_IMAGES defines whether `spec.relatedImages` is going to be generated or not
 # To disable set flag to false
@@ -554,6 +564,10 @@ $(OPERATOR_SDK): $(LOCALBIN)
 	curl -sSLfo $(LOCALBIN)/operator-sdk https://github.com/operator-framework/operator-sdk/releases/download/$(OPERATOR_SDK_VERSION)/operator-sdk_$(OS)_$(ARCH) && \
 	chmod +x $(LOCALBIN)/operator-sdk;
 
+# ISTIOCTL_DOWNLOAD_URL defines the url where istioctl will be downloaded
+# By default, it is not set and it uses the istio/istio release download artifact
+ISTIOCTL_DOWNLOAD_URL ?= 
+
 .PHONY: istioctl $(ISTIOCTL)
 istioctl: $(ISTIOCTL) ## Download istioctl to bin directory.
 istioctl: TARGET_OS=$(shell go env GOOS)
@@ -561,7 +575,7 @@ istioctl: TARGET_ARCH=$(shell go env GOARCH)
 $(ISTIOCTL): $(LOCALBIN)
 	@test -s $(LOCALBIN)/istioctl || { \
 		OSEXT=$(if $(filter $(TARGET_OS),Darwin),osx,linux); \
-		URL="https://github.com/istio/istio/releases/download/$(ISTIOCTL_VERSION)/istioctl-$(ISTIOCTL_VERSION)-$$OSEXT-$(TARGET_ARCH).tar.gz"; \
+		URL=$(if $(value ISTIOCTL_DOWNLOAD_URL),$(ISTIOCTL_DOWNLOAD_URL),"https://github.com/istio/istio/releases/download/$(ISTIOCTL_VERSION)/istioctl-$(ISTIOCTL_VERSION)-$$OSEXT-$(TARGET_ARCH).tar.gz"); \
 		echo "Fetching istioctl from $$URL"; \
 		curl -fsL $$URL -o /tmp/istioctl.tar.gz || { \
 			echo "Download failed! Please check the URL and ISTIO_VERSION."; \
@@ -571,9 +585,18 @@ $(ISTIOCTL): $(LOCALBIN)
 			echo "Extraction failed!"; \
 			exit 1; \
 		}; \
-		mv /tmp/istioctl $(LOCALBIN)/istioctl; \
+		mv /tmp/$$(tar tf /tmp/istioctl.tar.gz) $(LOCALBIN)/istioctl; \
 		rm -f /tmp/istioctl.tar.gz; \
 		echo "istioctl has been downloaded and placed in $(LOCALBIN)"; \
+	}
+
+.PHONY: runme $(RUNME)
+runme: OS=$(shell go env GOOS)
+runme: ARCH=$(shell go env GOARCH)
+runme: $(RUNME) ## Download runme to bin directory. If wrong version is installed, it will be overwritten.
+	@test -s $(LOCALBIN)/runme || { \
+		GOBIN=$(LOCALBIN) GO111MODULE=on go install github.com/runmedev/runme/v3@v$(RUNME_VERSION) > /dev/stderr; \
+		echo "runme has been downloaded and placed in $(LOCALBIN)"; \
 	}
 
 .PHONY: controller-gen
@@ -638,19 +661,24 @@ bundle-push: ## Push the bundle image.
 bundle-publish: ## Create a PR for publishing in OperatorHub.
 	@export GIT_USER=$(GITHUB_USER); \
 	export GITHUB_TOKEN=$(GITHUB_TOKEN); \
-	export OPERATOR_VERSION=$(OPERATOR_VERSION); \
+	export OPERATOR_VERSION=$(VERSION); \
 	export OPERATOR_NAME=$(OPERATOR_NAME); \
+	export CHANNELS="$(CHANNELS)"; \
+	export PREVIOUS_VERSION=$(PREVIOUS_VERSION); \
 	./hack/operatorhub/publish-bundle.sh
 
+## Generate nightly bundle.
 .PHONY: bundle-nightly
-bundle-nightly: VERSION:=$(VERSION)-nightly-$(TODAY)  ## Generate nightly bundle.
+bundle-nightly: VERSION:=$(VERSION)-nightly-$(TODAY)
 bundle-nightly: CHANNELS:=$(MINOR_VERSION)-nightly
 bundle-nightly: TAG=$(MINOR_VERSION)-nightly-$(TODAY)
 bundle-nightly: bundle
 
+## Publish nightly bundle.
 .PHONY: bundle-publish-nightly
-bundle-publish-nightly: OPERATOR_VERSION=$(VERSION)-nightly-$(TODAY)  ## Publish nightly bundle.
+bundle-publish-nightly: VERSION:=$(VERSION)-nightly-$(TODAY)
 bundle-publish-nightly: TAG=$(MINOR_VERSION)-nightly-$(TODAY)
+bundle-publish-nightly: CHANNELS:=$(MINOR_VERSION)-nightly
 bundle-publish-nightly: bundle-nightly bundle-publish
 
 .PHONY: helm-artifacts-publish
@@ -710,8 +738,19 @@ lint-watches: ## Checks if the operator watches all resource kinds present in He
 lint-secrets: gitleaks ## Checks whether any secrets are present in the repository.
 	@${GITLEAKS} detect --no-git --redact -v
 
+.PHONY: lint-spell ## Run spell checker on the documentation files. Skipping sailoperator.io.md file.
+lint-spell: misspell
+	@echo "Get misspell from $(LOCALBIN)"
+	@echo "Running misspell on the documentation files"
+	@find $(REPO_ROOT)/docs -type f \( \( -name "*.md" -o -name "*.asciidoc" \) ! -name "*sailoperator.io.md" \) \
+	| xargs $(LOCALBIN)/misspell -error -locale US
+
+.PHONY: misspell
+misspell: $(LOCALBIN) ## Download misspell to bin directory.
+	@test -s $(LOCALBIN)/misspell || GOBIN=$(LOCALBIN) go install github.com/client9/misspell/cmd/misspell@$(MISSPELL_VERSION)
+
 .PHONY: lint
-lint: lint-scripts lint-licenses lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle lint-watches lint-secrets ## Run all linters.
+lint: lint-scripts lint-licenses lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle lint-watches lint-secrets lint-spell ## Run all linters.
 
 .PHONY: format
 format: format-go tidy-go ## Auto-format all code. This should be run before sending a PR.
@@ -723,7 +762,7 @@ git-hook: gitleaks ## Installs gitleaks as a git pre-commit hook.
 		chmod +x .git/hooks/pre-commit; \
 	fi
 
-.SILENT: helm $(HELM) $(LOCALBIN) deploy-yaml gen-api operator-name operator-chart github-workflow
+.SILENT: helm $(HELM) $(LOCALBIN) deploy-yaml gen-api operator-name operator-chart
 
 COMMON_IMPORTS ?= mirror-licenses dump-licenses lint-all lint-licenses lint-scripts lint-copyright-banner lint-go lint-yaml lint-helm format-go tidy-go check-clean-repo update-common
 .PHONY: $(COMMON_IMPORTS)

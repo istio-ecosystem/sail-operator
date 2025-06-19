@@ -25,6 +25,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
@@ -44,8 +45,10 @@ var _ = Describe("Ambient configuration ", Label("smoke", "ambient"), Ordered, f
 	SetDefaultEventuallyPollingInterval(time.Second)
 
 	debugInfoLogged := false
+	clr := cleaner.New(cl)
 
 	BeforeAll(func(ctx SpecContext) {
+		clr.Record(ctx)
 		Expect(k.CreateNamespace(operatorNamespace)).To(Succeed(), "Namespace failed to be created")
 
 		if skipDeploy {
@@ -56,7 +59,7 @@ var _ = Describe("Ambient configuration ", Label("smoke", "ambient"), Ordered, f
 		}
 
 		Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(deploymentName, operatorNamespace), &appsv1.Deployment{}).
-			Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
+			Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
 		Success("Operator is deployed in the namespace and Running")
 	})
 
@@ -68,7 +71,9 @@ var _ = Describe("Ambient configuration ", Label("smoke", "ambient"), Ordered, f
 			}
 
 			Context(fmt.Sprintf("Istio version %s", version.Version), func() {
-				BeforeAll(func() {
+				clr := cleaner.New(cl)
+				BeforeAll(func(ctx SpecContext) {
+					clr.Record(ctx)
 					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
 					Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
 					Expect(k.CreateNamespace(ztunnelNamespace)).To(Succeed(), "ZTunnel namespace failed to be created")
@@ -144,19 +149,19 @@ spec:
 
 					It("updates the Istio CR status to Reconciled", func(ctx SpecContext) {
 						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioName), &v1.Istio{}).
-							Should(HaveCondition(v1.IstioConditionReconciled, metav1.ConditionTrue), "Istio is not Reconciled; unexpected Condition")
+							Should(HaveConditionStatus(v1.IstioConditionReconciled, metav1.ConditionTrue), "Istio is not Reconciled; unexpected Condition")
 						Success("Istio CR is Reconciled")
 					})
 
 					It("updates the Istio CR status to Ready", func(ctx SpecContext) {
 						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioName), &v1.Istio{}).
-							Should(HaveCondition(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready; unexpected Condition")
+							Should(HaveConditionStatus(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready; unexpected Condition")
 						Success("Istio CR is Ready")
 					})
 
 					It("deploys istiod", func(ctx SpecContext) {
 						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
-							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available; unexpected Condition")
+							Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available; unexpected Condition")
 						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
 						Success("Istiod is deployed in the namespace and Running")
 					})
@@ -275,13 +280,6 @@ spec:
 					It("can access the httpbin service from the sleep pod", func(ctx SpecContext) {
 						checkPodConnectivity(sleepPod.Items[0].Name, common.SleepNamespace, common.HttpbinNamespace)
 					})
-
-					AfterAll(func(ctx SpecContext) {
-						By("Deleting the pods")
-						Expect(k.DeleteNamespace(common.HttpbinNamespace, common.SleepNamespace)).
-							To(Succeed(), "Failed to delete namespaces")
-						Success("Ambient validation pods deleted")
-					})
 				})
 
 				When("the Istio CR is deleted", func() {
@@ -327,6 +325,14 @@ spec:
 						Success("ztunnel namespace is empty")
 					})
 				})
+
+				AfterAll(func(ctx SpecContext) {
+					if CurrentSpecReport().Failed() && keepOnFailure {
+						return
+					}
+
+					clr.Cleanup(ctx)
+				})
 			})
 		}
 
@@ -335,36 +341,22 @@ spec:
 				common.LogDebugInfo(common.Ambient, k)
 				debugInfoLogged = true
 			}
-
-			By("Cleaning up the Istio namespace")
-			Expect(k.DeleteNamespace(controlPlaneNamespace)).To(Succeed(), "Istio Namespace failed to be deleted")
-
-			By("Cleaning up the IstioCNI namespace")
-			Expect(k.DeleteNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI Namespace failed to be deleted")
-
-			By("Cleaning up the ZTunnel namespace")
-			Expect(k.DeleteNamespace(ztunnelNamespace)).To(Succeed(), "ZTunnel Namespace failed to be deleted")
 		})
 	})
 
-	AfterAll(func() {
-		if CurrentSpecReport().Failed() && !debugInfoLogged {
-			common.LogDebugInfo(common.Ambient, k)
-			debugInfoLogged = true
+	AfterAll(func(ctx SpecContext) {
+		if CurrentSpecReport().Failed() {
+			if !debugInfoLogged {
+				common.LogDebugInfo(common.Ambient, k)
+				debugInfoLogged = true
+			}
+
+			if keepOnFailure {
+				return
+			}
 		}
 
-		if skipDeploy {
-			Success("Skipping operator undeploy because it was deployed externally")
-			return
-		}
-
-		By("Deleting operator deployment")
-		Expect(common.UninstallOperator()).
-			To(Succeed(), "Operator failed to be deleted")
-		GinkgoWriter.Println("Operator uninstalled")
-
-		Expect(k.DeleteNamespace(operatorNamespace)).To(Succeed(), "Namespace failed to be deleted")
-		Success("Namespace deleted")
+		clr.Cleanup(ctx)
 	})
 })
 

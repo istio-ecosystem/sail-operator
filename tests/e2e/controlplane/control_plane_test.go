@@ -26,6 +26,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
@@ -98,7 +99,9 @@ metadata:
 	Describe("given Istio version", func() {
 		for _, version := range istioversion.GetLatestPatchVersions() {
 			Context(version.Name, func() {
-				BeforeAll(func() {
+				clr := cleaner.New(cl)
+				BeforeAll(func(ctx SpecContext) {
+					clr.Record(ctx)
 					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
 					Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
 				})
@@ -136,13 +139,13 @@ spec:
 
 					It("updates the status to Reconciled", func(ctx SpecContext) {
 						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioCniName), &v1.IstioCNI{}).
-							Should(HaveCondition(v1.IstioCNIConditionReconciled, metav1.ConditionTrue), "IstioCNI is not Reconciled; unexpected Condition")
+							Should(HaveConditionStatus(v1.IstioCNIConditionReconciled, metav1.ConditionTrue), "IstioCNI is not Reconciled; unexpected Condition")
 						Success("IstioCNI is Reconciled")
 					})
 
 					It("updates the status to Ready", func(ctx SpecContext) {
 						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioCniName), &v1.IstioCNI{}).
-							Should(HaveCondition(v1.IstioCNIConditionReady, metav1.ConditionTrue), "IstioCNI is not Ready; unexpected Condition")
+							Should(HaveConditionStatus(v1.IstioCNIConditionReady, metav1.ConditionTrue), "IstioCNI is not Ready; unexpected Condition")
 						Success("IstioCNI is Ready")
 					})
 
@@ -172,19 +175,19 @@ spec:
 
 					It("updates the Istio CR status to Reconciled", func(ctx SpecContext) {
 						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioName), &v1.Istio{}).
-							Should(HaveCondition(v1.IstioConditionReconciled, metav1.ConditionTrue), "Istio is not Reconciled; unexpected Condition")
+							Should(HaveConditionStatus(v1.IstioConditionReconciled, metav1.ConditionTrue), "Istio is not Reconciled; unexpected Condition")
 						Success("Istio CR is Reconciled")
 					})
 
 					It("updates the Istio CR status to Ready", func(ctx SpecContext) {
 						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioName), &v1.Istio{}).
-							Should(HaveCondition(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready; unexpected Condition")
+							Should(HaveConditionStatus(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready; unexpected Condition")
 						Success("Istio CR is Ready")
 					})
 
 					It("deploys istiod", func(ctx SpecContext) {
 						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
-							Should(HaveCondition(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available; unexpected Condition")
+							Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available; unexpected Condition")
 						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
 						Success("Istiod is deployed in the namespace and Running")
 					})
@@ -202,7 +205,7 @@ spec:
 				})
 
 				When("sample pod is deployed", func() {
-					BeforeAll(func() {
+					BeforeAll(func(ctx SpecContext) {
 						Expect(k.CreateNamespace(sampleNamespace)).To(Succeed(), "Sample namespace failed to be created")
 						Expect(k.Label("namespace", sampleNamespace, "istio-injection", "enabled")).To(Succeed(), "Error labeling sample namespace")
 						Expect(k.WithNamespace(sampleNamespace).
@@ -225,7 +228,7 @@ spec:
 
 						for _, pod := range samplePods.Items {
 							Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(pod.Name, sampleNamespace), &corev1.Pod{}).
-								Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready")
+								Should(HaveConditionStatus(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready")
 						}
 						Success("sample pods are ready")
 					})
@@ -237,12 +240,6 @@ spec:
 							Expect(sidecarVersion).To(Equal(version.Version), "Sidecar Istio version does not match the expected version")
 						}
 						Success("Istio sidecar version matches the expected Istio version")
-					})
-
-					AfterAll(func(ctx SpecContext) {
-						By("Deleting sample")
-						Expect(k.DeleteNamespace(sampleNamespace)).To(Succeed(), "sample namespace failed to be deleted")
-						Success("sample deleted")
 					})
 				})
 
@@ -274,6 +271,14 @@ spec:
 						Success("CNI namespace is empty")
 					})
 				})
+
+				AfterAll(func(ctx SpecContext) {
+					if CurrentSpecReport().Failed() && keepOnFailure {
+						return
+					}
+
+					clr.Cleanup(ctx)
+				})
 			})
 		}
 
@@ -282,21 +287,15 @@ spec:
 				common.LogDebugInfo(common.ControlPlane, k)
 				debugInfoLogged = true
 			}
-
-			By("Cleaning up the Istio namespace")
-			Expect(k.DeleteNamespace(controlPlaneNamespace)).To(Succeed(), "Istio Namespace failed to be deleted")
-
-			By("Cleaning up the IstioCNI namespace")
-			Expect(k.DeleteNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI Namespace failed to be deleted")
-
-			Success("Cleanup done")
 		})
 	})
 
 	AfterAll(func() {
-		if CurrentSpecReport().Failed() && !debugInfoLogged {
-			common.LogDebugInfo(common.ControlPlane, k)
-			debugInfoLogged = true
+		if CurrentSpecReport().Failed() {
+			if !debugInfoLogged {
+				common.LogDebugInfo(common.ControlPlane, k)
+				debugInfoLogged = true
+			}
 		}
 	})
 })

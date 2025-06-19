@@ -33,8 +33,8 @@ metadata:
       ]
     capabilities: Seamless Upgrades
     categories: Integration & Delivery, Networking, Security
-    containerImage: build-harbor.alauda.cn/asm/sail-operator:1.26-latest
-    createdAt: "2025-06-18T06:09:59Z"
+    containerImage: build-harbor.alauda.cn/asm/sail-operator:2.0-latest
+    createdAt: "2025-06-19T05:37:42Z"
     description: Alauda Service Mesh Operator enables you to install, configure, and
       manage an instance of Alauda Service Mesh. Alauda Service Mesh is based on the
       open source Istio project.
@@ -56,7 +56,7 @@ metadata:
   labels:
     operatorframework.io/arch.amd64: supported
     operatorframework.io/arch.arm64: supported
-  name: servicemeshoperator2.v1.26.0
+  name: servicemeshoperator2.v2.0.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -183,7 +183,7 @@ spec:
       - description: |-
           The built-in installation configuration profile to use.
           The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'.
-          Must be one of: ambient, default, demo, empty, openshift-ambient, openshift, preview, remote, stable.
+          Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable.
         displayName: Profile
         path: profile
         x-descriptors:
@@ -293,7 +293,7 @@ spec:
       - description: |-
           The built-in installation configuration profile to use.
           The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'.
-          Must be one of: ambient, default, demo, empty, openshift-ambient, openshift, preview, remote, stable.
+          Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable.
         displayName: Profile
         path: profile
         x-descriptors:
@@ -420,7 +420,7 @@ spec:
                 - --zap-log-level=info
                 command:
                 - /sail-operator
-                image: build-harbor.alauda.cn/asm/sail-operator:1.26-latest
+                image: build-harbor.alauda.cn/asm/sail-operator:2.0-latest
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -520,4 +520,4 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat, Inc.
-  version: 1.26.0
+  version: 2.0.0

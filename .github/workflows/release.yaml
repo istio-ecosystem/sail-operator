@@ -3,6 +3,9 @@ name: Release workflow
 on:
   workflow_dispatch:
     inputs:
+      run_name:
+        description: "Run name - short description for the workflow run"
+        required: true
       release_version:
         description: "Release version"
         required: true
@@ -21,7 +24,7 @@ on:
         required: false
         default: false
 
-run-name: Release ${{ inputs.release_version }}
+run-name: ${{ inputs.run_name }}
 
 env:
   GIT_USER: ${{ secrets.GIT_USER }}
@@ -53,11 +56,12 @@ jobs:
     - name: Generate bundle metadata
       run: |
         make bundle \
-         -e CHANNELS=$CHANNELS
+          -e CHANNELS=$CHANNELS
       env:
         CHANNELS: ${{ inputs.bundle_channels }}
 
     - name: Build and push bundle image
+      continue-on-error: true
       run: |
         make bundle-build \
           -e VERSION=$VERSION

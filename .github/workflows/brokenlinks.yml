@@ -5,6 +5,7 @@ on:
   schedule:
     # Run this job every sunday at midnight
     - cron: "0 0 * * 0"
+  workflow_dispatch:
 
 permissions: {}
 
@@ -20,11 +21,11 @@ jobs:
 
       # Checks the status of hyperlinks in .md files
       - name: Check links
-        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        uses: tcort/github-action-markdown-link-check@v1
         with:
           use-verbose-mode: 'yes'
           config-file: ".mdlinkcheck.json"
-          folder-path: "docs/common, docs/multicluster"
+          folder-path: "docs/addons, docs/common, docs/deployment-models, docs/dual-stack, docs/general, docs/guidelines, docs/update-strategy"
 
       - name: Raise an Issue to report broken links
         if: ${{ failure() }}

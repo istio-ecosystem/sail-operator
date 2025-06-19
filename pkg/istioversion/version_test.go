@@ -59,9 +59,11 @@ versions:
     version: 2.0.0
     repo: "repo2"
     commit: "commit2"
+  - name: "v0.1"
+    eol: true
 `)
 
-	list, defaultVersion, baseVersion, newVersion, versionMap, aliasList := mustParseVersionsYaml(yamlBytes)
+	list, defaultVersion, baseVersion, newVersion, versionMap, aliasList, eolVersions := mustParseVersionsYaml(yamlBytes)
 
 	assert.Len(t, list, 2)
 	assert.Equal(t, "v1.0.0", defaultVersion)
@@ -78,6 +80,10 @@ versions:
 	assert.Len(t, aliasList, 1)
 	assert.Equal(t, "latest", aliasList[0].Name)
 	assert.Equal(t, "v2.0.0", aliasList[0].Ref)
+
+	// Test eolVersions list
+	assert.Len(t, eolVersions, 1)
+	assert.Equal(t, "v0.1", eolVersions[0])
 
 	Map = versionMap
 	resolved, err := Resolve("latest")
@@ -98,7 +104,7 @@ versions:
     commit: "commit1"
 `)
 
-	list, defaultVersion, baseVersion, newVersion, versionMap, aliasList := mustParseVersionsYaml(yamlBytes)
+	list, defaultVersion, baseVersion, newVersion, versionMap, aliasList, eolVersions := mustParseVersionsYaml(yamlBytes)
 
 	assert.Len(t, list, 1)
 	assert.Equal(t, "v1.0.0", defaultVersion)
@@ -106,6 +112,7 @@ versions:
 	assert.Equal(t, "v1.0.0", newVersion)
 	assert.Len(t, versionMap, 1)
 	assert.Len(t, aliasList, 0)
+	assert.Len(t, eolVersions, 0)
 	assert.Equal(t, list[0], versionMap[list[0].Name])
 }
 
