@@ -31,6 +31,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
+	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
@@ -408,4 +409,55 @@ func ResolveHostDomainToIP(hostDomain string) (string, error) {
 	}
 
 	return "", fmt.Errorf("failed to resolve hostname %s after %d retries: %w", hostDomain, maxRetries, lastErr)
+}
+
+// CreateIstio custom resource using a given `kubectl` client and with the specified version.
+// An optional spec list can be given to inject into the CR's spec.
+func CreateIstio(k kubectl.Kubectl, version string, specs ...string) {
+	yaml := `
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: %s
+spec:
+  version: %s
+  namespace: %s`
+	yaml = fmt.Sprintf(yaml, istioName, version, controlPlaneNamespace)
+	for _, spec := range specs {
+		yaml += indent(spec)
+	}
+
+	Log("Istio YAML:", indent(yaml))
+	Expect(k.CreateFromString(yaml)).
+		To(Succeed(), withClusterName("Istio CR failed to be created", k))
+	Success(withClusterName("Istio CR created", k))
+}
+
+// CreateIstioCNI custom resource using a given `kubectl` client and with the specified version.
+func CreateIstioCNI(k kubectl.Kubectl, version string) {
+	yaml := `
+apiVersion: sailoperator.io/v1
+kind: IstioCNI
+metadata:
+  name: %s
+spec:
+  version: %s
+  namespace: %s`
+	yaml = fmt.Sprintf(yaml, istioCniName, version, istioCniNamespace)
+	Log("IstioCNI YAML:", indent(yaml))
+	Expect(k.CreateFromString(yaml)).To(Succeed(), withClusterName("IstioCNI creation failed", k))
+	Success(withClusterName("IstioCNI created", k))
+}
+
+func indent(str string) string {
+	indent := strings.Repeat(" ", 2)
+	return indent + strings.ReplaceAll(str, "\n", "\n"+indent)
+}
+
+func withClusterName(m string, k kubectl.Kubectl) string {
+	if k.ClusterName == "" {
+		return m
+	}
+
+	return m + " on " + k.ClusterName
 }

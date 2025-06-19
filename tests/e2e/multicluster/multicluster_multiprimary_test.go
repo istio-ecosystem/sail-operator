@@ -76,43 +76,18 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 							return err
 						}).ShouldNot(HaveOccurred(), "Secret is not created on Cluster #1")
 
-						multiclusterIstioCNIYAML := `
-apiVersion: sailoperator.io/v1
-kind: IstioCNI
-metadata:
-  name: default
-spec:
-  version: %s
-  namespace: %s`
-						multiclusterIstioCNICluster1YAML := fmt.Sprintf(multiclusterIstioCNIYAML, version.Name, istioCniNamespace)
-						Log("Istio CNI CR Cluster #1: ", multiclusterIstioCNICluster1YAML)
-						Expect(k1.CreateFromString(multiclusterIstioCNICluster1YAML)).To(Succeed(), "Istio CNI Resource creation failed on Cluster #1")
+						common.CreateIstioCNI(k1, version.Name)
+						common.CreateIstioCNI(k2, version.Name)
 
-						multiclusterIstioCNICluster2YAML := fmt.Sprintf(multiclusterIstioCNIYAML, version.Name, istioCniNamespace)
-						Log("Istio CNI CR Cluster #2: ", multiclusterIstioCNICluster2YAML)
-						Expect(k2.CreateFromString(multiclusterIstioCNICluster2YAML)).To(Succeed(), "Istio CNI Resource creation failed on Cluster #2")
-
-						multiclusterIstioYAML := `
-apiVersion: sailoperator.io/v1
-kind: Istio
-metadata:
-  name: default
-spec:
-  version: %s
-  namespace: %s
-  values:
-    global:
-      meshID: %s
-      multiCluster:
-        clusterName: %s
-      network: %s`
-						multiclusterIstioCluster1YAML := fmt.Sprintf(multiclusterIstioYAML, version.Name, controlPlaneNamespace, "mesh1", "cluster1", "network1")
-						Log("Istio CR Cluster #1: ", multiclusterIstioCluster1YAML)
-						Expect(k1.CreateFromString(multiclusterIstioCluster1YAML)).To(Succeed(), "Istio Resource creation failed on Cluster #1")
-
-						multiclusterIstioCluster2YAML := fmt.Sprintf(multiclusterIstioYAML, version.Name, controlPlaneNamespace, "mesh1", "cluster2", "network2")
-						Log("Istio CR Cluster #2: ", multiclusterIstioCluster2YAML)
-						Expect(k2.CreateFromString(multiclusterIstioCluster2YAML)).To(Succeed(), "Istio Resource creation failed on Cluster #2")
+						spec := `
+values:
+  global:
+    meshID: mesh1
+    multiCluster:
+      clusterName: %s
+    network: %s`
+						common.CreateIstio(k1, version.Name, fmt.Sprintf(spec, "cluster1", "network1"))
+						common.CreateIstio(k2, version.Name, fmt.Sprintf(spec, "cluster2", "network2"))
 					})
 
 					It("updates both Istio CR status to Ready", func(ctx SpecContext) {
