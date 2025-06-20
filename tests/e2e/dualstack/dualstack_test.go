@@ -119,12 +119,12 @@ values:
 
 					It("uses the correct image", func(ctx SpecContext) {
 						Expect(common.GetObject(ctx, cl, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{})).
-							To(HaveContainersThat(HaveEach(ImageFromRegistry(expectedRegistry))))
+							To(common.HaveContainersThat(HaveEach(common.ImageFromRegistry(expectedRegistry))))
 					})
 
 					It("has ISTIO_DUAL_STACK env variable set", func(ctx SpecContext) {
 						Expect(common.GetObject(ctx, cl, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{})).
-							To(HaveContainersThat(ContainElement(WithTransform(getEnvVars, ContainElement(corev1.EnvVar{Name: "ISTIO_DUAL_STACK", Value: "true"})))),
+							To(common.HaveContainersThat(ContainElement(WithTransform(getEnvVars, ContainElement(corev1.EnvVar{Name: "ISTIO_DUAL_STACK", Value: "true"})))),
 								"Expected ISTIO_DUAL_STACK to be set to true, but not found")
 					})
 
@@ -179,15 +179,15 @@ values:
 					})
 
 					It("can access the dual-stack service from the sleep pod", func(ctx SpecContext) {
-						checkPodConnectivity(sleepPod.Items[0].Name, SleepNamespace, DualStackNamespace)
+						common.CheckPodConnectivity(sleepPod.Items[0].Name, SleepNamespace, DualStackNamespace, k)
 					})
 
 					It("can access the ipv4 only service from the sleep pod", func(ctx SpecContext) {
-						checkPodConnectivity(sleepPod.Items[0].Name, SleepNamespace, IPv4Namespace)
+						common.CheckPodConnectivity(sleepPod.Items[0].Name, SleepNamespace, IPv4Namespace, k)
 					})
 
 					It("can access the ipv6 only service from the sleep pod", func(ctx SpecContext) {
-						checkPodConnectivity(sleepPod.Items[0].Name, SleepNamespace, IPv6Namespace)
+						common.CheckPodConnectivity(sleepPod.Items[0].Name, SleepNamespace, IPv6Namespace, k)
 					})
 				})
 
@@ -250,17 +250,6 @@ func HaveContainersThat(matcher types.GomegaMatcher) types.GomegaMatcher {
 	return HaveField("Spec.Template.Spec.Containers", matcher)
 }
 
-func ImageFromRegistry(regexp string) types.GomegaMatcher {
-	return HaveField("Image", MatchRegexp(regexp))
-}
-
 func getEnvVars(container corev1.Container) []corev1.EnvVar {
 	return container.Env
-}
-
-func checkPodConnectivity(podName, namespace, echoStr string) {
-	command := fmt.Sprintf(`sh -c 'echo %s | nc tcp-echo.%s 9000'`, echoStr, echoStr)
-	response, err := k.WithNamespace(namespace).Exec(podName, "sleep", command)
-	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("error connecting to the %q pod", podName))
-	Expect(response).To(ContainSubstring(fmt.Sprintf("hello %s", echoStr)), fmt.Sprintf("Unexpected response from %s pod", podName))
 }
