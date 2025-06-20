@@ -34,6 +34,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -207,17 +208,11 @@ spec:
 
 					sleepPod := &corev1.PodList{}
 					It("updates the status of pods to Running", func(ctx SpecContext) {
-						_, err = common.CheckPodsReady(ctx, cl, DualStackNamespace)
-						Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Error checking status of dual-stack pods: %v", err))
-
-						_, err = common.CheckPodsReady(ctx, cl, IPv4Namespace)
-						Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Error checking status of ipv4 pods: %v", err))
-
-						_, err = common.CheckPodsReady(ctx, cl, IPv6Namespace)
-						Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Error checking status of ipv6 pods: %v", err))
-
-						sleepPod, err = common.CheckPodsReady(ctx, cl, SleepNamespace)
-						Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Error checking status of sleep pods: %v", err))
+						Eventually(common.CheckPodsReady).WithArguments(ctx, cl, DualStackNamespace).Should(Succeed(), "Error checking status of dual-stack pod")
+						Eventually(common.CheckPodsReady).WithArguments(ctx, cl, IPv4Namespace).Should(Succeed(), "Error checking status of ipv4 pod")
+						Eventually(common.CheckPodsReady).WithArguments(ctx, cl, IPv6Namespace).Should(Succeed(), "Error checking status of ipv6 pod")
+						Eventually(common.CheckPodsReady).WithArguments(ctx, cl, SleepNamespace).Should(Succeed(), "Error checking status of sleep pod")
+						Expect(cl.List(ctx, sleepPod, client.InNamespace(SleepNamespace))).To(Succeed(), "Error getting the pod in sleep namespace")
 
 						Success("Pods are ready")
 					})
