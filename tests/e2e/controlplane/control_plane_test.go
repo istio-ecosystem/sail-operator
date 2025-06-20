@@ -217,21 +217,10 @@ spec:
 					})
 
 					samplePods := &corev1.PodList{}
-
 					It("updates the pods status to Running", func(ctx SpecContext) {
-						Eventually(func() bool {
-							// Wait until the sample pod exists. Is wraped inside a function to avoid failure on the first iteration
-							Expect(cl.List(ctx, samplePods, client.InNamespace(sampleNamespace))).To(Succeed())
-							return len(samplePods.Items) > 0
-						}).Should(BeTrue(), "No sample pods found")
+						Eventually(common.CheckPodsReady).WithArguments(ctx, cl, sampleNamespace).Should(Succeed(), "Error checking status of sample pods")
+						Expect(cl.List(ctx, samplePods, client.InNamespace(sampleNamespace))).To(Succeed(), "Error getting the pods in sample namespace")
 
-						Expect(cl.List(ctx, samplePods, client.InNamespace(sampleNamespace))).To(Succeed())
-						Expect(samplePods.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
-
-						for _, pod := range samplePods.Items {
-							Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(pod.Name, sampleNamespace), &corev1.Pod{}).
-								Should(HaveCondition(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready")
-						}
 						Success("sample pods are ready")
 					})
 
