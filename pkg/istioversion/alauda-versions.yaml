@@ -18,8 +18,8 @@ versions:
     repo: https://github.com/istio/istio
     commit: 1.24.5
     charts:
-      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.5-asm.0/helm/base-1.24.5-asm.0.tgz
-      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.5-asm.0/helm/istiod-1.24.5-asm.0.tgz
-      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.5-asm.0/helm/gateway-1.24.5-asm.0.tgz
-      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.5-asm.0/helm/cni-1.24.5-asm.0.tgz
-      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.5-asm.0/helm/ztunnel-1.24.5-asm.0.tgz
+      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.5-asm.1/helm/base-1.24.5-asm.1.tgz
+      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.5-asm.1/helm/istiod-1.24.5-asm.1.tgz
+      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.5-asm.1/helm/gateway-1.24.5-asm.1.tgz
+      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.5-asm.1/helm/cni-1.24.5-asm.1.tgz
+      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.5-asm.1/helm/ztunnel-1.24.5-asm.1.tgz
