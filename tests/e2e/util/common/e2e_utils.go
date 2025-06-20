@@ -29,9 +29,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
-	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
-	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
@@ -39,7 +37,6 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"istio.io/istio/pkg/ptr"
@@ -291,22 +288,31 @@ func GetVersionFromIstiod() (*semver.Version, error) {
 	return nil, fmt.Errorf("error getting version from istiod: version not found in output: %s", output)
 }
 
-func CheckPodsReady(ctx SpecContext, cl client.Client, namespace string) (*corev1.PodList, error) {
-	podList := &corev1.PodList{}
-
-	err := cl.List(ctx, podList, client.InNamespace(namespace))
-	if err != nil {
-		return nil, fmt.Errorf("failed to list pods in %s namespace: %w", namespace, err)
+func isPodReady(pod *corev1.Pod) bool {
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
+			return true
+		}
 	}
+	return false
+}
 
-	Expect(podList.Items).ToNot(BeEmpty(), fmt.Sprintf("No pods found in %s namespace", namespace))
+func CheckPodsReady(ctx context.Context, cl client.Client, namespace string) error {
+	podList := &corev1.PodList{}
+	if err := cl.List(ctx, podList, client.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("Failed to list pods: %w", err)
+	}
+	if len(podList.Items) == 0 {
+		return fmt.Errorf("No pods found in namespace %q", namespace)
+	}
 
 	for _, pod := range podList.Items {
-		Eventually(GetObject).WithArguments(ctx, cl, kube.Key(pod.Name, namespace), &corev1.Pod{}).
-			Should(HaveConditionStatus(corev1.PodReady, metav1.ConditionTrue), fmt.Sprintf("%q Pod in %q namespace is not Ready", pod.Name, namespace))
+		if !isPodReady(&pod) {
+			return fmt.Errorf("pod %q in namespace %q is not ready", pod.Name, namespace)
+		}
 	}
 
-	return podList, nil
+	return nil
 }
 
 func InstallOperatorViaHelm(extraArgs ...string) error {
