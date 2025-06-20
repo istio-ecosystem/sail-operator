@@ -42,6 +42,7 @@
   - [Validation](deployment-models/multiple-mesh.md#validation)
     - [Checking application to control plane mapping](deployment-models/multiple-mesh.md#checking-application-to-control-plane-mapping)
     - [Checking application connectivity](deployment-models/multiple-mesh.md#checking-application-connectivity)
+  - [Consolidating control planes](deployment-models/consolidating-cp.md)
 - [Multi-cluster](deployment-models/multicluster.md#multi-cluster)
   - [Prerequisites](deployment-models/multicluster.md#prerequisites)
   - [Common Setup](deployment-models/multicluster.md#common-setup)
