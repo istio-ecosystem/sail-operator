@@ -24,10 +24,10 @@ csv:
     features.operators.openshift.io/token-auth-aws: ~
     features.operators.openshift.io/token-auth-azure: ~
     features.operators.openshift.io/token-auth-gcp: ~
-  displayName: Alauda Service Mesh Operator 2
+  displayName: Alauda Service Mesh v2
   categories: Integration & Delivery, Networking, Security
   capabilities: Seamless Upgrades
-  description: Alauda Service Mesh Operator enables you to install, configure, and manage an instance of Alauda Service Mesh. Alauda Service Mesh is based on the open source Istio project.
+  description: Alauda Service Mesh v2 enables you to install, configure, and manage an instance of Alauda Service Mesh. Alauda Service Mesh is based on the open source Istio project.
   provider:
     name: Alauda
   icon:

@@ -34,10 +34,10 @@ metadata:
     capabilities: Seamless Upgrades
     categories: Integration & Delivery, Networking, Security
     containerImage: build-harbor.alauda.cn/asm/servicemesh-operator2:2.0-latest
-    createdAt: "2025-06-23T09:26:50Z"
-    description: Alauda Service Mesh Operator enables you to install, configure, and
-      manage an instance of Alauda Service Mesh. Alauda Service Mesh is based on the
-      open source Istio project.
+    createdAt: "2025-06-23T13:13:10Z"
+    description: Alauda Service Mesh v2 enables you to install, configure, and manage
+      an instance of Alauda Service Mesh. Alauda Service Mesh is based on the open
+      source Istio project.
     operatorframework.io/suggested-namespace: sail-operator
     operators.operatorframework.io/builder: operator-sdk-v1.39.2
     operators.operatorframework.io/internal-objects: '["wasmplugins.extensions.istio.io","destinationrules.networking.istio.io","envoyfilters.networking.istio.io","gateways.networking.istio.io","proxyconfigs.networking.istio.io","serviceentries.networking.istio.io","sidecars.networking.istio.io","virtualservices.networking.istio.io","workloadentries.networking.istio.io","workloadgroups.networking.istio.io","authorizationpolicies.security.istio.io","peerauthentications.security.istio.io","requestauthentications.security.istio.io","telemetries.telemetry.istio.io"]'
@@ -383,7 +383,7 @@ spec:
   description: Alauda Service Mesh is a platform that provides behavioral insight
     and operational control over a service mesh, providing a uniform way to connect,
     secure, and monitor microservice applications.
-  displayName: Alauda Service Mesh Operator 2
+  displayName: Alauda Service Mesh v2
   icon:
   - base64data: PHN2ZyB2aWV3Qm94PSIwIDAgMTAyNCAxMDI0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogICAgPCEtLSA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJyZ2IoMCwgMTIyLCAyNDUpIi8+IC0tPgogICAgPHBhdGggZD0iTTM5My41MjMyIDUxLjJMMTkwLjkwNzczMyA0MjEuNzM0NGwtMjEuODQ1MzMzIDM5LjUyNjRhMTA0Ljk3NzA2NyAxMDQuOTc3MDY3IDAgMCAwLTIuMTY3NDY3IDk3LjMzMTJsMi4xNjc0NjcgNC4xNDcyIDEyOC4xMzY1MzMgMjMxLjU5NDY2N2ExMDIuMDU4NjY3IDEwMi4wNTg2NjcgMCAwIDAgODQuOTA2NjY3IDUyLjgzODRsNC4yNDk2IDAuMDg1MzMzaDI1MS4yODk2YTEwMS45MjIxMzMgMTAxLjkyMjEzMyAwIDAgMCA4Ni45ODg4LTQ5LjIyMDI2N2wyLjE2NzQ2Ny0zLjcyMDUzMyAxMjguMTM2NTMzLTIzMS41Nzc2YTEwNC45NzcwNjcgMTA0Ljk3NzA2NyAwIDAgMCAyLjE2NzQ2Ny05Ny4zMzEybC0yLjE2NzQ2Ny00LjE0NzItMTI4LjEzNjUzMy0yMzEuNTk0NjY3YTEwMS45OTA0IDEwMS45OTA0IDAgMCAwLTg5LjE1NjI2Ny01Mi45MjM3MzNIMzkwLjQ1MTJMNDYwLjk4NzczMyA1MS4yaDI0Ni4xMTg0YTEwMS45OTA0IDEwMS45OTA0IDAgMCAxIDg5LjE1NjI2NyA1Mi45NDA4bDE5Ny41OTc4NjcgMzU3LjEyYTEwNC45NiAxMDQuOTYgMCAwIDEgMCAxMDEuNDc4NEw3OTYuMjYyNCA5MTkuODU5MkExMDEuOTkwNCAxMDEuOTkwNCAwIDAgMSA3MDcuMTA2MTMzIDk3Mi44SDMxNi44OTM4NjdhMTAxLjk5MDQgMTAxLjk5MDQgMCAwIDEtODkuMTU2MjY3LTUyLjk0MDhMMzAuMTM5NzMzIDU2Mi43MzkyYTEwNC45NiAxMDQuOTYgMCAwIDEgMC0xMDEuNDc4NEwyMjcuNzM3NiAxMDQuMTQwOEExMDEuOTkwNCAxMDEuOTkwNCAwIDAgMSAzMTYuODkzODY3IDUxLjJoNzYuNjI5MzMzek02MjEuNzM4NjY3IDI3My4wNjY2NjdjMTIuNzY1ODY3IDAgMjQuNTA3NzMzIDcuMTg1MDY3IDMwLjU0OTMzMyAxOC43MjIxMzNsMTExLjU4MTg2NyAyMTIuNjUwNjY3YTM2LjQzNzMzMyAzNi40MzczMzMgMCAwIDEtMC42MTQ0IDM0Ljg4NDI2NmwtMTEwLjc0NTYgMTkzLjk5NjhBMzQuNTQyOTMzIDM0LjU0MjkzMyAwIDAgMSA2MjIuNTU3ODY3IDc1MC45MzMzMzNoLTc4LjU3NDkzNEw0MzAuOTMzMzMzIDUzOS4xNzAxMzNhMzYuNDM3MzMzIDM2LjQzNzMzMyAwIDAgMSAwLTM0LjIxODY2Nkw1NTQuNjY2NjY3IDI3My4wNjY2NjdoNjcuMDcyeiIgZmlsbD0icmdiKDAsIDEyMiwgMjQ1KSI+PC9wYXRoPgogICAgPHBhdGggZD0iTTM4Ny40MTMzMzMgMjczLjA2NjY2N2wxMDcuNTIgMC45NzI4YTUyLjczNiA1Mi43MzYgMCAwIDAtNi42MDQ4IDguOTc3MDY2bC0xLjgyNjEzMyAzLjM3OTItMTA0LjQ4MjEzMyAyMTAuNjUzODY3YTU5LjU3OTczMyA1OS41Nzk3MzMgMCAwIDAtMi4wMzA5MzQgNDcuNjUwMTMzbDEuMzgyNCAzLjI0MjY2N0w0NzUuNDQzMiA3NTAuOTMzMzMzbC05NC42MDA1MzMtMC44ODc0NjZjLTExLjYwNTMzMy0wLjEwMjQtMjIuMjM3ODY3LTcuMzA0NTMzLTI3Ljc1MDQtMTguNzczMzM0bC05My4yNjkzMzQtMTk0LjA5OTJhMzkuNjk3MDY3IDM5LjY5NzA2NyAwIDAgMS0wLjEzNjUzMy0zMy42ODk2bDk5LjMyOC0yMTEuMzUzNmM1LjU0NjY2Ny0xMS44MTAxMzMgMTYuNTAzNDY3LTE5LjE2NTg2NyAyOC4zOTg5MzMtMTkuMDYzNDY2eiIgZmlsbD0icmdiKDEwMiwgMTc1LCAyNDkpIj48L3BhdGg+Cjwvc3ZnPgo=
     mediatype: image/svg+xml
