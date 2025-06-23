@@ -64,6 +64,7 @@ jobs:
     - name: Generate bundle metadata
       run: |
         make bundle \
+          -e TAG=$VERSION \
           -e CHANNELS=$CHANNELS
       env:
         CHANNELS: ${{ inputs.bundle_channels }}
