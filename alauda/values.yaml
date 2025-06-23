@@ -1,6 +1,8 @@
 name: servicemesh-operator2
 deployment:
   name: servicemesh-operator2
+# NB(timonwong) Please note that the service account name should be the same as the deployment
+serviceAccountName: servicemesh-operator2
 csv:
   labels:
     operatorframework.io/arch.amd64: supported
