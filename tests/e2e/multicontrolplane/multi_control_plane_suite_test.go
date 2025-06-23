@@ -21,11 +21,17 @@ import (
 
 	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
+	"github.com/istio-ecosystem/sail-operator/pkg/kube"
+	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	k8sclient "github.com/istio-ecosystem/sail-operator/tests/e2e/util/client"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
+	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -50,7 +56,8 @@ var (
 	keepOnFailure          = env.GetBool("KEEP_ON_FAILURE", false)
 	ipFamily               = env.Get("IP_FAMILY", "ipv4")
 
-	k kubectl.Kubectl
+	k   kubectl.Kubectl
+	clr cleaner.Cleaner
 )
 
 func TestMultiControlPlane(t *testing.T) {
@@ -70,4 +77,29 @@ func setup() {
 	Expect(err).NotTo(HaveOccurred())
 
 	k = kubectl.New()
+	clr = cleaner.New(cl)
 }
+
+var _ = BeforeSuite(func(ctx SpecContext) {
+	clr.Record(ctx)
+	Expect(k.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
+
+	if skipDeploy {
+		Success("Skipping operator installation because it was deployed externally")
+	} else {
+		Expect(common.InstallOperatorViaHelm()).
+			To(Succeed(), "Operator failed to be deployed")
+	}
+
+	Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
+		Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
+	Success("Operator is deployed in the namespace and Running")
+})
+
+var _ = ReportAfterSuite("Conditional cleanup", func(ctx SpecContext, r Report) {
+	if !r.SuiteSucceeded && keepOnFailure {
+		return
+	}
+
+	clr.Cleanup(ctx)
+})

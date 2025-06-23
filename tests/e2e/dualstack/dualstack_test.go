@@ -48,23 +48,6 @@ var _ = Describe("DualStack configuration ", Label("dualstack"), Ordered, func()
 	SetDefaultEventuallyPollingInterval(time.Second)
 
 	debugInfoLogged := false
-	clr := cleaner.New(cl)
-
-	BeforeAll(func(ctx SpecContext) {
-		clr.Record(ctx)
-		Expect(k.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
-
-		if skipDeploy {
-			Success("Skipping operator installation because it was deployed externally")
-		} else {
-			Expect(common.InstallOperatorViaHelm()).
-				To(Succeed(), "Operator failed to be deployed")
-		}
-
-		Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
-			Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
-		Success("Operator is deployed in the namespace and Running")
-	})
 
 	Describe("for supported versions", func() {
 		for _, version := range istioversion.GetLatestPatchVersions() {
@@ -293,8 +276,6 @@ spec:
 				return
 			}
 		}
-
-		clr.Cleanup(ctx)
 	})
 })
 

@@ -90,7 +90,7 @@ var _ = BeforeSuite(func(ctx SpecContext) {
 	Success("Operator is deployed in the namespace and Running")
 })
 
-var _ = ReportAfterSuite("Condiotnal cleanup", func(ctx SpecContext, r Report) {
+var _ = ReportAfterSuite("Conditional cleanup", func(ctx SpecContext, r Report) {
 	if !r.SuiteSucceeded && keepOnFailure {
 		return
 	}
