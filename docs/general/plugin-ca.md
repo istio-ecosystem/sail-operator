@@ -4,7 +4,7 @@
 Istio [documentation](https://istio.io/latest/docs/tasks/security/cert-management/plugin-ca-cert/) is covering how to plug in user generated certificates to be used by the Istio CA but it's not describing a use case where it's necessary to switch from Istio CA generated self-signed certificates to user generated certificates without any traffic disruptions even with strict mTLS enabled. This missing use case is covered here.
 
 ## Switching from Istio CA generated self-signed certificates
-By default the Istio CA generates a self-signed root certificate and key and uses them to sign the workload certificates. This is not recommended in production but there might be cases where it's used already and we need to switch to better certificate management method. It's a simple [task](https://istio.io/latest/docs/tasks/security/cert-management/plugin-ca-cert/) to be done during a maintenance window where the traffic disruptions are allowed. If the same task must be done outside of the maintenance window without any traffic disruptions, the procedure is more complex.
+By default the Istio CA generates a self-signed root certificate and key and uses them to sign the workload certificates. Having the root CA's private key in the cluster is not recommended in production but there might be cases where this default configuration is used already and we need to switch to better certificate management method. It's a simple [task](https://istio.io/latest/docs/tasks/security/cert-management/plugin-ca-cert/) to be done during a maintenance window where the traffic disruptions are allowed. If the same task must be done outside of the maintenance window without any traffic disruptions, the procedure is more complex.
 
 ### Cause of the traffic disruptions
 We can simply add a new `cacerts` secret with our certificates but what does it mean for service to service mTLS traffic? Consider `sleep` and `httpbin` demo applications. Both are sharing the same root of trust which is the Istio CA generated self-signed root certificate:
@@ -56,8 +56,10 @@ To achieve the no-downtime update of the certificates, it's necessary to ensure 
         meshConfig:
           defaultConfig:
             proxyMetadata:
-          PROXY_CONFIG_XDS_AGENT: "true"
+              PROXY_CONFIG_XDS_AGENT: "true"
     ```
+    > **_NOTE:_** Visit Istio documentation for details about `ISTIO_MULTIROOT_MESH` and `PROXY_CONFIG_XDS_AGENT`.
+
     Patch the Istio resource:
     ```bash
     kubectl patch Istio default --type='merge' --patch-file=istio-patch.yaml
@@ -69,7 +71,8 @@ To achieve the no-downtime update of the certificates, it's necessary to ensure 
     make -f ../tools/certs/Makefile.selfsigned.mk root-ca
     make -f ../tools/certs/Makefile.selfsigned.mk intermediate-cacerts
     ```
-1. Create new `cacerts` secrets with old CA certificate, key and chain and combined root certificates:
+1. Create new `cacerts` secrets with old CA certificate, key and chain and new combined root certificates:
+    > **_NOTE:_** It's necessary to assure that all workloads trust both old and new root certificates before updating the certificate used for signing workload certificates to avoid traffic disruptions.
 
     Get the certificate and the key from existing Istio CA generated secrets and prepare combined root certificates:
     ```bash
@@ -145,7 +148,7 @@ To achieve the no-downtime update of the certificates, it's necessary to ensure 
     -----END CERTIFICATE-----
     ```
     > **_NOTE:_** It might be necessary to restart the workload if you only see one certificate.
-1. Update `combined-root.pem` by adding the new root certificate again, this will ensure that workload certificates are regenerated after the next step as the root certificate is updated:
+1. Update `combined-root.pem` by adding the new root certificate again. Using updated `root-cert.pem` will trigger a rotation of workload certificates even without a need to restart the workloads:
     ```bash
     cat root-cert.pem >> combined-root.pem
     ```
