@@ -42,9 +42,11 @@ var _ = Describe("Control Plane updates", Label("control-plane", "slow"), Ordere
 	debugInfoLogged := false
 
 	Describe("using IstioRevisionTag", func() {
-		if istioversion.Base == "" || istioversion.New == "" {
-			Skip("Skipping update tests because there are not enough versions in versions.yaml")
-		}
+		BeforeAll(func() {
+			if istioversion.Base == "" || istioversion.New == "" {
+				Skip("Skipping update tests because there are not enough versions in versions.yaml")
+			}
+		})
 
 		Context(istioversion.Base, func() {
 			clr := cleaner.New(cl)
