@@ -271,7 +271,8 @@ func (c *Cleaner) WaitForDeletion(ctx context.Context, deleted []client.Object) 
 
 	By(fmt.Sprintf("Waiting for resources to be deleted%s", s))
 	for _, obj := range deleted {
-		Expect(c.waitForDeletion(ctx, obj)).To(Succeed())
+		Expect(c.waitForDeletion(ctx, obj)).To(Succeed(),
+			fmt.Sprintf("Failed while waiting for %s to delete", obj.GetName()))
 	}
 
 	Success(fmt.Sprintf("Finished cleaning up resources%s", s))
