@@ -34,7 +34,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/maistra-dev/sail-operator:3.0-latest
-    createdAt: "2025-05-22T09:09:48Z"
+    createdAt: "2025-06-25T09:12:24Z"
     description: The OpenShift Service Mesh Operator enables you to install, configure,
       and manage an instance of Red Hat OpenShift Service Mesh. OpenShift Service
       Mesh is based on the open source Istio project.
@@ -203,7 +203,16 @@ spec:
         displayName: Profile
         path: profile
         x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:hidden
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:ambient
+        - urn:alm:descriptor:com.tectonic.ui:select:default
+        - urn:alm:descriptor:com.tectonic.ui:select:demo
+        - urn:alm:descriptor:com.tectonic.ui:select:empty
+        - urn:alm:descriptor:com.tectonic.ui:select:openshift
+        - urn:alm:descriptor:com.tectonic.ui:select:openshift-ambient
+        - urn:alm:descriptor:com.tectonic.ui:select:preview
+        - urn:alm:descriptor:com.tectonic.ui:select:remote
+        - urn:alm:descriptor:com.tectonic.ui:select:stable
       - description: Defines the values to be passed to the Helm charts when installing
           Istio CNI.
         displayName: Helm Values
@@ -335,7 +344,16 @@ spec:
         displayName: Profile
         path: profile
         x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:hidden
+        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+        - urn:alm:descriptor:com.tectonic.ui:select:ambient
+        - urn:alm:descriptor:com.tectonic.ui:select:default
+        - urn:alm:descriptor:com.tectonic.ui:select:demo
+        - urn:alm:descriptor:com.tectonic.ui:select:empty
+        - urn:alm:descriptor:com.tectonic.ui:select:openshift
+        - urn:alm:descriptor:com.tectonic.ui:select:openshift-ambient
+        - urn:alm:descriptor:com.tectonic.ui:select:preview
+        - urn:alm:descriptor:com.tectonic.ui:select:remote
+        - urn:alm:descriptor:com.tectonic.ui:select:stable
       - description: Defines the update strategy to use when the version in the Istio
           CR is updated.
         displayName: Update Strategy

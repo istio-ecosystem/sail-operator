@@ -27,11 +27,7 @@ enumValues=""
 
 IFS=',' read -ra elements <<< "${profiles}"
 for element in "${elements[@]}"; do
-  if [[ "$element" != "openshift" ]]; then
-    # skip openshift profile in the drop-down, since it's always applied;
-    # default is also applied, but we preserve it so that users can deselect a profile after they select it
-    selectValues+=', "urn:alm:descriptor:com.tectonic.ui:select:'$element'"'
-  fi
+  selectValues+=', "urn:alm:descriptor:com.tectonic.ui:select:'$element'"'
   enumValues+=$element';'
 done
 
