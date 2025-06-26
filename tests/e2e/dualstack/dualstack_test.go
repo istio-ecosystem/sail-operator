@@ -84,18 +84,7 @@ var _ = Describe("DualStack configuration ", Label("dualstack"), Ordered, func()
 
 				When("the IstioCNI CR is created", func() {
 					BeforeAll(func() {
-						cniYAML := `
-apiVersion: sailoperator.io/v1
-kind: IstioCNI
-metadata:
-  name: default
-spec:
-  version: %s
-  namespace: %s`
-						cniYAML = fmt.Sprintf(cniYAML, version.Name, istioCniNamespace)
-						Log("IstioCNI YAML:", cniYAML)
-						Expect(k.CreateFromString(cniYAML)).To(Succeed(), "IstioCNI creation failed")
-						Success("IstioCNI created")
+						common.CreateIstioCNI(k, version.Name)
 					})
 
 					It("deploys the CNI DaemonSet", func(ctx SpecContext) {
@@ -111,30 +100,19 @@ spec:
 
 				When("the Istio CR is created with DualStack configuration", func() {
 					BeforeAll(func() {
-						istioYAML := `
-apiVersion: sailoperator.io/v1
-kind: Istio
-metadata:
-  name: default
-spec:
-  values:
-    meshConfig:
-      defaultConfig:
-        proxyMetadata:
-          ISTIO_DUAL_STACK: "true"
-    pilot:
-      ipFamilyPolicy: %s
-      env:
+						spec := `
+values:
+  meshConfig:
+    defaultConfig:
+      proxyMetadata:
         ISTIO_DUAL_STACK: "true"
-      cni:
-        enabled: true
-  version: %s
-  namespace: %s`
-						istioYAML = fmt.Sprintf(istioYAML, corev1.IPFamilyPolicyRequireDualStack, version.Name, controlPlaneNamespace)
-						Log("Istio YAML:", istioYAML)
-						Expect(k.CreateFromString(istioYAML)).
-							To(Succeed(), "Istio CR failed to be created")
-						Success("Istio CR created")
+  pilot:
+    ipFamilyPolicy: %s
+    env:
+      ISTIO_DUAL_STACK: "true"
+    cni:
+      enabled: true`
+						common.CreateIstio(k, version.Name, fmt.Sprintf(spec, corev1.IPFamilyPolicyRequireDualStack))
 					})
 
 					It("updates the Istio CR status to Reconciled", func(ctx SpecContext) {
