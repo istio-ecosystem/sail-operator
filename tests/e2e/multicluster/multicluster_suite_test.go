@@ -113,8 +113,8 @@ func setup(t *testing.T) {
 	exposeIstiodYAML = fmt.Sprintf("%s/docs/multicluster/expose-istiod.yaml", baseRepoDir)
 
 	// Initialize kubectl utilities, one for each cluster
-	k1 = kubectl.New().WithKubeconfig(kubeconfig)
-	k2 = kubectl.New().WithKubeconfig(kubeconfig2)
+	k1 = kubectl.New().WithKubeconfig(kubeconfig).WithClusterName("primary")
+	k2 = kubectl.New().WithKubeconfig(kubeconfig2).WithClusterName("remote")
 	clr1 = cleaner.New(clPrimary, "cluster=primary")
 	clr2 = cleaner.New(clRemote, "cluster=remote")
 }
