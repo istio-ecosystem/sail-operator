@@ -37,6 +37,7 @@ function run_integration_tests() {
   if [ "${MULTICLUSTER}" == "true" ]; then
     ARTIFACTS="${ARTIFACTS}" ISTIOCTL="${ISTIOCTL}" "${ROOT}/tests/e2e/common-operator-integ-suite.sh" --kind --multicluster
   else
+    KUBECONFIG="${ARTIFACTS}/config"
     ARTIFACTS="${ARTIFACTS}" IP_FAMILY="${IP_FAMILY}" "${ROOT}/tests/e2e/common-operator-integ-suite.sh" --kind
   fi
 }
