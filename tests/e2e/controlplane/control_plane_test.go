@@ -108,18 +108,7 @@ metadata:
 
 				When("the IstioCNI CR is created", func() {
 					BeforeAll(func() {
-						yaml := `
-apiVersion: sailoperator.io/v1
-kind: IstioCNI
-metadata:
-  name: default
-spec:
-  version: %s
-  namespace: %s`
-						yaml = fmt.Sprintf(yaml, version.Name, istioCniNamespace)
-						Log("IstioCNI YAML:", indent(yaml))
-						Expect(k.CreateFromString(yaml)).To(Succeed(), "IstioCNI creation failed")
-						Success("IstioCNI created")
+						common.CreateIstioCNI(k, version.Name)
 					})
 
 					It("deploys the CNI DaemonSet", func(ctx SpecContext) {
@@ -158,19 +147,7 @@ spec:
 
 				When("the Istio CR is created", func() {
 					BeforeAll(func() {
-						istioYAML := `
-apiVersion: sailoperator.io/v1
-kind: Istio
-metadata:
-  name: default
-spec:
-  version: %s
-  namespace: %s`
-						istioYAML = fmt.Sprintf(istioYAML, version.Name, controlPlaneNamespace)
-						Log("Istio YAML:", indent(istioYAML))
-						Expect(k.CreateFromString(istioYAML)).
-							To(Succeed(), "Istio CR failed to be created")
-						Success("Istio CR created")
+						common.CreateIstio(k, version.Name)
 					})
 
 					It("updates the Istio CR status to Reconciled", func(ctx SpecContext) {
@@ -295,11 +272,6 @@ func HaveContainersThat(matcher types.GomegaMatcher) types.GomegaMatcher {
 
 func ImageFromRegistry(regexp string) types.GomegaMatcher {
 	return HaveField("Image", MatchRegexp(regexp))
-}
-
-func indent(str string) string {
-	indent := strings.Repeat(" ", 2)
-	return indent + strings.ReplaceAll(str, "\n", "\n"+indent)
 }
 
 func getProxyVersion(podName, namespace string) (*semver.Version, error) {

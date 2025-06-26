@@ -30,6 +30,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
+	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
@@ -266,11 +267,10 @@ func logCertsDebugInfo(k kubectl.Kubectl) {
 
 func logDebugElement(caption string, info string, err error) {
 	GinkgoWriter.Println("\n" + caption + ":")
-	indent := "  "
 	if err != nil {
-		GinkgoWriter.Println(indent + err.Error())
+		GinkgoWriter.Println(Indent(err.Error()))
 	} else {
-		GinkgoWriter.Println(indent + strings.ReplaceAll(strings.TrimSpace(info), "\n", "\n"+indent))
+		GinkgoWriter.Println(Indent(strings.TrimSpace(info)))
 	}
 }
 
@@ -414,4 +414,55 @@ func ResolveHostDomainToIP(hostDomain string) (string, error) {
 	}
 
 	return "", fmt.Errorf("failed to resolve hostname %s after %d retries: %w", hostDomain, maxRetries, lastErr)
+}
+
+// CreateIstio custom resource using a given `kubectl` client and with the specified version.
+// An optional spec list can be given to inject into the CR's spec.
+func CreateIstio(k kubectl.Kubectl, version string, specs ...string) {
+	yaml := `
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: %s
+spec:
+  version: %s
+  namespace: %s`
+	yaml = fmt.Sprintf(yaml, istioName, version, controlPlaneNamespace)
+	for _, spec := range specs {
+		yaml += Indent(spec)
+	}
+
+	Log("Istio YAML:", Indent(yaml))
+	Expect(k.CreateFromString(yaml)).
+		To(Succeed(), withClusterName("Istio CR failed to be created", k))
+	Success(withClusterName("Istio CR created", k))
+}
+
+// CreateIstioCNI custom resource using a given `kubectl` client and with the specified version.
+func CreateIstioCNI(k kubectl.Kubectl, version string) {
+	yaml := `
+apiVersion: sailoperator.io/v1
+kind: IstioCNI
+metadata:
+  name: %s
+spec:
+  version: %s
+  namespace: %s`
+	yaml = fmt.Sprintf(yaml, istioCniName, version, istioCniNamespace)
+	Log("IstioCNI YAML:", Indent(yaml))
+	Expect(k.CreateFromString(yaml)).To(Succeed(), withClusterName("IstioCNI creation failed", k))
+	Success(withClusterName("IstioCNI created", k))
+}
+
+func Indent(str string) string {
+	indent := "  "
+	return indent + strings.ReplaceAll(str, "\n", "\n"+indent)
+}
+
+func withClusterName(m string, k kubectl.Kubectl) string {
+	if k.ClusterName == "" {
+		return m
+	}
+
+	return m + " on " + k.ClusterName
 }
