@@ -129,23 +129,11 @@ spec:
 
 				When("the Istio CR is created with ambient profile", func() {
 					BeforeAll(func() {
-						istioYAML := `
-apiVersion: sailoperator.io/v1
-kind: Istio
-metadata:
-  name: default
-spec:
-  values:
-    pilot:
-      trustedZtunnelNamespace: ztunnel
-  profile: ambient
-  version: %s
-  namespace: %s`
-						istioYAML = fmt.Sprintf(istioYAML, version.Name, controlPlaneNamespace)
-						Log("Istio YAML:", istioYAML)
-						Expect(k.CreateFromString(istioYAML)).
-							To(Succeed(), "Istio CR failed to be created")
-						Success("Istio CR created")
+						common.CreateIstio(k, version.Name, `
+values:
+  pilot:
+    trustedZtunnelNamespace: ztunnel
+profile: ambient`)
 					})
 
 					It("updates the Istio CR status to Reconciled", func(ctx SpecContext) {
