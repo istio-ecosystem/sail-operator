@@ -146,22 +146,6 @@ export COMMAND OCP HUB IMAGE_BASE TAG NAMESPACE
 if [ "${SKIP_BUILD}" == "false" ]; then
   "${WD}/setup/build-and-push-operator.sh"
 
-  if [ "${OCP}" = "true" ]; then
-    # This is a workaround when pulling the image from internal registry
-    # To avoid errors of certificates meanwhile we are pulling the operator image from the internal registry
-    # We need to set image $HUB to a fixed known value after the push
-    # This value always will be equal to the svc url of the internal registry
-    HUB="image-registry.openshift-image-registry.svc:5000/istio-images"
-    echo "Using internal registry: ${HUB}"
-
-    # Workaround for OCP helm operator installation issues:
-    # To avoid any cleanup issues, after we build and push the image we check if the namespace exists and delete it if it does.
-    # The test logic already handles the namespace creation and deletion during the test run. 
-    if ${COMMAND} get ns "${NAMESPACE}" &>/dev/null; then
-      echo "Namespace ${NAMESPACE} already exists. Deleting it to avoid conflicts."
-      ${COMMAND} delete ns "${NAMESPACE}"
-    fi
-  fi
   # If OLM is enabled, deploy the operator using OLM
   # We are skipping the deploy via OLM test on OCP because the workaround to avoid the certificate issue is not working.
   # Jira ticket related to the limitation: https://issues.redhat.com/browse/OSSM-7993
@@ -196,6 +180,14 @@ if [ "${SKIP_BUILD}" == "false" ]; then
 
     SKIP_DEPLOY=true
   fi
+fi
+
+if [ "${OCP}" == "true" ]; then
+  # This is a workaround
+  # To avoid errors of certificates meanwhile we are pulling the operator image from the internal registry
+  # We need to set image $HUB to a fixed known value after the push
+  # This value always will be equal to the svc url of the internal registry
+  HUB="image-registry.openshift-image-registry.svc:5000/sail-operator"
 fi
 
 export SKIP_DEPLOY IP_FAMILY ISTIO_MANIFEST NAMESPACE CONTROL_PLANE_NS DEPLOYMENT_NAME MULTICLUSTER ARTIFACTS ISTIO_NAME COMMAND KUBECONFIG ISTIOCTL_PATH

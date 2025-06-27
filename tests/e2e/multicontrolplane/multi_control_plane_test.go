@@ -66,7 +66,17 @@ var _ = Describe("Multi control plane deployment model", Label("smoke", "multico
 		})
 
 		It("Installs IstioCNI", func(ctx SpecContext) {
-			common.CreateIstioCNI(k, version)
+			yaml := `
+apiVersion: sailoperator.io/v1
+kind: IstioCNI
+metadata:
+  name: default
+spec:
+  version: %s
+  namespace: %s`
+			yaml = fmt.Sprintf(yaml, version, istioCniNamespace)
+			Expect(k.CreateFromString(yaml)).To(Succeed(), "failed to create IstioCNI")
+			Success("IstioCNI created")
 
 			Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioCniName), &v1.IstioCNI{}).
 				Should(HaveConditionStatus(v1.IstioCNIConditionReady, metav1.ConditionTrue), "IstioCNI is not Ready; unexpected Condition")

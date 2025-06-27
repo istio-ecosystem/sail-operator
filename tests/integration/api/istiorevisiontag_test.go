@@ -43,7 +43,6 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 		gracePeriod = 5 * time.Second
 	)
 	istio := &v1.Istio{}
-	istio2 := &v1.Istio{}
 	istioKey := client.ObjectKey{Name: istioName}
 	defaultTagKey := client.ObjectKey{Name: defaultTagName}
 	workloadNamespaceKey := client.ObjectKey{Name: workloadNamespace}
@@ -359,122 +358,6 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 					g.Expect(condition.Message).To(ContainSubstring("an IstioRevisionTag exists with this name"))
 				}).Should(Succeed())
 			})
-		})
-	})
-
-	When("Changing the targetRef of a tag to an IstioRevision in another namespace", func() {
-		BeforeAll(func() {
-			Step("Create primary Istio")
-			istio = &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: istioName,
-				},
-				Spec: v1.IstioSpec{
-					Version:   istioversion.Base,
-					Namespace: istioRevisionTagNamespace,
-					UpdateStrategy: &v1.IstioUpdateStrategy{
-						Type: v1.UpdateStrategyTypeInPlace,
-						InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(gracePeriod.Seconds())),
-					},
-				},
-			}
-			Expect(k8sClient.Create(ctx, istio)).To(Succeed())
-			Step("Create secondary Istio")
-			istio2 = &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: istioName + "2",
-				},
-				Spec: v1.IstioSpec{
-					Version:   istioversion.Base,
-					Namespace: workloadNamespace,
-					UpdateStrategy: &v1.IstioUpdateStrategy{
-						Type: v1.UpdateStrategyTypeInPlace,
-						InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(gracePeriod.Seconds())),
-					},
-				},
-			}
-			Expect(k8sClient.Create(ctx, istio2)).To(Succeed())
-			Step("Create IstioRevisionTag default")
-			tag = &v1.IstioRevisionTag{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: defaultTagName,
-				},
-				Spec: v1.IstioRevisionTagSpec{
-					TargetRef: v1.IstioRevisionTagTargetReference{
-						Kind: "Istio",
-						Name: istioName,
-					},
-				},
-			}
-			Expect(k8sClient.Create(ctx, tag)).To(Succeed())
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
-				g.Expect(tag.Status.IstiodNamespace).To(Equal(istioRevisionTagNamespace))
-			}).Should(Succeed())
-			Step("Switch IstioRevisionTag to secondary istio")
-			tag.Spec.TargetRef.Name = istio2.Name
-			Expect(k8sClient.Update(ctx, tag)).To(Succeed())
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
-				g.Expect(tag.Status.IstiodNamespace).To(Equal(workloadNamespace))
-			}).Should(Succeed())
-
-			deleteAllIstiosAndRevisions(ctx)
-			deleteAllIstioRevisionTags(ctx)
-
-			Step("Create conflicting Istio and IstioRevisionTags")
-			istio = &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: defaultTagName,
-				},
-				Spec: v1.IstioSpec{
-					Version:   istioversion.Base,
-					Namespace: istioRevisionTagNamespace,
-					UpdateStrategy: &v1.IstioUpdateStrategy{
-						Type: v1.UpdateStrategyTypeInPlace,
-						InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(gracePeriod.Seconds())),
-					},
-				},
-			}
-			Expect(k8sClient.Create(ctx, istio)).To(Succeed())
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, defaultTagKey, istio)).To(Succeed())
-				g.Expect(istio.Status.ObservedGeneration).To(Equal(istio.ObjectMeta.Generation))
-			}).Should(Succeed())
-
-			tag = &v1.IstioRevisionTag{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: defaultTagName,
-				},
-				Spec: v1.IstioRevisionTagSpec{
-					TargetRef: v1.IstioRevisionTagTargetReference{
-						Kind: "Istio",
-						Name: istioName,
-					},
-				},
-			}
-			Expect(k8sClient.Create(ctx, tag)).To(Succeed())
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
-				g.Expect(tag.Status.ObservedGeneration).To(Equal(tag.Generation))
-			}).Should(Succeed())
-			Consistently(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
-				g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionReconciled).Status).To(Equal(metav1.ConditionFalse))
-				g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionReconciled).Reason).To(Equal(v1.IstioRevisionTagReasonNameAlreadyExists))
-			}).Should(Succeed())
-		})
-
-		AfterAll(func() {
-			deleteAllIstiosAndRevisions(ctx)
-			deleteAllIstioRevisionTags(ctx)
-		})
-
-		It("can still delete the IstioRevisionTag", func() {
-			Eventually(k8sClient.Delete).WithArguments(ctx, tag).Should(Succeed())
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(ReturnNotFoundError())
-			}).Should(Succeed())
 		})
 	})
 })

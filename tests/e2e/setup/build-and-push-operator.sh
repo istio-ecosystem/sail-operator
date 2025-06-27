@@ -37,13 +37,9 @@ get_internal_registry() {
   fi
 
   URL=$(${COMMAND} get route default-route -n openshift-image-registry --template='{{ .spec.host }}')
-
-  # Create the istio-images namespace to store the operator image
-  # This will ensure that no matter the operator namespace is deleted, the image will still be available
-  export HUB="${URL}/istio-images"
+  export HUB="${URL}/${NAMESPACE}"
   echo "Registry URL: ${HUB}"
 
-  ${COMMAND} create namespace istio-images || true
   ${COMMAND} create namespace "${NAMESPACE}" || true
   envsubst < "${WD}/config/role-bindings.yaml" | ${COMMAND} apply -f -
 

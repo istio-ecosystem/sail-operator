@@ -34,7 +34,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -129,11 +128,23 @@ spec:
 
 				When("the Istio CR is created with ambient profile", func() {
 					BeforeAll(func() {
-						common.CreateIstio(k, version.Name, `
-values:
-  pilot:
-    trustedZtunnelNamespace: ztunnel
-profile: ambient`)
+						istioYAML := `
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  values:
+    pilot:
+      trustedZtunnelNamespace: ztunnel
+  profile: ambient
+  version: %s
+  namespace: %s`
+						istioYAML = fmt.Sprintf(istioYAML, version.Name, controlPlaneNamespace)
+						Log("Istio YAML:", istioYAML)
+						Expect(k.CreateFromString(istioYAML)).
+							To(Succeed(), "Istio CR failed to be created")
+						Success("Istio CR created")
 					})
 
 					It("updates the Istio CR status to Reconciled", func(ctx SpecContext) {
@@ -245,17 +256,19 @@ spec:
 						Expect(k.Label("namespace", common.HttpbinNamespace, "istio.io/dataplane-mode", "ambient")).To(Succeed(), "Error labeling httpbin namespace")
 
 						// Deploy the test pods.
-						Expect(k.WithNamespace(common.SleepNamespace).Apply(common.GetSampleYAML(version, "sleep"))).To(Succeed(), "Error deploying sleep pod")
-						Expect(k.WithNamespace(common.HttpbinNamespace).Apply(common.GetSampleYAML(version, "httpbin"))).To(Succeed(), "Error deploying httpbin pod")
+						Expect(k.WithNamespace(common.SleepNamespace).Apply(common.GetSampleYAML(version, "sleep"))).To(Succeed(), "error deploying sleep pod")
+						Expect(k.WithNamespace(common.HttpbinNamespace).Apply(common.GetSampleYAML(version, "httpbin"))).To(Succeed(), "error deploying httpbin pod")
 
 						Success("Ambient validation pods deployed")
 					})
 
 					sleepPod := &corev1.PodList{}
 					It("updates the status of pods to Running", func(ctx SpecContext) {
-						Eventually(common.CheckPodsReady).WithArguments(ctx, cl, common.SleepNamespace).Should(Succeed(), "Error checking status of sleep pod")
-						Eventually(common.CheckPodsReady).WithArguments(ctx, cl, common.HttpbinNamespace).Should(Succeed(), "Error checking status of httpbin pod")
-						Expect(cl.List(ctx, sleepPod, client.InNamespace(common.SleepNamespace))).To(Succeed(), "Error getting the pod in sleep namespace")
+						sleepPod, err = common.CheckPodsReady(ctx, cl, common.SleepNamespace)
+						Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Error checking status of sleep pod: %v", err))
+
+						_, err = common.CheckPodsReady(ctx, cl, common.HttpbinNamespace)
+						Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Error checking status of httpbin pod: %v", err))
 
 						Success("Pods are ready")
 					})

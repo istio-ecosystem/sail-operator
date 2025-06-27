@@ -18,16 +18,19 @@ package multicluster
 
 import (
 	"fmt"
+	"path/filepath"
 	"time"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/pkg/version"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -46,6 +49,35 @@ const (
 var _ = Describe("Multicluster deployment models", Label("multicluster", "multicluster-external"), Ordered, func() {
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
+	debugInfoLogged := false
+	clr1 := cleaner.New(clPrimary, "cluster=primary")
+	clr2 := cleaner.New(clRemote, "cluster=remote")
+
+	BeforeAll(func(ctx SpecContext) {
+		clr1.Record(ctx)
+		clr2.Record(ctx)
+
+		if !skipDeploy {
+			Expect(k1.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created on Cluster #1")
+			Expect(k2.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created on Cluster #2")
+
+			Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, "--kubeconfig "+kubeconfig)).
+				To(Succeed(), "Operator failed to be deployed in Cluster #1")
+
+			Expect(helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), "--namespace "+namespace, "--set=image="+image, "--kubeconfig "+kubeconfig2)).
+				To(Succeed(), "Operator failed to be deployed in Cluster #2")
+
+			Eventually(common.GetObject).
+				WithArguments(ctx, clPrimary, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
+				Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
+			Success("Operator is deployed in the Cluster #1 namespace and Running")
+
+			Eventually(common.GetObject).
+				WithArguments(ctx, clRemote, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
+				Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
+			Success("Operator is deployed in the Cluster #2 namespace and Running")
+		}
+	})
 
 	Describe("External Control Plane Multi-Network configuration", func() {
 		// Test the External Control Plane Multi-Network configuration for each supported Istio version
@@ -70,11 +102,41 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 						Expect(k1.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be created")
 						Expect(k1.CreateNamespace(istioCniNamespace)).To(Succeed(), "Istio CNI namespace failed to be created")
 
-						common.CreateIstioCNI(k1, v.Name)
-						common.CreateIstio(k1, v.Name, `
-values:
-  global:
-    network: network1`)
+						multiclusterCNIYAML := `
+apiVersion: sailoperator.io/v1
+kind: IstioCNI
+metadata:
+  name: {{ .Name }}
+spec:
+  version: {{ .Version }}
+  namespace: {{ .Namespace }}`
+						multiclusterCNIYAML = genTemplate(multiclusterCNIYAML, map[string]any{
+							"Name":      istioCniName,
+							"Namespace": istioCniNamespace,
+							"Version":   v.Name,
+						})
+						Log("Istio CNI CR Cluster #1: ", multiclusterCNIYAML)
+						Expect(k1.CreateFromString(multiclusterCNIYAML)).To(Succeed(), "Istio CNI Resource creation failed on Cluster #1")
+
+						multiclusterYAML := `
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: {{ .Name }}
+spec:
+  version: {{ .Version }}
+  namespace: {{ .Namespace }}
+  values:
+    global:
+      network: {{ .Network }}`
+						multiclusterYAML = genTemplate(multiclusterYAML, map[string]any{
+							"Name":      istioName,
+							"Namespace": controlPlaneNamespace,
+							"Network":   "network1",
+							"Version":   v.Name,
+						})
+						Log("Istio CR Cluster #1: ", multiclusterYAML)
+						Expect(k1.CreateFromString(multiclusterYAML)).To(Succeed(), "Istio Resource creation failed on Cluster #1")
 					})
 
 					It("updates the default Istio CR status to Ready", func(ctx SpecContext) {
@@ -113,8 +175,21 @@ values:
 						Expect(clRemote.Get(ctx, client.ObjectKey{Name: externalControlPlaneNamespace}, &corev1.Namespace{})).To(Succeed())
 
 						Expect(k2.CreateNamespace(istioCniNamespace)).To(Succeed(), "Istio CNI namespace failed to be created")
-						common.CreateIstioCNI(k2, v.Name)
-						Log("Istio CNI created on Cluster #2")
+						remoteIstioCNIYAML := `
+apiVersion: sailoperator.io/v1
+kind: IstioCNI
+metadata:
+  name: {{ .Name }}
+spec:
+  version: {{ .Version }}
+  namespace: {{ .Namespace }}`
+						remoteIstioCNIYAML = genTemplate(remoteIstioCNIYAML, map[string]any{
+							"Name":      istioCniName,
+							"Namespace": istioCniNamespace,
+							"Version":   v.Name,
+						})
+						Log("Istio CNI CR Cluster #2: ", remoteIstioCNIYAML)
+						Expect(k2.CreateFromString(remoteIstioCNIYAML)).To(Succeed(), "Istio CNI Resource creation failed on Cluster #2")
 
 						remotePilotAddress := common.GetSVCLoadBalancerAddress(ctx, clPrimary, controlPlaneNamespace, "istio-ingressgateway")
 						remotePilotIP, err := common.ResolveHostDomainToIP(remotePilotAddress)
@@ -181,20 +256,16 @@ metadata:
 						Expect(apiURLCluster2).NotTo(BeEmpty(), "API URL is empty for the Cluster #2")
 						Expect(err).NotTo(HaveOccurred())
 
-						var secret string
-						Eventually(func() error {
-							secret, err = istioctl.CreateRemoteSecret(
-								kubeconfig2,
-								externalControlPlaneNamespace,
-								"cluster2",
-								apiURLCluster2,
-								"--type=config",
-								"--service-account=istiod-"+externalIstioName,
-								"--create-service-account=false",
-							)
-
-							return err
-						}).ShouldNot(HaveOccurred(), "Remote secret generation failed")
+						secret, err := istioctl.CreateRemoteSecret(
+							kubeconfig2,
+							externalControlPlaneNamespace,
+							"cluster2",
+							apiURLCluster2,
+							"--type=config",
+							"--service-account=istiod-"+externalIstioName,
+							"--create-service-account=false",
+						)
+						Expect(err).NotTo(HaveOccurred())
 						Expect(k1.ApplyString(secret)).To(Succeed(), "Remote secret creation failed on Cluster #1")
 					})
 
@@ -426,5 +497,23 @@ spec:
 				})
 			})
 		}
+	})
+
+	AfterAll(func(ctx SpecContext) {
+		if CurrentSpecReport().Failed() {
+			if !debugInfoLogged {
+				common.LogDebugInfo(common.MultiCluster, k1, k2)
+				debugInfoLogged = true
+			}
+
+			if keepOnFailure {
+				return
+			}
+		}
+
+		c1Deleted := clr1.CleanupNoWait(ctx)
+		c2Deleted := clr2.CleanupNoWait(ctx)
+		clr1.WaitForDeletion(ctx, c1Deleted)
+		clr2.WaitForDeletion(ctx, c2Deleted)
 	})
 })

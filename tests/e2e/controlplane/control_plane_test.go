@@ -108,7 +108,18 @@ metadata:
 
 				When("the IstioCNI CR is created", func() {
 					BeforeAll(func() {
-						common.CreateIstioCNI(k, version.Name)
+						yaml := `
+apiVersion: sailoperator.io/v1
+kind: IstioCNI
+metadata:
+  name: default
+spec:
+  version: %s
+  namespace: %s`
+						yaml = fmt.Sprintf(yaml, version.Name, istioCniNamespace)
+						Log("IstioCNI YAML:", indent(yaml))
+						Expect(k.CreateFromString(yaml)).To(Succeed(), "IstioCNI creation failed")
+						Success("IstioCNI created")
 					})
 
 					It("deploys the CNI DaemonSet", func(ctx SpecContext) {
@@ -147,7 +158,19 @@ metadata:
 
 				When("the Istio CR is created", func() {
 					BeforeAll(func() {
-						common.CreateIstio(k, version.Name)
+						istioYAML := `
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  version: %s
+  namespace: %s`
+						istioYAML = fmt.Sprintf(istioYAML, version.Name, controlPlaneNamespace)
+						Log("Istio YAML:", indent(istioYAML))
+						Expect(k.CreateFromString(istioYAML)).
+							To(Succeed(), "Istio CR failed to be created")
+						Success("Istio CR created")
 					})
 
 					It("updates the Istio CR status to Reconciled", func(ctx SpecContext) {
@@ -192,10 +215,21 @@ metadata:
 					})
 
 					samplePods := &corev1.PodList{}
-					It("updates the pods status to Running", func(ctx SpecContext) {
-						Eventually(common.CheckPodsReady).WithArguments(ctx, cl, sampleNamespace).Should(Succeed(), "Error checking status of sample pods")
-						Expect(cl.List(ctx, samplePods, client.InNamespace(sampleNamespace))).To(Succeed(), "Error getting the pods in sample namespace")
 
+					It("updates the pods status to Running", func(ctx SpecContext) {
+						Eventually(func() bool {
+							// Wait until the sample pod exists. Is wraped inside a function to avoid failure on the first iteration
+							Expect(cl.List(ctx, samplePods, client.InNamespace(sampleNamespace))).To(Succeed())
+							return len(samplePods.Items) > 0
+						}).Should(BeTrue(), "No sample pods found")
+
+						Expect(cl.List(ctx, samplePods, client.InNamespace(sampleNamespace))).To(Succeed())
+						Expect(samplePods.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
+
+						for _, pod := range samplePods.Items {
+							Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(pod.Name, sampleNamespace), &corev1.Pod{}).
+								Should(HaveConditionStatus(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready")
+						}
 						Success("sample pods are ready")
 					})
 
@@ -272,6 +306,11 @@ func HaveContainersThat(matcher types.GomegaMatcher) types.GomegaMatcher {
 
 func ImageFromRegistry(regexp string) types.GomegaMatcher {
 	return HaveField("Image", MatchRegexp(regexp))
+}
+
+func indent(str string) string {
+	indent := strings.Repeat(" ", 2)
+	return indent + strings.ReplaceAll(str, "\n", "\n"+indent)
 }
 
 func getProxyVersion(podName, namespace string) (*semver.Version, error) {

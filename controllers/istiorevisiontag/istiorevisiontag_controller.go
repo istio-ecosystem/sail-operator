@@ -110,13 +110,6 @@ func (r *Reconciler) doReconcile(ctx context.Context, tag *v1.IstioRevisionTag) 
 		return nil, reconciler.NewValidationError("IstioRevisionTag cannot reference a remote IstioRevision")
 	}
 
-	// if the IstioRevision's namespace changes, we need to completely reinstall the tag
-	if tag.Status.IstiodNamespace != "" && tag.Status.IstiodNamespace != rev.Spec.Namespace {
-		if err := r.uninstallHelmCharts(ctx, tag); err != nil {
-			return nil, err
-		}
-	}
-
 	log.Info("Installing Helm chart")
 	return rev, r.installHelmCharts(ctx, tag, rev)
 }

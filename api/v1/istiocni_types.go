@@ -28,17 +28,18 @@ const (
 type IstioCNISpec struct {
 	// +sail:version
 	// Defines the version of Istio to install.
-	// Must be one of: v1.26-latest, v1.26.2, v1.26.1, v1.26.0, v1.25-latest, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0.
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.26-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.25-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.25.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.25.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.25.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.24-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.6", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.5", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.4", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.0"}
-	// +kubebuilder:validation:Enum=v1.26-latest;v1.26.2;v1.26.1;v1.26.0;v1.25-latest;v1.25.3;v1.25.2;v1.25.1;v1.24-latest;v1.24.6;v1.24.5;v1.24.4;v1.24.3;v1.24.2;v1.24.1;v1.24.0;v1.23-latest;v1.23.6;v1.23.5;v1.23.4;v1.23.3;v1.23.2;v1.22-latest;v1.22.8;v1.22.7;v1.22.6;v1.22.5;v1.21.6
-	// +kubebuilder:default=v1.26.2
+	// Must be one of: v1.26-latest, v1.26.1, v1.26.0, v1.25-latest, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.26-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.25-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.25.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.25.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.25.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.24-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.6", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.5", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.4", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.0"}
+	// +kubebuilder:validation:Enum=v1.26-latest;v1.26.1;v1.26.0;v1.25-latest;v1.25.3;v1.25.2;v1.25.1;v1.24-latest;v1.24.6;v1.24.5;v1.24.4;v1.24.3;v1.24.2;v1.24.1;v1.24.0;v1.23-latest;v1.23.6;v1.23.5;v1.23.4;v1.23.3;v1.23.2;v1.22-latest;v1.22.8;v1.22.7;v1.22.6;v1.22.5;v1.21.6
+	// +kubebuilder:default=v1.26.1
 	Version string `json:"version"`
 
 	// +sail:profile
 	// The built-in installation configuration profile to use.
 	// The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'.
 	// Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable.
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Profile",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:ambient", "urn:alm:descriptor:com.tectonic.ui:select:default", "urn:alm:descriptor:com.tectonic.ui:select:demo", "urn:alm:descriptor:com.tectonic.ui:select:empty", "urn:alm:descriptor:com.tectonic.ui:select:openshift", "urn:alm:descriptor:com.tectonic.ui:select:openshift-ambient", "urn:alm:descriptor:com.tectonic.ui:select:preview", "urn:alm:descriptor:com.tectonic.ui:select:remote", "urn:alm:descriptor:com.tectonic.ui:select:stable"}
+	// +++PROFILES-DROPDOWN-HIDDEN-UNTIL-WE-FULLY-IMPLEMENT-THEM+++operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Profile",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:ambient", "urn:alm:descriptor:com.tectonic.ui:select:default", "urn:alm:descriptor:com.tectonic.ui:select:demo", "urn:alm:descriptor:com.tectonic.ui:select:empty", "urn:alm:descriptor:com.tectonic.ui:select:external", "urn:alm:descriptor:com.tectonic.ui:select:minimal", "urn:alm:descriptor:com.tectonic.ui:select:preview", "urn:alm:descriptor:com.tectonic.ui:select:remote"}
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,xDescriptors={"urn:alm:descriptor:com.tectonic.ui:hidden"}
 	// +kubebuilder:validation:Enum=ambient;default;demo;empty;external;openshift;openshift-ambient;preview;remote;stable
 	Profile string `json:"profile,omitempty"`
 
@@ -181,7 +182,7 @@ type IstioCNI struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata"`
 
-	// +kubebuilder:default={version: "v1.26.2", namespace: "istio-cni"}
+	// +kubebuilder:default={version: "v1.26.1", namespace: "istio-cni"}
 	// +optional
 	Spec IstioCNISpec `json:"spec"`
 

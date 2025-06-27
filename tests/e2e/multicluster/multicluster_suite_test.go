@@ -23,18 +23,11 @@ import (
 	"testing"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/env"
-	"github.com/istio-ecosystem/sail-operator/pkg/kube"
-	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/certs"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	k8sclient "github.com/istio-ecosystem/sail-operator/tests/e2e/util/client"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
-	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	appsv1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -42,7 +35,6 @@ var (
 	clPrimary                     client.Client
 	clRemote                      client.Client
 	err                           error
-	debugInfoLogged               bool
 	namespace                     = env.Get("NAMESPACE", "sail-operator")
 	deploymentName                = env.Get("DEPLOYMENT_NAME", "sail-operator")
 	controlPlaneNamespace         = env.Get("CONTROL_PLANE_NS", "istio-system")
@@ -50,6 +42,7 @@ var (
 	istioName                     = env.Get("ISTIO_NAME", "default")
 	istioCniNamespace             = env.Get("ISTIOCNI_NAMESPACE", "istio-cni")
 	istioCniName                  = env.Get("ISTIOCNI_NAME", "default")
+	image                         = env.Get("IMAGE", "quay.io/maistra-dev/sail-operator:latest")
 	skipDeploy                    = env.GetBool("SKIP_DEPLOY", false)
 	multicluster                  = env.GetBool("MULTICLUSTER", false)
 	keepOnFailure                 = env.GetBool("KEEP_ON_FAILURE", false)
@@ -66,9 +59,6 @@ var (
 
 	k1 kubectl.Kubectl
 	k2 kubectl.Kubectl
-
-	clr1 cleaner.Cleaner
-	clr2 cleaner.Cleaner
 )
 
 func TestMultiCluster(t *testing.T) {
@@ -113,53 +103,6 @@ func setup(t *testing.T) {
 	exposeIstiodYAML = fmt.Sprintf("%s/docs/multicluster/expose-istiod.yaml", baseRepoDir)
 
 	// Initialize kubectl utilities, one for each cluster
-	k1 = kubectl.New().WithKubeconfig(kubeconfig).WithClusterName("primary")
-	k2 = kubectl.New().WithKubeconfig(kubeconfig2).WithClusterName("remote")
-	clr1 = cleaner.New(clPrimary, "cluster=primary")
-	clr2 = cleaner.New(clRemote, "cluster=remote")
+	k1 = kubectl.New().WithKubeconfig(kubeconfig)
+	k2 = kubectl.New().WithKubeconfig(kubeconfig2)
 }
-
-var _ = BeforeSuite(func(ctx SpecContext) {
-	clr1.Record(ctx)
-	clr2.Record(ctx)
-
-	if skipDeploy {
-		return
-	}
-
-	Expect(k1.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created on Primary Cluster")
-	Expect(k2.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created on Remote Cluster")
-
-	Expect(common.InstallOperatorViaHelm("--kubeconfig", kubeconfig)).
-		To(Succeed(), "Operator failed to be deployed in Primary Cluster")
-
-	Expect(common.InstallOperatorViaHelm("--kubeconfig", kubeconfig2)).
-		To(Succeed(), "Operator failed to be deployed in Remote Cluster")
-
-	Eventually(common.GetObject).
-		WithArguments(ctx, clPrimary, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
-		Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
-	Success("Operator is deployed in the Primary namespace and Running")
-
-	Eventually(common.GetObject).
-		WithArguments(ctx, clRemote, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
-		Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
-	Success("Operator is deployed in the Remote namespace and Running")
-})
-
-var _ = ReportAfterSuite("Conditional cleanup", func(ctx SpecContext, r Report) {
-	if !r.SuiteSucceeded {
-		if !debugInfoLogged {
-			common.LogDebugInfo(common.MultiCluster, k1, k2)
-		}
-
-		if keepOnFailure {
-			return
-		}
-	}
-
-	c1Deleted := clr1.CleanupNoWait(ctx)
-	c2Deleted := clr2.CleanupNoWait(ctx)
-	clr1.WaitForDeletion(ctx, c1Deleted)
-	clr2.WaitForDeletion(ctx, c2Deleted)
-})

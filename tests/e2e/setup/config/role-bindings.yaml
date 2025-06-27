@@ -13,38 +13,12 @@ items:
   subjects:
   - kind: Group
     apiGroup: rbac.authorization.k8s.io
-    name: system:authenticated
+    name: system:unauthenticated
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
     name: image-pusher
     namespace: ${NAMESPACE}
-  roleRef:
-    apiGroup: rbac.authorization.k8s.io
-    kind: ClusterRole
-    name: system:image-builder
-  subjects:
-  - kind: Group
-    apiGroup: rbac.authorization.k8s.io
-    name: system:unauthenticated
-- apiVersion: rbac.authorization.k8s.io/v1
-  kind: RoleBinding
-  metadata:
-    name: image-puller
-    namespace: istio-images
-  roleRef:
-    apiGroup: rbac.authorization.k8s.io
-    kind: ClusterRole
-    name: system:image-puller
-  subjects:
-  - kind: Group
-    apiGroup: rbac.authorization.k8s.io
-    name: system:authenticated
-- apiVersion: rbac.authorization.k8s.io/v1
-  kind: RoleBinding
-  metadata:
-    name: image-pusher
-    namespace: istio-images
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: ClusterRole
