@@ -30,7 +30,6 @@ import (
 
 var (
 	cl                 client.Client
-	skipDeploy         = env.GetBool("SKIP_DEPLOY", false)
 	namespace          = common.OperatorNamespace
 	deploymentName     = env.Get("DEPLOYMENT_NAME", "sail-operator")
 	serviceAccountName = deploymentName
