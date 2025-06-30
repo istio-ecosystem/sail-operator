@@ -18,11 +18,11 @@ versions:
     repo: https://github.com/istio/istio
     commit: 1.26.2
     charts:
-      - https://istio-release.storage.googleapis.com/charts/base-1.26.2.tgz
-      - https://istio-release.storage.googleapis.com/charts/istiod-1.26.2.tgz
-      - https://istio-release.storage.googleapis.com/charts/gateway-1.26.2.tgz
-      - https://istio-release.storage.googleapis.com/charts/cni-1.26.2.tgz
-      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.26.2.tgz
+      - https://github.com/openshift-service-mesh/istio-release/raw/d9d3e9c1f7b57312d517553bd5a361e61b61c7ad/1.26.2-redhat/helm/base-1.26.2.tgz
+      - https://github.com/openshift-service-mesh/istio-release/raw/d9d3e9c1f7b57312d517553bd5a361e61b61c7ad/1.26.2-redhat/helm/istiod-1.26.2.tgz
+      - https://github.com/openshift-service-mesh/istio-release/raw/d9d3e9c1f7b57312d517553bd5a361e61b61c7ad/1.26.2-redhat/helm/gateway-1.26.2.tgz
+      - https://github.com/openshift-service-mesh/istio-release/raw/d9d3e9c1f7b57312d517553bd5a361e61b61c7ad/1.26.2-redhat/helm/cni-1.26.2.tgz
+      - https://github.com/openshift-service-mesh/istio-release/raw/d9d3e9c1f7b57312d517553bd5a361e61b61c7ad/1.26.2-redhat/helm/ztunnel-1.26.2.tgz
   - name: v1.24-latest
     ref: v1.24.6
   - name: v1.24.6
