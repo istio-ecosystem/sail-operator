@@ -30,7 +30,7 @@ MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 # There are also GH workflows defined to release nightly and stable operators.
 # There is no need to define `replaces` and `skipRange` fields in the CSV as those fields are defined in the FBC and CSV values are ignored.
 # FBC is source of truth for OLM upgrade graph.
-PREVIOUS_VERSION ?= 1.26.0
+PREVIOUS_VERSION ?= 1.0.3
 
 OPERATOR_NAME ?= sailoperator
 VERSIONS_YAML_DIR ?= pkg/istioversion
