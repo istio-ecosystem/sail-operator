@@ -11,6 +11,18 @@
 # go.mod affect the generated API schema for the Sail CRDs (e.g. IstioRevision),
 # as well as all the Istio CRDs (e.g. VirtualService).
 versions:
+  - name: v1.6-latest
+    ref: v1.26.2
+  - name: v1.26.2
+    version: 1.26.2
+    repo: https://github.com/istio/istio
+    commit: 1.26.2
+    charts:
+      - https://istio-release.storage.googleapis.com/charts/base-1.26.2.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-1.26.2.tgz
+      - https://istio-release.storage.googleapis.com/charts/gateway-1.26.2.tgz
+      - https://istio-release.storage.googleapis.com/charts/cni-1.26.2.tgz
+      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.26.2.tgz
   - name: v1.24-latest
     ref: v1.24.6
   - name: v1.24.6
