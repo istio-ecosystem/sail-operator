@@ -474,9 +474,11 @@ var _ = Describe("Istio resource", Ordered, func() {
 	})
 
 	Describe("eol versions", func() {
-		if len(istioversion.EOL) < 1 {
-			Skip("No versions marked as EOL, skipping EOL test")
-		}
+		BeforeAll(func() {
+			if len(istioversion.EOL) < 1 {
+				Skip("No versions marked as EOL, skipping EOL test")
+			}
+		})
 		When("creating Istio resource with spec.version that is past EOL", func() {
 			It("produces a ReconcileError", func() {
 				istio = &v1.Istio{
