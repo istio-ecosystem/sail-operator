@@ -1,0 +1,49 @@
+apiVersion: kiali.io/v1alpha1
+kind: Kiali
+metadata:
+  name: kiali
+spec:
+  auth:
+    strategy: openshift
+  deployment:
+    cluster_wide_access: true
+    namespace: istio-system
+    pod_labels:
+      sidecar.istio.io/inject: 'false'
+  external_services:
+    grafana:
+      enabled: false
+    istio:
+      config_map_name: istio
+      istio_sidecar_injector_config_map_name: istio-sidecar-injector
+      istiod_deployment_name: istiod
+      url_service_version: 'http://istiod.istio-system:15014/version'
+      component_status:
+        components:
+        - app_label: "istiod"
+          is_core: true
+          is_proxy: false
+        - app_label: "istio-ingressgateway"
+          is_core: true
+          is_proxy: true
+          namespace: "istio-ingress"
+        enabled: true
+    prometheus:
+      auth:
+        type: bearer
+        use_kiali_token: true
+      query_scope:
+        mesh_id: ossm-3
+      thanos_proxy:
+        enabled: true
+      url: 'https://thanos-querier.openshift-monitoring.svc.cluster.local:9091'
+    tracing:
+      enabled: true
+      internal_url: "http://tempo-sample-query-frontend.tracing-system.svc.cluster.local:16685"
+      external_url: ${JAEGERROUTE} 
+      query_timeout: 60
+      use_grpc: true
+  installation_tag: "Kiali [istio-system]"
+  istio_namespace: istio-system
+  server:
+    write_timeout: 60

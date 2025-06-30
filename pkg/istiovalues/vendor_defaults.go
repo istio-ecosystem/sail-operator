@@ -34,6 +34,10 @@ func init() {
 	vendorDefaults = MustParseVendorDefaultsYAML(vendorDefaultsYAML)
 }
 
+func SetVendorDefaults(defaults map[string]map[string]any) {
+	vendorDefaults = defaults
+}
+
 func MustParseVendorDefaultsYAML(defaultsYAML []byte) map[string]map[string]any {
 	var parsedDefaults map[string]map[string]any
 	err := yaml.Unmarshal(defaultsYAML, &parsedDefaults)

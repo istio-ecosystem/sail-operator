@@ -1,0 +1,22 @@
+kind: TempoStack
+apiVersion: tempo.grafana.com/v1alpha1
+metadata:
+  name: sample
+spec:
+  storage:
+    secret:
+      name: my-storage-secret
+      type: s3
+  storageSize: 1Gi
+  template:
+    querier:
+      resources:
+        limits:
+          cpu: "2"
+    queryFrontend:
+      component:
+        resources:
+          limits:
+            memory: 6Gi
+      jaegerQuery:
+        enabled: true

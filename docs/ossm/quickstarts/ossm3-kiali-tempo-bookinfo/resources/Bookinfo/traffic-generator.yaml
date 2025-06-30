@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: kiali-traffic-generator
+  labels:
+    app: kiali-traffic-generator
+    kiali-test: traffic-generator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kiali-traffic-generator
+      kiali-test: traffic-generator
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: kiali-traffic-generator
+        kiali-test: traffic-generator
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - image: quay.io/kiali/kiali-test-mesh-traffic-generator:latest
+        name: kiali-traffic-generator
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: DURATION
+          valueFrom:
+            configMapKeyRef:
+              name: traffic-generator-config
+              key: duration
+
+        - name: ROUTE
+          valueFrom:
+            configMapKeyRef:
+              name: traffic-generator-config
+              key: route
+
+        - name: RATE
+          valueFrom:
+            configMapKeyRef:
+              name: traffic-generator-config
+              key: rate
+        - name: SILENT
+          valueFrom:
+            configMapKeyRef:
+              name: traffic-generator-config
+              key: silent
