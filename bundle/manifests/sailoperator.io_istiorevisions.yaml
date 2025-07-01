@@ -9565,8 +9565,9 @@ spec:
               version:
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.26.0, v1.25.3, v1.25.2, v1.25.1, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, v1.27-alpha.9c6178f5.
+                  Must be one of: v1.26.2, v1.26.0, v1.25.3, v1.25.2, v1.25.1, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, v1.27-alpha.11ce9e0a.
                 enum:
+                - v1.26.2
                 - v1.26.0
                 - v1.25.3
                 - v1.25.2
@@ -9588,7 +9589,7 @@ spec:
                 - v1.22.6
                 - v1.22.5
                 - v1.21.6
-                - v1.27-alpha.9c6178f5
+                - v1.27-alpha.11ce9e0a
                 type: string
             required:
             - namespace
