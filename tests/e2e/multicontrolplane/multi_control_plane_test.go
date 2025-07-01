@@ -24,7 +24,6 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
@@ -37,23 +36,6 @@ var _ = Describe("Multi control plane deployment model", Label("smoke", "multico
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 	debugInfoLogged := false
-	clr := cleaner.New(cl)
-
-	BeforeAll(func(ctx SpecContext) {
-		clr.Record(ctx)
-		Expect(k.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
-
-		if skipDeploy {
-			Success("Skipping operator installation because it was deployed externally")
-		} else {
-			Expect(common.InstallOperatorViaHelm()).
-				To(Succeed(), "Operator failed to be deployed")
-		}
-
-		Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
-			Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
-		Success("Operator is deployed in the namespace and Running")
-	})
 
 	Describe("Installation", func() {
 		It("Sets up namespaces", func(ctx SpecContext) {
@@ -66,17 +48,7 @@ var _ = Describe("Multi control plane deployment model", Label("smoke", "multico
 		})
 
 		It("Installs IstioCNI", func(ctx SpecContext) {
-			yaml := `
-apiVersion: sailoperator.io/v1
-kind: IstioCNI
-metadata:
-  name: default
-spec:
-  version: %s
-  namespace: %s`
-			yaml = fmt.Sprintf(yaml, version, istioCniNamespace)
-			Expect(k.CreateFromString(yaml)).To(Succeed(), "failed to create IstioCNI")
-			Success("IstioCNI created")
+			common.CreateIstioCNI(k, version)
 
 			Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioCniName), &v1.IstioCNI{}).
 				Should(HaveConditionStatus(v1.IstioCNIConditionReady, metav1.ConditionTrue), "IstioCNI is not Ready; unexpected Condition")
@@ -173,17 +145,9 @@ spec:
 	})
 
 	AfterAll(func(ctx SpecContext) {
-		if CurrentSpecReport().Failed() {
-			if !debugInfoLogged {
-				common.LogDebugInfo(common.MultiControlPlane, k)
-				debugInfoLogged = true
-			}
-
-			if keepOnFailure {
-				return
-			}
+		if CurrentSpecReport().Failed() && !debugInfoLogged {
+			common.LogDebugInfo(common.MultiControlPlane, k)
+			debugInfoLogged = true
 		}
-
-		clr.Cleanup(ctx)
 	})
 })

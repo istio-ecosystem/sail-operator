@@ -42,6 +42,7 @@
   - [Validation](deployment-models/multiple-mesh.md#validation)
     - [Checking application to control plane mapping](deployment-models/multiple-mesh.md#checking-application-to-control-plane-mapping)
     - [Checking application connectivity](deployment-models/multiple-mesh.md#checking-application-connectivity)
+  - [Consolidating control planes](deployment-models/consolidating-cp.md)
 - [Multi-cluster](deployment-models/multicluster.md#multi-cluster)
   - [Prerequisites](deployment-models/multicluster.md#prerequisites)
   - [Common Setup](deployment-models/multicluster.md#common-setup)
@@ -80,6 +81,8 @@
     - [Integrating with Kiali](addons/observability.md#integrating-with-kiali)
       - [Integrating Kiali with the OpenShift monitoring stack](addons/observability.md#integrating-kiali-with-the-openshift-monitoring-stack)
       - [Integrating Kiali with OpenShift Distributed Tracing](addons/observability.md#integrating-kiali-with-openshift-distributed-tracing)
+- Certificates management
+    - [Plug in CA Certificates](general/plugin-ca.md)
 - [Uninstalling](general/getting-started.md#uninstalling)
   - [Deleting Istio](general/getting-started.md#deleting-istio)
   - [Deleting IstioCNI](general/getting-started.md#deleting-istiocni)

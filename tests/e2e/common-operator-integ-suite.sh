@@ -135,6 +135,23 @@ initialize_variables() {
   if [ "${OCP}" == "true" ]; then COMMAND="oc"; fi
 }
 
+install_operator() {
+  echo "Installing sail-operator (KUBECONFIG=${KUBECONFIG})"
+  "${COMMAND}" create namespace "${NAMESPACE}"
+  helm install sail-operator "${SOURCE_DIR}"/chart --namespace "${NAMESPACE}" --set image="${HUB}/${IMAGE_BASE}:${TAG}" --set operatorLogLevel=3
+}
+
+await_operator() {
+  echo "Awaiting sail-operator deployment on (KUBECONFIG=${KUBECONFIG})"
+  "${COMMAND}" wait --for=condition=available deployment/"${DEPLOYMENT_NAME}" -n "${NAMESPACE}" --timeout=5m
+}
+
+uninstall_operator() {
+  echo "Uninstalling sail-operator (KUBECONFIG=${KUBECONFIG})"
+  helm uninstall sail-operator --namespace "${NAMESPACE}"
+  "${COMMAND}" delete namespace "${NAMESPACE}"
+}
+
 # Main script flow
 check_arguments "$@"
 parse_flags "$@"
@@ -192,7 +209,7 @@ if [ "${SKIP_BUILD}" == "false" ]; then
     ${COMMAND} create ns "${NAMESPACE}" || true
     ${OPERATOR_SDK} run bundle "${BUNDLE_IMG}" -n "${NAMESPACE}" --skip-tls --timeout 5m || exit 1
 
-    ${COMMAND} wait --for=condition=available deployment/"${DEPLOYMENT_NAME}" -n "${NAMESPACE}" --timeout=5m
+    await_operator
 
     SKIP_DEPLOY=true
   fi
@@ -200,7 +217,30 @@ fi
 
 export SKIP_DEPLOY IP_FAMILY ISTIO_MANIFEST NAMESPACE CONTROL_PLANE_NS DEPLOYMENT_NAME MULTICLUSTER ARTIFACTS ISTIO_NAME COMMAND KUBECONFIG ISTIOCTL_PATH
 
+if [ "${OLM}" != "true" ] && [ "${SKIP_DEPLOY}" != "true" ]; then
+  # shellcheck disable=SC2153
+  if [ "${MULTICLUSTER}" == true ]; then
+    KUBECONFIG="${KUBECONFIG}" install_operator
+    KUBECONFIG="${KUBECONFIG2}" install_operator
+    KUBECONFIG="${KUBECONFIG}" await_operator
+    KUBECONFIG="${KUBECONFIG2}" await_operator
+  else
+    install_operator
+    await_operator
+  fi
+fi
+
 # shellcheck disable=SC2086
 IMAGE="${HUB}/${IMAGE_BASE}:${TAG}" \
 go run github.com/onsi/ginkgo/v2/ginkgo -tags e2e \
 --timeout 60m --junit-report=report.xml ${GINKGO_FLAGS} "${WD}"/...
+
+if [ "${OLM}" != "true" ] && [ "${SKIP_DEPLOY}" != "true" ]; then
+  if [ "${MULTICLUSTER}" == true ]; then
+    KUBECONFIG="${KUBECONFIG}" uninstall_operator
+    KUBECONFIG="${KUBECONFIG2}" uninstall_operator
+  else
+    uninstall_operator
+  fi
+fi
+
