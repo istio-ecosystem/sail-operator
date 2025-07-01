@@ -3815,7 +3815,7 @@ type MeshConfigProxyConfig struct {
 	// ```yaml
 	// proxyHeaders:
 	//
-	//	perserveHttp1HeaderCase: true
+	//	preserveHttp1HeaderCase: true
 	//
 	// ```
 	//
