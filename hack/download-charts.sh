@@ -210,7 +210,12 @@ sources:
 version: 0.1.0
 " > "${CHARTS_DIR}/revisiontags/Chart.yaml"
   cp "${CHARTS_DIR}/istiod/values.yaml" "${CHARTS_DIR}/revisiontags/values.yaml"
-  cp "${CHARTS_DIR}/istiod/templates/revision-tags.yaml" "${CHARTS_DIR}/revisiontags/templates/revision-tags.yaml"
+  if [ -e "${CHARTS_DIR}/istiod/templates/revision-tags.yaml" ]; then
+    cp "${CHARTS_DIR}/istiod/templates/revision-tags.yaml" "${CHARTS_DIR}/revisiontags/templates/revision-tags.yaml"
+  else
+    cp "${CHARTS_DIR}/istiod/templates/revision-tags-mwc.yaml" "${CHARTS_DIR}/revisiontags/templates/revision-tags-mwc.yaml"
+    cp "${CHARTS_DIR}/istiod/templates/revision-tags-svc.yaml" "${CHARTS_DIR}/revisiontags/templates/revision-tags-svc.yaml"
+  fi
   cp "${CHARTS_DIR}/istiod/templates/zzz_profile.yaml" "${CHARTS_DIR}/revisiontags/templates/zzz_profile.yaml"
 
   mkdir -p "${CHARTS_DIR}/revisiontags/files"

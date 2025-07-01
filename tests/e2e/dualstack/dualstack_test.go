@@ -34,6 +34,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -48,23 +49,6 @@ var _ = Describe("DualStack configuration ", Label("dualstack"), Ordered, func()
 	SetDefaultEventuallyPollingInterval(time.Second)
 
 	debugInfoLogged := false
-	clr := cleaner.New(cl)
-
-	BeforeAll(func(ctx SpecContext) {
-		clr.Record(ctx)
-		Expect(k.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
-
-		if skipDeploy {
-			Success("Skipping operator installation because it was deployed externally")
-		} else {
-			Expect(common.InstallOperatorViaHelm()).
-				To(Succeed(), "Operator failed to be deployed")
-		}
-
-		Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
-			Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Istio CRD")
-		Success("Operator is deployed in the namespace and Running")
-	})
 
 	Describe("for supported versions", func() {
 		for _, version := range istioversion.GetLatestPatchVersions() {
@@ -83,18 +67,7 @@ var _ = Describe("DualStack configuration ", Label("dualstack"), Ordered, func()
 
 				When("the IstioCNI CR is created", func() {
 					BeforeAll(func() {
-						cniYAML := `
-apiVersion: sailoperator.io/v1
-kind: IstioCNI
-metadata:
-  name: default
-spec:
-  version: %s
-  namespace: %s`
-						cniYAML = fmt.Sprintf(cniYAML, version.Name, istioCniNamespace)
-						Log("IstioCNI YAML:", cniYAML)
-						Expect(k.CreateFromString(cniYAML)).To(Succeed(), "IstioCNI creation failed")
-						Success("IstioCNI created")
+						common.CreateIstioCNI(k, version.Name)
 					})
 
 					It("deploys the CNI DaemonSet", func(ctx SpecContext) {
@@ -110,30 +83,19 @@ spec:
 
 				When("the Istio CR is created with DualStack configuration", func() {
 					BeforeAll(func() {
-						istioYAML := `
-apiVersion: sailoperator.io/v1
-kind: Istio
-metadata:
-  name: default
-spec:
-  values:
-    meshConfig:
-      defaultConfig:
-        proxyMetadata:
-          ISTIO_DUAL_STACK: "true"
-    pilot:
-      ipFamilyPolicy: %s
-      env:
+						spec := `
+values:
+  meshConfig:
+    defaultConfig:
+      proxyMetadata:
         ISTIO_DUAL_STACK: "true"
-      cni:
-        enabled: true
-  version: %s
-  namespace: %s`
-						istioYAML = fmt.Sprintf(istioYAML, corev1.IPFamilyPolicyRequireDualStack, version.Name, controlPlaneNamespace)
-						Log("Istio YAML:", istioYAML)
-						Expect(k.CreateFromString(istioYAML)).
-							To(Succeed(), "Istio CR failed to be created")
-						Success("Istio CR created")
+  pilot:
+    ipFamilyPolicy: %s
+    env:
+      ISTIO_DUAL_STACK: "true"
+    cni:
+      enabled: true`
+						common.CreateIstio(k, version.Name, fmt.Sprintf(spec, corev1.IPFamilyPolicyRequireDualStack))
 					})
 
 					It("updates the Istio CR status to Reconciled", func(ctx SpecContext) {
@@ -207,17 +169,11 @@ spec:
 
 					sleepPod := &corev1.PodList{}
 					It("updates the status of pods to Running", func(ctx SpecContext) {
-						_, err = common.CheckPodsReady(ctx, cl, DualStackNamespace)
-						Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Error checking status of dual-stack pods: %v", err))
-
-						_, err = common.CheckPodsReady(ctx, cl, IPv4Namespace)
-						Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Error checking status of ipv4 pods: %v", err))
-
-						_, err = common.CheckPodsReady(ctx, cl, IPv6Namespace)
-						Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Error checking status of ipv6 pods: %v", err))
-
-						sleepPod, err = common.CheckPodsReady(ctx, cl, SleepNamespace)
-						Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Error checking status of sleep pods: %v", err))
+						Eventually(common.CheckPodsReady).WithArguments(ctx, cl, DualStackNamespace).Should(Succeed(), "Error checking status of dual-stack pod")
+						Eventually(common.CheckPodsReady).WithArguments(ctx, cl, IPv4Namespace).Should(Succeed(), "Error checking status of ipv4 pod")
+						Eventually(common.CheckPodsReady).WithArguments(ctx, cl, IPv6Namespace).Should(Succeed(), "Error checking status of ipv6 pod")
+						Eventually(common.CheckPodsReady).WithArguments(ctx, cl, SleepNamespace).Should(Succeed(), "Error checking status of sleep pod")
+						Expect(cl.List(ctx, sleepPod, client.InNamespace(SleepNamespace))).To(Succeed(), "Error getting the pod in sleep namespace")
 
 						Success("Pods are ready")
 					})
@@ -283,18 +239,10 @@ spec:
 	})
 
 	AfterAll(func(ctx SpecContext) {
-		if CurrentSpecReport().Failed() {
-			if !debugInfoLogged {
-				common.LogDebugInfo(common.DualStack, k)
-				debugInfoLogged = true
-			}
-
-			if keepOnFailure {
-				return
-			}
+		if CurrentSpecReport().Failed() && !debugInfoLogged {
+			common.LogDebugInfo(common.DualStack, k)
+			debugInfoLogged = true
 		}
-
-		clr.Cleanup(ctx)
 	})
 })
 
