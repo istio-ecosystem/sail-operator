@@ -1,7 +1,7 @@
-VERSION = 3.0.3
+VERSION = 3.1.0
 OPERATOR_NAME = servicemeshoperator3
 HUB = quay.io/maistra-dev
-CHANNELS = "stable,stable-3.0"
+CHANNELS = "stable,stable-3.1"
 DEFAULT_CHANNEL=stable
 HELM_VALUES_FILE = ossm/values.yaml
 VERSIONS_YAML_FILE ?= versions.ossm.yaml
