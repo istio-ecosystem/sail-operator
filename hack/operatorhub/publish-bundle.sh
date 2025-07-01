@@ -1,5 +1,5 @@
 #!/bin/bash
-# shellcheck disable=SC1091
+# shellcheck disable=SC1091,SC2001
 
 # Copyright Istio Authors
 #
@@ -29,6 +29,8 @@ GIT_CONFIG_USER_EMAIL="${GIT_CONFIG_USER_EMAIL:-}"
 # The OPERATOR_NAME is defined in Makefile
 : "${OPERATOR_NAME:?"Missing OPERATOR_NAME variable"}"
 : "${OPERATOR_VERSION:?"Missing OPERATOR_VERSION variable"}"
+: "${CHANNELS:?"Missing CHANNELS variable"}"
+: "${PREVIOUS_VERSION:?"Missing PREVIOUS_VERSION variable"}"
 
 show_help() {
   echo "publish-bundle - raises PR to Operator Hub"
@@ -98,6 +100,39 @@ OPERATORS_DIR="operators/${OPERATOR_NAME}/${OPERATOR_VERSION}/"
 BUNDLE_DIR="${CUR_DIR}"/../../bundle
 mkdir -p "${OPERATORS_DIR}"
 cp -a "${BUNDLE_DIR}"/. "${OPERATORS_DIR}"
+
+# Generate release-config.yaml which is required to update FBC. FBC is only available in community-operators-prod atm
+if [ "${OPERATOR_HUB}" = "community-operators-prod" ]
+then
+  # when publishing a nightly build, we want to get previous build version automatically
+  if [[ ${OPERATOR_VERSION} == *"nightly"* ]]
+  then
+    # expecting there is only one channel in $CHANNELS when pushing nightly builds
+    LATEST_VERSION=$(yq '.entries[] | select(.schema == "olm.channel" and .name == '\""${CHANNELS}"\"').entries[-1].name' "${OPERATORS_DIR}../catalog-templates/basic.yaml")
+    # there is no entry in the given channel, probably a new channel and first version to be pushed there. Let's use previous nightly channel.
+    if [ -z "${LATEST_VERSION}" ]
+    then
+      PREVIOUS_MINOR=$(echo "${PREVIOUS_VERSION}" | cut -f1,2 -d'.')
+      LATEST_VERSION=$(yq '.entries[] | select(.schema == "olm.channel" and .name == '\""${PREVIOUS_MINOR}-nightly"\"').entries[-1].name' "${OPERATORS_DIR}../catalog-templates/basic.yaml")
+      if [ -z "${LATEST_VERSION}" ]
+      then
+        echo "Unable to find previous nightly version. Exiting."
+        exit 1
+      fi
+    fi
+  else
+    LATEST_VERSION="${OPERATOR_NAME}.v${PREVIOUS_VERSION}"
+  fi
+  # yaml linter in community-operators-prod CI is expecting a space after a comma
+  CHANNELS_SANITIZED=$(echo "${CHANNELS}" | sed 's/, */, /g')
+  cat <<EOF > "${OPERATORS_DIR}/release-config.yaml"
+catalog_templates:
+  - template_name: basic.yaml
+    channels: [${CHANNELS_SANITIZED}]
+    replaces: ${LATEST_VERSION}
+    skipRange: '>=1.0.0 <${OPERATOR_VERSION}'
+EOF
+fi
 
 if ! git config --global user.name; then
   skipInDryRun git config --global user.name "${GIT_CONFIG_USER_NAME}"
