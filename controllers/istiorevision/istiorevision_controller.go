@@ -275,6 +275,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&rbacv1.RoleBinding{}, ownedResourceHandler).
 		Watches(&policyv1.PodDisruptionBudget{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
 		Watches(&autoscalingv2.HorizontalPodAutoscaler{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
+		// +lint-watches:ignore: NetworkPolicy (not found in charts, but created directly by controller when CreateNetworkPolicy feature is enabled)
 		Watches(&networkingv1.NetworkPolicy{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
 
 		// +lint-watches:ignore: Namespace (not found in charts, but must be watched to reconcile IstioRevision when its namespace is created)
