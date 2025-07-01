@@ -34,7 +34,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: Integration & Delivery, Networking, Security
     containerImage: build-harbor.alauda.cn/asm/servicemesh-operator2:2.0-latest
-    createdAt: "2025-06-23T13:13:10Z"
+    createdAt: "2025-07-01T12:42:09Z"
     description: Alauda Service Mesh v2 enables you to install, configure, and manage
       an instance of Alauda Service Mesh. Alauda Service Mesh is based on the open
       source Istio project.

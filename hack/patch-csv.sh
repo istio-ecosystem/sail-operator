@@ -99,6 +99,9 @@ if [ $# -ne 1 ]; then
 fi
 clusterserviceversion_file_path="$1"
 
+operator_image="$( ${YQ} '.metadata.annotations.containerImage' "${clusterserviceversion_file_path}" )"
+${YQ} -i ".spec.relatedImages |= (. + [{\"name\": \"operator_image\", \"image\": \"${operator_image}\"}])" "${clusterserviceversion_file_path}"
+
 versions="$( ${YQ} '.versions[] | select(. | has("ref") | not) | select (.eol != true) | .name' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" )"
 
 for version in ${versions}; do

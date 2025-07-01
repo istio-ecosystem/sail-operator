@@ -12,14 +12,14 @@
 # as well as all the Istio CRDs (e.g. VirtualService).
 versions:
   - name: v1.24-latest
-    ref: v1.24.5
-  - name: v1.24.5
-    version: 1.24.5
+    ref: v1.24.6
+  - name: v1.24.6
+    version: 1.24.6
     repo: https://github.com/istio/istio
-    commit: 1.24.5
+    commit: 1.24.6
     charts:
-      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.5-asm.1/helm/base-1.24.5-asm.1.tgz
-      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.5-asm.1/helm/istiod-1.24.5-asm.1.tgz
-      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.5-asm.1/helm/gateway-1.24.5-asm.1.tgz
-      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.5-asm.1/helm/cni-1.24.5-asm.1.tgz
-      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.5-asm.1/helm/ztunnel-1.24.5-asm.1.tgz
+      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.6-asm-r0/helm/base-1.24.6-asm-r0.tgz
+      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.6-asm-r0/helm/istiod-1.24.6-asm-r0.tgz
+      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.6-asm-r0/helm/gateway-1.24.6-asm-r0.tgz
+      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.6-asm-r0/helm/cni-1.24.6-asm-r0.tgz
+      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.6-asm-r0/helm/ztunnel-1.24.6-asm-r0.tgz
