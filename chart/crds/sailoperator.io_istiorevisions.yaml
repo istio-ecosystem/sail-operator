@@ -76,6 +76,11 @@ spec:
           spec:
             description: IstioRevisionSpec defines the desired state of IstioRevision
             properties:
+              createNetworkPolicy:
+                description: |-
+                  Enables creation of a NetworkPolicy for istiod to restrict network traffic.
+                  Defaults to false.
+                type: boolean
               namespace:
                 description: Namespace to which the Istio components should be installed.
                 type: string

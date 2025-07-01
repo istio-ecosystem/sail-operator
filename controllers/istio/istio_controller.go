@@ -143,7 +143,7 @@ func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1.Isti
 			UID:                istio.UID,
 			Controller:         ptr.Of(true),
 			BlockOwnerDeletion: ptr.Of(true),
-		})
+		}, istio.Spec.CreateNetworkPolicy)
 }
 
 func getPruningGracePeriod(istio *v1.Istio) time.Duration {

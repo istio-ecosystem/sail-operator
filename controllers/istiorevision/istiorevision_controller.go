@@ -38,6 +38,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -114,10 +115,32 @@ func (r *Reconciler) doReconcile(ctx context.Context, rev *v1.IstioRevision) err
 	}
 
 	log.Info("Installing Helm chart")
-	return r.installHelmCharts(ctx, rev)
+	if err := r.installHelmCharts(ctx, rev); err != nil {
+		return err
+	}
+
+	if r.shouldCreateNetworkPolicy(rev) {
+		log.Info("Creating NetworkPolicy for istiod")
+		if err := kube.CreateIstiodNetworkPolicy(ctx, r.Client, rev); err != nil {
+			return err
+		}
+	} else {
+		// Remove NetworkPolicy if feature is not enabled
+		log.V(2).Info("Removing NetworkPolicy as feature is not enabled")
+		if err := kube.DeleteIstiodNetworkPolicy(ctx, r.Client, rev); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (r *Reconciler) Finalize(ctx context.Context, rev *v1.IstioRevision) error {
+	// Delete NetworkPolicy if it exists
+	if err := kube.DeleteIstiodNetworkPolicy(ctx, r.Client, rev); err != nil {
+		return err
+	}
+
 	return r.uninstallHelmCharts(ctx, rev)
 }
 
@@ -188,6 +211,11 @@ func (r *Reconciler) uninstallHelmCharts(ctx context.Context, rev *v1.IstioRevis
 	return nil
 }
 
+// shouldCreateNetworkPolicy only creates NetworkPolicy if feature is explicitly enabled
+func (r *Reconciler) shouldCreateNetworkPolicy(rev *v1.IstioRevision) bool {
+	return rev.Spec.CreateNetworkPolicy != nil && *rev.Spec.CreateNetworkPolicy
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	logger := mgr.GetLogger().WithName("ctrlr").WithName("istiorev")
@@ -247,6 +275,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&rbacv1.RoleBinding{}, ownedResourceHandler).
 		Watches(&policyv1.PodDisruptionBudget{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
 		Watches(&autoscalingv2.HorizontalPodAutoscaler{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
+		Watches(&networkingv1.NetworkPolicy{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
 
 		// +lint-watches:ignore: Namespace (not found in charts, but must be watched to reconcile IstioRevision when its namespace is created)
 		Watches(&corev1.Namespace{}, nsHandler, builder.WithPredicates(ignoreStatusChange())).

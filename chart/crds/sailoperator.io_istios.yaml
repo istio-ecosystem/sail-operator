@@ -91,6 +91,11 @@ spec:
               version: v1.26.0
             description: IstioSpec defines the desired state of Istio
             properties:
+              createNetworkPolicy:
+                description: |-
+                  Enables creation of a NetworkPolicy for istiod to restrict network traffic.
+                  Defaults to false.
+                type: boolean
               namespace:
                 default: istio-system
                 description: Namespace to which the Istio components should be installed.

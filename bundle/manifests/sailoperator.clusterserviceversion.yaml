@@ -244,6 +244,13 @@ spec:
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24.1
         - urn:alm:descriptor:com.tectonic.ui:select:v1.24.0
         - urn:alm:descriptor:com.tectonic.ui:select:v1.27-alpha.9c6178f5
+      - description: |-
+          Enables creation of a NetworkPolicy for istiod to restrict network traffic.
+          Defaults to false.
+        displayName: Create NetworkPolicy
+        path: createNetworkPolicy
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Namespace to which the Istio components should be installed.
         displayName: Namespace
         path: namespace
@@ -327,6 +334,13 @@ spec:
           Defaults to false.
         displayName: Update Workloads Automatically
         path: updateStrategy.updateWorkloads
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+      - description: |-
+          Enables creation of a NetworkPolicy for istiod to restrict network traffic.
+          Defaults to false.
+        displayName: Create NetworkPolicy
+        path: createNetworkPolicy
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
       - description: Namespace to which the Istio components should be installed.
