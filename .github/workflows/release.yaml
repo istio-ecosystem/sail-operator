@@ -6,13 +6,6 @@ on:
       run_name:
         description: "Run name - short description for the workflow run"
         required: true
-      release_version:
-        description: "Release version"
-        required: true
-      bundle_channels:
-        description: "Bundle channels"
-        required: true
-        default: "latest,servicemesh-2.0"
       is_draft_release:
         description: "Draft release"
         type: boolean
@@ -29,56 +22,54 @@ run-name: ${{ inputs.run_name }}
 env:
   GIT_USER: ${{ secrets.GIT_USER }}
   GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
-  VERSION: ${{ inputs.release_version }}
-  TOOLS_REGISTRY_PROVIDER: gcr.m.daocloud.io
-  VERSIONS_YAML_FILE: alauda-versions.yaml
-  GENERATE_RELATED_IMAGES: "true"
-  LD_EXTRAFLAGS: ${{ vars.LD_EXTRAFLAGS }}
 
 jobs:
   release:
-    runs-on: [self-hosted, linux, x64]
+    runs-on: ubuntu-latest
 
     steps:
-    - name: Install GH CLI
-      uses: dev-hanz-ops/install-gh-cli-action@v0.2.1
-
-    - name: Login to build-harbor.alauda.cn
+    - name: Login to quay.io
       uses: docker/login-action@v3
       with:
-        registry: build-harbor.alauda.cn
-        username: ${{ secrets.HARBOR_USERNAME }}
-        password: ${{ secrets.HARBOR_PASSWORD }}
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-      with:
-        platforms: linux/amd64,linux/arm64
+        registry: quay.io
+        username: ${{ secrets.QUAY_USER }}
+        password: ${{ secrets.QUAY_PWD }}
 
     - uses: actions/checkout@v4
 
     - name: Build and push operator image
       run: |
-        make alauda-docker-buildx \
-          -e TAG=$VERSION
+        make docker-buildx
 
     - name: Generate bundle metadata
       run: |
-        make bundle \
-          -e TAG=$VERSION \
-          -e CHANNELS=$CHANNELS
-      env:
-        CHANNELS: ${{ inputs.bundle_channels }}
+        make bundle
 
-    - name: Build and push bundle image
+    - name: Publish bundle in operatorhub.io
       continue-on-error: true
       run: |
-        make bundle-build \
-          -e VERSION=$VERSION
-        make bundle-push
+        make bundle-publish \
+          -e GIT_CONFIG_USER_NAME="$GIT_CONFIG_USER_NAME" \
+          -e GIT_CONFIG_USER_EMAIL="$GIT_CONFIG_USER_EMAIL" \
+          -e OPERATOR_HUB=community-operators \
+          -e OWNER=k8s-operatorhub \
+          -e FORK=maistra
+      env:
+        GIT_CONFIG_USER_NAME: "${{ github.actor }}"
+        GIT_CONFIG_USER_EMAIL: "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+
+    - name: Publish bundle in OpenShift OperatorHub
+      run: |
+        make bundle-publish \
+          -e GIT_CONFIG_USER_NAME="$GIT_CONFIG_USER_NAME" \
+          -e GIT_CONFIG_USER_EMAIL="$GIT_CONFIG_USER_EMAIL" \
+          -e OWNER=redhat-openshift-ecosystem \
+          -e FORK=maistra
+      env:
+        GIT_CONFIG_USER_NAME: "${{ github.actor }}"
+        GIT_CONFIG_USER_EMAIL: "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
 
     - name: Create GitHub release
-      if: startsWith(github.ref, 'refs/tags/')
       run: |
         make create-gh-release \
           -e GH_PRE_RELEASE=$GH_PRE_RELEASE \

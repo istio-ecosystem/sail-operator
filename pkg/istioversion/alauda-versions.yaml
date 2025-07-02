@@ -11,12 +11,26 @@
 # go.mod affect the generated API schema for the Sail CRDs (e.g. IstioRevision),
 # as well as all the Istio CRDs (e.g. VirtualService).
 versions:
+  # v1.26
+  - name: v1.26-latest
+    ref: v1.26.2-asm-r0
+  - name: v1.26.2-asm-r0
+    version: 1.26.2-asm-r0
+    repo: https://github.com/alauda-mesh/istio
+    commit: 1.26.2-asm-r0
+    charts:
+      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.26.2-asm-r0/helm/base-1.26.2-asm-r0.tgz
+      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.26.2-asm-r0/helm/istiod-1.26.2-asm-r0.tgz
+      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.26.2-asm-r0/helm/gateway-1.26.2-asm-r0.tgz
+      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.26.2-asm-r0/helm/cni-1.26.2-asm-r0.tgz
+      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.26.2-asm-r0/helm/ztunnel-1.26.2-asm-r0.tgz
+  # v1.24
   - name: v1.24-latest
-    ref: v1.24.6
-  - name: v1.24.6
-    version: 1.24.6
-    repo: https://github.com/istio/istio
-    commit: 1.24.6
+    ref: v1.24.6-asm-r0
+  - name: v1.24.6-asm-r0
+    version: 1.24.6-asm-r0
+    repo: https://github.com/aluada-mesh/istio
+    commit: 1.26.2-asm-r0
     charts:
       - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.6-asm-r0/helm/base-1.24.6-asm-r0.tgz
       - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.6-asm-r0/helm/istiod-1.24.6-asm-r0.tgz
