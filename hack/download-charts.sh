@@ -37,7 +37,8 @@ trap 'rm -rf "${WORK_DIR}"' EXIT
 ISTIO_REPO_TOKEN=${ISTIO_REPO_TOKEN:-}
 ISTIO_CURL_ARGS=
 if [ -n "${ISTIO_REPO_TOKEN}" ]; then
-  ISTIO_CURL_ARGS="--header \"Authorization: bearer ${ISTIO_REPO_TOKEN}\""
+  echo "Using ISTIO_REPO_TOKEN for authentication remote istio repo"
+  ISTIO_CURL_ARGS=-H "Authorization: token ${ISTIO_REPO_TOKEN}"
 fi
 
 function downloadRequired() {

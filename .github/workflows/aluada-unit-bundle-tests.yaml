@@ -1,7 +1,6 @@
 name: alauda-unit-bundle-tests
 
 on:
-  push:
   pull_request_target:
     branches:
       - '*'
@@ -20,6 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Fetch PR branch from fork
+        run: |
+          gh pr checkout ${{ github.event.number }}
 
       - name: Generate bundle metadata
         run: |
