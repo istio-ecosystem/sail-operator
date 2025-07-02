@@ -1,10 +1,10 @@
-VERSION = 2.0.0
+VERSION = 2.0.5
 
 OPERATOR_NAME = servicemesh-operator2
 HUB = build-harbor.alauda.cn/asm
 IMAGE_BASE = servicemesh-operator2
-CHANNELS = "latest,servicemesh-2.0"
-DEFAULT_CHANNEL = latest
+CHANNELS = "stable,stable-2.0"
+DEFAULT_CHANNEL = stable
 HELM_VALUES_FILE = alauda/values.yaml
 # NB(timonwong) Only use this variable in release pipeline
 # VERSIONS_YAML_FILE ?= alauda-versions.yaml
