@@ -1,0 +1,34 @@
+name: alauda-unit-bundle-tests
+
+on:
+  push:
+  pull_request_target:
+    branches:
+      - '*'
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+env:
+  VERSIONS_YAML_FILE: alauda-versions.yaml
+  GENERATE_RELATED_IMAGES: "true"
+  ISTIO_REPO_TOKEN: ${{ secrets.GIT_TOKEN }}
+
+jobs:
+  test-bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate bundle metadata
+        run: |
+          make bundle
+
+      # Upload artifacts
+      - name: Upload bundle artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          retention-days: 3
+          name: bundle-artifacts
+          path: ./bundle
