@@ -94,8 +94,10 @@ func (h *ChartManager) UpgradeOrInstallChart(
 			return nil, fmt.Errorf("failed to roll back helm release %s: %w", releaseName, err)
 		}
 		releaseExists = true
-	} else if rel.Info.Status == release.StatusPendingInstall || (rel.Info.Status == release.StatusFailed && rel.Version <= 1) {
-		log.V(2).Info("Performing helm uninstall", "release", releaseName)
+	} else if rel.Info.Status == release.StatusPendingInstall ||
+		rel.Info.Status == release.StatusUninstalling ||
+		(rel.Info.Status == release.StatusFailed && rel.Version <= 1) {
+		log.V(2).Info("Performing helm uninstall", "release", releaseName, "status", rel.Info.Status)
 		if _, err := action.NewUninstall(cfg).Run(releaseName); err != nil {
 			return nil, fmt.Errorf("failed to uninstall failed helm release %s: %w", releaseName, err)
 		}
