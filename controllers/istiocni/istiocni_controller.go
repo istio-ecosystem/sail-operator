@@ -166,7 +166,7 @@ func (r *Reconciler) installHelmChart(ctx context.Context, cni *v1.IstioCNI) err
 		return fmt.Errorf("failed to apply profile: %w", err)
 	}
 
-	_, err = r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(version), mergedHelmValues, cni.Spec.Namespace, cniReleaseName, ownerReference)
+	_, err = r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(version), mergedHelmValues, cni.Spec.Namespace, cniReleaseName, &ownerReference)
 	if err != nil {
 		return fmt.Errorf("failed to install/update Helm chart %q: %w", cniChartName, err)
 	}
