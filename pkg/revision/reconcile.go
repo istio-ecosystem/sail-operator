@@ -28,7 +28,7 @@ import (
 
 func CreateOrUpdate(
 	ctx context.Context, cl client.Client, revName string, version string, namespace string,
-	values *v1.Values, ownerRef metav1.OwnerReference,
+	values *v1.Values, ownerRef metav1.OwnerReference, createNetworkPolicy *bool,
 ) error {
 	log := logf.FromContext(ctx)
 	log = log.WithValues("IstioRevision", revName)
@@ -42,6 +42,7 @@ func CreateOrUpdate(
 		// update
 		rev.Spec.Version = version
 		rev.Spec.Values = values
+		rev.Spec.CreateNetworkPolicy = createNetworkPolicy
 		log.Info("Updating IstioRevision")
 		if err = cl.Update(ctx, &rev); err != nil {
 			return fmt.Errorf("failed to update IstioRevision %q: %w", rev.Name, err)
@@ -54,9 +55,10 @@ func CreateOrUpdate(
 				OwnerReferences: []metav1.OwnerReference{ownerRef},
 			},
 			Spec: v1.IstioRevisionSpec{
-				Version:   version,
-				Namespace: namespace,
-				Values:    values,
+				Version:             version,
+				Namespace:           namespace,
+				Values:              values,
+				CreateNetworkPolicy: createNetworkPolicy,
 			},
 		}
 		log.Info("Creating IstioRevision")
