@@ -93,6 +93,13 @@ var (
 			},
 		},
 		{
+			name: "release in uninstalling state",
+			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
+				install(g, helm, chartDir, ns, relName, owner)
+				setReleaseStatus(g, helm, ns, relName, release.StatusUninstalling)
+			},
+		},
+		{
 			name: "release in uninstalled state",
 			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
 				install(g, helm, chartDir, ns, relName, owner)
@@ -100,14 +107,6 @@ var (
 			},
 			wantErrOnInstall:  true,
 			skipUninstallTest: true, // If the release is marked as Uninstalled, helm doesn't uninstall it
-		},
-		{
-			name: "release in uninstalling state",
-			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
-				install(g, helm, chartDir, ns, relName, owner)
-				setReleaseStatus(g, helm, ns, relName, release.StatusUninstalling)
-			},
-			wantErrOnInstall: true,
 		},
 		{
 			name: "release in unknown state",
