@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/env"
-	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	k8sclient "github.com/istio-ecosystem/sail-operator/tests/e2e/util/client"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
@@ -32,7 +31,6 @@ var (
 	cl  client.Client
 	err error
 	// version will be the first version in the list, this version is the newest Istio version in the versions.yaml file
-	version                = istioversion.New
 	controlPlaneNamespace1 = env.Get("CONTROL_PLANE_NS1", "istio-system1")
 	controlPlaneNamespace2 = env.Get("CONTROL_PLANE_NS2", "istio-system2")
 	istioName1             = env.Get("ISTIO_NAME1", "mesh1")
