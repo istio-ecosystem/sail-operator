@@ -39,6 +39,7 @@ import (
 type Cleaner struct {
 	cl        client.Client
 	ctx       []string
+	recorded  bool
 	resources map[resource]bool
 	crds      map[string]struct{}
 	crs       map[string]map[resource]struct{}
@@ -64,6 +65,8 @@ func New(cl client.Client, ctx ...string) Cleaner {
 
 // Record will save the state of all resources it wants to keep in the cluster, so they won't be cleaned up.
 func (c *Cleaner) Record(ctx context.Context) {
+	c.recorded = true
+
 	// Save all namespaces that exist so that we can skip them when cleaning
 	namespaceList := &corev1.NamespaceList{}
 	Expect(c.cl.List(ctx, namespaceList)).To(Succeed())
@@ -138,6 +141,10 @@ type resObj struct {
 }
 
 func (c *Cleaner) cleanup(ctx context.Context) (deleted []client.Object) {
+	if !c.recorded {
+		Fail("Running the Cleaner without recording first is unsafe and will lead to problems.")
+	}
+
 	allCRDs := &apiextensionsv1.CustomResourceDefinitionList{}
 	Expect(c.cl.List(ctx, allCRDs)).To(Succeed())
 
@@ -271,7 +278,8 @@ func (c *Cleaner) WaitForDeletion(ctx context.Context, deleted []client.Object) 
 
 	By(fmt.Sprintf("Waiting for resources to be deleted%s", s))
 	for _, obj := range deleted {
-		Expect(c.waitForDeletion(ctx, obj)).To(Succeed())
+		Expect(c.waitForDeletion(ctx, obj)).To(Succeed(),
+			fmt.Sprintf("Failed while waiting for %s to delete", obj.GetName()))
 	}
 
 	Success(fmt.Sprintf("Finished cleaning up resources%s", s))
