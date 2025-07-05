@@ -267,6 +267,10 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 				},
 			}
 			Expect(k8sClient.Create(ctx, istio)).To(Succeed())
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, defaultTagKey, istio)).To(Succeed())
+				g.Expect(istio.Status.ObservedGeneration).To(Equal(istio.Generation))
+			}).Should(Succeed())
 			tag = &v1.IstioRevisionTag{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
@@ -295,6 +299,25 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 				g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
 				g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionReconciled).Status).To(Equal(metav1.ConditionFalse))
 				g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionReconciled).Reason).To(Equal(v1.IstioRevisionTagReasonNameAlreadyExists))
+			}).Should(Succeed())
+		})
+
+		It("still reconciles the IstioRevision", func() {
+			// update Istio as well to make sure it's still reconciled
+			Expect(k8sClient.Get(ctx, defaultTagKey, istio)).To(Succeed())
+			istio.Spec.Values = &v1.Values{
+				Pilot: &v1.PilotConfig{
+					Env: map[string]string{"test": "test"},
+				},
+			}
+			Expect(k8sClient.Update(ctx, istio)).To(Succeed())
+			Eventually(func(g Gomega) {
+				rev := &v1.IstioRevision{}
+				g.Expect(k8sClient.Get(ctx, defaultTagKey, rev)).To(Succeed())
+				g.Expect(rev.Spec.Values).To(Not(BeNil()))
+				g.Expect(rev.Spec.Values.Pilot).To(Not(BeNil()))
+				g.Expect(rev.Spec.Values.Pilot.Env["test"]).To(Equal("test"))
+				g.Expect(rev.Status.GetCondition(v1.IstioRevisionConditionReconciled).Status).To(Equal(metav1.ConditionTrue))
 			}).Should(Succeed())
 		})
 	})
