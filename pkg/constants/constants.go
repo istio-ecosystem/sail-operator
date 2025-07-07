@@ -94,4 +94,7 @@ const (
 
 	// IstiodChartName is the name of the chart that installs istiod
 	IstiodChartName = "istiod"
+
+	// BaseChartName is the name of the base chart
+	BaseChartName = "base"
 )
