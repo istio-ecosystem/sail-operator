@@ -26,7 +26,6 @@ import (
 
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
@@ -59,21 +58,8 @@ var sailCRDs = []string{
 var _ = Describe("Operator", Label("smoke", "operator"), Ordered, func() {
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
-	clr := cleaner.New(cl)
 
 	Describe("installation", func() {
-		BeforeAll(func(ctx SpecContext) {
-			clr.Record(ctx)
-			Expect(k.CreateNamespace(namespace)).To(Succeed(), "Namespace failed to be created")
-
-			if skipDeploy {
-				Success("Skipping operator installation because it was deployed externally")
-			} else {
-				Eventually(common.InstallOperatorViaHelm).
-					To(Succeed(), "Operator failed to be deployed")
-			}
-		})
-
 		It("deploys all the CRDs", func(ctx SpecContext) {
 			Eventually(common.GetList).WithArguments(ctx, cl, &apiextensionsv1.CustomResourceDefinitionList{}).
 				Should(WithTransform(extractCRDNames, ContainElements(sailCRDs)),
@@ -202,12 +188,7 @@ spec:
 	AfterAll(func(ctx SpecContext) {
 		if CurrentSpecReport().Failed() {
 			common.LogDebugInfo(common.Operator, k)
-			if keepOnFailure {
-				return
-			}
 		}
-
-		clr.Cleanup(ctx)
 	})
 })
 

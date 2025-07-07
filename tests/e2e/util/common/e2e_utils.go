@@ -31,7 +31,6 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
@@ -313,17 +312,6 @@ func CheckPodsReady(ctx context.Context, cl client.Client, namespace string) err
 	}
 
 	return nil
-}
-
-func InstallOperatorViaHelm(extraArgs ...string) error {
-	args := []string{
-		"--namespace " + OperatorNamespace,
-		"--set image=" + OperatorImage,
-		"--set operatorLogLevel=3",
-	}
-	args = append(args, extraArgs...)
-
-	return helm.Install("sail-operator", filepath.Join(project.RootDir, "chart"), args...)
 }
 
 // GetSampleYAML returns the URL of the yaml file for the testing app.
