@@ -63,7 +63,7 @@ func (h *ChartManager) newActionConfig(ctx context.Context, namespace string) (*
 // UpgradeOrInstallChart upgrades a chart in cluster or installs it new if it does not already exist
 func (h *ChartManager) UpgradeOrInstallChart(
 	ctx context.Context, chartDir string, values Values,
-	namespace, releaseName string, ownerReference metav1.OwnerReference,
+	namespace, releaseName string, ownerReference *metav1.OwnerReference,
 ) (*release.Release, error) {
 	log := logf.FromContext(ctx)
 
@@ -161,4 +161,15 @@ func getRelease(cfg *action.Configuration, releaseName string) (*release.Release
 		return nil, fmt.Errorf("failed to get helm release %s: %w", releaseName, err)
 	}
 	return rel, nil
+}
+
+func (h *ChartManager) ListReleases(ctx context.Context) ([]*release.Release, error) {
+	cfg, err := h.newActionConfig(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+
+	listAction := action.NewList(cfg)
+	listAction.AllNamespaces = true
+	return listAction.Run()
 }
