@@ -282,7 +282,10 @@ func getProxyVersion(podName, namespace string) (*semver.Version, error) {
 	}
 
 	cmd := "echo " + proxyStatus + " | grep " + podName + "." + namespace + " | awk -F ' ' '{print $NF}'"
-	versionStr := shell.ExecuteCommand(cmd)
+	versionStr, err := shell.ExecuteCommand(cmd)
+	if err != nil {
+		return nil, fmt.Errorf("error getting sidecar version: %w", err)
+	}
 	version, err := semver.NewVersion(versionStr)
 	if err != nil {
 		return version, fmt.Errorf("error parsing sidecar version %q: %w", versionStr, err)
