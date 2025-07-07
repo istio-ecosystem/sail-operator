@@ -619,7 +619,7 @@ bundle: gen-all-except-bundle helm operator-sdk ## Generate bundle manifests and
 	if [ "$(OPENSHIFT_PLATFORM)" = "true" ]; then \
 		TEMPL_FLAGS="$$TEMPL_FLAGS --set platform=openshift"; \
 	fi; \
-	$(HELM) template chart chart $$TEMPL_FLAGS --set image='$(IMAGE)' --set bundleGeneration=true | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
+	$(HELM) template chart chart $$TEMPL_FLAGS --set bundleGeneration=true | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
 
 ifeq ($(GENERATE_RELATED_IMAGES), true)
 	@hack/patch-csv.sh bundle/manifests/$(OPERATOR_NAME).clusterserviceversion.yaml
