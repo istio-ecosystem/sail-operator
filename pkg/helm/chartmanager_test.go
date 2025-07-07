@@ -93,6 +93,13 @@ var (
 			},
 		},
 		{
+			name: "release in uninstalling state",
+			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
+				install(g, helm, chartDir, ns, relName, owner)
+				setReleaseStatus(g, helm, ns, relName, release.StatusUninstalling)
+			},
+		},
+		{
 			name: "release in uninstalled state",
 			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
 				install(g, helm, chartDir, ns, relName, owner)
@@ -100,14 +107,6 @@ var (
 			},
 			wantErrOnInstall:  true,
 			skipUninstallTest: true, // If the release is marked as Uninstalled, helm doesn't uninstall it
-		},
-		{
-			name: "release in uninstalling state",
-			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
-				install(g, helm, chartDir, ns, relName, owner)
-				setReleaseStatus(g, helm, ns, relName, release.StatusUninstalling)
-			},
-			wantErrOnInstall: true,
 		},
 		{
 			name: "release in unknown state",
@@ -151,7 +150,7 @@ func TestUpgradeOrInstallChart(t *testing.T) {
 				tc.setup(g, cl, helm, ns)
 			}
 
-			rel, err := helm.UpgradeOrInstallChart(ctx, chartDir, Values{"value": "my-value"}, ns, relName, owner)
+			rel, err := helm.UpgradeOrInstallChart(ctx, chartDir, Values{"value": "my-value"}, ns, relName, &owner)
 
 			if tc.wantErrOnInstall {
 				g.Expect(err).To(HaveOccurred())
@@ -216,7 +215,7 @@ func upgrade(g *WithT, helm *ChartManager, chartDir string, ns string, relName s
 }
 
 func upgradeOrInstall(g *WithT, helm *ChartManager, chartDir string, ns string, relName string, owner metav1.OwnerReference) {
-	_, err := helm.UpgradeOrInstallChart(ctx, chartDir, Values{"value": "other-value"}, ns, relName, owner)
+	_, err := helm.UpgradeOrInstallChart(ctx, chartDir, Values{"value": "other-value"}, ns, relName, &owner)
 	g.Expect(err).ToNot(HaveOccurred())
 }
 
