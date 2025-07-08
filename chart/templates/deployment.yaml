@@ -47,6 +47,10 @@ spec:
                 operator: In
                 values:
                 - linux
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 6 }}
+      {{- end }}
       containers:
       - args:
         - --health-probe-bind-address=:8081
