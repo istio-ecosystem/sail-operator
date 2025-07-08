@@ -33,8 +33,8 @@ metadata:
       ]
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
-    containerImage: quay.io/maistra-dev/sail-operator:3.1.0
-    createdAt: "2025-07-08T06:34:05Z"
+    containerImage: ${OSSM_OPERATOR_3_1}
+    createdAt: "2025-07-07T10:50:48Z"
     description: The OpenShift Service Mesh Operator enables you to install, configure,
       and manage an instance of Red Hat OpenShift Service Mesh. OpenShift Service
       Mesh is based on the open source Istio project.
@@ -700,11 +700,11 @@ spec:
                 images.v1_24_6.istiod: registry.redhat.io/openshift-service-mesh/istio-pilot-rhel9@sha256:a65efcf516c6ee950f89f52d3d41dd370aa32cda622198cd477052bf8d21ba50
                 images.v1_24_6.proxy: registry.redhat.io/openshift-service-mesh/istio-proxyv2-rhel9@sha256:a5748d50850784dd9c8e6646f5caf00c52deb4397632f02ffae5c879236d3b6c
                 images.v1_24_6.ztunnel: registry.redhat.io/openshift-service-mesh-dev-preview-beta/istio-ztunnel-rhel9@sha256:b74f037d9e0ee57d669d6860e327340f23a752cbf598cafb7de715464b90e465
-                images.v1_26_2.cni: registry.redhat.io/openshift-service-mesh/istio-cni-rhel9:1.26.2
-                images.v1_26_2.istiod: registry.redhat.io/openshift-service-mesh/istio-pilot-rhel9:1.25.2
-                images.v1_26_2.must-gather: registry.redhat.io/openshift-service-mesh/istio-must-gather-rhel9:3.1.0
-                images.v1_26_2.proxy: registry.redhat.io/openshift-service-mesh/istio-proxyv2-rhel9:1.26.2
-                images.v1_26_2.ztunnel: registry.redhat.io/openshift-service-mesh-dev-preview-beta/istio-ztunnel-rhel9:1.26.2
+                images.v1_26_2.cni: ${ISTIO_CNI_1_26}
+                images.v1_26_2.istiod: ${ISTIO_PILOT_1_26}
+                images.v1_26_2.must-gather: ${OSSM_MUST_GATHER_3_1}
+                images.v1_26_2.proxy: ${ISTIO_PROXY_1_26}
+                images.v1_26_2.ztunnel: ${ISTIO_ZTUNNEL_1_26}
                 kubectl.kubernetes.io/default-container: sail-operator
               labels:
                 app.kubernetes.io/created-by: servicemeshoperator3
@@ -734,7 +734,7 @@ spec:
                 - --zap-log-level=info
                 command:
                 - /sail-operator
-                image: quay.io/maistra-dev/sail-operator:3.1.0
+                image: ${OSSM_OPERATOR_3_1}
                 livenessProbe:
                   httpGet:
                     path: /healthz

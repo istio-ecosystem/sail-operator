@@ -23,11 +23,11 @@ deployment:
     images.v1_24_6.proxy: registry.redhat.io/openshift-service-mesh/istio-proxyv2-rhel9@sha256:a5748d50850784dd9c8e6646f5caf00c52deb4397632f02ffae5c879236d3b6c
     images.v1_24_6.ztunnel: registry.redhat.io/openshift-service-mesh-dev-preview-beta/istio-ztunnel-rhel9@sha256:b74f037d9e0ee57d669d6860e327340f23a752cbf598cafb7de715464b90e465
     # 1.26.2 images will be hardcoded to versions released with 3.1.0
-    images.v1_26_2.cni: registry.redhat.io/openshift-service-mesh/istio-cni-rhel9:1.26.2
-    images.v1_26_2.istiod: registry.redhat.io/openshift-service-mesh/istio-pilot-rhel9:1.25.2
-    images.v1_26_2.must-gather: registry.redhat.io/openshift-service-mesh/istio-must-gather-rhel9:3.1.0
-    images.v1_26_2.proxy: registry.redhat.io/openshift-service-mesh/istio-proxyv2-rhel9:1.26.2
-    images.v1_26_2.ztunnel: registry.redhat.io/openshift-service-mesh-dev-preview-beta/istio-ztunnel-rhel9:1.26.2
+    images.v1_26_2.cni: ${ISTIO_CNI_1_26}
+    images.v1_26_2.istiod: ${ISTIO_PILOT_1_26}
+    images.v1_26_2.must-gather: ${OSSM_MUST_GATHER_3_1}
+    images.v1_26_2.proxy: ${ISTIO_PROXY_1_26}
+    images.v1_26_2.ztunnel: ${ISTIO_ZTUNNEL_1_26}
 service:
   port: 8443
 serviceAccountName: servicemesh-operator3
