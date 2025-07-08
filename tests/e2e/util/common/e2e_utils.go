@@ -288,6 +288,29 @@ func GetVersionFromIstiod() (*semver.Version, error) {
 	return nil, fmt.Errorf("error getting version from istiod: version not found in output: %s", output)
 }
 
+func GetProxyVersion(podName, namespace string) (*semver.Version, error) {
+	proxyStatus, err := istioctl.GetProxyStatus()
+	if err != nil {
+		return nil, fmt.Errorf("error getting sidecar version: %w", err)
+	}
+
+	lines := strings.Split(proxyStatus, "\n")
+	var versionStr string
+	for _, line := range lines {
+		if strings.Contains(line, podName+"."+namespace) {
+			values := strings.Fields(line)
+			versionStr = values[len(values)-1]
+			break
+		}
+	}
+
+	version, err := semver.NewVersion(versionStr)
+	if err != nil {
+		return version, fmt.Errorf("error parsing sidecar version %q: %w", versionStr, err)
+	}
+	return version, err
+}
+
 func isPodReady(pod *corev1.Pod) bool {
 	for _, cond := range pod.Status.Conditions {
 		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
