@@ -26,7 +26,6 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
-	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -78,19 +77,14 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 		Step("Deleting the Namespace to perform the tests")
 		Expect(k8sClient.Delete(ctx, namespace)).To(Succeed())
 
-		Eventually(k8sClient.DeleteAllOf).WithArguments(ctx, &v1.IstioRevision{}).Should(Succeed())
-		Eventually(func(g Gomega) {
-			list := &v1.IstioRevisionList{}
-			g.Expect(k8sClient.List(ctx, list)).To(Succeed())
-			g.Expect(list.Items).To(BeEmpty())
-		}).Should(Succeed())
+		deleteAllIstioRevisions(ctx)
 	})
 
 	rev := &v1.IstioRevision{}
 
 	Describe("validation", func() {
 		AfterEach(func() {
-			Eventually(k8sClient.DeleteAllOf).WithArguments(ctx, &v1.IstioRevision{}).Should(Succeed())
+			deleteAllIstioRevisions(ctx)
 		})
 
 		It("rejects an IstioRevision where spec.values.global.istioNamespace doesn't match spec.namespace", func() {
@@ -204,8 +198,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 		})
 
 		AfterAll(func() {
-			Expect(k8sClient.Delete(ctx, rev)).To(Succeed())
-			Eventually(k8sClient.Get).WithArguments(ctx, kube.Key(revName), rev).Should(ReturnNotFoundError())
+			deleteAllIstioRevisions(ctx)
 
 			Expect(k8sClient.Delete(ctx, cni)).To(Succeed())
 			Eventually(k8sClient.Get).WithArguments(ctx, cniKey, cni).Should(ReturnNotFoundError())
@@ -277,8 +270,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 			})
 
 			AfterAll(func() {
-				Expect(k8sClient.Delete(ctx, rev)).To(Succeed())
-				Eventually(k8sClient.Get).WithArguments(ctx, kube.Key(revName), rev).Should(ReturnNotFoundError())
+				deleteAllIstioRevisions(ctx)
 			})
 
 			It("indicates in the status that the namespace doesn't exist", func() {
@@ -350,8 +342,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 			})
 
 			AfterAll(func() {
-				Expect(k8sClient.Delete(ctx, rev)).To(Succeed())
-				Eventually(k8sClient.Get).WithArguments(ctx, kube.Key(revName), rev).Should(ReturnNotFoundError())
+				deleteAllIstioRevisions(ctx)
 			})
 
 			It("reconciles immediately", func() {
@@ -394,8 +385,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 		})
 
 		AfterAll(func() {
-			Expect(k8sClient.Delete(ctx, rev)).To(Succeed())
-			Eventually(k8sClient.Get).WithArguments(ctx, kube.Key(revName), rev).Should(ReturnNotFoundError())
+			deleteAllIstioRevisions(ctx)
 		})
 
 		It("updates the status of the IstioRevision resource", func() {
@@ -460,8 +450,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 		})
 
 		AfterAll(func() {
-			Expect(k8sClient.Delete(ctx, rev)).To(Succeed())
-			Eventually(k8sClient.Get).WithArguments(ctx, kube.Key(revName), rev).Should(ReturnNotFoundError())
+			deleteAllIstioRevisions(ctx)
 		})
 
 		DescribeTable("reconciles owned resource",
@@ -626,8 +615,7 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 		})
 
 		AfterAll(func() {
-			Expect(k8sClient.Delete(ctx, rev)).To(Succeed())
-			Eventually(k8sClient.Get).WithArguments(ctx, kube.Key(revName), rev).Should(ReturnNotFoundError())
+			deleteAllIstioRevisions(ctx)
 		})
 
 		It("supports concurrent deployment of two control planes", func() {
@@ -708,4 +696,14 @@ func getReconcileCount(g Gomega, controllerName string) float64 {
 		}
 	}
 	return sum
+}
+
+func deleteAllIstioRevisions(ctx context.Context) {
+	Step("Deleting all IstioRevisions")
+	Eventually(k8sClient.DeleteAllOf).WithArguments(ctx, &v1.IstioRevision{}).Should(Succeed())
+	Eventually(func(g Gomega) {
+		list := &v1.IstioRevisionList{}
+		g.Expect(k8sClient.List(ctx, list)).To(Succeed())
+		g.Expect(list.Items).To(BeEmpty())
+	}).Should(Succeed())
 }
