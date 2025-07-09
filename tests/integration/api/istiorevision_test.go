@@ -395,7 +395,6 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 				readyCondition := rev.Status.GetCondition(v1.IstioRevisionConditionReady)
 				g.Expect(readyCondition.Status).To(Equal(metav1.ConditionFalse))
 			}).Should(Succeed())
-
 		})
 
 		It("updates the status of the IstioRevision resource", func() {
