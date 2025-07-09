@@ -36,7 +36,8 @@ jobs:
       run: |
         make bundle-publish-nightly \
           -e GIT_CONFIG_USER_NAME="$GIT_CONFIG_USER_NAME" \
-          -e GIT_CONFIG_USER_EMAIL="$GIT_CONFIG_USER_EMAIL"
+          -e GIT_CONFIG_USER_EMAIL="$GIT_CONFIG_USER_EMAIL" \
+          -e USE_IMAGE_DIGESTS=true
       env:
         GIT_CONFIG_USER_NAME: "${{ github.actor }}"
         GIT_CONFIG_USER_EMAIL: "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
