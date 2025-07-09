@@ -43,6 +43,11 @@ type IstioRevisionSpec struct {
 	// Defines the values to be passed to the Helm charts when installing Istio.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Helm Values"
 	Values *Values `json:"values,omitempty"`
+
+	// Enables creation of a NetworkPolicy for istiod to restrict network traffic.
+	// Defaults to false.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Create NetworkPolicy",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:booleanSwitch"}
+	CreateNetworkPolicy *bool `json:"createNetworkPolicy,omitempty"`
 }
 
 // IstioRevisionStatus defines the observed state of IstioRevision
