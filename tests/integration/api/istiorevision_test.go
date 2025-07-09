@@ -253,21 +253,139 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 		})
 	})
 
-	Describe("reconciles immediately after target namespace is created", func() {
-		nsName := "nonexistent-namespace-" + rand.String(8)
+	Describe("target namespace dependency checks", func() {
+		When("IstioRevision is created before the target namespace", func() {
+			nsName := "nonexistent-namespace-" + rand.String(8)
+			BeforeAll(func() {
+				Step("Creating the IstioRevision resource without the namespace")
+				rev = &v1.IstioRevision{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: revName,
+					},
+					Spec: v1.IstioRevisionSpec{
+						Version:   istioversion.Default,
+						Namespace: nsName,
+						Values: &v1.Values{
+							Revision: ptr.Of(revName),
+							Global: &v1.GlobalConfig{
+								IstioNamespace: &nsName,
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(ctx, rev)).To(Succeed())
+			})
+
+			AfterAll(func() {
+				Expect(k8sClient.Delete(ctx, rev)).To(Succeed())
+				Eventually(k8sClient.Get).WithArguments(ctx, kube.Key(revName), rev).Should(ReturnNotFoundError())
+			})
+
+			It("indicates in the status that the namespace doesn't exist", func() {
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
+					g.Expect(rev.Status.ObservedGeneration).To(Equal(rev.ObjectMeta.Generation))
+
+					reconciled := rev.Status.GetCondition(v1.IstioRevisionConditionReconciled)
+					g.Expect(reconciled.Status).To(Equal(metav1.ConditionFalse))
+					g.Expect(reconciled.Reason).To(Equal(v1.IstioRevisionReasonReconcileError))
+					g.Expect(reconciled.Message).To(ContainSubstring(fmt.Sprintf("namespace %q doesn't exist", nsName)))
+				}).Should(Succeed())
+			})
+
+			When("the namespace is created", func() {
+				var ns *corev1.Namespace
+
+				BeforeAll(func() {
+					ns = &corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: nsName,
+						},
+					}
+					Expect(k8sClient.Create(ctx, ns)).To(Succeed())
+				})
+				AfterAll(func() {
+					Expect(k8sClient.Delete(ctx, ns)).To(Succeed())
+				})
+
+				It("reconciles immediately", func() {
+					Step("Checking if istiod is deployed immediately")
+					istiod := &appsv1.Deployment{}
+					istiodKey := client.ObjectKey{Name: "istiod-" + revName, Namespace: ns.Name}
+					Eventually(k8sClient.Get).WithArguments(ctx, istiodKey, istiod).WithTimeout(10 * time.Second).Should(Succeed())
+
+					Step("Checking if the status is updated")
+					Eventually(func(g Gomega) {
+						g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
+						g.Expect(rev.Status.ObservedGeneration).To(Equal(rev.ObjectMeta.Generation))
+						reconciled := rev.Status.GetCondition(v1.IstioRevisionConditionReconciled)
+						g.Expect(reconciled.Status).To(Equal(metav1.ConditionTrue))
+					}).Should(Succeed())
+				})
+			})
+		})
+
+		When("target namespace is created before the IstioRevision", func() {
+			// Uses istioNamespace which has already been created by suite setup
+			BeforeAll(func() {
+				rev = &v1.IstioRevision{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: revName,
+					},
+					Spec: v1.IstioRevisionSpec{
+						Version:   istioversion.Default,
+						Namespace: istioNamespace,
+						Values: &v1.Values{
+							Global: &v1.GlobalConfig{
+								IstioNamespace: ptr.Of(istioNamespace),
+							},
+							Revision: ptr.Of(revName),
+							Pilot: &v1.PilotConfig{
+								Image: ptr.Of(pilotImage),
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(ctx, rev)).To(Succeed())
+			})
+
+			AfterAll(func() {
+				Expect(k8sClient.Delete(ctx, rev)).To(Succeed())
+				Eventually(k8sClient.Get).WithArguments(ctx, kube.Key(revName), rev).Should(ReturnNotFoundError())
+			})
+
+			It("reconciles immediately", func() {
+				istiod := &appsv1.Deployment{}
+				Step("Checking if Deployment was successfully created in the reconciliation")
+				Eventually(k8sClient.Get).WithArguments(ctx, istiodKey, istiod).Should(Succeed())
+				Expect(istiod.Spec.Template.Spec.Containers[0].Image).To(Equal(pilotImage))
+				Expect(istiod.ObjectMeta.OwnerReferences).To(ContainElement(NewOwnerReference(rev)))
+
+				Step("Checking if the status is updated")
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
+					g.Expect(rev.Status.ObservedGeneration).To(Equal(rev.ObjectMeta.Generation))
+				}).Should(Succeed())
+			})
+		})
+	})
+
+	When("istiod readiness changes", func() {
 		BeforeAll(func() {
-			Step("Creating the IstioRevision resource without the namespace")
 			rev = &v1.IstioRevision{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: revName,
 				},
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Default,
-					Namespace: nsName,
+					Namespace: istioNamespace,
 					Values: &v1.Values{
-						Revision: ptr.Of(revName),
 						Global: &v1.GlobalConfig{
-							IstioNamespace: &nsName,
+							IstioNamespace: ptr.Of(istioNamespace),
+						},
+						Revision: ptr.Of(revName),
+						Pilot: &v1.PilotConfig{
+							Image: ptr.Of(pilotImage),
 						},
 					},
 				},
@@ -280,92 +398,14 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 			Eventually(k8sClient.Get).WithArguments(ctx, kube.Key(revName), rev).Should(ReturnNotFoundError())
 		})
 
-		It("indicates in the status that the namespace doesn't exist", func() {
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
-				g.Expect(rev.Status.ObservedGeneration).To(Equal(rev.ObjectMeta.Generation))
-
-				reconciled := rev.Status.GetCondition(v1.IstioRevisionConditionReconciled)
-				g.Expect(reconciled.Status).To(Equal(metav1.ConditionFalse))
-				g.Expect(reconciled.Reason).To(Equal(v1.IstioRevisionReasonReconcileError))
-				g.Expect(reconciled.Message).To(ContainSubstring(fmt.Sprintf("namespace %q doesn't exist", nsName)))
-			}).Should(Succeed())
-		})
-
-		When("the namespace is created", func() {
-			var ns *corev1.Namespace
-
-			BeforeAll(func() {
-				ns = &corev1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: nsName,
-					},
-				}
-				Expect(k8sClient.Create(ctx, ns)).To(Succeed())
-			})
-
-			It("reconciles immediately", func() {
-				Step("Checking if istiod is deployed immediately")
-				istiod := &appsv1.Deployment{}
-				istiodKey := client.ObjectKey{Name: "istiod-" + revName, Namespace: ns.Name}
-				Eventually(k8sClient.Get).WithArguments(ctx, istiodKey, istiod).WithTimeout(10 * time.Second).Should(Succeed())
-
-				Step("Checking if the status is updated")
-				Eventually(func(g Gomega) {
-					g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
-					g.Expect(rev.Status.ObservedGeneration).To(Equal(rev.ObjectMeta.Generation))
-					reconciled := rev.Status.GetCondition(v1.IstioRevisionConditionReconciled)
-					g.Expect(reconciled.Status).To(Equal(metav1.ConditionTrue))
-				}).Should(Succeed())
-			})
-		})
-	})
-
-	It("successfully reconciles the resource", func() {
-		Step("Creating the IstioRevision")
-		rev = &v1.IstioRevision{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: revName,
-			},
-			Spec: v1.IstioRevisionSpec{
-				Version:   istioversion.Default,
-				Namespace: istioNamespace,
-				Values: &v1.Values{
-					Global: &v1.GlobalConfig{
-						IstioNamespace: ptr.Of(istioNamespace),
-					},
-					Revision: ptr.Of(revName),
-					Pilot: &v1.PilotConfig{
-						Image: ptr.Of(pilotImage),
-					},
-				},
-			},
-		}
-
-		Expect(k8sClient.Create(ctx, rev)).To(Succeed())
-
-		Step("Checking if the resource was successfully created")
-		Eventually(k8sClient.Get).WithArguments(ctx, revKey, rev).Should(Succeed())
-
-		istiod := &appsv1.Deployment{}
-		Step("Checking if Deployment was successfully created in the reconciliation")
-		Eventually(k8sClient.Get).WithArguments(ctx, istiodKey, istiod).Should(Succeed())
-		Expect(istiod.Spec.Template.Spec.Containers[0].Image).To(Equal(pilotImage))
-		Expect(istiod.ObjectMeta.OwnerReferences).To(ContainElement(NewOwnerReference(rev)))
-
-		Step("Checking if the status is updated")
-		Eventually(func(g Gomega) {
-			g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
-			g.Expect(rev.Status.ObservedGeneration).To(Equal(rev.ObjectMeta.Generation))
-		}).Should(Succeed())
-	})
-
-	When("istiod readiness changes", func() {
 		It("updates the status of the IstioRevision resource", func() {
 			By("setting the Ready condition status to true when istiod is ready", func() {
 				Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
-				readyCondition := rev.Status.GetCondition(v1.IstioRevisionConditionReady)
-				Expect(readyCondition.Status).To(Equal(metav1.ConditionFalse))
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
+					readyCondition := rev.Status.GetCondition(v1.IstioRevisionConditionReady)
+					g.Expect(readyCondition.Status).To(Equal(metav1.ConditionFalse))
+				}).Should(Succeed())
 
 				istiod := &appsv1.Deployment{}
 				Expect(k8sClient.Get(ctx, istiodKey, istiod)).To(Succeed())
@@ -396,183 +436,241 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 		})
 	})
 
-	DescribeTable("reconciles owned resource",
-		func(obj client.Object, modify func(obj client.Object), validate func(g Gomega, obj client.Object)) {
-			By("on update", func() {
-				// ensure all in-flight reconcile operations finish before the test
+	Describe("owned resource reconciliations", func() {
+		BeforeAll(func() {
+			rev = &v1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: revName,
+				},
+				Spec: v1.IstioRevisionSpec{
+					Version:   istioversion.Default,
+					Namespace: istioNamespace,
+					Values: &v1.Values{
+						Global: &v1.GlobalConfig{
+							IstioNamespace: ptr.Of(istioNamespace),
+						},
+						Revision: ptr.Of(revName),
+						Pilot: &v1.PilotConfig{
+							Image: ptr.Of(pilotImage),
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, rev)).To(Succeed())
+		})
+
+		AfterAll(func() {
+			Expect(k8sClient.Delete(ctx, rev)).To(Succeed())
+			Eventually(k8sClient.Get).WithArguments(ctx, kube.Key(revName), rev).Should(ReturnNotFoundError())
+		})
+
+		DescribeTable("reconciles owned resource",
+			func(obj client.Object, modify func(obj client.Object), validate func(g Gomega, obj client.Object)) {
+				By("on update", func() {
+					// ensure all in-flight reconcile operations finish before the test
+					waitForInFlightReconcileToFinish()
+
+					Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
+
+					modify(obj)
+					Expect(k8sClient.Update(ctx, obj)).To(Succeed())
+
+					Eventually(func(g Gomega) {
+						g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
+						validate(g, obj)
+					}).Should(Succeed())
+				})
+
+				By("on delete", func() {
+					Expect(k8sClient.Delete(ctx, obj)).To(Succeed())
+					Eventually(func(g Gomega) {
+						g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
+						g.Expect(obj.GetOwnerReferences()).To(ContainElement(NewOwnerReference(rev)))
+						validate(g, obj)
+					}).Should(Succeed())
+				})
+			},
+			Entry("Deployment",
+				&appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      istiodKey.Name,
+						Namespace: istiodKey.Namespace,
+					},
+				}, func(obj client.Object) {
+					deployment := obj.(*appsv1.Deployment)
+					deployment.Spec.Template.Spec.Containers[0].Image = "xyz"
+				}, func(g Gomega, obj client.Object) {
+					deployment := obj.(*appsv1.Deployment)
+					g.Expect(deployment.Spec.Template.Spec.Containers[0].Image).ToNot(Equal("xyz"))
+				}),
+			Entry("MutatingWebhookConfiguration",
+				&admissionv1.MutatingWebhookConfiguration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "istio-sidecar-injector-" + revName + "-" + istioNamespace,
+					},
+				}, func(obj client.Object) {
+					webhook := obj.(*admissionv1.MutatingWebhookConfiguration)
+					webhook.Webhooks[0].Name = "xyz.xyz.xyz"
+				}, func(g Gomega, obj client.Object) {
+					webhook := obj.(*admissionv1.MutatingWebhookConfiguration)
+					g.Expect(webhook.Webhooks[0].Name).ToNot(Equal("xyz.xyz.xyz"))
+				}),
+			Entry("HorizontalPodAutoscaler",
+				&autoscalingv2.HorizontalPodAutoscaler{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "istiod-" + revName,
+						Namespace: istioNamespace,
+					},
+				}, func(obj client.Object) {
+					hpa := obj.(*autoscalingv2.HorizontalPodAutoscaler)
+					hpa.Spec.MaxReplicas = 123
+				}, func(g Gomega, obj client.Object) {
+					hpa := obj.(*autoscalingv2.HorizontalPodAutoscaler)
+					g.Expect(hpa.Spec.MaxReplicas).ToNot(Equal(int32(123)))
+				}),
+		)
+
+		DescribeTable("skips reconcile when only the status of the owned resource is updated",
+			func(obj client.Object, modify func(obj client.Object)) {
 				waitForInFlightReconcileToFinish()
 
 				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
 
+				beforeCount := getIstioRevisionReconcileCount(Default)
+
+				By("modifying object")
 				modify(obj)
-				Expect(k8sClient.Update(ctx, obj)).To(Succeed())
+				Expect(k8sClient.Status().Update(ctx, obj)).To(Succeed())
 
-				Eventually(func(g Gomega) {
-					g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
-					validate(g, obj)
-				}).Should(Succeed())
-			})
+				Consistently(func(g Gomega) {
+					afterCount := getIstioRevisionReconcileCount(g)
+					g.Expect(afterCount).To(Equal(beforeCount))
+				}, 5*time.Second).Should(Succeed())
+			},
+			Entry("HorizontalPodAutoscaler",
+				&autoscalingv2.HorizontalPodAutoscaler{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "istiod-" + revName,
+						Namespace: istioNamespace,
+					},
+				},
+				func(obj client.Object) {
+					hpa := obj.(*autoscalingv2.HorizontalPodAutoscaler)
+					hpa.Status.CurrentReplicas = 123
+				},
+			),
+			Entry("PodDisruptionBudget",
+				&policyv1.PodDisruptionBudget{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "istiod-" + revName,
+						Namespace: istioNamespace,
+					},
+				},
+				func(obj client.Object) {
+					pdb := obj.(*policyv1.PodDisruptionBudget)
+					pdb.Status.CurrentHealthy = 123
+				},
+			),
+		)
 
-			By("on delete", func() {
-				Expect(k8sClient.Delete(ctx, obj)).To(Succeed())
-				Eventually(func(g Gomega) {
-					g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
-					g.Expect(obj.GetOwnerReferences()).To(ContainElement(NewOwnerReference(rev)))
-					validate(g, obj)
-				}).Should(Succeed())
-			})
-		},
-		Entry("Deployment",
-			&appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      istiodKey.Name,
-					Namespace: istiodKey.Namespace,
-				},
-			}, func(obj client.Object) {
-				deployment := obj.(*appsv1.Deployment)
-				deployment.Spec.Template.Spec.Containers[0].Image = "xyz"
-			}, func(g Gomega, obj client.Object) {
-				deployment := obj.(*appsv1.Deployment)
-				g.Expect(deployment.Spec.Template.Spec.Containers[0].Image).ToNot(Equal("xyz"))
-			}),
-		Entry("MutatingWebhookConfiguration",
-			&admissionv1.MutatingWebhookConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "istio-sidecar-injector-" + revName + "-" + istioNamespace,
-				},
-			}, func(obj client.Object) {
-				webhook := obj.(*admissionv1.MutatingWebhookConfiguration)
-				webhook.Webhooks[0].Name = "xyz.xyz.xyz"
-			}, func(g Gomega, obj client.Object) {
-				webhook := obj.(*admissionv1.MutatingWebhookConfiguration)
-				g.Expect(webhook.Webhooks[0].Name).ToNot(Equal("xyz.xyz.xyz"))
-			}),
-		Entry("HorizontalPodAutoscaler",
-			&autoscalingv2.HorizontalPodAutoscaler{
+		It("skips reconcile when a pull secret is added to service account", func() {
+			waitForInFlightReconcileToFinish()
+
+			sa := &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "istiod-" + revName,
 					Namespace: istioNamespace,
 				},
-			}, func(obj client.Object) {
-				hpa := obj.(*autoscalingv2.HorizontalPodAutoscaler)
-				hpa.Spec.MaxReplicas = 123
-			}, func(g Gomega, obj client.Object) {
-				hpa := obj.(*autoscalingv2.HorizontalPodAutoscaler)
-				g.Expect(hpa.Spec.MaxReplicas).ToNot(Equal(int32(123)))
-			}),
-	)
+			}
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(sa), sa)).To(Succeed())
 
-	DescribeTable("skips reconcile when only the status of the owned resource is updated",
-		func(obj client.Object, modify func(obj client.Object)) {
-			waitForInFlightReconcileToFinish()
-
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
+			GinkgoWriter.Println("sa:", sa)
 
 			beforeCount := getIstioRevisionReconcileCount(Default)
 
-			By("modifying object")
-			modify(obj)
-			Expect(k8sClient.Status().Update(ctx, obj)).To(Succeed())
+			By("adding pull secret to ServiceAccount")
+			sa.ImagePullSecrets = append(sa.ImagePullSecrets, corev1.LocalObjectReference{Name: "other-pull-secret"})
+			Expect(k8sClient.Update(ctx, sa)).To(Succeed())
 
 			Consistently(func(g Gomega) {
 				afterCount := getIstioRevisionReconcileCount(g)
 				g.Expect(afterCount).To(Equal(beforeCount))
-			}, 5*time.Second).Should(Succeed())
-		},
-		Entry("HorizontalPodAutoscaler",
-			&autoscalingv2.HorizontalPodAutoscaler{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "istiod-" + revName,
-					Namespace: istioNamespace,
-				},
-			},
-			func(obj client.Object) {
-				hpa := obj.(*autoscalingv2.HorizontalPodAutoscaler)
-				hpa.Status.CurrentReplicas = 123
-			},
-		),
-		Entry("PodDisruptionBudget",
-			&policyv1.PodDisruptionBudget{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "istiod-" + revName,
-					Namespace: istioNamespace,
-				},
-			},
-			func(obj client.Object) {
-				pdb := obj.(*policyv1.PodDisruptionBudget)
-				pdb.Status.CurrentHealthy = 123
-			},
-		),
-	)
+			}, 5*time.Second).Should(Succeed(), "IstioRevision was reconciled when it shouldn't have been")
 
-	It("skips reconcile when a pull secret is added to service account", func() {
-		waitForInFlightReconcileToFinish()
-
-		sa := &corev1.ServiceAccount{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "istiod-" + revName,
-				Namespace: istioNamespace,
-			},
-		}
-		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(sa), sa)).To(Succeed())
-
-		GinkgoWriter.Println("sa:", sa)
-
-		beforeCount := getIstioRevisionReconcileCount(Default)
-
-		By("adding pull secret to ServiceAccount")
-		sa.ImagePullSecrets = append(sa.ImagePullSecrets, corev1.LocalObjectReference{Name: "other-pull-secret"})
-		Expect(k8sClient.Update(ctx, sa)).To(Succeed())
-
-		Consistently(func(g Gomega) {
-			afterCount := getIstioRevisionReconcileCount(g)
-			g.Expect(afterCount).To(Equal(beforeCount))
-		}, 5*time.Second).Should(Succeed(), "IstioRevision was reconciled when it shouldn't have been")
-
-		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(sa), sa)).To(Succeed())
-		Expect(sa.ImagePullSecrets).To(ContainElement(corev1.LocalObjectReference{Name: "other-pull-secret"}))
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(sa), sa)).To(Succeed())
+			Expect(sa.ImagePullSecrets).To(ContainElement(corev1.LocalObjectReference{Name: "other-pull-secret"}))
+		})
 	})
 
-	It("supports concurrent deployment of two control planes", func() {
-		rev2Name := revName + "2"
-		rev2Key := client.ObjectKey{Name: rev2Name}
-		istiod2Key := client.ObjectKey{Name: "istiod-" + rev2Name, Namespace: istioNamespace}
-
-		Step("Creating the second IstioRevision instance")
-		rev2 := &v1.IstioRevision{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: rev2Key.Name,
-			},
-			Spec: v1.IstioRevisionSpec{
-				Version:   istioversion.Default,
-				Namespace: istioNamespace,
-				Values: &v1.Values{
-					Global: &v1.GlobalConfig{
-						IstioNamespace: ptr.Of(istioNamespace),
-					},
-					Revision: &rev2Key.Name,
-					Pilot: &v1.PilotConfig{
-						Image: ptr.Of(pilotImage),
+	Describe("multiple control planes", func() {
+		BeforeAll(func() {
+			rev = &v1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: revName,
+				},
+				Spec: v1.IstioRevisionSpec{
+					Version:   istioversion.Default,
+					Namespace: istioNamespace,
+					Values: &v1.Values{
+						Global: &v1.GlobalConfig{
+							IstioNamespace: ptr.Of(istioNamespace),
+						},
+						Revision: ptr.Of(revName),
+						Pilot: &v1.PilotConfig{
+							Image: ptr.Of(pilotImage),
+						},
 					},
 				},
-			},
-		}
-		Expect(k8sClient.Create(ctx, rev2)).To(Succeed())
+			}
+			Expect(k8sClient.Create(ctx, rev)).To(Succeed())
+		})
 
-		Step("Checking if the resource was successfully created")
-		Eventually(k8sClient.Get).WithArguments(ctx, rev2Key, rev2).Should(Succeed())
+		AfterAll(func() {
+			Expect(k8sClient.Delete(ctx, rev)).To(Succeed())
+			Eventually(k8sClient.Get).WithArguments(ctx, kube.Key(revName), rev).Should(ReturnNotFoundError())
+		})
 
-		Step("Checking if the status is updated")
-		Eventually(func(g Gomega) {
-			g.Expect(k8sClient.Get(ctx, rev2Key, rev2)).To(Succeed())
-			g.Expect(rev2.Status.ObservedGeneration).To(Equal(rev2.ObjectMeta.Generation))
-		}).Should(Succeed())
+		It("supports concurrent deployment of two control planes", func() {
+			rev2Name := revName + "2"
+			rev2Key := client.ObjectKey{Name: rev2Name}
+			istiod2Key := client.ObjectKey{Name: "istiod-" + rev2Name, Namespace: istioNamespace}
 
-		Step("Checking if Deployment was successfully created in the reconciliation")
-		istiod := &appsv1.Deployment{}
-		Eventually(k8sClient.Get).WithArguments(ctx, istiod2Key, istiod).Should(Succeed())
-		Expect(istiod.Spec.Template.Spec.Containers[0].Image).To(Equal(pilotImage))
-		Expect(istiod.ObjectMeta.OwnerReferences).To(ContainElement(NewOwnerReference(rev2)))
+			Step("Creating the second IstioRevision instance")
+			rev2 := &v1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: rev2Key.Name,
+				},
+				Spec: v1.IstioRevisionSpec{
+					Version:   istioversion.Default,
+					Namespace: istioNamespace,
+					Values: &v1.Values{
+						Global: &v1.GlobalConfig{
+							IstioNamespace: ptr.Of(istioNamespace),
+						},
+						Revision: &rev2Key.Name,
+						Pilot: &v1.PilotConfig{
+							Image: ptr.Of(pilotImage),
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, rev2)).To(Succeed())
+
+			Step("Checking if the resource was successfully created")
+			Eventually(k8sClient.Get).WithArguments(ctx, rev2Key, rev2).Should(Succeed())
+
+			Step("Checking if the status is updated")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, rev2Key, rev2)).To(Succeed())
+				g.Expect(rev2.Status.ObservedGeneration).To(Equal(rev2.ObjectMeta.Generation))
+			}).Should(Succeed())
+
+			Step("Checking if Deployment was successfully created in the reconciliation")
+			istiod := &appsv1.Deployment{}
+			Eventually(k8sClient.Get).WithArguments(ctx, istiod2Key, istiod).Should(Succeed())
+			Expect(istiod.Spec.Template.Spec.Containers[0].Image).To(Equal(pilotImage))
+			Expect(istiod.ObjectMeta.OwnerReferences).To(ContainElement(NewOwnerReference(rev2)))
+		})
 	})
 })
 
