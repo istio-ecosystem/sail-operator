@@ -147,6 +147,9 @@ BUNDLE_GEN_FLAGS ?= -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 # USE_IMAGE_DIGESTS defines if images are resolved via tags or digests
 # You can enable this value if you would like to use SHA Based Digests
 # To enable set flag to true
+# It also adds .spec.relatedImages field to generated CSV
+# Note that 'operator-sdk generate bundle' always removes spec.relatedImages field when USE_IMAGE_DIGESTS=false, even if the field already exists in the base CSV
+# Make sure to enable this before creating a release as it's a requirement for disconnected environments.
 USE_IMAGE_DIGESTS ?= false
 ifeq ($(USE_IMAGE_DIGESTS), true)
 	BUNDLE_GEN_FLAGS += --use-image-digests
@@ -492,6 +495,9 @@ operator-chart:
 	       -e "s/^\(appVersion: \).*$$/\1\"${VERSION}\"/g" chart/Chart.yaml
 	sed -i -e "s|^\(image: \).*$$|\1${IMAGE}|g" \
 	       -e "s/^\(  version: \).*$$/\1${VERSION}/g" chart/values.yaml
+	# adding all component images to values
+	# when building the bundle, helm generated base CSV is passed to the operator-sdk. With USE_IMAGE_DIGESTS=true, operator-sdk replaces all pullspecs with tags by digests and adds spec.relatedImages field automatically
+	@hack/patch-values.sh ${HELM_VALUES_FILE}
 
 .PHONY: update-istio
 update-istio: ## Update the Istio commit hash in the 'latest' entry in versions.yaml to the latest commit in the branch.
@@ -533,10 +539,6 @@ GITLEAKS_VERSION ?= v8.28.0
 ISTIOCTL_VERSION ?= 1.26.0
 RUNME_VERSION ?= 3.15.0
 MISSPELL_VERSION ?= v0.3.4
-
-# GENERATE_RELATED_IMAGES defines whether `spec.relatedImages` is going to be generated or not
-# To disable set flag to false
-GENERATE_RELATED_IMAGES ?= true
 
 .PHONY: helm $(HELM)
 helm: $(HELM) ## Download helm to bin directory. If wrong version is installed, it will be overwritten.
@@ -621,10 +623,10 @@ bundle: gen-all-except-bundle helm operator-sdk ## Generate bundle manifests and
 	fi; \
 	$(HELM) template chart chart $$TEMPL_FLAGS --set image='$(IMAGE)' --set bundleGeneration=true | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
 
-ifeq ($(GENERATE_RELATED_IMAGES), true)
-	@hack/patch-csv.sh bundle/manifests/$(OPERATOR_NAME).clusterserviceversion.yaml
+# operator sdk does not generate sorted relatedImages, we need to sort it here
+ifeq ($(USE_IMAGE_DIGESTS), true)
+	yq -i '.spec.relatedImages |= sort_by(.name)' bundle/manifests/$(OPERATOR_NAME).clusterserviceversion.yaml
 endif
-
 	# update CSV's spec.customresourcedefinitions.owned field. ideally we could do this straight in ./bundle, but
 	# sadly this is only possible if the file lives in a `bases` directory
 	mkdir -p _tmp/bases
