@@ -60,11 +60,16 @@ func CreateRemoteSecret(remoteKubeconfig, namespace, secretName, internalIP stri
 }
 
 // GetProxyStatus runs istioctl proxy-status command and return the output
-func GetProxyStatus() (string, error) {
+func GetProxyStatus(additionalFlags ...string) (string, error) {
 	cmd := istioctl("proxy-status")
+	if len(additionalFlags) != 0 {
+		cmd += (" " + strings.Join(additionalFlags, " "))
+	}
+
 	status, err := shell.ExecuteCommand(cmd)
 	if err != nil {
 		return "", fmt.Errorf("failed to get proxy status: %w", err)
 	}
+
 	return status, nil
 }

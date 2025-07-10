@@ -17,11 +17,8 @@
 package controlplane
 
 import (
-	"fmt"
-	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
@@ -201,7 +198,7 @@ metadata:
 
 					It("has sidecars with the correct istio version", func(ctx SpecContext) {
 						for _, pod := range samplePods.Items {
-							sidecarVersion, err := getProxyVersion(pod.Name, sampleNamespace)
+							sidecarVersion, err := common.GetProxyVersion(pod.Name, sampleNamespace)
 							Expect(err).NotTo(HaveOccurred(), "Error getting sidecar version")
 							Expect(sidecarVersion).To(Equal(version.Version), "Sidecar Istio version does not match the expected version")
 						}
@@ -272,21 +269,4 @@ func HaveContainersThat(matcher types.GomegaMatcher) types.GomegaMatcher {
 
 func ImageFromRegistry(regexp string) types.GomegaMatcher {
 	return HaveField("Image", MatchRegexp(regexp))
-}
-
-func getProxyVersion(podName, namespace string) (*semver.Version, error) {
-	output, err := k.WithNamespace(namespace).Exec(
-		podName,
-		"istio-proxy",
-		`curl -s http://localhost:15000/server_info | grep "ISTIO_VERSION" | awk -F '"' '{print $4}'`)
-	if err != nil {
-		return nil, fmt.Errorf("error getting sidecar version: %w", err)
-	}
-
-	versionStr := strings.TrimSpace(output)
-	version, err := semver.NewVersion(versionStr)
-	if err != nil {
-		return version, fmt.Errorf("error parsing sidecar version %q: %w", versionStr, err)
-	}
-	return version, err
 }
