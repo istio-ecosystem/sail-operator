@@ -206,7 +206,7 @@ const (
 // Users shouldn't create IstioRevision objects directly. Instead, they should
 // create an Istio object and allow the operator to create the underlying
 // IstioRevision object(s).
-// +kubebuilder:validation:XValidation:rule="self.metadata.name == 'default' ? (!has(self.spec.values.revision) || size(self.spec.values.revision) == 0) : self.spec.values.revision == self.metadata.name",message="spec.values.revision must match metadata.name"
+// +kubebuilder:validation:XValidation:rule="self.metadata.name == 'default' ? (!has(self.spec.values.revision) || size(self.spec.values.revision) == 0) : self.spec.values.revision == self.metadata.name",message="spec.values.revision must match metadata.name or be empty when the name is 'default'"
 type IstioRevision struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional

@@ -75,10 +75,14 @@ var _ = BeforeSuite(func() {
 
 	chartManager := helm.NewChartManager(mgr.GetConfig(), "")
 
+	operatorNs := &corev1.Namespace{ObjectMeta: v1.ObjectMeta{Name: operatorNamespace}}
+	Expect(k8sClient.Create(context.TODO(), operatorNs)).To(Succeed())
+
 	cfg := config.ReconcilerConfig{
 		ResourceDirectory: path.Join(project.RootDir, "resources"),
 		Platform:          config.PlatformKubernetes,
 		DefaultProfile:    "",
+		OperatorNamespace: operatorNs.Name,
 	}
 
 	cl := mgr.GetClient()
@@ -97,9 +101,6 @@ var _ = BeforeSuite(func() {
 			panic(err)
 		}
 	}()
-
-	operatorNs := &corev1.Namespace{ObjectMeta: v1.ObjectMeta{Name: operatorNamespace}}
-	Expect(k8sClient.Create(context.TODO(), operatorNs)).To(Succeed())
 
 	istiovalues.SetVendorDefaults(nil)
 })

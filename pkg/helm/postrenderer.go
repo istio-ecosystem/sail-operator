@@ -35,7 +35,7 @@ const (
 // NewHelmPostRenderer creates a Helm PostRenderer that adds the following to each rendered manifest:
 // - adds the "managed-by: sail-operator" label
 // - adds the specified OwnerReference
-func NewHelmPostRenderer(ownerReference metav1.OwnerReference, ownerNamespace string) postrender.PostRenderer {
+func NewHelmPostRenderer(ownerReference *metav1.OwnerReference, ownerNamespace string) postrender.PostRenderer {
 	return HelmPostRenderer{
 		ownerReference: ownerReference,
 		ownerNamespace: ownerNamespace,
@@ -43,7 +43,7 @@ func NewHelmPostRenderer(ownerReference metav1.OwnerReference, ownerNamespace st
 }
 
 type HelmPostRenderer struct {
-	ownerReference metav1.OwnerReference
+	ownerReference *metav1.OwnerReference
 	ownerNamespace string
 }
 
@@ -86,6 +86,10 @@ func (pr HelmPostRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifes
 }
 
 func (pr HelmPostRenderer) addOwnerReference(manifest map[string]any) (map[string]any, error) {
+	if pr.ownerReference == nil {
+		return manifest, nil
+	}
+
 	objNamespace, objHasNamespace, err := unstructured.NestedFieldNoCopy(manifest, "metadata", "namespace")
 	if err != nil {
 		return nil, err
@@ -96,7 +100,7 @@ func (pr HelmPostRenderer) addOwnerReference(manifest map[string]any) (map[strin
 			return nil, err
 		}
 
-		ref, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&pr.ownerReference)
+		ref, err := runtime.DefaultUnstructuredConverter.ToUnstructured(pr.ownerReference)
 		if err != nil {
 			return nil, err
 		}
