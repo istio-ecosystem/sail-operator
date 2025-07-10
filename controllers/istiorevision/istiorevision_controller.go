@@ -38,6 +38,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -86,6 +87,7 @@ func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *ru
 // +kubebuilder:rbac:groups="apps",resources=deployments;daemonsets,verbs="*"
 // +kubebuilder:rbac:groups="admissionregistration.k8s.io",resources=validatingwebhookconfigurations;mutatingwebhookconfigurations,verbs="*"
 // +kubebuilder:rbac:groups="autoscaling",resources=horizontalpodautoscalers,verbs="*"
+// +kubebuilder:rbac:groups="discovery.k8s.io",resources=endpointslices,verbs=get;list;watch
 // +kubebuilder:rbac:groups="apiextensions.k8s.io",resources=customresourcedefinitions,verbs=get;list;watch
 // +kubebuilder:rbac:groups="k8s.cni.cncf.io",resources=network-attachment-definitions,verbs="*"
 // +kubebuilder:rbac:groups="security.openshift.io",resources=securitycontextconstraints,resourceNames=privileged,verbs=use
@@ -201,6 +203,37 @@ func (r *Reconciler) uninstallHelmCharts(ctx context.Context, rev *v1.IstioRevis
 	return nil
 }
 
+func (r *Reconciler) mapEndpointSliceToReconcileRequests(ctx context.Context, obj client.Object) []reconcile.Request {
+	// EndpointSlices may be owned by an Endpoints resource (if mirrored) which is in turn owned
+	// by an IstioRevision, or in the future, EndpointSlices may be owned directly by an IstioRevision.
+
+	controller := metav1.GetControllerOf(obj)
+	if controller == nil {
+		return nil
+	}
+	if controller.APIVersion == v1.GroupVersion.String() && controller.Kind == v1.IstioRevisionKind {
+		return []reconcile.Request{
+			{NamespacedName: types.NamespacedName{Name: controller.Name}},
+		}
+	}
+	if controller.APIVersion == corev1.SchemeGroupVersion.String() && controller.Kind == "Endpoints" {
+		// nolint:staticcheck
+		ep := &corev1.Endpoints{}
+		if err := r.Client.Get(ctx, types.NamespacedName{Namespace: obj.GetNamespace(), Name: controller.Name}, ep); err != nil {
+			return nil
+		}
+
+		controller := metav1.GetControllerOf(ep)
+		if controller != nil && controller.APIVersion == v1.GroupVersion.String() && controller.Kind == v1.IstioRevisionKind {
+			return []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Name: controller.Name}},
+			}
+		}
+	}
+
+	return nil
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	logger := mgr.GetLogger().WithName("ctrlr").WithName("istiorev")
@@ -230,6 +263,10 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	istioCniHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapIstioCniToReconcileRequests))
 
+	// endpointSliceHandler triggers reconciliation if the EndpointSlice is owned directly by an IstioRevision,
+	// or if it's owned by an Endpoints object which in turn is owned by an IstioRevision.
+	endpointSliceHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapEndpointSliceToReconcileRequests))
+
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
 			LogConstructor: func(req *reconcile.Request) logr.Logger {
@@ -248,8 +285,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// namespaced resources
 		Watches(&corev1.ConfigMap{}, ownedResourceHandler).
 		Watches(&appsv1.Deployment{}, ownedResourceHandler). // we don't ignore the status here because we use it to calculate the IstioRevision status
-		// nolint:staticcheck
-		Watches(&corev1.Endpoints{}, ownedResourceHandler).
+		// +lint-watches:ignore: Endpoints (istiod chart creates Endpoints for remote installs, but this controller watches EndpointSlices)
+		// +lint-watches:ignore: EndpointSlice (istiod chart creates Endpoints for remote installs, but this controller watches EndpointSlices)
+		Watches(&discoveryv1.EndpointSlice{}, endpointSliceHandler).
 		Watches(&corev1.Service{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
 
 		// We use predicate.IgnoreUpdate() so that we skip the reconciliation when a pull secret is added to the ServiceAccount.
