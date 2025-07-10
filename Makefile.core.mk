@@ -639,6 +639,9 @@ endif
 	mv _tmp/bases/$(OPERATOR_NAME).clusterserviceversion.yaml bundle/manifests/$(OPERATOR_NAME).clusterserviceversion.yaml
 	rm -rf _tmp
 
+	# format the CSV using yq to easily process it later via yq if needed without any format changes
+	yq -i '.' "bundle/manifests/${OPERATOR_NAME}.clusterserviceversion.yaml"
+
 	# check if the only change in the CSV is the createdAt timestamp; if so, revert the change
 	@csvPath="bundle/manifests/${OPERATOR_NAME}.clusterserviceversion.yaml"; \
 		if (git ls-files --error-unmatch "$$csvPath" &>/dev/null); then \
