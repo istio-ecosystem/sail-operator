@@ -41,6 +41,12 @@ rules:
   verbs:
   - '*'
 - apiGroups:
+    - discovery.k8s.io
+  resources:
+    - endpointslices
+  verbs:
+    - '*'
+- apiGroups:
   - k8s.cni.cncf.io
   resources:
   - network-attachment-definitions

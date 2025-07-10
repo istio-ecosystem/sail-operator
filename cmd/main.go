@@ -201,7 +201,7 @@ func main() {
 	err = webhook.NewReconciler(mgr.GetClient(), mgr.GetScheme()).
 		SetupWithManager(mgr)
 	if err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Endpoints")
+		setupLog.Error(err, "unable to create controller", "controller", "Webhook")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
