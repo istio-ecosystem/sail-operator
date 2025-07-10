@@ -86,7 +86,7 @@ IMAGE ?= ${HUB}/${IMAGE_BASE}:${TAG}
 # Namespace to deploy the controller in
 NAMESPACE ?= sail-operator
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION ?= 1.29.0
+ENVTEST_K8S_VERSION ?= 1.30.0
 
 ifeq ($(findstring gen-check,$(MAKECMDGOALS)),gen-check)
 FORCE_DOWNLOADS := true
@@ -638,6 +638,9 @@ endif
 	$(OPERATOR_SDK) generate kustomize manifests --input-dir=_tmp --output-dir=_tmp
 	mv _tmp/bases/$(OPERATOR_NAME).clusterserviceversion.yaml bundle/manifests/$(OPERATOR_NAME).clusterserviceversion.yaml
 	rm -rf _tmp
+
+	# format the CSV using yq to easily process it later via yq if needed without any format changes
+	yq -i '.' "bundle/manifests/${OPERATOR_NAME}.clusterserviceversion.yaml"
 
 	# check if the only change in the CSV is the createdAt timestamp; if so, revert the change
 	@csvPath="bundle/manifests/${OPERATOR_NAME}.clusterserviceversion.yaml"; \

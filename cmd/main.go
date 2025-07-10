@@ -76,11 +76,11 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	operatorNamespace := os.Getenv("POD_NAMESPACE")
-	if operatorNamespace == "" {
+	reconcilerCfg.OperatorNamespace = os.Getenv("POD_NAMESPACE")
+	if reconcilerCfg.OperatorNamespace == "" {
 		contents, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
-		operatorNamespace = string(contents)
-		if err != nil || operatorNamespace == "" {
+		reconcilerCfg.OperatorNamespace = string(contents)
+		if err != nil || reconcilerCfg.OperatorNamespace == "" {
 			setupLog.Error(err, "can't determine namespace this operator is running in; if running outside of a pod, please set the POD_NAMESPACE environment variable")
 			os.Exit(1)
 		}
@@ -131,7 +131,7 @@ func main() {
 		HealthProbeBindAddress:  probeAddr,
 		LeaderElection:          leaderElectionEnabled,
 		LeaderElectionID:        "sail-operator-lock",
-		LeaderElectionNamespace: operatorNamespace,
+		LeaderElectionNamespace: reconcilerCfg.OperatorNamespace,
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
