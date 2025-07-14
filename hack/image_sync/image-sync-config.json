@@ -1,0 +1,43 @@
+{
+  "images": [
+    {
+      "name": "examples-helloworld-v1",
+      "upstream": "docker.io/istio/examples-helloworld-v1",
+      "target": "quay.io/sail-dev/examples-helloworld-v1",
+      "tags": [
+        "1.0",
+        "latest"
+      ]
+    },
+    {
+      "name": "examples-helloworld-v2",
+      "upstream": "docker.io/istio/examples-helloworld-v2",
+      "target": "quay.io/sail-dev/examples-helloworld-v2",
+      "tags": [
+        "1.0",
+        "latest"
+      ]
+    },
+    {
+      "name": "examples-httpbin",
+      "upstream": "docker.io/mccutchen/go-httpbin",
+      "target": "quay.io/sail-dev/examples-httpbin",
+      "tags": [
+        "v2.15.0",
+        "latest"
+      ]
+    },
+    {
+      "name": "examples-tcp-echo-server",
+      "upstream": "docker.io/istio/tcp-echo-server",
+      "target": "quay.io/sail-dev/examples-tcp-echo-server",
+      "tags": [
+        "1.3",
+        "latest"
+      ]
+    }
+  ],
+  "sync_schedule": "0 2 * * *",
+  "check_new_tags": true,
+  "max_tags_to_check": 5
+}

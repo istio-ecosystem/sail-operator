@@ -94,5 +94,15 @@ sed -i "s|RUNME_VERSION ?= .*|RUNME_VERSION ?= ${RUNME_LATEST_VERSION}|" "${ROOT
 MISSPELL_LATEST_VERSION=$(getLatestVersion client9/misspell)
 sed -i "s|MISSPELL_VERSION ?= .*|MISSPELL_VERSION ?= ${MISSPELL_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
 
+# Update sample images to match upstream Istio. 
+# It updates config file and yaml sample files with the latest upstream images tags. 
+# After updating the filew will use crane to copy those images into quay.io.
+echo "Updating sample images to match upstream Istio versions..."
+if make auto-sync-sample-images 2>/dev/null; then
+    echo "Sample image updates completed successfully"
+else
+    echo "Warning: Sample image updates failed, but continuing with other updates"
+fi
+
 # Regenerate files
 make update-istio gen

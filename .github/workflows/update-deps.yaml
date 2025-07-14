@@ -31,6 +31,11 @@ jobs:
       with:
         repository: istio/test-infra
         ref: master
+    
+    # this is needed to ensure that the automator can push samples images using crane to quay.io
+    - name: Login to Quay.io
+      run: |
+        echo "${{ secrets.QUAY_PWD }}" | crane auth login quay.io -u "${{ secrets.QUAY_USERNAME }}" --password-stdin
 
     # this is a workaround for a permissions issue when using the istio build container
     - run: git config --system --add safe.directory /__w/sail-operator/sail-operator

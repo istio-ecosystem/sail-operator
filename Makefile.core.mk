@@ -504,6 +504,16 @@ print-variables: ## Print all Makefile variables; Useful to inspect overrides of
   $(info $(v) = $($(v))))
 	@echo
 
+-PHONY: auto-update-sample-images
+auto-update-sample-images: ## Auto-update sample image tags to newer versions and update references.
+	@echo "Starting auto-update of sample images to newer versions"
+	@./hack/image_sync/sync-images.sh auto-update
+
+-PHONY: auto-sync-sample-images
+auto-sync-sample-images: ## Auto-update sample images and sync them (full workflow).
+	@echo "Starting full auto-update and sync workflow"
+	@./hack/image_sync/sync-images.sh auto-sync
+
 ##@ Build Dependencies
 
 ## Location to install dependencies to
