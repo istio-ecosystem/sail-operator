@@ -114,6 +114,7 @@ spec:
     pilot:
       autoscaleMin: 2   # <-- number of desired min replicas
       autoscaleMax: 5   # <-- number of desired max replicas
+      cpu:
         targetAverageUtilization: 80 # <-- target CPU utilization for autoscaling
       memory:
         targetAverageUtilization: 80 # <-- target memory utilization for autoscaling
