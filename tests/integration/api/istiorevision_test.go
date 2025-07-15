@@ -24,6 +24,7 @@ import (
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
+	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
@@ -42,7 +43,7 @@ import (
 	"istio.io/istio/pkg/ptr"
 )
 
-var _ = Describe("IstioRevision resource", Ordered, func() {
+var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func() {
 	const (
 		revName        = "test-istiorevision"
 		istioNamespace = "istiorevision-test"
@@ -593,6 +594,72 @@ var _ = Describe("IstioRevision resource", Ordered, func() {
 		})
 	})
 
+	DescribeTableSubtree("reconciling when revision is in use",
+		func(name, revision string, nsLabels, podLabels map[string]string) {
+			BeforeAll(func() {
+				rev := &v1.IstioRevision{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: name,
+					},
+					Spec: v1.IstioRevisionSpec{
+						Version:   istioversion.Default,
+						Namespace: istioNamespace,
+						Values: &v1.Values{
+							Global: &v1.GlobalConfig{
+								IstioNamespace: ptr.Of(istioNamespace),
+							},
+							Revision: &revision,
+						},
+					},
+				}
+				Expect(k8sClient.Create(ctx, rev)).To(Succeed())
+			})
+
+			AfterAll(func() {
+				deleteAllIstioRevisions(ctx)
+			})
+
+			When("watching pods", func() {
+				It("reconciles when a pod marked for injection is created in a regular namespace", func() {
+					ns := createNamespace(ctx, "non-injected-"+name, nil)
+					waitForInFlightReconcileToFinish()
+					expectConditionStatus(ctx, name, v1.IstioRevisionConditionInUse, metav1.ConditionFalse)
+
+					pod := createPod(ctx, "injected-pod", ns.Name, podLabels)
+					expectConditionStatus(ctx, name, v1.IstioRevisionConditionInUse, metav1.ConditionTrue)
+
+					// Clean up pod after the test
+					Expect(k8sClient.Delete(ctx, pod)).To(Succeed())
+				})
+
+				It("doesn't reconcile when a pod marked not to inject is created in a namespace marked for injection", func() {
+					ns := createNamespace(ctx, "injected-"+name, nsLabels)
+					waitForInFlightReconcileToFinish()
+					reconcileCount := getIstioRevisionReconcileCount(Default)
+
+					pod := createPod(ctx, "not-injected", ns.Name, map[string]string{constants.IstioSidecarInjectLabel: "false"})
+					Consistently(func(g Gomega) {
+						latestCount := getIstioRevisionReconcileCount(g)
+						g.Expect(latestCount).To(Equal(reconcileCount))
+					}, 5*time.Second).Should(Succeed(), "IstioRevision was reconciled when it shouldn't have been")
+
+					// Clean up after test
+					Expect(k8sClient.Delete(ctx, pod)).To(Succeed())
+					ns.Labels = map[string]string{}
+					Expect(k8sClient.Update(ctx, ns)).To(Succeed())
+				})
+			})
+		},
+		Entry("using the default IstioRevision", "default", "",
+			map[string]string{constants.IstioInjectionLabel: constants.IstioInjectionEnabledValue},
+			map[string]string{constants.IstioSidecarInjectLabel: "true"},
+		),
+		Entry("using a specific IstioRevision", revName, revName,
+			map[string]string{constants.IstioRevLabel: revName},
+			map[string]string{constants.IstioRevLabel: revName},
+		),
+	)
+
 	Describe("multiple control planes", func() {
 		BeforeAll(func() {
 			rev = &v1.IstioRevision{
@@ -717,4 +784,44 @@ func deleteAllIstioRevisions(ctx context.Context) {
 		g.Expect(k8sClient.List(ctx, list)).To(Succeed())
 		g.Expect(list.Items).To(BeEmpty())
 	}).Should(Succeed())
+}
+
+func createNamespace(ctx context.Context, name string, labels map[string]string) *corev1.Namespace {
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: labels,
+		},
+	}
+
+	Expect(k8sClient.Create(ctx, ns)).To(Succeed())
+	return ns
+}
+
+func createPod(ctx context.Context, name, ns string, labels map[string]string) *corev1.Pod {
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: ns,
+			Labels:    labels,
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Name:  "test",
+					Image: "test",
+				},
+			},
+		},
+	}
+	Expect(k8sClient.Create(ctx, pod)).To(Succeed())
+	return pod
+}
+
+func expectConditionStatus(ctx context.Context, name string, condition v1.IstioRevisionConditionType, status metav1.ConditionStatus) {
+	Eventually(func(g Gomega) {
+		rev := &v1.IstioRevision{}
+		g.Expect(k8sClient.Get(ctx, client.ObjectKey{Name: name}, rev)).To(Succeed())
+		g.Expect(rev.Status.GetCondition(condition).Status).To(Equal(status))
+	}).Should(Succeed(), "Expected condition %q to be %q on IstioRevision: %s", condition, status, name)
 }
