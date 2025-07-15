@@ -29,11 +29,14 @@ import (
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"istio.io/istio/pkg/ptr"
 )
@@ -200,6 +203,160 @@ func TestValidate(t *testing.T) {
 				g.Expect(err.Error()).To(ContainSubstring(tc.expectErr))
 			}
 		})
+	}
+}
+
+func TestMapEndpointSliceToReconcileRequests(t *testing.T) {
+	testCases := []struct {
+		endpointSlice *discoveryv1.EndpointSlice
+		objs          []client.Object
+		expected      []reconcile.Request
+	}{
+		{
+			endpointSlice: &discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: v1.GroupVersion.String(),
+							Kind:       v1.IstioRevisionKind,
+							Name:       "direct-istiorevision-owner",
+							Controller: ptr.Of(true),
+						},
+					},
+				},
+			},
+			expected: []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Name: "direct-istiorevision-owner"}},
+			},
+		},
+		{
+			endpointSlice: &discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "istio-system",
+					Name:      "endpointslice-1",
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "Endpoints",
+							Name:       "endpoints-owner",
+							Controller: ptr.Of(true),
+						},
+					},
+				},
+			},
+			objs: []client.Object{
+				// nolint:staticcheck
+				&corev1.Endpoints{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "istio-system",
+						Name:      "endpoints-owner",
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion: v1.GroupVersion.String(),
+								Kind:       v1.IstioRevisionKind,
+								Name:       "indirect-istiorevision-owner",
+								Controller: ptr.Of(true),
+							},
+						},
+					},
+				},
+			},
+			expected: []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Name: "indirect-istiorevision-owner"}},
+			},
+		},
+		{
+			endpointSlice: &discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: v1.GroupVersion.String(),
+							Kind:       "SomeOtherKind",
+							Name:       "not-istiorevision-owner",
+							Controller: ptr.Of(true),
+						},
+					},
+				},
+			},
+			expected: nil,
+		},
+		{
+			endpointSlice: &discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: v1.GroupVersion.String(),
+							Kind:       v1.IstioRevisionKind,
+							Name:       "not-controller-owner",
+							Controller: ptr.Of(false),
+						},
+					},
+				},
+			},
+			expected: nil,
+		},
+		{
+			endpointSlice: &discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "istio-system",
+					Name:      "endpointslice-1",
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "Endpoints",
+							Name:       "endpoints-owner",
+							Controller: ptr.Of(true),
+						},
+					},
+				},
+			},
+			objs: []client.Object{
+				// nolint:staticcheck
+				&corev1.Endpoints{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "istio-system",
+						Name:      "endpoints-owner",
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion: "some-other-group-version",
+								Kind:       "some-other-group-kind",
+								Name:       "indirect-istiorevision-owner",
+								Controller: ptr.Of(true),
+							},
+						},
+					},
+				},
+			},
+			expected: nil,
+		},
+		{
+			endpointSlice: &discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "istio-system",
+					Name:      "endpointslice-1",
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "Endpoints",
+							Name:       "endpoints-owner-does-not-exist",
+							Controller: ptr.Of(true),
+						},
+					},
+				},
+			},
+			expected: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(tc.objs...).Build()
+		r := NewReconciler(newReconcilerTestConfig(t), cl, scheme.Scheme, nil)
+
+		got := r.mapEndpointSliceToReconcileRequests(context.Background(), tc.endpointSlice)
+
+		g := NewWithT(t)
+		g.Expect(got).To(HaveLen(len(tc.expected)))
+		g.Expect(got).To(ContainElements(tc.expected))
 	}
 }
 
