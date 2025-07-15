@@ -199,7 +199,7 @@ test.scorecard: operator-sdk ## Run the operator scorecard test.
 	OPERATOR_SDK=$(OPERATOR_SDK) ${SOURCE_DIR}/tests/scorecard-test.sh
 
 .PHONY: test.e2e.ocp
-test.e2e.ocp: ## Run the end-to-end tests against an existing OCP cluster.
+test.e2e.ocp: istioctl ## Run the end-to-end tests against an existing OCP cluster. While running on OCP in downstream you need to set ISTIOCTL_DOWNLOAD_URL to the URL where the istioctl productized binary.
 	GINKGO_FLAGS="$(GINKGO_FLAGS)" ${SOURCE_DIR}/tests/e2e/integ-suite-ocp.sh
 
 .PHONY: test.e2e.kind
