@@ -440,6 +440,7 @@ _Appears in:_
 | `ipFamilyPolicy` _string_ | Controls whether Services are configured to use IPv4, IPv6, or both. Valid options are PreferDualStack, RequireDualStack, and SingleStack. More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services |  |  |
 | `waypoint` _[WaypointConfig](#waypointconfig)_ | Specifies how waypoints are configured within Istio. |  |  |
 | `trustBundleName` _string_ | Select a custom name for istiod's CA Root Cert ConfigMap. |  |  |
+| `nativeNftables` _boolean_ | Specifies whether native nftables rules should be used instead of iptables rules for traffic redirection. |  |  |
 
 
 #### GlobalLoggingConfig
@@ -650,7 +651,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.26-latest, v1.26.2, v1.26.0, v1.25-latest, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.27-alpha.11ce9e0a. | v1.26.2 | Enum: [v1.26-latest v1.26.2 v1.26.0 v1.25-latest v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.27-alpha.11ce9e0a]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.26-latest, v1.26.2, v1.26.0, v1.25-latest, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.28-alpha.15d90d38. | v1.26.2 | Enum: [v1.26-latest v1.26.2 v1.26.0 v1.25-latest v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.28-alpha.15d90d38]   |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift openshift-ambient preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio CNI component should be installed. Note that this field is immutable. | istio-cni |  |
 | `values` _[CNIValues](#cnivalues)_ | Defines the values to be passed to the Helm charts when installing Istio CNI. |  |  |
@@ -886,7 +887,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.26.2, v1.26.0, v1.25.3, v1.25.2, v1.25.1, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, v1.27-alpha.11ce9e0a. |  | Enum: [v1.26.2 v1.26.0 v1.25.3 v1.25.2 v1.25.1 v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 v1.27-alpha.11ce9e0a]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.26.2, v1.26.0, v1.25.3, v1.25.2, v1.25.1, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, v1.28-alpha.15d90d38. |  | Enum: [v1.26.2 v1.26.0 v1.25.3 v1.25.2 v1.25.1 v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 v1.28-alpha.15d90d38]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. |  |  |
 | `values` _[Values](#values)_ | Defines the values to be passed to the Helm charts when installing Istio. |  |  |
 
@@ -1079,7 +1080,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.26-latest, v1.26.2, v1.26.0, v1.25-latest, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.27-alpha.11ce9e0a. | v1.26.2 | Enum: [v1.26-latest v1.26.2 v1.26.0 v1.25-latest v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.27-alpha.11ce9e0a]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.26-latest, v1.26.2, v1.26.0, v1.25-latest, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.28-alpha.15d90d38. | v1.26.2 | Enum: [v1.26-latest v1.26.2 v1.26.0 v1.25-latest v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.28-alpha.15d90d38]   |
 | `updateStrategy` _[IstioUpdateStrategy](#istioupdatestrategy)_ | Defines the update strategy to use when the version in the Istio CR is updated. | \{ type:InPlace \} |  |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift openshift-ambient preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. Note that this field is immutable. | istio-system |  |
@@ -1159,6 +1160,7 @@ _Appears in:_
 | `injectionPath` _string_ | Path to use for the sidecar injector webhook service. |  |  |
 | `injectionCABundle` _string_ | injector ca bundle |  |  |
 | `enabled` _boolean_ | Indicates if this cluster/install should consume a "remote" istiod instance, |  |  |
+| `enabledLocalInjectorIstiod` _boolean_ | If `true`, indicates that this cluster/install should consume a "local istiod" installation, local istiod inject sidecars |  |  |
 
 
 #### LocalityLoadBalancerSetting
@@ -1328,6 +1330,7 @@ _Appears in:_
 | `h2UpgradePolicy` _[MeshConfigH2UpgradePolicy](#meshconfigh2upgradepolicy)_ | Specify if http1.1 connections should be upgraded to http2 by default. if sidecar is installed on all pods in the mesh, then this should be set to `UPGRADE`. If one or more services or namespaces do not have sidecar(s), then this should be set to `DO_NOT_UPGRADE`. It can be enabled by destination using the `destinationRule.trafficPolicy.connectionPool.http.h2UpgradePolicy` override. |  | Enum: [DO_NOT_UPGRADE UPGRADE]   |
 | `inboundClusterStatName` _string_ | Name to be used while emitting statistics for inbound clusters. The same pattern is used while computing stat prefix for network filters like TCP and Redis. By default, Istio emits statistics with the pattern `inbound\|<port>\|<port-name>\|<service-FQDN>`. For example `inbound\|7443\|grpc-reviews\|reviews.prod.svc.cluster.local`. This can be used to override that pattern.  A Pattern can be composed of various pre-defined variables. The following variables are supported.  - `%SERVICE%` - Will be substituted with short hostname of the service. - `%SERVICE_NAME%` - Will be substituted with name of the service. - `%SERVICE_FQDN%` - Will be substituted with FQDN of the service. - `%SERVICE_PORT%` - Will be substituted with port of the service. - `%TARGET_PORT%`  - Will be substituted with the target port of the service. - `%SERVICE_PORT_NAME%` - Will be substituted with port name of the service.  Following are some examples of supported patterns for reviews:  - `%SERVICE_FQDN%_%SERVICE_PORT%` will use reviews.prod.svc.cluster.local_7443 as the stats name. - `%SERVICE%` will use reviews.prod as the stats name. |  |  |
 | `outboundClusterStatName` _string_ | Name to be used while emitting statistics for outbound clusters. The same pattern is used while computing stat prefix for network filters like TCP and Redis. By default, Istio emits statistics with the pattern `outbound\|<port>\|<subsetname>\|<service-FQDN>`. For example `outbound\|8080\|v2\|reviews.prod.svc.cluster.local`. This can be used to override that pattern.  A Pattern can be composed of various pre-defined variables. The following variables are supported.  - `%SERVICE%` - Will be substituted with short hostname of the service. - `%SERVICE_NAME%` - Will be substituted with name of the service. - `%SERVICE_FQDN%` - Will be substituted with FQDN of the service. - `%SERVICE_PORT%` - Will be substituted with port of the service. - `%SERVICE_PORT_NAME%` - Will be substituted with port name of the service. - `%SUBSET_NAME%` - Will be substituted with subset.  Following are some examples of supported patterns for reviews:  - `%SERVICE_FQDN%_%SERVICE_PORT%` will use `reviews.prod.svc.cluster.local_7443` as the stats name. - `%SERVICE%` will use reviews.prod as the stats name. |  |  |
+| `serviceScopeConfigs` _[MeshConfigServiceScopeConfigs](#meshconfigservicescopeconfigs) array_ | Scope to be applied to select services. |  |  |
 | `enablePrometheusMerge` _boolean_ | If enabled, Istio agent will merge metrics exposed by the application with metrics from Envoy and Istio agent. The sidecar injection will replace `prometheus.io` annotations present on the pod and redirect them towards Istio agent, which will then merge metrics of from the application with Istio metrics. This relies on the annotations `prometheus.io/scrape`, `prometheus.io/port`, and `prometheus.io/path` annotations. If you are running a separately managed Envoy with an Istio sidecar, this may cause issues, as the metrics will collide. In this case, it is recommended to disable aggregation on that deployment with the `prometheus.istio.io/merge-metrics: "false"` annotation. If not specified, this will be enabled by default. |  |  |
 | `extensionProviders` _[MeshConfigExtensionProvider](#meshconfigextensionprovider) array_ | Defines a list of extension providers that extend Istio's functionality. For example, the AuthorizationPolicy can be used with an extension provider to delegate the authorization decision to a custom authorization system. |  | MaxItems: 1000   |
 | `defaultProviders` _[MeshConfigDefaultProviders](#meshconfigdefaultproviders)_ | Specifies extension providers to use by default in Istio configuration resources. |  |  |
@@ -1444,6 +1447,7 @@ _Appears in:_
 | `envoyHttpAls` _[MeshConfigExtensionProviderEnvoyHttpGrpcV3LogProvider](#meshconfigextensionproviderenvoyhttpgrpcv3logprovider)_ | Configures an Envoy Access Logging Service provider for HTTP traffic. |  |  |
 | `envoyTcpAls` _[MeshConfigExtensionProviderEnvoyTcpGrpcV3LogProvider](#meshconfigextensionproviderenvoytcpgrpcv3logprovider)_ | Configures an Envoy Access Logging Service provider for TCP traffic. |  |  |
 | `envoyOtelAls` _[MeshConfigExtensionProviderEnvoyOpenTelemetryLogProvider](#meshconfigextensionproviderenvoyopentelemetrylogprovider)_ | Configures an Envoy Open Telemetry Access Logging Service provider. |  |  |
+| `sds` _[MeshConfigExtensionProviderSDSProvider](#meshconfigextensionprovidersdsprovider)_ | Configures an Extension Provider for SDS. This can be used to configure an external SDS service to supply secrets for certain Gateways for example. This is useful for scenarios where the secrets are stored in an external secret store like Vault. The secret should be configured with sds://provider-name format. |  |  |
 
 
 #### MeshConfigExtensionProviderDatadogTracingProvider
@@ -1771,6 +1775,24 @@ _Appears in:_
 
 
 
+#### MeshConfigExtensionProviderSDSProvider
+
+
+
+Defines configuration for an Gateway SDS provider.
+
+
+
+_Appears in:_
+- [MeshConfigExtensionProvider](#meshconfigextensionprovider)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | REQUIRED. Specifies the name of the provider. This should be used to configure the Gateway SDS. |  | Required: \{\}   |
+| `service` _string_ | REQUIRED. Specifies the service that implements the  SDS service. The format is `[<Namespace>/]<Hostname>`. The specification of `<Namespace>` is required only when it is insufficient to unambiguously resolve a service in the service registry. The `<Hostname>` is a fully qualified host name of a service defined by the Kubernetes service or ServiceEntry.  Example: "gateway-sds.foo.svc.cluster.local" or "bar/gateway-sds.example.com". |  | Required: \{\}   |
+| `port` _integer_ | REQUIRED. Specifies the port of the service. |  | Required: \{\}   |
+
+
 #### MeshConfigExtensionProviderSkyWalkingTracingProvider
 
 
@@ -2012,7 +2034,7 @@ _Appears in:_
 | `caCertificatesPem` _string array_ | The PEM data of the extra root certificates for workload-to-workload communication. This includes the certificates defined in MeshConfig and any other certificates that Istiod uses as CA. The plugin certificates (the 'cacerts' secret), self-signed certificates (the 'istio-ca-secret' secret) are added automatically by Istiod. |  |  |
 | `image` _[ProxyImage](#proxyimage)_ | Specifies the details of the proxy image. |  |  |
 | `privateKeyProvider` _[PrivateKeyProvider](#privatekeyprovider)_ | Specifies the details of the Private Key Provider configuration for gateway and sidecar proxies. |  |  |
-| `proxyHeaders` _[ProxyConfigProxyHeaders](#proxyconfigproxyheaders)_ | Define the set of headers to add/modify for HTTP request/responses.  To enable an optional header, simply set the field. If no specific configuration is required, an empty object (`\{\}`) will enable it. Note: currently all headers are enabled by default.  Below shows an example of customizing the `server` header and disabling the `X-Envoy-Attempt-Count` header:  ```yaml proxyHeaders:    server:     value: "my-custom-server"   # Explicitly enable Request IDs.   # As this is the default, this has no effect.   requestId: \{\}   attemptCount:     disabled: true  ```  # Below shows an example of preserving the header case for HTTP 1.x requests  ```yaml proxyHeaders:    perserveHttp1HeaderCase: true  ```  Some headers are enabled by default, and require explicitly disabling. See below for an example of disabling all default-enabled headers:  ```yaml proxyHeaders:    forwardedClientCert: SANITIZE   server:     disabled: true   requestId:     disabled: true   attemptCount:     disabled: true   envoyDebugHeaders:     disabled: true   metadataExchangeHeaders:     mode: IN_MESH  ``` |  |  |
+| `proxyHeaders` _[ProxyConfigProxyHeaders](#proxyconfigproxyheaders)_ | Define the set of headers to add/modify for HTTP request/responses.  To enable an optional header, simply set the field. If no specific configuration is required, an empty object (`\{\}`) will enable it. Note: currently all headers are enabled by default.  Below shows an example of customizing the `server` header and disabling the `X-Envoy-Attempt-Count` header:  ```yaml proxyHeaders:    server:     value: "my-custom-server"   # Explicitly enable Request IDs.   # As this is the default, this has no effect.   requestId: \{\}   attemptCount:     disabled: true  ```  # Below shows an example of preserving the header case for HTTP 1.x requests  ```yaml proxyHeaders:    preserveHttp1HeaderCase: true  ```  Some headers are enabled by default, and require explicitly disabling. See below for an example of disabling all default-enabled headers:  ```yaml proxyHeaders:    forwardedClientCert: SANITIZE   server:     disabled: true   requestId:     disabled: true   attemptCount:     disabled: true   envoyDebugHeaders:     disabled: true   metadataExchangeHeaders:     mode: IN_MESH  ``` |  |  |
 
 
 #### MeshConfigProxyPathNormalization
@@ -2050,6 +2072,71 @@ _Appears in:_
 | `BASE` | Normalize according to [RFC 3986](https://tools.ietf.org/html/rfc3986). For Envoy proxies, this is the [`normalize_path`](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto.html) option. For example, `/a/../b` normalizes to `/b`.  |
 | `MERGE_SLASHES` | In addition to the `BASE` normalization, consecutive slashes are also merged. For example, `/a//b` normalizes to `a/b`.  |
 | `DECODE_AND_MERGE_SLASHES` | In addition to normalization in `MERGE_SLASHES`, slash characters are UTF-8 decoded (case insensitive) prior to merging. This means `%2F`, `%2f`, `%5C`, and `%5c` sequences in the request path will be rewritten to `/` or `\`. For example, `/a%2f/b` normalizes to `a/b`.  |
+
+
+#### MeshConfigServiceScopeConfigs
+
+
+
+Configuration for ambient mode multicluster service scope. This setting allows mesh administrators
+to define the criteria by which the cluster's control plane determines which services in other
+clusters in the mesh are treated as global (accessible across multiple clusters) versus local
+(restricted to a single cluster). The configuration can be applied to services based on namespace
+and/or other matching criteria. This is particularly  useful in multicluster service mesh deployments
+to control service visibility and access across clusters. This API is not intended to enforce
+security policies. Resources like DestinationRules should be used to enforce authorization policies.
+If a service matches a global service scope selector, the service's endpoints will be globally
+exposed. If a service is locally scoped, its endpoints will only be exposed to local cluster
+services.
+
+
+For example, the following configures the scope of all services with the "istio.io/global" label
+in matching namespaces to be available globally:
+
+
+```yaml
+serviceScopeConfigs:
+  - namespacesSelector:
+    matchExpressions:
+  - key: istio.io/global
+    operator: In
+    values: [true]
+    servicesSelector:
+    matchExpressions:
+  - key: istio.io/global
+    operator: Exists
+    scope: GLOBAL
+```
+
+
+
+_Appears in:_
+- [MeshConfig](#meshconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `namespaceSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#labelselector-v1-meta)_ | Match expression for namespaces. |  |  |
+| `servicesSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#labelselector-v1-meta)_ | Match expression for serivces. |  |  |
+| `scope` _[MeshConfigServiceScopeConfigsScope](#meshconfigservicescopeconfigsscope)_ | Specifics the available scope for matching services. |  | Enum: [LOCAL GLOBAL]   |
+
+
+#### MeshConfigServiceScopeConfigsScope
+
+_Underlying type:_ _string_
+
+The scope of the matching service. Used to determine if the service is available locally
+(cluster local) or globally (mesh-wide).
+
+_Validation:_
+- Enum: [LOCAL GLOBAL]
+
+_Appears in:_
+- [MeshConfigServiceScopeConfigs](#meshconfigservicescopeconfigs)
+
+| Field | Description |
+| --- | --- |
+| `LOCAL` |  |
+| `GLOBAL` |  |
 
 
 
@@ -3355,7 +3442,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.26-latest, v1.26.2, v1.26.0, v1.25-latest, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.27-alpha.11ce9e0a. | v1.26.2 | Enum: [v1.26-latest v1.26.2 v1.26.0 v1.25-latest v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 master v1.27-alpha.11ce9e0a]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.26-latest, v1.26.2, v1.26.0, v1.25-latest, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.28-alpha.15d90d38. | v1.26.2 | Enum: [v1.26-latest v1.26.2 v1.26.0 v1.25-latest v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 master v1.28-alpha.15d90d38]   |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is 'ambient' and it is always applied. Must be one of: ambient, default, demo, empty, external, preview, remote, stable. | ambient | Enum: [ambient default demo empty external openshift-ambient openshift preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio ztunnel component should be installed. | ztunnel |  |
 | `values` _[ZTunnelValues](#ztunnelvalues)_ | Defines the values to be passed to the Helm charts when installing Istio ztunnel. |  |  |
