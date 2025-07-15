@@ -130,7 +130,7 @@ spec:
 					Success("sample pods are ready")
 
 					for _, pod := range samplePods.Items {
-						sidecarVersion, err := common.GetProxyVersion(pod.Name, sampleNamespace)
+						sidecarVersion, err := getProxyVersion(pod.Name, sampleNamespace)
 						Expect(err).NotTo(HaveOccurred(), "Error getting sidecar version")
 						Expect(sidecarVersion).To(Equal(istioversion.Map[istioversion.Base].Version), "Sidecar Istio version does not match the expected version")
 					}
@@ -203,7 +203,7 @@ spec:
 
 					for _, pod := range samplePods.Items {
 						Eventually(func() *semver.Version {
-							sidecarVersion, err := common.GetProxyVersion(pod.Name, sampleNamespace)
+							sidecarVersion, err := getProxyVersion(pod.Name, sampleNamespace)
 							Expect(err).NotTo(HaveOccurred(), "Error getting sidecar version")
 							return sidecarVersion
 						}).Should(Equal(istioversion.Map[istioversion.Base].Version), "Sidecar Istio version does not match the expected version")
@@ -241,7 +241,7 @@ spec:
 						}
 
 						for _, pod := range samplePods.Items {
-							sidecarVersion, err := common.GetProxyVersion(pod.Name, sampleNamespace)
+							sidecarVersion, err := getProxyVersion(pod.Name, sampleNamespace)
 							if err != nil || !sidecarVersion.Equal(istioversion.Map[istioversion.New].Version) {
 								return false
 							}

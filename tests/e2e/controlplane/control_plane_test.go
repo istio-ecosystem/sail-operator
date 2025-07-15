@@ -17,8 +17,11 @@
 package controlplane
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
@@ -26,6 +29,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -198,7 +202,7 @@ metadata:
 
 					It("has sidecars with the correct istio version", func(ctx SpecContext) {
 						for _, pod := range samplePods.Items {
-							sidecarVersion, err := common.GetProxyVersion(pod.Name, sampleNamespace)
+							sidecarVersion, err := getProxyVersion(pod.Name, sampleNamespace)
 							Expect(err).NotTo(HaveOccurred(), "Error getting sidecar version")
 							Expect(sidecarVersion).To(Equal(version.Version), "Sidecar Istio version does not match the expected version")
 						}
@@ -269,4 +273,27 @@ func HaveContainersThat(matcher types.GomegaMatcher) types.GomegaMatcher {
 
 func ImageFromRegistry(regexp string) types.GomegaMatcher {
 	return HaveField("Image", MatchRegexp(regexp))
+}
+
+func getProxyVersion(podName, namespace string) (*semver.Version, error) {
+	proxyStatus, err := istioctl.GetProxyStatus("--namespace " + namespace)
+	if err != nil {
+		return nil, fmt.Errorf("error getting sidecar version: %w", err)
+	}
+
+	lines := strings.Split(proxyStatus, "\n")
+	var versionStr string
+	for _, line := range lines {
+		if strings.Contains(line, podName+"."+namespace) {
+			values := strings.Fields(line)
+			versionStr = values[len(values)-1]
+			break
+		}
+	}
+
+	version, err := semver.NewVersion(versionStr)
+	if err != nil {
+		return version, fmt.Errorf("error parsing sidecar version %q: %w", versionStr, err)
+	}
+	return version, err
 }
