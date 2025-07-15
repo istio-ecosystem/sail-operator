@@ -162,6 +162,8 @@ inputFiles:
       MeshConfig.DiscoverySelectors: "[]*metav1.LabelSelector"
       ConfigSource.TlsSettings: "*ClientTLSSettings"
       MeshConfig_CA.TlsSettings: "*ClientTLSSettings"
+      MeshConfig_ServiceScopeConfigs.NamespaceSelector: "*metav1.LabelSelector"
+      MeshConfig_ServiceScopeConfigs.ServicesSelector: "*metav1.LabelSelector"
     removeTypes:
     - LabelSelector
     - LabelSelectorRequirement
