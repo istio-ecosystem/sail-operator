@@ -1119,7 +1119,7 @@ spec:
                                   Request IDs.\n\t# As this is the default, this has
                                   no effect.\n\trequestId: {}\n\tattemptCount:\n\t
                                   \ disabled: true\n\n```\n\n# Below shows an example
-                                  of preserving the header case for HTTP 1.x requests\n\n```yaml\nproxyHeaders:\n\n\tperserveHttp1HeaderCase:
+                                  of preserving the header case for HTTP 1.x requests\n\n```yaml\nproxyHeaders:\n\n\tpreserveHttp1HeaderCase:
                                   true\n\n```\n\nSome headers are enabled by default,
                                   and require explicitly disabling. See below for
                                   an example of disabling all default-enabled headers:\n\n```yaml\nproxyHeaders:\n\n\tforwardedClientCert:
@@ -2933,6 +2933,37 @@ spec:
                                 prometheus:
                                   description: Configures a Prometheus metrics provider.
                                   type: object
+                                sds:
+                                  description: |-
+                                    Configures an Extension Provider for SDS. This can be used to
+                                    configure an external SDS service to supply secrets for certain Gateways for example.
+                                    This is useful for scenarios where the secrets are stored in an external secret store like Vault.
+                                    The secret should be configured with sds://provider-name format.
+                                  properties:
+                                    name:
+                                      description: REQUIRED. Specifies the name of
+                                        the provider. This should be used to configure
+                                        the Gateway SDS.
+                                      type: string
+                                    port:
+                                      description: REQUIRED. Specifies the port of
+                                        the service.
+                                      format: int32
+                                      type: integer
+                                    service:
+                                      description: |-
+                                        REQUIRED. Specifies the service that implements the  SDS service.
+                                        The format is `[<Namespace>/]<Hostname>`. The specification of `<Namespace>` is required only when it is insufficient
+                                        to unambiguously resolve a service in the service registry. The `<Hostname>` is a fully qualified host name of a
+                                        service defined by the Kubernetes service or ServiceEntry.
+
+                                        Example: "gateway-sds.foo.svc.cluster.local" or "bar/gateway-sds.example.com".
+                                      type: string
+                                  required:
+                                  - name
+                                  - port
+                                  - service
+                                  type: object
                                 skywalking:
                                   description: Configures a Apache SkyWalking provider.
                                   properties:
@@ -3057,8 +3088,8 @@ spec:
                               - message: At most one of [envoyExtAuthzHttp envoyExtAuthzGrpc
                                   zipkin lightstep datadog stackdriver opencensus
                                   skywalking opentelemetry prometheus envoyFileAccessLog
-                                  envoyHttpAls envoyTcpAls envoyOtelAls] should be
-                                  set
+                                  envoyHttpAls envoyTcpAls envoyOtelAls sds] should
+                                  be set
                                 rule: (has(self.envoyExtAuthzHttp)?1:0) + (has(self.envoyExtAuthzGrpc)?1:0)
                                   + (has(self.zipkin)?1:0) + (has(self.lightstep)?1:0)
                                   + (has(self.datadog)?1:0) + (has(self.stackdriver)?1:0)
@@ -3066,7 +3097,7 @@ spec:
                                   + (has(self.opentelemetry)?1:0) + (has(self.prometheus)?1:0)
                                   + (has(self.envoyFileAccessLog)?1:0) + (has(self.envoyHttpAls)?1:0)
                                   + (has(self.envoyTcpAls)?1:0) + (has(self.envoyOtelAls)?1:0)
-                                  <= 1
+                                  + (has(self.sds)?1:0) <= 1
                             maxItems: 1000
                             type: array
                           h2UpgradePolicy:
@@ -3432,6 +3463,142 @@ spec:
                               The precise semantics of this processing are documented on each resource
                               type.
                             type: string
+                          serviceScopeConfigs:
+                            description: Scope to be applied to select services.
+                            items:
+                              description: |-
+                                Configuration for ambient mode multicluster service scope. This setting allows mesh administrators
+                                to define the criteria by which the cluster's control plane determines which services in other
+                                clusters in the mesh are treated as global (accessible across multiple clusters) versus local
+                                (restricted to a single cluster). The configuration can be applied to services based on namespace
+                                and/or other matching criteria. This is particularly  useful in multicluster service mesh deployments
+                                to control service visibility and access across clusters. This API is not intended to enforce
+                                security policies. Resources like DestinationRules should be used to enforce authorization policies.
+                                If a service matches a global service scope selector, the service's endpoints will be globally
+                                exposed. If a service is locally scoped, its endpoints will only be exposed to local cluster
+                                services.
+
+                                For example, the following configures the scope of all services with the "istio.io/global" label
+                                in matching namespaces to be available globally:
+
+                                ```yaml
+                                serviceScopeConfigs:
+                                  - namespacesSelector:
+                                    matchExpressions:
+                                  - key: istio.io/global
+                                    operator: In
+                                    values: [true]
+                                    servicesSelector:
+                                    matchExpressions:
+                                  - key: istio.io/global
+                                    operator: Exists
+                                    scope: GLOBAL
+
+                                ```
+                              properties:
+                                namespaceSelector:
+                                  description: Match expression for namespaces.
+                                  properties:
+                                    matchExpressions:
+                                      description: matchExpressions is a list of label
+                                        selector requirements. The requirements are
+                                        ANDed.
+                                      items:
+                                        description: |-
+                                          A label selector requirement is a selector that contains values, a key, and an operator that
+                                          relates the key and values.
+                                        properties:
+                                          key:
+                                            description: key is the label key that
+                                              the selector applies to.
+                                            type: string
+                                          operator:
+                                            description: |-
+                                              operator represents a key's relationship to a set of values.
+                                              Valid operators are In, NotIn, Exists and DoesNotExist.
+                                            type: string
+                                          values:
+                                            description: |-
+                                              values is an array of string values. If the operator is In or NotIn,
+                                              the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                              the values array must be empty. This array is replaced during a strategic
+                                              merge patch.
+                                            items:
+                                              type: string
+                                            type: array
+                                            x-kubernetes-list-type: atomic
+                                        required:
+                                        - key
+                                        - operator
+                                        type: object
+                                      type: array
+                                      x-kubernetes-list-type: atomic
+                                    matchLabels:
+                                      additionalProperties:
+                                        type: string
+                                      description: |-
+                                        matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                        map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                        operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                      type: object
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                                scope:
+                                  description: Specifics the available scope for matching
+                                    services.
+                                  enum:
+                                  - LOCAL
+                                  - GLOBAL
+                                  type: string
+                                servicesSelector:
+                                  description: Match expression for serivces.
+                                  properties:
+                                    matchExpressions:
+                                      description: matchExpressions is a list of label
+                                        selector requirements. The requirements are
+                                        ANDed.
+                                      items:
+                                        description: |-
+                                          A label selector requirement is a selector that contains values, a key, and an operator that
+                                          relates the key and values.
+                                        properties:
+                                          key:
+                                            description: key is the label key that
+                                              the selector applies to.
+                                            type: string
+                                          operator:
+                                            description: |-
+                                              operator represents a key's relationship to a set of values.
+                                              Valid operators are In, NotIn, Exists and DoesNotExist.
+                                            type: string
+                                          values:
+                                            description: |-
+                                              values is an array of string values. If the operator is In or NotIn,
+                                              the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                              the values array must be empty. This array is replaced during a strategic
+                                              merge patch.
+                                            items:
+                                              type: string
+                                            type: array
+                                            x-kubernetes-list-type: atomic
+                                        required:
+                                        - key
+                                        - operator
+                                        type: object
+                                      type: array
+                                      x-kubernetes-list-type: atomic
+                                    matchLabels:
+                                      additionalProperties:
+                                        type: string
+                                      description: |-
+                                        matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                        map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                        operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                      type: object
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                              type: object
+                            type: array
                           serviceSettings:
                             description: Settings to be applied to select services.
                             items:
@@ -3450,6 +3617,14 @@ spec:
                                   - "bar.baz.svc.cluster.local"
 
                                 ```
+
+                                When in ambient mode, if ServiceSettings are defined they will be considered in addition to the
+                                ServiceScopeConfigs. If a service is defined by ServiceSetting to be cluster local and matches a
+                                global service scope selector, the service will be considered cluster local. If a service is
+                                considered global by ServiceSettings and does not match a global service scope selector
+                                the serive will be considered local. Local scope takes precedence over global scope. Since
+                                ServiceScopeConfigs is local by default, all services are considered local unless it is considered
+                                global by ServiceSettings AND ServiceScopeConfigs.
                               properties:
                                 hosts:
                                   description: |-
@@ -5594,7 +5769,7 @@ spec:
                 default: v1.26.2
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.26-latest, v1.26.2, v1.26.0, v1.25-latest, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.27-alpha.11ce9e0a.
+                  Must be one of: v1.26-latest, v1.26.2, v1.26.0, v1.25-latest, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.28-alpha.eecced08.
                 enum:
                 - v1.26-latest
                 - v1.26.2
@@ -5612,7 +5787,7 @@ spec:
                 - v1.24.1
                 - v1.24.0
                 - master
-                - v1.27-alpha.11ce9e0a
+                - v1.28-alpha.eecced08
                 type: string
             required:
             - namespace
