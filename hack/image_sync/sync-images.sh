@@ -264,8 +264,10 @@ sync_all() {
     done
     
     echo "==================== SYNC SUMMARY ===================="
-    local total_images=$(jq -r '.images | length' "$CONFIG_FILE")
-    local total_tags=$(jq -r '[.images[].tags | length] | add' "$CONFIG_FILE")
+    local total_images
+    total_images=$(jq -r '.images | length' "$CONFIG_FILE")
+    local total_tags
+    total_tags=$(jq -r '[.images[].tags | length] | add' "$CONFIG_FILE")
     print_info "Total images processed: $total_images"
     print_info "Total tags processed: $total_tags"
     print_info "Successfully synced: $sync_success/$total_synced"
@@ -310,8 +312,10 @@ dry_run() {
     done < <(jq -r '.images[] | @base64' "$CONFIG_FILE")
     
     echo "==================== DRY RUN SUMMARY ===================="
-    local total_images=$(jq -r '.images | length' "$CONFIG_FILE")
-    local total_tags=$(jq -r '[.images[].tags | length] | add' "$CONFIG_FILE")
+    local total_images
+    total_images=$(jq -r '.images | length' "$CONFIG_FILE")
+    local total_tags
+    total_tags=$(jq -r '[.images[].tags | length] | add' "$CONFIG_FILE")
     echo "Info: Total packages that would be processed: $total_images"
     echo "Info: Total tags that would be processed: $total_tags"
     echo "Warning: This was a dry run - no actual sync was performed"
@@ -344,7 +348,10 @@ discover_tags() {
     
     if [[ -n "$upstream_tags" ]]; then
         echo "Available upstream tags:"
-        echo "$upstream_tags" | sed 's/^/  /'
+        # Use a while loop to process each line and add the indentation
+        while IFS= read -r tag; do
+            echo "  $tag"
+        done <<< "$upstream_tags"
         
         echo
         echo "New tags (not in configuration):"
@@ -401,7 +408,8 @@ update_sample_files() {
     local new_tag="$3"
     
     # Extract the target image path from config
-    local target_image=$(jq -r --arg name "$image_name" '.images[] | select(.name == $name) | .target' "$CONFIG_FILE")
+    local target_image
+    target_image=$(jq -r --arg name "$image_name" '.images[] | select(.name == $name) | .target' "$CONFIG_FILE")
     
     if [[ -z "$target_image" ]]; then
         print_error "Could not find target image for $image_name"
@@ -459,7 +467,8 @@ update_sample_files() {
 
 # Function to extract image tags from Istio upstream samples
 extract_istio_tags() {
-    local temp_dir=$(mktemp -d)
+    local temp_dir
+    temp_dir=$(mktemp -d)
     local istio_sample_urls=(
         "https://raw.githubusercontent.com/istio/istio/master/samples/helloworld/helloworld.yaml"
         "https://raw.githubusercontent.com/istio/istio/master/samples/httpbin/httpbin.yaml"
@@ -471,7 +480,8 @@ extract_istio_tags() {
     declare -A istio_tags
     
     for url in "${istio_sample_urls[@]}"; do
-        local filename=$(basename "$url")
+        local filename
+        filename=$(basename "$url")
         local filepath="$temp_dir/$filename"
         
         print_info "  Fetching $filename"
@@ -535,7 +545,8 @@ auto_update() {
     echo
     
     # Extract tags from Istio upstream samples
-    local istio_tags_output=$(extract_istio_tags)
+    local istio_tags_output
+    istio_tags_output=$(extract_istio_tags)
     
     if [[ -z "$istio_tags_output" ]]; then
         print_error "Could not extract tags from Istio upstream samples"
@@ -648,23 +659,23 @@ show_help() {
     echo "Usage: $0 <command> [arguments]"
     echo
     echo "Commands:"
-    echo "  check-deps           Check if required dependencies are installed"
-    echo "  validate             Validate configuration file"
-    echo "  list                 List configured images"
-    echo "  status               Check status of all configured images"
-    echo "  sync-all             Sync all configured images automatically"
-    echo "  auto-update          Sync tags with upstream Istio samples and update config + samples"
-    echo "  auto-sync            Full workflow: auto-update + sync"
-    echo "  test-extract         Test extraction of tags from Istio upstream (no updates)"
-    echo "  dry-run              Show what would be synced (fast, no network calls)"
-    echo "  sync <image> [tag]   Sync specific image (all tags or specific tag)"
+    echo "  check-deps         Check if required dependencies are installed"
+    echo "  validate           Validate configuration file"
+    echo "  list               List configured images"
+    echo "  status             Check status of all configured images"
+    echo "  sync-all           Sync all configured images automatically"
+    echo "  auto-update        Sync tags with upstream Istio samples and update config + samples"
+    echo "  auto-sync          Full workflow: auto-update + sync"
+    echo "  test-extract       Test extraction of tags from Istio upstream (no updates)"
+    echo "  dry-run            Show what would be synced (fast, no network calls)"
+    echo "  sync <image> [tag] Sync specific image (all tags or specific tag)"
     echo "  discover <image> [max] Discover new tags for an image"
-    echo "  help                 Show this help message"
+    echo "  help               Show this help message"
     echo
     echo "Environment variables:"
-    echo "  CONFIG_FILE          Path to configuration file (default: .github/image-sync-config.json)"
-    echo "  REGISTRY_UPSTREAM    Upstream registry (default: docker.io/istio)"
-    echo "  REGISTRY_TARGET      Target registry (default: quay.io/sail-dev)"
+    echo "  CONFIG_FILE        Path to configuration file (default: .github/image-sync-config.json)"
+    echo "  REGISTRY_UPSTREAM  Upstream registry (default: docker.io/istio)"
+    echo "  REGISTRY_TARGET    Target registry (default: quay.io/sail-dev)"
     echo
     echo "Examples:"
     echo "  $0 status"
