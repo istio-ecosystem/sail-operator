@@ -1,28 +1,24 @@
-# Image Synchronization System
+# Image Sync Documentation
 
-This system automates the synchronization of sample container images from the Istio upstream registry (`docker.io/istio`) to our Quay.io registry (`quay.io/sail-dev`).
-
-## Overview
-
-The image synchronization system provides:
-
-- **Scheduled synchronization**: Automatically runs daily at 2:00 AM UTC
-- **Change detection**: Compares image digests to detect updates
-- **New tag discovery**: Automatically discovers new versions in upstream registries
-- **Automated copying**: Uses `crane` for efficient image copying
-- **Manual control**: Utility script for manual operations
+This script automatically syncs sample container images to match the exact tags used in upstream Istio samples, ensuring compatibility with official Istio examples.
 
 ## Quick Start
 
-### 1. Setup GitHub Secrets
+### 1. Automatic Sync (Recommended)
+It's runs with the GitHub Actions workflow, which automatically updates and syncs images based on the latest tags from Istio samples. This is incorporated inside the the update dependency workflow, so it will run automatically when you update dependencies. For more information check `.github/workflows/update-deps.yml`.
 
-We will use repository secret to store credentials for Quay.io:
-*  QUAY_USER: for the Quay.io username
-*  QUAY_PDW: for the Quay.io password
+### 2. Manual Operations
+```bash
+# Auto-update to newer tags + sync (recommended)
+make auto-sync-sample-images
 
-### 2. Configure Images
+# Just auto-update tags (no sync)
+make auto-update-sample-images
+```
 
-Images are configured in `.github/image-sync-config.json`:
+## Configuration
+
+Images are configured in `hack/image_sync/image-sync-config.json`:
 
 ```json
 {
@@ -33,135 +29,73 @@ Images are configured in `.github/image-sync-config.json`:
       "target": "quay.io/sail-dev/examples-helloworld-v1",
       "tags": ["1.0", "latest"]
     }
-  ],
-  "check_new_tags": true,
-  "max_tags_to_check": 10
+  ]
 }
 ```
 
-### 3. Run Synchronization
+Take into account that only listed tags will be synced into quay.io/sail-dev, so you can control which tags are available in the Sail Dev registry.
 
-**Automatic:** The workflow runs daily according to the configured schedule.
+## Setup Requirements
 
-**Manual:** Go to GitHub Actions → "Sync Images from Upstream" → "Run workflow"
+### Dependencies
+The system uses:
+- `crane` (for image copying)
+- `jq` (for JSON processing)
 
-## Files Structure
+Both are automatically installed by the GitHub workflow.
 
-```
-.github/
-├── workflows/
-│   └── sync-images.yml          # GitHub Actions workflow
-├── image-sync-config.json       # Image configuration
-scripts/
-└── sync-images.sh              # Utility script for manual operations
-docs/
-└── IMAGE_SYNC.md               # Detailed documentation (Spanish)
-```
+## Available Commands
 
-## Configuration Reference
-
-### Image Configuration
-
-Each image in the configuration file has the following structure:
-
-```json
-{
-  "name": "descriptive-name",
-  "upstream": "docker.io/istio/upstream-image",
-  "target": "quay.io/sail-dev/target-image",
-  "tags": ["tag1", "tag2", "latest"]
-}
-```
-
-### Configuration Options
-
-- **`check_new_tags`**: Boolean to enable/disable new tag discovery
-- **`max_tags_to_check`**: Maximum number of tags to check for new versions
-
-## Currently Synchronized Images
-
-- **examples-helloworld-v1**: HelloWorld example application v1
-- **examples-helloworld-v2**: HelloWorld example application v2  
-- **examples-httpbin**: HTTPBin example application
-- **examples-tcp-echo-server**: TCP echo server
-
-## Manual Operations
-
-The utility script `scripts/sync-images.sh` provides several commands:
-
+### Make Targets
 ```bash
-# Check system dependencies
-./scripts/sync-images.sh check-deps
-
-# Validate configuration
-./scripts/sync-images.sh validate
-
-# List configured images
-./scripts/sync-images.sh list
-
-# Check status of all images
-./scripts/sync-images.sh status
-
-# Sync a specific image
-./scripts/sync-images.sh sync examples-helloworld-v1
-
-# Sync a specific tag
-./scripts/sync-images.sh sync examples-helloworld-v1 1.0
-
-# Discover new tags for an image
-./scripts/sync-images.sh discover examples-httpbin 20
+make auto-sync-sample-images      # Auto-update + sync (recommended)
+make auto-update-sample-images    # Check for newer tags and update config + samples
 ```
+
+### Script Commands
+```bash
+./hack/image_sync/sync-images.sh <command>
+
+Commands:
+  validate              Check configuration file
+  list                  Show configured images
+  status                Check current sync status
+  auto-update           Check for newer tags and update config + samples
+  auto-sync             Full workflow: auto-update + sync
+  sync-all              Sync all configured images
+  dry-run               Show what would be synced
+  sync <image>          Sync specific image
+  discover  <image>     Discover new tags for an image
+  help                  Show all commands
+```
+
+## Currently Synced Images
+
+- `examples-helloworld-v1` - HelloWorld example v1
+- `examples-helloworld-v2` - HelloWorld example v2
+- `examples-httpbin` - HTTPBin testing tool
+- `examples-tcp-echo-server` - TCP echo server
 
 ## Adding New Images
 
-1. Edit `.github/image-sync-config.json`
-2. Add the new image configuration:
+1. Edit `hack/image_sync/image-sync-config.json`
+2. Add your image configuration:
+   ```json
+   {
+     "name": "my-new-image",
+     "upstream": "docker.io/istio/my-image",
+     "target": "quay.io/sail-dev/my-image", 
+     "tags": ["latest", "1.0"]
+   }
+   ```
+3. Commit and push - it will sync automatically on next run
 
-```json
-{
-  "name": "new-image-name",
-  "upstream": "docker.io/istio/new-image",
-  "target": "quay.io/sail-dev/new-image",
-  "tags": ["1.0", "latest"]
-}
-```
+## How It Works
 
-3. Commit and push changes
-4. The image will be synchronized in the next run
-
-### Logs
-
-Detailed logs are available in:
-- GitHub Actions → "Sync Images from Upstream" → Latest execution
-
-## Troubleshooting
-
-### Authentication Failure
-
-**Error:** `unauthorized: authentication required`
-
-**Solution:** Verify that `QUAY_USERNAME` and `QUAY_PASSWORD` secrets are correctly configured.
-
-### Image Not Found
-
-**Error:** `MANIFEST_UNKNOWN` or `NOT_FOUND`
-
-**Solution:**
-1. Verify the upstream image exists in `docker.io/istio/`
-2. Check that the image name is correct
-3. Confirm the specified tag exists
-
-### Rate Limiting
-
-**Error:** `too many requests`
-
-**Solution:** The system includes automatic retries, but you can adjust `max_tags_to_check` to reduce queries.
-
-## Dependencies
-
-- **[crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane)**: Container image manipulation tool
-- **[jq](https://stedolan.github.io/jq/)**: Command-line JSON processor
-
-## License
-
-This project is licensed under the same terms as the sail-operator project.
+### Auto-Update Workflow (Used on gh-actions)
+1. **Fetch Istio Samples**: Downloads official sample YAML files from github.com/istio/istio
+2. **Extract Official Tags**: Parses YAML files to find exact image tags Istio uses
+3. **Compare Tags**: Compares our config tags with Istio's official tags
+4. **Update Config**: Updates `.github/image-sync-config.json` to match Istio exactly
+5. **Update Samples**: Updates image references in `samples/` directory to match
+6. **Sync Images**: Copy using crane the updated images to Quay.io/sail-dev
