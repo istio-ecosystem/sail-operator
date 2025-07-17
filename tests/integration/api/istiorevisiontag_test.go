@@ -267,15 +267,7 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 		})
 
 		It("fails to reconcile IstioRevisionTag", func() {
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
-				g.Expect(tag.Status.ObservedGeneration).To(Equal(tag.Generation))
-			}).Should(Succeed())
-			Consistently(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
-				g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionReconciled).Status).To(Equal(metav1.ConditionFalse))
-				g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionReconciled).Reason).To(Equal(v1.IstioRevisionTagReasonNameAlreadyExists))
-			}).Should(Succeed())
+			expectTagNotReconciled(ctx, v1.IstioRevisionTagReasonNameAlreadyExists)
 		})
 	})
 
@@ -301,15 +293,7 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 		})
 
 		It("fails to reconcile IstioRevisionTag", func() {
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
-				g.Expect(tag.Status.ObservedGeneration).To(Equal(tag.Generation))
-			}).Should(Succeed())
-			Consistently(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
-				g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionReconciled).Status).To(Equal(metav1.ConditionFalse))
-				g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionReconciled).Reason).To(Equal(v1.IstioRevisionTagReasonReferenceNotFound))
-			}).Should(Succeed())
+			expectTagNotReconciled(ctx, v1.IstioRevisionTagReasonReferenceNotFound)
 		})
 
 		When("attempting to create IstioRevision with same name as the tag's", func() {
@@ -434,15 +418,7 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 				},
 			}
 			Expect(k8sClient.Create(ctx, tag)).To(Succeed())
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
-				g.Expect(tag.Status.ObservedGeneration).To(Equal(tag.Generation))
-			}).Should(Succeed())
-			Consistently(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
-				g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionReconciled).Status).To(Equal(metav1.ConditionFalse))
-				g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionReconciled).Reason).To(Equal(v1.IstioRevisionTagReasonNameAlreadyExists))
-			}).Should(Succeed())
+			expectTagNotReconciled(ctx, v1.IstioRevisionTagReasonNameAlreadyExists)
 		})
 
 		AfterAll(func() {
@@ -489,5 +465,18 @@ func expectTagInUse(ctx context.Context, status metav1.ConditionStatus, revision
 		if revision != "" {
 			g.Expect(tag.Status.IstioRevision).To(Equal(revision))
 		}
+	}).Should(Succeed())
+}
+
+func expectTagNotReconciled(ctx context.Context, reason v1.IstioRevisionTagConditionReason) {
+	tag := &v1.IstioRevisionTag{}
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
+		g.Expect(tag.Status.ObservedGeneration).To(Equal(tag.Generation))
+	}).Should(Succeed())
+	Consistently(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
+		g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionReconciled).Status).To(Equal(metav1.ConditionFalse))
+		g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionReconciled).Reason).To(Equal(reason))
 	}).Should(Succeed())
 }
