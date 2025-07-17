@@ -168,15 +168,13 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 	Describe("IstioCNI dependency checks", func() {
 		cni := &v1.IstioCNI{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "default",
+				Name: cniName,
 			},
 			Spec: v1.IstioCNISpec{
 				Version:   istioversion.Default,
 				Namespace: istioNamespace,
 			},
 		}
-
-		cniKey := client.ObjectKeyFromObject(cni)
 
 		BeforeAll(func() {
 			rev = &v1.IstioRevision{
@@ -228,12 +226,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 			ds.Status.NumberReady = 3
 			Expect(k8sClient.Status().Update(ctx, ds)).To(Succeed())
 
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, cniKey, cni)).To(Succeed())
-				readyCondition := cni.Status.GetCondition(v1.IstioCNIConditionReady)
-				g.Expect(readyCondition.Status).To(Equal(metav1.ConditionTrue))
-			}).Should(Succeed())
-
+			expectCNICondition(ctx, v1.IstioCNIConditionReady, metav1.ConditionTrue)
 			expectCondition(ctx, revName, v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionTrue)
 		})
 	})
