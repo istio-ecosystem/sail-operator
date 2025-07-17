@@ -1,7 +1,7 @@
-![unit test badge](https://github.com/istio-ecosystem/sail-operator/actions/workflows/unit-tests.yaml/badge.svg)
-![integration test badge](https://github.com/istio-ecosystem/sail-operator/actions/workflows/integration-tests.yaml/badge.svg)
-![update-deps badge](https://github.com/istio-ecosystem/sail-operator/actions/workflows/update-deps.yaml/badge.svg)
-![nightly-images badge](https://github.com/istio-ecosystem/sail-operator/actions/workflows/nightly-images.yaml/badge.svg)
+[![unit-test](https://github.com/istio-ecosystem/sail-operator/actions/workflows/unit-tests.yaml/badge.svg)](https://github.com/istio-ecosystem/sail-operator/blob/main/.github/workflows/unit-tests.yaml)
+[![integration test badge](https://github.com/istio-ecosystem/sail-operator/actions/workflows/integration-tests.yaml/badge.svg)](https://github.com/istio-ecosystem/sail-operator/blob/main/.github/workflows/integration-tests.yaml)
+[![update-deps badge](https://github.com/istio-ecosystem/sail-operator/actions/workflows/update-deps.yaml/badge.svg)](https://github.com/istio-ecosystem/sail-operator/blob/main/.github/workflows/update-deps.yaml)
+[![nightly-images badge](https://github.com/istio-ecosystem/sail-operator/actions/workflows/nightly-images.yaml/badge.svg)](https://github.com/istio-ecosystem/sail-operator/blob/main/.github/workflows/nightly-images.yaml)
 
 # Sail Operator
 
