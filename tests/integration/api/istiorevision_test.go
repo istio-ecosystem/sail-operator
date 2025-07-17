@@ -19,7 +19,6 @@ package integration
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"time"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
@@ -27,10 +26,10 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
+	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/prometheus/common/expfmt"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -514,17 +513,11 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 				waitForInFlightReconcileToFinish()
 
 				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
-
-				beforeCount := getIstioRevisionReconcileCount(Default)
-
-				By("modifying object")
-				modify(obj)
-				Expect(k8sClient.Status().Update(ctx, obj)).To(Succeed())
-
-				Consistently(func(g Gomega) {
-					afterCount := getIstioRevisionReconcileCount(g)
-					g.Expect(afterCount).To(Equal(beforeCount))
-				}, 5*time.Second).Should(Succeed())
+				expectNoReconciliation(istioRevisionController, func() {
+					By("modifying object")
+					modify(obj)
+					Expect(k8sClient.Status().Update(ctx, obj)).To(Succeed())
+				})
 			},
 			Entry("HorizontalPodAutoscaler",
 				&autoscalingv2.HorizontalPodAutoscaler{
@@ -565,16 +558,11 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 
 			GinkgoWriter.Println("sa:", sa)
 
-			beforeCount := getIstioRevisionReconcileCount(Default)
-
-			By("adding pull secret to ServiceAccount")
-			sa.ImagePullSecrets = append(sa.ImagePullSecrets, corev1.LocalObjectReference{Name: "other-pull-secret"})
-			Expect(k8sClient.Update(ctx, sa)).To(Succeed())
-
-			Consistently(func(g Gomega) {
-				afterCount := getIstioRevisionReconcileCount(g)
-				g.Expect(afterCount).To(Equal(beforeCount))
-			}, 5*time.Second).Should(Succeed(), "IstioRevision was reconciled when it shouldn't have been")
+			expectNoReconciliation(istioRevisionController, func() {
+				By("adding pull secret to ServiceAccount")
+				sa.ImagePullSecrets = append(sa.ImagePullSecrets, corev1.LocalObjectReference{Name: "other-pull-secret"})
+				Expect(k8sClient.Update(ctx, sa)).To(Succeed())
+			})
 
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(sa), sa)).To(Succeed())
 			Expect(sa.ImagePullSecrets).To(ContainElement(corev1.LocalObjectReference{Name: "other-pull-secret"}))
@@ -618,13 +606,9 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 
 				It("doesn't reconcile when a regular namespace is created", func() {
 					waitForInFlightReconcileToFinish()
-					reconcileCount := getIstioRevisionReconcileCount(Default)
-					createOrUpdateNamespace(ctx, "not-injected-"+name, nil)
-
-					Consistently(func(g Gomega) {
-						latestCount := getIstioRevisionReconcileCount(g)
-						g.Expect(latestCount).To(Equal(reconcileCount))
-					}, 5*time.Second).Should(Succeed(), "IstioRevision was reconciled when it shouldn't have been")
+					expectNoReconciliation(istioRevisionController, func() {
+						createOrUpdateNamespace(ctx, "not-injected-"+name, nil)
+					})
 				})
 			})
 
@@ -644,16 +628,14 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 				It("doesn't reconcile when a pod marked not to inject is created in a namespace marked for injection", func() {
 					ns := createOrUpdateNamespace(ctx, "injected-"+name, nsLabels)
 					waitForInFlightReconcileToFinish()
-					reconcileCount := getIstioRevisionReconcileCount(Default)
-
-					pod := createPod(ctx, "not-injected", ns.Name, map[string]string{constants.IstioSidecarInjectLabel: "false"})
-					Consistently(func(g Gomega) {
-						latestCount := getIstioRevisionReconcileCount(g)
-						g.Expect(latestCount).To(Equal(reconcileCount))
-					}, 5*time.Second).Should(Succeed(), "IstioRevision was reconciled when it shouldn't have been")
+					expectNoReconciliation(istioRevisionController, func() {
+						createPod(ctx, "not-injected", ns.Name, map[string]string{constants.IstioSidecarInjectLabel: "false"})
+					})
 
 					// Clean up after test
-					Expect(k8sClient.Delete(ctx, pod)).To(Succeed())
+					pod := &corev1.Pod{}
+					Expect(k8sClient.Get(ctx, kube.Key("not-injected", ns.Name), pod)).To(Succeed())
+					deletePod(ctx, pod)
 					createOrUpdateNamespace(ctx, ns.Name, nil)
 				})
 			})
@@ -752,36 +734,6 @@ func waitForInFlightReconcileToFinish() {
 	// wait for the in-flight reconcile operations to finish
 	// unfortunately, I don't see a good way to do this other than by waiting
 	time.Sleep(5 * time.Second)
-}
-
-func getIstioRevisionReconcileCount(g Gomega) float64 {
-	return getReconcileCount(g, "istiorevision")
-}
-
-func getIstioCNIReconcileCount(g Gomega) float64 {
-	return getReconcileCount(g, "istiocni")
-}
-
-func getReconcileCount(g Gomega, controllerName string) float64 {
-	resp, err := http.Get("http://localhost:8080/metrics")
-	g.Expect(err).NotTo(HaveOccurred())
-	defer resp.Body.Close()
-
-	parser := expfmt.TextParser{}
-	metricFamilies, err := parser.TextToMetricFamilies(resp.Body)
-	g.Expect(err).NotTo(HaveOccurred())
-
-	metricName := "controller_runtime_reconcile_total"
-	mf := metricFamilies[metricName]
-	sum := float64(0)
-	for _, metric := range mf.Metric {
-		for _, l := range metric.Label {
-			if *l.Name == "controller" && *l.Value == controllerName {
-				sum += metric.GetCounter().GetValue()
-			}
-		}
-	}
-	return sum
 }
 
 func deleteAllIstioRevisions(ctx context.Context) {

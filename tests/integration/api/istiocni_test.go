@@ -251,16 +251,11 @@ var _ = Describe("IstioCNI", Ordered, func() {
 				}
 				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(sa), sa)).To(Succeed())
 
-				beforeCount := getIstioCNIReconcileCount(Default)
-
-				By("adding pull secret to ServiceAccount")
-				sa.ImagePullSecrets = append(sa.ImagePullSecrets, corev1.LocalObjectReference{Name: "other-pull-secret"})
-				Expect(k8sClient.Update(ctx, sa)).To(Succeed())
-
-				Consistently(func(g Gomega) {
-					afterCount := getIstioCNIReconcileCount(g)
-					g.Expect(afterCount).To(Equal(beforeCount))
-				}, 5*time.Second).Should(Succeed(), "IstioRevision was reconciled when it shouldn't have been")
+				expectNoReconciliation(istioCNIController, func() {
+					By("adding pull secret to ServiceAccount")
+					sa.ImagePullSecrets = append(sa.ImagePullSecrets, corev1.LocalObjectReference{Name: "other-pull-secret"})
+					Expect(k8sClient.Update(ctx, sa)).To(Succeed())
+				})
 
 				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(sa), sa)).To(Succeed())
 				Expect(sa.ImagePullSecrets).To(ContainElement(corev1.LocalObjectReference{Name: "other-pull-secret"}))
