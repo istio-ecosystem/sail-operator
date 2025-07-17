@@ -1,13 +1,15 @@
 # Image Sync Documentation
 
-This script automatically syncs sample container images to match the exact tags used in upstream Istio samples, ensuring compatibility with official Istio examples.
+This documentation describes the automatic process for the sync of the sample container images to match the exact tags used in upstream Istio samples, ensuring compatibility with official Istio examples. Across this documentation it will be described the process, configuration, and commands available for managing the image synchronization.
 
-## Quick Start
+## Overview
 
 ### 1. Automatic Sync (Recommended)
-It's runs with the GitHub Actions workflow, which automatically updates and syncs images based on the latest tags from Istio samples. This is incorporated inside the the update dependency workflow, so it will run automatically when you update dependencies. For more information check `.github/workflows/update-deps.yml`.
+It runs with the GitHub Actions workflow, which automatically updates and syncs images based on the latest tags from Istio samples. This is incorporated inside the the update dependency workflow, so it will run automatically when you update dependencies. For more information please check [`update-deps.yml`](../../.github/workflows/update-deps.yaml).
 
 ### 2. Manual Operations
+You can use the make targets or the provided scripts to manually update or sync images. This is useful for testing or when you need to perform specific operations without waiting for the automatic workflow.
+
 ```bash
 # Auto-update to newer tags + sync (recommended)
 make auto-sync-sample-images
@@ -18,7 +20,7 @@ make auto-update-sample-images
 
 ## Configuration
 
-Images are configured in `hack/image_sync/image-sync-config.json`:
+Images are configured in [`image-sync-config.json`](../../hack/image_sync/image-sync-config.json). This file contains the list of images to be synced, their upstream sources, target locations, and the specific tags to be used.
 
 ```json
 {
@@ -44,13 +46,9 @@ The system uses:
 
 Both are automatically installed by the GitHub workflow.
 
-## Available Commands
+## Available Commands in the sync script
 
-### Make Targets
-```bash
-make auto-sync-sample-images      # Auto-update + sync (recommended)
-make auto-update-sample-images    # Check for newer tags and update config + samples
-```
+Besides the make targets, you can use the provided script to manage image synchronization. The script is located at [`hack/image_sync/sync-images.sh`](../../hack/image_sync/sync-images.sh) and provides several commands to manage the image sync process.
 
 ### Script Commands
 ```bash
