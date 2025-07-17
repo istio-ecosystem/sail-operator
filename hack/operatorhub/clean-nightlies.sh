@@ -84,7 +84,7 @@ PAYLOAD="${TMP_DIR}/PAYLOAD"
 jq -c -n \
   --arg msg "$(cat "${CUR_DIR}"/operatorhub-pr-template.md)" \
   --arg head "${FORK}:${BRANCH}" \
-  --arg base "${HUB_BASE_BRANCH}" \
+  --arg base main \
   --arg title "${TITLE}" \
    '{head: $head, base: $base, title: $title, body: $msg }' > "${PAYLOAD}"
 
