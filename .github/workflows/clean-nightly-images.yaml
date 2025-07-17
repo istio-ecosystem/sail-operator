@@ -11,7 +11,7 @@ env:
   GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
 
 jobs:
-  release:
+  clean-nightlies:
     runs-on: ubuntu-latest
 
     steps:
