@@ -207,23 +207,18 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 		})
 
 		It("shows dependencies unhealthy when IstioCNI is missing", func() {
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
-				dependenciesHealthyCondition := rev.Status.GetCondition(v1.IstioRevisionConditionDependenciesHealthy)
-				g.Expect(dependenciesHealthyCondition.Status).To(Equal(metav1.ConditionFalse))
-				g.Expect(dependenciesHealthyCondition.Reason).To(Equal(v1.IstioRevisionReasonIstioCNINotFound))
-			}).Should(Succeed())
+			expectCondition(ctx, revName, v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionFalse,
+				func(g Gomega, condition *v1.IstioRevisionCondition) {
+					g.Expect(condition.Reason).To(Equal(v1.IstioRevisionReasonIstioCNINotFound))
+				})
 		})
 
 		It("shows dependencies unhealthy when IstioCNI is unhealthy", func() {
 			Expect(k8sClient.Create(ctx, cni)).To(Succeed())
-
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
-				dependenciesHealthyCondition := rev.Status.GetCondition(v1.IstioRevisionConditionDependenciesHealthy)
-				g.Expect(dependenciesHealthyCondition.Status).To(Equal(metav1.ConditionFalse))
-				g.Expect(dependenciesHealthyCondition.Reason).To(Equal(v1.IstioRevisionReasonIstioCNINotHealthy))
-			}).Should(Succeed())
+			expectCondition(ctx, revName, v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionFalse,
+				func(g Gomega, condition *v1.IstioRevisionCondition) {
+					g.Expect(condition.Reason).To(Equal(v1.IstioRevisionReasonIstioCNINotHealthy))
+				})
 		})
 
 		It("shows dependencies healthy when IstioCNI is healthy", func() {
@@ -240,11 +235,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 				g.Expect(readyCondition.Status).To(Equal(metav1.ConditionTrue))
 			}).Should(Succeed())
 
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
-				dependenciesHealthyCondition := rev.Status.GetCondition(v1.IstioRevisionConditionDependenciesHealthy)
-				g.Expect(dependenciesHealthyCondition.Status).To(Equal(metav1.ConditionTrue))
-			}).Should(Succeed())
+			expectCondition(ctx, revName, v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionTrue)
 		})
 	})
 
@@ -276,15 +267,11 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 			})
 
 			It("indicates in the status that the namespace doesn't exist", func() {
-				Eventually(func(g Gomega) {
-					g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
-					g.Expect(rev.Status.ObservedGeneration).To(Equal(rev.ObjectMeta.Generation))
-
-					reconciled := rev.Status.GetCondition(v1.IstioRevisionConditionReconciled)
-					g.Expect(reconciled.Status).To(Equal(metav1.ConditionFalse))
-					g.Expect(reconciled.Reason).To(Equal(v1.IstioRevisionReasonReconcileError))
-					g.Expect(reconciled.Message).To(ContainSubstring(fmt.Sprintf("namespace %q doesn't exist", nsName)))
-				}).Should(Succeed())
+				expectCondition(ctx, revName, v1.IstioRevisionConditionReconciled, metav1.ConditionFalse,
+					func(g Gomega, condition *v1.IstioRevisionCondition) {
+						g.Expect(condition.Reason).To(Equal(v1.IstioRevisionReasonReconcileError))
+						g.Expect(condition.Message).To(ContainSubstring(fmt.Sprintf("namespace %q doesn't exist", nsName)))
+					})
 			})
 
 			When("the namespace is created", func() {
@@ -309,12 +296,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 					Eventually(k8sClient.Get).WithArguments(ctx, istiodKey, istiod).WithTimeout(10 * time.Second).Should(Succeed())
 
 					Step("Checking if the status is updated")
-					Eventually(func(g Gomega) {
-						g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
-						g.Expect(rev.Status.ObservedGeneration).To(Equal(rev.ObjectMeta.Generation))
-						reconciled := rev.Status.GetCondition(v1.IstioRevisionConditionReconciled)
-						g.Expect(reconciled.Status).To(Equal(metav1.ConditionTrue))
-					}).Should(Succeed())
+					expectCondition(ctx, revName, v1.IstioRevisionConditionReconciled, metav1.ConditionTrue)
 				})
 			})
 		})
@@ -391,12 +373,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 		})
 
 		It("has an initial Ready condition status of false when istiod isn't ready", func() {
-			Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
-				readyCondition := rev.Status.GetCondition(v1.IstioRevisionConditionReady)
-				g.Expect(readyCondition.Status).To(Equal(metav1.ConditionFalse))
-			}).Should(Succeed())
+			expectCondition(ctx, revName, v1.IstioRevisionConditionReady, metav1.ConditionFalse)
 		})
 
 		It("updates the status of the IstioRevision resource", func() {
@@ -407,11 +384,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 				istiod.Status.ReadyReplicas = 1
 				Expect(k8sClient.Status().Update(ctx, istiod)).To(Succeed())
 
-				Eventually(func(g Gomega) {
-					g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
-					readyCondition := rev.Status.GetCondition(v1.IstioRevisionConditionReady)
-					g.Expect(readyCondition.Status).To(Equal(metav1.ConditionTrue))
-				}).Should(Succeed())
+				expectCondition(ctx, revName, v1.IstioRevisionConditionReady, metav1.ConditionTrue)
 			})
 
 			By("setting the Ready condition status to false when istiod isn't ready", func() {
@@ -421,11 +394,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 				istiod.Status.ReadyReplicas = 0
 				Expect(k8sClient.Status().Update(ctx, istiod)).To(Succeed())
 
-				Eventually(func(g Gomega) {
-					g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
-					readyCondition := rev.Status.GetCondition(v1.IstioRevisionConditionReady)
-					g.Expect(readyCondition.Status).To(Equal(metav1.ConditionFalse))
-				}).Should(Succeed())
+				expectCondition(ctx, revName, v1.IstioRevisionConditionReady, metav1.ConditionFalse)
 			})
 		})
 	})
@@ -639,9 +608,9 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 
 			When("watching namespaces", func() {
 				It("reconciles when a namespace marked for injection is created", func() {
-					expectConditionStatus(ctx, name, v1.IstioRevisionConditionInUse, metav1.ConditionFalse)
+					expectCondition(ctx, name, v1.IstioRevisionConditionInUse, metav1.ConditionFalse)
 					ns := createOrUpdateNamespace(ctx, "injected-"+name, nsLabels)
-					expectConditionStatus(ctx, name, v1.IstioRevisionConditionInUse, metav1.ConditionTrue)
+					expectCondition(ctx, name, v1.IstioRevisionConditionInUse, metav1.ConditionTrue)
 
 					// Clean up after test (envtest doesn't support namespace deletion, so set labels to nil)
 					createOrUpdateNamespace(ctx, ns.Name, nil)
@@ -663,10 +632,10 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 				It("reconciles when a pod marked for injection is created in a regular namespace", func() {
 					ns := createOrUpdateNamespace(ctx, "non-injected-"+name, nil)
 					waitForInFlightReconcileToFinish()
-					expectConditionStatus(ctx, name, v1.IstioRevisionConditionInUse, metav1.ConditionFalse)
+					expectCondition(ctx, name, v1.IstioRevisionConditionInUse, metav1.ConditionFalse)
 
 					pod := createPod(ctx, "injected-pod", ns.Name, podLabels)
-					expectConditionStatus(ctx, name, v1.IstioRevisionConditionInUse, metav1.ConditionTrue)
+					expectCondition(ctx, name, v1.IstioRevisionConditionInUse, metav1.ConditionTrue)
 
 					// Clean up pod after the test
 					Expect(k8sClient.Delete(ctx, pod)).To(Succeed())
@@ -862,11 +831,20 @@ func createPod(ctx context.Context, name, ns string, labels map[string]string) *
 	return pod
 }
 
-// nolint:unparam // planning a refactor to use this more
-func expectConditionStatus(ctx context.Context, name string, condition v1.IstioRevisionConditionType, status metav1.ConditionStatus) {
+// expectCondition on a given IstioRevision (identified by name) to eventually have a given status.
+// Additional checks on the status can be done via an optional supplementary functions.
+func expectCondition(ctx context.Context, name string, condition v1.IstioRevisionConditionType, status metav1.ConditionStatus,
+	extraChecks ...func(Gomega, *v1.IstioRevisionCondition),
+) {
 	Eventually(func(g Gomega) {
 		rev := &v1.IstioRevision{}
 		g.Expect(k8sClient.Get(ctx, client.ObjectKey{Name: name}, rev)).To(Succeed())
-		g.Expect(rev.Status.GetCondition(condition).Status).To(Equal(status))
+		g.Expect(rev.Status.ObservedGeneration).To(Equal(rev.ObjectMeta.Generation))
+
+		condition := rev.Status.GetCondition(condition)
+		g.Expect(condition.Status).To(Equal(status))
+		for _, check := range extraChecks {
+			check(g, &condition)
+		}
 	}).Should(Succeed(), "Expected condition %q to be %q on IstioRevision: %s", condition, status, name)
 }
