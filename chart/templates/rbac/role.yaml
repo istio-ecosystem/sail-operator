@@ -48,6 +48,10 @@ rules:
     - get
     - list
     - watch
+    - create
+    - update
+    - patch
+    - delete
 - apiGroups:
   - k8s.cni.cncf.io
   resources:
