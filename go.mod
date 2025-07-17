@@ -24,7 +24,7 @@ require (
 	golang.org/x/tools v0.29.0
 	gomodules.xyz/jsonpatch/v2 v2.5.0
 	gopkg.in/yaml.v3 v3.0.1
-	helm.sh/helm/v3 v3.17.1
+	helm.sh/helm/v3 v3.17.4
 	istio.io/client-go v1.25.1
 	istio.io/istio v0.0.0-20250322053744-be4b14ad8be8
 	k8s.io/api v0.32.3
