@@ -33,9 +33,14 @@ import (
 	"istio.io/istio/pkg/ptr"
 )
 
-var _ = Describe("IstioRevisionTag resource", Ordered, func() {
+const (
+	defaultTagName = "default"
+)
+
+var defaultTagKey = client.ObjectKey{Name: defaultTagName}
+
+var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered, func() {
 	const (
-		defaultTagName            = "default"
 		istioName                 = "test-istio"
 		istioRevisionTagNamespace = "istiorevisiontag-test"
 		workloadNamespace         = "istiorevisiontag-test-workloads"
@@ -45,7 +50,6 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 	istio := &v1.Istio{}
 	istio2 := &v1.Istio{}
 	istioKey := client.ObjectKey{Name: istioName}
-	defaultTagKey := client.ObjectKey{Name: defaultTagName}
 	workloadNamespaceKey := client.ObjectKey{Name: workloadNamespace}
 	tag := &v1.IstioRevisionTag{}
 
@@ -144,12 +148,7 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 						Expect(k8sClient.Create(ctx, tag)).To(Succeed())
 					})
 					It("updates IstioRevisionTag status", func() {
-						Eventually(func(g Gomega) {
-							g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
-							g.Expect(tag.Status.ObservedGeneration).To(Equal(tag.Generation))
-							g.Expect(tag.Status.IstioRevision).To(Equal(getRevisionName(istio, istioversion.Base)))
-							g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionInUse).Status).To(Equal(metav1.ConditionFalse))
-						}).Should(Succeed())
+						expectTagInUse(ctx, metav1.ConditionFalse, getRevisionName(istio, istioversion.Base))
 					})
 				})
 				When("workload ns is labeled with istio-injection label", func() {
@@ -159,11 +158,7 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 						Expect(k8sClient.Update(ctx, workloadNs)).To(Succeed())
 					})
 					It("updates IstioRevisionTag status and detects that the revision tag is in use", func() {
-						Eventually(func(g Gomega) {
-							g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
-							g.Expect(tag.Status.ObservedGeneration).To(Equal(tag.Generation))
-							g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionInUse).Status).To(Equal(metav1.ConditionTrue))
-						}).Should(Succeed())
+						expectTagInUse(ctx, metav1.ConditionTrue, "")
 					})
 				})
 
@@ -176,19 +171,11 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 
 					if referencedResource == v1.IstioRevisionKind {
 						It("updates IstioRevisionTag status and still references old revision", func() {
-							Eventually(func(g Gomega) {
-								g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
-								g.Expect(tag.Status.IstioRevision).To(Equal(getRevisionName(istio, istioversion.Base)))
-								g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionInUse).Status).To(Equal(metav1.ConditionTrue))
-							}).Should(Succeed())
+							expectTagInUse(ctx, metav1.ConditionTrue, getRevisionName(istio, istioversion.Base))
 						})
 					} else {
 						It("updates IstioRevisionTag status and shows new referenced revision", func() {
-							Eventually(func(g Gomega) {
-								g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
-								g.Expect(tag.Status.IstioRevision).To(Equal(getRevisionName(istio, istioversion.New)))
-								g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionInUse).Status).To(Equal(metav1.ConditionTrue))
-							}).Should(Succeed())
+							expectTagInUse(ctx, metav1.ConditionTrue, getRevisionName(istio, istioversion.New))
 						})
 					}
 				})
@@ -201,10 +188,7 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 					})
 
 					It("updates IstioRevisionTag status and detects that the tag is no longer in use", func() {
-						Eventually(func(g Gomega) {
-							g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
-							g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionInUse).Status).To(Equal(metav1.ConditionFalse))
-						}).Should(Succeed())
+						expectTagInUse(ctx, metav1.ConditionFalse, "")
 					})
 					if referencedResource == v1.IstioRevisionKind && updateStrategy == v1.UpdateStrategyTypeRevisionBased {
 						It("does not delete the referenced IstioRevision even though it is no longer in use and not the active revision", func() {
@@ -225,11 +209,7 @@ var _ = Describe("IstioRevisionTag resource", Ordered, func() {
 					})
 
 					It("updates IstioRevisionTag status and detects that the revision tag is in use", func() {
-						Eventually(func(g Gomega) {
-							g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
-							g.Expect(tag.Status.ObservedGeneration).To(Equal(tag.Generation))
-							g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionInUse).Status).To(Equal(metav1.ConditionTrue))
-						}).Should(Succeed())
+						expectTagInUse(ctx, metav1.ConditionTrue, "")
 					})
 				})
 			})
@@ -495,5 +475,19 @@ func deletePod(ctx context.Context, pod *corev1.Pod) {
 	Eventually(func(g Gomega) {
 		p := &corev1.Pod{}
 		g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, p)).To(ReturnNotFoundError())
+	}).Should(Succeed())
+}
+
+// expectTagInUse to match the expected status for the default IstioRevisionTag.
+// Optionally, the istio revision can be specified to also be checked, if not empty.
+func expectTagInUse(ctx context.Context, status metav1.ConditionStatus, revision string) {
+	Eventually(func(g Gomega) {
+		tag := &v1.IstioRevisionTag{}
+		g.Expect(k8sClient.Get(ctx, defaultTagKey, tag)).To(Succeed())
+		g.Expect(tag.Status.ObservedGeneration).To(Equal(tag.ObjectMeta.Generation))
+		g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionInUse).Status).To(Equal(status))
+		if revision != "" {
+			g.Expect(tag.Status.IstioRevision).To(Equal(revision))
+		}
 	}).Should(Succeed())
 }
