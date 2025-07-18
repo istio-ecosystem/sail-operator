@@ -36,6 +36,7 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -619,9 +620,31 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 				deleteAllIstioRevisions(ctx)
 			})
 
+			When("watching namespaces", func() {
+				It("reconciles when a namespace marked for injection is created", func() {
+					expectConditionStatus(ctx, name, v1.IstioRevisionConditionInUse, metav1.ConditionFalse)
+					ns := createOrUpdateNamespace(ctx, "injected-"+name, nsLabels)
+					expectConditionStatus(ctx, name, v1.IstioRevisionConditionInUse, metav1.ConditionTrue)
+
+					// Clean up after test (envtest doesn't support namespace deletion, so set labels to nil)
+					createOrUpdateNamespace(ctx, ns.Name, nil)
+				})
+
+				It("doesn't reconcile when a regular namespace is created", func() {
+					waitForInFlightReconcileToFinish()
+					reconcileCount := getIstioRevisionReconcileCount(Default)
+					createOrUpdateNamespace(ctx, "not-injected-"+name, nil)
+
+					Consistently(func(g Gomega) {
+						latestCount := getIstioRevisionReconcileCount(g)
+						g.Expect(latestCount).To(Equal(reconcileCount))
+					}, 5*time.Second).Should(Succeed(), "IstioRevision was reconciled when it shouldn't have been")
+				})
+			})
+
 			When("watching pods", func() {
 				It("reconciles when a pod marked for injection is created in a regular namespace", func() {
-					ns := createNamespace(ctx, "non-injected-"+name, nil)
+					ns := createOrUpdateNamespace(ctx, "non-injected-"+name, nil)
 					waitForInFlightReconcileToFinish()
 					expectConditionStatus(ctx, name, v1.IstioRevisionConditionInUse, metav1.ConditionFalse)
 
@@ -633,7 +656,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 				})
 
 				It("doesn't reconcile when a pod marked not to inject is created in a namespace marked for injection", func() {
-					ns := createNamespace(ctx, "injected-"+name, nsLabels)
+					ns := createOrUpdateNamespace(ctx, "injected-"+name, nsLabels)
 					waitForInFlightReconcileToFinish()
 					reconcileCount := getIstioRevisionReconcileCount(Default)
 
@@ -645,8 +668,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 
 					// Clean up after test
 					Expect(k8sClient.Delete(ctx, pod)).To(Succeed())
-					ns.Labels = map[string]string{}
-					Expect(k8sClient.Update(ctx, ns)).To(Succeed())
+					createOrUpdateNamespace(ctx, ns.Name, nil)
 				})
 			})
 		},
@@ -786,7 +808,7 @@ func deleteAllIstioRevisions(ctx context.Context) {
 	}).Should(Succeed())
 }
 
-func createNamespace(ctx context.Context, name string, labels map[string]string) *corev1.Namespace {
+func createOrUpdateNamespace(ctx context.Context, name string, labels map[string]string) *corev1.Namespace {
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
@@ -794,7 +816,12 @@ func createNamespace(ctx context.Context, name string, labels map[string]string)
 		},
 	}
 
-	Expect(k8sClient.Create(ctx, ns)).To(Succeed())
+	err := k8sClient.Create(ctx, ns)
+	if errors.IsAlreadyExists(err) {
+		err = k8sClient.Update(ctx, ns)
+	}
+
+	Expect(err).ToNot(HaveOccurred())
 	return ns
 }
 
@@ -818,6 +845,7 @@ func createPod(ctx context.Context, name, ns string, labels map[string]string) *
 	return pod
 }
 
+// nolint:unparam // planning a refactor to use this more
 func expectConditionStatus(ctx context.Context, name string, condition v1.IstioRevisionConditionType, status metav1.ConditionStatus) {
 	Eventually(func(g Gomega) {
 		rev := &v1.IstioRevision{}
