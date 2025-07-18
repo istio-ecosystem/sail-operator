@@ -112,7 +112,7 @@ func (h *ChartManager) UpgradeOrInstallChart(
 		log.V(2).Info("Performing helm upgrade", "chartName", chart.Name())
 
 		updateAction := action.NewUpgrade(cfg)
-		updateAction.PostRenderer = NewHelmPostRenderer(ownerReference, "")
+		updateAction.PostRenderer = NewHelmPostRenderer(ownerReference, "", true)
 		updateAction.MaxHistory = 1
 		updateAction.SkipCRDs = true
 
@@ -124,7 +124,7 @@ func (h *ChartManager) UpgradeOrInstallChart(
 		log.V(2).Info("Performing helm install", "chartName", chart.Name())
 
 		installAction := action.NewInstall(cfg)
-		installAction.PostRenderer = NewHelmPostRenderer(ownerReference, "")
+		installAction.PostRenderer = NewHelmPostRenderer(ownerReference, "", false)
 		installAction.Namespace = namespace
 		installAction.ReleaseName = releaseName
 		installAction.SkipCRDs = true

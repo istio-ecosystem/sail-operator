@@ -520,6 +520,23 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 					hpa := obj.(*autoscalingv2.HorizontalPodAutoscaler)
 					g.Expect(hpa.Spec.MaxReplicas).ToNot(Equal(int32(123)))
 				}),
+			Entry("ValidatingWebhookConfiguration",
+				&admissionv1.ValidatingWebhookConfiguration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: fmt.Sprintf("istio-validator-%s-%s", revName, istioNamespace),
+					},
+				}, func(obj client.Object) {
+					webhook := obj.(*admissionv1.ValidatingWebhookConfiguration)
+					webhook.Webhooks[0].Name = "xyz.xyz.xyz"
+					webhook.Webhooks[0].FailurePolicy = ptr.Of(admissionv1.Fail)
+				}, func(g Gomega, obj client.Object) {
+					webhook := obj.(*admissionv1.ValidatingWebhookConfiguration)
+					g.Expect(webhook.Webhooks[0].Name).ToNot(Equal("xyz.xyz.xyz"))
+					// FailurePolicy should not be changed because we have a post-render
+					// step to remove it from the Helm generated YAML so it stays as-is
+					// in cluster.
+					g.Expect(webhook.Webhooks[0].FailurePolicy).To(HaveValue(Equal(admissionv1.Fail)))
+				}),
 		)
 
 		DescribeTable("skips reconcile when only the status of the owned resource is updated",
