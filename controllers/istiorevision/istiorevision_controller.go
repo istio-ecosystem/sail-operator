@@ -38,6 +38,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -251,6 +252,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// nolint:staticcheck
 		Watches(&corev1.Endpoints{}, ownedResourceHandler).
 		Watches(&corev1.Service{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
+
+		// +lint-watches:ignore: NetworkPolicy (FIXME: NetworkPolicy has not yet been added upstream, but is WIP)
+		Watches(&networkingv1.NetworkPolicy{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
 
 		// We use predicate.IgnoreUpdate() so that we skip the reconciliation when a pull secret is added to the ServiceAccount.
 		// This is necessary so that we don't remove the newly-added secret.
