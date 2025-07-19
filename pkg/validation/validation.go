@@ -17,11 +17,12 @@ package validation
 import (
 	"context"
 	"fmt"
+	"strings"
 
-	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -41,13 +42,12 @@ func ValidateTargetNamespace(ctx context.Context, cl client.Client, namespace st
 	return nil
 }
 
-func IstioRevisionTagExists(ctx context.Context, cl client.Client, name string) (bool, error) {
-	tag := &v1.IstioRevisionTag{}
-	if err := cl.Get(ctx, types.NamespacedName{Name: name}, tag); err != nil {
-		if apierrors.IsNotFound(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	return true, nil
+// ResourceTakesPrecedence returns `true` if `object1` takes precedence over `object2`. This is used in
+// cases where IstioRevision and IstioRevisionTag objects have the same name, to decide which will get
+// reconciled.
+// The decision is based on creation date, but if those are equal, a lexicographic comparison of the
+// objects' UIDs is used as tie-breaker.
+func ResourceTakesPrecedence(object1 *metav1.ObjectMeta, object2 *metav1.ObjectMeta) bool {
+	return object1.CreationTimestamp.Before(&object2.CreationTimestamp) ||
+		(object1.CreationTimestamp.Equal(&object2.CreationTimestamp) && strings.Compare(string(object1.UID), string(object2.UID)) < 0)
 }

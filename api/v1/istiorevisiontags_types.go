@@ -145,7 +145,7 @@ const (
 	// successfully reconciled the resources defined through the CR.
 	IstioRevisionTagConditionReconciled IstioRevisionTagConditionType = "Reconciled"
 
-	// IstioRevisionTagNameAlreadyExists indicates that the a revision with the same name as the IstioRevisionTag already exists.
+	// IstioRevisionTagNameAlreadyExists indicates that an IstioRevision with the same name as the IstioRevisionTag already exists.
 	IstioRevisionTagReasonNameAlreadyExists IstioRevisionTagConditionReason = "NameAlreadyExists"
 
 	// IstioRevisionTagReasonReferenceNotFound indicates that the resource referenced by the tag's TargetRef was not found
