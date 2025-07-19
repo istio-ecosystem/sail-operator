@@ -27,6 +27,7 @@ func TestHelmPostRenderer(t *testing.T) {
 		name           string
 		ownerReference *metav1.OwnerReference
 		ownerNamespace string
+		isUpdate       bool
 		input          string
 		expected       string
 	}{
@@ -219,6 +220,86 @@ spec:
     - port: 80
 `,
 		},
+		{
+			name:           "ValidatingWebhookConfiguration create",
+			ownerReference: nil,
+			ownerNamespace: "",
+			input: `apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: istio-validator
+webhooks:
+- name: rev.validation.istio.io
+  failurePolicy: Fail
+`,
+			expected: `apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  labels:
+    managed-by: sail-operator
+  name: istio-validator
+webhooks:
+  - failurePolicy: Fail
+    name: rev.validation.istio.io
+`,
+		},
+		{
+			name:           "ValidatingWebhookConfiguration update",
+			ownerReference: nil,
+			ownerNamespace: "",
+			isUpdate:       true,
+			input: `apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: istio-validator
+webhooks:
+- name: rev.validation.istio.io
+  failurePolicy: Fail
+`,
+			expected: `apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  labels:
+    managed-by: sail-operator
+  name: istio-validator
+webhooks:
+  - name: rev.validation.istio.io
+`,
+		},
+		{
+			name: "non-ValidatingWebhookConfiguration update",
+			ownerReference: &metav1.OwnerReference{
+				APIVersion: "v1",
+				Kind:       "ConfigMap",
+				Name:       "my-configmap",
+				UID:        "123",
+			},
+			ownerNamespace: "istio-system",
+			isUpdate:       true,
+			input: `apiVersion: v1
+kind: Deployment
+metadata:
+  name: istiod
+  namespace: istio-system
+spec:
+  replicas: 1
+`,
+			expected: `apiVersion: v1
+kind: Deployment
+metadata:
+  labels:
+    managed-by: sail-operator
+  name: istiod
+  namespace: istio-system
+  ownerReferences:
+    - apiVersion: v1
+      kind: ConfigMap
+      name: my-configmap
+      uid: "123"
+spec:
+  replicas: 1
+`,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -226,6 +307,7 @@ spec:
 			postRenderer := HelmPostRenderer{
 				ownerReference: tc.ownerReference,
 				ownerNamespace: tc.ownerNamespace,
+				isUpdate:       tc.isUpdate,
 			}
 
 			actual, err := postRenderer.Run(bytes.NewBufferString(tc.input))
