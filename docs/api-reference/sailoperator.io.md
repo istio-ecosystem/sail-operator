@@ -126,10 +126,11 @@ _Appears in:_
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#affinity-v1-core)_ | K8s affinity to set on the istio-cni Pods. Can be used to exclude istio-cni from being scheduled on specified nodes. |  |  |
 | `podAnnotations` _object (keys:string, values:string)_ | Additional annotations to apply to the istio-cni Pods.  Deprecated: Marked as deprecated in pkg/apis/values_types.proto. |  |  |
 | `psp_cluster_role` _string_ | PodSecurityPolicy cluster role. No longer used anywhere. |  |  |
+| `env` _object (keys:string, values:string)_ | A `key: value` mapping of environment variables to add to the pod |  |  |
 | `logging` _[GlobalLoggingConfig](#globalloggingconfig)_ | Same as `global.logging.level`, but will override it if set |  |  |
 | `repair` _[CNIRepairConfig](#cnirepairconfig)_ | Configuration for the CNI Repair controller. |  |  |
 | `chained` _boolean_ | Configure the plugin as a chained CNI plugin. When true, the configuration is added to the CNI chain; when false, the configuration is added as a standalone file in the CNI configuration directory. |  |  |
-| `resource_quotas` _[ResourceQuotas](#resourcequotas)_ | The resource quotas configration for the CNI DaemonSet. |  |  |
+| `resource_quotas` _[ResourceQuotas](#resourcequotas)_ | The resource quotas configuration for the CNI DaemonSet. |  |  |
 | `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core)_ | The k8s resource requests and limits for the istio-cni Pods. |  |  |
 | `privileged` _boolean_ | No longer used for CNI. See: https://github.com/istio/istio/issues/49004  Deprecated: Marked as deprecated in pkg/apis/values_types.proto. |  |  |
 | `seccompProfile` _[SeccompProfile](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#seccompprofile-v1-core)_ | The Container seccompProfile  See: https://kubernetes.io/docs/tutorials/security/seccomp/ |  |  |

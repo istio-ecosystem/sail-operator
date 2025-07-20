@@ -76,77 +76,6 @@ type ArchConfig struct {
 	Arm64 *uint32 `json:"arm64,omitempty"`
 }
 
-// Configuration for CNI.
-type CNIConfig struct {
-	// Hub to pull the container image from. Image will be `Hub/Image:Tag-Variant`.
-	Hub *string `json:"hub,omitempty"`
-	// The container image tag to pull. Image will be `Hub/Image:Tag-Variant`.
-	Tag *string `json:"tag,omitempty"`
-	// The container image variant to pull. Options are "debug" or "distroless". Unset will use the default for the given version.
-	Variant *string `json:"variant,omitempty"`
-	// Image name to pull from. Image will be `Hub/Image:Tag-Variant`.
-	// If Image contains a "/", it will replace the entire `image` in the pod.
-	Image *string `json:"image,omitempty"`
-	// Specifies the image pull policy. one of Always, Never, IfNotPresent.
-	// Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.
-	//
-	// More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
-	// +kubebuilder:validation:Enum=Always;Never;IfNotPresent
-	PullPolicy *k8sv1.PullPolicy `json:"pullPolicy,omitempty"`
-	// The directory path within the cluster node's filesystem where the CNI binaries are to be installed. Typically /var/lib/cni/bin.
-	CniBinDir *string `json:"cniBinDir,omitempty"`
-	// The directory path within the cluster node's filesystem where the CNI configuration files are to be installed. Typically /etc/cni/net.d.
-	CniConfDir *string `json:"cniConfDir,omitempty"`
-	// The name of the CNI plugin configuration file. Defaults to istio-cni.conf.
-	CniConfFileName *string `json:"cniConfFileName,omitempty"`
-	// The directory path within the cluster node's filesystem where network namespaces are located.
-	// Defaults to '/var/run/netns', in minikube/docker/others can be '/var/run/docker/netns'.
-	CniNetnsDir *string `json:"cniNetnsDir,omitempty"`
-	// List of namespaces that should be ignored by the CNI plugin.
-	ExcludeNamespaces []string `json:"excludeNamespaces,omitempty"`
-	// K8s affinity to set on the istio-cni Pods. Can be used to exclude istio-cni from being scheduled on specified nodes.
-	Affinity *k8sv1.Affinity `json:"affinity,omitempty"`
-	// Additional annotations to apply to the istio-cni Pods.
-	//
-	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
-	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
-	// PodSecurityPolicy cluster role. No longer used anywhere.
-	PspClusterRole *string `json:"psp_cluster_role,omitempty"`
-
-	// Same as `global.logging.level`, but will override it if set
-	Logging *GlobalLoggingConfig `json:"logging,omitempty"`
-	// Configuration for the CNI Repair controller.
-	Repair *CNIRepairConfig `json:"repair,omitempty"`
-	// Configure the plugin as a chained CNI plugin. When true, the configuration is added to the CNI chain; when false,
-	// the configuration is added as a standalone file in the CNI configuration directory.
-	Chained *bool `json:"chained,omitempty"`
-	// The resource quotas configration for the CNI DaemonSet.
-	ResourceQuotas *ResourceQuotas `json:"resource_quotas,omitempty"`
-	// The k8s resource requests and limits for the istio-cni Pods.
-	Resources *k8sv1.ResourceRequirements `json:"resources,omitempty"`
-	// No longer used for CNI. See: https://github.com/istio/istio/issues/49004
-	//
-	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
-	Privileged *bool `json:"privileged,omitempty"`
-	// The Container seccompProfile
-	//
-	// See: https://kubernetes.io/docs/tutorials/security/seccomp/
-	SeccompProfile *k8sv1.SeccompProfile `json:"seccompProfile,omitempty"`
-	// Configuration for Istio Ambient.
-	Ambient *CNIAmbientConfig `json:"ambient,omitempty"`
-	// Specifies the CNI provider. Can be either "default" or "multus". When set to "multus", an additional
-	// NetworkAttachmentDefinition resource is deployed to the cluster to allow the istio-cni plugin to be
-	// invoked in a cluster using the Multus CNI plugin.
-	Provider *string `json:"provider,omitempty"`
-	// The number of pods that can be unavailable during a rolling update of the CNI DaemonSet (see
-	// `updateStrategy.rollingUpdate.maxUnavailable` here:
-	// https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/daemon-set-v1/#DaemonSetSpec).
-	// May be specified as a number of pods or as a percent of the total number
-	// of pods at the start of the update.
-	// +kubebuilder:validation:XIntOrString
-	RollingMaxUnavailable *intstr.IntOrString `json:"rollingMaxUnavailable,omitempty"`
-}
-
 type CNIUsageConfig struct {
 	// Controls whether CNI should be used.
 	Enabled *bool `json:"enabled,omitempty"`
@@ -1439,45 +1368,10 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\adatadog\x10\x02\x12\x0f\n" +
 	"\vstackdriver\x10\x03\x12\x13\n" +
 	"\x0fopenCensusAgent\x10\x04\x12\b\n" +
-				"\x04none\x10\x05B\"Z istio.io/istio/operator/pkg/apisb\x06proto3" // CNIGlobalConfig is a subset of the Global Configuration used in the Istio CNI chart.
-type CNIGlobalConfig struct { // Default k8s resources settings for all Istio control plane components.
-	//
-	// See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
-	//
-	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
-	DefaultResources *k8sv1.ResourceRequirements `json:"defaultResources,omitempty"`
+	"\x04none\x10\x05B\"Z istio.io/istio/operator/pkg/apisb\x06proto3"
 
-	// Specifies the docker hub for Istio images.
-	Hub *string `json:"hub,omitempty"`
-	// Specifies the image pull policy for the Istio images. one of Always, Never, IfNotPresent.
-	// Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.
-	//
-	// More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
-	// +kubebuilder:validation:Enum=Always;Never;IfNotPresent
-	ImagePullPolicy *k8sv1.PullPolicy `json:"imagePullPolicy,omitempty"`
-	// ImagePullSecrets for the control plane ServiceAccount, list of secrets in the same namespace
-	// to use for pulling any images in pods that reference this ServiceAccount.
-	// Must be set for any cluster configured with private docker registry.
-	ImagePullSecrets []string `json:"imagePullSecrets,omitempty"`
-
-	// Specifies whether istio components should output logs in json format by adding --log_as_json argument to each container.
-	LogAsJson *bool `json:"logAsJson,omitempty"`
-	// Specifies the global logging level settings for the Istio control plane components.
-	Logging *GlobalLoggingConfig `json:"logging,omitempty"`
-
-	// Specifies the tag for the Istio docker images.
-	Tag *string `json:"tag,omitempty"`
-	// The variant of the Istio container images to use. Options are "debug" or "distroless". Unset will use the default for the given version.
-	Variant *string `json:"variant,omitempty"`
-
-	// Platform in which Istio is deployed. Possible values are: "openshift" and "gcp"
-	// An empty value means it is a vanilla Kubernetes distribution, therefore no special
-	// treatment will be considered.
-	Platform *string `json:"platform,omitempty"`
-}
-
-// Resource describes the source of configuration
-// +kubebuilder:validation:Enum=SERVICE_REGISTRY
+	// Resource describes the source of configuration
+	// +kubebuilder:validation:Enum=SERVICE_REGISTRY
 type Resource string
 
 const (
