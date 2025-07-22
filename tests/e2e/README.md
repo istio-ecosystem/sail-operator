@@ -279,7 +279,7 @@ Alternatively, set the following environment variables to change these file path
 * SLEEP_YAML_PATH
 * HELLOWORLD_YAML_PATH
 
-`TCP_ECHO_*` are used in the `dual-stack` test suite, `SLEEP_YAML_PATH` and `HELLOWORLD_YAML_PATH` are used in both `Multicluster` and default test run.
+`TCP_ECHO_*` are utilized in the `dual-stack` test suite, while `SLEEP_YAML_PATH` and `HELLOWORLD_YAML_PATH` are employed in both `Multicluster` and default test runs. By default, the sample files are sourced from the `openshift-service-mesh/istio` repository, as this configuration ensures the registry points to `quay.io`, mitigating potential rate-limiting issues when pulling images. If you prefer to use the upstream Istio sample files, set the `SAMPLE_YAML_BASE_URL` environment variable to `https://raw.githubusercontent.com/istio/istio/master/samples/`.
 
 ### Using the e2e framework to test your cluster configuration
 The e2e framework can be used to test your cluster configuration. The framework is designed to be flexible and extensible. It is easy to add new test suites and new tests. The idea is to be able to simulate what a real user scenario looks like when using the operator.

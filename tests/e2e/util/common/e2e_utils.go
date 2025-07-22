@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -29,7 +28,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
-	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
@@ -76,6 +74,27 @@ var (
 	// matching only the version before first '_' which is used in the downstream builds, e.g. "1.23.2_ossm_tp.2"
 	istiodVersionRegex = regexp.MustCompile(`Version:"([^"_]*)[^"]*"`)
 )
+
+// appConfig holds the configuration for a sample testing application.
+type appConfig struct {
+	envVar      string // The environment variable for a custom YAML path.
+	defaultPath string // The default YAML path relative to the base URL.
+}
+
+// appConfigs maps application names (and aliases) to their configuration.
+// Any new sample application that needs to be used should be added here.
+var appConfigs = map[string]appConfig{
+	"httpbin":             {envVar: "HTTPBIN_YAML_PATH", defaultPath: "samples/httpbin/httpbin.yaml"},
+	"helloworld":          {envVar: "HELLOWORLD_YAML_PATH", defaultPath: "samples/helloworld/helloworld.yaml"},
+	"sleep":               {envVar: "SLEEP_YAML_PATH", defaultPath: "samples/sleep/sleep.yaml"},
+	"tcp-echo-dual-stack": {envVar: "TCP_ECHO_DUAL_STACK_YAML_PATH", defaultPath: "samples/tcp-echo/tcp-echo-dual-stack.yaml"},
+	"tcp-echo-ipv4":       {envVar: "TCP_ECHO_IPV4_YAML_PATH", defaultPath: "samples/tcp-echo/tcp-echo-ipv4.yaml"},
+	"tcp-echo-ipv6":       {envVar: "TCP_ECHO_IPV6_YAML_PATH", defaultPath: "samples/tcp-echo/tcp-echo-ipv6.yaml"},
+
+	// Aliases
+	"sample":   {envVar: "HELLOWORLD_YAML_PATH", defaultPath: "samples/helloworld/helloworld.yaml"},
+	"tcp-echo": {envVar: "TCP_ECHO_IPV4_YAML_PATH", defaultPath: "samples/tcp-echo/tcp-echo-ipv4.yaml"},
+}
 
 // GetObject returns the object with the given key
 func GetObject(ctx context.Context, cl client.Client, key client.ObjectKey, obj client.Object) (client.Object, error) {
@@ -315,59 +334,30 @@ func CheckPodsReady(ctx context.Context, cl client.Client, namespace string) err
 }
 
 // GetSampleYAML returns the URL of the yaml file for the testing app.
-// args:
-// version: the version of the Istio to get the yaml file from.
-// appName: the name of the testing app. Example: helloworld, sleep, tcp-echo.
+// It prioritizes a custom path from an environment variable over the default path.
 func GetSampleYAML(version istioversion.VersionInfo, appName string) string {
-	// This func will be used to get URLs for the yaml files of the testing apps. Example: helloworld, sleep, tcp-echo.
-	// Default values points to upstream Istio sample yaml files. Custom paths can be provided using environment variables.
-
-	// Define environment variables for specific apps
-	envVarMap := map[string]string{
-		"tcp-echo-dual-stack": "TCP_ECHO_DUAL_STACK_YAML_PATH",
-		"tcp-echo-ipv4":       "TCP_ECHO_IPV4_YAML_PATH",
-		"tcp-echo":            "TCP_ECHO_IPV4_YAML_PATH",
-		"tcp-echo-ipv6":       "TCP_ECHO_IPV6_YAML_PATH",
-		"sleep":               "SLEEP_YAML_PATH",
-		"helloworld":          "HELLOWORLD_YAML_PATH",
-		"sample":              "HELLOWORLD_YAML_PATH",
-		"httpbin":             "HTTPBIN_YAML_PATH",
+	// Look up the configuration for the given appName.
+	config, exists := appConfigs[appName]
+	if !exists {
+		return "" // Return empty string if the app is not supported.
 	}
 
-	// Check if there's a custom path for the given appName
-	if envVar, exists := envVarMap[appName]; exists {
-		customPath := os.Getenv(envVar)
-		if customPath != "" {
-			return customPath
-		}
+	// Check if a custom path is provided via an environment variable.
+	if customPath := os.Getenv(config.envVar); customPath != "" {
+		return customPath
 	}
 
-	// Default paths if no custom path is provided
-	var path string
-	switch appName {
-	case "tcp-echo-dual-stack":
-		path = "samples/tcp-echo/tcp-echo-dual-stack.yaml"
-	case "tcp-echo-ipv4", "tcp-echo":
-		path = "samples/tcp-echo/tcp-echo-ipv4.yaml"
-	case "tcp-echo-ipv6":
-		path = "samples/tcp-echo/tcp-echo-ipv6.yaml"
-	case "sleep":
-		path = "samples/sleep/sleep.yaml"
-	case "helloworld", "sample":
-		path = "samples/helloworld/helloworld.yaml"
-	case "httpbin":
-		path = "samples/httpbin/httpbin.yaml"
-	default:
-		return ""
-	}
+	// If no custom path, construct the URL from the default path.
+	path := config.defaultPath
 
-	// Base URL logic
+	// Determine the base URL.
 	baseURL := os.Getenv("SAMPLE_YAML_BASE_URL")
 	if baseURL == "" {
-		// use local files by default
-		return filepath.Join(project.RootDir, path)
+		// Default to the master branch of the openshift-service-mesh/istio repo.
+		return fmt.Sprintf("https://raw.githubusercontent.com/openshift-service-mesh/istio/master/%s", path)
 	}
 
+	// Use the provided base URL, version commit, and path.
 	return fmt.Sprintf("%s/%s/%s", baseURL, version.Commit, path)
 }
 
