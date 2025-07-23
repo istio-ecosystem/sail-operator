@@ -1,0 +1,7 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - https://raw.githubusercontent.com/istio/istio/master/samples/tcp-echo/tcp-echo-ipv6.yaml
+images:
+  - name: docker.io/istio/tcp-echo-server
+    newName: quay.io/sail-dev/tcp-echo-server
