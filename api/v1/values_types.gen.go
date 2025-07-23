@@ -421,7 +421,11 @@ type GlobalConfig struct {
 	// More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services
 	IpFamilyPolicy *string `json:"ipFamilyPolicy,omitempty"`
 	// Specifies how waypoints are configured within Istio.
-	Waypoint *WaypointConfig `json:"waypoint,omitempty"` // The next available key is 73
+	Waypoint *WaypointConfig `json:"waypoint,omitempty"`
+	// Select a custom name for istiod's CA Root Cert ConfigMap.
+	TrustBundleName *string `json:"trustBundleName,omitempty"`
+	// Settings related to Kubernetes NetworkPolicy.
+	NetworkPolicy *NetworkPolicyConfig `json:"networkPolicy,omitempty"` // The next available key is 76
 
 }
 
@@ -986,6 +990,12 @@ type WaypointConfig struct {
 	Toleration []*k8sv1.Toleration `json:"toleration,omitempty"`
 }
 
+// Configuration for NetworkPolicy
+type NetworkPolicyConfig struct {
+	// Controls whether default NetworkPolicy resources will be created.
+	Enabled *bool `json:"enabled,omitempty"`
+}
+
 const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\n" +
 	"\x1bpkg/apis/values_types.proto\x12\x17istio.operator.v1alpha1\x1a\x19google/protobuf/any.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\"k8s.io/api/core/v1/generated.proto\x1a4k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto\"h\n" +
@@ -1119,7 +1129,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x14istio_ingressgateway\x18\x04 \x01(\v2-.istio.operator.v1alpha1.IngressGatewayConfigR\x14istio-ingressgateway\x12@\n" +
 	"\x0fsecurityContext\x18\n" +
 	" \x01(\v2\x16.google.protobuf.ValueR\x0fsecurityContext\x12>\n" +
-	"\x0eseccompProfile\x18\f \x01(\v2\x16.google.protobuf.ValueR\x0eseccompProfile\"\x9d\x12\n" +
+	"\x0eseccompProfile\x18\f \x01(\v2\x16.google.protobuf.ValueR\x0eseccompProfile\"\x9b\x13\n" +
 	"\fGlobalConfig\x12;\n" +
 	"\x04arch\x18\x01 \x01(\v2#.istio.operator.v1alpha1.ArchConfigB\x02\x18\x01R\x04arch\x12 \n" +
 	"\vcertSigners\x18D \x03(\tR\vcertSigners\x12F\n" +
@@ -1166,7 +1176,9 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"ipFamilies\x18F \x03(\tR\n" +
 	"ipFamilies\x12&\n" +
 	"\x0eipFamilyPolicy\x18G \x01(\tR\x0eipFamilyPolicy\x12C\n" +
-	"\bwaypoint\x18H \x01(\v2'.istio.operator.v1alpha1.WaypointConfigR\bwaypoint\"-\n" +
+	"\bwaypoint\x18H \x01(\v2'.istio.operator.v1alpha1.WaypointConfigR\bwaypoint\x12(\n" +
+	"\x0ftrustBundleName\x18I \x01(\tR\x0ftrustBundleName\x12R\n" +
+	"\rnetworkPolicy\x18K \x01(\v2,.istio.operator.v1alpha1.NetworkPolicyConfigR\rnetworkPolicy\"-\n" +
 	"\tSTSConfig\x12 \n" +
 	"\vservicePort\x18\x01 \x01(\rR\vservicePort\"R\n" +
 	"\fIstiodConfig\x12B\n" +
@@ -1422,7 +1434,9 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\fnodeSelector\x18\x04 \x01(\v2 .k8s.io.api.core.v1.NodeSelectorR\fnodeSelector\x12>\n" +
 	"\n" +
 	"toleration\x18\x05 \x03(\v2\x1e.k8s.io.api.core.v1.TolerationR\n" +
-	"toleration*J\n" +
+	"toleration\"K\n" +
+	"\x13NetworkPolicyConfig\x124\n" +
+	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled*J\n" +
 	"\x15ingressControllerMode\x12\x0f\n" +
 	"\vUNSPECIFIED\x10\x00\x12\v\n" +
 	"\aDEFAULT\x10\x01\x12\n" +
