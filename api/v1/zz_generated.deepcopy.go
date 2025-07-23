@@ -202,6 +202,13 @@ func (in *CNIConfig) DeepCopyInto(out *CNIConfig) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.Env != nil {
+		in, out := &in.Env, &out.Env
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	if in.Logging != nil {
 		in, out := &in.Logging, &out.Logging
 		*out = new(GlobalLoggingConfig)
@@ -287,8 +294,8 @@ func (in *CNIGlobalConfig) DeepCopyInto(out *CNIGlobalConfig) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	if in.LogAsJson != nil {
-		in, out := &in.LogAsJson, &out.LogAsJson
+	if in.LogAsJSON != nil {
+		in, out := &in.LogAsJSON, &out.LogAsJSON
 		*out = new(bool)
 		**out = **in
 	}

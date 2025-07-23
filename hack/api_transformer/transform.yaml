@@ -64,6 +64,8 @@ inputFiles:
     - Resources
     - DefaultResourcesConfig
     - IntOrString
+    - CNIConfig
+    - CNIGlobalConfig
     removeFields:
     - Values.Cni                           # moved to IstioCNIValues
     - Values.IstioCni                      # deprecated; replaced with Pilot.CNI
