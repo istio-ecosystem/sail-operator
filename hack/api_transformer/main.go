@@ -342,7 +342,7 @@ func getFilePath(module, file string) string {
 		panic(fmt.Errorf("could not parse go.mod file: %v", err))
 	}
 
-	version := findDependencyVersion(modFile, module)
+	module, version := findDependencyVersion(modFile, module)
 	if version == "" {
 		panic(fmt.Errorf("dependency %s not found in go.mod", module))
 	}
@@ -357,13 +357,18 @@ func getFilePath(module, file string) string {
 }
 
 // findDependencyVersion finds the version of the given module path in the parsed modfile.
-func findDependencyVersion(modFile *modfile.File, modulePath string) string {
-	for _, req := range modFile.Require {
-		if req.Mod.Path == modulePath {
-			return req.Mod.Version
+func findDependencyVersion(modFile *modfile.File, modulePath string) (string, string) {
+	for _, replace := range modFile.Replace {
+		if replace.Old.Path == modulePath {
+			return replace.New.Path, replace.New.Version
 		}
 	}
-	return ""
+	for _, req := range modFile.Require {
+		if req.Mod.Path == modulePath {
+			return modulePath, req.Mod.Version
+		}
+	}
+	return "", ""
 }
 
 func mergeFiles(fset *token.FileSet, files []*ast.File) *ast.File {
