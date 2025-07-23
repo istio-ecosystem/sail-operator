@@ -86,7 +86,10 @@ inputFiles:
     replaceFieldTypes:
       "*.Tag": "string"
       CNIConfig.Affinity: "*k8sv1.Affinity"
+      CNIConfig.DaemonSetLabels: "map[string]string"
+      CNIConfig.Env: "map[string]string"
       CNIConfig.PodAnnotations: "map[string]string"
+      CNIConfig.PodLabels: "map[string]string"
       CNIConfig.SeccompProfile: "*k8sv1.SeccompProfile"
       CNIConfig.PullPolicy: "*k8sv1.PullPolicy"
       Values.GatewayClasses: "json.RawMessage"
