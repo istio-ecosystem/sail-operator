@@ -114,20 +114,13 @@ spec:
 						Entry("App 2a", appNamespace2a, istioName2),
 						Entry("App 2b", appNamespace2b, istioName2),
 						func(ns, mesh string) {
-							var ver string
-							if mesh == istioName1 {
-								ver = latestVersion.Name
-							} else {
-								ver = version.Name
-							}
-
 							Expect(k.CreateNamespace(ns)).To(Succeed(), "Failed to create namespace")
 							Expect(k.Label("namespace", ns, "mesh", mesh)).To(Succeed(), "Failed to label namespace")
 							Expect(k.Label("namespace", ns, "istio.io/rev", mesh)).To(Succeed(), "Failed to label namespace")
 
 							for _, appName := range []string{"sleep", "httpbin"} {
 								Expect(k.WithNamespace(ns).
-									Apply(common.GetSampleYAML(istioversion.Map[ver], appName))).
+									Apply(common.GetKustomizeDir(appName))).
 									To(Succeed(), "Failed to deploy application")
 							}
 

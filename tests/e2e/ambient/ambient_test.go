@@ -228,8 +228,8 @@ spec:
 						Expect(k.Label("namespace", common.HttpbinNamespace, "istio.io/dataplane-mode", "ambient")).To(Succeed(), "Error labeling httpbin namespace")
 
 						// Deploy the test pods.
-						Expect(k.WithNamespace(common.SleepNamespace).Apply(common.GetSampleYAML(version, "sleep"))).To(Succeed(), "Error deploying sleep pod")
-						Expect(k.WithNamespace(common.HttpbinNamespace).Apply(common.GetSampleYAML(version, "httpbin"))).To(Succeed(), "Error deploying httpbin pod")
+						Expect(k.WithNamespace(common.SleepNamespace).Apply(common.GetKustomizeDir("sleep"))).To(Succeed(), "Error deploying sleep pod")
+						Expect(k.WithNamespace(common.HttpbinNamespace).Apply(common.GetKustomizeDir("httpbin"))).To(Succeed(), "Error deploying httpbin pod")
 
 						Success("Ambient validation pods deployed")
 					})

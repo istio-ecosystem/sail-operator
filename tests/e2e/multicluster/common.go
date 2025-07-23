@@ -22,7 +22,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/gomega"
@@ -35,19 +34,19 @@ type ClusterDeployment struct {
 }
 
 // deploySampleApp deploys the sample apps (helloworld and sleep) in the given cluster.
-func deploySampleApp(k kubectl.Kubectl, ns string, istioVersion istioversion.VersionInfo, appVersion string) {
-	helloWorldYAML := common.GetSampleYAML(istioVersion, "helloworld")
+func deploySampleApp(k kubectl.Kubectl, ns string, appVersion string) {
+	helloWorldYAML := common.GetKustomizeDir("helloworld")
 	Expect(k.WithNamespace(ns).ApplyWithLabels(helloWorldYAML, "service=helloworld")).To(Succeed(), "Sample service deploy failed on Cluster")
 	Expect(k.WithNamespace(ns).ApplyWithLabels(helloWorldYAML, "version="+appVersion)).To(Succeed(), "Sample service deploy failed on Cluster")
 
-	sleepYAML := common.GetSampleYAML(istioVersion, "sleep")
+	sleepYAML := common.GetKustomizeDir("sleep")
 	Expect(k.WithNamespace(ns).Apply(sleepYAML)).To(Succeed(), "Sample sleep deploy failed on Cluster")
 }
 
 // deploySampleAppToClusters deploys the sample app to all provided clusters.
-func deploySampleAppToClusters(ns string, istioVersion istioversion.VersionInfo, clusters []ClusterDeployment) {
+func deploySampleAppToClusters(ns string, clusters []ClusterDeployment) {
 	for _, cd := range clusters {
-		deploySampleApp(cd.Kubectl, ns, istioVersion, cd.AppVersion)
+		deploySampleApp(cd.Kubectl, ns, cd.AppVersion)
 	}
 }
 

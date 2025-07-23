@@ -129,18 +129,26 @@ func (k Kubectl) ApplyString(yamlString string) error {
 
 // Apply applies the given yaml file to the cluster
 func (k Kubectl) Apply(yamlFile string) error {
-	err := k.ApplyWithLabels(yamlFile, "")
-	return err
+	return k.applyWithOptions("-f " + yamlFile)
 }
 
 // ApplyWithLabels applies the given yaml file to the cluster with the given labels
 func (k Kubectl) ApplyWithLabels(yamlFile, label string) error {
-	cmd := k.build(" apply " + labelFlag(label) + " -f " + yamlFile)
+	return k.applyWithOptions(labelFlag(label) + " -f " + yamlFile)
+}
+
+// ApplyKustomize applies the given kustomization file to the cluster
+func (k Kubectl) ApplyKustomize(kustomizationDirectory string) error {
+	return k.applyWithOptions("-k " + kustomizationDirectory)
+}
+
+// applyWithOptions is a helper function to apply resources with specific options given as a string
+func (k Kubectl) applyWithOptions(options string) error {
+	cmd := k.build(" apply " + options)
 	_, err := k.executeCommand(cmd)
 	if err != nil {
-		return fmt.Errorf("error applying yaml: %w", err)
+		return fmt.Errorf("error applying resources: %w", err)
 	}
-
 	return nil
 }
 
