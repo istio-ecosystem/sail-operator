@@ -4,6 +4,7 @@ CHANNELS = "stable,stable-3.1"
 DEFAULT_CHANNEL=stable
 HELM_VALUES_FILE = ossm/values.yaml
 VERSIONS_YAML_FILE ?= versions.ossm.yaml
+USE_IMAGE_DIGESTS = false
 GENERATE_RELATED_IMAGES = false
 IMAGE ?= $$\{OSSM_OPERATOR_3_1\}
 
