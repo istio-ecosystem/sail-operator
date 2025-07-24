@@ -16,37 +16,48 @@ package reconciler
 
 import "errors"
 
-type ValidationError struct {
-	message string
+// SailOperatorError generics struct for different types of controllers errors
+type SailOperatorError[T any] struct {
+	Message       string
+	originalError error
 }
 
-func (v ValidationError) Error() string {
-	return "validation error: " + v.message
+// Error implements an Error interface
+func (e *SailOperatorError[T]) Error() string {
+	var errorType T
+	switch any(errorType).(type) {
+	case ValidationError:
+		return "validation error: " + e.Message
+	case TransientError:
+		return "transient error: " + e.Message
+	default:
+		return e.Message
+	}
 }
 
-func NewValidationError(message string) error {
-	return &ValidationError{message: message}
+// Unwrap Implement the Unwrap convention.
+func (e *SailOperatorError[T]) Unwrap() error {
+	return e.originalError
 }
 
-func IsValidationError(err error) bool {
-	e := &ValidationError{}
-	return errors.As(err, &e)
+// NewSailOperatorError creates a new contextual high level error and low-level wrapped error for the operator.
+// The generic type T represents the error type.
+func NewSailOperatorError[T any](message string, origErr error) *SailOperatorError[T] {
+	return &SailOperatorError[T]{message, origErr}
 }
+
+func IsAs[T error](err error) bool {
+	var target T
+	return errors.As(err, &target)
+}
+
+type ValidationError struct{}
 
 // TransientError is an error returned by a Reconciler that will usually resolve itself when retrying, e.g. some resource not yet reconciled
-type TransientError struct {
-	message string
-}
+type TransientError struct{}
 
-func (v TransientError) Error() string {
-	return "transient error: " + v.message
-}
+type NameAlreadyExistsError struct{}
 
-func NewTransientError(message string) error {
-	return &TransientError{message: message}
-}
+type ReferenceNotFoundError struct{}
 
-func IsTransientError(err error) bool {
-	e := &TransientError{}
-	return errors.As(err, &e)
-}
+type WebHookProbeError struct{}

@@ -126,32 +126,36 @@ func (r *Reconciler) Finalize(ctx context.Context, rev *v1.IstioRevision) error 
 
 func (r *Reconciler) validate(ctx context.Context, rev *v1.IstioRevision) error {
 	if rev.Spec.Version == "" {
-		return reconciler.NewValidationError("spec.version not set")
+		return reconciler.NewSailOperatorError[reconciler.ValidationError]("spec.version not set", nil)
 	}
 	if rev.Spec.Namespace == "" {
-		return reconciler.NewValidationError("spec.namespace not set")
+		return reconciler.NewSailOperatorError[reconciler.ValidationError]("spec.namespace not set", nil)
 	}
 	if err := validation.ValidateTargetNamespace(ctx, r.Client, rev.Spec.Namespace); err != nil {
 		return err
 	}
 
 	if rev.Spec.Values == nil {
-		return reconciler.NewValidationError("spec.values not set")
+		return reconciler.NewSailOperatorError[reconciler.ValidationError]("spec.values not set", nil)
 	}
 
 	revName := rev.Spec.Values.Revision
 	if rev.Name == v1.DefaultRevision && (revName != nil && *revName != "") {
-		return reconciler.NewValidationError(fmt.Sprintf("spec.values.revision must be \"\" when IstioRevision name is %s", v1.DefaultRevision))
+		return reconciler.NewSailOperatorError[reconciler.ValidationError](
+			fmt.Sprintf("spec.values.revision must be \"\" when IstioRevision name is %s", v1.DefaultRevision), nil)
 	} else if rev.Name != v1.DefaultRevision && (revName == nil || *revName != rev.Name) {
-		return reconciler.NewValidationError("spec.values.revision does not match IstioRevision name")
+		return reconciler.NewSailOperatorError[reconciler.ValidationError](
+			"spec.values.revision does not match IstioRevision name", nil)
 	}
 
 	if rev.Spec.Values.Global == nil || rev.Spec.Values.Global.IstioNamespace == nil || *rev.Spec.Values.Global.IstioNamespace != rev.Spec.Namespace {
-		return reconciler.NewValidationError("spec.values.global.istioNamespace does not match spec.namespace")
+		return reconciler.NewSailOperatorError[reconciler.ValidationError](
+			"spec.values.global.istioNamespace does not match spec.namespace", nil)
 	}
 
 	if tagExists, err := validation.IstioRevisionTagExists(ctx, r.Client, rev.Name); tagExists || err != nil {
-		return reconciler.NewValidationError("an IstioRevisionTag exists with this name")
+		return reconciler.NewSailOperatorError[reconciler.ValidationError](
+			"an IstioRevisionTag exists with this name", nil)
 	}
 
 	return nil

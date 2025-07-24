@@ -22,31 +22,31 @@ import (
 )
 
 func TestNewValidationError(t *testing.T) {
-	err := NewValidationError("my message")
+	err := NewSailOperatorError[ValidationError]("my message", nil)
 	assert.NotNil(t, err)
 	assert.Equal(t, "validation error: my message", err.Error())
-	assert.IsTypef(t, &ValidationError{}, err, "expected NewValidationError to return a ValidationError")
+	assert.True(t, IsAs[*SailOperatorError[ValidationError]](err), "expected NewSailOperatorError[ValidationError] to return a ValidationError")
 }
 
 func TestIsValidationError(t *testing.T) {
-	err := &ValidationError{message: "error"}
-	assert.True(t, IsValidationError(err), "expected IsValidationError to return true for a ValidationError")
+	err := NewSailOperatorError[ValidationError]("error", nil)
+	assert.True(t, IsAs[*SailOperatorError[ValidationError]](err), "expected IsValidationError to return true for a ValidationError")
 
 	wrappedError := fmt.Errorf("wrapped error: %w", err)
-	assert.True(t, IsValidationError(wrappedError), "expected IsValidationError to return true for a wrapped ValidationError")
+	assert.True(t, IsAs[*SailOperatorError[ValidationError]](wrappedError), "expected IsValidationError to return true for a wrapped ValidationError")
 }
 
 func TestNewTransientError(t *testing.T) {
-	err := NewTransientError("my message")
+	err := NewSailOperatorError[TransientError]("my message", nil)
 	assert.NotNil(t, err)
 	assert.Equal(t, "transient error: my message", err.Error())
-	assert.IsTypef(t, &TransientError{}, err, "expected NewTransientError to return a TransientError")
+	assert.True(t, IsAs[*SailOperatorError[TransientError]](err), "expected NewSailOperatorError[TransientError] to return a TransientError")
 }
 
 func TestIsTransientError(t *testing.T) {
-	err := &TransientError{message: "error"}
-	assert.True(t, IsTransientError(err), "expected IsTransientError to return true for a TransientError")
+	err := NewSailOperatorError[TransientError]("error", nil)
+	assert.True(t, IsAs[*SailOperatorError[TransientError]](err), "expected IsTransientError to return true for a TransientError")
 
 	wrappedError := fmt.Errorf("wrapped error: %w", err)
-	assert.True(t, IsTransientError(wrappedError), "expected IsTransientError to return true for a wrapped TransientError")
+	assert.True(t, IsAs[*SailOperatorError[TransientError]](wrappedError), "expected IsTransientError to return true for a wrapped TransientError")
 }

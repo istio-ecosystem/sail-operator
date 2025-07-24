@@ -75,26 +75,39 @@ func NewReconciler(client client.Client, scheme *runtime.Scheme) *Reconciler {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *Reconciler) Reconcile(ctx context.Context, webhook *admissionv1.MutatingWebhookConfiguration) (ctrl.Result, error) {
-	log := logf.FromContext(ctx)
-
-	isReady, err := r.probe(ctx, webhook)
-	reason := ""
-	if err != nil {
-		log.V(3).Error(err, "Probe failed")
-		reason = err.Error()
+	isReady, probeErr := r.probe(ctx, webhook)
+	if statusUpdateErr := r.updateStatus(ctx, webhook, isReady, probeErr); statusUpdateErr != nil {
+		return ctrl.Result{}, errors.Join(
+			statusUpdateErr,
+			errors.Unwrap(statusUpdateErr),
+			probeErr,
+			errors.Unwrap(probeErr),
+		)
 	}
+	return ctrl.Result{RequeueAfter: getPeriod(webhook)}, nil
+}
 
+func (r *Reconciler) updateStatus(
+	ctx context.Context,
+	webhook *admissionv1.MutatingWebhookConfiguration,
+	probeReady bool,
+	probeErr error,
+) error {
+	reason := ""
+	if probeErr != nil {
+		logf.FromContext(ctx).V(3).Error(probeErr, "Probe failed")
+		reason = errors.Join(probeErr, errors.Unwrap(probeErr)).Error()
+	}
 	if webhook.Annotations == nil {
 		webhook.Annotations = make(map[string]string)
 	}
-	webhook.Annotations[constants.WebhookReadinessProbeStatusAnnotationKey] = strconv.FormatBool(isReady)
+	webhook.Annotations[constants.WebhookReadinessProbeStatusAnnotationKey] = strconv.FormatBool(probeReady)
 	webhook.Annotations[constants.WebhookReadinessProbeStatusReasonAnnotationKey] = reason
-
-	err = r.Client.Update(ctx, webhook)
-	if err != nil {
-		return ctrl.Result{}, err
+	if err := r.Client.Update(ctx, webhook); err != nil {
+		return reconciler.NewSailOperatorError[reconciler.WebHookProbeError](
+			"error updating webhook status", err)
 	}
-	return ctrl.Result{RequeueAfter: getPeriod(webhook)}, nil
+	return nil
 }
 
 func doProbe(ctx context.Context, webhook *admissionv1.MutatingWebhookConfiguration) (bool, error) {
@@ -104,15 +117,19 @@ func doProbe(ctx context.Context, webhook *admissionv1.MutatingWebhookConfigurat
 	}
 	clientConfig := webhook.Webhooks[0].ClientConfig
 	if clientConfig.Service == nil {
-		return false, errors.New("missing webhooks[].clientConfig.service")
+		return false, reconciler.NewSailOperatorError[*reconciler.ValidationError](
+			"missing webhooks[].clientConfig.service", nil)
 	}
 
 	if len(clientConfig.CABundle) == 0 {
-		return false, errors.New("webhooks[].clientConfig.caBundle hasn't been set; check if the remote istiod can access this cluster")
+		return false, reconciler.NewSailOperatorError[*reconciler.ValidationError](
+			"webhooks[].clientConfig.caBundle hasn't been set; check if the remote istiod can access this cluster",
+			nil)
 	}
 	caCertPool := x509.NewCertPool()
 	if ok := caCertPool.AppendCertsFromPEM(clientConfig.CABundle); !ok {
-		return false, errors.New("failed to append CA bundle to cert pool")
+		return false, reconciler.NewSailOperatorError[*reconciler.WebHookProbeError](
+			"failed to append CA bundle to cert pool", nil)
 	}
 
 	httpClient := http.Client{
@@ -128,19 +145,22 @@ func doProbe(ctx context.Context, webhook *admissionv1.MutatingWebhookConfigurat
 
 	url, err := getReadinessProbeURL(clientConfig)
 	if err != nil {
-		return false, err
+		return false, reconciler.NewSailOperatorError[*reconciler.WebHookProbeError](
+			"composing readiness probe url failed", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return false, err
+		return false, reconciler.NewSailOperatorError[*reconciler.WebHookProbeError](
+			"composing readiness probe request failed", err)
 	}
 
 	log.V(3).Info("Executing readiness probe on remote control plane", "url", req.URL.String())
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		log.V(3).Info("Probe failed", "error", err)
-		return false, err
+		return false, reconciler.NewSailOperatorError[*reconciler.WebHookProbeError](
+			"probe request failed", err)
 	}
 	log.V(3).Info("Probe response", "response", resp.StatusCode)
 

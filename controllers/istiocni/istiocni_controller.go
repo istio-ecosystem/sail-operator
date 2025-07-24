@@ -122,10 +122,10 @@ func (r *Reconciler) doReconcile(ctx context.Context, cni *v1.IstioCNI) error {
 
 func (r *Reconciler) validate(ctx context.Context, cni *v1.IstioCNI) error {
 	if cni.Spec.Version == "" {
-		return reconciler.NewValidationError("spec.version not set")
+		return reconciler.NewSailOperatorError[reconciler.ValidationError]("spec.version not set", nil)
 	}
 	if cni.Spec.Namespace == "" {
-		return reconciler.NewValidationError("spec.namespace not set")
+		return reconciler.NewSailOperatorError[reconciler.ValidationError]("spec.namespace not set", nil)
 	}
 	if err := validation.ValidateTargetNamespace(ctx, r.Client, cni.Spec.Namespace); err != nil {
 		return err
