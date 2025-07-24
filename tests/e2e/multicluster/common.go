@@ -36,11 +36,11 @@ type ClusterDeployment struct {
 // deploySampleApp deploys the sample apps (helloworld and sleep) in the given cluster.
 func deploySampleApp(k kubectl.Kubectl, ns string, appVersion string) {
 	helloWorldYAML := common.GetKustomizeDir("helloworld")
-	Expect(k.WithNamespace(ns).ApplyWithLabels(helloWorldYAML, "service=helloworld")).To(Succeed(), "Sample service deploy failed on Cluster")
-	Expect(k.WithNamespace(ns).ApplyWithLabels(helloWorldYAML, "version="+appVersion)).To(Succeed(), "Sample service deploy failed on Cluster")
+	Expect(k.WithNamespace(ns).ApplyKustomizeWithLabels(helloWorldYAML, "service=helloworld")).To(Succeed(), "Sample service deploy failed on Cluster")
+	Expect(k.WithNamespace(ns).ApplyKustomizeWithLabels(helloWorldYAML, "version="+appVersion)).To(Succeed(), "Sample service deploy failed on Cluster")
 
 	sleepYAML := common.GetKustomizeDir("sleep")
-	Expect(k.WithNamespace(ns).Apply(sleepYAML)).To(Succeed(), "Sample sleep deploy failed on Cluster")
+	Expect(k.WithNamespace(ns).ApplyKustomize(sleepYAML)).To(Succeed(), "Sample sleep deploy failed on Cluster")
 }
 
 // deploySampleAppToClusters deploys the sample app to all provided clusters.
