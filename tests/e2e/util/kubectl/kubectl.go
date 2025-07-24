@@ -142,6 +142,11 @@ func (k Kubectl) ApplyKustomize(kustomizationDirectory string) error {
 	return k.applyWithOptions("-k " + kustomizationDirectory)
 }
 
+// ApplyKustomizeWithLabels applies the given kustomization file to the cluster with the given labels
+func (k Kubectl) ApplyKustomizeWithLabels(kustomizationDirectory, label string) error {
+	return k.applyWithOptions(labelFlag(label) + " -k " + kustomizationDirectory)
+}
+
 // applyWithOptions is a helper function to apply resources with specific options given as a string
 func (k Kubectl) applyWithOptions(options string) error {
 	cmd := k.build(" apply " + options)
