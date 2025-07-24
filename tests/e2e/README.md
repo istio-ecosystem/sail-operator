@@ -269,17 +269,41 @@ The following environment variables define the behavior of the test run:
 The test run can be customized by setting the following environment variables:
 
 To change all the sample files used in the test, you can use the following environment variable:
-* SAMPLE_YAML_BASE_URL=https://raw.githubusercontent.com/orgName/repoName - The base URL where the sample YAML files are located. This is useful when you want to test the operator with different sample YAML files defined in another repository. Currently the e2e framework use the upstream Istio repository to get the sample YAML files, for example: `https://raw.githubusercontent.com/istio/istio/master/samples/helloworld/helloworld.yaml` for `hello-world` sample yaml file on `master` branch.
+* `CUSTOM_SAMPLES_PATH=<path-to-kustomize-sample-base-folder>`. We use kustomize to patch the upstream sample yaml files to use images located in the `quay.io/sail-dev` registry. This is useful when you want to use your own sample files or when you want to use a different version of the sample files. The path should point to the folder where the kustomize files are located. For example, if you have your own sample files in the `tests/e2e/samples/custom` folder, you can set the environment variable as follows:
+```
+$ CUSTOM_SAMPLES_PATH=tests/e2e/samples/custom
+```
 
-Note: when setting this environment variable, make sure that the sample files are available in the same paths as in the Istio upstream repository. For more information check the [code](https://github.com/istio-ecosystem/sail-operator/blob/74f96ab4a56e3d41e2d31faede290116a68551e9/tests/e2e/util/common/e2e_utils.go#L271).
-Alternatively, set the following environment variables to change these file paths:
-* TCP_ECHO_DUAL_STACK_YAML_PATH
-* TCP_ECHO_IPV4_YAML_PATH
-* TCP_ECHO_IPV6_YAML_PATH
-* SLEEP_YAML_PATH
-* HELLOWORLD_YAML_PATH
+Note: when setting this environment variable, make sure that the folder contains the kustomize files with the same structure as the upstream sample files. This means that the folder should contain:
+- helloworld/kustomize.yaml
+- sleep/kustomize.yaml
+- httpbin/kustomize.yaml
+- tcp-echo-dual-stack/kustomize.yaml
+- tcp-echo-dual-stack-ipv6/kustomize.yaml
+- tcp-echo-dual-stack-ipv4/kustomize.yaml
 
-`TCP_ECHO_*` are used in the `dual-stack` test suite, `SLEEP_YAML_PATH` and `HELLOWORLD_YAML_PATH` are used in both `Multicluster` and default test run.
+note that each of the folders have their own kustomize file that will be used to patch the sample files. For example, the `helloworld` folder should contain a `kustomization.yaml` file with a content similar to this:
+```yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - <path-or-url-to-the-source-of-your-sample-file> # For example: https://raw.githubusercontent.com/istio/istio/master/samples/helloworld/helloworld.yaml
+images:
+    - name: docker.io/istio/examples-helloworld-v1 # This is the image that will be patched
+        newName: quay.io/sail-dev/examples-helloworld-v1 # This is the image that will be used in the test
+```
+
+You can also only patch one or more appa and continue using the others samples in the rest of the test. To do this instead of set the env var `CUSTOM_SAMPLES_PATH`, you can set the following environment variables:
+- `HTTPBIN_KUSTOMIZE_PATH`
+- `HELLOWORLD_KUSTOMIZE_PATH`
+- `SLEEP_KUSTOMIZE_PATH`
+- `TCP_ECHO_DUAL_STACK_KUSTOMIZE_PATH`
+- `TCP_ECHO_IPV4_KUSTOMIZE_PATH`
+- `TCP_ECHO_IPV6_KUSTOMIZE_PATH`
+
+Each of the env var will be pointing to the kustomize directory that will be used to patch the sample files.
+
+Note: the default behaviour is to use the kustomize files located un the folder `tests/e2e/samples/`. This kustomize files are used to patch the upstream examples from master branch of the Istio repository. The kustomize files are used to patch the upstream sample yaml files to use images located in the `quay.io/sail-dev` registry.
 
 ### Using the e2e framework to test your cluster configuration
 The e2e framework can be used to test your cluster configuration. The framework is designed to be flexible and extensible. It is easy to add new test suites and new tests. The idea is to be able to simulate what a real user scenario looks like when using the operator.
