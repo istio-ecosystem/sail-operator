@@ -106,10 +106,22 @@ type CNIConfig struct {
 	ExcludeNamespaces []string `json:"excludeNamespaces,omitempty"`
 	// K8s affinity to set on the istio-cni Pods. Can be used to exclude istio-cni from being scheduled on specified nodes.
 	Affinity *k8sv1.Affinity `json:"affinity,omitempty"`
+	// Environment variables passed to the CNI container.
+	//
+	// Examples:
+	// env:
+	//
+	//	ENV_VAR_1: value1
+	//	ENV_VAR_2: value2
+	Env map[string]string `json:"env,omitempty"`
+	// Additional labels to apply to the istio-cni DaemonSet.
+	DaemonSetLabels map[string]string `json:"daemonSetLabels,omitempty"`
 	// Additional annotations to apply to the istio-cni Pods.
 	//
 	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
+	// Additional labels to apply to the istio-cni Pods.
+	PodLabels map[string]string `json:"podLabels,omitempty"`
 	// PodSecurityPolicy cluster role. No longer used anywhere.
 	PspClusterRole *string `json:"psp_cluster_role,omitempty"`
 
@@ -1009,7 +1021,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x05amd64\x18\x01 \x01(\rR\x05amd64\x12\x18\n" +
 	"\appc64le\x18\x02 \x01(\rR\appc64le\x12\x14\n" +
 	"\x05s390x\x18\x03 \x01(\rR\x05s390x\x12\x14\n" +
-	"\x05arm64\x18\x04 \x01(\rR\x05arm64\"\xeb\t\n" +
+	"\x05arm64\x18\x04 \x01(\rR\x05arm64\"\x90\v\n" +
 	"\tCNIConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12\x10\n" +
 	"\x03hub\x18\x02 \x01(\tR\x03hub\x12(\n" +
@@ -1026,9 +1038,12 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x0fcniConfFileName\x18\b \x01(\tR\x0fcniConfFileName\x12 \n" +
 	"\vcniNetnsDir\x18\x1f \x01(\tR\vcniNetnsDir\x12,\n" +
 	"\x11excludeNamespaces\x18\t \x03(\tR\x11excludeNamespaces\x128\n" +
-	"\baffinity\x18\x14 \x01(\v2\x1c.k8s.io.api.core.v1.AffinityR\baffinity\x12C\n" +
+	"\baffinity\x18\x14 \x01(\v2\x1c.k8s.io.api.core.v1.AffinityR\baffinity\x12)\n" +
+	"\x03env\x18  \x01(\v2\x17.google.protobuf.StructR\x03env\x12A\n" +
+	"\x0fdaemonSetLabels\x18! \x01(\v2\x17.google.protobuf.StructR\x0fdaemonSetLabels\x12C\n" +
 	"\x0epodAnnotations\x18\n" +
-	" \x01(\v2\x17.google.protobuf.StructB\x02\x18\x01R\x0epodAnnotations\x12(\n" +
+	" \x01(\v2\x17.google.protobuf.StructB\x02\x18\x01R\x0epodAnnotations\x125\n" +
+	"\tpodLabels\x18\" \x01(\v2\x17.google.protobuf.StructR\tpodLabels\x12(\n" +
 	"\x10psp_cluster_role\x18\v \x01(\tR\x0epspClusterRole\x12\x1e\n" +
 	"\blogLevel\x18\f \x01(\tB\x02\x18\x01R\blogLevel\x12F\n" +
 	"\alogging\x18\x19 \x01(\v2,.istio.operator.v1alpha1.GlobalLoggingConfigR\alogging\x12@\n" +
