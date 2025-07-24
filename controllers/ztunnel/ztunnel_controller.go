@@ -28,6 +28,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
+	operrors "github.com/istio-ecosystem/sail-operator/pkg/errors"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/istiovalues"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
@@ -96,7 +97,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, ztunnel *v1alpha1.ZTunnel) (
 	log.Info("Reconciliation done. Updating status.")
 	statusErr := r.updateStatus(ctx, ztunnel, reconcileErr)
 
-	return ctrl.Result{}, errors.Join(reconcileErr, statusErr)
+	return ctrl.Result{}, errors.Join(reconcileErr, statusErr, errors.Unwrap(reconcileErr))
 }
 
 func (r *Reconciler) Finalize(ctx context.Context, ztunnel *v1alpha1.ZTunnel) error {
@@ -115,10 +116,10 @@ func (r *Reconciler) doReconcile(ctx context.Context, ztunnel *v1alpha1.ZTunnel)
 
 func (r *Reconciler) validate(ctx context.Context, ztunnel *v1alpha1.ZTunnel) error {
 	if ztunnel.Spec.Version == "" {
-		return reconciler.NewValidationError("spec.version not set")
+		return operrors.NewValidationError("spec.version not set")
 	}
 	if ztunnel.Spec.Namespace == "" {
-		return reconciler.NewValidationError("spec.namespace not set")
+		return operrors.NewValidationError("spec.namespace not set")
 	}
 	if err := validation.ValidateTargetNamespace(ctx, r.Client, ztunnel.Spec.Namespace); err != nil {
 		return err
@@ -302,7 +303,7 @@ func (r *Reconciler) determineReconciledCondition(err error) v1alpha1.ZTunnelCon
 	} else {
 		c.Status = metav1.ConditionFalse
 		c.Reason = v1alpha1.ZTunnelReasonReconcileError
-		c.Message = fmt.Sprintf("error reconciling resource: %v", err)
+		c.Message = errors.Join(errors.New("error reconciling resource"), err, errors.Unwrap(err)).Error()
 	}
 	return c
 }
