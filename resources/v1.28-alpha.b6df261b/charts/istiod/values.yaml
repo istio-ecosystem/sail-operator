@@ -254,7 +254,7 @@ _internal_defaults_do_not_set:
     # Dev builds from prow are on gcr.io
     hub: gcr.io/istio-testing
     # Default tag for Istio images.
-    tag: 1.28-alpha.69b44d6100a14bf195ce509d7bdf8778aec82944
+    tag: 1.28-alpha.b6df261b7c9f66c10b0d17b02f9c9b9ebb546033
     # Variant of the image to use.
     # Currently supported are: [debug, distroless]
     variant: ""
@@ -287,7 +287,7 @@ _internal_defaults_do_not_set:
     logging:
       level: "default:info"
 
-    # When enabled, a default NetworkPolicy for istiod will be created
+    # When enabled, default NetworkPolicy resources will be created
     networkPolicy:
       enabled: false
 
