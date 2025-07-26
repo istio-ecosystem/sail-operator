@@ -35,12 +35,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("IstioCNI", Ordered, func() {
-	const (
-		cniName      = "default"
-		cniNamespace = "istiocni-test"
-	)
+const (
+	cniName      = "default"
+	cniNamespace = "istiocni-test"
+)
 
+var cniKey = client.ObjectKey{Name: cniName}
+
+var _ = Describe("IstioCNI", Label("istiocni"), Ordered, func() {
 	SetDefaultEventuallyPollingInterval(time.Second)
 	SetDefaultEventuallyTimeout(30 * time.Second)
 
@@ -54,7 +56,6 @@ var _ = Describe("IstioCNI", Ordered, func() {
 		},
 	}
 
-	cniKey := client.ObjectKey{Name: cniName}
 	daemonsetKey := client.ObjectKey{Name: "istio-cni-node", Namespace: cniNamespace}
 
 	cni := &v1.IstioCNI{}
@@ -107,15 +108,10 @@ var _ = Describe("IstioCNI", Ordered, func() {
 			})
 
 			It("indicates in the status that the namespace doesn't exist", func() {
-				Eventually(func(g Gomega) {
-					g.Expect(k8sClient.Get(ctx, cniKey, cni)).To(Succeed())
-					g.Expect(cni.Status.ObservedGeneration).To(Equal(cni.ObjectMeta.Generation))
-
-					reconciled := cni.Status.GetCondition(v1.IstioCNIConditionReconciled)
-					g.Expect(reconciled.Status).To(Equal(metav1.ConditionFalse))
-					g.Expect(reconciled.Reason).To(Equal(v1.IstioCNIReasonReconcileError))
-					g.Expect(reconciled.Message).To(ContainSubstring(fmt.Sprintf("namespace %q doesn't exist", nsName)))
-				}).Should(Succeed())
+				expectCNICondition(ctx, v1.IstioCNIConditionReconciled, metav1.ConditionFalse, func(g Gomega, condition *v1.IstioCNICondition) {
+					g.Expect(condition.Reason).To(Equal(v1.IstioCNIReasonReconcileError))
+					g.Expect(condition.Message).To(ContainSubstring(fmt.Sprintf("namespace %q doesn't exist", nsName)))
+				})
 			})
 
 			When("the namespace is created", func() {
@@ -136,12 +132,7 @@ var _ = Describe("IstioCNI", Ordered, func() {
 					Eventually(k8sClient.Get).WithArguments(ctx, dsKey, ds).WithTimeout(10 * time.Second).Should(Succeed())
 
 					Step("Checking if the status is updated")
-					Eventually(func(g Gomega) {
-						g.Expect(k8sClient.Get(ctx, cniKey, cni)).To(Succeed())
-						g.Expect(cni.Status.ObservedGeneration).To(Equal(cni.ObjectMeta.Generation))
-						reconciled := cni.Status.GetCondition(v1.IstioCNIConditionReconciled)
-						g.Expect(reconciled.Status).To(Equal(metav1.ConditionTrue))
-					}).Should(Succeed())
+					expectCNICondition(ctx, v1.IstioCNIConditionReconciled, metav1.ConditionTrue)
 				})
 			})
 		})
@@ -183,11 +174,7 @@ var _ = Describe("IstioCNI", Ordered, func() {
 				})
 
 				It("marks the IstioCNI resource as ready", func() {
-					Eventually(func(g Gomega) {
-						g.Expect(k8sClient.Get(ctx, cniKey, cni)).To(Succeed())
-						readyCondition := cni.Status.GetCondition(v1.IstioCNIConditionReady)
-						g.Expect(readyCondition.Status).To(Equal(metav1.ConditionTrue))
-					}).Should(Succeed())
+					expectCNICondition(ctx, v1.IstioCNIConditionReady, metav1.ConditionTrue)
 				})
 			})
 
@@ -200,11 +187,7 @@ var _ = Describe("IstioCNI", Ordered, func() {
 				})
 
 				It("marks the IstioCNI resource as not ready", func() {
-					Eventually(func(g Gomega) {
-						g.Expect(k8sClient.Get(ctx, cniKey, cni)).To(Succeed())
-						readyCondition := cni.Status.GetCondition(v1.IstioCNIConditionReady)
-						g.Expect(readyCondition.Status).To(Equal(metav1.ConditionFalse))
-					}).Should(Succeed())
+					expectCNICondition(ctx, v1.IstioCNIConditionReady, metav1.ConditionFalse)
 				})
 			})
 		})
@@ -251,16 +234,11 @@ var _ = Describe("IstioCNI", Ordered, func() {
 				}
 				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(sa), sa)).To(Succeed())
 
-				beforeCount := getIstioCNIReconcileCount(Default)
-
-				By("adding pull secret to ServiceAccount")
-				sa.ImagePullSecrets = append(sa.ImagePullSecrets, corev1.LocalObjectReference{Name: "other-pull-secret"})
-				Expect(k8sClient.Update(ctx, sa)).To(Succeed())
-
-				Consistently(func(g Gomega) {
-					afterCount := getIstioCNIReconcileCount(g)
-					g.Expect(afterCount).To(Equal(beforeCount))
-				}, 5*time.Second).Should(Succeed(), "IstioRevision was reconciled when it shouldn't have been")
+				expectNoReconciliation(istioCNIController, func() {
+					By("adding pull secret to ServiceAccount")
+					sa.ImagePullSecrets = append(sa.ImagePullSecrets, corev1.LocalObjectReference{Name: "other-pull-secret"})
+					Expect(k8sClient.Update(ctx, sa)).To(Succeed())
+				})
 
 				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(sa), sa)).To(Succeed())
 				Expect(sa.ImagePullSecrets).To(ContainElement(corev1.LocalObjectReference{Name: "other-pull-secret"}))
@@ -289,3 +267,19 @@ var _ = Describe("IstioCNI", Ordered, func() {
 		})
 	})
 })
+
+func expectCNICondition(ctx context.Context, condition v1.IstioCNIConditionType, status metav1.ConditionStatus,
+	extraChecks ...func(Gomega, *v1.IstioCNICondition),
+) {
+	cni := v1.IstioCNI{}
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, cniKey, &cni)).To(Succeed())
+		g.Expect(cni.Status.ObservedGeneration).To(Equal(cni.ObjectMeta.Generation))
+
+		condition := cni.Status.GetCondition(condition)
+		g.Expect(condition.Status).To(Equal(status))
+		for _, check := range extraChecks {
+			check(g, &condition)
+		}
+	}).Should(Succeed())
+}
