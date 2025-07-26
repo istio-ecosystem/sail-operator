@@ -148,6 +148,9 @@ const (
 	// IstioRevisionReasonIstiodNotReady indicates that the control plane is fully reconciled, but istiod is not ready.
 	IstioRevisionReasonIstiodNotReady IstioRevisionConditionReason = "IstiodNotReady"
 
+	// IstioRevisionTagNameAlreadyExists indicates that a IstioRevisionTag with the same name as the IstioRevision already exists.
+	IstioRevisionReasonNameAlreadyExists IstioRevisionConditionReason = "NameAlreadyExists"
+
 	// IstioRevisionReasonRemoteIstiodNotReady indicates that the remote istiod is not ready.
 	IstioRevisionReasonRemoteIstiodNotReady IstioRevisionConditionReason = "RemoteIstiodNotReady"
 
