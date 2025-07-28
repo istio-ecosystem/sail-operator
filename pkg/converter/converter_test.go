@@ -125,8 +125,8 @@ spec:
 
 			g.Expect(os.WriteFile(istioFile, []byte(tc.input), 0o644)).To(Succeed(), "failed to write YAML file")
 
-			_, err := shell.ExecuteCommand(converter + " " + tc.args)
-			g.Expect(err).NotTo(HaveOccurred(), "error in execution of ./configuration-converter.sh")
+			std, err := shell.ExecuteCommand(converter + " " + tc.args)
+			g.Expect(err).NotTo(HaveOccurred(), "error in execution of ./configuration-converter.sh %s", std)
 
 			actualOutput, err := os.ReadFile(sailFile)
 			g.Expect(err).NotTo(HaveOccurred(), "Cannot read %s", sailFile)
