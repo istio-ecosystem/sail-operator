@@ -33,9 +33,7 @@ export ARTIFACTS="${ARTIFACTS:-$(mktemp -d)}"
 export MULTICLUSTER="${MULTICLUSTER:-false}"
 
 # Allow overriding DEFAULT_KIND_IMAGE from environment by passing as an argument in the setup_kind.sh script.
-if [[ -n "${CUSTOM_KIND_IMAGE:-}" ]]; then
-  export CUSTOM_KIND_IMAGE
-fi
+export CUSTOM_KIND_IMAGE="${CUSTOM_KIND_IMAGE:-}"
 
 export KIND_CLUSTER_NAME="${KIND_CLUSTER_NAME:-operator-integration-tests}"
 if [ "${MULTICLUSTER}" == "true" ]; then
