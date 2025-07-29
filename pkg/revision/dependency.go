@@ -14,17 +14,33 @@
 
 package revision
 
-import v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+import (
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/config"
+)
+
+type computeValuesFunc func(*v1.Values, string, string, config.Platform, string, string, string, string) (*v1.Values, error)
+
+var defaultComputeValues computeValuesFunc = ComputeValues
 
 // DependsOnIstioCNI returns true if CNI is enabled in the revision
-func DependsOnIstioCNI(rev *v1.IstioRevision) bool {
-	// TODO: get actual final values and inspect pilot.cni.enabled
-	values := rev.Spec.Values
-	if values == nil {
+func DependsOnIstioCNI(rev *v1.IstioRevision, cfg config.ReconcilerConfig) bool {
+	values, err := defaultComputeValues(rev.Spec.Values, rev.Spec.Namespace, rev.Spec.Version,
+		cfg.Platform, cfg.DefaultProfile, "", cfg.ResourceDirectory, rev.Name)
+	if err != nil || values == nil {
 		return false
 	}
 	global := values.Global
 	pilot := values.Pilot
-	return (global != nil && global.Platform != nil && *global.Platform == "openshift") ||
-		(pilot != nil && pilot.Cni != nil && pilot.Cni.Enabled != nil && *pilot.Cni.Enabled)
+
+	isOCPPlatform := global != nil && global.Platform != nil && *global.Platform == "openshift"
+	isCNIEnabled := pilot != nil && pilot.Cni != nil && pilot.Cni.Enabled != nil && *pilot.Cni.Enabled
+	isCNIExplicitlyDisabled := pilot != nil && pilot.Cni != nil && pilot.Cni.Enabled != nil && !*pilot.Cni.Enabled
+
+	// For OpenShift: CNI is enabled by default unless explicitly disabled
+	// For non-OpenShift: CNI must be explicitly enabled
+	if isOCPPlatform {
+		return !isCNIExplicitlyDisabled
+	}
+	return isCNIEnabled
 }
