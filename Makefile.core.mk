@@ -203,7 +203,7 @@ test.e2e.ocp: istioctl ## Run the end-to-end tests against an existing OCP clust
 
 .PHONY: test.e2e.kind
 test.e2e.kind: istioctl ## Deploy a KinD cluster and run the end-to-end tests against it.
-	GINKGO_FLAGS="$(GINKGO_FLAGS)" ISTIOCTL="$(ISTIOCTL)" ${SOURCE_DIR}/tests/e2e/integ-suite-kind.sh
+	CUSTOM_KIND_IMAGE="$(CUSTOM_KIND_IMAGE)" GINKGO_FLAGS="$(GINKGO_FLAGS)" ISTIOCTL="$(ISTIOCTL)" ${SOURCE_DIR}/tests/e2e/integ-suite-kind.sh
 
 .PHONY: test.e2e.describe
 test.e2e.describe: ## Runs ginkgo outline -format indent over the e2e test to show in BDD style the steps and test structure
@@ -229,7 +229,12 @@ run: gen ## Run a controller from your host.
 # docker build -t ${IMAGE} --build-arg GIT_TAG=${GIT_TAG} --build-arg GIT_REVISION=${GIT_REVISION} --build-arg GIT_STATUS=${GIT_STATUS} .
 .PHONY: docker-build
 docker-build: build ## Build docker image.
+    # If CONTAINER_CLI is set to podman, set --load flag. This is because podman is more modular and don't automatically import it into your main image store.
+ifeq ($(CONTAINER_CLI),podman)
+	docker build ${DOCKER_BUILD_FLAGS} -t ${IMAGE} . --load
+else
 	docker build ${DOCKER_BUILD_FLAGS} -t ${IMAGE} .
+endif
 
 PHONY: push
 push: docker-push ## Build and push docker image.
