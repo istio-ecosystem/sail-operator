@@ -21,7 +21,6 @@ import (
 	"path"
 	"reflect"
 	"regexp"
-	"sync"
 
 	"github.com/go-logr/logr"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
@@ -64,19 +63,17 @@ const istioCniName = "default"
 // Reconciler reconciles an IstioRevision object
 type Reconciler struct {
 	client.Client
-	Config             config.ReconcilerConfig
-	Scheme             *runtime.Scheme
-	ChartManager       *helm.ChartManager
-	cniDependencyCache sync.Map
+	Config       config.ReconcilerConfig
+	Scheme       *runtime.Scheme
+	ChartManager *helm.ChartManager
 }
 
 func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *runtime.Scheme, chartManager *helm.ChartManager) *Reconciler {
 	return &Reconciler{
-		Config:             cfg,
-		Client:             client,
-		Scheme:             scheme,
-		ChartManager:       chartManager,
-		cniDependencyCache: sync.Map{},
+		Config:       cfg,
+		Client:       client,
+		Scheme:       scheme,
+		ChartManager: chartManager,
 	}
 }
 
@@ -407,7 +404,7 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1.IstioR
 }
 
 func (r *Reconciler) determineDependenciesHealthyCondition(ctx context.Context, rev *v1.IstioRevision) (v1.IstioRevisionCondition, error) {
-	if r.dependsOnCNI(rev) {
+	if revision.DependsOnIstioCNI(rev, r.Config) {
 		cni := v1.IstioCNI{}
 		if err := r.Client.Get(ctx, client.ObjectKey{Name: istioCniName}, &cni); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -629,7 +626,7 @@ func (r *Reconciler) mapIstioCniToReconcileRequests(ctx context.Context, _ clien
 	}
 	var reqs []reconcile.Request
 	for _, rev := range list.Items {
-		if r.dependsOnCNI(&rev) {
+		if revision.DependsOnIstioCNI(&rev, r.Config) {
 			reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: rev.Name}})
 		}
 	}
@@ -697,23 +694,4 @@ func clearIgnoredFields(obj client.Object) {
 
 func wrapEventHandler(logger logr.Logger, handler handler.EventHandler) handler.EventHandler {
 	return enqueuelogger.WrapIfNecessary(v1.IstioRevisionKind, logger, handler)
-}
-
-// getCacheKey returns a unique key for the revision that includes its generation for cache invalidation when the spec changes
-func (r *Reconciler) getCacheKey(rev *v1.IstioRevision) string {
-	return fmt.Sprintf("%s/%s-%d", rev.Namespace, rev.Name, rev.Generation)
-}
-
-func (r *Reconciler) dependsOnCNI(rev *v1.IstioRevision) bool {
-	// Check if we have a cached result for CNI dependency
-	cacheKey := r.getCacheKey(rev)
-	var dependsOnCNI bool
-	if val, ok := r.cniDependencyCache.Load(cacheKey); ok {
-		dependsOnCNI = val.(bool)
-	} else {
-		// Compute and cache the result
-		dependsOnCNI = revision.DependsOnIstioCNI(rev, r.Config)
-		r.cniDependencyCache.Store(cacheKey, dependsOnCNI)
-	}
-	return dependsOnCNI
 }
