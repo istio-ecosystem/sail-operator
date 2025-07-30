@@ -34,7 +34,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/sail-dev/sail-operator:1.26.2
-    createdAt: "2025-07-10T07:34:55Z"
+    createdAt: "2025-07-30T07:56:37Z"
     description: The Sail Operator manages the lifecycle of your Istio control plane. It provides custom resources for you to deploy and manage your control plane components.
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -869,109 +869,4 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat, Inc.
-  relatedImages:
-    - image: gcr.io/istio-release/install-cni:1.24.0
-      name: v1_24_0.cni
-    - image: gcr.io/istio-release/pilot:1.24.0
-      name: v1_24_0.istiod
-    - image: gcr.io/istio-release/proxyv2:1.24.0
-      name: v1_24_0.proxy
-    - image: gcr.io/istio-release/ztunnel:1.24.0
-      name: v1_24_0.ztunnel
-    - image: gcr.io/istio-release/install-cni:1.24.1
-      name: v1_24_1.cni
-    - image: gcr.io/istio-release/pilot:1.24.1
-      name: v1_24_1.istiod
-    - image: gcr.io/istio-release/proxyv2:1.24.1
-      name: v1_24_1.proxy
-    - image: gcr.io/istio-release/ztunnel:1.24.1
-      name: v1_24_1.ztunnel
-    - image: gcr.io/istio-release/install-cni:1.24.2
-      name: v1_24_2.cni
-    - image: gcr.io/istio-release/pilot:1.24.2
-      name: v1_24_2.istiod
-    - image: gcr.io/istio-release/proxyv2:1.24.2
-      name: v1_24_2.proxy
-    - image: gcr.io/istio-release/ztunnel:1.24.2
-      name: v1_24_2.ztunnel
-    - image: gcr.io/istio-release/install-cni:1.24.3
-      name: v1_24_3.cni
-    - image: gcr.io/istio-release/pilot:1.24.3
-      name: v1_24_3.istiod
-    - image: gcr.io/istio-release/proxyv2:1.24.3
-      name: v1_24_3.proxy
-    - image: gcr.io/istio-release/ztunnel:1.24.3
-      name: v1_24_3.ztunnel
-    - image: gcr.io/istio-release/install-cni:1.24.4
-      name: v1_24_4.cni
-    - image: gcr.io/istio-release/pilot:1.24.4
-      name: v1_24_4.istiod
-    - image: gcr.io/istio-release/proxyv2:1.24.4
-      name: v1_24_4.proxy
-    - image: gcr.io/istio-release/ztunnel:1.24.4
-      name: v1_24_4.ztunnel
-    - image: gcr.io/istio-release/install-cni:1.24.5
-      name: v1_24_5.cni
-    - image: gcr.io/istio-release/pilot:1.24.5
-      name: v1_24_5.istiod
-    - image: gcr.io/istio-release/proxyv2:1.24.5
-      name: v1_24_5.proxy
-    - image: gcr.io/istio-release/ztunnel:1.24.5
-      name: v1_24_5.ztunnel
-    - image: gcr.io/istio-release/install-cni:1.24.6
-      name: v1_24_6.cni
-    - image: gcr.io/istio-release/pilot:1.24.6
-      name: v1_24_6.istiod
-    - image: gcr.io/istio-release/proxyv2:1.24.6
-      name: v1_24_6.proxy
-    - image: gcr.io/istio-release/ztunnel:1.24.6
-      name: v1_24_6.ztunnel
-    - image: gcr.io/istio-release/install-cni:1.25.1
-      name: v1_25_1.cni
-    - image: gcr.io/istio-release/pilot:1.25.1
-      name: v1_25_1.istiod
-    - image: gcr.io/istio-release/proxyv2:1.25.1
-      name: v1_25_1.proxy
-    - image: gcr.io/istio-release/ztunnel:1.25.1
-      name: v1_25_1.ztunnel
-    - image: gcr.io/istio-release/install-cni:1.25.2
-      name: v1_25_2.cni
-    - image: gcr.io/istio-release/pilot:1.25.2
-      name: v1_25_2.istiod
-    - image: gcr.io/istio-release/proxyv2:1.25.2
-      name: v1_25_2.proxy
-    - image: gcr.io/istio-release/ztunnel:1.25.2
-      name: v1_25_2.ztunnel
-    - image: gcr.io/istio-release/install-cni:1.25.3
-      name: v1_25_3.cni
-    - image: gcr.io/istio-release/pilot:1.25.3
-      name: v1_25_3.istiod
-    - image: gcr.io/istio-release/proxyv2:1.25.3
-      name: v1_25_3.proxy
-    - image: gcr.io/istio-release/ztunnel:1.25.3
-      name: v1_25_3.ztunnel
-    - image: gcr.io/istio-release/install-cni:1.26.0
-      name: v1_26_0.cni
-    - image: gcr.io/istio-release/pilot:1.26.0
-      name: v1_26_0.istiod
-    - image: gcr.io/istio-release/proxyv2:1.26.0
-      name: v1_26_0.proxy
-    - image: gcr.io/istio-release/ztunnel:1.26.0
-      name: v1_26_0.ztunnel
-    - image: gcr.io/istio-release/install-cni:1.26.1
-      name: v1_26_1.cni
-    - image: gcr.io/istio-release/pilot:1.26.1
-      name: v1_26_1.istiod
-    - image: gcr.io/istio-release/proxyv2:1.26.1
-      name: v1_26_1.proxy
-    - image: gcr.io/istio-release/ztunnel:1.26.1
-      name: v1_26_1.ztunnel
-    - image: gcr.io/istio-release/install-cni:1.26.2
-      name: v1_26_2.cni
-    - image: gcr.io/istio-release/pilot:1.26.2
-      name: v1_26_2.istiod
-    - image: gcr.io/istio-release/proxyv2:1.26.2
-      name: v1_26_2.proxy
-    - image: gcr.io/istio-release/ztunnel:1.26.2
-      name: v1_26_2.ztunnel
   version: 1.26.2
