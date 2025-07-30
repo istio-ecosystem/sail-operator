@@ -18,15 +18,44 @@ import (
 	"testing"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/stretchr/testify/assert"
 
 	"istio.io/istio/pkg/ptr"
 )
 
+// mockComputeValues returns the input values without any computation
+// this simulates what ComputeValues would do but without requiring actual files
+func mockComputeValues(values *v1.Values, _, _ string, platform config.Platform, _, _, _, _ string) (*v1.Values, error) {
+	if values == nil {
+		values = &v1.Values{}
+	}
+
+	// If platform is OpenShift and there is no explicit CNI configured, enable CNI
+	if platform == config.PlatformOpenShift && (values.Pilot == nil || values.Pilot.Cni == nil || values.Pilot.Cni.Enabled == nil) {
+		if values.Pilot == nil {
+			values.Pilot = &v1.PilotConfig{}
+		}
+		if values.Pilot.Cni == nil {
+			values.Pilot.Cni = &v1.CNIUsageConfig{}
+		}
+		values.Pilot.Cni.Enabled = ptr.Of(true)
+	}
+	return values, nil
+}
+
 func TestDependsOnIstioCNI(t *testing.T) {
+	// Replace ComputeValues with mock for testing
+	defaultComputeValues = mockComputeValues
+	defaultCfg := config.ReconcilerConfig{
+		Platform:       config.PlatformKubernetes,
+		DefaultProfile: "default",
+	}
+
 	tests := []struct {
 		name     string
 		rev      *v1.IstioRevision
+		cfg      config.ReconcilerConfig
 		expected bool
 	}{
 		{
@@ -36,57 +65,20 @@ func TestDependsOnIstioCNI(t *testing.T) {
 					Values: nil,
 				},
 			},
+			cfg:      defaultCfg,
 			expected: false,
 		},
 		{
-			name: "NilGlobal",
+			name: "PlatformOpenshift",
 			rev: &v1.IstioRevision{
 				Spec: v1.IstioRevisionSpec{
-					Values: &v1.Values{
-						Global: nil,
-					},
+					Values: nil,
 				},
 			},
-			expected: false,
-		},
-		{
-			name: "NilGlobalPlatform",
-			rev: &v1.IstioRevision{
-				Spec: v1.IstioRevisionSpec{
-					Values: &v1.Values{
-						Global: &v1.GlobalConfig{
-							Platform: nil,
-						},
-					},
-				},
-			},
-			expected: false,
-		},
-		{
-			name: "GlobalPlatformOpenshift",
-			rev: &v1.IstioRevision{
-				Spec: v1.IstioRevisionSpec{
-					Values: &v1.Values{
-						Global: &v1.GlobalConfig{
-							Platform: ptr.Of("openshift"),
-						},
-					},
-				},
+			cfg: config.ReconcilerConfig{
+				Platform: config.PlatformOpenShift,
 			},
 			expected: true,
-		},
-		{
-			name: "GlobalPlatformNotOpenshift",
-			rev: &v1.IstioRevision{
-				Spec: v1.IstioRevisionSpec{
-					Values: &v1.Values{
-						Global: &v1.GlobalConfig{
-							Platform: ptr.Of("kind"),
-						},
-					},
-				},
-			},
-			expected: false,
 		},
 		{
 			name: "NilPilot",
@@ -97,6 +89,7 @@ func TestDependsOnIstioCNI(t *testing.T) {
 					},
 				},
 			},
+			cfg:      defaultCfg,
 			expected: false,
 		},
 		{
@@ -110,6 +103,7 @@ func TestDependsOnIstioCNI(t *testing.T) {
 					},
 				},
 			},
+			cfg:      defaultCfg,
 			expected: false,
 		},
 		{
@@ -125,6 +119,7 @@ func TestDependsOnIstioCNI(t *testing.T) {
 					},
 				},
 			},
+			cfg:      defaultCfg,
 			expected: false,
 		},
 		{
@@ -140,6 +135,7 @@ func TestDependsOnIstioCNI(t *testing.T) {
 					},
 				},
 			},
+			cfg:      defaultCfg,
 			expected: true,
 		},
 		{
@@ -155,13 +151,73 @@ func TestDependsOnIstioCNI(t *testing.T) {
 					},
 				},
 			},
+			cfg:      defaultCfg,
 			expected: false,
+		},
+		{
+			name: "OpenshiftPlatformCNIExplicitlyDisabled",
+			rev: &v1.IstioRevision{
+				Spec: v1.IstioRevisionSpec{
+					Values: &v1.Values{
+						Global: &v1.GlobalConfig{
+							Platform: ptr.Of("openshift"),
+						},
+						Pilot: &v1.PilotConfig{
+							Cni: &v1.CNIUsageConfig{
+								Enabled: ptr.Of(false),
+							},
+						},
+					},
+				},
+			},
+			cfg: config.ReconcilerConfig{
+				Platform: config.PlatformOpenShift,
+			},
+			expected: false,
+		},
+		{
+			name: "OpenshiftPlatformCNIExplicitlyEnabled",
+			rev: &v1.IstioRevision{
+				Spec: v1.IstioRevisionSpec{
+					Values: &v1.Values{
+						Global: &v1.GlobalConfig{
+							Platform: ptr.Of("openshift"),
+						},
+						Pilot: &v1.PilotConfig{
+							Cni: &v1.CNIUsageConfig{
+								Enabled: ptr.Of(true),
+							},
+						},
+					},
+				},
+			},
+			cfg: config.ReconcilerConfig{
+				Platform: config.PlatformOpenShift,
+			},
+			expected: true,
+		},
+		{
+			name: "OpenshiftPlatformCNINotConfigured",
+			rev: &v1.IstioRevision{
+				Spec: v1.IstioRevisionSpec{
+					Values: &v1.Values{
+						Global: &v1.GlobalConfig{
+							Platform: ptr.Of("openshift"),
+						},
+						Pilot: &v1.PilotConfig{}, // CNI not configured
+					},
+				},
+			},
+			cfg: config.ReconcilerConfig{
+				Platform: config.PlatformOpenShift,
+			},
+			expected: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := DependsOnIstioCNI(tt.rev)
+			result := DependsOnIstioCNI(tt.rev, tt.cfg)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
