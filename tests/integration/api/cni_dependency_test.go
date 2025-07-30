@@ -126,7 +126,7 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 
 			AfterAll(func() {
 				Step("Cleaning up Istio resource")
-				Expect(k8sClient.Delete(ctx, istio)).To(Succeed())
+				deleteAllIstiosAndRevisions(ctx)
 			})
 		})
 
@@ -140,12 +140,8 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 					Spec: v1.IstioSpec{
 						Version:   istioversion.Default,
 						Namespace: istioNamespace,
-						Values: &v1.Values{
-							Pilot: &v1.PilotConfig{
-								Cni: &v1.CNIUsageConfig{
-									Enabled: ptr.Of(false),
-								},
-							},
+						Values:    &v1.Values{
+							// not setting anything as CNI should be disabled by default on non-OCP platforms
 						},
 					},
 				}
@@ -171,7 +167,7 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 
 			AfterAll(func() {
 				Step("Cleaning up Istio resource")
-				Expect(k8sClient.Delete(ctx, istio)).To(Succeed())
+				deleteAllIstiosAndRevisions(ctx)
 			})
 		})
 	})
@@ -180,10 +176,12 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 		BeforeAll(func() {
 			Step("Setting platform to OpenShift")
 			istioReconciler.Config.Platform = config.PlatformOpenShift
+			istioRevisionReconciler.Config.Platform = config.PlatformOpenShift
 		})
 		AfterAll(func() {
 			Step("Setting platform back to Kubernetes")
 			istioReconciler.Config.Platform = config.PlatformKubernetes
+			istioRevisionReconciler.Config.Platform = config.PlatformKubernetes
 		})
 		When("CNI is enabled", func() {
 			BeforeAll(func() {
@@ -213,12 +211,8 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 					Spec: v1.IstioSpec{
 						Version:   istioversion.Default,
 						Namespace: istioNamespace,
-						Values: &v1.Values{
-							Pilot: &v1.PilotConfig{
-								Cni: &v1.CNIUsageConfig{
-									Enabled: ptr.Of(true),
-								},
-							},
+						Values:    &v1.Values{
+							// we're not setting values as CNI should be enabled by default
 						},
 					},
 				}
@@ -237,6 +231,7 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 							break
 						}
 					}
+					g.Expect(istio.Generation).To(Equal(istio.Status.ObservedGeneration))
 					g.Expect(depCondition).NotTo(BeNil())
 					g.Expect(depCondition.Status).To(Equal(metav1.ConditionTrue),
 						fmt.Sprintf("Expected DependenciesHealthy condition to be True, got %v. Full conditions: %#v",
@@ -246,8 +241,8 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 
 			AfterAll(func() {
 				Step("Cleaning up Istio and IstioCNI resources")
-				Expect(k8sClient.Delete(ctx, istio)).To(Succeed())
-				Expect(k8sClient.Delete(ctx, istiocni)).To(Succeed())
+				deleteAllIstioCNIs(ctx)
+				deleteAllIstiosAndRevisions(ctx)
 			})
 		})
 
@@ -292,7 +287,7 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 
 			AfterAll(func() {
 				Step("Cleaning up Istio resource")
-				Expect(k8sClient.Delete(ctx, istio)).To(Succeed())
+				deleteAllIstiosAndRevisions(ctx)
 			})
 		})
 
@@ -359,8 +354,57 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 
 			AfterAll(func() {
 				Step("Cleaning up Istio resource")
-				Expect(k8sClient.Delete(ctx, istio)).To(Succeed())
-				Expect(k8sClient.Delete(ctx, istiocni)).To(Succeed())
+				deleteAllIstioCNIs(ctx)
+				deleteAllIstiosAndRevisions(ctx)
+			})
+		})
+		When("CNI is not explicitly configured, not deployed", func() {
+			BeforeAll(func() {
+				// Clean up any existing IstioCNI resources
+				Expect(k8sClient.DeleteAllOf(ctx, &v1.IstioCNI{})).To(Succeed())
+				Eventually(func(g Gomega) {
+					list := &v1.IstioCNIList{}
+					g.Expect(k8sClient.List(ctx, list)).To(Succeed())
+					g.Expect(list.Items).To(BeEmpty())
+				}).Should(Succeed())
+
+				Step("Creating Istio resource with CNI not configured")
+				istio = &v1.Istio{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: istioName + "-ocp-default",
+					},
+					Spec: v1.IstioSpec{
+						Version:   istioversion.Default,
+						Namespace: istioNamespace,
+						Values:    &v1.Values{
+							// Not configuring CNI - should default to enabled on OpenShift
+						},
+					},
+				}
+				Expect(k8sClient.Create(ctx, istio)).To(Succeed())
+			})
+
+			It("should not show Healthy condition", func() {
+				Eventually(func(g Gomega) {
+					err := k8sClient.Get(ctx, kube.Key(istio.Name, istio.Namespace), istio)
+					g.Expect(err).NotTo(HaveOccurred())
+
+					var depCondition *v1.IstioCondition
+					for _, cond := range istio.Status.Conditions {
+						if cond.Type == "DependenciesHealthy" {
+							depCondition = &cond
+							break
+						}
+					}
+					g.Expect(depCondition).NotTo(BeNil())
+					g.Expect(depCondition.Status).To(Equal(metav1.ConditionFalse))
+				}).Should(Succeed())
+			})
+
+			AfterAll(func() {
+				Step("Cleaning up Istio resource")
+				deleteAllIstioCNIs(ctx)
+				deleteAllIstiosAndRevisions(ctx)
 			})
 		})
 	})
