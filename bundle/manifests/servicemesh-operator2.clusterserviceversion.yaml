@@ -34,12 +34,10 @@ metadata:
     capabilities: Seamless Upgrades
     categories: Integration & Delivery, Networking, Security
     containerImage: build-harbor.alauda.cn/asm/servicemesh-operator2:2.0-latest
-    createdAt: "2025-07-02T13:21:11Z"
-    description: Alauda Service Mesh v2 enables you to install, configure, and manage
-      an instance of Alauda Service Mesh. Alauda Service Mesh is based on the open
-      source Istio project.
+    createdAt: "2025-07-30T02:46:02Z"
+    description: Alauda Service Mesh v2 enables you to install, configure, and manage an instance of Alauda Service Mesh. Alauda Service Mesh is based on the open source Istio project.
     operatorframework.io/suggested-namespace: sail-operator
-    operators.operatorframework.io/builder: operator-sdk-v1.39.2
+    operators.operatorframework.io/builder: operator-sdk-v1.41.1
     operators.operatorframework.io/internal-objects: '["wasmplugins.extensions.istio.io","destinationrules.networking.istio.io","envoyfilters.networking.istio.io","gateways.networking.istio.io","proxyconfigs.networking.istio.io","serviceentries.networking.istio.io","sidecars.networking.istio.io","virtualservices.networking.istio.io","workloadentries.networking.istio.io","workloadgroups.networking.istio.io","authorizationpolicies.security.istio.io","peerauthentications.security.istio.io","requestauthentications.security.istio.io","telemetries.telemetry.istio.io"]'
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
     provider: '{"zh":"平台", "en": "platform"}'
@@ -55,755 +53,751 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - kind: WasmPlugin
-      name: wasmplugins.extensions.istio.io
-      version: v1alpha1
-    - kind: DestinationRule
-      name: destinationrules.networking.istio.io
-      version: v1
-    - kind: DestinationRule
-      name: destinationrules.networking.istio.io
-      version: v1alpha3
-    - kind: DestinationRule
-      name: destinationrules.networking.istio.io
-      version: v1beta1
-    - kind: EnvoyFilter
-      name: envoyfilters.networking.istio.io
-      version: v1alpha3
-    - kind: Gateway
-      name: gateways.networking.istio.io
-      version: v1
-    - kind: Gateway
-      name: gateways.networking.istio.io
-      version: v1alpha3
-    - kind: Gateway
-      name: gateways.networking.istio.io
-      version: v1beta1
-    - kind: ProxyConfig
-      name: proxyconfigs.networking.istio.io
-      version: v1beta1
-    - kind: ServiceEntry
-      name: serviceentries.networking.istio.io
-      version: v1
-    - kind: ServiceEntry
-      name: serviceentries.networking.istio.io
-      version: v1alpha3
-    - kind: ServiceEntry
-      name: serviceentries.networking.istio.io
-      version: v1beta1
-    - kind: Sidecar
-      name: sidecars.networking.istio.io
-      version: v1
-    - kind: Sidecar
-      name: sidecars.networking.istio.io
-      version: v1alpha3
-    - kind: Sidecar
-      name: sidecars.networking.istio.io
-      version: v1beta1
-    - kind: VirtualService
-      name: virtualservices.networking.istio.io
-      version: v1
-    - kind: VirtualService
-      name: virtualservices.networking.istio.io
-      version: v1alpha3
-    - kind: VirtualService
-      name: virtualservices.networking.istio.io
-      version: v1beta1
-    - kind: WorkloadEntry
-      name: workloadentries.networking.istio.io
-      version: v1
-    - kind: WorkloadEntry
-      name: workloadentries.networking.istio.io
-      version: v1alpha3
-    - kind: WorkloadEntry
-      name: workloadentries.networking.istio.io
-      version: v1beta1
-    - kind: WorkloadGroup
-      name: workloadgroups.networking.istio.io
-      version: v1
-    - kind: WorkloadGroup
-      name: workloadgroups.networking.istio.io
-      version: v1alpha3
-    - kind: WorkloadGroup
-      name: workloadgroups.networking.istio.io
-      version: v1beta1
-    - kind: AuthorizationPolicy
-      name: authorizationpolicies.security.istio.io
-      version: v1
-    - kind: AuthorizationPolicy
-      name: authorizationpolicies.security.istio.io
-      version: v1beta1
-    - kind: PeerAuthentication
-      name: peerauthentications.security.istio.io
-      version: v1
-    - kind: PeerAuthentication
-      name: peerauthentications.security.istio.io
-      version: v1beta1
-    - kind: RequestAuthentication
-      name: requestauthentications.security.istio.io
-      version: v1
-    - kind: RequestAuthentication
-      name: requestauthentications.security.istio.io
-      version: v1beta1
-    - kind: Telemetry
-      name: telemetries.telemetry.istio.io
-      version: v1
-    - kind: Telemetry
-      name: telemetries.telemetry.istio.io
-      version: v1alpha1
-    - description: IstioCNI represents a deployment of the Istio CNI component.
-      displayName: Istio CNI
-      kind: IstioCNI
-      name: istiocnis.sailoperator.io
-      specDescriptors:
+      - kind: WasmPlugin
+        name: wasmplugins.extensions.istio.io
+        version: v1alpha1
+      - kind: DestinationRule
+        name: destinationrules.networking.istio.io
+        version: v1
+      - kind: DestinationRule
+        name: destinationrules.networking.istio.io
+        version: v1alpha3
+      - kind: DestinationRule
+        name: destinationrules.networking.istio.io
+        version: v1beta1
+      - kind: EnvoyFilter
+        name: envoyfilters.networking.istio.io
+        version: v1alpha3
+      - kind: Gateway
+        name: gateways.networking.istio.io
+        version: v1
+      - kind: Gateway
+        name: gateways.networking.istio.io
+        version: v1alpha3
+      - kind: Gateway
+        name: gateways.networking.istio.io
+        version: v1beta1
+      - kind: ProxyConfig
+        name: proxyconfigs.networking.istio.io
+        version: v1beta1
+      - kind: ServiceEntry
+        name: serviceentries.networking.istio.io
+        version: v1
+      - kind: ServiceEntry
+        name: serviceentries.networking.istio.io
+        version: v1alpha3
+      - kind: ServiceEntry
+        name: serviceentries.networking.istio.io
+        version: v1beta1
+      - kind: Sidecar
+        name: sidecars.networking.istio.io
+        version: v1
+      - kind: Sidecar
+        name: sidecars.networking.istio.io
+        version: v1alpha3
+      - kind: Sidecar
+        name: sidecars.networking.istio.io
+        version: v1beta1
+      - kind: VirtualService
+        name: virtualservices.networking.istio.io
+        version: v1
+      - kind: VirtualService
+        name: virtualservices.networking.istio.io
+        version: v1alpha3
+      - kind: VirtualService
+        name: virtualservices.networking.istio.io
+        version: v1beta1
+      - kind: WorkloadEntry
+        name: workloadentries.networking.istio.io
+        version: v1
+      - kind: WorkloadEntry
+        name: workloadentries.networking.istio.io
+        version: v1alpha3
+      - kind: WorkloadEntry
+        name: workloadentries.networking.istio.io
+        version: v1beta1
+      - kind: WorkloadGroup
+        name: workloadgroups.networking.istio.io
+        version: v1
+      - kind: WorkloadGroup
+        name: workloadgroups.networking.istio.io
+        version: v1alpha3
+      - kind: WorkloadGroup
+        name: workloadgroups.networking.istio.io
+        version: v1beta1
+      - kind: AuthorizationPolicy
+        name: authorizationpolicies.security.istio.io
+        version: v1
+      - kind: AuthorizationPolicy
+        name: authorizationpolicies.security.istio.io
+        version: v1beta1
+      - kind: PeerAuthentication
+        name: peerauthentications.security.istio.io
+        version: v1
+      - kind: PeerAuthentication
+        name: peerauthentications.security.istio.io
+        version: v1beta1
+      - kind: RequestAuthentication
+        name: requestauthentications.security.istio.io
+        version: v1
+      - kind: RequestAuthentication
+        name: requestauthentications.security.istio.io
+        version: v1beta1
+      - kind: Telemetry
+        name: telemetries.telemetry.istio.io
+        version: v1
+      - kind: Telemetry
+        name: telemetries.telemetry.istio.io
+        version: v1alpha1
+      - description: IstioCNI represents a deployment of the Istio CNI component.
+        displayName: Istio CNI
+        kind: IstioCNI
+        name: istiocnis.sailoperator.io
+        specDescriptors:
+          - description: |-
+              Defines the version of Istio to install.
+              Must be one of: v1.26-latest, v1.26.2, v1.26.0, v1.25-latest, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.28-alpha.8a5e40a4.
+            displayName: Istio Version
+            path: version
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.26-latest
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.26.2
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.26.0
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.25-latest
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.25.3
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.25.2
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.25.1
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24-latest
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.6
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.5
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.4
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.3
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.2
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.1
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.0
+              - urn:alm:descriptor:com.tectonic.ui:select:master
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.28-alpha.8a5e40a4
+          - description: Namespace to which the Istio CNI component should be installed. Note that this field is immutable.
+            displayName: Namespace
+            path: namespace
+            x-descriptors:
+              - urn:alm:descriptor:io.kubernetes:Namespace
+          - description: |-
+              The built-in installation configuration profile to use.
+              The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'.
+              Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable.
+            displayName: Profile
+            path: profile
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+              - urn:alm:descriptor:com.tectonic.ui:select:ambient
+              - urn:alm:descriptor:com.tectonic.ui:select:default
+              - urn:alm:descriptor:com.tectonic.ui:select:demo
+              - urn:alm:descriptor:com.tectonic.ui:select:empty
+              - urn:alm:descriptor:com.tectonic.ui:select:openshift
+              - urn:alm:descriptor:com.tectonic.ui:select:openshift-ambient
+              - urn:alm:descriptor:com.tectonic.ui:select:preview
+              - urn:alm:descriptor:com.tectonic.ui:select:remote
+              - urn:alm:descriptor:com.tectonic.ui:select:stable
+          - description: Defines the values to be passed to the Helm charts when installing Istio CNI.
+            displayName: Helm Values
+            path: values
+        version: v1
       - description: |-
-          Defines the version of Istio to install.
-          Must be one of: v1.26-latest, v1.26.2, v1.26.0, v1.25-latest, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.27-alpha.11ce9e0a.
-        displayName: Istio Version
-        path: version
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.26-latest
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.26.2
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.26.0
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.25-latest
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.25.3
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.25.2
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.25.1
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24-latest
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.6
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.5
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.4
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.3
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.2
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.1
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.0
-        - urn:alm:descriptor:com.tectonic.ui:select:master
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.27-alpha.11ce9e0a
-      - description: Namespace to which the Istio CNI component should be installed.
-          Note that this field is immutable.
-        displayName: Namespace
-        path: namespace
-        x-descriptors:
-        - urn:alm:descriptor:io.kubernetes:Namespace
+          IstioRevision represents a single revision of an Istio Service Mesh deployment.
+          Users shouldn't create IstioRevision objects directly. Instead, they should
+          create an Istio object and allow the operator to create the underlying
+          IstioRevision object(s).
+        displayName: Istio Revision
+        kind: IstioRevision
+        name: istiorevisions.sailoperator.io
+        specDescriptors:
+          - description: |-
+              Defines the version of Istio to install.
+              Must be one of: v1.26.2, v1.26.0, v1.25.3, v1.25.2, v1.25.1, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, v1.28-alpha.8a5e40a4.
+            displayName: Istio Version
+            path: version
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.26.2
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.26.0
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.25.3
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.25.2
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.25.1
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.6
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.5
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.4
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.3
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.2
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.1
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.0
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.28-alpha.8a5e40a4
+          - description: Namespace to which the Istio components should be installed.
+            displayName: Namespace
+            path: namespace
+            x-descriptors:
+              - urn:alm:descriptor:io.kubernetes:Namespace
+          - description: Defines the values to be passed to the Helm charts when installing Istio.
+            displayName: Helm Values
+            path: values
+        version: v1
+      - description: IstioRevisionTag references an Istio or IstioRevision object and serves as an alias for sidecar injection. It can be used to manage stable revision tags without having to use istioctl or helm directly. See https://istio.io/latest/docs/setup/upgrade/canary/#stable-revision-labels for more information on the concept.
+        displayName: Istio Revision Tag
+        kind: IstioRevisionTag
+        name: istiorevisiontags.sailoperator.io
+        version: v1
       - description: |-
-          The built-in installation configuration profile to use.
-          The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'.
-          Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable.
-        displayName: Profile
-        path: profile
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
-        - urn:alm:descriptor:com.tectonic.ui:select:ambient
-        - urn:alm:descriptor:com.tectonic.ui:select:default
-        - urn:alm:descriptor:com.tectonic.ui:select:demo
-        - urn:alm:descriptor:com.tectonic.ui:select:empty
-        - urn:alm:descriptor:com.tectonic.ui:select:openshift
-        - urn:alm:descriptor:com.tectonic.ui:select:openshift-ambient
-        - urn:alm:descriptor:com.tectonic.ui:select:preview
-        - urn:alm:descriptor:com.tectonic.ui:select:remote
-        - urn:alm:descriptor:com.tectonic.ui:select:stable
-      - description: Defines the values to be passed to the Helm charts when installing
-          Istio CNI.
-        displayName: Helm Values
-        path: values
-      version: v1
-    - description: |-
-        IstioRevision represents a single revision of an Istio Service Mesh deployment.
-        Users shouldn't create IstioRevision objects directly. Instead, they should
-        create an Istio object and allow the operator to create the underlying
-        IstioRevision object(s).
-      displayName: Istio Revision
-      kind: IstioRevision
-      name: istiorevisions.sailoperator.io
-      specDescriptors:
-      - description: |-
-          Defines the version of Istio to install.
-          Must be one of: v1.26.2, v1.26.0, v1.25.3, v1.25.2, v1.25.1, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, v1.27-alpha.11ce9e0a.
-        displayName: Istio Version
-        path: version
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.26.2
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.26.0
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.25.3
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.25.2
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.25.1
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.6
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.5
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.4
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.3
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.2
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.1
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.0
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.27-alpha.11ce9e0a
-      - description: Namespace to which the Istio components should be installed.
-        displayName: Namespace
-        path: namespace
-        x-descriptors:
-        - urn:alm:descriptor:io.kubernetes:Namespace
-      - description: Defines the values to be passed to the Helm charts when installing
-          Istio.
-        displayName: Helm Values
-        path: values
-      version: v1
-    - description: IstioRevisionTag references an Istio or IstioRevision object and
-        serves as an alias for sidecar injection. It can be used to manage stable
-        revision tags without having to use istioctl or helm directly. See https://istio.io/latest/docs/setup/upgrade/canary/#stable-revision-labels
-        for more information on the concept.
-      displayName: Istio Revision Tag
-      kind: IstioRevisionTag
-      name: istiorevisiontags.sailoperator.io
-      version: v1
-    - description: |-
-        Istio represents an Istio Service Mesh deployment consisting of one or more
-        control plane instances (represented by one or more IstioRevision objects).
-        To deploy an Istio Service Mesh, a user creates an Istio object with the
-        desired Istio version and configuration. The operator then creates
-        an IstioRevision object, which in turn creates the underlying Deployment
-        objects for istiod and other control plane components, similar to how a
-        Deployment object in Kubernetes creates ReplicaSets that create the Pods.
-      displayName: Istio
-      kind: Istio
-      name: istios.sailoperator.io
-      specDescriptors:
-      - description: "Type of strategy to use. Can be \"InPlace\" or \"RevisionBased\".
-          When the \"InPlace\" strategy\nis used, the existing Istio control plane
-          is updated in-place. The workloads therefore\ndon't need to be moved from
-          one control plane instance to another. When the \"RevisionBased\"\nstrategy
-          is used, a new Istio control plane instance is created for every change
-          to the\nIstio.spec.version field. The old control plane remains in place
-          until all workloads have\nbeen moved to the new control plane instance.\n\nThe
-          \"InPlace\" strategy is the default.\tTODO: change default to \"RevisionBased\""
-        displayName: Type
-        path: updateStrategy.type
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:select:InPlace
-        - urn:alm:descriptor:com.tectonic.ui:select:RevisionBased
-      - description: |-
-          Defines the version of Istio to install.
-          Must be one of: v1.26-latest, v1.26.2, v1.26.0, v1.25-latest, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.27-alpha.11ce9e0a.
-        displayName: Istio Version
-        path: version
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.26-latest
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.26.2
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.26.0
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.25-latest
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.25.3
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.25.2
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.25.1
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24-latest
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.6
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.5
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.4
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.3
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.2
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.1
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.0
-        - urn:alm:descriptor:com.tectonic.ui:select:master
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.27-alpha.11ce9e0a
-      - description: |-
-          Defines how many seconds the operator should wait before removing a non-active revision after all
-          the workloads have stopped using it. You may want to set this value on the order of minutes.
-          The minimum is 0 and the default value is 30.
-        displayName: Inactive Revision Deletion Grace Period (seconds)
-        path: updateStrategy.inactiveRevisionDeletionGracePeriodSeconds
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:number
-      - description: |-
-          Defines whether the workloads should be moved from one control plane instance to another
-          automatically. If updateWorkloads is true, the operator moves the workloads from the old
-          control plane instance to the new one after the new control plane is ready.
-          If updateWorkloads is false, the user must move the workloads manually by updating the
-          istio.io/rev labels on the namespace and/or the pods.
-          Defaults to false.
-        displayName: Update Workloads Automatically
-        path: updateStrategy.updateWorkloads
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-      - description: Namespace to which the Istio components should be installed.
-          Note that this field is immutable.
-        displayName: Namespace
-        path: namespace
-        x-descriptors:
-        - urn:alm:descriptor:io.kubernetes:Namespace
-      - description: |-
-          The built-in installation configuration profile to use.
-          The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'.
-          Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable.
-        displayName: Profile
-        path: profile
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
-        - urn:alm:descriptor:com.tectonic.ui:select:ambient
-        - urn:alm:descriptor:com.tectonic.ui:select:default
-        - urn:alm:descriptor:com.tectonic.ui:select:demo
-        - urn:alm:descriptor:com.tectonic.ui:select:empty
-        - urn:alm:descriptor:com.tectonic.ui:select:openshift
-        - urn:alm:descriptor:com.tectonic.ui:select:openshift-ambient
-        - urn:alm:descriptor:com.tectonic.ui:select:preview
-        - urn:alm:descriptor:com.tectonic.ui:select:remote
-        - urn:alm:descriptor:com.tectonic.ui:select:stable
-      - description: Defines the update strategy to use when the version in the Istio
-          CR is updated.
-        displayName: Update Strategy
-        path: updateStrategy
-      - description: Defines the values to be passed to the Helm charts when installing
-          Istio.
-        displayName: Helm Values
-        path: values
-      version: v1
-    - description: ZTunnel represents a deployment of the Istio ztunnel component.
-      displayName: ZTunnel
-      kind: ZTunnel
-      name: ztunnels.sailoperator.io
-      specDescriptors:
-      - description: |-
-          Defines the version of Istio to install.
-          Must be one of: v1.26-latest, v1.26.2, v1.26.0, v1.25-latest, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.27-alpha.11ce9e0a.
-        displayName: Istio Version
-        path: version
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.26-latest
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.26.2
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.26.0
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.25-latest
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.25.3
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.25.2
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.25.1
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24-latest
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.6
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.5
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.4
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.3
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.2
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.1
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.24.0
-        - urn:alm:descriptor:com.tectonic.ui:select:master
-        - urn:alm:descriptor:com.tectonic.ui:select:v1.27-alpha.11ce9e0a
-      - description: Namespace to which the Istio ztunnel component should be installed.
-        displayName: Namespace
-        path: namespace
-        x-descriptors:
-        - urn:alm:descriptor:io.kubernetes:Namespace
-      - description: |-
-          The built-in installation configuration profile to use.
-          The 'default' profile is 'ambient' and it is always applied.
-          Must be one of: ambient, default, demo, empty, external, preview, remote, stable.
-        displayName: Profile
-        path: profile
-        x-descriptors:
-        - urn:alm:descriptor:com.tectonic.ui:hidden
-      - description: Defines the values to be passed to the Helm charts when installing
-          Istio ztunnel.
-        displayName: Helm Values
-        path: values
-      version: v1alpha1
-  description: Alauda Service Mesh is a platform that provides behavioral insight
-    and operational control over a service mesh, providing a uniform way to connect,
-    secure, and monitor microservice applications.
+          Istio represents an Istio Service Mesh deployment consisting of one or more
+          control plane instances (represented by one or more IstioRevision objects).
+          To deploy an Istio Service Mesh, a user creates an Istio object with the
+          desired Istio version and configuration. The operator then creates
+          an IstioRevision object, which in turn creates the underlying Deployment
+          objects for istiod and other control plane components, similar to how a
+          Deployment object in Kubernetes creates ReplicaSets that create the Pods.
+        displayName: Istio
+        kind: Istio
+        name: istios.sailoperator.io
+        specDescriptors:
+          - description: "Type of strategy to use. Can be \"InPlace\" or \"RevisionBased\". When the \"InPlace\" strategy\nis used, the existing Istio control plane is updated in-place. The workloads therefore\ndon't need to be moved from one control plane instance to another. When the \"RevisionBased\"\nstrategy is used, a new Istio control plane instance is created for every change to the\nIstio.spec.version field. The old control plane remains in place until all workloads have\nbeen moved to the new control plane instance.\n\nThe \"InPlace\" strategy is the default.\tTODO: change default to \"RevisionBased\""
+            displayName: Type
+            path: updateStrategy.type
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:select:InPlace
+              - urn:alm:descriptor:com.tectonic.ui:select:RevisionBased
+          - description: |-
+              Defines the version of Istio to install.
+              Must be one of: v1.26-latest, v1.26.2, v1.26.0, v1.25-latest, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.28-alpha.8a5e40a4.
+            displayName: Istio Version
+            path: version
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.26-latest
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.26.2
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.26.0
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.25-latest
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.25.3
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.25.2
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.25.1
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24-latest
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.6
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.5
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.4
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.3
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.2
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.1
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.0
+              - urn:alm:descriptor:com.tectonic.ui:select:master
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.28-alpha.8a5e40a4
+          - description: |-
+              Defines how many seconds the operator should wait before removing a non-active revision after all
+              the workloads have stopped using it. You may want to set this value on the order of minutes.
+              The minimum is 0 and the default value is 30.
+            displayName: Inactive Revision Deletion Grace Period (seconds)
+            path: updateStrategy.inactiveRevisionDeletionGracePeriodSeconds
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:number
+          - description: |-
+              Defines whether the workloads should be moved from one control plane instance to another
+              automatically. If updateWorkloads is true, the operator moves the workloads from the old
+              control plane instance to the new one after the new control plane is ready.
+              If updateWorkloads is false, the user must move the workloads manually by updating the
+              istio.io/rev labels on the namespace and/or the pods.
+              Defaults to false.
+            displayName: Update Workloads Automatically
+            path: updateStrategy.updateWorkloads
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
+          - description: Namespace to which the Istio components should be installed. Note that this field is immutable.
+            displayName: Namespace
+            path: namespace
+            x-descriptors:
+              - urn:alm:descriptor:io.kubernetes:Namespace
+          - description: |-
+              The built-in installation configuration profile to use.
+              The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'.
+              Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable.
+            displayName: Profile
+            path: profile
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+              - urn:alm:descriptor:com.tectonic.ui:select:ambient
+              - urn:alm:descriptor:com.tectonic.ui:select:default
+              - urn:alm:descriptor:com.tectonic.ui:select:demo
+              - urn:alm:descriptor:com.tectonic.ui:select:empty
+              - urn:alm:descriptor:com.tectonic.ui:select:openshift
+              - urn:alm:descriptor:com.tectonic.ui:select:openshift-ambient
+              - urn:alm:descriptor:com.tectonic.ui:select:preview
+              - urn:alm:descriptor:com.tectonic.ui:select:remote
+              - urn:alm:descriptor:com.tectonic.ui:select:stable
+          - description: Defines the update strategy to use when the version in the Istio CR is updated.
+            displayName: Update Strategy
+            path: updateStrategy
+          - description: Defines the values to be passed to the Helm charts when installing Istio.
+            displayName: Helm Values
+            path: values
+        version: v1
+      - description: ZTunnel represents a deployment of the Istio ztunnel component.
+        displayName: ZTunnel
+        kind: ZTunnel
+        name: ztunnels.sailoperator.io
+        specDescriptors:
+          - description: |-
+              Defines the version of Istio to install.
+              Must be one of: v1.26-latest, v1.26.2, v1.26.0, v1.25-latest, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.28-alpha.8a5e40a4.
+            displayName: Istio Version
+            path: version
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.26-latest
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.26.2
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.26.0
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.25-latest
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.25.3
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.25.2
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.25.1
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24-latest
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.6
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.5
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.4
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.3
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.2
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.1
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24.0
+              - urn:alm:descriptor:com.tectonic.ui:select:master
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.28-alpha.8a5e40a4
+          - description: Namespace to which the Istio ztunnel component should be installed.
+            displayName: Namespace
+            path: namespace
+            x-descriptors:
+              - urn:alm:descriptor:io.kubernetes:Namespace
+          - description: |-
+              The built-in installation configuration profile to use.
+              The 'default' profile is 'ambient' and it is always applied.
+              Must be one of: ambient, default, demo, empty, external, preview, remote, stable.
+            displayName: Profile
+            path: profile
+            x-descriptors:
+              - urn:alm:descriptor:com.tectonic.ui:hidden
+          - description: Defines the values to be passed to the Helm charts when installing Istio ztunnel.
+            displayName: Helm Values
+            path: values
+        version: v1alpha1
+  description: Alauda Service Mesh is a platform that provides behavioral insight and operational control over a service mesh, providing a uniform way to connect, secure, and monitor microservice applications.
   displayName: Alauda Service Mesh v2
   icon:
-  - base64data: PHN2ZyB2aWV3Qm94PSIwIDAgMTAyNCAxMDI0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogICAgPCEtLSA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJyZ2IoMCwgMTIyLCAyNDUpIi8+IC0tPgogICAgPHBhdGggZD0iTTM5My41MjMyIDUxLjJMMTkwLjkwNzczMyA0MjEuNzM0NGwtMjEuODQ1MzMzIDM5LjUyNjRhMTA0Ljk3NzA2NyAxMDQuOTc3MDY3IDAgMCAwLTIuMTY3NDY3IDk3LjMzMTJsMi4xNjc0NjcgNC4xNDcyIDEyOC4xMzY1MzMgMjMxLjU5NDY2N2ExMDIuMDU4NjY3IDEwMi4wNTg2NjcgMCAwIDAgODQuOTA2NjY3IDUyLjgzODRsNC4yNDk2IDAuMDg1MzMzaDI1MS4yODk2YTEwMS45MjIxMzMgMTAxLjkyMjEzMyAwIDAgMCA4Ni45ODg4LTQ5LjIyMDI2N2wyLjE2NzQ2Ny0zLjcyMDUzMyAxMjguMTM2NTMzLTIzMS41Nzc2YTEwNC45NzcwNjcgMTA0Ljk3NzA2NyAwIDAgMCAyLjE2NzQ2Ny05Ny4zMzEybC0yLjE2NzQ2Ny00LjE0NzItMTI4LjEzNjUzMy0yMzEuNTk0NjY3YTEwMS45OTA0IDEwMS45OTA0IDAgMCAwLTg5LjE1NjI2Ny01Mi45MjM3MzNIMzkwLjQ1MTJMNDYwLjk4NzczMyA1MS4yaDI0Ni4xMTg0YTEwMS45OTA0IDEwMS45OTA0IDAgMCAxIDg5LjE1NjI2NyA1Mi45NDA4bDE5Ny41OTc4NjcgMzU3LjEyYTEwNC45NiAxMDQuOTYgMCAwIDEgMCAxMDEuNDc4NEw3OTYuMjYyNCA5MTkuODU5MkExMDEuOTkwNCAxMDEuOTkwNCAwIDAgMSA3MDcuMTA2MTMzIDk3Mi44SDMxNi44OTM4NjdhMTAxLjk5MDQgMTAxLjk5MDQgMCAwIDEtODkuMTU2MjY3LTUyLjk0MDhMMzAuMTM5NzMzIDU2Mi43MzkyYTEwNC45NiAxMDQuOTYgMCAwIDEgMC0xMDEuNDc4NEwyMjcuNzM3NiAxMDQuMTQwOEExMDEuOTkwNCAxMDEuOTkwNCAwIDAgMSAzMTYuODkzODY3IDUxLjJoNzYuNjI5MzMzek02MjEuNzM4NjY3IDI3My4wNjY2NjdjMTIuNzY1ODY3IDAgMjQuNTA3NzMzIDcuMTg1MDY3IDMwLjU0OTMzMyAxOC43MjIxMzNsMTExLjU4MTg2NyAyMTIuNjUwNjY3YTM2LjQzNzMzMyAzNi40MzczMzMgMCAwIDEtMC42MTQ0IDM0Ljg4NDI2NmwtMTEwLjc0NTYgMTkzLjk5NjhBMzQuNTQyOTMzIDM0LjU0MjkzMyAwIDAgMSA2MjIuNTU3ODY3IDc1MC45MzMzMzNoLTc4LjU3NDkzNEw0MzAuOTMzMzMzIDUzOS4xNzAxMzNhMzYuNDM3MzMzIDM2LjQzNzMzMyAwIDAgMSAwLTM0LjIxODY2Nkw1NTQuNjY2NjY3IDI3My4wNjY2NjdoNjcuMDcyeiIgZmlsbD0icmdiKDAsIDEyMiwgMjQ1KSI+PC9wYXRoPgogICAgPHBhdGggZD0iTTM4Ny40MTMzMzMgMjczLjA2NjY2N2wxMDcuNTIgMC45NzI4YTUyLjczNiA1Mi43MzYgMCAwIDAtNi42MDQ4IDguOTc3MDY2bC0xLjgyNjEzMyAzLjM3OTItMTA0LjQ4MjEzMyAyMTAuNjUzODY3YTU5LjU3OTczMyA1OS41Nzk3MzMgMCAwIDAtMi4wMzA5MzQgNDcuNjUwMTMzbDEuMzgyNCAzLjI0MjY2N0w0NzUuNDQzMiA3NTAuOTMzMzMzbC05NC42MDA1MzMtMC44ODc0NjZjLTExLjYwNTMzMy0wLjEwMjQtMjIuMjM3ODY3LTcuMzA0NTMzLTI3Ljc1MDQtMTguNzczMzM0bC05My4yNjkzMzQtMTk0LjA5OTJhMzkuNjk3MDY3IDM5LjY5NzA2NyAwIDAgMS0wLjEzNjUzMy0zMy42ODk2bDk5LjMyOC0yMTEuMzUzNmM1LjU0NjY2Ny0xMS44MTAxMzMgMTYuNTAzNDY3LTE5LjE2NTg2NyAyOC4zOTg5MzMtMTkuMDYzNDY2eiIgZmlsbD0icmdiKDEwMiwgMTc1LCAyNDkpIj48L3BhdGg+Cjwvc3ZnPgo=
-    mediatype: image/svg+xml
+    - base64data: PHN2ZyB2aWV3Qm94PSIwIDAgMTAyNCAxMDI0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogICAgPCEtLSA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJyZ2IoMCwgMTIyLCAyNDUpIi8+IC0tPgogICAgPHBhdGggZD0iTTM5My41MjMyIDUxLjJMMTkwLjkwNzczMyA0MjEuNzM0NGwtMjEuODQ1MzMzIDM5LjUyNjRhMTA0Ljk3NzA2NyAxMDQuOTc3MDY3IDAgMCAwLTIuMTY3NDY3IDk3LjMzMTJsMi4xNjc0NjcgNC4xNDcyIDEyOC4xMzY1MzMgMjMxLjU5NDY2N2ExMDIuMDU4NjY3IDEwMi4wNTg2NjcgMCAwIDAgODQuOTA2NjY3IDUyLjgzODRsNC4yNDk2IDAuMDg1MzMzaDI1MS4yODk2YTEwMS45MjIxMzMgMTAxLjkyMjEzMyAwIDAgMCA4Ni45ODg4LTQ5LjIyMDI2N2wyLjE2NzQ2Ny0zLjcyMDUzMyAxMjguMTM2NTMzLTIzMS41Nzc2YTEwNC45NzcwNjcgMTA0Ljk3NzA2NyAwIDAgMCAyLjE2NzQ2Ny05Ny4zMzEybC0yLjE2NzQ2Ny00LjE0NzItMTI4LjEzNjUzMy0yMzEuNTk0NjY3YTEwMS45OTA0IDEwMS45OTA0IDAgMCAwLTg5LjE1NjI2Ny01Mi45MjM3MzNIMzkwLjQ1MTJMNDYwLjk4NzczMyA1MS4yaDI0Ni4xMTg0YTEwMS45OTA0IDEwMS45OTA0IDAgMCAxIDg5LjE1NjI2NyA1Mi45NDA4bDE5Ny41OTc4NjcgMzU3LjEyYTEwNC45NiAxMDQuOTYgMCAwIDEgMCAxMDEuNDc4NEw3OTYuMjYyNCA5MTkuODU5MkExMDEuOTkwNCAxMDEuOTkwNCAwIDAgMSA3MDcuMTA2MTMzIDk3Mi44SDMxNi44OTM4NjdhMTAxLjk5MDQgMTAxLjk5MDQgMCAwIDEtODkuMTU2MjY3LTUyLjk0MDhMMzAuMTM5NzMzIDU2Mi43MzkyYTEwNC45NiAxMDQuOTYgMCAwIDEgMC0xMDEuNDc4NEwyMjcuNzM3NiAxMDQuMTQwOEExMDEuOTkwNCAxMDEuOTkwNCAwIDAgMSAzMTYuODkzODY3IDUxLjJoNzYuNjI5MzMzek02MjEuNzM4NjY3IDI3My4wNjY2NjdjMTIuNzY1ODY3IDAgMjQuNTA3NzMzIDcuMTg1MDY3IDMwLjU0OTMzMyAxOC43MjIxMzNsMTExLjU4MTg2NyAyMTIuNjUwNjY3YTM2LjQzNzMzMyAzNi40MzczMzMgMCAwIDEtMC42MTQ0IDM0Ljg4NDI2NmwtMTEwLjc0NTYgMTkzLjk5NjhBMzQuNTQyOTMzIDM0LjU0MjkzMyAwIDAgMSA2MjIuNTU3ODY3IDc1MC45MzMzMzNoLTc4LjU3NDkzNEw0MzAuOTMzMzMzIDUzOS4xNzAxMzNhMzYuNDM3MzMzIDM2LjQzNzMzMyAwIDAgMSAwLTM0LjIxODY2Nkw1NTQuNjY2NjY3IDI3My4wNjY2NjdoNjcuMDcyeiIgZmlsbD0icmdiKDAsIDEyMiwgMjQ1KSI+PC9wYXRoPgogICAgPHBhdGggZD0iTTM4Ny40MTMzMzMgMjczLjA2NjY2N2wxMDcuNTIgMC45NzI4YTUyLjczNiA1Mi43MzYgMCAwIDAtNi42MDQ4IDguOTc3MDY2bC0xLjgyNjEzMyAzLjM3OTItMTA0LjQ4MjEzMyAyMTAuNjUzODY3YTU5LjU3OTczMyA1OS41Nzk3MzMgMCAwIDAtMi4wMzA5MzQgNDcuNjUwMTMzbDEuMzgyNCAzLjI0MjY2N0w0NzUuNDQzMiA3NTAuOTMzMzMzbC05NC42MDA1MzMtMC44ODc0NjZjLTExLjYwNTMzMy0wLjEwMjQtMjIuMjM3ODY3LTcuMzA0NTMzLTI3Ljc1MDQtMTguNzczMzM0bC05My4yNjkzMzQtMTk0LjA5OTJhMzkuNjk3MDY3IDM5LjY5NzA2NyAwIDAgMS0wLjEzNjUzMy0zMy42ODk2bDk5LjMyOC0yMTEuMzUzNmM1LjU0NjY2Ny0xMS44MTAxMzMgMTYuNTAzNDY3LTE5LjE2NTg2NyAyOC4zOTg5MzMtMTkuMDYzNDY2eiIgZmlsbD0icmdiKDEwMiwgMTc1LCAyNDkpIj48L3BhdGg+Cjwvc3ZnPgo=
+      mediatype: image/svg+xml
   install:
     spec:
       clusterPermissions:
-      - rules:
-        - apiGroups:
-          - authentication.k8s.io
-          resources:
-          - tokenreviews
-          verbs:
-          - create
-        - apiGroups:
-          - authorization.k8s.io
-          resources:
-          - subjectaccessreviews
-          verbs:
-          - create
-        - apiGroups:
-          - ""
-          resources:
-          - '*'
-          verbs:
-          - '*'
-        - apiGroups:
-          - admissionregistration.k8s.io
-          resources:
-          - mutatingwebhookconfigurations
-          - validatingwebhookconfigurations
-          verbs:
-          - '*'
-        - apiGroups:
-          - apiextensions.k8s.io
-          resources:
-          - customresourcedefinitions
-          verbs:
-          - get
-          - list
-          - watch
-        - apiGroups:
-          - apps
-          resources:
-          - daemonsets
-          - deployments
-          verbs:
-          - '*'
-        - apiGroups:
-          - autoscaling
-          resources:
-          - horizontalpodautoscalers
-          verbs:
-          - '*'
-        - apiGroups:
-          - k8s.cni.cncf.io
-          resources:
-          - network-attachment-definitions
-          verbs:
-          - '*'
-        - apiGroups:
-          - networking.istio.io
-          resources:
-          - envoyfilters
-          verbs:
-          - '*'
-        - apiGroups:
-          - networking.k8s.io
-          resources:
-          - networkpolicies
-          verbs:
-          - '*'
-        - apiGroups:
-          - sailoperator.io
-          resources:
-          - istiorevisions
-          verbs:
-          - create
-          - delete
-          - get
-          - list
-          - patch
-          - update
-          - watch
-        - apiGroups:
-          - sailoperator.io
-          resources:
-          - istiorevisions/finalizers
-          verbs:
-          - update
-        - apiGroups:
-          - sailoperator.io
-          resources:
-          - istiorevisions/status
-          verbs:
-          - get
-          - patch
-          - update
-        - apiGroups:
-          - sailoperator.io
-          resources:
-          - istiorevisiontags
-          verbs:
-          - create
-          - delete
-          - get
-          - list
-          - patch
-          - update
-          - watch
-        - apiGroups:
-          - sailoperator.io
-          resources:
-          - istiorevisiontags/finalizers
-          verbs:
-          - update
-        - apiGroups:
-          - sailoperator.io
-          resources:
-          - istiorevisiontags/status
-          verbs:
-          - get
-          - patch
-          - update
-        - apiGroups:
-          - sailoperator.io
-          resources:
-          - istiocnis
-          verbs:
-          - create
-          - delete
-          - get
-          - list
-          - patch
-          - update
-          - watch
-        - apiGroups:
-          - sailoperator.io
-          resources:
-          - istiocnis/finalizers
-          verbs:
-          - update
-        - apiGroups:
-          - sailoperator.io
-          resources:
-          - istiocnis/status
-          verbs:
-          - get
-          - patch
-          - update
-        - apiGroups:
-          - sailoperator.io
-          resources:
-          - istios
-          verbs:
-          - create
-          - delete
-          - get
-          - list
-          - patch
-          - update
-          - watch
-        - apiGroups:
-          - sailoperator.io
-          resources:
-          - istios/finalizers
-          verbs:
-          - update
-        - apiGroups:
-          - sailoperator.io
-          resources:
-          - istios/status
-          verbs:
-          - get
-          - patch
-          - update
-        - apiGroups:
-          - sailoperator.io
-          resources:
-          - remoteistios
-          verbs:
-          - create
-          - delete
-          - get
-          - list
-          - patch
-          - update
-          - watch
-        - apiGroups:
-          - sailoperator.io
-          resources:
-          - remoteistios/finalizers
-          verbs:
-          - update
-        - apiGroups:
-          - sailoperator.io
-          resources:
-          - remoteistios/status
-          verbs:
-          - get
-          - patch
-          - update
-        - apiGroups:
-          - policy
-          resources:
-          - poddisruptionbudgets
-          verbs:
-          - '*'
-        - apiGroups:
-          - rbac.authorization.k8s.io
-          resources:
-          - clusterrolebindings
-          - clusterroles
-          - rolebindings
-          - roles
-          verbs:
-          - '*'
-        - apiGroups:
-          - security.openshift.io
-          resourceNames:
-          - privileged
-          resources:
-          - securitycontextconstraints
-          verbs:
-          - use
-        - apiGroups:
-          - sailoperator.io
-          resources:
-          - ztunnels
-          verbs:
-          - create
-          - delete
-          - get
-          - list
-          - patch
-          - update
-          - watch
-        - apiGroups:
-          - sailoperator.io
-          resources:
-          - ztunnels/finalizers
-          verbs:
-          - update
-        - apiGroups:
-          - sailoperator.io
-          resources:
-          - ztunnels/status
-          verbs:
-          - get
-          - patch
-          - update
-        serviceAccountName: servicemesh-operator2
+        - rules:
+            - apiGroups:
+                - authentication.k8s.io
+              resources:
+                - tokenreviews
+              verbs:
+                - create
+            - apiGroups:
+                - authorization.k8s.io
+              resources:
+                - subjectaccessreviews
+              verbs:
+                - create
+            - apiGroups:
+                - ""
+              resources:
+                - '*'
+              verbs:
+                - '*'
+            - apiGroups:
+                - admissionregistration.k8s.io
+              resources:
+                - mutatingwebhookconfigurations
+                - validatingadmissionpolicies
+                - validatingadmissionpolicybindings
+                - validatingwebhookconfigurations
+              verbs:
+                - '*'
+            - apiGroups:
+                - apiextensions.k8s.io
+              resources:
+                - customresourcedefinitions
+              verbs:
+                - get
+                - list
+                - watch
+            - apiGroups:
+                - apps
+              resources:
+                - daemonsets
+                - deployments
+              verbs:
+                - '*'
+            - apiGroups:
+                - autoscaling
+              resources:
+                - horizontalpodautoscalers
+              verbs:
+                - '*'
+            - apiGroups:
+                - discovery.k8s.io
+              resources:
+                - endpointslices
+              verbs:
+                - get
+                - list
+                - watch
+                - create
+                - update
+                - patch
+                - delete
+            - apiGroups:
+                - k8s.cni.cncf.io
+              resources:
+                - network-attachment-definitions
+              verbs:
+                - '*'
+            - apiGroups:
+                - networking.istio.io
+              resources:
+                - envoyfilters
+              verbs:
+                - '*'
+            - apiGroups:
+                - networking.k8s.io
+              resources:
+                - networkpolicies
+              verbs:
+                - '*'
+            - apiGroups:
+                - sailoperator.io
+              resources:
+                - istiorevisions
+              verbs:
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
+            - apiGroups:
+                - sailoperator.io
+              resources:
+                - istiorevisions/finalizers
+              verbs:
+                - update
+            - apiGroups:
+                - sailoperator.io
+              resources:
+                - istiorevisions/status
+              verbs:
+                - get
+                - patch
+                - update
+            - apiGroups:
+                - sailoperator.io
+              resources:
+                - istiorevisiontags
+              verbs:
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
+            - apiGroups:
+                - sailoperator.io
+              resources:
+                - istiorevisiontags/finalizers
+              verbs:
+                - update
+            - apiGroups:
+                - sailoperator.io
+              resources:
+                - istiorevisiontags/status
+              verbs:
+                - get
+                - patch
+                - update
+            - apiGroups:
+                - sailoperator.io
+              resources:
+                - istiocnis
+              verbs:
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
+            - apiGroups:
+                - sailoperator.io
+              resources:
+                - istiocnis/finalizers
+              verbs:
+                - update
+            - apiGroups:
+                - sailoperator.io
+              resources:
+                - istiocnis/status
+              verbs:
+                - get
+                - patch
+                - update
+            - apiGroups:
+                - sailoperator.io
+              resources:
+                - istios
+              verbs:
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
+            - apiGroups:
+                - sailoperator.io
+              resources:
+                - istios/finalizers
+              verbs:
+                - update
+            - apiGroups:
+                - sailoperator.io
+              resources:
+                - istios/status
+              verbs:
+                - get
+                - patch
+                - update
+            - apiGroups:
+                - sailoperator.io
+              resources:
+                - remoteistios
+              verbs:
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
+            - apiGroups:
+                - sailoperator.io
+              resources:
+                - remoteistios/finalizers
+              verbs:
+                - update
+            - apiGroups:
+                - sailoperator.io
+              resources:
+                - remoteistios/status
+              verbs:
+                - get
+                - patch
+                - update
+            - apiGroups:
+                - policy
+              resources:
+                - poddisruptionbudgets
+              verbs:
+                - '*'
+            - apiGroups:
+                - rbac.authorization.k8s.io
+              resources:
+                - clusterrolebindings
+                - clusterroles
+                - rolebindings
+                - roles
+                - serviceaccount
+              verbs:
+                - '*'
+            - apiGroups:
+                - security.openshift.io
+              resourceNames:
+                - privileged
+              resources:
+                - securitycontextconstraints
+              verbs:
+                - use
+            - apiGroups:
+                - sailoperator.io
+              resources:
+                - ztunnels
+              verbs:
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
+            - apiGroups:
+                - sailoperator.io
+              resources:
+                - ztunnels/finalizers
+              verbs:
+                - update
+            - apiGroups:
+                - sailoperator.io
+              resources:
+                - ztunnels/status
+              verbs:
+                - get
+                - patch
+                - update
+          serviceAccountName: servicemesh-operator2
       deployments:
-      - label:
-          app.kubernetes.io/component: sail-operator
-          app.kubernetes.io/created-by: servicemesh-operator2
-          app.kubernetes.io/instance: servicemesh-operator2
-          app.kubernetes.io/managed-by: helm
-          app.kubernetes.io/name: deployment
-          app.kubernetes.io/part-of: servicemesh-operator2
-          control-plane: servicemesh-operator2
-        name: servicemesh-operator2
-        spec:
-          replicas: 1
-          selector:
-            matchLabels:
-              app.kubernetes.io/created-by: servicemesh-operator2
-              app.kubernetes.io/part-of: servicemesh-operator2
-              control-plane: servicemesh-operator2
-          strategy: {}
-          template:
-            metadata:
-              annotations:
-                kubectl.kubernetes.io/default-container: sail-operator
-              labels:
+        - label:
+            app.kubernetes.io/component: sail-operator
+            app.kubernetes.io/created-by: servicemesh-operator2
+            app.kubernetes.io/instance: servicemesh-operator2
+            app.kubernetes.io/managed-by: helm
+            app.kubernetes.io/name: deployment
+            app.kubernetes.io/part-of: servicemesh-operator2
+            control-plane: servicemesh-operator2
+          name: servicemesh-operator2
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
                 app.kubernetes.io/created-by: servicemesh-operator2
                 app.kubernetes.io/part-of: servicemesh-operator2
                 control-plane: servicemesh-operator2
-            spec:
-              affinity:
-                nodeAffinity:
-                  requiredDuringSchedulingIgnoredDuringExecution:
-                    nodeSelectorTerms:
-                    - matchExpressions:
-                      - key: kubernetes.io/arch
-                        operator: In
-                        values:
-                        - amd64
-                        - arm64
-                        - ppc64le
-                        - s390x
-                      - key: kubernetes.io/os
-                        operator: In
-                        values:
-                        - linux
-              containers:
-              - args:
-                - --health-probe-bind-address=:8081
-                - --metrics-bind-address=:8443
-                - --zap-log-level=info
-                command:
-                - /sail-operator
-                image: build-harbor.alauda.cn/asm/servicemesh-operator2:2.0-latest
-                livenessProbe:
-                  httpGet:
-                    path: /healthz
-                    port: 8081
-                  initialDelaySeconds: 15
-                  periodSeconds: 20
-                name: sail-operator
-                readinessProbe:
-                  httpGet:
-                    path: /readyz
-                    port: 8081
-                  initialDelaySeconds: 5
-                  periodSeconds: 10
-                resources:
-                  limits:
-                    cpu: 500m
-                    memory: 512Mi
-                  requests:
-                    cpu: 10m
-                    memory: 64Mi
+            strategy: {}
+            template:
+              metadata:
+                annotations:
+                  kubectl.kubernetes.io/default-container: sail-operator
+                labels:
+                  app.kubernetes.io/created-by: servicemesh-operator2
+                  app.kubernetes.io/part-of: servicemesh-operator2
+                  control-plane: servicemesh-operator2
+              spec:
+                affinity:
+                  nodeAffinity:
+                    requiredDuringSchedulingIgnoredDuringExecution:
+                      nodeSelectorTerms:
+                        - matchExpressions:
+                            - key: kubernetes.io/arch
+                              operator: In
+                              values:
+                                - amd64
+                                - arm64
+                                - ppc64le
+                                - s390x
+                            - key: kubernetes.io/os
+                              operator: In
+                              values:
+                                - linux
+                containers:
+                  - args:
+                      - --health-probe-bind-address=:8081
+                      - --metrics-bind-address=:8443
+                      - --zap-log-level=info
+                    command:
+                      - /sail-operator
+                    image: build-harbor.alauda.cn/asm/servicemesh-operator2:2.0-latest
+                    livenessProbe:
+                      httpGet:
+                        path: /healthz
+                        port: 8081
+                      initialDelaySeconds: 15
+                      periodSeconds: 20
+                    name: sail-operator
+                    readinessProbe:
+                      httpGet:
+                        path: /readyz
+                        port: 8081
+                      initialDelaySeconds: 5
+                      periodSeconds: 10
+                    resources:
+                      limits:
+                        cpu: 500m
+                        memory: 512Mi
+                      requests:
+                        cpu: 10m
+                        memory: 64Mi
+                    securityContext:
+                      allowPrivilegeEscalation: false
+                      capabilities:
+                        drop:
+                          - ALL
+                      readOnlyRootFilesystem: true
+                    volumeMounts:
+                      - mountPath: /etc/sail-operator
+                        name: operator-config
+                        readOnly: true
                 securityContext:
-                  allowPrivilegeEscalation: false
-                  capabilities:
-                    drop:
-                    - ALL
-                  readOnlyRootFilesystem: true
-                volumeMounts:
-                - mountPath: /etc/sail-operator
-                  name: operator-config
-                  readOnly: true
-              securityContext:
-                runAsNonRoot: true
-              serviceAccountName: servicemesh-operator2
-              terminationGracePeriodSeconds: 10
-              volumes:
-              - downwardAPI:
-                  defaultMode: 420
-                  items:
-                  - fieldRef:
-                      fieldPath: metadata.annotations
-                    path: config.properties
-                name: operator-config
+                  runAsNonRoot: true
+                serviceAccountName: servicemesh-operator2
+                terminationGracePeriodSeconds: 10
+                volumes:
+                  - downwardAPI:
+                      defaultMode: 420
+                      items:
+                        - fieldRef:
+                            fieldPath: metadata.annotations
+                          path: config.properties
+                    name: operator-config
       permissions:
-      - rules:
-        - apiGroups:
-          - ""
-          resources:
-          - configmaps
-          verbs:
-          - get
-          - list
-          - watch
-          - create
-          - update
-          - patch
-          - delete
-        - apiGroups:
-          - coordination.k8s.io
-          resources:
-          - leases
-          verbs:
-          - get
-          - list
-          - watch
-          - create
-          - update
-          - patch
-          - delete
-        - apiGroups:
-          - ""
-          resources:
-          - events
-          verbs:
-          - create
-          - patch
-        serviceAccountName: servicemesh-operator2
+        - rules:
+            - apiGroups:
+                - ""
+              resources:
+                - configmaps
+              verbs:
+                - get
+                - list
+                - watch
+                - create
+                - update
+                - patch
+                - delete
+            - apiGroups:
+                - coordination.k8s.io
+              resources:
+                - leases
+              verbs:
+                - get
+                - list
+                - watch
+                - create
+                - update
+                - patch
+                - delete
+            - apiGroups:
+                - ""
+              resources:
+                - events
+              verbs:
+                - create
+                - patch
+          serviceAccountName: servicemesh-operator2
     strategy: deployment
   installModes:
-  - supported: false
-    type: OwnNamespace
-  - supported: false
-    type: SingleNamespace
-  - supported: false
-    type: MultiNamespace
-  - supported: true
-    type: AllNamespaces
+    - supported: false
+      type: OwnNamespace
+    - supported: false
+      type: SingleNamespace
+    - supported: false
+      type: MultiNamespace
+    - supported: true
+      type: AllNamespaces
   keywords:
-  - istio
-  - servicemesh
-  - envoy
+    - istio
+    - servicemesh
+    - envoy
   links:
-  - name: Istio Project
-    url: https://istio.io
+    - name: Istio Project
+      url: https://istio.io
   maintainers:
-  - email: istio-feedback@redhat.com
-    name: OpenShift Service Mesh Team
+    - email: istio-feedback@redhat.com
+      name: OpenShift Service Mesh Team
   maturity: alpha
   provider:
     name: Alauda

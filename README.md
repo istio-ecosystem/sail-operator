@@ -1,3 +1,8 @@
+[![unit-test](https://github.com/istio-ecosystem/sail-operator/actions/workflows/unit-tests.yaml/badge.svg)](https://github.com/istio-ecosystem/sail-operator/actions/workflows/unit-tests.yaml)
+[![integration test badge](https://github.com/istio-ecosystem/sail-operator/actions/workflows/integration-tests.yaml/badge.svg)](https://github.com/istio-ecosystem/sail-operator/actions/workflows/integration-tests.yaml)
+[![update-deps badge](https://github.com/istio-ecosystem/sail-operator/actions/workflows/update-deps.yaml/badge.svg)](https://github.com/istio-ecosystem/sail-operator/actions/workflows/update-deps.yaml)
+[![nightly-images badge](https://github.com/istio-ecosystem/sail-operator/actions/workflows/nightly-images.yaml/badge.svg)](https://github.com/istio-ecosystem/sail-operator/actions/workflows/nightly-images.yaml)
+
 # Sail Operator
 
 The Sail Operator manages the lifecycle of your [Istio](https://istio.io) control plane. It provides custom resources for you to deploy and manage your control plane components.

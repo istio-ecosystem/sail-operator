@@ -134,6 +134,14 @@ function patchIstioCharts() {
   resourceNames: ["privileged"] \
   verbs: ["use"]/' "${CHARTS_DIR}/cni/templates/clusterrole.yaml"
 
+  # remove CRDs from base chart, since they are installed by OLM, not by the operator
+  rm -f "${CHARTS_DIR}/base/templates/crds.yaml"
+  # <v1.24.0
+  rm -rf "${CHARTS_DIR}/base/crds/"
+  # >=v1.24.0
+  rm -f "${CHARTS_DIR}/base/files/crd-all.gen.yaml"
+
+  # TODO: remove this once we remove support for 1.23
   # remove CRDs from istiod-remote chart, since they are installed by OLM, not by the operator
   rm -f "${CHARTS_DIR}/istiod-remote/templates/crd-all.gen.yaml"
 

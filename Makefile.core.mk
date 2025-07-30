@@ -87,7 +87,7 @@ IMAGE ?= ${HUB}/${IMAGE_BASE}:${TAG}
 # Namespace to deploy the controller in
 NAMESPACE ?= sail-operator
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION ?= 1.29.0
+ENVTEST_K8S_VERSION ?= 1.30.0
 
 ifeq ($(findstring gen-check,$(MAKECMDGOALS)),gen-check)
 FORCE_DOWNLOADS := true
@@ -199,7 +199,7 @@ test.scorecard: operator-sdk ## Run the operator scorecard test.
 	OPERATOR_SDK=$(OPERATOR_SDK) ${SOURCE_DIR}/tests/scorecard-test.sh
 
 .PHONY: test.e2e.ocp
-test.e2e.ocp: ## Run the end-to-end tests against an existing OCP cluster.
+test.e2e.ocp: istioctl ## Run the end-to-end tests against an existing OCP cluster. While running on OCP in downstream you need to set ISTIOCTL_DOWNLOAD_URL to the URL where the istioctl productized binary.
 	GINKGO_FLAGS="$(GINKGO_FLAGS)" ${SOURCE_DIR}/tests/e2e/integ-suite-ocp.sh
 
 .PHONY: test.e2e.kind
@@ -528,15 +528,15 @@ RUNME ?= $(LOCALBIN)/runme
 MISSPELL ?= $(LOCALBIN)/misspell
 
 ## Tool Versions
-OPERATOR_SDK_VERSION ?= v1.39.2
-HELM_VERSION ?= v3.17.3
+OPERATOR_SDK_VERSION ?= v1.41.1
+HELM_VERSION ?= v3.18.4
 CONTROLLER_TOOLS_VERSION ?= v0.18.0
-CONTROLLER_RUNTIME_BRANCH ?= release-0.20
-OPM_VERSION ?= v1.54.0
-OLM_VERSION ?= v0.31.0
-GITLEAKS_VERSION ?= v8.26.0
+CONTROLLER_RUNTIME_BRANCH ?= release-0.21
+OPM_VERSION ?= v1.56.0
+OLM_VERSION ?= v0.32.0
+GITLEAKS_VERSION ?= v8.28.0
 ISTIOCTL_VERSION ?= 1.26.0
-RUNME_VERSION ?= 3.13.2
+RUNME_VERSION ?= 3.15.0
 MISSPELL_VERSION ?= v0.3.4
 
 # GENERATE_RELATED_IMAGES defines whether `spec.relatedImages` is going to be generated or not
@@ -637,6 +637,9 @@ endif
 	$(OPERATOR_SDK) generate kustomize manifests --input-dir=_tmp --output-dir=_tmp
 	mv _tmp/bases/$(OPERATOR_NAME).clusterserviceversion.yaml bundle/manifests/$(OPERATOR_NAME).clusterserviceversion.yaml
 	rm -rf _tmp
+
+	# format the CSV using yq to easily process it later via yq if needed without any format changes
+	yq -i '.' "bundle/manifests/${OPERATOR_NAME}.clusterserviceversion.yaml"
 
 	# check if the only change in the CSV is the createdAt timestamp; if so, revert the change
 	@csvPath="bundle/manifests/${OPERATOR_NAME}.clusterserviceversion.yaml"; \

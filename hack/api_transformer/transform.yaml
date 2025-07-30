@@ -86,7 +86,10 @@ inputFiles:
     replaceFieldTypes:
       "*.Tag": "string"
       CNIConfig.Affinity: "*k8sv1.Affinity"
+      CNIConfig.DaemonSetLabels: "map[string]string"
+      CNIConfig.Env: "map[string]string"
       CNIConfig.PodAnnotations: "map[string]string"
+      CNIConfig.PodLabels: "map[string]string"
       CNIConfig.SeccompProfile: "*k8sv1.SeccompProfile"
       CNIConfig.PullPolicy: "*k8sv1.PullPolicy"
       Values.GatewayClasses: "json.RawMessage"
@@ -162,6 +165,8 @@ inputFiles:
       MeshConfig.DiscoverySelectors: "[]*metav1.LabelSelector"
       ConfigSource.TlsSettings: "*ClientTLSSettings"
       MeshConfig_CA.TlsSettings: "*ClientTLSSettings"
+      MeshConfig_ServiceScopeConfigs.NamespaceSelector: "*metav1.LabelSelector"
+      MeshConfig_ServiceScopeConfigs.ServicesSelector: "*metav1.LabelSelector"
     removeTypes:
     - LabelSelector
     - LabelSelectorRequirement

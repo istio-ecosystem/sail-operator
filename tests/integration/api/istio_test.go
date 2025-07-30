@@ -508,12 +508,7 @@ func deleteAllIstiosAndRevisions(ctx context.Context) {
 		g.Expect(list.Items).To(BeEmpty())
 	}).Should(Succeed())
 
-	Eventually(k8sClient.DeleteAllOf).WithArguments(ctx, &v1.IstioRevision{}).Should(Succeed())
-	Eventually(func(g Gomega) {
-		list := &v1.IstioRevisionList{}
-		g.Expect(k8sClient.List(ctx, list)).To(Succeed())
-		g.Expect(list.Items).To(BeEmpty())
-	}).Should(Succeed())
+	deleteAllIstioRevisions(ctx)
 }
 
 func generateContextName(withWorkloads bool) string {

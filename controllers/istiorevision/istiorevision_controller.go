@@ -38,6 +38,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -86,6 +88,7 @@ func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *ru
 // +kubebuilder:rbac:groups="apps",resources=deployments;daemonsets,verbs="*"
 // +kubebuilder:rbac:groups="admissionregistration.k8s.io",resources=validatingwebhookconfigurations;mutatingwebhookconfigurations,verbs="*"
 // +kubebuilder:rbac:groups="autoscaling",resources=horizontalpodautoscalers,verbs="*"
+// +kubebuilder:rbac:groups="discovery.k8s.io",resources=endpointslices,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="apiextensions.k8s.io",resources=customresourcedefinitions,verbs=get;list;watch
 // +kubebuilder:rbac:groups="k8s.cni.cncf.io",resources=network-attachment-definitions,verbs="*"
 // +kubebuilder:rbac:groups="security.openshift.io",resources=securitycontextconstraints,resourceNames=privileged,verbs=use
@@ -165,26 +168,70 @@ func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevisio
 	}
 
 	values := helm.FromValues(rev.Spec.Values)
-	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev),
-		values, rev.Spec.Namespace, getReleaseName(rev), ownerReference)
+	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev, constants.IstiodChartName),
+		values, rev.Spec.Namespace, getReleaseName(rev, constants.IstiodChartName), &ownerReference)
 	if err != nil {
 		return fmt.Errorf("failed to install/update Helm chart %q: %w", constants.IstiodChartName, err)
+	}
+	if rev.Name == v1.DefaultRevision {
+		_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev, constants.BaseChartName),
+			values, r.Config.OperatorNamespace, getReleaseName(rev, constants.BaseChartName), &ownerReference)
+		if err != nil {
+			return fmt.Errorf("failed to install/update Helm chart %q: %w", constants.BaseChartName, err)
+		}
 	}
 	return nil
 }
 
-func getReleaseName(rev *v1.IstioRevision) string {
-	return fmt.Sprintf("%s-%s", rev.Name, constants.IstiodChartName)
+func getReleaseName(rev *v1.IstioRevision, chartName string) string {
+	return fmt.Sprintf("%s-%s", rev.Name, chartName)
 }
 
-func (r *Reconciler) getChartDir(rev *v1.IstioRevision) string {
-	return path.Join(r.Config.ResourceDirectory, rev.Spec.Version, "charts", constants.IstiodChartName)
+func (r *Reconciler) getChartDir(rev *v1.IstioRevision, chartName string) string {
+	return path.Join(r.Config.ResourceDirectory, rev.Spec.Version, "charts", chartName)
 }
 
 func (r *Reconciler) uninstallHelmCharts(ctx context.Context, rev *v1.IstioRevision) error {
-	if _, err := r.ChartManager.UninstallChart(ctx, getReleaseName(rev), rev.Spec.Namespace); err != nil {
+	if _, err := r.ChartManager.UninstallChart(ctx, getReleaseName(rev, constants.IstiodChartName), rev.Spec.Namespace); err != nil {
 		return fmt.Errorf("failed to uninstall Helm chart %q: %w", constants.IstiodChartName, err)
 	}
+	if rev.Name == v1.DefaultRevision {
+		_, err := r.ChartManager.UninstallChart(ctx, getReleaseName(rev, constants.BaseChartName), r.Config.OperatorNamespace)
+		if err != nil {
+			return fmt.Errorf("failed to uninstall Helm chart %q: %w", constants.BaseChartName, err)
+		}
+	}
+	return nil
+}
+
+func (r *Reconciler) mapEndpointSliceToReconcileRequests(ctx context.Context, obj client.Object) []reconcile.Request {
+	// EndpointSlices may be owned by an Endpoints resource (if mirrored) which is in turn owned
+	// by an IstioRevision, or in the future, EndpointSlices may be owned directly by an IstioRevision.
+
+	controller := metav1.GetControllerOf(obj)
+	if controller == nil {
+		return nil
+	}
+	if controller.APIVersion == v1.GroupVersion.String() && controller.Kind == v1.IstioRevisionKind {
+		return []reconcile.Request{
+			{NamespacedName: types.NamespacedName{Name: controller.Name}},
+		}
+	}
+	if controller.APIVersion == corev1.SchemeGroupVersion.String() && controller.Kind == "Endpoints" {
+		// nolint:staticcheck
+		ep := &corev1.Endpoints{}
+		if err := r.Client.Get(ctx, types.NamespacedName{Namespace: obj.GetNamespace(), Name: controller.Name}, ep); err != nil {
+			return nil
+		}
+
+		controller := metav1.GetControllerOf(ep)
+		if controller != nil && controller.APIVersion == v1.GroupVersion.String() && controller.Kind == v1.IstioRevisionKind {
+			return []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Name: controller.Name}},
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -217,6 +264,10 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	istioCniHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapIstioCniToReconcileRequests))
 
+	// endpointSliceHandler triggers reconciliation if the EndpointSlice is owned directly by an IstioRevision,
+	// or if it's owned by an Endpoints object which in turn is owned by an IstioRevision.
+	endpointSliceHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapEndpointSliceToReconcileRequests))
+
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
 			LogConstructor: func(req *reconcile.Request) logr.Logger {
@@ -235,9 +286,13 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// namespaced resources
 		Watches(&corev1.ConfigMap{}, ownedResourceHandler).
 		Watches(&appsv1.Deployment{}, ownedResourceHandler). // we don't ignore the status here because we use it to calculate the IstioRevision status
-		// nolint:staticcheck
-		Watches(&corev1.Endpoints{}, ownedResourceHandler).
+		// +lint-watches:ignore: Endpoints (older versions of istiod chart create Endpoints for remote installs, but this controller watches EndpointSlices)
+		// +lint-watches:ignore: EndpointSlice (istiod chart creates Endpoints for remote installs, but this controller watches EndpointSlices)
+		Watches(&discoveryv1.EndpointSlice{}, endpointSliceHandler).
 		Watches(&corev1.Service{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
+
+		// +lint-watches:ignore: NetworkPolicy (FIXME: NetworkPolicy has not yet been added upstream, but is WIP)
+		Watches(&networkingv1.NetworkPolicy{}, ownedResourceHandler, builder.WithPredicates(ignoreStatusChange())).
 
 		// We use predicate.IgnoreUpdate() so that we skip the reconciliation when a pull secret is added to the ServiceAccount.
 		// This is necessary so that we don't remove the newly-added secret.
@@ -561,7 +616,7 @@ func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, ns clie
 	return requests
 }
 
-// mapPodToReconcileRequest will collect all referenced revisions from a pod and its namespace and trigger reconciliation
+// mapPodToReconcileRequest will collect all referenced revisions from a pod and trigger reconciliation if there are any
 func (r *Reconciler) mapPodToReconcileRequest(ctx context.Context, pod client.Object) []reconcile.Request {
 	revisionNames := []string{}
 	revisionName := revision.GetInjectedRevisionFromPod(pod.GetAnnotations())
@@ -572,15 +627,6 @@ func (r *Reconciler) mapPodToReconcileRequest(ctx context.Context, pod client.Ob
 		if revisionName != "" {
 			revisionNames = append(revisionNames, revisionName)
 		}
-	}
-	ns := corev1.Namespace{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: pod.GetNamespace()}, &ns)
-	if err != nil {
-		return nil
-	}
-	revisionName = revision.GetReferencedRevisionFromNamespace(ns.GetLabels())
-	if revisionName != "" {
-		revisionNames = append(revisionNames, revisionName)
 	}
 
 	if len(revisionNames) > 0 {

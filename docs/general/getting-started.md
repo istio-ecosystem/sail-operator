@@ -86,7 +86,7 @@ If you're not using OpenShift or simply want to install from source, follow the 
 
 ## Migrating from Istio in-cluster Operator
 
-If you're planning to migrate from the [now-deprecated Istio in-cluster operator](https://istio.io/latest/blog/2024/in-cluster-operator-deprecation-announcement/) to the Sail Operator, you will have to make some adjustments to your Kubernetes Resources. While direct usage of the IstioOperator resource is not possible with the Sail Operator, you can very easily transfer all your settings to the respective Sail Operator APIs. As shown in the [Concepts](../README.md#concepts) section, every API resource has a `spec.values` field which accepts the same input as the `IstioOperator`'s `spec.values` field. Also, the [Istio resource](../README.md#istio-resource) provides a `spec.meshConfig` field, just like IstioOperator does.
+If you're planning to migrate from the [now-deprecated Istio in-cluster operator](https://istio.io/latest/blog/2024/in-cluster-operator-deprecation-announcement/) to the Sail Operator, you will have to make some adjustments to your Kubernetes Resources. While direct usage of the IstioOperator resource is not possible with the Sail Operator, you can very easily transfer all your settings to the respective Sail Operator APIs. As shown in the [Concepts](../README.md#concepts) section, every API resource has a `spec.values` field which accepts the same input as the `IstioOperator`'s `spec.values` field. Additionally, the [Istio resource](../README.md#istio-resource) provides a field for mesh configuration that accepts the same input as IstioOperator's `spec.meshConfig` field, though it is now located under spec.values (i.e., at spec.values.meshConfig).
 
 Another important distinction between the two operators is that Sail Operator can manage and install different versions of Istio and its components, whereas the in-cluster operator always installs the version of Istio that it was released with. This makes managing control plane upgrades much easier, as the operator update is disconnected from the control plane update.
 
@@ -109,9 +109,9 @@ becomes
 apiVersion: sailoperator.io/v1
 kind: Istio
 spec:
-  meshConfig:
-    accessLogFile: /dev/stdout
   values:
+    meshConfig:
+      accessLogFile: /dev/stdout
     pilot:
       traceSampling: 0.1
   version: v1.24.3

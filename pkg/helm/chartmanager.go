@@ -63,7 +63,7 @@ func (h *ChartManager) newActionConfig(ctx context.Context, namespace string) (*
 // UpgradeOrInstallChart upgrades a chart in cluster or installs it new if it does not already exist
 func (h *ChartManager) UpgradeOrInstallChart(
 	ctx context.Context, chartDir string, values Values,
-	namespace, releaseName string, ownerReference metav1.OwnerReference,
+	namespace, releaseName string, ownerReference *metav1.OwnerReference,
 ) (*release.Release, error) {
 	log := logf.FromContext(ctx)
 
@@ -94,8 +94,10 @@ func (h *ChartManager) UpgradeOrInstallChart(
 			return nil, fmt.Errorf("failed to roll back helm release %s: %w", releaseName, err)
 		}
 		releaseExists = true
-	} else if rel.Info.Status == release.StatusPendingInstall || (rel.Info.Status == release.StatusFailed && rel.Version <= 1) {
-		log.V(2).Info("Performing helm uninstall", "release", releaseName)
+	} else if rel.Info.Status == release.StatusPendingInstall ||
+		rel.Info.Status == release.StatusUninstalling ||
+		(rel.Info.Status == release.StatusFailed && rel.Version <= 1) {
+		log.V(2).Info("Performing helm uninstall", "release", releaseName, "status", rel.Info.Status)
 		if _, err := action.NewUninstall(cfg).Run(releaseName); err != nil {
 			return nil, fmt.Errorf("failed to uninstall failed helm release %s: %w", releaseName, err)
 		}
@@ -110,7 +112,7 @@ func (h *ChartManager) UpgradeOrInstallChart(
 		log.V(2).Info("Performing helm upgrade", "chartName", chart.Name())
 
 		updateAction := action.NewUpgrade(cfg)
-		updateAction.PostRenderer = NewHelmPostRenderer(ownerReference, "")
+		updateAction.PostRenderer = NewHelmPostRenderer(ownerReference, "", true)
 		updateAction.MaxHistory = 1
 		updateAction.SkipCRDs = true
 
@@ -122,7 +124,7 @@ func (h *ChartManager) UpgradeOrInstallChart(
 		log.V(2).Info("Performing helm install", "chartName", chart.Name())
 
 		installAction := action.NewInstall(cfg)
-		installAction.PostRenderer = NewHelmPostRenderer(ownerReference, "")
+		installAction.PostRenderer = NewHelmPostRenderer(ownerReference, "", false)
 		installAction.Namespace = namespace
 		installAction.ReleaseName = releaseName
 		installAction.SkipCRDs = true
@@ -159,4 +161,15 @@ func getRelease(cfg *action.Configuration, releaseName string) (*release.Release
 		return nil, fmt.Errorf("failed to get helm release %s: %w", releaseName, err)
 	}
 	return rel, nil
+}
+
+func (h *ChartManager) ListReleases(ctx context.Context) ([]*release.Release, error) {
+	cfg, err := h.newActionConfig(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+
+	listAction := action.NewList(cfg)
+	listAction.AllNamespaces = true
+	return listAction.Run()
 }

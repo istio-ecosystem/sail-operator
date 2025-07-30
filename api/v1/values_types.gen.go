@@ -106,10 +106,22 @@ type CNIConfig struct {
 	ExcludeNamespaces []string `json:"excludeNamespaces,omitempty"`
 	// K8s affinity to set on the istio-cni Pods. Can be used to exclude istio-cni from being scheduled on specified nodes.
 	Affinity *k8sv1.Affinity `json:"affinity,omitempty"`
+	// Environment variables passed to the CNI container.
+	//
+	// Examples:
+	// env:
+	//
+	//	ENV_VAR_1: value1
+	//	ENV_VAR_2: value2
+	Env map[string]string `json:"env,omitempty"`
+	// Additional labels to apply to the istio-cni DaemonSet.
+	DaemonSetLabels map[string]string `json:"daemonSetLabels,omitempty"`
 	// Additional annotations to apply to the istio-cni Pods.
 	//
 	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
+	// Additional labels to apply to the istio-cni Pods.
+	PodLabels map[string]string `json:"podLabels,omitempty"`
 	// PodSecurityPolicy cluster role. No longer used anywhere.
 	PspClusterRole *string `json:"psp_cluster_role,omitempty"`
 
@@ -423,7 +435,11 @@ type GlobalConfig struct {
 	// Specifies how waypoints are configured within Istio.
 	Waypoint *WaypointConfig `json:"waypoint,omitempty"`
 	// Select a custom name for istiod's CA Root Cert ConfigMap.
-	TrustBundleName *string `json:"trustBundleName,omitempty"` // The next available key is 74
+	TrustBundleName *string `json:"trustBundleName,omitempty"`
+	// Specifies whether native nftables rules should be used instead of iptables rules for traffic redirection.
+	NativeNftables *bool `json:"nativeNftables,omitempty"`
+	// Settings related to Kubernetes NetworkPolicy.
+	NetworkPolicy *NetworkPolicyConfig `json:"networkPolicy,omitempty"` // The next available key is 76
 
 }
 
@@ -912,6 +928,9 @@ type IstiodRemoteConfig struct {
 	InjectionCABundle *string `json:"injectionCABundle,omitempty"`
 	// Indicates if this cluster/install should consume a "remote" istiod instance,
 	Enabled *bool `json:"enabled,omitempty"`
+	// If `true`, indicates that this cluster/install should consume a "local istiod" installation,
+	// local istiod inject sidecars
+	EnabledLocalInjectorIstiod *bool `json:"enabledLocalInjectorIstiod,omitempty"`
 }
 
 type Values struct {
@@ -988,6 +1007,12 @@ type WaypointConfig struct {
 	Toleration []*k8sv1.Toleration `json:"toleration,omitempty"`
 }
 
+// Configuration for NetworkPolicy
+type NetworkPolicyConfig struct {
+	// Controls whether default NetworkPolicy resources will be created.
+	Enabled *bool `json:"enabled,omitempty"`
+}
+
 const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\n" +
 	"\x1bpkg/apis/values_types.proto\x12\x17istio.operator.v1alpha1\x1a\x19google/protobuf/any.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\"k8s.io/api/core/v1/generated.proto\x1a4k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto\"h\n" +
@@ -996,7 +1021,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x05amd64\x18\x01 \x01(\rR\x05amd64\x12\x18\n" +
 	"\appc64le\x18\x02 \x01(\rR\appc64le\x12\x14\n" +
 	"\x05s390x\x18\x03 \x01(\rR\x05s390x\x12\x14\n" +
-	"\x05arm64\x18\x04 \x01(\rR\x05arm64\"\xeb\t\n" +
+	"\x05arm64\x18\x04 \x01(\rR\x05arm64\"\x90\v\n" +
 	"\tCNIConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12\x10\n" +
 	"\x03hub\x18\x02 \x01(\tR\x03hub\x12(\n" +
@@ -1013,9 +1038,12 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x0fcniConfFileName\x18\b \x01(\tR\x0fcniConfFileName\x12 \n" +
 	"\vcniNetnsDir\x18\x1f \x01(\tR\vcniNetnsDir\x12,\n" +
 	"\x11excludeNamespaces\x18\t \x03(\tR\x11excludeNamespaces\x128\n" +
-	"\baffinity\x18\x14 \x01(\v2\x1c.k8s.io.api.core.v1.AffinityR\baffinity\x12C\n" +
+	"\baffinity\x18\x14 \x01(\v2\x1c.k8s.io.api.core.v1.AffinityR\baffinity\x12)\n" +
+	"\x03env\x18  \x01(\v2\x17.google.protobuf.StructR\x03env\x12A\n" +
+	"\x0fdaemonSetLabels\x18! \x01(\v2\x17.google.protobuf.StructR\x0fdaemonSetLabels\x12C\n" +
 	"\x0epodAnnotations\x18\n" +
-	" \x01(\v2\x17.google.protobuf.StructB\x02\x18\x01R\x0epodAnnotations\x12(\n" +
+	" \x01(\v2\x17.google.protobuf.StructB\x02\x18\x01R\x0epodAnnotations\x125\n" +
+	"\tpodLabels\x18\" \x01(\v2\x17.google.protobuf.StructR\tpodLabels\x12(\n" +
 	"\x10psp_cluster_role\x18\v \x01(\tR\x0epspClusterRole\x12\x1e\n" +
 	"\blogLevel\x18\f \x01(\tB\x02\x18\x01R\blogLevel\x12F\n" +
 	"\alogging\x18\x19 \x01(\v2,.istio.operator.v1alpha1.GlobalLoggingConfigR\alogging\x12@\n" +
@@ -1121,7 +1149,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x14istio_ingressgateway\x18\x04 \x01(\v2-.istio.operator.v1alpha1.IngressGatewayConfigR\x14istio-ingressgateway\x12@\n" +
 	"\x0fsecurityContext\x18\n" +
 	" \x01(\v2\x16.google.protobuf.ValueR\x0fsecurityContext\x12>\n" +
-	"\x0eseccompProfile\x18\f \x01(\v2\x16.google.protobuf.ValueR\x0eseccompProfile\"\xc7\x12\n" +
+	"\x0eseccompProfile\x18\f \x01(\v2\x16.google.protobuf.ValueR\x0eseccompProfile\"\xdf\x13\n" +
 	"\fGlobalConfig\x12;\n" +
 	"\x04arch\x18\x01 \x01(\v2#.istio.operator.v1alpha1.ArchConfigB\x02\x18\x01R\x04arch\x12 \n" +
 	"\vcertSigners\x18D \x03(\tR\vcertSigners\x12F\n" +
@@ -1169,7 +1197,9 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"ipFamilies\x12&\n" +
 	"\x0eipFamilyPolicy\x18G \x01(\tR\x0eipFamilyPolicy\x12C\n" +
 	"\bwaypoint\x18H \x01(\v2'.istio.operator.v1alpha1.WaypointConfigR\bwaypoint\x12(\n" +
-	"\x0ftrustBundleName\x18I \x01(\tR\x0ftrustBundleName\"-\n" +
+	"\x0ftrustBundleName\x18I \x01(\tR\x0ftrustBundleName\x12B\n" +
+	"\x0enativeNftables\x18J \x01(\v2\x1a.google.protobuf.BoolValueR\x0enativeNftables\x12R\n" +
+	"\rnetworkPolicy\x18K \x01(\v2,.istio.operator.v1alpha1.NetworkPolicyConfigR\rnetworkPolicy\"-\n" +
 	"\tSTSConfig\x12 \n" +
 	"\vservicePort\x18\x01 \x01(\rR\vservicePort\"R\n" +
 	"\fIstiodConfig\x12B\n" +
@@ -1383,12 +1413,13 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\rvalidationURL\x18\x02 \x01(\tR\rvalidationURL\x12P\n" +
 	"\x15enableIstioConfigCRDs\x18\x03 \x01(\v2\x1a.google.protobuf.BoolValueR\x15enableIstioConfigCRDs\x12D\n" +
 	"\x0fvalidateGateway\x18\x04 \x01(\v2\x1a.google.protobuf.BoolValueR\x0fvalidateGateway\x12.\n" +
-	"\x12validationCABundle\x18\x05 \x01(\tR\x12validationCABundle\"\xc2\x01\n" +
+	"\x12validationCABundle\x18\x05 \x01(\tR\x12validationCABundle\"\x9e\x02\n" +
 	"\x12IstiodRemoteConfig\x12\"\n" +
 	"\finjectionURL\x18\x01 \x01(\tR\finjectionURL\x12$\n" +
 	"\rinjectionPath\x18\x02 \x01(\tR\rinjectionPath\x12,\n" +
 	"\x11injectionCABundle\x18\x03 \x01(\tR\x11injectionCABundle\x124\n" +
-	"\aenabled\x18\x05 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\"\xd7\b\n" +
+	"\aenabled\x18\x05 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12Z\n" +
+	"\x1aenabledLocalInjectorIstiod\x18\x06 \x01(\v2\x1a.google.protobuf.BoolValueR\x1aenabledLocalInjectorIstiod\"\xd7\b\n" +
 	"\x06Values\x124\n" +
 	"\x03cni\x18\x02 \x01(\v2\".istio.operator.v1alpha1.CNIConfigR\x03cni\x12C\n" +
 	"\bgateways\x18\x05 \x01(\v2'.istio.operator.v1alpha1.GatewaysConfigR\bgateways\x12=\n" +
@@ -1425,7 +1456,9 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\fnodeSelector\x18\x04 \x01(\v2 .k8s.io.api.core.v1.NodeSelectorR\fnodeSelector\x12>\n" +
 	"\n" +
 	"toleration\x18\x05 \x03(\v2\x1e.k8s.io.api.core.v1.TolerationR\n" +
-	"toleration*J\n" +
+	"toleration\"K\n" +
+	"\x13NetworkPolicyConfig\x124\n" +
+	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled*J\n" +
 	"\x15ingressControllerMode\x12\x0f\n" +
 	"\vUNSPECIFIED\x10\x00\x12\v\n" +
 	"\aDEFAULT\x10\x01\x12\n" +
@@ -1567,6 +1600,16 @@ const (
 	MeshConfigInboundTrafficPolicyModePassthrough MeshConfigInboundTrafficPolicyMode = "PASSTHROUGH"
 	// inbound traffic will be sent to the destinations listening on localhost.
 	MeshConfigInboundTrafficPolicyModeLocalhost MeshConfigInboundTrafficPolicyMode = "LOCALHOST"
+)
+
+// The scope of the matching service. Used to determine if the service is available locally
+// (cluster local) or globally (mesh-wide).
+// +kubebuilder:validation:Enum=LOCAL;GLOBAL
+type MeshConfigServiceScopeConfigsScope string
+
+const (
+	MeshConfigServiceScopeConfigsScopeLocal  MeshConfigServiceScopeConfigsScope = "LOCAL"
+	MeshConfigServiceScopeConfigsScopeGlobal MeshConfigServiceScopeConfigsScope = "GLOBAL"
 )
 
 // TraceContext selects the context propagation headers used for
@@ -1857,6 +1900,8 @@ type MeshConfig struct {
 	// +hidefromdoc
 	// Settings to be applied to select services.
 	ServiceSettings []*MeshConfigServiceSettings `json:"serviceSettings,omitempty"`
+	// Scope to be applied to select services.
+	ServiceScopeConfigs []*MeshConfigServiceScopeConfigs `json:"serviceScopeConfigs,omitempty"`
 	// If enabled, Istio agent will merge metrics exposed by the application with metrics from Envoy
 	// and Istio agent. The sidecar injection will replace `prometheus.io` annotations present on the pod
 	// and redirect them towards Istio agent, which will then merge metrics of from the application with Istio metrics.
@@ -2068,6 +2113,14 @@ type MeshConfigCertificateData struct {
 //   - "bar.baz.svc.cluster.local"
 //
 // ```
+//
+// When in ambient mode, if ServiceSettings are defined they will be considered in addition to the
+// ServiceScopeConfigs. If a service is defined by ServiceSetting to be cluster local and matches a
+// global service scope selector, the service will be considered cluster local. If a service is
+// considered global by ServiceSettings and does not match a global service scope selector
+// the serive will be considered local. Local scope takes precedence over global scope. Since
+// ServiceScopeConfigs is local by default, all services are considered local unless it is considered
+// global by ServiceSettings AND ServiceScopeConfigs.
 type MeshConfigServiceSettings struct {
 	// The settings to apply to the selected services.
 	Settings *MeshConfigServiceSettingsSettings `json:"settings,omitempty"`
@@ -2076,6 +2129,43 @@ type MeshConfigServiceSettings struct {
 	//
 	// For example: foo.bar.svc.cluster.local, *.baz.svc.cluster.local
 	Hosts []string `json:"hosts,omitempty"`
+}
+
+// Configuration for ambient mode multicluster service scope. This setting allows mesh administrators
+// to define the criteria by which the cluster's control plane determines which services in other
+// clusters in the mesh are treated as global (accessible across multiple clusters) versus local
+// (restricted to a single cluster). The configuration can be applied to services based on namespace
+// and/or other matching criteria. This is particularly  useful in multicluster service mesh deployments
+// to control service visibility and access across clusters. This API is not intended to enforce
+// security policies. Resources like DestinationRules should be used to enforce authorization policies.
+// If a service matches a global service scope selector, the service's endpoints will be globally
+// exposed. If a service is locally scoped, its endpoints will only be exposed to local cluster
+// services.
+//
+// For example, the following configures the scope of all services with the "istio.io/global" label
+// in matching namespaces to be available globally:
+//
+// ```yaml
+// serviceScopeConfigs:
+//   - namespacesSelector:
+//     matchExpressions:
+//   - key: istio.io/global
+//     operator: In
+//     values: [true]
+//     servicesSelector:
+//     matchExpressions:
+//   - key: istio.io/global
+//     operator: Exists
+//     scope: GLOBAL
+//
+// ```
+type MeshConfigServiceScopeConfigs struct {
+	// Match expression for namespaces.
+	NamespaceSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
+	// Match expression for serivces.
+	ServicesSelector *metav1.LabelSelector `json:"servicesSelector,omitempty"`
+	// Specifics the available scope for matching services.
+	Scope MeshConfigServiceScopeConfigsScope `json:"scope,omitempty"`
 }
 
 type MeshConfigCA struct {
@@ -2100,7 +2190,7 @@ type MeshConfigCA struct {
 	IstiodSide *bool `json:"istiodSide,omitempty"`
 }
 
-// +kubebuilder:validation:XValidation:message="At most one of [envoyExtAuthzHttp envoyExtAuthzGrpc zipkin lightstep datadog stackdriver opencensus skywalking opentelemetry prometheus envoyFileAccessLog envoyHttpAls envoyTcpAls envoyOtelAls] should be set",rule="(has(self.envoyExtAuthzHttp)?1:0) + (has(self.envoyExtAuthzGrpc)?1:0) + (has(self.zipkin)?1:0) + (has(self.lightstep)?1:0) + (has(self.datadog)?1:0) + (has(self.stackdriver)?1:0) + (has(self.opencensus)?1:0) + (has(self.skywalking)?1:0) + (has(self.opentelemetry)?1:0) + (has(self.prometheus)?1:0) + (has(self.envoyFileAccessLog)?1:0) + (has(self.envoyHttpAls)?1:0) + (has(self.envoyTcpAls)?1:0) + (has(self.envoyOtelAls)?1:0) <= 1"
+// +kubebuilder:validation:XValidation:message="At most one of [envoyExtAuthzHttp envoyExtAuthzGrpc zipkin lightstep datadog stackdriver opencensus skywalking opentelemetry prometheus envoyFileAccessLog envoyHttpAls envoyTcpAls envoyOtelAls sds] should be set",rule="(has(self.envoyExtAuthzHttp)?1:0) + (has(self.envoyExtAuthzGrpc)?1:0) + (has(self.zipkin)?1:0) + (has(self.lightstep)?1:0) + (has(self.datadog)?1:0) + (has(self.stackdriver)?1:0) + (has(self.opencensus)?1:0) + (has(self.skywalking)?1:0) + (has(self.opentelemetry)?1:0) + (has(self.prometheus)?1:0) + (has(self.envoyFileAccessLog)?1:0) + (has(self.envoyHttpAls)?1:0) + (has(self.envoyTcpAls)?1:0) + (has(self.envoyOtelAls)?1:0) + (has(self.sds)?1:0) <= 1"
 type MeshConfigExtensionProvider struct {
 	// REQUIRED. A unique name identifying the extension provider.
 	// +kubebuilder:validation:Required
@@ -2156,6 +2246,12 @@ type MeshConfigExtensionProvider struct {
 
 	// Configures an Envoy Open Telemetry Access Logging Service provider.
 	EnvoyOtelAls *MeshConfigExtensionProviderEnvoyOpenTelemetryLogProvider `json:"envoyOtelAls,omitempty"`
+
+	// Configures an Extension Provider for SDS. This can be used to
+	// configure an external SDS service to supply secrets for certain Gateways for example.
+	// This is useful for scenarios where the secrets are stored in an external secret store like Vault.
+	// The secret should be configured with sds://provider-name format.
+	Sds *MeshConfigExtensionProviderSDSProvider `json:"sds,omitempty"`
 }
 
 // Holds the name references to the providers that will be used by default
@@ -2767,6 +2863,24 @@ type MeshConfigExtensionProviderOpenTelemetryTracingProvider struct {
 	DynatraceSampler *MeshConfigExtensionProviderOpenTelemetryTracingProviderDynatraceSampler `json:"dynatraceSampler,omitempty"`
 }
 
+// Defines configuration for an Gateway SDS provider.
+type MeshConfigExtensionProviderSDSProvider struct {
+	// REQUIRED. Specifies the name of the provider. This should be used to configure the Gateway SDS.
+	// +kubebuilder:validation:Required
+	Name *string `json:"name"`
+	// REQUIRED. Specifies the service that implements the  SDS service.
+	// The format is `[<Namespace>/]<Hostname>`. The specification of `<Namespace>` is required only when it is insufficient
+	// to unambiguously resolve a service in the service registry. The `<Hostname>` is a fully qualified host name of a
+	// service defined by the Kubernetes service or ServiceEntry.
+	//
+	// Example: "gateway-sds.foo.svc.cluster.local" or "bar/gateway-sds.example.com".
+	// +kubebuilder:validation:Required
+	Service *string `json:"service"`
+	// REQUIRED. Specifies the port of the service.
+	// +kubebuilder:validation:Required
+	Port *uint32 `json:"port"`
+}
+
 // Defines configuration for an HTTP service that can be used by an Extension Provider.
 // that does communication via HTTP.
 type MeshConfigExtensionProviderHttpService struct {
@@ -2943,7 +3057,7 @@ type MeshConfigExtensionProviderResourceDetectorsDynatraceResourceDetector struc
 
 const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\n" +
-	"\x1amesh/v1alpha1/config.proto\x12\x13istio.mesh.v1alpha1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19mesh/v1alpha1/proxy.proto\x1a*networking/v1alpha3/destination_rule.proto\x1a)networking/v1alpha3/virtual_service.proto\"\xebh\n" +
+	"\x1amesh/v1alpha1/config.proto\x12\x13istio.mesh.v1alpha1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19mesh/v1alpha1/proxy.proto\x1a*networking/v1alpha3/destination_rule.proto\x1a)networking/v1alpha3/virtual_service.proto\"\xa5m\n" +
 	"\n" +
 	"MeshConfig\x12*\n" +
 	"\x11proxy_listen_port\x18\x04 \x01(\x05R\x0fproxyListenPort\x129\n" +
@@ -2980,7 +3094,8 @@ const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\x19inbound_cluster_stat_name\x18, \x01(\tR\x16inboundClusterStatName\x12;\n" +
 	"\x1aoutbound_cluster_stat_name\x18- \x01(\tR\x17outboundClusterStatName\x12H\n" +
 	"\fcertificates\x18/ \x03(\v2 .istio.mesh.v1alpha1.CertificateB\x02\x18\x01R\fcertificates\x12Z\n" +
-	"\x10service_settings\x182 \x03(\v2/.istio.mesh.v1alpha1.MeshConfig.ServiceSettingsR\x0fserviceSettings\x12R\n" +
+	"\x10service_settings\x182 \x03(\v2/.istio.mesh.v1alpha1.MeshConfig.ServiceSettingsR\x0fserviceSettings\x12g\n" +
+	"\x15service_scope_configs\x18C \x03(\v23.istio.mesh.v1alpha1.MeshConfig.ServiceScopeConfigsR\x13serviceScopeConfigs\x12R\n" +
 	"\x17enable_prometheus_merge\x183 \x01(\v2\x1a.google.protobuf.BoolValueR\x15enablePrometheusMerge\x12_\n" +
 	"\x1cverify_certificate_at_client\x186 \x01(\v2\x1a.google.protobuf.BoolValueB\x02\x18\x01R\x19verifyCertificateAtClient\x122\n" +
 	"\x02ca\x187 \x01(\v2\".istio.mesh.v1alpha1.MeshConfig.CAR\x02ca\x12b\n" +
@@ -3011,13 +3126,21 @@ const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\bsettings\x18\x01 \x01(\v28.istio.mesh.v1alpha1.MeshConfig.ServiceSettings.SettingsR\bsettings\x12\x14\n" +
 	"\x05hosts\x18\x02 \x03(\tR\x05hosts\x1a/\n" +
 	"\bSettings\x12#\n" +
-	"\rcluster_local\x18\x01 \x01(\bR\fclusterLocal\x1a\xd4\x01\n" +
+	"\rcluster_local\x18\x01 \x01(\bR\fclusterLocal\x1a\xaa\x02\n" +
+	"\x13ServiceScopeConfigs\x12Q\n" +
+	"\x12namespace_selector\x18\x01 \x01(\v2\".istio.mesh.v1alpha1.LabelSelectorR\x11namespaceSelector\x12O\n" +
+	"\x11services_selector\x18\x02 \x01(\v2\".istio.mesh.v1alpha1.LabelSelectorR\x10servicesSelector\x12O\n" +
+	"\x05scope\x18\x03 \x01(\x0e29.istio.mesh.v1alpha1.MeshConfig.ServiceScopeConfigs.ScopeR\x05scope\"\x1e\n" +
+	"\x05Scope\x12\t\n" +
+	"\x05LOCAL\x10\x00\x12\n" +
+	"\n" +
+	"\x06GLOBAL\x10\x01\x1a\xd4\x01\n" +
 	"\x02CA\x12\x18\n" +
 	"\aaddress\x18\x01 \x01(\tR\aaddress\x12O\n" +
 	"\ftls_settings\x18\x02 \x01(\v2,.istio.networking.v1alpha3.ClientTLSSettingsR\vtlsSettings\x12B\n" +
 	"\x0frequest_timeout\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\x0erequestTimeout\x12\x1f\n" +
 	"\vistiod_side\x18\x04 \x01(\bR\n" +
-	"istiodSide\x1a\xcc=\n" +
+	"istiodSide\x1a\xf0>\n" +
 	"\x11ExtensionProvider\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x8b\x01\n" +
 	"\x14envoy_ext_authz_http\x18\x02 \x01(\v2X.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyExternalAuthorizationHttpProviderH\x00R\x11envoyExtAuthzHttp\x12\x8b\x01\n" +
@@ -3040,7 +3163,8 @@ const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\x15envoy_file_access_log\x18\v \x01(\v2L.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyFileAccessLogProviderH\x00R\x12envoyFileAccessLog\x12t\n" +
 	"\x0eenvoy_http_als\x18\f \x01(\v2L.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyHttpGrpcV3LogProviderH\x00R\fenvoyHttpAls\x12q\n" +
 	"\renvoy_tcp_als\x18\r \x01(\v2K.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyTcpGrpcV3LogProviderH\x00R\venvoyTcpAls\x12w\n" +
-	"\x0eenvoy_otel_als\x18\x0e \x01(\v2O.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyOpenTelemetryLogProviderH\x00R\fenvoyOtelAls\x1a\xab\x01\n" +
+	"\x0eenvoy_otel_als\x18\x0e \x01(\v2O.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyOpenTelemetryLogProviderH\x00R\fenvoyOtelAls\x12Q\n" +
+	"\x03sds\x18\x10 \x01(\v2=.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.SDSProviderH\x00R\x03sds\x1a\xab\x01\n" +
 	"%EnvoyExternalAuthorizationRequestBody\x12*\n" +
 	"\x11max_request_bytes\x18\x01 \x01(\rR\x0fmaxRequestBytes\x122\n" +
 	"\x15allow_partial_message\x18\x02 \x01(\bR\x13allowPartialMessage\x12\"\n" +
@@ -3167,7 +3291,11 @@ const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\x04port\x18\x02 \x01(\rR\x04port\x12Q\n" +
 	"\x04http\x18\x03 \x01(\v2=.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.HttpServiceR\x04httpB\n" +
 	"\n" +
-	"\bsampling\x1a\xae\x01\n" +
+	"\bsampling\x1aO\n" +
+	"\vSDSProvider\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
+	"\aservice\x18\x02 \x01(\tR\aservice\x12\x12\n" +
+	"\x04port\x18\x03 \x01(\rR\x04port\x1a\xae\x01\n" +
 	"\vHttpService\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x123\n" +
 	"\atimeout\x18\x02 \x01(\v2\x19.google.protobuf.DurationR\atimeout\x12V\n" +
@@ -3818,7 +3946,7 @@ type MeshConfigProxyConfig struct {
 	// ```yaml
 	// proxyHeaders:
 	//
-	//	perserveHttp1HeaderCase: true
+	//	preserveHttp1HeaderCase: true
 	//
 	// ```
 	//
@@ -4051,6 +4179,15 @@ type ProxyConfigProxyHeaders struct {
 	// requests and automatically normalize headers to lowercase, ensuring compliance with HTTP/2
 	// standards.
 	PreserveHttp1HeaderCase *bool `json:"preserveHttp1HeaderCase,omitempty"`
+	// Controls the `X-Forwarded-Host` header. If enabled, the `X-Forwarded-Host` header is appended
+	// with the original host when it is rewritten.
+	// This header is disabled by default.
+	XForwardedHost *ProxyConfigProxyHeadersXForwardedHost `json:"xForwardedHost,omitempty"`
+	// Controls the `X-Forwarded-Port` header. If enabled, the `X-Forwarded-Port` header is header with the port value
+	// client used to connect to Envoy. It will be ignored if the “x-forwarded-port“ header has been set by any
+	// trusted proxy in front of Envoy.
+	// This header is disabled by default.
+	XForwardedPort *ProxyConfigProxyHeadersXForwardedPort `json:"xForwardedPort,omitempty"`
 }
 
 type ProxyConfigProxyHeadersServer struct {
@@ -4065,6 +4202,14 @@ type ProxyConfigProxyHeadersRequestId struct {
 
 type ProxyConfigProxyHeadersAttemptCount struct {
 	Disabled *bool `json:"disabled,omitempty"`
+}
+
+type ProxyConfigProxyHeadersXForwardedHost struct {
+	Enabled *bool `json:"enabled,omitempty"`
+}
+
+type ProxyConfigProxyHeadersXForwardedPort struct {
+	Enabled *bool `json:"enabled,omitempty"`
 }
 
 type ProxyConfigProxyHeadersEnvoyDebugHeaders struct {
@@ -4169,7 +4314,7 @@ const fileMeshV1alpha1ProxyProtoRawDesc = "" +
 	"poll_delay\x18\x01 \x01(\v2\x19.google.protobuf.DurationR\tpollDelay\x126\n" +
 	"\bfallback\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\bfallbackB\n" +
 	"\n" +
-	"\bprovider\"\xc3#\n" +
+	"\bprovider\"\xa3&\n" +
 	"\vProxyConfig\x12\x1f\n" +
 	"\vconfig_path\x18\x01 \x01(\tR\n" +
 	"configPath\x12\x1f\n" +
@@ -4220,7 +4365,7 @@ const fileMeshV1alpha1ProxyProtoRawDesc = "" +
 	"\x11ProxyStatsMatcher\x12-\n" +
 	"\x12inclusion_prefixes\x18\x01 \x03(\tR\x11inclusionPrefixes\x12-\n" +
 	"\x12inclusion_suffixes\x18\x02 \x03(\tR\x11inclusionSuffixes\x12+\n" +
-	"\x11inclusion_regexps\x18\x03 \x03(\tR\x10inclusionRegexps\x1a\xc5\f\n" +
+	"\x11inclusion_regexps\x18\x03 \x03(\tR\x10inclusionRegexps\x1a\xa5\x0f\n" +
 	"\fProxyHeaders\x12a\n" +
 	"\x15forwarded_client_cert\x18\x01 \x01(\x0e2-.istio.mesh.v1alpha1.ForwardClientCertDetailsR\x13forwardedClientCert\x12\x8f\x01\n" +
 	"\x1fset_current_client_cert_details\x18\a \x01(\v2I.istio.mesh.v1alpha1.ProxyConfig.ProxyHeaders.SetCurrentClientCertDetailsR\x1bsetCurrentClientCertDetails\x12V\n" +
@@ -4230,14 +4375,20 @@ const fileMeshV1alpha1ProxyProtoRawDesc = "" +
 	"\rattempt_count\x18\x04 \x01(\v2:.istio.mesh.v1alpha1.ProxyConfig.ProxyHeaders.AttemptCountR\fattemptCount\x12o\n" +
 	"\x13envoy_debug_headers\x18\x05 \x01(\v2?.istio.mesh.v1alpha1.ProxyConfig.ProxyHeaders.EnvoyDebugHeadersR\x11envoyDebugHeaders\x12\x81\x01\n" +
 	"\x19metadata_exchange_headers\x18\x06 \x01(\v2E.istio.mesh.v1alpha1.ProxyConfig.ProxyHeaders.MetadataExchangeHeadersR\x17metadataExchangeHeaders\x12W\n" +
-	"\x1apreserve_http1_header_case\x18( \x01(\v2\x1a.google.protobuf.BoolValueR\x17preserveHttp1HeaderCase\x1aV\n" +
+	"\x1apreserve_http1_header_case\x18( \x01(\v2\x1a.google.protobuf.BoolValueR\x17preserveHttp1HeaderCase\x12f\n" +
+	"\x10x_forwarded_host\x18) \x01(\v2<.istio.mesh.v1alpha1.ProxyConfig.ProxyHeaders.XForwardedHostR\x0exForwardedHost\x12f\n" +
+	"\x10x_forwarded_port\x18* \x01(\v2<.istio.mesh.v1alpha1.ProxyConfig.ProxyHeaders.XForwardedPortR\x0exForwardedPort\x1aV\n" +
 	"\x06Server\x126\n" +
 	"\bdisabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\bdisabled\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value\x1aC\n" +
 	"\tRequestId\x126\n" +
 	"\bdisabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\bdisabled\x1aF\n" +
 	"\fAttemptCount\x126\n" +
-	"\bdisabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\bdisabled\x1aK\n" +
+	"\bdisabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\bdisabled\x1aF\n" +
+	"\x0eXForwardedHost\x124\n" +
+	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x1aF\n" +
+	"\x0eXForwardedPort\x124\n" +
+	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x1aK\n" +
 	"\x11EnvoyDebugHeaders\x126\n" +
 	"\bdisabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\bdisabled\x1aq\n" +
 	"\x17MetadataExchangeHeaders\x12V\n" +

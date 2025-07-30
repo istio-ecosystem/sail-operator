@@ -36,6 +36,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/validation"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -166,7 +167,7 @@ func (r *Reconciler) installHelmChart(ctx context.Context, cni *v1.IstioCNI) err
 		return fmt.Errorf("failed to apply profile: %w", err)
 	}
 
-	_, err = r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(version), mergedHelmValues, cni.Spec.Namespace, cniReleaseName, ownerReference)
+	_, err = r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(version), mergedHelmValues, cni.Spec.Namespace, cniReleaseName, &ownerReference)
 	if err != nil {
 		return fmt.Errorf("failed to install/update Helm chart %q: %w", cniChartName, err)
 	}
@@ -239,6 +240,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&corev1.ConfigMap{}, ownedResourceHandler).
 		Watches(&appsv1.DaemonSet{}, ownedResourceHandler).
 		Watches(&corev1.ResourceQuota{}, ownedResourceHandler).
+
+		// +lint-watches:ignore: NetworkPolicy (FIXME: NetworkPolicy has not yet been added upstream, but is WIP)
+		Watches(&networkingv1.NetworkPolicy{}, ownedResourceHandler, builder.WithPredicates(predicate.IgnoreUpdate())).
 
 		// We use predicate.IgnoreUpdate() so that we skip the reconciliation when a pull secret is added to the ServiceAccount.
 		// This is necessary so that we don't remove the newly-added secret.

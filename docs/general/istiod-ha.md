@@ -11,7 +11,7 @@
 # Running Istiod in HA mode
 By default, istiod is deployed with replica count set to 1, to be able to run it in HA mode, you can achieve it in two different ways:
 * Setting `replicaCount` to 2 or more in Istio resource and disabling autoscale (by default enabled).
-* Setting `autoscaleMin` to 2 or more in Istio resource and keeping `autoscaleMax` to 2 or more.
+* Setting `autoscaleMin` to 2 or more in Istio resource and keeping `autoscaleMax` to 2 or more. When setting `autoscaleMin`, you can also set `autoscaleMax` to a higher value to allow for scaling based on load. Take into account that you will need to configure also metrics for autoscaling to work properly, if no metrics are configured, the autoscaler will not scale up or down.
 
 Pros and Cons of each approach:
 - **Setting `replicaCount` to 2 or more**:
@@ -19,7 +19,7 @@ Pros and Cons of each approach:
   - Cons: Fixed number of replicas, no autoscaling based on load. For single-node clusters, you may need to disable the default Pod Disruption Budget (PDB) as outlined in the [Considerations for Single-Node Clusters ](#considerations-for-single-node-clusters) section.
 - **Setting `autoscaleMin` to 2 or more**:
   - Pros: Autoscaling based on load, can handle increased traffic without manual intervention, more efficient resource usage.
-  - Cons: Requires monitoring to ensure proper scaling.
+  - Cons: Requires monitoring to ensure proper scaling and correctly set of the metrics to trigger scaling actions.
 
 Now, let's see how to achieve this in Sail.
 
@@ -95,6 +95,10 @@ spec:
     pilot:
       autoscaleMin: 2   # <-- number of desired min replicas
       autoscaleMax: 5   # <-- number of desired max replicas
+      cpu:
+        targetAverageUtilization: 80 # <-- target CPU utilization for autoscaling
+      memory:
+        targetAverageUtilization: 80 # <-- target memory utilization for autoscaling
 ```
 <!--
 ```bash { name=validation-istio-expected-version tag=istio-ha-autoscaling }
@@ -110,6 +114,10 @@ spec:
     pilot:
       autoscaleMin: 2   # <-- number of desired min replicas
       autoscaleMax: 5   # <-- number of desired max replicas
+      cpu:
+        targetAverageUtilization: 80 # <-- target CPU utilization for autoscaling
+      memory:
+        targetAverageUtilization: 80 # <-- target memory utilization for autoscaling
 EOF
 ```
 -->
@@ -135,6 +143,10 @@ istiod-7c7b6564c9-xkmsl   1/1     Running   0          85s
 Let's break down the configuration:
 - `spec.values.pilot.autoscaleMin: 2`: This sets the minimum number of Istiod replicas to 2, ensuring that there are always at least 2 replicas running.
 - `spec.values.pilot.autoscaleMax: 5`: This sets the maximum number of Istiod replicas to 5, allowing for scaling based on load.
+- `spec.values.pilot.cpu.targetAverageUtilization: 80`: This sets the target CPU utilization for autoscaling to 80%. If the average CPU usage exceeds this threshold, the autoscaler will increase the number of replicas.
+- `spec.values.pilot.memory.targetAverageUtilization: 80`: This sets the target memory utilization for autoscaling to 80%. If the average memory usage exceeds this threshold, the autoscaler will increase the number of replicas.
+
+Note: Ensure that you have monitored the resource usage of your Istiod pods to set appropriate values for `autoscaleMin`, `autoscaleMax`, and the target utilization percentages. This will help in maintaining optimal performance and resource utilization. For more information about all the metrics that can be used for autoscaling, refer to the [Kubernetes documentation on Horizontal Pod Autoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/).
 
 ## Considerations for Single-Node Clusters
 For single-node clusters, it is crucial to disable the default Pod Disruption Budget (PDB) to prevent issues during node operations (e.g., draining) or scaling in HA mode. You can do this by adding the following configuration to your Istio resource:
