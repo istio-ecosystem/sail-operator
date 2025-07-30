@@ -22,6 +22,7 @@ import (
 	"time"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
@@ -94,9 +95,6 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 						Version:   istioversion.Default,
 						Namespace: istioNamespace,
 						Values: &v1.Values{
-							Global: &v1.GlobalConfig{
-								Platform: ptr.Of(""),
-							},
 							Pilot: &v1.PilotConfig{
 								Cni: &v1.CNIUsageConfig{
 									Enabled: ptr.Of(true),
@@ -179,6 +177,14 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 	})
 
 	Context("OpenShift Platform", func() {
+		BeforeAll(func() {
+			Step("Setting platform to OpenShift")
+			istioReconciler.Config.Platform = config.PlatformOpenShift
+		})
+		AfterAll(func() {
+			Step("Setting platform back to Kubernetes")
+			istioReconciler.Config.Platform = config.PlatformKubernetes
+		})
 		When("CNI is enabled", func() {
 			BeforeAll(func() {
 				Step("Creating IstioCNI resource")
@@ -206,7 +212,6 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 					},
 					Spec: v1.IstioSpec{
 						Version:   istioversion.Default,
-						Profile:   "openshift",
 						Namespace: istioNamespace,
 						Values: &v1.Values{
 							Pilot: &v1.PilotConfig{
@@ -257,9 +262,6 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 						Version:   istioversion.Default,
 						Namespace: istioNamespace,
 						Values: &v1.Values{
-							Global: &v1.GlobalConfig{
-								Platform: ptr.Of("openshift"),
-							},
 							Pilot: &v1.PilotConfig{
 								Cni: &v1.CNIUsageConfig{
 									Enabled: ptr.Of(false),
@@ -312,10 +314,7 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 					Spec: v1.IstioSpec{
 						Version:   istioversion.Default,
 						Namespace: istioNamespace,
-						Values: &v1.Values{
-							Global: &v1.GlobalConfig{
-								Platform: ptr.Of("openshift"),
-							},
+						Values:    &v1.Values{
 							// Not configuring CNI - should default to enabled on OpenShift
 						},
 					},
