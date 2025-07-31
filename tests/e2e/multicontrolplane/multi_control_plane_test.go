@@ -120,7 +120,7 @@ spec:
 
 							for _, appName := range []string{"sleep", "httpbin"} {
 								Expect(k.WithNamespace(ns).
-									ApplyKustomize(common.GetKustomizeDir(appName))).
+									ApplyKustomize(appName)).
 									To(Succeed(), "Failed to deploy application")
 							}
 
