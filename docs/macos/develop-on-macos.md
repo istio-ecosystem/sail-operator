@@ -42,7 +42,7 @@ If you encounter issues running Sail Operator on macOS, consider these troublesh
 
     ```bash
     make CONTAINER_CLI=podman \
-             CUSTOM_KIND_IMAGE=docker.io/kindest/node:v1.33.2 \
+             KIND_IMAGE=docker.io/kindest/node:v1.33.2 \
              TARGET_OS=linux \
              TARGET_ARCH=arm64 \
              test.e2e.kind
