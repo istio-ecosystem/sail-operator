@@ -633,7 +633,7 @@ type PilotConfig struct {
 	// Configuration for the istio-discovery chart when istiod is running in a remote cluster (e.g. "remote control plane").
 	IstiodRemote *IstiodRemoteConfig `json:"istiodRemote,omitempty"`
 	// Configuration for the istio-discovery chart
-	EnvVarFrom []k8sv1.EnvFromSource `json:"envVarFrom,omitempty"`
+	EnvVarFrom []k8sv1.EnvVar `json:"envVarFrom,omitempty"`
 }
 
 type PilotTaintControllerConfig struct {

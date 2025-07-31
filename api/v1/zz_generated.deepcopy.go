@@ -3751,7 +3751,7 @@ func (in *PilotConfig) DeepCopyInto(out *PilotConfig) {
 	}
 	if in.EnvVarFrom != nil {
 		in, out := &in.EnvVarFrom, &out.EnvVarFrom
-		*out = make([]corev1.EnvFromSource, len(*in))
+		*out = make([]corev1.EnvVar, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}

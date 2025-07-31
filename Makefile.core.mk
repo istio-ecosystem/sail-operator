@@ -501,7 +501,7 @@ operator-chart: download-istio-charts # pull the charts first as they are requir
 	       -e "s/^\(  version: \).*$$/\1${VERSION}/g" chart/values.yaml
 	# adding all component images to values
 	# when building the bundle, helm generated base CSV is passed to the operator-sdk. With USE_IMAGE_DIGESTS=true, operator-sdk replaces all pullspecs with tags by digests and adds spec.relatedImages field automatically
-	@hack/patch-values.sh ${HELM_VALUES_FILE}
+	@hack/patch-values.sh chart/values.yaml
 
 .PHONY: github-workflow
 github-workflow:

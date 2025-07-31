@@ -2392,7 +2392,7 @@ _Appears in:_
 | `taint` _[PilotTaintControllerConfig](#pilottaintcontrollerconfig)_ |  |  |  |
 | `trustedZtunnelNamespace` _string_ | If set, `istiod` will allow connections from trusted node proxy ztunnels in the provided namespace. |  |  |
 | `istiodRemote` _[IstiodRemoteConfig](#istiodremoteconfig)_ | Configuration for the istio-discovery chart when istiod is running in a remote cluster (e.g. "remote control plane"). |  |  |
-| `envVarFrom` _[EnvFromSource](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#envfromsource-v1-core) array_ | Configuration for the istio-discovery chart |  |  |
+| `envVarFrom` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#envvar-v1-core) array_ | Configuration for the istio-discovery chart |  |  |
 
 
 
