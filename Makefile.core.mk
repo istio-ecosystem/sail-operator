@@ -285,7 +285,7 @@ build-all: build-$(1)
 endef
 
 $(foreach arch,$(PLATFORM_ARCHITECTURES),$(eval $(call BUILDX,$(arch))))
-undefine BUILDX
+BUILDX =
 endif
 
 .PHONY: docker-buildx
