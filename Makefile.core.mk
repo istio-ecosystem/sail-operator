@@ -428,13 +428,15 @@ gen-code: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 	$(CONTROLLER_GEN) object:headerFile="common/scripts/copyright-banner-go.txt" paths="./..."
 
 export FORCE_DOWNLOADS
-.PHONY: gen-charts
-gen-charts: ## Pull charts from istio repository.
+.PHONY: download-istio-charts
+download-istio-charts: ## Pull charts from istio repository.
 	@# use yq to generate a list of download-charts.sh commands for each version in versions.yaml; these commands are
 	@# passed to sh and executed; in a nutshell, the yq command generates commands like:
 	@# ./hack/download-charts.sh <version> <git repo> <commit> [chart1] [chart2] ...
 	@yq eval '.versions[] | select(.ref == null) | select(.eol != true) | "./hack/download-charts.sh " + .name + " " + .version + " " + .repo + " " + .commit + " " + ((.charts // []) | join(" "))' < $(VERSIONS_YAML_DIR)/$(VERSIONS_YAML_FILE) | sh -e
 
+.PHONY: gen-charts
+gen-charts: download-istio-charts
 	@# remove old version directories
 	@hack/remove-old-versions.sh
 
@@ -490,7 +492,7 @@ operator-name:
 	sed -i "s/\(projectName:\).*/\1 ${OPERATOR_NAME}/g" PROJECT
 
 .PHONY: operator-chart
-operator-chart:
+operator-chart: download-istio-charts # pull the charts first as they are required by patch-values.sh
 	sed -i -e "s/^\(version: \).*$$/\1${VERSION}/g" \
 	       -e "s/^\(appVersion: \).*$$/\1\"${VERSION}\"/g" chart/Chart.yaml
 	sed -i -e "s|^\(image: \).*$$|\1${IMAGE}|g" \
