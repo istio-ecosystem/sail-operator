@@ -137,14 +137,9 @@ func (k Kubectl) ApplyWithLabels(yamlFile, label string) error {
 	return k.applyWithOptions(labelFlag(label) + " -f " + yamlFile)
 }
 
-// ApplyKustomize applies the given kustomization file to the cluster
-func (k Kubectl) ApplyKustomize(appName string) error {
-	return k.applyWithOptions("-k " + common.GetKustomizeDir(appName))
-}
-
-// ApplyKustomizeWithLabels applies the given kustomization file to the cluster with the given labels
+// ApplyKustomize applies the given kustomization file to the cluster and if labels are provided, adds them as well
 func (k Kubectl) ApplyKustomize(appName string, labels ...string) error {
-	cmd := "-k " + common.GetKustomizeDir(appName)
+	cmd := "-k " + getKustomizeDir(appName)
 	for _, label := range labels {
 		cmd += labelFlag(label)
 	}
@@ -156,7 +151,6 @@ func (k Kubectl) applyWithOptions(options ...string) error {
 	cmd := []string{"apply"}
 	cmd = append(cmd, options...)
 	_, err := k.executeCommand(k.build(strings.Join(cmd, " ")))
-	_, err := k.executeCommand(cmd)
 	if err != nil {
 		return fmt.Errorf("error applying resources: %w", err)
 	}

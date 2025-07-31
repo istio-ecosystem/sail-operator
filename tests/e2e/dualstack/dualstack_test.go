@@ -160,16 +160,16 @@ values:
 						Expect(k.Label("namespace", SleepNamespace, "istio-injection", "enabled")).To(Succeed(), "Error labeling sleep namespace")
 
 						Expect(k.WithNamespace(DualStackNamespace).
-							ApplyKustomize(common.GetKustomizeDir("tcp-echo-dual-stack"))).
+							ApplyKustomize("tcp-echo-dual-stack")).
 							To(Succeed(), "error deploying tcpDualStack pod")
 						Expect(k.WithNamespace(IPv4Namespace).
-							ApplyKustomize(common.GetKustomizeDir("tcp-echo-ipv4"))).
+							ApplyKustomize("tcp-echo-ipv4")).
 							To(Succeed(), "error deploying ipv4 pod")
 						Expect(k.WithNamespace(IPv6Namespace).
-							ApplyKustomize(common.GetKustomizeDir("tcp-echo-ipv6"))).
+							ApplyKustomize("tcp-echo-ipv6")).
 							To(Succeed(), "error deploying ipv6 pod")
 						Expect(k.WithNamespace(SleepNamespace).
-							ApplyKustomize(common.GetKustomizeDir("sleep"))).
+							ApplyKustomize("sleep")).
 							To(Succeed(), "error deploying sleep pod")
 
 						Success("dualStack validation pods deployed")
