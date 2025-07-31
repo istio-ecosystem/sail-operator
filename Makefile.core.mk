@@ -272,13 +272,22 @@ BUILDX_BUILD_ARGS = --build-arg TARGETOS=$(TARGET_OS)
 # - be able to push the image for your registry (i.e. if you do not inform a valid value via IMAGE=<myregistry/image:<tag>> then the export will fail)
 # To properly provided solutions that supports more than one platform you should use this option.
 PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
-# Extract architectures from PLATFORMS using make functions instead of shell
-# This is more reliable for handling empty strings
-COMMA := ,
-PLATFORM_ARCHITECTURES = $(strip $(subst linux/,,$(subst $(COMMA), ,$(PLATFORMS))))
+# Define supported architectures whitelist
+SUPPORTED_ARCHITECTURES := arm64 amd64 s390x ppc64le
 
-# Double-check: filter out any remaining empty strings
-FILTERED_ARCHITECTURES = $(filter-out ,$(PLATFORM_ARCHITECTURES))
+COMMA := ,
+SPACE := $(subst ,, )
+
+
+
+# Extract architectures and filter against whitelist
+RAW_ARCHITECTURES = $(strip $(subst linux/,,$(subst $(COMMA),$(SPACE),$(PLATFORMS))))
+FILTERED_ARCHITECTURES = $(filter $(SUPPORTED_ARCHITECTURES),$(RAW_ARCHITECTURES))
+
+# Ensure we have valid architectures (fallback to amd64 if empty)
+ifeq ($(strip $(FILTERED_ARCHITECTURES)),)
+FILTERED_ARCHITECTURES := amd64
+endif
 
 define BUILDX
 .PHONY: build-$(1)
