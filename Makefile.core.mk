@@ -274,19 +274,23 @@ BUILDX_BUILD_ARGS = --build-arg TARGETOS=$(TARGET_OS)
 PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
 PLATFORM_ARCHITECTURES = $(shell echo ${PLATFORMS} | sed -e 's/,/\ /g' -e 's/linux\///g')
 
-ifndef BUILDX
+# Define build targets for each architecture
+# Always generate the targets
+
+# Filter out empty strings from PLATFORM_ARCHITECTURES to avoid creating empty targets
+FILTERED_ARCHITECTURES = $(filter-out ,$(PLATFORM_ARCHITECTURES))
+
 define BUILDX
 .PHONY: build-$(1)
 build-$(1): ## Build sail-operator binary for specific architecture.
 	GOARCH=$(1) CGO_ENABLED=$(CGO_ENABLED) LDFLAGS="$(LD_FLAGS)" common/scripts/gobuild.sh $(REPO_ROOT)/out/$(TARGET_OS)_$(1)/sail-operator cmd/main.go
-
-.PHONY: build-all
-build-all: build-$(1)
 endef
 
-$(foreach arch,$(PLATFORM_ARCHITECTURES),$(eval $(call BUILDX,$(arch))))
-BUILDX =
-endif
+$(foreach arch,$(FILTERED_ARCHITECTURES),$(eval $(call BUILDX,$(arch))))
+
+# Create build-all target that depends on all architectures
+.PHONY: build-all
+build-all: $(foreach arch,$(FILTERED_ARCHITECTURES),build-$(arch))
 
 .PHONY: docker-buildx
 docker-buildx: build-all ## Build and push docker image with cross-platform support.
