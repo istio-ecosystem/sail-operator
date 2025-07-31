@@ -272,11 +272,13 @@ BUILDX_BUILD_ARGS = --build-arg TARGETOS=$(TARGET_OS)
 # - be able to push the image for your registry (i.e. if you do not inform a valid value via IMAGE=<myregistry/image:<tag>> then the export will fail)
 # To properly provided solutions that supports more than one platform you should use this option.
 PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
-PLATFORM_ARCHITECTURES = $(shell echo "${PLATFORMS}" | sed -e 's/,/ /g' -e 's/linux\///g' | tr -s ' ')
+# Extract architectures from PLATFORMS using make functions instead of shell
+# This is more reliable for handling empty strings
+COMMA := ,
+PLATFORM_ARCHITECTURES = $(strip $(subst linux/,,$(subst $(COMMA), ,$(PLATFORMS))))
 
-# Filter out empty strings from PLATFORM_ARCHITECTURES to avoid creating empty targets
-# Use a more robust method to ensure no empty strings
-FILTERED_ARCHITECTURES = $(foreach arch,$(PLATFORM_ARCHITECTURES),$(if $(strip $(arch)),$(arch)))
+# Double-check: filter out any remaining empty strings
+FILTERED_ARCHITECTURES = $(filter-out ,$(PLATFORM_ARCHITECTURES))
 
 define BUILDX
 .PHONY: build-$(1)
