@@ -13,9 +13,11 @@
 
 # **NOTE**
 # 1. Upgrade
-## For seamless upgrade, please only adding new versions
+## For seamless upgrade, please only add new versions
 ## To deprecate and remove an istio revision, start a new channel
-# 2. Update vendor defaults
+# 2. Update annotations in alauda/values.yaml
+## Run `make alauda-update-values`
+# 3. Update vendor defaults
 ## When introducing a new istio version, please remember to adjust `vendor_defaults.yaml` accordingly
 
 versions:

@@ -442,7 +442,7 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1.IstioR
 }
 
 func (r *Reconciler) determineDependenciesHealthyCondition(ctx context.Context, rev *v1.IstioRevision) (v1.IstioRevisionCondition, error) {
-	if revision.DependsOnIstioCNI(rev) {
+	if revision.DependsOnIstioCNI(rev, r.Config) {
 		cni := v1.IstioCNI{}
 		if err := r.Client.Get(ctx, client.ObjectKey{Name: istioCniName}, &cni); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -655,7 +655,7 @@ func (r *Reconciler) mapIstioCniToReconcileRequests(ctx context.Context, _ clien
 	}
 	var reqs []reconcile.Request
 	for _, rev := range list.Items {
-		if revision.DependsOnIstioCNI(&rev) {
+		if revision.DependsOnIstioCNI(&rev, r.Config) {
 			reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: rev.Name}})
 		}
 	}
