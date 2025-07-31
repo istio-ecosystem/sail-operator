@@ -19,10 +19,10 @@ set -euo pipefail
 # Base directory containing the sample application folders
 SAMPLES_DIR="tests/e2e/samples"
 # Quay repository where images will be copied
-QUAY_HUB="quay.io/sail-dev"
+HUB="${HUB:-quay.io/sail-dev}"
 
 # Array to store unique images that need to be copied
-declare -A IMAGES_TO_COPY
+declare -a IMAGES_TO_COPY
 
 # Iterate over all subdirectories in the samples directory
 for dir in "$SAMPLES_DIR"/*/; do
@@ -30,7 +30,7 @@ for dir in "$SAMPLES_DIR"/*/; do
     [[ ! -d "$dir" ]] && continue
 
     name=$(basename "$dir")
-    kustomization_file="${dir}kustomization.yaml"
+    kustomization_file="${dir}/kustomization.yaml"
 
     echo "Processing sample: $name"
 
@@ -61,13 +61,13 @@ done
 
 # Copy images from Docker Hub to Quay if any were found
 if [ ${#IMAGES_TO_COPY[@]} -eq 0 ]; then
-    echo "No new images found to copy."
+    echo "No images found to copy."
     exit 0
 fi
 
 echo "Copying images to $QUAY_HUB using crane..."
 # Requirements: crane must be installed, and you must be logged into quay.io with write permissions.
-for src_image in "${!IMAGES_TO_COPY[@]}"; do
+for src_image in "${IMAGES_TO_COPY[@]}"; do
     # Extract the image name and tag (e.g., from 'docker.io/istio/foo:tag' to 'foo:tag')
     image_name_tag=$(echo "$src_image" | sed -E 's|docker.io/[^/]+/||')
     dst_image="${QUAY_HUB}/${image_name_tag}"

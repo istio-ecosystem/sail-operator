@@ -269,7 +269,7 @@ The following environment variables define the behavior of the test run:
 The test run can be customized by setting the following environment variables:
 
 To change all the sample files used in the test, you can use the following environment variable:
-* `CUSTOM_SAMPLES_PATH=<path-to-kustomize-sample-base-folder>`. We use kustomize to patch the upstream sample yaml files to use images located in the `quay.io/sail-dev` registry. This is useful when you want to use your own sample files or when you want to use a different version of the sample files. The path should point to the folder where the kustomize files are located. For example, if you have your own sample files in the `tests/e2e/samples/custom` folder, you can set the environment variable as follows:
+* `SAMPLES_PATH=<path-to-kustomize-sample-base-folder>`. We use kustomize to patch the upstream sample yaml files to use images located in the `quay.io/sail-dev` registry. This is useful when you want to use your own sample files or when you want to use a different version of the sample files. The path should point to the folder where the kustomize files are located. For example, if you have your own sample files in the `tests/e2e/samples/custom` folder, you can set the environment variable as follows:
 ```
 $ CUSTOM_SAMPLES_PATH=tests/e2e/samples/custom
 ```
@@ -303,7 +303,7 @@ You can also only patch one or more appa and continue using the others samples i
 
 Each of the env var will be pointing to the kustomize directory that will be used to patch the sample files.
 
-Note: the default behaviour is to use the kustomize files located un the folder `tests/e2e/samples/`. This kustomize files are used to patch the upstream examples from master branch of the Istio repository. The kustomize files are used to patch the upstream sample yaml files to use images located in the `quay.io/sail-dev` registry.
+Note: the default behaviour is to use the kustomize files located un the folder `tests/e2e/samples/`. These kustomize files are used to patch the upstream examples from the master branch of the Istio repository to use images located in the `quay.io/sail-dev` registry.
 
 ### Using the e2e framework to test your cluster configuration
 The e2e framework can be used to test your cluster configuration. The framework is designed to be flexible and extensible. It is easy to add new test suites and new tests. The idea is to be able to simulate what a real user scenario looks like when using the operator.
