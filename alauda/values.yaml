@@ -2,58 +2,14 @@ name: servicemesh-operator2
 deployment:
   name: servicemesh-operator2
   annotations:
-    images.v1_26_2.ztunnel: gcr.io/istio-release/ztunnel:1.26.2
-    images.v1_26_2.istiod: gcr.io/istio-release/pilot:1.26.2
-    images.v1_26_2.proxy: gcr.io/istio-release/proxyv2:1.26.2
-    images.v1_26_2.cni: gcr.io/istio-release/install-cni:1.26.2
-    images.v1_26_0.ztunnel: gcr.io/istio-release/ztunnel:1.26.0
-    images.v1_26_0.istiod: gcr.io/istio-release/pilot:1.26.0
-    images.v1_26_0.proxy: gcr.io/istio-release/proxyv2:1.26.0
-    images.v1_26_0.cni: gcr.io/istio-release/install-cni:1.26.0
-    images.v1_25_3.ztunnel: gcr.io/istio-release/ztunnel:1.25.3
-    images.v1_25_3.istiod: gcr.io/istio-release/pilot:1.25.3
-    images.v1_25_3.proxy: gcr.io/istio-release/proxyv2:1.25.3
-    images.v1_25_3.cni: gcr.io/istio-release/install-cni:1.25.3
-    images.v1_25_2.ztunnel: gcr.io/istio-release/ztunnel:1.25.2
-    images.v1_25_2.istiod: gcr.io/istio-release/pilot:1.25.2
-    images.v1_25_2.proxy: gcr.io/istio-release/proxyv2:1.25.2
-    images.v1_25_2.cni: gcr.io/istio-release/install-cni:1.25.2
-    images.v1_25_1.ztunnel: gcr.io/istio-release/ztunnel:1.25.1
-    images.v1_25_1.istiod: gcr.io/istio-release/pilot:1.25.1
-    images.v1_25_1.proxy: gcr.io/istio-release/proxyv2:1.25.1
-    images.v1_25_1.cni: gcr.io/istio-release/install-cni:1.25.1
-    images.v1_24_6.ztunnel: gcr.io/istio-release/ztunnel:1.24.6
-    images.v1_24_6.istiod: gcr.io/istio-release/pilot:1.24.6
-    images.v1_24_6.proxy: gcr.io/istio-release/proxyv2:1.24.6
-    images.v1_24_6.cni: gcr.io/istio-release/install-cni:1.24.6
-    images.v1_24_5.ztunnel: gcr.io/istio-release/ztunnel:1.24.5
-    images.v1_24_5.istiod: gcr.io/istio-release/pilot:1.24.5
-    images.v1_24_5.proxy: gcr.io/istio-release/proxyv2:1.24.5
-    images.v1_24_5.cni: gcr.io/istio-release/install-cni:1.24.5
-    images.v1_24_4.ztunnel: gcr.io/istio-release/ztunnel:1.24.4
-    images.v1_24_4.istiod: gcr.io/istio-release/pilot:1.24.4
-    images.v1_24_4.proxy: gcr.io/istio-release/proxyv2:1.24.4
-    images.v1_24_4.cni: gcr.io/istio-release/install-cni:1.24.4
-    images.v1_24_3.ztunnel: gcr.io/istio-release/ztunnel:1.24.3
-    images.v1_24_3.istiod: gcr.io/istio-release/pilot:1.24.3
-    images.v1_24_3.proxy: gcr.io/istio-release/proxyv2:1.24.3
-    images.v1_24_3.cni: gcr.io/istio-release/install-cni:1.24.3
-    images.v1_24_2.ztunnel: gcr.io/istio-release/ztunnel:1.24.2
-    images.v1_24_2.istiod: gcr.io/istio-release/pilot:1.24.2
-    images.v1_24_2.proxy: gcr.io/istio-release/proxyv2:1.24.2
-    images.v1_24_2.cni: gcr.io/istio-release/install-cni:1.24.2
-    images.v1_24_1.ztunnel: gcr.io/istio-release/ztunnel:1.24.1
-    images.v1_24_1.istiod: gcr.io/istio-release/pilot:1.24.1
-    images.v1_24_1.proxy: gcr.io/istio-release/proxyv2:1.24.1
-    images.v1_24_1.cni: gcr.io/istio-release/install-cni:1.24.1
-    images.v1_24_0.ztunnel: gcr.io/istio-release/ztunnel:1.24.0
-    images.v1_24_0.istiod: gcr.io/istio-release/pilot:1.24.0
-    images.v1_24_0.proxy: gcr.io/istio-release/proxyv2:1.24.0
-    images.v1_24_0.cni: gcr.io/istio-release/install-cni:1.24.0
-    images.v1_28-alpha_8a5e40a4.ztunnel: gcr.io/istio-testing/ztunnel:1.28-alpha.8a5e40a462e220ff2e481847f52cb69835accd20
-    images.v1_28-alpha_8a5e40a4.istiod: gcr.io/istio-testing/pilot:1.28-alpha.8a5e40a462e220ff2e481847f52cb69835accd20
-    images.v1_28-alpha_8a5e40a4.proxy: gcr.io/istio-testing/proxyv2:1.28-alpha.8a5e40a462e220ff2e481847f52cb69835accd20
-    images.v1_28-alpha_8a5e40a4.cni: gcr.io/istio-testing/install-cni:1.28-alpha.8a5e40a462e220ff2e481847f52cb69835accd20
+    images.v1_26_3.ztunnel: build-harbor.alauda.cn/asm/ztunnel:1.26.3-asm-r0
+    images.v1_26_3.istiod: build-harbor.alauda.cn/asm/pilot:1.26.3-asm-r0
+    images.v1_26_3.proxy: build-harbor.alauda.cn/asm/proxyv2:1.26.3-asm-r0
+    images.v1_26_3.cni: build-harbor.alauda.cn/asm/install-cni:1.26.3-asm-r0
+    images.v1_24_6.ztunnel: build-harbor.alauda.cn/asm/ztunnel:1.24.6-asm-r0
+    images.v1_24_6.istiod: build-harbor.alauda.cn/asm/pilot:1.24.6-asm-r0
+    images.v1_24_6.proxy: build-harbor.alauda.cn/asm/proxyv2:1.24.6-asm-r0
+    images.v1_24_6.cni: build-harbor.alauda.cn/asm/install-cni:1.24.6-asm-r0
 # NB(timonwong) Please note that the service account name should be the same as the deployment
 serviceAccountName: servicemesh-operator2
 csv:

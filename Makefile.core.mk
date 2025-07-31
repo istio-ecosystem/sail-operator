@@ -152,6 +152,7 @@ BUNDLE_GEN_FLAGS ?= -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 # Note that 'operator-sdk generate bundle' always removes spec.relatedImages field when USE_IMAGE_DIGESTS=false, even if the field already exists in the base CSV
 # Make sure to enable this before creating a release as it's a requirement for disconnected environments.
 USE_IMAGE_DIGESTS ?= false
+GENERATE_RELATED_IMAGES ?= false
 ifeq ($(USE_IMAGE_DIGESTS), true)
 	BUNDLE_GEN_FLAGS += --use-image-digests
 endif
@@ -633,6 +634,8 @@ bundle: gen-all-except-bundle helm operator-sdk ## Generate bundle manifests and
 # operator sdk does not generate sorted relatedImages, we need to sort it here
 ifeq ($(USE_IMAGE_DIGESTS), true)
 	yq -i '.spec.relatedImages |= sort_by(.name)' bundle/manifests/$(OPERATOR_NAME).clusterserviceversion.yaml
+else ifeq ($(GENERATE_RELATED_IMAGES), true)
+	@hack/alauda-patch-csv.sh bundle/manifests/$(OPERATOR_NAME).clusterserviceversion.yaml ${HELM_VALUES_FILE}
 endif
 	# update CSV's spec.customresourcedefinitions.owned field. ideally we could do this straight in ./bundle, but
 	# sadly this is only possible if the file lives in a `bases` directory

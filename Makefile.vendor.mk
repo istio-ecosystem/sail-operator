@@ -9,7 +9,7 @@ HELM_VALUES_FILE = alauda/values.yaml
 # NB(timonwong) Only use this variable in release pipeline
 # VERSIONS_YAML_FILE ?= alauda-versions.yaml
 # NB(timonwong) Should only generated in release pipeline
-USE_IMAGE_DIGESTS = false
+GENERATE_RELATED_IMAGES = false
 
 PLATFORMS ?= linux/arm64,linux/amd64
 

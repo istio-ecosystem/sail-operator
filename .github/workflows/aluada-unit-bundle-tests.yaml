@@ -11,7 +11,7 @@ on:
 
 env:
   VERSIONS_YAML_FILE: alauda-versions.yaml
-  USE_IMAGE_DIGESTS: "true"
+  GENERATE_RELATED_IMAGES: "true"
   ISTIO_REPO_TOKEN: ${{ secrets.GIT_TOKEN }}
 
 jobs:
