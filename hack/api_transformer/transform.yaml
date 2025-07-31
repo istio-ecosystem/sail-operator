@@ -103,7 +103,7 @@ inputFiles:
       PilotConfig.Affinity: "*k8sv1.Affinity"
       PilotConfig.AutoscaleBehavior: "*autoscalingv2.HorizontalPodAutoscalerBehavior"
       PilotConfig.Env: "map[string]string"
-      PilotConfig.EnvVarFrom: "[]k8sv1.EnvFromSource"
+      PilotConfig.EnvVarFrom: "[]k8sv1.EnvVar"
       PilotConfig.ExtraContainerArgs: "[]string"
       PilotConfig.DeploymentLabels: "map[string]string"
       PilotConfig.NodeSelector: "map[string]string"
