@@ -345,7 +345,7 @@ func GetKustomizeDir(appName string) string {
 	}
 
 	// If app specific environment variable is set, use it.
-	if customPath := os.Getenv(config.envVar); customPath != "" {
+	if customPath := os.Getenv(strings.ToUpper(strings.ReplaceAll(appName, "-", "_") + "_KUSTOMIZE_PATH")); customPath != "" {
 		return customPath
 	}
 
