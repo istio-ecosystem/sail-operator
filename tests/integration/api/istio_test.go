@@ -511,6 +511,16 @@ func deleteAllIstiosAndRevisions(ctx context.Context) {
 	deleteAllIstioRevisions(ctx)
 }
 
+func deleteAllIstioCNIs(ctx context.Context) {
+	Step("Deleting all Istio and IstioRevision resources")
+	Eventually(k8sClient.DeleteAllOf).WithArguments(ctx, &v1.IstioCNI{}).Should(Succeed())
+	Eventually(func(g Gomega) {
+		list := &v1.IstioCNIList{}
+		g.Expect(k8sClient.List(ctx, list)).To(Succeed())
+		g.Expect(list.Items).To(BeEmpty())
+	}).Should(Succeed())
+}
+
 func generateContextName(withWorkloads bool) string {
 	if withWorkloads {
 		return "with workloads"

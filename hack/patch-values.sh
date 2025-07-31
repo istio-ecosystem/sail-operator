@@ -94,16 +94,15 @@ function get_field() {
 
 ## MAIN
 if [ $# -ne 1 ]; then
-  echo "Usage: $0 <clusterserviceversion_file_path>"
+  echo "Usage: $0 <values_file_path>"
   exit 1
 fi
-clusterserviceversion_file_path="$1"
-
-operator_image="$( ${YQ} '.metadata.annotations.containerImage' "${clusterserviceversion_file_path}" )"
-${YQ} -i ".spec.relatedImages |= (. + [{\"name\": \"operator_image\", \"image\": \"${operator_image}\"}])" "${clusterserviceversion_file_path}"
+values_file_path="$1"
 
 versions="$( ${YQ} '.versions[] | select(. | has("ref") | not) | select (.eol != true) | .name' "${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}" )"
 
+# remove existing images to always generate a fresh list
+${YQ} -i '.deployment.annotations = {}' "${values_file_path}"
 for version in ${versions}; do
   version_underscore=${version//./_}
   for component_name in "${!COMPONENTS[@]}"; do
@@ -117,11 +116,6 @@ for version in ${versions}; do
       exit 1
     fi
 
-    # Add .spec.install.spec.deployments[0].spec.template.metadata.annotations with olm.relatedImage
-    ${YQ} -i '.spec.install.spec.deployments[0].spec.template.metadata.annotations |= (. + {"images.'"${name}"'": "'"${hub}"'/'"${image}"':'"${tag}"'"})' "${clusterserviceversion_file_path}"
-
-    # Add .spec.relatedImages for every Istio components in all supported versions
-    # BUG: yq indents the arrays with 2 more spaces (cf. https://mikefarah.gitbook.io/yq/usage/output-format#indent)
-    ${YQ} -i ".spec.relatedImages |= (. + [ {\"name\": \"${name}\", \"image\": \"${hub}/${image}:${tag}\"} ] | sort_by(.name))" "${clusterserviceversion_file_path}"
+    ${YQ} -i '.deployment.annotations |= (. + {"images.'"${name}"'": "'"${hub}"'/'"${image}"':'"${tag}"'"})' "${values_file_path}"
   done
 done

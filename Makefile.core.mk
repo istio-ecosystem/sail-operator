@@ -148,6 +148,9 @@ BUNDLE_GEN_FLAGS ?= -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 # USE_IMAGE_DIGESTS defines if images are resolved via tags or digests
 # You can enable this value if you would like to use SHA Based Digests
 # To enable set flag to true
+# It also adds .spec.relatedImages field to generated CSV
+# Note that 'operator-sdk generate bundle' always removes spec.relatedImages field when USE_IMAGE_DIGESTS=false, even if the field already exists in the base CSV
+# Make sure to enable this before creating a release as it's a requirement for disconnected environments.
 USE_IMAGE_DIGESTS ?= false
 ifeq ($(USE_IMAGE_DIGESTS), true)
 	BUNDLE_GEN_FLAGS += --use-image-digests
@@ -426,13 +429,15 @@ gen-code: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 	$(CONTROLLER_GEN) object:headerFile="common/scripts/copyright-banner-go.txt" paths="./..."
 
 export FORCE_DOWNLOADS
-.PHONY: gen-charts
-gen-charts: ## Pull charts from istio repository.
+.PHONY: download-istio-charts
+download-istio-charts: ## Pull charts from istio repository.
 	@# use yq to generate a list of download-charts.sh commands for each version in versions.yaml; these commands are
 	@# passed to sh and executed; in a nutshell, the yq command generates commands like:
 	@# ./hack/download-charts.sh <version> <git repo> <commit> [chart1] [chart2] ...
 	@yq eval '.versions[] | select(.ref == null) | select(.eol != true) | "./hack/download-charts.sh " + .name + " " + .version + " " + .repo + " " + .commit + " " + ((.charts // []) | join(" "))' < $(VERSIONS_YAML_DIR)/$(VERSIONS_YAML_FILE) | sh -e
 
+.PHONY: gen-charts
+gen-charts: download-istio-charts
 	@# remove old version directories
 	@hack/remove-old-versions.sh
 
@@ -488,11 +493,14 @@ operator-name:
 	sed -i "s/\(projectName:\).*/\1 ${OPERATOR_NAME}/g" PROJECT
 
 .PHONY: operator-chart
-operator-chart:
+operator-chart: download-istio-charts # pull the charts first as they are required by patch-values.sh
 	sed -i -e "s/^\(version: \).*$$/\1${VERSION}/g" \
 	       -e "s/^\(appVersion: \).*$$/\1\"${VERSION}\"/g" chart/Chart.yaml
 	sed -i -e "s|^\(image: \).*$$|\1${IMAGE}|g" \
 	       -e "s/^\(  version: \).*$$/\1${VERSION}/g" chart/values.yaml
+	# adding all component images to values
+	# when building the bundle, helm generated base CSV is passed to the operator-sdk. With USE_IMAGE_DIGESTS=true, operator-sdk replaces all pullspecs with tags by digests and adds spec.relatedImages field automatically
+	@hack/patch-values.sh ${HELM_VALUES_FILE}
 
 .PHONY: github-workflow
 github-workflow:
@@ -538,10 +546,6 @@ GITLEAKS_VERSION ?= v8.28.0
 ISTIOCTL_VERSION ?= 1.26.0
 RUNME_VERSION ?= 3.15.0
 MISSPELL_VERSION ?= v0.3.4
-
-# GENERATE_RELATED_IMAGES defines whether `spec.relatedImages` is going to be generated or not
-# To disable set flag to false
-GENERATE_RELATED_IMAGES ?= true
 
 .PHONY: helm $(HELM)
 helm: $(HELM) ## Download helm to bin directory. If wrong version is installed, it will be overwritten.
@@ -626,10 +630,10 @@ bundle: gen-all-except-bundle helm operator-sdk ## Generate bundle manifests and
 	fi; \
 	$(HELM) template chart chart $$TEMPL_FLAGS --set image='$(IMAGE)' --set bundleGeneration=true | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
 
-ifeq ($(GENERATE_RELATED_IMAGES), true)
-	@hack/patch-csv.sh bundle/manifests/$(OPERATOR_NAME).clusterserviceversion.yaml
+# operator sdk does not generate sorted relatedImages, we need to sort it here
+ifeq ($(USE_IMAGE_DIGESTS), true)
+	yq -i '.spec.relatedImages |= sort_by(.name)' bundle/manifests/$(OPERATOR_NAME).clusterserviceversion.yaml
 endif
-
 	# update CSV's spec.customresourcedefinitions.owned field. ideally we could do this straight in ./bundle, but
 	# sadly this is only possible if the file lives in a `bases` directory
 	mkdir -p _tmp/bases

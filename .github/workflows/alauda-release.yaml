@@ -30,7 +30,7 @@ env:
   VERSION: ${{ inputs.release_version }}
   TOOLS_REGISTRY_PROVIDER: gcr.m.daocloud.io
   VERSIONS_YAML_FILE: alauda-versions.yaml
-  GENERATE_RELATED_IMAGES: "true"
+  USE_IMAGE_DIGESTS: "true"
   LD_EXTRAFLAGS: ${{ vars.LD_EXTRAFLAGS }}
 
 jobs:
