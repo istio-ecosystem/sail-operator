@@ -272,45 +272,50 @@ BUILDX_BUILD_ARGS = --build-arg TARGETOS=$(TARGET_OS)
 # - be able to push the image for your registry (i.e. if you do not inform a valid value via IMAGE=<myregistry/image:<tag>> then the export will fail)
 # To properly provided solutions that supports more than one platform you should use this option.
 PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
-# Define supported architectures whitelist
-SUPPORTED_ARCHITECTURES := arm64 amd64 s390x ppc64le
-
-COMMA := ,
-SPACE := $(subst ,, )
-
-
-
-# Extract architectures and filter against whitelist
-RAW_ARCHITECTURES = $(strip $(subst linux/,,$(subst $(COMMA),$(SPACE),$(PLATFORMS))))
-FILTERED_ARCHITECTURES = $(filter $(SUPPORTED_ARCHITECTURES),$(RAW_ARCHITECTURES))
-
-# Ensure we have valid architectures (fallback to amd64 if empty)
-ifeq ($(strip $(FILTERED_ARCHITECTURES)),)
-FILTERED_ARCHITECTURES := amd64
-endif
-
-# Debug output to diagnose CI issues
-$(info =================== MAKEFILE DEBUG ===================)
-$(info PLATFORMS = [$(PLATFORMS)])
-$(info RAW_ARCHITECTURES = [$(RAW_ARCHITECTURES)])
-$(info FILTERED_ARCHITECTURES = [$(FILTERED_ARCHITECTURES)])
-$(info Number of architectures: $(words $(FILTERED_ARCHITECTURES)))
-$(foreach arch,$(FILTERED_ARCHITECTURES),$(info Processing arch: [$(arch)] length=$(if $(arch),$(shell echo $(arch) | wc -c),0)))
-$(info ====================================================)
+# Cross-platform compatible architecture detection
+# Uses deterministic findstring matching to avoid string processing issues
 
 define BUILDX
-$(if $(strip $(1)),,$(error BUILDX called with empty architecture: [$(1)]))
 .PHONY: build-$(1)
 build-$(1): ## Build sail-operator binary for specific architecture.
 	GOARCH=$(1) CGO_ENABLED=$(CGO_ENABLED) LDFLAGS="$(LD_FLAGS)" common/scripts/gobuild.sh $(REPO_ROOT)/out/$(TARGET_OS)_$(1)/sail-operator cmd/main.go
 endef
 
-# Only process non-empty architectures with extra validation
-$(foreach arch,$(FILTERED_ARCHITECTURES),$(if $(strip $(arch)),$(eval $(call BUILDX,$(arch))),$(warning Skipping empty architecture)))
+# Deterministic architecture generation - no string processing
+ifneq (,$(findstring linux/arm64,$(PLATFORMS)))
+$(eval $(call BUILDX,arm64))
+endif
+
+ifneq (,$(findstring linux/amd64,$(PLATFORMS)))
+$(eval $(call BUILDX,amd64))
+endif
+
+ifneq (,$(findstring linux/s390x,$(PLATFORMS)))
+$(eval $(call BUILDX,s390x))
+endif
+
+ifneq (,$(findstring linux/ppc64le,$(PLATFORMS)))
+$(eval $(call BUILDX,ppc64le))
+endif
+
+# Create architecture list for build-all target
+BUILD_ARCHITECTURES := 
+ifneq (,$(findstring linux/arm64,$(PLATFORMS)))
+BUILD_ARCHITECTURES += arm64
+endif
+ifneq (,$(findstring linux/amd64,$(PLATFORMS)))
+BUILD_ARCHITECTURES += amd64
+endif
+ifneq (,$(findstring linux/s390x,$(PLATFORMS)))
+BUILD_ARCHITECTURES += s390x
+endif
+ifneq (,$(findstring linux/ppc64le,$(PLATFORMS)))
+BUILD_ARCHITECTURES += ppc64le
+endif
 
 # Create build-all target that depends on all architectures
 .PHONY: build-all
-build-all: $(foreach arch,$(FILTERED_ARCHITECTURES),build-$(arch))
+build-all: $(foreach arch,$(BUILD_ARCHITECTURES),build-$(arch))
 
 .PHONY: docker-buildx
 docker-buildx: build-all ## Build and push docker image with cross-platform support.
