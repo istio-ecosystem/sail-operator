@@ -139,11 +139,13 @@ func (k Kubectl) ApplyWithLabels(yamlFile, label string) error {
 
 // ApplyKustomize applies the given kustomization file to the cluster and if labels are provided, adds them as well
 func (k Kubectl) ApplyKustomize(appName string, labels ...string) error {
-	cmd := "-k " + getKustomizeDir(appName)
+	args := []string{"-k", getKustomizeDir(appName)}
 	for _, label := range labels {
-		cmd += labelFlag(label)
+		if label != "" {
+			args = append(args, labelFlag(label))
+		}
 	}
-	return k.applyWithOptions(cmd)
+	return k.applyWithOptions(args...)
 }
 
 // applyWithOptions is a helper function to apply resources with specific options given as a string
