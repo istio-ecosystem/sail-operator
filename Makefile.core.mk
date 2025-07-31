@@ -503,6 +503,17 @@ operator-chart: download-istio-charts # pull the charts first as they are requir
 	# when building the bundle, helm generated base CSV is passed to the operator-sdk. With USE_IMAGE_DIGESTS=true, operator-sdk replaces all pullspecs with tags by digests and adds spec.relatedImages field automatically
 	@hack/patch-values.sh chart/values.yaml
 
+.PHONY: alauda-update-values
+alauda-update-values: VERSIONS_YAML_FILE := alauda-versions.yaml
+alauda-update-values: download-istio-charts # pull the charts first as they are required by patch-values.sh
+	sed -i -e "s/^\(version: \).*$$/\1${VERSION}/g" \
+	       -e "s/^\(appVersion: \).*$$/\1\"${VERSION}\"/g" chart/Chart.yaml
+	sed -i -e "s|^\(image: \).*$$|\1${IMAGE}|g" \
+	       -e "s/^\(  version: \).*$$/\1${VERSION}/g" chart/values.yaml
+	# adding all component images to values
+	# when building the bundle, helm generated base CSV is passed to the operator-sdk. With USE_IMAGE_DIGESTS=true, operator-sdk replaces all pullspecs with tags by digests and adds spec.relatedImages field automatically
+	@hack/patch-values.sh ${HELM_VALUES_FILE}
+
 .PHONY: github-workflow
 github-workflow:
 	sed -i -e '1,/default:/ s/^\(.*default:\).*$$/\1 ${CHANNELS}/' .github/workflows/alauda-release.yaml
