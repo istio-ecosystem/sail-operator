@@ -289,13 +289,24 @@ ifeq ($(strip $(FILTERED_ARCHITECTURES)),)
 FILTERED_ARCHITECTURES := amd64
 endif
 
+# Debug output to diagnose CI issues
+$(info =================== MAKEFILE DEBUG ===================)
+$(info PLATFORMS = [$(PLATFORMS)])
+$(info RAW_ARCHITECTURES = [$(RAW_ARCHITECTURES)])
+$(info FILTERED_ARCHITECTURES = [$(FILTERED_ARCHITECTURES)])
+$(info Number of architectures: $(words $(FILTERED_ARCHITECTURES)))
+$(foreach arch,$(FILTERED_ARCHITECTURES),$(info Processing arch: [$(arch)] length=$(if $(arch),$(shell echo $(arch) | wc -c),0)))
+$(info ====================================================)
+
 define BUILDX
+$(if $(strip $(1)),,$(error BUILDX called with empty architecture: [$(1)]))
 .PHONY: build-$(1)
 build-$(1): ## Build sail-operator binary for specific architecture.
 	GOARCH=$(1) CGO_ENABLED=$(CGO_ENABLED) LDFLAGS="$(LD_FLAGS)" common/scripts/gobuild.sh $(REPO_ROOT)/out/$(TARGET_OS)_$(1)/sail-operator cmd/main.go
 endef
 
-$(foreach arch,$(FILTERED_ARCHITECTURES),$(eval $(call BUILDX,$(arch))))
+# Only process non-empty architectures with extra validation
+$(foreach arch,$(FILTERED_ARCHITECTURES),$(if $(strip $(arch)),$(eval $(call BUILDX,$(arch))),$(warning Skipping empty architecture)))
 
 # Create build-all target that depends on all architectures
 .PHONY: build-all
