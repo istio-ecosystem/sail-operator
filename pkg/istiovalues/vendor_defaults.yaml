@@ -15,3 +15,24 @@
 # These defaults are type-checked at compile time.
 # Note: After modifying this file, run `make test` to ensure that the
 # generated defaults values from this files are valid.
+
+v1.26.3:
+  istio:
+    pilot:
+      cni:
+        enabled: true
+        profile: multus
+  istiocni:
+    cni:
+      chained: false
+      provider: multus
+v1.24.6:
+  istio:
+    pilot:
+      cni:
+        enabled: true
+        profile: multus
+  istiocni:
+    cni:
+      chained: false
+      provider: multus
