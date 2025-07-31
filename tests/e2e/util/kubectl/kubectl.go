@@ -145,7 +145,7 @@ func (k Kubectl) ApplyKustomize(appName string, labels ...string) error {
 			args = append(args, labelFlag(label))
 		}
 	}
-	return k.applyWithOptions(args...)
+	return k.applyWithOptions(strings.Join(args, " "))
 }
 
 // applyWithOptions is a helper function to apply resources with specific options given as a string
