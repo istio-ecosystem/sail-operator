@@ -10,7 +10,6 @@ on:
       - synchronize
 
 env:
-  VERSIONS_YAML_FILE: alauda-versions.yaml
   GENERATE_RELATED_IMAGES: "true"
 
 jobs:

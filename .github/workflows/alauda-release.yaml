@@ -28,7 +28,6 @@ env:
   GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
   VERSION: ${{ inputs.release_version }}
   TOOLS_REGISTRY_PROVIDER: gcr.m.daocloud.io
-  VERSIONS_YAML_FILE: alauda-versions.yaml
   GENERATE_RELATED_IMAGES: "true"
   VENDOR_LD_EXTRAFLAGS: ${{ vars.LD_EXTRAFLAGS }}
 
@@ -56,8 +55,6 @@ jobs:
 
     - name: Build and push operator image
       run: |
-        make gen-all-except-bundle \
-          -e TAG=$VERSION
         make alauda-docker-buildx \
           -e TAG=$VERSION
 

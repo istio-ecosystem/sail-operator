@@ -244,9 +244,9 @@ _internal_defaults_do_not_set:
     # Default hub for Istio images.
     # Releases are published to docker hub under 'istio' project.
     # Dev builds from prow are on gcr.io
-    hub: gcr.io/istio-release
+    hub: build-harbor.alauda.cn/asm
     # Default tag for Istio images.
-    tag: 1.26.3
+    tag: 1.26.3-asm-r0
     # Variant of the image to use.
     # Currently supported are: [debug, distroless]
     variant: ""
