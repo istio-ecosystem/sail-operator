@@ -22,6 +22,7 @@ run-name: ${{ inputs.run_name }}
 env:
   GIT_USER: ${{ secrets.GIT_USER }}
   GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+  USE_IMAGE_DIGESTS: true
 
 jobs:
   release:
