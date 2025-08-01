@@ -1,0 +1,8 @@
+apiVersion: v2
+appVersion: 1.28-alpha.fc3ff90a82a67c7d14ac81615e76104cad10c268
+description: Helm chart for istio revision tags
+name: revisiontags
+sources:
+- https://github.com/istio-ecosystem/sail-operator
+version: 0.1.0
+
