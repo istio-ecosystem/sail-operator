@@ -539,7 +539,7 @@ CONTROLLER_RUNTIME_BRANCH ?= release-0.21
 OPM_VERSION ?= v1.56.0
 OLM_VERSION ?= v0.32.0
 GITLEAKS_VERSION ?= v8.28.0
-ISTIOCTL_VERSION ?= 1.26.0
+ISTIOCTL_VERSION ?= 1.26.2
 RUNME_VERSION ?= 3.15.1
 MISSPELL_VERSION ?= v0.3.4
 
@@ -568,26 +568,30 @@ $(OPERATOR_SDK): $(LOCALBIN)
 # By default, it is not set and it uses the istio/istio release download artifact
 ISTIOCTL_DOWNLOAD_URL ?= 
 
+# ISTIOCTL_FROM_CONTAINER_IMAGE defines whether istioctl should be downloaded by extracting it from a container image.
+# If set to true, the istioctl binary will be pulled from a specified container image instead of the default release artifact.
+ISTIOCTL_FROM_CONTAINER_IMAGE ?= false
+
+# ISTIOCTL_CONTAINER_IMAGE_REGISTRY specifies the container registry (e.g., quay.io, docker.io) to pull the istioctl image from when extracting istioctl from a container image.
+# ISTIOCTL_CONTAINER_IMAGE_REPOSITORY specifies the repository (in the format namespace/repository) within the registry that contains the istioctl image.
+# ISTIOCTL_CONTAINER_IMAGE_TAG_PATTERN specifies the tag pattern to match when selecting the image version to extract istioctl from (e.g., "latest", "on-push", or a specific tag).
+ISTIOCTL_CONTAINER_IMAGE_REGISTRY ?=
+ISTIOCTL_CONTAINER_IMAGE_REPOSITORY ?=
+ISTIOCTL_CONTAINER_IMAGE_TAG_PATTERN ?=
+
 .PHONY: istioctl $(ISTIOCTL)
 istioctl: $(ISTIOCTL) ## Download istioctl to bin directory.
 istioctl: TARGET_OS=$(shell go env GOOS)
 istioctl: TARGET_ARCH=$(shell go env GOARCH)
 $(ISTIOCTL): $(LOCALBIN)
 	@test -s $(LOCALBIN)/istioctl || { \
+if [ $(ISTIOCTL_FROM_CONTAINER_IMAGE) == true ]; then \
+		./tools/get-istioctl.sh --from-container-image $(ISTIOCTL_CONTAINER_IMAGE_REGISTRY) $(ISTIOCTL_CONTAINER_IMAGE_REPOSITORY) $(ISTIOCTL_CONTAINER_IMAGE_TAG_PATTERN); \
+else \
 		OSEXT=$(if $(filter $(TARGET_OS),Darwin),osx,linux); \
 		URL=$(if $(value ISTIOCTL_DOWNLOAD_URL),$(ISTIOCTL_DOWNLOAD_URL),"https://github.com/istio/istio/releases/download/$(ISTIOCTL_VERSION)/istioctl-$(ISTIOCTL_VERSION)-$$OSEXT-$(TARGET_ARCH).tar.gz"); \
-		echo "Fetching istioctl from $$URL"; \
-		curl -fsL $$URL -o /tmp/istioctl.tar.gz || { \
-			echo "Download failed! Please check the URL and ISTIO_VERSION."; \
-			exit 1; \
-		}; \
-		tar -xzf /tmp/istioctl.tar.gz -C /tmp || { \
-			echo "Extraction failed!"; \
-			exit 1; \
-		}; \
-		mv /tmp/$$(tar tf /tmp/istioctl.tar.gz) $(LOCALBIN)/istioctl; \
-		rm -f /tmp/istioctl.tar.gz; \
-		echo "istioctl has been downloaded and placed in $(LOCALBIN)"; \
+		./tools/get-istioctl.sh --from-url $$URL; \
+fi; \
 	}
 
 .PHONY: runme $(RUNME)
