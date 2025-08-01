@@ -2,6 +2,9 @@ name: integration-tests
 
 on: [push, pull_request]
 
+env:
+  USE_VENDOR_DEFAULTS: "false"
+
 jobs:
   coverage:
     runs-on: ubuntu-latest

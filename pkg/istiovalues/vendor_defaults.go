@@ -17,11 +17,13 @@ package istiovalues
 import (
 	_ "embed"
 	"fmt"
+	"os"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
-	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -31,7 +33,9 @@ var (
 )
 
 func init() {
-	vendorDefaults = MustParseVendorDefaultsYAML(vendorDefaultsYAML)
+	if os.Getenv("USE_VENDOR_DEFAULTS") != "false" {
+		vendorDefaults = MustParseVendorDefaultsYAML(vendorDefaultsYAML)
+	}
 }
 
 func MustParseVendorDefaultsYAML(defaultsYAML []byte) map[string]map[string]any {
