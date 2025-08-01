@@ -151,7 +151,7 @@ BUNDLE_GEN_FLAGS ?= -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 # It also adds .spec.relatedImages field to generated CSV
 # Note that 'operator-sdk generate bundle' always removes spec.relatedImages field when USE_IMAGE_DIGESTS=false, even if the field already exists in the base CSV
 # Make sure to enable this before creating a release as it's a requirement for disconnected environments.
-USE_IMAGE_DIGESTS ?= true
+USE_IMAGE_DIGESTS ?= false
 ifeq ($(USE_IMAGE_DIGESTS), true)
 	BUNDLE_GEN_FLAGS += --use-image-digests
 endif
