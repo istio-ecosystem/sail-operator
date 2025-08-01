@@ -20,10 +20,9 @@ import (
 	"os"
 	"strings"
 
-	"gopkg.in/yaml.v3"
-
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
+	"gopkg.in/yaml.v3"
 )
 
 var (
