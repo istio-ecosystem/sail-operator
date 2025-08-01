@@ -26,8 +26,8 @@ versions:
     ref: v1.26.3
   - name: v1.26.3
     version: 1.26.3
-    repo: https://github.com/alauda-mesh/istio
-    commit: 1.26.3-asm-r0
+    repo: https://github.com/istio/istio
+    commit: 1.26.3
     charts:
       - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.26.3-asm-r0/helm/base-1.26.3-asm-r0.tgz
       - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.26.3-asm-r0/helm/istiod-1.26.3-asm-r0.tgz
@@ -39,8 +39,8 @@ versions:
     ref: v1.24.6
   - name: v1.24.6
     version: 1.24.6
-    repo: https://github.com/alauda-mesh/istio
-    commit: 1.24.6-asm-r0
+    repo: https://github.com/istio/istio
+    commit: 1.24.6
     charts:
       - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.6-asm-r0/helm/base-1.24.6-asm-r0.tgz
       - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.6-asm-r0/helm/istiod-1.24.6-asm-r0.tgz
