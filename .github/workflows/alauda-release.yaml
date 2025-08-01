@@ -56,6 +56,8 @@ jobs:
 
     - name: Build and push operator image
       run: |
+        make gen-all-except-bundle \
+          -e TAG=$VERSION
         make alauda-docker-buildx \
           -e TAG=$VERSION
 
