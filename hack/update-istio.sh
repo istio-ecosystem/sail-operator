@@ -96,7 +96,7 @@ function list_only_latest() {
 }
 
 function update_stable() {
-    all_releases=$(curl -sL "https://api.github.com/repos/istio/istio/releases" | yq '.[].tag_name' -oy)
+    all_releases=$(curl -sL "https://api.github.com/repos/istio/istio/releases?per_page=200" | yq '.[].tag_name' -oy)
     supported_versions=$(yq '.versions[] | select(.name != "*.*-*.*") | .name' "${VERSIONS_YAML_PATH}" | list_only_latest)
     # For each supported version, look for a greater version in the all_releases list
     for version in ${supported_versions}; do
