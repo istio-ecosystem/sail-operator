@@ -33,9 +33,6 @@ WORK_DIR=$(mktemp -d)
 FORCE_DOWNLOADS=${FORCE_DOWNLOADS:=false}
 trap 'rm -rf "${WORK_DIR}"' EXIT
 
-# NB(alauda) can be removed if alauda-mesh' istio repo is public iin the future
-ISTIO_REPO_TOKEN=${ISTIO_REPO_TOKEN:-}
-
 function downloadRequired() {
   commit_file="${MANIFEST_DIR}/commit"
   if [ ! -f "${commit_file}" ]; then
@@ -74,13 +71,8 @@ function downloadIstioManifests() {
   echo "writing commit for Git archive to ${ISTIO_COMMIT}"
   echo "${ISTIO_COMMIT}" > "${commit_file}"
 
-  if [ -n "${ISTIO_REPO_TOKEN}" ]; then
-    echo "downloading Git archive from ${ISTIO_URL} using token"
-    curl -H "Authorization: Token ${ISTIO_REPO_TOKEN}" -sSfLO "${ISTIO_URL}"
-  else
-    echo "downloading Git archive from ${ISTIO_URL}"
-    curl -sSfLO "${ISTIO_URL}"
-  fi
+  echo "downloading Git archive from ${ISTIO_URL}"
+  curl -sSfLO "${ISTIO_URL}"
 
   ISTIO_FILE="${ISTIO_URL##*/}"
   EXTRACT_DIR="${ISTIO_REPO##*/}-${ISTIO_COMMIT}"

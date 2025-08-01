@@ -26,7 +26,6 @@ run-name: Release ${{ inputs.release_version }}
 env:
   GIT_USER: ${{ secrets.GIT_USER }}
   GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
-  ISTIO_REPO_TOKEN: ${{ secrets.GIT_TOKEN }}
   VERSION: ${{ inputs.release_version }}
   TOOLS_REGISTRY_PROVIDER: gcr.m.daocloud.io
   VERSIONS_YAML_FILE: alauda-versions.yaml
