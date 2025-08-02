@@ -50,3 +50,30 @@ func IsTransientError(err error) bool {
 	e := &TransientError{}
 	return errors.As(err, &e)
 }
+
+type NameAlreadyExistsError struct {
+	Message       string
+	originalError error
+}
+
+func (err NameAlreadyExistsError) Error() string {
+	return err.Message
+}
+
+func (err NameAlreadyExistsError) Unwrap() error {
+	return err.originalError
+}
+
+func NewNameAlreadyExistsError(message string, originalError error) NameAlreadyExistsError {
+	return NameAlreadyExistsError{
+		Message:       message,
+		originalError: originalError,
+	}
+}
+
+func IsNameAlreadyExistsError(err error) bool {
+	if _, ok := err.(NameAlreadyExistsError); ok {
+		return true
+	}
+	return false
+}
