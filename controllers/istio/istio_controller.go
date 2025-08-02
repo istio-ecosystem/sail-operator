@@ -78,7 +78,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, istio *v1.Istio) (ctrl.Resul
 	log.Info("Reconciliation done. Updating status.")
 	statusErr := r.updateStatus(ctx, istio, reconcileErr)
 
-	return result, errors.Join(reconcileErr, statusErr)
+	return result, errors.Join(reconcileErr, statusErr, errors.Unwrap(reconcileErr))
 }
 
 // doReconcile is the function that actually reconciles the Istio object. Any error reported by this
@@ -112,10 +112,10 @@ func managesExternalRevision(istio *v1.Istio) bool {
 
 func validate(istio *v1.Istio) error {
 	if istio.Spec.Version == "" {
-		return reconciler.NewValidationError("spec.version not set")
+		return reconciler.NewSailOperatorError[reconciler.ValidationError]("spec.version not set", nil)
 	}
 	if istio.Spec.Namespace == "" {
-		return reconciler.NewValidationError("spec.namespace not set")
+		return reconciler.NewSailOperatorError[reconciler.ValidationError]("spec.namespace not set", nil)
 	}
 	return nil
 }
@@ -229,7 +229,7 @@ func (r *Reconciler) determineStatus(ctx context.Context, istio *v1.Istio, recon
 			Type:    v1.IstioConditionReconciled,
 			Status:  metav1.ConditionFalse,
 			Reason:  v1.IstioReasonReconcileError,
-			Message: reconcileErr.Error(),
+			Message: errors.Join(reconcileErr, errors.Unwrap(reconcileErr)).Error(),
 		})
 		status.SetCondition(v1.IstioCondition{
 			Type:    v1.IstioConditionReady,
@@ -327,4 +327,17 @@ func convertCondition(condition v1.IstioRevisionCondition) v1.IstioCondition {
 
 func wrapEventHandler(logger logr.Logger, handler handler.EventHandler) handler.EventHandler {
 	return enqueuelogger.WrapIfNecessary(v1.IstioKind, logger, handler)
+}
+
+type ValidationError struct {
+	Message       string
+	originalError error
+}
+
+func (err ValidationError) Error() string {
+	return err.Message
+}
+
+func (err ValidationError) Unwrap() error {
+	return err.originalError
 }

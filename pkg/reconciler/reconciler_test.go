@@ -245,7 +245,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			setup: func(g *WithT, mock *mockReconciler) {
-				mock.reconcileError = NewValidationError("simulated validation error")
+				mock.reconcileError = NewSailOperatorError[ValidationError]("simulated validation error", nil)
 			},
 			assert: func(g *WithT, cl client.Client, result ctrl.Result, err error, mock *mockReconciler) {
 				g.Expect(result).To(Equal(reconcile.Result{}))

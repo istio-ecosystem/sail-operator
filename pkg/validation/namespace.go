@@ -31,12 +31,14 @@ func ValidateTargetNamespace(ctx context.Context, cl client.Client, namespace st
 	ns := &corev1.Namespace{}
 	if err := cl.Get(ctx, types.NamespacedName{Name: namespace}, ns); err != nil {
 		if apierrors.IsNotFound(err) {
-			return reconciler.NewValidationError(fmt.Sprintf("namespace %q doesn't exist", namespace))
+			return reconciler.NewSailOperatorError[reconciler.ValidationError](
+				fmt.Sprintf("namespace %q doesn't exist", namespace), nil)
 		}
 		return fmt.Errorf("get failed: %w", err)
 	}
 	if ns.DeletionTimestamp != nil {
-		return reconciler.NewValidationError(fmt.Sprintf("namespace %q is being deleted", namespace))
+		return reconciler.NewSailOperatorError[reconciler.ValidationError](
+			fmt.Sprintf("namespace %q is being deleted", namespace), nil)
 	}
 	return nil
 }
