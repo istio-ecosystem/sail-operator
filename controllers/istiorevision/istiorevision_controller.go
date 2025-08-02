@@ -578,7 +578,7 @@ func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, ns clie
 	return requests
 }
 
-// mapPodToReconcileRequest will collect all referenced revisions from a pod and its namespace and trigger reconciliation
+// mapPodToReconcileRequest will collect all referenced revisions from a pod and trigger reconciliation if there are any
 func (r *Reconciler) mapPodToReconcileRequest(ctx context.Context, pod client.Object) []reconcile.Request {
 	revisionNames := []string{}
 	revisionName := revision.GetInjectedRevisionFromPod(pod.GetAnnotations())
@@ -589,15 +589,6 @@ func (r *Reconciler) mapPodToReconcileRequest(ctx context.Context, pod client.Ob
 		if revisionName != "" {
 			revisionNames = append(revisionNames, revisionName)
 		}
-	}
-	ns := corev1.Namespace{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: pod.GetNamespace()}, &ns)
-	if err != nil {
-		return nil
-	}
-	revisionName = revision.GetReferencedRevisionFromNamespace(ns.GetLabels())
-	if revisionName != "" {
-		revisionNames = append(revisionNames, revisionName)
 	}
 
 	if len(revisionNames) > 0 {
