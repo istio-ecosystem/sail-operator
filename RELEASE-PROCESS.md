@@ -6,7 +6,7 @@ weeks prior to a new release.
 # New minor release preparations
 Please clone this [GitHub issue](https://github.com/istio-ecosystem/sail-operator/issues/825) and follow all the steps of the checklist to prepare the release.
 
-# New micro release preparations
+# New z-stream release preparations
 Please clone this [GitHub issue](https://github.com/istio-ecosystem/sail-operator/issues/1088) and follow all the steps of the checklist to prepare the release.
 
 # Feature Freeze
