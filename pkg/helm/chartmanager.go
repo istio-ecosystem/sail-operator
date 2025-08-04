@@ -103,7 +103,13 @@ func (h *ChartManager) UpgradeOrInstallChart(
 		}
 		releaseExists = false
 	} else if rel.Info.Status == release.StatusPendingRollback {
-		return nil, fmt.Errorf("unrecoverable helm release status %s", rel.Info.Status)
+		forceUninstall := action.NewUninstall(cfg)
+		forceUninstall.DisableHooks = true
+		log.V(2).Info("Performing force uninstall of pending rollback helm release", "release", releaseName)
+		if _, err := forceUninstall.Run(releaseName); err != nil {
+			return nil, fmt.Errorf("failed to force uninstall pending rollback helm release %s with error %w",releaseName, err)
+		}
+		releaseExists = false
 	} else {
 		return nil, fmt.Errorf("unexpected helm release status %s", rel.Info.Status)
 	}
