@@ -29,7 +29,7 @@ This document aims to provide an overview of the project and some information fo
     - [Integration Tests](#integration-tests)
     - [End-to-End Tests](#end-to-end-tests)
     - [Vendor-specific changes](#vendor-specific-changes)
-    - [Developing-on-MacOS](#developing-on-macos)
+    - [Developing-on-macOS](#developing-on-macos)
 - [Release Process](#release-process)
 - [Versioning and Support Policy](#versioning-and-support-policy)
 - [Community Support and Contributing](#community-support-and-contributing)
