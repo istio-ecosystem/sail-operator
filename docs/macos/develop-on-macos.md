@@ -42,11 +42,16 @@ If you encounter issues running Sail Operator on macOS, consider these troublesh
 
     ```bash
     make CONTAINER_CLI=podman \
-             KIND_IMAGE=docker.io/kindest/node:v1.33.2 \
              TARGET_OS=linux \
              TARGET_ARCH=arm64 \
              test.e2e.kind
     ```
+Additionally, we set by default KIND_IMAGE to latest docker.io kind image which are compatible with the Podman machine. If you need to use a specific version, set the `KIND_IMAGE` environment variable:
+
+    ```bash
+    export KIND_IMAGE=kindest/node:v1.27.0
+    ```
+Note: the default image used by the kind script from upstream does not work on macOS with Podman, so you need to set it to a compatible version.
 
 - **Unique UID error when running make commands:**
 
