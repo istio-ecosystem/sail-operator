@@ -107,7 +107,7 @@ func (h *ChartManager) UpgradeOrInstallChart(
 		forceUninstall.DisableHooks = true
 		log.V(2).Info("Performing force uninstall of pending rollback helm release", "release", releaseName)
 		if _, err := forceUninstall.Run(releaseName); err != nil {
-			return nil, fmt.Errorf("failed to force uninstall pending rollback helm release %s with error %w",releaseName, err)
+			return nil, fmt.Errorf("failed to force uninstall pending rollback helm release %s with error %w", releaseName, err)
 		}
 		releaseExists = false
 	} else {
