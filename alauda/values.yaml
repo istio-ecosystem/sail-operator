@@ -44,5 +44,27 @@ csv:
     mediatype: image/svg+xml
   longDescription: |-
     Alauda Service Mesh is a platform that provides behavioral insight and operational control over a service mesh, providing a uniform way to connect, secure, and monitor microservice applications.
+    
+    Alauda Service Mesh v2 requires Multus CNI to be installed, and default values for `Istio` and `IstioCNI` have been configured accordingly.
+    If different configurations are required, they must be overridden in the `Istio` or `IstioCNI` resources.
+    
+    **`Istio`**
+    
+    ```
+    pilot:
+      cni:
+        enabled: true
+        provider: multus
+    ```
+    
+    **`IstioCNI`**
+    
+    ```
+    cni:
+      chained: false
+      provider: multus
+      cniConfFileName: istio-cni.conf
+    ```
+
 # setting this to true will add resources required to generate the bundle using operator-sdk
 bundleGeneration: true

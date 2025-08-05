@@ -26,6 +26,7 @@ v1.26.3:
     cni:
       chained: false
       provider: multus
+      cniConfFileName: istio-cni.conf
 v1.24.6:
   istio:
     pilot:
@@ -36,3 +37,4 @@ v1.24.6:
     cni:
       chained: false
       provider: multus
+      cniConfFileName: istio-cni.conf
