@@ -32,6 +32,9 @@ export KIND_IP_FAMILY="${IP_FAMILY}"
 export ARTIFACTS="${ARTIFACTS:-$(mktemp -d)}"
 export MULTICLUSTER="${MULTICLUSTER:-false}"
 
+# Allow overriding DEFAULT_KIND_IMAGE from environment by passing as an argument in the setup_kind.sh script.
+export KIND_IMAGE="${KIND_IMAGE:-}"
+
 export KIND_CLUSTER_NAME="${KIND_CLUSTER_NAME:-operator-integration-tests}"
 if [ "${MULTICLUSTER}" == "true" ]; then
   export KIND_CLUSTER_NAME="${KIND_CLUSTER_NAME}-1"
@@ -64,14 +67,14 @@ function setup_kind_registry() {
 if [ "${MULTICLUSTER}" == "true" ]; then
     CLUSTER_TOPOLOGY_CONFIG_FILE="${SCRIPTPATH}/../setup/config/multicluster.json"
     load_cluster_topology "${CLUSTER_TOPOLOGY_CONFIG_FILE}"
-    setup_kind_clusters "" ""
+    setup_kind_clusters "${KIND_IMAGE}" ""
     setup_kind_registry "${CLUSTER_NAMES[@]}"
 
     export KUBECONFIG="${KUBECONFIGS[0]}"
     export KUBECONFIG2="${KUBECONFIGS[1]}"
     echo "Your KinD environment is ready, to use it: export KUBECONFIG=$(IFS=:; echo "${KUBECONFIGS[*]}")"
 else
-  KUBECONFIG="${ARTIFACTS}/config" setup_kind_cluster "${KIND_CLUSTER_NAME}" "" "" "true" "true"
+  KUBECONFIG="${ARTIFACTS}/config" setup_kind_cluster "${KIND_CLUSTER_NAME}" "${KIND_IMAGE}" "" "true" "true"
   setup_kind_registry "$KIND_CLUSTER_NAME"
   echo "Your KinD environment is ready, to use it: export KUBECONFIG=${ARTIFACTS}/config"
 fi

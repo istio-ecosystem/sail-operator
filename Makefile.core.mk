@@ -106,6 +106,18 @@ GINKGO_FLAGS += --fail-fast
 SKIP_CLEANUP = true
 endif
 
+# Allow kind image to be overridden by the user.
+KIND_IMAGE ?=
+# If KIND_IMAGE was not provided, determine it automatically in case of Darwin OS.
+ifeq ($(KIND_IMAGE),)
+  ifeq ($(LOCAL_OS),Darwin)
+    # If the OS is Darwin, set the image.
+    KIND_IMAGE := docker.io/kindest/node:v1.33.1
+  endif
+  # For other OS, KIND_IMAGE remains empty, which default to the upstream default image.
+endif
+
+
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
 # To re-generate a bundle for other specific channels without changing the standard setup, you can:
@@ -233,7 +245,7 @@ run: gen ## Run a controller from your host.
 # docker build -t ${IMAGE} --build-arg GIT_TAG=${GIT_TAG} --build-arg GIT_REVISION=${GIT_REVISION} --build-arg GIT_STATUS=${GIT_STATUS} .
 .PHONY: docker-build
 docker-build: build ## Build docker image.
-	docker build ${DOCKER_BUILD_FLAGS} -t ${IMAGE} .
+	docker build ${DOCKER_BUILD_FLAGS} -t ${IMAGE} . --load
 
 PHONY: push
 push: docker-push ## Build and push docker image.
@@ -347,9 +359,9 @@ create-gh-release: helm-package ## Create a GitHub release and upload the helm c
 .PHONY: cluster
 cluster: SKIP_CLEANUP=true
 cluster: ## Creates a KinD cluster(s) to use in local deployments.
-	source ${SOURCE_DIR}/tests/e2e/setup/setup-kind.sh; \
+	@source ${SOURCE_DIR}/tests/e2e/setup/setup-kind.sh; \
 	export HUB="$${KIND_REGISTRY}"; \
-	OCP=false ${SOURCE_DIR}/tests/e2e/setup/build-and-push-operator.sh
+	OCP=false ${SOURCE_DIR}/tests/e2e/setup/build-and-push-operator.sh;
 
 .PHONY: deploy
 deploy: verify-kubeconfig helm ## Deploy controller to an existing cluster.
