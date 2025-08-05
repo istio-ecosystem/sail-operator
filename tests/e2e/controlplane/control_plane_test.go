@@ -187,7 +187,7 @@ metadata:
 						Expect(k.CreateNamespace(sampleNamespace)).To(Succeed(), "Sample namespace failed to be created")
 						Expect(k.Label("namespace", sampleNamespace, "istio-injection", "enabled")).To(Succeed(), "Error labeling sample namespace")
 						Expect(k.WithNamespace(sampleNamespace).
-							ApplyWithLabels(common.GetSampleYAML(version, sampleNamespace), "version=v1")).
+							ApplyKustomize("helloworld", "version=v1")).
 							To(Succeed(), "Error deploying sample")
 						Success("sample deployed")
 					})

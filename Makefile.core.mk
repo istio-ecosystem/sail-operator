@@ -518,6 +518,10 @@ operator-chart: download-istio-charts # pull the charts first as they are requir
 update-istio: ## Update the Istio commit hash in the 'latest' entry in versions.yaml to the latest commit in the branch.
 	@hack/update-istio.sh
 
+.PHONY: update-istio-samples
+update-istio-samples: ## Update the Istio samples files located in the samples folder to match the latest Istio upstream version of the charts.
+	@hack/update-istio-samples.sh
+
 .PHONY: print-variables
 print-variables: ## Print all Makefile variables; Useful to inspect overrides of variables.
 	$(foreach v,                                        \
