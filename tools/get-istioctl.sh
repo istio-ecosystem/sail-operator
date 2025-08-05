@@ -20,7 +20,7 @@ set -euo pipefail
 # Supports downloading from a specified URL or locating the latest image tag matching a pattern in a container registry.
 
 usage() {
-  echo "Usage: $0 [--from-url] <url> | [--from-container-image] <namespace/repository> <tag_pattern>"
+  echo "Usage: $0 [--from-url] <url> | [--from-container-image] <registry> <namespace/repository> <tag_pattern>"
   echo ""
   echo "Download istioctl from a URL or extract it from a container image matching a tag pattern"
   echo ""
@@ -84,10 +84,10 @@ get_from_container_image() {
     usage
   fi
 
-  echo "curl -s -f $url"
+  echo "Fetching all tags from $registry/$repository"
   if ! response=$(curl -s -f "$url" 2>/dev/null); then
-    echo "Error: Failed to fetch information for tag pattern '$tag_pattern' in repository '$registry/$repository'"
-    echo "Please check that the repository and tag pattern exist and are publicly accessible"
+    echo "Error: Failed to fetch information of tags in repository '$registry/$repository'"
+    echo "Please check that the repository exist and is publicly accessible"
     exit 1
   fi
 
@@ -98,6 +98,7 @@ get_from_container_image() {
     if [ -n "$latest_tag" ]; then
       echo "Extracting istioctl from container image $registry/$repository:$latest_tag"
       
+      # Delete the container image if there is already one with the "$latest_tag" name
       if ${CONTAINER_CLI} ps -a --format '{{.Names}}' | grep -q "^${latest_tag}\$"; then
         delete_container_image "$latest_tag"
       fi
