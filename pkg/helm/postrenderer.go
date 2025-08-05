@@ -94,6 +94,12 @@ func (pr HelmPostRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifes
 			}
 		}
 
+		// Handle NetworkAttachmentDefinition resources that may not have spec field
+		manifest, err = pr.handleNetworkAttachmentDefinition(manifest)
+		if err != nil {
+			return nil, fmt.Errorf("error handling NetworkAttachmentDefinition: %v", err)
+		}
+
 		if err := encoder.Encode(manifest); err != nil {
 			return nil, err
 		}
@@ -177,4 +183,24 @@ func (pr HelmPostRenderer) addOwnerReference(manifest map[string]any) (map[strin
 func (pr HelmPostRenderer) addManagedByLabel(manifest map[string]any) (map[string]any, error) {
 	err := unstructured.SetNestedField(manifest, constants.ManagedByLabelValue, "metadata", "labels", constants.ManagedByLabelKey)
 	return manifest, err
+}
+
+// handleNetworkAttachmentDefinition ensures NetworkAttachmentDefinition resources
+// have proper structure to pass validation policies that expect a 'spec' field
+func (pr HelmPostRenderer) handleNetworkAttachmentDefinition(manifest map[string]any) (map[string]any, error) {
+	kind, hasKind := manifest["kind"]
+	if !hasKind {
+		return manifest, nil
+	}
+
+	if kind == "NetworkAttachmentDefinition" {
+		// Add empty spec if it doesn't exist to satisfy validation policies
+		// This prevents rollback failures when validation policies expect all resources to have a spec field
+		if _, hasSpec := manifest["spec"]; !hasSpec {
+			if err := unstructured.SetNestedField(manifest, map[string]any{}, "spec"); err != nil {
+				return nil, err
+			}
+		}
+	}
+	return manifest, nil
 }
