@@ -33,6 +33,11 @@ function getReleaseBranch() {
   echo "release-${minor#*v}"
 }
 
+function getLatestVersionFromDockerHub() {
+  # $1 = org/repo
+  curl -sL "https://hub.docker.com/v2/repositories/${1}/tags/?page_size=100" | jq -r '.results[].name' | sort -V | tail -n 1
+}
+
 # Update common files
 make update-common
 
@@ -95,6 +100,15 @@ sed -i "s|RUNME_VERSION ?= .*|RUNME_VERSION ?= ${RUNME_LATEST_VERSION}|" "${ROOT
 # Update misspell
 MISSPELL_LATEST_VERSION=$(getLatestVersion client9/misspell)
 sed -i "s|MISSPELL_VERSION ?= .*|MISSPELL_VERSION ?= ${MISSPELL_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+
+# Update KIND_IMAGE. Look for KIND_IMAGE := docker.io in the make file and look on docker.io/kindest/node for the latest version.
+KIND_LATEST_VERSION=$(getLatestVersionFromDockerHub kindest/node)
+if [[ -n "${KIND_LATEST_VERSION}" ]]; then
+  sed -i "s|KIND_IMAGE := docker.io/kindest/node:.*|KIND_IMAGE := docker.io/kindest/node:${KIND_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+else
+  echo "No latest version found for kindest/node on Docker Hub. Keeping the existing KIND_IMAGE."
+fi
+
 
 # Regenerate files
 make update-istio gen

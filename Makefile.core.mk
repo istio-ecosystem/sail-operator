@@ -106,6 +106,18 @@ GINKGO_FLAGS += --fail-fast
 SKIP_CLEANUP = true
 endif
 
+# Allow kind image to be overridden by the user.
+KIND_IMAGE ?=
+# If KIND_IMAGE was not provided, determine it automatically in case of Darwin OS.
+ifeq ($(KIND_IMAGE),)
+  ifeq ($(LOCAL_OS),Darwin)
+    # If the OS is Darwin, set the image.
+    KIND_IMAGE := docker.io/kindest/node:v1.33.1
+  endif
+  # For other OS, KIND_IMAGE remains empty, which default to the upstream default image.
+endif
+
+
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
 # To re-generate a bundle for other specific channels without changing the standard setup, you can:
