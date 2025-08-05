@@ -24,21 +24,6 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 )
 
-// appConfig defines the configuration for a test application.
-type appConfig struct {
-	envVar     string // Environment variable for a specific path.
-	defaultDir string // Default directory name in tests/e2e/samples.
-}
-
-// appConfigs maps application names to their configuration.
-var appConfigs = map[string]appConfig{
-	"httpbin":             {envVar: "HTTPBIN_KUSTOMIZE_PATH", defaultDir: "httpbin"},
-	"helloworld":          {envVar: "HELLOWORLD_KUSTOMIZE_PATH", defaultDir: "helloworld"},
-	"sleep":               {envVar: "SLEEP_KUSTOMIZE_PATH", defaultDir: "sleep"},
-	"tcp-echo-dual-stack": {envVar: "TCP_ECHO_DUAL_STACK_KUSTOMIZE_PATH", defaultDir: "tcp-echo-dual-stack"},
-	"tcp-echo-ipv4":       {envVar: "TCP_ECHO_IPV4_KUSTOMIZE_PATH", defaultDir: "tcp-echo-ipv4"},
-	"tcp-echo-ipv6":       {envVar: "TCP_ECHO_IPV6_KUSTOMIZE_PATH", defaultDir: "tcp-echo-ipv6"},
-}
 
 // getKustomizeDir returns the path to the Kustomize directory for a test application.
 // The path is determined with the following priority:
@@ -46,11 +31,6 @@ var appConfigs = map[string]appConfig{
 // 2. Custom base path defined in CUSTOM_SAMPLES_PATH.
 // 3. Default path within the project in this case will be: `tests/e2e/samples/httpbin“.
 func getKustomizeDir(appName string) string {
-	config, exists := appConfigs[appName]
-	if !exists {
-		return "" // return empty string if appName is not configured
-	}
-
 	// If app specific environment variable is set, use it.
 	if customPath := os.Getenv(strings.ToUpper(strings.ReplaceAll(appName, "-", "_") + "_KUSTOMIZE_PATH")); customPath != "" {
 		return customPath
@@ -58,7 +38,7 @@ func getKustomizeDir(appName string) string {
 
 	// If CUSTOM_SAMPLES_PATH is set, use it as the base path.
 	if basePath := os.Getenv("CUSTOM_SAMPLES_PATH"); basePath != "" {
-		return filepath.Join(basePath, config.defaultDir)
+		return filepath.Join(basePath, appName)
 	}
 
 	// If no custom path is set, use the default path within the project.
