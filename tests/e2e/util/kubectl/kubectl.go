@@ -19,9 +19,11 @@ package kubectl
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/shell"
 )
 
@@ -131,12 +133,12 @@ func (k Kubectl) ApplyString(yamlString string) error {
 
 // Apply applies the given yaml file to the cluster
 func (k Kubectl) Apply(yamlFile string) error {
-	return k.applyWithOptions("-f " + yamlFile)
+	return k.applyWithOptions("-f", yamlFile)
 }
 
 // ApplyWithLabels applies the given yaml file to the cluster with the given labels
 func (k Kubectl) ApplyWithLabels(yamlFile, label string) error {
-	return k.applyWithOptions(labelFlag(label) + " -f " + yamlFile)
+	return k.applyWithOptions(labelFlag(label), "-f", yamlFile)
 }
 
 // ApplyKustomize applies the given kustomization file to the cluster and if labels are provided, adds them as well
@@ -147,7 +149,7 @@ func (k Kubectl) ApplyKustomize(appName string, labels ...string) error {
 			args = append(args, labelFlag(label))
 		}
 	}
-	return k.applyWithOptions(strings.Join(args, " "))
+	return k.applyWithOptions(args...)
 }
 
 // applyWithOptions is a helper function to apply resources with specific options given as a string
@@ -327,4 +329,23 @@ func containerFlag(container string) string {
 		return ""
 	}
 	return "-c " + container
+}
+
+// getKustomizeDir returns the path to the Kustomize directory for a test application.
+// The path is determined with the following priority:
+// 1. App-specific environment variable (e.g., HTTPBIN_KUSTOMIZE_PATH).
+// 2. Custom base path defined in CUSTOM_SAMPLES_PATH.
+// 3. Default path within the project in this case will be: `tests/e2e/samples/httpbin“.
+func getKustomizeDir(appName string) string {
+	// If app specific environment variable is set, use it.
+	if customPath := os.Getenv(strings.ToUpper(strings.ReplaceAll(appName, "-", "_") + "_KUSTOMIZE_PATH")); customPath != "" {
+		return customPath
+	}
+
+	// If CUSTOM_SAMPLES_PATH is set, use it as the base path.
+	if basePath := os.Getenv("CUSTOM_SAMPLES_PATH"); basePath != "" {
+		return filepath.Join(basePath, appName)
+	}
+
+	return filepath.Join(project.RootDir, "tests", "e2e", "samples", appName)
 }
