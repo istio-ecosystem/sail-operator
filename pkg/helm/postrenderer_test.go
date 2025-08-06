@@ -300,6 +300,55 @@ spec:
   replicas: 1
 `,
 		},
+		{
+			name:           "NetworkAttachmentDefinition with empty 'spec' create",
+			ownerReference: nil,
+			ownerNamespace: "",
+			input: `apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: istio-network
+`,
+			expected: `apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  labels:
+    managed-by: sail-operator
+  name: istio-network
+spec: {}
+`,
+		},
+		{
+			name:           "NetworkAttachmentDefinition with specified 'spec' create",
+			ownerReference: nil,
+			ownerNamespace: "",
+			input: `apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: istio-network
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "istio-network",
+      "type": "istio-cni"
+    }
+`,
+			expected: `apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  labels:
+    managed-by: sail-operator
+  name: istio-network
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "istio-network",
+      "type": "istio-cni"
+    }
+`,
+		},
 	}
 
 	for _, tc := range testCases {
