@@ -34,7 +34,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/sail-dev/sail-operator:1.27-latest
-    createdAt: "2025-08-05T05:11:44Z"
+    createdAt: "2025-08-06T05:12:00Z"
     description: The Sail Operator manages the lifecycle of your Istio control plane. It provides custom resources for you to deploy and manage your control plane components.
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -165,7 +165,7 @@ spec:
         specDescriptors:
           - description: |-
               Defines the version of Istio to install.
-              Must be one of: v1.26-latest, v1.26.3, v1.26.2, v1.26.0, v1.25-latest, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.28-alpha.c5fdc78b.
+              Must be one of: v1.26-latest, v1.26.3, v1.26.2, v1.26.0, v1.25-latest, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.28-alpha.cbb50e60.
             displayName: Istio Version
             path: version
             x-descriptors:
@@ -187,7 +187,7 @@ spec:
               - urn:alm:descriptor:com.tectonic.ui:select:v1.24.1
               - urn:alm:descriptor:com.tectonic.ui:select:v1.24.0
               - urn:alm:descriptor:com.tectonic.ui:select:master
-              - urn:alm:descriptor:com.tectonic.ui:select:v1.28-alpha.c5fdc78b
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.28-alpha.cbb50e60
           - description: Namespace to which the Istio CNI component should be installed. Note that this field is immutable.
             displayName: Namespace
             path: namespace
@@ -225,7 +225,7 @@ spec:
         specDescriptors:
           - description: |-
               Defines the version of Istio to install.
-              Must be one of: v1.26.3, v1.26.2, v1.26.0, v1.25.3, v1.25.2, v1.25.1, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, v1.28-alpha.c5fdc78b.
+              Must be one of: v1.26.3, v1.26.2, v1.26.0, v1.25.3, v1.25.2, v1.25.1, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, v1.28-alpha.cbb50e60.
             displayName: Istio Version
             path: version
             x-descriptors:
@@ -243,7 +243,7 @@ spec:
               - urn:alm:descriptor:com.tectonic.ui:select:v1.24.2
               - urn:alm:descriptor:com.tectonic.ui:select:v1.24.1
               - urn:alm:descriptor:com.tectonic.ui:select:v1.24.0
-              - urn:alm:descriptor:com.tectonic.ui:select:v1.28-alpha.c5fdc78b
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.28-alpha.cbb50e60
           - description: Namespace to which the Istio components should be installed.
             displayName: Namespace
             path: namespace
@@ -278,7 +278,7 @@ spec:
               - urn:alm:descriptor:com.tectonic.ui:select:RevisionBased
           - description: |-
               Defines the version of Istio to install.
-              Must be one of: v1.26-latest, v1.26.3, v1.26.2, v1.26.0, v1.25-latest, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.28-alpha.c5fdc78b.
+              Must be one of: v1.26-latest, v1.26.3, v1.26.2, v1.26.0, v1.25-latest, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.28-alpha.cbb50e60.
             displayName: Istio Version
             path: version
             x-descriptors:
@@ -300,7 +300,7 @@ spec:
               - urn:alm:descriptor:com.tectonic.ui:select:v1.24.1
               - urn:alm:descriptor:com.tectonic.ui:select:v1.24.0
               - urn:alm:descriptor:com.tectonic.ui:select:master
-              - urn:alm:descriptor:com.tectonic.ui:select:v1.28-alpha.c5fdc78b
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.28-alpha.cbb50e60
           - description: |-
               Defines how many seconds the operator should wait before removing a non-active revision after all
               the workloads have stopped using it. You may want to set this value on the order of minutes.
@@ -356,7 +356,7 @@ spec:
         specDescriptors:
           - description: |-
               Defines the version of Istio to install.
-              Must be one of: v1.26-latest, v1.26.3, v1.26.2, v1.26.0, v1.25-latest, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.28-alpha.c5fdc78b.
+              Must be one of: v1.26-latest, v1.26.3, v1.26.2, v1.26.0, v1.25-latest, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.28-alpha.cbb50e60.
             displayName: Istio Version
             path: version
             x-descriptors:
@@ -378,7 +378,7 @@ spec:
               - urn:alm:descriptor:com.tectonic.ui:select:v1.24.1
               - urn:alm:descriptor:com.tectonic.ui:select:v1.24.0
               - urn:alm:descriptor:com.tectonic.ui:select:master
-              - urn:alm:descriptor:com.tectonic.ui:select:v1.28-alpha.c5fdc78b
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.28-alpha.cbb50e60
           - description: Namespace to which the Istio ztunnel component should be installed.
             displayName: Namespace
             path: namespace
@@ -418,7 +418,7 @@ spec:
     - v1.24.1
     - v1.24.0
     - master
-    - v1.28-alpha.c5fdc78b
+    - v1.28-alpha.cbb50e60
 
     [See this page](https://github.com/istio-ecosystem/sail-operator/blob/main/bundle/README.md) for instructions on how to use it.
   displayName: Sail Operator
@@ -761,10 +761,10 @@ spec:
                   images.v1_26_3.istiod: gcr.io/istio-release/pilot:1.26.3
                   images.v1_26_3.proxy: gcr.io/istio-release/proxyv2:1.26.3
                   images.v1_26_3.ztunnel: gcr.io/istio-release/ztunnel:1.26.3
-                  images.v1_28-alpha_c5fdc78b.cni: gcr.io/istio-testing/install-cni:1.28-alpha.c5fdc78b0741cf5d78db9ef08cceaf75ba2e952a
-                  images.v1_28-alpha_c5fdc78b.istiod: gcr.io/istio-testing/pilot:1.28-alpha.c5fdc78b0741cf5d78db9ef08cceaf75ba2e952a
-                  images.v1_28-alpha_c5fdc78b.proxy: gcr.io/istio-testing/proxyv2:1.28-alpha.c5fdc78b0741cf5d78db9ef08cceaf75ba2e952a
-                  images.v1_28-alpha_c5fdc78b.ztunnel: gcr.io/istio-testing/ztunnel:1.28-alpha.c5fdc78b0741cf5d78db9ef08cceaf75ba2e952a
+                  images.v1_28-alpha_cbb50e60.cni: gcr.io/istio-testing/install-cni:1.28-alpha.cbb50e6015574a14a527509c60ac818824977590
+                  images.v1_28-alpha_cbb50e60.istiod: gcr.io/istio-testing/pilot:1.28-alpha.cbb50e6015574a14a527509c60ac818824977590
+                  images.v1_28-alpha_cbb50e60.proxy: gcr.io/istio-testing/proxyv2:1.28-alpha.cbb50e6015574a14a527509c60ac818824977590
+                  images.v1_28-alpha_cbb50e60.ztunnel: gcr.io/istio-testing/ztunnel:1.28-alpha.cbb50e6015574a14a527509c60ac818824977590
                   kubectl.kubernetes.io/default-container: sail-operator
                 labels:
                   app.kubernetes.io/created-by: sailoperator
