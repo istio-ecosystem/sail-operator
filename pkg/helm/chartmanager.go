@@ -82,28 +82,38 @@ func (h *ChartManager) UpgradeOrInstallChart(
 		return rel, err
 	}
 
+	// A helm release can be stuck in pending state when:
+	// - operator exit/crashes during helm install/upgrade/uninstall
+	// - helm release timeouts (context timeouts, cancellation)
+	// let's try to brutally unlock it
+	if rel != nil && rel.Info.Status.IsPending() {
+		log.V(2).Info("Unlocking helm release", "status", rel.Info.Status, "release", releaseName)
+		rel.SetStatus(release.StatusFailed, fmt.Sprintf("Release unlocked from %q state", rel.Info.Status))
+
+		if err := cfg.Releases.Update(rel); err != nil {
+			return nil, fmt.Errorf("failed to unlock helm release %s: %w", releaseName, err)
+		}
+	}
+
 	var releaseExists bool
 
 	if rel == nil {
 		releaseExists = false
 	} else if rel.Info.Status == release.StatusDeployed {
 		releaseExists = true
-	} else if rel.Info.Status == release.StatusPendingUpgrade || (rel.Info.Status == release.StatusFailed && rel.Version > 1) {
+	} else if rel.Info.Status == release.StatusFailed && rel.Version > 1 {
 		log.V(2).Info("Performing helm rollback", "release", releaseName)
 		if err := action.NewRollback(cfg).Run(releaseName); err != nil {
 			return nil, fmt.Errorf("failed to roll back helm release %s: %w", releaseName, err)
 		}
 		releaseExists = true
-	} else if rel.Info.Status == release.StatusPendingInstall ||
-		rel.Info.Status == release.StatusUninstalling ||
+	} else if rel.Info.Status == release.StatusUninstalling ||
 		(rel.Info.Status == release.StatusFailed && rel.Version <= 1) {
 		log.V(2).Info("Performing helm uninstall", "release", releaseName, "status", rel.Info.Status)
 		if _, err := action.NewUninstall(cfg).Run(releaseName); err != nil {
 			return nil, fmt.Errorf("failed to uninstall failed helm release %s: %w", releaseName, err)
 		}
 		releaseExists = false
-	} else if rel.Info.Status == release.StatusPendingRollback {
-		return nil, fmt.Errorf("unrecoverable helm release status %s", rel.Info.Status)
 	} else {
 		return nil, fmt.Errorf("unexpected helm release status %s", rel.Info.Status)
 	}
