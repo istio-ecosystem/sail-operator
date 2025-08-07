@@ -229,6 +229,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 				}
 				return log
 			},
+			MaxConcurrentReconciles: r.Config.MaxConcurrentReconciles,
 		}).
 
 		// we use the Watches function instead of For(), so that we can wrap the handler so that events that cause the object to be enqueued are logged
