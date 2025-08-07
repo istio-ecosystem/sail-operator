@@ -21,6 +21,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v3"
+	"istio.io/istio/pkg/ptr"
 )
 
 func TestApplyVendorDefaults(t *testing.T) {
@@ -60,7 +62,7 @@ v1.24.2:
 			},
 			istioCniPostValues: &v1.CNIValues{
 				Cni: &v1.CNIConfig{
-					CniConfDir: StringPtr("example/path"),
+					CniConfDir: ptr.Of("example/path"),
 				},
 			},
 			expectedIstioError:    false,
@@ -76,13 +78,30 @@ v1.24.2:
       env:
         someEnvVar: "true"
 `,
-			version:           "v1.24.2",
-			istioPreValues:    &v1.Values{},
+			version: "v1.24.2",
+			istioPreValues: &v1.Values{
+				Pilot: &v1.PilotConfig{
+					Env: map[string]string{
+						"someOtherEnvVar": "true",
+					},
+				},
+				MeshConfig: &v1.MeshConfig{
+					LocalityLbSetting: &v1.LocalityLoadBalancerSetting{
+						Enabled: ptr.Of(true),
+					},
+				},
+			},
 			istioCNIPreValues: &v1.CNIValues{},
 			istoPostValues: &v1.Values{
 				Pilot: &v1.PilotConfig{
 					Env: map[string]string{
-						"someEnvVar": "true",
+						"someOtherEnvVar": "true",
+						"someEnvVar":      "true",
+					},
+				},
+				MeshConfig: &v1.MeshConfig{
+					LocalityLbSetting: &v1.LocalityLoadBalancerSetting{
+						Enabled: ptr.Of(true),
 					},
 				},
 			},
@@ -105,7 +124,7 @@ v1.24.2:
 			istoPostValues:    &v1.Values{},
 			istioCniPostValues: &v1.CNIValues{
 				Cni: &v1.CNIConfig{
-					CniConfDir: StringPtr("example/path"),
+					CniConfDir: ptr.Of("example/path"),
 				},
 			},
 			expectedIstioError:    false,
@@ -211,6 +230,12 @@ v1.24.2:
 	for _, tc := range testcases {
 		vendorDefaults = MustParseVendorDefaultsYAML([]byte(tc.vendorDefaults))
 
+		// preserve current vendor defaults
+		preVendorDefaults, err := yaml.Marshal(vendorDefaults)
+		if err != nil {
+			t.Fatalf("failed to marshal vendor defaults: %v", err)
+		}
+
 		// Test Istio values
 		istioResult, istioErr := ApplyIstioVendorDefaults(tc.version, tc.istioPreValues)
 		if tc.expectedIstioError {
@@ -237,6 +262,14 @@ v1.24.2:
 		}
 		if diff := cmp.Diff(tc.istioCniPostValues, cniResult); diff != "" {
 			t.Errorf("unexpected IstioCNI merge result; diff (-expected, +actual):\n%v", diff)
+		}
+
+		postVendorDefaults, err := yaml.Marshal(vendorDefaults)
+		if err != nil {
+			t.Fatalf("failed to marshal vendor defaults: %v", err)
+		}
+		if diff := cmp.Diff(preVendorDefaults, postVendorDefaults); diff != "" {
+			t.Errorf("vendor defaults should not be modified; diff (-expected, +actual):\n%v", diff)
 		}
 	}
 }
@@ -290,9 +323,4 @@ func TestOverrideVendorDefaults(t *testing.T) {
 
 	// Restore the original defaults
 	vendorDefaults = originalDefaults
-}
-
-// StringPtr returns a pointer to a string literal.
-func StringPtr(s string) *string {
-	return &s
 }
