@@ -157,6 +157,9 @@ type CNIConfig struct {
 	// of pods at the start of the update.
 	// +kubebuilder:validation:XIntOrString
 	RollingMaxUnavailable *intstr.IntOrString `json:"rollingMaxUnavailable,omitempty"`
+	// Specifies if an Istio owned CNI config should be created.
+	IstioOwnedCNIConfig         *bool   `json:"istioOwnedCNIConfig,omitempty"`
+	IstioOwnedCNIConfigFileName *string `json:"istioOwnedCNIConfigFileName,omitempty"`
 }
 
 type CNIUsageConfig struct {
@@ -1021,7 +1024,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x05amd64\x18\x01 \x01(\rR\x05amd64\x12\x18\n" +
 	"\appc64le\x18\x02 \x01(\rR\appc64le\x12\x14\n" +
 	"\x05s390x\x18\x03 \x01(\rR\x05s390x\x12\x14\n" +
-	"\x05arm64\x18\x04 \x01(\rR\x05arm64\"\x90\v\n" +
+	"\x05arm64\x18\x04 \x01(\rR\x05arm64\"\xa0\f\n" +
 	"\tCNIConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12\x10\n" +
 	"\x03hub\x18\x02 \x01(\tR\x03hub\x12(\n" +
@@ -1057,7 +1060,9 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x0eseccompProfile\x18\x13 \x01(\v2\".k8s.io.api.core.v1.SeccompProfileR\x0eseccompProfile\x12C\n" +
 	"\aambient\x18\x15 \x01(\v2).istio.operator.v1alpha1.CNIAmbientConfigR\aambient\x12\x1a\n" +
 	"\bprovider\x18\x16 \x01(\tR\bprovider\x12Z\n" +
-	"\x15rollingMaxUnavailable\x18\x17 \x01(\v2$.istio.operator.v1alpha1.IntOrStringR\x15rollingMaxUnavailable\"\x9c\x01\n" +
+	"\x15rollingMaxUnavailable\x18\x17 \x01(\v2$.istio.operator.v1alpha1.IntOrStringR\x15rollingMaxUnavailable\x12L\n" +
+	"\x13istioOwnedCNIConfig\x18# \x01(\v2\x1a.google.protobuf.BoolValueR\x13istioOwnedCNIConfig\x12@\n" +
+	"\x1bistioOwnedCNIConfigFileName\x18$ \x01(\tR\x1bistioOwnedCNIConfigFileName\"\x9c\x01\n" +
 	"\x0eCNIUsageConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x128\n" +
 	"\achained\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueB\x02\x18\x01R\achained\x12\x1a\n" +
