@@ -20,6 +20,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/istio-ecosystem/sail-operator/pkg/test"
+	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	. "github.com/onsi/gomega"
 	"helm.sh/helm/v3/pkg/release"
 	corev1 "k8s.io/api/core/v1"
@@ -27,9 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/istio-ecosystem/sail-operator/pkg/test"
-	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 
 	"istio.io/istio/pkg/ptr"
 )

@@ -51,6 +51,7 @@ var (
 	cfg       *rest.Config
 	cancel    context.CancelFunc
 
+	chartManager               *helm.ChartManager
 	istioReconciler            *istio.Reconciler
 	istioRevisionReconciler    *istiorevision.Reconciler
 	istioRevisionTagReconciler *istiorevisiontag.Reconciler
@@ -79,7 +80,7 @@ var _ = BeforeSuite(func() {
 		panic(err)
 	}
 
-	chartManager := helm.NewChartManager(mgr.GetConfig(), "")
+	chartManager = helm.NewChartManager(mgr.GetConfig(), "")
 
 	operatorNs := &corev1.Namespace{ObjectMeta: v1.ObjectMeta{Name: operatorNamespace}}
 	Expect(k8sClient.Create(context.TODO(), operatorNs)).To(Succeed())
