@@ -22,6 +22,7 @@ import (
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
+
 	"istio.io/istio/pkg/ptr"
 )
 
