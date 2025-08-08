@@ -1100,6 +1100,12 @@ spec:
                           Image name to pull from. Image will be `Hub/Image:Tag-Variant`.
                           If Image contains a "/", it will replace the entire `image` in the pod.
                         type: string
+                      istioOwnedCNIConfig:
+                        description: Specifies if an Istio owned CNI config should
+                          be created.
+                        type: boolean
+                      istioOwnedCNIConfigFileName:
+                        type: string
                       logging:
                         description: Same as `global.logging.level`, but will override
                           it if set
@@ -1456,7 +1462,7 @@ spec:
                 default: v1.26.3
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.26-latest, v1.26.3, v1.26.2, v1.26.0, v1.25-latest, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.28-alpha.c8889153.
+                  Must be one of: v1.26-latest, v1.26.3, v1.26.2, v1.26.0, v1.25-latest, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.28-alpha.522bbac9.
                 enum:
                 - v1.26-latest
                 - v1.26.3
@@ -1487,7 +1493,7 @@ spec:
                 - v1.22.5
                 - v1.21.6
                 - master
-                - v1.28-alpha.c8889153
+                - v1.28-alpha.522bbac9
                 type: string
             required:
             - namespace
