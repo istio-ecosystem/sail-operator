@@ -82,11 +82,15 @@ func (h *ChartManager) UpgradeOrInstallChart(
 		return rel, err
 	}
 
+	releaseExists := rel != nil
+
 	// A helm release can be stuck in pending state when:
 	// - operator exit/crashes during helm install/upgrade/uninstall
+	// - lost connection to apiserver
 	// - helm release timeouts (context timeouts, cancellation)
-	// let's try to brutally unlock it
-	if rel != nil && rel.Info.Status.IsPending() {
+	// - etc
+	// let's try to brutally unlock it and then remediate later by either rollback or uninstall
+	if releaseExists && rel.Info.Status.IsPending() {
 		log.V(2).Info("Unlocking helm release", "status", rel.Info.Status, "release", releaseName)
 		rel.SetStatus(release.StatusFailed, fmt.Sprintf("Release unlocked from %q state", rel.Info.Status))
 
@@ -95,26 +99,24 @@ func (h *ChartManager) UpgradeOrInstallChart(
 		}
 	}
 
-	var releaseExists bool
-
-	if rel == nil {
-		releaseExists = false
-	} else if rel.Info.Status == release.StatusDeployed {
-		releaseExists = true
-	} else if rel.Info.Status == release.StatusFailed && rel.Version > 1 {
+	switch {
+	case !releaseExists:
+		break
+	case rel.Info.Status == release.StatusDeployed:
+		break
+	case rel.Info.Status == release.StatusFailed && rel.Version > 1:
 		log.V(2).Info("Performing helm rollback", "release", releaseName)
 		if err := action.NewRollback(cfg).Run(releaseName); err != nil {
 			return nil, fmt.Errorf("failed to roll back helm release %s: %w", releaseName, err)
 		}
-		releaseExists = true
-	} else if rel.Info.Status == release.StatusUninstalling ||
-		(rel.Info.Status == release.StatusFailed && rel.Version <= 1) {
+	case rel.Info.Status == release.StatusUninstalling,
+		rel.Info.Status == release.StatusFailed && rel.Version <= 1:
 		log.V(2).Info("Performing helm uninstall", "release", releaseName, "status", rel.Info.Status)
 		if _, err := action.NewUninstall(cfg).Run(releaseName); err != nil {
 			return nil, fmt.Errorf("failed to uninstall failed helm release %s: %w", releaseName, err)
 		}
 		releaseExists = false
-	} else {
+	default:
 		return nil, fmt.Errorf("unexpected helm release status %s", rel.Info.Status)
 	}
 
@@ -171,6 +173,23 @@ func getRelease(cfg *action.Configuration, releaseName string) (*release.Release
 		return nil, fmt.Errorf("failed to get helm release %s: %w", releaseName, err)
 	}
 	return rel, nil
+}
+
+func (h *ChartManager) GetRelease(ctx context.Context, namespace, releaseName string) (*release.Release, error) {
+	cfg, err := h.newActionConfig(ctx, namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	return getRelease(cfg, releaseName)
+}
+
+func (h *ChartManager) UpdateRelease(ctx context.Context, namespace string, rel *release.Release) error {
+	cfg, err := h.newActionConfig(ctx, namespace)
+	if err != nil {
+		return err
+	}
+	return cfg.Releases.Update(rel)
 }
 
 func (h *ChartManager) ListReleases(ctx context.Context) ([]*release.Release, error) {
