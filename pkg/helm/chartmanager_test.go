@@ -130,7 +130,6 @@ var (
 				install(g, helm, chartDir, ns, relName, owner)
 				setReleaseStatus(g, helm, ns, relName, release.StatusPendingRollback)
 			},
-			wantErrOnInstall: true,
 		},
 	}
 )
