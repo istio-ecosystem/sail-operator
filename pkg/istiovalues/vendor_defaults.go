@@ -22,6 +22,7 @@ import (
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"gopkg.in/yaml.v3"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 var (
@@ -92,7 +93,7 @@ func ApplyIstioCNIVendorDefaults(version string, values *v1.CNIValues) (*v1.CNIV
 // a given version and resourceType, current valid resources are: "istio" and "istiocni"
 // It returns the merged map and an error if the defaults are not found or malformed.
 // The userValuesMap is the 'base', and resource-specific defaults are 'overrides'.
-func applyVendorDefaultsForResourceType(version string, resourceType string, userValuesMap map[string]any) (map[string]any, error) {
+func applyVendorDefaultsForResourceType(version, resourceType string, userValuesMap map[string]any) (map[string]any, error) {
 	if len(vendorDefaults) == 0 {
 		return userValuesMap, nil // No vendor defaults defined
 	}
@@ -113,5 +114,6 @@ func applyVendorDefaultsForResourceType(version string, resourceType string, use
 		return nil, fmt.Errorf("vendor defaults for resource '%s' (version '%s') are not a map[string]any", resourceType, version)
 	}
 
-	return mergeOverwrite(resourceSpecificDefaultsMap, userValuesMap), nil
+	valsMap := runtime.DeepCopyJSON(resourceSpecificDefaultsMap)
+	return mergeOverwrite(valsMap, userValuesMap), nil
 }
