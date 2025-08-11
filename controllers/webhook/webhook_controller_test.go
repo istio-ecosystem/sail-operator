@@ -33,6 +33,7 @@ import (
 	"time"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
@@ -128,7 +129,7 @@ func TestReconcile(t *testing.T) {
 				WithObjects(webhook).
 				WithInterceptorFuncs(tt.interceptors).
 				Build()
-			r := NewReconciler(cl, scheme.Scheme)
+			r := NewReconciler(newReconcilerTestConfig(t), cl, scheme.Scheme)
 			r.probe = tt.probeFunc
 
 			result, err := r.Reconcile(ctx, webhook)
@@ -610,4 +611,13 @@ func generateSelfSignedCert(dnsNames ...string) (certPEM []byte, keyPEM []byte, 
 	})
 
 	return certPEM, keyPEM, nil
+}
+
+func newReconcilerTestConfig(t *testing.T) config.ReconcilerConfig {
+	return config.ReconcilerConfig{
+		ResourceDirectory:       t.TempDir(),
+		Platform:                config.PlatformKubernetes,
+		DefaultProfile:          "",
+		MaxConcurrentReconciles: 5,
+	}
 }
