@@ -34,7 +34,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: Integration & Delivery, Networking, Security
     containerImage: build-harbor.alauda.cn/asm/servicemesh-operator2:2.0-latest
-    createdAt: "2025-08-05T04:12:27Z"
+    createdAt: "2025-08-11T12:36:56Z"
     description: Alauda Service Mesh v2 enables you to install, configure, and manage an instance of Alauda Service Mesh. Alauda Service Mesh is based on the open source Istio project.
     operatorframework.io/suggested-namespace: sail-operator
     operators.operatorframework.io/builder: operator-sdk-v1.41.1
@@ -47,7 +47,7 @@ metadata:
   labels:
     operatorframework.io/arch.amd64: supported
     operatorframework.io/arch.arm64: supported
-  name: servicemesh-operator2.v2.0.5
+  name: servicemesh-operator2.v2.0.13
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -698,7 +698,7 @@ spec:
                     resources:
                       limits:
                         cpu: 500m
-                        memory: 512Mi
+                        memory: 1Gi
                       requests:
                         cpu: 10m
                         memory: 64Mi
@@ -781,4 +781,4 @@ spec:
   maturity: alpha
   provider:
     name: Alauda
-  version: 2.0.5
+  version: 2.0.13

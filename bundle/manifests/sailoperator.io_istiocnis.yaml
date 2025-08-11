@@ -1100,6 +1100,12 @@ spec:
                           Image name to pull from. Image will be `Hub/Image:Tag-Variant`.
                           If Image contains a "/", it will replace the entire `image` in the pod.
                         type: string
+                      istioOwnedCNIConfig:
+                        description: Specifies if an Istio owned CNI config should
+                          be created.
+                        type: boolean
+                      istioOwnedCNIConfigFileName:
+                        type: string
                       logging:
                         description: Same as `global.logging.level`, but will override
                           it if set
