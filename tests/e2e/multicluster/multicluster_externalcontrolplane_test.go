@@ -353,7 +353,7 @@ spec:
 						// Label the namespace with the istio revision name
 						Expect(k2.Label("namespace", sampleNamespace, "istio.io/rev", "external-istiod")).To(Succeed(), "Labeling failed on Cluster #2")
 
-						deploySampleApp(k2, sampleNamespace, v, "v1")
+						deploySampleApp(k2, sampleNamespace, "v1")
 						Success("Sample app is deployed in Cluster #2")
 					})
 

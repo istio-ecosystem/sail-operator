@@ -20,16 +20,12 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/istio-ecosystem/sail-operator/pkg/env"
-	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
-	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
@@ -312,63 +308,6 @@ func CheckPodsReady(ctx context.Context, cl client.Client, namespace string) err
 	}
 
 	return nil
-}
-
-// GetSampleYAML returns the URL of the yaml file for the testing app.
-// args:
-// version: the version of the Istio to get the yaml file from.
-// appName: the name of the testing app. Example: helloworld, sleep, tcp-echo.
-func GetSampleYAML(version istioversion.VersionInfo, appName string) string {
-	// This func will be used to get URLs for the yaml files of the testing apps. Example: helloworld, sleep, tcp-echo.
-	// Default values points to upstream Istio sample yaml files. Custom paths can be provided using environment variables.
-
-	// Define environment variables for specific apps
-	envVarMap := map[string]string{
-		"tcp-echo-dual-stack": "TCP_ECHO_DUAL_STACK_YAML_PATH",
-		"tcp-echo-ipv4":       "TCP_ECHO_IPV4_YAML_PATH",
-		"tcp-echo":            "TCP_ECHO_IPV4_YAML_PATH",
-		"tcp-echo-ipv6":       "TCP_ECHO_IPV6_YAML_PATH",
-		"sleep":               "SLEEP_YAML_PATH",
-		"helloworld":          "HELLOWORLD_YAML_PATH",
-		"sample":              "HELLOWORLD_YAML_PATH",
-		"httpbin":             "HTTPBIN_YAML_PATH",
-	}
-
-	// Check if there's a custom path for the given appName
-	if envVar, exists := envVarMap[appName]; exists {
-		customPath := os.Getenv(envVar)
-		if customPath != "" {
-			return customPath
-		}
-	}
-
-	// Default paths if no custom path is provided
-	var path string
-	switch appName {
-	case "tcp-echo-dual-stack":
-		path = "samples/tcp-echo/tcp-echo-dual-stack.yaml"
-	case "tcp-echo-ipv4", "tcp-echo":
-		path = "samples/tcp-echo/tcp-echo-ipv4.yaml"
-	case "tcp-echo-ipv6":
-		path = "samples/tcp-echo/tcp-echo-ipv6.yaml"
-	case "sleep":
-		path = "samples/sleep/sleep.yaml"
-	case "helloworld", "sample":
-		path = "samples/helloworld/helloworld.yaml"
-	case "httpbin":
-		path = "samples/httpbin/httpbin.yaml"
-	default:
-		return ""
-	}
-
-	// Base URL logic
-	baseURL := os.Getenv("SAMPLE_YAML_BASE_URL")
-	if baseURL == "" {
-		// use local files by default
-		return filepath.Join(project.RootDir, path)
-	}
-
-	return fmt.Sprintf("%s/%s/%s", baseURL, version.Commit, path)
 }
 
 // Resolve domain name and return ip address.

@@ -3,8 +3,11 @@
 Release branches have a name of `release-MAJOR.MINOR`. The repository is branched from `main` roughly 3
 weeks prior to a new release.  
 
-> [!IMPORTANT]  
-> Please clone this [GitHub issue](https://github.com/istio-ecosystem/sail-operator/issues/516) and follow all the steps of the checklist to prepare the release.  
+# New minor release preparations
+Please clone this [GitHub issue](https://github.com/istio-ecosystem/sail-operator/issues/825) and follow all the steps of the checklist to prepare the release.
+
+# New z-stream release preparations
+Please clone this [GitHub issue](https://github.com/istio-ecosystem/sail-operator/issues/1088) and follow all the steps of the checklist to prepare the release.
 
 # Feature Freeze
 
@@ -13,20 +16,6 @@ blocking bugs are addressed. Additional changes that are targeted for new featur
 
 # Create a release
 
-A release can be created via the GitHub Actions workflow `Release workflow`.  
+When all preparations are done, a release can be created via the GitHub Actions workflow `Release workflow`.
 
-- From the `Actions` tab, select the `Release workflow` on the left menu  
-
-- Click on `Run workflow` button on the top right and specify the parameters:  
-
-  - Select the branch of the release  
-
-  - Specify the version of the release. The format must be `release-MAJOR.MINOR` (eg. `release-1.0`)  
-
-  - Specify the `Bundle channels` field  
-
-  - Check the box `Draft release` if it is the case. Note: this will create a draft release which must be edited and published afterwards.   
-  
-  - Check the box `Pre-release` if needed  
-
-  - Click on the button `Run workflow` to launch the workflow  
+Clone this [GitHub issue](https://github.com/istio-ecosystem/sail-operator/issues/1095) and follow all steps of the checklist.

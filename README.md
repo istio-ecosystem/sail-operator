@@ -29,6 +29,7 @@ This document aims to provide an overview of the project and some information fo
     - [Integration Tests](#integration-tests)
     - [End-to-End Tests](#end-to-end-tests)
     - [Vendor-specific changes](#vendor-specific-changes)
+    - [Developing-on-macOS](#developing-on-macos)
 - [Release Process](#release-process)
 - [Versioning and Support Policy](#versioning-and-support-policy)
 - [Community Support and Contributing](#community-support-and-contributing)
@@ -244,6 +245,10 @@ make test.e2e.ocp
 ### Vendor-specific changes
 
 As you might know, the Sail Operator project serves as the community upstream for the Red Hat OpenShift Service Mesh 3 operator. To accomodate any vendor-specific changes, we have a few places in the code base that allow for vendors to make downstream changes to the project with minimal conflicts. As a rule, these vendor-specific modifications should not include code changes, and they should be vendor-agnostic, ie if any other vendor wants to use them, they should be flexible enough to allow for doing that.
+
+### Developing on macOS
+
+There are some considerations that you need to take into account while trying to develop, debug and work on macOS and specially if you are using Podman instead on Docker. Please take a look into this [documentation](/docs/macos/develop-on-macos.md) for macOS specifics.
 
 #### versions.yaml
 

@@ -108,6 +108,18 @@ GINKGO_FLAGS += --fail-fast
 SKIP_CLEANUP = true
 endif
 
+# Allow kind image to be overridden by the user.
+KIND_IMAGE ?=
+# If KIND_IMAGE was not provided, determine it automatically in case of Darwin OS.
+ifeq ($(KIND_IMAGE),)
+  ifeq ($(LOCAL_OS),Darwin)
+    # If the OS is Darwin, set the image.
+    KIND_IMAGE := docker.io/kindest/node:v1.33.2
+  endif
+  # For other OS, KIND_IMAGE remains empty, which default to the upstream default image.
+endif
+
+
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
 # To re-generate a bundle for other specific channels without changing the standard setup, you can:
@@ -152,6 +164,7 @@ BUNDLE_GEN_FLAGS ?= -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 # It also adds .spec.relatedImages field to generated CSV
 # Note that 'operator-sdk generate bundle' always removes spec.relatedImages field when USE_IMAGE_DIGESTS=false, even if the field already exists in the base CSV
 # Make sure to enable this before creating a release as it's a requirement for disconnected environments.
+# Currently we keep this disabled for local development and only enable this in the release GH action.
 USE_IMAGE_DIGESTS ?= false
 GENERATE_RELATED_IMAGES ?= false
 ifeq ($(USE_IMAGE_DIGESTS), true)
@@ -235,7 +248,7 @@ run: gen ## Run a controller from your host.
 # docker build -t ${IMAGE} --build-arg GIT_TAG=${GIT_TAG} --build-arg GIT_REVISION=${GIT_REVISION} --build-arg GIT_STATUS=${GIT_STATUS} .
 .PHONY: docker-build
 docker-build: build ## Build docker image.
-	docker build ${DOCKER_BUILD_FLAGS} -t ${IMAGE} .
+	docker build ${DOCKER_BUILD_FLAGS} -t ${IMAGE} . --load
 
 PHONY: push
 push: docker-push ## Build and push docker image.
@@ -349,9 +362,9 @@ create-gh-release: helm-package ## Create a GitHub release and upload the helm c
 .PHONY: cluster
 cluster: SKIP_CLEANUP=true
 cluster: ## Creates a KinD cluster(s) to use in local deployments.
-	source ${SOURCE_DIR}/tests/e2e/setup/setup-kind.sh; \
+	@source ${SOURCE_DIR}/tests/e2e/setup/setup-kind.sh; \
 	export HUB="$${KIND_REGISTRY}"; \
-	OCP=false ${SOURCE_DIR}/tests/e2e/setup/build-and-push-operator.sh
+	OCP=false ${SOURCE_DIR}/tests/e2e/setup/build-and-push-operator.sh;
 
 .PHONY: deploy
 deploy: verify-kubeconfig helm ## Deploy controller to an existing cluster.
@@ -523,6 +536,10 @@ github-workflow:
 update-istio: ## Update the Istio commit hash in the 'latest' entry in versions.yaml to the latest commit in the branch.
 	@hack/update-istio.sh
 
+.PHONY: update-istio-samples
+update-istio-samples: ## Update the Istio samples files located in the samples folder to match the latest Istio upstream version of the charts.
+	@hack/update-istio-samples.sh
+
 .PHONY: print-variables
 print-variables: ## Print all Makefile variables; Useful to inspect overrides of variables.
 	$(foreach v,                                        \
@@ -556,8 +573,8 @@ CONTROLLER_RUNTIME_BRANCH ?= release-0.21
 OPM_VERSION ?= v1.56.0
 OLM_VERSION ?= v0.32.0
 GITLEAKS_VERSION ?= v8.28.0
-ISTIOCTL_VERSION ?= 1.26.0
-RUNME_VERSION ?= 3.15.0
+ISTIOCTL_VERSION ?= 1.26.2
+RUNME_VERSION ?= 3.15.1
 MISSPELL_VERSION ?= v0.3.4
 
 .PHONY: helm $(HELM)
@@ -585,26 +602,30 @@ $(OPERATOR_SDK): $(LOCALBIN)
 # By default, it is not set and it uses the istio/istio release download artifact
 ISTIOCTL_DOWNLOAD_URL ?= 
 
+# ISTIOCTL_FROM_CONTAINER_IMAGE defines whether istioctl should be downloaded by extracting it from a container image.
+# If set to true, the istioctl binary will be pulled from a specified container image instead of the default release artifact.
+ISTIOCTL_FROM_CONTAINER_IMAGE ?= false
+
+# ISTIOCTL_CONTAINER_IMAGE_REGISTRY specifies the container registry (e.g., quay.io, docker.io) to pull the istioctl image from when extracting istioctl from a container image.
+# ISTIOCTL_CONTAINER_IMAGE_REPOSITORY specifies the repository (in the format namespace/repository) within the registry that contains the istioctl image.
+# ISTIOCTL_CONTAINER_IMAGE_TAG_PATTERN specifies the tag pattern to match when selecting the image version to extract istioctl from (e.g., "latest", "on-push", or a specific tag).
+ISTIOCTL_CONTAINER_IMAGE_REGISTRY ?=
+ISTIOCTL_CONTAINER_IMAGE_REPOSITORY ?=
+ISTIOCTL_CONTAINER_IMAGE_TAG_PATTERN ?=
+
 .PHONY: istioctl $(ISTIOCTL)
 istioctl: $(ISTIOCTL) ## Download istioctl to bin directory.
 istioctl: TARGET_OS=$(shell go env GOOS)
 istioctl: TARGET_ARCH=$(shell go env GOARCH)
 $(ISTIOCTL): $(LOCALBIN)
 	@test -s $(LOCALBIN)/istioctl || { \
+if [ $(ISTIOCTL_FROM_CONTAINER_IMAGE) == true ]; then \
+		./tools/get-istioctl.sh --from-container-image $(ISTIOCTL_CONTAINER_IMAGE_REGISTRY) $(ISTIOCTL_CONTAINER_IMAGE_REPOSITORY) $(ISTIOCTL_CONTAINER_IMAGE_TAG_PATTERN); \
+else \
 		OSEXT=$(if $(filter $(TARGET_OS),Darwin),osx,linux); \
 		URL=$(if $(value ISTIOCTL_DOWNLOAD_URL),$(ISTIOCTL_DOWNLOAD_URL),"https://github.com/istio/istio/releases/download/$(ISTIOCTL_VERSION)/istioctl-$(ISTIOCTL_VERSION)-$$OSEXT-$(TARGET_ARCH).tar.gz"); \
-		echo "Fetching istioctl from $$URL"; \
-		curl -fsL $$URL -o /tmp/istioctl.tar.gz || { \
-			echo "Download failed! Please check the URL and ISTIO_VERSION."; \
-			exit 1; \
-		}; \
-		tar -xzf /tmp/istioctl.tar.gz -C /tmp || { \
-			echo "Extraction failed!"; \
-			exit 1; \
-		}; \
-		mv /tmp/$$(tar tf /tmp/istioctl.tar.gz) $(LOCALBIN)/istioctl; \
-		rm -f /tmp/istioctl.tar.gz; \
-		echo "istioctl has been downloaded and placed in $(LOCALBIN)"; \
+		./tools/get-istioctl.sh --from-url $$URL; \
+fi; \
 	}
 
 .PHONY: runme $(RUNME)
