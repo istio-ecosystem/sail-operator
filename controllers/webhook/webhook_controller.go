@@ -27,6 +27,7 @@ import (
 
 	"github.com/go-logr/logr"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
@@ -54,13 +55,15 @@ var customDialContext func(ctx context.Context, network, addr string) (net.Conn,
 
 // Reconciler checks the readiness of MutatingWebhookConfiguration pointing to a remote Istio control plane
 type Reconciler struct {
+	Config config.ReconcilerConfig
 	client.Client
 	Scheme *runtime.Scheme
 	probe  func(context.Context, *admissionv1.MutatingWebhookConfiguration) (bool, error)
 }
 
-func NewReconciler(client client.Client, scheme *runtime.Scheme) *Reconciler {
+func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *runtime.Scheme) *Reconciler {
 	return &Reconciler{
+		Config: cfg,
 		Client: client,
 		Scheme: scheme,
 		probe:  doProbe,
@@ -181,6 +184,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 				}
 				return log
 			},
+			MaxConcurrentReconciles: r.Config.MaxConcurrentReconciles,
 		}).
 
 		// we use the Watches function instead of For(), so that we can wrap the handler so that events that cause the object to be enqueued are logged

@@ -1053,8 +1053,9 @@ func TestIgnoreStatusChangePredicate(t *testing.T) {
 
 func newReconcilerTestConfig(t *testing.T) config.ReconcilerConfig {
 	return config.ReconcilerConfig{
-		ResourceDirectory: t.TempDir(),
-		Platform:          config.PlatformKubernetes,
-		DefaultProfile:    "",
+		ResourceDirectory:       t.TempDir(),
+		Platform:                config.PlatformKubernetes,
+		DefaultProfile:          "",
+		MaxConcurrentReconciles: 5,
 	}
 }

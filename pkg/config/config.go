@@ -34,10 +34,11 @@ type IstioImageConfig struct {
 }
 
 type ReconcilerConfig struct {
-	ResourceDirectory string
-	Platform          Platform
-	DefaultProfile    string
-	OperatorNamespace string
+	ResourceDirectory       string
+	Platform                Platform
+	DefaultProfile          string
+	OperatorNamespace       string
+	MaxConcurrentReconciles int
 }
 
 func Read(configFile string) error {
