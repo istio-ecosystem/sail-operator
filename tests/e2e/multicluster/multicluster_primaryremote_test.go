@@ -240,7 +240,7 @@ values:
 						Expect(k2.Label("namespace", sampleNamespace, "istio-injection", "enabled")).To(Succeed(), "Error labeling sample namespace")
 
 						// Deploy the sample app in both clusters
-						deploySampleAppToClusters(sampleNamespace, v, []ClusterDeployment{
+						deploySampleAppToClusters(sampleNamespace, []ClusterDeployment{
 							{Kubectl: k1, AppVersion: "v1"},
 							{Kubectl: k2, AppVersion: "v2"},
 						})

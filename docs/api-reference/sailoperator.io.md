@@ -139,6 +139,8 @@ _Appears in:_
 | `ambient` _[CNIAmbientConfig](#cniambientconfig)_ | Configuration for Istio Ambient. |  |  |
 | `provider` _string_ | Specifies the CNI provider. Can be either "default" or "multus". When set to "multus", an additional NetworkAttachmentDefinition resource is deployed to the cluster to allow the istio-cni plugin to be invoked in a cluster using the Multus CNI plugin. |  |  |
 | `rollingMaxUnavailable` _[IntOrString](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#intorstring-intstr-util)_ | The number of pods that can be unavailable during a rolling update of the CNI DaemonSet (see `updateStrategy.rollingUpdate.maxUnavailable` here: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/daemon-set-v1/#DaemonSetSpec). May be specified as a number of pods or as a percent of the total number of pods at the start of the update. |  | XIntOrString: \{\}   |
+| `istioOwnedCNIConfig` _boolean_ | Specifies if an Istio owned CNI config should be created. |  |  |
+| `istioOwnedCNIConfigFileName` _string_ |  |  |  |
 
 
 #### CNIGlobalConfig

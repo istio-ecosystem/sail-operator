@@ -260,16 +260,11 @@ var _ = Describe("base chart support", Ordered, func() {
 
 			GinkgoWriter.Println("sa:", sa)
 
-			beforeCount := getIstioRevisionReconcileCount(Default)
-
-			By("adding pull secret to ServiceAccount")
-			sa.ImagePullSecrets = append(sa.ImagePullSecrets, corev1.LocalObjectReference{Name: "other-pull-secret"})
-			Expect(k8sClient.Update(ctx, sa)).To(Succeed())
-
-			Consistently(func(g Gomega) {
-				afterCount := getIstioRevisionReconcileCount(g)
-				g.Expect(afterCount).To(Equal(beforeCount))
-			}, 5*time.Second).Should(Succeed(), "IstioRevision was reconciled when it shouldn't have been")
+			expectNoReconciliation(istioRevisionController, func() {
+				By("adding pull secret to ServiceAccount")
+				sa.ImagePullSecrets = append(sa.ImagePullSecrets, corev1.LocalObjectReference{Name: "other-pull-secret"})
+				Expect(k8sClient.Update(ctx, sa)).To(Succeed())
+			})
 
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(sa), sa)).To(Succeed())
 			Expect(sa.ImagePullSecrets).To(ContainElement(corev1.LocalObjectReference{Name: "other-pull-secret"}))
