@@ -1,11 +1,11 @@
-# syntax = build-harbor.alauda.cn/asm/dockerfile:1.12
+#syntax=docker/dockerfile:1.12
 
-FROM build-harbor.alauda.cn/mlops/static@sha256:c77c2fed31a81031ac4d3fb1079ad4cdb3a095daf7b2c79b204b84a1b992175b
+FROM build-harbor.alauda.cn/mlops/static@sha256:d2185a95c5e553a32e4f82d8138ccb78b57242f987985bd089ae2fb3c21e18d0
 
 ARG TARGETOS TARGETARCH
 
-COPY out/${TARGETOS}_${TARGETARCH}/sail-operator /sail-operator
-COPY resources /var/lib/sail-operator/resources
+COPY --link out/${TARGETOS}_${TARGETARCH}/sail-operator /sail-operator
+COPY --link resources /var/lib/sail-operator/resources
 
 USER 697:697
 WORKDIR /
