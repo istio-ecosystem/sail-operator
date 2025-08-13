@@ -230,7 +230,7 @@ test.docs: runme istioctl ## Run the documentation examples tests.
 ## test.docs use runme to test the documentation examples. 
 ## Check the specific documentation to understand the use of the tool
 	@echo "Running runme test on the documentation examples."
-	@PATH=$(LOCALBIN):$$PATH tests/documentation_tests/scripts/run-docs-examples.sh
+	@PATH=$(LOCALBIN):$$PATH tests/documentation_tests/scripts/run-asciidocs-test.sh
 	@echo "Documentation examples tested successfully"
 
 ##@ Build
