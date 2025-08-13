@@ -229,12 +229,11 @@ test.e2e.kind: istioctl ## Deploy a KinD cluster and run the end-to-end tests ag
 test.e2e.describe: ## Runs ginkgo outline -format indent over the e2e test to show in BDD style the steps and test structure
 	GINKGO_FLAGS="$(GINKGO_FLAGS)" ${SOURCE_DIR}/tests/e2e/common-operator-integ-suite.sh --describe
 
-.PHONE: test.docs
-test.docs: runme istioctl ## Run the documentation examples tests.
-## test.docs use runme to test the documentation examples. 
+.PHONY: test.docs
+test.docs: istioctl ## Run the documentation examples tests.
 ## Check the specific documentation to understand the use of the tool
-	@echo "Running runme test on the documentation examples."
-	@PATH=$(LOCALBIN):$$PATH tests/documentation_tests/scripts/run-docs-examples.sh
+	@echo "Running test on the documentation examples."
+	@PATH=$(LOCALBIN):$$PATH tests/documentation_tests/scripts/run-asciidocs-test.sh
 	@echo "Documentation examples tested successfully"
 
 ##@ Build
