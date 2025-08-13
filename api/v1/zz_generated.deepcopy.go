@@ -5504,6 +5504,16 @@ func (in *ZTunnelConfig) DeepCopyInto(out *ZTunnelConfig) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.Network != nil {
+		in, out := &in.Network, &out.Network
+		*out = new(string)
+		**out = **in
+	}
+	if in.Affinity != nil {
+		in, out := &in.Affinity, &out.Affinity
+		*out = new(corev1.Affinity)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.ResourceName != nil {
 		in, out := &in.ResourceName, &out.ResourceName
 		*out = new(string)
@@ -5537,6 +5547,13 @@ func (in *ZTunnelConfig) DeepCopyInto(out *ZTunnelConfig) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.Tolerations != nil {
+		in, out := &in.Tolerations, &out.Tolerations
+		*out = make([]corev1.Toleration, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.PodAnnotations != nil {
 		in, out := &in.PodAnnotations, &out.PodAnnotations
 		*out = make(map[string]string, len(*in))
@@ -5555,6 +5572,18 @@ func (in *ZTunnelConfig) DeepCopyInto(out *ZTunnelConfig) {
 		in, out := &in.Resources, &out.Resources
 		*out = new(corev1.ResourceRequirements)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.ResourceQuotas != nil {
+		in, out := &in.ResourceQuotas, &out.ResourceQuotas
+		*out = new(ResourceQuotas)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.NodeSelector != nil {
+		in, out := &in.NodeSelector, &out.NodeSelector
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
 	}
 	if in.ImagePullSecrets != nil {
 		in, out := &in.ImagePullSecrets, &out.ImagePullSecrets
@@ -5612,6 +5641,16 @@ func (in *ZTunnelConfig) DeepCopyInto(out *ZTunnelConfig) {
 		in, out := &in.LogAsJSON, &out.LogAsJSON
 		*out = new(bool)
 		**out = **in
+	}
+	if in.SeLinuxOptions != nil {
+		in, out := &in.SeLinuxOptions, &out.SeLinuxOptions
+		*out = new(corev1.SELinuxOptions)
+		**out = **in
+	}
+	if in.UpdateStrategy != nil {
+		in, out := &in.UpdateStrategy, &out.UpdateStrategy
+		*out = new(IstioUpdateStrategy)
+		(*in).DeepCopyInto(*out)
 	}
 }
 
