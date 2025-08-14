@@ -254,7 +254,7 @@ _internal_defaults_do_not_set:
     # Dev builds from prow are on gcr.io
     hub: gcr.io/istio-testing
     # Default tag for Istio images.
-    tag: 1.28-alpha.4a3e1b75d2d1759a247ef0a65d289b2fc86d0418
+    tag: 1.28-alpha.246461576ad0f834a231887e88d50fa5dbd28b46
     # Variant of the image to use.
     # Currently supported are: [debug, distroless]
     variant: ""
@@ -359,6 +359,8 @@ _internal_defaults_do_not_set:
 
       #If set to true, istio-proxy container will have privileged securityContext
       privileged: false
+      
+      seccompProfile: {}
 
       # The number of successive failed probes before indicating readiness failure.
       readinessFailureThreshold: 4
