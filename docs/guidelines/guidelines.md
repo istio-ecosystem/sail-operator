@@ -58,6 +58,8 @@ Use consistent terminology throughout the documentation. Use the same terms to r
 - `Istio` to the resource created and managed by the Sail Operator.
 - `IstioCNI` to refer to the Istio CNI resource managed by the Sail Operator.
 - `istio-cni` to refer to the Istio CNI project.
+- `ztunnel` to refer to the Istio ztunnel upstream project.
+- `ZTunnel` to the resource created and managed by the Sail Operator.
 
 ### Examples
 Use examples to illustrate concepts and provide practical guidance. Examples should be clear, concise, and easy to follow. They should be accompanied by explanations and annotations to help the reader understand the code. Also, the examples provided can be used to run automated tests over the example steps. This is going to be explained in the next section.
