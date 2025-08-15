@@ -5,6 +5,7 @@
 - [Istio nftables backend](#istio-nftables-backend)
   - [Prerequisites](#prerequisites)
   - [Installation steps](#installation-steps)
+	  - [Installation on OpenShift](#installation-on-openshift)
   - [Validation](#validation)
 
 ## Istio nftables backend
@@ -36,6 +37,77 @@ spec:
 ```
 
 This feature configures Istio to use the `nftables` backend instead of `iptables` for traffic redirection.
+
+#### Installation on OpenShift
+
+To enable the Istio native nftables feature, using the following steps:
+
+1. Create the `Subscription` object with a 1.27 channel.
+
+```sh
+kubectl apply -f - <<EOF
+    apiVersion: operators.coreos.com/v1alpha1
+    kind: Subscription
+    metadata:
+      name: sailoperator
+      namespace: openshift-operators
+    spec:
+      channel: "1.27-nightly"
+      installPlanApproval: Automatic
+      name: sailoperator
+      source: community-operators
+      sourceNamespace: openshift-marketplace
+EOF
+```
+
+2. Verify that the installation succeeded by inspecting the CSV status.
+
+```sh
+NAME                                      DISPLAY         VERSION                     REPLACES                                  PHASE
+sailoperator.v1.27.0-nightly-2025-08-15   Sail Operator   1.27.0-nightly-2025-08-15   sailoperator.v1.27.0-nightly-2025-08-14   Succeeded
+```
+
+Succeeded should appear in the sailoperator CSV PHASE column.
+
+3. Create the `istio-system` and `istio-cni` namespaces.
+
+```sh
+kubectl create namespace istio-system
+kubectl create namespace istio-cni
+```
+
+4. Create the `Istio` resource with `spec.values.global.nativeNftables=true`:
+
+```sh
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  version: v1.28-alpha.24646157
+  namespace: istio-system
+  updateStrategy:
+    type: InPlace
+    inactiveRevisionDeletionGracePeriodSeconds: 30
+  values:
+    global:
+      nativeNftables: true
+```
+
+5. Create the `IstioCNI` resource with `spec.values.global.nativeNftables=true`:
+
+```sh
+kind: IstioCNI
+apiVersion: sailoperator.io/v1
+metadata:
+  name: default
+spec:
+  namespace: istio-cni
+  version: v1.28-alpha.24646157
+  values:
+    global:
+      nativeNftables: true
+```
 
 ### Validation
 
