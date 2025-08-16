@@ -133,14 +133,15 @@ func TestReconcile(t *testing.T) {
 			r.probe = tt.probeFunc
 
 			result, err := r.Reconcile(ctx, webhook)
-
 			g.Expect(result).To(Equal(tt.expectResult))
+
 			if tt.expectErr != nil {
-				g.Expect(err).To(Equal(tt.expectErr))
+				uw, ok := err.(interface{ Unwrap() []error })
+				g.Expect(ok).To(BeTrue())
+				g.Expect(uw.Unwrap()).To(ContainElement(tt.expectErr))
 			} else {
 				g.Expect(err).ToNot(HaveOccurred())
 			}
-
 			g.Expect(cl.Get(ctx, kube.Key("istio-sidecar-injector"), webhook)).To(Succeed())
 			g.Expect(webhook.Annotations[constants.WebhookReadinessProbeStatusAnnotationKey]).To(Equal(tt.expectValue), "Unexpected annotation value")
 		})
@@ -375,7 +376,7 @@ func TestDoProbe(t *testing.T) {
 			if tt.expectedError == "" {
 				g.Expect(err).ToNot(HaveOccurred())
 			} else {
-				g.Expect(err.Error()).To(ContainSubstring(tt.expectedError))
+				g.Expect(errors.Join(err, errors.Unwrap(err)).Error()).To(ContainSubstring(tt.expectedError))
 			}
 		})
 	}
