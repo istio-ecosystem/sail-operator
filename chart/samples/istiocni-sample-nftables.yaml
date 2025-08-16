@@ -1,0 +1,10 @@
+apiVersion: sailoperator.io/v1
+kind: IstioCNI
+metadata:
+  name: default
+spec:
+  version: v1.28-alpha.24646157
+  namespace: istio-cni
+  values:
+    global:
+      nativeNftables: true
