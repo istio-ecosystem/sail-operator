@@ -122,7 +122,7 @@ csv:
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
     features.operators.openshift.io/csi: "false"
-image: quay.io/sail-dev/sail-operator:1.27-latest
+image: quay.io/sail-dev/sail-operator:1.27.0
 # We're commenting out the imagePullPolicy to use k8s defaults
 # imagePullPolicy: Always
 operator:
