@@ -127,6 +127,7 @@ func (h *ChartManager) UpgradeOrInstallChart(
 		updateAction.PostRenderer = NewHelmPostRenderer(ownerReference, "", true)
 		updateAction.MaxHistory = 1
 		updateAction.SkipCRDs = true
+		updateAction.DisableOpenAPIValidation = true
 
 		rel, err = updateAction.RunWithContext(ctx, releaseName, chart, values)
 		if err != nil {
@@ -140,6 +141,7 @@ func (h *ChartManager) UpgradeOrInstallChart(
 		installAction.Namespace = namespace
 		installAction.ReleaseName = releaseName
 		installAction.SkipCRDs = true
+		installAction.DisableOpenAPIValidation = true
 
 		rel, err = installAction.RunWithContext(ctx, chart, values)
 		if err != nil {
