@@ -125,9 +125,7 @@ _Appears in:_
 | `excludeNamespaces` _string array_ | List of namespaces that should be ignored by the CNI plugin. |  |  |
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#affinity-v1-core)_ | K8s affinity to set on the istio-cni Pods. Can be used to exclude istio-cni from being scheduled on specified nodes. |  |  |
 | `env` _object (keys:string, values:string)_ | Environment variables passed to the CNI container.  Examples: env:    ENV_VAR_1: value1   ENV_VAR_2: value2 |  |  |
-| `daemonSetLabels` _object (keys:string, values:string)_ | Additional labels to apply to the istio-cni DaemonSet. |  |  |
 | `podAnnotations` _object (keys:string, values:string)_ | Additional annotations to apply to the istio-cni Pods.  Deprecated: Marked as deprecated in pkg/apis/values_types.proto. |  |  |
-| `podLabels` _object (keys:string, values:string)_ | Additional labels to apply to the istio-cni Pods. |  |  |
 | `psp_cluster_role` _string_ | PodSecurityPolicy cluster role. No longer used anywhere. |  |  |
 | `logging` _[GlobalLoggingConfig](#globalloggingconfig)_ | Same as `global.logging.level`, but will override it if set |  |  |
 | `repair` _[CNIRepairConfig](#cnirepairconfig)_ | Configuration for the CNI Repair controller. |  |  |
@@ -446,7 +444,6 @@ _Appears in:_
 | `waypoint` _[WaypointConfig](#waypointconfig)_ | Specifies how waypoints are configured within Istio. |  |  |
 | `trustBundleName` _string_ | Select a custom name for istiod's CA Root Cert ConfigMap. |  |  |
 | `nativeNftables` _boolean_ | Specifies whether native nftables rules should be used instead of iptables rules for traffic redirection. |  |  |
-| `networkPolicy` _[NetworkPolicyConfig](#networkpolicyconfig)_ | Settings related to Kubernetes NetworkPolicy. |  |  |
 
 
 #### GlobalLoggingConfig
@@ -539,7 +536,7 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[IstioSpec](#istiospec)_ |  | \{ namespace:istio-system updateStrategy:map[type:InPlace] version:v1.26.3 \} |  |
+| `spec` _[IstioSpec](#istiospec)_ |  | \{ namespace:istio-system updateStrategy:map[type:InPlace] version:v1.27.0 \} |  |
 | `status` _[IstioStatus](#istiostatus)_ |  |  |  |
 
 
@@ -561,7 +558,7 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[IstioCNISpec](#istiocnispec)_ |  | \{ namespace:istio-cni version:v1.26.3 \} |  |
+| `spec` _[IstioCNISpec](#istiocnispec)_ |  | \{ namespace:istio-cni version:v1.27.0 \} |  |
 | `status` _[IstioCNIStatus](#istiocnistatus)_ |  |  |  |
 
 
@@ -657,7 +654,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.26-latest, v1.26.3, v1.26.2, v1.26.0, v1.25-latest, v1.25.4, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.28-alpha.be6c6d86. | v1.26.3 | Enum: [v1.26-latest v1.26.3 v1.26.2 v1.26.0 v1.25-latest v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.28-alpha.be6c6d86]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.27-latest, v1.27.0, v1.26-latest, v1.26.3, v1.26.2, v1.26.0, v1.25-latest, v1.25.4, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0. | v1.27.0 | Enum: [v1.27-latest v1.27.0 v1.26-latest v1.26.3 v1.26.2 v1.26.0 v1.25-latest v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6]   |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift openshift-ambient preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio CNI component should be installed. Note that this field is immutable. | istio-cni |  |
 | `values` _[CNIValues](#cnivalues)_ | Defines the values to be passed to the Helm charts when installing Istio CNI. |  |  |
@@ -893,7 +890,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.26.3, v1.26.2, v1.26.0, v1.25.4, v1.25.3, v1.25.2, v1.25.1, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, v1.28-alpha.be6c6d86. |  | Enum: [v1.26.3 v1.26.2 v1.26.0 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 v1.28-alpha.be6c6d86]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.27.0, v1.26.3, v1.26.2, v1.26.0, v1.25.4, v1.25.3, v1.25.2, v1.25.1, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0. |  | Enum: [v1.27.0 v1.26.3 v1.26.2 v1.26.0 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. |  |  |
 | `values` _[Values](#values)_ | Defines the values to be passed to the Helm charts when installing Istio. |  |  |
 
@@ -1086,7 +1083,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.26-latest, v1.26.3, v1.26.2, v1.26.0, v1.25-latest, v1.25.4, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.28-alpha.be6c6d86. | v1.26.3 | Enum: [v1.26-latest v1.26.3 v1.26.2 v1.26.0 v1.25-latest v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.28-alpha.be6c6d86]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.27-latest, v1.27.0, v1.26-latest, v1.26.3, v1.26.2, v1.26.0, v1.25-latest, v1.25.4, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0. | v1.27.0 | Enum: [v1.27-latest v1.27.0 v1.26-latest v1.26.3 v1.26.2 v1.26.0 v1.25-latest v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6]   |
 | `updateStrategy` _[IstioUpdateStrategy](#istioupdatestrategy)_ | Defines the update strategy to use when the version in the Istio CR is updated. | \{ type:InPlace \} |  |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift openshift-ambient preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. Note that this field is immutable. | istio-system |  |
@@ -2306,22 +2303,6 @@ _Appears in:_
 | `fromRegistry` _string_ | Add all endpoints from the specified registry into this network. The names of the registries should correspond to the kubeconfig file name inside the secret that was used to configure the registry (Kubernetes multicluster) or supplied by MCP server. |  |  |
 
 
-#### NetworkPolicyConfig
-
-
-
-Configuration for NetworkPolicy
-
-
-
-_Appears in:_
-- [GlobalConfig](#globalconfig)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `enabled` _boolean_ | Controls whether default NetworkPolicy resources will be created. |  |  |
-
-
 
 
 #### OutboundTrafficPolicyConfigMode
@@ -2546,8 +2527,6 @@ _Appears in:_
 | `envoyDebugHeaders` _[ProxyConfigProxyHeadersEnvoyDebugHeaders](#proxyconfigproxyheadersenvoydebugheaders)_ | Controls various `X-Envoy-*` headers, such as `X-Envoy-Overloaded` and `X-Envoy-Upstream-Service-Time`. If enabled, these headers will be included. If disabled, these headers will not be set. If they are already present, they will be preserved. See the [Envoy documentation](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/router/v3/router.proto#envoy-v3-api-field-extensions-filters-http-router-v3-router-suppress-envoy-headers) for more details. These headers are enabled by default if not configured. |  |  |
 | `metadataExchangeHeaders` _[ProxyConfigProxyHeadersMetadataExchangeHeaders](#proxyconfigproxyheadersmetadataexchangeheaders)_ | Controls Istio metadata exchange headers `X-Envoy-Peer-Metadata` and `X-Envoy-Peer-Metadata-Id`. By default, the behavior is unspecified. If IN_MESH, these headers will not be appended to outbound requests from sidecars to services not in-mesh. |  |  |
 | `preserveHttp1HeaderCase` _boolean_ | When true, the original case of HTTP/1.x headers will be preserved as they pass through the proxy, rather than normalizing them to lowercase. This field is particularly useful for applications that require case-sensitive headers for interoperability with downstream systems or APIs that expect specific casing. The preserve_http1_header_case option only applies to HTTP/1.x traffic, as HTTP/2 requires all headers to be lowercase per the protocol specification. Envoy will ignore this field for HTTP/2 requests and automatically normalize headers to lowercase, ensuring compliance with HTTP/2 standards. |  |  |
-| `xForwardedHost` _[ProxyConfigProxyHeadersXForwardedHost](#proxyconfigproxyheadersxforwardedhost)_ | Controls the `X-Forwarded-Host` header. If enabled, the `X-Forwarded-Host` header is appended with the original host when it is rewritten. This header is disabled by default. |  |  |
-| `xForwardedPort` _[ProxyConfigProxyHeadersXForwardedPort](#proxyconfigproxyheadersxforwardedport)_ | Controls the `X-Forwarded-Port` header. If enabled, the `X-Forwarded-Port` header is header with the port value client used to connect to Envoy. It will be ignored if the “x-forwarded-port“ header has been set by any trusted proxy in front of Envoy. This header is disabled by default. |  |  |
 
 
 #### ProxyConfigProxyHeadersAttemptCount
@@ -2620,32 +2599,6 @@ _Appears in:_
 #### ProxyConfigProxyHeadersSetCurrentClientCertDetails
 
 _Underlying type:_ _[struct{Subject *bool "json:\"subject,omitempty\""; Cert *bool "json:\"cert,omitempty\""; Chain *bool "json:\"chain,omitempty\""; Dns *bool "json:\"dns,omitempty\""; Uri *bool "json:\"uri,omitempty\""}](#struct{subject-*bool-"json:\"subject,omitempty\"";-cert-*bool-"json:\"cert,omitempty\"";-chain-*bool-"json:\"chain,omitempty\"";-dns-*bool-"json:\"dns,omitempty\"";-uri-*bool-"json:\"uri,omitempty\""})_
-
-
-
-
-
-_Appears in:_
-- [ProxyConfigProxyHeaders](#proxyconfigproxyheaders)
-
-
-
-#### ProxyConfigProxyHeadersXForwardedHost
-
-_Underlying type:_ _[struct{Enabled *bool "json:\"enabled,omitempty\""}](#struct{enabled-*bool-"json:\"enabled,omitempty\""})_
-
-
-
-
-
-_Appears in:_
-- [ProxyConfigProxyHeaders](#proxyconfigproxyheaders)
-
-
-
-#### ProxyConfigProxyHeadersXForwardedPort
-
-_Underlying type:_ _[struct{Enabled *bool "json:\"enabled,omitempty\""}](#struct{enabled-*bool-"json:\"enabled,omitempty\""})_
 
 
 
@@ -3396,7 +3349,7 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[ZTunnelSpec](#ztunnelspec)_ |  | \{ namespace:ztunnel profile:ambient version:v1.26.3 \} |  |
+| `spec` _[ZTunnelSpec](#ztunnelspec)_ |  | \{ namespace:ztunnel profile:ambient version:v1.27.0 \} |  |
 | `status` _[ZTunnelStatus](#ztunnelstatus)_ |  |  |  |
 
 
@@ -3492,7 +3445,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.26-latest, v1.26.3, v1.26.2, v1.26.0, v1.25-latest, v1.25.4, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.28-alpha.be6c6d86. | v1.26.3 | Enum: [v1.26-latest v1.26.3 v1.26.2 v1.26.0 v1.25-latest v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 master v1.28-alpha.be6c6d86]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.27-latest, v1.27.0, v1.26-latest, v1.26.3, v1.26.2, v1.26.0, v1.25-latest, v1.25.4, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0. | v1.27.0 | Enum: [v1.27-latest v1.27.0 v1.26-latest v1.26.3 v1.26.2 v1.26.0 v1.25-latest v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0]   |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is 'ambient' and it is always applied. Must be one of: ambient, default, demo, empty, external, preview, remote, stable. | ambient | Enum: [ambient default demo empty external openshift-ambient openshift preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio ztunnel component should be installed. | ztunnel |  |
 | `values` _[ZTunnelValues](#ztunnelvalues)_ | Defines the values to be passed to the Helm charts when installing Istio ztunnel. |  |  |

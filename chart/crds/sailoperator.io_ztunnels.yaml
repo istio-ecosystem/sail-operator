@@ -67,7 +67,7 @@ spec:
             default:
               namespace: ztunnel
               profile: ambient
-              version: v1.26.3
+              version: v1.27.0
             description: ZTunnelSpec defines the desired state of ZTunnel
             properties:
               namespace:
@@ -1244,25 +1244,6 @@ spec:
                                         description: |-
                                           Whether to forward the URI type Subject Alternative Name of the client cert. Defaults to
                                           true.
-                                        type: boolean
-                                    type: object
-                                  xForwardedHost:
-                                    description: |-
-                                      Controls the `X-Forwarded-Host` header. If enabled, the `X-Forwarded-Host` header is appended
-                                      with the original host when it is rewritten.
-                                      This header is disabled by default.
-                                    properties:
-                                      enabled:
-                                        type: boolean
-                                    type: object
-                                  xForwardedPort:
-                                    description: |-
-                                      Controls the `X-Forwarded-Port` header. If enabled, the `X-Forwarded-Port` header is header with the port value
-                                      client used to connect to Envoy. It will be ignored if the “x-forwarded-port“ header has been set by any
-                                      trusted proxy in front of Envoy.
-                                      This header is disabled by default.
-                                    properties:
-                                      enabled:
                                         type: boolean
                                     type: object
                                 type: object
@@ -5785,11 +5766,13 @@ spec:
                     type: object
                 type: object
               version:
-                default: v1.26.3
+                default: v1.27.0
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.26-latest, v1.26.3, v1.26.2, v1.26.0, v1.25-latest, v1.25.4, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.28-alpha.be6c6d86.
+                  Must be one of: v1.27-latest, v1.27.0, v1.26-latest, v1.26.3, v1.26.2, v1.26.0, v1.25-latest, v1.25.4, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0.
                 enum:
+                - v1.27-latest
+                - v1.27.0
                 - v1.26-latest
                 - v1.26.3
                 - v1.26.2
@@ -5807,8 +5790,6 @@ spec:
                 - v1.24.2
                 - v1.24.1
                 - v1.24.0
-                - master
-                - v1.28-alpha.be6c6d86
                 type: string
             required:
             - namespace

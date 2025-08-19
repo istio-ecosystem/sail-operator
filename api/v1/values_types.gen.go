@@ -114,14 +114,10 @@ type CNIConfig struct {
 	//	ENV_VAR_1: value1
 	//	ENV_VAR_2: value2
 	Env map[string]string `json:"env,omitempty"`
-	// Additional labels to apply to the istio-cni DaemonSet.
-	DaemonSetLabels map[string]string `json:"daemonSetLabels,omitempty"`
 	// Additional annotations to apply to the istio-cni Pods.
 	//
 	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
-	// Additional labels to apply to the istio-cni Pods.
-	PodLabels map[string]string `json:"podLabels,omitempty"`
 	// PodSecurityPolicy cluster role. No longer used anywhere.
 	PspClusterRole *string `json:"psp_cluster_role,omitempty"`
 
@@ -440,9 +436,7 @@ type GlobalConfig struct {
 	// Select a custom name for istiod's CA Root Cert ConfigMap.
 	TrustBundleName *string `json:"trustBundleName,omitempty"`
 	// Specifies whether native nftables rules should be used instead of iptables rules for traffic redirection.
-	NativeNftables *bool `json:"nativeNftables,omitempty"`
-	// Settings related to Kubernetes NetworkPolicy.
-	NetworkPolicy *NetworkPolicyConfig `json:"networkPolicy,omitempty"` // The next available key is 76
+	NativeNftables *bool `json:"nativeNftables,omitempty"` // The next available key is 75
 
 }
 
@@ -1010,12 +1004,6 @@ type WaypointConfig struct {
 	Toleration []*k8sv1.Toleration `json:"toleration,omitempty"`
 }
 
-// Configuration for NetworkPolicy
-type NetworkPolicyConfig struct {
-	// Controls whether default NetworkPolicy resources will be created.
-	Enabled *bool `json:"enabled,omitempty"`
-}
-
 const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\n" +
 	"\x1bpkg/apis/values_types.proto\x12\x17istio.operator.v1alpha1\x1a\x19google/protobuf/any.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\"k8s.io/api/core/v1/generated.proto\x1a4k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto\"h\n" +
@@ -1024,7 +1012,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x05amd64\x18\x01 \x01(\rR\x05amd64\x12\x18\n" +
 	"\appc64le\x18\x02 \x01(\rR\appc64le\x12\x14\n" +
 	"\x05s390x\x18\x03 \x01(\rR\x05s390x\x12\x14\n" +
-	"\x05arm64\x18\x04 \x01(\rR\x05arm64\"\xa0\f\n" +
+	"\x05arm64\x18\x04 \x01(\rR\x05arm64\"\xa6\v\n" +
 	"\tCNIConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12\x10\n" +
 	"\x03hub\x18\x02 \x01(\tR\x03hub\x12(\n" +
@@ -1042,11 +1030,9 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\vcniNetnsDir\x18\x1f \x01(\tR\vcniNetnsDir\x12,\n" +
 	"\x11excludeNamespaces\x18\t \x03(\tR\x11excludeNamespaces\x128\n" +
 	"\baffinity\x18\x14 \x01(\v2\x1c.k8s.io.api.core.v1.AffinityR\baffinity\x12)\n" +
-	"\x03env\x18  \x01(\v2\x17.google.protobuf.StructR\x03env\x12A\n" +
-	"\x0fdaemonSetLabels\x18! \x01(\v2\x17.google.protobuf.StructR\x0fdaemonSetLabels\x12C\n" +
+	"\x03env\x18  \x01(\v2\x17.google.protobuf.StructR\x03env\x12C\n" +
 	"\x0epodAnnotations\x18\n" +
-	" \x01(\v2\x17.google.protobuf.StructB\x02\x18\x01R\x0epodAnnotations\x125\n" +
-	"\tpodLabels\x18\" \x01(\v2\x17.google.protobuf.StructR\tpodLabels\x12(\n" +
+	" \x01(\v2\x17.google.protobuf.StructB\x02\x18\x01R\x0epodAnnotations\x12(\n" +
 	"\x10psp_cluster_role\x18\v \x01(\tR\x0epspClusterRole\x12\x1e\n" +
 	"\blogLevel\x18\f \x01(\tB\x02\x18\x01R\blogLevel\x12F\n" +
 	"\alogging\x18\x19 \x01(\v2,.istio.operator.v1alpha1.GlobalLoggingConfigR\alogging\x12@\n" +
@@ -1154,7 +1140,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x14istio_ingressgateway\x18\x04 \x01(\v2-.istio.operator.v1alpha1.IngressGatewayConfigR\x14istio-ingressgateway\x12@\n" +
 	"\x0fsecurityContext\x18\n" +
 	" \x01(\v2\x16.google.protobuf.ValueR\x0fsecurityContext\x12>\n" +
-	"\x0eseccompProfile\x18\f \x01(\v2\x16.google.protobuf.ValueR\x0eseccompProfile\"\xdf\x13\n" +
+	"\x0eseccompProfile\x18\f \x01(\v2\x16.google.protobuf.ValueR\x0eseccompProfile\"\x8b\x13\n" +
 	"\fGlobalConfig\x12;\n" +
 	"\x04arch\x18\x01 \x01(\v2#.istio.operator.v1alpha1.ArchConfigB\x02\x18\x01R\x04arch\x12 \n" +
 	"\vcertSigners\x18D \x03(\tR\vcertSigners\x12F\n" +
@@ -1203,8 +1189,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x0eipFamilyPolicy\x18G \x01(\tR\x0eipFamilyPolicy\x12C\n" +
 	"\bwaypoint\x18H \x01(\v2'.istio.operator.v1alpha1.WaypointConfigR\bwaypoint\x12(\n" +
 	"\x0ftrustBundleName\x18I \x01(\tR\x0ftrustBundleName\x12B\n" +
-	"\x0enativeNftables\x18J \x01(\v2\x1a.google.protobuf.BoolValueR\x0enativeNftables\x12R\n" +
-	"\rnetworkPolicy\x18K \x01(\v2,.istio.operator.v1alpha1.NetworkPolicyConfigR\rnetworkPolicy\"-\n" +
+	"\x0enativeNftables\x18J \x01(\v2\x1a.google.protobuf.BoolValueR\x0enativeNftables\"-\n" +
 	"\tSTSConfig\x12 \n" +
 	"\vservicePort\x18\x01 \x01(\rR\vservicePort\"R\n" +
 	"\fIstiodConfig\x12B\n" +
@@ -1461,9 +1446,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\fnodeSelector\x18\x04 \x01(\v2 .k8s.io.api.core.v1.NodeSelectorR\fnodeSelector\x12>\n" +
 	"\n" +
 	"toleration\x18\x05 \x03(\v2\x1e.k8s.io.api.core.v1.TolerationR\n" +
-	"toleration\"K\n" +
-	"\x13NetworkPolicyConfig\x124\n" +
-	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled*J\n" +
+	"toleration*J\n" +
 	"\x15ingressControllerMode\x12\x0f\n" +
 	"\vUNSPECIFIED\x10\x00\x12\v\n" +
 	"\aDEFAULT\x10\x01\x12\n" +
@@ -4184,15 +4167,6 @@ type ProxyConfigProxyHeaders struct {
 	// requests and automatically normalize headers to lowercase, ensuring compliance with HTTP/2
 	// standards.
 	PreserveHttp1HeaderCase *bool `json:"preserveHttp1HeaderCase,omitempty"`
-	// Controls the `X-Forwarded-Host` header. If enabled, the `X-Forwarded-Host` header is appended
-	// with the original host when it is rewritten.
-	// This header is disabled by default.
-	XForwardedHost *ProxyConfigProxyHeadersXForwardedHost `json:"xForwardedHost,omitempty"`
-	// Controls the `X-Forwarded-Port` header. If enabled, the `X-Forwarded-Port` header is header with the port value
-	// client used to connect to Envoy. It will be ignored if the “x-forwarded-port“ header has been set by any
-	// trusted proxy in front of Envoy.
-	// This header is disabled by default.
-	XForwardedPort *ProxyConfigProxyHeadersXForwardedPort `json:"xForwardedPort,omitempty"`
 }
 
 type ProxyConfigProxyHeadersServer struct {
@@ -4207,14 +4181,6 @@ type ProxyConfigProxyHeadersRequestId struct {
 
 type ProxyConfigProxyHeadersAttemptCount struct {
 	Disabled *bool `json:"disabled,omitempty"`
-}
-
-type ProxyConfigProxyHeadersXForwardedHost struct {
-	Enabled *bool `json:"enabled,omitempty"`
-}
-
-type ProxyConfigProxyHeadersXForwardedPort struct {
-	Enabled *bool `json:"enabled,omitempty"`
 }
 
 type ProxyConfigProxyHeadersEnvoyDebugHeaders struct {
@@ -4319,7 +4285,7 @@ const fileMeshV1alpha1ProxyProtoRawDesc = "" +
 	"poll_delay\x18\x01 \x01(\v2\x19.google.protobuf.DurationR\tpollDelay\x126\n" +
 	"\bfallback\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\bfallbackB\n" +
 	"\n" +
-	"\bprovider\"\xa3&\n" +
+	"\bprovider\"\xc3#\n" +
 	"\vProxyConfig\x12\x1f\n" +
 	"\vconfig_path\x18\x01 \x01(\tR\n" +
 	"configPath\x12\x1f\n" +
@@ -4370,7 +4336,7 @@ const fileMeshV1alpha1ProxyProtoRawDesc = "" +
 	"\x11ProxyStatsMatcher\x12-\n" +
 	"\x12inclusion_prefixes\x18\x01 \x03(\tR\x11inclusionPrefixes\x12-\n" +
 	"\x12inclusion_suffixes\x18\x02 \x03(\tR\x11inclusionSuffixes\x12+\n" +
-	"\x11inclusion_regexps\x18\x03 \x03(\tR\x10inclusionRegexps\x1a\xa5\x0f\n" +
+	"\x11inclusion_regexps\x18\x03 \x03(\tR\x10inclusionRegexps\x1a\xc5\f\n" +
 	"\fProxyHeaders\x12a\n" +
 	"\x15forwarded_client_cert\x18\x01 \x01(\x0e2-.istio.mesh.v1alpha1.ForwardClientCertDetailsR\x13forwardedClientCert\x12\x8f\x01\n" +
 	"\x1fset_current_client_cert_details\x18\a \x01(\v2I.istio.mesh.v1alpha1.ProxyConfig.ProxyHeaders.SetCurrentClientCertDetailsR\x1bsetCurrentClientCertDetails\x12V\n" +
@@ -4380,20 +4346,14 @@ const fileMeshV1alpha1ProxyProtoRawDesc = "" +
 	"\rattempt_count\x18\x04 \x01(\v2:.istio.mesh.v1alpha1.ProxyConfig.ProxyHeaders.AttemptCountR\fattemptCount\x12o\n" +
 	"\x13envoy_debug_headers\x18\x05 \x01(\v2?.istio.mesh.v1alpha1.ProxyConfig.ProxyHeaders.EnvoyDebugHeadersR\x11envoyDebugHeaders\x12\x81\x01\n" +
 	"\x19metadata_exchange_headers\x18\x06 \x01(\v2E.istio.mesh.v1alpha1.ProxyConfig.ProxyHeaders.MetadataExchangeHeadersR\x17metadataExchangeHeaders\x12W\n" +
-	"\x1apreserve_http1_header_case\x18( \x01(\v2\x1a.google.protobuf.BoolValueR\x17preserveHttp1HeaderCase\x12f\n" +
-	"\x10x_forwarded_host\x18) \x01(\v2<.istio.mesh.v1alpha1.ProxyConfig.ProxyHeaders.XForwardedHostR\x0exForwardedHost\x12f\n" +
-	"\x10x_forwarded_port\x18* \x01(\v2<.istio.mesh.v1alpha1.ProxyConfig.ProxyHeaders.XForwardedPortR\x0exForwardedPort\x1aV\n" +
+	"\x1apreserve_http1_header_case\x18( \x01(\v2\x1a.google.protobuf.BoolValueR\x17preserveHttp1HeaderCase\x1aV\n" +
 	"\x06Server\x126\n" +
 	"\bdisabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\bdisabled\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value\x1aC\n" +
 	"\tRequestId\x126\n" +
 	"\bdisabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\bdisabled\x1aF\n" +
 	"\fAttemptCount\x126\n" +
-	"\bdisabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\bdisabled\x1aF\n" +
-	"\x0eXForwardedHost\x124\n" +
-	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x1aF\n" +
-	"\x0eXForwardedPort\x124\n" +
-	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x1aK\n" +
+	"\bdisabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\bdisabled\x1aK\n" +
 	"\x11EnvoyDebugHeaders\x126\n" +
 	"\bdisabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\bdisabled\x1aq\n" +
 	"\x17MetadataExchangeHeaders\x12V\n" +

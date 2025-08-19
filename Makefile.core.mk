@@ -30,7 +30,7 @@ MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 # There are also GH workflows defined to release nightly and stable operators.
 # There is no need to define `replaces` and `skipRange` fields in the CSV as those fields are defined in the FBC and CSV values are ignored.
 # FBC is source of truth for OLM upgrade graph.
-PREVIOUS_VERSION ?= 1.26.0
+PREVIOUS_VERSION ?= 1.26.3
 
 OPERATOR_NAME ?= sailoperator
 VERSIONS_YAML_DIR ?= pkg/istioversion
@@ -77,8 +77,8 @@ endif
 
 # Image hub to use
 HUB ?= quay.io/sail-dev
-# Image tag to use
-TAG ?= ${MINOR_VERSION}-latest
+# Image tag to use. On release branches this should be the VERSION.
+TAG ?= ${VERSION}
 # Image base to use
 IMAGE_BASE ?= sail-operator
 # Image URL to use all building/pushing image targets
@@ -123,9 +123,10 @@ endif
 # To re-generate a bundle for other specific channels without changing the standard setup, you can:
 # - use the CHANNELS as arg of the bundle target (e.g make bundle CHANNELS=candidate,fast,stable)
 # - use environment variables to overwrite this value (e.g export CHANNELS="candidate,fast,stable")
-CHANNEL_PREFIX := dev
+CHANNEL_PREFIX := stable
+DEFAULT_CHANNEL := stable
 
-CHANNELS ?= $(CHANNEL_PREFIX)-$(MINOR_VERSION)
+CHANNELS := $(DEFAULT_CHANNEL),$(CHANNEL_PREFIX)-$(MINOR_VERSION)
 ifneq ($(origin CHANNELS), undefined)
 BUNDLE_CHANNELS = --channels=\"$(CHANNELS)\"
 endif
