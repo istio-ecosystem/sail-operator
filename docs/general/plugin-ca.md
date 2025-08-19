@@ -9,7 +9,7 @@ By default the Istio CA generates a self-signed root certificate and key and use
 ### Cause of the traffic disruptions
 We can simply add a new `cacerts` secret with our certificates but what does it mean for service to service mTLS traffic? Consider `sleep` and `httpbin` demo applications. Both are sharing the same root of trust which is the Istio CA generated self-signed root certificate:
 ```bash
-$ istioctl proxy-config secret deployment/sleep -n sleep -o json | jq -r '.dynamicActiveSecrets[1].secret.validationContext.trustedCa.inlineBytes' | base64 --decode | openssl x509 -text -noout
+istioctl proxy-config secret deployment/sleep -n sleep -o json | jq -r '.dynamicActiveSecrets[1].secret.validationContext.trustedCa.inlineBytes' | base64 --decode | openssl x509 -text -noout
 Certificate:
     Data:
         Version: 3 (0x2)
@@ -22,7 +22,7 @@ Certificate:
             Not After : Jun 17 12:39:46 2035 GMT
         Subject: O=cluster.local
         ...
-$ istioctl proxy-config secret deployment/httpbin -n httpbin -o json | jq -r '.dynamicActiveSecrets[1].secret.validationContext.trustedCa.inlineBytes' | base64 --decode | openssl x509 -text -noout
+istioctl proxy-config secret deployment/httpbin -n httpbin -o json | jq -r '.dynamicActiveSecrets[1].secret.validationContext.trustedCa.inlineBytes' | base64 --decode | openssl x509 -text -noout
 Certificate:
     Data:
         Version: 3 (0x2)

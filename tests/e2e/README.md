@@ -210,12 +210,12 @@ Specifically for OCP:
 
 * To run the end-to-end tests in OCP cluster, use the following command:
 ```
-$ make test.e2e.ocp
+make test.e2e.ocp
 ```
 
 * To run the end-to-end tests in KinD cluster, use the following command:
 ```
-$ make test.e2e.kind
+make test.e2e.kind
 ```
 
 Both targets will run setup first by using `integ-suite-ocp.sh` and `integ-suite-kind.sh` scripts respectively, and then run the end-to-end tests using the `common-operator-integ-suite` script setting different flags for OCP and KinD.
@@ -226,7 +226,7 @@ Note: By default, the test runs inside a container because the env var `BUILD_WI
 To run a specific subset of tests, you can use the `GINKGO_FLAGS` environment variable. For example, to run only the `smoke` tests, you can use the following command:
 
 ```
-$ GINKGO_FLAGS="-v --label-filter=smoke" make test.e2e.kind
+GINKGO_FLAGS="-v --label-filter=smoke" make test.e2e.kind
 ```
 Note: `-v` is to add verbosity to the output. The `--label-filter` flag is used to filter the tests by label. You can use multiple labels separated by commas. Please take a look at the topic [Settings for end to end test execution](#settings-for-end-to-end-test-execution) to see how you can set more customizations for the test run.
 
@@ -235,11 +235,11 @@ Note: `-v` is to add verbosity to the output. The `--label-filter` flag is used 
 To run the end-to-end tests without a container, use the following command:
 
 ```
-$ make BUILD_WITH_CONTAINER=0 test.e2e.kind
+make BUILD_WITH_CONTAINER=0 test.e2e.kind
 ```
 or
 ```
-$ make BUILD_WITH_CONTAINER=0 test.e2e.ocp
+make BUILD_WITH_CONTAINER=0 test.e2e.ocp
 ```
 
 Note: if you are running the test against a cluster that has a different architecture than the one you are running the test, you will need to set the `TARGET_ARCH` environment variable to the architecture of the cluster. For example, if you are running the test against an ARM64 cluster, you can use the following command:
@@ -271,7 +271,7 @@ The test run can be customized by setting the following environment variables:
 To change all the sample files used in the test, you can use the following environment variable:
 * `SAMPLES_PATH=<path-to-kustomize-sample-base-folder>`. We use kustomize to patch the upstream sample yaml files to use images located in the `quay.io/sail-dev` registry. This is useful when you want to use your own sample files or when you want to use a different version of the sample files. The path should point to the folder where the kustomize files are located. For example, if you have your own sample files in the `tests/e2e/samples/custom` folder, you can set the environment variable as follows:
 ```
-$ CUSTOM_SAMPLES_PATH=tests/e2e/samples/custom
+CUSTOM_SAMPLES_PATH=tests/e2e/samples/custom
 ```
 
 Note: when setting this environment variable, make sure that the folder contains the kustomize files with the same structure as the upstream sample files. This means that the folder should contain:
@@ -318,12 +318,12 @@ To run the test group, you can use the following command:
 * Run the following command to run the smoke tests:
 For running on kind:
 ```
-$ SKIP_BUILD=true SKIP_DEPLOY=true GINKGO_FLAGS="-v --label-filter=smoke" make test.e2e.kind
+SKIP_BUILD=true SKIP_DEPLOY=true GINKGO_FLAGS="-v --label-filter=smoke" make test.e2e.kind
 ```
 
 For running on OCP:
 ```
-$ SKIP_BUILD=true SKIP_DEPLOY=true GINKGO_FLAGS="-v --label-filter=smoke" make test.e2e.ocp
+SKIP_BUILD=true SKIP_DEPLOY=true GINKGO_FLAGS="-v --label-filter=smoke" make test.e2e.ocp
 ```
 
 #### Running with specific configuration for the Istio and IstioCNI resource
@@ -364,7 +364,7 @@ versions:
 
 * To run the test framework against a specific Istio version, you can use the following command:
 ```
-$ VERSIONS_YAML_FILE=custom_versions.yaml SKIP_BUILD=true SKIP_DEPLOY=true GINKGO_FLAGS="-v --label-filter=smoke" make test.e2e.kind
+VERSIONS_YAML_FILE=custom_versions.yaml SKIP_BUILD=true SKIP_DEPLOY=true GINKGO_FLAGS="-v --label-filter=smoke" make test.e2e.kind
 ```
 Note: The `custom_versions.yaml` file must be placed in the `pkg/istioversion` directory. The test framework uses this file to run tests against the specific Istio versions it defines.
 
@@ -401,7 +401,7 @@ Test Suite Failed
 The end-to-end test suite is defined in the `tests/e2e/operator` directory. If you want to check the test definition without running the test, you can use the following make target:
 
 ```
-$ make test.e2e.describe
+make test.e2e.describe
 ```
 
 When you run this target, the test definitions will be printed to the console with format `indent`. For example:

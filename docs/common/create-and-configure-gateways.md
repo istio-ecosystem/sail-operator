@@ -175,7 +175,7 @@ not available by default and must be enabled to be used. This can be done with
 the command:
 
 ```sh
-$ kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null ||  { kubectl kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.0.0" | kubectl apply -f -; }
+kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null ||  { kubectl kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.0.0" | kubectl apply -f -; }
 ```
 
 To configure `bookinfo` with a gateway using `Gateway API`:
