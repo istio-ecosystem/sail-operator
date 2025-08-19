@@ -108,16 +108,21 @@ for i in {1..5}; do kubectl wait --for=condition=available --timeout=600s deploy
 ```bash { name=check-sample-app tag=example}
 kubectl get pods -n sample
 ```
-<!--
-```bash { name=check-sidecar-exist tag=example}
-if ! kubectl get pods -n sample -l app=productpage -o jsonpath='{range .items[*]}{@.metadata.name}{" "}{range .spec.containers[*]}{@.name}{" "}{end}{"\n"}{end}' | grep -q istio-proxy; then
-  echo "No Istio sidecar (istio-proxy) injected in productpage pod!"
-  exit 1
-fi
-```
--->
 
 - Check the proxy version of the sample application:
 ```bash { name=check-proxy-version tag=example}
 istioctl proxy-status 
 ```
+
+<!--
+```bash { name=validation-sample-apps tag=example}
+POD_NAME=$(kubectl get pod -n sample -l app=productpage -o jsonpath='{.items[0].metadata.name}')
+if ! istioctl proxy-status "$POD_NAME.sample" | grep -q "Stale"; then
+  echo "✓ Success: Proxy is synced with Istiod."
+else
+  echo "𐄂 Validation Failed: Proxy configuration is Stale."
+  istioctl proxy-status "$POD_NAME.sample"
+  exit 1
+fi
+```
+-->
