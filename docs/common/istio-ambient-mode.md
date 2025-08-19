@@ -78,8 +78,8 @@ The ZTunnel resource API reference documentation can be found [here](../api-refe
 2. Create the `istio-system` namespace and add a label `istio-discovery=enabled`.
 
 ```bash
-$ kubectl create namespace istio-system
-$ kubectl label namespace istio-system istio-discovery=enabled
+kubectl create namespace istio-system
+kubectl label namespace istio-system istio-discovery=enabled
 ```
 
 3. Create the `Istio` resource. 
@@ -87,7 +87,7 @@ $ kubectl label namespace istio-system istio-discovery=enabled
 > The Istio resource `.spec.values.pilot.trustedZtunnelNamespace` value should match the namespace that we will install a `ZTunnel` resource at. 
 
 ```bash
-$ cat <<EOF | kubectl apply -f-
+cat <<EOF | kubectl apply -f-
 apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
@@ -111,7 +111,7 @@ EOF
 4. Confirm the installation and version of the control plane.
 
 ```console
-$ kubectl get istio -n istio-system
+kubectl get istio -n istio-system
     NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
     default   1           1       0        default           Healthy   v1.24.0   23s
 ```
@@ -120,13 +120,13 @@ $ kubectl get istio -n istio-system
 5. Create the `istio-cni` namespace.
 
 ```bash
-$ kubectl create namespace istio-cni
+kubectl create namespace istio-cni
 ```
 
 6. Create the `IstioCNI` resource.
 
 ```bash
-$ cat <<EOF | kubectl apply -f-
+cat <<EOF | kubectl apply -f-
 apiVersion: sailoperator.io/v1
 kind: IstioCNI
 metadata:
@@ -143,14 +143,14 @@ EOF
 > We need to label both the `Istio` resource's namespace e.g. `istio-system` and the `ZTunnel` resource's namespace when using a `discoverySelectors` mesh config. Those two labels should be added before installing a `ZTunnel` instance. This approach is used to avoid a [TLS signing error](https://github.com/istio/istio/issues/52057).
 
 ```bash
-$ kubectl create namespace ztunnel
-$ kubectl label namespace ztunnel istio-discovery=enabled
+kubectl create namespace ztunnel
+kubectl label namespace ztunnel istio-discovery=enabled
 ```
 
 8. Create the `ZTunnel` resource.
 
 ```bash
-$ cat <<EOF | kubectl apply -f-
+cat <<EOF | kubectl apply -f-
 apiVersion: sailoperator.io/v1alpha1
 kind: ZTunnel
 metadata:
@@ -165,7 +165,7 @@ EOF
 9. Confirm the installation and version of the `ztunnel`.
 
 ```console
-$ kubectl get ztunnel -n istio-system
+kubectl get ztunnel -n istio-system
     NAME      READY   STATUS    VERSION   AGE
     default   True    Healthy   v1.24.0   16s
 ```
@@ -179,21 +179,21 @@ To explore Istio's ambient mode, let's install the sample `Bookinfo application`
 1. Create the `bookinfo` namespace and add a label `istio-discovery=enabled`.
 
 ```bash
-$ kubectl create ns bookinfo
-$ kubectl label namespace bookinfo istio-discovery=enabled
+kubectl create ns bookinfo
+kubectl label namespace bookinfo istio-discovery=enabled
 ```
 
 2. Deploy the application.
 
 ```bash
-$ kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/release-1.24/samples/bookinfo/platform/kube/bookinfo.yaml
-$ kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/release-1.24/samples/bookinfo/platform/kube/bookinfo-versions.yaml
+kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/release-1.24/samples/bookinfo/platform/kube/bookinfo.yaml
+kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/release-1.24/samples/bookinfo/platform/kube/bookinfo-versions.yaml
 ```
 
 3. Verify that the application is running.
 
 ```console
-$ kubectl get -n bookinfo pods
+kubectl get -n bookinfo pods
 
     NAME                             READY   STATUS    RESTARTS   AGE
     details-v1-cf74bb974-nw94k       1/1     Running   0          42s
@@ -207,18 +207,18 @@ $ kubectl get -n bookinfo pods
 4. Deploy and configure the ingress gateway using the Kubernetes Gateway API.
 
 ```bash
-$ kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \ 
+kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
 { kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml; }
-$ kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/release-1.24/samples/bookinfo/gateway-api/bookinfo-gateway.yaml
+kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/release-1.24/samples/bookinfo/gateway-api/bookinfo-gateway.yaml
 ```
     
 Wait for the `bookinfo-gateway` pod to enter running state and then get the `productpage` service URL. The wait time depends on your cluster cloud provider. It takes me about one minute from an AWS ELB to be able to access it.
 
 ```bash
-$ export INGRESS_HOST=$(kubectl get -n bookinfo gtw bookinfo-gateway -o jsonpath='{.status.addresses[0].value}')
-$ export INGRESS_PORT=$(kubectl get -n bookinfo gtw bookinfo-gateway -o jsonpath='{.spec.listeners[?(@.name=="http")].port}')
-$ export GATEWAY_URL=$INGRESS_HOST:$INGRESS_PORT
-$ echo "http://${GATEWAY_URL}/productpage"
+export INGRESS_HOST=$(kubectl get -n bookinfo gtw bookinfo-gateway -o jsonpath='{.status.addresses[0].value}')
+export INGRESS_PORT=$(kubectl get -n bookinfo gtw bookinfo-gateway -o jsonpath='{.spec.listeners[?(@.name=="http")].port}')
+export GATEWAY_URL=$INGRESS_HOST:$INGRESS_PORT
+echo "http://${GATEWAY_URL}/productpage"
 ```
 
 5. Access the application.
@@ -229,7 +229,7 @@ If you refresh the page, you should see the display of the book ratings changing
 6. Add Bookinfo to the Ambient mesh.
 
 ```bash
-$ kubectl label namespace bookinfo istio.io/dataplane-mode=ambient
+kubectl label namespace bookinfo istio.io/dataplane-mode=ambient
 ```
 
 > **Note**:
@@ -241,7 +241,7 @@ If you refresh the previous browser page, you should see the same display.
 7. To confirm that `ztunnel` successfully opened listening sockets inside the pod network ns, use the following command.
 
 ```console
-$ kubectl debug -it -n bookinfo "$(kubectl get pod -n bookinfo -l app=productpage -o name)" --image quay.io/curl/curl -- netstat -tulpn
+kubectl debug -it -n bookinfo "$(kubectl get pod -n bookinfo -l app=productpage -o name)" --image quay.io/curl/curl -- netstat -tulpn
 Active Internet connections (only servers)
 Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name
 tcp        0      0 127.0.0.1:15053         0.0.0.0:*               LISTEN      -
@@ -260,7 +260,7 @@ Using Kiali dashboard and Prometheus metrics engine, you can visualize the Booki
 Deploy Prometheus in `istio-system` namespace.
 
 ```bash
-$ kubectl apply -n istio-system -f https://raw.githubusercontent.com/istio/istio/master/samples/addons/prometheus.yaml
+kubectl apply -n istio-system -f https://raw.githubusercontent.com/istio/istio/master/samples/addons/prometheus.yaml
 ```
 
 > **NOTE**:
@@ -269,7 +269,7 @@ $ kubectl apply -n istio-system -f https://raw.githubusercontent.com/istio/istio
 Deploy a Kiali dashboard using a community Kiali operator on OpenShift.
 
 ```bash
-$ cat <<EOF | kubectl apply -f -
+cat <<EOF | kubectl apply -f -
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
@@ -282,11 +282,11 @@ spec:
   source: community-operators
   sourceNamespace: openshift-marketplace
 EOF
-$ kubectl wait --for condition=established --timeout=60s crd "kialis.kiali.io"
+kubectl wait --for condition=established --timeout=60s crd "kialis.kiali.io"
 
 customresourcedefinition.apiextensions.k8s.io/kialis.kiali.io condition met
 
-$ cat <<EOF | kubectl apply -f -
+cat <<EOF | kubectl apply -f -
 apiVersion: kiali.io/v1alpha1
 kind: Kiali
 metadata:
@@ -298,7 +298,7 @@ EOF
 To access the Kiali dashboard, let's get the URL.
 
 ```bash
-$ kubectl get route -n istio-system -l app.kubernetes.io/name=kiali -o jsonpath='https://{..spec.host}/'
+kubectl get route -n istio-system -l app.kubernetes.io/name=kiali -o jsonpath='https://{..spec.host}/'
 ```
 
 ![kiali-dashboard](images/kiali-dashboard.png "Kiali Dashboard")
@@ -322,7 +322,7 @@ Users can download an `istioctl` binary and run those diagnostic commands. We re
 Before adding Bookinfo to the Ambient mesh, you would see the PROTOCOL field as TCP for all the workloads.
 
 ```console
-$ istioctl -n ztunnel ztunnel-config workloads
+istioctl -n ztunnel ztunnel-config workloads
     NAMESPACE    POD NAME                        ADDRESS      NODE                       WAYPOINT PROTOCOL
     bookinfo     details-v1-6cd6d9df6b-mddv2     10.129.0.43  ip-10-0-0-241.ec2.internal None     TCP
     bookinfo     productpage-v1-57ffb6658c-vmb6z 10.129.0.48  ip-10-0-0-241.ec2.internal None     TCP
@@ -336,7 +336,7 @@ $ istioctl -n ztunnel ztunnel-config workloads
 After adding `bookinfo` namespace to the Ambient mesh, you would see HBONE protocol.
 
 ```console
-$ istioctl -n ztunnel ztunnel-config workloads
+istioctl -n ztunnel ztunnel-config workloads
     NAMESPACE    POD NAME                        ADDRESS      NODE                       WAYPOINT PROTOCOL
     bookinfo     details-v1-6cd6d9df6b-mddv2     10.129.0.43  ip-10-0-0-241.ec2.internal None     HBONE
     bookinfo     productpage-v1-57ffb6658c-vmb6z 10.129.0.48  ip-10-0-0-241.ec2.internal None     HBONE
@@ -352,7 +352,7 @@ $ istioctl -n ztunnel ztunnel-config workloads
 You can also validate mTLS from ztunnel logs to confirm mTLS is enabled.
 
 ```console
-$ kubectl -n ztunnel logs -l app=ztunnel | grep -E "inbound|outbound"
+kubectl -n ztunnel logs -l app=ztunnel | grep -E "inbound|outbound"
 
 2025-01-23T05:07:25.806642Z	info	access	connection complete	src.addr=10.129.0.48:40978 src.workload="productpage-v1-57ffb6658c-vmb6z" src.namespace="bookinfo" src.identity="spiffe://cluster.local/ns/bookinfo/sa/bookinfo-productpage" dst.addr=10.129.0.43:15008 dst.hbone_addr=10.129.0.43:9080 dst.service="details.bookinfo.svc.cluster.local" dst.workload="details-v1-6cd6d9df6b-mddv2" dst.namespace="bookinfo" dst.identity="spiffe://cluster.local/ns/bookinfo/sa/bookinfo-details" direction="outbound" bytes_sent=283 bytes_recv=358 duration="2ms"
 ```

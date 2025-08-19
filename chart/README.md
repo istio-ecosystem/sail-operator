@@ -17,8 +17,8 @@ OpenShift:
 ## Prepare the Helm charts
 
 ```sh
-$ helm repo add sail-operator https://istio-ecosystem.github.io/sail-operator
-$ helm repo update
+helm repo add sail-operator https://istio-ecosystem.github.io/sail-operator
+helm repo update
 ```
 
 ## Installation steps
@@ -26,7 +26,7 @@ $ helm repo update
 This section describes the procedure to install `Sail Operator` using Helm. The general syntax for helm installation is:
 
 ```sh
-$ helm install <release> <chart> --create-namespace --namespace <namespace> [--set <other_parameters>]
+helm install <release> <chart> --create-namespace --namespace <namespace> [--set <other_parameters>]
 ```
 
 The variables specified in the command are as follows:
@@ -156,7 +156,7 @@ An example configuration:
 For a list of available configuration for the `spec.values` field, run the following command:
 
 ```sh
-$ kubectl explain istio.spec.values
+kubectl explain istio.spec.values
 ```
 
 For the `IstioCNI` resource, replace `istio` with `istiocni` in the command above.
@@ -210,25 +210,25 @@ For installation steps, refer to the following [link](../docs/common/istio-addon
 ### Deleting Istio
 
 ```sh
-$ kubectl -n istio-system delete istio default
+kubectl -n istio-system delete istio default
 ```
 
 ### Deleting IstioCNI (in OpenShift cluster platform)
 
 ```sh
-$ kubectl -n istio-cni delete istiocni default
+kubectl -n istio-cni delete istiocni default
 ```
 
 ### Uninstall the Sail Operator using Helm
 
 ```sh
-$ helm uninstall sail-operator --namespace sail-operator
+helm uninstall sail-operator --namespace sail-operator
 ```
  
 ### Deleting the Project namespaces
 
 ```sh
-$ kubectl delete namespace istio-system
-$ kubectl delete namespace istio-cni
-$ kubectl delete namespace sail-operator
+kubectl delete namespace istio-system
+kubectl delete namespace istio-cni
+kubectl delete namespace sail-operator
 ```

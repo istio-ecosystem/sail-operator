@@ -64,7 +64,7 @@ EOF
 In our case it is `test` the istio resource name.
 
 ```console
-$ kubectl get istios
+kubectl get istios
 NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
 test      1           1       0        test              Healthy   v1.24.3   8m10s
 ```

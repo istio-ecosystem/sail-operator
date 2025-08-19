@@ -240,7 +240,7 @@ Use the `istioctl ps` command to confirm that the application pods are connected
 The `curl` and `httpbin` pods in namespace `app1` should be connected to the control plane in namespace `istio-system1`, as shown in the following example (note the `.app1` suffix in the `NAME` column):
 
 ```console
-$ istioctl ps -i istio-system1
+istioctl ps -i istio-system1
 NAME                              CLUSTER        CDS                LDS                EDS                RDS                ECDS        ISTIOD                            VERSION
 curl-5b549b49b8-mg7nl.app1        Kubernetes     SYNCED (4m40s)     SYNCED (4m40s)     SYNCED (4m31s)     SYNCED (4m40s)     IGNORED     istiod-mesh1-5df45b97dd-tf2wl     1.24.0
 httpbin-7b549f7859-h6hnk.app1     Kubernetes     SYNCED (4m31s)     SYNCED (4m31s)     SYNCED (4m31s)     SYNCED (4m31s)     IGNORED     istiod-mesh1-5df45b97dd-tf2wl     1.24.0
@@ -249,7 +249,7 @@ httpbin-7b549f7859-h6hnk.app1     Kubernetes     SYNCED (4m31s)     SYNCED (4m31
 The pods in namespaces `app2a` and `app2b` should be connected to the control plane in namespace `istio-system2`:
 
 ```console
-$ istioctl ps -i istio-system2
+istioctl ps -i istio-system2
 NAME                               CLUSTER        CDS                LDS                EDS                RDS                ECDS        ISTIOD                            VERSION
 curl-5b549b49b8-2hlvm.app2a        Kubernetes     SYNCED (4m37s)     SYNCED (4m37s)     SYNCED (4m31s)     SYNCED (4m37s)     IGNORED     istiod-mesh2-59f6b874fb-mzxqw     1.24.0
 curl-5b549b49b8-xnzzk.app2b        Kubernetes     SYNCED (4m37s)     SYNCED (4m37s)     SYNCED (4m31s)     SYNCED (4m37s)     IGNORED     istiod-mesh2-59f6b874fb-mzxqw     1.24.0
@@ -268,7 +268,7 @@ As both meshes are configured to use the `STRICT` mTLS peer authentication mode,
 To test whether the `curl` pod in namespace `app2a` can connect to the `httpbin` service in namespace `app1`, run the following commands:
 
 ```console
-$ kubectl -n app2a exec deploy/curl -c curl -- curl -sIL http://httpbin.app1:8000
+kubectl -n app2a exec deploy/curl -c curl -- curl -sIL http://httpbin.app1:8000
 HTTP/1.1 503 Service Unavailable
 content-length: 95
 content-type: text/plain
@@ -291,7 +291,7 @@ As expected, the response indicates that the connection was not successful.
 In contrast, the same pod should be able to connect to the `httpbin` service in namespace `app2b`, because they are part of the same mesh:
 
 ```console
-$ kubectl -n app2a exec deploy/curl -c curl -- curl -sIL http://httpbin.app2b:8000
+kubectl -n app2a exec deploy/curl -c curl -- curl -sIL http://httpbin.app2b:8000
 HTTP/1.1 200 OK
 access-control-allow-credentials: true
 access-control-allow-origin: *
