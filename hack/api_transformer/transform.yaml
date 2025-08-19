@@ -135,6 +135,7 @@ inputFiles:
       - ImagePullSecrets
       - LogAsJson
       - Logging
+      - NativeNftables
       - Platform
       - Tag
       - Variant
@@ -149,6 +150,8 @@ inputFiles:
       Values.DefaultRevision:
       - "// +hidefromdoc"
       - "// Deprecated: This field is ignored. The default revision is expected to be configurable elsewhere."
+      CNIGlobalConfig.NativeNftables:
+      - "// +kubebuilder:validation:Enum=Always;Never;IfNotPresent"
 
 - module: istio.io/api
   path: /mesh/v1alpha1/config.pb.go
