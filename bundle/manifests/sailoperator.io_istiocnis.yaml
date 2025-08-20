@@ -1442,6 +1442,10 @@ spec:
                               If empty, default scope and level will be used as configured in code
                             type: string
                         type: object
+                      nativeNftables:
+                        description: Specifies whether native nftables rules should
+                          be used instead of iptables rules for traffic redirection.
+                        type: boolean
                       platform:
                         description: |-
                           Platform in which Istio is deployed. Possible values are: "openshift" and "gcp"
