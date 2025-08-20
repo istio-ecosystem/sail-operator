@@ -117,11 +117,18 @@ istioctl proxy-status
 <!--
 ```bash { name=validation-sample-apps tag=example}
 POD_NAME=$(kubectl get pod -n sample -l app=productpage -o jsonpath='{.items[0].metadata.name}')
-if ! istioctl proxy-status "$POD_NAME.sample" | grep -q "Stale"; then
-  echo "✓ Success: Proxy is synced with Istiod."
+if PROXY_STATUS=$(istioctl proxy-status "$POD_NAME.sample" 2>&1); then
+  if echo "$PROXY_STATUS" | grep -q "Stale"; then
+    echo "x Validation failed: The proxy configuration is outdated (Stale)."
+    echo "$PROXY_STATUS"
+    exit 1
+  else
+    echo "✓ Success: The proxy is synchronized with Istiod."
+  fi
 else
-  echo "𐄂 Validation Failed: Proxy configuration is Stale."
-  istioctl proxy-status "$POD_NAME.sample"
+  # This section runs if 'istioctl' failed (non-zero exit code)
+  echo "𐄂 Validation failed: The istioctl command failed."
+  echo "$PROXY_STATUS" # Prints the captured error
   exit 1
 fi
 ```
