@@ -55,7 +55,7 @@ Steps:
 3. Confirm the installation and version of the control plane.
 
     ```console
-    $ kubectl get istio -n istio-system
+    kubectl get istio -n istio-system
     NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
     default   1           1       0        default           Healthy   v1.25.3   23s
     ```
@@ -81,7 +81,7 @@ Steps:
 5. Review the `Istio` resource after application deployment.
 
    ```console
-   $ kubectl get istio -n istio-system
+   kubectl get istio -n istio-system
    NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
    default   1           1       1        default           Healthy   v1.25.3   115s
    ```
@@ -106,7 +106,7 @@ Steps:
 7. Confirm the `Istio` resource version was updated.
 
     ```console
-    $ kubectl get istio -n istio-system
+    kubectl get istio -n istio-system
     NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
     default   1           1       1        default           Healthy   v1.26.0   4m50s
     ```
@@ -190,7 +190,7 @@ Steps:
 3. Confirm the control plane is installed and is using the desired version.
 
     ```console
-    $ kubectl get istio -n istio-system
+    kubectl get istio -n istio-system
     NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
     default   1           1       0        default-v1-25-3   Healthy   v1.25.3   52s
     ```
@@ -199,7 +199,7 @@ Steps:
 4. Get the `IstioRevision` name.
 
     ```console
-    $ kubectl get istiorevision -n istio-system
+    kubectl get istiorevision -n istio-system
     NAME              TYPE    READY   STATUS    IN USE   VERSION   AGE
     default-v1-25-3   Local   True    Healthy   False    v1.25.3   3m4s
     ```
@@ -234,7 +234,7 @@ Steps:
 7. Review the `Istio` resource after application deployment.
 
     ```console
-    $ kubectl get istio -n istio-system
+    kubectl get istio -n istio-system
     NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
     default   1           1       1        default-v1-25-3   Healthy   v1.25.3   5m13s
     ```
@@ -269,11 +269,11 @@ Steps:
 10. Verify the `Istio` and `IstioRevision` resources. There will be a new revision created with the new version.
 
     ```console
-    $ kubectl get istio
+    kubectl get istio
     NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
     default   2           2       1        default-v1-26-0   Healthy   v1.26.0   9m23s
 
-    $ kubectl get istiorevision
+    kubectl get istiorevision
     NAME              TYPE    READY   STATUS    IN USE   VERSION   AGE
     default-v1-25-3   Local   True    Healthy   True     v1.25.3   10m
     default-v1-26-0   Local   True    Healthy   False    v1.26.0   66s
@@ -290,7 +290,7 @@ Steps:
 11. Confirm there are two control plane pods running, one for each revision.
 
     ```console
-    $ kubectl get pods -n istio-system
+    kubectl get pods -n istio-system
     NAME                                      READY   STATUS    RESTARTS   AGE
     istiod-default-v1-25-3-c98fd9675-r7bfw    1/1     Running   0          10m
     istiod-default-v1-26-0-7495cdc7bf-v8t4g   1/1     Running   0          113s
@@ -351,15 +351,15 @@ Steps:
 16. Confirm the deletion of the old control plane and IstioRevision.
 
     ```console
-    $ kubectl get pods -n istio-system
+    kubectl get pods -n istio-system
     NAME                                      READY   STATUS    RESTARTS   AGE
     istiod-default-v1-26-0-7495cdc7bf-v8t4g   1/1     Running   0          4m40s
 
-    $ kubectl get istio
+    kubectl get istio
     NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
     default   1           1       1        default-v1-26-0   Healthy   v1.26.0   5m
 
-    $ kubectl get istiorevision
+    kubectl get istiorevision
     NAME              TYPE    READY   STATUS    IN USE   VERSION   AGE
     default-v1-26-0   Local   True    Healthy   True     v1.26.0   5m31s
     ```
@@ -423,7 +423,7 @@ Steps:
 3. Confirm the control plane is installed and is using the desired version.
 
     ```console
-    $ kubectl get istio
+    kubectl get istio
     NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
     default   1           1       1        default-v1-25-3   Healthy   v1.25.3   52s
     ```
@@ -437,7 +437,7 @@ Steps:
 4. Inspect the `IstioRevisionTag`.
 
     ```console
-    $ kubectl get istiorevisiontags
+    kubectl get istiorevisiontags
     NAME      STATUS                    IN USE   REVISION          AGE
     default   NotReferencedByAnything   False    default-v1-25-3   52s
     ```
@@ -472,7 +472,7 @@ Steps:
 7. Review the `IstioRevisionTag` resource after application deployment.
 
     ```console
-    $ kubectl get istiorevisiontag
+    kubectl get istiorevisiontag
     NAME      STATUS    IN USE   REVISION          AGE
     default   Healthy   True     default-v1-25-3   2m46s
     ```
@@ -500,16 +500,16 @@ Steps:
 10. Verify the `Istio`, `IstioRevision` and `IstioRevisionTag` resources. There will be a new revision created with the new version.
 
     ```console
-    $ kubectl get istio
+    kubectl get istio
     NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
     default   2           2       1        default-v1-26-0   Healthy   v1.26.0   9m23s
 
-    $ kubectl get istiorevision
+    kubectl get istiorevision
     NAME              TYPE    READY   STATUS    IN USE   VERSION   AGE
     default-v1-25-3   Local   True    Healthy   True     v1.25.3   10m
     default-v1-26-0   Local   True    Healthy   True    v1.26.0   66s
 
-    $ kubectl get istiorevisiontag
+    kubectl get istiorevisiontag
     NAME      STATUS    IN USE   REVISION          AGE
     default   Healthy   True     default-v1-26-0   10m44s
     ```
@@ -518,7 +518,7 @@ Steps:
 11. Confirm there are two control plane pods running, one for each revision.
 
     ```console
-    $ kubectl get pods -n istio-system
+    kubectl get pods -n istio-system
     NAME                                      READY   STATUS    RESTARTS   AGE
     istiod-default-v1-25-3-c98fd9675-r7bfw    1/1     Running   0          10m
     istiod-default-v1-26-0-7495cdc7bf-v8t4g   1/1     Running   0          113s
@@ -573,15 +573,15 @@ Steps:
 16. Confirm the deletion of the old control plane and IstioRevision.
 
     ```console
-    $ kubectl get pods -n istio-system
+    kubectl get pods -n istio-system
     NAME                                      READY   STATUS    RESTARTS   AGE
     istiod-default-v1-26-0-7495cdc7bf-v8t4g   1/1     Running   0          4m40s
 
-    $ kubectl get istio -n istio-system
+    kubectl get istio -n istio-system
     NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
     default   1           1       1        default-v1-26-0   Healthy   v1.26.0   5m
 
-    $ kubectl get istiorevision -n istio-system
+    kubectl get istiorevision -n istio-system
     NAME              TYPE    READY   STATUS    IN USE   VERSION   AGE
     default-v1-26-0   Local   True    Healthy   True     v1.26.0   5m31s
     ```
