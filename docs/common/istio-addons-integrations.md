@@ -27,19 +27,19 @@ To install Prometheus, perform the following steps:
 1. Deploy `Prometheus`:
 
     ```sh
-    $ oc apply -f https://raw.githubusercontent.com/istio/istio/master/samples/addons/prometheus.yaml
+    oc apply -f https://raw.githubusercontent.com/istio/istio/master/samples/addons/prometheus.yaml
     ```
 2. Access to `Prometheus`console:
 
     * Expose the `Prometheus` service externally:
     
     ```sh
-    $ oc expose service prometheus -n istio-system
+    oc expose service prometheus -n istio-system
     ```
     * Get the route of the service and open the URL in the web browser
     
     ```sh
-    $ oc get route prometheus -o jsonpath='{.spec.host}' -n istio-system
+    oc get route prometheus -o jsonpath='{.spec.host}' -n istio-system
     ```
 
 
@@ -54,7 +54,7 @@ To install Grafana, perform the following steps:
 1. Deploy `Grafana`:
     
     ```sh
-    $ oc apply -f https://raw.githubusercontent.com/istio/istio/master/samples/addons/grafana.yaml
+    oc apply -f https://raw.githubusercontent.com/istio/istio/master/samples/addons/grafana.yaml
     ```
 
 2. Access to `Grafana`console:
@@ -62,12 +62,12 @@ To install Grafana, perform the following steps:
     * Expose the `Grafana` service externally
     
     ```sh
-    $ oc expose service grafana -n istio-system
+    oc expose service grafana -n istio-system
     ```
     * Get the route of the service and open the URL in the web browser
     
     ```sh
-    $ oc get route grafana -o jsonpath='{.spec.host}' -n istio-system
+    oc get route grafana -o jsonpath='{.spec.host}' -n istio-system
     ```
 
 
@@ -82,20 +82,20 @@ To install Jaeger, perform the following steps:
 1. Deploy `Jaeger`:
     
     ```sh
-    $ oc apply -f https://raw.githubusercontent.com/istio/istio/master/samples/addons/jaeger.yaml
+    oc apply -f https://raw.githubusercontent.com/istio/istio/master/samples/addons/jaeger.yaml
     ```
 2. Access to `Jaeger` console:
 
     * Expose the `Jaeger` service externally:
 
         ```sh
-        $ oc expose svc/tracing -n istio-system
+        oc expose svc/tracing -n istio-system
         ```
 
     * Get the route of the service and open the URL in the web browser
 
         ```sh
-        $ oc get route tracing -o jsonpath='{.spec.host}' -n istio-system
+        oc get route tracing -o jsonpath='{.spec.host}' -n istio-system
         ```
 *Note*: if you want to see some traces you can refresh several times the product 
 page of bookinfo app to start generating traces.
@@ -111,7 +111,7 @@ To install Kiali, perform the following steps:
 1. Deploy `Kiali`:
     
     ```sh
-    $ oc apply -f https://raw.githubusercontent.com/istio/istio/master/samples/addons/kiali.yaml
+    oc apply -f https://raw.githubusercontent.com/istio/istio/master/samples/addons/kiali.yaml
     ```
 
 2. Access to `Kiali` console:
@@ -119,11 +119,11 @@ To install Kiali, perform the following steps:
     * Expose the `Kiali` service externally:
 
         ```sh
-        $ oc expose service kiali -n istio-system
+        oc expose service kiali -n istio-system
         ```
 
     * Get the route of the service and open the URL in the web browser
 
         ```sh
-        $ oc get route kiali -o jsonpath='{.spec.host}' -n istio-system
+        oc get route kiali -o jsonpath='{.spec.host}' -n istio-system
         ```

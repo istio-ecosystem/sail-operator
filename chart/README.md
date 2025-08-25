@@ -39,7 +39,7 @@ Default configuration values can be changed using one or more `--set <parameter>
 1. Create the namespace, `sail-operator`, for the Sail Operator components:
 
     ```sh
-    $ kubectl create namespace sail-operator
+    kubectl create namespace sail-operator
     ```
 
 **Note** - This step could be skipped by using the `--create-namespace` argument in step 2.
@@ -47,13 +47,13 @@ Default configuration values can be changed using one or more `--set <parameter>
 2. Install the Sail Operator base charts which will manage all the Custom Resource Definitions(CRDs) to be able to deploy the Istio control plane:
 
     ```sh
-    $ helm install sail-operator sail-operator/sail-operator --namespace sail-operator
+    helm install sail-operator sail-operator/sail-operator --namespace sail-operator
     ```
 
 3. Validate the CRD installation with the `helm ls` command:
 
     ```sh
-    $ helm ls -n sail-operator
+    helm ls -n sail-operator
 
     NAME         	NAMESPACE    	REVISION	UPDATED                                	STATUS  	CHART              	APP VERSION
     sail-operator	sail-operator	1       	2024-09-26 21:15:52.508983383 +0300 IDT	deployed	sail-operator-0.1.0	0.1.0
@@ -62,7 +62,7 @@ Default configuration values can be changed using one or more `--set <parameter>
 4. Get the status of the installed helm chart to ensure it is deployed:
 
     ```bash
-    $ helm status sail-operator -n sail-operator
+    helm status sail-operator -n sail-operator
 
     NAME: sail-operator
     LAST DEPLOYED: Thu Sep 26 21:15:52 2024
@@ -75,12 +75,12 @@ Default configuration values can be changed using one or more `--set <parameter>
 5. Check `sail-operator` deployment is successfully installed and its pods are running:
 
     ```sh
-    $ kubectl -n sail-operator get deployment --output wide
+    kubectl -n sail-operator get deployment --output wide
 
     NAME            READY   UP-TO-DATE   AVAILABLE   AGE    CONTAINERS                IMAGES                                                                                    SELECTOR
     sail-operator   1/1     1            1           107s   kube-rbac-proxy,sail-operator  gcr.io/kubebuilder/kube-rbac-proxy:v0.16.0,quay.io/sail-dev/sail-operator:0.1-latest   app.kubernetes.io/created-by=sailoperator,app.kubernetes.io/part-of=sailoperator,control-plane=sail-operator
 
-    $ kubectl -n sail-operator get pods -o wide
+    kubectl -n sail-operator get pods -o wide
 
     NAME                             READY   STATUS    RESTARTS   AGE   IP           NODE                 NOMINATED NODE   READINESS GATES
     sail-operator-666f84b6f4-9hw4t   2/2     Running   0          43s   10.244.0.8   sail-control-plane   <none>           <none>
@@ -99,14 +99,14 @@ The `Istio` resource deploys and configures the Istio Control Plane, whereas the
 * Kubernetes
 
     ```sh
-    $ kubectl create namespace istio-system
+    kubectl create namespace istio-system
     ```
 
 * OpenShift
 
     ```sh
-    $ kubectl create namespace istio-system
-    $ kubectl create namespace istio-cni
+    kubectl create namespace istio-system
+    kubectl create namespace istio-cni
     ```
 
 ### Create the Istio resource
@@ -116,14 +116,14 @@ The `sail-operator` charts directory contains `samples` directory, which contain
 * Kubernetes
 
     ```sh
-    $ kubectl apply -f sail-operator/samples/istio-sample.yaml
+    kubectl apply -f sail-operator/samples/istio-sample.yaml
     ```
 
 * OpenShift
 
     ```sh
-    $ kubectl apply -f sail-operator/samples/istio-sample.yaml
-    $ kubectl apply -f sail-operator/samples/istiocni-sample.yaml
+    kubectl apply -f sail-operator/samples/istio-sample.yaml
+    kubectl apply -f sail-operator/samples/istiocni-sample.yaml
     ```
 
 **Note** - The version can be specified by modifying the `version` field within `Istio` and `IstioCNI` manifests.

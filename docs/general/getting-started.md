@@ -73,7 +73,7 @@ is installed. `Succeeded` should appear in the **Status** column.
 1. Verify that the installation succeeded by inspecting the CSV status.
 
     ```console
-    $ kubectl get csv -n openshift-operators
+    kubectl get csv -n openshift-operators
     NAME                                     DISPLAY         VERSION                    REPLACES                                 PHASE
     sailoperator.v0.1.0-nightly-2024-06-25   Sail Operator   0.1.0-nightly-2024-06-25   sailoperator.v0.1.0-nightly-2024-06-21   Succeeded
     ```
