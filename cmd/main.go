@@ -56,7 +56,7 @@ func main() {
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.StringVar(&configFile, "config-file", "/etc/sail-operator/config.properties", "Location of the config file, propagated by k8s downward APIs")
 	flag.StringVar(&reconcilerCfg.ResourceDirectory, "resource-directory", "/var/lib/sail-operator/resources", "Where to find resources (e.g. charts)")
-	flag.IntVar(&reconcilerCfg.MaxConcurrentReconciles, "max-concurrent-reconciles", 5,
+	flag.IntVar(&reconcilerCfg.MaxConcurrentReconciles, "max-concurrent-reconciles", 1,
 		"MaxConcurrentReconciles is the maximum number of concurrent Reconciles which can be run.")
 	flag.BoolVar(&logAPIRequests, "log-api-requests", false, "Whether to log each request sent to the Kubernetes API server")
 	flag.BoolVar(&printVersion, "version", printVersion, "Prints version information and exits")
