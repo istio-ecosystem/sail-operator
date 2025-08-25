@@ -337,7 +337,8 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 					},
 					Revision: ptr.Of(revName),
 					Pilot: &v1.PilotConfig{
-						Image: ptr.Of(pilotImage),
+						Image:        ptr.Of(pilotImage),
+						AutoscaleMin: ptr.Of(uint32(2)),
 					},
 				},
 			},
@@ -632,8 +633,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 						},
 						Revision: ptr.Of(revName),
 						Pilot: &v1.PilotConfig{
-							Image:        ptr.Of(pilotImage),
-							AutoscaleMin: ptr.Of(uint32(2)),
+							Image: ptr.Of(pilotImage),
 						},
 					},
 				},
