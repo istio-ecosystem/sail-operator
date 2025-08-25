@@ -23,16 +23,23 @@ helm repo update
 
 ## Installation steps
 
+List available releases
+
+```sh
+helm search repo sail-operator --versions
+```
+
 This section describes the procedure to install `Sail Operator` using Helm. The general syntax for helm installation is:
 
 ```sh
-helm install <release> <chart> --create-namespace --namespace <namespace> [--set <other_parameters>]
+helm install <release-name> <chart> --version <release-version> --create-namespace --namespace <namespace> [--set <other_parameters>]
 ```
 
 The variables specified in the command are as follows:
-* `<release>` - A name to identify and manage the Helm chart once installed.
+* `<release-name>` - A name to identify and manage the Helm chart once installed.
 * `<chart>` - A path to a packaged chart, a path to an unpacked chart directory or a URL.
 * `<namespace>` - The namespace in which the chart is to be installed.
+* `<release-version>` - A version number of the release.
 
 Default configuration values can be changed using one or more `--set <parameter>=<value>` arguments. Alternatively, you can specify several parameters in a custom values file using the `--values <file>` argument.
 
@@ -47,7 +54,7 @@ Default configuration values can be changed using one or more `--set <parameter>
 2. Install the Sail Operator base charts which will manage all the Custom Resource Definitions(CRDs) to be able to deploy the Istio control plane:
 
     ```sh
-    $ helm install sail-operator sail-operator/sail-operator --namespace sail-operator
+    $ helm install sail-operator sail-operator/sail-operator --version 1.26.3 --namespace sail-operator
     ```
 
 3. Validate the CRD installation with the `helm ls` command:
@@ -55,8 +62,8 @@ Default configuration values can be changed using one or more `--set <parameter>
     ```sh
     $ helm ls -n sail-operator
 
-    NAME         	NAMESPACE    	REVISION	UPDATED                                	STATUS  	CHART              	APP VERSION
-    sail-operator	sail-operator	1       	2024-09-26 21:15:52.508983383 +0300 IDT	deployed	sail-operator-0.1.0	0.1.0
+    NAME  	      NAMESPACE    	REVISION	UPDATED                                	STATUS  	CHART               	APP VERSION
+    sail-operator	sail-operator	1       	2025-08-20 16:14:12.210759174 +0300 IDT	deployed	sail-operator-1.26.3	1.26.3
     ```
 
 4. Get the status of the installed helm chart to ensure it is deployed:
@@ -65,7 +72,7 @@ Default configuration values can be changed using one or more `--set <parameter>
     $ helm status sail-operator -n sail-operator
 
     NAME: sail-operator
-    LAST DEPLOYED: Thu Sep 26 21:15:52 2024
+    LAST DEPLOYED: Wed Aug 20 16:14:12 2025
     NAMESPACE: sail-operator
     STATUS: deployed
     REVISION: 1
@@ -77,56 +84,18 @@ Default configuration values can be changed using one or more `--set <parameter>
     ```sh
     $ kubectl -n sail-operator get deployment --output wide
 
-    NAME            READY   UP-TO-DATE   AVAILABLE   AGE    CONTAINERS                IMAGES                                                                                    SELECTOR
-    sail-operator   1/1     1            1           107s   kube-rbac-proxy,sail-operator  gcr.io/kubebuilder/kube-rbac-proxy:v0.16.0,quay.io/sail-dev/sail-operator:0.1-latest   app.kubernetes.io/created-by=sailoperator,app.kubernetes.io/part-of=sailoperator,control-plane=sail-operator
+    NAME            READY   UP-TO-DATE   AVAILABLE   AGE     CONTAINERS      IMAGES                                  SELECTOR
+    sail-operator   1/1     1            1           4h37m   sail-operator   quay.io/sail-dev/sail-operator:1.26.3   app.kubernetes.io/created-by=sailoperator,app.kubernetes.io/part-of=sailoperator,control-plane=sail-operator
 
     $ kubectl -n sail-operator get pods -o wide
 
-    NAME                             READY   STATUS    RESTARTS   AGE   IP           NODE                 NOMINATED NODE   READINESS GATES
-    sail-operator-666f84b6f4-9hw4t   2/2     Running   0          43s   10.244.0.8   sail-control-plane   <none>           <none>
+    NAME                             READY   STATUS    RESTARTS   AGE     IP           NODE                                       NOMINATED NODE   READINESS GATES
+    sail-operator-79c7d9ffb9-bwfdf   1/1     Running   0          4h38m   10.244.0.5   operator-integration-tests-control-plane   <none>           <none>
     ```
 
 ## Deploying Istio
 
-To deploy Istio, you must create the following resources:
-* `Istio`.
-* If you are using OpenShift, the `IstioCNI` must also be created.
-
-The `Istio` resource deploys and configures the Istio Control Plane, whereas the `IstioCNI` resource (in OpenShift) deploys and configures the Istio CNI plugin. You should create these resources in separate projects.
-
-### Create a namespace for Istio project.
-
-* Kubernetes
-
-    ```sh
-    $ kubectl create namespace istio-system
-    ```
-
-* OpenShift
-
-    ```sh
-    $ kubectl create namespace istio-system
-    $ kubectl create namespace istio-cni
-    ```
-
-### Create the Istio resource
-
-The `sail-operator` charts directory contains `samples` directory, which contains manifests that could be used for Istio deployment.
-
-* Kubernetes
-
-    ```sh
-    $ kubectl apply -f sail-operator/samples/istio-sample.yaml
-    ```
-
-* OpenShift
-
-    ```sh
-    $ kubectl apply -f sail-operator/samples/istio-sample.yaml
-    $ kubectl apply -f sail-operator/samples/istiocni-sample.yaml
-    ```
-
-**Note** - The version can be specified by modifying the `version` field within `Istio` and `IstioCNI` manifests.
+For Istio deployment refer to the following section - [deploy](../README.md#deploying-the-istio-control-plane).
 
 ### Customizing Istio configuration
 
@@ -138,19 +107,19 @@ An example configuration:
     apiVersion: sailoperator.io/v1
     kind: Istio
     metadata:
-    name: example
+      name: example
     spec:
-    version: v1.23.0
+      version: v1.26.3
     values:
-        global:
-        mtls:
-            enabled: true
-        trustDomainAliases:
+      global:
+      mtls:
+        enabled: true
+      trustDomainAliases:
         - example.net
-        meshConfig:
+      meshConfig:
         trustDomain: example.com
         trustDomainAliases:
-        - example.net
+          - example.net
     ```
 
 For a list of available configuration for the `spec.values` field, run the following command:
@@ -213,10 +182,16 @@ For installation steps, refer to the following [link](../docs/common/istio-addon
 kubectl -n istio-system delete istio default
 ```
 
-### Deleting IstioCNI (in OpenShift cluster platform)
+### Deleting IstioCNI (in Ambient mode or OpenShift cluster platform)
 
 ```sh
 kubectl -n istio-cni delete istiocni default
+```
+
+### Deleting ZTunnel (in Ambient mode)
+
+```sh
+kubectl -n ztunnel delete ztunnel default
 ```
 
 ### Uninstall the Sail Operator using Helm
@@ -230,5 +205,6 @@ helm uninstall sail-operator --namespace sail-operator
 ```sh
 kubectl delete namespace istio-system
 kubectl delete namespace istio-cni
+kubectl delete namespace ztunnel
 kubectl delete namespace sail-operator
 ```
