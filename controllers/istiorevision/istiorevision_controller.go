@@ -150,8 +150,13 @@ func (r *Reconciler) validate(ctx context.Context, rev *v1.IstioRevision) error 
 		return reconciler.NewValidationError("spec.values.global.istioNamespace does not match spec.namespace")
 	}
 
-	if tagExists, err := validation.IstioRevisionTagExists(ctx, r.Client, rev.Name); tagExists || err != nil {
-		return reconciler.NewValidationError("an IstioRevisionTag exists with this name")
+	tag := v1.IstioRevisionTag{}
+	if err := r.Client.Get(ctx, types.NamespacedName{Name: rev.Name}, &tag); err == nil {
+		if validation.ResourceTakesPrecedence(&tag.ObjectMeta, &rev.ObjectMeta) {
+			return reconciler.NewNameAlreadyExistsError("an IstioRevisionTag exists with this name", nil)
+		}
+	} else if !apierrors.IsNotFound(err) {
+		return err
 	}
 
 	return nil
@@ -379,6 +384,10 @@ func (r *Reconciler) determineReconciledCondition(err error) v1.IstioRevisionCon
 
 	if err == nil {
 		c.Status = metav1.ConditionTrue
+	} else if reconciler.IsNameAlreadyExistsError(err) {
+		c.Status = metav1.ConditionFalse
+		c.Reason = v1.IstioRevisionReasonNameAlreadyExists
+		c.Message = err.Error()
 	} else {
 		c.Status = metav1.ConditionFalse
 		c.Reason = v1.IstioRevisionReasonReconcileError
