@@ -1125,6 +1125,7 @@ the Istio CR is updated.
 
 _Appears in:_
 - [IstioSpec](#istiospec)
+- [ZTunnelConfig](#ztunnelconfig)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -2778,6 +2779,7 @@ Configuration for the resource quotas for the CNI DaemonSet.
 
 _Appears in:_
 - [CNIConfig](#cniconfig)
+- [ZTunnelConfig](#ztunnelconfig)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -3305,14 +3307,17 @@ _Appears in:_
 | `tag` _string_ | The container image tag to pull. Image will be `Hub/Image:Tag-Variant`. |  |  |
 | `variant` _string_ | The container image variant to pull. Options are "debug" or "distroless". Unset will use the default for the given version. |  |  |
 | `image` _string_ | Image name to pull from. Image will be `Hub/Image:Tag-Variant`. If Image contains a "/", it will replace the entire `image` in the pod. |  |  |
+| `global` _object (keys:string, values:string)_ | We keep the global namespace around for backward-compatibility |  |  |
 | `resourceName` _string_ | resourceName, if set, will override the naming of resources. If not set, will default to the release name. It is recommended to not set this; this is primarily for backwards compatibility. |  |  |
 | `Annotations` _object (keys:string, values:string)_ | Annotations to apply to all top level resources |  |  |
 | `Labels` _object (keys:string, values:string)_ | Labels to apply to all top level resources |  |  |
 | `volumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#volumemount-v1-core) array_ | Additional volumeMounts to the ztunnel container |  |  |
 | `volumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#volume-v1-core) array_ | Additional volumes to add to the ztunnel Pod. |  |  |
+| `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#toleration-v1-core) array_ | Tolerations for the ztunnel pod |  |  |
 | `podAnnotations` _object (keys:string, values:string)_ | Annotations added to each pod. The default annotations are required for scraping prometheus (in most environments). |  |  |
 | `podLabels` _object (keys:string, values:string)_ | Additional labels to apply on the pod level. |  |  |
 | `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core)_ | The k8s resource requests and limits for the ztunnel Pods. |  |  |
+| `resourceQuotas` _[ResourceQuotas](#resourcequotas)_ | The resource quotas configuration for ztunnel |  |  |
 | `imagePullSecrets` _string array_ | List of secret names to add to the service account as image pull secrets to use for pulling any images in pods that reference this ServiceAccount. Must be set for any cluster configured with private docker registry. |  |  |
 | `env` _object (keys:string, values:string)_ | A `key: value` mapping of environment variables to add to the pod |  |  |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#pullpolicy-v1-core)_ | Specifies the image pull policy for the Istio images. one of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.  More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |  | Enum: [Always Never IfNotPresent]   |
@@ -3325,6 +3330,8 @@ _Appears in:_
 | `istioNamespace` _string_ | Specifies the default namespace for the Istio control plane components. |  |  |
 | `logLevel` _string_ | Configuration log level of ztunnel binary, default is info. Valid values are: trace, debug, info, warn, error. | info | Enum: [trace debug info warn error]   |
 | `logAsJson` _boolean_ | Specifies whether istio components should output logs in json format by adding --log_as_json argument to each container. |  |  |
+| `seLinuxOptions` _object (keys:string, values:string)_ | Set seLinux options for the ztunnel pod |  |  |
+| `updateStrategy` _[IstioUpdateStrategy](#istioupdatestrategy)_ | K8s DaemonSet update strategy https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/daemon-set-v1/#DaemonSetSpec). |  |  |
 
 
 #### ZTunnelGlobalConfig
