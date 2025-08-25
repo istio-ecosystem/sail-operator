@@ -618,6 +618,6 @@ func newReconcilerTestConfig(t *testing.T) config.ReconcilerConfig {
 		ResourceDirectory:       t.TempDir(),
 		Platform:                config.PlatformKubernetes,
 		DefaultProfile:          "",
-		MaxConcurrentReconciles: 5,
+		MaxConcurrentReconciles: 1,
 	}
 }
