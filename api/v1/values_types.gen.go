@@ -132,7 +132,7 @@ type CNIConfig struct {
 	// Configure the plugin as a chained CNI plugin. When true, the configuration is added to the CNI chain; when false,
 	// the configuration is added as a standalone file in the CNI configuration directory.
 	Chained *bool `json:"chained,omitempty"`
-	// The resource quotas configration for the CNI DaemonSet.
+	// The resource quotas configuration for the CNI DaemonSet.
 	ResourceQuotas *ResourceQuotas `json:"resource_quotas,omitempty"`
 	// The k8s resource requests and limits for the istio-cni Pods.
 	Resources *k8sv1.ResourceRequirements `json:"resources,omitempty"`
