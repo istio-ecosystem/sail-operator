@@ -112,7 +112,7 @@ KIND_IMAGE ?=
 ifeq ($(KIND_IMAGE),)
   ifeq ($(LOCAL_OS),Darwin)
     # If the OS is Darwin, set the image.
-    KIND_IMAGE := docker.io/kindest/node:v1.33.2
+    KIND_IMAGE := docker.io/kindest/node:v1.34.0
   endif
   # For other OS, KIND_IMAGE remains empty, which default to the upstream default image.
 endif
