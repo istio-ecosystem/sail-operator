@@ -27,6 +27,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
+	operrors "github.com/istio-ecosystem/sail-operator/pkg/errors"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
@@ -78,7 +79,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, istio *v1.Istio) (ctrl.Resul
 	log.Info("Reconciliation done. Updating status.")
 	statusErr := r.updateStatus(ctx, istio, reconcileErr)
 
-	return result, errors.Join(reconcileErr, statusErr)
+	return result, errors.Join(reconcileErr, statusErr, errors.Unwrap(reconcileErr))
 }
 
 // doReconcile is the function that actually reconciles the Istio object. Any error reported by this
@@ -112,10 +113,10 @@ func managesExternalRevision(istio *v1.Istio) bool {
 
 func validate(istio *v1.Istio) error {
 	if istio.Spec.Version == "" {
-		return reconciler.NewValidationError("spec.version not set")
+		return operrors.NewValidationError("spec.version not set")
 	}
 	if istio.Spec.Namespace == "" {
-		return reconciler.NewValidationError("spec.namespace not set")
+		return operrors.NewValidationError("spec.namespace not set")
 	}
 	return nil
 }
@@ -230,7 +231,7 @@ func (r *Reconciler) determineStatus(ctx context.Context, istio *v1.Istio, recon
 			Type:    v1.IstioConditionReconciled,
 			Status:  metav1.ConditionFalse,
 			Reason:  v1.IstioReasonReconcileError,
-			Message: reconcileErr.Error(),
+			Message: errors.Join(reconcileErr, errors.Unwrap(reconcileErr)).Error(),
 		})
 		status.SetCondition(v1.IstioCondition{
 			Type:    v1.IstioConditionReady,
