@@ -14,7 +14,11 @@
 
 package istiovalues
 
-import v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+import (
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+
+	"istio.io/istio/pkg/ptr"
+)
 
 func ApplyOverrides(revisionName string, namespace string, values *v1.Values) {
 	// Set revision name to "" if revision name is "default". This is a temporary fix until we fix the injection
@@ -30,4 +34,8 @@ func ApplyOverrides(revisionName string, namespace string, values *v1.Values) {
 		values.Global = &v1.GlobalConfig{}
 	}
 	values.Global.IstioNamespace = &namespace
+
+	// Force defaultRevision to be empty to prevent creation of the default validator webhook.
+	// This field is deprecated and should be ignored by the operator.
+	values.DefaultRevision = ptr.Of("")
 }
