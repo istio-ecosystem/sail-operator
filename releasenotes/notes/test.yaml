@@ -1,0 +1,6 @@
+apiVersion: release-notes/v2
+kind: test
+area: test
+releaseNotes:
+- |
+  **Test** this is a test release note. Will be removed later.
