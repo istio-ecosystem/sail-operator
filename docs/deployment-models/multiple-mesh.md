@@ -122,7 +122,7 @@ Because each mesh will use its own root certificate authority and configured to 
 
 1. Check the labels on the control plane namespaces:
    ```console
-   $ kubectl get ns -l mesh -L mesh
+   kubectl get ns -l mesh -L mesh
    NAME            STATUS   AGE    MESH
    istio-system1   Active   106s   mesh1
    istio-system2   Active   105s   mesh2
@@ -136,7 +136,7 @@ Because each mesh will use its own root certificate authority and configured to 
 -->
 2. Check the control planes are `Healthy`:
    ```console
-   $ kubectl get istios
+   kubectl get istios
    NAME    REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
    mesh1   1           1       0        mesh1             Healthy   v1.24.0   84s
    mesh2   1           1       0        mesh2             Healthy   v1.24.0   77s
@@ -148,12 +148,12 @@ Because each mesh will use its own root certificate authority and configured to 
 -->
 3. Confirm that the validation and mutation webhook configurations exist for both meshes:
    ```console
-   $ kubectl get validatingwebhookconfigurations
+   kubectl get validatingwebhookconfigurations
    NAME                                  WEBHOOKS   AGE
    istio-validator-mesh1-istio-system1   1          2m45s
    istio-validator-mesh2-istio-system2   1          2m38s
 
-   $ kubectl get mutatingwebhookconfigurations
+   kubectl get mutatingwebhookconfigurations
    NAME                                         WEBHOOKS   AGE
    istio-sidecar-injector-mesh1-istio-system1   2          5m55s
    istio-sidecar-injector-mesh2-istio-system2   2          5m48s
@@ -215,17 +215,17 @@ Because each mesh will use its own root certificate authority and configured to 
 -->
 5. Confirm that a sidecar has been injected into each of the application pods. The value `2/2` should be displayed in the `READY` column for each pod, as in the following example:
    ```console
-   $ kubectl get pods -n app1
+   kubectl get pods -n app1
    NAME                       READY   STATUS    RESTARTS   AGE
    curl-5b549b49b8-mg7nl      2/2     Running   0          102s
    httpbin-7b549f7859-h6hnk   2/2     Running   0          89s
 
-   $ kubectl get pods -n app2a
+   kubectl get pods -n app2a
    NAME                       READY   STATUS    RESTARTS   AGE
    curl-5b549b49b8-2hlvm      2/2     Running   0          2m3s
    httpbin-7b549f7859-bgblg   2/2     Running   0          110s
 
-   $ kubectl get pods -n app2b
+   kubectl get pods -n app2b
    NAME                       READY   STATUS    RESTARTS   AGE
    curl-5b549b49b8-xnzzk      2/2     Running   0          2m9s
    httpbin-7b549f7859-7k5gf   2/2     Running   0          118s

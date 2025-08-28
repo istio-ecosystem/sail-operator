@@ -46,7 +46,7 @@ Default configuration values can be changed using one or more `--set <parameter>
 1. Create the namespace, `sail-operator`, for the Sail Operator components:
 
     ```sh
-    $ kubectl create namespace sail-operator
+    kubectl create namespace sail-operator
     ```
 
 **Note** - This step could be skipped by using the `--create-namespace` argument in step 2.
@@ -54,13 +54,13 @@ Default configuration values can be changed using one or more `--set <parameter>
 2. Install the Sail Operator base charts which will manage all the Custom Resource Definitions(CRDs) to be able to deploy the Istio control plane:
 
     ```sh
-    $ helm install sail-operator sail-operator/sail-operator --version 1.26.3 --namespace sail-operator
+    helm install sail-operator sail-operator/sail-operator --version 1.26.3 --namespace sail-operator
     ```
 
 3. Validate the CRD installation with the `helm ls` command:
 
     ```sh
-    $ helm ls -n sail-operator
+    helm ls -n sail-operator
 
     NAME  	      NAMESPACE    	REVISION	UPDATED                                	STATUS  	CHART               	APP VERSION
     sail-operator	sail-operator	1       	2025-08-20 16:14:12.210759174 +0300 IDT	deployed	sail-operator-1.26.3	1.26.3
@@ -69,7 +69,7 @@ Default configuration values can be changed using one or more `--set <parameter>
 4. Get the status of the installed helm chart to ensure it is deployed:
 
     ```bash
-    $ helm status sail-operator -n sail-operator
+    helm status sail-operator -n sail-operator
 
     NAME: sail-operator
     LAST DEPLOYED: Wed Aug 20 16:14:12 2025
@@ -82,12 +82,12 @@ Default configuration values can be changed using one or more `--set <parameter>
 5. Check `sail-operator` deployment is successfully installed and its pods are running:
 
     ```sh
-    $ kubectl -n sail-operator get deployment --output wide
+    kubectl -n sail-operator get deployment --output wide
 
     NAME            READY   UP-TO-DATE   AVAILABLE   AGE     CONTAINERS      IMAGES                                  SELECTOR
     sail-operator   1/1     1            1           4h37m   sail-operator   quay.io/sail-dev/sail-operator:1.26.3   app.kubernetes.io/created-by=sailoperator,app.kubernetes.io/part-of=sailoperator,control-plane=sail-operator
 
-    $ kubectl -n sail-operator get pods -o wide
+    kubectl -n sail-operator get pods -o wide
 
     NAME                             READY   STATUS    RESTARTS   AGE     IP           NODE                                       NOMINATED NODE   READINESS GATES
     sail-operator-79c7d9ffb9-bwfdf   1/1     Running   0          4h38m   10.244.0.5   operator-integration-tests-control-plane   <none>           <none>

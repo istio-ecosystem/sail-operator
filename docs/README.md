@@ -204,10 +204,10 @@ with_retries resource_version_equal "istiocni" "default" "v1.24.2"
 -->
 2. Confirm the installation and version of the CNI plugin.
     ```console
-    $ kubectl get istiocni -n istio-cni
+    kubectl get istiocni -n istio-cni
     NAME      READY   STATUS    VERSION   AGE
     default   True    Healthy   v1.24.2   91m
-    $ kubectl get pods -n istio-cni
+    kubectl get pods -n istio-cni
     NAME                   READY   STATUS    RESTARTS   AGE
     istio-cni-node-hd9zf   1/1     Running   0          90m
     ```
@@ -234,10 +234,10 @@ wait_cni_ready "istio-cni"
 4. Confirm the CNI plugin version was updated.
 
     ```console
-    $ kubectl get istiocni -n istio-cni
+    kubectl get istiocni -n istio-cni
     NAME      READY   STATUS    VERSION   AGE
     default   True    Healthy   v1.24.3   93m
-    $ kubectl get pods -n istio-cni
+    kubectl get pods -n istio-cni
     NAME                   READY   STATUS    RESTARTS   AGE
     istio-cni-node-jz4lg   1/1     Running   0          44s
     ```

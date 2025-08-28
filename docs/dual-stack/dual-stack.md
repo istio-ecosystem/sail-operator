@@ -127,7 +127,7 @@ Note: If you installed the KinD cluster using the command above, install the [Sa
 
 4. Ensure that the tcp-echo service in the dual-stack namespace is configured with `ipFamilyPolicy` of RequireDualStack.
    ```console
-   $ kubectl get service tcp-echo -n dual-stack -o=jsonpath='{.spec.ipFamilyPolicy}'
+   kubectl get service tcp-echo -n dual-stack -o=jsonpath='{.spec.ipFamilyPolicy}'
    RequireDualStack
    ```
 <!-- ```bash { name=validation-ipfamilypolicy tag=dual-stack}
@@ -142,7 +142,7 @@ Note: If you installed the KinD cluster using the command above, install the [Sa
 ``` -->
 5. Verify that sleep pod is able to reach the dual-stack pods.
    ```console
-   $ kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo dualstack | nc tcp-echo.dual-stack 9000"
+   kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo dualstack | nc tcp-echo.dual-stack 9000"
    hello dualstack
    ```
 <!-- ```bash { name=validation-sleep-reach-dual-stack tag=dual-stack}
@@ -157,7 +157,7 @@ Note: If you installed the KinD cluster using the command above, install the [Sa
 ``` -->
 6. Similarly verify that sleep pod is able to reach both ipv4 pods as well as ipv6 pods.
    ```console
-   $ kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo ipv4 | nc tcp-echo.ipv4 9000"
+   kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo ipv4 | nc tcp-echo.ipv4 9000"
    hello ipv4
    ```
 <!-- ```bash { name=validation-sleep-reach-ipv4-pod tag=dual-stack}
@@ -171,7 +171,7 @@ Note: If you installed the KinD cluster using the command above, install the [Sa
     fi
 ``` -->
    ```console
-   $ kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo ipv6 | nc tcp-echo.ipv6 9000"
+   kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo ipv6 | nc tcp-echo.ipv6 9000"
    hello ipv6
    ```
 <!-- ```bash { name=validation-sleep-reach-ipv4-pod tag=dual-stack}

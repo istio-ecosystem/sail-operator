@@ -24,27 +24,27 @@ releases, including Beta releases.
 the following command at the terminal:
 
     ```sh
-    $ istioctl version
+    istioctl version
     ```
 
 2. Confirm the version of Istio you are using by running the following command 
 at the terminal:
 
     ```sh
-    $ oc get istio
+    oc get istio
     ```
 
 3. Install `istioctl` by running the following command at the terminal: 
 
     ```sh
-    $ curl -sL https://istio.io/downloadIstioctl | ISTIO_VERSION=<version> sh -
+    curl -sL https://istio.io/downloadIstioctl | ISTIO_VERSION=<version> sh -
     ```
     Replace `<version>` with the version of Istio you are using.
 
 4. Put the `istioctl` directory on path by running the following command at the terminal:
   
     ```sh
-    $ export PATH=$HOME/.istioctl/bin:$PATH
+    export PATH=$HOME/.istioctl/bin:$PATH
     ```
 
 5. Confirm that the `istioctl` client version and the Istio control plane 
@@ -52,7 +52,7 @@ version now match (or are within one version) by running the following command
 at the terminal:
 
     ```sh
-    $ istioctl version
+    istioctl version
     ```
 For more information on usage, see the [Istioctl documentation](https://istio.io/latest/docs/ops/diagnostic-tools/istioctl/).
 

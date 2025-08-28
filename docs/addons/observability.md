@@ -158,7 +158,7 @@ If you followed [Scraping metrics using the OpenShift monitoring stack](#scrapin
 1. Find out the revision name of your Istio instance. In our case it is `test`.
     
     ```console
-    $ kubectl get istiorevisions.sailoperator.io 
+    kubectl get istiorevisions.sailoperator.io
     NAME   READY   STATUS    IN USE   VERSION   AGE
     test   True    Healthy   True     v1.21.0   119m
     ```
