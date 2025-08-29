@@ -55,7 +55,7 @@ var sailCRDs = []string{
 	"workloadgroups.networking.istio.io",
 }
 
-var _ = Describe("Operator", Ordered, func() {
+var _ = Describe("Operator", Label("smoke", "operator"), Ordered, func() {
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 

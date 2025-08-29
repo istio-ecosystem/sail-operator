@@ -32,7 +32,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe("Multi control plane deployment model", Ordered, func() {
+var _ = Describe("Multi control plane deployment model", Label("smoke", "multicontrol-plane"), Ordered, func() {
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 	debugInfoLogged := false
