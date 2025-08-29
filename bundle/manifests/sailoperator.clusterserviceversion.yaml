@@ -34,7 +34,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/sail-dev/sail-operator:1.0-latest
-    createdAt: "2025-07-10T07:31:21Z"
+    createdAt: "2025-08-29T18:25:56Z"
     description: Experimental operator for installing Istio service mesh
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -56,7 +56,7 @@ metadata:
     operatorframework.io/arch.arm64: supported
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
-  name: sailoperator.v1.0.4
+  name: sailoperator.v1.0.5
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -908,4 +908,4 @@ spec:
       name: v1_24_6.proxy
     - image: gcr.io/istio-release/ztunnel:1.24.6
       name: v1_24_6.ztunnel
-  version: 1.0.4
+  version: 1.0.5
