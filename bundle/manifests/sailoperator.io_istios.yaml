@@ -2615,27 +2615,12 @@ spec:
                       See https://istio.io/docs/reference/config/istio.mesh.v1alpha1/ for all available options.
                     properties:
                       accessLogEncoding:
-                        description: |-
-                          Encoding for the proxy access log (`TEXT` or `JSON`).
-                          Default value is `TEXT`.
-                        enum:
-                        - TEXT
-                        - JSON
                         type: string
                       accessLogFile:
-                        description: |-
-                          File address for the proxy access log (e.g. /dev/stdout).
-                          Empty value disables access logging.
                         type: string
                       accessLogFormat:
-                        description: |-
-                          Format for the proxy access log
-                          Empty value results in proxy's default access log format
                         type: string
                       ca:
-                        description: |-
-                          If specified, Istiod will authorize and forward the CSRs from the workloads to the specified external CA
-                          using the Istio CA gRPC API.
                         properties:
                           address:
                             description: |-
@@ -2753,11 +2738,6 @@ spec:
                         - address
                         type: object
                       caCertificates:
-                        description: |-
-                          The extra root certificates for workload-to-workload communication.
-                          The plugin certificates (the 'cacerts' secret) or self-signed certificates (the 'istio-ca-secret' secret)
-                          are automatically added by Istiod.
-                          The CA certificate that signs the workload certificates is automatically added by Istio Agent.
                         items:
                           properties:
                             certSigners:
@@ -2770,6 +2750,11 @@ spec:
                             pem:
                               description: The PEM data of the certificate.
                               type: string
+                              x-kubernetes-validations:
+                              - message: At most one of [pem spiffeBundleUrl] should
+                                  be set
+                                rule: (has(self.pem)?1:0) + (has(self.spiffeBundleUrl)?1:0)
+                                  <= 1
                             spiffeBundleUrl:
                               description: |-
                                 The SPIFFE bundle endpoint URL that complies to:
@@ -2793,76 +2778,49 @@ spec:
                                 type: string
                               type: array
                           type: object
-                          x-kubernetes-validations:
-                          - message: At most one of [pem spiffeBundleUrl] should be
-                              set
-                            rule: (has(self.pem)?1:0) + (has(self.spiffeBundleUrl)?1:0)
-                              <= 1
                         type: array
                       certificates:
-                        description: |-
-                          Configure the provision of certificates.
-
-                          Note: Deprecated, please refer to Cert-Manager or other cert provisioning solutions to sign DNS certificates.
-
-                          Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
                         items:
-                          description: "Certificate configures the provision of a
-                            certificate and its key.\nExample 1: key and cert stored
-                            in a secret\n```\n{ secretName: galley-cert\n\n\t  secretNamespace:
-                            istio-system\n\t  dnsNames:\n\t    - galley.istio-system.svc\n\t
-                            \   - galley.mydomain.com\n\t}\n\n```\nExample 2: key
-                            and cert stored in a directory\n```\n{ dnsNames:\n  -
-                            pilot.istio-system\n  - pilot.istio-system.svc\n  - pilot.mydomain.com\n
-                            \   }\n\n```"
                           properties:
                             dnsNames:
-                              description: |-
-                                The DNS names for the certificate. A certificate may contain
-                                multiple DNS names.
                               items:
                                 type: string
                               type: array
                             secretName:
-                              description: |-
-                                Name of the secret the certificate and its key will be stored into.
-                                If it is empty, it will not be stored into a secret.
-                                Instead, the certificate and its key will be stored into a hard-coded directory.
                               type: string
                           type: object
                         type: array
                       configSources:
-                        description: |-
-                          ConfigSource describes a source of configuration data for networking
-                          rules, and other Istio configuration artifacts. Multiple data sources
-                          can be configured for a single control plane.
                         items:
-                          description: |-
-                            ConfigSource describes information about a configuration store inside a
-                            mesh. A single control plane instance can interact with one or more data
-                            sources.
                           properties:
                             address:
-                              description: |-
-                                Address of the server implementing the Istio Mesh Configuration
-                                protocol (MCP). Can be IP address or a fully qualified DNS name.
-                                Use xds:// to specify a grpc-based xds backend, k8s:// to specify a k8s controller or
-                                fs:/// to specify a file-based backend with absolute path to the directory.
                               type: string
                             subscribedResources:
-                              description: Describes the source of configuration,
-                                if nothing is specified default is MCP
                               items:
-                                description: Resource describes the source of configuration
-                                enum:
-                                - SERVICE_REGISTRY
                                 type: string
                               type: array
                             tlsSettings:
-                              description: |-
-                                Use the tlsSettings to specify the tls mode to use. If the MCP server
-                                uses Istio mutual TLS and shares the root CA with istiod, specify the TLS
-                                mode as `ISTIO_MUTUAL`.
+                              description: "SSL/TLS related settings for upstream
+                                connections. See Envoy's [TLS\ncontext](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto.html#common-tls-configuration)\nfor
+                                more details. These settings are common to both HTTP
+                                and TCP upstreams.\n\nFor example, the following rule
+                                configures a client to use mutual TLS\nfor connections
+                                to upstream database cluster.\n\n```yaml\napiVersion:
+                                networking.istio.io/v1\nkind: DestinationRule\nmetadata:\n\n\tname:
+                                db-mtls\n\nspec:\n\n\thost: mydbserver.prod.svc.cluster.local\n\ttrafficPolicy:\n\t
+                                \ tls:\n\t    mode: MUTUAL\n\t    clientCertificate:
+                                /etc/certs/myclientcert.pem\n\t    privateKey: /etc/certs/client_private_key.pem\n\t
+                                \   caCertificates: /etc/certs/rootcacerts.pem\n\n```\n\nThe
+                                following rule configures a client to use TLS when
+                                talking to a\nforeign service whose domain matches
+                                *.foo.com.\n\n```yaml\napiVersion: networking.istio.io/v1\nkind:
+                                DestinationRule\nmetadata:\n\n\tname: tls-foo\n\nspec:\n\n\thost:
+                                \"*.foo.com\"\n\ttrafficPolicy:\n\t  tls:\n\t    mode:
+                                SIMPLE\n\n```\n\nThe following rule configures a client
+                                to use Istio mutual TLS when talking\nto rating services.\n\n```yaml\napiVersion:
+                                networking.istio.io/v1\nkind: DestinationRule\nmetadata:\n\n\tname:
+                                ratings-istio-mtls\n\nspec:\n\n\thost: ratings.prod.svc.cluster.local\n\ttrafficPolicy:\n\t
+                                \ tls:\n\t    mode: ISTIO_MUTUAL\n\n```"
                               properties:
                                 caCertificates:
                                   description: |-
@@ -2953,17 +2911,26 @@ spec:
                           type: object
                         type: array
                       connectTimeout:
-                        description: |-
-                          Connection timeout used by Envoy. (MUST be >=1ms)
-                          Default timeout is 10s.
                         type: string
                       defaultConfig:
-                        description: |-
-                          Default proxy config used by gateway and sidecars.
-                          In case of Kubernetes, the proxy config is applied once during the injection process,
-                          and remain constant for the duration of the pod. The rest of the mesh config can be changed
-                          at runtime and config gets distributed dynamically.
-                          On Kubernetes, this can be overridden on individual pods with the `proxy.istio.io/config` annotation.
+                        description: "ProxyConfig defines variables for individual
+                          Envoy instances. This can be configured on a per-workload
+                          basis\nas well as by the mesh-wide defaults.\nTo set the
+                          mesh-wide defaults, configure the `defaultConfig` section
+                          of `meshConfig`. For example:\n\n```\nmeshConfig:\n\n\tdefaultConfig:\n\t
+                          \ discoveryAddress: istiod:15012\n\n```\n\nThis can also
+                          be configured on a per-workload basis by configuring the
+                          `proxy.istio.io/config` annotation on the pod. For example:\n\n```\nannotations:\n\n\tproxy.istio.io/config:
+                          |\n\t  discoveryAddress: istiod:15012\n\n```\n\nIf both
+                          are configured, the two are merged with per field semantics;
+                          the field set in annotation will fully replace the field
+                          from mesh config defaults.\nThis is different than a deep
+                          merge provided by protobuf.\nFor example, `\"tracing\":
+                          { \"sampling\": 5 }` would completely override a setting
+                          configuring a tracing provider\nsuch as `\"tracing\": {
+                          \"zipkin\": { \"address\": \"...\" } }`.\n\nNote: fields
+                          in ProxyConfig are not dynamically configured; changes will
+                          require restart of workloads to take effect."
                         properties:
                           availabilityZone:
                             description: 'Deprecated: Marked as deprecated in mesh/v1alpha1/proxy.proto.'
@@ -4108,23 +4075,21 @@ spec:
                           rule: (has(self.serviceCluster)?1:0) + (has(self.tracingServiceName)?1:0)
                             <= 1
                       defaultDestinationRuleExportTo:
-                        description: |-
-                          The default value for the `DestinationRule.exportTo` field. Has the same
-                          syntax as `defaultServiceExportTo`.
-
-                          If not set the system will use "*" as the default value which implies that
-                          destination rules are exported to all namespaces
                         items:
                           type: string
                         type: array
                       defaultHttpRetryPolicy:
-                        description: "Configure the default HTTP retry policy.\nThe
-                          default number of retry attempts is set at 2 for these errors:\n\n\t\"connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes\".\n\nSetting
-                          the number of attempts to 0 disables retry policy globally.\nThis
-                          setting can be overridden on a per-host basis using the
-                          Virtual Service\nAPI.\nAll settings in the retry policy
-                          except `perTryTimeout` can currently be\nconfigured globally
-                          via this field."
+                        description: "Describes the retry policy to use when a HTTP
+                          request fails. For\nexample, the following rule sets the
+                          maximum number of retries to 3 when\ncalling ratings:v1
+                          service, with a 2s timeout per retry attempt.\nA retry will
+                          be attempted if there is a connect-failure, refused_stream\nor
+                          when the upstream server responds with Service Unavailable(503).\n\n```yaml\napiVersion:
+                          networking.istio.io/v1\nkind: VirtualService\nmetadata:\n\n\tname:
+                          ratings-route\n\nspec:\n\n\thosts:\n\t- ratings.prod.svc.cluster.local\n\thttp:\n\t-
+                          route:\n\t  - destination:\n\t      host: ratings.prod.svc.cluster.local\n\t
+                          \     subset: v1\n\t  retries:\n\t    attempts: 3\n\t    perTryTimeout:
+                          2s\n\t    retryOn: gateway-error,connect-failure,refused-stream\n\n```"
                         properties:
                           attempts:
                             description: |-
@@ -4177,8 +4142,12 @@ spec:
                             type: boolean
                         type: object
                       defaultProviders:
-                        description: Specifies extension providers to use by default
-                          in Istio configuration resources.
+                        description: |-
+                          Holds the name references to the providers that will be used by default
+                          in other Istio configuration resources if the provider is not specified.
+
+                          These names must match a provider defined in `extensionProviders` that is
+                          one of the supported tracing providers.
                         properties:
                           accessLogging:
                             description: Name of the default provider(s) for access
@@ -4198,76 +4167,16 @@ spec:
                             type: array
                         type: object
                       defaultServiceExportTo:
-                        description: |-
-                          The default value for the ServiceEntry.exportTo field and services
-                          imported through container registry integrations, e.g. this applies to
-                          Kubernetes Service resources. The value is a list of namespace names and
-                          reserved namespace aliases. The allowed namespace aliases are:
-                          ```
-                          * - All Namespaces
-                          . - Current Namespace
-                          ~ - No Namespace
-                          ```
-                          If not set the system will use "*" as the default value which implies that
-                          services are exported to all namespaces.
-
-                          `All namespaces` is a reasonable default for implementations that don't
-                          need to restrict access or visibility of services across namespace
-                          boundaries. If that requirement is present it is generally good practice to
-                          make the default `Current namespace` so that services are only visible
-                          within their own namespaces by default. Operators can then expand the
-                          visibility of services to other namespaces as needed. Use of `No Namespace`
-                          is expected to be rare but can have utility for deployments where
-                          dependency management needs to be precise even within the scope of a single
-                          namespace.
-
-                          For further discussion see the reference documentation for `ServiceEntry`,
-                          `Sidecar`, and `Gateway`.
                         items:
                           type: string
                         type: array
                       defaultVirtualServiceExportTo:
-                        description: |-
-                          The default value for the VirtualService.exportTo field. Has the same
-                          syntax as `defaultServiceExportTo`.
-
-                          If not set the system will use "*" as the default value which implies that
-                          virtual services are exported to all namespaces
                         items:
                           type: string
                         type: array
                       disableEnvoyListenerLog:
-                        description: |-
-                          This flag disables Envoy Listener logs.
-                          See [Listener Access Log](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#envoy-v3-api-field-config-listener-v3-listener-access-log)
-                          Istio Enables Envoy's listener access logs on "NoRoute" response flag.
-                          Default value is `false`.
                         type: boolean
                       discoverySelectors:
-                        description: |-
-                          A list of Kubernetes selectors that specify the set of namespaces that Istio considers when
-                          computing configuration updates for sidecars. This can be used to reduce Istio's computational load
-                          by limiting the number of entities (including services, pods, and endpoints) that are watched and processed.
-                          If omitted, Istio will use the default behavior of processing all namespaces in the cluster.
-                          Elements in the list are disjunctive (OR semantics), i.e. a namespace will be included if it matches any selector.
-                          The following example selects any namespace that matches either below:
-                          1. The namespace has both of these labels: `env: prod` and `region: us-east1`
-                          2. The namespace has label `app` equal to `cassandra` or `spark`.
-                          ```yaml
-                          discoverySelectors:
-                            - matchLabels:
-                              env: prod
-                              region: us-east1
-                            - matchExpressions:
-                            - key: app
-                              operator: In
-                              values:
-                            - cassandra
-                            - spark
-
-                          ```
-                          Refer to the [Kubernetes selector docs](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors)
-                          for additional detail on selector semantics.
                         items:
                           description: |-
                             A label selector is a label query over a set of resources. The result of matchLabels and
@@ -4319,52 +4228,16 @@ spec:
                           x-kubernetes-map-type: atomic
                         type: array
                       dnsRefreshRate:
-                        description: |-
-                          Configures DNS refresh rate for Envoy clusters of type `STRICT_DNS`
-                          Default refresh rate is `60s`.
                         type: string
                       enableAutoMtls:
-                        description: |-
-                          This flag is used to enable mutual `TLS` automatically for service to service communication
-                          within the mesh, default true.
-                          If set to true, and a given service does not have a corresponding `DestinationRule` configured,
-                          or its `DestinationRule` does not have ClientTLSSettings specified, Istio configures client side
-                          TLS configuration appropriately. More specifically,
-                          If the upstream authentication policy is in `STRICT` mode, use Istio provisioned certificate
-                          for mutual `TLS` to connect to upstream.
-                          If upstream service is in plain text mode, use plain text.
-                          If the upstream authentication policy is in PERMISSIVE mode, Istio configures clients to use
-                          mutual `TLS` when server sides are capable of accepting mutual `TLS` traffic.
-                          If service `DestinationRule` exists and has `ClientTLSSettings` specified, that is always used instead.
                         type: boolean
                       enableEnvoyAccessLogService:
-                        description: |-
-                          This flag enables Envoy's gRPC Access Log Service.
-                          See [Access Log Service](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/grpc/v3/als.proto)
-                          for details about Envoy's gRPC Access Log Service API.
-                          Default value is `false`.
                         type: boolean
                       enablePrometheusMerge:
-                        description: |-
-                          If enabled, Istio agent will merge metrics exposed by the application with metrics from Envoy
-                          and Istio agent. The sidecar injection will replace `prometheus.io` annotations present on the pod
-                          and redirect them towards Istio agent, which will then merge metrics of from the application with Istio metrics.
-                          This relies on the annotations `prometheus.io/scrape`, `prometheus.io/port`, and
-                          `prometheus.io/path` annotations.
-                          If you are running a separately managed Envoy with an Istio sidecar, this may cause issues, as the metrics will collide.
-                          In this case, it is recommended to disable aggregation on that deployment with the
-                          `prometheus.istio.io/merge-metrics: "false"` annotation.
-                          If not specified, this will be enabled by default.
                         type: boolean
                       enableTracing:
-                        description: |-
-                          Flag to control generation of trace spans and request IDs.
-                          Requires a trace span collector defined in the proxy configuration.
                         type: boolean
                       extensionProviders:
-                        description: |-
-                          Defines a list of extension providers that extend Istio's functionality. For example, the AuthorizationPolicy
-                          can be used with an extension provider to delegate the authorization decision to a custom authorization system.
                         items:
                           properties:
                             datadog:
@@ -4883,15 +4756,6 @@ spec:
                                     the proxy will attempt to read each header for each request and will
                                     write all headers.
                                   items:
-                                    description: |-
-                                      TraceContext selects the context propagation headers used for
-                                      distributed tracing.
-                                    enum:
-                                    - UNSPECIFIED
-                                    - W3C_TRACE_CONTEXT
-                                    - GRPC_BIN
-                                    - CLOUD_TRACE_CONTEXT
-                                    - B3
                                     type: string
                                   type: array
                                 maxTagLength:
@@ -5394,86 +5258,57 @@ spec:
                               + (has(self.envoyFileAccessLog)?1:0) + (has(self.envoyHttpAls)?1:0)
                               + (has(self.envoyTcpAls)?1:0) + (has(self.envoyOtelAls)?1:0)
                               + (has(self.sds)?1:0) <= 1
-                        maxItems: 1000
                         type: array
                       h2UpgradePolicy:
-                        description: |-
-                          Specify if http1.1 connections should be upgraded to http2 by default.
-                          if sidecar is installed on all pods in the mesh, then this should be set to `UPGRADE`.
-                          If one or more services or namespaces do not have sidecar(s), then this should be set to `DO_NOT_UPGRADE`.
-                          It can be enabled by destination using the `destinationRule.trafficPolicy.connectionPool.http.h2UpgradePolicy` override.
-                        enum:
-                        - DO_NOT_UPGRADE
-                        - UPGRADE
                         type: string
                       inboundClusterStatName:
-                        description: |-
-                          Name to be used while emitting statistics for inbound clusters. The same pattern is used while computing stat prefix for
-                          network filters like TCP and Redis.
-                          By default, Istio emits statistics with the pattern `inbound|<port>|<port-name>|<service-FQDN>`.
-                          For example `inbound|7443|grpc-reviews|reviews.prod.svc.cluster.local`. This can be used to override that pattern.
-
-                          A Pattern can be composed of various pre-defined variables. The following variables are supported.
-
-                          - `%SERVICE%` - Will be substituted with short hostname of the service.
-                          - `%SERVICE_NAME%` - Will be substituted with name of the service.
-                          - `%SERVICE_FQDN%` - Will be substituted with FQDN of the service.
-                          - `%SERVICE_PORT%` - Will be substituted with port of the service.
-                          - `%TARGET_PORT%`  - Will be substituted with the target port of the service.
-                          - `%SERVICE_PORT_NAME%` - Will be substituted with port name of the service.
-
-                          Following are some examples of supported patterns for reviews:
-
-                          - `%SERVICE_FQDN%_%SERVICE_PORT%` will use reviews.prod.svc.cluster.local_7443 as the stats name.
-                          - `%SERVICE%` will use reviews.prod as the stats name.
                         type: string
                       inboundTrafficPolicy:
-                        description: |-
-                          Set the default behavior of the sidecar for handling inbound
-                          traffic to the application.  If your application listens on
-                          localhost, you will need to set this to `LOCALHOST`.
                         properties:
                           mode:
-                            enum:
-                            - PASSTHROUGH
-                            - LOCALHOST
                             type: string
                         type: object
                       ingressClass:
-                        description: |-
-                          Class of ingress resources to be processed by Istio ingress
-                          controller. This corresponds to the value of
-                          `kubernetes.io/ingress.class` annotation.
                         type: string
                       ingressControllerMode:
-                        description: |-
-                          Defines whether to use Istio ingress controller for annotated or all ingress resources.
-                          Default mode is `STRICT`.
-                        enum:
-                        - UNSPECIFIED
-                        - "OFF"
-                        - DEFAULT
-                        - STRICT
                         type: string
                       ingressSelector:
-                        description: |-
-                          Defines which gateway deployment to use as the Ingress controller. This field corresponds to
-                          the Gateway.selector field, and will be set as `istio: INGRESS_SELECTOR`.
-                          By default, `ingressgateway` is used, which will select the default IngressGateway as it has the
-                          `istio: ingressgateway` labels.
-                          It is recommended that this is the same value as ingressService.
                         type: string
                       ingressService:
-                        description: |-
-                          Name of the Kubernetes service used for the istio ingress controller.
-                          If no ingress controller is specified, the default value `istio-ingressgateway` is used.
                         type: string
                       localityLbSetting:
-                        description: |-
-                          Locality based load balancing distribution or failover settings.
-                          If unspecified, locality based load balancing will be enabled by default.
-                          However, this requires outlierDetection to actually take effect for a particular
-                          service, see https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/failover/
+                        description: "Locality-weighted load balancing allows administrators
+                          to control the\ndistribution of traffic to endpoints based
+                          on the localities of where the\ntraffic originates and where
+                          it will terminate. These localities are\nspecified using
+                          arbitrary labels that designate a hierarchy of localities
+                          in\n{region}/{zone}/{sub-zone} form. For additional detail
+                          refer to\n[Locality Weight](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/locality_weight)\nThe
+                          following example shows how to setup locality weights mesh-wide.\n\nGiven
+                          a mesh with workloads and their service deployed to \"us-west/zone1/\\*\"\nand
+                          \"us-west/zone2/\\*\". This example specifies that when
+                          traffic accessing a\nservice originates from workloads in
+                          \"us-west/zone1/\\*\", 80% of the traffic\nwill be sent
+                          to endpoints in \"us-west/zone1/\\*\", i.e the same zone,
+                          and the\nremaining 20% will go to endpoints in \"us-west/zone2/\\*\".
+                          This setup is\nintended to favor routing traffic to endpoints
+                          in the same locality.\nA similar setting is specified for
+                          traffic originating in \"us-west/zone2/\\*\".\n\n```yaml\n\n\tdistribute:\n\t
+                          \ - from: us-west/zone1/*\n\t    to:\n\t      \"us-west/zone1/*\":
+                          80\n\t      \"us-west/zone2/*\": 20\n\t  - from: us-west/zone2/*\n\t
+                          \   to:\n\t      \"us-west/zone1/*\": 20\n\t      \"us-west/zone2/*\":
+                          80\n\n```\n\nIf the goal of the operator is not to distribute
+                          load across zones and\nregions but rather to restrict the
+                          regionality of failover to meet other\noperational requirements
+                          an operator can set a 'failover' policy instead of\na 'distribute'
+                          policy.\n\nThe following example sets up a locality failover
+                          policy for regions.\nAssume a service resides in zones within
+                          us-east, us-west & eu-west\nthis example specifies that
+                          when endpoints within us-east become unhealthy\ntraffic
+                          should failover to endpoints in any zone or sub-zone within
+                          eu-west\nand similarly us-west should failover to us-east.\n\n```yaml\n\n\tfailover:\n\t
+                          \ - from: us-east\n\t    to: eu-west\n\t  - from: us-west\n\t
+                          \   to: us-east\n\n```"
                         properties:
                           distribute:
                             description: |-
@@ -5608,15 +5443,6 @@ spec:
                             type: array
                         type: object
                       meshMTLS:
-                        description: "The below configuration parameters can be used
-                          to specify TLSConfig for mesh traffic.\nFor example, a user
-                          could enable min TLS version for ISTIO_MUTUAL traffic and
-                          specify a curve for non ISTIO_MUTUAL traffic like below:\n```yaml\nmeshConfig:\n\n\tmeshMTLS:\n\t
-                          \ minProtocolVersion: TLSV1_3\n\ttlsDefaults:\n\t  Note:
-                          applicable only for non ISTIO_MUTUAL scenarios\n\t  ecdhCurves:\n\t
-                          \   - P-256\n\t    - P-512\n\n```\nConfiguration of mTLS
-                          for traffic between workloads with ISTIO_MUTUAL TLS traffic.\n\nNote:
-                          Mesh mTLS does not respect ECDH curves."
                         properties:
                           cipherSuites:
                             description: |-
@@ -5649,116 +5475,34 @@ spec:
                               minimum TLS version for clients may also be TLS 1.2.
                               In the current Istio implementation, the maximum TLS protocol version
                               is TLS 1.3.
-                            enum:
-                            - TLS_AUTO
-                            - TLSV1_2
-                            - TLSV1_3
                             type: string
                         type: object
                       outboundClusterStatName:
-                        description: |-
-                          Name to be used while emitting statistics for outbound clusters. The same pattern is used while computing stat prefix for
-                          network filters like TCP and Redis.
-                          By default, Istio emits statistics with the pattern `outbound|<port>|<subsetname>|<service-FQDN>`.
-                          For example `outbound|8080|v2|reviews.prod.svc.cluster.local`. This can be used to override that pattern.
-
-                          A Pattern can be composed of various pre-defined variables. The following variables are supported.
-
-                          - `%SERVICE%` - Will be substituted with short hostname of the service.
-                          - `%SERVICE_NAME%` - Will be substituted with name of the service.
-                          - `%SERVICE_FQDN%` - Will be substituted with FQDN of the service.
-                          - `%SERVICE_PORT%` - Will be substituted with port of the service.
-                          - `%SERVICE_PORT_NAME%` - Will be substituted with port name of the service.
-                          - `%SUBSET_NAME%` - Will be substituted with subset.
-
-                          Following are some examples of supported patterns for reviews:
-
-                          - `%SERVICE_FQDN%_%SERVICE_PORT%` will use `reviews.prod.svc.cluster.local_7443` as the stats name.
-                          - `%SERVICE%` will use reviews.prod as the stats name.
                         type: string
                       outboundTrafficPolicy:
-                        description: |-
-                          Set the default behavior of the sidecar for handling outbound
-                          traffic from the application.
-
-                          Can be overridden at a Sidecar level by setting the `OutboundTrafficPolicy` in the
-                          [Sidecar API](https://istio.io/docs/reference/config/networking/sidecar/#OutboundTrafficPolicy).
-
-                          Default mode is `ALLOW_ANY`, which means outbound traffic to unknown destinations will be allowed.
                         properties:
                           mode:
-                            enum:
-                            - REGISTRY_ONLY
-                            - ALLOW_ANY
                             type: string
                         type: object
                       pathNormalization:
-                        description: |-
-                          ProxyPathNormalization configures how URL paths in incoming and outgoing HTTP requests are
-                          normalized by the sidecars and gateways.
-                          The normalized paths will be used in all aspects through the requests' lifetime on the
-                          sidecars and gateways, which includes routing decisions in outbound direction (client proxy),
-                          authorization policy match and enforcement in inbound direction (server proxy), and the URL
-                          path proxied to the upstream service.
-                          If not set, the NormalizationType.DEFAULT configuration will be used.
                         properties:
                           normalization:
-                            enum:
-                            - DEFAULT
-                            - NONE
-                            - BASE
-                            - MERGE_SLASHES
-                            - DECODE_AND_MERGE_SLASHES
                             type: string
                         type: object
                       protocolDetectionTimeout:
-                        description: |-
-                          Automatic protocol detection uses a set of heuristics to
-                          determine whether the connection is using TLS or not (on the
-                          server side), as well as the application protocol being used
-                          (e.g., http vs tcp). These heuristics rely on the client sending
-                          the first bits of data. For server first protocols like MySQL,
-                          MongoDB, etc. Envoy will timeout on the protocol detection after
-                          the specified period, defaulting to non mTLS plain TCP
-                          traffic. Set this field to tweak the period that Envoy will wait
-                          for the client to send the first bits of data. (MUST be >=1ms or
-                          0s to disable). Default detection timeout is 0s (no timeout).
-
-                          Setting a timeout is not recommended nor safe. Even high timeouts (>5s) will be hit
-                          occasionally, and when they occur the result is typically broken traffic that may not
-                          recover on its own. Exceptionally high values might solve this, but injecting 60s delays
-                          onto new connections is generally not tenable anyways.
                         type: string
                       proxyHttpPort:
-                        description: Port on which Envoy should listen for HTTP PROXY
-                          requests if set.
                         format: int32
                         type: integer
                       proxyInboundListenPort:
-                        description: |-
-                          Port on which Envoy should listen for all inbound traffic to the pod/vm will be captured to.
-                          Default port is 15006.
                         format: int32
                         type: integer
                       proxyListenPort:
-                        description: |-
-                          Port on which Envoy should listen for all outbound traffic to other services.
-                          Default port is 15001.
                         format: int32
                         type: integer
                       rootNamespace:
-                        description: |-
-                          The namespace to treat as the administrative root namespace for
-                          Istio configuration. When processing a leaf namespace Istio will search for
-                          declarations in that namespace first and if none are found it will
-                          search in the root namespace. Any matching declaration found in the root
-                          namespace is processed as if it were declared in the leaf namespace.
-
-                          The precise semantics of this processing are documented on each resource
-                          type.
                         type: string
                       serviceScopeConfigs:
-                        description: Scope to be applied to select services.
                         items:
                           description: |-
                             Configuration for ambient mode multicluster service scope. This setting allows mesh administrators
@@ -5839,9 +5583,6 @@ spec:
                             scope:
                               description: Specifics the available scope for matching
                                 services.
-                              enum:
-                              - LOCAL
-                              - GLOBAL
                               type: string
                             servicesSelector:
                               description: Match expression for serivces.
@@ -5892,7 +5633,6 @@ spec:
                           type: object
                         type: array
                       serviceSettings:
-                        description: Settings to be applied to select services.
                         items:
                           description: |-
                             Settings to be applied to select services.
@@ -5954,8 +5694,7 @@ spec:
                           type: object
                         type: array
                       tcpKeepalive:
-                        description: If set then set `SO_KEEPALIVE` on the socket
-                          to enable TCP Keepalives.
+                        description: TCP keepalive.
                         properties:
                           interval:
                             description: |-
@@ -5978,10 +5717,6 @@ spec:
                             type: string
                         type: object
                       tlsDefaults:
-                        description: |-
-                          Configuration of TLS for all traffic except for ISTIO_MUTUAL mode.
-                          Currently, this supports configuration of ecdhCurves and cipherSuites only.
-                          For ISTIO_MUTUAL TLS settings, use meshMTLS configuration.
                         properties:
                           cipherSuites:
                             description: |-
@@ -6014,54 +5749,15 @@ spec:
                               minimum TLS version for clients may also be TLS 1.2.
                               In the current Istio implementation, the maximum TLS protocol version
                               is TLS 1.3.
-                            enum:
-                            - TLS_AUTO
-                            - TLSV1_2
-                            - TLSV1_3
                             type: string
                         type: object
                       trustDomain:
-                        description: |-
-                          The trust domain corresponds to the trust root of a system.
-                          Refer to [SPIFFE-ID](https://github.com/spiffe/spiffe/blob/master/standards/SPIFFE-ID.md#21-trust-domain)
                         type: string
                       trustDomainAliases:
-                        description: |-
-                          The trust domain aliases represent the aliases of `trustDomain`.
-                          For example, if we have
-                          ```yaml
-                          trustDomain: td1
-                          trustDomainAliases: ["td2", "td3"]
-                          ```
-                          Any service with the identity `td1/ns/foo/sa/a-service-account`, `td2/ns/foo/sa/a-service-account`,
-                          or `td3/ns/foo/sa/a-service-account` will be treated the same in the Istio mesh.
                         items:
                           type: string
                         type: array
                       verifyCertificateAtClient:
-                        description: |-
-                          `VerifyCertificateAtClient` sets the mesh global default for peer certificate validation
-                          at the client-side proxy when `SIMPLE` TLS or `MUTUAL` TLS (non `ISTIO_MUTUAL`) origination
-                          modes are used. This setting can be overridden at the host level via DestinationRule API.
-                          By default, `VerifyCertificateAtClient` is `true`.
-
-                          `CaCertificates`: If set, proxy verifies CA signature based on given CaCertificates. If unset,
-                          and VerifyCertificateAtClient is true, proxy uses default System CA bundle. If unset and
-                          `VerifyCertificateAtClient` is false, proxy will not verify the CA.
-
-                          `SubjectAltNames`: If set, proxy verifies subject alt names are present in the SAN. If unset,
-                          and `VerifyCertificateAtClient` is true, proxy uses host in destination rule to verify the SANs.
-                          If unset, and `VerifyCertificateAtClient` is false, proxy does not verify SANs.
-
-                          For SAN, client-side proxy will exact match host in `DestinationRule` as well as one level
-                          wildcard if the specified host in DestinationRule doesn't contain a wildcard.
-                          For example, if the host in `DestinationRule` is `x.y.com`, client-side proxy will
-                          match either `x.y.com` or `*.y.com` for the SAN in the presented server certificate.
-                          For wildcard host name in DestinationRule, client-side proxy will do a suffix match. For example,
-                          if host is `*.x.y.com`, client-side proxy will verify the presented server certificate SAN matches
-                          `.x.y.com` suffix.
-
-                          Deprecated: Marked as deprecated in mesh/v1alpha1/config.proto.
                         type: boolean
                     type: object
                   pilot:

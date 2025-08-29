@@ -226,6 +226,21 @@ _Appears in:_
 | `global` _[CNIGlobalConfig](#cniglobalconfig)_ | Part of the global configuration applicable to the Istio CNI component. |  |  |
 
 
+#### Certificate
+
+
+
+
+
+
+
+_Appears in:_
+- [MeshConfig](#meshconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `secretName` _string_ |  |  |  |
+| `dnsNames` _string array_ |  |  |  |
 
 
 #### ClientTLSSettings
@@ -306,9 +321,7 @@ _Appears in:_
 
 
 
-ConfigSource describes information about a configuration store inside a
-mesh. A single control plane instance can interact with one or more data
-sources.
+
 
 
 
@@ -317,9 +330,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `address` _string_ | Address of the server implementing the Istio Mesh Configuration protocol (MCP). Can be IP address or a fully qualified DNS name. Use xds:// to specify a grpc-based xds backend, k8s:// to specify a k8s controller or fs:/// to specify a file-based backend with absolute path to the directory. |  |  |
-| `tlsSettings` _[ClientTLSSettings](#clienttlssettings)_ | Use the tlsSettings to specify the tls mode to use. If the MCP server uses Istio mutual TLS and shares the root CA with istiod, specify the TLS mode as `ISTIO_MUTUAL`. |  |  |
-| `subscribedResources` _[Resource](#resource) array_ | Describes the source of configuration, if nothing is specified default is MCP |  | Enum: [SERVICE_REGISTRY]   |
+| `address` _string_ |  |  |  |
+| `tlsSettings` _[ClientTLSSettings](#clienttlssettings)_ |  |  |  |
+| `subscribedResources` _[Resource](#resource) array_ |  |  |  |
 
 
 #### ConnectionPoolSettingsTCPSettingsTcpKeepalive
@@ -1292,7 +1305,7 @@ _Appears in:_
 
 
 
-MeshConfig defines mesh-wide settings for the Istio service mesh.
+
 
 
 
@@ -1302,47 +1315,51 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `proxyListenPort` _integer_ | Port on which Envoy should listen for all outbound traffic to other services. Default port is 15001. |  |  |
-| `proxyInboundListenPort` _integer_ | Port on which Envoy should listen for all inbound traffic to the pod/vm will be captured to. Default port is 15006. |  |  |
-| `proxyHttpPort` _integer_ | Port on which Envoy should listen for HTTP PROXY requests if set. |  |  |
-| `connectTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | Connection timeout used by Envoy. (MUST be >=1ms) Default timeout is 10s. |  |  |
-| `tcpKeepalive` _[ConnectionPoolSettingsTCPSettingsTcpKeepalive](#connectionpoolsettingstcpsettingstcpkeepalive)_ | If set then set `SO_KEEPALIVE` on the socket to enable TCP Keepalives. |  |  |
-| `ingressClass` _string_ | Class of ingress resources to be processed by Istio ingress controller. This corresponds to the value of `kubernetes.io/ingress.class` annotation. |  |  |
-| `ingressService` _string_ | Name of the Kubernetes service used for the istio ingress controller. If no ingress controller is specified, the default value `istio-ingressgateway` is used. |  |  |
-| `ingressControllerMode` _[MeshConfigIngressControllerMode](#meshconfigingresscontrollermode)_ | Defines whether to use Istio ingress controller for annotated or all ingress resources. Default mode is `STRICT`. |  | Enum: [UNSPECIFIED OFF DEFAULT STRICT]   |
-| `ingressSelector` _string_ | Defines which gateway deployment to use as the Ingress controller. This field corresponds to the Gateway.selector field, and will be set as `istio: INGRESS_SELECTOR`. By default, `ingressgateway` is used, which will select the default IngressGateway as it has the `istio: ingressgateway` labels. It is recommended that this is the same value as ingressService. |  |  |
-| `enableTracing` _boolean_ | Flag to control generation of trace spans and request IDs. Requires a trace span collector defined in the proxy configuration. |  |  |
-| `accessLogFile` _string_ | File address for the proxy access log (e.g. /dev/stdout). Empty value disables access logging. |  |  |
-| `accessLogFormat` _string_ | Format for the proxy access log Empty value results in proxy's default access log format |  |  |
-| `accessLogEncoding` _[MeshConfigAccessLogEncoding](#meshconfigaccesslogencoding)_ | Encoding for the proxy access log (`TEXT` or `JSON`). Default value is `TEXT`. |  | Enum: [TEXT JSON]   |
-| `enableEnvoyAccessLogService` _boolean_ | This flag enables Envoy's gRPC Access Log Service. See [Access Log Service](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/grpc/v3/als.proto) for details about Envoy's gRPC Access Log Service API. Default value is `false`. |  |  |
-| `disableEnvoyListenerLog` _boolean_ | This flag disables Envoy Listener logs. See [Listener Access Log](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#envoy-v3-api-field-config-listener-v3-listener-access-log) Istio Enables Envoy's listener access logs on "NoRoute" response flag. Default value is `false`. |  |  |
-| `defaultConfig` _[MeshConfigProxyConfig](#meshconfigproxyconfig)_ | Default proxy config used by gateway and sidecars. In case of Kubernetes, the proxy config is applied once during the injection process, and remain constant for the duration of the pod. The rest of the mesh config can be changed at runtime and config gets distributed dynamically. On Kubernetes, this can be overridden on individual pods with the `proxy.istio.io/config` annotation. |  |  |
-| `outboundTrafficPolicy` _[MeshConfigOutboundTrafficPolicy](#meshconfigoutboundtrafficpolicy)_ | Set the default behavior of the sidecar for handling outbound traffic from the application.  Can be overridden at a Sidecar level by setting the `OutboundTrafficPolicy` in the [Sidecar API](https://istio.io/docs/reference/config/networking/sidecar/#OutboundTrafficPolicy).  Default mode is `ALLOW_ANY`, which means outbound traffic to unknown destinations will be allowed. |  |  |
-| `inboundTrafficPolicy` _[MeshConfigInboundTrafficPolicy](#meshconfiginboundtrafficpolicy)_ | Set the default behavior of the sidecar for handling inbound traffic to the application.  If your application listens on localhost, you will need to set this to `LOCALHOST`. |  |  |
-| `configSources` _[ConfigSource](#configsource) array_ | ConfigSource describes a source of configuration data for networking rules, and other Istio configuration artifacts. Multiple data sources can be configured for a single control plane. |  |  |
-| `enableAutoMtls` _boolean_ | This flag is used to enable mutual `TLS` automatically for service to service communication within the mesh, default true. If set to true, and a given service does not have a corresponding `DestinationRule` configured, or its `DestinationRule` does not have ClientTLSSettings specified, Istio configures client side TLS configuration appropriately. More specifically, If the upstream authentication policy is in `STRICT` mode, use Istio provisioned certificate for mutual `TLS` to connect to upstream. If upstream service is in plain text mode, use plain text. If the upstream authentication policy is in PERMISSIVE mode, Istio configures clients to use mutual `TLS` when server sides are capable of accepting mutual `TLS` traffic. If service `DestinationRule` exists and has `ClientTLSSettings` specified, that is always used instead. |  |  |
-| `trustDomain` _string_ | The trust domain corresponds to the trust root of a system. Refer to [SPIFFE-ID](https://github.com/spiffe/spiffe/blob/master/standards/SPIFFE-ID.md#21-trust-domain) |  |  |
-| `trustDomainAliases` _string array_ | The trust domain aliases represent the aliases of `trustDomain`. For example, if we have ```yaml trustDomain: td1 trustDomainAliases: ["td2", "td3"] ``` Any service with the identity `td1/ns/foo/sa/a-service-account`, `td2/ns/foo/sa/a-service-account`, or `td3/ns/foo/sa/a-service-account` will be treated the same in the Istio mesh. |  |  |
-| `caCertificates` _[MeshConfigCertificateData](#meshconfigcertificatedata) array_ | The extra root certificates for workload-to-workload communication. The plugin certificates (the 'cacerts' secret) or self-signed certificates (the 'istio-ca-secret' secret) are automatically added by Istiod. The CA certificate that signs the workload certificates is automatically added by Istio Agent. |  |  |
-| `defaultServiceExportTo` _string array_ | The default value for the ServiceEntry.exportTo field and services imported through container registry integrations, e.g. this applies to Kubernetes Service resources. The value is a list of namespace names and reserved namespace aliases. The allowed namespace aliases are: ``` * - All Namespaces . - Current Namespace ~ - No Namespace ``` If not set the system will use "*" as the default value which implies that services are exported to all namespaces.  `All namespaces` is a reasonable default for implementations that don't need to restrict access or visibility of services across namespace boundaries. If that requirement is present it is generally good practice to make the default `Current namespace` so that services are only visible within their own namespaces by default. Operators can then expand the visibility of services to other namespaces as needed. Use of `No Namespace` is expected to be rare but can have utility for deployments where dependency management needs to be precise even within the scope of a single namespace.  For further discussion see the reference documentation for `ServiceEntry`, `Sidecar`, and `Gateway`. |  |  |
-| `defaultVirtualServiceExportTo` _string array_ | The default value for the VirtualService.exportTo field. Has the same syntax as `defaultServiceExportTo`.  If not set the system will use "*" as the default value which implies that virtual services are exported to all namespaces |  |  |
-| `defaultDestinationRuleExportTo` _string array_ | The default value for the `DestinationRule.exportTo` field. Has the same syntax as `defaultServiceExportTo`.  If not set the system will use "*" as the default value which implies that destination rules are exported to all namespaces |  |  |
-| `rootNamespace` _string_ | The namespace to treat as the administrative root namespace for Istio configuration. When processing a leaf namespace Istio will search for declarations in that namespace first and if none are found it will search in the root namespace. Any matching declaration found in the root namespace is processed as if it were declared in the leaf namespace.  The precise semantics of this processing are documented on each resource type. |  |  |
-| `localityLbSetting` _[LocalityLoadBalancerSetting](#localityloadbalancersetting)_ | Locality based load balancing distribution or failover settings. If unspecified, locality based load balancing will be enabled by default. However, this requires outlierDetection to actually take effect for a particular service, see https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/failover/ |  |  |
-| `dnsRefreshRate` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | Configures DNS refresh rate for Envoy clusters of type `STRICT_DNS` Default refresh rate is `60s`. |  |  |
-| `h2UpgradePolicy` _[MeshConfigH2UpgradePolicy](#meshconfigh2upgradepolicy)_ | Specify if http1.1 connections should be upgraded to http2 by default. if sidecar is installed on all pods in the mesh, then this should be set to `UPGRADE`. If one or more services or namespaces do not have sidecar(s), then this should be set to `DO_NOT_UPGRADE`. It can be enabled by destination using the `destinationRule.trafficPolicy.connectionPool.http.h2UpgradePolicy` override. |  | Enum: [DO_NOT_UPGRADE UPGRADE]   |
-| `inboundClusterStatName` _string_ | Name to be used while emitting statistics for inbound clusters. The same pattern is used while computing stat prefix for network filters like TCP and Redis. By default, Istio emits statistics with the pattern `inbound\|<port>\|<port-name>\|<service-FQDN>`. For example `inbound\|7443\|grpc-reviews\|reviews.prod.svc.cluster.local`. This can be used to override that pattern.  A Pattern can be composed of various pre-defined variables. The following variables are supported.  - `%SERVICE%` - Will be substituted with short hostname of the service. - `%SERVICE_NAME%` - Will be substituted with name of the service. - `%SERVICE_FQDN%` - Will be substituted with FQDN of the service. - `%SERVICE_PORT%` - Will be substituted with port of the service. - `%TARGET_PORT%`  - Will be substituted with the target port of the service. - `%SERVICE_PORT_NAME%` - Will be substituted with port name of the service.  Following are some examples of supported patterns for reviews:  - `%SERVICE_FQDN%_%SERVICE_PORT%` will use reviews.prod.svc.cluster.local_7443 as the stats name. - `%SERVICE%` will use reviews.prod as the stats name. |  |  |
-| `outboundClusterStatName` _string_ | Name to be used while emitting statistics for outbound clusters. The same pattern is used while computing stat prefix for network filters like TCP and Redis. By default, Istio emits statistics with the pattern `outbound\|<port>\|<subsetname>\|<service-FQDN>`. For example `outbound\|8080\|v2\|reviews.prod.svc.cluster.local`. This can be used to override that pattern.  A Pattern can be composed of various pre-defined variables. The following variables are supported.  - `%SERVICE%` - Will be substituted with short hostname of the service. - `%SERVICE_NAME%` - Will be substituted with name of the service. - `%SERVICE_FQDN%` - Will be substituted with FQDN of the service. - `%SERVICE_PORT%` - Will be substituted with port of the service. - `%SERVICE_PORT_NAME%` - Will be substituted with port name of the service. - `%SUBSET_NAME%` - Will be substituted with subset.  Following are some examples of supported patterns for reviews:  - `%SERVICE_FQDN%_%SERVICE_PORT%` will use `reviews.prod.svc.cluster.local_7443` as the stats name. - `%SERVICE%` will use reviews.prod as the stats name. |  |  |
-| `serviceScopeConfigs` _[MeshConfigServiceScopeConfigs](#meshconfigservicescopeconfigs) array_ | Scope to be applied to select services. |  |  |
-| `enablePrometheusMerge` _boolean_ | If enabled, Istio agent will merge metrics exposed by the application with metrics from Envoy and Istio agent. The sidecar injection will replace `prometheus.io` annotations present on the pod and redirect them towards Istio agent, which will then merge metrics of from the application with Istio metrics. This relies on the annotations `prometheus.io/scrape`, `prometheus.io/port`, and `prometheus.io/path` annotations. If you are running a separately managed Envoy with an Istio sidecar, this may cause issues, as the metrics will collide. In this case, it is recommended to disable aggregation on that deployment with the `prometheus.istio.io/merge-metrics: "false"` annotation. If not specified, this will be enabled by default. |  |  |
-| `extensionProviders` _[MeshConfigExtensionProvider](#meshconfigextensionprovider) array_ | Defines a list of extension providers that extend Istio's functionality. For example, the AuthorizationPolicy can be used with an extension provider to delegate the authorization decision to a custom authorization system. |  | MaxItems: 1000   |
-| `defaultProviders` _[MeshConfigDefaultProviders](#meshconfigdefaultproviders)_ | Specifies extension providers to use by default in Istio configuration resources. |  |  |
-| `discoverySelectors` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#labelselector-v1-meta) array_ | A list of Kubernetes selectors that specify the set of namespaces that Istio considers when computing configuration updates for sidecars. This can be used to reduce Istio's computational load by limiting the number of entities (including services, pods, and endpoints) that are watched and processed. If omitted, Istio will use the default behavior of processing all namespaces in the cluster. Elements in the list are disjunctive (OR semantics), i.e. a namespace will be included if it matches any selector. The following example selects any namespace that matches either below: 1. The namespace has both of these labels: `env: prod` and `region: us-east1` 2. The namespace has label `app` equal to `cassandra` or `spark`. ```yaml discoverySelectors:   - matchLabels:     env: prod     region: us-east1   - matchExpressions:   - key: app     operator: In     values:   - cassandra   - spark  ``` Refer to the [Kubernetes selector docs](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors) for additional detail on selector semantics. |  |  |
-| `pathNormalization` _[MeshConfigProxyPathNormalization](#meshconfigproxypathnormalization)_ | ProxyPathNormalization configures how URL paths in incoming and outgoing HTTP requests are normalized by the sidecars and gateways. The normalized paths will be used in all aspects through the requests' lifetime on the sidecars and gateways, which includes routing decisions in outbound direction (client proxy), authorization policy match and enforcement in inbound direction (server proxy), and the URL path proxied to the upstream service. If not set, the NormalizationType.DEFAULT configuration will be used. |  |  |
-| `defaultHttpRetryPolicy` _[HTTPRetry](#httpretry)_ | Configure the default HTTP retry policy. The default number of retry attempts is set at 2 for these errors:    "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes".  Setting the number of attempts to 0 disables retry policy globally. This setting can be overridden on a per-host basis using the Virtual Service API. All settings in the retry policy except `perTryTimeout` can currently be configured globally via this field. |  |  |
-| `meshMTLS` _[MeshConfigTLSConfig](#meshconfigtlsconfig)_ | The below configuration parameters can be used to specify TLSConfig for mesh traffic. For example, a user could enable min TLS version for ISTIO_MUTUAL traffic and specify a curve for non ISTIO_MUTUAL traffic like below: ```yaml meshConfig:    meshMTLS:     minProtocolVersion: TLSV1_3   tlsDefaults:     Note: applicable only for non ISTIO_MUTUAL scenarios     ecdhCurves:       - P-256       - P-512  ``` Configuration of mTLS for traffic between workloads with ISTIO_MUTUAL TLS traffic.  Note: Mesh mTLS does not respect ECDH curves. |  |  |
-| `tlsDefaults` _[MeshConfigTLSConfig](#meshconfigtlsconfig)_ | Configuration of TLS for all traffic except for ISTIO_MUTUAL mode. Currently, this supports configuration of ecdhCurves and cipherSuites only. For ISTIO_MUTUAL TLS settings, use meshMTLS configuration. |  |  |
+| `proxyListenPort` _integer_ |  |  |  |
+| `proxyInboundListenPort` _integer_ |  |  |  |
+| `proxyHttpPort` _integer_ |  |  |  |
+| `connectTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ |  |  |  |
+| `protocolDetectionTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ |  |  |  |
+| `tcpKeepalive` _[ConnectionPoolSettingsTCPSettingsTcpKeepalive](#connectionpoolsettingstcpsettingstcpkeepalive)_ |  |  |  |
+| `ingressClass` _string_ |  |  |  |
+| `ingressService` _string_ |  |  |  |
+| `ingressControllerMode` _[MeshConfigIngressControllerMode](#meshconfigingresscontrollermode)_ |  |  |  |
+| `ingressSelector` _string_ |  |  |  |
+| `enableTracing` _boolean_ |  |  |  |
+| `accessLogFile` _string_ |  |  |  |
+| `accessLogFormat` _string_ |  |  |  |
+| `accessLogEncoding` _[MeshConfigAccessLogEncoding](#meshconfigaccesslogencoding)_ |  |  |  |
+| `enableEnvoyAccessLogService` _boolean_ |  |  |  |
+| `disableEnvoyListenerLog` _boolean_ |  |  |  |
+| `defaultConfig` _[MeshConfigProxyConfig](#meshconfigproxyconfig)_ |  |  |  |
+| `outboundTrafficPolicy` _[MeshConfigOutboundTrafficPolicy](#meshconfigoutboundtrafficpolicy)_ |  |  |  |
+| `inboundTrafficPolicy` _[MeshConfigInboundTrafficPolicy](#meshconfiginboundtrafficpolicy)_ |  |  |  |
+| `configSources` _[ConfigSource](#configsource) array_ |  |  |  |
+| `enableAutoMtls` _boolean_ |  |  |  |
+| `trustDomain` _string_ |  |  |  |
+| `trustDomainAliases` _string array_ |  |  |  |
+| `caCertificates` _[MeshConfigCertificateData](#meshconfigcertificatedata) array_ |  |  |  |
+| `defaultServiceExportTo` _string array_ |  |  |  |
+| `defaultVirtualServiceExportTo` _string array_ |  |  |  |
+| `defaultDestinationRuleExportTo` _string array_ |  |  |  |
+| `rootNamespace` _string_ |  |  |  |
+| `localityLbSetting` _[LocalityLoadBalancerSetting](#localityloadbalancersetting)_ |  |  |  |
+| `dnsRefreshRate` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ |  |  |  |
+| `h2UpgradePolicy` _[MeshConfigH2UpgradePolicy](#meshconfigh2upgradepolicy)_ |  |  |  |
+| `inboundClusterStatName` _string_ |  |  |  |
+| `outboundClusterStatName` _string_ |  |  |  |
+| `certificates` _[Certificate](#certificate) array_ |  |  |  |
+| `serviceScopeConfigs` _[MeshConfigServiceScopeConfigs](#meshconfigservicescopeconfigs) array_ |  |  |  |
+| `enablePrometheusMerge` _boolean_ |  |  |  |
+| `verifyCertificateAtClient` _boolean_ |  |  |  |
+| `ca` _[MeshConfigCA](#meshconfigca)_ |  |  |  |
+| `extensionProviders` _[MeshConfigExtensionProvider](#meshconfigextensionprovider) array_ |  |  |  |
+| `defaultProviders` _[MeshConfigDefaultProviders](#meshconfigdefaultproviders)_ |  |  |  |
+| `discoverySelectors` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#labelselector-v1-meta) array_ |  |  |  |
+| `pathNormalization` _[MeshConfigProxyPathNormalization](#meshconfigproxypathnormalization)_ |  |  |  |
+| `defaultHttpRetryPolicy` _[HTTPRetry](#httpretry)_ |  |  |  |
+| `meshMTLS` _[MeshConfigTLSConfig](#meshconfigtlsconfig)_ |  |  |  |
+| `tlsDefaults` _[MeshConfigTLSConfig](#meshconfigtlsconfig)_ |  |  |  |
 
 
 #### MeshConfigAccessLogEncoding
@@ -1351,16 +1368,15 @@ _Underlying type:_ _string_
 
 
 
-_Validation:_
-- Enum: [TEXT JSON]
+
 
 _Appears in:_
 - [MeshConfig](#meshconfig)
 
 | Field | Description |
 | --- | --- |
-| `TEXT` | text encoding for the proxy access log  |
-| `JSON` | json encoding for the proxy access log  |
+| `TEXT` |  |
+| `JSON` |  |
 
 
 
@@ -1680,7 +1696,7 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `service` _string_ | REQUIRED. Specifies the service for the OpenCensusAgent. The format is `[<Namespace>/]<Hostname>`. The specification of `<Namespace>` is required only when it is insufficient to unambiguously resolve a service in the service registry. The `<Hostname>` is a fully qualified host name of a service defined by the Kubernetes service or ServiceEntry.  Example: "ocagent.default.svc.cluster.local" or "bar/ocagent.example.com". |  | Required: \{\}   |
 | `port` _integer_ | REQUIRED. Specifies the port of the service. |  | Required: \{\}   |
-| `context` _[MeshConfigExtensionProviderOpenCensusAgentTracingProviderTraceContext](#meshconfigextensionprovideropencensusagenttracingprovidertracecontext) array_ | Specifies the set of context propagation headers used for distributed tracing. Default is `["W3C_TRACE_CONTEXT"]`. If multiple values are specified, the proxy will attempt to read each header for each request and will write all headers. |  | Enum: [UNSPECIFIED W3C_TRACE_CONTEXT GRPC_BIN CLOUD_TRACE_CONTEXT B3]   |
+| `context` _[MeshConfigExtensionProviderOpenCensusAgentTracingProviderTraceContext](#meshconfigextensionprovideropencensusagenttracingprovidertracecontext) array_ | Specifies the set of context propagation headers used for distributed tracing. Default is `["W3C_TRACE_CONTEXT"]`. If multiple values are specified, the proxy will attempt to read each header for each request and will write all headers. |  |  |
 | `maxTagLength` _integer_ | Optional. Controls the overall path length allowed in a reported span. NOTE: currently only controls max length of the path tag. |  |  |
 
 
@@ -1863,18 +1879,17 @@ _Appears in:_
 
 _Underlying type:_ _string_
 
-Default Policy for upgrading http1.1 connections to http2.
 
-_Validation:_
-- Enum: [DO_NOT_UPGRADE UPGRADE]
+
+
 
 _Appears in:_
 - [MeshConfig](#meshconfig)
 
 | Field | Description |
 | --- | --- |
-| `DO_NOT_UPGRADE` | Do not upgrade connections to http2.  |
-| `UPGRADE` | Upgrade the connections to http2.  |
+| `DO_NOT_UPGRADE` |  |
+| `UPGRADE` |  |
 
 
 #### MeshConfigInboundTrafficPolicy
@@ -1890,7 +1905,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `mode` _[MeshConfigInboundTrafficPolicyMode](#meshconfiginboundtrafficpolicymode)_ |  |  | Enum: [PASSTHROUGH LOCALHOST]   |
+| `mode` _[MeshConfigInboundTrafficPolicyMode](#meshconfiginboundtrafficpolicymode)_ |  |  |  |
 
 
 #### MeshConfigInboundTrafficPolicyMode
@@ -1899,16 +1914,15 @@ _Underlying type:_ _string_
 
 
 
-_Validation:_
-- Enum: [PASSTHROUGH LOCALHOST]
+
 
 _Appears in:_
 - [MeshConfigInboundTrafficPolicy](#meshconfiginboundtrafficpolicy)
 
 | Field | Description |
 | --- | --- |
-| `PASSTHROUGH` | inbound traffic will be passed through to the destination listening on Pod IP. This matches the behavior without Istio enabled at all allowing proxy to be transparent.  |
-| `LOCALHOST` | inbound traffic will be sent to the destinations listening on localhost.  |
+| `PASSTHROUGH` |  |
+| `LOCALHOST` |  |
 
 
 #### MeshConfigIngressControllerMode
@@ -1917,26 +1931,24 @@ _Underlying type:_ _string_
 
 
 
-_Validation:_
-- Enum: [UNSPECIFIED OFF DEFAULT STRICT]
+
 
 _Appears in:_
 - [MeshConfig](#meshconfig)
 
 | Field | Description |
 | --- | --- |
-| `UNSPECIFIED` | Unspecified Istio ingress controller.  |
-| `OFF` | Disables Istio ingress controller.  |
-| `DEFAULT` | Istio ingress controller will act on ingress resources that do not contain any annotation or whose annotations match the value specified in the ingressClass parameter described earlier. Use this mode if Istio ingress controller will be the default ingress controller for the entire Kubernetes cluster.  |
-| `STRICT` | Istio ingress controller will only act on ingress resources whose annotations match the value specified in the ingressClass parameter described earlier. Use this mode if Istio ingress controller will be a secondary ingress controller (e.g., in addition to a cloud-provided ingress controller).  |
+| `UNSPECIFIED` |  |
+| `OFF` |  |
+| `DEFAULT` |  |
+| `STRICT` |  |
 
 
 #### MeshConfigOutboundTrafficPolicy
 
 
 
-`OutboundTrafficPolicy` sets the default behavior of the sidecar for
-handling unknown outbound traffic from the application.
+
 
 
 
@@ -1945,7 +1957,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `mode` _[MeshConfigOutboundTrafficPolicyMode](#meshconfigoutboundtrafficpolicymode)_ |  |  | Enum: [REGISTRY_ONLY ALLOW_ANY]   |
+| `mode` _[MeshConfigOutboundTrafficPolicyMode](#meshconfigoutboundtrafficpolicymode)_ |  |  |  |
 
 
 #### MeshConfigOutboundTrafficPolicyMode
@@ -1954,16 +1966,15 @@ _Underlying type:_ _string_
 
 
 
-_Validation:_
-- Enum: [REGISTRY_ONLY ALLOW_ANY]
+
 
 _Appears in:_
 - [MeshConfigOutboundTrafficPolicy](#meshconfigoutboundtrafficpolicy)
 
 | Field | Description |
 | --- | --- |
-| `REGISTRY_ONLY` | In `REGISTRY_ONLY` mode, unknown outbound traffic will be dropped. Traffic destinations must be explicitly declared into the service registry through `ServiceEntry` configurations. Note: Istio [does not offer an outbound traffic security policy](https://istio.io/latest/docs/ops/best-practices/security/#understand-traffic-capture-limitations). This option does not act as one, or as any form of an outbound firewall. Instead, this option exists primarily to offer users a way to detect missing `ServiceEntry` configurations by explicitly failing.  |
-| `ALLOW_ANY` | In `ALLOW_ANY` mode, any traffic to unknown destinations will be allowed. Unknown destination traffic will have limited functionality, however, such as reduced observability. This mode allows users that do not have all possible egress destinations registered through `ServiceEntry` configurations to still connect to arbitrary destinations.  |
+| `REGISTRY_ONLY` |  |
+| `ALLOW_ANY` |  |
 
 
 #### MeshConfigProxyConfig
@@ -2054,7 +2065,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `normalization` _[MeshConfigProxyPathNormalizationNormalizationType](#meshconfigproxypathnormalizationnormalizationtype)_ |  |  | Enum: [DEFAULT NONE BASE MERGE_SLASHES DECODE_AND_MERGE_SLASHES]   |
+| `normalization` _[MeshConfigProxyPathNormalizationNormalizationType](#meshconfigproxypathnormalizationnormalizationtype)_ |  |  |  |
 
 
 #### MeshConfigProxyPathNormalizationNormalizationType
@@ -2063,19 +2074,18 @@ _Underlying type:_ _string_
 
 
 
-_Validation:_
-- Enum: [DEFAULT NONE BASE MERGE_SLASHES DECODE_AND_MERGE_SLASHES]
+
 
 _Appears in:_
 - [MeshConfigProxyPathNormalization](#meshconfigproxypathnormalization)
 
 | Field | Description |
 | --- | --- |
-| `DEFAULT` | Apply default normalizations. Currently, this is BASE.  |
-| `NONE` | No normalization, paths are used as is.  |
-| `BASE` | Normalize according to [RFC 3986](https://tools.ietf.org/html/rfc3986). For Envoy proxies, this is the [`normalize_path`](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto.html) option. For example, `/a/../b` normalizes to `/b`.  |
-| `MERGE_SLASHES` | In addition to the `BASE` normalization, consecutive slashes are also merged. For example, `/a//b` normalizes to `a/b`.  |
-| `DECODE_AND_MERGE_SLASHES` | In addition to normalization in `MERGE_SLASHES`, slash characters are UTF-8 decoded (case insensitive) prior to merging. This means `%2F`, `%2f`, `%5C`, and `%5c` sequences in the request path will be rewritten to `/` or `\`. For example, `/a%2f/b` normalizes to `a/b`.  |
+| `DEFAULT` |  |
+| `NONE` |  |
+| `BASE` |  |
+| `MERGE_SLASHES` |  |
+| `DECODE_AND_MERGE_SLASHES` |  |
 
 
 #### MeshConfigServiceScopeConfigs
@@ -2121,18 +2131,16 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `namespaceSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#labelselector-v1-meta)_ | Match expression for namespaces. |  |  |
 | `servicesSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#labelselector-v1-meta)_ | Match expression for serivces. |  |  |
-| `scope` _[MeshConfigServiceScopeConfigsScope](#meshconfigservicescopeconfigsscope)_ | Specifics the available scope for matching services. |  | Enum: [LOCAL GLOBAL]   |
+| `scope` _[MeshConfigServiceScopeConfigsScope](#meshconfigservicescopeconfigsscope)_ | Specifics the available scope for matching services. |  |  |
 
 
 #### MeshConfigServiceScopeConfigsScope
 
 _Underlying type:_ _string_
 
-The scope of the matching service. Used to determine if the service is available locally
-(cluster local) or globally (mesh-wide).
 
-_Validation:_
-- Enum: [LOCAL GLOBAL]
+
+
 
 _Appears in:_
 - [MeshConfigServiceScopeConfigs](#meshconfigservicescopeconfigs)
@@ -2174,7 +2182,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `minProtocolVersion` _[MeshConfigTLSConfigTLSProtocol](#meshconfigtlsconfigtlsprotocol)_ | Optional: the minimum TLS protocol version. The default minimum TLS version will be TLS 1.2. As servers may not be Envoy and be set to TLS 1.2 (e.g., workloads using mTLS without sidecars), the minimum TLS version for clients may also be TLS 1.2. In the current Istio implementation, the maximum TLS protocol version is TLS 1.3. |  | Enum: [TLS_AUTO TLSV1_2 TLSV1_3]   |
+| `minProtocolVersion` _[MeshConfigTLSConfigTLSProtocol](#meshconfigtlsconfigtlsprotocol)_ | Optional: the minimum TLS protocol version. The default minimum TLS version will be TLS 1.2. As servers may not be Envoy and be set to TLS 1.2 (e.g., workloads using mTLS without sidecars), the minimum TLS version for clients may also be TLS 1.2. In the current Istio implementation, the maximum TLS protocol version is TLS 1.3. |  |  |
 | `ecdhCurves` _string array_ | Optional: If specified, the TLS connection will only support the specified ECDH curves for the DH key exchange. If not specified, the default curves enforced by Envoy will be used. For details about the default curves, refer to [Ecdh Curves](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto). |  |  |
 | `cipherSuites` _string array_ | Optional: If specified, the TLS connection will only support the specified cipher list when negotiating TLS 1.0-1.2. If not specified, the following cipher suites will be used: ``` ECDHE-ECDSA-AES256-GCM-SHA384 ECDHE-RSA-AES256-GCM-SHA384 ECDHE-ECDSA-AES128-GCM-SHA256 ECDHE-RSA-AES128-GCM-SHA256 AES256-GCM-SHA384 AES128-GCM-SHA256 ``` |  |  |
 
@@ -2183,19 +2191,18 @@ _Appears in:_
 
 _Underlying type:_ _string_
 
-TLS protocol versions.
 
-_Validation:_
-- Enum: [TLS_AUTO TLSV1_2 TLSV1_3]
+
+
 
 _Appears in:_
 - [MeshConfigTLSConfig](#meshconfigtlsconfig)
 
 | Field | Description |
 | --- | --- |
-| `TLS_AUTO` | Automatically choose the optimal TLS version.  |
-| `TLSV1_2` | TLS version 1.2  |
-| `TLSV1_3` | TLS version 1.3  |
+| `TLS_AUTO` |  |
+| `TLSV1_2` |  |
+| `TLSV1_3` |  |
 
 
 
@@ -2708,17 +2715,16 @@ _Appears in:_
 
 _Underlying type:_ _string_
 
-Resource describes the source of configuration
 
-_Validation:_
-- Enum: [SERVICE_REGISTRY]
+
+
 
 _Appears in:_
 - [ConfigSource](#configsource)
 
 | Field | Description |
 | --- | --- |
-| `SERVICE_REGISTRY` | Set to only receive service entries that are generated by the platform. These auto generated service entries are combination of services and endpoints that are generated by a specific platform e.g. k8  |
+| `SERVICE_REGISTRY` |  |
 
 
 #### ResourceQuotas
