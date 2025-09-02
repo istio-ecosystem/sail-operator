@@ -53,6 +53,9 @@ kind: Istio
 metadata:
   name: default
 spec:
+  values:
+    meshConfig:
+      accessLogFile: /dev/stdout
   namespace: istio-system
   version: v1.24.3`,
 		},
@@ -85,6 +88,8 @@ metadata:
   name: default
 spec:
   values:
+    meshConfig:
+        accessLogFile: /dev/stdout
     global:
       externalIstiod: true
       operatorManageWebhooks: true
@@ -112,6 +117,9 @@ kind: Istio
 metadata:
   name: default
 spec:
+  values:
+    meshConfig:
+      accessLogFile: /dev/stdout
   namespace: istio-system`,
 		},
 	}
