@@ -1,7 +1,5 @@
 {
   "$schema": "http://json-schema.org/schema#",
-  "type": "object",
-  "additionalProperties": false,
   "$defs": {
     "values": {
       "type": "object",
@@ -64,10 +62,16 @@
           "type": "object"
         },
         "minReadySeconds": {
-          "type": [ "null", "integer" ]
+          "type": [
+            "null",
+            "integer"
+          ]
         },
         "readinessProbe": {
-          "type": [ "null", "object" ]
+          "type": [
+            "null",
+            "object"
+          ]
         },
         "labels": {
           "type": "object"
@@ -108,10 +112,16 @@
               "type": "object",
               "properties": {
                 "cpu": {
-                  "type": ["string", "null"]
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "memory": {
-                  "type": ["string", "null"]
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 }
               }
             },
@@ -119,10 +129,16 @@
               "type": "object",
               "properties": {
                 "cpu": {
-                  "type": ["string", "null"]
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "memory": {
-                  "type": ["string", "null"]
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 }
               }
             }
@@ -299,8 +315,12 @@
         },
         "priorityClassName": {
           "type": "string"
+        },
+        "_internal_defaults_do_not_set": {
+          "type": "object"
         }
-      }
+      },
+      "additionalProperties": false
     }
   },
   "defaults": {
