@@ -135,6 +135,7 @@ inputFiles:
       - ImagePullSecrets
       - LogAsJson
       - Logging
+      - NativeNftables
       - Platform
       - Tag
       - Variant
