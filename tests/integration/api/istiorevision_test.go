@@ -45,9 +45,6 @@ import (
 
 var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func() {
 	const (
-		revName        = "test-istiorevision"
-		istioNamespace = "istiorevision-test"
-
 		pilotImage = "sail-operator/test:latest"
 	)
 
@@ -58,15 +55,17 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 
 	ctx := context.Background()
 
+	istioNamespace := "istiorevision-test"
+	revName := "test-istiorevision"
+	revKey := client.ObjectKey{Name: revName}
+	defaultKey := client.ObjectKey{Name: "default"}
+	istiodKey := client.ObjectKey{Name: "istiod-" + revName, Namespace: istioNamespace}
+
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: istioNamespace,
 		},
 	}
-
-	revKey := client.ObjectKey{Name: revName}
-	istiodKey := client.ObjectKey{Name: "istiod-" + revName, Namespace: istioNamespace}
-
 	BeforeAll(func() {
 		Step("Creating the Namespace to perform the tests")
 		Expect(k8sClient.Create(ctx, namespace)).To(Succeed())
@@ -82,6 +81,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 	})
 
 	rev := &v1.IstioRevision{}
+	tag := &v1.IstioRevisionTag{}
 
 	Describe("validation", func() {
 		AfterEach(func() {
@@ -720,6 +720,109 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 				Expect(istiod.Spec.Template.Spec.Containers[0].Image).To(Equal(pilotImage))
 				Expect(istiod.ObjectMeta.OwnerReferences).To(ContainElement(NewOwnerReference(owner)))
 			}
+		})
+	})
+
+	When("Creating an IstioRevisionTag with name 'default' and attempting to create another IstioRevision with the same name", func() {
+		BeforeAll(func() {
+			deleteAllIstiosAndRevisions(ctx)
+			deleteAllIstioRevisionTags(ctx)
+
+			rev = &v1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: revName,
+				},
+				Spec: v1.IstioRevisionSpec{
+					Version:   istioversion.Base,
+					Namespace: istioNamespace,
+					Values: &v1.Values{
+						Revision: &revName,
+						Global: &v1.GlobalConfig{
+							IstioNamespace: &istioNamespace,
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, rev)).To(Succeed())
+			Step("Creating the IstioRevisionTag")
+			tag = &v1.IstioRevisionTag{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1.IstioRevisionTagSpec{
+					TargetRef: v1.IstioRevisionTagTargetReference{
+						Kind: "IstioRevision",
+						Name: revName,
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, tag)).To(Succeed())
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, defaultKey, tag)).To(Succeed())
+				g.Expect(tag.Status.ObservedGeneration).To(Equal(tag.Generation))
+				g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionReconciled).Status).To(Equal(metav1.ConditionTrue))
+			}).Should(Succeed())
+			rev = &v1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1.IstioRevisionSpec{
+					Version:   istioversion.Base,
+					Namespace: istioNamespace,
+					Values: &v1.Values{
+						Global: &v1.GlobalConfig{
+							IstioNamespace: &istioNamespace,
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, rev)).To(Succeed())
+		})
+
+		AfterAll(func() {
+			deleteAllIstioRevisionTags(ctx)
+			deleteAllIstiosAndRevisions(ctx)
+		})
+
+		It("fails to reconcile IstioRevision", func() {
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, defaultKey, rev)).To(Succeed())
+				g.Expect(rev.Status.ObservedGeneration).To(Equal(rev.Generation))
+			}).Should(Succeed())
+			Consistently(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, defaultKey, rev)).To(Succeed())
+				g.Expect(rev.Status.GetCondition(v1.IstioRevisionConditionReconciled).Status).To(Equal(metav1.ConditionFalse))
+				g.Expect(rev.Status.GetCondition(v1.IstioRevisionConditionReconciled).Reason).To(Equal(v1.IstioRevisionReasonNameAlreadyExists))
+			}).Should(Succeed())
+		})
+
+		It("still reconciles the IstioRevisionTag", func() {
+			rev = &v1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "something-else",
+				},
+				Spec: v1.IstioRevisionSpec{
+					Version:   istioversion.Base,
+					Namespace: istioNamespace,
+					Values: &v1.Values{
+						Revision: ptr.Of("something-else"),
+						Global: &v1.GlobalConfig{
+							IstioNamespace: &istioNamespace,
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, rev)).To(Succeed())
+			// update Istio as well to make sure it's still reconciled
+			Expect(k8sClient.Get(ctx, defaultKey, tag)).To(Succeed())
+			tag.Spec.TargetRef.Kind = "IstioRevision"
+			tag.Spec.TargetRef.Name = "something-else"
+			Expect(k8sClient.Update(ctx, tag)).To(Succeed())
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, defaultKey, tag)).To(Succeed())
+				g.Expect(tag.Generation).To(Equal(tag.Status.ObservedGeneration))
+				g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionReconciled).Status).To(Equal(metav1.ConditionTrue))
+			}).Should(Succeed())
 		})
 	})
 })

@@ -830,6 +830,7 @@ _Appears in:_
 | --- | --- |
 | `ReconcileError` | IstioRevisionReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried.  |
 | `IstiodNotReady` | IstioRevisionReasonIstiodNotReady indicates that the control plane is fully reconciled, but istiod is not ready.  |
+| `NameAlreadyExists` | IstioRevisionTagNameAlreadyExists indicates that a IstioRevisionTag with the same name as the IstioRevision already exists.  |
 | `RemoteIstiodNotReady` | IstioRevisionReasonRemoteIstiodNotReady indicates that the remote istiod is not ready.  |
 | `ReadinessCheckFailed` | IstioRevisionReasonReadinessCheckFailed indicates that istiod readiness status could not be ascertained.  |
 | `ReferencedByWorkloads` | IstioRevisionReasonReferencedByWorkloads indicates that the revision is referenced by at least one pod or namespace.  |
@@ -974,7 +975,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `NameAlreadyExists` | IstioRevisionTagNameAlreadyExists indicates that the a revision with the same name as the IstioRevisionTag already exists.  |
+| `NameAlreadyExists` | IstioRevisionTagNameAlreadyExists indicates that an IstioRevision with the same name as the IstioRevisionTag already exists.  |
 | `RefNotFound` | IstioRevisionTagReasonReferenceNotFound indicates that the resource referenced by the tag's TargetRef was not found  |
 | `ReconcileError` | IstioRevisionReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried.  |
 | `ReferencedByWorkloads` | IstioRevisionReasonReferencedByWorkloads indicates that the revision is referenced by at least one pod or namespace.  |
