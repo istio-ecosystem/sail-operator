@@ -2,10 +2,18 @@ name: sailoperator
 deployment:
   name: sail-operator
   annotations:
+    images.v1_27_1.ztunnel: gcr.io/istio-release/ztunnel:1.27.1
+    images.v1_27_1.istiod: gcr.io/istio-release/pilot:1.27.1
+    images.v1_27_1.proxy: gcr.io/istio-release/proxyv2:1.27.1
+    images.v1_27_1.cni: gcr.io/istio-release/install-cni:1.27.1
     images.v1_27_0.ztunnel: gcr.io/istio-release/ztunnel:1.27.0
     images.v1_27_0.istiod: gcr.io/istio-release/pilot:1.27.0
     images.v1_27_0.proxy: gcr.io/istio-release/proxyv2:1.27.0
     images.v1_27_0.cni: gcr.io/istio-release/install-cni:1.27.0
+    images.v1_26_4.ztunnel: gcr.io/istio-release/ztunnel:1.26.4
+    images.v1_26_4.istiod: gcr.io/istio-release/pilot:1.26.4
+    images.v1_26_4.proxy: gcr.io/istio-release/proxyv2:1.26.4
+    images.v1_26_4.cni: gcr.io/istio-release/install-cni:1.26.4
     images.v1_26_3.ztunnel: gcr.io/istio-release/ztunnel:1.26.3
     images.v1_26_3.istiod: gcr.io/istio-release/pilot:1.26.3
     images.v1_26_3.proxy: gcr.io/istio-release/proxyv2:1.26.3
@@ -18,6 +26,10 @@ deployment:
     images.v1_26_0.istiod: gcr.io/istio-release/pilot:1.26.0
     images.v1_26_0.proxy: gcr.io/istio-release/proxyv2:1.26.0
     images.v1_26_0.cni: gcr.io/istio-release/install-cni:1.26.0
+    images.v1_25_5.ztunnel: gcr.io/istio-release/ztunnel:1.25.5
+    images.v1_25_5.istiod: gcr.io/istio-release/pilot:1.25.5
+    images.v1_25_5.proxy: gcr.io/istio-release/proxyv2:1.25.5
+    images.v1_25_5.cni: gcr.io/istio-release/install-cni:1.25.5
     images.v1_25_4.ztunnel: gcr.io/istio-release/ztunnel:1.25.4
     images.v1_25_4.istiod: gcr.io/istio-release/pilot:1.25.4
     images.v1_25_4.proxy: gcr.io/istio-release/proxyv2:1.25.4
@@ -62,10 +74,10 @@ deployment:
     images.v1_24_0.istiod: gcr.io/istio-release/pilot:1.24.0
     images.v1_24_0.proxy: gcr.io/istio-release/proxyv2:1.24.0
     images.v1_24_0.cni: gcr.io/istio-release/install-cni:1.24.0
-    images.v1_28-alpha_87678099.ztunnel: gcr.io/istio-testing/ztunnel:1.28-alpha.8767809989c3ba377208eb2a380104c56f495fc8
-    images.v1_28-alpha_87678099.istiod: gcr.io/istio-testing/pilot:1.28-alpha.8767809989c3ba377208eb2a380104c56f495fc8
-    images.v1_28-alpha_87678099.proxy: gcr.io/istio-testing/proxyv2:1.28-alpha.8767809989c3ba377208eb2a380104c56f495fc8
-    images.v1_28-alpha_87678099.cni: gcr.io/istio-testing/install-cni:1.28-alpha.8767809989c3ba377208eb2a380104c56f495fc8
+    images.v1_28-alpha_fa820b6d.ztunnel: gcr.io/istio-testing/ztunnel:1.28-alpha.fa820b6d605070d7c3c048dccaed452d2dae27f5
+    images.v1_28-alpha_fa820b6d.istiod: gcr.io/istio-testing/pilot:1.28-alpha.fa820b6d605070d7c3c048dccaed452d2dae27f5
+    images.v1_28-alpha_fa820b6d.proxy: gcr.io/istio-testing/proxyv2:1.28-alpha.fa820b6d605070d7c3c048dccaed452d2dae27f5
+    images.v1_28-alpha_fa820b6d.cni: gcr.io/istio-testing/install-cni:1.28-alpha.fa820b6d605070d7c3c048dccaed452d2dae27f5
 service:
   port: 8443
 serviceAccountName: sail-operator
@@ -81,12 +93,15 @@ csv:
     This version of the operator supports the following Istio versions:
 
     - v1.27-latest
+    - v1.27.1
     - v1.27.0
     - v1.26-latest
+    - v1.26.4
     - v1.26.3
     - v1.26.2
     - v1.26.0
     - v1.25-latest
+    - v1.25.5
     - v1.25.4
     - v1.25.3
     - v1.25.2
@@ -100,7 +115,7 @@ csv:
     - v1.24.1
     - v1.24.0
     - master
-    - v1.28-alpha.87678099
+    - v1.28-alpha.fa820b6d
 
     [See this page](https://github.com/istio-ecosystem/sail-operator/blob/main/bundle/README.md) for instructions on how to use it.
   support: Community based
