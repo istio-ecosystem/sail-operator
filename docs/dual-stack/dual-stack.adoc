@@ -41,7 +41,7 @@ This allows you to specify the type of service, providing flexibility in managin
 
 You can use any existing Kind cluster that supports dual-stack networking or, alternatively, install one using the following command.
 
-[source,bash,subs="attributes+",name="dual-stack"]
+[source,bash,subs="attributes+"]
 ----
 kind create cluster --name istio-ds --config - <<EOF
 kind: Cluster
@@ -80,7 +80,7 @@ kubectl wait --for=jsonpath='{.status.revisions.ready}'=1 istios/default --timeo
 
 . If running on OpenShift platform, create the IstioCNI resource as well.
 
-[source,bash,subs="attributes+",name="dual-stack"]
+[source,bash,subs="attributes+"]
 ----
 kubectl get ns istio-cni || kubectl create namespace istio-cni
 kubectl apply -f - <<EOF
@@ -213,7 +213,7 @@ endif::[]
 === Cleanup
 To clean up the resources created during this example, you can run the following commands:
 
-[source,bash,subs="attributes+",name="dual-stack"]
+[source,bash,subs="attributes+"]
 ----
 kubectl delete istios default
 kubectl delete ns istio-system
