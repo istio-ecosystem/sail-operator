@@ -1495,6 +1495,9 @@ type CNIGlobalConfig struct { // Default k8s resources settings for all Istio co
 	// An empty value means it is a vanilla Kubernetes distribution, therefore no special
 	// treatment will be considered.
 	Platform *string `json:"platform,omitempty"`
+
+	// Specifies whether native nftables rules should be used instead of iptables rules for traffic redirection.
+	NativeNftables *bool `json:"nativeNftables,omitempty"`
 }
 
 // Resource describes the source of configuration
