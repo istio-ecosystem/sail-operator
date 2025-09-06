@@ -76,5 +76,20 @@ Note: the default image used by the kind script from upstream does not work on m
 
     You can also set the `DOCKER_GID` environment variable in your shell configuration file or terminal session.
 
+- **Shell compatibility errors with `update-common` target:**
+
+    When running `CONTAINER_CLI=podman make update-common`, you may encounter shell compatibility errors like:
+
+    ```
+    /bin/sh: 1: [: unexpected operator
+    ```
+
+    This occurs because the `update-common` target runs inside containers by default, but it needs to modify local files and has shell compatibility issues between macOS/bash and the container's `/bin/sh`. To resolve this, run the target directly from the common Makefile:
+
+    ```bash
+    make -f common/Makefile.common.mk update-common
+    ```
+
+    This bypasses the container logic entirely and runs the target on the host system, which is necessary for file modification operations.
 
 **Note**: Please submit a PR to this document if you find any issues or have additional tips for developing on macOS with the Sail Operator project.
