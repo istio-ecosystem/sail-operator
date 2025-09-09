@@ -5,6 +5,7 @@
 - [Multi-cluster](#multi-cluster)
   - [Prerequisites](#prerequisites)
   - [Common Setup](#common-setup)
+  - [Multi-Primary - Single-Network](#multi-primary---single-network)
   - [Multi-Primary - Multi-Network](#multi-primary---multi-network)
   - [Primary-Remote - Single-Network](#primary-remote---single-network)
   - [Primary-Remote - Multi-Network](#primary-remote---multi-network)
@@ -137,6 +138,160 @@ These steps are common to every multi-cluster deployment and should be completed
       --from-file=west/ca-key.pem \
       --from-file=west/root-cert.pem \
       --from-file=west/cert-chain.pem
+    ```
+
+### Multi-Primary - Single-Network
+
+These instructions install a [multi-primary](https://istio.io/latest/docs/setup/install/multicluster/multi-primary/) Istio deployment using the Sail Operator and Sail CRDs. **Before you begin**, ensure you complete the [common setup](#common-setup).
+
+These installation instructions are adapted from: https://istio.io/latest/docs/setup/install/multicluster/multi-primary/.
+
+In this setup there are two Primary clusters (`cluster1` and `cluster2`) which are on a single shared network.
+
+1. Create an `Istio` resource on `cluster1`.
+
+    ```bash
+    kubectl apply --context "${CTX_CLUSTER1}" -f - <<EOF
+    apiVersion: sailoperator.io/v1
+    kind: Istio
+    metadata:
+      name: default
+    spec:
+      version: v${ISTIO_VERSION}
+      namespace: istio-system
+      values:
+        global:
+          meshID: mesh1
+          multiCluster:
+            clusterName: cluster1
+          network: network1
+    EOF
+    ```
+
+2. Wait for the control plane to become ready.
+
+    ```bash
+    kubectl wait --context "${CTX_CLUSTER1}" --for=condition=Ready istios/default --timeout=3m
+    ```
+
+3. Create an `Istio` resource on `cluster2`.
+
+    ```bash
+    kubectl apply --context "${CTX_CLUSTER2}" -f - <<EOF
+    apiVersion: sailoperator.io/v1
+    kind: Istio
+    metadata:
+      name: default
+    spec:
+      version: v${ISTIO_VERSION}
+      namespace: istio-system
+      values:
+        global:
+          meshID: mesh1
+          multiCluster:
+            clusterName: cluster2
+          network: network1
+    EOF
+    ```
+
+4. Wait for the control plane to become ready.
+
+    ```bash
+    kubectl wait --context "${CTX_CLUSTER2}" --for=jsonpath='{.status.revisions.ready}'=1 istios/default --timeout=3m
+    ```
+
+5. Install a remote secret in `cluster2` that provides access to the `cluster1` API server.
+
+    ```bash
+    istioctl create-remote-secret \
+      --context="${CTX_CLUSTER1}" \
+      --name=cluster1 | \
+      kubectl apply -f - --context="${CTX_CLUSTER2}"
+    ```
+
+6. Install a remote secret in `cluster1` that provides access to the `cluster2` API server.
+
+    ```bash
+    istioctl create-remote-secret \
+      --context="${CTX_CLUSTER2}" \
+      --name=cluster2 | \
+      kubectl apply -f - --context="${CTX_CLUSTER1}"
+    ```
+
+7. Create the sample application namespaces in each cluster.
+
+    ```bash
+    kubectl get ns sample --context "${CTX_CLUSTER1}" || kubectl create --context="${CTX_CLUSTER1}" namespace sample
+    kubectl label --context="${CTX_CLUSTER1}" namespace sample istio-injection=enabled
+    kubectl get ns sample --context "${CTX_CLUSTER2}" || kubectl create --context="${CTX_CLUSTER2}" namespace sample
+    kubectl label --context="${CTX_CLUSTER2}" namespace sample istio-injection=enabled
+    ```
+
+8. Deploy the sample applications in `cluster1`.
+
+    ```bash
+    kubectl apply --context="${CTX_CLUSTER1}" \
+      -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml" \
+      -l service=helloworld -n sample
+    kubectl apply --context="${CTX_CLUSTER1}" \
+      -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml" \
+      -l version=v1 -n sample
+    kubectl apply --context="${CTX_CLUSTER1}" \
+      -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/sleep/sleep.yaml" -n sample
+    ```
+
+9. Deploy the sample applications in `cluster2`.
+
+    ```bash
+    kubectl apply --context="${CTX_CLUSTER2}" \
+      -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml" \
+      -l service=helloworld -n sample
+    kubectl apply --context="${CTX_CLUSTER2}" \
+      -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml" \
+      -l version=v2 -n sample
+    kubectl apply --context="${CTX_CLUSTER2}" \
+      -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/sleep/sleep.yaml" -n sample
+    ```
+
+10. Wait for the sample applications to be ready.
+    ```bash
+    kubectl --context="${CTX_CLUSTER1}" wait --for condition=available -n sample deployment/helloworld-v1
+    kubectl --context="${CTX_CLUSTER2}" wait --for condition=available -n sample deployment/helloworld-v2
+    kubectl --context="${CTX_CLUSTER1}" wait --for condition=available -n sample deployment/sleep
+    kubectl --context="${CTX_CLUSTER2}" wait --for condition=available -n sample deployment/sleep
+    ```
+
+11. From `cluster1`, send 10 requests to the helloworld service. Verify that you see responses from both v1 and v2.
+
+    ```bash
+    for i in {0..9}; do
+      kubectl exec --context="${CTX_CLUSTER1}" -n sample -c sleep \
+        "$(kubectl get pod --context="${CTX_CLUSTER1}" -n sample -l \
+        app=sleep -o jsonpath='{.items[0].metadata.name}')" \
+        -- curl -sS helloworld.sample:5000/hello;
+    done
+    ```
+
+12. From `cluster2`, send another 10 requests to the helloworld service. Verify that you see responses from both v1 and v2.
+
+    ```bash
+    for i in {0..9}; do
+      kubectl exec --context="${CTX_CLUSTER2}" -n sample -c sleep \
+        "$(kubectl get pod --context="${CTX_CLUSTER2}" -n sample -l \
+        app=sleep -o jsonpath='{.items[0].metadata.name}')" \
+        -- curl -sS helloworld.sample:5000/hello;
+    done
+    ```
+
+13. Cleanup
+
+    ```bash
+    kubectl delete ns sample --context="${CTX_CLUSTER1}"
+    kubectl delete istios default --context="${CTX_CLUSTER1}"
+    kubectl delete ns istio-system --context="${CTX_CLUSTER1}" 
+    kubectl delete ns sample --context="${CTX_CLUSTER2}"
+    kubectl delete istios default --context="${CTX_CLUSTER2}"
+    kubectl delete ns istio-system --context="${CTX_CLUSTER2}" 
     ```
 
 ### Multi-Primary - Multi-Network
