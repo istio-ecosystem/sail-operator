@@ -19,7 +19,7 @@ OLD_VARS := $(.VARIABLES)
 # Use `make print-variables` to inspect the values of the variables
 -include Makefile.vendor.mk
 
-VERSION ?= 1.26.3
+VERSION ?= 1.26.4
 MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 
 # This version will be used to generate the OLM upgrade graph in the FBC as a version to be replaced by the new operator version defined in $VERSION.
@@ -30,7 +30,7 @@ MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 # There are also GH workflows defined to release nightly and stable operators.
 # There is no need to define `replaces` and `skipRange` fields in the CSV as those fields are defined in the FBC and CSV values are ignored.
 # FBC is source of truth for OLM upgrade graph.
-PREVIOUS_VERSION ?= 1.26.2
+PREVIOUS_VERSION ?= 1.26.3
 
 OPERATOR_NAME ?= sailoperator
 VERSIONS_YAML_DIR ?= pkg/istioversion
@@ -549,14 +549,14 @@ RUNME ?= $(LOCALBIN)/runme
 
 ## Tool Versions
 OPERATOR_SDK_VERSION ?= v1.41.1
-HELM_VERSION ?= v3.18.4
-CONTROLLER_TOOLS_VERSION ?= v0.18.0
-CONTROLLER_RUNTIME_BRANCH ?= release-0.21
-OPM_VERSION ?= v1.56.0
-OLM_VERSION ?= v0.32.0
+HELM_VERSION ?= v3.18.6
+CONTROLLER_TOOLS_VERSION ?= v0.19.0
+CONTROLLER_RUNTIME_BRANCH ?= release-0.22
+OPM_VERSION ?= v1.57.0
+OLM_VERSION ?= v0.34.0
 GITLEAKS_VERSION ?= v8.28.0
 ISTIOCTL_VERSION ?= 1.26.0
-RUNME_VERSION ?= 3.15.0
+RUNME_VERSION ?= 3.15.1
 
 .PHONY: helm $(HELM)
 helm: $(HELM) ## Download helm to bin directory. If wrong version is installed, it will be overwritten.
