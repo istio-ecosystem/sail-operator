@@ -32,7 +32,7 @@ parse_flags() {
   SKIP_DEPLOY=${SKIP_DEPLOY:-false}
   OLM=${OLM:-false}
   DESCRIBE=false
-  MULTICLUSTER=false
+  MULTICLUSTER=${MULTICLUSTER:-false}
   while [ $# -gt 0 ]; do
     case "$1" in
       --ocp)
