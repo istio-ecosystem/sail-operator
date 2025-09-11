@@ -226,12 +226,6 @@ func PushIntermediateCA(k kubectl.Kubectl, ns, zone, network, basePath string, c
 	// Check if the secret exists in the cluster
 	_, err := common.GetObject(context.Background(), cl, kube.Key("cacerts", ns), &corev1.Secret{})
 	if err != nil {
-		// Label the namespace with the network
-		err = k.Label("namespace", ns, "topology.istio.io/network", network)
-		if err != nil {
-			return fmt.Errorf("failed to label namespace: %w", err)
-		}
-
 		// Read the pem content from the files
 		caCertPath := filepath.Join(certDir, zone, "ca-cert.pem")
 		caKeyPath := filepath.Join(certDir, zone, "ca-key.pem")

@@ -80,7 +80,6 @@ kubectl get ns sail-operator --context "${CTX_CLUSTER2}" || make -C "${SCRIPT_DI
 # 3. Create istio-system namespace on each cluster and configure a common root CA. 
 
 kubectl get ns istio-system --context "${CTX_CLUSTER1}" || kubectl create namespace istio-system --context "${CTX_CLUSTER1}"
-kubectl --context "${CTX_CLUSTER1}" label namespace istio-system topology.istio.io/network=network1
 kubectl get secret -n istio-system --context "${CTX_CLUSTER1}" cacerts || kubectl create secret generic cacerts -n istio-system --context "${CTX_CLUSTER1}" \
   --from-file=${CERTS_DIR}/east/ca-cert.pem \
   --from-file=${CERTS_DIR}/east/ca-key.pem \
@@ -88,7 +87,6 @@ kubectl get secret -n istio-system --context "${CTX_CLUSTER1}" cacerts || kubect
   --from-file=${CERTS_DIR}/east/cert-chain.pem
 
 kubectl get ns istio-system --context "${CTX_CLUSTER2}" || kubectl create namespace istio-system --context "${CTX_CLUSTER2}"
-kubectl --context "${CTX_CLUSTER2}" label namespace istio-system topology.istio.io/network=network2
 kubectl get secret -n istio-system --context "${CTX_CLUSTER2}" cacerts || kubectl create secret generic cacerts -n istio-system --context "${CTX_CLUSTER2}" \
   --from-file=${CERTS_DIR}/west/ca-cert.pem \
   --from-file=${CERTS_DIR}/west/ca-key.pem \
