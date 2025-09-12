@@ -231,9 +231,14 @@ if [ "${OLM}" != "true" ] && [ "${SKIP_DEPLOY}" != "true" ]; then
 fi
 
 # shellcheck disable=SC2086
+set +e
+# Disable to avoid fail the test run and not generate the report.xml
+# We need to catch the exit code to be able to generate the report
 IMAGE="${HUB}/${IMAGE_BASE}:${TAG}" \
 go run github.com/onsi/ginkgo/v2/ginkgo -tags e2e \
---timeout 60m --junit-report=report.xml ${GINKGO_FLAGS} "${WD}"/...
+--timeout 60m --junit-report="${ARTIFACTS}/report.xml" ${GINKGO_FLAGS:-} "${WD}"/...
+TEST_EXIT_CODE=$?
+set -e
 
 if [ "${OLM}" != "true" ] && [ "${SKIP_DEPLOY}" != "true" ]; then
   if [ "${MULTICLUSTER}" == true ]; then
@@ -244,3 +249,6 @@ if [ "${OLM}" != "true" ] && [ "${SKIP_DEPLOY}" != "true" ]; then
   fi
 fi
 
+
+echo "JUnit report: ${ARTIFACTS}/report.xml"
+exit ${TEST_EXIT_CODE}
