@@ -118,7 +118,7 @@ initialize_variables() {
   COMMAND="kubectl"
   ARTIFACTS="${ARTIFACTS:-$(mktemp -d)}"
   KUBECONFIG="${KUBECONFIG:-"${ARTIFACTS}/config"}"
-  ISTIOCTL="${ISTIOCTL:-"istioctl"}"
+  ISTIOCTL_PATH="${ISTIOCTL:-"istioctl"}"
   LOCALBIN="${LOCALBIN:-${HOME}/bin}"
   OPERATOR_SDK=${LOCALBIN}/operator-sdk
   IP_FAMILY=${IP_FAMILY:-ipv4}
@@ -284,9 +284,16 @@ if [ "${OCP}" == "true" ]; then
   HUB="image-registry.openshift-image-registry.svc:5000/sail-operator"
 fi
 
-# Run the go test passing the env variables defined that are going to be used in the operator tests
+export SKIP_DEPLOY IP_FAMILY ISTIO_MANIFEST NAMESPACE CONTROL_PLANE_NS DEPLOYMENT_NAME MULTICLUSTER ARTIFACTS ISTIO_NAME COMMAND KUBECONFIG ISTIOCTL_PATH
+set +e
+# Disable to avoid fail the test run and not generate the report.xml
+# We need to catch the exit code to be able to generate the report
 # shellcheck disable=SC2086
-IMAGE="${HUB}/${IMAGE_BASE}:${TAG}" SKIP_DEPLOY="${SKIP_DEPLOY}" OCP="${OCP}" IP_FAMILY="${IP_FAMILY}" ISTIO_MANIFEST="${ISTIO_MANIFEST}" \
-NAMESPACE="${NAMESPACE}" CONTROL_PLANE_NS="${CONTROL_PLANE_NS}" DEPLOYMENT_NAME="${DEPLOYMENT_NAME}" MULTICLUSTER="${MULTICLUSTER}" ARTIFACTS="${ARTIFACTS}" \
-ISTIO_NAME="${ISTIO_NAME}" COMMAND="${COMMAND}" KUBECONFIG="${KUBECONFIG}" ISTIOCTL_PATH="${ISTIOCTL}" \
-go run github.com/onsi/ginkgo/v2/ginkgo -tags e2e --timeout 60m --junit-report=report.xml ${GINKGO_FLAGS} "${WD}"/...
+IMAGE="${HUB}/${IMAGE_BASE}:${TAG}" \
+go run github.com/onsi/ginkgo/v2/ginkgo -tags e2e \
+--timeout 60m --junit-report="${ARTIFACTS}/report.xml" ${GINKGO_FLAGS:-} "${WD}"/...
+TEST_EXIT_CODE=$?
+set -e
+
+echo "JUnit report: ${ARTIFACTS}/report.xml"
+exit ${TEST_EXIT_CODE}
