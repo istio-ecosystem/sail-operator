@@ -123,13 +123,11 @@ These steps are common to every multi-cluster deployment and should be completed
 
 6. Push the intermediate CAs to each cluster.
     ```bash
-    kubectl --context "${CTX_CLUSTER1}" label namespace istio-system topology.istio.io/network=network1
     kubectl get secret -n istio-system --context "${CTX_CLUSTER1}" cacerts || kubectl create secret generic cacerts -n istio-system --context "${CTX_CLUSTER1}" \
       --from-file=east/ca-cert.pem \
       --from-file=east/ca-key.pem \
       --from-file=east/root-cert.pem \
       --from-file=east/cert-chain.pem
-    kubectl --context "${CTX_CLUSTER2}" label namespace istio-system topology.istio.io/network=network2
     kubectl get secret -n istio-system --context "${CTX_CLUSTER2}" cacerts || kubectl create secret generic cacerts -n istio-system --context "${CTX_CLUSTER2}" \
       --from-file=west/ca-cert.pem \
       --from-file=west/ca-key.pem \
@@ -407,11 +405,10 @@ In this setup there is a Primary cluster (`cluster1`) and a Remote cluster (`clu
     EOF
     ```
 
-6. Set the controlplane cluster and network for `cluster2`.
+6. Set the controlplane cluster for `cluster2`.
 
     ```bash
     kubectl --context="${CTX_CLUSTER2}" annotate namespace istio-system topology.istio.io/controlPlaneClusters=cluster1
-    kubectl --context="${CTX_CLUSTER2}" label namespace istio-system topology.istio.io/network=network2
     ```
 
 7. Install a remote secret on `cluster1` that provides access to the `cluster2` API server.
