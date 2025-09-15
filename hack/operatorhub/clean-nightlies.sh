@@ -61,6 +61,9 @@ do
   fi
 done
 
+# remove empty channels https://github.com/istio-ecosystem/sail-operator/issues/1192
+yq 'del(.entries[] | select(.entries | select(length == 0)))'  -i catalog-templates/basic.yaml
+
 # regenerate catalogs and validate them
 make catalogs
 make validate-catalogs
