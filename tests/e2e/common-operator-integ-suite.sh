@@ -146,6 +146,7 @@ await_operator() {
   "${COMMAND}" wait --for=condition=available deployment/"${DEPLOYMENT_NAME}" -n "${NAMESPACE}" --timeout=5m
 }
 
+# shellcheck disable=SC2329  # Function is invoked indirectly via trap
 uninstall_operator() {
   echo "Uninstalling sail-operator (KUBECONFIG=${KUBECONFIG})"
   helm uninstall sail-operator --namespace "${NAMESPACE}"
@@ -153,12 +154,14 @@ uninstall_operator() {
 }
 
 # Ensure cleanup always runs and that the original test exit code is preserved
+# shellcheck disable=SC2329  # Function is invoked indirectly via trap
 cleanup() {
   # Do not let cleanup errors affect the final exit code
   set +e
   if [ "${OLM}" != "true" ] && [ "${SKIP_DEPLOY}" != "true" ]; then
     if [ "${MULTICLUSTER}" == true ]; then
       KUBECONFIG="${KUBECONFIG}" uninstall_operator || true
+      # shellcheck disable=SC2153  # KUBECONFIG2 is set by multicluster setup scripts
       KUBECONFIG="${KUBECONFIG2}" uninstall_operator || true
     else
       uninstall_operator || true
