@@ -152,6 +152,23 @@ uninstall_operator() {
   "${COMMAND}" delete namespace "${NAMESPACE}"
 }
 
+# Ensure cleanup always runs and that the original test exit code is preserved
+cleanup() {
+  # Do not let cleanup errors affect the final exit code
+  set +e
+  if [ "${OLM}" != "true" ] && [ "${SKIP_DEPLOY}" != "true" ]; then
+    if [ "${MULTICLUSTER}" == true ]; then
+      KUBECONFIG="${KUBECONFIG}" uninstall_operator || true
+      KUBECONFIG="${KUBECONFIG2}" uninstall_operator || true
+    else
+      uninstall_operator || true
+    fi
+  fi
+  echo "JUnit report: ${ARTIFACTS}/report.xml"
+}
+
+trap cleanup EXIT INT TERM
+
 # Main script flow
 check_arguments "$@"
 parse_flags "$@"
@@ -231,24 +248,12 @@ if [ "${OLM}" != "true" ] && [ "${SKIP_DEPLOY}" != "true" ]; then
 fi
 
 set +e
-# Disable to avoid fail the test run and not generate the report.xml
-# We need to catch the exit code to be able to generate the report
+# Disable to avoid failing the test run before generating the report.xml
+# Capture the test exit code and allow cleanup via trap to run
 # shellcheck disable=SC2086
 IMAGE="${HUB}/${IMAGE_BASE}:${TAG}" \
 go run github.com/onsi/ginkgo/v2/ginkgo -tags e2e \
 --timeout 60m --junit-report="${ARTIFACTS}/report.xml" ${GINKGO_FLAGS:-} "${WD}"/...
 TEST_EXIT_CODE=$?
-set -e
 
-if [ "${OLM}" != "true" ] && [ "${SKIP_DEPLOY}" != "true" ]; then
-  if [ "${MULTICLUSTER}" == true ]; then
-    KUBECONFIG="${KUBECONFIG}" uninstall_operator
-    KUBECONFIG="${KUBECONFIG2}" uninstall_operator
-  else
-    uninstall_operator
-  fi
-fi
-
-
-echo "JUnit report: ${ARTIFACTS}/report.xml"
-exit ${TEST_EXIT_CODE}
+exit "${TEST_EXIT_CODE}"
