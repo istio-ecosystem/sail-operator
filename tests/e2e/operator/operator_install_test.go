@@ -93,6 +93,11 @@ var _ = Describe("Operator", Label("smoke", "operator"), Ordered, func() {
 				Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error getting Deployment status")
 		})
 
+		// TODO: TEMPORARY TEST - Remove this test after verifying CI error handling
+		It("TEMPORARY: should fail to test CI error handling", func(ctx SpecContext) {
+			Fail("This test intentionally fails to verify CI correctly reports test failures")
+		})
+
 		It("serves metrics securely", func(ctx SpecContext) {
 			metricsReaderRoleName := "metrics-reader"
 			metricsServiceName := deploymentName + "-metrics-service"
