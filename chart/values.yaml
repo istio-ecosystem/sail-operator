@@ -22,6 +22,10 @@ deployment:
     images.v1_26_2.istiod: gcr.io/istio-release/pilot:1.26.2
     images.v1_26_2.proxy: gcr.io/istio-release/proxyv2:1.26.2
     images.v1_26_2.cni: gcr.io/istio-release/install-cni:1.26.2
+    images.v1_26_1.ztunnel: gcr.io/istio-release/ztunnel:1.26.1
+    images.v1_26_1.istiod: gcr.io/istio-release/pilot:1.26.1
+    images.v1_26_1.proxy: gcr.io/istio-release/proxyv2:1.26.1
+    images.v1_26_1.cni: gcr.io/istio-release/install-cni:1.26.1
     images.v1_26_0.ztunnel: gcr.io/istio-release/ztunnel:1.26.0
     images.v1_26_0.istiod: gcr.io/istio-release/pilot:1.26.0
     images.v1_26_0.proxy: gcr.io/istio-release/proxyv2:1.26.0
@@ -95,6 +99,7 @@ csv:
     - v1.26.4
     - v1.26.3
     - v1.26.2
+    - v1.26.1
     - v1.26.0
     - v1.25-latest
     - v1.25.5
