@@ -85,15 +85,16 @@ Note: the default image used by the kind script from upstream does not work on m
 
     When running `CONTAINER_CLI=podman make update-common`, you may encounter shell compatibility errors like:
 
-    ```
+    ----
     /bin/sh: 1: [: unexpected operator
-    ```
+    ----
 
     This occurs because the `update-common` target runs inside containers by default, but it needs to modify local files and has shell compatibility issues between macOS/bash and the container's `/bin/sh`. To resolve this, run the target directly from the common Makefile:
 
-    ```bash
+    [source,bash,subs="attributes+"]
+    ----
     make -f common/Makefile.common.mk update-common
-    ```
+    ----
 
     This bypasses the container logic entirely and runs the target on the host system, which is necessary for file modification operations.
 
