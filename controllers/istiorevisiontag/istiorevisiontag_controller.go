@@ -31,6 +31,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/revision"
+	"github.com/istio-ecosystem/sail-operator/pkg/validation"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
@@ -131,7 +132,9 @@ func (r *Reconciler) validate(ctx context.Context, tag *v1.IstioRevisionTag) err
 	}
 	rev := v1.IstioRevision{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: tag.Name}, &rev); err == nil {
-		return NewNameAlreadyExistsError("there is an IstioRevision with this name", err)
+		if validation.ResourceTakesPrecedence(&rev.ObjectMeta, &tag.ObjectMeta) {
+			return reconciler.NewNameAlreadyExistsError("an IstioRevision exists with this name", nil)
+		}
 	} else if !apierrors.IsNotFound(err) {
 		return err
 	}
@@ -331,7 +334,7 @@ func (r *Reconciler) determineReconciledCondition(err error) v1.IstioRevisionTag
 
 	if err == nil {
 		c.Status = metav1.ConditionTrue
-	} else if IsNameAlreadyExistsError(err) {
+	} else if reconciler.IsNameAlreadyExistsError(err) {
 		c.Status = metav1.ConditionFalse
 		c.Reason = v1.IstioRevisionTagReasonNameAlreadyExists
 		c.Message = err.Error()
@@ -496,33 +499,6 @@ func specWasUpdated(oldObject client.Object, newObject client.Object) bool {
 
 func wrapEventHandler(logger logr.Logger, handler handler.EventHandler) handler.EventHandler {
 	return enqueuelogger.WrapIfNecessary(v1.IstioRevisionTagKind, logger, handler)
-}
-
-type NameAlreadyExistsError struct {
-	Message       string
-	originalError error
-}
-
-func (err NameAlreadyExistsError) Error() string {
-	return err.Message
-}
-
-func (err NameAlreadyExistsError) Unwrap() error {
-	return err.originalError
-}
-
-func NewNameAlreadyExistsError(message string, originalError error) NameAlreadyExistsError {
-	return NameAlreadyExistsError{
-		Message:       message,
-		originalError: originalError,
-	}
-}
-
-func IsNameAlreadyExistsError(err error) bool {
-	if _, ok := err.(NameAlreadyExistsError); ok {
-		return true
-	}
-	return false
 }
 
 type ReferenceNotFoundError struct {

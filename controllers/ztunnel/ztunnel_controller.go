@@ -183,6 +183,11 @@ func applyImageDigests(version string, values *v1.ZTunnelValues, config config.O
 		return values
 	}
 
+	// if a global hub or tag value is configured by the user, don't set image digests
+	if values != nil && values.Global != nil && (values.Global.Hub != nil || values.Global.Tag != nil) {
+		return values
+	}
+
 	if values == nil {
 		values = &v1.ZTunnelValues{}
 	}

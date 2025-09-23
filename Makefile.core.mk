@@ -19,7 +19,7 @@ OLD_VARS := $(.VARIABLES)
 # Use `make print-variables` to inspect the values of the variables
 -include Makefile.vendor.mk
 
-VERSION ?= 1.27.0
+VERSION ?= 1.28.0
 MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 
 # This version will be used to generate the OLM upgrade graph in the FBC as a version to be replaced by the new operator version defined in $VERSION.
@@ -30,7 +30,7 @@ MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 # There are also GH workflows defined to release nightly and stable operators.
 # There is no need to define `replaces` and `skipRange` fields in the CSV as those fields are defined in the FBC and CSV values are ignored.
 # FBC is source of truth for OLM upgrade graph.
-PREVIOUS_VERSION ?= 1.26.0
+PREVIOUS_VERSION ?= 1.27.0
 
 OPERATOR_NAME ?= sailoperator
 VERSIONS_YAML_DIR ?= pkg/istioversion
@@ -112,7 +112,7 @@ KIND_IMAGE ?=
 ifeq ($(KIND_IMAGE),)
   ifeq ($(LOCAL_OS),Darwin)
     # If the OS is Darwin, set the image.
-    KIND_IMAGE := docker.io/kindest/node:v1.33.2
+    KIND_IMAGE := docker.io/kindest/node:v1.34.0
   endif
   # For other OS, KIND_IMAGE remains empty, which default to the upstream default image.
 endif
@@ -217,6 +217,10 @@ test.scorecard: operator-sdk ## Run the operator scorecard test.
 test.e2e.ocp: istioctl ## Run the end-to-end tests against an existing OCP cluster. While running on OCP in downstream you need to set ISTIOCTL_DOWNLOAD_URL to the URL where the istioctl productized binary.
 	GINKGO_FLAGS="$(GINKGO_FLAGS)" ${SOURCE_DIR}/tests/e2e/integ-suite-ocp.sh
 
+.PHONY: test.e2e.ocp.cleanup
+test.e2e.ocp.cleanup: verify-kubeconfig ## Clean up leftover artifacts from e2e.ocp tests
+	${SOURCE_DIR}/tests/e2e/cleanup-ocp.sh
+
 .PHONY: test.e2e.kind
 test.e2e.kind: istioctl ## Deploy a KinD cluster and run the end-to-end tests against it.
 	GINKGO_FLAGS="$(GINKGO_FLAGS)" ISTIOCTL="$(ISTIOCTL)" ${SOURCE_DIR}/tests/e2e/integ-suite-kind.sh
@@ -225,12 +229,11 @@ test.e2e.kind: istioctl ## Deploy a KinD cluster and run the end-to-end tests ag
 test.e2e.describe: ## Runs ginkgo outline -format indent over the e2e test to show in BDD style the steps and test structure
 	GINKGO_FLAGS="$(GINKGO_FLAGS)" ${SOURCE_DIR}/tests/e2e/common-operator-integ-suite.sh --describe
 
-.PHONE: test.docs
-test.docs: runme istioctl ## Run the documentation examples tests.
-## test.docs use runme to test the documentation examples. 
+.PHONY: test.docs
+test.docs: istioctl ## Run the documentation examples tests.
 ## Check the specific documentation to understand the use of the tool
-	@echo "Running runme test on the documentation examples."
-	@PATH=$(LOCALBIN):$$PATH tests/documentation_tests/scripts/run-docs-examples.sh
+	@echo "Running test on the documentation examples."
+	@PATH=$(LOCALBIN):$$PATH tests/documentation_tests/scripts/run-asciidocs-test.sh
 	@echo "Documentation examples tested successfully"
 
 ##@ Build
@@ -549,11 +552,11 @@ MISSPELL ?= $(LOCALBIN)/misspell
 
 ## Tool Versions
 OPERATOR_SDK_VERSION ?= v1.41.1
-HELM_VERSION ?= v3.18.5
-CONTROLLER_TOOLS_VERSION ?= v0.18.0
-CONTROLLER_RUNTIME_BRANCH ?= release-0.21
-OPM_VERSION ?= v1.56.0
-OLM_VERSION ?= v0.32.0
+HELM_VERSION ?= v3.18.6
+CONTROLLER_TOOLS_VERSION ?= v0.19.0
+CONTROLLER_RUNTIME_BRANCH ?= release-0.22
+OPM_VERSION ?= v1.57.0
+OLM_VERSION ?= v0.34.0
 GITLEAKS_VERSION ?= v8.28.0
 ISTIOCTL_VERSION ?= 1.26.2
 RUNME_VERSION ?= 3.15.1

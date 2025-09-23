@@ -87,7 +87,7 @@ function add_mandatory_fields(){
     yq -i eval ".apiVersion = \"sailoperator.io/v1\" 
     | .kind = \"Istio\" 
     | (select(.spec.meshConfig) | .spec.values.meshConfig) = .spec.meshConfig 
-    | (select(.spec.values.istio_cni) | .spec.values.pilot.cni) = .spec.values.istio_cni 
+    | (select(.spec.values.istio_cni) | .spec.values.pilot.cni) = .spec.values.istio_cni
     | .metadata.name = \"default\" 
     | .spec.namespace = \"$NAMESPACE\" 
     | del(.spec.values.istio_cni)
@@ -101,6 +101,9 @@ function add_mandatory_fields(){
         yq -i ".spec.version = \"$VERSION\"" "$OUTPUT"  
     fi
 
+    # Ensure meshConfig and accessLogFile exist
+    yq -i eval '.spec.values.meshConfig |= (. // {}) | 
+    .spec.values.meshConfig.accessLogFile |= (select(. != "" ) // "/dev/stdout")' "$OUTPUT"
 }
 
 function boolean_2_string(){
@@ -127,5 +130,5 @@ add_mandatory_fields
 boolean_2_string
 validate_spec_components
 
-
 echo "Sail configuration file created with name: $(realpath "$OUTPUT")"
+

@@ -181,7 +181,6 @@ values:
 								"merge",
 								`{"metadata":{"annotations":{"topology.istio.io/controlPlaneClusters":"cluster1"}}}`)).
 							To(Succeed(), "Error patching istio-system namespace")
-						Expect(k2.Label("namespace", controlPlaneNamespace, "topology.istio.io/network", "network2")).To(Succeed(), "Error labeling istio-system namespace")
 
 						// To be able to access the remote cluster from the primary cluster, we need to create a secret in the primary cluster
 						// Remote Istio resource will not be Ready until the secret is created
