@@ -224,7 +224,7 @@ func (c *Cleaner) cleanup(ctx context.Context) (deleted []client.Object) {
 		})
 	}
 
-	return
+	return deleted
 }
 
 func mapHasKey[K comparable, V any](m map[K]V, k K) bool {
