@@ -98,7 +98,7 @@ func (r *Reconciler) doReconcile(ctx context.Context, istio *v1.Istio) (result c
 		return revision.PruneInactive(ctx, r.Client, istio.UID, getActiveRevisionName(istio), getPruningGracePeriod(istio))
 	}
 
-	return
+	return result, err
 }
 
 func managesExternalRevision(istio *v1.Istio) bool {
