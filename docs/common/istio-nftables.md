@@ -4,21 +4,43 @@
 
 - [Istio nftables backend](#istio-nftables-backend)
   - [Prerequisites](#prerequisites)
-  - [Installation steps](#installation-steps)
-	  - [Installation on OpenShift](#installation-on-openshift)
+  - [Installation](#installation)
+	  - [Install with Sail Operator on OpenShift](#install-with-sail-operator-on-openshift)
+    - [Install in Ambient Mode](#install-in-ambient-mode)
   - [Validation](#validation)
+  - [Upgrade](#upgrade)
+    - [Upgrade with Sail Operator on OpenShift](#upgrade-with-sail-operator-on-openshift)
+    - [Upgrade in Ambient Mode](#upgrade-in-ambient-mode)
+
 
 ## Istio nftables backend
 
-This document outlines the configuration steps for the nftables backend in Istio. As the official successor to iptables, nftables offers a modern, high-performance alternative for transparently redirecting traffic to and from the Envoy sidecar proxy. Many major Linux distributions are actively moving towards adopting native nftables support. At present, this backend supports Istio sidecar mode only, with ambient mode support currently under development.
-
+This document outlines the configuration steps for the nftables backend in Istio. As the official successor to iptables, nftables offers a modern, high-performance alternative for transparently redirecting traffic to and from the Envoy sidecar proxy. Many major Linux distributions are actively moving towards adopting native nftables support.
 ### Prerequisites
 
 - **nftables version**: Requires `nft` binary version 1.0.1 or later.
 
-### Installation Steps
+### Installation
 
-The support for native nftables when using Istio sidecar mode was implemented in the upstream istio release-1.27 [release note](https://github.com/istio/istio/blob/master/releasenotes/notes/nftables-sidecar.yaml). It is disabled by default. To enable it, you can create an instance of the `Istio` resource with `spec.values.global.nativeNftables=true`:
+The support for native nftables when using Istio sidecar mode was implemented in the upstream istio release-1.27 [release note](https://github.com/istio/istio/blob/master/releasenotes/notes/nftables-sidecar.yaml). It is disabled by default. To enable it, you can set a feature flag as `values.global.nativeNftables=true`. For example,
+
+Installation with Istioctl
+
+```sh
+istioctl install --set values.global.nativeNftables=true -y
+```
+
+Installation with Helm
+
+```sh
+helm install istiod-canary istio/istiod \
+  --set values.global.nativeNftables=true \
+  -n istio-system
+```
+
+#### Install with Sail Operator on OpenShift
+
+When you install an Istio resource with Sail Operator, you can create an instance of the `Istio` resource with `spec.values.global.nativeNftables=true`.
 
 ```sh
 apiVersion: sailoperator.io/v1
@@ -37,8 +59,6 @@ spec:
 ```
 
 This feature configures Istio to use the `nftables` backend instead of `iptables` for traffic redirection.
-
-#### Installation on OpenShift
 
 To enable the Istio native nftables feature, using the following steps:
 
@@ -109,9 +129,11 @@ spec:
       nativeNftables: true
 ```
 
+#### Install in Ambient Mode
+
 ### Validation
 
-When using the `nftables` backend, you can verify the traffic redirection rules using the `nft list ruleset` command in the `istio-proxy` container. The following example installs a sample application `curl` in a data plane namespace `test-ns`.
+When using the `nftables` backend, you can verify the traffic redirection rules using the `nft list ruleset` command in the `istio-proxy` container. When using the nftables backend, You get the table inet rules in the istio-proxy container. The following example installs a sample application `curl` in a data plane namespace `test-ns`.
 
 ```sh
 kubectl create ns test-ns
@@ -126,45 +148,90 @@ kubectl -n test-ns debug --image istio/base --profile netadmin --attach -t -i \
   "$(kubectl -n test-ns get pod -l app=curl -o jsonpath='{.items..metadata.name}')"
 root@curl-6c88b89ddf-kbzn6:$ nft list ruleset
 
-table inet istio-proxy-nat {
-	chain prerouting {
-		type nat hook prerouting priority dstnat; policy accept;
-		meta l4proto tcp jump istio-inbound
-	}
+```
 
-	chain output {
-		type nat hook output priority dstnat; policy accept;
-		jump istio-output
-	}
+Verify the connectivity between two pods is working. For example, deploy a httpbin application using the following step:
 
-	chain istio-inbound {
-		tcp dport 15008 return
-		tcp dport 15090 return
-		tcp dport 15021 return
-		tcp dport 15020 return
-		meta l4proto tcp jump istio-in-redirect
-	}
+```sh
+kubectl apply -n test-ns -f samples/httpbin/httpbin.yaml
+kubectl exec -n test-ns "$(kubectl get pod -l app=curl -n test-ns -o jsonpath={.items..metadata.name})" -c curl -n test-ns -- curl http://httpbin.test-ns:8000/ip -s -o /dev/null -w "%{http_code}\n"
 
-	chain istio-redirect {
-		meta l4proto tcp redirect to :15001
-	}
-
-	chain istio-in-redirect {
-		meta l4proto tcp redirect to :15006
-	}
-
-	chain istio-output {
-		oifname "lo" ip saddr 127.0.0.6 return
-		oifname "lo" ip daddr != 127.0.0.1 tcp dport != 15008 meta skuid 1337 jump istio-in-redirect
-		oifname "lo" meta skuid != 1337 return
-		meta skuid 1337 return
-		oifname "lo" ip daddr != 127.0.0.1 tcp dport != 15008 meta skgid 1337 jump istio-in-redirect
-		oifname "lo" meta skgid != 1337 return
-		meta skgid 1337 return
-		ip daddr 127.0.0.1 return
-		jump istio-redirect
-	}
-}
+200
 ```
 
 More guidelines: [Debugging Guidelines](https://github.com/istio/istio/tree/master/tools/istio-nftables/pkg#debugging-guidelines)
+
+### Upgrade
+
+The migration of using the existing Istio iptables backend to nftables backend can be done by upgrading Istio. The following example installs an Istio control plane with the iptables backend and a sample application curl in a data plane namespace test-ns.
+
+```sh
+istioctl install -y
+
+kubectl create ns test-ns
+kubectl label namespace test-ns istio-injection=enabled
+kubectl apply -n test-ns -f samples/curl/curl.yaml
+```
+
+You may create another Istio control plane with a revision value and gradually migrate data plane traffic to the new revision Istio control plane. This canary upgrade approach is much safer than doing an in-place upgrade. For example,
+
+1. Install a canary version of Istio with the nftables backend.
+
+```sh
+istioctl install --set revision=canary --set values.global.nativeNftables=true -y
+```
+
+2. Upgrade the data plane and restart the deployment
+
+```sh
+kubectl label namespace test-ns istio-injection- istio.io/rev=canary
+kubectl rollout restart deployment -n test-ns
+```
+
+3. Check the nftables backend running in the curl application pod. When using the nftables backend, You get the table inet rules in the istio-proxy container. For example, attach a debug container and run nft list ruleset command:
+
+```sh
+kubectl -n test-ns debug --image istio/base --profile netadmin --attach -t -i \
+  "$(kubectl -n test-ns get pod -l app=curl -o jsonpath='{.items..metadata.name}')"
+
+root@curl-6c88b89ddf-kbzn6:$ nft list ruleset
+```
+
+4. Verify the connectivity between two pods is working. For example, deploy a httpbin application using the following step:
+
+```sh
+kubectl apply -n test-ns -f samples/httpbin/httpbin.yaml
+kubectl exec -n test-ns "$(kubectl get pod -l app=curl -n test-ns -o jsonpath={.items..metadata.name})" -c curl -n test-ns -- curl http://httpbin.test-ns:8000/ip -s -o /dev/null -w "%{http_code}\n"
+
+200
+```
+
+5. After upgrading both the control plane and data plane, you can uninstall the old control plane in this example.
+
+```sh
+istioctl uninstall --revision default -y
+```
+
+When upgrading Istio with the CNI node agent, you can install a canary version of Istio control plane and upgrade the istio-cni node agent separately. For example, there is an Istio CNI component running in the istio-cni namespace, you can upgrade and enable the nftables backend using the following steps:
+
+1. Install a canary version of Istiod control plane with the nftables backend.
+
+```sh
+helm install istiod-canary istio/istiod \
+  --set revision=canary \
+  --set values.global.nativeNftables=true \
+  -n istio-system
+```
+
+2. Upgrade the CNI component separately from the revisioned control plane.
+
+```sh
+helm upgrade istio-cni istio/cni \
+  --set values.global.nativeNftables=true \
+  -n istio-cni --wait
+```
+
+#### Upgrade with Sail Operator on OpenShift
+
+#### Upgrade in Ambient mode
+
