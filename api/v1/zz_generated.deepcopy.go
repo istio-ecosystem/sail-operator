@@ -5578,11 +5578,6 @@ func (in *ZTunnelConfig) DeepCopyInto(out *ZTunnelConfig) {
 		*out = new(MultiClusterConfig)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.MeshConfig != nil {
-		in, out := &in.MeshConfig, &out.MeshConfig
-		*out = new(MeshConfig)
-		(*in).DeepCopyInto(*out)
-	}
 	if in.TerminationGracePeriodSeconds != nil {
 		in, out := &in.TerminationGracePeriodSeconds, &out.TerminationGracePeriodSeconds
 		*out = new(int64)
