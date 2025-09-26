@@ -135,6 +135,43 @@ initialize_variables() {
   if [ "${OCP}" == "true" ]; then COMMAND="oc"; fi
 }
 
+check_cluster_operators() {
+  # This function is only relevant for OCP clusters
+  if [ "${OCP}" != "true" ]; then
+    echo "Skipping ClusterOperator check on non-OCP cluster."
+    return 0
+  fi
+
+  # Check if jq is installed
+  if ! command -v jq &> /dev/null; then
+    echo "ERROR: jq is required for the cluster operator health check. Please install jq."
+    exit 1
+  fi
+
+  local timeout_seconds=600
+  echo "Validating OpenShift cluster operators are stable..."
+  local end_time=$(( $(date +%s) + timeout_seconds ))
+
+  while [ "$(date +%s)" -lt $end_time ]; do
+    # This command uses jq to count operators that are not Available, or are Progressing, or are Degraded.
+    # A healthy cluster should have a count of 0.
+    local unstable_operators
+    unstable_operators=$(oc get clusteroperator -o json | jq '[.items[] | select(.status.conditions[] | (.type == "Available" and .status == "False") or (.type == "Progressing" and .status == "True") or (.type == "Degraded" and .status == "True"))] | length')
+
+    if [[ $unstable_operators -eq 0 ]]; then
+      echo "All cluster operators are stable."
+      return 0
+    fi
+
+    echo -n "."
+    sleep 15
+  done
+
+  echo "ERROR: Timeout reached. Not all cluster operators are stable."
+  oc get clusteroperator # Print the final status for debugging
+  exit 1
+}
+
 install_operator() {
   echo "Installing sail-operator (KUBECONFIG=${KUBECONFIG})"
   "${COMMAND}" create namespace "${NAMESPACE}"
@@ -249,6 +286,10 @@ if [ "${OLM}" != "true" ] && [ "${SKIP_DEPLOY}" != "true" ]; then
     await_operator
   fi
 fi
+
+# Check that all cluster operators are stable before running the tests. This only applies to OCP clusters.
+# This is to avoid test failures due to cluster instability.
+check_cluster_operators
 
 set +e
 # Disable to avoid failing the test run before generating the report.xml
