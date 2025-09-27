@@ -78,6 +78,7 @@ deployment:
     images.v1_28-alpha_41429998.istiod: gcr.io/istio-testing/pilot:1.28-alpha.414299985bc1fbcb9f6b4ebaef1c4897ac8dd5df
     images.v1_28-alpha_41429998.proxy: gcr.io/istio-testing/proxyv2:1.28-alpha.414299985bc1fbcb9f6b4ebaef1c4897ac8dd5df
     images.v1_28-alpha_41429998.cni: gcr.io/istio-testing/install-cni:1.28-alpha.414299985bc1fbcb9f6b4ebaef1c4897ac8dd5df
+revisionHistoryLimit: 10
 service:
   port: 8443
 serviceAccountName: sail-operator
@@ -147,6 +148,17 @@ image: quay.io/sail-dev/sail-operator:1.28-latest
 # We're commenting out the imagePullPolicy to use k8s defaults
 # imagePullPolicy: Always
 operator:
+  # env:
+  # - name: GOMAXPROCS
+  #   valueFrom:
+  #     resourceFieldRef:
+  #       resource: limits.cpu
+  #       divisor: '1'
+  # - name: GOMEMLIMIT
+  #   valueFrom:
+  #     resourceFieldRef:
+  #       resource: limits.memory
+  #       divisor: '1'
   resources:
     limits:
       cpu: 500m
