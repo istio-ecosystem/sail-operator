@@ -56,6 +56,7 @@ var _ = Describe("base chart support", Ordered, func() {
 	}
 
 	saKey := client.ObjectKey{Name: "istio-reader-service-account", Namespace: istioNamespace}
+	validatingWebhookKey := client.ObjectKey{Name: "istiod-default-validator", Namespace: istioNamespace}
 
 	BeforeAll(func() {
 		Step(fmt.Sprintf("Creating namespace %q", istioNamespace))
@@ -99,6 +100,10 @@ var _ = Describe("base chart support", Ordered, func() {
 			sa := &corev1.ServiceAccount{}
 			Step("Checking if istio-reader ServiceAccount was successfully created")
 			Eventually(k8sClient.Get).WithArguments(ctx, saKey, sa).Should(Succeed())
+
+			webhook := &admissionv1.ValidatingWebhookConfiguration{}
+			Step("Checking if default ValidatingWebhookConfiguration was successfully created")
+			Eventually(k8sClient.Get).WithArguments(ctx, validatingWebhookKey, webhook).Should(Succeed())
 		})
 
 		It("undeploys base chart when default IstioRevision is deleted", func() {
@@ -108,6 +113,10 @@ var _ = Describe("base chart support", Ordered, func() {
 			sa := &corev1.ServiceAccount{}
 			Step("Checking if istio-reader ServiceAccount was deleted")
 			Eventually(k8sClient.Get).WithArguments(ctx, saKey, sa).Should(ReturnNotFoundError())
+
+			webhook := &admissionv1.ValidatingWebhookConfiguration{}
+			Step("Checking if default ValidatingWebhookConfiguration was deleted")
+			Eventually(k8sClient.Get).WithArguments(ctx, validatingWebhookKey, webhook).Should(ReturnNotFoundError())
 		})
 	})
 
@@ -153,12 +162,20 @@ var _ = Describe("base chart support", Ordered, func() {
 			sa := &corev1.ServiceAccount{}
 			Step("Checking if istio-reader ServiceAccount was deleted")
 			Eventually(k8sClient.Get).WithArguments(ctx, saKey, sa).Should(ReturnNotFoundError())
+
+			webhook := &admissionv1.ValidatingWebhookConfiguration{}
+			Step("Checking if default ValidatingWebhookConfiguration was deleted")
+			Eventually(k8sClient.Get).WithArguments(ctx, validatingWebhookKey, webhook).Should(ReturnNotFoundError())
 		})
 
 		It("deploys base chart when default IstioRevisionTag is created", func() {
 			sa := &corev1.ServiceAccount{}
 			Step("Checking if istio-reader ServiceAccount was successfully created")
 			Eventually(k8sClient.Get).WithArguments(ctx, saKey, sa).Should(Succeed())
+
+			webhook := &admissionv1.ValidatingWebhookConfiguration{}
+			Step("Checking if default ValidatingWebhookConfiguration was successfully created")
+			Eventually(k8sClient.Get).WithArguments(ctx, validatingWebhookKey, webhook).Should(Succeed())
 		})
 	})
 
