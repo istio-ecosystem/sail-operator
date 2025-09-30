@@ -19,13 +19,10 @@ set -exo pipefail
 # Set up a cross-platform sed command.
 # On macOS, we use gsed (GNU sed) to have consistent behavior with Linux.
 # This requires gsed to be installed on macOS (e.g., via `brew install gnu-sed`).
-sed_executable="sed"
+SED_CMD="sed"
 if [[ "$(uname)" == "Darwin" ]]; then
-  sed_executable="gsed"
+  SED_CMD="gsed"
 fi
-# Create a command array with the in-place flag.
-SED_CMD=("$sed_executable" "-i")
-
 
 UPDATE_BRANCH=${UPDATE_BRANCH:-"master"}
 
@@ -54,7 +51,7 @@ make update-common
 
 # update build container used in github actions
 NEW_IMAGE_MASTER=$(grep IMAGE_VERSION= < common/scripts/setup_env.sh | cut -d= -f2)
-"${SED_CMD[@]}" -e "s|\(gcr.io/istio-testing/build-tools\):master.*|\1:$NEW_IMAGE_MASTER|" .github/workflows/update-deps.yaml
+"$SED_CMD" -i -e "s|\(gcr.io/istio-testing/build-tools\):master.*|\1:$NEW_IMAGE_MASTER|" .github/workflows/update-deps.yaml
 
 # Update go dependencies
 export GO111MODULE=on
@@ -64,16 +61,16 @@ go mod tidy
 
 # Update operator-sdk
 OPERATOR_SDK_LATEST_VERSION=$(getLatestVersion operator-framework/operator-sdk)
-"${SED_CMD[@]}" "s|OPERATOR_SDK_VERSION ?= .*|OPERATOR_SDK_VERSION ?= ${OPERATOR_SDK_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
-find "${ROOTDIR}/chart/templates/olm/scorecard.yaml" -type f -exec "${SED_CMD[@]}" "s|quay.io/operator-framework/scorecard-test:.*|quay.io/operator-framework/scorecard-test:${OPERATOR_SDK_LATEST_VERSION}|" {} +
+"$SED_CMD" -i "s|OPERATOR_SDK_VERSION ?= .*|OPERATOR_SDK_VERSION ?= ${OPERATOR_SDK_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+find "${ROOTDIR}/chart/templates/olm/scorecard.yaml" -type f -exec "$SED_CMD" -i "s|quay.io/operator-framework/scorecard-test:.*|quay.io/operator-framework/scorecard-test:${OPERATOR_SDK_LATEST_VERSION}|" {} +
 
 # Update helm
 HELM_LATEST_VERSION=$(getLatestVersion helm/helm | cut -d/ -f2)
-"${SED_CMD[@]}" "s|HELM_VERSION ?= .*|HELM_VERSION ?= ${HELM_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+"$SED_CMD" -i "s|HELM_VERSION ?= .*|HELM_VERSION ?= ${HELM_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
 
 # Update controller-tools
 CONTROLLER_TOOLS_LATEST_VERSION=$(getLatestVersion kubernetes-sigs/controller-tools)
-"${SED_CMD[@]}" "s|CONTROLLER_TOOLS_VERSION ?= .*|CONTROLLER_TOOLS_VERSION ?= ${CONTROLLER_TOOLS_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+"$SED_CMD" -i "s|CONTROLLER_TOOLS_VERSION ?= .*|CONTROLLER_TOOLS_VERSION ?= ${CONTROLLER_TOOLS_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
 
 # Update controller-runtime
 CONTROLLER_RUNTIME_LATEST_VERSION=$(getLatestVersion kubernetes-sigs/controller-runtime)
@@ -81,41 +78,41 @@ CONTROLLER_RUNTIME_LATEST_VERSION=$(getLatestVersion kubernetes-sigs/controller-
 # go get -u "sigs.k8s.io/controller-runtime@${CONTROLLER_RUNTIME_LATEST_VERSION}"
 go get "sigs.k8s.io/controller-runtime@${CONTROLLER_RUNTIME_LATEST_VERSION}"
 CONTROLLER_RUNTIME_BRANCH=$(getReleaseBranch "${CONTROLLER_RUNTIME_LATEST_VERSION}")
-"${SED_CMD[@]}" "s|CONTROLLER_RUNTIME_BRANCH ?= .*|CONTROLLER_RUNTIME_BRANCH ?= ${CONTROLLER_RUNTIME_BRANCH}|" "${ROOTDIR}/Makefile.core.mk"
+"$SED_CMD" -i "s|CONTROLLER_RUNTIME_BRANCH ?= .*|CONTROLLER_RUNTIME_BRANCH ?= ${CONTROLLER_RUNTIME_BRANCH}|" "${ROOTDIR}/Makefile.core.mk"
 
 # Update opm
 OPM_LATEST_VERSION=$(getLatestVersion operator-framework/operator-registry)
-"${SED_CMD[@]}" "s|OPM_VERSION ?= .*|OPM_VERSION ?= ${OPM_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+"$SED_CMD" -i "s|OPM_VERSION ?= .*|OPM_VERSION ?= ${OPM_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
 
 # Update olm
 OLM_LATEST_VERSION=$(getLatestVersion operator-framework/operator-lifecycle-manager)
-"${SED_CMD[@]}" "s|OLM_VERSION ?= .*|OLM_VERSION ?= ${OLM_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+"$SED_CMD" -i "s|OLM_VERSION ?= .*|OLM_VERSION ?= ${OLM_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
 
 # Update kube-rbac-proxy
 RBAC_PROXY_LATEST_VERSION=$(getLatestVersion brancz/kube-rbac-proxy | cut -d/ -f1)
 # Only update it if the newer image is available in the registry
 if docker manifest inspect "gcr.io/kubebuilder/kube-rbac-proxy:${RBAC_PROXY_LATEST_VERSION}" >/dev/null 2>/dev/null; then
-  "${SED_CMD[@]}" "s|gcr.io/kubebuilder/kube-rbac-proxy:.*|gcr.io/kubebuilder/kube-rbac-proxy:${RBAC_PROXY_LATEST_VERSION}|" "${ROOTDIR}/chart/values.yaml"
+  "$SED_CMD" -i "s|gcr.io/kubebuilder/kube-rbac-proxy:.*|gcr.io/kubebuilder/kube-rbac-proxy:${RBAC_PROXY_LATEST_VERSION}|" "${ROOTDIR}/chart/values.yaml"
 fi
 
 # Update gitleaks
 GITLEAKS_VERSION=$(getLatestVersion gitleaks/gitleaks)
-"${SED_CMD[@]}" "s|GITLEAKS_VERSION ?= .*|GITLEAKS_VERSION ?= ${GITLEAKS_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+"$SED_CMD" -i "s|GITLEAKS_VERSION ?= .*|GITLEAKS_VERSION ?= ${GITLEAKS_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
 
 # Update runme
 RUNME_LATEST_VERSION=$(getLatestVersion runmedev/runme)
 # Remove the leading "v" from the version string
 RUNME_LATEST_VERSION=${RUNME_LATEST_VERSION#v}
-"${SED_CMD[@]}" "s|RUNME_VERSION ?= .*|RUNME_VERSION ?= ${RUNME_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+"$SED_CMD" -i "s|RUNME_VERSION ?= .*|RUNME_VERSION ?= ${RUNME_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
 
 # Update misspell
 MISSPELL_LATEST_VERSION=$(getLatestVersion client9/misspell)
-"${SED_CMD[@]}" "s|MISSPELL_VERSION ?= .*|MISSPELL_VERSION ?= ${MISSPELL_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+"$SED_CMD" -i "s|MISSPELL_VERSION ?= .*|MISSPELL_VERSION ?= ${MISSPELL_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
 
 # Update KIND_IMAGE. Look for KIND_IMAGE := docker.io in the make file and look on docker.io/kindest/node for the latest version.
 KIND_LATEST_VERSION=$(getLatestVersionFromDockerHub kindest/node)
 if [[ -n "${KIND_LATEST_VERSION}" ]]; then
-  "${SED_CMD[@]}" "s|KIND_IMAGE := docker.io/kindest/node:.*|KIND_IMAGE := docker.io/kindest/node:${KIND_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+  "$SED_CMD" -i "s|KIND_IMAGE := docker.io/kindest/node:.*|KIND_IMAGE := docker.io/kindest/node:${KIND_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
 else
   echo "No latest version found for kindest/node on Docker Hub. Keeping the existing KIND_IMAGE."
 fi
