@@ -174,7 +174,7 @@ check_cluster_operators() {
 
 install_operator() {
   echo "Installing sail-operator (KUBECONFIG=${KUBECONFIG})"
-  "${COMMAND}" create namespace "${NAMESPACE}"
+  "${COMMAND}" create namespace "${NAMESPACE}" || true
   helm install sail-operator "${SOURCE_DIR}"/chart --namespace "${NAMESPACE}" --set image="${HUB}/${IMAGE_BASE}:${TAG}" --set operatorLogLevel=3
 }
 
@@ -230,7 +230,7 @@ if [ "${SKIP_BUILD}" == "false" ]; then
 
     # Workaround for OCP helm operator installation issues:
     # To avoid any cleanup issues, after we build and push the image we check if the namespace exists and delete it if it does.
-    # The test logic already handles the namespace creation and deletion during the test run. 
+    # The test logic already handles the namespace creation and deletion during the test run.
     if ${COMMAND} get ns "${NAMESPACE}" &>/dev/null; then
       echo "Namespace ${NAMESPACE} already exists. Deleting it to avoid conflicts."
       ${COMMAND} delete ns "${NAMESPACE}"

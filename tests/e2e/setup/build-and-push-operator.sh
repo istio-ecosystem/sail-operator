@@ -36,6 +36,12 @@ get_internal_registry() {
       "until ${COMMAND} get route default-route -n openshift-image-registry &>/dev/null; do sleep 5; done"
   fi
 
+  setup_ci_environment
+}
+
+setup_ci_environment() {
+  echo "Setting up CI environment for OCP..."
+
   URL=$(${COMMAND} get route default-route -n openshift-image-registry --template='{{ .spec.host }}')
 
   # Create the istio-images namespace to store the operator image
@@ -43,8 +49,11 @@ get_internal_registry() {
   export HUB="${URL}/istio-images"
   echo "Registry URL: ${HUB}"
 
+  # Create necessary namespaces
   ${COMMAND} create namespace istio-images || true
   ${COMMAND} create namespace "${NAMESPACE}" || true
+
+  # Apply role bindings (needed for image operations)
   envsubst < "${WD}/config/role-bindings.yaml" | ${COMMAND} apply -f -
 
   if [[ ${URL} == *".apps-crc.testing"* ]]; then
@@ -54,6 +63,8 @@ get_internal_registry() {
       exit 1
     fi
   fi
+
+  echo "CI environment setup complete. Using external registry: ${HUB}"
 }
 
 build_and_push_operator_image() {
@@ -86,7 +97,13 @@ build_and_push_operator_image() {
 
 # Main logic
 if [ "${OCP}" == "true" ]; then
-  get_internal_registry
+  if [ "${CI}" == "false" ]; then
+    echo "Setting up OCP internal registry..."
+    get_internal_registry
+  else
+    echo "CI=true, setting up minimal OCP environment..."
+    setup_ci_environment
+  fi
 fi
 
 build_and_push_operator_image
