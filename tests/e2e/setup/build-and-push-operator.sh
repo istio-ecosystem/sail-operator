@@ -36,11 +36,11 @@ get_internal_registry() {
       "until ${COMMAND} get route default-route -n openshift-image-registry &>/dev/null; do sleep 5; done"
   fi
 
-  setup_ci_environment
+  setup_environment
 }
 
-setup_ci_environment() {
-  echo "Setting up CI environment for OCP..."
+setup_environment() {
+  echo "Setting up environment for OCP..."
 
   URL=$(${COMMAND} get route default-route -n openshift-image-registry --template='{{ .spec.host }}')
 
@@ -64,7 +64,7 @@ setup_ci_environment() {
     fi
   fi
 
-  echo "CI environment setup complete. Using external registry: ${HUB}"
+  echo "Environment setup complete. Using external registry: ${HUB}"
 }
 
 build_and_push_operator_image() {
@@ -97,12 +97,12 @@ build_and_push_operator_image() {
 
 # Main logic
 if [ "${OCP}" == "true" ]; then
-  if [ "${CI}" == "false" ]; then
+  if [ "${SKIP_INTERNAL_REGISTRY_SETUP}" == "false" ]; then
     echo "Setting up OCP internal registry..."
     get_internal_registry
   else
-    echo "CI=true, setting up minimal OCP environment..."
-    setup_ci_environment
+    echo "SKIP_INTERNAL_REGISTRY_SETUP=true, setting up minimal OCP environment..."
+    setup_environment
   fi
 fi
 

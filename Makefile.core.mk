@@ -97,8 +97,8 @@ endif
 # Set DOCKER_BUILD_FLAGS to specify flags to pass to 'docker build', default to empty. Example: --platform=linux/arm64
 DOCKER_BUILD_FLAGS ?= "--platform=$(TARGET_OS)/$(TARGET_ARCH)"
 
-# Set CI environment variable to true when running in CI environment
-CI ?= false
+# Set SKIP_INTERNAL_REGISTRY_SETUP environment variable to true to skip the internal registry setup.
+SKIP_INTERNAL_REGISTRY_SETUP ?= false
 
 # Set GOTEST_FLAGS and GINKGO_FLAGS for test targets
 GOTEST_FLAGS := $(if $(VERBOSE),-v) $(if $(COVERAGE),-coverprofile=$(REPO_ROOT)/out/coverage-unit.out)
@@ -219,7 +219,7 @@ test.scorecard: operator-sdk ## Run the operator scorecard test.
 
 .PHONY: test.e2e.ocp
 test.e2e.ocp: istioctl ## Run the end-to-end tests against an existing OCP cluster. While running on OCP in downstream you need to set ISTIOCTL_DOWNLOAD_URL to the URL where the istioctl productized binary.
-	GINKGO_FLAGS="$(GINKGO_FLAGS)" CI=${CI} ${SOURCE_DIR}/tests/e2e/integ-suite-ocp.sh
+	GINKGO_FLAGS="$(GINKGO_FLAGS)" SKIP_INTERNAL_REGISTRY_SETUP=${SKIP_INTERNAL_REGISTRY_SETUP} ${SOURCE_DIR}/tests/e2e/integ-suite-ocp.sh
 
 .PHONY: test.e2e.ocp.cleanup
 test.e2e.ocp.cleanup: verify-kubeconfig ## Clean up leftover artifacts from e2e.ocp tests
