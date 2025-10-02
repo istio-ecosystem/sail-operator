@@ -5328,6 +5328,15 @@ spec:
 
                                     Example: "zipkin.default.svc.cluster.local" or "bar/zipkin.example.com".
                                   type: string
+                                traceContextOption:
+                                  description: |-
+                                    Optional. Determines which trace context format to use for trace header extraction and propagation.
+                                    This controls both downstream request header extraction and upstream request header injection.
+                                    The default value is USE_B3 to maintain backward compatibility.
+                                  enum:
+                                  - USE_B3
+                                  - USE_B3_WITH_W3C_PROPAGATION
+                                  type: string
                               required:
                               - port
                               - service
@@ -9984,7 +9993,7 @@ spec:
               version:
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.27.1, v1.27.0, v1.26.4, v1.26.3, v1.26.2, v1.26.0, v1.25.5, v1.25.4, v1.25.3, v1.25.2, v1.25.1, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, v1.28-alpha.41429998.
+                  Must be one of: v1.27.1, v1.27.0, v1.26.4, v1.26.3, v1.26.2, v1.26.0, v1.25.5, v1.25.4, v1.25.3, v1.25.2, v1.25.1, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, v1.28-alpha.da174ad4.
                 enum:
                 - v1.27.1
                 - v1.27.0
@@ -10014,7 +10023,7 @@ spec:
                 - v1.22.6
                 - v1.22.5
                 - v1.21.6
-                - v1.28-alpha.41429998
+                - v1.28-alpha.da174ad4
                 type: string
             required:
             - namespace
