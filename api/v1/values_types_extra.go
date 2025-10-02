@@ -82,9 +82,6 @@ type ZTunnelConfig struct {
 	// The name of the cluster we are installing in. Note this is a user-defined name, which must be consistent
 	// with Istiod configuration.
 	MultiCluster *MultiClusterConfig `json:"multiCluster,omitempty"`
-	// meshConfig defines runtime configuration of components.
-	// For ztunnel, only defaultConfig is used, but this is nested under `meshConfig` for consistency with other components.
-	MeshConfig *MeshConfig `json:"meshConfig,omitempty"`
 	// This value defines:
 	// 1. how many seconds kube waits for ztunnel pod to gracefully exit before forcibly terminating it (this value)
 	// 2. how many seconds ztunnel waits to drain its own connections (this value - 1 sec)
