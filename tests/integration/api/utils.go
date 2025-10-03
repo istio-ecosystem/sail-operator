@@ -22,6 +22,7 @@ import (
 
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/common/expfmt"
+	"github.com/prometheus/common/model"
 )
 
 const (
@@ -34,7 +35,7 @@ func getReconcileCount(g Gomega, controllerName string) float64 {
 	g.Expect(err).NotTo(HaveOccurred())
 	defer resp.Body.Close()
 
-	parser := expfmt.TextParser{}
+	parser := expfmt.NewTextParser(model.UTF8Validation)
 	metricFamilies, err := parser.TextToMetricFamilies(resp.Body)
 	g.Expect(err).NotTo(HaveOccurred())
 

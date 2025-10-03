@@ -1620,6 +1620,20 @@ const (
 	MeshConfigServiceScopeConfigsScopeGlobal MeshConfigServiceScopeConfigsScope = "GLOBAL"
 )
 
+// Available trace context options for handling different trace header formats.
+// +kubebuilder:validation:Enum=USE_B3;USE_B3_WITH_W3C_PROPAGATION
+type MeshConfigExtensionProviderZipkinTracingProviderTraceContextOption string
+
+const (
+	// Use B3 headers only (default behavior).
+	MeshConfigExtensionProviderZipkinTracingProviderTraceContextOptionUseB3 MeshConfigExtensionProviderZipkinTracingProviderTraceContextOption = "USE_B3"
+	// Enable B3 and W3C dual header support:
+	// - For downstream: Extract from B3 headers first, fallback to W3C traceparent if B3 is unavailable.
+	// - For upstream: Inject both B3 and W3C traceparent headers.
+	// When this option is NOT set, only B3 headers are used for both extraction and injection.
+	MeshConfigExtensionProviderZipkinTracingProviderTraceContextOptionUseB3WithW3cPropagation MeshConfigExtensionProviderZipkinTracingProviderTraceContextOption = "USE_B3_WITH_W3C_PROPAGATION"
+)
+
 // TraceContext selects the context propagation headers used for
 // distributed tracing.
 // +kubebuilder:validation:Enum=UNSPECIFIED;W3C_TRACE_CONTEXT;GRPC_BIN;CLOUD_TRACE_CONTEXT;B3
@@ -2495,6 +2509,10 @@ type MeshConfigExtensionProviderZipkinTracingProvider struct {
 	// Optional. Specifies the endpoint of Zipkin API.
 	// The default value is "/api/v2/spans".
 	Path *string `json:"path,omitempty"`
+	// Optional. Determines which trace context format to use for trace header extraction and propagation.
+	// This controls both downstream request header extraction and upstream request header injection.
+	// The default value is USE_B3 to maintain backward compatibility.
+	TraceContextOption MeshConfigExtensionProviderZipkinTracingProviderTraceContextOption `json:"traceContextOption,omitempty"`
 }
 
 // Defines configuration for a Lightstep tracer.
@@ -3065,7 +3083,7 @@ type MeshConfigExtensionProviderResourceDetectorsDynatraceResourceDetector struc
 
 const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\n" +
-	"\x1amesh/v1alpha1/config.proto\x12\x13istio.mesh.v1alpha1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19mesh/v1alpha1/proxy.proto\x1a*networking/v1alpha3/destination_rule.proto\x1a)networking/v1alpha3/virtual_service.proto\"\xa5m\n" +
+	"\x1amesh/v1alpha1/config.proto\x12\x13istio.mesh.v1alpha1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19mesh/v1alpha1/proxy.proto\x1a*networking/v1alpha3/destination_rule.proto\x1a)networking/v1alpha3/virtual_service.proto\"\xf7n\n" +
 	"\n" +
 	"MeshConfig\x12*\n" +
 	"\x11proxy_listen_port\x18\x04 \x01(\x05R\x0fproxyListenPort\x129\n" +
@@ -3148,7 +3166,7 @@ const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\ftls_settings\x18\x02 \x01(\v2,.istio.networking.v1alpha3.ClientTLSSettingsR\vtlsSettings\x12B\n" +
 	"\x0frequest_timeout\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\x0erequestTimeout\x12\x1f\n" +
 	"\vistiod_side\x18\x04 \x01(\bR\n" +
-	"istiodSide\x1a\xf0>\n" +
+	"istiodSide\x1a\xc2@\n" +
 	"\x11ExtensionProvider\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x8b\x01\n" +
 	"\x14envoy_ext_authz_http\x18\x02 \x01(\v2X.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyExternalAuthorizationHttpProviderH\x00R\x11envoyExtAuthzHttp\x12\x8b\x01\n" +
@@ -3204,13 +3222,18 @@ const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\tfail_open\x18\x03 \x01(\bR\bfailOpen\x12*\n" +
 	"\x11clear_route_cache\x18\a \x01(\bR\x0fclearRouteCache\x12&\n" +
 	"\x0fstatus_on_error\x18\x04 \x01(\tR\rstatusOnError\x12\x99\x01\n" +
-	"\x1dinclude_request_body_in_check\x18\x06 \x01(\v2W.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyExternalAuthorizationRequestBodyR\x19includeRequestBodyInCheck\x1a\xb2\x01\n" +
+	"\x1dinclude_request_body_in_check\x18\x06 \x01(\v2W.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyExternalAuthorizationRequestBodyR\x19includeRequestBodyInCheck\x1a\x84\x03\n" +
 	"\x15ZipkinTracingProvider\x12\x18\n" +
 	"\aservice\x18\x01 \x01(\tR\aservice\x12\x12\n" +
 	"\x04port\x18\x02 \x01(\rR\x04port\x12$\n" +
 	"\x0emax_tag_length\x18\x03 \x01(\rR\fmaxTagLength\x121\n" +
 	"\x15enable_64bit_trace_id\x18\x04 \x01(\bR\x12enable64bitTraceId\x12\x12\n" +
-	"\x04path\x18\x05 \x01(\tR\x04path\x1a\x91\x01\n" +
+	"\x04path\x18\x05 \x01(\tR\x04path\x12\x8c\x01\n" +
+	"\x14trace_context_option\x18\x06 \x01(\x0e2Z.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.ZipkinTracingProvider.TraceContextOptionR\x12traceContextOption\"A\n" +
+	"\x12TraceContextOption\x12\n" +
+	"\n" +
+	"\x06USE_B3\x10\x00\x12\x1f\n" +
+	"\x1bUSE_B3_WITH_W3C_PROPAGATION\x10\x01\x1a\x91\x01\n" +
 	"\x18LightstepTracingProvider\x12\x18\n" +
 	"\aservice\x18\x01 \x01(\tR\aservice\x12\x12\n" +
 	"\x04port\x18\x02 \x01(\rR\x04port\x12!\n" +
