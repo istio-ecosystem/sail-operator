@@ -332,6 +332,9 @@ When an Istio release is out of support, the corresponding Sail Operator release
 ## Community Support and Contributing
 Please refer to the [CONTRIBUTING-SAIL-PROJECT.md](CONTRIBUTING.md) file for more information on how to contribute to the Sail Operator project. This file contains all the information you need to get started with contributing to the project.
 
+## AI Agents for Development
+If you're using AI coding assistants like Claude, GitHub Copilot, or Cursor, check out our [AI Agents Guide](docs/ai/ai-agents-guide.adoc) for information on how to configure these tools to understand Sail Operator patterns and best practices.
+
 ## Sail Enhancement Proposal
 
 SEP documents are used to propose and discuss non-trivial features or epics and any API changes. Please refer to the [SEP1-enhancement-process.md](enhancements/SEP1-enhancement-process.md) file for more information on how to create a Sail Enhancement Proposal (SEP) for the Sail Operator project.

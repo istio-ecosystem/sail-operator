@@ -316,3 +316,7 @@ The Sail Operator uses InUse detection to determine whether an object is referen
 == API Reference documentation
 
 The Sail Operator API reference documentation can be found link:api-reference/sailoperator.io.adoc#api-reference[here].
+
+== AI Agents Guide
+
+For developers using AI coding assistants (Claude, GitHub Copilot, Cursor, etc.), see the link:ai/ai-agents-guide.adoc[AI Agents Guide] for information on how to configure and use the Sail Operator's AI agent context files.
