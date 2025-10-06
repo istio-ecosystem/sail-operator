@@ -9,10 +9,14 @@ metadata:
     app.kubernetes.io/name: deployment
     app.kubernetes.io/part-of: {{ .Values.name }}
     control-plane: {{ .Values.deployment.name }}
+    {{- with .Values.deployment.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
   name: {{ .Values.deployment.name }}
   namespace: {{ .Release.Namespace }}
 spec:
   replicas: 1
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
   selector:
     matchLabels:
       app.kubernetes.io/created-by: {{ .Values.name }}
@@ -30,6 +34,9 @@ spec:
         app.kubernetes.io/created-by: {{ .Values.name }}
         app.kubernetes.io/part-of: {{ .Values.name }}
         control-plane: {{ .Values.deployment.name }}
+        {{- with (.Values.pod).labels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
       affinity:
         nodeAffinity:
@@ -47,8 +54,19 @@ spec:
                 operator: In
                 values:
                 - linux
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      {{- end }}
       {{- with .Values.tolerations }}
       tolerations:
+        {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
         {{- toYaml . | nindent 6 }}
       {{- end }}
       containers:
@@ -56,8 +74,15 @@ spec:
         - --health-probe-bind-address=:8081
         - --metrics-bind-address=:8443
         - --zap-log-level={{ .Values.operatorLogLevel }}
+        {{- with .Values.operator.extraArgs }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
+        {{- end }}
         command:
         - /sail-operator
+        {{- with .Values.operator.env }}
+        env:
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
         image: {{ .Values.image }}
 {{- if .Values.imagePullPolicy }}
         imagePullPolicy: {{ .Values.imagePullPolicy }}

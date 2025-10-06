@@ -729,6 +729,7 @@ spec:
           name: sail-operator
           spec:
             replicas: 1
+            revisionHistoryLimit: 10
             selector:
               matchLabels:
                 app.kubernetes.io/created-by: sailoperator
