@@ -316,7 +316,8 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// cluster-scoped resources
 		Watches(&rbacv1.ClusterRole{}, ownedResourceHandler).
 		Watches(&rbacv1.ClusterRoleBinding{}, ownedResourceHandler).
-		Watches(&admissionv1.MutatingWebhookConfiguration{}, ownedResourceHandler).
+		// TODO: this is a temporary hack until we implement the correct solution to ignore specific fields in the resource.
+		Watches(&admissionv1.MutatingWebhookConfiguration{}, ownedResourceHandler, builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
 		Watches(&admissionv1.ValidatingWebhookConfiguration{}, ownedResourceHandler, builder.WithPredicates(validatingWebhookConfigPredicate())).
 
 		// +lint-watches:ignore: IstioCNI (not found in charts, but this controller needs to watch it to update the IstioRevision status)

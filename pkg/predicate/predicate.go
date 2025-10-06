@@ -25,3 +25,18 @@ func IgnoreUpdate() predicate.Funcs {
 		UpdateFunc: func(e event.UpdateEvent) bool { return false },
 	}
 }
+
+// IgnoreUpdateWhenAnnotation returns a predicate that ignores update events
+// when the sailoperator.io/ignore annotation is set to "true" on the resource.
+// TODO: this is a temporary hack until we implement the correct solution to ignore specific fields in the resource.
+func IgnoreUpdateWhenAnnotation() predicate.Funcs {
+	return predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			if e.ObjectOld == nil || e.ObjectNew == nil {
+				return false
+			}
+
+			return e.ObjectNew.GetAnnotations()["sailoperator.io/ignore"] != "true"
+		},
+	}
+}
