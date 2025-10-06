@@ -1298,7 +1298,6 @@ MeshConfig defines mesh-wide settings for the Istio service mesh.
 
 _Appears in:_
 - [Values](#values)
-- [ZTunnelConfig](#ztunnelconfig)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -3270,7 +3269,6 @@ _Appears in:_
 | `env` _object (keys:string, values:string)_ | A `key: value` mapping of environment variables to add to the pod |  |  |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#pullpolicy-v1-core)_ | Specifies the image pull policy for the Istio images. one of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.  More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |  | Enum: [Always Never IfNotPresent]   |
 | `multiCluster` _[MultiClusterConfig](#multiclusterconfig)_ | Settings for multicluster. The name of the cluster we are installing in. Note this is a user-defined name, which must be consistent with Istiod configuration. |  |  |
-| `meshConfig` _[MeshConfig](#meshconfig)_ | meshConfig defines runtime configuration of components. For ztunnel, only defaultConfig is used, but this is nested under `meshConfig` for consistency with other components. |  |  |
 | `terminationGracePeriodSeconds` _integer_ | This value defines: 1. how many seconds kube waits for ztunnel pod to gracefully exit before forcibly terminating it (this value) 2. how many seconds ztunnel waits to drain its own connections (this value - 1 sec) | 30 | Minimum: 0   |
 | `revision` _string_ | Configures the revision this control plane is a part of |  |  |
 | `caAddress` _string_ | The address of the CA for CSR. |  |  |
