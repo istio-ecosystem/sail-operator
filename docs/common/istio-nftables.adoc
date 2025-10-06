@@ -222,7 +222,7 @@ https://github.com/istio/istio/tree/master/tools/istio-nftables/pkg#debugging-gu
 ==== Upgrade
 
 The migration from iptables backend to nftables backend can be done by upgrading `+Istio+` and `+IstioCNI+` resources. 
-Because the CNI component runs as a cluster singleton, it is recommended to operate and upgrade the CNI component seperately from the Istio control plane.
+Because the CNI component runs as a cluster singleton, it is recommended to operate and upgrade the CNI component separately from the Istio control plane.
 
 ===== Upgrade with Sail Operator on OpenShift
 
