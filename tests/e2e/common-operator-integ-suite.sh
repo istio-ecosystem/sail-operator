@@ -183,11 +183,31 @@ await_operator() {
   "${COMMAND}" wait --for=condition=available deployment/"${DEPLOYMENT_NAME}" -n "${NAMESPACE}" --timeout=5m
 }
 
+# shellcheck disable=SC2329,SC2317  # Function is invoked indirectly via trap
 uninstall_operator() {
   echo "Uninstalling sail-operator (KUBECONFIG=${KUBECONFIG})"
   helm uninstall sail-operator --namespace "${NAMESPACE}"
   "${COMMAND}" delete namespace "${NAMESPACE}"
 }
+
+# Ensure cleanup always runs and that the original test exit code is preserved
+# shellcheck disable=SC2329,SC2317  # Function is invoked indirectly via trap
+cleanup() {
+  # Do not let cleanup errors affect the final exit code
+  set +e
+  if [ "${OLM}" != "true" ] && [ "${SKIP_DEPLOY}" != "true" ]; then
+    if [ "${MULTICLUSTER}" == true ]; then
+      KUBECONFIG="${KUBECONFIG}" uninstall_operator || true
+      # shellcheck disable=SC2153  # KUBECONFIG2 is set by multicluster setup scripts
+      KUBECONFIG="${KUBECONFIG2}" uninstall_operator || true
+    else
+      uninstall_operator || true
+    fi
+  fi
+  echo "JUnit report: ${ARTIFACTS}/report.xml"
+}
+
+trap cleanup EXIT INT TERM
 
 # Main script flow
 check_arguments "$@"
@@ -272,24 +292,13 @@ fi
 check_cluster_operators
 
 set +e
-# Disable to avoid fail the test run and not generate the report.xml
-# We need to catch the exit code to be able to generate the report
+# Disable to avoid failing the test run before generating the report.xml
+# Capture the test exit code and allow cleanup via trap to run
 # shellcheck disable=SC2086
 IMAGE="${HUB}/${IMAGE_BASE}:${TAG}" \
 go run github.com/onsi/ginkgo/v2/ginkgo -tags e2e \
 --timeout 60m --junit-report="${ARTIFACTS}/report.xml" ${GINKGO_FLAGS:-} "${WD}"/...
 TEST_EXIT_CODE=$?
-set -e
-
-if [ "${OLM}" != "true" ] && [ "${SKIP_DEPLOY}" != "true" ]; then
-  if [ "${MULTICLUSTER}" == true ]; then
-    KUBECONFIG="${KUBECONFIG}" uninstall_operator
-    KUBECONFIG="${KUBECONFIG2}" uninstall_operator
-  else
-    uninstall_operator
-  fi
-fi
-
 
 echo "JUnit report: ${ARTIFACTS}/report.xml"
 exit ${TEST_EXIT_CODE}
