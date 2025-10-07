@@ -42,6 +42,10 @@ type ZTunnelSpec struct {
 	// Defines the values to be passed to the Helm charts when installing Istio ztunnel.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Helm Values"
 	Values *ZTunnelValues `json:"values,omitempty"`
+
+	// The Istio control plane that this ZTunnel instance is associated with. Valid references are Istio and IstioRevision resources, Istio resources are always resolved to their current active revision.
+	// Values relevant for ZTunnel will be copied from the referenced IstioRevision resource, these are `spec.values.global`, `spec.values.meshConfig`, `spec.values.revision`. Any user configuration in the ZTunnel spec will always take precedence over the settings copied from the Istio resource, however.
+	TargetRef *TargetReference `json:"targetRef,omitempty"`
 }
 
 // ZTunnelStatus defines the observed state of ZTunnel
@@ -57,6 +61,9 @@ type ZTunnelStatus struct {
 
 	// Reports the current state of the object.
 	State ZTunnelConditionReason `json:"state,omitempty"`
+
+	// IstioRevision stores the name of the referenced IstioRevision
+	IstioRevision string `json:"istioRevision,omitempty"`
 }
 
 // GetCondition returns the condition of the specified type
@@ -163,6 +170,7 @@ const (
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].status",description="Whether the Istio ztunnel installation is ready to handle requests."
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.state",description="The current state of this object."
 // +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".spec.version",description="The version of the Istio ztunnel installation."
+// +kubebuilder:printcolumn:name="Revision",type="string",JSONPath=".status.istioRevision",description="The referenced IstioRevision."
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",description="The age of the object"
 // +kubebuilder:validation:XValidation:rule="self.metadata.name == 'default'",message="metadata.name must be 'default'"
 
