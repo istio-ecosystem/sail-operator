@@ -533,9 +533,15 @@ func TestDetermineStatus(t *testing.T) {
 	tests := []struct {
 		name         string
 		reconcileErr error
+		rev          *v1.IstioRevision
 	}{
 		{
-			name:         "no error",
+			name: "no error",
+			rev: &v1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+			},
 			reconcileErr: nil,
 		},
 		{
@@ -559,7 +565,7 @@ func TestDetermineStatus(t *testing.T) {
 				},
 			}
 
-			status, err := r.determineStatus(ctx, ztunnel, tt.reconcileErr)
+			status, err := r.determineStatus(ctx, ztunnel, tt.rev, tt.reconcileErr)
 			g.Expect(err).ToNot(HaveOccurred())
 
 			g.Expect(status.ObservedGeneration).To(Equal(ztunnel.Generation))
@@ -571,6 +577,9 @@ func TestDetermineStatus(t *testing.T) {
 			g.Expect(status.State).To(Equal(deriveState(reconciledCondition, readyCondition)))
 			g.Expect(normalize(status.GetCondition(v1alpha1.ZTunnelConditionReconciled))).To(Equal(normalize(reconciledCondition)))
 			g.Expect(normalize(status.GetCondition(v1alpha1.ZTunnelConditionReady))).To(Equal(normalize(readyCondition)))
+			if tt.rev != nil {
+				g.Expect(status.IstioRevision).To(Equal(tt.rev.Name))
+			}
 		})
 	}
 }

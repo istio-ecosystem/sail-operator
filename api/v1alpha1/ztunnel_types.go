@@ -53,6 +53,10 @@ type ZTunnelSpec struct {
 	// Defines the values to be passed to the Helm charts when installing Istio ztunnel.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Helm Values"
 	Values *v1.ZTunnelValues `json:"values,omitempty"`
+
+	// The Istio control plane that this ZTunnel instance is associated with. Valid references are Istio and IstioRevision resources, Istio resources are always resolved to their current active revision.
+	// Values relevant for ZTunnel will be copied from the referenced IstioRevision resource, these are `spec.values.global`, `spec.values.meshConfig`, `spec.values.revision`. Any user configuration in the ZTunnel spec will always take precedence over the settings copied from the Istio resource, however.
+	TargetRef *v1.TargetReference `json:"targetRef,omitempty"`
 }
 
 // ZTunnelStatus defines the observed state of ZTunnel
@@ -68,6 +72,9 @@ type ZTunnelStatus struct {
 
 	// Reports the current state of the object.
 	State ZTunnelConditionReason `json:"state,omitempty"`
+
+	// IstioRevision stores the name of the referenced IstioRevision
+	IstioRevision string `json:"istioRevision,omitempty"`
 }
 
 // GetCondition returns the condition of the specified type
