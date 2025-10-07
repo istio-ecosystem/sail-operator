@@ -539,9 +539,15 @@ func TestDetermineStatus(t *testing.T) {
 	tests := []struct {
 		name         string
 		reconcileErr error
+		rev          *v1.IstioRevision
 	}{
 		{
-			name:         "no error",
+			name: "no error",
+			rev: &v1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+			},
 			reconcileErr: nil,
 		},
 		{
@@ -565,7 +571,7 @@ func TestDetermineStatus(t *testing.T) {
 				},
 			}
 
-			status, err := r.determineStatus(ctx, ztunnel, tt.reconcileErr)
+			status, err := r.determineStatus(ctx, ztunnel, tt.rev, tt.reconcileErr)
 			g.Expect(err).ToNot(HaveOccurred())
 
 			g.Expect(status.ObservedGeneration).To(Equal(ztunnel.Generation))
@@ -577,6 +583,66 @@ func TestDetermineStatus(t *testing.T) {
 			g.Expect(status.State).To(Equal(deriveState(reconciledCondition, readyCondition)))
 			g.Expect(normalize(status.GetCondition(v1.ZTunnelConditionReconciled))).To(Equal(normalize(reconciledCondition)))
 			g.Expect(normalize(status.GetCondition(v1.ZTunnelConditionReady))).To(Equal(normalize(readyCondition)))
+			if tt.rev != nil {
+				g.Expect(status.IstioRevision).To(Equal(tt.rev.Name))
+			}
+		})
+	}
+}
+
+func TestValidateTargetRef(t *testing.T) {
+	cfg := newReconcilerTestConfig(t)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	r := NewReconciler(cfg, cl, scheme.Scheme, nil)
+
+	testCases := []struct {
+		name      string
+		ref       *v1.TargetReference
+		expectErr string
+	}{
+		{
+			name: "valid Istio reference",
+			ref: &v1.TargetReference{
+				Kind: v1.IstioKind,
+				Name: "default",
+			},
+			expectErr: "",
+		},
+		{
+			name: "valid IstioRevision reference",
+			ref: &v1.TargetReference{
+				Kind: v1.IstioRevisionKind,
+				Name: "default",
+			},
+			expectErr: "",
+		},
+		{
+			name: "invalid kind",
+			ref: &v1.TargetReference{
+				Kind: "InvalidKind",
+				Name: "test",
+			},
+			expectErr: "spec.targetRef.kind must be either",
+		},
+		{
+			name: "empty name",
+			ref: &v1.TargetReference{
+				Kind: v1.IstioKind,
+				Name: "",
+			},
+			expectErr: "spec.targetRef.name must not be empty",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			err := r.validateTargetRef(tc.ref)
+			if tc.expectErr == "" {
+				g.Expect(err).ToNot(HaveOccurred())
+			} else {
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(err.Error()).To(ContainSubstring(tc.expectErr))
+			}
 		})
 	}
 }
