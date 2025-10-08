@@ -284,10 +284,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&v1.IstioRevision{}, mainObjectHandler).
 		Named("istiorevision").
 
-		// We use predicate.IgnoreUpdateWhenAnnotation() so that we skip the reconciliation
-		// when the sailoperator.io/ignore annotation is set to "true" on the resource.
-		// TODO: this is a temporary hack until we implement the correct solution to ignore specific fields in the resource.
-
 		// namespaced resources
 		Watches(&corev1.ConfigMap{}, ownedResourceHandler, builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
 		// We don't ignore the status for Deployments because we use it to calculate the IstioRevision status
