@@ -57,12 +57,12 @@ kubectl create namespace istio-cni
 [source,sh]
 ----
 cat <<EOF | kubectl apply -f-
-kind: IstioCNI
 apiVersion: sailoperator.io/v1
+kind: IstioCNI
 metadata:
   name: default
 spec:
-  version: master
+  version: v1.27.1
   namespace: istio-cni
   values:
     global:
@@ -82,7 +82,7 @@ kind: Istio
 metadata:
   name: default
 spec:
-  version: master
+  version: v1.27.1
   namespace: istio-system
   values:
     global:
@@ -116,7 +116,7 @@ kind: IstioCNI
 metadata:
   name: default
 spec:
-  version: master
+  version: v1.27.2
   namespace: istio-cni
   profile: ambient
   values:
@@ -136,7 +136,7 @@ kind: Istio
 metadata:
   name: default
 spec:
-  version: master
+  version: v1.27.2
   namespace: istio-system
   profile: ambient
   values:
@@ -158,7 +158,7 @@ kind: ZTunnel
 metadata:
   name: default
 spec:
-  version: master
+  version: v1.27.2
   namespace: ztunnel
   profile: ambient
 EOF
@@ -223,6 +223,8 @@ https://github.com/istio/istio/tree/master/tools/istio-nftables/pkg#debugging-gu
 
 The migration from iptables backend to nftables backend can be done by upgrading `+Istio+` and `+IstioCNI+` resources. 
 Because the CNI component runs as a cluster singleton, it is recommended to operate and upgrade the CNI component separately from the Istio control plane.
+
+When using Sail Operator, the upgraded `IstioCNI` and `Istio` resources `spec.version` value need to be different from the prior instances. Otherwise, the appended `spec.values` will not be configured.
 
 ===== Upgrade with Sail Operator on OpenShift
 
@@ -312,10 +314,20 @@ spec:
   version: master
   profile: ambient
   values:
+    pilot:
+      trustedZtunnelNamespace: ztunnel
     global:
       nativeNftables: true
 EOF
 ----
 
-You don’t need to restart deployments in the data place namespace `+test-ns+`. Check the `+ZTunnel+` DaemonSet pods and verify there is no error. 
-And then you can follow same steps in the link:#validation[Validation] section to validate traffic redirection is working.
+[arabic, start=3]
+. Update the data plane namespace `+test-ns+` by restarting all deployments so that new rules can be applied. For example,
+
+[source,sh]
+----
+kubectl rollout restart deployment -n test-ns
+----
+
+[arabic, start=4]
+. You can follow same steps in the link:#validation[Validation] section to validate traffic redirection is working.
