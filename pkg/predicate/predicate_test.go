@@ -33,6 +33,38 @@ func TestIgnoreUpdate(t *testing.T) {
 
 func TestIgnoreUpdateWhenAnnotation(t *testing.T) {
 	predicate := IgnoreUpdateWhenAnnotation()
+	// Object does not contain sailoperator.io/ignore annotation
+	// so reconciliation should be done and both objects should be equal
+	assert.Equal(t, true, predicate.Update(event.UpdateEvent{
+		ObjectOld: &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{},
+		},
+		ObjectNew: &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{},
+			Data: map[string]string{
+				"foo": "bar",
+			},
+		},
+	}))
+	// Object has sailoperator.io/ignore annotation set with wrong value
+	// so reconciliation should be done and both objects should be equal
+	assert.Equal(t, true, predicate.Update(event.UpdateEvent{
+		ObjectOld: &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{},
+		},
+		ObjectNew: &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					"sailoperator.io/ignore": "wrongvalue",
+				},
+			},
+			Data: map[string]string{
+				"foo": "bar",
+			},
+		},
+	}))
+	// Object has sailoperator.io/ignore annotation set to "true"
+	// so reconciliation should be skipped
 	assert.Equal(t, false, predicate.Update(event.UpdateEvent{
 		ObjectOld: &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{},
