@@ -238,6 +238,12 @@ spec:
                         description: 'A `key: value` mapping of environment variables
                           to add to the pod'
                         type: object
+                      global:
+                        description: We keep the global namespace around for backward-compatibility
+                        properties:
+                          network:
+                            type: string
+                        type: object
                       hub:
                         description: Hub to pull the container image from. Image will
                           be `Hub/Image:Tag-Variant`.
@@ -326,6 +332,19 @@ spec:
                           resourceName, if set, will override the naming of resources. If not set, will default to the release name.
                           It is recommended to not set this; this is primarily for backwards compatibility.
                         type: string
+                      resourceQuotas:
+                        description: The resource quotas configuration for ztunnel
+                        properties:
+                          enabled:
+                            description: Controls whether to create resource quotas
+                              or not for the CNI DaemonSet.
+                            type: boolean
+                          pods:
+                            description: The hard limit on the number of pods in the
+                              namespace where the CNI DaemonSet is deployed.
+                            format: int64
+                            type: integer
+                        type: object
                       resources:
                         description: The k8s resource requests and limits for the
                           ztunnel Pods.
@@ -390,6 +409,26 @@ spec:
                         description: Configures the revision this control plane is
                           a part of
                         type: string
+                      seLinuxOptions:
+                        description: Set seLinux options for the ztunnel pod
+                        properties:
+                          level:
+                            description: Level is SELinux level label that applies
+                              to the container.
+                            type: string
+                          role:
+                            description: Role is a SELinux role label that applies
+                              to the container.
+                            type: string
+                          type:
+                            description: Type is a SELinux type label that applies
+                              to the container.
+                            type: string
+                          user:
+                            description: User is a SELinux user label that applies
+                              to the container.
+                            type: string
+                        type: object
                       tag:
                         description: The container image tag to pull. Image will be
                           `Hub/Image:Tag-Variant`.
@@ -403,6 +442,86 @@ spec:
                         format: int64
                         minimum: 0
                         type: integer
+                      tolerations:
+                        description: Tolerations for the ztunnel pod
+                        items:
+                          description: |-
+                            The pod this Toleration is attached to tolerates any taint that matches
+                            the triple <key,value,effect> using the matching operator <operator>.
+                          properties:
+                            effect:
+                              description: |-
+                                Effect indicates the taint effect to match. Empty means match all taint effects.
+                                When specified, allowed values are NoSchedule, PreferNoSchedule and NoExecute.
+                              type: string
+                            key:
+                              description: |-
+                                Key is the taint key that the toleration applies to. Empty means match all taint keys.
+                                If the key is empty, operator must be Exists; this combination means to match all values and all keys.
+                              type: string
+                            operator:
+                              description: |-
+                                Operator represents a key's relationship to the value.
+                                Valid operators are Exists and Equal. Defaults to Equal.
+                                Exists is equivalent to wildcard for value, so that a pod can
+                                tolerate all taints of a particular category.
+                              type: string
+                            tolerationSeconds:
+                              description: |-
+                                TolerationSeconds represents the period of time the toleration (which must be
+                                of effect NoExecute, otherwise this field is ignored) tolerates the taint. By default,
+                                it is not set, which means tolerate the taint forever (do not evict). Zero and
+                                negative values will be treated as 0 (evict immediately) by the system.
+                              format: int64
+                              type: integer
+                            value:
+                              description: |-
+                                Value is the taint value the toleration matches to.
+                                If the operator is Exists, the value should be empty, otherwise just a regular string.
+                              type: string
+                          type: object
+                        type: array
+                      updateStrategy:
+                        default:
+                          type: InPlace
+                        description: Defines the update strategy to use when the version
+                          in the Ztunnel CR is updated.
+                        properties:
+                          inactiveRevisionDeletionGracePeriodSeconds:
+                            description: |-
+                              Defines how many seconds the operator should wait before removing a non-active revision after all
+                              the workloads have stopped using it. You may want to set this value on the order of minutes.
+                              The minimum is 0 and the default value is 30.
+                            format: int64
+                            minimum: 0
+                            type: integer
+                          type:
+                            default: InPlace
+                            description: "Type of strategy to use. Can be \"InPlace\"
+                              or \"RevisionBased\". When the \"InPlace\" strategy\nis
+                              used, the existing Istio control plane is updated in-place.
+                              The workloads therefore\ndon't need to be moved from
+                              one control plane instance to another. When the \"RevisionBased\"\nstrategy
+                              is used, a new Istio control plane instance is created
+                              for every change to the\nIstio.spec.version field. The
+                              old control plane remains in place until all workloads
+                              have\nbeen moved to the new control plane instance.\n\nThe
+                              \"InPlace\" strategy is the default.\tTODO: change default
+                              to \"RevisionBased\""
+                            enum:
+                            - InPlace
+                            - RevisionBased
+                            type: string
+                          updateWorkloads:
+                            description: |-
+                              Defines whether the workloads should be moved from one control plane instance to another
+                              automatically. If updateWorkloads is true, the operator moves the workloads from the old
+                              control plane instance to the new one after the new control plane is ready.
+                              If updateWorkloads is false, the user must move the workloads manually by updating the
+                              istio.io/rev labels on the namespace and/or the pods.
+                              Defaults to false.
+                            type: boolean
+                        type: object
                       variant:
                         description: The container image variant to pull. Options
                           are "debug" or "distroless". Unset will use the default
