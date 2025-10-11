@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
+	operrors "github.com/istio-ecosystem/sail-operator/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,12 +32,12 @@ func ValidateTargetNamespace(ctx context.Context, cl client.Client, namespace st
 	ns := &corev1.Namespace{}
 	if err := cl.Get(ctx, types.NamespacedName{Name: namespace}, ns); err != nil {
 		if apierrors.IsNotFound(err) {
-			return reconciler.NewValidationError(fmt.Sprintf("namespace %q doesn't exist", namespace))
+			return operrors.NewValidationError(fmt.Sprintf("namespace %q doesn't exist", namespace))
 		}
 		return fmt.Errorf("get failed: %w", err)
 	}
 	if ns.DeletionTimestamp != nil {
-		return reconciler.NewValidationError(fmt.Sprintf("namespace %q is being deleted", namespace))
+		return operrors.NewValidationError(fmt.Sprintf("namespace %q is being deleted", namespace))
 	}
 	return nil
 }
