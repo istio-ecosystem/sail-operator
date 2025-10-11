@@ -1,0 +1,176 @@
+= AI Agents Guide for Sail Operator
+:toc:
+:toc-placement!:
+
+This guide explains how to use the Sail Operator's AI agent configuration files with popular AI coding assistants and tools.
+
+toc::[]
+
+== Overview
+
+The Sail Operator includes comprehensive AI agent configuration files located in `.github/ai_agents/` to help AI coding assistants understand the project structure, patterns, and best practices. These files provide context for better code suggestions, debugging help, and development guidance.
+
+== File Structure
+
+----
+.github/ai_agents/
+├── AGENTS.md                           # Main entry point with project overview
+├── domain_knowledge_prompt.md          # Template for creating new domain knowledge
+└── knowledge/
+    ├── domain-knowledge-api-types.md           # Custom Resource Definitions
+    ├── domain-knowledge-controllers.md         # Controller patterns
+    ├── domain-knowledge-helm-integration.md    # Helm chart integration
+    ├── domain-knowledge-testing-framework.md   # Testing methodologies
+    └── domain-knowledge-version-management.md  # Version compatibility
+----
+
+== Using with Different AI Tools
+
+=== Claude (Anthropic)
+
+==== Claude Code (Official CLI)
+Claude Code automatically detects and uses the AGENTS.md file:
+
+1. **Automatic Detection**: Claude Code will automatically find and use `.github/ai_agents/AGENTS.md`
+2. **Domain Knowledge**: References to domain knowledge files are automatically followed
+3. **Context Awareness**: The AI understands Sail Operator patterns and conventions
+
+==== Claude Web/API
+For Claude web interface or API usage:
+
+1. **Upload Main File**: Share the contents of `.github/ai_agents/AGENTS.md`
+2. **Reference Domain Knowledge**: When working on specific areas, also share relevant domain knowledge files:
+   ```
+   For API work: share domain-knowledge-api-types.md
+   For controller development: share domain-knowledge-controllers.md
+   For testing: share domain-knowledge-testing-framework.md
+   ```
+3. **Project Context**: Start conversations with: "I'm working on the Sail Operator project. Please refer to the AGENTS.md file I've shared for context."
+
+=== GitHub Copilot
+
+==== GitHub Copilot (VS Code/IDEs)
+GitHub Copilot automatically uses files in the `.github/` directory:
+
+1. **Automatic Context**: Copilot reads `.github/ai_agents/AGENTS.md` automatically
+2. **Enhanced Suggestions**: Code suggestions will be informed by Sail Operator patterns
+3. **Domain Knowledge**: Place cursor in relevant files and Copilot will use appropriate domain knowledge
+
+==== GitHub Copilot Chat
+For chat interactions:
+
+1. **Reference Files**: Use `@workspace` to reference the entire project context
+2. **Specific Knowledge**: Ask "Based on the Sail Operator AGENTS.md, how should I..."
+3. **Domain-Specific Questions**: Reference specific domain knowledge files: "According to the controllers domain knowledge..."
+
+=== Cursor
+
+==== Adding Context Files
+Cursor allows uploading files directly:
+
+1. **Add AGENTS.md**:
+   - Open Cursor settings
+   - Go to "Context Files"
+   - Add `.github/ai_agents/AGENTS.md`
+
+2. **Add Domain Knowledge**:
+   - Add relevant domain knowledge files from `.github/ai_agents/knowledge/`
+   - Recommended: Add all domain knowledge files for comprehensive coverage
+
+3. **Reference in Chat**:
+   ```
+   "I'm working on Sail Operator. Use the AGENTS.md and domain knowledge files for context."
+   ```
+
+==== Using @-mentions
+Reference the files directly in chat:
+
+----
+@AGENTS.md How should I implement a new controller?
+@domain-knowledge-controllers.md What's the reconciliation pattern?
+----
+
+== Best Practices
+
+=== For Developers
+
+1. **Start with AGENTS.md**: Always begin by sharing or referencing the main AGENTS.md file
+2. **Layer Context**: Add domain-specific knowledge files as needed for your task
+3. **Reference Platform**: Mention if you're on macOS/Podman for platform-specific guidance
+4. **Specify Goals**: Be clear about what you're trying to accomplish
+
+Example prompt:
+----
+I'm working on the Sail Operator project (context in AGENTS.md). I need to add a new field to the Istio CRD and update the controller. I'm developing on macOS with Podman. What's the proper approach following our patterns?
+----
+
+=== For AI Tools Configuration
+
+1. **Automatic Tools**: GitHub Copilot and Claude Code work automatically
+2. **Manual Tools**: Upload/reference AGENTS.md and relevant domain knowledge files
+3. **Regular Updates**: Keep AI tools updated with latest versions of these files
+4. **Specific Context**: Use domain knowledge files for focused work
+
+=== Platform-Specific Notes
+
+==== macOS Development
+When working on macOS, mention:
+- Using Podman instead of Docker
+- ARM64 vs AMD64 architecture considerations
+- Reference to `docs/macos/develop-on-macos.adoc`
+
+==== Testing Context
+For testing-related work:
+- Share `domain-knowledge-testing-framework.md`
+- Mention test type (unit/integration/e2e)
+- Specify target platform (KIND/OpenShift)
+
+==== Version Management
+For version-related work:
+- Share `domain-knowledge-version-management.md`
+- Specify Istio version compatibility concerns
+- Mention upgrade scenarios if relevant
+
+== Troubleshooting AI Interactions
+
+=== Common Issues
+
+1. **AI doesn't understand Sail Operator patterns**
+   - Solution: Ensure AGENTS.md is properly shared/referenced
+   - Verify the AI tool has access to the `.github/ai_agents/` directory
+
+2. **Suggestions don't follow project conventions**
+   - Solution: Reference specific domain knowledge files
+   - Explicitly mention: "Follow the patterns described in the AGENTS.md"
+
+3. **Platform-specific issues not addressed**
+   - Solution: Mention your platform (macOS/Podman) explicitly
+   - Reference `docs/macos/develop-on-macos.adoc` for macOS users
+
+4. **Test suggestions don't match framework**
+   - Solution: Share `domain-knowledge-testing-framework.md`
+   - Specify test type and framework (Ginkgo/Gomega)
+
+=== Getting Better Results
+
+1. **Be Specific**: "Following Sail Operator controller patterns in AGENTS.md..."
+2. **Reference Context**: "According to the domain knowledge for..."
+3. **Mention Platform**: "I'm on macOS with Podman..."
+4. **Specify Goals**: "I need to implement a controller that..."
+
+== Contributing to AI Agent Configuration
+
+If you find gaps in the AI agent configuration or want to improve it:
+
+1. **Follow the Template**: Use `.github/ai_agents/domain_knowledge_prompt.md`
+2. **Update Existing Files**: Keep domain knowledge files current
+3. **Add New Domains**: Create new domain knowledge files for new areas
+4. **Test with AI Tools**: Verify your changes work with different AI assistants
+
+For detailed guidelines, see link:.github/ai_agents/domain_knowledge_prompt.md[Domain Knowledge Creation Guide].
+
+== Conclusion
+
+The Sail Operator's AI agent configuration provides comprehensive context for AI coding assistants. By properly configuring and using these files, you'll get better code suggestions, more accurate debugging help, and guidance that follows project patterns and best practices.
+
+For platform-specific development guidance, especially macOS with Podman, see link:../macos/develop-on-macos.adoc[macOS Development Guide].
