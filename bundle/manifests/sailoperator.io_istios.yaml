@@ -1186,6 +1186,16 @@ spec:
                         description: Specifies the Istio control plane’s pilot Pod
                           IP address or remote cluster DNS resolvable hostname.
                         type: string
+                      resourceScope:
+                        description: |-
+                          Specifies resource scope for discovery selectors.
+                          This is useful when installing Istio on a cluster where some resources need to be owned by a cluster administrator and some can be owned by the mesh administrator.
+                        enum:
+                        - undefined
+                        - all
+                        - cluster
+                        - namespace
+                        type: string
                       revision:
                         description: Configures the revision this control plane is
                           a part of
@@ -10067,7 +10077,7 @@ spec:
                 default: v1.27.1
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.27-latest, v1.27.1, v1.27.0, v1.26-latest, v1.26.4, v1.26.3, v1.26.2, v1.26.0, master, v1.28-alpha.423eb7cf.
+                  Must be one of: v1.27-latest, v1.27.1, v1.27.0, v1.26-latest, v1.26.4, v1.26.3, v1.26.2, v1.26.0, master, v1.28-alpha.4b0fdcfb.
                 enum:
                 - v1.27-latest
                 - v1.27.1
@@ -10104,7 +10114,7 @@ spec:
                 - v1.22.5
                 - v1.21.6
                 - master
-                - v1.28-alpha.423eb7cf
+                - v1.28-alpha.4b0fdcfb
                 type: string
             required:
             - namespace

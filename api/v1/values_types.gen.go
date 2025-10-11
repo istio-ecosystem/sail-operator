@@ -24,6 +24,16 @@ import (
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
 )
 
+// +kubebuilder:validation:Enum=undefined;all;cluster;namespace
+type ResourceScope string
+
+const (
+	ResourceScopeUndefined ResourceScope = "undefined"
+	ResourceScopeAll       ResourceScope = "all"
+	ResourceScopeCluster   ResourceScope = "cluster"
+	ResourceScopeNamespace ResourceScope = "namespace"
+)
+
 // Mode for the ingress controller.
 // +kubebuilder:validation:Enum=UNSPECIFIED;DEFAULT;STRICT;OFF
 type IngressControllerMode string
@@ -442,7 +452,10 @@ type GlobalConfig struct {
 	// Specifies whether native nftables rules should be used instead of iptables rules for traffic redirection.
 	NativeNftables *bool `json:"nativeNftables,omitempty"`
 	// Settings related to Kubernetes NetworkPolicy.
-	NetworkPolicy *NetworkPolicyConfig `json:"networkPolicy,omitempty"` // The next available key is 76
+	NetworkPolicy *NetworkPolicyConfig `json:"networkPolicy,omitempty"`
+	// Specifies resource scope for discovery selectors.
+	// This is useful when installing Istio on a cluster where some resources need to be owned by a cluster administrator and some can be owned by the mesh administrator.
+	ResourceScope ResourceScope `json:"resourceScope,omitempty"` // The next available key is 77
 
 }
 
@@ -1154,7 +1167,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x14istio_ingressgateway\x18\x04 \x01(\v2-.istio.operator.v1alpha1.IngressGatewayConfigR\x14istio-ingressgateway\x12@\n" +
 	"\x0fsecurityContext\x18\n" +
 	" \x01(\v2\x16.google.protobuf.ValueR\x0fsecurityContext\x12>\n" +
-	"\x0eseccompProfile\x18\f \x01(\v2\x16.google.protobuf.ValueR\x0eseccompProfile\"\xdf\x13\n" +
+	"\x0eseccompProfile\x18\f \x01(\v2\x16.google.protobuf.ValueR\x0eseccompProfile\"\xad\x14\n" +
 	"\fGlobalConfig\x12;\n" +
 	"\x04arch\x18\x01 \x01(\v2#.istio.operator.v1alpha1.ArchConfigB\x02\x18\x01R\x04arch\x12 \n" +
 	"\vcertSigners\x18D \x03(\tR\vcertSigners\x12F\n" +
@@ -1204,7 +1217,8 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\bwaypoint\x18H \x01(\v2'.istio.operator.v1alpha1.WaypointConfigR\bwaypoint\x12(\n" +
 	"\x0ftrustBundleName\x18I \x01(\tR\x0ftrustBundleName\x12B\n" +
 	"\x0enativeNftables\x18J \x01(\v2\x1a.google.protobuf.BoolValueR\x0enativeNftables\x12R\n" +
-	"\rnetworkPolicy\x18K \x01(\v2,.istio.operator.v1alpha1.NetworkPolicyConfigR\rnetworkPolicy\"-\n" +
+	"\rnetworkPolicy\x18K \x01(\v2,.istio.operator.v1alpha1.NetworkPolicyConfigR\rnetworkPolicy\x12L\n" +
+	"\rresourceScope\x18L \x01(\x0e2&.istio.operator.v1alpha1.ResourceScopeR\rresourceScope\"-\n" +
 	"\tSTSConfig\x12 \n" +
 	"\vservicePort\x18\x01 \x01(\rR\vservicePort\"R\n" +
 	"\fIstiodConfig\x12B\n" +
@@ -1463,7 +1477,12 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"toleration\x18\x05 \x03(\v2\x1e.k8s.io.api.core.v1.TolerationR\n" +
 	"toleration\"K\n" +
 	"\x13NetworkPolicyConfig\x124\n" +
-	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled*J\n" +
+	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled*C\n" +
+	"\rResourceScope\x12\r\n" +
+	"\tundefined\x10\x00\x12\a\n" +
+	"\x03all\x10\x01\x12\v\n" +
+	"\acluster\x10\x02\x12\r\n" +
+	"\tnamespace\x10\x03*J\n" +
 	"\x15ingressControllerMode\x12\x0f\n" +
 	"\vUNSPECIFIED\x10\x00\x12\v\n" +
 	"\aDEFAULT\x10\x01\x12\n" +
