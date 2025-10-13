@@ -29,9 +29,9 @@ const (
 type ZTunnelSpec struct {
 	// +sail:version
 	// Defines the version of Istio to install.
-	// Must be one of: v1.27-latest, v1.27.1, v1.27.0, v1.26-latest, v1.26.4, v1.26.3, v1.26.2, v1.26.0, v1.25-latest, v1.24-latest, master, v1.28-alpha.3fe89a0b.
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.27-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.27.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.27.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.26-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.4", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.25-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.24-latest", "urn:alm:descriptor:com.tectonic.ui:select:master", "urn:alm:descriptor:com.tectonic.ui:select:v1.28-alpha.3fe89a0b"}
-	// +kubebuilder:validation:Enum=v1.27-latest;v1.27.1;v1.27.0;v1.26-latest;v1.26.4;v1.26.3;v1.26.2;v1.26.0;v1.25-latest;v1.24-latest;master;v1.28-alpha.3fe89a0b
+	// Must be one of: v1.27-latest, v1.27.1, v1.27.0, v1.26-latest, v1.26.4, v1.26.3, v1.26.2, v1.26.0, v1.25-latest, v1.24-latest, master, v1.28-alpha.63f7fe3d.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.27-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.27.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.27.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.26-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.4", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.25-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.24-latest", "urn:alm:descriptor:com.tectonic.ui:select:master", "urn:alm:descriptor:com.tectonic.ui:select:v1.28-alpha.63f7fe3d"}
+	// +kubebuilder:validation:Enum=v1.27-latest;v1.27.1;v1.27.0;v1.26-latest;v1.26.4;v1.26.3;v1.26.2;v1.26.0;v1.25-latest;v1.24-latest;master;v1.28-alpha.63f7fe3d
 	// +kubebuilder:default=v1.27.1
 	Version string `json:"version"`
 
