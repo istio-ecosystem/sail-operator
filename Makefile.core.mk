@@ -19,7 +19,7 @@ OLD_VARS := $(.VARIABLES)
 # Use `make print-variables` to inspect the values of the variables
 -include Makefile.vendor.mk
 
-VERSION ?= 1.27.1
+VERSION ?= 1.27.2
 MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 
 # This version will be used to generate the OLM upgrade graph in the FBC as a version to be replaced by the new operator version defined in $VERSION.
@@ -30,7 +30,7 @@ MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 # There are also GH workflows defined to release nightly and stable operators.
 # There is no need to define `replaces` and `skipRange` fields in the CSV as those fields are defined in the FBC and CSV values are ignored.
 # FBC is source of truth for OLM upgrade graph.
-PREVIOUS_VERSION ?= 1.27.0
+PREVIOUS_VERSION ?= 1.27.1
 
 OPERATOR_NAME ?= sailoperator
 VERSIONS_YAML_DIR ?= pkg/istioversion
@@ -550,14 +550,15 @@ MISSPELL ?= $(LOCALBIN)/misspell
 
 ## Tool Versions
 OPERATOR_SDK_VERSION ?= v1.41.1
-HELM_VERSION ?= v3.18.6
+HELM_VERSION ?= v3.19.0
 CONTROLLER_TOOLS_VERSION ?= v0.19.0
 CONTROLLER_RUNTIME_BRANCH ?= release-0.22
-OPM_VERSION ?= v1.57.0
-OLM_VERSION ?= v0.34.0
+OPM_VERSION ?= v1.60.0
+# using 0.35.0 until https://github.com/operator-framework/operator-lifecycle-manager/issues/3675 is fixed
+OLM_VERSION ?= v0.35.0
 GITLEAKS_VERSION ?= v8.28.0
 ISTIOCTL_VERSION ?= 1.26.2
-RUNME_VERSION ?= 3.15.1
+RUNME_VERSION ?= 3.15.4
 MISSPELL_VERSION ?= v0.3.4
 
 .PHONY: helm $(HELM)
