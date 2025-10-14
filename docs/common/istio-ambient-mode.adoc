@@ -45,7 +45,7 @@ To install Istio Ambient mode using Sail Operator on OpenShift, use version `v1.
 [[ztunnel-resource]]
 === ZTunnel resource
 
-The `ZTunnel` resource manages the L4 node proxy and is a cluster-wide resource. It deploys a DaemonSet that runs on all nodes in the cluster. You can specify the version using the `spec.version` field, as shown in the example below. Similar to the `Istio` resource, it also includes a `values` field that allows you to configure options available in the ztunnel helm chart.
+The `ZTunnel` resource manages the L4 node proxy and is a cluster-wide resource. It deploys a DaemonSet that runs on all nodes in the cluster. You can specify the version using the `spec.version` field, as shown in the example below. Similar to the `Istio` resource, it also includes a `values` field that allows you to configure options available in the ztunnel helm chart. The `metadata.name` field must be set to `default`, as enforced by a CRD validation rule that guarantees only one `ZTunnel` instance exists cluster-wide.
 
 [source,yaml]
 ----
