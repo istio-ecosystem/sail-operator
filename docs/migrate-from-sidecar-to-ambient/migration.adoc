@@ -4,55 +4,55 @@ This guide provides a comprehensive, step-by-step process for migrating an exist
 
 == Table of Contents
 
-- <<overview-of-sidecar-to-ambient-migration, 1. Overview of Sidecar to Ambient Migration>>
-  - <<migration-strategy, 1.1 Migration Strategy>>
-  - <<key-architectural-changes, 1.2 Key Architectural Changes>>
-- <<prerequisites, 2. Prerequisites>>
-  - <<technical-requirements, 2.1 Technical Requirements>>
-    - <<cni-compatibility-requirements, 2.1.1 CNI Compatibility Requirements>>
-    - <<waypoint-decision-framework, 2.1.2 Waypoint Decision Framework>>
-  - <<compatibility-validation, 2.2 Compatibility Validation>>
-  - <<pre-migration-checklist, 2.3 Pre-Migration Checklist>>
-  - <<backup-existing-configuration, 2.4 Backup Existing Configuration>>
-- <<migration-steps, 3. Migration Steps>>
-  - <<step-1-prerequisites-validation, Step 1: Prerequisites Validation>>
-  - <<step-2-cluster-setup-enable-ambient-support, Step 2: Cluster Setup - Enable Ambient Support>>
-    - <<step-21-update-istio-configuration, Step 2.1 Update Istio Configuration>>
-    - <<step-22-deploy-istio-cni-for-ambient, Step 2.2 Deploy Istio CNI for Ambient>>
-    - <<step-23-deploy-ztunnel-proxies, Step 2.3 Deploy ZTunnel Proxies>>
-  - <<step-3-update-sidecars-for-hbone-support, Step 3: Update Sidecars for HBONE Support>>
-    - <<step-31-enable-hbone-protocol-support, Step 3.1 Enable HBONE Protocol Support>>
-    - <<step-32-validate-hbone-capability, Step 3.2 Validate HBONE Capability>>
-    - <<step-33-connectivity-validation, Step 3.3 Connectivity Validation>>
-  - <<step-4-deploy-waypoint-proxies, Step 4: Deploy Waypoint Proxies>>
-    - <<step-41-identify-services-requiring-l7-features, Step 4.1 Identify Services Requiring L7 Features>>
-    - <<step-42-create-waypoint-configurations, Step 4.2 Create Waypoint Configurations>>
-  - <<step-5-migrate-traffic-policies, Step 5: Migrate Traffic Policies>>
-    - <<step-51-convert-virtualservices-to-httproutes, Step 5.1 Convert VirtualServices to HTTPRoutes>>
-      - <<step-511-create-version-specific-services-required-for-httproute, Step 5.1.1 Create Version-Specific Services (Required for HTTPRoute)>>
-      - <<step-512-convert-virtualservice-to-httproute, Step 5.1.2 Convert VirtualService to HTTPRoute>>
-    - <<step-52-create-waypoint-targeted-authorization-policies, Step 5.2 Create Waypoint-Targeted Authorization Policies>>
-    - <<step-53-add-ztunnel-bypass-protection-critical-security-step, Step 5.3 Add Ztunnel Bypass Protection (Critical Security Step)>>
-  - <<step-6-enable-ambient-mode-for-applications, Step 6: Enable Ambient Mode for Applications>>
-    - <<step-61-gradual-namespace-migration, Step 6.1 Gradual Namespace Migration>>
-  - <<step-7-enable-waypoint-processing, Step 7: Enable Waypoint Processing>>
-    - <<step-71-activate-waypoints-for-l7-processing, Step 7.1 Activate Waypoints for L7 Processing>>
-    - <<step-72-validate-l7-policy-enforcement, Step 7.2 Validate L7 Policy Enforcement>>
-  - <<step-8-policy-simplification, Step 8: Policy Simplification>>
-    - <<step-81-remove-redundant-sidecar-policies, Step 8.1 Remove Redundant Sidecar Policies>>
-  - <<step-9-remove-sidecar-injection, Step 9: Remove Sidecar Injection>>
-    - <<step-91-disable-sidecar-injection, Step 9.1 Disable Sidecar Injection>>
-    - <<step-92-validate-sidecar-removal, Step 9.2 Validate Sidecar Removal>>
-- <<validation-and-testing, 4. Validation and Testing>>
-  - <<migration-verification, 4.1 Migration Verification>>
-- <<troubleshooting, 5. Troubleshooting>>
-  - <<common-issues, 5.1 Common Issues>>
-  - <<rollback-procedures, 5.2 Rollback Procedures>>
-- <<post-migration-optimization, 6. Post-Migration Optimization>>
-  - <<waypoint-right-sizing, 6.1 Waypoint Right-Sizing>>
-  - <<observability-considerations, 6.2 Observability Considerations>>
-  - <<configure-kiali-for-ambient-mode, 6.3 Configure Kiali for Ambient Mode>>
-- <<additional-resources, 7. Additional Resources>>
+* <<overview-of-sidecar-to-ambient-migration, 1. Overview of Sidecar to Ambient Migration>>
+** <<migration-strategy, 1.1 Migration Strategy>>
+** <<key-architectural-changes, 1.2 Key Architectural Changes>>
+* <<prerequisites, 2. Prerequisites>>
+** <<technical-requirements, 2.1 Technical Requirements>>
+*** <<cni-compatibility-requirements, 2.1.1 CNI Compatibility Requirements>>
+*** <<waypoint-decision-framework, 2.1.2 Waypoint Decision Framework>>
+** <<compatibility-validation, 2.2 Compatibility Validation>>
+** <<pre-migration-checklist, 2.3 Pre-Migration Checklist>>
+** <<backup-existing-configuration, 2.4 Backup Existing Configuration>>
+* <<migration-steps, 3. Migration Steps>>
+** <<step-1-prerequisites-validation, Step 1: Prerequisites Validation>>
+** <<step-2-cluster-setup-enable-ambient-support, Step 2: Cluster Setup - Enable Ambient Support>>
+*** <<step-21-update-istio-configuration, Step 2.1 Update Istio Configuration>>
+*** <<step-22-deploy-istio-cni-for-ambient, Step 2.2 Deploy Istio CNI for Ambient>>
+*** <<step-23-deploy-ztunnel-proxies, Step 2.3 Deploy ZTunnel Proxies>>
+** <<step-3-update-sidecars-for-hbone-support, Step 3: Update Sidecars for HBONE Support>>
+*** <<step-31-enable-hbone-protocol-support, Step 3.1 Enable HBONE Protocol Support>>
+*** <<step-32-validate-hbone-capability, Step 3.2 Validate HBONE Capability>>
+*** <<step-33-connectivity-validation, Step 3.3 Connectivity Validation>>
+** <<step-4-deploy-waypoint-proxies, Step 4: Deploy Waypoint Proxies>>
+*** <<step-41-identify-services-requiring-l7-features, Step 4.1 Identify Services Requiring L7 Features>>
+*** <<step-42-create-waypoint-configurations, Step 4.2 Create Waypoint Configurations>>
+** <<step-5-migrate-traffic-policies, Step 5: Migrate Traffic Policies>>
+*** <<step-51-convert-virtualservices-to-httproutes, Step 5.1 Convert VirtualServices to HTTPRoutes>>
+**** <<step-511-create-version-specific-services-required-for-httproute, Step 5.1.1 Create Version-Specific Services (Required for HTTPRoute)>>
+**** <<step-512-convert-virtualservice-to-httproute, Step 5.1.2 Convert VirtualService to HTTPRoute>>
+*** <<step-52-create-waypoint-targeted-authorization-policies, Step 5.2 Create Waypoint-Targeted Authorization Policies>>
+*** <<step-53-add-ztunnel-bypass-protection-critical-security-step, Step 5.3 Add Ztunnel Bypass Protection (Critical Security Step)>>
+** <<step-6-enable-ambient-mode-for-applications, Step 6: Enable Ambient Mode for Applications>>
+*** <<step-61-gradual-namespace-migration, Step 6.1 Gradual Namespace Migration>>
+** <<step-7-enable-waypoint-processing, Step 7: Enable Waypoint Processing>>
+*** <<step-71-activate-waypoints-for-l7-processing, Step 7.1 Activate Waypoints for L7 Processing>>
+*** <<step-72-validate-l7-policy-enforcement, Step 7.2 Validate L7 Policy Enforcement>>
+** <<step-8-policy-simplification, Step 8: Policy Simplification>>
+*** <<step-81-remove-redundant-sidecar-policies, Step 8.1 Remove Redundant Sidecar Policies>>
+** <<step-9-remove-sidecar-injection, Step 9: Remove Sidecar Injection>>
+*** <<step-91-disable-sidecar-injection, Step 9.1 Disable Sidecar Injection>>
+*** <<step-92-validate-sidecar-removal, Step 9.2 Validate Sidecar Removal>>
+* <<validation-and-testing, 4. Validation and Testing>>
+** <<migration-verification, 4.1 Migration Verification>>
+* <<troubleshooting, 5. Troubleshooting>>
+** <<common-issues, 5.1 Common Issues>>
+** <<rollback-procedures, 5.2 Rollback Procedures>>
+* <<post-migration-optimization, 6. Post-Migration Optimization>>
+** <<waypoint-right-sizing, 6.1 Waypoint Right-Sizing>>
+** <<observability-considerations, 6.2 Observability Considerations>>
+** <<configure-kiali-for-ambient-mode, 6.3 Configure Kiali for Ambient Mode>>
+* <<additional-resources, 7. Additional Resources>>
 
 ---
 
