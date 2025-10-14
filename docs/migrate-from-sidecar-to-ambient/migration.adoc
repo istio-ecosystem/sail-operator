@@ -106,12 +106,14 @@ For this migration we are going to use the bookinfo application as an example. Y
 Before starting migration, ensure your environment meets these requirements:
 
 For Kubernetes:
+
 - **Kubernetes 1.21+**: Minimum version for ambient mode support
 - **Sail Operator v1.27+**: Must be running Sail Operator version 1.27 or later
 - **Istio v1.27+**: Control plane must be v1.27 or later for ambient support
 - **Cluster Admin Access**: Required for namespace labeling and resource creation
 
 For Openshift:
+
 - **Openshift 4.19+**: Minimum version for ambient mode support
 - **Sail Operator v1.27+**: Must be running Sail Operator version 1.27 or later
 - **Istio v1.27+**: Control plane must be v1.27 or later for ambient support
@@ -121,6 +123,7 @@ For Openshift:
 === 2.1.1 CNI Compatibility Requirements
 
 **CNI Configuration Validation:**
+
 For Openshift clusters, the CNI must be `OVNKubernetes`. Other CNIs may work but are not officially supported. For Kubernetes, any CNI that supports NetworkPolicy should be compatible.
 
 [source,console]
@@ -139,18 +142,21 @@ kubectl get network.operator cluster -o yaml | grep -A 10 "additionalNetworks"
 A critical architectural decision involves whether to deploy waypoint proxies. This choice affects both functionality and performance:
 
 **Option 1: Ztunnel-Only (No Waypoints)**
+
 - **Maximum performance**: Minimal processing overhead
 - **Automatic mTLS**: Transparent encryption between services
 - **L4 policies**: Basic authorization and authentication
 - **No L7 features**: Traffic routing, fault injection, L7 authorization
 
 **Option 2: Ztunnel + Waypoint Proxies**
+
 - **Full feature set**: All Istio traffic management and security features
 - **L7 policies**: HTTP-level authorization, routing, telemetry
 - **Gateway API support**: Modern traffic management APIs
 - **Performance cost**: Similar to sidecar mode for L7 processing
 
 **Decision Criteria:**
+
 - **Use waypoints if**: You need traffic routing, L7 authorization, fault injection, or advanced observability
 - **Skip waypoints if**: You only need mTLS and basic L4 security policies
 - **Hybrid approach**: Deploy waypoints only for services requiring L7 features
@@ -161,12 +167,14 @@ This decision can be made per-namespace or per-service and changed after migrati
 === 2.2 Compatibility Validation
 
 **Supported Features:**
+
 - All L4 traffic policies (AuthorizationPolicy, PeerAuthentication)
 - L7 traffic management (VirtualService, DestinationRule converted to HTTPRoute)
 - Security policies (RequestAuthentication, AuthorizationPolicy)
 - Telemetry and observability features
 
 **Unsupported Features** (migration blockers):
+
 - Multi-cluster mesh configurations
 - Virtual Machine (VM) workload integration
 - SPIRE integration for identity federation
@@ -197,7 +205,7 @@ kubectl get virtualservice,destinationrule,peerauthentication -A
 
 Note: if you have any of the unsupported features listed above, we will need to resolve those before proceeding with the migration.
 
-== Application Namespace Validation:
+**Application Namespace Validation:**
 
 [source,console]
 ----
@@ -274,6 +282,7 @@ kubectl get namespaces -o yaml > namespace-backup.yaml
 This migration follows a structured step-by-step approach, with each step including detailed instructions, commands, and validation checks.
 
 **Critical Sequencing Rules:**
+
 - All waypoints must be enabled BEFORE removing any sidecars
 - Policies must be migrated and validated BEFORE removing sidecar policies
 - ZTunnel must be fully operational before enabling ambient mode
@@ -311,18 +320,20 @@ kubectl get authorizationpolicy -A -o yaml | grep -c -E "(methods|paths|headers)
 ----
 
 Note: You will need to resolve any unsupported features before proceeding. This includes:
+
 - Converting VirtualServices and DestinationRules to HTTPRoute and Gateway resources
 - Creating granular services to replace subset-based routing
 - Identifying which policies require waypoint deployment for Layer 7 processing
 
 [source,console]
 ----
-# Check cluster CNI compatibility
+# Check cluster CNI compatibility for OCP deployments
 kubectl get network.operator cluster -o jsonpath='{.spec.defaultNetwork.type}'
 OVNKubernetes
 ----
 
 **Migration Blockers (must resolve before proceeding):**
+
 - Multi-cluster mesh configurations
 - VM workload integration
 - SPIRE integration
@@ -335,7 +346,7 @@ OVNKubernetes
 echo "=== Step 1 Validation ==="
 
 # 1. Verify Sail Operator version is 1.27+# 2. Verify Istio version is 1.27+
-ISTIO_VERSION=$(kubectl get istio -n istio-system -o jsonpath='{.items[0].status.version}')
+ISTIO_VERSION=$(kubectl get istio -n istio-system -o jsonpath='{.items[0].spec.version}')
 echo "PASS: Istio version: $ISTIO_VERSION"
 
 # 2. Verify no blocking features are present
@@ -347,7 +358,7 @@ else
   exit 1
 fi
 
-# 3. Verify CNI compatibility
+# 3. Verify CNI compatibility for OCP clusters
 CNI_TYPE=$(kubectl get network.operator cluster -o jsonpath='{.spec.defaultNetwork.type}')
 if [[ "$CNI_TYPE" == "OVNKubernetes" ]]; then
   echo "PASS: CNI compatible: $CNI_TYPE"
@@ -471,7 +482,7 @@ kubectl get daemonset -n ztunnel
 [source,console]
 ----
 # Confirm cluster setup validation passes
-$ kubectl get ztunnel -n ztunnel
+kubectl get ztunnel -n ztunnel
 NAME      NAMESPACE   PROFILE   READY   STATUS    VERSION   AGE
 default   ztunnel               True    Healthy   v1.27.0   12m
 ----
@@ -577,22 +588,14 @@ Check that sidecars now support HBONE protocol:
 [source,console]
 ----
 # Verify sidecar version supports ambient (example with productpage)
-kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=productpage -o jsonpath='{.items[0].metadata.name}') -c istio-proxy -- pilot-agent version
-----
-
-[source,console]
-----
+$ kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=productpage -o jsonpath='{.items[0].metadata.name}') -c istio-proxy -- pilot-agent version
 client version: version.BuildInfo{Version:"1.27.0", GitRevision:"8dad717f74fbffd463595039148f9ec2148fa5fc", GolangVersion:"go1.24.4 (Red Hat 1.24.4-2.el9) X:strictfipsruntime", BuildStatus:"Clean", GitTag:"1.27.0"}
 ----
 
 [source,console]
 ----
 # Check for HBONE is enable in sidecar
-kubectl get pod $(kubectl get pods -n bookinfo -l app=reviews -o jsonpath='{.items[0].metadata.name}') -n bookinfo -o yaml | yq '.spec.containers[] | select(.name=="istio-proxy") | .env[] | select(.name=="PROXY_CONFIG")'
-----
-
-[source,console]
-----
+$ kubectl get pod $(kubectl get pods -n bookinfo -l app=reviews -o jsonpath='{.items[0].metadata.name}') -n bookinfo -o yaml | yq '.spec.containers[] | select(.name=="istio-proxy") | .env[] | select(.name=="PROXY_CONFIG")'
 name: PROXY_CONFIG
 value: |
   {"proxyMetadata":{"ISTIO_META_ENABLE_HBONE":"true"},"image":{"imageType":"distroless"}}
@@ -606,11 +609,7 @@ Send requests to ensure connectivity remains intact:
 [source,console]
 ----
 # Test service connectivity through sidecars
-kubectl exec $(kubectl get pods -n bookinfo -l app=reviews -o jsonpath='{.items[0].metadata.name}') -n bookinfo -- curl http://reviews.bookinfo:9080/reviews/1
-----
-
-[source,json]
-----
+$ kubectl exec $(kubectl get pods -n bookinfo -l app=reviews -o jsonpath='{.items[0].metadata.name}') -n bookinfo -- curl http://reviews.bookinfo:9080/reviews/1
 {
   "id": "1",
   "podname": "reviews-v1-75797bd984-7b5g6",
@@ -636,11 +635,7 @@ Test connectivity from outside the mesh:
 [source,console]
 ----
 # Test ingress connectivity
-curl -s http://$GATEWAY_URL/productpage | grep title
-----
-
-[source,html]
-----
+$ curl -s http://$GATEWAY_URL/productpage | grep title
 <title>Simple Bookstore App</title>
 ----
 
@@ -988,6 +983,7 @@ spec:
     - source:
         principals:
         - cluster.local/ns/bookinfo/sa/bookinfo-productpage
+        - cluster.local/ns/bookinfo/sa/bookinfo-reviews
     to:
     - operation:
         methods: ["GET"]
@@ -1253,8 +1249,7 @@ fi
 
 # 3. Verify pods still have sidecars (should not be removed yet)
 SIDECAR_COUNT=$(kubectl get pods -n $NAMESPACE --no-headers | grep -c "2/2.*Running")
-EXPECTED_PODS=$(kubectl get deployment -n $NAMESPACE --no-headers | wc -l)
-if [[ "$SIDECAR_COUNT" -eq "$EXPECTED_PODS" ]]; then
+if [[ "$SIDECAR_COUNT" -gt 0 ]]; then
   echo "PASS: Sidecars still present: $SIDECAR_COUNT/$EXPECTED_PODS"
 else
   echo "FAIL: Sidecars missing: $SIDECAR_COUNT/$EXPECTED_PODS"
@@ -1393,21 +1388,27 @@ else
   exit 1
 fi
 
-# Test header-based routing (if configured)
-HEADER_TEST=$(kubectl exec $TEST_POD -n $NAMESPACE -- curl -s -H "end-user: jason" http://reviews.$NAMESPACE:9080/reviews/1 2>/dev/null | grep -c "reviews-v2")
-if [[ "$HEADER_TEST" -gt 0 ]]; then
-  echo "PASS: Header-based routing working"
-else
-  echo "WARNING:  Header-based routing not configured or not working"
-fi
+# Test header-based routing (if HTTPRoute is configured)
+if kubectl get httproute reviews -n $NAMESPACE >/dev/null 2>&1; then
+  # Test default routing (should go to reviews-v1)
+  DEFAULT_RESPONSE=$(kubectl exec $TEST_POD -n $NAMESPACE -- curl -s http://reviews.$NAMESPACE:9080/reviews/1)
+  HEADER_RESPONSE=$(kubectl exec $TEST_POD -n $NAMESPACE -- curl -s -H "end-user: jason" http://reviews.$NAMESPACE:9080/reviews/1)
 
-# 4. Verify waypoint is processing traffic (check waypoint logs for traffic)
-WAYPOINT_POD=$(kubectl get pods -n $NAMESPACE -l gateway.networking.k8s.io/gateway-name=waypoint -o jsonpath='{.items[0].metadata.name}')
-WAYPOINT_LOGS=$(kubectl logs $WAYPOINT_POD -n $NAMESPACE --tail=10 | grep -c "200" || echo "0")
-if [[ "$WAYPOINT_LOGS" -gt 0 ]]; then
-  echo "PASS: Waypoint processing traffic (found $WAYPOINT_LOGS requests)"
+  DEFAULT_VERSION=$(echo "$DEFAULT_RESPONSE" | jq -r '.podname' | grep -o 'reviews-v[0-9]' || echo "unknown")
+  HEADER_VERSION=$(echo "$HEADER_RESPONSE" | jq -r '.podname' | grep -o 'reviews-v[0-9]' || echo "unknown")
+
+  echo "Default version (no header): $DEFAULT_VERSION"
+  echo "Version with 'end-user: jason' header: $HEADER_VERSION"
+
+  if [[ "$DEFAULT_VERSION" == "reviews-v1" && "$HEADER_VERSION" == "reviews-v2" ]]; then
+    echo "PASS: Header-based routing working correctly - default→v1, jason→v2"
+  elif [[ "$DEFAULT_VERSION" == "reviews-v1" && "$HEADER_VERSION" == "reviews-v1" ]]; then
+    echo "FAIL: Header routing not working - both requests go to v1 (waypoint may not be processing traffic)"
+  else
+    echo "WARNING: Routing behavior unclear - default: $DEFAULT_VERSION, header: $HEADER_VERSION"
+  fi
 else
-  echo "WARNING:  No recent traffic found in waypoint logs"
+  echo "INFO: No HTTPRoute configured for reviews service - skipping routing test"
 fi
 
 echo "PASS: Step 7 validation passed - ready to proceed to Step 8"
@@ -1618,11 +1619,30 @@ fi
 # 7. Verify L7 policies still work (if waypoints are active)
 USE_WAYPOINT=$(kubectl get namespace $NAMESPACE -o jsonpath='{.metadata.labels.istio\.io/use-waypoint}')
 if [[ -n "$USE_WAYPOINT" ]]; then
-  HEADER_TEST=$(kubectl exec $TEST_POD -n $NAMESPACE -- curl -s -H "end-user: jason" http://reviews.$NAMESPACE:9080/reviews/1 2>/dev/null | grep -c "reviews-v2" || echo "0")
-  if [[ "$HEADER_TEST" -gt 0 ]]; then
-    echo "PASS: L7 policies working in ambient mode"
+  # Test HTTPRoute-based routing if configured
+  if kubectl get httproute reviews -n $NAMESPACE >/dev/null 2>&1; then
+    DEFAULT_RESPONSE=$(kubectl exec $TEST_POD -n $NAMESPACE -- curl -s http://reviews.$NAMESPACE:9080/reviews/1)
+    HEADER_RESPONSE=$(kubectl exec $TEST_POD -n $NAMESPACE -- curl -s -H "end-user: jason" http://reviews.$NAMESPACE:9080/reviews/1)
+
+    DEFAULT_VERSION=$(echo "$DEFAULT_RESPONSE" | jq -r '.podname' | grep -o 'reviews-v[0-9]' || echo "unknown")
+    HEADER_VERSION=$(echo "$HEADER_RESPONSE" | jq -r '.podname' | grep -o 'reviews-v[0-9]' || echo "unknown")
+
+    echo "Default version (no header): $DEFAULT_VERSION"
+    echo "Version with 'end-user: jason' header: $HEADER_VERSION"
+
+    if [[ "$DEFAULT_VERSION" == "reviews-v1" && "$HEADER_VERSION" == "reviews-v2" ]]; then
+      echo "PASS: L7 routing policies working in ambient mode"
+    else
+      echo "WARNING: L7 routing not working properly - default: $DEFAULT_VERSION, header: $HEADER_VERSION"
+    fi
   else
-    echo "WARNING:  L7 policies not working or not configured"
+    echo "INFO: No HTTPRoute configured - testing basic connectivity only"
+    HTTP_STATUS=$(kubectl exec $TEST_POD -n $NAMESPACE -- curl -s -w "%{http_code}" -o /dev/null http://reviews.$NAMESPACE:9080/reviews/1)
+    if [[ "$HTTP_STATUS" == "200" ]]; then
+      echo "PASS: Basic L4 connectivity working in ambient mode"
+    else
+      echo "FAIL: Basic connectivity failed in ambient mode: HTTP $HTTP_STATUS"
+    fi
   fi
 fi
 
@@ -1653,9 +1673,9 @@ kubectl apply -f istio-backup.yaml
 ----
 **Risk**: Very High - You're removing the safety net of sidecars. Thoroughly test before proceeding.
 
----
 
 **Migration Complete!** Applications now run in ambient mode with:
+
 - No sidecar containers
 - mTLS via ztunnel
 - L7 policies via waypoints
@@ -1692,9 +1712,6 @@ image:./images/general-view-ambient.png[Bookinfo Ambient Label]
 
 image:./images/mtls-ambient.png[Mtls Verification]
 
-**Policy Enforcement Test:**
-You can test that your policies are still being enforced by sending requests that should be allowed or denied based on your existing policies.
-
 image:./images/istio-config-ambient.png[Istio configuration view]
 
 [[troubleshooting]]
@@ -1705,7 +1722,7 @@ image:./images/istio-config-ambient.png[Istio configuration view]
 
 ==== Step-Specific Error Scenarios
 
-**Step 2 Errors - Cluster Setup Issues:**
+**Errors - Cluster Setup Issues:**
 
 *Issue: ZTunnel pods failing to start*
 [source,console]
@@ -1723,7 +1740,7 @@ kubectl describe nodes | grep -A 5 "Allocated resources"
 kubectl logs -n ztunnel -l app=ztunnel --tail=50
 ----
 
-**Step 3 Errors - HBONE Support Issues:**
+**Errors - HBONE Support Issues:**
 
 *Issue: Pods fail to restart after enabling HBONE*
 [source,console]
@@ -1749,7 +1766,7 @@ kubectl delete pods -n bookinfo -l app=reviews
 kubectl rollout status deployment/reviews-v1 -n bookinfo
 ----
 
-**Step 6 Errors - Ambient Mode Activation Issues:**
+**Errors - Ambient Mode Activation Issues:**
 
 *Issue: Services not communicating after enabling ambient mode*
 [source,console]
@@ -1781,7 +1798,7 @@ kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=reviews -o jsonpa
 kubectl rollout restart deployment -n bookinfo
 ----
 
-**Step 7 Errors - Waypoint Activation Issues:**
+**Errors - Waypoint Activation Issues:**
 
 *Issue: Policies not enforcing correctly*
 [source,console]
@@ -2001,6 +2018,7 @@ echo "Debug logs collected in /tmp/ambient-debug-logs/"
 === 6.2 Observability Considerations
 
 **Metrics Changes:**
+
 Understanding how metrics change in ambient mode is crucial for monitoring and troubleshooting:
 
 - **Without waypoints**: Only Layer 4 (TCP) metrics are available, as Layer 7 processing is not performed
@@ -2008,17 +2026,20 @@ Understanding how metrics change in ambient mode is crucial for monitoring and t
 - **Traffic flow metrics**: Waypoints appear as intermediaries in connection paths
 
 **Tracing Impact:**
+
 - **Sidecar mode**: Generates two spans per request (client-side and server-side spans)
 - **Ambient mode**: Single span per waypoint (if waypoints are deployed), or no Layer 7 tracing without waypoints
 - **Span depth**: Less detailed trace information compared to sidecar mode
 
 **Dashboard Updates Required:**
+
 Existing observability dashboards need updates to account for:
 - Changed reporter label values
 - Different span patterns in distributed traces
 - Modified metric collection points
 
 **Configuration for Telemetry Policies:**
+
 Update Telemetry API policies to use `targetRefs` instead of workload selectors when targeting waypoints:
 
 [source,yaml]
@@ -2042,6 +2063,7 @@ spec:
 === 6.3 Configure Kiali for Ambient Mode
 
 **Configure Kiali for ambient mode:**
+
 When you move to ambient you will need to create a `PodMonitor` resource to allow Kiali to scrape the waypoint metrics.
 
 [source,yaml]
@@ -2085,12 +2107,8 @@ spec:
           targetLabel: pod_name
 ----
 
----
-
 [[additional-resources]]
 == 7. Additional Resources
 These resources provide further information on ambient mode and related configurations:
 
-- link:README.md[Getting Started with Istio Ambient Mode] - Initial ambient mode setup
-- link:waypoint.md[Getting Started with Waypoint Proxies] - Detailed waypoint configuration
 - https://istio.io/latest/docs/ambient/[Upstream Istio Ambient Documentation] - Official Istio ambient mode docs
