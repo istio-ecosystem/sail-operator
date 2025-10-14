@@ -553,7 +553,8 @@ HELM_VERSION ?= v3.19.0
 CONTROLLER_TOOLS_VERSION ?= v0.19.0
 CONTROLLER_RUNTIME_BRANCH ?= release-0.22
 OPM_VERSION ?= v1.60.0
-OLM_VERSION ?= v0.36.0
+# using 0.35.0 until https://github.com/operator-framework/operator-lifecycle-manager/issues/3675 is fixed
+OLM_VERSION ?= v0.35.0
 GITLEAKS_VERSION ?= v8.28.0
 ISTIOCTL_VERSION ?= 1.26.0
 RUNME_VERSION ?= 3.15.4
