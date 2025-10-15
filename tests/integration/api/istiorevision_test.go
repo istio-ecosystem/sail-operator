@@ -561,6 +561,32 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(sa), sa)).To(Succeed())
 			Expect(sa.ImagePullSecrets).To(ContainElement(corev1.LocalObjectReference{Name: "other-pull-secret"}))
 		})
+
+		It("skips reconcile when sailoperator.io/ignore annotation is set to true on a resource", func() {
+			waitForInFlightReconcileToFinish()
+
+			webhook := &admissionv1.MutatingWebhookConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "istio-sidecar-injector-" + revName + "-" + istioNamespace,
+				},
+			}
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(webhook), webhook)).To(Succeed())
+
+			GinkgoWriter.Println("webhook:", webhook)
+
+			expectNoReconciliation(istioRevisionController, func() {
+				By("adding sailoperator.io/ignore annotation to ConfigMap")
+				webhook.Annotations = map[string]string{
+					"sailoperator.io/ignore": "true",
+				}
+				webhook.Labels["app"] = "sidecar-injector-test"
+				Expect(k8sClient.Update(ctx, webhook)).To(Succeed())
+			})
+
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(webhook), webhook)).To(Succeed())
+			Expect(webhook.Annotations["sailoperator.io/ignore"]).To(Equal("true"))
+			Expect(webhook.Labels["app"]).To(Equal("sidecar-injector-test"))
+		})
 	})
 
 	DescribeTableSubtree("reconciling when revision is in use",
