@@ -1,0 +1,11 @@
+apiVersion: v2
+appVersion: 1.28-alpha.6000d6f4713c022c017f95d2ab8f54aa10b620e3
+description: Helm chart for istio ztunnel components
+icon: https://istio.io/latest/favicons/android-192x192.png
+keywords:
+- istio-ztunnel
+- istio
+name: ztunnel
+sources:
+- https://github.com/istio/istio
+version: 1.28-alpha.6000d6f4713c022c017f95d2ab8f54aa10b620e3
