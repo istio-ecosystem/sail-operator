@@ -77,7 +77,7 @@ fi
 TOOLS_REGISTRY_PROVIDER=${TOOLS_REGISTRY_PROVIDER:-gcr.io}
 PROJECT_ID=${PROJECT_ID:-istio-testing}
 if [[ "${IMAGE_VERSION:-}" == "" ]]; then
-  IMAGE_VERSION=master-b0cb074639c0677b4d65e4548ae1ec70559e2ba1
+  IMAGE_VERSION=master-4d8a6668b6d46b3becc35f9b24467f841bbb020a
 fi
 if [[ "${IMAGE_NAME:-}" == "" ]]; then
   IMAGE_NAME=build-tools
