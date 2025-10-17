@@ -21,6 +21,7 @@ link:../README.adoc[Return to Project Root]
 *** <<deploy-a-sample-application>>
 ** <<visualize-the-application-using-kiali-dashboard>>
 ** <<troubleshoot-issues>>
+** <<update>>
 ** <<cleanup>>
 
 [[introduction-to-istio-ambient-mode]]
@@ -397,6 +398,23 @@ kubectl -n ztunnel logs -l app=ztunnel | grep -E "inbound|outbound"
 ----
 
 Validate the `src.identity` and `dst.identity` values are correct. They are the identities used for the mTLS communication among the source and destination workloads.
+
+[[update]]
+== Update
+
+For detailed information on updating Istio when deployed in ambient mode, including procedures for both InPlace and RevisionBased update strategies, see link:./istio-ambient-update.adoc#updating-istio-in-ambient-mode[Updating Istio in Ambient Mode].
+
+This guide covers:
+- Understanding versioning and the update process
+- InPlace update strategy procedures
+- RevisionBased update strategy procedures
+- Updating IstioCNI and ZTunnel components
+- Verifying ambient workloads after updates
+- Waypoint proxy compatibility during upgrades
+- Special considerations for ambient mode upgrades
+- Troubleshooting common update issues
+
+For waypoint-specific update procedures, see link:./istio-ambient-waypoint.adoc#update[Waypoint Proxy Update Procedures].
 
 [[cleanup]]
 === Cleanup
