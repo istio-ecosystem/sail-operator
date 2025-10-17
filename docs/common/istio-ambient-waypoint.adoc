@@ -204,14 +204,7 @@ After updating waypoint proxies, verify that Layer 7 features are working correc
 
 If you have traffic routing rules (e.g., HTTPRoute), verify they are still being enforced.
 
-1. Check HTTPRoute resources:
-
-[source,bash,subs="attributes+"]
-----
-$ kubectl get httproutes -n bookinfo
-----
-
-2. Test traffic distribution (e.g., for Bookinfo reviews service):
+1. Test traffic distribution (e.g., for Bookinfo reviews service):
 
 [source,bash,subs="attributes+"]
 ----
@@ -222,14 +215,7 @@ $ for i in {1..10}; do kubectl exec "$(kubectl get pod -l app=reviews -n bookinf
 
 Verify L7 authorization policies are correctly enforced by the waypoint proxy.
 
-1. Check AuthorizationPolicy resources:
-
-[source,bash,subs="attributes+"]
-----
-$ kubectl get authorizationpolicies -n bookinfo
-----
-
-2. Test policy enforcement (e.g., deny access from a specific source):
+1. Test policy enforcement (e.g., deny access from a specific source):
 
 [source,bash,subs="attributes+"]
 ----
