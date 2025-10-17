@@ -82,7 +82,7 @@ The migration from sidecar to ambient mode follows a structured, phased approach
 
 |**L7 Processing**
 |Envoy sidecar per pod
-|Waypoint proxy per namespace/service
+|Waypoint proxy per namespace or service or workload.
 
 |**mTLS Enforcement**
 |Sidecar proxy
@@ -98,7 +98,14 @@ The migration from sidecar to ambient mode follows a structured, phased approach
 [[prerequisites]]
 == 2. Prerequisites
 
-For this migration we are going to use the bookinfo application as an example. You can use any application that is currently running with sidecar injection enabled.
+This migration guide uses example commands that can be adapted to any application. For reference purposes, we use placeholder values like `<NAMESPACE>`, `<SERVICE_NAME>`, and `<GATEWAY_NAME>` that you should replace with your actual application details.
+
+**Related Documentation:**
+- If you want to follow along with a sample application, you can deploy the bookinfo application by following the steps described in link:../addons/addons.adoc#deploy-gateway-and-bookinfo[Deploying Gateway and Bookinfo]
+- For detailed waypoint proxy configuration, see link:../common/istio-ambient-waypoint.adoc[Waypoint Proxy Documentation]
+- For general application deployment guidance, refer to link:../common/install-bookinfo-app.adoc[Installing the Bookinfo Application]
+
+You can use any application that is currently running with sidecar injection enabled.
 
 [[technical-requirements]]
 === 2.1 Technical Requirements
@@ -109,35 +116,22 @@ For Kubernetes:
 
 - **Kubernetes 1.21+**: Minimum version for ambient mode support
 - **Sail Operator v1.27+**: Must be running Sail Operator version 1.27 or later
-- **Istio v1.27+**: Control plane must be v1.27 or later for ambient support
+- **Istio v1.27+**: Control plane must be v1.24 or later for ambient support
 - **Cluster Admin Access**: Required for namespace labeling and resource creation
 
 For Openshift:
 
 - **Openshift 4.19+**: Minimum version for ambient mode support
 - **Sail Operator v1.27+**: Must be running Sail Operator version 1.27 or later
-- **Istio v1.27+**: Control plane must be v1.27 or later for ambient support
+- **Istio v1.27+**: Control plane must be v1.24 or later for ambient support
 - **Cluster Admin Access**: Required for namespace labeling and resource creation
 
-[[cni-compatibility-requirements]]
-=== 2.1.1 CNI Compatibility Requirements
+**Note**: for Openshift clusters, it's need the use of the local gateway mode for ambient deployments. Please refer to the Openshift documentation for more details: https://docs.redhat.com/en/documentation/red_hat_openshift_service_mesh/3.1/html/installing/ossm-istio-ambient-mode#ossm-installing-istio-ambient-mode_ossm-istio-ambient-mode.
 
-**CNI Configuration Validation:**
-
-For Openshift clusters, the CNI must be `OVNKubernetes`. Other CNIs may work but are not officially supported. For Kubernetes, any CNI that supports NetworkPolicy should be compatible.
-
-[source,console]
-----
-# Verify CNI type compatibility
-kubectl get network.operator cluster -o jsonpath='{.spec.defaultNetwork.type}'
-# Expected: OVNKubernetes for OCP clusters
-
-# Check if multiple CNI plugins are configured
-kubectl get network.operator cluster -o yaml | grep -A 10 "additionalNetworks"
-----
+**See also**: For general Istio installation guidance in this repository, refer to the installation documentation in the `docs/` directory.
 
 [[waypoint-decision-framework]]
-=== 2.1.2 Waypoint Decision Framework
+=== 2.1.1 Waypoint Decision Framework
 
 A critical architectural decision involves whether to deploy waypoint proxies. This choice affects both functionality and performance:
 
@@ -155,16 +149,30 @@ A critical architectural decision involves whether to deploy waypoint proxies. T
 - **Gateway API support**: Modern traffic management APIs
 - **Performance cost**: Similar to sidecar mode for L7 processing
 
+**When Waypoints Are Used vs Not Used:**
+
+**Automatic Waypoint Activation occurs when:**
+1. **Namespace labeling**: Adding `istio.io/use-waypoint=<waypoint-name>` label to a namespace
+2. **Service labeling**: Adding the label to specific services for granular control
+3. **Pod labeling**: Adding the label to individual pods (requires `istio.io/waypoint-for: workload`)
+
+**Traffic Flow Decision Tree:**
+- **Without waypoint labels**: Traffic flows directly through ztunnel (L4-only processing)
+- **With waypoint labels**: Traffic is intercepted and routed through waypoint proxies for L7 processing
+- **Mixed environments**: Some services use waypoints while others remain ztunnel-only
+
 **Decision Criteria:**
 
-- **Use waypoints if**: You need traffic routing, L7 authorization, fault injection, or advanced observability
-- **Skip waypoints if**: You only need mTLS and basic L4 security policies
+- **Use waypoints if**: You need VirtualServices, HTTPRoutes, L7 AuthorizationPolicies, fault injection, or HTTP-level observability
+- **Skip waypoints if**: You only need mTLS, L4 AuthorizationPolicies, and basic connectivity
 - **Hybrid approach**: Deploy waypoints only for services requiring L7 features
 
-This decision can be made per-namespace or per-service and changed after migration.
+**Important**: Waypoint activation is explicit, deploying a waypoint Gateway resource alone does not affect traffic flow. You must label namespaces, services, or pods to direct traffic through waypoints.
+
+For detailed waypoint configuration guidance, see link:../common/istio-ambient-waypoint.adoc[Waypoint Proxy Documentation].
 
 [[compatibility-validation]]
-=== 2.2 Compatibility Validation
+=== 2.2 Compatibility between Sidecar and Ambient Modes
 
 **Supported Features:**
 
@@ -178,6 +186,9 @@ This decision can be made per-namespace or per-service and changed after migrati
 - Multi-cluster mesh configurations
 - Virtual Machine (VM) workload integration
 - SPIRE integration for identity federation
+
+For additional compatibility considerations refer to:
+- https://github.com/openshift-service-mesh/sail-operator/blob/main/docs/ossm/ambient/coexistence.md[Sidecar-Ambient Coexistence Guidelines]
 
 [[pre-migration-checklist]]
 === 2.3 Pre-Migration Checklist
@@ -200,10 +211,10 @@ default   istio-system             1           1       1        default         
 [source,console]
 ----
 # Verify no unsupported features are in use
-kubectl get virtualservice,destinationrule,peerauthentication -A
+kubectl get virtualservice,destinationrule -A
 ----
 
-Note: if you have any of the unsupported features listed above, we will need to resolve those before proceeding with the migration.
+Note: if you have any of the unsupported features listed above, we will need to resolve those before proceeding with the migration. Take into account that ambient support PeerAuthentication but disable mode it's not supported, more information about this can be found here: https://istio.io/latest/docs/reference/config/security/peer_authentication/.
 
 **Application Namespace Validation:**
 
@@ -237,11 +248,11 @@ NAME               CLASS   ADDRESS       PROGRAMMED   AGE
 bookinfo-gateway   istio   10.0.147.96   True         5m41s
 ----
 
-Note: You can check that your application is getting requests trough the mesh by using Kiali. For example, in the Bookinfo application, you should see traffic flowing between the services on every request to the productpage:
+Note: You can check that your application is getting requests through the mesh by using Kiali. You should see traffic flowing between the services for every request to your application.
 
 image:./images/kiali-bookinfo-traffic.png[Kiali Bookinfo Traffic]
 
-For this migration example we are generating traffic to the productpage service using the following command:
+For testing purposes during migration, you can generate traffic to your application's main service using commands similar to:
 
 [source,console]
 ----
@@ -325,52 +336,12 @@ Note: You will need to resolve any unsupported features before proceeding. This 
 - Creating granular services to replace subset-based routing
 - Identifying which policies require waypoint deployment for Layer 7 processing
 
-[source,console]
-----
-# Check cluster CNI compatibility for OCP deployments
-kubectl get network.operator cluster -o jsonpath='{.spec.defaultNetwork.type}'
-OVNKubernetes
-----
-
 **Migration Blockers (must resolve before proceeding):**
 
 - Multi-cluster mesh configurations
 - VM workload integration
 - SPIRE integration
-- Istio version < 1.27
-
-**Step 1 Validation Checkpoint:**
-[source,console]
-----
-# Ensure all prerequisites are met before proceeding
-echo "=== Step 1 Validation ==="
-
-# 1. Verify Sail Operator version is 1.27+# 2. Verify Istio version is 1.27+
-ISTIO_VERSION=$(kubectl get istio -n istio-system -o jsonpath='{.items[0].spec.version}')
-echo "PASS: Istio version: $ISTIO_VERSION"
-
-# 2. Verify no blocking features are present
-BLOCKING_FEATURES=$(kubectl get virtualservice,destinationrule -A --no-headers 2>/dev/null | grep -E "DISABLE|multi-cluster|vm-" | wc -l)
-if [[ "$BLOCKING_FEATURES" -eq 0 ]]; then
-  echo "PASS: No blocking features detected"
-else
-  echo "FAIL: Found $BLOCKING_FEATURES blocking features - resolve before proceeding"
-  exit 1
-fi
-
-# 3. Verify CNI compatibility for OCP clusters
-CNI_TYPE=$(kubectl get network.operator cluster -o jsonpath='{.spec.defaultNetwork.type}')
-if [[ "$CNI_TYPE" == "OVNKubernetes" ]]; then
-  echo "PASS: CNI compatible: $CNI_TYPE"
-else
-  echo "FAIL: CNI incompatible: $CNI_TYPE"
-  exit 1
-fi
-
-echo "SUCCESS: Step 1 validation passed - ready to proceed to Step 2"
-----
-
-**If validation fails**: Resolve all issues before proceeding to Step 2.
+- Istio version < 1.24
 
 [[step-2-cluster-setup-enable-ambient-support]]
 === Step 2: Cluster Setup - Enable Ambient Support
@@ -407,12 +378,6 @@ kubectl apply -f istio-ambient.yaml
 kubectl wait --for=condition=Ready istios/default --timeout=5m
 ----
 
-You can also update the Istio resource using the following command:
-[source,console]
-----
-kubectl patch istio default -n istio-system --type merge -p '{"spec":{"profile":"ambient","values":{"pilot":{"trustedZtunnelNamespace":"ztunnel"}}}}'
-----
-
 [[step-22-deploy-istio-cni-for-ambient]]
 ==== Step 2.2 Deploy Istio CNI for Ambient
 
@@ -427,19 +392,17 @@ metadata:
 spec:
   namespace: istio-cni
   profile: ambient
+  # Preserve existing customizations
 ----
 
 Apply the CNI configuration:
 [source,console]
 ----
+# Create Istio CNI namespace if it doesn't exist
+kubectl create namespace istio-cni
+# Apply Istio CNI configuration
 kubectl apply -f istio-cni-ambient.yaml
 kubectl wait --for=condition=Ready istiocnis/default --timeout=3m
-----
-
-You can also apply the CNI configuration using the following command:
-[source,console]
-----
-kubectl patch istiocni default --type merge -p '{"spec":{"profile":"ambient"}}'
 ----
 
 [[step-23-deploy-ztunnel-proxies]]
@@ -487,81 +450,7 @@ NAME      NAMESPACE   PROFILE   READY   STATUS    VERSION   AGE
 default   ztunnel               True    Healthy   v1.27.0   12m
 ----
 
-**Step 2 Validation Checkpoint:**
-[source,console]
-----
-echo "=== Step 2 Validation ==="
-
-# 1. Verify Istio is configured for ambient mode
-ISTIO_PROFILE=$(kubectl get istio default -n istio-system -o jsonpath='{.spec.profile}')
-if [[ "$ISTIO_PROFILE" == "ambient" ]]; then
-  echo "PASS: Istio profile: $ISTIO_PROFILE"
-else
-  echo "FAIL: Istio profile is not 'ambient': $ISTIO_PROFILE"
-  exit 1
-fi
-
-# 2. Verify Istio is ready
-ISTIO_STATUS=$(kubectl get istio default -n istio-system -o jsonpath='{.status.state}')
-if [[ "$ISTIO_STATUS" == "Healthy" ]]; then
-  echo "PASS: Istio status: $ISTIO_STATUS"
-else
-  echo "FAIL: Istio not healthy: $ISTIO_STATUS"
-  exit 1
-fi
-
-# 3. Verify IstioCNI is configured for ambient
-CNI_PROFILE=$(kubectl get istiocni default -o jsonpath='{.spec.profile}')
-if [[ "$CNI_PROFILE" == "ambient" ]]; then
-  echo "PASS: IstioCNI profile: $CNI_PROFILE"
-else
-  echo "FAIL: IstioCNI profile is not 'ambient': $CNI_PROFILE"
-  exit 1
-fi
-
-# 4. Verify IstioCNI is ready
-CNI_STATUS=$(kubectl get istiocni default -o jsonpath='{.status.state}')
-if [[ "$CNI_STATUS" == "Healthy" ]]; then
-  echo "PASS: IstioCNI status: $CNI_STATUS"
-else
-  echo "FAIL: IstioCNI not healthy: $CNI_STATUS"
-  exit 1
-fi
-
-# 5. Verify ZTunnel is deployed and ready
-ZTUNNEL_STATUS=$(kubectl get ztunnel default -n ztunnel -o jsonpath='{.status.state}')
-if [[ "$ZTUNNEL_STATUS" == "Healthy" ]]; then
-  echo "PASS: ZTunnel status: $ZTUNNEL_STATUS"
-else
-  echo "FAIL: ZTunnel not healthy: $ZTUNNEL_STATUS"
-  exit 1
-fi
-
-# 6. Verify ZTunnel pods are running on all nodes
-EXPECTED_NODES=$(kubectl get nodes --no-headers | wc -l)
-ZTUNNEL_PODS=$(kubectl get pods -n ztunnel --no-headers | grep -c Running)
-if [[ "$ZTUNNEL_PODS" -eq "$EXPECTED_NODES" ]]; then
-  echo "PASS: ZTunnel pods running: $ZTUNNEL_PODS/$EXPECTED_NODES"
-else
-  echo "FAIL: ZTunnel pods not ready: $ZTUNNEL_PODS/$EXPECTED_NODES"
-  exit 1
-fi
-
-echo "PASS: Step 2 validation passed - ready to proceed to Step 3"
-----
-
-**If validation fails**: Check Istio, IstioCNI, and ZTunnel logs before proceeding.
-
-**Rollback Decision Point**: If Step 2 validation fails and cannot be resolved, you can safely rollback:
-[source,console]
-----
-# Rollback to sidecar mode
-kubectl patch istio default -n istio-system --type merge -p '{"spec":{"profile":"default"}}'
-kubectl patch istiocni default --type merge -p '{"spec":{"profile":"default"}}'
-kubectl delete ztunnel default -n ztunnel
-kubectl delete namespace ztunnel
-----
-**Risk**: Low - No application traffic affected.
+**If rollback needed**: See <<rollback-procedures,Section 5.2 Rollback Procedures>> for Step 2 cluster setup rollback instructions (Low Risk).
 
 [[step-3-update-sidecars-for-hbone-support]]
 === Step 3: Update Sidecars for HBONE Support
@@ -585,12 +474,6 @@ Note: during the restart, sidecars will be updated to support HBONE while still 
 ==== Step 3.2 Validate HBONE Capability
 
 Check that sidecars now support HBONE protocol:
-[source,console]
-----
-# Verify sidecar version supports ambient (example with productpage)
-$ kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=productpage -o jsonpath='{.items[0].metadata.name}') -c istio-proxy -- pilot-agent version
-client version: version.BuildInfo{Version:"1.27.0", GitRevision:"8dad717f74fbffd463595039148f9ec2148fa5fc", GolangVersion:"go1.24.4 (Red Hat 1.24.4-2.el9) X:strictfipsruntime", BuildStatus:"Clean", GitTag:"1.27.0"}
-----
 
 [source,console]
 ----
@@ -641,65 +524,7 @@ $ curl -s http://$GATEWAY_URL/productpage | grep title
 
 Traffic should continue flowing as before. This confirms that sidecars are still handling traffic.
 
-**Step 3 Validation Checkpoint:**
-[source,console]
-----
-echo "=== Step 3 Validation ==="
-
-# 1. Verify all pods have been restarted and are running
-NAMESPACE="bookinfo"  # Adjust for your namespace
-READY_PODS=$(kubectl get pods -n $NAMESPACE --no-headers | grep -c "2/2.*Running")
-
-echo "Total pods running with sidecars: $READY_PODS"
-if [[ "$READY_PODS" -gt 0 ]]; then
-  echo "PASS: All pods restarted and running"
-else
-  echo "FAIL: Some pods not running after restart"
-  exit 1
-fi
-
-# 2. Verify HBONE is enabled in sidecars
-HBONE_ENABLED=$(kubectl get pod -n $NAMESPACE -l app=productpage -o yaml | grep -c "ISTIO_META_ENABLE_HBONE.*true")
-if [[ "$HBONE_ENABLED" -gt 0 ]]; then
-  echo "PASS: HBONE enabled in sidecars"
-else
-  echo "FAIL: HBONE not enabled in sidecars"
-  exit 1
-fi
-
-# 3. Test internal service connectivity
-TEST_POD=$(kubectl get pods -n $NAMESPACE -l app=reviews -o jsonpath='{.items[0].metadata.name}')
-HTTP_STATUS=$(kubectl exec $TEST_POD -n $NAMESPACE -- curl -s -w "%{http_code}" -o /dev/null http://reviews.$NAMESPACE:9080/reviews/1)
-if [[ "$HTTP_STATUS" == "200" ]]; then
-  echo "PASS: Internal service connectivity working"
-else
-  echo "FAIL: Internal service connectivity failed: HTTP $HTTP_STATUS"
-  exit 1
-fi
-
-# 4. Test external connectivity (if gateway configured)
-if [[ -n "$GATEWAY_URL" ]]; then
-  EXTERNAL_STATUS=$(curl -s -w "%{http_code}" -o /dev/null --connect-timeout 5 "http://$GATEWAY_URL/productpage")
-  if [[ "$EXTERNAL_STATUS" == "200" ]]; then
-    echo "PASS: External connectivity working"
-  else
-    echo "FAIL: External connectivity failed: HTTP $EXTERNAL_STATUS"
-    exit 1
-  fi
-fi
-
-echo "PASS: Step 3 validation passed - ready to proceed to Step 4"
-----
-
-**If validation fails**: Check pod logs and verify sidecar injection is still working.
-
-**Rollback Decision Point**: If Step 3 validation fails, rollback the pod restarts:
-[source,console]
-----
-# Rollback pods to previous version (if they fail to restart properly)
-kubectl rollout undo deployment -n bookinfo
-----
-**Risk**: Low - Sidecars still active, no ambient components affecting traffic yet.
+**If rollback needed**: See <<rollback-procedures,Section 5.2 Rollback Procedures>> for Step 3 HBONE support rollback instructions (Low Risk).
 
 [[step-4-deploy-waypoint-proxies]]
 === Step 4: Deploy Waypoint Proxies
@@ -721,7 +546,7 @@ kubectl get authorizationpolicy -A -o yaml | grep -A 10 -B 5 "rules.*methods\|op
 
 Create waypoints for namespaces requiring L7 processing:
 
-**Waypoint for bookinfo namespace:**
+**Example Waypoint for bookinfo namespace:**
 [source,yaml]
 ----
 apiVersion: gateway.networking.k8s.io/v1
@@ -748,73 +573,19 @@ kubectl apply -f waypoint-bookinfo.yaml
 kubectl get gateway -n bookinfo
 ----
 
-**Important**: Deploying waypoints does NOT activate them. They remain dormant until explicitly enabled.
+**Important**: Deploying a waypoint does not automatically make workloads use it. You must explicitly configure namespaces, services, or pods to use the waypoint.
 
-**Step 4 Validation Checkpoint:**
+Verify that waypoints are deployed correctly:
 [source,console]
 ----
-echo "=== Step 4 Validation ==="
-
-NAMESPACE="bookinfo"  # Adjust for your namespace
-
-# 1. Verify waypoint gateway is created
-WAYPOINT_EXISTS=$(kubectl get gateway waypoint -n $NAMESPACE --no-headers 2>/dev/null | wc -l)
-if [[ "$WAYPOINT_EXISTS" -eq 1 ]]; then
-  echo "PASS: Waypoint gateway created"
-else
-  echo "FAIL: Waypoint gateway not found"
-  exit 1
-fi
-
-# 2. Verify waypoint has correct configuration
-WAYPOINT_CLASS=$(kubectl get gateway waypoint -n $NAMESPACE -o jsonpath='{.spec.gatewayClassName}')
-if [[ "$WAYPOINT_CLASS" == "istio-waypoint" ]]; then
-  echo "PASS: Waypoint gateway class: $WAYPOINT_CLASS"
-else
-  echo "FAIL: Incorrect waypoint gateway class: $WAYPOINT_CLASS"
-  exit 1
-fi
-
-# 3. Verify waypoint proxy deployment is created
-WAYPOINT_DEPLOY=$(kubectl get deployment -n $NAMESPACE -l gateway.networking.k8s.io/gateway-name=waypoint --no-headers 2>/dev/null | wc -l)
-if [[ "$WAYPOINT_DEPLOY" -eq 1 ]]; then
-  echo "PASS: Waypoint deployment created"
-else
-  echo "FAIL: Waypoint deployment not found"
-  exit 1
-fi
-
-# 4. Verify waypoint pod is running
-WAYPOINT_POD_STATUS=$(kubectl get pods -n $NAMESPACE -l gateway.networking.k8s.io/gateway-name=waypoint -o jsonpath='{.items[0].status.phase}' 2>/dev/null)
-if [[ "$WAYPOINT_POD_STATUS" == "Running" ]]; then
-  echo "PASS: Waypoint pod running"
-else
-  echo "FAIL: Waypoint pod not running: $WAYPOINT_POD_STATUS"
-  exit 1
-fi
-
-# 5. Verify waypoint is not yet active (namespace should not have use-waypoint label)
-USE_WAYPOINT=$(kubectl get namespace $NAMESPACE -o jsonpath='{.metadata.labels.istio\.io/use-waypoint}' 2>/dev/null)
-if [[ -z "$USE_WAYPOINT" ]]; then
-  echo "PASS: Waypoint deployed but not active (as expected)"
-else
-  echo "FAIL: Waypoint unexpectedly active: $USE_WAYPOINT"
-  exit 1
-fi
-
-echo "PASS: Step 4 validation passed - ready to proceed to Step 5"
+kubectl get gateway waypoint -n bookinfo
+kubectl get deployment -n $NAMESPACE -l gateway.networking.k8s.io/gateway-name=waypoint
+kubectl get pods -n $NAMESPACE -l gateway.networking.k8s.io/gateway-name=waypoint
+# Verify waypoint is not yet active
+kubectl get namespace $NAMESPACE -o jsonpath='{.metadata.labels.istio\.io/use-waypoint}'
 ----
 
-**If validation fails**: Check waypoint deployment logs and Gateway API CRDs installation.
-
-**Rollback Decision Point**: If Step 4 validation fails, remove waypoint resources:
-[source,console]
-----
-# Remove waypoint resources
-kubectl delete gateway waypoint -n bookinfo
-# Waypoint deployments will be automatically cleaned up
-----
-**Risk**: Low - Waypoints are dormant and not affecting traffic flow.
+**If rollback needed**: See <<rollback-procedures,Section 5.2 Rollback Procedures>> for Step 4 waypoint deployment rollback instructions (Low Risk).
 
 [[step-5-migrate-traffic-policies]]
 === Step 5: Migrate Traffic Policies
@@ -822,10 +593,21 @@ kubectl delete gateway waypoint -n bookinfo
 [[step-51-convert-virtualservices-to-httproutes]]
 ==== Step 5.1 Convert VirtualServices to HTTPRoutes
 
-[[step-511-create-version-specific-services-required-for-httproute]]
-==== Step 5.1.1 Create Version-Specific Services (Required for HTTPRoute)
+**Understanding Resource Conversion:**
 
-Before creating HTTPRoute resources, you must create granular services for each version since Gateway API doesn't support DestinationRule subsets, for example for the reviews service:
+Ambient mode uses the Kubernetes Gateway API instead of Istio's VirtualService and DestinationRule resources for traffic management. This migration requires converting your existing Istio traffic policies to Gateway API equivalents:
+
+- **VirtualService** to **HTTPRoute**: Traffic routing, header matching, fault injection
+- **DestinationRule subsets** to **Version-specific Services**: Since Gateway API doesn't support subset-based routing
+
+For comprehensive conversion guidance, refer to:
+- https://istio.io/latest/docs/reference/config/networking/virtual-service/[Istio VirtualService]
+- https://gateway-api.sigs.k8s.io/guides/http-routing/[Gateway API HTTPRoute Documentation]
+
+[[step-511-create-version-specific-services-required-for-httproute]]
+===== Step 5.1.1 Create Version-Specific Services (Required for HTTPRoute)
+
+Gateway API HTTPRoute doesn't support DestinationRule subsets. You must create individual services for each application version to enable version-specific routing:
 
 [source,yaml]
 ----
@@ -879,9 +661,18 @@ kubectl apply -f reviews-version-services.yaml
 ----
 
 [[step-512-convert-virtualservice-to-httproute]]
-==== Step 5.1.2 Convert VirtualService to HTTPRoute
+===== Step 5.1.2 Convert VirtualService to HTTPRoute
 
-Convert existing VirtualService resources to Gateway API HTTPRoute:
+**Key Conversion Concepts:**
+
+When converting VirtualService to HTTPRoute, understand these mapping principles:
+
+- **spec.hosts** to **spec.parentRefs**: HTTPRoute attaches to Services instead of declaring hosts
+- **spec.http.match** to **spec.rules.matches**: Similar header/path matching syntax
+- **spec.http.route.destination.subset** to **spec.rules.backendRefs.name**: Direct service references instead of subsets
+- **spec.http.fault**, **spec.http.timeout** → Use HTTPRoute filters or Istio policy resources
+
+**Example Conversion:**
 
 **Before (VirtualService):**
 [source,yaml]
@@ -936,12 +727,28 @@ spec:
       port: 9080
 ----
 
+**Apply the HTTPRoute:**
+
+[source,console]
+----
+kubectl apply -f reviews-httproute.yaml
+----
+
+**Key Differences Explained:**
+
+1. **Service Attachment**: HTTPRoute attaches to the original `reviews` service via `parentRefs`, intercepting traffic to that service.
+2. **Version Routing**: Instead of DestinationRule subsets, HTTPRoute uses version-specific services (`reviews-v1`, `reviews-v2`).
+3. **Header Matching**: Similar syntax to VirtualService but uses Gateway API format.
+4. **Backward Compatibility**: Original service remains functional; HTTPRoute adds routing logic on top.
+
+For complex routing scenarios (fault injection, retries, timeouts), you may need additional Gateway API filters or maintain some Istio policies alongside HTTPRoute.
+
 [[step-52-create-waypoint-targeted-authorization-policies]]
 ==== Step 5.2 Create Waypoint-Targeted Authorization Policies
 
-Create waypoint-targeted authorization policies while maintaining existing sidecar policies during transition. For the bookinfo application, we need to create policies that match the actual service account structure:
+Create waypoint-targeted authorization policies while maintaining existing sidecar policies during transition. These policies should match your actual service account structure:
 
-**Complete Authorization Policies for Bookinfo:**
+**Example bookinfo Authorization Policies:**
 
 [source,yaml]
 ----
@@ -1031,32 +838,24 @@ spec:
         methods: ["GET"]
 ----
 
+**Note**: The service account names should match your actual deployment. Adjust the principal names if your service accounts use different naming conventions. To verify the service accounts you can run:
+
+[source,console]
+----
+# Check actual service accounts used by your application pods
+kubectl get pods -n bookinfo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.serviceAccountName}{"\n"}{end}'
+----
+
 **Apply the authorization policies:**
 [source,console]
 ----
 kubectl apply -f bookinfo-waypoint-authz-policies.yaml
 ----
 
-**Verify the service accounts in your bookinfo deployment:**
-[source,console]
-----
-# Check actual service accounts used by bookinfo pods
-kubectl get pods -n bookinfo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.serviceAccountName}{"\n"}{end}'
-----
-
-**Note**: The service account names above (`bookinfo-gateway-istio`, `bookinfo-productpage`, `bookinfo-reviews`) should match your actual deployment. Adjust the principal names if your service accounts use different naming conventions.
-
-Apply waypoint policies while keeping existing sidecar policies:
-[source,console]
-----
-kubectl apply -f productpage-waypoint-policy.yaml
-kubectl apply -f reviews-waypoint-policy.yaml
-----
-
 [source,console]
 ----
 # Verify policies are created
-$ kubectl get authorizationpolicy -n bookinfo
+$ kubectl get authorizationpolicy -n <NAMESPACE>
 NAME                             ACTION   AGE
 productpage-waypoint             ALLOW    18s
 productpage-ztunnel-protection   DENY     7s
@@ -1112,58 +911,10 @@ kubectl apply -f ztunnel-protection-policies.yaml
 
 **Critical**: Keep existing sidecar policies active until Policy Simplification step.
 
-**Step 5 Validation Checkpoint:**
+Test that services are still accessible (policies not yet enforced):
 [source,console]
 ----
-echo "=== Step 5 Validation ==="
-
-NAMESPACE="bookinfo"  # Adjust for your namespace
-
-# 1. Verify version-specific services are created
-VERSION_SERVICES=$(kubectl get service -n $NAMESPACE | grep -c "reviews-v[123]")
-if [[ "$VERSION_SERVICES" -eq 3 ]]; then
-  echo "PASS: Version-specific services created: $VERSION_SERVICES"
-else
-  echo "FAIL: Version-specific services missing: found $VERSION_SERVICES, expected 3"
-  exit 1
-fi
-
-# 2. Verify HTTPRoute is created (if applicable)
-HTTPROUTE_EXISTS=$(kubectl get httproute -n $NAMESPACE --no-headers 2>/dev/null | wc -l)
-if [[ "$HTTPROUTE_EXISTS" -gt 0 ]]; then
-  echo "PASS: HTTPRoute(s) created: $HTTPROUTE_EXISTS"
-else
-  echo "WARNING:  No HTTPRoutes found (acceptable if using VirtualServices)"
-fi
-
-# 3. Verify waypoint-targeted authorization policies are created
-WAYPOINT_AUTHZ=$(kubectl get authorizationpolicy -n $NAMESPACE | grep -c "waypoint")
-if [[ "$WAYPOINT_AUTHZ" -gt 0 ]]; then
-  echo "PASS: Waypoint authorization policies created: $WAYPOINT_AUTHZ"
-else
-  echo "FAIL: No waypoint authorization policies found"
-  exit 1
-fi
-
-# 4. Verify ztunnel protection policies are created
-PROTECTION_POLICIES=$(kubectl get authorizationpolicy -n $NAMESPACE | grep -c "protection")
-if [[ "$PROTECTION_POLICIES" -gt 0 ]]; then
-  echo "PASS: ZTunnel protection policies created: $PROTECTION_POLICIES"
-else
-  echo "FAIL: No ztunnel protection policies found"
-  exit 1
-fi
-
-# 5. Verify policies have correct target references
-TARGETREF_POLICIES=$(kubectl get authorizationpolicy -n $NAMESPACE -o yaml | grep -c "targetRefs")
-if [[ "$TARGETREF_POLICIES" -gt 0 ]]; then
-  echo "PASS: Policies using targetRefs: $TARGETREF_POLICIES"
-else
-  echo "FAIL: No policies using targetRefs found"
-  exit 1
-fi
-
-# 6. Test that services are still accessible (policies not yet enforced)
+NAMESPACE="bookinfo" # Replace with your namespace
 TEST_POD=$(kubectl get pods -n $NAMESPACE -l app=reviews -o jsonpath='{.items[0].metadata.name}')
 HTTP_STATUS=$(kubectl exec $TEST_POD -n $NAMESPACE -- curl -s -w "%{http_code}" -o /dev/null http://reviews.$NAMESPACE:9080/reviews/1)
 if [[ "$HTTP_STATUS" == "200" ]]; then
@@ -1172,21 +923,9 @@ else
   echo "FAIL: Service connectivity failed: HTTP $HTTP_STATUS"
   exit 1
 fi
-
-echo "PASS: Step 5 validation passed - ready to proceed to Step 6"
 ----
 
-**If validation fails**: Verify policy syntax and ensure existing sidecar policies are still active.
-
-**Rollback Decision Point**: If Step 5 validation fails, remove new policies:
-[source,console]
-----
-# Remove waypoint-targeted policies if they cause issues
-kubectl delete authorizationpolicy -n bookinfo -l migration=waypoint
-kubectl delete httproute -n bookinfo --all
-# Keep original VirtualServices and sidecar policies active
-----
-**Risk**: Medium - Policy conflicts could affect traffic, but sidecar policies remain active.
+**If rollback needed**: See <<rollback-procedures,Section 5.2 Rollback Procedures>> for Step 5 policy migration rollback instructions (Medium Risk).
 
 [[step-6-enable-ambient-mode-for-applications]]
 === Step 6: Enable Ambient Mode for Applications
@@ -1194,7 +933,7 @@ kubectl delete httproute -n bookinfo --all
 [[step-61-gradual-namespace-migration]]
 ==== Step 6.1 Gradual Namespace Migration
 
-We recommend enabling ambient mode one namespace at a time, starting with the least critical. For our example, we will continue with the `bookinfo` namespace.
+We recommend enabling ambient mode one namespace at a time, starting with the least critical. Replace `bookinfo` with your actual namespace name:
 
 [source,console]
 ----
@@ -1222,72 +961,9 @@ bookinfo                                         waypoint-58cdc7f494-98h79      
 kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=reviews -o jsonpath='{.items[0].metadata.name}') -- curl http://reviews.bookinfo:9080/
 ----
 
-**Step 6 Validation Checkpoint:**
-[source,console]
-----
-echo "=== Step 6 Validation ==="
+**Important**: at this point sidecars are still present and handling traffic. Do NOT remove sidecars yet.
 
-NAMESPACE="bookinfo"  # Adjust for your namespace
-
-# 1. Verify namespace has ambient mode label
-AMBIENT_MODE=$(kubectl get namespace $NAMESPACE -o jsonpath='{.metadata.labels.istio\.io/dataplane-mode}')
-if [[ "$AMBIENT_MODE" == "ambient" ]]; then
-  echo "PASS: Namespace in ambient mode: $AMBIENT_MODE"
-else
-  echo "FAIL: Namespace not in ambient mode: $AMBIENT_MODE"
-  exit 1
-fi
-
-# 2. Verify workloads are recognized by ztunnel
-WORKLOAD_COUNT=$(istioctl ztunnel-config workloads --namespace ztunnel | grep $NAMESPACE | grep HBONE | wc -l)
-if [[ "$WORKLOAD_COUNT" -gt 0 ]]; then
-  echo "PASS: Workloads detected by ztunnel: $WORKLOAD_COUNT"
-else
-  echo "FAIL: No workloads detected by ztunnel in $NAMESPACE"
-  exit 1
-fi
-
-# 3. Verify pods still have sidecars (should not be removed yet)
-SIDECAR_COUNT=$(kubectl get pods -n $NAMESPACE --no-headers | grep -c "2/2.*Running")
-if [[ "$SIDECAR_COUNT" -gt 0 ]]; then
-  echo "PASS: Sidecars still present: $SIDECAR_COUNT/$EXPECTED_PODS"
-else
-  echo "FAIL: Sidecars missing: $SIDECAR_COUNT/$EXPECTED_PODS"
-  exit 1
-fi
-
-# 4. Test connectivity still works
-TEST_POD=$(kubectl get pods -n $NAMESPACE -l app=reviews -o jsonpath='{.items[0].metadata.name}')
-HTTP_STATUS=$(kubectl exec $TEST_POD -n $NAMESPACE -- curl -s -w "%{http_code}" -o /dev/null http://reviews.$NAMESPACE:9080/reviews/1)
-if [[ "$HTTP_STATUS" == "200" ]]; then
-  echo "PASS: Service connectivity working in ambient mode"
-else
-  echo "FAIL: Service connectivity failed: HTTP $HTTP_STATUS"
-  exit 1
-fi
-
-# 5. Verify traffic is using HBONE protocol
-HBONE_TRAFFIC=$(istioctl ztunnel-config workloads --namespace ztunnel | grep $NAMESPACE | grep -c "HBONE")
-if [[ "$HBONE_TRAFFIC" -gt 0 ]]; then
-  echo "PASS: HBONE protocol active: $HBONE_TRAFFIC workloads"
-else
-  echo "FAIL: HBONE protocol not active"
-  exit 1
-fi
-
-echo "PASS: Step 6 validation passed - ready to proceed to Step 7"
-----
-
-**If validation fails**: Check ztunnel logs and verify namespace labels are correct.
-
-**Rollback Decision Point**: If Step 6 validation fails, disable ambient mode:
-[source,console]
-----
-# Disable ambient mode for the namespace
-kubectl label namespace bookinfo istio.io/dataplane-mode-
-# Traffic will continue through sidecars
-----
-**Risk**: High - This is the critical transition point. Test thoroughly before proceeding.
+**If rollback needed**: See <<rollback-procedures,Section 5.2 Rollback Procedures>> for Step 6 ambient mode activation rollback instructions (High Risk).
 
 [[step-7-enable-waypoint-processing]]
 === Step 7: Enable Waypoint Processing
@@ -1297,46 +973,34 @@ kubectl label namespace bookinfo istio.io/dataplane-mode-
 
 **Critical Sequencing**: Only activate waypoints AFTER all required namespaces are in ambient mode.
 
+**Understanding Waypoint Activation:**
+
+Up to this point, waypoint proxies have been deployed but are not processing any traffic. They remain dormant until you explicitly configure workloads to use them. This activation happens through labeling:
+
+**Namespace-level Activation (recommended):**
 [source,console]
 ----
-# Enable waypoint for bookinfo first
+# Enable waypoint for all services in the namespace
 kubectl label namespace bookinfo istio.io/use-waypoint=waypoint
+----
 
-# Verify waypoint activation
+**Service-level Activation (granular control):**
+[source,console]
+----
+# Enable waypoint for specific services only
+kubectl label service <SERVICE_NAME> istio.io/use-waypoint=<WAYPOINT_NAME> -n <NAMESPACE>
+kubectl label service <SERVICE_NAME> istio.io/use-waypoint=<WAYPOINT_NAME> -n <NAMESPACE>
+----
+
+**Verify waypoint activation:**
+[source,console]
+----
+# Check waypoint pod is running
 kubectl get pods -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint
-----
 
-[[step-72-validate-l7-policy-enforcement]]
-==== Step 7.2 Validate L7 Policy Enforcement
-
-Test that L7 policies are now enforced through waypoints (L7 policies should work as before after waypoint activation):
-
-[source,console]
-----
-# Test authorization policies work through waypoint (use correct endpoint)
-kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=reviews -o jsonpath='{.items[0].metadata.name}') -- curl -v http://reviews.bookinfo:9080/reviews/1
-{"id": "1","podname": "reviews-v3-dd9d6fc89-6glvk","clustername": "null","reviews": [{  "reviewer": "Reviewer1",  "text": "An extremely entertaining play by Shakespeare. The slapstick humor is refreshing!", "rating": {"stars": 5, "color": "red"}},{  "reviewer": "Reviewer2",  "text": "Absolutely fun and entertaining. The play lacks thematic depth when compared to other plays by Shakespeare.", "rating": {"stars": 4, "color": "red"}}]}* Mark bundle as not supporting multiuse
-< HTTP/1.1 200 OK
-< x-powered-by: Servlet/3.1
-< content-type: application/json
-< date: Mon, 13 Oct 2025 16:13:58 GMT
-< content-language: en-US
-< content-length: 437
-< x-envoy-upstream-service-time: 41
-< server: envoy
-<
-{ [437 bytes data]
-100   437  100   437    0     0   9340      0 --:--:-- --:--:-- --:--:--  9500
-* Connection #0 to host reviews.bookinfo left intact
-----
-
-[source,console]
-----
-# Test traffic routing through waypoint with header
-$ kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=reviews -o jsonpath='{.items[0].metadata.name}') -- curl -H "end-user: jason" http://reviews.bookinfo:9080/reviews/1
-% Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                               Dload  Upload   Total   Spent    Left  Speed
-0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0{"id": "1","podname": "reviews-v2-67ff7bcdc5-kklgl","clustername":"null","reviews": [{  "reviewer": "Reviewer1",  "text": "An extremely entertaining play by Shakespeare. The slapstick humor is refreshing!","rating": {"stars": 5, "color": "black"}},{  "reviewer": "Reviewer2",  "text": "Absolutely fun and entertaining. The play lacks thematic depthwhen compared to other plays by Shakespeare.100   442  100   442    0     0   3306      0 --:--:-- --:--:-- --:--:--  3323
+# Verify namespace/service labels
+kubectl get namespace <NAMESPACE> --show-labels
+kubectl get service <SERVICE_NAME> -n <NAMESPACE> --show-labels
 ----
 
 **Critical Identity Security Consideration**:
@@ -1349,81 +1013,9 @@ Waypoints do not spoof client identity. When ztunnel processes traffic from wayp
 
 Ensure your authorization policies account for this identity behavior when validating security enforcement.
 
-**Critical**: Enable ALL required waypoints before removing ANY sidecars to maintain policy enforcement.
+**Important**: Enable ALL required waypoints before removing ANY sidecars to maintain policy enforcement.
 
-**Step 7 Validation Checkpoint:**
-[source,console]
-----
-echo "=== Step 7 Validation ==="
-
-NAMESPACE="bookinfo"  # Adjust for your namespace
-
-# 1. Verify namespace has use-waypoint label
-USE_WAYPOINT=$(kubectl get namespace $NAMESPACE -o jsonpath='{.metadata.labels.istio\.io/use-waypoint}')
-if [[ "$USE_WAYPOINT" == "waypoint" ]]; then
-  echo "PASS: Waypoint activated for namespace: $USE_WAYPOINT"
-else
-  echo "FAIL: Waypoint not activated: $USE_WAYPOINT"
-  exit 1
-fi
-
-# 2. Verify waypoint pod is still running
-WAYPOINT_POD_STATUS=$(kubectl get pods -n $NAMESPACE -l gateway.networking.k8s.io/gateway-name=waypoint -o jsonpath='{.items[0].status.phase}')
-if [[ "$WAYPOINT_POD_STATUS" == "Running" ]]; then
-  echo "PASS: Waypoint pod running"
-else
-  echo "FAIL: Waypoint pod not running: $WAYPOINT_POD_STATUS"
-  exit 1
-fi
-
-# 3. Test L7 policies are enforced through waypoint
-TEST_POD=$(kubectl get pods -n $NAMESPACE -l app=reviews -o jsonpath='{.items[0].metadata.name}')
-
-# Test normal request should work
-HTTP_STATUS=$(kubectl exec $TEST_POD -n $NAMESPACE -- curl -s -w "%{http_code}" -o /dev/null http://reviews.$NAMESPACE:9080/reviews/1)
-if [[ "$HTTP_STATUS" == "200" ]]; then
-  echo "PASS: Normal requests working through waypoint"
-else
-  echo "FAIL: Normal requests failing: HTTP $HTTP_STATUS"
-  exit 1
-fi
-
-# Test header-based routing (if HTTPRoute is configured)
-if kubectl get httproute reviews -n $NAMESPACE >/dev/null 2>&1; then
-  # Test default routing (should go to reviews-v1)
-  DEFAULT_RESPONSE=$(kubectl exec $TEST_POD -n $NAMESPACE -- curl -s http://reviews.$NAMESPACE:9080/reviews/1)
-  HEADER_RESPONSE=$(kubectl exec $TEST_POD -n $NAMESPACE -- curl -s -H "end-user: jason" http://reviews.$NAMESPACE:9080/reviews/1)
-
-  DEFAULT_VERSION=$(echo "$DEFAULT_RESPONSE" | jq -r '.podname' | grep -o 'reviews-v[0-9]' || echo "unknown")
-  HEADER_VERSION=$(echo "$HEADER_RESPONSE" | jq -r '.podname' | grep -o 'reviews-v[0-9]' || echo "unknown")
-
-  echo "Default version (no header): $DEFAULT_VERSION"
-  echo "Version with 'end-user: jason' header: $HEADER_VERSION"
-
-  if [[ "$DEFAULT_VERSION" == "reviews-v1" && "$HEADER_VERSION" == "reviews-v2" ]]; then
-    echo "PASS: Header-based routing working correctly - default→v1, jason→v2"
-  elif [[ "$DEFAULT_VERSION" == "reviews-v1" && "$HEADER_VERSION" == "reviews-v1" ]]; then
-    echo "FAIL: Header routing not working - both requests go to v1 (waypoint may not be processing traffic)"
-  else
-    echo "WARNING: Routing behavior unclear - default: $DEFAULT_VERSION, header: $HEADER_VERSION"
-  fi
-else
-  echo "INFO: No HTTPRoute configured for reviews service - skipping routing test"
-fi
-
-echo "PASS: Step 7 validation passed - ready to proceed to Step 8"
-----
-
-**If validation fails**: Check waypoint configuration and ensure L7 policies are correctly targeted.
-
-**Rollback Decision Point**: If Step 7 validation fails, disable waypoint usage:
-[source,console]
-----
-# Disable waypoint usage but keep ambient mode
-kubectl label namespace bookinfo istio.io/use-waypoint-
-# L4 policies will still work through ztunnel, L7 policies will be disabled
-----
-**Risk**: High - L7 policy enforcement may be lost. Consider full rollback to sidecar mode if L7 policies are critical.
+**If rollback needed**: See <<rollback-procedures,Section 5.2 Rollback Procedures>> for Step 7 waypoint activation rollback instructions (High Risk).
 
 [[step-8-policy-simplification]]
 === Step 8: Policy Simplification
@@ -1445,75 +1037,13 @@ Delete the redundant sidecar policies by running the following commands:
 [source,console]
 ----
 # Example: Remove sidecar-specific authorization policies
-kubectl delete authorizationpolicy authorizationpolicy-name -n bookinfo
+kubectl delete authorizationpolicy <authorizationpolicy-name> -n <NAMESPACE>
 
 # Example: Remove sidecar-specific virtual services
-kubectl delete virtualservice virtualservice-name -n bookinfo
+kubectl delete virtualservice <virtualservice-name> -n <NAMESPACE>
 ----
 
-**Step 8 Validation Checkpoint:**
-[source,console]
-----
-echo "=== Step 8 Validation ==="
-
-NAMESPACE="bookinfo"  # Adjust for your namespace
-
-# 1. Verify duplicate policies have been removed
-TOTAL_AUTHZ=$(kubectl get authorizationpolicy -n $NAMESPACE --no-headers | wc -l)
-echo "INFO:  Total authorization policies remaining: $TOTAL_AUTHZ"
-
-# 2. Verify waypoint-targeted policies are still present
-WAYPOINT_AUTHZ=$(kubectl get authorizationpolicy -n $NAMESPACE | grep -c "waypoint" || echo "0")
-PROTECTION_AUTHZ=$(kubectl get authorizationpolicy -n $NAMESPACE | grep -c "protection" || echo "0")
-if [[ "$WAYPOINT_AUTHZ" -gt 0 && "$PROTECTION_AUTHZ" -gt 0 ]]; then
-  echo "PASS: Waypoint and protection policies preserved"
-else
-  echo "FAIL: Critical policies missing - waypoint: $WAYPOINT_AUTHZ, protection: $PROTECTION_AUTHZ"
-  exit 1
-fi
-
-# 3. Test that traffic still flows correctly after policy cleanup
-TEST_POD=$(kubectl get pods -n $NAMESPACE -l app=reviews -o jsonpath='{.items[0].metadata.name}')
-HTTP_STATUS=$(kubectl exec $TEST_POD -n $NAMESPACE -- curl -s -w "%{http_code}" -o /dev/null http://reviews.$NAMESPACE:9080/reviews/1)
-if [[ "$HTTP_STATUS" == "200" ]]; then
-  echo "PASS: Service connectivity working after policy cleanup"
-else
-  echo "FAIL: Service connectivity failed after policy cleanup: HTTP $HTTP_STATUS"
-  exit 1
-fi
-
-# 4. Test external connectivity still works
-if [[ -n "$GATEWAY_URL" ]]; then
-  EXTERNAL_STATUS=$(curl -s -w "%{http_code}" -o /dev/null --connect-timeout 5 "http://$GATEWAY_URL/productpage")
-  if [[ "$EXTERNAL_STATUS" == "200" ]]; then
-    echo "PASS: External connectivity working"
-  else
-    echo "FAIL: External connectivity failed: HTTP $EXTERNAL_STATUS"
-    exit 1
-  fi
-fi
-
-# 5. Verify no conflicting policies remain
-CONFLICT_POLICIES=$(kubectl get authorizationpolicy -n $NAMESPACE -o yaml | grep -c "selector:" || echo "0")
-if [[ "$CONFLICT_POLICIES" -eq 0 ]]; then
-  echo "PASS: No conflicting selector-based policies found"
-else
-  echo "WARNING:  Found $CONFLICT_POLICIES selector-based policies - review for conflicts"
-fi
-
-echo "PASS: Step 8 validation passed - ready to proceed to Step 9"
-----
-
-**If validation fails**: Restore any accidentally deleted policies and verify traffic flows correctly.
-
-**Rollback Decision Point**: If Step 8 validation fails, restore from backup:
-[source,console]
-----
-# Restore original policies from backup
-kubectl apply -f istio-backup.yaml
-# This may cause policy conflicts - review and remove duplicates manually
-----
-**Risk**: Medium - Policy conflicts possible, but ambient infrastructure remains intact.
+**If rollback needed**: See <<rollback-procedures,Section 5.2 Rollback Procedures>> for Step 8 policy cleanup rollback instructions (Medium Risk).
 
 [[step-9-remove-sidecar-injection]]
 === Step 9: Remove Sidecar Injection
@@ -1543,143 +1073,59 @@ Verify sidecars are removed and ambient mode is working:
 kubectl get pods -n bookinfo
 ----
 
-Checking on Kiali should show traffic flowing:
+Checking on Kiali should show traffic flowing through ambient mode. You should see traffic flowing through ztunnel and waypoints instead of sidecars.
 
-image:./images/kiali-bookinfo-traffic-ambient.png[Kiali Ambient Traffic]
+[[step-93-validate-l7-policy-enforcement]]
+==== Step 9.3 Validate L7 Policy Enforcement
 
-Also, checking the application the label ambient will be visible:
+Test that L7 policies are now enforced through waypoints (L7 policies should work as before after waypoint activation):
 
-image:./images/general-view-ambient.png[Bookinfo Ambient Label]
-
-**Step 9 Validation Checkpoint:**
 [source,console]
 ----
-echo "=== Step 9 Validation ==="
+# Test authorization policies work through waypoint
+kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=reviews -o jsonpath='{.items[0].metadata.name}') -- curl -v http://reviews.bookinfo:9080/reviews/1
+{"id": "1","podname": "reviews-v3-dd9d6fc89-6glvk","clustername": "null","reviews": [{  "reviewer": "Reviewer1",  "text": "An extremely entertaining play by Shakespeare. The slapstick humor is refreshing!", "rating": {"stars": 5, "color": "red"}},{  "reviewer": "Reviewer2",  "text": "Absolutely fun and entertaining. The play lacks thematic depth when compared to other plays by Shakespeare.", "rating": {"stars": 4, "color": "red"}}]}
+----
 
-NAMESPACE="bookinfo"  # Adjust for your namespace
+[source,console]
+----
+# Test traffic routing through waypoint with header (if HTTPRoute configured)
+$ kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=reviews -o jsonpath='{.items[0].metadata.name}') -- curl -H "end-user: jason" http://reviews.bookinfo:9080/reviews/1
+{"id": "1","podname": "reviews-v2-67ff7bcdc5-kklgl","clustername":"null","reviews": [{  "reviewer": "Reviewer1",  "text": "An extremely entertaining play by Shakespeare. The slapstick humor is refreshing!","rating": {"stars": 5, "color": "black"}},{  "reviewer": "Reviewer2",  "text": "Absolutely fun and entertaining. The play lacks thematic depthwhen compared to other plays by Shakespeare.","rating": {"stars": 4, "color": "black"}}]}
+----
 
-# 1. Verify namespace no longer has sidecar injection labels
-REV_LABEL=$(kubectl get namespace $NAMESPACE -o jsonpath='{.metadata.labels.istio\.io/rev}' 2>/dev/null)
-if [[ -z "$REV_LABEL" ]]; then
-  echo "PASS: Sidecar injection disabled (no rev label)"
-else
-  echo "FAIL: Sidecar injection still enabled: $REV_LABEL"
-  exit 1
-fi
+Note: L7 policies should function as before, now enforced through waypoints instead of sidecars. Take into account that according to the configuration example that we applied before, requests with the `end-user: jason` header should route to `reviews-v2` and requests without that header should route to `reviews-v1` or `reviews-v3`.
 
-# 2. Verify namespace still has ambient mode label
-AMBIENT_MODE=$(kubectl get namespace $NAMESPACE -o jsonpath='{.metadata.labels.istio\.io/dataplane-mode}')
-if [[ "$AMBIENT_MODE" == "ambient" ]]; then
-  echo "PASS: Ambient mode preserved: $AMBIENT_MODE"
-else
-  echo "FAIL: Ambient mode lost: $AMBIENT_MODE"
-  exit 1
-fi
 
-# 3. Verify pods no longer have sidecars (should be 1/1 instead of 2/2)
-SINGLE_CONTAINER_PODS=$(kubectl get pods -n $NAMESPACE --no-headers | grep -c "1/1.*Running")
-EXPECTED_PODS=$(kubectl get deployment -n $NAMESPACE --no-headers | wc -l)
-if [[ "$SINGLE_CONTAINER_PODS" -eq "$EXPECTED_PODS" ]]; then
-  echo "PASS: Sidecars removed: $SINGLE_CONTAINER_PODS/$EXPECTED_PODS pods are 1/1"
-else
-  echo "FAIL: Sidecars not fully removed: $SINGLE_CONTAINER_PODS/$EXPECTED_PODS"
-  exit 1
-fi
-
-# 4. Verify workloads still appear in ztunnel
-WORKLOAD_COUNT=$(istioctl ztunnel-config workloads --namespace ztunnel | grep $NAMESPACE | grep HBONE | wc -l)
-if [[ "$WORKLOAD_COUNT" -gt 0 ]]; then
-  echo "PASS: Workloads tracked by ztunnel: $WORKLOAD_COUNT"
-else
-  echo "FAIL: Workloads not tracked by ztunnel"
-  exit 1
-fi
-
-# 5. Test full connectivity end-to-end
-TEST_POD=$(kubectl get pods -n $NAMESPACE -l app=reviews -o jsonpath='{.items[0].metadata.name}')
-HTTP_STATUS=$(kubectl exec $TEST_POD -n $NAMESPACE -- curl -s -w "%{http_code}" -o /dev/null http://reviews.$NAMESPACE:9080/reviews/1)
-if [[ "$HTTP_STATUS" == "200" ]]; then
-  echo "PASS: Internal connectivity working in pure ambient mode"
-else
-  echo "FAIL: Internal connectivity failed: HTTP $HTTP_STATUS"
-  exit 1
-fi
-
-# 6. Test external connectivity
+Test external connectivity (if gateway configured):
+[source,console]
+----
+# Test external connectivity through gateway
+export INGRESS_HOST=$(kubectl get gtw bookinfo-gateway -n bookinfo -o jsonpath='{.status.addresses[0].value}')
+export INGRESS_PORT=$(kubectl get gtw bookinfo-gateway -n bookinfo -o jsonpath='{.spec.listeners[?(@.name=="http")].port}')
+export GATEWAY_URL=$INGRESS_HOST:$INGRESS_PORT
 if [[ -n "$GATEWAY_URL" ]]; then
-  EXTERNAL_STATUS=$(curl -s -w "%{http_code}" -o /dev/null --connect-timeout 5 "http://$GATEWAY_URL/productpage")
+  EXTERNAL_STATUS=$(curl -s -w "%{http_code}" -o /dev/null --connect-timeout 5 "http://$GATEWAY_URL/")
   if [[ "$EXTERNAL_STATUS" == "200" ]]; then
     echo "PASS: External connectivity working"
   else
     echo "FAIL: External connectivity failed: HTTP $EXTERNAL_STATUS"
     exit 1
   fi
+else
+  echo "INFO: No gateway URL configured - skipping external connectivity test"
 fi
-
-# 7. Verify L7 policies still work (if waypoints are active)
-USE_WAYPOINT=$(kubectl get namespace $NAMESPACE -o jsonpath='{.metadata.labels.istio\.io/use-waypoint}')
-if [[ -n "$USE_WAYPOINT" ]]; then
-  # Test HTTPRoute-based routing if configured
-  if kubectl get httproute reviews -n $NAMESPACE >/dev/null 2>&1; then
-    DEFAULT_RESPONSE=$(kubectl exec $TEST_POD -n $NAMESPACE -- curl -s http://reviews.$NAMESPACE:9080/reviews/1)
-    HEADER_RESPONSE=$(kubectl exec $TEST_POD -n $NAMESPACE -- curl -s -H "end-user: jason" http://reviews.$NAMESPACE:9080/reviews/1)
-
-    DEFAULT_VERSION=$(echo "$DEFAULT_RESPONSE" | jq -r '.podname' | grep -o 'reviews-v[0-9]' || echo "unknown")
-    HEADER_VERSION=$(echo "$HEADER_RESPONSE" | jq -r '.podname' | grep -o 'reviews-v[0-9]' || echo "unknown")
-
-    echo "Default version (no header): $DEFAULT_VERSION"
-    echo "Version with 'end-user: jason' header: $HEADER_VERSION"
-
-    if [[ "$DEFAULT_VERSION" == "reviews-v1" && "$HEADER_VERSION" == "reviews-v2" ]]; then
-      echo "PASS: L7 routing policies working in ambient mode"
-    else
-      echo "WARNING: L7 routing not working properly - default: $DEFAULT_VERSION, header: $HEADER_VERSION"
-    fi
-  else
-    echo "INFO: No HTTPRoute configured - testing basic connectivity only"
-    HTTP_STATUS=$(kubectl exec $TEST_POD -n $NAMESPACE -- curl -s -w "%{http_code}" -o /dev/null http://reviews.$NAMESPACE:9080/reviews/1)
-    if [[ "$HTTP_STATUS" == "200" ]]; then
-      echo "PASS: Basic L4 connectivity working in ambient mode"
-    else
-      echo "FAIL: Basic connectivity failed in ambient mode: HTTP $HTTP_STATUS"
-    fi
-  fi
-fi
-
-echo "SUCCESS: Step 9 validation passed - Migration to ambient mode complete!"
 ----
 
-**If validation fails**: Check ztunnel and waypoint logs, verify traffic is flowing through ambient components.
-
-**Final Rollback Decision Point**: If Step 9 validation fails, you have two options:
-
-**Option 1 - Restore sidecars while keeping ambient infrastructure:**
-[source,console]
-----
-# Re-enable sidecar injection (keeps ambient components)
-kubectl label namespace bookinfo istio.io/rev=default
-kubectl rollout restart deployment -n bookinfo
-# Both sidecars and ambient will be active (safe but not optimal)
-----
-
-**Option 2 - Complete rollback to sidecar-only mode:**
-[source,console]
-----
-# Full rollback (see Section 5.2 for complete procedure)
-kubectl label namespace bookinfo istio.io/rev=default istio.io/dataplane-mode- istio.io/use-waypoint-
-kubectl rollout restart deployment -n bookinfo
-kubectl delete gateway waypoint -n bookinfo
-kubectl apply -f istio-backup.yaml
-----
-**Risk**: Very High - You're removing the safety net of sidecars. Thoroughly test before proceeding.
+**If rollback needed**: See <<rollback-procedures,Section 5.2 Rollback Procedures>> for Step 9 sidecar removal rollback instructions (Very High Risk). Two emergency rollback options are available.
 
 
-**Migration Complete!** Applications now run in ambient mode with:
+**The migration is completed!** Applications now run in ambient mode with:
 
 - No sidecar containers
 - mTLS via ztunnel
 - L7 policies via waypoints
----
+
 
 [[validation-and-testing]]
 == 4. Validation and Testing
@@ -1706,19 +1152,15 @@ bookinfo                                         waypoint-748b7f45c6-vxlnd      
 **Validate using Kiali:**
 After migration, use Kiali to visualize the service mesh. You should see traffic flowing through ztunnel and waypoints instead of sidecars. You will see the ztunnel as a node in the graph, and the waypoints as nodes for each namespace.
 
-image:./images/kiali-bookinfo-traffic-ambient.png[Kiali Ambient Traffic]
-
-image:./images/general-view-ambient.png[Bookinfo Ambient Label]
-
-image:./images/mtls-ambient.png[Mtls Verification]
-
-image:./images/istio-config-ambient.png[Istio configuration view]
-
 [[troubleshooting]]
 == 5. Troubleshooting
 
 [[common-issues]]
 === 5.1 Common Issues
+
+For comprehensive troubleshooting guidance, refer to:
+- https://istio.io/latest/docs/ambient/usage/troubleshoot-waypoint/[Istio Ambient Troubleshooting Documentation]
+- https://istio.io/latest/docs/ops/diagnostic-tools/[Istio Diagnostic Tools]
 
 ==== Step-Specific Error Scenarios
 
@@ -1746,24 +1188,24 @@ kubectl logs -n ztunnel -l app=ztunnel --tail=50
 [source,console]
 ----
 # Check deployment rollout status
-kubectl rollout status deployment -n bookinfo
+kubectl rollout status deployment -n <NAMESPACE>
 
 # Check for image pull errors or resource limits
-kubectl describe pods -n bookinfo | grep -A 10 "Events:"
+kubectl describe pods -n <NAMESPACE> | grep -A 10 "Events:"
 
 # Verify sidecar proxy version supports HBONE
-kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=productpage -o jsonpath='{.items[0].metadata.name}') -c istio-proxy -- pilot-agent version
+kubectl exec -n <NAMESPACE> $(kubectl get pods -n <NAMESPACE> -l app=<SERVICE_NAME> -o jsonpath='{.items[0].metadata.name}') -c istio-proxy -- pilot-agent version
 ----
 
 *Issue: HBONE environment variable not set*
 [source,console]
 ----
 # Check proxy configuration
-kubectl get pods -n bookinfo -o yaml | grep -A 5 -B 5 "PROXY_CONFIG"
+kubectl get pods -n <NAMESPACE> -o yaml | grep -A 5 -B 5 "PROXY_CONFIG"
 
 # Force pod recreation if HBONE not enabled
-kubectl delete pods -n bookinfo -l app=reviews
-kubectl rollout status deployment/reviews-v1 -n bookinfo
+kubectl delete pods -n <NAMESPACE> -l app=<SERVICE_NAME>
+kubectl rollout status deployment/<SERVICE_NAME>-v1 -n <NAMESPACE>
 ----
 
 **Errors - Ambient Mode Activation Issues:**
@@ -1772,30 +1214,30 @@ kubectl rollout status deployment/reviews-v1 -n bookinfo
 [source,console]
 ----
 # Check ztunnel logs for specific service issues
-kubectl logs -n ztunnel $(kubectl get pod -n ztunnel -l app=ztunnel -o jsonpath='{.items[0].metadata.name}') | grep productpage
+kubectl logs -n ztunnel $(kubectl get pod -n ztunnel -l app=ztunnel -o jsonpath='{.items[0].metadata.name}') | grep <SERVICE_NAME>
 
 # Verify namespace labels are correct
-kubectl get namespace bookinfo --show-labels
+kubectl get namespace <NAMESPACE> --show-labels
 
 # Check istio-cni logs for traffic redirection issues
-kubectl logs -n istio-cni $(kubectl get pod -n istio-cni -l app.kubernetes.io/name=istio-cni -o jsonpath='{.items[0].metadata.name}') | grep bookinfo
+kubectl logs -n istio-cni $(kubectl get pod -n istio-cni -l app.kubernetes.io/name=istio-cni -o jsonpath='{.items[0].metadata.name}') | grep <NAMESPACE>
 
 # Verify workloads are detected by ztunnel
-istioctl ztunnel-config workloads --namespace ztunnel | grep bookinfo
+istioctl ztunnel-config workloads --namespace ztunnel | grep <NAMESPACE>
 ----
 
 *Issue: Traffic still going through sidecars instead of ztunnel*
 [source,console]
 ----
 # Verify ambient mode is actually enabled
-kubectl get namespace bookinfo -o jsonpath='{.metadata.labels.istio\.io/dataplane-mode}'
+kubectl get namespace <NAMESPACE> -o jsonpath='{.metadata.labels.istio\.io/dataplane-mode}'
 
 # Check if CNI is redirecting traffic properly
-kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=reviews -o jsonpath='{.items[0].metadata.name}') -- netstat -rn
+kubectl exec -n <NAMESPACE> $(kubectl get pods -n <NAMESPACE> -l app=<SERVICE_NAME> -o jsonpath='{.items[0].metadata.name}') -- netstat -rn
 # Look for ztunnel redirect rules
 
 # Force pod restart to pick up ambient mode
-kubectl rollout restart deployment -n bookinfo
+kubectl rollout restart deployment -n <NAMESPACE>
 ----
 
 **Errors - Waypoint Activation Issues:**
@@ -1804,18 +1246,18 @@ kubectl rollout restart deployment -n bookinfo
 [source,console]
 ----
 # Verify policy target configuration
-kubectl get authorizationpolicy -n bookinfo -o yaml
+kubectl get authorizationpolicy -n <NAMESPACE> -o yaml
 
 # Check waypoint proxy status
-kubectl get gateway -n bookinfo
-kubectl get pods -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint
+kubectl get gateway -n <NAMESPACE>
+kubectl get pods -n <NAMESPACE> -l gateway.networking.k8s.io/gateway-name=<WAYPOINT_NAME>
 
 # Verify waypoint is receiving traffic
-WAYPOINT_POD=$(kubectl get pods -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint -o jsonpath='{.items[0].metadata.name}')
-kubectl logs $WAYPOINT_POD -n bookinfo | grep -E "HTTP|GET|POST"
+WAYPOINT_POD=$(kubectl get pods -n <NAMESPACE> -l gateway.networking.k8s.io/gateway-name=<WAYPOINT_NAME> -o jsonpath='{.items[0].metadata.name}')
+kubectl logs $WAYPOINT_POD -n <NAMESPACE> | grep -E "HTTP|GET|POST"
 
 # Check if use-waypoint label is correctly set
-kubectl get namespace bookinfo -o jsonpath='{.metadata.labels.istio\.io/use-waypoint}'
+kubectl get namespace <NAMESPACE> -o jsonpath='{.metadata.labels.istio\.io/use-waypoint}'
 ----
 
 Compare the existing sidecar policies with the new waypoint-targeted policies to ensure they match. All the rules should be the same to ensure consistent enforcement.
@@ -1824,16 +1266,16 @@ Compare the existing sidecar policies with the new waypoint-targeted policies to
 [source,console]
 ----
 # Verify waypoint configuration
-kubectl get gateway waypoint -n bookinfo -o yaml
+kubectl get gateway <WAYPOINT_NAME> -n <NAMESPACE> -o yaml
 # Check gatewayClassName is "istio-waypoint"
 
 # Check authorization policy targeting
-kubectl get authorizationpolicy -n bookinfo -o yaml | grep -A 10 "targetRefs"
+kubectl get authorizationpolicy -n <NAMESPACE> -o yaml | grep -A 10 "targetRefs"
 # Ensure policies target the correct services
 
 # Test policy enforcement manually
-TEST_POD=$(kubectl get pods -n bookinfo -l app=reviews -o jsonpath='{.items[0].metadata.name}')
-kubectl exec $TEST_POD -n bookinfo -- curl -v -H "authorization: invalid" http://productpage.bookinfo:9080/
+TEST_POD=$(kubectl get pods -n <NAMESPACE> -l app=<SERVICE_NAME> -o jsonpath='{.items[0].metadata.name}')
+kubectl exec $TEST_POD -n <NAMESPACE> -- curl -v -H "authorization: invalid" http://<SERVICE_NAME>.<NAMESPACE>:9080/
 # Should be denied if authorization policies are working
 ----
 
@@ -1843,20 +1285,16 @@ kubectl exec $TEST_POD -n bookinfo -- curl -v -H "authorization: invalid" http:/
 [source,console]
 ----
 # Check waypoint proxy performance
-$ istioctl proxy-config listeners  $(kubectl get pod -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint -o jsonpath='{.items[0].metadata.name}') -n bookinfo
+$ istioctl proxy-config listeners $(kubectl get pod -n <NAMESPACE> -l gateway.networking.k8s.io/gateway-name=<WAYPOINT_NAME> -o jsonpath='{.items[0].metadata.name}') -n <NAMESPACE>
 ADDRESSES PORT  MATCH DESTINATION
-          0     ALL   Cluster: inbound-vip|9080|http|reviews.bookinfo.svc.cluster.local
-          0     ALL   Cluster: inbound-vip|9080|http|reviews-v3.bookinfo.svc.cluster.local
-          0     ALL   Cluster: inbound-vip|9080|http|reviews-v2.bookinfo.svc.cluster.local
-          0     ALL   Cluster: inbound-vip|9080|http|reviews-v1.bookinfo.svc.cluster.local
-          0     ALL   Cluster: inbound-vip|9080|http|ratings.bookinfo.svc.cluster.local
-          0     ALL   Cluster: inbound-vip|9080|http|ratings-v1.bookinfo.svc.cluster.local
-          0     ALL   Cluster: inbound-vip|9080|http|productpage.bookinfo.svc.cluster.local
-          0     ALL   Cluster: inbound-vip|9080|http|productpage-v1.bookinfo.svc.cluster.local
-          0     ALL   Cluster: inbound-vip|9080|http|details.bookinfo.svc.cluster.local
-          0     ALL   Cluster: inbound-vip|9080|http|details-v1.bookinfo.svc.cluster.local
-          0     ALL   Cluster: inbound-vip|80|http|bookinfo-gateway-istio.bookinfo.svc.cluster.local
-          0     ALL   Cluster: inbound-vip|15021|tcp|bookinfo-gateway-istio.bookinfo.svc.cluster.local
+          0     ALL   Cluster: inbound-vip|9080|http|<SERVICE1>.<NAMESPACE>.svc.cluster.local
+          0     ALL   Cluster: inbound-vip|9080|http|<SERVICE1>-v3.<NAMESPACE>.svc.cluster.local
+          0     ALL   Cluster: inbound-vip|9080|http|<SERVICE1>-v2.<NAMESPACE>.svc.cluster.local
+          0     ALL   Cluster: inbound-vip|9080|http|<SERVICE1>-v1.<NAMESPACE>.svc.cluster.local
+          0     ALL   Cluster: inbound-vip|9080|http|<SERVICE2>.<NAMESPACE>.svc.cluster.local
+          0     ALL   Cluster: inbound-vip|9080|http|<SERVICE2>-v1.<NAMESPACE>.svc.cluster.local
+          0     ALL   Cluster: inbound-vip|80|http|<GATEWAY_SERVICE>.<NAMESPACE>.svc.cluster.local
+          0     ALL   Cluster: inbound-vip|15021|tcp|<GATEWAY_SERVICE>.<NAMESPACE>.svc.cluster.local
           0     ALL   Cluster: encap
           0     ALL   Cluster: encap
           0     ALL   Cluster: connect_originate
@@ -1868,151 +1306,196 @@ ADDRESSES PORT  MATCH DESTINATION
 [source,console]
 ----
 # Verify waypoint scaling
-kubectl get deployment -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint
+kubectl get deployment -n <NAMESPACE> -l gateway.networking.k8s.io/gateway-name=<WAYPOINT_NAME>
 
 # Scale waypoints if needed
-kubectl scale deployment $(kubectl get deployment -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint -o jsonpath='{.items[0].metadata.name}') -n bookinfo --replicas=2
+kubectl scale deployment $(kubectl get deployment -n <NAMESPACE> -l gateway.networking.k8s.io/gateway-name=<WAYPOINT_NAME> -o jsonpath='{.items[0].metadata.name}') -n <NAMESPACE> --replicas=2
 ----
 
 [[rollback-procedures]]
-=== 5.2 Rollback Procedures
+=== 5.2 Rollback Procedures and Risk Matrix
 
-**Complete Rollback:**
-If you experience several issues during migration, use this complete procedure:
+This section provides consolidated rollback procedures for each migration step, organized by risk level and recovery complexity.
+
+==== Rollback Decision Matrix
+
+[cols="1,1,2,3"]
+|===
+|Migration Step |Risk Level |Scenario |Rollback Actions
+
+|**Step 1-2 (Prerequisites & Cluster Setup)**
+|Low
+|Istio/CNI/ZTunnel configuration issues
+|Revert Istio profile, delete ZTunnel
+
+|**Step 3 (HBONE Support)**
+|Low
+|Pod restart failures
+|Rollback deployment revisions
+
+|**Step 4 (Waypoint Deployment)**
+|Low
+|Waypoint pods not starting
+|Delete waypoint resources
+
+|**Step 5 (Policy Migration)**
+|Medium
+|Policy conflicts causing traffic issues
+|Remove new policies, restore backups
+
+|**Step 6 (Ambient Mode Enable)**
+|High
+|Traffic flow disruption
+|Disable ambient mode labels
+
+|**Step 7 (Waypoint Activation)**
+|High
+|L7 policy enforcement failures
+|Disable waypoint usage
+
+|**Step 8 (Policy Cleanup)**
+|Medium
+|Accidental policy deletion
+|Restore from backup
+
+|**Step 9 (Sidecar Removal)**
+|Very High
+|Complete service failure
+|Emergency sidecar restoration
+|===
+
+==== Step-by-Step Rollback Procedures
+
+**Low Risk Rollbacks (Steps 1-4):**
+
+[source,console]
+----
+# Step 2 Rollback: Cluster Setup Issues
+# Replace the profile name if a custom profile was used
+kubectl patch istio default -n istio-system --type merge -p '{"spec":{"profile":"default"}}'
+kubectl patch istiocni default --type merge -p '{"spec":{"profile":"default"}}'
+kubectl delete ztunnel default -n ztunnel
+kubectl delete namespace ztunnel
+
+# Step 3 Rollback: HBONE Support Issues
+kubectl rollout undo deployment -n <NAMESPACE>
+
+# Step 4 Rollback: Waypoint Deployment Issues
+kubectl delete gateway <WAYPOINT_NAME> -n <NAMESPACE>
+# Waypoint deployments automatically cleaned up
+----
+
+**Medium Risk Rollbacks (Steps 5, 8):**
+
+[source,console]
+----
+# Step 5 Rollback: Policy Migration Issues
+kubectl delete authorizationpolicy -n <NAMESPACE> -l migration=waypoint
+kubectl delete authorizationpolicy -n <NAMESPACE> -l migration=protection
+kubectl delete httproute <HTTPROUTE_NAME> -n <NAMESPACE>
+# Original VirtualServices and sidecar policies remain active
+
+# Step 8 Rollback: Policy Cleanup Issues. Rollback to original policies using backup
+kubectl apply -f istio-backup.yaml
+# Review and manually remove duplicates after restoration
+----
+
+**High Risk Rollbacks (Steps 6-7):**
+
+[source,console]
+----
+# Step 6 Rollback: Ambient Mode Issues
+kubectl label namespace <NAMESPACE> istio.io/dataplane-mode-
+# Traffic reverts to sidecars immediately
+
+# Step 7 Rollback: Waypoint Activation Issues
+kubectl label namespace <NAMESPACE> istio.io/use-waypoint-
+# L4 policies continue through ztunnel, L7 policies disabled
+----
+
+**Very High Risk Rollback (Step 9):**
+
+**Option 1 - Sidecar Restoration (Recommended):**
 
 [source,console]
 ----
 #!/bin/bash
-# Complete rollback script. Please review and customize before running.
+# Rollback script - test before use in production
 
-echo "COMPLETE ROLLBACK - Restoring service availability"
+echo "=== ROLLBACK: Restoring Sidecars ==="
+NAMESPACE=${1:-<YOUR_NAMESPACE>}
 
-NAMESPACE=${1:-bookinfo}  # Use provided namespace or default to bookinfo
-
-# Step 1: Re-enable sidecar injection immediately
-echo "Step 1: Re-enabling sidecar injection..."
-# Use the original revision label used before migration
+# Step 1: Immediately re-enable sidecar injection
 kubectl label namespace $NAMESPACE istio.io/rev=default --overwrite
+echo "Sidecar injection re-enabled for $NAMESPACE"
 
-# Step 2: Disable ambient mode
-echo "Step 2: Disabling ambient mode..."
-kubectl label namespace $NAMESPACE istio.io/dataplane-mode- 2>/dev/null || true
-kubectl label namespace $NAMESPACE istio.io/use-waypoint- 2>/dev/null || true
-
-# Step 3: Restart all deployments to get sidecars back
-echo "Step 3: Restarting deployments..."
+# Step 2: Restart deployments to get sidecars back
 kubectl rollout restart deployment -n $NAMESPACE
+echo "Deployments restarting..."
 
-# Step 4: Wait for rollout to complete
-echo "Step 4: Waiting for deployments to be ready..."
+# Step 3: Wait for rollout (with timeout)
 kubectl rollout status deployment -n $NAMESPACE --timeout=300s
 
-# Step 5: Test connectivity
-echo "Step 5: Testing connectivity..."
+# Step 4: Validate service restoration
 TEST_POD=$(kubectl get pods -n $NAMESPACE -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
 if [[ -n "$TEST_POD" ]]; then
-    HTTP_STATUS=$(kubectl exec $TEST_POD -n $NAMESPACE -- curl -s -w "%{http_code}" -o /dev/null --connect-timeout 5 http://productpage.$NAMESPACE:9080/ 2>/dev/null || echo "000")
+    HTTP_STATUS=$(kubectl exec $TEST_POD -n $NAMESPACE -- curl -s -w "%{http_code}" -o /dev/null --connect-timeout 5 http://<SERVICE_NAME>.$NAMESPACE:9080/<SERVICE_PATH> 2>/dev/null || echo "000")
     if [[ "$HTTP_STATUS" == "200" ]]; then
-        echo "PASS: Emergency rollback successful - services restored"
+        echo "SUCCESS: Emergency rollback completed - services restored"
+        echo "Both sidecars and ambient infrastructure are now active"
     else
-        echo "FAIL: Services still not responding - check logs and contact support"
+        echo "WARNING: Service connectivity issues persist - manual intervention required"
     fi
 else
-    echo "FAIL: No pods found - check deployment status"
+    echo "ERROR: No pods found - check deployment status"
 fi
 
-echo "Next steps: Restore original policies from backup:"
-echo "Run: kubectl apply -f istio-backup.yaml to restore original configurations."
+echo "Next step: Restore original policies: kubectl apply -f istio-backup.yaml"
 ----
 
-**Partial Service Degradation - Gradual Rollback:**
-If only some services are affected, use a more measured approach:
+==== Rollback Validation Checklist
+
+After any rollback, verify system health:
 
 [source,console]
 ----
-# Identify affected services
-kubectl get pods -n bookinfo --field-selector=status.phase!=Running
+# 1. Verify pod status
+kubectl get pods -n <NAMESPACE>
 
-# For specific deployments with issues:
-DEPLOYMENT_NAME="reviews-v1"  # Replace with actual deployment
-kubectl label namespace bookinfo istio.io/rev=default  # Re-enable sidecars
-kubectl rollout restart deployment/$DEPLOYMENT_NAME -n bookinfo
-kubectl rollout status deployment/$DEPLOYMENT_NAME -n bookinfo
+# 2. Test service connectivity
+kubectl exec -n <NAMESPACE> $(kubectl get pods -n <NAMESPACE> -l app=<SERVICE_NAME> -o jsonpath='{.items[0].metadata.name}') -- curl http://<SERVICE_NAME>.<NAMESPACE>:9080/<SERVICE_PATH>
 
-# Test specific service
-kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=reviews -o jsonpath='{.items[0].metadata.name}') -- curl http://reviews.bookinfo:9080/reviews/1
+# 3. Check sidecar presence (should be 2/2 for sidecars)
+kubectl get pods -n <NAMESPACE> --no-headers | grep "2/2.*Running" | wc -l
+
+# 4. Verify policy enforcement
+kubectl get authorizationpolicy -n <NAMESPACE>
+
+# 5. Test external connectivity (if applicable)
+curl -s http://$GATEWAY_URL/<YOUR_APPLICATION_PATH>
 ----
+
+==== When to Use Each Rollback Option
+
+**Use Step-Specific Rollbacks when:**
+- Single step validation fails
+- Issues are isolated to specific components
+- Other migration steps are working correctly
+
+**Use Sidecar Restoration when:**
+- Service connectivity is disrupted
+- L7 policies are not enforcing correctly
+- Need immediate service restoration
+
+**Prevention Best Practices:**
+- Always create backups before starting migration
+- Test rollback procedures in non-production environments
+- Monitor service health continuously during migration
+- Keep original policies active until validation complete
+- Use gradual, namespace-by-namespace migration approach
 
 [[post-migration-optimization]]
 == 6. Post-Migration Optimization
-
-[[waypoint-right-sizing]]
-=== 6.1 Waypoint Right-Sizing
-
-**Monitor waypoint resource usage:**
-[source,console]
-----
-# Scale waypoint for high-traffic services (e.g., bookinfo)
-kubectl scale deployment $(kubectl get deployment -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint -o jsonpath='{.items[0].metadata.name}') -n bookinfo --replicas=3
-----
-
-**Memory and CPU Issues:**
-[source,console]
-----
-# Check resource usage of ambient components
-kubectl top pods -n ztunnel
-kubectl top pods -n istio-cni
-kubectl top pods -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint
-
-# Check for resource limits
-kubectl describe pods -n ztunnel | grep -A 5 "Limits:"
-kubectl describe pods -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint | grep -A 5 "Limits:"
-
-# Adjust waypoint resources if needed
-kubectl patch deployment waypoint -n bookinfo -p '{"spec":{"template":{"spec":{"containers":[{"name":"istio-proxy","resources":{"requests":{"memory":"256Mi","cpu":"100m"},"limits":{"memory":"512Mi","cpu":"500m"}}}]}}}}'
-----
-
-**Network Connectivity Issues:**
-[source,console]
-----
-# Check ztunnel network configuration
-kubectl exec -n ztunnel $(kubectl get pods -n ztunnel -o jsonpath='{.items[0].metadata.name}') -- ss -tulpn | grep :15001
-
-# Verify CNI network setup
-kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -o jsonpath='{.items[0].metadata.name}') -- ip route show
-
-# Check for DNS resolution issues
-kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -o jsonpath='{.items[0].metadata.name}') -- nslookup reviews.bookinfo.svc.cluster.local
-
-# Verify mTLS connectivity
-istioctl authn tls-check $(kubectl get pods -n bookinfo -l app=productpage -o jsonpath='{.items[0].metadata.name}').bookinfo reviews.bookinfo.svc.cluster.local
-----
-
-==== Log Analysis Commands
-
-**Comprehensive Log Collection:**
-[source,console]
-----
-# Collect all relevant logs for troubleshooting
-mkdir -p /tmp/ambient-debug-logs
-
-# Istio control plane logs
-kubectl logs -n istio-system -l app=istiod --tail=100 > /tmp/ambient-debug-logs/istiod.log
-
-# ZTunnel logs
-kubectl logs -n ztunnel -l app=ztunnel --tail=100 > /tmp/ambient-debug-logs/ztunnel.log
-
-# CNI logs
-kubectl logs -n istio-cni -l app.kubernetes.io/name=istio-cni --tail=100 > /tmp/ambient-debug-logs/cni.log
-
-# Waypoint logs
-kubectl logs -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint --tail=100 > /tmp/ambient-debug-logs/waypoint.log
-
-# Application logs
-kubectl logs -n bookinfo -l app=productpage --tail=100 > /tmp/ambient-debug-logs/app.log
-
-echo "Debug logs collected in /tmp/ambient-debug-logs/"
-----
 
 [[observability-considerations]]
 === 6.2 Observability Considerations
@@ -2048,7 +1531,7 @@ apiVersion: telemetry.istio.io/v1
 kind: Telemetry
 metadata:
   name: waypoint-metrics
-  namespace: bookinfo
+  namespace: <NAMESPACE>
 spec:
   targetRefs:
   - kind: Gateway
@@ -2065,6 +1548,8 @@ spec:
 **Configure Kiali for ambient mode:**
 
 When you move to ambient you will need to create a `PodMonitor` resource to allow Kiali to scrape the waypoint metrics.
+
+**See also**: For additional Kiali configuration options, refer to the observability documentation in the `docs/addons/` directory.
 
 [source,yaml]
 ----
@@ -2109,6 +1594,14 @@ spec:
 
 [[additional-resources]]
 == 7. Additional Resources
+
+**Internal Documentation:**
+- link:../common/istio-ambient-waypoint.adoc[Waypoint Proxy Configuration Guide] - Detailed waypoint proxy setup and usage
+- link:../common/install-bookinfo-app.adoc[Installing the Bookinfo Application] - Sample application for testing
+- link:../addons/addons.adoc[Addons and Extensions] - Additional components and observability tools
+- General installation and configuration guides in the `docs/` directory
+
+**External Resources:**
 These resources provide further information on ambient mode and related configurations:
 
 - https://istio.io/latest/docs/ambient/[Upstream Istio Ambient Documentation] - Official Istio ambient mode docs
