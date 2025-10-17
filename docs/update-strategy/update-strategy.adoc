@@ -10,6 +10,7 @@ link:../../README.adoc[Return to Project Root]
 
 == Table of Contents
 
+- <<understanding-versioning>>
 - <<update-strategy>>
   - <<inplace>>
     - <<example-using-the-inplace-strategy>>
@@ -18,10 +19,28 @@ link:../../README.adoc[Return to Project Root]
     - <<example-using-the-revisionbased-strategy>>
     - <<example-using-the-revisionbased-strategy-and-an-istiorevisiontag>>
 
+[[understanding-versioning]]
+== Understanding Versioning
+
+The Sail Operator follows Semantic Versioning for all releases. Semantic Versioning uses a three-part version number in the format X.Y.Z to communicate the nature of changes in each release.
+
+**X (Major version)**::
+Indicates significant updates that might include breaking changes, such as architectural shifts, API changes, or schema modifications.
+
+**Y (Minor version)**::
+Introduces new features and enhancements while maintaining backward compatibility.
+
+**Z (Patch version or z-stream release)**::
+Delivers critical bug fixes and security updates, such as Common Vulnerabilities and Exposures (CVEs) resolutions. Patch versions do not include new features.
+
+'''
+
 [[update-strategy]]
 == Update Strategy
 
 The Sail Operator supports two update strategies to update the version of the Istio control plane: `InPlace` and `RevisionBased`. The default strategy is `InPlace`.
+
+*Note:* These update strategies apply to both sidecar and ambient modes. For ambient mode-specific update procedures, including updating IstioCNI and ZTunnel components, see link:../common/istio-ambient-update.adoc#updating-istio-in-ambient-mode[Updating Istio in Ambient Mode].
 
 [[inplace]]
 == InPlace
@@ -148,7 +167,7 @@ endif::[]
 
 [source,bash,subs="attributes+",name="inplace-update-strategy"]
 ----
-istioctl proxy-status 
+istioctl proxy-status
 ----
 The column `VERSION` should match the new control plane version.
 
@@ -267,7 +286,7 @@ endif::[]
 
 [source,bash,subs="attributes+"]
 ----
-istioctl proxy-status 
+istioctl proxy-status
 ----
 The column `VERSION` should match the control plane version.
 
@@ -322,7 +341,7 @@ endif::[]
 
 [source,bash,subs="attributes+",name="revision-based-strategy"]
 ----
-istioctl proxy-status 
+istioctl proxy-status
 ----
 The column `VERSION` should still match the old control plane version.
 
@@ -362,7 +381,7 @@ endif::[]
 
 [source,bash,subs="attributes+",name="revision-based-strategy"]
 ----
-istioctl proxy-status 
+istioctl proxy-status
 ----
 The column `VERSION` should match the updated control plane version.
 
@@ -507,7 +526,7 @@ endif::[]
 
 [source,bash,subs="attributes+"]
 ----
-istioctl proxy-status 
+istioctl proxy-status
 ----
 The column `VERSION` should match the control plane version.
 
@@ -554,7 +573,7 @@ endif::[]
 
 [source,bash,subs="attributes+",name="revision-istiorevisiontag-strategy"]
 ----
-istioctl proxy-status 
+istioctl proxy-status
 ----
 The column `VERSION` should still match the old control plane version.
 
@@ -574,7 +593,7 @@ kubectl rollout restart deployment -n bookinfo
 
 [source,bash,subs="attributes+"]
 ----
-istioctl proxy-status 
+istioctl proxy-status
 ----
 The column `VERSION` should match the updated control plane version.
 
