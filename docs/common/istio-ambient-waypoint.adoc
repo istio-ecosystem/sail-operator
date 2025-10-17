@@ -53,7 +53,7 @@ If your applications require any of the following L7 mesh functions, you will ne
 
 Waypoint proxies are deployed using Kubernetes Gateway resources. As of Kubernetes 1.30 and OpenShift 4.17, the Kubernetes Gateway API CRDs are not available by default and must be installed to be used. This can be done with the following command:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-prerequisites"]
 ----
 kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
   { kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml; }
@@ -73,7 +73,7 @@ Before you deploy a waypoint proxy in the application namespace, confirm the nam
 
 1. Deploy a waypoint proxy in the bookinfo namespace:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-deploy"]
 ----
 kubectl apply -f - <<EOF
 apiVersion: gateway.networking.k8s.io/v1
@@ -96,7 +96,7 @@ The `istio.io/waypoint-for: service` label on the Gateway resource specifies tha
 
 2. Enroll the bookinfo namespace to use the waypoint:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-deploy"]
 ----
 kubectl label ns bookinfo istio.io/use-waypoint=waypoint
 ----
@@ -132,7 +132,7 @@ spec:
 
 By default, the Istio control plane will look for a waypoint specified using the `istio.io/use-waypoint` label in the same namespace as the resource which the label is applied to. You can add labels `istio.io/use-waypoint-namespace` and `istio.io/use-waypoint` together to start using the cross-namespace waypoint.
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-crossns-deploy"]
 ----
 kubectl label ns bookinfo istio.io/use-waypoint-namespace=foo
 kubectl label ns bookinfo istio.io/use-waypoint=waypoint-foo
@@ -154,7 +154,7 @@ When the Istio control plane is updated using the InPlace strategy, waypoint pro
 
 1. Verify waypoint proxy pods are running with the updated control plane:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-update-inplace"]
 ----
 $ kubectl get pods -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint
 NAME                       READY   STATUS    RESTARTS   AGE
@@ -163,7 +163,7 @@ waypoint-5d9c8b7f9-abc12   1/1     Running   0          5m
 
 2. Confirm the waypoint proxy is connected to the new control plane by checking its logs:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-update-inplace"]
 ----
 $ kubectl logs -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint | grep "istiod"
 ----
@@ -174,7 +174,7 @@ In a RevisionBased update, waypoint proxies are compatible with multiple control
 
 1. After the new Istio control plane revision is ready, verify waypoint proxy pods are running:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-update-revisionbased"]
 ----
 $ kubectl get pods -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint
 NAME                       READY   STATUS    RESTARTS   AGE
@@ -183,14 +183,14 @@ waypoint-5d9c8b7f9-abc12   1/1     Running   0          5m
 
 2. Confirm the waypoint proxy is connected to the new control plane revision by checking its logs:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-update-revisionbased"]
 ----
 $ kubectl logs -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint | grep "istiod"
 ----
 
 3. If you update the waypoint proxy image, apply the new image version to the Gateway resource:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-update-revisionbased"]
 ----
 $ kubectl patch gateway waypoint -n bookinfo --type='merge' -p '{"spec":{"template":{"spec":{"containers":[{"name":"istio-proxy","image":"docker.io/istio/proxyv2:1.26.4"}]}}}}'
 ----
@@ -206,7 +206,7 @@ If you have traffic routing rules (e.g., HTTPRoute), verify they are still being
 
 1. Test traffic distribution (e.g., for Bookinfo reviews service):
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-verify-l7"]
 ----
 $ for i in {1..10}; do kubectl exec "$(kubectl get pod -l app=reviews -n bookinfo -o jsonpath='{.items[0].metadata.name}')" -c reviews -n bookinfo -- curl -s http://productpage:9080/productpage | grep -o "reviews-v[0-9]"; done
 ----
@@ -217,7 +217,7 @@ Verify L7 authorization policies are correctly enforced by the waypoint proxy.
 
 1. Test policy enforcement (e.g., deny access from a specific source):
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-verify-l7"]
 ----
 $ kubectl exec "$(kubectl get pod -l app=ratings -n bookinfo -o jsonpath='{.items[0].metadata.name}')" -c ratings -n bookinfo -- curl -sS productpage:9080/productpage
 ----
@@ -229,7 +229,7 @@ If you are using cross-namespace waypoints, ensure that the labels for `istio.io
 
 1. Verify namespace labels:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-crossns-update"]
 ----
 $ kubectl get ns bookinfo --show-labels | grep waypoint
 bookinfo  Active  istio.io/use-waypoint-namespace=foo,istio.io/use-waypoint=waypoint-foo
@@ -237,7 +237,7 @@ bookinfo  Active  istio.io/use-waypoint-namespace=foo,istio.io/use-waypoint=wayp
 
 2. If labels are missing or incorrect, re-apply them:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-crossns-update"]
 ----
 $ kubectl label ns bookinfo istio.io/use-waypoint-namespace=foo --overwrite
 $ kubectl label ns bookinfo istio.io/use-waypoint=waypoint-foo --overwrite
@@ -255,7 +255,7 @@ With a waypoint proxy deployed, you can split traffic between different versions
 
 For example, let's configure traffic routing to send 90% of requests to reviews-v1 and 10% to reviews-v2:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-l7-features"]
 ----
 kubectl apply -f - <<EOF
 apiVersion: gateway.networking.k8s.io/v1
@@ -291,7 +291,7 @@ When a waypoint proxy is added to a workload, you may have two possible places w
 
 For example, let's add a L7 authorization policy that will explicitly allow a curl service to send `GET` requests to the `productpage` service, but perform no other operations:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-l7-features"]
 ----
 kubectl apply -f - <<EOF
 apiVersion: security.istio.io/v1
@@ -336,7 +336,7 @@ For steps on how to troubleshoot an ambient deployment, you can refer to the Ist
 [[remove-istio-and-gateway-resources]]
 ==== Remove Istio and Gateway Resources
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-cleanup"]
 ----
 kubectl delete -n bookinfo AuthorizationPolicy productpage-waypoint
 kubectl delete -n bookinfo HTTPRoute reviews
@@ -346,7 +346,7 @@ kubectl delete -n bookinfo Gateway waypoint
 [[remove-the-namespace-from-the-ambient-data-plane]]
 ==== Remove the namespace from the ambient data plane
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-cleanup"]
 ----
 kubectl label namespace bookinfo istio.io/dataplane-mode-
 ----
@@ -354,7 +354,7 @@ kubectl label namespace bookinfo istio.io/dataplane-mode-
 [[remove-the-bookinfo-applications]]
 ==== Remove the Bookinfo applications
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-cleanup"]
 ----
 kubectl delete -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo.yaml
 kubectl delete -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo-versions.yaml
@@ -364,7 +364,7 @@ kubectl delete -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{ist
 [[remove-the-kubernetes-gateway-api-crds]]
 ==== Remove the Kubernetes Gateway API CRDs
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-cleanup"]
 ----
 kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml
 ----
