@@ -443,6 +443,17 @@ This section provides common procedures for updating ambient mode components (Is
 [[updating-istiocni]]
 === Updating IstioCNI
 
+The Istio Container Network Interface (CNI) update process uses in-place updates. When the IstioCNI resource changes, the daemonset automatically replaces the existing istio-cni-node pods with the specified version of the CNI plugin.
+
+You can use the following field to manage version updates:
+
+**spec.version**::
+Defines the CNI plugin version to install. Specify the value in the format vX.Y.Z, where X.Y.Z represents the desired version. For example, use v1.26.4 to install the CNI plugin version 1.26.4.
+
+To update the CNI plugin, modify the spec.version field with the target version. The IstioCNI resource also includes a values field that exposes configuration options from the istio-cni chart.
+
+In ambient mode, the IstioCNI component is responsible for traffic redirection. The component is compatible with multiple control plane versions during RevisionBased upgrades and continues to handle traffic redirection for both old and new control planes during the migration period.
+
 After updating the Istio control plane, update the IstioCNI component. The Sail Operator deploys a new version of the CNI plugin that replaces the old version. The `istio-cni-node` DaemonSet pods are updated using a rolling update strategy, and traffic redirection rules are maintained during the update process.
 
 *Prerequisites:*
@@ -589,24 +600,6 @@ waypoint-5d9c8b7f9-abc12   1/1     Running   0          5m
 ----
 
 . Verify L7 features are working correctly by testing traffic routing and authorization policies. See link:./istio-ambient-waypoint.adoc#layer-7-features-in-ambient-mode[Layer 7 Features in Ambient Mode] for examples.
-
-'''
-
-[[about-the-istio-cni-update-process]]
-== About the Istio CNI update process
-
-The Istio Container Network Interface (CNI) update process uses in-place updates. When the IstioCNI resource changes, the daemonset automatically replaces the existing istio-cni-node pods with the specified version of the CNI plugin.
-
-You can use the following field to manage version updates:
-
-**spec.version**::
-Defines the CNI plugin version to install. Specify the value in the format vX.Y.Z, where X.Y.Z represents the desired version. For example, use v1.26.4 to install the CNI plugin version 1.26.4.
-
-To update the CNI plugin, modify the spec.version field with the target version. The IstioCNI resource also includes a values field that exposes configuration options from the istio-cni chart.
-
-In ambient mode, the IstioCNI component is responsible for traffic redirection. The component is compatible with multiple control plane versions during RevisionBased upgrades and continues to handle traffic redirection for both old and new control planes during the migration period.
-
-For detailed procedures on updating IstioCNI, see section "Updating IstioCNI".
 
 '''
 
