@@ -1,0 +1,86 @@
+link:../README.adoc[Return to Project Root]
+
+== Table of Contents
+
+* <<coexistence-of-ambient-and-sidecar-mode>>
+** <<requirements-for-coexistence>>
+** <<supported-use-cases-in-coexistence-mode>>
+** <<limitations-and-unsupported-use-cases>>
+*** <<layer-7-policy-enforcement>>
+** <<best-practices>>
+
+[[coexistence-of-ambient-and-sidecar-mode]]
+== Coexistence of ambient and sidecar mode in the same mesh
+
+Sail Operator supports running sidecar pods and ambient pods together within the same mesh.
+While basic connectivity and Layer 4 (L4) features work seamlessly between sidecar and ambient workloads, there is a
+significant limitation for Layer 7 (L7) capabilities in the hybrid model.
+
+NOTE: The information in this document applies to Istio version 1.27.x. The coexistence of the two data planes is still evolving. For the latest status and updates, see the following upstream links: https://github.com/istio/istio/issues/57213[Support sidecar and ambient coexistence] and https://istio.io/latest/docs/ambient/usage/add-workloads/[Istio Ambient Mode - Add workloads to the mesh].
+
+[[requirements-for-coexistence]]
+=== Requirements for Coexistence
+
+- You have deployed Istio with `ambient` profile or have migrated your existing Sail Operator deployment with `ambient` profile.
+- All sidecars in the hybrid mesh must be HBONE-aware. This requires you to restart any existing pods after upgrading the control
+  plane. The restart reinjects the pods with an updated sidecar configuration that enables HBONE (ISTIO_META_ENABLE_HBONE),
+  allowing them to communicate with the ambient mesh.
+
+[[supported-use-cases-in-coexistence-mode]]
+=== Supported Use Cases in Coexistence Mode
+
+The following table describes the functionality that is expected to work when running sidecar and ambient modes together:
+
+[cols="1,2,5"]
+|===
+| Category | Functionality | Description
+
+| *Basic connectivity*
+| East-west communication
+| Pods operating in sidecar mode can communicate with those in ambient mode, and vice versa.
+
+| *L4 Security*
+| mTLS
+| When a sidecar proxy detects that the destination is an HBONE endpoint, it automatically uses the HBONE protocol. Similarly, when a pod runs in ambient mode, its source ztunnel uses HBONE to communicate with the destination's sidecar proxy.
+
+| *L4 Authentication/Authorization*
+| Layer 4 policies
+| Layer 4 (L4) authentication and authorization policies remain supported in coexistence mode. A `PeerAuthentication` policy with mTLS mode set to `STRICT` allows traffic from pods running in either sidecar or ambient mode. AuthorizationPolicy with L4 rules (based on principals, source IPs, ports) work consistently across both architectures, with policies being enforced by both ztunnel (ambient) and Envoy sidecars.
+
+| *Gateways*
+| Ingress and Egress Gateways
+| Pods operating in ambient mode interoperate with Istio egress gateways. Ingress gateways deployed in non-ambient namespaces can expose services hosted in both ambient and sidecar modes.
+
+| *L4 Observability*
+| Basic telemetry
+| Only basic L4 TCP metrics are supported.
+|===
+
+NOTE: By default, traffic from ingress gateways to ambient services does not traverse waypoints unless the `istio.io/ingress-use-waypoint: "true"` label is applied.
+
+[[limitations-and-unsupported-use-cases]]
+=== Limitations and Unsupported Use Cases
+
+The major limitations are around L7 features (like L7 based traffic routing, L7 auth policies and L7 telemetry) when traffic has to traverse between the two dataplane modes.
+
+[[layer-7-policy-enforcement]]
+==== Layer 7 Policy Enforcement
+
+Currently, sidecar proxies have limited support for communicating with waypoint proxies. As a result, when a sidecar pod sends traffic
+to an ambient pod with a waypoint, the traffic usually bypasses the waypoint, which prevents Layer 7 (L7) policy enforcement.
+However, ambient pods can communicate with sidecar pods through waypoints, allowing L7 policy enforcement in that direction.
+
+When a sidecar pod communicates with an ambient pod that has a waypoint:
+
+- L7 authorization policies do not apply
+- Only Layer 4 (L4) authorization policies are enforced
+- Routing decisions are made by the client-side sidecar, not the waypoint proxy
+
+[[best-practices]]
+=== Best Practices
+
+When running sidecar and ambient modes together, follow these recommendations:
+
+- *Use separate namespaces*: Whenever possible, use separate namespaces for ambient and sidecar pods to avoid configuration issues.
+- *Avoid mixed labeling*: Avoid https://istio.io/latest/docs/reference/config/labels/[labeling] pods/namespaces with both sidecar and ambient injection labels (although sidecar takes precedence if both are present).
+
