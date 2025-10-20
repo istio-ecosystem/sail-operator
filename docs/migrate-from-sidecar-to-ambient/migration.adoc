@@ -186,7 +186,7 @@ For detailed waypoint configuration guidance, see link:../common/istio-ambient-w
 - SPIRE integration for identity federation
 
 For additional compatibility considerations refer to:
-- https://github.com/openshift-service-mesh/sail-operator/blob/main/docs/ossm/ambient/coexistence.md[Sidecar-Ambient Coexistence Guidelines]
+- link:../common/coexistence.md [Sidecar-Ambient Coexistence Guidelines]
 
 [[pre-migration-checklist]]
 === 2.3 Pre-Migration Checklist
@@ -476,7 +476,7 @@ Check that sidecars now support HBONE protocol:
 [source,console]
 ----
 # Check for HBONE is enable in sidecar
-$ kubectl get pod $(kubectl get pods -n bookinfo -l app=reviews -o jsonpath='{.items[0].metadata.name}') -n bookinfo -o yaml | yq '.spec.containers[] | select(.name=="istio-proxy") | .env[] | select(.name=="PROXY_CONFIG")'
+$ kubectl get pod $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -n bookinfo -o yaml | yq '.spec.containers[] | select(.name=="istio-proxy") | .env[] | select(.name=="PROXY_CONFIG")'
 name: PROXY_CONFIG
 value: |
   {"proxyMetadata":{"ISTIO_META_ENABLE_HBONE":"true"},"image":{"imageType":"distroless"}}
@@ -490,7 +490,7 @@ Send requests to ensure connectivity remains intact:
 [source,console]
 ----
 # Test service connectivity through sidecars
-$ kubectl exec $(kubectl get pods -n bookinfo -l app=reviews -o jsonpath='{.items[0].metadata.name}') -n bookinfo -- curl http://reviews.bookinfo:9080/reviews/1
+$ kubectl exec $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -n bookinfo -- curl http://reviews.bookinfo:9080/reviews/1
 {
   "id": "1",
   "podname": "reviews-v1-75797bd984-7b5g6",
@@ -577,10 +577,10 @@ Verify that waypoints are deployed correctly:
 [source,console]
 ----
 kubectl get gateway waypoint -n bookinfo
-kubectl get deployment -n $NAMESPACE -l gateway.networking.k8s.io/gateway-name=waypoint
-kubectl get pods -n $NAMESPACE -l gateway.networking.k8s.io/gateway-name=waypoint
+kubectl get deployment -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint
+kubectl get pods -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint
 # Verify waypoint is not yet active
-kubectl get namespace $NAMESPACE -o jsonpath='{.metadata.labels.istio\.io/use-waypoint}'
+kubectl get namespace bookinfo -o jsonpath='{.metadata.labels.istio\.io/use-waypoint}'
 ----
 
 **If rollback needed**: See <<rollback-procedures,Section 5.2 Rollback Procedures>> for Step 4 waypoint deployment rollback instructions (Low Risk).
@@ -931,7 +931,7 @@ fi
 [[step-61-gradual-namespace-migration]]
 ==== Step 6.1 Gradual Namespace Migration
 
-We recommend enabling ambient mode one namespace at a time, starting with the least critical. Replace `bookinfo` with your actual namespace name:
+We recommend enabling ambient mode for one namespace at a time, starting with the least critical. Replace `bookinfo` with your actual namespace name:
 
 [source,console]
 ----
@@ -956,7 +956,7 @@ bookinfo                                         waypoint-58cdc7f494-98h79      
 [source,console]
 ----
 # Test connectivity after enabling each namespace, e.g., bookinfo
-kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=reviews -o jsonpath='{.items[0].metadata.name}') -- curl http://reviews.bookinfo:9080/
+kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -- curl http://reviews.bookinfo:9080/
 ----
 
 **Important**: at this point sidecars are still present and handling traffic. Do NOT remove sidecars yet.
@@ -986,7 +986,6 @@ kubectl label namespace bookinfo istio.io/use-waypoint=waypoint
 [source,console]
 ----
 # Enable waypoint for specific services only
-kubectl label service <SERVICE_NAME> istio.io/use-waypoint=<WAYPOINT_NAME> -n <NAMESPACE>
 kubectl label service <SERVICE_NAME> istio.io/use-waypoint=<WAYPOINT_NAME> -n <NAMESPACE>
 ----
 
@@ -1081,14 +1080,14 @@ Test that L7 policies are now enforced through waypoints (L7 policies should wor
 [source,console]
 ----
 # Test authorization policies work through waypoint
-kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=reviews -o jsonpath='{.items[0].metadata.name}') -- curl -v http://reviews.bookinfo:9080/reviews/1
+kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -- curl -v http://reviews.bookinfo:9080/reviews/1
 {"id": "1","podname": "reviews-v3-dd9d6fc89-6glvk","clustername": "null","reviews": [{  "reviewer": "Reviewer1",  "text": "An extremely entertaining play by Shakespeare. The slapstick humor is refreshing!", "rating": {"stars": 5, "color": "red"}},{  "reviewer": "Reviewer2",  "text": "Absolutely fun and entertaining. The play lacks thematic depth when compared to other plays by Shakespeare.", "rating": {"stars": 4, "color": "red"}}]}
 ----
 
 [source,console]
 ----
 # Test traffic routing through waypoint with header (if HTTPRoute configured)
-$ kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=reviews -o jsonpath='{.items[0].metadata.name}') -- curl -H "end-user: jason" http://reviews.bookinfo:9080/reviews/1
+$ kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -- curl -H "end-user: jason" http://reviews.bookinfo:9080/reviews/1
 {"id": "1","podname": "reviews-v2-67ff7bcdc5-kklgl","clustername":"null","reviews": [{  "reviewer": "Reviewer1",  "text": "An extremely entertaining play by Shakespeare. The slapstick humor is refreshing!","rating": {"stars": 5, "color": "black"}},{  "reviewer": "Reviewer2",  "text": "Absolutely fun and entertaining. The play lacks thematic depthwhen compared to other plays by Shakespeare.","rating": {"stars": 4, "color": "black"}}]}
 ----
 
@@ -1190,9 +1189,6 @@ kubectl rollout status deployment -n <NAMESPACE>
 
 # Check for image pull errors or resource limits
 kubectl describe pods -n <NAMESPACE> | grep -A 10 "Events:"
-
-# Verify sidecar proxy version supports HBONE
-kubectl exec -n <NAMESPACE> $(kubectl get pods -n <NAMESPACE> -l app=<SERVICE_NAME> -o jsonpath='{.items[0].metadata.name}') -c istio-proxy -- pilot-agent version
 ----
 
 *Issue: HBONE environment variable not set*
@@ -1404,7 +1400,8 @@ kubectl apply -f istio-backup.yaml
 ----
 # Step 6 Rollback: Ambient Mode Issues
 kubectl label namespace <NAMESPACE> istio.io/dataplane-mode-
-# Traffic reverts to sidecars immediately
+kubectl rollout restart deployment -n <NAMESPACE>
+# Sidecars restored, traffic back through sidecars
 
 # Step 7 Rollback: Waypoint Activation Issues
 kubectl label namespace <NAMESPACE> istio.io/use-waypoint-
@@ -1594,12 +1591,14 @@ spec:
 == 7. Additional Resources
 
 **Internal Documentation:**
+
 - link:../common/istio-ambient-waypoint.adoc[Waypoint Proxy Configuration Guide] - Detailed waypoint proxy setup and usage
 - link:../common/install-bookinfo-app.adoc[Installing the Bookinfo Application] - Sample application for testing
 - link:../addons/addons.adoc[Addons and Extensions] - Additional components and observability tools
 - General installation and configuration guides in the `docs/` directory
 
 **External Resources:**
+
 These resources provide further information on ambient mode and related configurations:
 
 - https://istio.io/latest/docs/ambient/[Upstream Istio Ambient Documentation] - Official Istio ambient mode docs
