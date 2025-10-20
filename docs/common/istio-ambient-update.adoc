@@ -30,29 +30,21 @@ For information about installing Istio in ambient mode, see link:./istio-ambient
 [[understanding-versioning]]
 == Understanding Versioning
 
-For information about semantic versioning, see link:../update-strategy/update-strategy.adoc#understanding-versioning[Understanding Versioning].
+For information about semantic versioning and version numbering (X.Y.Z format), see link:../update-strategy/update-strategy.adoc#understanding-versioning[Understanding Versioning].
 
 '''
 
 [[selecting-update-strategy]]
 == Selecting an Update Strategy
 
-The Sail Operator supports two update strategies: InPlace and RevisionBased. For detailed information about these strategies and their general behavior, see link:../update-strategy/update-strategy.adoc#update-strategy[Update Strategy].
+The Sail Operator supports two update strategies: InPlace and RevisionBased. For detailed information about these strategies, their configuration, and general behavior, see link:../update-strategy/update-strategy.adoc#update-strategy[Update Strategy].
 
-In ambient mode, both strategies require additional steps to update IstioCNI and ZTunnel components after the control plane upgrade. The key differences are:
+**Ambient mode considerations:**
+
+In ambient mode, both strategies require additional steps to update IstioCNI and ZTunnel components after the control plane upgrade:
 
 * **InPlace** - Updates all components directly, with workloads immediately connecting to the new control plane
 * **RevisionBased** - Allows for gradual migration, with IstioCNI and ZTunnel supporting multiple control plane versions during the transition
-
-The Istio resource configuration includes the following fields that are relevant to the upgrade process:
-
-**spec.version**::
-Specifies the version of Istio to install. Use the format vX.Y.Z, where X.Y.Z is the desired Istio release. For example, set the field to v1.24.4 to install Istio 1.24.4. Alternatively, set the value to an alias such as vX.Y-latest to automatically install the latest supported patch version for the specified minor release.
-
-**spec.updateStrategy**::
-Defines the strategy for updating the Istio control plane. The available update strategies are InPlace and RevisionBased.
-
-*Note:* To enable automatic patch upgrades, set the approval strategy of the Operator to Automatic. When the Operator detects a new patch release and the version field uses the vX.Y-latest alias, the control plane is updated based on the configured updateStrategy type.
 
 '''
 
@@ -70,32 +62,15 @@ While the InPlace strategy offers simplicity and efficiency, there's a slight po
 [[selecting-inplace-strategy]]
 === Selecting InPlace Strategy
 
-To select the InPlace strategy, set the spec.updateStrategy.type value in the Istio resource to InPlace.
+To select the InPlace strategy, set the `spec.updateStrategy.type` value in the Istio resource to `InPlace`. For configuration details and examples, see link:../update-strategy/update-strategy.adoc#inplace[InPlace].
 
-**Example specification to select InPlace update strategy**
-
-[source,yaml]
-----
-apiVersion: sailoperator.io/v1
-kind: Istio
-metadata:
-  name: default
-spec:
-  namespace: istio-system
-  version: v1.26.3
-  updateStrategy:
-    type: InPlace
-----
-
-You can set this value while creating the resource or edit it later. If you edit the resource after creation, make the change before updating the Istio control plane.
-
-When using ambient mode with the InPlace strategy, ensure that all three components (Istio, IstioCNI, and ZTunnel) are updated to compatible versions. The update should be performed in the following order:
+**Important for ambient mode:** When using the InPlace strategy with ambient mode, ensure that all three components (Istio, IstioCNI, and ZTunnel) are updated to compatible versions in the following order:
 
 1. Istio control plane
 2. IstioCNI
 3. ZTunnel
 
-Running the Istio resource in High Availability mode to minimize traffic disruptions requires additional property settings. For more information, see link:../general/istiod-ha.adoc#running-istiod-in-ha-mode[Istiod HA guide].
+*Tip:* Running the Istio resource in High Availability mode minimizes traffic disruptions during updates. For more information, see link:../general/istiod-ha.adoc#running-istiod-in-ha-mode[Istiod HA guide].
 
 [[updating-istio-control-plane-with-inplace-strategy]]
 === Updating Istio control plane with InPlace strategy
@@ -222,25 +197,9 @@ When using ambient mode with the RevisionBased strategy, IstioCNI and ZTunnel co
 [[selecting-revisionbased-strategy]]
 === Selecting RevisionBased Strategy
 
-To deploy Istio with the RevisionBased strategy, create the Istio resource with the following spec.updateStrategy value:
+To deploy Istio with the RevisionBased strategy, set the `spec.updateStrategy.type` value in the Istio resource to `RevisionBased` and configure the `inactiveRevisionDeletionGracePeriodSeconds`. For configuration details and examples, see link:../update-strategy/update-strategy.adoc#revisionbased[RevisionBased].
 
-**Example specification to select RevisionBased strategy**
-
-[source,yaml]
-----
-apiVersion: sailoperator.io/v1
-kind: Istio
-metadata:
-  name: default
-spec:
-  namespace: istio-system
-  version: v1.26.3
-  updateStrategy:
-    type: RevisionBased
-    inactiveRevisionDeletionGracePeriodSeconds: 30
-----
-
-After you select the strategy for the Istio resource, the Operator creates a new IstioRevision resource with the name `<istio_resource_name>-<version>`. For example, if the Istio resource is named `default` and the version is `v1.26.3`, the IstioRevision resource name would be `default-v1-26-3`.
+When using the RevisionBased strategy, the Operator creates a new IstioRevision resource with the name `<istio_resource_name>-<version>`. For example, if the Istio resource is named `default` and the version is `v1.26.3`, the IstioRevision resource name would be `default-v1-26-3`.
 
 [[updating-istio-control-plane-with-revisionbased-strategy]]
 === Updating Istio Control Plane with RevisionBased Strategy
