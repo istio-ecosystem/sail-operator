@@ -665,7 +665,6 @@ If you have deployed waypoint proxies for L7 features:
 
 * **Automatic Updates:** Waypoint proxies automatically reference the active control plane revision.
 * **Gateway API:** Waypoint proxies are deployed using Kubernetes Gateway resources and are managed automatically by Istiod.
-* **Recreation:** In rare cases, you may need to recreate waypoint Gateway resources if there are breaking changes between versions.
 * **Verification:** Test L7 features after the upgrade to ensure waypoint proxies are functioning correctly. See link:./istio-ambient-waypoint.adoc#layer-7-features-in-ambient-mode[Layer 7 Features in Ambient Mode] for testing examples.
 
 **Update Behavior by Strategy:**
