@@ -40,7 +40,14 @@ Delivers critical bug fixes and security updates, such as Common Vulnerabilities
 
 The Sail Operator supports two update strategies to update the version of the Istio control plane: `InPlace` and `RevisionBased`. The default strategy is `InPlace`.
 
-*Note:* These update strategies apply to both sidecar and ambient modes. For ambient mode-specific update procedures, including updating IstioCNI and ZTunnel components, see link:../common/istio-ambient-update.adoc#updating-istio-in-ambient-mode[Updating Istio in Ambient Mode].
+*Note:* These update strategies apply to both sidecar and ambient modes.
+
+**For ambient mode deployments:** In addition to the control plane update procedures below, you must also update IstioCNI and ZTunnel components. See link:../common/istio-ambient-update.adoc#updating-istio-in-ambient-mode[Updating Istio in Ambient Mode] for complete ambient-specific procedures including:
+
+* Updating IstioCNI
+* Updating ZTunnel
+* Updating Waypoint Proxies
+* Special considerations for ambient mode upgrades
 
 [[inplace]]
 == InPlace
