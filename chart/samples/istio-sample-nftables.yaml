@@ -5,9 +5,6 @@ metadata:
 spec:
   version: master
   namespace: istio-system
-  updateStrategy:
-    type: InPlace
-    inactiveRevisionDeletionGracePeriodSeconds: 30
   values:
     global:
       nativeNftables: true
