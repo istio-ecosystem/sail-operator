@@ -347,7 +347,7 @@ istiod-default-v1-26-4-7c8e9d775c-y8l3n   1/1     Running   0          2m
 $ kubectl logs -n istio-system istiod-default-v1-26-4-7c8e9d775c-y8l3n --tail=50 | grep -i "version\|ready"
 ----
 
-After creating the new Istio control plane revision, proceed to update IstioCNI and ZTunnel. Refer to section "Common Update Procedures for Ambient Components" for detailed instructions. Note that IstioCNI and ZTunnel are compatible with multiple control plane versions and will continue to handle traffic for both the old and new control planes during the migration period.
+After creating the new Istio control plane revision, proceed to update IstioCNI and ZTunnel. Refer to section "Common Update Procedures for Ambient Components" for detailed instructions. Note that IstioCNI is compatible with multiple control plane versions and will continue to handle traffic for both the old and new control planes during the migration period.
 
 [[migrate-ambient-workloads-to-new-revision]]
 ==== Migrate Ambient Workloads to New Revision
