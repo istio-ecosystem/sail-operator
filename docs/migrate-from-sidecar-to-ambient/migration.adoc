@@ -9,8 +9,7 @@ This guide provides a comprehensive, step-by-step process for migrating an exist
 ** <<key-architectural-changes, 1.2 Key Architectural Changes>>
 * <<prerequisites, 2. Prerequisites>>
 ** <<technical-requirements, 2.1 Technical Requirements>>
-*** <<cni-compatibility-requirements, 2.1.1 CNI Compatibility Requirements>>
-*** <<waypoint-decision-framework, 2.1.2 Waypoint Decision Framework>>
+*** <<waypoint-decision-framework, 2.1.1 Waypoint Decision Framework>>
 ** <<compatibility-validation, 2.2 Compatibility Validation>>
 ** <<pre-migration-checklist, 2.3 Pre-Migration Checklist>>
 ** <<backup-existing-configuration, 2.4 Backup Existing Configuration>>
@@ -37,21 +36,20 @@ This guide provides a comprehensive, step-by-step process for migrating an exist
 *** <<step-61-gradual-namespace-migration, Step 6.1 Gradual Namespace Migration>>
 ** <<step-7-enable-waypoint-processing, Step 7: Enable Waypoint Processing>>
 *** <<step-71-activate-waypoints-for-l7-processing, Step 7.1 Activate Waypoints for L7 Processing>>
-*** <<step-72-validate-l7-policy-enforcement, Step 7.2 Validate L7 Policy Enforcement>>
 ** <<step-8-policy-simplification, Step 8: Policy Simplification>>
 *** <<step-81-remove-redundant-sidecar-policies, Step 8.1 Remove Redundant Sidecar Policies>>
 ** <<step-9-remove-sidecar-injection, Step 9: Remove Sidecar Injection>>
 *** <<step-91-disable-sidecar-injection, Step 9.1 Disable Sidecar Injection>>
 *** <<step-92-validate-sidecar-removal, Step 9.2 Validate Sidecar Removal>>
+*** <<step-93-validate-l7-policy-enforcement, Step 9.3 Validate L7 Policy Enforcement>>
 * <<validation-and-testing, 4. Validation and Testing>>
 ** <<migration-verification, 4.1 Migration Verification>>
 * <<troubleshooting, 5. Troubleshooting>>
 ** <<common-issues, 5.1 Common Issues>>
 ** <<rollback-procedures, 5.2 Rollback Procedures>>
 * <<post-migration-optimization, 6. Post-Migration Optimization>>
-** <<waypoint-right-sizing, 6.1 Waypoint Right-Sizing>>
-** <<observability-considerations, 6.2 Observability Considerations>>
-** <<configure-kiali-for-ambient-mode, 6.3 Configure Kiali for Ambient Mode>>
+** <<observability-considerations, 6.1 Observability Considerations>>
+** <<configure-kiali-for-ambient-mode, 6.2 Configure Kiali for Ambient Mode>>
 * <<additional-resources, 7. Additional Resources>>
 
 ---
@@ -1498,7 +1496,7 @@ curl -s http://$GATEWAY_URL/<YOUR_APPLICATION_PATH>
 == 6. Post-Migration Optimization
 
 [[observability-considerations]]
-=== 6.2 Observability Considerations
+=== 6.1 Observability Considerations
 
 **Metrics Changes:**
 
@@ -1543,7 +1541,7 @@ spec:
 ----
 
 [[configure-kiali-for-ambient-mode]]
-=== 6.3 Configure Kiali for Ambient Mode
+=== 6.2 Configure Kiali for Ambient Mode
 
 **Configure Kiali for ambient mode:**
 
