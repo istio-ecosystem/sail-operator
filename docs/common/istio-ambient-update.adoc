@@ -131,13 +131,6 @@ default   1           1       1        default           Healthy   v1.26.3   7d
 $ kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v1.26.4"}}'
 ----
 
-. Monitor the istiod pod replacement. The old pod will be terminated and a new pod will be created:
-+
-[source,bash,subs="attributes+",name="ambient-inplace-update-strategy"]
-----
-$ kubectl get pods -n istio-system -l app=istiod -w
-----
-
 . Wait for the Istio control plane to become ready:
 +
 [source,bash,subs="attributes+",name="ambient-inplace-update-strategy"]
@@ -154,7 +147,7 @@ NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
 default   1           1       1        default           Healthy   v1.26.4   7d1h
 ----
 
-. Confirm the istiod pod is running with the new version:
+. Verify the istiod pod is running with the new version and check its status:
 +
 [source,bash,subs="attributes+",name="ambient-inplace-update-strategy"]
 ----
@@ -162,15 +155,50 @@ $ kubectl get pods -n istio-system -l app=istiod
 NAME                             READY   STATUS    RESTARTS   AGE
 istiod-default-6bd6b8664b-x7k2m  1/1     Running   0          2m15s
 ----
-
-. Verify the control plane is functioning correctly by checking the istiod logs:
++
+Optionally, verify the control plane is functioning correctly by checking the logs:
 +
 [source,bash,subs="attributes+",name="ambient-inplace-update-strategy"]
 ----
 $ kubectl logs -n istio-system -l app=istiod --tail=50 | grep -i "version\|ready"
 ----
 
-After updating the Istio control plane, proceed to update IstioCNI, ZTunnel, verify ambient workloads, and optionally update Waypoint Proxies. Refer to section "Common Update Procedures for Ambient Components" for detailed instructions on updating these components.
+[[update-istiocni-and-ztunnel]]
+==== Update IstioCNI and ZTunnel
+
+After updating the Istio control plane, update the IstioCNI and ZTunnel components to maintain compatibility between the control plane and ambient data plane components.
+
+. Update the IstioCNI resource to the same version as the control plane:
++
+[source,bash,subs="attributes+",name="ambient-inplace-update-strategy"]
+----
+$ kubectl patch istiocni -n istio-cni default --type='merge' -p '{"spec":{"version":"v1.26.4"}}'
+----
++
+Wait for the IstioCNI resource to become ready:
++
+[source,bash,subs="attributes+",name="ambient-inplace-update-strategy"]
+----
+$ kubectl wait --for=condition=Ready istiocnis/default --timeout=5m
+----
+
+. Update the ZTunnel resource to the same version as the control plane:
++
+[source,bash,subs="attributes+",name="ambient-inplace-update-strategy"]
+----
+$ kubectl patch ztunnel -n ztunnel default --type='merge' -p '{"spec":{"version":"v1.26.4"}}'
+----
++
+Wait for the ZTunnel resource to become ready:
++
+[source,bash,subs="attributes+",name="ambient-inplace-update-strategy"]
+----
+$ kubectl wait --for=condition=Ready ztunnel/default --timeout=10m
+----
++
+*Note:* The ZTunnel DaemonSet update may take several minutes as pods are updated node-by-node to minimize disruption.
+
+For detailed information about updating IstioCNI and ZTunnel, including verification steps, refer to section "Common Update Procedures for Ambient Components".
 
 [[recommendations-for-inplace-strategy-in-ambient-mode]]
 === Recommendations for InPlace strategy in Ambient Mode
