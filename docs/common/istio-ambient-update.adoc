@@ -41,10 +41,12 @@ The Sail Operator supports two update strategies: InPlace and RevisionBased. For
 
 **Ambient mode considerations:**
 
+IMPORTANT: **InPlace is the recommended update strategy for ambient mode.** RevisionBased updates have significant limitations when used with ambient mode and require manual intervention. See the <<updating-with-revisionbased-strategy,RevisionBased Strategy section>> for details.
+
 In ambient mode, both strategies require additional steps to update IstioCNI and ZTunnel components after the control plane upgrade:
 
-* **InPlace** - Updates all components directly, with workloads immediately connecting to the new control plane
-* **RevisionBased** - Allows for gradual migration, with IstioCNI and ZTunnel supporting multiple control plane versions during the transition
+* **InPlace** (Recommended) - Updates all components directly, with workloads immediately connecting to the new control plane. This is the straightforward and recommended approach for ambient mode.
+* **RevisionBased** (Limited Support) - While theoretically possible, this strategy has significant limitations in ambient mode: only one ztunnel instance can run cluster-wide, and manual CRD synchronization is required between Istio and ZTunnel revisions.
 
 '''
 
@@ -190,9 +192,17 @@ For detailed information about updating IstioCNI and ZTunnel, including verifica
 
 For general information about the RevisionBased strategy, see link:../update-strategy/update-strategy.adoc#revisionbased[RevisionBased].
 
+WARNING: **RevisionBased updates are not fully supported in ambient mode and require significant manual intervention.** This strategy has the following limitations when used with ambient mode:
+
+* **Single ZTunnel Instance:** Only one ztunnel instance can run in the cluster at any time, which limits the canary upgrade capabilities typically available with RevisionBased updates.
+* **Manual CRD Synchronization:** You must manually synchronize CRDs between Istio control plane revisions and the ZTunnel instance, primarily managing the revision name configuration.
+* **Complex Migration:** The ztunnel must be manually reconfigured to point to the appropriate control plane revision during migration.
+
+**Recommendation:** Use the InPlace update strategy for ambient mode deployments. It provides a simpler, more reliable upgrade path. The procedures below are provided for advanced use cases where RevisionBased updates are required, but users should be prepared for additional manual configuration steps.
+
 *Ambient-specific considerations:*
 
-When using ambient mode with the RevisionBased strategy, IstioCNI and ZTunnel components are compatible with multiple control plane versions and continue to function during the workload migration period.
+When using ambient mode with the RevisionBased strategy, the IstioCNI component can work with multiple control plane versions during the workload migration period. However, since only one ztunnel instance can run cluster-wide, the migration process requires careful coordination. The ztunnel must be manually configured to connect to the correct control plane revision, and CRD synchronization between revisions must be maintained manually to ensure compatibility.
 
 [[selecting-revisionbased-strategy]]
 === Selecting RevisionBased Strategy
@@ -209,7 +219,9 @@ When updating Istio using the RevisionBased strategy in ambient mode, you can up
 [[update-the-istio-control-plane-revisionbased]]
 ==== Update the Istio Control Plane
 
-You can update the Istio control plane version by changing the version in the Istio resource. When using the RevisionBased update strategy, the Sail Operator creates a new istiod deployment alongside the existing one, allowing for a canary upgrade. Both control planes run simultaneously until all workloads are migrated to the new version. The new control plane is created with a revision name in the format `<istio-name>-<version>`.
+You can update the Istio control plane version by changing the version in the Istio resource. When using the RevisionBased update strategy, the Sail Operator creates a new istiod deployment alongside the existing one, allowing for a canary upgrade of the control plane. Both control planes run simultaneously until all workloads are migrated to the new version. The new control plane is created with a revision name in the format `<istio-name>-<version>`.
+
+NOTE: While multiple control plane revisions can run simultaneously, remember that only one ztunnel instance can exist cluster-wide in ambient mode. This limits the full canary upgrade benefits typically available with RevisionBased updates in sidecar mode.
 
 *Prerequisites:*
 
@@ -534,7 +546,7 @@ ztunnel-6njq8     1/1     Running   0          4m    node2.example.com
 ztunnel-96j7k     1/1     Running   0          3m    node3.example.com
 ----
 
-*Note:* When using the RevisionBased strategy, ZTunnel can communicate with multiple control plane versions, allowing ambient workloads to migrate between revisions smoothly without disruption.
+*Note:* When using the RevisionBased strategy, only one ztunnel instance can run cluster-wide. During migration, you must manually configure the ztunnel to point to the appropriate control plane revision and manually synchronize CRDs to ensure compatibility. This limitation reduces the canary upgrade capabilities typically available with RevisionBased updates in sidecar mode.
 
 [[verifying-ambient-workloads]]
 === Verifying Ambient Workloads
@@ -629,7 +641,7 @@ If you have deployed waypoint proxies for L7 features:
 **Update Behavior by Strategy:**
 
 * **InPlace Strategy:** Waypoint proxies transition directly to the new control plane version
-* **RevisionBased Strategy:** Waypoint proxies function with both revisions during migration
+* **RevisionBased Strategy:** Waypoint proxies can function with both control plane revisions during migration. However, note that the single-ztunnel limitation still applies to the ambient data plane.
 
 **Cross-Namespace Waypoints:**
 
