@@ -59,7 +59,7 @@ For general information about the InPlace strategy, see link:../update-strategy/
 
 In ambient mode, the InPlace update strategy updates all components directly, with workloads immediately connecting to the new control plane version. The IstioCNI and ZTunnel components are also updated using rolling updates. To maintain compatibility between the ambient data plane components and the control plane, you can upgrade only one minor version at a time.
 
-While the InPlace strategy offers simplicity and efficiency, there's a slight possibility of application traffic interruption if a workload pod updates, restarts, or scales while the control plane is restarting. You can mitigate this risk by running multiple replicas of the Istio control plane (istiod).
+While the InPlace strategy offers simplicity and efficiency, there's a slight possibility of application traffic interruption during control plane updates. Running multiple replicas of the Istio control plane (istiod) can help minimize this risk, but does not eliminate it entirely. For more details about ambient mode upgrade behavior, see the https://istio.io/latest/docs/ambient/upgrade/helm/#understanding-ambient-mode-upgrades[Istio ambient mode upgrade documentation].
 
 [[selecting-inplace-strategy]]
 === Selecting InPlace Strategy
@@ -72,7 +72,7 @@ To select the InPlace strategy, set the `spec.updateStrategy.type` value in the 
 2. IstioCNI
 3. ZTunnel
 
-*Tip:* Running the Istio resource in High Availability mode minimizes traffic disruptions during updates. For more information, see link:../general/istiod-ha.adoc#running-istiod-in-ha-mode[Istiod HA guide].
+*Tip:* Running the Istio resource in High Availability mode can help reduce traffic disruptions during updates, though some brief disruption may still occur. For more information, see link:../general/istiod-ha.adoc#running-istiod-in-ha-mode[Istiod HA guide].
 
 [[updating-istio-control-plane-with-inplace-strategy]]
 === Updating Istio control plane with InPlace strategy
@@ -180,7 +180,7 @@ For detailed information about updating IstioCNI and ZTunnel, including verifica
 [[recommendations-for-inplace-strategy-in-ambient-mode]]
 === Recommendations for InPlace strategy in Ambient Mode
 
-* **High Availability:** Configure the istiod deployment with multiple replicas for high availability during updates. See the link:../general/istiod-ha.adoc#running-istiod-in-ha-mode[Istiod HA guide] for more information.
+* **High Availability:** Configure the istiod deployment with multiple replicas to help reduce disruptions during updates. Note that even with HA mode, some brief traffic disruption may still occur during control plane upgrades. See the link:../general/istiod-ha.adoc#running-istiod-in-ha-mode[Istiod HA guide] for more information.
 * **ZTunnel Updates:** The ZTunnel DaemonSet uses a RollingUpdate strategy by default, which updates pods one node at a time. Monitor the rollout to ensure it completes successfully.
 * **Maintenance Window:** While ambient mode is designed to minimize disruption, it's recommended to perform upgrades during a maintenance window.
 * **Testing:** Always test the upgrade process in a non-production environment first.
