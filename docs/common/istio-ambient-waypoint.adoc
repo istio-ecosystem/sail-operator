@@ -161,14 +161,15 @@ NAME                       READY   STATUS    RESTARTS   AGE
 waypoint-5d9c8b7f9-abc12   1/1     Running   0          5m
 ----
 
-2. Confirm the waypoint proxy is connected to the new control plane by checking its logs:
+2. Confirm the waypoint proxy is connected to the new control plane:
 +
 [source,bash,subs="attributes+",name="ambient-waypoint-update-inplace"]
 ----
-$ kubectl logs -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint | grep "istiod"
-2025-10-21T15:04:32.179100Z     info    xdsproxy        Initializing with upstream address "istiod.istio-system.svc:15012" and cluster "Kubernetes"
-2025-10-21T15:04:32.253383Z     info    xdsproxy        connected to upstream XDS server: istiod.istio-system.svc:15012
+$ istioctl proxy-status | grep waypoint
+waypoint-5d9c8b7f9-abc12.bookinfo     SYNCED     SYNCED     SYNCED     SYNCED     istiod-6cf8d4f9cb-wm7x6.istio-system     1.26.4
 ----
++
+This command queries the Istio control plane to verify that the waypoint proxy is connected and its configuration is synchronized. The output displays the waypoint proxy name with namespace, followed by the synchronization status for each configuration type (CDS, LDS, EDS, RDS), the connected istiod pod, and the Istio version. All columns showing `SYNCED` indicate the waypoint is successfully receiving configuration from the control plane.
 
 **RevisionBased Strategy:**
 
@@ -185,14 +186,15 @@ NAME                       READY   STATUS    RESTARTS   AGE
 waypoint-5d9c8b7f9-abc12   1/1     Running   0          5m
 ----
 
-2. Confirm the waypoint proxy is connected to the new control plane revision by checking its logs:
+2. Confirm the waypoint proxy is connected to the new control plane revision:
 +
 [source,bash,subs="attributes+",name="ambient-waypoint-update-revisionbased"]
 ----
-$ kubectl logs -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint | grep "istiod"
-2025-10-21T15:20:15.348192Z     info    xdsproxy        Initializing with upstream address "istiod-1-26-4.istio-system.svc:15012" and cluster "Kubernetes"
-2025-10-21T15:20:15.421567Z     info    xdsproxy        connected to upstream XDS server: istiod-1-26-4.istio-system.svc:15012
+$ istioctl proxy-status | grep waypoint
+waypoint-5d9c8b7f9-abc12.bookinfo     SYNCED     SYNCED     SYNCED     SYNCED     istiod-1-26-4-7b9f8c5d6-xyz78.istio-system     1.26.4
 ----
++
+This command queries the Istio control plane to verify that the waypoint proxy is connected to the new revision. The output shows the waypoint proxy is now connected to the revision-specific istiod pod (with revision `1-26-4` in its name) and is running the updated version (1.26.4). The revision-specific naming in the ISTIOD column confirms the waypoint has successfully migrated to the new control plane revision.
 
 3. If you update the waypoint proxy image, apply the new image version to the Gateway resource:
 +
