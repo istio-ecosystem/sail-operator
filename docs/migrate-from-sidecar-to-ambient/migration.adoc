@@ -220,7 +220,7 @@ default   istio-system             1           1       1        default         
 [source,console]
 ----
 # Check your application namespaces for sidecar injection
-kubectl get namespaces -l istio.io/rev=default
+kubectl get namespaces -l istio.io/rev=default #or any other istio revision name. Also, check if you are using instead istio-injection=enabled label.
 NAME       STATUS   AGE
 bookinfo   Active   6m56
 ----
