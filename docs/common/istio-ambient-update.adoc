@@ -175,7 +175,7 @@ $ kubectl wait --for=condition=Ready ztunnel/default --timeout=10m
 +
 *Note:* The ZTunnel DaemonSet update may take several minutes as pods are updated node-by-node to minimize disruption.
 
-For detailed information about updating IstioCNI and ZTunnel, including verification steps, refer to section "Common Update Procedures for Ambient Components".
+For detailed information about updating IstioCNI, see link:../../README.md#updating-istiocni[IstioCNI Update Procedure in README]. For ZTunnel update procedures, refer to section "Common Update Procedures for Ambient Components".
 
 [[recommendations-for-inplace-strategy-in-ambient-mode]]
 === Recommendations for InPlace strategy in Ambient Mode
@@ -318,7 +318,7 @@ istiod-default-v1-26-4-7c8e9d775c-y8l3n   1/1     Running   0          2m
 $ kubectl logs -n istio-system istiod-default-v1-26-4-7c8e9d775c-y8l3n --tail=50 | grep -i "version\|ready"
 ----
 
-After creating the new Istio control plane revision, proceed to update IstioCNI and ZTunnel. Refer to section "Common Update Procedures for Ambient Components" for detailed instructions. Note that IstioCNI is compatible with multiple control plane versions and will continue to handle traffic for both the old and new control planes during the migration period.
+After creating the new Istio control plane revision, proceed to update IstioCNI and ZTunnel. For IstioCNI update procedures, see link:../../README.md#updating-istiocni[IstioCNI Update Procedure in README]. For ZTunnel update instructions, refer to section "Common Update Procedures for Ambient Components". Note that IstioCNI is compatible with multiple control plane versions and will continue to handle traffic for both the old and new control planes during the migration period.
 
 [[migrate-ambient-workloads-to-new-revision]]
 ==== Migrate Ambient Workloads to New Revision
@@ -442,57 +442,7 @@ This section provides common procedures for updating ambient mode components (Is
 [[updating-istiocni]]
 === Updating IstioCNI
 
-The Istio Container Network Interface (CNI) update process uses in-place updates. When the IstioCNI resource changes, the daemonset automatically replaces the existing istio-cni-node pods with the specified version of the CNI plugin.
-
-You can use the following field to manage version updates:
-
-**spec.version**::
-Defines the CNI plugin version to install. Specify the value in the format vX.Y.Z, where X.Y.Z represents the desired version. For example, use v1.26.4 to install the CNI plugin version 1.26.4.
-
-To update the CNI plugin, modify the spec.version field with the target version. The IstioCNI resource also includes a values field that exposes configuration options from the istio-cni chart.
-
-In ambient mode, the IstioCNI component is responsible for traffic redirection. The component is compatible with multiple control plane versions during RevisionBased upgrades and continues to handle traffic redirection for both old and new control planes during the migration period.
-
-After updating the Istio control plane, update the IstioCNI component. The Sail Operator deploys a new version of the CNI plugin that replaces the old version. The `istio-cni-node` DaemonSet pods are updated using a rolling update strategy, and traffic redirection rules are maintained during the update process.
-
-*Prerequisites:*
-
-* You have cluster-admin access to your Kubernetes cluster.
-* You have successfully updated the Istio control plane to the desired version (InPlace strategy) or created a new control plane revision (RevisionBased strategy).
-* The IstioCNI resource named `default` is deployed in the `istio-cni` namespace.
-
-*Procedure:*
-
-. Update the IstioCNI resource version. For example, to update to Istio 1.26.4, set the `spec.version` field to `v1.26.4` by running the following command:
-+
-[source,bash,subs="attributes+",name="ambient-update-istiocni"]
-----
-$ kubectl patch istiocni -n istio-cni default --type='merge' -p '{"spec":{"version":"v1.26.4"}}'
-----
-
-. Wait for the IstioCNI DaemonSet to be updated:
-+
-[source,bash,subs="attributes+",name="ambient-update-istiocni"]
-----
-$ kubectl wait --for=condition=Ready istiocnis/default --timeout=5m
-----
-
-. Verify the IstioCNI resource shows the new version and all pods are running:
-+
-[source,bash,subs="attributes+",name="ambient-update-istiocni"]
-----
-$ kubectl get istiocni
-NAME      READY   STATUS    VERSION   AGE
-default   True    Healthy   v1.26.4   7d1h
-
-$ kubectl get pods -n istio-cni
-NAME                   READY   STATUS    RESTARTS   AGE
-istio-cni-node-abc12   1/1     Running   0          3m
-istio-cni-node-def34   1/1     Running   0          3m
-istio-cni-node-ghi56   1/1     Running   0          3m
-----
-
-*Note:* When using the RevisionBased strategy, IstioCNI is compatible with multiple control plane versions and continues to work with both the old and new control planes during the workload migration.
+For detailed IstioCNI update procedures, see link:../../README.md#updating-istiocni[IstioCNI Update Procedure in README].
 
 [[updating-ztunnel]]
 === Updating ZTunnel
