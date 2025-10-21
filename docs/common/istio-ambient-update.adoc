@@ -685,6 +685,7 @@ bookinfo       Active   7d
 === Troubleshooting Common Issues
 
 **For common issues:**
+
 * Ztunnel Troubleshoot: https://istio.io/latest/docs/ambient/usage/troubleshoot-ztunnel/
 * Waypoint Troubleshoot: https://istio.io/latest/docs/ambient/usage/troubleshoot-ztunnel/
 
