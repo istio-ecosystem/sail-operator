@@ -166,6 +166,8 @@ waypoint-5d9c8b7f9-abc12   1/1     Running   0          5m
 [source,bash,subs="attributes+",name="ambient-waypoint-update-inplace"]
 ----
 $ kubectl logs -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint | grep "istiod"
+2025-10-21T15:04:32.179100Z     info    xdsproxy        Initializing with upstream address "istiod.istio-system.svc:15012" and cluster "Kubernetes"
+2025-10-21T15:04:32.253383Z     info    xdsproxy        connected to upstream XDS server: istiod.istio-system.svc:15012
 ----
 
 **RevisionBased Strategy:**
@@ -188,6 +190,8 @@ waypoint-5d9c8b7f9-abc12   1/1     Running   0          5m
 [source,bash,subs="attributes+",name="ambient-waypoint-update-revisionbased"]
 ----
 $ kubectl logs -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint | grep "istiod"
+2025-10-21T15:20:15.348192Z     info    xdsproxy        Initializing with upstream address "istiod-1-26-4.istio-system.svc:15012" and cluster "Kubernetes"
+2025-10-21T15:20:15.421567Z     info    xdsproxy        connected to upstream XDS server: istiod-1-26-4.istio-system.svc:15012
 ----
 
 3. If you update the waypoint proxy image, apply the new image version to the Gateway resource:
