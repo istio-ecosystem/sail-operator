@@ -172,6 +172,8 @@ $ kubectl logs -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint | 
 
 In a RevisionBased update, waypoint proxies are compatible with multiple control plane versions and continue to function during the migration period. They will automatically connect to the active control plane revision.
 
+NOTE: While waypoint proxies can work with multiple control plane versions during migration, it is recommended to keep them within one minor version of the control plane (same version or n-1). This follows Istio's general support policy where data plane components should not be ahead of the control plane version. Similar guidance applies to Istio CNI components. For more information, see the https://istio.io/latest/docs/releases/supported-releases/[Istio Supported Releases] documentation.
+
 1. After the new Istio control plane revision is ready, verify waypoint proxy pods are running:
 +
 [source,bash,subs="attributes+",name="ambient-waypoint-update-revisionbased"]
