@@ -153,7 +153,7 @@ Waypoint proxies automatically update to use the new control plane revision. How
 When the Istio control plane is updated using the InPlace strategy, waypoint proxies automatically transition to use the new control plane version.
 
 1. Verify waypoint proxy pods are running with the updated control plane:
-
++
 [source,bash,subs="attributes+",name="ambient-waypoint-update-inplace"]
 ----
 $ kubectl get pods -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint
@@ -162,7 +162,7 @@ waypoint-5d9c8b7f9-abc12   1/1     Running   0          5m
 ----
 
 2. Confirm the waypoint proxy is connected to the new control plane by checking its logs:
-
++
 [source,bash,subs="attributes+",name="ambient-waypoint-update-inplace"]
 ----
 $ kubectl logs -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint | grep "istiod"
@@ -173,7 +173,7 @@ $ kubectl logs -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint | 
 In a RevisionBased update, waypoint proxies are compatible with multiple control plane versions and continue to function during the migration period. They will automatically connect to the active control plane revision.
 
 1. After the new Istio control plane revision is ready, verify waypoint proxy pods are running:
-
++
 [source,bash,subs="attributes+",name="ambient-waypoint-update-revisionbased"]
 ----
 $ kubectl get pods -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint
@@ -182,14 +182,14 @@ waypoint-5d9c8b7f9-abc12   1/1     Running   0          5m
 ----
 
 2. Confirm the waypoint proxy is connected to the new control plane revision by checking its logs:
-
++
 [source,bash,subs="attributes+",name="ambient-waypoint-update-revisionbased"]
 ----
 $ kubectl logs -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint | grep "istiod"
 ----
 
 3. If you update the waypoint proxy image, apply the new image version to the Gateway resource:
-
++
 [source,bash,subs="attributes+",name="ambient-waypoint-update-revisionbased"]
 ----
 $ kubectl patch gateway waypoint -n bookinfo --type='merge' -p '{"spec":{"template":{"spec":{"containers":[{"name":"istio-proxy","image":"docker.io/istio/proxyv2:1.26.4"}]}}}}'
@@ -228,7 +228,7 @@ $ kubectl exec "$(kubectl get pod -l app=ratings -n bookinfo -o jsonpath='{.item
 If you are using cross-namespace waypoints, ensure that the labels for `istio.io/use-waypoint-namespace` and `istio.io/use-waypoint` remain correctly applied to the namespaces.
 
 1. Verify namespace labels:
-
++
 [source,bash,subs="attributes+",name="ambient-waypoint-crossns-update"]
 ----
 $ kubectl get ns bookinfo --show-labels | grep waypoint
@@ -236,7 +236,7 @@ bookinfo  Active  istio.io/use-waypoint-namespace=foo,istio.io/use-waypoint=wayp
 ----
 
 2. If labels are missing or incorrect, re-apply them:
-
++
 [source,bash,subs="attributes+",name="ambient-waypoint-crossns-update"]
 ----
 $ kubectl label ns bookinfo istio.io/use-waypoint-namespace=foo --overwrite
