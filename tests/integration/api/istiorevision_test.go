@@ -572,8 +572,6 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 			}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(webhook), webhook)).To(Succeed())
 
-			GinkgoWriter.Println("webhook:", webhook)
-
 			expectNoReconciliation(istioRevisionController, func() {
 				By("adding sailoperator.io/ignore annotation to ConfigMap")
 				webhook.Annotations = map[string]string{

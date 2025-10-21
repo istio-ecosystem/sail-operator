@@ -95,6 +95,9 @@ link:../[Return to Project Root]
 *** link:addons/observability.adoc#integrating-kiali-with-openshift-distributed-tracing[Integrating Kiali with OpenShift Distributed Tracing]
 * Certificates management
 ** link:general/plugin-ca.adoc[Plug in CA Certificates]
+* Advanced Configuration
+** link:general/resource-customization.adoc[Resource Customization]
+*** link:general/resource-customization.adoc#custom-resource-annotations[Custom Resource Annotations]
 * link:general/getting-started.adoc#uninstalling[Uninstalling]
 ** link:general/getting-started.adoc#deleting-istio[Deleting Istio]
 ** link:general/getting-started.adoc#deleting-istiocni[Deleting IstioCNI]

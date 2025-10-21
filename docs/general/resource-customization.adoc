@@ -1,0 +1,201 @@
+link:../../README.adoc[Return to Project Root]
+
+== Table of Contents
+
+* <<custom-resource-annotations>>
+** <<sailoperator-ignore-annotation>>
+*** <<use-cases>>
+*** <<how-it-works>>
+*** <<usage>>
+**** <<example-adding-annotation-to-webhook>>
+*** <<removing-annotation>>
+*** <<supported-resources>>
+*** <<limitations>>
+*** <<implementation-details>>
+
+== Resource Customization
+
+The Sail Operator supports customizing resources that it manages. This document describes the available customization options and how to use them.
+
+[[custom-resource-annotations]]
+=== Custom Resource Annotations
+
+Special annotations can be added to resources to modify Sail Operator's behavior.
+
+[[sailoperator-ignore-annotation]]
+==== sailoperator.io/ignore Annotation
+
+The `sailoperator.io/ignore` annotation allows you to prevent the Sail Operator from reconciling changes to specific resources that it manages. This is useful when you need to make manual modifications to operator-managed resources that should not be automatically reverted.
+
+[[use-cases]]
+===== Use Cases
+
+The `sailoperator.io/ignore` annotation is helpful in the following scenarios (non-exhaustive list):
+
+* **Customizing webhook configurations**: You need to modify webhook settings that should persist across reconciliation cycles
+* **Adding labels or annotations**: You want to add custom labels or annotations to resources without them being removed
+* **Tuning autoscaler settings**: You need to adjust `HorizontalPodAutoscaler` configurations based on observed behavior
+* **Managing image pull secrets**: You want to add additional image pull secrets to `ServiceAccount` resources
+* **Testing and debugging**: You need to temporarily modify a resource for troubleshooting purposes
+
+[[how-it-works]]
+===== How It Works
+
+When the `sailoperator.io/ignore` annotation is set to `"true"` on a resource:
+
+* The operator **will skip reconciling UPDATE events** for that resource
+* The resource **must still be owned** by the `Istio` (the ownerReference remains the associated `IstioRevision`)
+* The operator **will not revert manual changes** made to resources with this annotation
+* **Only UPDATE events are affected** - CREATE and DELETE events are still processed normally
+* **Any other value** (including a missing annotation) results in normal reconciliation
+
+[NOTE]
+====
+The annotation value must be exactly the string `"true"`. Any other value, such as `"True"`, `"yes"`, or `"1"`, will result in normal reconciliation behavior.
+====
+
+[[usage]]
+===== Usage
+
+To prevent the operator from reconciling a resource, add the annotation to the resource's metadata:
+
+[source,yaml]
+----
+metadata:
+  annotations:
+    sailoperator.io/ignore: "true"
+----
+
+[[example-adding-annotation-to-webhook]]
+====== Example: Preventing Reconciliation of a MutatingWebhookConfiguration
+
+In this example, we will add the annotation to a `MutatingWebhookConfiguration` and then modify it without the changes being reverted by Sail Operator:
+
+. Add the annotation to the webhook configuration:
+
+[source,bash]
+----
+kubectl annotate mutatingwebhookconfiguration \
+  istio-sidecar-injector \
+  -n istio-system \
+  sailoperator.io/ignore=true
+----
+
+. Verify the annotation was added:
+
+[source,bash]
+----
+kubectl get mutatingwebhookconfiguration \
+  istio-sidecar-injector \
+  -n istio-system \
+  -o jsonpath='{.metadata.annotations.sailoperator\.io/ignore}'
+----
+
+Expected output:
+
+[source,console]
+----
+true
+----
+
+. Check the value of the field you want to modify:
+
+[source,bash]
+----
+kubectl get mutatingwebhookconfiguration \
+  istio-sidecar-injector \
+  -n istio-system \
+  -o jsonpath='{.metadata.labels.app}'
+----
+
+Expected output:
+
+[source,console]
+----
+sidecar-injector
+----
+
+. Now you can modify the webhook and the changes will persist:
+
+[source,bash]
+----
+kubectl patch mutatingwebhookconfiguration \
+  istio-sidecar-injector \
+  -n istio-system \
+  --type=json \
+  -p='[{"op": "add", "path": "/metadata/labels/app", "value": "sidecar-injector-test"}]'
+----
+
+. Verify the change persisted:
+
+[source,bash]
+----
+kubectl get mutatingwebhookconfiguration \
+  istio-sidecar-injector \
+  -n istio-system \
+  -o jsonpath='{.metadata.labels.app}'
+----
+
+Expected output:
+
+[source,console]
+----
+sidecar-injector-test
+----
+
+[[removing-annotation]]
+===== Removing the Annotation
+
+To re-enable reconciliation for a resource, simply remove the annotation:
+
+[source,bash]
+----
+kubectl annotate mutatingwebhookconfiguration \
+  istio-sidecar-injector \
+  -n istio-system \
+  sailoperator.io/ignore-
+----
+
+[NOTE]
+====
+After removing the annotation, the operator will reconcile the resource on the next UPDATE event, reverting any manual changes back to the state defined in the `Istio` or `IstioRevision` resource.
+====
+
+[[supported-resources]]
+===== Supported Resources
+
+The `sailoperator.io/ignore` annotation works on any resource that is:
+
+* Owned by an `Istio` (has an `ownerReference` pointing to an `IstioRevision`)
+* Subject to UPDATE events
+
+Common resources include:
+
+* `Deployment`
+* `Service`
+* `ServiceAccount`
+* `ConfigMap`
+* `MutatingWebhookConfiguration`
+* `ValidatingWebhookConfiguration`
+* `HorizontalPodAutoscaler`
+* `PodDisruptionBudget`
+
+[[limitations]]
+===== Limitations and Considerations
+
+* **CREATE and DELETE events are not affected**: The annotation only prevents reconciliation of UPDATE events. If the resource is deleted, the operator will recreate it *without* the annotation set.
+* **OwnerReference must remain**: The resource must still be owned by the `IstioRevision`. Removing the ownerReference will cause the operator to lose track of the resource.
+* **Manual maintenance required**: You are responsible for maintaining resources with this annotation. The operator will update and revert them automatically when the parent `Istio` or `IstioRevision` resource changes.
+* **Version upgrades**: When upgrading Istio versions, resources with this annotation will be updated automatically and all changes will be reverted. You may need to apply back the changes manually.
+* **Configuration drift**: Using this annotation can lead to configuration drift between your intended state and the actual state. Use it sparingly and record which resources have this annotation in your documentation.
+
+[[implementation-details]]
+===== Implementation Details
+
+Here is the technical implementation:
+
+* **Predicate Function**: `pkg/predicate/predicate.go:IgnoreUpdateWhenAnnotation()`
+* **Integration Test**: `tests/integration/api/istiorevision_test.go:565`
+* **Documentation**: This annotation was introduced in commit `2543fb8`
+
+The implementation uses a controller-runtime predicate that filters UPDATE events based on the annotation value, preventing them from triggering reconciliation.
