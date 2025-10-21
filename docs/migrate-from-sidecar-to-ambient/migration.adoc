@@ -1473,16 +1473,19 @@ curl -s http://$GATEWAY_URL/<YOUR_APPLICATION_PATH>
 ==== When to Use Each Rollback Option
 
 **Use Step-Specific Rollbacks when:**
+
 - Single step validation fails
 - Issues are isolated to specific components
 - Other migration steps are working correctly
 
 **Use Sidecar Restoration when:**
+
 - Service connectivity is disrupted
 - L7 policies are not enforcing correctly
 - Need immediate service restoration
 
 **Prevention Best Practices:**
+
 - Always create backups before starting migration
 - Test rollback procedures in non-production environments
 - Monitor service health continuously during migration
