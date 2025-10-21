@@ -597,6 +597,7 @@ Ambient mode uses the Kubernetes Gateway API instead of Istio's VirtualService a
 - **DestinationRule subsets** to **Version-specific Services**: Since Gateway API doesn't support subset-based routing
 
 For comprehensive conversion guidance, refer to:
+
 - https://istio.io/latest/docs/reference/config/networking/virtual-service/[Istio VirtualService]
 - https://gateway-api.sigs.k8s.io/guides/http-routing/[Gateway API HTTPRoute Documentation]
 
