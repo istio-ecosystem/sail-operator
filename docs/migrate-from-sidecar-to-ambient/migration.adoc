@@ -1155,6 +1155,7 @@ After migration, use Kiali to visualize the service mesh. You should see traffic
 === 5.1 Common Issues
 
 For comprehensive troubleshooting guidance, refer to:
+
 - https://istio.io/latest/docs/ambient/usage/troubleshoot-waypoint/[Istio Ambient Troubleshooting Documentation]
 - https://istio.io/latest/docs/ops/diagnostic-tools/[Istio Diagnostic Tools]
 
