@@ -850,17 +850,6 @@ kubectl get pods -n bookinfo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"
 kubectl apply -f bookinfo-waypoint-authz-policies.yaml
 ----
 
-[source,console]
-----
-# Verify policies are created
-$ kubectl get authorizationpolicy -n <NAMESPACE>
-NAME                             ACTION   AGE
-productpage-waypoint             ALLOW    18s
-productpage-ztunnel-protection   DENY     7s
-reviews-waypoint                 ALLOW    17s
-reviews-ztunnel-protection       DENY     6s
-----
-
 [[step-53-add-ztunnel-bypass-protection-critical-security-step]]
 ==== Step 5.3 Add Ztunnel Bypass Protection (Critical Security Step)
 
@@ -905,6 +894,17 @@ Apply the protection policies:
 [source,console]
 ----
 kubectl apply -f ztunnel-protection-policies.yaml
+----
+
+[source,console]
+----
+# Verify policies are created
+$ kubectl get authorizationpolicy -n <NAMESPACE>
+NAME                             ACTION   AGE
+productpage-waypoint             ALLOW    18s
+productpage-ztunnel-protection   DENY     7s
+reviews-waypoint                 ALLOW    17s
+reviews-ztunnel-protection       DENY     6s
 ----
 
 **Critical**: Keep existing sidecar policies active until Policy Simplification step.
@@ -1102,7 +1102,7 @@ export INGRESS_HOST=$(kubectl get gtw bookinfo-gateway -n bookinfo -o jsonpath='
 export INGRESS_PORT=$(kubectl get gtw bookinfo-gateway -n bookinfo -o jsonpath='{.spec.listeners[?(@.name=="http")].port}')
 export GATEWAY_URL=$INGRESS_HOST:$INGRESS_PORT
 if [[ -n "$GATEWAY_URL" ]]; then
-  EXTERNAL_STATUS=$(curl -s -w "%{http_code}" -o /dev/null --connect-timeout 5 "http://$GATEWAY_URL/")
+  EXTERNAL_STATUS=$(curl -s -w "%{http_code}" -o /dev/null --connect-timeout 5 "http://$GATEWAY_URL/productpage")
   if [[ "$EXTERNAL_STATUS" == "200" ]]; then
     echo "PASS: External connectivity working"
   else
