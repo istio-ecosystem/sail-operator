@@ -393,7 +393,7 @@ NAME      REVISIONS   READY   IN USE   ACTIVE REVISION     STATUS    VERSION   A
 default   1           1       1        default-v1-26-4     Healthy   v1.26.4   7d1h
 ----
 
-If you have deployed waypoint proxies, verify them after the upgrade. Refer to section "Updating Waypoint Proxies (If Deployed)" for detailed instructions.
+If you have deployed waypoint proxies, verify them after the upgrade. Refer to <<updating-waypoint-proxies-if-deployed,Updating Waypoint Proxies (If Deployed)>> for detailed instructions.
 
 [[rollback-procedure]]
 === Rollback Procedure
