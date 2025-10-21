@@ -99,6 +99,7 @@ The migration from sidecar to ambient mode follows a structured, phased approach
 This migration guide uses example commands that can be adapted to any application. For reference purposes, we use placeholder values like `<NAMESPACE>`, `<SERVICE_NAME>`, and `<GATEWAY_NAME>` that you should replace with your actual application details.
 
 **Related Documentation:**
+
 - If you want to follow along with a sample application, you can deploy the bookinfo application by following the steps described in link:../addons/addons.adoc#deploy-gateway-and-bookinfo[Deploying Gateway and Bookinfo]
 - For detailed waypoint proxy configuration, see link:../common/istio-ambient-waypoint.adoc[Waypoint Proxy Documentation]
 - For general application deployment guidance, refer to link:../common/install-bookinfo-app.adoc[Installing the Bookinfo Application]
