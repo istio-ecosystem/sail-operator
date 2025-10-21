@@ -553,6 +553,8 @@ ztunnel-96j7k     1/1     Running   0          3m    node3.example.com
 
 After updating all ambient components, verify that your ambient workloads are functioning correctly:
 
+NOTE: The following examples use the `bookinfo` sample application running in the `bookinfo` namespace. Adapt these steps to your own application namespaces and pod labels when verifying your ambient workloads.
+
 . Verify that your ambient workloads are still functioning correctly:
 +
 [source,bash,subs="attributes+",name="ambient-verify-workloads"]
