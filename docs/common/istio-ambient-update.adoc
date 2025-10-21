@@ -345,14 +345,14 @@ $ istioctl ztunnel-config workloads --namespace ztunnel | grep bookinfo
 +
 [source,bash,subs="attributes+",name="ambient-revision-based-strategy"]
 ----
-$ kubectl rollout restart deployment -n bookinfo
+$ kubectl rollout restart deployment -n <NAMESPACE>
 ----
 
 . Wait for the rollout to complete:
 +
 [source,bash,subs="attributes+",name="ambient-revision-based-strategy"]
 ----
-$ kubectl rollout status deployment -n bookinfo
+$ kubectl rollout status deployment -n <NAMESPACE>
 ----
 
 . Verify the workloads are functioning correctly:
@@ -429,7 +429,7 @@ $ kubectl patch ztunnel default --type='merge' -p '{"spec":{"version":"v1.26.3"}
 +
 [source,bash,subs="attributes+",name="ambient-revision-rollback"]
 ----
-$ kubectl rollout restart deployment -n bookinfo
+$ kubectl rollout restart deployment -n <NAMESPACE>
 ----
 
 '''
