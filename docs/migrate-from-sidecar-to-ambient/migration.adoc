@@ -99,6 +99,7 @@ The migration from sidecar to ambient mode follows a structured, phased approach
 This migration guide uses example commands that can be adapted to any application. For reference purposes, we use placeholder values like `<NAMESPACE>`, `<SERVICE_NAME>`, and `<GATEWAY_NAME>` that you should replace with your actual application details.
 
 **Related Documentation:**
+
 - If you want to follow along with a sample application, you can deploy the bookinfo application by following the steps described in link:../addons/addons.adoc#deploy-gateway-and-bookinfo[Deploying Gateway and Bookinfo]
 - For detailed waypoint proxy configuration, see link:../common/istio-ambient-waypoint.adoc[Waypoint Proxy Documentation]
 - For general application deployment guidance, refer to link:../common/install-bookinfo-app.adoc[Installing the Bookinfo Application]
@@ -119,9 +120,9 @@ For Kubernetes:
 
 For Openshift:
 
-- **Openshift 4.19+**: Minimum version for ambient mode support
-- **Sail Operator v1.27+**: Must be running Sail Operator version 1.27 or later
-- **Istio v1.27+**: Control plane must be v1.24 or later for ambient support
+- **Openshift versions supported**: We support Openshift 4.14 and later but for versions older than 4.19 you will need to manually install Gateway API CRDs.
+- **Sail Operator v1.27+**: Must be running Sail Operator version 1.27 or later.
+- **Istio v1.27+**: Control plane must be v1.27 or later for ambient support on Openshift.
 - **Cluster Admin Access**: Required for namespace labeling and resource creation
 
 **Note**: for Openshift clusters, it's need the use of the local gateway mode for ambient deployments. Please refer to the Openshift documentation for more details: https://docs.redhat.com/en/documentation/red_hat_openshift_service_mesh/3.1/html/installing/ossm-istio-ambient-mode#ossm-installing-istio-ambient-mode_ossm-istio-ambient-mode.
@@ -150,11 +151,13 @@ A critical architectural decision involves whether to deploy waypoint proxies. T
 **When Waypoints Are Used vs Not Used:**
 
 **Automatic Waypoint Activation occurs when:**
+
 1. **Namespace labeling**: Adding `istio.io/use-waypoint=<waypoint-name>` label to a namespace
 2. **Service labeling**: Adding the label to specific services for granular control
 3. **Pod labeling**: Adding the label to individual pods (requires `istio.io/waypoint-for: workload`)
 
 **Traffic Flow Decision Tree:**
+
 - **Without waypoint labels**: Traffic flows directly through ztunnel (L4-only processing)
 - **With waypoint labels**: Traffic is intercepted and routed through waypoint proxies for L7 processing
 - **Mixed environments**: Some services use waypoints while others remain ztunnel-only
@@ -185,8 +188,7 @@ For detailed waypoint configuration guidance, see link:../common/istio-ambient-w
 - Virtual Machine (VM) workload integration
 - SPIRE integration for identity federation
 
-For additional compatibility considerations refer to:
-- link:../common/coexistence.md [Sidecar-Ambient Coexistence Guidelines]
+For additional compatibility considerations refer to: link:../common/coexistence.adoc[Sidecar-Ambient Coexistence Guidelines]
 
 [[pre-migration-checklist]]
 === 2.3 Pre-Migration Checklist
@@ -206,20 +208,19 @@ NAME      NAMESPACE      PROFILE   REVISIONS   READY   IN USE   ACTIVE REVISION 
 default   istio-system             1           1       1        default           Healthy   v1.27.0   20m
 ----
 
-[source,console]
-----
-# Verify no unsupported features are in use
-kubectl get virtualservice,destinationrule -A
-----
-
-Note: if you have any of the unsupported features listed above, we will need to resolve those before proceeding with the migration. Take into account that ambient support PeerAuthentication but disable mode it's not supported, more information about this can be found here: https://istio.io/latest/docs/reference/config/security/peer_authentication/.
+[NOTE]
+====
+* If you have any of the unsupported features like VirtualServices or DestinationRules, during Step 5 you will need to migrate those to be compatible with ambient mode.
+* Ambient supports PeerAuthentication, but disabled mode is not supported. More information: https://istio.io/latest/docs/reference/config/security/peer_authentication/
+* Migrate ingress gateways to use Gateway API resources before migration. More information: https://istio.io/latest/docs/reference/config/networking/gateway/
+====
 
 **Application Namespace Validation:**
 
 [source,console]
 ----
 # Check your application namespaces for sidecar injection
-kubectl get namespaces -l istio.io/rev=default
+kubectl get namespaces -l istio.io/rev=default #or any other istio revision name. Also, check if you are using instead istio-injection=enabled label.
 NAME       STATUS   AGE
 bookinfo   Active   6m56
 ----
@@ -277,7 +278,7 @@ Before starting migration, back up all existing Istio resources and namespace la
 [source,console]
 ----
 # Backup all Istio resources
-kubectl get istio,istiocni,virtualservice,destinationrule,authorizationpolicy,requestauthentication -A -o yaml > istio-backup.yaml
+kubectl get istio,istiocni,virtualservice,destinationrule,authorizationpolicy,requestauthentication,httproute,gateway,peerauthentication -A -o yaml > istio-backup.yaml
 
 # Backup namespace labels
 kubectl get namespaces -o yaml > namespace-backup.yaml
@@ -299,7 +300,7 @@ This migration follows a structured step-by-step approach, with each step includ
 [[step-1-prerequisites-validation]]
 === Step 1: Prerequisites Validation
 
-Before starting migration, validate your cluster meets all requirements
+Before starting migration, validate your cluster meets all requirements and check the current configuration for compatibility.
 
 **Enhanced Policy Compatibility Check:**
 [source,console]
@@ -328,7 +329,7 @@ echo "=== Authorization policies requiring waypoint deployment ==="
 kubectl get authorizationpolicy -A -o yaml | grep -c -E "(methods|paths|headers)"
 ----
 
-Note: You will need to resolve any unsupported features before proceeding. This includes:
+Note: In the step 5 of this guide you will need to migrate unsupported features. This includes:
 
 - Converting VirtualServices and DestinationRules to HTTPRoute and Gateway resources
 - Creating granular services to replace subset-based routing
@@ -463,10 +464,10 @@ Existing sidecars need to support the HBONE protocol. Restart deployments in all
 # Restart workloads in each application namespace
 kubectl rollout restart deployment -n bookinfo
 
-# Verify pods have restarted with ambient-aware sidecars
+# Verify pods have restarted
 kubectl get pods -n bookinfo
 ----
-Note: during the restart, sidecars will be updated to support HBONE while still functioning as traditional sidecars.
+Note: during the restart, sidecars will be updated to support HBONE while still functioning as traditional sidecars. Having HBONE support enabled is a prerequisite for ambient mode.
 
 [[step-32-validate-hbone-capability]]
 ==== Step 3.2 Validate HBONE Capability
@@ -475,7 +476,7 @@ Check that sidecars now support HBONE protocol:
 
 [source,console]
 ----
-# Check for HBONE is enable in sidecar
+# Check for HBONE is enabled in sidecar
 $ kubectl get pod $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -n bookinfo -o yaml | yq '.spec.containers[] | select(.name=="istio-proxy") | .env[] | select(.name=="PROXY_CONFIG")'
 name: PROXY_CONFIG
 value: |
@@ -566,9 +567,6 @@ Apply the waypoint configurations:
 [source,console]
 ----
 kubectl apply -f waypoint-bookinfo.yaml
-
-# Verify waypoints are created but not yet active
-kubectl get gateway -n bookinfo
 ----
 
 **Important**: Deploying a waypoint does not automatically make workloads use it. You must explicitly configure namespaces, services, or pods to use the waypoint.
@@ -599,6 +597,7 @@ Ambient mode uses the Kubernetes Gateway API instead of Istio's VirtualService a
 - **DestinationRule subsets** to **Version-specific Services**: Since Gateway API doesn't support subset-based routing
 
 For comprehensive conversion guidance, refer to:
+
 - https://istio.io/latest/docs/reference/config/networking/virtual-service/[Istio VirtualService]
 - https://gateway-api.sigs.k8s.io/guides/http-routing/[Gateway API HTTPRoute Documentation]
 
@@ -1156,6 +1155,7 @@ After migration, use Kiali to visualize the service mesh. You should see traffic
 === 5.1 Common Issues
 
 For comprehensive troubleshooting guidance, refer to:
+
 - https://istio.io/latest/docs/ambient/usage/troubleshoot-waypoint/[Istio Ambient Troubleshooting Documentation]
 - https://istio.io/latest/docs/ops/diagnostic-tools/[Istio Diagnostic Tools]
 
@@ -1473,16 +1473,19 @@ curl -s http://$GATEWAY_URL/<YOUR_APPLICATION_PATH>
 ==== When to Use Each Rollback Option
 
 **Use Step-Specific Rollbacks when:**
+
 - Single step validation fails
 - Issues are isolated to specific components
 - Other migration steps are working correctly
 
 **Use Sidecar Restoration when:**
+
 - Service connectivity is disrupted
 - L7 policies are not enforcing correctly
 - Need immediate service restoration
 
 **Prevention Best Practices:**
+
 - Always create backups before starting migration
 - Test rollback procedures in non-production environments
 - Monitor service health continuously during migration
