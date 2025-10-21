@@ -1,0 +1,12 @@
+apiVersion: v2
+appVersion: 1.29-alpha.871b1a4bac4cadea54f756febb4c2e2d1f2aaede
+description: Helm chart for deploying Istio gateways
+icon: https://istio.io/latest/favicons/android-192x192.png
+keywords:
+- istio
+- gateways
+name: gateway
+sources:
+- https://github.com/istio/istio
+type: application
+version: 1.29-alpha.871b1a4bac4cadea54f756febb4c2e2d1f2aaede
