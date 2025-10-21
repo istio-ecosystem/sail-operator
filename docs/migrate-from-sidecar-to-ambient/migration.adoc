@@ -188,7 +188,7 @@ For detailed waypoint configuration guidance, see link:../common/istio-ambient-w
 - Virtual Machine (VM) workload integration
 - SPIRE integration for identity federation
 
-For additional compatibility considerations refer to: link:../common/coexistence.md[Sidecar-Ambient Coexistence Guidelines]
+For additional compatibility considerations refer to: link:../common/coexistence.adoc[Sidecar-Ambient Coexistence Guidelines]
 
 [[pre-migration-checklist]]
 === 2.3 Pre-Migration Checklist
