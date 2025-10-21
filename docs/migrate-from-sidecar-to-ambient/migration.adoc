@@ -300,7 +300,7 @@ This migration follows a structured step-by-step approach, with each step includ
 [[step-1-prerequisites-validation]]
 === Step 1: Prerequisites Validation
 
-Before starting migration, validate your cluster meets all requirements
+Before starting migration, validate your cluster meets all requirements and check the current configuration for compatibility.
 
 **Enhanced Policy Compatibility Check:**
 [source,console]
@@ -329,7 +329,7 @@ echo "=== Authorization policies requiring waypoint deployment ==="
 kubectl get authorizationpolicy -A -o yaml | grep -c -E "(methods|paths|headers)"
 ----
 
-Note: You will need to resolve any unsupported features before proceeding. This includes:
+Note: In the step 5 of this guide you will need to migrate unsupported features. This includes:
 
 - Converting VirtualServices and DestinationRules to HTTPRoute and Gateway resources
 - Creating granular services to replace subset-based routing
