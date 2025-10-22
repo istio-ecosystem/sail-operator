@@ -707,10 +707,7 @@ metadata:
   namespace: bookinfo
 spec:
   parentRefs:
-  - group: ""
-    kind: Service
-    name: reviews
-    port: 9080
+  - name: bookinfo-gateway # Attach to existing gateway
   rules:
   - matches:
     - headers:
