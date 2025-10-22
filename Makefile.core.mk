@@ -172,6 +172,8 @@ endif
 # Default values and flags used when rendering chart templates locally
 HELM_VALUES_FILE ?= chart/values.yaml
 HELM_TEMPL_DEF_FLAGS ?= --include-crds --values $(HELM_VALUES_FILE)
+# When true, all operand images will be added to the HELM_VALUES_FILE automatically
+PATCH_HELM_VALUES ?= true
 
 TODAY ?= $(shell date -I)
 
@@ -510,10 +512,12 @@ operator-chart: download-istio-charts # pull the charts first as they are requir
 	sed -i -e "s/^\(version: \).*$$/\1${VERSION}/g" \
 	       -e "s/^\(appVersion: \).*$$/\1\"${VERSION}\"/g" chart/Chart.yaml
 	sed -i -e "s|^\(image: \).*$$|\1${IMAGE}|g" \
-	       -e "s/^\(  version: \).*$$/\1${VERSION}/g" chart/values.yaml
+	       -e "s/^\(  version: \).*$$/\1${VERSION}/g" ${HELM_VALUES_FILE}
 	# adding all component images to values
 	# when building the bundle, helm generated base CSV is passed to the operator-sdk. With USE_IMAGE_DIGESTS=true, operator-sdk replaces all pullspecs with tags by digests and adds spec.relatedImages field automatically
-	@hack/patch-values.sh chart/values.yaml
+ifeq ($(PATCH_HELM_VALUES), true)
+	@hack/patch-values.sh ${HELM_VALUES_FILE}
+endif
 
 .PHONY: update-istio
 update-istio: ## Update the Istio commit hash in the 'latest' entry in versions.yaml to the latest commit in the branch.
