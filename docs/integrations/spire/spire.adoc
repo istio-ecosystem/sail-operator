@@ -1,0 +1,1166 @@
+== SPIRE and Red Hat's Zero Trust Workload Identity
+
+=== Spiffe and SPIRE
+Spire is a production-ready implementation of the https://spiffe.io/[SPIFFE] specification
+that performs node and workload attestation in order to securely issue
+cryptographic identities to workloads running in heterogeneous environments.
+SPIRE can be configured as a source of cryptographic identities for Istio
+workloads through an integration with Envoy’s SDS API.
+Istio can detect the existence of a UNIX Domain
+Socket that implements the Envoy SDS API on a defined socket path,
+allowing Envoy to communicate and fetch identities directly from it.
+
+This integration with SPIRE provides flexible attestation options not
+available with the default Istio identity management while harnessing Istio’s
+powerful service management. For example,
+SPIRE’s plugin architecture enables diverse workload attestation options
+beyond the Kubernetes namespace and service account attestation offered by Istio.
+SPIRE’s node attestation extends attestation to the physical or virtual hardware on
+which workloads run.
+
+=== Red Hat's Zero Trust Workload Identity Manager (ZTWIM)
+https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/security_and_compliance/zero-trust-workload-identity-manager#zero-trust-manager-spire-agent-config_zero-trust-manager-configuration[ZTWIM] is a Red Hat OpenShift operator that uses the
+open-source SPIFFE/SPIRE framework to automate the creation,
+rotation, and management of secure, verifiable identities for workloads.
+
+* <<installation,Installation>>
+** <<ztwim-installation,Zero Trust Workload Identity Manager (ZTWIM)>>
+*** <<ztwim-deploy-operator,Deploy ZTWIM Operator>>
+*** <<ztwim-deploy-operands,Deploy ZTWIM Operands (CRs)>>
+**** <<spire-server,Create SpireServer CR>>
+**** <<spire-agent,Create SpireAgent CR>>
+**** <<patch-spire-agent-configmap,Patch Spire Agent ConfigMap>>
+**** <<csi-driver,Create SpiffeCSIDriver CR>>
+**** <<oidc-discovery,Create SpireOIDCDiscoveryProvider CR>>
+**** <<verify-ztwim-installation,Verify ZTWIM installation>>
+**** <<note-abot-spire-agent-socket-name,Note about Spire Agent Socket name>>
+** <<sail-operator,Sail Operator>>
+*** <<instal-sail-operator,Install Sail Operator>>
+*** <<create-istio-cr,Create Istio CR>>
+*** <<create-istio-cni,Create Istio CNI CR>>
+*** <<verify-istio-installation,Verify Istio Installation with ZTWIM>>
+** <<simple-istio-mutual-with-spire,Simple ISTIO_MUTUAL with Spire>>
+** <<connecting-external-services-to-the-mesh,Connect external services to the Mesh >>
+** <<ingress-gateway,Istio Ingress Gateway with SPIFFE >>
+** <<bookinfo-app-x509-svid,Bookinfo App example with SPIFFE with x509 SVID>>
+** <<bookinfo-app-x509-svid-jwt-svid,Bookinfo App example with SPIFFE with JWT SVID and x509 SVID>>
+
+
+
+[[installation]]
+[[ztwim-installation]]
+=== Zero Trust Workload Identity Manager (ZTWIM)
+
+[[ztwim-deploy-operator]]
+==== Deploying ZTWIM Operator
+The official ZTWIM installation documentation is available link:https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/security_and_compliance/zero-trust-workload-identity-manager#zero-trust-manager-how-it-works_zero-trust-manager-overview[here].
+
+However, to make it work with Istio, we will need to apply patches to the deployment manifests.
+
+Deploy the ZTWIM operator only (without any operands) as described in the official ZTWIM documentation: link:https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/security_and_compliance/zero-trust-workload-identity-manager#zero-trust-manager-install[10.3. Installing the Zero Trust Workload Identity Manager].
+
+[[ztwim-deploy-operands]]
+==== Deploying ZTWIM Operands
+[[spire-server]]
+Set https://spiffe.io/docs/latest/spiffe-about/spiffe-concepts/#trust-domain[Spiffe Trust Domain]
+and deploy https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/security_and_compliance/zero-trust-workload-identity-manager#zero-trust-manager-spire-server-config_zero-trust-manager-configuration[SpireServer]
+[source,bash]
+----
+export TRUST_DOMAIN=ocp.one
+----
+
+[source,bash]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: operator.openshift.io/v1alpha1
+kind: SpireServer
+metadata:
+  name: cluster
+spec:
+  trustDomain: $TRUST_DOMAIN
+  clusterName: spiffe-eval
+  caSubject:
+    commonName: spiffe-eval
+    country: "US"
+    organization: "RH"
+  persistence:
+    type: pvc
+    size: "5Gi"
+    accessMode: ReadWriteOnce
+  datastore:
+    databaseType: sqlite3
+    connectionString: "/run/spire/data/datastore.sqlite3"
+    maxOpenConns: 100
+    maxIdleConns: 2
+    connMaxLifetime: 3600
+  jwtIssuer: https://oidc-discovery.$TRUST_DOMAIN
+EOF
+----
+Make sure the Spire Server is up and running
+[source,bash]
+----
+oc get statefulset -l app.kubernetes.io/name=spire-server -n zero-trust-workload-identity-manager
+----
+[[spire-agent]]
+Deploy the link:https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/security_and_compliance/zero-trust-workload-identity-manager#zero-trust-manager-spire-agent-config_zero-trust-manager-configuration[SPIRE Agent].
+
+To integrate Istio, we must rename the Spire Agent
+socket after the agent is running.
+This requires a two-step process:
+
+. Set the `ztwim.openshift.io/create-only: "true"` annotation.
+This annotation is critical as it prevents the operator from
+overwriting subsequent manual changes.
+. Once all agent pods are running, patch the Spire Agent config
+map with the new socket name so it will match the Istio sidecar configuration.
+[source,bash]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: operator.openshift.io/v1alpha1
+kind: SpireAgent
+metadata:
+  name: cluster
+  annotations:
+    ztwim.openshift.io/create-only: "true"
+spec:
+  trustDomain: $TRUST_DOMAIN
+  clusterName: spiffe-eval
+  nodeAttestor:
+    k8sPSATEnabled: "true"
+  workloadAttestors:
+    k8sEnabled: "true"
+    workloadAttestorsVerification:
+      type: "auto"
+EOF
+----
+Make sure all the Spire Agent pods are running:
+[source,bash]
+----
+oc get daemonset -l app.kubernetes.io/name=spire-agent -n zero-trust-workload-identity-manager
+----
+[[patch-spire-agent-configmap]]
+Patch the Spire Agent config map, and change the agent socket path value from
+`"socket_path": "/tmp/spire-agent/public/spire-agent.sock"` to `"socket_path": "/tmp/spire-agent/public/socket"`
+This will allow Istio's proxy (Envoy) to properly discover (SDS) Spiffe Workload API socket
+[source,bash]
+----
+kubectl patch \
+ configmap spire-agent -nzero-trust-workload-identity-manager \
+-p "$(kubectl get configmap spire-agent  \
+-nzero-trust-workload-identity-manager -o json | \
+ jq '{data: {"agent.conf": (.data."agent.conf" | fromjson | .agent.socket_path = "/tmp/spire-agent/public/socket" | tostring)}}')"
+----
+To apply the changes rollout Spire Agent pods.
+[source,bash]
+----
+kubectl rollout restart daemonset/spire-agent -n zero-trust-workload-identity-manager
+----
+
+[[csi-driver]]
+Deploy https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/security_and_compliance/zero-trust-workload-identity-manager#zero-trust-manager-spire-csidriver-config_zero-trust-manager-configuration[SpiffeCSIDriver]
+[source,bash]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: operator.openshift.io/v1alpha1
+kind: SpiffeCSIDriver
+metadata:
+  name: cluster
+spec:
+  agentSocketPath: '/run/spire/agent-sockets/socket'
+EOF
+----
+Note, that in `agentSocketPath` the *socket file name* /run/spire/agent-sockets/`socket`
+now match to what we defined in
+Spire Agent configmap /tmp/spire-agent/public/`socket`
+Make sure all the Spiffe CSIDriver pods are running:
+[source,bash]
+----
+oc get daemonset -l app.kubernetes.io/name=spiffe-csi-driver -n zero-trust-workload-identity-manager
+----
+[[oidc-discovery]]
+Deploy https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/security_and_compliance/zero-trust-workload-identity-manager#zero-trust-manager-oidc-config_zero-trust-manager-configuration[SpireOIDCDiscoveryProvider]
+[source,bash]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: operator.openshift.io/v1alpha1
+kind: SpireOIDCDiscoveryProvider
+metadata:
+  name: cluster
+spec:
+  trustDomain: $TRUST_DOMAIN
+  agentSocketName: 'socket'
+  jwtIssuer: https://oidc-discovery.$TRUST_DOMAIN
+EOF
+----
+Note, that the `agentSocketName` is `socket` and it is
+the same name as was defined in Spire Agent and Spire CSIDriver.
+Make sure SpireOIDCDiscoveryProvider is up and running
+[source,bash]
+----
+oc get deployment spire-spiffe-oidc-discovery-provider -n zero-trust-workload-identity-manager
+----
+[[verify-ztwim-installation]]
+To verify ZTWIM installation, deploy client workload
+and try to fetch workload SVID
+[source,bash]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client
+  labels:
+    app: client
+spec:
+  selector:
+    matchLabels:
+      app: client
+  template:
+    metadata:
+      labels:
+        app: client
+    spec:
+      containers:
+        - name: client
+          image: ghcr.io/spiffe/spire-agent:1.5.1
+          command: ["/opt/spire/bin/spire-agent"]
+          args: [ "api", "watch",  "-socketPath", "/run/spire/sockets/socket" ]
+          volumeMounts:
+            - mountPath: /run/spire/sockets
+              name: spiffe-workload-api
+              readOnly: true
+      volumes:
+      - name: spiffe-workload-api
+        csi:
+          driver: csi.spiffe.io
+          readOnly: true
+EOF
+----
+Once the client pod is running try to fetch the SVID
+[source,bash]
+----
+kubectl exec -it \
+$(kubectl get pods -o=jsonpath='{.items[0].metadata.name}' -l app=client) \
+ -- /opt/spire/bin/spire-agent api fetch -socketPath /run/spire/sockets/socket
+----
+If ZTWIM was deployed and configured correctly, you should get something like this
+[source,text]
+----
+Received 1 svid after 29.636075ms
+
+SPIFFE ID:		spiffe://ocp.one/ns/default/sa/default
+SVID Valid After:	 2025-10-21 14:04:03 +0000 UTC
+SVID Valid Until:	 2025-10-21 15:04:13 +0000 UTC
+CA #1 Valid After:	2025-10-21 07:38:03 +0000 UTC
+CA #1 Valid Until:	2025-10-22 07:38:13 +0000 UTC
+----
+[[note-abot-spire-agent-socket-name]]
+_A note about the Spire Agent socket name.
+{empty} +
+Istio SDS server has static convention where it expects for the SDS socket.
+
+https://github.com/istio/istio/blob/master/pkg/security/security.go#L50[WorkloadIdentityPath]
+
+https://github.com/istio/istio/blob/master/pkg/security/security.go#L54C2-L54C35[DefaultWorkloadIdentitySocketFile]
+
+https://github.com/istio/istio/blob/master/pkg/security/security.go#L516[GetIstioSDSServerSocketPath()]
+
+Spiffe.io team aware that different workloads might have
+different requirements for spire-agent socket naming convention.
+To provide standardization and compatibility,
+spire-agent helm chart expose https://github.com/spiffe/helm-charts-hardened/blob/main/charts/spire/charts/spire-agent/values.yaml#L286[socketAlternate.names]
+param which is responsible for creation of alternate names for
+the spire-agent socket.
+However, as for the *Tech Preview* of the ZTWIM, the socketAlternate.names aren't supported yet.
+Thus, we must patch the Spire socket name is that way._
+
+[[sail-operator]]
+=== Sail Operator
+
+[[instal-sail-operator]]
+==== Install Sail Operator
+Follow <<../../general/getting-started.adoc#installation-on-openshift,this guide>>
+and Install Sail Operator only *without any operands*.
+[[create-istio-cni]]
+==== Create Istio CNI CR
+[source,bash]
+----
+kubectl create namespace istio-cni
+----
+[source,bash]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: sailoperator.io/v1
+kind: IstioCNI
+metadata:
+  name: default
+spec:
+  namespace: istio-cni
+EOF
+----
+[[create-istio-cr]]
+==== Create Istio CR
+Create `istio-system` namespace
+[source,bash]
+----
+kubectl create ns istio-system
+----
+Create `Istio` CR.
+[source,bash]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  namespace: istio-system
+  updateStrategy:
+    type: InPlace
+  values:
+    meshConfig:
+      trustDomain: $TRUST_DOMAIN
+    sidecarInjectorWebhook:
+      templates:
+        spire: |
+          spec:
+            containers:
+            - name: istio-proxy
+              volumeMounts:
+              - name: workload-socket
+                mountPath: /run/secrets/workload-spiffe-uds
+                readOnly: true
+            volumes:
+              - name: workload-socket
+                csi:
+                  driver: "csi.spiffe.io"
+                  readOnly: true
+EOF
+----
+_A note about `sidecarInjectorWebhook`.
+Spiffe Workload API exposed over unix socket.
+To avoid any host mounts we are using Spire CSI driver
+which is securely injecting the workload api socket.
+Thus, we must create sidecar injector template,
+which will be responsible for mounting the Spire Agent
+socket as a volume to the envoy sidecar container._
+
+Make sure the istiod up and running
+[source,bash]
+----
+kubectl get deploy istiod -nistio-system
+----
+[[verify-istio-installation]]
+==== Verify Istio Installation
+Create a new namespace and enable
+automatic sidecar injection
+[source,bash]
+----
+kubectl create namespace verify-istio-installation
+kubectl label namespace verify-istio-installation istio-injection=enabled
+----
+Create simple httpbin deployment and verify spiffe identity.
+Note, in the inject template we are specifying `spire` template.
+The spire injection template is responsible for mounting the Spiffe Workload API
+socket into the sidecar container
+[source,bash]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpbin
+  namespace: verify-istio-installation
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: httpbin
+      version: v1
+  template:
+    metadata:
+      annotations:
+        inject.istio.io/templates: "sidecar,spire"
+      labels:
+        app: httpbin
+        version: v1
+    spec:
+      containers:
+      - image: docker.io/mccutchen/go-httpbin:v2.15.0
+        imagePullPolicy: IfNotPresent
+        name: httpbin
+        ports:
+        - containerPort: 8080
+EOF
+----
+Check that the workload identity was issued by SPIRE
+[source,bash]
+----
+HTTPBIN_POD=$(kubectl get pod -l app=httpbin -nverify-istio-installation -o jsonpath="{.items[0].metadata.name}")
+istioctl proxy-config secret "$HTTPBIN_POD" -nverify-istio-installation -o json | jq -r \
+'.dynamicActiveSecrets[0].secret.tlsCertificate.certificateChain.inlineBytes' | base64 --decode > chain.pem
+openssl x509 -in chain.pem -text | grep SPIRE
+----
+Example output
+[source,bash]
+----
+Subject: C=US, O=SPIRE
+----
+[[simple-istio-mutual-with-spire]]
+=== Simple Istio ISTIO_MUTUAL with Spire
+In this scenario we'll deploy client (curl)
+and server (httpbin) and validate mTLS connectivity
+between the two services.
+
+Create namespace
+[source,bash]
+----
+kubectl create namespace test-1
+kubectl label namespace test-1 istio-injection=enabled
+----
+Create httpbin server
+[source,bash]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: httpbin
+  namespace: test-1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: httpbin
+  namespace: test-1
+  labels:
+    app: httpbin
+    service: httpbin
+spec:
+  ports:
+  - name: http-ex-spiffe
+    port: 443
+    targetPort: 8080
+  - name: http
+    port: 80
+    targetPort: 8080
+  selector:
+    app: httpbin
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpbin
+  namespace: test-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: httpbin
+      version: v1
+  template:
+    metadata:
+      annotations:
+        inject.istio.io/templates: "sidecar,spire"
+      labels:
+        app: httpbin
+        version: v1
+    spec:
+      serviceAccountName: httpbin
+      containers:
+      - image: docker.io/mccutchen/go-httpbin:v2.15.0
+        imagePullPolicy: IfNotPresent
+        name: httpbin
+        ports:
+        - containerPort: 8080
+EOF
+----
+Create curl client
+[source,bash]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: curl
+  namespace: test-1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: curl
+  namespace: test-1
+  labels:
+    app: curl
+    service: curl
+spec:
+  ports:
+  - port: 80
+    name: http
+  selector:
+    app: curl
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: curl
+  namespace: test-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: curl
+  template:
+    metadata:
+      annotations:
+        inject.istio.io/templates: "sidecar,spire"
+      labels:
+        app: curl
+    spec:
+      terminationGracePeriodSeconds: 0
+      serviceAccountName: curl
+      containers:
+      - name: curl
+        image: curlimages/curl:8.16.0
+        command: ["/bin/sleep", "infinity"]
+        imagePullPolicy: IfNotPresent
+EOF
+----
+Currently, Istio configured with default PERMISSIVE mode.
+Try to make http call without mTLS first
+[source,bash]
+----
+CURL_POD=$(kubectl get pod -l app=curl -ntest-1 -o jsonpath="{.items[0].metadata.name}")
+kubectl exec $CURL_POD -n test-1 -it -- curl -s -o /dev/null -w "%{http_code}" http://httpbin
+----
+You should get HTTP 200 status code. Now, lets enabled mTLS between two services.
+We'll set `PeerAuthentication` to `STRICT` and will define two appropriate
+`DestinationRules`
+[source,bash]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: test-1
+spec:
+  mtls:
+    mode: STRICT
+
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: curl
+  namespace: test-1
+spec:
+  host: curl
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: httpbin
+  namespace: test-1
+spec:
+  host: httpbin
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+---
+EOF
+----
+Make the curl request again, you should get 200 response code.
+[source,bash]
+----
+CURL_POD=$(kubectl get pod -l app=curl -ntest-1 -o jsonpath="{.items[0].metadata.name}")
+kubectl exec $CURL_POD -n test-1 -it -- curl -s -o /dev/null -w "%{http_code}" http://httpbin
+----
+If you receive an HTTP 200 code, it confirms that your mesh is configured with Spire correctly. Both services are able to fetch Spiffe link:https://github.com/spiffe/spiffe/blob/main/standards/X509-SVID.md[X.509 SVIDs], trust each other's identities, and can communicate securely.
+
+[[connecting-external-services-to-the-mesh]]
+=== Connecting external service to the mesh
+SPIRE issues SVIDs via the SPIFFE Workload API. In Istio,
+the Envoy sidecar's SDS server implements this API to fetch
+an SVID for its workload.
+
+In the same way, any application that implements the
+SPIFFE Workload API can fetch its own SVID and communicate
+securely with services inside the mesh, even without an Istio sidecar.
+
+In the following steps, we will deploy a new workload
+outside the mesh (with no Istio sidecar) and attempt
+to communicate with services running within the mesh.
+
+Create namespace, this time we are explicitly
+disabling istio sidecar injection with label `istio-injection=disabled`
+[source,bash]
+----
+kubectl create namespace test-2
+kubectl label namespace test-2 istio-injection=disabled
+----
+
+_NOTE: For our external client, we will use the curl command.
+Curl is not a native SPIFFE application.
+Therefore, to make curl (or any other non-native SPIFFE workload)
+work with our service mesh services,
+we must configure the ClusterSPIFFEID
+to include SANs in the X.509 SVID._
+
+Patch the default `ClusterSPIFFEID`
+`zero-trust-workload-identity-manager-spire-default`
+and exclude `test-1` and `test-2` namespaces.
+We'll create a dedicated `ClusterSPIFFEID` later.
+[source,bash]
+----
+kubectl patch clusterspiffeid zero-trust-workload-identity-manager-spire-default --type='json' -p='[
+    {
+      "op": "replace",
+      "path": "/spec/namespaceSelector/matchExpressions/0/values",
+      "value": [
+        "zero-trust-workload-identity-manager",
+        "test-1",
+        "test-2"
+      ]
+    }
+]'
+----
+Create a new `ClusterSPIFFEID` for service in test-1 and test-2 namespaces.
+
+_NOTE: we are adding `autoPopulateDNSNames: true`
+This will instruct Spire server to includes SANs into x509 SVID_
+
+[source,bash]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: spire.spiffe.io/v1alpha1
+kind: ClusterSPIFFEID
+metadata:
+  name: curl-test-2
+spec:
+  autoPopulateDNSNames: true
+  className: zero-trust-workload-identity-manager-spire
+  fallback: true
+  hint: curl
+  jwtTtl: 0s
+  namespaceSelector:
+    matchExpressions:
+    - key: kubernetes.io/metadata.name
+      operator: In
+      values:
+      - test-1
+      - test-2
+  spiffeIDTemplate: "spiffe://{{ .TrustDomain }}/ns/{{ .PodMeta.Namespace }}/sa/{{.PodSpec.ServiceAccountName }}"
+  ttl: 0s
+  dnsNameTemplates:
+    - "curl.{{ .TrustDomain }}"
+EOF
+----
+Deploy `curl` workload,
+this time we need explicitly use Spiffe CSI volume.
+[source,bash]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Service
+metadata:
+  name: curl-service
+  namespace: test-2
+spec:
+  selector:
+    app: curl
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: curl
+  namespace: test-2
+spec:
+  selector:
+    matchLabels:
+      app: curl
+  template:
+    metadata:
+      labels:
+        app: curl
+    spec:
+      containers:
+      - name: curl
+        image: curlimages/curl:8.16.0
+        command:
+        - /bin/sh
+        - -c
+        - |
+            wget -O /tmp/spire.zip https://github.com/spiffe/spire/releases/download/v1.12.5/spire-1.12.5-linux-amd64-musl.tar.gz \
+            && cd /tmp \
+            && tar zxvf spire.zip \
+            && mv /tmp/spire-1.12.5/bin/spire-agent /tmp/spire-agent \
+            && sleep inf
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: workload-socket
+          mountPath: /tmp/spiffe-socket
+          readOnly: true
+      volumes:
+      - name: workload-socket
+        csi:
+          driver: "csi.spiffe.io"
+          readOnly: true
+EOF
+----
+Make a direct HTTP request
+from the external client to a service running inside the mesh.
+[source,bash]
+----
+# get curl pod name
+CURL_POD=$(kubectl get pod -l app=curl -ntest-2 -o jsonpath="{.items[0].metadata.name}")
+
+# fetch x509 SVID and store them on the disk
+kubectl exec $CURL_POD -n test-2 -it -- \
+  /tmp/spire-agent api \
+  fetch x509 \
+  -socketPath /tmp/spiffe-socket/socket \
+  -write /tmp
+
+# making direct request to the service withing the mesh from outside mesh service
+kubectl exec $CURL_POD -n test-2 -it -- \
+  curl -s -o /dev/null -w "%{http_code}" \
+  https://httpbin.test-1.svc \
+  --key /tmp/svid.0.key \
+  --cert /tmp/svid.0.pem \
+  --cacert /tmp/bundle.0.pem
+----
+
+Receiving an HTTP 200 code confirms that you have
+successfully connected the external service to the services within the mesh.
+This indicates that both services were able to fetch
+a Spiffe link:https://github.com/spiffe/spiffe/blob/main/standards/X509-SVID.md[X.509 SVID],
+they trust each other's identities, and can now communicate securely.
+
+_The Istio sidecar (Envoy) is one example of a SPIFFE-native workload.
+Many other tools also implement SPIFFE. You can add native SPIFFE support to your application by using the link:https://github.com/spiffe/go-spiffe[Go SPIFFE SDK] or by leveraging third-party solutions that implement the SPIFFE protocol, such as link:https://github.com/ghostunnel/ghostunnel[Ghostunnel].
+You can find more information about deploying SVIDs link:https://spiffe.io/docs/latest/deploying/svids/[here]._
+
+[[ingress-gateway]]
+=== Ingress Gateway
+
+Deploy Istio Ingress Gateway
+
+_NOTE: The inject.istio.io/templates annotation should include
+both gateway and spire templates.
+The spire template is required to ensure the Spire Agent
+socket is automatically mounted to
+the Istio Ingress Gateway pod._
+
+[source,bash]
+----
+# allow istio ingress pod to run with anyuid
+oc adm policy add-scc-to-user anyuid system:serviceaccount:istio-system:istio-gateway
+
+# add istio helm repo
+helm repo add istio https://istio-release.storage.googleapis.com/charts
+
+# update the repo
+helm repo update
+
+# install the istio gateway helm chart
+helm install istio-gateway -nistio-system \
+  istio/gateway --set-json \
+  'podAnnotations={"inject.istio.io/templates":"gateway,spire"}'
+----
+Make sure the istio gateway is up and running
+[source,bash]
+----
+kubectl get deploy istio-gateway -nistio-system
+----
+Create Istio Gateway CR for `httpbin` service in `test-1` namespace.
+
+A note about the istio-gateway service:
+
+This tutorial uses example.com as the placeholder domain. You should replace this with the correct domain for your setup.
+You must configure DNS to resolve your domain to the gateway:
+
+Cloud (e.g., AWS): If your cluster is in a cloud environment that provides a hostname (like an ELB), create a CNAME record mapping your domain to that hostname.
+
+On-Premises/Bare-Metal: If your istio-gateway service has a LoadBalancerIP, create an A record mapping your domain to that external IP address.
+
+Alternative (nip.io): For quick testing, you can use nip.io. This method only works if your gateway service has an external IP address, not a CNAME.
+
+==== Local Testing
+
+For a simple local test, you can bypass public DNS. Update your local /etc/hosts file and manually add entries for the services used in this tutorial. This should be sufficient for completing this guide.
+
+Example /etc/hosts entries:
+....
+[GATEWAY_IP] httpbin.example.com
+[GATEWAY_IP] bookinfo.example.com
+....
+
+[source,bash]
+----
+# define base domain
+export BASE_DOMAIN=example.com
+# create Gateway CR
+cat <<EOF | kubectl apply -f -
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: httpbin-gateway
+  namespace: test-1
+spec:
+  selector:
+    istio: gateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "httpbin.$BASE_DOMAIN"
+EOF
+----
+
+Create Istio Virtual Service for `httpbin` service.
+No need to create `DestinationRules`, we created it in previous steps.
+[source,bash]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: httpbin
+  namespace: test-1
+spec:
+  hosts:
+    - "httpbin.$BASE_DOMAIN"
+  gateways:
+    - httpbin-gateway
+  http:
+    - route:
+      - destination:
+          host: httpbin.test-1.svc.cluster.local
+          port:
+            number: 80
+EOF
+----
+
+Make an http call to the httpbin service
+[source,bash]
+----
+curl httpbin.$BASE_DOMAIN \
+ -s -o /dev/null -w "%{http_code}"
+----
+If you receive an HTTP 200 code, it means your traffic
+is being securely routed from the Istio Gateway pod
+to the httpbin service using an mTLS connection.
+
+[[bookinfo-app-x509-svid]]
+=== Bookinfo app with SPIFFE
+For the Bookinfo application, we will use the existing default namespace,
+so there is no need to create a new one.
+However, we must label the default namespace to enable
+automatic Istio sidecar injection.
+[source,bash]
+----
+kubectl label namespace default istio-injection=enabled
+----
+
+Deploy Bookinfo App from this xref:resources/bookinfo.yaml[manifest]
+[source,bash]
+----
+kubectl create -f resources/bookinfo.yaml
+----
+
+Verify all Bookinfo workloads are up and running
+[source,bash]
+----
+kubectl get deployment
+----
+
+Deploy Istio `VirtualService` and `Gateway` CRs for the Bookinfo App.
+Do not forget to export the `LB_IP` as mentioned previously
+[source,bash]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: bookinfo-gateway
+  namespace: default
+spec:
+  selector:
+    istio: gateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "bookinfo.$BASE_DOMAIN"
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: bookinfo
+  namespace: default
+spec:
+  hosts:
+    - "bookinfo.$BASE_DOMAIN"
+  gateways:
+    - bookinfo-gateway
+  http:
+    - match:
+        - uri:
+            exact: /productpage
+        - uri:
+            prefix: /static
+        - uri:
+            exact: /login
+        - uri:
+            exact: /logout
+        - uri:
+            prefix: /api/v1/products
+      route:
+        - destination:
+            host: productpage.default.svc.cluster.local
+            port:
+              number: 9080
+EOF
+----
+Try to access the Bookinfo app with curl
+[source,bash]
+----
+curl http://bookinfo.$BASE_DOMAIN/productpage  -s -o /dev/null -w "%{http_code}"
+----
+Or with Web Browser go to `http://bookinfo.$BASE_DOMAIN/productpage`,
+if everything was configured correctly you
+should get the Bookinfo app product page
+
+Add Bookinfo app `DestinationRules` and set tls mode to ISTIO_MUTUAL
+[source,bash]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: productpage
+spec:
+  host: productpage
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+  subsets:
+    - name: v1
+      labels:
+        version: v1
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: reviews
+spec:
+  host: reviews
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+  subsets:
+    - name: v1
+      labels:
+        version: v1
+    - name: v2
+      labels:
+        version: v2
+    - name: v3
+      labels:
+        version: v3
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: ratings
+spec:
+  host: ratings
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+  subsets:
+    - name: v1
+      labels:
+        version: v1
+    - name: v2
+      labels:
+        version: v2
+    - name: v2-mysql
+      labels:
+        version: v2-mysql
+    - name: v2-mysql-vm
+      labels:
+        version: v2-mysql-vm
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: details
+spec:
+  host: details
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+  subsets:
+    - name: v1
+      labels:
+        version: v1
+    - name: v2
+      labels:
+        version: v2
+EOF
+----
+If everything is configured correctly, you will be able to access the
+Bookinfo application's webpage.
+A successful connection confirms that the services
+within your mesh are communicating securely with
+each other using mTLS, authenticated by SPIFFE X.509 SVIDs.
+
+[[bookinfo-app-x509-svid-jwt-svid]]
+=== JWT SVID with Istio
+
+To add support for JWT SVIDs to the Istio mesh,
+you must patch the Istio Custom Resource (CR).
+Add the following parameters:
+`PILOT_JWT_ENABLE_REMOTE_JWKS: "true"` and `jwksResolverExtraRootCA`
+The `jwksResolverExtraRootCA` parameter is required to
+allow the Istio sidecar to establish secure HTTPS connections
+to the remote JWKS server. And `PILOT_JWT_ENABLE_REMOTE_JWKS: "true"`
+instruct Istio to use external JWKS server.
+
+_Note, you can omit extra root CA if your `SpireOIDCDiscovery` is using
+trusted by Istio CA certificates. Otherwise, you must provide the `jwksResolverExtraRootCA`.
+If istio does not trust the `SpireOIDCDiscovery` CA, the request will fail._
+
+Fetch `SpireOIDCDiscovery` certificate into `EXTRA_ROOT_CA`
+
+[source,bash]
+----
+# get extra root ca
+export EXTRA_ROOT_CA="$(kubectl get secret oidc-serving-cert -nzero-trust-workload-identity-manager -ojson | jq -r '.data."tls.crt"' | base64 -d |  sed 's/^/        /')"
+----
+
+Update Istio CR with `jwksResolverExtraRootCA` and `PILOT_JWT_ENABLE_REMOTE_JWKS: "true"`
+
+[source,bash]
+----
+# patch the istio CR with extra root ca data
+# and PILOT_JWT_ENABLE_REMOTE_JWKS: true
+cat <<EOF | kubectl apply -f -
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  namespace: istio-system
+  updateStrategy:
+    type: InPlace
+  values:
+    pilot:
+      jwksResolverExtraRootCA: |
+${EXTRA_ROOT_CA}
+      env:
+        PILOT_JWT_ENABLE_REMOTE_JWKS: "true"
+    meshConfig:
+      trustDomain: $TRUST_DOMAIN
+    sidecarInjectorWebhook:
+      templates:
+        spire: |
+          spec:
+            containers:
+            - name: istio-proxy
+              volumeMounts:
+              - name: workload-socket
+                mountPath: /run/secrets/workload-spiffe-uds
+                readOnly: true
+            volumes:
+              - name: workload-socket
+                csi:
+                  driver: "csi.spiffe.io"
+                  readOnly: true
+EOF
+----
+
+To apply the new configuration
+and reload the sidecar proxies,
+perform a rolling restart of all Bookinfo deployments.
+[source,bash]
+----
+kubectl rollout restart deployment/details-v1 -n default
+kubectl rollout restart deployment/productpage-v1 -n default
+kubectl rollout restart deployment/ratings-v1 -n default
+kubectl rollout restart deployment/reviews-v1 -n default
+kubectl rollout restart deployment/reviews-v2 -n default
+kubectl rollout restart deployment/reviews-v3 -n default
+----
+
+Add `RequestAuthentication` and `AuthorizationPolicy`
+[source,bash]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: security.istio.io/v1
+kind: RequestAuthentication
+metadata:
+  name: productpage
+spec:
+  selector:
+    matchLabels:
+      app: productpage
+  jwtRules:
+    - issuer: "https://oidc-discovery.$TRUST_DOMAIN"
+      jwksUri: https://spire-spiffe-oidc-discovery-provider.zero-trust-workload-identity-manager.svc/keys
+      audiences:
+      - bookinfoapp
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: productpage
+spec:
+  selector:
+    matchLabels:
+      app: productpage
+  rules:
+    - from:
+        - source:
+            requestPrincipals: ["https://oidc-discovery.$TRUST_DOMAIN/*"]
+EOF
+----
+Make HTTP request to the Bookinfo app
+[source,bash]
+----
+curl http://bookinfo.$BASE_DOMAIN/productpage
+----
+The request should fail with `RBAC: access denied` error.
+This is expected because of the above authorization policy.
+
+Fetch the JWT token from the SPIFFE JWT
+SVID and make the request again.
+[source,bash]
+----
+# get the JWT SVID
+TOKEN=$(kubectl exec $CURL_POD -n test-2 -it -- \
+  /tmp/spire-agent api \
+  fetch jwt \
+  -audience bookinfoapp \
+  -socketPath /tmp/spiffe-socket/socket \
+  -output json | jq -r .[0].svids[0].svid)
+# make the http call
+curl -H "Authorization: Bearer $TOKEN" \
+  -s -o /dev/null -w "%{http_code}" \
+  http://bookinfo.$BASE_DOMAIN/productpage
+----
+If you receive an HTTP 200 code,
+it confirms that your traffic is secured by SPIFFE,
+using both mTLS and JWT SVIDs.
