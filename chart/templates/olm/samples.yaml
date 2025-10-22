@@ -2,4 +2,6 @@
 {{ .Files.Get "samples/istio-sample.yaml" }}
 ---
 {{ .Files.Get "samples/istiocni-sample.yaml" }}
+---
+{{ .Files.Get "samples/ztunnel-sample.yaml" }}
 {{ end }}
