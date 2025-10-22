@@ -210,14 +210,26 @@ After updating waypoint proxies, verify that Layer 7 features are working correc
 
 **Traffic Routing:**
 
-If you have traffic routing rules (e.g., HTTPRoute), verify they are still being enforced.
+If you have traffic routing rules (e.g., HTTPRoute), verify they are still being enforced. For reference, see the <<traffic-routing,Traffic Routing>> section which demonstrates setting up an HTTPRoute with a 90/10 traffic split between reviews-v1 and reviews-v2.
 
-1. Test traffic distribution (e.g., for Bookinfo reviews service):
-
+1. Test traffic distribution to verify your HTTPRoute rules are working correctly. The following command sends 10 requests to the productpage service and displays which reviews service version handles each request:
++
 [source,bash,subs="attributes+",name="ambient-waypoint-verify-l7"]
 ----
-$ for i in {1..10}; do kubectl exec "$(kubectl get pod -l app=reviews -n bookinfo -o jsonpath='{.items[0].metadata.name}')" -c reviews -n bookinfo -- curl -s http://productpage:9080/productpage | grep -o "reviews-v[0-9]"; done
+$ for i in {1..10}; do kubectl exec "$(kubectl get pod -l app=productpage -n bookinfo -o jsonpath='{.items[0].metadata.name}')" -c istio-proxy -n bookinfo -- curl -s http://reviews:9080/reviews/0 | grep -o "reviews-v[0-9]"; done
+reviews-v1
+reviews-v1
+reviews-v1
+reviews-v1
+reviews-v2
+reviews-v1
+reviews-v1
+reviews-v1
+reviews-v1
+reviews-v1
 ----
++
+The output should reflect the traffic distribution configured in your HTTPRoute. For example, with a 90/10 weight split between reviews-v1 and reviews-v2, you should see approximately 9 requests going to reviews-v1 and 1 request to reviews-v2. The exact distribution may vary slightly due to load balancing algorithms, but it should approximate the configured weights over multiple test runs.
 
 **Authorization Policies:**
 
