@@ -233,14 +233,27 @@ The output should reflect the traffic distribution configured in your HTTPRoute.
 
 **Authorization Policies:**
 
-Verify L7 authorization policies are correctly enforced by the waypoint proxy.
+Verify L7 authorization policies are correctly enforced by the waypoint proxy. For this verification, we'll test the `productpage-waypoint` AuthorizationPolicy shown in the <<security-authorization,Security Authorization>> section, which only allows the curl service (with service account `default/curl`) to send GET requests to the productpage service.
 
-1. Test policy enforcement (e.g., deny access from a specific source):
-
+1. Test denied access - Verify that services NOT in the allow list (such as the ratings service) are denied access:
++
 [source,bash,subs="attributes+",name="ambient-waypoint-verify-l7"]
 ----
 $ kubectl exec "$(kubectl get pod -l app=ratings -n bookinfo -o jsonpath='{.items[0].metadata.name}')" -c ratings -n bookinfo -- curl -sS productpage:9080/productpage
+RBAC: access denied
 ----
++
+This request is denied because the ratings service is not in the authorization policy's allow list. Only the curl service with the `default/curl` service account is permitted to access productpage.
+
+2. Test allowed access - Verify that the curl service CAN access productpage with GET requests:
++
+[source,bash,subs="attributes+",name="ambient-waypoint-verify-l7"]
+----
+$ kubectl exec "$(kubectl get pod -l app=curl -n default -o jsonpath='{.items[0].metadata.name}')" -c curl -n default -- curl -sS http://productpage.bookinfo:9080/productpage | grep -o "<title>.*</title>"
+<title>Simple Bookstore App</title>
+----
++
+This request succeeds because the curl service matches the authorization policy rules: it uses the `cluster.local/ns/default/sa/curl` principal and is performing a GET operation, both of which are explicitly allowed by the policy. The successful response containing the page title confirms that the waypoint proxy is correctly enforcing L7 authorization rules and allowing legitimate traffic through.
 
 [[cross-namespace-waypoint-updates]]
 === Cross-namespace Waypoint Updates
