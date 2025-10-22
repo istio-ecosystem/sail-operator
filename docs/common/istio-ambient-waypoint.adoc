@@ -196,12 +196,31 @@ waypoint-5d9c8b7f9-abc12.bookinfo     SYNCED     SYNCED     SYNCED     SYNCED   
 +
 This command queries the Istio control plane to verify that the waypoint proxy is connected to the new revision. The output shows the waypoint proxy is now connected to the revision-specific istiod pod (with revision `1-26-4` in its name) and is running the updated version (1.26.4). The revision-specific naming in the ISTIOD column confirms the waypoint has successfully migrated to the new control plane revision.
 
-3. If you update the waypoint proxy image, apply the new image version to the Gateway resource:
+3. _(Optional)_ Update waypoint proxy pods to use the new proxy version:
++
+Waypoint proxy pods automatically use the correct proxy version when they reconnect to the new control plane revision. In most cases, the waypoint pods will update automatically during the control plane migration. However, you can manually trigger an update using one of the following approaches:
++
+**Option A: Restart waypoint pods (Recommended)**
++
+Restart the waypoint deployment to trigger the pods to reconnect to the new control plane and pick up the updated proxy version:
++
+[source,bash,subs="attributes+",name="ambient-waypoint-update-revisionbased"]
+----
+$ kubectl rollout restart deployment -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint
+----
++
+This approach allows the waypoint to automatically use the appropriate proxy version from the new control plane revision.
++
+**Option B: Explicitly set proxy image version**
++
+If you need to pin the waypoint to a specific proxy version (for example, to use a version different from the control plane or for testing purposes), you can explicitly patch the Gateway resource:
 +
 [source,bash,subs="attributes+",name="ambient-waypoint-update-revisionbased"]
 ----
 $ kubectl patch gateway waypoint -n bookinfo --type='merge' -p '{"spec":{"template":{"spec":{"containers":[{"name":"istio-proxy","image":"docker.io/istio/proxyv2:1.26.4"}]}}}}'
 ----
++
+NOTE: Manually setting the proxy image version is only necessary when you want to pin to a specific version different from what the control plane would automatically provide, or in scenarios where automatic updates do not occur due to environmental or configuration constraints. In standard RevisionBased updates, Option A (restart) is sufficient.
 
 [[l7-feature-verification-during-updates]]
 === L7 Feature Verification During Updates
