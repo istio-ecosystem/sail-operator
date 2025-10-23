@@ -109,6 +109,16 @@ versions:
       - https://istio-release.storage.googleapis.com/charts/gateway-1.26.2.tgz
       - https://istio-release.storage.googleapis.com/charts/cni-1.26.2.tgz
       - https://istio-release.storage.googleapis.com/charts/ztunnel-1.26.2.tgz
+  - name: v1.26.1
+    version: 1.26.1
+    repo: https://github.com/istio/istio
+    commit: 1.26.1
+    charts:
+      - https://istio-release.storage.googleapis.com/charts/base-1.26.1.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-1.26.1.tgz
+      - https://istio-release.storage.googleapis.com/charts/gateway-1.26.1.tgz
+      - https://istio-release.storage.googleapis.com/charts/cni-1.26.1.tgz
+      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.26.1.tgz
   - name: v1.26.0
     version: 1.26.0
     repo: https://github.com/istio/istio
