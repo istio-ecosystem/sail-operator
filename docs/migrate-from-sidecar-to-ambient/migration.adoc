@@ -895,7 +895,7 @@ kubectl apply -f ztunnel-protection-policies.yaml
 [source,console]
 ----
 # Verify policies are created
-$ kubectl get authorizationpolicy -n <NAMESPACE>
+$ kubectl get authorizationpolicy -n bookinfo
 NAME                             ACTION   AGE
 productpage-waypoint             ALLOW    18s
 productpage-ztunnel-protection   DENY     7s
