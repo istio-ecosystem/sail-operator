@@ -612,7 +612,7 @@ For detailed waypoint update procedures, see link:./istio-ambient-waypoint.adoc#
 
 During ambient mode upgrades:
 
-When upgrading the ambient cluster, new mTLS connections continue to function normally throughout the upgrade process. However, upgrading ztunnel will cause any existing long-lived TCP connections (including mTLS connections) on the upgraded node to reset after a grace period. To minimize disruption during production upgrades, node cordoning, blue/green node pools are recommended.
+When upgrading the ambient cluster, new mTLS connections continue to function normally throughout the upgrade process. However, upgrading ztunnel will cause any existing long-lived TCP connections (including mTLS connections) on the upgraded node to reset after a grace period.
 
 [[discovery-selectors-impact]]
 === Discovery Selectors Impact
