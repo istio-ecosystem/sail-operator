@@ -16,6 +16,10 @@ link:../README.adoc[Return to Project Root]
     *** <<set-up-istio-ambient-mode-resources-and-a-sample-application,Set up Istio Ambient Mode Resources and a Sample Application>>
     *** <<deploy-a-waypoint-proxy,Deploy a Waypoint Proxy>>
       **** <<cross-namespace-waypoint,Cross-namespace Waypoint>>
+  ** <<update,Update>>
+    *** <<updating-waypoint-proxies,Updating Waypoint Proxies>>
+    *** <<l7-feature-verification-during-updates,L7 Feature Verification During Updates>>
+    *** <<cross-namespace-waypoint-updates,Cross-namespace Waypoint Updates>>
   ** <<layer-7-features-in-ambient-mode,Layer 7 Features in Ambient Mode>>
     *** <<traffic-routing,Traffic Routing>>
     *** <<security-authorization,Security Authorization>>
@@ -49,7 +53,7 @@ If your applications require any of the following L7 mesh functions, you will ne
 
 Waypoint proxies are deployed using Kubernetes Gateway resources. As of Kubernetes 1.30 and OpenShift 4.17, the Kubernetes Gateway API CRDs are not available by default and must be installed to be used. This can be done with the following command:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-prerequisites"]
 ----
 kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
   { kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml; }
@@ -69,7 +73,7 @@ Before you deploy a waypoint proxy in the application namespace, confirm the nam
 
 1. Deploy a waypoint proxy in the bookinfo namespace:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-deploy"]
 ----
 kubectl apply -f - <<EOF
 apiVersion: gateway.networking.k8s.io/v1
@@ -92,7 +96,7 @@ The `istio.io/waypoint-for: service` label on the Gateway resource specifies tha
 
 2. Enroll the bookinfo namespace to use the waypoint:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-deploy"]
 ----
 kubectl label ns bookinfo istio.io/use-waypoint=waypoint
 ----
@@ -128,10 +132,167 @@ spec:
 
 By default, the Istio control plane will look for a waypoint specified using the `istio.io/use-waypoint` label in the same namespace as the resource which the label is applied to. You can add labels `istio.io/use-waypoint-namespace` and `istio.io/use-waypoint` together to start using the cross-namespace waypoint.
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-crossns-deploy"]
 ----
 kubectl label ns bookinfo istio.io/use-waypoint-namespace=foo
 kubectl label ns bookinfo istio.io/use-waypoint=waypoint-foo
+----
+
+[[update]]
+== Update
+
+This section provides detailed procedures for updating waypoint proxies in ambient mode, covering both InPlace and RevisionBased update strategies.
+
+[[updating-waypoint-proxies]]
+=== Updating Waypoint Proxies
+
+Waypoint proxies automatically update to use the new control plane revision. However, specific steps are recommended to ensure a smooth transition and verify functionality.
+
+**InPlace Strategy:**
+
+When the Istio control plane is updated using the InPlace strategy, waypoint proxies automatically transition to use the new control plane version.
+
+1. Verify waypoint proxy pods are running with the updated control plane:
++
+[source,bash,subs="attributes+",name="ambient-waypoint-update-inplace"]
+----
+$ kubectl get pods -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint
+NAME                       READY   STATUS    RESTARTS   AGE
+waypoint-5d9c8b7f9-abc12   1/1     Running   0          5m
+----
+
+2. Confirm the waypoint proxy is connected to the new control plane:
++
+[source,bash,subs="attributes+",name="ambient-waypoint-update-inplace"]
+----
+$ istioctl proxy-status | grep waypoint
+waypoint-5d9c8b7f9-abc12.bookinfo     SYNCED     SYNCED     SYNCED     SYNCED     istiod-6cf8d4f9cb-wm7x6.istio-system     1.26.4
+----
++
+This command queries the Istio control plane to verify that the waypoint proxy is connected and its configuration is synchronized. The output displays the waypoint proxy name with namespace, followed by the synchronization status for each configuration type (CDS, LDS, EDS, RDS), the connected istiod pod, and the Istio version. All columns showing `SYNCED` indicate the waypoint is successfully receiving configuration from the control plane.
+
+**RevisionBased Strategy:**
+
+In a RevisionBased update, waypoint proxies are compatible with multiple control plane versions and continue to function during the migration period. They will automatically connect to the active control plane revision.
+
+NOTE: While waypoint proxies can work with multiple control plane versions during migration, it is recommended to keep them within one minor version of the control plane (same version or n-1). This follows Istio's general support policy where data plane components should not be ahead of the control plane version. Similar guidance applies to Istio CNI components. For more information, see the https://istio.io/latest/docs/releases/supported-releases/[Istio Supported Releases] documentation.
+
+1. After the new Istio control plane revision is ready, verify waypoint proxy pods are running:
++
+[source,bash,subs="attributes+",name="ambient-waypoint-update-revisionbased"]
+----
+$ kubectl get pods -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint
+NAME                       READY   STATUS    RESTARTS   AGE
+waypoint-5d9c8b7f9-abc12   1/1     Running   0          5m
+----
+
+2. Confirm the waypoint proxy is connected to the new control plane revision:
++
+[source,bash,subs="attributes+",name="ambient-waypoint-update-revisionbased"]
+----
+$ istioctl proxy-status | grep waypoint
+waypoint-5d9c8b7f9-abc12.bookinfo     SYNCED     SYNCED     SYNCED     SYNCED     istiod-1-26-4-7b9f8c5d6-xyz78.istio-system     1.26.4
+----
++
+This command queries the Istio control plane to verify that the waypoint proxy is connected to the new revision. The output shows the waypoint proxy is now connected to the revision-specific istiod pod (with revision `1-26-4` in its name) and is running the updated version (1.26.4). The revision-specific naming in the ISTIOD column confirms the waypoint has successfully migrated to the new control plane revision.
+
+3. _(Optional)_ Update waypoint proxy pods to use the new proxy version:
++
+Waypoint proxy pods automatically use the correct proxy version when they reconnect to the new control plane revision. In most cases, the waypoint pods will update automatically during the control plane migration. However, you can manually trigger an update using one of the following approaches:
++
+**Option A: Restart waypoint pods (Recommended)**
++
+Restart the waypoint deployment to trigger the pods to reconnect to the new control plane and pick up the updated proxy version:
++
+[source,bash,subs="attributes+",name="ambient-waypoint-update-revisionbased"]
+----
+$ kubectl rollout restart deployment -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint
+----
++
+This approach allows the waypoint to automatically use the appropriate proxy version from the new control plane revision.
++
+**Option B: Explicitly set proxy image version**
++
+If you need to pin the waypoint to a specific proxy version (for example, to use a version different from the control plane or for testing purposes), you can explicitly patch the Gateway resource:
++
+[source,bash,subs="attributes+",name="ambient-waypoint-update-revisionbased"]
+----
+$ kubectl patch gateway waypoint -n bookinfo --type='merge' -p '{"spec":{"template":{"spec":{"containers":[{"name":"istio-proxy","image":"docker.io/istio/proxyv2:1.26.4"}]}}}}'
+----
++
+NOTE: Manually setting the proxy image version is only necessary when you want to pin to a specific version different from what the control plane would automatically provide, or in scenarios where automatic updates do not occur due to environmental or configuration constraints. In standard RevisionBased updates, Option A (restart) is sufficient.
+
+[[l7-feature-verification-during-updates]]
+=== L7 Feature Verification During Updates
+
+After updating waypoint proxies, verify that Layer 7 features are working correctly.
+
+**Traffic Routing:**
+
+If you have traffic routing rules (e.g., HTTPRoute), verify they are still being enforced. For reference, see the <<traffic-routing,Traffic Routing>> section which demonstrates setting up an HTTPRoute with a 90/10 traffic split between reviews-v1 and reviews-v2.
+
+1. Test traffic distribution to verify your HTTPRoute rules are working correctly. The following command sends 10 requests to the productpage service and displays which reviews service version handles each request:
++
+[source,bash,subs="attributes+",name="ambient-waypoint-verify-l7"]
+----
+$ for i in {1..10}; do kubectl exec "$(kubectl get pod -l app=productpage -n bookinfo -o jsonpath='{.items[0].metadata.name}')" -c istio-proxy -n bookinfo -- curl -s http://reviews:9080/reviews/0 | grep -o "reviews-v[0-9]"; done
+reviews-v1
+reviews-v1
+reviews-v1
+reviews-v1
+reviews-v2
+reviews-v1
+reviews-v1
+reviews-v1
+reviews-v1
+reviews-v1
+----
++
+The output should reflect the traffic distribution configured in your HTTPRoute. For example, with a 90/10 weight split between reviews-v1 and reviews-v2, you should see approximately 9 requests going to reviews-v1 and 1 request to reviews-v2. The exact distribution may vary slightly due to load balancing algorithms, but it should approximate the configured weights over multiple test runs.
+
+**Authorization Policies:**
+
+Verify L7 authorization policies are correctly enforced by the waypoint proxy. For this verification, we'll test the `productpage-waypoint` AuthorizationPolicy shown in the <<security-authorization,Security Authorization>> section, which only allows the curl service (with service account `default/curl`) to send GET requests to the productpage service.
+
+1. Test denied access - Verify that services NOT in the allow list (such as the ratings service) are denied access:
++
+[source,bash,subs="attributes+",name="ambient-waypoint-verify-l7"]
+----
+$ kubectl exec "$(kubectl get pod -l app=ratings -n bookinfo -o jsonpath='{.items[0].metadata.name}')" -c ratings -n bookinfo -- curl -sS productpage:9080/productpage
+RBAC: access denied
+----
++
+This request is denied because the ratings service is not in the authorization policy's allow list. Only the curl service with the `default/curl` service account is permitted to access productpage.
+
+2. Test allowed access - Verify that the curl service CAN access productpage with GET requests:
++
+[source,bash,subs="attributes+",name="ambient-waypoint-verify-l7"]
+----
+$ kubectl exec "$(kubectl get pod -l app=curl -n default -o jsonpath='{.items[0].metadata.name}')" -c curl -n default -- curl -sS http://productpage.bookinfo:9080/productpage | grep -o "<title>.*</title>"
+<title>Simple Bookstore App</title>
+----
++
+This request succeeds because the curl service matches the authorization policy rules: it uses the `cluster.local/ns/default/sa/curl` principal and is performing a GET operation, both of which are explicitly allowed by the policy. The successful response containing the page title confirms that the waypoint proxy is correctly enforcing L7 authorization rules and allowing legitimate traffic through.
+
+[[cross-namespace-waypoint-updates]]
+=== Cross-namespace Waypoint Updates
+
+If you are using cross-namespace waypoints, ensure that the labels for `istio.io/use-waypoint-namespace` and `istio.io/use-waypoint` remain correctly applied to the namespaces.
+
+1. Verify namespace labels:
++
+[source,bash,subs="attributes+",name="ambient-waypoint-crossns-update"]
+----
+$ kubectl get ns bookinfo --show-labels | grep waypoint
+bookinfo  Active  istio.io/use-waypoint-namespace=foo,istio.io/use-waypoint=waypoint-foo
+----
+
+2. If labels are missing or incorrect, re-apply them:
++
+[source,bash,subs="attributes+",name="ambient-waypoint-crossns-update"]
+----
+$ kubectl label ns bookinfo istio.io/use-waypoint-namespace=foo --overwrite
+$ kubectl label ns bookinfo istio.io/use-waypoint=waypoint-foo --overwrite
 ----
 
 [[layer-7-features-in-ambient-mode]]
@@ -146,7 +307,7 @@ With a waypoint proxy deployed, you can split traffic between different versions
 
 For example, let's configure traffic routing to send 90% of requests to reviews-v1 and 10% to reviews-v2:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-l7-features"]
 ----
 kubectl apply -f - <<EOF
 apiVersion: gateway.networking.k8s.io/v1
@@ -182,7 +343,7 @@ When a waypoint proxy is added to a workload, you may have two possible places w
 
 For example, let's add a L7 authorization policy that will explicitly allow a curl service to send `GET` requests to the `productpage` service, but perform no other operations:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-l7-features"]
 ----
 kubectl apply -f - <<EOF
 apiVersion: security.istio.io/v1
@@ -227,7 +388,7 @@ For steps on how to troubleshoot an ambient deployment, you can refer to the Ist
 [[remove-istio-and-gateway-resources]]
 ==== Remove Istio and Gateway Resources
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-cleanup"]
 ----
 kubectl delete -n bookinfo AuthorizationPolicy productpage-waypoint
 kubectl delete -n bookinfo HTTPRoute reviews
@@ -237,7 +398,7 @@ kubectl delete -n bookinfo Gateway waypoint
 [[remove-the-namespace-from-the-ambient-data-plane]]
 ==== Remove the namespace from the ambient data plane
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-cleanup"]
 ----
 kubectl label namespace bookinfo istio.io/dataplane-mode-
 ----
@@ -245,7 +406,7 @@ kubectl label namespace bookinfo istio.io/dataplane-mode-
 [[remove-the-bookinfo-applications]]
 ==== Remove the Bookinfo applications
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-cleanup"]
 ----
 kubectl delete -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo.yaml
 kubectl delete -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo-versions.yaml
@@ -255,7 +416,7 @@ kubectl delete -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{ist
 [[remove-the-kubernetes-gateway-api-crds]]
 ==== Remove the Kubernetes Gateway API CRDs
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="ambient-waypoint-cleanup"]
 ----
 kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml
 ----
