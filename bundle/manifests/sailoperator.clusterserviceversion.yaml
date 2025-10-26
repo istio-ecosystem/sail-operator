@@ -29,6 +29,17 @@ metadata:
             "namespace": "istio-cni",
             "version": "v1.27.3"
           }
+        },
+        {
+          "apiVersion": "sailoperator.io/v1alpha1",
+          "kind": "ZTunnel",
+          "metadata": {
+            "name": "default"
+          },
+          "spec": {
+            "namespace": "ztunnel",
+            "version": "v1.27.3"
+          }
         }
       ]
     capabilities: Seamless Upgrades
