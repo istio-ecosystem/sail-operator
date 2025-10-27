@@ -90,6 +90,8 @@ You can update the Istio control plane version by changing the version in the Is
 * You have installed the Sail Operator.
 * You have deployed Istio in ambient mode with the InPlace update strategy.
 * The Istio resource named `default` is deployed in the `istio-system` namespace with the InPlace update strategy.
+* You have deployed IstioCNI in the `istio-cni` namespace.
+* You have deployed ZTunnel in the `ztunnel` namespace.
 * You have verified the current version and the Istio resource is in a Healthy state by running the following command:
 
 [source,bash,subs="attributes+",name="ambient-inplace-update-strategy"]
@@ -195,7 +197,7 @@ For general information about the RevisionBased strategy, see link:../update-str
 WARNING: **RevisionBased updates are not fully supported in ambient mode and require significant manual intervention.** This strategy has the following limitations when used with ambient mode:
 
 * **Single ZTunnel Instance:** Only one ztunnel instance can run in the cluster at any time, which limits the canary upgrade capabilities typically available with RevisionBased updates.
-* **Manual CRD Synchronization:** You must manually synchronize CRDs between Istio control plane revisions and the ZTunnel instance, primarily managing the revision name configuration.
+* **Manual Configuration Synchronization:** You must manually synchronize the revision name between the Istio control plane resource and the ZTunnel resource to ensure they point to the same Istio revision.
 * **Complex Migration:** The ztunnel must be manually reconfigured to point to the appropriate control plane revision during migration.
 
 **Recommendation:** Use the InPlace update strategy for ambient mode deployments. It provides a simpler, more reliable upgrade path. The procedures below are provided for advanced use cases where RevisionBased updates are required, but users should be prepared for additional manual configuration steps.
@@ -229,6 +231,8 @@ NOTE: While multiple control plane revisions can run simultaneously, remember th
 * You have installed the Sail Operator.
 * You have deployed Istio in ambient mode with the RevisionBased update strategy.
 * The Istio resource named `default` is deployed in the `istio-system` namespace with the RevisionBased update strategy.
+* You have deployed IstioCNI in the `istio-cni` namespace.
+* You have deployed ZTunnel in the `ztunnel` namespace.
 * You have verified the current version and the Istio resource is in a Healthy state by running the following commands:
 
 [source,bash,subs="attributes+",name="ambient-revision-based-strategy"]
@@ -345,14 +349,14 @@ $ istioctl ztunnel-config workloads --namespace ztunnel | grep bookinfo
 +
 [source,bash,subs="attributes+",name="ambient-revision-based-strategy"]
 ----
-$ kubectl rollout restart deployment -n <NAMESPACE>
+// Removed as pod restarts are generally unnecessary in ambient mode
 ----
 
 . Wait for the rollout to complete:
 +
 [source,bash,subs="attributes+",name="ambient-revision-based-strategy"]
 ----
-$ kubectl rollout status deployment -n <NAMESPACE>
+// Removed as pod restarts are generally unnecessary in ambient mode
 ----
 
 . Verify the workloads are functioning correctly:
@@ -429,7 +433,7 @@ $ kubectl patch ztunnel default --type='merge' -p '{"spec":{"version":"v1.26.3"}
 +
 [source,bash,subs="attributes+",name="ambient-revision-rollback"]
 ----
-$ kubectl rollout restart deployment -n <NAMESPACE>
+// Removed as pod restarts are generally unnecessary in ambient mode
 ----
 
 '''
