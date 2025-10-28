@@ -41,13 +41,14 @@ The `sailoperator.io/ignore` annotation is helpful in the following scenarios (n
 [[how-it-works]]
 ===== How It Works
 
+Sail Operator re-applies all helm charts when it detects a change in any of the resources it deployed.  
 When the `sailoperator.io/ignore` annotation is set to `"true"` on a resource:
 
-* The operator **will skip reconciling UPDATE events** for that resource
-* The resource **must still be owned** by the `Istio` (the ownerReference remains the associated `IstioRevision`)
-* The operator **will not revert manual changes** made to resources with this annotation
-* **Only UPDATE events are affected** - CREATE and DELETE events are still processed normally
-* **Any other value** (including a missing annotation) results in normal reconciliation
+* **Ownership is preserved** - The resource must remain owned by its associated `Istio` (the ownerReference remains the associated `IstioRevision`)
+* **UPDATE event reconciliation is skipped** - The operator ignores update events for that specific resource, allowing manual modifications to persist
+* **CREATE and DELETE events remain active** - The annotation only affects UPDATE events; creation and deletion are processed normally (ie. the reconciliation will be triggered and all the changes will be reverted back to the state defined in the `Istio` or `IstioRevision` resource)
+* **Global reconciliation still applies** - When other resources change, Sail Operator re-applies all Helm charts, including resources with this annotation. The `sailoperator.io/ignore: "true"` annotation still remains set on the resources.
+* **Partial field protection** - Only fields defined in the Helm templates are reverted; additional annotations and labels you add will persist, but modifications to existing template-defined fields (such as labels or pod command-line arguments) will be reverted
 
 [NOTE]
 ====
