@@ -2532,6 +2532,12 @@ type MeshConfigExtensionProviderZipkinTracingProvider struct {
 	// This controls both downstream request header extraction and upstream request header injection.
 	// The default value is USE_B3 to maintain backward compatibility.
 	TraceContextOption MeshConfigExtensionProviderZipkinTracingProviderTraceContextOption `json:"traceContextOption,omitempty"`
+	// Optional. The timeout for the HTTP request to the Zipkin collector.
+	// If not specified, the default timeout from Envoy's configuration will be used (which is 5 seconds currently).
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
+	// Optional. Additional HTTP headers to include in the request to the Zipkin collector.
+	// These headers will be added to the HTTP request when sending spans to the collector.
+	Headers []*MeshConfigExtensionProviderHttpHeader `json:"headers,omitempty"`
 }
 
 // Defines configuration for a Lightstep tracer.
@@ -3102,7 +3108,7 @@ type MeshConfigExtensionProviderResourceDetectorsDynatraceResourceDetector struc
 
 const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\n" +
-	"\x1amesh/v1alpha1/config.proto\x12\x13istio.mesh.v1alpha1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19mesh/v1alpha1/proxy.proto\x1a*networking/v1alpha3/destination_rule.proto\x1a)networking/v1alpha3/virtual_service.proto\"\xf7n\n" +
+	"\x1amesh/v1alpha1/config.proto\x12\x13istio.mesh.v1alpha1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19mesh/v1alpha1/proxy.proto\x1a*networking/v1alpha3/destination_rule.proto\x1a)networking/v1alpha3/virtual_service.proto\"\x84p\n" +
 	"\n" +
 	"MeshConfig\x12*\n" +
 	"\x11proxy_listen_port\x18\x04 \x01(\x05R\x0fproxyListenPort\x129\n" +
@@ -3185,7 +3191,7 @@ const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\ftls_settings\x18\x02 \x01(\v2,.istio.networking.v1alpha3.ClientTLSSettingsR\vtlsSettings\x12B\n" +
 	"\x0frequest_timeout\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\x0erequestTimeout\x12\x1f\n" +
 	"\vistiod_side\x18\x04 \x01(\bR\n" +
-	"istiodSide\x1a\xc2@\n" +
+	"istiodSide\x1a\xcfA\n" +
 	"\x11ExtensionProvider\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x8b\x01\n" +
 	"\x14envoy_ext_authz_http\x18\x02 \x01(\v2X.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyExternalAuthorizationHttpProviderH\x00R\x11envoyExtAuthzHttp\x12\x8b\x01\n" +
@@ -3241,14 +3247,16 @@ const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\tfail_open\x18\x03 \x01(\bR\bfailOpen\x12*\n" +
 	"\x11clear_route_cache\x18\a \x01(\bR\x0fclearRouteCache\x12&\n" +
 	"\x0fstatus_on_error\x18\x04 \x01(\tR\rstatusOnError\x12\x99\x01\n" +
-	"\x1dinclude_request_body_in_check\x18\x06 \x01(\v2W.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyExternalAuthorizationRequestBodyR\x19includeRequestBodyInCheck\x1a\x84\x03\n" +
+	"\x1dinclude_request_body_in_check\x18\x06 \x01(\v2W.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyExternalAuthorizationRequestBodyR\x19includeRequestBodyInCheck\x1a\x91\x04\n" +
 	"\x15ZipkinTracingProvider\x12\x18\n" +
 	"\aservice\x18\x01 \x01(\tR\aservice\x12\x12\n" +
 	"\x04port\x18\x02 \x01(\rR\x04port\x12$\n" +
 	"\x0emax_tag_length\x18\x03 \x01(\rR\fmaxTagLength\x121\n" +
 	"\x15enable_64bit_trace_id\x18\x04 \x01(\bR\x12enable64bitTraceId\x12\x12\n" +
 	"\x04path\x18\x05 \x01(\tR\x04path\x12\x8c\x01\n" +
-	"\x14trace_context_option\x18\x06 \x01(\x0e2Z.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.ZipkinTracingProvider.TraceContextOptionR\x12traceContextOption\"A\n" +
+	"\x14trace_context_option\x18\x06 \x01(\x0e2Z.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.ZipkinTracingProvider.TraceContextOptionR\x12traceContextOption\x123\n" +
+	"\atimeout\x18\a \x01(\v2\x19.google.protobuf.DurationR\atimeout\x12V\n" +
+	"\aheaders\x18\b \x03(\v2<.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.HttpHeaderR\aheaders\"A\n" +
 	"\x12TraceContextOption\x12\n" +
 	"\n" +
 	"\x06USE_B3\x10\x00\x12\x1f\n" +
