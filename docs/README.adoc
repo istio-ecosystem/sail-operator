@@ -178,7 +178,7 @@ As you can see in the YAML above, `IstioRevisionTag` really only has one field i
 [#istiocni-resource]
 === IstioCNI resource
 
-The lifecycle of Istio's CNI plugin is managed separately when using Sail Operator. To install it, you can create an `IstioCNI` resource. The `IstioCNI` resource is a cluster-wide resource as it will install a `DaemonSet` that will be operating on all nodes of your cluster.
+The lifecycle of Istio's CNI plugin is managed separately when using Sail Operator. To install it, you can create an `IstioCNI` resource. The `IstioCNI` resource is a cluster-wide resource as it will install a `DaemonSet` that will be operating on all nodes of your cluster. The `metadata.name` field must be set to `default`, as enforced by a CRD validation rule that guarantees only one `IstioCNI` custom resource exists cluster-wide.
 
 [source,yaml]
 ----
