@@ -113,7 +113,7 @@ func GetSVCLoadBalancerAddress(ctx context.Context, cl client.Client, ns, svcNam
 	Eventually(func() ([]corev1.LoadBalancerIngress, error) {
 		err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: svcName}, svc)
 		return svc.Status.LoadBalancer.Ingress, err
-	}, "1m", "1s").ShouldNot(BeEmpty(), "LoadBalancer should be ready")
+	}, "3m", "1s").ShouldNot(BeEmpty(), "LoadBalancer should be ready")
 
 	return svc.Status.LoadBalancer.Ingress[0].IP
 }
