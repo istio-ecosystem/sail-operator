@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package reconciler
+package errors
 
 import (
 	"fmt"
@@ -25,28 +25,28 @@ func TestNewValidationError(t *testing.T) {
 	err := NewValidationError("my message")
 	assert.NotNil(t, err)
 	assert.Equal(t, "validation error: my message", err.Error())
-	assert.IsTypef(t, &ValidationError{}, err, "expected NewValidationError to return a ValidationError")
+	assert.True(t, IsValidation(err), "expected NewSailOperatorError[ValidationError] to return a ValidationError")
 }
 
 func TestIsValidationError(t *testing.T) {
-	err := &ValidationError{message: "error"}
-	assert.True(t, IsValidationError(err), "expected IsValidationError to return true for a ValidationError")
+	err := NewValidationError("error")
+	assert.True(t, IsValidation(err), "expected IsValidationError to return true for a ValidationError")
 
 	wrappedError := fmt.Errorf("wrapped error: %w", err)
-	assert.True(t, IsValidationError(wrappedError), "expected IsValidationError to return true for a wrapped ValidationError")
+	assert.True(t, IsValidation(wrappedError), "expected IsValidationError to return true for a wrapped ValidationError")
 }
 
 func TestNewTransientError(t *testing.T) {
 	err := NewTransientError("my message")
 	assert.NotNil(t, err)
 	assert.Equal(t, "transient error: my message", err.Error())
-	assert.IsTypef(t, &TransientError{}, err, "expected NewTransientError to return a TransientError")
+	assert.True(t, IsTransient(err), "expected NewSailOperatorError[TransientError] to return a TransientError")
 }
 
 func TestIsTransientError(t *testing.T) {
-	err := &TransientError{message: "error"}
-	assert.True(t, IsTransientError(err), "expected IsTransientError to return true for a TransientError")
+	err := NewTransientError("error")
+	assert.True(t, IsTransient(err), "expected IsTransientError to return true for a TransientError")
 
 	wrappedError := fmt.Errorf("wrapped error: %w", err)
-	assert.True(t, IsTransientError(wrappedError), "expected IsTransientError to return true for a wrapped TransientError")
+	assert.True(t, IsTransient(wrappedError), "expected IsTransientError to return true for a wrapped TransientError")
 }
