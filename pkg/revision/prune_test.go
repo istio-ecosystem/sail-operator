@@ -172,6 +172,29 @@ func TestPruneInactive(t *testing.T) {
 			expectDeletion:     true,
 			expectRequeueAfter: ptr.Of((v1.DefaultRevisionDeletionGracePeriodSeconds - 25) * time.Second),
 		},
+		{
+			name:           "preserves non-active IstioRevision with unknown usage status",
+			revName:        istioName + "-non-active",
+			ownerReference: ownedByIstio,
+			inUseCondition: &v1.IstioRevisionCondition{
+				Type:               v1.IstioRevisionConditionInUse,
+				Status:             metav1.ConditionUnknown,
+				Reason:             v1.IstioRevisionReasonUsageCheckFailed,
+				Message:            "failed to determine if revision is in use",
+				LastTransitionTime: oneMinuteAgo,
+			},
+			expectDeletion:     false,
+			expectRequeueAfter: nil,
+		},
+		{
+			name:           "preserves non-active IstioRevision with missing InUse condition",
+			revName:        istioName + "-non-active",
+			ownerReference: ownedByIstio,
+			// No InUse condition is set to simulate GetCondition returning ConditionUnknown
+			inUseCondition:     nil,
+			expectDeletion:     false,
+			expectRequeueAfter: nil,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -191,9 +214,12 @@ func TestPruneInactive(t *testing.T) {
 					Name:            tc.revName,
 					OwnerReferences: []metav1.OwnerReference{tc.ownerReference},
 				},
-				Status: v1.IstioRevisionStatus{
+			}
+
+			if tc.inUseCondition != nil {
+				rev.Status = v1.IstioRevisionStatus{
 					Conditions: []v1.IstioRevisionCondition{*tc.inUseCondition},
-				},
+				}
 			}
 
 			initObjs := []client.Object{istio, rev}
