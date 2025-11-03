@@ -46,9 +46,15 @@ func PruneInactive(ctx context.Context, cl client.Client, ownerUID types.UID, ac
 			continue
 		}
 		inUseCondition := rev.Status.GetCondition(v1.IstioRevisionConditionInUse)
-		inUse := inUseCondition.Status == metav1.ConditionTrue
-		if inUse {
+
+		// Only prune revisions that are confirmed to be not in use (i.e., ConditionFalse).
+		// Skip revisions that are in use (ConditionTrue) or whose usage status is unknown (ConditionUnknown).
+		if inUseCondition.Status == metav1.ConditionTrue {
 			log.V(2).Info("IstioRevision is in use", "IstioRevision", rev.Name)
+			continue
+		}
+		if inUseCondition.Status != metav1.ConditionFalse {
+			log.V(2).Info("IstioRevision usage status is unknown, skipping pruning", "IstioRevision", rev.Name)
 			continue
 		}
 
