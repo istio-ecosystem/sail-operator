@@ -650,6 +650,8 @@ type PilotConfig struct {
 	IstiodRemote *IstiodRemoteConfig `json:"istiodRemote,omitempty"`
 	// Configuration for the istio-discovery chart
 	EnvVarFrom []k8sv1.EnvVar `json:"envVarFrom,omitempty"`
+	// Select a custom name for istiod's plugged-in CA CRL ConfigMap.
+	CrlConfigMapName *string `json:"crlConfigMapName,omitempty"`
 }
 
 type PilotTaintControllerConfig struct {
@@ -1275,7 +1277,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x04mode\x18\x02 \x01(\x0e29.istio.operator.v1alpha1.OutboundTrafficPolicyConfig.ModeR\x04mode\"(\n" +
 	"\x04Mode\x12\r\n" +
 	"\tALLOW_ANY\x10\x00\x12\x11\n" +
-	"\rREGISTRY_ONLY\x10\x01\"\x98\x13\n" +
+	"\rREGISTRY_ONLY\x10\x01\"\xc4\x13\n" +
 	"\vPilotConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12F\n" +
 	"\x10autoscaleEnabled\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x10autoscaleEnabled\x12\"\n" +
@@ -1320,7 +1322,8 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\fistiodRemote\x18= \x01(\v2+.istio.operator.v1alpha1.IstiodRemoteConfigR\fistiodRemote\x127\n" +
 	"\n" +
 	"envVarFrom\x18> \x03(\v2\x17.google.protobuf.StructR\n" +
-	"envVarFrom\"T\n" +
+	"envVarFrom\x12*\n" +
+	"\x10crlConfigMapName\x18? \x01(\tR\x10crlConfigMapName\"T\n" +
 	"\x1aPilotTaintControllerConfig\x12\x18\n" +
 	"\aenabled\x18\x01 \x01(\bR\aenabled\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\"\xc6\x01\n" +
