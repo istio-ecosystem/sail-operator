@@ -5,3 +5,5 @@ resources:
 images:
   - name: curlimages/curl
     newName: quay.io/curl/curl
+  - name: docker.io/curlimages/curl
+    newName: quay.io/curl/curl
