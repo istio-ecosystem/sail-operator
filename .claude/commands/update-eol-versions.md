@@ -27,7 +27,8 @@ This command automates the process of marking End-of-Life (EOL) Istio versions i
      - If the version is NOT supported upstream and doesn't already have `eol: true`, add `eol: true` to that version entry
      - If a version has `eol: true` but is still supported upstream, remove the `eol: true` flag (this handles corrections)
    - Preserve the YAML structure and comments
-   - For EOL versions, remove the `charts:` section since EOL versions are not installable
+   - For EOL versions, keep only `name:`, `eol:` and `ref:` sections
+
 
 5. **Run code generation**:
    - Execute `make gen` to regenerate all necessary code and manifests
@@ -44,7 +45,7 @@ This command automates the process of marking End-of-Life (EOL) Istio versions i
 - Only mark versions as EOL if they are confirmed to be EOL upstream
 - Preserve all existing version entries - do not remove them from the file
 - The `eol: true` flag makes versions uninstallable but keeps them as valid spec.version values for API compatibility
-- After marking as EOL, the charts array should be removed since EOL versions don't need chart URLs
+- For EOL versions, keep only `name:`, `eol:` and `ref:` sections
 - Always verify the changes before committing
 
 ## Example Version Entry
