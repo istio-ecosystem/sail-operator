@@ -834,6 +834,8 @@ _Appears in:_
 | `UsageCheckFailed` | IstioRevisionReasonUsageCheckFailed indicates that the operator could not check whether any workloads use the revision.  |
 | `IstioCNINotFound` | IstioRevisionReasonIstioCNINotFound indicates that the IstioCNI resource is not found.  |
 | `IstioCNINotHealthy` | IstioRevisionReasonIstioCNINotHealthy indicates that the IstioCNI resource is not healthy.  |
+| `ZTunnelNotFound` | IstioRevisionReasonZTunnelNotFound indicates that the ZTunnel resource is not found.  |
+| `ZTunnelNotHealthy` | IstioRevisionReasonZTunnelNotHealthy indicates that the ZTunnel resource is not healthy.  |
 | `DependencyCheckFailed` | IstioRevisionDependencyCheckFailed indicates that the status of the dependencies could not be ascertained.  |
 | `Healthy` | IstioRevisionReasonHealthy indicates that the control plane is fully reconciled and that all components are ready.  |
 
