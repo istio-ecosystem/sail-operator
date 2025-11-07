@@ -58,7 +58,7 @@ kind: IstioCNI
 metadata:
   name: default
 spec:
-  version: v1.27.1
+  version: v1.27-latest
   namespace: istio-cni
   values:
     global:
@@ -78,7 +78,7 @@ kind: Istio
 metadata:
   name: default
 spec:
-  version: v1.27.1
+  version: v1.27-latest
   namespace: istio-system
   values:
     global:
@@ -218,8 +218,6 @@ https://github.com/istio/istio/tree/master/tools/istio-nftables/pkg#debugging-gu
 
 The migration from iptables backend to nftables backend can be done by upgrading `+Istio+` and `+IstioCNI+` resources. 
 Because the CNI component runs as a cluster singleton, it is recommended to operate and upgrade the CNI component separately from the Istio control plane.
-
-NOTE: When using Sail operator, the upgraded `IstioCNI` and `Istio` resources `spec.version` value need to be different from the prior instances. Otherwise, the appended `spec.values` will not be configured.
 
 ==== Upgrade using Sail Operator
 
