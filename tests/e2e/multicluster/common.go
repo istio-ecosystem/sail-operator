@@ -17,13 +17,19 @@
 package multicluster
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"text/template"
 	"time"
 
+	"github.com/istio-ecosystem/sail-operator/pkg/kube"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/certs"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ClusterDeployment represents a cluster along with its sample app version.
@@ -74,4 +80,37 @@ func genTemplate(manifestTmpl string, values any) string {
 	var b strings.Builder
 	Expect(tmpl.Execute(&b, values)).To(Succeed())
 	return b.String()
+}
+
+func createIstioNamespaces(k kubectl.Kubectl) {
+	Expect(k.CreateNamespace(common.ControlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
+	Expect(k.CreateNamespace(common.IstioCniNamespace)).To(Succeed(), "Istio CNI namespace failed to be created")
+}
+
+func createIstioResources(k kubectl.Kubectl, version, cluster, network string, values ...string) {
+	common.CreateIstioCNI(k, version)
+
+	spec := fmt.Sprintf(`
+values:
+  global:
+    meshID: mesh1
+    multiCluster:
+      clusterName: %s
+    network: %s`, cluster, network)
+	for _, value := range values {
+		spec += common.Indent(value)
+	}
+	common.CreateIstio(k, version, spec)
+}
+
+func createIntermediateCA(k kubectl.Kubectl, zone, network, artifacts string, cl client.Client) {
+	Expect(certs.PushIntermediateCA(k, common.ControlPlaneNamespace, zone, network, artifacts, cl)).
+		To(Succeed(), fmt.Sprintf("Error pushing intermediate CA to %s Cluster", k.ClusterName))
+}
+
+func awaitSecretCreation(cluster string, cl client.Client) {
+	Eventually(func() error {
+		_, err := common.GetObject(context.Background(), cl, kube.Key("cacerts", common.ControlPlaneNamespace), &corev1.Secret{})
+		return err
+	}).ShouldNot(HaveOccurred(), fmt.Sprintf("Secret is not created on %s cluster", cluster))
 }
