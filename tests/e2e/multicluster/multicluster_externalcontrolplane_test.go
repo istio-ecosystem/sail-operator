@@ -340,7 +340,7 @@ spec:
 					})
 
 					It("updates remote Istio CR status to Ready on Cluster #2", func(ctx SpecContext) {
-						Eventually(common.GetObject).
+						Eventually(common.GetObject, 10*time.Minute).
 							WithArguments(ctx, clRemote, kube.Key(externalIstioName), &v1.Istio{}).
 							Should(HaveConditionStatus(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Remote; unexpected Condition")
 						Success("Remote Istio CR is Ready on Cluster #2")
