@@ -17,7 +17,6 @@
 package multicluster
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -25,7 +24,6 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/certs"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
@@ -53,38 +51,19 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 
 				When("Istio and IstioCNI resources are created in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
-						Expect(k1.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
-						Expect(k2.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
-						Expect(k1.CreateNamespace(istioCniNamespace)).To(Succeed(), "Istio CNI namespace failed to be created")
-						Expect(k2.CreateNamespace(istioCniNamespace)).To(Succeed(), "Istio CNI namespace failed to be created")
+						createIstioNamespaces(k1)
+						createIstioNamespaces(k2)
 
 						// Push the intermediate CA to both clusters
-						Expect(certs.PushIntermediateCA(k1, controlPlaneNamespace, "east", "network1", artifacts, clPrimary)).To(Succeed())
-						Expect(certs.PushIntermediateCA(k2, controlPlaneNamespace, "west", "network2", artifacts, clRemote)).To(Succeed())
+						createIntermediateCA(k1, "east", "network1", artifacts, clPrimary)
+						createIntermediateCA(k2, "west", "network2", artifacts, clRemote)
 
 						// Wait for the secret to be created in both clusters
-						Eventually(func() error {
-							_, err := common.GetObject(context.Background(), clPrimary, kube.Key("cacerts", controlPlaneNamespace), &corev1.Secret{})
-							return err
-						}).ShouldNot(HaveOccurred(), "Secret is not created on Cluster #1")
+						awaitSecretCreation(k1.ClusterName, clPrimary)
+						awaitSecretCreation(k2.ClusterName, clRemote)
 
-						Eventually(func() error {
-							_, err := common.GetObject(context.Background(), clRemote, kube.Key("cacerts", controlPlaneNamespace), &corev1.Secret{})
-							return err
-						}).ShouldNot(HaveOccurred(), "Secret is not created on Cluster #1")
-
-						common.CreateIstioCNI(k1, version.Name)
-						common.CreateIstioCNI(k2, version.Name)
-
-						spec := `
-values:
-  global:
-    meshID: mesh1
-    multiCluster:
-      clusterName: %s
-    network: %s`
-						common.CreateIstio(k1, version.Name, fmt.Sprintf(spec, "cluster1", "network1"))
-						common.CreateIstio(k2, version.Name, fmt.Sprintf(spec, "cluster2", "network2"))
+						createIstioResources(k1, version.Name, "cluster1", "network1")
+						createIstioResources(k2, version.Name, "cluster2", "network2")
 					})
 
 					It("updates both Istio CR status to Ready", func(ctx SpecContext) {

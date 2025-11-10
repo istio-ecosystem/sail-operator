@@ -65,8 +65,7 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 
 				When("default Istio is created in Cluster #1 to handle ingress to External Control Plane", func() {
 					BeforeAll(func(ctx SpecContext) {
-						Expect(k1.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be created")
-						Expect(k1.CreateNamespace(istioCniNamespace)).To(Succeed(), "Istio CNI namespace failed to be created")
+						createIstioNamespaces(k1)
 
 						common.CreateIstioCNI(k1, v.Name)
 						common.CreateIstio(k1, v.Name, `
