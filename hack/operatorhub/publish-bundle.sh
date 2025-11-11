@@ -85,7 +85,7 @@ OWNER="${OWNER:-"redhat-openshift-ecosystem"}"
 HUB_REPO_URL="${HUB_REPO_URL:-https://github.com/${OWNER}/${OPERATOR_HUB}.git}"
 HUB_BASE_BRANCH="${HUB_BASE_BRANCH:-main}"
 
-FORK="${FORK:-maistra}"
+FORK="${FORK:-openshift-service-mesh}"
 FORK_REPO_URL="${FORK_REPO_URL:-https://${GIT_USER}:${GITHUB_TOKEN}@github.com/${FORK}/${OPERATOR_HUB}.git}"
 
 BRANCH=${BRANCH:-"${OPERATOR_NAME}-${OPERATOR_VERSION}"}
