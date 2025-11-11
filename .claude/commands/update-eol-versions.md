@@ -42,7 +42,7 @@ This command automates the process of marking End-of-Life (EOL) Istio versions i
 
 ## Important Notes
 
-- Only mark versions as EOL if they are confirmed to be EOL upstream
+- Only mark versions as EOL if they are confirmed to be EOL upstream Istio [project](https://istio.io/latest/docs/releases/supported-releases/)
 - Preserve all existing version entries - do not remove them from the file
 - The `eol: true` flag makes versions uninstallable but keeps them as valid spec.version values for API compatibility
 - For EOL versions, keep only `name:`, `eol:` and `ref:` sections
