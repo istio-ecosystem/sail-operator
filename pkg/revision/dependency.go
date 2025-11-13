@@ -44,3 +44,26 @@ func DependsOnIstioCNI(rev *v1.IstioRevision, cfg config.ReconcilerConfig) bool 
 	}
 	return isCNIEnabled
 }
+
+// DependsOnZTunnel returns true if the revision is configured for ambient mode and requires ZTunnel
+func DependsOnZTunnel(rev *v1.IstioRevision, cfg config.ReconcilerConfig) bool {
+	values, err := defaultComputeValues(rev.Spec.Values, rev.Spec.Namespace, rev.Spec.Version,
+		cfg.Platform, cfg.DefaultProfile, "", cfg.ResourceDirectory, rev.Name)
+	if err != nil || values == nil {
+		return false
+	}
+
+	// Check if ambient mode is enabled via pilot.env.PILOT_ENABLE_AMBIENT
+	if values.Pilot != nil && values.Pilot.Env != nil {
+		if ambientEnabled, exists := values.Pilot.Env["PILOT_ENABLE_AMBIENT"]; exists && ambientEnabled == "true" {
+			return true
+		}
+	}
+
+	// Also check if ambient profile is being used
+	if values.Profile != nil && *values.Profile == "ambient" {
+		return true
+	}
+
+	return false
+}

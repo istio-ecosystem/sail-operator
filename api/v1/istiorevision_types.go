@@ -185,6 +185,12 @@ const (
 	// IstioRevisionReasonIstioCNINotHealthy indicates that the IstioCNI resource is not healthy.
 	IstioRevisionReasonIstioCNINotHealthy IstioRevisionConditionReason = "IstioCNINotHealthy"
 
+	// IstioRevisionReasonZTunnelNotFound indicates that the ZTunnel resource is not found.
+	IstioRevisionReasonZTunnelNotFound IstioRevisionConditionReason = "ZTunnelNotFound"
+
+	// IstioRevisionReasonZTunnelNotHealthy indicates that the ZTunnel resource is not healthy.
+	IstioRevisionReasonZTunnelNotHealthy IstioRevisionConditionReason = "ZTunnelNotHealthy"
+
 	// IstioRevisionDependencyCheckFailed indicates that the status of the dependencies could not be ascertained.
 	IstioRevisionDependencyCheckFailed IstioRevisionConditionReason = "DependencyCheckFailed"
 )

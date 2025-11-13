@@ -26,7 +26,7 @@ import (
 
 // mockComputeValues returns the input values without any computation
 // this simulates what ComputeValues would do but without requiring actual files
-func mockComputeValues(values *v1.Values, _, _ string, platform config.Platform, _, _, _, _ string) (*v1.Values, error) {
+func mockComputeValues(values *v1.Values, _, _ string, platform config.Platform, defaultProfile, userProfile, _, _ string) (*v1.Values, error) {
 	if values == nil {
 		values = &v1.Values{}
 	}
@@ -41,6 +41,24 @@ func mockComputeValues(values *v1.Values, _, _ string, platform config.Platform,
 		}
 		values.Pilot.Cni.Enabled = ptr.Of(true)
 	}
+
+	profile := userProfile
+	if profile == "" {
+		profile = defaultProfile
+	}
+
+	// If profile is ambient, set the profile in values and enable PILOT_ENABLE_AMBIENT
+	if profile == "ambient" {
+		values.Profile = ptr.Of("ambient")
+		if values.Pilot == nil {
+			values.Pilot = &v1.PilotConfig{}
+		}
+		if values.Pilot.Env == nil {
+			values.Pilot.Env = make(map[string]string)
+		}
+		values.Pilot.Env["PILOT_ENABLE_AMBIENT"] = "true"
+	}
+
 	return values, nil
 }
 
@@ -218,6 +236,150 @@ func TestDependsOnIstioCNI(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := DependsOnIstioCNI(tt.rev, tt.cfg)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestDependsOnZTunnel(t *testing.T) {
+	defaultComputeValues = mockComputeValues
+	defaultCfg := config.ReconcilerConfig{
+		Platform:       config.PlatformKubernetes,
+		DefaultProfile: "default",
+	}
+
+	tests := []struct {
+		name     string
+		rev      *v1.IstioRevision
+		cfg      config.ReconcilerConfig
+		expected bool
+	}{
+		{
+			name: "NilValues",
+			rev: &v1.IstioRevision{
+				Spec: v1.IstioRevisionSpec{
+					Values: nil,
+				},
+			},
+			cfg:      defaultCfg,
+			expected: false,
+		},
+		{
+			name: "NoPilot",
+			rev: &v1.IstioRevision{
+				Spec: v1.IstioRevisionSpec{
+					Values: &v1.Values{
+						Pilot: nil,
+					},
+				},
+			},
+			cfg:      defaultCfg,
+			expected: false,
+		},
+		{
+			name: "NoPilotEnv",
+			rev: &v1.IstioRevision{
+				Spec: v1.IstioRevisionSpec{
+					Values: &v1.Values{
+						Pilot: &v1.PilotConfig{
+							Env: nil,
+						},
+					},
+				},
+			},
+			cfg:      defaultCfg,
+			expected: false,
+		},
+		{
+			name: "PilotEnvAmbientDisabled",
+			rev: &v1.IstioRevision{
+				Spec: v1.IstioRevisionSpec{
+					Values: &v1.Values{
+						Pilot: &v1.PilotConfig{
+							Env: map[string]string{
+								"PILOT_ENABLE_AMBIENT": "false",
+							},
+						},
+					},
+				},
+			},
+			cfg:      defaultCfg,
+			expected: false,
+		},
+		{
+			name: "PilotEnvAmbientEnabled",
+			rev: &v1.IstioRevision{
+				Spec: v1.IstioRevisionSpec{
+					Values: &v1.Values{
+						Pilot: &v1.PilotConfig{
+							Env: map[string]string{
+								"PILOT_ENABLE_AMBIENT": "true",
+							},
+						},
+					},
+				},
+			},
+			cfg:      defaultCfg,
+			expected: true,
+		},
+		{
+			name: "AmbientProfileSet",
+			rev: &v1.IstioRevision{
+				Spec: v1.IstioRevisionSpec{
+					Values: &v1.Values{
+						Profile: ptr.Of("ambient"),
+					},
+				},
+			},
+			cfg:      defaultCfg,
+			expected: true,
+		},
+		{
+			name: "NonAmbientProfile",
+			rev: &v1.IstioRevision{
+				Spec: v1.IstioRevisionSpec{
+					Values: &v1.Values{
+						Profile: ptr.Of("default"),
+					},
+				},
+			},
+			cfg:      defaultCfg,
+			expected: false,
+		},
+		{
+			name: "AmbientProfileWithPilotEnvTrue",
+			rev: &v1.IstioRevision{
+				Spec: v1.IstioRevisionSpec{
+					Values: &v1.Values{
+						Profile: ptr.Of("ambient"),
+						Pilot: &v1.PilotConfig{
+							Env: map[string]string{
+								"PILOT_ENABLE_AMBIENT": "true",
+							},
+						},
+					},
+				},
+			},
+			cfg:      defaultCfg,
+			expected: true,
+		},
+		{
+			name: "EmptyProfile",
+			rev: &v1.IstioRevision{
+				Spec: v1.IstioRevisionSpec{
+					Values: &v1.Values{
+						Profile: ptr.Of(""),
+					},
+				},
+			},
+			cfg:      defaultCfg,
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := DependsOnZTunnel(tt.rev, tt.cfg)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

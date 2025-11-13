@@ -24,6 +24,7 @@ import (
 
 	"github.com/go-logr/logr"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
@@ -59,7 +60,10 @@ import (
 	"istio.io/istio/pkg/ptr"
 )
 
-const istioCniName = "default"
+const (
+	istioCniName = "default"
+	ztunnelName  = "default"
+)
 
 // Reconciler reconciles an IstioRevision object
 type Reconciler struct {
@@ -269,6 +273,8 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	istioCniHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapIstioCniToReconcileRequests))
 
+	ztunnelHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapZTunnelToReconcileRequests))
+
 	// endpointSliceHandler triggers reconciliation if the EndpointSlice is owned directly by an IstioRevision,
 	// or if it's owned by an Endpoints object which in turn is owned by an IstioRevision.
 	endpointSliceHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapEndpointSliceToReconcileRequests))
@@ -332,6 +338,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 		// +lint-watches:ignore: IstioCNI (not found in charts, but this controller needs to watch it to update the IstioRevision status)
 		Watches(&v1.IstioCNI{}, istioCniHandler).
+
+		// +lint-watches:ignore: ZTunnel (not found in charts, but this controller needs to watch it to update the IstioRevision status)
+		Watches(&v1alpha1.ZTunnel{}, ztunnelHandler).
 
 		// +lint-watches:ignore: ValidatingAdmissionPolicy (TODO: fix this when CI supports golang 1.22 and k8s 1.30)
 		// +lint-watches:ignore: ValidatingAdmissionPolicyBinding (TODO: fix this when CI supports golang 1.22 and k8s 1.30)
@@ -484,6 +493,36 @@ func (r *Reconciler) determineDependenciesHealthyCondition(ctx context.Context, 
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioRevisionReasonIstioCNINotHealthy,
 				Message: "IstioCNI resource status indicates that the component is not healthy",
+			}, nil
+		}
+	}
+
+	if revision.DependsOnZTunnel(rev, r.Config) {
+		ztunnel := v1alpha1.ZTunnel{}
+		if err := r.Client.Get(ctx, client.ObjectKey{Name: ztunnelName}, &ztunnel); err != nil {
+			if apierrors.IsNotFound(err) {
+				return v1.IstioRevisionCondition{
+					Type:    v1.IstioRevisionConditionDependenciesHealthy,
+					Status:  metav1.ConditionFalse,
+					Reason:  v1.IstioRevisionReasonZTunnelNotFound,
+					Message: "ZTunnel resource does not exist",
+				}, nil
+			}
+
+			return v1.IstioRevisionCondition{
+				Type:    v1.IstioRevisionConditionDependenciesHealthy,
+				Status:  metav1.ConditionUnknown,
+				Reason:  v1.IstioRevisionDependencyCheckFailed,
+				Message: fmt.Sprintf("failed to get ZTunnel status: %v", err),
+			}, fmt.Errorf("get failed: %w", err)
+		}
+
+		if ztunnel.Status.State != v1alpha1.ZTunnelReasonHealthy {
+			return v1.IstioRevisionCondition{
+				Type:    v1.IstioRevisionConditionDependenciesHealthy,
+				Status:  metav1.ConditionFalse,
+				Reason:  v1.IstioRevisionReasonZTunnelNotHealthy,
+				Message: "ZTunnel resource status indicates that the component is not healthy",
 			}, nil
 		}
 	}
@@ -672,6 +711,21 @@ func (r *Reconciler) mapIstioCniToReconcileRequests(ctx context.Context, _ clien
 	var reqs []reconcile.Request
 	for _, rev := range list.Items {
 		if revision.DependsOnIstioCNI(&rev, r.Config) {
+			reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: rev.Name}})
+		}
+	}
+	return reqs
+}
+
+// mapZTunnelToReconcileRequests returns reconcile requests for all IstioRevisions that depend on ZTunnel
+func (r *Reconciler) mapZTunnelToReconcileRequests(ctx context.Context, _ client.Object) []reconcile.Request {
+	list := v1.IstioRevisionList{}
+	if err := r.Client.List(ctx, &list); err != nil {
+		return nil
+	}
+	var reqs []reconcile.Request
+	for _, rev := range list.Items {
+		if revision.DependsOnZTunnel(&rev, r.Config) {
 			reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: rev.Name}})
 		}
 	}
