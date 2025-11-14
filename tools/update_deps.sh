@@ -85,11 +85,8 @@ OPM_LATEST_VERSION=$(getLatestVersion operator-framework/operator-registry)
 "$SED_CMD" -i "s|OPM_VERSION ?= .*|OPM_VERSION ?= ${OPM_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
 
 # Update olm
-# FIXME
-# TODO
-#OLM_LATEST_VERSION=$(getLatestVersion operator-framework/operator-lifecycle-manager)
-# using 0.35.0 until https://github.com/operator-framework/operator-lifecycle-manager/issues/3675 is fixed
-#"$SED_CMD" -i "s|OLM_VERSION ?= .*|OLM_VERSION ?= ${OLM_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+OLM_LATEST_VERSION=$(getLatestVersion operator-framework/operator-lifecycle-manager)
+"$SED_CMD" -i "s|OLM_VERSION ?= .*|OLM_VERSION ?= ${OLM_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
 
 # Update kube-rbac-proxy
 RBAC_PROXY_LATEST_VERSION=$(getLatestVersion brancz/kube-rbac-proxy | cut -d/ -f1)
