@@ -34,6 +34,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/predicate"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
+	"github.com/istio-ecosystem/sail-operator/pkg/revision"
 	"github.com/istio-ecosystem/sail-operator/pkg/validation"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -91,10 +92,10 @@ func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *ru
 func (r *Reconciler) Reconcile(ctx context.Context, ztunnel *v1alpha1.ZTunnel) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
-	reconcileErr := r.doReconcile(ctx, ztunnel)
+	rev, reconcileErr := r.doReconcile(ctx, ztunnel)
 
 	log.Info("Reconciliation done. Updating status.")
-	statusErr := r.updateStatus(ctx, ztunnel, reconcileErr)
+	statusErr := r.updateStatus(ctx, ztunnel, rev, reconcileErr)
 
 	return ctrl.Result{}, errors.Join(reconcileErr, statusErr)
 }
@@ -103,14 +104,22 @@ func (r *Reconciler) Finalize(ctx context.Context, ztunnel *v1alpha1.ZTunnel) er
 	return r.uninstallHelmChart(ctx, ztunnel)
 }
 
-func (r *Reconciler) doReconcile(ctx context.Context, ztunnel *v1alpha1.ZTunnel) error {
+func (r *Reconciler) doReconcile(ctx context.Context, ztunnel *v1alpha1.ZTunnel) (rev *v1.IstioRevision, err error) {
 	log := logf.FromContext(ctx)
-	if err := r.validate(ctx, ztunnel); err != nil {
-		return err
+	if err = r.validate(ctx, ztunnel); err != nil {
+		return nil, err
+	}
+
+	if ztunnel.Spec.TargetRef != nil {
+		log.Info("Retrieving referenced IstioRevision")
+		rev, err = revision.GetIstioRevisionFromTargetReference(ctx, r.Client, *ztunnel.Spec.TargetRef)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	log.Info("Installing ztunnel Helm chart")
-	return r.installHelmChart(ctx, ztunnel)
+	return rev, r.installHelmChart(ctx, ztunnel, rev)
 }
 
 func (r *Reconciler) validate(ctx context.Context, ztunnel *v1alpha1.ZTunnel) error {
@@ -126,7 +135,7 @@ func (r *Reconciler) validate(ctx context.Context, ztunnel *v1alpha1.ZTunnel) er
 	return nil
 }
 
-func (r *Reconciler) installHelmChart(ctx context.Context, ztunnel *v1alpha1.ZTunnel) error {
+func (r *Reconciler) installHelmChart(ctx context.Context, ztunnel *v1alpha1.ZTunnel, revision *v1.IstioRevision) error {
 	ownerReference := metav1.OwnerReference{
 		APIVersion:         v1alpha1.GroupVersion.String(),
 		Kind:               v1alpha1.ZTunnelKind,
@@ -156,11 +165,25 @@ func (r *Reconciler) installHelmChart(ctx context.Context, ztunnel *v1alpha1.ZTu
 		return fmt.Errorf("failed to apply profile: %w", err)
 	}
 
+	// Apply values from referenced IstioRevision first
+	var istioValues helm.Values
+	if revision != nil {
+		istioValues = helm.FromValues(v1.Values{
+			MeshConfig: revision.Spec.Values.MeshConfig,
+			Revision:   revision.Spec.Values.Revision,
+			Global:     revision.Spec.Values.Global,
+		})
+	}
+	userHelmValues, err := istiovalues.ApplyUserValues(istioValues, helm.FromValues(userValues.ZTunnel))
+	if err != nil {
+		return fmt.Errorf("failed to apply values from referenced IstioRevision: %w", err)
+	}
+
 	// Apply any user Overrides configured as part of values.ztunnel
 	// This step was not required for the IstioCNI resource because the Helm templates[*] automatically override values.cni
 	// [*]https://github.com/istio/istio/blob/0200fd0d4c3963a72f36987c2e8c2887df172abf/manifests/charts/istio-cni/templates/zzy_descope_legacy.yaml#L3
 	// However, ztunnel charts do not have such a file, hence we are manually applying the mergeOperation here.
-	finalHelmValues, err := istiovalues.ApplyUserValues(helm.FromValues(mergedHelmValues), helm.FromValues(userValues.ZTunnel))
+	finalHelmValues, err := istiovalues.ApplyUserValues(helm.FromValues(mergedHelmValues), userHelmValues)
 	if err != nil {
 		return fmt.Errorf("failed to apply user overrides: %w", err)
 	}
@@ -217,6 +240,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// mainObjectHandler handles the ZTunnel watch events
 	mainObjectHandler := wrapEventHandler(logger, &handler.EnqueueRequestForObject{})
 
+	// operatorResourcesHandler handles watch events from operator CRDs Istio and IstioRevision
+	operatorResourcesHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapOperatorResourceToReconcileRequest))
+
 	// ownedResourceHandler handles resources that are owned by the ZTunnel CR
 	ownedResourceHandler := wrapEventHandler(logger,
 		handler.EnqueueRequestForOwner(r.Scheme, r.RESTMapper(), &v1alpha1.ZTunnel{}, handler.OnlyControllerOwner()))
@@ -252,10 +278,13 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&corev1.Namespace{}, namespaceHandler).
 		Watches(&rbacv1.ClusterRole{}, ownedResourceHandler).
 		Watches(&rbacv1.ClusterRoleBinding{}, ownedResourceHandler).
+		Watches(&v1.Istio{}, operatorResourcesHandler).
+		Watches(&v1.IstioRevision{}, operatorResourcesHandler).
 		Complete(reconciler.NewStandardReconcilerWithFinalizer[*v1alpha1.ZTunnel](r.Client, r.Reconcile, r.Finalize, constants.FinalizerName))
 }
 
-func (r *Reconciler) determineStatus(ctx context.Context, ztunnel *v1alpha1.ZTunnel, reconcileErr error) (v1alpha1.ZTunnelStatus, error) {
+// nolint:lll
+func (r *Reconciler) determineStatus(ctx context.Context, ztunnel *v1alpha1.ZTunnel, rev *v1.IstioRevision, reconcileErr error) (v1alpha1.ZTunnelStatus, error) {
 	var errs errlist.Builder
 	reconciledCondition := r.determineReconciledCondition(reconcileErr)
 	readyCondition, err := r.determineReadyCondition(ctx, ztunnel)
@@ -266,13 +295,16 @@ func (r *Reconciler) determineStatus(ctx context.Context, ztunnel *v1alpha1.ZTun
 	status.SetCondition(reconciledCondition)
 	status.SetCondition(readyCondition)
 	status.State = deriveState(reconciledCondition, readyCondition)
+	if rev != nil {
+		status.IstioRevision = rev.Name
+	}
 	return status, errs.Error()
 }
 
-func (r *Reconciler) updateStatus(ctx context.Context, ztunnel *v1alpha1.ZTunnel, reconcileErr error) error {
+func (r *Reconciler) updateStatus(ctx context.Context, ztunnel *v1alpha1.ZTunnel, rev *v1.IstioRevision, reconcileErr error) error {
 	var errs errlist.Builder
 
-	status, err := r.determineStatus(ctx, ztunnel, reconcileErr)
+	status, err := r.determineStatus(ctx, ztunnel, rev, reconcileErr)
 	if err != nil {
 		errs.Add(fmt.Errorf("failed to determine status: %w", err))
 	}
@@ -356,6 +388,29 @@ func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, ns clie
 	var requests []reconcile.Request
 	for _, ztunnel := range ztunnelList.Items {
 		if ztunnel.Spec.Namespace == ns.GetName() {
+			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: ztunnel.Name}})
+		}
+	}
+	return requests
+}
+
+func (r *Reconciler) mapOperatorResourceToReconcileRequest(ctx context.Context, obj client.Object) []reconcile.Request {
+	var revisionName string
+	if i, ok := obj.(*v1.Istio); ok && i.Status.ActiveRevisionName != "" {
+		revisionName = i.Status.ActiveRevisionName
+	} else if rev, ok := obj.(*v1.IstioRevision); ok {
+		revisionName = rev.Name
+	} else {
+		return nil
+	}
+	ztunnels := v1alpha1.ZTunnelList{}
+	err := r.Client.List(ctx, &ztunnels, &client.ListOptions{})
+	if err != nil {
+		return nil
+	}
+	requests := []reconcile.Request{}
+	for _, ztunnel := range ztunnels.Items {
+		if ztunnel.Status.IstioRevision == revisionName {
 			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: ztunnel.Name}})
 		}
 	}

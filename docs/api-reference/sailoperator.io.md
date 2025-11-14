@@ -1038,7 +1038,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `targetRef` _[IstioRevisionTagTargetReference](#istiorevisiontagtargetreference)_ |  |  | Required: \{\}   |
+| `targetRef` _[TargetReference](#targetreference)_ |  |  | Required: \{\}   |
 
 
 #### IstioRevisionTagStatus
@@ -1059,23 +1059,6 @@ _Appears in:_
 | `state` _[IstioRevisionTagConditionReason](#istiorevisiontagconditionreason)_ | Reports the current state of the object. |  |  |
 | `istiodNamespace` _string_ | IstiodNamespace stores the namespace of the corresponding Istiod instance |  |  |
 | `istioRevision` _string_ | IstioRevision stores the name of the referenced IstioRevision |  |  |
-
-
-#### IstioRevisionTagTargetReference
-
-
-
-IstioRevisionTagTargetReference can reference either Istio or IstioRevision objects in the cluster. In the case of referencing an Istio object, the Sail Operator will automatically update the reference to the Istio object's Active Revision.
-
-
-
-_Appears in:_
-- [IstioRevisionTagSpec](#istiorevisiontagspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `kind` _string_ | Kind is the kind of the target resource. |  | MaxLength: 253  MinLength: 1  Required: \{\}   |
-| `name` _string_ | Name is the name of the target resource. |  | MaxLength: 253  MinLength: 1  Required: \{\}   |
 
 
 #### IstioSpec
@@ -2930,6 +2913,24 @@ _Appears in:_
 | `failureThreshold` _integer_ | Minimum consecutive failures for the probe to be considered failed after having succeeded. |  |  |
 
 
+#### TargetReference
+
+
+
+TargetReference can reference either Istio or IstioRevision objects in the cluster. In the case of referencing an Istio object, the Sail Operator will automatically update the reference to the Istio object's Active Revision.
+
+
+
+_Appears in:_
+- [IstioRevisionTagSpec](#istiorevisiontagspec)
+- [ZTunnelSpec](#ztunnelspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `kind` _string_ | Kind is the kind of the target resource. |  | MaxLength: 253  MinLength: 1  Required: \{\}   |
+| `name` _string_ | Name is the name of the target resource. |  | MaxLength: 253  MinLength: 1  Required: \{\}   |
+
+
 #### TargetUtilizationConfig
 
 
@@ -3532,6 +3533,7 @@ _Appears in:_
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is 'ambient' and it is always applied. Must be one of: ambient, default, demo, empty, external, preview, remote, stable. | ambient | Enum: [ambient default demo empty external openshift-ambient openshift preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio ztunnel component should be installed. | ztunnel |  |
 | `values` _[ZTunnelValues](#ztunnelvalues)_ | Defines the values to be passed to the Helm charts when installing Istio ztunnel. |  |  |
+| `targetRef` _[TargetReference](#targetreference)_ | The Istio control plane that this ZTunnel instance is associated with. Valid references are Istio and IstioRevision resources, Istio resources are always resolved to their current active revision. Values relevant for ZTunnel will be copied from the referenced IstioRevision resource, these are `spec.values.global`, `spec.values.meshConfig`, `spec.values.revision`. Any user configuration in the ZTunnel spec will always take precedence over the settings copied from the Istio resource, however. |  |  |
 
 
 #### ZTunnelStatus
@@ -3550,5 +3552,6 @@ _Appears in:_
 | `observedGeneration` _integer_ | ObservedGeneration is the most recent generation observed for this ZTunnel object. It corresponds to the object's generation, which is updated on mutation by the API Server. The information in the status pertains to this particular generation of the object. |  |  |
 | `conditions` _[ZTunnelCondition](#ztunnelcondition) array_ | Represents the latest available observations of the object's current state. |  |  |
 | `state` _[ZTunnelConditionReason](#ztunnelconditionreason)_ | Reports the current state of the object. |  |  |
+| `istioRevision` _string_ | IstioRevision stores the name of the referenced IstioRevision |  |  |
 
 

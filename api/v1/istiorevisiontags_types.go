@@ -28,11 +28,11 @@ const (
 // IstioRevisionTagSpec defines the desired state of IstioRevisionTag
 type IstioRevisionTagSpec struct {
 	// +kubebuilder:validation:Required
-	TargetRef IstioRevisionTagTargetReference `json:"targetRef"`
+	TargetRef TargetReference `json:"targetRef"`
 }
 
-// IstioRevisionTagTargetReference can reference either Istio or IstioRevision objects in the cluster. In the case of referencing an Istio object, the Sail Operator will automatically update the reference to the Istio object's Active Revision.
-type IstioRevisionTagTargetReference struct {
+// TargetReference can reference either Istio or IstioRevision objects in the cluster. In the case of referencing an Istio object, the Sail Operator will automatically update the reference to the Istio object's Active Revision.
+type TargetReference struct {
 	// Kind is the kind of the target resource.
 	//
 	// +kubebuilder:validation:MinLength=1
