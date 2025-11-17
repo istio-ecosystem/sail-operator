@@ -192,6 +192,37 @@ var _ = Describe("Testing with cleanup", Ordered, func() {
 ```
     * You can use multiple cleaners, each with its own state. This is useful if the test does some global set up, e.g. sets up the operator, and then specific tests create further resources which you want cleaned.
     * To clean resources without waiting, and waiting for them later, use `CleanupNoWait` followed by `WaitForDeletion`. This is particularly useful when working with more than one cluster.
+* Use `debugcollector` to collect comprehensive debug information when tests fail. The debug collector captures the cluster state and saves it as artifacts for easier debugging. Like the cleaner, it records initial state and collects debug information on test failure. For example:
+```go
+import "github.com/istio-ecosystem/sail-operator/tests/e2e/util/debugcollector"
+
+var _ = Describe("Testing with debug collection", Ordered, func() {
+    collector := debugcollector.New(cl, k, "test-suite-name")
+
+    BeforeAll(func(ctx SpecContext) {
+        collector.Record(ctx)
+        // Any additional set up goes here
+    })
+
+    // Tests go here
+
+    AfterAll(func(ctx SpecContext) {
+        if CurrentSpecReport().Failed() {
+            collector.CollectAndSave(ctx)
+        }
+        // Any cleanup logic goes here
+    })
+})
+```
+    * The debug collector saves artifacts to the `$ARTIFACTS` directory (or `/tmp` if not set) with a timestamped folder structure
+    * Collected information includes: pod YAMLs, logs, events, deployments, daemonsets, services, configmaps, and custom resources
+    * You can control the collection depth with the `DEBUG_COLLECTOR_DEPTH` environment variable (values: `full`, `minimal`, `logs-only`)
+    * For multicluster tests, create separate collectors for each cluster with descriptive names
+    * The artifacts directory structure is organized as:
+      - `debug-<suite-name>-<timestamp>/`
+        - `cluster-scoped/` - cluster-wide resources
+        - `namespaces/<namespace>/` - namespace-specific resources, logs, and events
+        - `istioctl/` - istioctl proxy-status output
 
 ## Running the tests
 The end-to-end test can be run in two different environments: OCP (OpenShift Container Platform) and KinD (Kubernetes in Docker).
