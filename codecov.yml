@@ -2,4 +2,4 @@ ignore:
   - "api"
   - "hack"
   - "tools"
-  - "tests"
+  - "tests/**"
