@@ -95,9 +95,9 @@ func (d *DebugCollector) CollectAndSave(ctx context.Context) string {
 	if contextStr != "" {
 		contextStr = "-" + contextStr
 	}
-	
+
 	debugDir := filepath.Join(d.artifactsDir, fmt.Sprintf("debug%s-%s", contextStr, timestamp))
-	
+
 	if err := os.MkdirAll(debugDir, 0755); err != nil {
 		GinkgoWriter.Printf("Error creating debug directory %s: %v\n", debugDir, err)
 		return debugDir
@@ -117,7 +117,7 @@ func (d *DebugCollector) CollectAndSave(ctx context.Context) string {
 	d.collectIstioctlInfo(debugDir)
 
 	Success(fmt.Sprintf("Debug information saved to: %s", debugDir))
-	
+
 	return debugDir
 }
 
@@ -227,12 +227,12 @@ func (d *DebugCollector) collectNamespaceDebugInfo(ctx context.Context, namespac
 	// Create subdirectories
 	resourcesDir := filepath.Join(nsDir, "resources")
 	logsDir := filepath.Join(nsDir, "logs")
-	
+
 	if err := os.MkdirAll(resourcesDir, 0755); err != nil {
 		GinkgoWriter.Printf("Error creating resources directory for %s: %v\n", ns, err)
 		return
 	}
-	
+
 	if d.collectionDepth != "minimal" {
 		if err := os.MkdirAll(logsDir, 0755); err != nil {
 			GinkgoWriter.Printf("Error creating logs directory for %s: %v\n", ns, err)
@@ -243,7 +243,7 @@ func (d *DebugCollector) collectNamespaceDebugInfo(ctx context.Context, namespac
 	k := d.kubectl.WithNamespace(ns)
 
 	// Collect resources (always collected regardless of depth)
-	d.collectNamespaceResources(ctx, ns, resourcesDir, k)
+	d.collectResourcesInNamespace(ctx, ns, resourcesDir, k)
 
 	// Collect events
 	if events, err := k.GetEvents(); err == nil {
@@ -256,8 +256,8 @@ func (d *DebugCollector) collectNamespaceDebugInfo(ctx context.Context, namespac
 	}
 }
 
-// collectNamespaceResources collects various Kubernetes resources in a namespace.
-func (d *DebugCollector) collectNamespaceResources(ctx context.Context, ns, resourcesDir string, k kubectl.Kubectl) {
+// collectResourcesInNamespace collects various Kubernetes resources in a specific namespace.
+func (d *DebugCollector) collectResourcesInNamespace(ctx context.Context, ns, resourcesDir string, k kubectl.Kubectl) {
 	// Collect Deployments
 	deploymentList := &appsv1.DeploymentList{}
 	if err := d.cl.List(ctx, deploymentList, client.InNamespace(ns)); err == nil {

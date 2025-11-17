@@ -16,7 +16,7 @@ This end-to-end test suite utilizes Ginkgo, a testing framework known for its ex
     1. [How to Run the test](#how-to-run-the-test)
     1. [Running the test locally](#running-the-test-locally)
     1. [Settings for end-to-end test execution](#settings-for-end-to-end-test-execution)
-    1. [Customizing the test run](#customizing-the-test-run)    
+    1. [Customizing the test run](#customizing-the-test-run)
     1. [Get test definitions for the end-to-end test](#get-test-definitions-for-the-end-to-end-test)
 1. [Contributing](#contributing)
 
@@ -69,7 +69,7 @@ var _ = Describe("Operator", Label("labels-for-the-test"), Ordered, func() {
         })
     })
 })
-``` 
+```
 Note: The `Label` function is used to label the test. This is useful when you want to run a specific test or a group of tests. The label can be used to filter the tests when running them. Ordered is used to run the tests in the order they are defined. This is useful when you want to run the tests in a specific order.
 
 
@@ -133,7 +133,7 @@ var _ = Describe("Operator", func() {
         })
     })
 })
-``` 
+```
 * Add Labels to the tests. This is useful when you want to run a specific test or a group of tests. The label can be used to filter the tests when running them. For example:
 ```go
 var _ = Describe("Ambient configuration ", Label("smoke", "ambient"), Ordered, func() {
@@ -436,7 +436,7 @@ make test.e2e.describe
 ```
 
 When you run this target, the test definitions will be printed to the console with format `indent`. For example:
-    
+
 ```
 Name,Text,Start,End,Spec,Focused,Pending,Labels
 Describe,Operator,882,7688,false,false,false,""

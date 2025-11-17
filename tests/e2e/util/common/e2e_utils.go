@@ -153,7 +153,7 @@ func LogDebugInfo(suite testSuite, kubectls ...kubectl.Kubectl) {
 	// Detailed debug artifacts are saved to the $ARTIFACTS directory by the DebugCollector.
 
 	artifactsDir := env.Get("ARTIFACTS", "")
-	
+
 	GinkgoWriter.Println()
 	GinkgoWriter.Println("=========================================================")
 	GinkgoWriter.Println("TEST FAILURE DETECTED")
@@ -165,12 +165,12 @@ func LogDebugInfo(suite testSuite, kubectls ...kubectl.Kubectl) {
 	GinkgoWriter.Println()
 	GinkgoWriter.Println("Quick Summary:")
 	GinkgoWriter.Println("=========================================================")
-	
+
 	for _, k := range kubectls {
 		if k.ClusterName != "" {
 			GinkgoWriter.Println("CLUSTER:", k.ClusterName)
 		}
-		
+
 		// Log quick status checks
 		logQuickStatus(k)
 		GinkgoWriter.Println("---")
@@ -187,7 +187,7 @@ func logQuickStatus(k kubectl.Kubectl) {
 	if pods, err := k.WithNamespace(OperatorNamespace).GetPods("", ""); err == nil {
 		GinkgoWriter.Printf("Operator namespace pods:\n%s\n", pods)
 	}
-	
+
 	if output, err := k.GetYAML("istio", istioName); err == nil && output != "" {
 		GinkgoWriter.Println("Istio CR exists")
 	}

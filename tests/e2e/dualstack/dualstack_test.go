@@ -58,15 +58,15 @@ var _ = Describe("DualStack configuration ", Label("dualstack"), Ordered, func()
 				continue
 			}
 
-		Context(fmt.Sprintf("Istio version %s", version.Version), func() {
-			clr := cleaner.New(cl)
-			collector := debugcollector.New(cl, k, "dualstack")
-			BeforeAll(func(ctx SpecContext) {
-				clr.Record(ctx)
-				collector.Record(ctx)
-				Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
-				Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
-			})
+			Context(fmt.Sprintf("Istio version %s", version.Version), func() {
+				clr := cleaner.New(cl)
+				collector := debugcollector.New(cl, k, "dualstack")
+				BeforeAll(func(ctx SpecContext) {
+					clr.Record(ctx)
+					collector.Record(ctx)
+					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
+					Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
+				})
 
 				When("the IstioCNI CR is created", func() {
 					BeforeAll(func() {
@@ -231,16 +231,16 @@ values:
 					})
 				})
 
-			AfterAll(func(ctx SpecContext) {
-				if CurrentSpecReport().Failed() {
-					collector.CollectAndSave(ctx)
-					if keepOnFailure {
-						return
+				AfterAll(func(ctx SpecContext) {
+					if CurrentSpecReport().Failed() {
+						collector.CollectAndSave(ctx)
+						if keepOnFailure {
+							return
+						}
 					}
-				}
 
-				clr.Cleanup(ctx)
-			})
+					clr.Cleanup(ctx)
+				})
 			})
 		}
 
