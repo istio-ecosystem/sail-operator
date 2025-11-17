@@ -70,6 +70,11 @@ if [ "${MULTICLUSTER}" == "true" ]; then
     setup_kind_clusters "${KIND_IMAGE}" ""
     setup_kind_registry "${CLUSTER_NAMES[@]}"
 
+    # Apply Gateway API CRDs which are needed for Multi-Cluster Ambient testing
+    for config in "${KUBECONFIGS[@]}"; do
+        kubectl apply --kubeconfig="$config" --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.4.0/experimental-install.yaml
+    done
+
     export KUBECONFIG="${KUBECONFIGS[0]}"
     export KUBECONFIG2="${KUBECONFIGS[1]}"
     echo "Your KinD environment is ready, to use it: export KUBECONFIG=$(IFS=:; echo "${KUBECONFIGS[*]}")"

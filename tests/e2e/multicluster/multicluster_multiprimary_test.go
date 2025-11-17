@@ -24,6 +24,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
+	"github.com/istio-ecosystem/sail-operator/pkg/version"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
@@ -40,10 +41,25 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
+	Context("Sidecar", func() {
+		generateMultiPrimaryTestCases("default")
+	})
+	Context("Ambient", Label("ambient"), func() {
+		generateMultiPrimaryTestCases("ambient")
+	})
+})
+
+func generateMultiPrimaryTestCases(profile string) {
 	Describe("Multi-Primary Multi-Network configuration", func() {
 		// Test the Multi-Primary Multi-Network configuration for each supported Istio version
-		for _, version := range istioversion.GetLatestPatchVersions() {
-			Context(fmt.Sprintf("Istio version %s", version.Version), func() {
+		for _, v := range istioversion.GetLatestPatchVersions() {
+			// Ambient multi-cluster is supported only since 1.27
+			if profile == "ambient" && version.Constraint("<1.27").Check(v.Version) {
+				Log(fmt.Sprintf("Skipping test, because Istio version %s does not support Ambient Multi-Cluster configuration", v.Version))
+				continue
+			}
+
+			Context(fmt.Sprintf("Istio version %s", v.Version), func() {
 				clr1 := cleaner.New(clPrimary, "cluster=primary")
 				clr2 := cleaner.New(clRemote, "cluster=remote")
 
@@ -54,8 +70,8 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 
 				When("Istio and IstioCNI resources are created in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
-						createIstioNamespaces(k1)
-						createIstioNamespaces(k2)
+						createIstioNamespaces(k1, "network1", profile)
+						createIstioNamespaces(k2, "network2", profile)
 
 						// Push the intermediate CA to both clusters
 						createIntermediateCA(k1, "east", "network1", artifacts, clPrimary)
@@ -65,8 +81,8 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 						awaitSecretCreation(k1.ClusterName, clPrimary)
 						awaitSecretCreation(k2.ClusterName, clRemote)
 
-						createIstioResources(k1, version.Name, "cluster1", "network1")
-						createIstioResources(k2, version.Name, "cluster2", "network2")
+						createIstioResources(k1, v.Name, "cluster1", "network1", profile)
+						createIstioResources(k2, v.Name, "cluster2", "network2", profile)
 					})
 
 					It("updates both Istio CR status to Ready", func(ctx SpecContext) {
@@ -97,13 +113,13 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 						Eventually(common.GetObject).
 							WithArguments(ctx, clPrimary, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
 							Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available on Cluster #1; unexpected Condition")
-						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
+						Expect(common.GetVersionFromIstiod()).To(Equal(v.Version), "Unexpected istiod version")
 						Success("Istiod is deployed in the namespace and Running on Cluster #1")
 
 						Eventually(common.GetObject).
 							WithArguments(ctx, clRemote, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
 							Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available on Cluster #2; unexpected Condition")
-						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
+						Expect(common.GetVersionFromIstiod()).To(Equal(v.Version), "Unexpected istiod version")
 						Success("Istiod is deployed in the namespace and Running on Cluster #2")
 					})
 
@@ -130,12 +146,17 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 
 				When("Gateway is created in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
-						Expect(k1.WithNamespace(controlPlaneNamespace).Apply(eastGatewayYAML)).To(Succeed(), "Gateway creation failed on Cluster #1")
-						Expect(k2.WithNamespace(controlPlaneNamespace).Apply(westGatewayYAML)).To(Succeed(), "Gateway creation failed on Cluster #2")
+						if profile == "ambient" {
+							common.CreateAmbientGateway(k1, controlPlaneNamespace, "network1")
+							common.CreateAmbientGateway(k2, controlPlaneNamespace, "network2")
+						} else {
+							Expect(k1.WithNamespace(controlPlaneNamespace).Apply(eastGatewayYAML)).To(Succeed(), "Gateway creation failed on Cluster #1")
+							Expect(k2.WithNamespace(controlPlaneNamespace).Apply(westGatewayYAML)).To(Succeed(), "Gateway creation failed on Cluster #2")
 
-						// Expose the Gateway service in both clusters
-						Expect(k1.WithNamespace(controlPlaneNamespace).Apply(exposeServiceYAML)).To(Succeed(), "Expose Service creation failed on Cluster #1")
-						Expect(k2.WithNamespace(controlPlaneNamespace).Apply(exposeServiceYAML)).To(Succeed(), "Expose Service creation failed on Cluster #2")
+							// Expose the Gateway service in both clusters
+							Expect(k1.WithNamespace(controlPlaneNamespace).Apply(exposeServiceYAML)).To(Succeed(), "Expose Service creation failed on Cluster #1")
+							Expect(k2.WithNamespace(controlPlaneNamespace).Apply(exposeServiceYAML)).To(Succeed(), "Expose Service creation failed on Cluster #2")
+						}
 					})
 
 					It("updates both Gateway status to Available", func(ctx SpecContext) {
@@ -186,16 +207,7 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 
 				When("sample apps are deployed in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
-						// Create namespace
-						Expect(k1.CreateNamespace(sampleNamespace)).To(Succeed(), "Namespace failed to be created on Cluster #1")
-						Expect(k2.CreateNamespace(sampleNamespace)).To(Succeed(), "Namespace failed to be created on Cluster #2")
-
-						// Label the namespace
-						Expect(k1.Label("namespace", sampleNamespace, "istio-injection", "enabled")).To(Succeed(), "Error labeling sample namespace")
-						Expect(k2.Label("namespace", sampleNamespace, "istio-injection", "enabled")).To(Succeed(), "Error labeling sample namespace")
-
-						// Deploy the sample app in both clusters
-						deploySampleAppToClusters(sampleNamespace, []ClusterDeployment{
+						deploySampleAppToClusters(sampleNamespace, profile, []ClusterDeployment{
 							{Kubectl: k1, AppVersion: "v1"},
 							{Kubectl: k2, AppVersion: "v2"},
 						})
@@ -285,4 +297,4 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 			})
 		}
 	})
-})
+}
