@@ -2,6 +2,10 @@ name: sailoperator
 deployment:
   name: sail-operator
   annotations:
+    images.v1_28_0.ztunnel: gcr.io/istio-release/ztunnel:1.28.0
+    images.v1_28_0.istiod: gcr.io/istio-release/pilot:1.28.0
+    images.v1_28_0.proxy: gcr.io/istio-release/proxyv2:1.28.0
+    images.v1_28_0.cni: gcr.io/istio-release/install-cni:1.28.0
     images.v1_27_3.ztunnel: gcr.io/istio-release/ztunnel:1.27.3
     images.v1_27_3.istiod: gcr.io/istio-release/pilot:1.27.3
     images.v1_27_3.proxy: gcr.io/istio-release/proxyv2:1.27.3
@@ -46,10 +50,6 @@ deployment:
     images.v1_26_0.istiod: gcr.io/istio-release/pilot:1.26.0
     images.v1_26_0.proxy: gcr.io/istio-release/proxyv2:1.26.0
     images.v1_26_0.cni: gcr.io/istio-release/install-cni:1.26.0
-    images.v1_29-alpha_c24fe2ae.ztunnel: gcr.io/istio-testing/ztunnel:1.29-alpha.c24fe2aebd9b6330f180bbc9fcf81ee431e5a460
-    images.v1_29-alpha_c24fe2ae.istiod: gcr.io/istio-testing/pilot:1.29-alpha.c24fe2aebd9b6330f180bbc9fcf81ee431e5a460
-    images.v1_29-alpha_c24fe2ae.proxy: gcr.io/istio-testing/proxyv2:1.29-alpha.c24fe2aebd9b6330f180bbc9fcf81ee431e5a460
-    images.v1_29-alpha_c24fe2ae.cni: gcr.io/istio-testing/install-cni:1.29-alpha.c24fe2aebd9b6330f180bbc9fcf81ee431e5a460
 revisionHistoryLimit: 10
 service:
   port: 8443
@@ -65,6 +65,8 @@ csv:
 
     This version of the operator supports the following Istio versions:
 
+    - v1.28-latest
+    - v1.28.0
     - v1.27-latest
     - v1.27.3
     - v1.27.2
@@ -78,8 +80,6 @@ csv:
     - v1.26.2
     - v1.26.1
     - v1.26.0
-    - master
-    - v1.29-alpha.c24fe2ae
 
     [See this page](https://github.com/istio-ecosystem/sail-operator/blob/main/bundle/README.md) for instructions on how to use it.
   support: Community based
@@ -107,7 +107,7 @@ csv:
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
     features.operators.openshift.io/csi: "false"
-image: quay.io/sail-dev/sail-operator:1.28-latest
+image: quay.io/sail-dev/sail-operator:1.28.0
 # We're commenting out the imagePullPolicy to use k8s defaults
 # imagePullPolicy: Always
 operator:

@@ -15,6 +15,18 @@
 # required. They will stay valid input values for the spec.version field though,
 # to avoid breaking API guarantees.
 versions:
+  - name: v1.28-latest
+    ref: v1.28.0
+  - name: v1.28.0
+    version: 1.28.0
+    repo: https://github.com/istio/istio
+    commit: 1.28.0
+    charts:
+      - https://istio-release.storage.googleapis.com/charts/base-1.28.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-1.28.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/gateway-1.28.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/cni-1.28.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.28.0.tgz
   - name: v1.27-latest
     ref: v1.27.3
   - name: v1.27.3
@@ -185,16 +197,3 @@ versions:
     eol: true
   - name: v1.21.6
     eol: true
-  - name: master
-    ref: v1.29-alpha.c24fe2ae
-  - name: v1.29-alpha.c24fe2ae
-    version: 1.29-alpha.c24fe2aebd9b6330f180bbc9fcf81ee431e5a460
-    repo: https://github.com/istio/istio
-    branch: master
-    commit: c24fe2aebd9b6330f180bbc9fcf81ee431e5a460
-    charts:
-      - https://storage.googleapis.com/istio-build/dev/1.29-alpha.c24fe2aebd9b6330f180bbc9fcf81ee431e5a460/helm/base-1.29-alpha.c24fe2aebd9b6330f180bbc9fcf81ee431e5a460.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.29-alpha.c24fe2aebd9b6330f180bbc9fcf81ee431e5a460/helm/cni-1.29-alpha.c24fe2aebd9b6330f180bbc9fcf81ee431e5a460.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.29-alpha.c24fe2aebd9b6330f180bbc9fcf81ee431e5a460/helm/gateway-1.29-alpha.c24fe2aebd9b6330f180bbc9fcf81ee431e5a460.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.29-alpha.c24fe2aebd9b6330f180bbc9fcf81ee431e5a460/helm/istiod-1.29-alpha.c24fe2aebd9b6330f180bbc9fcf81ee431e5a460.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.29-alpha.c24fe2aebd9b6330f180bbc9fcf81ee431e5a460/helm/ztunnel-1.29-alpha.c24fe2aebd9b6330f180bbc9fcf81ee431e5a460.tgz
