@@ -27,6 +27,7 @@ import (
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/debugcollector"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -55,8 +56,10 @@ var _ = Describe("Ambient configuration ", Label("smoke", "ambient"), Ordered, f
 
 			Context(fmt.Sprintf("Istio version %s", version.Version), func() {
 				clr := cleaner.New(cl)
+				collector := debugcollector.New(cl, k, "ambient")
 				BeforeAll(func(ctx SpecContext) {
 					clr.Record(ctx)
+					collector.Record(ctx)
 					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
 					Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
 					Expect(k.CreateNamespace(ztunnelNamespace)).To(Succeed(), "ZTunnel namespace failed to be created")
@@ -296,8 +299,11 @@ spec:
 				})
 
 				AfterAll(func(ctx SpecContext) {
-					if CurrentSpecReport().Failed() && keepOnFailure {
-						return
+					if CurrentSpecReport().Failed() {
+						collector.CollectAndSave(ctx)
+						if keepOnFailure {
+							return
+						}
 					}
 
 					clr.Cleanup(ctx)

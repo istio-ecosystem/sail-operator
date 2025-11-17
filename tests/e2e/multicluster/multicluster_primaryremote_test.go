@@ -29,6 +29,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/certs"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/debugcollector"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
 	. "github.com/onsi/ginkgo/v2"
@@ -52,14 +53,18 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 				continue
 			}
 
-			Context(fmt.Sprintf("Istio version %s", v.Version), func() {
-				clr1 := cleaner.New(clPrimary, "cluster=primary")
-				clr2 := cleaner.New(clRemote, "cluster=remote")
+		Context(fmt.Sprintf("Istio version %s", v.Version), func() {
+			clr1 := cleaner.New(clPrimary, "cluster=primary")
+			clr2 := cleaner.New(clRemote, "cluster=remote")
+			collector1 := debugcollector.New(clPrimary, k1, "multicluster-primary")
+			collector2 := debugcollector.New(clRemote, k2, "multicluster-remote")
 
-				BeforeAll(func(ctx SpecContext) {
-					clr1.Record(ctx)
-					clr2.Record(ctx)
-				})
+			BeforeAll(func(ctx SpecContext) {
+				clr1.Record(ctx)
+				clr2.Record(ctx)
+				collector1.Record(ctx)
+				collector2.Record(ctx)
+			})
 
 				When("Istio and IstioCNI resources are created in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
@@ -306,17 +311,19 @@ values:
 					})
 				})
 
-				AfterAll(func(ctx SpecContext) {
-					if CurrentSpecReport().Failed() {
-						common.LogDebugInfo(common.MultiCluster, k1, k2)
-						debugInfoLogged = true
-						if keepOnFailure {
-							return
-						}
+			AfterAll(func(ctx SpecContext) {
+				if CurrentSpecReport().Failed() {
+					collector1.CollectAndSave(ctx)
+					collector2.CollectAndSave(ctx)
+					common.LogDebugInfo(common.MultiCluster, k1, k2)
+					debugInfoLogged = true
+					if keepOnFailure {
+						return
 					}
+				}
 
-					c1Deleted := clr1.CleanupNoWait(ctx)
-					c2Deleted := clr2.CleanupNoWait(ctx)
+				c1Deleted := clr1.CleanupNoWait(ctx)
+				c2Deleted := clr2.CleanupNoWait(ctx)
 					clr1.WaitForDeletion(ctx, c1Deleted)
 					clr2.WaitForDeletion(ctx, c2Deleted)
 				})

@@ -28,6 +28,7 @@ import (
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/debugcollector"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -62,8 +63,10 @@ var _ = Describe("Operator", Label("smoke", "operator"), Ordered, func() {
 
 	Describe("installation", func() {
 		clr := cleaner.New(cl)
+		collector := debugcollector.New(cl, k, "operator")
 		BeforeAll(func(ctx SpecContext) {
 			clr.Record(ctx)
+			collector.Record(ctx)
 		})
 
 		It("deploys all the CRDs", func(ctx SpecContext) {
@@ -180,16 +183,16 @@ spec:
 			))
 		})
 
-		AfterAll(func(ctx SpecContext) {
-			if CurrentSpecReport().Failed() && keepOnFailure {
+	AfterAll(func(ctx SpecContext) {
+		if CurrentSpecReport().Failed() {
+			collector.CollectAndSave(ctx)
+			common.LogDebugInfo(common.Operator, k)
+			if keepOnFailure {
 				return
 			}
-
-			if CurrentSpecReport().Failed() {
-				common.LogDebugInfo(common.Operator, k)
-			}
-			clr.Cleanup(ctx)
-		})
+		}
+		clr.Cleanup(ctx)
+	})
 	})
 
 	AfterAll(func(ctx SpecContext) {

@@ -26,6 +26,7 @@ import (
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/debugcollector"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -41,12 +42,14 @@ var _ = Describe("Multi control plane deployment model", Label("smoke", "multico
 
 	Describe("for supported versions", func() {
 		for _, version := range istioversion.GetLatestPatchVersions() {
-			Context(fmt.Sprintf("Istio version %s", version.Version), func() {
-				clr := cleaner.New(cl)
+		Context(fmt.Sprintf("Istio version %s", version.Version), func() {
+			clr := cleaner.New(cl)
+			collector := debugcollector.New(cl, k, "multicontrol-plane")
 
-				BeforeAll(func(ctx SpecContext) {
-					clr.Record(ctx)
-				})
+			BeforeAll(func(ctx SpecContext) {
+				clr.Record(ctx)
+				collector.Record(ctx)
+			})
 
 				Describe("Installation", func() {
 					It("Sets up namespaces", func(ctx SpecContext) {
@@ -159,13 +162,14 @@ spec:
 					})
 				})
 
-				AfterAll(func(ctx SpecContext) {
-					if CurrentSpecReport().Failed() {
-						common.LogDebugInfo(common.ControlPlane, k)
-						debugInfoLogged = true
-					}
-					clr.Cleanup(ctx)
-				})
+			AfterAll(func(ctx SpecContext) {
+				if CurrentSpecReport().Failed() {
+					collector.CollectAndSave(ctx)
+					common.LogDebugInfo(common.ControlPlane, k)
+					debugInfoLogged = true
+				}
+				clr.Cleanup(ctx)
+			})
 			})
 		}
 

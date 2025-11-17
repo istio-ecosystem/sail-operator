@@ -28,6 +28,7 @@ import (
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/debugcollector"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -50,6 +51,7 @@ var _ = Describe("Control Plane updates", Label("control-plane", "slow"), Ordere
 
 		Context(istioversion.Base, func() {
 			clr := cleaner.New(cl)
+			collector := debugcollector.New(cl, k, "control-plane-update")
 
 			BeforeAll(func(ctx SpecContext) {
 				if len(istioversion.List) < 2 {
@@ -57,6 +59,7 @@ var _ = Describe("Control Plane updates", Label("control-plane", "slow"), Ordere
 				}
 
 				clr.Record(ctx)
+				collector.Record(ctx)
 				Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
 				Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
 
@@ -275,17 +278,18 @@ spec:
 				})
 			})
 
-			AfterAll(func(ctx SpecContext) {
-				if CurrentSpecReport().Failed() {
-					common.LogDebugInfo(common.ControlPlane, k)
-					debugInfoLogged = true
-					if keepOnFailure {
-						return
-					}
+		AfterAll(func(ctx SpecContext) {
+			if CurrentSpecReport().Failed() {
+				collector.CollectAndSave(ctx)
+				common.LogDebugInfo(common.ControlPlane, k)
+				debugInfoLogged = true
+				if keepOnFailure {
+					return
 				}
+			}
 
-				clr.Cleanup(ctx)
-			})
+			clr.Cleanup(ctx)
+		})
 		})
 
 		AfterAll(func() {
