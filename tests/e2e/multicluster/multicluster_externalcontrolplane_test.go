@@ -65,7 +65,7 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 
 				When("default Istio is created in Cluster #1 to handle ingress to External Control Plane", func() {
 					BeforeAll(func(ctx SpecContext) {
-						createIstioNamespaces(k1)
+						createIstioNamespaces(k1, "network1", "default")
 
 						common.CreateIstioCNI(k1, v.Name)
 						common.CreateIstio(k1, v.Name, `
@@ -334,7 +334,7 @@ spec:
 						// Label the namespace with the istio revision name
 						Expect(k2.Label("namespace", sampleNamespace, "istio.io/rev", "external-istiod")).To(Succeed(), "Labeling failed on Cluster #2")
 
-						deploySampleApp(k2, sampleNamespace, "v1")
+						deploySampleApp(k2, sampleNamespace, "v1", "default")
 						Success("Sample app is deployed in Cluster #2")
 					})
 

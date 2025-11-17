@@ -35,6 +35,7 @@ import (
 )
 
 var _ = Describe("Multicluster deployment models", Label("multicluster", "multicluster-primaryremote"), Ordered, func() {
+	profile := "default"
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
@@ -58,8 +59,8 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 
 				When("Istio and IstioCNI resources are created in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
-						createIstioNamespaces(k1)
-						createIstioNamespaces(k2)
+						createIstioNamespaces(k1, "network1", profile)
+						createIstioNamespaces(k2, "network2", profile)
 
 						// Push the intermediate CA to both clusters
 						createIntermediateCA(k1, "east", "network1", artifacts, clPrimary)
@@ -73,7 +74,7 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 pilot:
   env:
     EXTERNAL_ISTIOD: "true"`
-						createIstioResources(k1, v.Name, "cluster1", "network1", pilot)
+						createIstioResources(k1, v.Name, "cluster1", "network1", profile, pilot)
 					})
 
 					It("updates Istio CR on Primary cluster status to Ready", func(ctx SpecContext) {
@@ -182,16 +183,7 @@ values:
 
 				When("sample apps are deployed in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
-						// Create namespace
-						Expect(k1.CreateNamespace(sampleNamespace)).To(Succeed(), "Namespace failed to be created on Cluster #1")
-						Expect(k2.CreateNamespace(sampleNamespace)).To(Succeed(), "Namespace failed to be created on Cluster #2")
-
-						// Label the namespace
-						Expect(k1.Label("namespace", sampleNamespace, "istio-injection", "enabled")).To(Succeed(), "Error labeling sample namespace")
-						Expect(k2.Label("namespace", sampleNamespace, "istio-injection", "enabled")).To(Succeed(), "Error labeling sample namespace")
-
-						// Deploy the sample app in both clusters
-						deploySampleAppToClusters(sampleNamespace, []ClusterDeployment{
+						deploySampleAppToClusters(sampleNamespace, profile, []ClusterDeployment{
 							{Kubectl: k1, AppVersion: "v1"},
 							{Kubectl: k2, AppVersion: "v2"},
 						})

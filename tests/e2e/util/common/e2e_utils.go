@@ -386,18 +386,11 @@ spec:
   version: %s
   namespace: %s`
 	yaml = fmt.Sprintf(yaml, istioName, version, ControlPlaneNamespace)
-	for _, spec := range specs {
-		yaml += Indent(spec)
-	}
-
-	Log("Istio YAML:", Indent(yaml))
-	Expect(k.CreateFromString(yaml)).
-		To(Succeed(), withClusterName("Istio CR failed to be created", k))
-	Success(withClusterName("Istio CR created", k))
+	createResource(k, "Istio", yaml, specs...)
 }
 
 // CreateIstioCNI custom resource using a given `kubectl` client and with the specified version.
-func CreateIstioCNI(k kubectl.Kubectl, version string) {
+func CreateIstioCNI(k kubectl.Kubectl, version string, specs ...string) {
 	yaml := `
 apiVersion: sailoperator.io/v1
 kind: IstioCNI
@@ -407,9 +400,53 @@ spec:
   version: %s
   namespace: %s`
 	yaml = fmt.Sprintf(yaml, istioCniName, version, IstioCniNamespace)
-	Log("IstioCNI YAML:", Indent(yaml))
-	Expect(k.CreateFromString(yaml)).To(Succeed(), withClusterName("IstioCNI creation failed", k))
-	Success(withClusterName("IstioCNI created", k))
+	createResource(k, "IstioCNI", yaml, specs...)
+}
+
+func CreateZTunnel(k kubectl.Kubectl, version string, specs ...string) {
+	yaml := `
+apiVersion: sailoperator.io/v1alpha1
+kind: ZTunnel
+metadata:
+  name: default
+spec:
+  profile: ambient
+  version: %s
+  namespace: %s`
+	yaml = fmt.Sprintf(yaml, version, ZtunnelNamespace)
+	createResource(k, "ZTunnel", yaml, specs...)
+}
+
+func CreateAmbientGateway(k kubectl.Kubectl, namespace, network string) {
+	yaml := `kind: Gateway
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: istio-eastwestgateway
+  namespace: %s
+  labels:
+    topology.istio.io/network: %s
+spec:
+  gatewayClassName: istio-east-west
+  listeners:
+  - name: mesh
+    port: 15008
+    protocol: HBONE
+    tls:
+      mode: Terminate
+      options:
+        gateway.istio.io/tls-terminate-mode: ISTIO_MUTUAL`
+	yaml = fmt.Sprintf(yaml, namespace, network)
+	createResource(k, "Gateway", yaml)
+}
+
+func createResource(k kubectl.Kubectl, kind, yaml string, specs ...string) {
+	for _, spec := range specs {
+		yaml += Indent(spec)
+	}
+
+	Log(fmt.Sprintf("%s YAML:", kind), Indent(yaml))
+	Expect(k.CreateFromString(yaml)).To(Succeed(), withClusterName(fmt.Sprintf("%s creation failed:", kind), k))
+	Success(withClusterName(fmt.Sprintf("%s created", kind), k))
 }
 
 func Indent(str string) string {
