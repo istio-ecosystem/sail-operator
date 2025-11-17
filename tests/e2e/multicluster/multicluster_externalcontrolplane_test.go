@@ -49,7 +49,7 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 
 	Describe("External Control Plane Multi-Network configuration", func() {
 		// Test the External Control Plane Multi-Network configuration for each supported Istio version
-		for _, v := range istioversion.List {
+		for _, v := range istioversion.GetLatestPatchVersions() {
 			// The configuration is only supported in Istio 1.24+.
 			if version.Constraint("<1.24").Check(v.Version) {
 				Log(fmt.Sprintf("Skipping test, because Istio version %s does not support External Control Plane Multi-Network configuration", v.Version))
