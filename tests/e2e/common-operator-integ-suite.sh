@@ -195,7 +195,7 @@ uninstall_operator() {
 cleanup() {
   # Do not let cleanup errors affect the final exit code
   set +e
-  if [ "${OLM}" != "true" ] && [ "${SKIP_DEPLOY}" != "true" ]; then
+  if [ "${OLM}" != "true" ] && [ "${SKIP_DEPLOY}" != "true" ] && [ "${SKIP_CLEANUP}" != "true" ]; then
     if [ "${MULTICLUSTER}" == true ]; then
       KUBECONFIG="${KUBECONFIG}" uninstall_operator || true
       # shellcheck disable=SC2153  # KUBECONFIG2 is set by multicluster setup scripts
