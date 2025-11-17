@@ -1618,6 +1618,23 @@ _Appears in:_
 
 
 
+#### MeshConfigExtensionProviderHttpHeader
+
+
+
+
+
+
+
+_Appears in:_
+- [MeshConfigExtensionProviderGrpcService](#meshconfigextensionprovidergrpcservice)
+- [MeshConfigExtensionProviderHttpService](#meshconfigextensionproviderhttpservice)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | REQUIRED. The HTTP header name. |  | Required: \{\}   |
+| `value` _string_ | The HTTP header value. |  |  |
+| `envName` _string_ | The HTTP header value from the environment variable.  Warning: - The environment variable must be set in the istiod pod spec. - This is not a end-to-end secure. |  |  |
 
 
 
@@ -1847,8 +1864,6 @@ _Appears in:_
 | `enable64bitTraceId` _boolean_ | Optional. A 128 bit trace id will be used in Istio. If true, will result in a 64 bit trace id being used. |  |  |
 | `path` _string_ | Optional. Specifies the endpoint of Zipkin API. The default value is "/api/v2/spans". |  |  |
 | `traceContextOption` _[MeshConfigExtensionProviderZipkinTracingProviderTraceContextOption](#meshconfigextensionproviderzipkintracingprovidertracecontextoption)_ | Optional. Determines which trace context format to use for trace header extraction and propagation. This controls both downstream request header extraction and upstream request header injection. The default value is USE_B3 to maintain backward compatibility. |  | Enum: [USE_B3 USE_B3_WITH_W3C_PROPAGATION]   |
-| `timeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | Optional. The timeout for the HTTP request to the Zipkin collector. If not specified, the default timeout from Envoy's configuration will be used (which is 5 seconds currently). |  |  |
-| `headers` _[MeshConfigExtensionProviderHttpHeader](#meshconfigextensionproviderhttpheader) array_ | Optional. Additional HTTP headers to include in the request to the Zipkin collector. These headers will be added to the HTTP request when sending spans to the collector. |  |  |
 
 
 #### MeshConfigExtensionProviderZipkinTracingProviderTraceContextOption
@@ -2403,7 +2418,6 @@ _Appears in:_
 | `trustedZtunnelNamespace` _string_ | If set, `istiod` will allow connections from trusted node proxy ztunnels in the provided namespace. |  |  |
 | `istiodRemote` _[IstiodRemoteConfig](#istiodremoteconfig)_ | Configuration for the istio-discovery chart when istiod is running in a remote cluster (e.g. "remote control plane"). |  |  |
 | `envVarFrom` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#envvar-v1-core) array_ | Configuration for the istio-discovery chart |  |  |
-| `crlConfigMapName` _string_ | Select a custom name for istiod's plugged-in CA CRL ConfigMap. |  |  |
 
 
 
