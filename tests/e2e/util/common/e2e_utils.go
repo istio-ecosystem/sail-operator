@@ -149,35 +149,47 @@ func CheckNamespaceEmpty(ctx SpecContext, cl client.Client, ns string) {
 }
 
 func LogDebugInfo(suite testSuite, kubectls ...kubectl.Kubectl) {
-	// General debugging information to help diagnose the failure
-	// TODO: Add the creation of file with this information to be attached to the test report
+	// Log a summary of debug information.
+	// Detailed debug artifacts are saved to the $ARTIFACTS directory by the DebugCollector.
 
+	artifactsDir := env.Get("ARTIFACTS", "")
+	
 	GinkgoWriter.Println()
-	GinkgoWriter.Println("The test run has failures and the debug information is as follows:")
+	GinkgoWriter.Println("=========================================================")
+	GinkgoWriter.Println("TEST FAILURE DETECTED")
+	GinkgoWriter.Println("=========================================================")
+	if artifactsDir != "" {
+		GinkgoWriter.Printf("Detailed debug artifacts have been saved to: %s\n", artifactsDir)
+		GinkgoWriter.Println("Check the debug-* directories for comprehensive cluster state information.")
+	}
 	GinkgoWriter.Println()
+	GinkgoWriter.Println("Quick Summary:")
+	GinkgoWriter.Println("=========================================================")
+	
 	for _, k := range kubectls {
 		if k.ClusterName != "" {
-			GinkgoWriter.Println("=========================================================")
 			GinkgoWriter.Println("CLUSTER:", k.ClusterName)
-			GinkgoWriter.Println("=========================================================")
 		}
-		logOperatorDebugInfo(k)
-		GinkgoWriter.Println("=========================================================")
-		logIstioDebugInfo(k)
-		GinkgoWriter.Println("=========================================================")
-		logCNIDebugInfo(k)
-		GinkgoWriter.Println("=========================================================")
-		logCertsDebugInfo(k)
-		GinkgoWriter.Println("=========================================================")
-		GinkgoWriter.Println()
+		
+		// Log quick status checks
+		logQuickStatus(k)
+		GinkgoWriter.Println("---")
+	}
+	GinkgoWriter.Println("=========================================================")
+	if artifactsDir != "" {
+		GinkgoWriter.Printf("\nFor full details, review artifacts in: %s\n", artifactsDir)
+	}
+	GinkgoWriter.Println()
+}
 
-		if suite == Ambient {
-			logZtunnelDebugInfo(k)
-			describe, err := k.WithNamespace(SleepNamespace).Describe("deployment", "sleep")
-			logDebugElement("=====sleep deployment describe=====", describe, err)
-			describe, err = k.WithNamespace(HttpbinNamespace).Describe("deployment", "httpbin")
-			logDebugElement("=====httpbin deployment describe=====", describe, err)
-		}
+func logQuickStatus(k kubectl.Kubectl) {
+	// Quick status checks - just high-level information
+	if pods, err := k.WithNamespace(OperatorNamespace).GetPods("", ""); err == nil {
+		GinkgoWriter.Printf("Operator namespace pods:\n%s\n", pods)
+	}
+	
+	if output, err := k.GetYAML("istio", istioName); err == nil && output != "" {
+		GinkgoWriter.Println("Istio CR exists")
 	}
 }
 
