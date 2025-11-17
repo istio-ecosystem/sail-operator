@@ -98,7 +98,7 @@ func (d *DebugCollector) CollectAndSave(ctx context.Context) string {
 
 	debugDir := filepath.Join(d.artifactsDir, fmt.Sprintf("debug%s-%s", contextStr, timestamp))
 
-	if err := os.MkdirAll(debugDir, 0755); err != nil {
+	if err := os.MkdirAll(debugDir, 0o755); err != nil {
 		GinkgoWriter.Printf("Error creating debug directory %s: %v\n", debugDir, err)
 		return debugDir
 	}
@@ -124,7 +124,7 @@ func (d *DebugCollector) CollectAndSave(ctx context.Context) string {
 // collectClusterScopedResources collects cluster-wide resources for debugging.
 func (d *DebugCollector) collectClusterScopedResources(ctx context.Context, debugDir string) {
 	clusterDir := filepath.Join(debugDir, "cluster-scoped")
-	if err := os.MkdirAll(clusterDir, 0755); err != nil {
+	if err := os.MkdirAll(clusterDir, 0o755); err != nil {
 		GinkgoWriter.Printf("Error creating cluster-scoped directory: %v\n", err)
 		return
 	}
@@ -145,9 +145,9 @@ func (d *DebugCollector) collectClusterScopedResources(ctx context.Context, debu
 }
 
 // collectCustomResources collects custom resources of a specific GVK.
-func (d *DebugCollector) collectCustomResources(ctx context.Context, dir, group, version, kind string) {
+func (d *DebugCollector) collectCustomResources(ctx context.Context, dir, _ /* group */, version, kind string) {
 	gvk := schema.GroupVersionKind{
-		Group:   group,
+		Group:   "sailoperator.io",
 		Version: version,
 		Kind:    kind + "List",
 	}
@@ -177,7 +177,7 @@ func (d *DebugCollector) collectNamespaceResources(ctx context.Context, debugDir
 	}
 
 	namespacesDir := filepath.Join(debugDir, "namespaces")
-	if err := os.MkdirAll(namespacesDir, 0755); err != nil {
+	if err := os.MkdirAll(namespacesDir, 0o755); err != nil {
 		GinkgoWriter.Printf("Error creating namespaces directory: %v\n", err)
 		return
 	}
@@ -219,7 +219,7 @@ func (d *DebugCollector) isSystemNamespace(ns string) bool {
 // collectNamespaceDebugInfo collects all debug information for a specific namespace.
 func (d *DebugCollector) collectNamespaceDebugInfo(ctx context.Context, namespacesDir, ns string) {
 	nsDir := filepath.Join(namespacesDir, ns)
-	if err := os.MkdirAll(nsDir, 0755); err != nil {
+	if err := os.MkdirAll(nsDir, 0o755); err != nil {
 		GinkgoWriter.Printf("Error creating namespace directory %s: %v\n", ns, err)
 		return
 	}
@@ -228,13 +228,13 @@ func (d *DebugCollector) collectNamespaceDebugInfo(ctx context.Context, namespac
 	resourcesDir := filepath.Join(nsDir, "resources")
 	logsDir := filepath.Join(nsDir, "logs")
 
-	if err := os.MkdirAll(resourcesDir, 0755); err != nil {
+	if err := os.MkdirAll(resourcesDir, 0o755); err != nil {
 		GinkgoWriter.Printf("Error creating resources directory for %s: %v\n", ns, err)
 		return
 	}
 
 	if d.collectionDepth != "minimal" {
-		if err := os.MkdirAll(logsDir, 0755); err != nil {
+		if err := os.MkdirAll(logsDir, 0o755); err != nil {
 			GinkgoWriter.Printf("Error creating logs directory for %s: %v\n", ns, err)
 			return
 		}
@@ -373,7 +373,7 @@ func (d *DebugCollector) collectIstioctlInfo(debugDir string) {
 	}
 
 	istioctlDir := filepath.Join(debugDir, "istioctl")
-	if err := os.MkdirAll(istioctlDir, 0755); err != nil {
+	if err := os.MkdirAll(istioctlDir, 0o755); err != nil {
 		GinkgoWriter.Printf("Error creating istioctl directory: %v\n", err)
 		return
 	}
@@ -388,8 +388,7 @@ func (d *DebugCollector) collectIstioctlInfo(debugDir string) {
 
 // writeToFile writes content to a file, creating parent directories if needed.
 func (d *DebugCollector) writeToFile(filepath, content string) {
-	if err := os.WriteFile(filepath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filepath, []byte(content), 0o644); err != nil {
 		GinkgoWriter.Printf("Error writing to file %s: %v\n", filepath, err)
 	}
 }
-

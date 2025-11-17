@@ -241,16 +241,16 @@ metadata:
 					})
 				})
 
-			AfterAll(func(ctx SpecContext) {
-				if CurrentSpecReport().Failed() {
-					collector.CollectAndSave(ctx)
-					if keepOnFailure {
-						return
+				AfterAll(func(ctx SpecContext) {
+					if CurrentSpecReport().Failed() {
+						collector.CollectAndSave(ctx)
+						if keepOnFailure {
+							return
+						}
 					}
-				}
 
-				clr.Cleanup(ctx)
-			})
+					clr.Cleanup(ctx)
+				})
 			})
 		}
 

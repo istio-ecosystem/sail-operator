@@ -183,16 +183,16 @@ spec:
 			))
 		})
 
-	AfterAll(func(ctx SpecContext) {
-		if CurrentSpecReport().Failed() {
-			collector.CollectAndSave(ctx)
-			common.LogDebugInfo(common.Operator, k)
-			if keepOnFailure {
-				return
+		AfterAll(func(ctx SpecContext) {
+			if CurrentSpecReport().Failed() {
+				collector.CollectAndSave(ctx)
+				common.LogDebugInfo(common.Operator, k)
+				if keepOnFailure {
+					return
+				}
 			}
-		}
-		clr.Cleanup(ctx)
-	})
+			clr.Cleanup(ctx)
+		})
 	})
 
 	AfterAll(func(ctx SpecContext) {

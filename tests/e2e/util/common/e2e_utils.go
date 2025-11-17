@@ -27,7 +27,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -35,8 +34,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 type testSuite string
@@ -59,12 +56,10 @@ var (
 	OperatorImage     = env.Get("IMAGE", "quay.io/sail-dev/sail-operator:latest")
 	OperatorNamespace = env.Get("NAMESPACE", "sail-operator")
 
-	deploymentName        = env.Get("DEPLOYMENT_NAME", "sail-operator")
 	controlPlaneNamespace = env.Get("CONTROL_PLANE_NS", "istio-system")
 	istioName             = env.Get("ISTIO_NAME", "default")
 	istioCniName          = env.Get("ISTIOCNI_NAME", "default")
 	istioCniNamespace     = env.Get("ISTIOCNI_NAMESPACE", "istio-cni")
-	ztunnelNamespace      = env.Get("ZTUNNEL_NAMESPACE", "ztunnel")
 
 	// version can have one of the following formats:
 	// - 1.22.2
@@ -190,95 +185,6 @@ func logQuickStatus(k kubectl.Kubectl) {
 
 	if output, err := k.GetYAML("istio", istioName); err == nil && output != "" {
 		GinkgoWriter.Println("Istio CR exists")
-	}
-}
-
-func logOperatorDebugInfo(k kubectl.Kubectl) {
-	k = k.WithNamespace(OperatorNamespace)
-	operator, err := k.GetYAML("deployment", deploymentName)
-	logDebugElement("=====Operator Deployment YAML=====", operator, err)
-
-	logs, err := k.Logs("deploy/"+deploymentName, ptr.Of(120*time.Second))
-	logDebugElement("=====Operator logs=====", logs, err)
-
-	events, err := k.GetEvents()
-	logDebugElement("=====Events in "+OperatorNamespace+"=====", events, err)
-
-	// Temporary information to gather more details about failure
-	pods, err := k.GetPods("", "-o wide")
-	logDebugElement("=====Pods in "+OperatorNamespace+"=====", pods, err)
-
-	describe, err := k.Describe("deployment", deploymentName)
-	logDebugElement("=====Operator Deployment describe=====", describe, err)
-}
-
-func logIstioDebugInfo(k kubectl.Kubectl) {
-	resource, err := k.GetYAML("istio", istioName)
-	logDebugElement("=====Istio YAML=====", resource, err)
-
-	output, err := k.WithNamespace(controlPlaneNamespace).GetPods("", "-o wide")
-	logDebugElement("=====Pods in "+controlPlaneNamespace+"=====", output, err)
-
-	logs, err := k.WithNamespace(controlPlaneNamespace).Logs("deploy/istiod", ptr.Of(120*time.Second))
-	logDebugElement("=====Istiod logs=====", logs, err)
-
-	events, err := k.WithNamespace(controlPlaneNamespace).GetEvents()
-	logDebugElement("=====Events in "+controlPlaneNamespace+"=====", events, err)
-
-	// Running istioctl proxy-status to get the status of the proxies.
-	proxyStatus, err := istioctl.GetProxyStatus()
-	logDebugElement("=====Istioctl Proxy Status=====", proxyStatus, err)
-}
-
-func logCNIDebugInfo(k kubectl.Kubectl) {
-	resource, err := k.GetYAML("istiocni", istioCniName)
-	logDebugElement("=====IstioCNI YAML=====", resource, err)
-
-	ds, err := k.WithNamespace(istioCniNamespace).GetYAML("daemonset", "istio-cni-node")
-	logDebugElement("=====Istio CNI DaemonSet YAML=====", ds, err)
-
-	events, err := k.WithNamespace(istioCniNamespace).GetEvents()
-	logDebugElement("=====Events in "+istioCniNamespace+"=====", events, err)
-
-	// Temporary information to gather more details about failure
-	pods, err := k.WithNamespace(istioCniNamespace).GetPods("", "-o wide")
-	logDebugElement("=====Pods in "+istioCniNamespace+"=====", pods, err)
-
-	describe, err := k.WithNamespace(istioCniNamespace).Describe("daemonset", "istio-cni-node")
-	logDebugElement("=====Istio CNI DaemonSet describe=====", describe, err)
-
-	logs, err := k.WithNamespace(istioCniNamespace).Logs("daemonset/istio-cni-node", ptr.Of(120*time.Second))
-	logDebugElement("=====Istio CNI logs=====", logs, err)
-}
-
-func logZtunnelDebugInfo(k kubectl.Kubectl) {
-	resource, err := k.GetYAML("ztunnel", "default")
-	logDebugElement("=====ZTunnel YAML=====", resource, err)
-
-	ds, err := k.WithNamespace(ztunnelNamespace).GetYAML("daemonset", "ztunnel")
-	logDebugElement("=====ZTunnel DaemonSet YAML=====", ds, err)
-
-	events, err := k.WithNamespace(ztunnelNamespace).GetEvents()
-	logDebugElement("=====Events in "+ztunnelNamespace+"=====", events, err)
-
-	describe, err := k.WithNamespace(ztunnelNamespace).Describe("daemonset", "ztunnel")
-	logDebugElement("=====ZTunnel DaemonSet describe=====", describe, err)
-
-	logs, err := k.WithNamespace(ztunnelNamespace).Logs("daemonset/ztunnel", ptr.Of(120*time.Second))
-	logDebugElement("=====ztunnel logs=====", logs, err)
-}
-
-func logCertsDebugInfo(k kubectl.Kubectl) {
-	certs, err := k.WithNamespace(controlPlaneNamespace).GetSecret("cacerts")
-	logDebugElement("=====CA certs in "+controlPlaneNamespace+"=====", certs, err)
-}
-
-func logDebugElement(caption string, info string, err error) {
-	GinkgoWriter.Println("\n" + caption + ":")
-	if err != nil {
-		GinkgoWriter.Println(Indent(err.Error()))
-	} else {
-		GinkgoWriter.Println(Indent(strings.TrimSpace(info)))
 	}
 }
 
