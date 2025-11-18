@@ -174,7 +174,7 @@ spec:
         PILOT_ENABLE_AMBIENT: true
 
 # 3. ZTunnel
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: ZTunnel
 metadata:
   name: default

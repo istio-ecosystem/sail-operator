@@ -163,7 +163,7 @@ profile: ambient`)
 				When("the ZTunnel CR is created", func() {
 					BeforeAll(func() {
 						ztunnelYaml := `
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: ZTunnel
 metadata:
   name: default
