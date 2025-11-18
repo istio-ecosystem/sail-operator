@@ -5313,35 +5313,6 @@ spec:
                                     Optional. A 128 bit trace id will be used in Istio.
                                     If true, will result in a 64 bit trace id being used.
                                   type: boolean
-                                headers:
-                                  description: |-
-                                    Optional. Additional HTTP headers to include in the request to the Zipkin collector.
-                                    These headers will be added to the HTTP request when sending spans to the collector.
-                                  items:
-                                    properties:
-                                      envName:
-                                        description: |-
-                                          The HTTP header value from the environment variable.
-
-                                          Warning:
-                                          - The environment variable must be set in the istiod pod spec.
-                                          - This is not a end-to-end secure.
-                                        type: string
-                                      name:
-                                        description: REQUIRED. The HTTP header name.
-                                        type: string
-                                      value:
-                                        description: The HTTP header value.
-                                        type: string
-                                    required:
-                                    - name
-                                    type: object
-                                    x-kubernetes-validations:
-                                    - message: At most one of [value envName] should
-                                        be set
-                                      rule: (has(self.value)?1:0) + (has(self.envName)?1:0)
-                                        <= 1
-                                  type: array
                                 maxTagLength:
                                   description: |-
                                     Optional. Controls the overall path length allowed in a reported span.
@@ -5366,11 +5337,6 @@ spec:
                                     service defined by the Kubernetes service or ServiceEntry.
 
                                     Example: "zipkin.default.svc.cluster.local" or "bar/zipkin.example.com".
-                                  type: string
-                                timeout:
-                                  description: |-
-                                    Optional. The timeout for the HTTP request to the Zipkin collector.
-                                    If not specified, the default timeout from Envoy's configuration will be used (which is 5 seconds currently).
                                   type: string
                                 traceContextOption:
                                   description: |-
@@ -7201,10 +7167,6 @@ spec:
                             format: int32
                             type: integer
                         type: object
-                      crlConfigMapName:
-                        description: Select a custom name for istiod's plugged-in
-                          CA CRL ConfigMap.
-                        type: string
                       deploymentLabels:
                         additionalProperties:
                           type: string
@@ -10041,8 +10003,9 @@ spec:
               version:
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, v1.29-alpha.c24fe2ae.
+                  Must be one of: v1.28.0, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0.
                 enum:
+                - v1.28.0
                 - v1.27.3
                 - v1.27.2
                 - v1.27.1
@@ -10076,7 +10039,6 @@ spec:
                 - v1.22.6
                 - v1.22.5
                 - v1.21.6
-                - v1.29-alpha.c24fe2ae
                 type: string
             required:
             - namespace
