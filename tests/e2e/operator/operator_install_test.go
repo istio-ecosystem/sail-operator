@@ -75,8 +75,7 @@ var _ = Describe("Operator", Label("smoke", "operator"), Ordered, func() {
 
 		It("updates the CRDs status to Established", func(ctx SpecContext) {
 			for _, crdName := range sailCRDs {
-				Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(crdName), &apiextensionsv1.CustomResourceDefinition{}).
-					Should(HaveConditionStatus(apiextensionsv1.Established, metav1.ConditionTrue), "Error getting Istio CRD")
+				common.AwaitCondition(ctx, apiextensionsv1.Established, kube.Key(crdName), &apiextensionsv1.CustomResourceDefinition{}, k, cl)
 			}
 			Success("CRDs are Established")
 		})
