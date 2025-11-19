@@ -111,14 +111,7 @@ values:
 					})
 
 					It("deploys istio-cni-node", func(ctx SpecContext) {
-						Eventually(func() bool {
-							daemonset := &appsv1.DaemonSet{}
-							if err := clPrimary.Get(ctx, kube.Key("istio-cni-node", istioCniNamespace), daemonset); err != nil {
-								return false
-							}
-							return daemonset.Status.NumberAvailable == daemonset.Status.CurrentNumberScheduled
-						}).Should(BeTrue(), "IstioCNI DaemonSet Pods are not Available on Primary Cluster")
-						Success("IstioCNI DaemonSet is deployed in the namespace and Running on Primary Cluster")
+						common.AwaitCniDaemonSet(ctx, k1, clPrimary)
 					})
 				})
 

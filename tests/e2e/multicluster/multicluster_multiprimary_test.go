@@ -106,23 +106,8 @@ values:
 					})
 
 					It("deploys istio-cni-node", func(ctx SpecContext) {
-						Eventually(func() bool {
-							daemonset := &appsv1.DaemonSet{}
-							if err := clPrimary.Get(ctx, kube.Key("istio-cni-node", istioCniNamespace), daemonset); err != nil {
-								return false
-							}
-							return daemonset.Status.NumberAvailable == daemonset.Status.CurrentNumberScheduled
-						}).Should(BeTrue(), "CNI DaemonSet Pods are not Available on Cluster #1")
-						Success("CNI DaemonSet is deployed in the namespace and Running on Cluster #1")
-
-						Eventually(func() bool {
-							daemonset := &appsv1.DaemonSet{}
-							if err := clRemote.Get(ctx, kube.Key("istio-cni-node", istioCniNamespace), daemonset); err != nil {
-								return false
-							}
-							return daemonset.Status.NumberAvailable == daemonset.Status.CurrentNumberScheduled
-						}).Should(BeTrue(), "IstioCNI DaemonSet Pods are not Available on Cluster #2")
-						Success("IstioCNI DaemonSet is deployed in the namespace and Running on Cluster #2")
+						common.AwaitCniDaemonSet(ctx, k1, clPrimary)
+						common.AwaitCniDaemonSet(ctx, k2, clRemote)
 					})
 				})
 

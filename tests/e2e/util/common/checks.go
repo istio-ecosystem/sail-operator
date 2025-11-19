@@ -83,3 +83,16 @@ func CheckPodsReady(ctx context.Context, cl client.Client, namespace string) err
 func CheckSamplePodsReady(ctx context.Context, cl client.Client) error {
 	return CheckPodsReady(ctx, cl, sampleNamespace)
 }
+
+// AwaitCniDaemonSet to be deployed and reach the scheduled number of pods.
+func AwaitCniDaemonSet(ctx context.Context, k kubectl.Kubectl, cl client.Client) {
+	key := kube.Key("istio-cni-node", istioCniNamespace)
+	Eventually(func() bool {
+		daemonset := &appsv1.DaemonSet{}
+		if err := cl.Get(ctx, key, daemonset); err != nil {
+			return false
+		}
+		return daemonset.Status.NumberAvailable == daemonset.Status.CurrentNumberScheduled
+	}).Should(BeTrue(), fmt.Sprintf("DaemonSet '%s' is not Available in the '%s' namespace on %s cluster", key.Name, key.Namespace, k.ClusterName))
+	Success(fmt.Sprintf("DaemonSet '%s' is deployed and running in the '%s' namespace on %s cluster", key.Name, key.Namespace, k.ClusterName))
+}
