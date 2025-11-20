@@ -8,7 +8,12 @@
 {{- if $gv.Kinds  }}
 ### Resource Types
 {{- range $gv.SortedKinds }}
-- {{ $gv.TypeForKind . | markdownRenderTypeLink }}
+{{- $type := $gv.TypeForKind . }}
+{{- if $type.GVK }}
+- [{{ $type.Name }}](#{{ $type.Name | lower }}-{{ $type.GVK.Version }})
+{{- else }}
+- [{{ $type.Name }}](#{{ $type.Name | lower }})
+{{- end }}
 {{- end }}
 {{ end }}
 
