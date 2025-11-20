@@ -11,26 +11,19 @@ link:../README.adoc[Return to Project Root]
 [[updating-istio-in-ambient-mode]]
 == Updating Istio in Ambient Mode
 
-This guide provides procedures for updating Istio when deployed in ambient mode using the Sail Operator. The upgrade process includes updating the Istio control plane, IstioCNI, and ZTunnel components.
+This guide covers updating Istio in ambient mode using the Sail Operator. Updates include the Istio control plane, IstioCNI, and ZTunnel components.
 
-For general information about update strategies (InPlace and RevisionBased) and versioning, see link:../update-strategy/update-strategy.adoc#update-strategy[Update Strategy].
+For update strategies (InPlace and RevisionBased), see link:../update-strategy/update-strategy.adoc#update-strategy[Update Strategy].
 
-For information about installing Istio in ambient mode, see link:./istio-ambient-mode.adoc#introduction-to-istio-ambient-mode[Istio Ambient Mode].
+For installation, see link:./istio-ambient-mode.adoc#introduction-to-istio-ambient-mode[Istio Ambient Mode].
 
-*Note:* Istio's ambient mode is available starting from Istio version 1.24.0.
+*Note:* Ambient mode requires Istio 1.24.0 or later.
 
 *Key differences in ambient mode:*
 
 * Updates involve three components: Control Plane, IstioCNI, and ZTunnel
 * Components must be updated in sequence: Control Plane → IstioCNI → ZTunnel
 * No pod restart needed for workloads (workloads automatically connect to new control plane)
-
-'''
-
-[[understanding-versioning]]
-== Understanding Versioning
-
-For information about semantic versioning and version numbering (X.Y.Z format), see link:../update-strategy/update-strategy.adoc#understanding-versioning[Understanding Versioning].
 
 '''
 
@@ -41,12 +34,12 @@ The Sail Operator supports two update strategies: InPlace and RevisionBased. For
 
 **Ambient mode considerations:**
 
-IMPORTANT: **InPlace is the recommended update strategy for ambient mode.** RevisionBased updates have significant limitations when used with ambient mode and require manual intervention. See the <<updating-with-revisionbased-strategy,RevisionBased Strategy section>> for details.
+IMPORTANT: **Use InPlace for ambient mode.** RevisionBased has limitations and requires manual intervention. See <<updating-with-revisionbased-strategy,RevisionBased Strategy>> for details.
 
-In ambient mode, both strategies require additional steps to update IstioCNI and ZTunnel components after the control plane upgrade:
+Both strategies require updating IstioCNI and ZTunnel after the control plane upgrade:
 
-* **InPlace** (Recommended) - Updates all components directly, with workloads immediately connecting to the new control plane. This is the straightforward and recommended approach for ambient mode.
-* **RevisionBased** (Limited Support) - While theoretically possible, this strategy has significant limitations in ambient mode: only one ztunnel instance can run cluster-wide, and manual CRD synchronization is required between Istio and ZTunnel revisions.
+* **InPlace** (Recommended) - Updates all components directly. Workloads connect to the new control plane immediately.
+* **RevisionBased** (Limited Support) - Has limitations: only one ztunnel runs cluster-wide, and manual CRD synchronization is required.
 
 '''
 
@@ -57,32 +50,32 @@ For general information about the InPlace strategy, see link:../update-strategy/
 
 *Ambient-specific considerations:*
 
-In ambient mode, the InPlace update strategy updates all components directly, with workloads immediately connecting to the new control plane version. The IstioCNI and ZTunnel components are also updated using rolling updates. To maintain compatibility between the ambient data plane components and the control plane, you can upgrade only one minor version at a time.
+With InPlace updates in ambient mode, all components update directly and workloads immediately connect to the new control plane. IstioCNI and ZTunnel use rolling updates. Upgrade only one minor version at a time to maintain compatibility.
 
-While the InPlace strategy offers simplicity and efficiency, there's a slight possibility of application traffic interruption during control plane updates. Running multiple replicas of the Istio control plane (istiod) can help minimize this risk, but does not eliminate it entirely. For more details about ambient mode upgrade behavior, see the https://istio.io/latest/docs/ambient/upgrade/helm/#understanding-ambient-mode-upgrades[Istio ambient mode upgrade documentation].
+There may be brief traffic interruption during control plane updates. Running multiple istiod replicas helps minimize this risk but doesn't eliminate it. For details, see the https://istio.io/latest/docs/ambient/upgrade/helm/#understanding-ambient-mode-upgrades[Istio ambient mode upgrade documentation].
 
 [[selecting-inplace-strategy]]
 === Selecting InPlace Strategy
 
-To select the InPlace strategy, set the `spec.updateStrategy.type` value in the Istio resource to `InPlace`. For configuration details and examples, see link:../update-strategy/update-strategy.adoc#inplace[InPlace].
+Set `spec.updateStrategy.type` to `InPlace` in the Istio resource. See link:../update-strategy/update-strategy.adoc#inplace[InPlace] for details.
 
-**Important for ambient mode:** When using the InPlace strategy with ambient mode, ensure that all three components (Istio, IstioCNI, and ZTunnel) are updated to compatible versions in the following order:
+**Important:** Update all three components in this order:
 
 1. Istio control plane
 2. IstioCNI
 3. ZTunnel
 
-*Tip:* Running the Istio resource in High Availability mode can help reduce traffic disruptions during updates, though some brief disruption may still occur. For more information, see link:../general/istiod-ha.adoc#running-istiod-in-ha-mode[Istiod HA guide].
+*Tip:* Running istiod in HA mode reduces traffic disruptions during updates. See link:../general/istiod-ha.adoc#running-istiod-in-ha-mode[Istiod HA guide].
 
 [[updating-istio-control-plane-with-inplace-strategy]]
 === Updating Istio control plane with InPlace strategy
 
-When updating Istio using the InPlace strategy in ambient mode, you can increment the version by only one minor release at a time. To update by more than one minor version, you must increment the version after each update. The update process is complete after all ambient components (Istio control plane, IstioCNI, and ZTunnel) have been updated.
+With InPlace updates, increment the version by one minor release at a time. For larger version jumps, update incrementally. The update completes after all components (Istio control plane, IstioCNI, and ZTunnel) are updated.
 
 [[update-the-istio-control-plane]]
 ==== Update the Istio Control Plane
 
-You can update the Istio control plane version by changing the version in the Istio resource. When using the InPlace update strategy, the Sail Operator replaces the existing istiod deployment with a new version. The old istiod pod is terminated and a new pod with the updated version is created.
+Update the control plane by changing the version in the Istio resource. The Sail Operator replaces the existing istiod deployment with the new version.
 
 *Prerequisites:*
 
@@ -182,10 +175,10 @@ For detailed information about updating IstioCNI, see link:../../README.md#updat
 [[recommendations-for-inplace-strategy-in-ambient-mode]]
 === Recommendations for InPlace strategy in Ambient Mode
 
-* **High Availability:** Configure the istiod deployment with multiple replicas to help reduce disruptions during updates. Note that even with HA mode, some brief traffic disruption may still occur during control plane upgrades. See the link:../general/istiod-ha.adoc#running-istiod-in-ha-mode[Istiod HA guide] for more information.
-* **ZTunnel Updates:** The ZTunnel DaemonSet uses a RollingUpdate strategy by default, which updates pods one node at a time. Monitor the rollout to ensure it completes successfully.
-* **Maintenance Window:** While ambient mode is designed to minimize disruption, it's recommended to perform upgrades during a maintenance window.
-* **Testing:** Always test the upgrade process in a non-production environment first.
+* **High Availability:** Run multiple istiod replicas to reduce disruptions. Brief traffic disruption may still occur. See link:../general/istiod-ha.adoc#running-istiod-in-ha-mode[Istiod HA guide].
+* **ZTunnel Updates:** ZTunnel DaemonSet uses RollingUpdate by default, updating one node at a time. Monitor the rollout.
+* **Maintenance Window:** Perform upgrades during a maintenance window.
+* **Testing:** Test upgrades in non-production first.
 
 '''
 
@@ -194,36 +187,36 @@ For detailed information about updating IstioCNI, see link:../../README.md#updat
 
 For general information about the RevisionBased strategy, see link:../update-strategy/update-strategy.adoc#revisionbased[RevisionBased].
 
-WARNING: **RevisionBased updates are not fully supported in ambient mode and require significant manual intervention.** This strategy has the following limitations when used with ambient mode:
+WARNING: **RevisionBased updates have limited support in ambient mode and require manual intervention.** Limitations:
 
-* **Single ZTunnel Instance:** Only one ztunnel instance can run in the cluster at any time, which limits the canary upgrade capabilities typically available with RevisionBased updates.
-* **Manual Configuration Synchronization:** You must manually synchronize the revision name between the Istio control plane resource and the ZTunnel resource to ensure they point to the same Istio revision.
-* **Complex Migration:** The ztunnel must be manually reconfigured to point to the appropriate control plane revision during migration.
+* **Single ZTunnel Instance:** Only one ztunnel can run cluster-wide, limiting canary upgrade capabilities.
+* **Manual Configuration:** You must manually synchronize revision names between Istio and ZTunnel resources.
+* **Complex Migration:** The ztunnel must be manually reconfigured during migration.
 
-**Recommendation:** Use the InPlace update strategy for ambient mode deployments. It provides a simpler, more reliable upgrade path. The procedures below are provided for advanced use cases where RevisionBased updates are required, but users should be prepared for additional manual configuration steps.
+**Recommendation:** Use InPlace updates for ambient mode. It's simpler and more reliable. The procedures below are for advanced use cases only.
 
 *Ambient-specific considerations:*
 
-When using ambient mode with the RevisionBased strategy, the IstioCNI component can work with multiple control plane versions during the workload migration period. However, since only one ztunnel instance can run cluster-wide, the migration process requires careful coordination. The ztunnel must be manually configured to connect to the correct control plane revision, and CRD synchronization between revisions must be maintained manually to ensure compatibility.
+IstioCNI works with multiple control plane versions during migration. However, only one ztunnel runs cluster-wide, requiring careful coordination. You must manually configure ztunnel to connect to the correct revision and maintain CRD synchronization.
 
 [[selecting-revisionbased-strategy]]
 === Selecting RevisionBased Strategy
 
-To deploy Istio with the RevisionBased strategy, set the `spec.updateStrategy.type` value in the Istio resource to `RevisionBased` and configure the `inactiveRevisionDeletionGracePeriodSeconds`. For configuration details and examples, see link:../update-strategy/update-strategy.adoc#revisionbased[RevisionBased].
+Set `spec.updateStrategy.type` to `RevisionBased` and configure `inactiveRevisionDeletionGracePeriodSeconds` in the Istio resource. See link:../update-strategy/update-strategy.adoc#revisionbased[RevisionBased] for details.
 
-When using the RevisionBased strategy, the Operator creates a new IstioRevision resource with the name `<istio_resource_name>-<version>`. For example, if the Istio resource is named `default` and the version is `v1.26.3`, the IstioRevision resource name would be `default-v1-26-3`.
+The Operator creates IstioRevision resources named `<istio_resource_name>-<version>`. Example: `default-v1-26-3` for Istio resource `default` at version `v1.26.3`.
 
 [[updating-istio-control-plane-with-revisionbased-strategy]]
 === Updating Istio Control Plane with RevisionBased Strategy
 
-When updating Istio using the RevisionBased strategy in ambient mode, you can upgrade by more than one minor version at a time. The Sail Operator creates a new IstioRevision resource for each change to the .spec.version field and deploys a corresponding control plane instance.
+With RevisionBased updates, you can upgrade by multiple minor versions at once. The Sail Operator creates a new IstioRevision resource and control plane instance for each version change.
 
 [[update-the-istio-control-plane-revisionbased]]
 ==== Update the Istio Control Plane
 
-You can update the Istio control plane version by changing the version in the Istio resource. When using the RevisionBased update strategy, the Sail Operator creates a new istiod deployment alongside the existing one, allowing for a canary upgrade of the control plane. Both control planes run simultaneously until all workloads are migrated to the new version. The new control plane is created with a revision name in the format `<istio-name>-<version>`.
+Change the version in the Istio resource to update. The Sail Operator creates a new istiod deployment alongside the existing one for canary upgrades. Both control planes run until workload migration completes. The new control plane uses revision name format `<istio-name>-<version>`.
 
-NOTE: While multiple control plane revisions can run simultaneously, remember that only one ztunnel instance can exist cluster-wide in ambient mode. This limits the full canary upgrade benefits typically available with RevisionBased updates in sidecar mode.
+NOTE: Multiple control plane revisions can run simultaneously, but only one ztunnel instance exists cluster-wide in ambient mode. This limits canary upgrade benefits compared to sidecar mode.
 
 *Prerequisites:*
 

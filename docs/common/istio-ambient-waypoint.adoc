@@ -146,13 +146,13 @@ This section provides detailed procedures for updating waypoint proxies in ambie
 [[updating-waypoint-proxies]]
 === Updating Waypoint Proxies
 
-Waypoint proxies automatically update to use the new control plane revision. However, specific steps are recommended to ensure a smooth transition and verify functionality.
+Waypoint proxies automatically update when the control plane is updated. The istiod control plane reconciles the waypoint deployment and updates it to the new version.
 
 **InPlace Strategy:**
 
-When the Istio control plane is updated using the InPlace strategy, waypoint proxies automatically transition to use the new control plane version.
+When using InPlace updates, waypoint proxies automatically transition to the new control plane version.
 
-1. Verify waypoint proxy pods are running with the updated control plane:
+1. Verify waypoint proxy pods are running:
 +
 [source,bash,subs="attributes+",name="ambient-waypoint-update-inplace"]
 ----
@@ -169,13 +169,11 @@ $ istioctl proxy-status | grep waypoint
 waypoint-5d9c8b7f9-abc12.bookinfo     SYNCED     SYNCED     SYNCED     SYNCED     istiod-6cf8d4f9cb-wm7x6.istio-system     1.26.4
 ----
 +
-This command queries the Istio control plane to verify that the waypoint proxy is connected and its configuration is synchronized. The output displays the waypoint proxy name with namespace, followed by the synchronization status for each configuration type (CDS, LDS, EDS, RDS), the connected istiod pod, and the Istio version. All columns showing `SYNCED` indicate the waypoint is successfully receiving configuration from the control plane.
+The `SYNCED` status indicates the waypoint is receiving configuration from the control plane. The version column shows the updated Istio version.
 
 **RevisionBased Strategy:**
 
-In a RevisionBased update, waypoint proxies are compatible with multiple control plane versions and continue to function during the migration period. They will automatically connect to the active control plane revision.
-
-NOTE: While waypoint proxies can work with multiple control plane versions during migration, it is recommended to keep them within one minor version of the control plane (same version or n-1). This follows Istio's general support policy where data plane components should not be ahead of the control plane version. Similar guidance applies to Istio CNI components. For more information, see the https://istio.io/latest/docs/releases/supported-releases/[Istio Supported Releases] documentation.
+When using RevisionBased updates, waypoint proxies automatically connect to the active control plane revision. The istiod control plane reconciles the waypoint deployment and updates it to the new version.
 
 1. After the new Istio control plane revision is ready, verify waypoint proxy pods are running:
 +
@@ -194,44 +192,18 @@ $ istioctl proxy-status | grep waypoint
 waypoint-5d9c8b7f9-abc12.bookinfo     SYNCED     SYNCED     SYNCED     SYNCED     istiod-1-26-4-7b9f8c5d6-xyz78.istio-system     1.26.4
 ----
 +
-This command queries the Istio control plane to verify that the waypoint proxy is connected to the new revision. The output shows the waypoint proxy is now connected to the revision-specific istiod pod (with revision `1-26-4` in its name) and is running the updated version (1.26.4). The revision-specific naming in the ISTIOD column confirms the waypoint has successfully migrated to the new control plane revision.
-
-3. _(Optional)_ Update waypoint proxy pods to use the new proxy version:
-+
-Waypoint proxy pods automatically use the correct proxy version when they reconnect to the new control plane revision. In most cases, the waypoint pods will update automatically during the control plane migration. However, you can manually trigger an update using one of the following approaches:
-+
-**Option A: Restart waypoint pods (Recommended)**
-+
-Restart the waypoint deployment to trigger the pods to reconnect to the new control plane and pick up the updated proxy version:
-+
-[source,bash,subs="attributes+",name="ambient-waypoint-update-revisionbased"]
-----
-$ kubectl rollout restart deployment -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint
-----
-+
-This approach allows the waypoint to automatically use the appropriate proxy version from the new control plane revision.
-+
-**Option B: Explicitly set proxy image version**
-+
-If you need to pin the waypoint to a specific proxy version (for example, to use a version different from the control plane or for testing purposes), you can explicitly patch the Gateway resource:
-+
-[source,bash,subs="attributes+",name="ambient-waypoint-update-revisionbased"]
-----
-$ kubectl patch gateway waypoint -n bookinfo --type='merge' -p '{"spec":{"template":{"spec":{"containers":[{"name":"istio-proxy","image":"docker.io/istio/proxyv2:1.26.4"}]}}}}'
-----
-+
-NOTE: Manually setting the proxy image version is only necessary when you want to pin to a specific version different from what the control plane would automatically provide, or in scenarios where automatic updates do not occur due to environmental or configuration constraints. In standard RevisionBased updates, Option A (restart) is sufficient.
+The output shows the waypoint proxy connected to the revision-specific istiod pod (note the revision `1-26-4` in the pod name) and running the updated version.
 
 [[l7-feature-verification-during-updates]]
 === L7 Feature Verification During Updates
 
-After updating waypoint proxies, verify that Layer 7 features are working correctly.
+After updating waypoint proxies, verify Layer 7 features work correctly.
 
 **Traffic Routing:**
 
-If you have traffic routing rules (e.g., HTTPRoute), verify they are still being enforced. For reference, see the <<traffic-routing,Traffic Routing>> section which demonstrates setting up an HTTPRoute with a 90/10 traffic split between reviews-v1 and reviews-v2.
+Test that HTTPRoute rules are enforced. See <<traffic-routing,Traffic Routing>> for setup details with a 90/10 traffic split.
 
-1. Test traffic distribution to verify your HTTPRoute rules are working correctly. The following command sends 10 requests to the productpage service and displays which reviews service version handles each request:
+1. Test traffic distribution by sending requests and checking which service version handles them:
 +
 [source,bash,subs="attributes+",name="ambient-waypoint-verify-l7"]
 ----
@@ -248,13 +220,13 @@ reviews-v1
 reviews-v1
 ----
 +
-The output should reflect the traffic distribution configured in your HTTPRoute. For example, with a 90/10 weight split between reviews-v1 and reviews-v2, you should see approximately 9 requests going to reviews-v1 and 1 request to reviews-v2. The exact distribution may vary slightly due to load balancing algorithms, but it should approximate the configured weights over multiple test runs.
+The output should match your HTTPRoute configuration. With a 90/10 split, expect about 9 requests to reviews-v1 and 1 to reviews-v2.
 
 **Authorization Policies:**
 
-Verify L7 authorization policies are correctly enforced by the waypoint proxy. For this verification, we'll test the `productpage-waypoint` AuthorizationPolicy shown in the <<security-authorization,Security Authorization>> section, which only allows the curl service (with service account `default/curl`) to send GET requests to the productpage service.
+Test that L7 authorization policies are enforced. The `productpage-waypoint` AuthorizationPolicy (see <<security-authorization,Security Authorization>>) allows only the curl service to send GET requests to productpage.
 
-1. Test denied access - Verify that services NOT in the allow list (such as the ratings service) are denied access:
+1. Test denied access - Services not in the allow list should be denied:
 +
 [source,bash,subs="attributes+",name="ambient-waypoint-verify-l7"]
 ----
@@ -262,9 +234,9 @@ $ kubectl exec "$(kubectl get pod -l app=ratings -n bookinfo -o jsonpath='{.item
 RBAC: access denied
 ----
 +
-This request is denied because the ratings service is not in the authorization policy's allow list. Only the curl service with the `default/curl` service account is permitted to access productpage.
+The ratings service is denied because it's not in the allow list.
 
-2. Test allowed access - Verify that the curl service CAN access productpage with GET requests:
+2. Test allowed access - The curl service should access productpage successfully:
 +
 [source,bash,subs="attributes+",name="ambient-waypoint-verify-l7"]
 ----
@@ -272,14 +244,14 @@ $ kubectl exec "$(kubectl get pod -l app=curl -n default -o jsonpath='{.items[0]
 <title>Simple Bookstore App</title>
 ----
 +
-This request succeeds because the curl service matches the authorization policy rules: it uses the `cluster.local/ns/default/sa/curl` principal and is performing a GET operation, both of which are explicitly allowed by the policy. The successful response containing the page title confirms that the waypoint proxy is correctly enforcing L7 authorization rules and allowing legitimate traffic through.
+The request succeeds because the curl service matches the policy rules.
 
 [[cross-namespace-waypoint-updates]]
 === Cross-namespace Waypoint Updates
 
-If you are using cross-namespace waypoints, ensure that the labels for `istio.io/use-waypoint-namespace` and `istio.io/use-waypoint` remain correctly applied to the namespaces.
+For cross-namespace waypoints, verify the namespace labels are correct.
 
-1. Verify namespace labels:
+1. Check namespace labels:
 +
 [source,bash,subs="attributes+",name="ambient-waypoint-crossns-update"]
 ----
@@ -287,7 +259,7 @@ $ kubectl get ns bookinfo --show-labels | grep waypoint
 bookinfo  Active  istio.io/use-waypoint-namespace=foo,istio.io/use-waypoint=waypoint-foo
 ----
 
-2. If labels are missing or incorrect, re-apply them:
+2. Re-apply labels if needed:
 +
 [source,bash,subs="attributes+",name="ambient-waypoint-crossns-update"]
 ----
