@@ -18,6 +18,7 @@ package controlplane
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -282,15 +283,32 @@ func getProxyVersion(podName, namespace string) (*semver.Version, error) {
 	}
 
 	lines := strings.Split(proxyStatus, "\n")
+	colSplit := regexp.MustCompile(`\s{2,}`)
+
+	versionIdx := -1
+	headers := colSplit.Split(strings.TrimSpace(lines[0]), -1)
+	for i, header := range headers {
+		if header == "VERSION" {
+			versionIdx = i
+			break
+		}
+	}
+	if versionIdx == -1 {
+		return nil, fmt.Errorf("VERSION header not found")
+	}
+
 	var versionStr string
-	for _, line := range lines {
+	for _, line := range lines[1:] {
 		if strings.Contains(line, podName+"."+namespace) {
-			values := strings.Fields(line)
-			versionStr = values[len(values)-1]
+			values := colSplit.Split(strings.TrimSpace(line), -1)
+			versionStr = values[versionIdx]
 			break
 		}
 	}
 
+	if versionStr == "" {
+		return nil, fmt.Errorf("pod %s not found in proxy status output for namespace %s", podName, namespace)
+	}
 	version, err := semver.NewVersion(versionStr)
 	if err != nil {
 		return version, fmt.Errorf("error parsing sidecar version %q: %w", versionStr, err)
