@@ -154,7 +154,7 @@ metadata:
 					})
 
 					It("deploys istiod", func(ctx SpecContext) {
-						common.AwaitCondition(ctx, appsv1.DeploymentAvailable, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}, k, cl)
+						common.AwaitDeployment(ctx, "istiod", k, cl)
 						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
 					})
 

@@ -21,10 +21,12 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -42,4 +44,9 @@ func AwaitCondition[T ~string](ctx context.Context, condition T, key client.Obje
 		Should(HaveConditionStatus(condition, metav1.ConditionTrue),
 			fmt.Sprintf("%s %q is not %s on %s; unexpected Condition", kind, key.Name, condition, cluster))
 	Success(fmt.Sprintf("%s %q is %s on %s", kind, key.Name, condition, cluster))
+}
+
+// AwaitDeployment to reach the Available state.
+func AwaitDeployment(ctx context.Context, name string, k kubectl.Kubectl, cl client.Client) {
+	AwaitCondition(ctx, appsv1.DeploymentAvailable, kube.Key(name, controlPlaneNamespace), &appsv1.Deployment{}, k, cl)
 }

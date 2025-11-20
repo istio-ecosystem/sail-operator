@@ -99,10 +99,10 @@ values:
 					})
 
 					It("deploys istiod", func(ctx SpecContext) {
-						common.AwaitCondition(ctx, appsv1.DeploymentAvailable, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}, k1, clPrimary)
+						common.AwaitDeployment(ctx, "istiod", k1, clPrimary)
 						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
 
-						common.AwaitCondition(ctx, appsv1.DeploymentAvailable, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}, k2, clRemote)
+						common.AwaitDeployment(ctx, "istiod", k2, clRemote)
 						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
 					})
 
@@ -138,8 +138,8 @@ values:
 					})
 
 					It("updates both Gateway status to Available", func(ctx SpecContext) {
-						common.AwaitCondition(ctx, appsv1.DeploymentAvailable, kube.Key("istio-eastwestgateway", controlPlaneNamespace), &appsv1.Deployment{}, k1, clPrimary)
-						common.AwaitCondition(ctx, appsv1.DeploymentAvailable, kube.Key("istio-eastwestgateway", controlPlaneNamespace), &appsv1.Deployment{}, k2, clRemote)
+						common.AwaitDeployment(ctx, "istio-eastwestgateway", k1, clPrimary)
+						common.AwaitDeployment(ctx, "istio-eastwestgateway", k2, clRemote)
 						Success("Gateway is created and available in both clusters")
 					})
 				})
