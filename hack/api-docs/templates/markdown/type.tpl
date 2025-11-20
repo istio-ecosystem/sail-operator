@@ -3,7 +3,11 @@
 {{- if markdownShouldRenderType $type -}}
 {{- if not $type.Markers.hidefromdoc -}}
 
+{{- if $type.GVK -}}
+#### {{ $type.Name }} ({{ $type.GVK.Version }})
+{{- else -}}
 #### {{ $type.Name }}
+{{- end }}
 
 {{ if $type.IsAlias }}_Underlying type:_ _{{ markdownRenderTypeLink $type.UnderlyingType  }}_{{ end }}
 
