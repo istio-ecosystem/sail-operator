@@ -10,14 +10,14 @@
 package v1 contains API Schema definitions for the sailoperator.io v1 API group
 
 ### Resource Types
-- [Istio](#istio)
-- [IstioCNI](#istiocni)
-- [IstioCNIList](#istiocnilist)
-- [IstioList](#istiolist)
-- [IstioRevision](#istiorevision)
-- [IstioRevisionList](#istiorevisionlist)
-- [IstioRevisionTag](#istiorevisiontag)
-- [IstioRevisionTagList](#istiorevisiontaglist)
+- [Istio](#istio-v1)
+- [IstioCNI](#istiocni-v1)
+- [IstioCNIList](#istiocnilist-v1)
+- [IstioList](#istiolist-v1)
+- [IstioRevision](#istiorevision-v1)
+- [IstioRevisionList](#istiorevisionlist-v1)
+- [IstioRevisionTag](#istiorevisiontag-v1)
+- [IstioRevisionTagList](#istiorevisiontaglist-v1)
 
 
 
@@ -513,7 +513,7 @@ _Appears in:_
 
 
 
-#### Istio
+#### Istio (v1)
 
 
 
@@ -541,7 +541,7 @@ _Appears in:_
 | `status` _[IstioStatus](#istiostatus)_ |  |  |  |
 
 
-#### IstioCNI
+#### IstioCNI (v1)
 
 
 
@@ -622,7 +622,7 @@ _Appears in:_
 | `Ready` | IstioCNIConditionReady signifies whether the istio-cni-node DaemonSet is ready.  |
 
 
-#### IstioCNIList
+#### IstioCNIList (v1)
 
 
 
@@ -745,7 +745,7 @@ _Appears in:_
 | `DependenciesHealthy` | IstioConditionDependenciesHealthy signifies whether the dependencies required by this Istio are healthy. For example, an Istio with spec.values.pilot.cni.enabled=true requires the IstioCNI resource to be deployed and ready for the Istio revision to be considered healthy. The DependenciesHealthy condition is used to indicate that the IstioCNI resource is healthy.  |
 
 
-#### IstioList
+#### IstioList (v1)
 
 
 
@@ -765,7 +765,7 @@ IstioList contains a list of Istio
 | `items` _[Istio](#istio) array_ |  |  |  |
 
 
-#### IstioRevision
+#### IstioRevision (v1)
 
 
 
@@ -858,7 +858,7 @@ _Appears in:_
 | `DependenciesHealthy` | IstioRevisionConditionDependenciesHealthy signifies whether the dependencies required by this IstioRevision are healthy. For example, an IstioRevision with spec.values.pilot.cni.enabled=true requires the IstioCNI resource to be deployed and ready for the Istio revision to be considered healthy. The DependenciesHealthy condition is used to indicate that the IstioCNI resource is healthy.  |
 
 
-#### IstioRevisionList
+#### IstioRevisionList (v1)
 
 
 
@@ -914,7 +914,7 @@ _Appears in:_
 | `state` _[IstioRevisionConditionReason](#istiorevisionconditionreason)_ | Reports the current state of the object. |  |  |
 
 
-#### IstioRevisionTag
+#### IstioRevisionTag (v1)
 
 
 
@@ -998,7 +998,7 @@ _Appears in:_
 | `InUse` | IstioRevisionConditionInUse signifies whether any workload is configured to use the revision.  |
 
 
-#### IstioRevisionTagList
+#### IstioRevisionTagList (v1)
 
 
 
@@ -3333,12 +3333,12 @@ _Appears in:_
 Package v1alpha1 contains API Schema definitions for the sailoperator.io v1alpha1 API group
 
 ### Resource Types
-- [ZTunnel](#ztunnel)
-- [ZTunnelList](#ztunnellist)
+- [ZTunnel](#ztunnel-v1alpha1)
+- [ZTunnelList](#ztunnellist-v1alpha1)
 
 
 
-#### ZTunnel
+#### ZTunnel (v1alpha1)
 
 
 
@@ -3419,7 +3419,7 @@ _Appears in:_
 | `Ready` | ZTunnelConditionReady signifies whether the ztunnel DaemonSet is ready.  |
 
 
-#### ZTunnelList
+#### ZTunnelList (v1alpha1)
 
 
 
