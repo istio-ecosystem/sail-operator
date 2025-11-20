@@ -27,6 +27,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -49,4 +50,36 @@ func AwaitCondition[T ~string](ctx context.Context, condition T, key client.Obje
 // AwaitDeployment to reach the Available state.
 func AwaitDeployment(ctx context.Context, name string, k kubectl.Kubectl, cl client.Client) {
 	AwaitCondition(ctx, appsv1.DeploymentAvailable, kube.Key(name, controlPlaneNamespace), &appsv1.Deployment{}, k, cl)
+}
+
+func isPodReady(pod *corev1.Pod) bool {
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+	return false
+}
+
+// CheckPodsReady in the given namespace.
+func CheckPodsReady(ctx context.Context, cl client.Client, namespace string) error {
+	podList := &corev1.PodList{}
+	if err := cl.List(ctx, podList, client.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("Failed to list pods: %w", err)
+	}
+	if len(podList.Items) == 0 {
+		return fmt.Errorf("No pods found in namespace %q", namespace)
+	}
+
+	for _, pod := range podList.Items {
+		if !isPodReady(&pod) {
+			return fmt.Errorf("Pod %q in namespace %q is not ready", pod.Name, namespace)
+		}
+	}
+
+	return nil
+}
+
+func CheckSamplePodsReady(ctx context.Context, cl client.Client) error {
+	return CheckPodsReady(ctx, cl, sampleNamespace)
 }

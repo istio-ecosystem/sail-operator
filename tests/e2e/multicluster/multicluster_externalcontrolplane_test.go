@@ -339,18 +339,13 @@ spec:
 						Success("Sample app is deployed in Cluster #2")
 					})
 
-					samplePodsCluster2 := &corev1.PodList{}
 					It("updates the pods status to Ready", func(ctx SpecContext) {
-						Expect(clRemote.List(ctx, samplePodsCluster2, client.InNamespace(sampleNamespace))).To(Succeed())
-						Expect(samplePodsCluster2.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
-
-						for _, pod := range samplePodsCluster2.Items {
-							common.AwaitCondition(ctx, corev1.PodReady, kube.Key(pod.Name, sampleNamespace), &corev1.Pod{}, k2, clRemote)
-						}
+						Eventually(common.CheckSamplePodsReady).WithArguments(ctx, clRemote).Should(Succeed(), "Error checking status of sample pods on Cluster #2")
 						Success("Sample app is Running")
 					})
 
 					It("has istio.io/rev annotation external-istiod", func(ctx SpecContext) {
+						samplePodsCluster2 := &corev1.PodList{}
 						Expect(clRemote.List(ctx, samplePodsCluster2, client.InNamespace(sampleNamespace))).To(Succeed())
 						Expect(samplePodsCluster2.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
 

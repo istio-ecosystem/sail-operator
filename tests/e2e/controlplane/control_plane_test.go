@@ -182,7 +182,7 @@ metadata:
 
 					samplePods := &corev1.PodList{}
 					It("updates the pods status to Running", func(ctx SpecContext) {
-						Eventually(common.CheckPodsReady).WithArguments(ctx, cl, sampleNamespace).Should(Succeed(), "Error checking status of sample pods")
+						Eventually(common.CheckSamplePodsReady).WithArguments(ctx, cl).Should(Succeed(), "Error checking status of sample pods")
 						Expect(cl.List(ctx, samplePods, client.InNamespace(sampleNamespace))).To(Succeed(), "Error getting the pods in sample namespace")
 
 						Success("sample pods are ready")

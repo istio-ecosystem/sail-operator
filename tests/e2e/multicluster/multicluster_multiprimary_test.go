@@ -33,7 +33,6 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("Multicluster deployment models", Label("multicluster", "multicluster-multiprimary"), Ordered, func() {
@@ -197,22 +196,8 @@ values:
 					})
 
 					It("updates the pods status to Ready", func(ctx SpecContext) {
-						samplePodsCluster1 := &corev1.PodList{}
-
-						Expect(clPrimary.List(ctx, samplePodsCluster1, client.InNamespace(sampleNamespace))).To(Succeed())
-						Expect(samplePodsCluster1.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
-
-						for _, pod := range samplePodsCluster1.Items {
-							common.AwaitCondition(ctx, corev1.PodReady, kube.Key(pod.Name, sampleNamespace), &corev1.Pod{}, k1, clPrimary)
-						}
-
-						samplePodsCluster2 := &corev1.PodList{}
-						Expect(clRemote.List(ctx, samplePodsCluster2, client.InNamespace(sampleNamespace))).To(Succeed())
-						Expect(samplePodsCluster2.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
-
-						for _, pod := range samplePodsCluster2.Items {
-							common.AwaitCondition(ctx, corev1.PodReady, kube.Key(pod.Name, sampleNamespace), &corev1.Pod{}, k2, clRemote)
-						}
+						Eventually(common.CheckSamplePodsReady).WithArguments(ctx, clPrimary).Should(Succeed(), "Error checking status of sample pods on Cluster #1")
+						Eventually(common.CheckSamplePodsReady).WithArguments(ctx, clRemote).Should(Succeed(), "Error checking status of sample pods on Cluster #2")
 						Success("Sample app is created in both clusters and Running")
 					})
 

@@ -120,7 +120,7 @@ spec:
 					Success("sample deployed")
 
 					samplePods := &corev1.PodList{}
-					Eventually(common.CheckPodsReady).WithArguments(ctx, cl, sampleNamespace).Should(Succeed(), "Error checking status of sample pods")
+					Eventually(common.CheckSamplePodsReady).WithArguments(ctx, cl).Should(Succeed(), "Error checking status of sample pods")
 					Expect(cl.List(ctx, samplePods, client.InNamespace(sampleNamespace))).To(Succeed(), "Error getting the pods in sample namespace")
 
 					Success("sample pods are ready")
@@ -216,12 +216,7 @@ spec:
 						cl.Delete(ctx, &pod)
 					}
 
-					Expect(cl.List(ctx, samplePods, client.InNamespace(sampleNamespace))).To(Succeed())
-					Expect(samplePods.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
-					for _, pod := range samplePods.Items {
-						common.AwaitCondition(ctx, corev1.PodReady, kube.Key(pod.Name, sampleNamespace), &corev1.Pod{}, k, cl)
-					}
-
+					Eventually(common.CheckSamplePodsReady).WithArguments(ctx, cl).Should(Succeed(), "Error checking status of sample pods")
 					Success("sample pods restarted and are ready")
 				})
 
