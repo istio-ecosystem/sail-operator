@@ -50,5 +50,5 @@ resources:
   domain: sailoperator.io
   kind: ZTunnel
   path: github.com/istio-ecosystem/sail-operator/api/v1alpha1
-  version: v1alpha1
+  version: v1
 version: "3"
