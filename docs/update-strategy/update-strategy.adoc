@@ -10,7 +10,6 @@ link:../../README.adoc[Return to Project Root]
 
 == Table of Contents
 
-- <<understanding-versioning>>
 - <<update-strategy>>
   - <<inplace>>
     - <<example-using-the-inplace-strategy>>
@@ -19,39 +18,23 @@ link:../../README.adoc[Return to Project Root]
     - <<example-using-the-revisionbased-strategy>>
     - <<example-using-the-revisionbased-strategy-and-an-istiorevisiontag>>
 
-[[understanding-versioning]]
-== Understanding Versioning
-
-The Sail Operator follows Semantic Versioning for all releases. Semantic Versioning uses a three-part version number in the format X.Y.Z to communicate the nature of changes in each release.
-
-**X (Major version)**::
-Indicates significant updates that might include breaking changes, such as architectural shifts, API changes, or schema modifications.
-
-**Y (Minor version)**::
-Introduces new features and enhancements while maintaining backward compatibility.
-
-**Z (Patch version or z-stream release)**::
-Delivers critical bug fixes and security updates, such as Common Vulnerabilities and Exposures (CVEs) resolutions. Patch versions do not include new features.
-
-'''
-
 [[update-strategy]]
 == Update Strategy
 
-The Sail Operator supports two update strategies to update the version of the Istio control plane: `InPlace` and `RevisionBased`. The default strategy is `InPlace`.
+The Sail Operator supports two update strategies: `InPlace` and `RevisionBased`. The default is `InPlace`.
 
-*Note:* These update strategies apply to both sidecar and ambient modes.
+*Note:* Both strategies work with sidecar and ambient modes.
 
-**For ambient mode deployments:** In addition to the control plane update procedures below, you must also update IstioCNI and ZTunnel components. See link:../common/istio-ambient-update.adoc#updating-istio-in-ambient-mode[Updating Istio in Ambient Mode] for complete ambient-specific procedures including:
+**For ambient mode:** Also update IstioCNI and ZTunnel components after the control plane. See link:../common/istio-ambient-update.adoc#updating-istio-in-ambient-mode[Updating Istio in Ambient Mode] for:
 
-* Updating IstioCNI
-* Updating ZTunnel
-* Updating Waypoint Proxies
-* Special considerations for ambient mode upgrades
+* IstioCNI updates
+* ZTunnel updates
+* Waypoint proxy updates
+* Ambient mode considerations
 
 [[inplace]]
 == InPlace
-When the `InPlace` strategy is used, the existing Istio control plane is replaced with a new version. The workload sidecars immediately connect to the new control plane. The workloads therefore don't need to be moved from one control plane instance to another.
+With InPlace, the existing control plane is replaced with a new version. Workload sidecars connect to the new control plane immediately without needing pod restarts.
 
 [[example-using-the-inplace-strategy]]
 === Example using the InPlace strategy
@@ -184,11 +167,11 @@ endif::[]
 
 [[recommendations-for-inplace-strategy]]
 === Recommendations for InPlace Strategy
-During `InPlace` updates, the control plane pods are restarted, which may cause temporary service disruptions. To minimize downtime during updates, we recommend configuring the `istiod` deployment with high availability (HA). For more information, please refer to this link:../../docs/general/istiod-ha.adoc[guide].
+InPlace updates restart control plane pods, which may cause brief service disruptions. Configure istiod with high availability (HA) to minimize downtime. See the link:../../docs/general/istiod-ha.adoc[HA guide].
 
 [[revisionbased]]
 == RevisionBased
-When the `RevisionBased` strategy is used, a new Istio control plane instance is created for every change to the `Istio.spec.version` field. The old control plane remains in place until all workloads have been moved to the new control plane instance. This needs to be done by the user by updating the namespace label and restarting all the pods. The old control plane will be deleted after the grace period specified in the `Istio` resource field `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds`.
+With RevisionBased, a new control plane instance is created for each version change. The old control plane stays until workloads migrate to the new version. You migrate by updating namespace labels and restarting pods. The old control plane deletes after the grace period in `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds`.
 
 [[example-using-the-revisionbased-strategy]]
 === Example using the RevisionBased strategy
