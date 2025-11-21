@@ -36,6 +36,13 @@ function getLatestVersion() {
   curl -sL "https://api.github.com/repos/${1}/releases/latest" | yq '.tag_name'
 }
 
+# getLatestMinorVersion gets the latest released version of a github project with a specific minor version prefix
+# $1 = org/repo
+# $2 = major version prefix
+function getLatestMinorVersion() {
+  curl -sL "https://api.github.com/repos/${1}/releases" | yq -p json "[.[] | select(.tag_name | test(\"^$2\\.\")) | .tag_name] | .[0]" 
+}
+
 function getReleaseBranch() {
   minor=$(echo "${1}" | cut -f1,2 -d'.')
   echo "release-${minor#*v}"
@@ -64,8 +71,8 @@ OPERATOR_SDK_LATEST_VERSION=$(getLatestVersion operator-framework/operator-sdk)
 "$SED_CMD" -i "s|OPERATOR_SDK_VERSION ?= .*|OPERATOR_SDK_VERSION ?= ${OPERATOR_SDK_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
 find "${ROOTDIR}/chart/templates/olm/scorecard.yaml" -type f -exec "$SED_CMD" -i "s|quay.io/operator-framework/scorecard-test:.*|quay.io/operator-framework/scorecard-test:${OPERATOR_SDK_LATEST_VERSION}|" {} +
 
-# Update helm
-HELM_LATEST_VERSION=$(getLatestVersion helm/helm | cut -d/ -f2)
+# Update helm (FIXME: pinned to v3 as we don't support helm4 yet, see https://github.com/istio-ecosystem/sail-operator/issues/1371)
+HELM_LATEST_VERSION=$(getLatestMinorVersion helm/helm v3)
 "$SED_CMD" -i "s|HELM_VERSION ?= .*|HELM_VERSION ?= ${HELM_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
 
 # Update controller-tools
