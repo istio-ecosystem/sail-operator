@@ -13,11 +13,11 @@ link:../README.md[Return to Project Root]
 * link:#istio-nftables-backend[Istio nftables backend]
   ** link:#prerequisites[Prerequisites]
   ** link:#installation[Installation]
-    *** link:#install-using-sail-operator[Install using Sail Operator]
+    *** link:#install-in-sidecar-mode[Install in Sidecar Mode]
     *** link:#install-in-ambient-mode[Install in Ambient Mode]
   ** link:#validation[Validation]
   ** link:#Upgrade[Upgrade]
-    *** link:#upgrade-using-sail-operator[Upgrade using Sail Operator]
+    *** link:#upgrade-in-sidecar-mode[Upgrade in Sidecar Mode]
     *** link:#upgrade-in-ambient-mode[Upgrade in Ambient Mode]
 
 === Istio nftables backend
@@ -32,10 +32,10 @@ Many major Linux distributions are actively moving towards adopting native nftab
 
 === Installation
 
-The support for native nftables in Istio sidecar mode was implemented in the upstream istio https://github.com/istio/istio/blob/master/releasenotes/notes/nftables-sidecar.yaml[release-1.27].
+The support for native nftables in Istio sidecar mode was implemented in the upstream istio https://istio.io/latest/news/releases/1.27.x/announcing-1.27[release-1.27].
 It is disabled by default. To enable it, you can set a feature flag as `+values.global.nativeNftables=true+`.
 
-==== Install using Sail Operator
+==== Install in Sidecar Mode
 
 When installing `Istio` and `IstioCNI` resources with the Sail Operator, you can enable nftables by setting `spec.values.global.nativeNftables=true` in the resource. This option configures Istio to use the nftables backend for traffic redirection instead of iptables.
 
@@ -88,7 +88,7 @@ EOF
 
 ==== Install in Ambient Mode
 
-The support for native nftables in Istio ambient mode was implemented in the upstream istio `+release-1.28+`. 
+The support for native nftables in Istio ambient mode was implemented in the upstream istio https://istio.io/latest/news/releases/1.28.x/announcing-1.28[release-1.28].
 To enable native nftables in ambient mode, you can set the same feature flag with ambient profile. For example,
 
 . Create the `+istio-system+`, `+istio-cni+` and `+ztunnel+` namespaces.
@@ -148,7 +148,7 @@ EOF
 [source,sh]
 ----
 cat <<EOF | kubectl apply -f-
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: ZTunnel
 metadata:
   name: default
@@ -183,11 +183,13 @@ As an alternative, enable ambient mode for the namespace `+test-ns+`:
 kubectl label namespace test-ns istio.io/dataplane-mode=ambient
 ----
 
-Deploy a sample application:
+Deploy sample applications `curl` and `httpbin` :
 
 [source,sh]
 ----
 kubectl apply -n test-ns -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/curl/curl.yaml
+
+kubectl apply -n test-ns -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/httpbin/httpbin.yaml
 ----
 
 Attach a debug container and you can see the nftable rules in the `+inet+` table:
@@ -204,8 +206,6 @@ Verify the connectivity between two pods is working. For example, deploy a httpb
 
 [source,sh]
 ----
-kubectl apply -n test-ns -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/httpbin/httpbin.yaml
-
 kubectl exec -n test-ns "$(kubectl get pod -l app=curl -n test-ns -o jsonpath={.items..metadata.name})" -c curl -n test-ns -- curl http://httpbin.test-ns:8000/ip -s -o /dev/null -w "%{http_code}\n"
 
 200
@@ -216,24 +216,20 @@ https://github.com/istio/istio/tree/master/tools/istio-nftables/pkg#debugging-gu
 
 === Upgrade
 
+==== Upgrade in Sidecar mode
+
 The migration from iptables backend to nftables backend can be done by upgrading `+Istio+` and `+IstioCNI+` resources. 
 Because the CNI component runs as a cluster singleton, it is recommended to operate and upgrade the CNI component separately from the Istio control plane.
-
-When an existing Istio Ambient deployment using the iptables backend is upgraded to the nftables backend, IstioCNI doesn't switch to nftables silently.
-The IstioCNI initialization code detects any iptables artifacts on the host first. If it finds them, it overrides the nftables setting, keeps using the iptables backend, and logs a message telling users to reboot the node to complete the migration.
-After a reboot, the old iptables artifacts are cleared and pods come up with clean namespaces, completing the upgrade and migration automatically.
-
-==== Upgrade in Sidecar mode
 
 To upgrade an iptable based Istio service mesh with nftables backend, use the following steps:
 
 . Check existing `+Istio+` and `+IstioCNI+` resources’ state are Healthy.
 
 [start=2]
-. Enable nftables by setting `spec.values.global.nativeNftables=true` in the `+Istio+` and `+IstioCNI+` resources. You can find the same example manifests in the Installation section above.
+. Enable nftables by setting `spec.values.global.nativeNftables=true` in the `+Istio+` and `+IstioCNI+` resources. You can find the sample manifests in the Installation section above.
 
 [start=3]
-. Update the data plane namespace `+test-ns+` by restarting all deployments. For example,
+. Update the data plane by restarting the application workloads that are part of the mesh. For example,
 
 [source,sh]
 ----
@@ -242,7 +238,11 @@ kubectl rollout restart deployment -n test-ns
 
 ==== Upgrade in Ambient mode
 
-. Enable nftables with `+ambient+` profile by setting `spec.values.global.nativeNftables=true` in the `+Istio+` and `+IstioCNI+` resources. You can find the same example manifests in the Installation section above.
+When an existing Istio Ambient deployment using the iptables backend is upgraded to the nftables backend, IstioCNI doesn't switch to nftables silently.
+The IstioCNI initialization code detects any iptables artifacts on the host first. If it finds them, it overrides the nftables setting, keeps using the iptables backend, and logs a message telling users to reboot the node to complete the migration.
+After a reboot, the old iptables artifacts are cleared and pods come up with clean namespaces, completing the upgrade and migration automatically.
+
+. Enable nftables with `+ambient+` profile by setting `spec.values.global.nativeNftables=true` in the `+Istio+` and `+IstioCNI+` resources. You can find the sample manifests in the Installation section above.
 
 [start=2]
-. If you get the following IstioCNI log message like `To complete migration to nftables, reboot the node`, reboot each node. You don't need restarting application deployment pods because the Reconcile flag was enabled in Ambient mode IstioCNI.
+. Restart the cluster nodes to complete the migration from iptables backend to nftables backend.
