@@ -220,7 +220,7 @@ You can use the following field to manage version updates:
 
 To update the CNI plugin, modify the spec.version field with the target version. The IstioCNI resource also includes a values field that exposes configuration options from the istio-cni chart.
 
-In ambient mode, the IstioCNI component is responsible for traffic redirection. The component is compatible with multiple control plane versions during RevisionBased upgrades and continues to handle traffic redirection for both old and new control planes during the migration period.
+In ambient mode, the IstioCNI component is responsible for traffic redirection. The component is compatible with multiple control plane versions (generally n-1 to n+1 minor versions) during RevisionBased upgrades and continues to handle traffic redirection for both old and new control planes during the migration period.
 
 After updating the Istio control plane, update the IstioCNI component. The Sail Operator deploys a new version of the CNI plugin that replaces the old version. The `istio-cni-node` DaemonSet pods are updated using a rolling update strategy, and traffic redirection rules are maintained during the update process.
 
@@ -269,7 +269,7 @@ istio-cni-node-def34   1/1     Running   0          3m
 istio-cni-node-ghi56   1/1     Running   0          3m
 ```
 
-**Note:** When using the RevisionBased strategy, IstioCNI is compatible with multiple control plane versions and continues to work with both the old and new control planes during the workload migration.
+**Note:** When using the RevisionBased strategy, IstioCNI is compatible with multiple control plane versions (generally n-1 to n+1 minor versions) and continues to work with both the old and new control planes during the workload migration.
 
 For detailed information about updating Istio in ambient mode, including control plane updates and ZTunnel updates, see the [Istio Ambient Update Guide](docs/common/istio-ambient-update.adoc).
 
