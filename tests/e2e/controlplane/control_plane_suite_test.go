@@ -33,9 +33,9 @@ var (
 	err                   error
 	namespace             = common.OperatorNamespace
 	deploymentName        = env.Get("DEPLOYMENT_NAME", "sail-operator")
-	controlPlaneNamespace = env.Get("CONTROL_PLANE_NS", "istio-system")
+	controlPlaneNamespace = common.ControlPlaneNamespace
 	istioName             = env.Get("ISTIO_NAME", "default")
-	istioCniNamespace     = env.Get("ISTIOCNI_NAMESPACE", "istio-cni")
+	istioCniNamespace     = common.IstioCniNamespace
 	istioCniName          = env.Get("ISTIOCNI_NAME", "default")
 	expectedRegistry      = env.Get("EXPECTED_REGISTRY", "^docker\\.io|^gcr\\.io")
 	sampleNamespace       = env.Get("SAMPLE_NAMESPACE", "sample")

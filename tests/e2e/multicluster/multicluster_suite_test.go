@@ -37,10 +37,10 @@ var (
 	clRemote                      client.Client
 	err                           error
 	debugInfoLogged               bool
-	controlPlaneNamespace         = env.Get("CONTROL_PLANE_NS", "istio-system")
+	controlPlaneNamespace         = common.ControlPlaneNamespace
 	externalControlPlaneNamespace = env.Get("EXTERNAL_CONTROL_PLANE_NS", "external-istiod")
 	istioName                     = env.Get("ISTIO_NAME", "default")
-	istioCniNamespace             = env.Get("ISTIOCNI_NAMESPACE", "istio-cni")
+	istioCniNamespace             = common.IstioCniNamespace
 	istioCniName                  = env.Get("ISTIOCNI_NAME", "default")
 	multicluster                  = env.GetBool("MULTICLUSTER", false)
 	keepOnFailure                 = env.GetBool("KEEP_ON_FAILURE", false)
