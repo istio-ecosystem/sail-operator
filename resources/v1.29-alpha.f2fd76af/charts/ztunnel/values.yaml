@@ -4,7 +4,7 @@ _internal_defaults_do_not_set:
   # Hub to pull from. Image will be `Hub/Image:Tag-Variant`
   hub: gcr.io/istio-testing
   # Tag to pull from. Image will be `Hub/Image:Tag-Variant`
-  tag: 1.29-alpha.c24fe2aebd9b6330f180bbc9fcf81ee431e5a460
+  tag: 1.29-alpha.f2fd76afb4c6a3b9adb64df7c3763b52d7114325
   # Variant to pull. Options are "debug" or "distroless". Unset will use the default for the given version.
   variant: ""
 
@@ -65,6 +65,11 @@ _internal_defaults_do_not_set:
   resourceQuotas:
     enabled: false
     pods: 5000
+
+  # Certificate Revocation List (CRL) support for plugged-in CAs.
+  # When enabled, ztunnel will check certificates against the CRL
+  peerCaCrl:
+    enabled: false
 
   # List of secret names to add to the service account as image pull secrets
   imagePullSecrets: []
