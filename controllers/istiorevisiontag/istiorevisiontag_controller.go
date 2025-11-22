@@ -27,6 +27,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
+	operrors "github.com/istio-ecosystem/sail-operator/pkg/errors"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
@@ -89,10 +90,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, tag *v1.IstioRevisionTag) (c
 
 	log.Info("Reconciliation done. Updating status.")
 	statusErr := r.updateStatus(ctx, tag, rev, reconcileErr)
-
-	reconcileErr = errors.Unwrap(reconcileErr)
-
-	return ctrl.Result{}, errors.Join(reconcileErr, statusErr)
+	return ctrl.Result{}, errors.Join(reconcileErr, statusErr, errors.Unwrap(reconcileErr))
 }
 
 func (r *Reconciler) doReconcile(ctx context.Context, tag *v1.IstioRevisionTag) (*v1.IstioRevision, error) {
@@ -108,7 +106,7 @@ func (r *Reconciler) doReconcile(ctx context.Context, tag *v1.IstioRevisionTag) 
 	}
 
 	if revision.IsUsingRemoteControlPlane(rev) {
-		return nil, reconciler.NewValidationError("IstioRevisionTag cannot reference a remote IstioRevision")
+		return nil, operrors.NewValidationError("IstioRevisionTag cannot reference a remote IstioRevision")
 	}
 
 	// if the IstioRevision's namespace changes, we need to completely reinstall the tag
@@ -128,12 +126,12 @@ func (r *Reconciler) Finalize(ctx context.Context, tag *v1.IstioRevisionTag) err
 
 func (r *Reconciler) validate(ctx context.Context, tag *v1.IstioRevisionTag) error {
 	if tag.Spec.TargetRef.Kind == "" || tag.Spec.TargetRef.Name == "" {
-		return reconciler.NewValidationError("spec.targetRef not set")
+		return operrors.NewValidationError("spec.targetRef not set")
 	}
 	rev := v1.IstioRevision{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: tag.Name}, &rev); err == nil {
 		if validation.ResourceTakesPrecedence(&rev.ObjectMeta, &tag.ObjectMeta) {
-			return reconciler.NewNameAlreadyExistsError("an IstioRevision exists with this name", nil)
+			return operrors.NewNameAlreadyExistsError("an IstioRevision exists with this name")
 		}
 	} else if !apierrors.IsNotFound(err) {
 		return err
@@ -142,16 +140,16 @@ func (r *Reconciler) validate(ctx context.Context, tag *v1.IstioRevisionTag) err
 		i := v1.Istio{}
 		if err := r.Client.Get(ctx, types.NamespacedName{Name: tag.Spec.TargetRef.Name}, &i); err != nil {
 			if apierrors.IsNotFound(err) {
-				return NewReferenceNotFoundError("referenced Istio resource does not exist", err)
+				return operrors.NewReferenceNotFoundError("referenced Istio resource does not exist", err)
 			}
-			return reconciler.NewValidationError("failed to get referenced Istio resource: " + err.Error())
+			return operrors.NewValidationError("failed to get referenced Istio resource", err)
 		}
 	} else if tag.Spec.TargetRef.Kind == v1.IstioRevisionKind {
 		if err := r.Client.Get(ctx, types.NamespacedName{Name: tag.Spec.TargetRef.Name}, &rev); err != nil {
 			if apierrors.IsNotFound(err) {
-				return NewReferenceNotFoundError("referenced IstioRevision resource does not exist", err)
+				return operrors.NewReferenceNotFoundError("referenced IstioRevision resource does not exist", err)
 			}
-			return reconciler.NewValidationError("failed to get referenced IstioRevision resource: " + err.Error())
+			return operrors.NewValidationError("failed to get referenced IstioRevision resource", err)
 		}
 	}
 	return nil
@@ -168,11 +166,11 @@ func (r *Reconciler) getIstioRevision(ctx context.Context, ref v1.IstioRevisionT
 			return nil, err
 		}
 		if i.Status.ActiveRevisionName == "" {
-			return nil, reconciler.NewTransientError("referenced Istio has no active revision")
+			return nil, operrors.NewTransientError("referenced Istio has no active revision")
 		}
 		revisionName = i.Status.ActiveRevisionName
 	} else {
-		return nil, reconciler.NewValidationError("unknown targetRef.kind")
+		return nil, operrors.NewValidationError("unknown targetRef.kind")
 	}
 
 	rev := v1.IstioRevision{}
@@ -334,18 +332,18 @@ func (r *Reconciler) determineReconciledCondition(err error) v1.IstioRevisionTag
 
 	if err == nil {
 		c.Status = metav1.ConditionTrue
-	} else if reconciler.IsNameAlreadyExistsError(err) {
+	} else if operrors.IsNameAlreadyExists(err) {
 		c.Status = metav1.ConditionFalse
 		c.Reason = v1.IstioRevisionTagReasonNameAlreadyExists
 		c.Message = err.Error()
-	} else if IsReferenceNotFoundError(err) {
+	} else if operrors.IsReferenceNotFound(err) {
 		c.Status = metav1.ConditionFalse
 		c.Reason = v1.IstioRevisionTagReasonReferenceNotFound
 		c.Message = err.Error()
 	} else {
 		c.Status = metav1.ConditionFalse
 		c.Reason = v1.IstioRevisionTagReasonReconcileError
-		c.Message = fmt.Sprintf("error reconciling resource: %v", err)
+		c.Message = errors.Join(errors.New("error reconciling resource"), err, errors.Unwrap(err)).Error()
 	}
 	return c
 }
@@ -499,31 +497,4 @@ func specWasUpdated(oldObject client.Object, newObject client.Object) bool {
 
 func wrapEventHandler(logger logr.Logger, handler handler.EventHandler) handler.EventHandler {
 	return enqueuelogger.WrapIfNecessary(v1.IstioRevisionTagKind, logger, handler)
-}
-
-type ReferenceNotFoundError struct {
-	Message       string
-	originalError error
-}
-
-func (err ReferenceNotFoundError) Error() string {
-	return err.Message
-}
-
-func (err ReferenceNotFoundError) Unwrap() error {
-	return err.originalError
-}
-
-func NewReferenceNotFoundError(message string, originalError error) ReferenceNotFoundError {
-	return ReferenceNotFoundError{
-		Message:       message,
-		originalError: originalError,
-	}
-}
-
-func IsReferenceNotFoundError(err error) bool {
-	if _, ok := err.(ReferenceNotFoundError); ok {
-		return true
-	}
-	return false
 }

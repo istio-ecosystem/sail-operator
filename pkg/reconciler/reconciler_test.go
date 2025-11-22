@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	errors2 "github.com/istio-ecosystem/sail-operator/pkg/errors"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/testtime"
 	. "github.com/onsi/gomega"
@@ -245,7 +246,7 @@ func TestReconcile(t *testing.T) {
 				},
 			},
 			setup: func(g *WithT, mock *mockReconciler) {
-				mock.reconcileError = NewValidationError("simulated validation error")
+				mock.reconcileError = errors2.NewSailOperatorError[errors2.ValidationError]("simulated validation error", nil)
 			},
 			assert: func(g *WithT, cl client.Client, result ctrl.Result, err error, mock *mockReconciler) {
 				g.Expect(result).To(Equal(reconcile.Result{}))
