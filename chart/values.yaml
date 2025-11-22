@@ -50,10 +50,10 @@ deployment:
     images.v1_26_0.istiod: gcr.io/istio-release/pilot:1.26.0
     images.v1_26_0.proxy: gcr.io/istio-release/proxyv2:1.26.0
     images.v1_26_0.cni: gcr.io/istio-release/install-cni:1.26.0
-    images.v1_29-alpha_c24fe2ae.ztunnel: gcr.io/istio-testing/ztunnel:1.29-alpha.c24fe2aebd9b6330f180bbc9fcf81ee431e5a460
-    images.v1_29-alpha_c24fe2ae.istiod: gcr.io/istio-testing/pilot:1.29-alpha.c24fe2aebd9b6330f180bbc9fcf81ee431e5a460
-    images.v1_29-alpha_c24fe2ae.proxy: gcr.io/istio-testing/proxyv2:1.29-alpha.c24fe2aebd9b6330f180bbc9fcf81ee431e5a460
-    images.v1_29-alpha_c24fe2ae.cni: gcr.io/istio-testing/install-cni:1.29-alpha.c24fe2aebd9b6330f180bbc9fcf81ee431e5a460
+    images.v1_29-alpha_f2fd76af.ztunnel: gcr.io/istio-testing/ztunnel:1.29-alpha.f2fd76afb4c6a3b9adb64df7c3763b52d7114325
+    images.v1_29-alpha_f2fd76af.istiod: gcr.io/istio-testing/pilot:1.29-alpha.f2fd76afb4c6a3b9adb64df7c3763b52d7114325
+    images.v1_29-alpha_f2fd76af.proxy: gcr.io/istio-testing/proxyv2:1.29-alpha.f2fd76afb4c6a3b9adb64df7c3763b52d7114325
+    images.v1_29-alpha_f2fd76af.cni: gcr.io/istio-testing/install-cni:1.29-alpha.f2fd76afb4c6a3b9adb64df7c3763b52d7114325
 revisionHistoryLimit: 10
 service:
   port: 8443
@@ -85,7 +85,7 @@ csv:
     - v1.26.1
     - v1.26.0
     - master
-    - v1.29-alpha.c24fe2ae
+    - v1.29-alpha.f2fd76af
 
     [See this page](https://github.com/istio-ecosystem/sail-operator/blob/main/bundle/README.md) for instructions on how to use it.
   support: Community based
