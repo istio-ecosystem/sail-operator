@@ -124,6 +124,8 @@ else
   echo "No latest version found for kindest/node on Docker Hub. Keeping the existing KIND_IMAGE."
 fi
 
+# Update Istio versions in the Documentation files
+./hack/update-istio-in-docs.sh
 
 # Regenerate files
 make update-istio gen
