@@ -126,6 +126,11 @@ func generateMultiPrimaryTestCases(profile string) {
 						common.AwaitDeployment(ctx, "istio-eastwestgateway", k2, clRemote)
 						Success("Gateway is created and available in both clusters")
 					})
+
+					It("has external IPs assigned", func(ctx SpecContext) {
+						expectLoadBalancerAddress(ctx, k1, clPrimary, "istio-eastwestgateway")
+						expectLoadBalancerAddress(ctx, k2, clRemote, "istio-eastwestgateway")
+					})
 				})
 
 				When("are installed remote secrets on each cluster", func() {
