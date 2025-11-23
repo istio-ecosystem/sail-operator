@@ -109,6 +109,10 @@ pilot:
 					It("updates Gateway status to Available", func(ctx SpecContext) {
 						common.AwaitDeployment(ctx, "istio-eastwestgateway", k1, clPrimary)
 					})
+
+					It("has an external IP assigned", func(ctx SpecContext) {
+						expectLoadBalancerAddress(ctx, k1, clPrimary, "istio-eastwestgateway")
+					})
 				})
 
 				When("Istio and IstioCNI are created in Remote cluster", func() {
@@ -178,6 +182,10 @@ values:
 
 					It("updates Gateway status to Available", func(ctx SpecContext) {
 						common.AwaitDeployment(ctx, "istio-eastwestgateway", k2, clRemote)
+					})
+
+					It("has an external IP assigned", func(ctx SpecContext) {
+						expectLoadBalancerAddress(ctx, k2, clRemote, "istio-eastwestgateway")
 					})
 				})
 

@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
+	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/certs"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
@@ -31,6 +32,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+var controlPlaneNamespace = common.ControlPlaneNamespace
 
 // ClusterDeployment represents a cluster along with its sample app version.
 type ClusterDeployment struct {
@@ -153,4 +156,12 @@ func awaitSecretCreation(cluster string, cl client.Client) {
 		_, err := common.GetObject(context.Background(), cl, kube.Key("cacerts", common.ControlPlaneNamespace), &corev1.Secret{})
 		return err
 	}).ShouldNot(HaveOccurred(), fmt.Sprintf("Secret is not created on %s cluster", cluster))
+}
+
+// expectLoadBalancerAddress to be assigned.
+// If the address is not assigned, cross-cluster traffic will not be sent since Istio doesn't know where to send it for the remote cluster(s).
+func expectLoadBalancerAddress(ctx context.Context, k kubectl.Kubectl, cl client.Client, name string) {
+	address := common.GetSVCLoadBalancerAddress(ctx, cl, controlPlaneNamespace, name)
+	Expect(address).ToNot(BeEmpty(), fmt.Sprintf("Gateway service %q does not have an external address on %s", name, k.ClusterName))
+	Success(fmt.Sprintf("Gateway service %q has an external address %s on %s", name, address, k.ClusterName))
 }

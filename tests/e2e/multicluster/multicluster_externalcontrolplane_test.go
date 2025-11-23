@@ -92,6 +92,10 @@ values:
 					It("updates Gateway status to Available", func(ctx SpecContext) {
 						common.AwaitDeployment(ctx, "istio-ingressgateway", k1, clPrimary)
 					})
+
+					It("has an external IP assigned", func(ctx SpecContext) {
+						expectLoadBalancerAddress(ctx, k1, clPrimary, "istio-ingressgateway")
+					})
 				})
 
 				When("Istio external is installed in Cluster #2", func() {
