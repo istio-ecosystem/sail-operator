@@ -59,7 +59,6 @@ kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
   { kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml; }
 ----
 
-// Test block removed - now part of comprehensive e2e test
 
 [[set-up-istio-ambient-mode-resources-and-a-sample-application]]
 === Set up Istio Ambient Mode Resources and a Sample Application
@@ -75,7 +74,6 @@ Before you deploy a waypoint proxy in the application namespace, confirm the nam
 
 1. Deploy a waypoint proxy in the bookinfo namespace:
 
-// Test block removed - now part of comprehensive e2e test
 
 [source,bash,subs="attributes+"]
 ----
@@ -96,7 +94,6 @@ spec:
 EOF
 ----
 
-// Test block removed - now part of comprehensive e2e test
 
 The `istio.io/waypoint-for: service` label on the Gateway resource specifies that it processes traffic for services, which is the default behavior. The type of traffic a waypoint handles is determined by this label. For more details you can refer to Istio https://istio.io/latest/docs/ambient/usage/waypoint/#waypoint-traffic-types[documentation].
 
@@ -107,7 +104,6 @@ The `istio.io/waypoint-for: service` label on the Gateway resource specifies tha
 kubectl label ns bookinfo istio.io/use-waypoint=waypoint
 ----
 
-// Test block removed - now part of comprehensive e2e test
 
 After a namespace is enrolled to use a waypoint, any requests from any pods using the ambient data plane mode, to any service running in the `bookinfo` namespace, will be routed through the waypoint for L7 processing and policy enforcement.
 
@@ -146,7 +142,6 @@ kubectl label ns bookinfo istio.io/use-waypoint-namespace=foo
 kubectl label ns bookinfo istio.io/use-waypoint=waypoint-foo
 ----
 
-// Test block removed - now part of comprehensive e2e test
 
 [[update]]
 == Update
@@ -171,7 +166,6 @@ NAME                       READY   STATUS    RESTARTS   AGE
 waypoint-5d9c8b7f9-abc12   1/1     Running   0          5m
 ----
 +
-// Test block removed - now part of comprehensive e2e test
 
 2. Confirm the waypoint proxy is connected to the new control plane:
 +
@@ -183,7 +177,6 @@ waypoint-5d9c8b7f9-abc12.bookinfo     SYNCED     SYNCED     SYNCED     SYNCED   
 +
 The `SYNCED` status indicates the waypoint is receiving configuration from the control plane. The version column shows the updated Istio version.
 +
-// Test block removed - now part of comprehensive e2e test
 
 **RevisionBased Strategy:**
 
@@ -198,7 +191,6 @@ NAME                       READY   STATUS    RESTARTS   AGE
 waypoint-5d9c8b7f9-abc12   1/1     Running   0          5m
 ----
 +
-// Test block removed - now part of comprehensive e2e test
 
 2. Confirm the waypoint proxy is connected to the new control plane revision:
 +
@@ -210,7 +202,6 @@ waypoint-5d9c8b7f9-abc12.bookinfo     SYNCED     SYNCED     SYNCED     SYNCED   
 +
 The output shows the waypoint proxy connected to the revision-specific istiod pod (note the revision `1-26-4` in the pod name) and running the updated version.
 +
-// Test block removed - now part of comprehensive e2e test
 
 [[l7-feature-verification-during-updates]]
 === L7 Feature Verification During Updates
@@ -240,7 +231,6 @@ reviews-v1
 +
 The output should match your HTTPRoute configuration. With a 90/10 split, expect about 9 requests to reviews-v1 and 1 to reviews-v2.
 +
-// Test block removed - now part of comprehensive e2e test
 
 **Authorization Policies:**
 
@@ -256,7 +246,6 @@ RBAC: access denied
 +
 The ratings service is denied because it's not in the allow list.
 +
-// Test block removed - now part of comprehensive e2e test
 
 2. Test allowed access - The curl service should access productpage successfully:
 +
@@ -268,7 +257,6 @@ $ kubectl exec "$(kubectl get pod -l app=curl -n default -o jsonpath='{.items[0]
 +
 The request succeeds because the curl service matches the policy rules.
 +
-// Test block removed - now part of comprehensive e2e test
 
 [[cross-namespace-waypoint-updates]]
 === Cross-namespace Waypoint Updates
@@ -283,7 +271,6 @@ $ kubectl get ns bookinfo --show-labels | grep waypoint
 bookinfo  Active  istio.io/use-waypoint-namespace=foo,istio.io/use-waypoint=waypoint-foo
 ----
 +
-// Test block removed - now part of comprehensive e2e test
 
 2. Re-apply labels if needed:
 +
@@ -293,7 +280,6 @@ $ kubectl label ns bookinfo istio.io/use-waypoint-namespace=foo --overwrite
 $ kubectl label ns bookinfo istio.io/use-waypoint=waypoint-foo --overwrite
 ----
 +
-// Test block removed - now part of comprehensive e2e test
 
 [[layer-7-features-in-ambient-mode]]
 == Layer 7 Features in Ambient Mode
@@ -332,7 +318,6 @@ spec:
 EOF
 ----
 
-// Test block removed - now part of comprehensive e2e test
 
 If you open the Bookinfo application in your browser and refresh the page multiple times, you'll notice that most requests (90%) go to `reviews-v1`, which don't have any stars, while a smaller portion (10%) go to `reviews-v2`, which display black stars.
 
@@ -370,7 +355,6 @@ spec:
 EOF
 ----
 
-// Test block removed - now part of comprehensive e2e test
 
 Note the targetRefs field is used to specify the target service for the authorization policy of a waypoint proxy.
 
@@ -399,7 +383,6 @@ kubectl delete -n bookinfo HTTPRoute reviews
 kubectl delete -n bookinfo Gateway waypoint
 ----
 
-// Test block removed - now part of comprehensive e2e test
 
 [[remove-the-namespace-from-the-ambient-data-plane]]
 ==== Remove the namespace from the ambient data plane
@@ -409,7 +392,6 @@ kubectl delete -n bookinfo Gateway waypoint
 kubectl label namespace bookinfo istio.io/dataplane-mode-
 ----
 
-// Test block removed - now part of comprehensive e2e test
 
 [[remove-the-bookinfo-applications]]
 ==== Remove the Bookinfo applications
@@ -421,7 +403,6 @@ kubectl delete -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{ist
 kubectl delete -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/gateway-api/bookinfo-gateway.yaml
 ----
 
-// Test block removed - now part of comprehensive e2e test
 
 [[remove-the-kubernetes-gateway-api-crds]]
 ==== Remove the Kubernetes Gateway API CRDs
