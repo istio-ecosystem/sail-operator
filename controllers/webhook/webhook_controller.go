@@ -30,6 +30,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
+	operrors "github.com/istio-ecosystem/sail-operator/pkg/errors"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/revision"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
@@ -78,26 +79,38 @@ func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *ru
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *Reconciler) Reconcile(ctx context.Context, webhook *admissionv1.MutatingWebhookConfiguration) (ctrl.Result, error) {
-	log := logf.FromContext(ctx)
-
-	isReady, err := r.probe(ctx, webhook)
-	reason := ""
-	if err != nil {
-		log.V(3).Error(err, "Probe failed")
-		reason = err.Error()
+	isReady, probeErr := r.probe(ctx, webhook)
+	if statusUpdateErr := r.updateStatus(ctx, webhook, isReady, probeErr); statusUpdateErr != nil {
+		return ctrl.Result{}, errors.Join(
+			statusUpdateErr,
+			errors.Unwrap(statusUpdateErr),
+			probeErr,
+			errors.Unwrap(probeErr),
+		)
 	}
+	return ctrl.Result{RequeueAfter: getPeriod(webhook)}, nil
+}
 
+func (r *Reconciler) updateStatus(
+	ctx context.Context,
+	webhook *admissionv1.MutatingWebhookConfiguration,
+	probeReady bool,
+	probeErr error,
+) error {
+	reason := ""
+	if probeErr != nil {
+		logf.FromContext(ctx).V(3).Error(probeErr, "Probe failed")
+		reason = errors.Join(probeErr, errors.Unwrap(probeErr)).Error()
+	}
 	if webhook.Annotations == nil {
 		webhook.Annotations = make(map[string]string)
 	}
-	webhook.Annotations[constants.WebhookReadinessProbeStatusAnnotationKey] = strconv.FormatBool(isReady)
+	webhook.Annotations[constants.WebhookReadinessProbeStatusAnnotationKey] = strconv.FormatBool(probeReady)
 	webhook.Annotations[constants.WebhookReadinessProbeStatusReasonAnnotationKey] = reason
-
-	err = r.Client.Update(ctx, webhook)
-	if err != nil {
-		return ctrl.Result{}, err
+	if err := r.Client.Update(ctx, webhook); err != nil {
+		return operrors.NewWebHookProbeError("error updating webhook status", err)
 	}
-	return ctrl.Result{RequeueAfter: getPeriod(webhook)}, nil
+	return nil
 }
 
 func doProbe(ctx context.Context, webhook *admissionv1.MutatingWebhookConfiguration) (bool, error) {
@@ -107,15 +120,16 @@ func doProbe(ctx context.Context, webhook *admissionv1.MutatingWebhookConfigurat
 	}
 	clientConfig := webhook.Webhooks[0].ClientConfig
 	if clientConfig.Service == nil {
-		return false, errors.New("missing webhooks[].clientConfig.service")
+		return false, operrors.NewValidationError("missing webhooks[].clientConfig.service")
 	}
 
 	if len(clientConfig.CABundle) == 0 {
-		return false, errors.New("webhooks[].clientConfig.caBundle hasn't been set; check if the remote istiod can access this cluster")
+		return false, operrors.NewValidationError(
+			"webhooks[].clientConfig.caBundle hasn't been set; check if the remote istiod can access this cluster")
 	}
 	caCertPool := x509.NewCertPool()
 	if ok := caCertPool.AppendCertsFromPEM(clientConfig.CABundle); !ok {
-		return false, errors.New("failed to append CA bundle to cert pool")
+		return false, operrors.NewWebHookProbeError("failed to append CA bundle to cert pool")
 	}
 
 	httpClient := http.Client{
@@ -131,19 +145,19 @@ func doProbe(ctx context.Context, webhook *admissionv1.MutatingWebhookConfigurat
 
 	url, err := getReadinessProbeURL(clientConfig)
 	if err != nil {
-		return false, err
+		return false, operrors.NewWebHookProbeError("composing readiness probe url failed", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return false, err
+		return false, operrors.NewWebHookProbeError("composing readiness probe request failed", err)
 	}
 
 	log.V(3).Info("Executing readiness probe on remote control plane", "url", req.URL.String())
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		log.V(3).Info("Probe failed", "error", err)
-		return false, err
+		return false, operrors.NewWebHookProbeError("probe request failed", err)
 	}
 	log.V(3).Info("Probe response", "response", resp.StatusCode)
 

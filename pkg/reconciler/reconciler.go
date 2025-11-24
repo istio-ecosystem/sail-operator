@@ -19,6 +19,7 @@ import (
 	"reflect"
 	"strings"
 
+	operrors "github.com/istio-ecosystem/sail-operator/pkg/errors"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -102,10 +103,10 @@ func (r *StandardReconciler[T]) Reconcile(ctx context.Context, req ctrl.Request)
 	case errors.IsNotFound(err):
 		log.Info("Resource not found. Retrying...", "error", err)
 		return ctrl.Result{Requeue: true}, nil
-	case IsTransientError(err):
+	case operrors.IsTransient(err):
 		log.Info("Reconciliation failed. Retrying...", "error", err)
 		return ctrl.Result{Requeue: true}, nil
-	case IsValidationError(err):
+	case operrors.IsValidation(err):
 		log.Info("Validation failed", "error", err)
 		return ctrl.Result{}, nil
 	default:

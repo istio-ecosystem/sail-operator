@@ -29,6 +29,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
+	operrors "github.com/istio-ecosystem/sail-operator/pkg/errors"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	predicate2 "github.com/istio-ecosystem/sail-operator/pkg/predicate"
@@ -111,7 +112,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, rev *v1.IstioRevision) (ctrl
 	log.Info("Reconciliation done. Updating status.")
 	statusErr := r.updateStatus(ctx, rev, reconcileErr)
 
-	return ctrl.Result{}, errors.Join(reconcileErr, statusErr)
+	return ctrl.Result{}, errors.Join(reconcileErr, statusErr, errors.Unwrap(reconcileErr))
 }
 
 func (r *Reconciler) doReconcile(ctx context.Context, rev *v1.IstioRevision) error {
@@ -130,34 +131,36 @@ func (r *Reconciler) Finalize(ctx context.Context, rev *v1.IstioRevision) error 
 
 func (r *Reconciler) validate(ctx context.Context, rev *v1.IstioRevision) error {
 	if rev.Spec.Version == "" {
-		return reconciler.NewValidationError("spec.version not set")
+		return operrors.NewValidationError("spec.version not set")
 	}
 	if rev.Spec.Namespace == "" {
-		return reconciler.NewValidationError("spec.namespace not set")
+		return operrors.NewValidationError("spec.namespace not set")
 	}
 	if err := validation.ValidateTargetNamespace(ctx, r.Client, rev.Spec.Namespace); err != nil {
 		return err
 	}
 
 	if rev.Spec.Values == nil {
-		return reconciler.NewValidationError("spec.values not set")
+		return operrors.NewValidationError("spec.values not set")
 	}
 
 	revName := rev.Spec.Values.Revision
 	if rev.Name == v1.DefaultRevision && (revName != nil && *revName != "") {
-		return reconciler.NewValidationError(fmt.Sprintf("spec.values.revision must be \"\" when IstioRevision name is %s", v1.DefaultRevision))
+		return operrors.NewValidationError(
+			fmt.Sprintf("spec.values.revision must be \"\" when IstioRevision name is %s", v1.DefaultRevision))
 	} else if rev.Name != v1.DefaultRevision && (revName == nil || *revName != rev.Name) {
-		return reconciler.NewValidationError("spec.values.revision does not match IstioRevision name")
+		return operrors.NewValidationError("spec.values.revision does not match IstioRevision name")
 	}
 
 	if rev.Spec.Values.Global == nil || rev.Spec.Values.Global.IstioNamespace == nil || *rev.Spec.Values.Global.IstioNamespace != rev.Spec.Namespace {
-		return reconciler.NewValidationError("spec.values.global.istioNamespace does not match spec.namespace")
+		return operrors.NewValidationError(
+			"spec.values.global.istioNamespace does not match spec.namespace")
 	}
 
 	tag := v1.IstioRevisionTag{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: rev.Name}, &tag); err == nil {
 		if validation.ResourceTakesPrecedence(&tag.ObjectMeta, &rev.ObjectMeta) {
-			return reconciler.NewNameAlreadyExistsError("an IstioRevisionTag exists with this name", nil)
+			return operrors.NewNameAlreadyExistsError("an IstioRevisionTag exists with this name")
 		}
 	} else if !apierrors.IsNotFound(err) {
 		return err
@@ -399,14 +402,14 @@ func (r *Reconciler) determineReconciledCondition(err error) v1.IstioRevisionCon
 
 	if err == nil {
 		c.Status = metav1.ConditionTrue
-	} else if reconciler.IsNameAlreadyExistsError(err) {
+	} else if operrors.IsNameAlreadyExists(err) {
 		c.Status = metav1.ConditionFalse
 		c.Reason = v1.IstioRevisionReasonNameAlreadyExists
 		c.Message = err.Error()
 	} else {
 		c.Status = metav1.ConditionFalse
 		c.Reason = v1.IstioRevisionReasonReconcileError
-		c.Message = fmt.Sprintf("error reconciling resource: %v", err)
+		c.Message = errors.Join(errors.New("error reconciling resource"), err, errors.Unwrap(err)).Error()
 	}
 	return c
 }
