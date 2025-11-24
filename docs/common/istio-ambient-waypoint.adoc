@@ -314,7 +314,6 @@ spec:
 EOF
 ----
 
-
 If you open the Bookinfo application in your browser and refresh the page multiple times, you'll notice that most requests (90%) go to `reviews-v1`, which don't have any stars, while a smaller portion (10%) go to `reviews-v2`, which display black stars.
 
 [[security-authorization]]
@@ -351,7 +350,6 @@ spec:
 EOF
 ----
 
-
 Note the targetRefs field is used to specify the target service for the authorization policy of a waypoint proxy.
 
 [[security-authentication]]
@@ -379,7 +377,6 @@ kubectl delete -n bookinfo HTTPRoute reviews
 kubectl delete -n bookinfo Gateway waypoint
 ----
 
-
 [[remove-the-namespace-from-the-ambient-data-plane]]
 ==== Remove the namespace from the ambient data plane
 
@@ -387,7 +384,6 @@ kubectl delete -n bookinfo Gateway waypoint
 ----
 kubectl label namespace bookinfo istio.io/dataplane-mode-
 ----
-
 
 [[remove-the-bookinfo-applications]]
 ==== Remove the Bookinfo applications
@@ -398,7 +394,6 @@ kubectl delete -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{ist
 kubectl delete -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo-versions.yaml
 kubectl delete -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/gateway-api/bookinfo-gateway.yaml
 ----
-
 
 [[remove-the-kubernetes-gateway-api-crds]]
 ==== Remove the Kubernetes Gateway API CRDs
