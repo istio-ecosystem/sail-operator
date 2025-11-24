@@ -87,7 +87,7 @@ Update the control plane by changing the version in the Istio resource. The Sail
 * You have deployed ZTunnel in the `ztunnel` namespace.
 * You have verified the current version and the Istio resource is in a Healthy state by running the following command:
 
-[source,bash,subs="attributes+",name="ambient-inplace-update-strategy"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl get istio -n istio-system
 NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
@@ -98,21 +98,21 @@ default   1           1       1        default           Healthy   v1.26.3   7d
 
 . Update the Istio resource version. For example, to update to Istio 1.26.4, set the `spec.version` field to `v1.26.4` by running the following command:
 +
-[source,bash,subs="attributes+",name="ambient-inplace-update-strategy"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v1.26.4"}}'
 ----
 
 . Wait for the Istio control plane to become ready:
 +
-[source,bash,subs="attributes+",name="ambient-inplace-update-strategy"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl wait --for=condition=Ready istios/default -n istio-system --timeout=5m
 ----
 
 . Verify the Istio resource shows the new version and is in a Healthy state:
 +
-[source,bash,subs="attributes+",name="ambient-inplace-update-strategy"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl get istio -n istio-system
 NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
@@ -121,7 +121,7 @@ default   1           1       1        default           Healthy   v1.26.4   7d1
 
 . Verify the istiod pod is running with the new version and check its status:
 +
-[source,bash,subs="attributes+",name="ambient-inplace-update-strategy"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl get pods -n istio-system -l app=istiod
 NAME                             READY   STATUS    RESTARTS   AGE
@@ -130,7 +130,7 @@ istiod-default-6bd6b8664b-x7k2m  1/1     Running   0          2m15s
 +
 Optionally, verify the control plane is functioning correctly by checking the logs:
 +
-[source,bash,subs="attributes+",name="ambient-inplace-update-strategy"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl logs -n istio-system -l app=istiod --tail=50 | grep -i "version\|ready"
 ----
@@ -142,28 +142,28 @@ After updating the Istio control plane, update the IstioCNI and ZTunnel componen
 
 . Update the IstioCNI resource to the same version as the control plane:
 +
-[source,bash,subs="attributes+",name="ambient-inplace-update-strategy"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl patch istiocni -n istio-cni default --type='merge' -p '{"spec":{"version":"v1.26.4"}}'
 ----
 +
 Wait for the IstioCNI resource to become ready:
 +
-[source,bash,subs="attributes+",name="ambient-inplace-update-strategy"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl wait --for=condition=Ready istiocnis/default --timeout=5m
 ----
 
 . Update the ZTunnel resource to the same version as the control plane:
 +
-[source,bash,subs="attributes+",name="ambient-inplace-update-strategy"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl patch ztunnel -n ztunnel default --type='merge' -p '{"spec":{"version":"v1.26.4"}}'
 ----
 +
 Wait for the ZTunnel resource to become ready:
 +
-[source,bash,subs="attributes+",name="ambient-inplace-update-strategy"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl wait --for=condition=Ready ztunnel/default --timeout=10m
 ----
@@ -228,7 +228,7 @@ NOTE: Multiple control plane revisions can run simultaneously, but only one ztun
 * You have deployed ZTunnel in the `ztunnel` namespace.
 * You have verified the current version and the Istio resource is in a Healthy state by running the following commands:
 
-[source,bash,subs="attributes+",name="ambient-revision-based-strategy"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl get istio default -n istio-system -o yaml | grep -A 3 updateStrategy
   updateStrategy:
@@ -236,14 +236,14 @@ $ kubectl get istio default -n istio-system -o yaml | grep -A 3 updateStrategy
     inactiveRevisionDeletionGracePeriodSeconds: 30
 ----
 
-[source,bash,subs="attributes+",name="ambient-revision-based-strategy"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl get istio -n istio-system
 NAME      REVISIONS   READY   IN USE   ACTIVE REVISION     STATUS    VERSION   AGE
 default   1           1       1        default-v1-26-3     Healthy   v1.26.3   7d
 ----
 
-[source,bash,subs="attributes+",name="ambient-revision-based-strategy"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl get istiorevision -n istio-system
 NAME              TYPE    READY   STATUS    IN USE   VERSION   AGE
@@ -256,7 +256,7 @@ default-v1-26-3   Local   True    Healthy   True     v1.26.3   7d
 
 . Update the Istio resource version. For example, to update to Istio 1.26.4, set the `spec.version` field to `v1.26.4` by running the following command:
 +
-[source,bash,subs="attributes+",name="ambient-revision-based-strategy"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v1.26.4"}}'
 ----
@@ -265,21 +265,21 @@ This command creates a new IstioRevision resource and a new istiod deployment fo
 
 . Monitor the new istiod pod creation:
 +
-[source,bash,subs="attributes+",name="ambient-revision-based-strategy"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl get pods -n istio-system -l app=istiod -w
 ----
 
 . Wait for the new control plane revision to become ready:
 +
-[source,bash,subs="attributes+",name="ambient-revision-based-strategy"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl wait --for=condition=Ready istios/default -n istio-system --timeout=5m
 ----
 
 . Verify both revisions are now running. The Istio resource should show 2 revisions:
 +
-[source,bash,subs="attributes+",name="ambient-revision-based-strategy"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl get istio -n istio-system
 NAME      REVISIONS   READY   IN USE   ACTIVE REVISION     STATUS    VERSION   AGE
@@ -288,7 +288,7 @@ default   2           2       1        default-v1-26-4     Healthy   v1.26.4   7
 
 . List the IstioRevision resources to see both versions:
 +
-[source,bash,subs="attributes+",name="ambient-revision-based-strategy"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl get istiorevision -n istio-system
 NAME              TYPE    READY   STATUS    IN USE   VERSION   AGE
@@ -300,7 +300,7 @@ The old revision shows `IN USE: True` because workloads are still connected to i
 
 . Confirm both control plane pods are running:
 +
-[source,bash,subs="attributes+",name="ambient-revision-based-strategy"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl get pods -n istio-system -l app=istiod
 NAME                                      READY   STATUS    RESTARTS   AGE
@@ -310,7 +310,7 @@ istiod-default-v1-26-4-7c8e9d775c-y8l3n   1/1     Running   0          2m
 
 . Verify the new control plane is functioning by checking its logs:
 +
-[source,bash,subs="attributes+",name="ambient-revision-based-strategy"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl logs -n istio-system istiod-default-v1-26-4-7c8e9d775c-y8l3n --tail=50 | grep -i "version\|ready"
 ----
@@ -324,7 +324,7 @@ Unlike sidecar mode, ambient mode workloads don't use namespace labels like `ist
 
 . Verify that your ambient namespaces are still labeled correctly:
 +
-[source,bash,subs="attributes+",name="ambient-revision-based-strategy"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl get namespace bookinfo --show-labels | grep istio
 NAME       STATUS   AGE   LABELS
@@ -333,28 +333,28 @@ bookinfo   Active   7d    istio-discovery=enabled,istio.io/dataplane-mode=ambien
 
 . The ambient workloads automatically use the new control plane. Verify connectivity:
 +
-[source,bash,subs="attributes+",name="ambient-revision-based-strategy"]
+[source,bash,subs="attributes+"]
 ----
 $ istioctl ztunnel-config workloads --namespace ztunnel | grep bookinfo
 ----
 
 . For more controlled migration, you can temporarily restart application pods to ensure they pick up any configuration changes:
 +
-[source,bash,subs="attributes+",name="ambient-revision-based-strategy"]
+[source,bash,subs="attributes+"]
 ----
 // Removed as pod restarts are generally unnecessary in ambient mode
 ----
 
 . Wait for the rollout to complete:
 +
-[source,bash,subs="attributes+",name="ambient-revision-based-strategy"]
+[source,bash,subs="attributes+"]
 ----
 // Removed as pod restarts are generally unnecessary in ambient mode
 ----
 
 . Verify the workloads are functioning correctly:
 +
-[source,bash,subs="attributes+",name="ambient-revision-based-strategy"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl exec "$(kubectl get pod -l app=ratings -n bookinfo -o jsonpath='{.items[0].metadata.name}')" -c ratings -n bookinfo -- curl -sS productpage:9080/productpage | grep -o "<title>.*</title>"
 <title>Simple Bookstore App</title>
@@ -365,7 +365,7 @@ $ kubectl exec "$(kubectl get pod -l app=ratings -n bookinfo -o jsonpath='{.item
 
 . After the grace period (specified in `inactiveRevisionDeletionGracePeriodSeconds`), verify that the old revision has been cleaned up:
 +
-[source,bash,subs="attributes+",name="ambient-revision-based-strategy"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl get istiorevision -n istio-system
 NAME              TYPE    READY   STATUS    IN USE   VERSION   AGE
@@ -374,7 +374,7 @@ default-v1-26-4   Local   True    Healthy   True     v1.26.4   35m
 
 . Confirm only the new control plane pods are running:
 +
-[source,bash,subs="attributes+",name="ambient-revision-based-strategy"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl get pods -n istio-system -l app=istiod
 NAME                                      READY   STATUS    RESTARTS   AGE
@@ -383,7 +383,7 @@ istiod-default-v1-26-4-7c8e9d775c-y8l3n   1/1     Running   0          35m
 
 . Verify the Istio resource reflects the single active revision:
 +
-[source,bash,subs="attributes+",name="ambient-revision-based-strategy"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl get istio -n istio-system
 NAME      REVISIONS   READY   IN USE   ACTIVE REVISION     STATUS    VERSION   AGE
@@ -399,7 +399,7 @@ If you encounter issues during the RevisionBased upgrade, you can roll back befo
 
 . Verify the old revision is still available:
 +
-[source,bash,subs="attributes+",name="ambient-revision-rollback"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl get istiorevision -n istio-system
 NAME              TYPE    READY   STATUS    IN USE   VERSION   AGE
@@ -409,14 +409,14 @@ default-v1-26-4   Local   True    Healthy   True     v1.26.4   10m
 
 . Roll back the Istio resource to the previous version:
 +
-[source,bash,subs="attributes+",name="ambient-revision-rollback"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v1.26.3"}}'
 ----
 
 . Roll back IstioCNI and ZTunnel if needed:
 +
-[source,bash,subs="attributes+",name="ambient-revision-rollback"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl patch istiocni default --type='merge' -p '{"spec":{"version":"v1.26.3"}}'
 $ kubectl patch ztunnel default --type='merge' -p '{"spec":{"version":"v1.26.3"}}'
@@ -424,7 +424,7 @@ $ kubectl patch ztunnel default --type='merge' -p '{"spec":{"version":"v1.26.3"}
 
 . Restart application pods:
 +
-[source,bash,subs="attributes+",name="ambient-revision-rollback"]
+[source,bash,subs="attributes+"]
 ----
 // Removed as pod restarts are generally unnecessary in ambient mode
 ----
@@ -457,14 +457,14 @@ After updating IstioCNI, update the ZTunnel component. The Sail Operator updates
 
 . Update the ZTunnel resource version. For example, to update to Istio 1.26.4, set the `spec.version` field to `v1.26.4` by running the following command:
 +
-[source,bash,subs="attributes+",name="ambient-update-ztunnel"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl patch ztunnel -n ztunnel default --type='merge' -p '{"spec":{"version":"v1.26.4"}}'
 ----
 
 . Monitor the ZTunnel DaemonSet rollout:
 +
-[source,bash,subs="attributes+",name="ambient-update-ztunnel"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl rollout status daemonset/ztunnel -n ztunnel
 ----
@@ -473,14 +473,14 @@ $ kubectl rollout status daemonset/ztunnel -n ztunnel
 
 . Wait for the ZTunnel resource to become ready:
 +
-[source,bash,subs="attributes+",name="ambient-update-ztunnel"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl wait --for=condition=Ready ztunnel/default --timeout=10m
 ----
 
 . Verify the ZTunnel resource shows the new version and all pods are running:
 +
-[source,bash,subs="attributes+",name="ambient-update-ztunnel"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl get ztunnel
 NAME      READY   STATUS    VERSION   AGE
@@ -504,21 +504,21 @@ NOTE: The following examples use the `bookinfo` sample application running in th
 
 . Verify that your ambient workloads are still functioning correctly:
 +
-[source,bash,subs="attributes+",name="ambient-verify-workloads"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl get pods -n bookinfo
 ----
 
 . Verify ZTunnel is processing traffic for your ambient workloads:
 +
-[source,bash,subs="attributes+",name="ambient-verify-workloads"]
+[source,bash,subs="attributes+"]
 ----
 $ istioctl ztunnel-config workloads --namespace ztunnel | grep bookinfo
 ----
 
 . Test connectivity within your mesh:
 +
-[source,bash,subs="attributes+",name="ambient-verify-workloads"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl exec "$(kubectl get pod -l app=ratings -n bookinfo -o jsonpath='{.items[0].metadata.name}')" -c ratings -n bookinfo -- curl -sS productpage:9080/productpage | grep -o "<title>.*</title>"
 <title>Simple Bookstore App</title>
@@ -531,7 +531,7 @@ If you have deployed waypoint proxies in your ambient mesh for Layer 7 features,
 
 . List existing waypoint proxies:
 +
-[source,bash,subs="attributes+",name="ambient-update-waypoint"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl get gateway -n bookinfo
 NAME       CLASS              ADDRESS        PROGRAMMED   AGE
@@ -540,7 +540,7 @@ waypoint   istio-waypoint     10.96.123.45   True         7d
 
 . Waypoint proxies should automatically update to use the new control plane. Verify the waypoint proxy pods are running:
 +
-[source,bash,subs="attributes+",name="ambient-update-waypoint"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl get pods -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint
 NAME                       READY   STATUS    RESTARTS   AGE

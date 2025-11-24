@@ -53,7 +53,7 @@ If your applications require any of the following L7 mesh functions, you will ne
 
 Waypoint proxies are deployed using Kubernetes Gateway resources. As of Kubernetes 1.30 and OpenShift 4.17, the Kubernetes Gateway API CRDs are not available by default and must be installed to be used. This can be done with the following command:
 
-[source,bash,subs="attributes+",name="ambient-waypoint-prerequisites"]
+[source,bash,subs="attributes+"]
 ----
 kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
   { kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml; }
@@ -77,7 +77,7 @@ Before you deploy a waypoint proxy in the application namespace, confirm the nam
 
 // Test block removed - now part of comprehensive e2e test
 
-[source,bash,subs="attributes+",name="ambient-waypoint-deploy"]
+[source,bash,subs="attributes+"]
 ----
 kubectl apply -f - <<EOF
 apiVersion: gateway.networking.k8s.io/v1
@@ -102,7 +102,7 @@ The `istio.io/waypoint-for: service` label on the Gateway resource specifies tha
 
 2. Enroll the bookinfo namespace to use the waypoint:
 
-[source,bash,subs="attributes+",name="ambient-waypoint-deploy"]
+[source,bash,subs="attributes+"]
 ----
 kubectl label ns bookinfo istio.io/use-waypoint=waypoint
 ----
@@ -140,7 +140,7 @@ spec:
 
 By default, the Istio control plane will look for a waypoint specified using the `istio.io/use-waypoint` label in the same namespace as the resource which the label is applied to. You can add labels `istio.io/use-waypoint-namespace` and `istio.io/use-waypoint` together to start using the cross-namespace waypoint.
 
-[source,bash,subs="attributes+",name="ambient-waypoint-crossns-deploy"]
+[source,bash,subs="attributes+"]
 ----
 kubectl label ns bookinfo istio.io/use-waypoint-namespace=foo
 kubectl label ns bookinfo istio.io/use-waypoint=waypoint-foo
@@ -164,7 +164,7 @@ When using InPlace updates, waypoint proxies automatically transition to the new
 
 1. Verify waypoint proxy pods are running:
 +
-[source,bash,subs="attributes+",name="ambient-waypoint-update-inplace"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl get pods -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint
 NAME                       READY   STATUS    RESTARTS   AGE
@@ -175,7 +175,7 @@ waypoint-5d9c8b7f9-abc12   1/1     Running   0          5m
 
 2. Confirm the waypoint proxy is connected to the new control plane:
 +
-[source,bash,subs="attributes+",name="ambient-waypoint-update-inplace"]
+[source,bash,subs="attributes+"]
 ----
 $ istioctl proxy-status | grep waypoint
 waypoint-5d9c8b7f9-abc12.bookinfo     SYNCED     SYNCED     SYNCED     SYNCED     istiod-6cf8d4f9cb-wm7x6.istio-system     1.26.4
@@ -191,7 +191,7 @@ When using RevisionBased updates, waypoint proxies automatically connect to the 
 
 1. After the new Istio control plane revision is ready, verify waypoint proxy pods are running:
 +
-[source,bash,subs="attributes+",name="ambient-waypoint-update-revisionbased"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl get pods -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint
 NAME                       READY   STATUS    RESTARTS   AGE
@@ -202,7 +202,7 @@ waypoint-5d9c8b7f9-abc12   1/1     Running   0          5m
 
 2. Confirm the waypoint proxy is connected to the new control plane revision:
 +
-[source,bash,subs="attributes+",name="ambient-waypoint-update-revisionbased"]
+[source,bash,subs="attributes+"]
 ----
 $ istioctl proxy-status | grep waypoint
 waypoint-5d9c8b7f9-abc12.bookinfo     SYNCED     SYNCED     SYNCED     SYNCED     istiod-1-26-4-7b9f8c5d6-xyz78.istio-system     1.26.4
@@ -223,7 +223,7 @@ Test that HTTPRoute rules are enforced. See <<traffic-routing,Traffic Routing>> 
 
 1. Test traffic distribution by sending requests and checking which service version handles them:
 +
-[source,bash,subs="attributes+",name="ambient-waypoint-verify-l7"]
+[source,bash,subs="attributes+"]
 ----
 $ for i in {1..10}; do kubectl exec "$(kubectl get pod -l app=productpage -n bookinfo -o jsonpath='{.items[0].metadata.name}')" -c istio-proxy -n bookinfo -- curl -s http://reviews:9080/reviews/0 | grep -o "reviews-v[0-9]"; done
 reviews-v1
@@ -248,7 +248,7 @@ Test that L7 authorization policies are enforced. The `productpage-waypoint` Aut
 
 1. Test denied access - Services not in the allow list should be denied:
 +
-[source,bash,subs="attributes+",name="ambient-waypoint-verify-l7"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl exec "$(kubectl get pod -l app=ratings -n bookinfo -o jsonpath='{.items[0].metadata.name}')" -c ratings -n bookinfo -- curl -sS productpage:9080/productpage
 RBAC: access denied
@@ -260,7 +260,7 @@ The ratings service is denied because it's not in the allow list.
 
 2. Test allowed access - The curl service should access productpage successfully:
 +
-[source,bash,subs="attributes+",name="ambient-waypoint-verify-l7"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl exec "$(kubectl get pod -l app=curl -n default -o jsonpath='{.items[0].metadata.name}')" -c curl -n default -- curl -sS http://productpage.bookinfo:9080/productpage | grep -o "<title>.*</title>"
 <title>Simple Bookstore App</title>
@@ -277,7 +277,7 @@ For cross-namespace waypoints, verify the namespace labels are correct.
 
 1. Check namespace labels:
 +
-[source,bash,subs="attributes+",name="ambient-waypoint-crossns-update"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl get ns bookinfo --show-labels | grep waypoint
 bookinfo  Active  istio.io/use-waypoint-namespace=foo,istio.io/use-waypoint=waypoint-foo
@@ -287,7 +287,7 @@ bookinfo  Active  istio.io/use-waypoint-namespace=foo,istio.io/use-waypoint=wayp
 
 2. Re-apply labels if needed:
 +
-[source,bash,subs="attributes+",name="ambient-waypoint-crossns-update"]
+[source,bash,subs="attributes+"]
 ----
 $ kubectl label ns bookinfo istio.io/use-waypoint-namespace=foo --overwrite
 $ kubectl label ns bookinfo istio.io/use-waypoint=waypoint-foo --overwrite
@@ -307,7 +307,7 @@ With a waypoint proxy deployed, you can split traffic between different versions
 
 For example, let's configure traffic routing to send 90% of requests to reviews-v1 and 10% to reviews-v2:
 
-[source,bash,subs="attributes+",name="ambient-waypoint-l7-features"]
+[source,bash,subs="attributes+"]
 ----
 kubectl apply -f - <<EOF
 apiVersion: gateway.networking.k8s.io/v1
@@ -345,7 +345,7 @@ When a waypoint proxy is added to a workload, you may have two possible places w
 
 For example, let's add a L7 authorization policy that will explicitly allow a curl service to send `GET` requests to the `productpage` service, but perform no other operations:
 
-[source,bash,subs="attributes+",name="ambient-waypoint-l7-features"]
+[source,bash,subs="attributes+"]
 ----
 kubectl apply -f - <<EOF
 apiVersion: security.istio.io/v1
@@ -392,7 +392,7 @@ For steps on how to troubleshoot an ambient deployment, you can refer to the Ist
 [[remove-istio-and-gateway-resources]]
 ==== Remove Istio and Gateway Resources
 
-[source,bash,subs="attributes+",name="ambient-waypoint-cleanup"]
+[source,bash,subs="attributes+"]
 ----
 kubectl delete -n bookinfo AuthorizationPolicy productpage-waypoint
 kubectl delete -n bookinfo HTTPRoute reviews
@@ -404,7 +404,7 @@ kubectl delete -n bookinfo Gateway waypoint
 [[remove-the-namespace-from-the-ambient-data-plane]]
 ==== Remove the namespace from the ambient data plane
 
-[source,bash,subs="attributes+",name="ambient-waypoint-cleanup"]
+[source,bash,subs="attributes+"]
 ----
 kubectl label namespace bookinfo istio.io/dataplane-mode-
 ----
@@ -414,7 +414,7 @@ kubectl label namespace bookinfo istio.io/dataplane-mode-
 [[remove-the-bookinfo-applications]]
 ==== Remove the Bookinfo applications
 
-[source,bash,subs="attributes+",name="ambient-waypoint-cleanup"]
+[source,bash,subs="attributes+"]
 ----
 kubectl delete -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo.yaml
 kubectl delete -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo-versions.yaml
@@ -426,245 +426,7 @@ kubectl delete -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{ist
 [[remove-the-kubernetes-gateway-api-crds]]
 ==== Remove the Kubernetes Gateway API CRDs
 
-[source,bash,subs="attributes+",name="ambient-waypoint-cleanup"]
+[source,bash,subs="attributes+"]
 ----
 kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml
 ----
-
-// Test block removed - now part of comprehensive e2e test
-
-// Comprehensive E2E test for ambient waypoint proxy
-// This test includes all prerequisites, setup, testing, and cleanup
-ifdef::ambient-waypoint-e2e[]
-echo "======================================"
-echo "Starting Ambient Waypoint E2E Test"
-echo "======================================"
-
-# ============================================
-# PHASE 1: Prerequisites and Setup
-# ============================================
-echo "Phase 1: Setting up prerequisites..."
-
-# Install Gateway API CRDs
-echo "Installing Gateway API CRDs..."
-kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
-  { kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml; }
-with_retries kubectl get crd gateways.gateway.networking.k8s.io
-
-# Create namespaces
-echo "Creating namespaces..."
-kubectl create namespace istio-system --dry-run=client -o yaml | kubectl apply -f -
-kubectl label namespace istio-system istio-discovery=enabled --overwrite
-kubectl create namespace istio-cni --dry-run=client -o yaml | kubectl apply -f -
-kubectl create namespace ztunnel --dry-run=client -o yaml | kubectl apply -f -
-kubectl label namespace ztunnel istio-discovery=enabled --overwrite
-
-# Install Istio with ambient profile
-echo "Installing Istio with ambient profile..."
-cat <<EOF | kubectl apply -f-
-apiVersion: sailoperator.io/v1
-kind: Istio
-metadata:
-  name: default
-spec:
-  version: v{istio_latest_version}
-  namespace: istio-system
-  updateStrategy:
-    type: InPlace
-  profile: ambient
-  values:
-    pilot:
-      trustedZtunnelNamespace: ztunnel
-    meshConfig:
-      discoverySelectors:
-        - matchLabels:
-            istio-discovery: enabled
-EOF
-echo "Waiting for Istio to be ready..."
-with_retries kubectl get istio default -o jsonpath='{.status.state}' | grep -q "Healthy"
-with_retries wait_istio_ready "istio-system"
-
-# Install IstioCNI
-echo "Installing IstioCNI..."
-cat <<EOF | kubectl apply -f-
-apiVersion: sailoperator.io/v1
-kind: IstioCNI
-metadata:
-  name: default
-spec:
-  profile: ambient
-  version: v{istio_latest_version}
-  namespace: istio-cni
-EOF
-echo "Waiting for IstioCNI to be ready..."
-wait_cni_ready "istio-cni"
-
-# Install ZTunnel
-echo "Installing ZTunnel..."
-cat <<EOF | kubectl apply -f-
-apiVersion: sailoperator.io/v1alpha1
-kind: ZTunnel
-metadata:
-  name: default
-spec:
-  profile: ambient
-  version: v{istio_latest_version}
-  namespace: ztunnel
-EOF
-echo "Waiting for ZTunnel to be ready..."
-with_retries kubectl get ztunnel default -o jsonpath='{.status.state}' | grep -q "Healthy"
-
-# Deploy bookinfo application
-echo "Deploying bookinfo application..."
-kubectl create ns bookinfo --dry-run=client -o yaml | kubectl apply -f -
-kubectl label namespace bookinfo istio-discovery=enabled --overwrite
-kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo.yaml
-kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo-versions.yaml
-echo "Waiting for bookinfo pods to be ready..."
-with_retries wait_pods_ready_by_ns "bookinfo"
-
-# Add bookinfo to ambient mesh
-echo "Adding bookinfo to ambient mesh..."
-kubectl label namespace bookinfo istio.io/dataplane-mode=ambient --overwrite
-
-# ============================================
-# PHASE 2: Waypoint Proxy Testing
-# ============================================
-echo "Phase 2: Testing waypoint proxy..."
-
-# Deploy waypoint proxy
-echo "Deploying waypoint proxy..."
-kubectl apply -f - <<EOF
-apiVersion: gateway.networking.k8s.io/v1
-kind: Gateway
-metadata:
-  labels:
-    istio.io/waypoint-for: service
-  name: waypoint
-  namespace: bookinfo
-spec:
-  gatewayClassName: istio-waypoint
-  listeners:
-  - name: mesh
-    port: 15008
-    protocol: HBONE
-EOF
-with_retries kubectl get deployment waypoint -n bookinfo
-with_retries wait_pods_by_label "bookinfo" "gateway.networking.k8s.io/gateway-name=waypoint"
-
-# Enroll namespace to use waypoint
-echo "Enrolling bookinfo namespace to use waypoint..."
-kubectl label ns bookinfo istio.io/use-waypoint=waypoint --overwrite
-with_retries kubectl get ns bookinfo -o jsonpath='{.metadata.labels.istio\.io/use-waypoint}' | grep -q "waypoint"
-
-# Verify waypoint proxy is running
-echo "Verifying waypoint proxy..."
-kubectl get pods -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint
-istioctl proxy-status | grep waypoint || echo "Waypoint proxy status checked"
-
-# ============================================
-# PHASE 3: L7 Features Testing
-# ============================================
-echo "Phase 3: Testing L7 features..."
-
-# Deploy curl service for testing
-echo "Deploying curl service..."
-kubectl create ns default --dry-run=client -o yaml | kubectl apply -f -
-kubectl label namespace default istio.io/dataplane-mode=ambient --overwrite
-kubectl apply -n default -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/curl/curl.yaml
-with_retries wait_pods_by_label "default" "app=curl"
-
-# Apply HTTPRoute for traffic routing
-echo "Applying HTTPRoute..."
-kubectl apply -f - <<EOF
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: reviews
-  namespace: bookinfo
-spec:
-  parentRefs:
-  - group: ""
-    kind: Service
-    name: reviews
-    port: 9080
-  rules:
-  - backendRefs:
-    - name: reviews-v1
-      port: 9080
-      weight: 90
-    - name: reviews-v2
-      port: 9080
-      weight: 10
-EOF
-with_retries kubectl get httproute reviews -n bookinfo
-
-# Apply AuthorizationPolicy
-echo "Applying AuthorizationPolicy..."
-kubectl apply -f - <<EOF
-apiVersion: security.istio.io/v1
-kind: AuthorizationPolicy
-metadata:
-  name: productpage-waypoint
-  namespace: bookinfo
-spec:
-  targetRefs:
-  - kind: Service
-    group: ""
-    name: productpage
-  action: ALLOW
-  rules:
-  - from:
-    - source:
-        principals:
-        - cluster.local/ns/default/sa/curl
-    to:
-    - operation:
-        methods: ["GET"]
-EOF
-with_retries kubectl get authorizationpolicy productpage-waypoint -n bookinfo
-
-# ============================================
-# PHASE 4: Cleanup
-# ============================================
-echo "Phase 4: Cleanup..."
-
-# Remove Istio and Gateway resources
-echo "Removing Istio and Gateway resources..."
-kubectl delete -n bookinfo AuthorizationPolicy productpage-waypoint --ignore-not-found=true
-kubectl delete -n bookinfo HTTPRoute reviews --ignore-not-found=true
-kubectl delete -n bookinfo Gateway waypoint --ignore-not-found=true
-
-# Remove namespace labels
-echo "Removing namespace labels..."
-kubectl label namespace bookinfo istio.io/dataplane-mode- --ignore-not-found=true
-kubectl label namespace bookinfo istio.io/use-waypoint- --ignore-not-found=true
-kubectl label namespace default istio.io/dataplane-mode- --ignore-not-found=true
-
-# Remove bookinfo applications
-echo "Removing bookinfo applications..."
-kubectl delete -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo.yaml --ignore-not-found=true
-kubectl delete -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo-versions.yaml --ignore-not-found=true
-kubectl delete -n default -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/curl/curl.yaml --ignore-not-found=true
-
-# Remove Istio components
-echo "Removing Istio components..."
-kubectl delete ztunnel default --ignore-not-found=true
-kubectl delete istiocni default --ignore-not-found=true
-kubectl delete istio default --ignore-not-found=true
-
-# Remove namespaces
-echo "Removing namespaces..."
-kubectl delete namespace bookinfo --ignore-not-found=true
-kubectl delete namespace ztunnel --ignore-not-found=true
-kubectl delete namespace istio-cni --ignore-not-found=true
-kubectl delete namespace istio-system --ignore-not-found=true
-
-# Remove Gateway API CRDs
-echo "Removing Gateway API CRDs..."
-kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml --ignore-not-found=true
-
-echo "======================================"
-echo "Ambient Waypoint E2E Test Completed"
-echo "======================================"
-endif::[]
