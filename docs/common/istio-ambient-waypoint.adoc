@@ -59,7 +59,6 @@ kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
   { kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml; }
 ----
 
-
 [[set-up-istio-ambient-mode-resources-and-a-sample-application]]
 === Set up Istio Ambient Mode Resources and a Sample Application
 
@@ -73,7 +72,6 @@ Before you deploy a waypoint proxy in the application namespace, confirm the nam
 === Deploy a Waypoint Proxy
 
 1. Deploy a waypoint proxy in the bookinfo namespace:
-
 
 [source,bash,subs="attributes+"]
 ----
@@ -94,7 +92,6 @@ spec:
 EOF
 ----
 
-
 The `istio.io/waypoint-for: service` label on the Gateway resource specifies that it processes traffic for services, which is the default behavior. The type of traffic a waypoint handles is determined by this label. For more details you can refer to Istio https://istio.io/latest/docs/ambient/usage/waypoint/#waypoint-traffic-types[documentation].
 
 2. Enroll the bookinfo namespace to use the waypoint:
@@ -103,7 +100,6 @@ The `istio.io/waypoint-for: service` label on the Gateway resource specifies tha
 ----
 kubectl label ns bookinfo istio.io/use-waypoint=waypoint
 ----
-
 
 After a namespace is enrolled to use a waypoint, any requests from any pods using the ambient data plane mode, to any service running in the `bookinfo` namespace, will be routed through the waypoint for L7 processing and policy enforcement.
 
