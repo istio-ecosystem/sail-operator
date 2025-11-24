@@ -870,7 +870,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 					Name: "default",
 				},
 				Spec: v1.IstioRevisionTagSpec{
-					TargetRef: v1.IstioRevisionTagTargetReference{
+					TargetRef: v1.TargetReference{
 						Kind: "IstioRevision",
 						Name: revName,
 					},

@@ -6,3 +6,6 @@ spec:
   version: v1.28.0
   namespace: ztunnel
   profile: ambient
+  targetRef:
+    kind: Istio
+    name: default

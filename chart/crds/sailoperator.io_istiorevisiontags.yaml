@@ -64,10 +64,10 @@ spec:
             description: IstioRevisionTagSpec defines the desired state of IstioRevisionTag
             properties:
               targetRef:
-                description: IstioRevisionTagTargetReference can reference either
-                  Istio or IstioRevision objects in the cluster. In the case of referencing
-                  an Istio object, the Sail Operator will automatically update the
-                  reference to the Istio object's Active Revision.
+                description: TargetReference can reference either Istio or IstioRevision
+                  objects in the cluster. In the case of referencing an Istio object,
+                  the Sail Operator will automatically update the reference to the
+                  Istio object's Active Revision.
                 properties:
                   kind:
                     description: Kind is the kind of the target resource.

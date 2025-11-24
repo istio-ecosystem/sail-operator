@@ -102,7 +102,7 @@ func (r *Reconciler) doReconcile(ctx context.Context, tag *v1.IstioRevisionTag) 
 	}
 
 	log.Info("Retrieving referenced IstioRevision for IstioRevisionTag")
-	rev, err := r.getIstioRevision(ctx, tag.Spec.TargetRef)
+	rev, err := revision.GetIstioRevisionFromTargetReference(ctx, r.Client, tag.Spec.TargetRef)
 	if rev == nil || err != nil {
 		return nil, err
 	}
@@ -155,32 +155,6 @@ func (r *Reconciler) validate(ctx context.Context, tag *v1.IstioRevisionTag) err
 		}
 	}
 	return nil
-}
-
-func (r *Reconciler) getIstioRevision(ctx context.Context, ref v1.IstioRevisionTagTargetReference) (*v1.IstioRevision, error) {
-	var revisionName string
-	if ref.Kind == v1.IstioRevisionKind {
-		revisionName = ref.Name
-	} else if ref.Kind == v1.IstioKind {
-		i := v1.Istio{}
-		err := r.Client.Get(ctx, types.NamespacedName{Name: ref.Name}, &i)
-		if err != nil {
-			return nil, err
-		}
-		if i.Status.ActiveRevisionName == "" {
-			return nil, reconciler.NewTransientError("referenced Istio has no active revision")
-		}
-		revisionName = i.Status.ActiveRevisionName
-	} else {
-		return nil, reconciler.NewValidationError("unknown targetRef.kind")
-	}
-
-	rev := v1.IstioRevision{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: revisionName}, &rev)
-	if err != nil {
-		return nil, err
-	}
-	return &rev, nil
 }
 
 func (r *Reconciler) installHelmCharts(ctx context.Context, tag *v1.IstioRevisionTag, rev *v1.IstioRevision) error {
@@ -401,7 +375,7 @@ func (r *Reconciler) isRevisionTagReferencedByWorkloads(ctx context.Context, tag
 		}
 	}
 
-	rev, err := r.getIstioRevision(ctx, tag.Spec.TargetRef)
+	rev, err := revision.GetIstioRevisionFromTargetReference(ctx, r.Client, tag.Spec.TargetRef)
 	if err != nil {
 		return false, err
 	}
