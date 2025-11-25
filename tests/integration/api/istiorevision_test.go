@@ -22,7 +22,6 @@ import (
 	"time"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
@@ -235,11 +234,11 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 	Describe("ZTunnel dependency checks", func() {
 		ztunnelName := "default"
 		ztunnelKey := client.ObjectKey{Name: ztunnelName}
-		ztunnel := &v1alpha1.ZTunnel{
+		ztunnel := &v1.ZTunnel{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: ztunnelName,
 			},
-			Spec: v1alpha1.ZTunnelSpec{
+			Spec: v1.ZTunnelSpec{
 				Version:   istioversion.Default,
 				Namespace: istioNamespace,
 			},
@@ -320,7 +319,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 			ds.Status.NumberReady = 3
 			Expect(k8sClient.Status().Update(ctx, ds)).To(Succeed())
 
-			expectZTunnelCondition(ctx, v1alpha1.ZTunnelConditionReady, metav1.ConditionTrue)
+			expectZTunnelCondition(ctx, v1.ZTunnelConditionReady, metav1.ConditionTrue)
 			expectCondition(ctx, revName, v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionTrue)
 		})
 	})
@@ -1019,11 +1018,11 @@ func expectCondition(ctx context.Context, name string, condition v1.IstioRevisio
 }
 
 // expectZTunnelCondition on the ZTunnel resource to eventually have a given status.
-func expectZTunnelCondition(ctx context.Context, condition v1alpha1.ZTunnelConditionType, status metav1.ConditionStatus,
-	extraChecks ...func(Gomega, *v1alpha1.ZTunnelCondition),
+func expectZTunnelCondition(ctx context.Context, condition v1.ZTunnelConditionType, status metav1.ConditionStatus,
+	extraChecks ...func(Gomega, *v1.ZTunnelCondition),
 ) {
 	ztunnelKey := client.ObjectKey{Name: "default"}
-	ztunnel := v1alpha1.ZTunnel{}
+	ztunnel := v1.ZTunnel{}
 	Eventually(func(g Gomega) {
 		g.Expect(k8sClient.Get(ctx, ztunnelKey, &ztunnel)).To(Succeed())
 		g.Expect(ztunnel.Status.ObservedGeneration).To(Equal(ztunnel.ObjectMeta.Generation))

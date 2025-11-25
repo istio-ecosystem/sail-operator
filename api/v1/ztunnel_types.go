@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1
+package v1
 
 import (
 	"time"
 
-	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -29,21 +28,11 @@ const (
 type ZTunnelSpec struct {
 	// +sail:version
 	// Defines the version of Istio to install.
-	// Must be one of: v1.28-latest, v1.28.0, v1.27-latest, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, v1.25-latest, v1.24-latest.
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.28-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.28.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.27-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.27.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.27.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.27.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.27.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.26-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.6", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.5", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.4", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.25-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.24-latest"}
-	// +kubebuilder:validation:Enum=v1.28-latest;v1.28.0;v1.27-latest;v1.27.3;v1.27.2;v1.27.1;v1.27.0;v1.26-latest;v1.26.6;v1.26.5;v1.26.4;v1.26.3;v1.26.2;v1.26.1;v1.26.0;v1.25-latest;v1.24-latest
+	// Must be one of: v1.28-latest, v1.28.0, v1.27-latest, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, v1.25-latest, v1.24-latest, master, v1.29-alpha.b2f713a9.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.28-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.28.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.27-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.27.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.27.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.27.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.27.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.26-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.6", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.5", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.4", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.25-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.24-latest", "urn:alm:descriptor:com.tectonic.ui:select:master", "urn:alm:descriptor:com.tectonic.ui:select:v1.29-alpha.b2f713a9"}
+	// +kubebuilder:validation:Enum=v1.28-latest;v1.28.0;v1.27-latest;v1.27.3;v1.27.2;v1.27.1;v1.27.0;v1.26-latest;v1.26.6;v1.26.5;v1.26.4;v1.26.3;v1.26.2;v1.26.1;v1.26.0;v1.25-latest;v1.24-latest;master;v1.29-alpha.b2f713a9
 	// +kubebuilder:default=v1.28.0
 	Version string `json:"version"`
-
-	// +sail:profile
-	// The built-in installation configuration profile to use.
-	// The 'default' profile is 'ambient' and it is always applied.
-	// Must be one of: ambient, default, demo, empty, external, preview, remote, stable.
-	// +++PROFILES-DROPDOWN-HIDDEN-UNTIL-WE-FULLY-IMPLEMENT-THEM+++operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Profile",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:ambient", "urn:alm:descriptor:com.tectonic.ui:select:default", "urn:alm:descriptor:com.tectonic.ui:select:demo", "urn:alm:descriptor:com.tectonic.ui:select:empty", "urn:alm:descriptor:com.tectonic.ui:select:external", "urn:alm:descriptor:com.tectonic.ui:select:minimal", "urn:alm:descriptor:com.tectonic.ui:select:preview", "urn:alm:descriptor:com.tectonic.ui:select:remote"}
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,xDescriptors={"urn:alm:descriptor:com.tectonic.ui:hidden"}
-	// +kubebuilder:validation:Enum=ambient;default;demo;empty;external;openshift-ambient;openshift;preview;remote;stable
-	// +kubebuilder:default=ambient
-	Profile string `json:"profile,omitempty"`
 
 	// Namespace to which the Istio ztunnel component should be installed.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,xDescriptors={"urn:alm:descriptor:io.kubernetes:Namespace"}
@@ -52,7 +41,7 @@ type ZTunnelSpec struct {
 
 	// Defines the values to be passed to the Helm charts when installing Istio ztunnel.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Helm Values"
-	Values *v1.ZTunnelValues `json:"values,omitempty"`
+	Values *ZTunnelValues `json:"values,omitempty"`
 }
 
 // ZTunnelStatus defines the observed state of ZTunnel
@@ -166,10 +155,10 @@ const (
 	ZTunnelReasonHealthy ZTunnelConditionReason = "Healthy"
 )
 
-// +kubebuilder:deprecatedversion
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster,categories=istio-io
 // +kubebuilder:subresource:status
+// +kubebuilder:storageversion
 // +kubebuilder:printcolumn:name="Namespace",type="string",JSONPath=".spec.namespace",description="The namespace for the ztunnel component."
 // +kubebuilder:printcolumn:name="Profile",type="string",JSONPath=".spec.values.profile",description="The selected profile (collection of value presets)."
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].status",description="Whether the Istio ztunnel installation is ready to handle requests."
@@ -184,7 +173,7 @@ type ZTunnel struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata"`
 
-	// +kubebuilder:default={version: "v1.28.0", namespace: "ztunnel", profile: "ambient"}
+	// +kubebuilder:default={version: "v1.28.0", namespace: "ztunnel"}
 	// +optional
 	Spec ZTunnelSpec `json:"spec"`
 
