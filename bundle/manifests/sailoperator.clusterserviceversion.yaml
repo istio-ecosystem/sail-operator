@@ -31,7 +31,7 @@ metadata:
           }
         },
         {
-          "apiVersion": "sailoperator.io/v1alpha1",
+          "apiVersion": "sailoperator.io/v1",
           "kind": "ZTunnel",
           "metadata": {
             "name": "default"
@@ -45,7 +45,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/sail-dev/sail-operator:1.28.0
-    createdAt: "2025-11-17T08:36:47Z"
+    createdAt: "2025-11-25T10:19:16Z"
     description: The Sail Operator manages the lifecycle of your Istio control plane. It provides custom resources for you to deploy and manage your control plane components.
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -145,6 +145,9 @@ spec:
       - kind: WorkloadGroup
         name: workloadgroups.networking.istio.io
         version: v1beta1
+      - kind: ZTunnel
+        name: ztunnels.sailoperator.io
+        version: v1alpha1
       - kind: AuthorizationPolicy
         name: authorizationpolicies.security.istio.io
         version: v1
@@ -386,18 +389,10 @@ spec:
             path: namespace
             x-descriptors:
               - urn:alm:descriptor:io.kubernetes:Namespace
-          - description: |-
-              The built-in installation configuration profile to use.
-              The 'default' profile is 'ambient' and it is always applied.
-              Must be one of: ambient, default, demo, empty, external, preview, remote, stable.
-            displayName: Profile
-            path: profile
-            x-descriptors:
-              - urn:alm:descriptor:com.tectonic.ui:hidden
           - description: Defines the values to be passed to the Helm charts when installing Istio ztunnel.
             displayName: Helm Values
             path: values
-        version: v1alpha1
+        version: v1
   description: |-
     The Sail Operator manages the lifecycle of your Istio control plane. It provides custom resources for you to deploy and manage your control plane components.
 
