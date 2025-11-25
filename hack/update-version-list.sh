@@ -61,6 +61,14 @@ function updateVersionsInIstioTypeComment() {
       -e "/\+sail:version/,/Version string/ s/(\/\/ \Must be one of:)(.*)/\1 $ztunnelversions./g" \
       -e "s/(\+kubebuilder:default=.*version: \")[^\"]*\"/\1$defaultVersion\"/g" \
       api/v1alpha1/ztunnel_types.go
+
+    sed -i -E \
+      -e "/\+sail:version/,/Version string/ s/(\/\/ \+operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName=\"Istio Version\",xDescriptors=\{.*fieldGroup:General\")[^}]*(})/\1$ztunnelselectValues}/g" \
+      -e "/\+sail:version/,/Version string/ s/(\/\/ \+kubebuilder:validation:Enum=)(.*)/\1$ztunnelversionsEnum/g" \
+      -e "/\+sail:version/,/Version string/ s/(\/\/ \+kubebuilder:default=)(.*)/\1$defaultVersion/g" \
+      -e "/\+sail:version/,/Version string/ s/(\/\/ \Must be one of:)(.*)/\1 $ztunnelversions./g" \
+      -e "s/(\+kubebuilder:default=.*version: \")[^\"]*\"/\1$defaultVersion\"/g" \
+      api/v1/ztunnel_types.go
 }
 
 function updateVersionsInCSVDescription() {
