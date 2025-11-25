@@ -34,15 +34,17 @@ To install Istio Ambient mode using Sail Operator on OpenShift, use version `v1.
 
 ### ZTunnel resource
 
-The `ZTunnel` resource manages the L4 node proxy and is a cluster-wide resource. It deploys a DaemonSet that runs on all nodes in the cluster. You can specify the version using the `spec.version` field, as shown in the example below. Similar to the `Istio` resource, it also includes a `values` field that allows you to configure options available in the ztunnel helm chart.
+NOTE: The ZTunnel API was promoted from `v1alpha1` to `v1`. If you have existing `v1alpha1.ZTunnel` resources, they will continue to work but you should migrate to `v1`. The `profile` field has been removed as part of the graduation, so if you previously set this field you'll need to remove it in order to use `v1`.
 
-```yaml
-apiVersion: sailoperator.io/v1alpha1
+The `ZTunnel` resource manages the L4 node proxy and is a cluster-wide resource. It deploys a DaemonSet that runs on all nodes in the cluster. You can specify the version using the `spec.version` field, as shown in the example below. Similar to the `Istio` resource, it also includes a `values` field that allows you to configure options available in the ztunnel helm chart. The `metadata.name` field must be set to `default`, as enforced by a CRD validation rule that guarantees only one `ZTunnel` instance exists cluster-wide.
+
+[source,yaml]
+----
+apiVersion: sailoperator.io/v1
 kind: ZTunnel
 metadata:
   name: default
 spec:
-  profile: ambient
   namespace: ztunnel
   values:
     ztunnel:
@@ -147,17 +149,17 @@ $ kubectl create namespace ztunnel
 $ kubectl label namespace ztunnel istio-discovery=enabled
 ```
 
-8. Create the `ZTunnel` resource.
-
-```bash
-$ cat <<EOF | kubectl apply -f-
-apiVersion: sailoperator.io/v1alpha1
+. Create the `ZTunnel` resource.
++
+[source,bash,subs="attributes+"]
+----
+cat <<EOF | kubectl apply -f-
+apiVersion: sailoperator.io/v1
 kind: ZTunnel
 metadata:
   name: default
 spec:
-  profile: ambient
-  version: v1.24.0
+  version: v{istio_latest_version}
   namespace: ztunnel
 EOF
 ```

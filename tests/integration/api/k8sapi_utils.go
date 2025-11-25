@@ -16,6 +16,7 @@ package integration
 
 import (
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -35,6 +36,13 @@ func NewOwnerReference(obj client.Object) metav1.OwnerReference {
 	case *v1.IstioCNI:
 		apiVersion = v1.GroupVersion.String()
 		kind = v1.IstioCNIKind
+	case *v1alpha1.ZTunnel:
+		apiVersion = v1.GroupVersion.String()
+		kind = v1.ZTunnelKind
+	case *v1.ZTunnel:
+		apiVersion = v1.GroupVersion.String()
+		kind = v1.ZTunnelKind
+
 	default:
 		panic("unknown type")
 	}
