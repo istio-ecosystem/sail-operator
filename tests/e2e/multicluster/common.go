@@ -164,3 +164,13 @@ func expectLoadBalancerAddress(ctx context.Context, k kubectl.Kubectl, cl client
 		ShouldNot(BeEmpty(), fmt.Sprintf("Gateway service %q does not have an external IP on %s", name, k.ClusterName))
 	Success(fmt.Sprintf("Gateway service %q has an external IP on %s", name, k.ClusterName))
 }
+
+// eventuallyLoadBalancerIsReachable to make sure that cross cluster communication is working on the infrastructure level
+func eventuallyLoadBalancerIsReachable(ctx context.Context, kSrc kubectl.Kubectl, kDest kubectl.Kubectl, clDest client.Client, name string) {
+	ip := common.GetSVCLoadBalancerAddress(ctx, clDest, controlPlaneNamespace, name)
+	Eventually(ctx, kSrc.WithNamespace("sample").Exec).WithArguments(
+		"deploy/sleep", "sleep", fmt.Sprintf("curl -sS %s:15021/healthz/ready", ip)).
+		Should(BeEmpty(), fmt.Sprintf("Gateway %q on %s is not reachable from %s, this might indicate a problem with the underlying infrastructure",
+			name, kDest.ClusterName, kSrc.ClusterName))
+	Success(fmt.Sprintf("Gateway %q on %s is reachable from %s", name, kDest.ClusterName, kSrc.ClusterName))
+}

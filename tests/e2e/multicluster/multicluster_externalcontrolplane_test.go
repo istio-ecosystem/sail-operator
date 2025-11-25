@@ -358,6 +358,10 @@ spec:
 						Success("Sample pods has expected annotation")
 					})
 
+					It("can reach the ingress gateway from remote cluster", func(ctx SpecContext) {
+						eventuallyLoadBalancerIsReachable(ctx, k2, k1, clPrimary, "istio-ingressgateway")
+					})
+
 					It("can access the sample app from the local service", func(ctx SpecContext) {
 						verifyResponsesAreReceivedFromExpectedVersions(k2, "v1")
 						Success("Sample app is accessible from hello service in Cluster #2")

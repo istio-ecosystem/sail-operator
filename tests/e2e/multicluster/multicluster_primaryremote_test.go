@@ -204,6 +204,11 @@ values:
 						Success("Sample app is created in both clusters and Running")
 					})
 
+					It("can reach target east-west gateway from each cluster", func(ctx SpecContext) {
+						eventuallyLoadBalancerIsReachable(ctx, k1, k2, clRemote, "istio-eastwestgateway")
+						eventuallyLoadBalancerIsReachable(ctx, k2, k1, clPrimary, "istio-eastwestgateway")
+					})
+
 					It("can access the sample app from both clusters", func(ctx SpecContext) {
 						verifyResponsesAreReceivedFromExpectedVersions(k1)
 						verifyResponsesAreReceivedFromExpectedVersions(k2)
