@@ -3516,7 +3516,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.28-latest, v1.28.0, v1.27-latest, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, v1.25-latest, v1.24-latest, master, v1.29-alpha.b2f713a9. | v1.28.0 | Enum: [v1.28-latest v1.28.0 v1.27-latest v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.24-latest master v1.29-alpha.b2f713a9]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.28-latest, v1.28.0, v1.27-latest, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, v1.25-latest, v1.24-latest. | v1.28.0 | Enum: [v1.28-latest v1.28.0 v1.27-latest v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.24-latest]   |
 | `namespace` _string_ | Namespace to which the Istio ztunnel component should be installed. | ztunnel |  |
 | `values` _[ZTunnelValues](#ztunnelvalues)_ | Defines the values to be passed to the Helm charts when installing Istio ztunnel. |  |  |
 
