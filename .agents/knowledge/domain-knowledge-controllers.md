@@ -4,14 +4,14 @@ This document provides AI agents with detailed knowledge about the Sail Operator
 
 ## Controller Architecture
 
-The Sail Operator uses the controller-runtime framework with separate controllers for each Custom Resource:
+The Sail Operator uses the controller-runtime framework with separate controllers for each Custom Resource. Controllers are located in `controllers/<resource>/` directories:
 
-- **IstioController** - Manages `Istio` resources and their lifecycle
-- **IstioRevisionController** - Manages `IstioRevision` resources and Helm deployments
-- **IstioCNIController** - Manages `IstioCNI` resources for CNI plugin
-- **ZTunnelController** - Manages `ZTunnel` resources for Ambient mesh
-- **IstioRevisionTagController** - Manages `IstioRevisionTag` resources for canary deployments
-- **WebhookController** - Manages ValidatingAdmissionWebhook for Istio resources
+- **IstioController** (`controllers/istio/`) - Manages `Istio` resources and their lifecycle
+- **IstioRevisionController** (`controllers/istiorevision/`) - Manages `IstioRevision` resources and Helm deployments
+- **IstioCNIController** (`controllers/istiocni/`) - Manages `IstioCNI` resources for CNI plugin
+- **ZTunnelController** (`controllers/ztunnel/`) - Manages `ZTunnel` resources for Ambient mesh
+- **IstioRevisionTagController** (`controllers/istiorevisiontag/`) - Manages `IstioRevisionTag` resources for canary deployments
+- **WebhookController** (`controllers/webhook/`) - Manages MutatingWebhookConfiguration for Istio resources
 
 ## Controller Reconciliation Patterns
 

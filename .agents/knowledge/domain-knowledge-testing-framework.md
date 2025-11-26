@@ -87,12 +87,15 @@ E2E tests are organized by functionality:
 
 ```
 tests/e2e/
-├── operator/           # Operator deployment tests
-├── ambient/           # Ambient mesh functionality
-├── sidecar/           # Sidecar injection tests
-├── multicluster/      # Multi-cluster scenarios
-├── upgrade/           # Version upgrade tests
-└── util/              # Shared utilities
+├── ambient/              # Ambient mesh functionality tests
+├── controlplane/         # Control plane installation and update tests
+├── dualstack/            # Dual-stack networking tests
+├── multicluster/         # Multi-cluster scenarios (primary-remote, multi-primary, external control plane)
+├── multicontrolplane/    # Multiple control plane tests
+├── operator/             # Operator deployment and installation tests
+├── samples/              # Sample application tests
+├── setup/                # Test setup utilities
+└── util/                 # Shared utilities (cleaner, kubectl, helm, etc.)
 ```
 
 ### Cluster Management
@@ -131,8 +134,8 @@ BUILD_WITH_CONTAINER=0 make test.e2e.kind
 - `SKIP_BUILD=false` - Skip operator image build
 - `SKIP_DEPLOY=false` - Skip operator deployment
 - `IMAGE=quay.io/sail-dev/sail-operator:latest` - Operator image
-- `OCP=false` - Use OpenShift cluster
-- `OLM=false` - Deploy via OLM instead of Helm
+- `OCP=true` - Use OpenShift cluster
+- `OLM=true` - Deploy via OLM instead of Helm
 
 #### Test Behavior
 - `GINKGO_FLAGS` - Pass flags to Ginkgo runner

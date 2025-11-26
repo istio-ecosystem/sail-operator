@@ -15,26 +15,41 @@ This file defines all supported Istio versions:
 
 ```yaml
 versions:
-  - name: v1.26-latest
-    ref: v1.26.0
-  - name: v1.26.0
-    version: 1.26.0
+  # Alias pointing to a specific version (the first entry is the default)
+  - name: v1.X-latest
+    ref: v1.X.Y
+
+  # Full version definition
+  - name: v1.X.Y
+    version: 1.X.Y
     repo: https://github.com/istio/istio
-    commit: 1.26.0
+    commit: 1.X.Y
     charts:
-      - https://istio-release.storage.googleapis.com/charts/base-1.26.0.tgz
-      - https://istio-release.storage.googleapis.com/charts/istiod-1.26.0.tgz
-      - https://istio-release.storage.googleapis.com/charts/gateway-1.26.0.tgz
-      - https://istio-release.storage.googleapis.com/charts/cni-1.26.0.tgz
-      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.26.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/base-1.X.Y.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-1.X.Y.tgz
+      - https://istio-release.storage.googleapis.com/charts/gateway-1.X.Y.tgz
+      - https://istio-release.storage.googleapis.com/charts/cni-1.X.Y.tgz
+      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.X.Y.tgz
+
+  # End-of-life version (still valid input, but not installable)
+  - name: v1.W-latest
+    ref: v1.W.Z
+    eol: true
+  - name: v1.W.Z
+    eol: true
 ```
 
+**Note:** Check `pkg/istioversion/versions.yaml` in the repository for the current list of supported versions.
+
 ### Version Entry Structure
-- **name** - Human-readable version identifier
+- **name** - Human-readable version identifier (e.g., `v1.X.Y`, `v1.X-latest`)
+- **ref** - Reference to another version (for alias entries like `v1.X-latest`)
 - **version** - Semantic version (x.y.z)
 - **repo** - Source repository URL
 - **commit** - Git commit/tag reference
+- **branch** - Git branch (for development versions like `master`)
 - **charts** - List of Helm chart URLs for this version
+- **eol** - Boolean indicating end-of-life (version remains valid but not installable)
 
 ### Vendor Customization
 The version file can be customized using the `VERSIONS_YAML_FILE` environment variable:
@@ -51,9 +66,10 @@ This allows downstream vendors to:
 ## Versioning Policy
 
 ### Supported Version Range
-- **Current policy**: n-2 versions (e.g., Operator 1.26 supports Istio 1.24-1.26)
+- **Current policy**: n-2 versions (the operator supports the current and two previous minor Istio versions)
 - **Version alignment**: Operator version matches latest supported Istio version
 - **Patch version handling**: Not all Istio patch versions are included
+- **EOL versions**: Versions can be marked with `eol: true` to keep them as valid input but not installable
 
 ### Version Lifecycle
 1. **New Istio release** - Add to versions.yaml with charts
