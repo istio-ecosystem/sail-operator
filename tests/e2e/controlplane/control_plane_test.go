@@ -18,6 +18,7 @@ package controlplane
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -32,7 +33,6 @@ import (
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -124,7 +124,7 @@ metadata:
 
 					It("uses the correct image", func(ctx SpecContext) {
 						Expect(common.GetObject(ctx, cl, kube.Key("istio-cni-node", istioCniNamespace), &appsv1.DaemonSet{})).
-							To(HaveContainersThat(HaveEach(ImageFromRegistry(expectedRegistry))))
+							To(common.HaveContainersThat(HaveEach(common.ImageFromRegistry(expectedRegistry))))
 					})
 
 					It("updates the status to Reconciled", func(ctx SpecContext) {
@@ -172,7 +172,7 @@ metadata:
 
 					It("uses the correct image", func(ctx SpecContext) {
 						Expect(common.GetObject(ctx, cl, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{})).
-							To(HaveContainersThat(HaveEach(ImageFromRegistry(expectedRegistry))))
+							To(common.HaveContainersThat(HaveEach(common.ImageFromRegistry(expectedRegistry))))
 					})
 
 					It("doesn't continuously reconcile the Istio CR", func() {
@@ -267,14 +267,6 @@ metadata:
 	})
 })
 
-func HaveContainersThat(matcher types.GomegaMatcher) types.GomegaMatcher {
-	return HaveField("Spec.Template.Spec.Containers", matcher)
-}
-
-func ImageFromRegistry(regexp string) types.GomegaMatcher {
-	return HaveField("Image", MatchRegexp(regexp))
-}
-
 func getProxyVersion(podName, namespace string) (*semver.Version, error) {
 	proxyStatus, err := istioctl.GetProxyStatus("--namespace " + namespace)
 	if err != nil {
@@ -282,15 +274,32 @@ func getProxyVersion(podName, namespace string) (*semver.Version, error) {
 	}
 
 	lines := strings.Split(proxyStatus, "\n")
+	colSplit := regexp.MustCompile(`\s{2,}`)
+
+	versionIdx := -1
+	headers := colSplit.Split(strings.TrimSpace(lines[0]), -1)
+	for i, header := range headers {
+		if header == "VERSION" {
+			versionIdx = i
+			break
+		}
+	}
+	if versionIdx == -1 {
+		return nil, fmt.Errorf("VERSION header not found")
+	}
+
 	var versionStr string
-	for _, line := range lines {
+	for _, line := range lines[1:] {
 		if strings.Contains(line, podName+"."+namespace) {
-			values := strings.Fields(line)
-			versionStr = values[len(values)-1]
+			values := colSplit.Split(strings.TrimSpace(line), -1)
+			versionStr = values[versionIdx]
 			break
 		}
 	}
 
+	if versionStr == "" {
+		return nil, fmt.Errorf("pod %s not found in proxy status output for namespace %s", podName, namespace)
+	}
 	version, err := semver.NewVersion(versionStr)
 	if err != nil {
 		return version, fmt.Errorf("error parsing sidecar version %q: %w", versionStr, err)

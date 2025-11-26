@@ -24,6 +24,16 @@ import (
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
 )
 
+// +kubebuilder:validation:Enum=undefined;all;cluster;namespace
+type ResourceScope string
+
+const (
+	ResourceScopeUndefined ResourceScope = "undefined"
+	ResourceScopeAll       ResourceScope = "all"
+	ResourceScopeCluster   ResourceScope = "cluster"
+	ResourceScopeNamespace ResourceScope = "namespace"
+)
+
 // Mode for the ingress controller.
 // +kubebuilder:validation:Enum=UNSPECIFIED;DEFAULT;STRICT;OFF
 type IngressControllerMode string
@@ -132,7 +142,7 @@ type CNIConfig struct {
 	// Configure the plugin as a chained CNI plugin. When true, the configuration is added to the CNI chain; when false,
 	// the configuration is added as a standalone file in the CNI configuration directory.
 	Chained *bool `json:"chained,omitempty"`
-	// The resource quotas configration for the CNI DaemonSet.
+	// The resource quotas configuration for the CNI DaemonSet.
 	ResourceQuotas *ResourceQuotas `json:"resource_quotas,omitempty"`
 	// The k8s resource requests and limits for the istio-cni Pods.
 	Resources *k8sv1.ResourceRequirements `json:"resources,omitempty"`
@@ -442,7 +452,10 @@ type GlobalConfig struct {
 	// Specifies whether native nftables rules should be used instead of iptables rules for traffic redirection.
 	NativeNftables *bool `json:"nativeNftables,omitempty"`
 	// Settings related to Kubernetes NetworkPolicy.
-	NetworkPolicy *NetworkPolicyConfig `json:"networkPolicy,omitempty"` // The next available key is 76
+	NetworkPolicy *NetworkPolicyConfig `json:"networkPolicy,omitempty"`
+	// Specifies resource scope for discovery selectors.
+	// This is useful when installing Istio on a cluster where some resources need to be owned by a cluster administrator and some can be owned by the mesh administrator.
+	ResourceScope ResourceScope `json:"resourceScope,omitempty"` // The next available key is 77
 
 }
 
@@ -637,6 +650,8 @@ type PilotConfig struct {
 	IstiodRemote *IstiodRemoteConfig `json:"istiodRemote,omitempty"`
 	// Configuration for the istio-discovery chart
 	EnvVarFrom []k8sv1.EnvVar `json:"envVarFrom,omitempty"`
+	// Select a custom name for istiod's plugged-in CA CRL ConfigMap.
+	CrlConfigMapName *string `json:"crlConfigMapName,omitempty"`
 }
 
 type PilotTaintControllerConfig struct {
@@ -1154,7 +1169,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x14istio_ingressgateway\x18\x04 \x01(\v2-.istio.operator.v1alpha1.IngressGatewayConfigR\x14istio-ingressgateway\x12@\n" +
 	"\x0fsecurityContext\x18\n" +
 	" \x01(\v2\x16.google.protobuf.ValueR\x0fsecurityContext\x12>\n" +
-	"\x0eseccompProfile\x18\f \x01(\v2\x16.google.protobuf.ValueR\x0eseccompProfile\"\xdf\x13\n" +
+	"\x0eseccompProfile\x18\f \x01(\v2\x16.google.protobuf.ValueR\x0eseccompProfile\"\xad\x14\n" +
 	"\fGlobalConfig\x12;\n" +
 	"\x04arch\x18\x01 \x01(\v2#.istio.operator.v1alpha1.ArchConfigB\x02\x18\x01R\x04arch\x12 \n" +
 	"\vcertSigners\x18D \x03(\tR\vcertSigners\x12F\n" +
@@ -1204,7 +1219,8 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\bwaypoint\x18H \x01(\v2'.istio.operator.v1alpha1.WaypointConfigR\bwaypoint\x12(\n" +
 	"\x0ftrustBundleName\x18I \x01(\tR\x0ftrustBundleName\x12B\n" +
 	"\x0enativeNftables\x18J \x01(\v2\x1a.google.protobuf.BoolValueR\x0enativeNftables\x12R\n" +
-	"\rnetworkPolicy\x18K \x01(\v2,.istio.operator.v1alpha1.NetworkPolicyConfigR\rnetworkPolicy\"-\n" +
+	"\rnetworkPolicy\x18K \x01(\v2,.istio.operator.v1alpha1.NetworkPolicyConfigR\rnetworkPolicy\x12L\n" +
+	"\rresourceScope\x18L \x01(\x0e2&.istio.operator.v1alpha1.ResourceScopeR\rresourceScope\"-\n" +
 	"\tSTSConfig\x12 \n" +
 	"\vservicePort\x18\x01 \x01(\rR\vservicePort\"R\n" +
 	"\fIstiodConfig\x12B\n" +
@@ -1261,7 +1277,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x04mode\x18\x02 \x01(\x0e29.istio.operator.v1alpha1.OutboundTrafficPolicyConfig.ModeR\x04mode\"(\n" +
 	"\x04Mode\x12\r\n" +
 	"\tALLOW_ANY\x10\x00\x12\x11\n" +
-	"\rREGISTRY_ONLY\x10\x01\"\x98\x13\n" +
+	"\rREGISTRY_ONLY\x10\x01\"\xc4\x13\n" +
 	"\vPilotConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12F\n" +
 	"\x10autoscaleEnabled\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x10autoscaleEnabled\x12\"\n" +
@@ -1306,7 +1322,8 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\fistiodRemote\x18= \x01(\v2+.istio.operator.v1alpha1.IstiodRemoteConfigR\fistiodRemote\x127\n" +
 	"\n" +
 	"envVarFrom\x18> \x03(\v2\x17.google.protobuf.StructR\n" +
-	"envVarFrom\"T\n" +
+	"envVarFrom\x12*\n" +
+	"\x10crlConfigMapName\x18? \x01(\tR\x10crlConfigMapName\"T\n" +
 	"\x1aPilotTaintControllerConfig\x12\x18\n" +
 	"\aenabled\x18\x01 \x01(\bR\aenabled\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\"\xc6\x01\n" +
@@ -1463,7 +1480,12 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"toleration\x18\x05 \x03(\v2\x1e.k8s.io.api.core.v1.TolerationR\n" +
 	"toleration\"K\n" +
 	"\x13NetworkPolicyConfig\x124\n" +
-	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled*J\n" +
+	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled*C\n" +
+	"\rResourceScope\x12\r\n" +
+	"\tundefined\x10\x00\x12\a\n" +
+	"\x03all\x10\x01\x12\v\n" +
+	"\acluster\x10\x02\x12\r\n" +
+	"\tnamespace\x10\x03*J\n" +
 	"\x15ingressControllerMode\x12\x0f\n" +
 	"\vUNSPECIFIED\x10\x00\x12\v\n" +
 	"\aDEFAULT\x10\x01\x12\n" +
@@ -1512,6 +1534,9 @@ type CNIGlobalConfig struct { // Default k8s resources settings for all Istio co
 	// An empty value means it is a vanilla Kubernetes distribution, therefore no special
 	// treatment will be considered.
 	Platform *string `json:"platform,omitempty"`
+
+	// Specifies whether native nftables rules should be used instead of iptables rules for traffic redirection.
+	NativeNftables *bool `json:"nativeNftables,omitempty"`
 }
 
 // Resource describes the source of configuration
@@ -1615,6 +1640,20 @@ type MeshConfigServiceScopeConfigsScope string
 const (
 	MeshConfigServiceScopeConfigsScopeLocal  MeshConfigServiceScopeConfigsScope = "LOCAL"
 	MeshConfigServiceScopeConfigsScopeGlobal MeshConfigServiceScopeConfigsScope = "GLOBAL"
+)
+
+// Available trace context options for handling different trace header formats.
+// +kubebuilder:validation:Enum=USE_B3;USE_B3_WITH_W3C_PROPAGATION
+type MeshConfigExtensionProviderZipkinTracingProviderTraceContextOption string
+
+const (
+	// Use B3 headers only (default behavior).
+	MeshConfigExtensionProviderZipkinTracingProviderTraceContextOptionUseB3 MeshConfigExtensionProviderZipkinTracingProviderTraceContextOption = "USE_B3"
+	// Enable B3 and W3C dual header support:
+	// - For downstream: Extract from B3 headers first, fallback to W3C traceparent if B3 is unavailable.
+	// - For upstream: Inject both B3 and W3C traceparent headers.
+	// When this option is NOT set, only B3 headers are used for both extraction and injection.
+	MeshConfigExtensionProviderZipkinTracingProviderTraceContextOptionUseB3WithW3cPropagation MeshConfigExtensionProviderZipkinTracingProviderTraceContextOption = "USE_B3_WITH_W3C_PROPAGATION"
 )
 
 // TraceContext selects the context propagation headers used for
@@ -2492,6 +2531,16 @@ type MeshConfigExtensionProviderZipkinTracingProvider struct {
 	// Optional. Specifies the endpoint of Zipkin API.
 	// The default value is "/api/v2/spans".
 	Path *string `json:"path,omitempty"`
+	// Optional. Determines which trace context format to use for trace header extraction and propagation.
+	// This controls both downstream request header extraction and upstream request header injection.
+	// The default value is USE_B3 to maintain backward compatibility.
+	TraceContextOption MeshConfigExtensionProviderZipkinTracingProviderTraceContextOption `json:"traceContextOption,omitempty"`
+	// Optional. The timeout for the HTTP request to the Zipkin collector.
+	// If not specified, the default timeout from Envoy's configuration will be used (which is 5 seconds currently).
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
+	// Optional. Additional HTTP headers to include in the request to the Zipkin collector.
+	// These headers will be added to the HTTP request when sending spans to the collector.
+	Headers []*MeshConfigExtensionProviderHttpHeader `json:"headers,omitempty"`
 }
 
 // Defines configuration for a Lightstep tracer.
@@ -3062,7 +3111,7 @@ type MeshConfigExtensionProviderResourceDetectorsDynatraceResourceDetector struc
 
 const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\n" +
-	"\x1amesh/v1alpha1/config.proto\x12\x13istio.mesh.v1alpha1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19mesh/v1alpha1/proxy.proto\x1a*networking/v1alpha3/destination_rule.proto\x1a)networking/v1alpha3/virtual_service.proto\"\xa5m\n" +
+	"\x1amesh/v1alpha1/config.proto\x12\x13istio.mesh.v1alpha1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19mesh/v1alpha1/proxy.proto\x1a*networking/v1alpha3/destination_rule.proto\x1a)networking/v1alpha3/virtual_service.proto\"\x84p\n" +
 	"\n" +
 	"MeshConfig\x12*\n" +
 	"\x11proxy_listen_port\x18\x04 \x01(\x05R\x0fproxyListenPort\x129\n" +
@@ -3145,7 +3194,7 @@ const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\ftls_settings\x18\x02 \x01(\v2,.istio.networking.v1alpha3.ClientTLSSettingsR\vtlsSettings\x12B\n" +
 	"\x0frequest_timeout\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\x0erequestTimeout\x12\x1f\n" +
 	"\vistiod_side\x18\x04 \x01(\bR\n" +
-	"istiodSide\x1a\xf0>\n" +
+	"istiodSide\x1a\xcfA\n" +
 	"\x11ExtensionProvider\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x8b\x01\n" +
 	"\x14envoy_ext_authz_http\x18\x02 \x01(\v2X.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyExternalAuthorizationHttpProviderH\x00R\x11envoyExtAuthzHttp\x12\x8b\x01\n" +
@@ -3201,13 +3250,20 @@ const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\tfail_open\x18\x03 \x01(\bR\bfailOpen\x12*\n" +
 	"\x11clear_route_cache\x18\a \x01(\bR\x0fclearRouteCache\x12&\n" +
 	"\x0fstatus_on_error\x18\x04 \x01(\tR\rstatusOnError\x12\x99\x01\n" +
-	"\x1dinclude_request_body_in_check\x18\x06 \x01(\v2W.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyExternalAuthorizationRequestBodyR\x19includeRequestBodyInCheck\x1a\xb2\x01\n" +
+	"\x1dinclude_request_body_in_check\x18\x06 \x01(\v2W.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyExternalAuthorizationRequestBodyR\x19includeRequestBodyInCheck\x1a\x91\x04\n" +
 	"\x15ZipkinTracingProvider\x12\x18\n" +
 	"\aservice\x18\x01 \x01(\tR\aservice\x12\x12\n" +
 	"\x04port\x18\x02 \x01(\rR\x04port\x12$\n" +
 	"\x0emax_tag_length\x18\x03 \x01(\rR\fmaxTagLength\x121\n" +
 	"\x15enable_64bit_trace_id\x18\x04 \x01(\bR\x12enable64bitTraceId\x12\x12\n" +
-	"\x04path\x18\x05 \x01(\tR\x04path\x1a\x91\x01\n" +
+	"\x04path\x18\x05 \x01(\tR\x04path\x12\x8c\x01\n" +
+	"\x14trace_context_option\x18\x06 \x01(\x0e2Z.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.ZipkinTracingProvider.TraceContextOptionR\x12traceContextOption\x123\n" +
+	"\atimeout\x18\a \x01(\v2\x19.google.protobuf.DurationR\atimeout\x12V\n" +
+	"\aheaders\x18\b \x03(\v2<.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.HttpHeaderR\aheaders\"A\n" +
+	"\x12TraceContextOption\x12\n" +
+	"\n" +
+	"\x06USE_B3\x10\x00\x12\x1f\n" +
+	"\x1bUSE_B3_WITH_W3C_PROPAGATION\x10\x01\x1a\x91\x01\n" +
 	"\x18LightstepTracingProvider\x12\x18\n" +
 	"\aservice\x18\x01 \x01(\tR\aservice\x12\x12\n" +
 	"\x04port\x18\x02 \x01(\rR\x04port\x12!\n" +

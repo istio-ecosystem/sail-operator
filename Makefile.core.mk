@@ -19,7 +19,7 @@ OLD_VARS := $(.VARIABLES)
 # Use `make print-variables` to inspect the values of the variables
 -include Makefile.vendor.mk
 
-VERSION ?= 1.27.0
+VERSION ?= 1.28.0
 MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 
 # This version will be used to generate the OLM upgrade graph in the FBC as a version to be replaced by the new operator version defined in $VERSION.
@@ -30,7 +30,7 @@ MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 # There are also GH workflows defined to release nightly and stable operators.
 # There is no need to define `replaces` and `skipRange` fields in the CSV as those fields are defined in the FBC and CSV values are ignored.
 # FBC is source of truth for OLM upgrade graph.
-PREVIOUS_VERSION ?= 1.26.0
+PREVIOUS_VERSION ?= 1.27.0
 
 OPERATOR_NAME ?= sailoperator
 VERSIONS_YAML_DIR ?= pkg/istioversion
@@ -114,7 +114,7 @@ KIND_IMAGE ?=
 ifeq ($(KIND_IMAGE),)
   ifeq ($(LOCAL_OS),Darwin)
     # If the OS is Darwin, set the image.
-    KIND_IMAGE := docker.io/kindest/node:v1.33.2
+    KIND_IMAGE := docker.io/kindest/node:v1.34.0
   endif
   # For other OS, KIND_IMAGE remains empty, which default to the upstream default image.
 endif
@@ -156,6 +156,8 @@ BUNDLE_MANIFEST_DATE := $(shell cat bundle/manifests/${OPERATOR_NAME}.clusterser
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 
 # BUNDLE_GEN_FLAGS are the flags passed to the operator-sdk generate bundle command
+# We are overwriting the version as we are appending a suffix for nightly builds,
+# otherwise it would be taken directly from helm values.
 BUNDLE_GEN_FLAGS ?= -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 
 # USE_IMAGE_DIGESTS defines if images are resolved via tags or digests
@@ -174,6 +176,8 @@ endif
 # Default values and flags used when rendering chart templates locally
 HELM_VALUES_FILE ?= chart/values.yaml
 HELM_TEMPL_DEF_FLAGS ?= --include-crds --values $(HELM_VALUES_FILE)
+# When true, all operand images will be added to the HELM_VALUES_FILE automatically
+PATCH_HELM_VALUES ?= true
 
 TODAY ?= $(shell date -I)
 
@@ -220,6 +224,10 @@ test.scorecard: operator-sdk ## Run the operator scorecard test.
 test.e2e.ocp: istioctl ## Run the end-to-end tests against an existing OCP cluster. While running on OCP in downstream you need to set ISTIOCTL_DOWNLOAD_URL to the URL where the istioctl productized binary.
 	GINKGO_FLAGS="$(GINKGO_FLAGS)" ${SOURCE_DIR}/tests/e2e/integ-suite-ocp.sh
 
+.PHONY: test.e2e.ocp.cleanup
+test.e2e.ocp.cleanup: verify-kubeconfig ## Clean up leftover artifacts from e2e.ocp tests
+	${SOURCE_DIR}/tests/e2e/cleanup-ocp.sh
+
 .PHONY: test.e2e.kind
 test.e2e.kind: istioctl ## Deploy a KinD cluster and run the end-to-end tests against it.
 	GINKGO_FLAGS="$(GINKGO_FLAGS)" ISTIOCTL="$(ISTIOCTL)" ${SOURCE_DIR}/tests/e2e/integ-suite-kind.sh
@@ -228,12 +236,11 @@ test.e2e.kind: istioctl ## Deploy a KinD cluster and run the end-to-end tests ag
 test.e2e.describe: ## Runs ginkgo outline -format indent over the e2e test to show in BDD style the steps and test structure
 	GINKGO_FLAGS="$(GINKGO_FLAGS)" ${SOURCE_DIR}/tests/e2e/common-operator-integ-suite.sh --describe
 
-.PHONE: test.docs
-test.docs: runme istioctl ## Run the documentation examples tests.
-## test.docs use runme to test the documentation examples. 
+.PHONY: test.docs
+test.docs: istioctl ## Run the documentation examples tests.
 ## Check the specific documentation to understand the use of the tool
-	@echo "Running runme test on the documentation examples."
-	@PATH=$(LOCALBIN):$$PATH tests/documentation_tests/scripts/run-docs-examples.sh
+	@echo "Running test on the documentation examples."
+	@PATH=$(LOCALBIN):$$PATH tests/documentation_tests/scripts/run-asciidocs-test.sh
 	@echo "Documentation examples tested successfully"
 
 ##@ Build
@@ -512,10 +519,12 @@ operator-chart: download-istio-charts # pull the charts first as they are requir
 	sed -i -e "s/^\(version: \).*$$/\1${VERSION}/g" \
 	       -e "s/^\(appVersion: \).*$$/\1\"${VERSION}\"/g" chart/Chart.yaml
 	sed -i -e "s|^\(image: \).*$$|\1${IMAGE}|g" \
-	       -e "s/^\(  version: \).*$$/\1${VERSION}/g" chart/values.yaml
+	       -e "s/^\(  version: \).*$$/\1${VERSION}/g" ${HELM_VALUES_FILE}
 	# adding all component images to values
 	# when building the bundle, helm generated base CSV is passed to the operator-sdk. With USE_IMAGE_DIGESTS=true, operator-sdk replaces all pullspecs with tags by digests and adds spec.relatedImages field automatically
-	@hack/patch-values.sh chart/values.yaml
+ifeq ($(PATCH_HELM_VALUES), true)
+	@hack/patch-values.sh ${HELM_VALUES_FILE}
+endif
 
 .PHONY: alauda-update-values
 alauda-update-values: VERSIONS_YAML_FILE := alauda-versions.yaml
@@ -566,15 +575,15 @@ RUNME ?= $(LOCALBIN)/runme
 MISSPELL ?= $(LOCALBIN)/misspell
 
 ## Tool Versions
-OPERATOR_SDK_VERSION ?= v1.41.1
-HELM_VERSION ?= v3.18.4
-CONTROLLER_TOOLS_VERSION ?= v0.18.0
-CONTROLLER_RUNTIME_BRANCH ?= release-0.21
-OPM_VERSION ?= v1.56.0
-OLM_VERSION ?= v0.32.0
-GITLEAKS_VERSION ?= v8.28.0
+OPERATOR_SDK_VERSION ?= v1.42.0
+HELM_VERSION ?= v3.19.2
+CONTROLLER_TOOLS_VERSION ?= v0.19.0
+CONTROLLER_RUNTIME_BRANCH ?= release-0.22
+OPM_VERSION ?= v1.61.0
+OLM_VERSION ?= v0.38.0
+GITLEAKS_VERSION ?= v8.29.1
 ISTIOCTL_VERSION ?= 1.26.2
-RUNME_VERSION ?= 3.15.1
+RUNME_VERSION ?= 3.16.1
 MISSPELL_VERSION ?= v0.3.4
 
 .PHONY: helm $(HELM)

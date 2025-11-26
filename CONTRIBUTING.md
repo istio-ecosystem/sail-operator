@@ -30,6 +30,7 @@ If you want to contribute to the Sail Operator project, you can follow some rule
   - `good first issue`: Use this label to indicate that the issue is a good first issue for new contributors.
   - `help wanted`: Use this label to indicate that the issue needs help from the community.
   - `enhancement`: Use this label to indicate that the issue is an enhancement related to a new feature or improvement.
+- Commit should contains Header and Body explanation of the change for the future references.
 
 ## Community meetings
 

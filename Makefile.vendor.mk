@@ -1,9 +1,9 @@
-VERSION = 2.0.5
+VERSION = 2.1.0
 
 OPERATOR_NAME = servicemesh-operator2
 HUB = build-harbor.alauda.cn/asm
 IMAGE_BASE = servicemesh-operator2
-CHANNELS = "stable,stable-2.0"
+CHANNELS = "stable,stable-2.1"
 DEFAULT_CHANNEL = stable
 HELM_VALUES_FILE = alauda/values.yaml
 VERSIONS_YAML_FILE ?= alauda-versions.yaml

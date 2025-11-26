@@ -1,0 +1,616 @@
+// Variables embedded for GitHub compatibility
+:istio_latest_version: 1.28.0
+:istio_latest_version_revision_format: 1-28-0
+:istio_latest_tag: v1.28-latest
+:istio_release_name: release-1.28
+:istio_latest_minus_one_version: 1.27.3
+:istio_latest_minus_one_version_revision_format: 1-27-3
+
+link:../../README.adoc[Return to Project Root]
+
+== Table of Contents
+
+- <<update-strategy>>
+  - <<inplace>>
+    - <<example-using-the-inplace-strategy>>
+    - <<recommendations-for-inplace-strategy>>
+  - <<revisionbased>>
+    - <<example-using-the-revisionbased-strategy>>
+    - <<example-using-the-revisionbased-strategy-and-an-istiorevisiontag>>
+
+[[update-strategy]]
+== Update Strategy
+
+The Sail Operator supports two update strategies to update the version of the Istio control plane: `InPlace` and `RevisionBased`. The default strategy is `InPlace`.
+
+[[inplace]]
+== InPlace
+When the `InPlace` strategy is used, the existing Istio control plane is replaced with a new version. The workload sidecars immediately connect to the new control plane. The workloads therefore don't need to be moved from one control plane instance to another.
+
+[[example-using-the-inplace-strategy]]
+=== Example using the InPlace strategy
+
+Prerequisites:
+* Sail Operator is installed.
+* `istioctl` is link:../../docs/common/install-istioctl-tool.adoc[installed].
+
+Steps:
+
+. Create the `istio-system` namespace.
+
+[source,bash,subs="attributes+",name="inplace-update-strategy"]
+----
+kubectl create namespace istio-system
+----
+
+. Create the `Istio` resource.
+
+[source,bash,subs="attributes+",name="inplace-update-strategy"]
+----
+cat <<EOF | kubectl apply -f-
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  namespace: istio-system
+  updateStrategy:
+    type: InPlace
+  version: v{istio_latest_minus_one_version}
+EOF
+----
+
+ifdef::inplace-update-strategy[]
+wait_istio_ready "istio-system"
+print_istio_info
+endif::[]
+
+. Confirm the installation and version of the control plane.
+
+[source,console,subs="attributes+"]
+----
+kubectl get istio -n istio-system
+NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
+default   1           1       0        default           Healthy   v{istio_latest_minus_one_version}   23s
+----
+Note: `IN USE` field shows as 0, as `Istio` has just been installed and there are no workloads using it.
+
+. Create namespace `bookinfo` and deploy bookinfo application.
+
+[source,bash,subs="attributes+",name="inplace-update-strategy"]
+----
+kubectl create namespace bookinfo
+kubectl label namespace bookinfo istio-injection=enabled
+kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo.yaml
+----
+Note: if the `Istio` resource name is other than `default`, you need to set the `istio.io/rev` label to the name of the `Istio` resourceinstead of adding the `istio-injection=enabled` label.
+
+ifdef::inplace-update-strategy[]
+with_retries wait_pods_ready_by_ns "bookinfo"
+kubectl get pods -n bookinfo
+istioctl proxy-status
+with_retries pods_istio_version_match "bookinfo" "{istio_latest_minus_one_version}"
+endif::[]
+
+. Review the `Istio` resource after application deployment.
+
+[source,console,subs="attributes+"]
+----
+kubectl get istio -n istio-system
+NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
+default   1           1       1        default           Healthy   v{istio_latest_minus_one_version}   115s
+----
+Note: `IN USE` field shows as 1, as the namespace label and the injected proxies reference the IstioRevision.
+
+. Perform the update of the control plane by changing the version in the Istio resource.
+
+[source,bash,subs="attributes+"]
+----
+kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v{istio_latest_version}"}}'
+----
+
+ifdef::inplace-update-strategy[]
+old_pod=$(kubectl get pods -n istio-system -l app=istiod -o name)
+kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v{istio_latest_version}"}}'
+kubectl wait --for=delete $old_pod -n istio-system --timeout=60s
+wait_istio_ready "istio-system"
+print_istio_info
+endif::[]
+
+. Confirm the `Istio` resource version was updated.
+
+[source,console,subs="attributes+"]
+----
+kubectl get istio -n istio-system
+NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
+default   1           1       1        default           Healthy   v{istio_latest_version}   4m50s
+----
+
+. Delete `bookinfo` pods to trigger sidecar injection with the new version.
+
+[source,bash,subs="attributes+"]
+----
+kubectl rollout restart deployment -n bookinfo
+----
+
+ifdef::inplace-update-strategy[]
+pod_names=$(kubectl get pods -n bookinfo -o name)
+kubectl rollout restart deployment -n bookinfo
+# Wait pod deletion
+for pod in $pod_names; do
+    kubectl wait --for=delete $pod -n bookinfo --timeout=60s
+done
+with_retries wait_pods_ready_by_ns "bookinfo"
+istioctl proxy-status
+endif::[]
+
+. Confirm that the new version is used in the sidecar.
+
+[source,bash,subs="attributes+",name="inplace-update-strategy"]
+----
+istioctl proxy-status 
+----
+The column `VERSION` should match the new control plane version.
+
+ifdef::inplace-update-strategy[]
+with_retries pods_istio_version_match "bookinfo" "{istio_latest_version}"
+endif::[]
+
+[[recommendations-for-inplace-strategy]]
+=== Recommendations for InPlace Strategy
+During `InPlace` updates, the control plane pods are restarted, which may cause temporary service disruptions. To minimize downtime during updates, we recommend configuring the `istiod` deployment with high availability (HA). For more information, please refer to this link:../../docs/general/istiod-ha.adoc[guide].
+
+[[revisionbased]]
+== RevisionBased
+When the `RevisionBased` strategy is used, a new Istio control plane instance is created for every change to the `Istio.spec.version` field. The old control plane remains in place until all workloads have been moved to the new control plane instance. This needs to be done by the user by updating the namespace label and restarting all the pods. The old control plane will be deleted after the grace period specified in the `Istio` resource field `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds`.
+
+[[example-using-the-revisionbased-strategy]]
+=== Example using the RevisionBased strategy
+
+Prerequisites:
+* Sail Operator is installed.
+* `istioctl` is link:../../docs/common/install-istioctl-tool.adoc[installed].
+
+Steps:
+
+. Create the `istio-system` namespace.
+
+[source,bash,subs="attributes+",name="revision-based-strategy"]
+----
+kubectl create namespace istio-system
+----
+
+. Create the `Istio` resource.
+
+[source,bash,subs="attributes+",name="revision-based-strategy"]
+----
+cat <<EOF | kubectl apply -f-
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  namespace: istio-system
+  updateStrategy:
+    type: RevisionBased
+    inactiveRevisionDeletionGracePeriodSeconds: 30
+  version: v{istio_latest_minus_one_version}
+EOF
+----
+
+ifdef::revision-based-strategy[]
+wait_istio_ready "istio-system"
+print_istio_info
+endif::[]
+
+. Confirm the control plane is installed and is using the desired version.
+
+[source,console,subs="attributes+"]
+----
+kubectl get istio -n istio-system
+NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
+default   1           1       0        default-v1-25-3   Healthy   v{istio_latest_minus_one_version}   52s
+----
+Note: `IN USE` field shows as 0, as the control plane has just been installed and there are no workloads using it.
+
+. Get the `IstioRevision` name.
+
+[source,console,subs="attributes+"]
+----
+kubectl get istiorevision -n istio-system
+NAME              TYPE    READY   STATUS    IN USE   VERSION   AGE
+default-v1-25-3   Local   True    Healthy   False    v{istio_latest_minus_one_version}   3m4s
+----
+Note: `IstioRevision` name is in the format `<Istio resource name>-<version>`.
+
+ifdef::revision-based-strategy[]
+kubectl get istiorevision -n istio-system
+endif::[]
+
+. Create `bookinfo` namespace and label it with the revision name.
+
+[source,bash,subs="attributes+",name="revision-based-strategy"]
+----
+kubectl create namespace bookinfo
+kubectl label namespace bookinfo istio.io/rev=default-v{istio_latest_minus_one_version_revision_format}
+----
+
+. Deploy bookinfo application.
+
+[source,bash,subs="attributes+",name="revision-based-strategy"]
+----
+kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo.yaml
+----
+
+ifdef::revision-based-strategy[]
+with_retries wait_pods_ready_by_ns "bookinfo"
+kubectl get pods -n bookinfo
+istioctl proxy-status
+with_retries pods_istio_version_match "bookinfo" "{istio_latest_minus_one_version}"
+endif::[]
+
+. Review the `Istio` resource after application deployment.
+
+[source,console,subs="attributes+"]
+----
+kubectl get istio -n istio-system
+NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
+default   1           1       1        default-v{istio_latest_minus_one_version_revision_format}   Healthy   {istio_latest_minus_one_version}   5m13s
+----
+Note: `IN USE` field shows as 1, after application being deployed.
+
+ifdef::revision-based-strategy[]
+with_retries istio_active_revision_match "default-v{istio_latest_minus_one_version_revision_format}"
+endif::[]
+
+. Confirm that the proxy version matches the control plane version.
+
+[source,bash,subs="attributes+"]
+----
+istioctl proxy-status 
+----
+The column `VERSION` should match the control plane version.
+
+. Update the control plane to a new version.
+
+[source,bash,subs="attributes+",name="revision-based-strategy"]
+----
+kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v{istio_latest_version}"}}'
+----
+
+ifdef::revision-based-strategy[]
+with_retries istiod_pods_count "2"
+wait_istio_ready "istio-system"
+print_istio_info
+endif::[]
+
+. Verify the `Istio` and `IstioRevision` resources. There will be a new revision created with the new version.
+
+[source,console,subs="attributes+"]
+----
+kubectl get istio
+NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
+default   2           2       1        default-v1-26-0   Healthy   v{istio_latest_version}   9m23s
+kubectl get istiorevision
+NAME              TYPE    READY   STATUS    IN USE   VERSION   AGE
+default-v1-25-3   Local   True    Healthy   True     v{istio_latest_minus_one_version}   10m
+default-v1-26-0   Local   True    Healthy   False    v{istio_latest_version}   66s
+----
+
+ifdef::revision-based-strategy[]
+kubectl get istio
+kubectl get istiorevision -n istio-system
+with_retries istio_active_revision_match "default-v{istio_latest_version_revision_format}"
+with_retries istio_revisions_ready_count "2"
+endif::[]
+
+. Confirm there are two control plane pods running, one for each revision.
+
+[source,console,subs="attributes+"]
+----
+kubectl get pods -n istio-system
+NAME                                      READY   STATUS    RESTARTS   AGE
+istiod-default-v1-25-3-c98fd9675-r7bfw    1/1     Running   0          10m
+istiod-default-v1-26-0-7495cdc7bf-v8t4g   1/1     Running   0          113s
+----
+
+ifdef::revision-based-strategy[]
+with_retries istiod_pods_count "2"
+endif::[]
+
+. Confirm the proxy sidecar version remains the same:
+
+[source,bash,subs="attributes+",name="revision-based-strategy"]
+----
+istioctl proxy-status 
+----
+The column `VERSION` should still match the old control plane version.
+
+ifdef::revision-based-strategy[]
+with_retries pods_istio_version_match "bookinfo" "{istio_latest_minus_one_version}"
+endif::[]
+
+. Change the label of the `bookinfo` namespace to use the new revision.
+
+[source,bash,subs="attributes+",name="revision-based-strategy"]
+----
+kubectl label namespace bookinfo istio.io/rev=default-v{istio_latest_version_revision_format} --overwrite
+----
+The existing workload sidecars will continue to run and will remain connected to the old control plane instance. They will not be replacedwith a new version until the pods are deleted and recreated.
+
+. Restart all Deplyments in the `bookinfo` namespace.
+
+[source,bash,subs="attributes+"]
+----
+kubectl rollout restart deployment -n bookinfo
+----
+
+ifdef::revision-based-strategy[]
+pod_names=$(kubectl get pods -n bookinfo -o name)
+kubectl rollout restart deployment -n bookinfo
+# Wait pod deletion
+for pod in $pod_names; do
+    kubectl wait --for=delete $pod -n bookinfo --timeout=60s
+done
+with_retries wait_pods_ready_by_ns "bookinfo"
+kubectl get pods -n bookinfo
+istioctl proxy-status
+with_retries pods_istio_version_match "bookinfo" "{istio_latest_version}"
+endif::[]
+
+. Confirm the new version is used in the sidecars.
+
+[source,bash,subs="attributes+",name="revision-based-strategy"]
+----
+istioctl proxy-status 
+----
+The column `VERSION` should match the updated control plane version.
+
+. Confirm the deletion of the old control plane and IstioRevision.
+
+[source,console,subs="attributes+"]
+----
+kubectl get pods -n istio-system
+NAME                                      READY   STATUS    RESTARTS   AGE
+istiod-default-v1-26-0-7495cdc7bf-v8t4g   1/1     Running   0          4m40s
+kubectl get istio
+NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
+default   1           1       1        default-v1-26-0   Healthy   v{istio_latest_version}   5m
+kubectl get istiorevision
+NAME              TYPE    READY   STATUS    IN USE   VERSION   AGE
+default-v1-26-0   Local   True    Healthy   True     v{istio_latest_version}   5m31s
+----
+The old `IstioRevision` resource and the old control plane will be deleted when the grace period specified in the `Istio` resource field`spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds` expires.
+
+ifdef::revision-based-strategy[]
+echo "Confirm istiod pod is deleted"
+with_retries istiod_pods_count "1"
+echo "Confirm istiorevision is deleted"
+with_retries istio_revisions_ready_count "1"
+print_istio_info
+endif::[]
+
+[[example-using-the-revisionbased-strategy-and-an-istiorevisiontag]]
+=== Example using the RevisionBased strategy and an IstioRevisionTag
+
+Prerequisites:
+* Sail Operator is installed.
+* `istioctl` is link:../../docs/common/install-istioctl-tool.adoc[installed].
+
+Steps:
+
+. Create the `istio-system` namespace.
+
+[source,bash,subs="attributes+",name="revision-istiorevisiontag-strategy"]
+----
+kubectl create namespace istio-system
+----
+
+. Create the `Istio` and `IstioRevisionTag` resources.
+
+[source,bash,subs="attributes+",name="revision-istiorevisiontag-strategy"]
+----
+cat <<EOF | kubectl apply -f-
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  namespace: istio-system
+  updateStrategy:
+    type: RevisionBased
+    inactiveRevisionDeletionGracePeriodSeconds: 30
+  version: v{istio_latest_minus_one_version}
+---
+apiVersion: sailoperator.io/v1
+kind: IstioRevisionTag
+metadata:
+  name: default
+spec:
+  targetRef:
+    kind: Istio
+    name: default
+EOF
+----
+
+ifdef::revision-istiorevisiontag-strategy[]
+wait_istio_ready "istio-system"
+kubectl get pods -n istio-system
+endif::[]
+
+. Confirm the control plane is installed and is using the desired version.
+
+[source,console,subs="attributes+"]
+----
+kubectl get istio
+NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
+default   1           1       1        default-v1-25-3   Healthy   v{istio_latest_minus_one_version}   52s
+----
+Note: `IN USE` field shows as 1, even though no workloads are using the control plane. This is because the `IstioRevisionTag` is referencingit.
+
+ifdef::revision-istiorevisiontag-strategy[]
+with_retries istio_active_revision_match "default-v{istio_latest_minus_one_version_revision_format}"
+endif::[]
+
+. Inspect the `IstioRevisionTag`.
+
+[source,console,subs="attributes+"]
+----
+kubectl get istiorevisiontags
+NAME      STATUS                    IN USE   REVISION          AGE
+default   NotReferencedByAnything   False    default-v{istio_latest_minus_one_version_revision_format}   52s
+----
+Note: `IN USE` field shows as `False`, as the tag is not referenced by any workloads or namespaces.
+
+ifdef::revision-istiorevisiontag-strategy[]
+with_retries istio_revision_tag_status_equal "NotReferencedByAnything" "default"
+endif::[]
+
+. Create `bookinfo` namespace and label it to mark it for injection.
+
+[source,bash,subs="attributes+",name="revision-istiorevisiontag-strategy"]
+----
+kubectl create namespace bookinfo
+kubectl label namespace bookinfo istio-injection=enabled
+----
+
+. Deploy bookinfo application.
+
+[source,bash,subs="attributes+",name="revision-istiorevisiontag-strategy"]
+----
+kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo.yaml
+----
+
+ifdef::revision-istiorevisiontag-strategy[]
+with_retries wait_pods_ready_by_ns "bookinfo"
+kubectl get pods -n bookinfo
+istioctl proxy-status
+with_retries pods_istio_version_match "bookinfo" "{istio_latest_minus_one_version}"
+endif::[]
+
+. Review the `IstioRevisionTag` resource after application deployment.
+
+[source,console,subs="attributes+"]
+----
+kubectl get istiorevisiontag
+NAME      STATUS    IN USE   REVISION          AGE
+default   Healthy   True     default-v{istio_latest_minus_one_version_revision_format}   2m46s
+----
+Note: `IN USE` field shows 'True', as the tag is now referenced by both active workloads and the bookinfo namespace.
+
+ifdef::revision-istiorevisiontag-strategy[]
+istioctl proxy-status
+with_retries istio_revision_tag_inuse "true" "default"
+endif::[]
+
+. Confirm that the proxy version matches the control plane version.
+
+[source,bash,subs="attributes+"]
+----
+istioctl proxy-status 
+----
+The column `VERSION` should match the control plane version.
+
+. Update the control plane to a new version.
+
+[source,bash,subs="attributes+",name="revision-istiorevisiontag-strategy"]
+----
+kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v{istio_latest_version}"}}'
+----
+
+. Verify the `Istio`, `IstioRevision` and `IstioRevisionTag` resources. There will be a new revision created with the new version.
+
+[source,console,subs="attributes+"]
+----
+kubectl get istio
+NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
+default   2           2       1        default-v1-26-0   Healthy   v{istio_latest_version}   9m23s
+kubectl get istiorevision
+NAME              TYPE    READY   STATUS    IN USE   VERSION   AGE
+default-v{istio_latest_minus_one_version_revision_format}  Local   True    Healthy   True     v{istio_latest_minus_one_version}   10m
+default-v{istio_latest_version_revision_format}   Local   True    Healthy   True    v{istio_latest_version}   66s
+kubectl get istiorevisiontag
+NAME      STATUS    IN USE   REVISION          AGE
+default   Healthy   True     default-v{istio_latest_version_revision_format}   10m44s
+----
+Now, both our IstioRevisions and the IstioRevisionTag are considered in use. The old revision default-{istio_latest_minus_one_version_revision_format} because it is being used by proxies, the new revision default-{istio_latest_version_revision_format} because it is referenced by the tag, and lastly the tag because it is referenced by the bookinfonamespace.
+
+. Confirm there are two control plane pods running, one for each revision.
+
+[source,console,subs="attributes+"]
+----
+kubectl get pods -n istio-system
+NAME                                      READY   STATUS    RESTARTS   AGE
+istiod-default-v1-25-3-c98fd9675-r7bfw    1/1     Running   0          10m
+istiod-default-v1-26-0-7495cdc7bf-v8t4g   1/1     Running   0          113s
+----
+
+ifdef::revision-istiorevisiontag-strategy[]
+with_retries istiod_pods_count "2"
+wait_istio_ready "istio-system"
+endif::[]
+
+. Confirm the proxy sidecar version remains the same:
+
+[source,bash,subs="attributes+",name="revision-istiorevisiontag-strategy"]
+----
+istioctl proxy-status 
+----
+The column `VERSION` should still match the old control plane version.
+
+ifdef::revision-istiorevisiontag-strategy[]
+with_retries pods_istio_version_match "bookinfo" "{istio_latest_minus_one_version}"
+print_istio_info
+endif::[]
+
+. Restart all the Deployments in the `bookinfo` namespace.
+
+[source,bash,subs="attributes+"]
+----
+kubectl rollout restart deployment -n bookinfo
+----
+
+. Confirm the new version is used in the sidecars. Note that it might take a few seconds for the restarts to complete.
+
+[source,bash,subs="attributes+"]
+----
+istioctl proxy-status 
+----
+The column `VERSION` should match the updated control plane version.
+
+ifdef::revision-istiorevisiontag-strategy[]
+pod_names=$(kubectl get pods -n bookinfo -o name)
+kubectl rollout restart deployment -n bookinfo
+# Wait pod deletion
+for pod in $pod_names; do
+    kubectl wait --for=delete $pod -n bookinfo --timeout=60s
+done
+with_retries wait_pods_ready_by_ns "bookinfo"
+kubectl get pods -n bookinfo
+istioctl proxy-status
+with_retries pods_istio_version_match "bookinfo" "{istio_latest_version}"
+endif::[]
+
+. Confirm the deletion of the old control plane and IstioRevision.
+
+[source,console,subs="attributes+"]
+----
+kubectl get pods -n istio-system
+NAME                                      READY   STATUS    RESTARTS   AGE
+istiod-default-v1-26-0-7495cdc7bf-v8t4g   1/1     Running   0          4m40s
+kubectl get istio -n istio-system
+NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
+default   1           1       1        default-v1-26-0   Healthy   v{istio_latest_version}   5m
+kubectl get istiorevision -n istio-system
+NAME              TYPE    READY   STATUS    IN USE   VERSION   AGE
+default-v1-26-0   Local   True    Healthy   True     v{istio_latest_version}   5m31s
+----
+The old `IstioRevision` resource and the old control plane will be deleted when the grace period specified in the `Istio` resource field`spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds` expires.
+
+ifdef::revision-istiorevisiontag-strategy[]
+echo "Confirm istiod pod is deleted"
+with_retries istiod_pods_count "1"
+echo "Confirm istiorevision is deleted"
+with_retries istio_revisions_ready_count "1"
+print_istio_info
+endif::[]

@@ -37,10 +37,10 @@ const (
 type IstioSpec struct {
 	// +sail:version
 	// Defines the version of Istio to install.
-	// Must be one of: v1.26-latest, v1.26.3, v1.24-latest, v1.24.6.
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.26-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.24-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.6"}
-	// +kubebuilder:validation:Enum=v1.26-latest;v1.26.3;v1.24-latest;v1.24.6
-	// +kubebuilder:default=v1.26.3
+	// Must be one of: v1.28-latest, v1.28.0, v1.26-latest, v1.26.3.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.28-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.28.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.26-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.3"}
+	// +kubebuilder:validation:Enum=v1.28-latest;v1.28.0;v1.26-latest;v1.26.3;v1.24-latest;v1.24.6
+	// +kubebuilder:default=v1.28.0
 	Version string `json:"version"`
 
 	// Defines the update strategy to use when the version in the Istio CR is updated.
@@ -282,7 +282,7 @@ type Istio struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata"`
 
-	// +kubebuilder:default={version: "v1.26.3", namespace: "istio-system", updateStrategy: {type:"InPlace"}}
+	// +kubebuilder:default={version: "v1.28.0", namespace: "istio-system", updateStrategy: {type:"InPlace"}}
 	// +optional
 	Spec IstioSpec `json:"spec"`
 

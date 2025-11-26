@@ -412,6 +412,56 @@ func TestApplyImageDigests(t *testing.T) {
 			},
 		},
 		{
+			name: "user-supplied-global-hub",
+			config: config.OperatorConfig{
+				ImageDigests: map[string]config.IstioImageConfig{
+					istioversion.Default: {
+						CNIImage: "cni-test",
+					},
+				},
+			},
+			input: &v1.IstioCNI{
+				Spec: v1.IstioCNISpec{
+					Version: istioversion.Default,
+					Values: &v1.CNIValues{
+						Global: &v1.CNIGlobalConfig{
+							Hub: ptr.Of("docker.io/istio"),
+						},
+					},
+				},
+			},
+			expectValues: &v1.CNIValues{
+				Global: &v1.CNIGlobalConfig{
+					Hub: ptr.Of("docker.io/istio"),
+				},
+			},
+		},
+		{
+			name: "user-supplied-global-tag",
+			config: config.OperatorConfig{
+				ImageDigests: map[string]config.IstioImageConfig{
+					istioversion.Default: {
+						CNIImage: "cni-test",
+					},
+				},
+			},
+			input: &v1.IstioCNI{
+				Spec: v1.IstioCNISpec{
+					Version: istioversion.Default,
+					Values: &v1.CNIValues{
+						Global: &v1.CNIGlobalConfig{
+							Tag: ptr.Of("v1.24.0-custom-build"),
+						},
+					},
+				},
+			},
+			expectValues: &v1.CNIValues{
+				Global: &v1.CNIGlobalConfig{
+					Tag: ptr.Of("v1.24.0-custom-build"),
+				},
+			},
+		},
+		{
 			name: "version-without-defaults",
 			config: config.OperatorConfig{
 				ImageDigests: map[string]config.IstioImageConfig{
@@ -658,6 +708,6 @@ func newReconcilerTestConfig(t *testing.T) config.ReconcilerConfig {
 		ResourceDirectory:       t.TempDir(),
 		Platform:                config.PlatformKubernetes,
 		DefaultProfile:          "",
-		MaxConcurrentReconciles: 5,
+		MaxConcurrentReconciles: 1,
 	}
 }

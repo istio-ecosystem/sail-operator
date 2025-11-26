@@ -1,0 +1,296 @@
+// Variables embedded for GitHub compatibility
+:istio_latest_version: 1.28.0
+:istio_latest_version_revision_format: 1-28-0
+:istio_latest_tag: v1.28-latest
+:istio_latest_minus_one_version: 1.27.3
+:istio_latest_minus_one_version_revision_format: 1-27-3
+
+link:../README.adoc[Return to Project Root]
+
+== Table of Contents
+
+* <<creating-and-configuring-gateways>>
+** <<option-1-istio-gateway-injection>>
+*** <<ingress-gateway>>
+*** <<egress-gateway>>
+** <<option-2-kubernetes-gateway-api>>
+
+[[creating-and-configuring-gateways]]
+== Creating and Configuring Gateways
+
+https://istio.io/latest/docs/concepts/traffic-management/#gateways[Gateways in Istio] are used to manage inbound and outbound traffic for the mesh. The Sail Operator does not deploy or manage Gateways. You can deploy a gateway either through https://istio.io/latest/docs/tasks/traffic-management/ingress/gateway-api/[gateway-api] or through https://istio.io/latest/docs/setup/additional-setup/gateway/#deploying-a-gateway[gateway injection]. As you are following the gateway installation instructions, skip the step to install Istio since this is handled by the Sail Operator.
+
+*Note:* The `IstioOperator` / `istioctl` example is separate from the Sail Operator. Setting `spec.components` or `spec.values.gateways` on your Sail Operator `Istio` resource *will not work*.
+
+[[option-1-istio-gateway-injection]]
+=== Option 1: Istio Gateway Injection
+
+Gateway Injection uses the same mechanisms as Istio sidecar injection to create
+a gateway from a `Deployment` resource that is paired with a `Service` resource
+that can be made accessible from outside the cluster (ingress) or to control
+outbound traffic from the mesh (egress). For more information, see
+https://istio.io/latest/docs/setup/additional-setup/gateway/#deploying-a-gateway[Installing Gateways].
+
+[[ingress-gateway]]
+==== Ingress Gateway
+
+To configure ingress gateway injection with the `bookinfo` application, we have provided
+a link:../../chart/samples/ingress-gateway.yaml[sample gateway configuration] that should be applied in the namespace
+where the application is installed:
+
+. Create the `istio-ingressgateway` deployment and service:
+
+[source,bash,subs="attributes+"]
+----
+kubectl apply -f ingress-gateway.yaml
+----
+
+. Configure the `bookinfo` application with the new gateway:
+
+[source,bash,subs="attributes+"]
+----
+kubectl apply -f https://raw.githubusercontent.com/istio/istio/master/samples/bookinfo/networking/bookinfo-gateway.yaml
+----
+
+. On OpenShift, you can use a https://docs.openshift.com/container-platform/4.13/networking/routes/route-configuration.html[Route] to expose the gateway externally:
+
+[source,bash,subs="attributes+"]
+----
+kubectl expose service istio-ingressgateway
+----
+
+. Finally, obtain the gateway host name and the URL of the product page:
+
+[source,bash,subs="attributes+"]
+----
+HOST=$(kubectl get route istio-ingressgateway -o jsonpath='{.spec.host}')
+echo http://$HOST/productpage
+----
+
+Verify that the `productpage` is accessible from a web browser.
+
+[[egress-gateway]]
+==== Egress Gateway
+
+An egress gateway allows you to control outbound traffic from the service mesh, providing security and monitoring capabilities for external service access. Here's how to configure an egress gateway using gateway injection:
+
+. Create the `istio-egressgateway` namespace:
+
+[source,bash,subs="attributes+"]
+----
+kubectl create namespace istio-egressgateway
+----
+
+. Create the `istio-egressgateway` deployment and service using the provided https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/chart/samples/egress-gateway.yaml[sample egress gateway configuration]:
+
+[source,bash,subs="attributes+"]
+----
+kubectl apply -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/chart/samples/egress-gateway.yaml -n istio-egressgateway
+----
+
+. Configure traffic routing to use the egress gateway by creating these resources in the `istio-egressgateway` namespace. For example, to route traffic to `httpbin.org` through the egress gateway:
+
+[source,yaml]
+----
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: httpbin-ext
+spec:
+  hosts:
+  - httpbin.org
+  ports:
+  - number: 80
+    name: http
+    protocol: HTTP
+  location: MESH_EXTERNAL
+  resolution: DNS
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: egressgateway-for-httpbin
+spec:
+  host: istio-egressgateway.istio-egressgateway.svc.cluster.local
+  subsets:
+  - name: httpbin
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: direct-httpbin-through-egress-gateway
+spec:
+  hosts:
+  - httpbin.org
+  gateways:
+  - mesh
+  http:
+  - match:
+    - port: 80
+    route:
+    - destination:
+        host: istio-egressgateway.istio-egressgateway.svc.cluster.local
+        subset: httpbin
+        port:
+          number: 80
+---
+# Gateway resource to configure the egress gateway
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: istio-egressgateway
+spec:
+  selector:
+    istio: egressgateway # This is required to ensure the gateway is selected by the egress gateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - httpbin.org
+--- 
+# VirtualService for the egress gateway to route to external destination
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: gateway-to-httpbin
+spec:
+  hosts:
+  - httpbin.org
+  gateways:
+  - istio-egressgateway
+  http:
+  - route:
+    - destination:
+        host: httpbin.org
+        port:
+          number: 80
+----
+
+Apply this configuration:
+
+[source,bash,subs="attributes+"]
+----
+kubectl apply -f egress-gateway-config.yaml
+----
+
+
+. Test the egress gateway by making a request from a pod in the mesh (EG: using a bookinfo pod within the mesh):
+
+[source,bash,subs="attributes+"]
+----
+kubectl exec -it $(kubectl get pod -l app=productpage -o jsonpath='{.items[0].metadata.name}') -c productpage -- curl -v http://httpbin.org/get
+----
+
+*Note:* With gateway injection, the gateway proxy automatically handles the routing configuration for the injected workload. The VirtualService above directs mesh traffic to the egress gateway service, and the gateway proxy forwards it to the external destination. This approach provides centralized egress traffic monitoring, policy enforcement, and security controls for outbound traffic.
+
+[[option-2-kubernetes-gateway-api]]
+=== Option 2: Kubernetes Gateway API
+
+Istio includes support for Kubernetes https://gateway-api.sigs.k8s.io/[Gateway API] and intends to make it 
+the default API for https://istio.io/latest/blog/2022/gateway-api-beta/[traffic management in the future]. For more 
+information, see Istio's https://istio.io/latest/docs/tasks/traffic-management/ingress/gateway-api/[Kubernetes Gateway API] page.
+
+As of Kubernetes 1.28 and OpenShift 4.14, the Kubernetes Gateway API CRDs are 
+not available by default and must be enabled to be used. This can be done with 
+the command:
+
+[source,bash,subs="attributes+"]
+----
+kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null ||  { kubectl kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.0.0" | kubectl apply -f -; }
+----
+
+To configure `bookinfo` with a gateway using `Gateway API`:
+
+. Create and configure a gateway using a `Gateway` and `HTTPRoute` resource:
+
+[source,bash,subs="attributes+"]
+----
+kubectl apply -f https://raw.githubusercontent.com/istio/istio/master/samples/bookinfo/gateway-api/bookinfo-gateway.yaml
+----
+
+. Retrieve the host, port and gateway URL:
+
+[source,bash,subs="attributes+"]
+----
+export INGRESS_HOST=$(kubectl get gtw bookinfo-gateway -o jsonpath='{.status.addresses[0].value}')
+export INGRESS_PORT=$(kubectl get gtw bookinfo-gateway -o jsonpath='{.spec.listeners[?(@.name=="http")].port}')
+export GATEWAY_URL=$INGRESS_HOST:$INGRESS_PORT
+----
+
+. Obtain the `productpage` URL and check that you can visit it from a browser:
+
+[source,bash,subs="attributes+"]
+----
+echo "http://{$GATEWAY_URL}/productpage"
+----
+
+=== Deploying an Egress Gateway with Kubernetes Gateway API
+
+You can also use the Kubernetes Gateway API to configure an egress gateway in Istio. This approach leverages Gateway API resources to define and manage egress traffic, rather than using the traditional Istio Gateway/VirtualService model.
+
+==== Example: Egress to httpbin.org
+
+To deploy an egress gateway using the Gateway API, follow these steps:
+
+. *Create the egress gateway namespace:*
+
+[source,bash,subs="attributes+"]
+----
+kubectl create namespace egress-gateway
+kubectl label namespace egress-gateway istio-injection=enabled
+----
+
+. *Apply the sample egress gateway configuration:*
+
+We provide a sample manifest that includes a `ServiceEntry`, `Gateway`, and `HTTPRoute`s for egress to `httpbin.org` https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/chart/samples/egress-gateway-gw-api.yaml[here]:
+
+[source,bash,subs="attributes+"]
+----
+kubectl apply -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/chart/samples/egress-gateway-gw-api.yaml -n egress-gateway
+----
+
+This will:
+- Allow traffic to `httpbin.org` via a `ServiceEntry`.
+- Deploy a Gateway API `Gateway` resource for egress.
+- Create a `HTTPRoute`s to forward traffic from the mesh pod to the gateway and from the gateway to the external service.
+
+. *Test egress traffic:*
+
+From a pod in the mesh, you can test egress traffic to `httpbin.org`. Let's create a sample curl pod:
+
+[source,bash,subs="attributes+"]
+----
+kubectl run test-pod --image=curlimages/curl:latest -n egress-gateway --rm -it --restart=Never -- sh
+----
+
+Ensure that the `test-pod` has a sidecar injected into it (it should, as we've labeled the namespace for injection). Now that we're inside our test-pod, we can:
+
+[source,bash,subs="attributes+"]
+----
+# Test direct access to httpbin.org (this should work through the egress gateway)
+curl -v http://httpbin.org/get
+----
+
+You should see a response from httpbin.org, indicating that egress traffic is being routed through the configured gateway.
+
+If you'd like, you can ensure that traffic is being correctly routed by the egress gateway by setting the egress gateway proxy to use debug log levels and looking for logs that look like:
+
+----
+'x-envoy-decorator-operation', 'httpbin-egress-gateway-istio.egress-gateway.svc.cluster.local:80/*' # the request coming to the egress gateway
+
+cluster 'outbound|80||httpbin.org' match for URL '/get' # the egress gateway routing to the external service
+----
+
+*Note:*
+
+- The Gateway API egress gateway is managed by Istio and will be automatically provisioned based on the Gateway resource.
+- You can customize the Gateway and HTTPRoute resources to control which external hosts and ports are allowed.
+- For more advanced scenarios (e.g., TLS origination, policy enforcement), refer to the https://istio.io/latest/docs/tasks/traffic-management/egress/egress-gateway/[Istio documentation on egress gateways] and https://gateway-api.sigs.k8s.io/[Gateway API documentation].
+
+==== Troubleshooting
+
+- Ensure the namespace has istio-injection enabled
+- Verify HTTPRoute status: `kubectl describe httproute -n egress-gateway`
+- Check that the egress gateway pod is running: `kubectl get pods -l gateway.networking.k8s.io/gateway-name=httpbin-egress-gateway -n egress-gateway`

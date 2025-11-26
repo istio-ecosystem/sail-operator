@@ -1,8 +1,7 @@
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: ZTunnel
 metadata:
   name: default
 spec:
-  version: v1.26.3
+  version: v1.28.0
   namespace: ztunnel
-  profile: ambient

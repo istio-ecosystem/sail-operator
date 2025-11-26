@@ -31,6 +31,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -108,7 +109,7 @@ func GetSVCLoadBalancerAddress(ctx context.Context, cl client.Client, ns, svcNam
 	Eventually(func() ([]corev1.LoadBalancerIngress, error) {
 		err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: svcName}, svc)
 		return svc.Status.LoadBalancer.Ingress, err
-	}, "1m", "1s").ShouldNot(BeEmpty(), "LoadBalancer should be ready")
+	}, "3m", "1s").ShouldNot(BeEmpty(), "LoadBalancer should be ready")
 
 	if svc.Status.LoadBalancer.Ingress[0].IP != "" {
 		return svc.Status.LoadBalancer.Ingress[0].IP
@@ -392,4 +393,19 @@ func withClusterName(m string, k kubectl.Kubectl) string {
 	}
 
 	return m + " on " + k.ClusterName
+}
+
+func CheckPodConnectivity(podName, srcNamespace, destNamespace string, k kubectl.Kubectl) {
+	command := fmt.Sprintf(`curl -o /dev/null -s -w "%%{http_code}\n" httpbin.%s.svc.cluster.local:8000/get`, destNamespace)
+	response, err := k.WithNamespace(srcNamespace).Exec(podName, srcNamespace, command)
+	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("error connecting to the %q pod", podName))
+	Expect(response).To(ContainSubstring("200"), fmt.Sprintf("Unexpected response from %s pod", podName))
+}
+
+func HaveContainersThat(matcher types.GomegaMatcher) types.GomegaMatcher {
+	return HaveField("Spec.Template.Spec.Containers", matcher)
+}
+
+func ImageFromRegistry(regexp string) types.GomegaMatcher {
+	return HaveField("Image", MatchRegexp(regexp))
 }

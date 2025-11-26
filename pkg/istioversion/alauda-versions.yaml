@@ -21,6 +21,19 @@
 ## When introducing a new istio version, please remember to adjust `vendor_defaults.yaml` accordingly
 
 versions:
+  # v1.28
+  - name: v1.28-latest
+    ref: v1.28.0
+  - name: v1.28.0
+    version: 1.28.0
+    repo: https://github.com/istio/istio
+    commit: 1.28.0
+    charts:
+      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.28.0-asm-r1/helm/base-1.28.0-asm-r1.tgz
+      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.28.0-asm-r1/helm/istiod-1.28.0-asm-r1.tgz
+      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.28.0-asm-r1/helm/gateway-1.28.0-asm-r1.tgz
+      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.28.0-asm-r1/helm/cni-1.28.0-asm-r1.tgz
+      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.28.0-asm-r1/helm/ztunnel-1.28.0-asm-r1.tgz
   # v1.26
   - name: v1.26-latest
     ref: v1.26.3
@@ -37,13 +50,6 @@ versions:
   # v1.24
   - name: v1.24-latest
     ref: v1.24.6
+    eol: true
   - name: v1.24.6
-    version: 1.24.6
-    repo: https://github.com/istio/istio
-    commit: 1.24.6
-    charts:
-      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.6-asm-r0/helm/base-1.24.6-asm-r0.tgz
-      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.6-asm-r0/helm/istiod-1.24.6-asm-r0.tgz
-      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.6-asm-r0/helm/gateway-1.24.6-asm-r0.tgz
-      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.6-asm-r0/helm/cni-1.24.6-asm-r0.tgz
-      - https://pub-a1e2ecfe619448dbb7a1f9a1d20f807d.r2.dev/1.24.6-asm-r0/helm/ztunnel-1.24.6-asm-r0.tgz
+    eol: true

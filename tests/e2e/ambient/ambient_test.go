@@ -30,7 +30,6 @@ import (
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -140,7 +139,7 @@ profile: ambient`)
 
 					It("uses the correct image", func(ctx SpecContext) {
 						Expect(common.GetObject(ctx, cl, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{})).
-							To(HaveContainersThat(HaveEach(ImageFromRegistry(expectedRegistry))))
+							To(common.HaveContainersThat(HaveEach(common.ImageFromRegistry(expectedRegistry))))
 					})
 
 					It("has istiod with appropriate env variables set", func(ctx SpecContext) {
@@ -151,11 +150,11 @@ profile: ambient`)
 							return err
 						}).Should(Succeed(), "Expected to retrieve the 'istiod' deployment")
 
-						Expect(istiodObj).To(HaveContainersThat(ContainElement(WithTransform(getEnvVars,
+						Expect(istiodObj).To(common.HaveContainersThat(ContainElement(WithTransform(getEnvVars,
 							ContainElement(corev1.EnvVar{Name: "PILOT_ENABLE_AMBIENT", Value: "true"})))),
 							"Expected PILOT_ENABLE_AMBIENT to be set to true, but not found")
 
-						Expect(istiodObj).To(HaveContainersThat(ContainElement(WithTransform(getEnvVars,
+						Expect(istiodObj).To(common.HaveContainersThat(ContainElement(WithTransform(getEnvVars,
 							ContainElement(corev1.EnvVar{Name: "CA_TRUSTED_NODE_ACCOUNTS", Value: "ztunnel/ztunnel"})))),
 							"Expected CA_TRUSTED_NODE_ACCOUNTS to be set to ztunnel/ztunnel, but not found")
 					})
@@ -164,12 +163,11 @@ profile: ambient`)
 				When("the ZTunnel CR is created", func() {
 					BeforeAll(func() {
 						ztunnelYaml := `
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: ZTunnel
 metadata:
   name: default
 spec:
-  profile: ambient
   version: %s
   namespace: %s
   values:
@@ -201,15 +199,15 @@ spec:
 							return err
 						}).Should(Succeed(), "Expected to retrieve the 'ztunnel' daemonSet")
 
-						Expect(ztunnelObj).To(HaveContainersThat(ContainElement(WithTransform(getEnvVars,
+						Expect(ztunnelObj).To(common.HaveContainersThat(ContainElement(WithTransform(getEnvVars,
 							ContainElement(corev1.EnvVar{Name: "XDS_ADDRESS", Value: "istiod.istio-system.svc:15012"})))),
 							"Expected XDS_ADDRESS to be set to istiod.istio-system.svc:15012, but not found")
 
-						Expect(ztunnelObj).To(HaveContainersThat(ContainElement(WithTransform(getEnvVars,
+						Expect(ztunnelObj).To(common.HaveContainersThat(ContainElement(WithTransform(getEnvVars,
 							ContainElement(corev1.EnvVar{Name: "ISTIO_META_ENABLE_HBONE", Value: "true"})))),
 							"Expected ISTIO_META_ENABLE_HBONE to be set to true, but not found")
 
-						Expect(ztunnelObj).To(HaveContainersThat(ContainElement(WithTransform(getEnvVars,
+						Expect(ztunnelObj).To(common.HaveContainersThat(ContainElement(WithTransform(getEnvVars,
 							ContainElement(corev1.EnvVar{Name: "CUSTOM_ENV_VAR", Value: "true"})))),
 							"Expected CUSTOM_ENV_VAR to be set to true, but not found")
 					})
@@ -248,7 +246,7 @@ spec:
 					})
 
 					It("can access the httpbin service from the sleep pod", func(ctx SpecContext) {
-						checkPodConnectivity(sleepPod.Items[0].Name, common.SleepNamespace, common.HttpbinNamespace)
+						common.CheckPodConnectivity(sleepPod.Items[0].Name, common.SleepNamespace, common.HttpbinNamespace, k)
 					})
 				})
 
@@ -322,23 +320,8 @@ spec:
 	})
 })
 
-func HaveContainersThat(matcher types.GomegaMatcher) types.GomegaMatcher {
-	return HaveField("Spec.Template.Spec.Containers", matcher)
-}
-
-func ImageFromRegistry(regexp string) types.GomegaMatcher {
-	return HaveField("Image", MatchRegexp(regexp))
-}
-
 func getEnvVars(container corev1.Container) []corev1.EnvVar {
 	return container.Env
-}
-
-func checkPodConnectivity(podName, srcNamespace, destNamespace string) {
-	command := fmt.Sprintf(`curl -o /dev/null -s -w "%%{http_code}\n" httpbin.%s.svc.cluster.local:8000/get`, destNamespace)
-	response, err := k.WithNamespace(srcNamespace).Exec(podName, srcNamespace, command)
-	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("error connecting to the %q pod", podName))
-	Expect(response).To(ContainSubstring("200"), fmt.Sprintf("Unexpected response from %s pod", podName))
 }
 
 func checkZtunnelPort(podName, srcNamespace string) {

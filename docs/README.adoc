@@ -1,0 +1,326 @@
+// Variables embedded for GitHub compatibility
+:istio_latest_version: 1.26.3
+:istio_latest_version_revision_format: 1-26-3
+:istio_latest_tag: v1.26-latest
+:istio_latest_minus_one_version: 1.26.2
+:istio_latest_minus_one_version_revision_format: 1-26-2
+
+link:../[Return to Project Root]
+
+*Note*: To add new topics to this documentation, please follow the guidelines in the link:../../docs/guidelines/guidelines.md[guidelines] doc.
+
+== Table of Contents
+
+* <<user-documentation>>
+* <<concepts>>
+** <<istio-resource>>
+** link:general/istiod-ha.adoc#running-istiod-in-ha-mode[Istiod in HA mode]
+*** link:general/istiod-ha.adoc#setting-up-istiod-in-ha-mode-increasing-replicacount[Setting up Istiod in HA mode: using fixed replicas]
+*** link:general/istiod-ha.adoc#setting-up-istiod-in-ha-mode-using-autoscaling[Setting up Istiod in HA mode: using autoscaling]
+** <<istiorevision-resource>>
+** <<istiorevisiontag-resource>>
+** <<istiocni-resource>>
+*** <<updating-the-istiocni-resource>>
+** <<resource-status>>
+*** <<inuse-detection>>
+* <<api-reference-documentation>>
+* link:general/getting-started.adoc#getting-started[Getting Started]
+** link:general/getting-started.adoc#installation-on-openshift[Installation on OpenShift]
+** link:general/getting-started.adoc#installation-from-source[Installation from Source]
+** link:general/getting-started.adoc#migrating-from-istio-in-cluster-operator[Migrating from Istio in-cluster Operator]
+*** link:general/getting-started.adoc#setting-environments-variables-for-istiod[Setting environments variables for Istiod]
+*** link:general/getting-started.adoc#components-field[Components field]
+*** link:general/getting-started.adoc#cni-lifecycle-management[CNI lifecycle management]
+*** link:general/getting-started.adoc#converter-script-to-migrate-istio-in-cluster-operator-configuration-to-sail-operator[Converter Script to Migrate Istio in-cluster Operator Configuration to Sail Operator]
+* link:common/create-and-configure-gateways.adoc#creating-and-configuring-gateways[Creating and Configuring Gateways]
+** link:common/create-and-configure-gateways.adoc#option-1-istio-gateway-injection[Option 1: Istio Gateway Injection]
+** link:common/create-and-configure-gateways.adoc#option-2-kubernetes-gateway-api[Option 2: Kubernetes Gateway API]
+* link:update-strategy/update-strategy.adoc#update-strategy[Update Strategy]
+** link:update-strategy/update-strategy.adoc#inplace[InPlace]
+*** link:update-strategy/update-strategy.adoc#example-using-the-inplace-strategy[Example using the InPlace strategy]
+*** link:update-strategy/update-strategy.adoc#recommendations-for-inplace-strategy[Recommendations for InPlace strategy]
+** link:update-strategy/update-strategy.adoc#revisionbased[RevisionBased]
+*** link:update-strategy/update-strategy.adoc#example-using-the-revisionbased-strategy[Example using the RevisionBased strategy]
+*** link:update-strategy/update-strategy.adoc#example-using-the-revisionbased-strategy-and-an-istiorevisiontag[Example using the RevisionBased strategy and an IstioRevisionTag]
+* link:deployment-models/multiple-mesh.adoc#multiple-meshes-on-a-single-cluster[Multiple meshes on a single cluster]
+** link:deployment-models/multiple-mesh.adoc#prerequisites[Prerequisites]
+** link:deployment-models/multiple-mesh.adoc#installation-steps[Installation Steps]
+*** link:deployment-models/multiple-mesh.adoc#deploying-the-control-planes[Deploying the control planes]
+*** link:deployment-models/multiple-mesh.adoc#deploying-the-applications[Deploying the applications]
+** link:deployment-models/multiple-mesh.adoc#validation[Validation]
+*** link:deployment-models/multiple-mesh.adoc#checking-application-to-control-plane-mapping[Checking application to control plane mapping]
+*** link:deployment-models/multiple-mesh.adoc#checking-application-connectivity[Checking application connectivity]
+** link:deployment-models/consolidating-cp.adoc[Consolidating control planes]
+* link:deployment-models/multicluster.adoc#multi-cluster[Multi-cluster]
+** link:deployment-models/multicluster.adoc#prerequisites[Prerequisites]
+** link:deployment-models/multicluster.adoc#common-setup[Common Setup]
+** link:deployment-models/multicluster.adoc#multi-primary-multi-network[Multi-Primary]
+** link:deployment-models/multicluster.adoc#primary-remote-multi-network[Primary-Remote]
+** link:deployment-models/multicluster.adoc#external-control-plane[External Control Plane]
+* link:dual-stack/dual-stack.adoc#dual-stack-support[Dual-stack Support]
+** link:dual-stack/dual-stack.adoc#prerequisites[Prerequisites]
+** link:dual-stack/dual-stack.adoc#installation-steps[Installation Steps]
+** link:dual-stack/dual-stack.adoc#validation[Validation]
+* link:common/istio-ambient-mode.adoc#introduction-to-istio-ambient-mode[Introduction to Istio Ambient mode]
+** link:common/istio-ambient-mode.adoc#component-version[Component version]
+** link:common/istio-ambient-mode.adoc#concepts[Concepts]
+*** link:common/istio-ambient-mode.adoc#ztunnel-resource[ZTunnel resource]
+*** link:common/istio-ambient-mode.adoc#api-reference-documentation[API Reference documentation]
+** link:common/istio-ambient-mode.adoc#core-features[Core features]
+** link:common/istio-ambient-mode.adoc#getting-started[Getting Started]
+** link:common/istio-ambient-mode.adoc#visualize-the-application-using-kiali-dashboard[Visualize the application using Kiali dashboard]
+** link:common/istio-ambient-mode.adoc#troubleshoot-issues[Troubleshoot issues]
+** link:common/istio-ambient-mode.adoc#cleanup[Cleanup]
+* link:common/istio-ambient-waypoint.adoc#introduction-to-istio-waypoint-proxy[Introduction to Istio Waypoint Proxy]
+** link:common/istio-ambient-waypoint.adoc#core-features[Core features]
+** link:common/istio-ambient-waypoint.adoc#getting-started[Getting Started]
+** link:common/istio-ambient-waypoint.adoc#layer-7-features-in-ambient-mode[Layer 7 Features in Ambient Mode]
+** link:common/istio-ambient-waypoint.adoc#troubleshoot-issues[Troubleshoot issues]
+** link:common/istio-ambient-waypoint.adoc#cleanup[Cleanup]
+* link:common/coexistence.adoc#coexistence-of-ambient-and-sidecar-mode[Coexistence of Ambient and sidecar mode]
+** link:common/coexistence.adoc#requirements-for-coexistence[Requirements]
+** link:common/coexistence.adoc#supported-use-cases-in-coexistence-mode[Supported use-cases]
+** link:common/coexistence.adoc#limitations-and-unsupported-use-cases[Limitations and gaps]
+* link:addons/addons.adoc#addons[Addons]
+** link:addons/addons.adoc#deploy-prometheus-and-jaeger-addons[Deploy Prometheus and Jaeger addons]
+** link:addons/addons.adoc#deploy-kiali-addon[Deploy Kiali addon]
+** link:addons/addons.adoc#find-the-active-revision-of-your-istio-instance[Find the active revision of your Istio instance. In our case it is `test`.]
+** link:addons/addons.adoc#deploy-gateway-and-bookinfo[Deploy Gateway and Bookinfo]
+** link:addons/addons.adoc#generate-traffic-and-visualize-your-mesh[Generate traffic and visualize your mesh]
+* link:addons/observability.adoc#observability-integrations[Observability Integrations]
+** link:addons/observability.adoc#scraping-metrics-using-the-openshift-monitoring-stack[Scraping metrics using the OpenShift monitoring stack]
+** link:addons/observability.adoc#configure-tracing-with-openshift-distributed-tracing[Configure tracing with OpenShift distributed tracing]
+** link:addons/observability.adoc#integrating-with-kiali[Integrating with Kiali]
+*** link:addons/observability.adoc#integrating-kiali-with-the-openshift-monitoring-stack[Integrating Kiali with the OpenShift monitoring stack]
+*** link:addons/observability.adoc#integrating-kiali-with-openshift-distributed-tracing[Integrating Kiali with OpenShift Distributed Tracing]
+* Certificates management
+** link:general/plugin-ca.adoc[Plug in CA Certificates]
+* link:general/getting-started.adoc#uninstalling[Uninstalling]
+** link:general/getting-started.adoc#deleting-istio[Deleting Istio]
+** link:general/getting-started.adoc#deleting-istiocni[Deleting IstioCNI]
+** link:general/getting-started.adoc#deleting-the-sail-operator[Deleting the Sail Operator]
+** link:general/getting-started.adoc#deleting-the-istio-system-and-istio-cni-projects[Deleting the istio-system and istio-cni Projects]
+** link:general/getting-started.adoc#decide-whether-you-want-to-delete-the-crds-as-well[Decide whether you want to delete the CRDs as well]
+
+[#user-documentation]
+== User Documentation
+
+Sail Operator manages the lifecycle of your Istio control planes. Instead of creating a new configuration schema, Sail Operator APIs are built around Istio's helm chart APIs. All installation and configuration options that are exposed by Istio's helm charts are available through the Sail Operator CRDs' `values` fields.
+
+Similar to using Istio's Helm charts, the final set of values used to render the charts is determined by a combination of user-provided values, default chart values, and values from selected profiles. 
+These profiles can include the user-defined profile, the platform profile, and the compatibility version profile.
+To view the final set of values, inspect the ConfigMap named `values` (or `values-<revision>`) in the namespace where the control plane is installed.
+
+[#concepts]
+== Concepts
+
+[#istio-resource]
+=== Istio resource
+
+The `Istio` resource is used to manage your Istio control planes. It is a cluster-wide resource, as the Istio control plane operates in and requires access to the entire cluster. To select a namespace to run the control plane pods in, you can use the `spec.namespace` field. Note that this field is immutable, though: in order to move a control plane to another namespace, you have to remove the Istio resource and recreate it with a different `spec.namespace`. You can access all helm chart options through the `values` field in the `spec`:
+
+[source,yaml]
+----
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  namespace: istio-system
+  updateStrategy:
+    type: InPlace
+  values:
+    pilot:
+      resources:
+        requests:
+          cpu: 100m
+          memory: 1024Mi
+----
+
+Note: If you need a specific Istio version, you can explicitly set it using `spec.version`. If not specified, the Operator will install the latest supported version.
+
+Istio uses a ConfigMap for its global configuration, called the MeshConfig. All of its settings are available through `spec.meshConfig`.
+
+To support canary updates of the control plane, Sail Operator includes support for multiple Istio versions. You can select a version by setting the `version` field in the `spec` to the version you would like to install, prefixed with a `v`. You can then update to a new version just by changing this field. An `vX.Y-latest` alias can be used for the latest z/patch versions of each supported y/minor versions. As per the example above, `{istio_latest_tag}` can be specified in the `version` field. By doing so, the operator will keep the istio version with the latest `z` version of the same `y` version. 
+
+Sail Operator supports two different update strategies for your control planes: `InPlace` and `RevisionBased`. When using `InPlace`, the operator will immediately replace your existing control plane resources with the ones for the new version, whereas `RevisionBased` uses Istio's canary update mechanism by creating a second control plane to which you can migrate your workloads to complete the update.
+
+After creation of an `Istio` resource, the Sail Operator will generate a revision name for it based on the updateStrategy that was chosen, and create a corresponding <<istiorevision-resource>>.
+
+[#istiorevision-resource]
+=== IstioRevision resource
+
+The `IstioRevision` is the lowest-level API the Sail Operator provides, and it is usually not created by the user, but by the operator itself. It's schema closely resembles that of the `Istio` resource - but instead of representing the state of a control plane you want to be present in your cluster, it represents a *revision* of that control plane, which is an instance of Istio with a specific version and revision name, and its revision name can be used to add workloads or entire namespaces to the mesh, e.g. by using the `istio.io/rev=<REVISION_NAME>` label. It is also a cluster-wide resource.
+
+You can think of the relationship between the `Istio` and `IstioRevision` resource as similar to the one between Kubernetes' `ReplicaSet` and `Pod`: a `ReplicaSet` can be created by users and results in the automatic creation of `Pods`, which will trigger the instantiation of your containers. Similarly, users create an `Istio` resource which instructs the operator to create a matching `IstioRevision`, which then in turn triggers the creation of the Istio control plane. To do that, the Sail Operator will copy all of your relevant configuration from the `Istio` resource to the `IstioRevision` resource.
+
+[#istiorevisiontag-resource]
+=== IstioRevisionTag resource
+
+The `IstioRevisionTag` resource represents a *Stable Revision Tag*, which functions as an alias for Istio control plane revisions. With a stable tag `prod`, you can e.g. use the label `istio.io/rev=prod` to inject proxies into your workloads. When you perform an upgrade to a control plane with a new revision name, you can simply update your tag to point to the new revision, instead of having to re-label your workloads and namespaces. Also see the https://istio.io/latest/docs/setup/upgrade/canary/#stable-revision-labels[Stable Revision Tags] section of Istio's https://istio.io/latest/docs/setup/upgrade/canary/[Canary Upgrades documentation] for more details.
+
+In Istio, stable revision tags are usually created using `istioctl`, but if you're using the Sail Operator, you can use the `IstioRevisionTag` resource, which comes with an additional feature: instead of just being able to reference an `IstioRevision`, you can also reference an `Istio` resource. When you now update your control plane and the underlying `IstioRevision` changes, the Sail Operator will update your revision tag for you. You only need to restart your deployments to re-inject the new proxies.
+
+[source,yaml]
+----
+apiVersion: sailoperator.io/v1
+kind: IstioRevisionTag
+metadata:
+  name: default
+spec:
+  targetRef:
+    kind: Istio   # can be either Istio or IstioRevision
+    name: prod    # the name of the Istio/IstioRevision resource
+----
+
+As you can see in the YAML above, `IstioRevisionTag` really only has one field in its spec: `targetRef`. With this field, you can reference an `Istio` or `IstioRevision` resource. So after deploying this, you will be able to use both the `istio.io/rev=default` and also `istio-injection=enabled` labels to inject proxies into your workloads. The `istio-injection` label can only be used for revisions and revision tags named `default`, like the `IstioRevisionTag` in the above example.
+
+[#istiocni-resource]
+=== IstioCNI resource
+
+The lifecycle of Istio's CNI plugin is managed separately when using Sail Operator. To install it, you can create an `IstioCNI` resource. The `IstioCNI` resource is a cluster-wide resource as it will install a `DaemonSet` that will be operating on all nodes of your cluster. The `metadata.name` field must be set to `default`, as enforced by a CRD validation rule that guarantees only one `IstioCNI` custom resource exists cluster-wide.
+
+[source,yaml]
+----
+apiVersion: sailoperator.io/v1
+kind: IstioCNI
+metadata:
+  name: default
+spec:
+  namespace: istio-cni
+  values:
+    cni:
+      cniConfDir: /etc/cni/net.d
+      excludeNamespaces:
+      - kube-system
+----
+
+[NOTE]
+====
+If you need a specific Istio version, you can explicitly set it using `spec.version`. If not specified, the Operator will install the latest supported version.
+====
+
+[#updating-the-istiocni-resource]
+==== Updating the IstioCNI resource
+
+Updates for the `IstioCNI` resource are `Inplace` updates, this means that the `DaemonSet` will be updated with the new version of the CNI plugin once the resource is updated and the `istio-cni-node` pods are going to be replaced with the new version. 
+To update the CNI plugin, just change the `version` field to the version you want to install. Just like the `Istio` resource, it also has a `values` field that exposes all of the options provided in the `istio-cni` chart:
+
+. Create the `IstioCNI` resource.
++
+[source,bash,subs="attributes+",,name="cni-update-test"]
+----
+kubectl create ns istio-cni
+cat <<EOF | kubectl apply -f-
+apiVersion: sailoperator.io/v1
+kind: IstioCNI
+metadata:
+  name: default
+spec:
+  version: v{istio_latest_minus_one_version}
+  namespace: istio-cni
+  values:
+    cni:
+      cniConfDir: /etc/cni/net.d
+      excludeNamespaces:
+      - kube-system
+EOF
+----
+
+ifdef::cni-update-test[]
+wait_cni_ready "istio-cni"
+with_retries resource_version_equal "istiocni" "default" "v{istio_latest_minus_one_version}"
+endif::[]
+
+. Confirm the installation and version of the CNI plugin.
++
+[source,console,subs="attributes+"]
+----
+$ kubectl get istiocni -n istio-cni
+NAME      READY   STATUS    VERSION   AGE
+default   True    Healthy   v{istio_latest_minus_one_version}   91m
+$ kubectl get pods -n istio-cni
+NAME                   READY   STATUS    RESTARTS   AGE
+istio-cni-node-hd9zf   1/1     Running   0          90m
+----
+
+ifdef::cni-update-test[]
+print_cni_info
+endif::[]
+
+. Update the CNI plugin version.
++
+[source,bash,subs="attributes+",name="cni-update-test"]
+----
+kubectl patch istiocni default -n istio-cni --type='merge' -p '{"spec":{"version":"v{istio_latest_version}"}}'
+----
+
+ifdef::cni-update-test[]
+with_retries resource_version_equal "istiocni" "default" "v{istio_latest_version}"
+wait_cni_ready "istio-cni"
+endif::[]
+
+. Confirm the CNI plugin version was updated.
++
+[source,console,subs="attributes+"]
+----
+$ kubectl get istiocni -n istio-cni
+NAME      READY   STATUS    VERSION   AGE
+default   True    Healthy   v{istio_latest_version}   93m
+$ kubectl get pods -n istio-cni
+NAME                   READY   STATUS    RESTARTS   AGE
+istio-cni-node-jz4lg   1/1     Running   0          44s
+----
+
+ifdef::cni-update-test[]
+print_cni_info
+endif::[]
+
+[NOTE]
+====
+The CNI plugin at version `1.x` is compatible with `Istio` at version `1.x-1`, `1.x` and `1.x+1`.
+====
+
+[#resource-status]
+=== Resource Status
+
+All of the Sail Operator API resources have a `status` subresource that contains information about their current state in the Kubernetes cluster.
+
+[#conditions]
+==== Conditions
+
+All resources have a `Ready` condition which is set to `true` as soon as all child resource have been created and are deemed Ready by their respective controllers. To see additional conditions for each of the resources, check the link:api-reference/sailoperator.io.adoc[API reference documentation].
+
+[#inuse-detection]
+==== InUse Detection
+
+The Sail Operator uses InUse detection to determine whether an object is referenced. This is currently present on all resources apart from `IstioCNI`. On the `Istio` resource, it is a counter as it only aggregates the `InUse` conditions on its child `IstioRevisions`.
+
+[cols="3,2,3,8"]
+|===
+|API |Type |Name |Description
+
+|Istio
+|Counter
+|Status.Revisions.InUse
+|Aggregates across all child `IstioRevisions`.
+
+|IstioRevision
+|Condition
+|Status.Conditions[type="InUse']
+|Set to `true` if the `IstioRevision` is referenced by a namespace, workload or `IstioRevisionTag`.
+
+|IstioRevisionTag
+|Condition
+|Status.Conditions[type="InUse']
+|Set to `true` if the `IstioRevisionTag` is referenced by a namespace or workload.
+|===
+
+[#api-reference-documentation]
+== API Reference documentation
+
+The Sail Operator API reference documentation can be found link:api-reference/sailoperator.io.adoc#api-reference[here].
+
+== AI Agents Guide
+
+For developers using AI coding assistants (Claude, GitHub Copilot, Cursor, etc.), see the link:ai/ai-agents-guide.adoc[AI Agents Guide] for information on how to configure and use the Sail Operator's AI agent context files.

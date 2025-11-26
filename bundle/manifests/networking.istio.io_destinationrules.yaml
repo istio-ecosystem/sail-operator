@@ -233,6 +233,21 @@ spec:
                                 httpCookie:
                                   description: Hash based on HTTP cookie.
                                   properties:
+                                    attributes:
+                                      description: Additional attributes for the cookie.
+                                      items:
+                                        properties:
+                                          name:
+                                            description: The name of the cookie attribute.
+                                            type: string
+                                          value:
+                                            description: The optional value of the
+                                              cookie attribute.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
                                     name:
                                       description: Name of the cookie.
                                       type: string
@@ -348,7 +363,7 @@ spec:
                                   description: This parameter controls the speed of
                                     traffic increase over the warmup duration.
                                   format: double
-                                  minimum: 1
+                                  minimum: 0
                                   nullable: true
                                   type: number
                                 duration:
@@ -596,6 +611,23 @@ spec:
                                       httpCookie:
                                         description: Hash based on HTTP cookie.
                                         properties:
+                                          attributes:
+                                            description: Additional attributes for
+                                              the cookie.
+                                            items:
+                                              properties:
+                                                name:
+                                                  description: The name of the cookie
+                                                    attribute.
+                                                  type: string
+                                                value:
+                                                  description: The optional value
+                                                    of the cookie attribute.
+                                                  type: string
+                                              required:
+                                              - name
+                                              type: object
+                                            type: array
                                           name:
                                             description: Name of the cookie.
                                             type: string
@@ -714,7 +746,7 @@ spec:
                                         description: This parameter controls the speed
                                           of traffic increase over the warmup duration.
                                         format: double
-                                        minimum: 1
+                                        minimum: 0
                                         nullable: true
                                         type: number
                                       duration:
@@ -1136,6 +1168,21 @@ spec:
                           httpCookie:
                             description: Hash based on HTTP cookie.
                             properties:
+                              attributes:
+                                description: Additional attributes for the cookie.
+                                items:
+                                  properties:
+                                    name:
+                                      description: The name of the cookie attribute.
+                                      type: string
+                                    value:
+                                      description: The optional value of the cookie
+                                        attribute.
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
+                                type: array
                               name:
                                 description: Name of the cookie.
                                 type: string
@@ -1248,7 +1295,7 @@ spec:
                             description: This parameter controls the speed of traffic
                               increase over the warmup duration.
                             format: double
-                            minimum: 1
+                            minimum: 0
                             nullable: true
                             type: number
                           duration:
@@ -1492,6 +1539,21 @@ spec:
                                 httpCookie:
                                   description: Hash based on HTTP cookie.
                                   properties:
+                                    attributes:
+                                      description: Additional attributes for the cookie.
+                                      items:
+                                        properties:
+                                          name:
+                                            description: The name of the cookie attribute.
+                                            type: string
+                                          value:
+                                            description: The optional value of the
+                                              cookie attribute.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
                                     name:
                                       description: Name of the cookie.
                                       type: string
@@ -1607,7 +1669,7 @@ spec:
                                   description: This parameter controls the speed of
                                     traffic increase over the warmup duration.
                                   format: double
-                                  minimum: 1
+                                  minimum: 0
                                   nullable: true
                                   type: number
                                 duration:
@@ -2172,6 +2234,21 @@ spec:
                                 httpCookie:
                                   description: Hash based on HTTP cookie.
                                   properties:
+                                    attributes:
+                                      description: Additional attributes for the cookie.
+                                      items:
+                                        properties:
+                                          name:
+                                            description: The name of the cookie attribute.
+                                            type: string
+                                          value:
+                                            description: The optional value of the
+                                              cookie attribute.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
                                     name:
                                       description: Name of the cookie.
                                       type: string
@@ -2287,7 +2364,7 @@ spec:
                                   description: This parameter controls the speed of
                                     traffic increase over the warmup duration.
                                   format: double
-                                  minimum: 1
+                                  minimum: 0
                                   nullable: true
                                   type: number
                                 duration:
@@ -2535,6 +2612,23 @@ spec:
                                       httpCookie:
                                         description: Hash based on HTTP cookie.
                                         properties:
+                                          attributes:
+                                            description: Additional attributes for
+                                              the cookie.
+                                            items:
+                                              properties:
+                                                name:
+                                                  description: The name of the cookie
+                                                    attribute.
+                                                  type: string
+                                                value:
+                                                  description: The optional value
+                                                    of the cookie attribute.
+                                                  type: string
+                                              required:
+                                              - name
+                                              type: object
+                                            type: array
                                           name:
                                             description: Name of the cookie.
                                             type: string
@@ -2653,7 +2747,7 @@ spec:
                                         description: This parameter controls the speed
                                           of traffic increase over the warmup duration.
                                         format: double
-                                        minimum: 1
+                                        minimum: 0
                                         nullable: true
                                         type: number
                                       duration:
@@ -3075,6 +3169,21 @@ spec:
                           httpCookie:
                             description: Hash based on HTTP cookie.
                             properties:
+                              attributes:
+                                description: Additional attributes for the cookie.
+                                items:
+                                  properties:
+                                    name:
+                                      description: The name of the cookie attribute.
+                                      type: string
+                                    value:
+                                      description: The optional value of the cookie
+                                        attribute.
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
+                                type: array
                               name:
                                 description: Name of the cookie.
                                 type: string
@@ -3187,7 +3296,7 @@ spec:
                             description: This parameter controls the speed of traffic
                               increase over the warmup duration.
                             format: double
-                            minimum: 1
+                            minimum: 0
                             nullable: true
                             type: number
                           duration:
@@ -3431,6 +3540,21 @@ spec:
                                 httpCookie:
                                   description: Hash based on HTTP cookie.
                                   properties:
+                                    attributes:
+                                      description: Additional attributes for the cookie.
+                                      items:
+                                        properties:
+                                          name:
+                                            description: The name of the cookie attribute.
+                                            type: string
+                                          value:
+                                            description: The optional value of the
+                                              cookie attribute.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
                                     name:
                                       description: Name of the cookie.
                                       type: string
@@ -3546,7 +3670,7 @@ spec:
                                   description: This parameter controls the speed of
                                     traffic increase over the warmup duration.
                                   format: double
-                                  minimum: 1
+                                  minimum: 0
                                   nullable: true
                                   type: number
                                 duration:
@@ -4111,6 +4235,21 @@ spec:
                                 httpCookie:
                                   description: Hash based on HTTP cookie.
                                   properties:
+                                    attributes:
+                                      description: Additional attributes for the cookie.
+                                      items:
+                                        properties:
+                                          name:
+                                            description: The name of the cookie attribute.
+                                            type: string
+                                          value:
+                                            description: The optional value of the
+                                              cookie attribute.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
                                     name:
                                       description: Name of the cookie.
                                       type: string
@@ -4226,7 +4365,7 @@ spec:
                                   description: This parameter controls the speed of
                                     traffic increase over the warmup duration.
                                   format: double
-                                  minimum: 1
+                                  minimum: 0
                                   nullable: true
                                   type: number
                                 duration:
@@ -4474,6 +4613,23 @@ spec:
                                       httpCookie:
                                         description: Hash based on HTTP cookie.
                                         properties:
+                                          attributes:
+                                            description: Additional attributes for
+                                              the cookie.
+                                            items:
+                                              properties:
+                                                name:
+                                                  description: The name of the cookie
+                                                    attribute.
+                                                  type: string
+                                                value:
+                                                  description: The optional value
+                                                    of the cookie attribute.
+                                                  type: string
+                                              required:
+                                              - name
+                                              type: object
+                                            type: array
                                           name:
                                             description: Name of the cookie.
                                             type: string
@@ -4592,7 +4748,7 @@ spec:
                                         description: This parameter controls the speed
                                           of traffic increase over the warmup duration.
                                         format: double
-                                        minimum: 1
+                                        minimum: 0
                                         nullable: true
                                         type: number
                                       duration:
@@ -5014,6 +5170,21 @@ spec:
                           httpCookie:
                             description: Hash based on HTTP cookie.
                             properties:
+                              attributes:
+                                description: Additional attributes for the cookie.
+                                items:
+                                  properties:
+                                    name:
+                                      description: The name of the cookie attribute.
+                                      type: string
+                                    value:
+                                      description: The optional value of the cookie
+                                        attribute.
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
+                                type: array
                               name:
                                 description: Name of the cookie.
                                 type: string
@@ -5126,7 +5297,7 @@ spec:
                             description: This parameter controls the speed of traffic
                               increase over the warmup duration.
                             format: double
-                            minimum: 1
+                            minimum: 0
                             nullable: true
                             type: number
                           duration:
@@ -5370,6 +5541,21 @@ spec:
                                 httpCookie:
                                   description: Hash based on HTTP cookie.
                                   properties:
+                                    attributes:
+                                      description: Additional attributes for the cookie.
+                                      items:
+                                        properties:
+                                          name:
+                                            description: The name of the cookie attribute.
+                                            type: string
+                                          value:
+                                            description: The optional value of the
+                                              cookie attribute.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
                                     name:
                                       description: Name of the cookie.
                                       type: string
@@ -5485,7 +5671,7 @@ spec:
                                   description: This parameter controls the speed of
                                     traffic increase over the warmup duration.
                                   format: double
-                                  minimum: 1
+                                  minimum: 0
                                   nullable: true
                                   type: number
                                 duration:

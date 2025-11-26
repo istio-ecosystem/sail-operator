@@ -1,0 +1,151 @@
+// Variables embedded for GitHub compatibility
+:istio_latest_version: 1.28.0
+:istio_latest_version_revision_format: 1-28-0
+:istio_latest_tag: v1.28-latest
+:istio_latest_minus_one_version: 1.27.3
+:istio_latest_minus_one_version_revision_format: 1-27-3
+
+link:../README.adoc[Return to Project Root]
+
+== Table of Contents
+
+- <<addons>>
+  - <<deploy-prometheus-and-jaeger-addons>>
+  - <<deploy-kiali-addon>>
+  - <<find-the-active-revision-of-your-istio-instance>>
+  - <<deploy-gateway-and-bookinfo>>
+  - <<generate-traffic-and-visualize-your-mesh>>
+
+[[addons]]
+== Addons
+
+Addons are managed separately from the Sail Operator. You can follow the link:https://istio.io/latest/docs/ops/integrations/[istio documentation] for how to install addons. Below is an example of how to install some addons for Istio.
+
+The sample will deploy:
+
+- Prometheus
+- Jaeger
+- Kiali
+- Bookinfo demo app
+
+*Prerequisites*
+
+- Sail operator is installed.
+- Control Plane is installed via the Sail Operator.
+
+[[deploy-prometheus-and-jaeger-addons]]
+=== Deploy Prometheus and Jaeger addons
+
+[source,bash,subs="attributes+"]
+----
+kubectl apply -f https://raw.githubusercontent.com/istio/istio/master/samples/addons/prometheus.yaml
+kubectl apply -f https://raw.githubusercontent.com/istio/istio/master/samples/addons/jaeger.yaml
+----
+
+[[deploy-kiali-addon]]
+=== Deploy Kiali addon
+
+Install the kiali operator.
+
+You can install the kiali operator through OLM if running on Openshift, otherwise you can use helm:
+
+[source,bash,subs="attributes+"]
+----
+helm install --namespace kiali-operator --create-namespace kiali-operator kiali/kiali-operator
+----
+
+Create a Kiali resource. We're enabling tracing and disabling grafana here since tracing is disabled by default and grafana is not part of this example.
+
+[source,bash,subs="attributes+"]
+----
+kubectl apply -f - <<EOF
+apiVersion: kiali.io/v1alpha1
+kind: Kiali
+metadata:
+  name: kiali
+  namespace: istio-system
+spec:
+  external_services:
+    tracing:
+      enabled: true
+    grafana:
+      enabled: false
+EOF
+----
+
+[[find-the-active-revision-of-your-istio-instance]]
+=== Find the active revision of your Istio instance.
+In our case it is `test` the istio resource name.
+
+[source,console,subs="attributes+"]
+----
+kubectl get istios
+NAME      REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
+test      1           1       0        test              Healthy   v{istio_latest_version}  8m10s
+----
+
+[[deploy-gateway-and-bookinfo]]
+=== Deploy Gateway and Bookinfo
+
+Create the bookinfo namespace (if it doesn't already exist) and enable injection.
+
+[source,bash,subs="attributes+"]
+----
+kubectl create namespace bookinfo
+kubectl label namespace bookinfo istio.io/rev=test
+----
+
+Install Bookinfo demo app.
+
+[source,bash,subs="attributes+"]
+----
+kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/master/samples/bookinfo/platform/kube/bookinfo.yaml
+kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/master/samples/bookinfo/platform/kube/bookinfo-versions.yaml
+----
+
+Install gateway API CRDs if they are not already installed.
+
+[source,bash,subs="attributes+"]
+----
+kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
+  { kubectl kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.1.0" | kubectl apply -f -; }
+----
+
+Create bookinfo gateway.
+
+[source,bash,subs="attributes+"]
+----
+kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/master/samples/bookinfo/gateway-api/bookinfo-gateway.yaml
+kubectl wait -n bookinfo --for=condition=programmed gtw bookinfo-gateway
+----
+
+[[generate-traffic-and-visualize-your-mesh]]
+=== Generate traffic and visualize your mesh
+
+Send traffic to the productpage service. Note that this command will run until canceled.
+
+[source,bash,subs="attributes+"]
+----
+export INGRESS_HOST=$(kubectl get gtw bookinfo-gateway -n bookinfo -o jsonpath='{.status.addresses[0].value}')
+export INGRESS_PORT=$(kubectl get gtw bookinfo-gateway -n bookinfo -o jsonpath='{.spec.listeners[?(@.name=="http")].port}')
+export GATEWAY_URL=$INGRESS_HOST:$INGRESS_PORT
+watch curl http://${GATEWAY_URL}/productpage &> /dev/null
+----
+
+In a separate terminal, open Kiali to visualize your mesh.
+
+If using Openshift, open the Kiali route:
+
+[source,bash,subs="attributes+"]
+----
+echo https://$(kubectl get routes -n istio-system kiali -o jsonpath='{.spec.host}')
+----
+
+Otherwise, port forward to the kiali pod directly:
+
+[source,bash,subs="attributes+"]
+----
+kubectl port-forward -n istio-system svc/kiali 20001:20001
+----
+
+You can view Kiali dashboard at: http://localhost:20001

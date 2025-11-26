@@ -16,6 +16,17 @@
 # Note: After modifying this file, run `make test` to ensure that the
 # generated defaults values from this files are valid.
 
+v1.28.0:
+  istio:
+    pilot:
+      cni:
+        enabled: true
+        provider: multus
+  istiocni:
+    cni:
+      chained: false
+      provider: multus
+      cniConfFileName: istio-cni.conf
 v1.26.3:
   istio:
     pilot:

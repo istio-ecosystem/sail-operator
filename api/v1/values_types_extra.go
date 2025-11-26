@@ -15,6 +15,7 @@
 package v1
 
 import (
+	appsv1 "k8s.io/api/apps/v1"
 	k8sv1 "k8s.io/api/core/v1"
 )
 
@@ -49,6 +50,10 @@ type ZTunnelConfig struct {
 	// Image name to pull from. Image will be `Hub/Image:Tag-Variant`.
 	// If Image contains a "/", it will replace the entire `image` in the pod.
 	Image *string `json:"image,omitempty"`
+	// defines the network this cluster belong to. This name corresponds to the networks in the map of mesh networks.
+	Network *string `json:"network,omitempty"`
+	// K8s affinity to set on the ztunnel Pods. Can be used to exclude ztunnel from being scheduled on specified nodes.
+	Affinity *k8sv1.Affinity `json:"affinity,omitempty"`
 	// resourceName, if set, will override the naming of resources. If not set, will default to the release name.
 	// It is recommended to not set this; this is primarily for backwards compatibility.
 	ResourceName *string `json:"resourceName,omitempty"`
@@ -60,12 +65,20 @@ type ZTunnelConfig struct {
 	VolumeMounts []k8sv1.VolumeMount `json:"volumeMounts,omitempty"`
 	// Additional volumes to add to the ztunnel Pod.
 	Volumes []k8sv1.Volume `json:"volumes,omitempty"`
+	// Tolerations for the ztunnel pod
+	Tolerations []k8sv1.Toleration `json:"tolerations,omitempty"`
 	// Annotations added to each pod. The default annotations are required for scraping prometheus (in most environments).
 	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
 	// Additional labels to apply on the pod level.
 	PodLabels map[string]string `json:"podLabels,omitempty"`
 	// The k8s resource requests and limits for the ztunnel Pods.
 	Resources *k8sv1.ResourceRequirements `json:"resources,omitempty"`
+	// The resource quotas configuration for ztunnel
+	ResourceQuotas *ResourceQuotas `json:"resourceQuotas,omitempty"`
+	// K8s node selector settings.
+	//
+	// See https://kubernetes.io/docs/user-guide/node-selection/
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 	// List of secret names to add to the service account as image pull secrets
 	// to use for pulling any images in pods that reference this ServiceAccount.
 	// Must be set for any cluster configured with private docker registry.
@@ -82,9 +95,6 @@ type ZTunnelConfig struct {
 	// The name of the cluster we are installing in. Note this is a user-defined name, which must be consistent
 	// with Istiod configuration.
 	MultiCluster *MultiClusterConfig `json:"multiCluster,omitempty"`
-	// meshConfig defines runtime configuration of components.
-	// For ztunnel, only defaultConfig is used, but this is nested under `meshConfig` for consistency with other components.
-	MeshConfig *MeshConfig `json:"meshConfig,omitempty"`
 	// This value defines:
 	// 1. how many seconds kube waits for ztunnel pod to gracefully exit before forcibly terminating it (this value)
 	// 2. how many seconds ztunnel waits to drain its own connections (this value - 1 sec)
@@ -105,6 +115,10 @@ type ZTunnelConfig struct {
 	LogLevel *string `json:"logLevel,omitempty"`
 	// Specifies whether istio components should output logs in json format by adding --log_as_json argument to each container.
 	LogAsJSON *bool `json:"logAsJson,omitempty"`
+	// Set seLinux options for the ztunnel pod
+	SeLinuxOptions *k8sv1.SELinuxOptions `json:"seLinuxOptions,omitempty"`
+	// Defines the update strategy to use when the version in the Ztunnel CR is updated.
+	UpdateStrategy *appsv1.DaemonSetUpdateStrategy `json:"updateStrategy,omitempty"`
 }
 
 // ZTunnelGlobalConfig is a subset of the Global Configuration used in the Istio ztunnel chart.

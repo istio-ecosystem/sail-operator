@@ -174,6 +174,52 @@ func TestApplyImageDigests(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "user-supplied-global-hub",
+			config: config.OperatorConfig{
+				ImageDigests: map[string]config.IstioImageConfig{
+					"v1.20.0": {
+						IstiodImage:  "istiod-test",
+						ProxyImage:   "proxy-test",
+						ZTunnelImage: "ztunnel-test",
+					},
+				},
+			},
+			version: "v1.20.0",
+			inputValues: &v1.Values{
+				Global: &v1.GlobalConfig{
+					Hub: ptr.Of("docker.io/istio"),
+				},
+			},
+			expectValues: &v1.Values{
+				Global: &v1.GlobalConfig{
+					Hub: ptr.Of("docker.io/istio"),
+				},
+			},
+		},
+		{
+			name: "user-supplied-global-tag",
+			config: config.OperatorConfig{
+				ImageDigests: map[string]config.IstioImageConfig{
+					"v1.20.0": {
+						IstiodImage:  "istiod-test",
+						ProxyImage:   "proxy-test",
+						ZTunnelImage: "ztunnel-test",
+					},
+				},
+			},
+			version: "v1.20.0",
+			inputValues: &v1.Values{
+				Global: &v1.GlobalConfig{
+					Tag: ptr.Of("1.20.0-custom-build"),
+				},
+			},
+			expectValues: &v1.Values{
+				Global: &v1.GlobalConfig{
+					Tag: ptr.Of("1.20.0-custom-build"),
+				},
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

@@ -62,7 +62,8 @@ type Reconciler struct {
 }
 
 const (
-	ztunnelChart = "ztunnel"
+	ztunnelChart   = "ztunnel"
+	defaultProfile = "ambient"
 )
 
 func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *runtime.Scheme, chartManager *helm.ChartManager) *Reconciler {
@@ -88,7 +89,7 @@ func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *ru
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
-func (r *Reconciler) Reconcile(ctx context.Context, ztunnel *v1alpha1.ZTunnel) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, ztunnel *v1.ZTunnel) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
 	reconcileErr := r.doReconcile(ctx, ztunnel)
@@ -99,11 +100,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, ztunnel *v1alpha1.ZTunnel) (
 	return ctrl.Result{}, errors.Join(reconcileErr, statusErr)
 }
 
-func (r *Reconciler) Finalize(ctx context.Context, ztunnel *v1alpha1.ZTunnel) error {
+func (r *Reconciler) Finalize(ctx context.Context, ztunnel *v1.ZTunnel) error {
 	return r.uninstallHelmChart(ctx, ztunnel)
 }
 
-func (r *Reconciler) doReconcile(ctx context.Context, ztunnel *v1alpha1.ZTunnel) error {
+func (r *Reconciler) doReconcile(ctx context.Context, ztunnel *v1.ZTunnel) error {
 	log := logf.FromContext(ctx)
 	if err := r.validate(ctx, ztunnel); err != nil {
 		return err
@@ -113,7 +114,7 @@ func (r *Reconciler) doReconcile(ctx context.Context, ztunnel *v1alpha1.ZTunnel)
 	return r.installHelmChart(ctx, ztunnel)
 }
 
-func (r *Reconciler) validate(ctx context.Context, ztunnel *v1alpha1.ZTunnel) error {
+func (r *Reconciler) validate(ctx context.Context, ztunnel *v1.ZTunnel) error {
 	if ztunnel.Spec.Version == "" {
 		return reconciler.NewValidationError("spec.version not set")
 	}
@@ -126,10 +127,10 @@ func (r *Reconciler) validate(ctx context.Context, ztunnel *v1alpha1.ZTunnel) er
 	return nil
 }
 
-func (r *Reconciler) installHelmChart(ctx context.Context, ztunnel *v1alpha1.ZTunnel) error {
+func (r *Reconciler) installHelmChart(ctx context.Context, ztunnel *v1.ZTunnel) error {
 	ownerReference := metav1.OwnerReference{
-		APIVersion:         v1alpha1.GroupVersion.String(),
-		Kind:               v1alpha1.ZTunnelKind,
+		APIVersion:         v1.GroupVersion.String(),
+		Kind:               v1.ZTunnelKind,
 		Name:               ztunnel.Name,
 		UID:                ztunnel.UID,
 		Controller:         ptr.Of(true),
@@ -151,7 +152,7 @@ func (r *Reconciler) installHelmChart(ctx context.Context, ztunnel *v1alpha1.ZTu
 
 	// apply userValues on top of defaultValues from profiles
 	mergedHelmValues, err := istiovalues.ApplyProfilesAndPlatform(
-		r.Config.ResourceDirectory, version, r.Config.Platform, r.Config.DefaultProfile, ztunnel.Spec.Profile, helm.FromValues(userValues))
+		r.Config.ResourceDirectory, version, r.Config.Platform, r.Config.DefaultProfile, defaultProfile, helm.FromValues(userValues))
 	if err != nil {
 		return fmt.Errorf("failed to apply profile: %w", err)
 	}
@@ -183,6 +184,11 @@ func applyImageDigests(version string, values *v1.ZTunnelValues, config config.O
 		return values
 	}
 
+	// if a global hub or tag value is configured by the user, don't set image digests
+	if values != nil && values.Global != nil && (values.Global.Hub != nil || values.Global.Tag != nil) {
+		return values
+	}
+
 	if values == nil {
 		values = &v1.ZTunnelValues{}
 	}
@@ -197,7 +203,7 @@ func applyImageDigests(version string, values *v1.ZTunnelValues, config config.O
 	return values
 }
 
-func (r *Reconciler) uninstallHelmChart(ctx context.Context, ztunnel *v1alpha1.ZTunnel) error {
+func (r *Reconciler) uninstallHelmChart(ctx context.Context, ztunnel *v1.ZTunnel) error {
 	_, err := r.ChartManager.UninstallChart(ctx, ztunnelChart, ztunnel.Spec.Namespace)
 	if err != nil {
 		return fmt.Errorf("failed to uninstall Helm chart %q: %w", ztunnelChart, err)
@@ -214,7 +220,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// ownedResourceHandler handles resources that are owned by the ZTunnel CR
 	ownedResourceHandler := wrapEventHandler(logger,
-		handler.EnqueueRequestForOwner(r.Scheme, r.RESTMapper(), &v1alpha1.ZTunnel{}, handler.OnlyControllerOwner()))
+		handler.EnqueueRequestForOwner(r.Scheme, r.RESTMapper(), &v1.ZTunnel{}, handler.OnlyControllerOwner()))
 
 	namespaceHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapNamespaceToReconcileRequest))
 
@@ -230,7 +236,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		}).
 
 		// we use the Watches function instead of For(), so that we can wrap the handler so that events that cause the object to be enqueued are logged
-		Watches(&v1alpha1.ZTunnel{}, mainObjectHandler).Named("ztunnel").
+		Watches(&v1alpha1.ZTunnel{}, mainObjectHandler).
+		Watches(&v1.ZTunnel{}, mainObjectHandler).
+		Named("ztunnel").
 
 		// namespaced resources
 		Watches(&corev1.ConfigMap{}, ownedResourceHandler).
@@ -247,10 +255,10 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&corev1.Namespace{}, namespaceHandler).
 		Watches(&rbacv1.ClusterRole{}, ownedResourceHandler).
 		Watches(&rbacv1.ClusterRoleBinding{}, ownedResourceHandler).
-		Complete(reconciler.NewStandardReconcilerWithFinalizer[*v1alpha1.ZTunnel](r.Client, r.Reconcile, r.Finalize, constants.FinalizerName))
+		Complete(reconciler.NewStandardReconcilerWithFinalizer[*v1.ZTunnel](r.Client, r.Reconcile, r.Finalize, constants.FinalizerName))
 }
 
-func (r *Reconciler) determineStatus(ctx context.Context, ztunnel *v1alpha1.ZTunnel, reconcileErr error) (v1alpha1.ZTunnelStatus, error) {
+func (r *Reconciler) determineStatus(ctx context.Context, ztunnel *v1.ZTunnel, reconcileErr error) (v1.ZTunnelStatus, error) {
 	var errs errlist.Builder
 	reconciledCondition := r.determineReconciledCondition(reconcileErr)
 	readyCondition, err := r.determineReadyCondition(ctx, ztunnel)
@@ -264,7 +272,7 @@ func (r *Reconciler) determineStatus(ctx context.Context, ztunnel *v1alpha1.ZTun
 	return status, errs.Error()
 }
 
-func (r *Reconciler) updateStatus(ctx context.Context, ztunnel *v1alpha1.ZTunnel, reconcileErr error) error {
+func (r *Reconciler) updateStatus(ctx context.Context, ztunnel *v1.ZTunnel, reconcileErr error) error {
 	var errs errlist.Builder
 
 	status, err := r.determineStatus(ctx, ztunnel, reconcileErr)
@@ -280,58 +288,58 @@ func (r *Reconciler) updateStatus(ctx context.Context, ztunnel *v1alpha1.ZTunnel
 	return errs.Error()
 }
 
-func deriveState(reconciledCondition, readyCondition v1alpha1.ZTunnelCondition) v1alpha1.ZTunnelConditionReason {
+func deriveState(reconciledCondition, readyCondition v1.ZTunnelCondition) v1.ZTunnelConditionReason {
 	if reconciledCondition.Status != metav1.ConditionTrue {
 		return reconciledCondition.Reason
 	} else if readyCondition.Status != metav1.ConditionTrue {
 		return readyCondition.Reason
 	}
-	return v1alpha1.ZTunnelReasonHealthy
+	return v1.ZTunnelReasonHealthy
 }
 
-func (r *Reconciler) determineReconciledCondition(err error) v1alpha1.ZTunnelCondition {
-	c := v1alpha1.ZTunnelCondition{Type: v1alpha1.ZTunnelConditionReconciled}
+func (r *Reconciler) determineReconciledCondition(err error) v1.ZTunnelCondition {
+	c := v1.ZTunnelCondition{Type: v1.ZTunnelConditionReconciled}
 
 	if err == nil {
 		c.Status = metav1.ConditionTrue
 	} else {
 		c.Status = metav1.ConditionFalse
-		c.Reason = v1alpha1.ZTunnelReasonReconcileError
+		c.Reason = v1.ZTunnelReasonReconcileError
 		c.Message = fmt.Sprintf("error reconciling resource: %v", err)
 	}
 	return c
 }
 
-func (r *Reconciler) determineReadyCondition(ctx context.Context, ztunnel *v1alpha1.ZTunnel) (v1alpha1.ZTunnelCondition, error) {
-	c := v1alpha1.ZTunnelCondition{
-		Type:   v1alpha1.ZTunnelConditionReady,
+func (r *Reconciler) determineReadyCondition(ctx context.Context, ztunnel *v1.ZTunnel) (v1.ZTunnelCondition, error) {
+	c := v1.ZTunnelCondition{
+		Type:   v1.ZTunnelConditionReady,
 		Status: metav1.ConditionFalse,
 	}
 
 	ds := appsv1.DaemonSet{}
 	if err := r.Client.Get(ctx, r.getDaemonSetKey(ztunnel), &ds); err == nil {
 		if ds.Status.CurrentNumberScheduled == 0 {
-			c.Reason = v1alpha1.ZTunnelDaemonSetNotReady
+			c.Reason = v1.ZTunnelDaemonSetNotReady
 			c.Message = "no ztunnel pods are currently scheduled"
 		} else if ds.Status.NumberReady < ds.Status.CurrentNumberScheduled {
-			c.Reason = v1alpha1.ZTunnelDaemonSetNotReady
+			c.Reason = v1.ZTunnelDaemonSetNotReady
 			c.Message = "not all ztunnel pods are ready"
 		} else {
 			c.Status = metav1.ConditionTrue
 		}
 	} else if apierrors.IsNotFound(err) {
-		c.Reason = v1alpha1.ZTunnelDaemonSetNotReady
+		c.Reason = v1.ZTunnelDaemonSetNotReady
 		c.Message = "ztunnel DaemonSet not found"
 	} else {
 		c.Status = metav1.ConditionUnknown
-		c.Reason = v1alpha1.ZTunnelReasonReadinessCheckFailed
+		c.Reason = v1.ZTunnelReasonReadinessCheckFailed
 		c.Message = fmt.Sprintf("failed to get readiness: %v", err)
 		return c, fmt.Errorf("get failed: %w", err)
 	}
 	return c, nil
 }
 
-func (r *Reconciler) getDaemonSetKey(ztunnel *v1alpha1.ZTunnel) client.ObjectKey {
+func (r *Reconciler) getDaemonSetKey(ztunnel *v1.ZTunnel) client.ObjectKey {
 	return client.ObjectKey{
 		Namespace: ztunnel.Spec.Namespace,
 		Name:      "ztunnel",
@@ -342,7 +350,7 @@ func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, ns clie
 	log := logf.FromContext(ctx)
 
 	// Check if any ZTunnel references this namespace in .spec.namespace
-	ztunnelList := v1alpha1.ZTunnelList{}
+	ztunnelList := v1.ZTunnelList{}
 	if err := r.Client.List(ctx, &ztunnelList); err != nil {
 		log.Error(err, "failed to list ZTunnels")
 		return nil
@@ -358,5 +366,5 @@ func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, ns clie
 }
 
 func wrapEventHandler(logger logr.Logger, handler handler.EventHandler) handler.EventHandler {
-	return enqueuelogger.WrapIfNecessary(v1alpha1.ZTunnelKind, logger, handler)
+	return enqueuelogger.WrapIfNecessary(v1.ZTunnelKind, logger, handler)
 }

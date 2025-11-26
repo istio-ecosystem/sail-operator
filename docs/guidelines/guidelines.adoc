@@ -1,0 +1,267 @@
+// Variables embedded for GitHub compatibility
+:istio_latest_version: 1.28.0
+:istio_latest_version_revision_format: 1-28-0
+:istio_latest_tag: v1.28-latest
+:istio_release_name: release-1.28
+:istio_latest_minus_one_version: 1.27.3
+:istio_latest_minus_one_version_revision_format: 1-27-3
+
+link:../../README.adoc[Return to Project Root]
+
+== Table of Contents
+
+- <<documentation-guidelines>>
+  - <<introduction>>
+  - <<documentation-structure>>
+    - <<structure-of-the-entire-folder-and-new-folders>>
+    - <<table-of-contents>>
+    - <<headings>>
+    - <<formatting>>
+    - <<links>>
+    - <<images>>
+    - <<nomenclature>>
+    - <<examples>>
+  - <<automated-testing-over-the-documentation>>
+    - <<what-does-update-docs-examplessh-do>>
+    - <<adding-a-topic-example-to-the-automation-workflow>>
+    - <<debugging-a-specific-docs-example-locally>>
+
+[[documentation-guidelines]]
+== Documentation Guidelines
+
+[[introduction]]
+== Introduction
+This guide aims to set basic guidelines for writing documentation for the project. The documentation should be clear, concise, and easy to understand. It should be written in a way that is accessible to both technical and non-technical users.
+
+[[documentation-structure]]
+== Documentation Structure
+The documentation should be structured in a way that is easy to navigate. It should be divided into sections and subsections, with a table of contents at the beginning of the document. Each section should cover a specific topic, and each subsection should cover a specific aspect of that topic.
+
+[[structure-of-the-entire-folder-and-new-folders]]
+=== Structure of the entire folder and new folders
+All the documentation lives under the folder `docs` in the root of the project. The documentation is divided into the following sections:
+- `guidelines`: Contains guidelines for writing documentation.
+- `api-reference`: Contains the API reference documentation. It is generated from the code, so if you want to update it, you need to update the docstrings.
+- `common`: Contains common documentation that is relevant to the entire project, for example: `create-and-configure-gateways`, `install-bookinfo-app`, etc. All the docs located here should be linked to from the main README.adoc file for easy access.
+- `deployment-models`: Contains documentation and resources for different Istio deployment models like multicluster, multiple-mesh, etc.
+- `general`: Contains general documentation like getting started guides, istiod HA configuration, plugin CA setup, etc.
+- `addons`: Contains documentation for Istio addons and observability integrations.
+- `dual-stack`: Contains documentation for dual-stack networking support.
+- `macos`: Contains documentation specific to macOS development.
+- `update-strategy`: Contains documentation for different update strategies.
+- `README.adoc`: The main README.adoc file that contains the project main doc and links to the other documentation topics.
+
+Any new folder or file added to the documentation should be linked to from the main README.adoc and you should only create a new folder if the documentation is not relevant to the entire project or if it is a new section that does not fit into the existing structure. Also, new folders can contain resources that are referenced in the documentation files to be able to run examples or to get more information about the project (for example, see the `deployment-models/resources` folder).
+
+[[table-of-contents]]
+=== Table of Contents
+For long documents, it is recommended to include a table of contents at the beginning of the document. The table of contents should list all the sections and subsections in the document.
+
+[[headings]]
+=== Headings
+Use headings to break up the content into sections and subsections. Headings should be descriptive and should clearly indicate the topic of the section or subsection.
+
+[[formatting]]
+=== Formatting
+Use formatting to make the text more readable. Use bullet points for lists, code blocks for code snippets, and inline code for short code snippets. Use bold or italic text to highlight important points. Any topic that is important to the reader should be highlighted in some way.
+
+[[links]]
+=== Links
+Use links to reference other sections of the documentation, external resources, or related topics. Links should be descriptive and should clearly indicate the target of the link. Links should be used to provide additional information or context for the reader. Avoid the use of raw URLs in the documentation.
+
+[[images]]
+=== Images
+Use images to illustrate concepts and provide visual guidance. Images should be accompanied by explanations and annotations to help the reader understand the content. Images should be used to enhance the text and provide additional context for the reader and they are going to be stored in a `images` folder.
+
+[[nomenclature]]
+=== Nomenclature
+Use consistent terminology throughout the documentation. Use the same terms to refer to the same concepts and avoid using different terms to refer to the same concept. For this project, we are going to use the following terms:
+- `Sail Operator` to refer to the Sail Operator project.
+- `istio` to refer to the Istio service mesh upstream project.
+- `Istio` to the resource created and managed by the Sail Operator.
+- `IstioCNI` to refer to the Istio CNI resource managed by the Sail Operator.
+- `istio-cni` to refer to the Istio CNI project.
+
+[[examples]]
+=== Examples
+Use examples to illustrate concepts and provide practical guidance. Examples should be clear, concise, and easy to follow. They should be accompanied by explanations and annotations to help the reader understand the code. Also, the examples provided can be used to run automated tests over the example steps. This is going to be explained in the next section.
+
+Use code blocks for commands or groups of commands that have the same context. **IMPORTANT**: All code blocks that contain variables (like `{istio_latest_version}`) must include the `subs="attributes+"` attribute to ensure proper variable substitution. Use validation steps to ensure that conditions are met and avoid flakiness of the test. The next section explains how to add validation steps to the examples.
+
+**Code Block Format Requirements:**
+- Bash/console blocks with variables: `[source,bash,subs="attributes+"]` or `[source,console,subs="attributes+"]`
+- YAML blocks with variables: `[source,yaml,subs="attributes+"]`
+- Code blocks without variables can omit the `subs` attribute
+
+**Variable Definitions:**
+All AsciiDoc files should include variable definitions at the top for GitHub compatibility:
+```
+// Variables embedded for GitHub compatibility
+:istio_latest_version: 1.28.0
+:istio_latest_version_revision_format: 1-28-0
+:istio_latest_tag: v1.28-latest
+:istio_release_name: release-1.28
+:istio_latest_minus_one_version: 1.27.3
+:istio_latest_minus_one_version_revision_format: 1-27-3
+```
+
+Note: that the values of the variables will be automatically updated on each release to keep them in sync with the actual versions.
+
+[[automated-testing-over-the-documentation]]
+== Automated Testing over the Documentation
+Any documentation step needs to be tested to ensure that the steps are correct and the user can follow them without any issue. The documentation testing uses a custom automation framework based on AWK script processing and bash execution. The workflow of the automation is the following:
+
+- The documentation files are in the `docs` folder.
+- The `make test.docs` target runs the `tests/documentation_tests/scripts/run-asciidocs-test.sh` script which:
+  1. Sets up a Kind cluster with local registry
+  2. Builds and deploys the Sail Operator
+  3. Processes AsciiDoc files to extract test commands using AWK scripts
+  4. Executes both `ifdef` blocks and named code blocks in document order
+  5. Runs validation steps and cleanup
+- The main script calls `tests/documentation_tests/scripts/run-docs-examples.sh` which processes individual documentation files and extracts executable code blocks.
+- All temporary files and Kind clusters are cleaned up after testing.
+
+[[what-does-update-docs-examplessh-do]]
+=== What does the testing framework do
+The testing framework (`run-asciidocs-test.sh` and `run-docs-examples.sh`) performs the following steps:
+- **Environment Setup**: Creates a Kind cluster with local registry, builds and deploys the Sail Operator
+- **File Processing**: Processes AsciiDoc files using AWK scripts to extract executable code blocks
+- **Test Execution**: Executes both:
+  - `ifdef::test-{test-name}[]` conditional blocks
+  - Named code blocks (with `name=` attribute) that match the current test context
+- **Order Preservation**: Maintains document order when executing test steps
+- **Validation**: Runs validation steps to ensure resources are in expected states
+- **Cleanup**: Cleans up resources and removes the Kind cluster after testing
+
+The scripts handle variable substitution, environment setup, and provide detailed logging for debugging test failures.
+
+[[adding-a-topic-example-to-the-automation-workflow]]
+=== Adding a topic example to the automation workflow
+To add a new topic to the automation workflow you need to:
+
+. In your documentation topic, each bash code block that you want to execute as part of the automation can be included in two ways:
+
+**Method 1: Using ifdef blocks (Recommended for hidden validation steps)**
+```
+ifdef::test-{test-name}[]
+kubectl create namespace istio-system
+endif::[]
+```
+
+**Method 2: Using named code blocks (For specific test targeting and real steps from the docs)**
+```
+[source,bash,subs="attributes+",name="example-name"]
+----
+kubectl get pods -n istio-system
+----
+```
+
+The `name` attribute is useful to identify the step in the output of the test. The name should be short and descriptive and unique for each test. For example: `update-cni`, take into account ha the same name should be used accross all the needed commands for the same test, with this we ensure that the script will contain all the steps.
+
+**Important**: All executable code blocks must include `subs="attributes+"` when they contain variables like `{istio_latest_version}`.
+
+- YAML and example code blocks that shouldn't be executed are automatically ignored by the testing framework. Only `[source,bash]` and `[source,console]` blocks within `name=` attributes are executed. For example:
+
+- Example of a Istio resource:
+[source,yaml]
+----
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  namespace: istio-system
+  updateStrategy:
+    type: RevisionBased
+    inactiveRevisionDeletionGracePeriodSeconds: 30
+  version: v{istio_latest_version}
+----
+
+NOTE: The testing framework automatically identifies executable code blocks. Make sure that all code blocks intended for execution are marked with the bash language at the start of the block, include `subs="attributes+"` when they contain variables and have also the `name` attribute. These blocks should include only commands that are meant to be run in the terminal. For example:
+
+- You should set version for Istio in the `Istio` resource and `IstioRevisionTag` resource should reference the name of the `Istio` resource:
+[source,yaml]
+----
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  namespace: istio-system
+  updateStrategy:
+    type: RevisionBased
+    inactiveRevisionDeletionGracePeriodSeconds: 30
+  version: v{istio_latest_version}
+---
+apiVersion: sailoperator.io/v1
+kind: IstioRevisionTag
+metadata:
+  name: default
+spec:
+  targetRef:
+    kind: Istio
+    name: default
+----
+- Create ns, `Istio` and `IstioRevisionTag` resources:
+
+[source,bash,subs="attributes+",name="example"]
+----
+kubectl create ns istio-system
+cat <<EOF | kubectl apply -f-
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  namespace: istio-system
+  updateStrategy:
+    type: RevisionBased
+    inactiveRevisionDeletionGracePeriodSeconds: 30
+  version: v{istio_latest_version}
+---
+apiVersion: sailoperator.io/v1
+kind: IstioRevisionTag
+metadata:
+  name: default
+spec:
+  targetRef:
+    kind: Istio
+    name: default
+EOF
+----
+
+- Validation steps are always needed. Add validation steps as conditional blocks that will be processed by the testing framework. For example:
+```
+ifdef::test-{test-name}[]
+kubectl wait --for=condition=available --timeout=600s deployment/sail-operator -n sail-operator
+endif::[]
+```
+
+These conditional blocks are extracted and executed during testing but remain hidden in the rendered documentation.
+
+To avoid duplicated validation steps and help standardize testing, you can use prebuilt validation functions from the link:../../tests/documentation_tests/scripts/prebuilt-func.sh[prebuilt-func.sh] script. For example, to check if istiod pods are ready:
+```
+ifdef::test-{test-name}[]
+wait_istio_ready "istio-system"
+endif::[]
+```
+
+**Available prebuilt functions include:**
+- `wait_istio_ready "namespace"` - Wait for Istio control plane to be ready
+- `wait_pods_ready_by_ns "namespace"` - Wait for all pods in namespace to be ready
+- `istiod_pods_count "expected_count"` - Verify number of istiod pods
+- `pods_istio_version_match "namespace" "version"` - Verify pod proxy versions
+- `print_istio_info` - Print current Istio resource information
+
+Check the complete list in link:../../tests/documentation_tests/scripts/prebuilt-func.sh[prebuilt-func.sh]. The `SCRIPT_DIR` variable is automatically available in the testing environment.
+
+IMPORTANT: Always include validation steps to avoid flakiness. They ensure resources are in expected conditions and the test fails clearly if they don't.
+
+NOTE: The testing framework automatically extracts and executes commands from AsciiDoc files. You can run tests locally using:
+
+[source,bash,subs="attributes+"]
+----
+make test.docs
+----
+
+This runs the complete documentation test suite. For debugging individual files, check the test output logs which show each extracted command before execution.

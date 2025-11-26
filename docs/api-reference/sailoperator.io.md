@@ -10,14 +10,16 @@
 package v1 contains API Schema definitions for the sailoperator.io v1 API group
 
 ### Resource Types
-- [Istio](#istio)
-- [IstioCNI](#istiocni)
-- [IstioCNIList](#istiocnilist)
-- [IstioList](#istiolist)
-- [IstioRevision](#istiorevision)
-- [IstioRevisionList](#istiorevisionlist)
-- [IstioRevisionTag](#istiorevisiontag)
-- [IstioRevisionTagList](#istiorevisiontaglist)
+- [Istio](#istio-v1)
+- [IstioCNI](#istiocni-v1)
+- [IstioCNIList](#istiocnilist-v1)
+- [IstioList](#istiolist-v1)
+- [IstioRevision](#istiorevision-v1)
+- [IstioRevisionList](#istiorevisionlist-v1)
+- [IstioRevisionTag](#istiorevisiontag-v1)
+- [IstioRevisionTagList](#istiorevisiontaglist-v1)
+- [ZTunnel](#ztunnel-v1)
+- [ZTunnelList](#ztunnellist-v1)
 
 
 
@@ -132,7 +134,7 @@ _Appears in:_
 | `logging` _[GlobalLoggingConfig](#globalloggingconfig)_ | Same as `global.logging.level`, but will override it if set |  |  |
 | `repair` _[CNIRepairConfig](#cnirepairconfig)_ | Configuration for the CNI Repair controller. |  |  |
 | `chained` _boolean_ | Configure the plugin as a chained CNI plugin. When true, the configuration is added to the CNI chain; when false, the configuration is added as a standalone file in the CNI configuration directory. |  |  |
-| `resource_quotas` _[ResourceQuotas](#resourcequotas)_ | The resource quotas configration for the CNI DaemonSet. |  |  |
+| `resource_quotas` _[ResourceQuotas](#resourcequotas)_ | The resource quotas configuration for the CNI DaemonSet. |  |  |
 | `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core)_ | The k8s resource requests and limits for the istio-cni Pods. |  |  |
 | `privileged` _boolean_ | No longer used for CNI. See: https://github.com/istio/istio/issues/49004  Deprecated: Marked as deprecated in pkg/apis/values_types.proto. |  |  |
 | `seccompProfile` _[SeccompProfile](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#seccompprofile-v1-core)_ | The Container seccompProfile  See: https://kubernetes.io/docs/tutorials/security/seccomp/ |  |  |
@@ -165,6 +167,7 @@ _Appears in:_
 | `tag` _string_ | Specifies the tag for the Istio docker images. |  |  |
 | `variant` _string_ | The variant of the Istio container images to use. Options are "debug" or "distroless". Unset will use the default for the given version. |  |  |
 | `platform` _string_ | Platform in which Istio is deployed. Possible values are: "openshift" and "gcp" An empty value means it is a vanilla Kubernetes distribution, therefore no special treatment will be considered. |  |  |
+| `nativeNftables` _boolean_ | Specifies whether native nftables rules should be used instead of iptables rules for traffic redirection. |  |  |
 
 
 #### CNIRepairConfig
@@ -447,6 +450,7 @@ _Appears in:_
 | `trustBundleName` _string_ | Select a custom name for istiod's CA Root Cert ConfigMap. |  |  |
 | `nativeNftables` _boolean_ | Specifies whether native nftables rules should be used instead of iptables rules for traffic redirection. |  |  |
 | `networkPolicy` _[NetworkPolicyConfig](#networkpolicyconfig)_ | Settings related to Kubernetes NetworkPolicy. |  |  |
+| `resourceScope` _[ResourceScope](#resourcescope)_ | Specifies resource scope for discovery selectors. This is useful when installing Istio on a cluster where some resources need to be owned by a cluster administrator and some can be owned by the mesh administrator. |  | Enum: [undefined all cluster namespace]   |
 
 
 #### GlobalLoggingConfig
@@ -515,7 +519,7 @@ _Appears in:_
 
 
 
-#### Istio
+#### Istio (v1)
 
 
 
@@ -539,11 +543,11 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[IstioSpec](#istiospec)_ |  | \{ namespace:istio-system updateStrategy:map[type:InPlace] version:v1.26.3 \} |  |
+| `spec` _[IstioSpec](#istiospec)_ |  | \{ namespace:istio-system updateStrategy:map[type:InPlace] version:v1.28.0 \} |  |
 | `status` _[IstioStatus](#istiostatus)_ |  |  |  |
 
 
-#### IstioCNI
+#### IstioCNI (v1)
 
 
 
@@ -561,7 +565,7 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[IstioCNISpec](#istiocnispec)_ |  | \{ namespace:istio-cni version:v1.26.3 \} |  |
+| `spec` _[IstioCNISpec](#istiocnispec)_ |  | \{ namespace:istio-cni version:v1.28.0 \} |  |
 | `status` _[IstioCNIStatus](#istiocnistatus)_ |  |  |  |
 
 
@@ -624,7 +628,7 @@ _Appears in:_
 | `Ready` | IstioCNIConditionReady signifies whether the istio-cni-node DaemonSet is ready.  |
 
 
-#### IstioCNIList
+#### IstioCNIList (v1)
 
 
 
@@ -657,7 +661,13 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
+<<<<<<< HEAD
 | `version` _string_ | Defines the version of Istio to install. Must be one of: v1.26-latest, v1.26.3, v1.24-latest, v1.24.6. | v1.26.3 | Enum: [v1.26-latest v1.26.3 v1.24-latest v1.24.6]   |
+||||||| 4314f7ac
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.26-latest, v1.26.3, v1.26.2, v1.26.0, v1.25-latest, v1.25.4, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.28-alpha.a1729615. | v1.26.3 | Enum: [v1.26-latest v1.26.3 v1.26.2 v1.26.0 v1.25-latest v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.28-alpha.a1729615]   |
+=======
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.28-latest, v1.28.0, v1.27-latest, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, master, v1.29-alpha.b2f713a9. | v1.28.0 | Enum: [v1.28-latest v1.28.0 v1.27-latest v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.29-alpha.b2f713a9]   |
+>>>>>>> upstream/main
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift openshift-ambient preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio CNI component should be installed. Note that this field is immutable. | istio-cni |  |
 | `values` _[CNIValues](#cnivalues)_ | Defines the values to be passed to the Helm charts when installing Istio CNI. |  |  |
@@ -747,7 +757,7 @@ _Appears in:_
 | `DependenciesHealthy` | IstioConditionDependenciesHealthy signifies whether the dependencies required by this Istio are healthy. For example, an Istio with spec.values.pilot.cni.enabled=true requires the IstioCNI resource to be deployed and ready for the Istio revision to be considered healthy. The DependenciesHealthy condition is used to indicate that the IstioCNI resource is healthy.  |
 
 
-#### IstioList
+#### IstioList (v1)
 
 
 
@@ -767,7 +777,7 @@ IstioList contains a list of Istio
 | `items` _[Istio](#istio) array_ |  |  |  |
 
 
-#### IstioRevision
+#### IstioRevision (v1)
 
 
 
@@ -829,6 +839,7 @@ _Appears in:_
 | --- | --- |
 | `ReconcileError` | IstioRevisionReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried.  |
 | `IstiodNotReady` | IstioRevisionReasonIstiodNotReady indicates that the control plane is fully reconciled, but istiod is not ready.  |
+| `NameAlreadyExists` | IstioRevisionTagNameAlreadyExists indicates that a IstioRevisionTag with the same name as the IstioRevision already exists.  |
 | `RemoteIstiodNotReady` | IstioRevisionReasonRemoteIstiodNotReady indicates that the remote istiod is not ready.  |
 | `ReadinessCheckFailed` | IstioRevisionReasonReadinessCheckFailed indicates that istiod readiness status could not be ascertained.  |
 | `ReferencedByWorkloads` | IstioRevisionReasonReferencedByWorkloads indicates that the revision is referenced by at least one pod or namespace.  |
@@ -836,6 +847,8 @@ _Appears in:_
 | `UsageCheckFailed` | IstioRevisionReasonUsageCheckFailed indicates that the operator could not check whether any workloads use the revision.  |
 | `IstioCNINotFound` | IstioRevisionReasonIstioCNINotFound indicates that the IstioCNI resource is not found.  |
 | `IstioCNINotHealthy` | IstioRevisionReasonIstioCNINotHealthy indicates that the IstioCNI resource is not healthy.  |
+| `ZTunnelNotFound` | IstioRevisionReasonZTunnelNotFound indicates that the ZTunnel resource is not found.  |
+| `ZTunnelNotHealthy` | IstioRevisionReasonZTunnelNotHealthy indicates that the ZTunnel resource is not healthy.  |
 | `DependencyCheckFailed` | IstioRevisionDependencyCheckFailed indicates that the status of the dependencies could not be ascertained.  |
 | `Healthy` | IstioRevisionReasonHealthy indicates that the control plane is fully reconciled and that all components are ready.  |
 
@@ -860,7 +873,7 @@ _Appears in:_
 | `DependenciesHealthy` | IstioRevisionConditionDependenciesHealthy signifies whether the dependencies required by this IstioRevision are healthy. For example, an IstioRevision with spec.values.pilot.cni.enabled=true requires the IstioCNI resource to be deployed and ready for the Istio revision to be considered healthy. The DependenciesHealthy condition is used to indicate that the IstioCNI resource is healthy.  |
 
 
-#### IstioRevisionList
+#### IstioRevisionList (v1)
 
 
 
@@ -893,7 +906,13 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
+<<<<<<< HEAD
 | `version` _string_ | Defines the version of Istio to install. Must be one of: v1.26.3, v1.24.6. |  | Enum: [v1.26.3 v1.24.6]   |
+||||||| 4314f7ac
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.26.3, v1.26.2, v1.26.0, v1.25.4, v1.25.3, v1.25.2, v1.25.1, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, v1.28-alpha.a1729615. |  | Enum: [v1.26.3 v1.26.2 v1.26.0 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 v1.28-alpha.a1729615]   |
+=======
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.28.0, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, v1.29-alpha.b2f713a9. |  | Enum: [v1.28.0 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 v1.29-alpha.b2f713a9]   |
+>>>>>>> upstream/main
 | `namespace` _string_ | Namespace to which the Istio components should be installed. |  |  |
 | `values` _[Values](#values)_ | Defines the values to be passed to the Helm charts when installing Istio. |  |  |
 
@@ -916,7 +935,7 @@ _Appears in:_
 | `state` _[IstioRevisionConditionReason](#istiorevisionconditionreason)_ | Reports the current state of the object. |  |  |
 
 
-#### IstioRevisionTag
+#### IstioRevisionTag (v1)
 
 
 
@@ -973,7 +992,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `NameAlreadyExists` | IstioRevisionTagNameAlreadyExists indicates that the a revision with the same name as the IstioRevisionTag already exists.  |
+| `NameAlreadyExists` | IstioRevisionTagNameAlreadyExists indicates that an IstioRevision with the same name as the IstioRevisionTag already exists.  |
 | `RefNotFound` | IstioRevisionTagReasonReferenceNotFound indicates that the resource referenced by the tag's TargetRef was not found  |
 | `ReconcileError` | IstioRevisionReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried.  |
 | `ReferencedByWorkloads` | IstioRevisionReasonReferencedByWorkloads indicates that the revision is referenced by at least one pod or namespace.  |
@@ -1000,7 +1019,7 @@ _Appears in:_
 | `InUse` | IstioRevisionConditionInUse signifies whether any workload is configured to use the revision.  |
 
 
-#### IstioRevisionTagList
+#### IstioRevisionTagList (v1)
 
 
 
@@ -1086,7 +1105,13 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
+<<<<<<< HEAD
 | `version` _string_ | Defines the version of Istio to install. Must be one of: v1.26-latest, v1.26.3, v1.24-latest, v1.24.6. | v1.26.3 | Enum: [v1.26-latest v1.26.3 v1.24-latest v1.24.6]   |
+||||||| 4314f7ac
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.26-latest, v1.26.3, v1.26.2, v1.26.0, v1.25-latest, v1.25.4, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.28-alpha.a1729615. | v1.26.3 | Enum: [v1.26-latest v1.26.3 v1.26.2 v1.26.0 v1.25-latest v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.28-alpha.a1729615]   |
+=======
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.28-latest, v1.28.0, v1.27-latest, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, master, v1.29-alpha.b2f713a9. | v1.28.0 | Enum: [v1.28-latest v1.28.0 v1.27-latest v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.29-alpha.b2f713a9]   |
+>>>>>>> upstream/main
 | `updateStrategy` _[IstioUpdateStrategy](#istioupdatestrategy)_ | Defines the update strategy to use when the version in the Istio CR is updated. | \{ type:InPlace \} |  |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift openshift-ambient preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. Note that this field is immutable. | istio-system |  |
@@ -1300,7 +1325,6 @@ MeshConfig defines mesh-wide settings for the Istio service mesh.
 
 _Appears in:_
 - [Values](#values)
-- [ZTunnelConfig](#ztunnelconfig)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -1614,23 +1638,6 @@ _Appears in:_
 
 
 
-#### MeshConfigExtensionProviderHttpHeader
-
-
-
-
-
-
-
-_Appears in:_
-- [MeshConfigExtensionProviderGrpcService](#meshconfigextensionprovidergrpcservice)
-- [MeshConfigExtensionProviderHttpService](#meshconfigextensionproviderhttpservice)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `name` _string_ | REQUIRED. The HTTP header name. |  | Required: \{\}   |
-| `value` _string_ | The HTTP header value. |  |  |
-| `envName` _string_ | The HTTP header value from the environment variable.  Warning: - The environment variable must be set in the istiod pod spec. - This is not a end-to-end secure. |  |  |
 
 
 
@@ -1859,6 +1866,27 @@ _Appears in:_
 | `maxTagLength` _integer_ | Optional. Controls the overall path length allowed in a reported span. NOTE: currently only controls max length of the path tag. |  |  |
 | `enable64bitTraceId` _boolean_ | Optional. A 128 bit trace id will be used in Istio. If true, will result in a 64 bit trace id being used. |  |  |
 | `path` _string_ | Optional. Specifies the endpoint of Zipkin API. The default value is "/api/v2/spans". |  |  |
+| `traceContextOption` _[MeshConfigExtensionProviderZipkinTracingProviderTraceContextOption](#meshconfigextensionproviderzipkintracingprovidertracecontextoption)_ | Optional. Determines which trace context format to use for trace header extraction and propagation. This controls both downstream request header extraction and upstream request header injection. The default value is USE_B3 to maintain backward compatibility. |  | Enum: [USE_B3 USE_B3_WITH_W3C_PROPAGATION]   |
+| `timeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | Optional. The timeout for the HTTP request to the Zipkin collector. If not specified, the default timeout from Envoy's configuration will be used (which is 5 seconds currently). |  |  |
+| `headers` _[MeshConfigExtensionProviderHttpHeader](#meshconfigextensionproviderhttpheader) array_ | Optional. Additional HTTP headers to include in the request to the Zipkin collector. These headers will be added to the HTTP request when sending spans to the collector. |  |  |
+
+
+#### MeshConfigExtensionProviderZipkinTracingProviderTraceContextOption
+
+_Underlying type:_ _string_
+
+Available trace context options for handling different trace header formats.
+
+_Validation:_
+- Enum: [USE_B3 USE_B3_WITH_W3C_PROPAGATION]
+
+_Appears in:_
+- [MeshConfigExtensionProviderZipkinTracingProvider](#meshconfigextensionproviderzipkintracingprovider)
+
+| Field | Description |
+| --- | --- |
+| `USE_B3` | Use B3 headers only (default behavior).  |
+| `USE_B3_WITH_W3C_PROPAGATION` | Enable B3 and W3C dual header support: - For downstream: Extract from B3 headers first, fallback to W3C traceparent if B3 is unavailable. - For upstream: Inject both B3 and W3C traceparent headers. When this option is NOT set, only B3 headers are used for both extraction and injection.  |
 
 
 #### MeshConfigH2UpgradePolicy
@@ -2395,6 +2423,7 @@ _Appears in:_
 | `trustedZtunnelNamespace` _string_ | If set, `istiod` will allow connections from trusted node proxy ztunnels in the provided namespace. |  |  |
 | `istiodRemote` _[IstiodRemoteConfig](#istiodremoteconfig)_ | Configuration for the istio-discovery chart when istiod is running in a remote cluster (e.g. "remote control plane"). |  |  |
 | `envVarFrom` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#envvar-v1-core) array_ | Configuration for the istio-discovery chart |  |  |
+| `crlConfigMapName` _string_ | Select a custom name for istiod's plugged-in CA CRL ConfigMap. |  |  |
 
 
 
@@ -2777,11 +2806,32 @@ Configuration for the resource quotas for the CNI DaemonSet.
 
 _Appears in:_
 - [CNIConfig](#cniconfig)
+- [ZTunnelConfig](#ztunnelconfig)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `enabled` _boolean_ | Controls whether to create resource quotas or not for the CNI DaemonSet. |  |  |
 | `pods` _integer_ | The hard limit on the number of pods in the namespace where the CNI DaemonSet is deployed. |  |  |
+
+
+#### ResourceScope
+
+_Underlying type:_ _string_
+
+
+
+_Validation:_
+- Enum: [undefined all cluster namespace]
+
+_Appears in:_
+- [GlobalConfig](#globalconfig)
+
+| Field | Description |
+| --- | --- |
+| `undefined` |  |
+| `all` |  |
+| `cluster` |  |
+| `namespace` |  |
 
 
 
@@ -3287,98 +3337,7 @@ _Appears in:_
 
 
 
-#### ZTunnelConfig
-
-
-
-Configuration for ztunnel.
-
-
-
-_Appears in:_
-- [ZTunnelValues](#ztunnelvalues)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `hub` _string_ | Hub to pull the container image from. Image will be `Hub/Image:Tag-Variant`. |  |  |
-| `tag` _string_ | The container image tag to pull. Image will be `Hub/Image:Tag-Variant`. |  |  |
-| `variant` _string_ | The container image variant to pull. Options are "debug" or "distroless". Unset will use the default for the given version. |  |  |
-| `image` _string_ | Image name to pull from. Image will be `Hub/Image:Tag-Variant`. If Image contains a "/", it will replace the entire `image` in the pod. |  |  |
-| `resourceName` _string_ | resourceName, if set, will override the naming of resources. If not set, will default to the release name. It is recommended to not set this; this is primarily for backwards compatibility. |  |  |
-| `Annotations` _object (keys:string, values:string)_ | Annotations to apply to all top level resources |  |  |
-| `Labels` _object (keys:string, values:string)_ | Labels to apply to all top level resources |  |  |
-| `volumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#volumemount-v1-core) array_ | Additional volumeMounts to the ztunnel container |  |  |
-| `volumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#volume-v1-core) array_ | Additional volumes to add to the ztunnel Pod. |  |  |
-| `podAnnotations` _object (keys:string, values:string)_ | Annotations added to each pod. The default annotations are required for scraping prometheus (in most environments). |  |  |
-| `podLabels` _object (keys:string, values:string)_ | Additional labels to apply on the pod level. |  |  |
-| `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core)_ | The k8s resource requests and limits for the ztunnel Pods. |  |  |
-| `imagePullSecrets` _string array_ | List of secret names to add to the service account as image pull secrets to use for pulling any images in pods that reference this ServiceAccount. Must be set for any cluster configured with private docker registry. |  |  |
-| `env` _object (keys:string, values:string)_ | A `key: value` mapping of environment variables to add to the pod |  |  |
-| `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#pullpolicy-v1-core)_ | Specifies the image pull policy for the Istio images. one of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.  More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |  | Enum: [Always Never IfNotPresent]   |
-| `multiCluster` _[MultiClusterConfig](#multiclusterconfig)_ | Settings for multicluster. The name of the cluster we are installing in. Note this is a user-defined name, which must be consistent with Istiod configuration. |  |  |
-| `meshConfig` _[MeshConfig](#meshconfig)_ | meshConfig defines runtime configuration of components. For ztunnel, only defaultConfig is used, but this is nested under `meshConfig` for consistency with other components. |  |  |
-| `terminationGracePeriodSeconds` _integer_ | This value defines: 1. how many seconds kube waits for ztunnel pod to gracefully exit before forcibly terminating it (this value) 2. how many seconds ztunnel waits to drain its own connections (this value - 1 sec) | 30 | Minimum: 0   |
-| `revision` _string_ | Configures the revision this control plane is a part of |  |  |
-| `caAddress` _string_ | The address of the CA for CSR. |  |  |
-| `xdsAddress` _string_ | The customized XDS address to retrieve configuration. |  |  |
-| `istioNamespace` _string_ | Specifies the default namespace for the Istio control plane components. |  |  |
-| `logLevel` _string_ | Configuration log level of ztunnel binary, default is info. Valid values are: trace, debug, info, warn, error. | info | Enum: [trace debug info warn error]   |
-| `logAsJson` _boolean_ | Specifies whether istio components should output logs in json format by adding --log_as_json argument to each container. |  |  |
-
-
-#### ZTunnelGlobalConfig
-
-
-
-ZTunnelGlobalConfig is a subset of the Global Configuration used in the Istio ztunnel chart.
-
-
-
-_Appears in:_
-- [ZTunnelValues](#ztunnelvalues)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `defaultResources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core)_ | See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container  Deprecated: Marked as deprecated in pkg/apis/values_types.proto. |  |  |
-| `hub` _string_ | Specifies the docker hub for Istio images. |  |  |
-| `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#pullpolicy-v1-core)_ | Specifies the image pull policy for the Istio images. one of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.  More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |  | Enum: [Always Never IfNotPresent]   |
-| `imagePullSecrets` _string array_ | ImagePullSecrets for the control plane ServiceAccount, list of secrets in the same namespace to use for pulling any images in pods that reference this ServiceAccount. Must be set for any cluster configured with private docker registry. |  |  |
-| `logAsJson` _boolean_ | Specifies whether istio components should output logs in json format by adding --log_as_json argument to each container. |  |  |
-| `logging` _[GlobalLoggingConfig](#globalloggingconfig)_ | Specifies the global logging level settings for the Istio control plane components. |  |  |
-| `tag` _string_ | Specifies the tag for the Istio docker images. |  |  |
-| `variant` _string_ | The variant of the Istio container images to use. Options are "debug" or "distroless". Unset will use the default for the given version. |  |  |
-| `platform` _string_ | Platform in which Istio is deployed. Possible values are: "openshift" and "gcp" An empty value means it is a vanilla Kubernetes distribution, therefore no special treatment will be considered. |  |  |
-
-
-#### ZTunnelValues
-
-
-
-
-
-
-
-_Appears in:_
-- [ZTunnelSpec](#ztunnelspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `ztunnel` _[ZTunnelConfig](#ztunnelconfig)_ | Configuration for the Istio ztunnel plugin. |  |  |
-| `global` _[ZTunnelGlobalConfig](#ztunnelglobalconfig)_ | Part of the global configuration applicable to the Istio ztunnel component. |  |  |
-
-
-
-## sailoperator.io/v1alpha1
-
-Package v1alpha1 contains API Schema definitions for the sailoperator.io v1alpha1 API group
-
-### Resource Types
-- [ZTunnel](#ztunnel)
-- [ZTunnelList](#ztunnellist)
-
-
-
-#### ZTunnel
+#### ZTunnel (v1)
 
 
 
@@ -3391,12 +3350,12 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `apiVersion` _string_ | `sailoperator.io/v1alpha1` | | |
+| `apiVersion` _string_ | `sailoperator.io/v1` | | |
 | `kind` _string_ | `ZTunnel` | | |
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[ZTunnelSpec](#ztunnelspec)_ |  | \{ namespace:ztunnel profile:ambient version:v1.26.3 \} |  |
+| `spec` _[ZTunnelSpec](#ztunnelspec)_ |  | \{ namespace:ztunnel version:v1.28.0 \} |  |
 | `status` _[ZTunnelStatus](#ztunnelstatus)_ |  |  |  |
 
 
@@ -3459,7 +3418,242 @@ _Appears in:_
 | `Ready` | ZTunnelConditionReady signifies whether the ztunnel DaemonSet is ready.  |
 
 
-#### ZTunnelList
+#### ZTunnelConfig
+
+
+
+Configuration for ztunnel.
+
+
+
+_Appears in:_
+- [ZTunnelValues](#ztunnelvalues)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `hub` _string_ | Hub to pull the container image from. Image will be `Hub/Image:Tag-Variant`. |  |  |
+| `tag` _string_ | The container image tag to pull. Image will be `Hub/Image:Tag-Variant`. |  |  |
+| `variant` _string_ | The container image variant to pull. Options are "debug" or "distroless". Unset will use the default for the given version. |  |  |
+| `image` _string_ | Image name to pull from. Image will be `Hub/Image:Tag-Variant`. If Image contains a "/", it will replace the entire `image` in the pod. |  |  |
+| `network` _string_ | defines the network this cluster belong to. This name corresponds to the networks in the map of mesh networks. |  |  |
+| `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#affinity-v1-core)_ | K8s affinity to set on the ztunnel Pods. Can be used to exclude ztunnel from being scheduled on specified nodes. |  |  |
+| `resourceName` _string_ | resourceName, if set, will override the naming of resources. If not set, will default to the release name. It is recommended to not set this; this is primarily for backwards compatibility. |  |  |
+| `Annotations` _object (keys:string, values:string)_ | Annotations to apply to all top level resources |  |  |
+| `Labels` _object (keys:string, values:string)_ | Labels to apply to all top level resources |  |  |
+| `volumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#volumemount-v1-core) array_ | Additional volumeMounts to the ztunnel container |  |  |
+| `volumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#volume-v1-core) array_ | Additional volumes to add to the ztunnel Pod. |  |  |
+| `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#toleration-v1-core) array_ | Tolerations for the ztunnel pod |  |  |
+| `podAnnotations` _object (keys:string, values:string)_ | Annotations added to each pod. The default annotations are required for scraping prometheus (in most environments). |  |  |
+| `podLabels` _object (keys:string, values:string)_ | Additional labels to apply on the pod level. |  |  |
+| `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core)_ | The k8s resource requests and limits for the ztunnel Pods. |  |  |
+| `resourceQuotas` _[ResourceQuotas](#resourcequotas)_ | The resource quotas configuration for ztunnel |  |  |
+| `nodeSelector` _object (keys:string, values:string)_ | K8s node selector settings.  See https://kubernetes.io/docs/user-guide/node-selection/ |  |  |
+| `imagePullSecrets` _string array_ | List of secret names to add to the service account as image pull secrets to use for pulling any images in pods that reference this ServiceAccount. Must be set for any cluster configured with private docker registry. |  |  |
+| `env` _object (keys:string, values:string)_ | A `key: value` mapping of environment variables to add to the pod |  |  |
+| `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#pullpolicy-v1-core)_ | Specifies the image pull policy for the Istio images. one of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.  More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |  | Enum: [Always Never IfNotPresent]   |
+| `multiCluster` _[MultiClusterConfig](#multiclusterconfig)_ | Settings for multicluster. The name of the cluster we are installing in. Note this is a user-defined name, which must be consistent with Istiod configuration. |  |  |
+| `terminationGracePeriodSeconds` _integer_ | This value defines: 1. how many seconds kube waits for ztunnel pod to gracefully exit before forcibly terminating it (this value) 2. how many seconds ztunnel waits to drain its own connections (this value - 1 sec) | 30 | Minimum: 0   |
+| `revision` _string_ | Configures the revision this control plane is a part of |  |  |
+| `caAddress` _string_ | The address of the CA for CSR. |  |  |
+| `xdsAddress` _string_ | The customized XDS address to retrieve configuration. |  |  |
+| `istioNamespace` _string_ | Specifies the default namespace for the Istio control plane components. |  |  |
+| `logLevel` _string_ | Configuration log level of ztunnel binary, default is info. Valid values are: trace, debug, info, warn, error. | info | Enum: [trace debug info warn error]   |
+| `logAsJson` _boolean_ | Specifies whether istio components should output logs in json format by adding --log_as_json argument to each container. |  |  |
+| `seLinuxOptions` _[SELinuxOptions](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#selinuxoptions-v1-core)_ | Set seLinux options for the ztunnel pod |  |  |
+| `updateStrategy` _[DaemonSetUpdateStrategy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#daemonsetupdatestrategy-v1-apps)_ | Defines the update strategy to use when the version in the Ztunnel CR is updated. |  |  |
+
+
+#### ZTunnelGlobalConfig
+
+
+
+ZTunnelGlobalConfig is a subset of the Global Configuration used in the Istio ztunnel chart.
+
+
+
+_Appears in:_
+- [ZTunnelValues](#ztunnelvalues)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `defaultResources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core)_ | See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container  Deprecated: Marked as deprecated in pkg/apis/values_types.proto. |  |  |
+| `hub` _string_ | Specifies the docker hub for Istio images. |  |  |
+| `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#pullpolicy-v1-core)_ | Specifies the image pull policy for the Istio images. one of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.  More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |  | Enum: [Always Never IfNotPresent]   |
+| `imagePullSecrets` _string array_ | ImagePullSecrets for the control plane ServiceAccount, list of secrets in the same namespace to use for pulling any images in pods that reference this ServiceAccount. Must be set for any cluster configured with private docker registry. |  |  |
+| `logAsJson` _boolean_ | Specifies whether istio components should output logs in json format by adding --log_as_json argument to each container. |  |  |
+| `logging` _[GlobalLoggingConfig](#globalloggingconfig)_ | Specifies the global logging level settings for the Istio control plane components. |  |  |
+| `tag` _string_ | Specifies the tag for the Istio docker images. |  |  |
+| `variant` _string_ | The variant of the Istio container images to use. Options are "debug" or "distroless". Unset will use the default for the given version. |  |  |
+| `platform` _string_ | Platform in which Istio is deployed. Possible values are: "openshift" and "gcp" An empty value means it is a vanilla Kubernetes distribution, therefore no special treatment will be considered. |  |  |
+
+
+#### ZTunnelList (v1)
+
+
+
+ZTunnelList contains a list of ZTunnel
+
+
+
+
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `sailoperator.io/v1` | | |
+| `kind` _string_ | `ZTunnelList` | | |
+| `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
+| `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `items` _[ZTunnel](#ztunnel) array_ |  |  |  |
+
+
+#### ZTunnelSpec
+
+
+
+ZTunnelSpec defines the desired state of ZTunnel
+
+
+
+_Appears in:_
+- [ZTunnel](#ztunnel)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.28-latest, v1.28.0, v1.27-latest, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, v1.25-latest, v1.24-latest, master, v1.29-alpha.b2f713a9. | v1.28.0 | Enum: [v1.28-latest v1.28.0 v1.27-latest v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.24-latest master v1.29-alpha.b2f713a9]   |
+| `namespace` _string_ | Namespace to which the Istio ztunnel component should be installed. | ztunnel |  |
+| `values` _[ZTunnelValues](#ztunnelvalues)_ | Defines the values to be passed to the Helm charts when installing Istio ztunnel. |  |  |
+
+
+#### ZTunnelStatus
+
+
+
+ZTunnelStatus defines the observed state of ZTunnel
+
+
+
+_Appears in:_
+- [ZTunnel](#ztunnel)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `observedGeneration` _integer_ | ObservedGeneration is the most recent generation observed for this ZTunnel object. It corresponds to the object's generation, which is updated on mutation by the API Server. The information in the status pertains to this particular generation of the object. |  |  |
+| `conditions` _[ZTunnelCondition](#ztunnelcondition) array_ | Represents the latest available observations of the object's current state. |  |  |
+| `state` _[ZTunnelConditionReason](#ztunnelconditionreason)_ | Reports the current state of the object. |  |  |
+
+
+#### ZTunnelValues
+
+
+
+
+
+
+
+_Appears in:_
+- [ZTunnelSpec](#ztunnelspec)
+- [ZTunnelSpec](#ztunnelspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `ztunnel` _[ZTunnelConfig](#ztunnelconfig)_ | Configuration for the Istio ztunnel plugin. |  |  |
+| `global` _[ZTunnelGlobalConfig](#ztunnelglobalconfig)_ | Part of the global configuration applicable to the Istio ztunnel component. |  |  |
+
+
+
+## sailoperator.io/v1alpha1
+
+Package v1alpha1 contains API Schema definitions for the sailoperator.io v1alpha1 API group
+
+### Resource Types
+- [ZTunnel](#ztunnel-v1alpha1)
+- [ZTunnelList](#ztunnellist-v1alpha1)
+
+
+
+#### ZTunnel (v1alpha1)
+
+
+
+ZTunnel represents a deployment of the Istio ztunnel component.
+
+
+
+_Appears in:_
+- [ZTunnelList](#ztunnellist)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `sailoperator.io/v1alpha1` | | |
+| `kind` _string_ | `ZTunnel` | | |
+| `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
+| `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[ZTunnelSpec](#ztunnelspec)_ |  | \{ namespace:ztunnel profile:ambient version:v1.28.0 \} |  |
+| `status` _[ZTunnelStatus](#ztunnelstatus)_ |  |  |  |
+
+
+#### ZTunnelCondition
+
+
+
+ZTunnelCondition represents a specific observation of the ZTunnel object's state.
+
+
+
+_Appears in:_
+- [ZTunnelStatus](#ztunnelstatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `type` _[ZTunnelConditionType](#ztunnelconditiontype)_ | The type of this condition. |  |  |
+| `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#conditionstatus-v1-meta)_ | The status of this condition. Can be True, False or Unknown. |  |  |
+| `reason` _[ZTunnelConditionReason](#ztunnelconditionreason)_ | Unique, single-word, CamelCase reason for the condition's last transition. |  |  |
+| `message` _string_ | Human-readable message indicating details about the last transition. |  |  |
+| `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta)_ | Last time the condition transitioned from one status to another. |  |  |
+
+
+#### ZTunnelConditionReason
+
+_Underlying type:_ _string_
+
+ZTunnelConditionReason represents a short message indicating how the condition came
+to be in its present state.
+
+
+
+_Appears in:_
+- [ZTunnelCondition](#ztunnelcondition)
+- [ZTunnelStatus](#ztunnelstatus)
+
+| Field | Description |
+| --- | --- |
+| `ReconcileError` | ZTunnelReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried.  |
+| `DaemonSetNotReady` | ZTunnelDaemonSetNotReady indicates that the ztunnel DaemonSet is not ready.  |
+| `ReadinessCheckFailed` | ZTunnelReasonReadinessCheckFailed indicates that the DaemonSet readiness status could not be ascertained.  |
+| `Healthy` | ZTunnelReasonHealthy indicates that the control plane is fully reconciled and that all components are ready.  |
+
+
+#### ZTunnelConditionType
+
+_Underlying type:_ _string_
+
+ZTunnelConditionType represents the type of the condition.  Condition stages are:
+Installed, Reconciled, Ready
+
+
+
+_Appears in:_
+- [ZTunnelCondition](#ztunnelcondition)
+
+| Field | Description |
+| --- | --- |
+| `Reconciled` | ZTunnelConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.  |
+| `Ready` | ZTunnelConditionReady signifies whether the ztunnel DaemonSet is ready.  |
+
+
+#### ZTunnelList (v1alpha1)
 
 
 
@@ -3492,7 +3686,13 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
+<<<<<<< HEAD
 | `version` _string_ | Defines the version of Istio to install. Must be one of: v1.26-latest, v1.26.3, v1.24-latest, v1.24.6. | v1.26.3 | Enum: [v1.26-latest v1.26.3 v1.24-latest v1.24.6]   |
+||||||| 4314f7ac
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.26-latest, v1.26.3, v1.26.2, v1.26.0, v1.25-latest, v1.25.4, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0, master, v1.28-alpha.a1729615. | v1.26.3 | Enum: [v1.26-latest v1.26.3 v1.26.2 v1.26.0 v1.25-latest v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 master v1.28-alpha.a1729615]   |
+=======
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.28-latest, v1.28.0, v1.27-latest, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, v1.25-latest, v1.24-latest, master, v1.29-alpha.b2f713a9. | v1.28.0 | Enum: [v1.28-latest v1.28.0 v1.27-latest v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.24-latest master v1.29-alpha.b2f713a9]   |
+>>>>>>> upstream/main
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is 'ambient' and it is always applied. Must be one of: ambient, default, demo, empty, external, preview, remote, stable. | ambient | Enum: [ambient default demo empty external openshift-ambient openshift preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio ztunnel component should be installed. | ztunnel |  |
 | `values` _[ZTunnelValues](#ztunnelvalues)_ | Defines the values to be passed to the Helm charts when installing Istio ztunnel. |  |  |

@@ -181,7 +181,6 @@ values:
 								"merge",
 								`{"metadata":{"annotations":{"topology.istio.io/controlPlaneClusters":"cluster1"}}}`)).
 							To(Succeed(), "Error patching istio-system namespace")
-						Expect(k2.Label("namespace", controlPlaneNamespace, "topology.istio.io/network", "network2")).To(Succeed(), "Error labeling istio-system namespace")
 
 						// To be able to access the remote cluster from the primary cluster, we need to create a secret in the primary cluster
 						// Remote Istio resource will not be Ready until the secret is created
@@ -208,7 +207,7 @@ values:
 					})
 
 					It("updates remote Istio CR status to Ready", func(ctx SpecContext) {
-						Eventually(common.GetObject).
+						Eventually(common.GetObject, 10*time.Minute).
 							WithArguments(ctx, clRemote, kube.Key(istioName), &v1.Istio{}).
 							Should(HaveConditionStatus(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Remote; unexpected Condition")
 						Success("Istio CR is Ready on Remote Cluster")

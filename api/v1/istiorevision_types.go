@@ -30,9 +30,9 @@ const (
 type IstioRevisionSpec struct {
 	// +sail:version
 	// Defines the version of Istio to install.
-	// Must be one of: v1.26.3, v1.24.6.
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.24.6"}
-	// +kubebuilder:validation:Enum=v1.26.3;v1.24.6
+	// Must be one of: v1.28.0, v1.26.3.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.28.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.3"}
+	// +kubebuilder:validation:Enum=v1.28.0;v1.26.3;v1.24.6
 	Version string `json:"version"`
 
 	// Namespace to which the Istio components should be installed.
@@ -148,6 +148,9 @@ const (
 	// IstioRevisionReasonIstiodNotReady indicates that the control plane is fully reconciled, but istiod is not ready.
 	IstioRevisionReasonIstiodNotReady IstioRevisionConditionReason = "IstiodNotReady"
 
+	// IstioRevisionTagNameAlreadyExists indicates that a IstioRevisionTag with the same name as the IstioRevision already exists.
+	IstioRevisionReasonNameAlreadyExists IstioRevisionConditionReason = "NameAlreadyExists"
+
 	// IstioRevisionReasonRemoteIstiodNotReady indicates that the remote istiod is not ready.
 	IstioRevisionReasonRemoteIstiodNotReady IstioRevisionConditionReason = "RemoteIstiodNotReady"
 
@@ -181,6 +184,12 @@ const (
 
 	// IstioRevisionReasonIstioCNINotHealthy indicates that the IstioCNI resource is not healthy.
 	IstioRevisionReasonIstioCNINotHealthy IstioRevisionConditionReason = "IstioCNINotHealthy"
+
+	// IstioRevisionReasonZTunnelNotFound indicates that the ZTunnel resource is not found.
+	IstioRevisionReasonZTunnelNotFound IstioRevisionConditionReason = "ZTunnelNotFound"
+
+	// IstioRevisionReasonZTunnelNotHealthy indicates that the ZTunnel resource is not healthy.
+	IstioRevisionReasonZTunnelNotHealthy IstioRevisionConditionReason = "ZTunnelNotHealthy"
 
 	// IstioRevisionDependencyCheckFailed indicates that the status of the dependencies could not be ascertained.
 	IstioRevisionDependencyCheckFailed IstioRevisionConditionReason = "DependencyCheckFailed"

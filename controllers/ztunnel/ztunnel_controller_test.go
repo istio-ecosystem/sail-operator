@@ -22,7 +22,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
@@ -52,17 +51,17 @@ func TestValidate(t *testing.T) {
 
 	testCases := []struct {
 		name      string
-		ztunnel   *v1alpha1.ZTunnel
+		ztunnel   *v1.ZTunnel
 		objects   []client.Object
 		expectErr string
 	}{
 		{
 			name: "success",
-			ztunnel: &v1alpha1.ZTunnel{
+			ztunnel: &v1.ZTunnel{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
-				Spec: v1alpha1.ZTunnelSpec{
+				Spec: v1.ZTunnelSpec{
 					Version:   istioversion.Default,
 					Namespace: ztunnelNamespace,
 				},
@@ -72,11 +71,11 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "no version",
-			ztunnel: &v1alpha1.ZTunnel{
+			ztunnel: &v1.ZTunnel{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
-				Spec: v1alpha1.ZTunnelSpec{
+				Spec: v1.ZTunnelSpec{
 					Namespace: ztunnelNamespace,
 				},
 			},
@@ -85,11 +84,11 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "no namespace",
-			ztunnel: &v1alpha1.ZTunnel{
+			ztunnel: &v1.ZTunnel{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
-				Spec: v1alpha1.ZTunnelSpec{
+				Spec: v1.ZTunnelSpec{
 					Version: istioversion.Default,
 				},
 			},
@@ -98,11 +97,11 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "namespace not found",
-			ztunnel: &v1alpha1.ZTunnel{
+			ztunnel: &v1.ZTunnel{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
-				Spec: v1alpha1.ZTunnelSpec{
+				Spec: v1.ZTunnelSpec{
 					Version:   istioversion.Default,
 					Namespace: ztunnelNamespace,
 				},
@@ -112,11 +111,11 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "namespace is being deleted",
-			ztunnel: &v1alpha1.ZTunnel{
+			ztunnel: &v1.ZTunnel{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
-				Spec: v1alpha1.ZTunnelSpec{
+				Spec: v1.ZTunnelSpec{
 					Version:   istioversion.Default,
 					Namespace: ztunnelNamespace,
 				},
@@ -155,39 +154,39 @@ func TestValidate(t *testing.T) {
 func TestDeriveState(t *testing.T) {
 	testCases := []struct {
 		name                string
-		reconciledCondition v1alpha1.ZTunnelCondition
-		readyCondition      v1alpha1.ZTunnelCondition
-		expectedState       v1alpha1.ZTunnelConditionReason
+		reconciledCondition v1.ZTunnelCondition
+		readyCondition      v1.ZTunnelCondition
+		expectedState       v1.ZTunnelConditionReason
 	}{
 		{
 			name:                "healthy",
-			reconciledCondition: newCondition(v1alpha1.ZTunnelConditionReconciled, metav1.ConditionTrue, ""),
-			readyCondition:      newCondition(v1alpha1.ZTunnelConditionReady, metav1.ConditionTrue, ""),
-			expectedState:       v1alpha1.ZTunnelReasonHealthy,
+			reconciledCondition: newCondition(v1.ZTunnelConditionReconciled, metav1.ConditionTrue, ""),
+			readyCondition:      newCondition(v1.ZTunnelConditionReady, metav1.ConditionTrue, ""),
+			expectedState:       v1.ZTunnelReasonHealthy,
 		},
 		{
 			name:                "not reconciled",
-			reconciledCondition: newCondition(v1alpha1.ZTunnelConditionReconciled, metav1.ConditionFalse, v1alpha1.ZTunnelReasonReconcileError),
-			readyCondition:      newCondition(v1alpha1.ZTunnelConditionReady, metav1.ConditionTrue, ""),
-			expectedState:       v1alpha1.ZTunnelReasonReconcileError,
+			reconciledCondition: newCondition(v1.ZTunnelConditionReconciled, metav1.ConditionFalse, v1.ZTunnelReasonReconcileError),
+			readyCondition:      newCondition(v1.ZTunnelConditionReady, metav1.ConditionTrue, ""),
+			expectedState:       v1.ZTunnelReasonReconcileError,
 		},
 		{
 			name:                "not ready",
-			reconciledCondition: newCondition(v1alpha1.ZTunnelConditionReconciled, metav1.ConditionTrue, ""),
-			readyCondition:      newCondition(v1alpha1.ZTunnelConditionReady, metav1.ConditionFalse, v1alpha1.ZTunnelDaemonSetNotReady),
-			expectedState:       v1alpha1.ZTunnelDaemonSetNotReady,
+			reconciledCondition: newCondition(v1.ZTunnelConditionReconciled, metav1.ConditionTrue, ""),
+			readyCondition:      newCondition(v1.ZTunnelConditionReady, metav1.ConditionFalse, v1.ZTunnelDaemonSetNotReady),
+			expectedState:       v1.ZTunnelDaemonSetNotReady,
 		},
 		{
 			name:                "readiness unknown",
-			reconciledCondition: newCondition(v1alpha1.ZTunnelConditionReconciled, metav1.ConditionTrue, ""),
-			readyCondition:      newCondition(v1alpha1.ZTunnelConditionReady, metav1.ConditionUnknown, v1alpha1.ZTunnelReasonReadinessCheckFailed),
-			expectedState:       v1alpha1.ZTunnelReasonReadinessCheckFailed,
+			reconciledCondition: newCondition(v1.ZTunnelConditionReconciled, metav1.ConditionTrue, ""),
+			readyCondition:      newCondition(v1.ZTunnelConditionReady, metav1.ConditionUnknown, v1.ZTunnelReasonReadinessCheckFailed),
+			expectedState:       v1.ZTunnelReasonReadinessCheckFailed,
 		},
 		{
 			name:                "not reconciled nor ready",
-			reconciledCondition: newCondition(v1alpha1.ZTunnelConditionReconciled, metav1.ConditionFalse, v1alpha1.ZTunnelReasonReconcileError),
-			readyCondition:      newCondition(v1alpha1.ZTunnelConditionReady, metav1.ConditionFalse, v1alpha1.ZTunnelDaemonSetNotReady),
-			expectedState:       v1alpha1.ZTunnelReasonReconcileError, // reconcile reason takes precedence over ready reason
+			reconciledCondition: newCondition(v1.ZTunnelConditionReconciled, metav1.ConditionFalse, v1.ZTunnelReasonReconcileError),
+			readyCondition:      newCondition(v1.ZTunnelConditionReady, metav1.ConditionFalse, v1.ZTunnelDaemonSetNotReady),
+			expectedState:       v1.ZTunnelReasonReconcileError, // reconcile reason takes precedence over ready reason
 		},
 	}
 
@@ -200,8 +199,8 @@ func TestDeriveState(t *testing.T) {
 	}
 }
 
-func newCondition(condType v1alpha1.ZTunnelConditionType, status metav1.ConditionStatus, reason v1alpha1.ZTunnelConditionReason) v1alpha1.ZTunnelCondition {
-	return v1alpha1.ZTunnelCondition{
+func newCondition(condType v1.ZTunnelConditionType, status metav1.ConditionStatus, reason v1.ZTunnelConditionReason) v1.ZTunnelCondition {
+	return v1.ZTunnelCondition{
 		Type:   condType,
 		Status: status,
 		Reason: reason,
@@ -215,7 +214,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 		name          string
 		clientObjects []client.Object
 		interceptors  interceptor.Funcs
-		expected      v1alpha1.ZTunnelCondition
+		expected      v1.ZTunnelCondition
 		expectErr     bool
 	}{
 		{
@@ -232,8 +231,8 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1alpha1.ZTunnelCondition{
-				Type:   v1alpha1.ZTunnelConditionReady,
+			expected: v1.ZTunnelCondition{
+				Type:   v1.ZTunnelConditionReady,
 				Status: metav1.ConditionTrue,
 			},
 		},
@@ -251,10 +250,10 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1alpha1.ZTunnelCondition{
-				Type:    v1alpha1.ZTunnelConditionReady,
+			expected: v1.ZTunnelCondition{
+				Type:    v1.ZTunnelConditionReady,
 				Status:  metav1.ConditionFalse,
-				Reason:  v1alpha1.ZTunnelDaemonSetNotReady,
+				Reason:  v1.ZTunnelDaemonSetNotReady,
 				Message: "not all ztunnel pods are ready",
 			},
 		},
@@ -272,20 +271,20 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1alpha1.ZTunnelCondition{
-				Type:    v1alpha1.ZTunnelConditionReady,
+			expected: v1.ZTunnelCondition{
+				Type:    v1.ZTunnelConditionReady,
 				Status:  metav1.ConditionFalse,
-				Reason:  v1alpha1.ZTunnelDaemonSetNotReady,
+				Reason:  v1.ZTunnelDaemonSetNotReady,
 				Message: "no ztunnel pods are currently scheduled",
 			},
 		},
 		{
 			name:          "ZTunnel daemonSet not found",
 			clientObjects: []client.Object{},
-			expected: v1alpha1.ZTunnelCondition{
-				Type:    v1alpha1.ZTunnelConditionReady,
+			expected: v1.ZTunnelCondition{
+				Type:    v1.ZTunnelConditionReady,
 				Status:  metav1.ConditionFalse,
-				Reason:  v1alpha1.ZTunnelDaemonSetNotReady,
+				Reason:  v1.ZTunnelDaemonSetNotReady,
 				Message: "ztunnel DaemonSet not found",
 			},
 		},
@@ -297,10 +296,10 @@ func TestDetermineReadyCondition(t *testing.T) {
 					return fmt.Errorf("simulated error")
 				},
 			},
-			expected: v1alpha1.ZTunnelCondition{
-				Type:    v1alpha1.ZTunnelConditionReady,
+			expected: v1.ZTunnelCondition{
+				Type:    v1.ZTunnelConditionReady,
 				Status:  metav1.ConditionUnknown,
-				Reason:  v1alpha1.ZTunnelReasonReadinessCheckFailed,
+				Reason:  v1.ZTunnelReasonReadinessCheckFailed,
 				Message: "failed to get readiness: simulated error",
 			},
 			expectErr: true,
@@ -315,11 +314,11 @@ func TestDetermineReadyCondition(t *testing.T) {
 
 			r := NewReconciler(cfg, cl, scheme.Scheme, nil)
 
-			ztunnel := &v1alpha1.ZTunnel{
+			ztunnel := &v1.ZTunnel{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "ztunnel",
 				},
-				Spec: v1alpha1.ZTunnelSpec{
+				Spec: v1.ZTunnelSpec{
 					Namespace: ztunnelNamespace,
 				},
 			}
@@ -342,7 +341,7 @@ func TestApplyImageDigests(t *testing.T) {
 	testCases := []struct {
 		name         string
 		config       config.OperatorConfig
-		input        *v1alpha1.ZTunnel
+		input        *v1.ZTunnel
 		expectValues *v1.ZTunnelValues
 	}{
 		{
@@ -350,8 +349,8 @@ func TestApplyImageDigests(t *testing.T) {
 			config: config.OperatorConfig{
 				ImageDigests: map[string]config.IstioImageConfig{},
 			},
-			input: &v1alpha1.ZTunnel{
-				Spec: v1alpha1.ZTunnelSpec{
+			input: &v1.ZTunnel{
+				Spec: v1.ZTunnelSpec{
 					Version: "v1.24.0",
 					Values: &v1.ZTunnelValues{
 						ZTunnel: &v1.ZTunnelConfig{
@@ -375,8 +374,8 @@ func TestApplyImageDigests(t *testing.T) {
 					},
 				},
 			},
-			input: &v1alpha1.ZTunnel{
-				Spec: v1alpha1.ZTunnelSpec{
+			input: &v1.ZTunnel{
+				Spec: v1.ZTunnelSpec{
 					Version: "v1.24.0",
 					Values:  &v1.ZTunnelValues{},
 				},
@@ -396,8 +395,8 @@ func TestApplyImageDigests(t *testing.T) {
 					},
 				},
 			},
-			input: &v1alpha1.ZTunnel{
-				Spec: v1alpha1.ZTunnelSpec{
+			input: &v1.ZTunnel{
+				Spec: v1.ZTunnelSpec{
 					Version: "v1.24.0",
 					Values: &v1.ZTunnelValues{
 						ZTunnel: &v1.ZTunnelConfig{
@@ -421,8 +420,8 @@ func TestApplyImageDigests(t *testing.T) {
 					},
 				},
 			},
-			input: &v1alpha1.ZTunnel{
-				Spec: v1alpha1.ZTunnelSpec{
+			input: &v1.ZTunnel{
+				Spec: v1.ZTunnelSpec{
 					Version: "v1.24.0",
 					Values: &v1.ZTunnelValues{
 						ZTunnel: &v1.ZTunnelConfig{
@@ -440,6 +439,56 @@ func TestApplyImageDigests(t *testing.T) {
 			},
 		},
 		{
+			name: "user-supplied-global-hub",
+			config: config.OperatorConfig{
+				ImageDigests: map[string]config.IstioImageConfig{
+					"v1.24.0": {
+						ZTunnelImage: "ztunnel-test",
+					},
+				},
+			},
+			input: &v1.ZTunnel{
+				Spec: v1.ZTunnelSpec{
+					Version: "v1.24.0",
+					Values: &v1.ZTunnelValues{
+						Global: &v1.ZTunnelGlobalConfig{
+							Hub: ptr.Of("docker.io/istio"),
+						},
+					},
+				},
+			},
+			expectValues: &v1.ZTunnelValues{
+				Global: &v1.ZTunnelGlobalConfig{
+					Hub: ptr.Of("docker.io/istio"),
+				},
+			},
+		},
+		{
+			name: "user-supplied-global-tag",
+			config: config.OperatorConfig{
+				ImageDigests: map[string]config.IstioImageConfig{
+					"v1.24.0": {
+						ZTunnelImage: "ztunnel-test",
+					},
+				},
+			},
+			input: &v1.ZTunnel{
+				Spec: v1.ZTunnelSpec{
+					Version: "v1.24.0",
+					Values: &v1.ZTunnelValues{
+						Global: &v1.ZTunnelGlobalConfig{
+							Tag: ptr.Of("v1.24.0-custom-build"),
+						},
+					},
+				},
+			},
+			expectValues: &v1.ZTunnelValues{
+				Global: &v1.ZTunnelGlobalConfig{
+					Tag: ptr.Of("v1.24.0-custom-build"),
+				},
+			},
+		},
+		{
 			name: "version-without-defaults",
 			config: config.OperatorConfig{
 				ImageDigests: map[string]config.IstioImageConfig{
@@ -448,8 +497,8 @@ func TestApplyImageDigests(t *testing.T) {
 					},
 				},
 			},
-			input: &v1alpha1.ZTunnel{
-				Spec: v1alpha1.ZTunnelSpec{
+			input: &v1.ZTunnel{
+				Spec: v1.ZTunnelSpec{
 					Version: "v1.24.1",
 					Values: &v1.ZTunnelValues{
 						ZTunnel: &v1.ZTunnelConfig{
@@ -502,7 +551,7 @@ func TestDetermineStatus(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			ztunnel := &v1alpha1.ZTunnel{
+			ztunnel := &v1.ZTunnel{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "ztunnel",
 					Generation: 123,
@@ -519,13 +568,13 @@ func TestDetermineStatus(t *testing.T) {
 			g.Expect(err).ToNot(HaveOccurred())
 
 			g.Expect(status.State).To(Equal(deriveState(reconciledCondition, readyCondition)))
-			g.Expect(normalize(status.GetCondition(v1alpha1.ZTunnelConditionReconciled))).To(Equal(normalize(reconciledCondition)))
-			g.Expect(normalize(status.GetCondition(v1alpha1.ZTunnelConditionReady))).To(Equal(normalize(readyCondition)))
+			g.Expect(normalize(status.GetCondition(v1.ZTunnelConditionReconciled))).To(Equal(normalize(reconciledCondition)))
+			g.Expect(normalize(status.GetCondition(v1.ZTunnelConditionReady))).To(Equal(normalize(readyCondition)))
 		})
 	}
 }
 
-func normalize(condition v1alpha1.ZTunnelCondition) v1alpha1.ZTunnelCondition {
+func normalize(condition v1.ZTunnelCondition) v1.ZTunnelCondition {
 	condition.LastTransitionTime = metav1.Time{}
 	return condition
 }

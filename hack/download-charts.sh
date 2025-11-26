@@ -176,6 +176,17 @@ EOF
     # shellcheck disable=SC2016
     sed -i '/mustMergeOverwrite \$defaults \$.Values/i {{- $x := set $.Values "_original" (deepCopy $.Values) }}' "${CHARTS_DIR}/istiod/templates/zzz_profile.yaml"
   fi
+
+  if versionIsBelow "1.27.1"; then
+    # patch the Gateway chart to comply with the new JSON schema validation introduced upstream
+    # This is necessary for all versions <1.27.1
+    # TODO: remove once we remove support for 1.27.0
+    jq '
+      del(.type, .additionalProperties) |
+      ."$defs".values.additionalProperties = false |
+      ."$defs".values.properties."_internal_defaults_do_not_set" = {"type": "object"}
+    ' "${CHARTS_DIR}/gateway/values.schema.json" > temp.json && mv temp.json "${CHARTS_DIR}/gateway/values.schema.json"
+  fi
 }
 
 # The charts use docker.io as the default registry, but this leads to issues
@@ -228,6 +239,11 @@ version: 0.1.0
 
   mkdir -p "${CHARTS_DIR}/revisiontags/files"
   cp "${CHARTS_DIR}"/istiod/files/profile-*.yaml "${CHARTS_DIR}/revisiontags/files"
+}
+
+function versionIsBelow() {
+  local comparedVersion="$1"
+  [[ "$(printf '%s\n' "$ISTIO_VERSION" "${comparedVersion}" | sort -V | head -n1)" == "$ISTIO_VERSION" ]] && [[ "$ISTIO_VERSION" != "${comparedVersion}" ]]
 }
 
 if ! downloadRequired && [ "${FORCE_DOWNLOADS}" != "true" ] ; then

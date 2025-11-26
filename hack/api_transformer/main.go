@@ -292,7 +292,14 @@ func (t *FileTransformer) processFile() (*ast.File, error) {
 					}
 					for _, f := range structType.Fields.List {
 						if slices.Contains(ct.IncludeFields, f.Names[0].Name) {
-							structCopy.Fields.List = append(structCopy.Fields.List, f)
+							fCopy := &ast.Field{
+								Comment: nil, // remove inline comments
+								Doc:     f.Doc,
+								Names:   f.Names,
+								Type:    f.Type,
+								Tag:     f.Tag,
+							}
+							structCopy.Fields.List = append(structCopy.Fields.List, fCopy)
 						}
 					}
 					declCopy := &ast.GenDecl{

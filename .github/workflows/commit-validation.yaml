@@ -1,0 +1,33 @@
+name: Commit check
+
+on: [pull_request]
+
+jobs:
+  commit-check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+        fetch-depth: 0
+
+    - name: Get first commit SHA in PR
+      id: first_commit
+      run: |
+        FIRST_COMMIT=$(git rev-list --reverse origin/${{ github.event.pull_request.base.ref }}..HEAD | head -n 1)
+        echo "first_commit_sha=$FIRST_COMMIT" >> $GITHUB_OUTPUT
+
+    - name: Validate the first commit from the PR
+      uses: commit-check/commit-check-action@v0.9.2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        commit: ${{ steps.first_commit.outputs.first_commit_sha }}
+        message: true
+        author-name: true
+        author-email: true
+        commit-signoff: true
+        job-summary: true
+        branch: false
+        merge-base: false
+        imperative: false
