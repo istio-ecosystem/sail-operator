@@ -169,6 +169,8 @@ func LogDebugInfo(suite testSuite, kubectls ...kubectl.Kubectl) {
 		GinkgoWriter.Println("=========================================================")
 		logCertsDebugInfo(k)
 		GinkgoWriter.Println("=========================================================")
+		logSampleNamespacesDebugInfo(k, suite)
+		GinkgoWriter.Println("=========================================================")
 		GinkgoWriter.Println()
 
 		if suite == Ambient {
@@ -259,6 +261,60 @@ func logZtunnelDebugInfo(k kubectl.Kubectl) {
 func logCertsDebugInfo(k kubectl.Kubectl) {
 	certs, err := k.WithNamespace(controlPlaneNamespace).GetSecret("cacerts")
 	logDebugElement("=====CA certs in "+controlPlaneNamespace+"=====", certs, err)
+}
+
+func logSampleNamespacesDebugInfo(k kubectl.Kubectl, suite testSuite) {
+	// Common sample namespaces used across different test suites
+	sampleNamespaces := []string{SleepNamespace, HttpbinNamespace}
+
+	// Add additional namespaces based on test suite
+	switch suite {
+	case MultiCluster, ControlPlane, MultiControlPlane:
+		sampleNamespaces = append(sampleNamespaces, "sample")
+	case DualStack:
+		// Dual-stack tests use specific namespaces for TCP services
+		sampleNamespaces = append(sampleNamespaces, "dual-stack", "ipv4", "ipv6")
+	}
+
+	for _, ns := range sampleNamespaces {
+		logSampleNamespaceInfo(k, ns)
+	}
+}
+
+func logSampleNamespaceInfo(k kubectl.Kubectl, namespace string) {
+	// Check if namespace exists
+	nsInfo, err := k.GetYAML("namespace", namespace)
+	if err != nil {
+		logDebugElement("=====Namespace "+namespace+" (not found)=====", "", err)
+		return
+	}
+	logDebugElement("=====Namespace "+namespace+" YAML=====", nsInfo, err)
+
+	// Get pods in the namespace with wide output for more details
+	pods, err := k.WithNamespace(namespace).GetPods("", "-o wide")
+	logDebugElement("=====Pods in "+namespace+"=====", pods, err)
+
+	// Get events in the namespace
+	events, err := k.WithNamespace(namespace).GetEvents()
+	logDebugElement("=====Events in "+namespace+"=====", events, err)
+
+	// Get deployments
+	deployments, err := k.WithNamespace(namespace).GetYAML("deployments", "")
+	logDebugElement("=====Deployments in "+namespace+"=====", deployments, err)
+
+	// Get services
+	services, err := k.WithNamespace(namespace).GetYAML("services", "")
+	logDebugElement("=====Services in "+namespace+"=====", services, err)
+
+	// Describe failed or non-ready pods specifically
+	logFailedPodsDetails(k, namespace)
+}
+
+func logFailedPodsDetails(k kubectl.Kubectl, namespace string) {
+	// Describe all pods in the namespace for detailed troubleshooting
+	// This provides comprehensive information about pod status, events, and configuration
+	describe, err := k.WithNamespace(namespace).Describe("pods", "")
+	logDebugElement("=====Pod descriptions in "+namespace+"=====", describe, err)
 }
 
 func logDebugElement(caption string, info string, err error) {
