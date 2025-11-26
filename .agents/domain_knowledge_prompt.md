@@ -1,6 +1,6 @@
 # Create Domain Knowledge File
 
-This guide outlines best practices for creating domain knowledge files in the `.github/ai_agents/knowledge/` folder. These files serve as a source of truth for understanding the Sail Operator architecture, patterns, and implementation details.
+This guide outlines best practices for creating domain knowledge files in the `.agents/knowledge/` folder. These files serve as a source of truth for understanding the Sail Operator architecture, patterns, and implementation details.
 
 ## Naming Convention
 
@@ -232,10 +232,10 @@ Common issues and solutions:
 ## Related Components
 
 Links to related Sail Operator domain knowledge files:
-- [API Types](domain-knowledge-api-types.md)
-- [Controllers](domain-knowledge-controllers.md)
-- [Testing Framework](domain-knowledge-testing-framework.md)
-- [Version Management](domain-knowledge-version-management.md)
+- [API Types](knowledge/domain-knowledge-api-types.md)
+- [Controllers](knowledge/domain-knowledge-controllers.md)
+- [Testing Framework](knowledge/domain-knowledge-testing-framework.md)
+- [Version Management](knowledge/domain-knowledge-version-management.md)
 ```
 
 ## Maintenance

@@ -4,7 +4,7 @@ This document provides AI coding agents with project-specific context for the Sa
 
 ## Project Overview
 
-The Sail Operator is a Kubernetes operator built to manage Istio service mesh deployments. It provides custom resources (`Istio`, `IstioRevision`, `IstioCNI`, `ZTunnel`) to deploy and manage control plane components.
+The Sail Operator is a Kubernetes operator built to manage Istio service mesh deployments. It provides custom resources (`Istio`, `IstioRevision`, `IstioRevisionTag`, `IstioCNI`, `ZTunnel`) to deploy and manage control plane components.
 
 ## Setup Commands
 
@@ -83,8 +83,8 @@ CONTAINER_CLI=podman DOCKER_GID=0 make deploy
 
 ### Resource Relationships
 - `Istio` creates and manages `IstioRevision`
-- `IstioRevisionTag` points to a `Istio` resource
-- Ambient mode requires `Istio` + `ZTunnel` (+ `IstioCNI` on OpenShift)
+- `IstioRevisionTag` points to an `Istio` or `IstioRevision` resource
+- Ambient mode requires `Istio` + `IstioCNI` + `ZTunnel`
 - Sidecar mode requires `Istio` (+ `IstioCNI` on OpenShift)
 
 ## Key Configuration Files
@@ -124,8 +124,10 @@ The project supports downstream vendors with custom configurations:
 ## Versioning Policy
 
 - Sail Operator versions follow Istio versioning
-- Supports n-2 Istio releases (e.g., Sail 1.27 supports Istio 1.25-1.27)
+- Supports n-2 Istio releases (the operator supports the current and two previous minor Istio versions)
 - Not all Istio patch versions are included in Sail releases
+- EOL versions remain valid inputs but are not installable
+- Check `pkg/istioversion/versions.yaml` for the current list of supported versions
 
 ## Security
 
@@ -156,15 +158,15 @@ The operator deploys Istio using Helm charts and follows Istio's configuration p
 For detailed technical knowledge about specific areas of the Sail Operator, refer to these domain-specific documents:
 
 ### API and Resource Management
-- **[API Types and CRDs](.github/ai_agents/knowledge/domain-knowledge-api-types.md)** - Detailed knowledge about Custom Resource Definitions, API types, validation rules, and resource relationships
-- **[Controllers Architecture](.github/ai_agents/knowledge/domain-knowledge-controllers.md)** - Controller reconciliation patterns, error handling, debugging, and inter-controller communication
+- **[API Types and CRDs](.agents/knowledge/domain-knowledge-api-types.md)** - Detailed knowledge about Custom Resource Definitions, API types, validation rules, and resource relationships
+- **[Controllers Architecture](.agents/knowledge/domain-knowledge-controllers.md)** - Controller reconciliation patterns, error handling, debugging, and inter-controller communication
 
 ### Development and Operations
-- **[Helm Integration](.github/ai_agents/knowledge/domain-knowledge-helm-integration.md)** - Chart management, values processing, platform customization, and troubleshooting
-- **[Testing Framework](.github/ai_agents/knowledge/domain-knowledge-testing-framework.md)** - Unit/integration/E2E testing methodologies, utilities, and best practices
-- **[Version Management](.github/ai_agents/knowledge/domain-knowledge-version-management.md)** - Version compatibility, upgrade strategies, chart management, and troubleshooting
+- **[Helm Integration](.agents/knowledge/domain-knowledge-helm-integration.md)** - Chart management, values processing, platform customization, and troubleshooting
+- **[Testing Framework](.agents/knowledge/domain-knowledge-testing-framework.md)** - Unit/integration/E2E testing methodologies, utilities, and best practices
+- **[Version Management](.agents/knowledge/domain-knowledge-version-management.md)** - Version compatibility, upgrade strategies, chart management, and troubleshooting
 
 ### Creating New Domain Knowledge
-- **[Domain Knowledge Creation Guide](.github/ai_agents/domain_knowledge_prompt.md)** - Template and guidelines for creating new domain knowledge files
+- **[Domain Knowledge Creation Guide](.agents/domain_knowledge_prompt.md)** - Template and guidelines for creating new domain knowledge files
 
 Each domain knowledge file provides deep, technical details that complement the high-level guidance in this document. Use them for specific implementation questions and detailed understanding of system behavior.

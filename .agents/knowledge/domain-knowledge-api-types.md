@@ -8,10 +8,13 @@ This document provides AI agents with detailed knowledge about the Sail Operator
 The primary resource for managing Istio control plane deployments.
 
 **Key Fields:**
-- `spec.version` - Istio version to install (defaults to operator's supported version)
-- `spec.namespace` - Target namespace for control plane (typically `istio-system`)
+- `spec.version` - Istio version to install (defaults to operator's default version)
+- `spec.namespace` - Target namespace for control plane (default: `istio-system`, immutable)
+- `spec.profile` - Built-in installation profile (e.g., `default`, `ambient`, `openshift`)
 - `spec.values` - Helm values for customizing Istio installation
-- `spec.updateStrategy` - Controls how updates are performed (`InPlace` or `RevisionBased`)
+- `spec.updateStrategy.type` - Update strategy: `InPlace` (default) or `RevisionBased`
+- `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds` - Seconds before removing inactive revision (default: 30)
+- `spec.updateStrategy.updateWorkloads` - Automatically move workloads to new revision (default: false)
 
 **Status Fields:**
 - `status.state` - Current state: `Healthy`, `Installing`, `Updating`, `Error`, etc.
@@ -34,26 +37,47 @@ Represents a specific deployment of Istio control plane components.
 Manages the Istio CNI plugin (required for OpenShift and Ambient mesh).
 
 **Key Fields:**
-- `spec.version` - CNI plugin version
-- `spec.namespace` - CNI installation namespace (typically `istio-cni`)
+- `spec.version` - CNI plugin version (must match Istio version)
+- `spec.namespace` - CNI installation namespace (default: `istio-cni`, immutable)
+- `spec.profile` - Built-in installation profile
 - `spec.values` - CNI-specific Helm values
 
-### ZTunnel Resource (Alpha)
+**Note:** The resource name must be `default` (validated by CRD).
+
+### ZTunnel Resource
 Manages ZTunnel workloads for Istio Ambient mesh mode.
 
 **Key Fields:**
-- `spec.version` - ZTunnel version
-- `spec.namespace` - ZTunnel namespace (typically `ztunnel`)
+- `spec.version` - ZTunnel version (must match Istio version)
+- `spec.namespace` - ZTunnel namespace (default: `ztunnel`)
 - `spec.values` - ZTunnel configuration values
 
+**Note:** The resource name must be `default` (validated by CRD). ZTunnel was promoted to v1 API; a v1alpha1 version still exists for backwards compatibility.
+
 ### IstioRevisionTag Resource
-Creates revision tags for canary deployments and traffic shifting.
+Creates revision tags for canary deployments and traffic shifting. References an Istio or IstioRevision object and serves as an alias for sidecar injection.
 
 **Key Fields:**
-- `spec.targetRef` - Reference to target IstioRevision
-- `spec.tag` - Tag name (e.g., `canary`, `stable`)
+- `spec.targetRef.kind` - Kind of target resource (`Istio` or `IstioRevision`)
+- `spec.targetRef.name` - Name of the target resource
+
+**Status Fields:**
+- `status.istioRevision` - Name of the referenced IstioRevision
+- `status.istiodNamespace` - Namespace of the corresponding Istiod instance
 
 ## Common Patterns
+
+### Profile Configuration
+Istio and IstioCNI resources support profiles for predefined configuration sets:
+- `ambient` - Ambient mesh configuration
+- `default` - Default Istio configuration (always applied)
+- `demo` - Demo configuration with additional features
+- `empty` - Empty profile
+- `openshift` - OpenShift-specific configuration (auto-applied on OpenShift)
+- `openshift-ambient` - OpenShift with Ambient mesh
+- `preview` - Preview features
+- `remote` - Remote cluster configuration
+- `stable` - Stable production configuration
 
 ### Values Configuration
 All resources support Helm values via the `values` field:
@@ -153,13 +177,14 @@ spec:
 
 ### Ambient Mesh Setup
 ```yaml
-# 1. CNI
-apiVersion: sailoperator.io/v1alpha1
+# 1. CNI (required for Ambient)
+apiVersion: sailoperator.io/v1
 kind: IstioCNI
 metadata:
   name: default
 spec:
   namespace: istio-cni
+  profile: ambient
 
 # 2. Control Plane
 apiVersion: sailoperator.io/v1
@@ -168,10 +193,7 @@ metadata:
   name: default
 spec:
   namespace: istio-system
-  values:
-    pilot:
-      env:
-        PILOT_ENABLE_AMBIENT: true
+  profile: ambient
 
 # 3. ZTunnel
 apiVersion: sailoperator.io/v1
@@ -184,21 +206,21 @@ spec:
 
 ### Revision-Based Canary Deployment
 ```yaml
-# Main revision
+# Main Istio resource with RevisionBased strategy
 apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
-  name: stable
+  name: default
 spec:
   namespace: istio-system
   updateStrategy:
     type: RevisionBased
 
-# Canary revision tag
+# Revision tag pointing to the Istio resource
 apiVersion: sailoperator.io/v1
 kind: IstioRevisionTag
 metadata:
-  name: canary
+  name: stable
 spec:
   targetRef:
     kind: Istio
