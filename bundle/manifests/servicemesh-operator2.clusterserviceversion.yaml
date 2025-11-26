@@ -38,14 +38,14 @@ metadata:
           },
           "spec": {
             "namespace": "ztunnel",
-            "version": "v1.28.0"
+            "version": "v1.27.3"
           }
         }
       ]
     capabilities: Seamless Upgrades
     categories: Integration & Delivery, Networking, Security
     containerImage: build-harbor.alauda.cn/asm/servicemesh-operator2:2.1-latest
-    createdAt: "2025-08-11T12:36:56Z"
+    createdAt: "2025-11-26T10:50:06Z"
     description: Alauda Service Mesh v2 enables you to install, configure, and manage an instance of Alauda Service Mesh. Alauda Service Mesh is based on the open source Istio project.
     operatorframework.io/suggested-namespace: sail-operator
     operators.operatorframework.io/builder: operator-sdk-v1.42.0
@@ -58,7 +58,7 @@ metadata:
   labels:
     operatorframework.io/arch.amd64: supported
     operatorframework.io/arch.arm64: supported
-  name: servicemesh-operator2.v2.0.13
+  name: servicemesh-operator2.v2.1.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -321,7 +321,7 @@ spec:
         specDescriptors:
           - description: |-
               Defines the version of Istio to install.
-              Must be one of: v1.28-latest, v1.28.0, v1.26-latest, v1.26.3.
+              Must be one of: v1.28-latest, v1.28.0, v1.26-latest, v1.26.3, v1.24-latest.
             displayName: Istio Version
             path: version
             x-descriptors:
@@ -330,6 +330,7 @@ spec:
               - urn:alm:descriptor:com.tectonic.ui:select:v1.28.0
               - urn:alm:descriptor:com.tectonic.ui:select:v1.26-latest
               - urn:alm:descriptor:com.tectonic.ui:select:v1.26.3
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.24-latest
           - description: Namespace to which the Istio ztunnel component should be installed.
             displayName: Namespace
             path: namespace
@@ -641,7 +642,6 @@ spec:
           name: servicemesh-operator2
           spec:
             replicas: 1
-            revisionHistoryLimit: 10
             selector:
               matchLabels:
                 app.kubernetes.io/created-by: servicemesh-operator2
@@ -787,5 +787,5 @@ spec:
       name: OpenShift Service Mesh Team
   maturity: alpha
   provider:
-    name: Red Hat, Inc.
-  version: 1.27.0
+    name: Alauda
+  version: 2.1.0

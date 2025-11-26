@@ -55,13 +55,7 @@ csv:
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
     features.operators.openshift.io/csi: "false"
-<<<<<<< HEAD
-image: build-harbor.alauda.cn/asm/servicemesh-operator2:2.0-latest
-||||||| 4314f7ac
-image: quay.io/sail-dev/sail-operator:1.27-latest
-=======
-image: quay.io/sail-dev/sail-operator:1.28-latest
->>>>>>> upstream/main
+image: build-harbor.alauda.cn/asm/servicemesh-operator2:2.1-latest
 # We're commenting out the imagePullPolicy to use k8s defaults
 # imagePullPolicy: Always
 operator:

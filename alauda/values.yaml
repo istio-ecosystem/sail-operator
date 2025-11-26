@@ -2,14 +2,14 @@ name: servicemesh-operator2
 deployment:
   name: servicemesh-operator2
   annotations:
+    images.v1_28_0.ztunnel: build-harbor.alauda.cn/asm/ztunnel:1.28.0-asm-r1
+    images.v1_28_0.istiod: build-harbor.alauda.cn/asm/pilot:1.28.0-asm-r1
+    images.v1_28_0.proxy: build-harbor.alauda.cn/asm/proxyv2:1.28.0-asm-r1
+    images.v1_28_0.cni: build-harbor.alauda.cn/asm/install-cni:1.28.0-asm-r1
     images.v1_26_3.ztunnel: build-harbor.alauda.cn/asm/ztunnel:1.26.3-asm-r0
     images.v1_26_3.istiod: build-harbor.alauda.cn/asm/pilot:1.26.3-asm-r0
     images.v1_26_3.proxy: build-harbor.alauda.cn/asm/proxyv2:1.26.3-asm-r0
     images.v1_26_3.cni: build-harbor.alauda.cn/asm/install-cni:1.26.3-asm-r0
-    images.v1_24_6.ztunnel: build-harbor.alauda.cn/asm/ztunnel:1.24.6-asm-r0
-    images.v1_24_6.istiod: build-harbor.alauda.cn/asm/pilot:1.24.6-asm-r0
-    images.v1_24_6.proxy: build-harbor.alauda.cn/asm/proxyv2:1.24.6-asm-r0
-    images.v1_24_6.cni: build-harbor.alauda.cn/asm/install-cni:1.24.6-asm-r0
 # NB(timonwong) Please note that the service account name should be the same as the deployment
 serviceAccountName: servicemesh-operator2
 csv:
@@ -44,27 +44,26 @@ csv:
     mediatype: image/svg+xml
   longDescription: |-
     Alauda Service Mesh is a platform that provides behavioral insight and operational control over a service mesh, providing a uniform way to connect, secure, and monitor microservice applications.
-    
+
     Alauda Service Mesh v2 requires Multus CNI to be installed, and default values for `Istio` and `IstioCNI` have been configured accordingly.
     If different configurations are required, they must be overridden in the `Istio` or `IstioCNI` resources.
-    
+
     **`Istio`**
-    
+
     ```
     pilot:
       cni:
         enabled: true
         provider: multus
     ```
-    
+
     **`IstioCNI`**
-    
+
     ```
     cni:
       chained: false
       provider: multus
       cniConfFileName: istio-cni.conf
     ```
-
 # setting this to true will add resources required to generate the bundle using operator-sdk
 bundleGeneration: true
