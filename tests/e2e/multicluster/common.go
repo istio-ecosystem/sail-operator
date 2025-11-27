@@ -69,15 +69,18 @@ func deploySampleAppToClusters(ns, profile string, clusters []ClusterDeployment)
 }
 
 // verifyResponsesAreReceivedFromBothClusters checks that when the sleep pod in the sample namespace
-// sends a request to the helloworld service, it receives responses from expectedVersions,
-// which can be either "v1" or "v2" on on different clusters.
+// sends requests to the helloworld service, it receives responses from expectedVersions,
+// which can be either "v1" or "v2" on different clusters.
 func verifyResponsesAreReceivedFromExpectedVersions(k kubectl.Kubectl, expectedVersions ...string) {
+	Step(fmt.Sprintf("Checking app connectivity from %s", k.ClusterName))
 	if len(expectedVersions) == 0 {
 		expectedVersions = []string{"v1", "v2"}
 	}
 	for _, v := range expectedVersions {
+		// Each curl will fetch the URL multiple times, minimizing time wasted waiting for different responses.
+		// This is because running the exec is much more expensive than having curl fetch the URL several times.
 		Eventually(k.WithNamespace("sample").Exec, 10*time.Minute, 2*time.Second).
-			WithArguments("deploy/sleep", "sleep", "curl -sS helloworld.sample:5000/hello").
+			WithArguments("deploy/sleep", "sleep", "curl -sS -Z helloworld.sample:5000/hello{,,,,,,,,,}").
 			Should(ContainSubstring(fmt.Sprintf("Hello version: %s", v)),
 				fmt.Sprintf("sleep pod in %s did not receive any response from %s", k.ClusterName, v))
 	}
