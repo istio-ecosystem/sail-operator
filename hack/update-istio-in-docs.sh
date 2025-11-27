@@ -33,7 +33,10 @@ fi
 
 echo "Extracting the latest two 'version' values from $YAML_FILE..."
 
+# Disable pipefail temporarily to avoid SIGPIPE error from head
+set +o pipefail
 LATEST_VERSIONS=$(yq '.versions[] | select(.version) | .version' "$YAML_FILE" | head -n 2)
+set -o pipefail
 if [ -z "$LATEST_VERSIONS" ]; then
     echo "No versions with a 'version' property found."
     exit 1
