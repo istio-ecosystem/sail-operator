@@ -1,10 +1,10 @@
 // Variables embedded for GitHub compatibility
-:istio_latest_version: 1.27.3
-:istio_latest_version_revision_format: 1-27-3
-:istio_latest_tag: v1.27-latest
-:istio_release_name: release-1.27
-:istio_latest_minus_one_version: 1.27.0
-:istio_latest_minus_one_version_revision_format: 1-27-0
+:istio_latest_version: 1.28.0
+:istio_latest_version_revision_format: 1-28-0
+:istio_latest_tag: v1.28-latest
+:istio_release_name: release-1.28
+:istio_latest_minus_one_version: 1.27.3
+:istio_latest_minus_one_version_revision_format: 1-27-3
 
 
 = Migrating from Sidecar to Ambient Mode
@@ -115,6 +115,13 @@ This migration guide uses example commands that can be adapted to any applicatio
 
 You can use any application that is currently running with sidecar injection enabled.
 
+ifdef::istio-migrate-from-sidecar-to-ambient[]
+create_default_istio
+install_bookinfo "{istio_release_name}"
+create_bookinfo_gateway_api "{istio_release_name}"
+with_retries wait_pods_ready_by_ns "bookinfo"
+endif::[]
+
 [[technical-requirements]]
 === 2.1 Technical Requirements
 
@@ -203,13 +210,13 @@ For additional compatibility considerations refer to: link:../common/coexistence
 === 2.3 Pre-Migration Checklist
 
 **Environment Validation:**
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Verify Sail Operator is deployed
 kubectl get pods -n sail-operator
 ----
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Check Istio control plane version
 kubectl get istio -n istio-system
@@ -237,7 +244,7 @@ endif::[]
 
 **Application Namespace Validation:**
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Check your application namespaces for sidecar injection
 kubectl get namespaces -l istio.io/rev=default #or any other istio revision name. Also, check if you are using instead istio-injection=enabled label.
@@ -250,7 +257,7 @@ NAME       STATUS   AGE
 bookinfo   Active   6m56
 ----
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Check current workloads with sidecar injection
 kubectl get pods -n bookinfo
@@ -271,10 +278,9 @@ reviews-v3-6445668877-gdr22               2/2     Running   0          6m5s
 
 ifdef::istio-migrate-from-sidecar-to-ambient[]
 with_retries wait_pods_ready_by_ns "bookinfo"
-kubectl get pods -n bookinfo
 endif::[]
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Check current gateway API being used
 kubectl get gateway -n bookinfo
@@ -293,7 +299,7 @@ image:./images/kiali-bookinfo-traffic.png[Kiali Bookinfo Traffic]
 
 For testing purposes during migration, you can generate traffic to your application's main service using commands similar to:
 
-[source,bash,subs="attributes+"]
+[source,bash]
 ----
 # Generate traffic to productpage service
 export INGRESS_HOST=$(kubectl get gtw bookinfo-gateway -n bookinfo -o jsonpath='{.status.addresses[0].value}')
@@ -315,7 +321,7 @@ done
 === 2.4 Backup Existing Configuration
 
 Before starting migration, back up all existing Istio resources and namespace labels:
-[source,bash,subs="attributes+"]
+[source,bash]
 ----
 # Backup all Istio resources
 kubectl get istio,istiocni,virtualservice,destinationrule,authorizationpolicy,requestauthentication,httproute,gateway,peerauthentication -A -o yaml > istio-backup.yaml
@@ -343,7 +349,7 @@ This migration follows a structured step-by-step approach, with each step includ
 Before starting migration, validate your cluster meets all requirements and check the current configuration for compatibility.
 
 **Enhanced Policy Compatibility Check:**
-[source,console]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Check for Layer 7-only authorization policies that will require waypoints
 kubectl get authorizationpolicy -A -o yaml | grep -E "(methods|paths|headers)" | grep -v "name:"
@@ -355,14 +361,8 @@ kubectl get virtualservice -A -o yaml | grep -B5 -A10 "subset:" | grep -E "(name
 kubectl get virtualservice -A -o yaml | grep -E "(fault|delay|mirror)" | grep -v "name:"
 ----
 
-ifdef::istio-migrate-from-sidecar-to-ambient[]
-kubectl get authorizationpolicy -A -o yaml | grep -E "(methods|paths|headers)" | grep -v "name:"
-kubectl get virtualservice -A -o yaml | grep -B5 -A10 "subset:" | grep -E "(name:|subset:)"
-kubectl get virtualservice -A -o yaml | grep -E "(fault|delay|mirror)" | grep -v "name:"
-endif::[]
-
 **Migration Readiness Assessment:**
-[source,console]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # List all resources that need conversion
 echo "=== VirtualServices requiring HTTPRoute conversion ==="
@@ -374,12 +374,6 @@ kubectl get destinationrule -A -o yaml | grep -c "subset:"
 echo "=== Authorization policies requiring waypoint deployment ==="
 kubectl get authorizationpolicy -A -o yaml | grep -c -E "(methods|paths|headers)"
 ----
-
-ifdef::istio-migrate-from-sidecar-to-ambient[]
-kubectl get virtualservice -A --no-headers | wc -l
-kubectl get destinationrule -A -o yaml | grep -c "subset:"
-kubectl get authorizationpolicy -A -o yaml | grep -c -E "(methods|paths|headers)"
-endif::[]
 
 Note: In the step 5 of this guide you will need to migrate unsupported features. This includes:
 
@@ -402,9 +396,9 @@ Note: In the step 5 of this guide you will need to migrate unsupported features.
 
 Update your existing Istio resource:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
-kubectl apply -f - <<EOF
+cat <<EOF | kubectl apply -f-
 apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
@@ -425,7 +419,7 @@ EOF
 ----
 
 Verify the Istio resource is ready again:
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 kubectl wait --for=condition=Ready istios/default --timeout=5m
 ----
@@ -435,13 +429,13 @@ kubectl wait --for=condition=Ready istios/default --timeout=5m
 
 Create or update the IstioCNI resource:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Create Istio CNI namespace if it doesn't exist
 kubectl get namespace istio-cni 2>/dev/null || kubectl create namespace istio-cni
 
 # Apply Istio CNI configuration
-kubectl apply -f - <<EOF
+cat <<EOF | kubectl apply -f-
 apiVersion: sailoperator.io/v1
 kind: IstioCNI
 metadata:
@@ -461,7 +455,7 @@ kubectl wait --for=condition=Ready istiocnis/default --timeout=3m
 
 Create the ZTunnel namespace and resource:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Create ZTunnel namespace if it doesn't exist
 kubectl get namespace ztunnel 2>/dev/null || kubectl create namespace ztunnel
@@ -470,7 +464,7 @@ kubectl get namespace ztunnel 2>/dev/null || kubectl create namespace ztunnel
 kubectl label namespace ztunnel istio-discovery=enabled
 
 # Apply ZTunnel configuration
-kubectl apply -f - <<EOF
+cat <<EOF | kubectl apply -f-
 apiVersion: sailoperator.io/v1alpha1
 kind: ZTunnel
 metadata:
@@ -514,7 +508,7 @@ endif::[]
 
 Existing sidecars need to support the HBONE protocol. Restart deployments in all sidecar-injected namespaces:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Restart workloads in each application namespace
 kubectl rollout restart deployment -n bookinfo
@@ -529,7 +523,7 @@ Note: during the restart, sidecars will be updated to support HBONE while still 
 
 Check that sidecars now support HBONE protocol:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Check for HBONE is enabled in sidecar
 $ kubectl get pod $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -n bookinfo -o yaml | yq '.spec.containers[] | select(.name=="istio-proxy") | .env[] | select(.name=="PROXY_CONFIG")'
@@ -548,7 +542,7 @@ As shown above, the `ISTIO_META_ENABLE_HBONE` environment variable is set to `tr
 [[step-33-connectivity-validation]]
 ==== Step 3.3 Connectivity Validation
 Send requests to ensure connectivity remains intact:
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Test service connectivity through sidecars
 $ kubectl exec $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -n bookinfo -- curl http://reviews.bookinfo:9080/reviews/1
@@ -579,7 +573,7 @@ Note: At this point, sidecars are fully functional with HBONE support, but traff
 **Critical**: Do NOT remove sidecars yet. They must remain until waypoints are fully deployed and active in Step 7.
 
 Test connectivity from outside the mesh:
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Test ingress connectivity
 $ curl -s http://$GATEWAY_URL/productpage | grep title
@@ -603,7 +597,7 @@ Traffic should continue flowing as before. This confirms that sidecars are still
 
 Analyze your current configuration to identify services that need waypoint proxies:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Check for existing L7 policies that will need waypoints
 kubectl get virtualservice,httproute -A
@@ -616,9 +610,9 @@ kubectl get authorizationpolicy -A -o yaml | grep -A 10 -B 5 "rules.*methods\|op
 Create waypoints for namespaces requiring L7 processing:
 
 Apply the Waypoint for bookinfo namespace configurations:
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
-kubectl apply -f - <<EOF
+cat <<EOF | kubectl apply -f-
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -638,7 +632,7 @@ EOF
 **Important**: Deploying a waypoint does not automatically make workloads use it. You must explicitly configure namespaces, services, or pods to use the waypoint.
 
 Verify that waypoints are deployed correctly:
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 kubectl get gateway waypoint -n bookinfo
 kubectl get deployment -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint
@@ -672,9 +666,9 @@ For comprehensive conversion guidance, refer to:
 
 Gateway API HTTPRoute doesn't support DestinationRule subsets. You must create individual services for each application version to enable version-specific routing:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
-kubectl apply -f - <<EOF
+cat <<EOF | kubectl apply -f-
 apiVersion: v1
 kind: Service
 metadata:
@@ -785,9 +779,9 @@ spec:
 
 **Apply the HTTPRoute:**
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
-kubectl apply -f - <<EOF
+cat <<EOF | kubectl apply -f-
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -826,9 +820,9 @@ Create waypoint-targeted authorization policies while maintaining existing sidec
 
 **Apply the bookinfo Authorization Policies:**
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
-kubectl apply -f - <<EOF
+cat <<EOF | kubectl apply -f-
 # ProductPage service authorization - allows traffic from gateway
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
@@ -918,7 +912,7 @@ EOF
 
 **Note**: The service account names should match your actual deployment. Adjust the principal names if your service accounts use different naming conventions. To verify the service accounts you can run:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Check actual service accounts used by your application pods
 kubectl get pods -n bookinfo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.serviceAccountName}{"\n"}{end}'
@@ -929,9 +923,9 @@ kubectl get pods -n bookinfo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"
 
 **Security Warning**: In ambient mode, waypoint-targeted policies can be bypassed if traffic flows directly through ztunnel, because the ztunnel itself cannot enforce Layer 7 (L7) policies. Add protection policies to prevent this:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
-kubectl apply -f - <<EOF
+cat <<EOF | kubectl apply -f-
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
@@ -967,13 +961,13 @@ EOF
 ----
 
 Verify that the policies are created:
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 kubectl get authorizationpolicy -n bookinfo
 ----
 
 The output should be similar to:
-[source,bash]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 NAME                             ACTION   AGE
 productpage-waypoint             ALLOW    18s
@@ -985,7 +979,7 @@ reviews-ztunnel-protection       DENY     6s
 **Critical**: Keep existing sidecar policies active until Policy Simplification step.
 
 Test that services are still accessible (policies not yet enforced):
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 NAMESPACE="bookinfo" # Replace with your namespace
 TEST_POD=$(kubectl get pods -n $NAMESPACE -l app=reviews -o jsonpath='{.items[0].metadata.name}')
@@ -1008,12 +1002,12 @@ fi
 
 We recommend enabling ambient mode for one namespace at a time, starting with the least critical. Replace `bookinfo` with your actual namespace name:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 kubectl label namespace bookinfo istio.io/dataplane-mode=ambient
 ----
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Verify ztunnel configuration for each namespace
 istioctl ztunnel-config workloads --namespace ztunnel | grep bookinfo
@@ -1034,7 +1028,7 @@ bookinfo                                         waypoint-58cdc7f494-98h79      
 ----
 
 **Validation after each namespace:**
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Test connectivity after enabling each namespace, e.g., bookinfo
 kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -- curl http://reviews.bookinfo:9080/
@@ -1057,7 +1051,7 @@ kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=ratings -o jsonpa
 Up to this point, waypoint proxies have been deployed but are not processing any traffic. They remain dormant until you explicitly configure workloads to use them. This activation happens through labeling:
 
 **Namespace-level Activation (recommended):**
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Enable waypoint for all services in the namespace
 kubectl label namespace bookinfo istio.io/use-waypoint=waypoint
@@ -1107,7 +1101,7 @@ Ensure your authorization policies account for this identity behavior when valid
 
 Once traffic flows through waypoints, remove duplicate sidecar-specific policies:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # List all authorization policies to identify duplicates
 kubectl get authorizationpolicy -A
@@ -1135,7 +1129,7 @@ kubectl delete virtualservice <virtualservice-name> -n <NAMESPACE>
 
 **Final step**: Remove sidecar injection now that ambient mode is fully operational:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Remove sidecar injection while preserving ambient mode labels
 kubectl label namespace bookinfo istio.io/rev- istio.io/dataplane-mode=ambient
@@ -1149,7 +1143,7 @@ kubectl rollout restart deployment -n bookinfo
 
 Verify sidecars are removed and ambient mode is working:
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Verify pods no longer have sidecars containers in the application pods
 kubectl get pods -n bookinfo
@@ -1166,7 +1160,7 @@ Checking on Kiali should show traffic flowing through ambient mode. You should s
 
 Test that L7 policies are now enforced through waypoints (L7 policies should work as before after waypoint activation):
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Test authorization policies work through waypoint
 kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -- curl -v http://reviews.bookinfo:9080/reviews/1
@@ -1181,7 +1175,7 @@ Output should be similar to:
 
 Test the traffic routing through waypoint with header (if HTTPRoute configured):
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -- curl -H "end-user: jason" http://reviews.bookinfo:9080/reviews/1
 ----
@@ -1196,7 +1190,7 @@ Note: L7 policies should function as before, now enforced through waypoints inst
 
 
 Test external connectivity (if gateway configured):
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Test external connectivity through gateway
 export INGRESS_HOST=$(kubectl get gtw bookinfo-gateway -n bookinfo -o jsonpath='{.status.addresses[0].value}')
@@ -1233,7 +1227,7 @@ fi
 
 **mTLS Verification:**
 
-[source,bash,subs="attributes+"]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Check ztunnel protocols for the bookinfo namespace
 istioctl ztunnel-config workloads -n ztunnel |grep bookinfo
