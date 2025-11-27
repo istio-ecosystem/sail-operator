@@ -222,6 +222,10 @@ test.scorecard: operator-sdk ## Run the operator scorecard test.
 test.e2e.ocp: istioctl ## Run the end-to-end tests against an existing OCP cluster. While running on OCP in downstream you need to set ISTIOCTL_DOWNLOAD_URL to the URL where the istioctl productized binary.
 	GINKGO_FLAGS="$(GINKGO_FLAGS)" ${SOURCE_DIR}/tests/e2e/integ-suite-ocp.sh
 
+.PHONY: test.e2e.ocp.cleanup
+test.e2e.ocp.cleanup: verify-kubeconfig ## Clean up leftover artifacts from e2e.ocp tests
+	${SOURCE_DIR}/tests/e2e/cleanup-ocp.sh
+
 .PHONY: test.e2e.kind
 test.e2e.kind: istioctl ## Deploy a KinD cluster and run the end-to-end tests against it.
 	GINKGO_FLAGS="$(GINKGO_FLAGS)" ISTIOCTL="$(ISTIOCTL)" ${SOURCE_DIR}/tests/e2e/integ-suite-kind.sh
