@@ -127,5 +127,7 @@ fi
 # Update Istio versions in the Documentation files
 ./hack/update-istio-in-docs.sh
 
+exit 1
+
 # Regenerate files
 make update-istio gen
