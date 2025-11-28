@@ -21,6 +21,7 @@ import (
 
 	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	k8sclient "github.com/istio-ecosystem/sail-operator/tests/e2e/util/client"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -30,10 +31,10 @@ import (
 var (
 	cl                    client.Client
 	err                   error
-	controlPlaneNamespace = env.Get("CONTROL_PLANE_NS", "istio-system")
+	controlPlaneNamespace = common.ControlPlaneNamespace
 	istioName             = env.Get("ISTIO_NAME", "default")
-	istioCniNamespace     = env.Get("ISTIOCNI_NAMESPACE", "istio-cni")
-	ztunnelNamespace      = env.Get("ZTUNNEL_NAMESPACE", "ztunnel")
+	istioCniNamespace     = common.IstioCniNamespace
+	ztunnelNamespace      = common.ZtunnelNamespace
 	istioCniName          = env.Get("ISTIOCNI_NAME", "default")
 	expectedRegistry      = env.Get("EXPECTED_REGISTRY", "^docker\\.io|^gcr\\.io")
 	multicluster          = env.GetBool("MULTICLUSTER", false)
