@@ -127,7 +127,7 @@ fi
 # Update Istio versions in the Documentation files
 ./hack/update-istio-in-docs.sh
 
-exit 1
+echo "Fake change to trigger update PR"
 
 # Regenerate files
 make update-istio gen
