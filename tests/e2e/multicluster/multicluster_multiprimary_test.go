@@ -28,14 +28,11 @@ import (
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/certs"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
-	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("Multicluster deployment models", Label("multicluster", "multicluster-multiprimary"), Ordered, func() {
@@ -91,61 +88,26 @@ values:
 					})
 
 					It("updates both Istio CR status to Ready", func(ctx SpecContext) {
-						Eventually(common.GetObject).
-							WithArguments(ctx, clPrimary, kube.Key(istioName), &v1.Istio{}).
-							Should(HaveConditionStatus(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Cluster #1; unexpected Condition")
-						Success("Istio CR is Ready on Cluster #1")
-
-						Eventually(common.GetObject).
-							WithArguments(ctx, clRemote, kube.Key(istioName), &v1.Istio{}).
-							Should(HaveConditionStatus(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Cluster #2; unexpected Condition")
-						Success("Istio CR is Ready on Cluster #2")
+						common.AwaitCondition(ctx, v1.IstioConditionReady, kube.Key(istioName), &v1.Istio{}, k1, clPrimary)
+						common.AwaitCondition(ctx, v1.IstioConditionReady, kube.Key(istioName), &v1.Istio{}, k2, clRemote)
 					})
 
 					It("updates both IstioCNI CR status to Ready", func(ctx SpecContext) {
-						Eventually(common.GetObject).
-							WithArguments(ctx, clPrimary, kube.Key(istioCniName), &v1.IstioCNI{}).
-							Should(HaveConditionStatus(v1.IstioCNIConditionReady, metav1.ConditionTrue), "Istio CNI is not Ready on Cluster #1; unexpected Condition")
-						Success("Istio CNI CR is Ready on Cluster #1")
-
-						Eventually(common.GetObject).
-							WithArguments(ctx, clRemote, kube.Key(istioCniName), &v1.IstioCNI{}).
-							Should(HaveConditionStatus(v1.IstioCNIConditionReady, metav1.ConditionTrue), "Istio CNI is not Ready on Cluster #2; unexpected Condition")
-						Success("Istio CNI CR is Ready on Cluster #2")
+						common.AwaitCondition(ctx, v1.IstioCNIConditionReady, kube.Key(istioCniName), &v1.IstioCNI{}, k1, clPrimary)
+						common.AwaitCondition(ctx, v1.IstioCNIConditionReady, kube.Key(istioCniName), &v1.IstioCNI{}, k2, clRemote)
 					})
 
 					It("deploys istiod", func(ctx SpecContext) {
-						Eventually(common.GetObject).
-							WithArguments(ctx, clPrimary, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
-							Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available on Cluster #1; unexpected Condition")
+						common.AwaitDeployment(ctx, "istiod", k1, clPrimary)
 						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
-						Success("Istiod is deployed in the namespace and Running on Cluster #1")
 
-						Eventually(common.GetObject).
-							WithArguments(ctx, clRemote, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
-							Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available on Cluster #2; unexpected Condition")
+						common.AwaitDeployment(ctx, "istiod", k2, clRemote)
 						Expect(common.GetVersionFromIstiod()).To(Equal(version.Version), "Unexpected istiod version")
-						Success("Istiod is deployed in the namespace and Running on Cluster #2")
 					})
 
 					It("deploys istio-cni-node", func(ctx SpecContext) {
-						Eventually(func() bool {
-							daemonset := &appsv1.DaemonSet{}
-							if err := clPrimary.Get(ctx, kube.Key("istio-cni-node", istioCniNamespace), daemonset); err != nil {
-								return false
-							}
-							return daemonset.Status.NumberAvailable == daemonset.Status.CurrentNumberScheduled
-						}).Should(BeTrue(), "CNI DaemonSet Pods are not Available on Cluster #1")
-						Success("CNI DaemonSet is deployed in the namespace and Running on Cluster #1")
-
-						Eventually(func() bool {
-							daemonset := &appsv1.DaemonSet{}
-							if err := clRemote.Get(ctx, kube.Key("istio-cni-node", istioCniNamespace), daemonset); err != nil {
-								return false
-							}
-							return daemonset.Status.NumberAvailable == daemonset.Status.CurrentNumberScheduled
-						}).Should(BeTrue(), "IstioCNI DaemonSet Pods are not Available on Cluster #2")
-						Success("IstioCNI DaemonSet is deployed in the namespace and Running on Cluster #2")
+						common.AwaitCniDaemonSet(ctx, k1, clPrimary)
+						common.AwaitCniDaemonSet(ctx, k2, clRemote)
 					})
 				})
 
@@ -160,13 +122,8 @@ values:
 					})
 
 					It("updates both Gateway status to Available", func(ctx SpecContext) {
-						Eventually(common.GetObject).
-							WithArguments(ctx, clPrimary, kube.Key("istio-eastwestgateway", controlPlaneNamespace), &appsv1.Deployment{}).
-							Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Gateway is not Ready on Cluster #1; unexpected Condition")
-
-						Eventually(common.GetObject).
-							WithArguments(ctx, clRemote, kube.Key("istio-eastwestgateway", controlPlaneNamespace), &appsv1.Deployment{}).
-							Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Gateway is not Ready on Cluster #2; unexpected Condition")
+						common.AwaitDeployment(ctx, "istio-eastwestgateway", k1, clPrimary)
+						common.AwaitDeployment(ctx, "istio-eastwestgateway", k2, clRemote)
 						Success("Gateway is created and available in both clusters")
 					})
 				})
@@ -224,26 +181,8 @@ values:
 					})
 
 					It("updates the pods status to Ready", func(ctx SpecContext) {
-						samplePodsCluster1 := &corev1.PodList{}
-
-						Expect(clPrimary.List(ctx, samplePodsCluster1, client.InNamespace(sampleNamespace))).To(Succeed())
-						Expect(samplePodsCluster1.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
-
-						for _, pod := range samplePodsCluster1.Items {
-							Eventually(common.GetObject).
-								WithArguments(ctx, clPrimary, kube.Key(pod.Name, sampleNamespace), &corev1.Pod{}).
-								Should(HaveConditionStatus(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready on Cluster #1; unexpected Condition")
-						}
-
-						samplePodsCluster2 := &corev1.PodList{}
-						Expect(clRemote.List(ctx, samplePodsCluster2, client.InNamespace(sampleNamespace))).To(Succeed())
-						Expect(samplePodsCluster2.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
-
-						for _, pod := range samplePodsCluster2.Items {
-							Eventually(common.GetObject).
-								WithArguments(ctx, clRemote, kube.Key(pod.Name, sampleNamespace), &corev1.Pod{}).
-								Should(HaveConditionStatus(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready on Cluster #2; unexpected Condition")
-						}
+						Eventually(common.CheckSamplePodsReady).WithArguments(ctx, clPrimary).Should(Succeed(), "Error checking status of sample pods on Cluster #1")
+						Eventually(common.CheckSamplePodsReady).WithArguments(ctx, clRemote).Should(Succeed(), "Error checking status of sample pods on Cluster #2")
 						Success("Sample app is created in both clusters and Running")
 					})
 

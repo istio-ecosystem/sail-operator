@@ -64,6 +64,7 @@ var (
 	istioName             = env.Get("ISTIO_NAME", "default")
 	istioCniName          = env.Get("ISTIOCNI_NAME", "default")
 	istioCniNamespace     = env.Get("ISTIOCNI_NAMESPACE", "istio-cni")
+	sampleNamespace       = env.Get("SAMPLE_NAMESPACE", "sample")
 	ztunnelNamespace      = env.Get("ZTUNNEL_NAMESPACE", "ztunnel")
 
 	// version can have one of the following formats:
@@ -338,33 +339,6 @@ func GetVersionFromIstiod() (*semver.Version, error) {
 		return semver.NewVersion(matches[1])
 	}
 	return nil, fmt.Errorf("error getting version from istiod: version not found in output: %s", output)
-}
-
-func isPodReady(pod *corev1.Pod) bool {
-	for _, cond := range pod.Status.Conditions {
-		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
-			return true
-		}
-	}
-	return false
-}
-
-func CheckPodsReady(ctx context.Context, cl client.Client, namespace string) error {
-	podList := &corev1.PodList{}
-	if err := cl.List(ctx, podList, client.InNamespace(namespace)); err != nil {
-		return fmt.Errorf("Failed to list pods: %w", err)
-	}
-	if len(podList.Items) == 0 {
-		return fmt.Errorf("No pods found in namespace %q", namespace)
-	}
-
-	for _, pod := range podList.Items {
-		if !isPodReady(&pod) {
-			return fmt.Errorf("pod %q in namespace %q is not ready", pod.Name, namespace)
-		}
-	}
-
-	return nil
 }
 
 // Resolve domain name and return ip address.
