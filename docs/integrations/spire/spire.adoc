@@ -1,4 +1,22 @@
-== SPIFFE and Spire and Sail Operator
+link:../../README.adoc[Return to Project Root]
+
+== Table of Contents
+
+* <<installation,Installation>>
+** <<spire-installation,Install Spire>>
+** <<verify-spire-installation,Verify Spire installation>>
+** <<sail-operator,Sail Operator>>
+*** <<instal-sail-operator,Install Sail Operator>>
+*** <<deploy-istio-cni,Create Istio CNI CR>>
+*** <<configure-istio-cr,Create Istio CR>>
+*** <<verify-istio-installation,Verify Istio Installation with Spire>>
+** <<validate-simple-istio-mutual-with-spire,Simple ISTIO_MUTUAL with Spire>>
+** <<connecting-external-services-to-the-mesh,Connect external services to the Mesh >>
+** <<ingress-gateway,Istio Ingress Gateway with SPIFFE >>
+** <<bookinfo-app-x509-svid,Bookinfo App example with SPIFFE with x509 SVID>>
+** <<bookinfo-app-x509-svid-jwt-svid,Bookinfo App example with SPIFFE with JWT SVID and x509 SVID>>
+
+== Spire and Sail Operator
 Spire is a production-ready implementation of the https://spiffe.io/[SPIFFE] specification
 that performs node and workload attestation in order to securely issue
 cryptographic identities to workloads running in heterogeneous environments.
@@ -16,22 +34,8 @@ beyond the Kubernetes namespace and service account attestation offered by Istio
 SPIRE’s node attestation extends attestation to the physical or virtual hardware on
 which workloads run.
 
-* <<installation,Installation>>
-** <<spire-installation,Install Spire>>
-** <<verify-spire-installation,Verify Spire installation>>
-** <<sail-operator,Sail Operator>>
-*** <<instal-sail-operator,Install Sail Operator>>
-*** <<create-istio-cr,Create Istio CR>>
-*** <<create-istio-cni,Create Istio CNI CR>>
-*** <<verify-istio-installation,Verify Istio Installation with Spire>>
-** <<simple-istio-mutual-with-spire,Simple ISTIO_MUTUAL with Spire>>
-** <<connecting-external-services-to-the-mesh,Connect external services to the Mesh >>
-** <<ingress-gateway,Istio Ingress Gateway with SPIFFE >>
-** <<bookinfo-app-x509-svid,Bookinfo App example with SPIFFE with x509 SVID>>
-** <<bookinfo-app-x509-svid-jwt-svid,Bookinfo App example with SPIFFE with JWT SVID and x509 SVID>>
-
 [[installation]]
-=== Installation
+=== Configuring Spire
 For simplicity, this guide uses K8s cluster created with Kind.
 However, you are free to choose any other K8s
 distribution that suite your setup.
@@ -66,7 +70,7 @@ helm upgrade --install \
 Make sure the all the Spire components are up and running
 [source,bash]
 ----
-kubectl get pods -nspire-server
+kubectl get pods -n spire-server
 ----
 
 [[verify-spire-installation]]
@@ -131,18 +135,18 @@ CA #1 Valid Until:	2025-10-22 07:38:13 +0000 UTC
 
 
 [[instal-sail-operator]]
-==== Install Sail Operator
+==== Configure Spire on Sail Operator
 [source,bash]
 ----
 helm repo add sail-operator https://istio-ecosystem.github.io/sail-operator
 helm repo update
 helm install sail-operator \
   sail-operator/sail-operator \
-  -nistio-system \
+  -n istio-system \
   --create-namespace
 ----
-[[create-istio-cni]]
-==== Create Istio CNI CR
+[[deploy-istio-cni]]
+==== Deploy Istio CNI
 [source,bash]
 ----
 kubectl create namespace istio-cni
@@ -158,15 +162,16 @@ spec:
   namespace: istio-cni
 EOF
 ----
-[[create-istio-cr]]
-==== Create Istio CR
+[[configure-istio-cr]]
+==== Configure Istio resource to work with Spire
 Create `Istio` CR.
 
-_If you are using Kubernetes 1.33 and have not disabled
+**Important**: _If you are using Kubernetes 1.33 and have not disabled
 support for native sidecars in the Istio control plane,
 you must use initContainers in the injection template for sidecars.
 This is required because native sidecar support changes
 how sidecars are injected.
+
 NOTE: The SPIRE injection template for gateways should
 continue to use regular containers as before._
 [source,bash]
@@ -213,8 +218,9 @@ spec:
                   readOnly: true
 EOF
 ----
-_A note about `sidecarInjectorWebhook`.
-Spiffe Workload API exposed over unix socket.
+
+**About `sidecarInjectorWebhook`**:
+_Spiffe Workload API exposed over unix socket.
 To avoid any host mounts we are using Spire CSI driver
 which is securely injecting the workload api socket.
 Thus, we must create sidecar injector template,
@@ -224,19 +230,20 @@ socket as a volume to the envoy sidecar container._
 Make sure the istiod up and running
 [source,bash]
 ----
-kubectl get deploy istiod -nistio-system
+kubectl get deploy istiod -n istio-system
 ----
 [[verify-istio-installation]]
-==== Verify Istio Installation
+==== Verify Istio Installation with Spire configuration
 Create a new namespace and enable
 automatic sidecar injection
 [source,bash]
 ----
-kubectl create namespace verify-istio-installation
-kubectl label namespace verify-istio-installation istio-injection=enabled
+kubectl create namespace test
+kubectl label namespace test istio-injection=enabled
 ----
 Create simple httpbin deployment and verify spiffe identity.
-Note, in the inject template we are specifying `spire` template.
+
+**Note**: In the inject template, we are specifying `spire` template.
 The spire injection template is responsible for mounting the Spiffe Workload API
 socket into the sidecar container
 [source,bash]
@@ -246,7 +253,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: httpbin
-  namespace: verify-istio-installation
+  namespace: test
 spec:
   replicas: 1
   selector:
@@ -272,8 +279,8 @@ EOF
 Check that the workload identity was issued by SPIRE
 [source,bash]
 ----
-HTTPBIN_POD=$(kubectl get pod -l app=httpbin -nverify-istio-installation -o jsonpath="{.items[0].metadata.name}")
-istioctl proxy-config secret "$HTTPBIN_POD" -nverify-istio-installation -o json | jq -r \
+HTTPBIN_POD=$(kubectl get pod -l app=httpbin -n test -o jsonpath="{.items[0].metadata.name}")
+istioctl proxy-config secret "$HTTPBIN_POD" -n test -o json | jq -r \
 '.dynamicActiveSecrets[0].secret.tlsCertificate.certificateChain.inlineBytes' | base64 --decode > chain.pem
 openssl x509 -in chain.pem -text | grep SPIRE
 ----
@@ -282,8 +289,8 @@ Example output
 ----
 Subject: C=US, O=SPIRE
 ----
-[[simple-istio-mutual-with-spire]]
-=== Simple Istio ISTIO_MUTUAL with Spire
+[[validate-simple-istio-mutual-with-spire]]
+=== Validate simple Istio ISTIO_MUTUAL with Spire
 In this scenario we'll deploy client (curl)
 and server (httpbin) and validate mTLS connectivity
 between the two services.
@@ -406,7 +413,7 @@ Currently, Istio configured with default PERMISSIVE mode.
 Try to make http call without mTLS first
 [source,bash]
 ----
-CURL_POD=$(kubectl get pod -l app=curl -ntest-1 -o jsonpath="{.items[0].metadata.name}")
+CURL_POD=$(kubectl get pod -l app=curl -n test-1 -o jsonpath="{.items[0].metadata.name}")
 kubectl exec $CURL_POD -n test-1 -it -- curl -s -o /dev/null -w "%{http_code}" http://httpbin
 ----
 You should get HTTP 200 status code. Now, lets enabled mTLS between two services.
@@ -452,7 +459,7 @@ EOF
 Make the curl request again, you should get 200 response code.
 [source,bash]
 ----
-CURL_POD=$(kubectl get pod -l app=curl -ntest-1 -o jsonpath="{.items[0].metadata.name}")
+CURL_POD=$(kubectl get pod -l app=curl -n test-1 -o jsonpath="{.items[0].metadata.name}")
 kubectl exec $CURL_POD -n test-1 -it -- curl -s -o /dev/null -w "%{http_code}" http://httpbin
 ----
 If you receive an HTTP 200 code, it confirms that your mesh is configured with Spire correctly. Both services are able to fetch Spiffe link:https://github.com/spiffe/spiffe/blob/main/standards/X509-SVID.md[X.509 SVIDs], trust each other's identities, and can communicate securely.
@@ -596,7 +603,7 @@ from the external client to a service running inside the mesh.
 [source,bash]
 ----
 # get curl pod name
-CURL_POD=$(kubectl get pod -l app=curl -ntest-2 -o jsonpath="{.items[0].metadata.name}")
+CURL_POD=$(kubectl get pod -l app=curl -n test-2 -o jsonpath="{.items[0].metadata.name}")
 
 # fetch x509 SVID and store them on the disk
 kubectl exec $CURL_POD -n test-2 -it -- \
@@ -644,33 +651,31 @@ helm repo add istio https://istio-release.storage.googleapis.com/charts
 helm repo update
 
 # install the istio gateway helm chart
-helm install istio-gateway -nistio-system \
+helm install istio-gateway -n istio-system \
   istio/gateway --set-json \
   'podAnnotations={"inject.istio.io/templates":"gateway,spireWithoutNativeSidecar"}'
 ----
 Make sure the istio gateway is up and running
 [source,bash]
 ----
-kubectl get deploy istio-gateway -nistio-system
+kubectl get deploy istio-gateway -n istio-system
 ----
 Create Istio Gateway CR for `httpbin` service in `test-1` namespace.
 
-A note about the istio-gateway service:
+**Note about the istio-gateway service:**
 
 This tutorial uses example.com as the placeholder domain. You should replace this with the correct domain for your setup.
 You must configure DNS to resolve your domain to the gateway:
 
-Cloud (e.g., AWS): If your cluster is in a cloud environment that provides a hostname (like an ELB), create a CNAME record mapping your domain to that hostname.
-
-On-Premises/Bare-Metal: If your istio-gateway service has a LoadBalancerIP, create an A record mapping your domain to that external IP address.
-
-Alternative (nip.io): For quick testing, you can use nip.io. This method only works if your gateway service has an external IP address, not a CNAME.
+* Cloud (e.g., AWS): If your cluster is in a cloud environment that provides a hostname (like an ELB), create a CNAME record mapping your domain to that hostname.
+* On-Premises/Bare-Metal: If your istio-gateway service has a LoadBalancerIP, create an A record mapping your domain to that external IP address.
+* Alternative (nip.io): For quick testing, you can use nip.io. This method only works if your gateway service has an external IP address, not a CNAME.
 
 ==== Local Testing
 
-For a simple local test, you can bypass public DNS. Update your local /etc/hosts file and manually add entries for the services used in this tutorial. This should be sufficient for completing this guide.
+For a simple local test, you can bypass public DNS. Update your local `/etc/hosts` file and manually add entries for the services used in this tutorial. This should be sufficient for completing this guide.
 
-Example /etc/hosts entries:
+Example `/etc/hosts` entries:
 ....
 [GATEWAY_IP] httpbin.example.com
 [GATEWAY_IP] bookinfo.example.com
@@ -912,11 +917,9 @@ each other using mTLS, authenticated by SPIFFE X.509 SVIDs.
 To add support for JWT SVIDs to the Istio mesh,
 you must patch the Istio Custom Resource (CR).
 Add the following parameters:
-`PILOT_JWT_ENABLE_REMOTE_JWKS: "true"` and `jwksResolverExtraRootCA`
-The `jwksResolverExtraRootCA` parameter is required to
-allow the Istio sidecar to establish secure HTTPS connections
-to the remote JWKS server. And `PILOT_JWT_ENABLE_REMOTE_JWKS: "true"`
-instruct Istio to use external JWKS server.
+* `PILOT_JWT_ENABLE_REMOTE_JWKS: "true"`: instruct Istio to use an external JWKS server
+* `jwksResolverExtraRootCA`: required to allow the Istio sidecar to establish secure HTTPS connections
+to the remote JWKS server.
 
 _Note, you can omit extra root CA if your `SpireOIDCDiscovery` is using
 trusted by Istio CA certificates. Otherwise, you must provide the `jwksResolverExtraRootCA`.
