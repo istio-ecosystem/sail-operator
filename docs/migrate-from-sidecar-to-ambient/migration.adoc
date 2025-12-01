@@ -465,7 +465,7 @@ kubectl label namespace ztunnel istio-discovery=enabled
 
 # Apply ZTunnel configuration
 cat <<EOF | kubectl apply -f-
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: ZTunnel
 metadata:
   name: default
