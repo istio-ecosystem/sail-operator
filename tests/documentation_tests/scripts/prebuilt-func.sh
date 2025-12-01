@@ -286,7 +286,7 @@ wait_for_rollout_success() {
 create_default_istio() {
     namespace="${1:-istio-system}"
 
-    kubectl get namespace "$namespace" 2>/dev/null || kubectl create namespace "$namespace"
+    kubectl get namespace "$namespace" >/dev/null 2>&1 || kubectl create namespace "$namespace"
     cat <<EOF | kubectl apply -f-
 apiVersion: sailoperator.io/v1
 kind: Istio
@@ -302,9 +302,9 @@ install_bookinfo() {
     istio_release_name="$1"
     namespace="${2:-bookinfo}"
 
-    kubectl get namespace "$namespace" 2>/dev/null || kubectl create namespace "$namespace"
+    kubectl get namespace "$namespace" >/dev/null 2>&1 || kubectl create namespace "$namespace"
     kubectl label namespace "$namespace" istio-injection=enabled
-    kubectl apply -n "$namespace" -f https://raw.githubusercontent.com/istio/istio/${istio_release_name}/samples/bookinfo/platform/kube/bookinfo.yaml
+    kubectl apply -n "$namespace" -f https://raw.githubusercontent.com/istio/istio/"${istio_release_name}"/samples/bookinfo/platform/kube/bookinfo.yaml
 }
 
 # Create Bookinfo gateway API
@@ -312,7 +312,7 @@ create_bookinfo_gateway_api() {
     istio_release_name="$1"
     namespace="${2:-bookinfo}"
 
-    kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
+    kubectl get crd gateways.gateway.networking.k8s.io >/dev/null 2>&1 || \
         kubectl apply --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.4.0/experimental-install.yaml
-    kubectl apply -f https://raw.githubusercontent.com/istio/istio/${istio_release_name}/samples/bookinfo/gateway-api/bookinfo-gateway.yaml -n "$namespace"
+    kubectl apply -f https://raw.githubusercontent.com/istio/istio/"${istio_release_name}"/samples/bookinfo/gateway-api/bookinfo-gateway.yaml -n "$namespace"
 }

@@ -432,7 +432,7 @@ Create or update the IstioCNI resource:
 [source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Create Istio CNI namespace if it doesn't exist
-kubectl get namespace istio-cni 2>/dev/null || kubectl create namespace istio-cni
+kubectl get namespace istio-cni >/dev/null 2>&1 || kubectl create namespace istio-cni
 
 # Apply Istio CNI configuration
 cat <<EOF | kubectl apply -f-
@@ -458,7 +458,7 @@ Create the ZTunnel namespace and resource:
 [source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Create ZTunnel namespace if it doesn't exist
-kubectl get namespace ztunnel 2>/dev/null || kubectl create namespace ztunnel
+kubectl get namespace ztunnel >/dev/null 2>&1 || kubectl create namespace ztunnel
 
 # If you are using discoverySelectors, label the namespace accordingly
 kubectl label namespace ztunnel istio-discovery=enabled
@@ -573,7 +573,7 @@ Note: At this point, sidecars are fully functional with HBONE support, but traff
 **Critical**: Do NOT remove sidecars yet. They must remain until waypoints are fully deployed and active in Step 7.
 
 Test connectivity from outside the mesh:
-[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
+[source,bash]
 ----
 # Test ingress connectivity
 $ curl -s http://$GATEWAY_URL/productpage | grep title
@@ -1190,7 +1190,7 @@ Note: L7 policies should function as before, now enforced through waypoints inst
 
 
 Test external connectivity (if gateway configured):
-[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
+[source,bash]
 ----
 # Test external connectivity through gateway
 export INGRESS_HOST=$(kubectl get gtw bookinfo-gateway -n bookinfo -o jsonpath='{.status.addresses[0].value}')
