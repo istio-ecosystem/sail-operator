@@ -7,7 +7,7 @@
 
 link:../[Return to Project Root]
 
-*Note*: To add new topics to this documentation, please follow the guidelines in the link:../../docs/guidelines/guidelines.md[guidelines] doc.
+*Note*: To add new topics to this documentation, please follow the guidelines in the link:../../docs/guidelines/guidelines.adoc[guidelines] doc.
 
 == Table of Contents
 
