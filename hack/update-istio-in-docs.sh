@@ -60,7 +60,8 @@ echo "LATEST_RELEASE_NAME: $LATEST_RELEASE_NAME"
 echo "LATEST_MINUS_ONE_VERSION: $LATEST_MINUS_ONE_VERSION"
 echo "LATEST_MINUS_ONE_VERSION_REVISION_FORMAT: $LATEST_MINUS_ONE_VERSION_REVISION_FORMAT"
 
-for file in docs/**/*.adoc; do
+# Find all .adoc files under docs/ (top-level and nested) and update them
+while IFS= read -r -d '' file; do
     echo "Updating file: $file"
     "$SED_CMD" -i -E "s/(:istio_latest_version: ).*/\1$LATEST_VERSION/" "$file"
     "$SED_CMD" -i -E "s/(:istio_latest_version_revision_format: ).*/\1$LATEST_VERSION_REVISION_FORMAT/" "$file"
@@ -68,5 +69,5 @@ for file in docs/**/*.adoc; do
     "$SED_CMD" -i -E "s/(:istio_release_name: ).*/\1$LATEST_RELEASE_NAME/" "$file"
     "$SED_CMD" -i -E "s/(:istio_latest_minus_one_version: ).*/\1$LATEST_MINUS_ONE_VERSION/" "$file"
     "$SED_CMD" -i -E "s/(:istio_latest_minus_one_version_revision_format: ).*/\1$LATEST_MINUS_ONE_VERSION_REVISION_FORMAT/" "$file"
-done
+done < <(find docs -type f -name '*.adoc' -print0)
 echo "Documentation files updated successfully."
