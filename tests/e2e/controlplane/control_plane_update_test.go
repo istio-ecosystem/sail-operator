@@ -61,9 +61,7 @@ var _ = Describe("Control Plane updates", Label("control-plane", "slow"), Ordere
 				Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
 
 				common.CreateIstioCNI(k, istioversion.Base)
-				Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioCniName), &v1.IstioCNI{}).
-					Should(HaveConditionStatus(v1.IstioCNIConditionReady, metav1.ConditionTrue), "IstioCNI is not Ready; unexpected Condition")
-				Success("IstioCNI is Ready")
+				common.AwaitCondition(ctx, v1.IstioCNIConditionReady, kube.Key(istioCniName), &v1.IstioCNI{}, k, cl)
 			})
 
 			When(fmt.Sprintf("the Istio CR is created with RevisionBased updateStrategy for base version %s", istioversion.Base), func() {
@@ -75,9 +73,7 @@ updateStrategy:
 				})
 
 				It("deploys istiod and pod is Ready", func(ctx SpecContext) {
-					Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key("default"), &v1.Istio{}).
-						Should(HaveConditionStatus(v1.IstioConditionReady, metav1.ConditionTrue), "Istiod is not Available; unexpected Condition")
-					Success("Istiod is deployed in the namespace and Running")
+					common.AwaitCondition(ctx, v1.IstioConditionReady, kube.Key("default"), &v1.Istio{}, k, cl)
 				})
 			})
 
@@ -124,7 +120,7 @@ spec:
 					Success("sample deployed")
 
 					samplePods := &corev1.PodList{}
-					Eventually(common.CheckPodsReady).WithArguments(ctx, cl, sampleNamespace).Should(Succeed(), "Error checking status of sample pods")
+					Eventually(common.CheckSamplePodsReady).WithArguments(ctx, cl).Should(Succeed(), "Error checking status of sample pods")
 					Expect(cl.List(ctx, samplePods, client.InNamespace(sampleNamespace))).To(Succeed(), "Error getting the pods in sample namespace")
 
 					Success("sample pods are ready")
@@ -138,9 +134,7 @@ spec:
 				})
 
 				It("IstioRevisionTag state change to inUse true", func(ctx SpecContext) {
-					Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key("default"), &v1.IstioRevisionTag{}).
-						Should(HaveConditionStatus(v1.IstioRevisionTagConditionInUse, metav1.ConditionTrue), "unexpected Condition; expected InUse true")
-					Success("IstioRevisionTag is in use by the sample pods")
+					common.AwaitCondition(ctx, v1.IstioRevisionTagConditionInUse, kube.Key("default"), &v1.IstioRevisionTag{}, k, cl)
 				})
 			})
 
@@ -222,13 +216,7 @@ spec:
 						cl.Delete(ctx, &pod)
 					}
 
-					Expect(cl.List(ctx, samplePods, client.InNamespace(sampleNamespace))).To(Succeed())
-					Expect(samplePods.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
-					for _, pod := range samplePods.Items {
-						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(pod.Name, sampleNamespace), &corev1.Pod{}).
-							Should(HaveConditionStatus(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready")
-					}
-
+					Eventually(common.CheckSamplePodsReady).WithArguments(ctx, cl).Should(Succeed(), "Error checking status of sample pods")
 					Success("sample pods restarted and are ready")
 				})
 

@@ -26,11 +26,9 @@ import (
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
-	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var _ = Describe("Multi control plane deployment model", Label("smoke", "multicontrol-plane"), Ordered, func() {
@@ -60,10 +58,7 @@ var _ = Describe("Multi control plane deployment model", Label("smoke", "multico
 
 					It("Installs IstioCNI", func(ctx SpecContext) {
 						common.CreateIstioCNI(k, latestVersion.Name)
-
-						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(istioCniName), &v1.IstioCNI{}).
-							Should(HaveConditionStatus(v1.IstioCNIConditionReady, metav1.ConditionTrue), "IstioCNI is not Ready; unexpected Condition")
-						Success("IstioCNI is Ready")
+						common.AwaitCondition(ctx, v1.IstioCNIConditionReady, kube.Key(istioCniName), &v1.IstioCNI{}, k, cl)
 					})
 
 					DescribeTable("Installs Istios",
@@ -100,13 +95,8 @@ spec:
 						Entry("Mesh 1", istioName1),
 						Entry("Mesh 2", istioName2),
 						func(ctx SpecContext, name string) {
-							Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(name), &v1.Istio{}).
-								Should(
-									And(
-										HaveConditionStatus(v1.IstioConditionReconciled, metav1.ConditionTrue),
-										HaveConditionStatus(v1.IstioConditionReady, metav1.ConditionTrue),
-									), "Istio is not Reconciled and Ready; unexpected Condition")
-							Success(fmt.Sprintf("Istio %s ready", name))
+							common.AwaitCondition(ctx, v1.IstioConditionReconciled, kube.Key(name), &v1.Istio{}, k, cl)
+							common.AwaitCondition(ctx, v1.IstioConditionReady, kube.Key(name), &v1.Istio{}, k, cl)
 						})
 
 					DescribeTable("Deploys applications",
@@ -134,10 +124,8 @@ spec:
 						Entry("App 2b", appNamespace2b),
 						func(ctx SpecContext, ns string) {
 							for _, deployment := range []string{"sleep", "httpbin"} {
-								Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(deployment, ns), &appsv1.Deployment{}).
-									Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Error waiting for deployment to be available")
+								common.AwaitCondition(ctx, appsv1.DeploymentAvailable, kube.Key(deployment, ns), &appsv1.Deployment{}, k, cl)
 							}
-							Success(fmt.Sprintf("Applications in namespace %s ready", ns))
 						})
 				})
 
