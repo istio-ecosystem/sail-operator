@@ -56,16 +56,16 @@ const (
 )
 
 var (
-	OperatorImage     = env.Get("IMAGE", "quay.io/sail-dev/sail-operator:latest")
-	OperatorNamespace = env.Get("NAMESPACE", "sail-operator")
+	ControlPlaneNamespace = env.Get("CONTROL_PLANE_NS", "istio-system")
+	IstioCniNamespace     = env.Get("ISTIOCNI_NAMESPACE", "istio-cni")
+	OperatorImage         = env.Get("IMAGE", "quay.io/sail-dev/sail-operator:latest")
+	OperatorNamespace     = env.Get("NAMESPACE", "sail-operator")
+	ZtunnelNamespace      = env.Get("ZTUNNEL_NAMESPACE", "ztunnel")
 
-	deploymentName        = env.Get("DEPLOYMENT_NAME", "sail-operator")
-	controlPlaneNamespace = env.Get("CONTROL_PLANE_NS", "istio-system")
-	istioName             = env.Get("ISTIO_NAME", "default")
-	istioCniName          = env.Get("ISTIOCNI_NAME", "default")
-	istioCniNamespace     = env.Get("ISTIOCNI_NAMESPACE", "istio-cni")
-	sampleNamespace       = env.Get("SAMPLE_NAMESPACE", "sample")
-	ztunnelNamespace      = env.Get("ZTUNNEL_NAMESPACE", "ztunnel")
+	deploymentName  = env.Get("DEPLOYMENT_NAME", "sail-operator")
+	istioName       = env.Get("ISTIO_NAME", "default")
+	istioCniName    = env.Get("ISTIOCNI_NAME", "default")
+	sampleNamespace = env.Get("SAMPLE_NAMESPACE", "sample")
 
 	// version can have one of the following formats:
 	// - 1.22.2
@@ -207,14 +207,14 @@ func logIstioDebugInfo(k kubectl.Kubectl) {
 	resource, err := k.GetYAML("istio", istioName)
 	logDebugElement("=====Istio YAML=====", resource, err)
 
-	output, err := k.WithNamespace(controlPlaneNamespace).GetPods("", "-o wide")
-	logDebugElement("=====Pods in "+controlPlaneNamespace+"=====", output, err)
+	output, err := k.WithNamespace(ControlPlaneNamespace).GetPods("", "-o wide")
+	logDebugElement("=====Pods in "+ControlPlaneNamespace+"=====", output, err)
 
-	logs, err := k.WithNamespace(controlPlaneNamespace).Logs("deploy/istiod", ptr.Of(120*time.Second))
+	logs, err := k.WithNamespace(ControlPlaneNamespace).Logs("deploy/istiod", ptr.Of(120*time.Second))
 	logDebugElement("=====Istiod logs=====", logs, err)
 
-	events, err := k.WithNamespace(controlPlaneNamespace).GetEvents()
-	logDebugElement("=====Events in "+controlPlaneNamespace+"=====", events, err)
+	events, err := k.WithNamespace(ControlPlaneNamespace).GetEvents()
+	logDebugElement("=====Events in "+ControlPlaneNamespace+"=====", events, err)
 
 	// Running istioctl proxy-status to get the status of the proxies.
 	proxyStatus, err := istioctl.GetProxyStatus()
@@ -225,20 +225,20 @@ func logCNIDebugInfo(k kubectl.Kubectl) {
 	resource, err := k.GetYAML("istiocni", istioCniName)
 	logDebugElement("=====IstioCNI YAML=====", resource, err)
 
-	ds, err := k.WithNamespace(istioCniNamespace).GetYAML("daemonset", "istio-cni-node")
+	ds, err := k.WithNamespace(IstioCniNamespace).GetYAML("daemonset", "istio-cni-node")
 	logDebugElement("=====Istio CNI DaemonSet YAML=====", ds, err)
 
-	events, err := k.WithNamespace(istioCniNamespace).GetEvents()
-	logDebugElement("=====Events in "+istioCniNamespace+"=====", events, err)
+	events, err := k.WithNamespace(IstioCniNamespace).GetEvents()
+	logDebugElement("=====Events in "+IstioCniNamespace+"=====", events, err)
 
 	// Temporary information to gather more details about failure
-	pods, err := k.WithNamespace(istioCniNamespace).GetPods("", "-o wide")
-	logDebugElement("=====Pods in "+istioCniNamespace+"=====", pods, err)
+	pods, err := k.WithNamespace(IstioCniNamespace).GetPods("", "-o wide")
+	logDebugElement("=====Pods in "+IstioCniNamespace+"=====", pods, err)
 
-	describe, err := k.WithNamespace(istioCniNamespace).Describe("daemonset", "istio-cni-node")
+	describe, err := k.WithNamespace(IstioCniNamespace).Describe("daemonset", "istio-cni-node")
 	logDebugElement("=====Istio CNI DaemonSet describe=====", describe, err)
 
-	logs, err := k.WithNamespace(istioCniNamespace).Logs("daemonset/istio-cni-node", ptr.Of(120*time.Second))
+	logs, err := k.WithNamespace(IstioCniNamespace).Logs("daemonset/istio-cni-node", ptr.Of(120*time.Second))
 	logDebugElement("=====Istio CNI logs=====", logs, err)
 }
 
@@ -246,22 +246,22 @@ func logZtunnelDebugInfo(k kubectl.Kubectl) {
 	resource, err := k.GetYAML("ztunnel", "default")
 	logDebugElement("=====ZTunnel YAML=====", resource, err)
 
-	ds, err := k.WithNamespace(ztunnelNamespace).GetYAML("daemonset", "ztunnel")
+	ds, err := k.WithNamespace(ZtunnelNamespace).GetYAML("daemonset", "ztunnel")
 	logDebugElement("=====ZTunnel DaemonSet YAML=====", ds, err)
 
-	events, err := k.WithNamespace(ztunnelNamespace).GetEvents()
-	logDebugElement("=====Events in "+ztunnelNamespace+"=====", events, err)
+	events, err := k.WithNamespace(ZtunnelNamespace).GetEvents()
+	logDebugElement("=====Events in "+ZtunnelNamespace+"=====", events, err)
 
-	describe, err := k.WithNamespace(ztunnelNamespace).Describe("daemonset", "ztunnel")
+	describe, err := k.WithNamespace(ZtunnelNamespace).Describe("daemonset", "ztunnel")
 	logDebugElement("=====ZTunnel DaemonSet describe=====", describe, err)
 
-	logs, err := k.WithNamespace(ztunnelNamespace).Logs("daemonset/ztunnel", ptr.Of(120*time.Second))
+	logs, err := k.WithNamespace(ZtunnelNamespace).Logs("daemonset/ztunnel", ptr.Of(120*time.Second))
 	logDebugElement("=====ztunnel logs=====", logs, err)
 }
 
 func logCertsDebugInfo(k kubectl.Kubectl) {
-	certs, err := k.WithNamespace(controlPlaneNamespace).GetSecret("cacerts")
-	logDebugElement("=====CA certs in "+controlPlaneNamespace+"=====", certs, err)
+	certs, err := k.WithNamespace(ControlPlaneNamespace).GetSecret("cacerts")
+	logDebugElement("=====CA certs in "+ControlPlaneNamespace+"=====", certs, err)
 }
 
 func logSampleNamespacesDebugInfo(k kubectl.Kubectl, suite testSuite) {
@@ -329,7 +329,7 @@ func logDebugElement(caption string, info string, err error) {
 
 func GetVersionFromIstiod() (*semver.Version, error) {
 	k := kubectl.New()
-	output, err := k.WithNamespace(controlPlaneNamespace).Exec("deploy/istiod", "", "pilot-discovery version")
+	output, err := k.WithNamespace(ControlPlaneNamespace).Exec("deploy/istiod", "", "pilot-discovery version")
 	if err != nil {
 		return nil, fmt.Errorf("error getting version from istiod: %w", err)
 	}
@@ -385,19 +385,12 @@ metadata:
 spec:
   version: %s
   namespace: %s`
-	yaml = fmt.Sprintf(yaml, istioName, version, controlPlaneNamespace)
-	for _, spec := range specs {
-		yaml += Indent(spec)
-	}
-
-	Log("Istio YAML:", Indent(yaml))
-	Expect(k.CreateFromString(yaml)).
-		To(Succeed(), withClusterName("Istio CR failed to be created", k))
-	Success(withClusterName("Istio CR created", k))
+	yaml = fmt.Sprintf(yaml, istioName, version, ControlPlaneNamespace)
+	createResource(k, "Istio", yaml, specs...)
 }
 
 // CreateIstioCNI custom resource using a given `kubectl` client and with the specified version.
-func CreateIstioCNI(k kubectl.Kubectl, version string) {
+func CreateIstioCNI(k kubectl.Kubectl, version string, specs ...string) {
 	yaml := `
 apiVersion: sailoperator.io/v1
 kind: IstioCNI
@@ -406,10 +399,54 @@ metadata:
 spec:
   version: %s
   namespace: %s`
-	yaml = fmt.Sprintf(yaml, istioCniName, version, istioCniNamespace)
-	Log("IstioCNI YAML:", Indent(yaml))
-	Expect(k.CreateFromString(yaml)).To(Succeed(), withClusterName("IstioCNI creation failed", k))
-	Success(withClusterName("IstioCNI created", k))
+	yaml = fmt.Sprintf(yaml, istioCniName, version, IstioCniNamespace)
+	createResource(k, "IstioCNI", yaml, specs...)
+}
+
+func CreateZTunnel(k kubectl.Kubectl, version string, specs ...string) {
+	yaml := `
+apiVersion: sailoperator.io/v1alpha1
+kind: ZTunnel
+metadata:
+  name: default
+spec:
+  profile: ambient
+  version: %s
+  namespace: %s`
+	yaml = fmt.Sprintf(yaml, version, ZtunnelNamespace)
+	createResource(k, "ZTunnel", yaml, specs...)
+}
+
+func CreateAmbientGateway(k kubectl.Kubectl, namespace, network string) {
+	yaml := `kind: Gateway
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: istio-eastwestgateway
+  namespace: %s
+  labels:
+    topology.istio.io/network: %s
+spec:
+  gatewayClassName: istio-east-west
+  listeners:
+  - name: mesh
+    port: 15008
+    protocol: HBONE
+    tls:
+      mode: Terminate
+      options:
+        gateway.istio.io/tls-terminate-mode: ISTIO_MUTUAL`
+	yaml = fmt.Sprintf(yaml, namespace, network)
+	createResource(k, "Gateway", yaml)
+}
+
+func createResource(k kubectl.Kubectl, kind, yaml string, specs ...string) {
+	for _, spec := range specs {
+		yaml += Indent(spec)
+	}
+
+	Log(fmt.Sprintf("%s YAML:", kind), Indent(yaml))
+	Expect(k.CreateFromString(yaml)).To(Succeed(), withClusterName(fmt.Sprintf("%s creation failed:", kind), k))
+	Success(withClusterName(fmt.Sprintf("%s created", kind), k))
 }
 
 func Indent(str string) string {

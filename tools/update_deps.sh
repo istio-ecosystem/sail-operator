@@ -95,6 +95,10 @@ OPM_LATEST_VERSION=$(getLatestVersion operator-framework/operator-registry)
 OLM_LATEST_VERSION=$(getLatestVersion operator-framework/operator-lifecycle-manager)
 "$SED_CMD" -i "s|OLM_VERSION ?= .*|OLM_VERSION ?= ${OLM_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
 
+# Update gateway-api
+GW_API_LATEST_VERSION=$(getLatestVersion kubernetes-sigs/gateway-api)
+"$SED_CMD" -i "s|GW_API_VERSION=.*|GW_API_VERSION=\${GW_API_VERSION:-${GW_API_LATEST_VERSION}}|" "${ROOTDIR}/tests/e2e/setup/setup-kind.sh"
+
 # Update kube-rbac-proxy
 RBAC_PROXY_LATEST_VERSION=$(getLatestVersion brancz/kube-rbac-proxy | cut -d/ -f1)
 # Only update it if the newer image is available in the registry

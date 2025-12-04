@@ -17,13 +17,19 @@
 package multicluster
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"text/template"
 	"time"
 
+	"github.com/istio-ecosystem/sail-operator/pkg/kube"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/certs"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ClusterDeployment represents a cluster along with its sample app version.
@@ -33,16 +39,29 @@ type ClusterDeployment struct {
 }
 
 // deploySampleApp deploys the sample apps (helloworld and sleep) in the given cluster.
-func deploySampleApp(k kubectl.Kubectl, ns string, appVersion string) {
+func deploySampleApp(k kubectl.Kubectl, ns, appVersion, profile string) {
 	Expect(k.WithNamespace(ns).ApplyKustomize("helloworld", "service=helloworld")).To(Succeed(), "Sample service deploy failed on Cluster")
 	Expect(k.WithNamespace(ns).ApplyKustomize("helloworld", "version="+appVersion)).To(Succeed(), "Sample service deploy failed on Cluster")
 	Expect(k.WithNamespace(ns).ApplyKustomize("sleep")).To(Succeed(), "Sample sleep deploy failed on Cluster")
+
+	// In Ambient mode, services need to be marked as "global" in order to load balance requests among clusters
+	if profile == "ambient" {
+		Expect(k.LabelNamespaced("service", ns, "helloworld", "istio.io/global", "true")).To(Succeed(), "Error labeling sample namespace")
+	}
 }
 
 // deploySampleAppToClusters deploys the sample app to all provided clusters.
-func deploySampleAppToClusters(ns string, clusters []ClusterDeployment) {
+func deploySampleAppToClusters(ns, profile string, clusters []ClusterDeployment) {
 	for _, cd := range clusters {
-		deploySampleApp(cd.Kubectl, ns, cd.AppVersion)
+		k := cd.Kubectl
+		Expect(k.CreateNamespace(ns)).To(Succeed(), fmt.Sprintf("Namespace failed to be created on Cluster %s", k.ClusterName))
+		if profile == "ambient" {
+			Expect(k.Label("namespace", ns, "istio.io/dataplane-mode", "ambient")).To(Succeed(), "Error labeling sample namespace")
+		} else {
+			Expect(k.Label("namespace", ns, "istio-injection", "enabled")).To(Succeed(), "Error labeling sample namespace")
+		}
+
+		deploySampleApp(k, ns, cd.AppVersion, profile)
 	}
 }
 
@@ -74,4 +93,64 @@ func genTemplate(manifestTmpl string, values any) string {
 	var b strings.Builder
 	Expect(tmpl.Execute(&b, values)).To(Succeed())
 	return b.String()
+}
+
+func createIstioNamespaces(k kubectl.Kubectl, network, profile string) {
+	Expect(k.CreateNamespace(common.ControlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
+	Expect(k.CreateNamespace(common.IstioCniNamespace)).To(Succeed(), "Istio CNI namespace failed to be created")
+
+	if profile == "ambient" {
+		Expect(k.Label("namespace", common.ControlPlaneNamespace, "topology.istio.io/network", network)).To(Succeed(), "Error labeling istio namespace")
+		Expect(k.CreateNamespace(common.ZtunnelNamespace)).To(Succeed(), "Ztunnel namespace failed to be created")
+	}
+}
+
+func createIstioResources(k kubectl.Kubectl, version, cluster, network, profile string, values ...string) {
+	cniSpec := fmt.Sprintf(`
+profile: %s`, profile)
+	common.CreateIstioCNI(k, version, cniSpec)
+
+	if profile == "ambient" {
+		spec := fmt.Sprintf(`
+values:
+  ztunnel:
+    multiCluster:
+      clusterName: %s
+    network: %s`, cluster, network)
+		common.CreateZTunnel(k, version, spec)
+	}
+
+	spec := fmt.Sprintf(`
+profile: %s
+values:
+  global:
+    meshID: mesh1
+    multiCluster:
+      clusterName: %s
+    network: %s`, profile, cluster, network)
+	for _, value := range values {
+		spec += common.Indent(value)
+	}
+
+	if profile == "ambient" {
+		spec += fmt.Sprintf(`
+  pilot:
+    trustedZtunnelNamespace: %s
+    env:
+      AMBIENT_ENABLE_MULTI_NETWORK: "true"`, common.ZtunnelNamespace)
+	}
+
+	common.CreateIstio(k, version, spec)
+}
+
+func createIntermediateCA(k kubectl.Kubectl, zone, network, artifacts string, cl client.Client) {
+	Expect(certs.PushIntermediateCA(k, common.ControlPlaneNamespace, zone, network, artifacts, cl)).
+		To(Succeed(), fmt.Sprintf("Error pushing intermediate CA to %s Cluster", k.ClusterName))
+}
+
+func awaitSecretCreation(cluster string, cl client.Client) {
+	Eventually(func() error {
+		_, err := common.GetObject(context.Background(), cl, kube.Key("cacerts", common.ControlPlaneNamespace), &corev1.Secret{})
+		return err
+	}).ShouldNot(HaveOccurred(), fmt.Sprintf("Secret is not created on %s cluster", cluster))
 }

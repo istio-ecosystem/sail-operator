@@ -21,6 +21,7 @@ import (
 
 	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	k8sclient "github.com/istio-ecosystem/sail-operator/tests/e2e/util/client"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -35,7 +36,7 @@ var (
 	controlPlaneNamespace2 = env.Get("CONTROL_PLANE_NS2", "istio-system2")
 	istioName1             = env.Get("ISTIO_NAME1", "mesh1")
 	istioName2             = env.Get("ISTIO_NAME2", "mesh2")
-	istioCniNamespace      = env.Get("ISTIOCNI_NAMESPACE", "istio-cni")
+	istioCniNamespace      = common.IstioCniNamespace
 	istioCniName           = env.Get("ISTIOCNI_NAME", "default")
 	appNamespace1          = env.Get("APP_NAMESPACE1", "app1")
 	appNamespace2a         = env.Get("APP_NAMESPACE2A", "app2a")

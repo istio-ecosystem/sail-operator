@@ -18,6 +18,7 @@ set -eux -o pipefail
 
 SCRIPTPATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ROOT=$(cd "${SCRIPTPATH}/../../.." && pwd)
+GW_API_VERSION=${GW_API_VERSION:-v1.4.0}
 
 # shellcheck source=common/scripts/kind_provisioner.sh
 source "${ROOT}/common/scripts/kind_provisioner.sh"
@@ -69,6 +70,11 @@ if [ "${MULTICLUSTER}" == "true" ]; then
     load_cluster_topology "${CLUSTER_TOPOLOGY_CONFIG_FILE}"
     setup_kind_clusters "${KIND_IMAGE}" ""
     setup_kind_registry "${CLUSTER_NAMES[@]}"
+
+    # Apply Gateway API CRDs which are needed for Multi-Cluster Ambient testing
+    for config in "${KUBECONFIGS[@]}"; do
+        kubectl apply --kubeconfig="$config" --server-side -f "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GW_API_VERSION}/experimental-install.yaml"
+    done
 
     export KUBECONFIG="${KUBECONFIGS[0]}"
     export KUBECONFIG2="${KUBECONFIGS[1]}"

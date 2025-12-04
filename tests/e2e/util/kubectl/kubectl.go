@@ -305,6 +305,12 @@ func (k Kubectl) Label(kind, name, labelKey, labelValue string) error {
 	return err
 }
 
+// LabelNamespaced adds a label to the specified resource in the specified namespace
+func (k Kubectl) LabelNamespaced(kind, namespace, name, labelKey, labelValue string) error {
+	_, err := k.executeCommand(k.build(fmt.Sprintf(" label %s -n %s %s %s=%s", kind, namespace, name, labelKey, labelValue)))
+	return err
+}
+
 // executeCommand handles running the command and then resets the namespace automatically
 func (k Kubectl) executeCommand(cmd string) (string, error) {
 	return shell.ExecuteCommand(cmd)
