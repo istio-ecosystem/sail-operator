@@ -49,7 +49,7 @@ func AwaitCondition[T ~string](ctx context.Context, condition T, key client.Obje
 
 // AwaitDeployment to reach the Available state.
 func AwaitDeployment(ctx context.Context, name string, k kubectl.Kubectl, cl client.Client) {
-	AwaitCondition(ctx, appsv1.DeploymentAvailable, kube.Key(name, controlPlaneNamespace), &appsv1.Deployment{}, k, cl)
+	AwaitCondition(ctx, appsv1.DeploymentAvailable, kube.Key(name, ControlPlaneNamespace), &appsv1.Deployment{}, k, cl)
 }
 
 func isPodReady(pod *corev1.Pod) bool {
@@ -86,7 +86,7 @@ func CheckSamplePodsReady(ctx context.Context, cl client.Client) error {
 
 // AwaitCniDaemonSet to be deployed and reach the scheduled number of pods.
 func AwaitCniDaemonSet(ctx context.Context, k kubectl.Kubectl, cl client.Client) {
-	key := kube.Key("istio-cni-node", istioCniNamespace)
+	key := kube.Key("istio-cni-node", IstioCniNamespace)
 	Eventually(func() bool {
 		daemonset := &appsv1.DaemonSet{}
 		if err := cl.Get(ctx, key, daemonset); err != nil {
