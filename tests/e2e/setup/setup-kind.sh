@@ -18,7 +18,7 @@ set -eux -o pipefail
 
 SCRIPTPATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ROOT=$(cd "${SCRIPTPATH}/../../.." && pwd)
-GW_API_VERSION=${GW_API_VERSION:-v1.4.0}
+GW_API_VERSION=${GW_API_VERSION:-v1.4.1}
 
 # shellcheck source=common/scripts/kind_provisioner.sh
 source "${ROOT}/common/scripts/kind_provisioner.sh"

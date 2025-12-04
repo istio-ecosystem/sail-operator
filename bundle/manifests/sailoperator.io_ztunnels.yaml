@@ -62,7 +62,7 @@ spec:
           spec:
             default:
               namespace: ztunnel
-              version: v1.28.0
+              version: v1.28.1
             description: ZTunnelSpec defines the desired state of ZTunnel
             properties:
               namespace:
@@ -3424,19 +3424,22 @@ spec:
                     type: object
                 type: object
               version:
-                default: v1.28.0
+                default: v1.28.1
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.28-latest, v1.28.0, v1.27-latest, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, v1.25-latest, v1.24-latest, master, v1.29-alpha.b2f713a9.
+                  Must be one of: v1.28-latest, v1.28.1, v1.28.0, v1.27-latest, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.7, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, v1.25-latest, v1.24-latest, master, v1.29-alpha.9aed894d.
                 enum:
                 - v1.28-latest
+                - v1.28.1
                 - v1.28.0
                 - v1.27-latest
+                - v1.27.4
                 - v1.27.3
                 - v1.27.2
                 - v1.27.1
                 - v1.27.0
                 - v1.26-latest
+                - v1.26.7
                 - v1.26.6
                 - v1.26.5
                 - v1.26.4
@@ -3447,7 +3450,7 @@ spec:
                 - v1.25-latest
                 - v1.24-latest
                 - master
-                - v1.29-alpha.b2f713a9
+                - v1.29-alpha.9aed894d
                 type: string
             required:
             - namespace
@@ -3557,7 +3560,7 @@ spec:
             default:
               namespace: ztunnel
               profile: ambient
-              version: v1.28.0
+              version: v1.28.1
             description: ZTunnelSpec defines the desired state of ZTunnel
             properties:
               namespace:
@@ -6937,19 +6940,22 @@ spec:
                     type: object
                 type: object
               version:
-                default: v1.28.0
+                default: v1.28.1
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.28-latest, v1.28.0, v1.27-latest, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, v1.25-latest, v1.24-latest, master, v1.29-alpha.b2f713a9.
+                  Must be one of: v1.28-latest, v1.28.1, v1.28.0, v1.27-latest, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.7, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, v1.25-latest, v1.24-latest, master, v1.29-alpha.9aed894d.
                 enum:
                 - v1.28-latest
+                - v1.28.1
                 - v1.28.0
                 - v1.27-latest
+                - v1.27.4
                 - v1.27.3
                 - v1.27.2
                 - v1.27.1
                 - v1.27.0
                 - v1.26-latest
+                - v1.26.7
                 - v1.26.6
                 - v1.26.5
                 - v1.26.4
@@ -6960,7 +6966,7 @@ spec:
                 - v1.25-latest
                 - v1.24-latest
                 - master
-                - v1.29-alpha.b2f713a9
+                - v1.29-alpha.9aed894d
                 type: string
             required:
             - namespace
