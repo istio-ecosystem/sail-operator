@@ -43,6 +43,7 @@ function getVersionFromMakefile() {
 # Only needed when PIN_MINOR is true (for patch version updates)
 if [[ "${PIN_MINOR}" == "true" ]]; then
   OPERATOR_SDK_VERSION=$(getVersionFromMakefile "OPERATOR_SDK_VERSION")
+  # shellcheck disable=SC2034
   HELM_VERSION=$(getVersionFromMakefile "HELM_VERSION")
   CONTROLLER_TOOLS_VERSION=$(getVersionFromMakefile "CONTROLLER_TOOLS_VERSION")
   CONTROLLER_RUNTIME_BRANCH=$(getVersionFromMakefile "CONTROLLER_RUNTIME_BRANCH")
@@ -77,10 +78,12 @@ function getLatestPatchVersion() {
   # Extract major.minor from current version
   # Handle versions with or without 'v' prefix
   local version_no_v=${current_version#v}
-  local major_minor=$(echo "${version_no_v}" | cut -d'.' -f1,2)
+  local major_minor=""
+  major_minor=$(echo "${version_no_v}" | cut -d'.' -f1,2)
 
   # Get all releases and filter by major.minor, then get the latest
-  local latest=$(curl -sL "https://api.github.com/repos/${repo}/releases?per_page=100" | \
+  local latest=""
+  latest=$(curl -sL "https://api.github.com/repos/${repo}/releases?per_page=100" | \
     yq -r '.[].tag_name' | \
     grep -E "^v?${major_minor}\.[0-9]*$" | \
     sort -V | \
