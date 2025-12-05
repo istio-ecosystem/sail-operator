@@ -1,9 +1,9 @@
 // Variables embedded for GitHub compatibility
-:istio_latest_version: 1.28.0
-:istio_latest_version_revision_format: 1-28-0
+:istio_latest_version: 1.28.1
+:istio_latest_version_revision_format: 1-28-1
 :istio_latest_tag: v1.28-latest
-:istio_latest_minus_one_version: 1.27.3
-:istio_latest_minus_one_version_revision_format: 1-27-3
+:istio_latest_minus_one_version: 1.28.0
+:istio_latest_minus_one_version_revision_format: 1-28-0
 
 link:../README.adoc[Return to Project Root]
 
