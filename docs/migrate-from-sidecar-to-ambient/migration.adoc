@@ -226,7 +226,7 @@ Output should be similar to:
 [source,console]
 ----
 NAME      NAMESPACE      PROFILE   REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
-default   istio-system             1           1       1        default           Healthy   v1.27.0   20m
+default   istio-system             1           1       1        default           Healthy   v{istio_latest_version}   20m
 ----
 
 ifdef::istio-migrate-from-sidecar-to-ambient[]
@@ -284,6 +284,7 @@ endif::[]
 ----
 # Check current gateway API being used
 kubectl get gateway -n bookinfo
+echo "Return code: $?"
 ----
 
 Output should be similar to:
@@ -491,7 +492,7 @@ kubectl get daemonset -n ztunnel
 # Confirm cluster setup validation passes
 kubectl get ztunnel -n ztunnel
 NAME      NAMESPACE   PROFILE   READY   STATUS    VERSION   AGE
-default   ztunnel               True    Healthy   v1.27.0   12m
+default   ztunnel               True    Healthy   v{istio_latest_version}   12m
 ----
 
 ifdef::istio-migrate-from-sidecar-to-ambient[]
@@ -979,7 +980,7 @@ reviews-ztunnel-protection       DENY     6s
 **Critical**: Keep existing sidecar policies active until Policy Simplification step.
 
 Test that services are still accessible (policies not yet enforced):
-[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
+[source,bash]
 ----
 NAMESPACE="bookinfo" # Replace with your namespace
 TEST_POD=$(kubectl get pods -n $NAMESPACE -l app=reviews -o jsonpath='{.items[0].metadata.name}')
