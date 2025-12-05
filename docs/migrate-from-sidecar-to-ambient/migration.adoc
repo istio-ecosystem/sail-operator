@@ -283,6 +283,7 @@ endif::[]
 ----
 # Check current gateway API being used
 kubectl get gateway -n bookinfo
+echo "Return code: $?"
 ----
 
 Output should be similar to:
@@ -978,7 +979,7 @@ reviews-ztunnel-protection       DENY     6s
 **Critical**: Keep existing sidecar policies active until Policy Simplification step.
 
 Test that services are still accessible (policies not yet enforced):
-[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
+[source,bash]
 ----
 NAMESPACE="bookinfo" # Replace with your namespace
 TEST_POD=$(kubectl get pods -n $NAMESPACE -l app=reviews -o jsonpath='{.items[0].metadata.name}')
