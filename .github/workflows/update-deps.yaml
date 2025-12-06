@@ -3,12 +3,6 @@ name: Update-deps workflow
 on:
   schedule: 
     - cron: "0 5 * * *" # everyday at 5AM UTC
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: "Branch to update"
-        default: "main"
-        required: true
 
 run-name: update-deps
 
@@ -17,7 +11,6 @@ env:
   GH_TOKEN: ${{ secrets.GIT_TOKEN }}
   AUTOMATOR_ORG: istio-ecosystem
   AUTOMATOR_REPO: sail-operator
-  AUTOMATOR_BRANCH:  ${{ inputs.branch || 'main' }}
 
 jobs:
   update-deps:
@@ -35,16 +28,55 @@ jobs:
     # this is a workaround for a permissions issue when using the istio build container
     - run: git config --system --add safe.directory /__w/sail-operator/sail-operator
 
-    - name: Run Automator
+    - name: Run Automator main
       run: |
         ./tools/automator/automator.sh \
           --org=$AUTOMATOR_ORG \
           --repo=sail-operator \
-          --branch=$AUTOMATOR_BRANCH \
-          '--title=Automator: Update dependencies in $AUTOMATOR_ORG/$AUTOMATOR_REPO@$AUTOMATOR_BRANCH' \
+          --branch=main \
+          '--title=Automator: Update dependencies in $AUTOMATOR_ORG/$AUTOMATOR_REPO@main' \
           --labels=auto-merge \
           --email=openshiftservicemeshbot@gmail.com \
           --modifier=update_deps \
           --token-env \
           --cmd='BUILD_WITH_CONTAINER=0 ./tools/update_deps.sh' \
+          --signoff
+    - name: Run Automator release-1.28
+      run: |
+        ./tools/automator/automator.sh \
+          --org=$AUTOMATOR_ORG \
+          --repo=sail-operator \
+          --branch=release-1.28 \
+          '--title=Automator: Update dependencies in $AUTOMATOR_ORG/$AUTOMATOR_REPO@release-1.28' \
+          --labels=auto-merge \
+          --email=openshiftservicemeshbot@gmail.com \
+          --modifier=update_deps \
+          --token-env \
+          --cmd='BUILD_WITH_CONTAINER=0 UPDATE_BRANCH=release-1.28 PIN_MINOR=true TOOLS_ONLY=true ./tools/update_deps.sh' \
+          --signoff
+    - name: Run Automator release-1.27
+      run: |
+        ./tools/automator/automator.sh \
+          --org=$AUTOMATOR_ORG \
+          --repo=sail-operator \
+          --branch=release-1.27 \
+          '--title=Automator: Update dependencies in $AUTOMATOR_ORG/$AUTOMATOR_REPO@release-1.27' \
+          --labels=auto-merge \
+          --email=openshiftservicemeshbot@gmail.com \
+          --modifier=update_deps \
+          --token-env \
+          --cmd='BUILD_WITH_CONTAINER=0 UPDATE_BRANCH=release-1.27 PIN_MINOR=true TOOLS_ONLY=true ./tools/update_deps.sh' \
+          --signoff
+    - name: Run Automator release-1.26
+      run: |
+        ./tools/automator/automator.sh \
+          --org=$AUTOMATOR_ORG \
+          --repo=sail-operator \
+          --branch=release-1.26 \
+          '--title=Automator: Update dependencies in $AUTOMATOR_ORG/$AUTOMATOR_REPO@release-1.26' \
+          --labels=auto-merge \
+          --email=openshiftservicemeshbot@gmail.com \
+          --modifier=update_deps \
+          --token-env \
+          --cmd='BUILD_WITH_CONTAINER=0 UPDATE_BRANCH=release-1.26 PIN_MINOR=true TOOLS_ONLY=true ./tools/update_deps.sh' \
           --signoff
