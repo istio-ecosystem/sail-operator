@@ -61,11 +61,15 @@ function getLatestVersion() {
   curl -sL "https://api.github.com/repos/${1}/releases/latest" | yq '.tag_name'
 }
 
-# getLatestMinorVersion gets the latest released version of a github project with a specific minor version prefix
+# getLatestVersionByPrefix gets the latest released version of a github project with a specific version prefix
 # $1 = org/repo
-# $2 = major version prefix
-function getLatestMinorVersion() {
-  curl -sL "https://api.github.com/repos/${1}/releases" | yq -p json "[.[] | select(.tag_name | test(\"^$2\\.\")) | .tag_name] | .[0]"
+# $2 = version prefix
+function getLatestVersionByPrefix() {
+  curl -sL "https://api.github.com/repos/${1}/releases?per_page=100" | \
+    yq -r '.[].tag_name' | \
+    grep -E "^v?${2}[.0-9]*$" | \
+    sort -V | \
+    tail -n 1
 }
 
 # getLatestPatchVersion gets the latest patch version for a given major.minor version
@@ -81,15 +85,7 @@ function getLatestPatchVersion() {
   local major_minor=""
   major_minor=$(echo "${version_no_v}" | cut -d'.' -f1,2)
 
-  # Get all releases and filter by major.minor, then get the latest
-  local latest=""
-  latest=$(curl -sL "https://api.github.com/repos/${repo}/releases?per_page=100" | \
-    yq -r '.[].tag_name' | \
-    grep -E "^v?${major_minor}\.[0-9]*$" | \
-    sort -V | \
-    tail -n 1)
-
-  echo "${latest}"
+  getLatestVersionByPrefix "$repo" "${major_minor}"
 }
 
 # getVersionForUpdate chooses between getLatestVersion and getLatestPatchVersion based on PIN_MINOR
@@ -139,7 +135,7 @@ OPERATOR_SDK_LATEST_VERSION=$(getVersionForUpdate operator-framework/operator-sd
 find "${ROOTDIR}/chart/templates/olm/scorecard.yaml" -type f -exec "$SED_CMD" -i "s|quay.io/operator-framework/scorecard-test:.*|quay.io/operator-framework/scorecard-test:${OPERATOR_SDK_LATEST_VERSION}|" {} +
 
 # Update helm (FIXME: pinned to v3 as we don't support helm4 yet, see https://github.com/istio-ecosystem/sail-operator/issues/1371)
-HELM_LATEST_VERSION=$(getLatestMinorVersion helm/helm v3)
+HELM_LATEST_VERSION=$(getLatestVersionByPrefix helm/helm v3)
 "$SED_CMD" -i "s|HELM_VERSION ?= .*|HELM_VERSION ?= ${HELM_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
 
 # Update controller-tools
