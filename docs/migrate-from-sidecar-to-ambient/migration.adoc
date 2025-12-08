@@ -284,7 +284,6 @@ endif::[]
 ----
 # Check current gateway API being used
 kubectl get gateway -n bookinfo
-echo "Return code: $?"
 ----
 
 Output should be similar to:
@@ -353,13 +352,13 @@ Before starting migration, validate your cluster meets all requirements and chec
 [source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Check for Layer 7-only authorization policies that will require waypoints
-kubectl get authorizationpolicy -A -o yaml | grep -E "(methods|paths|headers)" | grep -v "name:"
+kubectl get authorizationpolicy -A -o yaml | grep -E "(methods|paths|headers)" | grep -v "name:" || echo "No authorization policies found"
 
 # Identify VirtualServices with subset-based routing requiring service migration
-kubectl get virtualservice -A -o yaml | grep -B5 -A10 "subset:" | grep -E "(name:|subset:)"
+kubectl get virtualservice -A -o yaml | grep -B5 -A10 "subset:" | grep -E "(name:|subset:)" || echo "No virtualservices with subset-based routing found"
 
 # Check for unsupported features that need manual conversion
-kubectl get virtualservice -A -o yaml | grep -E "(fault|delay|mirror)" | grep -v "name:"
+kubectl get virtualservice -A -o yaml | grep -E "(fault|delay|mirror)" | grep -v "name:" || echo "No unsupported features found"
 ----
 
 **Migration Readiness Assessment:**
@@ -370,10 +369,10 @@ echo "=== VirtualServices requiring HTTPRoute conversion ==="
 kubectl get virtualservice -A --no-headers | wc -l
 
 echo "=== DestinationRules with subsets requiring service creation ==="
-kubectl get destinationrule -A -o yaml | grep -c "subset:"
+kubectl get destinationrule -A -o yaml | grep -c "subset:" || true
 
 echo "=== Authorization policies requiring waypoint deployment ==="
-kubectl get authorizationpolicy -A -o yaml | grep -c -E "(methods|paths|headers)"
+kubectl get authorizationpolicy -A -o yaml | grep -c -E "(methods|paths|headers)" || true
 ----
 
 Note: In the step 5 of this guide you will need to migrate unsupported features. This includes:
@@ -472,7 +471,6 @@ metadata:
   name: default
 spec:
   namespace: ztunnel
-  profile: ambient
 EOF
 
 # Verify ZTunnel is ready
@@ -519,6 +517,10 @@ kubectl get pods -n bookinfo
 ----
 Note: during the restart, sidecars will be updated to support HBONE while still functioning as traditional sidecars. Having HBONE support enabled is a prerequisite for ambient mode.
 
+ifdef::istio-migrate-from-sidecar-to-ambient[]
+with_retries wait_pods_ready_by_ns "bookinfo"
+endif::[]
+
 [[step-32-validate-hbone-capability]]
 ==== Step 3.2 Validate HBONE Capability
 
@@ -527,7 +529,7 @@ Check that sidecars now support HBONE protocol:
 [source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Check for HBONE is enabled in sidecar
-$ kubectl get pod $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -n bookinfo -o yaml | yq '.spec.containers[] | select(.name=="istio-proxy") | .env[] | select(.name=="PROXY_CONFIG")'
+kubectl get pod $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -n bookinfo -o yaml | yq '.spec.containers[] | select(.name=="istio-proxy") | .env[] | select(.name=="PROXY_CONFIG")'
 ----
 
 The output should be similar to:
@@ -546,7 +548,7 @@ Send requests to ensure connectivity remains intact:
 [source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Test service connectivity through sidecars
-$ kubectl exec $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -n bookinfo -- curl http://reviews.bookinfo:9080/reviews/1
+kubectl exec $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -n bookinfo -- curl http://reviews.bookinfo:9080/reviews/1
 ----
 
 The output result should be similar to:
@@ -577,7 +579,7 @@ Test connectivity from outside the mesh:
 [source,bash]
 ----
 # Test ingress connectivity
-$ curl -s http://$GATEWAY_URL/productpage | grep title
+curl -s http://$GATEWAY_URL/productpage | grep title
 ----
 
 The output should be similar to:
@@ -602,7 +604,7 @@ Analyze your current configuration to identify services that need waypoint proxi
 ----
 # Check for existing L7 policies that will need waypoints
 kubectl get virtualservice,httproute -A
-kubectl get authorizationpolicy -A -o yaml | grep -A 10 -B 5 "rules.*methods\|operation"
+kubectl get authorizationpolicy -A -o yaml | grep -A 10 -B 5 "rules.*methods\|operation" || true
 ----
 
 [[step-42-create-waypoint-configurations]]
@@ -968,7 +970,7 @@ kubectl get authorizationpolicy -n bookinfo
 ----
 
 The output should be similar to:
-[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
+[source,bash]
 ----
 NAME                             ACTION   AGE
 productpage-waypoint             ALLOW    18s
@@ -980,7 +982,7 @@ reviews-ztunnel-protection       DENY     6s
 **Critical**: Keep existing sidecar policies active until Policy Simplification step.
 
 Test that services are still accessible (policies not yet enforced):
-[source,bash]
+[source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 NAMESPACE="bookinfo" # Replace with your namespace
 TEST_POD=$(kubectl get pods -n $NAMESPACE -l app=reviews -o jsonpath='{.items[0].metadata.name}')
@@ -989,7 +991,7 @@ if [[ "$HTTP_STATUS" == "200" ]]; then
   echo "PASS: Service connectivity still working"
 else
   echo "FAIL: Service connectivity failed: HTTP $HTTP_STATUS"
-  exit 1
+  sleep 1
 fi
 ----
 
@@ -1381,7 +1383,7 @@ kubectl exec $TEST_POD -n <NAMESPACE> -- curl -v -H "authorization: invalid" htt
 [source,console]
 ----
 # Check waypoint proxy performance
-$ istioctl proxy-config listeners $(kubectl get pod -n <NAMESPACE> -l gateway.networking.k8s.io/gateway-name=<WAYPOINT_NAME> -o jsonpath='{.items[0].metadata.name}') -n <NAMESPACE>
+istioctl proxy-config listeners $(kubectl get pod -n <NAMESPACE> -l gateway.networking.k8s.io/gateway-name=<WAYPOINT_NAME> -o jsonpath='{.items[0].metadata.name}') -n <NAMESPACE>
 ADDRESSES PORT  MATCH DESTINATION
           0     ALL   Cluster: inbound-vip|9080|http|<SERVICE1>.<NAMESPACE>.svc.cluster.local
           0     ALL   Cluster: inbound-vip|9080|http|<SERVICE1>-v3.<NAMESPACE>.svc.cluster.local
