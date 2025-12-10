@@ -41,7 +41,7 @@ NOTE: Ambient mode requires Istio 1.24.0 or later. For installation, see link:..
 
 [[inplace]]
 == InPlace
-With InPlace, the existing control plane is replaced with a new version. Workload sidecars connect to the new control plane immediately without needing pod restarts.
+With InPlace, the existing control plane is replaced with a new version. Workload sidecars immediately connect to the new control plane. Workloads don't need to be moved from one control plane instance to another.
 
 [[example-using-the-inplace-strategy]]
 === Example using the InPlace strategy
