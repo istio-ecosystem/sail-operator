@@ -16,7 +16,6 @@ link:../../README.adoc[Return to Project Root]
     - <<recommendations-for-inplace-strategy>>
     - <<inplace-ambient-mode-considerations>>
   - <<revisionbased>>
-    - <<revisionbased-ambient-mode-considerations>>
     - <<example-using-the-revisionbased-strategy>>
     - <<example-using-the-revisionbased-strategy-and-an-istiorevisiontag>>
 - <<updating-ambient-components>>
@@ -31,13 +30,12 @@ link:../../README.adoc[Return to Project Root]
 
 The Sail Operator supports two update strategies: `InPlace` and `RevisionBased`. The default is `InPlace`.
 
-*Note:* Both strategies work with sidecar and ambient modes.
-
 **For ambient mode updates:**
+
+IMPORTANT: **Only the InPlace strategy is supported for ambient mode.** RevisionBased updates are not supported because only one ztunnel instance can run in the cluster, and manual revision synchronization between Istio and ZTunnel CRDs would be required.
 
 * Components update order: Control Plane → IstioCNI → ZTunnel
 * No pod restart needed (workloads automatically connect to new control plane)
-* Use InPlace strategy (recommended) - RevisionBased has limitations in ambient mode
 
 NOTE: Ambient mode requires Istio 1.24.0 or later. For installation, see link:../common/istio-ambient-mode.adoc[Istio Ambient Mode].
 
@@ -196,25 +194,6 @@ See <<updating-ambient-components>> for detailed IstioCNI and ZTunnel update pro
 [[revisionbased]]
 == RevisionBased
 With RevisionBased, a new control plane instance is created for each version change. The old control plane stays until workloads migrate to the new version. You migrate by updating namespace labels and restarting pods. The old control plane deletes after the grace period in `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds`.
-
-[[revisionbased-ambient-mode-considerations]]
-=== RevisionBased Strategy for Ambient Mode
-
-WARNING: **RevisionBased updates have limited support in ambient mode and require manual intervention.**
-
-Limitations:
-
-* **Single ZTunnel Instance:** Only one ztunnel can run cluster-wide, limiting canary upgrade capabilities.
-* **Manual Configuration:** You must manually synchronize revision names between Istio and ZTunnel resources.
-* **Complex Migration:** The ztunnel must be manually reconfigured during migration.
-
-**Recommendation:** Use InPlace updates for ambient mode. It's simpler and more reliable. Use RevisionBased only if you have specific requirements for canary upgrades.
-
-Unlike sidecar mode, ambient workloads don't use namespace labels like `istio.io/rev` for version selection. Instead, ambient workloads automatically connect to the active control plane revision.
-
-IstioCNI works with multiple control plane versions during migration. However, only one ztunnel runs cluster-wide, requiring careful coordination.
-
-See <<updating-ambient-components>> for IstioCNI and ZTunnel update procedures.
 
 [[example-using-the-revisionbased-strategy]]
 === Example using the RevisionBased strategy
