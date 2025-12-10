@@ -1,3 +1,11 @@
+// Variables embedded for GitHub compatibility
+:istio_latest_version: 1.28.0
+:istio_latest_version_revision_format: 1-28-0
+:istio_latest_tag: v1.28-latest
+:istio_release_name: release-1.28
+:istio_latest_minus_one_version: 1.27.3
+:istio_latest_minus_one_version_revision_format: 1-27-3
+
 = Migrating from Sidecar to Ambient Mode
 
 This guide provides a comprehensive, step-by-step process for migrating an existing Sail Operator deployment from sidecar mode to ambient mode. The migration approach is designed to achieve a near zero-downtime transition while maintaining all security policies and service mesh functionality.
@@ -205,7 +213,7 @@ kubectl get pods -n sail-operator
 # Check Istio control plane version
 kubectl get istio -n istio-system
 NAME      NAMESPACE      PROFILE   REVISIONS   READY   IN USE   ACTIVE REVISION   STATUS    VERSION   AGE
-default   istio-system             1           1       1        default           Healthy   v1.27.0   20m
+default   istio-system             1           1       1        default           Healthy   v{istio_latest_version}   20m
 ----
 
 [NOTE]
@@ -358,7 +366,7 @@ metadata:
   name: default
   namespace: istio-system
 spec:
-  version: v1.27.0
+  version: v{istio_latest_version}
   namespace: istio-system
   updateStrategy:
     type: InPlace # Set your preferred update strategy
@@ -446,7 +454,7 @@ kubectl get daemonset -n ztunnel
 # Confirm cluster setup validation passes
 kubectl get ztunnel -n ztunnel
 NAME      NAMESPACE   PROFILE   READY   STATUS    VERSION   AGE
-default   ztunnel               True    Healthy   v1.27.0   12m
+default   ztunnel               True    Healthy   v{istio_latest_version}   12m
 ----
 
 **If rollback needed**: See <<rollback-procedures,Section 5.2 Rollback Procedures>> for Step 2 cluster setup rollback instructions (Low Risk).
