@@ -326,6 +326,10 @@ Not all Istio patch versions will be included in Sail Operator releases. Some ma
 
 When an Istio release is out of support, the corresponding Sail Operator release will be out of support as well.
 
+### Component Version Compatibility
+
+When running multiple Istio components (control plane, IstioCNI, ZTunnel), each component at version `1.x` is generally compatible with other components at versions `1.x-1`, `1.x`, and `1.x+1`. This allows for rolling upgrades where components can temporarily run at different minor versions. For best results, keep all components at the same version and follow the recommended update order: control plane first, then IstioCNI, then ZTunnel.
+
 > [!NOTE]
 > The first stable 1.0 release did not follow this versioning strategy but subsequent releases will.
 
