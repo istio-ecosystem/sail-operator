@@ -114,16 +114,39 @@ function create_test_files() {
         {
           echo "#!/bin/bash"
           echo "set -eu -o pipefail"
-          echo "echo \"Running test: $test_name\""
+          echo "export TEST_NAME=\"$test_name\""
           echo "# Source to prebuilt functions"
           echo ". \$SCRIPT_DIR/prebuilt-func.sh"
+          echo "# Trap to ensure test_end is called on exit"
+          echo "trap 'test_end \$?' EXIT"
+          echo "test_start \"$test_name\""
         } > "$test_file"
         # Extract content in document order: both ifdef blocks and named code blocks matching the test name
         # First pass: extract content from named code blocks and ifdef blocks in order
         awk -v test_name="$test_name" '
+        # Track the last step description (lines starting with ".")
+        /^\./ {
+            last_step = substr($0, 2)
+            gsub(/^[ \t]+/, "", last_step)  # Trim leading whitespace
+            # Remove backticks (asciidoc inline code formatting)
+            gsub(/`/, "", last_step)
+            # Escape double quotes and backslashes for bash
+            gsub(/\\/, "\\\\", last_step)
+            gsub(/"/, "\\\"", last_step)
+            # Escape dollar signs to prevent variable expansion
+            gsub(/\$/, "\\$", last_step)
+            next
+        }
+
         # Handle ifdef blocks
         $0 ~ "ifdef::" test_name "\\[\\]" {
             in_ifdef = 1
+            if (last_step != "") {
+                print "test_step \"" last_step "\""
+                last_step = ""
+            } else {
+                print "test_step \"\""
+            }
             next
         }
         /^endif::\[\]/ && in_ifdef {
@@ -134,10 +157,16 @@ function create_test_files() {
             print
             next
         }
-        
+
         # Handle named code blocks
         $0 ~ "\\[source,.*,name=\"" test_name "\"\\]" {
             found_named_block = 1
+            if (last_step != "") {
+                print "test_step \"" last_step "\""
+                last_step = ""
+            } else {
+                print "test_step \"\""
+            }
             next
         }
         found_named_block && /^----$/ {
@@ -202,13 +231,13 @@ function run_tests() {
     
     for test_file in "${test_files[@]}"; do
       test_name=$(basename "$test_file" .sh)
-      echo "*** Running test: $test_name ***"
-      
-      # Make test file executable and run it
+      log_file="${TEST_DIR}/${test_name}.log"
+
+      # Make test file executable and run it, redirecting output to both console and log file
       chmod +x "$test_file"
-      "$test_file"
-      
-      echo "*** Test completed: $test_name ***"
+      if ! "$test_file" 2>&1 | tee "$log_file"; then
+        exit 1
+      fi
 
       # Save some time by avoiding cleanup for last test, as the cluster will be deleted anyway.
       [ "$test_file" != "${test_files[-1]}" ] || break
