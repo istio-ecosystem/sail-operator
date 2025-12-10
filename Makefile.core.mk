@@ -88,6 +88,11 @@ NAMESPACE ?= sail-operator
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION ?= 1.30.0
 
+# ARTIFACTS is the directory where test artifacts (logs, junit reports, etc.) are stored
+ifndef ARTIFACTS
+ARTIFACTS = $(REPO_ROOT)/out
+endif
+
 ifeq ($(findstring gen-check,$(MAKECMDGOALS)),gen-check)
 FORCE_DOWNLOADS := true
 else
@@ -97,7 +102,7 @@ endif
 # Set DOCKER_BUILD_FLAGS to specify flags to pass to 'docker build', default to empty. Example: --platform=linux/arm64
 DOCKER_BUILD_FLAGS ?= "--platform=$(TARGET_OS)/$(TARGET_ARCH)"
 
-GOTEST_FLAGS := $(if $(VERBOSE),-v) $(if $(COVERAGE),-coverprofile=$(REPO_ROOT)/out/coverage-unit.out)
+GOTEST_FLAGS := $(if $(VERBOSE),-v) $(if $(CI),-v) $(if $(COVERAGE),-coverprofile=$(REPO_ROOT)/out/coverage-unit.out)
 GINKGO_FLAGS ?= $(if $(VERBOSE),-v) $(if $(CI),--no-color) $(if $(COVERAGE),-coverprofile=coverage-integration.out -coverpkg=./... --output-dir=out)
 
 # Fail fast when keeping the environment on failure, to make sure we don't contaminate it with other resources. Also make sure to skip cleanup so it won't be deleted.
@@ -202,16 +207,15 @@ test: test.unit test.integration ## Run both unit tests and integration test.
 
 .PHONY: test.unit
 test.unit: envtest  ## Run unit tests.
-ifdef COVERAGE
-	if [ ! -d "$(REPO_ROOT)/out" ]; then mkdir $(REPO_ROOT)/out; fi
-endif
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
-	go test $(GOTEST_FLAGS) ./...
+	@mkdir -p "$(ARTIFACTS)"; \
+	set -o pipefail; KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
+	go test $(GOTEST_FLAGS) ./... | tee >(go-junit-report -set-exit-code > "$(ARTIFACTS)/junit-unit.xml")
 
 .PHONY: test.integration
 test.integration: envtest ## Run integration tests located in the tests/integration directory.
+	@mkdir -p "$(ARTIFACTS)"; \
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
-	go run github.com/onsi/ginkgo/v2/ginkgo --tags=integration $(GINKGO_FLAGS) ./tests/integration/...
+	go run github.com/onsi/ginkgo/v2/ginkgo --tags=integration --junit-report=junit-integration.xml --output-dir="$(ARTIFACTS)" $(GINKGO_FLAGS) ./tests/integration/...
 
 .PHONY: test.scorecard
 test.scorecard: operator-sdk ## Run the operator scorecard test.

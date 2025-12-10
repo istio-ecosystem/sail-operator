@@ -197,6 +197,55 @@ function create_test_files() {
     cat "$TEST_DIR"/*.sh
 }
 
+# Generate JUnit XML report from test results
+function generate_junit_xml() {
+  local junit_file="${ARTIFACTS}/junit-docs.xml"
+  local results_file="${ARTIFACTS}/test-results.txt"
+  local total_tests=0
+  local total_failures=0
+  local total_time=0
+
+  # Check if results file exists
+  if [ ! -f "$results_file" ]; then
+    echo "No test results found, skipping JUnit report generation"
+    return 0
+  fi
+
+  # Count tests, failures, and calculate total time
+  while IFS='|' read -r name status duration log_file; do
+    total_tests=$((total_tests + 1))
+    if [ "$status" != "passed" ]; then
+      total_failures=$((total_failures + 1))
+    fi
+    total_time=$(awk "BEGIN {print $total_time + $duration}")
+  done < "$results_file"
+
+  # Generate JUnit XML
+  {
+    echo '<?xml version="1.0" encoding="UTF-8"?>'
+    echo "<testsuite name=\"docs-tests\" tests=\"$total_tests\" failures=\"$total_failures\" errors=\"0\" time=\"$total_time\">"
+
+    while IFS='|' read -r name status duration log_file; do
+      echo "  <testcase name=\"$name\" classname=\"docs-tests\" time=\"$duration\">"
+
+      if [ "$status" != "passed" ]; then
+        echo "    <failure message=\"Test failed\">"
+        if [ -f "$log_file" ]; then
+          # Include last 100 lines of log file, XML-escaped
+          tail -n 100 "$log_file" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g'
+        fi
+        echo "    </failure>"
+      fi
+
+      echo "  </testcase>"
+    done < "$results_file"
+
+    echo "</testsuite>"
+  } > "$junit_file"
+
+  echo "JUnit report written to: $junit_file"
+}
+
 # Run the tests on a separate cluster for all given test files
 function run_tests() {
   (
@@ -228,14 +277,33 @@ function run_tests() {
 
     # Get list of test files to run (passed as parameters)
     test_files=("$@")
-    
+
     for test_file in "${test_files[@]}"; do
       test_name=$(basename "$test_file" .sh)
       log_file="${TEST_DIR}/${test_name}.log"
 
       # Make test file executable and run it, redirecting output to both console and log file
       chmod +x "$test_file"
-      if ! "$test_file" 2>&1 | tee "$log_file"; then
+
+      # Track test start time
+      test_start_time=$(date +%s.%N)
+
+      # Run test and capture result
+      if "$test_file" 2>&1 | tee "$log_file"; then
+        test_status="passed"
+      else
+        test_status="failed"
+      fi
+
+      # Calculate test duration
+      test_end_time=$(date +%s.%N)
+      test_duration=$(awk "BEGIN {print $test_end_time - $test_start_time}")
+
+      # Store test result (to file since we're in a subshell)
+      echo "${test_name}|${test_status}|${test_duration}|${log_file}" >> "${ARTIFACTS}/test-results.txt"
+
+      # Exit on failure
+      if [ "$test_status" != "passed" ]; then
         exit 1
       fi
 
@@ -268,6 +336,13 @@ if ! find "$TEST_DIR" -maxdepth 1 -name "*.sh" -not -name "prebuilt-func.sh"; th
   echo "No test files found in the test directory: $TEST_DIR"
   exit 1
 fi
+
+# Initialize test results file for JUnit reporting
+# shellcheck disable=SC2031
+: > "${ARTIFACTS}/test-results.txt"
+
+# Ensure JUnit report is always generated on exit
+trap generate_junit_xml EXIT
 
 # Separate dual stack tests from regular tests
 regular_tests=()
