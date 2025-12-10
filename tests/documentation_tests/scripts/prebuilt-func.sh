@@ -29,6 +29,48 @@ set -eu
 ## Place here general functions that are going to be used in the documentation tests
 ## please do not add any specific functions here, they should be added in the next section
 
+# Logging utilities for test execution
+# Global step counter for the current test
+STEP_COUNTER=0
+# Global test name (set externally by the test script)
+TEST_NAME=${TEST_NAME:-}
+
+# Print a test start heading
+test_start() {
+    test_name="$1"
+    STEP_COUNTER=0
+    echo ""
+    echo "##### Test ${test_name}: start"
+    echo ""
+}
+
+# Print a test step heading
+test_step() {
+    step_description="$1"
+    STEP_COUNTER=$((STEP_COUNTER + 1))
+    echo ""
+    if [ -n "$step_description" ]; then
+        echo "##### Test ${TEST_NAME}: Step ${STEP_COUNTER}: ${step_description}"
+    else
+        echo "##### Test ${TEST_NAME}: Step ${STEP_COUNTER}"
+    fi
+    echo ""
+}
+
+# Print a test completion heading
+test_end() {
+    exit_code="${1:-$?}"
+    if [ "$exit_code" -eq 0 ]; then
+        status="PASS"
+    else
+        status="FAIL"
+    fi
+    echo ""
+    echo "##### Test ${TEST_NAME} completed: ${status}"
+    echo ""
+    return "$exit_code"
+}
+
 # Retry a command a number of times with a delay
 with_retries() {
     retries=60
