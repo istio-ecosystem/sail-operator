@@ -4,10 +4,10 @@ Release branches have a name of `release-MAJOR.MINOR`. The repository is branche
 weeks prior to a new release.  
 
 # New minor release preparations
-Please clone this [GitHub issue](https://github.com/istio-ecosystem/sail-operator/issues/825) and follow all the steps of the checklist to prepare the release.
+Please clone this [GitHub issue](https://github.com/istio-ecosystem/sail-operator/issues/1333) and follow all the steps of the checklist to prepare the release.
 
 # New z-stream release preparations
-Please clone this [GitHub issue](https://github.com/istio-ecosystem/sail-operator/issues/1088) and follow all the steps of the checklist to prepare the release.
+Please clone this [GitHub issue](https://github.com/istio-ecosystem/sail-operator/issues/1434) and follow all the steps of the checklist to prepare the release.
 
 # Feature Freeze
 
@@ -18,4 +18,4 @@ blocking bugs are addressed. Additional changes that are targeted for new featur
 
 When all preparations are done, a release can be created via the GitHub Actions workflow `Release workflow`.
 
-Clone this [GitHub issue](https://github.com/istio-ecosystem/sail-operator/issues/1095) and follow all steps of the checklist.
+Clone this [GitHub issue](https://github.com/istio-ecosystem/sail-operator/issues/1436) and follow all steps of the checklist.
