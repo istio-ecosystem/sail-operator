@@ -763,7 +763,7 @@ kubectl get deployment
 ----
 
 Deploy Istio `VirtualService` and `Gateway` CRs for the Bookinfo App.
-Do not forget to export the `LB_IP` as mentioned previously
+Do not forget to export the `BASE_DOMAIN` as mentioned previously when we define base domain for the Gateway
 [source,bash]
 ----
 cat <<EOF | kubectl apply -f -
