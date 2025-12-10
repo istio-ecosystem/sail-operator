@@ -193,7 +193,7 @@ See <<updating-ambient-components>> for detailed IstioCNI and ZTunnel update pro
 
 [[revisionbased]]
 == RevisionBased
-With RevisionBased, a new control plane instance is created for each version change. The old control plane stays until workloads migrate to the new version. You migrate by updating namespace labels and restarting pods. The old control plane deletes after the grace period in `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds`.
+With RevisionBased, a new control plane instance is created for each version change. The old control plane stays until workloads migrate to the new version. The migration is triggered by updating namespace labels and restarting pods. The old control plane is deleted after the grace period in `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds`.
 
 [[example-using-the-revisionbased-strategy]]
 === Example using the RevisionBased strategy
