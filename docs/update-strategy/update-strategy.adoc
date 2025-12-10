@@ -35,7 +35,7 @@ The Sail Operator supports two update strategies: `InPlace` and `RevisionBased`.
 IMPORTANT: **Only the InPlace strategy is supported for ambient mode.** RevisionBased updates are not supported because only one ztunnel instance can run in the cluster, and manual revision synchronization between Istio and ZTunnel CRDs would be required.
 
 * Components update order: Control Plane → IstioCNI → ZTunnel
-* No pod restart needed (workloads automatically connect to new control plane)
+* No pod restart needed (in ambient mode, the ztunnel maintains xDS connections to istiod, not application workloads directly)
 
 NOTE: Ambient mode requires Istio 1.24.0 or later. For installation, see link:../common/istio-ambient-mode.adoc[Istio Ambient Mode].
 
@@ -179,7 +179,7 @@ InPlace updates restart control plane pods, which may cause brief service disrup
 [[inplace-ambient-mode-considerations]]
 === InPlace Strategy for Ambient Mode
 
-With InPlace updates in ambient mode, all components update directly and workloads immediately connect to the new control plane. IstioCNI and ZTunnel use rolling updates. Brief traffic interruption may occur during control plane updates. Running multiple istiod replicas helps minimize this risk but doesn't eliminate it. For details, see the https://istio.io/latest/docs/ambient/upgrade/helm/#understanding-ambient-mode-upgrades[Istio ambient mode upgrade documentation].
+With InPlace updates in ambient mode, all components update directly. In ambient mode, the ztunnel maintains xDS connections to istiod, not application workloads directly. IstioCNI and ZTunnel use rolling updates. Brief traffic interruption may occur during control plane updates. Running multiple istiod replicas helps minimize this risk but doesn't eliminate it. For details, see the https://istio.io/latest/docs/ambient/upgrade/helm/#understanding-ambient-mode-upgrades[Istio ambient mode upgrade documentation].
 
 **Update sequence for ambient mode:**
 
@@ -722,8 +722,9 @@ For detailed waypoint configuration, see link:../common/istio-ambient-waypoint.a
 
 **ZTunnel DaemonSet Updates:**
 
+When upgrading the ambient cluster, new mTLS connections continue to function normally. However, upgrading ztunnel will cause existing long-lived TCP connections on the upgraded node to reset after a grace period. For production upgrades, use node cordoning or blue/green node pools.
+
 * Rolling updates update one node at a time by default
-* Existing connections may reset after a grace period during node updates
 * New connections may experience brief latency while a node's ZTunnel restarts
 
 **Version Skew:**
