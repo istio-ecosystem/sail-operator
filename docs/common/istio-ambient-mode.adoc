@@ -402,19 +402,15 @@ Validate the `src.identity` and `dst.identity` values are correct. They are the 
 [[update]]
 == Update
 
-For detailed information on updating Istio when deployed in ambient mode, see link:./istio-ambient-update.adoc#updating-istio-in-ambient-mode[Updating Istio in Ambient Mode].
+For detailed information on updating Istio when deployed in ambient mode, see link:../update-strategy/update-strategy.adoc#update-strategy[Update Strategy].
 
-IMPORTANT: The **InPlace update strategy is the recommended approach** for ambient mode deployments. While RevisionBased updates are theoretically possible, they require significant manual effort to synchronize CRDs between Istio and ZTunnel revisions and have inherent limitations (only one ztunnel instance can run cluster-wide). See the link:./istio-ambient-update.adoc#updating-with-revisionbased-strategy[RevisionBased Strategy section] for details on these limitations.
+IMPORTANT: The **InPlace update strategy is the recommended approach** for ambient mode deployments. While RevisionBased updates are theoretically possible, they require significant manual effort to synchronize CRDs between Istio and ZTunnel revisions and have inherent limitations (only one ztunnel instance can run cluster-wide). See link:../update-strategy/update-strategy.adoc#revisionbased-ambient-mode-considerations[RevisionBased Strategy for Ambient Mode] for details on these limitations.
 
-This guide covers:
-- Understanding versioning and the update process
-- InPlace update strategy procedures (recommended for ambient mode)
-- RevisionBased update strategy procedures (with limitations in ambient mode)
-- Updating IstioCNI and ZTunnel components
-- Verifying ambient workloads after updates
-- Waypoint proxy compatibility during upgrades
-- Special considerations for ambient mode upgrades
-- Troubleshooting common update issues
+The update strategy guide covers:
+
+- InPlace strategy (recommended for ambient mode) - see link:../update-strategy/update-strategy.adoc#inplace-ambient-mode-considerations[InPlace Strategy for Ambient Mode]
+- RevisionBased strategy (with limitations) - see link:../update-strategy/update-strategy.adoc#revisionbased-ambient-mode-considerations[RevisionBased Strategy for Ambient Mode]
+- Updating IstioCNI, ZTunnel, and Waypoint proxies - see link:../update-strategy/update-strategy.adoc#updating-ambient-components[Updating Ambient Mode Components]
 
 For waypoint-specific update procedures, see link:./istio-ambient-waypoint.adoc#update[Waypoint Proxy Update Procedures].
 
