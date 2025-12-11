@@ -191,7 +191,7 @@ Create an instance of the `IstioCNI` resource to install the Istio CNI plugin.
 kubectl apply -f chart/samples/ambient/istiocni-sample.yaml
 ```
 
-Create an instal of the `ZTunnel` resource to install the ZTunnel plugin.
+Create an instance of the `ZTunnel` resource to install the ZTunnel plugin.
 
 ```sh
 kubectl apply -f chart/samples/ambient/istioztunnel-sample.yaml
