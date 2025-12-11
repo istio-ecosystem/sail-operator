@@ -289,7 +289,7 @@ All of the Sail Operator API resources have a `status` subresource that contains
 [#conditions]
 ==== Conditions
 
-All resources have a `Ready` condition which is set to `true` as soon as all child resource have been created and are deemed Ready by their respective controllers. To see additional conditions for each of the resources, check the link:api-reference/sailoperator.io.adoc[API reference documentation].
+All resources have a `Ready` condition which is set to `true` as soon as all child resource have been created and are deemed Ready by their respective controllers. To see additional conditions for each of the resources, check the link:api-reference/sailoperator.io.md[API reference documentation].
 
 [#inuse-detection]
 ==== InUse Detection
@@ -319,7 +319,7 @@ The Sail Operator uses InUse detection to determine whether an object is referen
 [#api-reference-documentation]
 == API Reference documentation
 
-The Sail Operator API reference documentation can be found link:api-reference/sailoperator.io.adoc#api-reference[here].
+The Sail Operator API reference documentation can be found link:api-reference/sailoperator.io.md#api-reference[here].
 
 == AI Agents Guide
 
