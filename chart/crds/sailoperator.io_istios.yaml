@@ -1068,6 +1068,31 @@ spec:
                                   More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                                 type: object
                             type: object
+                          seccompProfile:
+                            description: |-
+                              Configures the seccomp profile for the istio-validation and istio-proxy containers.
+
+                              See: https://kubernetes.io/docs/tutorials/security/seccomp/
+                            properties:
+                              localhostProfile:
+                                description: |-
+                                  localhostProfile indicates a profile defined in a file on the node should be used.
+                                  The profile must be preconfigured on the node to work.
+                                  Must be a descending path, relative to the kubelet's configured seccomp profile location.
+                                  Must be set if type is "Localhost". Must NOT be set for any other type.
+                                type: string
+                              type:
+                                description: |-
+                                  type indicates which kind of seccomp profile will be applied.
+                                  Valid options are:
+
+                                  Localhost - a profile defined in a file on the node should be used.
+                                  RuntimeDefault - the container runtime default profile should be used.
+                                  Unconfined - no profile should be applied.
+                                type: string
+                            required:
+                            - type
+                            type: object
                           startupProbe:
                             description: Configures the startup probe for the istio-proxy
                               container.
@@ -10115,7 +10140,7 @@ spec:
                 default: v1.28.1
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.28-latest, v1.28.1, v1.28.0, v1.27-latest, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.7, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, master, v1.29-alpha.1cbc5c7f.
+                  Must be one of: v1.28-latest, v1.28.1, v1.28.0, v1.27-latest, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.7, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, master, v1.29-alpha.9eb41939.
                 enum:
                 - v1.28-latest
                 - v1.28.1
@@ -10162,7 +10187,7 @@ spec:
                 - v1.22.5
                 - v1.21.6
                 - master
-                - v1.29-alpha.1cbc5c7f
+                - v1.29-alpha.9eb41939
                 type: string
             required:
             - namespace
