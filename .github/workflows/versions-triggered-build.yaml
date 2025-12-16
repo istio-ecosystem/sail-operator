@@ -1,0 +1,34 @@
+name: Versions update image build workflow
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'pkg/istioversion/versions.yaml'
+
+run-name: versions-triggered-build
+
+env:
+  GIT_USER: ${{ secrets.GIT_USER }}
+  GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Login to quay.io
+      uses: docker/login-action@v3
+      with:
+        registry: quay.io
+        username: ${{ secrets.QUAY_USER }}
+        password: ${{ secrets.QUAY_PWD }}
+
+    - uses: actions/checkout@v4
+      with:
+        ref: main
+
+    - name: Build and push operator image
+      run: |
+        make docker-buildx
