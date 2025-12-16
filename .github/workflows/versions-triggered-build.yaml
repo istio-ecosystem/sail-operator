@@ -29,6 +29,6 @@ jobs:
       with:
         ref: main
 
-    - name: Build and push nightly operator image
+    - name: Build and push operator image
       run: |
         make docker-buildx
