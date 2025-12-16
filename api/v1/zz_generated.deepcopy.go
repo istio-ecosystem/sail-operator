@@ -4093,6 +4093,11 @@ func (in *ProxyConfig) DeepCopyInto(out *ProxyConfig) {
 		*out = new(uint32)
 		**out = **in
 	}
+	if in.SeccompProfile != nil {
+		in, out := &in.SeccompProfile, &out.SeccompProfile
+		*out = new(corev1.SeccompProfile)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.StartupProbe != nil {
 		in, out := &in.StartupProbe, &out.StartupProbe
 		*out = new(StartupProbe)

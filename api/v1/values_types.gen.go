@@ -762,6 +762,10 @@ type ProxyConfig struct {
 	ReadinessPeriodSeconds *uint32 `json:"readinessPeriodSeconds,omitempty"`
 	// Sets the number of successive failed probes before indicating readiness failure.
 	ReadinessFailureThreshold *uint32 `json:"readinessFailureThreshold,omitempty"`
+	// Configures the seccomp profile for the istio-validation and istio-proxy containers.
+	//
+	// See: https://kubernetes.io/docs/tutorials/security/seccomp/
+	SeccompProfile *k8sv1.SeccompProfile `json:"seccompProfile,omitempty"`
 	// Configures the startup probe for the istio-proxy container.
 	StartupProbe *StartupProbe `json:"startupProbe,omitempty"`
 	// Default port used for the Pilot agent's health checks.
@@ -1353,7 +1357,8 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\n" +
 	"targetPort\x18\x04 \x01(\x05R\n" +
 	"targetPort\x12\x1a\n" +
-	"\bprotocol\x18\x05 \x01(\tR\bprotocol\"\xca\t\n" +
+	"\bprotocol\x18\x05 \x01(\tR\bprotocol\"\x96\n" +
+	"\n" +
 	"\vProxyConfig\x12\x1e\n" +
 	"\n" +
 	"autoInject\x18\x04 \x01(\tR\n" +
@@ -1372,7 +1377,8 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"privileged\x12B\n" +
 	"\x1creadinessInitialDelaySeconds\x18\x14 \x01(\rR\x1creadinessInitialDelaySeconds\x126\n" +
 	"\x16readinessPeriodSeconds\x18\x15 \x01(\rR\x16readinessPeriodSeconds\x12<\n" +
-	"\x19readinessFailureThreshold\x18\x16 \x01(\rR\x19readinessFailureThreshold\x12I\n" +
+	"\x19readinessFailureThreshold\x18\x16 \x01(\rR\x19readinessFailureThreshold\x12J\n" +
+	"\x0eseccompProfile\x18+ \x01(\v2\".k8s.io.api.core.v1.SeccompProfileR\x0eseccompProfile\x12I\n" +
 	"\fstartupProbe\x18) \x01(\v2%.istio.operator.v1alpha1.StartupProbeR\fstartupProbe\x12\x1e\n" +
 	"\n" +
 	"statusPort\x18\x17 \x01(\rR\n" +
