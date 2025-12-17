@@ -944,6 +944,46 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 			}).Should(Succeed())
 		})
 	})
+
+	When("the IstioRevision has Spec.Values.GatewayClasses set", func() {
+		BeforeAll(func() {
+			rev = &v1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: revName,
+				},
+				Spec: v1.IstioRevisionSpec{
+					Version:   istioversion.Default,
+					Namespace: istioNamespace,
+					Values: &v1.Values{
+						Global: &v1.GlobalConfig{
+							IstioNamespace: ptr.Of(istioNamespace),
+						},
+						Revision: ptr.Of(revName),
+						Pilot: &v1.PilotConfig{
+							Image: ptr.Of(pilotImage),
+						},
+						GatewayClasses: []byte(`{"istio":{"service":{"spec":{"type":"ClusterIP"}}}}`),
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, rev)).To(Succeed())
+		})
+
+		AfterAll(func() {
+			deleteAllIstioRevisions(ctx)
+		})
+
+		It("creates a configmap in the istiorevision-test namespace with the gateway class customization", func() {
+			// Format of ConfigMap name is "istio-<revision>-gatewayclass-<gatewayclass-name>"
+			cmKey := client.ObjectKey{Name: "istio-test-istiorevision-gatewayclass-istio", Namespace: istioNamespace}
+			cm := &corev1.ConfigMap{}
+			Eventually(k8sClient.Get).WithArguments(ctx, cmKey, cm).Should(Succeed())
+			Expect(cm.Labels).To(HaveKeyWithValue("gateway.istio.io/defaults-for-class", "istio"))
+			Expect(cm.Data).To(HaveKeyWithValue("service", `spec:
+  type: ClusterIP
+`))
+		})
+	})
 })
 
 func waitForInFlightReconcileToFinish() {

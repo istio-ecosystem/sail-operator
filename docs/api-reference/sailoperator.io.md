@@ -3293,7 +3293,7 @@ _Appears in:_
 | `profile` _string_ | Specifies which installation configuration profile to apply. |  |  |
 | `compatibilityVersion` _string_ | Specifies the compatibility version to use. When this is set, the control plane will be configured with the same defaults as the specified version. |  |  |
 | `experimental` _[RawMessage](#rawmessage)_ | Specifies experimental helm fields that could be removed or changed in the future |  | Schemaless: \{\}   |
-| `gatewayClasses` _[RawMessage](#rawmessage)_ | Configuration for Gateway Classes |  |  |
+| `gatewayClasses` _[RawMessage](#rawmessage)_ | Configuration for Gateway Classes |  | Schemaless: \{\}   |
 
 
 #### WaypointConfig
