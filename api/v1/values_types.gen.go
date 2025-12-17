@@ -990,6 +990,8 @@ type Values struct {
 	// +kubebuilder:validation:Schemaless
 	Experimental json.RawMessage `json:"experimental,omitempty"`
 	// Configuration for Gateway Classes
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
 	GatewayClasses json.RawMessage `json:"gatewayClasses,omitempty"`
 }
 
