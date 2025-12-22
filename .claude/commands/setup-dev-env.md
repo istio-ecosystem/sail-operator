@@ -56,9 +56,73 @@ Expected output:
 - Kubernetes control plane running
 - 1 node in Ready state
 
-Show: `[1/7] ✅ KIND cluster created and kubeconfig exported`
+Show: `[1/8] ✅ KIND cluster created and kubeconfig exported`
 
-### 3. Build and Push Operator Image
+### 3. Install MetalLB
+
+**IMPORTANT:** Ensure KUBECONFIG is still exported from Step 2.
+
+MetalLB is a load balancer implementation for bare metal Kubernetes clusters. It allows LoadBalancer-type services to receive external IPs in the KIND cluster.
+
+Install MetalLB:
+```bash
+kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml
+```
+
+Wait for MetalLB to be ready:
+```bash
+kubectl wait --for=condition=ready pod -l app=metallb -n metallb-system --timeout=2m
+```
+
+Verify MetalLB components are running:
+```bash
+kubectl get pods -n metallb-system
+```
+
+Expected output:
+- controller pod in Running state (1/1)
+- speaker pods in Running state (1/1) - one per node
+
+Configure MetalLB with an IP address pool. First, get the KIND Docker network subnet:
+```bash
+docker network inspect kind | grep -o '"Subnet": "[^"]*"' | awk -F'"' '{print $4}'
+```
+
+Create an IPAddressPool and L2Advertisement for MetalLB:
+```bash
+kubectl apply -f - <<EOF
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: example
+  namespace: metallb-system
+spec:
+  addresses:
+  - 172.18.255.200-172.18.255.250
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: empty
+  namespace: metallb-system
+EOF
+```
+
+Note: The IP range 172.18.255.200-172.18.255.250 is typically safe for KIND's default network (172.18.0.0/16). If your KIND cluster uses a different network, adjust the range accordingly.
+
+Verify the configuration:
+```bash
+kubectl get ipaddresspool -n metallb-system
+kubectl get l2advertisement -n metallb-system
+```
+
+Expected output:
+- IPAddressPool named "example" with address range configured
+- L2Advertisement named "empty"
+
+Show: `[2/8] ✅ MetalLB installed and configured`
+
+### 4. Build and Push Operator Image
 
 **IMPORTANT:** Ensure KUBECONFIG is still exported from Step 2.
 
@@ -86,9 +150,9 @@ docker images | grep localhost:5000/sail-operator
 
 Expected: Image with tag sail-operator:local listed
 
-Show: `[2/8] ✅ Operator binary built and image pushed to KIND registry`
+Show: `[3/9] ✅ Operator binary built and image pushed to KIND registry`
 
-### 4. Deploy Sail Operator to Cluster
+### 5. Deploy Sail Operator to Cluster
 
 Deploy the operator using the locally built image:
 ```bash
@@ -115,9 +179,9 @@ Expected:
 - Operator pod in Running state (1/1)
 - Image shows localhost:5000/sail-operator:local
 
-Show: `[3/8] ✅ Sail Operator deployed (using local image)`
+Show: `[4/9] ✅ Sail Operator deployed (using local image)`
 
-### 5. Deploy Istio Control Plane
+### 6. Deploy Istio Control Plane
 
 **If profile is "sidecar":**
 
@@ -140,7 +204,7 @@ kubectl get istiorevision
 kubectl get pods -n istio-system -l app=istiod
 ```
 
-Show: `[4/8] ✅ Istio control plane deployed (sidecar mode)`
+Show: `[5/9] ✅ Istio control plane deployed (sidecar mode)`
 
 **If profile is "ambient":**
 
@@ -168,9 +232,9 @@ kubectl get pods -n istio-cni
 kubectl get pods -n ztunnel
 ```
 
-Show: `[4/8] ✅ Istio control plane deployed (ambient mode with CNI and ZTunnel)`
+Show: `[5/9] ✅ Istio control plane deployed (ambient mode with CNI and ZTunnel)`
 
-### 6. Create Sample Namespace
+### 7. Create Sample Namespace
 
 **If profile is "sidecar":**
 
@@ -180,7 +244,7 @@ kubectl create namespace sample
 kubectl label namespace sample istio-injection=enabled
 ```
 
-Show: `[5/8] ✅ Sample namespace created with sidecar injection label`
+Show: `[6/9] ✅ Sample namespace created with sidecar injection label`
 
 **If profile is "ambient":**
 
@@ -190,9 +254,9 @@ kubectl create namespace sample
 kubectl label namespace sample istio.io/dataplane-mode=ambient
 ```
 
-Show: `[5/8] ✅ Sample namespace created with ambient mode label`
+Show: `[6/9] ✅ Sample namespace created with ambient mode label`
 
-### 7. Deploy Sample Applications
+### 8. Deploy Sample Applications
 
 Run the following commands to deploy sleep and httpbin using local kustomization files:
 ```bash
@@ -223,9 +287,9 @@ kubectl get pods -n sample
 **If profile is "ambient":**
 - Verify each pod shows 1/1 containers (no sidecar, using ztunnel)
 
-Show: `[6/8] ✅ Sample applications deployed (sleep and httpbin)`
+Show: `[7/9] ✅ Sample applications deployed (sleep and httpbin)`
 
-### 8. Test Connectivity
+### 9. Test Connectivity
 
 Run the following command to test HTTP connectivity from sleep to httpbin:
 ```bash
@@ -260,10 +324,10 @@ Note: X-Forwarded-Client-Cert header will NOT be present in ambient mode without
 - mTLS is active at L4 (transparent to application)
 
 Show:
-- Sidecar mode: `[7/8] ✅ Connectivity test passed - mTLS active (L7 via sidecar)`
-- Ambient mode: `[7/8] ✅ Connectivity test passed - mTLS active (L4 via ztunnel)`
+- Sidecar mode: `[8/9] ✅ Connectivity test passed - mTLS active (L7 via sidecar)`
+- Ambient mode: `[8/9] ✅ Connectivity test passed - mTLS active (L4 via ztunnel)`
 
-### 9. Display Final Summary
+### 10. Display Final Summary
 
 Gather all status information and display a comprehensive summary.
 
@@ -277,6 +341,13 @@ Gather all status information and display a comprehensive summary.
    - Type: KIND
    - Status: Running
    - Nodes: 1 Ready
+
+⚖️  METALLB
+   - Namespace: metallb-system
+   - Status: Running
+   - Controller: Running (1/1)
+   - Speaker: Running (1/1)
+   - IP Pool: 172.18.255.200-172.18.255.250
 
 🎛️  SAIL OPERATOR
    - Namespace: sail-operator
@@ -300,6 +371,7 @@ Gather all status information and display a comprehensive summary.
 
 📋 SUMMARY
    - ✅ KIND cluster created
+   - ✅ MetalLB installed and configured
    - ✅ Sail Operator deployed
    - ✅ Istio control plane ready
    - ✅ Sample apps deployed with sidecars
@@ -335,6 +407,13 @@ Gather all status information and display a comprehensive summary.
    - Status: Running
    - Nodes: 1 Ready
 
+⚖️  METALLB
+   - Namespace: metallb-system
+   - Status: Running
+   - Controller: Running (1/1)
+   - Speaker: Running (1/1)
+   - IP Pool: 172.18.255.200-172.18.255.250
+
 🎛️  SAIL OPERATOR
    - Namespace: sail-operator
    - Status: Running (1/1)
@@ -369,6 +448,7 @@ Gather all status information and display a comprehensive summary.
 
 📋 SUMMARY
    - ✅ KIND cluster created
+   - ✅ MetalLB installed and configured
    - ✅ Sail Operator deployed
    - ✅ IstioCNI daemonset running
    - ✅ Istio control plane ready
@@ -399,7 +479,7 @@ Gather all status information and display a comprehensive summary.
    - Migration guide: docs/migrate-from-sidecar-to-ambient/migration.adoc
 ```
 
-Show: `[7/7] ✅ Setup complete - environment verified and ready`
+Show: `[9/9] ✅ Setup complete - environment verified and ready`
 
 ## Error Handling
 
@@ -424,9 +504,27 @@ Troubleshooting:
 3. Try: kind delete cluster && make cluster
 ```
 
+**MetalLB installation failed:**
+```
+❌ Failed at Step 3: MetalLB installation
+
+Error: [show error message]
+
+Troubleshooting:
+1. Check if metallb-system namespace was created:
+   kubectl get namespace metallb-system
+2. Check MetalLB pod logs:
+   kubectl logs -n metallb-system -l app=metallb
+3. Verify network connectivity:
+   kubectl get pods -n metallb-system
+4. Retry installation:
+   kubectl delete namespace metallb-system
+   kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml
+```
+
 **Image build/push failed:**
 ```
-❌ Failed at Step 2: Building operator image
+❌ Failed at Step 4: Building operator image
 
 Error: [show error message]
 
@@ -439,7 +537,7 @@ Troubleshooting:
 
 **Operator deployment failed:**
 ```
-❌ Failed at Step 3: Operator deployment
+❌ Failed at Step 5: Operator deployment
 
 Check operator logs:
 kubectl logs -n sail-operator deployment/sail-operator --tail=100
@@ -452,7 +550,7 @@ Common fixes:
 
 **Istio not ready:**
 ```
-❌ Failed at Step 4 or 5: Istio control plane
+❌ Failed at Step 6: Istio control plane
 
 Check Istio status:
 kubectl describe istio/default -n istio-system
@@ -464,7 +562,7 @@ kubectl logs -n istio-system -l app=istiod
 
 **Sample apps not ready:**
 ```
-❌ Failed at Step 6 or 7: Sample applications
+❌ Failed at Step 7 or 8: Sample applications
 
 Check pod status:
 kubectl get pods -n sample
@@ -477,7 +575,7 @@ kubectl get namespace sample --show-labels
 
 **Connectivity test failed:**
 ```
-❌ Failed at Step 8: Connectivity test
+❌ Failed at Step 9: Connectivity test
 
 Test result: [show curl output or error]
 
