@@ -324,3 +324,7 @@ The Sail Operator API reference documentation can be found link:api-reference/sa
 == AI Agents Guide
 
 For developers using AI coding assistants (Claude, GitHub Copilot, Cursor, etc.), see the link:ai/ai-agents-guide.adoc[AI Agents Guide] for information on how to configure and use the Sail Operator's AI agent context files.
+
+
+
+sdfsdfsdf
