@@ -23,10 +23,11 @@ Kubernetes supports dual-stack networking as a stable feature starting from link
 
 When Kubernetes is configured for dual-stack, it automatically assigns an IPv4 and an IPv6 address to each pod, enabling them to communicate over both IP families. For services, however, you can control how they behave using the `ipFamilyPolicy` setting.
 
-Service.Spec.ipFamilyPolicy can take the following values
-- SingleStack: Only one IP family is configured for the service, which can be either IPv4 or IPv6.
-- PreferDualStack: Both IPv4 and IPv6 cluster IPs are assigned to the Service when dual-stack is enabled. However, if dual-stack is not enabled or supported, it falls back to singleStack behavior.
-- RequireDualStack: The service will be created only if both IPv4 and IPv6 addresses can be assigned.
+Service.Spec.ipFamilyPolicy can take the following values:
+
+- `SingleStack`: Only one IP family is configured for the service, which can be either IPv4 or IPv6.
+- `PreferDualStack`: Both IPv4 and IPv6 cluster IPs are assigned to the Service when dual-stack is enabled. However, if dual-stack is not enabled or supported, it falls back to singleStack behavior.
+- `RequireDualStack`: The service will be created only if both IPv4 and IPv6 addresses can be assigned.
 
 This allows you to specify the type of service, providing flexibility in managing your network configuration. For more details, you can refer to the Kubernetes link:https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services[documentation].
 
