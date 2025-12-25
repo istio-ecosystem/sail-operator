@@ -84,3 +84,4 @@ When running sidecar and ambient modes together, follow these recommendations:
 - *Use separate namespaces*: Whenever possible, use separate namespaces for ambient and sidecar pods to avoid configuration issues.
 - *Avoid mixed labeling*: Avoid https://istio.io/latest/docs/reference/config/labels/[labeling] pods/namespaces with both sidecar and ambient injection labels (although sidecar takes precedence if both are present).
 
+sdfsdfsdf
