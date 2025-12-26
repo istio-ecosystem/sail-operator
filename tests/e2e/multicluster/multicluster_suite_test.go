@@ -37,7 +37,6 @@ var (
 	clRemote                      client.Client
 	err                           error
 	debugInfoLogged               bool
-	controlPlaneNamespace         = common.ControlPlaneNamespace
 	externalControlPlaneNamespace = env.Get("EXTERNAL_CONTROL_PLANE_NS", "external-istiod")
 	istioName                     = env.Get("ISTIO_NAME", "default")
 	istioCniNamespace             = common.IstioCniNamespace
