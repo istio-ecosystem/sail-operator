@@ -23,10 +23,11 @@ Kubernetes supports dual-stack networking as a stable feature starting from link
 
 When Kubernetes is configured for dual-stack, it automatically assigns an IPv4 and an IPv6 address to each pod, enabling them to communicate over both IP families. For services, however, you can control how they behave using the `ipFamilyPolicy` setting.
 
-Service.Spec.ipFamilyPolicy can take the following values
-- SingleStack: Only one IP family is configured for the service, which can be either IPv4 or IPv6.
-- PreferDualStack: Both IPv4 and IPv6 cluster IPs are assigned to the Service when dual-stack is enabled. However, if dual-stack is not enabled or supported, it falls back to singleStack behavior.
-- RequireDualStack: The service will be created only if both IPv4 and IPv6 addresses can be assigned.
+Service.Spec.ipFamilyPolicy can take the following values:
+
+- `SingleStack`: Only one IP family is configured for the service, which can be either IPv4 or IPv6.
+- `PreferDualStack`: Both IPv4 and IPv6 cluster IPs are assigned to the Service when dual-stack is enabled. However, if dual-stack is not enabled or supported, it falls back to singleStack behavior.
+- `RequireDualStack`: The service will be created only if both IPv4 and IPv6 addresses can be assigned.
 
 This allows you to specify the type of service, providing flexibility in managing your network configuration. For more details, you can refer to the Kubernetes link:https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services[documentation].
 
@@ -54,7 +55,7 @@ EOF
 Note: If you installed the KinD cluster using the command above, install the link:../../docs/general/getting-started.adoc#getting-started[Sail Operator] before proceeding with the next steps.
 
 . Create the `Istio` resource with dual-stack configuration.
-
++
 [source,bash,subs="attributes+",name="dual-stack"]
 ----
 kubectl get ns istio-system || kubectl create namespace istio-system
@@ -79,7 +80,7 @@ kubectl wait --for=jsonpath='{.status.revisions.ready}'=1 istios/default --timeo
 ----
 
 . If running on OpenShift platform, create the IstioCNI resource as well.
-
++
 [source,bash,subs="attributes+"]
 ----
 kubectl get ns istio-cni || kubectl create namespace istio-cni
@@ -102,7 +103,7 @@ kubectl wait --for=condition=Ready pod -n istio-cni -l k8s-app=istio-cni-node --
    - dual-stack: which includes a tcp-echo service that listens on both IPv4 and IPv6 address.
    - ipv4: which includes a tcp-echo service listening only on IPv4 address.
    - ipv6: which includes a tcp-echo service listening only on IPv6 address.
-
++
 [source,bash,subs="attributes+",name="dual-stack"]
 ----
 kubectl get ns dual-stack || kubectl create namespace dual-stack
@@ -112,7 +113,7 @@ kubectl get ns sleep || kubectl create namespace sleep
 ----
 
 . Label the namespaces for sidecar injection.
-
++
 [source,bash,subs="attributes+",name="dual-stack"]
 ----
 kubectl label --overwrite namespace dual-stack istio-injection=enabled
@@ -122,7 +123,7 @@ kubectl label --overwrite namespace sleep istio-injection=enabled
 ----
 
 . Deploy the pods and services in their respective namespaces.
-
++
 [source,bash,subs="attributes+",name="dual-stack"]
 ----
 kubectl apply -n dual-stack -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/tcp-echo/tcp-echo-dual-stack.yaml
@@ -136,13 +137,13 @@ kubectl wait --for=condition=Ready pod -n ipv6 -l app=tcp-echo --timeout=60s
 ----
 
 . Ensure that the tcp-echo service in the dual-stack namespace is configured with `ipFamilyPolicy` of RequireDualStack.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get service tcp-echo -n dual-stack -o=jsonpath='{.spec.ipFamilyPolicy}'
 RequireDualStack
 ----
-
++
 ifdef::dual-stack[]
 response=$(kubectl get service tcp-echo -n dual-stack -o=jsonpath='{.spec.ipFamilyPolicy}')
 echo $response
@@ -155,13 +156,13 @@ fi
 endif::[]
 
 . Verify that sleep pod is able to reach the dual-stack pods.
-
++
 [source,console,subs="attributes+"]
 ----
-kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo dualstack | nctcp-echo.dual-stack 9000"
+kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo dualstack | nc tcp-echo.dual-stack 9000"
 hello dualstack
 ----
-
++
 ifdef::dual-stack[]
 response=$(kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo dualstack | nc tcp-echo.dual-stack 9000")
 echo $response
@@ -174,10 +175,10 @@ fi
 endif::[]
 
 . Similarly verify that sleep pod is able to reach both ipv4 pods as well as ipv6 pods.
-
++
 [source,console,subs="attributes+"]
 ----
-kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo ipv4 | nc tcp-echoipv4 9000"
+kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo ipv4 | nc tcp-echo.ipv4 9000"
 hello ipv4
 ----
 
@@ -191,10 +192,10 @@ else
     exit 1
 fi
 endif::[]
-
++
 [source,console,subs="attributes+"]
 ----
-kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo ipv6 | nc tcp-echoipv6 9000"
+kubectl exec -n sleep "$(kubectl get pod -n sleep -l app=sleep -o jsonpath='{.items[0].metadata.name}')" -- sh -c "echo ipv6 | nc tcp-echo.ipv6 9000"
 hello ipv6
 ----
 
