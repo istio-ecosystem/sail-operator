@@ -7,9 +7,26 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - '*'
+  - configmaps
+  - endpoints
+  - events
+  - namespaces
+  - nodes
+  - persistentvolumeclaims
+  - pods
+  - replicationcontrollers
+  - resourcequotas
+  - secrets
+  - serviceaccounts
+  - services
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - admissionregistration.k8s.io
   resources:
@@ -18,7 +35,13 @@ rules:
   - validatingadmissionpolicybindings
   - validatingwebhookconfigurations
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - apiextensions.k8s.io
   resources:
@@ -33,43 +56,73 @@ rules:
   - daemonsets
   - deployments
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - autoscaling
   resources:
   - horizontalpodautoscalers
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
-    - discovery.k8s.io
+  - discovery.k8s.io
   resources:
-    - endpointslices
+  - endpointslices
   verbs:
-    - get
-    - list
-    - watch
-    - create
-    - update
-    - patch
-    - delete
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
 - apiGroups:
   - k8s.cni.cncf.io
   resources:
   - network-attachment-definitions
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - networking.istio.io
   resources:
   - envoyfilters
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - networking.k8s.io
   resources:
   - networkpolicies
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - sailoperator.io
   resources:
@@ -205,7 +258,13 @@ rules:
   resources:
   - poddisruptionbudgets
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
@@ -213,9 +272,16 @@ rules:
   - clusterroles
   - rolebindings
   - roles
-  - serviceaccount
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+  - bind
+  - escalate
 - apiGroups:
   - security.openshift.io
   resourceNames:
@@ -225,28 +291,28 @@ rules:
   verbs:
   - use
 - apiGroups:
-    - sailoperator.io
+  - sailoperator.io
   resources:
-    - ztunnels
+  - ztunnels
   verbs:
-    - create
-    - delete
-    - get
-    - list
-    - patch
-    - update
-    - watch
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
-    - sailoperator.io
+  - sailoperator.io
   resources:
-    - ztunnels/finalizers
+  - ztunnels/finalizers
   verbs:
-    - update
+  - update
 - apiGroups:
-    - sailoperator.io
+  - sailoperator.io
   resources:
-    - ztunnels/status
+  - ztunnels/status
   verbs:
-    - get
-    - patch
-    - update
+  - get
+  - patch
+  - update
