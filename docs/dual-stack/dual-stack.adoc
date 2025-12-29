@@ -19,7 +19,7 @@ link:../../README.adoc[Return to Project Root]
 [[dual-stack-support]]
 == Dual-stack Support
 
-Kubernetes supports dual-stack networking as a stable feature starting from link:https://kubernetes.io/docs/concepts/services-networking/dual-stack/[v1.23], allowing clusters to handle both IPv4 and IPv6 traffic. With many cloud providers also beginning to offer dual-stack Kubernetes clusters, it's easier than ever to run services that function across both address types. Istio introduced dual-stack as an experimental feature in version 1.17, and promoted it to link:https://istio.io/latest/news/releases/1.24.x/announcing-1.24/change-notes/[Alpha] in version 1.24. With Istio in dual-stack mode, services can communicate over both IPv4 and IPv6 endpoints, which helps organizations transition to IPv6 while still maintaining compatibility with their existing IPv4 infrastructure.
+Kubernetes supports dual-stack networking as a stable feature starting from link:https://kubernetes.io/docs/concepts/services-networking/dual-stack/[v1.23], allowing clusters to handle both IPv4 and IPv6 traffic. With many cloud providers also beginning to offer dual-stack Kubernetes clusters, it's easier than ever to run services that function across both address types. Istio introduced dual-stack as an experimental feature in version 1.17, promoted it to link:https://istio.io/latest/news/releases/1.24.x/announcing-1.24/change-notes/[Alpha] in version 1.24, and to link:https://istio.io/latest/news/releases/1.28.x/announcing-1.28/change-notes/[Beta] in version 1.28. With Istio in dual-stack mode, services can communicate over both IPv4 and IPv6 endpoints, which helps organizations transition to IPv6 while still maintaining compatibility with their existing IPv4 infrastructure.
 
 When Kubernetes is configured for dual-stack, it automatically assigns an IPv4 and an IPv6 address to each pod, enabling them to communicate over both IP families. For services, however, you can control how they behave using the `ipFamilyPolicy` setting.
 
@@ -48,7 +48,7 @@ kind create cluster --name istio-ds --config - <<EOF
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 networking:
- ipFamily: dual
+  ipFamily: dual
 EOF
 ----
 
