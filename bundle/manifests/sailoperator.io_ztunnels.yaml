@@ -62,7 +62,7 @@ spec:
           spec:
             default:
               namespace: ztunnel
-              version: v1.28.1
+              version: v1.28.2
             description: ZTunnelSpec defines the desired state of ZTunnel
             properties:
               namespace:
@@ -1371,9 +1371,10 @@ spec:
                             operator:
                               description: |-
                                 Operator represents a key's relationship to the value.
-                                Valid operators are Exists and Equal. Defaults to Equal.
+                                Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.
                                 Exists is equivalent to wildcard for value, so that a pod can
                                 tolerate all taints of a particular category.
+                                Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).
                               type: string
                             tolerationSeconds:
                               description: |-
@@ -2110,7 +2111,7 @@ spec:
                                         resources:
                                           description: |-
                                             resources represents the minimum resources the volume should have.
-                                            If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+                                            Users are allowed to specify resource requirements
                                             that are lower than previous value but must still be higher than capacity recorded in the
                                             status field of the claim.
                                             More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
@@ -2996,6 +2997,24 @@ spec:
                                             description: Kubelet's generated CSRs
                                               will be addressed to this signer.
                                             type: string
+                                          userAnnotations:
+                                            additionalProperties:
+                                              type: string
+                                            description: |-
+                                              userAnnotations allow pod authors to pass additional information to
+                                              the signer implementation.  Kubernetes does not restrict or validate this
+                                              metadata in any way.
+
+                                              These values are copied verbatim into the `spec.unverifiedUserAnnotations` field of
+                                              the PodCertificateRequest objects that Kubelet creates.
+
+                                              Entries are subject to the same validation as object metadata annotations,
+                                              with the addition that all keys must be domain-prefixed. No restrictions
+                                              are placed on values, except an overall size limitation on the entire field.
+
+                                              Signers should document the keys and values they support. Signers should
+                                              deny requests that contain keys they do not recognize.
+                                            type: object
                                         required:
                                         - keyType
                                         - signerName
@@ -3424,21 +3443,24 @@ spec:
                     type: object
                 type: object
               version:
-                default: v1.28.1
+                default: v1.28.2
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.28-latest, v1.28.1, v1.28.0, v1.27-latest, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.7, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, master, v1.29-alpha.33f91585.
+                  Must be one of: v1.28-latest, v1.28.2, v1.28.1, v1.28.0, v1.27-latest, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.8, v1.26.7, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, master, v1.29-alpha.dcfb1b0b.
                 enum:
                 - v1.28-latest
+                - v1.28.2
                 - v1.28.1
                 - v1.28.0
                 - v1.27-latest
+                - v1.27.5
                 - v1.27.4
                 - v1.27.3
                 - v1.27.2
                 - v1.27.1
                 - v1.27.0
                 - v1.26-latest
+                - v1.26.8
                 - v1.26.7
                 - v1.26.6
                 - v1.26.5
@@ -3462,7 +3484,7 @@ spec:
                 - v1.24.1
                 - v1.24.0
                 - master
-                - v1.29-alpha.33f91585
+                - v1.29-alpha.dcfb1b0b
                 type: string
             required:
             - namespace
@@ -3572,7 +3594,7 @@ spec:
             default:
               namespace: ztunnel
               profile: ambient
-              version: v1.28.1
+              version: v1.28.2
             description: ZTunnelSpec defines the desired state of ZTunnel
             properties:
               namespace:
@@ -4899,9 +4921,10 @@ spec:
                             operator:
                               description: |-
                                 Operator represents a key's relationship to the value.
-                                Valid operators are Exists and Equal. Defaults to Equal.
+                                Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.
                                 Exists is equivalent to wildcard for value, so that a pod can
                                 tolerate all taints of a particular category.
+                                Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).
                               type: string
                             tolerationSeconds:
                               description: |-
@@ -5638,7 +5661,7 @@ spec:
                                         resources:
                                           description: |-
                                             resources represents the minimum resources the volume should have.
-                                            If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+                                            Users are allowed to specify resource requirements
                                             that are lower than previous value but must still be higher than capacity recorded in the
                                             status field of the claim.
                                             More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
@@ -6524,6 +6547,24 @@ spec:
                                             description: Kubelet's generated CSRs
                                               will be addressed to this signer.
                                             type: string
+                                          userAnnotations:
+                                            additionalProperties:
+                                              type: string
+                                            description: |-
+                                              userAnnotations allow pod authors to pass additional information to
+                                              the signer implementation.  Kubernetes does not restrict or validate this
+                                              metadata in any way.
+
+                                              These values are copied verbatim into the `spec.unverifiedUserAnnotations` field of
+                                              the PodCertificateRequest objects that Kubelet creates.
+
+                                              Entries are subject to the same validation as object metadata annotations,
+                                              with the addition that all keys must be domain-prefixed. No restrictions
+                                              are placed on values, except an overall size limitation on the entire field.
+
+                                              Signers should document the keys and values they support. Signers should
+                                              deny requests that contain keys they do not recognize.
+                                            type: object
                                         required:
                                         - keyType
                                         - signerName
@@ -6952,21 +6993,24 @@ spec:
                     type: object
                 type: object
               version:
-                default: v1.28.1
+                default: v1.28.2
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.28-latest, v1.28.1, v1.28.0, v1.27-latest, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.7, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, master, v1.29-alpha.33f91585.
+                  Must be one of: v1.28-latest, v1.28.2, v1.28.1, v1.28.0, v1.27-latest, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.8, v1.26.7, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, master, v1.29-alpha.dcfb1b0b.
                 enum:
                 - v1.28-latest
+                - v1.28.2
                 - v1.28.1
                 - v1.28.0
                 - v1.27-latest
+                - v1.27.5
                 - v1.27.4
                 - v1.27.3
                 - v1.27.2
                 - v1.27.1
                 - v1.27.0
                 - v1.26-latest
+                - v1.26.8
                 - v1.26.7
                 - v1.26.6
                 - v1.26.5
@@ -6990,7 +7034,7 @@ spec:
                 - v1.24.1
                 - v1.24.0
                 - master
-                - v1.29-alpha.33f91585
+                - v1.29-alpha.dcfb1b0b
                 type: string
             required:
             - namespace
