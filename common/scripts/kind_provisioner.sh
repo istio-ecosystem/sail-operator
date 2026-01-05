@@ -186,7 +186,7 @@ function setup_kind_cluster() {
 
   # Create KinD cluster
   if ! (yq eval "${CONFIG}" --expression ".networking.disableDefaultCNI = ${KIND_DISABLE_CNI}" \
-    --expression ".networking.ipFamily = \"${KIND_IP_FAMILY}\"" | \
+    --expression ".networking.ipFamily = \"${KIND_IP_FAMILY}\"" \
     --expression ".failCgroupV1 = \"false\"" | \
     kind create cluster --name="${NAME}" -v4 --retain --image "${IMAGE}" ${KIND_WAIT_FLAG:+"$KIND_WAIT_FLAG"} --config -); then
     echo "Could not setup KinD environment. Something wrong with KinD setup. Exporting logs."
