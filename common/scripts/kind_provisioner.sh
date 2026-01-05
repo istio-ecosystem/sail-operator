@@ -188,6 +188,8 @@ function setup_kind_cluster() {
   if ! (yq eval "${CONFIG}" --expression ".networking.disableDefaultCNI = ${KIND_DISABLE_CNI}" \
     --expression ".networking.ipFamily = \"${KIND_IP_FAMILY}\"" | \
     kind create cluster --name="${NAME}" -v4 --retain --image "${IMAGE}" ${KIND_WAIT_FLAG:+"$KIND_WAIT_FLAG"} --config -); then
+    systemctl status kubelet || true
+    journalctl -xeu kubelet || true
     echo "Could not setup KinD environment. Something wrong with KinD setup. Exporting logs."
     return 9
     # kubectl config set clusters.kind-istio-testing.server https://istio-testing-control-plane:6443
