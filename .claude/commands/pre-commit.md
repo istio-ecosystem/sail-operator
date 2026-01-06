@@ -29,7 +29,17 @@ This runs all linters including:
 - Secret scanning (gitleaks)
 - Spell checking
 
-If linting fails, show the errors and stop. Provide guidance on fixing common lint issues.
+**If linting fails:**
+
+1. First, analyze the lint errors to understand what needs fixing
+2. Attempt to fix the issues:
+   - For Go lint errors: Read the affected files and apply fixes directly
+   - For formatting issues: Run `go fmt` on affected files
+   - For import ordering: Run `goimports` if available, or fix manually
+   - For simple issues (unused variables, missing error checks, etc.): Fix the code directly
+3. After applying fixes, re-run `make lint` to verify
+4. If fixes were applied, inform the user what was changed
+5. Only stop and report if issues cannot be automatically fixed (e.g., complex logic errors, design issues)
 
 ### 3. Run Unit Tests
 
@@ -51,12 +61,12 @@ make gen-check
 
 This verifies that all generated files (CRDs, API docs, code) are up-to-date with the source.
 
-If this fails, it means generated files are out of sync. Instruct the user to run:
-```bash
-make gen
-```
+**If gen-check fails:**
 
-Then review and stage the generated changes.
+1. Run `make gen` to regenerate all files
+2. Run `make gen-check` again to verify the fix worked
+3. Show the user which files were regenerated using `git status --short`
+4. Inform the user these generated files need to be staged with their commit
 
 ### 5. Show Summary
 
