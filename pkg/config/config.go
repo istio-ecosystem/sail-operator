@@ -15,10 +15,13 @@
 package config
 
 import (
+	"crypto/tls"
 	"io/fs"
 	"strings"
 
 	"github.com/magiconair/properties"
+	configv1 "github.com/openshift/api/config/v1"
+	"github.com/openshift/library-go/pkg/crypto"
 )
 
 var Config = OperatorConfig{}
@@ -40,6 +43,62 @@ type ReconcilerConfig struct {
 	DefaultProfile          string
 	OperatorNamespace       string
 	MaxConcurrentReconciles int
+}
+
+// TLSConfig represents the TLS configuration to be applied globally.
+type TLSConfig struct {
+	// CipherSuites is a list of TLS cipher suites.
+	CipherSuites []tls.CipherSuite
+}
+
+// TLSConfigFromAPIServer extracts TLS configuration from an OpenShift APIServer resource.
+func TLSConfigFromAPIServer(apiServer *configv1.APIServer) TLSConfig {
+	profile := apiServer.Spec.TLSSecurityProfile
+	profileType := configv1.TLSProfileIntermediateType
+	if profile != nil {
+		profileType = profile.Type
+	}
+
+	var profileSpec *configv1.TLSProfileSpec
+	if profileType == configv1.TLSProfileCustomType {
+		if profile.Custom != nil {
+			profileSpec = &profile.Custom.TLSProfileSpec
+		}
+	} else {
+		profileSpec = configv1.TLSProfiles[profileType]
+	}
+
+	if profileSpec == nil {
+		profileSpec = configv1.TLSProfiles[configv1.TLSProfileIntermediateType]
+	}
+
+	return TLSConfig{
+		CipherSuites: cipherSuitesFromNames(crypto.OpenSSLToIANACipherSuites(profileSpec.Ciphers)),
+	}
+}
+
+// cipherSuitesFromNames converts IANA cipher suite names to tls.CipherSuite structs.
+func cipherSuitesFromNames(names []string) []tls.CipherSuite {
+	cipherMap := make(map[uint16]*tls.CipherSuite)
+	for _, cs := range tls.CipherSuites() {
+		cipherMap[cs.ID] = cs
+	}
+	for _, cs := range tls.InsecureCipherSuites() {
+		cipherMap[cs.ID] = cs
+	}
+
+	var suites []tls.CipherSuite
+	for _, name := range names {
+		cs, err := crypto.CipherSuite(name)
+		if err != nil {
+			// Ignore unknown cipher suites.
+			continue
+		}
+		if cs, ok := cipherMap[cs]; ok {
+			suites = append(suites, *cs)
+		}
+	}
+	return suites
 }
 
 func Read(configFile string) error {
