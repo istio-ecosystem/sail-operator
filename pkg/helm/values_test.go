@@ -212,3 +212,90 @@ func TestSetIfAbsent(t *testing.T) {
 		})
 	}
 }
+
+func TestGetSlice(t *testing.T) {
+	testCases := []struct {
+		name        string
+		input       Values
+		key         string
+		expectFound bool
+		expected    []any
+		expectErr   bool
+	}{
+		{
+			name: "valid key",
+			input: Values{
+				"foo": map[string]any{
+					"bar": []any{"a", "b", "c"},
+				},
+			},
+			key:         "foo.bar",
+			expectFound: true,
+			expected:    []any{"a", "b", "c"},
+		},
+		{
+			name: "nested key does not exist",
+			input: Values{
+				"foo": "not a map",
+			},
+			key:         "foo.bar",
+			expectFound: false,
+			expectErr:   true,
+		},
+		{
+			name: "nonexistent key",
+			input: Values{
+				"foo": map[string]any{
+					"bar": []any{"a", "b", "c"},
+				},
+			},
+			key:         "foo.baz",
+			expectFound: false,
+			expected:    nil,
+		},
+		{
+			name: "value is not a slice",
+			input: Values{
+				"foo": map[string]any{
+					"bar": "string value",
+				},
+			},
+			key:         "foo.bar",
+			expectFound: false,
+			expectErr:   true,
+		},
+		{
+			name: "empty slice",
+			input: Values{
+				"foo": map[string]any{
+					"bar": []any{},
+				},
+			},
+			key:         "foo.bar",
+			expectFound: true,
+			expected:    []any{},
+		},
+	}
+
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			result, found, err := test.input.GetSlice(test.key)
+			if test.expectErr {
+				if err == nil {
+					t.Errorf("Expected an error, but got nil")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Expected no error, but got an error: %v", err)
+				}
+				if !reflect.DeepEqual(result, test.expected) {
+					t.Errorf("Expected %v, but got %v", test.expected, result)
+				}
+			}
+
+			if found != test.expectFound {
+				t.Errorf("Expected found to be %v, but it was %v", test.expectFound, found)
+			}
+		})
+	}
+}

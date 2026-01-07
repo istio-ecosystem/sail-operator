@@ -18,10 +18,12 @@ package integration
 
 import (
 	"context"
+	"crypto/tls"
 	"strings"
 	"time"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
@@ -532,10 +534,118 @@ var _ = Describe("Istio resource", Ordered, func() {
 						Namespace: istioNamespace,
 					},
 				}
-				Expect(k8sClient.Create(ctx, istio, &client.CreateOptions{})).To(Succeed())
+				createIstioWithCleanup(ctx, istio, k8sClient)
 				Eventually(getObject).WithArguments(ctx, k8sClient, istioKey, istio).
 					Should(HaveConditionMessage(v1.IstioConditionReconciled, "failed to resolve Istio version"))
 			})
+		})
+	})
+
+	Describe("Operator TLSConfig", func() {
+		It("applies TLS cipher suites to the IstioRevision", func() {
+			expectedCipherName := tls.CipherSuites()[0].Name
+			istioReconciler.TLSConfig = &config.TLSConfig{
+				CipherSuites: []tls.CipherSuite{
+					*tls.CipherSuites()[0],
+				},
+			}
+			DeferCleanup(func() {
+				istioReconciler.TLSConfig = nil
+			})
+
+			istio = &v1.Istio{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: istioName,
+				},
+				Spec: v1.IstioSpec{
+					Version:   istioversion.Default,
+					Namespace: istioNamespace,
+				},
+			}
+			createIstioWithCleanup(ctx, istio, k8sClient)
+
+			rev := &v1.IstioRevision{}
+			revKey := client.ObjectKey{Name: istioName}
+
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
+				g.Expect(rev.Spec.Values).NotTo(BeNil())
+				g.Expect(rev.Spec.Values.MeshConfig).NotTo(BeNil())
+
+				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults).NotTo(BeNil())
+				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults.CipherSuites).NotTo(BeEmpty())
+				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults.CipherSuites[0]).To(Equal(expectedCipherName))
+
+				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS).NotTo(BeNil())
+				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS.CipherSuites).NotTo(BeEmpty())
+				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS.CipherSuites[0]).To(Equal(expectedCipherName))
+
+				g.Expect(rev.Spec.Values.Pilot).NotTo(BeNil())
+				g.Expect(rev.Spec.Values.Pilot.ExtraContainerArgs).NotTo(BeEmpty())
+				expectedArg := "--tls-cipher-suites=" + expectedCipherName
+				g.Expect(rev.Spec.Values.Pilot.ExtraContainerArgs).To(ContainElement(expectedArg))
+			}).Should(Succeed())
+		})
+
+		It("does not overwrite user-specified TLS values", func() {
+			userCipherSuite := tls.CipherSuiteName(tls.TLS_AES_128_GCM_SHA256)
+			userExtraArg := "--tls-cipher-suites=" + userCipherSuite
+			tlsConfigCipher := tls.CipherSuite{ID: tls.TLS_AES_256_GCM_SHA384, Name: tls.CipherSuiteName(tls.TLS_AES_256_GCM_SHA384)}
+			istioReconciler.TLSConfig = &config.TLSConfig{
+				CipherSuites: []tls.CipherSuite{
+					tlsConfigCipher,
+				},
+			}
+			DeferCleanup(func() {
+				istioReconciler.TLSConfig = nil
+			})
+
+			istio = &v1.Istio{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: istioName,
+				},
+				Spec: v1.IstioSpec{
+					Version:   istioversion.Default,
+					Namespace: istioNamespace,
+					Values: &v1.Values{
+						MeshConfig: &v1.MeshConfig{
+							TlsDefaults: &v1.MeshConfigTLSConfig{
+								CipherSuites: []string{userCipherSuite},
+							},
+							MeshMTLS: &v1.MeshConfigTLSConfig{
+								CipherSuites: []string{userCipherSuite},
+							},
+						},
+						Pilot: &v1.PilotConfig{
+							ExtraContainerArgs: []string{userExtraArg},
+						},
+					},
+				},
+			}
+			createIstioWithCleanup(ctx, istio, k8sClient)
+
+			rev := &v1.IstioRevision{}
+			revKey := client.ObjectKey{Name: istioName}
+
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
+				g.Expect(rev.Spec.Values).NotTo(BeNil())
+				g.Expect(rev.Spec.Values.MeshConfig).NotTo(BeNil())
+
+				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults).NotTo(BeNil())
+				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults.CipherSuites).To(HaveLen(1))
+				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults.CipherSuites[0]).To(Equal(userCipherSuite))
+				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults.CipherSuites).NotTo(ContainElement(tlsConfigCipher.Name))
+
+				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS).NotTo(BeNil())
+				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS.CipherSuites).To(HaveLen(1))
+				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS.CipherSuites[0]).To(Equal(userCipherSuite))
+				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS.CipherSuites).NotTo(ContainElement(tlsConfigCipher.Name))
+
+				g.Expect(rev.Spec.Values.Pilot).NotTo(BeNil())
+				g.Expect(rev.Spec.Values.Pilot.ExtraContainerArgs).To(ContainElement(userExtraArg))
+				g.Expect(rev.Spec.Values.Pilot.ExtraContainerArgs).NotTo(ContainElement("--tls-cipher-suites=" + tlsConfigCipher.Name))
+			}).Should(Succeed())
 		})
 	})
 })
@@ -586,4 +696,11 @@ func getRevisionName(istio *v1.Istio, version string) string {
 func getObject(ctx context.Context, cl client.Client, key client.ObjectKey, obj client.Object) (client.Object, error) {
 	err := cl.Get(ctx, key, obj)
 	return obj, err
+}
+
+func createIstioWithCleanup(ctx context.Context, istio *v1.Istio, k8sClient client.Client) {
+	Expect(k8sClient.Create(ctx, istio, &client.CreateOptions{})).To(Succeed())
+	DeferCleanup(func() {
+		deleteAllIstiosAndRevisions(ctx)
+	})
 }

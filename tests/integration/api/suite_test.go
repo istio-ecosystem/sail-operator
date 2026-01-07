@@ -96,7 +96,7 @@ var _ = BeforeSuite(func() {
 
 	cl := mgr.GetClient()
 	scheme := mgr.GetScheme()
-	istioReconciler = istio.NewReconciler(cfg, cl, scheme)
+	istioReconciler = istio.NewReconciler(cfg, cl, scheme, nil)
 	istioRevisionReconciler = istiorevision.NewReconciler(cfg, cl, scheme, chartManager)
 	istioRevisionTagReconciler = istiorevisiontag.NewReconciler(cfg, cl, scheme, chartManager)
 	istioCNIReconciler = istiocni.NewReconciler(cfg, cl, scheme, chartManager)
