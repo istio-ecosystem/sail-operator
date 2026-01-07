@@ -15,6 +15,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"flag"
 	"fmt"
@@ -32,7 +33,10 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/version"
+	configclient "github.com/openshift/client-go/config/clientset/versioned"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -104,20 +108,24 @@ func main() {
 		})
 	}
 
-	// if the enable-http2 flag is false (the default), http/2 should be disabled
-	// due to its vulnerabilities. More specifically, disabling http/2 will
-	// prevent from being vulnerable to the HTTP/2 Stream Cancellation and
-	// Rapid Reset CVEs. For more information see:
-	// - https://github.com/advisories/GHSA-qppj-fm5r-hxr3
-	// - https://github.com/advisories/GHSA-4374-p667-p6c8
-	disableHTTP2 := func(c *tls.Config) {
-		setupLog.Info("disabling http/2")
-		c.NextProtos = []string{"http/1.1"}
+	reconcilerCfg.Platform, err = config.DetectPlatform(cfg)
+	if err != nil {
+		setupLog.Error(err, "unable to detect platform")
+		os.Exit(1)
+	}
+	setupLog.Info("detected platform", "platform", reconcilerCfg.Platform)
+
+	if reconcilerCfg.Platform == config.PlatformOpenShift {
+		reconcilerCfg.DefaultProfile = "openshift"
+	} else {
+		reconcilerCfg.DefaultProfile = "default"
 	}
 
-	tlsOpts := []func(*tls.Config){
-		// disable http/2 because of https://github.com/kubernetes/kubernetes/issues/121197
-		disableHTTP2,
+	ctx := ctrl.SetupSignalHandler()
+	tlsOpts, err := metricsServerTLSOptions(ctx, cfg, reconcilerCfg.Platform)
+	if err != nil {
+		setupLog.Error(err, "unable to get metrics server TLS options")
+		os.Exit(1)
 	}
 
 	metricsServerOptions := metricsserver.Options{
@@ -152,18 +160,6 @@ func main() {
 	}
 
 	chartManager := helm.NewChartManager(mgr.GetConfig(), os.Getenv("HELM_DRIVER"))
-
-	reconcilerCfg.Platform, err = config.DetectPlatform(mgr.GetConfig())
-	if err != nil {
-		setupLog.Error(err, "unable to detect platform")
-		os.Exit(1)
-	}
-
-	if reconcilerCfg.Platform == config.PlatformOpenShift {
-		reconcilerCfg.DefaultProfile = "openshift"
-	} else {
-		reconcilerCfg.DefaultProfile = "default"
-	}
 
 	err = istio.NewReconciler(reconcilerCfg, mgr.GetClient(), mgr.GetScheme()).
 		SetupWithManager(mgr)
@@ -218,7 +214,7 @@ func main() {
 	}
 
 	setupLog.Info("starting sail-operator manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running sail-operator manager")
 		os.Exit(1)
 	}
@@ -235,3 +231,57 @@ func (rl requestLogger) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 var _ http.RoundTripper = requestLogger{}
+
+func metricsServerTLSOptions(ctx context.Context, restConfig *rest.Config, platform config.Platform) ([]func(*tls.Config), error) {
+	// if the enable-http2 flag is false (the default), http/2 should be disabled
+	// due to its vulnerabilities. More specifically, disabling http/2 will
+	// prevent from being vulnerable to the HTTP/2 Stream Cancellation and
+	// Rapid Reset CVEs. For more information see:
+	// - https://github.com/advisories/GHSA-qppj-fm5r-hxr3
+	// - https://github.com/advisories/GHSA-4374-p667-p6c8
+	disableHTTP2 := func(c *tls.Config) {
+		setupLog.Info("disabling http/2")
+		c.NextProtos = []string{"http/1.1"}
+	}
+
+	tlsOpts := []func(*tls.Config){
+		// disable http/2 because of https://github.com/kubernetes/kubernetes/issues/121197
+		disableHTTP2,
+	}
+
+	if platform == config.PlatformOpenShift {
+		client, err := configclient.NewForConfig(restConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create config client: %w", err)
+		}
+
+		apiServer, err := client.ConfigV1().APIServers().Get(ctx, "cluster", metav1.GetOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to get APIServer 'cluster': %w", err)
+		}
+
+		tlsConfig := config.TLSConfigFromAPIServer(apiServer)
+		setupLog.Info("TLS config from APIServer", "tlsConfig", tlsConfig)
+
+		apiServerTLSConfig := func(c *tls.Config) {
+			c.CipherSuites = cipherSuiteIDs(tlsConfig.CipherSuites)
+			// TODO: Do we need to dynamically update the TLS settings or is it good enough to require an operator restart?
+			// c.GetConfigForClient = func(*tls.ClientHelloInfo) (*tls.Config, error) {
+			// 	cfg := c.Clone()
+			// 	cfg.CipherSuites = cipherSuiteIDs(tlsConfig.CipherSuites)
+			// 	return cfg, nil
+			// }
+		}
+		tlsOpts = append(tlsOpts, apiServerTLSConfig)
+	}
+
+	return tlsOpts, nil
+}
+
+func cipherSuiteIDs(suites []tls.CipherSuite) []uint16 {
+	ids := make([]uint16, len(suites))
+	for i, cs := range suites {
+		ids[i] = cs.ID
+	}
+	return ids
+}
