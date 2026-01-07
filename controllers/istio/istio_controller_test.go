@@ -64,7 +64,7 @@ func TestReconcile(t *testing.T) {
 		cl := newFakeClientBuilder().
 			WithObjects(istio).
 			Build()
-		reconciler := NewReconciler(cfg, cl, scheme.Scheme)
+		reconciler := NewReconciler(cfg, cl, scheme.Scheme, nil)
 
 		_, err := reconciler.Reconcile(ctx, istio)
 		if err == nil {
@@ -102,7 +102,7 @@ func TestReconcile(t *testing.T) {
 			Build()
 		cfg := newReconcilerTestConfig(t)
 		cfg.DefaultProfile = "invalid-profile"
-		reconciler := NewReconciler(cfg, cl, scheme.Scheme)
+		reconciler := NewReconciler(cfg, cl, scheme.Scheme, nil)
 
 		_, err := reconciler.Reconcile(ctx, istio)
 		if err == nil {
@@ -143,7 +143,7 @@ func TestReconcile(t *testing.T) {
 				},
 			}).
 			Build()
-		reconciler := NewReconciler(cfg, cl, scheme.Scheme)
+		reconciler := NewReconciler(cfg, cl, scheme.Scheme, nil)
 
 		_, err := reconciler.Reconcile(ctx, istio)
 		if err == nil {
@@ -559,7 +559,7 @@ func TestDetermineStatus(t *testing.T) {
 				WithObjects(initObjs...).
 				WithInterceptorFuncs(interceptorFuncs).
 				Build()
-			reconciler := NewReconciler(cfg, cl, scheme.Scheme)
+			reconciler := NewReconciler(cfg, cl, scheme.Scheme, nil)
 
 			status, err := reconciler.determineStatus(ctx, istio, tc.reconciliationErr)
 			if (err != nil) != tc.wantErr {
@@ -773,7 +773,7 @@ func TestUpdateStatus(t *testing.T) {
 				WithObjects(initObjs...).
 				WithInterceptorFuncs(interceptorFuncs).
 				Build()
-			reconciler := NewReconciler(cfg, cl, scheme.Scheme)
+			reconciler := NewReconciler(cfg, cl, scheme.Scheme, nil)
 
 			err := reconciler.updateStatus(ctx, istio, tc.reconciliationErr)
 			if (err != nil) != tc.wantErr {

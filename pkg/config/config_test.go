@@ -15,10 +15,13 @@
 package config
 
 import (
+	"crypto/tls"
 	"os"
+	"slices"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	configv1 "github.com/openshift/api/config/v1"
 )
 
 var testImages = IstioImageConfig{
@@ -117,6 +120,66 @@ images.v1_20_0.ztunnel=ztunnel-test
 			}
 			if diff := cmp.Diff(Config, tc.expectedConfig); diff != "" {
 				t.Fatal("config did not match expectation:\n\n", diff)
+			}
+		})
+	}
+}
+
+func TestTLSConfigFromAPIServer(t *testing.T) {
+	// This list is pulled from: https://pkg.go.dev/github.com/openshift/api@v0.0.0-20260116135531-36664f770c0a/config/v1#TLSSecurityProfile
+	expectedIntermediateCiphers := []uint16{
+		tls.TLS_AES_128_GCM_SHA256,
+		tls.TLS_AES_256_GCM_SHA384,
+		tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+		tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+		tls.TLS_CHACHA20_POLY1305_SHA256,
+		tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+		tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+		tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+		tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+		// TODO: These are left out of the openshift crypto conversion for some reason.
+		// tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
+		// tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+	}
+	tests := map[string]struct {
+		apiServer         *configv1.APIServer
+		expectedCipherIDs []uint16
+	}{
+		"custom TLS profile with ciphers": {
+			apiServer: &configv1.APIServer{
+				Spec: configv1.APIServerSpec{
+					TLSSecurityProfile: &configv1.TLSSecurityProfile{
+						Type: configv1.TLSProfileCustomType,
+						Custom: &configv1.CustomTLSProfile{
+							TLSProfileSpec: configv1.TLSProfileSpec{
+								Ciphers: []string{"ECDHE-RSA-AES128-GCM-SHA256"},
+							},
+						},
+					},
+				},
+			},
+			expectedCipherIDs: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
+		},
+		"default to intermediate when no profile is set": {
+			apiServer: &configv1.APIServer{
+				Spec: configv1.APIServerSpec{
+					TLSSecurityProfile: nil,
+				},
+			},
+			expectedCipherIDs: expectedIntermediateCiphers,
+		},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			result := TLSConfigFromAPIServer(tt.apiServer)
+			var resultIDs []uint16
+			for _, cs := range result.CipherSuites {
+				resultIDs = append(resultIDs, cs.ID)
+			}
+			slices.Sort(resultIDs)
+			slices.Sort(tt.expectedCipherIDs)
+			if diff := cmp.Diff(resultIDs, tt.expectedCipherIDs); diff != "" {
+				t.Errorf("unexpected cipher suite IDs; diff (-expected, +actual):\n%v", diff)
 			}
 		})
 	}

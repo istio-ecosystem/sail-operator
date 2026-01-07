@@ -15,6 +15,9 @@ require (
 	github.com/magiconair/properties v1.8.9
 	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.39.1
+	github.com/openshift/api v0.0.0-20260320151444-324a1bcb9f55
+	github.com/openshift/client-go v0.0.0-20260105124352-f93a4291f9ae
+	github.com/openshift/library-go v0.0.0-20251222131241-289839b3ffe8
 	github.com/prometheus/common v0.67.5
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/zap v1.27.1
