@@ -475,9 +475,26 @@ spec:
             - apiGroups:
                 - ""
               resources:
-                - '*'
+                - configmaps
+                - endpoints
+                - events
+                - namespaces
+                - nodes
+                - persistentvolumeclaims
+                - pods
+                - replicationcontrollers
+                - resourcequotas
+                - secrets
+                - serviceaccounts
+                - services
               verbs:
-                - '*'
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
             - apiGroups:
                 - admissionregistration.k8s.io
               resources:
@@ -486,7 +503,13 @@ spec:
                 - validatingadmissionpolicybindings
                 - validatingwebhookconfigurations
               verbs:
-                - '*'
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
             - apiGroups:
                 - apiextensions.k8s.io
               resources:
@@ -501,13 +524,25 @@ spec:
                 - daemonsets
                 - deployments
               verbs:
-                - '*'
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
             - apiGroups:
                 - autoscaling
               resources:
                 - horizontalpodautoscalers
               verbs:
-                - '*'
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
             - apiGroups:
                 - discovery.k8s.io
               resources:
@@ -525,19 +560,37 @@ spec:
               resources:
                 - network-attachment-definitions
               verbs:
-                - '*'
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
             - apiGroups:
                 - networking.istio.io
               resources:
                 - envoyfilters
               verbs:
-                - '*'
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
             - apiGroups:
                 - networking.k8s.io
               resources:
                 - networkpolicies
               verbs:
-                - '*'
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
             - apiGroups:
                 - sailoperator.io
               resources:
@@ -673,7 +726,13 @@ spec:
               resources:
                 - poddisruptionbudgets
               verbs:
-                - '*'
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
             - apiGroups:
                 - rbac.authorization.k8s.io
               resources:
@@ -681,9 +740,16 @@ spec:
                 - clusterroles
                 - rolebindings
                 - roles
-                - serviceaccount
               verbs:
-                - '*'
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
+                - bind
+                - escalate
             - apiGroups:
                 - security.openshift.io
               resourceNames:
