@@ -117,8 +117,7 @@ spec:
                     x-kubernetes-preserve-unknown-fields: true
                   gatewayClasses:
                     description: Configuration for Gateway Classes
-                    format: byte
-                    type: string
+                    x-kubernetes-preserve-unknown-fields: true
                   global:
                     description: Global configuration for Istio components.
                     properties:

@@ -147,6 +147,9 @@ inputFiles:
       Values.Experimental:
       - "// +kubebuilder:pruning:PreserveUnknownFields"
       - "// +kubebuilder:validation:Schemaless"
+      Values.GatewayClasses:
+      - "// +kubebuilder:pruning:PreserveUnknownFields"
+      - "// +kubebuilder:validation:Schemaless"
       Values.DefaultRevision:
       - "// +hidefromdoc"
       - "// Deprecated: This field is ignored. The default revision is expected to be configurable elsewhere."
