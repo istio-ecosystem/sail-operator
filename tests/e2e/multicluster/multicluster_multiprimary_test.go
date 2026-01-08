@@ -126,6 +126,11 @@ func generateMultiPrimaryTestCases(profile string) {
 						common.AwaitDeployment(ctx, "istio-eastwestgateway", k2, clRemote)
 						Success("Gateway is created and available in both clusters")
 					})
+
+					It("has external IPs assigned", func(ctx SpecContext) {
+						expectLoadBalancerAddress(ctx, k1, clPrimary, "istio-eastwestgateway")
+						expectLoadBalancerAddress(ctx, k2, clRemote, "istio-eastwestgateway")
+					})
 				})
 
 				When("are installed remote secrets on each cluster", func() {
@@ -175,6 +180,11 @@ func generateMultiPrimaryTestCases(profile string) {
 						Eventually(common.CheckSamplePodsReady).WithArguments(ctx, clPrimary).Should(Succeed(), "Error checking status of sample pods on Cluster #1")
 						Eventually(common.CheckSamplePodsReady).WithArguments(ctx, clRemote).Should(Succeed(), "Error checking status of sample pods on Cluster #2")
 						Success("Sample app is created in both clusters and Running")
+					})
+
+					It("can reach target east-west gateway from each cluster", func(ctx SpecContext) {
+						eventuallyLoadBalancerIsReachable(ctx, k1, k2, clRemote, "istio-eastwestgateway")
+						eventuallyLoadBalancerIsReachable(ctx, k2, k1, clPrimary, "istio-eastwestgateway")
 					})
 
 					It("can access the sample app from both clusters", func(ctx SpecContext) {

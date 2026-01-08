@@ -109,6 +109,10 @@ pilot:
 					It("updates Gateway status to Available", func(ctx SpecContext) {
 						common.AwaitDeployment(ctx, "istio-eastwestgateway", k1, clPrimary)
 					})
+
+					It("has an external IP assigned", func(ctx SpecContext) {
+						expectLoadBalancerAddress(ctx, k1, clPrimary, "istio-eastwestgateway")
+					})
 				})
 
 				When("Istio and IstioCNI are created in Remote cluster", func() {
@@ -179,6 +183,10 @@ values:
 					It("updates Gateway status to Available", func(ctx SpecContext) {
 						common.AwaitDeployment(ctx, "istio-eastwestgateway", k2, clRemote)
 					})
+
+					It("has an external IP assigned", func(ctx SpecContext) {
+						expectLoadBalancerAddress(ctx, k2, clRemote, "istio-eastwestgateway")
+					})
 				})
 
 				When("sample apps are deployed in both clusters", func() {
@@ -194,6 +202,11 @@ values:
 						Eventually(common.CheckSamplePodsReady).WithArguments(ctx, clPrimary).Should(Succeed(), "Error checking status of sample pods on Primary cluster")
 						Eventually(common.CheckSamplePodsReady).WithArguments(ctx, clRemote).Should(Succeed(), "Error checking status of sample pods on Remote cluster")
 						Success("Sample app is created in both clusters and Running")
+					})
+
+					It("can reach target east-west gateway from each cluster", func(ctx SpecContext) {
+						eventuallyLoadBalancerIsReachable(ctx, k1, k2, clRemote, "istio-eastwestgateway")
+						eventuallyLoadBalancerIsReachable(ctx, k2, k1, clPrimary, "istio-eastwestgateway")
 					})
 
 					It("can access the sample app from both clusters", func(ctx SpecContext) {
