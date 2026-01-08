@@ -93,6 +93,10 @@ values:
 					It("updates Gateway status to Available", func(ctx SpecContext) {
 						common.AwaitDeployment(ctx, "istio-ingressgateway", k1, clPrimary)
 					})
+
+					It("has an external IP assigned", func(ctx SpecContext) {
+						expectLoadBalancerAddress(ctx, k1, clPrimary, "istio-ingressgateway")
+					})
 				})
 
 				When("Istio external is installed in Cluster #2", func() {
@@ -353,6 +357,10 @@ spec:
 							Expect(pod.Annotations).To(HaveKeyWithValue("istio.io/rev", "external-istiod"), "The pod dom't have expected annotation")
 						}
 						Success("Sample pods has expected annotation")
+					})
+
+					It("can reach the ingress gateway from remote cluster", func(ctx SpecContext) {
+						eventuallyLoadBalancerIsReachable(ctx, k2, k1, clPrimary, "istio-ingressgateway")
 					})
 
 					It("can access the sample app from the local service", func(ctx SpecContext) {
