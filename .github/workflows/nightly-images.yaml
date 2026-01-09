@@ -26,6 +26,11 @@ jobs:
       if: github.event.schedule == '0 3 * * *'
       with:
         ref: main
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      with:
+        name: project-v4-builder
 
     - name: Build and push nightly operator image
       run: |
