@@ -38,6 +38,12 @@ jobs:
 
     - uses: actions/checkout@v4
 
+    # this should avoid ERROR: failed to build: failed to read GITHUB_EVENT_PATH "/home/runner/work/_temp/_github_workflow/event.json"
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      with:
+        name: project-v4-builder
+
     - name: Build and push operator image
       run: |
         make docker-buildx
