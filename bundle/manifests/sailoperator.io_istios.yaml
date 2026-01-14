@@ -194,6 +194,12 @@ spec:
                   global:
                     description: Global configuration for Istio components.
                     properties:
+                      agentgateway:
+                        description: Specifies how proxies are configured within Istio.
+                        properties:
+                          image:
+                            type: string
+                        type: object
                       arch:
                         description: "Specifies pod scheduling arch(amd64, ppc64le,
                           s390x, arm64) and weight as follows:\n\n\t0 - Never scheduled\n\t1
@@ -3336,6 +3342,20 @@ spec:
                             items:
                               type: string
                             type: array
+                          fileFlushInterval:
+                            description: |-
+                              File flush interval for envoy flushes buffers to disk in milliseconds.
+                              The duration needs to be set to a value greater than or equal to 1 millisecond.
+                              Default is 1000ms.
+                              Optional.
+                            type: string
+                          fileFlushMinSizeKb:
+                            description: |-
+                              File flush buffer size for envoy flushes buffers to disk in kilobytes.
+                              Defaults to 64.
+                              Optional.
+                            format: int32
+                            type: integer
                           gatewayTopology:
                             description: |-
                               Topology encapsulates the configuration which describes where the proxy is
@@ -5502,20 +5522,6 @@ spec:
                               + (has(self.sds)?1:0) <= 1
                         maxItems: 1000
                         type: array
-                      fileFlushInterval:
-                        description: |-
-                          File flush interval for envoy flushes buffers to disk in milliseconds.
-                          Default is 1000.
-                          Optional.
-                        format: int32
-                        type: integer
-                      fileFlushMinSize:
-                        description: |-
-                          File flush buffer size for envoy flushes buffers to disk in kilobytes.
-                          Defaults to 64.
-                          Optional.
-                        format: int32
-                        type: integer
                       h2UpgradePolicy:
                         description: |-
                           Specify if http1.1 connections should be upgraded to http2 by default.
@@ -5525,6 +5531,16 @@ spec:
                         enum:
                         - DO_NOT_UPGRADE
                         - UPGRADE
+                        type: string
+                      hboneIdleTimeout:
+                        description: |-
+                          Idle timeout configured on Envoy proxies for their connection pools to ztunnel via HBONE.
+                          This controls how long Envoy will keep idle connections to ztunnel before closing them.
+                          Note: This setting is applied only on the Envoy proxy side; ztunnel does not use it.
+                          Default timeout is 1 hour (3600s).
+                          For environments with aggressive IP address reuse, it is recommended to set
+                          this to a value less than the CNI IP cooldown period to prevent stale connection reuse.
+                          For example, if your CNI has a 30s cooldown period, setting this to 15s is recommended.
                         type: string
                       inboundClusterStatName:
                         description: |-
@@ -10174,7 +10190,7 @@ spec:
                 default: v1.28.2
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.28-latest, v1.28.2, v1.28.1, v1.28.0, v1.27-latest, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.8, v1.26.7, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, master, v1.29-alpha.dcfb1b0b.
+                  Must be one of: v1.28-latest, v1.28.2, v1.28.1, v1.28.0, v1.27-latest, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.8, v1.26.7, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, master, v1.30-alpha.7847ff09.
                 enum:
                 - v1.28-latest
                 - v1.28.2
@@ -10224,7 +10240,7 @@ spec:
                 - v1.22.5
                 - v1.21.6
                 - master
-                - v1.29-alpha.dcfb1b0b
+                - v1.30-alpha.7847ff09
                 type: string
             required:
             - namespace

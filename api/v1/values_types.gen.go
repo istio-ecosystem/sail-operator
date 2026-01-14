@@ -455,8 +455,14 @@ type GlobalConfig struct {
 	NetworkPolicy *NetworkPolicyConfig `json:"networkPolicy,omitempty"`
 	// Specifies resource scope for discovery selectors.
 	// This is useful when installing Istio on a cluster where some resources need to be owned by a cluster administrator and some can be owned by the mesh administrator.
-	ResourceScope ResourceScope `json:"resourceScope,omitempty"` // The next available key is 77
+	ResourceScope ResourceScope `json:"resourceScope,omitempty"`
+	// Specifies how proxies are configured within Istio.
+	Agentgateway *Agentgateway `json:"agentgateway,omitempty"` // The next available key is 78
 
+}
+
+type Agentgateway struct {
+	Image *string `json:"image,omitempty"`
 }
 
 // Configuration for Security Token Service (STS) server.
@@ -1039,13 +1045,13 @@ type NetworkPolicyConfig struct {
 
 const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\n" +
-	"\x1bpkg/apis/values_types.proto\x12\x17istio.operator.v1alpha1\x1a\x19google/protobuf/any.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\"k8s.io/api/core/v1/generated.proto\x1a4k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto\"h\n" +
+	"\x1bpkg/apis/values_types.proto\x12\x17istio.operator.v1alpha1\x1a\x19google/protobuf/any.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\"h\n" +
 	"\n" +
 	"ArchConfig\x12\x14\n" +
 	"\x05amd64\x18\x01 \x01(\rR\x05amd64\x12\x18\n" +
 	"\appc64le\x18\x02 \x01(\rR\appc64le\x12\x14\n" +
 	"\x05s390x\x18\x03 \x01(\rR\x05s390x\x12\x14\n" +
-	"\x05arm64\x18\x04 \x01(\rR\x05arm64\"\xa0\f\n" +
+	"\x05arm64\x18\x04 \x01(\rR\x05arm64\"\x90\f\n" +
 	"\tCNIConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12\x10\n" +
 	"\x03hub\x18\x02 \x01(\tR\x03hub\x12(\n" +
@@ -1061,8 +1067,8 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"cniConfDir\x12(\n" +
 	"\x0fcniConfFileName\x18\b \x01(\tR\x0fcniConfFileName\x12 \n" +
 	"\vcniNetnsDir\x18\x1f \x01(\tR\vcniNetnsDir\x12,\n" +
-	"\x11excludeNamespaces\x18\t \x03(\tR\x11excludeNamespaces\x128\n" +
-	"\baffinity\x18\x14 \x01(\v2\x1c.k8s.io.api.core.v1.AffinityR\baffinity\x12)\n" +
+	"\x11excludeNamespaces\x18\t \x03(\tR\x11excludeNamespaces\x123\n" +
+	"\baffinity\x18\x14 \x01(\v2\x17.google.protobuf.StructR\baffinity\x12)\n" +
 	"\x03env\x18  \x01(\v2\x17.google.protobuf.StructR\x03env\x12A\n" +
 	"\x0fdaemonSetLabels\x18! \x01(\v2\x17.google.protobuf.StructR\x0fdaemonSetLabels\x12C\n" +
 	"\x0epodAnnotations\x18\n" +
@@ -1077,8 +1083,8 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\tresources\x18\x11 \x01(\v2\".istio.operator.v1alpha1.ResourcesR\tresources\x12>\n" +
 	"\n" +
 	"privileged\x18\x12 \x01(\v2\x1a.google.protobuf.BoolValueB\x02\x18\x01R\n" +
-	"privileged\x12J\n" +
-	"\x0eseccompProfile\x18\x13 \x01(\v2\".k8s.io.api.core.v1.SeccompProfileR\x0eseccompProfile\x12C\n" +
+	"privileged\x12?\n" +
+	"\x0eseccompProfile\x18\x13 \x01(\v2\x17.google.protobuf.StructR\x0eseccompProfile\x12C\n" +
 	"\aambient\x18\x15 \x01(\v2).istio.operator.v1alpha1.CNIAmbientConfigR\aambient\x12\x1a\n" +
 	"\bprovider\x18\x16 \x01(\tR\bprovider\x12Z\n" +
 	"\x15rollingMaxUnavailable\x18\x17 \x01(\v2$.istio.operator.v1alpha1.IntOrStringR\x15rollingMaxUnavailable\x12L\n" +
@@ -1132,7 +1138,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	" DefaultPodDisruptionBudgetConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\"f\n" +
 	"\x16DefaultResourcesConfig\x12L\n" +
-	"\brequests\x18\x01 \x01(\v20.istio.operator.v1alpha1.ResourcesRequestsConfigR\brequests\"\xbb\x0f\n" +
+	"\brequests\x18\x01 \x01(\v20.istio.operator.v1alpha1.ResourcesRequestsConfigR\brequests\"\xfb\x0e\n" +
 	"\x13EgressGatewayConfig\x12F\n" +
 	"\x10autoscaleEnabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\x10autoscaleEnabled\x12\"\n" +
 	"\fautoscaleMax\x18\x02 \x01(\rR\fautoscaleMax\x12\"\n" +
@@ -1146,15 +1152,15 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x04name\x18\x19 \x01(\tR\x04name\x12?\n" +
 	"\fnodeSelector\x18\n" +
 	" \x01(\v2\x17.google.protobuf.StructB\x02\x18\x01R\fnodeSelector\x12C\n" +
-	"\x0epodAnnotations\x18\v \x01(\v2\x17.google.protobuf.StructB\x02\x18\x01R\x0epodAnnotations\x12{\n" +
-	"\x1cpodAntiAffinityLabelSelector\x18\f \x03(\v23.k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelectorB\x02\x18\x01R\x1cpodAntiAffinityLabelSelector\x12\x83\x01\n" +
-	" podAntiAffinityTermLabelSelector\x18\r \x03(\v23.k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelectorB\x02\x18\x01R podAntiAffinityTermLabelSelector\x12:\n" +
+	"\x0epodAnnotations\x18\v \x01(\v2\x17.google.protobuf.StructB\x02\x18\x01R\x0epodAnnotations\x12_\n" +
+	"\x1cpodAntiAffinityLabelSelector\x18\f \x03(\v2\x17.google.protobuf.StructB\x02\x18\x01R\x1cpodAntiAffinityLabelSelector\x12g\n" +
+	" podAntiAffinityTermLabelSelector\x18\r \x03(\v2\x17.google.protobuf.StructB\x02\x18\x01R podAntiAffinityTermLabelSelector\x12:\n" +
 	"\x05ports\x18\x0e \x03(\v2$.istio.operator.v1alpha1.PortsConfigR\x05ports\x12D\n" +
 	"\tresources\x18\x0f \x01(\v2\".istio.operator.v1alpha1.ResourcesB\x02\x18\x01R\tresources\x12K\n" +
 	"\rsecretVolumes\x18\x10 \x03(\v2%.istio.operator.v1alpha1.SecretVolumeR\rsecretVolumes\x12G\n" +
 	"\x12serviceAnnotations\x18\x11 \x01(\v2\x17.google.protobuf.StructR\x12serviceAnnotations\x12\x12\n" +
-	"\x04type\x18\x12 \x01(\tR\x04type\x12D\n" +
-	"\vtolerations\x18\x14 \x03(\v2\x1e.k8s.io.api.core.v1.TolerationB\x02\x18\x01R\vtolerations\x12R\n" +
+	"\x04type\x18\x12 \x01(\tR\x04type\x12=\n" +
+	"\vtolerations\x18\x14 \x03(\v2\x17.google.protobuf.StructB\x02\x18\x01R\vtolerations\x12R\n" +
 	"\x0frollingMaxSurge\x18\x15 \x01(\v2$.istio.operator.v1alpha1.IntOrStringB\x02\x18\x01R\x0frollingMaxSurge\x12^\n" +
 	"\x15rollingMaxUnavailable\x18\x16 \x01(\v2$.istio.operator.v1alpha1.IntOrStringB\x02\x18\x01R\x15rollingMaxUnavailable\x12=\n" +
 	"\rconfigVolumes\x18\x17 \x03(\v2\x17.google.protobuf.StructR\rconfigVolumes\x12K\n" +
@@ -1175,15 +1181,15 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x14istio_ingressgateway\x18\x04 \x01(\v2-.istio.operator.v1alpha1.IngressGatewayConfigR\x14istio-ingressgateway\x12@\n" +
 	"\x0fsecurityContext\x18\n" +
 	" \x01(\v2\x16.google.protobuf.ValueR\x0fsecurityContext\x12>\n" +
-	"\x0eseccompProfile\x18\f \x01(\v2\x16.google.protobuf.ValueR\x0eseccompProfile\"\xad\x14\n" +
+	"\x0eseccompProfile\x18\f \x01(\v2\x16.google.protobuf.ValueR\x0eseccompProfile\"\xf1\x14\n" +
 	"\fGlobalConfig\x12;\n" +
 	"\x04arch\x18\x01 \x01(\v2#.istio.operator.v1alpha1.ArchConfigB\x02\x18\x01R\x04arch\x12 \n" +
 	"\vcertSigners\x18D \x03(\tR\vcertSigners\x12F\n" +
 	"\x10configValidation\x18\x03 \x01(\v2\x1a.google.protobuf.BoolValueR\x10configValidation\x12M\n" +
 	"\x13defaultNodeSelector\x18\x06 \x01(\v2\x17.google.protobuf.StructB\x02\x18\x01R\x13defaultNodeSelector\x12y\n" +
 	"\x1adefaultPodDisruptionBudget\x18\a \x01(\v29.istio.operator.v1alpha1.DefaultPodDisruptionBudgetConfigR\x1adefaultPodDisruptionBudget\x12_\n" +
-	"\x10defaultResources\x18\t \x01(\v2/.istio.operator.v1alpha1.DefaultResourcesConfigB\x02\x18\x01R\x10defaultResources\x12R\n" +
-	"\x12defaultTolerations\x187 \x03(\v2\x1e.k8s.io.api.core.v1.TolerationB\x02\x18\x01R\x12defaultTolerations\x12\x10\n" +
+	"\x10defaultResources\x18\t \x01(\v2/.istio.operator.v1alpha1.DefaultResourcesConfigB\x02\x18\x01R\x10defaultResources\x12K\n" +
+	"\x12defaultTolerations\x187 \x03(\v2\x17.google.protobuf.StructB\x02\x18\x01R\x12defaultTolerations\x12\x10\n" +
 	"\x03hub\x18\f \x01(\tR\x03hub\x12(\n" +
 	"\x0fimagePullPolicy\x18\r \x01(\tR\x0fimagePullPolicy\x12*\n" +
 	"\x10imagePullSecrets\x18% \x03(\tR\x10imagePullSecrets\x12&\n" +
@@ -1226,13 +1232,16 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x0ftrustBundleName\x18I \x01(\tR\x0ftrustBundleName\x12B\n" +
 	"\x0enativeNftables\x18J \x01(\v2\x1a.google.protobuf.BoolValueR\x0enativeNftables\x12R\n" +
 	"\rnetworkPolicy\x18K \x01(\v2,.istio.operator.v1alpha1.NetworkPolicyConfigR\rnetworkPolicy\x12L\n" +
-	"\rresourceScope\x18L \x01(\x0e2&.istio.operator.v1alpha1.ResourceScopeR\rresourceScope\"-\n" +
+	"\rresourceScope\x18L \x01(\x0e2&.istio.operator.v1alpha1.ResourceScopeR\rresourceScope\x12I\n" +
+	"\fagentgateway\x18M \x01(\v2%.istio.operator.v1alpha1.AgentgatewayR\fagentgateway\"$\n" +
+	"\fAgentgateway\x12\x14\n" +
+	"\x05image\x18\x01 \x01(\tR\x05image\"-\n" +
 	"\tSTSConfig\x12 \n" +
 	"\vservicePort\x18\x01 \x01(\rR\vservicePort\"R\n" +
 	"\fIstiodConfig\x12B\n" +
 	"\x0eenableAnalysis\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x0eenableAnalysis\"+\n" +
 	"\x13GlobalLoggingConfig\x12\x14\n" +
-	"\x05level\x18\x01 \x01(\tR\x05level\"\xb1\x11\n" +
+	"\x05level\x18\x01 \x01(\tR\x05level\"\xf1\x10\n" +
 	"\x14IngressGatewayConfig\x12F\n" +
 	"\x10autoscaleEnabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\x10autoscaleEnabled\x12\"\n" +
 	"\fautoscaleMax\x18\x02 \x01(\rR\fautoscaleMax\x12\"\n" +
@@ -1248,9 +1257,9 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x18loadBalancerSourceRanges\x18\x11 \x03(\tR\x18loadBalancerSourceRanges\x12\x12\n" +
 	"\x04name\x18, \x01(\tR\x04name\x12?\n" +
 	"\fnodeSelector\x18\x13 \x01(\v2\x17.google.protobuf.StructB\x02\x18\x01R\fnodeSelector\x12C\n" +
-	"\x0epodAnnotations\x18\x14 \x01(\v2\x17.google.protobuf.StructB\x02\x18\x01R\x0epodAnnotations\x12{\n" +
-	"\x1cpodAntiAffinityLabelSelector\x18\x15 \x03(\v23.k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelectorB\x02\x18\x01R\x1cpodAntiAffinityLabelSelector\x12\x83\x01\n" +
-	" podAntiAffinityTermLabelSelector\x18\x16 \x03(\v23.k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelectorB\x02\x18\x01R podAntiAffinityTermLabelSelector\x12:\n" +
+	"\x0epodAnnotations\x18\x14 \x01(\v2\x17.google.protobuf.StructB\x02\x18\x01R\x0epodAnnotations\x12_\n" +
+	"\x1cpodAntiAffinityLabelSelector\x18\x15 \x03(\v2\x17.google.protobuf.StructB\x02\x18\x01R\x1cpodAntiAffinityLabelSelector\x12g\n" +
+	" podAntiAffinityTermLabelSelector\x18\x16 \x03(\v2\x17.google.protobuf.StructB\x02\x18\x01R podAntiAffinityTermLabelSelector\x12:\n" +
 	"\x05ports\x18\x17 \x03(\v2$.istio.operator.v1alpha1.PortsConfigR\x05ports\x12&\n" +
 	"\freplicaCount\x18\x18 \x01(\rB\x02\x18\x01R\freplicaCount\x129\n" +
 	"\tresources\x18\x19 \x01(\v2\x17.google.protobuf.StructB\x02\x18\x01R\tresources\x12K\n" +
@@ -1259,8 +1268,8 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x04type\x18\x1d \x01(\tR\x04type\x12R\n" +
 	"\x0frollingMaxSurge\x18\x1f \x01(\v2$.istio.operator.v1alpha1.IntOrStringB\x02\x18\x01R\x0frollingMaxSurge\x12^\n" +
 	"\x15rollingMaxUnavailable\x18  \x01(\v2$.istio.operator.v1alpha1.IntOrStringB\x02\x18\x01R\x15rollingMaxUnavailable\x124\n" +
-	"\x15externalTrafficPolicy\x18\" \x01(\tR\x15externalTrafficPolicy\x12D\n" +
-	"\vtolerations\x18# \x03(\v2\x1e.k8s.io.api.core.v1.TolerationB\x02\x18\x01R\vtolerations\x12;\n" +
+	"\x15externalTrafficPolicy\x18\" \x01(\tR\x15externalTrafficPolicy\x12=\n" +
+	"\vtolerations\x18# \x03(\v2\x17.google.protobuf.StructB\x02\x18\x01R\vtolerations\x12;\n" +
 	"\fingressPorts\x18$ \x03(\v2\x17.google.protobuf.StructR\fingressPorts\x12K\n" +
 	"\x14additionalContainers\x18% \x03(\v2\x17.google.protobuf.StructR\x14additionalContainers\x12=\n" +
 	"\rconfigVolumes\x18& \x03(\v2\x17.google.protobuf.StructR\rconfigVolumes\x128\n" +
@@ -1283,7 +1292,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x04mode\x18\x02 \x01(\x0e29.istio.operator.v1alpha1.OutboundTrafficPolicyConfig.ModeR\x04mode\"(\n" +
 	"\x04Mode\x12\r\n" +
 	"\tALLOW_ANY\x10\x00\x12\x11\n" +
-	"\rREGISTRY_ONLY\x10\x01\"\xc4\x13\n" +
+	"\rREGISTRY_ONLY\x10\x01\"\x8d\x13\n" +
 	"\vPilotConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12F\n" +
 	"\x10autoscaleEnabled\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x10autoscaleEnabled\x12\"\n" +
@@ -1300,23 +1309,23 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x10deploymentLabels\x18\x0e \x01(\v2\x17.google.protobuf.StructR\x10deploymentLabels\x125\n" +
 	"\tpodLabels\x18$ \x01(\v2\x17.google.protobuf.StructR\tpodLabels\x128\n" +
 	"\tconfigMap\x18\x12 \x01(\v2\x1a.google.protobuf.BoolValueR\tconfigMap\x12)\n" +
-	"\x03env\x18\x15 \x01(\v2\x17.google.protobuf.StructR\x03env\x128\n" +
-	"\baffinity\x18\x16 \x01(\v2\x1c.k8s.io.api.core.v1.AffinityR\baffinity\x12R\n" +
+	"\x03env\x18\x15 \x01(\v2\x17.google.protobuf.StructR\x03env\x123\n" +
+	"\baffinity\x18\x16 \x01(\v2\x17.google.protobuf.StructR\baffinity\x12R\n" +
 	"\x0frollingMaxSurge\x18\x18 \x01(\v2$.istio.operator.v1alpha1.IntOrStringB\x02\x18\x01R\x0frollingMaxSurge\x12^\n" +
-	"\x15rollingMaxUnavailable\x18\x19 \x01(\v2$.istio.operator.v1alpha1.IntOrStringB\x02\x18\x01R\x15rollingMaxUnavailable\x12D\n" +
-	"\vtolerations\x18\x1a \x03(\v2\x1e.k8s.io.api.core.v1.TolerationB\x02\x18\x01R\vtolerations\x12C\n" +
+	"\x15rollingMaxUnavailable\x18\x19 \x01(\v2$.istio.operator.v1alpha1.IntOrStringB\x02\x18\x01R\x15rollingMaxUnavailable\x12=\n" +
+	"\vtolerations\x18\x1a \x03(\v2\x17.google.protobuf.StructB\x02\x18\x01R\vtolerations\x12C\n" +
 	"\x0epodAnnotations\x18\x1e \x01(\v2\x17.google.protobuf.StructB\x02\x18\x01R\x0epodAnnotations\x12G\n" +
 	"\x12serviceAnnotations\x18% \x01(\v2\x17.google.protobuf.StructR\x12serviceAnnotations\x12U\n" +
 	"\x19serviceAccountAnnotations\x188 \x01(\v2\x17.google.protobuf.StructR\x19serviceAccountAnnotations\x128\n" +
 	"\x17jwksResolverExtraRootCA\x18  \x01(\tR\x17jwksResolverExtraRootCA\x12\x10\n" +
 	"\x03hub\x18\" \x01(\tR\x03hub\x12(\n" +
 	"\x03tag\x18# \x01(\v2\x16.google.protobuf.ValueR\x03tag\x12\x18\n" +
-	"\avariant\x18' \x01(\tR\avariant\x12J\n" +
-	"\x0eseccompProfile\x18& \x01(\v2\".k8s.io.api.core.v1.SeccompProfileR\x0eseccompProfile\x12j\n" +
-	"\x19topologySpreadConstraints\x18) \x03(\v2,.k8s.io.api.core.v1.TopologySpreadConstraintR\x19topologySpreadConstraints\x12G\n" +
-	"\x12extraContainerArgs\x18* \x03(\v2\x17.google.protobuf.StructR\x12extraContainerArgs\x12C\n" +
-	"\fvolumeMounts\x181 \x03(\v2\x1f.k8s.io.api.core.v1.VolumeMountR\fvolumeMounts\x124\n" +
-	"\avolumes\x183 \x03(\v2\x1a.k8s.io.api.core.v1.VolumeR\avolumes\x12\x1e\n" +
+	"\avariant\x18' \x01(\tR\avariant\x12?\n" +
+	"\x0eseccompProfile\x18& \x01(\v2\x17.google.protobuf.StructR\x0eseccompProfile\x12U\n" +
+	"\x19topologySpreadConstraints\x18) \x03(\v2\x17.google.protobuf.StructR\x19topologySpreadConstraints\x12G\n" +
+	"\x12extraContainerArgs\x18* \x03(\v2\x17.google.protobuf.StructR\x12extraContainerArgs\x12;\n" +
+	"\fvolumeMounts\x181 \x03(\v2\x17.google.protobuf.StructR\fvolumeMounts\x121\n" +
+	"\avolumes\x183 \x03(\v2\x17.google.protobuf.StructR\avolumes\x12\x1e\n" +
 	"\n" +
 	"ipFamilies\x184 \x03(\tR\n" +
 	"ipFamilies\x12&\n" +
@@ -1359,7 +1368,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\n" +
 	"targetPort\x18\x04 \x01(\x05R\n" +
 	"targetPort\x12\x1a\n" +
-	"\bprotocol\x18\x05 \x01(\tR\bprotocol\"\x96\n" +
+	"\bprotocol\x18\x05 \x01(\tR\bprotocol\"\x85\n" +
 	"\n" +
 	"\vProxyConfig\x12\x1e\n" +
 	"\n" +
@@ -1379,16 +1388,16 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"privileged\x12B\n" +
 	"\x1creadinessInitialDelaySeconds\x18\x14 \x01(\rR\x1creadinessInitialDelaySeconds\x126\n" +
 	"\x16readinessPeriodSeconds\x18\x15 \x01(\rR\x16readinessPeriodSeconds\x12<\n" +
-	"\x19readinessFailureThreshold\x18\x16 \x01(\rR\x19readinessFailureThreshold\x12J\n" +
-	"\x0eseccompProfile\x18+ \x01(\v2\".k8s.io.api.core.v1.SeccompProfileR\x0eseccompProfile\x12I\n" +
+	"\x19readinessFailureThreshold\x18\x16 \x01(\rR\x19readinessFailureThreshold\x12?\n" +
+	"\x0eseccompProfile\x18+ \x01(\v2\x17.google.protobuf.StructR\x0eseccompProfile\x12I\n" +
 	"\fstartupProbe\x18) \x01(\v2%.istio.operator.v1alpha1.StartupProbeR\fstartupProbe\x12\x1e\n" +
 	"\n" +
 	"statusPort\x18\x17 \x01(\rR\n" +
 	"statusPort\x12D\n" +
 	"\tresources\x18\x18 \x01(\v2\".istio.operator.v1alpha1.ResourcesB\x02\x18\x01R\tresources\x127\n" +
 	"\x06tracer\x18\x19 \x01(\x0e2\x1f.istio.operator.v1alpha1.tracerR\x06tracer\x122\n" +
-	"\x14excludeOutboundPorts\x18\x1c \x01(\tR\x14excludeOutboundPorts\x12;\n" +
-	"\tlifecycle\x18$ \x01(\v2\x1d.k8s.io.api.core.v1.LifecycleR\tlifecycle\x12h\n" +
+	"\x14excludeOutboundPorts\x18\x1c \x01(\tR\x14excludeOutboundPorts\x125\n" +
+	"\tlifecycle\x18$ \x01(\v2\x17.google.protobuf.StructR\tlifecycle\x12h\n" +
 	"\x1fholdApplicationUntilProxyStarts\x18% \x01(\v2\x1a.google.protobuf.BoolValueB\x02\x18\x01R\x1fholdApplicationUntilProxyStarts\x120\n" +
 	"\x13includeInboundPorts\x18& \x01(\tR\x13includeInboundPorts\x122\n" +
 	"\x14includeOutboundPorts\x18' \x01(\tR\x14includeOutboundPorts\"p\n" +
@@ -1408,12 +1417,12 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1e\n" +
 	"\n" +
 	"secretName\x18\x03 \x01(\tR\n" +
-	"secretName\"\x91\x05\n" +
+	"secretName\"\xd9\x04\n" +
 	"\x15SidecarInjectorConfig\x12X\n" +
 	"\x19enableNamespacesByDefault\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x19enableNamespacesByDefault\x12.\n" +
-	"\x12reinvocationPolicy\x18\x03 \x01(\tR\x12reinvocationPolicy\x12e\n" +
-	"\x13neverInjectSelector\x18\v \x03(\v23.k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelectorR\x13neverInjectSelector\x12g\n" +
-	"\x14alwaysInjectSelector\x18\f \x03(\v23.k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelectorR\x14alwaysInjectSelector\x12L\n" +
+	"\x12reinvocationPolicy\x18\x03 \x01(\tR\x12reinvocationPolicy\x12I\n" +
+	"\x13neverInjectSelector\x18\v \x03(\v2\x17.google.protobuf.StructR\x13neverInjectSelector\x12K\n" +
+	"\x14alwaysInjectSelector\x18\f \x03(\v2\x17.google.protobuf.StructR\x14alwaysInjectSelector\x12L\n" +
 	"\x13rewriteAppHTTPProbe\x18\x10 \x01(\v2\x1a.google.protobuf.BoolValueR\x13rewriteAppHTTPProbe\x12I\n" +
 	"\x13injectedAnnotations\x18\x13 \x01(\v2\x17.google.protobuf.StructR\x13injectedAnnotations\x12\"\n" +
 	"\finjectionURL\x18\x16 \x01(\tR\finjectionURL\x125\n" +
@@ -1478,14 +1487,14 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\vIntOrString\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\x03R\x04type\x123\n" +
 	"\x06intVal\x18\x02 \x01(\v2\x1b.google.protobuf.Int32ValueR\x06intVal\x124\n" +
-	"\x06strVal\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueR\x06strVal\"\xfe\x02\n" +
+	"\x06strVal\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueR\x06strVal\"\xd4\x02\n" +
 	"\x0eWaypointConfig\x12@\n" +
-	"\tresources\x18\x01 \x01(\v2\".istio.operator.v1alpha1.ResourcesR\tresources\x128\n" +
-	"\baffinity\x18\x02 \x01(\v2\x1c.k8s.io.api.core.v1.AffinityR\baffinity\x12j\n" +
-	"\x19topologySpreadConstraints\x18\x03 \x03(\v2,.k8s.io.api.core.v1.TopologySpreadConstraintR\x19topologySpreadConstraints\x12D\n" +
-	"\fnodeSelector\x18\x04 \x01(\v2 .k8s.io.api.core.v1.NodeSelectorR\fnodeSelector\x12>\n" +
+	"\tresources\x18\x01 \x01(\v2\".istio.operator.v1alpha1.ResourcesR\tresources\x123\n" +
+	"\baffinity\x18\x02 \x01(\v2\x17.google.protobuf.StructR\baffinity\x12U\n" +
+	"\x19topologySpreadConstraints\x18\x03 \x03(\v2\x17.google.protobuf.StructR\x19topologySpreadConstraints\x12;\n" +
+	"\fnodeSelector\x18\x04 \x01(\v2\x17.google.protobuf.StructR\fnodeSelector\x127\n" +
 	"\n" +
-	"toleration\x18\x05 \x03(\v2\x1e.k8s.io.api.core.v1.TolerationR\n" +
+	"toleration\x18\x05 \x03(\v2\x17.google.protobuf.StructR\n" +
 	"toleration\"K\n" +
 	"\x13NetworkPolicyConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled*C\n" +
@@ -1737,6 +1746,14 @@ type MeshConfig struct {
 	// Connection timeout used by Envoy. (MUST be >=1ms)
 	// Default timeout is 10s.
 	ConnectTimeout *metav1.Duration `json:"connectTimeout,omitempty"`
+	// Idle timeout configured on Envoy proxies for their connection pools to ztunnel via HBONE.
+	// This controls how long Envoy will keep idle connections to ztunnel before closing them.
+	// Note: This setting is applied only on the Envoy proxy side; ztunnel does not use it.
+	// Default timeout is 1 hour (3600s).
+	// For environments with aggressive IP address reuse, it is recommended to set
+	// this to a value less than the CNI IP cooldown period to prevent stale connection reuse.
+	// For example, if your CNI has a 30s cooldown period, setting this to 15s is recommended.
+	HboneIdleTimeout *metav1.Duration `json:"hboneIdleTimeout,omitempty"`
 	// +hidefromdoc
 	// Automatic protocol detection uses a set of heuristics to
 	// determine whether the connection is using TLS or not (on the
@@ -2063,14 +2080,6 @@ type MeshConfig struct {
 	// Currently, this supports configuration of ecdhCurves and cipherSuites only.
 	// For ISTIO_MUTUAL TLS settings, use meshMTLS configuration.
 	TlsDefaults *MeshConfigTLSConfig `json:"tlsDefaults,omitempty"`
-	// File flush interval for envoy flushes buffers to disk in milliseconds.
-	// Default is 1000.
-	// Optional.
-	FileFlushInterval *uint32 `json:"fileFlushInterval,omitempty"`
-	// File flush buffer size for envoy flushes buffers to disk in kilobytes.
-	// Defaults to 64.
-	// Optional.
-	FileFlushMinSize *uint32 `json:"fileFlushMinSize,omitempty"`
 }
 
 // ConfigSource describes information about a configuration store inside a
@@ -3127,13 +3136,14 @@ type MeshConfigExtensionProviderResourceDetectorsDynatraceResourceDetector struc
 
 const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\n" +
-	"\x1amesh/v1alpha1/config.proto\x12\x13istio.mesh.v1alpha1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19mesh/v1alpha1/proxy.proto\x1a*networking/v1alpha3/destination_rule.proto\x1a)networking/v1alpha3/virtual_service.proto\"\xe3p\n" +
+	"\x1amesh/v1alpha1/config.proto\x12\x13istio.mesh.v1alpha1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19mesh/v1alpha1/proxy.proto\x1a*networking/v1alpha3/destination_rule.proto\x1a)networking/v1alpha3/virtual_service.proto\"\x83q\n" +
 	"\n" +
 	"MeshConfig\x12*\n" +
 	"\x11proxy_listen_port\x18\x04 \x01(\x05R\x0fproxyListenPort\x129\n" +
 	"\x19proxy_inbound_listen_port\x18A \x01(\x05R\x16proxyInboundListenPort\x12&\n" +
 	"\x0fproxy_http_port\x18\x05 \x01(\x05R\rproxyHttpPort\x12B\n" +
-	"\x0fconnect_timeout\x18\x06 \x01(\v2\x19.google.protobuf.DurationR\x0econnectTimeout\x12W\n" +
+	"\x0fconnect_timeout\x18\x06 \x01(\v2\x19.google.protobuf.DurationR\x0econnectTimeout\x12G\n" +
+	"\x12hbone_idle_timeout\x18F \x01(\v2\x19.google.protobuf.DurationR\x10hboneIdleTimeout\x12W\n" +
 	"\x1aprotocol_detection_timeout\x18* \x01(\v2\x19.google.protobuf.DurationR\x18protocolDetectionTimeout\x12o\n" +
 	"\rtcp_keepalive\x18\x1c \x01(\v2J.istio.networking.v1alpha3.ConnectionPoolSettings.TCPSettings.TcpKeepaliveR\ftcpKeepalive\x12#\n" +
 	"\ringress_class\x18\a \x01(\tR\fingressClass\x12'\n" +
@@ -3175,9 +3185,7 @@ const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\x12path_normalization\x18= \x01(\v26.istio.mesh.v1alpha1.MeshConfig.ProxyPathNormalizationR\x11pathNormalization\x12_\n" +
 	"\x19default_http_retry_policy\x18> \x01(\v2$.istio.networking.v1alpha3.HTTPRetryR\x16defaultHttpRetryPolicy\x12F\n" +
 	"\tmesh_mTLS\x18? \x01(\v2).istio.mesh.v1alpha1.MeshConfig.TLSConfigR\bmeshMTLS\x12L\n" +
-	"\ftls_defaults\x18@ \x01(\v2).istio.mesh.v1alpha1.MeshConfig.TLSConfigR\vtlsDefaults\x12.\n" +
-	"\x13file_flush_interval\x18D \x01(\rR\x11fileFlushInterval\x12-\n" +
-	"\x13file_flush_min_size\x18E \x01(\rR\x10fileFlushMinSize\x1a\xad\x01\n" +
+	"\ftls_defaults\x18@ \x01(\v2).istio.mesh.v1alpha1.MeshConfig.TLSConfigR\vtlsDefaults\x1a\xad\x01\n" +
 	"\x15OutboundTrafficPolicy\x12N\n" +
 	"\x04mode\x18\x01 \x01(\x0e2:.istio.mesh.v1alpha1.MeshConfig.OutboundTrafficPolicy.ModeR\x04mode\"D\n" +
 	"\x04Mode\x12\x11\n" +
@@ -3433,7 +3441,7 @@ const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\x0fH2UpgradePolicy\x12\x12\n" +
 	"\x0eDO_NOT_UPGRADE\x10\x00\x12\v\n" +
 	"\aUPGRADE\x10\x01J\x04\b1\x102J\x04\b\x01\x10\x02J\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b0\x101J\x04\b\x19\x10\x1aJ\x04\b\x1e\x10\x1fJ\x04\b\n" +
-	"\x10\vJ\x04\b\v\x10\fJ\x04\b\x0f\x10\x10J\x04\b\x10\x10\x11J\x04\b\x12\x10\x13J\x04\b\x13\x10\x14J\x04\b\x14\x10\x15J\x04\b\x15\x10\x16J\x04\b\x17\x10\x18J\x04\b\x1d\x10\x1eJ\x04\b5\x106J\x04\b%\x10&J\x04\b&\x10'J\x04\b'\x10(R\rthrift_configR\x12mixer_check_serverR\x13mixer_report_serverR\x15disable_policy_checksR\x1adisable_mixer_http_reportsR\x16policy_check_fail_openR%sidecar_to_telemetry_session_affinityR\vauth_policyR\x11rds_refresh_delayR\rmixer_addressR\x1fenable_client_side_policy_checkR\fsds_uds_pathR\x11sds_refresh_delayR\x16enable_sds_token_mountR\x12sds_use_k8s_sa_jwtR\x1atermination_drain_durationR\x14disable_report_batchR\x18report_batch_max_entriesR\x15report_batch_max_time\"\x81\x02\n" +
+	"\x10\vJ\x04\b\v\x10\fJ\x04\b\x0f\x10\x10J\x04\b\x10\x10\x11J\x04\b\x12\x10\x13J\x04\b\x13\x10\x14J\x04\b\x14\x10\x15J\x04\b\x15\x10\x16J\x04\b\x17\x10\x18J\x04\b\x1d\x10\x1eJ\x04\b5\x106J\x04\b%\x10&J\x04\b&\x10'J\x04\b'\x10(J\x04\bD\x10EJ\x04\bE\x10FR\rthrift_configR\x12mixer_check_serverR\x13mixer_report_serverR\x15disable_policy_checksR\x1adisable_mixer_http_reportsR\x16policy_check_fail_openR%sidecar_to_telemetry_session_affinityR\vauth_policyR\x11rds_refresh_delayR\rmixer_addressR\x1fenable_client_side_policy_checkR\fsds_uds_pathR\x11sds_refresh_delayR\x16enable_sds_token_mountR\x12sds_use_k8s_sa_jwtR\x1atermination_drain_durationR\x14disable_report_batchR\x18report_batch_max_entriesR\x15report_batch_max_timeR\x13file_flush_intervalR\x13file_flush_min_size\"\x81\x02\n" +
 	"\rLabelSelector\x12U\n" +
 	"\vmatchLabels\x18\x01 \x03(\v23.istio.mesh.v1alpha1.LabelSelector.MatchLabelsEntryR\vmatchLabels\x12Y\n" +
 	"\x10matchExpressions\x18\x02 \x03(\v2-.istio.mesh.v1alpha1.LabelSelectorRequirementR\x10matchExpressions\x1a>\n" +
@@ -4048,6 +4056,15 @@ type MeshConfigProxyConfig struct {
 	//
 	// ```
 	ProxyHeaders *ProxyConfigProxyHeaders `json:"proxyHeaders,omitempty"`
+	// File flush interval for envoy flushes buffers to disk in milliseconds.
+	// The duration needs to be set to a value greater than or equal to 1 millisecond.
+	// Default is 1000ms.
+	// Optional.
+	FileFlushInterval *metav1.Duration `json:"fileFlushInterval,omitempty"`
+	// File flush buffer size for envoy flushes buffers to disk in kilobytes.
+	// Defaults to 64.
+	// Optional.
+	FileFlushMinSizeKb *uint32 `json:"fileFlushMinSizeKb,omitempty"`
 }
 
 type RemoteService struct {
@@ -4393,7 +4410,7 @@ const fileMeshV1alpha1ProxyProtoRawDesc = "" +
 	"poll_delay\x18\x01 \x01(\v2\x19.google.protobuf.DurationR\tpollDelay\x126\n" +
 	"\bfallback\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\bfallbackB\n" +
 	"\n" +
-	"\bprovider\"\xa3&\n" +
+	"\bprovider\"\xa2'\n" +
 	"\vProxyConfig\x12\x1f\n" +
 	"\vconfig_path\x18\x01 \x01(\tR\n" +
 	"configPath\x12\x1f\n" +
@@ -4434,7 +4451,9 @@ const fileMeshV1alpha1ProxyProtoRawDesc = "" +
 	"\x13ca_certificates_pem\x18\" \x03(\tR\x11caCertificatesPem\x12:\n" +
 	"\x05image\x18# \x01(\v2$.istio.networking.v1beta1.ProxyImageR\x05image\x12Y\n" +
 	"\x14private_key_provider\x18& \x01(\v2'.istio.mesh.v1alpha1.PrivateKeyProviderR\x12privateKeyProvider\x12R\n" +
-	"\rproxy_headers\x18' \x01(\v2-.istio.mesh.v1alpha1.ProxyConfig.ProxyHeadersR\fproxyHeaders\x1a@\n" +
+	"\rproxy_headers\x18' \x01(\v2-.istio.mesh.v1alpha1.ProxyConfig.ProxyHeadersR\fproxyHeaders\x12I\n" +
+	"\x13file_flush_interval\x18( \x01(\v2\x19.google.protobuf.DurationR\x11fileFlushInterval\x122\n" +
+	"\x16file_flush_min_size_kb\x18) \x01(\rR\x12fileFlushMinSizeKb\x1a@\n" +
 	"\x12ProxyMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a@\n" +
