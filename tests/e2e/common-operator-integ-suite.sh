@@ -123,11 +123,37 @@ initialize_variables() {
   OPERATOR_SDK=${LOCALBIN}/operator-sdk
   IP_FAMILY=${IP_FAMILY:-ipv4}
   ISTIO_MANIFEST="chart/samples/istio-sample.yaml"
+  CI=${CI:-"false"}
 
   # export to be sure that the variables are available in the subshell
   export IMAGE_BASE="${IMAGE_BASE:-sail-operator}"
   export TAG="${TAG:-latest}"
   export HUB="${HUB:-localhost:5000}"
+
+  # Handle OCP registry scenarios
+  # Note: Makefile.core.mk sets HUB=quay.io/sail-dev and TAG=1.29-latest by default
+  if [ "${OCP}" == "true" ]; then
+    if [ "${CI}" == "true" ] && [ "${HUB}" == "quay.io/sail-dev" ]; then
+      # Scenario 2: CI mode with default HUB -> use external registry with proper CI tag
+      echo "CI mode detected for OCP, using external registry quay.io/sail-dev"
+
+      # Use PR_NUMBER if available, otherwise generate timestamp tag
+      if [ -n "${PR_NUMBER:-}" ]; then
+        export TAG="pr-${PR_NUMBER}"
+        echo "Using PR-based tag: ${TAG}"
+      else
+        export TAG="ci-test-$(date +%s)"
+        echo "Using timestamp-based tag: ${TAG}"
+      fi
+    elif [ "${HUB}" != "quay.io/sail-dev" ] && [ "${HUB}" != "localhost:5000" ]; then
+      # Scenario 3: Custom registry provided by user
+      echo "Using custom registry: ${HUB}"
+    else
+      # Scenario 1: Local development -> use internal OCP registry
+      echo "Local development mode, will use OCP internal registry"
+      export HUB="localhost:5000"  # Reset to trigger internal registry setup
+    fi
+  fi
 
   echo "Setting Istio manifest file: ${ISTIO_MANIFEST}"
   ISTIO_NAME=$(yq eval '.metadata.name' "${WD}/../../$ISTIO_MANIFEST")
