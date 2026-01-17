@@ -17,11 +17,12 @@ link:../README.adoc[Return to Project Root]
 ** <<common-setup,Common Setup>>
 ** <<multi-primary---single-network,Multi-Primary - Single-Network>>
 ** <<multi-primary---multi-network,Multi-Primary - Multi-Network>>
+** <<multi-primary---multi-network-ambient-mode,Multi-Primary - Multi-Network (Ambient Mode)>>
 ** <<primary-remote---single-network,Primary-Remote - Single-Network>>
 ** <<primary-remote---multi-network,Primary-Remote - Multi-Network>>
 ** <<external-control-plane,External Control Plane>>
 
-You can use the Sail Operator and the Sail CRDs to manage a multi-cluster Istio deployment. The following instructions are adapted from the https://istio.io/latest/docs/setup/install/multicluster/[Istio multi-cluster documentation] to demonstrate how you can setup the various deployment models with Sail. Please familiarize yourself with the different https://istio.io/latest/docs/ops/deployment/deployment-models/[deployment models] before starting.
+You can use the Sail Operator and the Sail CRDs to manage a multi-cluster Istio deployment. The following instructions are adapted from the https://istio.io/latest/docs/setup/install/multicluster/[Istio multi-cluster documentation] and https://istio.io/latest/docs/ambient/install/multicluster/[Istio Ambient Mode multi-cluster documentation] to demonstrate how you can setup the various deployment models with Sail. Please familiarize yourself with the different https://istio.io/latest/docs/ops/deployment/deployment-models/[deployment models] before starting.
 
 == Prerequisites
 
@@ -514,6 +515,369 @@ kubectl delete ns sample --context="${CTX_CLUSTER1}"
 kubectl delete istios default --context="${CTX_CLUSTER2}"
 kubectl delete ns istio-system --context="${CTX_CLUSTER2}" 
 kubectl delete ns sample --context="${CTX_CLUSTER2}"
+----
+
+== Multi-Primary - Multi-Network (Ambient Mode)
+
+These instructions install a https://istio.io/latest/docs/ambient/install/multicluster/multi-primary_multi-network/[ambient/multi-primary/multi-network] Istio deployment using the Sail Operator and Sail CRDs. **Before you begin**, ensure you complete the <<common-setup,common setup>>.
+
+**Note:** Istio v1.27 is the minimum supported version for this deployment model.
+
+. Install the Kubernetes Gateway API CRDs
++
+----
+kubectl get crd gateways.gateway.networking.k8s.io &> /dev/null || \
+  kubectl apply --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.4.1/experimental-install.yaml
+----
+
+. Create `istio-cni` namespace on `cluster1`
++
+----
+kubectl get ns istio-cni --context "${CTX_CLUSTER1}" || kubectl create namespace istio-cni --context "${CTX_CLUSTER1}"
+----
+
+. Create an `IstioCNI` resource on `cluster1`
++
+----
+kubectl apply --context "${CTX_CLUSTER1}" -f - <<EOF
+apiVersion: sailoperator.io/v1
+kind: IstioCNI
+metadata:
+  name: default
+spec:
+  namespace: istio-cni
+  profile: ambient
+EOF
+----
+
+. Create `ztunnel` namespace on `cluster1`.
++
+----
+kubectl get ns ztunnel --context "${CTX_CLUSTER1}" || kubectl create namespace ztunnel --context "${CTX_CLUSTER1}"
+----
+
+. Create `Ztunnel` resource on `cluster1`.
++
+----
+kubectl apply --context "${CTX_CLUSTER1}" -f - <<EOF
+apiVersion: sailoperator.io/v1
+kind: ZTunnel
+metadata:
+  name: default
+spec:
+  namespace: ztunnel
+  values:
+    ztunnel:
+      multiCluster:
+        clusterName: cluster1
+      network: network1
+EOF
+----
+
+. Create an `Istio` resource on `cluster1`.
++
+----
+kubectl apply --context "${CTX_CLUSTER1}" -f - <<EOF
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  version: v${ISTIO_VERSION}
+  namespace: istio-system
+  profile: ambient
+  values:
+    global:
+      meshID: mesh1
+      multiCluster:
+        clusterName: cluster1
+      network: network1
+    pilot:
+      trustedZtunnelNamespace: ztunnel
+      env:
+        AMBIENT_ENABLE_MULTI_NETWORK: "true"
+EOF
+----
+
+. Wait for the control plane to become ready.
++
+----
+kubectl wait --context "${CTX_CLUSTER1}" --for=condition=Ready istios/default --timeout=3m
+----
+
+. Create east-west gateway on `cluster1`.
++
+----
+kubectl apply --context "${CTX_CLUSTER1}" -f - <<EOF
+kind: Gateway
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: istio-eastwestgateway
+  namespace: istio-system
+  labels:
+    topology.istio.io/network: network1
+spec:
+  gatewayClassName: istio-east-west
+  listeners:
+  - name: mesh
+    port: 15008
+    protocol: HBONE
+    tls:
+      mode: Terminate
+      options:
+        gateway.istio.io/tls-terminate-mode: ISTIO_MUTUAL
+EOF
+----
+
+. Create `istio-cni` namespace on `cluster2`
++
+----
+kubectl get ns istio-cni --context "${CTX_CLUSTER2}" || kubectl create namespace istio-cni --context "${CTX_CLUSTER2}"
+----
+
+. Create an `IstioCNI` resource on `cluster2`
++
+----
+kubectl apply --context "${CTX_CLUSTER2}" -f - <<EOF
+apiVersion: sailoperator.io/v1
+kind: IstioCNI
+metadata:
+  name: default
+spec:
+  namespace: istio-cni
+  profile: ambient
+EOF
+----
+
+. Create `ztunnel` namespace on `cluster2`.
++
+----
+kubectl get ns ztunnel --context "${CTX_CLUSTER2}" || kubectl create namespace ztunnel --context "${CTX_CLUSTER2}"
+----
+
+. Create `Ztunnel` resource on `cluster2`.
++
+----
+kubectl apply --context "${CTX_CLUSTER2}" -f - <<EOF
+apiVersion: sailoperator.io/v1
+kind: ZTunnel
+metadata:
+  name: default
+spec:
+  namespace: ztunnel
+  values:
+    ztunnel:
+      multiCluster:
+        clusterName: cluster2
+      network: network2
+EOF
+----
+
+. Create `Istio` resource on `cluster2`.
++
+----
+kubectl apply --context "${CTX_CLUSTER2}" -f - <<EOF
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  version: v${ISTIO_VERSION}
+  namespace: istio-system
+  profile: ambient
+  values:
+    global:
+      meshID: mesh1
+      multiCluster:
+        clusterName: cluster2
+      network: network2
+    pilot:
+      trustedZtunnelNamespace: ztunnel
+      env:
+        AMBIENT_ENABLE_MULTI_NETWORK: "true"
+EOF
+----
+
+. Wait for the control plane to become ready.
++
+----
+kubectl wait --context "${CTX_CLUSTER2}" --for=jsonpath='{.status.revisions.ready}'=1 istios/default --timeout=3m
+----
+
+. Create east-west gateway on `cluster2`.
++
+----
+kubectl apply --context "${CTX_CLUSTER2}" -f - <<EOF
+kind: Gateway
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: istio-eastwestgateway
+  namespace: istio-system
+  labels:
+    topology.istio.io/network: network2
+spec:
+  gatewayClassName: istio-east-west
+  listeners:
+  - name: mesh
+    port: 15008
+    protocol: HBONE
+    tls:
+      mode: Terminate
+      options:
+        gateway.istio.io/tls-terminate-mode: ISTIO_MUTUAL
+EOF
+----
+
+. Install a remote secret in `cluster2` that provides access to the `cluster1` API server.
+
++
+----
+istioctl create-remote-secret \
+  --context="${CTX_CLUSTER1}" \
+  --name=cluster1 | \
+  kubectl apply -f - --context="${CTX_CLUSTER2}"
+----
+
++
+**If using kind**, first get the `cluster1` controlplane ip and pass the `--server` option to `istioctl create-remote-secret`.
++
+----
+CLUSTER1_CONTAINER_IP=$(kubectl get nodes -l node-role.kubernetes.io/control-plane --context "${CTX_CLUSTER1}" -o jsonpath='{.items[0].status.addresses[?(@.type == "InternalIP")].address}')
+istioctl create-remote-secret \
+      --context="${CTX_CLUSTER1}" \
+      --name=cluster1 \
+      --server="https://${CLUSTER1_CONTAINER_IP}:6443" | \
+  kubectl apply -f - --context "${CTX_CLUSTER2}"
+----
+
+. Install a remote secret in `cluster1` that provides access to the `cluster2` API server.
+
++
+----
+istioctl create-remote-secret \
+  --context="${CTX_CLUSTER2}" \
+  --name=cluster2 | \
+  kubectl apply -f - --context="${CTX_CLUSTER1}"
+----
+
++
+**If using kind**, first get the `cluster1` controlplane IP and pass the `--server` option to `istioctl create-remote-secret`
++
+----
+CLUSTER2_CONTAINER_IP=$(kubectl get nodes -l node-role.kubernetes.io/control-plane --context "${CTX_CLUSTER2}" -o jsonpath='{.items[0].status.addresses[?(@.type == "InternalIP")].address}')
+istioctl create-remote-secret \
+      --context="${CTX_CLUSTER2}" \
+      --name=cluster2 \
+      --server="https://${CLUSTER2_CONTAINER_IP}:6443" | \
+  kubectl apply -f - --context "${CTX_CLUSTER1}"
+----
+
+. Create sample application namespaces in each cluster.
+
++
+----
+kubectl get ns sample --context "${CTX_CLUSTER1}" || kubectl create --context="${CTX_CLUSTER1}" namespace sample
+kubectl label --context "${CTX_CLUSTER1}" namespace sample istio.io/dataplane-mode=ambient
+kubectl get ns sample --context "${CTX_CLUSTER2}" || kubectl create --context="${CTX_CLUSTER2}" namespace sample
+kubectl label --context "${CTX_CLUSTER2}" namespace sample istio.io/dataplane-mode=ambient
+----
+
+. Deploy sample applications in `cluster1`.
+
++
+----
+kubectl apply --context="${CTX_CLUSTER1}" \
+  -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml" \
+  -l service=helloworld -n sample
+kubectl apply --context="${CTX_CLUSTER1}" \
+  -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml" \
+  -l version=v1 -n sample
+kubectl apply --context="${CTX_CLUSTER1}" \
+  -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/sleep/sleep.yaml" -n sample
+----
+
+. Label `helloworld` service in `cluster1` as global so that it can be accessed from other clusters in the mesh
++
+----
+kubectl label --context="${CTX_CLUSTER1}" svc helloworld -n sample istio.io/global="true"
+----
+
+. Deploy sample applications in `cluster2`.
+
++
+----
+kubectl apply --context="${CTX_CLUSTER2}" \
+  -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml" \
+  -l service=helloworld -n sample
+kubectl apply --context="${CTX_CLUSTER2}" \
+  -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml" \
+  -l version=v2 -n sample
+kubectl apply --context="${CTX_CLUSTER2}" \
+  -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/sleep/sleep.yaml" -n sample
+----
+
+. Label `helloworld` service in `cluster2` as global so that it can be accessed from other clusters in the mesh
++
+----
+kubectl label --context="${CTX_CLUSTER2}" svc helloworld -n sample istio.io/global="true"
+----
+
+. Wait for the sample applications to be ready.
++
+----
+kubectl --context="${CTX_CLUSTER1}" wait --for condition=available -n sample deployment/helloworld-v1
+kubectl --context="${CTX_CLUSTER2}" wait --for condition=available -n sample deployment/helloworld-v2
+kubectl --context="${CTX_CLUSTER1}" wait --for condition=available -n sample deployment/sleep
+kubectl --context="${CTX_CLUSTER2}" wait --for condition=available -n sample deployment/sleep
+----
+
+. From `cluster1`, send 10 requests to the helloworld service. Verify that you see responses from both v1 and v2.
+
++
+----
+for i in {0..9}; do
+  kubectl exec --context="${CTX_CLUSTER1}" -n sample -c sleep \
+    "$(kubectl get pod --context="${CTX_CLUSTER1}" -n sample -l \
+    app=sleep -o jsonpath='{.items[0].metadata.name}')" \
+    -- curl -sS helloworld.sample:5000/hello;
+done
+----
+
+. From `cluster2`, send another 10 requests to the helloworld service. Verify that you see responses from both v1 and v2.
+
++
+----
+for i in {0..9}; do
+  kubectl exec --context="${CTX_CLUSTER2}" -n sample -c sleep \
+    "$(kubectl get pod --context="${CTX_CLUSTER2}" -n sample -l \
+    app=sleep -o jsonpath='{.items[0].metadata.name}')" \
+    -- curl -sS helloworld.sample:5000/hello;
+done
+----
+
+. Cleanup
++
+----
+kubectl delete ztunnels default --context="${CTX_CLUSTER1}"
+kubectl delete istiocnis default --context="${CTX_CLUSTER1}"
+kubectl delete istios default --context="${CTX_CLUSTER1}"
+kubectl delete ns istio-system --context="${CTX_CLUSTER1}"
+kubectl delete ns sample --context="${CTX_CLUSTER1}"
+kubectl delete ns ztunnel --context="${CTX_CLUSTER1}"
+kubectl delete ns istio-cni --context="${CTX_CLUSTER1}"
+kubectl delete ztunnels default --context="${CTX_CLUSTER2}"
+kubectl delete istiocnis default --context="${CTX_CLUSTER2}"
+kubectl delete istios default --context="${CTX_CLUSTER2}"
+kubectl delete ns istio-system --context="${CTX_CLUSTER2}"
+kubectl delete ns sample --context="${CTX_CLUSTER2}"
+kubectl delete ns ztunnel --context="${CTX_CLUSTER2}"
+kubectl delete ns istio-cni --context="${CTX_CLUSTER2}"
+----
+
+. Remove the Kubernetes Gateway API CRDs
++
+----
+kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.4.1/experimental-install.yaml
 ----
 
 === Primary-Remote - Single-Network
