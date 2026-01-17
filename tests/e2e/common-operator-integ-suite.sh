@@ -124,11 +124,26 @@ initialize_variables() {
   OPERATOR_SDK=${LOCALBIN}/operator-sdk
   IP_FAMILY=${IP_FAMILY:-ipv4}
   ISTIO_MANIFEST="chart/samples/istio-sample.yaml"
+  CI=${CI:-"false"}
 
   # export to be sure that the variables are available in the subshell
   export IMAGE_BASE="${IMAGE_BASE:-sail-operator}"
   export TAG="${TAG:-latest}"
   export HUB="${HUB:-localhost:5000}"
+
+  # If running on OCP and CI true, force HUB to quay.io/sail-dev
+  # This means we are running test on CI and we need to push to quay.io the testing image having an unique tag
+  if [ "${OCP}" == "true" ] && [ "${CI}" == "true" ]; then
+    echo "OCP detected with default HUB, forcing HUB to quay.io/sail-dev"
+    HUB="quay.io/sail-dev"
+    # If tag is equal to latest or is not set, we set a unique tag for the CI tests
+    # On CI the tag should be set to the PR number
+    if [ "${TAG}" == "latest" ] || [ -z "${TAG}" ] || [[ "${TAG}" == *"-latest" ]]; then
+      TAG="ci-test-$(date +%s)"
+      export TAG
+      echo "Forcing TAG to ${TAG} for the CI tests"
+    fi
+  fi
 
   echo "Setting Istio manifest file: ${ISTIO_MANIFEST}"
   ISTIO_NAME=$(yq eval '.metadata.name' "${WD}/../../$ISTIO_MANIFEST")
@@ -222,16 +237,11 @@ if [ "${SKIP_BUILD}" == "false" ]; then
   "${WD}/setup/build-and-push-operator.sh"
 
   if [ "${OCP}" = "true" ]; then
-    # This is a workaround when pulling the image from internal registry
-    # To avoid errors of certificates meanwhile we are pulling the operator image from the internal registry
-    # We need to set image $HUB to a fixed known value after the push
-    # This value always will be equal to the svc url of the internal registry
-    HUB="image-registry.openshift-image-registry.svc:5000/istio-images"
-    echo "Using internal registry: ${HUB}"
+    echo "Using external registry: ${HUB}"
 
     # Workaround for OCP helm operator installation issues:
     # To avoid any cleanup issues, after we build and push the image we check if the namespace exists and delete it if it does.
-    # The test logic already handles the namespace creation and deletion during the test run. 
+    # The test logic already handles the namespace creation and deletion during the test run.
     if ${COMMAND} get ns "${NAMESPACE}" &>/dev/null; then
       echo "Namespace ${NAMESPACE} already exists. Deleting it to avoid conflicts."
       ${COMMAND} delete ns "${NAMESPACE}"

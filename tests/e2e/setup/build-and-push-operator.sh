@@ -22,40 +22,6 @@ WD=$(cd "${WD}" || exit; pwd)
 # The following variables must already be set and exported from the caller:
 # COMMAND, HUB, IMAGE_BASE, TAG, NAMESPACE
 
-# OCP-specific registry logic
-get_internal_registry() {
-  ${COMMAND} get pods -n openshift-image-registry --no-headers | grep -v "Running\|Completed" && \
-    echo "OCP image registry is not running. Aborting." && exit 1
-
-  if [ -z "$(${COMMAND} get route default-route -n openshift-image-registry -o name)" ]; then
-    echo "Creating default route for image registry..."
-    ${COMMAND} patch configs.imageregistry.operator.openshift.io/cluster \
-      --patch '{"spec":{"defaultRoute":true}}' --type=merge
-  
-    timeout 3m bash -c \
-      "until ${COMMAND} get route default-route -n openshift-image-registry &>/dev/null; do sleep 5; done"
-  fi
-
-  URL=$(${COMMAND} get route default-route -n openshift-image-registry --template='{{ .spec.host }}')
-
-  # Create the istio-images namespace to store the operator image
-  # This will ensure that no matter the operator namespace is deleted, the image will still be available
-  export HUB="${URL}/istio-images"
-  echo "Registry URL: ${HUB}"
-
-  ${COMMAND} create namespace istio-images || true
-  ${COMMAND} create namespace "${NAMESPACE}" || true
-  envsubst < "${WD}/config/role-bindings.yaml" | ${COMMAND} apply -f -
-
-  if [[ ${URL} == *".apps-crc.testing"* ]]; then
-    echo "Logging into internal registry..."
-    if ! oc whoami -t | docker login -u "$(${COMMAND} whoami)" --password-stdin "${URL}"; then
-      echo "Failed to log in to Docker registry."
-      exit 1
-    fi
-  fi
-}
-
 build_and_push_operator_image() {
   echo "Building and pushing operator image: ${HUB}/${IMAGE_BASE}:${TAG}"
 
@@ -85,8 +51,9 @@ build_and_push_operator_image() {
 }
 
 # Main logic
-if [ "${OCP}" == "true" ]; then
-  get_internal_registry
-fi
+echo "Starting build and push of operator image..."
+echo "HUB: ${HUB}"
+echo "IMAGE_BASE: ${IMAGE_BASE}"
+echo "TAG: ${TAG}"
 
 build_and_push_operator_image
