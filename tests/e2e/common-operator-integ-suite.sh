@@ -143,7 +143,8 @@ initialize_variables() {
         export TAG="pr-${PR_NUMBER}"
         echo "Using PR-based tag: ${TAG}"
       else
-        export TAG="ci-test-$(date +%s)"
+        TAG="ci-test-$(date +%s)"
+        export TAG
         echo "Using timestamp-based tag: ${TAG}"
       fi
     elif [ "${HUB}" != "quay.io/sail-dev" ] && [ "${HUB}" != "localhost:5000" ]; then
