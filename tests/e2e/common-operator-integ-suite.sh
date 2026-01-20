@@ -147,13 +147,13 @@ initialize_variables() {
         export TAG
         echo "Using timestamp-based tag: ${TAG}"
       fi
-    elif [ "${HUB}" != "quay.io/sail-dev" ] && [ "${HUB}" != "localhost:5000" ]; then
+    elif [ "${HUB}" != "quay.io/sail-dev" ]; then
       # Scenario 3: Custom registry provided by user
       echo "Using custom registry: ${HUB}"
     else
       # Scenario 1: Local development -> use internal OCP registry
       echo "Local development mode, will use OCP internal registry"
-      export HUB="localhost:5000"  # Reset to trigger internal registry setup
+      export USE_INTERNAL_REGISTRY="true"
     fi
   fi
 
@@ -243,7 +243,7 @@ parse_flags "$@"
 initialize_variables
 
 # Export necessary vars
-export COMMAND OCP HUB IMAGE_BASE TAG NAMESPACE
+export COMMAND OCP HUB IMAGE_BASE TAG NAMESPACE USE_INTERNAL_REGISTRY
 
 if [ "${SKIP_BUILD}" == "false" ]; then
   "${WD}/setup/build-and-push-operator.sh"
@@ -252,9 +252,13 @@ if [ "${SKIP_BUILD}" == "false" ]; then
     # This is a workaround when pulling the image from internal registry
     # To avoid errors of certificates meanwhile we are pulling the operator image from the internal registry
     # We need to set image $HUB to a fixed known value after the push
-    # This value always will be equal to the svc url of the internal registry
-    HUB="image-registry.openshift-image-registry.svc:5000/istio-images"
-    echo "Using internal registry: ${HUB}"
+    # Convert from route URL to service URL format for image pulling
+    if [[ "${HUB}" == *"/istio-images" ]]; then
+      HUB="image-registry.openshift-image-registry.svc:5000/istio-images"
+      echo "Using internal registry service URL: ${HUB}"
+    else
+      echo "Using external registry: ${HUB}"
+    fi
 
     # Workaround for OCP helm operator installation issues:
     # To avoid any cleanup issues, after we build and push the image we check if the namespace exists and delete it if it does.
