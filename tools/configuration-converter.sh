@@ -117,7 +117,7 @@ function boolean_2_string(){
 # Note that if there is an entry except spec.components.<component>.enabled: true/false converter will delete them and warn user 
 function validate_spec_components(){
     if [[ $(yq eval '.spec.components' "$OUTPUT") != "null" ]]; then
-        yq -i 'del(.spec.components.[] | keys[] | select(. != "enabled")) | .spec.values *= .spec.components | del (.spec.components)' "$OUTPUT"    
+        yq -i 'with(.spec.components[]; del( .[] | select(key != "enabled") )) | .spec.values *= .spec.components | del(.spec.components)' "$OUTPUT"
         echo "Only values in the format spec.components.<component>.enabled: true/false are supported for conversion. For more details, refer to the documentation: https://github.com/istio-ecosystem/sail-operator/tree/main/docs#components-field"
     fi
 }
