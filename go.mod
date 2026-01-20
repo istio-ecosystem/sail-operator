@@ -28,12 +28,12 @@ require (
 	helm.sh/helm/v3 v3.18.6
 	istio.io/client-go v1.27.5
 	istio.io/istio v0.0.0-20260113195203-846732f15e44
-	k8s.io/api v0.34.1
-	k8s.io/apiextensions-apiserver v0.34.1
-	k8s.io/apimachinery v0.34.1
+	k8s.io/api v0.34.3
+	k8s.io/apiextensions-apiserver v0.34.3
+	k8s.io/apimachinery v0.34.3
 	k8s.io/cli-runtime v0.33.3
-	k8s.io/client-go v0.34.1
-	sigs.k8s.io/controller-runtime v0.22.4
+	k8s.io/client-go v0.34.3
+	sigs.k8s.io/controller-runtime v0.22.5
 )
 
 require (
@@ -171,8 +171,8 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	istio.io/api v1.27.4-0.20251203120322-2b2a39461789 // indirect
-	k8s.io/apiserver v0.34.1 // indirect
-	k8s.io/component-base v0.34.1 // indirect
+	k8s.io/apiserver v0.34.3 // indirect
+	k8s.io/component-base v0.34.3 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b // indirect
 	k8s.io/kubectl v0.33.3 // indirect
