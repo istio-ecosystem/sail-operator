@@ -136,7 +136,7 @@ initialize_variables() {
   if [ "${OCP}" == "true" ]; then
     if [ "${CI}" == "true" ] && [ "${HUB}" == "quay.io/sail-dev" ]; then
       # Scenario 2: CI mode with default HUB -> use external registry with proper CI tag
-      echo "CI mode detected for OCP, using external registry quay.io/sail-dev"
+      echo "CI mode detected for OCP, using external registry ${HUB}"
 
       # Use PR_NUMBER if available, otherwise generate timestamp tag
       if [ -n "${PR_NUMBER:-}" ]; then
