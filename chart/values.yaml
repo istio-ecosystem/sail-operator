@@ -2,6 +2,10 @@ name: sailoperator
 deployment:
   name: sail-operator
   annotations:
+    images.v1_28_3.ztunnel: gcr.io/istio-release/ztunnel:1.28.3
+    images.v1_28_3.istiod: gcr.io/istio-release/pilot:1.28.3
+    images.v1_28_3.proxy: gcr.io/istio-release/proxyv2:1.28.3
+    images.v1_28_3.cni: gcr.io/istio-release/install-cni:1.28.3
     images.v1_28_2.ztunnel: gcr.io/istio-release/ztunnel:1.28.2
     images.v1_28_2.istiod: gcr.io/istio-release/pilot:1.28.2
     images.v1_28_2.proxy: gcr.io/istio-release/proxyv2:1.28.2
@@ -74,10 +78,10 @@ deployment:
     images.v1_26_0.istiod: gcr.io/istio-release/pilot:1.26.0
     images.v1_26_0.proxy: gcr.io/istio-release/proxyv2:1.26.0
     images.v1_26_0.cni: gcr.io/istio-release/install-cni:1.26.0
-    images.v1_30-alpha_4d7a765c.ztunnel: gcr.io/istio-testing/ztunnel:1.30-alpha.4d7a765cf81a69e8c1a3e38b5f64c5fc1bc64360
-    images.v1_30-alpha_4d7a765c.istiod: gcr.io/istio-testing/pilot:1.30-alpha.4d7a765cf81a69e8c1a3e38b5f64c5fc1bc64360
-    images.v1_30-alpha_4d7a765c.proxy: gcr.io/istio-testing/proxyv2:1.30-alpha.4d7a765cf81a69e8c1a3e38b5f64c5fc1bc64360
-    images.v1_30-alpha_4d7a765c.cni: gcr.io/istio-testing/install-cni:1.30-alpha.4d7a765cf81a69e8c1a3e38b5f64c5fc1bc64360
+    images.v1_30-alpha_941c7435.ztunnel: gcr.io/istio-testing/ztunnel:1.30-alpha.941c7435d35fdebdea431237a8dc966bd0bbdd64
+    images.v1_30-alpha_941c7435.istiod: gcr.io/istio-testing/pilot:1.30-alpha.941c7435d35fdebdea431237a8dc966bd0bbdd64
+    images.v1_30-alpha_941c7435.proxy: gcr.io/istio-testing/proxyv2:1.30-alpha.941c7435d35fdebdea431237a8dc966bd0bbdd64
+    images.v1_30-alpha_941c7435.cni: gcr.io/istio-testing/install-cni:1.30-alpha.941c7435d35fdebdea431237a8dc966bd0bbdd64
 revisionHistoryLimit: 10
 service:
   port: 8443
@@ -94,6 +98,7 @@ csv:
     This version of the operator supports the following Istio versions:
 
     - v1.28-latest
+    - v1.28.3
     - v1.28.2
     - v1.28.1
     - v1.28.0
@@ -115,7 +120,7 @@ csv:
     - v1.26.1
     - v1.26.0
     - master
-    - v1.30-alpha.4d7a765c
+    - v1.30-alpha.941c7435
 
     [See this page](https://github.com/istio-ecosystem/sail-operator/blob/main/bundle/README.md) for instructions on how to use it.
   support: Community based

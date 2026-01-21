@@ -29,10 +29,10 @@ const (
 type ZTunnelSpec struct {
 	// +sail:version
 	// Defines the version of Istio to install.
-	// Must be one of: v1.28-latest, v1.28.2, v1.28.1, v1.28.0, v1.27-latest, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.8, v1.26.7, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, master, v1.30-alpha.4d7a765c.
-	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.28-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.28.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.28.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.28.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.27-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.27.5", "urn:alm:descriptor:com.tectonic.ui:select:v1.27.4", "urn:alm:descriptor:com.tectonic.ui:select:v1.27.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.27.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.27.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.27.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.26-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.8", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.7", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.6", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.5", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.4", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.0", "urn:alm:descriptor:com.tectonic.ui:select:master", "urn:alm:descriptor:com.tectonic.ui:select:v1.30-alpha.4d7a765c"}
-	// +kubebuilder:validation:Enum=v1.28-latest;v1.28.2;v1.28.1;v1.28.0;v1.27-latest;v1.27.5;v1.27.4;v1.27.3;v1.27.2;v1.27.1;v1.27.0;v1.26-latest;v1.26.8;v1.26.7;v1.26.6;v1.26.5;v1.26.4;v1.26.3;v1.26.2;v1.26.1;v1.26.0;v1.25-latest;v1.25.5;v1.25.4;v1.25.3;v1.25.2;v1.25.1;v1.24-latest;v1.24.6;v1.24.5;v1.24.4;v1.24.3;v1.24.2;v1.24.1;v1.24.0;master;v1.30-alpha.4d7a765c
-	// +kubebuilder:default=v1.28.2
+	// Must be one of: v1.28-latest, v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.27-latest, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.8, v1.26.7, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, master, v1.30-alpha.941c7435.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName="Istio Version",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:fieldGroup:General", "urn:alm:descriptor:com.tectonic.ui:select:v1.28-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.28.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.28.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.28.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.28.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.27-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.27.5", "urn:alm:descriptor:com.tectonic.ui:select:v1.27.4", "urn:alm:descriptor:com.tectonic.ui:select:v1.27.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.27.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.27.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.27.0", "urn:alm:descriptor:com.tectonic.ui:select:v1.26-latest", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.8", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.7", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.6", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.5", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.4", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.3", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.2", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.1", "urn:alm:descriptor:com.tectonic.ui:select:v1.26.0", "urn:alm:descriptor:com.tectonic.ui:select:master", "urn:alm:descriptor:com.tectonic.ui:select:v1.30-alpha.941c7435"}
+	// +kubebuilder:validation:Enum=v1.28-latest;v1.28.3;v1.28.2;v1.28.1;v1.28.0;v1.27-latest;v1.27.5;v1.27.4;v1.27.3;v1.27.2;v1.27.1;v1.27.0;v1.26-latest;v1.26.8;v1.26.7;v1.26.6;v1.26.5;v1.26.4;v1.26.3;v1.26.2;v1.26.1;v1.26.0;v1.25-latest;v1.25.5;v1.25.4;v1.25.3;v1.25.2;v1.25.1;v1.24-latest;v1.24.6;v1.24.5;v1.24.4;v1.24.3;v1.24.2;v1.24.1;v1.24.0;master;v1.30-alpha.941c7435
+	// +kubebuilder:default=v1.28.3
 	Version string `json:"version"`
 
 	// +sail:profile
@@ -184,7 +184,7 @@ type ZTunnel struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata"`
 
-	// +kubebuilder:default={version: "v1.28.2", namespace: "ztunnel", profile: "ambient"}
+	// +kubebuilder:default={version: "v1.28.3", namespace: "ztunnel", profile: "ambient"}
 	// +optional
 	Spec ZTunnelSpec `json:"spec"`
 
