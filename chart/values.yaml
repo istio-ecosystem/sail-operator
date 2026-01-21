@@ -38,42 +38,6 @@ deployment:
     images.v1_27_0.istiod: gcr.io/istio-release/pilot:1.27.0
     images.v1_27_0.proxy: gcr.io/istio-release/proxyv2:1.27.0
     images.v1_27_0.cni: gcr.io/istio-release/install-cni:1.27.0
-    images.v1_26_8.ztunnel: gcr.io/istio-release/ztunnel:1.26.8
-    images.v1_26_8.istiod: gcr.io/istio-release/pilot:1.26.8
-    images.v1_26_8.proxy: gcr.io/istio-release/proxyv2:1.26.8
-    images.v1_26_8.cni: gcr.io/istio-release/install-cni:1.26.8
-    images.v1_26_7.ztunnel: gcr.io/istio-release/ztunnel:1.26.7
-    images.v1_26_7.istiod: gcr.io/istio-release/pilot:1.26.7
-    images.v1_26_7.proxy: gcr.io/istio-release/proxyv2:1.26.7
-    images.v1_26_7.cni: gcr.io/istio-release/install-cni:1.26.7
-    images.v1_26_6.ztunnel: gcr.io/istio-release/ztunnel:1.26.6
-    images.v1_26_6.istiod: gcr.io/istio-release/pilot:1.26.6
-    images.v1_26_6.proxy: gcr.io/istio-release/proxyv2:1.26.6
-    images.v1_26_6.cni: gcr.io/istio-release/install-cni:1.26.6
-    images.v1_26_5.ztunnel: gcr.io/istio-release/ztunnel:1.26.5
-    images.v1_26_5.istiod: gcr.io/istio-release/pilot:1.26.5
-    images.v1_26_5.proxy: gcr.io/istio-release/proxyv2:1.26.5
-    images.v1_26_5.cni: gcr.io/istio-release/install-cni:1.26.5
-    images.v1_26_4.ztunnel: gcr.io/istio-release/ztunnel:1.26.4
-    images.v1_26_4.istiod: gcr.io/istio-release/pilot:1.26.4
-    images.v1_26_4.proxy: gcr.io/istio-release/proxyv2:1.26.4
-    images.v1_26_4.cni: gcr.io/istio-release/install-cni:1.26.4
-    images.v1_26_3.ztunnel: gcr.io/istio-release/ztunnel:1.26.3
-    images.v1_26_3.istiod: gcr.io/istio-release/pilot:1.26.3
-    images.v1_26_3.proxy: gcr.io/istio-release/proxyv2:1.26.3
-    images.v1_26_3.cni: gcr.io/istio-release/install-cni:1.26.3
-    images.v1_26_2.ztunnel: gcr.io/istio-release/ztunnel:1.26.2
-    images.v1_26_2.istiod: gcr.io/istio-release/pilot:1.26.2
-    images.v1_26_2.proxy: gcr.io/istio-release/proxyv2:1.26.2
-    images.v1_26_2.cni: gcr.io/istio-release/install-cni:1.26.2
-    images.v1_26_1.ztunnel: gcr.io/istio-release/ztunnel:1.26.1
-    images.v1_26_1.istiod: gcr.io/istio-release/pilot:1.26.1
-    images.v1_26_1.proxy: gcr.io/istio-release/proxyv2:1.26.1
-    images.v1_26_1.cni: gcr.io/istio-release/install-cni:1.26.1
-    images.v1_26_0.ztunnel: gcr.io/istio-release/ztunnel:1.26.0
-    images.v1_26_0.istiod: gcr.io/istio-release/pilot:1.26.0
-    images.v1_26_0.proxy: gcr.io/istio-release/proxyv2:1.26.0
-    images.v1_26_0.cni: gcr.io/istio-release/install-cni:1.26.0
     images.v1_30-alpha_5326b280.ztunnel: gcr.io/istio-testing/ztunnel:1.30-alpha.5326b28022300d0f02adaa1be7cc33948a50a7f6
     images.v1_30-alpha_5326b280.istiod: gcr.io/istio-testing/pilot:1.30-alpha.5326b28022300d0f02adaa1be7cc33948a50a7f6
     images.v1_30-alpha_5326b280.proxy: gcr.io/istio-testing/proxyv2:1.30-alpha.5326b28022300d0f02adaa1be7cc33948a50a7f6
@@ -104,16 +68,6 @@ csv:
     - v1.27.2
     - v1.27.1
     - v1.27.0
-    - v1.26-latest
-    - v1.26.8
-    - v1.26.7
-    - v1.26.6
-    - v1.26.5
-    - v1.26.4
-    - v1.26.3
-    - v1.26.2
-    - v1.26.1
-    - v1.26.0
     - master
     - v1.30-alpha.5326b280
 
