@@ -124,11 +124,38 @@ initialize_variables() {
   OPERATOR_SDK=${LOCALBIN}/operator-sdk
   IP_FAMILY=${IP_FAMILY:-ipv4}
   ISTIO_MANIFEST="chart/samples/istio-sample.yaml"
+  CI=${CI:-"false"}
 
   # export to be sure that the variables are available in the subshell
   export IMAGE_BASE="${IMAGE_BASE:-sail-operator}"
   export TAG="${TAG:-latest}"
   export HUB="${HUB:-localhost:5000}"
+
+  # Handle OCP registry scenarios
+  # Note: Makefile.core.mk sets HUB=quay.io/sail-dev and TAG=1.29-latest by default
+  if [ "${OCP}" == "true" ]; then
+    if [ "${CI}" == "true" ] && [ "${HUB}" == "quay.io/sail-dev" ]; then
+      # Scenario 2: CI mode with default HUB -> use external registry with proper CI tag
+      echo "CI mode detected for OCP, using external registry ${HUB}"
+
+      # Use PR_NUMBER if available, otherwise generate timestamp tag
+      if [ -n "${PR_NUMBER:-}" ]; then
+        export TAG="pr-${PR_NUMBER}"
+        echo "Using PR-based tag: ${TAG}"
+      else
+        TAG="ci-test-$(date +%s)"
+        export TAG
+        echo "Using timestamp-based tag: ${TAG}"
+      fi
+    elif [ "${HUB}" != "quay.io/sail-dev" ]; then
+      # Scenario 3: Custom registry provided by user
+      echo "Using custom registry: ${HUB}"
+    else
+      # Scenario 1: Local development -> use internal OCP registry
+      echo "Local development mode, will use OCP internal registry"
+      export USE_INTERNAL_REGISTRY="true"
+    fi
+  fi
 
   echo "Setting Istio manifest file: ${ISTIO_MANIFEST}"
   ISTIO_NAME=$(yq eval '.metadata.name' "${WD}/../../$ISTIO_MANIFEST")
@@ -216,7 +243,7 @@ parse_flags "$@"
 initialize_variables
 
 # Export necessary vars
-export COMMAND OCP HUB IMAGE_BASE TAG NAMESPACE
+export COMMAND OCP HUB IMAGE_BASE TAG NAMESPACE USE_INTERNAL_REGISTRY
 
 if [ "${SKIP_BUILD}" == "false" ]; then
   "${WD}/setup/build-and-push-operator.sh"
@@ -225,9 +252,13 @@ if [ "${SKIP_BUILD}" == "false" ]; then
     # This is a workaround when pulling the image from internal registry
     # To avoid errors of certificates meanwhile we are pulling the operator image from the internal registry
     # We need to set image $HUB to a fixed known value after the push
-    # This value always will be equal to the svc url of the internal registry
-    HUB="image-registry.openshift-image-registry.svc:5000/istio-images"
-    echo "Using internal registry: ${HUB}"
+    # Convert from route URL to service URL format for image pulling
+    if [[ "${HUB}" == *"/istio-images" ]]; then
+      HUB="image-registry.openshift-image-registry.svc:5000/istio-images"
+      echo "Using internal registry service URL: ${HUB}"
+    else
+      echo "Using external registry: ${HUB}"
+    fi
 
     # Workaround for OCP helm operator installation issues:
     # To avoid any cleanup issues, after we build and push the image we check if the namespace exists and delete it if it does.
