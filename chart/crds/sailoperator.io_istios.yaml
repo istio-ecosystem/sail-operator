@@ -3890,6 +3890,12 @@ spec:
                               Increase the value of this field if you find that the metrics from Envoys are truncated.
                             format: int32
                             type: integer
+                          statsCompression:
+                            description: |-
+                              Offer HTTP compression for stats
+                              Defaults to false.
+                              Optional.
+                            type: boolean
                           statsdUdpAddress:
                             description: IP Address and Port of a statsd UDP listener
                               (e.g. `10.75.241.127:9125`).
@@ -10190,7 +10196,7 @@ spec:
                 default: v1.28.3
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.28-latest, v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.27-latest, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, master, v1.30-alpha.941c7435.
+                  Must be one of: v1.28-latest, v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.27-latest, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, master, v1.30-alpha.702493a1.
                 enum:
                 - v1.28-latest
                 - v1.28.3
@@ -10241,7 +10247,7 @@ spec:
                 - v1.22.5
                 - v1.21.6
                 - master
-                - v1.30-alpha.941c7435
+                - v1.30-alpha.702493a1
                 type: string
             required:
             - namespace
