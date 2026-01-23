@@ -194,12 +194,6 @@ spec:
                   global:
                     description: Global configuration for Istio components.
                     properties:
-                      agentgateway:
-                        description: Specifies how proxies are configured within Istio.
-                        properties:
-                          image:
-                            type: string
-                        type: object
                       arch:
                         description: "Specifies pod scheduling arch(amd64, ppc64le,
                           s390x, arm64) and weight as follows:\n\n\t0 - Never scheduled\n\t1
@@ -1073,31 +1067,6 @@ spec:
                                   otherwise to an implementation-defined value. Requests cannot exceed Limits.
                                   More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                                 type: object
-                            type: object
-                          seccompProfile:
-                            description: |-
-                              Configures the seccomp profile for the istio-validation and istio-proxy containers.
-
-                              See: https://kubernetes.io/docs/tutorials/security/seccomp/
-                            properties:
-                              localhostProfile:
-                                description: |-
-                                  localhostProfile indicates a profile defined in a file on the node should be used.
-                                  The profile must be preconfigured on the node to work.
-                                  Must be a descending path, relative to the kubelet's configured seccomp profile location.
-                                  Must be set if type is "Localhost". Must NOT be set for any other type.
-                                type: string
-                              type:
-                                description: |-
-                                  type indicates which kind of seccomp profile will be applied.
-                                  Valid options are:
-
-                                  Localhost - a profile defined in a file on the node should be used.
-                                  RuntimeDefault - the container runtime default profile should be used.
-                                  Unconfined - no profile should be applied.
-                                type: string
-                            required:
-                            - type
                             type: object
                           startupProbe:
                             description: Configures the startup probe for the istio-proxy
@@ -3342,20 +3311,6 @@ spec:
                             items:
                               type: string
                             type: array
-                          fileFlushInterval:
-                            description: |-
-                              File flush interval for envoy flushes buffers to disk in milliseconds.
-                              The duration needs to be set to a value greater than or equal to 1 millisecond.
-                              Default is 1000ms.
-                              Optional.
-                            type: string
-                          fileFlushMinSizeKb:
-                            description: |-
-                              File flush buffer size for envoy flushes buffers to disk in kilobytes.
-                              Defaults to 64.
-                              Optional.
-                            format: int32
-                            type: integer
                           gatewayTopology:
                             description: |-
                               Topology encapsulates the configuration which describes where the proxy is
@@ -3890,12 +3845,6 @@ spec:
                               Increase the value of this field if you find that the metrics from Envoys are truncated.
                             format: int32
                             type: integer
-                          statsCompression:
-                            description: |-
-                              Offer HTTP compression for stats
-                              Defaults to false.
-                              Optional.
-                            type: boolean
                           statsdUdpAddress:
                             description: IP Address and Port of a statsd UDP listener
                               (e.g. `10.75.241.127:9125`).
@@ -5438,35 +5387,6 @@ spec:
                                     Optional. A 128 bit trace id will be used in Istio.
                                     If true, will result in a 64 bit trace id being used.
                                   type: boolean
-                                headers:
-                                  description: |-
-                                    Optional. Additional HTTP headers to include in the request to the Zipkin collector.
-                                    These headers will be added to the HTTP request when sending spans to the collector.
-                                  items:
-                                    properties:
-                                      envName:
-                                        description: |-
-                                          The HTTP header value from the environment variable.
-
-                                          Warning:
-                                          - The environment variable must be set in the istiod pod spec.
-                                          - This is not a end-to-end secure.
-                                        type: string
-                                      name:
-                                        description: REQUIRED. The HTTP header name.
-                                        type: string
-                                      value:
-                                        description: The HTTP header value.
-                                        type: string
-                                    required:
-                                    - name
-                                    type: object
-                                    x-kubernetes-validations:
-                                    - message: At most one of [value envName] should
-                                        be set
-                                      rule: (has(self.value)?1:0) + (has(self.envName)?1:0)
-                                        <= 1
-                                  type: array
                                 maxTagLength:
                                   description: |-
                                     Optional. Controls the overall path length allowed in a reported span.
@@ -5491,11 +5411,6 @@ spec:
                                     service defined by the Kubernetes service or ServiceEntry.
 
                                     Example: "zipkin.default.svc.cluster.local" or "bar/zipkin.example.com".
-                                  type: string
-                                timeout:
-                                  description: |-
-                                    Optional. The timeout for the HTTP request to the Zipkin collector.
-                                    If not specified, the default timeout from Envoy's configuration will be used (which is 5 seconds currently).
                                   type: string
                                 traceContextOption:
                                   description: |-
@@ -5537,16 +5452,6 @@ spec:
                         enum:
                         - DO_NOT_UPGRADE
                         - UPGRADE
-                        type: string
-                      hboneIdleTimeout:
-                        description: |-
-                          Idle timeout configured on Envoy proxies for their connection pools to ztunnel via HBONE.
-                          This controls how long Envoy will keep idle connections to ztunnel before closing them.
-                          Note: This setting is applied only on the Envoy proxy side; ztunnel does not use it.
-                          Default timeout is 1 hour (3600s).
-                          For environments with aggressive IP address reuse, it is recommended to set
-                          this to a value less than the CNI IP cooldown period to prevent stale connection reuse.
-                          For example, if your CNI has a 30s cooldown period, setting this to 15s is recommended.
                         type: string
                       inboundClusterStatName:
                         description: |-
@@ -7336,10 +7241,6 @@ spec:
                             format: int32
                             type: integer
                         type: object
-                      crlConfigMapName:
-                        description: Select a custom name for istiod's plugged-in
-                          CA CRL ConfigMap.
-                        type: string
                       deploymentLabels:
                         additionalProperties:
                           type: string
@@ -10196,7 +10097,7 @@ spec:
                 default: v1.28.3
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.28-latest, v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.27-latest, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, master, v1.30-alpha.eab5fb06.
+                  Must be one of: v1.28-latest, v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.27-latest, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0.
                 enum:
                 - v1.28-latest
                 - v1.28.3
@@ -10246,8 +10147,6 @@ spec:
                 - v1.22.6
                 - v1.22.5
                 - v1.21.6
-                - master
-                - v1.30-alpha.eab5fb06
                 type: string
             required:
             - namespace

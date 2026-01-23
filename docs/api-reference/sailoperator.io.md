@@ -23,22 +23,6 @@ package v1 contains API Schema definitions for the sailoperator.io v1 API group
 
 
 
-#### Agentgateway
-
-
-
-
-
-
-
-_Appears in:_
-- [GlobalConfig](#globalconfig)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `image` _string_ |  |  |  |
-
-
 #### ArchConfig
 
 
@@ -467,7 +451,6 @@ _Appears in:_
 | `nativeNftables` _boolean_ | Specifies whether native nftables rules should be used instead of iptables rules for traffic redirection. |  |  |
 | `networkPolicy` _[NetworkPolicyConfig](#networkpolicyconfig)_ | Settings related to Kubernetes NetworkPolicy. |  |  |
 | `resourceScope` _[ResourceScope](#resourcescope)_ | Specifies resource scope for discovery selectors. This is useful when installing Istio on a cluster where some resources need to be owned by a cluster administrator and some can be owned by the mesh administrator. |  | Enum: [undefined all cluster namespace]   |
-| `agentgateway` _[Agentgateway](#agentgateway)_ | Specifies how proxies are configured within Istio. |  |  |
 
 
 #### GlobalLoggingConfig
@@ -678,7 +661,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.28-latest, v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.27-latest, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, master, v1.30-alpha.eab5fb06. | v1.28.3 | Enum: [v1.28-latest v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.30-alpha.eab5fb06]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.28-latest, v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.27-latest, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0. | v1.28.3 | Enum: [v1.28-latest v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6]   |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift openshift-ambient preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio CNI component should be installed. Note that this field is immutable. | istio-cni |  |
 | `values` _[CNIValues](#cnivalues)_ | Defines the values to be passed to the Helm charts when installing Istio CNI. |  |  |
@@ -917,7 +900,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.30-alpha.eab5fb06. |  | Enum: [v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 v1.30-alpha.eab5fb06]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0. |  | Enum: [v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. |  |  |
 | `values` _[Values](#values)_ | Defines the values to be passed to the Helm charts when installing Istio. |  |  |
 
@@ -1110,7 +1093,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.28-latest, v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.27-latest, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, master, v1.30-alpha.eab5fb06. | v1.28.3 | Enum: [v1.28-latest v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.30-alpha.eab5fb06]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.28-latest, v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.27-latest, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0. | v1.28.3 | Enum: [v1.28-latest v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6]   |
 | `updateStrategy` _[IstioUpdateStrategy](#istioupdatestrategy)_ | Defines the update strategy to use when the version in the Istio CR is updated. | \{ type:InPlace \} |  |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift openshift-ambient preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. Note that this field is immutable. | istio-system |  |
@@ -1331,7 +1314,6 @@ _Appears in:_
 | `proxyInboundListenPort` _integer_ | Port on which Envoy should listen for all inbound traffic to the pod/vm will be captured to. Default port is 15006. |  |  |
 | `proxyHttpPort` _integer_ | Port on which Envoy should listen for HTTP PROXY requests if set. |  |  |
 | `connectTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | Connection timeout used by Envoy. (MUST be >=1ms) Default timeout is 10s. |  |  |
-| `hboneIdleTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | Idle timeout configured on Envoy proxies for their connection pools to ztunnel via HBONE. This controls how long Envoy will keep idle connections to ztunnel before closing them. Note: This setting is applied only on the Envoy proxy side; ztunnel does not use it. Default timeout is 1 hour (3600s). For environments with aggressive IP address reuse, it is recommended to set this to a value less than the CNI IP cooldown period to prevent stale connection reuse. For example, if your CNI has a 30s cooldown period, setting this to 15s is recommended. |  |  |
 | `tcpKeepalive` _[ConnectionPoolSettingsTCPSettingsTcpKeepalive](#connectionpoolsettingstcpsettingstcpkeepalive)_ | If set then set `SO_KEEPALIVE` on the socket to enable TCP Keepalives. |  |  |
 | `ingressClass` _string_ | Class of ingress resources to be processed by Istio ingress controller. This corresponds to the value of `kubernetes.io/ingress.class` annotation. |  |  |
 | `ingressService` _string_ | Name of the Kubernetes service used for the istio ingress controller. If no ingress controller is specified, the default value `istio-ingressgateway` is used. |  |  |
@@ -1638,6 +1620,23 @@ _Appears in:_
 
 
 
+#### MeshConfigExtensionProviderHttpHeader
+
+
+
+
+
+
+
+_Appears in:_
+- [MeshConfigExtensionProviderGrpcService](#meshconfigextensionprovidergrpcservice)
+- [MeshConfigExtensionProviderHttpService](#meshconfigextensionproviderhttpservice)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | REQUIRED. The HTTP header name. |  | Required: \{\}   |
+| `value` _string_ | The HTTP header value. |  |  |
+| `envName` _string_ | The HTTP header value from the environment variable.  Warning: - The environment variable must be set in the istiod pod spec. - This is not a end-to-end secure. |  |  |
 
 
 
@@ -1867,8 +1866,6 @@ _Appears in:_
 | `enable64bitTraceId` _boolean_ | Optional. A 128 bit trace id will be used in Istio. If true, will result in a 64 bit trace id being used. |  |  |
 | `path` _string_ | Optional. Specifies the endpoint of Zipkin API. The default value is "/api/v2/spans". |  |  |
 | `traceContextOption` _[MeshConfigExtensionProviderZipkinTracingProviderTraceContextOption](#meshconfigextensionproviderzipkintracingprovidertracecontextoption)_ | Optional. Determines which trace context format to use for trace header extraction and propagation. This controls both downstream request header extraction and upstream request header injection. The default value is USE_B3 to maintain backward compatibility. |  | Enum: [USE_B3 USE_B3_WITH_W3C_PROPAGATION]   |
-| `timeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | Optional. The timeout for the HTTP request to the Zipkin collector. If not specified, the default timeout from Envoy's configuration will be used (which is 5 seconds currently). |  |  |
-| `headers` _[MeshConfigExtensionProviderHttpHeader](#meshconfigextensionproviderhttpheader) array_ | Optional. Additional HTTP headers to include in the request to the Zipkin collector. These headers will be added to the HTTP request when sending spans to the collector. |  |  |
 
 
 #### MeshConfigExtensionProviderZipkinTracingProviderTraceContextOption
@@ -2069,9 +2066,6 @@ _Appears in:_
 | `image` _[ProxyImage](#proxyimage)_ | Specifies the details of the proxy image. |  |  |
 | `privateKeyProvider` _[PrivateKeyProvider](#privatekeyprovider)_ | Specifies the details of the Private Key Provider configuration for gateway and sidecar proxies. |  |  |
 | `proxyHeaders` _[ProxyConfigProxyHeaders](#proxyconfigproxyheaders)_ | Define the set of headers to add/modify for HTTP request/responses.  To enable an optional header, simply set the field. If no specific configuration is required, an empty object (`\{\}`) will enable it. Note: currently all headers are enabled by default.  Below shows an example of customizing the `server` header and disabling the `X-Envoy-Attempt-Count` header:  ```yaml proxyHeaders:    server:     value: "my-custom-server"   # Explicitly enable Request IDs.   # As this is the default, this has no effect.   requestId: \{\}   attemptCount:     disabled: true  ```  # Below shows an example of preserving the header case for HTTP 1.x requests  ```yaml proxyHeaders:    preserveHttp1HeaderCase: true  ```  Some headers are enabled by default, and require explicitly disabling. See below for an example of disabling all default-enabled headers:  ```yaml proxyHeaders:    forwardedClientCert: SANITIZE   server:     disabled: true   requestId:     disabled: true   attemptCount:     disabled: true   envoyDebugHeaders:     disabled: true   metadataExchangeHeaders:     mode: IN_MESH  ``` |  |  |
-| `fileFlushInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | File flush interval for envoy flushes buffers to disk in milliseconds. The duration needs to be set to a value greater than or equal to 1 millisecond. Default is 1000ms. Optional. |  |  |
-| `fileFlushMinSizeKb` _integer_ | File flush buffer size for envoy flushes buffers to disk in kilobytes. Defaults to 64. Optional. |  |  |
-| `statsCompression` _boolean_ | Offer HTTP compression for stats Defaults to false. Optional. |  |  |
 
 
 #### MeshConfigProxyPathNormalization
@@ -2426,7 +2420,6 @@ _Appears in:_
 | `trustedZtunnelNamespace` _string_ | If set, `istiod` will allow connections from trusted node proxy ztunnels in the provided namespace. |  |  |
 | `istiodRemote` _[IstiodRemoteConfig](#istiodremoteconfig)_ | Configuration for the istio-discovery chart when istiod is running in a remote cluster (e.g. "remote control plane"). |  |  |
 | `envVarFrom` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#envvar-v1-core) array_ | Configuration for the istio-discovery chart |  |  |
-| `crlConfigMapName` _string_ | Select a custom name for istiod's plugged-in CA CRL ConfigMap. |  |  |
 
 
 
@@ -2525,7 +2518,6 @@ _Appears in:_
 | `readinessInitialDelaySeconds` _integer_ | Sets the initial delay for readiness probes in seconds. |  |  |
 | `readinessPeriodSeconds` _integer_ | Sets the interval between readiness probes in seconds. |  |  |
 | `readinessFailureThreshold` _integer_ | Sets the number of successive failed probes before indicating readiness failure. |  |  |
-| `seccompProfile` _[SeccompProfile](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#seccompprofile-v1-core)_ | Configures the seccomp profile for the istio-validation and istio-proxy containers.  See: https://kubernetes.io/docs/tutorials/security/seccomp/ |  |  |
 | `startupProbe` _[StartupProbe](#startupprobe)_ | Configures the startup probe for the istio-proxy container. |  |  |
 | `statusPort` _integer_ | Default port used for the Pilot agent's health checks. |  |  |
 | `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core)_ | K8s resources settings.  See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container  Deprecated: Marked as deprecated in pkg/apis/values_types.proto. |  |  |
@@ -3524,7 +3516,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.28-latest, v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.27-latest, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, master, v1.30-alpha.eab5fb06. | v1.28.3 | Enum: [v1.28-latest v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 master v1.30-alpha.eab5fb06]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.28-latest, v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.27-latest, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0. | v1.28.3 | Enum: [v1.28-latest v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0]   |
 | `namespace` _string_ | Namespace to which the Istio ztunnel component should be installed. | ztunnel |  |
 | `values` _[ZTunnelValues](#ztunnelvalues)_ | Defines the values to be passed to the Helm charts when installing Istio ztunnel. |  |  |
 
@@ -3690,7 +3682,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.28-latest, v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.27-latest, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, master, v1.30-alpha.eab5fb06. | v1.28.3 | Enum: [v1.28-latest v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 master v1.30-alpha.eab5fb06]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.28-latest, v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.27-latest, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0. | v1.28.3 | Enum: [v1.28-latest v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0]   |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is 'ambient' and it is always applied. Must be one of: ambient, default, demo, empty, external, preview, remote, stable. | ambient | Enum: [ambient default demo empty external openshift-ambient openshift preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio ztunnel component should be installed. | ztunnel |  |
 | `values` _[ZTunnelValues](#ztunnelvalues)_ | Defines the values to be passed to the Helm charts when installing Istio ztunnel. |  |  |
