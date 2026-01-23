@@ -288,16 +288,12 @@ spec:
                               - environment
                             - required:
                               - header
-                            - required:
-                              - formatter
                         - required:
                           - literal
                         - required:
                           - environment
                         - required:
                           - header
-                        - required:
-                          - formatter
                         properties:
                           environment:
                             description: Environment adds the value of an environment
@@ -313,18 +309,6 @@ spec:
                                 type: string
                             required:
                             - name
-                            type: object
-                          formatter:
-                            description: Formatter adds the value of access logging
-                              substitution formatter.
-                            properties:
-                              value:
-                                description: The formatter tag value to use, same
-                                  formatter as HTTP access logging (e.g.
-                                minLength: 1
-                                type: string
-                            required:
-                            - value
                             type: object
                           header:
                             description: RequestHeader adds the value of an header
@@ -752,16 +736,12 @@ spec:
                               - environment
                             - required:
                               - header
-                            - required:
-                              - formatter
                         - required:
                           - literal
                         - required:
                           - environment
                         - required:
                           - header
-                        - required:
-                          - formatter
                         properties:
                           environment:
                             description: Environment adds the value of an environment
@@ -777,18 +757,6 @@ spec:
                                 type: string
                             required:
                             - name
-                            type: object
-                          formatter:
-                            description: Formatter adds the value of access logging
-                              substitution formatter.
-                            properties:
-                              value:
-                                description: The formatter tag value to use, same
-                                  formatter as HTTP access logging (e.g.
-                                minLength: 1
-                                type: string
-                            required:
-                            - value
                             type: object
                           header:
                             description: RequestHeader adds the value of an header
