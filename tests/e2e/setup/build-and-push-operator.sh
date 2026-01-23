@@ -85,8 +85,12 @@ build_and_push_operator_image() {
 }
 
 # Main logic
-if [ "${OCP}" == "true" ]; then
+# Only use internal registry for OCP local development (when USE_INTERNAL_REGISTRY is set)
+if [ "${OCP}" == "true" ] && [ "${USE_INTERNAL_REGISTRY:-false}" == "true" ]; then
+  echo "Setting up OCP internal registry for local development..."
   get_internal_registry
 fi
+
+echo "Registry: ${HUB}"
 
 build_and_push_operator_image
