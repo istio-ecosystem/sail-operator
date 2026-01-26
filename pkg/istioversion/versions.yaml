@@ -16,7 +16,17 @@
 # to avoid breaking API guarantees.
 versions:
   - name: v1.28-latest
-    ref: v1.28.2
+    ref: v1.28.3
+  - name: v1.28.3
+    version: 1.28.3
+    repo: https://github.com/istio/istio
+    commit: 1.28.3
+    charts:
+      - https://istio-release.storage.googleapis.com/charts/base-1.28.3.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-1.28.3.tgz
+      - https://istio-release.storage.googleapis.com/charts/gateway-1.28.3.tgz
+      - https://istio-release.storage.googleapis.com/charts/cni-1.28.3.tgz
+      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.28.3.tgz
   - name: v1.28.2
     version: 1.28.2
     repo: https://github.com/istio/istio
