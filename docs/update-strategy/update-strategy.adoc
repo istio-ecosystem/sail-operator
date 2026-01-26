@@ -37,14 +37,14 @@ Prerequisites:
 Steps:
 
 . Create the `istio-system` namespace.
-
++
 [source,bash,subs="attributes+",name="inplace-update-strategy"]
 ----
 kubectl create namespace istio-system
 ----
 
 . Create the `Istio` resource.
-
++
 [source,bash,subs="attributes+",name="inplace-update-strategy"]
 ----
 cat <<EOF | kubectl apply -f-
@@ -66,7 +66,7 @@ print_istio_info
 endif::[]
 
 . Confirm the installation and version of the control plane.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get istio -n istio-system
@@ -76,7 +76,7 @@ default   1           1       0        default           Healthy   v{istio_lates
 Note: `IN USE` field shows as 0, as `Istio` has just been installed and there are no workloads using it.
 
 . Create namespace `bookinfo` and deploy bookinfo application.
-
++
 [source,bash,subs="attributes+",name="inplace-update-strategy"]
 ----
 kubectl create namespace bookinfo
@@ -93,7 +93,7 @@ with_retries pods_istio_version_match "bookinfo" "{istio_latest_minus_one_versio
 endif::[]
 
 . Review the `Istio` resource after application deployment.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get istio -n istio-system
@@ -103,7 +103,7 @@ default   1           1       1        default           Healthy   v{istio_lates
 Note: `IN USE` field shows as 1, as the namespace label and the injected proxies reference the IstioRevision.
 
 . Perform the update of the control plane by changing the version in the Istio resource.
-
++
 [source,bash,subs="attributes+"]
 ----
 kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v{istio_latest_version}"}}'
@@ -118,7 +118,7 @@ print_istio_info
 endif::[]
 
 . Confirm the `Istio` resource version was updated.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get istio -n istio-system
@@ -127,7 +127,7 @@ default   1           1       1        default           Healthy   v{istio_lates
 ----
 
 . Delete `bookinfo` pods to trigger sidecar injection with the new version.
-
++
 [source,bash,subs="attributes+"]
 ----
 kubectl rollout restart deployment -n bookinfo
@@ -145,7 +145,7 @@ istioctl proxy-status
 endif::[]
 
 . Confirm that the new version is used in the sidecar.
-
++
 [source,bash,subs="attributes+",name="inplace-update-strategy"]
 ----
 istioctl proxy-status 
@@ -174,14 +174,14 @@ Prerequisites:
 Steps:
 
 . Create the `istio-system` namespace.
-
++
 [source,bash,subs="attributes+",name="revision-based-strategy"]
 ----
 kubectl create namespace istio-system
 ----
 
 . Create the `Istio` resource.
-
++
 [source,bash,subs="attributes+",name="revision-based-strategy"]
 ----
 cat <<EOF | kubectl apply -f-
@@ -204,7 +204,7 @@ print_istio_info
 endif::[]
 
 . Confirm the control plane is installed and is using the desired version.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get istio -n istio-system
@@ -214,7 +214,7 @@ default   1           1       0        default-v1-25-3   Healthy   v{istio_lates
 Note: `IN USE` field shows as 0, as the control plane has just been installed and there are no workloads using it.
 
 . Get the `IstioRevision` name.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get istiorevision -n istio-system
@@ -228,7 +228,7 @@ kubectl get istiorevision -n istio-system
 endif::[]
 
 . Create `bookinfo` namespace and label it with the revision name.
-
++
 [source,bash,subs="attributes+",name="revision-based-strategy"]
 ----
 kubectl create namespace bookinfo
@@ -236,7 +236,7 @@ kubectl label namespace bookinfo istio.io/rev=default-v{istio_latest_minus_one_v
 ----
 
 . Deploy bookinfo application.
-
++
 [source,bash,subs="attributes+",name="revision-based-strategy"]
 ----
 kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo.yaml
@@ -250,7 +250,7 @@ with_retries pods_istio_version_match "bookinfo" "{istio_latest_minus_one_versio
 endif::[]
 
 . Review the `Istio` resource after application deployment.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get istio -n istio-system
@@ -264,7 +264,7 @@ with_retries istio_active_revision_match "default-v{istio_latest_minus_one_versi
 endif::[]
 
 . Confirm that the proxy version matches the control plane version.
-
++
 [source,bash,subs="attributes+"]
 ----
 istioctl proxy-status 
@@ -272,7 +272,7 @@ istioctl proxy-status
 The column `VERSION` should match the control plane version.
 
 . Update the control plane to a new version.
-
++
 [source,bash,subs="attributes+",name="revision-based-strategy"]
 ----
 kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v{istio_latest_version}"}}'
@@ -285,7 +285,7 @@ print_istio_info
 endif::[]
 
 . Verify the `Istio` and `IstioRevision` resources. There will be a new revision created with the new version.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get istio
@@ -305,7 +305,7 @@ with_retries istio_revisions_ready_count "2"
 endif::[]
 
 . Confirm there are two control plane pods running, one for each revision.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get pods -n istio-system
@@ -319,7 +319,7 @@ with_retries istiod_pods_count "2"
 endif::[]
 
 . Confirm the proxy sidecar version remains the same:
-
++
 [source,bash,subs="attributes+",name="revision-based-strategy"]
 ----
 istioctl proxy-status 
@@ -331,7 +331,7 @@ with_retries pods_istio_version_match "bookinfo" "{istio_latest_minus_one_versio
 endif::[]
 
 . Change the label of the `bookinfo` namespace to use the new revision.
-
++
 [source,bash,subs="attributes+",name="revision-based-strategy"]
 ----
 kubectl label namespace bookinfo istio.io/rev=default-v{istio_latest_version_revision_format} --overwrite
@@ -339,7 +339,7 @@ kubectl label namespace bookinfo istio.io/rev=default-v{istio_latest_version_rev
 The existing workload sidecars will continue to run and will remain connected to the old control plane instance. They will not be replacedwith a new version until the pods are deleted and recreated.
 
 . Restart all Deplyments in the `bookinfo` namespace.
-
++
 [source,bash,subs="attributes+"]
 ----
 kubectl rollout restart deployment -n bookinfo
@@ -359,7 +359,7 @@ with_retries pods_istio_version_match "bookinfo" "{istio_latest_version}"
 endif::[]
 
 . Confirm the new version is used in the sidecars.
-
++
 [source,bash,subs="attributes+",name="revision-based-strategy"]
 ----
 istioctl proxy-status 
@@ -367,7 +367,7 @@ istioctl proxy-status
 The column `VERSION` should match the updated control plane version.
 
 . Confirm the deletion of the old control plane and IstioRevision.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get pods -n istio-system
@@ -400,14 +400,14 @@ Prerequisites:
 Steps:
 
 . Create the `istio-system` namespace.
-
++
 [source,bash,subs="attributes+",name="revision-istiorevisiontag-strategy"]
 ----
 kubectl create namespace istio-system
 ----
 
 . Create the `Istio` and `IstioRevisionTag` resources.
-
++
 [source,bash,subs="attributes+",name="revision-istiorevisiontag-strategy"]
 ----
 cat <<EOF | kubectl apply -f-
@@ -439,7 +439,7 @@ kubectl get pods -n istio-system
 endif::[]
 
 . Confirm the control plane is installed and is using the desired version.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get istio
@@ -453,7 +453,7 @@ with_retries istio_active_revision_match "default-v{istio_latest_minus_one_versi
 endif::[]
 
 . Inspect the `IstioRevisionTag`.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get istiorevisiontags
@@ -467,7 +467,7 @@ with_retries istio_revision_tag_status_equal "NotReferencedByAnything" "default"
 endif::[]
 
 . Create `bookinfo` namespace and label it to mark it for injection.
-
++
 [source,bash,subs="attributes+",name="revision-istiorevisiontag-strategy"]
 ----
 kubectl create namespace bookinfo
@@ -475,7 +475,7 @@ kubectl label namespace bookinfo istio-injection=enabled
 ----
 
 . Deploy bookinfo application.
-
++
 [source,bash,subs="attributes+",name="revision-istiorevisiontag-strategy"]
 ----
 kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo.yaml
@@ -489,7 +489,7 @@ with_retries pods_istio_version_match "bookinfo" "{istio_latest_minus_one_versio
 endif::[]
 
 . Review the `IstioRevisionTag` resource after application deployment.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get istiorevisiontag
@@ -504,7 +504,7 @@ with_retries istio_revision_tag_inuse "true" "default"
 endif::[]
 
 . Confirm that the proxy version matches the control plane version.
-
++
 [source,bash,subs="attributes+"]
 ----
 istioctl proxy-status 
@@ -512,14 +512,14 @@ istioctl proxy-status
 The column `VERSION` should match the control plane version.
 
 . Update the control plane to a new version.
-
++
 [source,bash,subs="attributes+",name="revision-istiorevisiontag-strategy"]
 ----
 kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v{istio_latest_version}"}}'
 ----
 
 . Verify the `Istio`, `IstioRevision` and `IstioRevisionTag` resources. There will be a new revision created with the new version.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get istio
@@ -536,7 +536,7 @@ default   Healthy   True     default-v{istio_latest_version_revision_format}   1
 Now, both our IstioRevisions and the IstioRevisionTag are considered in use. The old revision default-{istio_latest_minus_one_version_revision_format} because it is being used by proxies, the new revision default-{istio_latest_version_revision_format} because it is referenced by the tag, and lastly the tag because it is referenced by the bookinfonamespace.
 
 . Confirm there are two control plane pods running, one for each revision.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get pods -n istio-system
@@ -551,7 +551,7 @@ wait_istio_ready "istio-system"
 endif::[]
 
 . Confirm the proxy sidecar version remains the same:
-
++
 [source,bash,subs="attributes+",name="revision-istiorevisiontag-strategy"]
 ----
 istioctl proxy-status 
@@ -564,14 +564,14 @@ print_istio_info
 endif::[]
 
 . Restart all the Deployments in the `bookinfo` namespace.
-
++
 [source,bash,subs="attributes+"]
 ----
 kubectl rollout restart deployment -n bookinfo
 ----
 
 . Confirm the new version is used in the sidecars. Note that it might take a few seconds for the restarts to complete.
-
++
 [source,bash,subs="attributes+"]
 ----
 istioctl proxy-status 
@@ -592,7 +592,7 @@ with_retries pods_istio_version_match "bookinfo" "{istio_latest_version}"
 endif::[]
 
 . Confirm the deletion of the old control plane and IstioRevision.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get pods -n istio-system

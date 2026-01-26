@@ -29,7 +29,7 @@ The easiest way to get started with production-grade metrics collection is to us
 *Steps*
 
 . Create a ServiceMonitor for istiod.
-
++
 [source,yaml]
 ----
 apiVersion: monitoring.coreos.com/v1
@@ -49,7 +49,7 @@ spec:
 ----
 
 . Create a PodMonitor to scrape metrics from the istio-proxy containers. Note that *this resource has to be created in all namespaces where you are running sidecars*.
-
++
 [source,yaml]
 ----
 apiVersion: monitoring.coreos.com/v1
@@ -107,7 +107,7 @@ This section describes how to setup Istio with OpenShift Distributed Tracing to 
 *Steps*
 
 . Configure Istio to enable tracing and include the OpenTelemetry settings:
-
++
 [source,yaml]
 ----
 meshConfig:
@@ -121,9 +121,8 @@ meshConfig:
 
   The *service* field is the OpenTelemetry collector service in the `istio-system` namespace.
 
-[start=2]
 . Create an Istio telemetry resource to active the OpenTelemetry tracer
-
++
 [source,yaml]
 ----
 apiVersion: telemetry.istio.io/v1
@@ -138,14 +137,12 @@ spec:
         randomSamplingPercentage: 100
 ----
 
-[start=3]
 . Validate the integration: Generate some traffic
-
++
 We can link:addons.adoc#deploy-gateway-and-bookinfo[Deploy Bookinfo] and generate some traffic.
 
-[start=4]
 . Validate the integration: See the traces in the UI
-
++
 [source,bash,subs="attributes+"]
 ----
 kubectl get routes -n tempo tempo-sample-query-frontend-tempo
@@ -169,7 +166,7 @@ If you followed <<scraping-metrics-using-the-openshift-monitoring-stack>>, you c
 *Steps*
 
 . Create a ClusterRoleBinding for Kiali, so it can view metrics from user-workload monitoring
-
++
 [source,yaml]
 ----
 apiVersion: rbac.authorization.k8s.io/v1
@@ -186,9 +183,8 @@ subjects:
   namespace: istio-system
 ----
 
-[start=2]
 . Find out the revision name of your Istio instance. In our case it is `test`.
-    
++
 [source,console,subs="attributes+"]
 ----
 kubectl get istiorevisions.sailoperator.io
@@ -196,9 +192,8 @@ NAME   READY   STATUS    IN USE   VERSION   AGE
 test   True    Healthy   True     v{istio_latest_version}  119m
 ----
 
-[start=3]
 . Create a Kiali resource and point it to your Istio instance. Make sure to replace `test` with your revision name in the fields `config_map_name`, `istio_sidecar_injector_config_map_name`, `istiod_deployment_name` and `url_service_version`.
-
++
 [source,yaml]
 ----
 apiVersion: kiali.io/v1alpha1
@@ -233,7 +228,7 @@ This section describes how to setup Kiali with OpenShift Distributed Tracing to 
 *Steps*
 
 . Setup Kiali to access traces from the Tempo frontend: 
-
++
 [source,yaml]
 ----
 external_services:
