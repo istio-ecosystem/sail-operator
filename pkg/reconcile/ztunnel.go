@@ -88,6 +88,12 @@ func (r *ZTunnelReconciler) ComputeValues(version string, userValues *v1.ZTunnel
 		return nil, fmt.Errorf("failed to apply profile: %w", err)
 	}
 
+	// apply fips values
+	mergedHelmValues, err = istiovalues.ApplyZTunnelFipsValues(mergedHelmValues)
+	if err != nil {
+		return nil, fmt.Errorf("failed to apply FIPS values: %w", err)
+	}
+
 	// Apply any user Overrides configured as part of values.ztunnel
 	// This step was not required for the IstioCNI resource because the Helm templates[*] automatically override values.cni
 	// [*]https://github.com/istio/istio/blob/0200fd0d4c3963a72f36987c2e8c2887df172abf/manifests/charts/istio-cni/templates/zzy_descope_legacy.yaml#L3
