@@ -15,6 +15,7 @@ This end-to-end test suite utilizes Ginkgo, a testing framework known for its ex
     1. [Pre-requisites](#pre-requisites)
     1. [How to Run the test](#how-to-run-the-test)
     1. [Running the test locally](#running-the-test-locally)
+    1. [Test Run scenarios while running on OCP](#test-run-scenarios-while-running-on-ocp)
     1. [Settings for end-to-end test execution](#settings-for-end-to-end-test-execution)
     1. [Customizing the test run](#customizing-the-test-run)    
     1. [Get test definitions for the end-to-end test](#get-test-definitions-for-the-end-to-end-test)
@@ -246,6 +247,35 @@ Note: if you are running the test against a cluster that has a different archite
 
 ```
 TARGET_ARCH=arm64 make test.e2e.ocp
+```
+
+#### Test Run scenarios while running on OCP
+When running the E2E test on OpenShift clusters, the framework supports three different registry scenarios:
+
+**Scenario 1: Test run with Internal Registry (Default behaviour)**
+For test run on OpenShift with the default settings, no additional configuration is needed. The test scripts will automatically configure and use the OpenShift internal registry:
+
+```sh
+# No HUB setting needed - uses internal registry by default
+make test.e2e.ocp
+```
+
+**Scenario 2: Test run with CI Mode with External Registry**
+In CI environments, set `CI=true` to use external registries with proper tagging:
+
+```sh
+export CI=true
+# Uses default HUB=quay.io/sail-dev with auto-generated tags if no PR_NUMBER var is being set 
+make test.e2e.ocp
+```
+
+**Scenario 3: Test run with custom External Registry**
+For custom external registries, specify your own HUB value:
+
+```sh
+export HUB=your-registry.com/your-namespace
+export TAG=your-tag
+make test.e2e.ocp
 ```
 
 ### Settings for end-to-end test execution
