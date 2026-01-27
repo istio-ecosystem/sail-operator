@@ -4066,7 +4066,7 @@ type MeshConfigProxyConfig struct {
 	// Optional.
 	FileFlushMinSizeKb *uint32 `json:"fileFlushMinSizeKb,omitempty"`
 	// Offer HTTP compression for stats
-	// Defaults to false.
+	// Defaults to true.
 	// Optional.
 	StatsCompression *bool `json:"statsCompression,omitempty"`
 }
