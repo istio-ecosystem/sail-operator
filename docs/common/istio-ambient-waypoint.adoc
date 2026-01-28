@@ -16,6 +16,10 @@ link:../README.adoc[Return to Project Root]
     *** <<set-up-istio-ambient-mode-resources-and-a-sample-application,Set up Istio Ambient Mode Resources and a Sample Application>>
     *** <<deploy-a-waypoint-proxy,Deploy a Waypoint Proxy>>
       **** <<cross-namespace-waypoint,Cross-namespace Waypoint>>
+  ** <<update,Update>>
+    *** <<updating-waypoint-proxies,Updating Waypoint Proxies>>
+    *** <<l7-feature-verification-during-updates,L7 Feature Verification During Updates>>
+    *** <<cross-namespace-waypoint-updates,Cross-namespace Waypoint Updates>>
   ** <<layer-7-features-in-ambient-mode,Layer 7 Features in Ambient Mode>>
     *** <<traffic-routing,Traffic Routing>>
     *** <<security-authorization,Security Authorization>>
@@ -132,6 +136,114 @@ By default, the Istio control plane will look for a waypoint specified using the
 ----
 kubectl label ns bookinfo istio.io/use-waypoint-namespace=foo
 kubectl label ns bookinfo istio.io/use-waypoint=waypoint-foo
+----
+
+
+[[update]]
+== Update
+
+This section provides detailed procedures for updating waypoint proxies in ambient mode using the InPlace update strategy.
+
+[[updating-waypoint-proxies]]
+=== Updating Waypoint Proxies
+
+Waypoint proxies automatically update when the control plane is updated. The istiod control plane reconciles the waypoint deployment and updates it to the new version.
+
+==== InPlace Strategy
+
+When using InPlace updates, waypoint proxies automatically transition to the new control plane version.
+
+1. Verify waypoint proxy pods are running:
+
+[source,bash,subs="attributes+"]
+----
+$ kubectl get pods -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint
+NAME                       READY   STATUS    RESTARTS   AGE
+waypoint-5d9c8b7f9-abc12   1/1     Running   0          5m
+----
+
+2. Confirm the waypoint proxy is connected to the new control plane:
+
+[source,bash,subs="attributes+"]
+----
+$ istioctl proxy-status | grep waypoint
+waypoint-5d9c8b7f9-abc12.bookinfo     SYNCED     SYNCED     SYNCED     SYNCED     istiod-6cf8d4f9cb-wm7x6.istio-system     {istio_latest_version}
+----
+
+The `SYNCED` status indicates the waypoint is receiving configuration from the control plane. The version column shows the updated Istio version.
+
+
+[[l7-feature-verification-during-updates]]
+=== L7 Feature Verification During Updates
+
+After updating waypoint proxies, verify Layer 7 features work correctly.
+
+==== Traffic Routing
+
+Test that HTTPRoute rules are enforced. See <<traffic-routing,Traffic Routing>> for setup details with a 90/10 traffic split.
+
+1. Test traffic distribution by sending requests and checking which service version handles them:
+
+[source,bash,subs="attributes+"]
+----
+$ for i in {1..10}; do kubectl exec "$(kubectl get pod -l app=productpage -n bookinfo -o jsonpath='{.items[0].metadata.name}')" -c istio-proxy -n bookinfo -- curl -s http://reviews:9080/reviews/0 | grep -o "reviews-v[0-9]"; done
+reviews-v1
+reviews-v1
+reviews-v1
+reviews-v1
+reviews-v2
+reviews-v1
+reviews-v1
+reviews-v1
+reviews-v1
+reviews-v1
+----
+
+The output should match your HTTPRoute configuration. With a 90/10 split, expect about 9 requests to reviews-v1 and 1 to reviews-v2.
+
+==== Authorization Policies
+
+Test that L7 authorization policies are enforced. The `productpage-waypoint` AuthorizationPolicy (see <<security-authorization,Security Authorization>>) allows only the curl service to send GET requests to productpage.
+
+1. Test denied access - Services not in the allow list should be denied:
+
+[source,bash,subs="attributes+"]
+----
+$ kubectl exec "$(kubectl get pod -l app=ratings -n bookinfo -o jsonpath='{.items[0].metadata.name}')" -c ratings -n bookinfo -- curl -sS productpage:9080/productpage
+RBAC: access denied
+----
+
+The ratings service is denied because it's not in the allow list.
+
+2. Test allowed access - The curl service should access productpage successfully:
+
+[source,bash,subs="attributes+"]
+----
+$ kubectl exec "$(kubectl get pod -l app=curl -n default -o jsonpath='{.items[0].metadata.name}')" -c curl -n default -- curl -sS http://productpage.bookinfo:9080/productpage | grep -o "<title>.*</title>"
+<title>Simple Bookstore App</title>
+----
+
+The request succeeds because the curl service matches the policy rules.
+
+[[cross-namespace-waypoint-updates]]
+=== Cross-namespace Waypoint Updates
+
+For cross-namespace waypoints, verify the namespace labels are correct.
+
+1. Check namespace labels:
+
+[source,bash,subs="attributes+"]
+----
+$ kubectl get ns bookinfo --show-labels | grep waypoint
+bookinfo  Active  istio.io/use-waypoint-namespace=foo,istio.io/use-waypoint=waypoint-foo
+----
+
+2. Re-apply labels if needed:
+
+[source,bash,subs="attributes+"]
+----
+$ kubectl label ns bookinfo istio.io/use-waypoint-namespace=foo --overwrite
+$ kubectl label ns bookinfo istio.io/use-waypoint=waypoint-foo --overwrite
 ----
 
 [[layer-7-features-in-ambient-mode]]

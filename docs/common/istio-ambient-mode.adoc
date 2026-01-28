@@ -21,6 +21,7 @@ link:../README.adoc[Return to Project Root]
 *** <<deploy-a-sample-application>>
 ** <<visualize-the-application-using-kiali-dashboard>>
 ** <<troubleshoot-issues>>
+** <<update>>
 ** <<cleanup>>
 
 [[introduction-to-istio-ambient-mode]]
@@ -59,7 +60,7 @@ spec:
   namespace: ztunnel
   values:
     ztunnel:
-      image: docker.io/istio/ztunnel:1.24.0
+      image: docker.io/istio/ztunnel:{istio_latest_version}
 ----
 
 NOTE: If you need a specific Istio version, you can explicitly set it using `spec.version`. If not specified, the Operator will install the latest supported version.
@@ -100,7 +101,7 @@ kubectl create namespace istio-system
 kubectl label namespace istio-system istio-discovery=enabled
 ----
 
-. Create the `Istio` resource. 
+. Create the `Istio` resource.
 +
 NOTE: The Istio resource `.spec.values.pilot.trustedZtunnelNamespace` value should match the namespace that we will install a `ZTunnel` resource at.
 +
@@ -346,7 +347,7 @@ Next, click and select `Show Badges`, `Security` from the `Display` drop-down. Y
 
 image::images/kiali-security.png[Kiali Security]
 
-In the https://kiali.io/docs/features/ambient/[Kiali documentation] there is a list of all the Ambient features. 
+In the https://kiali.io/docs/features/ambient/[Kiali documentation] there is a list of all the Ambient features.
 
 [[troubleshoot-issues]]
 === Troubleshoot issues
@@ -397,6 +398,20 @@ kubectl -n ztunnel logs -l app=ztunnel | grep -E "inbound|outbound"
 ----
 
 Validate the `src.identity` and `dst.identity` values are correct. They are the identities used for the mTLS communication among the source and destination workloads.
+
+[[update]]
+== Update
+
+For detailed information on updating Istio when deployed in ambient mode, see link:../update-strategy/update-strategy.adoc#update-strategy[Update Strategy].
+
+IMPORTANT: **Only the InPlace update strategy is supported for ambient mode.** This is due to ZTunnel's cluster-wide singleton architecture - only one ztunnel instance can run in the cluster at a time, making canary-style upgrades impractical with RevisionBased updates.
+
+The update strategy guide covers:
+
+- InPlace strategy for ambient mode - see link:../update-strategy/update-strategy.adoc#inplace-ambient-mode-considerations[InPlace Strategy for Ambient Mode]
+- Updating IstioCNI, ZTunnel, and Waypoint proxies - see link:../update-strategy/update-strategy.adoc#updating-ambient-components[Updating Ambient Mode Components]
+
+For waypoint-specific update procedures, see link:./istio-ambient-waypoint.adoc#update[Waypoint Proxy Update Procedures].
 
 [[cleanup]]
 === Cleanup

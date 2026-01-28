@@ -14,18 +14,34 @@ link:../../README.adoc[Return to Project Root]
   - <<inplace>>
     - <<example-using-the-inplace-strategy>>
     - <<recommendations-for-inplace-strategy>>
+    - <<inplace-ambient-mode-considerations>>
   - <<revisionbased>>
     - <<example-using-the-revisionbased-strategy>>
     - <<example-using-the-revisionbased-strategy-and-an-istiorevisiontag>>
+- <<updating-ambient-components>>
+  - <<updating-istiocni-ambient>>
+  - <<updating-ztunnel-ambient>>
+  - <<verifying-ambient-workloads>>
+  - <<updating-waypoint-proxies>>
+  - <<ambient-special-considerations>>
 
 [[update-strategy]]
 == Update Strategy
 
-The Sail Operator supports two update strategies to update the version of the Istio control plane: `InPlace` and `RevisionBased`. The default strategy is `InPlace`.
+The Sail Operator supports two update strategies: `InPlace` and `RevisionBased`. The default is `InPlace`.
+
+**For ambient mode updates:**
+
+IMPORTANT: **Only the InPlace strategy is supported for ambient mode.** This is due to ZTunnel's cluster-wide singleton architecture - only one ztunnel instance can run in the cluster at a time, making canary-style upgrades impractical with RevisionBased updates.
+
+* Components update order: Control Plane → IstioCNI → ZTunnel
+* No pod restart needed (in ambient mode, the ztunnel maintains xDS connections to istiod, not application workloads directly)
+
+NOTE: Ambient mode requires Istio 1.24.0 or later. For installation, see link:../common/istio-ambient-mode.adoc[Istio Ambient Mode].
 
 [[inplace]]
 == InPlace
-When the `InPlace` strategy is used, the existing Istio control plane is replaced with a new version. The workload sidecars immediately connect to the new control plane. The workloads therefore don't need to be moved from one control plane instance to another.
+With InPlace, the existing control plane is replaced with a new version. Workload sidecars immediately connect to the new control plane. Workloads don't need to be moved from one control plane instance to another.
 
 [[example-using-the-inplace-strategy]]
 === Example using the InPlace strategy
@@ -148,7 +164,7 @@ endif::[]
 +
 [source,bash,subs="attributes+",name="inplace-update-strategy"]
 ----
-istioctl proxy-status 
+istioctl proxy-status
 ----
 The column `VERSION` should match the new control plane version.
 
@@ -158,11 +174,26 @@ endif::[]
 
 [[recommendations-for-inplace-strategy]]
 === Recommendations for InPlace Strategy
-During `InPlace` updates, the control plane pods are restarted, which may cause temporary service disruptions. To minimize downtime during updates, we recommend configuring the `istiod` deployment with high availability (HA). For more information, please refer to this link:../../docs/general/istiod-ha.adoc[guide].
+InPlace updates restart control plane pods, which may cause brief service disruptions. Configure istiod with high availability (HA) to minimize downtime. See the link:../../docs/general/istiod-ha.adoc[HA guide].
+
+[[inplace-ambient-mode-considerations]]
+=== InPlace Strategy for Ambient Mode
+
+With InPlace updates in ambient mode, all components update directly. In ambient mode, the ztunnel maintains xDS connections to istiod, not application workloads directly. IstioCNI and ZTunnel use rolling updates. Brief traffic interruption may occur during control plane updates. Running multiple istiod replicas helps minimize this risk but doesn't eliminate it. For details, see the https://istio.io/latest/docs/ambient/upgrade/helm/#understanding-ambient-mode-upgrades[Istio ambient mode upgrade documentation].
+
+**Update sequence for ambient mode:**
+
+1. Istio control plane (patch version in Istio resource)
+2. IstioCNI (patch to same version)
+3. ZTunnel (patch to same version)
+
+See <<updating-ambient-components>> for detailed IstioCNI and ZTunnel update procedures.
+
+*Tip:* Running istiod in HA mode reduces traffic disruptions during updates. See the link:../../docs/general/istiod-ha.adoc[HA guide].
 
 [[revisionbased]]
 == RevisionBased
-When the `RevisionBased` strategy is used, a new Istio control plane instance is created for every change to the `Istio.spec.version` field. The old control plane remains in place until all workloads have been moved to the new control plane instance. This needs to be done by the user by updating the namespace label and restarting all the pods. The old control plane will be deleted after the grace period specified in the `Istio` resource field `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds`.
+With RevisionBased, a new control plane instance is created for each version change. The old control plane stays until workloads migrate to the new version. The migration is triggered by updating namespace labels and restarting pods. The old control plane is deleted after the grace period in `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds`.
 
 [[example-using-the-revisionbased-strategy]]
 === Example using the RevisionBased strategy
@@ -267,7 +298,7 @@ endif::[]
 +
 [source,bash,subs="attributes+"]
 ----
-istioctl proxy-status 
+istioctl proxy-status
 ----
 The column `VERSION` should match the control plane version.
 
@@ -322,7 +353,7 @@ endif::[]
 +
 [source,bash,subs="attributes+",name="revision-based-strategy"]
 ----
-istioctl proxy-status 
+istioctl proxy-status
 ----
 The column `VERSION` should still match the old control plane version.
 
@@ -362,7 +393,7 @@ endif::[]
 +
 [source,bash,subs="attributes+",name="revision-based-strategy"]
 ----
-istioctl proxy-status 
+istioctl proxy-status
 ----
 The column `VERSION` should match the updated control plane version.
 
@@ -507,7 +538,7 @@ endif::[]
 +
 [source,bash,subs="attributes+"]
 ----
-istioctl proxy-status 
+istioctl proxy-status
 ----
 The column `VERSION` should match the control plane version.
 
@@ -554,7 +585,7 @@ endif::[]
 +
 [source,bash,subs="attributes+",name="revision-istiorevisiontag-strategy"]
 ----
-istioctl proxy-status 
+istioctl proxy-status
 ----
 The column `VERSION` should still match the old control plane version.
 
@@ -574,7 +605,7 @@ kubectl rollout restart deployment -n bookinfo
 +
 [source,bash,subs="attributes+"]
 ----
-istioctl proxy-status 
+istioctl proxy-status
 ----
 The column `VERSION` should match the updated control plane version.
 
@@ -614,3 +645,102 @@ echo "Confirm istiorevision is deleted"
 with_retries istio_revisions_ready_count "1"
 print_istio_info
 endif::[]
+
+[[updating-ambient-components]]
+== Updating Ambient Mode Components
+
+This section covers updating IstioCNI, ZTunnel, and Waypoint proxies after control plane updates using the InPlace update strategy.
+
+[[updating-istiocni-ambient]]
+=== Updating IstioCNI
+
+After updating the Istio control plane, update the IstioCNI component. The CNI at version 1.x is compatible with the control plane at version 1.x+1 and 1.x, so the control plane must be upgraded before IstioCNI.
+
+[source,bash,subs="attributes+"]
+----
+kubectl patch istiocni default --type='merge' -p '{"spec":{"version":"v{istio_latest_version}"}}'
+kubectl wait --for=condition=Ready istiocnis/default --timeout=5m
+----
+
+[[updating-ztunnel-ambient]]
+=== Updating ZTunnel
+
+After updating IstioCNI, update the ZTunnel component. The ZTunnel DaemonSet uses a rolling update strategy, updating one node at a time to maintain mesh connectivity.
+
+[source,bash,subs="attributes+"]
+----
+kubectl patch ztunnel default --type='merge' -p '{"spec":{"version":"v{istio_latest_version}"}}'
+kubectl rollout status daemonset/ztunnel -n ztunnel
+kubectl wait --for=condition=Ready ztunnel/default --timeout=10m
+----
+
+*Note:* The ZTunnel DaemonSet update may take several minutes as pods are updated node-by-node to minimize disruption.
+
+Verify the ZTunnel resource shows the new version:
+
+[source,bash,subs="attributes+"]
+----
+kubectl get ztunnel
+kubectl get pods -n ztunnel -o wide
+----
+
+[[verifying-ambient-workloads]]
+=== Verifying Ambient Workloads
+
+After updating all ambient components, verify that your workloads are functioning correctly:
+
+[source,bash,subs="attributes+"]
+----
+# Check workload status
+kubectl get pods -n <your-namespace>
+
+# Verify ZTunnel is processing traffic
+istioctl ztunnel-config workloads --namespace ztunnel | grep <your-namespace>
+
+# Test connectivity within your mesh
+kubectl exec <your-pod> -n <your-namespace> -- curl -sS <service>:<port>
+----
+
+[[updating-waypoint-proxies]]
+=== Updating Waypoint Proxies (If Deployed)
+
+If you have deployed waypoint proxies for Layer 7 features, they automatically update to use the new control plane. Verify after upgrade:
+
+[source,bash,subs="attributes+"]
+----
+# List waypoint proxies
+kubectl get gateway -n <your-namespace>
+
+# Verify waypoint pods are running
+kubectl get pods -n <your-namespace> -l gateway.networking.k8s.io/gateway-name=<waypoint-name>
+----
+
+For detailed waypoint configuration, see link:../common/istio-ambient-waypoint.adoc[Istio Waypoint Proxy Guide].
+
+[[ambient-special-considerations]]
+=== Special Considerations for Ambient Mode
+
+**ZTunnel DaemonSet Updates:**
+
+When upgrading the ambient cluster, new mTLS connections continue to function normally. However, upgrading ztunnel will cause existing long-lived TCP connections on the upgraded node to reset after a grace period. For production upgrades, use node cordoning or blue/green node pools.
+
+* Rolling updates update one node at a time by default
+* New connections may experience brief latency while a node's ZTunnel restarts
+
+**Version Skew:**
+
+* ZTunnel at version 1.x is compatible with control plane at version 1.x+1 and 1.x
+* Keep all components (Istio, IstioCNI, ZTunnel) at the same version when possible
+* Always test version combinations in non-production first
+* IstioCNI at version 1.x is compatible with control plane at version 1.x+1 and 1.x
+
+**Waypoint Proxy Compatibility:**
+
+* Waypoint proxies automatically reference the active control plane revision
+* With InPlace: waypoints transition directly to the new version
+* With RevisionBased: waypoints can function with both revisions during migration
+
+**Troubleshooting:**
+
+* ZTunnel: https://istio.io/latest/docs/ambient/usage/troubleshoot-ztunnel/
+* Waypoint: https://istio.io/latest/docs/ambient/usage/troubleshoot-waypoint/
