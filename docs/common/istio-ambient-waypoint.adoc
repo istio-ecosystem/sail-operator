@@ -142,7 +142,7 @@ kubectl label ns bookinfo istio.io/use-waypoint=waypoint-foo
 [[update]]
 == Update
 
-This section provides detailed procedures for updating waypoint proxies in ambient mode, covering both InPlace and RevisionBased update strategies.
+This section provides detailed procedures for updating waypoint proxies in ambient mode using the InPlace update strategy.
 
 [[updating-waypoint-proxies]]
 === Updating Waypoint Proxies
@@ -172,28 +172,6 @@ waypoint-5d9c8b7f9-abc12.bookinfo     SYNCED     SYNCED     SYNCED     SYNCED   
 
 The `SYNCED` status indicates the waypoint is receiving configuration from the control plane. The version column shows the updated Istio version.
 
-==== RevisionBased Strategy
-
-When using RevisionBased updates, waypoint proxies automatically connect to the active control plane revision. The istiod control plane reconciles the waypoint deployment and updates it to the new version.
-
-1. After the new Istio control plane revision is ready, verify waypoint proxy pods are running:
-
-[source,bash,subs="attributes+"]
-----
-$ kubectl get pods -n bookinfo -l gateway.networking.k8s.io/gateway-name=waypoint
-NAME                       READY   STATUS    RESTARTS   AGE
-waypoint-5d9c8b7f9-abc12   1/1     Running   0          5m
-----
-
-2. Confirm the waypoint proxy is connected to the new control plane revision:
-
-[source,bash,subs="attributes+"]
-----
-$ istioctl proxy-status | grep waypoint
-waypoint-5d9c8b7f9-abc12.bookinfo     SYNCED     SYNCED     SYNCED     SYNCED     istiod-{istio_latest_version_revision_format}-7b9f8c5d6-xyz78.istio-system     {istio_latest_version}
-----
-
-The output shows the waypoint proxy connected to the revision-specific istiod pod (note the revision `{istio_latest_version_revision_format}` in the pod name) and running the updated version.
 
 [[l7-feature-verification-during-updates]]
 === L7 Feature Verification During Updates

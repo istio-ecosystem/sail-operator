@@ -404,7 +404,7 @@ Validate the `src.identity` and `dst.identity` values are correct. They are the 
 
 For detailed information on updating Istio when deployed in ambient mode, see link:../update-strategy/update-strategy.adoc#update-strategy[Update Strategy].
 
-IMPORTANT: **Only the InPlace update strategy is recommended for ambient mode.** RevisionBased updates require manual effort to keep Istio and ZTunnel revisions in sync, and only one ztunnel instance can run in the cluster at a time, making canary-style upgrades impractical.
+IMPORTANT: **Only the InPlace update strategy is supported for ambient mode.** This is due to ZTunnel's cluster-wide singleton architecture - only one ztunnel instance can run in the cluster at a time, making canary-style upgrades impractical with RevisionBased updates.
 
 The update strategy guide covers:
 
