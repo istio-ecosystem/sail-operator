@@ -15,11 +15,10 @@
 package istiovalues
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
-	"github.com/istio-ecosystem/sail-operator/pkg/helm"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 )
 
 var (
@@ -44,12 +43,18 @@ func detectFipsMode(filepath string) {
 	}
 }
 
-// ApplyFipsValues sets value pilot.env.COMPLIANCE_POLICY if FIPS mode is enabled in the system.
-func ApplyFipsValues(values helm.Values) (helm.Values, error) {
-	if FipsEnabled {
-		if err := values.SetIfAbsent("pilot.env.COMPLIANCE_POLICY", "fips-140-2"); err != nil {
-			return nil, fmt.Errorf("failed to set pilot.env.COMPLIANCE_POLICY: %w", err)
-		}
+// ApplyFipsValues sets pilot.env.COMPLIANCE_POLICY if FIPS mode is enabled in the system.
+func ApplyFipsValues(values *v1.Values) {
+	if !FipsEnabled || values == nil {
+		return
 	}
-	return values, nil
+	if values.Pilot == nil {
+		values.Pilot = &v1.PilotConfig{}
+	}
+	if values.Pilot.Env == nil {
+		values.Pilot.Env = make(map[string]string)
+	}
+	if _, found := values.Pilot.Env["COMPLIANCE_POLICY"]; !found {
+		values.Pilot.Env["COMPLIANCE_POLICY"] = "fips-140-2"
+	}
 }

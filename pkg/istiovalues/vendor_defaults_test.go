@@ -16,6 +16,7 @@ package istiovalues
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -195,7 +196,7 @@ v1.24.2:
 			istioCniPostValues:    &v1.CNIValues{},
 			expectedIstioError:    true,
 			expectedIstioCniError: false,
-			expectedErrSubstring:  "cannot unmarshal string into Go struct field Values.pilot", // expect a specific error for malformed defaults
+			expectedErrSubstring:  "cannot unmarshal string into Go struct field Values.istio.pilot", // expect a specific error for malformed defaults
 		},
 		{
 			name: "user values override vendor defaults",
@@ -229,7 +230,19 @@ v1.24.2:
 		},
 	}
 	for _, tc := range testcases {
-		vendorDefaults = MustParseVendorDefaultsYAML([]byte(tc.vendorDefaults))
+		var err error
+		vendorDefaults, err = ParseVendorDefaultsYAML([]byte(tc.vendorDefaults))
+		if tc.expectedIstioError || tc.expectedIstioCniError {
+			if err == nil {
+				t.Fatalf("expected an error for %s but got none", tc.name)
+			}
+			if !strings.Contains(err.Error(), tc.expectedErrSubstring) {
+				t.Fatalf("expected error to contain %s but got: %s", tc.expectedErrSubstring, err.Error())
+			}
+			return
+		} else if err != nil {
+			t.Fatalf("unexpected error while parsing vendor defaults YAML: %s", err)
+		}
 
 		// preserve current vendor defaults
 		preVendorDefaults, err := yaml.Marshal(vendorDefaults)
@@ -239,13 +252,8 @@ v1.24.2:
 
 		// Test Istio values
 		istioResult, istioErr := ApplyIstioVendorDefaults(tc.version, tc.istioPreValues)
-		if tc.expectedIstioError {
-			if assert.Error(t, istioErr, "expected an error for Istio on %s but got none", tc.name) {
-				assert.ErrorContains(t, istioErr, tc.expectedErrSubstring,
-					"Istio default values on %s should unwrap JSON-unmarshal errors", tc.name)
-			}
-		} else {
-			assert.NoError(t, istioErr, "unexpected error for Istio on %s: %v", tc.name, istioErr)
+		if istioErr != nil {
+			t.Fatalf("there should be no error after parsing vendor defaults but got: %s", istioErr)
 		}
 		if diff := cmp.Diff(tc.istoPostValues, istioResult); diff != "" {
 			t.Errorf("unexpected Istio merge result; diff (-expected, +actual):\n%v", diff)
@@ -253,13 +261,8 @@ v1.24.2:
 
 		// Test IstioCNI values
 		cniResult, cniErr := ApplyIstioCNIVendorDefaults(tc.version, tc.istioCNIPreValues)
-		if tc.expectedIstioCniError {
-			if assert.Error(t, cniErr, "expected an error for IstioCNI on %s but got none", tc.name) {
-				assert.ErrorContains(t, cniErr, tc.expectedErrSubstring,
-					"IstioCNI default values on %s should unwrap JSON-unmarshal errors", tc.name)
-			}
-		} else {
-			assert.NoError(t, cniErr, "unexpected error for IstioCNI on %s: %v", tc.name, cniErr)
+		if cniErr != nil {
+			t.Fatalf("there should be no error after parsing vendor defaults but got: %s", cniErr)
 		}
 		if diff := cmp.Diff(tc.istioCniPostValues, cniResult); diff != "" {
 			t.Errorf("unexpected IstioCNI merge result; diff (-expected, +actual):\n%v", diff)
@@ -299,18 +302,18 @@ func TestOverrideVendorDefaults(t *testing.T) {
 	originalDefaults := vendorDefaults
 
 	// Define new defaults to override
-	newDefaults := map[string]map[string]any{
-		"v1.24.2": {
-			"istio": map[string]any{
-				"pilot": map[string]any{
-					"env": map[string]string{
+	newDefaults := VendorDefaults{
+		"v1.24.2": VersionDefaults{
+			Istio: &v1.Values{
+				Pilot: &v1.PilotConfig{
+					Env: map[string]string{
 						"newEnvVar": "true",
 					},
 				},
 			},
-			"istiocni": map[string]any{
-				"cni": map[string]any{
-					"cniConfDir": "new/path",
+			IstioCNI: &v1.CNIValues{
+				Cni: &v1.CNIConfig{
+					CniConfDir: ptr.Of("new/path"),
 				},
 			},
 		},

@@ -19,7 +19,6 @@ import (
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
-	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/istiovalues"
 )
 
@@ -42,24 +41,14 @@ func ComputeValues(
 		return nil, fmt.Errorf("failed to apply vendor defaults: %w", err)
 	}
 
-	// apply userValues on top of defaultValues from profiles
-	mergedHelmValues, err := istiovalues.ApplyProfilesAndPlatform(resourceDir, version, platform, defaultProfile, userProfile, helm.FromValues(userValues))
+	userValues, err = istiovalues.ApplyProfilesAndPlatformToIstioValues(resourceDir, version, platform, defaultProfile, userProfile, userValues)
 	if err != nil {
-		return nil, fmt.Errorf("failed to apply profile: %w", err)
+		return nil, fmt.Errorf("failed to apply profiles: %w", err)
 	}
 
-	// apply FipsValues on top of mergedHelmValues from profile
-	mergedHelmValues, err = istiovalues.ApplyFipsValues(mergedHelmValues)
-	if err != nil {
-		return nil, fmt.Errorf("failed to apply FIPS values: %w", err)
-	}
-
-	values, err := helm.ToValues(mergedHelmValues, &v1.Values{})
-	if err != nil {
-		return nil, fmt.Errorf("conversion to Helm values failed: %w", err)
-	}
+	istiovalues.ApplyFipsValues(userValues)
 
 	// override values that are not configurable by the user
-	istiovalues.ApplyOverrides(activeRevisionName, namespace, values)
-	return values, nil
+	istiovalues.ApplyOverrides(activeRevisionName, namespace, userValues)
+	return userValues, nil
 }

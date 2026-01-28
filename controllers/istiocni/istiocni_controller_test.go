@@ -626,6 +626,12 @@ v1.24.2:
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 
+			if tt.expectError {
+				g.Expect(func() {
+					istiovalues.MustParseVendorDefaultsYAML([]byte(tt.vendorDefaultsYAML))
+				}).To(Panic())
+				return
+			}
 			vendorDefaults := istiovalues.MustParseVendorDefaultsYAML([]byte(tt.vendorDefaultsYAML))
 
 			// Apply vendor defaults

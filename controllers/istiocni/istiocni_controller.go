@@ -160,14 +160,14 @@ func (r *Reconciler) installHelmChart(ctx context.Context, cni *v1.IstioCNI) err
 		return fmt.Errorf("failed to apply vendor defaults: %w", err)
 	}
 
-	// apply userValues on top of defaultValues from profiles
-	mergedHelmValues, err := istiovalues.ApplyProfilesAndPlatform(
-		r.Config.ResourceDirectory, version, r.Config.Platform, r.Config.DefaultProfile, cni.Spec.Profile, helm.FromValues(userValues))
+	// apply userValues on top of defaultValues from profiles and set platform
+	mergedValues, err := istiovalues.ApplyProfilesAndPlatformToCNIValues(
+		r.Config.ResourceDirectory, version, r.Config.Platform, r.Config.DefaultProfile, cni.Spec.Profile, userValues)
 	if err != nil {
 		return fmt.Errorf("failed to apply profile: %w", err)
 	}
 
-	_, err = r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(version), mergedHelmValues, cni.Spec.Namespace, cniReleaseName, &ownerReference)
+	_, err = r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(version), helm.FromValues(mergedValues), cni.Spec.Namespace, cniReleaseName, &ownerReference)
 	if err != nil {
 		return fmt.Errorf("failed to install/update Helm chart %q: %w", cniChartName, err)
 	}

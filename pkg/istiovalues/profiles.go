@@ -19,31 +19,105 @@ import (
 	"os"
 	"path"
 
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"istio.io/istio/pkg/ptr"
 	"istio.io/istio/pkg/util/sets"
 )
 
-func ApplyProfilesAndPlatform(
-	resourceDir string, version string, platform config.Platform, defaultProfile, userProfile string, userValues helm.Values,
-) (helm.Values, error) {
+func applyProfiles(resourceDir string, version string, defaultProfile, userProfile string, userValues helm.Values) (helm.Values, error) {
 	profile := resolve(defaultProfile, userProfile)
 	defaultValues, err := getValuesFromProfiles(path.Join(resourceDir, version, "profiles"), profile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get values from profile %q: %w", profile, err)
 	}
-	values := helm.Values(mergeOverwrite(defaultValues, userValues))
+	return helm.Values(mergeOverwrite(defaultValues, userValues)), nil
+}
 
-	if platform != config.PlatformKubernetes && platform != config.PlatformUndefined {
-		if err = values.SetIfAbsent("global.platform", string(platform)); err != nil {
-			return nil, fmt.Errorf("failed to set global.platform: %w", err)
-		}
+func ApplyProfilesAndPlatformToIstioValues(
+	resourceDir string, version string, platform config.Platform, defaultProfile, userProfile string, userValues *v1.Values,
+) (*v1.Values, error) {
+	values, err := applyProfiles(resourceDir, version, defaultProfile, userProfile, helm.FromValues(userValues))
+	if err != nil {
+		return nil, fmt.Errorf("failed to apply profiles: %w", err)
 	}
-	return values, nil
+	result, err := helm.ToValues(values, &v1.Values{})
+	if err != nil {
+		return nil, err
+	}
+	applyPlatformToIstioValues(platform, result)
+	return result, nil
+}
+
+func ApplyProfilesAndPlatformToCNIValues(
+	resourceDir string, version string, platform config.Platform, defaultProfile, userProfile string, userValues *v1.CNIValues,
+) (*v1.CNIValues, error) {
+	values, err := applyProfiles(resourceDir, version, defaultProfile, userProfile, helm.FromValues(userValues))
+	if err != nil {
+		return nil, fmt.Errorf("failed to apply profiles: %w", err)
+	}
+	result, err := helm.ToValues(values, &v1.CNIValues{})
+	if err != nil {
+		return nil, err
+	}
+	applyPlatformToCNIValues(platform, result)
+	return result, nil
+}
+
+func ApplyProfilesAndPlatformToZTunnelValues(
+	resourceDir string, version string, platform config.Platform, defaultProfile, userProfile string, userValues *v1.ZTunnelValues,
+) (*v1.ZTunnelValues, error) {
+	values, err := applyProfiles(resourceDir, version, defaultProfile, userProfile, helm.FromValues(userValues))
+	if err != nil {
+		return nil, fmt.Errorf("failed to apply profiles: %w", err)
+	}
+	result, err := helm.ToValues(values, &v1.ZTunnelValues{})
+	if err != nil {
+		return nil, err
+	}
+	applyPlatformToZTunnelValues(platform, result)
+	return result, nil
+}
+
+func applyPlatformToIstioValues(platform config.Platform, values *v1.Values) {
+	if platform == config.PlatformKubernetes || platform == config.PlatformUndefined {
+		return
+	}
+	if values.Global == nil {
+		values.Global = &v1.GlobalConfig{}
+	}
+	if values.Global.Platform == nil {
+		values.Global.Platform = ptr.Of(string(platform))
+	}
+}
+
+func applyPlatformToCNIValues(platform config.Platform, values *v1.CNIValues) {
+	if platform == config.PlatformKubernetes || platform == config.PlatformUndefined {
+		return
+	}
+	if values.Global == nil {
+		values.Global = &v1.CNIGlobalConfig{}
+	}
+	if values.Global.Platform == nil {
+		values.Global.Platform = ptr.Of(string(platform))
+	}
+}
+
+func applyPlatformToZTunnelValues(platform config.Platform, values *v1.ZTunnelValues) {
+	if platform == config.PlatformKubernetes || platform == config.PlatformUndefined {
+		return
+	}
+	if values.Global == nil {
+		values.Global = &v1.ZTunnelGlobalConfig{}
+	}
+	if values.Global.Platform == nil {
+		values.Global.Platform = ptr.Of(string(platform))
+	}
 }
 
 func ApplyUserValues(mergedValues, userValues helm.Values,
