@@ -89,7 +89,7 @@ spec:
 
 ## Getting Started
 
-You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.  
+You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
 **Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
 
 ### Quick start using a local KIND cluster
@@ -205,7 +205,7 @@ kubectl get istiocni default
 kubectl get ztunnel default
 ```
 
-**Note** - The version can be specified by modifying the `version` field within `Istio` and `IstioCNI` manifests.  
+**Note** - The version can be specified by modifying the `version` field within `Istio` and `IstioCNI` manifests.
 For other deployment options, refer to the [docs](docs) directory.
 
 ### Undeploying the operator
@@ -325,6 +325,10 @@ The Sail Operator will support n-2 releases of Istio. If you install the 1.25 Sa
 Not all Istio patch versions will be included in Sail Operator releases. Some may be skipped. Also, the Sail Operator patch version will not correspond to the Istio patch version. For example, the 1.25.0 Sail Operator may only support installing Istio 1.25.1 but not Istio 1.25.0.
 
 When an Istio release is out of support, the corresponding Sail Operator release will be out of support as well.
+
+### Component Version Compatibility
+
+When running multiple Istio components (control plane, IstioCNI, ZTunnel), each component at version `1.x` is generally compatible with other components at versions `1.x-1`, `1.x`, and `1.x+1`. This allows for rolling upgrades where components can temporarily run at different minor versions. For best results, keep all components at the same version and follow the recommended update order: control plane first, then IstioCNI, then ZTunnel.
 
 > [!NOTE]
 > The first stable 1.0 release did not follow this versioning strategy but subsequent releases will.

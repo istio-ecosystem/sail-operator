@@ -71,9 +71,11 @@ link:../[Return to Project Root]
 ** link:common/istio-ambient-mode.adoc#visualize-the-application-using-kiali-dashboard[Visualize the application using Kiali dashboard]
 ** link:common/istio-ambient-mode.adoc#troubleshoot-issues[Troubleshoot issues]
 ** link:common/istio-ambient-mode.adoc#cleanup[Cleanup]
+* link:update-strategy/update-strategy.adoc#updating-ambient-components[Updating Ambient Mode Components]
 * link:common/istio-ambient-waypoint.adoc#introduction-to-istio-waypoint-proxy[Introduction to Istio Waypoint Proxy]
 ** link:common/istio-ambient-waypoint.adoc#core-features[Core features]
 ** link:common/istio-ambient-waypoint.adoc#getting-started[Getting Started]
+** link:common/istio-ambient-waypoint.adoc#update[Update]
 ** link:common/istio-ambient-waypoint.adoc#layer-7-features-in-ambient-mode[Layer 7 Features in Ambient Mode]
 ** link:common/istio-ambient-waypoint.adoc#troubleshoot-issues[Troubleshoot issues]
 ** link:common/istio-ambient-waypoint.adoc#cleanup[Cleanup]
@@ -107,7 +109,7 @@ link:../[Return to Project Root]
 
 Sail Operator manages the lifecycle of your Istio control planes. Instead of creating a new configuration schema, Sail Operator APIs are built around Istio's helm chart APIs. All installation and configuration options that are exposed by Istio's helm charts are available through the Sail Operator CRDs' `values` fields.
 
-Similar to using Istio's Helm charts, the final set of values used to render the charts is determined by a combination of user-provided values, default chart values, and values from selected profiles. 
+Similar to using Istio's Helm charts, the final set of values used to render the charts is determined by a combination of user-provided values, default chart values, and values from selected profiles.
 These profiles can include the user-defined profile, the platform profile, and the compatibility version profile.
 To view the final set of values, inspect the ConfigMap named `values` (or `values-<revision>`) in the namespace where the control plane is installed.
 
@@ -141,7 +143,7 @@ Note: If you need a specific Istio version, you can explicitly set it using `spe
 
 Istio uses a ConfigMap for its global configuration, called the MeshConfig. All of its settings are available through `spec.meshConfig`.
 
-To support canary updates of the control plane, Sail Operator includes support for multiple Istio versions. You can select a version by setting the `version` field in the `spec` to the version you would like to install, prefixed with a `v`. You can then update to a new version just by changing this field. An `vX.Y-latest` alias can be used for the latest z/patch versions of each supported y/minor versions. As per the example above, `{istio_latest_tag}` can be specified in the `version` field. By doing so, the operator will keep the istio version with the latest `z` version of the same `y` version. 
+To support canary updates of the control plane, Sail Operator includes support for multiple Istio versions. You can select a version by setting the `version` field in the `spec` to the version you would like to install, prefixed with a `v`. You can then update to a new version just by changing this field. An `vX.Y-latest` alias can be used for the latest z/patch versions of each supported y/minor versions. As per the example above, `{istio_latest_tag}` can be specified in the `version` field. By doing so, the operator will keep the istio version with the latest `z` version of the same `y` version.
 
 Sail Operator supports two different update strategies for your control planes: `InPlace` and `RevisionBased`. When using `InPlace`, the operator will immediately replace your existing control plane resources with the ones for the new version, whereas `RevisionBased` uses Istio's canary update mechanism by creating a second control plane to which you can migrate your workloads to complete the update.
 
@@ -203,7 +205,7 @@ If you need a specific Istio version, you can explicitly set it using `spec.vers
 [#updating-the-istiocni-resource]
 ==== Updating the IstioCNI resource
 
-Updates for the `IstioCNI` resource are `Inplace` updates, this means that the `DaemonSet` will be updated with the new version of the CNI plugin once the resource is updated and the `istio-cni-node` pods are going to be replaced with the new version. 
+Updates for the `IstioCNI` resource are `Inplace` updates, this means that the `DaemonSet` will be updated with the new version of the CNI plugin once the resource is updated and the `istio-cni-node` pods are going to be replaced with the new version.
 To update the CNI plugin, just change the `version` field to the version you want to install. Just like the `Istio` resource, it also has a `values` field that exposes all of the options provided in the `istio-cni` chart:
 
 . Create the `IstioCNI` resource.
