@@ -22,7 +22,7 @@ spec:
       name: Namespace
       type: string
     - description: The selected profile (collection of value presets).
-      jsonPath: .spec.values.profile
+      jsonPath: .spec.profile
       name: Profile
       type: string
     - description: Whether the Istio CNI installation is ready to handle requests.
