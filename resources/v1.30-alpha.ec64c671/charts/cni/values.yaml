@@ -75,6 +75,8 @@ _internal_defaults_do_not_set:
     reconcileIptablesOnStartup: true
     # If enabled, and ambient is enabled, the CNI agent will always share the network namespace of the host node it is running on
     shareHostNetworkNamespace: false
+    # If enabled, the CNI agent will retry checking if a pod is ambient enabled when there are errors
+    enableAmbientDetectionRetry: false
 
 
   repair:
@@ -153,7 +155,7 @@ _internal_defaults_do_not_set:
     hub: gcr.io/istio-testing
 
     # Default tag for Istio images.
-    tag: 1.30-alpha.299edbbb2a6147edf0e6172b55988bdd60052f67
+    tag: 1.30-alpha.ec64c6713f2147b3530261d4bb5a57278bfe3c40
 
     # Variant of the image to use.
     # Currently supported are: [debug, distroless]
