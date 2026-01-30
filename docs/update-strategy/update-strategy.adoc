@@ -179,7 +179,7 @@ InPlace updates restart control plane pods, which may cause brief service disrup
 [[inplace-ambient-mode-considerations]]
 === InPlace Strategy for Ambient Mode
 
-With InPlace updates in ambient mode, all components update directly. Update sequence is described below. In contrast to sidecar mode, ambient mode supports moving application pods to an upgraded ztunnel proxy without a mandatory restart or reschedule of running application pods. However, upgrading ztunnel will cause all long-lived TCP connections on the upgraded node to reset. See <<ambient-special-considerations>> for instruction how to avoid this problem. Recommendation to configure istiod with high availability (HA) applies for ambient mode as well.
+With InPlace updates in ambient mode, all components update directly. Update sequence is described below. In contrast to sidecar mode, ambient mode supports moving application pods to an upgraded ztunnel proxy without a mandatory restart or reschedule of running application pods. However, upgrading ztunnel could cause all long-lived TCP connections on the upgraded node to reset. See <<ambient-special-considerations>> for instruction how to avoid this problem. Recommendation to configure istiod with high availability (HA) applies for ambient mode as well.
 
 **Update sequence for ambient mode:**
 
