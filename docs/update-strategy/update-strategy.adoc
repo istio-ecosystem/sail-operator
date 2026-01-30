@@ -780,7 +780,7 @@ spec:
 With this update strategy, following workflow will avoid forceful termination of long-lived connections:
 
 . Update ZTunnel version
-. drain a node
+. Drain a node: This forces all applications to move to other nodes, closing their long-lived connections gracefully (per their own terminationGracePeriodSeconds).
 . delete old ZTunnel pod and wait for new one to be started
 . mark the node as schedulable
 . repeat steps 2 -- 4 for all nodes
