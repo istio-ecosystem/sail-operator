@@ -781,7 +781,7 @@ With this update strategy, following workflow will avoid forceful termination of
 
 . Update ZTunnel version
 . Drain a node: This forces all applications to move to other nodes, closing their long-lived connections gracefully (per their own terminationGracePeriodSeconds).
-. delete old ZTunnel pod and wait for new one to be started
+. Delete old ZTunnel pod and wait for new one to be started: Since the node is empty, deleting the old ztunnel and starting the new one carries zero risk to traffic.
 . mark the node as schedulable
 . repeat steps 2 -- 4 for all nodes
 
