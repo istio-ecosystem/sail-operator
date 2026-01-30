@@ -730,7 +730,7 @@ By default ZTunnel DaemonSet is using RollingUpdate update strategy and during e
 . New Ztunnel establishes listeners in each pod running on the node, and marks itself "ready".
 . At this point, we have both Ztunnels running. New connections may be handled by either instance, for a very brief period of time as Ztunnel uses SO_REUSEPORT.
 . Shortly after, Kubernetes will start terminating the old ztunnel. It does this initially by sending a SIGTERM. Old ztunnel will catch this, and start "draining".
-. Immediately upon starting a drain, the old ztunnel will close its listeners. Now only the new ztunnel is listening. Critically, at all times there was at least one ztunnel listening.
+. Immediately upon starting a drain, the old ztunnel will close its listeners. Now only the new ztunnel is listening. Critically, at all times there will be at least one ztunnel available to accept new connections.
 . While old ztunnel will not accept new connections, it will continue processing existing connections.
 . After the drain period, the old ztunnel will forcefully terminate any outstanding connections.
 
