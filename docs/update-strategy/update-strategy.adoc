@@ -734,9 +734,9 @@ By default ZTunnel DaemonSet is using RollingUpdate update strategy and during e
 . While old ztunnel will not accept new connections, it will continue processing existing connections.
 . After the drain period, the old ztunnel will forcefully terminate any outstanding connections.
 
-
-
 The drain period is configured by https://github.com/istio/istio/blob/master/manifests/charts/ztunnel/values.yaml#L96C3-L96C32[terminationGracePeriodSeconds]. Every connection still open after the drain period will be forcefully terminated.
+
+**Upgrade using high terminationGracePeriodSeconds**
 
 The simplest option to avoid dropping connections is to configure high enough terminationGracePeriodSeconds so all application connections can naturally and gracefully terminate. This however requires good knowledge of applications running in the mesh. Also with high terminationGracePeriodSeconds it will take a long time to finish the upgrade as only one node is being processed at the time. Therefore a wise balance is necessary.
 
@@ -756,9 +756,12 @@ spec:
 ----
 
 
-**Applications with long-lived connections**
+**A safe upgrade using node draining**
 
 As it's not possible to pass TCP connection to another process, only reliable option to force an application to reconnect through a new ztunnel is by graceful restart of the application. This can be done manually by restarting selected applications or all at once by node draining. Applications would have to be restarted at the correct time when the new ztunnel is started and the old ztunnel is in the draining phase. This would be difficult to achieve.
+
+[NOTE]
+Applications with retry logic or short keepalive timeouts will naturally recover better than ones with very long idle TCP connections.
 
 For better control over the upgrade process it is possible to use https://kubernetes.io/docs/tasks/manage-daemon/update-daemon-set/#daemonset-update-strategy[OnDelete update strategy] which can be set via:
 
