@@ -168,7 +168,7 @@ const (
 // +kubebuilder:resource:scope=Cluster,categories=istio-io
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Namespace",type="string",JSONPath=".spec.namespace",description="The namespace of the istio-cni-node DaemonSet."
-// +kubebuilder:printcolumn:name="Profile",type="string",JSONPath=".spec.values.profile",description="The selected profile (collection of value presets)."
+// +kubebuilder:printcolumn:name="Profile",type="string",JSONPath=".spec.profile",description="The selected profile (collection of value presets)."
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].status",description="Whether the Istio CNI installation is ready to handle requests."
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.state",description="The current state of this object."
 // +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".spec.version",description="The version of the Istio CNI installation."
