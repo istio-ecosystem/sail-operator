@@ -152,7 +152,7 @@ func (r *Reconciler) installHelmChart(ctx context.Context, ztunnel *v1.ZTunnel) 
 
 	// apply userValues on top of defaultValues from profiles
 	mergedHelmValues, err := istiovalues.ApplyProfilesAndPlatform(
-		r.Config.ResourceDirectory, version, r.Config.Platform, r.Config.DefaultProfile, defaultProfile, helm.FromValues(userValues))
+		r.Config.ResourceFS, version, r.Config.Platform, r.Config.DefaultProfile, defaultProfile, helm.FromValues(userValues))
 	if err != nil {
 		return fmt.Errorf("failed to apply profile: %w", err)
 	}
@@ -166,15 +166,16 @@ func (r *Reconciler) installHelmChart(ctx context.Context, ztunnel *v1.ZTunnel) 
 		return fmt.Errorf("failed to apply user overrides: %w", err)
 	}
 
-	_, err = r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(version), finalHelmValues, ztunnel.Spec.Namespace, ztunnelChart, &ownerReference)
+	_, err = r.ChartManager.UpgradeOrInstallChart(
+		ctx, r.Config.ResourceFS, r.getChartPath(version), finalHelmValues, ztunnel.Spec.Namespace, ztunnelChart, &ownerReference)
 	if err != nil {
 		return fmt.Errorf("failed to install/update Helm chart %q: %w", ztunnelChart, err)
 	}
 	return nil
 }
 
-func (r *Reconciler) getChartDir(version string) string {
-	return path.Join(r.Config.ResourceDirectory, version, "charts", ztunnelChart)
+func (r *Reconciler) getChartPath(version string) string {
+	return path.Join(version, "charts", ztunnelChart)
 }
 
 func applyImageDigests(version string, values *v1.ZTunnelValues, config config.OperatorConfig) *v1.ZTunnelValues {

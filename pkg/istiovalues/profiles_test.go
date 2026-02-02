@@ -105,7 +105,7 @@ spec:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual, err := getValuesFromProfiles(profilesDir, tt.profiles)
+			actual, err := getValuesFromProfiles(os.DirFS(resourceDir), path.Join(version, "profiles"), tt.profiles)
 			if (err != nil) != tt.expectErr {
 				t.Errorf("applyProfile() error = %v, expectErr %v", err, tt.expectErr)
 			}
