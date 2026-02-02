@@ -21,6 +21,8 @@ import (
 
 	"helm.sh/helm/v3/pkg/chart"
 	chartLoader "helm.sh/helm/v3/pkg/chart/loader"
+	"helm.sh/helm/v3/pkg/chartutil"
+	"helm.sh/helm/v3/pkg/engine"
 )
 
 // LoadChart loads a Helm chart from an fs.FS at the specified path.
@@ -71,4 +73,41 @@ func LoadChart(resourceFS fs.FS, chartPath string) (*chart.Chart, error) {
 	}
 
 	return loadedChart, nil
+}
+
+// RenderChart renders a Helm chart's templates with the provided values.
+// This does not require cluster access - it's a pure template rendering operation.
+// Returns a map of template name to rendered content.
+func RenderChart(resourceFS fs.FS, chartPath string, values Values, namespace, releaseName string) (map[string]string, error) {
+	loadedChart, err := LoadChart(resourceFS, chartPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load chart: %w", err)
+	}
+
+	return RenderLoadedChart(loadedChart, values, namespace, releaseName)
+}
+
+// RenderLoadedChart renders an already-loaded chart's templates with the provided values.
+// Returns a map of template name to rendered content.
+func RenderLoadedChart(loadedChart *chart.Chart, values Values, namespace, releaseName string) (map[string]string, error) {
+	// Create release options for rendering
+	options := chartutil.ReleaseOptions{
+		Name:      releaseName,
+		Namespace: namespace,
+		IsInstall: true,
+	}
+
+	// Merge values with chart defaults
+	chartValues, err := chartutil.ToRenderValues(loadedChart, values, options, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create render values: %w", err)
+	}
+
+	// Render templates
+	rendered, err := engine.Render(loadedChart, chartValues)
+	if err != nil {
+		return nil, fmt.Errorf("failed to render chart templates: %w", err)
+	}
+
+	return rendered, nil
 }
