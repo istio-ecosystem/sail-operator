@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path"
 	"reflect"
 	"regexp"
 
@@ -31,9 +30,9 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	predicate2 "github.com/istio-ecosystem/sail-operator/pkg/predicate"
+	sharedreconcile "github.com/istio-ecosystem/sail-operator/pkg/reconcile"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/revision"
-	"github.com/istio-ecosystem/sail-operator/pkg/validation"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -115,57 +114,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, rev *v1.IstioRevision) (ctrl
 
 func (r *Reconciler) doReconcile(ctx context.Context, rev *v1.IstioRevision) error {
 	log := logf.FromContext(ctx)
-	if err := r.validate(ctx, rev); err != nil {
+	istiodReconciler := r.newIstiodReconciler()
+
+	if err := istiodReconciler.Validate(ctx, rev.Spec.Version, rev.Spec.Namespace, rev.Spec.Values, rev.Name, &rev.ObjectMeta); err != nil {
 		return err
 	}
 
 	log.Info("Installing Helm chart")
-	return r.installHelmCharts(ctx, rev)
-}
-
-func (r *Reconciler) Finalize(ctx context.Context, rev *v1.IstioRevision) error {
-	return r.uninstallHelmCharts(ctx, rev)
-}
-
-func (r *Reconciler) validate(ctx context.Context, rev *v1.IstioRevision) error {
-	if rev.Spec.Version == "" {
-		return reconciler.NewValidationError("spec.version not set")
-	}
-	if rev.Spec.Namespace == "" {
-		return reconciler.NewValidationError("spec.namespace not set")
-	}
-	if err := validation.ValidateTargetNamespace(ctx, r.Client, rev.Spec.Namespace); err != nil {
-		return err
-	}
-
-	if rev.Spec.Values == nil {
-		return reconciler.NewValidationError("spec.values not set")
-	}
-
-	revName := rev.Spec.Values.Revision
-	if rev.Name == v1.DefaultRevision && (revName != nil && *revName != "") {
-		return reconciler.NewValidationError(fmt.Sprintf("spec.values.revision must be \"\" when IstioRevision name is %s", v1.DefaultRevision))
-	} else if rev.Name != v1.DefaultRevision && (revName == nil || *revName != rev.Name) {
-		return reconciler.NewValidationError("spec.values.revision does not match IstioRevision name")
-	}
-
-	if rev.Spec.Values.Global == nil || rev.Spec.Values.Global.IstioNamespace == nil || *rev.Spec.Values.Global.IstioNamespace != rev.Spec.Namespace {
-		return reconciler.NewValidationError("spec.values.global.istioNamespace does not match spec.namespace")
-	}
-
-	tag := v1.IstioRevisionTag{}
-	if err := r.Client.Get(ctx, types.NamespacedName{Name: rev.Name}, &tag); err == nil {
-		if validation.ResourceTakesPrecedence(&tag.ObjectMeta, &rev.ObjectMeta) {
-			return reconciler.NewNameAlreadyExistsError("an IstioRevisionTag exists with this name", nil)
-		}
-	} else if !apierrors.IsNotFound(err) {
-		return err
-	}
-
-	return nil
-}
-
-func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevision) error {
 	ownerReference := metav1.OwnerReference{
 		APIVersion:         v1.GroupVersion.String(),
 		Kind:               v1.IstioRevisionKind,
@@ -174,42 +129,22 @@ func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevisio
 		Controller:         ptr.Of(true),
 		BlockOwnerDeletion: ptr.Of(true),
 	}
-
-	values := helm.FromValues(rev.Spec.Values)
-	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.Config.ResourceFS, r.getChartPath(rev, constants.IstiodChartName),
-		values, rev.Spec.Namespace, getReleaseName(rev, constants.IstiodChartName), &ownerReference)
-	if err != nil {
-		return fmt.Errorf("failed to install/update Helm chart %q: %w", constants.IstiodChartName, err)
-	}
-	if rev.Name == v1.DefaultRevision {
-		_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.Config.ResourceFS, r.getChartPath(rev, constants.BaseChartName),
-			values, r.Config.OperatorNamespace, getReleaseName(rev, constants.BaseChartName), &ownerReference)
-		if err != nil {
-			return fmt.Errorf("failed to install/update Helm chart %q: %w", constants.BaseChartName, err)
-		}
-	}
-	return nil
+	return istiodReconciler.Install(ctx, rev.Spec.Version, rev.Spec.Namespace, rev.Spec.Values, rev.Name, &ownerReference)
 }
 
-func getReleaseName(rev *v1.IstioRevision, chartName string) string {
-	return fmt.Sprintf("%s-%s", rev.Name, chartName)
+func (r *Reconciler) Finalize(ctx context.Context, rev *v1.IstioRevision) error {
+	istiodReconciler := r.newIstiodReconciler()
+	return istiodReconciler.Uninstall(ctx, rev.Spec.Namespace, rev.Name)
 }
 
-func (r *Reconciler) getChartPath(rev *v1.IstioRevision, chartName string) string {
-	return path.Join(rev.Spec.Version, "charts", chartName)
-}
-
-func (r *Reconciler) uninstallHelmCharts(ctx context.Context, rev *v1.IstioRevision) error {
-	if _, err := r.ChartManager.UninstallChart(ctx, getReleaseName(rev, constants.IstiodChartName), rev.Spec.Namespace); err != nil {
-		return fmt.Errorf("failed to uninstall Helm chart %q: %w", constants.IstiodChartName, err)
-	}
-	if rev.Name == v1.DefaultRevision {
-		_, err := r.ChartManager.UninstallChart(ctx, getReleaseName(rev, constants.BaseChartName), r.Config.OperatorNamespace)
-		if err != nil {
-			return fmt.Errorf("failed to uninstall Helm chart %q: %w", constants.BaseChartName, err)
-		}
-	}
-	return nil
+func (r *Reconciler) newIstiodReconciler() *sharedreconcile.IstiodReconciler {
+	return sharedreconcile.NewIstiodReconciler(sharedreconcile.Config{
+		ResourceFS:        r.Config.ResourceFS,
+		Platform:          r.Config.Platform,
+		DefaultProfile:    r.Config.DefaultProfile,
+		OperatorNamespace: r.Config.OperatorNamespace,
+		ChartManager:      r.ChartManager,
+	}, r.Client)
 }
 
 func (r *Reconciler) mapEndpointSliceToReconcileRequests(ctx context.Context, obj client.Object) []reconcile.Request {

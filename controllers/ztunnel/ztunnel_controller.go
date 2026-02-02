@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path"
 	"reflect"
 
 	"github.com/go-logr/logr"
@@ -29,12 +28,10 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
-	"github.com/istio-ecosystem/sail-operator/pkg/istiovalues"
-	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/predicate"
+	sharedreconcile "github.com/istio-ecosystem/sail-operator/pkg/reconcile"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
-	"github.com/istio-ecosystem/sail-operator/pkg/validation"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -60,11 +57,6 @@ type Reconciler struct {
 	Scheme       *runtime.Scheme
 	ChartManager *helm.ChartManager
 }
-
-const (
-	ztunnelChart   = "ztunnel"
-	defaultProfile = "ambient"
-)
 
 func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *runtime.Scheme, chartManager *helm.ChartManager) *Reconciler {
 	return &Reconciler{
@@ -101,33 +93,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, ztunnel *v1.ZTunnel) (ctrl.R
 }
 
 func (r *Reconciler) Finalize(ctx context.Context, ztunnel *v1.ZTunnel) error {
-	return r.uninstallHelmChart(ctx, ztunnel)
+	ztunnelReconciler := r.newZTunnelReconciler()
+	return ztunnelReconciler.Uninstall(ctx, ztunnel.Spec.Namespace)
 }
 
 func (r *Reconciler) doReconcile(ctx context.Context, ztunnel *v1.ZTunnel) error {
 	log := logf.FromContext(ctx)
-	if err := r.validate(ctx, ztunnel); err != nil {
+	ztunnelReconciler := r.newZTunnelReconciler()
+
+	if err := ztunnelReconciler.Validate(ctx, ztunnel.Spec.Version, ztunnel.Spec.Namespace); err != nil {
 		return err
 	}
 
 	log.Info("Installing ztunnel Helm chart")
-	return r.installHelmChart(ctx, ztunnel)
-}
-
-func (r *Reconciler) validate(ctx context.Context, ztunnel *v1.ZTunnel) error {
-	if ztunnel.Spec.Version == "" {
-		return reconciler.NewValidationError("spec.version not set")
-	}
-	if ztunnel.Spec.Namespace == "" {
-		return reconciler.NewValidationError("spec.namespace not set")
-	}
-	if err := validation.ValidateTargetNamespace(ctx, r.Client, ztunnel.Spec.Namespace); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (r *Reconciler) installHelmChart(ctx context.Context, ztunnel *v1.ZTunnel) error {
 	ownerReference := metav1.OwnerReference{
 		APIVersion:         v1.GroupVersion.String(),
 		Kind:               v1.ZTunnelKind,
@@ -136,80 +114,17 @@ func (r *Reconciler) installHelmChart(ctx context.Context, ztunnel *v1.ZTunnel) 
 		Controller:         ptr.Of(true),
 		BlockOwnerDeletion: ptr.Of(true),
 	}
-
-	version, err := istioversion.Resolve(ztunnel.Spec.Version)
-	if err != nil {
-		return fmt.Errorf("failed to resolve Ztunnel version for %q: %w", ztunnel.Name, err)
-	}
-	// get userValues from ztunnel.spec.values
-	userValues := ztunnel.Spec.Values
-	if userValues == nil {
-		userValues = &v1.ZTunnelValues{}
-	}
-
-	// apply image digests from configuration, if not already set by user
-	userValues = applyImageDigests(version, userValues, config.Config)
-
-	// apply userValues on top of defaultValues from profiles
-	mergedHelmValues, err := istiovalues.ApplyProfilesAndPlatform(
-		r.Config.ResourceFS, version, r.Config.Platform, r.Config.DefaultProfile, defaultProfile, helm.FromValues(userValues))
-	if err != nil {
-		return fmt.Errorf("failed to apply profile: %w", err)
-	}
-
-	// Apply any user Overrides configured as part of values.ztunnel
-	// This step was not required for the IstioCNI resource because the Helm templates[*] automatically override values.cni
-	// [*]https://github.com/istio/istio/blob/0200fd0d4c3963a72f36987c2e8c2887df172abf/manifests/charts/istio-cni/templates/zzy_descope_legacy.yaml#L3
-	// However, ztunnel charts do not have such a file, hence we are manually applying the mergeOperation here.
-	finalHelmValues, err := istiovalues.ApplyUserValues(helm.FromValues(mergedHelmValues), helm.FromValues(userValues.ZTunnel))
-	if err != nil {
-		return fmt.Errorf("failed to apply user overrides: %w", err)
-	}
-
-	_, err = r.ChartManager.UpgradeOrInstallChart(
-		ctx, r.Config.ResourceFS, r.getChartPath(version), finalHelmValues, ztunnel.Spec.Namespace, ztunnelChart, &ownerReference)
-	if err != nil {
-		return fmt.Errorf("failed to install/update Helm chart %q: %w", ztunnelChart, err)
-	}
-	return nil
+	return ztunnelReconciler.Install(ctx, ztunnel.Spec.Version, ztunnel.Spec.Namespace, ztunnel.Spec.Values, &ownerReference)
 }
 
-func (r *Reconciler) getChartPath(version string) string {
-	return path.Join(version, "charts", ztunnelChart)
-}
-
-func applyImageDigests(version string, values *v1.ZTunnelValues, config config.OperatorConfig) *v1.ZTunnelValues {
-	imageDigests, digestsDefined := config.ImageDigests[version]
-	// if we don't have default image digests defined for this version, it's a no-op
-	if !digestsDefined {
-		return values
-	}
-
-	// if a global hub or tag value is configured by the user, don't set image digests
-	if values != nil && values.Global != nil && (values.Global.Hub != nil || values.Global.Tag != nil) {
-		return values
-	}
-
-	if values == nil {
-		values = &v1.ZTunnelValues{}
-	}
-
-	// set image digest unless any part of the image has been configured by the user
-	if values.ZTunnel == nil {
-		values.ZTunnel = &v1.ZTunnelConfig{}
-	}
-	if values.ZTunnel.Image == nil && values.ZTunnel.Hub == nil && values.ZTunnel.Tag == nil {
-		values.ZTunnel.Image = &imageDigests.ZTunnelImage
-	}
-	return values
-}
-
-func (r *Reconciler) uninstallHelmChart(ctx context.Context, ztunnel *v1.ZTunnel) error {
-	_, err := r.ChartManager.UninstallChart(ctx, ztunnelChart, ztunnel.Spec.Namespace)
-	if err != nil {
-		return fmt.Errorf("failed to uninstall Helm chart %q: %w", ztunnelChart, err)
-	}
-	return nil
+func (r *Reconciler) newZTunnelReconciler() *sharedreconcile.ZTunnelReconciler {
+	return sharedreconcile.NewZTunnelReconciler(sharedreconcile.Config{
+		ResourceFS:        r.Config.ResourceFS,
+		Platform:          r.Config.Platform,
+		DefaultProfile:    r.Config.DefaultProfile,
+		OperatorNamespace: r.Config.OperatorNamespace,
+		ChartManager:      r.ChartManager,
+	}, r.Client)
 }
 
 // SetupWithManager sets up the controller with the Manager.
