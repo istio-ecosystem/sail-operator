@@ -1,0 +1,43 @@
+name: Update EOL Versions
+
+on:
+  schedule:
+    - cron: "0 2 * * *" # Nightly
+  workflow_dispatch: # Allow manual trigger
+
+run-name: update-eol-versions
+
+env:
+  GIT_USER: ${{ secrets.GIT_USER }}
+  GH_TOKEN: ${{ secrets.GIT_TOKEN }}
+  AUTOMATOR_ORG: istio-ecosystem
+  AUTOMATOR_REPO: sail-operator
+
+jobs:
+  update-eol-versions:
+    runs-on: ubuntu-latest
+    container:
+      image: gcr.io/istio-testing/build-tools:master-eebcdda8856e2d4f528991d27d4808880cce4c52
+      options: --entrypoint ''
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        repository: istio/test-infra
+        ref: master
+
+    # this is a workaround for a permissions issue when using the istio build container
+    - run: git config --system --add safe.directory /__w/sail-operator/sail-operator
+
+    - name: Run Automator to update EOL versions
+      run: |
+        ./tools/automator/automator.sh \
+          --org=$AUTOMATOR_ORG \
+          --repo=sail-operator \
+          --branch=main \
+          '--title=Automator: Update EOL Istio versions in $AUTOMATOR_ORG/$AUTOMATOR_REPO@main' \
+          --email=openshiftservicemeshbot@gmail.com \
+          --modifier=update_eol_versions \
+          --token-env \
+          --cmd='BUILD_WITH_CONTAINER=0 ./tools/update_eol_versions.sh' \
+          --signoff
