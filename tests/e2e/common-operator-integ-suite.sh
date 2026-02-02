@@ -126,6 +126,16 @@ initialize_variables() {
   ISTIO_MANIFEST="chart/samples/istio-sample.yaml"
   CI=${CI:-"false"}
 
+  # Debug logging and fallback for GINKGO_FLAGS
+  echo "CI environment: ${CI}"
+  echo "GINKGO_FLAGS received: '${GINKGO_FLAGS:-}'"
+
+  # Fallback: Generate GINKGO_FLAGS if empty and CI=true
+  if [ -z "${GINKGO_FLAGS:-}" ] && [ "${CI}" == "true" ]; then
+    GINKGO_FLAGS="--no-color"
+    echo "Generated GINKGO_FLAGS fallback: '${GINKGO_FLAGS}'"
+  fi
+
   # export to be sure that the variables are available in the subshell
   export IMAGE_BASE="${IMAGE_BASE:-sail-operator}"
   export TAG="${TAG:-latest}"
@@ -304,7 +314,7 @@ if [ "${SKIP_BUILD}" == "false" ]; then
   fi
 fi
 
-export SKIP_DEPLOY IP_FAMILY ISTIO_MANIFEST NAMESPACE CONTROL_PLANE_NS DEPLOYMENT_NAME MULTICLUSTER ARTIFACTS ISTIO_NAME COMMAND KUBECONFIG ISTIOCTL_PATH SKIP_CLEANUP
+export SKIP_DEPLOY IP_FAMILY ISTIO_MANIFEST NAMESPACE CONTROL_PLANE_NS DEPLOYMENT_NAME MULTICLUSTER ARTIFACTS ISTIO_NAME COMMAND KUBECONFIG ISTIOCTL_PATH SKIP_CLEANUP GINKGO_FLAGS
 
 if [ "${OLM}" != "true" ] && [ "${SKIP_DEPLOY}" != "true" ]; then
   # shellcheck disable=SC2153
