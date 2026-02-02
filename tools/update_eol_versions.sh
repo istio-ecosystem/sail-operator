@@ -65,7 +65,8 @@ echo ""
 is_version_supported() {
   local version=$1
   # Extract major.minor from version (e.g., v1.28.3 -> 1.28)
-  local major_minor=$(echo "$version" | grep -oE '[0-9]+\.[0-9]+' | head -n1)
+  local major_minor
+  major_minor=$(echo "$version" | grep -oE '[0-9]+\.[0-9]+' | head -n1)
 
   if [ -z "$major_minor" ]; then
     # If we can't parse it (e.g., master, alpha versions), consider it supported
