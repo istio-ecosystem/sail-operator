@@ -198,13 +198,13 @@ func (r *Reconciler) installHelmCharts(ctx context.Context, tag *v1.IstioRevisio
 		return err
 	}
 
-	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev, revisionTagsChartName),
+	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.Config.ResourceFS, r.getChartPath(rev, revisionTagsChartName),
 		values, rev.Spec.Namespace, getReleaseName(tag, revisionTagsChartName), &ownerReference)
 	if err != nil {
 		return fmt.Errorf("failed to install/update Helm chart %q: %w", revisionTagsChartName, err)
 	}
 	if tag.Name == v1.DefaultRevision {
-		_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev, constants.BaseChartName),
+		_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.Config.ResourceFS, r.getChartPath(rev, constants.BaseChartName),
 			values, r.Config.OperatorNamespace, getReleaseName(tag, constants.BaseChartName), &ownerReference)
 		if err != nil {
 			return fmt.Errorf("failed to install/update Helm chart %q: %w", constants.BaseChartName, err)
@@ -217,8 +217,8 @@ func getReleaseName(tag *v1.IstioRevisionTag, chartName string) string {
 	return fmt.Sprintf("%s-%s", tag.Name, chartName)
 }
 
-func (r *Reconciler) getChartDir(tag *v1.IstioRevision, chartName string) string {
-	return path.Join(r.Config.ResourceDirectory, tag.Spec.Version, "charts", chartName)
+func (r *Reconciler) getChartPath(rev *v1.IstioRevision, chartName string) string {
+	return path.Join(rev.Spec.Version, "charts", chartName)
 }
 
 func (r *Reconciler) uninstallHelmCharts(ctx context.Context, tag *v1.IstioRevisionTag) error {
