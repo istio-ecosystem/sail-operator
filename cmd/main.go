@@ -32,6 +32,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/version"
+	"github.com/istio-ecosystem/sail-operator/resources"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -56,7 +57,7 @@ func main() {
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8443", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.StringVar(&configFile, "config-file", "/etc/sail-operator/config.properties", "Location of the config file, propagated by k8s downward APIs")
-	flag.StringVar(&resourceDirectory, "resource-directory", "/var/lib/sail-operator/resources", "Where to find resources (e.g. charts)")
+	flag.StringVar(&resourceDirectory, "resource-directory", "", "Where to find resources (e.g. charts). If empty, uses embedded resources.")
 	flag.IntVar(&reconcilerCfg.MaxConcurrentReconciles, "max-concurrent-reconciles", 1,
 		"MaxConcurrentReconciles is the maximum number of concurrent Reconciles which can be run.")
 	flag.BoolVar(&logAPIRequests, "log-api-requests", false, "Whether to log each request sent to the Kubernetes API server")
@@ -79,7 +80,13 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	reconcilerCfg.ResourceFS = os.DirFS(resourceDirectory)
+	if resourceDirectory != "" {
+		setupLog.Info("using filesystem resources", "directory", resourceDirectory)
+		reconcilerCfg.ResourceFS = os.DirFS(resourceDirectory)
+	} else {
+		setupLog.Info("using embedded resources")
+		reconcilerCfg.ResourceFS = resources.FS
+	}
 	reconcilerCfg.OperatorNamespace = os.Getenv("POD_NAMESPACE")
 	if reconcilerCfg.OperatorNamespace == "" {
 		contents, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
