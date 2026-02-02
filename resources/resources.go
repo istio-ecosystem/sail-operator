@@ -18,9 +18,6 @@
 // Helm charts and profiles. Importing this package will increase the binary
 // size significantly (~10MB) as it includes all chart files.
 //
-// The Sail Operator itself does NOT import this package - it uses filesystem
-// paths via os.DirFS instead, keeping the operator binary small.
-//
 // This package is intended for consumers who want to embed the charts
 // directly in their binary.
 //
