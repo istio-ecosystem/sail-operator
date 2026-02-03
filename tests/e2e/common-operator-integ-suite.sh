@@ -125,6 +125,7 @@ initialize_variables() {
   IP_FAMILY=${IP_FAMILY:-ipv4}
   ISTIO_MANIFEST="chart/samples/istio-sample.yaml"
   CI=${CI:-"false"}
+  USE_INTERNAL_REGISTRY=${USE_INTERNAL_REGISTRY:-"false"}
 
   # Debug logging and fallback for GINKGO_FLAGS
   echo "CI environment: ${CI}"
@@ -144,9 +145,13 @@ initialize_variables() {
   # Handle OCP registry scenarios
   # Note: Makefile.core.mk sets HUB=quay.io/sail-dev and TAG=1.29-latest by default
   if [ "${OCP}" == "true" ]; then
+    # Debug output for troubleshooting
+    echo "DEBUG: CI='${CI}', HUB='${HUB}'"
+
     if [ "${CI}" == "true" ] && [ "${HUB}" == "quay.io/sail-dev" ]; then
       # Scenario 2: CI mode with default HUB -> use external registry with proper CI tag
       echo "CI mode detected for OCP, using external registry ${HUB}"
+      export USE_INTERNAL_REGISTRY="false"
 
       # Use PR_NUMBER if available, otherwise generate timestamp tag
       if [ -n "${PR_NUMBER:-}" ]; then
@@ -157,9 +162,14 @@ initialize_variables() {
         export TAG
         echo "Using timestamp-based tag: ${TAG}"
       fi
+    elif [ "${CI}" == "true" ]; then
+      # Additional CI mode check - handle CI mode regardless of HUB value
+      echo "CI mode detected for OCP with custom HUB (${HUB}), using external registry"
+      export USE_INTERNAL_REGISTRY="false"
     elif [ "${HUB}" != "quay.io/sail-dev" ]; then
       # Scenario 3: Custom registry provided by user
       echo "Using custom registry: ${HUB}"
+      export USE_INTERNAL_REGISTRY="false"
     else
       # Scenario 1: Local development -> use internal OCP registry
       echo "Local development mode, will use OCP internal registry"
