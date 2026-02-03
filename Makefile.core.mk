@@ -251,7 +251,7 @@ build: build-$(TARGET_ARCH) ## Build the sail-operator binary.
 
 .PHONY: run
 run: gen ## Run a controller from your host.
-	POD_NAMESPACE=${NAMESPACE} go run ./cmd/main.go --config-file=./hack/config.properties --resource-directory=./resources
+	POD_NAMESPACE=${NAMESPACE} go run ./cmd/main.go --config-file=./hack/config.properties
 
 # docker build -t ${IMAGE} --build-arg GIT_TAG=${GIT_TAG} --build-arg GIT_REVISION=${GIT_REVISION} --build-arg GIT_STATUS=${GIT_STATUS} .
 .PHONY: docker-build

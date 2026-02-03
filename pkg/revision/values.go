@@ -16,6 +16,7 @@ package revision
 
 import (
 	"fmt"
+	"io/fs"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
@@ -28,9 +29,11 @@ import (
 // - applies vendor-specific default values
 // - applies the user-provided values on top of the default values from the default and user-selected profiles
 // - applies overrides that are not configurable by the user
+//
+// The resourceFS parameter accepts any fs.FS implementation (embed.FS, os.DirFS, etc.).
 func ComputeValues(
 	userValues *v1.Values, namespace string, version string,
-	platform config.Platform, defaultProfile, userProfile string, resourceDir string,
+	platform config.Platform, defaultProfile, userProfile string, resourceFS fs.FS,
 	activeRevisionName string,
 ) (*v1.Values, error) {
 	// apply image digests from configuration, if not already set by user
@@ -43,7 +46,7 @@ func ComputeValues(
 	}
 
 	// apply userValues on top of defaultValues from profiles
-	mergedHelmValues, err := istiovalues.ApplyProfilesAndPlatform(resourceDir, version, platform, defaultProfile, userProfile, helm.FromValues(userValues))
+	mergedHelmValues, err := istiovalues.ApplyProfilesAndPlatform(resourceFS, version, platform, defaultProfile, userProfile, helm.FromValues(userValues))
 	if err != nil {
 		return nil, fmt.Errorf("failed to apply profile: %w", err)
 	}
