@@ -720,7 +720,7 @@ For detailed waypoint configuration, see link:../common/istio-ambient-waypoint.a
 
 **ZTunnel DaemonSet Updates:**
 
-Ztunnel operates at Layer 4 of the OSI model, proxying TCP traffic, and does not have application-layer visibility. Because of this, it cannot transfer connection state to another process.This has significant implications for the long-lived TCP connections on the upgraded node. The Ztunnel runs as a DaemonSet — a per-node proxy — meaning that ztunnel upgrades affect, at minimum, an entire node at a time.
+Ztunnel operates at Layer 4 of the OSI model, proxying TCP traffic, and does not have application-layer visibility. Because of this, it cannot transfer connection state to another process. This has significant implications for the long-lived TCP connections on the upgraded node. The ztunnel runs as a DaemonSet — a per-node proxy — meaning that ztunnel upgrades affect, at minimum, an entire node at a time.
 
 **ZTunnel LifeCycle**
 
