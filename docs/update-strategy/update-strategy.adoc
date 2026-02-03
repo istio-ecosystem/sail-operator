@@ -727,7 +727,7 @@ Ztunnel operates at Layer 4 of the OSI model, proxying TCP traffic, and does not
 By default ztunnel DaemonSet is using RollingUpdate update strategy and during every restart will go through following phases (node by node):
 
 . New ztunnel pod starts on a node (while old one is still running)
-. New Ztunnel establishes listeners in each pod running on the node, and marks itself "ready".
+. New ztunnel establishes listeners in each pod running on the node, and marks itself "ready".
 . At this point, we have both Ztunnels running. New connections may be handled by either instance, for a very brief period of time as Ztunnel uses SO_REUSEPORT.
 . Shortly after, Kubernetes will start terminating the old ztunnel. It does this initially by sending a SIGTERM. Old ztunnel will catch this, and start "draining".
 . Immediately upon starting a drain, the old ztunnel will close its listeners. Now only the new ztunnel is listening. Critically, at all times there will be at least one ztunnel available to accept new connections.
