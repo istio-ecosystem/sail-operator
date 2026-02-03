@@ -2,11 +2,8 @@ module github.com/istio-ecosystem/sail-operator
 
 go 1.25.0
 
-// Client-go does not handle different versions of mergo due to some breaking changes - use the matching version
-// This replacement is aligned with istio/istio's go.mod
-replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.5
-
 require (
+	dario.cat/mergo v1.0.2
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/elastic/crd-ref-docs v0.1.0
 	github.com/go-logr/logr v1.4.3
@@ -36,7 +33,6 @@ require (
 
 require (
 	cel.dev/expr v0.24.0 // indirect
-	dario.cat/mergo v1.0.2 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect
 	github.com/BurntSushi/toml v1.5.0 // indirect
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect

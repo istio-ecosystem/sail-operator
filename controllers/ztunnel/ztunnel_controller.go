@@ -150,9 +150,9 @@ func (r *Reconciler) installHelmChart(ctx context.Context, ztunnel *v1.ZTunnel) 
 	// apply image digests from configuration, if not already set by user
 	userValues = applyImageDigests(version, userValues, config.Config)
 
-	// apply userValues on top of defaultValues from profiles
-	mergedHelmValues, err := istiovalues.ApplyProfilesAndPlatform(
-		r.Config.ResourceDirectory, version, r.Config.Platform, r.Config.DefaultProfile, defaultProfile, helm.FromValues(userValues))
+	// apply userValues on top of defaultValues from profiles and set platform
+	mergedValues, err := istiovalues.ApplyProfilesAndPlatformToZTunnelValues(
+		r.Config.ResourceDirectory, version, r.Config.Platform, r.Config.DefaultProfile, defaultProfile, userValues)
 	if err != nil {
 		return fmt.Errorf("failed to apply profile: %w", err)
 	}
@@ -161,7 +161,7 @@ func (r *Reconciler) installHelmChart(ctx context.Context, ztunnel *v1.ZTunnel) 
 	// This step was not required for the IstioCNI resource because the Helm templates[*] automatically override values.cni
 	// [*]https://github.com/istio/istio/blob/0200fd0d4c3963a72f36987c2e8c2887df172abf/manifests/charts/istio-cni/templates/zzy_descope_legacy.yaml#L3
 	// However, ztunnel charts do not have such a file, hence we are manually applying the mergeOperation here.
-	finalHelmValues, err := istiovalues.ApplyUserValues(helm.FromValues(mergedHelmValues), helm.FromValues(userValues.ZTunnel))
+	finalHelmValues, err := istiovalues.ApplyUserValues(helm.FromValues(mergedValues), helm.FromValues(userValues.ZTunnel))
 	if err != nil {
 		return fmt.Errorf("failed to apply user overrides: %w", err)
 	}

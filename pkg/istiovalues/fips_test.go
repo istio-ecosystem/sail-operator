@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/istio-ecosystem/sail-operator/pkg/helm"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 )
 
 func TestDetectFipsMode(t *testing.T) {
@@ -65,38 +65,71 @@ func TestApplyFipsValues(t *testing.T) {
 	tests := []struct {
 		name         string
 		fipsEnabled  bool
-		expectValues helm.Values
-		expectErr    bool
+		inputValues  *v1.Values
+		expectValues *v1.Values
 	}{
 		{
 			name:         "FIPS not enabled",
 			fipsEnabled:  false,
-			expectValues: helm.Values{},
+			inputValues:  &v1.Values{},
+			expectValues: &v1.Values{},
 		},
 		{
 			name:        "FIPS enabled",
 			fipsEnabled: true,
-			expectValues: helm.Values{
-				"pilot": map[string]any{
-					"env": map[string]any{"COMPLIANCE_POLICY": string("fips-140-2")},
+			inputValues: &v1.Values{},
+			expectValues: &v1.Values{
+				Pilot: &v1.PilotConfig{
+					Env: map[string]string{"COMPLIANCE_POLICY": "fips-140-2"},
 				},
 			},
 		},
+		{
+			name:        "FIPS enabled with existing env",
+			fipsEnabled: true,
+			inputValues: &v1.Values{
+				Pilot: &v1.PilotConfig{
+					Env: map[string]string{"OTHER_VAR": "value"},
+				},
+			},
+			expectValues: &v1.Values{
+				Pilot: &v1.PilotConfig{
+					Env: map[string]string{
+						"OTHER_VAR":         "value",
+						"COMPLIANCE_POLICY": "fips-140-2",
+					},
+				},
+			},
+		},
+		{
+			name:        "FIPS enabled but COMPLIANCE_POLICY already set",
+			fipsEnabled: true,
+			inputValues: &v1.Values{
+				Pilot: &v1.PilotConfig{
+					Env: map[string]string{"COMPLIANCE_POLICY": "custom-policy"},
+				},
+			},
+			expectValues: &v1.Values{
+				Pilot: &v1.PilotConfig{
+					Env: map[string]string{"COMPLIANCE_POLICY": "custom-policy"},
+				},
+			},
+		},
+		{
+			name:         "nil values",
+			fipsEnabled:  true,
+			inputValues:  nil,
+			expectValues: nil,
+		},
 	}
 
-	values := helm.Values{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			FipsEnabled = tt.fipsEnabled
-			actual, err := ApplyFipsValues(values)
-			if (err != nil) != tt.expectErr {
-				t.Errorf("applyFipsValues() error = %v, expectErr %v", err, tt.expectErr)
-			}
+			ApplyFipsValues(tt.inputValues)
 
-			if err == nil {
-				if diff := cmp.Diff(tt.expectValues, actual); diff != "" {
-					t.Errorf("COMPLIANCE_POLICY env wasn't applied properly; diff (-expected, +actual):\n%v", diff)
-				}
+			if diff := cmp.Diff(tt.expectValues, tt.inputValues); diff != "" {
+				t.Errorf("COMPLIANCE_POLICY env wasn't applied properly; diff (-expected, +actual):\n%v", diff)
 			}
 		})
 	}

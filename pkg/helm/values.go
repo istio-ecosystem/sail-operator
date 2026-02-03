@@ -24,12 +24,6 @@ import (
 
 type Values map[string]any
 
-// GetBool returns the bool value of a nested field.
-// Returns false if value is not found and an error if not a bool.
-func (h *Values) GetBool(key string) (bool, bool, error) {
-	return unstructured.NestedBool(*h, toKeys(key)...)
-}
-
 // GetString returns the string value of a nested field.
 // Returns false if value is not found and an error if not a string.
 func (h *Values) GetString(key string) (string, bool, error) {
