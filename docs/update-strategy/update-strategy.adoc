@@ -724,7 +724,7 @@ Ztunnel operates at Layer 4 of the OSI model, proxying TCP traffic, and does not
 
 **ZTunnel LifeCycle**
 
-By default ZTunnel DaemonSet is using RollingUpdate update strategy and during every restart will go through following phases (node by node):
+By default ztunnel DaemonSet is using RollingUpdate update strategy and during every restart will go through following phases (node by node):
 
 . New ztunnel pod starts on a node (while old one is still running)
 . New Ztunnel establishes listeners in each pod running on the node, and marks itself "ready".
