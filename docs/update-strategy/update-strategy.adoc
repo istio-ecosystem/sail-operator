@@ -179,7 +179,7 @@ InPlace updates restart control plane pods, which may cause brief service disrup
 [[inplace-ambient-mode-considerations]]
 === InPlace Strategy for Ambient Mode
 
-With InPlace updates in ambient mode, all components update directly. In ambient mode, the ztunnel maintains xDS connections to istiod, not application workloads directly. IstioCNI and ZTunnel use rolling updates. Brief traffic interruption may occur during control plane updates. Running multiple istiod replicas helps minimize this risk but doesn't eliminate it. For details, see the https://istio.io/latest/docs/ambient/upgrade/helm/#understanding-ambient-mode-upgrades[Istio ambient mode upgrade documentation].
+With InPlace updates in ambient mode, all components update directly. Update sequence is described below. In contrast to sidecar mode, ambient mode supports moving application pods to an upgraded ztunnel proxy without a mandatory restart or reschedule of running application pods. However, upgrading ztunnel could cause all long-lived TCP connections on the upgraded node to reset. See <<ambient-special-considerations>> for instruction how to avoid this problem. Recommendation to configure istiod with high availability (HA) applies for ambient mode as well.
 
 **Update sequence for ambient mode:**
 
@@ -188,8 +188,6 @@ With InPlace updates in ambient mode, all components update directly. In ambient
 3. ZTunnel (patch to same version)
 
 See <<updating-ambient-components>> for detailed IstioCNI and ZTunnel update procedures.
-
-*Tip:* Running istiod in HA mode reduces traffic disruptions during updates. See the link:../../docs/general/istiod-ha.adoc[HA guide].
 
 [[revisionbased]]
 == RevisionBased
@@ -722,10 +720,74 @@ For detailed waypoint configuration, see link:../common/istio-ambient-waypoint.a
 
 **ZTunnel DaemonSet Updates:**
 
-When upgrading the ambient cluster, new mTLS connections continue to function normally. However, upgrading ztunnel will cause existing long-lived TCP connections on the upgraded node to reset after a grace period. For production upgrades, use node cordoning or blue/green node pools.
+Ztunnel operates at Layer 4 of the OSI model, proxying TCP traffic, and does not have application-layer visibility. Because of this, it cannot transfer connection state to another process. This has significant implications for the long-lived TCP connections on the upgraded node. The ztunnel runs as a DaemonSet — a per-node proxy — meaning that ztunnel upgrades affect, at minimum, an entire node at a time.
 
-* Rolling updates update one node at a time by default
-* New connections may experience brief latency while a node's ZTunnel restarts
+**ZTunnel LifeCycle**
+
+By default ztunnel DaemonSet is using RollingUpdate update strategy and during every restart will go through following phases (node by node):
+
+. New ztunnel pod starts on a node (while old one is still running)
+. New ztunnel establishes listeners in each pod running on the node, and marks itself "ready".
+. At this point, we have both ztunnels running. New connections may be handled by either instance, for a very brief period of time as ztunnel uses SO_REUSEPORT.
+. Shortly after, Kubernetes will start terminating the old ztunnel. It does this initially by sending a SIGTERM. Old ztunnel will catch this, and start "draining".
+. Immediately upon starting a drain, the old ztunnel will close its listeners. Now only the new ztunnel is listening. Critically, at all times there will be at least one ztunnel available to accept new connections.
+. While old ztunnel will not accept new connections, it will continue processing existing connections.
+. After the drain period, the old ztunnel will forcefully terminate any outstanding connections.
+
+The drain period is configured by https://github.com/istio/istio/blob/master/manifests/charts/ztunnel/values.yaml#L96C3-L96C32[terminationGracePeriodSeconds]. Every connection still open after the drain period will be forcefully terminated.
+
+**Upgrade using high terminationGracePeriodSeconds**
+
+The simplest option to avoid dropping connections is to configure high enough terminationGracePeriodSeconds so all application connections can naturally and gracefully terminate. This however requires good knowledge of applications running in the mesh. Also with high terminationGracePeriodSeconds it will take a long time to finish the upgrade as only one node is being processed at the time. Therefore a wise balance is necessary.
+
+Default terminationGracePeriodSeconds value can be changed via:
+[source,yaml,subs="attributes+"]
+----
+apiVersion: sailoperator.io/v1
+kind: ZTunnel
+metadata:
+  name: default
+spec:
+  version: {istio_latest_version}
+  namespace: ztunnel
+  values:
+    ztunnel:
+      terminationGracePeriodSeconds: 300  # 5 minutes - adjust based on workload
+----
+
+
+**A safe upgrade using node draining**
+
+As it's not possible to pass TCP connection to another process, only reliable option to force an application to reconnect through a new ztunnel is by graceful restart of the application. This can be done manually by restarting selected applications or all at once by node draining. Applications would have to be restarted at the correct time when the new ztunnel is started and the old ztunnel is in the draining phase. This would be difficult to achieve.
+
+[NOTE]
+Applications with retry logic or short keepalive timeouts will naturally recover better than ones with very long idle TCP connections.
+
+For better control over the upgrade process it is possible to use https://kubernetes.io/docs/tasks/manage-daemon/update-daemon-set/#daemonset-update-strategy[OnDelete update strategy] which can be set via:
+
+[source,yaml,subs="attributes+"]
+----
+apiVersion: sailoperator.io/v1
+kind: ZTunnel
+metadata:
+  name: default
+spec:
+  version: {istio_latest_version}
+  namespace: ztunnel
+  values:
+    ztunnel:
+      updateStrategy:
+        type: OnDelete
+----
+
+With this update strategy, following workflow will avoid forceful termination of long-lived connections:
+
+. Update ZTunnel version
+. Drain a node: This forces all applications to move to other nodes, closing their long-lived connections gracefully (per their own terminationGracePeriodSeconds).
+. Delete old ztunnel pod and wait for new one to be started: Since the node is empty, deleting the old ztunnel and starting the new one carries zero risk to traffic.
+. Mark the node as schedulable: This allows applications to schedule back onto the node and they will now automatically use the new ztunnel.
+. repeat steps 2 -- 4 for all nodes
+
 
 **Version Skew:**
 
