@@ -6049,7 +6049,6 @@ spec:
                       tlsDefaults:
                         description: |-
                           Configuration of TLS for all traffic except for ISTIO_MUTUAL mode.
-                          Currently, this supports configuration of ecdhCurves and cipherSuites only.
                           For ISTIO_MUTUAL TLS settings, use meshMTLS configuration.
                         properties:
                           cipherSuites:
@@ -10122,7 +10121,7 @@ spec:
               version:
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.30-alpha.a6c6f0b2.
+                  Must be one of: v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.30-alpha.15986c2f.
                 enum:
                 - v1.28.3
                 - v1.28.2
@@ -10165,7 +10164,7 @@ spec:
                 - v1.22.6
                 - v1.22.5
                 - v1.21.6
-                - v1.30-alpha.a6c6f0b2
+                - v1.30-alpha.15986c2f
                 type: string
             required:
             - namespace
