@@ -15,21 +15,33 @@
 package reconcile
 
 import (
+	"context"
 	"testing"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
+	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"istio.io/istio/pkg/ptr"
 )
 
-func TestZTunnelReconciler_ValidateSpec(t *testing.T) {
+func TestZTunnelReconciler_Validate(t *testing.T) {
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "istio-system",
+		},
+	}
+
 	tests := []struct {
 		name        string
 		version     string
 		namespace   string
+		nsExists    bool
 		wantErr     bool
 		errContains string
 	}{
@@ -37,6 +49,7 @@ func TestZTunnelReconciler_ValidateSpec(t *testing.T) {
 			name:        "missing version",
 			version:     "",
 			namespace:   "istio-system",
+			nsExists:    true,
 			wantErr:     true,
 			errContains: "version not set",
 		},
@@ -44,21 +57,37 @@ func TestZTunnelReconciler_ValidateSpec(t *testing.T) {
 			name:        "missing namespace",
 			version:     "v1.24.0",
 			namespace:   "",
+			nsExists:    true,
 			wantErr:     true,
 			errContains: "namespace not set",
+		},
+		{
+			name:        "namespace not found",
+			version:     "v1.24.0",
+			namespace:   "istio-system",
+			nsExists:    false,
+			wantErr:     true,
+			errContains: `namespace "istio-system" doesn't exist`,
 		},
 		{
 			name:      "valid",
 			version:   "v1.24.0",
 			namespace: "istio-system",
+			nsExists:  true,
 			wantErr:   false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := NewZTunnelReconciler(Config{}, nil)
-			err := r.ValidateSpec(tt.version, tt.namespace)
+			clientBuilder := fake.NewClientBuilder().WithScheme(scheme.Scheme)
+			if tt.nsExists {
+				clientBuilder = clientBuilder.WithObjects(ns)
+			}
+			cl := clientBuilder.Build()
+
+			r := NewZTunnelReconciler(Config{}, cl)
+			err := r.Validate(context.Background(), tt.version, tt.namespace)
 
 			if tt.wantErr {
 				assert.Error(t, err)

@@ -15,30 +15,42 @@
 package reconcile
 
 import (
+	"context"
 	"testing"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
+	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"istio.io/istio/pkg/ptr"
 )
 
-func TestIstiodReconciler_ValidateSpec(t *testing.T) {
+func TestIstiodReconciler_Validate(t *testing.T) {
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "istio-system",
+		},
+	}
+
 	tests := []struct {
-		name         string
-		version      string
-		namespace    string
-		values       *v1.Values
-		revisionName string
-		wantErr      bool
-		errContains  string
+		name        string
+		version     string
+		namespace   string
+		values      *v1.Values
+		nsExists    bool
+		wantErr     bool
+		errContains string
 	}{
 		{
 			name:        "missing version",
 			version:     "",
 			namespace:   "istio-system",
 			values:      &v1.Values{},
+			nsExists:    true,
 			wantErr:     true,
 			errContains: "version not set",
 		},
@@ -47,6 +59,7 @@ func TestIstiodReconciler_ValidateSpec(t *testing.T) {
 			version:     "v1.24.0",
 			namespace:   "",
 			values:      &v1.Values{},
+			nsExists:    true,
 			wantErr:     true,
 			errContains: "namespace not set",
 		},
@@ -55,82 +68,47 @@ func TestIstiodReconciler_ValidateSpec(t *testing.T) {
 			version:     "v1.24.0",
 			namespace:   "istio-system",
 			values:      nil,
+			nsExists:    true,
 			wantErr:     true,
 			errContains: "values not set",
 		},
 		{
-			name:         "default revision with non-empty revision name in values",
-			version:      "v1.24.0",
-			namespace:    "istio-system",
-			revisionName: v1.DefaultRevision,
+			name:      "namespace not found",
+			version:   "v1.24.0",
+			namespace: "istio-system",
 			values: &v1.Values{
-				Revision: ptr.Of("canary"),
 				Global: &v1.GlobalConfig{
 					IstioNamespace: ptr.Of("istio-system"),
 				},
 			},
+			nsExists:    false,
 			wantErr:     true,
-			errContains: "values.revision must be",
+			errContains: `namespace "istio-system" doesn't exist`,
 		},
 		{
-			name:         "non-default revision with mismatched revision name",
-			version:      "v1.24.0",
-			namespace:    "istio-system",
-			revisionName: "canary",
+			name:      "valid",
+			version:   "v1.24.0",
+			namespace: "istio-system",
 			values: &v1.Values{
-				Revision: ptr.Of("other"),
 				Global: &v1.GlobalConfig{
 					IstioNamespace: ptr.Of("istio-system"),
 				},
 			},
-			wantErr:     true,
-			errContains: "values.revision does not match revision name",
-		},
-		{
-			name:         "namespace mismatch",
-			version:      "v1.24.0",
-			namespace:    "istio-system",
-			revisionName: v1.DefaultRevision,
-			values: &v1.Values{
-				Global: &v1.GlobalConfig{
-					IstioNamespace: ptr.Of("other-namespace"),
-				},
-			},
-			wantErr:     true,
-			errContains: "values.global.istioNamespace does not match namespace",
-		},
-		{
-			name:         "valid default revision",
-			version:      "v1.24.0",
-			namespace:    "istio-system",
-			revisionName: v1.DefaultRevision,
-			values: &v1.Values{
-				Revision: ptr.Of(""),
-				Global: &v1.GlobalConfig{
-					IstioNamespace: ptr.Of("istio-system"),
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name:         "valid canary revision",
-			version:      "v1.24.0",
-			namespace:    "istio-system",
-			revisionName: "canary",
-			values: &v1.Values{
-				Revision: ptr.Of("canary"),
-				Global: &v1.GlobalConfig{
-					IstioNamespace: ptr.Of("istio-system"),
-				},
-			},
-			wantErr: false,
+			nsExists: true,
+			wantErr:  false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := NewIstiodReconciler(Config{}, nil)
-			err := r.ValidateSpec(tt.version, tt.namespace, tt.values, tt.revisionName)
+			clientBuilder := fake.NewClientBuilder().WithScheme(scheme.Scheme)
+			if tt.nsExists {
+				clientBuilder = clientBuilder.WithObjects(ns)
+			}
+			cl := clientBuilder.Build()
+
+			r := NewIstiodReconciler(Config{}, cl)
+			err := r.Validate(context.Background(), tt.version, tt.namespace, tt.values)
 
 			if tt.wantErr {
 				assert.Error(t, err)

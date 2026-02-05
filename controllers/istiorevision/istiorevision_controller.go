@@ -33,6 +33,7 @@ import (
 	sharedreconcile "github.com/istio-ecosystem/sail-operator/pkg/reconcile"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/revision"
+	"github.com/istio-ecosystem/sail-operator/pkg/validation"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -116,7 +117,16 @@ func (r *Reconciler) doReconcile(ctx context.Context, rev *v1.IstioRevision) err
 	log := logf.FromContext(ctx)
 	istiodReconciler := r.newIstiodReconciler()
 
-	if err := istiodReconciler.Validate(ctx, rev.Spec.Version, rev.Spec.Namespace, rev.Spec.Values, rev.Name, &rev.ObjectMeta); err != nil {
+	// CRD-specific validations
+	if err := r.validateRevisionConsistency(rev); err != nil {
+		return err
+	}
+	if err := r.validateNoTagConflict(ctx, rev); err != nil {
+		return err
+	}
+
+	// General validations
+	if err := istiodReconciler.Validate(ctx, rev.Spec.Version, rev.Spec.Namespace, rev.Spec.Values); err != nil {
 		return err
 	}
 
@@ -145,6 +155,42 @@ func (r *Reconciler) newIstiodReconciler() *sharedreconcile.IstiodReconciler {
 		OperatorNamespace: r.Config.OperatorNamespace,
 		ChartManager:      r.ChartManager,
 	}, r.Client)
+}
+
+// validateRevisionConsistency validates that the IstioRevision CR fields are consistent
+// with the Helm values. This is CRD-specific validation.
+func (r *Reconciler) validateRevisionConsistency(rev *v1.IstioRevision) error {
+	values := rev.Spec.Values
+	if values == nil {
+		return nil // values nil check is done in general validation
+	}
+
+	// Validate revision name consistency
+	revName := values.Revision
+	if rev.Name == v1.DefaultRevision && (revName != nil && *revName != "") {
+		return reconciler.NewValidationError(fmt.Sprintf("values.revision must be \"\" when revision name is %s", v1.DefaultRevision))
+	} else if rev.Name != v1.DefaultRevision && (revName == nil || *revName != rev.Name) {
+		return reconciler.NewValidationError("values.revision does not match revision name")
+	}
+
+	// Validate namespace consistency
+	if values.Global == nil || values.Global.IstioNamespace == nil || *values.Global.IstioNamespace != rev.Spec.Namespace {
+		return reconciler.NewValidationError("values.global.istioNamespace does not match namespace")
+	}
+
+	return nil
+}
+
+// validateNoTagConflict checks that no IstioRevisionTag exists with the same name
+// as this IstioRevision. This is CRD-specific validation.
+func (r *Reconciler) validateNoTagConflict(ctx context.Context, rev *v1.IstioRevision) error {
+	tag := v1.IstioRevisionTag{}
+	if err := r.Client.Get(ctx, types.NamespacedName{Name: rev.Name}, &tag); err == nil {
+		if validation.ResourceTakesPrecedence(&tag.ObjectMeta, &rev.ObjectMeta) {
+			return reconciler.NewNameAlreadyExistsError("an IstioRevisionTag exists with this name", nil)
+		}
+	}
+	return nil
 }
 
 func (r *Reconciler) mapEndpointSliceToReconcileRequests(ctx context.Context, obj client.Object) []reconcile.Request {

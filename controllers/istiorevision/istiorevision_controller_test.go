@@ -200,14 +200,28 @@ func TestValidate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
 			cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(tc.objects...).Build()
-			istiodReconciler := sharedreconcile.NewIstiodReconciler(sharedreconcile.Config{
-				ResourceFS:        cfg.ResourceFS,
-				Platform:          cfg.Platform,
-				DefaultProfile:    cfg.DefaultProfile,
-				OperatorNamespace: cfg.OperatorNamespace,
-			}, cl)
 
-			err := istiodReconciler.Validate(context.TODO(), tc.rev.Spec.Version, tc.rev.Spec.Namespace, tc.rev.Spec.Values, tc.rev.Name, &tc.rev.ObjectMeta)
+			// Create controller reconciler for CRD-specific validations
+			reconciler := &Reconciler{
+				Client: cl,
+				Config: cfg,
+			}
+
+			// Run CRD-specific validations (same order as doReconcile)
+			var err error
+			if err = reconciler.validateRevisionConsistency(tc.rev); err == nil {
+				if err = reconciler.validateNoTagConflict(context.TODO(), tc.rev); err == nil {
+					// Run general validations
+					istiodReconciler := sharedreconcile.NewIstiodReconciler(sharedreconcile.Config{
+						ResourceFS:        cfg.ResourceFS,
+						Platform:          cfg.Platform,
+						DefaultProfile:    cfg.DefaultProfile,
+						OperatorNamespace: cfg.OperatorNamespace,
+					}, cl)
+					err = istiodReconciler.Validate(context.TODO(), tc.rev.Spec.Version, tc.rev.Spec.Namespace, tc.rev.Spec.Values)
+				}
+			}
+
 			if tc.expectErr == "" {
 				g.Expect(err).ToNot(HaveOccurred())
 			} else {

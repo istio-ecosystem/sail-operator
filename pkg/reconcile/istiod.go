@@ -25,7 +25,6 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -36,8 +35,6 @@ type IstiodReconciler struct {
 }
 
 // NewIstiodReconciler creates a new IstiodReconciler.
-// The client parameter is optional - pass nil when using from the library
-// where Kubernetes client operations are not needed.
 func NewIstiodReconciler(cfg Config, client client.Client) *IstiodReconciler {
 	return &IstiodReconciler{
 		cfg:    cfg,
@@ -45,9 +42,11 @@ func NewIstiodReconciler(cfg Config, client client.Client) *IstiodReconciler {
 	}
 }
 
-// ValidateSpec validates the istiod specification.
-// It performs basic validation that doesn't require Kubernetes API access.
-func (r *IstiodReconciler) ValidateSpec(version, namespace string, values *v1.Values, revisionName string) error {
+// Validate performs general validation of the istiod specification.
+// This includes basic field validation and Kubernetes API checks (namespace exists).
+// CRD-specific validations (revision name consistency, IstioRevisionTag conflicts)
+// should be performed by the controller before calling this method.
+func (r *IstiodReconciler) Validate(ctx context.Context, version, namespace string, values *v1.Values) error {
 	if version == "" {
 		return reconciler.NewValidationError("version not set")
 	}
@@ -58,54 +57,9 @@ func (r *IstiodReconciler) ValidateSpec(version, namespace string, values *v1.Va
 		return reconciler.NewValidationError("values not set")
 	}
 
-	// Validate revision name consistency
-	revName := values.Revision
-	if revisionName == v1.DefaultRevision && (revName != nil && *revName != "") {
-		return reconciler.NewValidationError(fmt.Sprintf("values.revision must be \"\" when revision name is %s", v1.DefaultRevision))
-	} else if revisionName != v1.DefaultRevision && (revName == nil || *revName != revisionName) {
-		return reconciler.NewValidationError("values.revision does not match revision name")
-	}
-
-	// Validate namespace consistency
-	if values.Global == nil || values.Global.IstioNamespace == nil || *values.Global.IstioNamespace != namespace {
-		return reconciler.NewValidationError("values.global.istioNamespace does not match namespace")
-	}
-
-	return nil
-}
-
-// Validate performs full validation including Kubernetes API checks.
-// This requires a non-nil client to be set.
-func (r *IstiodReconciler) Validate(
-	ctx context.Context,
-	version, namespace string,
-	values *v1.Values,
-	revisionName string,
-	revisionMeta *metav1.ObjectMeta,
-) error {
-	// First perform basic validation
-	if err := r.ValidateSpec(version, namespace, values, revisionName); err != nil {
-		return err
-	}
-
-	// Skip Kubernetes checks if no client is available
-	if r.client == nil {
-		return nil
-	}
-
 	// Validate target namespace exists
 	if err := validation.ValidateTargetNamespace(ctx, r.client, namespace); err != nil {
 		return err
-	}
-
-	// Check for name conflicts with IstioRevisionTag (only when revisionMeta is provided)
-	if revisionMeta != nil {
-		tag := v1.IstioRevisionTag{}
-		if err := r.client.Get(ctx, types.NamespacedName{Name: revisionName}, &tag); err == nil {
-			if validation.ResourceTakesPrecedence(&tag.ObjectMeta, revisionMeta) {
-				return reconciler.NewNameAlreadyExistsError("an IstioRevisionTag exists with this name", nil)
-			}
-		}
 	}
 
 	return nil

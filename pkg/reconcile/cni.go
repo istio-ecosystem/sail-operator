@@ -42,8 +42,6 @@ type CNIReconciler struct {
 }
 
 // NewCNIReconciler creates a new CNIReconciler.
-// The client parameter is optional - pass nil when using from the library
-// where Kubernetes client operations are not needed.
 func NewCNIReconciler(cfg Config, client client.Client) *CNIReconciler {
 	return &CNIReconciler{
 		cfg:    cfg,
@@ -51,29 +49,14 @@ func NewCNIReconciler(cfg Config, client client.Client) *CNIReconciler {
 	}
 }
 
-// ValidateSpec validates the CNI specification.
-// It performs basic validation that doesn't require Kubernetes API access.
-func (r *CNIReconciler) ValidateSpec(version, namespace string) error {
+// Validate performs general validation of the CNI specification.
+// This includes basic field validation and Kubernetes API checks (namespace exists).
+func (r *CNIReconciler) Validate(ctx context.Context, version, namespace string) error {
 	if version == "" {
 		return reconciler.NewValidationError("version not set")
 	}
 	if namespace == "" {
 		return reconciler.NewValidationError("namespace not set")
-	}
-	return nil
-}
-
-// Validate performs full validation including Kubernetes API checks.
-// This requires a non-nil client to be set.
-func (r *CNIReconciler) Validate(ctx context.Context, version, namespace string) error {
-	// First perform basic validation
-	if err := r.ValidateSpec(version, namespace); err != nil {
-		return err
-	}
-
-	// Skip Kubernetes checks if no client is available
-	if r.client == nil {
-		return nil
 	}
 
 	// Validate target namespace exists
