@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/istio-ecosystem/sail-operator/controllers/apiserver"
 	"github.com/istio-ecosystem/sail-operator/controllers/istio"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiocni"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiorevision"
@@ -35,11 +34,12 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/version"
 	"github.com/istio-ecosystem/sail-operator/resources"
-	configclient "github.com/openshift/client-go/config/clientset/versioned"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	configv1 "github.com/openshift/api/config/v1"
+	openshifttls "github.com/openshift/controller-runtime-common/pkg/tls"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -131,23 +131,55 @@ func main() {
 		reconcilerCfg.DefaultProfile = "default"
 	}
 
+	// if the enable-http2 flag is false (the default), http/2 should be disabled
+	// due to its vulnerabilities. More specifically, disabling http/2 will
+	// prevent from being vulnerable to the HTTP/2 Stream Cancellation and
+	// Rapid Reset CVEs. For more information see:
+	// - https://github.com/advisories/GHSA-qppj-fm5r-hxr3
+	// - https://github.com/advisories/GHSA-4374-p667-p6c8
+	disableHTTP2 := func(c *tls.Config) {
+		setupLog.Info("disabling http/2 for metrics server")
+		c.NextProtos = []string{"http/1.1"}
+	}
+
+	metricsServerTLSOptions := []func(*tls.Config){
+		// disable http/2 because of https://github.com/kubernetes/kubernetes/issues/121197
+		disableHTTP2,
+	}
+
 	ctx, shutdown := context.WithCancel(ctrl.SetupSignalHandler())
 
+	var tlsProfileSpec *configv1.TLSProfileSpec
 	var tlsConfig *config.TLSConfig
 	if reconcilerCfg.Platform == config.PlatformOpenShift {
-		tlsConfig, err = getTLSConfig(ctx, cfg)
+		tlsProfileSpec, err = fetchTLSProfileFromAPIServer(ctx, cfg)
 		if err != nil {
-			setupLog.Error(err, "unable to get TLS config")
+			setupLog.Error(err, "unable to fetch TLS profile from APIServer")
 			os.Exit(1)
 		}
-		setupLog.Info("TLS config from APIServer", "tlsConfig", tlsConfig)
+
+		if tlsProfileSpec != nil {
+			setupLog.Info("Using TLS config from APIServer", "tlsProfileSpec", tlsProfileSpec)
+			tlsConfigFunc, unsupportedCiphers := openshifttls.NewTLSConfigFromProfile(*tlsProfileSpec)
+			if len(unsupportedCiphers) > 0 {
+				setupLog.Info("Some ciphers from TLS profile are unsupported and will be ignored", "unsupportedCiphers", unsupportedCiphers)
+			}
+			metricsServerTLSOptions = append(metricsServerTLSOptions, tlsConfigFunc)
+
+			// Convert gotls.Config --> config.TLSConfig
+			goTLSConfig := &tls.Config{}
+			tlsConfigFunc(goTLSConfig)
+			tlsConfig = &config.TLSConfig{
+				CipherSuites: goTLSConfig.CipherSuites,
+			}
+		}
 	}
 
 	metricsServerOptions := metricsserver.Options{
 		BindAddress:    metricsAddr,
 		SecureServing:  true,
 		FilterProvider: filters.WithAuthenticationAndAuthorization,
-		TLSOpts:        metricsServerTLSOptions(tlsConfig),
+		TLSOpts:        metricsServerTLSOptions,
 	}
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
@@ -219,9 +251,19 @@ func main() {
 	}
 
 	if reconcilerCfg.Platform == config.PlatformOpenShift {
-		err = apiserver.NewReconciler(mgr.GetClient(), *tlsConfig, shutdown).SetupWithManager(mgr)
+		tlsWatcher := &openshifttls.SecurityProfileWatcher{
+			Client:                mgr.GetClient(),
+			InitialTLSProfileSpec: *tlsProfileSpec,
+			OnProfileChange: func(oldProfile, newProfile configv1.TLSProfileSpec) {
+				setupLog.Info("TLS profile has changed, initiating shutdown to reload configuration",
+					"oldProfile", oldProfile,
+					"newProfile", newProfile)
+				shutdown()
+			},
+		}
+		err = tlsWatcher.SetupWithManager(mgr)
 		if err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "APIServer")
+			setupLog.Error(err, "unable to create controller", "controller", "TLSSecurityProfileWatcher")
 			os.Exit(1)
 		}
 	}
@@ -255,53 +297,18 @@ func (rl requestLogger) RoundTrip(req *http.Request) (*http.Response, error) {
 
 var _ http.RoundTripper = requestLogger{}
 
-func metricsServerTLSOptions(tlsConfig *config.TLSConfig) []func(*tls.Config) {
-	// if the enable-http2 flag is false (the default), http/2 should be disabled
-	// due to its vulnerabilities. More specifically, disabling http/2 will
-	// prevent from being vulnerable to the HTTP/2 Stream Cancellation and
-	// Rapid Reset CVEs. For more information see:
-	// - https://github.com/advisories/GHSA-qppj-fm5r-hxr3
-	// - https://github.com/advisories/GHSA-4374-p667-p6c8
-	disableHTTP2 := func(c *tls.Config) {
-		setupLog.Info("disabling http/2 for metrics server")
-		c.NextProtos = []string{"http/1.1"}
-	}
-
-	tlsOpts := []func(*tls.Config){
-		// disable http/2 because of https://github.com/kubernetes/kubernetes/issues/121197
-		disableHTTP2,
-	}
-
-	if tlsConfig != nil {
-		setupLog.Info("Using TLS config for metrics server")
-		apiServerTLSConfig := func(c *tls.Config) {
-			c.CipherSuites = cipherSuiteIDs(tlsConfig.CipherSuites)
-		}
-		tlsOpts = append(tlsOpts, apiServerTLSConfig)
-	}
-
-	return tlsOpts
-}
-
-func getTLSConfig(ctx context.Context, restConfig *rest.Config) (*config.TLSConfig, error) {
-	client, err := configclient.NewForConfig(restConfig)
+func fetchTLSProfileFromAPIServer(ctx context.Context, cfg *rest.Config) (*configv1.TLSProfileSpec, error) {
+	// Create a temporary client to fetch the initial TLS profile.
+	// We can't use the manager's client here because the manager hasn't started yet.
+	tempClient, err := client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create config client: %w", err)
+		return nil, fmt.Errorf("unable to create temporary client: %w", err)
 	}
 
-	apiServer, err := client.ConfigV1().APIServers().Get(ctx, "cluster", metav1.GetOptions{})
+	spec, err := openshifttls.FetchAPIServerTLSProfile(ctx, tempClient)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get APIServer 'cluster': %w", err)
+		return nil, fmt.Errorf("unable to fetch APIServer TLS profile: %w", err)
 	}
 
-	tlsConfig := config.TLSConfigFromAPIServer(apiServer)
-	return &tlsConfig, nil
-}
-
-func cipherSuiteIDs(suites []tls.CipherSuite) []uint16 {
-	ids := make([]uint16, len(suites))
-	for i, cs := range suites {
-		ids[i] = cs.ID
-	}
-	return ids
+	return &spec, nil
 }

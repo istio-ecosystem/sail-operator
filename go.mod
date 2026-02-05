@@ -13,11 +13,10 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.4.0
 	github.com/magiconair/properties v1.8.9
-	github.com/onsi/ginkgo/v2 v2.28.0
+	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.39.1
-	github.com/openshift/api v0.0.0-20260105114749-aae5635a71a7
-	github.com/openshift/client-go v0.0.0-20260105124352-f93a4291f9ae
-	github.com/openshift/library-go v0.0.0-20251222131241-289839b3ffe8
+	github.com/openshift/api v0.0.0-20260130140113-71e91db96ffc
+	github.com/openshift/controller-runtime-common v0.0.0-20260204183245-642129afd14f
 	github.com/prometheus/common v0.66.1
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/zap v1.27.1
@@ -125,6 +124,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
+	github.com/openshift/library-go v0.0.0-20260204111611-b7d4fa0e292a // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect

@@ -40,10 +40,7 @@ func TestApplyTLSConfig(t *testing.T) {
 		{
 			name: "applies multiple cipher suites",
 			tlsConfig: &config.TLSConfig{
-				CipherSuites: []tls.CipherSuite{
-					{ID: tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, Name: "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
-					{ID: tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, Name: "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"},
-				},
+				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384},
 			},
 			inputValues: helm.Values{},
 			outputValues: helm.Values{
@@ -63,9 +60,7 @@ func TestApplyTLSConfig(t *testing.T) {
 		{
 			name: "does not override existing cipherSuites",
 			tlsConfig: &config.TLSConfig{
-				CipherSuites: []tls.CipherSuite{
-					{ID: tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, Name: "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
-				},
+				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
 			},
 			inputValues: helm.Values{
 				"meshConfig": map[string]any{
@@ -97,9 +92,7 @@ func TestApplyTLSConfig(t *testing.T) {
 		{
 			name: "error when meshConfig is not a map",
 			tlsConfig: &config.TLSConfig{
-				CipherSuites: []tls.CipherSuite{
-					{ID: tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, Name: "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
-				},
+				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
 			},
 			inputValues: helm.Values{
 				"meshConfig": "not a map",
@@ -109,9 +102,7 @@ func TestApplyTLSConfig(t *testing.T) {
 		{
 			name: "error when pilot is not a map",
 			tlsConfig: &config.TLSConfig{
-				CipherSuites: []tls.CipherSuite{
-					{ID: tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, Name: "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
-				},
+				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
 			},
 			inputValues: helm.Values{
 				"pilot": "not a map",
@@ -121,9 +112,7 @@ func TestApplyTLSConfig(t *testing.T) {
 		{
 			name: "preserves existing extraContainerArgs",
 			tlsConfig: &config.TLSConfig{
-				CipherSuites: []tls.CipherSuite{
-					{ID: tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, Name: "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
-				},
+				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
 			},
 			inputValues: helm.Values{
 				"pilot": map[string]any{
@@ -147,9 +136,7 @@ func TestApplyTLSConfig(t *testing.T) {
 		{
 			name: "error when extraContainerArgs is not a slice",
 			tlsConfig: &config.TLSConfig{
-				CipherSuites: []tls.CipherSuite{
-					{ID: tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, Name: "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
-				},
+				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
 			},
 			inputValues: helm.Values{
 				"pilot": map[string]any{
