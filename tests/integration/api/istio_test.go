@@ -543,11 +543,10 @@ var _ = Describe("Istio resource", Ordered, func() {
 
 	Describe("Operator TLSConfig", func() {
 		It("applies TLS cipher suites to the IstioRevision", func() {
-			expectedCipherName := tls.CipherSuites()[0].Name
+			cipherID := tls.CipherSuites()[0].ID
+			expectedCipherName := tls.CipherSuiteName(cipherID)
 			istioReconciler.TLSConfig = &config.TLSConfig{
-				CipherSuites: []tls.CipherSuite{
-					*tls.CipherSuites()[0],
-				},
+				CipherSuites: []uint16{cipherID},
 			}
 			DeferCleanup(func() {
 				istioReconciler.TLSConfig = nil
@@ -590,11 +589,10 @@ var _ = Describe("Istio resource", Ordered, func() {
 		It("does not overwrite user-specified TLS values", func() {
 			userCipherSuite := tls.CipherSuiteName(tls.TLS_AES_128_GCM_SHA256)
 			userExtraArg := "--tls-cipher-suites=" + userCipherSuite
-			tlsConfigCipher := tls.CipherSuite{ID: tls.TLS_AES_256_GCM_SHA384, Name: tls.CipherSuiteName(tls.TLS_AES_256_GCM_SHA384)}
+			tlsConfigCipherID := tls.TLS_AES_256_GCM_SHA384
+			tlsConfigCipherName := tls.CipherSuiteName(tlsConfigCipherID)
 			istioReconciler.TLSConfig = &config.TLSConfig{
-				CipherSuites: []tls.CipherSuite{
-					tlsConfigCipher,
-				},
+				CipherSuites: []uint16{tlsConfigCipherID},
 			}
 			DeferCleanup(func() {
 				istioReconciler.TLSConfig = nil
@@ -635,16 +633,16 @@ var _ = Describe("Istio resource", Ordered, func() {
 				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults).NotTo(BeNil())
 				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults.CipherSuites).To(HaveLen(1))
 				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults.CipherSuites[0]).To(Equal(userCipherSuite))
-				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults.CipherSuites).NotTo(ContainElement(tlsConfigCipher.Name))
+				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults.CipherSuites).NotTo(ContainElement(tlsConfigCipherName))
 
 				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS).NotTo(BeNil())
 				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS.CipherSuites).To(HaveLen(1))
 				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS.CipherSuites[0]).To(Equal(userCipherSuite))
-				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS.CipherSuites).NotTo(ContainElement(tlsConfigCipher.Name))
+				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS.CipherSuites).NotTo(ContainElement(tlsConfigCipherName))
 
 				g.Expect(rev.Spec.Values.Pilot).NotTo(BeNil())
 				g.Expect(rev.Spec.Values.Pilot.ExtraContainerArgs).To(ContainElement(userExtraArg))
-				g.Expect(rev.Spec.Values.Pilot.ExtraContainerArgs).NotTo(ContainElement("--tls-cipher-suites=" + tlsConfigCipher.Name))
+				g.Expect(rev.Spec.Values.Pilot.ExtraContainerArgs).NotTo(ContainElement("--tls-cipher-suites=" + tlsConfigCipherName))
 			}).Should(Succeed())
 		})
 	})

@@ -15,6 +15,7 @@
 package istiovalues
 
 import (
+	"crypto/tls"
 	"fmt"
 	"strings"
 
@@ -32,9 +33,10 @@ func ApplyTLSConfig(tlsConfig *config.TLSConfig, values helm.Values) (helm.Value
 	if len(tlsConfig.CipherSuites) > 0 {
 		cipherNames := make([]string, len(tlsConfig.CipherSuites))
 		cipherSlice := make([]any, len(tlsConfig.CipherSuites))
-		for i, cs := range tlsConfig.CipherSuites {
-			cipherNames[i] = cs.Name
-			cipherSlice[i] = cs.Name
+		for i, id := range tlsConfig.CipherSuites {
+			name := tls.CipherSuiteName(id)
+			cipherNames[i] = name
+			cipherSlice[i] = name
 		}
 		if err := values.SetIfAbsent("meshConfig.tlsDefaults.cipherSuites", cipherSlice); err != nil {
 			return nil, fmt.Errorf("failed to set meshConfig.tlsDefaults.cipherSuites: %w", err)
