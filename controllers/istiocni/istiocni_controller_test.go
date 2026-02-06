@@ -25,6 +25,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/istiovalues"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
+	sharedreconcile "github.com/istio-ecosystem/sail-operator/pkg/reconcile"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -77,7 +78,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 			objects:   []client.Object{ns},
-			expectErr: "spec.version not set",
+			expectErr: "version not set",
 		},
 		{
 			name: "no namespace",
@@ -90,7 +91,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 			objects:   []client.Object{ns},
-			expectErr: "spec.namespace not set",
+			expectErr: "namespace not set",
 		},
 		{
 			name: "namespace not found",
@@ -111,9 +112,14 @@ func TestValidate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
 			cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(tc.objects...).Build()
-			r := NewReconciler(cfg, cl, scheme.Scheme, nil)
+			cniReconciler := sharedreconcile.NewCNIReconciler(sharedreconcile.Config{
+				ResourceFS:        cfg.ResourceFS,
+				Platform:          cfg.Platform,
+				DefaultProfile:    cfg.DefaultProfile,
+				OperatorNamespace: cfg.OperatorNamespace,
+			}, cl)
 
-			err := r.validate(context.TODO(), tc.cni)
+			err := cniReconciler.Validate(context.TODO(), tc.cni.Spec.Version, tc.cni.Spec.Namespace)
 			if tc.expectErr == "" {
 				g.Expect(err).ToNot(HaveOccurred())
 			} else {
@@ -496,7 +502,7 @@ func TestApplyImageDigests(t *testing.T) {
 			if err != nil {
 				t.Errorf("failed to resolve IstioCNI version for %q: %v", tc.input.Name, err)
 			}
-			result := applyImageDigests(version, tc.input.Spec.Values, tc.config)
+			result := sharedreconcile.ApplyCNIImageDigests(version, tc.input.Spec.Values, tc.config)
 			if diff := cmp.Diff(tc.expectValues, result); diff != "" {
 				t.Errorf("unexpected merge result; diff (-expected, +actual):\n%v", diff)
 			}
