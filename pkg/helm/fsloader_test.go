@@ -15,10 +15,42 @@
 package helm
 
 import (
+	"maps"
 	"os"
+	"strings"
 	"testing"
 	"testing/fstest"
 )
+
+func TestRenderChart(t *testing.T) {
+	testFS := os.DirFS("testdata")
+
+	t.Run("renders template with values", func(t *testing.T) {
+		rendered, err := RenderChart(testFS, "chart", Values{"value": "hello"}, "test-ns", "my-release")
+		if err != nil {
+			t.Fatalf("expected no error, got: %v", err)
+		}
+
+		cm, ok := rendered["test-chart/templates/configmap.yaml"]
+		if !ok {
+			t.Fatalf("expected configmap template in output, got keys: %v", maps.Keys(rendered))
+		}
+
+		if !strings.Contains(cm, "namespace: test-ns") {
+			t.Errorf("expected namespace 'test-ns' in rendered output, got:\n%s", cm)
+		}
+		if !strings.Contains(cm, `value: "hello"`) {
+			t.Errorf("expected value 'hello' in rendered output, got:\n%s", cm)
+		}
+	})
+
+	t.Run("returns error for missing chart", func(t *testing.T) {
+		_, err := RenderChart(testFS, "nonexistent", nil, "ns", "rel")
+		if err == nil {
+			t.Fatal("expected error for non-existent chart path")
+		}
+	})
+}
 
 func TestLoadChart(t *testing.T) {
 	testFS := os.DirFS("testdata")
