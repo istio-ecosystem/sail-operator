@@ -53,3 +53,13 @@ func ApplyFipsValues(values helm.Values) (helm.Values, error) {
 	}
 	return values, nil
 }
+
+// ApplyFipsValues sets value pilot.env.COMPLIANCE_POLICY if FIPS mode is enabled in the system.
+func ApplyZTunnelFipsValues(values helm.Values) (helm.Values, error) {
+	if FipsEnabled {
+		if err := values.SetIfAbsent("ztunnel.env.TLS12_ENABLED", "true"); err != nil {
+			return nil, fmt.Errorf("failed to set ztunnel.env.TLS12_ENABLED: %w", err)
+		}
+	}
+	return values, nil
+}
