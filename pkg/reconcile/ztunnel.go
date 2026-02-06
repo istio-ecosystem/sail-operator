@@ -17,7 +17,6 @@ package reconcile
 import (
 	"context"
 	"fmt"
-	"path"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
@@ -113,7 +112,7 @@ func (r *ZTunnelReconciler) Install(ctx context.Context, version, namespace stri
 		return fmt.Errorf("failed to resolve ZTunnel version: %w", err)
 	}
 
-	chartPath := path.Join(resolvedVersion, "charts", ztunnelChartName)
+	chartPath := GetChartPath(resolvedVersion, ztunnelChartName)
 	_, err = r.cfg.ChartManager.UpgradeOrInstallChart(
 		ctx,
 		r.cfg.ResourceFS,

@@ -19,6 +19,7 @@ package reconcile
 
 import (
 	"io/fs"
+	"path"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
@@ -42,4 +43,9 @@ type Config struct {
 
 	// ChartManager handles Helm chart installation and upgrades
 	ChartManager *helm.ChartManager
+}
+
+// GetChartPath returns the path to a chart for a given version.
+func GetChartPath(version, chartName string) string {
+	return path.Join(version, "charts", chartName)
 }

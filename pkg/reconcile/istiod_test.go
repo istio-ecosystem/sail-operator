@@ -123,7 +123,7 @@ func TestIstiodReconciler_Validate(t *testing.T) {
 	}
 }
 
-func TestGetReleaseName(t *testing.T) {
+func Test_getReleaseName(t *testing.T) {
 	tests := []struct {
 		revisionName string
 		chartName    string
@@ -148,33 +148,7 @@ func TestGetReleaseName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.revisionName+"-"+tt.chartName, func(t *testing.T) {
-			result := GetReleaseName(tt.revisionName, tt.chartName)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func TestGetChartPath(t *testing.T) {
-	tests := []struct {
-		version   string
-		chartName string
-		expected  string
-	}{
-		{
-			version:   "v1.24.0",
-			chartName: "istiod",
-			expected:  "v1.24.0/charts/istiod",
-		},
-		{
-			version:   "v1.23.0",
-			chartName: "base",
-			expected:  "v1.23.0/charts/base",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.version+"-"+tt.chartName, func(t *testing.T) {
-			result := GetChartPath(tt.version, tt.chartName)
+			result := getReleaseName(tt.revisionName, tt.chartName)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

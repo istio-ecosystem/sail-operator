@@ -17,7 +17,6 @@ package reconcile
 import (
 	"context"
 	"fmt"
-	"path"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
@@ -105,7 +104,7 @@ func (r *CNIReconciler) Install(ctx context.Context, version, namespace string, 
 		return fmt.Errorf("failed to resolve CNI version: %w", err)
 	}
 
-	chartPath := path.Join(resolvedVersion, "charts", cniChartName)
+	chartPath := GetChartPath(resolvedVersion, cniChartName)
 	_, err = r.cfg.ChartManager.UpgradeOrInstallChart(
 		ctx,
 		r.cfg.ResourceFS,
