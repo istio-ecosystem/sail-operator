@@ -10195,7 +10195,7 @@ spec:
                 default: v1.28.3
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.28-latest, v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.27-latest, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, master, v1.30-alpha.d9e77b1d.
+                  Must be one of: v1.28-latest, v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.27-latest, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, master, v1.30-alpha.2c4ef39a.
                 enum:
                 - v1.28-latest
                 - v1.28.3
@@ -10246,7 +10246,7 @@ spec:
                 - v1.22.5
                 - v1.21.6
                 - master
-                - v1.30-alpha.d9e77b1d
+                - v1.30-alpha.2c4ef39a
                 type: string
             required:
             - namespace
