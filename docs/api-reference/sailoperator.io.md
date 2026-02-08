@@ -2373,6 +2373,22 @@ _Appears in:_
 | `REGISTRY_ONLY` | Restrict outbound traffic to services defined in the service registry as well as those defined through ServiceEntries  |
 
 
+#### PeerCaCrlConfig
+
+
+
+
+
+
+
+_Appears in:_
+- [ZTunnelConfig](#ztunnelconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | When enabled, ztunnel will check certificates against the CRL |  |  |
+
+
 #### PilotConfig
 
 
@@ -3451,6 +3467,7 @@ _Appears in:_
 | `podLabels` _object (keys:string, values:string)_ | Additional labels to apply on the pod level. |  |  |
 | `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core)_ | The k8s resource requests and limits for the ztunnel Pods. |  |  |
 | `resourceQuotas` _[ResourceQuotas](#resourcequotas)_ | The resource quotas configuration for ztunnel |  |  |
+| `peerCaCrl` _[PeerCaCrlConfig](#peercacrlconfig)_ | Certificate Revocation List (CRL) support for plugged-in CAs. When enabled, ztunnel will check certificates against the CRL |  |  |
 | `nodeSelector` _object (keys:string, values:string)_ | K8s node selector settings.  See https://kubernetes.io/docs/user-guide/node-selection/ |  |  |
 | `imagePullSecrets` _string array_ | List of secret names to add to the service account as image pull secrets to use for pulling any images in pods that reference this ServiceAccount. Must be set for any cluster configured with private docker registry. |  |  |
 | `env` _object (keys:string, values:string)_ | A `key: value` mapping of environment variables to add to the pod |  |  |

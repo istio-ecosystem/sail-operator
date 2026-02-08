@@ -23,6 +23,11 @@ type SDSConfigToken struct {
 	Aud string `json:"aud,omitempty"`
 }
 
+type PeerCaCrlConfig struct {
+	// When enabled, ztunnel will check certificates against the CRL
+	Enabled *bool `json:"enabled,omitempty"`
+}
+
 type CNIValues struct {
 	// Configuration for the Istio CNI plugin.
 	Cni *CNIConfig `json:"cni,omitempty"`
@@ -75,6 +80,9 @@ type ZTunnelConfig struct {
 	Resources *k8sv1.ResourceRequirements `json:"resources,omitempty"`
 	// The resource quotas configuration for ztunnel
 	ResourceQuotas *ResourceQuotas `json:"resourceQuotas,omitempty"`
+	// Certificate Revocation List (CRL) support for plugged-in CAs.
+	// When enabled, ztunnel will check certificates against the CRL
+	PeerCaCrl *PeerCaCrlConfig `json:"peerCaCrl,omitempty"`
 	// K8s node selector settings.
 	//
 	// See https://kubernetes.io/docs/user-guide/node-selection/
