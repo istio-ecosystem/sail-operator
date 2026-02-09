@@ -167,7 +167,7 @@ func main() {
 			metricsServerTLSOptions = append(metricsServerTLSOptions, tlsConfigFunc)
 
 			// Convert gotls.Config --> config.TLSConfig
-			goTLSConfig := &tls.Config{}
+			goTLSConfig := &tls.Config{MinVersion: tls.VersionTLS12}
 			tlsConfigFunc(goTLSConfig)
 			tlsConfig = &config.TLSConfig{
 				CipherSuites: goTLSConfig.CipherSuites,
