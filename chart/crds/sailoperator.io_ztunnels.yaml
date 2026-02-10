@@ -1225,6 +1225,16 @@ spec:
 
                           See https://kubernetes.io/docs/user-guide/node-selection/
                         type: object
+                      peerCaCrl:
+                        description: |-
+                          Certificate Revocation List (CRL) support for plugged-in CAs.
+                          When enabled, ztunnel will check certificates against the CRL
+                        properties:
+                          enabled:
+                            description: When enabled, ztunnel will check certificates
+                              against the CRL
+                            type: boolean
+                        type: object
                       podAnnotations:
                         additionalProperties:
                           type: string
@@ -4775,6 +4785,16 @@ spec:
                           K8s node selector settings.
 
                           See https://kubernetes.io/docs/user-guide/node-selection/
+                        type: object
+                      peerCaCrl:
+                        description: |-
+                          Certificate Revocation List (CRL) support for plugged-in CAs.
+                          When enabled, ztunnel will check certificates against the CRL
+                        properties:
+                          enabled:
+                            description: When enabled, ztunnel will check certificates
+                              against the CRL
+                            type: boolean
                         type: object
                       podAnnotations:
                         additionalProperties:
