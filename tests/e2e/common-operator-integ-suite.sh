@@ -151,15 +151,14 @@ initialize_variables() {
       # Scenario 2: CI mode with default HUB -> use external registry with proper CI tag
       echo "CI mode detected for OCP, using external registry ${HUB}"
       export USE_INTERNAL_REGISTRY="false"
-
       # Use PR_NUMBER if available, otherwise generate timestamp tag
+      # Use TARGET_ARCH to differentiate tags for different architectures in CI, avoid race conditions in CI when multiple runs are pushing to the same default tag
       if [ -n "${PR_NUMBER:-}" ]; then
-        export TAG="pr-${PR_NUMBER}"
-        echo "Using PR-based tag: ${TAG}"
+      export TAG="pr-${PR_NUMBER}-${TARGET_ARCH}"
+      echo "Using PR-based tag: ${TAG}"
       else
-        TAG="ci-test-$(date +%s)"
-        export TAG
-        echo "Using timestamp-based tag: ${TAG}"
+      export TAG="ci-test-$(date +%s)-${TARGET_ARCH}"
+      echo "Using timestamp-based tag: ${TAG}"
       fi
     elif [ "${CI}" == "true" ]; then
       # Additional CI mode check - handle CI mode regardless of HUB value
