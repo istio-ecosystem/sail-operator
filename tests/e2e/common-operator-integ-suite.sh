@@ -124,6 +124,17 @@ initialize_variables() {
   IP_FAMILY=${IP_FAMILY:-ipv4}
   ISTIO_MANIFEST="chart/samples/istio-sample.yaml"
   CI=${CI:-"false"}
+  USE_INTERNAL_REGISTRY=${USE_INTERNAL_REGISTRY:-"false"}
+
+  # Debug logging and fallback for GINKGO_FLAGS
+  echo "CI environment: ${CI}"
+  echo "GINKGO_FLAGS received: '${GINKGO_FLAGS:-}'"
+
+  # Fallback: Generate GINKGO_FLAGS if empty and CI=true
+  if [ -z "${GINKGO_FLAGS:-}" ] && [ "${CI}" == "true" ]; then
+    GINKGO_FLAGS="--no-color"
+    echo "Generated GINKGO_FLAGS fallback: '${GINKGO_FLAGS}'"
+  fi
 
   # export to be sure that the variables are available in the subshell
   export IMAGE_BASE="${IMAGE_BASE:-sail-operator}"
@@ -133,22 +144,32 @@ initialize_variables() {
   # Handle OCP registry scenarios
   # Note: Makefile.core.mk sets HUB=quay.io/sail-dev and TAG=1.29-latest by default
   if [ "${OCP}" == "true" ]; then
+    # Debug output for troubleshooting
+    echo "DEBUG: CI='${CI}', HUB='${HUB}'"
+
     if [ "${CI}" == "true" ] && [ "${HUB}" == "quay.io/sail-dev" ]; then
       # Scenario 2: CI mode with default HUB -> use external registry with proper CI tag
       echo "CI mode detected for OCP, using external registry ${HUB}"
-
+      export USE_INTERNAL_REGISTRY="false"
       # Use PR_NUMBER if available, otherwise generate timestamp tag
+      # Use TARGET_ARCH to differentiate tags for different architectures in CI, avoid race conditions in CI when multiple runs are pushing to the same default tag
       if [ -n "${PR_NUMBER:-}" ]; then
-        export TAG="pr-${PR_NUMBER}"
+        TAG="pr-${PR_NUMBER}-${TARGET_ARCH}"
+        export TAG
         echo "Using PR-based tag: ${TAG}"
       else
-        TAG="ci-test-$(date +%s)"
+        TAG="ci-test-$(date +%s)-${TARGET_ARCH}"
         export TAG
         echo "Using timestamp-based tag: ${TAG}"
       fi
+    elif [ "${CI}" == "true" ]; then
+      # Additional CI mode check - handle CI mode regardless of HUB value
+      echo "CI mode detected for OCP with custom HUB (${HUB}), using external registry"
+      export USE_INTERNAL_REGISTRY="false"
     elif [ "${HUB}" != "quay.io/sail-dev" ]; then
       # Scenario 3: Custom registry provided by user
       echo "Using custom registry: ${HUB}"
+      export USE_INTERNAL_REGISTRY="false"
     else
       # Scenario 1: Local development -> use internal OCP registry
       echo "Local development mode, will use OCP internal registry"
@@ -303,7 +324,7 @@ if [ "${SKIP_BUILD}" == "false" ]; then
   fi
 fi
 
-export SKIP_DEPLOY IP_FAMILY ISTIO_MANIFEST NAMESPACE CONTROL_PLANE_NS DEPLOYMENT_NAME MULTICLUSTER ARTIFACTS ISTIO_NAME COMMAND KUBECONFIG ISTIOCTL_PATH
+export SKIP_DEPLOY IP_FAMILY ISTIO_MANIFEST NAMESPACE CONTROL_PLANE_NS DEPLOYMENT_NAME MULTICLUSTER ARTIFACTS ISTIO_NAME COMMAND KUBECONFIG ISTIOCTL_PATH GINKGO_FLAGS
 
 if [ "${OLM}" != "true" ] && [ "${SKIP_DEPLOY}" != "true" ]; then
   # shellcheck disable=SC2153
