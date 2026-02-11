@@ -87,6 +87,8 @@ func TestApplyFipsValues(t *testing.T) {
 	values := helm.Values{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			originalFipsEnabled := FipsEnabled
+			t.Cleanup(func() { FipsEnabled = originalFipsEnabled })
 			FipsEnabled = tt.fipsEnabled
 			actual, err := ApplyFipsValues(values)
 			if (err != nil) != tt.expectErr {
@@ -128,6 +130,8 @@ func TestApplyZTunnelFipsValues(t *testing.T) {
 	values := helm.Values{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			originalFipsEnabled := FipsEnabled
+			t.Cleanup(func() { FipsEnabled = originalFipsEnabled })
 			FipsEnabled = tt.fipsEnabled
 			actual, err := ApplyZTunnelFipsValues(values)
 			if (err != nil) != tt.expectErr {
