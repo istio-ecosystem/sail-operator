@@ -64,7 +64,7 @@ NAMESPACE="${SCORECARD_NAMESPACE:-default}"
 if [[ "${OCP}" == "true" ]]; then
     NAMESPACE="${SCORECARD_NAMESPACE:-scorecard-test}"
     # Create namespace if it doesn't exist
-    oc create namespace "${NAMESPACE}" --dry-run=client -o yaml | oc apply -f -
+    oc create namespace "${NAMESPACE}" || true
 fi
 
 # Run the test
