@@ -18,6 +18,10 @@ deployment:
     images.v1_28_0.istiod: gcr.io/istio-release/pilot:1.28.0
     images.v1_28_0.proxy: gcr.io/istio-release/proxyv2:1.28.0
     images.v1_28_0.cni: gcr.io/istio-release/install-cni:1.28.0
+    images.v1_27_6.ztunnel: gcr.io/istio-release/ztunnel:1.27.6
+    images.v1_27_6.istiod: gcr.io/istio-release/pilot:1.27.6
+    images.v1_27_6.proxy: gcr.io/istio-release/proxyv2:1.27.6
+    images.v1_27_6.cni: gcr.io/istio-release/install-cni:1.27.6
     images.v1_27_5.ztunnel: gcr.io/istio-release/ztunnel:1.27.5
     images.v1_27_5.istiod: gcr.io/istio-release/pilot:1.27.5
     images.v1_27_5.proxy: gcr.io/istio-release/proxyv2:1.27.5
@@ -42,10 +46,10 @@ deployment:
     images.v1_27_0.istiod: gcr.io/istio-release/pilot:1.27.0
     images.v1_27_0.proxy: gcr.io/istio-release/proxyv2:1.27.0
     images.v1_27_0.cni: gcr.io/istio-release/install-cni:1.27.0
-    images.v1_30-alpha_0a346609.ztunnel: gcr.io/istio-testing/ztunnel:1.30-alpha.0a3466091a333998e160a8aa3400a3aa65d4cb7a
-    images.v1_30-alpha_0a346609.istiod: gcr.io/istio-testing/pilot:1.30-alpha.0a3466091a333998e160a8aa3400a3aa65d4cb7a
-    images.v1_30-alpha_0a346609.proxy: gcr.io/istio-testing/proxyv2:1.30-alpha.0a3466091a333998e160a8aa3400a3aa65d4cb7a
-    images.v1_30-alpha_0a346609.cni: gcr.io/istio-testing/install-cni:1.30-alpha.0a3466091a333998e160a8aa3400a3aa65d4cb7a
+    images.v1_30-alpha_9e476e6b.ztunnel: gcr.io/istio-testing/ztunnel:1.30-alpha.9e476e6b77314411c8b45a2b97a546fbb99ddc8b
+    images.v1_30-alpha_9e476e6b.istiod: gcr.io/istio-testing/pilot:1.30-alpha.9e476e6b77314411c8b45a2b97a546fbb99ddc8b
+    images.v1_30-alpha_9e476e6b.proxy: gcr.io/istio-testing/proxyv2:1.30-alpha.9e476e6b77314411c8b45a2b97a546fbb99ddc8b
+    images.v1_30-alpha_9e476e6b.cni: gcr.io/istio-testing/install-cni:1.30-alpha.9e476e6b77314411c8b45a2b97a546fbb99ddc8b
 revisionHistoryLimit: 10
 service:
   port: 8443
@@ -67,6 +71,7 @@ csv:
     - v1.28.1
     - v1.28.0
     - v1.27-latest
+    - v1.27.6
     - v1.27.5
     - v1.27.4
     - v1.27.3
@@ -74,7 +79,7 @@ csv:
     - v1.27.1
     - v1.27.0
     - master
-    - v1.30-alpha.0a346609
+    - v1.30-alpha.9e476e6b
 
     [See this page](https://github.com/istio-ecosystem/sail-operator/blob/main/bundle/README.md) for instructions on how to use it.
   support: Community based
