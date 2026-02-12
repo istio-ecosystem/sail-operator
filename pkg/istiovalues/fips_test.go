@@ -87,6 +87,8 @@ func TestApplyFipsValues(t *testing.T) {
 	values := helm.Values{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			originalFipsEnabled := FipsEnabled
+			t.Cleanup(func() { FipsEnabled = originalFipsEnabled })
 			FipsEnabled = tt.fipsEnabled
 			actual, err := ApplyFipsValues(values)
 			if (err != nil) != tt.expectErr {
@@ -96,6 +98,49 @@ func TestApplyFipsValues(t *testing.T) {
 			if err == nil {
 				if diff := cmp.Diff(tt.expectValues, actual); diff != "" {
 					t.Errorf("COMPLIANCE_POLICY env wasn't applied properly; diff (-expected, +actual):\n%v", diff)
+				}
+			}
+		})
+	}
+}
+
+func TestApplyZTunnelFipsValues(t *testing.T) {
+	tests := []struct {
+		name         string
+		fipsEnabled  bool
+		expectValues helm.Values
+		expectErr    bool
+	}{
+		{
+			name:         "FIPS not enabled",
+			fipsEnabled:  false,
+			expectValues: helm.Values{},
+		},
+		{
+			name:        "FIPS enabled",
+			fipsEnabled: true,
+			expectValues: helm.Values{
+				"ztunnel": map[string]any{
+					"env": map[string]any{"TLS12_ENABLED": string("true")},
+				},
+			},
+		},
+	}
+
+	values := helm.Values{}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			originalFipsEnabled := FipsEnabled
+			t.Cleanup(func() { FipsEnabled = originalFipsEnabled })
+			FipsEnabled = tt.fipsEnabled
+			actual, err := ApplyZTunnelFipsValues(values)
+			if (err != nil) != tt.expectErr {
+				t.Errorf("applyFipsValues() error = %v, expectErr %v", err, tt.expectErr)
+			}
+
+			if err == nil {
+				if diff := cmp.Diff(tt.expectValues, actual); diff != "" {
+					t.Errorf("TLS12_ENABLED env wasn't applied properly; diff (-expected, +actual):\n%v", diff)
 				}
 			}
 		})

@@ -108,6 +108,8 @@ apiVersion: sailoperator.io/v1
 kind: IstioRevision
 spec:`)), 0o644))
 
+	originalFipsEnabled := istiovalues.FipsEnabled
+	t.Cleanup(func() { istiovalues.FipsEnabled = originalFipsEnabled })
 	istiovalues.FipsEnabled = true
 	values := &v1.Values{}
 	result, err := ComputeValues(values, namespace, version, config.PlatformOpenShift, "default", "",
