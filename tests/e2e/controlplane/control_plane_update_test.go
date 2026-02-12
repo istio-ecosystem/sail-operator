@@ -21,7 +21,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
@@ -196,11 +195,11 @@ spec:
 					Expect(samplePods.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
 
 					for _, pod := range samplePods.Items {
-						Eventually(func() *semver.Version {
+						Eventually(func(g Gomega) {
 							sidecarVersion, err := getProxyVersion(pod.Name, sampleNamespace)
-							Expect(err).NotTo(HaveOccurred(), "Error getting sidecar version")
-							return sidecarVersion
-						}).Should(Equal(istioversion.Map[istioversion.Base].Version), "Sidecar Istio version does not match the expected version")
+							g.Expect(err).NotTo(HaveOccurred(), "Error getting sidecar version")
+							g.Expect(sidecarVersion).To(Equal(istioversion.Map[istioversion.Base].Version))
+						}).Should(Succeed(), "Sidecar Istio version does not match the expected version")
 					}
 					Success("Istio sidecar version matches the expected Istio version")
 				})
