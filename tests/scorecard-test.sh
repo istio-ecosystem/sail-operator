@@ -51,7 +51,7 @@ else
 
     # Create the kind cluster
     export KIND_CLUSTER_NAME="${KIND_CLUSTER_NAME:-kind}"
-    export DEFAULT_CLUSTER_YAML="${ROOT}/tests/e2e/setup/config/default.yaml"
+    export DEFAULT_CLUSTER_YAML="${ROOT}/tests/e2e/config/default.yaml"
     export ARTIFACTS="${ARTIFACTS:-$(mktemp -d)}"
     export IP_FAMILY="${IP_FAMILY:-ipv4}"
     setup_kind_cluster "${KIND_CLUSTER_NAME}" "" "" "true" "true"
@@ -63,9 +63,9 @@ fi
 NAMESPACE="${SCORECARD_NAMESPACE:-default}"
 if [[ "${OCP}" == "true" ]]; then
     NAMESPACE="${SCORECARD_NAMESPACE:-scorecard-test}"
-    # Create namespace if it doesn't exist
-    oc create namespace "${NAMESPACE}" || true
 fi
+# Create namespace if it doesn't exist
+oc create namespace "${NAMESPACE}" || true
 
 # Run the test
 OPERATOR_SDK="${OPERATOR_SDK:-operator-sdk}"
