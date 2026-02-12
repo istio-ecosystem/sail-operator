@@ -127,6 +127,13 @@ type ZTunnelConfig struct {
 	SeLinuxOptions *k8sv1.SELinuxOptions `json:"seLinuxOptions,omitempty"`
 	// Defines the update strategy to use when the version in the Ztunnel CR is updated.
 	UpdateStrategy *appsv1.DaemonSetUpdateStrategy `json:"updateStrategy,omitempty"`
+	// DNS policy for the ztunnel pod
+	// More info: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy
+	// +kubebuilder:validation:Enum=ClusterFirstWithHostNet;ClusterFirst;Default;None
+	DNSPolicy *k8sv1.DNSPolicy `json:"dnsPolicy,omitempty"`
+	// DNS config for the ztunnel pod
+	// https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config
+	DNSConfig *k8sv1.PodDNSConfig `json:"dnsConfig,omitempty"`
 }
 
 // ZTunnelGlobalConfig is a subset of the Global Configuration used in the Istio ztunnel chart.

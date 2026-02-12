@@ -3482,6 +3482,8 @@ _Appears in:_
 | `logAsJson` _boolean_ | Specifies whether istio components should output logs in json format by adding --log_as_json argument to each container. |  |  |
 | `seLinuxOptions` _[SELinuxOptions](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#selinuxoptions-v1-core)_ | Set seLinux options for the ztunnel pod |  |  |
 | `updateStrategy` _[DaemonSetUpdateStrategy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#daemonsetupdatestrategy-v1-apps)_ | Defines the update strategy to use when the version in the Ztunnel CR is updated. |  |  |
+| `dnsPolicy` _[DNSPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#dnspolicy-v1-core)_ | DNS policy for the ztunnel pod More info: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy |  | Enum: [ClusterFirstWithHostNet ClusterFirst Default None]   |
+| `dnsConfig` _[PodDNSConfig](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#poddnsconfig-v1-core)_ | DNS config for the ztunnel pod https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config |  |  |
 
 
 #### ZTunnelGlobalConfig
