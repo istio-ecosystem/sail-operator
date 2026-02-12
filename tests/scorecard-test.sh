@@ -63,9 +63,9 @@ fi
 NAMESPACE="${SCORECARD_NAMESPACE:-default}"
 if [[ "${OCP}" == "true" ]]; then
     NAMESPACE="${SCORECARD_NAMESPACE:-scorecard-test}"
-    # Create namespace if it doesn't exist
-    oc create namespace "${NAMESPACE}" || true
 fi
+# Create namespace if it doesn't exist
+oc create namespace "${NAMESPACE}" || true
 
 # Run the test
 OPERATOR_SDK="${OPERATOR_SDK:-operator-sdk}"
