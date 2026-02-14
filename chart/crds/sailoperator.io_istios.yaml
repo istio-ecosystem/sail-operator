@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.20.0
+    controller-gen.kubebuilder.io/version: v0.20.1
   name: istios.sailoperator.io
 spec:
   group: sailoperator.io
@@ -10195,7 +10195,7 @@ spec:
                 default: v1.28.3
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.28-latest, v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.27-latest, v1.27.6, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, master, v1.30-alpha.ed0ec1b7.
+                  Must be one of: v1.28-latest, v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.27-latest, v1.27.6, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, master, v1.30-alpha.cdc5dca4.
                 enum:
                 - v1.28-latest
                 - v1.28.3
@@ -10247,7 +10247,7 @@ spec:
                 - v1.22.5
                 - v1.21.6
                 - master
-                - v1.30-alpha.ed0ec1b7
+                - v1.30-alpha.cdc5dca4
                 type: string
             required:
             - namespace

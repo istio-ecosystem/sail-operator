@@ -117,7 +117,7 @@ KIND_IMAGE ?=
 ifeq ($(KIND_IMAGE),)
   ifeq ($(LOCAL_OS),Darwin)
     # If the OS is Darwin, set the image.
-    KIND_IMAGE := docker.io/kindest/node:v1.35.0
+    KIND_IMAGE := docker.io/kindest/node:v1.35.1
   endif
   # For other OS, KIND_IMAGE remains empty, which default to the upstream default image.
 endif
@@ -569,7 +569,7 @@ MISSPELL ?= $(LOCALBIN)/misspell
 ## Tool Versions
 OPERATOR_SDK_VERSION ?= v1.42.0
 HELM_VERSION ?= v3.20.0
-CONTROLLER_TOOLS_VERSION ?= v0.20.0
+CONTROLLER_TOOLS_VERSION ?= v0.20.1
 CONTROLLER_RUNTIME_BRANCH ?= release-0.23
 OPM_VERSION ?= v1.63.0
 OLM_VERSION ?= v0.40.0
