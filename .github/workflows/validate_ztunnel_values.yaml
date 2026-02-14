@@ -1,0 +1,33 @@
+---
+name: Validate ZTunnel values
+
+on:
+  schedule:
+    # Run this job every sunday at midnight
+    - cron: "0 0 * * 0"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  validate-ztunnel-values:
+    name: Validate ZTunnel values
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Run validation
+        run: |
+          make validate-ztunnel-values
+
+      - name: Raise an Issue to report missing ztunnel values
+        if: ${{ failure() }}
+        uses: peter-evans/create-issue-from-file@v5
+        with:
+          title: Missing values detected by validation
+          content-filepath: .github/ISSUE_TEMPLATE/validate-ztunnel-values.md
+          labels: automated, missing ztunnel values
+

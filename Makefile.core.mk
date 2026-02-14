@@ -479,6 +479,11 @@ gen: gen-all-except-bundle bundle ## Generate everything.
 .PHONY: gen-all-except-bundle
 gen-all-except-bundle: operator-name operator-chart controller-gen gen-api gen-charts gen-manifests gen-code gen-api-docs mirror-licenses
 
+.PHONY: validate-ztunnel-values
+validate-ztunnel-values: ## Validate that upstream ztunnel Helm chart fields are present in Sail Operator ZTunnelConfig.
+	@echo "Validating ztunnel values completeness..."
+	go run hack/validate_ztunnel_values/validate_ztunnel_values.go
+
 .PHONY: gen-check
 gen-check: gen restore-manifest-dates check-clean-repo ## Verify that changes in generated resources have been checked in.
 
