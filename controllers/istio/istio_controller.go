@@ -47,16 +47,18 @@ import (
 
 // Reconciler reconciles an Istio object
 type Reconciler struct {
-	Config config.ReconcilerConfig
+	Config    config.ReconcilerConfig
+	TLSConfig *config.TLSConfig
 	client.Client
 	Scheme *runtime.Scheme
 }
 
-func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *runtime.Scheme) *Reconciler {
+func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *runtime.Scheme, tlsConfig *config.TLSConfig) *Reconciler {
 	return &Reconciler{
-		Config: cfg,
-		Client: client,
-		Scheme: scheme,
+		Config:    cfg,
+		TLSConfig: tlsConfig,
+		Client:    client,
+		Scheme:    scheme,
 	}
 }
 
@@ -125,10 +127,11 @@ func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1.Isti
 	if err != nil {
 		return fmt.Errorf("failed to resolve Istio version for %q: %w", istio.Name, err)
 	}
+
 	values, err := revision.ComputeValues(
 		istio.Spec.Values, istio.Spec.Namespace, version,
 		r.Config.Platform, r.Config.DefaultProfile, istio.Spec.Profile,
-		r.Config.ResourceFS, getActiveRevisionName(istio))
+		r.Config.ResourceFS, getActiveRevisionName(istio), r.TLSConfig)
 	if err != nil {
 		return err
 	}
@@ -216,7 +219,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&v1.Istio{}, mainObjectHandler).
 		Named("istio").
 		Watches(&v1.IstioRevision{}, ownedResourceHandler).
-		Complete(reconciler.NewStandardReconciler[*v1.Istio](r.Client, r.Reconcile))
+		Complete(reconciler.NewStandardReconciler(r.Client, r.Reconcile))
 }
 
 func (r *Reconciler) determineStatus(ctx context.Context, istio *v1.Istio, reconcileErr error) (v1.IstioStatus, error) {
