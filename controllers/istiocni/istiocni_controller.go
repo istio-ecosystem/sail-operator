@@ -162,20 +162,21 @@ func (r *Reconciler) installHelmChart(ctx context.Context, cni *v1.IstioCNI) err
 
 	// apply userValues on top of defaultValues from profiles
 	mergedHelmValues, err := istiovalues.ApplyProfilesAndPlatform(
-		r.Config.ResourceDirectory, version, r.Config.Platform, r.Config.DefaultProfile, cni.Spec.Profile, helm.FromValues(userValues))
+		r.Config.ResourceFS, version, r.Config.Platform, r.Config.DefaultProfile, cni.Spec.Profile, helm.FromValues(userValues))
 	if err != nil {
 		return fmt.Errorf("failed to apply profile: %w", err)
 	}
 
-	_, err = r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(version), mergedHelmValues, cni.Spec.Namespace, cniReleaseName, &ownerReference)
+	_, err = r.ChartManager.UpgradeOrInstallChart(
+		ctx, r.Config.ResourceFS, r.getChartPath(version), mergedHelmValues, cni.Spec.Namespace, cniReleaseName, &ownerReference)
 	if err != nil {
 		return fmt.Errorf("failed to install/update Helm chart %q: %w", cniChartName, err)
 	}
 	return nil
 }
 
-func (r *Reconciler) getChartDir(version string) string {
-	return path.Join(r.Config.ResourceDirectory, version, "charts", cniChartName)
+func (r *Reconciler) getChartPath(version string) string {
+	return path.Join(version, "charts", cniChartName)
 }
 
 func applyImageDigests(version string, values *v1.CNIValues, config config.OperatorConfig) *v1.CNIValues {

@@ -16,7 +16,7 @@ package istiovalues
 
 import (
 	"fmt"
-	"os"
+	"io/fs"
 	"path"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
@@ -28,11 +28,14 @@ import (
 	"istio.io/istio/pkg/util/sets"
 )
 
+// ApplyProfilesAndPlatform loads profiles from an fs.FS and applies them with platform settings.
+// Works with embed.FS, os.DirFS, or any other fs.FS implementation.
 func ApplyProfilesAndPlatform(
-	resourceDir string, version string, platform config.Platform, defaultProfile, userProfile string, userValues helm.Values,
+	resourceFS fs.FS, version string, platform config.Platform, defaultProfile, userProfile string, userValues helm.Values,
 ) (helm.Values, error) {
 	profile := resolve(defaultProfile, userProfile)
-	defaultValues, err := getValuesFromProfiles(path.Join(resourceDir, version, "profiles"), profile)
+	profilesPath := path.Join(version, "profiles")
+	defaultValues, err := getValuesFromProfiles(resourceFS, profilesPath, profile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get values from profile %q: %w", profile, err)
 	}
@@ -63,7 +66,7 @@ func resolve(defaultProfile, userProfile string) []string {
 	}
 }
 
-func getValuesFromProfiles(profilesDir string, profiles []string) (helm.Values, error) {
+func getValuesFromProfiles(resourceFS fs.FS, profilesDir string, profiles []string) (helm.Values, error) {
 	// start with an empty values map
 	values := helm.Values{}
 
@@ -84,7 +87,7 @@ func getValuesFromProfiles(profilesDir string, profiles []string) (helm.Values, 
 			return nil, reconciler.NewValidationError(fmt.Sprintf("invalid profile name %s", profile))
 		}
 
-		profileValues, err := getProfileValues(file)
+		profileValues, err := getProfileValues(resourceFS, file)
 		if err != nil {
 			return nil, err
 		}
@@ -94,16 +97,21 @@ func getValuesFromProfiles(profilesDir string, profiles []string) (helm.Values, 
 	return values, nil
 }
 
-func getProfileValues(file string) (helm.Values, error) {
-	fileContents, err := os.ReadFile(file)
+func getProfileValues(resourceFS fs.FS, file string) (helm.Values, error) {
+	fileContents, err := fs.ReadFile(resourceFS, file)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read profile file %v: %w", file, err)
 	}
 
+	return parseProfileYAML(fileContents, file)
+}
+
+// parseProfileYAML parses the profile YAML content and extracts spec.values
+func parseProfileYAML(fileContents []byte, filename string) (helm.Values, error) {
 	var profile map[string]any
-	err = yaml.Unmarshal(fileContents, &profile)
+	err := yaml.Unmarshal(fileContents, &profile)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal profile YAML %s: %w", file, err)
+		return nil, fmt.Errorf("failed to unmarshal profile YAML %s: %w", filename, err)
 	}
 
 	val, found, err := unstructured.NestedFieldNoCopy(profile, "spec", "values")
