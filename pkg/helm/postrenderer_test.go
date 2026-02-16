@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -308,6 +309,7 @@ spec:
 				ownerReference: tc.ownerReference,
 				ownerNamespace: tc.ownerNamespace,
 				isUpdate:       tc.isUpdate,
+				managedByValue: constants.ManagedByLabelValue,
 			}
 
 			actual, err := postRenderer.Run(bytes.NewBufferString(tc.input))
