@@ -170,7 +170,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	istio.io/api v1.27.4-0.20251203120322-2b2a39461789 // indirect
+	istio.io/api v1.27.7 // indirect
 	k8s.io/apiserver v0.34.3 // indirect
 	k8s.io/component-base v0.34.3 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
