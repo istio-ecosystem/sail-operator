@@ -16,7 +16,27 @@
 # to avoid breaking API guarantees.
 versions:
   - name: v1.27-latest
-    ref: v1.27.5
+    ref: v1.27.7
+  - name: v1.27.7
+    version: 1.27.7
+    repo: https://github.com/istio/istio
+    commit: 1.27.7
+    charts:
+      - https://istio-release.storage.googleapis.com/charts/base-1.27.7.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-1.27.7.tgz
+      - https://istio-release.storage.googleapis.com/charts/gateway-1.27.7.tgz
+      - https://istio-release.storage.googleapis.com/charts/cni-1.27.7.tgz
+      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.27.7.tgz
+  - name: v1.27.6
+    version: 1.27.6
+    repo: https://github.com/istio/istio
+    commit: 1.27.6
+    charts:
+      - https://istio-release.storage.googleapis.com/charts/base-1.27.6.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-1.27.6.tgz
+      - https://istio-release.storage.googleapis.com/charts/gateway-1.27.6.tgz
+      - https://istio-release.storage.googleapis.com/charts/cni-1.27.6.tgz
+      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.27.6.tgz
   - name: v1.27.5
     version: 1.27.5
     repo: https://github.com/istio/istio
