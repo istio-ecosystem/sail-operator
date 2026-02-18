@@ -16,7 +16,7 @@ metadata:
               "inactiveRevisionDeletionGracePeriodSeconds": 30,
               "type": "InPlace"
             },
-            "version": "v1.27.5"
+            "version": "v1.27.7"
           }
         },
         {
@@ -27,7 +27,7 @@ metadata:
           },
           "spec": {
             "namespace": "istio-cni",
-            "version": "v1.27.5"
+            "version": "v1.27.7"
           }
         },
         {
@@ -44,8 +44,8 @@ metadata:
       ]
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
-    containerImage: quay.io/sail-dev/sail-operator:1.27.5
-    createdAt: "2026-01-19T08:59:13Z"
+    containerImage: quay.io/sail-dev/sail-operator:1.27.7
+    createdAt: "2026-02-18T10:11:15Z"
     description: The Sail Operator manages the lifecycle of your Istio control plane. It provides custom resources for you to deploy and manage your control plane components.
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -67,7 +67,7 @@ metadata:
     operatorframework.io/arch.arm64: supported
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
-  name: sailoperator.v1.27.5
+  name: sailoperator.v1.27.7
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -179,12 +179,14 @@ spec:
         specDescriptors:
           - description: |-
               Defines the version of Istio to install.
-              Must be one of: v1.27-latest, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.8, v1.26.7, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, v1.25-latest, v1.25.5, v1.25.4, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0.
+              Must be one of: v1.27-latest, v1.27.7, v1.27.6, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.8, v1.26.7, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, v1.25-latest, v1.25.5, v1.25.4, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0.
             displayName: Istio Version
             path: version
             x-descriptors:
               - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
               - urn:alm:descriptor:com.tectonic.ui:select:v1.27-latest
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.27.7
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.27.6
               - urn:alm:descriptor:com.tectonic.ui:select:v1.27.5
               - urn:alm:descriptor:com.tectonic.ui:select:v1.27.4
               - urn:alm:descriptor:com.tectonic.ui:select:v1.27.3
@@ -252,11 +254,13 @@ spec:
         specDescriptors:
           - description: |-
               Defines the version of Istio to install.
-              Must be one of: v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26.8, v1.26.7, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, v1.25.5, v1.25.4, v1.25.3, v1.25.2, v1.25.1, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0.
+              Must be one of: v1.27.7, v1.27.6, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26.8, v1.26.7, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, v1.25.5, v1.25.4, v1.25.3, v1.25.2, v1.25.1, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0.
             displayName: Istio Version
             path: version
             x-descriptors:
               - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.27.7
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.27.6
               - urn:alm:descriptor:com.tectonic.ui:select:v1.27.5
               - urn:alm:descriptor:com.tectonic.ui:select:v1.27.4
               - urn:alm:descriptor:com.tectonic.ui:select:v1.27.3
@@ -318,12 +322,14 @@ spec:
               - urn:alm:descriptor:com.tectonic.ui:select:RevisionBased
           - description: |-
               Defines the version of Istio to install.
-              Must be one of: v1.27-latest, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.8, v1.26.7, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, v1.25-latest, v1.25.5, v1.25.4, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0.
+              Must be one of: v1.27-latest, v1.27.7, v1.27.6, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.8, v1.26.7, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, v1.25-latest, v1.25.5, v1.25.4, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0.
             displayName: Istio Version
             path: version
             x-descriptors:
               - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
               - urn:alm:descriptor:com.tectonic.ui:select:v1.27-latest
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.27.7
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.27.6
               - urn:alm:descriptor:com.tectonic.ui:select:v1.27.5
               - urn:alm:descriptor:com.tectonic.ui:select:v1.27.4
               - urn:alm:descriptor:com.tectonic.ui:select:v1.27.3
@@ -409,12 +415,14 @@ spec:
         specDescriptors:
           - description: |-
               Defines the version of Istio to install.
-              Must be one of: v1.27-latest, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.8, v1.26.7, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, v1.25-latest, v1.25.5, v1.25.4, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0.
+              Must be one of: v1.27-latest, v1.27.7, v1.27.6, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.26-latest, v1.26.8, v1.26.7, v1.26.6, v1.26.5, v1.26.4, v1.26.3, v1.26.2, v1.26.1, v1.26.0, v1.25-latest, v1.25.5, v1.25.4, v1.25.3, v1.25.2, v1.25.1, v1.24-latest, v1.24.6, v1.24.5, v1.24.4, v1.24.3, v1.24.2, v1.24.1, v1.24.0.
             displayName: Istio Version
             path: version
             x-descriptors:
               - urn:alm:descriptor:com.tectonic.ui:fieldGroup:General
               - urn:alm:descriptor:com.tectonic.ui:select:v1.27-latest
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.27.7
+              - urn:alm:descriptor:com.tectonic.ui:select:v1.27.6
               - urn:alm:descriptor:com.tectonic.ui:select:v1.27.5
               - urn:alm:descriptor:com.tectonic.ui:select:v1.27.4
               - urn:alm:descriptor:com.tectonic.ui:select:v1.27.3
@@ -460,6 +468,8 @@ spec:
     This version of the operator supports the following Istio versions:
 
     - v1.27-latest
+    - v1.27.7
+    - v1.27.6
     - v1.27.5
     - v1.27.4
     - v1.27.3
@@ -888,6 +898,14 @@ spec:
                   images.v1_27_5.istiod: gcr.io/istio-release/pilot:1.27.5
                   images.v1_27_5.proxy: gcr.io/istio-release/proxyv2:1.27.5
                   images.v1_27_5.ztunnel: gcr.io/istio-release/ztunnel:1.27.5
+                  images.v1_27_6.cni: gcr.io/istio-release/install-cni:1.27.6
+                  images.v1_27_6.istiod: gcr.io/istio-release/pilot:1.27.6
+                  images.v1_27_6.proxy: gcr.io/istio-release/proxyv2:1.27.6
+                  images.v1_27_6.ztunnel: gcr.io/istio-release/ztunnel:1.27.6
+                  images.v1_27_7.cni: gcr.io/istio-release/install-cni:1.27.7
+                  images.v1_27_7.istiod: gcr.io/istio-release/pilot:1.27.7
+                  images.v1_27_7.proxy: gcr.io/istio-release/proxyv2:1.27.7
+                  images.v1_27_7.ztunnel: gcr.io/istio-release/ztunnel:1.27.7
                   kubectl.kubernetes.io/default-container: sail-operator
                 labels:
                   app.kubernetes.io/created-by: sailoperator
@@ -917,7 +935,7 @@ spec:
                       - --zap-log-level=info
                     command:
                       - /sail-operator
-                    image: quay.io/sail-dev/sail-operator:1.27.5
+                    image: quay.io/sail-dev/sail-operator:1.27.7
                     livenessProbe:
                       httpGet:
                         path: /healthz
@@ -1017,4 +1035,4 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat, Inc.
-  version: 1.27.5
+  version: 1.27.7
