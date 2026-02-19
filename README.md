@@ -303,7 +303,7 @@ As you might know, the Sail Operator project serves as the community upstream fo
 
 ### Developing on macOS
 
-There are some considerations that you need to take into account while trying to develop, debug and work on macOS and specially if you are using Podman instead on Docker. Please take a look into this [documentation](/docs/macos/develop-on-macos.md) for macOS specifics.
+There are some considerations that you need to take into account while trying to develop, debug and work on macOS and specially if you are using Podman instead on Docker. Please take a look into this [documentation](/docs/macos/develop-on-macos.adoc) for macOS specifics.
 
 #### versions.yaml
 
