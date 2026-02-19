@@ -15,6 +15,18 @@
 # required. They will stay valid input values for the spec.version field though,
 # to avoid breaking API guarantees.
 versions:
+  - name: v1.29-latest
+    ref: v1.29.0
+  - name: v1.29.0
+    version: 1.29.0
+    repo: https://github.com/istio/istio
+    commit: 1.29.0
+    charts:
+      - https://istio-release.storage.googleapis.com/charts/base-1.29.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-1.29.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/gateway-1.29.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/cni-1.29.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.29.0.tgz
   - name: v1.28-latest
     ref: v1.28.4
   - name: v1.28.4
