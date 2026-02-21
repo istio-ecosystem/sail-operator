@@ -1659,6 +1659,44 @@ const (
 	MeshConfigServiceScopeConfigsScopeGlobal MeshConfigServiceScopeConfigsScope = "GLOBAL"
 )
 
+// ServiceAttributeEnrichment controls how service resource attributes
+// (such as `service.name`, `service.namespace`, `service.version`, and
+// `service.instance.id`) are populated in exported trace spans.
+// +kubebuilder:validation:Enum=ISTIO_CANONICAL;OTEL_SEMANTIC_CONVENTIONS
+type MeshConfigExtensionProviderServiceAttributeEnrichment string
+
+const (
+	// Use Istio's default service attribute enrichment logic.
+	// The service name is determined by the `TracingServiceName` setting in
+	// `ProxyConfig` (e.g., based on the `app` label, canonical name, etc.).
+	MeshConfigExtensionProviderServiceAttributeEnrichmentIstioCanonical MeshConfigExtensionProviderServiceAttributeEnrichment = "ISTIO_CANONICAL"
+	// Follow the OpenTelemetry semantic conventions for Kubernetes service
+	// attributes. The service attributes are calculated following the fallback
+	// chain defined in:
+	// https://opentelemetry.io/docs/specs/semconv/non-normative/k8s-attributes/#service-attributes
+	//
+	// The fallback chain for `service.name` is:
+	//  1. `resource.opentelemetry.io/service.name` annotation on the pod
+	//  2. `app.kubernetes.io/name` label
+	//  3. Name of the owning Kubernetes resource (Deployment, StatefulSet, etc.)
+	//  4. Pod name
+	//  5. Container name (if single container in the pod)
+	//  6. `unknown_service`
+	//
+	// The fallback chain for `service.namespace` is:
+	//  1. `resource.opentelemetry.io/service.namespace` annotation on the pod
+	//  2. Kubernetes namespace name
+	//
+	// The fallback chain for `service.version` is:
+	//  1. `resource.opentelemetry.io/service.version` annotation on the pod
+	//  2. `app.kubernetes.io/version` label
+	//
+	// The fallback chain for `service.instance.id` is:
+	//  1. `resource.opentelemetry.io/service.instance.id` annotation on the pod
+	//  2. Pod UID
+	MeshConfigExtensionProviderServiceAttributeEnrichmentOtelSemanticConventions MeshConfigExtensionProviderServiceAttributeEnrichment = "OTEL_SEMANTIC_CONVENTIONS"
+)
+
 // Available trace context options for handling different trace header formats.
 // +kubebuilder:validation:Enum=USE_B3;USE_B3_WITH_W3C_PROPAGATION
 type MeshConfigExtensionProviderZipkinTracingProviderTraceContextOption string
@@ -2917,6 +2955,27 @@ type MeshConfigExtensionProviderOpenTelemetryTracingProvider struct {
 	//
 	// ```
 	ResourceDetectors *MeshConfigExtensionProviderResourceDetectors `json:"resourceDetectors,omitempty"`
+	// Optional. Controls how service resource attributes are enriched in
+	// exported trace spans. When set to `OTEL_SEMANTIC_CONVENTIONS`, the
+	// service attributes (`service.name`, `service.namespace`,
+	// `service.version`, `service.instance.id`) will be populated following
+	// the OpenTelemetry semantic conventions for Kubernetes:
+	// https://opentelemetry.io/docs/specs/semconv/non-normative/k8s-attributes/#service-attributes
+	//
+	// When not set or set to `ISTIO_CANONICAL`, Istio's default enrichment
+	// logic is used (controlled by `TracingServiceName` in `ProxyConfig`).
+	//
+	// Example:
+	// ```yaml
+	// extensionProviders:
+	//   - name: otel-tracing
+	//     opentelemetry:
+	//     port: 443
+	//     service: my.olly-backend.com
+	//     serviceAttributeEnrichment: OTEL_SEMANTIC_CONVENTIONS
+	//
+	// ```
+	ServiceAttributeEnrichment MeshConfigExtensionProviderServiceAttributeEnrichment `json:"serviceAttributeEnrichment,omitempty"`
 
 	// The Dynatrace adaptive traffic management (ATM) sampler.
 	//
@@ -3135,7 +3194,7 @@ type MeshConfigExtensionProviderResourceDetectorsDynatraceResourceDetector struc
 
 const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\n" +
-	"\x1amesh/v1alpha1/config.proto\x12\x13istio.mesh.v1alpha1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19mesh/v1alpha1/proxy.proto\x1a*networking/v1alpha3/destination_rule.proto\x1a)networking/v1alpha3/virtual_service.proto\"\x83q\n" +
+	"\x1amesh/v1alpha1/config.proto\x12\x13istio.mesh.v1alpha1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19mesh/v1alpha1/proxy.proto\x1a*networking/v1alpha3/destination_rule.proto\x1a)networking/v1alpha3/virtual_service.proto\"\xe6r\n" +
 	"\n" +
 	"MeshConfig\x12*\n" +
 	"\x11proxy_listen_port\x18\x04 \x01(\x05R\x0fproxyListenPort\x129\n" +
@@ -3219,7 +3278,7 @@ const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\ftls_settings\x18\x02 \x01(\v2,.istio.networking.v1alpha3.ClientTLSSettingsR\vtlsSettings\x12B\n" +
 	"\x0frequest_timeout\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\x0erequestTimeout\x12\x1f\n" +
 	"\vistiod_side\x18\x04 \x01(\bR\n" +
-	"istiodSide\x1a\xcfA\n" +
+	"istiodSide\x1a\xb2C\n" +
 	"\x11ExtensionProvider\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x8b\x01\n" +
 	"\x14envoy_ext_authz_http\x18\x02 \x01(\v2X.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyExternalAuthorizationHttpProviderH\x00R\x11envoyExtAuthzHttp\x12\x8b\x01\n" +
@@ -3357,7 +3416,7 @@ const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"log_format\x18\x04 \x01(\v2Y.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyOpenTelemetryLogProvider.LogFormatR\tlogFormat\x1aP\n" +
 	"\tLogFormat\x12\x12\n" +
 	"\x04text\x18\x01 \x01(\tR\x04text\x12/\n" +
-	"\x06labels\x18\x02 \x01(\v2\x17.google.protobuf.StructR\x06labels\x1a\xcc\a\n" +
+	"\x06labels\x18\x02 \x01(\v2\x17.google.protobuf.StructR\x06labels\x1a\xdd\b\n" +
 	"\x1cOpenTelemetryTracingProvider\x12\x18\n" +
 	"\aservice\x18\x01 \x01(\tR\aservice\x12\x12\n" +
 	"\x04port\x18\x02 \x01(\rR\x04port\x12$\n" +
@@ -3365,6 +3424,7 @@ const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\x04http\x18\x04 \x01(\v2=.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.HttpServiceR\x04http\x12Q\n" +
 	"\x04grpc\x18\a \x01(\v2=.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.GrpcServiceR\x04grpc\x12r\n" +
 	"\x12resource_detectors\x18\x05 \x01(\v2C.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.ResourceDetectorsR\x11resourceDetectors\x12\x8e\x01\n" +
+	"\x1cservice_attribute_enrichment\x18\b \x01(\x0e2L.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.ServiceAttributeEnrichmentR\x1aserviceAttributeEnrichment\x12\x8e\x01\n" +
 	"\x11dynatrace_sampler\x18\x06 \x01(\v2_.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.OpenTelemetryTracingProvider.DynatraceSamplerH\x00R\x10dynatraceSampler\x1a\xa0\x03\n" +
 	"\x10DynatraceSampler\x12\x16\n" +
 	"\x06tenant\x18\x01 \x01(\tR\x06tenant\x12\x1d\n" +
@@ -3399,7 +3459,10 @@ const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\x19DynatraceResourceDetector\x1a\xab\x01\n" +
 	"\vGrpcService\x123\n" +
 	"\atimeout\x18\x01 \x01(\v2\x19.google.protobuf.DurationR\atimeout\x12g\n" +
-	"\x10initial_metadata\x18\x02 \x03(\v2<.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.HttpHeaderR\x0finitialMetadataB\n" +
+	"\x10initial_metadata\x18\x02 \x03(\v2<.istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.HttpHeaderR\x0finitialMetadata\"P\n" +
+	"\x1aServiceAttributeEnrichment\x12\x13\n" +
+	"\x0fISTIO_CANONICAL\x10\x00\x12\x1d\n" +
+	"\x19OTEL_SEMANTIC_CONVENTIONS\x10\x01B\n" +
 	"\n" +
 	"\bprovider\x1am\n" +
 	"\x10DefaultProviders\x12\x18\n" +

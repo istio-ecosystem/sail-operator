@@ -5235,6 +5235,32 @@ spec:
 
                                     Example: "otlp.default.svc.cluster.local" or "bar/otlp.example.com".
                                   type: string
+                                serviceAttributeEnrichment:
+                                  description: |-
+                                    Optional. Controls how service resource attributes are enriched in
+                                    exported trace spans. When set to `OTEL_SEMANTIC_CONVENTIONS`, the
+                                    service attributes (`service.name`, `service.namespace`,
+                                    `service.version`, `service.instance.id`) will be populated following
+                                    the OpenTelemetry semantic conventions for Kubernetes:
+                                    https://opentelemetry.io/docs/specs/semconv/non-normative/k8s-attributes/#service-attributes
+
+                                    When not set or set to `ISTIO_CANONICAL`, Istio's default enrichment
+                                    logic is used (controlled by `TracingServiceName` in `ProxyConfig`).
+
+                                    Example:
+                                    ```yaml
+                                    extensionProviders:
+                                      - name: otel-tracing
+                                        opentelemetry:
+                                        port: 443
+                                        service: my.olly-backend.com
+                                        serviceAttributeEnrichment: OTEL_SEMANTIC_CONVENTIONS
+
+                                    ```
+                                  enum:
+                                  - ISTIO_CANONICAL
+                                  - OTEL_SEMANTIC_CONVENTIONS
+                                  type: string
                               required:
                               - port
                               - service
@@ -10121,7 +10147,7 @@ spec:
               version:
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.29.0, v1.28.4, v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.27.7, v1.27.6, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.30-alpha.4746acec.
+                  Must be one of: v1.29.0, v1.28.4, v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.27.7, v1.27.6, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.30-alpha.bbb2b885.
                 enum:
                 - v1.29.0
                 - v1.28.4
@@ -10168,7 +10194,7 @@ spec:
                 - v1.22.6
                 - v1.22.5
                 - v1.21.6
-                - v1.30-alpha.4746acec
+                - v1.30-alpha.bbb2b885
                 type: string
             required:
             - namespace
