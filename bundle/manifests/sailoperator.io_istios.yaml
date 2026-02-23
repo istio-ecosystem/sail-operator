@@ -6122,6 +6122,7 @@ spec:
                       tlsDefaults:
                         description: |-
                           Configuration of TLS for all traffic except for ISTIO_MUTUAL mode.
+                          Currently, this supports configuration of ecdhCurves and cipherSuites only.
                           For ISTIO_MUTUAL TLS settings, use meshMTLS configuration.
                         properties:
                           cipherSuites:

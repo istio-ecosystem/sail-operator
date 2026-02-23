@@ -2077,6 +2077,7 @@ type MeshConfig struct {
 	// Note: Mesh mTLS does not respect ECDH curves.
 	MeshMTLS *MeshConfigTLSConfig `json:"meshMTLS,omitempty"`
 	// Configuration of TLS for all traffic except for ISTIO_MUTUAL mode.
+	// Currently, this supports configuration of ecdhCurves and cipherSuites only.
 	// For ISTIO_MUTUAL TLS settings, use meshMTLS configuration.
 	TlsDefaults *MeshConfigTLSConfig `json:"tlsDefaults,omitempty"`
 }
@@ -3501,7 +3502,7 @@ type Network struct {
 // If `ENABLE_HCM_INTERNAL_NETWORKS` is set to true, MeshNetworks can be used to
 // to explicitly define the networks in Envoy's internal address configuration.
 // Envoy uses the IPs in the `internalAddressConfig` to decide whether or not to sanitize
-// Envoy headers. If the IP address is listed as internal, the Envoy headers are not
+// Envoy headers. If the IP address is listed an internal, the Envoy headers are not
 // sanitized. As of Envoy 1.33, the default value for `internalAddressConfig` is set to
 // an empty set. Previously, the default value was the set of all private IPs. Setting
 // the `internalAddressConfig` to all private IPs (via Envoy's previous default behavior
