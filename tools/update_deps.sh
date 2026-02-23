@@ -24,9 +24,9 @@ if [[ "$(uname)" == "Darwin" ]]; then
   SED_CMD="gsed"
 fi
 
-UPDATE_BRANCH=${UPDATE_BRANCH:-"master"}
+UPDATE_BRANCH=${UPDATE_BRANCH:-"release-1.29"}
 # When true, only update to the latest patch version (keeps major.minor version the same)
-PIN_MINOR=${PIN_MINOR:-false}
+PIN_MINOR=${PIN_MINOR:-true}
 # When true, skip Istio module updates (istio.io/istio and istio.io/client-go), do not add new Istio versions and only update tools
 TOOLS_ONLY=${TOOLS_ONLY:-false}
 

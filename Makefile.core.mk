@@ -78,7 +78,7 @@ endif
 # Image hub to use
 HUB ?= quay.io/sail-dev
 # Image tag to use
-TAG ?= ${MINOR_VERSION}-latest
+TAG ?= ${MINOR_VERSION}
 # Image base to use
 IMAGE_BASE ?= sail-operator
 # Image URL to use all building/pushing image targets
@@ -128,9 +128,10 @@ endif
 # To re-generate a bundle for other specific channels without changing the standard setup, you can:
 # - use the CHANNELS as arg of the bundle target (e.g make bundle CHANNELS=candidate,fast,stable)
 # - use environment variables to overwrite this value (e.g export CHANNELS="candidate,fast,stable")
-CHANNEL_PREFIX := dev
+CHANNEL_PREFIX := stable
+DEFAULT_CHANNEL := stable
 
-CHANNELS ?= $(CHANNEL_PREFIX)-$(MINOR_VERSION)
+CHANNELS := $(DEFAULT_CHANNEL),$(CHANNEL_PREFIX)-$(MINOR_VERSION)
 ifneq ($(origin CHANNELS), undefined)
 BUNDLE_CHANNELS = --channels=\"$(CHANNELS)\"
 endif

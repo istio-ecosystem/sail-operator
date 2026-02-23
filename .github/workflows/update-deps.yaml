@@ -41,6 +41,19 @@ jobs:
           --token-env \
           --cmd='BUILD_WITH_CONTAINER=0 ./tools/update_deps.sh' \
           --signoff
+    - name: Run Automator release-1.29
+      run: |
+        ./tools/automator/automator.sh \
+          --org=$AUTOMATOR_ORG \
+          --repo=sail-operator \
+          --branch=release-1.29 \
+          '--title=Automator: Update dependencies in $AUTOMATOR_ORG/$AUTOMATOR_REPO@release-1.29' \
+          --labels=auto-merge \
+          --email=openshiftservicemeshbot@gmail.com \
+          --modifier=update_deps \
+          --token-env \
+          --cmd='BUILD_WITH_CONTAINER=0 UPDATE_BRANCH=release-1.29 PIN_MINOR=true TOOLS_ONLY=true ./tools/update_deps.sh' \
+          --signoff
     - name: Run Automator release-1.28
       run: |
         ./tools/automator/automator.sh \
@@ -66,17 +79,4 @@ jobs:
           --modifier=update_deps \
           --token-env \
           --cmd='BUILD_WITH_CONTAINER=0 UPDATE_BRANCH=release-1.27 PIN_MINOR=true TOOLS_ONLY=true ./tools/update_deps.sh' \
-          --signoff
-    - name: Run Automator release-1.26
-      run: |
-        ./tools/automator/automator.sh \
-          --org=$AUTOMATOR_ORG \
-          --repo=sail-operator \
-          --branch=release-1.26 \
-          '--title=Automator: Update dependencies in $AUTOMATOR_ORG/$AUTOMATOR_REPO@release-1.26' \
-          --labels=auto-merge \
-          --email=openshiftservicemeshbot@gmail.com \
-          --modifier=update_deps \
-          --token-env \
-          --cmd='BUILD_WITH_CONTAINER=0 UPDATE_BRANCH=release-1.26 PIN_MINOR=true TOOLS_ONLY=true ./tools/update_deps.sh' \
           --signoff
