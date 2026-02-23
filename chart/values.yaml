@@ -58,10 +58,6 @@ deployment:
     images.v1_27_0.istiod: gcr.io/istio-release/pilot:1.27.0
     images.v1_27_0.proxy: gcr.io/istio-release/proxyv2:1.27.0
     images.v1_27_0.cni: gcr.io/istio-release/install-cni:1.27.0
-    images.v1_30-alpha_0997af56.ztunnel: gcr.io/istio-testing/ztunnel:1.30-alpha.0997af56bba72e58bb3d64a28d8bcc7657001451
-    images.v1_30-alpha_0997af56.istiod: gcr.io/istio-testing/pilot:1.30-alpha.0997af56bba72e58bb3d64a28d8bcc7657001451
-    images.v1_30-alpha_0997af56.proxy: gcr.io/istio-testing/proxyv2:1.30-alpha.0997af56bba72e58bb3d64a28d8bcc7657001451
-    images.v1_30-alpha_0997af56.cni: gcr.io/istio-testing/install-cni:1.30-alpha.0997af56bba72e58bb3d64a28d8bcc7657001451
 revisionHistoryLimit: 10
 service:
   port: 8443
@@ -94,8 +90,6 @@ csv:
     - v1.27.2
     - v1.27.1
     - v1.27.0
-    - master
-    - v1.30-alpha.0997af56
 
     [See this page](https://github.com/istio-ecosystem/sail-operator/blob/main/bundle/README.md) for instructions on how to use it.
   support: Community based
@@ -123,7 +117,7 @@ csv:
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
     features.operators.openshift.io/csi: "false"
-image: quay.io/sail-dev/sail-operator:1.29-latest
+image: quay.io/sail-dev/sail-operator:1.29
 # We're commenting out the imagePullPolicy to use k8s defaults
 # imagePullPolicy: Always
 operator:
