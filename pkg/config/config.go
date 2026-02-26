@@ -42,6 +42,12 @@ type ReconcilerConfig struct {
 	MaxConcurrentReconciles int
 }
 
+// TLSConfig represents the TLS configuration to be applied globally.
+type TLSConfig struct {
+	// CipherSuites is a list of TLS cipher suite IDs.
+	CipherSuites []uint16
+}
+
 func Read(configFile string) error {
 	p, err := properties.LoadFile(configFile, properties.UTF8)
 	if err != nil {

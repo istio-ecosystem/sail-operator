@@ -739,6 +739,14 @@ spec:
               verbs:
                 - use
             - apiGroups:
+                - config.openshift.io
+              resources:
+                - apiservers
+              verbs:
+                - get
+                - list
+                - watch
+            - apiGroups:
                 - sailoperator.io
               resources:
                 - ztunnels
