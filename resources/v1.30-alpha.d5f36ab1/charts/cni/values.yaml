@@ -155,7 +155,7 @@ _internal_defaults_do_not_set:
     hub: gcr.io/istio-testing
 
     # Default tag for Istio images.
-    tag: 1.30-alpha.6c76e33806da8172561dc39742a22c0ee0f221e8
+    tag: 1.30-alpha.d5f36ab1545d47bec2ee4c97216c91dbfd34e42d
 
     # Variant of the image to use.
     # Currently supported are: [debug, distroless]
