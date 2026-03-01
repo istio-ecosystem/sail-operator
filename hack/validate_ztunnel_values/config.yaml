@@ -1,0 +1,9 @@
+# ZTunnel validation configuration
+# Fields listed here will NOT be reported as missing even if they exist in upstream
+# but are not implemented in the Sail Operator ZTunnelConfig
+
+ignore_missing_fields:
+  # Add fields you want to ignore here
+  # Example:
+  # - "someFieldWeDoNotWant"
+  # - "experimentalFeature"
