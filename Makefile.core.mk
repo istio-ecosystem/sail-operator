@@ -565,6 +565,7 @@ OPM ?= $(LOCALBIN)/opm
 ISTIOCTL ?= $(LOCALBIN)/istioctl
 RUNME ?= $(LOCALBIN)/runme
 MISSPELL ?= $(LOCALBIN)/misspell
+CRD_SCHEMA_CHECKER ?= $(LOCALBIN)/crd-schema-checker
 
 ## Tool Versions
 OPERATOR_SDK_VERSION ?= v1.42.0
@@ -577,6 +578,7 @@ GITLEAKS_VERSION ?= v8.30.0
 ISTIOCTL_VERSION ?= 1.26.2
 RUNME_VERSION ?= 3.16.5
 MISSPELL_VERSION ?= v0.3.4
+CRD_SCHEMA_CHECKER_VERSION ?= release-4.22
 
 .PHONY: helm $(HELM)
 helm: $(HELM) ## Download helm to bin directory. If wrong version is installed, it will be overwritten.
@@ -791,8 +793,17 @@ lint-spell: misspell
 misspell: $(LOCALBIN) ## Download misspell to bin directory.
 	@test -s $(LOCALBIN)/misspell || GOBIN=$(LOCALBIN) go install github.com/client9/misspell/cmd/misspell@$(MISSPELL_VERSION)
 
+.PHONY: crd-schema-checker
+crd-schema-checker: $(CRD_SCHEMA_CHECKER) ## Download crd-schema-checker to bin directory.
+$(CRD_SCHEMA_CHECKER): $(LOCALBIN)
+	@test -x $(LOCALBIN)/crd-schema-checker || GOBIN=$(LOCALBIN) GO111MODULE=on go install github.com/openshift/crd-schema-checker/cmd/crd-schema-checker@$(CRD_SCHEMA_CHECKER_VERSION) > /dev/stderr
+
+.PHONY: lint-crds
+lint-crds: crd-schema-checker ## Lint CRDs for backwards compatibility on release branches.
+	@PREVIOUS_VERSION=$(PREVIOUS_VERSION) ./tools/crd-schema-checker.sh
+
 .PHONY: lint
-lint: lint-scripts lint-licenses lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle lint-watches lint-secrets lint-spell ## Run all linters.
+lint: lint-scripts lint-licenses lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle lint-watches lint-secrets lint-spell lint-crds ## Run all linters.
 
 .PHONY: format
 format: format-go tidy-go ## Auto-format all code. This should be run before sending a PR.
