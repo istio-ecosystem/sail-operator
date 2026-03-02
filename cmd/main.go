@@ -254,7 +254,7 @@ func main() {
 		tlsWatcher := &openshifttls.SecurityProfileWatcher{
 			Client:                mgr.GetClient(),
 			InitialTLSProfileSpec: *tlsProfileSpec,
-			OnProfileChange: func(oldProfile, newProfile configv1.TLSProfileSpec) {
+			OnProfileChange: func(ctx context.Context, oldProfile, newProfile configv1.TLSProfileSpec) {
 				setupLog.Info("TLS profile has changed, initiating shutdown to reload configuration",
 					"oldProfile", oldProfile,
 					"newProfile", newProfile)
