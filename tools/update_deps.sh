@@ -117,7 +117,12 @@ make update-common
 
 # update build container used in github actions
 NEW_IMAGE_MASTER=$(grep IMAGE_VERSION= < common/scripts/setup_env.sh | cut -d= -f2)
-"$SED_CMD" -i -e "s|\(gcr.io/istio-testing/build-tools\):master.*|\1:$NEW_IMAGE_MASTER|" .github/workflows/update-deps.yaml
+if [[ "${UPDATE_BRANCH}" == "master" ]]; then
+  "$SED_CMD" -i -e "s|\(gcr.io/istio-testing/build-tools\):master.*|\1:$NEW_IMAGE_MASTER|" .github/workflows/update-deps.yaml
+  echo "Updated build-tools image in update-deps.yaml"
+else
+  echo "Skipping build-tools image update (UPDATE_BRANCH is not master)"
+fi
 
 # Update go dependencies
 export GO111MODULE=on
