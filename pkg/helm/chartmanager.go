@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/fs"
 
+	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/release"
@@ -33,17 +34,35 @@ import (
 type ChartManager struct {
 	restClientGetter genericclioptions.RESTClientGetter
 	driver           string
+	managedByValue   string
+}
+
+// ChartManagerOption is a functional option for configuring a ChartManager.
+type ChartManagerOption func(*ChartManager)
+
+// WithManagedByValue overrides the value of the "managed-by" label that is
+// applied to every resource created by Helm install/upgrade. The default
+// value is constants.ManagedByLabelValue ("sail-operator").
+func WithManagedByValue(v string) ChartManagerOption {
+	return func(cm *ChartManager) {
+		cm.managedByValue = v
+	}
 }
 
 // NewChartManager creates a new Helm chart manager using cfg as the configuration
 // that Helm will use to connect to the cluster when installing or uninstalling
 // charts, and using the specified driver to store information about releases
 // (one of: memory, secret, configmap, sql, or "" (same as "secret")).
-func NewChartManager(cfg *rest.Config, driver string) *ChartManager {
-	return &ChartManager{
+func NewChartManager(cfg *rest.Config, driver string, opts ...ChartManagerOption) *ChartManager {
+	cm := &ChartManager{
 		restClientGetter: NewRESTClientGetter(cfg),
 		driver:           driver,
+		managedByValue:   constants.ManagedByLabelValue,
 	}
+	for _, o := range opts {
+		o(cm)
+	}
+	return cm
 }
 
 // newActionConfig Create a new Helm action config from in-cluster service account
@@ -134,7 +153,7 @@ func (h *ChartManager) upgradeOrInstallChart(
 		log.V(2).Info("Performing helm upgrade", "chartName", chart.Name())
 
 		updateAction := action.NewUpgrade(cfg)
-		updateAction.PostRenderer = NewHelmPostRenderer(ownerReference, "", true)
+		updateAction.PostRenderer = NewHelmPostRenderer(ownerReference, "", true, h.managedByValue)
 		updateAction.MaxHistory = 1
 		updateAction.SkipCRDs = true
 		updateAction.DisableOpenAPIValidation = true
@@ -147,7 +166,7 @@ func (h *ChartManager) upgradeOrInstallChart(
 		log.V(2).Info("Performing helm install", "chartName", chart.Name())
 
 		installAction := action.NewInstall(cfg)
-		installAction.PostRenderer = NewHelmPostRenderer(ownerReference, "", false)
+		installAction.PostRenderer = NewHelmPostRenderer(ownerReference, "", false, h.managedByValue)
 		installAction.Namespace = namespace
 		installAction.ReleaseName = releaseName
 		installAction.SkipCRDs = true
