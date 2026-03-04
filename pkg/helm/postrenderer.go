@@ -22,7 +22,7 @@ import (
 
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"gopkg.in/yaml.v3"
-	"helm.sh/helm/v3/pkg/postrender"
+	"helm.sh/helm/v4/pkg/postrenderer"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -39,7 +39,7 @@ const (
 // - adds the specified OwnerReference
 // It also removes the failurePolicy field from ValidatingWebhookConfigurations on updates, so
 // the in-cluster setting stays as-is, to prevent clashing with the istiod validation controller.
-func NewHelmPostRenderer(ownerReference *metav1.OwnerReference, ownerNamespace string, isUpdate bool, managedByValue string) postrender.PostRenderer {
+func NewHelmPostRenderer(ownerReference *metav1.OwnerReference, ownerNamespace string, isUpdate bool, managedByValue string) postrenderer.PostRenderer {
 	return HelmPostRenderer{
 		ownerReference: ownerReference,
 		ownerNamespace: ownerNamespace,
@@ -55,7 +55,7 @@ type HelmPostRenderer struct {
 	managedByValue string
 }
 
-var _ postrender.PostRenderer = HelmPostRenderer{}
+var _ postrenderer.PostRenderer = HelmPostRenderer{}
 
 func (pr HelmPostRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *bytes.Buffer, err error) {
 	modifiedManifests = &bytes.Buffer{}
