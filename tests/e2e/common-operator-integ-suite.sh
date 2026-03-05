@@ -165,8 +165,9 @@ initialize_variables() {
   VERBOSE=${VERBOSE:-"false"}
 }
 
+# shellcheck disable=SC2317  # Function may be called indirectly or sourced by other scripts
 get_internal_registry() {
-  # Validate that the internal registry is running in the OCP Cluster, configure the variable to be used in the make target. 
+  # Validate that the internal registry is running in the OCP Cluster, configure the variable to be used in the make target.
   # If there is no internal registry, the test can't be executed targeting to the internal registry
 
   # Check if the registry pods are running
@@ -177,7 +178,7 @@ get_internal_registry() {
     echo "Route default-route does not exist, patching DefaultRoute to true on Image Registry."
     ${COMMAND} patch configs.imageregistry.operator.openshift.io/cluster --patch '{"spec":{"defaultRoute":true}}' --type=merge
   
-    timeout --foreground -v -s SIGHUP -k ${TIMEOUT} ${TIMEOUT} bash --verbose -c \
+    timeout --foreground -v -s SIGHUP -k "${TIMEOUT}" "${TIMEOUT}" bash --verbose -c \
       "until ${COMMAND} get route default-route -n openshift-image-registry &> /dev/null; do sleep 5; done && echo 'The 'default-route' has been created.'"
   fi
 
