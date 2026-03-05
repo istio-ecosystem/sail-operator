@@ -45,7 +45,7 @@ get_internal_registry() {
 
   ${COMMAND} create namespace istio-images || true
   ${COMMAND} create namespace "${NAMESPACE}" || true
-  envsubst < "${WD}/config/role-bindings.yaml" | ${COMMAND} apply -f -
+  envsubst < "${WD}/../config/role-bindings.yaml" | ${COMMAND} apply -f -
 
   if [[ ${URL} == *".apps-crc.testing"* ]]; then
     echo "Logging into internal registry..."
