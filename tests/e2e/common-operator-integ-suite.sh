@@ -125,6 +125,7 @@ initialize_variables() {
   ISTIO_MANIFEST="chart/samples/istio-sample.yaml"
   CI=${CI:-"false"}
 
+
   if [ "${OCP}" == "true" ]; then
     COMMAND="oc"
   fi
@@ -208,35 +209,6 @@ get_internal_registry() {
   fi
 }
 
-build_and_push_operator_image() {
-  # Build and push docker image
-  # Notes: to be able to build and push to the local registry we need to set these variables to be used in the Makefile
-  # IMAGE ?= ${HUB}/${IMAGE_BASE}:${TAG}, so we need to pass hub, image_base, and tag to be able to build and push the image
-  echo "Building and pushing image"
-  echo "Image base: ${IMAGE_BASE}"
-  echo " Tag: ${TAG}"
-
-  # Check the current architecture to build the image for the same architecture
-  # For now we are only building for arm64 and x86_64 because z and p are not supported by the operator yet.
-  DOCKER_BUILD_FLAGS=""
-  TARGET_ARCH=$(uname -m)
-
-  if [[ "$TARGET_ARCH" == "aarch64" || "$TARGET_ARCH" == "arm64" ]]; then
-      echo "Running on arm64 architecture"
-      TARGET_ARCH="arm64"
-      DOCKER_BUILD_FLAGS="--platform=linux/${TARGET_ARCH}"
-  elif [[ "$TARGET_ARCH" == "x86_64" || "$TARGET_ARCH" == "amd64" ]]; then
-      echo "Running on x86_64 architecture"
-      TARGET_ARCH="amd64"
-  else
-      echo "Unsupported architecture: ${TARGET_ARCH}"
-      exit 1
-  fi
-
-  # running docker build inside another container layer causes issues with bind mounts
-  BUILD_WITH_CONTAINER=0 DOCKER_BUILD_FLAGS=${DOCKER_BUILD_FLAGS} IMAGE=${HUB}/${IMAGE_BASE}:${TAG} TARGET_ARCH=${TARGET_ARCH} make docker-push
-}
-
 # PRE SETUP: Get arguments and initialize variables
 check_arguments "$@"
 parse_flags "$@"
@@ -268,8 +240,6 @@ if [ "${SKIP_BUILD}" == "false" ]; then
       ${COMMAND} delete ns "${NAMESPACE}"
     fi
   fi
-
-  build_and_push_operator_image
 
   # If OLM is enabled, deploy the operator using OLM
   # We are skipping the deploy via OLM test on OCP because the workaround to avoid the certificate issue is not working.
@@ -322,14 +292,6 @@ if [ "${SKIP_BUILD}" == "false" ]; then
     # Set SKIP_DEPLOY to true to avoid deploying the operator again
     SKIP_DEPLOY=true
   fi
-fi
-
-if [ "${OCP}" == "true" ]; then
-  # This is a workaround
-  # To avoid errors of certificates meanwhile we are pulling the operator image from the internal registry
-  # We need to set image $HUB to a fixed known value after the push
-  # This value always will be equal to the svc url of the internal registry
-  HUB="image-registry.openshift-image-registry.svc:5000/sail-operator"
 fi
 
 export SKIP_DEPLOY IP_FAMILY ISTIO_MANIFEST NAMESPACE CONTROL_PLANE_NS DEPLOYMENT_NAME MULTICLUSTER ARTIFACTS ISTIO_NAME COMMAND KUBECONFIG ISTIOCTL_PATH
