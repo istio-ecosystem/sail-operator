@@ -123,12 +123,39 @@ initialize_variables() {
   OPERATOR_SDK=${LOCALBIN}/operator-sdk
   IP_FAMILY=${IP_FAMILY:-ipv4}
   ISTIO_MANIFEST="chart/samples/istio-sample.yaml"
+  CI=${CI:-"false"}
 
   if [ "${OCP}" == "true" ]; then
     COMMAND="oc"
   fi
 
   echo "Using command: ${COMMAND}"
+
+  # Handle OCP registry scenarios
+  # Note: Makefile.core.mk sets HUB=quay.io/sail-dev and TAG=1.29-latest by default
+  if [ "${OCP}" == "true" ]; then
+    if [ "${CI}" == "true" ] && [ "${HUB}" == "quay.io/sail-dev" ]; then
+      # Scenario 2: CI mode with default HUB -> use external registry with proper CI tag
+      echo "CI mode detected for OCP, using external registry ${HUB}"
+
+      # Use PR_NUMBER if available, otherwise generate timestamp tag
+      if [ -n "${PR_NUMBER:-}" ]; then
+        export TAG="pr-${PR_NUMBER}"
+        echo "Using PR-based tag: ${TAG}"
+      else
+        TAG="ci-test-$(date +%s)"
+        export TAG
+        echo "Using timestamp-based tag: ${TAG}"
+      fi
+    elif [ "${HUB}" != "quay.io/sail-dev" ]; then
+      # Scenario 3: Custom registry provided by user
+      echo "Using custom registry: ${HUB}"
+    else
+      # Scenario 1: Local development -> use internal OCP registry
+      echo "Local development mode, will use OCP internal registry"
+      export USE_INTERNAL_REGISTRY="true"
+    fi
+  fi
 
   echo "Setting Istio manifest file: ${ISTIO_MANIFEST}"
   ISTIO_NAME=$(yq eval '.metadata.name' "${WD}/../../$ISTIO_MANIFEST")
@@ -138,8 +165,9 @@ initialize_variables() {
   VERBOSE=${VERBOSE:-"false"}
 }
 
+# shellcheck disable=SC2317  # Function may be called indirectly or sourced by other scripts
 get_internal_registry() {
-  # Validate that the internal registry is running in the OCP Cluster, configure the variable to be used in the make target. 
+  # Validate that the internal registry is running in the OCP Cluster, configure the variable to be used in the make target.
   # If there is no internal registry, the test can't be executed targeting to the internal registry
 
   # Check if the registry pods are running
@@ -150,7 +178,7 @@ get_internal_registry() {
     echo "Route default-route does not exist, patching DefaultRoute to true on Image Registry."
     ${COMMAND} patch configs.imageregistry.operator.openshift.io/cluster --patch '{"spec":{"defaultRoute":true}}' --type=merge
   
-    timeout --foreground -v -s SIGHUP -k ${TIMEOUT} ${TIMEOUT} bash --verbose -c \
+    timeout --foreground -v -s SIGHUP -k "${TIMEOUT}" "${TIMEOUT}" bash --verbose -c \
       "until ${COMMAND} get route default-route -n openshift-image-registry &> /dev/null; do sleep 5; done && echo 'The 'default-route' has been created.'"
   fi
 
@@ -214,11 +242,31 @@ check_arguments "$@"
 parse_flags "$@"
 initialize_variables
 
+# Export necessary vars
+export COMMAND OCP HUB IMAGE_BASE TAG NAMESPACE USE_INTERNAL_REGISTRY
+
 if [ "${SKIP_BUILD}" == "false" ]; then
-  # SETUP
-  if [ "${OCP}" == "true" ]; then
-    # Internal Registry is only available in OCP clusters
-    get_internal_registry
+  "${WD}/setup/build-and-push-operator.sh"
+
+  if [ "${OCP}" = "true" ]; then
+    # This is a workaround when pulling the image from internal registry
+    # To avoid errors of certificates meanwhile we are pulling the operator image from the internal registry
+    # We need to set image $HUB to a fixed known value after the push
+    # Convert from route URL to service URL format for image pulling
+    if [[ "${HUB}" == *"/istio-images" ]]; then
+      HUB="image-registry.openshift-image-registry.svc:5000/istio-images"
+      echo "Using internal registry service URL: ${HUB}"
+    else
+      echo "Using external registry: ${HUB}"
+    fi
+
+    # Workaround for OCP helm operator installation issues:
+    # To avoid any cleanup issues, after we build and push the image we check if the namespace exists and delete it if it does.
+    # The test logic already handles the namespace creation and deletion during the test run. 
+    if ${COMMAND} get ns "${NAMESPACE}" &>/dev/null; then
+      echo "Namespace ${NAMESPACE} already exists. Deleting it to avoid conflicts."
+      ${COMMAND} delete ns "${NAMESPACE}"
+    fi
   fi
 
   build_and_push_operator_image
