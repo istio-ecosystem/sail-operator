@@ -19,11 +19,11 @@ import (
 	"io/fs"
 	"strings"
 
-	chartv2 "helm.sh/helm/v4/pkg/chart/v2"
 	"helm.sh/helm/v4/pkg/chart/common"
-	"helm.sh/helm/v4/pkg/chart/loader/archive"
-	chartv2loader "helm.sh/helm/v4/pkg/chart/v2/loader"
 	chartutil "helm.sh/helm/v4/pkg/chart/common/util"
+	"helm.sh/helm/v4/pkg/chart/loader/archive"
+	chartv2 "helm.sh/helm/v4/pkg/chart/v2"
+	chartv2loader "helm.sh/helm/v4/pkg/chart/v2/loader"
 	"helm.sh/helm/v4/pkg/engine"
 )
 
