@@ -25,13 +25,13 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.18.6
 	istio.io/client-go v1.29.0-alpha.0.0.20260302212757-4d22331907bb
-	istio.io/istio v0.0.0-20260305002959-2fb82507f445
+	istio.io/istio v0.0.0-20260305143300-1334b393da45
 	k8s.io/api v0.35.1
 	k8s.io/apiextensions-apiserver v0.35.1
 	k8s.io/apimachinery v0.35.1
 	k8s.io/cli-runtime v0.35.0
 	k8s.io/client-go v0.35.1
-	sigs.k8s.io/controller-runtime v0.23.1
+	sigs.k8s.io/controller-runtime v0.23.3
 )
 
 require (
