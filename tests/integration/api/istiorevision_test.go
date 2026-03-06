@@ -680,6 +680,46 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 			Expect(webhook.Annotations["sailoperator.io/ignore"]).To(Equal("true"))
 			Expect(webhook.Labels["app"]).To(Equal("sidecar-injector-test"))
 		})
+
+		It("skips reconcile when only caBundle and failurePolicy are updated on MutatingWebhookConfiguration", func() {
+			waitForInFlightReconcileToFinish()
+
+			webhook := &admissionv1.MutatingWebhookConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "istio-sidecar-injector-" + revName + "-" + istioNamespace,
+				},
+			}
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(webhook), webhook)).To(Succeed())
+
+			expectNoReconciliation(istioRevisionController, func() {
+				By("updating caBundle and failurePolicy on MutatingWebhookConfiguration")
+				for i := range webhook.Webhooks {
+					webhook.Webhooks[i].ClientConfig.CABundle = []byte("new-ca-bundle-data")
+					webhook.Webhooks[i].FailurePolicy = ptr.Of(admissionv1.Fail)
+				}
+				Expect(k8sClient.Update(ctx, webhook)).To(Succeed())
+			})
+		})
+
+		It("skips reconcile when only caBundle and failurePolicy are updated on ValidatingWebhookConfiguration", func() {
+			waitForInFlightReconcileToFinish()
+
+			webhook := &admissionv1.ValidatingWebhookConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: fmt.Sprintf("istio-validator-%s-%s", revName, istioNamespace),
+				},
+			}
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(webhook), webhook)).To(Succeed())
+
+			expectNoReconciliation(istioRevisionController, func() {
+				By("updating caBundle and failurePolicy on ValidatingWebhookConfiguration")
+				for i := range webhook.Webhooks {
+					webhook.Webhooks[i].ClientConfig.CABundle = []byte("new-ca-bundle-data")
+					webhook.Webhooks[i].FailurePolicy = ptr.Of(admissionv1.Fail)
+				}
+				Expect(k8sClient.Update(ctx, webhook)).To(Succeed())
+			})
+		})
 	})
 
 	DescribeTableSubtree("reconciling when revision is in use",
