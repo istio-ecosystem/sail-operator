@@ -28,6 +28,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/controllers/istiorevisiontag"
 	"github.com/istio-ecosystem/sail-operator/controllers/ztunnel"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
+	"github.com/istio-ecosystem/sail-operator/pkg/fieldignore"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/test"
@@ -81,7 +82,8 @@ var _ = BeforeSuite(func() {
 		panic(err)
 	}
 
-	chartManager = helm.NewChartManager(mgr.GetConfig(), "")
+	chartManager = helm.NewChartManager(mgr.GetConfig(), "",
+		helm.WithFieldIgnoreRules(fieldignore.IntoUntypedAll(fieldignore.DefaultRules)))
 
 	operatorNs := &corev1.Namespace{ObjectMeta: v1.ObjectMeta{Name: operatorNamespace}}
 	Expect(k8sClient.Create(context.TODO(), operatorNs)).To(Succeed())
