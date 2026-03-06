@@ -5,3 +5,6 @@ metadata:
 spec:
   version: v1.29.0
   namespace: ztunnel
+  targetRef:
+    kind: Istio
+    name: default
