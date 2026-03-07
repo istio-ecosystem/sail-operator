@@ -18,9 +18,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 
 	"helm.sh/helm/v3/pkg/action"
-	chartLoader "helm.sh/helm/v3/pkg/chart/loader"
+	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/release"
 	"helm.sh/helm/v3/pkg/storage/driver"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,19 +61,28 @@ func (h *ChartManager) newActionConfig(ctx context.Context, namespace string) (*
 	return actionConfig, err
 }
 
-// UpgradeOrInstallChart upgrades a chart in cluster or installs it new if it does not already exist
+// UpgradeOrInstallChart upgrades a chart in cluster or installs it new if it does not already exist.
+// It loads the chart from an fs.FS (e.g., embed.FS or os.DirFS).
 func (h *ChartManager) UpgradeOrInstallChart(
-	ctx context.Context, chartDir string, values Values,
+	ctx context.Context, resourceFS fs.FS, chartPath string, values Values,
+	namespace, releaseName string, ownerReference *metav1.OwnerReference,
+) (*release.Release, error) {
+	loadedChart, err := LoadChart(resourceFS, chartPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load chart from fs: %w", err)
+	}
+
+	return h.upgradeOrInstallChart(ctx, loadedChart, values, namespace, releaseName, ownerReference)
+}
+
+// upgradeOrInstallChart is the internal implementation that works with an already-loaded chart
+func (h *ChartManager) upgradeOrInstallChart(
+	ctx context.Context, chart *chart.Chart, values Values,
 	namespace, releaseName string, ownerReference *metav1.OwnerReference,
 ) (*release.Release, error) {
 	log := logf.FromContext(ctx)
 
 	cfg, err := h.newActionConfig(ctx, namespace)
-	if err != nil {
-		return nil, err
-	}
-
-	chart, err := chartLoader.Load(chartDir)
 	if err != nil {
 		return nil, err
 	}

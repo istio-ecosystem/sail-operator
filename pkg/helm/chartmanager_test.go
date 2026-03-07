@@ -17,7 +17,6 @@ package helm
 import (
 	"context"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/test"
@@ -36,8 +35,9 @@ import (
 var ctx = context.TODO()
 
 var (
-	relName  = "my-release"
-	chartDir = filepath.Join("testdata", "chart")
+	relName   = "my-release"
+	chartFS   = os.DirFS("testdata")
+	chartPath = "chart"
 
 	owner = metav1.OwnerReference{
 		APIVersion: "v1",
@@ -59,50 +59,50 @@ var (
 		{
 			name: "release exists",
 			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
-				install(g, helm, chartDir, ns, relName, owner)
+				install(g, helm, ns, relName, owner)
 			},
 		},
 		{
 			name: "release in failed state with previous revision",
 			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
-				install(g, helm, chartDir, ns, relName, owner)
-				upgrade(g, helm, chartDir, ns, relName, owner)
+				install(g, helm, ns, relName, owner)
+				upgrade(g, helm, ns, relName, owner)
 				setReleaseStatus(g, helm, ns, relName, release.StatusFailed)
 			},
 		},
 		{
 			name: "release in failed state with no previous revision",
 			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
-				install(g, helm, chartDir, ns, relName, owner)
+				install(g, helm, ns, relName, owner)
 				setReleaseStatus(g, helm, ns, relName, release.StatusFailed)
 			},
 		},
 		{
 			name: "release in pending-install state",
 			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
-				install(g, helm, chartDir, ns, relName, owner)
+				install(g, helm, ns, relName, owner)
 				setReleaseStatus(g, helm, ns, relName, release.StatusPendingInstall)
 			},
 		},
 		{
 			name: "release in pending-upgrade state",
 			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
-				install(g, helm, chartDir, ns, relName, owner)
-				upgrade(g, helm, chartDir, ns, relName, owner)
+				install(g, helm, ns, relName, owner)
+				upgrade(g, helm, ns, relName, owner)
 				setReleaseStatus(g, helm, ns, relName, release.StatusPendingUpgrade)
 			},
 		},
 		{
 			name: "release in uninstalling state",
 			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
-				install(g, helm, chartDir, ns, relName, owner)
+				install(g, helm, ns, relName, owner)
 				setReleaseStatus(g, helm, ns, relName, release.StatusUninstalling)
 			},
 		},
 		{
 			name: "release in uninstalled state",
 			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
-				install(g, helm, chartDir, ns, relName, owner)
+				install(g, helm, ns, relName, owner)
 				setReleaseStatus(g, helm, ns, relName, release.StatusUninstalled)
 			},
 			wantErrOnInstall:  true,
@@ -111,7 +111,7 @@ var (
 		{
 			name: "release in unknown state",
 			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
-				install(g, helm, chartDir, ns, relName, owner)
+				install(g, helm, ns, relName, owner)
 				setReleaseStatus(g, helm, ns, relName, release.StatusUnknown)
 			},
 			wantErrOnInstall: true,
@@ -119,7 +119,7 @@ var (
 		{
 			name: "release in superseded state",
 			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
-				install(g, helm, chartDir, ns, relName, owner)
+				install(g, helm, ns, relName, owner)
 				setReleaseStatus(g, helm, ns, relName, release.StatusSuperseded)
 			},
 			wantErrOnInstall: true,
@@ -127,7 +127,7 @@ var (
 		{
 			name: "release in pending-rollback state",
 			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
-				install(g, helm, chartDir, ns, relName, owner)
+				install(g, helm, ns, relName, owner)
 				setReleaseStatus(g, helm, ns, relName, release.StatusPendingRollback)
 			},
 		},
@@ -149,7 +149,7 @@ func TestUpgradeOrInstallChart(t *testing.T) {
 				tc.setup(g, cl, helm, ns)
 			}
 
-			rel, err := helm.UpgradeOrInstallChart(ctx, chartDir, Values{"value": "my-value"}, ns, relName, &owner)
+			rel, err := helm.UpgradeOrInstallChart(ctx, chartFS, chartPath, Values{"value": "my-value"}, ns, relName, &owner)
 
 			if tc.wantErrOnInstall {
 				g.Expect(err).To(HaveOccurred())
@@ -205,16 +205,16 @@ func createNamespace(cl client.Client, ns string) error {
 	})
 }
 
-func install(g *WithT, helm *ChartManager, chartDir string, ns string, relName string, owner metav1.OwnerReference) {
-	upgradeOrInstall(g, helm, chartDir, ns, relName, owner)
+func install(g *WithT, helm *ChartManager, ns string, relName string, owner metav1.OwnerReference) {
+	upgradeOrInstall(g, helm, ns, relName, owner)
 }
 
-func upgrade(g *WithT, helm *ChartManager, chartDir string, ns string, relName string, owner metav1.OwnerReference) {
-	upgradeOrInstall(g, helm, chartDir, ns, relName, owner)
+func upgrade(g *WithT, helm *ChartManager, ns string, relName string, owner metav1.OwnerReference) {
+	upgradeOrInstall(g, helm, ns, relName, owner)
 }
 
-func upgradeOrInstall(g *WithT, helm *ChartManager, chartDir string, ns string, relName string, owner metav1.OwnerReference) {
-	_, err := helm.UpgradeOrInstallChart(ctx, chartDir, Values{"value": "other-value"}, ns, relName, &owner)
+func upgradeOrInstall(g *WithT, helm *ChartManager, ns string, relName string, owner metav1.OwnerReference) {
+	_, err := helm.UpgradeOrInstallChart(ctx, chartFS, chartPath, Values{"value": "other-value"}, ns, relName, &owner)
 	g.Expect(err).ToNot(HaveOccurred())
 }
 

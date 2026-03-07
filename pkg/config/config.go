@@ -15,6 +15,7 @@
 package config
 
 import (
+	"io/fs"
 	"strings"
 
 	"github.com/magiconair/properties"
@@ -34,7 +35,7 @@ type IstioImageConfig struct {
 }
 
 type ReconcilerConfig struct {
-	ResourceDirectory       string
+	ResourceFS              fs.FS
 	Platform                Platform
 	DefaultProfile          string
 	OperatorNamespace       string
