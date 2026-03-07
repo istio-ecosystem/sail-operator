@@ -44,6 +44,7 @@ func SetupEnv(logWriter io.Writer, installCRDs bool) (*envtest.Environment, clie
 	// disabling mutatingwebhooks to avoid failing calls to the injection webhooks
 	// once we implement mutatingwebhooks in the operator we might have to find another way
 	testEnv.ControlPlane.GetAPIServer().Configure().Append("disable-admission-plugins", "MutatingAdmissionWebhook")
+	testEnv.ControlPlane.GetAPIServer().Configure().Append("advertise-address", "127.0.0.1")
 
 	cfg, err := testEnv.Start()
 	if err != nil || cfg == nil {
