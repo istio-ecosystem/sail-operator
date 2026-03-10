@@ -4,7 +4,7 @@ _internal_defaults_do_not_set:
   # Hub to pull from. Image will be `Hub/Image:Tag-Variant`
   hub: gcr.io/istio-testing
   # Tag to pull from. Image will be `Hub/Image:Tag-Variant`
-  tag: 1.30-alpha.a22c309148e944c8c73b4e2bec9a1c5a18f94bf0
+  tag: 1.30-alpha.222ea3cc6c86b04d0e6285a9c5e62156e8569889
   # Variant to pull. Options are "debug" or "distroless". Unset will use the default for the given version.
   variant: ""
 
