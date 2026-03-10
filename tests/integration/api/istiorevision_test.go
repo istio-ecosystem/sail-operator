@@ -552,6 +552,56 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 		Expect(sa.ImagePullSecrets).To(ContainElement(corev1.LocalObjectReference{Name: "other-pull-secret"}))
 	})
 
+	It("skips reconcile when only caBundle and failurePolicy are updated on MutatingWebhookConfiguration", func() {
+		waitForInFlightReconcileToFinish()
+
+		webhook := &admissionv1.MutatingWebhookConfiguration{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "istio-sidecar-injector-" + revName + "-" + istioNamespace,
+			},
+		}
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(webhook), webhook)).To(Succeed())
+
+		beforeCount := getIstioRevisionReconcileCount(Default)
+
+		By("updating caBundle and failurePolicy on MutatingWebhookConfiguration")
+		for i := range webhook.Webhooks {
+			webhook.Webhooks[i].ClientConfig.CABundle = []byte("new-ca-bundle-data")
+			webhook.Webhooks[i].FailurePolicy = ptr.Of(admissionv1.Fail)
+		}
+		Expect(k8sClient.Update(ctx, webhook)).To(Succeed())
+
+		Consistently(func(g Gomega) {
+			afterCount := getIstioRevisionReconcileCount(g)
+			g.Expect(afterCount).To(Equal(beforeCount))
+		}, 5*time.Second).Should(Succeed(), "IstioRevision was reconciled when it shouldn't have been")
+	})
+
+	It("skips reconcile when only caBundle and failurePolicy are updated on ValidatingWebhookConfiguration", func() {
+		waitForInFlightReconcileToFinish()
+
+		webhook := &admissionv1.ValidatingWebhookConfiguration{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: fmt.Sprintf("istio-validator-%s-%s", revName, istioNamespace),
+			},
+		}
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(webhook), webhook)).To(Succeed())
+
+		beforeCount := getIstioRevisionReconcileCount(Default)
+
+		By("updating caBundle and failurePolicy on ValidatingWebhookConfiguration")
+		for i := range webhook.Webhooks {
+			webhook.Webhooks[i].ClientConfig.CABundle = []byte("new-ca-bundle-data")
+			webhook.Webhooks[i].FailurePolicy = ptr.Of(admissionv1.Fail)
+		}
+		Expect(k8sClient.Update(ctx, webhook)).To(Succeed())
+
+		Consistently(func(g Gomega) {
+			afterCount := getIstioRevisionReconcileCount(g)
+			g.Expect(afterCount).To(Equal(beforeCount))
+		}, 5*time.Second).Should(Succeed(), "IstioRevision was reconciled when it shouldn't have been")
+	})
+
 	DescribeTableSubtree("reconciling when revision is in use",
 		func(name, revision string, nsLabels, podLabels map[string]string) {
 			BeforeAll(func() {
