@@ -2,6 +2,10 @@ name: sailoperator
 deployment:
   name: sail-operator
   annotations:
+    images.v1_28_5.ztunnel: gcr.io/istio-release/ztunnel:1.28.5
+    images.v1_28_5.istiod: gcr.io/istio-release/pilot:1.28.5
+    images.v1_28_5.proxy: gcr.io/istio-release/proxyv2:1.28.5
+    images.v1_28_5.cni: gcr.io/istio-release/install-cni:1.28.5
     images.v1_28_4.ztunnel: gcr.io/istio-release/ztunnel:1.28.4
     images.v1_28_4.istiod: gcr.io/istio-release/pilot:1.28.4
     images.v1_28_4.proxy: gcr.io/istio-release/proxyv2:1.28.4
@@ -22,6 +26,10 @@ deployment:
     images.v1_28_0.istiod: gcr.io/istio-release/pilot:1.28.0
     images.v1_28_0.proxy: gcr.io/istio-release/proxyv2:1.28.0
     images.v1_28_0.cni: gcr.io/istio-release/install-cni:1.28.0
+    images.v1_27_8.ztunnel: gcr.io/istio-release/ztunnel:1.27.8
+    images.v1_27_8.istiod: gcr.io/istio-release/pilot:1.27.8
+    images.v1_27_8.proxy: gcr.io/istio-release/proxyv2:1.27.8
+    images.v1_27_8.cni: gcr.io/istio-release/install-cni:1.27.8
     images.v1_27_7.ztunnel: gcr.io/istio-release/ztunnel:1.27.7
     images.v1_27_7.istiod: gcr.io/istio-release/pilot:1.27.7
     images.v1_27_7.proxy: gcr.io/istio-release/proxyv2:1.27.7
@@ -106,12 +114,14 @@ csv:
     This version of the operator supports the following Istio versions:
 
     - v1.28-latest
+    - v1.28.5
     - v1.28.4
     - v1.28.3
     - v1.28.2
     - v1.28.1
     - v1.28.0
     - v1.27-latest
+    - v1.27.8
     - v1.27.7
     - v1.27.6
     - v1.27.5
