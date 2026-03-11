@@ -120,9 +120,7 @@ func TestApplyZTunnelFipsValues(t *testing.T) {
 			name:        "FIPS enabled",
 			fipsEnabled: true,
 			expectValues: helm.Values{
-				"ztunnel": map[string]any{
-					"env": map[string]any{"TLS12_ENABLED": string("true")},
-				},
+				"env": map[string]any{"TLS12_ENABLED": string("true")},
 			},
 		},
 	}
