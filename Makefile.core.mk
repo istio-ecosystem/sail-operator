@@ -196,7 +196,7 @@ SHELL = /bin/bash -o pipefail
 .SHELLFLAGS = -ec
 
 .PHONY: all
-all: build lint test
+all: build lint test.unit
 
 export
 

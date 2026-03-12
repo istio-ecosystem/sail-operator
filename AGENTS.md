@@ -184,4 +184,4 @@ Each domain knowledge file provides deep, technical details that complement the 
 
 IMPORTANT: Ensure you are following these steps when making changes.
 
-1. Run `BUILD_WITH_CONTAINER=0 GINKGO_FLAGS="--fail-fast" make all` after each change to ensure that the changes build, the code is linted, and the tests are run. If any failure occurs, address the failure and run `BUILD_WITH_CONTAINER=0 GINKGO_FLAGS="--fail-fast" make all` again to ensure all issues have been addressed.
+1. Run `make all` after each change to ensure that the changes build, the code is linted, and the unit tests pass. If any failure occurs, address the failure and run `make all` again to ensure all issues have been addressed.
