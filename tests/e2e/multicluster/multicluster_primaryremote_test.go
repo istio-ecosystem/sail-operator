@@ -222,7 +222,11 @@ values:
 					})
 				})
 
-				When("a revision is no longer in use", func() {
+				// This test ensures that the Sail Operator running on the primary cluster
+				// will not prune old revisions when they manage remote clusters because
+				// the Sail Operator on the primary cluster has no way of checking if
+				// the revision on the primary is still in use by the remote.
+				When("a revision is no longer in use on the primary cluster", func() {
 					BeforeAll(func(ctx SpecContext) {
 						Step("Switching the update strategy to revision based to create a new revision " +
 							"and setting the inactive revision deletion grace period to 0 so that the old revision would normally be deleted.")
@@ -308,6 +312,17 @@ values:
 						list := &v1.IstioRevisionList{}
 						Expect(clPrimary.List(ctx, list)).To(Succeed())
 						Expect(list.Items).To(HaveLen(2))
+					})
+
+					It("keeps the remote revision healthy", func(ctx SpecContext) {
+						list := &v1.IstioRevisionList{}
+						Expect(clRemote.List(ctx, list)).To(Succeed())
+						Expect(list.Items).To(HaveLen(1), "Expected exactly one IstioRevision on the remote cluster")
+
+						rev := list.Items[0]
+						readyCondition := rev.Status.GetCondition(v1.IstioRevisionConditionReady)
+						Expect(readyCondition.Status).To(Equal(metav1.ConditionTrue),
+							fmt.Sprintf("Remote IstioRevision %q is not Ready: %s", rev.Name, readyCondition.Message))
 					})
 				})
 
