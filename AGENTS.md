@@ -75,6 +75,7 @@ CONTAINER_CLI=podman DOCKER_GID=0 make deploy
 ## Custom Resources
 
 ### Primary Resources
+
 - **Istio**: Main resource representing a control plane
 - **IstioRevision**: Represents a specific control plane deployment
 - **IstioRevisionTag**: Tags for managing active revisions
@@ -82,6 +83,7 @@ CONTAINER_CLI=podman DOCKER_GID=0 make deploy
 - **ZTunnel**: Ambient mesh tunnel configuration
 
 ### Resource Relationships
+
 - `Istio` creates and manages `IstioRevision`
 - `IstioRevisionTag` points to an `Istio` or `IstioRevision` resource
 - Ambient mode requires `Istio` + `IstioCNI` + `ZTunnel`
@@ -103,6 +105,7 @@ CONTAINER_CLI=podman DOCKER_GID=0 make deploy
 ## Common Operations
 
 ### Adding New API Fields
+
 1. Modify types in `api/`
 2. Run `make gen` to generate CRDs
 3. Update controllers in `controllers/`
@@ -110,6 +113,7 @@ CONTAINER_CLI=podman DOCKER_GID=0 make deploy
 5. Create SEP for significant changes
 
 ### Debugging
+
 - Use `make run` to run operator locally
 - Check controller logs for reconciliation issues
 - Use `kubectl describe` on custom resources for events
@@ -117,6 +121,7 @@ CONTAINER_CLI=podman DOCKER_GID=0 make deploy
 ## Vendor Considerations
 
 The project supports downstream vendors with custom configurations:
+
 - Vendor-specific changes should be configuration-based, not code changes
 - Use `VERSIONS_YAML_FILE` environment variable for custom version files
 - Modify `vendor_defaults.yaml` for vendor-specific Helm defaults
@@ -148,6 +153,7 @@ The project supports downstream vendors with custom configurations:
 ## Integration with Istio
 
 The operator deploys Istio using Helm charts and follows Istio's configuration patterns:
+
 - Uses official Istio Helm charts
 - Supports all standard Istio configuration via `values` field
 - Manages Istio lifecycle (install, upgrade, uninstall)
@@ -158,15 +164,24 @@ The operator deploys Istio using Helm charts and follows Istio's configuration p
 For detailed technical knowledge about specific areas of the Sail Operator, refer to these domain-specific documents:
 
 ### API and Resource Management
+
 - **[API Types and CRDs](.agents/knowledge/domain-knowledge-api-types.md)** - Detailed knowledge about Custom Resource Definitions, API types, validation rules, and resource relationships
 - **[Controllers Architecture](.agents/knowledge/domain-knowledge-controllers.md)** - Controller reconciliation patterns, error handling, debugging, and inter-controller communication
 
 ### Development and Operations
+
 - **[Helm Integration](.agents/knowledge/domain-knowledge-helm-integration.md)** - Chart management, values processing, platform customization, and troubleshooting
 - **[Testing Framework](.agents/knowledge/domain-knowledge-testing-framework.md)** - Unit/integration/E2E testing methodologies, utilities, and best practices
 - **[Version Management](.agents/knowledge/domain-knowledge-version-management.md)** - Version compatibility, upgrade strategies, chart management, and troubleshooting
 
 ### Creating New Domain Knowledge
+
 - **[Domain Knowledge Creation Guide](.agents/domain_knowledge_prompt.md)** - Template and guidelines for creating new domain knowledge files
 
 Each domain knowledge file provides deep, technical details that complement the high-level guidance in this document. Use them for specific implementation questions and detailed understanding of system behavior.
+
+## Code Quality
+
+IMPORTANT: Ensure you are following these steps when making changes.
+
+1. Run `make all` after each change to ensure that the changes build, the code is linted, and the unit tests pass. If any failure occurs, address the failure and run `make all` again to ensure all issues have been addressed.
