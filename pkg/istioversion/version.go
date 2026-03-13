@@ -84,6 +84,16 @@ func Resolve(version string) (string, error) {
 	return info.Name, nil
 }
 
+// IsEOLVersion returns true if the version is known but has been marked end-of-life.
+func IsEOLVersion(version string) bool {
+	for _, eolVersion := range EOL {
+		if eolVersion == version {
+			return true
+		}
+	}
+	return false
+}
+
 func init() {
 	// we can't use ldflags when running tests, use an env variable instead
 	// tmp workaround for https://github.com/golang/go/issues/64246

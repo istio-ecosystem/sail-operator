@@ -82,6 +82,7 @@ versions:
 	assert.Equal(t, "v0.1", eolVersions[0])
 
 	Map = versionMap
+	EOL = eolVersions
 	resolved, err := Resolve("latest")
 	assert.NoError(t, err)
 	assert.Equal(t, "v2.0.0", resolved)
@@ -89,6 +90,10 @@ versions:
 	resolved, err = Resolve("nonexistent-version")
 	assert.Error(t, err)
 	assert.Equal(t, "", resolved)
+
+	assert.True(t, IsEOLVersion("v0.1"))
+	assert.False(t, IsEOLVersion("nonexistent-version"))
+	assert.False(t, IsEOLVersion("v1.0.0"))
 }
 
 func TestParseVersionsYaml_SingleVersion(t *testing.T) {
