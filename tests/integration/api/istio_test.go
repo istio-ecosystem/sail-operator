@@ -534,7 +534,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 				}
 				Expect(k8sClient.Create(ctx, istio, &client.CreateOptions{})).To(Succeed())
 				Eventually(getObject).WithArguments(ctx, k8sClient, istioKey, istio).
-					Should(HaveConditionMessage(v1.IstioConditionReconciled, "failed to resolve Istio version"))
+					Should(HaveConditionMessage(v1.IstioConditionReconciled, "is end-of-life and cannot be installed"))
 			})
 		})
 	})
