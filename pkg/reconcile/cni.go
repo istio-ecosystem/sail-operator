@@ -70,6 +70,9 @@ func (r *CNIReconciler) Validate(ctx context.Context, version, namespace string)
 func (r *CNIReconciler) ComputeValues(version string, userValues *v1.CNIValues, profile string) (helm.Values, error) {
 	resolvedVersion, err := istioversion.Resolve(version)
 	if err != nil {
+		if istioversion.IsEOLVersion(version) {
+			return nil, reconciler.NewValidationError(fmt.Sprintf("version %q is end-of-life and cannot be installed; use a supported version", version))
+		}
 		return nil, fmt.Errorf("failed to resolve CNI version: %w", err)
 	}
 

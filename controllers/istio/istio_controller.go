@@ -123,6 +123,9 @@ func validate(istio *v1.Istio) error {
 func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1.Istio) error {
 	version, err := istioversion.Resolve(istio.Spec.Version)
 	if err != nil {
+		if istioversion.IsEOLVersion(istio.Spec.Version) {
+			return reconciler.NewValidationError(fmt.Sprintf("version %q is end-of-life and cannot be installed; use a supported version", istio.Spec.Version))
+		}
 		return fmt.Errorf("failed to resolve Istio version for %q: %w", istio.Name, err)
 	}
 	values, err := revision.ComputeValues(
