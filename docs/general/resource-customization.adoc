@@ -73,7 +73,7 @@ metadata:
 In this example, we will add the annotation to a `MutatingWebhookConfiguration` and then modify it without the changes being reverted by Sail Operator:
 
 . Add the annotation to the webhook configuration:
-
++
 [source,bash]
 ----
 kubectl annotate mutatingwebhookconfiguration \
@@ -83,7 +83,7 @@ kubectl annotate mutatingwebhookconfiguration \
 ----
 
 . Verify the annotation was added:
-
++
 [source,bash]
 ----
 kubectl get mutatingwebhookconfiguration \
@@ -91,16 +91,16 @@ kubectl get mutatingwebhookconfiguration \
   -n istio-system \
   -o jsonpath='{.metadata.annotations.sailoperator\.io/ignore}'
 ----
-
++
 Expected output:
-
++
 [source,console]
 ----
 true
 ----
 
 . Check the value of the field you want to modify:
-
++
 [source,bash]
 ----
 kubectl get mutatingwebhookconfiguration \
@@ -108,16 +108,16 @@ kubectl get mutatingwebhookconfiguration \
   -n istio-system \
   -o jsonpath='{.metadata.labels.app}'
 ----
-
++
 Expected output:
-
++
 [source,console]
 ----
 sidecar-injector
 ----
 
 . Now you can modify the webhook and the changes will persist:
-
++
 [source,bash]
 ----
 kubectl patch mutatingwebhookconfiguration \
@@ -128,7 +128,7 @@ kubectl patch mutatingwebhookconfiguration \
 ----
 
 . Verify the change persisted:
-
++
 [source,bash]
 ----
 kubectl get mutatingwebhookconfiguration \
@@ -136,9 +136,9 @@ kubectl get mutatingwebhookconfiguration \
   -n istio-system \
   -o jsonpath='{.metadata.labels.app}'
 ----
-
++
 Expected output:
-
++
 [source,console]
 ----
 sidecar-injector-test
@@ -196,7 +196,7 @@ Common resources include:
 Here is the technical implementation:
 
 * **Predicate Function**: `pkg/predicate/predicate.go:IgnoreUpdateWhenAnnotation()`
-* **Integration Test**: `tests/integration/api/istiorevision_test.go:565`
-* **Documentation**: This annotation was introduced in commit `2543fb8`
+* **Integration Test**: `tests/integration/api/istiorevision_test.go`
+* **Documentation**: This annotation was introduced in commit https://github.com/istio-ecosystem/sail-operator/commit/2543fb8[2543fb8]
 
 The implementation uses a controller-runtime predicate that filters UPDATE events based on the annotation value, preventing them from triggering reconciliation.
