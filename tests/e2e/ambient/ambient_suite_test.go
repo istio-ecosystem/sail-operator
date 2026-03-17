@@ -39,6 +39,7 @@ var (
 	expectedRegistry      = env.Get("EXPECTED_REGISTRY", "^docker\\.io|^gcr\\.io")
 	multicluster          = env.GetBool("MULTICLUSTER", false)
 	keepOnFailure         = env.GetBool("KEEP_ON_FAILURE", false)
+	fipsCluster           = env.GetBool("FIPS_CLUSTER", false)
 
 	k kubectl.Kubectl
 )
