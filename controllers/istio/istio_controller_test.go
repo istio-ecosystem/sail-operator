@@ -17,6 +17,7 @@ package istio
 import (
 	"context"
 	"fmt"
+	"os"
 	"runtime/debug"
 	"strings"
 	"testing"
@@ -1091,7 +1092,7 @@ func noWrites(t *testing.T) interceptor.Funcs {
 
 func newReconcilerTestConfig(t *testing.T) config.ReconcilerConfig {
 	return config.ReconcilerConfig{
-		ResourceDirectory:       t.TempDir(),
+		ResourceFS:              os.DirFS(t.TempDir()),
 		Platform:                config.PlatformKubernetes,
 		DefaultProfile:          "",
 		MaxConcurrentReconciles: 1,

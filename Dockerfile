@@ -14,7 +14,6 @@ ARG TARGETOS TARGETARCH
 COPY --from=packager /output /
 
 ADD out/${TARGETOS:-linux}_${TARGETARCH:-amd64}/sail-operator /sail-operator
-ADD resources /var/lib/sail-operator/resources
 
 USER 65532:65532
 WORKDIR /

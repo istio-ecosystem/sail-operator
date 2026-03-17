@@ -15,6 +15,7 @@
 package revision
 
 import (
+	"io/fs"
 	"testing"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
@@ -26,7 +27,7 @@ import (
 
 // mockComputeValues returns the input values without any computation
 // this simulates what ComputeValues would do but without requiring actual files
-func mockComputeValues(values *v1.Values, _, _ string, platform config.Platform, defaultProfile, userProfile, _, _ string) (*v1.Values, error) {
+func mockComputeValues(values *v1.Values, _, _ string, platform config.Platform, defaultProfile, userProfile string, _ fs.FS, _ string) (*v1.Values, error) {
 	if values == nil {
 		values = &v1.Values{}
 	}

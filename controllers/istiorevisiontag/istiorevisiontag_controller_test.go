@@ -17,6 +17,7 @@ package istiorevisiontag
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -277,7 +278,7 @@ func TestDetermineInUseCondition(t *testing.T) {
 
 func newReconcilerTestConfig(t *testing.T) config.ReconcilerConfig {
 	return config.ReconcilerConfig{
-		ResourceDirectory:       t.TempDir(),
+		ResourceFS:              os.DirFS(t.TempDir()),
 		Platform:                config.PlatformKubernetes,
 		DefaultProfile:          "",
 		MaxConcurrentReconciles: 1,
