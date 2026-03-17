@@ -51,6 +51,11 @@ var _ = Describe("Ambient configuration ", Label("smoke", "ambient"), Ordered, f
 				continue
 			}
 
+			// FIPS clusters do not support ambient mode for versions below 1.28
+			if fipsCluster && version.Version.LessThan(semver.MustParse("1.28.0")) {
+				continue
+			}
+
 			Context(fmt.Sprintf("Istio version %s", version.Version), func() {
 				clr := cleaner.New(cl)
 				BeforeAll(func(ctx SpecContext) {
