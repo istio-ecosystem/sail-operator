@@ -15,7 +15,7 @@ require (
 	github.com/magiconair/properties v1.8.9
 	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.39.1
-	github.com/openshift/api v0.0.0-20260213155647-8fe9fe363807
+	github.com/openshift/api v0.0.0-20260317165824-54a3998d81eb
 	github.com/openshift/controller-runtime-common v0.0.0-20260213175913-767fef058eca
 	github.com/prometheus/common v0.66.1
 	github.com/stretchr/testify v1.11.1

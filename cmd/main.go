@@ -250,7 +250,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if reconcilerCfg.Platform == config.PlatformOpenShift {
+	if reconcilerCfg.Platform == config.PlatformOpenShift && tlsProfileSpec != nil {
 		tlsWatcher := &openshifttls.SecurityProfileWatcher{
 			Client:                mgr.GetClient(),
 			InitialTLSProfileSpec: *tlsProfileSpec,
@@ -305,10 +305,40 @@ func fetchTLSProfileFromAPIServer(ctx context.Context, cfg *rest.Config) (*confi
 		return nil, fmt.Errorf("unable to create temporary client: %w", err)
 	}
 
-	spec, err := openshifttls.FetchAPIServerTLSProfile(ctx, tempClient)
+	apiServer := &configv1.APIServer{}
+	if err := tempClient.Get(ctx, client.ObjectKey{Name: openshifttls.APIServerName}, apiServer); err != nil {
+		return nil, fmt.Errorf("unable to fetch APIServer: %w", err)
+	}
+
+	if !shouldHonorClusterTLSProfile(apiServer.Spec.TLSAdherence) {
+		return nil, nil
+	}
+
+	spec, err := openshifttls.GetTLSProfileSpec(apiServer.Spec.TLSSecurityProfile)
 	if err != nil {
-		return nil, fmt.Errorf("unable to fetch APIServer TLS profile: %w", err)
+		return nil, fmt.Errorf("unable to get TLS profile from APIServer: %w", err)
 	}
 
 	return &spec, nil
+}
+
+// TODO: Replace this with the library-go function when it is available.
+// See: https://github.com/openshift/library-go/pull/2114
+
+// shouldHonorClusterTLSProfile returns true if the component should honor the
+// cluster-wide TLS security profile settings from apiserver.config.openshift.io/cluster.
+//
+// When this returns true (StrictAllComponents mode), components must honor the
+// cluster-wide TLS profile unless they have a component-specific TLS configuration
+// that overrides it.
+//
+// Unknown enum values are treated as StrictAllComponents for forward compatibility
+// and to default to the more secure behavior.
+func shouldHonorClusterTLSProfile(tlsAdherence configv1.TLSAdherencePolicy) bool {
+	switch tlsAdherence {
+	case configv1.TLSAdherencePolicyNoOpinion, configv1.TLSAdherencePolicyLegacyAdheringComponentsOnly:
+		return false
+	default:
+		return true
+	}
 }
