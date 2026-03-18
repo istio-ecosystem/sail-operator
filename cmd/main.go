@@ -36,6 +36,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/resources"
 	configv1 "github.com/openshift/api/config/v1"
 	openshifttls "github.com/openshift/controller-runtime-common/pkg/tls"
+	openshiftcrypto "github.com/openshift/library-go/pkg/crypto"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -310,7 +311,7 @@ func fetchTLSProfileFromAPIServer(ctx context.Context, cfg *rest.Config) (*confi
 		return nil, fmt.Errorf("unable to fetch APIServer: %w", err)
 	}
 
-	if !shouldHonorClusterTLSProfile(apiServer.Spec.TLSAdherence) {
+	if !openshiftcrypto.ShouldHonorClusterTLSProfile(apiServer.Spec.TLSAdherence) {
 		return nil, nil
 	}
 
@@ -322,23 +323,3 @@ func fetchTLSProfileFromAPIServer(ctx context.Context, cfg *rest.Config) (*confi
 	return &spec, nil
 }
 
-// TODO: Replace this with the library-go function when it is available.
-// See: https://github.com/openshift/library-go/pull/2114
-
-// shouldHonorClusterTLSProfile returns true if the component should honor the
-// cluster-wide TLS security profile settings from apiserver.config.openshift.io/cluster.
-//
-// When this returns true (StrictAllComponents mode), components must honor the
-// cluster-wide TLS profile unless they have a component-specific TLS configuration
-// that overrides it.
-//
-// Unknown enum values are treated as StrictAllComponents for forward compatibility
-// and to default to the more secure behavior.
-func shouldHonorClusterTLSProfile(tlsAdherence configv1.TLSAdherencePolicy) bool {
-	switch tlsAdherence {
-	case configv1.TLSAdherencePolicyNoOpinion, configv1.TLSAdherencePolicyLegacyAdheringComponentsOnly:
-		return false
-	default:
-		return true
-	}
-}
