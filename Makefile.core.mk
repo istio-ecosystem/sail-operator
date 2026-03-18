@@ -791,6 +791,10 @@ lint-spell: misspell
 misspell: $(LOCALBIN) ## Download misspell to bin directory.
 	@test -s $(LOCALBIN)/misspell || GOBIN=$(LOCALBIN) go install github.com/client9/misspell/cmd/misspell@$(MISSPELL_VERSION)
 
+.PHONY: lint-helm
+lint-helm:
+	@find ./chart ./resources -name 'Chart.yaml' -exec dirname {} \; | xargs -r helm lint
+
 .PHONY: lint
 lint: lint-scripts lint-licenses lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle lint-watches lint-secrets lint-spell ## Run all linters.
 
@@ -806,7 +810,7 @@ git-hook: gitleaks ## Installs gitleaks as a git pre-commit hook.
 
 .SILENT: helm $(HELM) $(LOCALBIN) deploy-yaml gen-api operator-name operator-chart
 
-COMMON_IMPORTS ?= mirror-licenses dump-licenses lint-all lint-licenses lint-scripts lint-copyright-banner lint-go lint-yaml lint-helm format-go tidy-go check-clean-repo update-common
+COMMON_IMPORTS ?= mirror-licenses dump-licenses lint-all lint-licenses lint-scripts lint-copyright-banner lint-go lint-yaml format-go tidy-go check-clean-repo update-common
 .PHONY: $(COMMON_IMPORTS)
 $(COMMON_IMPORTS):
 	@$(MAKE) --no-print-directory -f common/Makefile.common.mk $@
