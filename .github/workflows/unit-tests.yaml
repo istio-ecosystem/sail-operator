@@ -18,4 +18,5 @@ jobs:
       with:
         files: out/coverage-unit.out,out/coverage-integration.out
         token: ${{ secrets.CODECOV_TOKEN }}
+        flags: unit-tests
         fail_ci_if_error: true
