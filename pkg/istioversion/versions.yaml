@@ -269,15 +269,15 @@ versions:
   - name: v1.21.6
     eol: true
   - name: master
-    ref: v1.30-alpha.6fd4e792
-  - name: v1.30-alpha.6fd4e792
-    version: 1.30-alpha.6fd4e792817ad3b246f2e0c378c3976b722536ce
+    ref: v1.30-alpha.3e422319
+  - name: v1.30-alpha.3e422319
+    version: 1.30-alpha.3e42231932825f8b57844ed3313ec5bce3402397
     repo: https://github.com/istio/istio
     branch: master
-    commit: 6fd4e792817ad3b246f2e0c378c3976b722536ce
+    commit: 3e42231932825f8b57844ed3313ec5bce3402397
     charts:
-      - https://storage.googleapis.com/istio-build/dev/1.30-alpha.6fd4e792817ad3b246f2e0c378c3976b722536ce/helm/base-1.30-alpha.6fd4e792817ad3b246f2e0c378c3976b722536ce.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.30-alpha.6fd4e792817ad3b246f2e0c378c3976b722536ce/helm/cni-1.30-alpha.6fd4e792817ad3b246f2e0c378c3976b722536ce.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.30-alpha.6fd4e792817ad3b246f2e0c378c3976b722536ce/helm/gateway-1.30-alpha.6fd4e792817ad3b246f2e0c378c3976b722536ce.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.30-alpha.6fd4e792817ad3b246f2e0c378c3976b722536ce/helm/istiod-1.30-alpha.6fd4e792817ad3b246f2e0c378c3976b722536ce.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.30-alpha.6fd4e792817ad3b246f2e0c378c3976b722536ce/helm/ztunnel-1.30-alpha.6fd4e792817ad3b246f2e0c378c3976b722536ce.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.30-alpha.3e42231932825f8b57844ed3313ec5bce3402397/helm/base-1.30-alpha.3e42231932825f8b57844ed3313ec5bce3402397.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.30-alpha.3e42231932825f8b57844ed3313ec5bce3402397/helm/cni-1.30-alpha.3e42231932825f8b57844ed3313ec5bce3402397.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.30-alpha.3e42231932825f8b57844ed3313ec5bce3402397/helm/gateway-1.30-alpha.3e42231932825f8b57844ed3313ec5bce3402397.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.30-alpha.3e42231932825f8b57844ed3313ec5bce3402397/helm/istiod-1.30-alpha.3e42231932825f8b57844ed3313ec5bce3402397.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.30-alpha.3e42231932825f8b57844ed3313ec5bce3402397/helm/ztunnel-1.30-alpha.3e42231932825f8b57844ed3313ec5bce3402397.tgz
