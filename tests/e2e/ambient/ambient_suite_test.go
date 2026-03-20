@@ -36,7 +36,7 @@ var (
 	istioCniNamespace     = common.IstioCniNamespace
 	ztunnelNamespace      = common.ZtunnelNamespace
 	istioCniName          = env.Get("ISTIOCNI_NAME", "default")
-	expectedRegistry      = env.Get("EXPECTED_REGISTRY", "^docker\\.io|^gcr\\.io")
+	expectedRegistry      = env.Get("EXPECTED_REGISTRY", "^docker\\.io|^gcr\\.io|^registry\\.istio\\.io")
 	multicluster          = env.GetBool("MULTICLUSTER", false)
 	keepOnFailure         = env.GetBool("KEEP_ON_FAILURE", false)
 	fipsCluster           = env.GetBool("FIPS_CLUSTER", false)
