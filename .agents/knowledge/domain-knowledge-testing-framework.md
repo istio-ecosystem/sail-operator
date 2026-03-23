@@ -141,7 +141,7 @@ BUILD_WITH_CONTAINER=0 make test.e2e.kind
 - `GINKGO_FLAGS` - Pass flags to Ginkgo runner
 - `NAMESPACE=sail-operator` - Operator namespace
 - `CONTROL_PLANE_NS=istio-system` - Istio namespace
-- `EXPECTED_REGISTRY=^docker\.io|^gcr\.io` - Expected image registry
+- `EXPECTED_REGISTRY=^docker\.io|^gcr\.io|^registry\.istio\.io` - Expected image registry
 - `KEEP_ON_FAILURE=false` - Keep cluster on test failure
 
 #### Custom Samples
