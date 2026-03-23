@@ -100,12 +100,12 @@ function patchIstioCharts() {
 
 # The charts use docker.io as the default registry, but this leads to issues
 # because of Docker Hub's rate limiting. This function modifies the hub field
-# in all charts to use gcr.io/istio-release instead of docker.io/istio.
-# gcr.io also contains the official images for Istio and they ar an exact match.
-function replaceDockerHubWithGcrIo() {
-  echo "replacing docker.io/istio with gcr.io/istio-release in all charts"
+# in all charts to use registry.istio.io/release instead of docker.io/istio.
+# registry.istio.io also contains the official images for Istio and they are an exact match.
+function replaceDockerHubWithRegistryIstio() {
+  echo "replacing docker.io/istio with registry.istio.io/release in all charts"
 
-  find "${CHARTS_DIR}" -name values.yaml -exec sed -i 's/hub: docker.io\/istio/hub: gcr.io\/istio-release/g' {} \;
+  find "${CHARTS_DIR}" -name values.yaml -exec sed -i 's/hub: docker.io\/istio/hub: registry.istio.io\/release/g' {} \;
 }
 
 function convertIstioProfiles() {
@@ -148,6 +148,6 @@ version: 0.1.0
 
 downloadIstioManifests
 patchIstioCharts
-replaceDockerHubWithGcrIo
+replaceDockerHubWithRegistryIstio
 convertIstioProfiles
 createRevisionTagChart
