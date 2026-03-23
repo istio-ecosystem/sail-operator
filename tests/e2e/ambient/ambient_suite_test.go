@@ -39,7 +39,7 @@ var (
 	ztunnelNamespace      = env.Get("ZTUNNEL_NAMESPACE", "ztunnel")
 	istioCniName          = env.Get("ISTIOCNI_NAME", "default")
 	skipDeploy            = env.GetBool("SKIP_DEPLOY", false)
-	expectedRegistry      = env.Get("EXPECTED_REGISTRY", "^docker\\.io|^gcr\\.io")
+	expectedRegistry      = env.Get("EXPECTED_REGISTRY", "^docker\\.io|^gcr\\.io|^registry\\.istio\\.io")
 	multicluster          = env.GetBool("MULTICLUSTER", false)
 
 	k kubectl.Kubectl
