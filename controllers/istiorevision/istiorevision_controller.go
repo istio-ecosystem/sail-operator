@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"path"
 	"reflect"
-	"regexp"
 
 	"github.com/go-logr/logr"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
@@ -255,8 +254,10 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// cluster-scoped resources
 		Watches(&rbacv1.ClusterRole{}, ownedResourceHandler).
 		Watches(&rbacv1.ClusterRoleBinding{}, ownedResourceHandler).
-		Watches(&admissionv1.MutatingWebhookConfiguration{}, ownedResourceHandler).
-		Watches(&admissionv1.ValidatingWebhookConfiguration{}, ownedResourceHandler, builder.WithPredicates(validatingWebhookConfigPredicate())).
+		Watches(&admissionv1.MutatingWebhookConfiguration{}, ownedResourceHandler,
+			builder.WithPredicates(webhookConfigPredicate())).
+		Watches(&admissionv1.ValidatingWebhookConfiguration{}, ownedResourceHandler,
+			builder.WithPredicates(webhookConfigPredicate())).
 
 		// +lint-watches:ignore: ValidatingAdmissionPolicy (TODO: fix this when CI supports golang 1.22 and k8s 1.30)
 		// +lint-watches:ignore: ValidatingAdmissionPolicyBinding (TODO: fix this when CI supports golang 1.22 and k8s 1.30)
@@ -579,21 +580,21 @@ func specWasUpdated(oldObject client.Object, newObject client.Object) bool {
 	return oldObject.GetGeneration() != newObject.GetGeneration()
 }
 
-func validatingWebhookConfigPredicate() predicate.Funcs {
+func webhookConfigPredicate() predicate.Funcs {
 	return predicate.Funcs{
 		UpdateFunc: func(e event.TypedUpdateEvent[client.Object]) bool {
 			if e.ObjectOld == nil || e.ObjectNew == nil {
 				return false
 			}
 
-			if matched, _ := regexp.MatchString("istiod-.*-validator|istio-validator.*", e.ObjectNew.GetName()); matched {
-				// Istiod updates the caBundle and failurePolicy fields in istiod-<ns>-validator and istio-validator[-<rev>]-<ns>
-				// webhook configs. We must ignore changes to these fields to prevent an endless update loop.
-				clearIgnoredFields(e.ObjectOld)
-				clearIgnoredFields(e.ObjectNew)
-				return !reflect.DeepEqual(e.ObjectNew, e.ObjectOld)
-			}
-			return true
+			// Istiod updates the caBundle and failurePolicy fields in its webhook configs.
+			// We must ignore changes to these fields to prevent an endless update loop.
+			// We must use deep copies to avoid mutating the shared informer cache.
+			oldCopy := e.ObjectOld.DeepCopyObject().(client.Object)
+			newCopy := e.ObjectNew.DeepCopyObject().(client.Object)
+			clearIgnoredFields(oldCopy)
+			clearIgnoredFields(newCopy)
+			return !reflect.DeepEqual(newCopy, oldCopy)
 		},
 	}
 }
@@ -602,9 +603,15 @@ func clearIgnoredFields(obj client.Object) {
 	obj.SetResourceVersion("")
 	obj.SetGeneration(0)
 	obj.SetManagedFields(nil)
-	if webhookConfig, ok := obj.(*admissionv1.ValidatingWebhookConfiguration); ok {
-		for i := 0; i < len(webhookConfig.Webhooks); i++ {
+	switch webhookConfig := obj.(type) {
+	case *admissionv1.ValidatingWebhookConfiguration:
+		for i := range len(webhookConfig.Webhooks) {
 			webhookConfig.Webhooks[i].FailurePolicy = nil
+			webhookConfig.Webhooks[i].ClientConfig.CABundle = nil
+		}
+	case *admissionv1.MutatingWebhookConfiguration:
+		for i := range len(webhookConfig.Webhooks) {
+			webhookConfig.Webhooks[i].ClientConfig.CABundle = nil
 		}
 	}
 }
