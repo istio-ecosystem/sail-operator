@@ -36,9 +36,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/resources"
 	configv1 "github.com/openshift/api/config/v1"
 	openshifttls "github.com/openshift/controller-runtime-common/pkg/tls"
-	openshiftcrypto "github.com/openshift/library-go/pkg/crypto"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -150,29 +148,25 @@ func main() {
 
 	ctx, shutdown := context.WithCancel(ctrl.SetupSignalHandler())
 
-	var tlsProfileSpec *configv1.TLSProfileSpec
 	var tlsConfig *config.TLSConfig
 	if reconcilerCfg.Platform == config.PlatformOpenShift {
-		tlsProfileSpec, err = fetchTLSProfileFromAPIServer(ctx, cfg)
+		// Create a temporary client to fetch the initial TLS settings.
+		// We can't use the manager's client here because the manager hasn't started yet.
+		cl, err := client.New(cfg, client.Options{Scheme: scheme.Scheme})
 		if err != nil {
-			setupLog.Error(err, "unable to fetch TLS profile from APIServer")
+			setupLog.Error(err, "unable to create temporary client")
 			os.Exit(1)
 		}
 
-		if tlsProfileSpec != nil {
-			setupLog.Info("Using TLS config from APIServer", "tlsProfileSpec", tlsProfileSpec)
-			tlsConfigFunc, unsupportedCiphers := openshifttls.NewTLSConfigFromProfile(*tlsProfileSpec)
-			if len(unsupportedCiphers) > 0 {
-				setupLog.Info("Some ciphers from TLS profile are unsupported and will be ignored", "unsupportedCiphers", unsupportedCiphers)
-			}
-			metricsServerTLSOptions = append(metricsServerTLSOptions, tlsConfigFunc)
+		tlsConfig, err = config.NewTLSConfigForOpenShift(ctx, setupLog, cl)
+		if err != nil {
+			setupLog.Error(err, "unable to fetch TLS config")
+			os.Exit(1)
+		}
 
-			// Convert gotls.Config --> config.TLSConfig
-			goTLSConfig := &tls.Config{MinVersion: tls.VersionTLS12}
-			tlsConfigFunc(goTLSConfig)
-			tlsConfig = &config.TLSConfig{
-				CipherSuites: goTLSConfig.CipherSuites,
-			}
+		if tlsConfig.OpenShift != nil && tlsConfig.OpenShift.TLSConfigFunc != nil {
+			setupLog.Info("Using TLS config from APIServer", "tlsProfileSpec", tlsConfig.OpenShift.TLSProfileSpec)
+			metricsServerTLSOptions = append(metricsServerTLSOptions, tlsConfig.OpenShift.TLSConfigFunc)
 		}
 	}
 
@@ -251,14 +245,21 @@ func main() {
 		os.Exit(1)
 	}
 
-	if reconcilerCfg.Platform == config.PlatformOpenShift && tlsProfileSpec != nil {
+	if tlsConfig != nil && tlsConfig.OpenShift != nil {
 		tlsWatcher := &openshifttls.SecurityProfileWatcher{
-			Client:                mgr.GetClient(),
-			InitialTLSProfileSpec: *tlsProfileSpec,
+			Client:                    mgr.GetClient(),
+			InitialTLSProfileSpec:     tlsConfig.OpenShift.TLSProfileSpec,
+			InitialTLSAdherencePolicy: tlsConfig.OpenShift.TLSAdherencePolicy,
 			OnProfileChange: func(ctx context.Context, oldProfile, newProfile configv1.TLSProfileSpec) {
 				setupLog.Info("TLS profile has changed, initiating shutdown to reload configuration",
 					"oldProfile", oldProfile,
 					"newProfile", newProfile)
+				shutdown()
+			},
+			OnAdherencePolicyChange: func(ctx context.Context, oldPolicy, newPolicy configv1.TLSAdherencePolicy) {
+				setupLog.Info("TLS adherence policy has changed, initiating shutdown to reload configuration",
+					"oldPolicy", oldPolicy,
+					"newPolicy", newPolicy)
 				shutdown()
 			},
 		}
@@ -297,29 +298,3 @@ func (rl requestLogger) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 var _ http.RoundTripper = requestLogger{}
-
-func fetchTLSProfileFromAPIServer(ctx context.Context, cfg *rest.Config) (*configv1.TLSProfileSpec, error) {
-	// Create a temporary client to fetch the initial TLS profile.
-	// We can't use the manager's client here because the manager hasn't started yet.
-	tempClient, err := client.New(cfg, client.Options{Scheme: scheme.Scheme})
-	if err != nil {
-		return nil, fmt.Errorf("unable to create temporary client: %w", err)
-	}
-
-	apiServer := &configv1.APIServer{}
-	if err := tempClient.Get(ctx, client.ObjectKey{Name: openshifttls.APIServerName}, apiServer); err != nil {
-		return nil, fmt.Errorf("unable to fetch APIServer: %w", err)
-	}
-
-	if !openshiftcrypto.ShouldHonorClusterTLSProfile(apiServer.Spec.TLSAdherence) {
-		return nil, nil
-	}
-
-	spec, err := openshifttls.GetTLSProfileSpec(apiServer.Spec.TLSSecurityProfile)
-	if err != nil {
-		return nil, fmt.Errorf("unable to get TLS profile from APIServer: %w", err)
-	}
-
-	return &spec, nil
-}
-

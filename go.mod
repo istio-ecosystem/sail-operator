@@ -16,7 +16,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.39.1
 	github.com/openshift/api v0.0.0-20260320151444-324a1bcb9f55
-	github.com/openshift/controller-runtime-common v0.0.0-20260213175913-767fef058eca
+	github.com/openshift/controller-runtime-common v0.0.0-20260318085703-1812aed6dbd2
 	github.com/openshift/library-go v0.0.0-20260318142011-72bf34f474bc
 	github.com/prometheus/common v0.67.5
 	github.com/stretchr/testify v1.11.1
