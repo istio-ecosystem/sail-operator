@@ -170,6 +170,10 @@ type CNIConfig struct {
 	// Specifies if an Istio owned CNI config should be created.
 	IstioOwnedCNIConfig         *bool   `json:"istioOwnedCNIConfig,omitempty"`
 	IstioOwnedCNIConfigFileName *string `json:"istioOwnedCNIConfigFileName,omitempty"`
+	// Specifies whether to use the AppArmor annotation or the appArmorProfile field in the securityContext to configure the profile.
+	// See https://kubernetes.io/docs/tutorials/security/apparmor/
+	// https://kubernetes.io/docs/reference/labels-annotations-taints/#container-apparmor-security-beta-kubernetes-io
+	UseAppArmorAnnotation *bool `json:"useAppArmorAnnotation,omitempty"`
 }
 
 type CNIUsageConfig struct {
@@ -1054,7 +1058,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x05amd64\x18\x01 \x01(\rR\x05amd64\x12\x18\n" +
 	"\appc64le\x18\x02 \x01(\rR\appc64le\x12\x14\n" +
 	"\x05s390x\x18\x03 \x01(\rR\x05s390x\x12\x14\n" +
-	"\x05arm64\x18\x04 \x01(\rR\x05arm64\"\x90\f\n" +
+	"\x05arm64\x18\x04 \x01(\rR\x05arm64\"\xe2\f\n" +
 	"\tCNIConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12\x10\n" +
 	"\x03hub\x18\x02 \x01(\tR\x03hub\x12(\n" +
@@ -1092,7 +1096,8 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\bprovider\x18\x16 \x01(\tR\bprovider\x12Z\n" +
 	"\x15rollingMaxUnavailable\x18\x17 \x01(\v2$.istio.operator.v1alpha1.IntOrStringR\x15rollingMaxUnavailable\x12L\n" +
 	"\x13istioOwnedCNIConfig\x18# \x01(\v2\x1a.google.protobuf.BoolValueR\x13istioOwnedCNIConfig\x12@\n" +
-	"\x1bistioOwnedCNIConfigFileName\x18$ \x01(\tR\x1bistioOwnedCNIConfigFileName\"\x9c\x01\n" +
+	"\x1bistioOwnedCNIConfigFileName\x18$ \x01(\tR\x1bistioOwnedCNIConfigFileName\x12P\n" +
+	"\x15useAppArmorAnnotation\x18% \x01(\v2\x1a.google.protobuf.BoolValueR\x15useAppArmorAnnotation\"\x9c\x01\n" +
 	"\x0eCNIUsageConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x128\n" +
 	"\achained\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueB\x02\x18\x01R\achained\x12\x1a\n" +
