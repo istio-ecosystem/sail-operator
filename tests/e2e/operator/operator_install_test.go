@@ -93,7 +93,7 @@ var _ = Describe("Operator", Label("smoke", "operator"), Ordered, func() {
 		})
 
 		It("serves metrics securely", func(ctx SpecContext) {
-			metricsReaderRoleName := "metrics-reader"
+			metricsReaderRoleName := "sailoperator-metrics-reader"
 			metricsServiceName := deploymentName + "-metrics-service"
 
 			By("creating a ClusterRoleBinding for the service account to allow access to metrics")
@@ -101,7 +101,7 @@ var _ = Describe("Operator", Label("smoke", "operator"), Ordered, func() {
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: metrics-reader-rolebinding
+  name: sailoperator-metrics-reader-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
