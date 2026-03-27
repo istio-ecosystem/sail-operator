@@ -27,7 +27,9 @@ import (
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"helm.sh/helm/v3/pkg/release"
+	"helm.sh/helm/v4/pkg/release"
+	releasecommon "helm.sh/helm/v4/pkg/release/common"
+	releasev1 "helm.sh/helm/v4/pkg/release/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -173,9 +175,13 @@ var _ = Describe("Istio resource", Ordered, func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rel).NotTo(BeNil())
 
-				rel.SetStatus(release.StatusPendingInstall, "pending-install")
+				concreteRel, ok := rel.(*releasev1.Release)
+				Expect(ok).To(BeTrue(), "expected *releasev1.Release, got %T", rel)
+				concreteRel.SetStatus(releasecommon.StatusPendingInstall, "pending-install")
 				Expect(chartManager.UpdateRelease(ctx, istioNamespace, rel)).To(Succeed())
-				lockedRelVer = rel.Version
+				acc, err := release.NewAccessor(rel)
+				Expect(err).NotTo(HaveOccurred())
+				lockedRelVer = acc.Version()
 
 				// trigger a istiorevision updates
 				_, err = controllerutil.CreateOrPatch(ctx, k8sClient, rev, func() error {
@@ -194,8 +200,10 @@ var _ = Describe("Istio resource", Ordered, func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(rel).NotTo(BeNil())
 
-					g.Expect(rel.Info.Status).To(Equal(release.StatusDeployed))
-					g.Expect(rel.Version).To(BeNumerically(">", lockedRelVer))
+					acc, err := release.NewAccessor(rel)
+					Expect(err).NotTo(HaveOccurred())
+					g.Expect(releasecommon.Status(acc.Status())).To(Equal(releasecommon.StatusDeployed))
+					g.Expect(acc.Version()).To(BeNumerically(">", lockedRelVer))
 				}).Should(Succeed())
 			})
 		})
