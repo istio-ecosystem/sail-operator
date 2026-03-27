@@ -252,10 +252,10 @@ _internal_defaults_do_not_set:
 
     # Default hub for Istio images.
     # Releases are published to docker hub under 'istio' project.
-    # Dev builds from prow are on gcr.io
-    hub: gcr.io/istio-testing
+    # Dev builds from prow are on registry.istio.io/testing.
+    hub: registry.istio.io/testing
     # Default tag for Istio images.
-    tag: 1.30-alpha.f48aa0995a564cb2abf434b8c51fd3cb17759544
+    tag: 1.30-alpha.17bbc5a54833f01aadf99d218a0e49e01edd60f8
     # Variant of the image to use.
     # Currently supported are: [debug, distroless]
     variant: ""
