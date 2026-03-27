@@ -296,7 +296,7 @@ if [ "${SKIP_BUILD}" == "false" ]; then
     IMAGE="${HUB}/${IMAGE_BASE}:${TAG}" \
     IMAGE_TAG_BASE="${IMAGE_TAG_BASE}" \
     BUNDLE_IMG="${BUNDLE_IMG}" \
-    OPENSHIFT_PLATFORM="${OCP}" \
+    OCP="${OCP}" \
     make bundle bundle-build bundle-push
 
     if [ "${OCP}" == "false" ]; then
@@ -310,10 +310,7 @@ if [ "${SKIP_BUILD}" == "false" ]; then
       kind export kubeconfig --name="${KIND_CLUSTER_NAME}"
       # shellcheck disable=SC2086
       ${OPERATOR_SDK} olm install ${OLM_INSTALL_ARGS}
-    fi
 
-    # Wait for for the CatalogSource to be CatalogSource.status.connectionState.lastObservedState == READY
-    if [ "${OCP}" == "false" ]; then
       ${COMMAND} wait catalogsource operatorhubio-catalog -n olm --for 'jsonpath={.status.connectionState.lastObservedState}=READY' --timeout=5m
     else
       # On OCP, wait for different CatalogSources as operatorhubio-catalog might not exist
