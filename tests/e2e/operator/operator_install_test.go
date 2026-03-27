@@ -17,13 +17,16 @@
 package operator
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"time"
 
+	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
@@ -31,9 +34,12 @@ import (
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	configv1 "github.com/openshift/api/config/v1"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var sailCRDs = []string{
@@ -56,16 +62,41 @@ var sailCRDs = []string{
 	"workloadgroups.networking.istio.io",
 }
 
+const sailOperatorContainerName = "sail-operator"
+
+var (
+	apiServerKey     = client.ObjectKey{Name: "cluster"}
+	operatorPodLabel = client.MatchingLabels{"control-plane": "sail-operator"}
+
+	// Ciphers match the Intermediate profile from: kubectl explain apiservers.spec.tlsSecurityProfile.intermediate
+	customTLSProfileCiphers = []string{
+		"TLS_AES_128_GCM_SHA256",
+		"TLS_AES_256_GCM_SHA384",
+		"TLS_CHACHA20_POLY1305_SHA256",
+		"ECDHE-ECDSA-AES128-GCM-SHA256",
+		"ECDHE-RSA-AES128-GCM-SHA256",
+		"ECDHE-ECDSA-AES256-GCM-SHA384",
+		"ECDHE-RSA-AES256-GCM-SHA384",
+		"ECDHE-ECDSA-CHACHA20-POLY1305",
+		"ECDHE-RSA-CHACHA20-POLY1305",
+		"DHE-RSA-AES128-GCM-SHA256",
+		"DHE-RSA-AES256-GCM-SHA384",
+		// Add an old cipher to ensure the operator restarts.
+		// Note: it matters which cipher you add because unknown
+		// ciphers are silently dropped by the library-go/crypto package.
+		"AES256-SHA",
+	}
+)
+
 var _ = Describe("Operator", Label("smoke", "operator"), Ordered, func() {
 	SetDefaultEventuallyTimeout(180 * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
+	clr := cleaner.New(cl)
+	BeforeAll(func(ctx SpecContext) {
+		clr.Record(ctx)
+	})
 
 	Describe("installation", func() {
-		clr := cleaner.New(cl)
-		BeforeAll(func(ctx SpecContext) {
-			clr.Record(ctx)
-		})
-
 		It("deploys all the CRDs", func(ctx SpecContext) {
 			Eventually(common.GetList).WithArguments(ctx, cl, &apiextensionsv1.CustomResourceDefinitionList{}).
 				Should(WithTransform(extractCRDNames, ContainElements(sailCRDs)),
@@ -178,23 +209,223 @@ spec:
 				"controller_runtime_reconcile_total",
 			))
 		})
+	})
 
-		AfterAll(func(ctx SpecContext) {
-			if CurrentSpecReport().Failed() && keepOnFailure {
-				return
+	// These tests verify the operator's behavior when the APIServer TLS settings change.
+	// Test 1 runs on all OpenShift clusters. Tests 2 and 3 require OpenShift >= 4.22
+	// because the TLSAdherence field was introduced in 4.22.
+	Describe("TLS profile change", Label("openshift"), func() {
+		var ocpMinorVersion int
+		var ocpMajorVersion int
+
+		BeforeAll(func(ctx SpecContext) {
+			if !env.GetBool("OCP", false) {
+				Skip("Skipping OpenShift-specific tests on non-OpenShift cluster")
 			}
 
-			if CurrentSpecReport().Failed() {
-				common.LogDebugInfo(common.Operator, k)
+			Step("Determining OpenShift version")
+			cv := &configv1.ClusterVersion{}
+			err := cl.Get(ctx, client.ObjectKey{Name: "version"}, cv)
+			Expect(err).NotTo(HaveOccurred(), "Failed to get ClusterVersion")
+			_, err = fmt.Sscanf(cv.Status.Desired.Version, "%d.%d", &ocpMajorVersion, &ocpMinorVersion)
+			Expect(err).NotTo(HaveOccurred(), "Failed to parse ClusterVersion %q", cv.Status.Desired.Version)
+
+			// On OCP 4.22, TLSAdherence is behind a TechPreview feature gate.
+			// Enable it via CustomNoUpgrade so the TLSAdherence field is available on the APIServer CRD.
+			// On OCP > 4.22, the feature gate is GA and does not need to be enabled.
+			// On OCP < 4.22, the TLSAdherence tests are skipped entirely.
+			if ocpMajorVersion == 4 && ocpMinorVersion == 22 {
+				Step("Enabling TLSAdherence feature gate on OCP 4.22")
+				featureGate := &configv1.FeatureGate{}
+				err = cl.Get(ctx, client.ObjectKey{Name: "cluster"}, featureGate)
+				Expect(err).NotTo(HaveOccurred(), "Failed to get FeatureGate")
+
+				if featureGate.Spec.FeatureSet != configv1.CustomNoUpgrade {
+					featureGate.Spec.FeatureSet = configv1.CustomNoUpgrade
+					featureGate.Spec.CustomNoUpgrade = &configv1.CustomFeatureGates{
+						Enabled: []configv1.FeatureGateName{"TLSAdherence"},
+					}
+					err = cl.Update(ctx, featureGate)
+					Expect(err).NotTo(HaveOccurred(), "Failed to enable TLSAdherence feature gate")
+					Success("TLSAdherence feature gate enabled")
+
+					Step("Waiting for kube-apiserver to finish rolling out after feature gate change")
+					Eventually(func(g Gomega) {
+						co := &configv1.ClusterOperator{}
+						g.Expect(cl.Get(ctx, client.ObjectKey{Name: "kube-apiserver"}, co)).To(Succeed())
+						for _, cond := range co.Status.Conditions {
+							if cond.Type == configv1.OperatorProgressing {
+								g.Expect(cond.Status).To(Equal(configv1.ConditionFalse), "kube-apiserver should not be Progressing")
+							}
+						}
+					}).WithTimeout(30*time.Minute).WithPolling(30*time.Second).Should(Succeed(),
+						"kube-apiserver should finish rolling out after enabling feature gate")
+					Success("kube-apiserver is stable after feature gate change")
+
+					Step("Waiting for operator to stabilize after feature gate rollout")
+					Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
+						WithTimeout(5*time.Minute).WithPolling(10*time.Second).
+						Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue),
+							"Operator should be available after feature gate rollout")
+					// Wait for restart count to stabilize
+					restartCount := getOperatorRestartCount(ctx, cl)
+					Consistently(func() int32 { return getOperatorRestartCount(ctx, cl) }).
+						WithTimeout(30*time.Second).WithPolling(5*time.Second).
+						Should(Equal(restartCount), "Operator restart count should stabilize")
+					Success("Operator is stable after feature gate rollout")
+				}
 			}
-			clr.Cleanup(ctx)
+
+			Step("Saving the original APIServer TLS settings")
+			apiServer := &configv1.APIServer{}
+			err = cl.Get(ctx, apiServerKey, apiServer)
+			Expect(err).NotTo(HaveOccurred(), "Failed to get APIServer")
+			var originalTLSProfile *configv1.TLSSecurityProfile
+			if apiServer.Spec.TLSSecurityProfile != nil {
+				originalTLSProfile = apiServer.Spec.TLSSecurityProfile.DeepCopy()
+			}
+			originalTLSAdherence := apiServer.Spec.TLSAdherence
+
+			DeferCleanup(func(ctx SpecContext) {
+				Step("Restoring the original APIServer TLS settings")
+				apiServer := &configv1.APIServer{}
+				err := cl.Get(ctx, apiServerKey, apiServer)
+				Expect(err).NotTo(HaveOccurred(), "Failed to get APIServer")
+				apiServer.Spec.TLSSecurityProfile = originalTLSProfile
+				// TLSAdherence cannot be set back to NoOpinion once set,
+				// so only restore it if the original was a non-empty value.
+				if originalTLSAdherence != configv1.TLSAdherencePolicyNoOpinion {
+					apiServer.Spec.TLSAdherence = originalTLSAdherence
+				}
+				err = cl.Update(ctx, apiServer)
+				Expect(err).NotTo(HaveOccurred(), "Failed to update APIServer TLS settings")
+			})
+		})
+
+		// When TLSAdherence is NoOpinion (empty), TLS profile changes should not
+		// cause the operator to restart. This covers both OpenShift <= 4.21 (where
+		// the TLSAdherence field does not exist) and 4.22+ (where it defaults to
+		// NoOpinion). Runs on all OpenShift versions.
+		// Note: TLSAdherence cannot be set back to NoOpinion once set, so this test
+		// must run first and requires the cluster to have the default NoOpinion state.
+		It("does not restart the operator when TLSSecurityProfile changes and TLSAdherence is NoOpinion", func(ctx SpecContext) {
+			Step("Verifying TLSAdherence is NoOpinion")
+			apiServer := &configv1.APIServer{}
+			err := cl.Get(ctx, apiServerKey, apiServer)
+			Expect(err).NotTo(HaveOccurred())
+			if apiServer.Spec.TLSAdherence != configv1.TLSAdherencePolicyNoOpinion {
+				Skip(fmt.Sprintf("TLSAdherence is already set to %q; cannot reset to NoOpinion. Skipping test.", apiServer.Spec.TLSAdherence))
+			}
+
+			Step("Clearing TLS profile")
+			apiServer.Spec.TLSSecurityProfile = nil
+			err = cl.Update(ctx, apiServer)
+			Expect(err).NotTo(HaveOccurred())
+
+			Step("Waiting for operator to be available")
+			Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
+				Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue))
+
+			initialRestartCount := getOperatorRestartCount(ctx, cl)
+
+			applyCustomTLSProfile(ctx, cl, customTLSProfileCiphers)
+
+			Step("Verifying the operator container is NOT restarted")
+			Consistently(func() int32 { return getOperatorRestartCount(ctx, cl) }).Should(Equal(initialRestartCount),
+				"Operator container should not have been restarted")
+			Success("Operator was not restarted when TLSAdherence is NoOpinion")
+		})
+
+		// Any change to the TLSAdherence field should cause the operator to restart
+		// so it can pick up the new adherence policy.
+		It("restarts the operator when TLSAdherence changes", func(ctx SpecContext) {
+			if ocpMinorVersion < 22 {
+				Skip(fmt.Sprintf("TLSAdherence field requires OpenShift >= 4.22. Current version: '%d.%d'. Skipping test.", ocpMajorVersion, ocpMinorVersion))
+			}
+
+			Step("Waiting for operator to be available")
+			Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
+				Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue))
+
+			initialRestartCount := getOperatorRestartCount(ctx, cl)
+
+			Step("Changing TLSAdherence to StrictAllComponents")
+			apiServer := &configv1.APIServer{}
+			err := cl.Get(ctx, apiServerKey, apiServer)
+			Expect(err).NotTo(HaveOccurred(), "Failed to get APIServer")
+			apiServer.Spec.TLSAdherence = configv1.TLSAdherencePolicyStrictAllComponents
+			err = cl.Update(ctx, apiServer)
+			Expect(err).NotTo(HaveOccurred(), "Failed to update APIServer TLSAdherence")
+
+			Step("Verifying the operator container is restarted")
+			Eventually(func() int32 { return getOperatorRestartCount(ctx, cl) }).Should(Equal(initialRestartCount+1),
+				"Operator container should have been restarted after TLSAdherence change")
+			Success("Operator was restarted after TLSAdherence change")
+
+			Step("Verifying the operator is available after restart")
+			Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
+				Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue))
+			Success("Operator is available after TLSAdherence change")
+		})
+
+		// When TLSAdherence is StrictAllComponents, TLS profile changes should
+		// cause the operator to restart so it can apply the new TLS configuration.
+		It("restarts the operator when TLSSecurityProfile changes and TLSAdherence is StrictAllComponents", func(ctx SpecContext) {
+			if ocpMinorVersion < 22 {
+				Skip(fmt.Sprintf("TLSAdherence field requires OpenShift >= 4.22. Current version: '%d.%d'. Skipping test.", ocpMajorVersion, ocpMinorVersion))
+			}
+
+			// TLSAdherence should already be StrictAllComponents from test 2.
+			// Verify this, then set the profile to Intermediate so we have a known
+			// baseline before switching to a custom profile with different ciphers.
+			Step("Verifying TLSAdherence is StrictAllComponents")
+			apiServer := &configv1.APIServer{}
+			err := cl.Get(ctx, apiServerKey, apiServer)
+			Expect(err).NotTo(HaveOccurred(), "Failed to get APIServer")
+			Expect(apiServer.Spec.TLSAdherence).To(Equal(configv1.TLSAdherencePolicyStrictAllComponents),
+				"TLSAdherence should be StrictAllComponents from test 2")
+
+			Step("Setting Intermediate profile and waiting for operator to stabilize")
+			apiServer.Spec.TLSSecurityProfile = &configv1.TLSSecurityProfile{
+				Type:         configv1.TLSProfileIntermediateType,
+				Intermediate: &configv1.IntermediateTLSProfile{},
+			}
+			err = cl.Update(ctx, apiServer)
+			Expect(err).NotTo(HaveOccurred(), "Failed to update APIServer")
+
+			// The profile change may trigger a restart. Wait for the operator
+			// to become available, then verify the restart count has stabilized.
+			Step("Waiting for operator to be available")
+			Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
+				Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue))
+			initialRestartCount := getOperatorRestartCount(ctx, cl)
+			Consistently(func() int32 { return getOperatorRestartCount(ctx, cl) }).Should(Equal(initialRestartCount),
+				"Operator restart count should stabilize before proceeding")
+
+			Step("Applying a custom TLS profile to trigger operator restart")
+			applyCustomTLSProfile(ctx, cl, customTLSProfileCiphers)
+
+			Step("Verifying the operator container is restarted")
+			Eventually(func() int32 { return getOperatorRestartCount(ctx, cl) }).Should(Equal(initialRestartCount+1),
+				"Operator container should have been restarted after TLS profile change")
+			Success("Operator was restarted after TLS profile change")
+
+			Step("Verifying the operator is available after restart")
+			Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(deploymentName, namespace), &appsv1.Deployment{}).
+				Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue))
+			Success("Operator is available after TLS profile change")
 		})
 	})
 
 	AfterAll(func(ctx SpecContext) {
+		if CurrentSpecReport().Failed() && keepOnFailure {
+			return
+		}
+
 		if CurrentSpecReport().Failed() {
 			common.LogDebugInfo(common.Operator, k)
 		}
+		clr.Cleanup(ctx)
 	})
 })
 
@@ -262,4 +493,42 @@ type tokenRequest struct {
 	Status struct {
 		Token string `json:"token"`
 	} `json:"status"`
+}
+
+func getOperatorRestartCount(ctx context.Context, cl client.Client) int32 {
+	GinkgoHelper()
+	podList := &corev1.PodList{}
+	err := cl.List(ctx, podList, client.InNamespace(namespace), operatorPodLabel)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(podList.Items).NotTo(BeEmpty(), "Operator pod should exist")
+	podIdx := slices.IndexFunc(podList.Items, func(pod corev1.Pod) bool {
+		return pod.Status.Phase == corev1.PodRunning
+	})
+	Expect(podIdx).NotTo(Equal(-1), "Operator pod should be running")
+	runningPod := &podList.Items[podIdx]
+	containerIdx := slices.IndexFunc(runningPod.Status.ContainerStatuses, func(cs corev1.ContainerStatus) bool {
+		return cs.Name == sailOperatorContainerName
+	})
+	Expect(containerIdx).NotTo(Equal(-1), "Operator container should be present")
+	return runningPod.Status.ContainerStatuses[containerIdx].RestartCount
+}
+
+func applyCustomTLSProfile(ctx context.Context, cl client.Client, ciphers []string) {
+	GinkgoHelper()
+	Step("Applying a Custom TLS profile")
+	apiServer := &configv1.APIServer{}
+	err := cl.Get(ctx, apiServerKey, apiServer)
+	Expect(err).NotTo(HaveOccurred(), "Failed to get APIServer")
+	apiServer.Spec.TLSSecurityProfile = &configv1.TLSSecurityProfile{
+		Type: configv1.TLSProfileCustomType,
+		Custom: &configv1.CustomTLSProfile{
+			TLSProfileSpec: configv1.TLSProfileSpec{
+				Ciphers:       ciphers,
+				MinTLSVersion: configv1.VersionTLS12,
+			},
+		},
+	}
+	err = cl.Update(ctx, apiServer)
+	Expect(err).NotTo(HaveOccurred(), "Failed to update APIServer with custom TLS profile")
+	Success("Applied Custom TLS profile to APIServer")
 }
