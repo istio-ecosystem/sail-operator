@@ -5,11 +5,11 @@ metadata:
   labels:
     app.kubernetes.io/component: kube-rbac-proxy
     app.kubernetes.io/created-by: sailoperator
-    app.kubernetes.io/instance: metrics-reader
+    app.kubernetes.io/instance: sailoperator-metrics-reader
     app.kubernetes.io/managed-by: helm
     app.kubernetes.io/name: clusterrole
     app.kubernetes.io/part-of: sailoperator
-  name: metrics-reader
+  name: sailoperator-metrics-reader
 rules:
 - nonResourceURLs:
   - /metrics
