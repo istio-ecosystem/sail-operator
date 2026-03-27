@@ -2,9 +2,9 @@
 # For instance, instead of `--set _internal_defaults_do_not_set.foo=bar``, just set `--set foo=bar`.
 _internal_defaults_do_not_set:
   # Hub to pull from. Image will be `Hub/Image:Tag-Variant`
-  hub: gcr.io/istio-testing
+  hub: registry.istio.io/testing
   # Tag to pull from. Image will be `Hub/Image:Tag-Variant`
-  tag: 1.30-alpha.f48aa0995a564cb2abf434b8c51fd3cb17759544
+  tag: 1.30-alpha.17bbc5a54833f01aadf99d218a0e49e01edd60f8
   # Variant to pull. Options are "debug" or "distroless". Unset will use the default for the given version.
   variant: ""
 
