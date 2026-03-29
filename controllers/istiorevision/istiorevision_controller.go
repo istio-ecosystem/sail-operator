@@ -28,19 +28,14 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
-	predicate2 "github.com/istio-ecosystem/sail-operator/pkg/predicate"
 	sharedreconcile "github.com/istio-ecosystem/sail-operator/pkg/reconcile"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/revision"
 	"github.com/istio-ecosystem/sail-operator/pkg/validation"
+	"github.com/istio-ecosystem/sail-operator/pkg/watches"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
-	discoveryv1 "k8s.io/api/discovery/v1"
-	networkingv1 "k8s.io/api/networking/v1"
-	policyv1 "k8s.io/api/policy/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -49,10 +44,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"istio.io/istio/pkg/ptr"
@@ -258,7 +251,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// or if it's owned by an Endpoints object which in turn is owned by an IstioRevision.
 	endpointSliceHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapEndpointSliceToReconcileRequests))
 
-	return ctrl.NewControllerManagedBy(mgr).
+	b := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
 			LogConstructor: func(req *reconcile.Request) logr.Logger {
 				log := logger
@@ -270,61 +263,24 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 			MaxConcurrentReconciles: r.Config.MaxConcurrentReconciles,
 		}).
 		// we use the Watches function instead of For(), so that we can wrap the handler so that events that cause the object to be enqueued are logged
-		// +lint-watches:ignore: IstioRevision (not found in charts, but this is the main resource watched by this controller)
 		Watches(&v1.IstioRevision{}, mainObjectHandler).
-		Named("istiorevision").
+		Named("istiorevision")
 
-		// namespaced resources
-		Watches(&corev1.ConfigMap{}, ownedResourceHandler, builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
-		// We don't ignore the status for Deployments because we use it to calculate the IstioRevision status
-		Watches(&appsv1.Deployment{}, ownedResourceHandler, builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
-		// +lint-watches:ignore: Endpoints (older versions of istiod chart create Endpoints for remote installs, but this controller watches EndpointSlices)
-		// +lint-watches:ignore: EndpointSlice (istiod chart creates Endpoints for remote installs, but this controller watches EndpointSlices)
-		Watches(&discoveryv1.EndpointSlice{}, endpointSliceHandler, builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
-		Watches(&corev1.Service{}, ownedResourceHandler,
-			builder.WithPredicates(ignoreStatusChange(), predicate2.IgnoreUpdateWhenAnnotation())).
+	// Register watches for all chart-produced resource types.
+	// EndpointSlice uses a different handler; all others use ownedResourceHandler.
+	handlerOverrides := map[string]handler.EventHandler{
+		"EndpointSlice": endpointSliceHandler,
+	}
+	watches.RegisterOwnedWatches(b, watches.IstiodWatches, ownedResourceHandler, handlerOverrides)
 
-		// +lint-watches:ignore: NetworkPolicy (FIXME: NetworkPolicy has not yet been added upstream, but is WIP)
-		Watches(&networkingv1.NetworkPolicy{}, ownedResourceHandler,
-			builder.WithPredicates(ignoreStatusChange(), predicate2.IgnoreUpdateWhenAnnotation())).
-
-		// We use predicate.IgnoreUpdate() so that we skip the reconciliation when a pull secret is added to the ServiceAccount.
-		// This is necessary so that we don't remove the newly-added secret.
-		// TODO: this is a temporary hack until we implement the correct solution on the Helm-render side
-		Watches(&corev1.ServiceAccount{}, ownedResourceHandler, builder.WithPredicates(predicate2.IgnoreUpdate())).
-		Watches(&rbacv1.Role{}, ownedResourceHandler, builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
-		Watches(&rbacv1.RoleBinding{}, ownedResourceHandler, builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
-		Watches(&policyv1.PodDisruptionBudget{}, ownedResourceHandler,
-			builder.WithPredicates(ignoreStatusChange(), predicate2.IgnoreUpdateWhenAnnotation())).
-		Watches(&autoscalingv2.HorizontalPodAutoscaler{}, ownedResourceHandler,
-			builder.WithPredicates(ignoreStatusChange(), predicate2.IgnoreUpdateWhenAnnotation())).
-
-		// +lint-watches:ignore: Namespace (not found in charts, but must be watched to reconcile IstioRevision when its namespace is created)
-		Watches(&corev1.Namespace{}, nsHandler, builder.WithPredicates(ignoreStatusChange()), builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
-
-		// +lint-watches:ignore: Pod (not found in charts, but must be watched to reconcile IstioRevision when a pod references it)
-		Watches(&corev1.Pod{}, podHandler, builder.WithPredicates(ignoreStatusChange(), predicate2.IgnoreUpdateWhenAnnotation())).
-
-		// +lint-watches:ignore: IstioRevisionTag (not found in charts, but must be watched to reconcile IstioRevision when a pod references it)
+	return b.
+		// Non-chart watches: these resources are not produced by Helm charts but
+		// must be watched for controller-specific reasons.
+		Watches(&corev1.Namespace{}, nsHandler, builder.WithPredicates(watches.IgnoreAnnotation(), watches.AsPredicate(watches.IgnoreStatusChanges()))).
+		Watches(&corev1.Pod{}, podHandler, builder.WithPredicates(watches.IgnoreAnnotation(), watches.AsPredicate(watches.IgnoreStatusChanges()))).
 		Watches(&v1.IstioRevisionTag{}, revisionTagHandler).
-
-		// cluster-scoped resources
-		Watches(&rbacv1.ClusterRole{}, ownedResourceHandler, builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
-		Watches(&rbacv1.ClusterRoleBinding{}, ownedResourceHandler, builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
-		Watches(&admissionv1.MutatingWebhookConfiguration{}, ownedResourceHandler,
-			builder.WithPredicates(webhookConfigPredicate(), predicate2.IgnoreUpdateWhenAnnotation())).
-		Watches(&admissionv1.ValidatingWebhookConfiguration{}, ownedResourceHandler,
-			builder.WithPredicates(webhookConfigPredicate(), predicate2.IgnoreUpdateWhenAnnotation())).
-
-		// +lint-watches:ignore: IstioCNI (not found in charts, but this controller needs to watch it to update the IstioRevision status)
 		Watches(&v1.IstioCNI{}, istioCniHandler).
-
-		// +lint-watches:ignore: ZTunnel (not found in charts, but this controller needs to watch it to update the IstioRevision status)
 		Watches(&v1.ZTunnel{}, ztunnelHandler).
-
-		// +lint-watches:ignore: ValidatingAdmissionPolicy (TODO: fix this when CI supports golang 1.22 and k8s 1.30)
-		// +lint-watches:ignore: ValidatingAdmissionPolicyBinding (TODO: fix this when CI supports golang 1.22 and k8s 1.30)
-		// +lint-watches:ignore: CustomResourceDefinition (prevents `make lint-watches` from bugging us about CRDs)
 		Complete(reconciler.NewStandardReconcilerWithFinalizer[*v1.IstioRevision](r.Client, r.Reconcile, r.Finalize, constants.FinalizerName))
 }
 
@@ -710,71 +666,6 @@ func (r *Reconciler) mapZTunnelToReconcileRequests(ctx context.Context, _ client
 		}
 	}
 	return reqs
-}
-
-// ignoreStatusChange returns a predicate that ignores watch events where only the resource status changes; if
-// there are any other changes to the resource, the event is not ignored.
-// This ensures that the controller doesn't reconcile the entire IstioRevision every time the status of an owned
-// resource is updated. Without this predicate, the controller would continuously reconcile the IstioRevision
-// because the status.currentMetrics of the HorizontalPodAutoscaler object was updated.
-func ignoreStatusChange() predicate.Funcs {
-	return predicate.Funcs{
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			return specWasUpdated(e.ObjectOld, e.ObjectNew) ||
-				!reflect.DeepEqual(e.ObjectNew.GetLabels(), e.ObjectOld.GetLabels()) ||
-				!reflect.DeepEqual(e.ObjectNew.GetAnnotations(), e.ObjectOld.GetAnnotations()) ||
-				!reflect.DeepEqual(e.ObjectNew.GetOwnerReferences(), e.ObjectOld.GetOwnerReferences()) ||
-				!reflect.DeepEqual(e.ObjectNew.GetFinalizers(), e.ObjectOld.GetFinalizers())
-		},
-	}
-}
-
-func specWasUpdated(oldObject client.Object, newObject client.Object) bool {
-	// for HPAs, k8s doesn't set metadata.generation, so we actually have to check whether the spec was updated
-	if oldHpa, ok := oldObject.(*autoscalingv2.HorizontalPodAutoscaler); ok {
-		if newHpa, ok := newObject.(*autoscalingv2.HorizontalPodAutoscaler); ok {
-			return !reflect.DeepEqual(oldHpa.Spec, newHpa.Spec)
-		}
-	}
-
-	// for other resources, comparing the metadata.generation suffices
-	return oldObject.GetGeneration() != newObject.GetGeneration()
-}
-
-func webhookConfigPredicate() predicate.Funcs {
-	return predicate.Funcs{
-		UpdateFunc: func(e event.TypedUpdateEvent[client.Object]) bool {
-			if e.ObjectOld == nil || e.ObjectNew == nil {
-				return false
-			}
-
-			// Istiod updates the caBundle and failurePolicy fields in its webhook configs.
-			// We must ignore changes to these fields to prevent an endless update loop.
-			// We must use deep copies to avoid mutating the shared informer cache.
-			oldCopy := e.ObjectOld.DeepCopyObject().(client.Object)
-			newCopy := e.ObjectNew.DeepCopyObject().(client.Object)
-			clearIgnoredFields(oldCopy)
-			clearIgnoredFields(newCopy)
-			return !reflect.DeepEqual(newCopy, oldCopy)
-		},
-	}
-}
-
-func clearIgnoredFields(obj client.Object) {
-	obj.SetResourceVersion("")
-	obj.SetGeneration(0)
-	obj.SetManagedFields(nil)
-	switch webhookConfig := obj.(type) {
-	case *admissionv1.ValidatingWebhookConfiguration:
-		for i := range len(webhookConfig.Webhooks) {
-			webhookConfig.Webhooks[i].FailurePolicy = nil
-			webhookConfig.Webhooks[i].ClientConfig.CABundle = nil
-		}
-	case *admissionv1.MutatingWebhookConfiguration:
-		for i := range len(webhookConfig.Webhooks) {
-			webhookConfig.Webhooks[i].ClientConfig.CABundle = nil
-		}
-	}
 }
 
 func wrapEventHandler(logger logr.Logger, handler handler.EventHandler) handler.EventHandler {
