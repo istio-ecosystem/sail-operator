@@ -70,10 +70,10 @@ deployment:
     images.v1_27_0.istiod: registry.istio.io/release/pilot:1.27.0
     images.v1_27_0.proxy: registry.istio.io/release/proxyv2:1.27.0
     images.v1_27_0.cni: registry.istio.io/release/install-cni:1.27.0
-    images.v1_30-alpha_d9ada8aa.ztunnel: registry.istio.io/testing/ztunnel:1.30-alpha.d9ada8aa419ebc88620a6087ae56383768a1eb2c
-    images.v1_30-alpha_d9ada8aa.istiod: registry.istio.io/testing/pilot:1.30-alpha.d9ada8aa419ebc88620a6087ae56383768a1eb2c
-    images.v1_30-alpha_d9ada8aa.proxy: registry.istio.io/testing/proxyv2:1.30-alpha.d9ada8aa419ebc88620a6087ae56383768a1eb2c
-    images.v1_30-alpha_d9ada8aa.cni: registry.istio.io/testing/install-cni:1.30-alpha.d9ada8aa419ebc88620a6087ae56383768a1eb2c
+    images.v1_30-alpha_fa0ac38c.ztunnel: registry.istio.io/testing/ztunnel:1.30-alpha.fa0ac38c00f96785fadfa88858f5a2dd2a820c94
+    images.v1_30-alpha_fa0ac38c.istiod: registry.istio.io/testing/pilot:1.30-alpha.fa0ac38c00f96785fadfa88858f5a2dd2a820c94
+    images.v1_30-alpha_fa0ac38c.proxy: registry.istio.io/testing/proxyv2:1.30-alpha.fa0ac38c00f96785fadfa88858f5a2dd2a820c94
+    images.v1_30-alpha_fa0ac38c.cni: registry.istio.io/testing/install-cni:1.30-alpha.fa0ac38c00f96785fadfa88858f5a2dd2a820c94
 revisionHistoryLimit: 10
 service:
   port: 8443
@@ -110,7 +110,7 @@ csv:
     - v1.27.1
     - v1.27.0
     - master
-    - v1.30-alpha.d9ada8aa
+    - v1.30-alpha.fa0ac38c
 
     [See this page](https://github.com/istio-ecosystem/sail-operator/blob/main/bundle/README.md) for instructions on how to use it.
   support: Community based
