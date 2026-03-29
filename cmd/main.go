@@ -160,7 +160,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	chartManager := helm.NewChartManager(mgr.GetConfig(), os.Getenv("HELM_DRIVER"))
+	chartManager := helm.NewChartManager(mgr.GetConfig(), os.Getenv("HELM_DRIVER"),
+		helm.WithFieldIgnoreRules(istiorevision.DefaultFieldIgnoreRules))
 
 	reconcilerCfg.Platform, err = config.DetectPlatform(mgr.GetConfig())
 	if err != nil {

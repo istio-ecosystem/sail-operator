@@ -16,14 +16,13 @@ package helm
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"strings"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
+	"github.com/istio-ecosystem/sail-operator/pkg/fieldignore"
 	"gopkg.in/yaml.v3"
 	"helm.sh/helm/v3/pkg/postrender"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -37,22 +36,27 @@ const (
 // NewHelmPostRenderer creates a Helm PostRenderer that adds the following to each rendered manifest:
 // - adds the "managed-by" label with the given managedByValue
 // - adds the specified OwnerReference
-// It also removes the failurePolicy field from ValidatingWebhookConfigurations on updates, so
-// the in-cluster setting stays as-is, to prevent clashing with the istiod validation controller.
-func NewHelmPostRenderer(ownerReference *metav1.OwnerReference, ownerNamespace string, isUpdate bool, managedByValue string) postrender.PostRenderer {
+// It also removes fields from rendered manifests according to the provided FieldIgnoreRules.
+// Rules with OnlyOnUpdate=true are only applied when isUpdate is true, allowing Helm to set the
+// initial value on install but preserving in-cluster values on upgrade.
+func NewHelmPostRenderer(ownerReference *metav1.OwnerReference, ownerNamespace string, isUpdate bool,
+	managedByValue string, fieldIgnoreRules []fieldignore.FieldIgnoreRule,
+) postrender.PostRenderer {
 	return HelmPostRenderer{
-		ownerReference: ownerReference,
-		ownerNamespace: ownerNamespace,
-		isUpdate:       isUpdate,
-		managedByValue: managedByValue,
+		ownerReference:   ownerReference,
+		ownerNamespace:   ownerNamespace,
+		isUpdate:         isUpdate,
+		managedByValue:   managedByValue,
+		fieldIgnoreRules: fieldIgnoreRules,
 	}
 }
 
 type HelmPostRenderer struct {
-	ownerReference *metav1.OwnerReference
-	ownerNamespace string
-	isUpdate       bool
-	managedByValue string
+	ownerReference   *metav1.OwnerReference
+	ownerNamespace   string
+	isUpdate         bool
+	managedByValue   string
+	fieldIgnoreRules []fieldignore.FieldIgnoreRule
 }
 
 var _ postrender.PostRenderer = HelmPostRenderer{}
@@ -86,56 +90,13 @@ func (pr HelmPostRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifes
 			return nil, err
 		}
 
-		// Strip ValidatingWebhookConfiguration webhooks[].failurePolicy field if we're upgrading,
-		// to avoid overwriting the value set in-cluster by the istiod validation controller. On
-		// initial install we still want to set the field per the Helm template.
-		if pr.isUpdate {
-			manifest, err = pr.removeValidatingWebhookFailurePolicy(manifest)
-			if err != nil {
-				return nil, fmt.Errorf("error removing ValidatingWebhookConfiguration failurePolicy: %v", err)
-			}
-		}
+		fieldignore.RemoveFieldsFromManifest(manifest, pr.fieldIgnoreRules, pr.isUpdate)
 
 		if err := encoder.Encode(manifest); err != nil {
 			return nil, err
 		}
 	}
 	return modifiedManifests, nil
-}
-
-func (pr HelmPostRenderer) removeValidatingWebhookFailurePolicy(manifest map[string]any) (map[string]any, error) {
-	apiVersion, _, _ := unstructured.NestedString(manifest, "apiVersion")
-	if apiVersion != admissionregistrationv1.SchemeGroupVersion.String() {
-		return manifest, nil
-	}
-	kind, _, _ := unstructured.NestedString(manifest, "kind")
-	if kind != "ValidatingWebhookConfiguration" {
-		return manifest, nil
-	}
-
-	webhooksAny, found, err := unstructured.NestedFieldNoCopy(manifest, "webhooks")
-	if err != nil {
-		return nil, err
-	}
-	if !found {
-		return manifest, nil
-	}
-
-	webhooks, ok := webhooksAny.([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("expected webhooks to be []interface{}, got %T", webhooksAny)
-	}
-
-	for _, webhookAny := range webhooks {
-		webhook, ok := webhookAny.(map[string]any)
-		if !ok {
-			return nil, fmt.Errorf("expected webhook to be map[string]interface{}, got %T", webhookAny)
-		}
-
-		delete(webhook, "failurePolicy")
-	}
-
-	return manifest, nil
 }
 
 func (pr HelmPostRenderer) addOwnerReference(manifest map[string]any) (map[string]any, error) {
