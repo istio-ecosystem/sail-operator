@@ -34,42 +34,6 @@ deployment:
     images.v1_28_0.istiod: registry.istio.io/release/pilot:1.28.0
     images.v1_28_0.proxy: registry.istio.io/release/proxyv2:1.28.0
     images.v1_28_0.cni: registry.istio.io/release/install-cni:1.28.0
-    images.v1_27_8.ztunnel: registry.istio.io/release/ztunnel:1.27.8
-    images.v1_27_8.istiod: registry.istio.io/release/pilot:1.27.8
-    images.v1_27_8.proxy: registry.istio.io/release/proxyv2:1.27.8
-    images.v1_27_8.cni: registry.istio.io/release/install-cni:1.27.8
-    images.v1_27_7.ztunnel: registry.istio.io/release/ztunnel:1.27.7
-    images.v1_27_7.istiod: registry.istio.io/release/pilot:1.27.7
-    images.v1_27_7.proxy: registry.istio.io/release/proxyv2:1.27.7
-    images.v1_27_7.cni: registry.istio.io/release/install-cni:1.27.7
-    images.v1_27_6.ztunnel: registry.istio.io/release/ztunnel:1.27.6
-    images.v1_27_6.istiod: registry.istio.io/release/pilot:1.27.6
-    images.v1_27_6.proxy: registry.istio.io/release/proxyv2:1.27.6
-    images.v1_27_6.cni: registry.istio.io/release/install-cni:1.27.6
-    images.v1_27_5.ztunnel: registry.istio.io/release/ztunnel:1.27.5
-    images.v1_27_5.istiod: registry.istio.io/release/pilot:1.27.5
-    images.v1_27_5.proxy: registry.istio.io/release/proxyv2:1.27.5
-    images.v1_27_5.cni: registry.istio.io/release/install-cni:1.27.5
-    images.v1_27_4.ztunnel: registry.istio.io/release/ztunnel:1.27.4
-    images.v1_27_4.istiod: registry.istio.io/release/pilot:1.27.4
-    images.v1_27_4.proxy: registry.istio.io/release/proxyv2:1.27.4
-    images.v1_27_4.cni: registry.istio.io/release/install-cni:1.27.4
-    images.v1_27_3.ztunnel: registry.istio.io/release/ztunnel:1.27.3
-    images.v1_27_3.istiod: registry.istio.io/release/pilot:1.27.3
-    images.v1_27_3.proxy: registry.istio.io/release/proxyv2:1.27.3
-    images.v1_27_3.cni: registry.istio.io/release/install-cni:1.27.3
-    images.v1_27_2.ztunnel: registry.istio.io/release/ztunnel:1.27.2
-    images.v1_27_2.istiod: registry.istio.io/release/pilot:1.27.2
-    images.v1_27_2.proxy: registry.istio.io/release/proxyv2:1.27.2
-    images.v1_27_2.cni: registry.istio.io/release/install-cni:1.27.2
-    images.v1_27_1.ztunnel: registry.istio.io/release/ztunnel:1.27.1
-    images.v1_27_1.istiod: registry.istio.io/release/pilot:1.27.1
-    images.v1_27_1.proxy: registry.istio.io/release/proxyv2:1.27.1
-    images.v1_27_1.cni: registry.istio.io/release/install-cni:1.27.1
-    images.v1_27_0.ztunnel: registry.istio.io/release/ztunnel:1.27.0
-    images.v1_27_0.istiod: registry.istio.io/release/pilot:1.27.0
-    images.v1_27_0.proxy: registry.istio.io/release/proxyv2:1.27.0
-    images.v1_27_0.cni: registry.istio.io/release/install-cni:1.27.0
     images.v1_30-alpha_fa0ac38c.ztunnel: registry.istio.io/testing/ztunnel:1.30-alpha.fa0ac38c00f96785fadfa88858f5a2dd2a820c94
     images.v1_30-alpha_fa0ac38c.istiod: registry.istio.io/testing/pilot:1.30-alpha.fa0ac38c00f96785fadfa88858f5a2dd2a820c94
     images.v1_30-alpha_fa0ac38c.proxy: registry.istio.io/testing/proxyv2:1.30-alpha.fa0ac38c00f96785fadfa88858f5a2dd2a820c94
@@ -99,16 +63,6 @@ csv:
     - v1.28.2
     - v1.28.1
     - v1.28.0
-    - v1.27-latest
-    - v1.27.8
-    - v1.27.7
-    - v1.27.6
-    - v1.27.5
-    - v1.27.4
-    - v1.27.3
-    - v1.27.2
-    - v1.27.1
-    - v1.27.0
     - master
     - v1.30-alpha.fa0ac38c
 
