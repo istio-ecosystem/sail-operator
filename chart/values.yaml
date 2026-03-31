@@ -191,5 +191,3 @@ operator:
       memory: 64Mi
 # setting this to true will add resources required to generate the bundle using operator-sdk
 bundleGeneration: false
-# can be either kubernetes or openshift
-platform: kubernetes
