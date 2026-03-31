@@ -1095,7 +1095,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `kind` _string_ | Kind is the kind of the target resource. |  | MaxLength: 253  MinLength: 1  Required: \{\}   |
+| `kind` _string_ | Kind is the kind of the target resource. |  | Enum: [Istio IstioRevision]  Required: \{\}   |
 | `name` _string_ | Name is the name of the target resource. |  | MaxLength: 253  MinLength: 1  Required: \{\}   |
 
 
