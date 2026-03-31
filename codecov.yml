@@ -1,5 +1,29 @@
+codecov:
+  notify:
+    require_ci_to_pass: no
+
+comment:
+  behavior: default
+  require_changes: false
+
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 5%  # Allow coverage to drop by 5% without failing
+        informational: false
+    patch:
+      default:
+        target: 80%
+        threshold: 0%
+        informational: false
+
 ignore:
   - "api"
+  - "bundle"
+  - "docs"
   - "hack"
+  - "licenses"
   - "tools"
   - "tests/**"
