@@ -102,10 +102,6 @@ parse_flags() {
 
   if [ "${OLM}" == "true" ]; then
     echo "OLM deployment enabled"
-    if [ "${OCP}" == "true" ]; then
-      echo "Skipping operator deployment using OLM on OCP clusters due to certificate issues with the internal registry."
-      exit 1
-    fi
   fi
 }
 
@@ -125,6 +121,7 @@ initialize_variables() {
   ISTIO_MANIFEST="chart/samples/istio-sample.yaml"
   CI=${CI:-"false"}
   USE_INTERNAL_REGISTRY=${USE_INTERNAL_REGISTRY:-"false"}
+  FIPS_CLUSTER=${FIPS_CLUSTER:-"false"}
 
   # Debug logging and fallback for GINKGO_FLAGS
   echo "CI environment: ${CI}"
@@ -298,22 +295,26 @@ if [ "${SKIP_BUILD}" == "false" ]; then
     IMAGE="${HUB}/${IMAGE_BASE}:${TAG}" \
     IMAGE_TAG_BASE="${IMAGE_TAG_BASE}" \
     BUNDLE_IMG="${BUNDLE_IMG}" \
-    OPENSHIFT_PLATFORM=false \
+    OCP="${OCP}" \
     make bundle bundle-build bundle-push
 
-    # Install OLM in the cluster because it's not available by default in kind.
-    OLM_INSTALL_ARGS=""
-    if [ "${OLM_VERSION}" != "" ]; then
-      OLM_INSTALL_ARGS+="--version ${OLM_VERSION}"
+    if [ "${OCP}" == "false" ]; then
+      # Install OLM in the cluster because it's not available by default in kind.
+      OLM_INSTALL_ARGS=""
+      if [ "${OLM_VERSION}" != "" ]; then
+        OLM_INSTALL_ARGS+="--version ${OLM_VERSION}"
+      fi
+
+      # Ensure kubeconfig is set to the kind cluster
+      kind export kubeconfig --name="${KIND_CLUSTER_NAME}"
+      # shellcheck disable=SC2086
+      ${OPERATOR_SDK} olm install ${OLM_INSTALL_ARGS}
+
+      ${COMMAND} wait catalogsource operatorhubio-catalog -n olm --for 'jsonpath={.status.connectionState.lastObservedState}=READY' --timeout=5m
+    else
+      # On OCP, wait for different CatalogSources as operatorhubio-catalog might not exist
+      ${COMMAND} wait catalogsource redhat-operators -n openshift-marketplace --for 'jsonpath={.status.connectionState.lastObservedState}=READY' --timeout=5m || true
     fi
-
-    # Ensure kubeconfig is set to the kind cluster
-    kind export kubeconfig --name="${KIND_CLUSTER_NAME}"
-    # shellcheck disable=SC2086
-    ${OPERATOR_SDK} olm install ${OLM_INSTALL_ARGS}
-
-    # Wait for for the CatalogSource to be CatalogSource.status.connectionState.lastObservedState == READY
-    ${COMMAND} wait catalogsource operatorhubio-catalog -n olm --for 'jsonpath={.status.connectionState.lastObservedState}=READY' --timeout=5m
 
     ${COMMAND} create ns "${NAMESPACE}" || true
     ${OPERATOR_SDK} run bundle "${BUNDLE_IMG}" -n "${NAMESPACE}" --skip-tls --timeout 5m || exit 1
