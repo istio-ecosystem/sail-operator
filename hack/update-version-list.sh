@@ -49,24 +49,22 @@ function updateVersionsInIstioTypeComment() {
       api/v1/istiorevision_types.go
 
     # Ambient mode in Sail Operator is supported starting with Istio version 1.24+
-    # TODO: Once support for versions prior to 1.24 is discontinued, we can merge the ztunnel specific changes below with the other components.
-    ztunnelselectValues=$(yq '.versions[] | select(.version >= "1.24.0" or .ref >= "v1.24.0") | ", \"urn:alm:descriptor:com.tectonic.ui:select:" + .name + "\""' "${VERSIONS_YAML_PATH}" | tr -d '\n')
-    ztunnelversionsEnum=$(yq '.versions[] | select(.version >= "1.24.0" or .ref >= "v1.24.0") | .name' "${VERSIONS_YAML_PATH}" | tr '\n' ';' | sed 's/;$//g')
-    ztunnelversions=$(yq '.versions[] | select(.version >= "1.24.0" or .ref >= "v1.24.0") | .name' "${VERSIONS_YAML_PATH}" | tr '\n' ',' | sed -e 's/,/, /g' -e 's/, $//g')
+    # Filter out versions prior to 1.24 from the versionsEnum by removing v1.21.x, v1.22.x, v1.23.x entries
+    ztunnelversionsEnum=$(echo "$versionsEnum" | sed -E 's/v1\.(21|22|23)[^;]*;?//g; s/;+/;/g; s/^;//; s/;$//')
 
     sed -i -E \
-      -e "/\+sail:version/,/Version string/ s/(\/\/ \+operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName=\"Istio Version\",xDescriptors=\{.*fieldGroup:General\")[^}]*(})/\1$ztunnelselectValues}/g" \
+      -e "/\+sail:version/,/Version string/ s/(\/\/ \+operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName=\"Istio Version\",xDescriptors=\{.*fieldGroup:General\")[^}]*(})/\1$selectValues}/g" \
       -e "/\+sail:version/,/Version string/ s/(\/\/ \+kubebuilder:validation:Enum=)(.*)/\1$ztunnelversionsEnum/g" \
       -e "/\+sail:version/,/Version string/ s/(\/\/ \+kubebuilder:default=)(.*)/\1$defaultVersion/g" \
-      -e "/\+sail:version/,/Version string/ s/(\/\/ \Must be one of:)(.*)/\1 $ztunnelversions./g" \
+      -e "/\+sail:version/,/Version string/ s/(\/\/ \Must be one of:)(.*)/\1 $versions./g" \
       -e "s/(\+kubebuilder:default=.*version: \")[^\"]*\"/\1$defaultVersion\"/g" \
       api/v1alpha1/ztunnel_types.go
 
     sed -i -E \
-      -e "/\+sail:version/,/Version string/ s/(\/\/ \+operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName=\"Istio Version\",xDescriptors=\{.*fieldGroup:General\")[^}]*(})/\1$ztunnelselectValues}/g" \
+      -e "/\+sail:version/,/Version string/ s/(\/\/ \+operator-sdk:csv:customresourcedefinitions:type=spec,order=1,displayName=\"Istio Version\",xDescriptors=\{.*fieldGroup:General\")[^}]*(})/\1$selectValues}/g" \
       -e "/\+sail:version/,/Version string/ s/(\/\/ \+kubebuilder:validation:Enum=)(.*)/\1$ztunnelversionsEnum/g" \
       -e "/\+sail:version/,/Version string/ s/(\/\/ \+kubebuilder:default=)(.*)/\1$defaultVersion/g" \
-      -e "/\+sail:version/,/Version string/ s/(\/\/ \Must be one of:)(.*)/\1 $ztunnelversions./g" \
+      -e "/\+sail:version/,/Version string/ s/(\/\/ \Must be one of:)(.*)/\1 $versions./g" \
       -e "s/(\+kubebuilder:default=.*version: \")[^\"]*\"/\1$defaultVersion\"/g" \
       api/v1/ztunnel_types.go
 }
@@ -106,7 +104,8 @@ function updateVersionInSamples() {
       -e "s/version: .*/version: $defaultVersion/g" \
       chart/samples/istio-sample.yaml chart/samples/istiocni-sample.yaml chart/samples/istio-sample-gw-api.yaml \
       chart/samples/istio-sample-revisionbased.yaml chart/samples/ambient/istiocni-sample.yaml \
-      chart/samples/ambient/istio-sample.yaml  chart/samples/ambient/istioztunnel-sample.yaml
+      chart/samples/ambient/istio-sample.yaml chart/samples/ambient/istioztunnel-sample.yaml \
+      chart/samples/ztunnel-sample.yaml
 }
 
 updateVersionsInIstioTypeComment
