@@ -20,17 +20,42 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
+	"github.com/istio-ecosystem/sail-operator/pkg/fieldignore"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// defaultTestRules replicates the built-in field ignore rules used in production.
+var defaultTestRules = []fieldignore.FieldIgnoreRule{
+	{
+		Group:        "admissionregistration.k8s.io",
+		Version:      "v1",
+		Kind:         "ValidatingWebhookConfiguration",
+		Fields:       []string{"webhooks[*].failurePolicy"},
+		OnlyOnUpdate: true,
+	},
+	{
+		Group:   "admissionregistration.k8s.io",
+		Version: "v1",
+		Kind:    "ValidatingWebhookConfiguration",
+		Fields:  []string{"webhooks[*].clientConfig.caBundle"},
+	},
+	{
+		Group:   "admissionregistration.k8s.io",
+		Version: "v1",
+		Kind:    "MutatingWebhookConfiguration",
+		Fields:  []string{"webhooks[*].clientConfig.caBundle"},
+	},
+}
+
 func TestHelmPostRenderer(t *testing.T) {
 	testCases := []struct {
-		name           string
-		ownerReference *metav1.OwnerReference
-		ownerNamespace string
-		isUpdate       bool
-		input          string
-		expected       string
+		name             string
+		ownerReference   *metav1.OwnerReference
+		ownerNamespace   string
+		isUpdate         bool
+		fieldIgnoreRules []fieldignore.FieldIgnoreRule
+		input            string
+		expected         string
 	}{
 		{
 			name: "cluster-scoped owner",
@@ -222,9 +247,10 @@ spec:
 `,
 		},
 		{
-			name:           "ValidatingWebhookConfiguration create",
-			ownerReference: nil,
-			ownerNamespace: "",
+			name:             "ValidatingWebhookConfiguration create",
+			ownerReference:   nil,
+			ownerNamespace:   "",
+			fieldIgnoreRules: defaultTestRules,
 			input: `apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
@@ -245,10 +271,11 @@ webhooks:
 `,
 		},
 		{
-			name:           "ValidatingWebhookConfiguration update",
-			ownerReference: nil,
-			ownerNamespace: "",
-			isUpdate:       true,
+			name:             "ValidatingWebhookConfiguration update",
+			ownerReference:   nil,
+			ownerNamespace:   "",
+			isUpdate:         true,
+			fieldIgnoreRules: defaultTestRules,
 			input: `apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
@@ -265,6 +292,67 @@ metadata:
   name: istio-validator
 webhooks:
   - name: rev.validation.istio.io
+`,
+		},
+		{
+			name:             "ValidatingWebhookConfiguration strips caBundle on install",
+			ownerReference:   nil,
+			ownerNamespace:   "",
+			fieldIgnoreRules: defaultTestRules,
+			input: `apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: istio-validator
+webhooks:
+- name: rev.validation.istio.io
+  failurePolicy: Fail
+  clientConfig:
+    caBundle: c29tZS1jYS1idW5kbGU=
+    service:
+      name: istiod
+`,
+			expected: `apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  labels:
+    managed-by: sail-operator
+  name: istio-validator
+webhooks:
+  - clientConfig:
+      service:
+        name: istiod
+    failurePolicy: Fail
+    name: rev.validation.istio.io
+`,
+		},
+		{
+			name:             "MutatingWebhookConfiguration strips caBundle on update",
+			ownerReference:   nil,
+			ownerNamespace:   "",
+			isUpdate:         true,
+			fieldIgnoreRules: defaultTestRules,
+			input: `apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: istio-sidecar-injector
+webhooks:
+- name: rev.namespace.sidecar-injector.istio.io
+  clientConfig:
+    caBundle: c29tZS1jYS1idW5kbGU=
+    service:
+      name: istiod
+`,
+			expected: `apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  labels:
+    managed-by: sail-operator
+  name: istio-sidecar-injector
+webhooks:
+  - clientConfig:
+      service:
+        name: istiod
+    name: rev.namespace.sidecar-injector.istio.io
 `,
 		},
 		{
@@ -306,10 +394,11 @@ spec:
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			postRenderer := HelmPostRenderer{
-				ownerReference: tc.ownerReference,
-				ownerNamespace: tc.ownerNamespace,
-				isUpdate:       tc.isUpdate,
-				managedByValue: constants.ManagedByLabelValue,
+				ownerReference:   tc.ownerReference,
+				ownerNamespace:   tc.ownerNamespace,
+				isUpdate:         tc.isUpdate,
+				managedByValue:   constants.ManagedByLabelValue,
+				fieldIgnoreRules: tc.fieldIgnoreRules,
 			}
 
 			actual, err := postRenderer.Run(bytes.NewBufferString(tc.input))
