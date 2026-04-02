@@ -16,65 +16,76 @@
 
 set -euo pipefail
 
-check_watches() {
-    # path to the controller implementation
-    controllerPath=$1
+# Validates that the static watch lists in pkg/watches/ match the resource
+# kinds produced by the Helm charts in resources/. Each watch list file
+# contains typed object prototypes (e.g. &corev1.ConfigMap{}) whose Go type
+# name matches the Kubernetes Kind.
+
+check_watchlist() {
+    # path to the watch list Go file (e.g. pkg/watches/istiod.go)
+    watchlistPath=$1
     shift
     # space-separated list of file path patterns indicating which Helm charts to inspect
     chartPaths="$*"
+
+    echo "--- Checking $watchlistPath ---"
 
     # Find kinds in charts
     # shellcheck disable=SC2086
     read -r -a chartKinds <<< "$(grep -rEo "^kind: ([A-Za-z0-9]+)" --no-filename $chartPaths | sed -e 's/^kind: //g' | sort | uniq | tr '\n' ' ')"
     echo "Kinds in charts: ${chartKinds[*]}"
 
-    # Find watched kinds in istiorevision_controller.go
-    read -r -a watchedKinds <<< "$(grep -Eo "(Owns|Watches)\\((.*)" "$controllerPath" | sed 's/.*&[^.]*\.\([^{}]*\).*/\1/' | sort | uniq | tr '\n' ' ')"
-    echo "Watched kinds: ${watchedKinds[*]}"
+    # Extract kinds from the watch list by parsing typed object prototypes (e.g. &corev1.ConfigMap{})
+    read -r -a watchlistKinds <<< "$(grep -Eo '&\w+\.\w+\{\}' "$watchlistPath" | sed 's/&[a-zA-Z0-9]*\.\([A-Za-z0-9]*\){}/\1/' | sort | uniq | tr '\n' ' ')"
+    echo "Watch list kinds: ${watchlistKinds[*]}"
 
-    # Find ignored kinds in istiorevision_controller.go
-    read -r -a ignoredKinds <<< "$(sed -n 's/.*\+lint-watches:ignore:\s*\(\w*\).*/\1/p' "$controllerPath" | sort | uniq | tr '\n' ' ')"
-    echo "Ignored kinds: ${ignoredKinds[*]}"
+    # Find ignored kinds
+    local ignoredKinds=()
+    if grep -q '+lint-watches:ignore' "$watchlistPath"; then
+        read -r -a ignoredKinds <<< "$(sed -n 's/.*\+lint-watches:ignore:\s*\(\w*\).*/\1/p' "$watchlistPath" | sort | uniq | tr '\n' ' ')"
+        echo "Ignored kinds: ${ignoredKinds[*]}"
+    fi
 
-    # Check for missing and unnecessary watches
-    local unwatched_kinds=()
+    # Check for chart kinds missing from the watch list
+    local missing_kinds=()
     for kind in "${chartKinds[@]}"; do
         # shellcheck disable=SC2076
-        if [[ ! " ${watchedKinds[*]} ${ignoredKinds[*]} " =~ " $kind " ]]; then
-            unwatched_kinds+=("$kind")
+        if [[ ! " ${watchlistKinds[*]} ${ignoredKinds[*]} " =~ " $kind " ]]; then
+            missing_kinds+=("$kind")
         fi
     done
 
-    local unneeded_watches=()
-    for kind in "${watchedKinds[@]}"; do
+    # Check for watch list entries not in charts
+    local extra_kinds=()
+    for kind in "${watchlistKinds[@]}"; do
         # shellcheck disable=SC2076
         if [[ ! " ${chartKinds[*]} ${ignoredKinds[*]} " =~ " $kind " ]]; then
-            unneeded_watches+=("$kind")
+            extra_kinds+=("$kind")
         fi
     done
 
-    # Print unwatched kinds, if any
-    if [[ ${#unwatched_kinds[@]} -gt 0 ]]; then
-        printf "FAIL: The following kinds aren't watched in %s:\n" "$controllerPath"
-        for kind in "${unwatched_kinds[@]}"; do
+    if [[ ${#missing_kinds[@]} -gt 0 ]]; then
+        printf "FAIL: The following chart kinds are missing from %s:\n" "$watchlistPath"
+        for kind in "${missing_kinds[@]}"; do
             printf "  - %s\n" "$kind"
         done
         exit 1
     else
-        printf "%s watches all kinds found in Helm charts.\n" "$controllerPath"
+        printf "%s covers all kinds found in Helm charts.\n" "$watchlistPath"
     fi
 
-    # Print unnecessary watches, if any
-    if [[ ${#unneeded_watches[@]} -gt 0 ]]; then
-        printf "FAIL: The following kinds are watched in %s, but are not present in the charts:\n" "$controllerPath"
-        for kind in "${unneeded_watches[@]}"; do
+    if [[ ${#extra_kinds[@]} -gt 0 ]]; then
+        printf "FAIL: The following kinds in %s are not present in the charts:\n" "$watchlistPath"
+        for kind in "${extra_kinds[@]}"; do
             printf "  - %s\n" "$kind"
         done
         exit 1
     else
-        printf "%s does not watch any kinds that aren't found in Helm charts.\n" "$controllerPath"
+        printf "%s does not contain kinds that aren't found in Helm charts.\n" "$watchlistPath"
     fi
+    echo ""
 }
 
-check_watches "./controllers/istiorevision/istiorevision_controller.go" "./resources/*/charts/istiod ./resources/*/charts/istiod-remote ./resources/*/charts/base"
-check_watches "./controllers/istiocni/istiocni_controller.go" "./resources/*/charts/cni"
+check_watchlist "./pkg/watches/istiod.go" "./resources/*/charts/istiod ./resources/*/charts/base"
+check_watchlist "./pkg/watches/cni.go" "./resources/*/charts/cni"
+check_watchlist "./pkg/watches/ztunnel.go" "./resources/*/charts/ztunnel"

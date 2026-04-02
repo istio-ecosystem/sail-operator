@@ -29,18 +29,16 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
-	"github.com/istio-ecosystem/sail-operator/pkg/predicate"
 	sharedreconcile "github.com/istio-ecosystem/sail-operator/pkg/reconcile"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
+	"github.com/istio-ecosystem/sail-operator/pkg/watches"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -140,7 +138,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	namespaceHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapNamespaceToReconcileRequest))
 
-	return ctrl.NewControllerManagedBy(mgr).
+	b := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
 			LogConstructor: func(req *reconcile.Request) logr.Logger {
 				log := logger
@@ -151,27 +149,17 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 			},
 			MaxConcurrentReconciles: r.Config.MaxConcurrentReconciles,
 		}).
-
 		// we use the Watches function instead of For(), so that we can wrap the handler so that events that cause the object to be enqueued are logged
 		Watches(&v1alpha1.ZTunnel{}, mainObjectHandler).
 		Watches(&v1.ZTunnel{}, mainObjectHandler).
-		Named("ztunnel").
+		Named("ztunnel")
 
-		// namespaced resources
-		Watches(&corev1.ConfigMap{}, ownedResourceHandler).
-		Watches(&appsv1.DaemonSet{}, ownedResourceHandler).
-		Watches(&corev1.ResourceQuota{}, ownedResourceHandler).
+	// Register watches for all chart-produced resource types.
+	watches.RegisterOwnedWatches(b, watches.ZTunnelWatches, ownedResourceHandler, nil)
 
-		// We use predicate.IgnoreUpdate() so that we skip the reconciliation when a pull secret is added to the ServiceAccount.
-		// This is necessary so that we don't remove the newly-added secret.
-		// TODO: this is a temporary hack until we implement the correct solution on the Helm-render side
-		Watches(&corev1.ServiceAccount{}, ownedResourceHandler, builder.WithPredicates(predicate.IgnoreUpdate())).
-
-		// cluster-scoped resources
-		// +lint-watches:ignore: Namespace (not present in charts, but must be watched to reconcile ZTunnel when its namespace is created)
+	return b.
+		// Non-chart watches
 		Watches(&corev1.Namespace{}, namespaceHandler).
-		Watches(&rbacv1.ClusterRole{}, ownedResourceHandler).
-		Watches(&rbacv1.ClusterRoleBinding{}, ownedResourceHandler).
 		Complete(reconciler.NewStandardReconcilerWithFinalizer[*v1.ZTunnel](r.Client, r.Reconcile, r.Finalize, constants.FinalizerName))
 }
 
