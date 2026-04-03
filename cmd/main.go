@@ -36,6 +36,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/resources"
 	configv1 "github.com/openshift/api/config/v1"
 	openshifttls "github.com/openshift/controller-runtime-common/pkg/tls"
+	openshiftcrypto "github.com/openshift/library-go/pkg/crypto"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -251,10 +252,15 @@ func main() {
 			InitialTLSProfileSpec:     tlsConfig.OpenShift.TLSProfileSpec,
 			InitialTLSAdherencePolicy: tlsConfig.OpenShift.TLSAdherencePolicy,
 			OnProfileChange: func(ctx context.Context, oldProfile, newProfile configv1.TLSProfileSpec) {
-				setupLog.Info("TLS profile has changed, initiating shutdown to reload configuration",
-					"oldProfile", oldProfile,
-					"newProfile", newProfile)
-				shutdown()
+				if openshiftcrypto.ShouldHonorClusterTLSProfile(tlsConfig.OpenShift.TLSAdherencePolicy) {
+					setupLog.Info("TLS profile has changed, initiating shutdown to reload configuration",
+						"oldProfile", oldProfile,
+						"newProfile", newProfile)
+					shutdown()
+				} else {
+					setupLog.Info("TLS profile has changed, but TLS adherence policy does not honor cluster TLS profile, skipping reload",
+						"policy", tlsConfig.OpenShift.TLSAdherencePolicy)
+				}
 			},
 			OnAdherencePolicyChange: func(ctx context.Context, oldPolicy, newPolicy configv1.TLSAdherencePolicy) {
 				setupLog.Info("TLS adherence policy has changed, initiating shutdown to reload configuration",
