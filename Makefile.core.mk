@@ -385,11 +385,11 @@ deploy-yaml: helm ## Output YAML manifests used by `deploy`.
 deploy-openshift: verify-kubeconfig helm ## Deploy controller to an existing OCP cluster.
 	$(info NAMESPACE: $(NAMESPACE))
 	kubectl create ns ${NAMESPACE} || echo "namespace ${NAMESPACE} already exists"
-	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --namespace $(NAMESPACE) --set platform="openshift" | kubectl apply --server-side=true -f -
+	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --namespace $(NAMESPACE) | kubectl apply --server-side=true -f -
 
 .PHONY: deploy-yaml-openshift
 deploy-yaml-openshift: helm ## Output YAML manifests used by `deploy-openshift`.
-	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --namespace $(NAMESPACE) --set platform="openshift"
+	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --namespace $(NAMESPACE)"
 
 .PHONY: deploy-olm
 deploy-olm: verify-kubeconfig bundle bundle-build bundle-push ## Build and push the operator OLM bundle and deploy the operator using OLM.
@@ -644,17 +644,11 @@ gitleaks: $(GITLEAKS) ## Download gitleaks to bin directory.
 $(GITLEAKS): $(LOCALBIN)
 	@test -s $(LOCALBIN)/gitleaks || GOBIN=$(LOCALBIN) go install github.com/zricethezav/gitleaks/v8@${GITLEAKS_VERSION}
 
-# Openshift Platform flag
-# If is set to true will add `--set platform=openshift` to the helm template command
-OCP ?= true
+OCP ?= false
 
 .PHONY: bundle
 bundle: gen-all-except-bundle helm operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
-	@TEMPL_FLAGS="$(HELM_TEMPL_DEF_FLAGS)"; \
-	if [ "$(OCP)" = "true" ]; then \
-		TEMPL_FLAGS="$$TEMPL_FLAGS --set platform=openshift"; \
-	fi; \
-	$(HELM) template chart chart $$TEMPL_FLAGS --set image='$(IMAGE)' --set bundleGeneration=true | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
+	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --set bundleGeneration=true | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
 
 # operator sdk does not generate sorted relatedImages, we need to sort it here
 ifeq ($(USE_IMAGE_DIGESTS), true)
