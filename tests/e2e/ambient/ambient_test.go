@@ -35,9 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var (
-	defaultTimeout = env.GetInt("DEFAULT_TEST_TIMEOUT", 180)
-)
+var defaultTimeout = env.GetInt("DEFAULT_TEST_TIMEOUT", 180)
 
 var _ = Describe("Ambient configuration ", Label("smoke", "ambient"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(defaultTimeout) * time.Second)
