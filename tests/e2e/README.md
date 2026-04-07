@@ -293,6 +293,7 @@ The following environment variables define the behavior of the test run:
 * DEPLOYMENT_NAME=sail-operator - The name of the operator deployment.
 * EXPECTED_REGISTRY=`^docker\.io|^gcr\.io|^registry\.istio\.io` - Which image registry should the operand images come from. Useful for downstream tests.
 * KEEP_ON_FAILURE - If set to true, when using a local KIND cluster, don't clean it up when the test fails. This allows to debug the failure.
+* DEFAULT_TEST_TIMEOUT=180 - The default timeout in seconds for `Eventually` assertions. Increase this value when running tests on slow clusters (e.g., `DEFAULT_TEST_TIMEOUT=300` for 5 minutes).
 
 ### Customizing the test run
 
