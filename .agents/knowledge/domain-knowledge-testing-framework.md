@@ -268,7 +268,7 @@ func createTestIstio(ctx context.Context, k8sClient client.Client, name, namespa
             Namespace: namespace,
         },
         Spec: v1.IstioSpec{
-            Version: "1.25.0",
+            Version: istioversion.Default,
         },
     }
     Expect(k8sClient.Create(ctx, istio)).To(Succeed())
@@ -296,7 +296,7 @@ BeforeAll(func(ctx SpecContext) {
     }
     Expect(k8sClient.Create(ctx, ns)).To(Succeed())
     DeferCleanup(func(ctx SpecContext) {
-        Expect(k8sClient.Delete(ctx, ns)).To(Succeed())
+        Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, ns))).To(Succeed())
     })
 })
 
@@ -306,7 +306,7 @@ BeforeEach(func(ctx SpecContext) {
     }
     Expect(k8sClient.Create(ctx, configMap)).To(Succeed())
     DeferCleanup(func(ctx SpecContext) {
-        Expect(k8sClient.Delete(ctx, configMap)).To(Succeed())
+        Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, configMap))).To(Succeed())
     })
 })
 ```
