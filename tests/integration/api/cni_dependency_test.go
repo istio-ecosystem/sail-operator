@@ -111,7 +111,7 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 					err := k8sClient.Get(ctx, kube.Key(istio.Name, istio.Namespace), istio)
 					g.Expect(err).NotTo(HaveOccurred())
 
-					var depCondition *v1.IstioCondition
+					var depCondition *v1.StatusCondition
 					for _, cond := range istio.Status.Conditions {
 						if cond.Type == "DependenciesHealthy" {
 							depCondition = &cond
@@ -153,7 +153,7 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 					err := k8sClient.Get(ctx, kube.Key(istio.Name, istio.Namespace), istio)
 					g.Expect(err).NotTo(HaveOccurred())
 
-					var depCondition *v1.IstioCondition
+					var depCondition *v1.StatusCondition
 					for _, cond := range istio.Status.Conditions {
 						if cond.Type == "DependenciesHealthy" {
 							depCondition = &cond
@@ -224,7 +224,7 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 					err := k8sClient.Get(ctx, kube.Key(istio.Name, istio.Namespace), istio)
 					g.Expect(err).NotTo(HaveOccurred())
 
-					var depCondition *v1.IstioCondition
+					var depCondition *v1.StatusCondition
 					for _, cond := range istio.Status.Conditions {
 						if cond.Type == "DependenciesHealthy" {
 							depCondition = &cond
@@ -273,7 +273,7 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 					err := k8sClient.Get(ctx, kube.Key(istio.Name, istio.Namespace), istio)
 					g.Expect(err).NotTo(HaveOccurred())
 
-					var depCondition *v1.IstioCondition
+					var depCondition *v1.StatusCondition
 					for _, cond := range istio.Status.Conditions {
 						if cond.Type == "DependenciesHealthy" {
 							depCondition = &cond
@@ -340,7 +340,7 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 					err := k8sClient.Get(ctx, kube.Key(istio.Name, istio.Namespace), istio)
 					g.Expect(err).NotTo(HaveOccurred())
 
-					var depCondition *v1.IstioCondition
+					var depCondition *v1.StatusCondition
 					for _, cond := range istio.Status.Conditions {
 						if cond.Type == "DependenciesHealthy" {
 							depCondition = &cond
@@ -389,7 +389,7 @@ var _ = Describe("CNI Dependency", Ordered, func() {
 					err := k8sClient.Get(ctx, kube.Key(istio.Name, istio.Namespace), istio)
 					g.Expect(err).NotTo(HaveOccurred())
 
-					var depCondition *v1.IstioCondition
+					var depCondition *v1.StatusCondition
 					for _, cond := range istio.Status.Conditions {
 						if cond.Type == "DependenciesHealthy" {
 							depCondition = &cond

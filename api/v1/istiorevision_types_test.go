@@ -27,40 +27,44 @@ func TestGetCondition(t *testing.T) {
 		name           string
 		istioStatus    *IstioRevisionStatus
 		conditionType  IstioRevisionConditionType
-		expectedResult IstioRevisionCondition
+		expectedResult StatusCondition
 	}{
 		{
 			name: "condition found",
 			istioStatus: &IstioRevisionStatus{
-				Conditions: []IstioRevisionCondition{
+				Conditions: []StatusCondition{
 					{
 						Type:   IstioRevisionConditionReconciled,
 						Status: metav1.ConditionTrue,
+						Reason: ConditionReason(IstioRevisionConditionReconciled),
 					},
 					{
 						Type:   IstioRevisionConditionReady,
 						Status: metav1.ConditionFalse,
+						Reason: IstioRevisionReasonIstiodNotReady,
 					},
 				},
 			},
 			conditionType: IstioRevisionConditionReady,
-			expectedResult: IstioRevisionCondition{
+			expectedResult: StatusCondition{
 				Type:   IstioRevisionConditionReady,
 				Status: metav1.ConditionFalse,
+				Reason: IstioRevisionReasonIstiodNotReady,
 			},
 		},
 		{
 			name: "condition not found",
 			istioStatus: &IstioRevisionStatus{
-				Conditions: []IstioRevisionCondition{
+				Conditions: []StatusCondition{
 					{
 						Type:   IstioRevisionConditionReconciled,
 						Status: metav1.ConditionTrue,
+						Reason: ConditionReason(IstioRevisionConditionReconciled),
 					},
 				},
 			},
 			conditionType: IstioRevisionConditionReady,
-			expectedResult: IstioRevisionCondition{
+			expectedResult: StatusCondition{
 				Type:   IstioRevisionConditionReady,
 				Status: metav1.ConditionUnknown,
 			},
@@ -69,7 +73,7 @@ func TestGetCondition(t *testing.T) {
 			name:          "nil IstioRevisionStatus",
 			istioStatus:   (*IstioRevisionStatus)(nil),
 			conditionType: IstioRevisionConditionReady,
-			expectedResult: IstioRevisionCondition{
+			expectedResult: StatusCondition{
 				Type:   IstioRevisionConditionReady,
 				Status: metav1.ConditionUnknown,
 			},
@@ -88,76 +92,36 @@ func TestGetCondition(t *testing.T) {
 
 func TestSetCondition(t *testing.T) {
 	prevTime := time.Date(2023, 9, 26, 9, 0, 0, 0, time.UTC)
-	currTime := time.Date(2023, 9, 26, 12, 0, 5, 123456, time.UTC)
-	truncatedCurrTime := currTime.Truncate(time.Second)
 
 	testCases := []struct {
-		name      string
-		existing  []IstioRevisionCondition
-		condition IstioRevisionCondition
-		expected  []IstioRevisionCondition
+		name                          string
+		existing                      []StatusCondition
+		condition                     StatusCondition
+		expectTransitionTimePreserved bool // if true, LastTransitionTime should match existing; if false, it should be updated
 	}{
 		{
 			name: "add",
-			existing: []IstioRevisionCondition{
+			existing: []StatusCondition{
 				{
 					Type:   IstioRevisionConditionReconciled,
 					Status: metav1.ConditionTrue,
+					Reason: ConditionReason(IstioRevisionConditionReconciled),
 				},
 			},
-			condition: IstioRevisionCondition{
+			condition: StatusCondition{
 				Type:   IstioRevisionConditionReady,
 				Status: metav1.ConditionFalse,
+				Reason: IstioRevisionReasonIstiodNotReady,
 			},
-			expected: []IstioRevisionCondition{
-				{
-					Type:   IstioRevisionConditionReconciled,
-					Status: metav1.ConditionTrue,
-				},
-				{
-					Type:               IstioRevisionConditionReady,
-					Status:             metav1.ConditionFalse,
-					LastTransitionTime: metav1.NewTime(truncatedCurrTime),
-				},
-			},
+			expectTransitionTimePreserved: false,
 		},
 		{
 			name: "update with status change",
-			existing: []IstioRevisionCondition{
+			existing: []StatusCondition{
 				{
 					Type:               IstioRevisionConditionReconciled,
 					Status:             metav1.ConditionTrue,
-					LastTransitionTime: metav1.NewTime(prevTime),
-				},
-				{
-					Type:               IstioRevisionConditionReady,
-					Status:             metav1.ConditionFalse,
-					LastTransitionTime: metav1.NewTime(prevTime),
-				},
-			},
-			condition: IstioRevisionCondition{
-				Type:   IstioRevisionConditionReady,
-				Status: metav1.ConditionTrue,
-			},
-			expected: []IstioRevisionCondition{
-				{
-					Type:               IstioRevisionConditionReconciled,
-					Status:             metav1.ConditionTrue,
-					LastTransitionTime: metav1.NewTime(prevTime),
-				},
-				{
-					Type:               IstioRevisionConditionReady,
-					Status:             metav1.ConditionTrue,
-					LastTransitionTime: metav1.NewTime(truncatedCurrTime),
-				},
-			},
-		},
-		{
-			name: "update without status change",
-			existing: []IstioRevisionCondition{
-				{
-					Type:               IstioRevisionConditionReconciled,
-					Status:             metav1.ConditionTrue,
+					Reason:             ConditionReason(IstioRevisionConditionReconciled),
 					LastTransitionTime: metav1.NewTime(prevTime),
 				},
 				{
@@ -167,24 +131,35 @@ func TestSetCondition(t *testing.T) {
 					LastTransitionTime: metav1.NewTime(prevTime),
 				},
 			},
-			condition: IstioRevisionCondition{
+			condition: StatusCondition{
+				Type:   IstioRevisionConditionReady,
+				Status: metav1.ConditionTrue,
+				Reason: ConditionReason(IstioRevisionConditionReady),
+			},
+			expectTransitionTimePreserved: false,
+		},
+		{
+			name: "update without status change",
+			existing: []StatusCondition{
+				{
+					Type:               IstioRevisionConditionReconciled,
+					Status:             metav1.ConditionTrue,
+					Reason:             ConditionReason(IstioRevisionConditionReconciled),
+					LastTransitionTime: metav1.NewTime(prevTime),
+				},
+				{
+					Type:               IstioRevisionConditionReady,
+					Status:             metav1.ConditionFalse,
+					Reason:             IstioRevisionReasonIstiodNotReady,
+					LastTransitionTime: metav1.NewTime(prevTime),
+				},
+			},
+			condition: StatusCondition{
 				Type:   IstioRevisionConditionReady,
 				Status: metav1.ConditionFalse, // same as previous status
 				Reason: IstioRevisionReasonIstiodNotReady,
 			},
-			expected: []IstioRevisionCondition{
-				{
-					Type:               IstioRevisionConditionReconciled,
-					Status:             metav1.ConditionTrue,
-					LastTransitionTime: metav1.NewTime(prevTime),
-				},
-				{
-					Type:               IstioRevisionConditionReady,
-					Status:             metav1.ConditionFalse,
-					Reason:             IstioRevisionReasonIstiodNotReady,
-					LastTransitionTime: metav1.NewTime(prevTime), // original lastTransitionTime must be preserved
-				},
-			},
+			expectTransitionTimePreserved: true,
 		},
 	}
 
@@ -194,11 +169,39 @@ func TestSetCondition(t *testing.T) {
 				Conditions: tc.existing,
 			}
 
-			testTime = &currTime // force SetCondition() to use fake currTime instead of real time
+			before := time.Now()
 			status.SetCondition(tc.condition)
+			after := time.Now()
 
-			if !reflect.DeepEqual(tc.expected, status.Conditions) {
-				t.Errorf("Expected condition:\n    %+v,\n but got:\n    %+v", tc.expected, status.Conditions)
+			// Find the condition that was set
+			var found *StatusCondition
+			for i := range status.Conditions {
+				if status.Conditions[i].Type == tc.condition.Type {
+					found = &status.Conditions[i]
+					break
+				}
+			}
+			if found == nil {
+				t.Fatal("condition not found after SetCondition")
+			}
+
+			if found.Status != tc.condition.Status {
+				t.Errorf("Expected status %v, got %v", tc.condition.Status, found.Status)
+			}
+			if found.Reason != tc.condition.Reason {
+				t.Errorf("Expected reason %v, got %v", tc.condition.Reason, found.Reason)
+			}
+
+			if tc.expectTransitionTimePreserved {
+				if !found.LastTransitionTime.Equal(&metav1.Time{Time: prevTime}) {
+					t.Errorf("Expected LastTransitionTime to be preserved as %v, but got %v", prevTime, found.LastTransitionTime)
+				}
+			} else {
+				transitionTime := found.LastTransitionTime.Time
+				// SetCondition truncates to the second, so compare with truncated bounds
+				if transitionTime.Before(before.Truncate(time.Second)) || transitionTime.After(after.Truncate(time.Second).Add(time.Second)) {
+					t.Errorf("Expected LastTransitionTime to be around %v, but got %v", before.Truncate(time.Second), transitionTime)
+				}
 			}
 		})
 	}

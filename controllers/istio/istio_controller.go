@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 	"strings"
 	"time"
 
@@ -28,7 +27,6 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
-	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/revision"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -229,13 +227,13 @@ func (r *Reconciler) determineStatus(ctx context.Context, istio *v1.Istio, recon
 
 	// set Reconciled and Ready conditions
 	if reconcileErr != nil {
-		status.SetCondition(v1.IstioCondition{
+		status.SetCondition(v1.StatusCondition{
 			Type:    v1.IstioConditionReconciled,
 			Status:  metav1.ConditionFalse,
 			Reason:  v1.IstioReasonReconcileError,
 			Message: reconcileErr.Error(),
 		})
-		status.SetCondition(v1.IstioCondition{
+		status.SetCondition(v1.StatusCondition{
 			Type:    v1.IstioConditionReady,
 			Status:  metav1.ConditionUnknown,
 			Reason:  v1.IstioReasonReconcileError,
@@ -246,8 +244,8 @@ func (r *Reconciler) determineStatus(ctx context.Context, istio *v1.Istio, recon
 		status.ActiveRevisionName = getActiveRevisionName(istio)
 		rev, err := r.getActiveRevision(ctx, istio)
 		if apierrors.IsNotFound(err) {
-			revisionNotFound := func(conditionType v1.IstioConditionType) v1.IstioCondition {
-				return v1.IstioCondition{
+			revisionNotFound := func(conditionType v1.IstioConditionType) v1.StatusCondition {
+				return v1.StatusCondition{
 					Type:    conditionType,
 					Status:  metav1.ConditionFalse,
 					Reason:  v1.IstioReasonRevisionNotFound,
@@ -259,13 +257,13 @@ func (r *Reconciler) determineStatus(ctx context.Context, istio *v1.Istio, recon
 			status.SetCondition(revisionNotFound(v1.IstioConditionReady))
 			status.State = v1.IstioReasonRevisionNotFound
 		} else if err == nil {
-			status.SetCondition(convertCondition(rev.Status.GetCondition(v1.IstioRevisionConditionReconciled)))
-			status.SetCondition(convertCondition(rev.Status.GetCondition(v1.IstioRevisionConditionReady)))
-			status.SetCondition(convertCondition(rev.Status.GetCondition(v1.IstioRevisionConditionDependenciesHealthy)))
-			status.State = convertState(rev.Status.State)
+			status.SetCondition(rev.Status.GetCondition(v1.IstioRevisionConditionReconciled))
+			status.SetCondition(rev.Status.GetCondition(v1.IstioRevisionConditionReady))
+			status.SetCondition(rev.Status.GetCondition(v1.IstioRevisionConditionDependenciesHealthy))
+			status.State = rev.Status.State
 		} else {
-			activeRevisionGetFailed := func(conditionType v1.IstioConditionType) v1.IstioCondition {
-				return v1.IstioCondition{
+			activeRevisionGetFailed := func(conditionType v1.IstioConditionType) v1.StatusCondition {
+				return v1.StatusCondition{
 					Type:    conditionType,
 					Status:  metav1.ConditionUnknown,
 					Reason:  v1.IstioReasonFailedToGetActiveRevision,
@@ -302,31 +300,8 @@ func (r *Reconciler) determineStatus(ctx context.Context, istio *v1.Istio, recon
 }
 
 func (r *Reconciler) updateStatus(ctx context.Context, istio *v1.Istio, reconcileErr error) error {
-	var errs errlist.Builder
 	status, err := r.determineStatus(ctx, istio, reconcileErr)
-	if err != nil {
-		errs.Add(fmt.Errorf("failed to determine status: %w", err))
-	}
-
-	if !reflect.DeepEqual(istio.Status, status) {
-		if err := r.Client.Status().Patch(ctx, istio, kube.NewStatusPatch(status)); err != nil {
-			errs.Add(fmt.Errorf("failed to patch status: %w", err))
-		}
-	}
-	return errs.Error()
-}
-
-func convertState(state v1.IstioRevisionConditionReason) v1.IstioConditionReason {
-	return v1.IstioConditionReason(state)
-}
-
-func convertCondition(condition v1.IstioRevisionCondition) v1.IstioCondition {
-	return v1.IstioCondition{
-		Type:    v1.IstioConditionType(condition.Type),
-		Status:  condition.Status,
-		Reason:  v1.IstioConditionReason(condition.Reason),
-		Message: condition.Message,
-	}
+	return reconciler.UpdateStatus(ctx, r.Client, istio, istio.Status, status, err)
 }
 
 func wrapEventHandler(logger logr.Logger, handler handler.EventHandler) handler.EventHandler {

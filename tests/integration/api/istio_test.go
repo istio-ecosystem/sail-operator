@@ -185,7 +185,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 
 				// trigger a istiorevision updates
 				_, err = controllerutil.CreateOrPatch(ctx, k8sClient, rev, func() error {
-					rev.Status.SetCondition(v1.IstioRevisionCondition{
+					rev.Status.SetCondition(v1.StatusCondition{
 						Type:   "Unlock",
 						Status: "True",
 					})
