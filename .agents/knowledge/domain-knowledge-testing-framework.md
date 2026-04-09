@@ -254,6 +254,65 @@ func TestCalculateRevisionName(t *testing.T) {
 3. **Resource cleanup** - Use cleaner utility for automatic cleanup
 4. **Platform coverage** - Test on different Kubernetes distributions
 
+### Ginkgo Best Practices
+
+#### Extract Common Setup into Helper Methods with `GinkgoHelper()`
+When multiple tests share setup logic, extract it into a helper function. Call `GinkgoHelper()` at the beginning of the helper so that test failures report the caller's location, not the helper's internals. Use the global `Expect` (from the gomega dot-import) for assertions:
+
+```go
+func createTestIstio(ctx context.Context, k8sClient client.Client, name, namespace string) *v1.Istio {
+    GinkgoHelper()
+    istio := &v1.Istio{
+        ObjectMeta: metav1.ObjectMeta{
+            Name:      name,
+            Namespace: namespace,
+        },
+        Spec: v1.IstioSpec{
+            Version: istioversion.Default,
+        },
+    }
+    Expect(k8sClient.Create(ctx, istio)).To(Succeed())
+    return istio
+}
+
+// Usage in a test:
+It("should reconcile", func() {
+    istio := createTestIstio(ctx, k8sClient, "test", "istio-system")
+    // ... assertions using istio
+})
+```
+
+This keeps tests concise while preserving clear error traces.
+
+**Important**: Do NOT use `func(ctx SpecContext, g Gomega)` as an `It` node signature. Ginkgo's `It` only accepts `func()`, `func(ctx SpecContext)`, or `func(ctx context.Context)`. The `g Gomega` parameter is only valid in `Eventually`/`Consistently` callbacks. For helper functions called from `It` blocks, use `GinkgoHelper()` with the global `Expect` instead of passing a `Gomega` instance.
+
+#### Use `DeferCleanup` for Setup Teardown
+Prefer `DeferCleanup` over manual `AfterEach`/`AfterAll` blocks to clean up resources created during setup. `DeferCleanup` ties the cleanup directly to the setup code, making the relationship explicit and reducing the risk of forgetting cleanup:
+
+```go
+BeforeAll(func(ctx SpecContext) {
+    ns := &corev1.Namespace{
+        ObjectMeta: metav1.ObjectMeta{Name: "test-ns"},
+    }
+    Expect(k8sClient.Create(ctx, ns)).To(Succeed())
+    DeferCleanup(func(ctx SpecContext) {
+        Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, ns))).To(Succeed())
+    })
+})
+
+BeforeEach(func(ctx SpecContext) {
+    configMap := &corev1.ConfigMap{
+        ObjectMeta: metav1.ObjectMeta{Name: "test-cm", Namespace: "test-ns"},
+    }
+    Expect(k8sClient.Create(ctx, configMap)).To(Succeed())
+    DeferCleanup(func(ctx SpecContext) {
+        Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, configMap))).To(Succeed())
+    })
+})
+```
+
+`DeferCleanup` runs at the matching scope (e.g., cleanup registered in `BeforeAll` runs after all specs in that container; cleanup in `BeforeEach` runs after each spec). This is preferred over separate `AfterEach`/`AfterAll` blocks because it colocates setup and teardown.
+
 ### Common Testing Patterns
 
 #### Testing Controller Reconciliation
@@ -320,13 +379,20 @@ When("invalid configuration is provided", func() {
 ## Test Execution and CI/CD
 
 ### Local Development
+
+**Important**: Always run e2e tests via `make` targets, never by invoking `ginkgo` directly. The `make` targets and their underlying shell scripts set up required environment variables, handle operator build/deploy, and configure the test runner correctly.
+
 ```bash
 # Run all tests
 make test test.integration test.e2e.kind
 
-# Run specific test suites
+# Run specific test suites using GINKGO_FLAGS
 make test.integration GINKGO_FLAGS="--focus=IstioController"
 make test.e2e.kind GINKGO_FLAGS="--label-filter=smoke"
+make test.e2e.ocp GINKGO_FLAGS="--focus='some test'"
+
+# Skip build and deploy when operator is already running on the cluster
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.ocp GINKGO_FLAGS="--focus='some test'"
 
 # Debug test failures
 KEEP_ON_FAILURE=true make test.e2e.kind
