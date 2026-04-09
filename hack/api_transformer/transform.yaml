@@ -221,7 +221,6 @@ inputFiles:
     - LocalityLoadBalancerSetting
     - LocalityLoadBalancerSetting_Distribute
     - LocalityLoadBalancerSetting_Failover
-    - ClientTLSSettings
     - ClientTLSSettings_TLSmode
 
 - module: istio.io/api
