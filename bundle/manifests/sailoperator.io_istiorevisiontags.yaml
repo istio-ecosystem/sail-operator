@@ -71,8 +71,9 @@ spec:
                 properties:
                   kind:
                     description: Kind is the kind of the target resource.
-                    maxLength: 253
-                    minLength: 1
+                    enum:
+                    - Istio
+                    - IstioRevision
                     type: string
                   name:
                     description: Name is the name of the target resource.
