@@ -21,6 +21,7 @@ import (
 	"io/fs"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
+	"github.com/istio-ecosystem/sail-operator/pkg/fieldignore"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/release"
@@ -35,6 +36,7 @@ type ChartManager struct {
 	restClientGetter genericclioptions.RESTClientGetter
 	driver           string
 	managedByValue   string
+	fieldIgnoreRules []fieldignore.FieldIgnoreRule
 }
 
 // ChartManagerOption is a functional option for configuring a ChartManager.
@@ -46,6 +48,15 @@ type ChartManagerOption func(*ChartManager)
 func WithManagedByValue(v string) ChartManagerOption {
 	return func(cm *ChartManager) {
 		cm.managedByValue = v
+	}
+}
+
+// WithFieldIgnoreRules configures the field ignore rules that the post-renderer
+// uses to strip fields from rendered manifests. Rules with OnlyOnUpdate=true are
+// only applied during upgrades, not initial installs.
+func WithFieldIgnoreRules(rules []fieldignore.FieldIgnoreRule) ChartManagerOption {
+	return func(cm *ChartManager) {
+		cm.fieldIgnoreRules = rules
 	}
 }
 
@@ -153,7 +164,7 @@ func (h *ChartManager) upgradeOrInstallChart(
 		log.V(2).Info("Performing helm upgrade", "chartName", chart.Name())
 
 		updateAction := action.NewUpgrade(cfg)
-		updateAction.PostRenderer = NewHelmPostRenderer(ownerReference, "", true, h.managedByValue)
+		updateAction.PostRenderer = NewHelmPostRenderer(ownerReference, "", true, h.managedByValue, h.fieldIgnoreRules)
 		updateAction.MaxHistory = 1
 		updateAction.SkipCRDs = true
 		updateAction.DisableOpenAPIValidation = true
@@ -166,7 +177,7 @@ func (h *ChartManager) upgradeOrInstallChart(
 		log.V(2).Info("Performing helm install", "chartName", chart.Name())
 
 		installAction := action.NewInstall(cfg)
-		installAction.PostRenderer = NewHelmPostRenderer(ownerReference, "", false, h.managedByValue)
+		installAction.PostRenderer = NewHelmPostRenderer(ownerReference, "", false, h.managedByValue, h.fieldIgnoreRules)
 		installAction.Namespace = namespace
 		installAction.ReleaseName = releaseName
 		installAction.SkipCRDs = true
