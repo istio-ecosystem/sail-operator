@@ -4,11 +4,11 @@ metadata:
   labels:
     app.kubernetes.io/created-by: {{ .Values.name }}
     app.kubernetes.io/name: clusterrole
-    app.kubernetes.io/instance: metrics-reader
+    app.kubernetes.io/instance: {{ .Values.name }}-metrics-reader
     app.kubernetes.io/component: kube-rbac-proxy
     app.kubernetes.io/managed-by: helm
     app.kubernetes.io/part-of: {{ .Values.name }}
-  name: metrics-reader
+  name: {{ .Values.name }}-metrics-reader
 rules:
 - nonResourceURLs:
   - "/metrics"

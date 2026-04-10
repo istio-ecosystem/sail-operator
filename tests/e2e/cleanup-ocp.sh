@@ -183,10 +183,10 @@ cleanup_cluster_resources() {
   echo "=== Cleaning up cluster-level resources ==="
 
   echo "Removing cluster role bindings..."
-  ${COMMAND} delete clusterrolebinding metrics-reader-rolebinding --ignore-not-found
+  ${COMMAND} delete clusterrolebinding sailoperator-metrics-reader-rolebinding --ignore-not-found
 
   echo "Removing cluster roles..."
-  ${COMMAND} delete clusterrole metrics-reader --ignore-not-found
+  ${COMMAND} delete clusterrole sailoperator-metrics-reader --ignore-not-found
 }
 
 # Main cleanup flow following official documentation order
