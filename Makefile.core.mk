@@ -587,7 +587,7 @@ CRD_SCHEMA_CHECKER ?= $(LOCALBIN)/crd-schema-checker
 
 ## Tool Versions
 OPERATOR_SDK_VERSION ?= v1.42.2
-HELM_VERSION ?= v3.20.2
+HELM_VERSION ?= v4.1.4
 CONTROLLER_TOOLS_VERSION ?= v0.20.1
 CONTROLLER_RUNTIME_BRANCH ?= release-0.23
 OPM_VERSION ?= v1.65.0
@@ -605,7 +605,7 @@ $(HELM): $(LOCALBIN)
 		echo "$(LOCALBIN)/helm version is not expected $(HELM_VERSION). Removing it before installing." > /dev/stderr; \
 		rm -rf $(LOCALBIN)/helm; \
 	fi
-	@test -s $(LOCALBIN)/helm || GOBIN=$(LOCALBIN) GO111MODULE=on go install helm.sh/helm/v3/cmd/helm@$(HELM_VERSION) > /dev/stderr
+	@test -s $(LOCALBIN)/helm || GOBIN=$(LOCALBIN) GO111MODULE=on go install helm.sh/helm/v4/cmd/helm@$(HELM_VERSION) > /dev/stderr
 .PHONY: operator-sdk $(OPERATOR_SDK)
 operator-sdk: $(OPERATOR_SDK)
 operator-sdk: OS=$(shell go env GOOS)
