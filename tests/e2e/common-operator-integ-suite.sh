@@ -287,11 +287,18 @@ if [ "${SKIP_BUILD}" == "false" ]; then
     fi
   fi
   # If OLM is enabled, deploy the operator using OLM
-  # We are skipping the deploy via OLM test on OCP because the workaround to avoid the certificate issue is not working.
-  # Jira ticket related to the limitation: https://issues.redhat.com/browse/OSSM-7993
+  # If PR_NUMBER is set we will tag the BUNDLE_IMG with the PR number to avoid conflicts.
   if [ "${OLM}" == "true" ] && [ "${SKIP_DEPLOY}" == "false" ] && [ "${MULTICLUSTER}" == "false" ]; then    
     IMAGE_TAG_BASE="${HUB}/${IMAGE_BASE}"
-    BUNDLE_IMG="${IMAGE_TAG_BASE}-bundle:v${VERSION}"
+    if [ "${CI}" == "true" ]; then
+      if [ -n "${PR_NUMBER:-}" ]; then
+        BUNDLE_IMG="${IMAGE_TAG_BASE}-bundle:pr-${PR_NUMBER}-${TARGET_ARCH}"
+      else
+        BUNDLE_IMG="${IMAGE_TAG_BASE}-bundle:ci-test-$(date +%s)-${TARGET_ARCH}"
+      fi
+    else
+      BUNDLE_IMG="${IMAGE_TAG_BASE}-bundle:test+$(date +%s)-${TARGET_ARCH}"
+    fi
 
     IMAGE="${HUB}/${IMAGE_BASE}:${TAG}" \
     IMAGE_TAG_BASE="${IMAGE_TAG_BASE}" \
