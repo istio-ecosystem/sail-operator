@@ -222,12 +222,7 @@ spec:
 						cl.Delete(ctx, &pod)
 					}
 
-					Expect(cl.List(ctx, samplePods, client.InNamespace(sampleNamespace))).To(Succeed())
-					Expect(samplePods.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
-					for _, pod := range samplePods.Items {
-						Eventually(common.GetObject).WithArguments(ctx, cl, kube.Key(pod.Name, sampleNamespace), &corev1.Pod{}).
-							Should(HaveConditionStatus(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready")
-					}
+					Eventually(common.CheckPodsReady).WithArguments(ctx, cl, sampleNamespace).Should(Succeed(), "Sample pods are not ready after restart")
 
 					Success("sample pods restarted and are ready")
 				})
