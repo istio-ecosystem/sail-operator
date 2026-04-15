@@ -3,7 +3,7 @@ kind: Istio
 metadata:
   name: default
 spec:
-  version: v1.28.5
+  version: v1.28.6
   namespace: istio-system
   profile: ambient
   updateStrategy:
