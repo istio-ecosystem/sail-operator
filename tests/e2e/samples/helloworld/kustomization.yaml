@@ -3,7 +3,7 @@ kind: Kustomization
 resources:
   - https://raw.githubusercontent.com/istio/istio/master/samples/helloworld/helloworld.yaml
 images:
-  - name: docker.io/istio/examples-helloworld-v1
+  - name: registry.istio.io/release/examples-helloworld-v1
     newName: quay.io/sail-dev/examples-helloworld-v1
-  - name: docker.io/istio/examples-helloworld-v2
+  - name: registry.istio.io/release/examples-helloworld-v2
     newName: quay.io/sail-dev/examples-helloworld-v2
