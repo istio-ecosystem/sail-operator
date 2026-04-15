@@ -139,8 +139,8 @@ OPERATOR_SDK_LATEST_VERSION=$(getVersionForUpdate operator-framework/operator-sd
 "$SED_CMD" -i "s|OPERATOR_SDK_VERSION ?= .*|OPERATOR_SDK_VERSION ?= ${OPERATOR_SDK_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
 find "${ROOTDIR}/chart/templates/olm/scorecard.yaml" -type f -exec "$SED_CMD" -i "s|quay.io/operator-framework/scorecard-test:.*|quay.io/operator-framework/scorecard-test:${OPERATOR_SDK_LATEST_VERSION}|" {} +
 
-# Update helm (FIXME: pinned to v3 as we don't support helm4 yet, see https://github.com/istio-ecosystem/sail-operator/issues/1371)
-HELM_LATEST_VERSION=$(getLatestVersionByPrefix helm/helm v3)
+# Update helm
+HELM_LATEST_VERSION=$(getLatestVersionByPrefix helm/helm v4)
 "$SED_CMD" -i "s|HELM_VERSION ?= .*|HELM_VERSION ?= ${HELM_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
 
 # Update controller-tools
