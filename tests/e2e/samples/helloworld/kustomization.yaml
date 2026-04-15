@@ -1,7 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - https://raw.githubusercontent.com/istio/istio/master/samples/helloworld/helloworld.yaml
+  - https://raw.githubusercontent.com/istio/istio/release-1.28/samples/helloworld/helloworld.yaml
 images:
   - name: docker.io/istio/examples-helloworld-v1
     newName: quay.io/sail-dev/examples-helloworld-v1
