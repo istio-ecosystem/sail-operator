@@ -2,6 +2,10 @@ name: sailoperator
 deployment:
   name: sail-operator
   annotations:
+    images.v1_29_2.ztunnel: registry.istio.io/release/ztunnel:1.29.2
+    images.v1_29_2.istiod: registry.istio.io/release/pilot:1.29.2
+    images.v1_29_2.proxy: registry.istio.io/release/proxyv2:1.29.2
+    images.v1_29_2.cni: registry.istio.io/release/install-cni:1.29.2
     images.v1_29_1.ztunnel: registry.istio.io/release/ztunnel:1.29.1
     images.v1_29_1.istiod: registry.istio.io/release/pilot:1.29.1
     images.v1_29_1.proxy: registry.istio.io/release/proxyv2:1.29.1
@@ -10,6 +14,10 @@ deployment:
     images.v1_29_0.istiod: registry.istio.io/release/pilot:1.29.0
     images.v1_29_0.proxy: registry.istio.io/release/proxyv2:1.29.0
     images.v1_29_0.cni: registry.istio.io/release/install-cni:1.29.0
+    images.v1_28_6.ztunnel: registry.istio.io/release/ztunnel:1.28.6
+    images.v1_28_6.istiod: registry.istio.io/release/pilot:1.28.6
+    images.v1_28_6.proxy: registry.istio.io/release/proxyv2:1.28.6
+    images.v1_28_6.cni: registry.istio.io/release/install-cni:1.28.6
     images.v1_28_5.ztunnel: registry.istio.io/release/ztunnel:1.28.5
     images.v1_28_5.istiod: registry.istio.io/release/pilot:1.28.5
     images.v1_28_5.proxy: registry.istio.io/release/proxyv2:1.28.5
@@ -54,9 +62,11 @@ csv:
     This version of the operator supports the following Istio versions:
 
     - v1.29-latest
+    - v1.29.2
     - v1.29.1
     - v1.29.0
     - v1.28-latest
+    - v1.28.6
     - v1.28.5
     - v1.28.4
     - v1.28.3
