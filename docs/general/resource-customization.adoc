@@ -41,12 +41,10 @@ The `sailoperator.io/ignore` annotation is helpful in the following scenarios (n
 [[how-it-works]]
 ===== How It Works
 
-Sail Operator re-applies all helm charts when it detects a change in any of the resources it deployed.  
+Sail Operator re-applies all helm charts when it detects a change in any of the resources it deployed.
 When the `sailoperator.io/ignore` annotation is set to `"true"` on a resource:
 
-* **Ownership is preserved** - The resource must remain owned by its associated `Istio` (the ownerReference remains the associated `IstioRevision`)
 * **UPDATE event reconciliation is skipped** - The operator ignores update events for that specific resource, allowing manual modifications to persist
-* **CREATE and DELETE events remain active** - The annotation only affects UPDATE events; creation and deletion are processed normally (ie. the reconciliation will be triggered and all the changes will be reverted back to the state defined in the `Istio` or `IstioRevision` resource)
 * **Global reconciliation still applies** - When other resources change, Sail Operator re-applies all Helm charts, including resources with this annotation. The `sailoperator.io/ignore: "true"` annotation still remains set on the resources.
 * **Partial field protection** - Only fields defined in the Helm templates are reverted; additional annotations and labels you add will persist, but modifications to existing template-defined fields (such as labels or pod command-line arguments) will be reverted
 
@@ -184,10 +182,8 @@ Common resources include:
 [[limitations]]
 ===== Limitations and Considerations
 
-* **CREATE and DELETE events are not affected**: The annotation only prevents reconciliation of UPDATE events. If the resource is deleted, the operator will recreate it *without* the annotation set.
-* **OwnerReference must remain**: The resource must still be owned by the `IstioRevision`. Removing the ownerReference will cause the operator to lose track of the resource.
-* **Manual maintenance required**: You are responsible for maintaining resources with this annotation. The operator will update and revert them automatically when the parent `Istio` or `IstioRevision` resource changes.
-* **Version upgrades**: When upgrading Istio versions, resources with this annotation will be updated automatically and all changes will be reverted. You may need to apply back the changes manually.
+* **Annotation is not preserved on recreation**: If the resource is deleted and recreated by the operator, the annotation will not be set automatically. You must re-apply it manually.
+* **Manual maintenance required**: You are responsible for maintaining resources with this annotation. When upgrading Istio versions or when the parent `Istio` or `IstioRevision` resource changes, manual modifications will be reverted and may need to be re-applied.
 * **Configuration drift**: Using this annotation can lead to configuration drift between your intended state and the actual state. Use it sparingly and record which resources have this annotation in your documentation.
 
 [[implementation-details]]
