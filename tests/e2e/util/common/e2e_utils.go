@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -151,120 +153,153 @@ func CheckNamespaceEmpty(ctx SpecContext, cl client.Client, ns string) {
 
 func LogDebugInfo(suite testSuite, kubectls ...kubectl.Kubectl) {
 	// General debugging information to help diagnose the failure
-	// TODO: Add the creation of file with this information to be attached to the test report
+	artifactsDir := env.Get("ARTIFACTS", "/tmp/artifacts")
 
 	GinkgoWriter.Println()
 	GinkgoWriter.Println("The test run has failures and the debug information is as follows:")
 	GinkgoWriter.Println()
 	for _, k := range kubectls {
+		clusterName := k.ClusterName
+		if clusterName == "" {
+			clusterName = "default"
+		}
+
 		if k.ClusterName != "" {
 			GinkgoWriter.Println("=========================================================")
 			GinkgoWriter.Println("CLUSTER:", k.ClusterName)
 			GinkgoWriter.Println("=========================================================")
 		}
-		logOperatorDebugInfo(k)
+		logOperatorDebugInfo(k, artifactsDir, clusterName)
 		GinkgoWriter.Println("=========================================================")
-		logIstioDebugInfo(k)
+		logIstioDebugInfo(k, artifactsDir, clusterName)
 		GinkgoWriter.Println("=========================================================")
-		logCNIDebugInfo(k)
+		logCNIDebugInfo(k, artifactsDir, clusterName)
 		GinkgoWriter.Println("=========================================================")
-		logCertsDebugInfo(k)
+		logCertsDebugInfo(k, artifactsDir, clusterName)
 		GinkgoWriter.Println("=========================================================")
-		logSampleNamespacesDebugInfo(k, suite)
+		logSampleNamespacesDebugInfo(k, suite, artifactsDir, clusterName)
 		GinkgoWriter.Println("=========================================================")
 		GinkgoWriter.Println()
 
 		if suite == Ambient {
-			logZtunnelDebugInfo(k)
+			logZtunnelDebugInfo(k, artifactsDir, clusterName)
+			var buf strings.Builder
 			describe, err := k.WithNamespace(SleepNamespace).Describe("deployment", "sleep")
-			logDebugElement("=====sleep deployment describe=====", describe, err)
+			logDebugElement("=====sleep deployment describe=====", describe, err, &buf)
 			describe, err = k.WithNamespace(HttpbinNamespace).Describe("deployment", "httpbin")
-			logDebugElement("=====httpbin deployment describe=====", describe, err)
+			logDebugElement("=====httpbin deployment describe=====", describe, err, &buf)
+			writeDebugFile(artifactsDir, clusterName, "ambient-deployments", &buf)
 		}
 	}
 }
 
-func logOperatorDebugInfo(k kubectl.Kubectl) {
+// writeDebugFile writes the collected debug information to a file under the artifacts directory.
+func writeDebugFile(artifactsDir, clusterName, section string, buf *strings.Builder) {
+	debugDir := filepath.Join(artifactsDir, "debug", clusterName)
+	if err := os.MkdirAll(debugDir, 0o755); err != nil {
+		GinkgoWriter.Printf("Warning: failed to create debug directory %s: %v\n", debugDir, err)
+		return
+	}
+
+	fileName := filepath.Join(debugDir, section+".log")
+	if err := os.WriteFile(fileName, []byte(buf.String()), 0o644); err != nil {
+		GinkgoWriter.Printf("Warning: failed to write debug file %s: %v\n", fileName, err)
+		return
+	}
+	GinkgoWriter.Printf("Debug info written to %s\n", fileName)
+}
+
+func logOperatorDebugInfo(k kubectl.Kubectl, artifactsDir, clusterName string) {
+	var buf strings.Builder
 	k = k.WithNamespace(OperatorNamespace)
 	operator, err := k.GetYAML("deployment", deploymentName)
-	logDebugElement("=====Operator Deployment YAML=====", operator, err)
+	logDebugElement("=====Operator Deployment YAML=====", operator, err, &buf)
 
 	logs, err := k.Logs("deploy/"+deploymentName, ptr.Of(120*time.Second))
-	logDebugElement("=====Operator logs=====", logs, err)
+	logDebugElement("=====Operator logs=====", logs, err, &buf)
 
 	events, err := k.GetEvents()
-	logDebugElement("=====Events in "+OperatorNamespace+"=====", events, err)
+	logDebugElement("=====Events in "+OperatorNamespace+"=====", events, err, &buf)
 
 	// Temporary information to gather more details about failure
 	pods, err := k.GetPods("", "-o wide")
-	logDebugElement("=====Pods in "+OperatorNamespace+"=====", pods, err)
+	logDebugElement("=====Pods in "+OperatorNamespace+"=====", pods, err, &buf)
 
 	describe, err := k.Describe("deployment", deploymentName)
-	logDebugElement("=====Operator Deployment describe=====", describe, err)
+	logDebugElement("=====Operator Deployment describe=====", describe, err, &buf)
+	writeDebugFile(artifactsDir, clusterName, "operator", &buf)
 }
 
-func logIstioDebugInfo(k kubectl.Kubectl) {
+func logIstioDebugInfo(k kubectl.Kubectl, artifactsDir, clusterName string) {
+	var buf strings.Builder
 	resource, err := k.GetYAML("istio", istioName)
-	logDebugElement("=====Istio YAML=====", resource, err)
+	logDebugElement("=====Istio YAML=====", resource, err, &buf)
 
 	output, err := k.WithNamespace(ControlPlaneNamespace).GetPods("", "-o wide")
-	logDebugElement("=====Pods in "+ControlPlaneNamespace+"=====", output, err)
+	logDebugElement("=====Pods in "+ControlPlaneNamespace+"=====", output, err, &buf)
 
 	logs, err := k.WithNamespace(ControlPlaneNamespace).Logs("deploy/istiod", ptr.Of(120*time.Second))
-	logDebugElement("=====Istiod logs=====", logs, err)
+	logDebugElement("=====Istiod logs=====", logs, err, &buf)
 
 	events, err := k.WithNamespace(ControlPlaneNamespace).GetEvents()
-	logDebugElement("=====Events in "+ControlPlaneNamespace+"=====", events, err)
+	logDebugElement("=====Events in "+ControlPlaneNamespace+"=====", events, err, &buf)
 
 	// Running istioctl proxy-status to get the status of the proxies.
 	proxyStatus, err := istioctl.GetProxyStatus()
-	logDebugElement("=====Istioctl Proxy Status=====", proxyStatus, err)
+	logDebugElement("=====Istioctl Proxy Status=====", proxyStatus, err, &buf)
+	writeDebugFile(artifactsDir, clusterName, "istio", &buf)
 }
 
-func logCNIDebugInfo(k kubectl.Kubectl) {
+func logCNIDebugInfo(k kubectl.Kubectl, artifactsDir, clusterName string) {
+	var buf strings.Builder
 	resource, err := k.GetYAML("istiocni", istioCniName)
-	logDebugElement("=====IstioCNI YAML=====", resource, err)
+	logDebugElement("=====IstioCNI YAML=====", resource, err, &buf)
 
 	ds, err := k.WithNamespace(IstioCniNamespace).GetYAML("daemonset", "istio-cni-node")
-	logDebugElement("=====Istio CNI DaemonSet YAML=====", ds, err)
+	logDebugElement("=====Istio CNI DaemonSet YAML=====", ds, err, &buf)
 
 	events, err := k.WithNamespace(IstioCniNamespace).GetEvents()
-	logDebugElement("=====Events in "+IstioCniNamespace+"=====", events, err)
+	logDebugElement("=====Events in "+IstioCniNamespace+"=====", events, err, &buf)
 
 	// Temporary information to gather more details about failure
 	pods, err := k.WithNamespace(IstioCniNamespace).GetPods("", "-o wide")
-	logDebugElement("=====Pods in "+IstioCniNamespace+"=====", pods, err)
+	logDebugElement("=====Pods in "+IstioCniNamespace+"=====", pods, err, &buf)
 
 	describe, err := k.WithNamespace(IstioCniNamespace).Describe("daemonset", "istio-cni-node")
-	logDebugElement("=====Istio CNI DaemonSet describe=====", describe, err)
+	logDebugElement("=====Istio CNI DaemonSet describe=====", describe, err, &buf)
 
 	logs, err := k.WithNamespace(IstioCniNamespace).Logs("daemonset/istio-cni-node", ptr.Of(120*time.Second))
-	logDebugElement("=====Istio CNI logs=====", logs, err)
+	logDebugElement("=====Istio CNI logs=====", logs, err, &buf)
+	writeDebugFile(artifactsDir, clusterName, "cni", &buf)
 }
 
-func logZtunnelDebugInfo(k kubectl.Kubectl) {
+func logZtunnelDebugInfo(k kubectl.Kubectl, artifactsDir, clusterName string) {
+	var buf strings.Builder
 	resource, err := k.GetYAML("ztunnel", "default")
-	logDebugElement("=====ZTunnel YAML=====", resource, err)
+	logDebugElement("=====ZTunnel YAML=====", resource, err, &buf)
 
 	ds, err := k.WithNamespace(ZtunnelNamespace).GetYAML("daemonset", "ztunnel")
-	logDebugElement("=====ZTunnel DaemonSet YAML=====", ds, err)
+	logDebugElement("=====ZTunnel DaemonSet YAML=====", ds, err, &buf)
 
 	events, err := k.WithNamespace(ZtunnelNamespace).GetEvents()
-	logDebugElement("=====Events in "+ZtunnelNamespace+"=====", events, err)
+	logDebugElement("=====Events in "+ZtunnelNamespace+"=====", events, err, &buf)
 
 	describe, err := k.WithNamespace(ZtunnelNamespace).Describe("daemonset", "ztunnel")
-	logDebugElement("=====ZTunnel DaemonSet describe=====", describe, err)
+	logDebugElement("=====ZTunnel DaemonSet describe=====", describe, err, &buf)
 
 	logs, err := k.WithNamespace(ZtunnelNamespace).Logs("daemonset/ztunnel", ptr.Of(120*time.Second))
-	logDebugElement("=====ztunnel logs=====", logs, err)
+	logDebugElement("=====ztunnel logs=====", logs, err, &buf)
+	writeDebugFile(artifactsDir, clusterName, "ztunnel", &buf)
 }
 
-func logCertsDebugInfo(k kubectl.Kubectl) {
+func logCertsDebugInfo(k kubectl.Kubectl, artifactsDir, clusterName string) {
+	var buf strings.Builder
 	certs, err := k.WithNamespace(ControlPlaneNamespace).GetSecret("cacerts")
-	logDebugElement("=====CA certs in "+ControlPlaneNamespace+"=====", certs, err)
+	logDebugElement("=====CA certs in "+ControlPlaneNamespace+"=====", certs, err, &buf)
+	writeDebugFile(artifactsDir, clusterName, "certs", &buf)
 }
 
-func logSampleNamespacesDebugInfo(k kubectl.Kubectl, suite testSuite) {
+func logSampleNamespacesDebugInfo(k kubectl.Kubectl, suite testSuite, artifactsDir, clusterName string) {
 	// Common sample namespaces used across different test suites
 	sampleNamespaces := []string{SleepNamespace, HttpbinNamespace}
 
@@ -278,52 +313,57 @@ func logSampleNamespacesDebugInfo(k kubectl.Kubectl, suite testSuite) {
 	}
 
 	for _, ns := range sampleNamespaces {
-		logSampleNamespaceInfo(k, ns)
+		var buf strings.Builder
+		logSampleNamespaceInfo(k, ns, &buf)
+		writeDebugFile(artifactsDir, clusterName, "namespace-"+ns, &buf)
 	}
 }
 
-func logSampleNamespaceInfo(k kubectl.Kubectl, namespace string) {
+func logSampleNamespaceInfo(k kubectl.Kubectl, namespace string, buf *strings.Builder) {
 	// Check if namespace exists
 	nsInfo, err := k.GetYAML("namespace", namespace)
 	if err != nil {
-		logDebugElement("=====Namespace "+namespace+" (not found)=====", "", err)
+		logDebugElement("=====Namespace "+namespace+" (not found)=====", "", err, buf)
 		return
 	}
-	logDebugElement("=====Namespace "+namespace+" YAML=====", nsInfo, err)
+	logDebugElement("=====Namespace "+namespace+" YAML=====", nsInfo, err, buf)
 
 	// Get pods in the namespace with wide output for more details
 	pods, err := k.WithNamespace(namespace).GetPods("", "-o wide")
-	logDebugElement("=====Pods in "+namespace+"=====", pods, err)
+	logDebugElement("=====Pods in "+namespace+"=====", pods, err, buf)
 
 	// Get events in the namespace
 	events, err := k.WithNamespace(namespace).GetEvents()
-	logDebugElement("=====Events in "+namespace+"=====", events, err)
+	logDebugElement("=====Events in "+namespace+"=====", events, err, buf)
 
 	// Get deployments
 	deployments, err := k.WithNamespace(namespace).GetYAML("deployments", "")
-	logDebugElement("=====Deployments in "+namespace+"=====", deployments, err)
+	logDebugElement("=====Deployments in "+namespace+"=====", deployments, err, buf)
 
 	// Get services
 	services, err := k.WithNamespace(namespace).GetYAML("services", "")
-	logDebugElement("=====Services in "+namespace+"=====", services, err)
+	logDebugElement("=====Services in "+namespace+"=====", services, err, buf)
 
 	// Describe failed or non-ready pods specifically
-	logFailedPodsDetails(k, namespace)
+	logFailedPodsDetails(k, namespace, buf)
 }
 
-func logFailedPodsDetails(k kubectl.Kubectl, namespace string) {
+func logFailedPodsDetails(k kubectl.Kubectl, namespace string, buf *strings.Builder) {
 	// Describe all pods in the namespace for detailed troubleshooting
 	// This provides comprehensive information about pod status, events, and configuration
 	describe, err := k.WithNamespace(namespace).Describe("pods", "")
-	logDebugElement("=====Pod descriptions in "+namespace+"=====", describe, err)
+	logDebugElement("=====Pod descriptions in "+namespace+"=====", describe, err, buf)
 }
 
-func logDebugElement(caption string, info string, err error) {
+func logDebugElement(caption string, info string, err error, buf *strings.Builder) {
 	GinkgoWriter.Println("\n" + caption + ":")
+	buf.WriteString("\n" + caption + ":\n")
 	if err != nil {
 		GinkgoWriter.Println(Indent(err.Error()))
+		buf.WriteString(Indent(err.Error()) + "\n")
 	} else {
 		GinkgoWriter.Println(Indent(strings.TrimSpace(info)))
+		buf.WriteString(Indent(strings.TrimSpace(info)) + "\n")
 	}
 }
 

@@ -22,6 +22,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
@@ -34,12 +35,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	defaultTimeout = 180
-)
+var defaultTimeout = env.GetInt("DEFAULT_TEST_TIMEOUT", 180)
 
 var _ = Describe("Ambient configuration ", Label("smoke", "ambient"), Ordered, func() {
-	SetDefaultEventuallyTimeout(defaultTimeout * time.Second)
+	SetDefaultEventuallyTimeout(time.Duration(defaultTimeout) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
 	debugInfoLogged := false
@@ -48,6 +47,11 @@ var _ = Describe("Ambient configuration ", Label("smoke", "ambient"), Ordered, f
 		for _, version := range istioversion.GetLatestPatchVersions() {
 			// The minimum supported version is 1.24 (and above)
 			if version.Version.LessThan(semver.MustParse("1.24.0")) {
+				continue
+			}
+
+			// FIPS clusters do not support ambient mode for versions below 1.28
+			if fipsCluster && version.Version.LessThan(semver.MustParse("1.28.0")) {
 				continue
 			}
 

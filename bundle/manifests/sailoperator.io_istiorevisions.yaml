@@ -308,6 +308,11 @@ spec:
                               type: string
                           type: object
                         type: array
+                      enableReaderRBAC:
+                        description: |-
+                          If true, install istio-reader service account and associated cluster role/binding,
+                          which are used for multicluster remote-secret workflows.
+                        type: boolean
                       externalIstiod:
                         description: Controls whether one external istiod is enabled.
                         type: boolean
@@ -5785,7 +5790,98 @@ spec:
                             enum:
                             - REGISTRY_ONLY
                             - ALLOW_ANY
+                            - ALLOW_ANY_DYNAMIC_DNS
                             type: string
+                          tls:
+                            description: TLS settings for client connections to unknown
+                              destinations. Applicable only when mode is set to `ALLOW_ANY_DYNAMIC_DNS`.
+                            properties:
+                              caCertificates:
+                                description: |-
+                                  OPTIONAL: The path to the file containing certificate authority
+                                  certificates to use in verifying a presented server certificate. If
+                                  omitted, the proxy will verify the server's certificate using
+                                  the OS CA certificates.
+                                  Should be empty if mode is `ISTIO_MUTUAL`.
+                                type: string
+                              caCrl:
+                                description: |-
+                                  OPTIONAL: The path to the file containing the certificate revocation list (CRL)
+                                  to use in verifying a presented server certificate. `CRL` is a list of certificates
+                                  that have been revoked by the CA (Certificate Authority) before their scheduled expiration date.
+                                  If specified, the proxy will verify if the presented certificate is part of the revoked list of certificates.
+                                  If omitted, the proxy will not verify the certificate against the `crl`. Note that if `credentialName` is set,
+                                  `CRL` cannot be specified using `caCrl`, rather it has to be specified inside the credential.
+                                type: string
+                              clientCertificate:
+                                description: |-
+                                  REQUIRED if mode is `MUTUAL`. The path to the file holding the
+                                  client-side TLS certificate to use.
+                                  Should be empty if mode is `ISTIO_MUTUAL`.
+                                type: string
+                              credentialName:
+                                description: |-
+                                  The name of the secret that holds the TLS certs for the
+                                  client including the CA certificates. This secret must exist in
+                                  the namespace of the proxy using the certificates.
+                                  An Opaque secret should contain the following keys and values:
+                                  `key: <privateKey>`, `cert: <clientCert>`, `cacert: <CACertificate>`,
+                                  `crl: <certificateRevocationList>`
+                                  Here CACertificate is used to verify the server certificate.
+                                  For mutual TLS, `cacert: <CACertificate>` can be provided in the
+                                  same secret or a separate secret named `<secret>-cacert`.
+                                  A TLS secret for client certificates with an additional
+                                  `ca.crt` key for CA certificates and `ca.crl` key for
+                                  certificate revocation list(CRL) is also supported.
+                                  Only one of client certificates and CA certificate
+                                  or credentialName can be specified.
+
+                                  **NOTE:** This field is applicable at sidecars only if
+                                  `DestinationRule` has a `workloadSelector` specified.
+                                  Otherwise the field will be applicable only at gateways, and
+                                  sidecars will continue to use the certificate paths.
+                                type: string
+                              insecureSkipVerify:
+                                description: |-
+                                  `insecureSkipVerify` specifies whether the proxy should skip verifying the
+                                  CA signature and SAN for the server certificate corresponding to the host.
+                                  The default value of this field is false.
+                                type: boolean
+                              mode:
+                                description: |-
+                                  Indicates whether connections to this port should be secured
+                                  using TLS. The value of this field determines how TLS is enforced.
+                                enum:
+                                - DISABLE
+                                - SIMPLE
+                                - MUTUAL
+                                - ISTIO_MUTUAL
+                                type: string
+                              privateKey:
+                                description: |-
+                                  REQUIRED if mode is `MUTUAL`. The path to the file holding the
+                                  client's private key.
+                                  Should be empty if mode is `ISTIO_MUTUAL`.
+                                type: string
+                              sni:
+                                description: |-
+                                  SNI string to present to the server during TLS handshake.
+                                  If unspecified, SNI will be automatically set based on downstream HTTP
+                                  host/authority header for SIMPLE and MUTUAL TLS modes.
+                                type: string
+                              subjectAltNames:
+                                description: |-
+                                  A list of alternate names to verify the subject identity in the
+                                  certificate. If specified, the proxy will verify that the server
+                                  certificate's subject alt name matches one of the specified values.
+                                  If specified, this list overrides the value of `subjectAltNames`
+                                  from the `ServiceEntry`. If unspecified, automatic validation of upstream
+                                  presented certificate for new upstream connections will be done based on the
+                                  downstream HTTP host/authority header.
+                                items:
+                                  type: string
+                                type: array
+                            type: object
                         type: object
                       pathNormalization:
                         description: |-
@@ -10147,7 +10243,7 @@ spec:
               version:
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.29.1, v1.29.0, v1.28.5, v1.28.4, v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.27.8, v1.27.7, v1.27.6, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, v1.30-alpha.2137ab0d.
+                  Must be one of: v1.29.1, v1.29.0, v1.28.5, v1.28.4, v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.30-alpha.e2413abb.
                 enum:
                 - v1.29.1
                 - v1.29.0
@@ -10157,6 +10253,7 @@ spec:
                 - v1.28.2
                 - v1.28.1
                 - v1.28.0
+                - v1.27.9
                 - v1.27.8
                 - v1.27.7
                 - v1.27.6
@@ -10197,7 +10294,7 @@ spec:
                 - v1.22.6
                 - v1.22.5
                 - v1.21.6
-                - v1.30-alpha.2137ab0d
+                - v1.30-alpha.e2413abb
                 type: string
             required:
             - namespace

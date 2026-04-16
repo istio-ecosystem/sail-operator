@@ -170,6 +170,10 @@ type CNIConfig struct {
 	// Specifies if an Istio owned CNI config should be created.
 	IstioOwnedCNIConfig         *bool   `json:"istioOwnedCNIConfig,omitempty"`
 	IstioOwnedCNIConfigFileName *string `json:"istioOwnedCNIConfigFileName,omitempty"`
+	// Specifies whether to use the AppArmor annotation or the appArmorProfile field in the securityContext to configure the profile.
+	// See https://kubernetes.io/docs/tutorials/security/apparmor/
+	// https://kubernetes.io/docs/reference/labels-annotations-taints/#container-apparmor-security-beta-kubernetes-io
+	UseAppArmorAnnotation *bool `json:"useAppArmorAnnotation,omitempty"`
 }
 
 type CNIUsageConfig struct {
@@ -457,7 +461,10 @@ type GlobalConfig struct {
 	// This is useful when installing Istio on a cluster where some resources need to be owned by a cluster administrator and some can be owned by the mesh administrator.
 	ResourceScope ResourceScope `json:"resourceScope,omitempty"`
 	// Specifies how proxies are configured within Istio.
-	Agentgateway *Agentgateway `json:"agentgateway,omitempty"` // The next available key is 78
+	Agentgateway *Agentgateway `json:"agentgateway,omitempty"`
+	// If true, install istio-reader service account and associated cluster role/binding,
+	// which are used for multicluster remote-secret workflows.
+	EnableReaderRBAC *bool `json:"enableReaderRBAC,omitempty"` // The next available key is 79
 
 }
 
@@ -1051,7 +1058,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x05amd64\x18\x01 \x01(\rR\x05amd64\x12\x18\n" +
 	"\appc64le\x18\x02 \x01(\rR\appc64le\x12\x14\n" +
 	"\x05s390x\x18\x03 \x01(\rR\x05s390x\x12\x14\n" +
-	"\x05arm64\x18\x04 \x01(\rR\x05arm64\"\x90\f\n" +
+	"\x05arm64\x18\x04 \x01(\rR\x05arm64\"\xe2\f\n" +
 	"\tCNIConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12\x10\n" +
 	"\x03hub\x18\x02 \x01(\tR\x03hub\x12(\n" +
@@ -1089,7 +1096,8 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\bprovider\x18\x16 \x01(\tR\bprovider\x12Z\n" +
 	"\x15rollingMaxUnavailable\x18\x17 \x01(\v2$.istio.operator.v1alpha1.IntOrStringR\x15rollingMaxUnavailable\x12L\n" +
 	"\x13istioOwnedCNIConfig\x18# \x01(\v2\x1a.google.protobuf.BoolValueR\x13istioOwnedCNIConfig\x12@\n" +
-	"\x1bistioOwnedCNIConfigFileName\x18$ \x01(\tR\x1bistioOwnedCNIConfigFileName\"\x9c\x01\n" +
+	"\x1bistioOwnedCNIConfigFileName\x18$ \x01(\tR\x1bistioOwnedCNIConfigFileName\x12P\n" +
+	"\x15useAppArmorAnnotation\x18% \x01(\v2\x1a.google.protobuf.BoolValueR\x15useAppArmorAnnotation\"\x9c\x01\n" +
 	"\x0eCNIUsageConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x128\n" +
 	"\achained\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueB\x02\x18\x01R\achained\x12\x1a\n" +
@@ -1181,7 +1189,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x14istio_ingressgateway\x18\x04 \x01(\v2-.istio.operator.v1alpha1.IngressGatewayConfigR\x14istio-ingressgateway\x12@\n" +
 	"\x0fsecurityContext\x18\n" +
 	" \x01(\v2\x16.google.protobuf.ValueR\x0fsecurityContext\x12>\n" +
-	"\x0eseccompProfile\x18\f \x01(\v2\x16.google.protobuf.ValueR\x0eseccompProfile\"\xf1\x14\n" +
+	"\x0eseccompProfile\x18\f \x01(\v2\x16.google.protobuf.ValueR\x0eseccompProfile\"\xb9\x15\n" +
 	"\fGlobalConfig\x12;\n" +
 	"\x04arch\x18\x01 \x01(\v2#.istio.operator.v1alpha1.ArchConfigB\x02\x18\x01R\x04arch\x12 \n" +
 	"\vcertSigners\x18D \x03(\tR\vcertSigners\x12F\n" +
@@ -1233,7 +1241,8 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x0enativeNftables\x18J \x01(\v2\x1a.google.protobuf.BoolValueR\x0enativeNftables\x12R\n" +
 	"\rnetworkPolicy\x18K \x01(\v2,.istio.operator.v1alpha1.NetworkPolicyConfigR\rnetworkPolicy\x12L\n" +
 	"\rresourceScope\x18L \x01(\x0e2&.istio.operator.v1alpha1.ResourceScopeR\rresourceScope\x12I\n" +
-	"\fagentgateway\x18M \x01(\v2%.istio.operator.v1alpha1.AgentgatewayR\fagentgateway\"$\n" +
+	"\fagentgateway\x18M \x01(\v2%.istio.operator.v1alpha1.AgentgatewayR\fagentgateway\x12F\n" +
+	"\x10enableReaderRBAC\x18N \x01(\v2\x1a.google.protobuf.BoolValueR\x10enableReaderRBAC\"$\n" +
 	"\fAgentgateway\x12\x14\n" +
 	"\x05image\x18\x01 \x01(\tR\x05image\"-\n" +
 	"\tSTSConfig\x12 \n" +
@@ -1619,7 +1628,7 @@ const (
 	MeshConfigH2UpgradePolicyUpgrade MeshConfigH2UpgradePolicy = "UPGRADE"
 )
 
-// +kubebuilder:validation:Enum=REGISTRY_ONLY;ALLOW_ANY
+// +kubebuilder:validation:Enum=REGISTRY_ONLY;ALLOW_ANY;ALLOW_ANY_DYNAMIC_DNS
 type MeshConfigOutboundTrafficPolicyMode string
 
 const (
@@ -1635,6 +1644,10 @@ const (
 	// This mode allows users that do not have all possible egress destinations registered through `ServiceEntry` configurations to still connect
 	// to arbitrary destinations.
 	MeshConfigOutboundTrafficPolicyModeAllowAny MeshConfigOutboundTrafficPolicyMode = "ALLOW_ANY"
+	// In `ALLOW_ANY_DYNAMIC_DNS` mode, traffic to unknown destinations will be allowed via dynamic DNS resolution.
+	// This mode allows users that do not have all possible egress destinations registered through `ServiceEntry` configurations to still connect
+	// to arbitrary destinations. Client TLS settings can be configured for connections to such destinations.
+	MeshConfigOutboundTrafficPolicyModeAllowAnyDynamicDns MeshConfigOutboundTrafficPolicyMode = "ALLOW_ANY_DYNAMIC_DNS"
 )
 
 // +kubebuilder:validation:Enum=PASSTHROUGH;LOCALHOST
@@ -2172,6 +2185,8 @@ type Certificate struct {
 // handling unknown outbound traffic from the application.
 type MeshConfigOutboundTrafficPolicy struct {
 	Mode MeshConfigOutboundTrafficPolicyMode `json:"mode,omitempty"`
+	// TLS settings for client connections to unknown destinations. Applicable only when mode is set to `ALLOW_ANY_DYNAMIC_DNS`.
+	Tls *ClientTLSSettings `json:"tls,omitempty"`
 }
 
 type MeshConfigInboundTrafficPolicy struct {
@@ -3194,7 +3209,7 @@ type MeshConfigExtensionProviderResourceDetectorsDynatraceResourceDetector struc
 
 const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\n" +
-	"\x1amesh/v1alpha1/config.proto\x12\x13istio.mesh.v1alpha1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19mesh/v1alpha1/proxy.proto\x1a*networking/v1alpha3/destination_rule.proto\x1a)networking/v1alpha3/virtual_service.proto\"\xe6r\n" +
+	"\x1amesh/v1alpha1/config.proto\x12\x13istio.mesh.v1alpha1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19mesh/v1alpha1/proxy.proto\x1a*networking/v1alpha3/destination_rule.proto\x1a)networking/v1alpha3/virtual_service.proto\"\xc1s\n" +
 	"\n" +
 	"MeshConfig\x12*\n" +
 	"\x11proxy_listen_port\x18\x04 \x01(\x05R\x0fproxyListenPort\x129\n" +
@@ -3243,12 +3258,14 @@ const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\x12path_normalization\x18= \x01(\v26.istio.mesh.v1alpha1.MeshConfig.ProxyPathNormalizationR\x11pathNormalization\x12_\n" +
 	"\x19default_http_retry_policy\x18> \x01(\v2$.istio.networking.v1alpha3.HTTPRetryR\x16defaultHttpRetryPolicy\x12F\n" +
 	"\tmesh_mTLS\x18? \x01(\v2).istio.mesh.v1alpha1.MeshConfig.TLSConfigR\bmeshMTLS\x12L\n" +
-	"\ftls_defaults\x18@ \x01(\v2).istio.mesh.v1alpha1.MeshConfig.TLSConfigR\vtlsDefaults\x1a\xad\x01\n" +
+	"\ftls_defaults\x18@ \x01(\v2).istio.mesh.v1alpha1.MeshConfig.TLSConfigR\vtlsDefaults\x1a\x88\x02\n" +
 	"\x15OutboundTrafficPolicy\x12N\n" +
-	"\x04mode\x18\x01 \x01(\x0e2:.istio.mesh.v1alpha1.MeshConfig.OutboundTrafficPolicy.ModeR\x04mode\"D\n" +
+	"\x04mode\x18\x01 \x01(\x0e2:.istio.mesh.v1alpha1.MeshConfig.OutboundTrafficPolicy.ModeR\x04mode\x12>\n" +
+	"\x03tls\x18\x02 \x01(\v2,.istio.networking.v1alpha3.ClientTLSSettingsR\x03tls\"_\n" +
 	"\x04Mode\x12\x11\n" +
 	"\rREGISTRY_ONLY\x10\x00\x12\r\n" +
-	"\tALLOW_ANY\x10\x01\"\x04\b\x02\x10\x02*\x14VIRTUAL_SERVICE_ONLY\x1a\x8d\x01\n" +
+	"\tALLOW_ANY\x10\x01\x12\x19\n" +
+	"\x15ALLOW_ANY_DYNAMIC_DNS\x10\x03\"\x04\b\x02\x10\x02*\x14VIRTUAL_SERVICE_ONLY\x1a\x8d\x01\n" +
 	"\x14InboundTrafficPolicy\x12M\n" +
 	"\x04mode\x18\x01 \x01(\x0e29.istio.mesh.v1alpha1.MeshConfig.InboundTrafficPolicy.ModeR\x04mode\"&\n" +
 	"\x04Mode\x12\x0f\n" +

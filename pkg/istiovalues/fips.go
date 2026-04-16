@@ -19,6 +19,8 @@ import (
 	"strings"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+  
+  "istio.io/istio/pkg/log"
 )
 
 var (
@@ -34,11 +36,15 @@ func init() {
 func detectFipsMode(filepath string) {
 	contents, err := os.ReadFile(filepath)
 	if err != nil {
+		log.Infof("FIPS detection: failed to read %s: %v; FIPS mode disabled", filepath, err)
 		FipsEnabled = false
 	} else {
 		fipsEnabled := strings.TrimSuffix(string(contents), "\n")
 		if fipsEnabled == "1" {
 			FipsEnabled = true
+			log.Infof("FIPS detection: %s contains %q; FIPS mode enabled", filepath, fipsEnabled)
+		} else {
+			log.Infof("FIPS detection: %s contains %q (expected \"1\"); FIPS mode disabled", filepath, fipsEnabled)
 		}
 	}
 }

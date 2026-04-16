@@ -21,6 +21,7 @@ import (
 	"time"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
@@ -35,7 +36,7 @@ import (
 )
 
 var _ = Describe("Multicluster deployment models", Label("multicluster", "multicluster-multiprimary"), Ordered, func() {
-	SetDefaultEventuallyTimeout(180 * time.Second)
+	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
 	Context("Sidecar", func() {

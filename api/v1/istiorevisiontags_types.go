@@ -35,8 +35,7 @@ type IstioRevisionTagSpec struct {
 type IstioRevisionTagTargetReference struct {
 	// Kind is the kind of the target resource.
 	//
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=Istio;IstioRevision
 	// +kubebuilder:validation:Required
 	Kind string `json:"kind"`
 

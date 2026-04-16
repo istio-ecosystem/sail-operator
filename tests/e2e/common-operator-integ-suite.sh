@@ -103,10 +103,6 @@ parse_flags() {
 
   if [ "${OLM}" == "true" ]; then
     echo "OLM deployment enabled"
-    if [ "${OCP}" == "true" ]; then
-      echo "Skipping operator deployment using OLM on OCP clusters due to certificate issues with the internal registry."
-      exit 1
-    fi
   fi
 }
 
@@ -126,6 +122,8 @@ initialize_variables() {
   ISTIO_MANIFEST="chart/samples/istio-sample.yaml"
   CI=${CI:-"false"}
   USE_INTERNAL_REGISTRY=${USE_INTERNAL_REGISTRY:-"false"}
+  FIPS_CLUSTER=${FIPS_CLUSTER:-"false"}
+  COMMIT_HASH=$(git rev-parse --short HEAD)
 
   # Debug logging and fallback for GINKGO_FLAGS
   echo "CI environment: ${CI}"
@@ -152,16 +150,16 @@ initialize_variables() {
       # Scenario 2: CI mode with default HUB -> use external registry with proper CI tag
       echo "CI mode detected for OCP, using external registry ${HUB}"
       export USE_INTERNAL_REGISTRY="false"
-      # Use PR_NUMBER if available, otherwise generate timestamp tag
-      # Use TARGET_ARCH to differentiate tags for different architectures in CI, avoid race conditions in CI when multiple runs are pushing to the same default tag
+      # Use PR_NUMBER and commit hash to identify the image, avoid race conditions in CI when multiple runs are pushing to the same default tag
+      # Use TARGET_ARCH to differentiate tags for different architectures in CI
       if [ -n "${PR_NUMBER:-}" ]; then
-        TAG="pr-${PR_NUMBER}-${TARGET_ARCH}"
+        TAG="pr-${PR_NUMBER}-${COMMIT_HASH}-${TARGET_ARCH}"
         export TAG
         echo "Using PR-based tag: ${TAG}"
       else
-        TAG="ci-test-$(date +%s)-${TARGET_ARCH}"
+        TAG="ci-test-${COMMIT_HASH}-${TARGET_ARCH}"
         export TAG
-        echo "Using timestamp-based tag: ${TAG}"
+        echo "Using commit-based tag: ${TAG}"
       fi
     elif [ "${CI}" == "true" ]; then
       # Additional CI mode check - handle CI mode regardless of HUB value
@@ -290,31 +288,42 @@ if [ "${SKIP_BUILD}" == "false" ]; then
     fi
   fi
   # If OLM is enabled, deploy the operator using OLM
-  # We are skipping the deploy via OLM test on OCP because the workaround to avoid the certificate issue is not working.
-  # Jira ticket related to the limitation: https://issues.redhat.com/browse/OSSM-7993
-  if [ "${OLM}" == "true" ] && [ "${SKIP_DEPLOY}" == "false" ] && [ "${MULTICLUSTER}" == "false" ]; then    
+  # If PR_NUMBER is set we will tag the BUNDLE_IMG with the PR number and commit hash to avoid conflicts.
+  if [ "${OLM}" == "true" ] && [ "${SKIP_DEPLOY}" == "false" ] && [ "${MULTICLUSTER}" == "false" ]; then
     IMAGE_TAG_BASE="${HUB}/${IMAGE_BASE}"
-    BUNDLE_IMG="${IMAGE_TAG_BASE}-bundle:v${VERSION}"
+    if [ "${CI}" == "true" ]; then
+      if [ -n "${PR_NUMBER:-}" ]; then
+        BUNDLE_IMG="${IMAGE_TAG_BASE}-bundle:pr-${PR_NUMBER}-${COMMIT_HASH}-${TARGET_ARCH}"
+      else
+        BUNDLE_IMG="${IMAGE_TAG_BASE}-bundle:ci-test-${COMMIT_HASH}-${TARGET_ARCH}"
+      fi
+    else
+      BUNDLE_IMG="${IMAGE_TAG_BASE}-bundle:ci-test-${COMMIT_HASH}-${TARGET_ARCH}"
+    fi
 
     IMAGE="${HUB}/${IMAGE_BASE}:${TAG}" \
     IMAGE_TAG_BASE="${IMAGE_TAG_BASE}" \
     BUNDLE_IMG="${BUNDLE_IMG}" \
-    OPENSHIFT_PLATFORM=false \
+    OCP="${OCP}" \
     make bundle bundle-build bundle-push
 
-    # Install OLM in the cluster because it's not available by default in kind.
-    OLM_INSTALL_ARGS=""
-    if [ "${OLM_VERSION}" != "" ]; then
-      OLM_INSTALL_ARGS+="--version ${OLM_VERSION}"
+    if [ "${OCP}" == "false" ]; then
+      # Install OLM in the cluster because it's not available by default in kind.
+      OLM_INSTALL_ARGS=""
+      if [ "${OLM_VERSION}" != "" ]; then
+        OLM_INSTALL_ARGS+="--version ${OLM_VERSION}"
+      fi
+
+      # Ensure kubeconfig is set to the kind cluster
+      kind export kubeconfig --name="${KIND_CLUSTER_NAME}"
+      # shellcheck disable=SC2086
+      ${OPERATOR_SDK} olm install ${OLM_INSTALL_ARGS}
+
+      ${COMMAND} wait catalogsource operatorhubio-catalog -n olm --for 'jsonpath={.status.connectionState.lastObservedState}=READY' --timeout=5m
+    else
+      # On OCP, wait for different CatalogSources as operatorhubio-catalog might not exist
+      ${COMMAND} wait catalogsource redhat-operators -n openshift-marketplace --for 'jsonpath={.status.connectionState.lastObservedState}=READY' --timeout=5m || true
     fi
-
-    # Ensure kubeconfig is set to the kind cluster
-    kind export kubeconfig --name="${KIND_CLUSTER_NAME}"
-    # shellcheck disable=SC2086
-    ${OPERATOR_SDK} olm install ${OLM_INSTALL_ARGS}
-
-    # Wait for for the CatalogSource to be CatalogSource.status.connectionState.lastObservedState == READY
-    ${COMMAND} wait catalogsource operatorhubio-catalog -n olm --for 'jsonpath={.status.connectionState.lastObservedState}=READY' --timeout=5m
 
     ${COMMAND} create ns "${NAMESPACE}" || true
     ${OPERATOR_SDK} run bundle "${BUNDLE_IMG}" -n "${NAMESPACE}" --skip-tls --timeout 5m || exit 1
@@ -325,7 +334,7 @@ if [ "${SKIP_BUILD}" == "false" ]; then
   fi
 fi
 
-export SKIP_DEPLOY IP_FAMILY ISTIO_MANIFEST NAMESPACE CONTROL_PLANE_NS DEPLOYMENT_NAME MULTICLUSTER ARTIFACTS ISTIO_NAME COMMAND KUBECONFIG ISTIOCTL_PATH SKIP_CLEANUP GINKGO_FLAGS
+export SKIP_DEPLOY IP_FAMILY ISTIO_MANIFEST NAMESPACE CONTROL_PLANE_NS DEPLOYMENT_NAME MULTICLUSTER ARTIFACTS ISTIO_NAME COMMAND KUBECONFIG ISTIOCTL_PATH SKIP_CLEANUP GINKGO_FLAGS FIPS_CLUSTER
 
 if [ "${OLM}" != "true" ] && [ "${SKIP_DEPLOY}" != "true" ]; then
   # shellcheck disable=SC2153

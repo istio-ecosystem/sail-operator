@@ -17,7 +17,7 @@ jobs:
   update-eol-versions:
     runs-on: ubuntu-latest
     container:
-      image: gcr.io/istio-testing/build-tools:master-eebcdda8856e2d4f528991d27d4808880cce4c52
+      image: registry.istio.io/testing/build-tools:master-817db1b7909fb411f9c6d357b831b658285c26fb
       options: --entrypoint ''
 
     steps:

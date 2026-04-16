@@ -68,7 +68,7 @@ The major limitations are around L7 features (like L7 based traffic routing, L7 
 
 Currently, sidecar proxies have limited support for communicating with waypoint proxies. As a result, when a sidecar pod sends traffic
 to an ambient pod with a waypoint, the traffic usually bypasses the waypoint, which prevents Layer 7 (L7) policy enforcement.
-However, ambient pods can communicate with sidecar pods through waypoints, allowing L7 policy enforcement in that direction.
+However, ambient pods communicate directly with sidecar pods, and L7 policy enforcement is handled by the sidecar proxy.
 
 When a sidecar pod communicates with an ambient pod that has a waypoint:
 

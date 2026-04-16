@@ -1332,6 +1332,12 @@ spec:
                         description: The container image tag to pull. Image will be
                           `Hub/Image:Tag-Variant`.
                         type: string
+                      useAppArmorAnnotation:
+                        description: |-
+                          Specifies whether to use the AppArmor annotation or the appArmorProfile field in the securityContext to configure the profile.
+                          See https://kubernetes.io/docs/tutorials/security/apparmor/
+                          https://kubernetes.io/docs/reference/labels-annotations-taints/#container-apparmor-security-beta-kubernetes-io
+                        type: boolean
                       variant:
                         description: The container image variant to pull. Options
                           are "debug" or "distroless". Unset will use the default
@@ -1466,7 +1472,7 @@ spec:
                 default: v1.29.1
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.29-latest, v1.29.1, v1.29.0, v1.28-latest, v1.28.5, v1.28.4, v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.27-latest, v1.27.8, v1.27.7, v1.27.6, v1.27.5, v1.27.4, v1.27.3, v1.27.2, v1.27.1, v1.27.0, master, v1.30-alpha.2137ab0d.
+                  Must be one of: v1.29-latest, v1.29.1, v1.29.0, v1.28-latest, v1.28.5, v1.28.4, v1.28.3, v1.28.2, v1.28.1, v1.28.0, master, v1.30-alpha.e2413abb.
                 enum:
                 - v1.29-latest
                 - v1.29.1
@@ -1479,6 +1485,7 @@ spec:
                 - v1.28.1
                 - v1.28.0
                 - v1.27-latest
+                - v1.27.9
                 - v1.27.8
                 - v1.27.7
                 - v1.27.6
@@ -1525,7 +1532,7 @@ spec:
                 - v1.22.5
                 - v1.21.6
                 - master
-                - v1.30-alpha.2137ab0d
+                - v1.30-alpha.e2413abb
                 type: string
             required:
             - namespace
