@@ -15,9 +15,15 @@
 package revision
 
 import (
+	"context"
 	"testing"
 
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/stretchr/testify/assert"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func TestGetReferencedRevisionFromNamespace(t *testing.T) {
@@ -142,6 +148,86 @@ func TestGetInjectedRevisionFromPod(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := GetInjectedRevisionFromPod(tt.podAnnotations)
 			assert.Equalf(t, tt.expected, result, "GetInjectedRevisionFromPod(%v)", tt.podAnnotations)
+		})
+	}
+}
+
+func TestGetIstioRevisionFromTargetReference(t *testing.T) {
+	rev := &v1.IstioRevision{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "my-revision",
+		},
+	}
+	istioWithActiveRevision := &v1.Istio{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "my-istio",
+		},
+		Status: v1.IstioStatus{
+			ActiveRevisionName: "my-revision",
+		},
+	}
+	istioWithoutActiveRevision := &v1.Istio{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "no-active",
+		},
+	}
+
+	tests := []struct {
+		name        string
+		ref         v1.TargetReference
+		objects     []client.Object
+		expectedRev string
+		expectErr   string
+	}{
+		{
+			name:        "IstioRevision reference",
+			ref:         v1.TargetReference{Kind: v1.IstioRevisionKind, Name: "my-revision"},
+			objects:     []client.Object{rev},
+			expectedRev: "my-revision",
+		},
+		{
+			name:        "Istio reference with active revision",
+			ref:         v1.TargetReference{Kind: v1.IstioKind, Name: "my-istio"},
+			objects:     []client.Object{istioWithActiveRevision, rev},
+			expectedRev: "my-revision",
+		},
+		{
+			name:      "Istio reference without active revision",
+			ref:       v1.TargetReference{Kind: v1.IstioKind, Name: "no-active"},
+			objects:   []client.Object{istioWithoutActiveRevision},
+			expectErr: "referenced Istio has no active revision",
+		},
+		{
+			name:      "Istio reference not found",
+			ref:       v1.TargetReference{Kind: v1.IstioKind, Name: "nonexistent"},
+			objects:   []client.Object{},
+			expectErr: "not found",
+		},
+		{
+			name:      "IstioRevision reference not found",
+			ref:       v1.TargetReference{Kind: v1.IstioRevisionKind, Name: "nonexistent"},
+			objects:   []client.Object{},
+			expectErr: "not found",
+		},
+		{
+			name:      "unknown kind",
+			ref:       v1.TargetReference{Kind: "UnknownKind", Name: "test"},
+			objects:   []client.Object{},
+			expectErr: "unknown targetRef.kind",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(tt.objects...).WithStatusSubresource(&v1.Istio{}).Build()
+			result, err := GetIstioRevisionFromTargetReference(context.TODO(), cl, tt.ref)
+			if tt.expectErr != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectErr)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedRev, result.Name)
+			}
 		})
 	}
 }
