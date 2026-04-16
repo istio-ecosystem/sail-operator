@@ -15,11 +15,10 @@
 package istiovalues
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
-	"github.com/istio-ecosystem/sail-operator/pkg/helm"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 
 	"istio.io/istio/pkg/log"
 )
@@ -50,22 +49,34 @@ func detectFipsMode(filepath string) {
 	}
 }
 
-// ApplyFipsValues sets value pilot.env.COMPLIANCE_POLICY if FIPS mode is enabled in the system.
-func ApplyFipsValues(values helm.Values) (helm.Values, error) {
-	if FipsEnabled {
-		if err := values.SetIfAbsent("pilot.env.COMPLIANCE_POLICY", "fips-140-2"); err != nil {
-			return nil, fmt.Errorf("failed to set pilot.env.COMPLIANCE_POLICY: %w", err)
-		}
+// ApplyFipsValues sets pilot.env.COMPLIANCE_POLICY if FIPS mode is enabled in the system.
+func ApplyFipsValues(values *v1.Values) {
+	if !FipsEnabled || values == nil {
+		return
 	}
-	return values, nil
+	if values.Pilot == nil {
+		values.Pilot = &v1.PilotConfig{}
+	}
+	if values.Pilot.Env == nil {
+		values.Pilot.Env = make(map[string]string)
+	}
+	if _, found := values.Pilot.Env["COMPLIANCE_POLICY"]; !found {
+		values.Pilot.Env["COMPLIANCE_POLICY"] = "fips-140-2"
+	}
 }
 
-// ApplyZTunnelFipsValues sets value ztunnel.env.TLS12_ENABLED if FIPS mode is enabled in the system.
-func ApplyZTunnelFipsValues(values helm.Values) (helm.Values, error) {
-	if FipsEnabled {
-		if err := values.SetIfAbsent("env.TLS12_ENABLED", "true"); err != nil {
-			return nil, fmt.Errorf("failed to set env.TLS12_ENABLED: %w", err)
-		}
+// ApplyZTunnelFipsValues sets ztunnel.env.TLS12_ENABLED if FIPS mode is enabled in the system.
+func ApplyZTunnelFipsValues(values *v1.ZTunnelValues) {
+	if !FipsEnabled || values == nil {
+		return
 	}
-	return values, nil
+	if values.ZTunnel == nil {
+		values.ZTunnel = &v1.ZTunnelConfig{}
+	}
+	if values.ZTunnel.Env == nil {
+		values.ZTunnel.Env = make(map[string]string)
+	}
+	if _, found := values.ZTunnel.Env["TLS12_ENABLED"]; !found {
+		values.ZTunnel.Env["TLS12_ENABLED"] = "true"
+	}
 }

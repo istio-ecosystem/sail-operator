@@ -84,17 +84,14 @@ func (r *ZTunnelReconciler) ComputeValues(version string, userValues *v1.ZTunnel
 	// Apply image digests from configuration, if not already set by user
 	userValues = ApplyZTunnelImageDigests(resolvedVersion, userValues, config.Config)
 
+	// apply fips values
+	istiovalues.ApplyZTunnelFipsValues(userValues)
+
 	// Apply userValues on top of defaultValues from profiles
 	mergedHelmValues, err := istiovalues.ApplyProfilesAndPlatform(
 		r.cfg.ResourceFS, resolvedVersion, r.cfg.Platform, r.cfg.DefaultProfile, ztunnelProfile, helm.FromValues(userValues))
 	if err != nil {
 		return nil, fmt.Errorf("failed to apply profile: %w", err)
-	}
-
-	// apply fips values
-	mergedHelmValues, err = istiovalues.ApplyZTunnelFipsValues(mergedHelmValues)
-	if err != nil {
-		return nil, fmt.Errorf("failed to apply FIPS values: %w", err)
 	}
 
 	// Apply any user Overrides configured as part of values.ztunnel
