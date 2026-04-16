@@ -28,14 +28,12 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/version"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
-	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -68,8 +66,7 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 
 				When("default Istio is created in Cluster #1 to handle ingress to External Control Plane", func() {
 					BeforeAll(func(ctx SpecContext) {
-						Expect(k1.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Namespace failed to be created")
-						Expect(k1.CreateNamespace(istioCniNamespace)).To(Succeed(), "Istio CNI namespace failed to be created")
+						createIstioNamespaces(k1, "network1", "default")
 
 						common.CreateIstioCNI(k1, v.Name)
 						common.CreateIstio(k1, v.Name, `
@@ -79,18 +76,12 @@ values:
 					})
 
 					It("updates the default Istio CR status to Ready", func(ctx SpecContext) {
-						Eventually(common.GetObject).
-							WithArguments(ctx, clPrimary, kube.Key(istioName), &v1.Istio{}).
-							Should(HaveConditionStatus(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Cluster #1; unexpected Condition")
-						Success("Istio CR is Ready on Cluster #1")
+						common.AwaitCondition(ctx, v1.IstioConditionReady, kube.Key(istioName), &v1.Istio{}, k1, clPrimary)
 					})
 
 					It("deploys istiod", func(ctx SpecContext) {
-						Eventually(common.GetObject).
-							WithArguments(ctx, clPrimary, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
-							Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Istiod is not Available on Cluster #1; unexpected Condition")
+						common.AwaitDeployment(ctx, "istiod", k1, clPrimary)
 						Expect(common.GetVersionFromIstiod()).To(Equal(v.Version), "Unexpected istiod version")
-						Success("Istiod is deployed in the namespace and Running on Exernal Cluster")
 					})
 				})
 
@@ -100,11 +91,11 @@ values:
 					})
 
 					It("updates Gateway status to Available", func(ctx SpecContext) {
-						Eventually(common.GetObject).
-							WithArguments(ctx, clPrimary, kube.Key("istio-ingressgateway", controlPlaneNamespace), &appsv1.Deployment{}).
-							Should(HaveConditionStatus(appsv1.DeploymentAvailable, metav1.ConditionTrue), "Gateway is not Ready on Cluster #1; unexpected Condition")
+						common.AwaitDeployment(ctx, "istio-ingressgateway", k1, clPrimary)
+					})
 
-						Success("Gateway is created and available in both clusters")
+					It("has an external IP assigned", func(ctx SpecContext) {
+						expectLoadBalancerAddress(ctx, k1, clPrimary, "istio-ingressgateway")
 					})
 				})
 
@@ -266,11 +257,8 @@ spec:
 						Expect(k1.CreateFromString(externalControlPlaneYAML)).To(Succeed(), "Istio Resource creation failed on Cluster #1")
 					})
 
-					It("updates both Istio CR status to Ready", func(ctx SpecContext) {
-						Eventually(common.GetObject).
-							WithArguments(ctx, clPrimary, kube.Key("external-istiod"), &v1.Istio{}).
-							Should(HaveConditionStatus(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Cluster #1; unexpected Condition")
-						Success("Istio CR is Ready on Cluster #1")
+					It("updates external Istio CR status to Ready", func(ctx SpecContext) {
+						common.AwaitCondition(ctx, v1.IstioConditionReady, kube.Key("external-istiod"), &v1.Istio{}, k1, clPrimary)
 					})
 				})
 
@@ -341,10 +329,7 @@ spec:
 					})
 
 					It("updates remote Istio CR status to Ready on Cluster #2", func(ctx SpecContext) {
-						Eventually(common.GetObject, 10*time.Minute).
-							WithArguments(ctx, clRemote, kube.Key(externalIstioName), &v1.Istio{}).
-							Should(HaveConditionStatus(v1.IstioConditionReady, metav1.ConditionTrue), "Istio is not Ready on Remote; unexpected Condition")
-						Success("Remote Istio CR is Ready on Cluster #2")
+						common.AwaitCondition(ctx, v1.IstioConditionReady, kube.Key(externalIstioName), &v1.Istio{}, k2, clRemote, 10*time.Minute)
 					})
 				})
 
@@ -354,24 +339,17 @@ spec:
 						// Label the namespace with the istio revision name
 						Expect(k2.Label("namespace", sampleNamespace, "istio.io/rev", "external-istiod")).To(Succeed(), "Labeling failed on Cluster #2")
 
-						deploySampleApp(k2, sampleNamespace, "v1")
+						deploySampleApp(k2, sampleNamespace, "v1", "default")
 						Success("Sample app is deployed in Cluster #2")
 					})
 
-					samplePodsCluster2 := &corev1.PodList{}
 					It("updates the pods status to Ready", func(ctx SpecContext) {
-						Expect(clRemote.List(ctx, samplePodsCluster2, client.InNamespace(sampleNamespace))).To(Succeed())
-						Expect(samplePodsCluster2.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
-
-						for _, pod := range samplePodsCluster2.Items {
-							Eventually(common.GetObject).
-								WithArguments(ctx, clRemote, kube.Key(pod.Name, sampleNamespace), &corev1.Pod{}).
-								Should(HaveConditionStatus(corev1.PodReady, metav1.ConditionTrue), "Pod is not Ready on Cluster #2; unexpected Condition")
-						}
+						Eventually(common.CheckSamplePodsReady).WithArguments(ctx, clRemote).Should(Succeed(), "Error checking status of sample pods on Cluster #2")
 						Success("Sample app is Running")
 					})
 
 					It("has istio.io/rev annotation external-istiod", func(ctx SpecContext) {
+						samplePodsCluster2 := &corev1.PodList{}
 						Expect(clRemote.List(ctx, samplePodsCluster2, client.InNamespace(sampleNamespace))).To(Succeed())
 						Expect(samplePodsCluster2.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
 
@@ -379,6 +357,10 @@ spec:
 							Expect(pod.Annotations).To(HaveKeyWithValue("istio.io/rev", "external-istiod"), "The pod dom't have expected annotation")
 						}
 						Success("Sample pods has expected annotation")
+					})
+
+					It("can reach the ingress gateway from remote cluster", func(ctx SpecContext) {
+						eventuallyLoadBalancerIsReachable(ctx, k2, k1, clPrimary, "istio-ingressgateway")
 					})
 
 					It("can access the sample app from the local service", func(ctx SpecContext) {

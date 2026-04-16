@@ -160,6 +160,18 @@ OPM_LATEST_VERSION=$(getVersionForUpdate operator-framework/operator-registry "$
 OLM_LATEST_VERSION=$(getVersionForUpdate operator-framework/operator-lifecycle-manager "${OLM_VERSION}")
 "$SED_CMD" -i "s|OLM_VERSION ?= .*|OLM_VERSION ?= ${OLM_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
 
+# Update gateway-api
+GW_API_LATEST_VERSION=$(getLatestVersion kubernetes-sigs/gateway-api)
+"$SED_CMD" -i "s|GW_API_VERSION=.*|GW_API_VERSION=\${GW_API_VERSION:-${GW_API_LATEST_VERSION}}|" "${ROOTDIR}/tests/e2e/setup/setup-kind.sh"
+
+# Update kube-rbac-proxy
+RBAC_PROXY_LATEST_VERSION=$(getLatestVersion brancz/kube-rbac-proxy | cut -d/ -f1)
+# Only update it if the newer image is available in the registry
+if docker manifest inspect "gcr.io/kubebuilder/kube-rbac-proxy:${RBAC_PROXY_LATEST_VERSION}" >/dev/null 2>/dev/null; then
+  "$SED_CMD" -i "s|gcr.io/kubebuilder/kube-rbac-proxy:.*|gcr.io/kubebuilder/kube-rbac-proxy:${RBAC_PROXY_LATEST_VERSION}|" "${ROOTDIR}/chart/values.yaml"
+fi
+
+
 # Update gitleaks
 GITLEAKS_LATEST_VERSION=$(getVersionForUpdate gitleaks/gitleaks "${GITLEAKS_VERSION}")
 "$SED_CMD" -i "s|GITLEAKS_VERSION ?= .*|GITLEAKS_VERSION ?= ${GITLEAKS_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
