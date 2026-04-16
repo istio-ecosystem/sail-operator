@@ -569,12 +569,12 @@ $(GITLEAKS): $(LOCALBIN)
 
 # Openshift Platform flag
 # If is set to true will add `--set platform=openshift` to the helm template command
-OCP ?= true
+OPENSHIFT_PLATFORM ?= true
 
 .PHONY: bundle
 bundle: gen-all-except-bundle helm operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
 	@TEMPL_FLAGS="$(HELM_TEMPL_DEF_FLAGS)"; \
-	if [ "$(OCP)" = "true" ]; then \
+	if [ "$(OPENSHIFT_PLATFORM)" = "true" ]; then \
 		TEMPL_FLAGS="$$TEMPL_FLAGS --set platform=openshift"; \
 	fi; \
 	$(HELM) template chart chart $$TEMPL_FLAGS --set image='$(IMAGE)' --set bundleGeneration=true | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)

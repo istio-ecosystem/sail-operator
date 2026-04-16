@@ -251,7 +251,7 @@ if [ "${SKIP_BUILD}" == "false" ]; then
     IMAGE="${HUB}/${IMAGE_BASE}:${TAG}" \
     IMAGE_TAG_BASE="${IMAGE_TAG_BASE}" \
     BUNDLE_IMG="${BUNDLE_IMG}" \
-    OCP="${OCP}" \
+    OPENSHIFT_PLATFORM="${OCP}" \
     make bundle bundle-build bundle-push
 
     if [ "${OCP}" == "false" ]; then
