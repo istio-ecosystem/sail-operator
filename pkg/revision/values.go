@@ -53,16 +53,13 @@ func ComputeValues(
 		return nil, fmt.Errorf("failed to apply profile: %w", err)
 	}
 
-	// apply OpenShift TLS config from APIServer before FIPS values
-	mergedHelmValues, err = istiovalues.ApplyTLSConfig(tlsConfig, mergedHelmValues)
-	if err != nil {
-		return nil, fmt.Errorf("failed to apply OpenShift TLS settings: %w", err)
-	}
-
 	values, err := helm.ToValues(mergedHelmValues, &v1.Values{})
 	if err != nil {
 		return nil, fmt.Errorf("conversion to Helm values failed: %w", err)
 	}
+
+	// apply OpenShift TLS config from APIServer before FIPS values
+	istiovalues.ApplyTLSConfig(tlsConfig, values)
 
 	// apply FipsValues on top of merged values from profile
 	istiovalues.ApplyFipsValues(values)

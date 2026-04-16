@@ -16,61 +16,54 @@ package istiovalues
 
 import (
 	"crypto/tls"
-	"fmt"
 	"strings"
 
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
-	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 )
 
-// ApplyTLSConfig applies TLS configuration to the Helm values.
+// ApplyTLSConfig applies TLS configuration to the Istio values.
 // If TLS settings are already set, they are not overridden.
-func ApplyTLSConfig(tlsConfig *config.TLSConfig, values helm.Values) (helm.Values, error) {
-	if tlsConfig == nil {
-		return values, nil
+func ApplyTLSConfig(tlsConfig *config.TLSConfig, values *v1.Values) {
+	if tlsConfig == nil || values == nil || len(tlsConfig.CipherSuites) == 0 {
+		return
 	}
 
-	if len(tlsConfig.CipherSuites) > 0 {
-		cipherNames := make([]string, len(tlsConfig.CipherSuites))
-		cipherSlice := make([]any, len(tlsConfig.CipherSuites))
-		for i, id := range tlsConfig.CipherSuites {
-			name := tls.CipherSuiteName(id)
-			cipherNames[i] = name
-			cipherSlice[i] = name
-		}
-		if err := values.SetIfAbsent("meshConfig.tlsDefaults.cipherSuites", cipherSlice); err != nil {
-			return nil, fmt.Errorf("failed to set meshConfig.tlsDefaults.cipherSuites: %w", err)
-		}
-		if err := values.SetIfAbsent("meshConfig.meshMTLS.cipherSuites", cipherSlice); err != nil {
-			return nil, fmt.Errorf("failed to set meshConfig.meshMTLS.cipherSuites: %w", err)
-		}
-
-		if err := addExtraContainerArg(values, "--tls-cipher-suites", strings.Join(cipherNames, ",")); err != nil {
-			return nil, fmt.Errorf("failed to set pilot.extraContainerArgs: %w", err)
-		}
+	cipherNames := make([]string, len(tlsConfig.CipherSuites))
+	for i, id := range tlsConfig.CipherSuites {
+		cipherNames[i] = tls.CipherSuiteName(id)
 	}
 
-	return values, nil
+	if values.MeshConfig == nil {
+		values.MeshConfig = &v1.MeshConfig{}
+	}
+
+	if values.MeshConfig.TlsDefaults == nil {
+		values.MeshConfig.TlsDefaults = &v1.MeshConfigTLSConfig{}
+	}
+	if len(values.MeshConfig.TlsDefaults.CipherSuites) == 0 {
+		values.MeshConfig.TlsDefaults.CipherSuites = cipherNames
+	}
+
+	if values.MeshConfig.MeshMTLS == nil {
+		values.MeshConfig.MeshMTLS = &v1.MeshConfigTLSConfig{}
+	}
+	if len(values.MeshConfig.MeshMTLS.CipherSuites) == 0 {
+		values.MeshConfig.MeshMTLS.CipherSuites = cipherNames
+	}
+
+	if values.Pilot == nil {
+		values.Pilot = &v1.PilotConfig{}
+	}
+	addExtraContainerArg(values.Pilot, "--tls-cipher-suites", strings.Join(cipherNames, ","))
 }
 
-// addExtraContainerArg adds an argument to pilot.extraContainerArgs if not already present.
-func addExtraContainerArg(values helm.Values, argName, argValue string) error {
-	existingArgs, _, err := values.GetSlice("pilot.extraContainerArgs")
-	if err != nil {
-		return fmt.Errorf("pilot.extraContainerArgs is not a slice: %w", err)
-	}
-
-	argWithValue := argName + "=" + argValue
-	for _, arg := range existingArgs {
-		if argStr, ok := arg.(string); ok {
-			// Skip if already set (don't override user-provided values)
-			if strings.HasPrefix(argStr, argName) {
-				return nil
-			}
+// addExtraContainerArg adds an argument to ExtraContainerArgs if not already present.
+func addExtraContainerArg(pilot *v1.PilotConfig, argName, argValue string) {
+	for _, arg := range pilot.ExtraContainerArgs {
+		if strings.HasPrefix(arg, argName) {
+			return
 		}
 	}
-
-	// Add the new argument
-	newArgs := append(existingArgs, argWithValue)
-	return values.Set("pilot.extraContainerArgs", newArgs)
+	pilot.ExtraContainerArgs = append(pilot.ExtraContainerArgs, argName+"="+argValue)
 }

@@ -19,41 +19,54 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
-	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 )
 
 func TestApplyTLSConfig(t *testing.T) {
 	tests := []struct {
-		name         string
-		tlsConfig    *config.TLSConfig
-		inputValues  helm.Values
-		outputValues helm.Values
-		expectErr    bool
+		name        string
+		tlsConfig   *config.TLSConfig
+		inputValues *v1.Values
+		wantValues  *v1.Values
 	}{
 		{
-			name:         "nil TLS config does not change values",
-			tlsConfig:    nil,
-			inputValues:  helm.Values{},
-			outputValues: helm.Values{},
+			name:        "nil TLS config does not change values",
+			tlsConfig:   nil,
+			inputValues: &v1.Values{},
+			wantValues:  &v1.Values{},
+		},
+		{
+			name:        "nil values is safe",
+			tlsConfig:   &config.TLSConfig{CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256}},
+			inputValues: nil,
+			wantValues:  nil,
+		},
+		{
+			name: "empty cipher suites does not change values",
+			tlsConfig: &config.TLSConfig{
+				CipherSuites: []uint16{},
+			},
+			inputValues: &v1.Values{},
+			wantValues:  &v1.Values{},
 		},
 		{
 			name: "applies multiple cipher suites",
 			tlsConfig: &config.TLSConfig{
 				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384},
 			},
-			inputValues: helm.Values{},
-			outputValues: helm.Values{
-				"meshConfig": map[string]any{
-					"meshMTLS": map[string]any{
-						"cipherSuites": []any{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"},
+			inputValues: &v1.Values{},
+			wantValues: &v1.Values{
+				MeshConfig: &v1.MeshConfig{
+					MeshMTLS: &v1.MeshConfigTLSConfig{
+						CipherSuites: []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"},
 					},
-					"tlsDefaults": map[string]any{
-						"cipherSuites": []any{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"},
+					TlsDefaults: &v1.MeshConfigTLSConfig{
+						CipherSuites: []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"},
 					},
 				},
-				"pilot": map[string]any{
-					"extraContainerArgs": []any{"--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"},
+				Pilot: &v1.PilotConfig{
+					ExtraContainerArgs: []string{"--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"},
 				},
 			},
 		},
@@ -62,128 +75,65 @@ func TestApplyTLSConfig(t *testing.T) {
 			tlsConfig: &config.TLSConfig{
 				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
 			},
-			inputValues: helm.Values{
-				"meshConfig": map[string]any{
-					"meshMTLS": map[string]any{
-						"cipherSuites": []any{"TLS_AES_128_GCM_SHA256"},
+			inputValues: &v1.Values{
+				MeshConfig: &v1.MeshConfig{
+					MeshMTLS: &v1.MeshConfigTLSConfig{
+						CipherSuites: []string{"TLS_AES_128_GCM_SHA256"},
 					},
-					"tlsDefaults": map[string]any{
-						"cipherSuites": []any{"TLS_AES_128_GCM_SHA256"},
-					},
-				},
-				"pilot": map[string]any{
-					"extraContainerArgs": []any{"--tls-cipher-suites=TLS_AES_128_GCM_SHA256"},
-				},
-			},
-			outputValues: helm.Values{
-				"meshConfig": map[string]any{
-					"meshMTLS": map[string]any{
-						"cipherSuites": []any{"TLS_AES_128_GCM_SHA256"},
-					},
-					"tlsDefaults": map[string]any{
-						"cipherSuites": []any{"TLS_AES_128_GCM_SHA256"},
+					TlsDefaults: &v1.MeshConfigTLSConfig{
+						CipherSuites: []string{"TLS_AES_128_GCM_SHA256"},
 					},
 				},
-				"pilot": map[string]any{
-					"extraContainerArgs": []any{"--tls-cipher-suites=TLS_AES_128_GCM_SHA256"},
+				Pilot: &v1.PilotConfig{
+					ExtraContainerArgs: []string{"--tls-cipher-suites=TLS_AES_128_GCM_SHA256"},
 				},
 			},
-		},
-		{
-			name: "error when meshConfig is not a map",
-			tlsConfig: &config.TLSConfig{
-				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
+			wantValues: &v1.Values{
+				MeshConfig: &v1.MeshConfig{
+					MeshMTLS: &v1.MeshConfigTLSConfig{
+						CipherSuites: []string{"TLS_AES_128_GCM_SHA256"},
+					},
+					TlsDefaults: &v1.MeshConfigTLSConfig{
+						CipherSuites: []string{"TLS_AES_128_GCM_SHA256"},
+					},
+				},
+				Pilot: &v1.PilotConfig{
+					ExtraContainerArgs: []string{"--tls-cipher-suites=TLS_AES_128_GCM_SHA256"},
+				},
 			},
-			inputValues: helm.Values{
-				"meshConfig": "not a map",
-			},
-			expectErr: true,
-		},
-		{
-			name: "error when pilot is not a map",
-			tlsConfig: &config.TLSConfig{
-				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
-			},
-			inputValues: helm.Values{
-				"pilot": "not a map",
-			},
-			expectErr: true,
 		},
 		{
 			name: "preserves existing extraContainerArgs",
 			tlsConfig: &config.TLSConfig{
 				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
 			},
-			inputValues: helm.Values{
-				"pilot": map[string]any{
-					"extraContainerArgs": []any{"--some-arg=value"},
+			inputValues: &v1.Values{
+				Pilot: &v1.PilotConfig{
+					ExtraContainerArgs: []string{"--some-arg=value"},
 				},
 			},
-			outputValues: helm.Values{
-				"meshConfig": map[string]any{
-					"meshMTLS": map[string]any{
-						"cipherSuites": []any{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+			wantValues: &v1.Values{
+				MeshConfig: &v1.MeshConfig{
+					MeshMTLS: &v1.MeshConfigTLSConfig{
+						CipherSuites: []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
 					},
-					"tlsDefaults": map[string]any{
-						"cipherSuites": []any{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
-					},
-				},
-				"pilot": map[string]any{
-					"extraContainerArgs": []any{"--some-arg=value", "--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
-				},
-			},
-		},
-		{
-			name: "error when extraContainerArgs is not a slice",
-			tlsConfig: &config.TLSConfig{
-				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
-			},
-			inputValues: helm.Values{
-				"pilot": map[string]any{
-					"extraContainerArgs": "not a slice",
-				},
-			},
-			outputValues: helm.Values{
-				"meshConfig": map[string]any{
-					"meshMTLS": map[string]any{
-						"cipherSuites": []any{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
-					},
-					"tlsDefaults": map[string]any{
-						"cipherSuites": []any{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+					TlsDefaults: &v1.MeshConfigTLSConfig{
+						CipherSuites: []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
 					},
 				},
-				"pilot": map[string]any{
-					"extraContainerArgs": []any{"--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+				Pilot: &v1.PilotConfig{
+					ExtraContainerArgs: []string{"--some-arg=value", "--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
 				},
 			},
-			expectErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := ApplyTLSConfig(tt.tlsConfig, tt.inputValues)
-			checkError(t, err, tt.expectErr)
-			if tt.expectErr {
-				return
-			}
-
-			if diff := cmp.Diff(tt.outputValues, result); diff != "" {
+			ApplyTLSConfig(tt.tlsConfig, tt.inputValues)
+			if diff := cmp.Diff(tt.wantValues, tt.inputValues); diff != "" {
 				t.Errorf("ApplyTLSConfig() mismatch (-want +got):\n%s", diff)
 			}
 		})
-	}
-}
-
-func checkError(t *testing.T, err error, expectErr bool) {
-	t.Helper()
-	if expectErr {
-		if err == nil {
-			t.Fatal("Expected an error, but got nil")
-		}
-	} else {
-		if err != nil {
-			t.Fatalf("Expected no error, but got an error: %v", err)
-		}
 	}
 }
