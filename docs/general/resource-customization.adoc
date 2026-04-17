@@ -1,0 +1,162 @@
+link:../../README.adoc[Return to Project Root]
+
+== Table of Contents
+
+* <<custom-resource-annotations>>
+** <<sailoperator-ignore-annotation>>
+*** <<usage>>
+**** <<example-adding-annotation-to-webhook>>
+*** <<removing-annotation>>
+*** <<supported-resources>>
+*** <<limitations>>
+
+== Resource Customization
+
+The Sail Operator supports customizing resources that it manages. This document describes the available customization options and how to use them.
+
+[[custom-resource-annotations]]
+=== Custom Resource Annotations
+
+Special annotations can be added to resources to modify Sail Operator's behavior.
+
+[[sailoperator-ignore-annotation]]
+==== sailoperator.io/ignore Annotation
+
+The `sailoperator.io/ignore` annotation allows you to prevent the Sail Operator from re-applying the helm charts in response to a change in one of the resources that it manages. This is useful when you or another controller needs to make modifications to operator-managed resources and the operator is continually overwriting the changes.
+
+See these issues: https://github.com/istio-ecosystem/sail-operator/issues/430 and https://github.com/istio-ecosystem/sail-operator/issues/1148
+
+This **does not** prevent the operator from re-applying the helm charts in response to other managed resources changing.  
+
+[[usage]]
+===== Usage
+
+To prevent the operator from reconciling a resource, add the annotation to the resource's metadata:
+
+[source,yaml]
+----
+metadata:
+  annotations:
+    sailoperator.io/ignore: "true"
+----
+
+[[example-adding-annotation-to-webhook]]
+====== Example: Preventing Reconciliation of a MutatingWebhookConfiguration
+
+In this example, we will add the annotation to a `MutatingWebhookConfiguration` and then modify it without the changes being reverted by Sail Operator:
+
+. Add the annotation to the webhook configuration:
++
+[source,bash]
+----
+kubectl annotate mutatingwebhookconfiguration \
+  istio-sidecar-injector \
+  -n istio-system \
+  sailoperator.io/ignore=true
+----
+
+. Verify the annotation was added:
++
+[source,bash]
+----
+kubectl get mutatingwebhookconfiguration \
+  istio-sidecar-injector \
+  -n istio-system \
+  -o jsonpath='{.metadata.annotations.sailoperator\.io/ignore}'
+----
++
+Expected output:
++
+[source,console]
+----
+true
+----
+
+. Check the value of the field you want to modify:
++
+[source,bash]
+----
+kubectl get mutatingwebhookconfiguration \
+  istio-sidecar-injector \
+  -n istio-system \
+  -o jsonpath='{.metadata.labels.app}'
+----
++
+Expected output:
++
+[source,console]
+----
+sidecar-injector
+----
+
+. Now you can modify the webhook and the changes will persist:
++
+[source,bash]
+----
+kubectl patch mutatingwebhookconfiguration \
+  istio-sidecar-injector \
+  -n istio-system \
+  --type=json \
+  -p='[{"op": "add", "path": "/metadata/labels/app", "value": "sidecar-injector-test"}]'
+----
+
+. Verify the change persisted:
++
+[source,bash]
+----
+kubectl get mutatingwebhookconfiguration \
+  istio-sidecar-injector \
+  -n istio-system \
+  -o jsonpath='{.metadata.labels.app}'
+----
++
+Expected output:
++
+[source,console]
+----
+sidecar-injector-test
+----
+
+[[removing-annotation]]
+===== Removing the Annotation
+
+To re-enable reconciliation for a resource, simply remove the annotation:
+
+[source,bash]
+----
+kubectl annotate mutatingwebhookconfiguration \
+  istio-sidecar-injector \
+  -n istio-system \
+  sailoperator.io/ignore-
+----
+
+[NOTE]
+====
+After removing the annotation, the operator will reconcile the resource on the next UPDATE event, reverting any manual changes back to the state defined in the `Istio` or `IstioRevision` resource.
+====
+
+[[supported-resources]]
+===== Supported Resources
+
+The `sailoperator.io/ignore` annotation works on any resource that is:
+
+* Owned by an `Istio` (has an `ownerReference` pointing to an `IstioRevision`)
+* Subject to UPDATE events
+
+Common resources include:
+
+* `Deployment`
+* `Service`
+* `ServiceAccount`
+* `ConfigMap`
+* `MutatingWebhookConfiguration`
+* `ValidatingWebhookConfiguration`
+* `HorizontalPodAutoscaler`
+* `PodDisruptionBudget`
+
+[[limitations]]
+===== Limitations and Considerations
+
+* **Annotation is not preserved on recreation**: If the resource is deleted and recreated by the operator, the annotation will not be set automatically. You must re-apply it manually.
+* **Manual maintenance required**: You are responsible for maintaining resources with this annotation. When upgrading Istio versions or when the parent `Istio` or `IstioRevision` resource changes, manual modifications will be reverted and may need to be re-applied.
+* **Configuration drift**: Using this annotation can lead to configuration drift between your intended state and the actual state.
