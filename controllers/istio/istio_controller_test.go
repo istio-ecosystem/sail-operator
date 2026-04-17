@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"runtime/debug"
 	"strings"
 	"testing"
 	"time"
@@ -28,6 +27,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/interceptors"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/testtime"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -136,11 +136,7 @@ func TestReconcile(t *testing.T) {
 
 		cl := newFakeClientBuilder().
 			WithObjects(istio).
-			WithInterceptorFuncs(interceptor.Funcs{
-				Create: func(_ context.Context, _ client.WithWatch, _ client.Object, _ ...client.CreateOption) error {
-					return fmt.Errorf("internal error")
-				},
-			}).
+			WithInterceptorFuncs(interceptors.FailCreate(fmt.Errorf("internal error"))).
 			Build()
 		reconciler := NewReconciler(cfg, cl, scheme.Scheme)
 
@@ -464,16 +460,9 @@ func TestDetermineStatus(t *testing.T) {
 			},
 		},
 		{
-			name: "get active revision error",
-			interceptorFuncs: &interceptor.Funcs{
-				Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-					if _, ok := obj.(*v1.IstioRevision); ok {
-						return fmt.Errorf("simulated error")
-					}
-					return nil
-				},
-			},
-			wantErr: true,
+			name:             "get active revision error",
+			interceptorFuncs: ptr.Of(interceptors.FailGetFor[*v1.IstioRevision](fmt.Errorf("simulated error"))),
+			wantErr:          true,
 			expectedStatus: v1.IstioStatus{
 				State:              v1.IstioReasonFailedToGetActiveRevision,
 				ObservedGeneration: generation,
@@ -496,16 +485,9 @@ func TestDetermineStatus(t *testing.T) {
 			},
 		},
 		{
-			name: "list revisions error",
-			interceptorFuncs: &interceptor.Funcs{
-				List: func(_ context.Context, _ client.WithWatch, list client.ObjectList, _ ...client.ListOption) error {
-					if _, ok := list.(*v1.IstioRevisionList); ok {
-						return fmt.Errorf("simulated error")
-					}
-					return nil
-				},
-			},
-			wantErr: true,
+			name:             "list revisions error",
+			interceptorFuncs: ptr.Of(interceptors.FailListFor[*v1.IstioRevisionList](fmt.Errorf("simulated error"))),
+			wantErr:          true,
 			expectedStatus: v1.IstioStatus{
 				State:              v1.IstioReasonRevisionNotFound,
 				ObservedGeneration: generation,
@@ -597,16 +579,9 @@ func TestUpdateStatus(t *testing.T) {
 		skipInterceptors bool // used internally by test implementation when it wants to get around the interceptor
 	}{
 		{
-			name: "updates status even when determineStatus returns error",
-			interceptorFuncs: &interceptor.Funcs{
-				List: func(_ context.Context, _ client.WithWatch, list client.ObjectList, _ ...client.ListOption) error {
-					if _, ok := list.(*v1.IstioRevisionList); ok {
-						return fmt.Errorf("simulated error")
-					}
-					return nil
-				},
-			},
-			wantErr: true,
+			name:             "updates status even when determineStatus returns error",
+			interceptorFuncs: ptr.Of(interceptors.FailListFor[*v1.IstioRevisionList](fmt.Errorf("simulated error"))),
+			wantErr:          true,
 			expectedStatus: v1.IstioStatus{
 				State:              v1.IstioReasonRevisionNotFound,
 				ObservedGeneration: generation,
@@ -735,13 +710,9 @@ func TestUpdateStatus(t *testing.T) {
 			wantErr:        false,
 		},
 		{
-			name: "returns status update error",
-			interceptorFuncs: &interceptor.Funcs{
-				SubResourcePatch: func(_ context.Context, _ client.Client, _ string, _ client.Object, _ client.Patch, _ ...client.SubResourcePatchOption) error {
-					return fmt.Errorf("patch status error")
-				},
-			},
-			wantErr: true,
+			name:             "returns status update error",
+			interceptorFuncs: ptr.Of(interceptors.FailSubResourcePatch(fmt.Errorf("patch status error"))),
+			wantErr:          true,
 		},
 	}
 
@@ -752,7 +723,7 @@ func TestUpdateStatus(t *testing.T) {
 				if tc.interceptorFuncs != nil {
 					panic("can't use disallowWrites and interceptorFuncs at the same time")
 				}
-				interceptorFuncs = noWrites(t)
+				interceptorFuncs = interceptors.NoWrites(t)
 			} else if tc.interceptorFuncs != nil {
 				interceptorFuncs = *tc.interceptorFuncs
 			}
@@ -964,43 +935,6 @@ func Must(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {
 		t.Fatal(err)
-	}
-}
-
-func noWrites(t *testing.T) interceptor.Funcs {
-	return interceptor.Funcs{
-		Create: func(_ context.Context, _ client.WithWatch, _ client.Object, _ ...client.CreateOption) error {
-			t.Fatal("unexpected call to Create in", string(debug.Stack()))
-			return nil
-		},
-		Update: func(_ context.Context, _ client.WithWatch, _ client.Object, _ ...client.UpdateOption) error {
-			t.Fatal("unexpected call to Update in", string(debug.Stack()))
-			return nil
-		},
-		Delete: func(_ context.Context, _ client.WithWatch, _ client.Object, _ ...client.DeleteOption) error {
-			t.Fatal("unexpected call to Delete in", string(debug.Stack()))
-			return nil
-		},
-		Patch: func(_ context.Context, _ client.WithWatch, _ client.Object, _ client.Patch, _ ...client.PatchOption) error {
-			t.Fatal("unexpected call to Patch in", string(debug.Stack()))
-			return nil
-		},
-		DeleteAllOf: func(_ context.Context, _ client.WithWatch, _ client.Object, _ ...client.DeleteAllOfOption) error {
-			t.Fatal("unexpected call to DeleteAllOf in", string(debug.Stack()))
-			return nil
-		},
-		SubResourceCreate: func(_ context.Context, _ client.Client, _ string, _ client.Object, _ client.Object, _ ...client.SubResourceCreateOption) error {
-			t.Fatal("unexpected call to SubResourceCreate in", string(debug.Stack()))
-			return nil
-		},
-		SubResourceUpdate: func(_ context.Context, _ client.Client, _ string, _ client.Object, _ ...client.SubResourceUpdateOption) error {
-			t.Fatal("unexpected call to SubResourceUpdate in", string(debug.Stack()))
-			return nil
-		},
-		SubResourcePatch: func(_ context.Context, _ client.Client, _ string, obj client.Object, _ client.Patch, _ ...client.SubResourcePatchOption) error {
-			t.Fatalf("unexpected call to SubResourcePatch with the object %+v: %v", obj, string(debug.Stack()))
-			return nil
-		},
 	}
 }
 

@@ -15,12 +15,17 @@
 package enqueuelogger
 
 import (
+	"context"
 	"testing"
 
+	"github.com/go-logr/logr"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 func Test_determineKind(t *testing.T) {
@@ -58,4 +63,48 @@ func Test_determineKind(t *testing.T) {
 			assert.Equalf(t, tt.want, got, "determineKind(%v)", tt.arg)
 		})
 	}
+}
+
+func TestWrapIfNecessary(t *testing.T) {
+	delegate := &fakeHandler{}
+	logger := logr.Discard()
+
+	t.Run("returns delegate when logging disabled", func(t *testing.T) {
+		LogEnqueueEvents = false
+		result := WrapIfNecessary("Istio", logger, delegate)
+		assert.Equal(t, delegate, result)
+	})
+
+	t.Run("wraps delegate when logging enabled", func(t *testing.T) {
+		LogEnqueueEvents = true
+		defer func() { LogEnqueueEvents = false }()
+
+		result := WrapIfNecessary("Istio", logger, delegate)
+		assert.IsType(t, &EnqueueEventLogger{}, result)
+		wrapper := result.(*EnqueueEventLogger)
+		assert.Equal(t, "Istio", wrapper.kind)
+		assert.Equal(t, delegate, wrapper.delegate)
+	})
+}
+
+type fakeHandler struct{}
+
+func (f *fakeHandler) Create(_ context.Context, _ event.TypedCreateEvent[client.Object],
+	_ workqueue.TypedRateLimitingInterface[reconcile.Request],
+) {
+}
+
+func (f *fakeHandler) Update(_ context.Context, _ event.TypedUpdateEvent[client.Object],
+	_ workqueue.TypedRateLimitingInterface[reconcile.Request],
+) {
+}
+
+func (f *fakeHandler) Delete(_ context.Context, _ event.TypedDeleteEvent[client.Object],
+	_ workqueue.TypedRateLimitingInterface[reconcile.Request],
+) {
+}
+
+func (f *fakeHandler) Generic(_ context.Context, _ event.TypedGenericEvent[client.Object],
+	_ workqueue.TypedRateLimitingInterface[reconcile.Request],
+) {
 }

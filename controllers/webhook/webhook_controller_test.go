@@ -38,6 +38,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/interceptors"
 	. "github.com/onsi/gomega"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -90,11 +91,7 @@ func TestReconcile(t *testing.T) {
 			probeFunc: func(context.Context, *admissionv1.MutatingWebhookConfiguration) (bool, error) {
 				return true, nil
 			},
-			interceptors: interceptor.Funcs{
-				Update: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
-					return errors.New("some error")
-				},
-			},
+			interceptors: interceptors.FailUpdate(errors.New("some error")),
 			expectResult: ctrl.Result{},
 			expectErr:    errors.New("some error"),
 			expectValue:  "",
@@ -425,12 +422,8 @@ func TestIsOwnedByRevisionWithRemoteControlPlane(t *testing.T) {
 					Name:       "revision1",
 				},
 			},
-			interceptors: interceptor.Funcs{
-				Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-					return errors.New("some error")
-				},
-			},
-			expected: false,
+			interceptors: interceptors.FailGet(errors.New("some error")),
+			expected:     false,
 		},
 		{
 			name: "IstioRevision not using remote profile",

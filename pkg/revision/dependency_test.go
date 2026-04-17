@@ -15,6 +15,7 @@
 package revision
 
 import (
+	"fmt"
 	"io/fs"
 	"testing"
 
@@ -61,6 +62,28 @@ func mockComputeValues(values *v1.Values, _, _ string, platform config.Platform,
 	}
 
 	return values, nil
+}
+
+func TestDependsOnIstioCNI_ComputeValuesError(t *testing.T) {
+	defaultComputeValues = func(_ *v1.Values, _, _ string, _ config.Platform, _, _ string, _ fs.FS, _ string) (*v1.Values, error) {
+		return nil, fmt.Errorf("simulated error")
+	}
+	defer func() { defaultComputeValues = mockComputeValues }()
+
+	rev := &v1.IstioRevision{Spec: v1.IstioRevisionSpec{Values: &v1.Values{}}}
+	result := DependsOnIstioCNI(rev, config.ReconcilerConfig{})
+	assert.False(t, result)
+}
+
+func TestDependsOnZTunnel_ComputeValuesError(t *testing.T) {
+	defaultComputeValues = func(_ *v1.Values, _, _ string, _ config.Platform, _, _ string, _ fs.FS, _ string) (*v1.Values, error) {
+		return nil, fmt.Errorf("simulated error")
+	}
+	defer func() { defaultComputeValues = mockComputeValues }()
+
+	rev := &v1.IstioRevision{Spec: v1.IstioRevisionSpec{Values: &v1.Values{}}}
+	result := DependsOnZTunnel(rev, config.ReconcilerConfig{})
+	assert.False(t, result)
 }
 
 func TestDependsOnIstioCNI(t *testing.T) {

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/interceptors"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/testtime"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -67,13 +68,9 @@ func TestValidateTargetNamespace(t *testing.T) {
 			expectErr: `namespace "my-namespace" is being deleted`,
 		},
 		{
-			name: "get error",
-			interceptors: interceptor.Funcs{
-				Get: func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-					return fmt.Errorf("simulated error")
-				},
-			},
-			expectErr: "simulated error",
+			name:         "get error",
+			interceptors: interceptors.FailGet(fmt.Errorf("simulated error")),
+			expectErr:    "simulated error",
 		},
 	}
 	for _, tc := range testCases {

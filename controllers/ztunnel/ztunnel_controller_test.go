@@ -28,6 +28,7 @@ import (
 	sharedreconcile "github.com/istio-ecosystem/sail-operator/pkg/reconcile"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/interceptors"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -300,11 +301,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 		{
 			name:          "client error on get",
 			clientObjects: []client.Object{},
-			interceptors: interceptor.Funcs{
-				Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-					return fmt.Errorf("simulated error")
-				},
-			},
+			interceptors:  interceptors.FailGet(fmt.Errorf("simulated error")),
 			expected: v1.StatusCondition{
 				Type:    v1.ZTunnelConditionReady,
 				Status:  metav1.ConditionUnknown,
@@ -592,6 +589,64 @@ func TestDetermineStatus(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestUpdateStatus(t *testing.T) {
+	cfg := newReconcilerTestConfig(t)
+
+	zt := &v1.ZTunnel{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "default",
+			Generation: 2,
+		},
+		Spec: v1.ZTunnelSpec{
+			Version:   istioversion.Default,
+			Namespace: ztunnelNamespace,
+		},
+	}
+
+	t.Run("patches status successfully", func(t *testing.T) {
+		g := NewWithT(t)
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme.Scheme).
+			WithObjects(zt.DeepCopy()).
+			WithStatusSubresource(&v1.ZTunnel{}).
+			Build()
+		r := NewReconciler(cfg, cl, scheme.Scheme, nil)
+
+		err := r.updateStatus(context.TODO(), zt.DeepCopy(), nil, nil)
+		g.Expect(err).ToNot(HaveOccurred())
+	})
+
+	t.Run("returns error when status patch fails", func(t *testing.T) {
+		g := NewWithT(t)
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme.Scheme).
+			WithObjects(zt.DeepCopy()).
+			WithStatusSubresource(&v1.ZTunnel{}).
+			WithInterceptorFuncs(interceptors.FailSubResourcePatch(fmt.Errorf("patch failed"))).
+			Build()
+		r := NewReconciler(cfg, cl, scheme.Scheme, nil)
+
+		err := r.updateStatus(context.TODO(), zt.DeepCopy(), nil, nil)
+		g.Expect(err).To(HaveOccurred())
+		g.Expect(err.Error()).To(ContainSubstring("failed to patch status"))
+	})
+
+	t.Run("returns error when determineStatus fails", func(t *testing.T) {
+		g := NewWithT(t)
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme.Scheme).
+			WithObjects(zt.DeepCopy()).
+			WithStatusSubresource(&v1.ZTunnel{}).
+			WithInterceptorFuncs(interceptors.FailGet(fmt.Errorf("get failed"))).
+			Build()
+		r := NewReconciler(cfg, cl, scheme.Scheme, nil)
+
+		err := r.updateStatus(context.TODO(), zt.DeepCopy(), nil, nil)
+		g.Expect(err).To(HaveOccurred())
+		g.Expect(err.Error()).To(ContainSubstring("failed to determine status"))
+	})
 }
 
 func normalize(condition v1.StatusCondition) v1.StatusCondition {

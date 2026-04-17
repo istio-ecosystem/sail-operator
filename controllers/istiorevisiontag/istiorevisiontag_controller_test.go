@@ -24,6 +24,7 @@ import (
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/interceptors"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -170,11 +171,7 @@ func TestDetermineInUseCondition(t *testing.T) {
 			matchesTag:          "default",
 		},
 		{
-			interceptors: interceptor.Funcs{
-				List: func(ctx context.Context, client client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
-					return fmt.Errorf("simulated error")
-				},
-			},
+			interceptors:       interceptors.FailList(fmt.Errorf("simulated error")),
 			expectUnknownState: true,
 		},
 	}

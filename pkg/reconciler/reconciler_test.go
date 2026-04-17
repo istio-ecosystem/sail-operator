@@ -22,6 +22,7 @@ import (
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/interceptors"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/testtime"
 	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -83,12 +84,8 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
-			name: "returns error when it fails to get resource",
-			interceptorFuncs: interceptor.Funcs{
-				Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
-					return fmt.Errorf("internal error")
-				},
-			},
+			name:             "returns error when it fails to get resource",
+			interceptorFuncs: interceptors.FailGet(fmt.Errorf("internal error")),
 			assert: func(g *WithT, cl client.Client, result ctrl.Result, err error, mock *mockReconciler) {
 				g.Expect(result).To(BeZero())
 				g.Expect(err).To(HaveOccurred())

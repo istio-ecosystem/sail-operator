@@ -17,6 +17,11 @@ package helm
 import (
 	"reflect"
 	"testing"
+
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	. "github.com/onsi/gomega"
+
+	"istio.io/istio/pkg/ptr"
 )
 
 func TestGetString(t *testing.T) {
@@ -211,4 +216,151 @@ func TestSetIfAbsent(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetBool(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       Values
+		key         string
+		expectFound bool
+		expected    bool
+		expectErr   bool
+	}{
+		{
+			name:        "valid key",
+			input:       Values{"foo": map[string]any{"bar": true}},
+			key:         "foo.bar",
+			expectFound: true,
+			expected:    true,
+		},
+		{
+			name:        "false value",
+			input:       Values{"foo": map[string]any{"bar": false}},
+			key:         "foo.bar",
+			expectFound: true,
+			expected:    false,
+		},
+		{
+			name:        "nonexistent key",
+			input:       Values{"foo": map[string]any{"bar": true}},
+			key:         "foo.baz",
+			expectFound: false,
+			expected:    false,
+		},
+		{
+			name:        "wrong type",
+			input:       Values{"foo": map[string]any{"bar": "notabool"}},
+			key:         "foo.bar",
+			expectFound: false,
+			expectErr:   true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			result, found, err := tc.input.GetBool(tc.key)
+			if tc.expectErr {
+				g.Expect(err).To(HaveOccurred())
+			} else {
+				g.Expect(err).ToNot(HaveOccurred())
+				g.Expect(result).To(Equal(tc.expected))
+			}
+			g.Expect(found).To(Equal(tc.expectFound))
+		})
+	}
+}
+
+func TestSetStringSlice(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     Values
+		key       string
+		val       []string
+		expected  Values
+		expectErr bool
+	}{
+		{
+			name:  "set new slice",
+			input: Values{"foo": map[string]any{}},
+			key:   "foo.bar",
+			val:   []string{"a", "b", "c"},
+			expected: Values{"foo": map[string]any{
+				"bar": []any{"a", "b", "c"},
+			}},
+		},
+		{
+			name:  "overwrite existing",
+			input: Values{"foo": map[string]any{"bar": []any{"old"}}},
+			key:   "foo.bar",
+			val:   []string{"new"},
+			expected: Values{"foo": map[string]any{
+				"bar": []any{"new"},
+			}},
+		},
+		{
+			name:      "invalid path",
+			input:     Values{"foo": "notamap"},
+			key:       "foo.bar",
+			val:       []string{"a"},
+			expectErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			err := tc.input.SetStringSlice(tc.key, tc.val)
+			if tc.expectErr {
+				g.Expect(err).To(HaveOccurred())
+			} else {
+				g.Expect(err).ToNot(HaveOccurred())
+				g.Expect(tc.input).To(Equal(tc.expected))
+			}
+		})
+	}
+}
+
+func TestFromValues(t *testing.T) {
+	t.Run("converts struct to Values", func(t *testing.T) {
+		g := NewWithT(t)
+		input := &v1.Values{
+			Global: &v1.GlobalConfig{
+				IstioNamespace: ptr.Of("istio-system"),
+			},
+		}
+
+		result := FromValues(input)
+		g.Expect(result).To(HaveKey("global"))
+	})
+
+	t.Run("converts nil to empty Values", func(t *testing.T) {
+		g := NewWithT(t)
+		result := FromValues((*v1.Values)(nil))
+		g.Expect(result).To(BeNil())
+	})
+}
+
+func TestToValues(t *testing.T) {
+	t.Run("converts Values to struct", func(t *testing.T) {
+		g := NewWithT(t)
+		input := Values{
+			"global": map[string]any{
+				"istioNamespace": "istio-system",
+			},
+		}
+
+		result, err := ToValues(input, &v1.Values{})
+		g.Expect(err).ToNot(HaveOccurred())
+		g.Expect(result.Global).ToNot(BeNil())
+		g.Expect(*result.Global.IstioNamespace).To(Equal("istio-system"))
+	})
+
+	t.Run("handles empty Values", func(t *testing.T) {
+		g := NewWithT(t)
+		result, err := ToValues(Values{}, &v1.Values{})
+		g.Expect(err).ToNot(HaveOccurred())
+		g.Expect(result).ToNot(BeNil())
+	})
 }

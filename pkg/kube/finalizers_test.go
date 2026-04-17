@@ -23,6 +23,7 @@ import (
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/interceptors"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -81,36 +82,24 @@ func TestRemoveFinalizer(t *testing.T) {
 		expectedFinalizers []string
 	}{
 		{
-			name: "object not found",
-			interceptorFuncs: interceptor.Funcs{
-				Get: func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-					return errors.NewNotFound(schema.GroupResource{}, "Istio")
-				},
-			},
-			expectResult: ctrl.Result{},
-			expectError:  false,
+			name:             "object not found",
+			interceptorFuncs: interceptors.FailGet(errors.NewNotFound(schema.GroupResource{}, "Istio")),
+			expectResult:     ctrl.Result{},
+			expectError:      false,
 		},
 		{
 			name:              "update conflict",
 			initialFinalizers: []string{constants.FinalizerName},
-			interceptorFuncs: interceptor.Funcs{
-				Update: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
-					return errors.NewConflict(schema.GroupResource{}, "dummy", fmt.Errorf("simulated conflict error"))
-				},
-			},
-			expectResult: ctrl.Result{RequeueAfter: 2 * time.Second},
-			expectError:  false,
+			interceptorFuncs:  interceptors.FailUpdate(errors.NewConflict(schema.GroupResource{}, "dummy", fmt.Errorf("simulated conflict error"))),
+			expectResult:      ctrl.Result{RequeueAfter: 2 * time.Second},
+			expectError:       false,
 		},
 		{
 			name:              "update error",
 			initialFinalizers: []string{constants.FinalizerName},
-			interceptorFuncs: interceptor.Funcs{
-				Update: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
-					return fmt.Errorf("simulated update error")
-				},
-			},
-			expectResult: ctrl.Result{},
-			expectError:  true,
+			interceptorFuncs:  interceptors.FailUpdate(fmt.Errorf("simulated update error")),
+			expectResult:      ctrl.Result{},
+			expectError:       true,
 		},
 		{
 			name:               "success with single finalizer",
@@ -182,36 +171,24 @@ func TestAddFinalizer(t *testing.T) {
 		expectedFinalizers []string
 	}{
 		{
-			name: "object not found",
-			interceptorFuncs: interceptor.Funcs{
-				Get: func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-					return errors.NewNotFound(schema.GroupResource{}, "Istio")
-				},
-			},
-			expectResult: ctrl.Result{},
-			expectError:  false,
+			name:             "object not found",
+			interceptorFuncs: interceptors.FailGet(errors.NewNotFound(schema.GroupResource{}, "Istio")),
+			expectResult:     ctrl.Result{},
+			expectError:      false,
 		},
 		{
 			name:              "update conflict",
 			initialFinalizers: nil,
-			interceptorFuncs: interceptor.Funcs{
-				Update: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
-					return errors.NewConflict(schema.GroupResource{}, "dummy", fmt.Errorf("simulated conflict error"))
-				},
-			},
-			expectResult: ctrl.Result{RequeueAfter: 2 * time.Second},
-			expectError:  false,
+			interceptorFuncs:  interceptors.FailUpdate(errors.NewConflict(schema.GroupResource{}, "dummy", fmt.Errorf("simulated conflict error"))),
+			expectResult:      ctrl.Result{RequeueAfter: 2 * time.Second},
+			expectError:       false,
 		},
 		{
 			name:              "update error",
 			initialFinalizers: nil,
-			interceptorFuncs: interceptor.Funcs{
-				Update: func(ctx context.Context, client client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
-					return fmt.Errorf("simulated update error")
-				},
-			},
-			expectResult: ctrl.Result{},
-			expectError:  true,
+			interceptorFuncs:  interceptors.FailUpdate(fmt.Errorf("simulated update error")),
+			expectResult:      ctrl.Result{},
+			expectError:       true,
 		},
 		{
 			name:               "success with no previous finalizer",

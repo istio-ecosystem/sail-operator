@@ -20,8 +20,10 @@ import (
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
+	"github.com/istio-ecosystem/sail-operator/resources"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -100,6 +102,42 @@ func TestZTunnelReconciler_Validate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestZTunnelReconciler_ComputeValues(t *testing.T) {
+	cfg := Config{ResourceFS: resources.FS}
+
+	t.Run("valid version", func(t *testing.T) {
+		r := NewZTunnelReconciler(cfg, nil)
+		values, err := r.ComputeValues(istioversion.Default, &v1.ZTunnelValues{})
+		assert.NoError(t, err)
+		assert.NotNil(t, values)
+	})
+
+	t.Run("invalid version", func(t *testing.T) {
+		r := NewZTunnelReconciler(cfg, nil)
+		_, err := r.ComputeValues("v99.99.99", &v1.ZTunnelValues{})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to resolve ZTunnel version")
+	})
+
+	t.Run("EOL version", func(t *testing.T) {
+		if len(istioversion.EOL) == 0 {
+			t.Skip("no EOL versions defined")
+		}
+		r := NewZTunnelReconciler(cfg, nil)
+		_, err := r.ComputeValues(istioversion.EOL[0], &v1.ZTunnelValues{})
+		assert.Error(t, err)
+		assert.True(t, reconciler.IsValidationError(err))
+		assert.Contains(t, err.Error(), "end-of-life")
+	})
+
+	t.Run("nil values", func(t *testing.T) {
+		r := NewZTunnelReconciler(cfg, nil)
+		values, err := r.ComputeValues(istioversion.Default, nil)
+		assert.NoError(t, err)
+		assert.NotNil(t, values)
+	})
 }
 
 func TestApplyZTunnelImageDigests(t *testing.T) {

@@ -28,6 +28,8 @@ import (
 	sharedreconcile "github.com/istio-ecosystem/sail-operator/pkg/reconcile"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/interceptors"
+	"github.com/istio-ecosystem/sail-operator/resources"
 	. "github.com/onsi/gomega"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -585,11 +587,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 		{
 			name:          "client error on get",
 			clientObjects: []client.Object{},
-			interceptors: interceptor.Funcs{
-				Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-					return fmt.Errorf("simulated error")
-				},
-			},
+			interceptors:  interceptors.FailGet(fmt.Errorf("simulated error")),
 			expected: v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionUnknown,
@@ -670,11 +668,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 			name:          "Istiod-remote client error on get",
 			values:        &v1.Values{Profile: ptr.Of("remote")},
 			clientObjects: []client.Object{},
-			interceptors: interceptor.Funcs{
-				Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-					return fmt.Errorf("simulated error")
-				},
-			},
+			interceptors:  interceptors.FailGet(fmt.Errorf("simulated error")),
 			expected: v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionUnknown,
@@ -854,11 +848,7 @@ func TestDetermineInUseCondition(t *testing.T) {
 			matchesRevision:     "default",
 		},
 		{
-			interceptors: interceptor.Funcs{
-				List: func(ctx context.Context, client client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
-					return fmt.Errorf("simulated error")
-				},
-			},
+			interceptors:       interceptors.FailList(fmt.Errorf("simulated error")),
 			expectUnknownState: true,
 		},
 	}
@@ -1079,6 +1069,328 @@ func TestIgnoreStatusChangePredicate(t *testing.T) {
 			g.Expect(result).To(Equal(tc.expected), "unexpected result of predicate.Update()")
 		})
 	}
+}
+
+func TestDetermineStatus(t *testing.T) {
+	cfg := newReconcilerTestConfig(t)
+
+	rev := &v1.IstioRevision{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "default",
+			Generation: 2,
+		},
+		Spec: v1.IstioRevisionSpec{
+			Version:   istioversion.Default,
+			Namespace: "istio-system",
+		},
+	}
+
+	t.Run("success with no reconcile error", func(t *testing.T) {
+		g := NewWithT(t)
+		cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(rev.DeepCopy()).Build()
+		r := NewReconciler(cfg, cl, scheme.Scheme, nil)
+
+		status, err := r.determineStatus(context.TODO(), rev.DeepCopy(), nil)
+		g.Expect(err).ToNot(HaveOccurred())
+		g.Expect(status.ObservedGeneration).To(Equal(int64(2)))
+		reconciledCond := status.GetCondition(v1.IstioRevisionConditionReconciled)
+		g.Expect(reconciledCond.Status).To(Equal(metav1.ConditionTrue))
+	})
+
+	t.Run("success with reconcile error", func(t *testing.T) {
+		g := NewWithT(t)
+		cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(rev.DeepCopy()).Build()
+		r := NewReconciler(cfg, cl, scheme.Scheme, nil)
+
+		status, err := r.determineStatus(context.TODO(), rev.DeepCopy(), fmt.Errorf("reconcile failed"))
+		g.Expect(err).ToNot(HaveOccurred())
+		reconciledCond := status.GetCondition(v1.IstioRevisionConditionReconciled)
+		g.Expect(reconciledCond.Status).To(Equal(metav1.ConditionFalse))
+		g.Expect(reconciledCond.Reason).To(Equal(v1.IstioRevisionReasonReconcileError))
+	})
+
+	t.Run("returns error when Get fails", func(t *testing.T) {
+		g := NewWithT(t)
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme.Scheme).
+			WithObjects(rev.DeepCopy()).
+			WithInterceptorFuncs(interceptors.FailGet(fmt.Errorf("simulated error"))).
+			Build()
+		r := NewReconciler(cfg, cl, scheme.Scheme, nil)
+
+		_, err := r.determineStatus(context.TODO(), rev.DeepCopy(), nil)
+		g.Expect(err).To(HaveOccurred())
+		g.Expect(err.Error()).To(ContainSubstring("get failed"))
+	})
+
+	t.Run("returns error when List fails", func(t *testing.T) {
+		g := NewWithT(t)
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme.Scheme).
+			WithObjects(rev.DeepCopy()).
+			WithInterceptorFuncs(interceptors.FailList(fmt.Errorf("simulated error"))).
+			Build()
+		r := NewReconciler(cfg, cl, scheme.Scheme, nil)
+
+		_, err := r.determineStatus(context.TODO(), rev.DeepCopy(), nil)
+		g.Expect(err).To(HaveOccurred())
+	})
+}
+
+func TestUpdateStatus(t *testing.T) {
+	cfg := newReconcilerTestConfig(t)
+
+	rev := &v1.IstioRevision{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "default",
+			Generation: 2,
+		},
+		Spec: v1.IstioRevisionSpec{
+			Version:   istioversion.Default,
+			Namespace: "istio-system",
+		},
+	}
+
+	t.Run("patches status successfully", func(t *testing.T) {
+		g := NewWithT(t)
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme.Scheme).
+			WithObjects(rev.DeepCopy()).
+			WithStatusSubresource(&v1.IstioRevision{}).
+			Build()
+		r := NewReconciler(cfg, cl, scheme.Scheme, nil)
+
+		err := r.updateStatus(context.TODO(), rev.DeepCopy(), nil)
+		g.Expect(err).ToNot(HaveOccurred())
+	})
+
+	t.Run("returns error when status patch fails", func(t *testing.T) {
+		g := NewWithT(t)
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme.Scheme).
+			WithObjects(rev.DeepCopy()).
+			WithStatusSubresource(&v1.IstioRevision{}).
+			WithInterceptorFuncs(interceptors.FailSubResourcePatch(fmt.Errorf("patch failed"))).
+			Build()
+		r := NewReconciler(cfg, cl, scheme.Scheme, nil)
+
+		err := r.updateStatus(context.TODO(), rev.DeepCopy(), nil)
+		g.Expect(err).To(HaveOccurred())
+		g.Expect(err.Error()).To(ContainSubstring("failed to patch status"))
+	})
+
+	t.Run("returns combined error when determineStatus and patch both fail", func(t *testing.T) {
+		g := NewWithT(t)
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme.Scheme).
+			WithObjects(rev.DeepCopy()).
+			WithStatusSubresource(&v1.IstioRevision{}).
+			WithInterceptorFuncs(interceptors.Merge(
+				interceptors.FailGet(fmt.Errorf("get failed")),
+				interceptors.FailSubResourcePatch(fmt.Errorf("patch failed")),
+			)).
+			Build()
+		r := NewReconciler(cfg, cl, scheme.Scheme, nil)
+
+		err := r.updateStatus(context.TODO(), rev.DeepCopy(), nil)
+		g.Expect(err).To(HaveOccurred())
+		g.Expect(err.Error()).To(ContainSubstring("failed to determine status"))
+	})
+}
+
+func TestDetermineDependenciesHealthyCondition(t *testing.T) {
+	cfg := newReconcilerTestConfig(t)
+
+	rev := &v1.IstioRevision{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "default",
+		},
+		Spec: v1.IstioRevisionSpec{
+			Version:   istioversion.Default,
+			Namespace: "istio-system",
+		},
+	}
+
+	t.Run("healthy when no dependencies", func(t *testing.T) {
+		g := NewWithT(t)
+		cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+		r := NewReconciler(cfg, cl, scheme.Scheme, nil)
+
+		cond, err := r.determineDependenciesHealthyCondition(context.TODO(), rev.DeepCopy())
+		g.Expect(err).ToNot(HaveOccurred())
+		g.Expect(cond.Status).To(Equal(metav1.ConditionTrue))
+	})
+
+	t.Run("IstioCNI not found when required", func(t *testing.T) {
+		g := NewWithT(t)
+		cniCfg := config.ReconcilerConfig{ResourceFS: resources.FS, Platform: config.PlatformOpenShift}
+		cniRev := rev.DeepCopy()
+		cniRev.Spec.Values = &v1.Values{Pilot: &v1.PilotConfig{Cni: &v1.CNIUsageConfig{Enabled: ptr.Of(true)}}}
+		cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+		r := NewReconciler(cniCfg, cl, scheme.Scheme, nil)
+
+		cond, err := r.determineDependenciesHealthyCondition(context.TODO(), cniRev)
+		g.Expect(err).ToNot(HaveOccurred())
+		g.Expect(cond.Status).To(Equal(metav1.ConditionFalse))
+		g.Expect(cond.Reason).To(Equal(v1.IstioRevisionReasonIstioCNINotFound))
+	})
+
+	t.Run("returns error when Get fails for IstioCNI", func(t *testing.T) {
+		g := NewWithT(t)
+		cniCfg := config.ReconcilerConfig{ResourceFS: resources.FS, Platform: config.PlatformOpenShift}
+		cniRev := rev.DeepCopy()
+		cniRev.Spec.Values = &v1.Values{Pilot: &v1.PilotConfig{Cni: &v1.CNIUsageConfig{Enabled: ptr.Of(true)}}}
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme.Scheme).
+			WithInterceptorFuncs(interceptors.FailGet(fmt.Errorf("simulated error"))).
+			Build()
+		r := NewReconciler(cniCfg, cl, scheme.Scheme, nil)
+
+		cond, err := r.determineDependenciesHealthyCondition(context.TODO(), cniRev)
+		g.Expect(err).To(HaveOccurred())
+		g.Expect(cond.Status).To(Equal(metav1.ConditionUnknown))
+		g.Expect(cond.Reason).To(Equal(v1.IstioRevisionDependencyCheckFailed))
+	})
+
+	t.Run("IstioCNI not healthy", func(t *testing.T) {
+		g := NewWithT(t)
+		cniCfg := config.ReconcilerConfig{ResourceFS: resources.FS, Platform: config.PlatformOpenShift}
+		cniRev := rev.DeepCopy()
+		cniRev.Spec.Values = &v1.Values{Pilot: &v1.PilotConfig{Cni: &v1.CNIUsageConfig{Enabled: ptr.Of(true)}}}
+		cni := &v1.IstioCNI{
+			ObjectMeta: metav1.ObjectMeta{Name: "default"},
+			Status: v1.IstioCNIStatus{
+				State: v1.IstioCNIReasonReconcileError,
+			},
+		}
+		cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(cni).Build()
+		r := NewReconciler(cniCfg, cl, scheme.Scheme, nil)
+
+		cond, err := r.determineDependenciesHealthyCondition(context.TODO(), cniRev)
+		g.Expect(err).ToNot(HaveOccurred())
+		g.Expect(cond.Status).To(Equal(metav1.ConditionFalse))
+		g.Expect(cond.Reason).To(Equal(v1.IstioRevisionReasonIstioCNINotHealthy))
+	})
+
+	t.Run("IstioCNI healthy", func(t *testing.T) {
+		g := NewWithT(t)
+		cniCfg := config.ReconcilerConfig{ResourceFS: resources.FS, Platform: config.PlatformOpenShift}
+		cniRev := rev.DeepCopy()
+		cniRev.Spec.Values = &v1.Values{Pilot: &v1.PilotConfig{Cni: &v1.CNIUsageConfig{Enabled: ptr.Of(true)}}}
+		cni := &v1.IstioCNI{
+			ObjectMeta: metav1.ObjectMeta{Name: "default"},
+			Status: v1.IstioCNIStatus{
+				State: v1.IstioCNIReasonHealthy,
+			},
+		}
+		cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(cni).Build()
+		r := NewReconciler(cniCfg, cl, scheme.Scheme, nil)
+
+		cond, err := r.determineDependenciesHealthyCondition(context.TODO(), cniRev)
+		g.Expect(err).ToNot(HaveOccurred())
+		g.Expect(cond.Status).To(Equal(metav1.ConditionTrue))
+	})
+
+	t.Run("ZTunnel not found when required", func(t *testing.T) {
+		g := NewWithT(t)
+		ambientCfg := config.ReconcilerConfig{ResourceFS: resources.FS}
+		ambientRev := rev.DeepCopy()
+		ambientRev.Spec.Values = &v1.Values{
+			Pilot: &v1.PilotConfig{Env: map[string]string{"PILOT_ENABLE_AMBIENT": "true"}},
+		}
+		cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+		r := NewReconciler(ambientCfg, cl, scheme.Scheme, nil)
+
+		cond, err := r.determineDependenciesHealthyCondition(context.TODO(), ambientRev)
+		g.Expect(err).ToNot(HaveOccurred())
+		g.Expect(cond.Status).To(Equal(metav1.ConditionFalse))
+		g.Expect(cond.Reason).To(Equal(v1.IstioRevisionReasonZTunnelNotFound))
+	})
+
+	t.Run("returns error when Get fails for ZTunnel", func(t *testing.T) {
+		g := NewWithT(t)
+		ambientCfg := config.ReconcilerConfig{ResourceFS: resources.FS}
+		ambientRev := rev.DeepCopy()
+		ambientRev.Spec.Values = &v1.Values{
+			Pilot: &v1.PilotConfig{Env: map[string]string{"PILOT_ENABLE_AMBIENT": "true"}},
+		}
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme.Scheme).
+			WithInterceptorFuncs(interceptors.FailGetFor[*v1.ZTunnel](fmt.Errorf("simulated error"))).
+			Build()
+		r := NewReconciler(ambientCfg, cl, scheme.Scheme, nil)
+
+		cond, err := r.determineDependenciesHealthyCondition(context.TODO(), ambientRev)
+		g.Expect(err).To(HaveOccurred())
+		g.Expect(cond.Status).To(Equal(metav1.ConditionUnknown))
+		g.Expect(cond.Reason).To(Equal(v1.IstioRevisionDependencyCheckFailed))
+	})
+
+	t.Run("ZTunnel not healthy", func(t *testing.T) {
+		g := NewWithT(t)
+		ambientCfg := config.ReconcilerConfig{ResourceFS: resources.FS}
+		ambientRev := rev.DeepCopy()
+		ambientRev.Spec.Values = &v1.Values{
+			Pilot: &v1.PilotConfig{Env: map[string]string{"PILOT_ENABLE_AMBIENT": "true"}},
+		}
+		zt := &v1.ZTunnel{
+			ObjectMeta: metav1.ObjectMeta{Name: "default"},
+			Status: v1.ZTunnelStatus{
+				State: v1.ZTunnelReasonReconcileError,
+			},
+		}
+		cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(zt).Build()
+		r := NewReconciler(ambientCfg, cl, scheme.Scheme, nil)
+
+		cond, err := r.determineDependenciesHealthyCondition(context.TODO(), ambientRev)
+		g.Expect(err).ToNot(HaveOccurred())
+		g.Expect(cond.Status).To(Equal(metav1.ConditionFalse))
+		g.Expect(cond.Reason).To(Equal(v1.IstioRevisionReasonZTunnelNotHealthy))
+	})
+
+	t.Run("ZTunnel healthy", func(t *testing.T) {
+		g := NewWithT(t)
+		ambientCfg := config.ReconcilerConfig{ResourceFS: resources.FS}
+		ambientRev := rev.DeepCopy()
+		ambientRev.Spec.Values = &v1.Values{
+			Pilot: &v1.PilotConfig{Env: map[string]string{"PILOT_ENABLE_AMBIENT": "true"}},
+		}
+		zt := &v1.ZTunnel{
+			ObjectMeta: metav1.ObjectMeta{Name: "default"},
+			Status: v1.ZTunnelStatus{
+				State: v1.ZTunnelReasonHealthy,
+			},
+		}
+		cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(zt).Build()
+		r := NewReconciler(ambientCfg, cl, scheme.Scheme, nil)
+
+		cond, err := r.determineDependenciesHealthyCondition(context.TODO(), ambientRev)
+		g.Expect(err).ToNot(HaveOccurred())
+		g.Expect(cond.Status).To(Equal(metav1.ConditionTrue))
+	})
+}
+
+func TestDetermineReconciledCondition(t *testing.T) {
+	cfg := newReconcilerTestConfig(t)
+
+	t.Run("reconciled on nil error", func(t *testing.T) {
+		g := NewWithT(t)
+		cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+		r := NewReconciler(cfg, cl, scheme.Scheme, nil)
+
+		cond := r.determineReconciledCondition(nil)
+		g.Expect(cond.Status).To(Equal(metav1.ConditionTrue))
+	})
+
+	t.Run("not reconciled on error", func(t *testing.T) {
+		g := NewWithT(t)
+		cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+		r := NewReconciler(cfg, cl, scheme.Scheme, nil)
+
+		cond := r.determineReconciledCondition(fmt.Errorf("reconcile error"))
+		g.Expect(cond.Status).To(Equal(metav1.ConditionFalse))
+		g.Expect(cond.Reason).To(Equal(v1.IstioRevisionReasonReconcileError))
+	})
 }
 
 func newReconcilerTestConfig(t *testing.T) config.ReconcilerConfig {

@@ -15,16 +15,14 @@
 package revision
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/interceptors"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
 
 func TestListOwned(t *testing.T) {
@@ -58,11 +56,7 @@ func TestListOwned(t *testing.T) {
 
 	t.Run("list-error", func(t *testing.T) {
 		cl := newFakeClientBuilder().
-			WithInterceptorFuncs(interceptor.Funcs{
-				List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
-					return fmt.Errorf("simulated error")
-				},
-			}).
+			WithInterceptorFuncs(interceptors.FailList(fmt.Errorf("simulated error"))).
 			Build()
 
 		result, err := ListOwned(ctx, cl, "123")

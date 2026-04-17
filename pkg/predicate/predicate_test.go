@@ -83,4 +83,14 @@ func TestIgnoreUpdateWhenAnnotation(t *testing.T) {
 	assert.Equal(t, true, predicate.Create(event.CreateEvent{}))
 	assert.Equal(t, true, predicate.Delete(event.DeleteEvent{}))
 	assert.Equal(t, true, predicate.Generic(event.GenericEvent{}))
+
+	// nil objects should return false
+	assert.Equal(t, false, predicate.Update(event.UpdateEvent{
+		ObjectOld: nil,
+		ObjectNew: nil,
+	}))
+	assert.Equal(t, false, predicate.Update(event.UpdateEvent{
+		ObjectOld: &corev1.ConfigMap{},
+		ObjectNew: nil,
+	}))
 }
