@@ -4,14 +4,11 @@ link:../../README.adoc[Return to Project Root]
 
 * <<custom-resource-annotations>>
 ** <<sailoperator-ignore-annotation>>
-*** <<use-cases>>
-*** <<how-it-works>>
 *** <<usage>>
 **** <<example-adding-annotation-to-webhook>>
 *** <<removing-annotation>>
 *** <<supported-resources>>
 *** <<limitations>>
-*** <<implementation-details>>
 
 == Resource Customization
 
@@ -25,33 +22,11 @@ Special annotations can be added to resources to modify Sail Operator's behavior
 [[sailoperator-ignore-annotation]]
 ==== sailoperator.io/ignore Annotation
 
-The `sailoperator.io/ignore` annotation allows you to prevent the Sail Operator from reconciling changes to specific resources that it manages. This is useful when you need to make manual modifications to operator-managed resources that should not be automatically reverted.
+The `sailoperator.io/ignore` annotation allows you to prevent the Sail Operator from re-applying the helm charts in response to a change in one of the resources that it manages. This is useful when you or another controller needs to make modifications to operator-managed resources and the operator is continually overwriting the changes.
 
-[[use-cases]]
-===== Use Cases
+See these issues: https://github.com/istio-ecosystem/sail-operator/issues/430 and https://github.com/istio-ecosystem/sail-operator/issues/1148
 
-The `sailoperator.io/ignore` annotation is helpful in the following scenarios (non-exhaustive list):
-
-* **Customizing webhook configurations**: You need to modify webhook settings that should persist across reconciliation cycles
-* **Adding labels or annotations**: You want to add custom labels or annotations to resources without them being removed
-* **Tuning autoscaler settings**: You need to adjust `HorizontalPodAutoscaler` configurations based on observed behavior
-* **Managing image pull secrets**: You want to add additional image pull secrets to `ServiceAccount` resources
-* **Testing and debugging**: You need to temporarily modify a resource for troubleshooting purposes
-
-[[how-it-works]]
-===== How It Works
-
-Sail Operator re-applies all helm charts when it detects a change in any of the resources it deployed.
-When the `sailoperator.io/ignore` annotation is set to `"true"` on a resource:
-
-* **UPDATE event reconciliation is skipped** - The operator ignores update events for that specific resource, allowing manual modifications to persist
-* **Global reconciliation still applies** - When other resources change, Sail Operator re-applies all Helm charts, including resources with this annotation. The `sailoperator.io/ignore: "true"` annotation still remains set on the resources.
-* **Partial field protection** - Only fields defined in the Helm templates are reverted; additional annotations and labels you add will persist, but modifications to existing template-defined fields (such as labels or pod command-line arguments) will be reverted
-
-[NOTE]
-====
-The annotation value must be exactly the string `"true"`. Any other value, such as `"True"`, `"yes"`, or `"1"`, will result in normal reconciliation behavior.
-====
+This **does not** prevent the operator from re-applying the helm charts in response to other managed resources changing.  
 
 [[usage]]
 ===== Usage
@@ -184,15 +159,4 @@ Common resources include:
 
 * **Annotation is not preserved on recreation**: If the resource is deleted and recreated by the operator, the annotation will not be set automatically. You must re-apply it manually.
 * **Manual maintenance required**: You are responsible for maintaining resources with this annotation. When upgrading Istio versions or when the parent `Istio` or `IstioRevision` resource changes, manual modifications will be reverted and may need to be re-applied.
-* **Configuration drift**: Using this annotation can lead to configuration drift between your intended state and the actual state. Use it sparingly and record which resources have this annotation in your documentation.
-
-[[implementation-details]]
-===== Implementation Details
-
-Here is the technical implementation:
-
-* **Predicate Function**: `pkg/predicate/predicate.go:IgnoreUpdateWhenAnnotation()`
-* **Integration Test**: `tests/integration/api/istiorevision_test.go`
-* **Documentation**: This annotation was introduced in commit https://github.com/istio-ecosystem/sail-operator/commit/2543fb8[2543fb8]
-
-The implementation uses a controller-runtime predicate that filters UPDATE events based on the annotation value, preventing them from triggering reconciliation.
+* **Configuration drift**: Using this annotation can lead to configuration drift between your intended state and the actual state.
