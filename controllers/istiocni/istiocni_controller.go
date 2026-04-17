@@ -26,18 +26,14 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
-	"github.com/istio-ecosystem/sail-operator/pkg/predicate"
 	sharedreconcile "github.com/istio-ecosystem/sail-operator/pkg/reconcile"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
-	appsv1 "k8s.io/api/apps/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/watches"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -143,7 +139,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	namespaceHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapNamespaceToReconcileRequest))
 
-	return ctrl.NewControllerManagedBy(mgr).
+	b := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
 			LogConstructor: func(req *reconcile.Request) logr.Logger {
 				log := logger
@@ -154,33 +150,15 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 			},
 			MaxConcurrentReconciles: r.Config.MaxConcurrentReconciles,
 		}).
-
 		// we use the Watches function instead of For(), so that we can wrap the handler so that events that cause the object to be enqueued are logged
-		// +lint-watches:ignore: IstioCNI (not found in charts, but this is the main resource watched by this controller)
 		Watches(&v1.IstioCNI{}, mainObjectHandler).
-		Named("istiocni").
+		Named("istiocni")
 
-		// namespaced resources
-		Watches(&corev1.ConfigMap{}, ownedResourceHandler).
-		Watches(&appsv1.DaemonSet{}, ownedResourceHandler).
-		Watches(&corev1.ResourceQuota{}, ownedResourceHandler).
+	watches.RegisterOwnedWatches(b, watches.CNIWatches, ownedResourceHandler, nil)
 
-		// +lint-watches:ignore: NetworkPolicy (FIXME: NetworkPolicy has not yet been added upstream, but is WIP)
-		Watches(&networkingv1.NetworkPolicy{}, ownedResourceHandler, builder.WithPredicates(predicate.IgnoreUpdate())).
-
-		// We use predicate.IgnoreUpdate() so that we skip the reconciliation when a pull secret is added to the ServiceAccount.
-		// This is necessary so that we don't remove the newly-added secret.
-		// TODO: this is a temporary hack until we implement the correct solution on the Helm-render side
-		Watches(&corev1.ServiceAccount{}, ownedResourceHandler, builder.WithPredicates(predicate.IgnoreUpdate())).
-
-		// TODO: only register NetAttachDef if the CRD is installed (may also need to watch for CRD creation)
-		// Owns(&multusv1.NetworkAttachmentDefinition{}).
-
-		// cluster-scoped resources
+	return b.
 		// +lint-watches:ignore: Namespace (not present in charts, but must be watched to reconcile IstioCni when its namespace is created)
 		Watches(&corev1.Namespace{}, namespaceHandler).
-		Watches(&rbacv1.ClusterRole{}, ownedResourceHandler).
-		Watches(&rbacv1.ClusterRoleBinding{}, ownedResourceHandler).
 		Complete(reconciler.NewStandardReconcilerWithFinalizer[*v1.IstioCNI](r.Client, r.Reconcile, r.Finalize, constants.FinalizerName))
 }
 

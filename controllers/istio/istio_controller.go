@@ -216,7 +216,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 			MaxConcurrentReconciles: r.Config.MaxConcurrentReconciles,
 		}).
 		// we use the Watches function instead of For(), so that we can wrap the handler so that events that cause the object to be enqueued are logged
-		// +lint-watches:ignore: Istio (not found in charts, but this is the main resource watched by this controller)
 		Watches(&v1.Istio{}, mainObjectHandler).
 		Named("istio").
 		Watches(&v1.IstioRevision{}, ownedResourceHandler).

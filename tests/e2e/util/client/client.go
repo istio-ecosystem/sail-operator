@@ -16,11 +16,9 @@ package client
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -60,10 +58,6 @@ func InitK8sClient(kubeconfig string) (client.Client, error) {
 	k8sClient, err := client.New(config, client.Options{Scheme: scheme.Scheme})
 	if err != nil {
 		return nil, fmt.Errorf("error creating clientset: %w", err)
-	}
-
-	if err := apiextensionsv1.AddToScheme(scheme.Scheme); err != nil {
-		log.Fatalf("Failed to register CRD scheme: %v", err)
 	}
 
 	return k8sClient, nil
