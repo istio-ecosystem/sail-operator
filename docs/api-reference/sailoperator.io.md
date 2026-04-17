@@ -324,6 +324,32 @@ _Appears in:_
 
 
 
+#### ConditionReason
+
+_Underlying type:_ _string_
+
+ConditionReason represents a reason for a condition's current status.
+
+
+
+_Appears in:_
+- [StatusCondition](#statuscondition)
+
+
+
+#### ConditionType
+
+_Underlying type:_ _string_
+
+ConditionType represents the type of a status condition (e.g., "Reconciled", "Ready").
+
+
+
+_Appears in:_
+- [StatusCondition](#statuscondition)
+
+
+
 #### ConfigSource
 
 
@@ -589,63 +615,8 @@ _Appears in:_
 | `status` _[IstioCNIStatus](#istiocnistatus)_ |  |  |  |
 
 
-#### IstioCNICondition
 
 
-
-IstioCNICondition represents a specific observation of the IstioCNI object's state.
-
-
-
-_Appears in:_
-- [IstioCNIStatus](#istiocnistatus)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `type` _[IstioCNIConditionType](#istiocniconditiontype)_ | The type of this condition. |  |  |
-| `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#conditionstatus-v1-meta)_ | The status of this condition. Can be True, False or Unknown. |  |  |
-| `reason` _[IstioCNIConditionReason](#istiocniconditionreason)_ | Unique, single-word, CamelCase reason for the condition's last transition. |  |  |
-| `message` _string_ | Human-readable message indicating details about the last transition. |  |  |
-| `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta)_ | Last time the condition transitioned from one status to another. |  |  |
-
-
-#### IstioCNIConditionReason
-
-_Underlying type:_ _string_
-
-IstioCNIConditionReason represents a short message indicating how the condition came
-to be in its present state.
-
-
-
-_Appears in:_
-- [IstioCNICondition](#istiocnicondition)
-- [IstioCNIStatus](#istiocnistatus)
-
-| Field | Description |
-| --- | --- |
-| `ReconcileError` | IstioCNIReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried.  |
-| `DaemonSetNotReady` | IstioCNIDaemonSetNotReady indicates that the istio-cni-node DaemonSet is not ready.  |
-| `ReadinessCheckFailed` | IstioCNIReasonReadinessCheckFailed indicates that the DaemonSet readiness status could not be ascertained.  |
-| `Healthy` | IstioCNIReasonHealthy indicates that the control plane is fully reconciled and that all components are ready.  |
-
-
-#### IstioCNIConditionType
-
-_Underlying type:_ _string_
-
-IstioCNIConditionType represents the type of the condition.  Condition stages are:
-Installed, Reconciled, Ready
-
-
-
-_Appears in:_
-- [IstioCNICondition](#istiocnicondition)
-
-| Field | Description |
-| --- | --- |
-| `Reconciled` | IstioCNIConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.  |
-| `Ready` | IstioCNIConditionReady signifies whether the istio-cni-node DaemonSet is ready.  |
 
 
 #### IstioCNIList (v1)
@@ -701,74 +672,12 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `observedGeneration` _integer_ | ObservedGeneration is the most recent generation observed for this IstioCNI object. It corresponds to the object's generation, which is updated on mutation by the API Server. The information in the status pertains to this particular generation of the object. |  |  |
-| `conditions` _[IstioCNICondition](#istiocnicondition) array_ | Represents the latest available observations of the object's current state. |  |  |
+| `conditions` _[StatusCondition](#statuscondition) array_ | Represents the latest available observations of the object's current state. |  |  |
 | `state` _[IstioCNIConditionReason](#istiocniconditionreason)_ | Reports the current state of the object. |  |  |
 
 
-#### IstioCondition
 
 
-
-IstioCondition represents a specific observation of the IstioCondition object's state.
-
-
-
-_Appears in:_
-- [IstioStatus](#istiostatus)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `type` _[IstioConditionType](#istioconditiontype)_ | The type of this condition. |  |  |
-| `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#conditionstatus-v1-meta)_ | The status of this condition. Can be True, False or Unknown. |  |  |
-| `reason` _[IstioConditionReason](#istioconditionreason)_ | Unique, single-word, CamelCase reason for the condition's last transition. |  |  |
-| `message` _string_ | Human-readable message indicating details about the last transition. |  |  |
-| `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta)_ | Last time the condition transitioned from one status to another. |  |  |
-
-
-#### IstioConditionReason
-
-_Underlying type:_ _string_
-
-IstioConditionReason represents a short message indicating how the condition came
-to be in its present state.
-
-
-
-_Appears in:_
-- [IstioCondition](#istiocondition)
-- [IstioStatus](#istiostatus)
-
-| Field | Description |
-| --- | --- |
-| `ReconcileError` | IstioReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried.  |
-| `ActiveRevisionNotFound` | IstioReasonRevisionNotFound indicates that the active IstioRevision is not found.  |
-| `FailedToGetActiveRevision` | IstioReasonFailedToGetActiveRevision indicates that a failure occurred when getting the active IstioRevision  |
-| `IstiodNotReady` | IstioReasonIstiodNotReady indicates that the control plane is fully reconciled, but istiod is not ready.  |
-| `RemoteIstiodNotReady` | IstioReasonRemoteIstiodNotReady indicates that the control plane is fully reconciled, but the remote istiod is not ready.  |
-| `ReadinessCheckFailed` | IstioReasonReadinessCheckFailed indicates that readiness could not be ascertained.  |
-| `IstioCNINotFound` | IstioReasonIstioCNINotFound indicates that the IstioCNI resource is not found.  |
-| `IstioCNINotHealthy` | IstioReasonIstioCNINotHealthy indicates that the IstioCNI resource is not healthy.  |
-| `DependencyCheckFailed` | IstioReasonDependencyCheckFailed indicates that the status of the dependencies could not be ascertained.  |
-| `Healthy` | IstioReasonHealthy indicates that the control plane is fully reconciled and that all components are ready.  |
-
-
-#### IstioConditionType
-
-_Underlying type:_ _string_
-
-IstioConditionType represents the type of the condition.  Condition stages are:
-Installed, Reconciled, Ready
-
-
-
-_Appears in:_
-- [IstioCondition](#istiocondition)
-
-| Field | Description |
-| --- | --- |
-| `Reconciled` | IstioConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.  |
-| `Ready` | IstioConditionReady signifies whether any Deployment, StatefulSet, etc. resources are Ready.  |
-| `DependenciesHealthy` | IstioConditionDependenciesHealthy signifies whether the dependencies required by this Istio are healthy. For example, an Istio with spec.values.pilot.cni.enabled=true requires the IstioCNI resource to be deployed and ready for the Istio revision to be considered healthy. The DependenciesHealthy condition is used to indicate that the IstioCNI resource is healthy.  |
 
 
 #### IstioList (v1)
@@ -816,75 +725,8 @@ _Appears in:_
 | `status` _[IstioRevisionStatus](#istiorevisionstatus)_ |  |  |  |
 
 
-#### IstioRevisionCondition
 
 
-
-IstioRevisionCondition represents a specific observation of the IstioRevision object's state.
-
-
-
-_Appears in:_
-- [IstioRevisionStatus](#istiorevisionstatus)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `type` _[IstioRevisionConditionType](#istiorevisionconditiontype)_ | The type of this condition. |  |  |
-| `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#conditionstatus-v1-meta)_ | The status of this condition. Can be True, False or Unknown. |  |  |
-| `reason` _[IstioRevisionConditionReason](#istiorevisionconditionreason)_ | Unique, single-word, CamelCase reason for the condition's last transition. |  |  |
-| `message` _string_ | Human-readable message indicating details about the last transition. |  |  |
-| `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta)_ | Last time the condition transitioned from one status to another. |  |  |
-
-
-#### IstioRevisionConditionReason
-
-_Underlying type:_ _string_
-
-IstioRevisionConditionReason represents a short message indicating how the condition came
-to be in its present state.
-
-
-
-_Appears in:_
-- [IstioRevisionCondition](#istiorevisioncondition)
-- [IstioRevisionStatus](#istiorevisionstatus)
-
-| Field | Description |
-| --- | --- |
-| `ReconcileError` | IstioRevisionReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried.  |
-| `IstiodNotReady` | IstioRevisionReasonIstiodNotReady indicates that the control plane is fully reconciled, but istiod is not ready.  |
-| `NameAlreadyExists` | IstioRevisionTagNameAlreadyExists indicates that a IstioRevisionTag with the same name as the IstioRevision already exists.  |
-| `RemoteIstiodNotReady` | IstioRevisionReasonRemoteIstiodNotReady indicates that the remote istiod is not ready.  |
-| `ReadinessCheckFailed` | IstioRevisionReasonReadinessCheckFailed indicates that istiod readiness status could not be ascertained.  |
-| `ReferencedByWorkloads` | IstioRevisionReasonReferencedByWorkloads indicates that the revision is referenced by at least one pod or namespace.  |
-| `NotReferencedByAnything` | IstioRevisionReasonNotReferenced indicates that the revision is not referenced by any pod or namespace.  |
-| `UsageCheckFailed` | IstioRevisionReasonUsageCheckFailed indicates that the operator could not check whether any workloads use the revision.  |
-| `IstioCNINotFound` | IstioRevisionReasonIstioCNINotFound indicates that the IstioCNI resource is not found.  |
-| `IstioCNINotHealthy` | IstioRevisionReasonIstioCNINotHealthy indicates that the IstioCNI resource is not healthy.  |
-| `ZTunnelNotFound` | IstioRevisionReasonZTunnelNotFound indicates that the ZTunnel resource is not found.  |
-| `ZTunnelNotHealthy` | IstioRevisionReasonZTunnelNotHealthy indicates that the ZTunnel resource is not healthy.  |
-| `DependencyCheckFailed` | IstioRevisionDependencyCheckFailed indicates that the status of the dependencies could not be ascertained.  |
-| `Healthy` | IstioRevisionReasonHealthy indicates that the control plane is fully reconciled and that all components are ready.  |
-
-
-#### IstioRevisionConditionType
-
-_Underlying type:_ _string_
-
-IstioRevisionConditionType represents the type of the condition.  Condition stages are:
-Installed, Reconciled, Ready
-
-
-
-_Appears in:_
-- [IstioRevisionCondition](#istiorevisioncondition)
-
-| Field | Description |
-| --- | --- |
-| `Reconciled` | IstioRevisionConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.  |
-| `Ready` | IstioRevisionConditionReady signifies whether any Deployment, StatefulSet, etc. resources are Ready.  |
-| `InUse` | IstioRevisionConditionInUse signifies whether any workload is configured to use the revision.  |
-| `DependenciesHealthy` | IstioRevisionConditionDependenciesHealthy signifies whether the dependencies required by this IstioRevision are healthy. For example, an IstioRevision with spec.values.pilot.cni.enabled=true requires the IstioCNI resource to be deployed and ready for the Istio revision to be considered healthy. The DependenciesHealthy condition is used to indicate that the IstioCNI resource is healthy.  |
 
 
 #### IstioRevisionList (v1)
@@ -939,7 +781,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `observedGeneration` _integer_ | ObservedGeneration is the most recent generation observed for this IstioRevision object. It corresponds to the object's generation, which is updated on mutation by the API Server. The information in the status pertains to this particular generation of the object. |  |  |
-| `conditions` _[IstioRevisionCondition](#istiorevisioncondition) array_ | Represents the latest available observations of the object's current state. |  |  |
+| `conditions` _[StatusCondition](#statuscondition) array_ | Represents the latest available observations of the object's current state. |  |  |
 | `state` _[IstioRevisionConditionReason](#istiorevisionconditionreason)_ | Reports the current state of the object. |  |  |
 
 
@@ -965,66 +807,8 @@ _Appears in:_
 | `status` _[IstioRevisionTagStatus](#istiorevisiontagstatus)_ |  |  |  |
 
 
-#### IstioRevisionTagCondition
 
 
-
-IstioRevisionCondition represents a specific observation of the IstioRevision object's state.
-
-
-
-_Appears in:_
-- [IstioRevisionTagStatus](#istiorevisiontagstatus)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `type` _[IstioRevisionTagConditionType](#istiorevisiontagconditiontype)_ | The type of this condition. |  |  |
-| `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#conditionstatus-v1-meta)_ | The status of this condition. Can be True, False or Unknown. |  |  |
-| `reason` _[IstioRevisionTagConditionReason](#istiorevisiontagconditionreason)_ | Unique, single-word, CamelCase reason for the condition's last transition. |  |  |
-| `message` _string_ | Human-readable message indicating details about the last transition. |  |  |
-| `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta)_ | Last time the condition transitioned from one status to another. |  |  |
-
-
-#### IstioRevisionTagConditionReason
-
-_Underlying type:_ _string_
-
-IstioRevisionConditionReason represents a short message indicating how the condition came
-to be in its present state.
-
-
-
-_Appears in:_
-- [IstioRevisionTagCondition](#istiorevisiontagcondition)
-- [IstioRevisionTagStatus](#istiorevisiontagstatus)
-
-| Field | Description |
-| --- | --- |
-| `NameAlreadyExists` | IstioRevisionTagNameAlreadyExists indicates that an IstioRevision with the same name as the IstioRevisionTag already exists.  |
-| `RefNotFound` | IstioRevisionTagReasonReferenceNotFound indicates that the resource referenced by the tag's TargetRef was not found  |
-| `ReconcileError` | IstioRevisionReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried.  |
-| `ReferencedByWorkloads` | IstioRevisionReasonReferencedByWorkloads indicates that the revision is referenced by at least one pod or namespace.  |
-| `NotReferencedByAnything` | IstioRevisionReasonNotReferenced indicates that the revision is not referenced by any pod or namespace.  |
-| `UsageCheckFailed` | IstioRevisionReasonUsageCheckFailed indicates that the operator could not check whether any workloads use the revision.  |
-| `Healthy` | IstioRevisionTagReasonHealthy indicates that the revision tag has been successfully reconciled and is in use.  |
-
-
-#### IstioRevisionTagConditionType
-
-_Underlying type:_ _string_
-
-IstioRevisionConditionType represents the type of the condition.  Condition stages are:
-Installed, Reconciled, Ready
-
-
-
-_Appears in:_
-- [IstioRevisionTagCondition](#istiorevisiontagcondition)
-
-| Field | Description |
-| --- | --- |
-| `Reconciled` | IstioRevisionConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.  |
-| `InUse` | IstioRevisionConditionInUse signifies whether any workload is configured to use the revision.  |
 
 
 #### IstioRevisionTagList (v1)
@@ -1077,7 +861,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `observedGeneration` _integer_ | ObservedGeneration is the most recent generation observed for this IstioRevisionTag object. It corresponds to the object's generation, which is updated on mutation by the API Server. The information in the status pertains to this particular generation of the object. |  |  |
-| `conditions` _[IstioRevisionTagCondition](#istiorevisiontagcondition) array_ | Represents the latest available observations of the object's current state. |  |  |
+| `conditions` _[StatusCondition](#statuscondition) array_ | Represents the latest available observations of the object's current state. |  |  |
 | `state` _[IstioRevisionTagConditionReason](#istiorevisiontagconditionreason)_ | Reports the current state of the object. |  |  |
 | `istiodNamespace` _string_ | IstiodNamespace stores the namespace of the corresponding Istiod instance |  |  |
 | `istioRevision` _string_ | IstioRevision stores the name of the referenced IstioRevision |  |  |
@@ -1117,7 +901,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `observedGeneration` _integer_ | ObservedGeneration is the most recent generation observed for this Istio object. It corresponds to the object's generation, which is updated on mutation by the API Server. The information in the status pertains to this particular generation of the object. |  |  |
-| `conditions` _[IstioCondition](#istiocondition) array_ | Represents the latest available observations of the object's current state. |  |  |
+| `conditions` _[StatusCondition](#statuscondition) array_ | Represents the latest available observations of the object's current state. |  |  |
 | `state` _[IstioConditionReason](#istioconditionreason)_ | Reports the current state of the object. |  |  |
 | `activeRevisionName` _string_ | The name of the active revision. |  |  |
 | `revisions` _[RevisionSummary](#revisionsummary)_ | Reports information about the underlying IstioRevisions. |  |  |
@@ -2979,6 +2763,31 @@ _Appears in:_
 | `failureThreshold` _integer_ | Minimum consecutive failures for the probe to be considered failed after having succeeded. |  |  |
 
 
+#### StatusCondition
+
+
+
+StatusCondition represents a specific observation of an object's state.
+
+
+
+_Appears in:_
+- [IstioCNIStatus](#istiocnistatus)
+- [IstioRevisionStatus](#istiorevisionstatus)
+- [IstioRevisionTagStatus](#istiorevisiontagstatus)
+- [IstioStatus](#istiostatus)
+- [ZTunnelStatus](#ztunnelstatus)
+- [ZTunnelStatus](#ztunnelstatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `type` _[ConditionType](#conditiontype)_ | The type of this condition. |  |  |
+| `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#conditionstatus-v1-meta)_ | The status of this condition. Can be True, False or Unknown. |  |  |
+| `reason` _[ConditionReason](#conditionreason)_ | Unique, single-word, CamelCase reason for the condition's last transition. |  |  |
+| `message` _string_ | Human-readable message indicating details about the last transition. |  |  |
+| `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta)_ | Last time the condition transitioned from one status to another. |  |  |
+
+
 #### TargetReference
 
 
@@ -3406,63 +3215,8 @@ _Appears in:_
 | `status` _[ZTunnelStatus](#ztunnelstatus)_ |  |  |  |
 
 
-#### ZTunnelCondition
 
 
-
-ZTunnelCondition represents a specific observation of the ZTunnel object's state.
-
-
-
-_Appears in:_
-- [ZTunnelStatus](#ztunnelstatus)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `type` _[ZTunnelConditionType](#ztunnelconditiontype)_ | The type of this condition. |  |  |
-| `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#conditionstatus-v1-meta)_ | The status of this condition. Can be True, False or Unknown. |  |  |
-| `reason` _[ZTunnelConditionReason](#ztunnelconditionreason)_ | Unique, single-word, CamelCase reason for the condition's last transition. |  |  |
-| `message` _string_ | Human-readable message indicating details about the last transition. |  |  |
-| `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta)_ | Last time the condition transitioned from one status to another. |  |  |
-
-
-#### ZTunnelConditionReason
-
-_Underlying type:_ _string_
-
-ZTunnelConditionReason represents a short message indicating how the condition came
-to be in its present state.
-
-
-
-_Appears in:_
-- [ZTunnelCondition](#ztunnelcondition)
-- [ZTunnelStatus](#ztunnelstatus)
-
-| Field | Description |
-| --- | --- |
-| `ReconcileError` | ZTunnelReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried.  |
-| `DaemonSetNotReady` | ZTunnelDaemonSetNotReady indicates that the ztunnel DaemonSet is not ready.  |
-| `ReadinessCheckFailed` | ZTunnelReasonReadinessCheckFailed indicates that the DaemonSet readiness status could not be ascertained.  |
-| `Healthy` | ZTunnelReasonHealthy indicates that the control plane is fully reconciled and that all components are ready.  |
-
-
-#### ZTunnelConditionType
-
-_Underlying type:_ _string_
-
-ZTunnelConditionType represents the type of the condition.  Condition stages are:
-Installed, Reconciled, Ready
-
-
-
-_Appears in:_
-- [ZTunnelCondition](#ztunnelcondition)
-
-| Field | Description |
-| --- | --- |
-| `Reconciled` | ZTunnelConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.  |
-| `Ready` | ZTunnelConditionReady signifies whether the ztunnel DaemonSet is ready.  |
 
 
 #### ZTunnelConfig
@@ -3590,7 +3344,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `observedGeneration` _integer_ | ObservedGeneration is the most recent generation observed for this ZTunnel object. It corresponds to the object's generation, which is updated on mutation by the API Server. The information in the status pertains to this particular generation of the object. |  |  |
-| `conditions` _[ZTunnelCondition](#ztunnelcondition) array_ | Represents the latest available observations of the object's current state. |  |  |
+| `conditions` _[StatusCondition](#statuscondition) array_ | Represents the latest available observations of the object's current state. |  |  |
 | `state` _[ZTunnelConditionReason](#ztunnelconditionreason)_ | Reports the current state of the object. |  |  |
 | `istioRevision` _string_ | IstioRevision stores the name of the referenced IstioRevision |  |  |
 
@@ -3646,37 +3400,15 @@ _Appears in:_
 | `status` _[ZTunnelStatus](#ztunnelstatus)_ |  |  |  |
 
 
-#### ZTunnelCondition
-
-
-
-ZTunnelCondition represents a specific observation of the ZTunnel object's state.
-
-
-
-_Appears in:_
-- [ZTunnelStatus](#ztunnelstatus)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `type` _[ZTunnelConditionType](#ztunnelconditiontype)_ | The type of this condition. |  |  |
-| `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#conditionstatus-v1-meta)_ | The status of this condition. Can be True, False or Unknown. |  |  |
-| `reason` _[ZTunnelConditionReason](#ztunnelconditionreason)_ | Unique, single-word, CamelCase reason for the condition's last transition. |  |  |
-| `message` _string_ | Human-readable message indicating details about the last transition. |  |  |
-| `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta)_ | Last time the condition transitioned from one status to another. |  |  |
-
-
 #### ZTunnelConditionReason
 
 _Underlying type:_ _string_
 
-ZTunnelConditionReason represents a short message indicating how the condition came
-to be in its present state.
+ZTunnelConditionReason represents the reason for a ZTunnel condition.
 
 
 
 _Appears in:_
-- [ZTunnelCondition](#ztunnelcondition)
 - [ZTunnelStatus](#ztunnelstatus)
 
 | Field | Description |
@@ -3687,22 +3419,6 @@ _Appears in:_
 | `Healthy` | ZTunnelReasonHealthy indicates that the control plane is fully reconciled and that all components are ready.  |
 
 
-#### ZTunnelConditionType
-
-_Underlying type:_ _string_
-
-ZTunnelConditionType represents the type of the condition.  Condition stages are:
-Installed, Reconciled, Ready
-
-
-
-_Appears in:_
-- [ZTunnelCondition](#ztunnelcondition)
-
-| Field | Description |
-| --- | --- |
-| `Reconciled` | ZTunnelConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.  |
-| `Ready` | ZTunnelConditionReady signifies whether the ztunnel DaemonSet is ready.  |
 
 
 #### ZTunnelList (v1alpha1)
@@ -3758,7 +3474,153 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `observedGeneration` _integer_ | ObservedGeneration is the most recent generation observed for this ZTunnel object. It corresponds to the object's generation, which is updated on mutation by the API Server. The information in the status pertains to this particular generation of the object. |  |  |
-| `conditions` _[ZTunnelCondition](#ztunnelcondition) array_ | Represents the latest available observations of the object's current state. |  |  |
+| `conditions` _[StatusCondition](#statuscondition) array_ | Represents the latest available observations of the object's current state. |  |  |
 | `state` _[ZTunnelConditionReason](#ztunnelconditionreason)_ | Reports the current state of the object. |  |  |
 
+
+
+
+## Conditions Reference
+
+Each resource has a set of conditions in its status that indicate its current state.
+The `status` of each condition is one of `True`, `False`, or `Unknown`.
+
+### Istio
+
+**`Reconciled`** — IstioConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.
+
+| Reason | Description |
+| --- | --- |
+| `ReconcileError` | IstioReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried. |
+
+**`Ready`** — IstioConditionReady signifies whether any Deployment, StatefulSet, etc. resources are Ready.
+
+| Reason | Description |
+| --- | --- |
+| `ActiveRevisionNotFound` | IstioReasonRevisionNotFound indicates that the active IstioRevision is not found. |
+| `FailedToGetActiveRevision` | IstioReasonFailedToGetActiveRevision indicates that a failure occurred when getting the active IstioRevision |
+| `IstiodNotReady` | IstioReasonIstiodNotReady indicates that the control plane is fully reconciled, but istiod is not ready. |
+| `RemoteIstiodNotReady` | IstioReasonRemoteIstiodNotReady indicates that the control plane is fully reconciled, but the remote istiod is not ready. |
+| `ReadinessCheckFailed` | IstioReasonReadinessCheckFailed indicates that readiness could not be ascertained. |
+
+**`DependenciesHealthy`** — IstioConditionDependenciesHealthy signifies whether the dependencies required by this Istio are healthy. For example, an Istio with spec.values.pilot.cni.enabled=true requires the IstioCNI resource to be deployed and ready for the Istio revision to be considered healthy. The DependenciesHealthy condition is used to indicate that the IstioCNI resource is healthy.
+
+| Reason | Description |
+| --- | --- |
+| `IstioCNINotFound` | IstioReasonIstioCNINotFound indicates that the IstioCNI resource is not found. |
+| `IstioCNINotHealthy` | IstioReasonIstioCNINotHealthy indicates that the IstioCNI resource is not healthy. |
+| `DependencyCheckFailed` | IstioReasonDependencyCheckFailed indicates that the status of the dependencies could not be ascertained. |
+
+*General reasons:*
+
+| Reason | Description |
+| --- | --- |
+| `Healthy` | IstioReasonHealthy indicates that the control plane is fully reconciled and that all components are ready. |
+
+### IstioRevision
+
+**`Reconciled`** — IstioRevisionConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.
+
+| Reason | Description |
+| --- | --- |
+| `ReconcileError` | IstioRevisionReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried. |
+
+**`Ready`** — IstioRevisionConditionReady signifies whether any Deployment, StatefulSet, etc. resources are Ready.
+
+| Reason | Description |
+| --- | --- |
+| `IstiodNotReady` | IstioRevisionReasonIstiodNotReady indicates that the control plane is fully reconciled, but istiod is not ready. |
+| `NameAlreadyExists` | IstioRevisionTagNameAlreadyExists indicates that a IstioRevisionTag with the same name as the IstioRevision already exists. |
+| `RemoteIstiodNotReady` | IstioRevisionReasonRemoteIstiodNotReady indicates that the remote istiod is not ready. |
+| `ReadinessCheckFailed` | IstioRevisionReasonReadinessCheckFailed indicates that istiod readiness status could not be ascertained. |
+
+**`InUse`** — IstioRevisionConditionInUse signifies whether any workload is configured to use the revision.
+
+| Reason | Description |
+| --- | --- |
+| `ReferencedByWorkloads` | IstioRevisionReasonReferencedByWorkloads indicates that the revision is referenced by at least one pod or namespace. |
+| `NotReferencedByAnything` | IstioRevisionReasonNotReferenced indicates that the revision is not referenced by any pod or namespace. |
+| `UsageCheckFailed` | IstioRevisionReasonUsageCheckFailed indicates that the operator could not check whether any workloads use the revision. |
+
+**`DependenciesHealthy`** — IstioRevisionConditionDependenciesHealthy signifies whether the dependencies required by this IstioRevision are healthy. For example, an IstioRevision with spec.values.pilot.cni.enabled=true requires the IstioCNI resource to be deployed and ready for the Istio revision to be considered healthy. The DependenciesHealthy condition is used to indicate that the IstioCNI resource is healthy.
+
+| Reason | Description |
+| --- | --- |
+| `IstioCNINotFound` | IstioRevisionReasonIstioCNINotFound indicates that the IstioCNI resource is not found. |
+| `IstioCNINotHealthy` | IstioRevisionReasonIstioCNINotHealthy indicates that the IstioCNI resource is not healthy. |
+| `ZTunnelNotFound` | IstioRevisionReasonZTunnelNotFound indicates that the ZTunnel resource is not found. |
+| `ZTunnelNotHealthy` | IstioRevisionReasonZTunnelNotHealthy indicates that the ZTunnel resource is not healthy. |
+| `DependencyCheckFailed` | IstioRevisionDependencyCheckFailed indicates that the status of the dependencies could not be ascertained. |
+
+*General reasons:*
+
+| Reason | Description |
+| --- | --- |
+| `Healthy` | IstioRevisionReasonHealthy indicates that the control plane is fully reconciled and that all components are ready. |
+
+### IstioRevisionTag
+
+**`Reconciled`** — IstioRevisionConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.
+
+| Reason | Description |
+| --- | --- |
+| `NameAlreadyExists` | IstioRevisionTagNameAlreadyExists indicates that an IstioRevision with the same name as the IstioRevisionTag already exists. |
+| `RefNotFound` | IstioRevisionTagReasonReferenceNotFound indicates that the resource referenced by the tag's TargetRef was not found |
+| `ReconcileError` | IstioRevisionReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried. |
+
+**`InUse`** — IstioRevisionConditionInUse signifies whether any workload is configured to use the revision.
+
+| Reason | Description |
+| --- | --- |
+| `ReferencedByWorkloads` | IstioRevisionReasonReferencedByWorkloads indicates that the revision is referenced by at least one pod or namespace. |
+| `NotReferencedByAnything` | IstioRevisionReasonNotReferenced indicates that the revision is not referenced by any pod or namespace. |
+| `UsageCheckFailed` | IstioRevisionReasonUsageCheckFailed indicates that the operator could not check whether any workloads use the revision. |
+
+*General reasons:*
+
+| Reason | Description |
+| --- | --- |
+| `Healthy` | IstioRevisionTagReasonHealthy indicates that the revision tag has been successfully reconciled and is in use. |
+
+### IstioCNI
+
+**`Reconciled`** — IstioCNIConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.
+
+| Reason | Description |
+| --- | --- |
+| `ReconcileError` | IstioCNIReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried. |
+
+**`Ready`** — IstioCNIConditionReady signifies whether the istio-cni-node DaemonSet is ready.
+
+| Reason | Description |
+| --- | --- |
+| `DaemonSetNotReady` | IstioCNIDaemonSetNotReady indicates that the istio-cni-node DaemonSet is not ready. |
+| `ReadinessCheckFailed` | IstioCNIReasonReadinessCheckFailed indicates that the DaemonSet readiness status could not be ascertained. |
+
+*General reasons:*
+
+| Reason | Description |
+| --- | --- |
+| `Healthy` | IstioCNIReasonHealthy indicates that the control plane is fully reconciled and that all components are ready. |
+
+### ZTunnel
+
+**`Reconciled`** — ZTunnelConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.
+
+| Reason | Description |
+| --- | --- |
+| `ReconcileError` | ZTunnelReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried. |
+
+**`Ready`** — ZTunnelConditionReady signifies whether the ztunnel DaemonSet is ready.
+
+| Reason | Description |
+| --- | --- |
+| `DaemonSetNotReady` | ZTunnelDaemonSetNotReady indicates that the ztunnel DaemonSet is not ready. |
+| `ReadinessCheckFailed` | ZTunnelReasonReadinessCheckFailed indicates that the DaemonSet readiness status could not be ascertained. |
+
+*General reasons:*
+
+| Reason | Description |
+| --- | --- |
+| `Healthy` | ZTunnelReasonHealthy indicates that the control plane is fully reconciled and that all components are ready. |
 

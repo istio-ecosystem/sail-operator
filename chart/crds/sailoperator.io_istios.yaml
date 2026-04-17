@@ -10399,8 +10399,8 @@ spec:
                 description: Represents the latest available observations of the object's
                   current state.
                 items:
-                  description: IstioCondition represents a specific observation of
-                    the IstioCondition object's state.
+                  description: StatusCondition represents a specific observation of
+                    an object's state.
                   properties:
                     lastTransitionTime:
                       description: Last time the condition transitioned from one status

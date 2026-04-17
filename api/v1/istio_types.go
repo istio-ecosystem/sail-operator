@@ -15,8 +15,6 @@
 package v1
 
 import (
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -109,7 +107,7 @@ type IstioStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
 	// Represents the latest available observations of the object's current state.
-	Conditions []IstioCondition `json:"conditions,omitempty"`
+	Conditions []StatusCondition `json:"conditions,omitempty"`
 
 	// Reports the current state of the object.
 	State IstioConditionReason `json:"state,omitempty"`
@@ -135,75 +133,23 @@ type RevisionSummary struct {
 }
 
 // GetCondition returns the condition of the specified type
-func (s *IstioStatus) GetCondition(conditionType IstioConditionType) IstioCondition {
-	if s != nil {
-		for i := range s.Conditions {
-			if s.Conditions[i].Type == conditionType {
-				return s.Conditions[i]
-			}
-		}
+func (s *IstioStatus) GetCondition(conditionType IstioConditionType) StatusCondition {
+	if s == nil {
+		return StatusCondition{Type: conditionType, Status: metav1.ConditionUnknown}
 	}
-	return IstioCondition{Type: conditionType, Status: metav1.ConditionUnknown}
+	return GetCondition(s.Conditions, conditionType)
 }
 
 // SetCondition sets a specific condition in the list of conditions
-func (s *IstioStatus) SetCondition(condition IstioCondition) {
-	var now time.Time
-	if testTime == nil {
-		now = time.Now()
-	} else {
-		now = *testTime
-	}
-
-	// The lastTransitionTime only gets serialized out to the second.  This can
-	// break update skipping, as the time in the resource returned from the client
-	// may not match the time in our cached status during a reconcile.  We truncate
-	// here to save any problems down the line.
-	lastTransitionTime := metav1.NewTime(now.Truncate(time.Second))
-
-	for i, prevCondition := range s.Conditions {
-		if prevCondition.Type == condition.Type {
-			if prevCondition.Status != condition.Status {
-				condition.LastTransitionTime = lastTransitionTime
-			} else {
-				condition.LastTransitionTime = prevCondition.LastTransitionTime
-			}
-			s.Conditions[i] = condition
-			return
-		}
-	}
-
-	// If the condition does not exist, initialize the lastTransitionTime
-	condition.LastTransitionTime = lastTransitionTime
-	s.Conditions = append(s.Conditions, condition)
+func (s *IstioStatus) SetCondition(condition StatusCondition) {
+	SetCondition(&s.Conditions, condition)
 }
 
-// IstioCondition represents a specific observation of the IstioCondition object's state.
-type IstioCondition struct {
-	// The type of this condition.
-	Type IstioConditionType `json:"type,omitempty"`
+// IstioConditionType is an alias for ConditionType.
+type IstioConditionType = ConditionType
 
-	// The status of this condition. Can be True, False or Unknown.
-	Status metav1.ConditionStatus `json:"status,omitempty"`
-
-	// Unique, single-word, CamelCase reason for the condition's last transition.
-	Reason IstioConditionReason `json:"reason,omitempty"`
-
-	// Human-readable message indicating details about the last transition.
-	Message string `json:"message,omitempty"`
-
-	// Last time the condition transitioned from one status to another.
-	// +optional
-	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitzero"`
-}
-
-// IstioConditionType represents the type of the condition.  Condition stages are:
-// Installed, Reconciled, Ready
-type IstioConditionType string
-
-// IstioConditionReason represents a short message indicating how the condition came
-// to be in its present state.
-type IstioConditionReason string
+// IstioConditionReason is an alias for ConditionReason.
+type IstioConditionReason = ConditionReason
 
 const (
 	// IstioConditionReconciled signifies whether the controller has

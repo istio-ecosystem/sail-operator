@@ -12,11 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1
+package reconciler
 
 import (
-	"time"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// testTime is only in unit tests to pin the time to a fixed value
-var testTime *time.Time
+// DeriveState returns the reason of the first non-True condition,
+// or healthyReason if all conditions are True.
+func DeriveState(healthyReason v1.ConditionReason, conditions ...v1.StatusCondition) v1.ConditionReason {
+	for _, c := range conditions {
+		if c.Status != metav1.ConditionTrue {
+			return c.Reason
+		}
+	}
+	return healthyReason
+}

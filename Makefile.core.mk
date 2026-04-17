@@ -521,6 +521,7 @@ gen-api-docs: ## Generate API documentation. Known issues: go fmt does not prope
 	@find $(OUTPUT_DOCS_PATH) -type f -name "*.md" -exec sed -i 's/<br \/>/ /g' {} \;
 	@find $(OUTPUT_DOCS_PATH) -type f \( -name "*.md" -o -name "*.asciidoc" \) -exec sed -i 's/\t/  /g' {} \;
 	@find $(OUTPUT_DOCS_PATH) -type f \( -name "*.md" -o -name "*.asciidoc" \) -exec sed -i '/^```/,/^```/ {/./!d;}' {} \;
+	go run ./hack/gen-condition-docs $(CRD_PATH)/v1 >> $(OUTPUT_DOCS_PATH)/sailoperator.io.md
 	@echo "API reference documentation generated at $(OUTPUT_DOCS_PATH)"
 
 .PHONY: restore-manifest-dates
