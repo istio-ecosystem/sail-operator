@@ -31,6 +31,10 @@ type TLSConfig struct {
 	// CipherSuites is a list of TLS cipher suite IDs.
 	CipherSuites []uint16
 
+	// MinVersion is the minimum TLS version (e.g. tls.VersionTLS12).
+	// Zero means no minimum version is configured.
+	MinVersion uint16
+
 	// OpenShift holds OpenShift-specific TLS configuration.
 	// It is nil when not running on OpenShift.
 	OpenShift *OpenShiftTLS
@@ -78,6 +82,7 @@ func NewTLSConfigForOpenShift(ctx context.Context, log logr.Logger, cl client.Cl
 		goTLSConfig := &tls.Config{MinVersion: tls.VersionTLS12}
 		tlsConfigFunc(goTLSConfig)
 		tlsConfig.CipherSuites = goTLSConfig.CipherSuites
+		tlsConfig.MinVersion = goTLSConfig.MinVersion
 	}
 
 	return tlsConfig, nil

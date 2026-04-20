@@ -59,7 +59,7 @@ func ComputeValues(
 	}
 
 	// apply OpenShift TLS config from APIServer before FIPS values
-	istiovalues.ApplyTLSConfig(tlsConfig, values)
+	istiovalues.ApplyTLSConfig(tlsConfig, version, values)
 
 	// apply FipsValues on top of merged values from profile
 	istiovalues.ApplyFipsValues(values)

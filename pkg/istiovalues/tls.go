@@ -18,13 +18,18 @@ import (
 	"crypto/tls"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
+
+	"istio.io/istio/pkg/log"
 )
+
+var istio1_29 = semver.MustParse("1.29.0")
 
 // ApplyTLSConfig applies TLS configuration to the Istio values.
 // If TLS settings are already set, they are not overridden.
-func ApplyTLSConfig(tlsConfig *config.TLSConfig, values *v1.Values) {
+func ApplyTLSConfig(tlsConfig *config.TLSConfig, istioVersion string, values *v1.Values) {
 	if tlsConfig == nil || values == nil || len(tlsConfig.CipherSuites) == 0 {
 		return
 	}
@@ -45,6 +50,10 @@ func ApplyTLSConfig(tlsConfig *config.TLSConfig, values *v1.Values) {
 		values.MeshConfig.TlsDefaults.CipherSuites = cipherNames
 	}
 
+	if values.MeshConfig.TlsDefaults.MinProtocolVersion == "" {
+		values.MeshConfig.TlsDefaults.MinProtocolVersion = tlsProtocolVersion(tlsConfig.MinVersion)
+	}
+
 	if values.MeshConfig.MeshMTLS == nil {
 		values.MeshConfig.MeshMTLS = &v1.MeshConfigTLSConfig{}
 	}
@@ -52,10 +61,45 @@ func ApplyTLSConfig(tlsConfig *config.TLSConfig, values *v1.Values) {
 		values.MeshConfig.MeshMTLS.CipherSuites = cipherNames
 	}
 
+	if values.MeshConfig.MeshMTLS.MinProtocolVersion == "" {
+		values.MeshConfig.MeshMTLS.MinProtocolVersion = tlsProtocolVersion(tlsConfig.MinVersion)
+	}
+
 	if values.Pilot == nil {
 		values.Pilot = &v1.PilotConfig{}
 	}
 	addExtraContainerArg(values.Pilot, "--tls-cipher-suites", strings.Join(cipherNames, ","))
+
+	if minVersionName := tlsVersionName(tlsConfig.MinVersion); minVersionName != "" {
+		v, err := semver.NewVersion(istioVersion)
+		if err != nil {
+			log.Warnf("failed to parse Istio version %q: %v", istioVersion, err)
+		} else if v.GreaterThanEqual(istio1_29) { // This flag is only supported on Istio 1.29+. TODO: Remove this check when we drop support for Istio 1.28
+			addExtraContainerArg(values.Pilot, "--tls-min-version", minVersionName)
+		}
+	}
+}
+
+func tlsProtocolVersion(v uint16) v1.MeshConfigTLSConfigTLSProtocol {
+	switch v {
+	case tls.VersionTLS12:
+		return v1.MeshConfigTLSConfigTLSProtocolTlsv12
+	case tls.VersionTLS13:
+		return v1.MeshConfigTLSConfigTLSProtocolTlsv13
+	default:
+		return ""
+	}
+}
+
+func tlsVersionName(v uint16) string {
+	switch v {
+	case tls.VersionTLS12:
+		return "1.2"
+	case tls.VersionTLS13:
+		return "1.3"
+	default:
+		return ""
+	}
 }
 
 // addExtraContainerArg adds an argument to ExtraContainerArgs if not already present.
