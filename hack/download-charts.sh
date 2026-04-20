@@ -192,11 +192,35 @@ EOF
 # The charts use docker.io as the default registry, but this leads to issues
 # because of Docker Hub's rate limiting. This function modifies the hub field
 # in all charts to use registry.istio.io/release instead of docker.io/istio.
-# registry.istio.io also contains the official images for Istio and they ar an exact match.
+# registry.istio.io also contains the official images for Istio and they are an exact match.
 function replaceDockerHubWithRegistryIstio() {
   echo "replacing docker.io/istio with registry.istio.io/release in all charts"
 
   find "${CHARTS_DIR}" -name values.yaml -exec sed -i 's/hub: docker.io\/istio/hub: registry.istio.io\/release/g' {} \;
+}
+
+# The alpha/beta releases from istio-release.storage.googleapis.com may specify
+# registry.istio.io/testing in their charts, but the images are actually published
+# to registry.istio.io/release. This function replaces /testing/ with /release/ only for
+# official releases from istio-release.storage.googleapis.com.
+# Dev builds from istio-build/dev/ should keep /testing/ as their images are published there.
+function replaceChartsNSForAlphaRelease() {
+  local is_official_release=false
+  if [ "${#CHART_URLS[@]}" -gt 0 ]; then
+    for url in "${CHART_URLS[@]}"; do
+      if [[ "$url" == *"istio-release.storage.googleapis.com"* ]]; then
+        is_official_release=true
+        break
+      fi
+    done
+  fi
+
+  if [ "$is_official_release" = true ]; then
+    echo "replacing registry.istio.io/testing with registry.istio.io/release for official release charts"
+    find "${CHARTS_DIR}" -name values.yaml -exec sed -i 's/registry\.istio\.io\/testing/registry.istio.io\/release/g' {} \;
+  else
+    echo "skipping registry replacement for dev/testing builds"
+  fi
 }
 
 function convertIstioProfiles() {
@@ -253,5 +277,6 @@ fi
 downloadIstioManifests
 patchIstioCharts
 replaceDockerHubWithRegistryIstio
+replaceChartsNSForAlphaRelease
 convertIstioProfiles
 createRevisionTagChart
