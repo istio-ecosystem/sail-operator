@@ -3,7 +3,7 @@ kind: ZTunnel
 metadata:
   name: default
 spec:
-  version: v1.29.2
+  version: v1.30.0-alpha.2
   namespace: ztunnel
   targetRef:
     kind: Istio
