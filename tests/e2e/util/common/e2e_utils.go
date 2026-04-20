@@ -523,7 +523,9 @@ func EnsureNamespace(ctx context.Context, ctrlclient client.Client, namespace st
 	ns := &corev1.Namespace{}
 	if err := ctrlclient.Get(ctx, client.ObjectKey{Name: namespace}, ns); apierrors.IsNotFound(err) {
 		ns.Name = namespace
-		Expect(ctrlclient.Create(ctx, ns)).To(Succeed(), "Failed to create namespace")
+		if err := ctrlclient.Create(ctx, ns); err != nil && !apierrors.IsAlreadyExists(err) {
+			Fail(fmt.Sprintf("Failed to create namespace: %s", err))
+		}
 	} else if err != nil {
 		Fail(fmt.Sprintf("Failed to get namespace: %s", err))
 	}

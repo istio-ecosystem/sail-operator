@@ -126,6 +126,30 @@ func TestApplyTLSConfig(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "does not treat arg with shared prefix as already present",
+			tlsConfig: &config.TLSConfig{
+				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
+			},
+			inputValues: &v1.Values{
+				Pilot: &v1.PilotConfig{
+					ExtraContainerArgs: []string{"--tls-cipher-suites-foo=bar"},
+				},
+			},
+			wantValues: &v1.Values{
+				MeshConfig: &v1.MeshConfig{
+					MeshMTLS: &v1.MeshConfigTLSConfig{
+						CipherSuites: []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+					},
+					TlsDefaults: &v1.MeshConfigTLSConfig{
+						CipherSuites: []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+					},
+				},
+				Pilot: &v1.PilotConfig{
+					ExtraContainerArgs: []string{"--tls-cipher-suites-foo=bar", "--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {

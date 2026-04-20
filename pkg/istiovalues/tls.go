@@ -60,10 +60,11 @@ func ApplyTLSConfig(tlsConfig *config.TLSConfig, values *v1.Values) {
 
 // addExtraContainerArg adds an argument to ExtraContainerArgs if not already present.
 func addExtraContainerArg(pilot *v1.PilotConfig, argName, argValue string) {
+	argNameWithEquals := argName + "="
 	for _, arg := range pilot.ExtraContainerArgs {
-		if strings.HasPrefix(arg, argName) {
+		if arg == argName || strings.HasPrefix(arg, argNameWithEquals) {
 			return
 		}
 	}
-	pilot.ExtraContainerArgs = append(pilot.ExtraContainerArgs, argName+"="+argValue)
+	pilot.ExtraContainerArgs = append(pilot.ExtraContainerArgs, argNameWithEquals+argValue)
 }

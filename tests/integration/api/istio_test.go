@@ -542,7 +542,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 						Namespace: istioNamespace,
 					},
 				}
-				createIstioWithCleanup(ctx, istio, k8sClient)
+				createIstioWithCleanup(ctx, istio)
 				Eventually(getObject).WithArguments(ctx, k8sClient, istioKey, istio).
 					Should(HaveConditionMessage(v1.IstioConditionReconciled, "is end-of-life and cannot be installed"))
 			})
@@ -569,7 +569,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 					Namespace: istioNamespace,
 				},
 			}
-			createIstioWithCleanup(ctx, istio, k8sClient)
+			createIstioWithCleanup(ctx, istio)
 
 			rev := &v1.IstioRevision{}
 			revKey := client.ObjectKey{Name: istioName}
@@ -628,7 +628,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 					},
 				},
 			}
-			createIstioWithCleanup(ctx, istio, k8sClient)
+			createIstioWithCleanup(ctx, istio)
 
 			rev := &v1.IstioRevision{}
 			revKey := client.ObjectKey{Name: istioName}
@@ -704,7 +704,7 @@ func getObject(ctx context.Context, cl client.Client, key client.ObjectKey, obj 
 	return obj, err
 }
 
-func createIstioWithCleanup(ctx context.Context, istio *v1.Istio, k8sClient client.Client) {
+func createIstioWithCleanup(ctx context.Context, istio *v1.Istio) {
 	Expect(k8sClient.Create(ctx, istio, &client.CreateOptions{})).To(Succeed())
 	DeferCleanup(func() {
 		deleteAllIstiosAndRevisions(ctx)

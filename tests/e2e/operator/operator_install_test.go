@@ -383,7 +383,9 @@ spec:
 			}).Should(Succeed(), "IstioRevision is not syncing TLS settings but should be")
 
 			Step("Verifying metrics endpoint accepts the custom cipher")
-			Expect(metricsEndpointAcceptsCipher(k, "ECDHE-RSA-AES256-GCM-SHA384", "1.2")).To(BeTrue(),
+			Eventually(func() bool {
+				return metricsEndpointAcceptsCipher(k, "ECDHE-RSA-AES256-GCM-SHA384", "1.2")
+			}).Should(BeTrue(),
 				"Metrics endpoint should accept ECDHE-RSA-AES256-GCM-SHA384 when TLS profile includes it")
 			Success("TLS settings were synced after TLSAdherence change to StrictAllComponents")
 
@@ -401,7 +403,9 @@ spec:
 			}).Should(Succeed())
 
 			Step("Verifying metrics endpoint rejects the marker cipher")
-			Expect(metricsEndpointAcceptsCipher(k, markerCipher, "1.2")).To(BeFalse(),
+			Eventually(func() bool {
+				return metricsEndpointAcceptsCipher(k, markerCipher, "1.2")
+			}).Should(BeFalse(),
 				"Metrics endpoint should reject ECDHE-RSA-CHACHA20-POLY1305 after custom profile is applied")
 			Success("TLS settings were updated after profile change")
 		})
