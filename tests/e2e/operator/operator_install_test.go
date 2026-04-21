@@ -26,6 +26,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
@@ -125,15 +126,18 @@ var _ = Describe("Operator", Label("smoke", "operator"), Ordered, func() {
 		})
 
 		It("serves metrics securely", func(ctx SpecContext) {
-			metricsReaderRoleName := "sailoperator-metrics-reader"
+			By("discovering the metrics reader ClusterRole installed on the cluster")
+			metricsReaderRoleName, err := discoverMetricsReaderClusterRole()
+			Expect(err).NotTo(HaveOccurred(), "metrics reader ClusterRole must exist")
+
 			metricsServiceName := deploymentName + "-metrics-service"
 
 			By("creating a ClusterRoleBinding for the service account to allow access to metrics")
-			err := k.CreateFromString(fmt.Sprintf(`
+			err = k.CreateFromString(fmt.Sprintf(`
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: sailoperator-metrics-reader-rolebinding
+  name: metrics-reader-test-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -428,6 +432,39 @@ func extractCRDNames(crdList *apiextensionsv1.CustomResourceDefinitionList) []st
 		names = append(names, crd.ObjectMeta.Name)
 	}
 	return names
+}
+
+const metricsReaderClusterRoleLabel = "app.kubernetes.io/component=kube-rbac-proxy"
+
+// discoverMetricsReaderClusterRole lists ClusterRoles with the kube-rbac-proxy component label
+// (same as chart/bundle), then picks the one whose name ends with "-metrics-reader".
+func discoverMetricsReaderClusterRole() (string, error) {
+	out, err := k.GetClusterRoleNamesByLabel(metricsReaderClusterRoleLabel)
+	if err != nil {
+		return "", err
+	}
+	var matches []string
+	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		name := line
+		if i := strings.LastIndex(line, "/"); i >= 0 {
+			name = line[i+1:]
+		}
+		if strings.HasSuffix(name, "-metrics-reader") {
+			matches = append(matches, name)
+		}
+	}
+	switch len(matches) {
+	case 0:
+		return "", fmt.Errorf("no *-metrics-reader ClusterRole under label %s", metricsReaderClusterRoleLabel)
+	case 1:
+		return matches[0], nil
+	default:
+		return "", fmt.Errorf("ambiguous *-metrics-reader ClusterRoles: %v", matches)
+	}
 }
 
 // serviceAccountToken returns a token for the specified service account in the given namespace.
