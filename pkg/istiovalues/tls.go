@@ -74,8 +74,13 @@ func ApplyTLSConfig(tlsConfig *config.TLSConfig, istioVersion string, values *v1
 		v, err := semver.NewVersion(istioVersion)
 		if err != nil {
 			log.Warnf("failed to parse Istio version %q: %v", istioVersion, err)
-		} else if v.GreaterThanEqual(istio1_29) { // This flag is only supported on Istio 1.29+. TODO: Remove this check when we drop support for Istio 1.28
+		}
+
+		// This flag is only supported on Istio 1.29+. TODO: Remove this check when we drop support for Istio 1.28
+		if v.GreaterThanEqual(istio1_29) {
 			addExtraContainerArg(values.Pilot, "--tls-min-version", minVersionName)
+		} else {
+			log.Infof("Istio version %q is less than 1.29 and --tls-min-version flag for istiod is only supported on Istio 1.29+. Skipping sync of flag.", istioVersion)
 		}
 	}
 }
