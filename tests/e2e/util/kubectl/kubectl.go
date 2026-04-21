@@ -195,6 +195,17 @@ func (k Kubectl) GetYAML(kind, name string) (string, error) {
 	return output, nil
 }
 
+// GetClusterRoleNamesByLabel runs `kubectl|oc get clusterrole -l <selector> -o name` (cluster-scoped; no namespace).
+func (k Kubectl) GetClusterRoleNamesByLabel(labelSelector string) (string, error) {
+	cmd := k.build(fmt.Sprintf(" get clusterrole -l %q -o name", labelSelector))
+	output, err := k.executeCommand(cmd)
+	if err != nil {
+		return "", fmt.Errorf("error listing clusterroles: %w, output: %s", err, output)
+	}
+
+	return output, nil
+}
+
 // GetPods returns the pods of a namespace
 func (k Kubectl) GetPods(args ...string) (string, error) {
 	cmd := k.build(fmt.Sprintf(" get pods %s", strings.Join(args, " ")))
