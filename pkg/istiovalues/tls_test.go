@@ -25,37 +25,42 @@ import (
 
 func TestApplyTLSConfig(t *testing.T) {
 	tests := []struct {
-		name        string
-		tlsConfig   *config.TLSConfig
-		inputValues *v1.Values
-		wantValues  *v1.Values
+		name         string
+		tlsConfig    *config.TLSConfig
+		istioVersion string
+		inputValues  *v1.Values
+		wantValues   *v1.Values
 	}{
 		{
-			name:        "nil TLS config does not change values",
-			tlsConfig:   nil,
-			inputValues: &v1.Values{},
-			wantValues:  &v1.Values{},
+			name:         "nil TLS config does not change values",
+			tlsConfig:    nil,
+			istioVersion: "1.29.0",
+			inputValues:  &v1.Values{},
+			wantValues:   &v1.Values{},
 		},
 		{
-			name:        "nil values is safe",
-			tlsConfig:   &config.TLSConfig{CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256}},
-			inputValues: nil,
-			wantValues:  nil,
+			name:         "nil values is safe",
+			tlsConfig:    &config.TLSConfig{CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256}},
+			istioVersion: "1.29.0",
+			inputValues:  nil,
+			wantValues:   nil,
 		},
 		{
 			name: "empty cipher suites does not change values",
 			tlsConfig: &config.TLSConfig{
 				CipherSuites: []uint16{},
 			},
-			inputValues: &v1.Values{},
-			wantValues:  &v1.Values{},
+			istioVersion: "1.29.0",
+			inputValues:  &v1.Values{},
+			wantValues:   &v1.Values{},
 		},
 		{
 			name: "applies multiple cipher suites",
 			tlsConfig: &config.TLSConfig{
 				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384},
 			},
-			inputValues: &v1.Values{},
+			istioVersion: "1.28.0",
+			inputValues:  &v1.Values{},
 			wantValues: &v1.Values{
 				MeshConfig: &v1.MeshConfig{
 					MeshMTLS: &v1.MeshConfigTLSConfig{
@@ -75,6 +80,7 @@ func TestApplyTLSConfig(t *testing.T) {
 			tlsConfig: &config.TLSConfig{
 				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
 			},
+			istioVersion: "1.28.0",
 			inputValues: &v1.Values{
 				MeshConfig: &v1.MeshConfig{
 					MeshMTLS: &v1.MeshConfigTLSConfig{
@@ -107,6 +113,7 @@ func TestApplyTLSConfig(t *testing.T) {
 			tlsConfig: &config.TLSConfig{
 				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
 			},
+			istioVersion: "1.28.0",
 			inputValues: &v1.Values{
 				Pilot: &v1.PilotConfig{
 					ExtraContainerArgs: []string{"--some-arg=value"},
@@ -131,6 +138,7 @@ func TestApplyTLSConfig(t *testing.T) {
 			tlsConfig: &config.TLSConfig{
 				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
 			},
+			istioVersion: "1.28.0",
 			inputValues: &v1.Values{
 				Pilot: &v1.PilotConfig{
 					ExtraContainerArgs: []string{"--tls-cipher-suites-foo=bar"},
@@ -150,11 +158,111 @@ func TestApplyTLSConfig(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "adds tls-min-version for istio 1.29+",
+			tlsConfig: &config.TLSConfig{
+				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
+				MinVersion:   tls.VersionTLS12,
+			},
+			istioVersion: "1.29.0",
+			inputValues:  &v1.Values{},
+			wantValues: &v1.Values{
+				MeshConfig: &v1.MeshConfig{
+					MeshMTLS: &v1.MeshConfigTLSConfig{
+						CipherSuites:       []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+						MinProtocolVersion: v1.MeshConfigTLSConfigTLSProtocolTlsv12,
+					},
+					TlsDefaults: &v1.MeshConfigTLSConfig{
+						CipherSuites:       []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+						MinProtocolVersion: v1.MeshConfigTLSConfigTLSProtocolTlsv12,
+					},
+				},
+				Pilot: &v1.PilotConfig{
+					ExtraContainerArgs: []string{
+						"--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+						"--tls-min-version=1.2",
+					},
+				},
+			},
+		},
+		{
+			name: "adds tls-min-version TLS 1.3 for istio 1.29+",
+			tlsConfig: &config.TLSConfig{
+				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
+				MinVersion:   tls.VersionTLS13,
+			},
+			istioVersion: "1.30.0",
+			inputValues:  &v1.Values{},
+			wantValues: &v1.Values{
+				MeshConfig: &v1.MeshConfig{
+					MeshMTLS: &v1.MeshConfigTLSConfig{
+						CipherSuites:       []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+						MinProtocolVersion: v1.MeshConfigTLSConfigTLSProtocolTlsv13,
+					},
+					TlsDefaults: &v1.MeshConfigTLSConfig{
+						CipherSuites:       []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+						MinProtocolVersion: v1.MeshConfigTLSConfigTLSProtocolTlsv13,
+					},
+				},
+				Pilot: &v1.PilotConfig{
+					ExtraContainerArgs: []string{
+						"--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+						"--tls-min-version=1.3",
+					},
+				},
+			},
+		},
+		{
+			name: "does not add tls-min-version for istio < 1.29",
+			tlsConfig: &config.TLSConfig{
+				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
+				MinVersion:   tls.VersionTLS12,
+			},
+			istioVersion: "1.28.3",
+			inputValues:  &v1.Values{},
+			wantValues: &v1.Values{
+				MeshConfig: &v1.MeshConfig{
+					MeshMTLS: &v1.MeshConfigTLSConfig{
+						CipherSuites:       []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+						MinProtocolVersion: v1.MeshConfigTLSConfigTLSProtocolTlsv12,
+					},
+					TlsDefaults: &v1.MeshConfigTLSConfig{
+						CipherSuites:       []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+						MinProtocolVersion: v1.MeshConfigTLSConfigTLSProtocolTlsv12,
+					},
+				},
+				Pilot: &v1.PilotConfig{
+					ExtraContainerArgs: []string{"--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+				},
+			},
+		},
+		{
+			name: "does not add tls-min-version when MinVersion is zero",
+			tlsConfig: &config.TLSConfig{
+				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
+				MinVersion:   0,
+			},
+			istioVersion: "1.29.0",
+			inputValues:  &v1.Values{},
+			wantValues: &v1.Values{
+				MeshConfig: &v1.MeshConfig{
+					MeshMTLS: &v1.MeshConfigTLSConfig{
+						CipherSuites: []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+					},
+					TlsDefaults: &v1.MeshConfigTLSConfig{
+						CipherSuites: []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+					},
+				},
+				Pilot: &v1.PilotConfig{
+					ExtraContainerArgs: []string{"--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ApplyTLSConfig(tt.tlsConfig, tt.inputValues)
+			ApplyTLSConfig(tt.tlsConfig, tt.istioVersion, tt.inputValues)
 			if diff := cmp.Diff(tt.wantValues, tt.inputValues); diff != "" {
 				t.Errorf("ApplyTLSConfig() mismatch (-want +got):\n%s", diff)
 			}
