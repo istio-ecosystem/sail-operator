@@ -320,12 +320,19 @@ docker-buildx: build-all ## Build and push docker image with cross-platform supp
 ifeq ($(PREVENT_IMAGE_OVERWRITE),true)
 	@echo "Checking if image ${IMAGE} already exists..."
 	@if command -v crane >/dev/null 2>&1; then \
-		if crane manifest ${IMAGE} >/dev/null 2>&1; then \
+		set +e; \
+		OUTPUT=$$(crane manifest ${IMAGE} 2>&1); \
+		EXIT_CODE=$$?; \
+		set -e; \
+		if echo "$$OUTPUT" | grep -q "MANIFEST_UNKNOWN"; then \
+			echo "Image tag ${IMAGE} does not exist. Proceeding with build and push."; \
+		elif [ $$EXIT_CODE -eq 0 ]; then \
 			echo "ERROR: Image tag ${IMAGE} already exists in the registry!"; \
 			echo "Please ensure you are releasing a new version."; \
 			exit 1; \
 		else \
-			echo "Image tag ${IMAGE} does not exist. Proceeding with build and push."; \
+			echo "ERROR: Failed to check if image exists: $$OUTPUT"; \
+			exit 1; \
 		fi; \
 	else \
 		echo "ERROR: crane is not installed. Cannot verify if image already exists."; \
