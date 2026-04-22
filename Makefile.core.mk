@@ -319,8 +319,8 @@ endif
 docker-buildx: build-all ## Build and push docker image with cross-platform support.
 ifeq ($(PREVENT_IMAGE_OVERWRITE),true)
 	@echo "Checking if image ${IMAGE} already exists..."
-	@if command -v skopeo >/dev/null 2>&1; then \
-		if skopeo inspect docker://${IMAGE} >/dev/null 2>&1; then \
+	@if command -v crane >/dev/null 2>&1; then \
+		if crane manifest ${IMAGE} >/dev/null 2>&1; then \
 			echo "ERROR: Image tag ${IMAGE} already exists in the registry!"; \
 			echo "Please ensure you are releasing a new version."; \
 			exit 1; \
@@ -328,8 +328,8 @@ ifeq ($(PREVENT_IMAGE_OVERWRITE),true)
 			echo "Image tag ${IMAGE} does not exist. Proceeding with build and push."; \
 		fi; \
 	else \
-		echo "ERROR: skopeo is not installed. Cannot verify if image already exists."; \
-		echo "Install skopeo or set PREVENT_IMAGE_OVERWRITE=false to skip this check."; \
+		echo "ERROR: crane is not installed. Cannot verify if image already exists."; \
+		echo "Install crane or set PREVENT_IMAGE_OVERWRITE=false to skip this check."; \
 		exit 1; \
 	fi
 endif
