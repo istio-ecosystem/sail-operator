@@ -230,6 +230,16 @@ spec:
 				Skip("Skipping OpenShift-specific tests on non-OpenShift cluster")
 			}
 
+			// On hosted clusters, the APIServer resource is read-only and TLS settings cannot be changed,
+			// so skip all TLS profile tests. If the test run in a regular cluster, the APIServer resource is writable and the tests can run as normal.
+			Step("Checking if this is a Hosted Cluster")
+			infra := &configv1.Infrastructure{}
+			infraErr := cl.Get(ctx, client.ObjectKey{Name: "cluster"}, infra)
+			Expect(infraErr).NotTo(HaveOccurred(), "Failed to get Infrastructure resource")
+			if infra.Status.ControlPlaneTopology == configv1.ExternalTopologyMode {
+				Skip("Skipping TLS profile tests on hosted cluster: APIServer resource is read-only on hosted clusters")
+			}
+
 			Step("Determining OpenShift version")
 			cv := &configv1.ClusterVersion{}
 			err := cl.Get(ctx, client.ObjectKey{Name: "version"}, cv)
