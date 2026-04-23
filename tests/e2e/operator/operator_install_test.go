@@ -230,6 +230,14 @@ spec:
 				Skip("Skipping OpenShift-specific tests on non-OpenShift cluster")
 			}
 
+			Step("Checking if this is a Hosted Cluster")
+			infra := &configv1.Infrastructure{}
+			infraErr := cl.Get(ctx, client.ObjectKey{Name: "cluster"}, infra)
+			Expect(infraErr).NotTo(HaveOccurred(), "Failed to get Infrastructure resource")
+			if infra.Status.ControlPlaneTopology == configv1.ExternalTopologyMode {
+				Skip("Skipping TLS profile tests on hosted cluster: APIServer resource is read-only on hosted clusters")
+			}
+
 			Step("Determining OpenShift version")
 			cv := &configv1.ClusterVersion{}
 			err := cl.Get(ctx, client.ObjectKey{Name: "version"}, cv)
