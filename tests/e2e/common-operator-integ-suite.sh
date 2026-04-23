@@ -225,8 +225,18 @@ install_operator() {
 }
 
 await_operator() {
-  echo "Awaiting sail-operator deployment on (KUBECONFIG=${KUBECONFIG})"
-  "${COMMAND}" wait --for=condition=available deployment/"${DEPLOYMENT_NAME}" -n "${NAMESPACE}" --timeout=5m
+  echo "Awaiting operator deployment on (KUBECONFIG=${KUBECONFIG})"
+  local name="${DEPLOYMENT_NAME}"
+  if [ "${OLM}" == "true" ]; then
+    local csv_name
+    csv_name=$("${COMMAND}" get csv -n "${NAMESPACE}" \
+      -o jsonpath='{.items[0].spec.install.spec.deployments[0].name}' 2>/dev/null || true)
+    if [ -n "${csv_name}" ]; then
+      echo "OLM mode: using deployment name from CSV: ${csv_name}"
+      name="${csv_name}"
+    fi
+  fi
+  "${COMMAND}" wait --for=condition=available deployment/"${name}" -n "${NAMESPACE}" --timeout=5m
 }
 
 # shellcheck disable=SC2329  # Function is invoked indirectly via trap
