@@ -229,10 +229,11 @@ await_operator() {
   local name="${DEPLOYMENT_NAME}"
   if [ "${OLM}" == "true" ]; then
     local csv_name
-    csv_name=$("${COMMAND}" get csv -n "${NAMESPACE}" \
-      -o jsonpath='{.items[0].spec.install.spec.deployments[0].name}' 2>/dev/null || true)
+    local csv_file
+    csv_file=$(find "${WD}/../../bundle/manifests/" -name "*.clusterserviceversion.yaml" | head -1)
+    csv_name=$(yq eval '.spec.install.spec.deployments[0].name' "${csv_file}" 2>/dev/null || true)
     if [ -n "${csv_name}" ]; then
-      echo "OLM mode: using deployment name from CSV: ${csv_name}"
+      echo "OLM mode: using deployment name from bundle CSV: ${csv_name}"
       name="${csv_name}"
     fi
   fi
