@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -xeuo pipefail
+set -euo pipefail
 
 SLEEP_TIME=10
 VERSIONS_YAML_DIR=${VERSIONS_YAML_DIR:-"pkg/istioversion"}
