@@ -203,6 +203,12 @@ function setup_kind_cluster() {
   # Workaround kind issue causing taints to not be removed in 1.24
   kubectl taint nodes "${NAME}"-control-plane node-role.kubernetes.io/control-plane- 2>/dev/null || true
 
+  # Increase inotify limits to prevent "too many open files" errors with ztunnel and ambient mode
+  # This is needed because ztunnel watches ConfigMaps and the default limits are often too low
+  echo "Increasing inotify limits on KIND node..."
+  docker exec "${NAME}"-control-plane sysctl -w fs.inotify.max_user_instances=8192 || true
+  docker exec "${NAME}"-control-plane sysctl -w fs.inotify.max_user_watches=524288 || true
+
   # Determine what CNI to install
   case "${KUBERNETES_CNI:-}" in
 
