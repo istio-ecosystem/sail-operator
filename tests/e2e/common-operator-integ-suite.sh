@@ -225,8 +225,19 @@ install_operator() {
 }
 
 await_operator() {
-  echo "Awaiting sail-operator deployment on (KUBECONFIG=${KUBECONFIG})"
-  "${COMMAND}" wait --for=condition=available deployment/"${DEPLOYMENT_NAME}" -n "${NAMESPACE}" --timeout=5m
+  echo "Awaiting operator deployment on (KUBECONFIG=${KUBECONFIG})"
+  local name="${DEPLOYMENT_NAME}"
+  if [ "${OLM}" == "true" ]; then
+    local csv_name
+    local csv_file
+    csv_file=$(find "${WD}/../../bundle/manifests/" -name "*.clusterserviceversion.yaml" | head -1)
+    csv_name=$(yq eval '.spec.install.spec.deployments[0].name' "${csv_file}" 2>/dev/null || true)
+    if [ -n "${csv_name}" ]; then
+      echo "OLM mode: using deployment name from bundle CSV: ${csv_name}"
+      name="${csv_name}"
+    fi
+  fi
+  "${COMMAND}" wait --for=condition=available deployment/"${name}" -n "${NAMESPACE}" --timeout=5m
 }
 
 # shellcheck disable=SC2329,SC2317  # Function is invoked indirectly via trap
