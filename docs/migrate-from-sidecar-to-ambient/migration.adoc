@@ -460,7 +460,13 @@ Create the ZTunnel namespace and resource:
 kubectl get namespace ztunnel >/dev/null 2>&1 || kubectl create namespace ztunnel
 
 # If you are using discoverySelectors, label the namespace accordingly
-kubectl label namespace ztunnel istio-discovery=enabled
+kubectl label namespace ztunnel istio.io/rev=default --overwrite
+
+# Wait for istiod to propagate the CA certificate ConfigMap to the ztunnel namespace
+kubectl wait --for=condition=Complete --timeout=120s job/wait-for-configmap -n ztunnel 2>/dev/null || \
+  for i in {1..30}; do \
+    kubectl get configmap istio-ca-root-cert -n ztunnel >/dev/null 2>&1 && break || sleep 2; \
+  done
 
 # Apply ZTunnel configuration
 cat <<EOF | kubectl apply -f-

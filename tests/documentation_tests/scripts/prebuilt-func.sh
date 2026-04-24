@@ -345,7 +345,7 @@ install_bookinfo() {
     namespace="${2:-bookinfo}"
 
     kubectl get namespace "$namespace" >/dev/null 2>&1 || kubectl create namespace "$namespace"
-    kubectl label namespace "$namespace" istio-injection=enabled
+    kubectl label namespace "$namespace" istio.io/rev=default
     kubectl apply -n "$namespace" -f https://raw.githubusercontent.com/istio/istio/"${istio_release_name}"/samples/bookinfo/platform/kube/bookinfo.yaml
 }
 
