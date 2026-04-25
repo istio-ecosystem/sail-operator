@@ -4614,7 +4614,7 @@ const fileMeshV1alpha1ProxyProtoRawDesc = "" +
 
 	// The following values are used to construct proxy image url.
 // format: `${hub}/${image_name}/${tag}-${image_type}`,
-// example: `docker.io/istio/proxyv2:1.11.1` or `docker.io/istio/proxyv2:1.11.1-distroless`.
+// example: `registry.istio.io/release/proxyv2:1.11.1` or `registry.istio.io/release/proxyv2:1.11.1-distroless`.
 // This information was previously part of the Values API.
 type ProxyImage struct {
 	// The image type of the image.
