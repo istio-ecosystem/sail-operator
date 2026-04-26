@@ -220,7 +220,7 @@ func TestMergeOverwrite(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := mergeOverwrite(tc.base, tc.overrides)
+			result := MergeOverwrite(tc.base, tc.overrides)
 			if diff := cmp.Diff(tc.expect, result); diff != "" {
 				t.Errorf("unexpected merge result; diff (-expected, +actual):\n%v", diff)
 			}
