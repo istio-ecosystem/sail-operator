@@ -30,6 +30,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
+	"github.com/istio-ecosystem/sail-operator/pkg/fieldignore"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/revision"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
@@ -189,7 +190,10 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 		// we use the Watches function instead of For(), so that we can wrap the handler so that events that cause the object to be enqueued are logged
 		// +lint-watches:ignore: IstioRevision (not found in charts, but this is the main resource watched by this controller)
-		Watches(&admissionv1.MutatingWebhookConfiguration{}, objectHandler, builder.WithPredicates(ownedByRemoteIstioRevisionPredicate(mgr.GetClient()))).
+		Watches(&admissionv1.MutatingWebhookConfiguration{}, objectHandler,
+			builder.WithPredicates(
+				fieldignore.RulesFor(fieldignore.DefaultRules, &admissionv1.MutatingWebhookConfiguration{}).NewPredicate(),
+				ownedByRemoteIstioRevisionPredicate(mgr.GetClient()))).
 		Named("mutatingwebhookconfiguration").
 		Complete(reconciler.NewStandardReconciler[*admissionv1.MutatingWebhookConfiguration](r.Client, r.Reconcile))
 }

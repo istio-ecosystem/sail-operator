@@ -30,6 +30,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/controllers/ztunnel"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
+	"github.com/istio-ecosystem/sail-operator/pkg/fieldignore"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/version"
@@ -202,7 +203,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	chartManager := helm.NewChartManager(mgr.GetConfig(), os.Getenv("HELM_DRIVER"))
+	chartManager := helm.NewChartManager(mgr.GetConfig(), os.Getenv("HELM_DRIVER"),
+		helm.WithFieldIgnoreRules(fieldignore.IntoUntypedAll(fieldignore.DefaultRules)))
 
 	err = istio.NewReconciler(reconcilerCfg, mgr.GetClient(), mgr.GetScheme(), tlsConfig).
 		SetupWithManager(mgr)

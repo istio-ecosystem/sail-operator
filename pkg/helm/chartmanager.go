@@ -15,6 +15,7 @@
 package helm
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
+	"github.com/istio-ecosystem/sail-operator/pkg/fieldignore"
 	"helm.sh/helm/v4/pkg/action"
 	chartv2 "helm.sh/helm/v4/pkg/chart/v2"
 	"helm.sh/helm/v4/pkg/kube"
@@ -39,6 +41,7 @@ type ChartManager struct {
 	restClientGetter genericclioptions.RESTClientGetter
 	driver           string
 	managedByValue   string
+	fieldIgnoreRules []fieldignore.UntypedFieldIgnoreRule
 }
 
 // ChartManagerOption is a functional option for configuring a ChartManager.
@@ -50,6 +53,15 @@ type ChartManagerOption func(*ChartManager)
 func WithManagedByValue(v string) ChartManagerOption {
 	return func(cm *ChartManager) {
 		cm.managedByValue = v
+	}
+}
+
+// WithFieldIgnoreRules configures the field ignore rules that the post-renderer
+// uses to strip fields from rendered manifests.
+// See fieldignore.IgnoreScope for how the Scope field controls stripping behavior.
+func WithFieldIgnoreRules(rules []fieldignore.UntypedFieldIgnoreRule) ChartManagerOption {
+	return func(cm *ChartManager) {
+		cm.fieldIgnoreRules = rules
 	}
 }
 
@@ -163,8 +175,17 @@ func (h *ChartManager) upgradeOrInstallChart(
 	if releaseExists {
 		log.V(2).Info("Performing helm upgrade", "chartName", chart.Name())
 
+		// Strip ReconcileAndUpgrade-scoped fields from the stored release
+		// manifest before upgrade. Without this, Helm's three-way merge sees
+		// these fields in the old manifest but not in the new (post-rendered)
+		// manifest, interprets the absence as a deletion, and overwrites
+		// in-cluster values set by other controllers (e.g. istiod).
+		if err := h.stripUpgradeOnlyFieldsFromRelease(cfg, relV1); err != nil {
+			return nil, fmt.Errorf("failed to strip fields from stored release %s: %w", releaseName, err)
+		}
+
 		updateAction := action.NewUpgrade(cfg)
-		updateAction.PostRenderer = NewHelmPostRenderer(ownerReference, "", true, h.managedByValue)
+		updateAction.PostRenderer = NewHelmPostRenderer(ownerReference, "", true, h.managedByValue, h.fieldIgnoreRules)
 		updateAction.MaxHistory = 1
 		updateAction.SkipCRDs = true
 		updateAction.DisableOpenAPIValidation = true
@@ -179,7 +200,7 @@ func (h *ChartManager) upgradeOrInstallChart(
 		log.V(2).Info("Performing helm install", "chartName", chart.Name())
 
 		installAction := action.NewInstall(cfg)
-		installAction.PostRenderer = NewHelmPostRenderer(ownerReference, "", false, h.managedByValue)
+		installAction.PostRenderer = NewHelmPostRenderer(ownerReference, "", false, h.managedByValue, h.fieldIgnoreRules)
 		installAction.Namespace = namespace
 		installAction.ReleaseName = releaseName
 		installAction.SkipCRDs = true
@@ -249,4 +270,23 @@ func (h *ChartManager) ListReleases(ctx context.Context) ([]release.Releaser, er
 	listAction := action.NewList(cfg)
 	listAction.AllNamespaces = true
 	return listAction.Run()
+}
+
+// stripUpgradeOnlyFieldsFromRelease removes ReconcileAndUpgrade-scoped fields
+// from the stored release manifest so that Helm's three-way merge does not
+// treat their absence in the post-rendered new manifest as a deletion.
+func (h *ChartManager) stripUpgradeOnlyFieldsFromRelease(cfg *action.Configuration, rel *releasev1.Release) error {
+	if len(h.fieldIgnoreRules) == 0 {
+		return nil
+	}
+	pr := NewHelmPostRenderer(nil, "", true, h.managedByValue, h.fieldIgnoreRules)
+	modified, err := pr.Run(bytes.NewBufferString(rel.Manifest))
+	if err != nil {
+		return err
+	}
+	if modified.String() == rel.Manifest {
+		return nil
+	}
+	rel.Manifest = modified.String()
+	return cfg.Releases.Update(rel)
 }
