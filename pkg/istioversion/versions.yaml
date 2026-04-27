@@ -17,6 +17,7 @@
 versions:
   - name: v1.30-latest
     ref: v1.30.0-alpha.2
+    eol: true
   - name: v1.30.0-alpha.2
     version: 1.30.0-alpha.2
     repo: https://github.com/istio/istio
