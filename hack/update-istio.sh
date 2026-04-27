@@ -111,7 +111,8 @@ function update_stable() {
 }
 
 function update_prerelease() {
-    VERSION_CURRENT=$(yq '.versions[] | select(.name == "*.*-*.*") | .name' "${VERSIONS_YAML_PATH}")
+    # get only dev versions containing commit hash and ignore official alpha/beta builds handled manually currently
+    VERSION_CURRENT=$(yq '.versions[] | select(.name | test("^v?[0-9]+\\.[0-9]+\\.[0-9]+.*\\.[0-9a-f]{8}$")) | .name' "${VERSIONS_YAML_PATH}")
     COMMIT=$(yq '.versions[] | select(.name == '\""${VERSION_CURRENT}"\"') | "git ls-remote --heads " + .repo + ".git " + .branch + " | cut -f 1"' "${VERSIONS_YAML_PATH}" | sh)
     CURRENT=$(yq '.versions[] | select(.name == '\""${VERSION_CURRENT}"\"') | .commit' "${VERSIONS_YAML_PATH}")
 
@@ -132,8 +133,8 @@ function update_prerelease() {
 
     full_version=$(curl -sSfL "${URL}")
     IFS="." read -r -a version_array <<< "${full_version}" # split version into an array for major, minor and patch
-    patch_version=${version_array[2]:0:8} # cutoff commit at 8 chars
-    VERSION=${version_array[0]}.${version_array[1]}.${patch_version}
+    commit_short=${version_array[3]:0:8} # cutoff commit at 8 chars
+    VERSION=${version_array[0]}.${version_array[1]}.${version_array[2]}.${commit_short}
     echo New version: "${VERSION}"
 
     yq -i '

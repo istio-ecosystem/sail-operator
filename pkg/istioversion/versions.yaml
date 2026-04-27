@@ -231,16 +231,3 @@ versions:
     eol: true
   - name: v1.21.6
     eol: true
-  - name: master
-    ref: v1.31.0-alpha
-  - name: v1.31.0-alpha
-    version: 1.31.0-alpha.d5bd25c962ebb11018e56000b566f8f70f8c4387
-    repo: https://github.com/istio/istio
-    branch: master
-    commit: d5bd25c962ebb11018e56000b566f8f70f8c4387
-    charts:
-      - https://storage.googleapis.com/istio-build/dev/1.31.0-alpha.d5bd25c962ebb11018e56000b566f8f70f8c4387/helm/base-1.31.0-alpha.d5bd25c962ebb11018e56000b566f8f70f8c4387.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.31.0-alpha.d5bd25c962ebb11018e56000b566f8f70f8c4387/helm/cni-1.31.0-alpha.d5bd25c962ebb11018e56000b566f8f70f8c4387.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.31.0-alpha.d5bd25c962ebb11018e56000b566f8f70f8c4387/helm/gateway-1.31.0-alpha.d5bd25c962ebb11018e56000b566f8f70f8c4387.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.31.0-alpha.d5bd25c962ebb11018e56000b566f8f70f8c4387/helm/istiod-1.31.0-alpha.d5bd25c962ebb11018e56000b566f8f70f8c4387.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.31.0-alpha.d5bd25c962ebb11018e56000b566f8f70f8c4387/helm/ztunnel-1.31.0-alpha.d5bd25c962ebb11018e56000b566f8f70f8c4387.tgz
