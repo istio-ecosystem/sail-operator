@@ -584,6 +584,7 @@ Note: during the restart, sidecars will be updated to support HBONE while still 
 
 ifdef::istio-migrate-from-sidecar-to-ambient[]
 with_retries wait_pods_ready_by_ns "bookinfo"
+kubectl get pods -n bookinfo
 endif::[]
 
 [[step-32-validate-hbone-capability]]
@@ -594,7 +595,7 @@ Check that sidecars now support HBONE protocol:
 [source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Check for HBONE is enabled in sidecar
-kubectl get pod $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -n bookinfo -o yaml | yq '.spec.containers[] | select(.name=="istio-proxy") | .env[] | select(.name=="PROXY_CONFIG")'
+kubectl get pod $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -n bookinfo -o yaml | grep -A 2 'name: PROXY_CONFIG'
 ----
 
 The output should be similar to:
@@ -698,6 +699,10 @@ EOF
 ----
 
 **Important**: Deploying a waypoint does not automatically make workloads use it. You must explicitly configure namespaces, services, or pods to use the waypoint.
+
+ifdef::istio-migrate-from-sidecar-to-ambient[]
+with_retries wait_pods_by_label "bookinfo" "gateway.networking.k8s.io/gateway-name=waypoint"
+endif::[]
 
 Verify that waypoints are deployed correctly:
 [source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
@@ -929,7 +934,7 @@ spec:
     - operation:
         methods: ["GET", "POST"]
 ---
-# Reviews service authorization - allows traffic from productpage
+# Reviews service authorization - allows traffic from productpage, reviews, and ratings
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
@@ -947,6 +952,7 @@ spec:
         principals:
         - cluster.local/ns/bookinfo/sa/bookinfo-productpage
         - cluster.local/ns/bookinfo/sa/bookinfo-reviews
+        - cluster.local/ns/bookinfo/sa/bookinfo-ratings
     to:
     - operation:
         methods: ["GET"]
@@ -1289,15 +1295,15 @@ kubectl rollout restart deployment -n bookinfo
 
 Verify sidecars are removed and ambient mode is working:
 
+ifdef::istio-migrate-from-sidecar-to-ambient[]
+with_retries wait_pods_ready_by_ns "bookinfo"
+endif::[]
+
 [source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Verify pods no longer have sidecars containers in the application pods
 kubectl get pods -n bookinfo
 ----
-
-ifdef::istio-migrate-from-sidecar-to-ambient[]
-with_retries wait_pods_ready_by_ns "bookinfo"
-endif::[]
 
 Checking on Kiali should show traffic flowing through ambient mode. You should see traffic flowing through ztunnel and waypoints instead of sidecars.
 
@@ -1309,7 +1315,7 @@ Test that L7 policies are now enforced through waypoints (L7 policies should wor
 [source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
 # Test authorization policies work through waypoint
-kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -- curl -v http://reviews.bookinfo:9080/reviews/1
+kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -- curl -s http://reviews.bookinfo:9080/reviews/1
 
 ----
 
@@ -1323,7 +1329,7 @@ Test the traffic routing through waypoint with header (if HTTPRoute configured):
 
 [source,bash,subs="attributes+",name="istio-migrate-from-sidecar-to-ambient"]
 ----
-kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -- curl -H "end-user: jason" http://reviews.bookinfo:9080/reviews/1
+kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=ratings -o jsonpath='{.items[0].metadata.name}') -- curl -s -H "end-user: jason" http://reviews.bookinfo:9080/reviews/1
 ----
 
 Output should be similar to:
