@@ -2,7 +2,7 @@
 :istio_latest_version: 1.30.0-alpha.2
 :istio_latest_version_revision_format: 1-30-0-alpha-2
 :istio_latest_tag: v1.30.0-alpha-latest
-:istio_release_name: release-1.30.0-alpha
+:istio_release_name: release-1.30
 :istio_latest_minus_one_version: 1.29.2
 :istio_latest_minus_one_version_revision_format: 1-29-2
 
@@ -100,7 +100,7 @@ All AsciiDoc files should include variable definitions at the top for GitHub com
 :istio_latest_version: 1.30.0-alpha.2
 :istio_latest_version_revision_format: 1-30-0-alpha-2
 :istio_latest_tag: v1.30.0-alpha-latest
-:istio_release_name: release-1.30.0-alpha
+:istio_release_name: release-1.30
 :istio_latest_minus_one_version: 1.29.2
 :istio_latest_minus_one_version_revision_format: 1-29-2
 ```
