@@ -10040,8 +10040,9 @@ spec:
               version:
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.28.3, v1.28.1, v1.26.3.
+                  Must be one of: v1.28.6, v1.28.3, v1.28.1, v1.26.3.
                 enum:
+                - v1.28.6
                 - v1.28.3
                 - v1.28.1
                 - v1.26.3

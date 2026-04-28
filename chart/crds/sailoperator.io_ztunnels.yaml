@@ -62,7 +62,7 @@ spec:
           spec:
             default:
               namespace: ztunnel
-              version: v1.28.3
+              version: v1.28.6
             description: ZTunnelSpec defines the desired state of ZTunnel
             properties:
               namespace:
@@ -3424,12 +3424,13 @@ spec:
                     type: object
                 type: object
               version:
-                default: v1.28.3
+                default: v1.28.6
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.28-latest, v1.28.3, v1.28.1, v1.26-latest, v1.26.3.
+                  Must be one of: v1.28-latest, v1.28.6, v1.28.3, v1.28.1, v1.26-latest, v1.26.3.
                 enum:
                 - v1.28-latest
+                - v1.28.6
                 - v1.28.3
                 - v1.28.1
                 - v1.26-latest
@@ -3545,7 +3546,7 @@ spec:
             default:
               namespace: ztunnel
               profile: ambient
-              version: v1.28.3
+              version: v1.28.6
             description: ZTunnelSpec defines the desired state of ZTunnel
             properties:
               namespace:
@@ -6925,12 +6926,13 @@ spec:
                     type: object
                 type: object
               version:
-                default: v1.28.3
+                default: v1.28.6
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.28-latest, v1.28.3, v1.28.1, v1.26-latest, v1.26.3.
+                  Must be one of: v1.28-latest, v1.28.6, v1.28.3, v1.28.1, v1.26-latest, v1.26.3.
                 enum:
                 - v1.28-latest
+                - v1.28.6
                 - v1.28.3
                 - v1.28.1
                 - v1.26-latest
