@@ -692,6 +692,9 @@ var _ = Describe("Istio resource", Ordered, func() {
 			createIstioWithCleanup(ctx, istio)
 
 			Consistently(k8sClient.Get).WithArguments(ctx, validatorWebhookKey, &admissionv1.ValidatingWebhookConfiguration{}).Should(ReturnNotFoundError())
+
+			revisionedWebhookKey := client.ObjectKey{Name: "istio-validator-custom-" + istioNamespace}
+			Eventually(k8sClient.Get).WithArguments(ctx, revisionedWebhookKey, &admissionv1.ValidatingWebhookConfiguration{}).Should(Succeed())
 		})
 
 		It("does not create istiod-default-validator with RevisionBased strategy", func() {
