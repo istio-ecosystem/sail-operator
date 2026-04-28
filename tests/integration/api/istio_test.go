@@ -657,6 +657,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 	})
 
 	Describe("ValidatingWebhookConfiguration", func() {
+		validatorWebhookKey := client.ObjectKey{Name: "istiod-default-validator"}
 		It("creates istiod-default-validator when the Istio is named 'default' with InPlace strategy", func() {
 			istio = &v1.Istio{
 				ObjectMeta: metav1.ObjectMeta{
@@ -672,9 +673,43 @@ var _ = Describe("Istio resource", Ordered, func() {
 			}
 			createIstioWithCleanup(ctx, istio)
 
-			webhookKey := client.ObjectKey{Name: "istiod-default-validator"}
-			webhook := &admissionv1.ValidatingWebhookConfiguration{}
-			Eventually(k8sClient.Get).WithArguments(ctx, webhookKey, webhook).Should(Succeed())
+			Eventually(k8sClient.Get).WithArguments(ctx, validatorWebhookKey, &admissionv1.ValidatingWebhookConfiguration{}).Should(Succeed())
+		})
+
+		It("does not create istiod-default-validator when the Istio name is not 'default' with InPlace strategy", func() {
+			istio = &v1.Istio{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "custom",
+				},
+				Spec: v1.IstioSpec{
+					Version:   istioversion.Default,
+					Namespace: istioNamespace,
+					UpdateStrategy: &v1.IstioUpdateStrategy{
+						Type: v1.UpdateStrategyTypeInPlace,
+					},
+				},
+			}
+			createIstioWithCleanup(ctx, istio)
+
+			Consistently(k8sClient.Get).WithArguments(ctx, validatorWebhookKey, &admissionv1.ValidatingWebhookConfiguration{}).Should(ReturnNotFoundError())
+		})
+
+		It("does not create istiod-default-validator with RevisionBased strategy", func() {
+			istio = &v1.Istio{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1.IstioSpec{
+					Version:   istioversion.Default,
+					Namespace: istioNamespace,
+					UpdateStrategy: &v1.IstioUpdateStrategy{
+						Type: v1.UpdateStrategyTypeRevisionBased,
+					},
+				},
+			}
+			createIstioWithCleanup(ctx, istio)
+
+			Consistently(k8sClient.Get).WithArguments(ctx, validatorWebhookKey, &admissionv1.ValidatingWebhookConfiguration{}).Should(ReturnNotFoundError())
 		})
 	})
 })
