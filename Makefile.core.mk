@@ -820,7 +820,7 @@ $(CRD_SCHEMA_CHECKER): $(LOCALBIN)
 
 .PHONY: lint-crds
 lint-crds: crd-schema-checker ## Lint CRDs for backwards compatibility on release branches.
-	@PREVIOUS_VERSION=$(PREVIOUS_VERSION) ./tools/crd-schema-checker.sh
+	@./tools/crd-schema-checker.sh
 
 .PHONY: lint-helm
 lint-helm:
