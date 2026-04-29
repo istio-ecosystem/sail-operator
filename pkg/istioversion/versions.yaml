@@ -232,15 +232,15 @@ versions:
   - name: v1.21.6
     eol: true
   - name: master
-    ref: v1.31.0-alpha.80f4dd6b
-  - name: v1.31.0-alpha.80f4dd6b
-    version: 1.31.0-alpha.80f4dd6b14b62a35cb3fd79bda665b675288239e
+    ref: v1.31.0-alpha.2e4387a0
+  - name: v1.31.0-alpha.2e4387a0
+    version: 1.31.0-alpha.2e4387a00e7f14c9364ab06f38ce80bb4f975e28
     repo: https://github.com/istio/istio
     branch: master
-    commit: 80f4dd6b14b62a35cb3fd79bda665b675288239e
+    commit: 2e4387a00e7f14c9364ab06f38ce80bb4f975e28
     charts:
-      - https://storage.googleapis.com/istio-build/dev/1.31.0-alpha.80f4dd6b14b62a35cb3fd79bda665b675288239e/helm/base-1.31.0-alpha.80f4dd6b14b62a35cb3fd79bda665b675288239e.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.31.0-alpha.80f4dd6b14b62a35cb3fd79bda665b675288239e/helm/cni-1.31.0-alpha.80f4dd6b14b62a35cb3fd79bda665b675288239e.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.31.0-alpha.80f4dd6b14b62a35cb3fd79bda665b675288239e/helm/gateway-1.31.0-alpha.80f4dd6b14b62a35cb3fd79bda665b675288239e.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.31.0-alpha.80f4dd6b14b62a35cb3fd79bda665b675288239e/helm/istiod-1.31.0-alpha.80f4dd6b14b62a35cb3fd79bda665b675288239e.tgz
-      - https://storage.googleapis.com/istio-build/dev/1.31.0-alpha.80f4dd6b14b62a35cb3fd79bda665b675288239e/helm/ztunnel-1.31.0-alpha.80f4dd6b14b62a35cb3fd79bda665b675288239e.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.31.0-alpha.2e4387a00e7f14c9364ab06f38ce80bb4f975e28/helm/base-1.31.0-alpha.2e4387a00e7f14c9364ab06f38ce80bb4f975e28.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.31.0-alpha.2e4387a00e7f14c9364ab06f38ce80bb4f975e28/helm/cni-1.31.0-alpha.2e4387a00e7f14c9364ab06f38ce80bb4f975e28.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.31.0-alpha.2e4387a00e7f14c9364ab06f38ce80bb4f975e28/helm/gateway-1.31.0-alpha.2e4387a00e7f14c9364ab06f38ce80bb4f975e28.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.31.0-alpha.2e4387a00e7f14c9364ab06f38ce80bb4f975e28/helm/istiod-1.31.0-alpha.2e4387a00e7f14c9364ab06f38ce80bb4f975e28.tgz
+      - https://storage.googleapis.com/istio-build/dev/1.31.0-alpha.2e4387a00e7f14c9364ab06f38ce80bb4f975e28/helm/ztunnel-1.31.0-alpha.2e4387a00e7f14c9364ab06f38ce80bb4f975e28.tgz
