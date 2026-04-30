@@ -107,8 +107,8 @@ else
     previous_branch=$(git branch -r | grep -E 'origin/release-[0-9]+(\.[0-9]+)*$' | \
         sed 's|.*origin/||' | sort -V | tail -1)
     if [[ -z "$previous_branch" ]]; then
-        echo "No release branches found. Skipping."
-        exit 0
+        echo "No release branches found. Please check branch naming or specify PREVIOUS_BRANCH explicitly."
+        exit 1
     fi
 fi
 
