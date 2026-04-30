@@ -18,6 +18,12 @@
 # Compares CRDs between the current release branch and the previous one to catch breaking changes.
 # Uses OpenShift's crd-schema-checker to detect issues like removed fields or stricter validation.
 # Run 'make crd-schema-checker' first to install the dependency, then 'make lint-crds' to check.
+#
+# Environment variables:
+#   PREVIOUS_BRANCH  Optional. Explicitly set the release branch to compare against.
+#                    If not set, the script auto-detects the appropriate branch:
+#                    - On a release branch: uses the previous release branch (via sort -V).
+#                    - On any other branch: uses the latest available release branch (via sort -V).
 
 set -euo pipefail
 
@@ -93,11 +99,17 @@ if [[ "$current_branch" =~ ^release-[0-9]+\.[0-9]+$ ]]; then
     previous_branch=$(git branch -r | grep -E 'origin/release-[0-9]+\.[0-9]+$' | 
         sed 's|.*origin/||' | sort -V | 
         awk -v target="$current_branch" '$0 == target { print prev; exit } { prev = $0 }')
-elif [[ -n "${PREVIOUS_VERSION:-}" ]]; then
-    previous_branch="release-$(echo "${PREVIOUS_VERSION}" | cut -f1,2 -d'.')"
+elif [[ -n "${PREVIOUS_BRANCH:-}" ]]; then
+    # Explicit override — allows callers to specify the exact branch to compare against.
+    previous_branch="${PREVIOUS_BRANCH}"
 else
-    echo "Not on a release branch and PREVIOUS_VERSION not set. Skipping."
-    exit 0
+    # Not on a release branch: compare against the latest available release branch.
+    previous_branch=$(git branch -r | grep -E 'origin/release-[0-9]+(\.[0-9]+)*$' | \
+        sed 's|.*origin/||' | sort -V | tail -1)
+    if [[ -z "$previous_branch" ]]; then
+        echo "No release branches found. Please check branch naming or specify PREVIOUS_BRANCH explicitly."
+        exit 1
+    fi
 fi
 
 if [[ -z "$previous_branch" ]]; then
