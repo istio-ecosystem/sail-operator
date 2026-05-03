@@ -182,7 +182,3 @@ type IstioRevisionList struct {
 	metav1.ListMeta `json:"metadata"`
 	Items           []IstioRevision `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&IstioRevision{}, &IstioRevisionList{})
-}

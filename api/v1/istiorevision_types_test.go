@@ -183,6 +183,7 @@ func TestSetCondition(t *testing.T) {
 			}
 			if found == nil {
 				t.Fatal("condition not found after SetCondition")
+				return
 			}
 
 			if found.Status != tc.condition.Status {
