@@ -123,7 +123,17 @@ initialize_variables() {
   CI=${CI:-"false"}
   USE_INTERNAL_REGISTRY=${USE_INTERNAL_REGISTRY:-"false"}
   FIPS_CLUSTER=${FIPS_CLUSTER:-"false"}
-  COMMIT_HASH=$(git rev-parse --short HEAD)
+  # In Prow CI, HEAD is a temporary merge commit not visible in the PR history.
+  # PULL_PULL_SHA holds the actual PR head commit — use it when available.
+  if [ -n "${PULL_PULL_SHA:-}" ]; then
+    COMMIT_HASH="${PULL_PULL_SHA:0:8}"
+  else
+    COMMIT_HASH=$(git rev-parse --short HEAD)
+  fi
+  echo "DEBUG commit hash resolution:"
+  echo "  PULL_PULL_SHA: ${PULL_PULL_SHA:-not set}"
+  echo "  git HEAD (full): $(git rev-parse HEAD)"
+  echo "  COMMIT_HASH resolved to: ${COMMIT_HASH}"
 
   # Debug logging and fallback for GINKGO_FLAGS
   echo "CI environment: ${CI}"
