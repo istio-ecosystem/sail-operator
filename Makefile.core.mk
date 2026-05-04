@@ -318,17 +318,24 @@ endif
 docker-buildx: build-all ## Build and push docker image with cross-platform support.
 ifeq ($(PREVENT_IMAGE_OVERWRITE),true)
 	@echo "Checking if image ${IMAGE} already exists..."
-	@if command -v skopeo >/dev/null 2>&1; then \
-		if skopeo inspect docker://${IMAGE} >/dev/null 2>&1; then \
+	@if command -v crane >/dev/null 2>&1; then \
+		set +e; \
+		OUTPUT=$$(crane manifest ${IMAGE} 2>&1); \
+		EXIT_CODE=$$?; \
+		set -e; \
+		if echo "$$OUTPUT" | grep -q "MANIFEST_UNKNOWN"; then \
+			echo "Image tag ${IMAGE} does not exist. Proceeding with build and push."; \
+		elif [ $$EXIT_CODE -eq 0 ]; then \
 			echo "ERROR: Image tag ${IMAGE} already exists in the registry!"; \
 			echo "Please ensure you are releasing a new version."; \
 			exit 1; \
 		else \
-			echo "Image tag ${IMAGE} does not exist. Proceeding with build and push."; \
+			echo "ERROR: Failed to check if image exists: $$OUTPUT"; \
+			exit 1; \
 		fi; \
 	else \
-		echo "ERROR: skopeo is not installed. Cannot verify if image already exists."; \
-		echo "Install skopeo or set PREVENT_IMAGE_OVERWRITE=false to skip this check."; \
+		echo "ERROR: crane is not installed. Cannot verify if image already exists."; \
+		echo "Install crane or set PREVENT_IMAGE_OVERWRITE=false to skip this check."; \
 		exit 1; \
 	fi
 endif
@@ -521,6 +528,7 @@ gen-api-docs: ## Generate API documentation. Known issues: go fmt does not prope
 	@find $(OUTPUT_DOCS_PATH) -type f -name "*.md" -exec sed -i 's/<br \/>/ /g' {} \;
 	@find $(OUTPUT_DOCS_PATH) -type f \( -name "*.md" -o -name "*.asciidoc" \) -exec sed -i 's/\t/  /g' {} \;
 	@find $(OUTPUT_DOCS_PATH) -type f \( -name "*.md" -o -name "*.asciidoc" \) -exec sed -i '/^```/,/^```/ {/./!d;}' {} \;
+	go run ./hack/gen-condition-docs $(CRD_PATH)/v1 >> $(OUTPUT_DOCS_PATH)/sailoperator.io.md
 	@echo "API reference documentation generated at $(OUTPUT_DOCS_PATH)"
 
 .PHONY: restore-manifest-dates
@@ -583,18 +591,20 @@ OPM ?= $(LOCALBIN)/opm
 ISTIOCTL ?= $(LOCALBIN)/istioctl
 RUNME ?= $(LOCALBIN)/runme
 MISSPELL ?= $(LOCALBIN)/misspell
+CRD_SCHEMA_CHECKER ?= $(LOCALBIN)/crd-schema-checker
 
 ## Tool Versions
 OPERATOR_SDK_VERSION ?= v1.42.2
-HELM_VERSION ?= v3.20.1
+HELM_VERSION ?= v4.1.4
 CONTROLLER_TOOLS_VERSION ?= v0.20.1
 CONTROLLER_RUNTIME_BRANCH ?= release-0.23
-OPM_VERSION ?= v1.65.0
-OLM_VERSION ?= v0.41.0
+OPM_VERSION ?= v1.66.0
+OLM_VERSION ?= v0.42.0
 GITLEAKS_VERSION ?= v8.30.1
 ISTIOCTL_VERSION ?= 1.26.2
-RUNME_VERSION ?= 3.16.10
+RUNME_VERSION ?= 3.16.11
 MISSPELL_VERSION ?= v0.3.4
+CRD_SCHEMA_CHECKER_VERSION ?= release-4.22
 
 .PHONY: helm $(HELM)
 helm: $(HELM) ## Download helm to bin directory. If wrong version is installed, it will be overwritten.
@@ -603,7 +613,7 @@ $(HELM): $(LOCALBIN)
 		echo "$(LOCALBIN)/helm version is not expected $(HELM_VERSION). Removing it before installing." > /dev/stderr; \
 		rm -rf $(LOCALBIN)/helm; \
 	fi
-	@test -s $(LOCALBIN)/helm || GOBIN=$(LOCALBIN) GO111MODULE=on go install helm.sh/helm/v3/cmd/helm@$(HELM_VERSION) > /dev/stderr
+	@test -s $(LOCALBIN)/helm || GOBIN=$(LOCALBIN) GO111MODULE=on go install helm.sh/helm/v4/cmd/helm@$(HELM_VERSION) > /dev/stderr
 .PHONY: operator-sdk $(OPERATOR_SDK)
 operator-sdk: $(OPERATOR_SDK)
 operator-sdk: OS=$(shell go env GOOS)
@@ -803,12 +813,21 @@ lint-spell: misspell
 misspell: $(LOCALBIN) ## Download misspell to bin directory.
 	@test -s $(LOCALBIN)/misspell || GOBIN=$(LOCALBIN) go install github.com/client9/misspell/cmd/misspell@$(MISSPELL_VERSION)
 
+.PHONY: crd-schema-checker
+crd-schema-checker: $(CRD_SCHEMA_CHECKER) ## Download crd-schema-checker to bin directory.
+$(CRD_SCHEMA_CHECKER): $(LOCALBIN)
+	@test -x $(LOCALBIN)/crd-schema-checker || GOBIN=$(LOCALBIN) GO111MODULE=on go install github.com/openshift/crd-schema-checker/cmd/crd-schema-checker@$(CRD_SCHEMA_CHECKER_VERSION) > /dev/stderr
+
+.PHONY: lint-crds
+lint-crds: crd-schema-checker ## Lint CRDs for backwards compatibility on release branches.
+	@./tools/crd-schema-checker.sh
+
 .PHONY: lint-helm
 lint-helm:
 	@find ./chart ./resources -name 'Chart.yaml' -exec dirname {} \; | xargs -r helm lint
 
 .PHONY: lint
-lint: lint-scripts lint-licenses lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle lint-watches lint-secrets lint-spell ## Run all linters.
+lint: lint-scripts lint-licenses lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle lint-watches lint-secrets lint-spell lint-crds ## Run all linters.
 
 .PHONY: format
 format: format-go tidy-go ## Auto-format all code. This should be run before sending a PR.

@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 
 	"github.com/go-logr/logr"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
@@ -27,7 +26,6 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
-	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/predicate"
 	sharedreconcile "github.com/istio-ecosystem/sail-operator/pkg/reconcile"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
@@ -35,7 +33,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -197,40 +194,20 @@ func (r *Reconciler) determineStatus(ctx context.Context, cni *v1.IstioCNI, reco
 	status.ObservedGeneration = cni.Generation
 	status.SetCondition(reconciledCondition)
 	status.SetCondition(readyCondition)
-	status.State = deriveState(reconciledCondition, readyCondition)
+	status.State = reconciler.DeriveState(v1.IstioCNIReasonHealthy, reconciledCondition, readyCondition)
 	return status, errs.Error()
 }
 
 func (r *Reconciler) updateStatus(ctx context.Context, cni *v1.IstioCNI, reconcileErr error) error {
-	var errs errlist.Builder
-
 	status, err := r.determineStatus(ctx, cni, reconcileErr)
-	if err != nil {
-		errs.Add(fmt.Errorf("failed to determine status: %w", err))
-	}
-
-	if !reflect.DeepEqual(cni.Status, status) {
-		if err := r.Client.Status().Patch(ctx, cni, kube.NewStatusPatch(status)); err != nil {
-			errs.Add(fmt.Errorf("failed to patch status: %w", err))
-		}
-	}
-	return errs.Error()
+	return reconciler.UpdateStatus(ctx, r.Client, cni, cni.Status, status, err)
 }
 
-func deriveState(reconciledCondition, readyCondition v1.IstioCNICondition) v1.IstioCNIConditionReason {
-	if reconciledCondition.Status != metav1.ConditionTrue {
-		return reconciledCondition.Reason
-	} else if readyCondition.Status != metav1.ConditionTrue {
-		return readyCondition.Reason
-	}
-	return v1.IstioCNIReasonHealthy
-}
-
-func (r *Reconciler) determineReconciledCondition(err error) v1.IstioCNICondition {
-	c := v1.IstioCNICondition{Type: v1.IstioCNIConditionReconciled}
-
+func (r *Reconciler) determineReconciledCondition(err error) v1.StatusCondition {
+	c := v1.StatusCondition{Type: v1.IstioCNIConditionReconciled}
 	if err == nil {
 		c.Status = metav1.ConditionTrue
+		c.Reason = v1.ConditionReason(v1.IstioCNIConditionReconciled)
 	} else {
 		c.Status = metav1.ConditionFalse
 		c.Reason = v1.IstioCNIReasonReconcileError
@@ -239,33 +216,9 @@ func (r *Reconciler) determineReconciledCondition(err error) v1.IstioCNIConditio
 	return c
 }
 
-func (r *Reconciler) determineReadyCondition(ctx context.Context, cni *v1.IstioCNI) (v1.IstioCNICondition, error) {
-	c := v1.IstioCNICondition{
-		Type:   v1.IstioCNIConditionReady,
-		Status: metav1.ConditionFalse,
-	}
-
-	ds := appsv1.DaemonSet{}
-	if err := r.Client.Get(ctx, r.cniDaemonSetKey(cni), &ds); err == nil {
-		if ds.Status.CurrentNumberScheduled == 0 {
-			c.Reason = v1.IstioCNIDaemonSetNotReady
-			c.Message = "no istio-cni-node pods are currently scheduled"
-		} else if ds.Status.NumberReady < ds.Status.CurrentNumberScheduled {
-			c.Reason = v1.IstioCNIDaemonSetNotReady
-			c.Message = "not all istio-cni-node pods are ready"
-		} else {
-			c.Status = metav1.ConditionTrue
-		}
-	} else if apierrors.IsNotFound(err) {
-		c.Reason = v1.IstioCNIDaemonSetNotReady
-		c.Message = "istio-cni-node DaemonSet not found"
-	} else {
-		c.Status = metav1.ConditionUnknown
-		c.Reason = v1.IstioCNIReasonReadinessCheckFailed
-		c.Message = fmt.Sprintf("failed to get readiness: %v", err)
-		return c, fmt.Errorf("get failed: %w", err)
-	}
-	return c, nil
+func (r *Reconciler) determineReadyCondition(ctx context.Context, cni *v1.IstioCNI) (v1.StatusCondition, error) {
+	return reconciler.CheckDaemonSetReadiness(ctx, r.Client, r.cniDaemonSetKey(cni),
+		"istio-cni-node", v1.IstioCNIConditionReady, v1.IstioCNIDaemonSetNotReady, v1.IstioCNIReasonReadinessCheckFailed)
 }
 
 func (r *Reconciler) cniDaemonSetKey(cni *v1.IstioCNI) client.ObjectKey {

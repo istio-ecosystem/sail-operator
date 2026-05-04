@@ -15,8 +15,6 @@
 package v1
 
 import (
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -28,15 +26,14 @@ const (
 // IstioRevisionTagSpec defines the desired state of IstioRevisionTag
 type IstioRevisionTagSpec struct {
 	// +kubebuilder:validation:Required
-	TargetRef IstioRevisionTagTargetReference `json:"targetRef"`
+	TargetRef TargetReference `json:"targetRef"`
 }
 
-// IstioRevisionTagTargetReference can reference either Istio or IstioRevision objects in the cluster. In the case of referencing an Istio object, the Sail Operator will automatically update the reference to the Istio object's Active Revision.
-type IstioRevisionTagTargetReference struct {
+// TargetReference can reference either Istio or IstioRevision objects in the cluster. In the case of referencing an Istio object, the Sail Operator will automatically update the reference to the Istio object's Active Revision.
+type TargetReference struct {
 	// Kind is the kind of the target resource.
 	//
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=Istio;IstioRevision
 	// +kubebuilder:validation:Required
 	Kind string `json:"kind"`
 
@@ -57,7 +54,7 @@ type IstioRevisionTagStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
 	// Represents the latest available observations of the object's current state.
-	Conditions []IstioRevisionTagCondition `json:"conditions,omitempty"`
+	Conditions []StatusCondition `json:"conditions,omitempty"`
 
 	// Reports the current state of the object.
 	State IstioRevisionTagConditionReason `json:"state,omitempty"`
@@ -70,75 +67,23 @@ type IstioRevisionTagStatus struct {
 }
 
 // GetCondition returns the condition of the specified type
-func (s *IstioRevisionTagStatus) GetCondition(conditionType IstioRevisionTagConditionType) IstioRevisionTagCondition {
-	if s != nil {
-		for i := range s.Conditions {
-			if s.Conditions[i].Type == conditionType {
-				return s.Conditions[i]
-			}
-		}
+func (s *IstioRevisionTagStatus) GetCondition(conditionType IstioRevisionTagConditionType) StatusCondition {
+	if s == nil {
+		return StatusCondition{Type: conditionType, Status: metav1.ConditionUnknown}
 	}
-	return IstioRevisionTagCondition{Type: conditionType, Status: metav1.ConditionUnknown}
+	return GetCondition(s.Conditions, conditionType)
 }
 
 // SetCondition sets a specific condition in the list of conditions
-func (s *IstioRevisionTagStatus) SetCondition(condition IstioRevisionTagCondition) {
-	var now time.Time
-	if testTime == nil {
-		now = time.Now()
-	} else {
-		now = *testTime
-	}
-
-	// The lastTransitionTime only gets serialized out to the second.  This can
-	// break update skipping, as the time in the resource returned from the client
-	// may not match the time in our cached status during a reconcile.  We truncate
-	// here to save any problems down the line.
-	lastTransitionTime := metav1.NewTime(now.Truncate(time.Second))
-
-	for i, prevCondition := range s.Conditions {
-		if prevCondition.Type == condition.Type {
-			if prevCondition.Status != condition.Status {
-				condition.LastTransitionTime = lastTransitionTime
-			} else {
-				condition.LastTransitionTime = prevCondition.LastTransitionTime
-			}
-			s.Conditions[i] = condition
-			return
-		}
-	}
-
-	// If the condition does not exist, initialize the lastTransitionTime
-	condition.LastTransitionTime = lastTransitionTime
-	s.Conditions = append(s.Conditions, condition)
+func (s *IstioRevisionTagStatus) SetCondition(condition StatusCondition) {
+	SetCondition(&s.Conditions, condition)
 }
 
-// IstioRevisionCondition represents a specific observation of the IstioRevision object's state.
-type IstioRevisionTagCondition struct {
-	// The type of this condition.
-	Type IstioRevisionTagConditionType `json:"type,omitempty"`
+// IstioRevisionTagConditionType is an alias for ConditionType.
+type IstioRevisionTagConditionType = ConditionType
 
-	// The status of this condition. Can be True, False or Unknown.
-	Status metav1.ConditionStatus `json:"status,omitempty"`
-
-	// Unique, single-word, CamelCase reason for the condition's last transition.
-	Reason IstioRevisionTagConditionReason `json:"reason,omitempty"`
-
-	// Human-readable message indicating details about the last transition.
-	Message string `json:"message,omitempty"`
-
-	// Last time the condition transitioned from one status to another.
-	// +optional
-	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitzero"`
-}
-
-// IstioRevisionConditionType represents the type of the condition.  Condition stages are:
-// Installed, Reconciled, Ready
-type IstioRevisionTagConditionType string
-
-// IstioRevisionConditionReason represents a short message indicating how the condition came
-// to be in its present state.
-type IstioRevisionTagConditionReason string
+// IstioRevisionTagConditionReason is an alias for ConditionReason.
+type IstioRevisionTagConditionReason = ConditionReason
 
 const (
 	// IstioRevisionConditionReconciled signifies whether the controller has

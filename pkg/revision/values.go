@@ -28,13 +28,15 @@ import (
 // - applies image digests from the operator configuration
 // - applies vendor-specific default values
 // - applies the user-provided values on top of the default values from the default and user-selected profiles
+// - applies OpenShift TLS settings from the APIServer (if provided)
+// - applies FIPS values (if FIPS mode is enabled)
 // - applies overrides that are not configurable by the user
 //
 // The resourceFS parameter accepts any fs.FS implementation (embed.FS, os.DirFS, etc.).
 func ComputeValues(
 	userValues *v1.Values, namespace string, version string,
 	platform config.Platform, defaultProfile, userProfile string, resourceFS fs.FS,
-	activeRevisionName string,
+	activeRevisionName string, tlsConfig *config.TLSConfig,
 ) (*v1.Values, error) {
 	// apply image digests from configuration, if not already set by user
 	userValues = istiovalues.ApplyDigests(version, userValues, config.Config)
@@ -51,16 +53,16 @@ func ComputeValues(
 		return nil, fmt.Errorf("failed to apply profile: %w", err)
 	}
 
-	// apply FipsValues on top of mergedHelmValues from profile
-	mergedHelmValues, err = istiovalues.ApplyFipsValues(mergedHelmValues)
-	if err != nil {
-		return nil, fmt.Errorf("failed to apply FIPS values: %w", err)
-	}
-
 	values, err := helm.ToValues(mergedHelmValues, &v1.Values{})
 	if err != nil {
 		return nil, fmt.Errorf("conversion to Helm values failed: %w", err)
 	}
+
+	// apply OpenShift TLS config from APIServer before FIPS values
+	istiovalues.ApplyTLSConfig(tlsConfig, version, values)
+
+	// apply FipsValues on top of merged values from profile
+	istiovalues.ApplyFipsValues(values)
 
 	// override values that are not configurable by the user
 	istiovalues.ApplyOverrides(activeRevisionName, namespace, values)

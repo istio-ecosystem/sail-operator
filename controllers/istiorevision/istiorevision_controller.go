@@ -27,7 +27,6 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
-	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	predicate2 "github.com/istio-ecosystem/sail-operator/pkg/predicate"
 	sharedreconcile "github.com/istio-ecosystem/sail-operator/pkg/reconcile"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
@@ -345,54 +344,36 @@ func (r *Reconciler) determineStatus(ctx context.Context, rev *v1.IstioRevision,
 	status.SetCondition(readyCondition)
 	status.SetCondition(dependenciesHealthyCondition)
 	status.SetCondition(inUseCondition)
-	status.State = deriveState(reconciledCondition, readyCondition, dependenciesHealthyCondition)
+	status.State = reconciler.DeriveState(v1.IstioRevisionReasonHealthy, reconciledCondition, readyCondition, dependenciesHealthyCondition)
 	return status, errs.Error()
 }
 
 func (r *Reconciler) updateStatus(ctx context.Context, rev *v1.IstioRevision, reconcileErr error) error {
-	var errs errlist.Builder
-
 	status, err := r.determineStatus(ctx, rev, reconcileErr)
-	if err != nil {
-		errs.Add(fmt.Errorf("failed to determine status: %w", err))
-	}
-
-	if !reflect.DeepEqual(rev.Status, status) {
-		if err := r.Client.Status().Patch(ctx, rev, kube.NewStatusPatch(status)); err != nil {
-			errs.Add(fmt.Errorf("failed to patch status: %w", err))
-		}
-	}
-	return errs.Error()
+	return reconciler.UpdateStatus(ctx, r.Client, rev, rev.Status, status, err)
 }
 
-func deriveState(conditions ...v1.IstioRevisionCondition) v1.IstioRevisionConditionReason {
-	for _, c := range conditions {
-		if c.Status != metav1.ConditionTrue {
-			return c.Reason
-		}
-	}
-	return v1.IstioRevisionReasonHealthy
-}
-
-func (r *Reconciler) determineReconciledCondition(err error) v1.IstioRevisionCondition {
-	c := v1.IstioRevisionCondition{Type: v1.IstioRevisionConditionReconciled}
-
+func (r *Reconciler) determineReconciledCondition(err error) v1.StatusCondition {
+	c := v1.StatusCondition{Type: v1.IstioRevisionConditionReconciled}
 	if err == nil {
 		c.Status = metav1.ConditionTrue
-	} else if reconciler.IsNameAlreadyExistsError(err) {
-		c.Status = metav1.ConditionFalse
-		c.Reason = v1.IstioRevisionReasonNameAlreadyExists
-		c.Message = err.Error()
+		c.Reason = v1.ConditionReason(v1.IstioRevisionConditionReconciled)
 	} else {
 		c.Status = metav1.ConditionFalse
-		c.Reason = v1.IstioRevisionReasonReconcileError
-		c.Message = fmt.Sprintf("error reconciling resource: %v", err)
+		switch {
+		case reconciler.IsNameAlreadyExistsError(err):
+			c.Reason = v1.IstioRevisionReasonNameAlreadyExists
+			c.Message = err.Error()
+		default:
+			c.Reason = v1.IstioRevisionReasonReconcileError
+			c.Message = fmt.Sprintf("error reconciling resource: %v", err)
+		}
 	}
 	return c
 }
 
-func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1.IstioRevision) (v1.IstioRevisionCondition, error) {
-	c := v1.IstioRevisionCondition{
+func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1.IstioRevision) (v1.StatusCondition, error) {
+	c := v1.StatusCondition{
 		Type:   v1.IstioRevisionConditionReady,
 		Status: metav1.ConditionFalse,
 	}
@@ -408,6 +389,7 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1.IstioR
 				c.Message = "not all istiod pods are ready"
 			} else {
 				c.Status = metav1.ConditionTrue
+				c.Reason = v1.ConditionReason(v1.IstioRevisionConditionReady)
 			}
 		} else if apierrors.IsNotFound(err) {
 			c.Reason = v1.IstioRevisionReasonIstiodNotReady
@@ -425,6 +407,7 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1.IstioR
 			switch webhook.Annotations[constants.WebhookReadinessProbeStatusAnnotationKey] {
 			case "true":
 				c.Status = metav1.ConditionTrue
+				c.Reason = v1.ConditionReason(v1.IstioRevisionConditionReady)
 			case "false":
 				c.Reason = v1.IstioRevisionReasonRemoteIstiodNotReady
 				c.Message = "readiness probe on remote istiod failed"
@@ -446,12 +429,12 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1.IstioR
 	return c, nil
 }
 
-func (r *Reconciler) determineDependenciesHealthyCondition(ctx context.Context, rev *v1.IstioRevision) (v1.IstioRevisionCondition, error) {
+func (r *Reconciler) determineDependenciesHealthyCondition(ctx context.Context, rev *v1.IstioRevision) (v1.StatusCondition, error) {
 	if revision.DependsOnIstioCNI(rev, r.Config) {
 		cni := v1.IstioCNI{}
 		if err := r.Client.Get(ctx, client.ObjectKey{Name: istioCniName}, &cni); err != nil {
 			if apierrors.IsNotFound(err) {
-				return v1.IstioRevisionCondition{
+				return v1.StatusCondition{
 					Type:    v1.IstioRevisionConditionDependenciesHealthy,
 					Status:  metav1.ConditionFalse,
 					Reason:  v1.IstioRevisionReasonIstioCNINotFound,
@@ -459,7 +442,7 @@ func (r *Reconciler) determineDependenciesHealthyCondition(ctx context.Context, 
 				}, nil
 			}
 
-			return v1.IstioRevisionCondition{
+			return v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionDependenciesHealthy,
 				Status:  metav1.ConditionUnknown,
 				Reason:  v1.IstioRevisionDependencyCheckFailed,
@@ -468,7 +451,7 @@ func (r *Reconciler) determineDependenciesHealthyCondition(ctx context.Context, 
 		}
 
 		if cni.Status.State != v1.IstioCNIReasonHealthy {
-			return v1.IstioRevisionCondition{
+			return v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionDependenciesHealthy,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioRevisionReasonIstioCNINotHealthy,
@@ -481,7 +464,7 @@ func (r *Reconciler) determineDependenciesHealthyCondition(ctx context.Context, 
 		ztunnel := v1.ZTunnel{}
 		if err := r.Client.Get(ctx, client.ObjectKey{Name: ztunnelName}, &ztunnel); err != nil {
 			if apierrors.IsNotFound(err) {
-				return v1.IstioRevisionCondition{
+				return v1.StatusCondition{
 					Type:    v1.IstioRevisionConditionDependenciesHealthy,
 					Status:  metav1.ConditionFalse,
 					Reason:  v1.IstioRevisionReasonZTunnelNotFound,
@@ -489,7 +472,7 @@ func (r *Reconciler) determineDependenciesHealthyCondition(ctx context.Context, 
 				}, nil
 			}
 
-			return v1.IstioRevisionCondition{
+			return v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionDependenciesHealthy,
 				Status:  metav1.ConditionUnknown,
 				Reason:  v1.IstioRevisionDependencyCheckFailed,
@@ -498,7 +481,7 @@ func (r *Reconciler) determineDependenciesHealthyCondition(ctx context.Context, 
 		}
 
 		if ztunnel.Status.State != v1.ZTunnelReasonHealthy {
-			return v1.IstioRevisionCondition{
+			return v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionDependenciesHealthy,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioRevisionReasonZTunnelNotHealthy,
@@ -507,14 +490,15 @@ func (r *Reconciler) determineDependenciesHealthyCondition(ctx context.Context, 
 		}
 	}
 
-	return v1.IstioRevisionCondition{
+	return v1.StatusCondition{
 		Type:   v1.IstioRevisionConditionDependenciesHealthy,
 		Status: metav1.ConditionTrue,
+		Reason: v1.ConditionReason(v1.IstioRevisionConditionDependenciesHealthy),
 	}, nil
 }
 
-func (r *Reconciler) determineInUseCondition(ctx context.Context, rev *v1.IstioRevision) (v1.IstioRevisionCondition, error) {
-	c := v1.IstioRevisionCondition{Type: v1.IstioRevisionConditionInUse}
+func (r *Reconciler) determineInUseCondition(ctx context.Context, rev *v1.IstioRevision) (v1.StatusCondition, error) {
+	c := v1.StatusCondition{Type: v1.IstioRevisionConditionInUse}
 
 	isReferenced, err := r.isRevisionReferenced(ctx, rev)
 	if err == nil {

@@ -26,6 +26,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/istiovalues"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	sharedreconcile "github.com/istio-ecosystem/sail-operator/pkg/reconcile"
+	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -133,8 +134,8 @@ func TestValidate(t *testing.T) {
 func TestDeriveState(t *testing.T) {
 	testCases := []struct {
 		name                string
-		reconciledCondition v1.IstioCNICondition
-		readyCondition      v1.IstioCNICondition
+		reconciledCondition v1.StatusCondition
+		readyCondition      v1.StatusCondition
 		expectedState       v1.IstioCNIConditionReason
 	}{
 		{
@@ -172,14 +173,14 @@ func TestDeriveState(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			result := deriveState(tc.reconciledCondition, tc.readyCondition)
+			result := reconciler.DeriveState(v1.IstioCNIReasonHealthy, tc.reconciledCondition, tc.readyCondition)
 			g.Expect(result).To(Equal(tc.expectedState))
 		})
 	}
 }
 
-func newCondition(condType v1.IstioCNIConditionType, status metav1.ConditionStatus, reason v1.IstioCNIConditionReason) v1.IstioCNICondition {
-	return v1.IstioCNICondition{
+func newCondition(condType v1.IstioCNIConditionType, status metav1.ConditionStatus, reason v1.IstioCNIConditionReason) v1.StatusCondition {
+	return v1.StatusCondition{
 		Type:   condType,
 		Status: status,
 		Reason: reason,
@@ -194,7 +195,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 		cniEnabled    bool
 		clientObjects []client.Object
 		interceptors  interceptor.Funcs
-		expected      v1.IstioCNICondition
+		expected      v1.StatusCondition
 		expectErr     bool
 	}{
 		{
@@ -211,9 +212,10 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1.IstioCNICondition{
+			expected: v1.StatusCondition{
 				Type:   v1.IstioCNIConditionReady,
 				Status: metav1.ConditionTrue,
+				Reason: v1.ConditionReason(v1.IstioCNIConditionReady),
 			},
 		},
 		{
@@ -230,7 +232,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1.IstioCNICondition{
+			expected: v1.StatusCondition{
 				Type:    v1.IstioCNIConditionReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioCNIDaemonSetNotReady,
@@ -251,7 +253,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1.IstioCNICondition{
+			expected: v1.StatusCondition{
 				Type:    v1.IstioCNIConditionReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioCNIDaemonSetNotReady,
@@ -261,7 +263,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 		{
 			name:          "CNI not found",
 			clientObjects: []client.Object{},
-			expected: v1.IstioCNICondition{
+			expected: v1.StatusCondition{
 				Type:    v1.IstioCNIConditionReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioCNIDaemonSetNotReady,
@@ -276,7 +278,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 					return fmt.Errorf("simulated error")
 				},
 			},
-			expected: v1.IstioCNICondition{
+			expected: v1.StatusCondition{
 				Type:    v1.IstioCNIConditionReady,
 				Status:  metav1.ConditionUnknown,
 				Reason:  v1.IstioCNIReasonReadinessCheckFailed,
@@ -698,14 +700,14 @@ func TestDetermineStatus(t *testing.T) {
 			readyCondition, err := r.determineReadyCondition(ctx, cni)
 			g.Expect(err).ToNot(HaveOccurred())
 
-			g.Expect(status.State).To(Equal(deriveState(reconciledCondition, readyCondition)))
+			g.Expect(status.State).To(Equal(reconciler.DeriveState(v1.IstioCNIReasonHealthy, reconciledCondition, readyCondition)))
 			g.Expect(normalize(status.GetCondition(v1.IstioCNIConditionReconciled))).To(Equal(normalize(reconciledCondition)))
 			g.Expect(normalize(status.GetCondition(v1.IstioCNIConditionReady))).To(Equal(normalize(readyCondition)))
 		})
 	}
 }
 
-func normalize(condition v1.IstioCNICondition) v1.IstioCNICondition {
+func normalize(condition v1.StatusCondition) v1.StatusCondition {
 	condition.LastTransitionTime = metav1.Time{}
 	return condition
 }

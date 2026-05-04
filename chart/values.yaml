@@ -1,7 +1,55 @@
 name: sailoperator
 deployment:
   name: sail-operator
-  annotations: {}
+  annotations:
+    images.v1_30_0-alpha_2.ztunnel: registry.istio.io/release/ztunnel:1.30.0-alpha.2
+    images.v1_30_0-alpha_2.istiod: registry.istio.io/release/pilot:1.30.0-alpha.2
+    images.v1_30_0-alpha_2.proxy: registry.istio.io/release/proxyv2:1.30.0-alpha.2
+    images.v1_30_0-alpha_2.cni: registry.istio.io/release/install-cni:1.30.0-alpha.2
+    images.v1_29_2.ztunnel: registry.istio.io/release/ztunnel:1.29.2
+    images.v1_29_2.istiod: registry.istio.io/release/pilot:1.29.2
+    images.v1_29_2.proxy: registry.istio.io/release/proxyv2:1.29.2
+    images.v1_29_2.cni: registry.istio.io/release/install-cni:1.29.2
+    images.v1_29_1.ztunnel: registry.istio.io/release/ztunnel:1.29.1
+    images.v1_29_1.istiod: registry.istio.io/release/pilot:1.29.1
+    images.v1_29_1.proxy: registry.istio.io/release/proxyv2:1.29.1
+    images.v1_29_1.cni: registry.istio.io/release/install-cni:1.29.1
+    images.v1_29_0.ztunnel: registry.istio.io/release/ztunnel:1.29.0
+    images.v1_29_0.istiod: registry.istio.io/release/pilot:1.29.0
+    images.v1_29_0.proxy: registry.istio.io/release/proxyv2:1.29.0
+    images.v1_29_0.cni: registry.istio.io/release/install-cni:1.29.0
+    images.v1_28_6.ztunnel: registry.istio.io/release/ztunnel:1.28.6
+    images.v1_28_6.istiod: registry.istio.io/release/pilot:1.28.6
+    images.v1_28_6.proxy: registry.istio.io/release/proxyv2:1.28.6
+    images.v1_28_6.cni: registry.istio.io/release/install-cni:1.28.6
+    images.v1_28_5.ztunnel: registry.istio.io/release/ztunnel:1.28.5
+    images.v1_28_5.istiod: registry.istio.io/release/pilot:1.28.5
+    images.v1_28_5.proxy: registry.istio.io/release/proxyv2:1.28.5
+    images.v1_28_5.cni: registry.istio.io/release/install-cni:1.28.5
+    images.v1_28_4.ztunnel: registry.istio.io/release/ztunnel:1.28.4
+    images.v1_28_4.istiod: registry.istio.io/release/pilot:1.28.4
+    images.v1_28_4.proxy: registry.istio.io/release/proxyv2:1.28.4
+    images.v1_28_4.cni: registry.istio.io/release/install-cni:1.28.4
+    images.v1_28_3.ztunnel: registry.istio.io/release/ztunnel:1.28.3
+    images.v1_28_3.istiod: registry.istio.io/release/pilot:1.28.3
+    images.v1_28_3.proxy: registry.istio.io/release/proxyv2:1.28.3
+    images.v1_28_3.cni: registry.istio.io/release/install-cni:1.28.3
+    images.v1_28_2.ztunnel: registry.istio.io/release/ztunnel:1.28.2
+    images.v1_28_2.istiod: registry.istio.io/release/pilot:1.28.2
+    images.v1_28_2.proxy: registry.istio.io/release/proxyv2:1.28.2
+    images.v1_28_2.cni: registry.istio.io/release/install-cni:1.28.2
+    images.v1_28_1.ztunnel: registry.istio.io/release/ztunnel:1.28.1
+    images.v1_28_1.istiod: registry.istio.io/release/pilot:1.28.1
+    images.v1_28_1.proxy: registry.istio.io/release/proxyv2:1.28.1
+    images.v1_28_1.cni: registry.istio.io/release/install-cni:1.28.1
+    images.v1_28_0.ztunnel: registry.istio.io/release/ztunnel:1.28.0
+    images.v1_28_0.istiod: registry.istio.io/release/pilot:1.28.0
+    images.v1_28_0.proxy: registry.istio.io/release/proxyv2:1.28.0
+    images.v1_28_0.cni: registry.istio.io/release/install-cni:1.28.0
+    images.v1_31_0-alpha_30efb2b4.ztunnel: registry.istio.io/testing/ztunnel:1.31.0-alpha.30efb2b4173e1c2d941019d5169a24d44235d434
+    images.v1_31_0-alpha_30efb2b4.istiod: registry.istio.io/testing/pilot:1.31.0-alpha.30efb2b4173e1c2d941019d5169a24d44235d434
+    images.v1_31_0-alpha_30efb2b4.proxy: registry.istio.io/testing/proxyv2:1.31.0-alpha.30efb2b4173e1c2d941019d5169a24d44235d434
+    images.v1_31_0-alpha_30efb2b4.cni: registry.istio.io/testing/install-cni:1.31.0-alpha.30efb2b4173e1c2d941019d5169a24d44235d434
 revisionHistoryLimit: 10
 service:
   port: 8443
@@ -17,10 +65,14 @@ csv:
 
     This version of the operator supports the following Istio versions:
 
+    - v1.30-latest
+    - v1.30.0-alpha.2
     - v1.29-latest
+    - v1.29.2
     - v1.29.1
     - v1.29.0
     - v1.28-latest
+    - v1.28.6
     - v1.28.5
     - v1.28.4
     - v1.28.3
@@ -28,7 +80,7 @@ csv:
     - v1.28.1
     - v1.28.0
     - master
-    - v1.30-alpha.0577d34d
+    - v1.31.0-alpha.30efb2b4
 
     [See this page](https://github.com/istio-ecosystem/sail-operator/blob/main/bundle/README.md) for instructions on how to use it.
   support: Community based

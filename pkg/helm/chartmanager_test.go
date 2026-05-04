@@ -22,7 +22,9 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/test"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	. "github.com/onsi/gomega"
-	"helm.sh/helm/v3/pkg/release"
+	"helm.sh/helm/v4/pkg/release"
+	releasecommon "helm.sh/helm/v4/pkg/release/common"
+	releasev1 "helm.sh/helm/v4/pkg/release/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -67,21 +69,21 @@ var (
 			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
 				install(g, helm, ns, relName, owner)
 				upgrade(g, helm, ns, relName, owner)
-				setReleaseStatus(g, helm, ns, relName, release.StatusFailed)
+				setReleaseStatus(g, helm, ns, relName, releasecommon.StatusFailed)
 			},
 		},
 		{
 			name: "release in failed state with no previous revision",
 			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
 				install(g, helm, ns, relName, owner)
-				setReleaseStatus(g, helm, ns, relName, release.StatusFailed)
+				setReleaseStatus(g, helm, ns, relName, releasecommon.StatusFailed)
 			},
 		},
 		{
 			name: "release in pending-install state",
 			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
 				install(g, helm, ns, relName, owner)
-				setReleaseStatus(g, helm, ns, relName, release.StatusPendingInstall)
+				setReleaseStatus(g, helm, ns, relName, releasecommon.StatusPendingInstall)
 			},
 		},
 		{
@@ -89,21 +91,21 @@ var (
 			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
 				install(g, helm, ns, relName, owner)
 				upgrade(g, helm, ns, relName, owner)
-				setReleaseStatus(g, helm, ns, relName, release.StatusPendingUpgrade)
+				setReleaseStatus(g, helm, ns, relName, releasecommon.StatusPendingUpgrade)
 			},
 		},
 		{
 			name: "release in uninstalling state",
 			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
 				install(g, helm, ns, relName, owner)
-				setReleaseStatus(g, helm, ns, relName, release.StatusUninstalling)
+				setReleaseStatus(g, helm, ns, relName, releasecommon.StatusUninstalling)
 			},
 		},
 		{
 			name: "release in uninstalled state",
 			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
 				install(g, helm, ns, relName, owner)
-				setReleaseStatus(g, helm, ns, relName, release.StatusUninstalled)
+				setReleaseStatus(g, helm, ns, relName, releasecommon.StatusUninstalled)
 			},
 			wantErrOnInstall:  true,
 			skipUninstallTest: true, // If the release is marked as Uninstalled, helm doesn't uninstall it
@@ -112,7 +114,7 @@ var (
 			name: "release in unknown state",
 			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
 				install(g, helm, ns, relName, owner)
-				setReleaseStatus(g, helm, ns, relName, release.StatusUnknown)
+				setReleaseStatus(g, helm, ns, relName, releasecommon.StatusUnknown)
 			},
 			wantErrOnInstall: true,
 		},
@@ -120,7 +122,7 @@ var (
 			name: "release in superseded state",
 			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
 				install(g, helm, ns, relName, owner)
-				setReleaseStatus(g, helm, ns, relName, release.StatusSuperseded)
+				setReleaseStatus(g, helm, ns, relName, releasecommon.StatusSuperseded)
 			},
 			wantErrOnInstall: true,
 		},
@@ -128,7 +130,7 @@ var (
 			name: "release in pending-rollback state",
 			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
 				install(g, helm, ns, relName, owner)
-				setReleaseStatus(g, helm, ns, relName, release.StatusPendingRollback)
+				setReleaseStatus(g, helm, ns, relName, releasecommon.StatusPendingRollback)
 			},
 		},
 	}
@@ -156,7 +158,9 @@ func TestUpgradeOrInstallChart(t *testing.T) {
 			} else {
 				g.Expect(err).ToNot(HaveOccurred())
 				g.Expect(rel).ToNot(BeNil())
-				g.Expect(rel.Name).To(Equal(relName))
+				acc, accErr := release.NewAccessor(rel)
+				g.Expect(accErr).ToNot(HaveOccurred())
+				g.Expect(acc.Name()).To(Equal(relName))
 
 				configMap := &corev1.ConfigMap{}
 				g.Expect(cl.Get(ctx, types.NamespacedName{Name: "test", Namespace: ns}, configMap)).To(Succeed())
@@ -218,13 +222,15 @@ func upgradeOrInstall(g *WithT, helm *ChartManager, ns string, relName string, o
 	g.Expect(err).ToNot(HaveOccurred())
 }
 
-func setReleaseStatus(g *WithT, helm *ChartManager, ns, releaseName string, status release.Status) {
+func setReleaseStatus(g *WithT, helm *ChartManager, ns, releaseName string, status releasecommon.Status) {
 	cfg, err := helm.newActionConfig(ctx, ns)
 	g.Expect(err).ToNot(HaveOccurred())
 
 	rel, err := getRelease(cfg, releaseName)
 	g.Expect(err).ToNot(HaveOccurred())
 
-	rel.SetStatus(status, "simulated status")
+	concreteRel, ok := rel.(*releasev1.Release)
+	g.Expect(ok).To(BeTrue(), "expected *releasev1.Release, got %T", rel)
+	concreteRel.SetStatus(status, "simulated status")
 	g.Expect(cfg.Releases.Update(rel)).To(Succeed())
 }

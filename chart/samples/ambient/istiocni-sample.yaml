@@ -3,6 +3,6 @@ kind: IstioCNI
 metadata:
   name: default
 spec:
-  version: v1.29.1
+  version: v1.30.0-alpha.2
   profile: ambient
   namespace: istio-cni

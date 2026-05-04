@@ -20,11 +20,15 @@ import (
 	"fmt"
 	"io/fs"
 
+	"github.com/go-logr/logr"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
-	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/chart"
-	"helm.sh/helm/v3/pkg/release"
-	"helm.sh/helm/v3/pkg/storage/driver"
+	"helm.sh/helm/v4/pkg/action"
+	chartv2 "helm.sh/helm/v4/pkg/chart/v2"
+	"helm.sh/helm/v4/pkg/kube"
+	"helm.sh/helm/v4/pkg/release"
+	releasecommon "helm.sh/helm/v4/pkg/release/common"
+	releasev1 "helm.sh/helm/v4/pkg/release/v1"
+	"helm.sh/helm/v4/pkg/storage/driver"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/rest"
@@ -67,16 +71,9 @@ func NewChartManager(cfg *rest.Config, driver string, opts ...ChartManagerOption
 
 // newActionConfig Create a new Helm action config from in-cluster service account
 func (h *ChartManager) newActionConfig(ctx context.Context, namespace string) (*action.Configuration, error) {
-	logAdapter := func(format string, v ...any) {
-		log := logf.FromContext(ctx)
-		logv2 := log.V(2)
-		if logv2.Enabled() {
-			logv2.Info(fmt.Sprintf(format, v...))
-		}
-	}
-
-	actionConfig := new(action.Configuration)
-	err := actionConfig.Init(h.restClientGetter, namespace, h.driver, logAdapter)
+	log := logf.FromContext(ctx)
+	actionConfig := action.NewConfiguration(action.ConfigurationSetLogger(logr.ToSlogHandler(log.V(2))))
+	err := actionConfig.Init(h.restClientGetter, namespace, h.driver)
 	return actionConfig, err
 }
 
@@ -85,7 +82,7 @@ func (h *ChartManager) newActionConfig(ctx context.Context, namespace string) (*
 func (h *ChartManager) UpgradeOrInstallChart(
 	ctx context.Context, resourceFS fs.FS, chartPath string, values Values,
 	namespace, releaseName string, ownerReference *metav1.OwnerReference,
-) (*release.Release, error) {
+) (release.Releaser, error) {
 	loadedChart, err := LoadChart(resourceFS, chartPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load chart from fs: %w", err)
@@ -96,9 +93,9 @@ func (h *ChartManager) UpgradeOrInstallChart(
 
 // upgradeOrInstallChart is the internal implementation that works with an already-loaded chart
 func (h *ChartManager) upgradeOrInstallChart(
-	ctx context.Context, chart *chart.Chart, values Values,
+	ctx context.Context, chart *chartv2.Chart, values Values,
 	namespace, releaseName string, ownerReference *metav1.OwnerReference,
-) (*release.Release, error) {
+) (release.Releaser, error) {
 	log := logf.FromContext(ctx)
 
 	cfg, err := h.newActionConfig(ctx, namespace)
@@ -112,6 +109,14 @@ func (h *ChartManager) upgradeOrInstallChart(
 	}
 
 	releaseExists := rel != nil
+	var relV1 *releasev1.Release
+	if releaseExists {
+		var ok bool
+		relV1, ok = rel.(*releasev1.Release)
+		if !ok {
+			return nil, fmt.Errorf("unexpected release type %T for helm release %s", rel, releaseName)
+		}
+	}
 
 	// A helm release can be stuck in pending state when:
 	// - operator exit/crashes during helm install/upgrade/uninstall
@@ -119,9 +124,9 @@ func (h *ChartManager) upgradeOrInstallChart(
 	// - helm release timeouts (context timeouts, cancellation)
 	// - etc
 	// let's try to brutally unlock it and then remediate later by either rollback or uninstall
-	if releaseExists && rel.Info.Status.IsPending() {
-		log.V(2).Info("Unlocking helm release", "status", rel.Info.Status, "release", releaseName)
-		rel.SetStatus(release.StatusFailed, fmt.Sprintf("Release unlocked from %q state", rel.Info.Status))
+	if releaseExists && relV1.Info.Status.IsPending() {
+		log.V(2).Info("Unlocking helm release", "status", relV1.Info.Status, "release", releaseName)
+		relV1.SetStatus(releasecommon.StatusFailed, fmt.Sprintf("Release unlocked from %q state", relV1.Info.Status))
 
 		if err := cfg.Releases.Update(rel); err != nil {
 			return nil, fmt.Errorf("failed to unlock helm release %s: %w", releaseName, err)
@@ -131,22 +136,28 @@ func (h *ChartManager) upgradeOrInstallChart(
 	switch {
 	case !releaseExists:
 		break
-	case rel.Info.Status == release.StatusDeployed:
+	case relV1.Info.Status == releasecommon.StatusDeployed:
 		break
-	case rel.Info.Status == release.StatusFailed && rel.Version > 1:
+	case relV1.Info.Status == releasecommon.StatusFailed && relV1.Version > 1:
 		log.V(2).Info("Performing helm rollback", "release", releaseName)
-		if err := action.NewRollback(cfg).Run(releaseName); err != nil {
+		rollbackAction := action.NewRollback(cfg)
+		rollbackAction.WaitStrategy = kube.HookOnlyStrategy
+		rollbackAction.WaitForJobs = false
+		rollbackAction.ServerSideApply = "false"
+		if err := rollbackAction.Run(releaseName); err != nil {
 			return nil, fmt.Errorf("failed to roll back helm release %s: %w", releaseName, err)
 		}
-	case rel.Info.Status == release.StatusUninstalling,
-		rel.Info.Status == release.StatusFailed && rel.Version <= 1:
-		log.V(2).Info("Performing helm uninstall", "release", releaseName, "status", rel.Info.Status)
-		if _, err := action.NewUninstall(cfg).Run(releaseName); err != nil {
+	case relV1.Info.Status == releasecommon.StatusUninstalling,
+		relV1.Info.Status == releasecommon.StatusFailed && relV1.Version <= 1:
+		log.V(2).Info("Performing helm uninstall", "release", releaseName, "status", relV1.Info.Status)
+		uninstallAction := action.NewUninstall(cfg)
+		uninstallAction.WaitStrategy = kube.HookOnlyStrategy
+		if _, err := uninstallAction.Run(releaseName); err != nil {
 			return nil, fmt.Errorf("failed to uninstall failed helm release %s: %w", releaseName, err)
 		}
 		releaseExists = false
 	default:
-		return nil, fmt.Errorf("unexpected helm release status %s", rel.Info.Status)
+		return nil, fmt.Errorf("unexpected helm release status %s", relV1.Info.Status)
 	}
 
 	if releaseExists {
@@ -157,7 +168,9 @@ func (h *ChartManager) upgradeOrInstallChart(
 		updateAction.MaxHistory = 1
 		updateAction.SkipCRDs = true
 		updateAction.DisableOpenAPIValidation = true
-
+		updateAction.WaitStrategy = kube.HookOnlyStrategy
+		updateAction.ServerSideApply = "false"
+		updateAction.WaitForJobs = false
 		rel, err = updateAction.RunWithContext(ctx, releaseName, chart, values)
 		if err != nil {
 			return nil, fmt.Errorf("failed to update helm chart %s: %w", chart.Name(), err)
@@ -171,7 +184,9 @@ func (h *ChartManager) upgradeOrInstallChart(
 		installAction.ReleaseName = releaseName
 		installAction.SkipCRDs = true
 		installAction.DisableOpenAPIValidation = true
-
+		installAction.WaitStrategy = kube.HookOnlyStrategy
+		installAction.ServerSideApply = false
+		installAction.WaitForJobs = false
 		rel, err = installAction.RunWithContext(ctx, chart, values)
 		if err != nil {
 			return nil, fmt.Errorf("failed to install helm chart %s: %w", chart.Name(), err)
@@ -194,10 +209,12 @@ func (h *ChartManager) UninstallChart(ctx context.Context, releaseName, namespac
 		return &release.UninstallReleaseResponse{Info: "release not found"}, nil
 	}
 
-	return action.NewUninstall(cfg).Run(releaseName)
+	uninstallAction := action.NewUninstall(cfg)
+	uninstallAction.WaitStrategy = kube.HookOnlyStrategy
+	return uninstallAction.Run(releaseName)
 }
 
-func getRelease(cfg *action.Configuration, releaseName string) (*release.Release, error) {
+func getRelease(cfg *action.Configuration, releaseName string) (release.Releaser, error) {
 	getAction := action.NewGet(cfg)
 	rel, err := getAction.Run(releaseName)
 	if err != nil && !errors.Is(err, driver.ErrReleaseNotFound) {
@@ -206,7 +223,7 @@ func getRelease(cfg *action.Configuration, releaseName string) (*release.Release
 	return rel, nil
 }
 
-func (h *ChartManager) GetRelease(ctx context.Context, namespace, releaseName string) (*release.Release, error) {
+func (h *ChartManager) GetRelease(ctx context.Context, namespace, releaseName string) (release.Releaser, error) {
 	cfg, err := h.newActionConfig(ctx, namespace)
 	if err != nil {
 		return nil, err
@@ -215,7 +232,7 @@ func (h *ChartManager) GetRelease(ctx context.Context, namespace, releaseName st
 	return getRelease(cfg, releaseName)
 }
 
-func (h *ChartManager) UpdateRelease(ctx context.Context, namespace string, rel *release.Release) error {
+func (h *ChartManager) UpdateRelease(ctx context.Context, namespace string, rel release.Releaser) error {
 	cfg, err := h.newActionConfig(ctx, namespace)
 	if err != nil {
 		return err
@@ -223,7 +240,7 @@ func (h *ChartManager) UpdateRelease(ctx context.Context, namespace string, rel 
 	return cfg.Releases.Update(rel)
 }
 
-func (h *ChartManager) ListReleases(ctx context.Context) ([]*release.Release, error) {
+func (h *ChartManager) ListReleases(ctx context.Context) ([]release.Releaser, error) {
 	cfg, err := h.newActionConfig(ctx, "")
 	if err != nil {
 		return nil, err

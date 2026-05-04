@@ -33,6 +33,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"istio.io/istio/pkg/ptr"
 )
 
 const (
@@ -231,6 +233,240 @@ var _ = Describe("ZTunnel FIPS", Label("ztunnel", "fips"), Ordered, func() {
 	})
 })
 
+var _ = Describe("ZTunnel targetRef", Label("ztunnel", "targetRef"), Ordered, func() {
+	SetDefaultEventuallyPollingInterval(time.Second)
+	SetDefaultEventuallyTimeout(30 * time.Second)
+
+	ctx := context.Background()
+
+	const (
+		targetRefIstioName      = "target-ref-istio"
+		targetRefIstioNamespace = "ztunnel-targetref-test"
+		customHub               = "custom-registry.example.com/istio"
+	)
+
+	namespace := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: targetRefIstioNamespace,
+		},
+	}
+
+	daemonsetKey := client.ObjectKey{Name: "ztunnel", Namespace: targetRefIstioNamespace}
+
+	var istio *v1.Istio
+
+	BeforeAll(func() {
+		Expect(k8sClient.Create(ctx, namespace)).To(Succeed())
+
+		istio = &v1.Istio{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: targetRefIstioName,
+			},
+			Spec: v1.IstioSpec{
+				Version:   istioversion.Default,
+				Namespace: targetRefIstioNamespace,
+				UpdateStrategy: &v1.IstioUpdateStrategy{
+					Type: v1.UpdateStrategyTypeInPlace,
+				},
+				Values: &v1.Values{
+					Pilot: &v1.PilotConfig{
+						Image: ptr.Of("sail-operator/test:latest"),
+						Cni: &v1.CNIUsageConfig{
+							Enabled: ptr.Of(true),
+						},
+					},
+					Global: &v1.GlobalConfig{
+						Hub:       ptr.Of(customHub),
+						LogAsJson: ptr.Of(true),
+					},
+				},
+			},
+		}
+		Expect(k8sClient.Create(ctx, istio)).To(Succeed())
+
+		// Wait for Istio to have an active revision
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(ctx, client.ObjectKey{Name: targetRefIstioName}, istio)).To(Succeed())
+			g.Expect(istio.Status.ActiveRevisionName).ToNot(BeEmpty())
+		}).Should(Succeed())
+	})
+
+	AfterAll(func() {
+		deleteAllIstiosAndRevisions(ctx)
+		Expect(k8sClient.Delete(ctx, namespace)).To(Succeed())
+	})
+
+	When("creating a ZTunnel with targetRef referencing an Istio resource", func() {
+		BeforeAll(func() {
+			ztunnel := &v1.ZTunnel{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: ztunnelName,
+				},
+				Spec: v1.ZTunnelSpec{
+					Version:   istioversion.Default,
+					Namespace: targetRefIstioNamespace,
+					TargetRef: &v1.TargetReference{
+						Kind: v1.IstioKind,
+						Name: targetRefIstioName,
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, ztunnel)).To(Succeed())
+		})
+
+		AfterAll(func() {
+			ztunnel := &v1.ZTunnel{}
+			Expect(k8sClient.Get(ctx, ztunnelKey, ztunnel)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, ztunnel)).To(Succeed())
+			Eventually(k8sClient.Get).WithArguments(ctx, ztunnelKey, &v1.ZTunnel{}).Should(ReturnNotFoundError())
+		})
+
+		It("creates the ztunnel DaemonSet", func() {
+			ds := &appsv1.DaemonSet{}
+			Eventually(k8sClient.Get).WithArguments(ctx, daemonsetKey, ds).Should(Succeed())
+		})
+
+		It("sets the IstioRevision in the ZTunnel status", func() {
+			Eventually(func(g Gomega) {
+				ztunnel := &v1.ZTunnel{}
+				g.Expect(k8sClient.Get(ctx, ztunnelKey, ztunnel)).To(Succeed())
+				g.Expect(ztunnel.Status.ObservedGeneration).To(Equal(ztunnel.Generation))
+				g.Expect(ztunnel.Status.IstioRevision).To(Equal(istio.Status.ActiveRevisionName))
+			}).Should(Succeed())
+		})
+
+		It("is reconciled successfully", func() {
+			expectZTunnelV1Condition(ctx, v1.ZTunnelConditionReconciled, metav1.ConditionTrue)
+		})
+
+		It("copies global.hub from the referenced IstioRevision to the DaemonSet", func() {
+			ds := &appsv1.DaemonSet{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, daemonsetKey, ds)).To(Succeed())
+				g.Expect(ds.Spec.Template.Spec.Containers).ToNot(BeEmpty())
+				g.Expect(ds.Spec.Template.Spec.Containers[0].Image).To(ContainSubstring(customHub))
+			}).Should(Succeed())
+		})
+
+		It("copies global.logAsJson from the referenced IstioRevision to the DaemonSet", func() {
+			ds := &appsv1.DaemonSet{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, daemonsetKey, ds)).To(Succeed())
+				g.Expect(ds.Spec.Template.Spec.Containers).ToNot(BeEmpty())
+				g.Expect(ds.Spec.Template.Spec.Containers[0].Env).To(
+					ContainElement(corev1.EnvVar{Name: "LOG_FORMAT", Value: "json"}))
+			}).Should(Succeed())
+		})
+	})
+
+	When("creating a ZTunnel with targetRef referencing an IstioRevision resource", func() {
+		var revisionName string
+
+		BeforeAll(func() {
+			Expect(k8sClient.Get(ctx, client.ObjectKey{Name: targetRefIstioName}, istio)).To(Succeed())
+			revisionName = istio.Status.ActiveRevisionName
+			Expect(revisionName).ToNot(BeEmpty())
+
+			ztunnel := &v1.ZTunnel{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: ztunnelName,
+				},
+				Spec: v1.ZTunnelSpec{
+					Version:   istioversion.Default,
+					Namespace: targetRefIstioNamespace,
+					TargetRef: &v1.TargetReference{
+						Kind: v1.IstioRevisionKind,
+						Name: revisionName,
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, ztunnel)).To(Succeed())
+		})
+
+		AfterAll(func() {
+			ztunnel := &v1.ZTunnel{}
+			Expect(k8sClient.Get(ctx, ztunnelKey, ztunnel)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, ztunnel)).To(Succeed())
+			Eventually(k8sClient.Get).WithArguments(ctx, ztunnelKey, &v1.ZTunnel{}).Should(ReturnNotFoundError())
+		})
+
+		It("creates the ztunnel DaemonSet", func() {
+			ds := &appsv1.DaemonSet{}
+			Eventually(k8sClient.Get).WithArguments(ctx, daemonsetKey, ds).Should(Succeed())
+		})
+
+		It("sets the IstioRevision in the ZTunnel status", func() {
+			Eventually(func(g Gomega) {
+				ztunnel := &v1.ZTunnel{}
+				g.Expect(k8sClient.Get(ctx, ztunnelKey, ztunnel)).To(Succeed())
+				g.Expect(ztunnel.Status.ObservedGeneration).To(Equal(ztunnel.Generation))
+				g.Expect(ztunnel.Status.IstioRevision).To(Equal(revisionName))
+			}).Should(Succeed())
+		})
+
+		It("is reconciled successfully", func() {
+			expectZTunnelV1Condition(ctx, v1.ZTunnelConditionReconciled, metav1.ConditionTrue)
+		})
+
+		It("copies global.hub from the referenced IstioRevision to the DaemonSet", func() {
+			ds := &appsv1.DaemonSet{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, daemonsetKey, ds)).To(Succeed())
+				g.Expect(ds.Spec.Template.Spec.Containers).ToNot(BeEmpty())
+				g.Expect(ds.Spec.Template.Spec.Containers[0].Image).To(ContainSubstring(customHub))
+			}).Should(Succeed())
+		})
+
+		It("copies global.logAsJson from the referenced IstioRevision to the DaemonSet", func() {
+			ds := &appsv1.DaemonSet{}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, daemonsetKey, ds)).To(Succeed())
+				g.Expect(ds.Spec.Template.Spec.Containers).ToNot(BeEmpty())
+				g.Expect(ds.Spec.Template.Spec.Containers[0].Env).To(
+					ContainElement(corev1.EnvVar{Name: "LOG_FORMAT", Value: "json"}))
+			}).Should(Succeed())
+		})
+	})
+
+	When("creating a ZTunnel with targetRef referencing a non-existent Istio", func() {
+		BeforeAll(func() {
+			ztunnel := &v1.ZTunnel{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: ztunnelName,
+				},
+				Spec: v1.ZTunnelSpec{
+					Version:   istioversion.Default,
+					Namespace: targetRefIstioNamespace,
+					TargetRef: &v1.TargetReference{
+						Kind: v1.IstioKind,
+						Name: "non-existent-istio",
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, ztunnel)).To(Succeed())
+		})
+
+		AfterAll(func() {
+			ztunnel := &v1.ZTunnel{}
+			Expect(k8sClient.Get(ctx, ztunnelKey, ztunnel)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, ztunnel)).To(Succeed())
+			Eventually(k8sClient.Get).WithArguments(ctx, ztunnelKey, &v1.ZTunnel{}).Should(ReturnNotFoundError())
+		})
+
+		It("fails reconciliation", func() {
+			expectZTunnelV1Condition(ctx, v1.ZTunnelConditionReconciled, metav1.ConditionFalse)
+		})
+
+		It("does not set IstioRevision in status", func() {
+			Eventually(func(g Gomega) {
+				ztunnel := &v1.ZTunnel{}
+				g.Expect(k8sClient.Get(ctx, ztunnelKey, ztunnel)).To(Succeed())
+				g.Expect(ztunnel.Status.IstioRevision).To(BeEmpty())
+			}).Should(Succeed())
+		})
+	})
+})
+
 func HaveContainersThat(matcher types.GomegaMatcher) types.GomegaMatcher {
 	return HaveField("Spec.Template.Spec.Containers", matcher)
 }
@@ -240,35 +476,21 @@ func getEnvVars(container corev1.Container) []corev1.EnvVar {
 }
 
 // expectZTunnelV1Condition on the v1.ZTunnel resource to eventually have a given status.
-func expectZTunnelV1Condition(ctx context.Context, condition v1.ZTunnelConditionType, status metav1.ConditionStatus,
-	extraChecks ...func(Gomega, *v1.ZTunnelCondition),
-) {
+func expectZTunnelV1Condition(ctx context.Context, conditionType v1.ZTunnelConditionType, status metav1.ConditionStatus) {
 	ztunnel := v1.ZTunnel{}
 	Eventually(func(g Gomega) {
 		g.Expect(k8sClient.Get(ctx, ztunnelKey, &ztunnel)).To(Succeed())
 		g.Expect(ztunnel.Status.ObservedGeneration).To(Equal(ztunnel.ObjectMeta.Generation))
-
-		condition := ztunnel.Status.GetCondition(condition)
-		g.Expect(condition.Status).To(Equal(status))
-		for _, check := range extraChecks {
-			check(g, &condition)
-		}
+		g.Expect(ztunnel.Status.GetCondition(conditionType).Status).To(Equal(status))
 	}).Should(Succeed())
 }
 
 // expectZTunnelV1Alpha1Condition on the v1alpha1.ZTunnel resource to eventually have a given status.
-func expectZTunnelV1Alpha1Condition(ctx context.Context, condition v1alpha1.ZTunnelConditionType, status metav1.ConditionStatus,
-	extraChecks ...func(Gomega, *v1alpha1.ZTunnelCondition),
-) {
+func expectZTunnelV1Alpha1Condition(ctx context.Context, conditionType v1alpha1.ZTunnelConditionType, status metav1.ConditionStatus) {
 	ztunnel := v1alpha1.ZTunnel{}
 	Eventually(func(g Gomega) {
 		g.Expect(k8sClient.Get(ctx, ztunnelKey, &ztunnel)).To(Succeed())
 		g.Expect(ztunnel.Status.ObservedGeneration).To(Equal(ztunnel.ObjectMeta.Generation))
-
-		condition := ztunnel.Status.GetCondition(condition)
-		g.Expect(condition.Status).To(Equal(status))
-		for _, check := range extraChecks {
-			check(g, &condition)
-		}
+		g.Expect(ztunnel.Status.GetCondition(conditionType).Status).To(Equal(status))
 	}).Should(Succeed())
 }

@@ -15,8 +15,13 @@
 package revision
 
 import (
+	"context"
+
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
+	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func GetReferencedRevisionFromNamespace(labels map[string]string) string {
@@ -45,4 +50,31 @@ func GetReferencedRevisionFromPod(podLabels map[string]string) string {
 func GetInjectedRevisionFromPod(podAnnotations map[string]string) string {
 	// if pod was already injected, the revision that did the injection is specified in the istio.io/rev annotation
 	return podAnnotations[constants.IstioRevLabel]
+}
+
+func GetIstioRevisionFromTargetReference(ctx context.Context, client client.Client, ref v1.TargetReference) (*v1.IstioRevision, error) {
+	var revisionName string
+	switch ref.Kind {
+	case v1.IstioRevisionKind:
+		revisionName = ref.Name
+	case v1.IstioKind:
+		i := v1.Istio{}
+		err := client.Get(ctx, types.NamespacedName{Name: ref.Name}, &i)
+		if err != nil {
+			return nil, err
+		}
+		if i.Status.ActiveRevisionName == "" {
+			return nil, reconciler.NewTransientError("referenced Istio has no active revision")
+		}
+		revisionName = i.Status.ActiveRevisionName
+	default:
+		return nil, reconciler.NewValidationError("unknown targetRef.kind")
+	}
+
+	rev := v1.IstioRevision{}
+	err := client.Get(ctx, types.NamespacedName{Name: revisionName}, &rev)
+	if err != nil {
+		return nil, err
+	}
+	return &rev, nil
 }

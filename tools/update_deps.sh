@@ -139,8 +139,8 @@ OPERATOR_SDK_LATEST_VERSION=$(getVersionForUpdate operator-framework/operator-sd
 "$SED_CMD" -i "s|OPERATOR_SDK_VERSION ?= .*|OPERATOR_SDK_VERSION ?= ${OPERATOR_SDK_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
 find "${ROOTDIR}/chart/templates/olm/scorecard.yaml" -type f -exec "$SED_CMD" -i "s|quay.io/operator-framework/scorecard-test:.*|quay.io/operator-framework/scorecard-test:${OPERATOR_SDK_LATEST_VERSION}|" {} +
 
-# Update helm (FIXME: pinned to v3 as we don't support helm4 yet, see https://github.com/istio-ecosystem/sail-operator/issues/1371)
-HELM_LATEST_VERSION=$(getLatestVersionByPrefix helm/helm v3)
+# Update helm
+HELM_LATEST_VERSION=$(getLatestVersionByPrefix helm/helm v4)
 "$SED_CMD" -i "s|HELM_VERSION ?= .*|HELM_VERSION ?= ${HELM_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
 
 # Update controller-tools
@@ -167,7 +167,23 @@ OLM_LATEST_VERSION=$(getVersionForUpdate operator-framework/operator-lifecycle-m
 
 # Update gateway-api
 GW_API_LATEST_VERSION=$(getLatestVersion kubernetes-sigs/gateway-api)
-"$SED_CMD" -i "s|GW_API_VERSION=.*|GW_API_VERSION=\${GW_API_VERSION:-${GW_API_LATEST_VERSION}}|" "${ROOTDIR}/tests/e2e/setup/setup-kind.sh"
+curl -sSL -o "${ROOTDIR}/tests/e2e/setup/testdata/gateway-api/experimental-install.yaml" \
+  "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GW_API_LATEST_VERSION}/experimental-install.yaml"
+
+# Update vendored Istio sample manifests
+SAMPLES_DIR="${ROOTDIR}/tests/e2e/samples"
+curl -sSL -o "${SAMPLES_DIR}/helloworld/helloworld.yaml" \
+  "https://raw.githubusercontent.com/istio/istio/${UPDATE_BRANCH}/samples/helloworld/helloworld.yaml"
+curl -sSL -o "${SAMPLES_DIR}/httpbin/httpbin.yaml" \
+  "https://raw.githubusercontent.com/istio/istio/${UPDATE_BRANCH}/samples/httpbin/httpbin.yaml"
+curl -sSL -o "${SAMPLES_DIR}/sleep/sleep.yaml" \
+  "https://raw.githubusercontent.com/istio/istio/${UPDATE_BRANCH}/samples/sleep/sleep.yaml"
+curl -sSL -o "${SAMPLES_DIR}/tcp-echo-dual-stack/tcp-echo-dual-stack.yaml" \
+  "https://raw.githubusercontent.com/istio/istio/${UPDATE_BRANCH}/samples/tcp-echo/tcp-echo-dual-stack.yaml"
+curl -sSL -o "${SAMPLES_DIR}/tcp-echo-ipv4/tcp-echo-ipv4.yaml" \
+  "https://raw.githubusercontent.com/istio/istio/${UPDATE_BRANCH}/samples/tcp-echo/tcp-echo-ipv4.yaml"
+curl -sSL -o "${SAMPLES_DIR}/tcp-echo-ipv6/tcp-echo-ipv6.yaml" \
+  "https://raw.githubusercontent.com/istio/istio/${UPDATE_BRANCH}/samples/tcp-echo/tcp-echo-ipv6.yaml"
 
 # Update gitleaks
 GITLEAKS_LATEST_VERSION=$(getVersionForUpdate gitleaks/gitleaks "${GITLEAKS_VERSION}")

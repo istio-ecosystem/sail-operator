@@ -26,6 +26,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	sharedreconcile "github.com/istio-ecosystem/sail-operator/pkg/reconcile"
+	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	. "github.com/onsi/gomega"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
@@ -389,12 +390,12 @@ func TestMapEndpointSliceToReconcileRequests(t *testing.T) {
 func TestDeriveState(t *testing.T) {
 	testCases := []struct {
 		name          string
-		conditions    []v1.IstioRevisionCondition
+		conditions    []v1.StatusCondition
 		expectedState v1.IstioRevisionConditionReason
 	}{
 		{
 			name: "healthy",
-			conditions: []v1.IstioRevisionCondition{
+			conditions: []v1.StatusCondition{
 				newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionTrue, ""),
 				newCondition(v1.IstioRevisionConditionReady, metav1.ConditionTrue, ""),
 				newCondition(v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionTrue, ""),
@@ -403,7 +404,7 @@ func TestDeriveState(t *testing.T) {
 		},
 		{
 			name: "not reconciled",
-			conditions: []v1.IstioRevisionCondition{
+			conditions: []v1.StatusCondition{
 				newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionFalse, v1.IstioRevisionReasonReconcileError),
 				newCondition(v1.IstioRevisionConditionReady, metav1.ConditionTrue, ""),
 				newCondition(v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionTrue, ""),
@@ -412,7 +413,7 @@ func TestDeriveState(t *testing.T) {
 		},
 		{
 			name: "not ready",
-			conditions: []v1.IstioRevisionCondition{
+			conditions: []v1.StatusCondition{
 				newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionTrue, ""),
 				newCondition(v1.IstioRevisionConditionReady, metav1.ConditionFalse, v1.IstioRevisionReasonIstiodNotReady),
 				newCondition(v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionTrue, ""),
@@ -421,7 +422,7 @@ func TestDeriveState(t *testing.T) {
 		},
 		{
 			name: "readiness unknown",
-			conditions: []v1.IstioRevisionCondition{
+			conditions: []v1.StatusCondition{
 				newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionTrue, ""),
 				newCondition(v1.IstioRevisionConditionReady, metav1.ConditionUnknown, v1.IstioRevisionReasonReadinessCheckFailed),
 				newCondition(v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionTrue, ""),
@@ -430,7 +431,7 @@ func TestDeriveState(t *testing.T) {
 		},
 		{
 			name: "not reconciled nor ready",
-			conditions: []v1.IstioRevisionCondition{
+			conditions: []v1.StatusCondition{
 				newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionFalse, v1.IstioRevisionReasonReconcileError),
 				newCondition(v1.IstioRevisionConditionReady, metav1.ConditionFalse, v1.IstioRevisionReasonIstiodNotReady),
 				newCondition(v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionTrue, ""),
@@ -439,7 +440,7 @@ func TestDeriveState(t *testing.T) {
 		},
 		{
 			name: "dependencies not ready",
-			conditions: []v1.IstioRevisionCondition{
+			conditions: []v1.StatusCondition{
 				newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionTrue, ""),
 				newCondition(v1.IstioRevisionConditionReady, metav1.ConditionTrue, ""),
 				newCondition(v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionFalse, v1.IstioRevisionReasonIstioCNINotHealthy),
@@ -451,7 +452,7 @@ func TestDeriveState(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			result := deriveState(tc.conditions...)
+			result := reconciler.DeriveState(v1.IstioRevisionReasonHealthy, tc.conditions...)
 			g.Expect(result).To(Equal(tc.expectedState))
 		})
 	}
@@ -459,8 +460,8 @@ func TestDeriveState(t *testing.T) {
 
 func newCondition(
 	conditionType v1.IstioRevisionConditionType, status metav1.ConditionStatus, reason v1.IstioRevisionConditionReason,
-) v1.IstioRevisionCondition {
-	return v1.IstioRevisionCondition{
+) v1.StatusCondition {
+	return v1.StatusCondition{
 		Type:   conditionType,
 		Status: status,
 		Reason: reason,
@@ -475,7 +476,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 		values        *v1.Values
 		clientObjects []client.Object
 		interceptors  interceptor.Funcs
-		expected      v1.IstioRevisionCondition
+		expected      v1.StatusCondition
 		expectErr     bool
 	}{
 		{
@@ -494,9 +495,10 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1.IstioRevisionCondition{
+			expected: v1.StatusCondition{
 				Type:   v1.IstioRevisionConditionReady,
 				Status: metav1.ConditionTrue,
+				Reason: v1.ConditionReason(v1.IstioRevisionConditionReady),
 			},
 		},
 		{
@@ -515,7 +517,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1.IstioRevisionCondition{
+			expected: v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioRevisionReasonIstiodNotReady,
@@ -538,7 +540,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1.IstioRevisionCondition{
+			expected: v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioRevisionReasonIstiodNotReady,
@@ -549,7 +551,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 			name:          "Istiod not found",
 			values:        nil,
 			clientObjects: []client.Object{},
-			expected: v1.IstioRevisionCondition{
+			expected: v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioRevisionReasonIstiodNotReady,
@@ -574,9 +576,10 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1.IstioRevisionCondition{
+			expected: v1.StatusCondition{
 				Type:   v1.IstioRevisionConditionReady,
 				Status: metav1.ConditionTrue,
+				Reason: v1.ConditionReason(v1.IstioRevisionConditionReady),
 			},
 		},
 		{
@@ -587,7 +590,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 					return fmt.Errorf("simulated error")
 				},
 			},
-			expected: v1.IstioRevisionCondition{
+			expected: v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionUnknown,
 				Reason:  v1.IstioRevisionReasonReadinessCheckFailed,
@@ -608,9 +611,10 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1.IstioRevisionCondition{
+			expected: v1.StatusCondition{
 				Type:   v1.IstioRevisionConditionReady,
 				Status: metav1.ConditionTrue,
+				Reason: v1.ConditionReason(v1.IstioRevisionConditionReady),
 			},
 		},
 		{
@@ -626,7 +630,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1.IstioRevisionCondition{
+			expected: v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioRevisionReasonRemoteIstiodNotReady,
@@ -644,7 +648,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1.IstioRevisionCondition{
+			expected: v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioRevisionReasonRemoteIstiodNotReady,
@@ -655,7 +659,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 			name:          "Istiod-remote webhook config not found",
 			values:        &v1.Values{Profile: ptr.Of("remote")},
 			clientObjects: []client.Object{},
-			expected: v1.IstioRevisionCondition{
+			expected: v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioRevisionReasonRemoteIstiodNotReady,
@@ -671,7 +675,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 					return fmt.Errorf("simulated error")
 				},
 			},
-			expected: v1.IstioRevisionCondition{
+			expected: v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionUnknown,
 				Reason:  v1.IstioRevisionReasonReadinessCheckFailed,

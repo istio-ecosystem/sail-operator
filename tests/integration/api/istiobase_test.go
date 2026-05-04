@@ -129,7 +129,7 @@ var _ = Describe("base chart support", Ordered, func() {
 					Name: "default",
 				},
 				Spec: v1.IstioRevisionTagSpec{
-					TargetRef: v1.IstioRevisionTagTargetReference{
+					TargetRef: v1.TargetReference{
 						Kind: "IstioRevision",
 						Name: "my-rev",
 					},
@@ -322,7 +322,7 @@ var _ = Describe("base chart support", Ordered, func() {
 					Name: "default",
 				},
 				Spec: v1.IstioRevisionTagSpec{
-					TargetRef: v1.IstioRevisionTagTargetReference{
+					TargetRef: v1.TargetReference{
 						Kind: "IstioRevision",
 						Name: "rev1",
 					},
