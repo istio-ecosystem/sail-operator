@@ -162,19 +162,15 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Named("istiocni").
 
 		// namespaced resources
-		Watches(&corev1.ConfigMap{}, ownedResourceHandler,
-			builder.WithPredicates(fieldignore.RulesFor(fieldignore.DefaultRules, &corev1.ConfigMap{}).NewPredicate())).
-		Watches(&appsv1.DaemonSet{}, ownedResourceHandler,
-			builder.WithPredicates(fieldignore.RulesFor(fieldignore.DefaultRules, &appsv1.DaemonSet{}).NewPredicate())).
-		Watches(&corev1.ResourceQuota{}, ownedResourceHandler,
-			builder.WithPredicates(fieldignore.RulesFor(fieldignore.DefaultRules, &corev1.ResourceQuota{}).NewPredicate())).
+		Watches(&corev1.ConfigMap{}, ownedResourceHandler).
+		Watches(&appsv1.DaemonSet{}, ownedResourceHandler).
+		Watches(&corev1.ResourceQuota{}, ownedResourceHandler).
 
 		// +lint-watches:ignore: NetworkPolicy (FIXME: NetworkPolicy has not yet been added upstream, but is WIP)
-		Watches(&networkingv1.NetworkPolicy{}, ownedResourceHandler,
-			builder.WithPredicates(fieldignore.RulesFor(fieldignore.DefaultRules, &networkingv1.NetworkPolicy{}).NewPredicate(), predicate.IgnoreUpdate())).
+		Watches(&networkingv1.NetworkPolicy{}, ownedResourceHandler, builder.WithPredicates(predicate.IgnoreUpdate())).
 		Watches(&corev1.ServiceAccount{}, ownedResourceHandler,
 			builder.WithPredicates(
-				fieldignore.RulesFor(fieldignore.DefaultRules, &corev1.ServiceAccount{}).NewPredicate(),
+				fieldignore.ServiceAccountIgnoreRules.NewPredicate(),
 				predicate.IgnoreUpdateWhenAnnotation())).
 
 		// TODO: only register NetAttachDef if the CRD is installed (may also need to watch for CRD creation)
@@ -183,10 +179,8 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// cluster-scoped resources
 		// +lint-watches:ignore: Namespace (not present in charts, but must be watched to reconcile IstioCni when its namespace is created)
 		Watches(&corev1.Namespace{}, namespaceHandler).
-		Watches(&rbacv1.ClusterRole{}, ownedResourceHandler,
-			builder.WithPredicates(fieldignore.RulesFor(fieldignore.DefaultRules, &rbacv1.ClusterRole{}).NewPredicate())).
-		Watches(&rbacv1.ClusterRoleBinding{}, ownedResourceHandler,
-			builder.WithPredicates(fieldignore.RulesFor(fieldignore.DefaultRules, &rbacv1.ClusterRoleBinding{}).NewPredicate())).
+		Watches(&rbacv1.ClusterRole{}, ownedResourceHandler).
+		Watches(&rbacv1.ClusterRoleBinding{}, ownedResourceHandler).
 		Complete(reconciler.NewStandardReconcilerWithFinalizer[*v1.IstioCNI](r.Client, r.Reconcile, r.Finalize, constants.FinalizerName))
 }
 

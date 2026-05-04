@@ -83,7 +83,7 @@ var _ = BeforeSuite(func() {
 	}
 
 	chartManager = helm.NewChartManager(mgr.GetConfig(), "",
-		helm.WithFieldIgnoreRules(fieldignore.IntoUntypedAll(fieldignore.DefaultRules)))
+		helm.WithFieldIgnoreRules(fieldignore.DefaultIgnoreRules))
 
 	operatorNs := &corev1.Namespace{ObjectMeta: v1.ObjectMeta{Name: operatorNamespace}}
 	Expect(k8sClient.Create(context.TODO(), operatorNs)).To(Succeed())

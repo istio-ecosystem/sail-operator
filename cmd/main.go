@@ -204,7 +204,7 @@ func main() {
 	}
 
 	chartManager := helm.NewChartManager(mgr.GetConfig(), os.Getenv("HELM_DRIVER"),
-		helm.WithFieldIgnoreRules(fieldignore.IntoUntypedAll(fieldignore.DefaultRules)))
+		helm.WithFieldIgnoreRules(fieldignore.DefaultIgnoreRules))
 
 	err = istio.NewReconciler(reconcilerCfg, mgr.GetClient(), mgr.GetScheme(), tlsConfig).
 		SetupWithManager(mgr)

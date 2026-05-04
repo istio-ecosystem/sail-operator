@@ -275,41 +275,26 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Named("istiorevision").
 
 		// namespaced resources
-		Watches(&corev1.ConfigMap{}, ownedResourceHandler,
-			builder.WithPredicates(fieldignore.RulesFor(fieldignore.DefaultRules, &corev1.ConfigMap{}).NewPredicate(), predicate2.IgnoreUpdateWhenAnnotation())).
+		Watches(&corev1.ConfigMap{}, ownedResourceHandler, builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
 		// We don't ignore the status for Deployments because we use it to calculate the IstioRevision status
-		Watches(&appsv1.Deployment{}, ownedResourceHandler,
-			builder.WithPredicates(fieldignore.RulesFor(fieldignore.DefaultRules, &appsv1.Deployment{}).NewPredicate(), predicate2.IgnoreUpdateWhenAnnotation())).
+		Watches(&appsv1.Deployment{}, ownedResourceHandler, builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
 		// +lint-watches:ignore: Endpoints (older versions of istiod chart create Endpoints for remote installs, but this controller watches EndpointSlices)
 		// +lint-watches:ignore: EndpointSlice (istiod chart creates Endpoints for remote installs, but this controller watches EndpointSlices)
-		Watches(&discoveryv1.EndpointSlice{}, endpointSliceHandler,
-			builder.WithPredicates(
-				fieldignore.RulesFor(fieldignore.DefaultRules, &discoveryv1.EndpointSlice{}).NewPredicate(),
-				predicate2.IgnoreUpdateWhenAnnotation())).
+		Watches(&discoveryv1.EndpointSlice{}, endpointSliceHandler, builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
 		Watches(&corev1.Service{}, ownedResourceHandler,
-			builder.WithPredicates(
-				fieldignore.RulesFor(fieldignore.DefaultRules, &corev1.Service{}).NewPredicate(),
-				ignoreStatusChange(), predicate2.IgnoreUpdateWhenAnnotation())).
+			builder.WithPredicates(ignoreStatusChange(), predicate2.IgnoreUpdateWhenAnnotation())).
 
 		// +lint-watches:ignore: NetworkPolicy (FIXME: NetworkPolicy has not yet been added upstream, but is WIP)
 		Watches(&networkingv1.NetworkPolicy{}, ownedResourceHandler,
-			builder.WithPredicates(
-				fieldignore.RulesFor(fieldignore.DefaultRules, &networkingv1.NetworkPolicy{}).NewPredicate(),
-				ignoreStatusChange(), predicate2.IgnoreUpdateWhenAnnotation())).
+			builder.WithPredicates(ignoreStatusChange(), predicate2.IgnoreUpdateWhenAnnotation())).
 		Watches(&corev1.ServiceAccount{}, ownedResourceHandler,
-			builder.WithPredicates(fieldignore.RulesFor(fieldignore.DefaultRules, &corev1.ServiceAccount{}).NewPredicate(), predicate2.IgnoreUpdateWhenAnnotation())).
-		Watches(&rbacv1.Role{}, ownedResourceHandler,
-			builder.WithPredicates(fieldignore.RulesFor(fieldignore.DefaultRules, &rbacv1.Role{}).NewPredicate(), predicate2.IgnoreUpdateWhenAnnotation())).
-		Watches(&rbacv1.RoleBinding{}, ownedResourceHandler,
-			builder.WithPredicates(fieldignore.RulesFor(fieldignore.DefaultRules, &rbacv1.RoleBinding{}).NewPredicate(), predicate2.IgnoreUpdateWhenAnnotation())).
+			builder.WithPredicates(fieldignore.ServiceAccountIgnoreRules.NewPredicate(), predicate2.IgnoreUpdateWhenAnnotation())).
+		Watches(&rbacv1.Role{}, ownedResourceHandler, builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
+		Watches(&rbacv1.RoleBinding{}, ownedResourceHandler, builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
 		Watches(&policyv1.PodDisruptionBudget{}, ownedResourceHandler,
-			builder.WithPredicates(
-				fieldignore.RulesFor(fieldignore.DefaultRules, &policyv1.PodDisruptionBudget{}).NewPredicate(),
-				ignoreStatusChange(), predicate2.IgnoreUpdateWhenAnnotation())).
+			builder.WithPredicates(ignoreStatusChange(), predicate2.IgnoreUpdateWhenAnnotation())).
 		Watches(&autoscalingv2.HorizontalPodAutoscaler{}, ownedResourceHandler,
-			builder.WithPredicates(
-				fieldignore.RulesFor(fieldignore.DefaultRules, &autoscalingv2.HorizontalPodAutoscaler{}).NewPredicate(),
-				ignoreStatusChange(), predicate2.IgnoreUpdateWhenAnnotation())).
+			builder.WithPredicates(ignoreStatusChange(), predicate2.IgnoreUpdateWhenAnnotation())).
 
 		// +lint-watches:ignore: Namespace (not found in charts, but must be watched to reconcile IstioRevision when its namespace is created)
 		Watches(&corev1.Namespace{}, nsHandler, builder.WithPredicates(ignoreStatusChange()), builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
@@ -321,19 +306,15 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&v1.IstioRevisionTag{}, revisionTagHandler).
 
 		// cluster-scoped resources
-		Watches(&rbacv1.ClusterRole{}, ownedResourceHandler,
-			builder.WithPredicates(fieldignore.RulesFor(fieldignore.DefaultRules, &rbacv1.ClusterRole{}).NewPredicate(), predicate2.IgnoreUpdateWhenAnnotation())).
-		Watches(&rbacv1.ClusterRoleBinding{}, ownedResourceHandler,
-			builder.WithPredicates(
-				fieldignore.RulesFor(fieldignore.DefaultRules, &rbacv1.ClusterRoleBinding{}).NewPredicate(),
-				predicate2.IgnoreUpdateWhenAnnotation())).
+		Watches(&rbacv1.ClusterRole{}, ownedResourceHandler, builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
+		Watches(&rbacv1.ClusterRoleBinding{}, ownedResourceHandler, builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
 		Watches(&admissionv1.MutatingWebhookConfiguration{}, ownedResourceHandler,
 			builder.WithPredicates(
-				fieldignore.RulesFor(fieldignore.DefaultRules, &admissionv1.MutatingWebhookConfiguration{}).NewPredicate(),
+				fieldignore.MutatingWebhookIgnoreRules.NewPredicate(),
 				predicate2.IgnoreUpdateWhenAnnotation())).
 		Watches(&admissionv1.ValidatingWebhookConfiguration{}, ownedResourceHandler,
 			builder.WithPredicates(
-				fieldignore.RulesFor(fieldignore.DefaultRules, &admissionv1.ValidatingWebhookConfiguration{}).NewPredicate(),
+				fieldignore.ValidatingWebhookIgnoreRules.NewPredicate(),
 				predicate2.IgnoreUpdateWhenAnnotation())).
 
 		// +lint-watches:ignore: IstioCNI (not found in charts, but this controller needs to watch it to update the IstioRevision status)

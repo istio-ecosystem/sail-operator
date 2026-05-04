@@ -20,6 +20,9 @@ import (
 	"github.com/google/go-cmp/cmp"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 )
 
@@ -281,19 +284,16 @@ func TestParseArrayPredicate(t *testing.T) {
 func TestMatchesManifest(t *testing.T) {
 	tests := []struct {
 		name     string
-		rule     UntypedFieldIgnoreRule
+		rule     GenericFieldIgnoreRule
 		manifest map[string]any
 		want     bool
 	}{
 		{
 			name: "matching manifest with exact name",
-			rule: UntypedFieldIgnoreRule{
-				Group:   "admissionregistration.k8s.io",
-				Version: "v1",
-				Kind:    "ValidatingWebhookConfiguration",
-				Name:    "istiod-istio-system-validator",
-				Fields:  []string{"webhooks[*].failurePolicy"},
-			},
+			rule: NewFieldIgnoreRuleWithName[client.Object](
+				&admissionv1.ValidatingWebhookConfiguration{},
+				"istiod-istio-system-validator",
+				[]string{"webhooks[*].failurePolicy"}, IgnoreScopeAlways),
 			manifest: map[string]any{
 				"apiVersion": "admissionregistration.k8s.io/v1",
 				"kind":       "ValidatingWebhookConfiguration",
@@ -303,12 +303,9 @@ func TestMatchesManifest(t *testing.T) {
 		},
 		{
 			name: "matching manifest with no name requirement",
-			rule: UntypedFieldIgnoreRule{
-				Group:   "admissionregistration.k8s.io",
-				Version: "v1",
-				Kind:    "ValidatingWebhookConfiguration",
-				Fields:  []string{"webhooks[*].failurePolicy"},
-			},
+			rule: NewFieldIgnoreRule[client.Object](
+				&admissionv1.ValidatingWebhookConfiguration{},
+				[]string{"webhooks[*].failurePolicy"}, IgnoreScopeAlways),
 			manifest: map[string]any{
 				"apiVersion": "admissionregistration.k8s.io/v1",
 				"kind":       "ValidatingWebhookConfiguration",
@@ -318,12 +315,9 @@ func TestMatchesManifest(t *testing.T) {
 		},
 		{
 			name: "non-matching kind",
-			rule: UntypedFieldIgnoreRule{
-				Group:   "admissionregistration.k8s.io",
-				Version: "v1",
-				Kind:    "MutatingWebhookConfiguration",
-				Fields:  []string{"webhooks[*].failurePolicy"},
-			},
+			rule: NewFieldIgnoreRule[client.Object](
+				&admissionv1.MutatingWebhookConfiguration{},
+				[]string{"webhooks[*].failurePolicy"}, IgnoreScopeAlways),
 			manifest: map[string]any{
 				"apiVersion": "admissionregistration.k8s.io/v1",
 				"kind":       "ValidatingWebhookConfiguration",
@@ -333,13 +327,10 @@ func TestMatchesManifest(t *testing.T) {
 		},
 		{
 			name: "non-matching name",
-			rule: UntypedFieldIgnoreRule{
-				Group:   "admissionregistration.k8s.io",
-				Version: "v1",
-				Kind:    "ValidatingWebhookConfiguration",
-				Name:    "istiod-istio-system-validator",
-				Fields:  []string{"webhooks[*].failurePolicy"},
-			},
+			rule: NewFieldIgnoreRuleWithName[client.Object](
+				&admissionv1.ValidatingWebhookConfiguration{},
+				"istiod-istio-system-validator",
+				[]string{"webhooks[*].failurePolicy"}, IgnoreScopeAlways),
 			manifest: map[string]any{
 				"apiVersion": "admissionregistration.k8s.io/v1",
 				"kind":       "ValidatingWebhookConfiguration",
@@ -347,11 +338,85 @@ func TestMatchesManifest(t *testing.T) {
 			},
 			want: false,
 		},
+		{
+			name: "unstructured object with matching GVK",
+			rule: NewFieldIgnoreRule[client.Object](
+				newUnstructuredWithGVK("example.io", "v1", "MyCustomResource"),
+				[]string{"spec.someField"}, IgnoreScopeAlways),
+			manifest: map[string]any{
+				"apiVersion": "example.io/v1",
+				"kind":       "MyCustomResource",
+				"metadata":   map[string]any{"name": "test"},
+			},
+			want: true,
+		},
+		{
+			name: "unstructured object with matching GVK and name",
+			rule: NewFieldIgnoreRuleWithName[client.Object](
+				newUnstructuredWithGVK("example.io", "v1", "MyCustomResource"),
+				"specific-name",
+				[]string{"spec.someField"}, IgnoreScopeAlways),
+			manifest: map[string]any{
+				"apiVersion": "example.io/v1",
+				"kind":       "MyCustomResource",
+				"metadata":   map[string]any{"name": "specific-name"},
+			},
+			want: true,
+		},
+		{
+			name: "unstructured object with matching GVK but wrong name",
+			rule: NewFieldIgnoreRuleWithName[client.Object](
+				newUnstructuredWithGVK("example.io", "v1", "MyCustomResource"),
+				"expected-name",
+				[]string{"spec.someField"}, IgnoreScopeAlways),
+			manifest: map[string]any{
+				"apiVersion": "example.io/v1",
+				"kind":       "MyCustomResource",
+				"metadata":   map[string]any{"name": "other-name"},
+			},
+			want: false,
+		},
+		{
+			name: "unstructured object with non-matching kind",
+			rule: NewFieldIgnoreRule[client.Object](
+				newUnstructuredWithGVK("example.io", "v1alpha1", "MyCustomResource"),
+				[]string{"spec.someField"}, IgnoreScopeAlways),
+			manifest: map[string]any{
+				"apiVersion": "example.io/v1alpha1",
+				"kind":       "DifferentResource",
+				"metadata":   map[string]any{"name": "test"},
+			},
+			want: false,
+		},
+		{
+			name: "unstructured object with no GVK set",
+			rule: NewFieldIgnoreRule[client.Object](
+				&unstructured.Unstructured{},
+				[]string{"spec.someField"}, IgnoreScopeAlways),
+			manifest: map[string]any{
+				"apiVersion": "example.io/v1",
+				"kind":       "MyCustomResource",
+				"metadata":   map[string]any{"name": "test"},
+			},
+			want: false,
+		},
+		{
+			name: "unstructured object with core group (no group prefix in apiVersion)",
+			rule: NewFieldIgnoreRule[client.Object](
+				newUnstructuredWithGVK("", "v1", "ConfigMap"),
+				[]string{"data"}, IgnoreScopeAlways),
+			manifest: map[string]any{
+				"apiVersion": "v1",
+				"kind":       "ConfigMap",
+				"metadata":   map[string]any{"name": "test"},
+			},
+			want: true,
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := tc.rule.MatchesManifest(tc.manifest)
+			got := MatchesManifest(tc.rule, tc.manifest)
 			if got != tc.want {
 				t.Errorf("MatchesManifest() = %v, want %v", got, tc.want)
 			}
@@ -360,23 +425,15 @@ func TestMatchesManifest(t *testing.T) {
 }
 
 func TestRemoveFieldsFromManifest(t *testing.T) {
-	reconcileAndUpgradeRules := []UntypedFieldIgnoreRule{
-		{
-			Group:   "admissionregistration.k8s.io",
-			Version: "v1",
-			Kind:    "ValidatingWebhookConfiguration",
-			Fields:  []string{"webhooks[*].failurePolicy"},
-			Scope:   IgnoreScopeReconcileAndUpgrade,
-		},
+	reconcileAndUpgradeRules := []GenericFieldIgnoreRule{
+		NewFieldIgnoreRule[client.Object](
+			&admissionv1.ValidatingWebhookConfiguration{},
+			[]string{"webhooks[*].failurePolicy"}, IgnoreScopeReconcileAndUpgrade),
 	}
-	reconcileOnlyRules := []UntypedFieldIgnoreRule{
-		{
-			Group:   "admissionregistration.k8s.io",
-			Version: "v1",
-			Kind:    "ValidatingWebhookConfiguration",
-			Fields:  []string{"webhooks[*].failurePolicy"},
-			Scope:   IgnoreScopeReconcile,
-		},
+	reconcileOnlyRules := []GenericFieldIgnoreRule{
+		NewFieldIgnoreRule[client.Object](
+			&admissionv1.ValidatingWebhookConfiguration{},
+			[]string{"webhooks[*].failurePolicy"}, IgnoreScopeReconcile),
 	}
 
 	webhookManifest := func() map[string]any {
@@ -390,7 +447,7 @@ func TestRemoveFieldsFromManifest(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		rules    []UntypedFieldIgnoreRule
+		rules    []GenericFieldIgnoreRule
 		manifest map[string]any
 		isUpdate bool
 		expected map[string]any
@@ -458,7 +515,7 @@ func TestRemoveFieldsFromManifest(t *testing.T) {
 }
 
 func TestNewPredicateWithEmptyName(t *testing.T) {
-	rules := TypedRuleSet[*admissionv1.ValidatingWebhookConfiguration]{
+	rules := RuleSet[*admissionv1.ValidatingWebhookConfiguration]{
 		{Fields: []string{"webhooks[*].failurePolicy"}},
 	}
 	pred := rules.NewPredicate()
@@ -517,7 +574,7 @@ func TestNewPredicateWithEmptyName(t *testing.T) {
 }
 
 func TestNewPredicate(t *testing.T) {
-	rules := TypedRuleSet[*admissionv1.ValidatingWebhookConfiguration]{
+	rules := RuleSet[*admissionv1.ValidatingWebhookConfiguration]{
 		{Name: "istiod-istio-system-validator", Fields: []string{"webhooks[*].failurePolicy"}},
 	}
 	pred := rules.NewPredicate()
@@ -591,8 +648,14 @@ func TestNewPredicate(t *testing.T) {
 	}
 }
 
+func newUnstructuredWithGVK(group string, version string, kind string) *unstructured.Unstructured {
+	u := &unstructured.Unstructured{}
+	u.SetGroupVersionKind(schema.GroupVersionKind{Group: group, Version: version, Kind: kind})
+	return u
+}
+
 func TestNewPredicateMutatingWebhookConfiguration(t *testing.T) {
-	rules := TypedRuleSet[*admissionv1.MutatingWebhookConfiguration]{
+	rules := RuleSet[*admissionv1.MutatingWebhookConfiguration]{
 		{Fields: []string{"webhooks[*].clientConfig.caBundle"}},
 	}
 	pred := rules.NewPredicate()
@@ -644,29 +707,5 @@ func TestNewPredicateMutatingWebhookConfiguration(t *testing.T) {
 				t.Errorf("pred.Update() = %v, want %v", result, tc.want)
 			}
 		})
-	}
-}
-
-func TestIntoUntyped(t *testing.T) {
-	rules := TypedRuleSet[*admissionv1.ValidatingWebhookConfiguration]{
-		{Name: "istiod-validator", Fields: []string{"webhooks[*].failurePolicy"}, Scope: IgnoreScopeReconcileAndUpgrade},
-	}
-
-	untyped := rules.IntoUntyped()
-	if len(untyped) != 1 {
-		t.Fatalf("expected 1 untyped rule, got %d", len(untyped))
-	}
-	r := untyped[0]
-	if r.Group != "admissionregistration.k8s.io" || r.Version != "v1" || r.Kind != "ValidatingWebhookConfiguration" {
-		t.Errorf("GVK = %s/%s %s, want admissionregistration.k8s.io/v1 ValidatingWebhookConfiguration", r.Group, r.Version, r.Kind)
-	}
-	if r.Name != "istiod-validator" {
-		t.Errorf("Name = %q, want %q", r.Name, "istiod-validator")
-	}
-	if len(r.Fields) != 1 || r.Fields[0] != "webhooks[*].failurePolicy" {
-		t.Errorf("Fields = %v, want [webhooks[*].failurePolicy]", r.Fields)
-	}
-	if r.Scope != IgnoreScopeReconcileAndUpgrade {
-		t.Errorf("Scope = %q, want %q", r.Scope, IgnoreScopeReconcileAndUpgrade)
 	}
 }

@@ -192,7 +192,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// +lint-watches:ignore: IstioRevision (not found in charts, but this is the main resource watched by this controller)
 		Watches(&admissionv1.MutatingWebhookConfiguration{}, objectHandler,
 			builder.WithPredicates(
-				fieldignore.RulesFor(fieldignore.DefaultRules, &admissionv1.MutatingWebhookConfiguration{}).NewPredicate(),
+				fieldignore.MutatingWebhookIgnoreRules.NewPredicate(),
 				ownedByRemoteIstioRevisionPredicate(mgr.GetClient()))).
 		Named("mutatingwebhookconfiguration").
 		Complete(reconciler.NewStandardReconciler[*admissionv1.MutatingWebhookConfiguration](r.Client, r.Reconcile))

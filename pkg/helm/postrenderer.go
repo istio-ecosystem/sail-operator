@@ -39,7 +39,7 @@ const (
 // It also removes fields from rendered manifests according to the provided FieldIgnoreRules.
 // See fieldignore.IgnoreScope for how the Scope field controls install vs. upgrade behavior.
 func NewHelmPostRenderer(ownerReference *metav1.OwnerReference, ownerNamespace string, isUpdate bool,
-	managedByValue string, fieldIgnoreRules []fieldignore.UntypedFieldIgnoreRule,
+	managedByValue string, fieldIgnoreRules []fieldignore.GenericFieldIgnoreRule,
 ) postrenderer.PostRenderer {
 	return HelmPostRenderer{
 		ownerReference:   ownerReference,
@@ -55,7 +55,7 @@ type HelmPostRenderer struct {
 	ownerNamespace   string
 	isUpdate         bool
 	managedByValue   string
-	fieldIgnoreRules []fieldignore.UntypedFieldIgnoreRule
+	fieldIgnoreRules []fieldignore.GenericFieldIgnoreRule
 }
 
 var _ postrenderer.PostRenderer = HelmPostRenderer{}

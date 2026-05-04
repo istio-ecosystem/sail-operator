@@ -22,8 +22,8 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
@@ -54,6 +54,11 @@ const (
 //   - "webhooks[*].clientConfig.caBundle"   → deletes caBundle nested inside each webhook
 //   - "spec.template.metadata.annotations"  → deletes a deeply nested field
 type FieldIgnoreRule[T client.Object] struct {
+	// obj is an empty instance of the object type. It is used to extract the GVK.
+	// If go supported accessing a subset of the Type parameter's methods, we could avoid this.
+	// e.g. T.GetGroupVersionKind()
+	obj T
+
 	// Name is an optional exact name match. Empty matches all names.
 	Name string `json:"name,omitempty"`
 
@@ -64,58 +69,32 @@ type FieldIgnoreRule[T client.Object] struct {
 	Scope IgnoreScope `json:"scope,omitempty"`
 }
 
-// RuleSet is an interface for type-safe rule collections that
-// can be stored together in a single slice regardless of their type parameter.
-type RuleSet interface {
-	IntoUntyped() []UntypedFieldIgnoreRule
-}
-
-// RulesFor returns the typed rules from a mixed slice that match type T.
-func RulesFor[T client.Object](allRules []RuleSet, _ T) TypedRuleSet[T] {
-	var result TypedRuleSet[T]
-	for _, rules := range allRules {
-		if typed, ok := rules.(TypedRuleSet[T]); ok {
-			result = append(result, typed...)
-		}
+func NewFieldIgnoreRule[T client.Object](obj T, fields []string, scope IgnoreScope) FieldIgnoreRule[T] {
+	return FieldIgnoreRule[T]{
+		obj:    obj,
+		Fields: fields,
+		Scope:  scope,
 	}
-	return result
 }
 
-// IntoUntypedAll flattens a mixed slice of typed rule sets into a single untyped slice.
-func IntoUntypedAll(allRules []RuleSet) []UntypedFieldIgnoreRule {
-	var result []UntypedFieldIgnoreRule
-	for _, rules := range allRules {
-		result = append(result, rules.IntoUntyped()...)
+func NewFieldIgnoreRuleWithName[T client.Object](obj T, name string, fields []string, scope IgnoreScope) FieldIgnoreRule[T] {
+	return FieldIgnoreRule[T]{
+		obj:    obj,
+		Name:   name,
+		Fields: fields,
+		Scope:  scope,
 	}
-	return result
 }
 
-// TypedRuleSet is a type-safe collection of field ignore rules for a specific resource type.
-type TypedRuleSet[T client.Object] []FieldIgnoreRule[T]
-
-// IntoUntyped converts typed rules into untyped rules for use with manifests.
-func (rules TypedRuleSet[T]) IntoUntyped() []UntypedFieldIgnoreRule {
-	gvk := gvkFor[T]()
-	result := make([]UntypedFieldIgnoreRule, len(rules))
-	for i, r := range rules {
-		result[i] = UntypedFieldIgnoreRule{
-			Group:   gvk.Group,
-			Version: gvk.Version,
-			Kind:    gvk.Kind,
-			Name:    r.Name,
-			Fields:  r.Fields,
-			Scope:   r.Scope,
-		}
-	}
-	return result
-}
+// RuleSet is a collection of field ignore rules for a specific resource type.
+type RuleSet[T client.Object] []FieldIgnoreRule[T]
 
 // NewPredicate returns a predicate that ignores changes to fields specified by
 // the given typed rules. On update events it converts both old and new objects to
 // unstructured maps, removes the ignored fields (plus standard metadata noise
 // like resourceVersion, generation, managedFields), and only triggers
 // reconciliation when the remaining content differs.
-func (rules TypedRuleSet[T]) NewPredicate() predicate.Funcs {
+func (rules RuleSet[T]) NewPredicate() predicate.Funcs {
 	return predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			if e.ObjectOld == nil || e.ObjectNew == nil {
@@ -126,40 +105,37 @@ func (rules TypedRuleSet[T]) NewPredicate() predicate.Funcs {
 	}
 }
 
-// UntypedFieldIgnoreRule is the untyped version used for manifest matching.
+// GenericFieldIgnoreRule is the generic version used for manifest matching.
 // This is primarily for Helm post-rendering and runtime matching against unstructured manifests.
-type UntypedFieldIgnoreRule struct {
-	Group   string      `json:"group"`
-	Version string      `json:"version"`
-	Kind    string      `json:"kind"`
-	Name    string      `json:"name,omitempty"`
-	Fields  []string    `json:"fields"`
-	Scope   IgnoreScope `json:"scope,omitempty"`
-}
+type GenericFieldIgnoreRule = FieldIgnoreRule[client.Object]
 
 // MatchesManifest returns true if the untyped rule applies to an unstructured manifest map.
-func (r UntypedFieldIgnoreRule) MatchesManifest(manifest map[string]any) bool {
+func MatchesManifest(rule GenericFieldIgnoreRule, manifest map[string]any) bool {
 	apiVersion, _, _ := unstructured.NestedString(manifest, "apiVersion")
 	kind, _, _ := unstructured.NestedString(manifest, "kind")
 	name, _, _ := unstructured.NestedString(manifest, "metadata", "name")
 
-	gv, err := schema.ParseGroupVersion(apiVersion)
+	// Unstructured is handled by this even if the type is not registered in the scheme.
+	gvk, err := apiutil.GVKForObject(rule.obj, scheme.Scheme)
 	if err != nil {
 		return false
 	}
-	if r.Group != gv.Group || r.Version != gv.Version || r.Kind != kind {
+
+	if gvk.GroupVersion().Identifier() != apiVersion || gvk.Kind != kind {
 		return false
 	}
-	if r.Name != "" && r.Name != name {
+
+	if rule.Name != "" && rule.Name != name {
 		return false
 	}
+
 	return true
 }
 
 // RemoveFieldsFromManifest removes ignored fields from an unstructured manifest map.
 // Rules with Scope=Reconcile are never applied (predicate-only). Rules with
 // Scope=ReconcileAndUpgrade are only applied when isUpdate is true.
-func RemoveFieldsFromManifest(manifest map[string]any, rules []UntypedFieldIgnoreRule, isUpdate bool) {
+func RemoveFieldsFromManifest(manifest map[string]any, rules []GenericFieldIgnoreRule, isUpdate bool) {
 	for _, rule := range rules {
 		switch rule.Scope {
 		case IgnoreScopeReconcile:
@@ -169,7 +145,7 @@ func RemoveFieldsFromManifest(manifest map[string]any, rules []UntypedFieldIgnor
 				continue
 			}
 		}
-		if !rule.MatchesManifest(manifest) {
+		if !MatchesManifest(rule, manifest) {
 			continue
 		}
 		for _, field := range rule.Fields {
@@ -178,7 +154,7 @@ func RemoveFieldsFromManifest(manifest map[string]any, rules []UntypedFieldIgnor
 	}
 }
 
-func objectsChangedIgnoringFields[T client.Object](oldObj, newObj client.Object, rules TypedRuleSet[T]) bool {
+func objectsChangedIgnoringFields[T client.Object](oldObj, newObj client.Object, rules RuleSet[T]) bool {
 	name := newObj.GetName()
 
 	// Collect fields from all matching rules regardless of Scope.
@@ -213,24 +189,6 @@ func objectsChangedIgnoringFields[T client.Object](oldObj, newObj client.Object,
 	}
 
 	return !reflect.DeepEqual(oldMap, newMap)
-}
-
-// gvkFor derives the GVK for a client.Object type from the global scheme.
-func gvkFor[T client.Object]() schema.GroupVersionKind {
-	var t T
-	typ := reflect.TypeOf(t)
-	var instance reflect.Value
-	if typ.Kind() == reflect.Pointer {
-		instance = reflect.New(typ.Elem())
-	} else {
-		instance = reflect.New(typ)
-	}
-	obj := instance.Interface().(client.Object)
-	gvks, _, err := scheme.Scheme.ObjectKinds(obj)
-	if err != nil || len(gvks) == 0 {
-		panic("no GVK found for type " + typ.String())
-	}
-	return gvks[0]
 }
 
 // clearMetadataFields removes standard metadata fields that change on every

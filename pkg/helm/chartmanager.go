@@ -41,7 +41,7 @@ type ChartManager struct {
 	restClientGetter genericclioptions.RESTClientGetter
 	driver           string
 	managedByValue   string
-	fieldIgnoreRules []fieldignore.UntypedFieldIgnoreRule
+	fieldIgnoreRules []fieldignore.GenericFieldIgnoreRule
 }
 
 // ChartManagerOption is a functional option for configuring a ChartManager.
@@ -59,7 +59,7 @@ func WithManagedByValue(v string) ChartManagerOption {
 // WithFieldIgnoreRules configures the field ignore rules that the post-renderer
 // uses to strip fields from rendered manifests.
 // See fieldignore.IgnoreScope for how the Scope field controls stripping behavior.
-func WithFieldIgnoreRules(rules []fieldignore.UntypedFieldIgnoreRule) ChartManagerOption {
+func WithFieldIgnoreRules(rules []fieldignore.GenericFieldIgnoreRule) ChartManagerOption {
 	return func(cm *ChartManager) {
 		cm.fieldIgnoreRules = rules
 	}

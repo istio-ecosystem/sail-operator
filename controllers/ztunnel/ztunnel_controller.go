@@ -185,22 +185,17 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Named("ztunnel").
 
 		// namespaced resources
-		Watches(&corev1.ConfigMap{}, ownedResourceHandler,
-			builder.WithPredicates(fieldignore.RulesFor(fieldignore.DefaultRules, &corev1.ConfigMap{}).NewPredicate())).
-		Watches(&appsv1.DaemonSet{}, ownedResourceHandler,
-			builder.WithPredicates(fieldignore.RulesFor(fieldignore.DefaultRules, &appsv1.DaemonSet{}).NewPredicate())).
-		Watches(&corev1.ResourceQuota{}, ownedResourceHandler,
-			builder.WithPredicates(fieldignore.RulesFor(fieldignore.DefaultRules, &corev1.ResourceQuota{}).NewPredicate())).
+		Watches(&corev1.ConfigMap{}, ownedResourceHandler).
+		Watches(&appsv1.DaemonSet{}, ownedResourceHandler).
+		Watches(&corev1.ResourceQuota{}, ownedResourceHandler).
 		Watches(&corev1.ServiceAccount{}, ownedResourceHandler,
-			builder.WithPredicates(fieldignore.RulesFor(fieldignore.DefaultRules, &corev1.ServiceAccount{}).NewPredicate(), predicate.IgnoreUpdateWhenAnnotation())).
+			builder.WithPredicates(fieldignore.ServiceAccountIgnoreRules.NewPredicate(), predicate.IgnoreUpdateWhenAnnotation())).
 
 		// cluster-scoped resources
 		// +lint-watches:ignore: Namespace (not present in charts, but must be watched to reconcile ZTunnel when its namespace is created)
 		Watches(&corev1.Namespace{}, namespaceHandler).
-		Watches(&rbacv1.ClusterRole{}, ownedResourceHandler,
-			builder.WithPredicates(fieldignore.RulesFor(fieldignore.DefaultRules, &rbacv1.ClusterRole{}).NewPredicate())).
-		Watches(&rbacv1.ClusterRoleBinding{}, ownedResourceHandler,
-			builder.WithPredicates(fieldignore.RulesFor(fieldignore.DefaultRules, &rbacv1.ClusterRoleBinding{}).NewPredicate())).
+		Watches(&rbacv1.ClusterRole{}, ownedResourceHandler).
+		Watches(&rbacv1.ClusterRoleBinding{}, ownedResourceHandler).
 		Watches(&v1.Istio{}, operatorResourcesHandler).
 		Watches(&v1.IstioRevision{}, operatorResourcesHandler).
 		Complete(reconciler.NewStandardReconcilerWithFinalizer[*v1.ZTunnel](r.Client, r.Reconcile, r.Finalize, constants.FinalizerName))

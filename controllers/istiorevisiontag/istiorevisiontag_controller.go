@@ -253,8 +253,8 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&v1.Istio{}, operatorResourcesHandler).
 		Watches(&v1.IstioRevision{}, operatorResourcesHandler).
 		Watches(&admissionv1.MutatingWebhookConfiguration{}, ownedResourceHandler,
-			builder.WithPredicates(fieldignore.RulesFor(fieldignore.DefaultRules, &admissionv1.MutatingWebhookConfiguration{}).NewPredicate())).
-		Complete(reconciler.NewStandardReconcilerWithFinalizer[*v1.IstioRevisionTag](r.Client, r.Reconcile, r.Finalize, constants.FinalizerName))
+			builder.WithPredicates(fieldignore.ValidatingWebhookIgnoreRules.NewPredicate())).
+		Complete(reconciler.NewStandardReconcilerWithFinalizer(r.Client, r.Reconcile, r.Finalize, constants.FinalizerName))
 }
 
 func (r *Reconciler) determineStatus(ctx context.Context, tag *v1.IstioRevisionTag,

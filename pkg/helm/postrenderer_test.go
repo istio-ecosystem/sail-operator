@@ -21,48 +21,26 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/fieldignore"
+	admissionv1 "k8s.io/api/admissionregistration/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // defaultTestRules replicates the built-in field ignore rules used in production.
-var defaultTestRules = []fieldignore.UntypedFieldIgnoreRule{
-	{
-		Group:   "admissionregistration.k8s.io",
-		Version: "v1",
-		Kind:    "ValidatingWebhookConfiguration",
-		Fields:  []string{"webhooks[*].failurePolicy"},
-		Scope:   fieldignore.IgnoreScopeReconcileAndUpgrade,
-	},
-	{
-		Group:   "admissionregistration.k8s.io",
-		Version: "v1",
-		Kind:    "ValidatingWebhookConfiguration",
-		Fields:  []string{"webhooks[*].clientConfig.caBundle"},
-	},
-	{
-		Group:   "admissionregistration.k8s.io",
-		Version: "v1",
-		Kind:    "MutatingWebhookConfiguration",
-		Fields:  []string{"webhooks[*].clientConfig.caBundle"},
-	},
-	{
-		Group:   "",
-		Version: "v1",
-		Kind:    "ServiceAccount",
-		Fields:  []string{"imagePullSecrets"},
-	},
-	{
-		Group:   "",
-		Version: "v1",
-		Kind:    "ServiceAccount",
-		Fields:  []string{"automountServiceAccountToken"},
-	},
-	{
-		Group:   "",
-		Version: "v1",
-		Kind:    "ServiceAccount",
-		Fields:  []string{"secrets"},
-	},
+var defaultTestRules = []fieldignore.GenericFieldIgnoreRule{
+	fieldignore.NewFieldIgnoreRule[client.Object](&admissionv1.ValidatingWebhookConfiguration{},
+		[]string{"webhooks[*].failurePolicy"}, fieldignore.IgnoreScopeReconcileAndUpgrade),
+	fieldignore.NewFieldIgnoreRule[client.Object](&admissionv1.ValidatingWebhookConfiguration{},
+		[]string{"webhooks[*].clientConfig.caBundle"}, fieldignore.IgnoreScopeAlways),
+	fieldignore.NewFieldIgnoreRule[client.Object](&admissionv1.MutatingWebhookConfiguration{},
+		[]string{"webhooks[*].clientConfig.caBundle"}, fieldignore.IgnoreScopeAlways),
+	fieldignore.NewFieldIgnoreRule[client.Object](&corev1.ServiceAccount{},
+		[]string{"imagePullSecrets"}, fieldignore.IgnoreScopeAlways),
+	fieldignore.NewFieldIgnoreRule[client.Object](&corev1.ServiceAccount{},
+		[]string{"automountServiceAccountToken"}, fieldignore.IgnoreScopeAlways),
+	fieldignore.NewFieldIgnoreRule[client.Object](&corev1.ServiceAccount{},
+		[]string{"secrets"}, fieldignore.IgnoreScopeAlways),
 }
 
 func TestHelmPostRenderer(t *testing.T) {
@@ -71,7 +49,7 @@ func TestHelmPostRenderer(t *testing.T) {
 		ownerReference   *metav1.OwnerReference
 		ownerNamespace   string
 		isUpdate         bool
-		fieldIgnoreRules []fieldignore.UntypedFieldIgnoreRule
+		fieldIgnoreRules []fieldignore.GenericFieldIgnoreRule
 		input            string
 		expected         string
 	}{
