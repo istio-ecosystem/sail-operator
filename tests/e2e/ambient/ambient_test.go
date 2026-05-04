@@ -291,6 +291,12 @@ spec:
 				})
 
 				AfterAll(func(ctx SpecContext) {
+					// Log debug info before Cleanup: Cleaner removes CRs created after Record()
+					// (e.g. Istio), and parent AfterAll hooks run after this AfterAll.
+					if CurrentSpecReport().Failed() {
+						common.LogDebugInfo(common.Ambient, k)
+						debugInfoLogged = true
+					}
 					if CurrentSpecReport().Failed() && keepOnFailure {
 						return
 					}
@@ -301,7 +307,7 @@ spec:
 		}
 
 		AfterAll(func(ctx SpecContext) {
-			if CurrentSpecReport().Failed() {
+			if CurrentSpecReport().Failed() && !debugInfoLogged {
 				common.LogDebugInfo(common.Ambient, k)
 				debugInfoLogged = true
 			}
