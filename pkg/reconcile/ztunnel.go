@@ -68,7 +68,9 @@ func (r *ZTunnelReconciler) Validate(ctx context.Context, version, namespace str
 }
 
 // ComputeValues computes the final Helm values by applying digests, profiles, and user overrides.
-func (r *ZTunnelReconciler) ComputeValues(version string, userValues *v1.ZTunnelValues) (helm.Values, error) {
+// If baseValues are provided (e.g. from a referenced IstioRevision), they are treated like an additional
+// profile layer: applied on top of profile defaults, with user values then applied on top.
+func (r *ZTunnelReconciler) ComputeValues(version string, userValues *v1.ZTunnelValues, baseValues ...helm.Values) (helm.Values, error) {
 	resolvedVersion, err := istioversion.Resolve(version)
 	if err != nil {
 		if istioversion.IsEOLVersion(version) {
@@ -84,17 +86,30 @@ func (r *ZTunnelReconciler) ComputeValues(version string, userValues *v1.ZTunnel
 	// Apply image digests from configuration, if not already set by user
 	userValues = ApplyZTunnelImageDigests(resolvedVersion, userValues, config.Config)
 
-	// Apply userValues on top of defaultValues from profiles
-	mergedHelmValues, err := istiovalues.ApplyProfilesAndPlatform(
-		r.cfg.ResourceFS, resolvedVersion, r.cfg.Platform, r.cfg.DefaultProfile, ztunnelProfile, helm.FromValues(userValues))
-	if err != nil {
-		return nil, fmt.Errorf("failed to apply profile: %w", err)
-	}
-
 	// apply fips values
-	mergedHelmValues, err = istiovalues.ApplyZTunnelFipsValues(mergedHelmValues)
-	if err != nil {
-		return nil, fmt.Errorf("failed to apply FIPS values: %w", err)
+	istiovalues.ApplyZTunnelFipsValues(userValues)
+
+	var mergedHelmValues helm.Values
+	if len(baseValues) > 0 && baseValues[0] != nil {
+		// Apply base values (from IstioRevision) on top of profile defaults, like an additional profile
+		mergedHelmValues, err = istiovalues.ApplyProfilesAndPlatform(
+			r.cfg.ResourceFS, resolvedVersion, r.cfg.Platform, r.cfg.DefaultProfile, ztunnelProfile, baseValues[0])
+		if err != nil {
+			return nil, fmt.Errorf("failed to apply profile: %w", err)
+		}
+
+		// Apply user values on top so they always take precedence
+		mergedHelmValues, err = istiovalues.ApplyUserValues(mergedHelmValues, helm.FromValues(userValues))
+		if err != nil {
+			return nil, fmt.Errorf("failed to apply user values: %w", err)
+		}
+	} else {
+		// Apply userValues on top of defaultValues from profiles
+		mergedHelmValues, err = istiovalues.ApplyProfilesAndPlatform(
+			r.cfg.ResourceFS, resolvedVersion, r.cfg.Platform, r.cfg.DefaultProfile, ztunnelProfile, helm.FromValues(userValues))
+		if err != nil {
+			return nil, fmt.Errorf("failed to apply profile: %w", err)
+		}
 	}
 
 	// Apply any user Overrides configured as part of values.ztunnel
@@ -110,8 +125,12 @@ func (r *ZTunnelReconciler) ComputeValues(version string, userValues *v1.ZTunnel
 }
 
 // Install installs or upgrades the ztunnel Helm chart.
-func (r *ZTunnelReconciler) Install(ctx context.Context, version, namespace string, values *v1.ZTunnelValues, ownerRef *metav1.OwnerReference) error {
-	finalHelmValues, err := r.ComputeValues(version, values)
+// If baseValues are provided (e.g. from a referenced IstioRevision), they are passed to ComputeValues
+// to be merged early in the pipeline, before profiles and FIPS values are applied.
+func (r *ZTunnelReconciler) Install(
+	ctx context.Context, version, namespace string, values *v1.ZTunnelValues, ownerRef *metav1.OwnerReference, baseValues ...helm.Values,
+) error {
+	finalHelmValues, err := r.ComputeValues(version, values, baseValues...)
 	if err != nil {
 		return err
 	}

@@ -1628,7 +1628,7 @@ const (
 	MeshConfigH2UpgradePolicyUpgrade MeshConfigH2UpgradePolicy = "UPGRADE"
 )
 
-// +kubebuilder:validation:Enum=REGISTRY_ONLY;ALLOW_ANY
+// +kubebuilder:validation:Enum=REGISTRY_ONLY;ALLOW_ANY;ALLOW_ANY_DYNAMIC_DNS
 type MeshConfigOutboundTrafficPolicyMode string
 
 const (
@@ -1644,6 +1644,10 @@ const (
 	// This mode allows users that do not have all possible egress destinations registered through `ServiceEntry` configurations to still connect
 	// to arbitrary destinations.
 	MeshConfigOutboundTrafficPolicyModeAllowAny MeshConfigOutboundTrafficPolicyMode = "ALLOW_ANY"
+	// In `ALLOW_ANY_DYNAMIC_DNS` mode, traffic to unknown destinations will be allowed via dynamic DNS resolution.
+	// This mode allows users that do not have all possible egress destinations registered through `ServiceEntry` configurations to still connect
+	// to arbitrary destinations. Client TLS settings can be configured for connections to such destinations.
+	MeshConfigOutboundTrafficPolicyModeAllowAnyDynamicDns MeshConfigOutboundTrafficPolicyMode = "ALLOW_ANY_DYNAMIC_DNS"
 )
 
 // +kubebuilder:validation:Enum=PASSTHROUGH;LOCALHOST
@@ -2181,6 +2185,8 @@ type Certificate struct {
 // handling unknown outbound traffic from the application.
 type MeshConfigOutboundTrafficPolicy struct {
 	Mode MeshConfigOutboundTrafficPolicyMode `json:"mode,omitempty"`
+	// TLS settings for client connections to unknown destinations. Applicable only when mode is set to `ALLOW_ANY_DYNAMIC_DNS`.
+	Tls *ClientTLSSettings `json:"tls,omitempty"`
 }
 
 type MeshConfigInboundTrafficPolicy struct {
@@ -3203,7 +3209,7 @@ type MeshConfigExtensionProviderResourceDetectorsDynatraceResourceDetector struc
 
 const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\n" +
-	"\x1amesh/v1alpha1/config.proto\x12\x13istio.mesh.v1alpha1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19mesh/v1alpha1/proxy.proto\x1a*networking/v1alpha3/destination_rule.proto\x1a)networking/v1alpha3/virtual_service.proto\"\xe6r\n" +
+	"\x1amesh/v1alpha1/config.proto\x12\x13istio.mesh.v1alpha1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19mesh/v1alpha1/proxy.proto\x1a*networking/v1alpha3/destination_rule.proto\x1a)networking/v1alpha3/virtual_service.proto\"\xc1s\n" +
 	"\n" +
 	"MeshConfig\x12*\n" +
 	"\x11proxy_listen_port\x18\x04 \x01(\x05R\x0fproxyListenPort\x129\n" +
@@ -3252,12 +3258,14 @@ const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\x12path_normalization\x18= \x01(\v26.istio.mesh.v1alpha1.MeshConfig.ProxyPathNormalizationR\x11pathNormalization\x12_\n" +
 	"\x19default_http_retry_policy\x18> \x01(\v2$.istio.networking.v1alpha3.HTTPRetryR\x16defaultHttpRetryPolicy\x12F\n" +
 	"\tmesh_mTLS\x18? \x01(\v2).istio.mesh.v1alpha1.MeshConfig.TLSConfigR\bmeshMTLS\x12L\n" +
-	"\ftls_defaults\x18@ \x01(\v2).istio.mesh.v1alpha1.MeshConfig.TLSConfigR\vtlsDefaults\x1a\xad\x01\n" +
+	"\ftls_defaults\x18@ \x01(\v2).istio.mesh.v1alpha1.MeshConfig.TLSConfigR\vtlsDefaults\x1a\x88\x02\n" +
 	"\x15OutboundTrafficPolicy\x12N\n" +
-	"\x04mode\x18\x01 \x01(\x0e2:.istio.mesh.v1alpha1.MeshConfig.OutboundTrafficPolicy.ModeR\x04mode\"D\n" +
+	"\x04mode\x18\x01 \x01(\x0e2:.istio.mesh.v1alpha1.MeshConfig.OutboundTrafficPolicy.ModeR\x04mode\x12>\n" +
+	"\x03tls\x18\x02 \x01(\v2,.istio.networking.v1alpha3.ClientTLSSettingsR\x03tls\"_\n" +
 	"\x04Mode\x12\x11\n" +
 	"\rREGISTRY_ONLY\x10\x00\x12\r\n" +
-	"\tALLOW_ANY\x10\x01\"\x04\b\x02\x10\x02*\x14VIRTUAL_SERVICE_ONLY\x1a\x8d\x01\n" +
+	"\tALLOW_ANY\x10\x01\x12\x19\n" +
+	"\x15ALLOW_ANY_DYNAMIC_DNS\x10\x03\"\x04\b\x02\x10\x02*\x14VIRTUAL_SERVICE_ONLY\x1a\x8d\x01\n" +
 	"\x14InboundTrafficPolicy\x12M\n" +
 	"\x04mode\x18\x01 \x01(\x0e29.istio.mesh.v1alpha1.MeshConfig.InboundTrafficPolicy.ModeR\x04mode\"&\n" +
 	"\x04Mode\x12\x0f\n" +
@@ -4606,7 +4614,7 @@ const fileMeshV1alpha1ProxyProtoRawDesc = "" +
 
 	// The following values are used to construct proxy image url.
 // format: `${hub}/${image_name}/${tag}-${image_type}`,
-// example: `docker.io/istio/proxyv2:1.11.1` or `docker.io/istio/proxyv2:1.11.1-distroless`.
+// example: `registry.istio.io/release/proxyv2:1.11.1` or `registry.istio.io/release/proxyv2:1.11.1-distroless`.
 // This information was previously part of the Values API.
 type ProxyImage struct {
 	// The image type of the image.

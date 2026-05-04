@@ -19,10 +19,12 @@ import (
 	"io/fs"
 	"strings"
 
-	"helm.sh/helm/v3/pkg/chart"
-	chartLoader "helm.sh/helm/v3/pkg/chart/loader"
-	"helm.sh/helm/v3/pkg/chartutil"
-	"helm.sh/helm/v3/pkg/engine"
+	"helm.sh/helm/v4/pkg/chart/common"
+	chartutil "helm.sh/helm/v4/pkg/chart/common/util"
+	"helm.sh/helm/v4/pkg/chart/loader/archive"
+	chartv2 "helm.sh/helm/v4/pkg/chart/v2"
+	chartv2loader "helm.sh/helm/v4/pkg/chart/v2/loader"
+	"helm.sh/helm/v4/pkg/engine"
 )
 
 // LoadChart loads a Helm chart from an fs.FS at the specified path.
@@ -30,8 +32,8 @@ import (
 //
 // The chartPath should be the path to the chart directory within the filesystem,
 // e.g., "v1.28.2/charts/istiod".
-func LoadChart(resourceFS fs.FS, chartPath string) (*chart.Chart, error) {
-	var files []*chartLoader.BufferedFile
+func LoadChart(resourceFS fs.FS, chartPath string) (*chartv2.Chart, error) {
+	var files []*archive.BufferedFile
 
 	err := fs.WalkDir(resourceFS, chartPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -53,7 +55,7 @@ func LoadChart(resourceFS fs.FS, chartPath string) (*chart.Chart, error) {
 		relPath := strings.TrimPrefix(path, chartPath)
 		relPath = strings.TrimPrefix(relPath, "/")
 
-		files = append(files, &chartLoader.BufferedFile{
+		files = append(files, &archive.BufferedFile{
 			Name: relPath,
 			Data: data,
 		})
@@ -67,7 +69,7 @@ func LoadChart(resourceFS fs.FS, chartPath string) (*chart.Chart, error) {
 		return nil, fmt.Errorf("no files found in chart directory %s", chartPath)
 	}
 
-	loadedChart, err := chartLoader.LoadFiles(files)
+	loadedChart, err := chartv2loader.LoadFiles(files)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load chart from files: %w", err)
 	}
@@ -89,15 +91,13 @@ func RenderChart(resourceFS fs.FS, chartPath string, values Values, namespace, r
 
 // RenderLoadedChart renders an already-loaded chart's templates with the provided values.
 // Returns a map of template name to rendered content.
-func RenderLoadedChart(loadedChart *chart.Chart, values Values, namespace, releaseName string) (map[string]string, error) {
-	// Create release options for rendering
-	options := chartutil.ReleaseOptions{
+func RenderLoadedChart(loadedChart *chartv2.Chart, values Values, namespace, releaseName string) (map[string]string, error) {
+	options := common.ReleaseOptions{
 		Name:      releaseName,
 		Namespace: namespace,
 		IsInstall: true,
 	}
 
-	// Merge values with chart defaults
 	chartValues, err := chartutil.ToRenderValues(loadedChart, values, options, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create render values: %w", err)

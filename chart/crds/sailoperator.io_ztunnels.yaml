@@ -33,6 +33,10 @@ spec:
       jsonPath: .spec.version
       name: Version
       type: string
+    - description: The referenced IstioRevision.
+      jsonPath: .status.istioRevision
+      name: Revision
+      type: string
     - description: The age of the object
       jsonPath: .metadata.creationTimestamp
       name: Age
@@ -62,7 +66,7 @@ spec:
           spec:
             default:
               namespace: ztunnel
-              version: v1.29.1
+              version: v1.30.0-alpha.2
             description: ZTunnelSpec defines the desired state of ZTunnel
             properties:
               namespace:
@@ -70,6 +74,26 @@ spec:
                 description: Namespace to which the Istio ztunnel component should
                   be installed.
                 type: string
+              targetRef:
+                description: |-
+                  The Istio control plane that this ZTunnel instance is associated with. Valid references are Istio and IstioRevision resources, Istio resources are always resolved to their current active revision.
+                  Values relevant for ZTunnel will be copied from the referenced IstioRevision resource, these are `spec.values.global`, `spec.values.meshConfig`, `spec.values.revision`. Any user configuration in the ZTunnel spec will always take precedence over the settings copied from the Istio resource, however.
+                properties:
+                  kind:
+                    description: Kind is the kind of the target resource.
+                    enum:
+                    - Istio
+                    - IstioRevision
+                    type: string
+                  name:
+                    description: Name is the name of the target resource.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                required:
+                - kind
+                - name
+                type: object
               values:
                 description: Defines the values to be passed to the Helm charts when
                   installing Istio ztunnel.
@@ -3509,15 +3533,19 @@ spec:
                     type: object
                 type: object
               version:
-                default: v1.29.1
+                default: v1.30.0-alpha.2
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.29-latest, v1.29.1, v1.29.0, v1.28-latest, v1.28.5, v1.28.4, v1.28.3, v1.28.2, v1.28.1, v1.28.0, master, v1.30-alpha.0577d34d.
+                  Must be one of: v1.30-latest, v1.30.0-alpha.2, v1.29-latest, v1.29.2, v1.29.1, v1.29.0, v1.28-latest, v1.28.6, v1.28.5, v1.28.4, v1.28.3, v1.28.2, v1.28.1, v1.28.0, master, v1.31.0-alpha.30efb2b4.
                 enum:
+                - v1.30-latest
+                - v1.30.0-alpha.2
                 - v1.29-latest
+                - v1.29.2
                 - v1.29.1
                 - v1.29.0
                 - v1.28-latest
+                - v1.28.6
                 - v1.28.5
                 - v1.28.4
                 - v1.28.3
@@ -3525,6 +3553,7 @@ spec:
                 - v1.28.1
                 - v1.28.0
                 - v1.27-latest
+                - v1.27.9
                 - v1.27.8
                 - v1.27.7
                 - v1.27.6
@@ -3559,7 +3588,7 @@ spec:
                 - v1.24.1
                 - v1.24.0
                 - master
-                - v1.30-alpha.0577d34d
+                - v1.31.0-alpha.30efb2b4
                 type: string
             required:
             - namespace
@@ -3572,8 +3601,8 @@ spec:
                 description: Represents the latest available observations of the object's
                   current state.
                 items:
-                  description: ZTunnelCondition represents a specific observation
-                    of the ZTunnel object's state.
+                  description: StatusCondition represents a specific observation of
+                    an object's state.
                   properties:
                     lastTransitionTime:
                       description: Last time the condition transitioned from one status
@@ -3597,6 +3626,9 @@ spec:
                       type: string
                   type: object
                 type: array
+              istioRevision:
+                description: IstioRevision stores the name of the referenced IstioRevision
+                type: string
               observedGeneration:
                 description: |-
                   ObservedGeneration is the most recent generation observed for this
@@ -3669,7 +3701,7 @@ spec:
             default:
               namespace: ztunnel
               profile: ambient
-              version: v1.29.1
+              version: v1.30.0-alpha.2
             description: ZTunnelSpec defines the desired state of ZTunnel
             properties:
               namespace:
@@ -7134,15 +7166,19 @@ spec:
                     type: object
                 type: object
               version:
-                default: v1.29.1
+                default: v1.30.0-alpha.2
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.29-latest, v1.29.1, v1.29.0, v1.28-latest, v1.28.5, v1.28.4, v1.28.3, v1.28.2, v1.28.1, v1.28.0, master, v1.30-alpha.0577d34d.
+                  Must be one of: v1.30-latest, v1.30.0-alpha.2, v1.29-latest, v1.29.2, v1.29.1, v1.29.0, v1.28-latest, v1.28.6, v1.28.5, v1.28.4, v1.28.3, v1.28.2, v1.28.1, v1.28.0, master, v1.31.0-alpha.30efb2b4.
                 enum:
+                - v1.30-latest
+                - v1.30.0-alpha.2
                 - v1.29-latest
+                - v1.29.2
                 - v1.29.1
                 - v1.29.0
                 - v1.28-latest
+                - v1.28.6
                 - v1.28.5
                 - v1.28.4
                 - v1.28.3
@@ -7150,6 +7186,7 @@ spec:
                 - v1.28.1
                 - v1.28.0
                 - v1.27-latest
+                - v1.27.9
                 - v1.27.8
                 - v1.27.7
                 - v1.27.6
@@ -7184,7 +7221,7 @@ spec:
                 - v1.24.1
                 - v1.24.0
                 - master
-                - v1.30-alpha.0577d34d
+                - v1.31.0-alpha.30efb2b4
                 type: string
             required:
             - namespace
@@ -7197,8 +7234,8 @@ spec:
                 description: Represents the latest available observations of the object's
                   current state.
                 items:
-                  description: ZTunnelCondition represents a specific observation
-                    of the ZTunnel object's state.
+                  description: StatusCondition represents a specific observation of
+                    an object's state.
                   properties:
                     lastTransitionTime:
                       description: Last time the condition transitioned from one status

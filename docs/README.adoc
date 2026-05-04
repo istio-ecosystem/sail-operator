@@ -1,9 +1,9 @@
 // Variables embedded for GitHub compatibility
-:istio_latest_version: 1.29.1
-:istio_latest_version_revision_format: 1-29-1
-:istio_latest_tag: v1.29-latest
-:istio_latest_minus_one_version: 1.29.0
-:istio_latest_minus_one_version_revision_format: 1-29-0
+:istio_latest_version: 1.30.0-alpha.2
+:istio_latest_version_revision_format: 1-30-0-alpha-2
+:istio_latest_tag: v1.30.0-alpha-latest
+:istio_latest_minus_one_version: 1.29.2
+:istio_latest_minus_one_version_revision_format: 1-29-2
 
 link:../[Return to Project Root]
 
@@ -97,6 +97,9 @@ link:../[Return to Project Root]
 *** link:addons/observability.adoc#integrating-kiali-with-openshift-distributed-tracing[Integrating Kiali with OpenShift Distributed Tracing]
 * Certificates management
 ** link:general/plugin-ca.adoc[Plug in CA Certificates]
+* Advanced Configuration
+** link:general/resource-customization.adoc[Resource Customization]
+*** link:general/resource-customization.adoc#custom-resource-annotations[Custom Resource Annotations]
 * link:general/getting-started.adoc#uninstalling[Uninstalling]
 ** link:general/getting-started.adoc#deleting-istio[Deleting Istio]
 ** link:general/getting-started.adoc#deleting-istiocni[Deleting IstioCNI]

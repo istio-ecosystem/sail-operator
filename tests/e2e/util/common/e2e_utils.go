@@ -36,6 +36,7 @@ import (
 	"github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"istio.io/istio/pkg/ptr"
@@ -515,4 +516,17 @@ func HaveContainersThat(matcher types.GomegaMatcher) types.GomegaMatcher {
 
 func ImageFromRegistry(regexp string) types.GomegaMatcher {
 	return HaveField("Image", MatchRegexp(regexp))
+}
+
+func EnsureNamespace(ctx context.Context, ctrlclient client.Client, namespace string) {
+	GinkgoHelper()
+	ns := &corev1.Namespace{}
+	if err := ctrlclient.Get(ctx, client.ObjectKey{Name: namespace}, ns); apierrors.IsNotFound(err) {
+		ns.Name = namespace
+		if err := ctrlclient.Create(ctx, ns); err != nil && !apierrors.IsAlreadyExists(err) {
+			Fail(fmt.Sprintf("Failed to create namespace: %s", err))
+		}
+	} else if err != nil {
+		Fail(fmt.Sprintf("Failed to get namespace: %s", err))
+	}
 }

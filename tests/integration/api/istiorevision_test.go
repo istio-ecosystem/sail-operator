@@ -205,7 +205,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 
 		It("shows dependencies unhealthy when IstioCNI is missing", func() {
 			expectCondition(ctx, revName, v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionFalse,
-				func(g Gomega, condition *v1.IstioRevisionCondition) {
+				func(g Gomega, condition *v1.StatusCondition) {
 					g.Expect(condition.Reason).To(Equal(v1.IstioRevisionReasonIstioCNINotFound))
 				})
 		})
@@ -213,7 +213,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 		It("shows dependencies unhealthy when IstioCNI is unhealthy", func() {
 			Expect(k8sClient.Create(ctx, cni)).To(Succeed())
 			expectCondition(ctx, revName, v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionFalse,
-				func(g Gomega, condition *v1.IstioRevisionCondition) {
+				func(g Gomega, condition *v1.StatusCondition) {
 					g.Expect(condition.Reason).To(Equal(v1.IstioRevisionReasonIstioCNINotHealthy))
 				})
 		})
@@ -298,7 +298,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 
 		It("shows dependencies unhealthy when ZTunnel is missing", func() {
 			expectCondition(ctx, revName, v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionFalse,
-				func(g Gomega, condition *v1.IstioRevisionCondition) {
+				func(g Gomega, condition *v1.StatusCondition) {
 					g.Expect(condition.Reason).To(Equal(v1.IstioRevisionReasonZTunnelNotFound))
 				})
 		})
@@ -306,7 +306,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 		It("shows dependencies unhealthy when ZTunnel is unhealthy", func() {
 			Expect(k8sClient.Create(ctx, ztunnel)).To(Succeed())
 			expectCondition(ctx, revName, v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionFalse,
-				func(g Gomega, condition *v1.IstioRevisionCondition) {
+				func(g Gomega, condition *v1.StatusCondition) {
 					g.Expect(condition.Reason).To(Equal(v1.IstioRevisionReasonZTunnelNotHealthy))
 				})
 		})
@@ -353,7 +353,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 
 			It("indicates in the status that the namespace doesn't exist", func() {
 				expectCondition(ctx, revName, v1.IstioRevisionConditionReconciled, metav1.ConditionFalse,
-					func(g Gomega, condition *v1.IstioRevisionCondition) {
+					func(g Gomega, condition *v1.StatusCondition) {
 						g.Expect(condition.Reason).To(Equal(v1.IstioRevisionReasonReconcileError))
 						g.Expect(condition.Message).To(ContainSubstring(fmt.Sprintf("namespace %q doesn't exist", nsName)))
 					})
@@ -665,8 +665,6 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 			}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(webhook), webhook)).To(Succeed())
 
-			GinkgoWriter.Println("webhook:", webhook)
-
 			expectNoReconciliation(istioRevisionController, func() {
 				By("adding sailoperator.io/ignore annotation to ConfigMap")
 				webhook.Annotations = map[string]string{
@@ -909,7 +907,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 					Name: "default",
 				},
 				Spec: v1.IstioRevisionTagSpec{
-					TargetRef: v1.IstioRevisionTagTargetReference{
+					TargetRef: v1.TargetReference{
 						Kind: "IstioRevision",
 						Name: revName,
 					},
@@ -1082,7 +1080,7 @@ func createPod(ctx context.Context, name, ns string, labels map[string]string) *
 // expectCondition on a given IstioRevision (identified by name) to eventually have a given status.
 // Additional checks on the status can be done via an optional supplementary functions.
 func expectCondition(ctx context.Context, name string, condition v1.IstioRevisionConditionType, status metav1.ConditionStatus,
-	extraChecks ...func(Gomega, *v1.IstioRevisionCondition),
+	extraChecks ...func(Gomega, *v1.StatusCondition),
 ) {
 	Eventually(func(g Gomega) {
 		rev := &v1.IstioRevision{}
@@ -1099,7 +1097,7 @@ func expectCondition(ctx context.Context, name string, condition v1.IstioRevisio
 
 // expectZTunnelCondition on the ZTunnel resource to eventually have a given status.
 func expectZTunnelCondition(ctx context.Context, condition v1.ZTunnelConditionType, status metav1.ConditionStatus,
-	extraChecks ...func(Gomega, *v1.ZTunnelCondition),
+	extraChecks ...func(Gomega, *v1.StatusCondition),
 ) {
 	ztunnelKey := client.ObjectKey{Name: "default"}
 	ztunnel := v1.ZTunnel{}

@@ -115,6 +115,8 @@ spec:
 					BeforeAll(func() {
 						common.CreateIstio(k, version.Name, `
 values:
+  global:
+    network: custom-network
   pilot:
     trustedZtunnelNamespace: ztunnel
 profile: ambient`)
@@ -166,11 +168,14 @@ metadata:
 spec:
   version: %s
   namespace: %s
+  targetRef:
+    kind: Istio
+    name: %s
   values:
     ztunnel:
       env:
         CUSTOM_ENV_VAR: "true"`
-						ztunnelYaml = fmt.Sprintf(ztunnelYaml, version.Name, ztunnelNamespace)
+						ztunnelYaml = fmt.Sprintf(ztunnelYaml, version.Name, ztunnelNamespace, istioName)
 						Log("ZTunnel YAML:", ztunnelYaml)
 						Expect(k.CreateFromString(ztunnelYaml)).To(Succeed(), "ZTunnel creation failed")
 						Success("ZTunnel created")
@@ -206,6 +211,12 @@ spec:
 						Expect(ztunnelObj).To(common.HaveContainersThat(ContainElement(WithTransform(getEnvVars,
 							ContainElement(corev1.EnvVar{Name: "CUSTOM_ENV_VAR", Value: "true"})))),
 							"Expected CUSTOM_ENV_VAR to be set to true, but not found")
+
+						if version.Version.GreaterThanEqual(semver.New(1, 27, 0, "", "")) {
+							Expect(ztunnelObj).To(common.HaveContainersThat(ContainElement(WithTransform(getEnvVars,
+								ContainElement(corev1.EnvVar{Name: "NETWORK", Value: "custom-network"})))),
+								"Expected NETWORK to be set to custom-network, but not found")
+						}
 					})
 				})
 

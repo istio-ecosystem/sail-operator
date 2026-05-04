@@ -98,6 +98,16 @@ for i in $(seq 0 $((version_count - 1))); do
     continue
   fi
 
+  # Skip versions that reference pre-release versions (contain dash in ref)
+  # It's for cases when the pre-release version is added manually for early testing
+  has_ref=$(yq ".versions[$i] | has(\"ref\")" "${VERSIONS_FILE}")
+  if [ "$has_ref" = "true" ]; then
+    ref_value=$(yq ".versions[$i].ref" "${VERSIONS_FILE}" | tr -d '"')
+    if [[ "$ref_value" == *"-"* ]]; then
+      continue
+    fi
+  fi
+
   # Check if version has EOL flag
   has_eol=$(yq ".versions[$i].eol // false" "${VERSIONS_FILE}")
 

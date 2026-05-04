@@ -68,7 +68,7 @@ spec:
 		},
 	}
 
-	result, err := ComputeValues(values, namespace, version, config.PlatformOpenShift, "default", "my-profile", os.DirFS(resourceDir), revisionName)
+	result, err := ComputeValues(values, namespace, version, config.PlatformOpenShift, "default", "my-profile", os.DirFS(resourceDir), revisionName, nil)
 	if err != nil {
 		t.Errorf("Expected no error, but got an error: %v", err)
 	}
@@ -113,7 +113,7 @@ spec:`)), 0o644))
 	istiovalues.FipsEnabled = true
 	values := &v1.Values{}
 	result, err := ComputeValues(values, namespace, version, config.PlatformOpenShift, "default", "",
-		os.DirFS(resourceDir), revisionName)
+		os.DirFS(resourceDir), revisionName, nil)
 	if err != nil {
 		t.Errorf("Expected no error, but got an error: %v", err)
 	}

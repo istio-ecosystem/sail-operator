@@ -130,7 +130,7 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 
 				When("creating the IstioRevisionTag", func() {
 					BeforeAll(func() {
-						targetRef := v1.IstioRevisionTagTargetReference{
+						targetRef := v1.TargetReference{
 							Kind: referencedResource,
 							Name: getRevisionName(istio, istio.Spec.Version),
 						}
@@ -256,7 +256,7 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 					Name: "default",
 				},
 				Spec: v1.IstioRevisionTagSpec{
-					TargetRef: v1.IstioRevisionTagTargetReference{
+					TargetRef: v1.TargetReference{
 						Kind: "Istio",
 						Name: istioName,
 					},
@@ -301,7 +301,7 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 					Name: "default",
 				},
 				Spec: v1.IstioRevisionTagSpec{
-					TargetRef: v1.IstioRevisionTagTargetReference{
+					TargetRef: v1.TargetReference{
 						Kind: "Istio",
 						Name: istioName,
 					},
@@ -387,7 +387,7 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 					Name: defaultTagName,
 				},
 				Spec: v1.IstioRevisionTagSpec{
-					TargetRef: v1.IstioRevisionTagTargetReference{
+					TargetRef: v1.TargetReference{
 						Kind: "Istio",
 						Name: istioName,
 					},
@@ -434,7 +434,7 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 					Name: defaultTagName,
 				},
 				Spec: v1.IstioRevisionTagSpec{
-					TargetRef: v1.IstioRevisionTagTargetReference{
+					TargetRef: v1.TargetReference{
 						Kind: "Istio",
 						Name: istioName,
 					},
