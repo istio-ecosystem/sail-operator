@@ -41,7 +41,7 @@ func TestApplyOverrides(t *testing.T) {
 				Global: &v1.GlobalConfig{
 					IstioNamespace: ptr.Of("ns1"),
 				},
-				DefaultRevision: ptr.Of(""),
+				DefaultRevision: nil,
 			},
 		},
 		{
@@ -54,7 +54,7 @@ func TestApplyOverrides(t *testing.T) {
 				Global: &v1.GlobalConfig{
 					IstioNamespace: ptr.Of("ns1"),
 				},
-				DefaultRevision: ptr.Of(""),
+				DefaultRevision: nil,
 			},
 		},
 		{
@@ -69,7 +69,7 @@ func TestApplyOverrides(t *testing.T) {
 				Global: &v1.GlobalConfig{
 					IstioNamespace: ptr.Of("ns1"),
 				},
-				DefaultRevision: ptr.Of(""),
+				DefaultRevision: nil,
 			},
 		},
 		{
@@ -86,7 +86,7 @@ func TestApplyOverrides(t *testing.T) {
 				Global: &v1.GlobalConfig{
 					IstioNamespace: ptr.Of("ns1"),
 				},
-				DefaultRevision: ptr.Of(""),
+				DefaultRevision: nil,
 			},
 		},
 		{
@@ -101,7 +101,7 @@ func TestApplyOverrides(t *testing.T) {
 				Global: &v1.GlobalConfig{
 					IstioNamespace: ptr.Of("ns1"),
 				},
-				DefaultRevision: ptr.Of(""),
+				DefaultRevision: nil,
 			},
 		},
 	}

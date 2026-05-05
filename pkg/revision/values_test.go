@@ -84,7 +84,7 @@ spec:
 			IstioNamespace: ptr.Of(namespace), // this value is always added/overridden based on IstioRevision.spec.namespace
 		},
 		Revision:        ptr.Of(revisionName),
-		DefaultRevision: ptr.Of(""),
+		DefaultRevision: nil,
 	}
 
 	if !reflect.DeepEqual(result, expected) {
@@ -127,7 +127,7 @@ spec:`)), 0o644))
 			IstioNamespace: ptr.Of(namespace), // this value is always added/overridden based on IstioRevision.spec.namespace
 		},
 		Revision:        ptr.Of(revisionName),
-		DefaultRevision: ptr.Of(""),
+		DefaultRevision: nil,
 	}
 
 	if !reflect.DeepEqual(result, expected) {
