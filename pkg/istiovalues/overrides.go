@@ -30,4 +30,10 @@ func ApplyOverrides(revisionName string, namespace string, values *v1.Values) {
 		values.Global = &v1.GlobalConfig{}
 	}
 	values.Global.IstioNamespace = &namespace
+
+	// Clear the defaultRevision field to prevent users from creating the default validator webhook.
+	// This field is deprecated and should be ignored by the operator when set by the user.
+	// The validating webhook should still be created when an `Istio` or `IstioRevisionTag` has a
+	// revision name of "default".
+	values.DefaultRevision = nil
 }

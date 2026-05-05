@@ -41,6 +41,7 @@ func TestApplyOverrides(t *testing.T) {
 				Global: &v1.GlobalConfig{
 					IstioNamespace: ptr.Of("ns1"),
 				},
+				DefaultRevision: nil,
 			},
 		},
 		{
@@ -53,6 +54,7 @@ func TestApplyOverrides(t *testing.T) {
 				Global: &v1.GlobalConfig{
 					IstioNamespace: ptr.Of("ns1"),
 				},
+				DefaultRevision: nil,
 			},
 		},
 		{
@@ -67,6 +69,7 @@ func TestApplyOverrides(t *testing.T) {
 				Global: &v1.GlobalConfig{
 					IstioNamespace: ptr.Of("ns1"),
 				},
+				DefaultRevision: nil,
 			},
 		},
 		{
@@ -83,6 +86,22 @@ func TestApplyOverrides(t *testing.T) {
 				Global: &v1.GlobalConfig{
 					IstioNamespace: ptr.Of("ns1"),
 				},
+				DefaultRevision: nil,
+			},
+		},
+		{
+			name:      "defaultRevision-is-ignored-when-set-by-user",
+			revision:  "my-revision",
+			namespace: "ns1",
+			values: v1.Values{
+				DefaultRevision: ptr.Of("my-revision"),
+			},
+			expectedValues: v1.Values{
+				Revision: ptr.Of("my-revision"),
+				Global: &v1.GlobalConfig{
+					IstioNamespace: ptr.Of("ns1"),
+				},
+				DefaultRevision: nil,
 			},
 		},
 	}
