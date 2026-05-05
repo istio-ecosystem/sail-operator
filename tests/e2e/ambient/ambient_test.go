@@ -233,8 +233,8 @@ spec:
 						Expect(k.Label("namespace", common.HttpbinNamespace, "istio.io/dataplane-mode", "ambient")).To(Succeed(), "Error labeling httpbin namespace")
 
 						// Deploy the test pods.
-						Expect(k.WithNamespace(common.SleepNamespace).ApplyKustomize("sleep")).To(Succeed(), "Error deploying sleep pod")
-						Expect(k.WithNamespace(common.HttpbinNamespace).ApplyKustomize("httpbin")).To(Succeed(), "Error deploying httpbin pod")
+						Expect(k.WithNamespace(common.SleepNamespace).ApplyKustomize(common.SleepContainerName)).To(Succeed(), "Error deploying sleep pod")
+						Expect(k.WithNamespace(common.HttpbinNamespace).ApplyKustomize(common.HttpbinContainerName)).To(Succeed(), "Error deploying httpbin pod")
 
 						Success("Ambient validation pods deployed")
 					})
@@ -253,7 +253,7 @@ spec:
 					})
 
 					It("can access the httpbin service from the sleep pod", func(ctx SpecContext) {
-						common.CheckPodConnectivity(sleepPod.Items[0].Name, common.SleepNamespace, common.HttpbinNamespace, k)
+						common.CheckPodConnectivity(sleepPod.Items[0].Name, common.SleepContainerName, common.SleepNamespace, common.HttpbinNamespace, k)
 					})
 				})
 
@@ -338,7 +338,7 @@ func getEnvVars(container corev1.Container) []corev1.EnvVar {
 }
 
 func checkZtunnelPort(podName, srcNamespace string) {
-	response, err := k.WithNamespace(srcNamespace).Exec(podName, srcNamespace, "netstat -tlpn")
+	response, err := k.WithNamespace(srcNamespace).Exec(podName, common.SleepContainerName, "netstat -tlpn")
 	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("error validating the proxy sockets in the %q pod", podName))
 	// Verify that the HBONE mTLS tunnel port (15008) is listed in the output.
 	Expect(response).To(ContainSubstring("15008"), fmt.Sprintf("Unexpected response from %s pod", podName))
