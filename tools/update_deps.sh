@@ -148,13 +148,43 @@ CONTROLLER_TOOLS_LATEST_VERSION=$(getVersionForUpdate kubernetes-sigs/controller
 "$SED_CMD" -i "s|CONTROLLER_TOOLS_VERSION ?= .*|CONTROLLER_TOOLS_VERSION ?= ${CONTROLLER_TOOLS_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
 
 # Update controller-runtime
-# Note: For controller-runtime, we use the branch to determine the current version
-CONTROLLER_RUNTIME_CURRENT_VERSION="v${CONTROLLER_RUNTIME_BRANCH#release-}.0"
-CONTROLLER_RUNTIME_LATEST_VERSION=$(getVersionForUpdate kubernetes-sigs/controller-runtime "${CONTROLLER_RUNTIME_CURRENT_VERSION}")
-# FIXME: Do not use `go get -u` until https://github.com/kubernetes/apimachinery/issues/190 is resolved
-# go get -u "sigs.k8s.io/controller-runtime@${CONTROLLER_RUNTIME_LATEST_VERSION}"
-go get "sigs.k8s.io/controller-runtime@${CONTROLLER_RUNTIME_LATEST_VERSION}"
-CONTROLLER_RUNTIME_BRANCH=$(getReleaseBranch "${CONTROLLER_RUNTIME_LATEST_VERSION}")
+# Get current controller-runtime version from go.mod
+CONTROLLER_RUNTIME_CURRENT_VERSION=$(grep "sigs.k8s.io/controller-runtime" go.mod | awk '{print $2}')
+
+if [[ "${PIN_MINOR}" == "true" ]]; then
+  # On release branches, only apply patch updates within the current minor version
+  CONTROLLER_RUNTIME_LATEST_VERSION=$(getVersionForUpdate kubernetes-sigs/controller-runtime "${CONTROLLER_RUNTIME_CURRENT_VERSION}")
+  go get "sigs.k8s.io/controller-runtime@${CONTROLLER_RUNTIME_LATEST_VERSION}"
+  CONTROLLER_RUNTIME_BRANCH=$(getReleaseBranch "${CONTROLLER_RUNTIME_LATEST_VERSION}")
+else
+  # On main branch, align with upstream Istio
+  CONTROLLER_RUNTIME_LATEST_VERSION=$(getVersionForUpdate kubernetes-sigs/controller-runtime "${CONTROLLER_RUNTIME_CURRENT_VERSION}")
+
+  # Fetch Istio's controller-runtime version to stay aligned
+  ISTIO_CONTROLLER_RUNTIME_VERSION=$(curl -sL "https://raw.githubusercontent.com/istio/istio/master/go.mod" | \
+    grep "sigs.k8s.io/controller-runtime" | awk '{print $2}')
+
+  # Compare versions: if we're behind Istio, upgrade to latest; otherwise only patch upgrades
+  CURRENT_MINOR=$(echo "${CONTROLLER_RUNTIME_CURRENT_VERSION}" | cut -d'.' -f1,2)
+  ISTIO_MINOR=$(echo "${ISTIO_CONTROLLER_RUNTIME_VERSION}" | cut -d'.' -f1,2)
+
+  if [[ "${CURRENT_MINOR}" < "${ISTIO_MINOR}" ]]; then
+    # We're behind Istio, upgrade to latest to catch up
+    echo "Sail Operator controller-runtime (${CONTROLLER_RUNTIME_CURRENT_VERSION}) is behind Istio (${ISTIO_CONTROLLER_RUNTIME_VERSION}), upgrading to latest"
+    # FIXME: Do not use `go get -u` until https://github.com/kubernetes/apimachinery/issues/190 is resolved
+    # go get -u "sigs.k8s.io/controller-runtime@${CONTROLLER_RUNTIME_LATEST_VERSION}"
+    go get "sigs.k8s.io/controller-runtime@${CONTROLLER_RUNTIME_LATEST_VERSION}"
+    CONTROLLER_RUNTIME_BRANCH=$(getReleaseBranch "${CONTROLLER_RUNTIME_LATEST_VERSION}")
+  else
+    # We're aligned or ahead of Istio, only do patch upgrades to stay aligned
+    echo "Sail Operator controller-runtime (${CONTROLLER_RUNTIME_CURRENT_VERSION}) is aligned with Istio (${ISTIO_CONTROLLER_RUNTIME_VERSION}), only applying patch updates"
+    go get -u=patch sigs.k8s.io/controller-runtime
+    # Determine the new version after patch upgrade
+    CONTROLLER_RUNTIME_NEW_VERSION=$(grep "sigs.k8s.io/controller-runtime" go.mod | awk '{print $2}')
+    CONTROLLER_RUNTIME_BRANCH=$(getReleaseBranch "${CONTROLLER_RUNTIME_NEW_VERSION}")
+  fi
+fi
+
 "$SED_CMD" -i "s|CONTROLLER_RUNTIME_BRANCH ?= .*|CONTROLLER_RUNTIME_BRANCH ?= ${CONTROLLER_RUNTIME_BRANCH}|" "${ROOTDIR}/Makefile.core.mk"
 
 # Update opm
