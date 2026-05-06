@@ -2,7 +2,7 @@ link:../../README.adoc[Return to Project Root]
 
 == Table of Contents
 
-* <<installation,Installation>>
+* <<installation,Installation - Single Cluster>>
 ** <<spire-installation,Install Spire>>
 ** <<verify-spire-installation,Verify Spire installation>>
 ** <<sail-operator,Sail Operator>>
@@ -15,6 +15,11 @@ link:../../README.adoc[Return to Project Root]
 ** <<ingress-gateway,Istio Ingress Gateway with SPIFFE >>
 ** <<bookinfo-app-x509-svid,Bookinfo App example with SPIFFE with x509 SVID>>
 ** <<bookinfo-app-x509-svid-jwt-svid,Bookinfo App example with SPIFFE with JWT SVID and x509 SVID>>
+* <<fed-spire-with-istio-multicluster,Installation - Multicluster with Spire Federation>>
+** <<fed-spire-installation,Install Federated Spire>>
+** <<fed-verify-spire-installation,Verify Federated Spire installation>>
+** <<fed-instal-sail-operator,Install Sail Operator>>
+** <<fed-verify-cross-cluster-access-with-federation,Verify Istio multicluster connectivity with Spire Federation>>
 
 == Spire and Sail Operator
 Spire is a production-ready implementation of the https://spiffe.io/[SPIFFE] specification
@@ -1046,3 +1051,562 @@ curl -H "Authorization: Bearer $TOKEN" \
 If you receive an HTTP 200 code,
 it confirms that your traffic is secured by SPIFFE,
 using both mTLS and JWT SVIDs.
+
+[[fed-spire-with-istio-multicluster]]
+== Multicluster with Spire Federation
+[[fed-spire-installation]]
+=== Install Federated Spire
+First create two Kubernetes clusters.
+It can be two local Kind cluster instances,
+or any other K8s clusters running on-prem or in the cloud.
+Once the clusters are ready define required environment variables
+
+_⚠️ Ensure your Istio version is at least 1.29.2 before attempting
+a multicluster federated configuration._
+
+[source,bash]
+----
+# Path to cluster A kubeconfig
+export CLUSTER_A_KUBECONFIG="path/to/cluster-a/kubeconfig"
+# Path to cluster B kubeconfig
+export CLUSTER_B_KUBECONFIG="path/to/cluster-b/kubeconfig"
+# The name of the cluster A that we'll be using for federation setup
+export CLUSTER_A=cluster-a
+# The name of the cluster B that we'll be using for federation setup
+export CLUSTER_B=cluster-b
+----
+
+Install Spire Server on Cluster A
+[source, bash]
+----
+# Install spire CRDs first
+helm upgrade --install \
+   -n spire-server spire-crds \
+   spire-crds --repo https://spiffe.github.io/helm-charts-hardened/ \
+   --create-namespace \
+   --kubeconfig="${CLUSTER_A_KUBECONFIG}"
+# Install the Spire Server
+helm upgrade --install \
+   -n spire-server spire spire \
+    --repo https://spiffe.github.io/helm-charts-hardened/ \
+    --kubeconfig="${CLUSTER_A_KUBECONFIG}" \
+    --set global.spire.trustDomain="${CLUSTER_A}" \
+    --set spire-server.federation.enabled=true \
+    --set spire-server.service.type=LoadBalancer \
+    --set "spire-server.controllerManager.identities.clusterSPIFFEIDs.default.federatesWith={${CLUSTER_B}}" \
+    --set spire-server.controllerManager.identities.clusterSPIFFEIDs.default.autoPopulateDNSNames=true \
+    --set spire-agent.sds.enabled=true \
+    --set spire-agent.sds.defaultBundleName="\"null\"" \
+    --set spire-agent.sds.defaultAllBundlesName="ROOTCA"
+until kubectl get daemonset/spire-agent --kubeconfig "${CLUSTER_A_KUBECONFIG}" -n spire-server &> /dev/null; do sleep 3; done
+kubectl rollout status daemonset/spire-agent --kubeconfig "${CLUSTER_A_KUBECONFIG}" -n spire-server --timeout=300s
+----
+
+Install Spire Server on Cluster B
+[source, bash]
+----
+# Install spire CRDs first
+helm upgrade --install \
+   -n spire-server spire-crds \
+   spire-crds --repo https://spiffe.github.io/helm-charts-hardened/ \
+   --create-namespace \
+   --kubeconfig="${CLUSTER_B_KUBECONFIG}"
+# Install the Spire Server
+helm upgrade --install \
+   -n spire-server spire spire \
+    --repo https://spiffe.github.io/helm-charts-hardened/ \
+    --kubeconfig="${CLUSTER_B_KUBECONFIG}" \
+    --set global.spire.trustDomain="${CLUSTER_B}" \
+    --set spire-server.federation.enabled=true \
+    --set spire-server.service.type=LoadBalancer \
+    --set "spire-server.controllerManager.identities.clusterSPIFFEIDs.default.federatesWith={${CLUSTER_A}}" \
+    --set spire-server.controllerManager.identities.clusterSPIFFEIDs.default.autoPopulateDNSNames=true \
+    --set spire-agent.sds.enabled=true \
+    --set spire-agent.sds.defaultBundleName="\"null\"" \
+    --set spire-agent.sds.defaultAllBundlesName="ROOTCA"
+until kubectl get daemonset/spire-agent --kubeconfig "${CLUSTER_B_KUBECONFIG}" -n spire-server &> /dev/null; do sleep 3; done
+kubectl rollout status daemonset/spire-agent --kubeconfig "${CLUSTER_B_KUBECONFIG}" -n spire-server --timeout=300s
+----
+
+Share the trust bundle between the federation members
+
+Define required environment variables
+[source,bash]
+----
+export CLUSTER_A_BUNDLE_ENDPOINT_URL="https://$(kubectl get svc spire-server --kubeconfig="${CLUSTER_A_KUBECONFIG}" -n spire-server -ojsonpath={.status.loadBalancer.ingress[].ip}):8443"
+export CLUSTER_B_BUNDLE_ENDPOINT_URL="https://$(kubectl get svc spire-server --kubeconfig="${CLUSTER_B_KUBECONFIG}" -n spire-server -ojsonpath={.status.loadBalancer.ingress[].ip}):8443"
+----
+
+Fetch the trust domain bundle of each cluster and store it locally as a file on disk
+[source,bash]
+----
+# Fetch Cluster A trust domain bundle
+kubectl exec -it spire-server-0 -n spire-server \
+ --kubeconfig="${CLUSTER_A_KUBECONFIG}" \
+ -- spire-server bundle show -format spiffe > fed_bundle_cluster_a
+
+# Fetch Cluster B trust domain bundle
+kubectl exec -it spire-server-0 -n spire-server \
+  --kubeconfig="${CLUSTER_B_KUBECONFIG}" \
+  -- spire-server bundle show -format spiffe > fed_bundle_cluster_b
+
+# Add extra spaces to the beginning of the content
+# so we can easily use it in ClusterFederatedTrustDomain yaml
+export REMOTE_TRUST_DOMAIN_BUNDLE_CLUSTER_A="$(sed 's/^/    /' ./fed_bundle_cluster_a)"
+export REMOTE_TRUST_DOMAIN_BUNDLE_CLUSTER_B="$(sed 's/^/    /' ./fed_bundle_cluster_b)"
+----
+
+Install federation trust by creating `ClusterFederatedTrustDomain` for Cluster A
+[source,bash]
+----
+cat <<EOF | kubectl apply --kubeconfig="${CLUSTER_A_KUBECONFIG}" -f -
+apiVersion: spire.spiffe.io/v1alpha1
+kind: ClusterFederatedTrustDomain
+metadata:
+  name: $CLUSTER_B
+spec:
+  className: spire-server-spire
+  trustDomain: $CLUSTER_B
+  bundleEndpointURL: $CLUSTER_B_BUNDLE_ENDPOINT_URL
+  bundleEndpointProfile:
+    type: https_spiffe
+    endpointSPIFFEID: "spiffe://${CLUSTER_B}/spire/server"
+  trustDomainBundle: |-
+$REMOTE_TRUST_DOMAIN_BUNDLE_CLUSTER_B
+EOF
+----
+
+Install federation trust by creating `ClusterFederatedTrustDomain` for Cluster B
+[source,bash]
+----
+cat <<EOF | kubectl apply --kubeconfig="${CLUSTER_B_KUBECONFIG}" -f -
+apiVersion: spire.spiffe.io/v1alpha1
+kind: ClusterFederatedTrustDomain
+metadata:
+  name: $CLUSTER_A
+spec:
+  className: spire-server-spire
+  trustDomain: $CLUSTER_A
+  bundleEndpointURL: $CLUSTER_A_BUNDLE_ENDPOINT_URL
+  bundleEndpointProfile:
+    type: https_spiffe
+    endpointSPIFFEID: "spiffe://${CLUSTER_A}/spire/server"
+  trustDomainBundle: |-
+$REMOTE_TRUST_DOMAIN_BUNDLE_CLUSTER_A
+EOF
+----
+
+[[fed-verify-spire-installation]] Verify Federated Spire installation
+[source,bash]
+----
+# should return cluster-b
+kubectl exec \
+  --kubeconfig="${CLUSTER_A_KUBECONFIG}" \
+  -c spire-server \
+  -n spire-server \
+  spire-server-0 \
+  -- spire-server federation list -output json \
+  | jq -r .federation_relationships[].trust_domain
+# should return cluster-a
+kubectl exec \
+  --kubeconfig="${CLUSTER_B_KUBECONFIG}" \
+  -c spire-server \
+  -n spire-server \
+  spire-server-0 \
+  -- spire-server federation list -output json \
+  | jq -r .federation_relationships[].trust_domain
+----
+
+If federation configured correctly you should get exact this output:
+[source,bash]
+----
+cluster-b
+cluster-a
+----
+
+[[fed-instal-sail-operator]] Install Sail Operator
+Install Sail Operator as described in <<instal-sail-operator>>
+
+Install Istio CNI as described in <<deploy-istio-cni>>
+Note that you need to install the Sail Operator and Istio CNI on both clusters.
+
+For simplicity, use this command
+[source,bash]
+----
+for kubeconfig in "${CLUSTER_A_KUBECONFIG}" "${CLUSTER_B_KUBECONFIG}"; do
+
+# Install Sail Operator with Helm Chart
+helm repo add sail-operator https://istio-ecosystem.github.io/sail-operator
+helm repo update
+helm install sail-operator \
+  sail-operator/sail-operator \
+  -n istio-system \
+  --create-namespace \
+  --kubeconfig="${kubeconfig}"
+
+# Create namespace for istio-cni
+kubectl create namespace istio-cni --kubeconfig="${kubeconfig}"
+
+# Create IstioCNI CR
+cat <<EOF | kubectl --kubeconfig="${kubeconfig}" apply -f -
+apiVersion: sailoperator.io/v1
+kind: IstioCNI
+metadata:
+  name: default
+spec:
+  namespace: istio-cni
+EOF
+done
+----
+
+Create `Istio` CR.
+
+To demonstrate SPIRE Federation, we will deploy Istio in a
+Multi-Primary configuration across distinct networks.
+In this setup, each cluster operates within its own
+unique trust domain, supported by a dedicated SPIRE server.
+SPIRE Federation is established when pods from these
+disparate clusters attempt to communicate securely via
+their respective Istio East-West gateways.
+
+Define environment variables for `Istio` in Cluster A
+[source,bash]
+----
+export ISTIO_A_TRUST_DOMAIN_NAME=$CLUSTER_A
+export ISTIO_A_MULTI_CLUSTER_NAME=$CLUSTER_A
+export ISTIO_A_MULTI_CLUSTER_NETWORK="network-a"
+----
+
+Define environment variables for `Istio` in Cluster B
+[source,bash]
+----
+export ISTIO_B_TRUST_DOMAIN_NAME=$CLUSTER_B
+export ISTIO_B_MULTI_CLUSTER_NAME=$CLUSTER_B
+export ISTIO_B_MULTI_CLUSTER_NETWORK="network-b"
+----
+
+Create `Istio` in Cluster A
+[source,bash]
+----
+cat <<EOF | kubectl apply --kubeconfig="${CLUSTER_A_KUBECONFIG}" -f -
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  namespace: istio-system
+  updateStrategy:
+    type: InPlace
+  values:
+    meshConfig:
+      trustDomain: $ISTIO_A_TRUST_DOMAIN_NAME
+      caCertificates:
+      - spiffeBundleUrl: $CLUSTER_A_BUNDLE_ENDPOINT_URL
+        trustDomains:
+        - $ISTIO_A_TRUST_DOMAIN_NAME
+      - spiffeBundleUrl: $CLUSTER_B_BUNDLE_ENDPOINT_URL
+        trustDomains:
+        - $ISTIO_B_TRUST_DOMAIN_NAME
+    global:
+      meshID: istio-federation
+      multiCluster:
+        clusterName: $ISTIO_A_MULTI_CLUSTER_NAME
+      network: $ISTIO_A_MULTI_CLUSTER_NETWORK
+    sidecarInjectorWebhook:
+      templates:
+        spire: |
+          spec:
+            initContainers:
+            - name: istio-proxy
+              volumeMounts:
+              - name: workload-socket
+                mountPath: /run/secrets/workload-spiffe-uds
+                readOnly: true
+            volumes:
+              - name: workload-socket
+                csi:
+                  driver: "csi.spiffe.io"
+                  readOnly: true
+        spireGw: |
+          spec:
+            containers:
+            - name: istio-proxy
+              volumeMounts:
+              - name: workload-socket
+                mountPath: /run/secrets/workload-spiffe-uds
+                readOnly: true
+            volumes:
+              - name: workload-socket
+                csi:
+                  driver: "csi.spiffe.io"
+                  readOnly: true
+EOF
+----
+
+Create `Istio` in Cluster B
+[source,bash]
+----
+cat <<EOF | kubectl apply --kubeconfig="${CLUSTER_B_KUBECONFIG}" -f -
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  namespace: istio-system
+  updateStrategy:
+    type: InPlace
+  values:
+    meshConfig:
+      trustDomain: $ISTIO_B_TRUST_DOMAIN_NAME
+      caCertificates:
+      - spiffeBundleUrl: $CLUSTER_B_BUNDLE_ENDPOINT_URL
+        trustDomains:
+        - $ISTIO_B_TRUST_DOMAIN_NAME
+      - spiffeBundleUrl: $CLUSTER_A_BUNDLE_ENDPOINT_URL
+        trustDomains:
+        - $ISTIO_A_TRUST_DOMAIN_NAME
+    global:
+      meshID: istio-federation
+      multiCluster:
+        clusterName: $ISTIO_B_MULTI_CLUSTER_NAME
+      network: $ISTIO_B_MULTI_CLUSTER_NETWORK
+    sidecarInjectorWebhook:
+      templates:
+        spire: |
+          spec:
+            initContainers:
+            - name: istio-proxy
+              volumeMounts:
+              - name: workload-socket
+                mountPath: /run/secrets/workload-spiffe-uds
+                readOnly: true
+            volumes:
+              - name: workload-socket
+                csi:
+                  driver: "csi.spiffe.io"
+                  readOnly: true
+        spireGw: |
+          spec:
+            containers:
+            - name: istio-proxy
+              volumeMounts:
+              - name: workload-socket
+                mountPath: /run/secrets/workload-spiffe-uds
+                readOnly: true
+            volumes:
+              - name: workload-socket
+                csi:
+                  driver: "csi.spiffe.io"
+                  readOnly: true
+EOF
+----
+
+Deploy Istio Ingress Controller for east-west traffic
+
+[source,bash]
+----
+helm upgrade --install istio-eastwestgateway istio/gateway \
+  -n istio-system \
+  --set-json 'podAnnotations={"inject.istio.io/templates":"gateway,spireGw"}' \
+  --set name=istio-eastwestgateway \
+  --set networkGateway="${ISTIO_A_MULTI_CLUSTER_NETWORK}" \
+  --kubeconfig="${CLUSTER_A_KUBECONFIG}"
+
+helm upgrade --install istio-eastwestgateway istio/gateway \
+  -n istio-system \
+  --set-json 'podAnnotations={"inject.istio.io/templates":"gateway,spireGw"}' \
+  --set name=istio-eastwestgateway \
+  --set networkGateway="${ISTIO_B_MULTI_CLUSTER_NETWORK}" \
+  --kubeconfig="${CLUSTER_B_KUBECONFIG}"
+----
+
+Enable https://istio.io/latest/docs/setup/install/multicluster/multi-primary_multi-network/#enable-endpoint-discovery[Endpoint Discovery]
+by creating istio remote secrets
+
+Install a remote secret in `cluster-a` and `cluster-b` accordingly
+[source,bash]
+----
+istioctl create-remote-secret \
+  --kubeconfig="${CLUSTER_A_KUBECONFIG}" \
+  --name="${CLUSTER_A}" \
+  --istioNamespace=istio-system | \
+  kubectl apply --kubeconfig="${CLUSTER_B_KUBECONFIG}" -f -
+
+istioctl create-remote-secret \
+  --kubeconfig="${CLUSTER_B_KUBECONFIG}" \
+  --name="${CLUSTER_B}" \
+  --istioNamespace=istio-system | \
+  kubectl apply --kubeconfig="${CLUSTER_A_KUBECONFIG}" -f -
+----
+
+
+**If using kind**, first get the `cluster-a` and the `cluster-b`
+controlplane ip and pass the `--server` option to `istioctl create-remote-secret`.
+
+[source,bash]
+----
+export CLUSTER_A_NODE_IP=$(kubectl get nodes -l node-role.kubernetes.io/control-plane --kubeconfig "${CLUSTER_A_KUBECONFIG}" -o jsonpath='{.items[0].status.addresses[?(@.type == "InternalIP")].address}')
+export CLUSTER_B_NODE_IP=$(kubectl get nodes -l node-role.kubernetes.io/control-plane --kubeconfig "${CLUSTER_B_KUBECONFIG}" -o jsonpath='{.items[0].status.addresses[?(@.type == "InternalIP")].address}')
+
+istioctl create-remote-secret \
+  --kubeconfig="${CLUSTER_A_KUBECONFIG}" \
+  --name="${CLUSTER_A}" \
+  --server="https://${CLUSTER_A_NODE_IP}:6443" \
+  --istioNamespace=istio-system | \
+  kubectl apply --kubeconfig="${CLUSTER_B_KUBECONFIG}" -f -
+
+istioctl create-remote-secret \
+  --kubeconfig="${CLUSTER_B_KUBECONFIG}" \
+  --name="${CLUSTER_B}" \
+  --server="https://${CLUSTER_B_NODE_IP}:6443" \
+  --istioNamespace=istio-system | \
+  kubectl apply --kubeconfig="${CLUSTER_A_KUBECONFIG}" -f -
+----
+
+Verify Endpoint Discovery configured correctly
+
+For Cluster A
+
+[source,bash]
+----
+istioctl remote-clusters --kubeconfig=$CLUSTER_A_KUBECONFIG
+----
+Expected output:
+[source,text]
+----
+NAME          SECRET                                         STATUS     ISTIOD
+cluster-a                                                    synced     istiod-676d74c5b7-crtw6
+cluster-b     istio-system/istio-remote-secret-cluster-b     synced     istiod-676d74c5b7-crtw6
+----
+
+For Cluster B
+
+[source,bash]
+----
+istioctl remote-clusters --kubeconfig=$CLUSTER_B_KUBECONFIG
+----
+Expected output:
+[source,text]
+----
+NAME          SECRET                                         STATUS     ISTIOD
+cluster-b                                                    synced     istiod-54bb6dfcc4-zfztz
+cluster-a     istio-system/istio-remote-secret-cluster-a     synced     istiod-54bb6dfcc4-zfztz
+----
+
+
+[[fed-verify-cross-cluster-access-with-federation]] Verify Istio multicluster connectivity with Spire Federation
+
+Create `sample` namespace in both clusters
+[source,bash]
+----
+for kubeconfig in "${CLUSTER_A_KUBECONFIG}" "${CLUSTER_B_KUBECONFIG}"; do
+  # Create sample namespace
+  kubectl create \
+   --kubeconfig="${kubeconfig}" \
+   namespace sample
+  # enabled sidecar injection
+  kubectl label \
+   --kubeconfig="${kubeconfig}" \
+    namespace sample \
+    istio-injection=enabled
+done
+----
+
+Create Istio Gateway in both clusters
+[source,bash]
+----
+for kubeconfig in "${CLUSTER_A_KUBECONFIG}" "${CLUSTER_B_KUBECONFIG}"; do
+cat <<EOF | kubectl apply -n sample --kubeconfig="${kubeconfig}" -f -
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: cross-network-gateway
+spec:
+  selector:
+    istio: eastwestgateway
+  servers:
+    - port:
+        number: 15443
+        name: tls
+        protocol: TLS
+      tls:
+        mode: AUTO_PASSTHROUGH
+      hosts:
+        - "*.local"
+EOF
+done
+----
+
+Install Istio's `HelloWorld` service in Cluster B
+[source,bash]
+----
+# Create the HelloWorld service in Cluster B
+kubectl apply \
+ -n ${SAMPLE_NS} \
+ --kubeconfig="${CLUSTER_B_KUBECONFIG}" \
+ -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/helloworld/helloworld.yaml \
+ -l service=helloworld
+
+# Deploy HelloWorld application in Cluster B
+kubectl apply \
+ -n ${SAMPLE_NS} \
+ --kubeconfig="${CLUSTER_B_KUBECONFIG}" \
+ -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/helloworld/helloworld.yaml \
+ -l version=v1
+----
+
+Install Istio's `sleep` service in Cluster A
+[source,bash]
+----
+# Create the HelloWorld service in Clusters A
+kubectl apply \
+ -n ${SAMPLE_NS} \
+ --kubeconfig="${CLUSTER_A_KUBECONFIG}" \
+ -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/helloworld/helloworld.yaml \
+ -l service=helloworld
+
+# Deploy curl application
+kubectl apply \
+ -n ${SAMPLE_NS} \
+ --kubeconfig="${CLUSTER_A_KUBECONFIG}" \
+ -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/sleep/sleep.yaml
+----
+
+Add spire injection template for both  `curl` and `HelloWorld` deployments
+[source,bash]
+----
+# Add spire injection template to curl application in Cluster A
+kubectl patch deploy sleep \
+    -n ${SAMPLE_NS} \
+    --type='merge' \
+    --kubeconfig="${CLUSTER_A_KUBECONFIG}" \
+    -p '{"spec": {"template": {"metadata": {"annotations": {"inject.istio.io/templates": "sidecar,spire"}}}}}'
+
+# Add spire injection template to HelloWorld application in Cluster B
+kubectl patch deploy helloworld-v1 \
+   -n ${SAMPLE_NS} \
+   --type='merge' \
+   --kubeconfig="${CLUSTER_B_KUBECONFIG}" \
+    -p '{"spec": {"template": {"metadata": {"annotations": {"inject.istio.io/templates": "sidecar,spire"}}}}}'
+# Wait till both deployment are up and running
+kubectl rollout status deploy/sleep --kubeconfig "${CLUSTER_A_KUBECONFIG}" -n ${SAMPLE_NS} --timeout=300s
+kubectl rollout status deploy/helloworld-v1 --kubeconfig "${CLUSTER_B_KUBECONFIG}" -n ${SAMPLE_NS} --timeout=300s
+----
+
+Make a call from the `sleep` pod running in Cluster A to `helloworld` pod running in Cluster B
+[source,bash]
+----
+kubectl exec deploy/sleep \
+  -n sample \
+  --kubeconfig=$CLUSTER_A_KUBECONFIG \
+  -- curl -sS helloworld.sample:5000/hello
+----
+
+If everything was configured correctly you should expect similar output
+[source,bash]
+----
+Hello version: v1, instance: helloworld-v1-64675cc6dd-svnwn
+----
+
+This verifies that services operating across disparate clusters—managed by independent service meshes—can communicate securely. This connectivity is achieved through a correctly configured SPIRE Federation, which effectively bridges the two distinct Istio trust domains.
+
