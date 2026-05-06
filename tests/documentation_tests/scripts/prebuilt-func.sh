@@ -337,6 +337,7 @@ metadata:
 spec:
   namespace: "$namespace"
 EOF
+    with_retries wait_istio_ready "$namespace"
 }
 
 # Deploy Bookinfo application
