@@ -119,6 +119,8 @@ create_default_istio
 install_bookinfo "{istio_release_name}"
 create_bookinfo_gateway_api "{istio_release_name}"
 with_retries wait_pods_ready_by_ns "bookinfo"
+echo "Checking if pods have their application container and the Istio sidecar container (READY 2/2):"
+kubectl get pods -n "bookinfo" -l app
 endif::[]
 
 [[technical-requirements]]
