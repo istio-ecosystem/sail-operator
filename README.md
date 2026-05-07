@@ -13,25 +13,27 @@ The Sail Operator manages the lifecycle of your [Istio](https://istio.io) contro
 We have a weekly call every Thursday at 4PM CET / 10AM EST to discuss current progress and future plans. To add it to your Google Calendar, you can [subscribe to the Sail Operator calendar](https://calendar.google.com/calendar/u/0?cid=MDRhNzBkZjUwNmI5ZjFlMTAyYmUzZDhiZTFlNDA3ZjRlMjcwZjAzNmY4NDFkZTA1MmYzYzczYjk3OTU4ZGI2MUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t).
 
 ## User Documentation
+
 This document aims to provide an overview of the project and some information for contributors. For information on how to use the operator, take a look at the [User Documentation](docs/README.adoc).
 
 ## Table of Contents
 
 - [How it works](#how-it-works)
 - [Getting Started](#getting-started)
-    - [Deploying the operator from source](#deploying-the-operator-from-source)
-    - [Deploying the operator by using Helm charts](#deploying-the-operator-by-using-helm-charts)
-    - [Deploying the Istio Control Plane](#deploying-the-istio-control-plane)
-    - [Undeploying the operator](#undeploying-the-operator)
+  - [Deploying the operator from source](#deploying-the-operator-from-source)
+  - [Deploying the operator by using Helm charts](#deploying-the-operator-by-using-helm-charts)
+  - [Deploying the Istio Control Plane](#deploying-the-istio-control-plane)
+  - [Undeploying the operator](#undeploying-the-operator)
 - [Development](#development)
-    - [Repository Setup](#repository-setup)
-    - [Test It Out](#test-it-out)
-    - [Modifying the API definitions](#modifying-the-api-definitions)
-    - [Writing Tests](#writing-tests)
-    - [Integration Tests](#integration-tests)
-    - [End-to-End Tests](#end-to-end-tests)
-    - [Vendor-specific changes](#vendor-specific-changes)
-    - [Developing on macOS](#developing-on-macos)
+  - [Repository Setup](#repository-setup)
+  - [Test It Out](#test-it-out)
+  - [Modifying the API definitions](#modifying-the-api-definitions)
+  - [Writing Tests](#writing-tests)
+  - [Integration Tests](#integration-tests)
+  - [End-to-End Tests](#end-to-end-tests)
+  - [Vendor-specific changes](#vendor-specific-changes)
+  - [Developing on macOS](#developing-on-macos)
+  - [Synchronization with Istio](#synchronization-with-istio)
 - [Release process](#release-process)
 - [Versioning and Support Policy](#versioning-and-support-policy)
 - [Community Support and Contributing](#community-support-and-contributing)
@@ -85,7 +87,7 @@ spec:
     meshConfig:
       trustDomain: example.com
       trustDomainAliases:
-      - example.net
+        - example.net
 ```
 
 ## Getting Started
@@ -210,6 +212,7 @@ kubectl get ztunnel default
 For other deployment options, refer to the [docs](docs) directory.
 
 ### Undeploying the operator
+
 Undeploy the operator from the cluster:
 
 ```sh
@@ -305,6 +308,10 @@ As you might know, the Sail Operator project serves as the community upstream fo
 
 There are some considerations that you need to take into account while trying to develop, debug and work on macOS and specially if you are using Podman instead on Docker. Please take a look into this [documentation](/docs/macos/develop-on-macos.adoc) for macOS specifics.
 
+### Synchronization with Istio
+
+This repo uses a few different workflows to stay in sync with [Istio](github.com/istio/istio). See [SYNC](./SYNC.md) for more detail.
+
 #### versions.yaml
 
 The name of the versions.yaml file can be overwritten using the VERSIONS_YAML_FILE environment variable. This way, downstream vendors can point to a custom list of supported versions. Note that this file should be located in the `pkg/istioversion` directory, with the default value being `versions.yaml`.
@@ -335,9 +342,11 @@ When running multiple Istio components (control plane, IstioCNI, ZTunnel), each 
 > The first stable 1.0 release did not follow this versioning strategy but subsequent releases will.
 
 ## Community Support and Contributing
+
 Please refer to the [CONTRIBUTING-SAIL-PROJECT.md](CONTRIBUTING.md) file for more information on how to contribute to the Sail Operator project. This file contains all the information you need to get started with contributing to the project.
 
 ## AI Agents for Development
+
 If you're using AI coding assistants like Claude, GitHub Copilot, or Cursor, check out our [AI Agents Guide](docs/ai/ai-agents-guide.adoc) for information on how to configure these tools to understand Sail Operator patterns and best practices.
 
 ## Sail Enhancement Proposal
@@ -347,6 +356,7 @@ SEP documents are used to propose and discuss non-trivial features or epics and 
 SEP documents are stored in the [enhancements](enhancements) directory of the Sail Operator repository in Markdown format. If you want to create a SEP, be sure to check out the [SEP template](enhancements/SEP0-template.md).
 
 ## Issue management
+
 Please refer to the [ISSUE-MANAGEMENT.md](ISSUE-MANAGEMENT.md) file for more information on how to report bugs and feature requests to the Sail Operator team.
 
 If you found a bug in Istio, please refer to the [Istio GitHub repository](BUGS-AND-FEATURE-REQUESTS.md)
