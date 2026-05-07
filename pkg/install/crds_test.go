@@ -19,9 +19,13 @@ import (
 	"testing/fstest"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/chart"
 	. "github.com/onsi/gomega"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func TestAggregateState(t *testing.T) {
@@ -79,7 +83,7 @@ func TestClassifyCRD(t *testing.T) {
 			name: "OLM managed",
 			crd: &apiextensionsv1.CustomResourceDefinition{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{olmManagedLabel: "test-operator"},
+					Labels: map[string]string{OLMManagedLabel: "test-operator"},
 				},
 			},
 			expect: crdManagedByOLM,
@@ -307,6 +311,58 @@ func TestLoadCRDs(t *testing.T) {
 			g.Expect(err).NotTo(HaveOccurred())
 			g.Expect(crds).To(HaveLen(tc.expectLen))
 		})
+	}
+}
+
+func TestUnmanagedCRDNotTakenOver(t *testing.T) {
+	g := NewWithT(t)
+
+	existingVS := &apiextensionsv1.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "virtualservices.networking.istio.io",
+			Labels:      map[string]string{"some-label": "some-value"},
+			Annotations: map[string]string{"some-annotation": "ann-value"},
+		},
+		Status: apiextensionsv1.CustomResourceDefinitionStatus{
+			Conditions: []apiextensionsv1.CustomResourceDefinitionCondition{
+				{Type: apiextensionsv1.Established, Status: apiextensionsv1.ConditionTrue},
+			},
+		},
+	}
+	existingGW := &apiextensionsv1.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "gateways.networking.istio.io",
+			Labels:      map[string]string{"some-label": "some-value"},
+			Annotations: map[string]string{"some-annotation": "ann-value"},
+		},
+	}
+
+	s := runtime.NewScheme()
+	g.Expect(apiextensionsv1.AddToScheme(s)).To(Succeed())
+	cl := fake.NewClientBuilder().WithScheme(s).WithObjects(existingVS, existingGW).Build()
+
+	m := &crdManager{
+		cl:    cl,
+		crdFS: chart.CRDsFS,
+	}
+
+	ctx := t.Context()
+	infos, err := m.Reconcile(ctx, Options{ManageCRDs: true, IncludeAllCRDs: true})
+	g.Expect(err).NotTo(HaveOccurred())
+
+	for _, info := range infos {
+		var updated apiextensionsv1.CustomResourceDefinition
+		g.Expect(cl.Get(ctx, types.NamespacedName{Name: info.Name}, &updated)).To(Succeed())
+		if info.Name == "virtualservices.networking.istio.io" || info.Name == "gateways.networking.istio.io" {
+			g.Expect(info.Managed).To(BeFalse(), "unmanaged CRD %s should not be taken over", info.Name)
+			g.Expect(updated.Labels).NotTo(HaveKey(kubeManagedByLabel), "managed-by label should not be added to unmanaged CRD")
+			g.Expect(updated.Labels).To(Equal(existingGW.Labels), "existing labels should not be modified")
+			g.Expect(updated.Annotations).To(Equal(existingGW.Annotations), "existing annotations should not be modified")
+		} else {
+			g.Expect(info.Managed).To(BeTrue(), "CRD %s should be managed by the library", info.Name)
+			g.Expect(updated.Labels).To(HaveKey(kubeManagedByLabel))
+			g.Expect(updated.Labels[kubeManagedByLabel]).To(Equal(managedByValue))
+		}
 	}
 }
 
