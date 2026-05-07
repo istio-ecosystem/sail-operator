@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"maps"
 	"strings"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
@@ -31,7 +30,8 @@ import (
 )
 
 const (
-	olmManagedLabel = "operators.coreos.com/managed-by"
+	kubeManagedByLabel = "app.kubernetes.io/managed-by"
+	OLMManagedLabel    = "olm.managed"
 )
 
 type crdOwnership int
@@ -86,23 +86,21 @@ func (m *crdManager) applyCRD(ctx context.Context, crd *apiextensionsv1.CustomRe
 		return info, fmt.Errorf("failed to get CRD %s: %w", name, err)
 	}
 
-	ownership := m.classifyCRD(existing)
-	if ownership == crdManagedByOLM {
+	switch ownership := m.classifyCRD(existing); ownership {
+	case crdManagedByOLM:
 		if overwriteOLM == nil || !overwriteOLM(ctx, existing) {
 			info.Managed = false
 			info.Ready = m.isCRDReady(existing)
 			return info, nil
 		}
+	case crdUnmanaged:
+		info.Managed = false
+		info.Ready = m.isCRDReady(existing)
+		return info, nil
 	}
 
 	crd.SetResourceVersion(existing.ResourceVersion)
-	mergedLabels := maps.Clone(existing.Labels)
-	maps.Copy(mergedLabels, crd.GetLabels())
-	crd.SetLabels(mergedLabels)
 	setManagedByLabel(crd)
-	mergedAnnotations := maps.Clone(existing.Annotations)
-	maps.Copy(mergedAnnotations, crd.GetAnnotations())
-	crd.SetAnnotations(mergedAnnotations)
 	if err := m.cl.Update(ctx, crd); err != nil {
 		return info, fmt.Errorf("failed to update CRD %s: %w", name, err)
 	}
@@ -115,15 +113,15 @@ func setManagedByLabel(crd *apiextensionsv1.CustomResourceDefinition) {
 	if labels == nil {
 		labels = map[string]string{}
 	}
-	labels["app.kubernetes.io/managed-by"] = managedByValue
+	labels[kubeManagedByLabel] = managedByValue
 	crd.SetLabels(labels)
 }
 
 func (m *crdManager) classifyCRD(crd *apiextensionsv1.CustomResourceDefinition) crdOwnership {
-	if _, ok := crd.Labels[olmManagedLabel]; ok {
+	if _, ok := crd.Labels[OLMManagedLabel]; ok {
 		return crdManagedByOLM
 	}
-	if crd.Labels != nil && crd.Labels["app.kubernetes.io/managed-by"] == managedByValue {
+	if crd.Labels != nil && crd.Labels[kubeManagedByLabel] == managedByValue {
 		return crdManagedByLibrary
 	}
 	return crdUnmanaged
