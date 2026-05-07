@@ -44,9 +44,9 @@ metadata:
       ]
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
-    containerImage: quay.io/sail-dev/sail-operator:1.30-latest
-    createdAt: "2026-05-06T06:03:16Z"
-    description: The Sail Operator manages the lifecycle of your Istio control plane. It provides custom resources for you to deploy and manage your control plane components.
+    containerImage: quay.io/sail-dev/sail-operator:3.0-latest
+    createdAt: "2026-05-07T06:09:02Z"
+    description: The OpenShift Service Mesh Operator enables you to install, configure, and manage an instance of Red Hat OpenShift Service Mesh. OpenShift Service Mesh is based on the open source Istio project.
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
     features.operators.openshift.io/csi: "false"
@@ -403,22 +403,10 @@ spec:
 
     ### Overview
 
-    - v1.30-latest
-    - v1.30.0-alpha.2
-    - v1.29-latest
-    - v1.29.2
-    - v1.29.1
-    - v1.29.0
-    - v1.28-latest
-    - v1.28.6
-    - v1.28.5
-    - v1.28.4
-    - v1.28.3
-    - v1.28.2
-    - v1.28.1
-    - v1.28.0
-    - master
-    - v1.31.0-alpha.d90b05fe
+    Red Hat OpenShift Service Mesh, based on the open source [Istio](https://istio.io/) project, adds a transparent layer on existing
+    distributed applications without requiring any changes to the service code. You add Red Hat OpenShift Service Mesh
+    support to services by deploying a special sidecar proxy throughout your environment that intercepts all network
+    communication between microservices. You configure and manage the service mesh using the control plane features.
 
     Red Hat OpenShift Service Mesh provides an easy way to create a network of deployed services that provides discovery,
     load balancing, service-to-service authentication, failure recovery, metrics, and monitoring. A service mesh also
@@ -809,54 +797,11 @@ spec:
             template:
               metadata:
                 annotations:
-                  images.v1_28_0.cni: registry.istio.io/release/install-cni:1.28.0
-                  images.v1_28_0.istiod: registry.istio.io/release/pilot:1.28.0
-                  images.v1_28_0.proxy: registry.istio.io/release/proxyv2:1.28.0
-                  images.v1_28_0.ztunnel: registry.istio.io/release/ztunnel:1.28.0
-                  images.v1_28_1.cni: registry.istio.io/release/install-cni:1.28.1
-                  images.v1_28_1.istiod: registry.istio.io/release/pilot:1.28.1
-                  images.v1_28_1.proxy: registry.istio.io/release/proxyv2:1.28.1
-                  images.v1_28_1.ztunnel: registry.istio.io/release/ztunnel:1.28.1
-                  images.v1_28_2.cni: registry.istio.io/release/install-cni:1.28.2
-                  images.v1_28_2.istiod: registry.istio.io/release/pilot:1.28.2
-                  images.v1_28_2.proxy: registry.istio.io/release/proxyv2:1.28.2
-                  images.v1_28_2.ztunnel: registry.istio.io/release/ztunnel:1.28.2
-                  images.v1_28_3.cni: registry.istio.io/release/install-cni:1.28.3
-                  images.v1_28_3.istiod: registry.istio.io/release/pilot:1.28.3
-                  images.v1_28_3.proxy: registry.istio.io/release/proxyv2:1.28.3
-                  images.v1_28_3.ztunnel: registry.istio.io/release/ztunnel:1.28.3
-                  images.v1_28_4.cni: registry.istio.io/release/install-cni:1.28.4
-                  images.v1_28_4.istiod: registry.istio.io/release/pilot:1.28.4
-                  images.v1_28_4.proxy: registry.istio.io/release/proxyv2:1.28.4
-                  images.v1_28_4.ztunnel: registry.istio.io/release/ztunnel:1.28.4
-                  images.v1_28_5.cni: registry.istio.io/release/install-cni:1.28.5
-                  images.v1_28_5.istiod: registry.istio.io/release/pilot:1.28.5
-                  images.v1_28_5.proxy: registry.istio.io/release/proxyv2:1.28.5
-                  images.v1_28_5.ztunnel: registry.istio.io/release/ztunnel:1.28.5
-                  images.v1_28_6.cni: registry.istio.io/release/install-cni:1.28.6
-                  images.v1_28_6.istiod: registry.istio.io/release/pilot:1.28.6
-                  images.v1_28_6.proxy: registry.istio.io/release/proxyv2:1.28.6
-                  images.v1_28_6.ztunnel: registry.istio.io/release/ztunnel:1.28.6
-                  images.v1_29_0.cni: registry.istio.io/release/install-cni:1.29.0
-                  images.v1_29_0.istiod: registry.istio.io/release/pilot:1.29.0
-                  images.v1_29_0.proxy: registry.istio.io/release/proxyv2:1.29.0
-                  images.v1_29_0.ztunnel: registry.istio.io/release/ztunnel:1.29.0
-                  images.v1_29_1.cni: registry.istio.io/release/install-cni:1.29.1
-                  images.v1_29_1.istiod: registry.istio.io/release/pilot:1.29.1
-                  images.v1_29_1.proxy: registry.istio.io/release/proxyv2:1.29.1
-                  images.v1_29_1.ztunnel: registry.istio.io/release/ztunnel:1.29.1
-                  images.v1_29_2.cni: registry.istio.io/release/install-cni:1.29.2
-                  images.v1_29_2.istiod: registry.istio.io/release/pilot:1.29.2
-                  images.v1_29_2.proxy: registry.istio.io/release/proxyv2:1.29.2
-                  images.v1_29_2.ztunnel: registry.istio.io/release/ztunnel:1.29.2
-                  images.v1_30_0-alpha_2.cni: registry.istio.io/release/install-cni:1.30.0-alpha.2
-                  images.v1_30_0-alpha_2.istiod: registry.istio.io/release/pilot:1.30.0-alpha.2
-                  images.v1_30_0-alpha_2.proxy: registry.istio.io/release/proxyv2:1.30.0-alpha.2
-                  images.v1_30_0-alpha_2.ztunnel: registry.istio.io/release/ztunnel:1.30.0-alpha.2
-                  images.v1_31_0-alpha_d90b05fe.cni: registry.istio.io/testing/install-cni:1.31.0-alpha.d90b05fe8e8879cc8d5985aa179a2877f23e56d7
-                  images.v1_31_0-alpha_d90b05fe.istiod: registry.istio.io/testing/pilot:1.31.0-alpha.d90b05fe8e8879cc8d5985aa179a2877f23e56d7
-                  images.v1_31_0-alpha_d90b05fe.proxy: registry.istio.io/testing/proxyv2:1.31.0-alpha.d90b05fe8e8879cc8d5985aa179a2877f23e56d7
-                  images.v1_31_0-alpha_d90b05fe.ztunnel: registry.istio.io/testing/ztunnel:1.31.0-alpha.d90b05fe8e8879cc8d5985aa179a2877f23e56d7
+                  images.v1_24_4.cni: registry.redhat.io/openshift-service-mesh/istio-cni-rhel9:1.24.4
+                  images.v1_24_4.istiod: registry.redhat.io/openshift-service-mesh/istio-pilot-rhel9:1.24.4
+                  images.v1_24_4.must-gather: registry.redhat.io/openshift-service-mesh/istio-must-gather-rhel9:3.0.1
+                  images.v1_24_4.proxy: registry.redhat.io/openshift-service-mesh/istio-proxyv2-rhel9:1.24.4
+                  images.v1_24_4.ztunnel: registry.redhat.io/openshift-service-mesh/istio-pilot-rhel9:1.24.4
                   kubectl.kubernetes.io/default-container: sail-operator
                 labels:
                   app.kubernetes.io/created-by: servicemeshoperator3
