@@ -254,7 +254,7 @@ _internal_defaults_do_not_set:
     # Dev builds from prow are on gcr.io
     hub: build-harbor.alauda.cn/asm
     # Default tag for Istio images.
-    tag: 1.28.6-asm-r1
+    tag: 1.28.6-asm-r3
     # Variant of the image to use.
     # Currently supported are: [debug, distroless]
     variant: ""
