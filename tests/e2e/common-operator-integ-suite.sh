@@ -235,6 +235,7 @@ await_operator() {
     if [ -n "${csv_name}" ]; then
       echo "OLM mode: using deployment name from bundle CSV: ${csv_name}"
       name="${csv_name}"
+      DEPLOYMENT_NAME="${csv_name}"
     fi
   fi
   "${COMMAND}" wait --for=condition=available deployment/"${name}" -n "${NAMESPACE}" --timeout=5m
