@@ -184,9 +184,10 @@ metadata:
   name: default
 spec:
   namespace: istio-system
-  global:
-    defaultPodDisruptionBudget:
-      enabled: false # <-- disable default Pod Disruption Budget
+  values:
+    global:
+      defaultPodDisruptionBudget:
+        enabled: false # <-- disable default Pod Disruption Budget
 ----
 
-`spec.global.defaultPodDisruptionBudget.enabled: false` disables the default Pod Disruption Budget for Istiod. In single-node clusters, a PDB can block operations such as node drains or pod evictions, as it prevents the number of available Istiod replicas from falling below the PDB's minimum desired count. Disabling it ensures smooth operations in this specific topology.
+`spec.values.global.defaultPodDisruptionBudget.enabled: false` disables the default Pod Disruption Budget for Istiod. In single-node clusters, a PDB can block operations such as node drains or pod evictions, as it prevents the number of available Istiod replicas from falling below the PDB's minimum desired count. Disabling it ensures smooth operations in this specific topology.
