@@ -1,7 +1,7 @@
 // Variables embedded for GitHub compatibility
-:istio_latest_version: 1.30.0-alpha.2
-:istio_latest_version_revision_format: 1-30-0-alpha-2
-:istio_latest_tag: v1.30.0-alpha-latest
+:istio_latest_version: 1.30.0-rc.0
+:istio_latest_version_revision_format: 1-30-0-rc-0
+:istio_latest_tag: v1.30.0-rc-latest
 :istio_release_name: release-1.30
 :istio_latest_minus_one_version: 1.29.2
 :istio_latest_minus_one_version_revision_format: 1-29-2
@@ -97,9 +97,9 @@ Use code blocks for commands or groups of commands that have the same context. *
 All AsciiDoc files should include variable definitions at the top for GitHub compatibility:
 ```
 // Variables embedded for GitHub compatibility
-:istio_latest_version: 1.30.0-alpha.2
-:istio_latest_version_revision_format: 1-30-0-alpha-2
-:istio_latest_tag: v1.30.0-alpha-latest
+:istio_latest_version: 1.30.0-rc.0
+:istio_latest_version_revision_format: 1-30-0-rc-0
+:istio_latest_tag: v1.30.0-rc-latest
 :istio_release_name: release-1.30
 :istio_latest_minus_one_version: 1.29.2
 :istio_latest_minus_one_version_revision_format: 1-29-2
