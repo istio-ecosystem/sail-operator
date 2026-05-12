@@ -246,6 +246,47 @@ function generate_junit_xml() {
   echo "JUnit report written to: $junit_file"
 }
 
+# Collect cluster debug info when a test fails
+function collect_debug_info() {
+  local test_name="$1"
+  local debug_file="${TEST_DIR}/${test_name}-debug.log"
+
+  echo "Collecting debug info for failed test: $test_name -> $debug_file"
+  {
+    echo "===== DEBUG INFO FOR FAILED TEST: $test_name ====="
+    echo "Timestamp: $(date -u)"
+    echo ""
+
+    echo "===== NAMESPACES ====="
+    kubectl get namespaces 2>&1 || true
+    echo ""
+
+    echo "===== PODS (all namespaces) ====="
+    kubectl get pods --all-namespaces 2>&1 || true
+    echo ""
+
+    echo "===== EVENTS (all namespaces, sorted by time) ====="
+    kubectl get events --all-namespaces --sort-by='.lastTimestamp' 2>&1 || true
+    echo ""
+
+    echo "===== NODES ====="
+    kubectl describe nodes 2>&1 || true
+    echo ""
+
+    echo "===== SAIL OPERATOR CUSTOM RESOURCES ====="
+    kubectl get istio,istiorevision,istiorevisiontag,istiocni,ztunnel --all-namespaces 2>&1 || true
+    echo ""
+
+    echo "===== SAIL OPERATOR LOGS (last 200 lines) ====="
+    kubectl logs -n sail-operator -l app.kubernetes.io/name=sail-operator --tail=200 2>&1 || true
+    echo ""
+
+    echo "===== END DEBUG INFO ====="
+  } > "$debug_file"
+
+  echo "Debug info written to: $debug_file"
+}
+
 # Run the tests on a separate cluster for all given test files
 function run_tests() {
   (
@@ -304,6 +345,7 @@ function run_tests() {
 
       # Exit on failure
       if [ "$test_status" != "passed" ]; then
+        collect_debug_info "$test_name"
         exit 1
       fi
 
