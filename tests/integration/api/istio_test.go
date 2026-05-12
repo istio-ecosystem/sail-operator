@@ -32,6 +32,7 @@ import (
 	"helm.sh/helm/v4/pkg/release"
 	releasecommon "helm.sh/helm/v4/pkg/release/common"
 	releasev1 "helm.sh/helm/v4/pkg/release/v1"
+	admissionv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -159,7 +160,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 						},
 					},
 					Revision:        &revKey.Name,
-					DefaultRevision: ptr.Of(""), // set in the default profile
+					DefaultRevision: nil,
 				},
 			}))
 		})
@@ -241,7 +242,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 							},
 						},
 						Revision:        &revKey.Name,
-						DefaultRevision: ptr.Of(""), // set in the default profile
+						DefaultRevision: nil,
 					},
 				}))
 			})
@@ -652,6 +653,66 @@ var _ = Describe("Istio resource", Ordered, func() {
 				g.Expect(rev.Spec.Values.Pilot.ExtraContainerArgs).To(ContainElement(userExtraArg))
 				g.Expect(rev.Spec.Values.Pilot.ExtraContainerArgs).NotTo(ContainElement("--tls-cipher-suites=" + tlsConfigCipherName))
 			}).Should(Succeed())
+		})
+	})
+
+	Describe("ValidatingWebhookConfiguration", func() {
+		validatorWebhookKey := client.ObjectKey{Name: "istiod-default-validator"}
+		It("creates istiod-default-validator when the Istio is named 'default' with InPlace strategy", func() {
+			istio = &v1.Istio{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1.IstioSpec{
+					Version:   istioversion.Default,
+					Namespace: istioNamespace,
+					UpdateStrategy: &v1.IstioUpdateStrategy{
+						Type: v1.UpdateStrategyTypeInPlace,
+					},
+				},
+			}
+			createIstioWithCleanup(ctx, istio)
+
+			Eventually(k8sClient.Get).WithArguments(ctx, validatorWebhookKey, &admissionv1.ValidatingWebhookConfiguration{}).Should(Succeed())
+		})
+
+		It("does not create istiod-default-validator when the Istio name is not 'default' with InPlace strategy", func() {
+			istio = &v1.Istio{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "custom",
+				},
+				Spec: v1.IstioSpec{
+					Version:   istioversion.Default,
+					Namespace: istioNamespace,
+					UpdateStrategy: &v1.IstioUpdateStrategy{
+						Type: v1.UpdateStrategyTypeInPlace,
+					},
+				},
+			}
+			createIstioWithCleanup(ctx, istio)
+
+			Consistently(k8sClient.Get).WithArguments(ctx, validatorWebhookKey, &admissionv1.ValidatingWebhookConfiguration{}).Should(ReturnNotFoundError())
+
+			revisionedWebhookKey := client.ObjectKey{Name: "istio-validator-custom-" + istioNamespace}
+			Eventually(k8sClient.Get).WithArguments(ctx, revisionedWebhookKey, &admissionv1.ValidatingWebhookConfiguration{}).Should(Succeed())
+		})
+
+		It("does not create istiod-default-validator with RevisionBased strategy", func() {
+			istio = &v1.Istio{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1.IstioSpec{
+					Version:   istioversion.Default,
+					Namespace: istioNamespace,
+					UpdateStrategy: &v1.IstioUpdateStrategy{
+						Type: v1.UpdateStrategyTypeRevisionBased,
+					},
+				},
+			}
+			createIstioWithCleanup(ctx, istio)
+
+			Consistently(k8sClient.Get).WithArguments(ctx, validatorWebhookKey, &admissionv1.ValidatingWebhookConfiguration{}).Should(ReturnNotFoundError())
 		})
 	})
 })
