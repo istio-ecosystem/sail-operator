@@ -1,11 +1,10 @@
 apiVersion: v2
-appVersion: 1.30.0-alpha.2
-description: Helm chart for istio-cni components
+appVersion: 1.30.0-rc.0
+description: Helm chart for deploying Istio cluster resources and CRDs
 icon: https://istio.io/latest/favicons/android-192x192.png
 keywords:
-- istio-cni
 - istio
-name: cni
+name: base
 sources:
 - https://github.com/istio/istio
-version: 1.30.0-alpha.2
+version: 1.30.0-rc.0

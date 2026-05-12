@@ -66,7 +66,7 @@ spec:
           spec:
             default:
               namespace: ztunnel
-              version: v1.30.0-alpha.2
+              version: v1.30.0-rc.0
             description: ZTunnelSpec defines the desired state of ZTunnel
             properties:
               namespace:
@@ -3533,13 +3533,13 @@ spec:
                     type: object
                 type: object
               version:
-                default: v1.30.0-alpha.2
+                default: v1.30.0-rc.0
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.30-latest, v1.30.0-alpha.2, v1.29-latest, v1.29.2, v1.29.1, v1.29.0, v1.28-latest, v1.28.6, v1.28.5, v1.28.4, v1.28.3, v1.28.2, v1.28.1, v1.28.0, master, v1.31.0-alpha.7c8cb4d3.
+                  Must be one of: v1.30-latest, v1.30.0-rc.0, v1.29-latest, v1.29.2, v1.29.1, v1.29.0, v1.28-latest, v1.28.6, v1.28.5, v1.28.4, v1.28.3, v1.28.2, v1.28.1, v1.28.0, master, v1.31.0-alpha.7c8cb4d3.
                 enum:
                 - v1.30-latest
-                - v1.30.0-alpha.2
+                - v1.30.0-rc.0
                 - v1.29-latest
                 - v1.29.2
                 - v1.29.1
@@ -3552,6 +3552,7 @@ spec:
                 - v1.28.2
                 - v1.28.1
                 - v1.28.0
+                - v1.30.0-alpha.2
                 - v1.27-latest
                 - v1.27.9
                 - v1.27.8
@@ -3701,7 +3702,7 @@ spec:
             default:
               namespace: ztunnel
               profile: ambient
-              version: v1.30.0-alpha.2
+              version: v1.30.0-rc.0
             description: ZTunnelSpec defines the desired state of ZTunnel
             properties:
               namespace:
@@ -7166,13 +7167,13 @@ spec:
                     type: object
                 type: object
               version:
-                default: v1.30.0-alpha.2
+                default: v1.30.0-rc.0
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.30-latest, v1.30.0-alpha.2, v1.29-latest, v1.29.2, v1.29.1, v1.29.0, v1.28-latest, v1.28.6, v1.28.5, v1.28.4, v1.28.3, v1.28.2, v1.28.1, v1.28.0, master, v1.31.0-alpha.7c8cb4d3.
+                  Must be one of: v1.30-latest, v1.30.0-rc.0, v1.29-latest, v1.29.2, v1.29.1, v1.29.0, v1.28-latest, v1.28.6, v1.28.5, v1.28.4, v1.28.3, v1.28.2, v1.28.1, v1.28.0, master, v1.31.0-alpha.7c8cb4d3.
                 enum:
                 - v1.30-latest
-                - v1.30.0-alpha.2
+                - v1.30.0-rc.0
                 - v1.29-latest
                 - v1.29.2
                 - v1.29.1
@@ -7185,6 +7186,7 @@ spec:
                 - v1.28.2
                 - v1.28.1
                 - v1.28.0
+                - v1.30.0-alpha.2
                 - v1.27-latest
                 - v1.27.9
                 - v1.27.8
