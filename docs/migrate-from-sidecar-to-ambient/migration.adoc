@@ -952,11 +952,11 @@ spec:
   - kind: Service
     group: ""
     name: productpage
-  action: DENY
+  action: ALLOW
   rules:
-  - when:
-    - key: source.workload_name
-      notValues: ["waypoint"]
+  - from:
+    - source:
+        principals: ["cluster.local/ns/bookinfo/sa/waypoint"]
 ---
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
@@ -968,11 +968,11 @@ spec:
   - kind: Service
     group: ""
     name: reviews
-  action: DENY
+  action: ALLOW
   rules:
-  - when:
-    - key: source.workload_name
-      notValues: ["waypoint"]
+  - from:
+    - source:
+        principals: ["cluster.local/ns/bookinfo/sa/waypoint"]
 EOF
 ----
 

@@ -124,6 +124,7 @@ wait_pods_ready_by_ns() {
     for pod_name in $pod_names; do
         wait_for_pod_ready "$namespace" "$pod_name"
     done
+    sleep 5
 }
 
 # Wait for all pods that match labels in a namespace to be ready
