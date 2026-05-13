@@ -131,8 +131,6 @@ versions:
       - https://istio-release.storage.googleapis.com/charts/gateway-1.28.0.tgz
       - https://istio-release.storage.googleapis.com/charts/cni-1.28.0.tgz
       - https://istio-release.storage.googleapis.com/charts/ztunnel-1.28.0.tgz
-  - name: v1.30.0-alpha.2
-    eol: true
   - name: v1.27-latest
     ref: v1.27.9
     eol: true
