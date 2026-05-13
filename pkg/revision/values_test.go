@@ -83,7 +83,8 @@ spec:
 			Platform:       ptr.Of("openshift"),
 			IstioNamespace: ptr.Of(namespace), // this value is always added/overridden based on IstioRevision.spec.namespace
 		},
-		Revision: ptr.Of(revisionName),
+		Revision:        ptr.Of(revisionName),
+		DefaultRevision: nil,
 	}
 
 	if !reflect.DeepEqual(result, expected) {
@@ -125,7 +126,8 @@ spec:`)), 0o644))
 			Platform:       ptr.Of("openshift"),
 			IstioNamespace: ptr.Of(namespace), // this value is always added/overridden based on IstioRevision.spec.namespace
 		},
-		Revision: ptr.Of(revisionName),
+		Revision:        ptr.Of(revisionName),
+		DefaultRevision: nil,
 	}
 
 	if !reflect.DeepEqual(result, expected) {
