@@ -8,7 +8,7 @@
 
 = Migrating from Sidecar to Ambient Mode
 
-This guide provides a comprehensive, step-by-step process for migrating an existing Sail Operator deployment from sidecar mode to ambient mode. The migration approach is designed to achieve a near zero-downtime transition while maintaining all security policies and service mesh functionality.
+This guide provides a comprehensive, step-by-step process for migrating an existing Sail Operator deployment from sidecar mode to ambient mode. The migration approach is designed to achieve a near zero-downtime transition for workloads using only Layer 4 (L4) policies. If your workloads use Layer 7 (L7) policies such as L7 AuthorizationPolicy, HTTPRoute, or RequestAuthentication, there is currently a window during the migration where L7 enforcement is temporarily unenforced. Plan a maintenance window when L7 policies are in use.
 
 == Table of Contents
 
@@ -39,6 +39,7 @@ This guide provides a comprehensive, step-by-step process for migrating an exist
 **** <<step-511-create-version-specific-services-required-for-httproute, Step 5.1.1 Create Version-Specific Services (Required for HTTPRoute)>>
 **** <<step-512-convert-virtualservice-to-httproute, Step 5.1.2 Convert VirtualService to HTTPRoute>>
 *** <<step-52-create-waypoint-targeted-authorization-policies, Step 5.2 Create Waypoint-Targeted Authorization Policies>>
+**** <<step-521-migrate-requestauthentication-to-waypoints, Step 5.2.1 Migrate RequestAuthentication to Waypoints>>
 *** <<step-53-add-ztunnel-bypass-protection-critical-security-step, Step 5.3 Add Ztunnel Bypass Protection (Critical Security Step)>>
 ** <<step-6-enable-ambient-mode-for-applications, Step 6: Enable Ambient Mode for Applications>>
 *** <<step-61-gradual-namespace-migration, Step 6.1 Gradual Namespace Migration>>
@@ -74,6 +75,11 @@ The migration from sidecar to ambient mode follows a structured, phased approach
 2. **Service-by-Service**: Migration can occur incrementally, one service or namespace at a time
 3. **Policy Preservation**: All existing security and traffic policies are maintained throughout the process
 4. **Rollback Support**: Each step can be reversed if issues arise
+
+[WARNING]
+====
+*L7 Policy Enforcement Gap*: Zero-downtime migration is not currently guaranteed when L7 policies are in use. During the transition window — after a namespace is labeled for ambient mode but before waypoints are fully activated and all sidecar traffic stops — L7 policies (HTTPRoute rules, L7 AuthorizationPolicy, RequestAuthentication) are not enforced. Plan a maintenance window if your workloads rely on L7 policies for security enforcement.
+====
 
 [[key-architectural-changes]]
 === 1.2 Key Architectural Changes
@@ -180,21 +186,64 @@ A critical architectural decision involves whether to deploy waypoint proxies. T
 
 For detailed waypoint configuration guidance, see link:../common/istio-ambient-waypoint.adoc[Waypoint Proxy Documentation].
 
+[NOTE]
+====
+*L4-Only Migration Fast Path*: If your workloads use only L4 policies (L4 AuthorizationPolicy, PeerAuthentication), you can migrate to ambient mode without deploying waypoint proxies and without changing any existing policies. Existing L4 AuthorizationPolicies continue to work unchanged, enforced directly by ztunnel. This is the simplest path and covers most mTLS-only deployments. You can skip Steps 4, 5.1, 5.2, 5.2.1, and 7 of this guide.
+====
+
 [[compatibility-validation]]
 === 2.2 Compatibility between Sidecar and Ambient Modes
 
-**Supported Features:**
+**Resource Migration Overview:**
 
-- All L4 traffic policies (AuthorizationPolicy, PeerAuthentication)
-- L7 traffic management (VirtualService, DestinationRule converted to HTTPRoute)
-- Security policies (RequestAuthentication, AuthorizationPolicy)
-- Telemetry and observability features
+[cols="2,3,2"]
+|===
+|Sidecar Resource |Ambient Action |Notes
+
+|`AuthorizationPolicy` (L4)
+|No change required
+|ztunnel enforces directly
+
+|`AuthorizationPolicy` (L7)
+|Attach to waypoint via `targetRefs`
+|Requires waypoint deployment
+
+|`PeerAuthentication`
+|No change required (STRICT/PERMISSIVE)
+|`DISABLE` mode is a migration blocker
+
+|`VirtualService`
+|Migrate to `HTTPRoute`
+|Alpha support only in ambient; migrate before completing migration
+
+|`DestinationRule` (traffic policy)
+|No change required
+|Waypoints apply policies automatically
+
+|`DestinationRule` (subsets)
+|Create version-specific Services
+|HTTPRoute does not support subsets
+
+|`RequestAuthentication`
+|Attach to waypoint via `targetRefs`
+|Not enforced by ztunnel
+
+|`EnvoyFilter`
+|Not supported on waypoints
+|Use Wasm extensions or alternative APIs
+
+|`Gateway` (Istio API)
+|Migrate to `Gateway` (Gateway API)
+|Recommended before migration; `ingress2gateway` tool can help
+|===
 
 **Unsupported Features** (migration blockers):
 
-- Multi-cluster mesh configurations
+- Primary-remote multicluster configurations (multiple-primary multicluster IS supported)
 - Virtual Machine (VM) workload integration
 - SPIRE integration for identity federation
+- PeerAuthentication with `mode: DISABLE` (ambient always enforces mTLS; DISABLE mode is not compatible)
+- EnvoyFilter resources targeting waypoint proxies (EnvoyFilter is not supported on waypoints; use Wasm extensions or alternative APIs)
 
 For additional compatibility considerations refer to: link:../common/coexistence.adoc[Sidecar-Ambient Coexistence Guidelines]
 
@@ -321,6 +370,15 @@ kubectl get virtualservice -A -o yaml | grep -B5 -A10 "subset:" | grep -E "(name
 
 # Check for unsupported features that need manual conversion
 kubectl get virtualservice -A -o yaml | grep -E "(fault|delay|mirror)" | grep -v "name:"
+
+# Check for PeerAuthentication with DISABLE mode (migration blocker)
+kubectl get peerauthentication -A -o yaml | grep -B5 "mode: DISABLE"
+
+# Check for EnvoyFilter resources (not supported on waypoint proxies)
+kubectl get envoyfilter -A
+
+# Check for primary-remote multicluster config (blocker; multiple-primary is OK)
+kubectl get istio -A -o yaml | grep -i "remote\|multiCluster"
 ----
 
 **Migration Readiness Assessment:**
@@ -345,10 +403,12 @@ Note: In the step 5 of this guide you will need to migrate unsupported features.
 
 **Migration Blockers (must resolve before proceeding):**
 
-- Multi-cluster mesh configurations
+- Primary-remote multicluster configurations (multiple-primary multicluster is supported)
 - VM workload integration
 - SPIRE integration
 - Istio version < 1.24
+- PeerAuthentication with `mode: DISABLE` (ambient always enforces mTLS)
+- EnvoyFilter resources that cannot be migrated to alternative APIs
 
 [[step-2-cluster-setup-enable-ambient-support]]
 === Step 2: Cluster Setup - Enable Ambient Support
@@ -593,15 +653,32 @@ kubectl get namespace bookinfo -o jsonpath='{.metadata.labels.istio\.io/use-wayp
 [[step-5-migrate-traffic-policies]]
 === Step 5: Migrate Traffic Policies
 
+[IMPORTANT]
+====
+*EnvoyFilter Not Supported on Waypoints*: `EnvoyFilter` resources are not supported on waypoint proxies in ambient mode. If your workloads rely on EnvoyFilter customizations, you must find alternative approaches (Wasm extensions, Lua filters through other APIs, or native Envoy features). Inventory your EnvoyFilter resources before proceeding: `kubectl get envoyfilter -A`
+====
+
 [[step-51-convert-virtualservices-to-httproutes]]
 ==== Step 5.1 Convert VirtualServices to HTTPRoutes
+
+`HTTPRoute` is the stable, supported L7 routing API for ambient mode. All `VirtualService` resources should be migrated to `HTTPRoute` before completing the migration.
+
+[WARNING]
+====
+`VirtualService` support with waypoints is Alpha and may break in future releases. Migrate your `VirtualService` resources to `HTTPRoute` before completing the migration. Do not leave both `VirtualService` and `HTTPRoute` resources targeting the same workload, as this leads to undefined behavior.
+====
+
+[TIP]
+====
+The community tool https://github.com/kubernetes-sigs/ingress2gateway[ingress2gateway] can automate part of this conversion. Its https://github.com/kubernetes-sigs/ingress2gateway/blob/main/pkg/i2gw/providers/istio/README.md[Istio provider] translates `VirtualService` resources to `HTTPRoute`, `TLSRoute`, and `TCPRoute`, and generates `ReferenceGrant` resources for cross-namespace references. Fields that cannot be translated directly are logged and skipped, so always review the generated output before applying it to your cluster. Note that `IngressGateway` resources are also translated to Gateway API `Gateway` resources, so this tool can be used for the migration of both `VirtualService` and `Gateway` resources.
+====
 
 **Understanding Resource Conversion:**
 
 Ambient mode uses the Kubernetes Gateway API instead of Istio's VirtualService and DestinationRule resources for traffic management. This migration requires converting your existing Istio traffic policies to Gateway API equivalents:
 
 - **VirtualService** to **HTTPRoute**: Traffic routing, header matching, fault injection
-- **DestinationRule subsets** to **Version-specific Services**: Since Gateway API doesn't support subset-based routing
+- **DestinationRule subsets** to **Version-specific Services**: Since Gateway API does not support subset-based routing
 
 For comprehensive conversion guidance, refer to:
 
@@ -853,6 +930,57 @@ kubectl get pods -n bookinfo -o jsonpath='{range .items[*]}{.metadata.name}{"\t"
 kubectl apply -f bookinfo-waypoint-authz-policies.yaml
 ----
 
+[[step-521-migrate-requestauthentication-to-waypoints]]
+==== Step 5.2.1 Migrate RequestAuthentication to Waypoints
+
+[WARNING]
+====
+`RequestAuthentication` resources (JWT validation) are **not** enforced by ztunnel in ambient mode. Existing resources using `selector` will not apply to ambient workloads. Update them to target the waypoint proxy using `targetRefs`.
+====
+
+If you have existing `RequestAuthentication` resources, update them to target the waypoint:
+
+**Before (sidecar mode - selector-based):**
+[source,yaml]
+----
+apiVersion: security.istio.io/v1
+kind: RequestAuthentication
+metadata:
+  name: jwt-auth
+  namespace: bookinfo
+spec:
+  selector:
+    matchLabels:
+      app: productpage
+  jwtRules:
+  - issuer: "https://example.com"
+    jwksUri: "https://example.com/.well-known/jwks.json"
+----
+
+**After (ambient mode - waypoint-targeted):**
+[source,yaml]
+----
+apiVersion: security.istio.io/v1
+kind: RequestAuthentication
+metadata:
+  name: jwt-auth
+  namespace: bookinfo
+spec:
+  targetRefs:
+  - kind: Gateway
+    group: gateway.networking.k8s.io
+    name: waypoint  # Replace with your actual waypoint Gateway name
+  jwtRules:
+  - issuer: "https://example.com"
+    jwksUri: "https://example.com/.well-known/jwks.json"
+----
+
+Apply the updated RequestAuthentication:
+[source,console]
+----
+kubectl apply -f requestauthentication.yaml
+----
+
 [[step-53-add-ztunnel-bypass-protection-critical-security-step]]
 ==== Step 5.3 Add Ztunnel Bypass Protection (Critical Security Step)
 
@@ -936,6 +1064,11 @@ fi
 
 We recommend enabling ambient mode for one namespace at a time, starting with the least critical. Replace `bookinfo` with your actual namespace name:
 
+[WARNING]
+====
+*Sidecar-to-Ambient Traffic Bypasses Waypoints*: During incremental migration, traffic originating from sidecar-mode workloads (in namespaces not yet migrated to ambient) to ambient-mode workloads bypasses waypoint proxies entirely. This means L7 policies (HTTPRoute routing rules, L7 AuthorizationPolicy) are NOT enforced for that cross-mode traffic during the migration window. Only L4 ztunnel policies are enforced for this traffic. Complete the migration of all communicating namespaces before activating waypoints in Step 7 to close this enforcement gap.
+====
+
 [source,console]
 ----
 kubectl label namespace bookinfo istio.io/dataplane-mode=ambient
@@ -973,6 +1106,11 @@ kubectl exec -n bookinfo $(kubectl get pods -n bookinfo -l app=ratings -o jsonpa
 ==== Step 7.1 Activate Waypoints for L7 Processing
 
 **Critical Sequencing**: Only activate waypoints AFTER all required namespaces are in ambient mode.
+
+[NOTE]
+====
+This sequencing requirement exists because traffic from sidecar-mode workloads bypasses waypoint proxies (see the warning in <<step-61-gradual-namespace-migration,Step 6.1>>). Activating waypoints before all communicating namespaces are in ambient mode would result in inconsistent L7 policy enforcement. Enable ambient mode on all related namespaces before activating waypoints.
+====
 
 **Understanding Waypoint Activation:**
 
