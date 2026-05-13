@@ -7,6 +7,7 @@ link:../README.adoc[Return to Project Root]
 ** <<supported-use-cases-in-coexistence-mode>>
 ** <<limitations-and-unsupported-use-cases>>
 *** <<layer-7-policy-enforcement>>
+*** <<known-incompatibilities>>
 ** <<best-practices>>
 
 [[coexistence-of-ambient-and-sidecar-mode]]
@@ -16,7 +17,9 @@ Sail Operator supports running sidecar pods and ambient pods together within the
 While basic connectivity and Layer 4 (L4) features work seamlessly between sidecar and ambient workloads, there is a
 significant limitation for Layer 7 (L7) capabilities in the hybrid model.
 
-NOTE: The information in this document applies to Istio version 1.27.x. The coexistence of the two data planes is still evolving. For the latest status and updates, see the following upstream links: https://github.com/istio/istio/issues/57213[Support sidecar and ambient coexistence] and https://istio.io/latest/docs/ambient/usage/add-workloads/[Istio Ambient Mode - Add workloads to the mesh].
+Coexistence mode is typically a transitional state during migration from sidecar to ambient. It is not intended as a permanent architecture unless you truly need sidecar features that are not yet supported in ambient mode. If you are actively migrating workloads, refer to link:../migrate-from-sidecar-to-ambient/migration.adoc[Migrating from Sidecar to Ambient Mode] for a step-by-step guide.
+
+NOTE: The information in this document applies to Sail Operator with Istio version 1.27 and later. The coexistence of the two data planes is still evolving. For the latest status and updates, see the following upstream links: https://github.com/istio/istio/issues/57213[Support sidecar and ambient coexistence] and https://istio.io/latest/docs/ambient/usage/add-workloads/[Istio Ambient Mode - Add workloads to the mesh].
 
 [[requirements-for-coexistence]]
 === Requirements for Coexistence
@@ -66,15 +69,38 @@ The major limitations are around L7 features (like L7 based traffic routing, L7 
 [[layer-7-policy-enforcement]]
 ==== Layer 7 Policy Enforcement
 
-Currently, sidecar proxies have limited support for communicating with waypoint proxies. As a result, when a sidecar pod sends traffic
-to an ambient pod with a waypoint, the traffic usually bypasses the waypoint, which prevents Layer 7 (L7) policy enforcement.
-However, ambient pods communicate directly with sidecar pods, and L7 policy enforcement is handled by the sidecar proxy.
+Sidecar proxies cannot route traffic through waypoint proxies. When a sidecar pod sends traffic to an ambient pod with a waypoint, the traffic always bypasses the waypoint.
 
-When a sidecar pod communicates with an ambient pod that has a waypoint:
+[WARNING]
+====
+This means:
 
-- L7 authorization policies do not apply
-- Only Layer 4 (L4) authorization policies are enforced
+- L7 `AuthorizationPolicy` rules are **not** enforced for this traffic
+- `RequestAuthentication` (JWT validation) is **not** enforced for this traffic
+- `HTTPRoute` routing rules targeting waypoints are **not** applied
+- Only Layer 4 (L4) authorization policies are enforced, via ztunnel
 - Routing decisions are made by the client-side sidecar, not the waypoint proxy
+
+Account for this before relying on waypoint-based L7 access control for cross-mode traffic.
+====
+
+In the reverse direction, ambient workloads sending traffic to sidecar workloads communicate normally, and L7 policy enforcement is handled by the destination sidecar proxy.
+
+[[known-incompatibilities]]
+==== Known Incompatibilities
+
+The following configurations are incompatible with coexistence mode and will prevent correct operation:
+
+- **`PeerAuthentication` with `mode: DISABLE`**: Ambient mode always enforces mTLS via ztunnel. If any namespace uses `PeerAuthentication` with `mode: DISABLE`, ambient workloads will be unable to communicate with those sidecar workloads. Check for this before enabling ambient mode:
++
+[source,bash]
+----
+kubectl get peerauthentication -A -o yaml | grep -B5 "mode: DISABLE"
+----
+
+- **`EnvoyFilter` on waypoint proxies**: `EnvoyFilter` resources are not supported on waypoint proxies. Sidecar workloads that rely on `EnvoyFilter` customizations targeting ambient workloads will not have those filters applied when traffic passes through a waypoint. Use Wasm extensions or alternative Envoy APIs instead.
+
+- **Primary-remote multicluster**: Primary-remote multicluster configurations are not supported in mixed sidecar-ambient mode. Use multiple-primary configurations instead.
 
 [[best-practices]]
 === Best Practices
@@ -83,4 +109,9 @@ When running sidecar and ambient modes together, follow these recommendations:
 
 - *Use separate namespaces*: Whenever possible, use separate namespaces for ambient and sidecar pods to avoid configuration issues.
 - *Avoid mixed labeling*: Avoid https://istio.io/latest/docs/reference/config/labels/[labeling] pods/namespaces with both sidecar and ambient injection labels (although sidecar takes precedence if both are present).
+- *Complete migration promptly*: Coexistence mode has significant L7 limitations and should be treated as a temporary state. Plan to complete the migration to ambient for all communicating namespaces as quickly as feasible to restore full L7 enforcement.
+- *Migrate L7 policies before enabling ambient*: Before enabling ambient mode on a namespace, ensure all L7 policies (`HTTPRoute`, L7 `AuthorizationPolicy`, `RequestAuthentication`) are updated to use `targetRefs` to attach to waypoint proxies. Policies using `selector` will not apply to ambient workloads.
+- *Enable ambient on all communicating namespaces together*: To restore waypoint-based L7 enforcement, all namespaces that communicate with each other should complete ambient mode migration before activating waypoints. Activating waypoints while some namespaces are still in sidecar mode leaves L7 policies unenforced for cross-mode traffic.
+
+For step-by-step migration guidance, see link:../migrate-from-sidecar-to-ambient/migration.adoc[Migrating from Sidecar to Ambient Mode].
 
