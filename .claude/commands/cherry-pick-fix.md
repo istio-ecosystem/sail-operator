@@ -7,6 +7,10 @@ argument-hint: "<issue-number>"
 
 Automates resolving failed cherry-pick issues created by the cherry-pick bot. Parses the issue, cherry-picks the original commit onto the target release branch, intelligently resolves conflicts, runs tests, and pauses for review before pushing and creating a PR.
 
+## Prerequisites
+
+- `gh` CLI must be installed and authenticated with permission to push to the user's fork.
+
 ## Argument
 
 - `<issue-number>`: Required. The GitHub issue number created by the cherry-pick bot (e.g. `1928`).
@@ -73,12 +77,12 @@ For each conflicting file (identified from `git diff --name-only --diff-filter=U
 
 If any helper functions or utilities were added in the original commit but depend on code that's also added in the commit, make sure they are included. Check for undefined references.
 
-### 5. Run tests and lint
+### 5. Generate, test, and lint
 
-Run `make test` to verify the cherry-pick doesn't break anything. This runs both unit tests and integration tests. Then run `make lint` to ensure the code passes linting checks.
+First run `make gen` to regenerate any generated code (CRDs, deepcopy, etc.) that may need updating after the cherry-pick. Then run `make test` to verify the cherry-pick doesn't break anything. This runs both unit tests and integration tests. Then run `make lint` to ensure the code passes linting checks.
 
-- **If tests and lint pass**: proceed to step 6.
-- **If either fails**: analyze the failure, fix the issue, amend the commit, and re-run. Repeat until both pass or report the failure to the user if it can't be resolved.
+- **If all pass**: proceed to step 6.
+- **If any fail**: analyze the failure, fix the issue, amend the commit, and re-run. Repeat until all pass or report the failure to the user if it can't be resolved.
 
 ### 6. Pause for review
 
@@ -141,7 +145,6 @@ After the branch has been pushed to the fork, immediately remove the worktree us
 ## Error Handling
 
 - **Issue not found or wrong format**: Report what was expected and what was found. The bot issues have a specific format; if the issue doesn't match, tell the user.
-- **Merge commit not found**: The original PR may not have been merged. Report this.
 - **Cherry-pick fails with non-content conflicts** (e.g. file deletions, renames): Report the situation and let the user decide.
 - **Tests fail after resolution**: Show the failure output and ask the user how to proceed.
 - **Push fails**: Ask the user what they want to do. NEVER fall back to pushing to upstream or any other remote automatically.
