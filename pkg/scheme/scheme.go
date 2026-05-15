@@ -19,6 +19,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	multusv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	configv1 "github.com/openshift/api/config/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -36,5 +37,6 @@ func init() {
 
 	utilruntime.Must(v1alpha1.AddToScheme(Scheme))
 	utilruntime.Must(v1.AddToScheme(Scheme))
+	utilruntime.Must(apiextensionsv1.AddToScheme(Scheme))
 	// +kubebuilder:scaffold:scheme
 }

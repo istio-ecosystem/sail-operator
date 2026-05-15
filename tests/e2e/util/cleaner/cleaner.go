@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/istio-ecosystem/sail-operator/pkg/install"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -199,7 +200,7 @@ func (c *Cleaner) cleanup(ctx context.Context) (deleted []client.Object) {
 		// Skip any resource we recorded previously.
 		// Also, skip any OLM managed resource as it'll be recreated upon deletion.
 		if mapHasKey(c.resources, res.key) ||
-			mapHasKey(res.obj.GetLabels(), "olm.managed") {
+			mapHasKey(res.obj.GetLabels(), install.OLMManagedLabel) {
 			continue
 		}
 
