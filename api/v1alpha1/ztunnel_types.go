@@ -146,7 +146,3 @@ type ZTunnelList struct {
 	metav1.ListMeta `json:"metadata"`
 	Items           []ZTunnel `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&ZTunnel{}, &ZTunnelList{})
-}

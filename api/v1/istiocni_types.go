@@ -143,7 +143,3 @@ type IstioCNIList struct {
 	metav1.ListMeta `json:"metadata"`
 	Items           []IstioCNI `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&IstioCNI{}, &IstioCNIList{})
-}
