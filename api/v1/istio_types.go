@@ -244,7 +244,3 @@ type IstioList struct {
 	metav1.ListMeta `json:"metadata"`
 	Items           []Istio `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&Istio{}, &IstioList{})
-}
