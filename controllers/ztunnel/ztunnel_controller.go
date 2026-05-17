@@ -26,6 +26,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
+	"github.com/istio-ecosystem/sail-operator/pkg/fieldignore"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/predicate"
 	sharedreconcile "github.com/istio-ecosystem/sail-operator/pkg/reconcile"
@@ -187,11 +188,8 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&corev1.ConfigMap{}, ownedResourceHandler).
 		Watches(&appsv1.DaemonSet{}, ownedResourceHandler).
 		Watches(&corev1.ResourceQuota{}, ownedResourceHandler).
-
-		// We use predicate.IgnoreUpdate() so that we skip the reconciliation when a pull secret is added to the ServiceAccount.
-		// This is necessary so that we don't remove the newly-added secret.
-		// TODO: this is a temporary hack until we implement the correct solution on the Helm-render side
-		Watches(&corev1.ServiceAccount{}, ownedResourceHandler, builder.WithPredicates(predicate.IgnoreUpdate())).
+		Watches(&corev1.ServiceAccount{}, ownedResourceHandler,
+			builder.WithPredicates(fieldignore.ServiceAccountIgnoreRules.NewPredicate(), predicate.IgnoreUpdateWhenAnnotation())).
 
 		// cluster-scoped resources
 		// +lint-watches:ignore: Namespace (not present in charts, but must be watched to reconcile ZTunnel when its namespace is created)

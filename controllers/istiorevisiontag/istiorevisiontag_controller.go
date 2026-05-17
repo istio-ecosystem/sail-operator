@@ -27,6 +27,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
+	"github.com/istio-ecosystem/sail-operator/pkg/fieldignore"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/revision"
@@ -251,8 +252,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// cluster-scoped resources
 		Watches(&v1.Istio{}, operatorResourcesHandler).
 		Watches(&v1.IstioRevision{}, operatorResourcesHandler).
-		Watches(&admissionv1.MutatingWebhookConfiguration{}, ownedResourceHandler).
-		Complete(reconciler.NewStandardReconcilerWithFinalizer[*v1.IstioRevisionTag](r.Client, r.Reconcile, r.Finalize, constants.FinalizerName))
+		Watches(&admissionv1.MutatingWebhookConfiguration{}, ownedResourceHandler,
+			builder.WithPredicates(fieldignore.ValidatingWebhookIgnoreRules.NewPredicate())).
+		Complete(reconciler.NewStandardReconcilerWithFinalizer(r.Client, r.Reconcile, r.Finalize, constants.FinalizerName))
 }
 
 func (r *Reconciler) determineStatus(ctx context.Context, tag *v1.IstioRevisionTag,
