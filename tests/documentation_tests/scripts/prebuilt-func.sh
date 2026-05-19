@@ -124,6 +124,7 @@ wait_pods_ready_by_ns() {
     for pod_name in $pod_names; do
         wait_for_pod_ready "$namespace" "$pod_name"
     done
+    sleep 5
 }
 
 # Wait for all pods that match labels in a namespace to be ready
@@ -204,7 +205,6 @@ wait_istio_ready() {
 print_istio_info() {
     kubectl get istio
     kubectl get pods -n istio-system
-    kubectl get istio
     kubectl get istiorevision
     kubectl get istiorevisiontag
 }
@@ -323,4 +323,40 @@ wait_for_rollout_success() {
     for deploy in $deploy_names; do
         kubectl rollout status "$deploy" -n "$namespace" --timeout=60s
     done
+}
+
+# Create default Istio resource
+create_default_istio() {
+    namespace="${1:-istio-system}"
+
+    kubectl get namespace "$namespace" >/dev/null 2>&1 || kubectl create namespace "$namespace"
+    cat <<EOF | kubectl apply -f-
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  namespace: "$namespace"
+EOF
+    with_retries wait_istio_ready "$namespace"
+}
+
+# Deploy Bookinfo application
+install_bookinfo() {
+    istio_release_name="$1"
+    namespace="${2:-bookinfo}"
+
+    kubectl get namespace "$namespace" >/dev/null 2>&1 || kubectl create namespace "$namespace"
+    kubectl label namespace "$namespace" istio.io/rev=default
+    kubectl apply -n "$namespace" -f https://raw.githubusercontent.com/istio/istio/"${istio_release_name}"/samples/bookinfo/platform/kube/bookinfo.yaml
+}
+
+# Create Bookinfo gateway API
+create_bookinfo_gateway_api() {
+    istio_release_name="$1"
+    namespace="${2:-bookinfo}"
+
+    kubectl get crd gateways.gateway.networking.k8s.io >/dev/null 2>&1 || \
+        kubectl apply --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.4.0/experimental-install.yaml
+    kubectl apply -f https://raw.githubusercontent.com/istio/istio/"${istio_release_name}"/samples/bookinfo/gateway-api/bookinfo-gateway.yaml -n "$namespace"
 }
