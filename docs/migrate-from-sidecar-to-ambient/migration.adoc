@@ -218,7 +218,7 @@ For detailed waypoint configuration guidance, see link:../common/istio-ambient-w
 
 |`DestinationRule` (traffic policy)
 |No change required
-|Waypoints apply policies automatically
+|Only enforced when a waypoint is deployed and traffic is directed through it; silently ignored in ztunnel-only deployments
 
 |`DestinationRule` (subsets)
 |Create version-specific Services
