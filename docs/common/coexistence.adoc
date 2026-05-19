@@ -100,7 +100,7 @@ kubectl get peerauthentication -A -o yaml | grep -B5 "mode: DISABLE"
 
 - **`EnvoyFilter` on waypoint proxies**: `EnvoyFilter` resources are not supported on waypoint proxies. Sidecar workloads that rely on `EnvoyFilter` customizations targeting ambient workloads will not have those filters applied when traffic passes through a waypoint. Use Wasm extensions or alternative Envoy APIs instead.
 
-- **Primary-remote multicluster**: Primary-remote multicluster configurations are not supported in mixed sidecar-ambient mode. Use multiple-primary configurations instead.
+- **Primary-remote multicluster**: Primary-remote multicluster configurations are not supported in mixed sidecar-ambient mode. Use multi-primary configurations instead.
 
 [[best-practices]]
 === Best Practices

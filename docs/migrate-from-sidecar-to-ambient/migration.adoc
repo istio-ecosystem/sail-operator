@@ -239,7 +239,7 @@ For detailed waypoint configuration guidance, see link:../common/istio-ambient-w
 
 **Unsupported Features** (migration blockers):
 
-- Primary-remote multicluster configurations (multiple-primary multicluster IS supported)
+- Primary-remote multicluster configurations (multi-primary multicluster IS supported)
 - Virtual Machine (VM) workload integration
 - SPIRE integration for identity federation
 - PeerAuthentication with `mode: DISABLE` (ambient always enforces mTLS; DISABLE mode is not compatible)
@@ -377,7 +377,7 @@ kubectl get peerauthentication -A -o yaml | grep -B5 "mode: DISABLE"
 # Check for EnvoyFilter resources (not supported on waypoint proxies)
 kubectl get envoyfilter -A
 
-# Check for primary-remote multicluster config (blocker; multiple-primary is OK)
+# Check for primary-remote multicluster config (blocker; multi-primary is OK)
 kubectl get istio -A -o yaml | grep -i "remote\|multiCluster"
 ----
 
@@ -403,7 +403,7 @@ Note: In the step 5 of this guide you will need to migrate unsupported features.
 
 **Migration Blockers (must resolve before proceeding):**
 
-- Primary-remote multicluster configurations (multiple-primary multicluster is supported)
+- Primary-remote multicluster configurations (multi-primary multicluster is supported)
 - VM workload integration
 - SPIRE integration
 - Istio version < 1.24
