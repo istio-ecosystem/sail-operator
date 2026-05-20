@@ -54,8 +54,10 @@ const (
 )
 
 const (
-	SleepNamespace   = "sleep"
-	HttpbinNamespace = "httpbin"
+	SleepNamespace       = "sleep"
+	HttpbinNamespace     = "httpbin"
+	SleepContainerName   = "sleep"
+	HttpbinContainerName = "httpbin"
 )
 
 var (
@@ -503,9 +505,9 @@ func withClusterName(m string, k kubectl.Kubectl) string {
 	return m + " on " + k.ClusterName
 }
 
-func CheckPodConnectivity(podName, srcNamespace, destNamespace string, k kubectl.Kubectl) {
+func CheckPodConnectivity(podName, containerName, srcNamespace, destNamespace string, k kubectl.Kubectl) {
 	command := fmt.Sprintf(`curl -o /dev/null -s -w "%%{http_code}\n" httpbin.%s.svc.cluster.local:8000/get`, destNamespace)
-	response, err := k.WithNamespace(srcNamespace).Exec(podName, srcNamespace, command)
+	response, err := k.WithNamespace(srcNamespace).Exec(podName, containerName, command)
 	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("error connecting to the %q pod", podName))
 	Expect(response).To(ContainSubstring("200"), fmt.Sprintf("Unexpected response from %s pod", podName))
 }
@@ -529,4 +531,45 @@ func EnsureNamespace(ctx context.Context, ctrlclient client.Client, namespace st
 	} else if err != nil {
 		Fail(fmt.Sprintf("Failed to get namespace: %s", err))
 	}
+}
+
+// GetProxyVersion extracts the Istio proxy version from a pod using istioctl proxy-status
+func GetProxyVersion(podName, namespace string) (*semver.Version, error) {
+	proxyStatus, err := istioctl.GetProxyStatus("--namespace " + namespace)
+	if err != nil {
+		return nil, fmt.Errorf("error getting sidecar version: %w", err)
+	}
+
+	lines := strings.Split(proxyStatus, "\n")
+	colSplit := regexp.MustCompile(`\s{2,}`)
+
+	versionIdx := -1
+	headers := colSplit.Split(strings.TrimSpace(lines[0]), -1)
+	for i, header := range headers {
+		if header == "VERSION" {
+			versionIdx = i
+			break
+		}
+	}
+	if versionIdx == -1 {
+		return nil, fmt.Errorf("VERSION header not found")
+	}
+
+	var versionStr string
+	for _, line := range lines[1:] {
+		if strings.Contains(line, podName+"."+namespace) {
+			values := colSplit.Split(strings.TrimSpace(line), -1)
+			versionStr = values[versionIdx]
+			break
+		}
+	}
+
+	if versionStr == "" {
+		return nil, fmt.Errorf("pod %s not found in proxy status output for namespace %s", podName, namespace)
+	}
+	version, err := semver.NewVersion(versionStr)
+	if err != nil {
+		return version, fmt.Errorf("error parsing sidecar version %q: %w", versionStr, err)
+	}
+	return version, err
 }
