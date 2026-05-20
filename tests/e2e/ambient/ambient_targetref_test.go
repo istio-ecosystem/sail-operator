@@ -69,6 +69,12 @@ profile: ambient`)
 
 	Context("Value Propagation from TargetRef", Ordered, func() {
 		networkValue := "test-network"
+		var contextCleaner cleaner.Cleaner
+
+		BeforeAll(func(ctx SpecContext) {
+			contextCleaner = cleaner.New(cl)
+			contextCleaner.Record(ctx)
+		})
 
 		When("Istio CR is created with custom global.network value", func() {
 			It("creates Istio with custom network configuration", func(ctx SpecContext) {
@@ -182,21 +188,20 @@ spec:
 				Success(fmt.Sprintf("ZTunnel DaemonSet inherited updated NETWORK=%s", newNetworkValue))
 			})
 		})
+
+		AfterAll(func(ctx SpecContext) {
+			contextCleaner.Cleanup(ctx)
+			Success("Context cleanup completed")
+		})
 	})
 
 	Context("MeshConfig Propagation from TargetRef", Ordered, func() {
 		customTrustDomain := "custom-trust.local"
+		var contextCleaner cleaner.Cleaner
 
 		BeforeAll(func(ctx SpecContext) {
-			// Delete the ZTunnel from the previous context
-			_ = k.Delete("ztunnel", "default")
-			Eventually(func(g Gomega) {
-				ztunnel := &v1.ZTunnel{}
-				err := cl.Get(ctx, kube.Key("default"), ztunnel)
-				g.Expect(err).To(HaveOccurred())
-				g.Expect(err.Error()).To(ContainSubstring("not found"))
-			}).Should(Succeed())
-			Success("Previous ZTunnel deleted and verified gone")
+			contextCleaner = cleaner.New(cl)
+			contextCleaner.Record(ctx)
 		})
 
 		When("Istio CR is created with custom meshConfig", func() {
@@ -317,6 +322,11 @@ spec:
 				Success("ZTunnel DaemonSet healthy after meshConfig update")
 			})
 		})
+
+		AfterAll(func(ctx SpecContext) {
+			contextCleaner.Cleanup(ctx)
+			Success("Context cleanup completed")
+		})
 	})
 
 	Context("User Value Override Precedence", Ordered, func() {
@@ -324,18 +334,11 @@ spec:
 		overrideNetwork := "override-net"
 		customEnvVar := "CUSTOM_TEST_VAR"
 		customEnvValue := "custom-value"
+		var contextCleaner cleaner.Cleaner
 
 		BeforeAll(func(ctx SpecContext) {
-			// Delete the ZTunnel from the previous context since only one ZTunnel named 'default' can exist
-			// Wait for deletion to complete to avoid conflicts
-			_ = k.Delete("ztunnel", "default")
-			Eventually(func(g Gomega) {
-				ztunnel := &v1.ZTunnel{}
-				err := cl.Get(ctx, kube.Key("default"), ztunnel)
-				g.Expect(err).To(HaveOccurred())
-				g.Expect(err.Error()).To(ContainSubstring("not found"))
-			}).Should(Succeed())
-			Success("Previous ZTunnel deleted and verified gone")
+			contextCleaner = cleaner.New(cl)
+			contextCleaner.Record(ctx)
 		})
 
 		When("Istio is created with a network value", func() {
@@ -459,36 +462,21 @@ spec:
 				Success(fmt.Sprintf("ZTunnel now uses inherited NETWORK=%s", inheritedNetwork))
 			})
 		})
+
+		AfterAll(func(ctx SpecContext) {
+			contextCleaner.Cleanup(ctx)
+			Success("Context cleanup completed")
+		})
 	})
 
 	Context("Invalid TargetRef Handling", Ordered, func() {
-		BeforeAll(func(ctx SpecContext) {
-			// Delete the ZTunnel from the previous context since only one ZTunnel named 'default' can exist
-			// Wait for deletion to complete to avoid conflicts
-			_ = k.Delete("ztunnel", "default")
-			Eventually(func(g Gomega) {
-				ztunnel := &v1.ZTunnel{}
-				err := cl.Get(ctx, kube.Key("default"), ztunnel)
-				g.Expect(err).To(HaveOccurred())
-				g.Expect(err.Error()).To(ContainSubstring("not found"))
-			}).Should(Succeed())
-			Success("Previous ZTunnel deleted and verified gone")
-		})
-
 		When("ZTunnel targetRef points to non-existent Istio resource", func() {
 			missingIstioName := "missing-istio"
+			var whenCleaner cleaner.Cleaner
 
 			BeforeAll(func(ctx SpecContext) {
-				// Delete the ZTunnel from the previous When block
-				// Wait for deletion to complete to avoid conflicts
-				_ = k.Delete("ztunnel", "default")
-				Eventually(func(g Gomega) {
-					ztunnel := &v1.ZTunnel{}
-					err := cl.Get(ctx, kube.Key("default"), ztunnel)
-					g.Expect(err).To(HaveOccurred())
-					g.Expect(err.Error()).To(ContainSubstring("not found"))
-				}).Should(Succeed())
-				Success("Previous ZTunnel deleted and verified gone")
+				whenCleaner = cleaner.New(cl)
+				whenCleaner.Record(ctx)
 			})
 
 			It("creates ZTunnel with targetRef to non-existent Istio", func(ctx SpecContext) {
@@ -581,6 +569,11 @@ spec:
 					g.Expect(daemonset.Status.NumberAvailable).To(BeNumerically(">", 0))
 				}).Should(Succeed())
 				Success("Value propagation working - ZTunnel DaemonSet is deployed")
+			})
+
+			AfterAll(func(ctx SpecContext) {
+				whenCleaner.Cleanup(ctx)
+				Success("Cleanup completed")
 			})
 		})
 	})
