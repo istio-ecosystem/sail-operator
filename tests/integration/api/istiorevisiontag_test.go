@@ -25,6 +25,7 @@ import (
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	admissionv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -149,6 +150,11 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 					})
 					It("updates IstioRevisionTag status", func() {
 						expectTagInUse(ctx, metav1.ConditionFalse, getRevisionName(istio, istioversion.Base))
+					})
+					It("creates the istiod-default-validator ValidatingWebhookConfiguration", func() {
+						webhookKey := client.ObjectKey{Name: "istiod-default-validator"}
+						webhook := &admissionv1.ValidatingWebhookConfiguration{}
+						Eventually(k8sClient.Get).WithArguments(ctx, webhookKey, webhook).Should(Succeed())
 					})
 				})
 				When("workload ns is labeled with istio-injection label", func() {
