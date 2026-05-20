@@ -17,12 +17,8 @@
 package controlplane
 
 import (
-	"fmt"
-	"regexp"
-	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
@@ -30,7 +26,6 @@ import (
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -191,7 +186,7 @@ metadata:
 
 					It("has sidecars with the correct istio version", func(ctx SpecContext) {
 						for _, pod := range samplePods.Items {
-							sidecarVersion, err := getProxyVersion(pod.Name, sampleNamespace)
+							sidecarVersion, err := common.GetProxyVersion(pod.Name, sampleNamespace)
 							Expect(err).NotTo(HaveOccurred(), "Error getting sidecar version")
 							Expect(sidecarVersion).To(Equal(version.Version), "Sidecar Istio version does not match the expected version")
 						}
@@ -255,43 +250,3 @@ metadata:
 		}
 	})
 })
-
-func getProxyVersion(podName, namespace string) (*semver.Version, error) {
-	proxyStatus, err := istioctl.GetProxyStatus("--namespace " + namespace)
-	if err != nil {
-		return nil, fmt.Errorf("error getting sidecar version: %w", err)
-	}
-
-	lines := strings.Split(proxyStatus, "\n")
-	colSplit := regexp.MustCompile(`\s{2,}`)
-
-	versionIdx := -1
-	headers := colSplit.Split(strings.TrimSpace(lines[0]), -1)
-	for i, header := range headers {
-		if header == "VERSION" {
-			versionIdx = i
-			break
-		}
-	}
-	if versionIdx == -1 {
-		return nil, fmt.Errorf("VERSION header not found")
-	}
-
-	var versionStr string
-	for _, line := range lines[1:] {
-		if strings.Contains(line, podName+"."+namespace) {
-			values := colSplit.Split(strings.TrimSpace(line), -1)
-			versionStr = values[versionIdx]
-			break
-		}
-	}
-
-	if versionStr == "" {
-		return nil, fmt.Errorf("pod %s not found in proxy status output for namespace %s", podName, namespace)
-	}
-	version, err := semver.NewVersion(versionStr)
-	if err != nil {
-		return version, fmt.Errorf("error parsing sidecar version %q: %w", versionStr, err)
-	}
-	return version, err
-}
