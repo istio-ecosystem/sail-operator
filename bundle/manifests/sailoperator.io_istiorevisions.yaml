@@ -5779,7 +5779,7 @@ spec:
                       outboundTrafficPolicy:
                         description: |-
                           Set the default behavior of the sidecar for handling outbound
-                          traffic from the application.
+                          traffic from the application. This does not apply to gateways.
 
                           Can be overridden at a Sidecar level by setting the `OutboundTrafficPolicy` in the
                           [Sidecar API](https://istio.io/docs/reference/config/networking/sidecar/#OutboundTrafficPolicy).
@@ -10242,7 +10242,7 @@ spec:
               version:
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.30.0, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.28.7, v1.28.6, v1.28.5, v1.28.4, v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.31.0-alpha.20b5c87f.
+                  Must be one of: v1.30.0, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.28.7, v1.28.6, v1.28.5, v1.28.4, v1.28.3, v1.28.2, v1.28.1, v1.28.0, v1.31.0-alpha.ddc812f7.
                 enum:
                 - v1.30.0
                 - v1.29.3
@@ -10298,7 +10298,7 @@ spec:
                 - v1.22.6
                 - v1.22.5
                 - v1.21.6
-                - v1.31.0-alpha.20b5c87f
+                - v1.31.0-alpha.ddc812f7
                 type: string
             required:
             - namespace
