@@ -392,7 +392,7 @@ spec:
 			})
 
 			It("can access the httpbin service from the sleep pod", func(ctx SpecContext) {
-				common.CheckPodConnectivity(sleepPod.Items[0].Name, common.SleepNamespace, common.HttpbinNamespace, k)
+				common.CheckPodConnectivity(sleepPod.Items[0].Name, common.SleepContainerName, common.SleepNamespace, common.HttpbinNamespace, k)
 			})
 		})
 

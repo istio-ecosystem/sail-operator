@@ -327,7 +327,7 @@ spec:
 
 				// Any logging or diagnostics should also be inside this block
 				time.Sleep(60 * time.Second)
-				common.CheckPodConnectivity(sleepPod.Items[0].Name, common.SleepNamespace, common.HttpbinNamespace, k)
+				common.CheckPodConnectivity(sleepPod.Items[0].Name, common.SleepContainerName, common.SleepNamespace, common.HttpbinNamespace, k)
 			})
 		})
 
