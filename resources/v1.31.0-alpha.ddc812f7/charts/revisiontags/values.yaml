@@ -255,7 +255,7 @@ _internal_defaults_do_not_set:
     # Dev builds from prow are on registry.istio.io/testing.
     hub: registry.istio.io/testing
     # Default tag for Istio images.
-    tag: 1.31.0-alpha.20b5c87f4f35900218601538540599078fb4971c
+    tag: 1.31.0-alpha.ddc812f7772e9c9a25a3a53d146b1ccb21d1ed27
     # Variant of the image to use.
     # Currently supported are: [debug, distroless]
     variant: ""
