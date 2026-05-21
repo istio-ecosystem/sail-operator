@@ -93,8 +93,13 @@ for i in $(seq 0 $((version_count - 1))); do
   # Remove quotes from version name if present
   version_name=$(echo "$version_name" | tr -d '"')
 
-  # Skip special versions
-  if [[ "$version_name" == "master" ]] || [[ "$version_name" == *"alpha"* ]]; then
+  # Skip special versions and pre-release versions
+  # Pre-release patterns: -alpha, -beta, -rc (e.g., 1.30.0-rc.0, v1.31.0-alpha.7c8cb4d3)
+  if [[ "$version_name" == "master" ]] || \
+     [[ "$version_name" == *"-alpha"* ]] || \
+     [[ "$version_name" == *"-beta"* ]] || \
+     [[ "$version_name" == *"-rc"* ]]; then
+    echo "Skipping pre-release ${version_name}"
     continue
   fi
 

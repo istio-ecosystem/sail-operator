@@ -1,10 +1,10 @@
 // Variables embedded for GitHub compatibility
-:istio_latest_version: 1.30.0-alpha.2
-:istio_latest_version_revision_format: 1-30-0-alpha-2
-:istio_latest_tag: v1.30.0-alpha-latest
+:istio_latest_version: 1.30.0
+:istio_latest_version_revision_format: 1-30-0
+:istio_latest_tag: v1.30-latest
 :istio_release_name: release-1.30
-:istio_latest_minus_one_version: 1.29.2
-:istio_latest_minus_one_version_revision_format: 1-29-2
+:istio_latest_minus_one_version: 1.29.3
+:istio_latest_minus_one_version_revision_format: 1-29-3
 
 link:../README.adoc[Return to Project Root]
 
@@ -1233,7 +1233,6 @@ kubectl wait --context "${CTX_CLUSTER1}" --for=condition=Ready istios/default --
 ----
 
 . Create the ingress gateway for the external control plane.
-
 +
 ----
 kubectl --context "${CTX_CLUSTER1}" apply -f https://raw.githubusercontent.com/istio-ecosystem/sail-operator/main/docs/deployment-models/resources/controlplane-gateway.yaml
@@ -1243,11 +1242,58 @@ kubectl --context "${CTX_CLUSTER1}" wait '--for=jsonpath={.status.loadBalancer.i
 . Configure your environment to expose the ingress gateway.
 
     **Note:** these instructions are intended to be executed in a test environment. For production environments, please refer to: https://istio.io/latest/docs/setup/install/external-controlplane/#set-up-a-gateway-in-the-external-cluster and https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#configure-a-tls-ingress-gateway-for-a-single-host for setting up a secure ingress gateway.
-
 +
 ----
 export EXTERNAL_ISTIOD_ADDR=$(kubectl -n istio-system --context="${CTX_CLUSTER1}" get svc istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 ----
+
++
+[WARNING]
+====
+⚠️ This tutorial assumes your cloud provider allocates an IP address for
+the Istio IngressGateway LoadBalancer.
+If your provider uses a DNS name (e.g., AWS ELB),
+you must ensure the `tls-webhook` port is exposed
+correctly on the provider's load balancer.
+
+The Challenge: Port Mapping
+In an external-istiod installation, the remote cluster uses a local service to reach the external Istio instance via a mutating webhook.
+
+The webhook configuration always expects port 443:
+[source,yaml]
+----
+clientConfig:
+  service:
+    name: istiod-external-istiod
+    namespace: external-istiod
+    path: /inject/cluster/cluster2/net/network1
+    port: 443 # Hardcoded to 443
+----
+However, the `tls-webhook` is typically exposed on port `15017` at the Ingress Gateway.
+To bridge this, a Kubernetes Service and Endpoint are used to map port `443` to `15017`.
+
+The issue with DNS-based Load Balancers:
+
+While `Service` + `Endpoint` mapping works perfectly with IPs,
+it fails when using a DNS-based LoadBalancer.
+In these cases, the service must be of type `ExternalName`, which does not
+support `targetPort` mapping.
+Consequently, the remote cluster cannot reach the external webhook because the port mismatch remains unresolved.
+
+The Solution
+
+If your provider allocates DNS names, you must bypass the mapping requirement
+by exposing the webhook directly on port `443` at the Ingress Gateway.
+Patch the istio-ingressgateway service to change
+the `tls-webhook` port from `15017` to `443`
+[source,bash]
+----
+kubectl patch svc istio-ingressgateway \
+  -n istio-system \
+  --type='json' -p='[{"op": "replace", "path": "/spec/ports/filter_by_name_tls-webhook/port", "value":443}]'
+----
+====
+
 
 . Create the `external-istiod` namespace and `Istio` resource in `cluster2`.
 
