@@ -343,6 +343,26 @@ func (k Kubectl) LabelNamespaced(kind, namespace, name, labelKey, labelValue str
 	return err
 }
 
+// RolloutRestart restarts a deployment using kubectl rollout restart
+func (k Kubectl) RolloutRestart(resource string) (string, error) {
+	cmd := k.build(fmt.Sprintf(" rollout restart %s", resource))
+	output, err := k.executeCommand(cmd)
+	if err != nil {
+		return "", fmt.Errorf("error restarting rollout: %w, output: %s", err, output)
+	}
+	return output, nil
+}
+
+// RolloutStatus waits for a rollout to complete
+func (k Kubectl) RolloutStatus(resource string) (string, error) {
+	cmd := k.build(fmt.Sprintf(" rollout status %s", resource))
+	output, err := k.executeCommand(cmd)
+	if err != nil {
+		return "", fmt.Errorf("error checking rollout status: %w, output: %s", err, output)
+	}
+	return output, nil
+}
+
 // executeCommand handles running the command and then resets the namespace automatically
 func (k Kubectl) executeCommand(cmd string) (string, error) {
 	return shell.ExecuteCommand(cmd)
