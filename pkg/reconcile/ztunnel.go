@@ -87,7 +87,7 @@ func (r *ZTunnelReconciler) ComputeValues(version string, userValues *v1.ZTunnel
 	userValues = ApplyZTunnelImageDigests(resolvedVersion, userValues, config.Config)
 
 	// apply fips values
-	istiovalues.ApplyZTunnelFipsValues(userValues)
+	istiovalues.ApplyZTunnelFipsValues(userValues, resolvedVersion)
 
 	var mergedHelmValues helm.Values
 	if len(baseValues) > 0 && baseValues[0] != nil {
