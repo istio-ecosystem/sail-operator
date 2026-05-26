@@ -233,7 +233,7 @@ var _ = Describe("ZTunnel FIPS", Label("ztunnel", "fips"), Ordered, func() {
 			"Expected TLS12_ENABLED to be set to true on ztunnel DaemonSet when FIPS is enabled")
 	})
 
-	It("removes TLS12_ENABLED from the ztunnel DaemonSet when version >= 1.30", func() {
+	It("removes TLS12_ENABLED from the ztunnel DaemonSet when version > 1.30", func() {
 		originalFipsEnabled := istiovalues.FipsEnabled
 		DeferCleanup(func() {
 			istiovalues.FipsEnabled = originalFipsEnabled
@@ -245,7 +245,7 @@ var _ = Describe("ZTunnel FIPS", Label("ztunnel", "fips"), Ordered, func() {
 				Name: ztunnelName,
 			},
 			Spec: v1.ZTunnelSpec{
-				Version:   istioversion.Default,
+				Version:   "master",
 				Namespace: fipsZTunnelNamespace,
 				Values: &v1.ZTunnelValues{
 					ZTunnel: &v1.ZTunnelConfig{
@@ -267,7 +267,7 @@ var _ = Describe("ZTunnel FIPS", Label("ztunnel", "fips"), Ordered, func() {
 
 		Expect(ds).To(HaveContainersThat(ContainElement(WithTransform(getEnvVars,
 			Not(ContainElement(corev1.EnvVar{Name: "TLS12_ENABLED", Value: "true"}))))),
-			"Expected TLS12_ENABLED to be removed from ztunnel DaemonSet when version >= 1.30")
+			"Expected TLS12_ENABLED to be removed from ztunnel DaemonSet when version > 1.30")
 	})
 })
 

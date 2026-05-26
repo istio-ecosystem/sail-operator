@@ -69,7 +69,7 @@ func ApplyFipsValues(values *v1.Values) {
 }
 
 // ApplyZTunnelFipsValues sets ztunnel.env.TLS12_ENABLED if FIPS mode is enabled in the system.
-// For versions >= 1.30, TLS12_ENABLED is removed because ztunnel
+// For versions > 1.30, TLS12_ENABLED is removed because ztunnel
 // defaults to using only FIPS 140-3 approved ciphers.
 func ApplyZTunnelFipsValues(values *v1.ZTunnelValues, version string) {
 	if !FipsEnabled || values == nil {
@@ -80,7 +80,7 @@ func ApplyZTunnelFipsValues(values *v1.ZTunnelValues, version string) {
 	if err != nil {
 		log.Warnf("failed to parse ztunnel version %q: %v", version, err)
 	}
-	if v != nil && v.GreaterThanEqual(istio1_30) {
+	if v != nil && v.GreaterThan(istio1_30) {
 		if values.ZTunnel != nil && values.ZTunnel.Env != nil {
 			delete(values.ZTunnel.Env, "TLS12_ENABLED")
 		}
