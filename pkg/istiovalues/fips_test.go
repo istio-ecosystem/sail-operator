@@ -204,9 +204,20 @@ func TestApplyZTunnelFipsValues(t *testing.T) {
 			expectValues: nil,
 		},
 		{
-			name:        "version >= 1.30 removes TLS12_ENABLED",
+			name:        "version 1.30 still sets TLS12_ENABLED",
 			fipsEnabled: true,
 			version:     "1.30.0",
+			inputValues: &v1.ZTunnelValues{},
+			expectValues: &v1.ZTunnelValues{
+				ZTunnel: &v1.ZTunnelConfig{
+					Env: map[string]string{"TLS12_ENABLED": "true"},
+				},
+			},
+		},
+		{
+			name:        "version > 1.30 removes TLS12_ENABLED",
+			fipsEnabled: true,
+			version:     "1.31.0",
 			inputValues: &v1.ZTunnelValues{
 				ZTunnel: &v1.ZTunnelConfig{
 					Env: map[string]string{
@@ -224,9 +235,16 @@ func TestApplyZTunnelFipsValues(t *testing.T) {
 			},
 		},
 		{
-			name:         "version >= 1.30 does not set TLS12_ENABLED even with FIPS",
+			name:         "version > 1.30 does not set TLS12_ENABLED even with FIPS",
 			fipsEnabled:  true,
 			version:      "1.31.0",
+			inputValues:  &v1.ZTunnelValues{},
+			expectValues: &v1.ZTunnelValues{},
+		},
+		{
+			name:         "version 1.31-alpha does not set TLS12_ENABLED",
+			fipsEnabled:  true,
+			version:      "1.31.0-alpha.0",
 			inputValues:  &v1.ZTunnelValues{},
 			expectValues: &v1.ZTunnelValues{},
 		},
