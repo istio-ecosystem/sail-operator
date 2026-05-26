@@ -202,7 +202,8 @@ var _ = Describe("ZTunnel FIPS", Label("ztunnel", "fips"), Ordered, func() {
 		Expect(k8sClient.Delete(ctx, namespace)).To(Succeed())
 	})
 
-	It("sets TLS12_ENABLED on the ztunnel DaemonSet when FipsEnabled is true", func() {
+	// TODO: Remove this test when Istio 1.29 goes out of support
+	It("sets TLS12_ENABLED on the ztunnel DaemonSet when FipsEnabled is true and version < 1.30", func() {
 		originalFipsEnabled := istiovalues.FipsEnabled
 		DeferCleanup(func() {
 			istiovalues.FipsEnabled = originalFipsEnabled
@@ -214,7 +215,7 @@ var _ = Describe("ZTunnel FIPS", Label("ztunnel", "fips"), Ordered, func() {
 				Name: ztunnelName,
 			},
 			Spec: v1.ZTunnelSpec{
-				Version:   istioversion.Default,
+				Version:   "v1.29.3",
 				Namespace: fipsZTunnelNamespace,
 			},
 		}
@@ -230,6 +231,43 @@ var _ = Describe("ZTunnel FIPS", Label("ztunnel", "fips"), Ordered, func() {
 		Expect(ds).To(HaveContainersThat(ContainElement(WithTransform(getEnvVars,
 			ContainElement(corev1.EnvVar{Name: "TLS12_ENABLED", Value: "true"})))),
 			"Expected TLS12_ENABLED to be set to true on ztunnel DaemonSet when FIPS is enabled")
+	})
+
+	It("removes TLS12_ENABLED from the ztunnel DaemonSet when version > 1.30", func() {
+		originalFipsEnabled := istiovalues.FipsEnabled
+		DeferCleanup(func() {
+			istiovalues.FipsEnabled = originalFipsEnabled
+		})
+		istiovalues.FipsEnabled = true
+
+		ztunnel := &v1.ZTunnel{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: ztunnelName,
+			},
+			Spec: v1.ZTunnelSpec{
+				Version:   "master",
+				Namespace: fipsZTunnelNamespace,
+				Values: &v1.ZTunnelValues{
+					ZTunnel: &v1.ZTunnelConfig{
+						Env: map[string]string{
+							"TLS12_ENABLED": "true",
+						},
+					},
+				},
+			},
+		}
+		Expect(k8sClient.Create(ctx, ztunnel)).To(Succeed())
+		DeferCleanup(func() {
+			Expect(k8sClient.Delete(ctx, ztunnel)).To(Succeed())
+			Eventually(k8sClient.Get).WithArguments(ctx, fipsZTunnelKey, &v1.ZTunnel{}).Should(ReturnNotFoundError())
+		})
+
+		ds := &appsv1.DaemonSet{}
+		Eventually(k8sClient.Get).WithArguments(ctx, daemonsetKey, ds).Should(Succeed())
+
+		Expect(ds).To(HaveContainersThat(ContainElement(WithTransform(getEnvVars,
+			Not(ContainElement(corev1.EnvVar{Name: "TLS12_ENABLED", Value: "true"}))))),
+			"Expected TLS12_ENABLED to be removed from ztunnel DaemonSet when version > 1.30")
 	})
 })
 

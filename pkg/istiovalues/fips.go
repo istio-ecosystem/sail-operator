@@ -18,6 +18,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 
 	"istio.io/istio/pkg/log"
@@ -27,6 +28,8 @@ var (
 	FipsEnabled        bool
 	FipsEnableFilePath = "/proc/sys/crypto/fips_enabled"
 )
+
+var istio1_30 = semver.MustParse("1.30.0")
 
 // detectFipsMode checks if FIPS mode is enabled in the system.
 func init() {
@@ -66,16 +69,31 @@ func ApplyFipsValues(values *v1.Values) {
 }
 
 // ApplyZTunnelFipsValues sets ztunnel.env.TLS12_ENABLED if FIPS mode is enabled in the system.
-func ApplyZTunnelFipsValues(values *v1.ZTunnelValues) {
+// For versions > 1.30, TLS12_ENABLED is removed because ztunnel
+// defaults to using only FIPS 140-3 approved ciphers.
+func ApplyZTunnelFipsValues(values *v1.ZTunnelValues, version string) {
 	if !FipsEnabled || values == nil {
 		return
 	}
+
+	v, err := semver.NewVersion(version)
+	if err != nil {
+		log.Warnf("failed to parse ztunnel version %q: %v", version, err)
+	}
+	if v != nil && v.GreaterThan(istio1_30) {
+		if values.ZTunnel != nil && values.ZTunnel.Env != nil {
+			delete(values.ZTunnel.Env, "TLS12_ENABLED")
+		}
+		return
+	}
+
 	if values.ZTunnel == nil {
 		values.ZTunnel = &v1.ZTunnelConfig{}
 	}
 	if values.ZTunnel.Env == nil {
 		values.ZTunnel.Env = make(map[string]string)
 	}
+	// TODO: Remove this after 1.29 is no longer supported.
 	if _, found := values.ZTunnel.Env["TLS12_ENABLED"]; !found {
 		values.ZTunnel.Env["TLS12_ENABLED"] = "true"
 	}

@@ -25,8 +25,8 @@ import (
 
 func TestDetectFipsMode(t *testing.T) {
 	resourceDir := t.TempDir()
-	os.WriteFile(path.Join(resourceDir, "fips_enabled"), []byte(("1\n")), 0o644)
-	os.WriteFile(path.Join(resourceDir, "fips_not_enabled"), []byte(("0\n")), 0o644)
+	os.WriteFile(path.Join(resourceDir, "fips_enabled"), []byte("1\n"), 0o644)
+	os.WriteFile(path.Join(resourceDir, "fips_not_enabled"), []byte("0\n"), 0o644)
 	tests := []struct {
 		name        string
 		filepath    string
@@ -141,18 +141,21 @@ func TestApplyZTunnelFipsValues(t *testing.T) {
 	tests := []struct {
 		name         string
 		fipsEnabled  bool
+		version      string
 		inputValues  *v1.ZTunnelValues
 		expectValues *v1.ZTunnelValues
 	}{
 		{
 			name:         "FIPS not enabled",
 			fipsEnabled:  false,
+			version:      "1.29.0",
 			inputValues:  &v1.ZTunnelValues{},
 			expectValues: &v1.ZTunnelValues{},
 		},
 		{
 			name:        "FIPS enabled",
 			fipsEnabled: true,
+			version:     "1.29.0",
 			inputValues: &v1.ZTunnelValues{},
 			expectValues: &v1.ZTunnelValues{
 				ZTunnel: &v1.ZTunnelConfig{
@@ -163,6 +166,7 @@ func TestApplyZTunnelFipsValues(t *testing.T) {
 		{
 			name:        "FIPS enabled with existing env",
 			fipsEnabled: true,
+			version:     "1.29.0",
 			inputValues: &v1.ZTunnelValues{
 				ZTunnel: &v1.ZTunnelConfig{
 					Env: map[string]string{"OTHER_VAR": "value"},
@@ -180,6 +184,7 @@ func TestApplyZTunnelFipsValues(t *testing.T) {
 		{
 			name:        "FIPS enabled but TLS12_ENABLED already set",
 			fipsEnabled: true,
+			version:     "1.29.0",
 			inputValues: &v1.ZTunnelValues{
 				ZTunnel: &v1.ZTunnelConfig{
 					Env: map[string]string{"TLS12_ENABLED": "false"},
@@ -194,8 +199,54 @@ func TestApplyZTunnelFipsValues(t *testing.T) {
 		{
 			name:         "nil values",
 			fipsEnabled:  false,
+			version:      "1.29.0",
 			inputValues:  nil,
 			expectValues: nil,
+		},
+		{
+			name:        "version 1.30 still sets TLS12_ENABLED",
+			fipsEnabled: true,
+			version:     "1.30.0",
+			inputValues: &v1.ZTunnelValues{},
+			expectValues: &v1.ZTunnelValues{
+				ZTunnel: &v1.ZTunnelConfig{
+					Env: map[string]string{"TLS12_ENABLED": "true"},
+				},
+			},
+		},
+		{
+			name:        "version > 1.30 removes TLS12_ENABLED",
+			fipsEnabled: true,
+			version:     "1.31.0",
+			inputValues: &v1.ZTunnelValues{
+				ZTunnel: &v1.ZTunnelConfig{
+					Env: map[string]string{
+						"TLS12_ENABLED": "true",
+						"OTHER_VAR":     "keep",
+					},
+				},
+			},
+			expectValues: &v1.ZTunnelValues{
+				ZTunnel: &v1.ZTunnelConfig{
+					Env: map[string]string{
+						"OTHER_VAR": "keep",
+					},
+				},
+			},
+		},
+		{
+			name:         "version > 1.30 does not set TLS12_ENABLED even with FIPS",
+			fipsEnabled:  true,
+			version:      "1.31.0",
+			inputValues:  &v1.ZTunnelValues{},
+			expectValues: &v1.ZTunnelValues{},
+		},
+		{
+			name:         "version 1.31-alpha does not set TLS12_ENABLED",
+			fipsEnabled:  true,
+			version:      "1.31.0-alpha.0",
+			inputValues:  &v1.ZTunnelValues{},
+			expectValues: &v1.ZTunnelValues{},
 		},
 	}
 
@@ -204,7 +255,7 @@ func TestApplyZTunnelFipsValues(t *testing.T) {
 			originalFipsEnabled := FipsEnabled
 			t.Cleanup(func() { FipsEnabled = originalFipsEnabled })
 			FipsEnabled = tt.fipsEnabled
-			ApplyZTunnelFipsValues(tt.inputValues)
+			ApplyZTunnelFipsValues(tt.inputValues, tt.version)
 
 			if diff := cmp.Diff(tt.expectValues, tt.inputValues); diff != "" {
 				t.Errorf("TLS12_ENABLED env wasn't applied properly; diff (-expected, +actual):\n%v", diff)
