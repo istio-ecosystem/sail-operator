@@ -375,7 +375,11 @@ spec:
 				g.Expect(ciphers).To(BeEmpty(), "IstioRevision should not have cipher suites")
 
 				// assert that pilot.extraContainerArgs does not contain --tls-cipher-suites
-				g.Expect(rev.Spec.Values.Pilot.ExtraContainerArgs).To(Not(ContainElement(ContainSubstring("--tls-cipher-suites="))))
+				var pilotExtraArgs []string
+				if rev.Spec.Values != nil && rev.Spec.Values.Pilot != nil {
+					pilotExtraArgs = rev.Spec.Values.Pilot.ExtraContainerArgs
+				}
+				g.Expect(pilotExtraArgs).To(Not(ContainElement(ContainSubstring("--tls-cipher-suites="))))
 			}).Should(Succeed(), "IstioRevision is syncing TLS settings but should NOT be")
 
 			ensureTLSAdherence(ctx, cl, configv1.TLSAdherencePolicyStrictAllComponents)
