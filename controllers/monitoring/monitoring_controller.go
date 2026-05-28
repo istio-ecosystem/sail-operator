@@ -24,9 +24,10 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -136,7 +137,7 @@ func (r *Reconciler) reconcileServiceMonitor(ctx context.Context, rev *v1.IstioR
 	log := logf.FromContext(ctx)
 	desired := r.buildServiceMonitor(rev)
 
-	existing := &unstructured.Unstructured{}
+	existing := &monitoringv1.ServiceMonitor{}
 	existing.SetGroupVersionKind(rhobsGV.WithKind("ServiceMonitor"))
 
 	err := r.Client.Get(ctx, client.ObjectKeyFromObject(desired), existing)
@@ -187,7 +188,7 @@ func (r *Reconciler) reconcilePodMonitorInNamespace(ctx context.Context, rev *v1
 	log := logf.FromContext(ctx)
 	desired := r.buildPodMonitor(rev, namespace)
 
-	existing := &unstructured.Unstructured{}
+	existing := &monitoringv1.PodMonitor{}
 	existing.SetGroupVersionKind(rhobsGV.WithKind("PodMonitor"))
 
 	err := r.Client.Get(ctx, client.ObjectKeyFromObject(desired), existing)
@@ -204,98 +205,101 @@ func (r *Reconciler) reconcilePodMonitorInNamespace(ctx context.Context, rev *v1
 	return r.Client.Update(ctx, desired)
 }
 
-// buildServiceMonitor constructs the ServiceMonitor for monitoring istiod using unstructured
-func (r *Reconciler) buildServiceMonitor(rev *v1.IstioRevision) *unstructured.Unstructured {
+// buildServiceMonitor constructs the ServiceMonitor for monitoring istiod
+func (r *Reconciler) buildServiceMonitor(rev *v1.IstioRevision) *monitoringv1.ServiceMonitor {
 	name := rev.Name + serviceMonitorNameSuffix
 	namespace := rev.Spec.Namespace
 
-	sm := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": rhobsGV.String(),
-			"kind":       "ServiceMonitor",
-			"metadata": map[string]interface{}{
-				"name":      name,
-				"namespace": namespace,
-				"labels": map[string]interface{}{
-					"app":               "istiod",
-					cooMonitoredByLabel: cooMonitoredByValue,
-				},
-				"ownerReferences": []interface{}{
-					map[string]interface{}{
-						"apiVersion":         v1.GroupVersion.String(),
-						"kind":               v1.IstioRevisionKind,
-						"name":               rev.Name,
-						"uid":                string(rev.UID),
-						"controller":         true,
-						"blockOwnerDeletion": true,
-					},
+	sm := &monitoringv1.ServiceMonitor{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels: map[string]string{
+				"app":               "istiod",
+				cooMonitoredByLabel: cooMonitoredByValue,
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion:         v1.GroupVersion.String(),
+					Kind:               v1.IstioRevisionKind,
+					Name:               rev.Name,
+					UID:                rev.UID,
+					Controller:         ptr(true),
+					BlockOwnerDeletion: ptr(true),
 				},
 			},
-			"spec": map[string]interface{}{
-				"selector": map[string]interface{}{
-					"matchLabels": map[string]interface{}{
-						"app": "istiod",
-					},
+		},
+		Spec: monitoringv1.ServiceMonitorSpec{
+			Selector: metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "istiod",
 				},
-				"endpoints": []interface{}{
-					map[string]interface{}{
-						"port":     "http-monitoring",
-						"path":     "/metrics",
-						"scheme":   "http",
-						"interval": "30s",
-					},
+			},
+			Endpoints: []monitoringv1.Endpoint{
+				{
+					Port:     "http-monitoring",
+					Path:     "/metrics",
+					Scheme:   ptr(monitoringv1.Scheme("http")),
+					Interval: monitoringv1.Duration("30s"),
 				},
 			},
 		},
 	}
+
+	// Set the GVK to use the rhobs API group instead of monitoring.coreos.com
+	sm.SetGroupVersionKind(rhobsGV.WithKind("ServiceMonitor"))
 
 	return sm
 }
 
-// buildPodMonitor constructs the PodMonitor for monitoring istio-proxy sidecars using unstructured
-func (r *Reconciler) buildPodMonitor(rev *v1.IstioRevision, namespace string) *unstructured.Unstructured {
+// buildPodMonitor constructs the PodMonitor for monitoring istio-proxy sidecars
+func (r *Reconciler) buildPodMonitor(rev *v1.IstioRevision, namespace string) *monitoringv1.PodMonitor {
 	name := rev.Name + podMonitorNameSuffix
 
-	pm := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": rhobsGV.String(),
-			"kind":       "PodMonitor",
-			"metadata": map[string]interface{}{
-				"name":      name,
-				"namespace": namespace,
-				"labels": map[string]interface{}{
-					"app":               "istio-proxy",
-					cooMonitoredByLabel: cooMonitoredByValue,
-				},
-				// Note: We don't set owner references here because the PodMonitor is in a different
-				// namespace than the IstioRevision (which is cluster-scoped). Cross-namespace owner
-				// references are not supported by Kubernetes.
+	pm := &monitoringv1.PodMonitor{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels: map[string]string{
+				"app":               "istio-proxy",
+				cooMonitoredByLabel: cooMonitoredByValue,
 			},
-			"spec": map[string]interface{}{
-				"selector": map[string]interface{}{
-					"matchExpressions": []interface{}{
-						map[string]interface{}{
-							"key":      "security.istio.io/tlsMode",
-							"operator": "Exists",
-						},
+			// Note: We don't set owner references here because the PodMonitor is in a different
+			// namespace than the IstioRevision (which is cluster-scoped). Cross-namespace owner
+			// references are not supported by Kubernetes.
+		},
+		Spec: monitoringv1.PodMonitorSpec{
+			Selector: metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "security.istio.io/tlsMode",
+						Operator: metav1.LabelSelectorOpExists,
 					},
 				},
-				"podMetricsEndpoints": []interface{}{
-					map[string]interface{}{
-						"port":          "http-envoy-prom",
-						"path":          "/stats/prometheus",
-						"scheme":        "http",
-						"interval":      "30s",
-						"scrapeTimeout": "10s",
-						"honorLabels":   true,
-						"filterRunning": true,
-					},
+			},
+			PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{
+				{
+					Port:          ptr("http-envoy-prom"),
+					Path:          "/stats/prometheus",
+					Scheme:        ptr(monitoringv1.Scheme("http")),
+					Interval:      monitoringv1.Duration("30s"),
+					ScrapeTimeout: monitoringv1.Duration("10s"),
+					HonorLabels:   true,
+					FilterRunning: ptr(true),
 				},
 			},
 		},
 	}
 
+	// Set the GVK to use the rhobs API group instead of monitoring.coreos.com
+	pm.SetGroupVersionKind(rhobsGV.WithKind("PodMonitor"))
+
 	return pm
+}
+
+// ptr returns a pointer to the given value
+func ptr[T any](v T) *T {
+	return &v
 }
 
 // SetupWithManager sets up the controller with the Manager

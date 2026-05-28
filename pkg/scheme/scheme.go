@@ -19,12 +19,18 @@ import (
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	multusv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	configv1 "github.com/openshift/api/config/v1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 
 	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 )
+
+// RhobsAPIGroup is the API group for Cluster Observability Operator (COO) monitoring resources.
+// COO uses monitoring.rhobs/v1 instead of monitoring.coreos.com/v1.
+const RhobsAPIGroup = "monitoring.rhobs"
 
 var Scheme = runtime.NewScheme()
 
@@ -37,5 +43,32 @@ func init() {
 	utilruntime.Must(v1alpha1.AddToScheme(Scheme))
 	utilruntime.Must(v1.AddToScheme(Scheme))
 
+	// Register prometheus-operator monitoring types with the rhobs API group.
+	// This allows using typed Go objects while targeting the monitoring.rhobs/v1 API
+	// which is used by the Cluster Observability Operator (COO) on OpenShift.
+	addRhobsMonitoringTypes(Scheme)
+
 	// +kubebuilder:scaffold:scheme
+}
+
+// addRhobsMonitoringTypes registers prometheus-operator monitoring types with the monitoring.rhobs API group
+func addRhobsMonitoringTypes(scheme *runtime.Scheme) {
+	rhobsGV := schema.GroupVersion{Group: RhobsAPIGroup, Version: "v1"}
+
+	scheme.AddKnownTypeWithName(
+		rhobsGV.WithKind("ServiceMonitor"),
+		&monitoringv1.ServiceMonitor{},
+	)
+	scheme.AddKnownTypeWithName(
+		rhobsGV.WithKind("ServiceMonitorList"),
+		&monitoringv1.ServiceMonitorList{},
+	)
+	scheme.AddKnownTypeWithName(
+		rhobsGV.WithKind("PodMonitor"),
+		&monitoringv1.PodMonitor{},
+	)
+	scheme.AddKnownTypeWithName(
+		rhobsGV.WithKind("PodMonitorList"),
+		&monitoringv1.PodMonitorList{},
+	)
 }
