@@ -63,6 +63,24 @@ type IstioSpec struct {
 	// Defines the values to be passed to the Helm charts when installing Istio.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Helm Values"
 	Values *Values `json:"values,omitempty"`
+
+	// Defines the configuration for Prometheus monitoring integration.
+	// When enabled, the operator creates ServiceMonitor and PodMonitor resources
+	// for scraping Istio metrics using the Cluster Observability Operator (COO).
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Monitoring"
+	// +optional
+	Monitoring *MonitoringConfig `json:"monitoring,omitempty"`
+}
+
+// MonitoringConfig defines the configuration for Prometheus monitoring integration
+type MonitoringConfig struct {
+	// When enabled, the operator creates ServiceMonitor resources for istiod
+	// and PodMonitor resources for Envoy sidecars in namespaces with
+	// istio-injection=enabled label.
+	// Defaults to false.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Enable Monitoring",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:booleanSwitch"}
+	// +kubebuilder:default=false
+	Enabled bool `json:"enabled,omitempty"`
 }
 
 // IstioUpdateStrategy defines how the control plane should be updated when the version in
