@@ -77,11 +77,36 @@ build_and_push_operator_image() {
   echo "Docker build flags: ${DOCKER_BUILD_FLAGS}"
   echo "Using image base: ${HUB}/${IMAGE_BASE}:${TAG}"
 
-  BUILD_WITH_CONTAINER=0 \
-    DOCKER_BUILD_FLAGS=${DOCKER_BUILD_FLAGS} \
-    IMAGE=${HUB}/${IMAGE_BASE}:${TAG} \
-    TARGET_ARCH=${TARGET_ARCH} \
-    make docker-push
+  # If using Podman, we need to build the binary locally and then build the image using the local Dockerfile
+  # since Podman doesn't support BuildKit's multi-platform builds with local source context.
+  # For Docker, we keep the existing make target which handles both building the binary and pushing the image in one step.
+  if [[ "${CONTAINER_CLI:-docker}" == "podman" ]]; then
+    repo_root=$(cd "${WD}/../../.." || exit; pwd)
+
+    BUILD_WITH_CONTAINER=0 TARGET_OS=linux TARGET_ARCH=${TARGET_ARCH} \
+      make -C "${repo_root}" build
+
+    tmp_ctx=$(mktemp -d)
+    cp "${repo_root}/Dockerfile" "${tmp_ctx}/Dockerfile"
+    mkdir -p "${tmp_ctx}/out/linux_${TARGET_ARCH}"
+    cp "${repo_root}/out/linux_${TARGET_ARCH}/sail-operator" "${tmp_ctx}/out/linux_${TARGET_ARCH}/sail-operator"
+
+    docker build \
+      ${DOCKER_BUILD_FLAGS} \
+      --push \
+      --build-arg TARGETOS=linux \
+      --build-arg TARGETARCH=${TARGET_ARCH} \
+      -t "${HUB}/${IMAGE_BASE}:${TAG}" \
+      "${tmp_ctx}"
+
+    rm -rf "${tmp_ctx}"
+  else
+    BUILD_WITH_CONTAINER=0 \
+      DOCKER_BUILD_FLAGS=${DOCKER_BUILD_FLAGS} \
+      IMAGE=${HUB}/${IMAGE_BASE}:${TAG} \
+      TARGET_ARCH=${TARGET_ARCH} \
+      make docker-push
+  fi
 }
 
 # Main logic
