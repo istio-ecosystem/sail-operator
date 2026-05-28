@@ -24,9 +24,9 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	. "github.com/onsi/gomega"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -224,28 +224,30 @@ func TestReconcile(t *testing.T) {
 
 			// Check ServiceMonitor creation
 			if tt.expectSMCreated {
-				sm := &unstructured.Unstructured{}
+				sm := &monitoringv1.ServiceMonitor{}
 				sm.SetGroupVersionKind(testRhobsGV.WithKind("ServiceMonitor"))
 				err := cl.Get(ctx, types.NamespacedName{
 					Name:      revisionName + serviceMonitorNameSuffix,
 					Namespace: istioNamespace,
 				}, sm)
 				g.Expect(err).ToNot(HaveOccurred())
-				g.Expect(sm.GetKind()).To(Equal("ServiceMonitor"))
-				g.Expect(sm.GetAPIVersion()).To(Equal("monitoring.rhobs/v1"))
+				// Verify the ServiceMonitor has expected content
+				g.Expect(sm.Name).To(Equal(revisionName + serviceMonitorNameSuffix))
+				g.Expect(sm.Labels["monitored-by"]).To(Equal("coo-prometheus"))
 			}
 
 			// Check PodMonitor creation
 			if tt.expectPMNamespace != "" {
-				pm := &unstructured.Unstructured{}
+				pm := &monitoringv1.PodMonitor{}
 				pm.SetGroupVersionKind(testRhobsGV.WithKind("PodMonitor"))
 				err := cl.Get(ctx, types.NamespacedName{
 					Name:      revisionName + podMonitorNameSuffix,
 					Namespace: tt.expectPMNamespace,
 				}, pm)
 				g.Expect(err).ToNot(HaveOccurred())
-				g.Expect(pm.GetKind()).To(Equal("PodMonitor"))
-				g.Expect(pm.GetAPIVersion()).To(Equal("monitoring.rhobs/v1"))
+				// Verify the PodMonitor has expected content
+				g.Expect(pm.Name).To(Equal(revisionName + podMonitorNameSuffix))
+				g.Expect(pm.Labels["monitored-by"]).To(Equal("coo-prometheus"))
 			}
 		})
 	}
@@ -255,13 +257,13 @@ func TestReconcileServiceMonitor(t *testing.T) {
 	cfg := newReconcilerTestConfig()
 
 	tests := []struct {
-		name            string
-		rev             *v1.IstioRevision
-		existingSM      *unstructured.Unstructured
-		clientGetError  error
-		expectErr       bool
-		expectCreate    bool
-		expectUpdate    bool
+		name           string
+		rev            *v1.IstioRevision
+		existingSM     *monitoringv1.ServiceMonitor
+		clientGetError error
+		expectErr      bool
+		expectCreate   bool
+		expectUpdate   bool
 	}{
 		{
 			name: "creates new ServiceMonitor",
@@ -286,12 +288,15 @@ func TestReconcileServiceMonitor(t *testing.T) {
 					Namespace: istioNamespace,
 				},
 			},
-			existingSM: func() *unstructured.Unstructured {
-				sm := &unstructured.Unstructured{}
+			existingSM: func() *monitoringv1.ServiceMonitor {
+				sm := &monitoringv1.ServiceMonitor{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            revisionName + serviceMonitorNameSuffix,
+						Namespace:       istioNamespace,
+						ResourceVersion: "123",
+					},
+				}
 				sm.SetGroupVersionKind(testRhobsGV.WithKind("ServiceMonitor"))
-				sm.SetName(revisionName + serviceMonitorNameSuffix)
-				sm.SetNamespace(istioNamespace)
-				sm.SetResourceVersion("123")
 				return sm
 			}(),
 			expectErr:    false,
@@ -329,7 +334,7 @@ func TestReconcileServiceMonitor(t *testing.T) {
 			if tt.clientGetError != nil {
 				builder = builder.WithInterceptorFuncs(interceptor.Funcs{
 					Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-						if _, ok := obj.(*unstructured.Unstructured); ok {
+						if _, ok := obj.(*monitoringv1.ServiceMonitor); ok {
 							return tt.clientGetError
 						}
 						return c.Get(ctx, key, obj, opts...)
@@ -347,15 +352,16 @@ func TestReconcileServiceMonitor(t *testing.T) {
 				g.Expect(err).ToNot(HaveOccurred())
 
 				// Verify the ServiceMonitor exists
-				result := &unstructured.Unstructured{}
+				result := &monitoringv1.ServiceMonitor{}
 				result.SetGroupVersionKind(testRhobsGV.WithKind("ServiceMonitor"))
 				err := cl.Get(ctx, types.NamespacedName{
 					Name:      revisionName + serviceMonitorNameSuffix,
 					Namespace: istioNamespace,
 				}, result)
 				g.Expect(err).ToNot(HaveOccurred())
-				g.Expect(result.GetAPIVersion()).To(Equal("monitoring.rhobs/v1"))
-				g.Expect(result.GetKind()).To(Equal("ServiceMonitor"))
+				// Verify expected content
+				g.Expect(result.Name).To(Equal(revisionName + serviceMonitorNameSuffix))
+				g.Expect(result.Labels["monitored-by"]).To(Equal("coo-prometheus"))
 			}
 		})
 	}
@@ -368,7 +374,7 @@ func TestReconcilePodMonitors(t *testing.T) {
 		name               string
 		rev                *v1.IstioRevision
 		existingNamespaces []client.Object
-		existingPM         *unstructured.Unstructured
+		existingPM         *monitoringv1.PodMonitor
 		clientListError    error
 		expectErr          bool
 		expectPMNamespaces []string // namespaces where PodMonitors should exist
@@ -432,12 +438,15 @@ func TestReconcilePodMonitors(t *testing.T) {
 			existingNamespaces: []client.Object{
 				newNamespaceWithInjection(appNamespace),
 			},
-			existingPM: func() *unstructured.Unstructured {
-				pm := &unstructured.Unstructured{}
+			existingPM: func() *monitoringv1.PodMonitor {
+				pm := &monitoringv1.PodMonitor{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            revisionName + podMonitorNameSuffix,
+						Namespace:       appNamespace,
+						ResourceVersion: "123",
+					},
+				}
 				pm.SetGroupVersionKind(testRhobsGV.WithKind("PodMonitor"))
-				pm.SetName(revisionName + podMonitorNameSuffix)
-				pm.SetNamespace(appNamespace)
-				pm.SetResourceVersion("123")
 				return pm
 			}(),
 			expectErr:          false,
@@ -512,15 +521,16 @@ func TestReconcilePodMonitors(t *testing.T) {
 
 				// Verify PodMonitors exist in expected namespaces
 				for _, ns := range tt.expectPMNamespaces {
-					pm := &unstructured.Unstructured{}
+					pm := &monitoringv1.PodMonitor{}
 					pm.SetGroupVersionKind(testRhobsGV.WithKind("PodMonitor"))
 					err := cl.Get(ctx, types.NamespacedName{
 						Name:      revisionName + podMonitorNameSuffix,
 						Namespace: ns,
 					}, pm)
 					g.Expect(err).ToNot(HaveOccurred(), "PodMonitor should exist in namespace %s", ns)
-					g.Expect(pm.GetAPIVersion()).To(Equal("monitoring.rhobs/v1"))
-					g.Expect(pm.GetKind()).To(Equal("PodMonitor"))
+					// Verify expected content
+					g.Expect(pm.Name).To(Equal(revisionName + podMonitorNameSuffix))
+					g.Expect(pm.Labels["monitored-by"]).To(Equal("coo-prometheus"))
 				}
 			}
 		})
@@ -531,11 +541,11 @@ func TestBuildServiceMonitor(t *testing.T) {
 	cfg := newReconcilerTestConfig()
 
 	tests := []struct {
-		name             string
-		rev              *v1.IstioRevision
-		expectedName     string
-		expectedNS       string
-		expectedSelector map[string]interface{}
+		name                   string
+		rev                    *v1.IstioRevision
+		expectedName           string
+		expectedNS             string
+		expectedSelectorLabels map[string]string
 	}{
 		{
 			name: "default revision",
@@ -549,13 +559,9 @@ func TestBuildServiceMonitor(t *testing.T) {
 					Namespace: "istio-system",
 				},
 			},
-			expectedName: "default-istiod",
-			expectedNS:   "istio-system",
-			expectedSelector: map[string]interface{}{
-				"matchLabels": map[string]interface{}{
-					"app": "istiod",
-				},
-			},
+			expectedName:           "default-istiod",
+			expectedNS:             "istio-system",
+			expectedSelectorLabels: map[string]string{"app": "istiod"},
 		},
 		{
 			name: "named revision",
@@ -569,13 +575,9 @@ func TestBuildServiceMonitor(t *testing.T) {
 					Namespace: "istio-system",
 				},
 			},
-			expectedName: "canary-istiod",
-			expectedNS:   "istio-system",
-			expectedSelector: map[string]interface{}{
-				"matchLabels": map[string]interface{}{
-					"app": "istiod",
-				},
-			},
+			expectedName:           "canary-istiod",
+			expectedNS:             "istio-system",
+			expectedSelectorLabels: map[string]string{"app": "istiod"},
 		},
 		{
 			name: "custom namespace",
@@ -589,13 +591,9 @@ func TestBuildServiceMonitor(t *testing.T) {
 					Namespace: "custom-istio-ns",
 				},
 			},
-			expectedName: "default-istiod",
-			expectedNS:   "custom-istio-ns",
-			expectedSelector: map[string]interface{}{
-				"matchLabels": map[string]interface{}{
-					"app": "istiod",
-				},
-			},
+			expectedName:           "default-istiod",
+			expectedNS:             "custom-istio-ns",
+			expectedSelectorLabels: map[string]string{"app": "istiod"},
 		},
 	}
 
@@ -607,8 +605,9 @@ func TestBuildServiceMonitor(t *testing.T) {
 			reconciler := NewReconciler(cfg, cl, scheme.Scheme)
 			result := reconciler.buildServiceMonitor(tt.rev)
 
-			g.Expect(result.GetAPIVersion()).To(Equal("monitoring.rhobs/v1"))
-			g.Expect(result.GetKind()).To(Equal("ServiceMonitor"))
+			g.Expect(result.GetObjectKind().GroupVersionKind().Group).To(Equal("monitoring.rhobs"))
+			g.Expect(result.GetObjectKind().GroupVersionKind().Version).To(Equal("v1"))
+			g.Expect(result.GetObjectKind().GroupVersionKind().Kind).To(Equal("ServiceMonitor"))
 			g.Expect(result.GetName()).To(Equal(tt.expectedName))
 			g.Expect(result.GetNamespace()).To(Equal(tt.expectedNS))
 
@@ -618,23 +617,15 @@ func TestBuildServiceMonitor(t *testing.T) {
 			g.Expect(labels["monitored-by"]).To(Equal("coo-prometheus"))
 
 			// Check spec.selector
-			spec, found, err := unstructured.NestedMap(result.Object, "spec")
-			g.Expect(err).ToNot(HaveOccurred())
-			g.Expect(found).To(BeTrue())
-			selector, found, err := unstructured.NestedMap(spec, "selector")
-			g.Expect(err).ToNot(HaveOccurred())
-			g.Expect(found).To(BeTrue())
-			g.Expect(selector).To(Equal(tt.expectedSelector))
+			g.Expect(result.Spec.Selector.MatchLabels).To(Equal(tt.expectedSelectorLabels))
 
 			// Check endpoints
-			endpoints, found, err := unstructured.NestedSlice(spec, "endpoints")
-			g.Expect(err).ToNot(HaveOccurred())
-			g.Expect(found).To(BeTrue())
-			g.Expect(len(endpoints)).To(Equal(1))
-			endpoint := endpoints[0].(map[string]interface{})
-			g.Expect(endpoint["port"]).To(Equal("http-monitoring"))
-			g.Expect(endpoint["path"]).To(Equal("/metrics"))
-			g.Expect(endpoint["scheme"]).To(Equal("http"))
+			g.Expect(len(result.Spec.Endpoints)).To(Equal(1))
+			endpoint := result.Spec.Endpoints[0]
+			g.Expect(endpoint.Port).To(Equal("http-monitoring"))
+			g.Expect(endpoint.Path).To(Equal("/metrics"))
+			g.Expect(string(*endpoint.Scheme)).To(Equal("http"))
+			g.Expect(string(endpoint.Interval)).To(Equal("30s"))
 
 			// Check owner references
 			ownerRefs := result.GetOwnerReferences()
@@ -694,8 +685,9 @@ func TestBuildPodMonitor(t *testing.T) {
 			reconciler := NewReconciler(cfg, cl, scheme.Scheme)
 			result := reconciler.buildPodMonitor(tt.rev, tt.namespace)
 
-			g.Expect(result.GetAPIVersion()).To(Equal("monitoring.rhobs/v1"))
-			g.Expect(result.GetKind()).To(Equal("PodMonitor"))
+			g.Expect(result.GetObjectKind().GroupVersionKind().Group).To(Equal("monitoring.rhobs"))
+			g.Expect(result.GetObjectKind().GroupVersionKind().Version).To(Equal("v1"))
+			g.Expect(result.GetObjectKind().GroupVersionKind().Kind).To(Equal("PodMonitor"))
 			g.Expect(result.GetName()).To(Equal(tt.expectedName))
 			g.Expect(result.GetNamespace()).To(Equal(tt.namespace))
 
@@ -708,32 +700,22 @@ func TestBuildPodMonitor(t *testing.T) {
 			ownerRefs := result.GetOwnerReferences()
 			g.Expect(len(ownerRefs)).To(Equal(0))
 
-			// Check spec.selector
-			spec, found, err := unstructured.NestedMap(result.Object, "spec")
-			g.Expect(err).ToNot(HaveOccurred())
-			g.Expect(found).To(BeTrue())
-			selector, found, err := unstructured.NestedMap(spec, "selector")
-			g.Expect(err).ToNot(HaveOccurred())
-			g.Expect(found).To(BeTrue())
-
-			// Check matchExpressions
-			matchExpressions, found, err := unstructured.NestedSlice(selector, "matchExpressions")
-			g.Expect(err).ToNot(HaveOccurred())
-			g.Expect(found).To(BeTrue())
-			g.Expect(len(matchExpressions)).To(Equal(1))
-			expr := matchExpressions[0].(map[string]interface{})
-			g.Expect(expr["key"]).To(Equal("security.istio.io/tlsMode"))
-			g.Expect(expr["operator"]).To(Equal("Exists"))
+			// Check spec.selector.matchExpressions
+			g.Expect(len(result.Spec.Selector.MatchExpressions)).To(Equal(1))
+			expr := result.Spec.Selector.MatchExpressions[0]
+			g.Expect(expr.Key).To(Equal("security.istio.io/tlsMode"))
+			g.Expect(expr.Operator).To(Equal(metav1.LabelSelectorOpExists))
 
 			// Check podMetricsEndpoints
-			endpoints, found, err := unstructured.NestedSlice(spec, "podMetricsEndpoints")
-			g.Expect(err).ToNot(HaveOccurred())
-			g.Expect(found).To(BeTrue())
-			g.Expect(len(endpoints)).To(Equal(1))
-			endpoint := endpoints[0].(map[string]interface{})
-			g.Expect(endpoint["port"]).To(Equal("http-envoy-prom"))
-			g.Expect(endpoint["path"]).To(Equal("/stats/prometheus"))
-			g.Expect(endpoint["scheme"]).To(Equal("http"))
+			g.Expect(len(result.Spec.PodMetricsEndpoints)).To(Equal(1))
+			endpoint := result.Spec.PodMetricsEndpoints[0]
+			g.Expect(*endpoint.Port).To(Equal("http-envoy-prom"))
+			g.Expect(endpoint.Path).To(Equal("/stats/prometheus"))
+			g.Expect(string(*endpoint.Scheme)).To(Equal("http"))
+			g.Expect(string(endpoint.Interval)).To(Equal("30s"))
+			g.Expect(string(endpoint.ScrapeTimeout)).To(Equal("10s"))
+			g.Expect(endpoint.HonorLabels).To(BeTrue())
+			g.Expect(*endpoint.FilterRunning).To(BeTrue())
 		})
 	}
 }
