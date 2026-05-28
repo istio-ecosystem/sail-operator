@@ -24,17 +24,19 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
-	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -84,6 +86,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, rev *v1.IstioRevision) (ctrl
 		return ctrl.Result{}, nil
 	}
 
+	// Check if monitoring is enabled in the parent Istio CR
+	enabled, err := r.isMonitoringEnabled(ctx, rev)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to check if monitoring is enabled: %w", err)
+	}
+	if !enabled {
+		log.V(2).Info("Monitoring is not enabled in Istio CR, skipping reconciliation")
+		return ctrl.Result{}, nil
+	}
+
 	// Reconcile ServiceMonitor for istiod (in the istio control plane namespace)
 	if err := r.reconcileServiceMonitor(ctx, rev); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to reconcile ServiceMonitor: %w", err)
@@ -98,13 +110,33 @@ func (r *Reconciler) Reconcile(ctx context.Context, rev *v1.IstioRevision) (ctrl
 	return ctrl.Result{}, nil
 }
 
+// isMonitoringEnabled checks if monitoring is enabled in the parent Istio CR
+func (r *Reconciler) isMonitoringEnabled(ctx context.Context, rev *v1.IstioRevision) (bool, error) {
+	// Find the parent Istio CR from owner references
+	for _, ownerRef := range rev.GetOwnerReferences() {
+		if ownerRef.Kind == v1.IstioKind {
+			istio := &v1.Istio{}
+			if err := r.Client.Get(ctx, client.ObjectKey{Name: ownerRef.Name}, istio); err != nil {
+				if apierrors.IsNotFound(err) {
+					// Istio CR not found, monitoring not enabled
+					return false, nil
+				}
+				return false, fmt.Errorf("failed to get Istio CR: %w", err)
+			}
+			// Check if monitoring is enabled (defaults to false if not set)
+			return istio.Spec.Monitoring != nil && istio.Spec.Monitoring.Enabled, nil
+		}
+	}
+	// No Istio owner found, monitoring not enabled
+	return false, nil
+}
+
 // reconcileServiceMonitor creates or updates the ServiceMonitor for istiod
 func (r *Reconciler) reconcileServiceMonitor(ctx context.Context, rev *v1.IstioRevision) error {
 	log := logf.FromContext(ctx)
 	desired := r.buildServiceMonitor(rev)
 
-	existing := &monitoringv1.ServiceMonitor{}
-	// Set the GVK to use the rhobs API group
+	existing := &unstructured.Unstructured{}
 	existing.SetGroupVersionKind(rhobsGV.WithKind("ServiceMonitor"))
 
 	err := r.Client.Get(ctx, client.ObjectKeyFromObject(desired), existing)
@@ -155,8 +187,7 @@ func (r *Reconciler) reconcilePodMonitorInNamespace(ctx context.Context, rev *v1
 	log := logf.FromContext(ctx)
 	desired := r.buildPodMonitor(rev, namespace)
 
-	existing := &monitoringv1.PodMonitor{}
-	// Set the GVK to use the rhobs API group
+	existing := &unstructured.Unstructured{}
 	existing.SetGroupVersionKind(rhobsGV.WithKind("PodMonitor"))
 
 	err := r.Client.Get(ctx, client.ObjectKeyFromObject(desired), existing)
@@ -173,94 +204,96 @@ func (r *Reconciler) reconcilePodMonitorInNamespace(ctx context.Context, rev *v1
 	return r.Client.Update(ctx, desired)
 }
 
-// buildServiceMonitor constructs the ServiceMonitor for monitoring istiod
-func (r *Reconciler) buildServiceMonitor(rev *v1.IstioRevision) *monitoringv1.ServiceMonitor {
+// buildServiceMonitor constructs the ServiceMonitor for monitoring istiod using unstructured
+func (r *Reconciler) buildServiceMonitor(rev *v1.IstioRevision) *unstructured.Unstructured {
 	name := rev.Name + serviceMonitorNameSuffix
 	namespace := rev.Spec.Namespace
 
-	sm := &monitoringv1.ServiceMonitor{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels: map[string]string{
-				"app":               "istiod",
-				cooMonitoredByLabel: cooMonitoredByValue,
-			},
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion:         v1.GroupVersion.String(),
-					Kind:               v1.IstioRevisionKind,
-					Name:               rev.Name,
-					UID:                rev.UID,
-					Controller:         ptrBool(true),
-					BlockOwnerDeletion: ptrBool(true),
+	sm := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": rhobsGV.String(),
+			"kind":       "ServiceMonitor",
+			"metadata": map[string]interface{}{
+				"name":      name,
+				"namespace": namespace,
+				"labels": map[string]interface{}{
+					"app":               "istiod",
+					cooMonitoredByLabel: cooMonitoredByValue,
+				},
+				"ownerReferences": []interface{}{
+					map[string]interface{}{
+						"apiVersion":         v1.GroupVersion.String(),
+						"kind":               v1.IstioRevisionKind,
+						"name":               rev.Name,
+						"uid":                string(rev.UID),
+						"controller":         true,
+						"blockOwnerDeletion": true,
+					},
 				},
 			},
-		},
-		Spec: monitoringv1.ServiceMonitorSpec{
-			Selector: metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": "istiod",
+			"spec": map[string]interface{}{
+				"selector": map[string]interface{}{
+					"matchLabels": map[string]interface{}{
+						"app": "istiod",
+					},
 				},
-			},
-			Endpoints: []monitoringv1.Endpoint{
-				{
-					Port:     "http-monitoring",
-					Path:     "/metrics",
-					Scheme:   ptrScheme(monitoringv1.SchemeHTTP),
-					Interval: "30s",
+				"endpoints": []interface{}{
+					map[string]interface{}{
+						"port":     "http-monitoring",
+						"path":     "/metrics",
+						"scheme":   "http",
+						"interval": "30s",
+					},
 				},
 			},
 		},
 	}
-
-	// Set the GVK to use the rhobs API group
-	sm.SetGroupVersionKind(rhobsGV.WithKind("ServiceMonitor"))
 
 	return sm
 }
 
-// buildPodMonitor constructs the PodMonitor for monitoring istio-proxy sidecars in a namespace
-func (r *Reconciler) buildPodMonitor(rev *v1.IstioRevision, namespace string) *monitoringv1.PodMonitor {
+// buildPodMonitor constructs the PodMonitor for monitoring istio-proxy sidecars using unstructured
+func (r *Reconciler) buildPodMonitor(rev *v1.IstioRevision, namespace string) *unstructured.Unstructured {
 	name := rev.Name + podMonitorNameSuffix
 
-	pm := &monitoringv1.PodMonitor{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels: map[string]string{
-				"app":               "istio-proxy",
-				cooMonitoredByLabel: cooMonitoredByValue,
+	pm := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": rhobsGV.String(),
+			"kind":       "PodMonitor",
+			"metadata": map[string]interface{}{
+				"name":      name,
+				"namespace": namespace,
+				"labels": map[string]interface{}{
+					"app":               "istio-proxy",
+					cooMonitoredByLabel: cooMonitoredByValue,
+				},
+				// Note: We don't set owner references here because the PodMonitor is in a different
+				// namespace than the IstioRevision (which is cluster-scoped). Cross-namespace owner
+				// references are not supported by Kubernetes.
 			},
-			// Note: We don't set owner references here because the PodMonitor is in a different
-			// namespace than the IstioRevision (which is cluster-scoped). Cross-namespace owner
-			// references are not supported by Kubernetes.
-		},
-		Spec: monitoringv1.PodMonitorSpec{
-			Selector: metav1.LabelSelector{
-				MatchExpressions: []metav1.LabelSelectorRequirement{
-					{
-						Key:      "security.istio.io/tlsMode",
-						Operator: metav1.LabelSelectorOpExists,
+			"spec": map[string]interface{}{
+				"selector": map[string]interface{}{
+					"matchExpressions": []interface{}{
+						map[string]interface{}{
+							"key":      "security.istio.io/tlsMode",
+							"operator": "Exists",
+						},
 					},
 				},
-			},
-			PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{
-				{
-					Port:          ptrString("http-envoy-prom"),
-					Path:          "/stats/prometheus",
-					Scheme:        ptrScheme(monitoringv1.SchemeHTTP),
-					Interval:      "30s",
-					ScrapeTimeout: "10s",
-					HonorLabels:   true,
-					FilterRunning: ptrBool(true),
+				"podMetricsEndpoints": []interface{}{
+					map[string]interface{}{
+						"port":          "http-envoy-prom",
+						"path":          "/stats/prometheus",
+						"scheme":        "http",
+						"interval":      "30s",
+						"scrapeTimeout": "10s",
+						"honorLabels":   true,
+						"filterRunning": true,
+					},
 				},
 			},
 		},
 	}
-
-	// Set the GVK to use the rhobs API group
-	pm.SetGroupVersionKind(rhobsGV.WithKind("PodMonitor"))
 
 	return pm
 }
@@ -272,6 +305,10 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// namespaceHandler triggers reconciliation of all IstioRevisions when a namespace
 	// with istio-injection=enabled label is created/updated/deleted
 	namespaceHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapNamespaceToReconcileRequest))
+
+	// istioHandler triggers reconciliation of owned IstioRevisions when an Istio CR's
+	// monitoring configuration changes
+	istioHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapIstioToReconcileRequest))
 
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
@@ -286,25 +323,23 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		}).
 		Named("monitoring").
 		Watches(&v1.IstioRevision{}, wrapEventHandler(logger, &handler.EnqueueRequestForObject{})).
-		Watches(&monitoringv1.ServiceMonitor{},
-			wrapEventHandler(logger, handler.EnqueueRequestForOwner(r.Scheme, mgr.GetRESTMapper(), &v1.IstioRevision{}, handler.OnlyControllerOwner()))).
+		// Note: We don't watch ServiceMonitor/PodMonitor directly because they use the rhobs API group
+		// which requires COO CRDs. Owner references ensure cleanup on IstioRevision deletion.
+		// Watch Istio CR to react to monitoring configuration changes
+		Watches(&v1.Istio{}, istioHandler).
 		// Watch namespaces with istio-injection label to create PodMonitors in them
-		Watches(&corev1.Namespace{}, namespaceHandler).
+		// Use predicate to filter only namespaces with injection enabled
+		Watches(&corev1.Namespace{}, namespaceHandler, builder.WithPredicates(injectionEnabledPredicate())).
 		Complete(reconciler.NewStandardReconciler[*v1.IstioRevision](r.Client, r.Reconcile))
 }
 
 // mapNamespaceToReconcileRequest returns reconcile requests for all IstioRevisions
-// when a namespace with istio-injection=enabled is created/updated
+// when a namespace event passes the injectionEnabledPredicate
 func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, obj client.Object) []reconcile.Request {
 	log := logf.FromContext(ctx)
 	ns, ok := obj.(*corev1.Namespace)
 	if !ok {
 		log.Error(nil, "unexpected object type", "type", fmt.Sprintf("%T", obj))
-		return nil
-	}
-
-	// Only trigger reconciliation if namespace has injection enabled
-	if ns.Labels[constants.IstioInjectionLabel] != constants.IstioInjectionEnabledValue {
 		return nil
 	}
 
@@ -322,23 +357,78 @@ func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, obj cli
 		})
 	}
 
-	log.V(2).Info("Namespace with injection enabled changed, queuing IstioRevisions for reconciliation",
+	log.V(2).Info("Namespace with injection label changed, queuing IstioRevisions for reconciliation",
 		"namespace", ns.Name, "revisionCount", len(requests))
 	return requests
 }
 
+// mapIstioToReconcileRequest returns reconcile requests for all IstioRevisions
+// owned by the given Istio CR when the Istio CR's monitoring configuration changes
+func (r *Reconciler) mapIstioToReconcileRequest(ctx context.Context, obj client.Object) []reconcile.Request {
+	log := logf.FromContext(ctx)
+	istio, ok := obj.(*v1.Istio)
+	if !ok {
+		log.Error(nil, "unexpected object type", "type", fmt.Sprintf("%T", obj))
+		return nil
+	}
+
+	// List IstioRevisions owned by this Istio CR
+	revList := &v1.IstioRevisionList{}
+	if err := r.Client.List(ctx, revList); err != nil {
+		log.Error(err, "failed to list IstioRevisions")
+		return nil
+	}
+
+	// Find revisions that are owned by this Istio CR
+	requests := make([]reconcile.Request, 0)
+	for _, rev := range revList.Items {
+		for _, ownerRef := range rev.GetOwnerReferences() {
+			if ownerRef.Kind == v1.IstioKind && ownerRef.Name == istio.Name {
+				requests = append(requests, reconcile.Request{
+					NamespacedName: client.ObjectKeyFromObject(&rev),
+				})
+				break
+			}
+		}
+	}
+
+	log.V(2).Info("Istio CR changed, queuing owned IstioRevisions for reconciliation",
+		"istio", istio.Name, "revisionCount", len(requests))
+	return requests
+}
+
+// injectionEnabledPredicate returns a predicate that filters namespace events
+// to only those where the istio-injection label is added, removed, or changed
+func injectionEnabledPredicate() predicate.Funcs {
+	hasInjectionEnabled := func(obj client.Object) bool {
+		if obj == nil {
+			return false
+		}
+		labels := obj.GetLabels()
+		return labels != nil && labels[constants.IstioInjectionLabel] == constants.IstioInjectionEnabledValue
+	}
+
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			// Trigger when a namespace is created with injection enabled
+			return hasInjectionEnabled(e.Object)
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			// Trigger when injection label is added, removed, or changed
+			oldHasLabel := hasInjectionEnabled(e.ObjectOld)
+			newHasLabel := hasInjectionEnabled(e.ObjectNew)
+			return oldHasLabel != newHasLabel
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			// Trigger when a namespace with injection enabled is deleted
+			return hasInjectionEnabled(e.Object)
+		},
+		GenericFunc: func(e event.GenericEvent) bool {
+			return hasInjectionEnabled(e.Object)
+		},
+	}
+}
+
 func wrapEventHandler(logger logr.Logger, h handler.EventHandler) handler.EventHandler {
 	return enqueuelogger.WrapIfNecessary(v1.IstioRevisionKind, logger, h)
-}
-
-func ptrBool(b bool) *bool {
-	return &b
-}
-
-func ptrString(s string) *string {
-	return &s
-}
-
-func ptrScheme(s monitoringv1.Scheme) *monitoringv1.Scheme {
-	return &s
 }
