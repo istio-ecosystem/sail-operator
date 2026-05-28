@@ -91,6 +91,21 @@ spec:
               version: v1.30.1
             description: IstioSpec defines the desired state of Istio
             properties:
+              monitoring:
+                description: |-
+                  Defines the configuration for Prometheus monitoring integration.
+                  When enabled, the operator creates ServiceMonitor and PodMonitor resources
+                  for scraping Istio metrics using the Cluster Observability Operator (COO).
+                properties:
+                  enabled:
+                    default: false
+                    description: |-
+                      When enabled, the operator creates ServiceMonitor resources for istiod
+                      and PodMonitor resources for Envoy sidecars in namespaces with
+                      istio-injection=enabled label.
+                      Defaults to false.
+                    type: boolean
+                type: object
               namespace:
                 default: istio-system
                 description: Namespace to which the Istio components should be installed.
