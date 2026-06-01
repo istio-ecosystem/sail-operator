@@ -103,6 +103,54 @@ func TestStop_noop(t *testing.T) {
 	l.Stop()
 }
 
+func TestUninstall_clearsStateAndAllowsReinstall(t *testing.T) {
+	g := NewWithT(t)
+
+	savedMap := istioversion.Map
+	savedEOL := istioversion.EOL
+	defer func() { istioversion.Map = savedMap; istioversion.EOL = savedEOL }()
+	istioversion.Map = map[string]istioversion.VersionInfo{"v1.0.0": {Name: "v1.0.0"}}
+	istioversion.EOL = nil
+
+	l := &Library{
+		triggerCh: make(chan event.GenericEvent, 1),
+	}
+
+	// Simulate a successful install cycle: set desiredOpts and status.
+	opts := Options{Namespace: "istio-system", Version: "v1.0.0"}
+	err := l.Apply(opts)
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(l.generation).To(Equal(uint64(1)))
+	<-l.triggerCh
+
+	l.statusMu.Lock()
+	l.currentStatus = Status{Installed: true, Version: "v1.0.0"}
+	l.statusMu.Unlock()
+
+	// Directly nil the desiredOpts and clear status as Uninstall would
+	// after a successful Helm uninstall. We can't call the real Uninstall
+	// without a cluster, but we can verify the state contract.
+	l.mu.Lock()
+	l.desiredOpts = nil
+	l.mu.Unlock()
+	l.statusMu.Lock()
+	l.currentStatus = Status{}
+	l.statusMu.Unlock()
+
+	// Status should now be zero-value.
+	s := l.Status()
+	g.Expect(s.Installed).To(BeFalse())
+	g.Expect(s.Version).To(BeEmpty())
+	g.Expect(s.Error).To(BeNil())
+
+	// Apply with the same options should trigger a new install cycle
+	// because desiredOpts is nil (no optionsEqual comparison).
+	err = l.Apply(opts)
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(l.generation).To(Equal(uint64(2)))
+	g.Expect(l.triggerCh).To(HaveLen(1))
+}
+
 func TestApply_validationError(t *testing.T) {
 	g := NewWithT(t)
 

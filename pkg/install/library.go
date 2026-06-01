@@ -260,10 +260,23 @@ func (l *Library) Status() Status {
 	return l.currentStatus
 }
 
-// Uninstall removes the istiod Helm release.
+// Uninstall removes the istiod Helm release. It nils the desired state
+// first so that any in-flight reconciliation triggered by drift watches
+// will short-circuit. On success, the status is cleared so that Status()
+// reflects the uninstalled state and a subsequent Apply with the same
+// options will trigger a fresh installation.
 func (l *Library) Uninstall(ctx context.Context, namespace, revision string) error {
 	l.mu.Lock()
+	l.desiredOpts = nil
 	inst := l.newInstaller(namespace)
 	l.mu.Unlock()
-	return inst.uninstall(ctx, namespace, revision)
+
+	if err := inst.uninstall(ctx, namespace, revision); err != nil {
+		return err
+	}
+
+	l.statusMu.Lock()
+	l.currentStatus = Status{}
+	l.statusMu.Unlock()
+	return nil
 }
