@@ -22,9 +22,7 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -129,29 +127,36 @@ func (w *WorkloadValidator) ValidateConnectivity(ctx context.Context) error {
 
 // ValidateProxyVersion validates proxy version based on dataplane mode
 func (w *WorkloadValidator) ValidateProxyVersion(ctx context.Context, expectedVersion *semver.Version) error {
+	var namespace string
+	var checkAllPods bool // true = check all pods, false = check first pod only
+
 	switch w.DataplaneMode {
 	case DataplaneModeSidecar:
-		return w.validateSidecarProxyVersion(ctx, expectedVersion)
+		namespace = w.Namespace
+		checkAllPods = true // check all workload pods
 	case DataplaneModeAmbient:
-		return w.validateZTunnelVersion(ctx, expectedVersion)
+		namespace = ZtunnelNamespace
+		checkAllPods = false // All ZTunnel pods share same version, check first only
 	default:
 		return fmt.Errorf("unsupported dataplane mode: %s", w.DataplaneMode)
 	}
-}
 
-// validateSidecarProxyVersion checks proxy container version in workload pods
-func (w *WorkloadValidator) validateSidecarProxyVersion(ctx context.Context, expectedVersion *semver.Version) error {
 	pods := &corev1.PodList{}
-	if err := w.Cl.List(ctx, pods, client.InNamespace(w.Namespace)); err != nil {
-		return fmt.Errorf("failed to list pods in %s: %w", w.Namespace, err)
+	if err := w.Cl.List(ctx, pods, client.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("failed to list pods in %s: %w", namespace, err)
 	}
 
 	if len(pods.Items) == 0 {
-		return fmt.Errorf("no pods found in %s namespace", w.Namespace)
+		return fmt.Errorf("no pods found in %s namespace", namespace)
 	}
 
-	for _, pod := range pods.Items {
-		proxyVersion, err := GetProxyVersion(pod.Name, w.Namespace)
+	podsToValidate := pods.Items
+	if !checkAllPods {
+		podsToValidate = pods.Items[:1]
+	}
+
+	for _, pod := range podsToValidate {
+		proxyVersion, err := GetProxyVersion(pod.Name, namespace)
 		if err != nil {
 			return fmt.Errorf("failed to get proxy version for pod %s: %w", pod.Name, err)
 		}
@@ -160,40 +165,8 @@ func (w *WorkloadValidator) validateSidecarProxyVersion(ctx context.Context, exp
 				pod.Name, proxyVersion, expectedVersion)
 		}
 	}
+
 	return nil
-}
-
-// validateZTunnelVersion checks ZTunnel DaemonSet version by reading image tag
-func (w *WorkloadValidator) validateZTunnelVersion(ctx context.Context, expectedVersion *semver.Version) error {
-	daemonset := &appsv1.DaemonSet{}
-	if err := w.Cl.Get(ctx, kube.Key("ztunnel", ZtunnelNamespace), daemonset); err != nil {
-		return fmt.Errorf("failed to get ZTunnel DaemonSet: %w", err)
-	}
-
-	// Extract version from ZTunnel container image tag
-	// Image format: gcr.io/istio-release/ztunnel:1.29.2
-	for _, container := range daemonset.Spec.Template.Spec.Containers {
-		if container.Name == "istio-proxy" {
-			parts := strings.Split(container.Image, ":")
-			if len(parts) != 2 {
-				return fmt.Errorf("unexpected ZTunnel image format: %s", container.Image)
-			}
-			tag := parts[1]
-
-			// Parse version from tag
-			version, err := semver.NewVersion(tag)
-			if err != nil {
-				return fmt.Errorf("failed to parse ZTunnel version from tag %s: %w", tag, err)
-			}
-
-			if !version.Equal(expectedVersion) {
-				return fmt.Errorf("ZTunnel has version %s, expected %s", version, expectedVersion)
-			}
-			return nil
-		}
-	}
-
-	return fmt.Errorf("istio-proxy container not found in ZTunnel DaemonSet")
 }
 
 // Cleanup removes workload and httpbin namespaces
