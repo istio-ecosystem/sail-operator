@@ -554,11 +554,11 @@ var _ = Describe("Istio resource", Ordered, func() {
 		It("applies TLS cipher suites to the IstioRevision", func() {
 			cipherID := tls.CipherSuites()[0].ID
 			expectedCipherName := tls.CipherSuiteName(cipherID)
-			istioReconciler.TLSConfig = &config.TLSConfig{
+			istioReconciler.Config.TLSConfig = &config.TLSConfig{
 				CipherSuites: []uint16{cipherID},
 			}
 			DeferCleanup(func() {
-				istioReconciler.TLSConfig = nil
+				istioReconciler.Config.TLSConfig = nil
 			})
 
 			istio = &v1.Istio{
@@ -600,11 +600,11 @@ var _ = Describe("Istio resource", Ordered, func() {
 			userExtraArg := "--tls-cipher-suites=" + userCipherSuite
 			tlsConfigCipherID := tls.TLS_AES_256_GCM_SHA384
 			tlsConfigCipherName := tls.CipherSuiteName(tlsConfigCipherID)
-			istioReconciler.TLSConfig = &config.TLSConfig{
+			istioReconciler.Config.TLSConfig = &config.TLSConfig{
 				CipherSuites: []uint16{tlsConfigCipherID},
 			}
 			DeferCleanup(func() {
-				istioReconciler.TLSConfig = nil
+				istioReconciler.Config.TLSConfig = nil
 			})
 
 			istio = &v1.Istio{

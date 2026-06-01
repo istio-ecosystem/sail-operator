@@ -40,6 +40,7 @@ type ReconcilerConfig struct {
 	DefaultProfile          string
 	OperatorNamespace       string
 	MaxConcurrentReconciles int
+	TLSConfig               *TLSConfig
 }
 
 func Read(configFile string) error {

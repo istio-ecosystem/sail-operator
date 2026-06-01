@@ -56,7 +56,8 @@ type Reconciler struct {
 	ChartManager *helm.ChartManager
 }
 
-func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *runtime.Scheme, chartManager *helm.ChartManager) *Reconciler {
+func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *runtime.Scheme, chartManager *helm.ChartManager,
+) *Reconciler {
 	return &Reconciler{
 		Config:       cfg,
 		Client:       client,
@@ -147,6 +148,7 @@ func (r *Reconciler) newZTunnelReconciler() *sharedreconcile.ZTunnelReconciler {
 		DefaultProfile:    r.Config.DefaultProfile,
 		OperatorNamespace: r.Config.OperatorNamespace,
 		ChartManager:      r.ChartManager,
+		TLSConfig:         r.Config.TLSConfig,
 	}, r.Client)
 }
 

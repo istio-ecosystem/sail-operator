@@ -45,18 +45,16 @@ import (
 
 // Reconciler reconciles an Istio object
 type Reconciler struct {
-	Config    config.ReconcilerConfig
-	TLSConfig *config.TLSConfig
+	Config config.ReconcilerConfig
 	client.Client
 	Scheme *runtime.Scheme
 }
 
-func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *runtime.Scheme, tlsConfig *config.TLSConfig) *Reconciler {
+func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *runtime.Scheme) *Reconciler {
 	return &Reconciler{
-		Config:    cfg,
-		TLSConfig: tlsConfig,
-		Client:    client,
-		Scheme:    scheme,
+		Config: cfg,
+		Client: client,
+		Scheme: scheme,
 	}
 }
 
@@ -132,7 +130,7 @@ func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1.Isti
 	values, err := revision.ComputeValues(
 		istio.Spec.Values, istio.Spec.Namespace, version,
 		r.Config.Platform, r.Config.DefaultProfile, istio.Spec.Profile,
-		r.Config.ResourceFS, getActiveRevisionName(istio), r.TLSConfig)
+		r.Config.ResourceFS, getActiveRevisionName(istio), r.Config.TLSConfig)
 	if err != nil {
 		return err
 	}

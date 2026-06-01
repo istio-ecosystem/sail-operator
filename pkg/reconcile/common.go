@@ -43,6 +43,10 @@ type Config struct {
 
 	// ChartManager handles Helm chart installation and upgrades
 	ChartManager *helm.ChartManager
+
+	// TLSConfig holds the TLS configuration from the platform (e.g. OpenShift APIServer).
+	// Nil when not applicable.
+	TLSConfig *config.TLSConfig
 }
 
 // GetChartPath returns the path to a chart for a given version.
