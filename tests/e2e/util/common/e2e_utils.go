@@ -537,7 +537,7 @@ func EnsureNamespace(ctx context.Context, ctrlclient client.Client, namespace st
 func GetProxyVersion(podName, namespace string) (*semver.Version, error) {
 	proxyStatus, err := istioctl.GetProxyStatus("--namespace " + namespace)
 	if err != nil {
-		return nil, fmt.Errorf("error getting sidecar version: %w", err)
+		return nil, fmt.Errorf("error getting proxy version: %w", err)
 	}
 
 	lines := strings.Split(proxyStatus, "\n")
@@ -559,8 +559,10 @@ func GetProxyVersion(podName, namespace string) (*semver.Version, error) {
 	for _, line := range lines[1:] {
 		if strings.Contains(line, podName+"."+namespace) {
 			values := colSplit.Split(strings.TrimSpace(line), -1)
-			versionStr = values[versionIdx]
-			break
+			if versionIdx < len(values) {
+				versionStr = values[versionIdx]
+				break
+			}
 		}
 	}
 
@@ -569,7 +571,7 @@ func GetProxyVersion(podName, namespace string) (*semver.Version, error) {
 	}
 	version, err := semver.NewVersion(versionStr)
 	if err != nil {
-		return version, fmt.Errorf("error parsing sidecar version %q: %w", versionStr, err)
+		return version, fmt.Errorf("error parsing proxy version %q: %w", versionStr, err)
 	}
 	return version, err
 }
