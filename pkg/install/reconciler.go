@@ -56,8 +56,13 @@ func (r *libraryReconciler) Reconcile(ctx context.Context, _ ctrlreconcile.Reque
 		return ctrlreconcile.Result{}, nil
 	}
 
-	inst := r.lib.newInstaller(opts.Namespace)
-	status := inst.reconcile(ctx, *opts)
+	optsCopy := *opts
+	if optsCopy.Values != nil {
+		optsCopy.Values = optsCopy.Values.DeepCopy()
+	}
+
+	inst := r.lib.newInstaller(optsCopy.Namespace)
+	status := inst.reconcile(ctx, optsCopy)
 	status.Generation = gen
 
 	r.lib.statusMu.Lock()

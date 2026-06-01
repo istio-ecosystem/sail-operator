@@ -17,9 +17,12 @@ package install
 import (
 	"testing"
 
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+
+	"istio.io/istio/pkg/ptr"
 )
 
 func TestValidateOptions(t *testing.T) {
@@ -163,6 +166,49 @@ func TestApply_skipsWhenOptionsUnchanged(t *testing.T) {
 	err = l.Apply(opts)
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(l.generation).To(Equal(uint64(1)))
+	g.Expect(l.triggerCh).To(BeEmpty())
+}
+
+func TestApply_isolatesFromCallerMutation(t *testing.T) {
+	g := NewWithT(t)
+
+	savedMap := istioversion.Map
+	savedEOL := istioversion.EOL
+	defer func() { istioversion.Map = savedMap; istioversion.EOL = savedEOL }()
+	istioversion.Map = map[string]istioversion.VersionInfo{"v1.0.0": {Name: "v1.0.0"}}
+	istioversion.EOL = nil
+
+	l := &Library{
+		triggerCh: make(chan event.GenericEvent, 1),
+	}
+
+	values := &v1.Values{Pilot: &v1.PilotConfig{Hub: ptr.Of("original")}}
+	opts := Options{
+		Namespace: "istio-system",
+		Version:   "v1.0.0",
+		Values:    values,
+	}
+
+	err := l.Apply(opts)
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(l.generation).To(Equal(uint64(1)))
+	<-l.triggerCh
+
+	// Caller mutates the Values pointer after Apply (simulates what
+	// ApplyDigests would do if Apply hadn't deep-copied).
+	values.Pilot.Image = ptr.Of("mutated-by-caller")
+
+	// Apply again with a fresh copy of the original intent — must be a
+	// no-op because stored desiredOpts should be isolated from the
+	// caller's mutation above.
+	freshOpts := Options{
+		Namespace: "istio-system",
+		Version:   "v1.0.0",
+		Values:    &v1.Values{Pilot: &v1.PilotConfig{Hub: ptr.Of("original")}},
+	}
+	err = l.Apply(freshOpts)
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(l.generation).To(Equal(uint64(1)), "generation should not increment when intent is unchanged")
 	g.Expect(l.triggerCh).To(BeEmpty())
 }
 

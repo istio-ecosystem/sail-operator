@@ -223,7 +223,11 @@ func (l *Library) Apply(opts Options) error {
 		return nil
 	}
 	l.generation++
-	l.desiredOpts = &opts
+	copied := opts
+	if copied.Values != nil {
+		copied.Values = copied.Values.DeepCopy()
+	}
+	l.desiredOpts = &copied
 	l.mu.Unlock()
 	l.sendTrigger()
 	return nil
