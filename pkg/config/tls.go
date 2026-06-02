@@ -91,9 +91,9 @@ func cipherCodes(ciphers []string) (codes []uint16, unsupportedCiphers []string)
 	return codes, unsupportedCiphers
 }
 
-// NewTLSConfigForOpenShift fetches TLS configuration from the OpenShift
+// FetchTLSConfigForOpenShift fetches TLS configuration from the OpenShift
 // APIServer and returns a TLSConfig with the OpenShift field populated.
-func NewTLSConfigForOpenShift(ctx context.Context, log logr.Logger, cl client.Client) (*TLSConfig, error) {
+func FetchTLSConfigForOpenShift(ctx context.Context, log logr.Logger, cl client.Client) (*TLSConfig, error) {
 	adherencePolicy, err := openshifttls.FetchAPIServerTLSAdherencePolicy(ctx, cl)
 	if err != nil {
 		return nil, fmt.Errorf("fetching TLS adherence policy from APIServer: %w", err)
@@ -104,6 +104,12 @@ func NewTLSConfigForOpenShift(ctx context.Context, log logr.Logger, cl client.Cl
 		return nil, fmt.Errorf("fetching TLS profile from APIServer: %w", err)
 	}
 
+	return NewTLSConfigForOpenShift(profileSpec, adherencePolicy, log), nil
+}
+
+// NewTLSConfigForOpenShift builds a TLSConfig from the given profile spec
+// and adherence policy without fetching from the API server.
+func NewTLSConfigForOpenShift(profileSpec configv1.TLSProfileSpec, adherencePolicy configv1.TLSAdherencePolicy, log logr.Logger) *TLSConfig {
 	tlsConfig := &TLSConfig{
 		OpenShift: &OpenShiftTLS{
 			TLSProfileSpec:     profileSpec,
@@ -130,5 +136,5 @@ func NewTLSConfigForOpenShift(ctx context.Context, log logr.Logger, cl client.Cl
 		}
 	}
 
-	return tlsConfig, nil
+	return tlsConfig
 }

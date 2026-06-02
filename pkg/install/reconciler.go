@@ -163,7 +163,6 @@ func (l *Library) newInstaller(namespace string) *installer {
 		crdManager:       &crdManager{cl: l.cl, crdFS: l.crdFS},
 		cfg:              cfg,
 		platform:         l.platform,
-		tlsConfig:        l.tlsConfig,
 	}
 }
 
@@ -172,7 +171,6 @@ type installer struct {
 	crdManager       *crdManager
 	cfg              sharedreconcile.Config
 	platform         config.Platform
-	tlsConfig        *config.TLSConfig
 }
 
 func (inst *installer) reconcile(ctx context.Context, opts Options) Status {
@@ -199,6 +197,15 @@ func (inst *installer) reconcile(ctx context.Context, opts Options) Status {
 		defaultProfile = "openshift"
 	}
 
+	var tlsCfg *config.TLSConfig
+	if opts.OpenShiftTLS != nil {
+		tlsCfg = config.NewTLSConfigForOpenShift(
+			opts.OpenShiftTLS.TLSProfileSpec,
+			opts.OpenShiftTLS.TLSAdherencePolicy,
+			ctrl.Log.WithName("install-library"),
+		)
+	}
+
 	values, err := revision.ComputeValues(
 		opts.Values,
 		opts.Namespace,
@@ -208,7 +215,7 @@ func (inst *installer) reconcile(ctx context.Context, opts Options) Status {
 		"",
 		inst.cfg.ResourceFS,
 		revisionName,
-		inst.tlsConfig,
+		tlsCfg,
 	)
 	if err != nil {
 		status.Error = fmt.Errorf("failed to compute values: %w", err)

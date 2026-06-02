@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package crdownership
+package library
 
 import (
 	"os"
@@ -42,17 +42,17 @@ var (
 )
 
 const (
-	libraryNamespace = "crd-ownership-test"
+	libraryNamespace = "library-test"
 )
 
-func TestCRDOwnership(t *testing.T) {
+func TestLibrary(t *testing.T) {
 	if multicluster {
-		t.Skip("Skipping the CRD Ownership tests")
+		t.Skip("Skipping the Library tests")
 	}
 
 	RegisterFailHandler(Fail)
 	setup()
-	RunSpecs(t, "CRD Ownership Test Suite")
+	RunSpecs(t, "Library Test Suite")
 }
 
 func setup() {

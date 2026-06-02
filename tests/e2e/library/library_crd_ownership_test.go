@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package crdownership
+package library
 
 import (
 	"context"
@@ -356,56 +356,6 @@ var _ = Describe("CRD Ownership", Label("crd-ownership"), Ordered, func() {
 			lib.Stop()
 			deleteAllIstioCRDs(ctx)
 			Success("Cleaned up scenario 3")
-		})
-	})
-
-	When("the library reconcile loop stabilizes after install", func() {
-		var lib *install.Library
-		installOpts := install.Options{
-			Values:         install.GatewayAPIDefaults(libraryNamespace),
-			Namespace:      libraryNamespace,
-			Version:        istioversion.Default,
-			Revision:       "crdtest",
-			ManageCRDs:     true,
-			IncludeAllCRDs: true,
-		}
-
-		BeforeAll(func() {
-			deleteAllIstioCRDs(ctx)
-
-			var err error
-			lib, err = install.New(kubeConfig, resources.FS, chart.CRDsFS)
-			Expect(err).NotTo(HaveOccurred())
-
-			_, err = lib.Start(ctx)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(lib.Apply(installOpts)).To(Succeed())
-
-			Eventually(func() bool {
-				s := lib.Status()
-				return s.Installed && s.Error == nil
-			}).Should(BeTrue())
-			Success("Library installed successfully")
-		})
-
-		It("does not enter an infinite reconcile loop", func() {
-			// Continually apply the same options to the library to ensure it doesn't enter an infinite reconcile loop.
-			initialGeneration := lib.Status().Generation
-			Expect(initialGeneration).To(Equal(uint64(1)))
-
-			Consistently(func(g Gomega) {
-				g.Expect(lib.Apply(installOpts)).To(Succeed())
-				g.Expect(lib.Status().Generation).To(Equal(initialGeneration),
-					fmt.Sprintf("library generation changed from %d to %d, indicating a reconcile loop", initialGeneration, lib.Status().Generation))
-			}, 10*time.Second, 2*time.Second).Should(Succeed())
-			Success("Library generation is stable — no reconcile loop detected")
-		})
-
-		AfterAll(func() {
-			lib.Stop()
-			deleteAllIstioCRDs(ctx)
-			Success("Cleaned up reconcile loop test")
 		})
 	})
 

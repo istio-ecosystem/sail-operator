@@ -72,6 +72,7 @@ type Options struct {
 	Version        string
 	Revision       string
 	Values         *v1.Values
+	OpenShiftTLS   *config.OpenShiftTLS
 	ManageCRDs     bool
 	IncludeAllCRDs bool
 
@@ -81,18 +82,30 @@ type Options struct {
 	OverwriteOLMManagedCRD OverwriteOLMManagedCRDFunc
 }
 
-// optionsEqual compares two Options for equality, skipping the
-// OverwriteOLMManagedCRD function field. Used by Apply to suppress
-// no-op reconciliation triggers.
+// optionsEqual compares two Options for equality, skipping function
+// fields (OverwriteOLMManagedCRD, TLSConfigFunc). Used by Apply to
+// suppress no-op reconciliation triggers.
 func optionsEqual(a, b Options) bool {
 	if a.Namespace != b.Namespace ||
 		a.Version != b.Version ||
 		a.Revision != b.Revision ||
 		a.ManageCRDs != b.ManageCRDs ||
-		a.IncludeAllCRDs != b.IncludeAllCRDs {
+		a.IncludeAllCRDs != b.IncludeAllCRDs ||
+		!openShiftTLSEqual(a.OpenShiftTLS, b.OpenShiftTLS) {
 		return false
 	}
 	return reflect.DeepEqual(helm.FromValues(a.Values), helm.FromValues(b.Values))
+}
+
+func openShiftTLSEqual(a, b *config.OpenShiftTLS) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return reflect.DeepEqual(a.TLSProfileSpec, b.TLSProfileSpec) &&
+		a.TLSAdherencePolicy == b.TLSAdherencePolicy
 }
 
 // CRDManagementState represents the state of CRD management.
@@ -135,7 +148,6 @@ type Library struct {
 	cl           client.Client
 	chartManager *helm.ChartManager
 	platform     config.Platform
-	tlsConfig    *config.TLSConfig
 
 	triggerCh chan event.GenericEvent
 	notifyCh  chan struct{}
@@ -183,14 +195,6 @@ func New(kubeConfig *rest.Config, resourceFS, crdFS fs.FS, opts ...LibraryOption
 	}
 	setupLog.Info("detected platform", "platform", platform)
 
-	var tlsConfig *config.TLSConfig
-	if platform == config.PlatformOpenShift {
-		tlsConfig, err = config.NewTLSConfigForOpenShift(context.Background(), setupLog, cl)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch TLS config: %w", err)
-		}
-	}
-
 	return &Library{
 		kubeConfig:   cfg,
 		resourceFS:   resourceFS,
@@ -198,7 +202,6 @@ func New(kubeConfig *rest.Config, resourceFS, crdFS fs.FS, opts ...LibraryOption
 		cl:           cl,
 		chartManager: chartManager,
 		platform:     platform,
-		tlsConfig:    tlsConfig,
 		triggerCh:    make(chan event.GenericEvent, 1),
 		notifyCh:     make(chan struct{}, 1),
 	}, nil
