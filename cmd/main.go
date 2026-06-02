@@ -149,7 +149,6 @@ func main() {
 
 	ctx, shutdown := context.WithCancel(ctrl.SetupSignalHandler())
 
-	var tlsConfig *config.TLSConfig
 	if reconcilerCfg.Platform == config.PlatformOpenShift {
 		// Create a temporary client to fetch the initial TLS settings.
 		// We can't use the manager's client here because the manager hasn't started yet.
@@ -159,15 +158,15 @@ func main() {
 			os.Exit(1)
 		}
 
-		tlsConfig, err = config.NewTLSConfigForOpenShift(ctx, setupLog, cl)
+		reconcilerCfg.TLSConfig, err = config.NewTLSConfigForOpenShift(ctx, setupLog, cl)
 		if err != nil {
 			setupLog.Error(err, "unable to fetch TLS config")
 			os.Exit(1)
 		}
 
-		if tlsConfig.OpenShift != nil && tlsConfig.OpenShift.TLSConfigFunc != nil {
-			setupLog.Info("Using TLS config from APIServer", "tlsProfileSpec", tlsConfig.OpenShift.TLSProfileSpec)
-			metricsServerTLSOptions = append(metricsServerTLSOptions, tlsConfig.OpenShift.TLSConfigFunc)
+		if reconcilerCfg.TLSConfig.OpenShift != nil && reconcilerCfg.TLSConfig.OpenShift.TLSConfigFunc != nil {
+			setupLog.Info("Using TLS config from APIServer", "tlsProfileSpec", reconcilerCfg.TLSConfig.OpenShift.TLSProfileSpec)
+			metricsServerTLSOptions = append(metricsServerTLSOptions, reconcilerCfg.TLSConfig.OpenShift.TLSConfigFunc)
 		}
 	}
 
@@ -204,7 +203,7 @@ func main() {
 
 	chartManager := helm.NewChartManager(mgr.GetConfig(), os.Getenv("HELM_DRIVER"))
 
-	err = istio.NewReconciler(reconcilerCfg, mgr.GetClient(), mgr.GetScheme(), tlsConfig).
+	err = istio.NewReconciler(reconcilerCfg, mgr.GetClient(), mgr.GetScheme()).
 		SetupWithManager(mgr)
 	if err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Istio")
@@ -246,20 +245,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	if tlsConfig != nil && tlsConfig.OpenShift != nil {
+	if reconcilerCfg.TLSConfig != nil && reconcilerCfg.TLSConfig.OpenShift != nil {
 		tlsWatcher := &openshifttls.SecurityProfileWatcher{
 			Client:                    mgr.GetClient(),
-			InitialTLSProfileSpec:     tlsConfig.OpenShift.TLSProfileSpec,
-			InitialTLSAdherencePolicy: tlsConfig.OpenShift.TLSAdherencePolicy,
+			InitialTLSProfileSpec:     reconcilerCfg.TLSConfig.OpenShift.TLSProfileSpec,
+			InitialTLSAdherencePolicy: reconcilerCfg.TLSConfig.OpenShift.TLSAdherencePolicy,
 			OnProfileChange: func(ctx context.Context, oldProfile, newProfile configv1.TLSProfileSpec) {
-				if openshiftcrypto.ShouldHonorClusterTLSProfile(tlsConfig.OpenShift.TLSAdherencePolicy) {
+				if openshiftcrypto.ShouldHonorClusterTLSProfile(reconcilerCfg.TLSConfig.OpenShift.TLSAdherencePolicy) {
 					setupLog.Info("TLS profile has changed, initiating shutdown to reload configuration",
 						"oldProfile", oldProfile,
 						"newProfile", newProfile)
 					shutdown()
 				} else {
 					setupLog.Info("TLS profile has changed, but TLS adherence policy does not honor cluster TLS profile, skipping reload",
-						"policy", tlsConfig.OpenShift.TLSAdherencePolicy)
+						"policy", reconcilerCfg.TLSConfig.OpenShift.TLSAdherencePolicy)
 				}
 			},
 			OnAdherencePolicyChange: func(ctx context.Context, oldPolicy, newPolicy configv1.TLSAdherencePolicy) {
