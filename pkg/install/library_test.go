@@ -141,7 +141,7 @@ func TestUninstall_clearsStateAndAllowsReinstall(t *testing.T) {
 	s := l.Status()
 	g.Expect(s.Installed).To(BeFalse())
 	g.Expect(s.Version).To(BeEmpty())
-	g.Expect(s.Error).To(BeNil())
+	g.Expect(s.Error).NotTo(HaveOccurred())
 
 	// Apply with the same options should trigger a new install cycle
 	// because desiredOpts is nil (no optionsEqual comparison).
