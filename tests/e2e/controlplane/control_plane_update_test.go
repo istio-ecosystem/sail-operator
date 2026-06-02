@@ -310,6 +310,10 @@ spec:
 			BeforeAll(func(ctx SpecContext) {
 				clr.Record(ctx)
 				Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
+				Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
+
+				common.CreateIstioCNI(k, baseVersion.Name)
+				common.AwaitCondition(ctx, v1.IstioCNIConditionReady, kube.Key(istioCniName), &v1.IstioCNI{}, k, cl)
 			})
 
 			When(fmt.Sprintf("Istio CR is created with InPlace updateStrategy for version %s", baseVersion.Name), func() {
@@ -476,6 +480,10 @@ updateStrategy:
 			BeforeAll(func(ctx SpecContext) {
 				clr.Record(ctx)
 				Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
+				Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
+
+				common.CreateIstioCNI(k, testVersion.Name)
+				common.AwaitCondition(ctx, v1.IstioCNIConditionReady, kube.Key(istioCniName), &v1.IstioCNI{}, k, cl)
 
 				// Create Istio CR with test version
 				common.CreateIstio(k, testVersion.Name, `
