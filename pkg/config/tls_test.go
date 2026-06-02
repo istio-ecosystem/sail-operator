@@ -16,15 +16,22 @@ package config
 
 import (
 	"crypto/tls"
+	"fmt"
 	"testing"
 
 	configv1 "github.com/openshift/api/config/v1"
+	openshifttls "github.com/openshift/controller-runtime-common/pkg/tls"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+)
+
+var (
+	defaultTLSCiphers, _ = cipherCodes(openshifttls.DefaultTLSCiphers)
+	modernTLSCiphers, _  = cipherCodes(configv1.TLSProfiles[configv1.TLSProfileModernType].Ciphers)
 )
 
 func TestNewTLSConfigForOpenShift(t *testing.T) {
@@ -44,6 +51,7 @@ func TestNewTLSConfigForOpenShift(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
 			},
 			expected: TLSConfig{
+				MinVersion: tls.VersionTLS12,
 				OpenShift: &OpenShiftTLS{
 					TLSAdherencePolicy: configv1.TLSAdherencePolicyNoOpinion,
 				},
@@ -61,6 +69,7 @@ func TestNewTLSConfigForOpenShift(t *testing.T) {
 				},
 			},
 			expected: TLSConfig{
+				MinVersion: tls.VersionTLS12,
 				OpenShift: &OpenShiftTLS{
 					TLSAdherencePolicy: configv1.TLSAdherencePolicyLegacyAdheringComponentsOnly,
 				},
@@ -73,11 +82,13 @@ func TestNewTLSConfigForOpenShift(t *testing.T) {
 				Spec: configv1.APIServerSpec{
 					TLSAdherence: configv1.TLSAdherencePolicyStrictAllComponents,
 					TLSSecurityProfile: &configv1.TLSSecurityProfile{
-						Type: configv1.TLSProfileOldType,
+						Type: configv1.TLSProfileModernType,
 					},
 				},
 			},
 			expected: TLSConfig{
+				MinVersion:   tls.VersionTLS13,
+				CipherSuites: modernTLSCiphers,
 				OpenShift: &OpenShiftTLS{
 					TLSAdherencePolicy: configv1.TLSAdherencePolicyStrictAllComponents,
 				},
@@ -92,6 +103,8 @@ func TestNewTLSConfigForOpenShift(t *testing.T) {
 				},
 			},
 			expected: TLSConfig{
+				MinVersion:   tls.VersionTLS12,
+				CipherSuites: defaultTLSCiphers,
 				OpenShift: &OpenShiftTLS{
 					TLSAdherencePolicy: configv1.TLSAdherencePolicyStrictAllComponents,
 				},
@@ -105,6 +118,8 @@ func TestNewTLSConfigForOpenShift(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			require := require.New(t)
+			assert := assert.New(t)
 			builder := fake.NewClientBuilder().WithScheme(scheme)
 			if tt.apiServer != nil {
 				builder = builder.WithObjects(tt.apiServer)
@@ -113,24 +128,23 @@ func TestNewTLSConfigForOpenShift(t *testing.T) {
 
 			tlsConfig, err := NewTLSConfigForOpenShift(t.Context(), log, cl)
 			if tt.wantErr {
-				require.Error(t, err)
+				require.Error(err)
 				return
 			}
-			require.NoError(t, err)
-			require.NotNil(t, tlsConfig)
-			require.NotNil(t, tlsConfig.OpenShift)
+			require.NoError(err)
+			require.NotNil(tlsConfig)
+			require.NotNil(tlsConfig.OpenShift)
 
-			assert.Equal(t, tt.expected.OpenShift.TLSAdherencePolicy, tlsConfig.OpenShift.TLSAdherencePolicy)
+			assert.Equal(tt.expected.OpenShift.TLSAdherencePolicy, tlsConfig.OpenShift.TLSAdherencePolicy)
 
 			if tt.expected.OpenShift.TLSAdherencePolicy == configv1.TLSAdherencePolicyStrictAllComponents {
-				assert.NotEmpty(t, tlsConfig.CipherSuites)
-				require.NotNil(t, tlsConfig.OpenShift.TLSConfigFunc)
-				goTLS := &tls.Config{MinVersion: tls.VersionTLS12}
-				tlsConfig.OpenShift.TLSConfigFunc(goTLS)
-				assert.NotEmpty(t, goTLS.CipherSuites)
+				assert.Equal(tt.expected.CipherSuites, tlsConfig.CipherSuites)
+				assert.Equal(tt.expected.MinVersion, tlsConfig.MinVersion,
+					fmt.Sprintf("TLS MinVersion mismatch: expected %s, got %s", tls.VersionName(tt.expected.MinVersion), tls.VersionName(tlsConfig.MinVersion)))
+				require.NotNil(tlsConfig.OpenShift.TLSConfigFunc)
 			} else {
-				assert.Empty(t, tlsConfig.CipherSuites)
-				assert.Nil(t, tlsConfig.OpenShift.TLSConfigFunc)
+				assert.Empty(tlsConfig.CipherSuites)
+				assert.Nil(tlsConfig.OpenShift.TLSConfigFunc)
 			}
 		})
 	}
