@@ -26,12 +26,6 @@ GIT_USER="${GIT_USER:-}"
 GIT_CONFIG_USER_NAME="${GIT_CONFIG_USER_NAME:-}"
 GIT_CONFIG_USER_EMAIL="${GIT_CONFIG_USER_EMAIL:-}"
 
-# The OPERATOR_NAME is defined in Makefile
-: "${OPERATOR_NAME:?"Missing OPERATOR_NAME variable"}"
-: "${OPERATOR_VERSION:?"Missing OPERATOR_VERSION variable"}"
-: "${CHANNELS:?"Missing CHANNELS variable"}"
-: "${PREVIOUS_VERSION:?"Missing PREVIOUS_VERSION variable"}"
-
 show_help() {
   echo "publish-bundle - raises PR to Operator Hub"
   echo " "
@@ -52,6 +46,7 @@ skipInDryRun() {
   fi
 }
 
+# Parse arguments first so --help works without environment variables
 while test $# -gt 0; do
   case "$1" in
     -h|--help)
@@ -69,6 +64,121 @@ while test $# -gt 0; do
   esac
 done
 
+# The OPERATOR_NAME is defined in Makefile
+: "${OPERATOR_NAME:?"Missing OPERATOR_NAME variable"}"
+: "${OPERATOR_VERSION:?"Missing OPERATOR_VERSION variable"}"
+: "${CHANNELS:?"Missing CHANNELS variable"}"
+
+# Check required tools early for clearer failures
+command -v curl >/dev/null 2>&1 || { echo "ERROR: curl is required but not found" >&2; exit 1; }
+command -v yq >/dev/null 2>&1 || { echo "ERROR: yq is required but not found (https://github.com/mikefarah/yq)" >&2; exit 1; }
+
+# FBC catalog URL - used for auto-detection and validation
+FBC_URL="https://raw.githubusercontent.com/redhat-openshift-ecosystem/community-operators-prod/main/operators/${OPERATOR_NAME}/catalog-templates/basic.yaml"
+
+# Extract version components (used for auto-detection and validation)
+OPERATOR_BASE_VERSION=$(echo "${OPERATOR_VERSION}" | sed 's/-.*$//')
+OPERATOR_PATCH=$(echo "${OPERATOR_BASE_VERSION}" | cut -d. -f3)
+OPERATOR_MINOR_VERSION=$(echo "${OPERATOR_BASE_VERSION}" | cut -d. -f1,2)
+
+# Auto-detect PREVIOUS_VERSION from FBC (File-Based Catalog)
+# This is used to generate the OLM upgrade graph in FBC for stable releases.
+# For nightly releases, the previous version is fetched directly from the FBC catalog using the same approach.
+#
+# The FBC catalog is the authoritative source of truth for OLM upgrade graphs.
+# This queries the 'stable' channel in the community-operators-prod FBC catalog to get the latest released version.
+#
+# To override: export PREVIOUS_VERSION=X.Y.Z before calling this script
+#
+if [ -z "${PREVIOUS_VERSION:-}" ]; then
+  echo "Auto-detecting PREVIOUS_VERSION from FBC catalog..."
+
+  ALL_STABLE=$(curl -sf "${FBC_URL}" 2>/dev/null | yq -r '.entries[] | select(.schema == "olm.channel" and .name == "stable").entries[].name' 2>/dev/null | grep -v '^null$' || true)
+
+  if [ -z "${ALL_STABLE}" ]; then
+    echo "ERROR: Failed to fetch versions from FBC catalog." >&2
+    echo "  URL: ${FBC_URL}" >&2
+    echo "  Network connection and yq are required for release." >&2
+    echo "  To override: export PREVIOUS_VERSION=X.Y.Z" >&2
+    exit 1
+  fi
+
+  if [[ ${OPERATOR_VERSION} != *"nightly"* ]] && [ "${OPERATOR_PATCH}" != "0" ]; then
+    PREVIOUS_VERSION=$(echo "${ALL_STABLE}" | sed "s/^${OPERATOR_NAME}\.v//" | grep "^${OPERATOR_MINOR_VERSION}\." | sort -V | tail -1)
+    if [ -z "${PREVIOUS_VERSION}" ]; then
+      echo "ERROR: No previous version found in FBC for minor series ${OPERATOR_MINOR_VERSION}." >&2
+      echo "  To override: export PREVIOUS_VERSION=X.Y.Z" >&2
+      exit 1
+    fi
+  else
+    PREVIOUS_VERSION=$(echo "${ALL_STABLE}" | sed "s/^${OPERATOR_NAME}\.v//" | sort -V | tail -1)
+  fi
+  echo "Detected PREVIOUS_VERSION: ${PREVIOUS_VERSION}"
+else
+  echo "Using provided PREVIOUS_VERSION: ${PREVIOUS_VERSION}"
+fi
+
+echo "Using PREVIOUS_VERSION: ${PREVIOUS_VERSION} for OLM upgrade graph"
+
+# Validate version ordering
+# Skip for nightly builds as they use date-based versioning
+if [[ ${OPERATOR_VERSION} != *"nightly"* ]]; then
+  # Extract PREVIOUS_VERSION components for validation
+  PREVIOUS_BASE_VERSION=$(echo "${PREVIOUS_VERSION}" | sed 's/-.*$//')
+  PREVIOUS_MINOR_VERSION=$(echo "${PREVIOUS_BASE_VERSION}" | cut -d. -f1,2)
+
+  # Rule 1: If publishing a new minor version (.0 release), it must be newer than latest
+  if [ "${OPERATOR_PATCH}" = "0" ]; then
+    # Check if versions are equal
+    if [ "${OPERATOR_BASE_VERSION}" = "${PREVIOUS_BASE_VERSION}" ]; then
+      echo "ERROR: Cannot publish same version as latest in catalog!" >&2
+      echo "  Attempting to publish: ${OPERATOR_VERSION}" >&2
+      echo "  Latest in catalog:     ${PREVIOUS_VERSION}" >&2
+      exit 1
+    fi
+
+    # Check if it's older
+    NEWER=$(printf "%s\n%s\n" "${OPERATOR_BASE_VERSION}" "${PREVIOUS_BASE_VERSION}" | sort -V | tail -1)
+    if [ "${NEWER}" != "${OPERATOR_BASE_VERSION}" ]; then
+      echo "ERROR: Cannot publish older minor version than latest in catalog!" >&2
+      echo "  Attempting to publish: ${OPERATOR_VERSION} (minor: ${OPERATOR_MINOR_VERSION})" >&2
+      echo "  Latest in catalog:     ${PREVIOUS_VERSION} (minor: ${PREVIOUS_MINOR_VERSION})" >&2
+      echo "  New minor versions must be greater than the latest." >&2
+      exit 1
+    fi
+
+    echo "✓ Version check passed: New minor version ${OPERATOR_VERSION} > ${PREVIOUS_VERSION}"
+  else
+    # Rule 2: For patch releases, validate the minor series exists in FBC
+    # It's OK to publish 1.28.4 even when latest is 1.30.0, as long as 1.28 series exists
+    echo "Validating patch release ${OPERATOR_VERSION} for minor series ${OPERATOR_MINOR_VERSION}..."
+
+    # Fetch all versions from FBC stable channel
+    ALL_VERSIONS=$(curl -sf "${FBC_URL}" 2>/dev/null | yq ".entries[] | select(.schema == \"olm.channel\" and .name == \"stable\").entries[].name" 2>/dev/null)
+
+    # Check if we successfully fetched data
+    if [ -z "${ALL_VERSIONS}" ]; then
+      echo "ERROR: Failed to fetch version list from FBC catalog!" >&2
+      echo "  URL: ${FBC_URL}" >&2
+      echo "  Network connection required for validation." >&2
+      exit 1
+    fi
+
+    # Check if this minor version exists in the fetched list
+    MINOR_EXISTS=$(echo "${ALL_VERSIONS}" | grep -c "^${OPERATOR_NAME}\.v${OPERATOR_MINOR_VERSION}\." || true)
+
+    if [ "${MINOR_EXISTS}" -eq 0 ]; then
+      echo "ERROR: Cannot publish patch for non-existent minor version!" >&2
+      echo "  Attempting to publish: ${OPERATOR_VERSION}" >&2
+      echo "  Minor version ${OPERATOR_MINOR_VERSION} does not exist in FBC stable channel." >&2
+      echo "  Available minor versions:" >&2
+      echo "${ALL_VERSIONS}" | sed "s/${OPERATOR_NAME}\.v//" | cut -d. -f1,2 | sort -uV | tail -10 >&2
+      exit 1
+    fi
+
+    echo "✓ Version check passed: Patch release ${OPERATOR_VERSION} for existing minor series ${OPERATOR_MINOR_VERSION}"
+  fi
+fi
 
 # Validations
 validate_semantic_versioning "v${OPERATOR_VERSION}"
