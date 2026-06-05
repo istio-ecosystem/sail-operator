@@ -3,5 +3,5 @@ kind: ZTunnel
 metadata:
   name: default
 spec:
-  version: v1.30.0
+  version: v1.30.1
   namespace: ztunnel
