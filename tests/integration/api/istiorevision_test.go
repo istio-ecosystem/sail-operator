@@ -1018,8 +1018,9 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 			cm := &corev1.ConfigMap{}
 			Eventually(k8sClient.Get).WithArguments(ctx, cmKey, cm).Should(Succeed())
 			Expect(cm.Labels).To(HaveKeyWithValue("gateway.istio.io/defaults-for-class", "istio"))
-			// Trim to handle Helm v4.1.4 (with trailing newline) vs v4.2.0 (without)
-			Expect(strings.TrimRight(cm.Data["service"], "\n")).To(Equal("spec:\n  type: ClusterIP"))
+			// TrimSuffix allows Helm v4.1.4 (single trailing newline) and v4.2.0 (none)
+			Expect(cm.Data).To(HaveKey("service"))
+			Expect(strings.TrimSuffix(cm.Data["service"], "\n")).To(Equal("spec:\n  type: ClusterIP"))
 		})
 	})
 })
