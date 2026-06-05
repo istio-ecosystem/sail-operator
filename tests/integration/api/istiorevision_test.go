@@ -19,6 +19,7 @@ package integration
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
@@ -1017,9 +1018,8 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 			cm := &corev1.ConfigMap{}
 			Eventually(k8sClient.Get).WithArguments(ctx, cmKey, cm).Should(Succeed())
 			Expect(cm.Labels).To(HaveKeyWithValue("gateway.istio.io/defaults-for-class", "istio"))
-			Expect(cm.Data).To(HaveKeyWithValue("service", `spec:
-  type: ClusterIP
-`))
+			// Trim to handle Helm v4.1.4 (with trailing newline) vs v4.2.0 (without)
+			Expect(strings.TrimRight(cm.Data["service"], "\n")).To(Equal("spec:\n  type: ClusterIP"))
 		})
 	})
 })
