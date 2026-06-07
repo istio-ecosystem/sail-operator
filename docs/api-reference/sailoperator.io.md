@@ -652,7 +652,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.1, v1.30.0, v1.29-latest, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.28.8, master, v1.31.0-alpha.7d7b6cf3. | v1.30.1 | Enum: [v1.30-latest v1.30.1 v1.30.0 v1.29-latest v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.31.0-alpha.7d7b6cf3]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.1, v1.30.0, v1.29-latest, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.28.8, master, v1.31.0-alpha.dbe021f1. | v1.30.1 | Enum: [v1.30-latest v1.30.1 v1.30.0 v1.29-latest v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.31.0-alpha.dbe021f1]   |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift openshift-ambient preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio CNI component should be installed. Note that this field is immutable. | istio-cni |  |
 | `values` _[CNIValues](#cnivalues)_ | Defines the values to be passed to the Helm charts when installing Istio CNI. |  |  |
@@ -762,7 +762,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30.1, v1.30.0, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.28.8, v1.31.0-alpha.7d7b6cf3. |  | Enum: [v1.30.1 v1.30.0 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 v1.31.0-alpha.7d7b6cf3]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30.1, v1.30.0, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.28.8, v1.31.0-alpha.dbe021f1. |  | Enum: [v1.30.1 v1.30.0 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 v1.31.0-alpha.dbe021f1]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. |  |  |
 | `values` _[Values](#values)_ | Defines the values to be passed to the Helm charts when installing Istio. |  |  |
 
@@ -880,7 +880,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.1, v1.30.0, v1.29-latest, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.28.8, master, v1.31.0-alpha.7d7b6cf3. | v1.30.1 | Enum: [v1.30-latest v1.30.1 v1.30.0 v1.29-latest v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.31.0-alpha.7d7b6cf3]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.1, v1.30.0, v1.29-latest, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.28.8, master, v1.31.0-alpha.dbe021f1. | v1.30.1 | Enum: [v1.30-latest v1.30.1 v1.30.0 v1.29-latest v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.31.0-alpha.dbe021f1]   |
 | `updateStrategy` _[IstioUpdateStrategy](#istioupdatestrategy)_ | Defines the update strategy to use when the version in the Istio CR is updated. | \{ type:InPlace \} |  |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift openshift-ambient preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. Note that this field is immutable. | istio-system |  |
@@ -1865,6 +1865,7 @@ _Appears in:_
 | `fileFlushInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | File flush interval for envoy flushes buffers to disk in milliseconds. The duration needs to be set to a value greater than or equal to 1 millisecond. Default is 1000ms. Optional. |  |  |
 | `fileFlushMinSizeKb` _integer_ | File flush buffer size for envoy flushes buffers to disk in kilobytes. Defaults to 64. Optional. |  |  |
 | `statsCompression` _boolean_ | Offer HTTP compression for stats Defaults to true. Optional. |  |  |
+| `connectionSettings` _[ProxyConfigConnectionSettings](#proxyconfigconnectionsettings)_ | Connection handling settings for this proxy, including buffer limits, timeouts, HTTP/2 tuning, header/path normalization, and connection limits. Use `profile` within this message to apply a recommended set of defaults. |  |  |
 
 
 #### MeshConfigProxyPathNormalization
@@ -2345,6 +2346,117 @@ _Appears in:_
 | `holdApplicationUntilProxyStarts` _boolean_ | Controls if sidecar is injected at the front of the container list and blocks the start of the other containers until the proxy is ready  Deprecated: replaced by ProxyConfig setting which allows per-pod configuration of this behavior.  Deprecated: Marked as deprecated in pkg/apis/values_types.proto. |  |  |
 | `includeInboundPorts` _string_ | A comma separated list of inbound ports for which traffic is to be redirected to Envoy. The wildcard character '*' can be used to configure redirection for all ports. |  |  |
 | `includeOutboundPorts` _string_ | A comma separated list of outbound ports for which traffic is to be redirected to Envoy, regardless of the destination IP. |  |  |
+
+
+#### ProxyConfigConnectionSettings
+
+
+
+Settings that control proxy connection handling, buffering, timeouts,
+HTTP/2 tuning, header/path normalization, and connection limits.
+
+
+The `profile` field selects a set of recommended defaults for these settings.
+Any field explicitly set always takes precedence over profile defaults.
+
+
+These settings primarily configure the downstream side of the proxy —
+listeners and the HTTP Connection Manager. The exception is
+`cluster_per_connection_buffer_limit_bytes`, which applies at the
+cluster level.
+
+
+Where DestinationRule configures behavior at the upstream cluster level
+(notably `connectionPoolSettings.tcp.idleTimeout`), both apply
+independently at different hops rather than one overriding the other:
+DestinationRule governs Envoy → upstream connections, while these
+settings govern downstream → Envoy connections. For per-destination
+connection pool configuration, use DestinationRule's
+`connectionPoolSettings`.
+
+
+
+_Appears in:_
+- [MeshConfigProxyConfig](#meshconfigproxyconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `profile` _[ProxyConfigConnectionSettingsProfile](#proxyconfigconnectionsettingsprofile)_ | The config profile to use. Determines default values for all fields in this message. |  | Enum: [SIDECAR EDGE]   |
+| `listenerPerConnectionBufferLimitBytes` _integer_ | Soft limit on size of the listener's new connection read and write buffers in bytes. See Envoy's [per_connection_buffer_limit_bytes](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#envoy-v3-api-field-config-listener-v3-listener-per-connection-buffer-limit-bytes). |  |  |
+| `clusterPerConnectionBufferLimitBytes` _integer_ | Soft limit on size of the cluster's new connection read and write buffers in bytes. See Envoy's [per_connection_buffer_limit_bytes](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#envoy-v3-api-field-config-cluster-v3-cluster-per-connection-buffer-limit-bytes). |  |  |
+| `httpIdleTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | The idle timeout for HTTP connections. The idle timeout is defined as the period in which there are no active requests. When the idle timeout is reached, the connection will be closed. Note that request-based timeouts mean that HTTP/2 PINGs will not keep the connection alive. See Envoy's [idle_timeout](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-httpprotocoloptions-idle-timeout). |  |  |
+| `httpMaxConnectionDuration` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | The maximum duration of a connection. When this duration is reached, a drain sequence will begin and the connection will be closed after the drain timeout period if there are no active streams. See Envoy's [max_connection_duration](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-httpprotocoloptions-max-connection-duration). |  |  |
+| `httpDrainTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | The time that Envoy will wait between sending an HTTP/2 shutdown notification (GOAWAY frame with max stream ID) and a final GOAWAY frame. This is used so that Envoy can drain in-flight requests. See Envoy's [drain_timeout](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-drain-timeout). |  |  |
+| `httpRequestTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | The amount of time that Envoy will wait for the entire request to be received. The timer is activated when the request is initiated, and is disarmed when the last byte of the request is sent upstream or when the response is initiated. See Envoy's [request_timeout](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-request-timeout). |  |  |
+| `httpRequestHeadersTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | The amount of time Envoy will wait for the request headers to be received. The timer is activated when the first byte of the headers is received and is disarmed when the last byte of the headers has been received. See Envoy's [request_headers_timeout](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-request-headers-timeout). |  |  |
+| `httpStreamIdleTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | The amount of time that Envoy will allow a stream to exist with no activity. The timer is reset each time an encode/decode event for headers or data is processed for the stream. See Envoy's [stream_idle_timeout](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-stream-idle-timeout). |  |  |
+| `httpMaxStreamDuration` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | Total duration to keep alive an HTTP request/response stream. If the time limit is reached, the stream will be reset independent of any other timeouts. See Envoy's [max_stream_duration](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-httpprotocoloptions-max-stream-duration). |  |  |
+| `httpMaxConcurrentStreams` _integer_ | Maximum number of concurrent streams allowed for HTTP/2 connections. See Envoy's [max_concurrent_streams](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-http2protocoloptions-max-concurrent-streams). |  |  |
+| `http2InitialStreamWindowSize` _integer_ | Initial stream-level flow-control window size for HTTP/2 connections. Valid values range from 65535 (2^16 - 1, HTTP/2 default) to 2147483647 (2^31 - 1, HTTP/2 maximum). See Envoy's [initial_stream_window_size](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-http2protocoloptions-initial-stream-window-size). |  |  |
+| `http2InitialConnectionWindowSize` _integer_ | Initial connection-level flow-control window size for HTTP/2 connections. Valid values range from 65535 (2^16 - 1, HTTP/2 default) to 2147483647 (2^31 - 1, HTTP/2 maximum). See Envoy's [initial_connection_window_size](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-http2protocoloptions-initial-connection-window-size). |  |  |
+| `httpHeadersWithUnderscoresAction` _[ProxyConfigConnectionSettingsHeadersWithUnderscoresAction](#proxyconfigconnectionsettingsheaderswithunderscoresaction)_ | Action to take when a client request contains header names with underscore characters. See Envoy's [headers_with_underscores_action](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-httpprotocoloptions-headers-with-underscores-action). |  | Enum: [HEADERS_WITH_UNDERSCORES_ALLOW HEADERS_WITH_UNDERSCORES_REJECT_REQUEST HEADERS_WITH_UNDERSCORES_DROP_HEADER]   |
+| `httpMergeSlashes` _boolean_ | Determines if adjacent slashes in the path are merged into a single slash. This is useful for protecting against path confusion attacks where different backend services interpret paths with multiple slashes differently. See Envoy's [merge_slashes](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-merge-slashes). |  |  |
+| `httpPathWithEscapedSlashesAction` _[ProxyConfigConnectionSettingsPathWithEscapedSlashesAction](#proxyconfigconnectionsettingspathwithescapedslashesaction)_ | Action to take when a request path contains escaped slash sequences (%2F, %5C). See Envoy's [path_with_escaped_slashes_action](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-path-with-escaped-slashes-action). |  | Enum: [KEEP_UNCHANGED REJECT_REQUEST UNESCAPE_AND_REDIRECT UNESCAPE_AND_FORWARD]   |
+| `listenerConnectionLimit` _integer_ | The maximum number of connections that a single listener will accept. Maps to Envoy's per-listener connection limit via runtime configuration (`envoy.resource_limits.listener.<listener_name>.connection_limit`). See Envoy's [edge best practices](https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/edge). |  |  |
+| `globalDownstreamConnectionLimit` _integer_ | The maximum number of downstream connections allowed across all listeners. Maps to Envoy's global downstream max connections via runtime configuration (`overload.global_downstream_max_connections`). See Envoy's [edge best practices](https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/edge). |  |  |
+
+
+#### ProxyConfigConnectionSettingsHeadersWithUnderscoresAction
+
+_Underlying type:_ _string_
+
+Action to take when Envoy receives client request with header names containing underscore characters.
+
+_Validation:_
+- Enum: [HEADERS_WITH_UNDERSCORES_ALLOW HEADERS_WITH_UNDERSCORES_REJECT_REQUEST HEADERS_WITH_UNDERSCORES_DROP_HEADER]
+
+_Appears in:_
+- [ProxyConfigConnectionSettings](#proxyconfigconnectionsettings)
+
+| Field | Description |
+| --- | --- |
+| `HEADERS_WITH_UNDERSCORES_ALLOW` | Allow headers with underscores.  |
+| `HEADERS_WITH_UNDERSCORES_REJECT_REQUEST` | Reject client request with 400 status. HTTP/1 requests are rejected with the "underscore_in_headers" response code.  |
+| `HEADERS_WITH_UNDERSCORES_DROP_HEADER` | Drop the header with name containing underscores. The header is dropped before the filter chain is invoked and as such filters will not see the header.  |
+
+
+#### ProxyConfigConnectionSettingsPathWithEscapedSlashesAction
+
+_Underlying type:_ _string_
+
+Determines the action for request paths that contain escaped slashes (%2F, %2f, %5C, %5c).
+
+_Validation:_
+- Enum: [KEEP_UNCHANGED REJECT_REQUEST UNESCAPE_AND_REDIRECT UNESCAPE_AND_FORWARD]
+
+_Appears in:_
+- [ProxyConfigConnectionSettings](#proxyconfigconnectionsettings)
+
+| Field | Description |
+| --- | --- |
+| `KEEP_UNCHANGED` | Keep escaped slashes as they are.  |
+| `REJECT_REQUEST` | Reject client request with 400 status.  |
+| `UNESCAPE_AND_REDIRECT` | Unescape %2F and %5C sequences and redirect the request to the new path if the result path is different.  |
+| `UNESCAPE_AND_FORWARD` | Unescape %2F and %5C sequences and forward the request. Note that this option may introduce path confusion vulnerabilities if the backend service does not expect unescaped slashes.  |
+
+
+#### ProxyConfigConnectionSettingsProfile
+
+_Underlying type:_ _string_
+
+Profile selects a default value set for the fields in this message.
+Explicitly setting any field always takes precedence over profile defaults.
+
+_Validation:_
+- Enum: [SIDECAR EDGE]
+
+_Appears in:_
+- [ProxyConfigConnectionSettings](#proxyconfigconnectionsettings)
+
+| Field | Description |
+| --- | --- |
+| `SIDECAR` | SIDECAR profile preserves existing Istio behavior. This is the default profile. No additional defaults are applied.  |
+| `EDGE` | EDGE profile applies Envoy's recommended defaults for edge gateway deployments. See https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/edge Explicitly setting any field overrides the corresponding profile default. Defaults applied by this profile:   listener_per_connection_buffer_limit_bytes: 32768 (32 KiB)   cluster_per_connection_buffer_limit_bytes:  32768 (32 KiB)   http_idle_timeout:                          3600s (1 hour)   http_request_timeout:                       300s  (5 minutes)   http_stream_idle_timeout:                   300s  (5 minutes)   http_max_concurrent_streams:                100   http2_initial_stream_window_size:           65536 (64 KiB)   http2_initial_connection_window_size:       1048576 (1 MiB)   http_headers_with_underscores_action:       HEADERS_WITH_UNDERSCORES_REJECT_REQUEST   http_merge_slashes:                         true   http_path_with_escaped_slashes_action:      UNESCAPE_AND_REDIRECT  |
 
 
 #### ProxyConfigInboundInterceptionMode
@@ -3325,7 +3437,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.1, v1.30.0, v1.29-latest, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.28.8, master, v1.31.0-alpha.7d7b6cf3. | v1.30.1 | Enum: [v1.30-latest v1.30.1 v1.30.0 v1.29-latest v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 master v1.31.0-alpha.7d7b6cf3]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.1, v1.30.0, v1.29-latest, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.28.8, master, v1.31.0-alpha.dbe021f1. | v1.30.1 | Enum: [v1.30-latest v1.30.1 v1.30.0 v1.29-latest v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 master v1.31.0-alpha.dbe021f1]   |
 | `namespace` _string_ | Namespace to which the Istio ztunnel component should be installed. | ztunnel |  |
 | `values` _[ZTunnelValues](#ztunnelvalues)_ | Defines the values to be passed to the Helm charts when installing Istio ztunnel. |  |  |
 | `targetRef` _[TargetReference](#targetreference)_ | The Istio control plane that this ZTunnel instance is associated with. Valid references are Istio and IstioRevision resources, Istio resources are always resolved to their current active revision. Values relevant for ZTunnel will be copied from the referenced IstioRevision resource, these are `spec.values.global`, `spec.values.meshConfig`, `spec.values.revision`. Any user configuration in the ZTunnel spec will always take precedence over the settings copied from the Istio resource, however. |  |  |
@@ -3455,7 +3567,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.1, v1.30.0, v1.29-latest, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.28.8, master, v1.31.0-alpha.7d7b6cf3. | v1.30.1 | Enum: [v1.30-latest v1.30.1 v1.30.0 v1.29-latest v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 master v1.31.0-alpha.7d7b6cf3]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.1, v1.30.0, v1.29-latest, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.28.8, master, v1.31.0-alpha.dbe021f1. | v1.30.1 | Enum: [v1.30-latest v1.30.1 v1.30.0 v1.29-latest v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 master v1.31.0-alpha.dbe021f1]   |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is 'ambient' and it is always applied. Must be one of: ambient, default, demo, empty, external, preview, remote, stable. | ambient | Enum: [ambient default demo empty external openshift-ambient openshift preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio ztunnel component should be installed. | ztunnel |  |
 | `values` _[ZTunnelValues](#ztunnelvalues)_ | Defines the values to be passed to the Helm charts when installing Istio ztunnel. |  |  |

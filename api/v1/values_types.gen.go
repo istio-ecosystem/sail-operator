@@ -3796,6 +3796,65 @@ const (
 	ProxyConfigProxyHeadersMetadataExchangeModeInMesh ProxyConfigProxyHeadersMetadataExchangeMode = "IN_MESH"
 )
 
+// Profile selects a default value set for the fields in this message.
+// Explicitly setting any field always takes precedence over profile defaults.
+// +kubebuilder:validation:Enum=SIDECAR;EDGE
+type ProxyConfigConnectionSettingsProfile string
+
+const (
+	// SIDECAR profile preserves existing Istio behavior.
+	// This is the default profile. No additional defaults are applied.
+	ProxyConfigConnectionSettingsProfileSidecar ProxyConfigConnectionSettingsProfile = "SIDECAR"
+	// EDGE profile applies Envoy's recommended defaults for edge gateway deployments.
+	// See https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/edge
+	// Explicitly setting any field overrides the corresponding profile default.
+	//
+	// Defaults applied by this profile:
+	//
+	//	listener_per_connection_buffer_limit_bytes: 32768 (32 KiB)
+	//	cluster_per_connection_buffer_limit_bytes:  32768 (32 KiB)
+	//	http_idle_timeout:                          3600s (1 hour)
+	//	http_request_timeout:                       300s  (5 minutes)
+	//	http_stream_idle_timeout:                   300s  (5 minutes)
+	//	http_max_concurrent_streams:                100
+	//	http2_initial_stream_window_size:           65536 (64 KiB)
+	//	http2_initial_connection_window_size:       1048576 (1 MiB)
+	//	http_headers_with_underscores_action:       HEADERS_WITH_UNDERSCORES_REJECT_REQUEST
+	//	http_merge_slashes:                         true
+	//	http_path_with_escaped_slashes_action:      UNESCAPE_AND_REDIRECT
+	ProxyConfigConnectionSettingsProfileEdge ProxyConfigConnectionSettingsProfile = "EDGE"
+)
+
+// Action to take when Envoy receives client request with header names containing underscore characters.
+// +kubebuilder:validation:Enum=HEADERS_WITH_UNDERSCORES_ALLOW;HEADERS_WITH_UNDERSCORES_REJECT_REQUEST;HEADERS_WITH_UNDERSCORES_DROP_HEADER
+type ProxyConfigConnectionSettingsHeadersWithUnderscoresAction string
+
+const (
+	// Allow headers with underscores.
+	ProxyConfigConnectionSettingsHeadersWithUnderscoresActionHeadersWithUnderscoresAllow ProxyConfigConnectionSettingsHeadersWithUnderscoresAction = "HEADERS_WITH_UNDERSCORES_ALLOW"
+	// Reject client request with 400 status. HTTP/1 requests are rejected with the "underscore_in_headers" response code.
+	ProxyConfigConnectionSettingsHeadersWithUnderscoresActionHeadersWithUnderscoresRejectRequest ProxyConfigConnectionSettingsHeadersWithUnderscoresAction = "HEADERS_WITH_UNDERSCORES_REJECT_REQUEST"
+	// Drop the header with name containing underscores. The header is dropped before the filter chain is invoked
+	// and as such filters will not see the header.
+	ProxyConfigConnectionSettingsHeadersWithUnderscoresActionHeadersWithUnderscoresDropHeader ProxyConfigConnectionSettingsHeadersWithUnderscoresAction = "HEADERS_WITH_UNDERSCORES_DROP_HEADER"
+)
+
+// Determines the action for request paths that contain escaped slashes (%2F, %2f, %5C, %5c).
+// +kubebuilder:validation:Enum=KEEP_UNCHANGED;REJECT_REQUEST;UNESCAPE_AND_REDIRECT;UNESCAPE_AND_FORWARD
+type ProxyConfigConnectionSettingsPathWithEscapedSlashesAction string
+
+const (
+	// Keep escaped slashes as they are.
+	ProxyConfigConnectionSettingsPathWithEscapedSlashesActionKeepUnchanged ProxyConfigConnectionSettingsPathWithEscapedSlashesAction = "KEEP_UNCHANGED"
+	// Reject client request with 400 status.
+	ProxyConfigConnectionSettingsPathWithEscapedSlashesActionRejectRequest ProxyConfigConnectionSettingsPathWithEscapedSlashesAction = "REJECT_REQUEST"
+	// Unescape %2F and %5C sequences and redirect the request to the new path if the result path is different.
+	ProxyConfigConnectionSettingsPathWithEscapedSlashesActionUnescapeAndRedirect ProxyConfigConnectionSettingsPathWithEscapedSlashesAction = "UNESCAPE_AND_REDIRECT"
+	// Unescape %2F and %5C sequences and forward the request. Note that this option may introduce path confusion
+	// vulnerabilities if the backend service does not expect unescaped slashes.
+	ProxyConfigConnectionSettingsPathWithEscapedSlashesActionUnescapeAndForward ProxyConfigConnectionSettingsPathWithEscapedSlashesAction = "UNESCAPE_AND_FORWARD"
+)
+
 // Tracing defines configuration for the tracing performed by Envoy instances.
 // +kubebuilder:validation:XValidation:message="At most one of [zipkin lightstep datadog stackdriver openCensusAgent] should be set",rule="(has(self.zipkin)?1:0) + (has(self.lightstep)?1:0) + (has(self.datadog)?1:0) + (has(self.stackdriver)?1:0) + (has(self.openCensusAgent)?1:0) <= 1"
 type Tracing struct {
@@ -4154,6 +4213,10 @@ type MeshConfigProxyConfig struct {
 	// Defaults to true.
 	// Optional.
 	StatsCompression *bool `json:"statsCompression,omitempty"`
+	// Connection handling settings for this proxy, including buffer limits, timeouts,
+	// HTTP/2 tuning, header/path normalization, and connection limits.
+	// Use `profile` within this message to apply a recommended set of defaults.
+	ConnectionSettings *ProxyConfigConnectionSettings `json:"connectionSettings,omitempty"`
 }
 
 type RemoteService struct {
@@ -4375,6 +4438,98 @@ type ProxyConfigProxyHeaders struct {
 	XForwardedPort *ProxyConfigProxyHeadersXForwardedPort `json:"xForwardedPort,omitempty"`
 }
 
+// Settings that control proxy connection handling, buffering, timeouts,
+// HTTP/2 tuning, header/path normalization, and connection limits.
+//
+// The `profile` field selects a set of recommended defaults for these settings.
+// Any field explicitly set always takes precedence over profile defaults.
+//
+// These settings primarily configure the downstream side of the proxy —
+// listeners and the HTTP Connection Manager. The exception is
+// `cluster_per_connection_buffer_limit_bytes`, which applies at the
+// cluster level.
+//
+// Where DestinationRule configures behavior at the upstream cluster level
+// (notably `connectionPoolSettings.tcp.idleTimeout`), both apply
+// independently at different hops rather than one overriding the other:
+// DestinationRule governs Envoy → upstream connections, while these
+// settings govern downstream → Envoy connections. For per-destination
+// connection pool configuration, use DestinationRule's
+// `connectionPoolSettings`.
+type ProxyConfigConnectionSettings struct {
+	// The config profile to use. Determines default values for all fields in this message.
+	Profile ProxyConfigConnectionSettingsProfile `json:"profile,omitempty"`
+	// Soft limit on size of the listener's new connection read and write buffers in bytes.
+	// See Envoy's [per_connection_buffer_limit_bytes](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#envoy-v3-api-field-config-listener-v3-listener-per-connection-buffer-limit-bytes).
+	ListenerPerConnectionBufferLimitBytes *int32 `json:"listenerPerConnectionBufferLimitBytes,omitempty"`
+	// Soft limit on size of the cluster's new connection read and write buffers in bytes.
+	// See Envoy's [per_connection_buffer_limit_bytes](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#envoy-v3-api-field-config-cluster-v3-cluster-per-connection-buffer-limit-bytes).
+	ClusterPerConnectionBufferLimitBytes *int32 `json:"clusterPerConnectionBufferLimitBytes,omitempty"`
+	// The idle timeout for HTTP connections. The idle timeout is defined as the period in which there are no active requests.
+	// When the idle timeout is reached, the connection will be closed.
+	// Note that request-based timeouts mean that HTTP/2 PINGs will not keep the connection alive.
+	// See Envoy's [idle_timeout](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-httpprotocoloptions-idle-timeout).
+	HttpIdleTimeout *metav1.Duration `json:"httpIdleTimeout,omitempty"`
+	// The maximum duration of a connection.
+	// When this duration is reached, a drain sequence will begin and the connection will be closed
+	// after the drain timeout period if there are no active streams.
+	// See Envoy's [max_connection_duration](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-httpprotocoloptions-max-connection-duration).
+	HttpMaxConnectionDuration *metav1.Duration `json:"httpMaxConnectionDuration,omitempty"`
+	// The time that Envoy will wait between sending an HTTP/2 shutdown notification (GOAWAY frame with max stream ID)
+	// and a final GOAWAY frame. This is used so that Envoy can drain in-flight requests.
+	// See Envoy's [drain_timeout](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-drain-timeout).
+	HttpDrainTimeout *metav1.Duration `json:"httpDrainTimeout,omitempty"`
+	// The amount of time that Envoy will wait for the entire request to be received.
+	// The timer is activated when the request is initiated, and is disarmed when the last byte of
+	// the request is sent upstream or when the response is initiated.
+	// See Envoy's [request_timeout](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-request-timeout).
+	HttpRequestTimeout *metav1.Duration `json:"httpRequestTimeout,omitempty"`
+	// The amount of time Envoy will wait for the request headers to be received.
+	// The timer is activated when the first byte of the headers is received and is disarmed when the last byte of the headers has been received.
+	// See Envoy's [request_headers_timeout](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-request-headers-timeout).
+	HttpRequestHeadersTimeout *metav1.Duration `json:"httpRequestHeadersTimeout,omitempty"`
+	// The amount of time that Envoy will allow a stream to exist with no activity.
+	// The timer is reset each time an encode/decode event for headers or data is processed for the stream.
+	// See Envoy's [stream_idle_timeout](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-stream-idle-timeout).
+	HttpStreamIdleTimeout *metav1.Duration `json:"httpStreamIdleTimeout,omitempty"`
+	// Total duration to keep alive an HTTP request/response stream.
+	// If the time limit is reached, the stream will be reset independent of any other timeouts.
+	// See Envoy's [max_stream_duration](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-httpprotocoloptions-max-stream-duration).
+	HttpMaxStreamDuration *metav1.Duration `json:"httpMaxStreamDuration,omitempty"`
+	// Maximum number of concurrent streams allowed for HTTP/2 connections.
+	// See Envoy's [max_concurrent_streams](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-http2protocoloptions-max-concurrent-streams).
+	HttpMaxConcurrentStreams *int32 `json:"httpMaxConcurrentStreams,omitempty"`
+	// Initial stream-level flow-control window size for HTTP/2 connections.
+	// Valid values range from 65535 (2^16 - 1, HTTP/2 default) to 2147483647 (2^31 - 1, HTTP/2 maximum).
+	// See Envoy's [initial_stream_window_size](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-http2protocoloptions-initial-stream-window-size).
+	Http2InitialStreamWindowSize *int32 `json:"http2InitialStreamWindowSize,omitempty"`
+	// Initial connection-level flow-control window size for HTTP/2 connections.
+	// Valid values range from 65535 (2^16 - 1, HTTP/2 default) to 2147483647 (2^31 - 1, HTTP/2 maximum).
+	// See Envoy's [initial_connection_window_size](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-http2protocoloptions-initial-connection-window-size).
+	Http2InitialConnectionWindowSize *int32 `json:"http2InitialConnectionWindowSize,omitempty"`
+	// Action to take when a client request contains header names with underscore characters.
+	// See Envoy's [headers_with_underscores_action](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-httpprotocoloptions-headers-with-underscores-action).
+	HttpHeadersWithUnderscoresAction ProxyConfigConnectionSettingsHeadersWithUnderscoresAction `json:"httpHeadersWithUnderscoresAction,omitempty"`
+	// Determines if adjacent slashes in the path are merged into a single slash.
+	// This is useful for protecting against path confusion attacks where different backend services
+	// interpret paths with multiple slashes differently.
+	// See Envoy's [merge_slashes](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-merge-slashes).
+	HttpMergeSlashes *bool `json:"httpMergeSlashes,omitempty"`
+	// Action to take when a request path contains escaped slash sequences (%2F, %5C).
+	// See Envoy's [path_with_escaped_slashes_action](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-path-with-escaped-slashes-action).
+	HttpPathWithEscapedSlashesAction ProxyConfigConnectionSettingsPathWithEscapedSlashesAction `json:"httpPathWithEscapedSlashesAction,omitempty"`
+	// The maximum number of connections that a single listener will accept.
+	// Maps to Envoy's per-listener connection limit via runtime configuration
+	// (`envoy.resource_limits.listener.<listener_name>.connection_limit`).
+	// See Envoy's [edge best practices](https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/edge).
+	ListenerConnectionLimit *int32 `json:"listenerConnectionLimit,omitempty"`
+	// The maximum number of downstream connections allowed across all listeners.
+	// Maps to Envoy's global downstream max connections via runtime configuration
+	// (`overload.global_downstream_max_connections`).
+	// See Envoy's [edge best practices](https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/edge).
+	GlobalDownstreamConnectionLimit *int32 `json:"globalDownstreamConnectionLimit,omitempty"`
+}
+
 type ProxyConfigProxyHeadersServer struct {
 	Disabled *bool `json:"disabled,omitempty"`
 	// If set, and the server header is enabled, this value will be set as the server header. By default, `istio-envoy` will be used.
@@ -4499,7 +4654,7 @@ const fileMeshV1alpha1ProxyProtoRawDesc = "" +
 	"poll_delay\x18\x01 \x01(\v2\x19.google.protobuf.DurationR\tpollDelay\x126\n" +
 	"\bfallback\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\bfallbackB\n" +
 	"\n" +
-	"\bprovider\"\xeb'\n" +
+	"\bprovider\"\xa79\n" +
 	"\vProxyConfig\x12\x1f\n" +
 	"\vconfig_path\x18\x01 \x01(\tR\n" +
 	"configPath\x12\x1f\n" +
@@ -4543,7 +4698,8 @@ const fileMeshV1alpha1ProxyProtoRawDesc = "" +
 	"\rproxy_headers\x18' \x01(\v2-.istio.mesh.v1alpha1.ProxyConfig.ProxyHeadersR\fproxyHeaders\x12I\n" +
 	"\x13file_flush_interval\x18( \x01(\v2\x19.google.protobuf.DurationR\x11fileFlushInterval\x122\n" +
 	"\x16file_flush_min_size_kb\x18) \x01(\rR\x12fileFlushMinSizeKb\x12G\n" +
-	"\x11stats_compression\x18* \x01(\v2\x1a.google.protobuf.BoolValueR\x10statsCompression\x1a@\n" +
+	"\x11stats_compression\x18* \x01(\v2\x1a.google.protobuf.BoolValueR\x10statsCompression\x12d\n" +
+	"\x13connection_settings\x18+ \x01(\v23.istio.mesh.v1alpha1.ProxyConfig.ConnectionSettingsR\x12connectionSettings\x1a@\n" +
 	"\x12ProxyMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a@\n" +
@@ -4589,7 +4745,39 @@ const fileMeshV1alpha1ProxyProtoRawDesc = "" +
 	"\x03uri\x18\x05 \x01(\v2\x1a.google.protobuf.BoolValueR\x03uri\"2\n" +
 	"\x14MetadataExchangeMode\x12\r\n" +
 	"\tUNDEFINED\x10\x00\x12\v\n" +
-	"\aIN_MESH\x10\x01\"l\n" +
+	"\aIN_MESH\x10\x01\x1a\xd3\x10\n" +
+	"\x12ConnectionSettings\x12U\n" +
+	"\aprofile\x18\x01 \x01(\x0e2;.istio.mesh.v1alpha1.ProxyConfig.ConnectionSettings.ProfileR\aprofile\x12v\n" +
+	"*listener_per_connection_buffer_limit_bytes\x18\x02 \x01(\v2\x1b.google.protobuf.Int32ValueR%listenerPerConnectionBufferLimitBytes\x12t\n" +
+	")cluster_per_connection_buffer_limit_bytes\x18\x03 \x01(\v2\x1b.google.protobuf.Int32ValueR$clusterPerConnectionBufferLimitBytes\x12E\n" +
+	"\x11http_idle_timeout\x18\x04 \x01(\v2\x19.google.protobuf.DurationR\x0fhttpIdleTimeout\x12Z\n" +
+	"\x1chttp_max_connection_duration\x18\x05 \x01(\v2\x19.google.protobuf.DurationR\x19httpMaxConnectionDuration\x12G\n" +
+	"\x12http_drain_timeout\x18\x06 \x01(\v2\x19.google.protobuf.DurationR\x10httpDrainTimeout\x12K\n" +
+	"\x14http_request_timeout\x18\a \x01(\v2\x19.google.protobuf.DurationR\x12httpRequestTimeout\x12Z\n" +
+	"\x1chttp_request_headers_timeout\x18\b \x01(\v2\x19.google.protobuf.DurationR\x19httpRequestHeadersTimeout\x12R\n" +
+	"\x18http_stream_idle_timeout\x18\t \x01(\v2\x19.google.protobuf.DurationR\x15httpStreamIdleTimeout\x12R\n" +
+	"\x18http_max_stream_duration\x18\n" +
+	" \x01(\v2\x19.google.protobuf.DurationR\x15httpMaxStreamDuration\x12Z\n" +
+	"\x1bhttp_max_concurrent_streams\x18\v \x01(\v2\x1b.google.protobuf.Int32ValueR\x18httpMaxConcurrentStreams\x12c\n" +
+	" http2_initial_stream_window_size\x18\f \x01(\v2\x1b.google.protobuf.Int32ValueR\x1chttp2InitialStreamWindowSize\x12k\n" +
+	"$http2_initial_connection_window_size\x18\r \x01(\v2\x1b.google.protobuf.Int32ValueR http2InitialConnectionWindowSize\x12\xa0\x01\n" +
+	"$http_headers_with_underscores_action\x18\x0e \x01(\x0e2P.istio.mesh.v1alpha1.ProxyConfig.ConnectionSettings.HeadersWithUnderscoresActionR httpHeadersWithUnderscoresAction\x12H\n" +
+	"\x12http_merge_slashes\x18\x0f \x01(\v2\x1a.google.protobuf.BoolValueR\x10httpMergeSlashes\x12\xa1\x01\n" +
+	"%http_path_with_escaped_slashes_action\x18\x10 \x01(\x0e2P.istio.mesh.v1alpha1.ProxyConfig.ConnectionSettings.PathWithEscapedSlashesActionR httpPathWithEscapedSlashesAction\x12W\n" +
+	"\x19listener_connection_limit\x18\x11 \x01(\v2\x1b.google.protobuf.Int32ValueR\x17listenerConnectionLimit\x12h\n" +
+	"\"global_downstream_connection_limit\x18\x12 \x01(\v2\x1b.google.protobuf.Int32ValueR\x1fglobalDownstreamConnectionLimit\" \n" +
+	"\aProfile\x12\v\n" +
+	"\aSIDECAR\x10\x00\x12\b\n" +
+	"\x04EDGE\x10\x01\"\x99\x01\n" +
+	"\x1cHeadersWithUnderscoresAction\x12\"\n" +
+	"\x1eHEADERS_WITH_UNDERSCORES_ALLOW\x10\x00\x12+\n" +
+	"'HEADERS_WITH_UNDERSCORES_REJECT_REQUEST\x10\x01\x12(\n" +
+	"$HEADERS_WITH_UNDERSCORES_DROP_HEADER\x10\x02\"{\n" +
+	"\x1cPathWithEscapedSlashesAction\x12\x12\n" +
+	"\x0eKEEP_UNCHANGED\x10\x00\x12\x12\n" +
+	"\x0eREJECT_REQUEST\x10\x01\x12\x19\n" +
+	"\x15UNESCAPE_AND_REDIRECT\x10\x02\x12\x18\n" +
+	"\x14UNESCAPE_AND_FORWARD\x10\x03\"l\n" +
 	"\x12TracingServiceName\x12\x1b\n" +
 	"\x17APP_LABEL_AND_NAMESPACE\x10\x00\x12\x17\n" +
 	"\x13CANONICAL_NAME_ONLY\x10\x01\x12 \n" +
