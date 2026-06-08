@@ -2975,6 +2975,139 @@ spec:
                               Path to the generated configuration file directory.
                               Proxy agent generates the actual configuration and stores it in this directory.
                             type: string
+                          connectionSettings:
+                            description: |-
+                              Connection handling settings for this proxy, including buffer limits, timeouts,
+                              HTTP/2 tuning, header/path normalization, and connection limits.
+                              Use `profile` within this message to apply a recommended set of defaults.
+                            properties:
+                              clusterPerConnectionBufferLimitBytes:
+                                description: |-
+                                  Soft limit on size of the cluster's new connection read and write buffers in bytes.
+                                  See Envoy's [per_connection_buffer_limit_bytes](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#envoy-v3-api-field-config-cluster-v3-cluster-per-connection-buffer-limit-bytes).
+                                format: int32
+                                type: integer
+                              globalDownstreamConnectionLimit:
+                                description: |-
+                                  The maximum number of downstream connections allowed across all listeners.
+                                  Maps to Envoy's global downstream max connections via runtime configuration
+                                  (`overload.global_downstream_max_connections`).
+                                  See Envoy's [edge best practices](https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/edge).
+                                format: int32
+                                type: integer
+                              http2InitialConnectionWindowSize:
+                                description: |-
+                                  Initial connection-level flow-control window size for HTTP/2 connections.
+                                  Valid values range from 65535 (2^16 - 1, HTTP/2 default) to 2147483647 (2^31 - 1, HTTP/2 maximum).
+                                  See Envoy's [initial_connection_window_size](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-http2protocoloptions-initial-connection-window-size).
+                                format: int32
+                                type: integer
+                              http2InitialStreamWindowSize:
+                                description: |-
+                                  Initial stream-level flow-control window size for HTTP/2 connections.
+                                  Valid values range from 65535 (2^16 - 1, HTTP/2 default) to 2147483647 (2^31 - 1, HTTP/2 maximum).
+                                  See Envoy's [initial_stream_window_size](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-http2protocoloptions-initial-stream-window-size).
+                                format: int32
+                                type: integer
+                              httpDrainTimeout:
+                                description: |-
+                                  The time that Envoy will wait between sending an HTTP/2 shutdown notification (GOAWAY frame with max stream ID)
+                                  and a final GOAWAY frame. This is used so that Envoy can drain in-flight requests.
+                                  See Envoy's [drain_timeout](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-drain-timeout).
+                                type: string
+                              httpHeadersWithUnderscoresAction:
+                                description: |-
+                                  Action to take when a client request contains header names with underscore characters.
+                                  See Envoy's [headers_with_underscores_action](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-httpprotocoloptions-headers-with-underscores-action).
+                                enum:
+                                - HEADERS_WITH_UNDERSCORES_ALLOW
+                                - HEADERS_WITH_UNDERSCORES_REJECT_REQUEST
+                                - HEADERS_WITH_UNDERSCORES_DROP_HEADER
+                                type: string
+                              httpIdleTimeout:
+                                description: |-
+                                  The idle timeout for HTTP connections. The idle timeout is defined as the period in which there are no active requests.
+                                  When the idle timeout is reached, the connection will be closed.
+                                  Note that request-based timeouts mean that HTTP/2 PINGs will not keep the connection alive.
+                                  See Envoy's [idle_timeout](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-httpprotocoloptions-idle-timeout).
+                                type: string
+                              httpMaxConcurrentStreams:
+                                description: |-
+                                  Maximum number of concurrent streams allowed for HTTP/2 connections.
+                                  See Envoy's [max_concurrent_streams](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-http2protocoloptions-max-concurrent-streams).
+                                format: int32
+                                type: integer
+                              httpMaxConnectionDuration:
+                                description: |-
+                                  The maximum duration of a connection.
+                                  When this duration is reached, a drain sequence will begin and the connection will be closed
+                                  after the drain timeout period if there are no active streams.
+                                  See Envoy's [max_connection_duration](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-httpprotocoloptions-max-connection-duration).
+                                type: string
+                              httpMaxStreamDuration:
+                                description: |-
+                                  Total duration to keep alive an HTTP request/response stream.
+                                  If the time limit is reached, the stream will be reset independent of any other timeouts.
+                                  See Envoy's [max_stream_duration](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-httpprotocoloptions-max-stream-duration).
+                                type: string
+                              httpMergeSlashes:
+                                description: |-
+                                  Determines if adjacent slashes in the path are merged into a single slash.
+                                  This is useful for protecting against path confusion attacks where different backend services
+                                  interpret paths with multiple slashes differently.
+                                  See Envoy's [merge_slashes](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-merge-slashes).
+                                type: boolean
+                              httpPathWithEscapedSlashesAction:
+                                description: |-
+                                  Action to take when a request path contains escaped slash sequences (%2F, %5C).
+                                  See Envoy's [path_with_escaped_slashes_action](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-path-with-escaped-slashes-action).
+                                enum:
+                                - KEEP_UNCHANGED
+                                - REJECT_REQUEST
+                                - UNESCAPE_AND_REDIRECT
+                                - UNESCAPE_AND_FORWARD
+                                type: string
+                              httpRequestHeadersTimeout:
+                                description: |-
+                                  The amount of time Envoy will wait for the request headers to be received.
+                                  The timer is activated when the first byte of the headers is received and is disarmed when the last byte of the headers has been received.
+                                  See Envoy's [request_headers_timeout](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-request-headers-timeout).
+                                type: string
+                              httpRequestTimeout:
+                                description: |-
+                                  The amount of time that Envoy will wait for the entire request to be received.
+                                  The timer is activated when the request is initiated, and is disarmed when the last byte of
+                                  the request is sent upstream or when the response is initiated.
+                                  See Envoy's [request_timeout](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-request-timeout).
+                                type: string
+                              httpStreamIdleTimeout:
+                                description: |-
+                                  The amount of time that Envoy will allow a stream to exist with no activity.
+                                  The timer is reset each time an encode/decode event for headers or data is processed for the stream.
+                                  See Envoy's [stream_idle_timeout](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-stream-idle-timeout).
+                                type: string
+                              listenerConnectionLimit:
+                                description: |-
+                                  The maximum number of connections that a single listener will accept.
+                                  Maps to Envoy's per-listener connection limit via runtime configuration
+                                  (`envoy.resource_limits.listener.<listener_name>.connection_limit`).
+                                  See Envoy's [edge best practices](https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/edge).
+                                format: int32
+                                type: integer
+                              listenerPerConnectionBufferLimitBytes:
+                                description: |-
+                                  Soft limit on size of the listener's new connection read and write buffers in bytes.
+                                  See Envoy's [per_connection_buffer_limit_bytes](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#envoy-v3-api-field-config-listener-v3-listener-per-connection-buffer-limit-bytes).
+                                format: int32
+                                type: integer
+                              profile:
+                                description: The config profile to use. Determines
+                                  default values for all fields in this message.
+                                enum:
+                                - SIDECAR
+                                - EDGE
+                                type: string
+                            type: object
                           controlPlaneAuthPolicy:
                             description: |-
                               AuthenticationPolicy defines how the proxy is authenticated when it connects to the control plane.
@@ -10248,7 +10381,7 @@ spec:
               version:
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.30.1, v1.30.0, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.28.8, v1.31.0-alpha.7d7b6cf3.
+                  Must be one of: v1.30.1, v1.30.0, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.28.8, v1.31.0-alpha.dbe021f1.
                 enum:
                 - v1.30.1
                 - v1.30.0
@@ -10307,7 +10440,7 @@ spec:
                 - v1.22.6
                 - v1.22.5
                 - v1.21.6
-                - v1.31.0-alpha.7d7b6cf3
+                - v1.31.0-alpha.dbe021f1
                 type: string
             required:
             - namespace
