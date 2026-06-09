@@ -218,7 +218,7 @@ func logOperatorDebugInfo(k kubectl.Kubectl, artifactsDir, clusterName string) {
 	operator, err := k.GetYAML("deployment", deploymentName)
 	logDebugElement("=====Operator Deployment YAML=====", operator, err, &buf)
 
-	logs, err := k.Logs("deploy/"+deploymentName, ptr.Of(120*time.Second))
+	logs, err := k.Logs("deploy/"+deploymentName, nil)
 	logDebugElement("=====Operator logs=====", logs, err, &buf)
 
 	events, err := k.GetEvents()
