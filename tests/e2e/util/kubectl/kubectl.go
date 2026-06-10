@@ -310,6 +310,27 @@ func (k Kubectl) Logs(pod string, since *time.Duration) (string, error) {
 	return output, nil
 }
 
+// LogsPrevious returns the logs from the previous instance of a container
+func (k Kubectl) LogsPrevious(pod string, since *time.Duration) (string, error) {
+	cmd := k.build(fmt.Sprintf(" logs %s --previous %s", pod, sinceFlag(since)))
+	output, err := shell.ExecuteCommand(cmd)
+	if err != nil {
+		return "", err
+	}
+	return output, nil
+}
+
+// TopPods returns resource utilization for pods in namespace
+func (k Kubectl) TopPods() (string, error) {
+	cmd := k.build(" top pods --no-headers")
+	output, err := shell.ExecuteCommand(cmd)
+	if err != nil {
+		// metrics-server may not be available, don't fail
+		return "", nil
+	}
+	return output, nil
+}
+
 // Label adds a label to the specified resource
 func (k Kubectl) Label(kind, name, labelKey, labelValue string) error {
 	_, err := k.executeCommand(k.build(fmt.Sprintf(" label %s %s %s=%s", kind, name, labelKey, labelValue)))

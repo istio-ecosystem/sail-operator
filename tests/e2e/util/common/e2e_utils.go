@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -161,6 +162,7 @@ func LogDebugInfo(suite testSuite, kubectls ...kubectl.Kubectl) {
 	GinkgoWriter.Println()
 	GinkgoWriter.Println("The test run has failures and the debug information is as follows:")
 	GinkgoWriter.Println()
+
 	for _, k := range kubectls {
 		clusterName := k.ClusterName
 		if clusterName == "" {
@@ -172,27 +174,26 @@ func LogDebugInfo(suite testSuite, kubectls ...kubectl.Kubectl) {
 			GinkgoWriter.Println("CLUSTER:", k.ClusterName)
 			GinkgoWriter.Println("=========================================================")
 		}
-		logOperatorDebugInfo(k, artifactsDir, clusterName)
-		GinkgoWriter.Println("=========================================================")
-		logIstioDebugInfo(k, artifactsDir, clusterName)
-		GinkgoWriter.Println("=========================================================")
-		logCNIDebugInfo(k, artifactsDir, clusterName)
-		GinkgoWriter.Println("=========================================================")
-		logCertsDebugInfo(k, artifactsDir, clusterName)
-		GinkgoWriter.Println("=========================================================")
-		logSampleNamespacesDebugInfo(k, suite, artifactsDir, clusterName)
-		GinkgoWriter.Println("=========================================================")
-		GinkgoWriter.Println()
+
+		// Collect debug info in parallel
+		var wg sync.WaitGroup
+
+		wg.Add(5)
+		go func() { defer wg.Done(); logOperatorDebugInfo(k, artifactsDir, clusterName) }()
+		go func() { defer wg.Done(); logIstioDebugInfo(k, artifactsDir, clusterName) }()
+		go func() { defer wg.Done(); logCNIDebugInfo(k, artifactsDir, clusterName) }()
+		go func() { defer wg.Done(); logCertsDebugInfo(k, artifactsDir, clusterName) }()
+		go func() { defer wg.Done(); logSampleNamespacesDebugInfo(k, suite, artifactsDir, clusterName) }()
 
 		if suite == Ambient {
-			logZtunnelDebugInfo(k, artifactsDir, clusterName)
-			var buf strings.Builder
-			describe, err := k.WithNamespace(SleepNamespace).Describe("deployment", "sleep")
-			logDebugElement("=====sleep deployment describe=====", describe, err, &buf)
-			describe, err = k.WithNamespace(HttpbinNamespace).Describe("deployment", "httpbin")
-			logDebugElement("=====httpbin deployment describe=====", describe, err, &buf)
-			writeDebugFile(artifactsDir, clusterName, "ambient-deployments", &buf)
+			wg.Add(1)
+			go func() { defer wg.Done(); logZtunnelDebugInfo(k, artifactsDir, clusterName) }()
 		}
+
+		wg.Wait()
+
+		GinkgoWriter.Println("=========================================================")
+		GinkgoWriter.Println()
 	}
 }
 
@@ -215,90 +216,126 @@ func writeDebugFile(artifactsDir, clusterName, section string, buf *strings.Buil
 func logOperatorDebugInfo(k kubectl.Kubectl, artifactsDir, clusterName string) {
 	var buf strings.Builder
 	k = k.WithNamespace(OperatorNamespace)
+
 	operator, err := k.GetYAML("deployment", deploymentName)
 	logDebugElement("=====Operator Deployment YAML=====", operator, err, &buf)
 
 	logs, err := k.Logs("deploy/"+deploymentName, nil)
 	logDebugElement("=====Operator logs=====", logs, err, &buf)
 
+	logPreviousLogsIfAvailable(k, "deploy/"+deploymentName, &buf)
+
 	events, err := k.GetEvents()
 	logDebugElement("=====Events in "+OperatorNamespace+"=====", events, err, &buf)
 
-	// Temporary information to gather more details about failure
 	pods, err := k.GetPods("", "-o wide")
 	logDebugElement("=====Pods in "+OperatorNamespace+"=====", pods, err, &buf)
 
 	describe, err := k.Describe("deployment", deploymentName)
 	logDebugElement("=====Operator Deployment describe=====", describe, err, &buf)
+
+	metrics, err := k.TopPods()
+	logDebugElement("=====Resource metrics in "+OperatorNamespace+"=====", metrics, err, &buf)
+
 	writeDebugFile(artifactsDir, clusterName, "operator", &buf)
 }
 
 func logIstioDebugInfo(k kubectl.Kubectl, artifactsDir, clusterName string) {
 	var buf strings.Builder
+
 	resource, err := k.GetYAML("istio", istioName)
 	logDebugElement("=====Istio YAML=====", resource, err, &buf)
 
-	output, err := k.WithNamespace(ControlPlaneNamespace).GetPods("", "-o wide")
+	k = k.WithNamespace(ControlPlaneNamespace)
+
+	output, err := k.GetPods("", "-o wide")
 	logDebugElement("=====Pods in "+ControlPlaneNamespace+"=====", output, err, &buf)
 
-	logs, err := k.WithNamespace(ControlPlaneNamespace).Logs("deploy/istiod", ptr.Of(120*time.Second))
+	logs, err := k.Logs("deploy/istiod", ptr.Of(120*time.Second))
 	logDebugElement("=====Istiod logs=====", logs, err, &buf)
 
-	events, err := k.WithNamespace(ControlPlaneNamespace).GetEvents()
+	logPreviousLogsIfAvailable(k, "deploy/istiod", &buf)
+
+	meshConfig, err := k.GetYAML("configmap", "istio")
+	logDebugElement("=====Istio Mesh ConfigMap=====", meshConfig, err, &buf)
+
+	events, err := k.GetEvents()
 	logDebugElement("=====Events in "+ControlPlaneNamespace+"=====", events, err, &buf)
 
-	// Running istioctl proxy-status to get the status of the proxies.
+	metrics, err := k.TopPods()
+	logDebugElement("=====Resource metrics in "+ControlPlaneNamespace+"=====", metrics, err, &buf)
+
 	proxyStatus, err := istioctl.GetProxyStatus()
 	logDebugElement("=====Istioctl Proxy Status=====", proxyStatus, err, &buf)
+
 	writeDebugFile(artifactsDir, clusterName, "istio", &buf)
 }
 
 func logCNIDebugInfo(k kubectl.Kubectl, artifactsDir, clusterName string) {
 	var buf strings.Builder
+
 	resource, err := k.GetYAML("istiocni", istioCniName)
 	logDebugElement("=====IstioCNI YAML=====", resource, err, &buf)
 
-	ds, err := k.WithNamespace(IstioCniNamespace).GetYAML("daemonset", "istio-cni-node")
+	k = k.WithNamespace(IstioCniNamespace)
+
+	ds, err := k.GetYAML("daemonset", "istio-cni-node")
 	logDebugElement("=====Istio CNI DaemonSet YAML=====", ds, err, &buf)
 
-	events, err := k.WithNamespace(IstioCniNamespace).GetEvents()
+	events, err := k.GetEvents()
 	logDebugElement("=====Events in "+IstioCniNamespace+"=====", events, err, &buf)
 
-	// Temporary information to gather more details about failure
-	pods, err := k.WithNamespace(IstioCniNamespace).GetPods("", "-o wide")
+	pods, err := k.GetPods("", "-o wide")
 	logDebugElement("=====Pods in "+IstioCniNamespace+"=====", pods, err, &buf)
 
-	describe, err := k.WithNamespace(IstioCniNamespace).Describe("daemonset", "istio-cni-node")
+	describe, err := k.Describe("daemonset", "istio-cni-node")
 	logDebugElement("=====Istio CNI DaemonSet describe=====", describe, err, &buf)
 
-	logs, err := k.WithNamespace(IstioCniNamespace).Logs("daemonset/istio-cni-node", ptr.Of(120*time.Second))
+	logs, err := k.Logs("daemonset/istio-cni-node", ptr.Of(120*time.Second))
 	logDebugElement("=====Istio CNI logs=====", logs, err, &buf)
+
+	logPreviousLogsIfAvailable(k, "daemonset/istio-cni-node", &buf)
+
+	metrics, err := k.TopPods()
+	logDebugElement("=====Resource metrics in "+IstioCniNamespace+"=====", metrics, err, &buf)
+
 	writeDebugFile(artifactsDir, clusterName, "cni", &buf)
 }
 
 func logZtunnelDebugInfo(k kubectl.Kubectl, artifactsDir, clusterName string) {
 	var buf strings.Builder
+
 	resource, err := k.GetYAML("ztunnel", "default")
 	logDebugElement("=====ZTunnel YAML=====", resource, err, &buf)
 
-	ds, err := k.WithNamespace(ZtunnelNamespace).GetYAML("daemonset", "ztunnel")
+	k = k.WithNamespace(ZtunnelNamespace)
+
+	ds, err := k.GetYAML("daemonset", "ztunnel")
 	logDebugElement("=====ZTunnel DaemonSet YAML=====", ds, err, &buf)
 
-	events, err := k.WithNamespace(ZtunnelNamespace).GetEvents()
+	events, err := k.GetEvents()
 	logDebugElement("=====Events in "+ZtunnelNamespace+"=====", events, err, &buf)
 
-	describe, err := k.WithNamespace(ZtunnelNamespace).Describe("daemonset", "ztunnel")
+	describe, err := k.Describe("daemonset", "ztunnel")
 	logDebugElement("=====ZTunnel DaemonSet describe=====", describe, err, &buf)
 
-	logs, err := k.WithNamespace(ZtunnelNamespace).Logs("daemonset/ztunnel", ptr.Of(120*time.Second))
+	logs, err := k.Logs("daemonset/ztunnel", ptr.Of(120*time.Second))
 	logDebugElement("=====ztunnel logs=====", logs, err, &buf)
+
+	logPreviousLogsIfAvailable(k, "daemonset/ztunnel", &buf)
+
+	metrics, err := k.TopPods()
+	logDebugElement("=====Resource metrics in "+ZtunnelNamespace+"=====", metrics, err, &buf)
+
 	writeDebugFile(artifactsDir, clusterName, "ztunnel", &buf)
 }
 
 func logCertsDebugInfo(k kubectl.Kubectl, artifactsDir, clusterName string) {
 	var buf strings.Builder
+
 	certs, err := k.WithNamespace(ControlPlaneNamespace).GetSecret("cacerts")
 	logDebugElement("=====CA certs in "+ControlPlaneNamespace+"=====", certs, err, &buf)
+
 	writeDebugFile(artifactsDir, clusterName, "certs", &buf)
 }
 
@@ -329,23 +366,30 @@ func logSampleNamespaceInfo(k kubectl.Kubectl, namespace string, buf *strings.Bu
 		logDebugElement("=====Namespace "+namespace+" (not found)=====", "", err, buf)
 		return
 	}
-	logDebugElement("=====Namespace "+namespace+" YAML=====", nsInfo, err, buf)
+	logDebugElement("=====Namespace "+namespace+" YAML=====", nsInfo, nil, buf)
 
-	// Get pods in the namespace with wide output for more details
-	pods, err := k.WithNamespace(namespace).GetPods("", "-o wide")
+	k = k.WithNamespace(namespace)
+
+	pods, err := k.GetPods("", "-o wide")
 	logDebugElement("=====Pods in "+namespace+"=====", pods, err, buf)
 
-	// Get events in the namespace
-	events, err := k.WithNamespace(namespace).GetEvents()
+	events, err := k.GetEvents()
 	logDebugElement("=====Events in "+namespace+"=====", events, err, buf)
 
-	// Get deployments
-	deployments, err := k.WithNamespace(namespace).GetYAML("deployments", "")
+	deployments, err := k.GetYAML("deployments", "")
 	logDebugElement("=====Deployments in "+namespace+"=====", deployments, err, buf)
 
-	// Get services
-	services, err := k.WithNamespace(namespace).GetYAML("services", "")
+	services, err := k.GetYAML("services", "")
 	logDebugElement("=====Services in "+namespace+"=====", services, err, buf)
+
+	endpoints, err := k.GetYAML("endpoints", "")
+	logDebugElement("=====Endpoints in "+namespace+"=====", endpoints, err, buf)
+
+	networkPolicies, err := k.GetYAML("networkpolicies", "")
+	logDebugElement("=====NetworkPolicies in "+namespace+"=====", networkPolicies, err, buf)
+
+	metrics, err := k.TopPods()
+	logDebugElement("=====Resource metrics in "+namespace+"=====", metrics, err, buf)
 
 	// Describe failed or non-ready pods specifically
 	logFailedPodsDetails(k, namespace, buf)
@@ -368,6 +412,17 @@ func logDebugElement(caption string, info string, err error, buf *strings.Builde
 		GinkgoWriter.Println(Indent(strings.TrimSpace(info)))
 		buf.WriteString(Indent(strings.TrimSpace(info)) + "\n")
 	}
+}
+
+// logPreviousLogsIfAvailable attempts to collect previous container logs for a resource
+// This is useful when pods have restarted - it captures logs from before the restart
+func logPreviousLogsIfAvailable(k kubectl.Kubectl, resource string, buf *strings.Builder) {
+	prevLogs, err := k.LogsPrevious(resource, nil)
+	if err == nil && prevLogs != "" {
+		// Previous logs exist - a container has restarted
+		logDebugElement(fmt.Sprintf("=====Previous logs for %s (container restarted)=====", resource), prevLogs, nil, buf)
+	}
+	// If err != nil or prevLogs is empty, the container hasn't restarted - skip silently
 }
 
 func GetVersionFromIstiod() (*semver.Version, error) {
