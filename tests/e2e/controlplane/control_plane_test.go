@@ -224,6 +224,11 @@ metadata:
 				})
 
 				AfterAll(func(ctx SpecContext) {
+					if CurrentSpecReport().Failed() {
+						common.LogDebugInfo(common.ControlPlane, k)
+						debugInfoLogged = true
+					}
+
 					if CurrentSpecReport().Failed() && keepOnFailure {
 						return
 					}
@@ -232,21 +237,11 @@ metadata:
 				})
 			})
 		}
-
-		AfterAll(func(ctx SpecContext) {
-			if CurrentSpecReport().Failed() {
-				common.LogDebugInfo(common.ControlPlane, k)
-				debugInfoLogged = true
-			}
-		})
 	})
 
 	AfterAll(func() {
-		if CurrentSpecReport().Failed() {
-			if !debugInfoLogged {
-				common.LogDebugInfo(common.ControlPlane, k)
-				debugInfoLogged = true
-			}
+		if CurrentSpecReport().Failed() && !debugInfoLogged {
+			common.LogDebugInfo(common.ControlPlane, k)
 		}
 	})
 })

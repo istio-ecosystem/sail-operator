@@ -222,6 +222,11 @@ values:
 				})
 
 				AfterAll(func(ctx SpecContext) {
+					if CurrentSpecReport().Failed() {
+						common.LogDebugInfo(common.DualStack, k)
+						debugInfoLogged = true
+					}
+
 					if CurrentSpecReport().Failed() && keepOnFailure {
 						return
 					}
@@ -230,19 +235,11 @@ values:
 				})
 			})
 		}
-
-		AfterAll(func(ctx SpecContext) {
-			if CurrentSpecReport().Failed() {
-				common.LogDebugInfo(common.DualStack, k)
-				debugInfoLogged = true
-			}
-		})
 	})
 
 	AfterAll(func(ctx SpecContext) {
 		if CurrentSpecReport().Failed() && !debugInfoLogged {
 			common.LogDebugInfo(common.DualStack, k)
-			debugInfoLogged = true
 		}
 	})
 })

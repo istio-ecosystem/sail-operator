@@ -346,9 +346,14 @@ spec:
 				})
 
 				AfterAll(func(ctx SpecContext) {
+					if CurrentSpecReport().Failed() {
+						common.LogDebugInfo(common.Ambient, k)
+					}
+
 					if CurrentSpecReport().Failed() && keepOnFailure {
 						return
 					}
+
 					clr.Cleanup(ctx)
 				})
 			})

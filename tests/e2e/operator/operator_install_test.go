@@ -90,10 +90,16 @@ var (
 var _ = Describe("Operator", Label("smoke", "operator"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
+	debugInfoLogged := false
 	clr := cleaner.New(cl)
 	BeforeAll(func(ctx SpecContext) {
 		clr.Record(ctx)
 		DeferCleanup(func(ctx SpecContext) {
+			if CurrentSpecReport().Failed() {
+				common.LogDebugInfo(common.Operator, k)
+				debugInfoLogged = true
+			}
+
 			clr.Cleanup(ctx)
 		})
 	})
@@ -453,7 +459,7 @@ spec:
 			return
 		}
 
-		if CurrentSpecReport().Failed() {
+		if CurrentSpecReport().Failed() && !debugInfoLogged {
 			common.LogDebugInfo(common.Operator, k)
 		}
 	})
