@@ -23,6 +23,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
+	"github.com/istio-ecosystem/sail-operator/pkg/monitoring/relabeling"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -209,6 +210,7 @@ func (r *Reconciler) reconcilePodMonitorInNamespace(ctx context.Context, rev *v1
 func (r *Reconciler) buildServiceMonitor(rev *v1.IstioRevision) *monitoringv1.ServiceMonitor {
 	name := rev.Name + serviceMonitorNameSuffix
 	namespace := rev.Spec.Namespace
+	relabelCfg := relabeling.ForPlatform(r.Config.Platform, istioOwnerName(rev))
 
 	sm := &monitoringv1.ServiceMonitor{
 		ObjectMeta: metav1.ObjectMeta{
@@ -230,17 +232,23 @@ func (r *Reconciler) buildServiceMonitor(rev *v1.IstioRevision) *monitoringv1.Se
 			},
 		},
 		Spec: monitoringv1.ServiceMonitorSpec{
+			TargetLabels: []string{"app"},
 			Selector: metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": "istiod",
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "istio",
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{"pilot"},
+					},
 				},
 			},
 			Endpoints: []monitoringv1.Endpoint{
 				{
-					Port:     "http-monitoring",
-					Path:     "/metrics",
-					Scheme:   ptr(monitoringv1.Scheme("http")),
-					Interval: monitoringv1.Duration("30s"),
+					Port:         "http-monitoring",
+					Path:         "/metrics",
+					Scheme:       ptr(monitoringv1.Scheme("http")),
+					Interval:     monitoringv1.Duration("30s"),
+					RelabelConfigs: relabelCfg.ServiceMonitorRelabelings,
 				},
 			},
 		},
@@ -255,6 +263,7 @@ func (r *Reconciler) buildServiceMonitor(rev *v1.IstioRevision) *monitoringv1.Se
 // buildPodMonitor constructs the PodMonitor for monitoring istio-proxy sidecars
 func (r *Reconciler) buildPodMonitor(rev *v1.IstioRevision, namespace string) *monitoringv1.PodMonitor {
 	name := rev.Name + podMonitorNameSuffix
+	relabelCfg := relabeling.ForPlatform(r.Config.Platform, istioOwnerName(rev))
 
 	pm := &monitoringv1.PodMonitor{
 		ObjectMeta: metav1.ObjectMeta{
@@ -272,20 +281,17 @@ func (r *Reconciler) buildPodMonitor(rev *v1.IstioRevision, namespace string) *m
 			Selector: metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
-						Key:      "security.istio.io/tlsMode",
-						Operator: metav1.LabelSelectorOpExists,
+						Key:      "istio-prometheus-ignore",
+						Operator: metav1.LabelSelectorOpDoesNotExist,
 					},
 				},
 			},
 			PodMetricsEndpoints: []monitoringv1.PodMetricsEndpoint{
 				{
-					Port:          ptr("http-envoy-prom"),
-					Path:          "/stats/prometheus",
-					Scheme:        ptr(monitoringv1.Scheme("http")),
-					Interval:      monitoringv1.Duration("30s"),
-					ScrapeTimeout: monitoringv1.Duration("10s"),
-					HonorLabels:   true,
-					FilterRunning: ptr(true),
+					Path:           "/stats/prometheus",
+					Scheme:         ptr(monitoringv1.Scheme("http")),
+					Interval:       monitoringv1.Duration("30s"),
+					RelabelConfigs: relabelCfg.PodMonitorRelabelings,
 				},
 			},
 		},
@@ -295,6 +301,16 @@ func (r *Reconciler) buildPodMonitor(rev *v1.IstioRevision, namespace string) *m
 	pm.SetGroupVersionKind(rhobsGV.WithKind("PodMonitor"))
 
 	return pm
+}
+
+// istioOwnerName returns the name of the parent Istio CR from owner references.
+func istioOwnerName(rev *v1.IstioRevision) string {
+	for _, ownerRef := range rev.GetOwnerReferences() {
+		if ownerRef.Kind == v1.IstioKind {
+			return ownerRef.Name
+		}
+	}
+	return rev.Name
 }
 
 // ptr returns a pointer to the given value
