@@ -538,17 +538,19 @@ func TestReconcilePodMonitors(t *testing.T) {
 }
 
 func TestBuildServiceMonitor(t *testing.T) {
-	cfg := newReconcilerTestConfig()
-
 	tests := []struct {
 		name                   string
+		platform               config.Platform
 		rev                    *v1.IstioRevision
 		expectedName           string
 		expectedNS             string
-		expectedSelectorLabels map[string]string
+		expectedTargetLabels   []string
+		expectedSelectorKey    string
+		expectedSelectorValues []string
 	}{
 		{
-			name: "default revision",
+			name:     "default revision on kubernetes",
+			platform: config.PlatformKubernetes,
 			rev: &v1.IstioRevision{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
@@ -561,10 +563,13 @@ func TestBuildServiceMonitor(t *testing.T) {
 			},
 			expectedName:           "default-istiod",
 			expectedNS:             "istio-system",
-			expectedSelectorLabels: map[string]string{"app": "istiod"},
+			expectedTargetLabels:   []string{"app"},
+			expectedSelectorKey:    "istio",
+			expectedSelectorValues: []string{"pilot"},
 		},
 		{
-			name: "named revision",
+			name:     "named revision on openshift",
+			platform: config.PlatformOpenShift,
 			rev: &v1.IstioRevision{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "canary",
@@ -577,10 +582,13 @@ func TestBuildServiceMonitor(t *testing.T) {
 			},
 			expectedName:           "canary-istiod",
 			expectedNS:             "istio-system",
-			expectedSelectorLabels: map[string]string{"app": "istiod"},
+			expectedTargetLabels:   []string{"app"},
+			expectedSelectorKey:    "istio",
+			expectedSelectorValues: []string{"pilot"},
 		},
 		{
-			name: "custom namespace",
+			name:     "custom namespace",
+			platform: config.PlatformKubernetes,
 			rev: &v1.IstioRevision{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
@@ -593,13 +601,18 @@ func TestBuildServiceMonitor(t *testing.T) {
 			},
 			expectedName:           "default-istiod",
 			expectedNS:             "custom-istio-ns",
-			expectedSelectorLabels: map[string]string{"app": "istiod"},
+			expectedTargetLabels:   []string{"app"},
+			expectedSelectorKey:    "istio",
+			expectedSelectorValues: []string{"pilot"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
+
+			cfg := newReconcilerTestConfig()
+			cfg.Platform = tt.platform
 
 			cl := newFakeClientBuilder().Build()
 			reconciler := NewReconciler(cfg, cl, scheme.Scheme)
@@ -616,8 +629,11 @@ func TestBuildServiceMonitor(t *testing.T) {
 			g.Expect(labels["app"]).To(Equal("istiod"))
 			g.Expect(labels["monitored-by"]).To(Equal("coo-prometheus"))
 
-			// Check spec.selector
-			g.Expect(result.Spec.Selector.MatchLabels).To(Equal(tt.expectedSelectorLabels))
+			// Check spec.targetLabels and selector
+			g.Expect(result.Spec.TargetLabels).To(Equal(tt.expectedTargetLabels))
+			g.Expect(result.Spec.Selector.MatchExpressions).To(HaveLen(1))
+			g.Expect(result.Spec.Selector.MatchExpressions[0].Key).To(Equal(tt.expectedSelectorKey))
+			g.Expect(result.Spec.Selector.MatchExpressions[0].Values).To(Equal(tt.expectedSelectorValues))
 
 			// Check endpoints
 			g.Expect(len(result.Spec.Endpoints)).To(Equal(1))
@@ -626,6 +642,7 @@ func TestBuildServiceMonitor(t *testing.T) {
 			g.Expect(endpoint.Path).To(Equal("/metrics"))
 			g.Expect(string(*endpoint.Scheme)).To(Equal("http"))
 			g.Expect(string(endpoint.Interval)).To(Equal("30s"))
+			g.Expect(endpoint.RelabelConfigs).To(BeEmpty())
 
 			// Check owner references
 			ownerRefs := result.GetOwnerReferences()
@@ -637,49 +654,65 @@ func TestBuildServiceMonitor(t *testing.T) {
 }
 
 func TestBuildPodMonitor(t *testing.T) {
-	cfg := newReconcilerTestConfig()
-
 	tests := []struct {
-		name         string
-		rev          *v1.IstioRevision
-		namespace    string
-		expectedName string
+		name                 string
+		platform             config.Platform
+		rev                  *v1.IstioRevision
+		namespace            string
+		expectedName         string
+		expectedRelabelCount int
+		expectedLastLabel    string
 	}{
 		{
-			name: "builds PodMonitor for application namespace",
+			name:     "kubernetes platform uses upstream istio relabelings",
+			platform: config.PlatformKubernetes,
 			rev: &v1.IstioRevision{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 					UID:  "test-uid",
+					OwnerReferences: []metav1.OwnerReference{
+						{Kind: v1.IstioKind, Name: "my-istio"},
+					},
 				},
 				Spec: v1.IstioRevisionSpec{
 					Version:   "v1.24.0",
 					Namespace: "istio-system",
 				},
 			},
-			namespace:    "bookinfo",
-			expectedName: "default-proxies",
+			namespace:            "bookinfo",
+			expectedName:         "default-proxies",
+			expectedRelabelCount: 7,
+			expectedLastLabel:    "pod",
 		},
 		{
-			name: "named revision",
+			name:     "openshift platform uses service mesh relabelings",
+			platform: config.PlatformOpenShift,
 			rev: &v1.IstioRevision{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "canary",
 					UID:  "test-uid",
+					OwnerReferences: []metav1.OwnerReference{
+						{Kind: v1.IstioKind, Name: "prod-mesh"},
+					},
 				},
 				Spec: v1.IstioRevisionSpec{
 					Version:   "v1.25.0",
 					Namespace: "istio-system",
 				},
 			},
-			namespace:    "myapp",
-			expectedName: "canary-proxies",
+			namespace:            "myapp",
+			expectedName:         "canary-proxies",
+			expectedRelabelCount: 8,
+			expectedLastLabel:    "mesh_id",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
+
+			cfg := newReconcilerTestConfig()
+			cfg.Platform = tt.platform
 
 			cl := newFakeClientBuilder().Build()
 			reconciler := NewReconciler(cfg, cl, scheme.Scheme)
@@ -703,19 +736,24 @@ func TestBuildPodMonitor(t *testing.T) {
 			// Check spec.selector.matchExpressions
 			g.Expect(len(result.Spec.Selector.MatchExpressions)).To(Equal(1))
 			expr := result.Spec.Selector.MatchExpressions[0]
-			g.Expect(expr.Key).To(Equal("security.istio.io/tlsMode"))
-			g.Expect(expr.Operator).To(Equal(metav1.LabelSelectorOpExists))
+			g.Expect(expr.Key).To(Equal("istio-prometheus-ignore"))
+			g.Expect(expr.Operator).To(Equal(metav1.LabelSelectorOpDoesNotExist))
 
 			// Check podMetricsEndpoints
 			g.Expect(len(result.Spec.PodMetricsEndpoints)).To(Equal(1))
 			endpoint := result.Spec.PodMetricsEndpoints[0]
-			g.Expect(*endpoint.Port).To(Equal("http-envoy-prom"))
+			g.Expect(endpoint.Port).To(BeNil())
 			g.Expect(endpoint.Path).To(Equal("/stats/prometheus"))
 			g.Expect(string(*endpoint.Scheme)).To(Equal("http"))
 			g.Expect(string(endpoint.Interval)).To(Equal("30s"))
-			g.Expect(string(endpoint.ScrapeTimeout)).To(Equal("10s"))
-			g.Expect(endpoint.HonorLabels).To(BeTrue())
-			g.Expect(*endpoint.FilterRunning).To(BeTrue())
+			g.Expect(endpoint.RelabelConfigs).To(HaveLen(tt.expectedRelabelCount))
+			g.Expect(endpoint.RelabelConfigs[0].Regex).To(Equal("istio-proxy"))
+			g.Expect(endpoint.RelabelConfigs[len(endpoint.RelabelConfigs)-1].TargetLabel).To(Equal(tt.expectedLastLabel))
+
+			if tt.platform == config.PlatformOpenShift {
+				meshID := endpoint.RelabelConfigs[len(endpoint.RelabelConfigs)-1]
+				g.Expect(*meshID.Replacement).To(Equal("prod-mesh"))
+			}
 		})
 	}
 }
