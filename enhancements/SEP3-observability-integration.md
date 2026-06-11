@@ -1,43 +1,116 @@
 |Status                                             | Authors      | Created    | 
 |---------------------------------------------------|--------------|------------|
-|Proposed | @mayleighnmyers, @yxun         | 2026-06-01 |
+|Implementation                                     | @mayleighnmyers, @yxun         | 2026-06-01 |
+
+# Observability Integration (Metrics)
 
 ## Overview
-Upstream Istio generates detailed telemetry metrics for the mesh control plane and each sidecar proxies generate a set of metrics about all traffic passing through the proxy. Users can customize Istio metrics with Telemetry API. However, those APIs are not covering collection, scraping of metrics from a backend service such as a Prometheus Addon. We want to make it easier for users to integrate Istio with Observability metrics components using Sail operator.
 
-We are targeting two Custom Resource Definitions (CRDs), `ServiceMonitor` and `PodMonitor`, that provide management of Prometheus related scraping jobs. By having a monitoring controller in the Sail operator, it would automate the creation, deletion and updates of those two CRDs and reduce manual configuration steps for users to query Istio generated telemetry metrics in a Prometheus or Kiali dashboard.
+Upstream Istio generates telemetry metrics for the control plane and sidecar proxies. Users can customize Istio metrics with the Telemetry API, but that does not cover scraping those metrics with Prometheus Operator. We want to automate creation of `ServiceMonitor` and `PodMonitor` resources so users can query Istio metrics in Prometheus or Kiali without manual configuration.
 
 ## Goals
-- Implement a monitoring controller that manages two Custom Resource Definitions (CRDs), `ServiceMonitor` and `PodMonitor` reconciliation so users don't have to configure metrics scraping jobs manually. 
+
+* Provide a monitoring controller that reconciles `ServiceMonitor` and `PodMonitor` resources for Istio control plane and sidecar proxy metrics
+* Apply platform-appropriate default relabeling rules on Kubernetes and OpenShift
 
 ## Non-goals
-- Deployment of the Observability metrics components are not goals. We will implement validation methods for checking required CRD groups and CRDs. We assume the Observability components such Observability operator(s), Prometheus monitoring stacks have been deployed in a Kubernetes environment. 
+
+* Deploying observability stack components (Prometheus, COO, OpenShift user-workload monitoring, etc.). We assume those are installed separately.
+* User customization of scrape paths, ports, or relabeling rules via the Sail API
+* Tracing integration (tracked separately under [OSSM-14058](https://redhat.atlassian.net/browse/OSSM-14058))
 
 ## Design
 
 ### User Stories
-1. As a user of Istio's metrics monitoring using Prometheus components, I want to automatically configure Prometheus metrics scraping jobs for Istio generated telemetry metrics.
+
+1. As a user running Istio with a Prometheus Operator-based stack, I want the operator to configure metrics scraping jobs for Istio-generated telemetry metrics.
+2. As a user running OpenShift Service Mesh, I want `PodMonitor` resources with OSSM-documented relabeling rules so metrics appear correctly in the OpenShift console and Kiali.
 
 ### API Changes
-We will add a boolean field `spec.monitoring.enabled` in the `Istio` and `IstioRevision` CRDs. When a user enables it, a monitoring controller will reconcile a `ServiceMonitor` CR for the mesh control plane and `PodMonitor` CRs for each namespace labeled by the Istio sidecar injection label.
+
+We will add a boolean field `spec.monitoring.enabled` on the `Istio` CR:
+
+```yaml
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  monitoring:
+    enabled: true
+```
+
+When enabled, the monitoring controller reconciles monitor CRs for each owned `IstioRevision`. The field defaults to `false`.
+
+A broader observability integration API with references to external metrics and tracing stacks is being designed in [OSSM-14058](https://redhat.atlassian.net/browse/OSSM-14058). That work may supersede this boolean field in a future release.
 
 ### Architecture
-We assume the related `ServiceMonitor` and `PodMonitor` CRDs and the API groups such as "monitoring.coreos.com/v1" , "monitoring.rhobs/v1" are available. We will add required RBAC permissions for creating, deleting and updating those two resources in the Sail Operator ClusterRole.
 
-A monitoring controller should watch `Istio` and `IstioRevision` resources before reconciling a `ServiceMonitor` object in the mesh control plane namespace. It should watch namespaces with Istio sidecar injection labels before reconciling `PodMonitor` objects for the application namespaces.
-When the monitoring controller creates or updates `ServiceMonitor` and `PodMonitor` resources, it will construct default metadata and spec fields for scraping Istio generated telemetry metrics.
+We assume `ServiceMonitor` and `PodMonitor` CRDs are available under `monitoring.coreos.com/v1` and/or `monitoring.rhobs/v1`. The Sail Operator ClusterRole grants permissions for both API groups.
+
+The monitoring controller watches `IstioRevision` resources and reconciles monitor CRs when monitoring is enabled on the parent `Istio` CR. It also watches `Istio` (for changes to `spec.monitoring.enabled`) and namespaces with the `istio-injection=enabled` label (for PodMonitor placement on OpenShift).
+
+Monitor CRs are built using prometheus-operator Go API types and applied via the controller-runtime client. Platform-specific relabeling defaults are selected from `pkg/monitoring/relabeling` based on `ReconcilerConfig.Platform` (detected at startup via `config.DetectPlatform()`).
+
+#### ServiceMonitor (istiod)
+
+One `ServiceMonitor` per `IstioRevision` in the control plane namespace, named `{revision}-istiod`, with an owner reference to the `IstioRevision`. The spec follows upstream Istio and OSSM samples: selector `istio: pilot`, `targetLabels: [app]`, endpoint port `http-monitoring`, path `/metrics`, interval `30s`. No endpoint relabelings.
+
+#### PodMonitor (istio-proxy)
+
+One or more `PodMonitor` resources per `IstioRevision`, named `{revision}-proxies`. The spec uses selector `istio-prometheus-ignore` DoesNotExist, path `/stats/prometheus`, interval `30s`, and annotation-based scrape relabelings (no explicit port field).
+
+Relabeling rules follow [upstream Istio prometheus-operator.yaml](https://github.com/istio/istio/blob/master/samples/addons/extras/prometheus-operator.yaml) on Kubernetes and the [OSSM 3.0 metrics documentation](https://docs.redhat.com/en/documentation/red_hat_openshift_service_mesh/3.0/html/observability/metrics-and-service-mesh) on OpenShift (additional `app`, `version`, and `mesh_id` labels; `mesh_id` is set to the parent `Istio` CR name).
+
+#### Kubernetes vs OpenShift
+
+On **Kubernetes**, a single `PodMonitor` in the control plane namespace with `namespaceSelector.any: true` is the preferred approach (matching upstream Istio). On **OpenShift**, user-workload monitoring ignores `namespaceSelector`, so a `PodMonitor` must be created in each mesh namespace with sidecar injection enabled.
+
+The controller currently creates a `PodMonitor` per namespace with `istio-injection=enabled`. Platform-specific API group selection (`monitoring.coreos.com` vs `monitoring.rhobs`) is not yet implemented; created objects use `monitoring.rhobs/v1`.
 
 ### Performance Impact
-The `ServiceMonitor` CR reconciliation will not affect the Sail Operator performance because it only watches the mesh control plane namespace. 
 
-The `PodMonitor` CRs reconciliation need to watch all namespaces and determine which one(s) has the Istio sidecar injection label. It will impact the performance when a cluster has large number of namespaces. We may consider an alternative option for implementing a field selector and reduce this performance impact.
+`ServiceMonitor` reconciliation is limited to the control plane namespace and has low impact. `PodMonitor` reconciliation on OpenShift requires listing namespaces and may impact performance on clusters with many namespaces. Using `namespaceSelector` on Kubernetes avoids this per-namespace loop.
+
+## Alternatives Considered
+
+### Embedded YAML templates in Go
+
+Rejected. Monitor CR specs should be built entirely from typed Go structs via the controller-runtime client, not from YAML fragments embedded in controller code.
+
+### Named port scraping (`http-envoy-prom`)
+
+Rejected. Upstream Istio and OSSM samples use annotation-based address relabeling without an explicit port field.
+
+### Single PodMonitor strategy for all platforms
+
+Rejected on OpenShift. User-workload monitoring ignores `namespaceSelector` on monitor CRs, requiring per-namespace PodMonitors per OSSM documentation.
+
+### Standalone Integration CR with target references
+
+A standalone `Integration` CR referencing `Istio`, metrics stacks, and tracing stacks (similar to `targetRef` on `ZTunnel` and `IstioRevisionTag`) is preferred long term for opt-in RBAC and stack-specific configuration. That design is tracked in [OSSM-14058](https://redhat.atlassian.net/browse/OSSM-14058) rather than in this SEP.
 
 ## Implementation Plan
+
 v1alpha1
-- [X] Initial implementation of a monitoring controller and integration tests.
-- [] Provide customized metrics relabeling configuration specs for a `PodMonitor` resource builder.
+- [x] Monitoring controller reconciling `ServiceMonitor` and `PodMonitor` for `IstioRevision`
+- [x] `Istio.spec.monitoring.enabled` API
+- [x] Platform-specific PodMonitor relabeling defaults
+- [x] Unit tests for controller and relabeling package
+- [ ] External CRD/API group detection (`monitoring.coreos.com` vs `monitoring.rhobs`)
+- [ ] Kubernetes PodMonitor strategy using `namespaceSelector.any: true`
+- [ ] Validation when monitoring CRDs are unavailable
+- [ ] Integration tests (`tests/integration/api/monitoring_test.go`)
+- [ ] KinD e2e tests
+- [ ] User-facing documentation
+
+v1alpha2
+- [ ] [OSSM-14058](https://redhat.atlassian.net/browse/OSSM-14058) — Integration API with target references for metrics and tracing
 
 ## Test Plan
-Functionality will be tested in integration tests.
 
+Functionality will be tested in unit tests, integration tests (envtest), and KinD e2e tests.
 
+## Updates
+
+* 2026-06-11: Updated with platform relabeling implementation, remaining v1alpha1 work items, and OSSM-14058 reference
