@@ -22,15 +22,19 @@ OLD_VARS := $(.VARIABLES)
 VERSION ?= 1.30.0
 MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 
-# This version will be used to generate the OLM upgrade graph in the FBC as a version to be replaced by the new operator version defined in $VERSION.
-# This applies for stable releases, for nightly releases we are getting previous version directly from the FBC.
-# Currently we are pushing the operator to two operator hubs https://github.com/k8s-operatorhub/community-operators and
-# https://github.com/redhat-openshift-ecosystem/community-operators-prod. Nightly builds go only to community-operators-prod which already
-# supports FBC. FBC yaml files and kept in community-operators-prod repo and we only generate a PR with changes using make targets from this Makefile.
-# There are also GH workflows defined to release nightly and stable operators.
-# There is no need to define `replaces` and `skipRange` fields in the CSV as those fields are defined in the FBC and CSV values are ignored.
-# FBC is source of truth for OLM upgrade graph.
-PREVIOUS_VERSION ?= 1.29.1
+# PREVIOUS_VERSION is used to generate the OLM upgrade graph in FBC for stable releases.
+# This variable is auto-detected in hack/operatorhub/publish-bundle.sh by querying the
+# FBC (File-Based Catalog) to get the latest version from the 'stable' channel.
+# The FBC catalog is the authoritative source of truth for OLM upgrade graphs.
+#
+# Auto-detection occurs during 'make bundle-publish' - the script queries:
+# https://raw.githubusercontent.com/redhat-openshift-ecosystem/community-operators-prod/main/operators/sailoperator/catalog-templates/basic.yaml
+#
+# To manually override (if needed):
+#   make bundle-publish -e PREVIOUS_VERSION=X.Y.Z
+#
+# Default: empty (will be auto-detected by publish-bundle.sh)
+PREVIOUS_VERSION ?=
 
 OPERATOR_NAME ?= sailoperator
 VERSIONS_YAML_DIR ?= pkg/istioversion
