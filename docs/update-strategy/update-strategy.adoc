@@ -32,7 +32,7 @@ The Sail Operator supports two update strategies: `InPlace` and `RevisionBased`.
 
 **For ambient mode updates:**
 
-IMPORTANT: **Only the InPlace strategy is supported for ambient mode.** This is due to ZTunnel's cluster-wide singleton architecture - only one ztunnel instance can run in the cluster at a time, making canary-style upgrades impractical with RevisionBased updates.
+IMPORTANT: **In ambient mode, the control plane supports both the `InPlace` and `RevisionBased` strategies.** The ambient data-plane components (`ZTunnel` and `IstioCNI`) are deployed as node-level shared DaemonSets and are always updated in place; they are not deployed per revision and cannot be canaried side by side. With `RevisionBased`, multiple `istiod` revisions can coexist while sharing the single ztunnel, which must remain within its supported version skew (ztunnel 1.x is compatible with control plane 1.x and 1.x+1).
 
 * Components update order: Control Plane → IstioCNI → ZTunnel
 * No pod restart needed (in ambient mode, the ztunnel maintains xDS connections to istiod, not application workloads directly)
@@ -647,7 +647,7 @@ endif::[]
 [[updating-ambient-components]]
 == Updating Ambient Mode Components
 
-This section covers updating IstioCNI, ZTunnel, and Waypoint proxies after control plane updates using the InPlace update strategy.
+This section covers updating IstioCNI, ZTunnel, and Waypoint proxies after a control plane update. These ambient data-plane components are always updated in place, regardless of the control plane's update strategy.
 
 [[updating-istiocni-ambient]]
 === Updating IstioCNI
