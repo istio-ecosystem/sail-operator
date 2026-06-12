@@ -58,6 +58,9 @@ const (
 // rhobsGV is the GroupVersion for COO monitoring resources
 var rhobsGV = schema.GroupVersion{Group: rhobsAPIGroup, Version: rhobsAPIVersion}
 
+// TODO: map tuningEnabled from an Integration API spec field
+var tuningEnabled = false
+
 // Reconciler reconciles monitoring resources (ServiceMonitor, PodMonitor) for IstioRevision objects
 type Reconciler struct {
 	client.Client
@@ -210,7 +213,7 @@ func (r *Reconciler) reconcilePodMonitorInNamespace(ctx context.Context, rev *v1
 func (r *Reconciler) buildServiceMonitor(rev *v1.IstioRevision) *monitoringv1.ServiceMonitor {
 	name := rev.Name + serviceMonitorNameSuffix
 	namespace := rev.Spec.Namespace
-	relabelCfg := relabeling.ForPlatform(r.Config.Platform, istioOwnerName(rev))
+	relabelCfg := relabeling.ForPlatform(r.Config.Platform, istioOwnerName(rev), tuningEnabled)
 
 	sm := &monitoringv1.ServiceMonitor{
 		ObjectMeta: metav1.ObjectMeta{
@@ -244,10 +247,10 @@ func (r *Reconciler) buildServiceMonitor(rev *v1.IstioRevision) *monitoringv1.Se
 			},
 			Endpoints: []monitoringv1.Endpoint{
 				{
-					Port:         "http-monitoring",
-					Path:         "/metrics",
-					Scheme:       ptr(monitoringv1.Scheme("http")),
-					Interval:     monitoringv1.Duration("30s"),
+					Port:           "http-monitoring",
+					Path:           "/metrics",
+					Scheme:         ptr(monitoringv1.Scheme("http")),
+					Interval:       monitoringv1.Duration("30s"),
 					RelabelConfigs: relabelCfg.ServiceMonitorRelabelings,
 				},
 			},
@@ -263,7 +266,7 @@ func (r *Reconciler) buildServiceMonitor(rev *v1.IstioRevision) *monitoringv1.Se
 // buildPodMonitor constructs the PodMonitor for monitoring istio-proxy sidecars
 func (r *Reconciler) buildPodMonitor(rev *v1.IstioRevision, namespace string) *monitoringv1.PodMonitor {
 	name := rev.Name + podMonitorNameSuffix
-	relabelCfg := relabeling.ForPlatform(r.Config.Platform, istioOwnerName(rev))
+	relabelCfg := relabeling.ForPlatform(r.Config.Platform, istioOwnerName(rev), tuningEnabled)
 
 	pm := &monitoringv1.PodMonitor{
 		ObjectMeta: metav1.ObjectMeta{
