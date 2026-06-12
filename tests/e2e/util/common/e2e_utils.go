@@ -641,3 +641,46 @@ func GetProxyVersion(podName, namespace string) (*semver.Version, error) {
 	}
 	return version, err
 }
+
+// GetIstioProxyContainer finds and returns the istio-proxy container from a pod
+// It checks both regular containers and init containers (for persistent init containers in K8s 1.28+)
+// Returns the container if found, nil otherwise
+func GetIstioProxyContainer(pod corev1.Pod) *corev1.Container {
+	// Check regular containers
+	for i := range pod.Spec.Containers {
+		if pod.Spec.Containers[i].Name == "istio-proxy" {
+			return &pod.Spec.Containers[i]
+		}
+	}
+
+	// Check init containers
+	for i := range pod.Spec.InitContainers {
+		if pod.Spec.InitContainers[i].Name == "istio-proxy" {
+			return &pod.Spec.InitContainers[i]
+		}
+	}
+
+	return nil
+}
+
+// HasSidecarInjected checks if a pod has the istio-proxy sidecar injected
+func HasSidecarInjected(pod corev1.Pod) bool {
+	return GetIstioProxyContainer(pod) != nil
+}
+
+// HasHBONEEnabled checks if the istio-proxy sidecar has HBONE capability enabled
+// by verifying the ISTIO_META_ENABLE_HBONE environment variable is set to "true"
+func HasHBONEEnabled(pod corev1.Pod) bool {
+	container := GetIstioProxyContainer(pod)
+	if container == nil {
+		return false
+	}
+
+	for _, env := range container.Env {
+		if env.Name == "ISTIO_META_ENABLE_HBONE" && env.Value == "true" {
+			return true
+		}
+	}
+
+	return false
+}
