@@ -29,17 +29,25 @@ type Config struct {
 
 // ForPlatform returns default relabeling configuration for the given platform.
 // meshID is the Istio CR name used as the mesh_id label on OpenShift; it is ignored on Kubernetes.
-func ForPlatform(platform config.Platform, meshID string) Config {
+// tuningEnabled is an option for metric thinning usages.
+func ForPlatform(platform config.Platform, meshID string, tuningEnabled bool) Config {
 	switch platform {
 	case config.PlatformOpenShift:
+		if tuningEnabled {
+			return Config{
+				PodMonitorRelabelings:     openShiftMetricTuningPodMonitorRelabelings(meshID),
+				ServiceMonitorRelabelings: nil,
+			}
+		}
+
 		return Config{
-			PodMonitorRelabelings:       openshiftPodMonitorRelabelings(meshID),
-			ServiceMonitorRelabelings:   nil,
+			PodMonitorRelabelings:     openshiftPodMonitorRelabelings(meshID),
+			ServiceMonitorRelabelings: nil,
 		}
 	default:
 		return Config{
-			PodMonitorRelabelings:       kubernetesPodMonitorRelabelings(),
-			ServiceMonitorRelabelings:   nil,
+			PodMonitorRelabelings:     kubernetesPodMonitorRelabelings(),
+			ServiceMonitorRelabelings: nil,
 		}
 	}
 }
@@ -105,6 +113,21 @@ func openshiftPodMonitorRelabelings(meshID string) []monitoringv1.RelabelConfig 
 			Replacement: strPtr(meshID),
 		},
 	})
+}
+
+// openShiftMetricTuningPodMonitorRelabelings returns relabeling rules
+// by dropping unnecessary metrics and labels from Service Mesh Istio default scraping jobs: 
+func openShiftMetricTuningPodMonitorRelabelings(meshID string) []monitoringv1.RelabelConfig {
+	return cloneRelabelConfigs(append(openshiftPodMonitorRelabelings(meshID),
+		monitoringv1.RelabelConfig{
+			Action:       "drop",
+			SourceLabels: []monitoringv1.LabelName{"__name__"},
+			Regex:        "istio_agent_.*|istiod_.*|istio_build|citadel_.*|galley_.*|pilot_[^psx].*|envoy_cluster_[^u].*|envoy_cluster_update.*|envoy_listener_[^dh].*|envoy_server_[^mu].*|envoy_wasm_.*",
+		},
+		monitoringv1.RelabelConfig{
+			Action: "labeldrop",
+			Regex:  "chart|destination_app|destination_version|heritage|.*operator.*|istio.*|release|security_istio_io_.*|service_istio_io_.*|sidecar_istio_io_inject|source_app|source_version",
+		}))
 }
 
 func keepContainer(name string) monitoringv1.RelabelConfig {

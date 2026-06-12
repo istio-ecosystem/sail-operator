@@ -25,7 +25,7 @@ import (
 func TestForPlatformKubernetes(t *testing.T) {
 	g := NewWithT(t)
 
-	cfg := ForPlatform(config.PlatformKubernetes, "ignored-mesh-id")
+	cfg := ForPlatform(config.PlatformKubernetes, "ignored-mesh-id", false)
 
 	g.Expect(cfg.ServiceMonitorRelabelings).To(BeEmpty())
 	g.Expect(cfg.PodMonitorRelabelings).To(HaveLen(7))
@@ -39,7 +39,7 @@ func TestForPlatformKubernetes(t *testing.T) {
 func TestForPlatformOpenShift(t *testing.T) {
 	g := NewWithT(t)
 
-	cfg := ForPlatform(config.PlatformOpenShift, "my-mesh")
+	cfg := ForPlatform(config.PlatformOpenShift, "my-mesh", false)
 
 	g.Expect(cfg.ServiceMonitorRelabelings).To(BeEmpty())
 	g.Expect(cfg.PodMonitorRelabelings).To(HaveLen(8))
@@ -50,10 +50,19 @@ func TestForPlatformOpenShift(t *testing.T) {
 	g.Expect(*cfg.PodMonitorRelabelings[7].Replacement).To(Equal("my-mesh"))
 }
 
+func TestForPlatformOpenShiftTuning(t *testing.T) {
+	g := NewWithT(t)
+
+	cfg := ForPlatform(config.PlatformOpenShift, "my-mesh", true)
+
+	g.Expect(cfg.PodMonitorRelabelings[8].Action).To(Equal("drop"))
+	g.Expect(cfg.PodMonitorRelabelings[9].Action).To(Equal("labeldrop"))
+}
+
 func TestForPlatformDefault(t *testing.T) {
 	g := NewWithT(t)
 
-	cfg := ForPlatform(config.PlatformUndefined, "ignored")
+	cfg := ForPlatform(config.PlatformUndefined, "ignored", false)
 
 	g.Expect(cfg.PodMonitorRelabelings).To(HaveLen(7))
 	g.Expect(cfg.PodMonitorRelabelings[6].TargetLabel).To(Equal("pod"))
