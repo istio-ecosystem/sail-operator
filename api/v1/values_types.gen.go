@@ -3826,10 +3826,13 @@ const (
 )
 
 // Action to take when Envoy receives client request with header names containing underscore characters.
-// +kubebuilder:validation:Enum=HEADERS_WITH_UNDERSCORES_ALLOW;HEADERS_WITH_UNDERSCORES_REJECT_REQUEST;HEADERS_WITH_UNDERSCORES_DROP_HEADER
+// +kubebuilder:validation:Enum=HEADERS_WITH_UNDERSCORES_UNSPECIFIED;HEADERS_WITH_UNDERSCORES_ALLOW;HEADERS_WITH_UNDERSCORES_REJECT_REQUEST;HEADERS_WITH_UNDERSCORES_DROP_HEADER
 type ProxyConfigConnectionSettingsHeadersWithUnderscoresAction string
 
 const (
+	// Unspecified. When profile is EDGE, defaults to HEADERS_WITH_UNDERSCORES_REJECT_REQUEST.
+	// Otherwise defaults to HEADERS_WITH_UNDERSCORES_ALLOW.
+	ProxyConfigConnectionSettingsHeadersWithUnderscoresActionHeadersWithUnderscoresUnspecified ProxyConfigConnectionSettingsHeadersWithUnderscoresAction = "HEADERS_WITH_UNDERSCORES_UNSPECIFIED"
 	// Allow headers with underscores.
 	ProxyConfigConnectionSettingsHeadersWithUnderscoresActionHeadersWithUnderscoresAllow ProxyConfigConnectionSettingsHeadersWithUnderscoresAction = "HEADERS_WITH_UNDERSCORES_ALLOW"
 	// Reject client request with 400 status. HTTP/1 requests are rejected with the "underscore_in_headers" response code.
@@ -3840,10 +3843,13 @@ const (
 )
 
 // Determines the action for request paths that contain escaped slashes (%2F, %2f, %5C, %5c).
-// +kubebuilder:validation:Enum=KEEP_UNCHANGED;REJECT_REQUEST;UNESCAPE_AND_REDIRECT;UNESCAPE_AND_FORWARD
+// +kubebuilder:validation:Enum=PATH_WITH_ESCAPED_SLASHES_UNSPECIFIED;KEEP_UNCHANGED;REJECT_REQUEST;UNESCAPE_AND_REDIRECT;UNESCAPE_AND_FORWARD
 type ProxyConfigConnectionSettingsPathWithEscapedSlashesAction string
 
 const (
+	// Unspecified. When profile is EDGE, defaults to UNESCAPE_AND_REDIRECT.
+	// Otherwise defaults to KEEP_UNCHANGED.
+	ProxyConfigConnectionSettingsPathWithEscapedSlashesActionPathWithEscapedSlashesUnspecified ProxyConfigConnectionSettingsPathWithEscapedSlashesAction = "PATH_WITH_ESCAPED_SLASHES_UNSPECIFIED"
 	// Keep escaped slashes as they are.
 	ProxyConfigConnectionSettingsPathWithEscapedSlashesActionKeepUnchanged ProxyConfigConnectionSettingsPathWithEscapedSlashesAction = "KEEP_UNCHANGED"
 	// Reject client request with 400 status.
@@ -4654,7 +4660,7 @@ const fileMeshV1alpha1ProxyProtoRawDesc = "" +
 	"poll_delay\x18\x01 \x01(\v2\x19.google.protobuf.DurationR\tpollDelay\x126\n" +
 	"\bfallback\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\bfallbackB\n" +
 	"\n" +
-	"\bprovider\"\xa79\n" +
+	"\bprovider\"\xfd9\n" +
 	"\vProxyConfig\x12\x1f\n" +
 	"\vconfig_path\x18\x01 \x01(\tR\n" +
 	"configPath\x12\x1f\n" +
@@ -4745,7 +4751,7 @@ const fileMeshV1alpha1ProxyProtoRawDesc = "" +
 	"\x03uri\x18\x05 \x01(\v2\x1a.google.protobuf.BoolValueR\x03uri\"2\n" +
 	"\x14MetadataExchangeMode\x12\r\n" +
 	"\tUNDEFINED\x10\x00\x12\v\n" +
-	"\aIN_MESH\x10\x01\x1a\xd3\x10\n" +
+	"\aIN_MESH\x10\x01\x1a\xa9\x11\n" +
 	"\x12ConnectionSettings\x12U\n" +
 	"\aprofile\x18\x01 \x01(\x0e2;.istio.mesh.v1alpha1.ProxyConfig.ConnectionSettings.ProfileR\aprofile\x12v\n" +
 	"*listener_per_connection_buffer_limit_bytes\x18\x02 \x01(\v2\x1b.google.protobuf.Int32ValueR%listenerPerConnectionBufferLimitBytes\x12t\n" +
@@ -4768,16 +4774,18 @@ const fileMeshV1alpha1ProxyProtoRawDesc = "" +
 	"\"global_downstream_connection_limit\x18\x12 \x01(\v2\x1b.google.protobuf.Int32ValueR\x1fglobalDownstreamConnectionLimit\" \n" +
 	"\aProfile\x12\v\n" +
 	"\aSIDECAR\x10\x00\x12\b\n" +
-	"\x04EDGE\x10\x01\"\x99\x01\n" +
-	"\x1cHeadersWithUnderscoresAction\x12\"\n" +
-	"\x1eHEADERS_WITH_UNDERSCORES_ALLOW\x10\x00\x12+\n" +
-	"'HEADERS_WITH_UNDERSCORES_REJECT_REQUEST\x10\x01\x12(\n" +
-	"$HEADERS_WITH_UNDERSCORES_DROP_HEADER\x10\x02\"{\n" +
-	"\x1cPathWithEscapedSlashesAction\x12\x12\n" +
-	"\x0eKEEP_UNCHANGED\x10\x00\x12\x12\n" +
-	"\x0eREJECT_REQUEST\x10\x01\x12\x19\n" +
-	"\x15UNESCAPE_AND_REDIRECT\x10\x02\x12\x18\n" +
-	"\x14UNESCAPE_AND_FORWARD\x10\x03\"l\n" +
+	"\x04EDGE\x10\x01\"\xc3\x01\n" +
+	"\x1cHeadersWithUnderscoresAction\x12(\n" +
+	"$HEADERS_WITH_UNDERSCORES_UNSPECIFIED\x10\x00\x12\"\n" +
+	"\x1eHEADERS_WITH_UNDERSCORES_ALLOW\x10\x01\x12+\n" +
+	"'HEADERS_WITH_UNDERSCORES_REJECT_REQUEST\x10\x02\x12(\n" +
+	"$HEADERS_WITH_UNDERSCORES_DROP_HEADER\x10\x03\"\xa6\x01\n" +
+	"\x1cPathWithEscapedSlashesAction\x12)\n" +
+	"%PATH_WITH_ESCAPED_SLASHES_UNSPECIFIED\x10\x00\x12\x12\n" +
+	"\x0eKEEP_UNCHANGED\x10\x01\x12\x12\n" +
+	"\x0eREJECT_REQUEST\x10\x02\x12\x19\n" +
+	"\x15UNESCAPE_AND_REDIRECT\x10\x03\x12\x18\n" +
+	"\x14UNESCAPE_AND_FORWARD\x10\x04\"l\n" +
 	"\x12TracingServiceName\x12\x1b\n" +
 	"\x17APP_LABEL_AND_NAMESPACE\x10\x00\x12\x17\n" +
 	"\x13CANONICAL_NAME_ONLY\x10\x01\x12 \n" +
