@@ -81,8 +81,10 @@ The library delegates heavily to existing Sail Operator infrastructure:
 ## CRD management
 
 The Library manages Istio CRDs when `ManageCRDs` is true (the default in PR #721; explicit on this branch).
-CRDs are loaded from the embedded `chart/crds/` filesystem, rendered via the base Helm chart,
-and filtered by `PILOT_INCLUDE_RESOURCES` / `PILOT_IGNORE_RESOURCES` when `IncludeAllCRDs` is false.
+CRDs are loaded from the embedded `chart/crds/` filesystem, but only `*.istio.io` API groups are
+managed. `sailoperator.io` CRDs are excluded — they are installed separately by the Sail Operator
+Helm chart. When `IncludeAllCRDs` is false, `PILOT_INCLUDE_RESOURCES` further narrows which
+Istio CRDs are installed.
 
 When an existing CRD has OLM labels (`olm.managed`), it is left alone unless `OverwriteOLMManagedCRD`
 is set to true.

@@ -224,6 +224,54 @@ metadata:
   name: istio
 `
 
+const testManifestsWithSailOperator = testManifests + `
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: istios.sailoperator.io
+spec:
+  group: sailoperator.io
+  names:
+    kind: Istio
+`
+
+func TestIstioCRD(t *testing.T) {
+	tests := []struct {
+		name   string
+		group  string
+		expect bool
+	}{
+		{name: "networking.istio.io", group: "networking.istio.io", expect: true},
+		{name: "extensions.istio.io", group: "extensions.istio.io", expect: true},
+		{name: "sailoperator.io", group: "sailoperator.io", expect: false},
+		{name: "empty group", group: "", expect: false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			crd := &apiextensionsv1.CustomResourceDefinition{
+				Spec: apiextensionsv1.CustomResourceDefinitionSpec{Group: tc.group},
+			}
+			g.Expect(istioCRD(crd)).To(Equal(tc.expect))
+		})
+	}
+}
+
+func TestLoadCRDs_excludesSailOperatorCRDs(t *testing.T) {
+	g := NewWithT(t)
+	m := &crdManager{crdFS: fstest.MapFS{
+		"crds.yaml": &fstest.MapFile{Data: []byte(testManifestsWithSailOperator)},
+	}}
+	crds, err := m.loadCRDs(Options{ManageCRDs: true, IncludeAllCRDs: true})
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(crds).To(HaveLen(2))
+	for _, crd := range crds {
+		g.Expect(crd.Name).NotTo(HaveSuffix(".sailoperator.io"))
+	}
+}
+
 func TestLoadCRDs_filterByPilotInclude(t *testing.T) {
 	g := NewWithT(t)
 	vals := &v1.Values{
@@ -386,6 +434,10 @@ func TestUnmanagedCRDNotTakenOver(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 
 	for _, info := range infos {
+		g.Expect(info.Name).NotTo(HaveSuffix(".sailoperator.io"))
+	}
+
+	for _, info := range infos {
 		var updated apiextensionsv1.CustomResourceDefinition
 		g.Expect(cl.Get(ctx, types.NamespacedName{Name: info.Name}, &updated)).To(Succeed())
 		if info.Name == "virtualservices.networking.istio.io" || info.Name == "gateways.networking.istio.io" {
@@ -441,6 +493,10 @@ func TestCRDOwnershipLabelCustom(t *testing.T) {
 	ctx := t.Context()
 	infos, err := m.Reconcile(ctx, Options{ManageCRDs: true, IncludeAllCRDs: true})
 	g.Expect(err).NotTo(HaveOccurred())
+
+	for _, info := range infos {
+		g.Expect(info.Name).NotTo(HaveSuffix(".sailoperator.io"))
+	}
 
 	for _, info := range infos {
 		var updated apiextensionsv1.CustomResourceDefinition

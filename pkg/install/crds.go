@@ -163,6 +163,9 @@ func (m *crdManager) loadCRDs(opts Options) ([]*apiextensionsv1.CustomResourceDe
 			if crd.Kind != "CustomResourceDefinition" {
 				continue
 			}
+			if !istioCRD(&crd) {
+				continue
+			}
 			if opts.IncludeAllCRDs || matchesCRDFilter(&crd, targetKinds) {
 				crds = append(crds, &crd)
 			}
@@ -191,6 +194,10 @@ func AggregateState(infos []CRDInfo) (CRDManagementState, string) {
 		return CRDManagementStateReady, ""
 	}
 	return CRDManagementStateNotReady, "not all CRDs are ready"
+}
+
+func istioCRD(crd *apiextensionsv1.CustomResourceDefinition) bool {
+	return strings.HasSuffix(crd.Spec.Group, ".istio.io")
 }
 
 func matchesCRDFilter(crd *apiextensionsv1.CustomResourceDefinition, targetKinds map[string]bool) bool {

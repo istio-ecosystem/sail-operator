@@ -97,6 +97,10 @@ func forEachChartCRD(fn func(obj *unstructured.Unstructured)) {
 		if obj.GetName() == "" {
 			continue
 		}
+		group, _, _ := unstructured.NestedString(obj.Object, "spec", "group")
+		if !strings.HasSuffix(group, ".istio.io") {
+			continue
+		}
 		fn(&obj)
 	}
 }
