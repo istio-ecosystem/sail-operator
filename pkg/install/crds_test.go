@@ -28,6 +28,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
+func defaultCRDManager() *crdManager {
+	return &crdManager{
+		ownershipLabelKey:   defaultCRDOwnershipLabelKey,
+		ownershipLabelValue: defaultCRDOwnershipLabelValue,
+	}
+}
+
 func TestAggregateState(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -72,7 +79,7 @@ func TestAggregateState(t *testing.T) {
 }
 
 func TestClassifyCRD(t *testing.T) {
-	m := &crdManager{}
+	m := defaultCRDManager()
 
 	tests := []struct {
 		name   string
@@ -92,7 +99,7 @@ func TestClassifyCRD(t *testing.T) {
 			name: "library managed",
 			crd: &apiextensionsv1.CustomResourceDefinition{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{"app.kubernetes.io/managed-by": managedByValue},
+					Labels: map[string]string{defaultCRDOwnershipLabelKey: defaultCRDOwnershipLabelValue},
 				},
 			},
 			expect: crdManagedByLibrary,
@@ -119,6 +126,32 @@ func TestClassifyCRD(t *testing.T) {
 			g.Expect(m.classifyCRD(tc.crd)).To(Equal(tc.expect))
 		})
 	}
+}
+
+func TestClassifyCRDCustomOwnershipLabel(t *testing.T) {
+	const (
+		customKey   = "ingress.operator.openshift.io/owned"
+		customValue = "true"
+	)
+	m := &crdManager{
+		ownershipLabelKey:   customKey,
+		ownershipLabelValue: customValue,
+	}
+
+	g := NewWithT(t)
+	owned := &apiextensionsv1.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{customKey: customValue},
+		},
+	}
+	g.Expect(m.classifyCRD(owned)).To(Equal(crdManagedByLibrary))
+
+	wrongValue := &apiextensionsv1.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{customKey: "false"},
+		},
+	}
+	g.Expect(m.classifyCRD(wrongValue)).To(Equal(crdUnmanaged))
 }
 
 func TestIsCRDReady(t *testing.T) {
@@ -342,8 +375,10 @@ func TestUnmanagedCRDNotTakenOver(t *testing.T) {
 	cl := fake.NewClientBuilder().WithScheme(s).WithObjects(existingVS, existingGW).Build()
 
 	m := &crdManager{
-		cl:    cl,
-		crdFS: chart.CRDsFS,
+		cl:                  cl,
+		crdFS:               chart.CRDsFS,
+		ownershipLabelKey:   defaultCRDOwnershipLabelKey,
+		ownershipLabelValue: defaultCRDOwnershipLabelValue,
 	}
 
 	ctx := t.Context()
@@ -355,13 +390,71 @@ func TestUnmanagedCRDNotTakenOver(t *testing.T) {
 		g.Expect(cl.Get(ctx, types.NamespacedName{Name: info.Name}, &updated)).To(Succeed())
 		if info.Name == "virtualservices.networking.istio.io" || info.Name == "gateways.networking.istio.io" {
 			g.Expect(info.Managed).To(BeFalse(), "unmanaged CRD %s should not be taken over", info.Name)
-			g.Expect(updated.Labels).NotTo(HaveKey(kubeManagedByLabel), "managed-by label should not be added to unmanaged CRD")
+			g.Expect(updated.Labels).NotTo(HaveKey(defaultCRDOwnershipLabelKey), "managed-by label should not be added to unmanaged CRD")
 			g.Expect(updated.Labels).To(Equal(existingGW.Labels), "existing labels should not be modified")
 			g.Expect(updated.Annotations).To(Equal(existingGW.Annotations), "existing annotations should not be modified")
 		} else {
 			g.Expect(info.Managed).To(BeTrue(), "CRD %s should be managed by the library", info.Name)
-			g.Expect(updated.Labels).To(HaveKey(kubeManagedByLabel))
-			g.Expect(updated.Labels[kubeManagedByLabel]).To(Equal(managedByValue))
+			g.Expect(updated.Labels).To(HaveKey(defaultCRDOwnershipLabelKey))
+			g.Expect(updated.Labels[defaultCRDOwnershipLabelKey]).To(Equal(defaultCRDOwnershipLabelValue))
+		}
+	}
+}
+
+func TestCRDOwnershipLabelCustom(t *testing.T) {
+	const (
+		customKey   = "ingress.operator.openshift.io/owned"
+		customValue = "true"
+	)
+
+	g := NewWithT(t)
+
+	existingOwned := &apiextensionsv1.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "virtualservices.networking.istio.io",
+			Labels: map[string]string{customKey: customValue},
+		},
+		Status: apiextensionsv1.CustomResourceDefinitionStatus{
+			Conditions: []apiextensionsv1.CustomResourceDefinitionCondition{
+				{Type: apiextensionsv1.Established, Status: apiextensionsv1.ConditionTrue},
+			},
+		},
+	}
+	existingUnmanaged := &apiextensionsv1.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "gateways.networking.istio.io",
+			Labels: map[string]string{"some-label": "some-value"},
+		},
+	}
+
+	s := runtime.NewScheme()
+	g.Expect(apiextensionsv1.AddToScheme(s)).To(Succeed())
+	cl := fake.NewClientBuilder().WithScheme(s).WithObjects(existingOwned, existingUnmanaged).Build()
+
+	m := &crdManager{
+		cl:                  cl,
+		crdFS:               chart.CRDsFS,
+		ownershipLabelKey:   customKey,
+		ownershipLabelValue: customValue,
+	}
+
+	ctx := t.Context()
+	infos, err := m.Reconcile(ctx, Options{ManageCRDs: true, IncludeAllCRDs: true})
+	g.Expect(err).NotTo(HaveOccurred())
+
+	for _, info := range infos {
+		var updated apiextensionsv1.CustomResourceDefinition
+		g.Expect(cl.Get(ctx, types.NamespacedName{Name: info.Name}, &updated)).To(Succeed())
+		switch info.Name {
+		case "gateways.networking.istio.io":
+			g.Expect(info.Managed).To(BeFalse())
+			g.Expect(updated.Labels).NotTo(HaveKey(customKey))
+		case "virtualservices.networking.istio.io":
+			g.Expect(info.Managed).To(BeTrue())
+			g.Expect(updated.Labels[customKey]).To(Equal(customValue))
+		default:
+			g.Expect(info.Managed).To(BeTrue(), "CRD %s should be managed", info.Name)
+			g.Expect(updated.Labels[customKey]).To(Equal(customValue))
 		}
 	}
 }

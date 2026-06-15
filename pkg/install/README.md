@@ -7,7 +7,9 @@ to install and maintain Istio as an internal dependency.
 ## Usage
 
 ```go
-lib, err := install.New(kubeConfig, resourceFS, crdFS)  // defaults: QPS=50, Burst=100
+lib, err := install.New(kubeConfig, resourceFS, crdFS,
+    install.WithCRDOwnershipLabel("ingress.operator.openshift.io/owned", "true"), // optional
+)
 notifyCh, err := lib.Start(ctx)
 
 // In controller reconcile:
@@ -47,7 +49,7 @@ The library delegates heavily to existing Sail Operator infrastructure:
 
 ### Constructor
 
-- `New(kubeConfig, resourceFS, crdFS, opts...)` -- creates a Library with Kubernetes clients, Helm chart manager, and CRD manager (defaults: QPS=50, Burst=100; override with `WithQPS()` / `WithBurst()`)
+- `New(kubeConfig, resourceFS, crdFS, opts...)` -- creates a Library with Kubernetes clients, Helm chart manager, and CRD manager (defaults: QPS=50, Burst=100; override with `WithQPS()` / `WithBurst()` / `WithCRDOwnershipLabel()`)
 - `FromDirectory(path)` -- creates an `fs.FS` from a filesystem path (alternative to embedded resources)
 
 ### Library methods
@@ -84,6 +86,13 @@ and filtered by `PILOT_INCLUDE_RESOURCES` / `PILOT_IGNORE_RESOURCES` when `Inclu
 
 When an existing CRD has OLM labels (`olm.managed`), it is left alone unless `OverwriteOLMManagedCRD`
 is set to true.
+
+CRD ownership is determined by a configurable label (default: `app.kubernetes.io/managed-by=sail-library`).
+Use `WithCRDOwnershipLabel(key, value)` at library construction time to match labels already present
+on cluster CRDs. For example, OpenShift Ingress can pass
+`WithCRDOwnershipLabel("ingress.operator.openshift.io/owned", "true")` to continue managing CRDs
+installed by a previous version. The embedder must configure the label to match existing CRDs;
+the library does not migrate ownership labels automatically.
 
 ## Design: delegation over reimplementation
 

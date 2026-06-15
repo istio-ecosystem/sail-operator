@@ -30,8 +30,7 @@ import (
 )
 
 const (
-	kubeManagedByLabel = "app.kubernetes.io/managed-by"
-	OLMManagedLabel    = "olm.managed"
+	OLMManagedLabel = "olm.managed"
 )
 
 type crdOwnership int
@@ -43,8 +42,10 @@ const (
 )
 
 type crdManager struct {
-	cl    client.Client
-	crdFS fs.FS
+	cl                  client.Client
+	crdFS               fs.FS
+	ownershipLabelKey   string
+	ownershipLabelValue string
 }
 
 // Reconcile installs or updates CRDs based on the provided options.
@@ -76,7 +77,7 @@ func (m *crdManager) applyCRD(ctx context.Context, crd *apiextensionsv1.CustomRe
 	existing := &apiextensionsv1.CustomResourceDefinition{}
 	err := m.cl.Get(ctx, types.NamespacedName{Name: name}, existing)
 	if apierrors.IsNotFound(err) {
-		setManagedByLabel(crd)
+		m.setManagedByLabel(crd)
 		if err := m.cl.Create(ctx, crd); err != nil {
 			return info, fmt.Errorf("failed to create CRD %s: %w", name, err)
 		}
@@ -100,7 +101,7 @@ func (m *crdManager) applyCRD(ctx context.Context, crd *apiextensionsv1.CustomRe
 	}
 
 	crd.SetResourceVersion(existing.ResourceVersion)
-	setManagedByLabel(crd)
+	m.setManagedByLabel(crd)
 	if err := m.cl.Update(ctx, crd); err != nil {
 		return info, fmt.Errorf("failed to update CRD %s: %w", name, err)
 	}
@@ -108,12 +109,12 @@ func (m *crdManager) applyCRD(ctx context.Context, crd *apiextensionsv1.CustomRe
 	return info, nil
 }
 
-func setManagedByLabel(crd *apiextensionsv1.CustomResourceDefinition) {
+func (m *crdManager) setManagedByLabel(crd *apiextensionsv1.CustomResourceDefinition) {
 	labels := crd.GetLabels()
 	if labels == nil {
 		labels = map[string]string{}
 	}
-	labels[kubeManagedByLabel] = managedByValue
+	labels[m.ownershipLabelKey] = m.ownershipLabelValue
 	crd.SetLabels(labels)
 }
 
@@ -121,7 +122,7 @@ func (m *crdManager) classifyCRD(crd *apiextensionsv1.CustomResourceDefinition) 
 	if _, ok := crd.Labels[OLMManagedLabel]; ok {
 		return crdManagedByOLM
 	}
-	if crd.Labels != nil && crd.Labels[kubeManagedByLabel] == managedByValue {
+	if crd.Labels != nil && crd.Labels[m.ownershipLabelKey] == m.ownershipLabelValue {
 		return crdManagedByLibrary
 	}
 	return crdUnmanaged
