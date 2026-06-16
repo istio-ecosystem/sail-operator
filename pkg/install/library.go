@@ -40,6 +40,9 @@ const (
 
 	defaultQPS   float32 = 50
 	defaultBurst int     = 100
+
+	defaultCRDOwnershipLabelKey   = "app.kubernetes.io/managed-by"
+	defaultCRDOwnershipLabelValue = "sail-library"
 )
 
 // OverwriteOLMManagedCRDFunc is called when a CRD is detected with OLM
@@ -52,8 +55,10 @@ type OverwriteOLMManagedCRDFunc func(ctx context.Context, crd *apiextensionsv1.C
 type LibraryOption func(*libraryOptions)
 
 type libraryOptions struct {
-	qps   float32
-	burst int
+	qps                    float32
+	burst                  int
+	crdOwnershipLabelKey   string
+	crdOwnershipLabelValue string
 }
 
 // WithQPS sets the maximum sustained queries-per-second to the API server.
@@ -64,6 +69,16 @@ func WithQPS(qps float32) LibraryOption {
 // WithBurst sets the maximum burst of requests to the API server.
 func WithBurst(burst int) LibraryOption {
 	return func(o *libraryOptions) { o.burst = burst }
+}
+
+// WithCRDOwnershipLabel sets the label key and value used to identify CRDs
+// owned by the library. Existing CRDs must already carry this label for the
+// library to manage them. Defaults: app.kubernetes.io/managed-by=sail-library.
+func WithCRDOwnershipLabel(key, value string) LibraryOption {
+	return func(o *libraryOptions) {
+		o.crdOwnershipLabelKey = key
+		o.crdOwnershipLabelValue = value
+	}
 }
 
 // Options specifies the desired state for the istiod installation.
@@ -142,12 +157,14 @@ type Library struct {
 	mu       sync.Mutex
 	statusMu sync.RWMutex
 
-	kubeConfig   *rest.Config
-	resourceFS   fs.FS
-	crdFS        fs.FS
-	cl           client.Client
-	chartManager *helm.ChartManager
-	platform     config.Platform
+	kubeConfig             *rest.Config
+	resourceFS             fs.FS
+	crdFS                  fs.FS
+	cl                     client.Client
+	chartManager           *helm.ChartManager
+	platform               config.Platform
+	crdOwnershipLabelKey   string
+	crdOwnershipLabelValue string
 
 	triggerCh chan event.GenericEvent
 	notifyCh  chan struct{}
@@ -167,13 +184,31 @@ func ValidateOptions(opts Options) error {
 	return istioversion.ValidateVersion(opts.Version)
 }
 
+func validateCRDOwnershipLabel(key, value string) error {
+	if key == "" {
+		return fmt.Errorf("CRD ownership label key must not be empty")
+	}
+	if value == "" {
+		return fmt.Errorf("CRD ownership label value must not be empty")
+	}
+	return nil
+}
+
 // New creates a new Library instance. The resourceFS should contain Helm chart
 // resources (typically from resources/ directory or FromDirectory()).
 // The crdFS should contain CRD YAML files (typically from chart/crds/).
 func New(kubeConfig *rest.Config, resourceFS, crdFS fs.FS, opts ...LibraryOption) (*Library, error) {
-	o := libraryOptions{qps: defaultQPS, burst: defaultBurst}
+	o := libraryOptions{
+		qps:                    defaultQPS,
+		burst:                  defaultBurst,
+		crdOwnershipLabelKey:   defaultCRDOwnershipLabelKey,
+		crdOwnershipLabelValue: defaultCRDOwnershipLabelValue,
+	}
 	for _, fn := range opts {
 		fn(&o)
+	}
+	if err := validateCRDOwnershipLabel(o.crdOwnershipLabelKey, o.crdOwnershipLabelValue); err != nil {
+		return nil, err
 	}
 
 	cfg := rest.CopyConfig(kubeConfig)
@@ -196,14 +231,16 @@ func New(kubeConfig *rest.Config, resourceFS, crdFS fs.FS, opts ...LibraryOption
 	setupLog.Info("detected platform", "platform", platform)
 
 	return &Library{
-		kubeConfig:   cfg,
-		resourceFS:   resourceFS,
-		crdFS:        crdFS,
-		cl:           cl,
-		chartManager: chartManager,
-		platform:     platform,
-		triggerCh:    make(chan event.GenericEvent, 1),
-		notifyCh:     make(chan struct{}, 1),
+		kubeConfig:             cfg,
+		resourceFS:             resourceFS,
+		crdFS:                  crdFS,
+		cl:                     cl,
+		chartManager:           chartManager,
+		platform:               platform,
+		crdOwnershipLabelKey:   o.crdOwnershipLabelKey,
+		crdOwnershipLabelValue: o.crdOwnershipLabelValue,
+		triggerCh:              make(chan event.GenericEvent, 1),
+		notifyCh:               make(chan struct{}, 1),
 	}, nil
 }
 

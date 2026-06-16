@@ -25,6 +25,39 @@ import (
 	"istio.io/istio/pkg/ptr"
 )
 
+func TestWithCRDOwnershipLabel(t *testing.T) {
+	g := NewWithT(t)
+
+	o := libraryOptions{
+		crdOwnershipLabelKey:   defaultCRDOwnershipLabelKey,
+		crdOwnershipLabelValue: defaultCRDOwnershipLabelValue,
+	}
+	WithCRDOwnershipLabel("ingress.operator.openshift.io/owned", "true")(&o)
+	g.Expect(o.crdOwnershipLabelKey).To(Equal("ingress.operator.openshift.io/owned"))
+	g.Expect(o.crdOwnershipLabelValue).To(Equal("true"))
+}
+
+func TestCRDOwnershipLabelEmptyValidation(t *testing.T) {
+	tests := []struct {
+		name    string
+		key     string
+		value   string
+		wantErr string
+	}{
+		{name: "empty key", key: "", value: "true", wantErr: "CRD ownership label key must not be empty"},
+		{name: "empty value", key: defaultCRDOwnershipLabelKey, value: "", wantErr: "CRD ownership label value must not be empty"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			err := validateCRDOwnershipLabel(tc.key, tc.value)
+			g.Expect(err).To(HaveOccurred())
+			g.Expect(err.Error()).To(Equal(tc.wantErr))
+		})
+	}
+}
+
 func TestValidateOptions(t *testing.T) {
 	savedMap := istioversion.Map
 	savedEOL := istioversion.EOL
