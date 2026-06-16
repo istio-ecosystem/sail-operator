@@ -160,9 +160,14 @@ func (l *Library) newInstaller(namespace string) *installer {
 	}
 	return &installer{
 		istiodReconciler: sharedreconcile.NewIstiodReconciler(cfg, l.cl),
-		crdManager:       &crdManager{cl: l.cl, crdFS: l.crdFS},
-		cfg:              cfg,
-		platform:         l.platform,
+		crdManager: &crdManager{
+			cl:                  l.cl,
+			crdFS:               l.crdFS,
+			ownershipLabelKey:   l.crdOwnershipLabelKey,
+			ownershipLabelValue: l.crdOwnershipLabelValue,
+		},
+		cfg:      cfg,
+		platform: l.platform,
 	}
 }
 
