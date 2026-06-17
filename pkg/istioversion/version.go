@@ -84,6 +84,23 @@ func Resolve(version string) (string, error) {
 	return info.Name, nil
 }
 
+func DefaultVersion() string {
+	return Default
+}
+
+func ValidateVersion(version string) error {
+	if version == "" {
+		return fmt.Errorf("version must not be empty")
+	}
+	if _, ok := Map[version]; !ok {
+		if IsEOLVersion(version) {
+			return fmt.Errorf("version %q is end-of-life and cannot be installed", version)
+		}
+		return fmt.Errorf("version %q is not supported", version)
+	}
+	return nil
+}
+
 // IsEOLVersion returns true if the version is known but has been marked end-of-life.
 func IsEOLVersion(version string) bool {
 	for _, eolVersion := range EOL {

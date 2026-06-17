@@ -158,7 +158,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		reconcilerCfg.TLSConfig, err = config.NewTLSConfigForOpenShift(ctx, setupLog, cl)
+		reconcilerCfg.TLSConfig, err = config.FetchTLSConfigForOpenShift(ctx, setupLog, cl)
 		if err != nil {
 			setupLog.Error(err, "unable to fetch TLS config")
 			os.Exit(1)

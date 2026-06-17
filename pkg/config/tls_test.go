@@ -34,7 +34,7 @@ var (
 	modernTLSCiphers, _  = cipherCodes(configv1.TLSProfiles[configv1.TLSProfileModernType].Ciphers)
 )
 
-func TestNewTLSConfigForOpenShift(t *testing.T) {
+func TestFetchTLSConfigForOpenShift(t *testing.T) {
 	log := zap.New(zap.UseDevMode(true))
 	scheme := runtime.NewScheme()
 	require.NoError(t, configv1.Install(scheme))
@@ -126,7 +126,7 @@ func TestNewTLSConfigForOpenShift(t *testing.T) {
 			}
 			cl := builder.Build()
 
-			tlsConfig, err := NewTLSConfigForOpenShift(t.Context(), log, cl)
+			tlsConfig, err := FetchTLSConfigForOpenShift(t.Context(), log, cl)
 			if tt.wantErr {
 				require.Error(err)
 				return

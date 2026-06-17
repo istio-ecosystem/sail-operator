@@ -158,6 +158,30 @@ func TestParseVersionsYaml_InvalidYaml(t *testing.T) {
 	})
 }
 
+func TestDefaultVersion(t *testing.T) {
+	assert.Equal(t, Default, DefaultVersion())
+	assert.NotEmpty(t, DefaultVersion())
+}
+
+func TestValidateVersion(t *testing.T) {
+	savedMap := Map
+	savedEOL := EOL
+	defer func() { Map = savedMap; EOL = savedEOL }()
+
+	Map = map[string]VersionInfo{
+		"v1.0.0": {Name: "v1.0.0"},
+	}
+	EOL = []string{"v0.9.0"}
+
+	assert.NoError(t, ValidateVersion("v1.0.0"))
+	assert.Error(t, ValidateVersion(""))
+	assert.Error(t, ValidateVersion("nonexistent-version"))
+
+	err := ValidateVersion("v0.9.0")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "end-of-life")
+}
+
 func TestGetLatestPatchVersions_Valid(t *testing.T) {
 	t.Run("valid versions", func(t *testing.T) {
 		List = []VersionInfo{
