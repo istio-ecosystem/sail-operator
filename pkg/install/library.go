@@ -24,6 +24,7 @@ import (
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
+	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
@@ -35,8 +36,9 @@ import (
 )
 
 const (
-	managedByValue = "sail-library"
-	helmDriver     = "secret"
+	managedByLabelKey = constants.ManagedByLabelKey // "managed-by"
+	managedByValue    = "sail-library"
+	helmDriver        = "secret"
 
 	defaultQPS   float32 = 50
 	defaultBurst int     = 100

@@ -23,6 +23,7 @@ import (
 
 	"github.com/istio-ecosystem/sail-operator/chart"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
+	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/install"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
@@ -31,10 +32,19 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	configv1 "github.com/openshift/api/config/v1"
+	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/yaml"
+
+	"istio.io/istio/pkg/ptr"
+)
+
+const (
+	tlsTestNamespace   = "library-test-tls"
+	loopTestNamespace  = "library-test-loop"
+	driftTestNamespace = "library-test-drift"
 )
 
 var _ = Describe("Library Reconciliation", Label("reconciliation"), Ordered, func() {
@@ -43,14 +53,13 @@ var _ = Describe("Library Reconciliation", Label("reconciliation"), Ordered, fun
 
 	ctx := context.Background()
 
-	BeforeAll(func() {
-		common.EnsureNamespaceWithCleanup(k, libraryNamespace)
-	})
-
 	When("TLS options are passed via Options", func() {
 		var lib *install.Library
 
-		const revision = "tlstest"
+		const (
+			namespace = tlsTestNamespace
+			revision  = "tlstest"
+		)
 
 		openshiftTLS := &config.OpenShiftTLS{
 			TLSProfileSpec: configv1.TLSProfileSpec{
@@ -64,6 +73,8 @@ var _ = Describe("Library Reconciliation", Label("reconciliation"), Ordered, fun
 		}
 
 		BeforeAll(func() {
+			common.EnsureNamespaceWithCleanup(k, namespace)
+
 			var err error
 			lib, err = install.New(kubeConfig, resources.FS, chart.CRDsFS)
 			Expect(err).NotTo(HaveOccurred())
@@ -72,14 +83,14 @@ var _ = Describe("Library Reconciliation", Label("reconciliation"), Ordered, fun
 			Expect(err).NotTo(HaveOccurred())
 
 			DeferCleanup(func() {
-				Expect(lib.Uninstall(ctx, libraryNamespace, revision)).To(Succeed())
+				Expect(lib.Uninstall(ctx, namespace, revision)).To(Succeed())
 				lib.Stop()
 				Success("Cleaned up TLS test")
 			})
 
 			Expect(lib.Apply(install.Options{
-				Values:         install.GatewayAPIDefaults(libraryNamespace),
-				Namespace:      libraryNamespace,
+				Values:         install.GatewayAPIDefaults(namespace),
+				Namespace:      namespace,
 				Version:        istioversion.Default,
 				Revision:       revision,
 				OpenShiftTLS:   openshiftTLS,
@@ -100,7 +111,7 @@ var _ = Describe("Library Reconciliation", Label("reconciliation"), Ordered, fun
 				deploy := &appsv1.Deployment{}
 				g.Expect(cl.Get(ctx, types.NamespacedName{
 					Name:      "istiod-" + revision,
-					Namespace: libraryNamespace,
+					Namespace: namespace,
 				}, deploy)).To(Succeed())
 
 				var discoveryArgs []string
@@ -124,7 +135,7 @@ var _ = Describe("Library Reconciliation", Label("reconciliation"), Ordered, fun
 				cm := &corev1.ConfigMap{}
 				g.Expect(cl.Get(ctx, types.NamespacedName{
 					Name:      "istio-" + revision,
-					Namespace: libraryNamespace,
+					Namespace: namespace,
 				}, cm)).To(Succeed())
 
 				meshYAML, ok := cm.Data["mesh"]
@@ -151,16 +162,24 @@ var _ = Describe("Library Reconciliation", Label("reconciliation"), Ordered, fun
 
 	When("the library reconcile loop stabilizes after install", func() {
 		var lib *install.Library
+
+		const (
+			namespace = loopTestNamespace
+			revision  = "crdtest"
+		)
+
 		installOpts := install.Options{
-			Values:         install.GatewayAPIDefaults(libraryNamespace),
-			Namespace:      libraryNamespace,
+			Values:         install.GatewayAPIDefaults(namespace),
+			Namespace:      namespace,
 			Version:        istioversion.Default,
-			Revision:       "crdtest",
+			Revision:       revision,
 			ManageCRDs:     true,
 			IncludeAllCRDs: true,
 		}
 
 		BeforeAll(func() {
+			common.EnsureNamespaceWithCleanup(k, namespace)
+
 			var err error
 			lib, err = install.New(kubeConfig, resources.FS, chart.CRDsFS)
 			Expect(err).NotTo(HaveOccurred())
@@ -169,7 +188,7 @@ var _ = Describe("Library Reconciliation", Label("reconciliation"), Ordered, fun
 			Expect(err).NotTo(HaveOccurred())
 
 			DeferCleanup(func() {
-				Expect(lib.Uninstall(ctx, libraryNamespace, "crdtest")).To(Succeed())
+				Expect(lib.Uninstall(ctx, namespace, revision)).To(Succeed())
 				lib.Stop()
 				Success("Cleaned up reconcile loop test")
 			})
@@ -194,6 +213,82 @@ var _ = Describe("Library Reconciliation", Label("reconciliation"), Ordered, fun
 					fmt.Sprintf("library generation changed from %d to %d, indicating a reconcile loop", initialGeneration, lib.Status().Generation))
 			}, 10*time.Second, 2*time.Second).Should(Succeed())
 			Success("Library generation is stable — no reconcile loop detected")
+		})
+	})
+
+	When("drift detection reconciles owned istiod resources", func() {
+		var lib *install.Library
+
+		const (
+			namespace = driftTestNamespace
+			revision  = "drifttest"
+		)
+
+		installOpts := install.Options{
+			Values:         install.GatewayAPIDefaults(namespace),
+			Namespace:      namespace,
+			Version:        istioversion.Default,
+			Revision:       revision,
+			ManageCRDs:     false,
+			IncludeAllCRDs: false,
+		}
+
+		BeforeAll(func() {
+			common.EnsureNamespaceWithCleanup(k, namespace)
+
+			var err error
+			lib, err = install.New(kubeConfig, resources.FS, chart.CRDsFS)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = lib.Start(ctx)
+			Expect(err).NotTo(HaveOccurred())
+
+			DeferCleanup(func() {
+				if err := lib.Uninstall(ctx, namespace, revision); err != nil {
+					GinkgoWriter.Printf("drift test uninstall (best-effort): %v\n", err)
+				}
+				lib.Stop()
+				Success("Cleaned up drift detection test")
+			})
+
+			Expect(lib.Apply(installOpts)).To(Succeed())
+
+			Eventually(func(g Gomega) {
+				s := lib.Status()
+				g.Expect(s.Error).NotTo(HaveOccurred(), "library install error")
+				g.Expect(s.Installed).To(BeTrue(), "library not yet installed")
+			}).Should(Succeed())
+			Success("Library installed for drift detection test")
+		})
+
+		It("labels istiod resources with managed-by=sail-library", func(ctx SpecContext) {
+			deploy := &appsv1.Deployment{}
+			Expect(cl.Get(ctx, types.NamespacedName{
+				Name:      "istiod-" + revision,
+				Namespace: namespace,
+			}, deploy)).To(Succeed())
+			Expect(deploy.Labels).To(HaveKeyWithValue(constants.ManagedByLabelKey, "sail-library"))
+			Success("Istiod deployment has managed-by=sail-library label")
+		})
+
+		It("re-reconciles when a watched resource is modified", func(ctx SpecContext) {
+			webhookKey := types.NamespacedName{
+				Name: fmt.Sprintf("istio-validator-%s-%s", revision, namespace),
+			}
+			webhook := &admissionv1.ValidatingWebhookConfiguration{}
+			Expect(cl.Get(ctx, webhookKey, webhook)).To(Succeed())
+
+			webhook.Webhooks[0].Name = "xyz.xyz.xyz"
+			webhook.Webhooks[0].FailurePolicy = ptr.Of(admissionv1.Fail)
+			Expect(cl.Update(ctx, webhook)).To(Succeed())
+
+			Eventually(func(g Gomega) {
+				restored := &admissionv1.ValidatingWebhookConfiguration{}
+				g.Expect(cl.Get(ctx, webhookKey, restored)).To(Succeed())
+				g.Expect(restored.Webhooks[0].Name).NotTo(Equal("xyz.xyz.xyz"))
+				g.Expect(restored.Webhooks[0].FailurePolicy).To(HaveValue(Equal(admissionv1.Fail)))
+			}).Should(Succeed())
+			Success("Library re-reconciled validating webhook after drift")
 		})
 	})
 })
