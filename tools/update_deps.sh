@@ -58,7 +58,7 @@ fi
 # getLatestVersion gets the latest released version of a github project
 # $1 = org/repo
 function getLatestVersion() {
-  curl -sL "https://api.github.com/repos/${1}/releases/latest" | yq '.tag_name'
+  curl -sL "https://api.github.com/repos/${1}/releases/latest" | jq -r '.tag_name'
 }
 
 # getLatestVersionByPrefix gets the latest released version of a github project with a specific version prefix
@@ -66,7 +66,7 @@ function getLatestVersion() {
 # $2 = version prefix
 function getLatestVersionByPrefix() {
   curl -sL "https://api.github.com/repos/${1}/releases?per_page=100" | \
-    yq -r '.[].tag_name' | \
+    jq -r '.[].tag_name' | \
     grep -E "^v?${2}[.0-9]*$" | \
     sort -V | \
     tail -n 1
