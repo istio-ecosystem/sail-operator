@@ -72,7 +72,20 @@ function downloadIstioManifests() {
   echo "${ISTIO_COMMIT}" > "${commit_file}"
 
   echo "downloading Git archive from ${ISTIO_URL}"
-  curl -sSLfO "${ISTIO_URL}"
+  # Retry up to 3 times with exponential backoff on failures (network errors, 5xx responses)
+  for i in 1 2 3; do
+    if curl -sSLfO --retry 2 --retry-delay 2 --retry-max-time 120 "${ISTIO_URL}"; then
+      break
+    else
+      if [ "$i" -lt 3 ]; then
+        echo "Download failed (attempt $i/3), retrying in $((2**i)) seconds..."
+        sleep $((2**i))
+      else
+        echo "Download failed after 3 attempts"
+        exit 1
+      fi
+    fi
+  done
 
   ISTIO_FILE="${ISTIO_URL##*/}"
   EXTRACT_DIR="${ISTIO_REPO##*/}-${ISTIO_COMMIT}"
@@ -82,7 +95,20 @@ function downloadIstioManifests() {
       file="${url##*/}"
       etag_file="${MANIFEST_DIR}/$file.etag"
       echo "downloading chart from $url"
-      curl -LfO -D - "$url" 2>/dev/null | awk -F': ' '/^etag:/ {print $2}' | tr -d "\"" > "$etag_file"
+      # Retry up to 3 times with exponential backoff on failures
+      for i in 1 2 3; do
+        if curl -LfO -D - --retry 2 --retry-delay 2 --retry-max-time 120 "$url" 2>/dev/null | awk -F': ' '/^etag:/ {print $2}' | tr -d "\"" > "$etag_file"; then
+          break
+        else
+          if [ "$i" -lt 3 ]; then
+            echo "Chart download failed (attempt $i/3), retrying in $((2**i)) seconds..."
+            sleep $((2**i))
+          else
+            echo "Chart download failed after 3 attempts"
+            exit 1
+          fi
+        fi
+      done
 
       echo "extracting charts from $file to ${CHARTS_DIR}"
       tar zxf "$file" -C "${CHARTS_DIR}"
