@@ -40,19 +40,17 @@ function getVersionFromMakefile() {
 }
 
 # Get current versions from Makefile and set as variables
-# Only needed when PIN_MINOR is true (for patch version updates)
-if [[ "${PIN_MINOR}" == "true" ]]; then
-  OPERATOR_SDK_VERSION=$(getVersionFromMakefile "OPERATOR_SDK_VERSION")
-  # shellcheck disable=SC2034
-  HELM_VERSION=$(getVersionFromMakefile "HELM_VERSION")
-  CONTROLLER_TOOLS_VERSION=$(getVersionFromMakefile "CONTROLLER_TOOLS_VERSION")
-  CONTROLLER_RUNTIME_BRANCH=$(getVersionFromMakefile "CONTROLLER_RUNTIME_BRANCH")
-  OPM_VERSION=$(getVersionFromMakefile "OPM_VERSION")
-  OLM_VERSION=$(getVersionFromMakefile "OLM_VERSION")
-  GITLEAKS_VERSION=$(getVersionFromMakefile "GITLEAKS_VERSION")
-  RUNME_VERSION=$(getVersionFromMakefile "RUNME_VERSION")
-  MISSPELL_VERSION=$(getVersionFromMakefile "MISSPELL_VERSION")
-fi
+# These are always needed for getVersionForUpdate function
+OPERATOR_SDK_VERSION=$(getVersionFromMakefile "OPERATOR_SDK_VERSION")
+# shellcheck disable=SC2034
+HELM_VERSION=$(getVersionFromMakefile "HELM_VERSION")
+CONTROLLER_TOOLS_VERSION=$(getVersionFromMakefile "CONTROLLER_TOOLS_VERSION")
+CONTROLLER_RUNTIME_BRANCH=$(getVersionFromMakefile "CONTROLLER_RUNTIME_BRANCH")
+OPM_VERSION=$(getVersionFromMakefile "OPM_VERSION")
+OLM_VERSION=$(getVersionFromMakefile "OLM_VERSION")
+GITLEAKS_VERSION=$(getVersionFromMakefile "GITLEAKS_VERSION")
+RUNME_VERSION=$(getVersionFromMakefile "RUNME_VERSION")
+MISSPELL_VERSION=$(getVersionFromMakefile "MISSPELL_VERSION")
 
 
 # getLatestVersion gets the latest released version of a github project
