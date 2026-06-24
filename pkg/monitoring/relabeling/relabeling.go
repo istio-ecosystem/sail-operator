@@ -115,18 +115,25 @@ func openshiftPodMonitorRelabelings(meshID string) []monitoringv1.RelabelConfig 
 	})
 }
 
-// openShiftMetricTuningPodMonitorRelabelings returns relabeling rules
-// by dropping unnecessary metrics and labels from Service Mesh Istio default scraping jobs: 
+const (
+	metricTuningDropMetricsRegex = "istio_agent_.*|istiod_.*|istio_build|citadel_.*|galley_.*|pilot_[^psx].*|" +
+		"envoy_cluster_[^u].*|envoy_cluster_update.*|envoy_listener_[^dh].*|envoy_server_[^mu].*|envoy_wasm_.*"
+	metricTuningDropLabelsRegex = "chart|destination_app|destination_version|heritage|.*operator.*|istio.*|release|" +
+		"security_istio_io_.*|service_istio_io_.*|sidecar_istio_io_inject|source_app|source_version"
+)
+
+// openShiftMetricTuningPodMonitorRelabelings returns relabeling rules that drop unnecessary
+// metrics and labels from Service Mesh Istio default scraping jobs.
 func openShiftMetricTuningPodMonitorRelabelings(meshID string) []monitoringv1.RelabelConfig {
 	return cloneRelabelConfigs(append(openshiftPodMonitorRelabelings(meshID),
 		monitoringv1.RelabelConfig{
 			Action:       "drop",
 			SourceLabels: []monitoringv1.LabelName{"__name__"},
-			Regex:        "istio_agent_.*|istiod_.*|istio_build|citadel_.*|galley_.*|pilot_[^psx].*|envoy_cluster_[^u].*|envoy_cluster_update.*|envoy_listener_[^dh].*|envoy_server_[^mu].*|envoy_wasm_.*",
+			Regex:        metricTuningDropMetricsRegex,
 		},
 		monitoringv1.RelabelConfig{
 			Action: "labeldrop",
-			Regex:  "chart|destination_app|destination_version|heritage|.*operator.*|istio.*|release|security_istio_io_.*|service_istio_io_.*|sidecar_istio_io_inject|source_app|source_version",
+			Regex:  metricTuningDropLabelsRegex,
 		}))
 }
 
