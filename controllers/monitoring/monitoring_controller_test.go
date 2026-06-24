@@ -47,7 +47,6 @@ var (
 	istioName      = "my-istio"
 	istioNamespace = "my-istio-namespace"
 	appNamespace   = "my-app-namespace"
-	revisionKey    = types.NamespacedName{Name: revisionName}
 	revisionMeta   = metav1.ObjectMeta{
 		Name: revisionName,
 		UID:  revisionUID,
@@ -636,7 +635,7 @@ func TestBuildServiceMonitor(t *testing.T) {
 			g.Expect(result.Spec.Selector.MatchExpressions[0].Values).To(Equal(tt.expectedSelectorValues))
 
 			// Check endpoints
-			g.Expect(len(result.Spec.Endpoints)).To(Equal(1))
+			g.Expect(result.Spec.Endpoints).To(HaveLen(1))
 			endpoint := result.Spec.Endpoints[0]
 			g.Expect(endpoint.Port).To(Equal("http-monitoring"))
 			g.Expect(endpoint.Path).To(Equal("/metrics"))
@@ -646,7 +645,7 @@ func TestBuildServiceMonitor(t *testing.T) {
 
 			// Check owner references
 			ownerRefs := result.GetOwnerReferences()
-			g.Expect(len(ownerRefs)).To(Equal(1))
+			g.Expect(ownerRefs).To(HaveLen(1))
 			g.Expect(ownerRefs[0].Kind).To(Equal(v1.IstioRevisionKind))
 			g.Expect(ownerRefs[0].Name).To(Equal(tt.rev.Name))
 		})
@@ -731,16 +730,16 @@ func TestBuildPodMonitor(t *testing.T) {
 
 			// PodMonitor should NOT have owner references (cross-namespace)
 			ownerRefs := result.GetOwnerReferences()
-			g.Expect(len(ownerRefs)).To(Equal(0))
+			g.Expect(ownerRefs).To(BeEmpty())
 
 			// Check spec.selector.matchExpressions
-			g.Expect(len(result.Spec.Selector.MatchExpressions)).To(Equal(1))
+			g.Expect(result.Spec.Selector.MatchExpressions).To(HaveLen(1))
 			expr := result.Spec.Selector.MatchExpressions[0]
 			g.Expect(expr.Key).To(Equal("istio-prometheus-ignore"))
 			g.Expect(expr.Operator).To(Equal(metav1.LabelSelectorOpDoesNotExist))
 
 			// Check podMetricsEndpoints
-			g.Expect(len(result.Spec.PodMetricsEndpoints)).To(Equal(1))
+			g.Expect(result.Spec.PodMetricsEndpoints).To(HaveLen(1))
 			endpoint := result.Spec.PodMetricsEndpoints[0]
 			g.Expect(endpoint.Port).To(BeNil())
 			g.Expect(endpoint.Path).To(Equal("/stats/prometheus"))
