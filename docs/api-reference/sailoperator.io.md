@@ -885,6 +885,7 @@ _Appears in:_
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift openshift-ambient preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. Note that this field is immutable. | istio-system |  |
 | `values` _[Values](#values)_ | Defines the values to be passed to the Helm charts when installing Istio. |  |  |
+| `monitoring` _[MonitoringConfig](#monitoringconfig)_ | Defines the configuration for Prometheus monitoring integration. When enabled, the operator creates ServiceMonitor and PodMonitor resources for scraping Istio metrics using the Cluster Observability Operator (COO). |  |  |
 
 
 #### IstioStatus
@@ -2025,6 +2026,22 @@ _Appears in:_
 | `TLSV1_3` | TLS version 1.3  |
 
 
+
+
+#### MonitoringConfig
+
+
+
+MonitoringConfig defines the configuration for Prometheus monitoring integration
+
+
+
+_Appears in:_
+- [IstioSpec](#istiospec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | When enabled, the operator creates ServiceMonitor resources for istiod and PodMonitor resources for Envoy sidecars in namespaces with istio-injection=enabled label. Defaults to false. | false |  |
 
 
 #### MultiClusterConfig
