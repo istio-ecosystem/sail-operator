@@ -43,7 +43,7 @@ const (
 	SleepNamespace     = "sleep"
 )
 
-var _ = Describe("DualStack configuration ", Label("dualstack"), Ordered, func() {
+var _ = Describe("DualStack configuration ", Label("dualstack", "slow", "sidecar"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 

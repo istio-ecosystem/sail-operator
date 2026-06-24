@@ -40,7 +40,7 @@ import (
 	"istio.io/istio/pkg/ptr"
 )
 
-var _ = Describe("Gateway Controller with Install Library", Label("gateway-controller"), Ordered, func() {
+var _ = Describe("Gateway Controller with Install Library", Label("gateway-controller", "slow"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 

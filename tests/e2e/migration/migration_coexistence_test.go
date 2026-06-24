@@ -93,8 +93,7 @@ var _ = Describe("Migration Sidecar-Ambient Coexistence Validation", Ordered,
 				clr.Cleanup(ctx)
 			})
 
-			Context("Sidecar-Ambient Coexistence with Continuous Traffic", Ordered,
-				Label("migration-coexistence-traffic"), func() {
+			Context("Sidecar-Ambient Coexistence with Continuous Traffic", Ordered, func() {
 					BeforeAll(func(ctx SpecContext) {
 						// Create and deploy stable client (never migrates, always stays in sidecar mode)
 						Expect(k.CreateNamespace(stableClientNamespace)).To(Succeed())

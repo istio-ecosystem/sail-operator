@@ -120,7 +120,7 @@ func createAllIstioCRDs(ctx context.Context) {
 	})
 }
 
-var _ = Describe("CRD Ownership", Label("crd-ownership"), Ordered, func() {
+var _ = Describe("CRD Ownership", Label("library", "crd-ownership"), Ordered, func() {
 	SetDefaultEventuallyTimeout(3 * time.Minute)
 	SetDefaultEventuallyPollingInterval(time.Second)
 

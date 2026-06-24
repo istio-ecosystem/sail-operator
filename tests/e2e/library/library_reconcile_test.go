@@ -47,7 +47,7 @@ const (
 	driftTestNamespace = "library-test-drift"
 )
 
-var _ = Describe("Library Reconciliation", Label("reconciliation"), Ordered, func() {
+var _ = Describe("Library Reconciliation", Label("library", "reconciliation"), Ordered, func() {
 	SetDefaultEventuallyTimeout(3 * time.Minute)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
