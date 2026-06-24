@@ -175,10 +175,19 @@ metadata:
   labels:
     sidecar.istio.io/inject: "false"
 spec:
+  securityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
   containers:
   - name: curl
     image: curlimages/curl
-    command: ["sleep", "3600"]`, gatewayNamespace)
+    command: ["sleep", "3600"]
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL`, gatewayNamespace)
 			Expect(k.ApplyString(curlPodYAML)).To(Succeed())
 		})
 
