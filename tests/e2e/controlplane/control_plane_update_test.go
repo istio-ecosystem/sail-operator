@@ -38,7 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("Control Plane updates", Label("control-plane", "update", "slow"), Ordered, func() {
+var _ = Describe("Control Plane updates", Label("control-plane", "update", "slow", "sidecar"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 	debugInfoLogged := false

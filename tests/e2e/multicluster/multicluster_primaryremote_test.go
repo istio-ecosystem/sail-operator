@@ -41,7 +41,7 @@ import (
 	"istio.io/istio/pkg/ptr"
 )
 
-var _ = Describe("Multicluster deployment models", Label("multicluster", "multicluster-primaryremote"), Ordered, func() {
+var _ = Describe("Multicluster deployment models", Label("multicluster", "multicluster-primaryremote", "slow", "sidecar"), Ordered, func() {
 	profile := "default"
 	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)

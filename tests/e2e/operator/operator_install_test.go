@@ -227,7 +227,7 @@ spec:
 	// a specific TLS 1.2 cipher) and the TLS settings synced to the IstioRevision resource.
 	// Test 1 runs on all OpenShift clusters. Tests 2 and 3 require OpenShift >= 4.22
 	// because the TLSAdherence field was introduced in 4.22.
-	Describe("TLS profile change", Label("openshift"), func() {
+	Describe("TLS profile change", Label("tls-profile"), func() {
 		var ocpMinorVersion int
 		var ocpMajorVersion int
 
