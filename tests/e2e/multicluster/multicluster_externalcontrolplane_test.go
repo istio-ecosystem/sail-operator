@@ -42,7 +42,7 @@ const (
 	externalIstioName = "external-istiod"
 )
 
-var _ = Describe("Multicluster deployment models", Label("multicluster", "multicluster-external"), Ordered, func() {
+var _ = Describe("Multicluster deployment models", Label("multicluster", "multicluster-external", "slow", "sidecar"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
