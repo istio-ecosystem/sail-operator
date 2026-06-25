@@ -122,7 +122,7 @@ ZTunnel  ──installs──▶ ztunnel chart
 | `helm` | Helm v4 ChartManager: chart loading (`FSLoader`), install/upgrade, post-renderer for label injection |
 | `install` | Installation orchestration: CRD management, RBAC setup, Library pattern for operator-in-operator embedding |
 | `istiovalues` | Values transformation pipeline: profiles, image digests, FIPS/TLS settings, platform overrides |
-| `istioversion` | Version resolution from `versions.yaml`: aliases (e.g. `v1.30-latest` -> `v1.30.1`), EOL tracking |
+| `istioversion` | Version resolution from `versions.yaml`: aliases (e.g. `vX.Y-latest` -> `vX.Y.Z`), EOL tracking |
 | `revision` | Revision lifecycle: dependency tracking, old revision pruning, workload migration |
 | `reconcile` | Component-specific reconciliation logic for istiod, CNI, and ZTunnel |
 | `reconciler` | Generic `StandardReconciler[T]` with finalizer support, used by all controllers |
@@ -180,15 +180,15 @@ The `Istio` controller supports two update strategies:
 
 ## Key Technologies
 
-| Technology | Version | Role |
-|---|---|---|
-| Go | 1.24+ | Implementation language |
-| controller-runtime | v0.24.1 | Kubernetes operator framework |
-| Helm | v4.2.0 | Chart-based Istio deployment |
-| Istio | v1.28 - v1.31 | Service mesh (managed by this operator) |
-| Kubebuilder | - | Project scaffolding and code generation |
-| Ginkgo / Gomega | v2.28.1 | BDD testing framework |
-| OpenShift API | - | Platform-specific integration (optional) |
+| Technology | Role |
+|---|---|
+| Go | Implementation language |
+| controller-runtime | Kubernetes operator framework |
+| Helm | Chart-based Istio deployment |
+| Istio | Service mesh (managed by this operator) |
+| Kubebuilder | Project scaffolding and code generation |
+| Ginkgo / Gomega | BDD testing framework |
+| OpenShift API | Platform-specific integration (optional) |
 
 ## Embedded Resources
 
@@ -199,10 +199,8 @@ directory under `resources/`:
 ```
 resources/
 ├── resources.go          # //go:embed directive
-├── v1.28.8/charts/       # base, cni, gateway, istiod, revisiontags, ztunnel
-├── v1.29.x/charts/
-├── v1.30.x/charts/
-└── v1.31.0-alpha/charts/
+├── vX.Y.Z/charts/        # base, cni, gateway, istiod, revisiontags, ztunnel
+└── ...
 ```
 
 At runtime, the `--resource-directory` flag can override embedded charts with
