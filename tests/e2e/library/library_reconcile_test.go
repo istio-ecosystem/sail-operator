@@ -275,12 +275,15 @@ var _ = Describe("Library Reconciliation", Label("library", "reconciliation"), O
 			webhookKey := types.NamespacedName{
 				Name: fmt.Sprintf("istio-validator-%s-%s", revision, namespace),
 			}
-			webhook := &admissionv1.ValidatingWebhookConfiguration{}
-			Expect(cl.Get(ctx, webhookKey, webhook)).To(Succeed())
 
-			webhook.Webhooks[0].Name = "xyz.xyz.xyz"
-			webhook.Webhooks[0].FailurePolicy = ptr.Of(admissionv1.Fail)
-			Expect(cl.Update(ctx, webhook)).To(Succeed())
+			// The background reconciler may update the webhook concurrently; retry on conflict.
+			Eventually(func(g Gomega) {
+				webhook := &admissionv1.ValidatingWebhookConfiguration{}
+				g.Expect(cl.Get(ctx, webhookKey, webhook)).To(Succeed())
+				webhook.Webhooks[0].Name = "xyz.xyz.xyz"
+				webhook.Webhooks[0].FailurePolicy = ptr.Of(admissionv1.Fail)
+				g.Expect(cl.Update(ctx, webhook)).To(Succeed())
+			}).Should(Succeed())
 
 			Eventually(func(g Gomega) {
 				restored := &admissionv1.ValidatingWebhookConfiguration{}
