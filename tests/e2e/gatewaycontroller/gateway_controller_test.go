@@ -35,6 +35,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"istio.io/istio/pkg/ptr"
@@ -215,10 +216,20 @@ spec:
 		})
 
 		It("curl client pod is ready", func(ctx SpecContext) {
-			Eventually(func() error {
-				return common.CheckPodsReady(ctx, cl, gatewayNamespace)
+			// Check only the curl-client pod
+			Eventually(func(g Gomega) {
+				pod := &corev1.Pod{}
+				g.Expect(cl.Get(ctx, kube.Key("curl-client", gatewayNamespace), pod)).To(Succeed())
+				var ready bool
+				for _, cond := range pod.Status.Conditions {
+					if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
+						ready = true
+						break
+					}
+				}
+				g.Expect(ready).To(BeTrue(), "curl-client pod is not ready")
 			}).Should(Succeed())
-			Success("All pods in gateway namespace are ready")
+			Success("Curl client pod is ready")
 		})
 	})
 
