@@ -19,7 +19,10 @@ Alternatively, those can be configured by using two custom resources `ServiceMon
 
 * Deploying observability stack components (Prometheus, OpenShift Cluster Observability Operator, OpenShift User-Workload Monitoring, etc.). We assume those are installed separately.
 * Updating `ServiceMonitor` and `PodMonitor` for user customization of scraping paths, ports, or relabeling rules via the Sail Operator API.
+
+  If custom relabeling or scraping configuration is required, leave `spec.monitoring.enabled: false` and deploy independent `ServiceMonitor` and `PodMonitor` resources manually.
 * Observability Distributed Tracing integration.
+* Ambient mesh metrics (`ZTunnel`, waypoint proxies).
 
 ## Design
 
@@ -46,7 +49,7 @@ This field defaults to `false`. When it is set to `true`, the monitoring control
 
 #### Alternatives API Considered
 
-A broader Observability Integration API with target references to a monitoring and tracing stacks is being discussed in the initial PR comments. We plan to design and implement the monitoring controller and broader Integration API controller separately. This enhancement proposal is focused on the monitoring controller with API change in the `Istio` Custom Resource. We will work toward a broader Integration API design and implementation in next phase.
+A broader Observability Integration API with target references to monitoring and tracing stacks may be added in a future release. This enhancement focuses on the monitoring controller with a boolean field on the `Istio` CR.
 
 ### Architecture
 
@@ -56,10 +59,57 @@ A monitoring controller watches `IstioRevision` resources and reconciles `Servic
 
 The monitoring controller applies platform-specific relabeling defaults when creating `ServiceMonitor` and `PodMonitor` CRs. The monitoring controller starts and detects the running platform at the Sail Operator startup time.
 
+#### Resource lifecycle and deletion
+
+The monitoring controller only interacts with monitoring resources it creates itself, identified by a fixed naming convention. It must **never** delete or modify user-managed `ServiceMonitor` or `PodMonitor` resources that were configured manually in existing environments.
+
+The controller creates and reconciles only resources named `{IstioRevision.name}-istiod` (`ServiceMonitor`, in the control plane namespace) and `{IstioRevision.name}-proxies` (`PodMonitor`, in each matching workload namespace). It uses Get/Create/Update by exact name and does not list or bulk-delete monitoring resources in a namespace.
+
+**ServiceMonitor:** carries an `ownerReferences` entry pointing at the owning `IstioRevision`. When the `IstioRevision` is deleted, Kubernetes garbage collection removes the `ServiceMonitor`. When `spec.monitoring.enabled` is `false`, the controller stops reconciling but does not delete the existing `ServiceMonitor`.
+
+**PodMonitor:** does not carry an `ownerReferences` entry (cross-namespace owner references are not supported). `PodMonitor` resources are not automatically garbage-collected when an `IstioRevision` is deleted. Explicit controller cleanup of `{IstioRevision.name}-proxies` by name is planned for revision deletion, disabling monitoring, and namespace label changes.
+
+User-managed monitors with other names are never touched. Because `spec.monitoring.enabled` defaults to `false`, existing clusters with manually configured monitors are unaffected until a user opts in.
+
+#### Sidecar injection namespace selection
+
+`PodMonitor` reconciliation is revision-scoped. Each `IstioRevision` receives a `PodMonitor` only in namespaces whose sidecar injection labels reference that revision:
+
+| Namespace label | Resolved revision |
+|-----------------|-------------------|
+| `istio-injection: enabled` | `default` |
+| `istio.io/rev: <name>` | `<name>` |
+
+When both labels are present, `istio-injection` takes precedence. The Istio control plane namespace is excluded. The controller watches `Namespace` objects when `istio-injection` or `istio.io/rev` labels are added, removed, or changed.
+
 #### Kubernetes vs OpenShift
 
 On **Kubernetes** platform, applying a single `PodMonitor` CR in the control plane namespace with `namespaceSelector.any: true` is the preferred approach. That is matching upstream Istio Prometheus configuration example. 
 On **OpenShift** platform, the User-Workload Monitoring stack ignores `namespaceSelector` field, so we need create a `PodMonitor` CR in each sidecar injection enabled namespace.
+
+#### External CRD/API Group Detection
+
+The monitoring controller must detect which Prometheus Operator API group is installed before creating `ServiceMonitor` or `PodMonitor` resources:
+
+| API group | Typical platform |
+|-----------|------------------|
+| `monitoring.coreos.com/v1` | Upstream Prometheus Operator |
+| `monitoring.rhobs/v1` | OpenShift Cluster Observability Operator |
+
+Monitoring is available only when both `ServiceMonitor` and `PodMonitor` CRDs exist in the same API group. When both groups are present, prefer `monitoring.coreos.com/v1`.
+
+#### Monitoring Availability
+
+When `spec.monitoring.enabled` is `true` but the required CRDs are not installed, the monitoring controller should set a status condition on the parent `Istio` CR:
+
+| Field | Value |
+|-------|-------|
+| `type` | `MonitoringAvailable` |
+| `status` | `False` |
+| `reason` | `MissingCRDs` |
+| `message` | `Prometheus Operator CRDs not found` |
+
+When `spec.monitoring.enabled` is `false`, the monitoring controller does not set this condition.
 
 ### Performance Impact
 
