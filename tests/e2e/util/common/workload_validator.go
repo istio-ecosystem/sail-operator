@@ -120,9 +120,11 @@ func (w *WorkloadValidator) ValidateConnectivity(ctx context.Context) error {
 		return fmt.Errorf("no pods found in %s namespace", w.Namespace)
 	}
 
-	// Test connectivity from sleep to httpbin
-	CheckPodConnectivity(sleepPods.Items[0].Name, SleepContainerName, w.Namespace, HttpbinNamespace, w.K)
-	return nil
+	// Test connectivity from sleep to httpbin. Use the error-returning form so that
+	// transient failures (e.g. 503 during proxy startup/upgrade) are propagated as
+	// errors and can be retried by the caller's Eventually block rather than
+	// immediately failing the test via a bare Expect.
+	return CheckPodConnectivityWithError(sleepPods.Items[0].Name, SleepContainerName, w.Namespace, HttpbinNamespace, w.K)
 }
 
 // ValidateProxyVersion validates proxy version based on dataplane mode
