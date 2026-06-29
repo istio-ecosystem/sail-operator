@@ -75,6 +75,18 @@ func newNamespaceWithInjection(name string) *corev1.Namespace {
 	}
 }
 
+// newNamespaceWithRevLabel creates a namespace with the istio.io/rev label
+func newNamespaceWithRevLabel(name, rev string) *corev1.Namespace {
+	return &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+			Labels: map[string]string{
+				constants.IstioRevLabel: rev,
+			},
+		},
+	}
+}
+
 // newIstioWithMonitoringEnabled creates an Istio CR with monitoring enabled
 func newIstioWithMonitoringEnabled(name, namespace string) *v1.Istio {
 	return &v1.Istio{
@@ -113,11 +125,55 @@ func TestReconcile(t *testing.T) {
 			},
 			existingObjects: []client.Object{
 				newIstioWithMonitoringEnabled(istioName, istioNamespace),
+				newNamespaceWithRevLabel(appNamespace, revisionName),
+			},
+			expectErr:         false,
+			expectSMCreated:   true,
+			expectPMNamespace: appNamespace,
+		},
+		{
+			name: "creates PodMonitor for namespace with istio-injection=enabled on default revision",
+			rev: &v1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: v1.DefaultRevision,
+					UID:  revisionUID,
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "sailoperator.io/v1",
+							Kind:       v1.IstioKind,
+							Name:       istioName,
+						},
+					},
+				},
+				Spec: v1.IstioRevisionSpec{
+					Version:   "v1.24.0",
+					Namespace: istioNamespace,
+				},
+			},
+			existingObjects: []client.Object{
+				newIstioWithMonitoringEnabled(istioName, istioNamespace),
 				newNamespaceWithInjection(appNamespace),
 			},
 			expectErr:         false,
 			expectSMCreated:   true,
 			expectPMNamespace: appNamespace,
+		},
+		{
+			name: "does not create PodMonitor when istio.io/rev references a different revision",
+			rev: &v1.IstioRevision{
+				ObjectMeta: revisionMeta,
+				Spec: v1.IstioRevisionSpec{
+					Version:   "v1.24.0",
+					Namespace: istioNamespace,
+				},
+			},
+			existingObjects: []client.Object{
+				newIstioWithMonitoringEnabled(istioName, istioNamespace),
+				newNamespaceWithRevLabel(appNamespace, "other-revision"),
+			},
+			expectErr:         false,
+			expectSMCreated:   true,
+			expectPMNamespace: "",
 		},
 		{
 			name: "skips reconciliation for deleting IstioRevision",
@@ -225,13 +281,17 @@ func TestReconcile(t *testing.T) {
 			if tt.expectSMCreated {
 				sm := &monitoringv1.ServiceMonitor{}
 				sm.SetGroupVersionKind(testRhobsGV.WithKind("ServiceMonitor"))
+				revName := revisionName
+				if tt.rev != nil && tt.rev.Name != "" {
+					revName = tt.rev.Name
+				}
 				err := cl.Get(ctx, types.NamespacedName{
-					Name:      revisionName + serviceMonitorNameSuffix,
+					Name:      revName + serviceMonitorNameSuffix,
 					Namespace: istioNamespace,
 				}, sm)
 				g.Expect(err).ToNot(HaveOccurred())
 				// Verify the ServiceMonitor has expected content
-				g.Expect(sm.Name).To(Equal(revisionName + serviceMonitorNameSuffix))
+				g.Expect(sm.Name).To(Equal(revName + serviceMonitorNameSuffix))
 				g.Expect(sm.Labels["monitored-by"]).To(Equal("coo-prometheus"))
 			}
 
@@ -239,13 +299,17 @@ func TestReconcile(t *testing.T) {
 			if tt.expectPMNamespace != "" {
 				pm := &monitoringv1.PodMonitor{}
 				pm.SetGroupVersionKind(testRhobsGV.WithKind("PodMonitor"))
+				revName := revisionName
+				if tt.rev != nil && tt.rev.Name != "" {
+					revName = tt.rev.Name
+				}
 				err := cl.Get(ctx, types.NamespacedName{
-					Name:      revisionName + podMonitorNameSuffix,
+					Name:      revName + podMonitorNameSuffix,
 					Namespace: tt.expectPMNamespace,
 				}, pm)
 				g.Expect(err).ToNot(HaveOccurred())
 				// Verify the PodMonitor has expected content
-				g.Expect(pm.Name).To(Equal(revisionName + podMonitorNameSuffix))
+				g.Expect(pm.Name).To(Equal(revName + podMonitorNameSuffix))
 				g.Expect(pm.Labels["monitored-by"]).To(Equal("coo-prometheus"))
 			}
 		})
@@ -379,9 +443,27 @@ func TestReconcilePodMonitors(t *testing.T) {
 		expectPMNamespaces []string // namespaces where PodMonitors should exist
 	}{
 		{
-			name: "creates PodMonitor in namespace with injection enabled",
+			name: "creates PodMonitor in namespace with istio.io/rev label",
 			rev: &v1.IstioRevision{
 				ObjectMeta: revisionMeta,
+				Spec: v1.IstioRevisionSpec{
+					Version:   "v1.24.0",
+					Namespace: istioNamespace,
+				},
+			},
+			existingNamespaces: []client.Object{
+				newNamespaceWithRevLabel(appNamespace, revisionName),
+			},
+			expectErr:          false,
+			expectPMNamespaces: []string{appNamespace},
+		},
+		{
+			name: "creates PodMonitor in namespace with istio-injection=enabled for default revision",
+			rev: &v1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: v1.DefaultRevision,
+					UID:  revisionUID,
+				},
 				Spec: v1.IstioRevisionSpec{
 					Version:   "v1.24.0",
 					Namespace: istioNamespace,
@@ -403,8 +485,8 @@ func TestReconcilePodMonitors(t *testing.T) {
 				},
 			},
 			existingNamespaces: []client.Object{
-				newNamespaceWithInjection(appNamespace),
-				newNamespaceWithInjection("another-app-namespace"),
+				newNamespaceWithRevLabel(appNamespace, revisionName),
+				newNamespaceWithRevLabel("another-app-namespace", revisionName),
 			},
 			expectErr:          false,
 			expectPMNamespaces: []string{appNamespace, "another-app-namespace"},
@@ -419,8 +501,8 @@ func TestReconcilePodMonitors(t *testing.T) {
 				},
 			},
 			existingNamespaces: []client.Object{
-				newNamespaceWithInjection(istioNamespace), // should be skipped
-				newNamespaceWithInjection(appNamespace),
+				newNamespaceWithRevLabel(istioNamespace, revisionName), // should be skipped
+				newNamespaceWithRevLabel(appNamespace, revisionName),
 			},
 			expectErr:          false,
 			expectPMNamespaces: []string{appNamespace}, // only app namespace
@@ -435,7 +517,7 @@ func TestReconcilePodMonitors(t *testing.T) {
 				},
 			},
 			existingNamespaces: []client.Object{
-				newNamespaceWithInjection(appNamespace),
+				newNamespaceWithRevLabel(appNamespace, revisionName),
 			},
 			existingPM: func() *monitoringv1.PodMonitor {
 				pm := &monitoringv1.PodMonitor{
@@ -519,16 +601,20 @@ func TestReconcilePodMonitors(t *testing.T) {
 				g.Expect(err).ToNot(HaveOccurred())
 
 				// Verify PodMonitors exist in expected namespaces
+				revName := revisionName
+				if tt.rev != nil && tt.rev.Name != "" {
+					revName = tt.rev.Name
+				}
 				for _, ns := range tt.expectPMNamespaces {
 					pm := &monitoringv1.PodMonitor{}
 					pm.SetGroupVersionKind(testRhobsGV.WithKind("PodMonitor"))
 					err := cl.Get(ctx, types.NamespacedName{
-						Name:      revisionName + podMonitorNameSuffix,
+						Name:      revName + podMonitorNameSuffix,
 						Namespace: ns,
 					}, pm)
 					g.Expect(err).ToNot(HaveOccurred(), "PodMonitor should exist in namespace %s", ns)
 					// Verify expected content
-					g.Expect(pm.Name).To(Equal(revisionName + podMonitorNameSuffix))
+					g.Expect(pm.Name).To(Equal(revName + podMonitorNameSuffix))
 					g.Expect(pm.Labels["monitored-by"]).To(Equal("coo-prometheus"))
 				}
 			}
@@ -757,8 +843,8 @@ func TestBuildPodMonitor(t *testing.T) {
 	}
 }
 
-func TestInjectionEnabledPredicate(t *testing.T) {
-	pred := injectionEnabledPredicate()
+func TestSidecarInjectionNamespacePredicate(t *testing.T) {
+	pred := sidecarInjectionNamespacePredicate()
 
 	tests := []struct {
 		name     string
@@ -843,6 +929,52 @@ func TestInjectionEnabledPredicate(t *testing.T) {
 						},
 					},
 				},
+			},
+			expected: true,
+		},
+		{
+			name: "CreateFunc: namespace with istio.io/rev label",
+			event: event.CreateEvent{
+				Object: newNamespaceWithRevLabel("test-ns", "canary"),
+			},
+			expected: true,
+		},
+		{
+			name: "UpdateFunc: istio.io/rev label added",
+			event: event.UpdateEvent{
+				ObjectOld: &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-ns",
+					},
+				},
+				ObjectNew: newNamespaceWithRevLabel("test-ns", "canary"),
+			},
+			expected: true,
+		},
+		{
+			name: "UpdateFunc: istio.io/rev label changed",
+			event: event.UpdateEvent{
+				ObjectOld: newNamespaceWithRevLabel("test-ns", "canary"),
+				ObjectNew: newNamespaceWithRevLabel("test-ns", "stable"),
+			},
+			expected: true,
+		},
+		{
+			name: "UpdateFunc: istio.io/rev label removed",
+			event: event.UpdateEvent{
+				ObjectOld: newNamespaceWithRevLabel("test-ns", "canary"),
+				ObjectNew: &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-ns",
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "DeleteFunc: namespace with istio.io/rev label",
+			event: event.DeleteEvent{
+				Object: newNamespaceWithRevLabel("test-ns", "canary"),
 			},
 			expected: true,
 		},
