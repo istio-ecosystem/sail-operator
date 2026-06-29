@@ -565,11 +565,23 @@ func withClusterName(m string, k kubectl.Kubectl) string {
 	return m + " on " + k.ClusterName
 }
 
-func CheckPodConnectivity(podName, containerName, srcNamespace, destNamespace string, k kubectl.Kubectl) {
+// CheckPodConnectivityWithError tests connectivity from podName to httpbin in destNamespace
+// and returns an error instead of calling Expect directly. This allows callers wrapped in
+// Eventually to retry on transient failures (e.g. 503 during proxy startup/upgrade).
+func CheckPodConnectivityWithError(podName, containerName, srcNamespace, destNamespace string, k kubectl.Kubectl) error {
 	command := fmt.Sprintf(`curl -o /dev/null -s -w "%%{http_code}\n" httpbin.%s.svc.cluster.local:8000/get`, destNamespace)
 	response, err := k.WithNamespace(srcNamespace).Exec(podName, containerName, command)
-	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("error connecting to the %q pod", podName))
-	Expect(response).To(ContainSubstring("200"), fmt.Sprintf("Unexpected response from %s pod", podName))
+	if err != nil {
+		return fmt.Errorf("error connecting to the %q pod: %w", podName, err)
+	}
+	if !strings.Contains(response, "200") {
+		return fmt.Errorf("unexpected response from %s pod: %s", podName, strings.TrimSpace(response))
+	}
+	return nil
+}
+
+func CheckPodConnectivity(podName, containerName, srcNamespace, destNamespace string, k kubectl.Kubectl) {
+	Expect(CheckPodConnectivityWithError(podName, containerName, srcNamespace, destNamespace, k)).To(Succeed())
 }
 
 func HaveContainersThat(matcher types.GomegaMatcher) types.GomegaMatcher {
