@@ -40,7 +40,7 @@ import (
 	"istio.io/istio/pkg/ptr"
 )
 
-var _ = Describe("Gateway Controller with Install Library", Label("gateway-controller"), Ordered, func() {
+var _ = Describe("Gateway Controller with Install Library", Label("gateway-controller", "slow"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
@@ -165,6 +165,19 @@ spec:
 			Expect(k.ApplyString(gatewayYAML)).To(Succeed())
 			Success("Gateway created")
 
+			// Define the platform specific security context snippets
+			var securityContextFields string
+			if env.GetBool("OCP", true) {
+				// OpenShift handles UID allocation dynamically via SCC
+				securityContextFields = `seccompProfile:
+      type: RuntimeDefault`
+			} else {
+				// Kind/Vanilla K8s requires explicit non-root enforcement
+				securityContextFields = `runAsNonRoot: true
+    runAsUser: 100
+    seccompProfile:
+      type: RuntimeDefault`
+			}
 			// Deploy a curl client pod for traffic testing
 			curlPodYAML := fmt.Sprintf(`
 apiVersion: v1
@@ -175,10 +188,17 @@ metadata:
   labels:
     sidecar.istio.io/inject: "false"
 spec:
+  securityContext:
+    %s
   containers:
   - name: curl
     image: curlimages/curl
-    command: ["sleep", "3600"]`, gatewayNamespace)
+    command: ["sleep", "3600"]
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL`, gatewayNamespace, securityContextFields)
 			Expect(k.ApplyString(curlPodYAML)).To(Succeed())
 		})
 

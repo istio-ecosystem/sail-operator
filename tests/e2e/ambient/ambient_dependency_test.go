@@ -34,7 +34,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe("Ambient Dependency Management", Label("ambient", "ambient-dependency", "smoke"), Ordered, func() {
+var _ = Describe("Ambient Dependency Management", Label("ambient", "ambient-dependency"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(defaultTimeout) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
@@ -346,9 +346,14 @@ spec:
 				})
 
 				AfterAll(func(ctx SpecContext) {
+					if CurrentSpecReport().Failed() {
+						common.LogDebugInfo(common.Ambient, k)
+					}
+
 					if CurrentSpecReport().Failed() && keepOnFailure {
 						return
 					}
+
 					clr.Cleanup(ctx)
 				})
 			})

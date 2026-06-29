@@ -97,6 +97,10 @@ func forEachChartCRD(fn func(obj *unstructured.Unstructured)) {
 		if obj.GetName() == "" {
 			continue
 		}
+		group, _, _ := unstructured.NestedString(obj.Object, "spec", "group")
+		if !strings.HasSuffix(group, ".istio.io") {
+			continue
+		}
 		fn(&obj)
 	}
 }
@@ -116,7 +120,7 @@ func createAllIstioCRDs(ctx context.Context) {
 	})
 }
 
-var _ = Describe("CRD Ownership", Label("crd-ownership"), Ordered, func() {
+var _ = Describe("CRD Ownership", Label("library", "crd-ownership"), Ordered, func() {
 	SetDefaultEventuallyTimeout(3 * time.Minute)
 	SetDefaultEventuallyPollingInterval(time.Second)
 

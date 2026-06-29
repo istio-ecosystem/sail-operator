@@ -43,7 +43,7 @@ const (
 	SleepNamespace     = "sleep"
 )
 
-var _ = Describe("DualStack configuration ", Label("dualstack"), Ordered, func() {
+var _ = Describe("DualStack configuration ", Label("dualstack", "slow", "sidecar"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
@@ -222,6 +222,11 @@ values:
 				})
 
 				AfterAll(func(ctx SpecContext) {
+					if CurrentSpecReport().Failed() {
+						common.LogDebugInfo(common.DualStack, k)
+						debugInfoLogged = true
+					}
+
 					if CurrentSpecReport().Failed() && keepOnFailure {
 						return
 					}
@@ -230,19 +235,11 @@ values:
 				})
 			})
 		}
-
-		AfterAll(func(ctx SpecContext) {
-			if CurrentSpecReport().Failed() {
-				common.LogDebugInfo(common.DualStack, k)
-				debugInfoLogged = true
-			}
-		})
 	})
 
 	AfterAll(func(ctx SpecContext) {
 		if CurrentSpecReport().Failed() && !debugInfoLogged {
 			common.LogDebugInfo(common.DualStack, k)
-			debugInfoLogged = true
 		}
 	})
 })

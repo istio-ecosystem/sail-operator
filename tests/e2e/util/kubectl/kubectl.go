@@ -310,6 +310,27 @@ func (k Kubectl) Logs(pod string, since *time.Duration) (string, error) {
 	return output, nil
 }
 
+// LogsPrevious returns the logs from the previous instance of a container
+func (k Kubectl) LogsPrevious(pod string, since *time.Duration) (string, error) {
+	cmd := k.build(fmt.Sprintf(" logs %s --previous %s", pod, sinceFlag(since)))
+	output, err := shell.ExecuteCommand(cmd)
+	if err != nil {
+		return "", err
+	}
+	return output, nil
+}
+
+// TopPods returns resource utilization for pods in namespace
+func (k Kubectl) TopPods() (string, error) {
+	cmd := k.build(" top pods --no-headers")
+	output, err := shell.ExecuteCommand(cmd)
+	if err != nil {
+		// metrics-server may not be available, don't fail
+		return "", nil
+	}
+	return output, nil
+}
+
 // Label adds a label to the specified resource
 func (k Kubectl) Label(kind, name, labelKey, labelValue string) error {
 	_, err := k.executeCommand(k.build(fmt.Sprintf(" label %s %s %s=%s", kind, name, labelKey, labelValue)))
@@ -320,6 +341,26 @@ func (k Kubectl) Label(kind, name, labelKey, labelValue string) error {
 func (k Kubectl) LabelNamespaced(kind, namespace, name, labelKey, labelValue string) error {
 	_, err := k.executeCommand(k.build(fmt.Sprintf(" label %s -n %s %s %s=%s", kind, namespace, name, labelKey, labelValue)))
 	return err
+}
+
+// RolloutRestart restarts a deployment using kubectl rollout restart
+func (k Kubectl) RolloutRestart(resource string) (string, error) {
+	cmd := k.build(fmt.Sprintf(" rollout restart %s", resource))
+	output, err := k.executeCommand(cmd)
+	if err != nil {
+		return "", fmt.Errorf("error restarting rollout: %w, output: %s", err, output)
+	}
+	return output, nil
+}
+
+// RolloutStatus waits for a rollout to complete
+func (k Kubectl) RolloutStatus(resource string) (string, error) {
+	cmd := k.build(fmt.Sprintf(" rollout status %s", resource))
+	output, err := k.executeCommand(cmd)
+	if err != nil {
+		return "", fmt.Errorf("error checking rollout status: %w, output: %s", err, output)
+	}
+	return output, nil
 }
 
 // executeCommand handles running the command and then resets the namespace automatically

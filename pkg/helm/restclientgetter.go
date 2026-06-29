@@ -43,13 +43,13 @@ func (c *restClientGetter) ToRESTConfig() (*rest.Config, error) {
 
 func (c *restClientGetter) ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error) {
 	if c.discoveryClient == nil {
-		oldBurst := c.config.Burst
+		// Copy the config to avoid mutating the original config.
+		// Otherwise calling ToDiscoveryClient can cause a race condition.
+		cfg := rest.CopyConfig(c.config)
 		// use the default (high) burst for discovery
-		c.config.Burst = 0
-		// write back the old burst value after it has been copied for discovery client creation
-		defer func() { c.config.Burst = oldBurst }()
+		cfg.Burst = 0
 
-		discoveryClient, err := discovery.NewDiscoveryClientForConfig(c.config)
+		discoveryClient, err := discovery.NewDiscoveryClientForConfig(cfg)
 		if err != nil {
 			return nil, err
 		}

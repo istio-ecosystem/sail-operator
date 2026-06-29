@@ -35,7 +35,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var _ = Describe("Multicluster deployment models", Label("multicluster", "multicluster-multiprimary"), Ordered, func() {
+var _ = Describe("Multicluster deployment models", Label("multicluster", "multicluster-multiprimary", "slow"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 

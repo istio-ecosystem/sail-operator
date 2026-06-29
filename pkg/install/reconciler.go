@@ -89,7 +89,7 @@ func (l *Library) setupController(mgr ctrl.Manager) error {
 	)
 
 	managedByPred, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
-		MatchLabels: map[string]string{"app.kubernetes.io/managed-by": managedByValue},
+		MatchLabels: map[string]string{managedByLabelKey: managedByValue},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create label predicate: %w", err)
@@ -160,9 +160,14 @@ func (l *Library) newInstaller(namespace string) *installer {
 	}
 	return &installer{
 		istiodReconciler: sharedreconcile.NewIstiodReconciler(cfg, l.cl),
-		crdManager:       &crdManager{cl: l.cl, crdFS: l.crdFS},
-		cfg:              cfg,
-		platform:         l.platform,
+		crdManager: &crdManager{
+			cl:                  l.cl,
+			crdFS:               l.crdFS,
+			ownershipLabelKey:   l.crdOwnershipLabelKey,
+			ownershipLabelValue: l.crdOwnershipLabelValue,
+		},
+		cfg:      cfg,
+		platform: l.platform,
 	}
 }
 

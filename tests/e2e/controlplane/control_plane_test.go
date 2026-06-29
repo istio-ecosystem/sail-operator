@@ -35,7 +35,7 @@ import (
 	"istio.io/istio/pkg/ptr"
 )
 
-var _ = Describe("Control Plane Installation", Label("smoke", "control-plane", "slow"), Ordered, func() {
+var _ = Describe("Control Plane Installation", Label("control-plane", "slow", "sidecar"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 	debugInfoLogged := false
@@ -224,6 +224,11 @@ metadata:
 				})
 
 				AfterAll(func(ctx SpecContext) {
+					if CurrentSpecReport().Failed() {
+						common.LogDebugInfo(common.ControlPlane, k)
+						debugInfoLogged = true
+					}
+
 					if CurrentSpecReport().Failed() && keepOnFailure {
 						return
 					}
@@ -232,21 +237,11 @@ metadata:
 				})
 			})
 		}
-
-		AfterAll(func(ctx SpecContext) {
-			if CurrentSpecReport().Failed() {
-				common.LogDebugInfo(common.ControlPlane, k)
-				debugInfoLogged = true
-			}
-		})
 	})
 
 	AfterAll(func() {
-		if CurrentSpecReport().Failed() {
-			if !debugInfoLogged {
-				common.LogDebugInfo(common.ControlPlane, k)
-				debugInfoLogged = true
-			}
+		if CurrentSpecReport().Failed() && !debugInfoLogged {
+			common.LogDebugInfo(common.ControlPlane, k)
 		}
 	})
 })
