@@ -25,6 +25,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/monitoring/relabeling"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
+	"github.com/istio-ecosystem/sail-operator/pkg/revision"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -158,33 +159,49 @@ func (r *Reconciler) reconcileServiceMonitor(ctx context.Context, rev *v1.IstioR
 	return r.Client.Update(ctx, desired)
 }
 
-// reconcilePodMonitors creates or updates PodMonitors for istio-proxy sidecars
-// in namespaces with istio-injection=enabled label (excluding istio control plane namespace)
+// reconcilePodMonitors creates or updates PodMonitors for istio-proxy sidecars in namespaces
+// that reference this IstioRevision via istio-injection=enabled or istio.io/rev labels.
 func (r *Reconciler) reconcilePodMonitors(ctx context.Context, rev *v1.IstioRevision) error {
 	log := logf.FromContext(ctx)
 
-	// List namespaces with istio-injection=enabled label
-	nsList := &corev1.NamespaceList{}
-	if err := r.Client.List(ctx, nsList, client.MatchingLabels{
-		constants.IstioInjectionLabel: constants.IstioInjectionEnabledValue,
-	}); err != nil {
-		return fmt.Errorf("failed to list namespaces: %w", err)
+	namespaces, err := r.namespacesForRevision(ctx, rev)
+	if err != nil {
+		return err
 	}
 
-	// Create/update PodMonitor in each namespace with injection enabled
-	for _, ns := range nsList.Items {
-		// Skip the istio control plane namespace - we don't want to monitor sidecars there
-		if ns.Name == rev.Spec.Namespace {
-			log.V(2).Info("Skipping PodMonitor for control plane namespace", "namespace", ns.Name)
-			continue
-		}
-
+	for _, ns := range namespaces {
 		if err := r.reconcilePodMonitorInNamespace(ctx, rev, ns.Name); err != nil {
 			return fmt.Errorf("failed to reconcile PodMonitor in namespace %s: %w", ns.Name, err)
 		}
+		log.V(2).Info("Reconciled PodMonitor for injection namespace", "namespace", ns.Name, "revision", rev.Name)
 	}
 
 	return nil
+}
+
+// namespacesForRevision returns namespaces where sidecar injection is enabled for the given revision.
+// A namespace matches when istio-injection=enabled (default revision) or istio.io/rev=<revision>.
+func (r *Reconciler) namespacesForRevision(ctx context.Context, rev *v1.IstioRevision) ([]corev1.Namespace, error) {
+	nsList := &corev1.NamespaceList{}
+	if err := r.Client.List(ctx, nsList); err != nil {
+		return nil, fmt.Errorf("failed to list namespaces: %w", err)
+	}
+
+	var namespaces []corev1.Namespace
+	for _, ns := range nsList.Items {
+		if namespaceReferencesRevision(&ns, rev) {
+			namespaces = append(namespaces, ns)
+		}
+	}
+	return namespaces, nil
+}
+
+// namespaceReferencesRevision reports whether the namespace should receive a PodMonitor for rev.
+func namespaceReferencesRevision(ns *corev1.Namespace, rev *v1.IstioRevision) bool {
+	if ns.Name == rev.Spec.Namespace {
+		return false
+	}
+	return revision.GetReferencedRevisionFromNamespace(ns.GetLabels()) == rev.Name
 }
 
 // reconcilePodMonitorInNamespace creates or updates a PodMonitor in the specified namespace
@@ -325,8 +342,8 @@ func ptr[T any](v T) *T {
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	logger := mgr.GetLogger().WithName("ctrlr").WithName("monitoring")
 
-	// namespaceHandler triggers reconciliation of all IstioRevisions when a namespace
-	// with istio-injection=enabled label is created/updated/deleted
+	// namespaceHandler triggers reconciliation of all IstioRevisions when a namespace's
+	// sidecar injection labels (istio-injection or istio.io/rev) change
 	namespaceHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapNamespaceToReconcileRequest))
 
 	// istioHandler triggers reconciliation of owned IstioRevisions when an Istio CR's
@@ -350,14 +367,13 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// which requires COO CRDs. Owner references ensure cleanup on IstioRevision deletion.
 		// Watch Istio CR to react to monitoring configuration changes
 		Watches(&v1.Istio{}, istioHandler).
-		// Watch namespaces with istio-injection label to create PodMonitors in them
-		// Use predicate to filter only namespaces with injection enabled
-		Watches(&corev1.Namespace{}, namespaceHandler, builder.WithPredicates(injectionEnabledPredicate())).
+		// Watch namespaces with sidecar injection labels to create PodMonitors in them
+		Watches(&corev1.Namespace{}, namespaceHandler, builder.WithPredicates(sidecarInjectionNamespacePredicate())).
 		Complete(reconciler.NewStandardReconciler[*v1.IstioRevision](r.Client, r.Reconcile))
 }
 
 // mapNamespaceToReconcileRequest returns reconcile requests for all IstioRevisions
-// when a namespace event passes the injectionEnabledPredicate
+// when a namespace's sidecar injection labels change
 func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, obj client.Object) []reconcile.Request {
 	log := logf.FromContext(ctx)
 	ns, ok := obj.(*corev1.Namespace)
@@ -380,7 +396,7 @@ func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, obj cli
 		})
 	}
 
-	log.V(2).Info("Namespace with injection label changed, queuing IstioRevisions for reconciliation",
+	log.V(2).Info("Namespace sidecar injection labels changed, queuing IstioRevisions for reconciliation",
 		"namespace", ns.Name, "revisionCount", len(requests))
 	return requests
 }
@@ -420,34 +436,37 @@ func (r *Reconciler) mapIstioToReconcileRequest(ctx context.Context, obj client.
 	return requests
 }
 
-// injectionEnabledPredicate returns a predicate that filters namespace events
-// to only those where the istio-injection label is added, removed, or changed
-func injectionEnabledPredicate() predicate.Funcs {
-	hasInjectionEnabled := func(obj client.Object) bool {
+// sidecarInjectionNamespacePredicate returns a predicate that filters namespace events
+// to those where istio-injection or istio.io/rev labels are added, removed, or changed.
+func sidecarInjectionNamespacePredicate() predicate.Funcs {
+	injectionLabelState := func(obj client.Object) string {
 		if obj == nil {
-			return false
+			return ""
 		}
 		labels := obj.GetLabels()
-		return labels != nil && labels[constants.IstioInjectionLabel] == constants.IstioInjectionEnabledValue
+		if labels == nil {
+			return ""
+		}
+		injection := labels[constants.IstioInjectionLabel]
+		rev := labels[constants.IstioRevLabel]
+		if injection == "" && rev == "" {
+			return ""
+		}
+		return injection + "|" + rev
 	}
 
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
-			// Trigger when a namespace is created with injection enabled
-			return hasInjectionEnabled(e.Object)
+			return injectionLabelState(e.Object) != ""
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			// Trigger when injection label is added, removed, or changed
-			oldHasLabel := hasInjectionEnabled(e.ObjectOld)
-			newHasLabel := hasInjectionEnabled(e.ObjectNew)
-			return oldHasLabel != newHasLabel
+			return injectionLabelState(e.ObjectOld) != injectionLabelState(e.ObjectNew)
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			// Trigger when a namespace with injection enabled is deleted
-			return hasInjectionEnabled(e.Object)
+			return injectionLabelState(e.Object) != ""
 		},
 		GenericFunc: func(e event.GenericEvent) bool {
-			return hasInjectionEnabled(e.Object)
+			return injectionLabelState(e.Object) != ""
 		},
 	}
 }
