@@ -292,10 +292,13 @@ var _ = Describe("Library Reconciliation", Label("library", "reconciliation"), O
 				Name: fmt.Sprintf("istio-validator-%s-%s", revision, namespace),
 			}
 
-			// The background reconciler may update the webhook concurrently; retry on conflict.
+			// Refresh and retry: the background reconciler may update the webhook
+			// concurrently (causing a 409 conflict on Update) or transiently clear
+			// the Webhooks list, so we assert rather than index directly.
 			Eventually(func(g Gomega) {
 				webhook := &admissionv1.ValidatingWebhookConfiguration{}
 				g.Expect(cl.Get(ctx, webhookKey, webhook)).To(Succeed())
+				g.Expect(webhook.Webhooks).NotTo(BeEmpty(), "webhook has no entries")
 				webhook.Webhooks[0].Name = "xyz.xyz.xyz"
 				webhook.Webhooks[0].FailurePolicy = ptr.Of(admissionv1.Fail)
 				g.Expect(cl.Update(ctx, webhook)).To(Succeed())
