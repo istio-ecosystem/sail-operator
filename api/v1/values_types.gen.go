@@ -4958,8 +4958,23 @@ const fileTypeV1beta1SelectorProtoRawDesc = "" +
 	"\x06SERVER\x10\x02\x12\x15\n" +
 	"\x11CLIENT_AND_SERVER\x10\x03B\x1bZ\x19istio.io/api/type/v1beta1b\x06proto3"
 
-	// TLS connection mode
-	// +kubebuilder:validation:Enum=DISABLE;SIMPLE;MUTUAL;ISTIO_MUTUAL
+	// Policy for upgrading http1.1 connections to http2.
+	// +kubebuilder:validation:Enum=DEFAULT;DO_NOT_UPGRADE;UPGRADE
+type ConnectionPoolSettingsHTTPSettingsH2UpgradePolicy string
+
+const (
+	// Use the global default.
+	ConnectionPoolSettingsHTTPSettingsH2UpgradePolicyDefault ConnectionPoolSettingsHTTPSettingsH2UpgradePolicy = "DEFAULT"
+	// Do not upgrade the connection to http2.
+	// This opt-out option overrides the default.
+	ConnectionPoolSettingsHTTPSettingsH2UpgradePolicyDoNotUpgrade ConnectionPoolSettingsHTTPSettingsH2UpgradePolicy = "DO_NOT_UPGRADE"
+	// Upgrade the connection to http2.
+	// This opt-in option overrides the default.
+	ConnectionPoolSettingsHTTPSettingsH2UpgradePolicyUpgrade ConnectionPoolSettingsHTTPSettingsH2UpgradePolicy = "UPGRADE"
+)
+
+// TLS connection mode
+// +kubebuilder:validation:Enum=DISABLE;SIMPLE;MUTUAL;ISTIO_MUTUAL
 type ClientTLSSettingsTLSmode string
 
 const (
@@ -4977,6 +4992,162 @@ const (
 	// used, all other fields in `ClientTLSSettings` should be empty.
 	ClientTLSSettingsTLSmodeIstioMutual ClientTLSSettingsTLSmode = "ISTIO_MUTUAL"
 )
+
+// Connection pool settings for an upstream host. The settings apply to
+// each individual host in the upstream service.  See Envoy's [circuit
+// breaker](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/circuit_breaking)
+// for more details. Connection pool settings can be applied at the TCP
+// level as well as at HTTP level.
+//
+// For example, the following rule sets a limit of 100 connections to redis
+// service called myredissrv with a connect timeout of 30ms
+//
+// ```yaml
+// apiVersion: networking.istio.io/v1
+// kind: DestinationRule
+// metadata:
+//
+//	name: bookinfo-redis
+//
+// spec:
+//
+//	host: myredissrv.prod.svc.cluster.local
+//	trafficPolicy:
+//	  connectionPool:
+//	    tcp:
+//	      maxConnections: 100
+//	      connectTimeout: 30ms
+//	      tcpKeepalive:
+//	        time: 7200s
+//	        interval: 75s
+//
+// ```
+type ConnectionPoolSettings struct {
+	// Settings common to both HTTP and TCP upstream connections.
+	Tcp *ConnectionPoolSettingsTCPSettings `json:"tcp,omitempty"`
+	// HTTP connection pool settings.
+	Http *ConnectionPoolSettingsHTTPSettings `json:"http,omitempty"`
+}
+
+// A Circuit breaker implementation that tracks the status of each
+// individual host in the upstream service.  Applicable to both HTTP and
+// TCP services.  For HTTP services, hosts that continually return 5xx
+// errors for API calls are ejected from the pool for a pre-defined period
+// of time. For TCP services, connection timeouts or connection
+// failures to a given host counts as an error when measuring the
+// consecutive errors metric. See Envoy's [outlier
+// detection](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/outlier)
+// for more details.
+//
+// **Note:** Istio's default mesh configuration enables locality load balancing
+// (`localityLbSetting.enabled: true`). As a result, configuring
+// `OutlierDetection` in a `DestinationRule` will automatically activate
+// locality-aware failover behavior — Envoy uses the outlier detection state to
+// determine when endpoints are unhealthy and should be failed over to the next
+// locality. To suppress this implicit failover, explicitly set
+// `localityLbSetting.enabled: false` in the `DestinationRule`'s load balancer
+// settings.
+//
+// The following rule sets a connection pool size of 100 HTTP1 connections
+// with no more than 10 req/connection to the "reviews" service. In addition,
+// it sets a limit of 1000 concurrent HTTP/2 requests and configures upstream
+// hosts to be scanned every 5 mins so that any host that fails 7 consecutive
+// times with a 502, 503, or 504 error code will be ejected for 15 minutes.
+//
+// ```yaml
+// apiVersion: networking.istio.io/v1
+// kind: DestinationRule
+// metadata:
+//
+//	name: reviews-cb-policy
+//
+// spec:
+//
+//	host: reviews.prod.svc.cluster.local
+//	trafficPolicy:
+//	  connectionPool:
+//	    tcp:
+//	      maxConnections: 100
+//	    http:
+//	      http2MaxRequests: 1000
+//	      maxRequestsPerConnection: 10
+//	  outlierDetection:
+//	    consecutive5xxErrors: 7
+//	    interval: 5m
+//	    baseEjectionTime: 15m
+//
+// ```
+type OutlierDetection struct {
+	// Number of errors before a host is ejected from the connection
+	// pool. Defaults to 5. When the upstream host is accessed over HTTP, a
+	// 502, 503, or 504 return code qualifies as an error. When the upstream host
+	// is accessed over an opaque TCP connection, connect timeouts and
+	// connection error/failure events qualify as an error.
+	// +hidefromdoc
+	//
+	// Deprecated: Marked as deprecated in networking/v1alpha3/destination_rule.proto.
+	ConsecutiveErrors *int32 `json:"consecutiveErrors,omitempty"`
+	// Determines whether to distinguish local origin failures from external errors. If set to true
+	// `consecutiveLocalOriginFailures` is taken into account for outlier detection calculations.
+	// This should be used when you want to derive the outlier detection status based on the errors
+	// seen locally such as failure to connect, timeout while connecting etc. rather than the status code
+	// returned by upstream service. This is especially useful when the upstream service explicitly returns
+	// a 5xx for some requests and you want to ignore those responses from upstream service while determining
+	// the outlier detection status of a host.
+	// Defaults to false.
+	SplitExternalLocalOriginErrors *bool `json:"splitExternalLocalOriginErrors,omitempty"`
+	// The number of consecutive locally originated failures before ejection
+	// occurs. Defaults to 5. Parameter takes effect only when `splitExternalLocalOriginErrors`
+	// is set to true.
+	ConsecutiveLocalOriginFailures *uint32 `json:"consecutiveLocalOriginFailures,omitempty"`
+	// Number of gateway errors before a host is ejected from the connection pool.
+	// When the upstream host is accessed over HTTP, a 502, 503, or 504 return
+	// code qualifies as a gateway error. When the upstream host is accessed over
+	// an opaque TCP connection, connect timeouts and connection error/failure
+	// events qualify as a gateway error.
+	// This feature is disabled by default or when set to the value 0.
+	//
+	// Note that `consecutiveGatewayErrors` and `consecutive5xxErrors` can be
+	// used separately or together. Because the errors counted by
+	// `consecutiveGatewayErrors` are also included in `consecutive5xxErrors`,
+	// if the value of `consecutiveGatewayErrors` is greater than or equal to
+	// the value of `consecutive5xxErrors`, `consecutiveGatewayErrors` will have
+	// no effect.
+	ConsecutiveGatewayErrors *uint32 `json:"consecutiveGatewayErrors,omitempty"`
+	// Number of 5xx errors before a host is ejected from the connection pool.
+	// When the upstream host is accessed over an opaque TCP connection, connect
+	// timeouts, connection error/failure and request failure events qualify as a
+	// 5xx error.
+	// This feature defaults to 5 but can be disabled by setting the value to 0.
+	//
+	// Note that `consecutiveGatewayErrors` and `consecutive5xxErrors` can be
+	// used separately or together. Because the errors counted by
+	// `consecutiveGatewayErrors` are also included in `consecutive5xxErrors`,
+	// if the value of `consecutiveGatewayErrors` is greater than or equal to
+	// the value of `consecutive5xxErrors`, `consecutiveGatewayErrors` will have
+	// no effect.
+	Consecutive5XxErrors *uint32 `json:"consecutive5xxErrors,omitempty"`
+	// Time interval between ejection sweep analysis. format:
+	// 1h/1m/1s/1ms. MUST be >=1ms. Default is 10s.
+	Interval *metav1.Duration `json:"interval,omitempty"`
+	// Minimum ejection duration. A host will remain ejected for a period
+	// equal to the product of minimum ejection duration and the number of
+	// times the host has been ejected. This technique allows the system to
+	// automatically increase the ejection period for unhealthy upstream
+	// servers. format: 1h/1m/1s/1ms. MUST be >=1ms. Default is 30s.
+	BaseEjectionTime *metav1.Duration `json:"baseEjectionTime,omitempty"`
+	// Maximum % of hosts in the load balancing pool for the upstream
+	// service that can be ejected. Defaults to 10%.
+	MaxEjectionPercent *int32 `json:"maxEjectionPercent,omitempty"`
+	// Outlier detection will be enabled as long as the associated load balancing
+	// pool has at least `minHealthPercent` hosts in healthy mode. When the
+	// percentage of healthy hosts in the load balancing pool drops below this
+	// threshold, outlier detection will be disabled and the proxy will load balance
+	// across all hosts in the pool (healthy and unhealthy). The threshold can be
+	// disabled by setting it to 0%. The default is 0% as it's not typically
+	// applicable in k8s environments with few pods per service.
+	MinHealthPercent *int32 `json:"minHealthPercent,omitempty"`
+}
 
 // SSL/TLS related settings for upstream connections. See Envoy's [TLS
 // context](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto.html#common-tls-configuration)
@@ -5232,6 +5403,80 @@ type LocalityLoadBalancerSetting struct {
 	Enabled *bool `json:"enabled,omitempty"`
 }
 
+// Settings common to both HTTP and TCP upstream connections.
+type ConnectionPoolSettingsTCPSettings struct {
+	// Maximum number of HTTP1 /TCP connections to a destination host. Default 2^32-1.
+	MaxConnections *int32 `json:"maxConnections,omitempty"`
+	// TCP connection timeout. format:
+	// 1h/1m/1s/1ms. MUST be >=1ms. Default is 10s.
+	ConnectTimeout *metav1.Duration `json:"connectTimeout,omitempty"`
+	// If set then set SO_KEEPALIVE on the socket to enable TCP Keepalives.
+	TcpKeepalive *ConnectionPoolSettingsTCPSettingsTcpKeepalive `json:"tcpKeepalive,omitempty"`
+	// The maximum duration of a connection. The duration is defined as the period since a connection
+	// was established. If not set, there is no max duration. When `maxConnectionDuration`
+	// is reached the connection will be closed. Duration must be at least 1ms.
+	MaxConnectionDuration *metav1.Duration `json:"maxConnectionDuration,omitempty"`
+	// The idle timeout for TCP connections. This is applied to the outbound connections to the upstream service.
+	// The idle timeout is defined as the period in which there are no bytes sent or received on the
+	// upstream connection.
+	// If not set, the default idle timeout is 1 hour. If set to 0s, the timeout will be disabled.
+	// Idle timeout is not configured per each cluster individually when weighted destinations are used,
+	// because idleTimeout is a property of a listener, not a cluster. In that case, idleTimeout
+	// specified in a destination rule for the first weighted route is configured in the listener,
+	// which means also for all weighted routes.
+	// To set the idle timeout for downstream (inbound) connections, use the
+	// `ISTIO_META_IDLE_TIMEOUT` field in the proxy configuration (e.g., via the `proxy.istio.io/config`
+	// annotation) which applies to all inbound connections.
+	// ```
+	// proxy.istio.io/config: |-
+	//
+	//	proxyMetadata:
+	//	   ISTIO_META_IDLE_TIMEOUT: "100s"
+	//
+	// ```
+	// +protoc-gen-crd:duration-validation:none
+	IdleTimeout *metav1.Duration `json:"idleTimeout,omitempty"`
+}
+
+// Settings applicable to HTTP1.1/HTTP2/GRPC connections.
+type ConnectionPoolSettingsHTTPSettings struct {
+	// Maximum number of requests that will be queued while waiting for
+	// a ready connection pool connection. Default 2^32-1.
+	// Refer to [Envoy Circuit Breaking](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/circuit_breaking)
+	// under which conditions a new connection is created for HTTP/2.
+	// Please note that this is applicable to both HTTP/1.1 and HTTP/2.
+	Http1MaxPendingRequests *int32 `json:"http1MaxPendingRequests,omitempty"`
+	// Maximum number of active requests to a destination. Default 2^32-1.
+	// Please note that this is applicable to both HTTP/1.1 and HTTP/2.
+	Http2MaxRequests *int32 `json:"http2MaxRequests,omitempty"`
+	// Maximum number of requests per connection to a backend. Setting this
+	// parameter to 1 disables keep alive. Default 0, meaning "unlimited",
+	// up to 2^29.
+	MaxRequestsPerConnection *int32 `json:"maxRequestsPerConnection,omitempty"`
+	// Maximum number of retries that can be outstanding to all hosts in a
+	// cluster at a given time. Defaults to 2^32-1.
+	MaxRetries *int32 `json:"maxRetries,omitempty"`
+	// The idle timeout for upstream connection pool connections. The idle timeout
+	// is defined as the period in which there are no active requests.
+	// If not set, the default is 1 hour. When the idle timeout is reached,
+	// the connection will be closed. If the connection is an HTTP/2
+	// connection a drain sequence will occur prior to closing the connection.
+	// Note that request based timeouts mean that HTTP/2 PINGs will not
+	// keep the connection alive. Applies to both HTTP/1.1 and HTTP/2 connections.
+	IdleTimeout *metav1.Duration `json:"idleTimeout,omitempty"`
+	// Specify if http1.1 connection should be upgraded to http2 for the associated destination.
+	H2UpgradePolicy ConnectionPoolSettingsHTTPSettingsH2UpgradePolicy `json:"h2UpgradePolicy,omitempty"`
+	// If set to true, client protocol will be preserved while initiating connection to backend.
+	// Note that when this is set to true, `h2UpgradePolicy` will be ineffective i.e. the client
+	// connections will not be upgraded to http2.
+	UseClientProtocol *bool `json:"useClientProtocol,omitempty"`
+	// The maximum number of concurrent streams allowed for a peer on one HTTP/2 connection.
+	// Defaults to 2^31-1.
+	MaxConcurrentStreams *int32 `json:"maxConcurrentStreams,omitempty"`
+	// Configure HTTP/2 PING frames for upstream connections.
+	Http2KeepAlive *ConnectionPoolSettingsHTTPSettingsConnectionKeepalive `json:"http2KeepAlive,omitempty"`
+}
+
 // TCP keepalive.
 type ConnectionPoolSettingsTCPSettingsTcpKeepalive struct {
 	// Maximum number of keepalive probes to send without response before
@@ -5246,6 +5491,16 @@ type ConnectionPoolSettingsTCPSettingsTcpKeepalive struct {
 	// Default is to use the OS level configuration
 	// (unless overridden, Linux defaults to 75s.)
 	Interval *metav1.Duration `json:"interval,omitempty"`
+}
+
+// Settings for HTTP/2 PING frames.
+type ConnectionPoolSettingsHTTPSettingsConnectionKeepalive struct {
+	// Send HTTP/2 PING frames at this interval. Required when
+	// `http2KeepAlive` is set.
+	Interval *metav1.Duration `json:"interval,omitempty"`
+	// How long to wait for a response to an HTTP/2 PING frame before
+	// closing the connection. Required when `http2KeepAlive` is set.
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
 }
 
 // Describes how traffic originating in the 'from' zone or sub-zone is

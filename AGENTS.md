@@ -150,6 +150,46 @@ The project supports downstream vendors with custom configurations:
 - **Controller errors**: Check logs and resource events
 - **macOS with Podman**: See `docs/macos/develop-on-macos.adoc` for platform-specific guidance
 
+## API Type Generation (update-deps breakages)
+
+The operator generates `api/v1/values_types.gen.go` from upstream Istio protobuf Go files using `hack/api_transformer/main.go` with config in `hack/api_transformer/transform.yaml`. This runs as part of `tools/update_deps.sh` → `make gen`.
+
+### How the transformer works
+
+1. Reads Go source files from upstream modules (`istio.io/istio` and `istio.io/api`) in the Go module cache
+2. Applies transformations per `transform.yaml`: removes imports, replaces types, filters/preserves types, renames fields
+3. Merges all processed files into one output file (`api/v1/values_types.gen.go`)
+
+### Common breakage pattern
+
+When upstream Istio adds new fields or structs that reference types from removed imports (e.g. `v1alpha3.SomeType`), the generated file will have dangling type references. The error looks like:
+
+```
+use of unimported package "v1alpha3"
+unknown type v1alpha3.SomeNewType
+```
+
+### How to fix
+
+1. **Identify the new type references**: The error message shows the unknown types
+2. **Find the source**: Check which upstream `.pb.go` file defines the type (usually in `istio.io/api/networking/v1alpha3/`)
+3. **Preserve the type**: Add it and any sub-types (nested structs, enums) to `preserveTypes` in the relevant input file section of `transform.yaml`
+4. **Replace field type references**: Add `replaceFieldTypes` entries in the input file section where the type is *used* (e.g. `config.pb.go`), mapping `StructName.FieldName` to the local type (without import prefix)
+
+### Key files
+
+- `hack/api_transformer/transform.yaml` — Transformation config (input files, type mappings, field replacements)
+- `hack/api_transformer/main.go` — The transformer tool
+- `tools/update_deps.sh` — Orchestrates dependency updates and runs `make gen`
+
+### Processing order in transform.yaml
+
+- `removeImports` / `addImports` — Controls which packages are available
+- `replaceFieldTypes` — Maps `StructName.FieldName` to replacement type (runs before `fixNames`)
+- `replaceTypes` — Global type string replacements (e.g. `*wrappers.BoolValue` → `*bool`)
+- `removeTypes` / `preserveTypes` — Controls which types survive from each input file
+- Struct/field names in transform.yaml use the *original* Go names (with underscores for nested types, e.g. `MeshConfig_DefaultTrafficPolicy`)
+
 ## Integration with Istio
 
 The operator deploys Istio using Helm charts and follows Istio's configuration patterns:
