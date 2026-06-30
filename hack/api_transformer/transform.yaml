@@ -171,6 +171,8 @@ inputFiles:
       MeshConfig.TcpKeepalive: "*ConnectionPoolSettingsTCPSettingsTcpKeepalive"
       MeshConfig.LocalityLbSetting: "*LocalityLoadBalancerSetting"
       MeshConfig.DefaultHttpRetryPolicy: "*HTTPRetry"
+      MeshConfig_DefaultTrafficPolicy.ConnectionPool: "*ConnectionPoolSettings"
+      MeshConfig_DefaultTrafficPolicy.OutlierDetection: "*OutlierDetection"
       MeshConfig.DiscoverySelectors: "[]*metav1.LabelSelector"
       ConfigSource.TlsSettings: "*ClientTLSSettings"
       MeshConfig_CA.TlsSettings: "*ClientTLSSettings"
@@ -218,7 +220,13 @@ inputFiles:
     removeTypes:
     - '*'
     preserveTypes:
+    - ConnectionPoolSettings
+    - ConnectionPoolSettings_TCPSettings
+    - ConnectionPoolSettings_HTTPSettings
+    - ConnectionPoolSettings_HTTPSettings_H2UpgradePolicy
+    - ConnectionPoolSettings_HTTPSettings_ConnectionKeepalive
     - ConnectionPoolSettings_TCPSettings_TcpKeepalive
+    - OutlierDetection
     - LocalityLoadBalancerSetting
     - LocalityLoadBalancerSetting_Distribute
     - LocalityLoadBalancerSetting_Failover

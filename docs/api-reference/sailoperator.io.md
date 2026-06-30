@@ -370,6 +370,88 @@ _Appears in:_
 | `subscribedResources` _[Resource](#resource) array_ | Describes the source of configuration, if nothing is specified default is MCP |  | Enum: [SERVICE_REGISTRY]   |
 
 
+
+
+#### ConnectionPoolSettingsHTTPSettings
+
+
+
+Settings applicable to HTTP1.1/HTTP2/GRPC connections.
+
+
+
+_Appears in:_
+- [ConnectionPoolSettings](#connectionpoolsettings)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `http1MaxPendingRequests` _integer_ | Maximum number of requests that will be queued while waiting for a ready connection pool connection. Default 2^32-1. Refer to [Envoy Circuit Breaking](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/circuit_breaking) under which conditions a new connection is created for HTTP/2. Please note that this is applicable to both HTTP/1.1 and HTTP/2. |  |  |
+| `http2MaxRequests` _integer_ | Maximum number of active requests to a destination. Default 2^32-1. Please note that this is applicable to both HTTP/1.1 and HTTP/2. |  |  |
+| `maxRequestsPerConnection` _integer_ | Maximum number of requests per connection to a backend. Setting this parameter to 1 disables keep alive. Default 0, meaning "unlimited", up to 2^29. |  |  |
+| `maxRetries` _integer_ | Maximum number of retries that can be outstanding to all hosts in a cluster at a given time. Defaults to 2^32-1. |  |  |
+| `idleTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | The idle timeout for upstream connection pool connections. The idle timeout is defined as the period in which there are no active requests. If not set, the default is 1 hour. When the idle timeout is reached, the connection will be closed. If the connection is an HTTP/2 connection a drain sequence will occur prior to closing the connection. Note that request based timeouts mean that HTTP/2 PINGs will not keep the connection alive. Applies to both HTTP/1.1 and HTTP/2 connections. |  |  |
+| `h2UpgradePolicy` _[ConnectionPoolSettingsHTTPSettingsH2UpgradePolicy](#connectionpoolsettingshttpsettingsh2upgradepolicy)_ | Specify if http1.1 connection should be upgraded to http2 for the associated destination. |  | Enum: [DEFAULT DO_NOT_UPGRADE UPGRADE]   |
+| `useClientProtocol` _boolean_ | If set to true, client protocol will be preserved while initiating connection to backend. Note that when this is set to true, `h2UpgradePolicy` will be ineffective i.e. the client connections will not be upgraded to http2. |  |  |
+| `maxConcurrentStreams` _integer_ | The maximum number of concurrent streams allowed for a peer on one HTTP/2 connection. Defaults to 2^31-1. |  |  |
+| `http2KeepAlive` _[ConnectionPoolSettingsHTTPSettingsConnectionKeepalive](#connectionpoolsettingshttpsettingsconnectionkeepalive)_ | Configure HTTP/2 PING frames for upstream connections. |  |  |
+
+
+#### ConnectionPoolSettingsHTTPSettingsConnectionKeepalive
+
+
+
+Settings for HTTP/2 PING frames.
+
+
+
+_Appears in:_
+- [ConnectionPoolSettingsHTTPSettings](#connectionpoolsettingshttpsettings)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `interval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | Send HTTP/2 PING frames at this interval. Required when `http2KeepAlive` is set. |  |  |
+| `timeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | How long to wait for a response to an HTTP/2 PING frame before closing the connection. Required when `http2KeepAlive` is set. |  |  |
+
+
+#### ConnectionPoolSettingsHTTPSettingsH2UpgradePolicy
+
+_Underlying type:_ _string_
+
+Policy for upgrading http1.1 connections to http2.
+
+_Validation:_
+- Enum: [DEFAULT DO_NOT_UPGRADE UPGRADE]
+
+_Appears in:_
+- [ConnectionPoolSettingsHTTPSettings](#connectionpoolsettingshttpsettings)
+
+| Field | Description |
+| --- | --- |
+| `DEFAULT` | Use the global default.  |
+| `DO_NOT_UPGRADE` | Do not upgrade the connection to http2. This opt-out option overrides the default.  |
+| `UPGRADE` | Upgrade the connection to http2. This opt-in option overrides the default.  |
+
+
+#### ConnectionPoolSettingsTCPSettings
+
+
+
+Settings common to both HTTP and TCP upstream connections.
+
+
+
+_Appears in:_
+- [ConnectionPoolSettings](#connectionpoolsettings)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `maxConnections` _integer_ | Maximum number of HTTP1 /TCP connections to a destination host. Default 2^32-1. |  |  |
+| `connectTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | TCP connection timeout. format: 1h/1m/1s/1ms. MUST be >=1ms. Default is 10s. |  |  |
+| `tcpKeepalive` _[ConnectionPoolSettingsTCPSettingsTcpKeepalive](#connectionpoolsettingstcpsettingstcpkeepalive)_ | If set then set SO_KEEPALIVE on the socket to enable TCP Keepalives. |  |  |
+| `maxConnectionDuration` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | The maximum duration of a connection. The duration is defined as the period since a connection was established. If not set, there is no max duration. When `maxConnectionDuration` is reached the connection will be closed. Duration must be at least 1ms. |  |  |
+| `idleTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | The idle timeout for TCP connections. This is applied to the outbound connections to the upstream service. The idle timeout is defined as the period in which there are no bytes sent or received on the upstream connection. If not set, the default idle timeout is 1 hour. If set to 0s, the timeout will be disabled. Idle timeout is not configured per each cluster individually when weighted destinations are used, because idleTimeout is a property of a listener, not a cluster. In that case, idleTimeout specified in a destination rule for the first weighted route is configured in the listener, which means also for all weighted routes. To set the idle timeout for downstream (inbound) connections, use the `ISTIO_META_IDLE_TIMEOUT` field in the proxy configuration (e.g., via the `proxy.istio.io/config` annotation) which applies to all inbound connections. ``` proxy.istio.io/config: \|-    proxyMetadata:      ISTIO_META_IDLE_TIMEOUT: "100s"  ``` |  |  |
+
+
 #### ConnectionPoolSettingsTCPSettingsTcpKeepalive
 
 
@@ -379,6 +461,7 @@ TCP keepalive.
 
 
 _Appears in:_
+- [ConnectionPoolSettingsTCPSettings](#connectionpoolsettingstcpsettings)
 - [MeshConfig](#meshconfig)
 - [RemoteService](#remoteservice)
 
@@ -2165,6 +2248,8 @@ _Appears in:_
 | --- | --- |
 | `ALLOW_ANY` | Outbound traffic to unknown destinations will be allowed, in case there are no services or ServiceEntries for the destination port  |
 | `REGISTRY_ONLY` | Restrict outbound traffic to services defined in the service registry as well as those defined through ServiceEntries  |
+
+
 
 
 #### PeerCaCrlConfig
