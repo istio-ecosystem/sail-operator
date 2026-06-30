@@ -21,6 +21,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
+	configv1 "github.com/openshift/api/config/v1"
 )
 
 func TestApplyTLSConfig(t *testing.T) {
@@ -186,7 +187,7 @@ func TestApplyTLSConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "adds tls-min-version TLS 1.3 for istio 1.29+",
+			name: "adds tls-min-version TLS 1.3 for istio 1.29+ and remove cipherSuites from meshConfig",
 			tlsConfig: &config.TLSConfig{
 				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
 				MinVersion:   tls.VersionTLS13,
@@ -196,11 +197,11 @@ func TestApplyTLSConfig(t *testing.T) {
 			wantValues: &v1.Values{
 				MeshConfig: &v1.MeshConfig{
 					MeshMTLS: &v1.MeshConfigTLSConfig{
-						CipherSuites:       []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+						CipherSuites:       nil,
 						MinProtocolVersion: v1.MeshConfigTLSConfigTLSProtocolTlsv13,
 					},
 					TlsDefaults: &v1.MeshConfigTLSConfig{
-						CipherSuites:       []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+						CipherSuites:       nil,
 						MinProtocolVersion: v1.MeshConfigTLSConfigTLSProtocolTlsv13,
 					},
 				},
@@ -255,6 +256,45 @@ func TestApplyTLSConfig(t *testing.T) {
 				},
 				Pilot: &v1.PilotConfig{
 					ExtraContainerArgs: []string{"--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+				},
+			},
+		},
+		{
+			name: "adds tls-min-version TLS 1.3 and the right ecdh curves only to TLSDefaults",
+			tlsConfig: &config.TLSConfig{
+				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
+				MinVersion:   tls.VersionTLS13,
+				OpenShift: &config.OpenShiftTLS{
+					TLSProfileSpec: configv1.TLSProfileSpec{
+						Groups: []configv1.TLSGroup{
+							configv1.TLSGroupX25519MLKEM768,
+							configv1.TLSGroupX25519,
+							configv1.TLSGroupSecP256r1,
+							configv1.TLSGroupSecP384r1,
+						},
+					},
+				},
+			},
+			istioVersion: "1.30.0",
+			inputValues:  &v1.Values{},
+			wantValues: &v1.Values{
+				MeshConfig: &v1.MeshConfig{
+					MeshMTLS: &v1.MeshConfigTLSConfig{
+						CipherSuites:       nil,
+						MinProtocolVersion: v1.MeshConfigTLSConfigTLSProtocolTlsv13,
+						EcdhCurves:         nil,
+					},
+					TlsDefaults: &v1.MeshConfigTLSConfig{
+						CipherSuites:       nil,
+						MinProtocolVersion: v1.MeshConfigTLSConfigTLSProtocolTlsv13,
+						EcdhCurves:         []string{"X25519MLKEM768", "X25519", "P-256", "P-384"},
+					},
+				},
+				Pilot: &v1.PilotConfig{
+					ExtraContainerArgs: []string{
+						"--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+						"--tls-min-version=1.3",
+					},
 				},
 			},
 		},
