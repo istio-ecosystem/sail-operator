@@ -192,7 +192,7 @@ spec:
     %s
   containers:
   - name: curl
-    image: curlimages/curl
+    image: quay.io/curl/curl:8.16.0
     command: ["sleep", "3600"]
     securityContext:
       allowPrivilegeEscalation: false
