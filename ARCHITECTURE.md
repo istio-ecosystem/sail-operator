@@ -9,7 +9,7 @@ See also [AGENTS.md](AGENTS.md) for development workflow, commands, and contribu
 ```
 sail-operator/
 ├── api/                    # CRD type definitions
-│   ├── v1/                 # Stable API group (Istio, IstioRevision, IstioRevisionTag, IstioCNI)
+│   ├── v1/                 # Stable API group (Istio, IstioRevision, IstioRevisionTag, IstioCNI, ZTunnel)
 │   └── v1alpha1/           # Experimental API group (ZTunnel)
 ├── cmd/                    # Operator binary entry point
 │   └── main.go             # Manager setup, controller registration, platform detection
