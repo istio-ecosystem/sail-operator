@@ -16,7 +16,7 @@ sail-operator/
 ├── controllers/            # Kubernetes controller implementations
 │   ├── istio/              # Top-level Istio CR controller
 │   ├── istiorevision/      # Revision lifecycle via Helm charts
-│   ├── istiorevisiontag/   # Revision traffic routing
+│   ├── istiorevisiontag/   # Revision tag management
 │   ├── istiocni/           # CNI plugin controller
 │   ├── ztunnel/            # Ambient mesh tunnel controller
 │   └── webhook/            # ValidatingWebhookConfiguration controller
