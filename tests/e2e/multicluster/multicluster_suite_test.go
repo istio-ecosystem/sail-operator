@@ -36,7 +36,6 @@ var (
 	clPrimary                     client.Client
 	clRemote                      client.Client
 	err                           error
-	debugInfoLogged               bool
 	externalControlPlaneNamespace = env.Get("EXTERNAL_CONTROL_PLANE_NS", "external-istiod")
 	istioName                     = env.Get("ISTIO_NAME", "default")
 	istioCniNamespace             = common.IstioCniNamespace
@@ -103,9 +102,3 @@ func setup(t *testing.T) {
 	k1 = kubectl.New().WithKubeconfig(kubeconfig).WithClusterName("primary")
 	k2 = kubectl.New().WithKubeconfig(kubeconfig2).WithClusterName("remote")
 }
-
-var _ = ReportAfterSuite("Conditional cleanup", func(ctx SpecContext, r Report) {
-	if !r.SuiteSucceeded && !debugInfoLogged {
-		common.LogDebugInfo(common.MultiCluster, k1, k2)
-	}
-})

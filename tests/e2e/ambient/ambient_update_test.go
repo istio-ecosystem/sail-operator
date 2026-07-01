@@ -37,7 +37,6 @@ import (
 var _ = Describe("Ambient Update & Lifecycle", Label("ambient", "update", "slow"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(defaultTimeout) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
-	debugInfoLogged := false
 
 	// Get two consecutive minor versions for update testing
 	baseVersion, newVersion, err := update.GetTwoConsecutiveAmbientVersions(fipsCluster)
@@ -56,6 +55,13 @@ var _ = Describe("Ambient Update & Lifecycle", Label("ambient", "update", "slow"
 				Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed())
 				Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed())
 				Expect(k.CreateNamespace(ztunnelNamespace)).To(Succeed())
+			})
+
+			// Capture debug info immediately on test failure
+			JustAfterEach(func(ctx SpecContext) {
+				if CurrentSpecReport().Failed() {
+					common.LogDebugInfo(common.Ambient, k)
+				}
 			})
 
 			When("all components are created with base version", func() {
@@ -279,12 +285,9 @@ spec:
 			})
 
 			AfterAll(func(ctx SpecContext) {
-				if CurrentSpecReport().Failed() {
-					common.LogDebugInfo(common.Ambient, k)
-					debugInfoLogged = true
-					if keepOnFailure {
-						return
-					}
+				// Skip cleanup if test failed and keepOnFailure is set
+				if CurrentSpecReport().Failed() && keepOnFailure {
+					return
 				}
 				clr.Cleanup(ctx)
 			})
@@ -340,6 +343,12 @@ spec:
 				// the first IstioRevision is created.
 
 				Success("Shared dependencies created at base version")
+			})
+			// Capture debug info immediately on test failure
+			JustAfterEach(func(ctx SpecContext) {
+				if CurrentSpecReport().Failed() {
+					common.LogDebugInfo(common.Ambient, k)
+				}
 			})
 
 			When("Istio CR is created with base version (default revision)", func() {
@@ -585,12 +594,9 @@ spec:
 			})
 
 			AfterAll(func(ctx SpecContext) {
-				if CurrentSpecReport().Failed() {
-					common.LogDebugInfo(common.Ambient, k)
-					debugInfoLogged = true
-					if keepOnFailure {
-						return
-					}
+				// Skip cleanup if test failed and keepOnFailure is set
+				if CurrentSpecReport().Failed() && keepOnFailure {
+					return
 				}
 				clr.Cleanup(ctx)
 			})
@@ -642,6 +648,12 @@ spec:
 				common.AwaitCondition(ctx, v1.IstioConditionReady, kube.Key(istioName), &v1.Istio{}, k, cl, 240*time.Second)
 
 				Success("Control plane and IstioCNI created for lifecycle tests")
+			})
+			// Capture debug info immediately on test failure
+			JustAfterEach(func(ctx SpecContext) {
+				if CurrentSpecReport().Failed() {
+					common.LogDebugInfo(common.Ambient, k)
+				}
 			})
 
 			When("spec.values is updated on ZTunnel", func() {
@@ -743,28 +755,12 @@ spec:
 			})
 
 			AfterAll(func(ctx SpecContext) {
-				if CurrentSpecReport().Failed() {
-					common.LogDebugInfo(common.Ambient, k)
-					debugInfoLogged = true
-					if keepOnFailure {
-						return
-					}
+				// Skip cleanup if test failed and keepOnFailure is set
+				if CurrentSpecReport().Failed() && keepOnFailure {
+					return
 				}
 				clr.Cleanup(ctx)
 			})
 		})
-	})
-
-	AfterAll(func() {
-		if CurrentSpecReport().Failed() {
-			if !debugInfoLogged {
-				common.LogDebugInfo(common.Ambient, k)
-				debugInfoLogged = true
-
-				if keepOnFailure {
-					return
-				}
-			}
-		}
 	})
 })
