@@ -21,6 +21,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
+	configv1 "github.com/openshift/api/config/v1"
 
 	"istio.io/istio/pkg/log"
 )
@@ -63,6 +64,26 @@ func ApplyTLSConfig(tlsConfig *config.TLSConfig, istioVersion string, values *v1
 
 	if values.MeshConfig.MeshMTLS.MinProtocolVersion == "" {
 		values.MeshConfig.MeshMTLS.MinProtocolVersion = tlsProtocolVersion(tlsConfig.MinVersion)
+	}
+
+	// Envoy does not support setting TLS ciphers when minProtocolVersion is 1.3
+	if values.MeshConfig.TlsDefaults.MinProtocolVersion == v1.MeshConfigTLSConfigTLSProtocolTlsv13 {
+		values.MeshConfig.TlsDefaults.CipherSuites = nil
+	}
+
+	if values.MeshConfig.MeshMTLS.MinProtocolVersion == v1.MeshConfigTLSConfigTLSProtocolTlsv13 {
+		values.MeshConfig.MeshMTLS.CipherSuites = nil
+	}
+
+	// Configure the Ecdhcurves if they are available on Openshift configuration. Normalize before
+	// copying the names, given Openshift allows a different naming from NIST
+	if tlsConfig.OpenShift != nil && len(tlsConfig.OpenShift.TLSProfileSpec.Groups) > 0 {
+		ecdhCurves := copyECDHCurvesToConfig(tlsConfig.OpenShift.TLSProfileSpec.Groups)
+		if len(values.MeshConfig.TlsDefaults.EcdhCurves) == 0 {
+			values.MeshConfig.TlsDefaults.EcdhCurves = ecdhCurves
+		}
+		// TODO: MeshMTLS does not support setting ecdhCurves and this will break Gateway provisioning.
+		// we should take care of ecdhCurves for mesh as a second step
 	}
 
 	if values.Pilot == nil {
@@ -116,4 +137,28 @@ func addExtraContainerArg(pilot *v1.PilotConfig, argName, argValue string) {
 		}
 	}
 	pilot.ExtraContainerArgs = append(pilot.ExtraContainerArgs, argNameWithEquals+argValue)
+}
+
+// copyECDHCurvesToConfig creates a new slice containing the normalized ECDHCurves to be
+// used on meshConfig fields
+func copyECDHCurvesToConfig(groups []configv1.TLSGroup) []string {
+	values := make([]string, len(groups))
+	for i := range groups {
+		values[i] = normalizeECDHCurve(string(groups[i]))
+	}
+	return values
+}
+
+// normalizeECDHCurve maps common curve aliases to Envoy-supported names
+func normalizeECDHCurve(curve string) string {
+	switch strings.ToLower(strings.TrimSpace(curve)) {
+	case "secp256r1", "prime256v1", "p-256", "p256":
+		return "P-256"
+	case "secp384r1", "p-384", "p384":
+		return "P-384"
+	case "x25519":
+		return "X25519"
+	default:
+		return curve // Return as-is if unmapped
+	}
 }
