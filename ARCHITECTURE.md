@@ -32,7 +32,6 @@ sail-operator/
 ├── enhancements/           # Sail Enhancement Proposals (SEPs)
 ├── docs/                   # Documentation
 ├── common/                 # Shared Makefile infrastructure (from istio/common-files)
-├── ossm/                   # OpenShift Service Mesh downstream code
 └── licenses/               # Third-party license information
 ```
 
