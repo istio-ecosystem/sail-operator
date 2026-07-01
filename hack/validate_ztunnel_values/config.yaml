@@ -1,0 +1,13 @@
+# ZTunnel validation configuration
+# Fields listed here will NOT be reported as missing even if they exist in upstream
+# but are not implemented in the Sail Operator ZTunnelConfig
+#
+# Use "section.field" syntax for nested section fields (e.g., "global.networkPolicy")
+
+ignore_missing_fields:
+  # we currently don't have a MeshConfig field in the API and if we can avoid it, we might want to keep it that way
+  - "meshConfig"
+  # FIXME: add this field
+  - "resourceScope"
+  # FIXME: add this field
+  - "global.networkPolicy"
