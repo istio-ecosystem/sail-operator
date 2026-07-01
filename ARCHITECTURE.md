@@ -11,28 +11,28 @@ sail-operator/
 ├── api/                    # CRD type definitions
 │   ├── v1/                 # Stable API group (Istio, IstioRevision, IstioRevisionTag, IstioCNI, ZTunnel)
 │   └── v1alpha1/           # Experimental API group (ZTunnel)
+├── bundle/                 # OLM bundle (ClusterServiceVersion, metadata)
+├── chart/                  # Operator's own Helm chart for deployment
 ├── cmd/                    # Operator binary entry point
 │   └── main.go             # Manager setup, controller registration, platform detection
+├── common/                 # Shared Makefile infrastructure (from istio/common-files)
 ├── controllers/            # Kubernetes controller implementations
 │   ├── istio/              # Top-level Istio CR controller
+│   ├── istiocni/           # CNI plugin controller
 │   ├── istiorevision/      # Revision lifecycle via Helm charts
 │   ├── istiorevisiontag/   # Revision tag management
-│   ├── istiocni/           # CNI plugin controller
-│   ├── ztunnel/            # Ambient mesh tunnel controller
-│   └── webhook/            # ValidatingWebhookConfiguration controller
+│   ├── webhook/            # ValidatingWebhookConfiguration controller
+│   └── ztunnel/            # Ambient mesh tunnel controller
+├── docs/                   # Documentation
+├── enhancements/           # Sail Enhancement Proposals (SEPs)
+├── hack/                   # Shell scripts for chart downloads, CRD extraction, patching
+├── licenses/               # Third-party license information
 ├── pkg/                    # Core packages (see "Core Packages" below)
 ├── resources/              # Embedded Istio Helm charts and profiles, per version
-├── chart/                  # Operator's own Helm chart for deployment
-├── bundle/                 # OLM bundle (ClusterServiceVersion, metadata)
 ├── tests/
 │   ├── e2e/                # End-to-end tests (Ginkgo, against real clusters)
 │   └── integration/        # Integration tests (Ginkgo, envtest)
-├── hack/                   # Shell scripts for chart downloads, CRD extraction, patching
-├── tools/                  # Dependency update and utility scripts
-├── enhancements/           # Sail Enhancement Proposals (SEPs)
-├── docs/                   # Documentation
-├── common/                 # Shared Makefile infrastructure (from istio/common-files)
-└── licenses/               # Third-party license information
+└── tools/                  # Dependency update and utility scripts
 ```
 
 ## High-Level System Diagram
