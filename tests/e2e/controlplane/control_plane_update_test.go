@@ -41,7 +41,6 @@ import (
 var _ = Describe("Control Plane updates", Label("control-plane", "update", "slow", "sidecar"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
-	debugInfoLogged := false
 
 	Describe("using IstioRevisionTag", func() {
 		var baseVersion, newVersion istioversion.VersionInfo
@@ -64,6 +63,13 @@ var _ = Describe("Control Plane updates", Label("control-plane", "update", "slow
 
 				common.CreateIstioCNI(k, baseVersion.Name)
 				common.AwaitCondition(ctx, v1.IstioCNIConditionReady, kube.Key(istioCniName), &v1.IstioCNI{}, k, cl)
+			})
+
+			// Capture debug info immediately on test failure
+			JustAfterEach(func(ctx SpecContext) {
+				if CurrentSpecReport().Failed() {
+					common.LogDebugInfo(common.ControlPlane, k)
+				}
 			})
 
 			When(fmt.Sprintf("the Istio CR is created with RevisionBased updateStrategy for base version %s", baseVersion.Name), func() {
@@ -266,29 +272,13 @@ spec:
 			})
 
 			AfterAll(func(ctx SpecContext) {
-				if CurrentSpecReport().Failed() {
-					common.LogDebugInfo(common.ControlPlane, k)
-					debugInfoLogged = true
-					if keepOnFailure {
-						return
-					}
+				// Skip cleanup if test failed and keepOnFailure is set
+				if CurrentSpecReport().Failed() && keepOnFailure {
+					return
 				}
 
 				clr.Cleanup(ctx)
 			})
-		})
-
-		AfterAll(func() {
-			if CurrentSpecReport().Failed() {
-				if !debugInfoLogged {
-					common.LogDebugInfo(common.ControlPlane, k)
-					debugInfoLogged = true
-
-					if keepOnFailure {
-						return
-					}
-				}
-			}
 		})
 	})
 
@@ -314,6 +304,13 @@ spec:
 
 				common.CreateIstioCNI(k, baseVersion.Name)
 				common.AwaitCondition(ctx, v1.IstioCNIConditionReady, kube.Key(istioCniName), &v1.IstioCNI{}, k, cl)
+			})
+
+			// Capture debug info immediately on test failure
+			JustAfterEach(func(ctx SpecContext) {
+				if CurrentSpecReport().Failed() {
+					common.LogDebugInfo(common.ControlPlane, k)
+				}
 			})
 
 			When(fmt.Sprintf("Istio CR is created with InPlace updateStrategy for version %s", baseVersion.Name), func() {
@@ -451,11 +448,9 @@ updateStrategy:
 			})
 
 			AfterAll(func(ctx SpecContext) {
-				if CurrentSpecReport().Failed() {
-					common.LogDebugInfo(common.ControlPlane, k)
-					if keepOnFailure {
-						return
-					}
+				// Skip cleanup if test failed and keepOnFailure is set
+				if CurrentSpecReport().Failed() && keepOnFailure {
+					return
 				}
 				clr.Cleanup(ctx)
 			})
@@ -493,6 +488,13 @@ updateStrategy:
 				// Wait for it to be ready
 				common.AwaitCondition(ctx, v1.IstioConditionReady, kube.Key("default"), &v1.Istio{}, k, cl)
 				Success("Istio CR created and ready for lifecycle tests")
+			})
+
+			// Capture debug info immediately on test failure
+			JustAfterEach(func(ctx SpecContext) {
+				if CurrentSpecReport().Failed() {
+					common.LogDebugInfo(common.ControlPlane, k)
+				}
 			})
 
 			When("spec.values is updated on Istio CR", func() {
@@ -581,11 +583,9 @@ updateStrategy:
 			})
 
 			AfterAll(func(ctx SpecContext) {
-				if CurrentSpecReport().Failed() {
-					common.LogDebugInfo(common.ControlPlane, k)
-					if keepOnFailure {
-						return
-					}
+				// Skip cleanup if test failed and keepOnFailure is set
+				if CurrentSpecReport().Failed() && keepOnFailure {
+					return
 				}
 				clr.Cleanup(ctx)
 			})

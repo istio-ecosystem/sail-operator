@@ -38,7 +38,6 @@ import (
 var _ = Describe("Control Plane Installation", Label("control-plane", "slow", "sidecar"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
-	debugInfoLogged := false
 
 	Describe("defaulting", func() {
 		DescribeTable("IstioCNI",
@@ -99,6 +98,13 @@ metadata:
 					clr.Record(ctx)
 					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
 					Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
+				})
+
+				// Capture debug info immediately on test failure
+				JustAfterEach(func(ctx SpecContext) {
+					if CurrentSpecReport().Failed() {
+						common.LogDebugInfo(common.ControlPlane, k)
+					}
 				})
 
 				When("the IstioCNI CR is created", func() {
@@ -224,11 +230,7 @@ metadata:
 				})
 
 				AfterAll(func(ctx SpecContext) {
-					if CurrentSpecReport().Failed() {
-						common.LogDebugInfo(common.ControlPlane, k)
-						debugInfoLogged = true
-					}
-
+					// Skip cleanup if test failed and keepOnFailure is set
 					if CurrentSpecReport().Failed() && keepOnFailure {
 						return
 					}
@@ -236,12 +238,6 @@ metadata:
 					clr.Cleanup(ctx)
 				})
 			})
-		}
-	})
-
-	AfterAll(func() {
-		if CurrentSpecReport().Failed() && !debugInfoLogged {
-			common.LogDebugInfo(common.ControlPlane, k)
 		}
 	})
 })
