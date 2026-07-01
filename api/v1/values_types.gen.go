@@ -464,12 +464,20 @@ type GlobalConfig struct {
 	Agentgateway *Agentgateway `json:"agentgateway,omitempty"`
 	// If true, install istio-reader service account and associated cluster role/binding,
 	// which are used for multicluster remote-secret workflows.
-	EnableReaderRBAC *bool `json:"enableReaderRBAC,omitempty"` // The next available key is 79
+	EnableReaderRBAC *bool `json:"enableReaderRBAC,omitempty"`
+	// Optionally specify a custom service account to bind to the istio-reader ClusterRole.
+	// When set, the default istio-reader-service-account is not created.
+	ReaderServiceAccount *ReaderServiceAccount `json:"readerServiceAccount,omitempty"` // The next available key is 80
 
 }
 
 type Agentgateway struct {
 	Image *string `json:"image,omitempty"`
+}
+
+type ReaderServiceAccount struct {
+	Name      *string `json:"name,omitempty"`
+	Namespace *string `json:"namespace,omitempty"`
 }
 
 // Configuration for Security Token Service (STS) server.
@@ -1193,7 +1201,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x14istio_ingressgateway\x18\x04 \x01(\v2-.istio.operator.v1alpha1.IngressGatewayConfigR\x14istio-ingressgateway\x12@\n" +
 	"\x0fsecurityContext\x18\n" +
 	" \x01(\v2\x16.google.protobuf.ValueR\x0fsecurityContext\x12>\n" +
-	"\x0eseccompProfile\x18\f \x01(\v2\x16.google.protobuf.ValueR\x0eseccompProfile\"\xb9\x15\n" +
+	"\x0eseccompProfile\x18\f \x01(\v2\x16.google.protobuf.ValueR\x0eseccompProfile\"\x9c\x16\n" +
 	"\fGlobalConfig\x12;\n" +
 	"\x04arch\x18\x01 \x01(\v2#.istio.operator.v1alpha1.ArchConfigB\x02\x18\x01R\x04arch\x12 \n" +
 	"\vcertSigners\x18D \x03(\tR\vcertSigners\x12F\n" +
@@ -1246,9 +1254,13 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\rnetworkPolicy\x18K \x01(\v2,.istio.operator.v1alpha1.NetworkPolicyConfigR\rnetworkPolicy\x12L\n" +
 	"\rresourceScope\x18L \x01(\x0e2&.istio.operator.v1alpha1.ResourceScopeR\rresourceScope\x12I\n" +
 	"\fagentgateway\x18M \x01(\v2%.istio.operator.v1alpha1.AgentgatewayR\fagentgateway\x12F\n" +
-	"\x10enableReaderRBAC\x18N \x01(\v2\x1a.google.protobuf.BoolValueR\x10enableReaderRBAC\"$\n" +
+	"\x10enableReaderRBAC\x18N \x01(\v2\x1a.google.protobuf.BoolValueR\x10enableReaderRBAC\x12a\n" +
+	"\x14readerServiceAccount\x18O \x01(\v2-.istio.operator.v1alpha1.ReaderServiceAccountR\x14readerServiceAccount\"$\n" +
 	"\fAgentgateway\x12\x14\n" +
-	"\x05image\x18\x01 \x01(\tR\x05image\"-\n" +
+	"\x05image\x18\x01 \x01(\tR\x05image\"H\n" +
+	"\x14ReaderServiceAccount\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1c\n" +
+	"\tnamespace\x18\x02 \x01(\tR\tnamespace\"-\n" +
 	"\tSTSConfig\x12 \n" +
 	"\vservicePort\x18\x01 \x01(\rR\vservicePort\"R\n" +
 	"\fIstiodConfig\x12B\n" +
@@ -2136,6 +2148,11 @@ type MeshConfig struct {
 	// Configuration of TLS for all traffic except for ISTIO_MUTUAL mode.
 	// For ISTIO_MUTUAL TLS settings, use meshMTLS configuration.
 	TlsDefaults *MeshConfigTLSConfig `json:"tlsDefaults,omitempty"`
+	// The default traffic policy applied to outbound clusters in the mesh, providing a
+	// baseline that DestinationRules inherit and override per block. Without this, a
+	// DestinationRule that sets `connectionPool` or `outlierDetection` has no mesh-level
+	// baseline, and unset blocks fall back to Istio's built-in defaults.
+	DefaultTrafficPolicy *MeshConfigDefaultTrafficPolicy `json:"defaultTrafficPolicy,omitempty"`
 }
 
 // ConfigSource describes information about a configuration store inside a
@@ -2422,6 +2439,19 @@ type MeshConfigTLSConfig struct {
 	// AES128-GCM-SHA256
 	// ```
 	CipherSuites []string `json:"cipherSuites,omitempty"`
+}
+
+// DefaultTrafficPolicy defines mesh-wide baseline traffic settings for outbound
+// clusters. Only connection pool and outlier detection are configurable here, the
+// two settings that benefit from a mesh-wide baseline. A DestinationRule overrides a
+// baseline block when it sets the corresponding policy, and inherits it otherwise.
+type MeshConfigDefaultTrafficPolicy struct {
+	// Baseline connection pool settings for outbound clusters. A DestinationRule that
+	// sets `connectionPool` overrides this whole block; otherwise this baseline applies.
+	ConnectionPool *ConnectionPoolSettings `json:"connectionPool,omitempty"`
+	// Baseline outlier detection for outbound clusters. A DestinationRule that sets
+	// `outlierDetection` overrides this whole block; otherwise this baseline applies.
+	OutlierDetection *OutlierDetection `json:"outlierDetection,omitempty"`
 }
 
 // Settings for the selected services.
@@ -3215,7 +3245,7 @@ type MeshConfigExtensionProviderResourceDetectorsDynatraceResourceDetector struc
 
 const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\n" +
-	"\x1amesh/v1alpha1/config.proto\x12\x13istio.mesh.v1alpha1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19mesh/v1alpha1/proxy.proto\x1a*networking/v1alpha3/destination_rule.proto\x1a)networking/v1alpha3/virtual_service.proto\"\xc1s\n" +
+	"\x1amesh/v1alpha1/config.proto\x12\x13istio.mesh.v1alpha1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19mesh/v1alpha1/proxy.proto\x1a*networking/v1alpha3/destination_rule.proto\x1a)networking/v1alpha3/virtual_service.proto\"\xfcu\n" +
 	"\n" +
 	"MeshConfig\x12*\n" +
 	"\x11proxy_listen_port\x18\x04 \x01(\x05R\x0fproxyListenPort\x129\n" +
@@ -3264,7 +3294,8 @@ const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\x12path_normalization\x18= \x01(\v26.istio.mesh.v1alpha1.MeshConfig.ProxyPathNormalizationR\x11pathNormalization\x12_\n" +
 	"\x19default_http_retry_policy\x18> \x01(\v2$.istio.networking.v1alpha3.HTTPRetryR\x16defaultHttpRetryPolicy\x12F\n" +
 	"\tmesh_mTLS\x18? \x01(\v2).istio.mesh.v1alpha1.MeshConfig.TLSConfigR\bmeshMTLS\x12L\n" +
-	"\ftls_defaults\x18@ \x01(\v2).istio.mesh.v1alpha1.MeshConfig.TLSConfigR\vtlsDefaults\x1a\x88\x02\n" +
+	"\ftls_defaults\x18@ \x01(\v2).istio.mesh.v1alpha1.MeshConfig.TLSConfigR\vtlsDefaults\x12j\n" +
+	"\x16default_traffic_policy\x18G \x01(\v24.istio.mesh.v1alpha1.MeshConfig.DefaultTrafficPolicyR\x14defaultTrafficPolicy\x1a\x88\x02\n" +
 	"\x15OutboundTrafficPolicy\x12N\n" +
 	"\x04mode\x18\x01 \x01(\x0e2:.istio.mesh.v1alpha1.MeshConfig.OutboundTrafficPolicy.ModeR\x04mode\x12>\n" +
 	"\x03tls\x18\x02 \x01(\v2,.istio.networking.v1alpha3.ClientTLSSettingsR\x03tls\"_\n" +
@@ -3508,7 +3539,10 @@ const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\vTLSProtocol\x12\f\n" +
 	"\bTLS_AUTO\x10\x00\x12\v\n" +
 	"\aTLSV1_2\x10\x01\x12\v\n" +
-	"\aTLSV1_3\x10\x02\"J\n" +
+	"\aTLSV1_3\x10\x02\x1a\xcc\x01\n" +
+	"\x14DefaultTrafficPolicy\x12Z\n" +
+	"\x0fconnection_pool\x18\x01 \x01(\v21.istio.networking.v1alpha3.ConnectionPoolSettingsR\x0econnectionPool\x12X\n" +
+	"\x11outlier_detection\x18\x02 \x01(\v2+.istio.networking.v1alpha3.OutlierDetectionR\x10outlierDetection\"J\n" +
 	"\x15IngressControllerMode\x12\x0f\n" +
 	"\vUNSPECIFIED\x10\x00\x12\a\n" +
 	"\x03OFF\x10\x01\x12\v\n" +

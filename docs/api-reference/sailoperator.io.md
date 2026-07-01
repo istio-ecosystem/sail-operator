@@ -370,11 +370,52 @@ _Appears in:_
 | `subscribedResources` _[Resource](#resource) array_ | Describes the source of configuration, if nothing is specified default is MCP |  | Enum: [SERVICE_REGISTRY]   |
 
 
+#### ConnectionPoolSettings
+
+
+
+Connection pool settings for an upstream host. The settings apply to
+each individual host in the upstream service.  See Envoy's [circuit
+breaker](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/circuit_breaking)
+for more details. Connection pool settings can be applied at the TCP
+level as well as at HTTP level.
+
+
+For example, the following rule sets a limit of 100 connections to redis
+service called myredissrv with a connect timeout of 30ms
+
+
+```yaml
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: bookinfo-redis
+spec:
+  host: myredissrv.prod.svc.cluster.local
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 100
+        connectTimeout: 30ms
+        tcpKeepalive:
+          time: 7200s
+          interval: 75s
+```
+
+
+
+_Appears in:_
+- [MeshConfigDefaultTrafficPolicy](#meshconfigdefaulttrafficpolicy)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `tcp` _[ConnectionPoolSettingsTCPSettings](#connectionpoolsettingstcpsettings)_ | Settings common to both HTTP and TCP upstream connections. |  |  |
+| `http` _[ConnectionPoolSettingsHTTPSettings](#connectionpoolsettingshttpsettings)_ | HTTP connection pool settings. |  |  |
 
 
 #### ConnectionPoolSettingsHTTPSettings
 
-
+_Underlying type:_ _[struct{Http1MaxPendingRequests *int32 "json:\"http1MaxPendingRequests,omitempty\""; Http2MaxRequests *int32 "json:\"http2MaxRequests,omitempty\""; MaxRequestsPerConnection *int32 "json:\"maxRequestsPerConnection,omitempty\""; MaxRetries *int32 "json:\"maxRetries,omitempty\""; IdleTimeout *k8s.io/apimachinery/pkg/apis/meta/v1.Duration "json:\"idleTimeout,omitempty\""; H2UpgradePolicy ConnectionPoolSettingsHTTPSettingsH2UpgradePolicy "json:\"h2UpgradePolicy,omitempty\""; UseClientProtocol *bool "json:\"useClientProtocol,omitempty\""; MaxConcurrentStreams *int32 "json:\"maxConcurrentStreams,omitempty\""; Http2KeepAlive *ConnectionPoolSettingsHTTPSettingsConnectionKeepalive "json:\"http2KeepAlive,omitempty\""}](#struct{http1maxpendingrequests-*int32-"json:\"http1maxpendingrequests,omitempty\"";-http2maxrequests-*int32-"json:\"http2maxrequests,omitempty\"";-maxrequestsperconnection-*int32-"json:\"maxrequestsperconnection,omitempty\"";-maxretries-*int32-"json:\"maxretries,omitempty\"";-idletimeout-*k8sioapimachinerypkgapismetav1duration-"json:\"idletimeout,omitempty\"";-h2upgradepolicy-connectionpoolsettingshttpsettingsh2upgradepolicy-"json:\"h2upgradepolicy,omitempty\"";-useclientprotocol-*bool-"json:\"useclientprotocol,omitempty\"";-maxconcurrentstreams-*int32-"json:\"maxconcurrentstreams,omitempty\"";-http2keepalive-*connectionpoolsettingshttpsettingsconnectionkeepalive-"json:\"http2keepalive,omitempty\""})_
 
 Settings applicable to HTTP1.1/HTTP2/GRPC connections.
 
@@ -383,58 +424,15 @@ Settings applicable to HTTP1.1/HTTP2/GRPC connections.
 _Appears in:_
 - [ConnectionPoolSettings](#connectionpoolsettings)
 
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `http1MaxPendingRequests` _integer_ | Maximum number of requests that will be queued while waiting for a ready connection pool connection. Default 2^32-1. Refer to [Envoy Circuit Breaking](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/circuit_breaking) under which conditions a new connection is created for HTTP/2. Please note that this is applicable to both HTTP/1.1 and HTTP/2. |  |  |
-| `http2MaxRequests` _integer_ | Maximum number of active requests to a destination. Default 2^32-1. Please note that this is applicable to both HTTP/1.1 and HTTP/2. |  |  |
-| `maxRequestsPerConnection` _integer_ | Maximum number of requests per connection to a backend. Setting this parameter to 1 disables keep alive. Default 0, meaning "unlimited", up to 2^29. |  |  |
-| `maxRetries` _integer_ | Maximum number of retries that can be outstanding to all hosts in a cluster at a given time. Defaults to 2^32-1. |  |  |
-| `idleTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | The idle timeout for upstream connection pool connections. The idle timeout is defined as the period in which there are no active requests. If not set, the default is 1 hour. When the idle timeout is reached, the connection will be closed. If the connection is an HTTP/2 connection a drain sequence will occur prior to closing the connection. Note that request based timeouts mean that HTTP/2 PINGs will not keep the connection alive. Applies to both HTTP/1.1 and HTTP/2 connections. |  |  |
-| `h2UpgradePolicy` _[ConnectionPoolSettingsHTTPSettingsH2UpgradePolicy](#connectionpoolsettingshttpsettingsh2upgradepolicy)_ | Specify if http1.1 connection should be upgraded to http2 for the associated destination. |  | Enum: [DEFAULT DO_NOT_UPGRADE UPGRADE]   |
-| `useClientProtocol` _boolean_ | If set to true, client protocol will be preserved while initiating connection to backend. Note that when this is set to true, `h2UpgradePolicy` will be ineffective i.e. the client connections will not be upgraded to http2. |  |  |
-| `maxConcurrentStreams` _integer_ | The maximum number of concurrent streams allowed for a peer on one HTTP/2 connection. Defaults to 2^31-1. |  |  |
-| `http2KeepAlive` _[ConnectionPoolSettingsHTTPSettingsConnectionKeepalive](#connectionpoolsettingshttpsettingsconnectionkeepalive)_ | Configure HTTP/2 PING frames for upstream connections. |  |  |
-
-
-#### ConnectionPoolSettingsHTTPSettingsConnectionKeepalive
 
 
 
-Settings for HTTP/2 PING frames.
 
-
-
-_Appears in:_
-- [ConnectionPoolSettingsHTTPSettings](#connectionpoolsettingshttpsettings)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `interval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | Send HTTP/2 PING frames at this interval. Required when `http2KeepAlive` is set. |  |  |
-| `timeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | How long to wait for a response to an HTTP/2 PING frame before closing the connection. Required when `http2KeepAlive` is set. |  |  |
-
-
-#### ConnectionPoolSettingsHTTPSettingsH2UpgradePolicy
-
-_Underlying type:_ _string_
-
-Policy for upgrading http1.1 connections to http2.
-
-_Validation:_
-- Enum: [DEFAULT DO_NOT_UPGRADE UPGRADE]
-
-_Appears in:_
-- [ConnectionPoolSettingsHTTPSettings](#connectionpoolsettingshttpsettings)
-
-| Field | Description |
-| --- | --- |
-| `DEFAULT` | Use the global default.  |
-| `DO_NOT_UPGRADE` | Do not upgrade the connection to http2. This opt-out option overrides the default.  |
-| `UPGRADE` | Upgrade the connection to http2. This opt-in option overrides the default.  |
 
 
 #### ConnectionPoolSettingsTCPSettings
 
-
+_Underlying type:_ _[struct{MaxConnections *int32 "json:\"maxConnections,omitempty\""; ConnectTimeout *k8s.io/apimachinery/pkg/apis/meta/v1.Duration "json:\"connectTimeout,omitempty\""; TcpKeepalive *ConnectionPoolSettingsTCPSettingsTcpKeepalive "json:\"tcpKeepalive,omitempty\""; MaxConnectionDuration *k8s.io/apimachinery/pkg/apis/meta/v1.Duration "json:\"maxConnectionDuration,omitempty\""; IdleTimeout *k8s.io/apimachinery/pkg/apis/meta/v1.Duration "json:\"idleTimeout,omitempty\""}](#struct{maxconnections-*int32-"json:\"maxconnections,omitempty\"";-connecttimeout-*k8sioapimachinerypkgapismetav1duration-"json:\"connecttimeout,omitempty\"";-tcpkeepalive-*connectionpoolsettingstcpsettingstcpkeepalive-"json:\"tcpkeepalive,omitempty\"";-maxconnectionduration-*k8sioapimachinerypkgapismetav1duration-"json:\"maxconnectionduration,omitempty\"";-idletimeout-*k8sioapimachinerypkgapismetav1duration-"json:\"idletimeout,omitempty\""})_
 
 Settings common to both HTTP and TCP upstream connections.
 
@@ -443,13 +441,6 @@ Settings common to both HTTP and TCP upstream connections.
 _Appears in:_
 - [ConnectionPoolSettings](#connectionpoolsettings)
 
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `maxConnections` _integer_ | Maximum number of HTTP1 /TCP connections to a destination host. Default 2^32-1. |  |  |
-| `connectTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | TCP connection timeout. format: 1h/1m/1s/1ms. MUST be >=1ms. Default is 10s. |  |  |
-| `tcpKeepalive` _[ConnectionPoolSettingsTCPSettingsTcpKeepalive](#connectionpoolsettingstcpsettingstcpkeepalive)_ | If set then set SO_KEEPALIVE on the socket to enable TCP Keepalives. |  |  |
-| `maxConnectionDuration` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | The maximum duration of a connection. The duration is defined as the period since a connection was established. If not set, there is no max duration. When `maxConnectionDuration` is reached the connection will be closed. Duration must be at least 1ms. |  |  |
-| `idleTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | The idle timeout for TCP connections. This is applied to the outbound connections to the upstream service. The idle timeout is defined as the period in which there are no bytes sent or received on the upstream connection. If not set, the default idle timeout is 1 hour. If set to 0s, the timeout will be disabled. Idle timeout is not configured per each cluster individually when weighted destinations are used, because idleTimeout is a property of a listener, not a cluster. In that case, idleTimeout specified in a destination rule for the first weighted route is configured in the listener, which means also for all weighted routes. To set the idle timeout for downstream (inbound) connections, use the `ISTIO_META_IDLE_TIMEOUT` field in the proxy configuration (e.g., via the `proxy.istio.io/config` annotation) which applies to all inbound connections. ``` proxy.istio.io/config: \|-    proxyMetadata:      ISTIO_META_IDLE_TIMEOUT: "100s"  ``` |  |  |
 
 
 #### ConnectionPoolSettingsTCPSettingsTcpKeepalive
@@ -461,7 +452,6 @@ TCP keepalive.
 
 
 _Appears in:_
-- [ConnectionPoolSettingsTCPSettings](#connectionpoolsettingstcpsettings)
 - [MeshConfig](#meshconfig)
 - [RemoteService](#remoteservice)
 
@@ -580,6 +570,7 @@ _Appears in:_
 | `resourceScope` _[ResourceScope](#resourcescope)_ | Specifies resource scope for discovery selectors. This is useful when installing Istio on a cluster where some resources need to be owned by a cluster administrator and some can be owned by the mesh administrator. |  | Enum: [undefined all cluster namespace]   |
 | `agentgateway` _[Agentgateway](#agentgateway)_ | Specifies how proxies are configured within Istio. |  |  |
 | `enableReaderRBAC` _boolean_ | If true, install istio-reader service account and associated cluster role/binding, which are used for multicluster remote-secret workflows. |  |  |
+| `readerServiceAccount` _[ReaderServiceAccount](#readerserviceaccount)_ | Optionally specify a custom service account to bind to the istio-reader ClusterRole. When set, the default istio-reader-service-account is not created. |  |  |
 
 
 #### GlobalLoggingConfig
@@ -672,7 +663,7 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[IstioSpec](#istiospec)_ |  | \{ namespace:istio-system updateStrategy:map[type:InPlace] version:v1.30.1 \} |  |
+| `spec` _[IstioSpec](#istiospec)_ |  | \{ namespace:istio-system updateStrategy:map[type:InPlace] version:v1.30.2 \} |  |
 | `status` _[IstioStatus](#istiostatus)_ |  |  |  |
 
 
@@ -694,7 +685,7 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[IstioCNISpec](#istiocnispec)_ |  | \{ namespace:istio-cni version:v1.30.1 \} |  |
+| `spec` _[IstioCNISpec](#istiocnispec)_ |  | \{ namespace:istio-cni version:v1.30.2 \} |  |
 | `status` _[IstioCNIStatus](#istiocnistatus)_ |  |  |  |
 
 
@@ -735,7 +726,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.1, v1.30.0, v1.29-latest, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.28.8, master, v1.31.0-alpha.58e9892e. | v1.30.1 | Enum: [v1.30-latest v1.30.1 v1.30.0 v1.29-latest v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.31.0-alpha.58e9892e]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.28.9, v1.28.8, master, v1.31.0-alpha.14f9ffc3. | v1.30.2 | Enum: [v1.30-latest v1.30.2 v1.30.1 v1.30.0 v1.29-latest v1.29.5 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.9 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.31.0-alpha.14f9ffc3]   |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift openshift-ambient preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio CNI component should be installed. Note that this field is immutable. | istio-cni |  |
 | `values` _[CNIValues](#cnivalues)_ | Defines the values to be passed to the Helm charts when installing Istio CNI. |  |  |
@@ -845,7 +836,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30.1, v1.30.0, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.28.8, v1.31.0-alpha.58e9892e. |  | Enum: [v1.30.1 v1.30.0 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 v1.31.0-alpha.58e9892e]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30.2, v1.30.1, v1.30.0, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.28.9, v1.28.8, v1.31.0-alpha.14f9ffc3. |  | Enum: [v1.30.2 v1.30.1 v1.30.0 v1.29.5 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28.9 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 v1.31.0-alpha.14f9ffc3]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. |  |  |
 | `values` _[Values](#values)_ | Defines the values to be passed to the Helm charts when installing Istio. |  |  |
 
@@ -963,7 +954,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.1, v1.30.0, v1.29-latest, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.28.8, master, v1.31.0-alpha.58e9892e. | v1.30.1 | Enum: [v1.30-latest v1.30.1 v1.30.0 v1.29-latest v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.31.0-alpha.58e9892e]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.28.9, v1.28.8, master, v1.31.0-alpha.14f9ffc3. | v1.30.2 | Enum: [v1.30-latest v1.30.2 v1.30.1 v1.30.0 v1.29-latest v1.29.5 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.9 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.31.0-alpha.14f9ffc3]   |
 | `updateStrategy` _[IstioUpdateStrategy](#istioupdatestrategy)_ | Defines the update strategy to use when the version in the Istio CR is updated. | \{ type:InPlace \} |  |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift openshift-ambient preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. Note that this field is immutable. | istio-system |  |
@@ -1222,6 +1213,7 @@ _Appears in:_
 | `defaultHttpRetryPolicy` _[HTTPRetry](#httpretry)_ | Configure the default HTTP retry policy. The default number of retry attempts is set at 2 for these errors:    "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes".  Setting the number of attempts to 0 disables retry policy globally. This setting can be overridden on a per-host basis using the Virtual Service API. All settings in the retry policy except `perTryTimeout` can currently be configured globally via this field. |  |  |
 | `meshMTLS` _[MeshConfigTLSConfig](#meshconfigtlsconfig)_ | The below configuration parameters can be used to specify TLSConfig for mesh traffic. For example, a user could enable min TLS version for ISTIO_MUTUAL traffic and specify a curve for non ISTIO_MUTUAL traffic like below: ```yaml meshConfig:    meshMTLS:     minProtocolVersion: TLSV1_3   tlsDefaults:     Note: applicable only for non ISTIO_MUTUAL scenarios     ecdhCurves:       - P-256       - P-512  ``` Configuration of mTLS for traffic between workloads with ISTIO_MUTUAL TLS traffic.  Note: Mesh mTLS does not respect ECDH curves. |  |  |
 | `tlsDefaults` _[MeshConfigTLSConfig](#meshconfigtlsconfig)_ | Configuration of TLS for all traffic except for ISTIO_MUTUAL mode. For ISTIO_MUTUAL TLS settings, use meshMTLS configuration. |  |  |
+| `defaultTrafficPolicy` _[MeshConfigDefaultTrafficPolicy](#meshconfigdefaulttrafficpolicy)_ | The default traffic policy applied to outbound clusters in the mesh, providing a baseline that DestinationRules inherit and override per block. Without this, a DestinationRule that sets `connectionPool` or `outlierDetection` has no mesh-level baseline, and unset blocks fall back to Istio's built-in defaults. |  |  |
 
 
 #### MeshConfigAccessLogEncoding
@@ -1303,6 +1295,26 @@ _Appears in:_
 | `tracing` _string array_ | Name of the default provider(s) for tracing. |  |  |
 | `metrics` _string array_ | Name of the default provider(s) for metrics. |  |  |
 | `accessLogging` _string array_ | Name of the default provider(s) for access logging. |  |  |
+
+
+#### MeshConfigDefaultTrafficPolicy
+
+
+
+DefaultTrafficPolicy defines mesh-wide baseline traffic settings for outbound
+clusters. Only connection pool and outlier detection are configurable here, the
+two settings that benefit from a mesh-wide baseline. A DestinationRule overrides a
+baseline block when it sets the corresponding policy, and inherits it otherwise.
+
+
+
+_Appears in:_
+- [MeshConfig](#meshconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `connectionPool` _[ConnectionPoolSettings](#connectionpoolsettings)_ | Baseline connection pool settings for outbound clusters. A DestinationRule that sets `connectionPool` overrides this whole block; otherwise this baseline applies. |  |  |
+| `outlierDetection` _[OutlierDetection](#outlierdetection)_ | Baseline outlier detection for outbound clusters. A DestinationRule that sets `outlierDetection` overrides this whole block; otherwise this baseline applies. |  |  |
 
 
 #### MeshConfigExtensionProvider
@@ -2250,6 +2262,73 @@ _Appears in:_
 | `REGISTRY_ONLY` | Restrict outbound traffic to services defined in the service registry as well as those defined through ServiceEntries  |
 
 
+#### OutlierDetection
+
+
+
+A Circuit breaker implementation that tracks the status of each
+individual host in the upstream service.  Applicable to both HTTP and
+TCP services.  For HTTP services, hosts that continually return 5xx
+errors for API calls are ejected from the pool for a pre-defined period
+of time. For TCP services, connection timeouts or connection
+failures to a given host counts as an error when measuring the
+consecutive errors metric. See Envoy's [outlier
+detection](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/outlier)
+for more details.
+
+
+**Note:** Istio's default mesh configuration enables locality load balancing
+(`localityLbSetting.enabled: true`). As a result, configuring
+`OutlierDetection` in a `DestinationRule` will automatically activate
+locality-aware failover behavior — Envoy uses the outlier detection state to
+determine when endpoints are unhealthy and should be failed over to the next
+locality. To suppress this implicit failover, explicitly set
+`localityLbSetting.enabled: false` in the `DestinationRule`'s load balancer
+settings.
+
+
+The following rule sets a connection pool size of 100 HTTP1 connections
+with no more than 10 req/connection to the "reviews" service. In addition,
+it sets a limit of 1000 concurrent HTTP/2 requests and configures upstream
+hosts to be scanned every 5 mins so that any host that fails 7 consecutive
+times with a 502, 503, or 504 error code will be ejected for 15 minutes.
+
+
+```yaml
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: reviews-cb-policy
+spec:
+  host: reviews.prod.svc.cluster.local
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        http2MaxRequests: 1000
+        maxRequestsPerConnection: 10
+    outlierDetection:
+      consecutive5xxErrors: 7
+      interval: 5m
+      baseEjectionTime: 15m
+```
+
+
+
+_Appears in:_
+- [MeshConfigDefaultTrafficPolicy](#meshconfigdefaulttrafficpolicy)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `splitExternalLocalOriginErrors` _boolean_ | Determines whether to distinguish local origin failures from external errors. If set to true `consecutiveLocalOriginFailures` is taken into account for outlier detection calculations. This should be used when you want to derive the outlier detection status based on the errors seen locally such as failure to connect, timeout while connecting etc. rather than the status code returned by upstream service. This is especially useful when the upstream service explicitly returns a 5xx for some requests and you want to ignore those responses from upstream service while determining the outlier detection status of a host. Defaults to false. |  |  |
+| `consecutiveLocalOriginFailures` _integer_ | The number of consecutive locally originated failures before ejection occurs. Defaults to 5. Parameter takes effect only when `splitExternalLocalOriginErrors` is set to true. |  |  |
+| `consecutiveGatewayErrors` _integer_ | Number of gateway errors before a host is ejected from the connection pool. When the upstream host is accessed over HTTP, a 502, 503, or 504 return code qualifies as a gateway error. When the upstream host is accessed over an opaque TCP connection, connect timeouts and connection error/failure events qualify as a gateway error. This feature is disabled by default or when set to the value 0.  Note that `consecutiveGatewayErrors` and `consecutive5xxErrors` can be used separately or together. Because the errors counted by `consecutiveGatewayErrors` are also included in `consecutive5xxErrors`, if the value of `consecutiveGatewayErrors` is greater than or equal to the value of `consecutive5xxErrors`, `consecutiveGatewayErrors` will have no effect. |  |  |
+| `consecutive5xxErrors` _integer_ | Number of 5xx errors before a host is ejected from the connection pool. When the upstream host is accessed over an opaque TCP connection, connect timeouts, connection error/failure and request failure events qualify as a 5xx error. This feature defaults to 5 but can be disabled by setting the value to 0.  Note that `consecutiveGatewayErrors` and `consecutive5xxErrors` can be used separately or together. Because the errors counted by `consecutiveGatewayErrors` are also included in `consecutive5xxErrors`, if the value of `consecutiveGatewayErrors` is greater than or equal to the value of `consecutive5xxErrors`, `consecutiveGatewayErrors` will have no effect. |  |  |
+| `interval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | Time interval between ejection sweep analysis. format: 1h/1m/1s/1ms. MUST be >=1ms. Default is 10s. |  |  |
+| `baseEjectionTime` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | Minimum ejection duration. A host will remain ejected for a period equal to the product of minimum ejection duration and the number of times the host has been ejected. This technique allows the system to automatically increase the ejection period for unhealthy upstream servers. format: 1h/1m/1s/1ms. MUST be >=1ms. Default is 30s. |  |  |
+| `maxEjectionPercent` _integer_ | Maximum % of hosts in the load balancing pool for the upstream service that can be ejected. Defaults to 10%. |  |  |
+| `minHealthPercent` _integer_ | Outlier detection will be enabled as long as the associated load balancing pool has at least `minHealthPercent` hosts in healthy mode. When the percentage of healthy hosts in the load balancing pool drops below this threshold, outlier detection will be disabled and the proxy will load balance across all hosts in the pool (healthy and unhealthy). The threshold can be disabled by setting it to 0%. The default is 0% as it's not typically applicable in k8s environments with few pods per service. |  |  |
 
 
 #### PeerCaCrlConfig
@@ -2772,6 +2851,23 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `image` _string_ | Specifies the image for the proxy_init container. |  |  |
 | `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core)_ | K8s resources settings.  See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container  Deprecated: Marked as deprecated in pkg/apis/values_types.proto. |  |  |
+
+
+#### ReaderServiceAccount
+
+
+
+
+
+
+
+_Appears in:_
+- [GlobalConfig](#globalconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ |  |  |  |
+| `namespace` _string_ |  |  |  |
 
 
 #### RemoteService
@@ -3411,7 +3507,7 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[ZTunnelSpec](#ztunnelspec)_ |  | \{ namespace:ztunnel version:v1.30.1 \} |  |
+| `spec` _[ZTunnelSpec](#ztunnelspec)_ |  | \{ namespace:ztunnel version:v1.30.2 \} |  |
 | `status` _[ZTunnelStatus](#ztunnelstatus)_ |  |  |  |
 
 
@@ -3524,7 +3620,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.1, v1.30.0, v1.29-latest, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.28.8, master, v1.31.0-alpha.58e9892e. | v1.30.1 | Enum: [v1.30-latest v1.30.1 v1.30.0 v1.29-latest v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 master v1.31.0-alpha.58e9892e]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.28.9, v1.28.8, master, v1.31.0-alpha.14f9ffc3. | v1.30.2 | Enum: [v1.30-latest v1.30.2 v1.30.1 v1.30.0 v1.29-latest v1.29.5 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.9 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 master v1.31.0-alpha.14f9ffc3]   |
 | `namespace` _string_ | Namespace to which the Istio ztunnel component should be installed. | ztunnel |  |
 | `values` _[ZTunnelValues](#ztunnelvalues)_ | Defines the values to be passed to the Helm charts when installing Istio ztunnel. |  |  |
 | `targetRef` _[TargetReference](#targetreference)_ | The Istio control plane that this ZTunnel instance is associated with. Valid references are Istio and IstioRevision resources, Istio resources are always resolved to their current active revision. Values relevant for ZTunnel will be copied from the referenced IstioRevision resource, these are `spec.values.global`, `spec.values.meshConfig`, `spec.values.revision`. Any user configuration in the ZTunnel spec will always take precedence over the settings copied from the Istio resource, however. |  |  |
@@ -3596,7 +3692,7 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[ZTunnelSpec](#ztunnelspec)_ |  | \{ namespace:ztunnel profile:ambient version:v1.30.1 \} |  |
+| `spec` _[ZTunnelSpec](#ztunnelspec)_ |  | \{ namespace:ztunnel profile:ambient version:v1.30.2 \} |  |
 | `status` _[ZTunnelStatus](#ztunnelstatus)_ |  |  |  |
 
 
@@ -3654,7 +3750,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.1, v1.30.0, v1.29-latest, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.28.8, master, v1.31.0-alpha.58e9892e. | v1.30.1 | Enum: [v1.30-latest v1.30.1 v1.30.0 v1.29-latest v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 master v1.31.0-alpha.58e9892e]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.28.9, v1.28.8, master, v1.31.0-alpha.14f9ffc3. | v1.30.2 | Enum: [v1.30-latest v1.30.2 v1.30.1 v1.30.0 v1.29-latest v1.29.5 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.9 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 master v1.31.0-alpha.14f9ffc3]   |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is 'ambient' and it is always applied. Must be one of: ambient, default, demo, empty, external, preview, remote, stable. | ambient | Enum: [ambient default demo empty external openshift-ambient openshift preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio ztunnel component should be installed. | ztunnel |  |
 | `values` _[ZTunnelValues](#ztunnelvalues)_ | Defines the values to be passed to the Helm charts when installing Istio ztunnel. |  |  |
