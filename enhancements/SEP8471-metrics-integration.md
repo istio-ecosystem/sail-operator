@@ -6,7 +6,7 @@
 
 ## Overview
 
-Upstream Istio generates telemetry metrics for the control plane and sidecar proxies. Users can customize Istio metrics with the Telemetry API and create scraping jobs by updating a Prometheus ConfigMap. For example, [prometheus.yaml](https://raw.githubusercontent.com/istio/istio/master/samples/addons/prometheus.yaml). However, that approach requires restarting the Prometheus instance and users may not have enough permission to update the existing Prometheus's ConfigMap.
+Upstream Istio generates telemetry metrics for the control plane and sidecar proxies. Users can customize Istio metrics with the Telemetry API and create scraping jobs by updating a Prometheus ConfigMap. For example, The following sample deploys a Prometheus instance and configures Istio telemetry integration in the Prometheus ConfigMap [samples/addons/prometheus.yaml](https://raw.githubusercontent.com/istio/istio/master/samples/addons/prometheus.yaml). However, that approach requires restarting the Prometheus instance and users may not have enough permission to update the existing Prometheus's ConfigMap.
 
 Alternatively, those can be configured by using two custom resources `ServiceMonitor` and `PodMonitor`. We want to automate the creation of `ServiceMonitor` and `PodMonitor` resources with default values in Sail Operator. And then users can query Istio metrics in Prometheus or Kiali dashboard without manual configuration step.
 
@@ -27,7 +27,7 @@ Alternatively, those can be configured by using two custom resources `ServiceMon
 ### User Stories
 
 1. As a user running Istio with a Prometheus monitoring stack, I want the Sail Operator to configure metrics scraping jobs for Istio-generated telemetry metrics without restart the Prometheus instance.
-2. As a user running OpenShift Service Mesh(OSSM), I want the Sail Operator to create `PodMonitor` resources with OSSM-documented relabeling rules so metrics appear correctly in the OpenShift console and Kiali dashboard.
+2. As a user running OpenShift Service Mesh, I want the Sail Operator to create `PodMonitor` resources with platform-appropriate relabeling rules. So those metrics can be formatted and displayed correctly in the OpenShift console and Kiali dashboard.
 
 ### API Changes
 
@@ -49,23 +49,23 @@ If any custom relabeling or scraping configuration is required, users must leave
 
 #### Alternatives API Considered
 
-A broader Observability Integration API with target references to monitoring and tracing stacks may be added in a future release. This enhancement focuses on the monitoring controller with a boolean field on the `Istio` CR.
+A broader Observability Integration API and CRD can be added in a future enhancement. It uses target reference fields and helps integrating more monitoring and tracing component services. This enhancement focuses on a monitoring controller by adding a boolean field in the `Istio` CR.
 
 ### Architecture
 
 We assume `ServiceMonitor` and `PodMonitor` CRDs are available under `monitoring.coreos.com/v1` and/or `monitoring.rhobs/v1` group. The Sail Operator ClusterRole grants permissions for both API groups' `ServiceMonitor` and `PodMonitor` custom resources.
 
-A monitoring controller watches `IstioRevision` resources and reconciles `ServiceMonitor` and `PodMonitor` CRs when the boolean field `spec.monitoring.enabled` is set to `true` in the parent `Istio` CR. It also watches namespaces with the `istio-injection=enabled` label and reconciles `PodMonitor` CRs for Istio sidecar injection namespaces.
+A monitoring controller watches `IstioRevision` resources and reconciles `ServiceMonitor` and `PodMonitor` CRs when the boolean field `spec.monitoring.enabled` is set to `true` in the parent `Istio` CR. It also watches namespaces with the Istio sidecar injection labels and reconciles `PodMonitor` CRs for those namespaces.
 
-The monitoring controller applies platform-specific relabeling defaults when creating `ServiceMonitor` and `PodMonitor` CRs. The monitoring controller starts and detects the running platform at the Sail Operator startup time.
+The monitoring controller applies platform-specific relabeling defaults when creating `ServiceMonitor` and `PodMonitor` CRs. It detects the running platform at the Sail Operator startup time.
 
 #### Monitoring Controller Design
 
 When the `spec.monitoring.enabled` is `true` in an `Istio` custom resource, the monitoring controller reconciles `ServiceMonitor` or `PodMonitor` resources and adds label such as `managed-by`: `mesh-operator` in those resources. When the `spec.monitoring.enabled` is `false` in an `Istio` custom resource, the monitoring controller stops reconciling.
 
-The monitoring controller only interacts with monitoring resources it creates itself, identified by a naming convention and labels. It will not delete or update user-managed `ServiceMonitor` or `PodMonitor` resources that were configured manually in existing environments.
+The monitoring controller only interacts with monitoring resources it creates. Those resources are identified by a naming convention and labels. It will not delete or update user-managed `ServiceMonitor` or `PodMonitor` resources that were configured manually in existing environments.
 
-The controller creates and reconciles only resources named `{IstioRevision.name}-istiod-metrics` by applying a `ServiceMonitor` resource in the control plane namespace. And it creates and reconciles `{IstioRevision.name}-proxies-metrics` by applying `PodMonitor` resources in each matching application namespace. It uses Get/Create/Update by exact name and does not list or bulk-delete monitoring resources in a namespace.
+The controller creates and reconciles `ServiceMonitor` resources named as `{IstioRevision.name}-istiod-metrics` in the control plane namespace. And it creates and reconciles `PodMonitor` resources named as `{IstioRevision.name}-proxies-metrics` in each matching application namespace. It uses Get/Create/Update methods and does not list or bulk-delete monitoring resources in a namespace.
 
 #### Custom Resource Deletion
 
