@@ -20,6 +20,12 @@ import "github.com/istio-ecosystem/sail-operator/pkg/config"
 
 func init() {
 	config.Config.ImageDigests = map[string]config.IstioImageConfig{
+		"v1.30.2": {
+			IstiodImage:  "registry.istio.io/release/pilot:1.30.2",
+			ProxyImage:   "registry.istio.io/release/proxyv2:1.30.2",
+			CNIImage:     "registry.istio.io/release/install-cni:1.30.2",
+			ZTunnelImage: "registry.istio.io/release/ztunnel:1.30.2",
+		},
 		"v1.30.1": {
 			IstiodImage:  "registry.istio.io/release/pilot:1.30.1",
 			ProxyImage:   "registry.istio.io/release/proxyv2:1.30.1",
@@ -31,6 +37,12 @@ func init() {
 			ProxyImage:   "registry.istio.io/release/proxyv2:1.30.0",
 			CNIImage:     "registry.istio.io/release/install-cni:1.30.0",
 			ZTunnelImage: "registry.istio.io/release/ztunnel:1.30.0",
+		},
+		"v1.29.5": {
+			IstiodImage:  "registry.istio.io/release/pilot:1.29.5",
+			ProxyImage:   "registry.istio.io/release/proxyv2:1.29.5",
+			CNIImage:     "registry.istio.io/release/install-cni:1.29.5",
+			ZTunnelImage: "registry.istio.io/release/ztunnel:1.29.5",
 		},
 		"v1.29.4": {
 			IstiodImage:  "registry.istio.io/release/pilot:1.29.4",
@@ -62,17 +74,23 @@ func init() {
 			CNIImage:     "registry.istio.io/release/install-cni:1.29.0",
 			ZTunnelImage: "registry.istio.io/release/ztunnel:1.29.0",
 		},
+		"v1.28.9": {
+			IstiodImage:  "registry.istio.io/release/pilot:1.28.9",
+			ProxyImage:   "registry.istio.io/release/proxyv2:1.28.9",
+			CNIImage:     "registry.istio.io/release/install-cni:1.28.9",
+			ZTunnelImage: "registry.istio.io/release/ztunnel:1.28.9",
+		},
 		"v1.28.8": {
 			IstiodImage:  "registry.istio.io/release/pilot:1.28.8",
 			ProxyImage:   "registry.istio.io/release/proxyv2:1.28.8",
 			CNIImage:     "registry.istio.io/release/install-cni:1.28.8",
 			ZTunnelImage: "registry.istio.io/release/ztunnel:1.28.8",
 		},
-		"v1.31.0-alpha.58e9892e": {
-			IstiodImage:  "registry.istio.io/testing/pilot:1.31.0-alpha.58e9892e6a60d635c1f661c95f0004f52867b379",
-			ProxyImage:   "registry.istio.io/testing/proxyv2:1.31.0-alpha.58e9892e6a60d635c1f661c95f0004f52867b379",
-			CNIImage:     "registry.istio.io/testing/install-cni:1.31.0-alpha.58e9892e6a60d635c1f661c95f0004f52867b379",
-			ZTunnelImage: "registry.istio.io/testing/ztunnel:1.31.0-alpha.58e9892e6a60d635c1f661c95f0004f52867b379",
+		"v1.31.0-alpha.14f9ffc3": {
+			IstiodImage:  "registry.istio.io/testing/pilot:1.31.0-alpha.14f9ffc3f7955d0ad013bde88fdeee7ecdd3e35f",
+			ProxyImage:   "registry.istio.io/testing/proxyv2:1.31.0-alpha.14f9ffc3f7955d0ad013bde88fdeee7ecdd3e35f",
+			CNIImage:     "registry.istio.io/testing/install-cni:1.31.0-alpha.14f9ffc3f7955d0ad013bde88fdeee7ecdd3e35f",
+			ZTunnelImage: "registry.istio.io/testing/ztunnel:1.31.0-alpha.14f9ffc3f7955d0ad013bde88fdeee7ecdd3e35f",
 		},
 	}
 }
