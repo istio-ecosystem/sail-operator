@@ -38,6 +38,10 @@ deployment:
     images.v1_29_0.istiod: registry.istio.io/release/pilot:1.29.0
     images.v1_29_0.proxy: registry.istio.io/release/proxyv2:1.29.0
     images.v1_29_0.cni: registry.istio.io/release/install-cni:1.29.0
+    images.v1_28_10.ztunnel: registry.istio.io/release/ztunnel:1.28.10
+    images.v1_28_10.istiod: registry.istio.io/release/pilot:1.28.10
+    images.v1_28_10.proxy: registry.istio.io/release/proxyv2:1.28.10
+    images.v1_28_10.cni: registry.istio.io/release/install-cni:1.28.10
     images.v1_28_9.ztunnel: registry.istio.io/release/ztunnel:1.28.9
     images.v1_28_9.istiod: registry.istio.io/release/pilot:1.28.9
     images.v1_28_9.proxy: registry.istio.io/release/proxyv2:1.28.9
@@ -46,10 +50,10 @@ deployment:
     images.v1_28_8.istiod: registry.istio.io/release/pilot:1.28.8
     images.v1_28_8.proxy: registry.istio.io/release/proxyv2:1.28.8
     images.v1_28_8.cni: registry.istio.io/release/install-cni:1.28.8
-    images.v1_31_0-alpha_14f9ffc3.ztunnel: registry.istio.io/testing/ztunnel:1.31.0-alpha.14f9ffc3f7955d0ad013bde88fdeee7ecdd3e35f
-    images.v1_31_0-alpha_14f9ffc3.istiod: registry.istio.io/testing/pilot:1.31.0-alpha.14f9ffc3f7955d0ad013bde88fdeee7ecdd3e35f
-    images.v1_31_0-alpha_14f9ffc3.proxy: registry.istio.io/testing/proxyv2:1.31.0-alpha.14f9ffc3f7955d0ad013bde88fdeee7ecdd3e35f
-    images.v1_31_0-alpha_14f9ffc3.cni: registry.istio.io/testing/install-cni:1.31.0-alpha.14f9ffc3f7955d0ad013bde88fdeee7ecdd3e35f
+    images.v1_31_0-alpha_99f2f4f5.ztunnel: registry.istio.io/testing/ztunnel:1.31.0-alpha.99f2f4f55d5c7e27b28d77f0f758cd8b331e98e4
+    images.v1_31_0-alpha_99f2f4f5.istiod: registry.istio.io/testing/pilot:1.31.0-alpha.99f2f4f55d5c7e27b28d77f0f758cd8b331e98e4
+    images.v1_31_0-alpha_99f2f4f5.proxy: registry.istio.io/testing/proxyv2:1.31.0-alpha.99f2f4f55d5c7e27b28d77f0f758cd8b331e98e4
+    images.v1_31_0-alpha_99f2f4f5.cni: registry.istio.io/testing/install-cni:1.31.0-alpha.99f2f4f55d5c7e27b28d77f0f758cd8b331e98e4
 revisionHistoryLimit: 10
 service:
   port: 8443
@@ -76,10 +80,11 @@ csv:
     - v1.29.2
     - v1.29.1
     - v1.29.0
+    - v1.28.10
     - v1.28.9
     - v1.28.8
     - master
-    - v1.31.0-alpha.14f9ffc3
+    - v1.31.0-alpha.99f2f4f5
 
     [See this page](https://github.com/istio-ecosystem/sail-operator/blob/main/bundle/README.md) for instructions on how to use it.
   support: Community based
