@@ -155,6 +155,15 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 						webhookKey := client.ObjectKey{Name: "istiod-default-validator"}
 						webhook := &admissionv1.ValidatingWebhookConfiguration{}
 						Eventually(k8sClient.Get).WithArguments(ctx, webhookKey, webhook).Should(Succeed())
+
+						revisionName := getRevisionName(istio, istioversion.Base)
+						expectedServiceName := "istiod-" + revisionName
+						Expect(webhook.Webhooks).To(HaveLen(1))
+						Expect(webhook.Webhooks[0].ClientConfig.Service).ToNot(BeNil())
+						Expect(webhook.Webhooks[0].ClientConfig.Service.Name).To(Equal(expectedServiceName),
+							"VWC should point to the istiod service for the referenced revision")
+						Expect(webhook.Webhooks[0].ClientConfig.Service.Namespace).To(Equal(istio.Spec.Namespace),
+							"VWC should point to the correct namespace for the referenced revision")
 					})
 				})
 				When("workload ns is labeled with istio-injection label", func() {
