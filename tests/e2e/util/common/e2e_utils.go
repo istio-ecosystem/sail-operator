@@ -56,6 +56,10 @@ const (
 const (
 	SleepNamespace   = "sleep"
 	HttpbinNamespace = "httpbin"
+
+	// maxJUnitErrorMessageSize is the maximum size (in bytes) for error messages
+	// written to junit XML files. Messages exceeding this size will be truncated.
+	maxJUnitErrorMessageSize = 10 * 1024 // 10KB
 )
 
 var (
@@ -364,6 +368,22 @@ func logFailedPodsDetails(k kubectl.Kubectl, namespace string, buf *strings.Buil
 	logDebugElement("=====Pod descriptions in "+namespace+"=====", describe, err, buf, printDebug)
 }
 
+// truncateForJUnit truncates strings that exceed maxJUnitErrorMessageSize
+// to prevent junit XML files from becoming excessively large.
+func truncateForJUnit(s string) string {
+	if len(s) <= maxJUnitErrorMessageSize {
+		return s
+	}
+
+	const truncationMsg = "\n\n... [truncated due to size limit] ..."
+	truncateAt := maxJUnitErrorMessageSize - len(truncationMsg)
+	if truncateAt < 0 {
+		truncateAt = 0
+	}
+
+	return s[:truncateAt] + truncationMsg
+}
+
 func logDebugElement(caption string, info string, err error, buf *strings.Builder, printDebug bool) {
 	buf.WriteString("\n" + caption + ":\n")
 	if err != nil {
@@ -375,9 +395,9 @@ func logDebugElement(caption string, info string, err error, buf *strings.Builde
 	if printDebug {
 		GinkgoWriter.Println("\n" + caption + ":")
 		if err != nil {
-			GinkgoWriter.Println(Indent(err.Error()))
+			GinkgoWriter.Println(Indent(truncateForJUnit(err.Error())))
 		} else {
-			GinkgoWriter.Println(Indent(strings.TrimSpace(info)))
+			GinkgoWriter.Println(Indent(truncateForJUnit(strings.TrimSpace(info))))
 		}
 	}
 }
