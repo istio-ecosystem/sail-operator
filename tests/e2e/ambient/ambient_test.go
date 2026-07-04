@@ -41,8 +41,6 @@ var _ = Describe("Ambient configuration ", Label("ambient", "slow"), Ordered, fu
 	SetDefaultEventuallyTimeout(time.Duration(defaultTimeout) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
-	debugInfoLogged := false
-
 	Describe("for supported versions", func() {
 		for _, version := range istioversion.GetLatestPatchVersions() {
 			// The minimum supported version is 1.24 (and above)
@@ -116,6 +114,13 @@ profile: ambient`
 					common.CreateIstio(k, version.Name, istioYAML)
 
 					Success("All ambient components created in reverse order to test order independence")
+				})
+
+				// Capture debug info immediately on test failure
+				JustAfterEach(func(ctx SpecContext) {
+					if CurrentSpecReport().Failed() {
+						common.LogDebugInfo(common.Ambient, k)
+					}
 				})
 
 				When("the ambient components are deployed", func() {
@@ -323,12 +328,7 @@ profile: ambient`
 				})
 
 				AfterAll(func(ctx SpecContext) {
-					// Log debug info before Cleanup: Cleaner removes CRs created after Record()
-					// (e.g. Istio), and parent AfterAll hooks run after this AfterAll.
-					if CurrentSpecReport().Failed() {
-						common.LogDebugInfo(common.Ambient, k)
-						debugInfoLogged = true
-					}
+					// Skip cleanup if test failed and keepOnFailure is set
 					if CurrentSpecReport().Failed() && keepOnFailure {
 						return
 					}
@@ -336,20 +336,6 @@ profile: ambient`
 					clr.Cleanup(ctx)
 				})
 			})
-		}
-
-		AfterAll(func(ctx SpecContext) {
-			if CurrentSpecReport().Failed() && !debugInfoLogged {
-				common.LogDebugInfo(common.Ambient, k)
-				debugInfoLogged = true
-			}
-		})
-	})
-
-	AfterAll(func(ctx SpecContext) {
-		if CurrentSpecReport().Failed() && !debugInfoLogged {
-			common.LogDebugInfo(common.Ambient, k)
-			debugInfoLogged = true
 		}
 	})
 })

@@ -35,7 +35,6 @@ import (
 var _ = Describe("Multi control plane deployment model", Label("multi-control-plane", "slow", "sidecar"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
-	debugInfoLogged := false
 	latestVersion := istioversion.GetLatestPatchVersions()[0]
 
 	Describe("for supported versions", func() {
@@ -45,6 +44,13 @@ var _ = Describe("Multi control plane deployment model", Label("multi-control-pl
 
 				BeforeAll(func(ctx SpecContext) {
 					clr.Record(ctx)
+				})
+
+				// Capture debug info immediately on test failure
+				JustAfterEach(func(ctx SpecContext) {
+					if CurrentSpecReport().Failed() {
+						common.LogDebugInfo(common.ControlPlane, k)
+					}
 				})
 
 				Describe("Installation", func() {
@@ -149,22 +155,9 @@ spec:
 				})
 
 				AfterAll(func(ctx SpecContext) {
-					if CurrentSpecReport().Failed() {
-						common.LogDebugInfo(common.ControlPlane, k)
-						debugInfoLogged = true
-					}
 					clr.Cleanup(ctx)
 				})
 			})
 		}
-
-		AfterAll(func(ctx SpecContext) {
-			if CurrentSpecReport().Failed() {
-				if !debugInfoLogged {
-					common.LogDebugInfo(common.MultiControlPlane, k)
-					debugInfoLogged = true
-				}
-			}
-		})
 	})
 })

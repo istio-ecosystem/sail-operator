@@ -64,6 +64,14 @@ var _ = Describe("Multicluster deployment models", Label("multicluster", "multic
 					clr2.Record(ctx)
 				})
 
+				// Capture debug info immediately on test failure (before any cleanup or next BeforeEach runs)
+				// Use JustAfterEach instead of DeferCleanup to run immediately after test failure
+				JustAfterEach(func(ctx SpecContext) {
+					if CurrentSpecReport().Failed() {
+						common.LogDebugInfo(common.MultiCluster, k1, k2)
+					}
+				})
+
 				When("Istio and IstioCNI resources are created in both clusters", func() {
 					BeforeAll(func(ctx SpecContext) {
 						createIstioNamespaces(k1, "network1", profile)
@@ -357,12 +365,9 @@ values:
 				})
 
 				AfterAll(func(ctx SpecContext) {
-					if CurrentSpecReport().Failed() {
-						common.LogDebugInfo(common.MultiCluster, k1, k2)
-						debugInfoLogged = true
-						if keepOnFailure {
-							return
-						}
+					// Skip cleanup if test failed and keepOnFailure is set
+					if CurrentSpecReport().Failed() && keepOnFailure {
+						return
 					}
 
 					c1Deleted := clr1.CleanupNoWait(ctx)
