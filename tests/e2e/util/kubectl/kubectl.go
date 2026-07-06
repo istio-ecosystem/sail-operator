@@ -185,6 +185,17 @@ func (k Kubectl) Delete(kind, name string) error {
 	return nil
 }
 
+// DeleteIgnoreNotFound deletes a resource and succeeds if the resource does not exist.
+// Use this in teardown blocks where the resource may not have been created due to an earlier failure.
+func (k Kubectl) DeleteIgnoreNotFound(kind, name string) error {
+	cmd := k.build(" delete " + kind + " " + name + " --ignore-not-found=true")
+	_, err := k.executeCommand(cmd)
+	if err != nil {
+		return fmt.Errorf("error deleting resource: %w", err)
+	}
+	return nil
+}
+
 // Patch patches a resource
 func (k Kubectl) Patch(kind, name, patchType, patch string) error {
 	cmd := k.build(fmt.Sprintf(" patch %s %s --type=%s -p=%q", kind, name, patchType, patch))

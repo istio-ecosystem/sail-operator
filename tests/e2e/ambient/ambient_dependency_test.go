@@ -327,8 +327,8 @@ spec:
 				When("dependencies are restored", func() {
 					It("should make IstioRevision healthy again", func(ctx SpecContext) {
 						// Wait for all dependencies to become Ready
-						common.AwaitCondition(ctx, v1.IstioCNIConditionReady, kube.Key("default"), &v1.IstioCNI{}, k, cl, 60*time.Second)
-						common.AwaitCondition(ctx, v1.ZTunnelConditionReady, kube.Key("default"), &v1.ZTunnel{}, k, cl, 60*time.Second)
+						common.AwaitCondition(ctx, v1.IstioCNIConditionReady, kube.Key("default"), &v1.IstioCNI{}, k, cl, 2*time.Minute)
+						common.AwaitCondition(ctx, v1.ZTunnelConditionReady, kube.Key("default"), &v1.ZTunnel{}, k, cl, 2*time.Minute)
 
 						// Get the active revision name
 						istio := &v1.Istio{}

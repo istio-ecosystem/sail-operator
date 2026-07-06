@@ -167,12 +167,13 @@ spec:
 
 			When("IstioCNI version is updated", func() {
 				BeforeAll(func(ctx SpecContext) {
-					cni := &v1.IstioCNI{}
-					Expect(cl.Get(ctx, kube.Key("default"), cni)).To(Succeed())
-
 					Log(fmt.Sprintf("Updating IstioCNI from %s to %s", baseVersion.Name, newVersion.Name))
-					cni.Spec.Version = newVersion.Name
-					Expect(cl.Update(ctx, cni)).To(Succeed())
+					Eventually(func(g Gomega) {
+						cni := &v1.IstioCNI{}
+						g.Expect(cl.Get(ctx, kube.Key("default"), cni)).To(Succeed())
+						cni.Spec.Version = newVersion.Name
+						g.Expect(cl.Update(ctx, cni)).To(Succeed())
+					}).Should(Succeed())
 					Success("IstioCNI version updated")
 				})
 
@@ -208,12 +209,13 @@ spec:
 
 			When("ZTunnel version is updated", func() {
 				BeforeAll(func(ctx SpecContext) {
-					ztunnel := &v1.ZTunnel{}
-					Expect(cl.Get(ctx, kube.Key("default"), ztunnel)).To(Succeed())
-
 					Log(fmt.Sprintf("Updating ZTunnel from %s to %s", baseVersion.Name, newVersion.Name))
-					ztunnel.Spec.Version = newVersion.Name
-					Expect(cl.Update(ctx, ztunnel)).To(Succeed())
+					Eventually(func(g Gomega) {
+						ztunnel := &v1.ZTunnel{}
+						g.Expect(cl.Get(ctx, kube.Key("default"), ztunnel)).To(Succeed())
+						ztunnel.Spec.Version = newVersion.Name
+						g.Expect(cl.Update(ctx, ztunnel)).To(Succeed())
+					}).Should(Succeed())
 					Success("ZTunnel version updated")
 				})
 
@@ -253,13 +255,13 @@ spec:
 
 			When("Istio version is updated", func() {
 				BeforeAll(func(ctx SpecContext) {
-					// Update the Istio CR to new version
-					istio := &v1.Istio{}
-					Expect(cl.Get(ctx, kube.Key(istioName), istio)).To(Succeed())
-
 					Log(fmt.Sprintf("Updating Istio from %s to %s", baseVersion.Name, newVersion.Name))
-					istio.Spec.Version = newVersion.Name
-					Expect(cl.Update(ctx, istio)).To(Succeed())
+					Eventually(func(g Gomega) {
+						istio := &v1.Istio{}
+						g.Expect(cl.Get(ctx, kube.Key(istioName), istio)).To(Succeed())
+						istio.Spec.Version = newVersion.Name
+						g.Expect(cl.Update(ctx, istio)).To(Succeed())
+					}).Should(Succeed())
 					Success("Istio version updated")
 				})
 
