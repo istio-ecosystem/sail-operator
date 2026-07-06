@@ -429,7 +429,8 @@ spec:
 				g.Expect(rev.Spec.Values.Pilot.ExtraContainerArgs).To(
 					ContainElement(ContainSubstring("--tls-cipher-suites=")),
 					"IstioRevision should have --tls-cipher-suites in pilot.extraContainerArgs")
-			}).WithTimeout(5 * time.Minute).WithPolling(5 * time.Second).Should(Succeed(), "IstioRevision is not syncing TLS settings but should be")
+			}).WithTimeout(5 * time.Minute).WithPolling(5 * time.Second).Should(Succeed(),
+				"IstioRevision is not syncing TLS settings but should be")
 
 			Step("Verifying metrics endpoint accepts the custom cipher")
 			Eventually(func() bool {
