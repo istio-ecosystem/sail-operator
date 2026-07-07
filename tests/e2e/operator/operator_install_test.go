@@ -237,21 +237,20 @@ spec:
 			_, err = fmt.Sscanf(cv.Status.Desired.Version, "%d.%d", &ocpMajorVersion, &ocpMinorVersion)
 			Expect(err).NotTo(HaveOccurred(), "Failed to parse ClusterVersion %q", cv.Status.Desired.Version)
 
-			// On OCP 4.22, TLSAdherence is behind a TechPreview feature gate.
+			// TLSAdherence is behind a TechPreview feature gate.
 			// Enable it via CustomNoUpgrade so the TLSAdherence field is available on the APIServer CRD.
-			// On OCP > 4.22, the feature gate is GA and does not need to be enabled.
 			// On OCP < 4.22, the TLSAdherence tests are skipped entirely.
-			if ocpMajorVersion == 4 && ocpMinorVersion == 22 {
+			if ocpMinorVersion >= 22 {
 				featureGate := &configv1.FeatureGate{}
 				err = cl.Get(ctx, client.ObjectKey{Name: "cluster"}, featureGate)
 				Expect(err).NotTo(HaveOccurred(), "Failed to get FeatureGate")
 
-				tlsAdherenceEnabled := featureGate.Spec.FeatureSet == configv1.CustomNoUpgrade &&
-					featureGate.Spec.CustomNoUpgrade != nil &&
-					slices.Contains(featureGate.Spec.CustomNoUpgrade.Enabled, "TLSAdherence")
+				tlsAdherenceEnabled := slices.ContainsFunc(featureGate.Status.FeatureGates, func(fg configv1.FeatureGateDetails) bool {
+					return slices.Contains(fg.Enabled, configv1.FeatureGateAttributes{Name: "TLSAdherence"})
+				})
 
 				if !tlsAdherenceEnabled {
-					Step("Enabling TLSAdherence feature gate on OCP 4.22")
+					Step("Enabling TLSAdherence feature gate")
 					featureGate.Spec.FeatureSet = configv1.CustomNoUpgrade
 					featureGate.Spec.CustomNoUpgrade = &configv1.CustomFeatureGates{
 						Enabled: []configv1.FeatureGateName{"TLSAdherence"},
