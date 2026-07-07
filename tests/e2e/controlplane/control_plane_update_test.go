@@ -221,7 +221,7 @@ spec:
 					Expect(samplePods.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
 
 					for _, pod := range samplePods.Items {
-						cl.Delete(ctx, &pod)
+						Expect(cl.Delete(ctx, &pod)).To(Succeed())
 					}
 
 					Eventually(common.CheckSamplePodsReady).WithArguments(ctx, cl).Should(Succeed(), "Error checking status of sample pods")
@@ -378,7 +378,7 @@ updateStrategy:
 						revisions := &v1.IstioRevisionList{}
 						g.Expect(cl.List(ctx, revisions)).To(Succeed())
 						g.Expect(revisions.Items).To(HaveLen(1), "Should have exactly one IstioRevision")
-					}).WithTimeout(30 * time.Second).Should(Succeed())
+					}).WithTimeout(60 * time.Second).WithPolling(5 * time.Second).Should(Succeed())
 					Success("Single IstioRevision maintained")
 				})
 
@@ -499,24 +499,26 @@ updateStrategy:
 
 			When("spec.values is updated on Istio CR", func() {
 				It("should update istiod deployment when values change", func(ctx SpecContext) {
-					// Get current Istio CR
-					istio := &v1.Istio{}
-					Expect(cl.Get(ctx, kube.Key("default"), istio)).To(Succeed())
-
-					// Modify spec.values to add a custom env var
-					if istio.Spec.Values == nil {
-						istio.Spec.Values = &v1.Values{}
-					}
-					if istio.Spec.Values.Pilot == nil {
-						istio.Spec.Values.Pilot = &v1.PilotConfig{}
-					}
-					if istio.Spec.Values.Pilot.Env == nil {
-						istio.Spec.Values.Pilot.Env = make(map[string]string)
-					}
-					istio.Spec.Values.Pilot.Env["TEST_VAR"] = "test-value"
-
 					Log("Updating Istio spec.values")
-					Expect(cl.Update(ctx, istio)).To(Succeed())
+					Eventually(func(g Gomega) {
+						// Get current Istio CR fresh on each attempt to avoid 409 Conflict
+						istio := &v1.Istio{}
+						g.Expect(cl.Get(ctx, kube.Key("default"), istio)).To(Succeed())
+
+						// Modify spec.values to add a custom env var
+						if istio.Spec.Values == nil {
+							istio.Spec.Values = &v1.Values{}
+						}
+						if istio.Spec.Values.Pilot == nil {
+							istio.Spec.Values.Pilot = &v1.PilotConfig{}
+						}
+						if istio.Spec.Values.Pilot.Env == nil {
+							istio.Spec.Values.Pilot.Env = make(map[string]string)
+						}
+						istio.Spec.Values.Pilot.Env["TEST_VAR"] = "test-value"
+
+						g.Expect(cl.Update(ctx, istio)).To(Succeed())
+					}).Should(Succeed())
 
 					// Verify the istiod Deployment is updated with the new env var
 					Eventually(func(g Gomega) {

@@ -175,7 +175,8 @@ kind: ServiceAccount
 metadata:
   name: istiod-service-account
 `
-						k1.WithNamespace(externalControlPlaneNamespace).CreateFromString(externalSVCAccountYAML)
+						Expect(k1.WithNamespace(externalControlPlaneNamespace).CreateFromString(externalSVCAccountYAML)).To(
+							Succeed(), "Failed to create istiod service account on Cluster #1")
 
 						apiURLCluster2, err := k2.GetClusterAPIURL()
 						Expect(apiURLCluster2).NotTo(BeEmpty(), "API URL is empty for the Cluster #2")

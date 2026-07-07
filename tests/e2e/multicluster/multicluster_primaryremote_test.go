@@ -167,13 +167,15 @@ values:
 						Expect(RemoteClusterAPIURL).NotTo(BeEmpty(), "API URL is empty for Remote Cluster")
 						Expect(err).NotTo(HaveOccurred())
 
-						// Wait for the remote Istio CR to be created, this can be moved to a condition verification, but the resource it not will be Ready at this point
-						time.Sleep(5 * time.Second)
-
 						// Install a remote secret in Primary cluster that provides access to the Remote cluster API server.
+						// Wrap in Eventually: CreateRemoteSecret may fail until the remote Istio service account is provisioned.
 						By("Creating Remote Secret on Primary Cluster")
-						secret, err := istioctl.CreateRemoteSecret(kubeconfig2, controlPlaneNamespace, "remote", RemoteClusterAPIURL)
-						Expect(err).NotTo(HaveOccurred())
+						var secret string
+						Eventually(func() error {
+							var err error
+							secret, err = istioctl.CreateRemoteSecret(kubeconfig2, controlPlaneNamespace, "remote", RemoteClusterAPIURL)
+							return err
+						}).ShouldNot(HaveOccurred(), "Remote secret generation failed")
 						Expect(k1.WithNamespace(controlPlaneNamespace).ApplyString(secret)).To(Succeed(), "Remote secret creation failed on Primary Cluster")
 					})
 
