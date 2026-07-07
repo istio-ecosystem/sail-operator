@@ -160,7 +160,7 @@ _internal_defaults_do_not_set:
     hub: registry.istio.io/testing
 
     # Default tag for Istio images.
-    tag: 1.31.0-alpha.02c8fcd665e1ba8815eb7c6c9b577c3368071373
+    tag: 1.31.0-alpha.02e0457e424cc357149949f055bfa680058524bc
 
     # Variant of the image to use.
     # Currently supported are: [debug, distroless]
