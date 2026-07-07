@@ -21,7 +21,8 @@ This end-to-end test suite utilizes Ginkgo, a testing framework known for its ex
     1. [Running the test locally](#running-the-test-locally)
     1. [Test Run scenarios while running on OCP](#test-run-scenarios-while-running-on-ocp)
     1. [Settings for end-to-end test execution](#settings-for-end-to-end-test-execution)
-    1. [Customizing the test run](#customizing-the-test-run)    
+    1. [Customizing the test run](#customizing-the-test-run)
+    1. [Detecting and investigating flaky tests](#detecting-and-investigating-flaky-tests)
     1. [Get test definitions for the end-to-end test](#get-test-definitions-for-the-end-to-end-test)
 1. [Contributing](#contributing)
 
@@ -539,6 +540,85 @@ FAIL! -- 81 Passed | 1 Failed | 0 Pending | 0 Skipped
 Ginkgo ran 1 suite in 3m46.401610849s
 Test Suite Failed
 ```
+
+### Detecting and investigating flaky tests
+
+The `GINKGO_FLAGS` variable is passed directly to the Ginkgo runner, so all Ginkgo stress-test and retry flags work without any additional setup. The workflows below are intended for local use when investigating a test that fails intermittently.
+
+#### Repeat a suite N times
+
+Run the full suite (or a focused subset) up to N additional times, stopping at the first failure. Total runs = `1 + N`.
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind GINKGO_FLAGS="--repeat=3"
+```
+
+Combine with `--randomize-all` to expose ordering-dependent failures:
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind GINKGO_FLAGS="--repeat=5 --randomize-all"
+```
+
+#### Loop until a failure occurs
+
+Runs the suite indefinitely until a failure is detected. Stop with `Ctrl+C`. Useful for catching rare race conditions.
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind GINKGO_FLAGS="--until-it-fails"
+```
+
+#### Retry flaky specs automatically
+
+When a spec fails, Ginkgo retries it up to N times before marking the suite as failed. Retried-but-passing specs are reported but do not fail the run.
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind GINKGO_FLAGS="--flake-attempts=3"
+```
+
+#### Targeting a specific test
+
+Combine any of the flags above with `--focus` to isolate a single spec:
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind \
+  GINKGO_FLAGS="--focus='should update istiod deployment' --repeat=10"
+```
+
+Or use a label filter to stress a specific feature area:
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind \
+  GINKGO_FLAGS="--label-filter=library --repeat=5"
+```
+
+#### Per-spec decorators in test code
+
+For specs that are known to be sensitive, you can mark them in the source instead of relying on command-line flags.
+
+`MustPassRepeatedly(N)` requires the spec to pass N times in a row with no retries on failure — use this to verify correctness:
+
+```go
+It("does not enter an infinite reconcile loop", MustPassRepeatedly(3), func() {
+    // ...
+})
+```
+
+`FlakeAttempts(N)` retries the spec up to N times on failure — use sparingly and prefer fixing the root cause:
+
+```go
+It("syncs TLS settings", FlakeAttempts(3), func() {
+    // ...
+})
+```
+
+> **Note on `FlakeAttempts` in `Ordered` containers**: if the failure occurs inside an `It`, only that `It` is retried — `BeforeAll` is not re-run. If the failure is in a `BeforeAll`, Ginkgo runs `AfterAll` to clean up and then re-runs `BeforeAll`.
+
+#### Recommended workflow for a flaky CI result
+
+1. Identify the failing spec from the CI output.
+2. Run it locally with `--focus` and `--repeat=10` to reproduce.
+3. If it reproduces, add `MustPassRepeatedly` or fix the underlying race condition.
+4. If it does not reproduce, try `--until-it-fails --randomize-all` to expose ordering dependencies.
 
 ### Get test definitions for the end-to-end test
 
