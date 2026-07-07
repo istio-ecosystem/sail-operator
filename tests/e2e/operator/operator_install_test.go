@@ -292,17 +292,17 @@ spec:
 
 			DeferCleanup(func(ctx SpecContext) {
 				Step("Restoring the original APIServer TLS settings")
-				apiServer := &configv1.APIServer{}
-				err := cl.Get(ctx, apiServerKey, apiServer)
-				Expect(err).NotTo(HaveOccurred(), "Failed to get APIServer")
-				apiServer.Spec.TLSSecurityProfile = originalTLSProfile
-				// TLSAdherence cannot be set back to NoOpinion once set,
-				// so only restore it if the original was a non-empty value.
-				if originalTLSAdherence != configv1.TLSAdherencePolicyNoOpinion {
-					apiServer.Spec.TLSAdherence = originalTLSAdherence
-				}
-				err = cl.Update(ctx, apiServer)
-				Expect(err).NotTo(HaveOccurred(), "Failed to update APIServer TLS settings")
+				Eventually(func(g Gomega) {
+					apiServer := &configv1.APIServer{}
+					g.Expect(cl.Get(ctx, apiServerKey, apiServer)).To(Succeed(), "Failed to get APIServer")
+					apiServer.Spec.TLSSecurityProfile = originalTLSProfile
+					// TLSAdherence cannot be set back to NoOpinion once set,
+					// so only restore it if the original was a non-empty value.
+					if originalTLSAdherence != configv1.TLSAdherencePolicyNoOpinion {
+						apiServer.Spec.TLSAdherence = originalTLSAdherence
+					}
+					g.Expect(cl.Update(ctx, apiServer)).To(Succeed(), "Failed to update APIServer TLS settings")
+				}).WithTimeout(30 * time.Second).WithPolling(2 * time.Second).Should(Succeed())
 			})
 
 			Step("Creating Istio")
@@ -393,7 +393,8 @@ spec:
 				g.Expect(rev.Spec.Values.Pilot.ExtraContainerArgs).To(
 					ContainElement(ContainSubstring("--tls-cipher-suites=")),
 					"IstioRevision should have --tls-cipher-suites in pilot.extraContainerArgs")
-			}).Should(Succeed(), "IstioRevision is not syncing TLS settings but should be")
+			}).WithTimeout(5*time.Minute).WithPolling(5*time.Second).Should(Succeed(),
+				"IstioRevision is not syncing TLS settings but should be")
 
 			Step("Verifying metrics endpoint accepts the custom cipher")
 			Eventually(func() bool {
