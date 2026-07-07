@@ -31,7 +31,7 @@ Alternatively, those can be configured by using two custom resources `ServiceMon
 
 ### API Changes
 
-We will add a boolean field `spec.monitoring.enabled` in the `Istio` Custom Resource(CR). For example,
+We will add fields `spec.monitoring.enabled` and `spec.monitoring.monitored-by` in the `Istio` Custom Resource(CR). For example,
 
 ```yaml
 apiVersion: sailoperator.io/v1
@@ -40,12 +40,16 @@ metadata:
   name: default
 spec:
   monitoring:
-    enabled: false
+    enabled: None
+    monitored-by: prometheus
 ```
 
-This field defaults to `false`. When it is set to `true`, the monitoring controller reconciles `ServiceMonitor` and `PodMonitor` CRs for each owned `IstioRevision`. 
+The `spec.monitoring.enabled` field allows values in the following list: `["None", "kube-prometheus"]`. It defaults to `None`. When it is set to other value, the monitoring controller reconciles `ServiceMonitor` and `PodMonitor` CRs for each owned `IstioRevision`.
+The `spec.monitoring.monitored-by` field value is used when the monitoring controller adds additional label(s) for label matching in `ServiceMonitor` and `PodMonitor` CRs.
 
-If any custom relabeling or scraping configuration is required, users must leave `spec.monitoring.enabled` as default value `false` and they can apply independent `ServiceMonitor` and `PodMonitor` resources manually. The monitoring controller will not delete or update those independent resources in its reconciliation.
+For example, users may set `spec.monitoring.enabled: kube-prometheus` and `spec.monitoring.monitored-by: prometheus`. The monitoring controller reconciles and adds required label `release: prometheus` in `ServiceMonitor` and `PodMonitor` CRs. Because Prometheus Operator configures the Prometheus resource with a selector by default in `kube-prometheus-stack` helm chart. The selector is matching label `release: <helm-chart-release-name>` in `ServiceMonitor` and `PodMonitor` CRs.
+
+If any custom relabeling or scraping configuration is required, users must leave `spec.monitoring.enabled` as default value `None` and they can apply independent `ServiceMonitor` and `PodMonitor` resources manually. The monitoring controller will not delete or update those independent resources in its reconciliation.
 
 #### Alternatives API Considered
 
@@ -55,13 +59,18 @@ A broader Observability Integration API and CRD can be added in a future enhance
 
 We assume `ServiceMonitor` and `PodMonitor` CRDs are available under `monitoring.coreos.com/v1` and/or `monitoring.rhobs/v1` group. The Sail Operator ClusterRole grants permissions for both API groups' `ServiceMonitor` and `PodMonitor` custom resources.
 
-A monitoring controller watches `IstioRevision` resources and reconciles `ServiceMonitor` and `PodMonitor` CRs when the boolean field `spec.monitoring.enabled` is set to `true` in the parent `Istio` CR. It also watches namespaces with the Istio sidecar injection labels and reconciles `PodMonitor` CRs for those namespaces.
+A monitoring controller watches `IstioRevision` resources and reconciles `ServiceMonitor` and `PodMonitor` CRs when the field `spec.monitoring.enabled` is set to `kube-prometheus` in the parent `Istio` CR. It also watches namespaces with the Istio sidecar injection labels and reconciles `PodMonitor` CRs for those namespaces.
 
 The monitoring controller applies platform-specific relabeling defaults when creating `ServiceMonitor` and `PodMonitor` CRs. It detects the running platform at the Sail Operator startup time.
 
 #### Monitoring Controller Design
 
-When the `spec.monitoring.enabled` is `true` in an `Istio` custom resource, the monitoring controller reconciles `ServiceMonitor` or `PodMonitor` resources and adds label such as `managed-by`: `mesh-operator` in those resources. When the `spec.monitoring.enabled` is `false` in an `Istio` custom resource, the monitoring controller stops reconciling.
+When the `spec.monitoring.enabled` is `kube-prometheus` in an `Istio` custom resource, the monitoring controller reconciles `ServiceMonitor` or `PodMonitor` resources and adds the following labels in those resources:
+- `managed-by: mesh-operator`
+- `release: prometheus` (This value is mapped from Istio CR's `spec.monitoring.monitored-by`)
+- `monitored-by: prometheus` (This value is mapped from Istio CR's `spec.monitoring.monitored-by`)
+
+When the `spec.monitoring.enabled` is `None` in an `Istio` custom resource, the monitoring controller stops reconciling.
 
 The monitoring controller only interacts with monitoring resources it creates. Those resources are identified by a naming convention and labels. It will not delete or update user-managed `ServiceMonitor` or `PodMonitor` resources that were configured manually in existing environments.
 
@@ -103,7 +112,7 @@ By default, the monitoring controller will create the `ServiceMonitor` and `PodM
 
 #### Monitoring Availability
 
-When the `spec.monitoring.enabled` is `true` in an `Istio` custom resource, but the required `ServiceMonitor` and `PodMonitor` CRDs are not installed, the monitoring controller should set a status condition in the `Istio` custom resource. For example:
+When the `spec.monitoring.enabled` is `kube-prometheus` in an `Istio` custom resource, but the required `ServiceMonitor` and `PodMonitor` CRDs are not installed, the monitoring controller should set a status condition in the `Istio` custom resource. For example:
 
 | Field | Value |
 |-------|-------|
@@ -131,7 +140,7 @@ The `PodMonitor` reconciliation watches namespaces with the sidecar injection la
 - [ ] User-facing documentation
 
 Alternatives API Considered
-- [ ] Introduce an Integration API in v1alph1 api group. It uses target references fields for integrating more Observability services.
+- [ ] Introduce an Integration API in v1alpha1 api group. It uses target references fields for integrating more Observability services.
 
 ## Test Plan
 
@@ -142,3 +151,4 @@ Functionality will be tested in unit tests, integration tests (envtest), and Kin
 * 2026-06-11: Updated with platform relabeling implementation, remaining v1alpha1 work items.
 * 2026-06-23: Updated Overview, Goals, Non-goals, Design descriptions. Added Alternatives API Considered. Removed OSSM JIRA references.
 * 2026-07-01: Update descriptions. Addressed review comments. Renamed this file with JIRA work item number.
+* 2026-07-07: Update API changes.
