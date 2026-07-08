@@ -21,6 +21,7 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -53,24 +54,15 @@ func init() {
 	// +kubebuilder:scaffold:scheme
 }
 
-// addRhobsMonitoringTypes registers prometheus-operator monitoring types with the monitoring.rhobs API group
+// addRhobsMonitoringTypes registers prometheus-operator monitoring types with the monitoring.rhobs API group.
 func addRhobsMonitoringTypes(scheme *runtime.Scheme) {
 	rhobsGV := schema.GroupVersion{Group: RhobsAPIGroup, Version: "v1"}
 
-	scheme.AddKnownTypeWithName(
-		rhobsGV.WithKind("ServiceMonitor"),
+	scheme.AddKnownTypes(rhobsGV,
 		&monitoringv1.ServiceMonitor{},
-	)
-	scheme.AddKnownTypeWithName(
-		rhobsGV.WithKind("ServiceMonitorList"),
 		&monitoringv1.ServiceMonitorList{},
-	)
-	scheme.AddKnownTypeWithName(
-		rhobsGV.WithKind("PodMonitor"),
 		&monitoringv1.PodMonitor{},
-	)
-	scheme.AddKnownTypeWithName(
-		rhobsGV.WithKind("PodMonitorList"),
 		&monitoringv1.PodMonitorList{},
 	)
+	metav1.AddToGroupVersion(scheme, rhobsGV)
 }
