@@ -20,11 +20,35 @@ import "github.com/istio-ecosystem/sail-operator/pkg/config"
 
 func init() {
 	config.Config.ImageDigests = map[string]config.IstioImageConfig{
+		"v1.30.2": {
+			IstiodImage:  "registry.istio.io/release/pilot:1.30.2",
+			ProxyImage:   "registry.istio.io/release/proxyv2:1.30.2",
+			CNIImage:     "registry.istio.io/release/install-cni:1.30.2",
+			ZTunnelImage: "registry.istio.io/release/ztunnel:1.30.2",
+		},
+		"v1.30.1": {
+			IstiodImage:  "registry.istio.io/release/pilot:1.30.1",
+			ProxyImage:   "registry.istio.io/release/proxyv2:1.30.1",
+			CNIImage:     "registry.istio.io/release/install-cni:1.30.1",
+			ZTunnelImage: "registry.istio.io/release/ztunnel:1.30.1",
+		},
 		"v1.30.0": {
 			IstiodImage:  "registry.istio.io/release/pilot:1.30.0",
 			ProxyImage:   "registry.istio.io/release/proxyv2:1.30.0",
 			CNIImage:     "registry.istio.io/release/install-cni:1.30.0",
 			ZTunnelImage: "registry.istio.io/release/ztunnel:1.30.0",
+		},
+		"v1.29.5": {
+			IstiodImage:  "registry.istio.io/release/pilot:1.29.5",
+			ProxyImage:   "registry.istio.io/release/proxyv2:1.29.5",
+			CNIImage:     "registry.istio.io/release/install-cni:1.29.5",
+			ZTunnelImage: "registry.istio.io/release/ztunnel:1.29.5",
+		},
+		"v1.29.4": {
+			IstiodImage:  "registry.istio.io/release/pilot:1.29.4",
+			ProxyImage:   "registry.istio.io/release/proxyv2:1.29.4",
+			CNIImage:     "registry.istio.io/release/install-cni:1.29.4",
+			ZTunnelImage: "registry.istio.io/release/ztunnel:1.29.4",
 		},
 		"v1.29.3": {
 			IstiodImage:  "registry.istio.io/release/pilot:1.29.3",
@@ -49,6 +73,24 @@ func init() {
 			ProxyImage:   "registry.istio.io/release/proxyv2:1.29.0",
 			CNIImage:     "registry.istio.io/release/install-cni:1.29.0",
 			ZTunnelImage: "registry.istio.io/release/ztunnel:1.29.0",
+		},
+		"v1.28.10": {
+			IstiodImage:  "registry.istio.io/release/pilot:1.28.10",
+			ProxyImage:   "registry.istio.io/release/proxyv2:1.28.10",
+			CNIImage:     "registry.istio.io/release/install-cni:1.28.10",
+			ZTunnelImage: "registry.istio.io/release/ztunnel:1.28.10",
+		},
+		"v1.28.9": {
+			IstiodImage:  "registry.istio.io/release/pilot:1.28.9",
+			ProxyImage:   "registry.istio.io/release/proxyv2:1.28.9",
+			CNIImage:     "registry.istio.io/release/install-cni:1.28.9",
+			ZTunnelImage: "registry.istio.io/release/ztunnel:1.28.9",
+		},
+		"v1.28.8": {
+			IstiodImage:  "registry.istio.io/release/pilot:1.28.8",
+			ProxyImage:   "registry.istio.io/release/proxyv2:1.28.8",
+			CNIImage:     "registry.istio.io/release/install-cni:1.28.8",
+			ZTunnelImage: "registry.istio.io/release/ztunnel:1.28.8",
 		},
 		"v1.28.7": {
 			IstiodImage:  "registry.istio.io/release/pilot:1.28.7",
