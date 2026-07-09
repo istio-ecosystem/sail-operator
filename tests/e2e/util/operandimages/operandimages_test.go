@@ -30,15 +30,15 @@ spec:
   install:
     spec:
       deployments:
-        - name: servicemesh-operator3
+        - name: sail-operator
           spec:
             template:
               metadata:
                 annotations:
-                  images.v1_30_1.istiod: registry.redhat.io/openshift-service-mesh/istio-pilot-rhel9@sha256:abc
-                  images.v1_30_1.proxy: registry.redhat.io/openshift-service-mesh/istio-proxyv2-rhel9@sha256:def
-                  images.v1_30_1.cni: registry.redhat.io/openshift-service-mesh/istio-cni-rhel9@sha256:ghi
-                  images.v1_30_1.ztunnel: registry.redhat.io/openshift-service-mesh/istio-ztunnel-rhel9@sha256:jkl
+                  images.v1_30_1.istiod: registry.istio.io/testing/pilot@sha256:abc
+                  images.v1_30_1.proxy: registry.istio.io/testing/proxyv2@sha256:def
+                  images.v1_30_1.cni: registry.istio.io/testing/install-cni@sha256:ghi
+                  images.v1_30_1.ztunnel: registry.istio.io/testing/ztunnel@sha256:jkl
         - name: other-deployment
           spec:
             template:
@@ -47,7 +47,7 @@ spec:
 `
 
 func TestParseInstallDeploymentAnnotations(t *testing.T) {
-	ann, err := parseInstallDeploymentAnnotations(sampleCSV, "servicemesh-operator3")
+	ann, err := parseInstallDeploymentAnnotations(sampleCSV, "sail-operator")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,10 +59,10 @@ func TestParseInstallDeploymentAnnotations(t *testing.T) {
 
 	want := map[string]config.IstioImageConfig{
 		"v1.30.1": {
-			IstiodImage:  "registry.redhat.io/openshift-service-mesh/istio-pilot-rhel9@sha256:abc",
-			ProxyImage:   "registry.redhat.io/openshift-service-mesh/istio-proxyv2-rhel9@sha256:def",
-			CNIImage:     "registry.redhat.io/openshift-service-mesh/istio-cni-rhel9@sha256:ghi",
-			ZTunnelImage: "registry.redhat.io/openshift-service-mesh/istio-ztunnel-rhel9@sha256:jkl",
+			IstiodImage:  "registry.istio.io/testing/pilot@sha256:abc",
+			ProxyImage:   "registry.istio.io/testing/proxyv2@sha256:def",
+			CNIImage:     "registry.istio.io/testing/install-cni@sha256:ghi",
+			ZTunnelImage: "registry.istio.io/testing/ztunnel@sha256:jkl",
 		},
 	}
 	if diff := cmp.Diff(want, digests); diff != "" {
@@ -78,12 +78,12 @@ func TestParseInstallDeploymentAnnotationsMissingDeployment(t *testing.T) {
 }
 
 func TestCSVSemver(t *testing.T) {
-	version, err := csvSemver("servicemeshoperator3.v3.4.0")
+	version, err := csvSemver("sailoperator.v1.30.0")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if version.String() != "3.4.0" {
-		t.Fatalf("expected 3.4.0, got %s", version)
+	if version.String() != "1.30.0" {
+		t.Fatalf("expected 1.30.0, got %s", version)
 	}
 }
 
@@ -91,15 +91,15 @@ func TestHighestSucceededCSVFromYAML(t *testing.T) {
 	const csvListYAML = `
 items:
   - metadata:
-      name: servicemeshoperator3.v3.3.0
+      name: sailoperator.v1.28.0
     status:
       phase: Succeeded
   - metadata:
-      name: servicemeshoperator3.v3.4.0
+      name: sailoperator.v1.30.0
     status:
       phase: Succeeded
   - metadata:
-      name: servicemeshoperator3.v3.2.0
+      name: sailoperator.v1.27.0
     status:
       phase: Failed
 `
@@ -125,8 +125,8 @@ items:
 			bestName = item.Metadata.Name
 		}
 	}
-	if bestName != "servicemeshoperator3.v3.4.0" {
-		t.Fatalf("expected servicemeshoperator3.v3.4.0, got %q", bestName)
+	if bestName != "sailoperator.v1.30.0" {
+		t.Fatalf("expected sailoperator.v1.30.0, got %q", bestName)
 	}
 }
 

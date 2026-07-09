@@ -70,11 +70,11 @@ func TestParseImageDigestsFromAnnotations(t *testing.T) {
 		{
 			name: "ignores must-gather",
 			ann: map[string]string{
-				"images.v1_30_1.istiod":       rhIstiod,
-				"images.v1_30_1.proxy":        rhProxy,
-				"images.v1_30_1.cni":          rhCNI,
-				"images.v1_30_1.ztunnel":      rhZtunnel,
-				"images.v1_30_1.must-gather":  "registry.example.com/must-gather:latest",
+				"images.v1_30_1.istiod":      rhIstiod,
+				"images.v1_30_1.proxy":       rhProxy,
+				"images.v1_30_1.cni":         rhCNI,
+				"images.v1_30_1.ztunnel":     rhZtunnel,
+				"images.v1_30_1.must-gather": "registry.example.com/must-gather:latest",
 			},
 			want: map[string]IstioImageConfig{
 				"v1.30.1": {
@@ -104,6 +104,13 @@ func TestParseImageDigestsFromAnnotations(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "decoding error on missing required fields",
+			ann: map[string]string{
+				"images.v1_30_1.istiod": "registry.io/istio:v1.30.1",
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -126,27 +133,70 @@ func TestParseImageDigestsFromAnnotations(t *testing.T) {
 }
 
 func TestMergeImageDigests(t *testing.T) {
-	orig := Config.ImageDigests
-	t.Cleanup(func() {
-		Config.ImageDigests = orig
-	})
-
-	Config.ImageDigests = map[string]IstioImageConfig{
-		"v1.29.0": testImages,
-	}
-
-	overlay := map[string]IstioImageConfig{
-		"v1.30.1": {
-			IstiodImage: "overlay-istiod",
+	testCases := []struct {
+		name     string
+		initial  map[string]IstioImageConfig
+		overlay  map[string]IstioImageConfig
+		expected map[string]IstioImageConfig
+	}{
+		{
+			name: "merge into existing map",
+			initial: map[string]IstioImageConfig{
+				"v1.29.0": testImages,
+			},
+			overlay: map[string]IstioImageConfig{
+				"v1.30.1": {
+					IstiodImage: "overlay-istiod",
+				},
+			},
+			expected: map[string]IstioImageConfig{
+				"v1.29.0": testImages,
+				"v1.30.1": {IstiodImage: "overlay-istiod"},
+			},
+		},
+		{
+			name:    "merge into nil map",
+			initial: nil,
+			overlay: map[string]IstioImageConfig{
+				"v1.30.1": {
+					IstiodImage: "overlay-istiod",
+				},
+			},
+			expected: map[string]IstioImageConfig{
+				"v1.30.1": {IstiodImage: "overlay-istiod"},
+			},
+		},
+		{
+			name: "merge empty overlay",
+			initial: map[string]IstioImageConfig{
+				"v1.29.0": testImages,
+			},
+			overlay: map[string]IstioImageConfig{},
+			expected: map[string]IstioImageConfig{
+				"v1.29.0": testImages,
+			},
+		},
+		{
+			name:     "merge nil overlay",
+			initial:  map[string]IstioImageConfig{"v1.29.0": testImages},
+			overlay:  nil,
+			expected: map[string]IstioImageConfig{"v1.29.0": testImages},
 		},
 	}
-	MergeImageDigests(overlay)
 
-	want := map[string]IstioImageConfig{
-		"v1.29.0": testImages,
-		"v1.30.1": {IstiodImage: "overlay-istiod"},
-	}
-	if diff := cmp.Diff(want, Config.ImageDigests); diff != "" {
-		t.Fatal("merged config did not match expectation:\n", diff)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			orig := Config.ImageDigests
+			t.Cleanup(func() {
+				Config.ImageDigests = orig
+			})
+
+			Config.ImageDigests = tc.initial
+			MergeImageDigests(tc.overlay)
+
+			if diff := cmp.Diff(tc.expected, Config.ImageDigests); diff != "" {
+				t.Fatal("merged config did not match expectation:\n", diff)
+			}
+		})
 	}
 }
