@@ -30,10 +30,10 @@ import (
 )
 
 const (
-	csvKind              = "csv"
-	deploymentKind       = "deployment"
-	olmOwnerAnnotation   = "olm.owner"
-	csvSucceededPhase    = "Succeeded"
+	csvKind            = "csv"
+	deploymentKind     = "deployment"
+	olmOwnerAnnotation = "olm.owner"
+	csvSucceededPhase  = "Succeeded"
 )
 
 // Options configures CSV operand image discovery.
