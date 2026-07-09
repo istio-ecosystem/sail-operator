@@ -16,7 +16,27 @@
 # to avoid breaking API guarantees.
 versions:
   - name: v1.30-latest
-    ref: v1.30.0
+    ref: v1.30.2
+  - name: v1.30.2
+    version: 1.30.2
+    repo: https://github.com/istio/istio
+    commit: 1.30.2
+    charts:
+      - https://istio-release.storage.googleapis.com/charts/base-1.30.2.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-1.30.2.tgz
+      - https://istio-release.storage.googleapis.com/charts/gateway-1.30.2.tgz
+      - https://istio-release.storage.googleapis.com/charts/cni-1.30.2.tgz
+      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.30.2.tgz
+  - name: v1.30.1
+    version: 1.30.1
+    repo: https://github.com/istio/istio
+    commit: 1.30.1
+    charts:
+      - https://istio-release.storage.googleapis.com/charts/base-1.30.1.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-1.30.1.tgz
+      - https://istio-release.storage.googleapis.com/charts/gateway-1.30.1.tgz
+      - https://istio-release.storage.googleapis.com/charts/cni-1.30.1.tgz
+      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.30.1.tgz
   - name: v1.30.0
     version: 1.30.0
     repo: https://github.com/istio/istio
@@ -28,7 +48,27 @@ versions:
       - https://istio-release.storage.googleapis.com/charts/cni-1.30.0.tgz
       - https://istio-release.storage.googleapis.com/charts/ztunnel-1.30.0.tgz
   - name: v1.29-latest
-    ref: v1.29.3
+    ref: v1.29.5
+  - name: v1.29.5
+    version: 1.29.5
+    repo: https://github.com/istio/istio
+    commit: 1.29.5
+    charts:
+      - https://istio-release.storage.googleapis.com/charts/base-1.29.5.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-1.29.5.tgz
+      - https://istio-release.storage.googleapis.com/charts/gateway-1.29.5.tgz
+      - https://istio-release.storage.googleapis.com/charts/cni-1.29.5.tgz
+      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.29.5.tgz
+  - name: v1.29.4
+    version: 1.29.4
+    repo: https://github.com/istio/istio
+    commit: 1.29.4
+    charts:
+      - https://istio-release.storage.googleapis.com/charts/base-1.29.4.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-1.29.4.tgz
+      - https://istio-release.storage.googleapis.com/charts/gateway-1.29.4.tgz
+      - https://istio-release.storage.googleapis.com/charts/cni-1.29.4.tgz
+      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.29.4.tgz
   - name: v1.29.3
     version: 1.29.3
     repo: https://github.com/istio/istio
@@ -70,7 +110,37 @@ versions:
       - https://istio-release.storage.googleapis.com/charts/cni-1.29.0.tgz
       - https://istio-release.storage.googleapis.com/charts/ztunnel-1.29.0.tgz
   - name: v1.28-latest
-    ref: v1.28.7
+    ref: v1.28.10
+  - name: v1.28.10
+    version: 1.28.10
+    repo: https://github.com/istio/istio
+    commit: 1.28.10
+    charts:
+      - https://istio-release.storage.googleapis.com/charts/base-1.28.10.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-1.28.10.tgz
+      - https://istio-release.storage.googleapis.com/charts/gateway-1.28.10.tgz
+      - https://istio-release.storage.googleapis.com/charts/cni-1.28.10.tgz
+      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.28.10.tgz
+  - name: v1.28.9
+    version: 1.28.9
+    repo: https://github.com/istio/istio
+    commit: 1.28.9
+    charts:
+      - https://istio-release.storage.googleapis.com/charts/base-1.28.9.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-1.28.9.tgz
+      - https://istio-release.storage.googleapis.com/charts/gateway-1.28.9.tgz
+      - https://istio-release.storage.googleapis.com/charts/cni-1.28.9.tgz
+      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.28.9.tgz
+  - name: v1.28.8
+    version: 1.28.8
+    repo: https://github.com/istio/istio
+    commit: 1.28.8
+    charts:
+      - https://istio-release.storage.googleapis.com/charts/base-1.28.8.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-1.28.8.tgz
+      - https://istio-release.storage.googleapis.com/charts/gateway-1.28.8.tgz
+      - https://istio-release.storage.googleapis.com/charts/cni-1.28.8.tgz
+      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.28.8.tgz
   - name: v1.28.7
     version: 1.28.7
     repo: https://github.com/istio/istio

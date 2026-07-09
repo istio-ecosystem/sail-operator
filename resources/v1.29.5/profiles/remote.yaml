@@ -1,0 +1,7 @@
+# The remote profile is used to configure a mesh cluster without a locally deployed control plane.
+# Only the injector mutating webhook configuration is installed.
+apiVersion: sailoperator.io/v1
+kind: Istio
+spec:
+  values:
+    profile: remote
