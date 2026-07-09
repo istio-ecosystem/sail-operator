@@ -24,6 +24,7 @@ import (
 	k8sclient "github.com/istio-ecosystem/sail-operator/tests/e2e/util/client"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/operandimages"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/rest"
@@ -74,4 +75,9 @@ func setup() {
 	Expect(err).NotTo(HaveOccurred())
 
 	k = kubectl.New()
+
+	Expect(operandimages.MergeFromCSV(k, operandimages.Options{
+		Namespace:      common.OperatorNamespace,
+		DeploymentName: env.Get("DEPLOYMENT_NAME", "sail-operator"),
+	})).To(Succeed())
 }
