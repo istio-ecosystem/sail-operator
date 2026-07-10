@@ -72,10 +72,10 @@ var sailCRDs = []string{
 // profile but intentionally omitted from the custom TLS profile used in tests.
 // Its absence distinguishes Custom from Intermediate on both the metrics endpoint
 // and in the IstioRevision values.
-const markerCipher = "ECDHE-RSA-CHACHA20-POLY1305"
+const markerCipher = "ECDHE-RSA-AES128-GCM-SHA256"
 
 // markerCipherName is the Go TLS cipher name for the marker cipher.
-const markerCipherName = "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256"
+const markerCipherName = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
 
 var (
 	apiServerKey = client.ObjectKey{Name: crtls.APIServerName}
@@ -379,7 +379,7 @@ spec:
 
 			Step("Verifying metrics endpoint still accepts the marker cipher")
 			Expect(metricsEndpointAcceptsCipher(k, markerCipher, "1.2")).To(BeTrue(),
-				"Metrics endpoint should accept ECDHE-RSA-CHACHA20-POLY1305 when TLSAdherence is NoOpinion (custom profile not applied)")
+				"Metrics endpoint should accept ECDHE-RSA-AES128-GCM-SHA256 when TLSAdherence is NoOpinion (custom profile not applied)")
 			Success("TLS settings were not synced when TLSAdherence is NoOpinion")
 		})
 
@@ -438,7 +438,7 @@ spec:
 				"Metrics endpoint should accept ECDHE-RSA-AES256-GCM-SHA384 when TLS profile includes it")
 			Success("TLS settings were synced after TLSAdherence change to StrictAllComponents")
 
-			Step("Applying custom TLS profile without ECDHE-RSA-CHACHA20-POLY1305")
+			Step("Applying custom TLS profile without ECDHE-RSA-AES128-GCM-SHA256")
 			applyCustomTLSProfile(ctx, cl, customTLSProfileCiphers)
 
 			Step("Verifying IstioRevision cipher suites no longer include the marker cipher")
@@ -448,14 +448,14 @@ spec:
 				ciphers := getIstioRevisionCipherSuites(rev)
 				g.Expect(ciphers).NotTo(BeEmpty(), "IstioRevision should have cipher suites")
 				g.Expect(ciphers).NotTo(ContainElement(markerCipherName),
-					"IstioRevision should not contain ECDHE-RSA-CHACHA20-POLY1305 after custom profile is applied")
+					"IstioRevision should not contain ECDHE-RSA-AES128-GCM-SHA256 after custom profile is applied")
 			}).WithTimeout(5 * time.Minute).WithPolling(5 * time.Second).Should(Succeed())
 
 			Step("Verifying metrics endpoint rejects the marker cipher")
 			Eventually(func() bool {
 				return metricsEndpointAcceptsCipher(k, markerCipher, "1.2")
 			}).Should(BeFalse(),
-				"Metrics endpoint should reject ECDHE-RSA-CHACHA20-POLY1305 after custom profile is applied")
+				"Metrics endpoint should reject ECDHE-RSA-AES128-GCM-SHA256 after custom profile is applied")
 			Success("TLS settings were updated after profile change")
 		})
 	})
