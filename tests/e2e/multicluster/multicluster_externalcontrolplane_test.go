@@ -42,7 +42,7 @@ const (
 	externalIstioName = "external-istiod"
 )
 
-var _ = Describe("Multicluster deployment models", Label("multicluster", "multicluster-external"), Ordered, func() {
+var _ = Describe("Multicluster deployment models", Label("multicluster", "multicluster-external", "slow", "sidecar"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
@@ -167,7 +167,8 @@ kind: ServiceAccount
 metadata:
   name: istiod-service-account
 `
-						k1.WithNamespace(externalControlPlaneNamespace).CreateFromString(externalSVCAccountYAML)
+						Expect(k1.WithNamespace(externalControlPlaneNamespace).CreateFromString(externalSVCAccountYAML)).To(
+							Succeed(), "Failed to create istiod service account on Cluster #1")
 
 						apiURLCluster2, err := k2.GetClusterAPIURL()
 						Expect(apiURLCluster2).NotTo(BeEmpty(), "API URL is empty for the Cluster #2")

@@ -90,10 +90,16 @@ var (
 var _ = Describe("Operator", Label("smoke", "operator"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
+	debugInfoLogged := false
 	clr := cleaner.New(cl)
 	BeforeAll(func(ctx SpecContext) {
 		clr.Record(ctx)
 		DeferCleanup(func(ctx SpecContext) {
+			if CurrentSpecReport().Failed() {
+				common.LogDebugInfo(common.Operator, k)
+				debugInfoLogged = true
+			}
+
 			clr.Cleanup(ctx)
 		})
 	})
@@ -221,7 +227,7 @@ spec:
 	// a specific TLS 1.2 cipher) and the TLS settings synced to the IstioRevision resource.
 	// Test 1 runs on all OpenShift clusters. Tests 2 and 3 require OpenShift >= 4.22
 	// because the TLSAdherence field was introduced in 4.22.
-	Describe("TLS profile change", Label("openshift"), func() {
+	Describe("TLS profile change", Label("tls-profile"), func() {
 		var ocpMinorVersion int
 		var ocpMajorVersion int
 
@@ -286,17 +292,17 @@ spec:
 
 			DeferCleanup(func(ctx SpecContext) {
 				Step("Restoring the original APIServer TLS settings")
-				apiServer := &configv1.APIServer{}
-				err := cl.Get(ctx, apiServerKey, apiServer)
-				Expect(err).NotTo(HaveOccurred(), "Failed to get APIServer")
-				apiServer.Spec.TLSSecurityProfile = originalTLSProfile
-				// TLSAdherence cannot be set back to NoOpinion once set,
-				// so only restore it if the original was a non-empty value.
-				if originalTLSAdherence != configv1.TLSAdherencePolicyNoOpinion {
-					apiServer.Spec.TLSAdherence = originalTLSAdherence
-				}
-				err = cl.Update(ctx, apiServer)
-				Expect(err).NotTo(HaveOccurred(), "Failed to update APIServer TLS settings")
+				Eventually(func(g Gomega) {
+					apiServer := &configv1.APIServer{}
+					g.Expect(cl.Get(ctx, apiServerKey, apiServer)).To(Succeed(), "Failed to get APIServer")
+					apiServer.Spec.TLSSecurityProfile = originalTLSProfile
+					// TLSAdherence cannot be set back to NoOpinion once set,
+					// so only restore it if the original was a non-empty value.
+					if originalTLSAdherence != configv1.TLSAdherencePolicyNoOpinion {
+						apiServer.Spec.TLSAdherence = originalTLSAdherence
+					}
+					g.Expect(cl.Update(ctx, apiServer)).To(Succeed(), "Failed to update APIServer TLS settings")
+				}).WithTimeout(30 * time.Second).WithPolling(2 * time.Second).Should(Succeed())
 			})
 
 			Step("Creating Istio")
@@ -387,7 +393,8 @@ spec:
 				g.Expect(rev.Spec.Values.Pilot.ExtraContainerArgs).To(
 					ContainElement(ContainSubstring("--tls-cipher-suites=")),
 					"IstioRevision should have --tls-cipher-suites in pilot.extraContainerArgs")
-			}).Should(Succeed(), "IstioRevision is not syncing TLS settings but should be")
+			}).WithTimeout(5*time.Minute).WithPolling(5*time.Second).Should(Succeed(),
+				"IstioRevision is not syncing TLS settings but should be")
 
 			Step("Verifying metrics endpoint accepts the custom cipher")
 			Eventually(func() bool {
@@ -423,7 +430,7 @@ spec:
 			return
 		}
 
-		if CurrentSpecReport().Failed() {
+		if CurrentSpecReport().Failed() && !debugInfoLogged {
 			common.LogDebugInfo(common.Operator, k)
 		}
 	})

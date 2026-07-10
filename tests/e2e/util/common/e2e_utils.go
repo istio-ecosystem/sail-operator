@@ -20,8 +20,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -38,8 +36,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 type testSuite string
@@ -54,8 +50,10 @@ const (
 )
 
 const (
-	SleepNamespace   = "sleep"
-	HttpbinNamespace = "httpbin"
+	SleepNamespace       = "sleep"
+	HttpbinNamespace     = "httpbin"
+	SleepContainerName   = "sleep"
+	HttpbinContainerName = "httpbin"
 
 	// maxJUnitErrorMessageSize is the maximum size (in bytes) for error messages
 	// written to junit XML files. Messages exceeding this size will be truncated.
@@ -156,252 +154,6 @@ func CheckNamespaceEmpty(ctx SpecContext, cl client.Client, ns string) {
 	}).Should(BeEmpty(), "No Services should be present in the namespace")
 }
 
-func LogDebugInfo(suite testSuite, kubectls ...kubectl.Kubectl) {
-	artifactsDir := env.Get("ARTIFACTS", "/tmp/artifacts")
-	printDebug := env.GetBool("E2E_PRINT_DEBUG", false)
-
-	if printDebug {
-		GinkgoWriter.Println()
-		GinkgoWriter.Println("The test run has failures and the debug information is as follows:")
-		GinkgoWriter.Println()
-	}
-	for _, k := range kubectls {
-		clusterName := k.ClusterName
-		if clusterName == "" {
-			clusterName = "default"
-		}
-
-		if printDebug && k.ClusterName != "" {
-			GinkgoWriter.Println("=========================================================")
-			GinkgoWriter.Println("CLUSTER:", k.ClusterName)
-			GinkgoWriter.Println("=========================================================")
-		}
-		logOperatorDebugInfo(k, artifactsDir, clusterName, printDebug)
-		if printDebug {
-			GinkgoWriter.Println("=========================================================")
-		}
-		logIstioDebugInfo(k, artifactsDir, clusterName, printDebug)
-		if printDebug {
-			GinkgoWriter.Println("=========================================================")
-		}
-		logCNIDebugInfo(k, artifactsDir, clusterName, printDebug)
-		if printDebug {
-			GinkgoWriter.Println("=========================================================")
-		}
-		logCertsDebugInfo(k, artifactsDir, clusterName, printDebug)
-		if printDebug {
-			GinkgoWriter.Println("=========================================================")
-		}
-		logSampleNamespacesDebugInfo(k, suite, artifactsDir, clusterName, printDebug)
-		if printDebug {
-			GinkgoWriter.Println("=========================================================")
-			GinkgoWriter.Println()
-		}
-
-		if suite == Ambient {
-			logZtunnelDebugInfo(k, artifactsDir, clusterName, printDebug)
-			var buf strings.Builder
-			describe, err := k.WithNamespace(SleepNamespace).Describe("deployment", "sleep")
-			logDebugElement("=====sleep deployment describe=====", describe, err, &buf, printDebug)
-			describe, err = k.WithNamespace(HttpbinNamespace).Describe("deployment", "httpbin")
-			logDebugElement("=====httpbin deployment describe=====", describe, err, &buf, printDebug)
-			writeDebugFile(artifactsDir, clusterName, "ambient-deployments", &buf)
-		}
-	}
-}
-
-// writeDebugFile writes the collected debug information to a file under the artifacts directory.
-func writeDebugFile(artifactsDir, clusterName, section string, buf *strings.Builder) {
-	debugDir := filepath.Join(artifactsDir, "debug", clusterName)
-	if err := os.MkdirAll(debugDir, 0o755); err != nil {
-		GinkgoWriter.Printf("Warning: failed to create debug directory %s: %v\n", debugDir, err)
-		return
-	}
-
-	fileName := filepath.Join(debugDir, section+".log")
-	if err := os.WriteFile(fileName, []byte(buf.String()), 0o644); err != nil {
-		GinkgoWriter.Printf("Warning: failed to write debug file %s: %v\n", fileName, err)
-		return
-	}
-	GinkgoWriter.Printf("Debug info written to %s\n", fileName)
-}
-
-func logOperatorDebugInfo(k kubectl.Kubectl, artifactsDir, clusterName string, printDebug bool) {
-	var buf strings.Builder
-	k = k.WithNamespace(OperatorNamespace)
-	operator, err := k.GetYAML("deployment", deploymentName)
-	logDebugElement("=====Operator Deployment YAML=====", operator, err, &buf, printDebug)
-
-	logs, err := k.Logs("deploy/"+deploymentName, ptr.Of(120*time.Second))
-	logDebugElement("=====Operator logs=====", logs, err, &buf, printDebug)
-
-	events, err := k.GetEvents()
-	logDebugElement("=====Events in "+OperatorNamespace+"=====", events, err, &buf, printDebug)
-
-	pods, err := k.GetPods("", "-o wide")
-	logDebugElement("=====Pods in "+OperatorNamespace+"=====", pods, err, &buf, printDebug)
-
-	describe, err := k.Describe("deployment", deploymentName)
-	logDebugElement("=====Operator Deployment describe=====", describe, err, &buf, printDebug)
-	writeDebugFile(artifactsDir, clusterName, "operator", &buf)
-}
-
-func logIstioDebugInfo(k kubectl.Kubectl, artifactsDir, clusterName string, printDebug bool) {
-	var buf strings.Builder
-	resource, err := k.GetYAML("istio", istioName)
-	logDebugElement("=====Istio YAML=====", resource, err, &buf, printDebug)
-
-	output, err := k.WithNamespace(ControlPlaneNamespace).GetPods("", "-o wide")
-	logDebugElement("=====Pods in "+ControlPlaneNamespace+"=====", output, err, &buf, printDebug)
-
-	logs, err := k.WithNamespace(ControlPlaneNamespace).Logs("deploy/istiod", ptr.Of(120*time.Second))
-	logDebugElement("=====Istiod logs=====", logs, err, &buf, printDebug)
-
-	events, err := k.WithNamespace(ControlPlaneNamespace).GetEvents()
-	logDebugElement("=====Events in "+ControlPlaneNamespace+"=====", events, err, &buf, printDebug)
-
-	// Running istioctl proxy-status to get the status of the proxies.
-	proxyStatus, err := istioctl.GetProxyStatus()
-	logDebugElement("=====Istioctl Proxy Status=====", proxyStatus, err, &buf, printDebug)
-	writeDebugFile(artifactsDir, clusterName, "istio", &buf)
-}
-
-func logCNIDebugInfo(k kubectl.Kubectl, artifactsDir, clusterName string, printDebug bool) {
-	var buf strings.Builder
-	resource, err := k.GetYAML("istiocni", istioCniName)
-	logDebugElement("=====IstioCNI YAML=====", resource, err, &buf, printDebug)
-
-	ds, err := k.WithNamespace(IstioCniNamespace).GetYAML("daemonset", "istio-cni-node")
-	logDebugElement("=====Istio CNI DaemonSet YAML=====", ds, err, &buf, printDebug)
-
-	events, err := k.WithNamespace(IstioCniNamespace).GetEvents()
-	logDebugElement("=====Events in "+IstioCniNamespace+"=====", events, err, &buf, printDebug)
-
-	pods, err := k.WithNamespace(IstioCniNamespace).GetPods("", "-o wide")
-	logDebugElement("=====Pods in "+IstioCniNamespace+"=====", pods, err, &buf, printDebug)
-
-	describe, err := k.WithNamespace(IstioCniNamespace).Describe("daemonset", "istio-cni-node")
-	logDebugElement("=====Istio CNI DaemonSet describe=====", describe, err, &buf, printDebug)
-
-	logs, err := k.WithNamespace(IstioCniNamespace).Logs("daemonset/istio-cni-node", ptr.Of(120*time.Second))
-	logDebugElement("=====Istio CNI logs=====", logs, err, &buf, printDebug)
-	writeDebugFile(artifactsDir, clusterName, "cni", &buf)
-}
-
-func logZtunnelDebugInfo(k kubectl.Kubectl, artifactsDir, clusterName string, printDebug bool) {
-	var buf strings.Builder
-	resource, err := k.GetYAML("ztunnel", "default")
-	logDebugElement("=====ZTunnel YAML=====", resource, err, &buf, printDebug)
-
-	ds, err := k.WithNamespace(ZtunnelNamespace).GetYAML("daemonset", "ztunnel")
-	logDebugElement("=====ZTunnel DaemonSet YAML=====", ds, err, &buf, printDebug)
-
-	events, err := k.WithNamespace(ZtunnelNamespace).GetEvents()
-	logDebugElement("=====Events in "+ZtunnelNamespace+"=====", events, err, &buf, printDebug)
-
-	describe, err := k.WithNamespace(ZtunnelNamespace).Describe("daemonset", "ztunnel")
-	logDebugElement("=====ZTunnel DaemonSet describe=====", describe, err, &buf, printDebug)
-
-	logs, err := k.WithNamespace(ZtunnelNamespace).Logs("daemonset/ztunnel", ptr.Of(120*time.Second))
-	logDebugElement("=====ztunnel logs=====", logs, err, &buf, printDebug)
-	writeDebugFile(artifactsDir, clusterName, "ztunnel", &buf)
-}
-
-func logCertsDebugInfo(k kubectl.Kubectl, artifactsDir, clusterName string, printDebug bool) {
-	var buf strings.Builder
-	certs, err := k.WithNamespace(ControlPlaneNamespace).GetSecret("cacerts")
-	logDebugElement("=====CA certs in "+ControlPlaneNamespace+"=====", certs, err, &buf, printDebug)
-	writeDebugFile(artifactsDir, clusterName, "certs", &buf)
-}
-
-func logSampleNamespacesDebugInfo(k kubectl.Kubectl, suite testSuite, artifactsDir, clusterName string, printDebug bool) {
-	// Common sample namespaces used across different test suites
-	sampleNamespaces := []string{SleepNamespace, HttpbinNamespace}
-
-	// Add additional namespaces based on test suite
-	switch suite {
-	case MultiCluster, ControlPlane, MultiControlPlane:
-		sampleNamespaces = append(sampleNamespaces, "sample")
-	case DualStack:
-		// Dual-stack tests use specific namespaces for TCP services
-		sampleNamespaces = append(sampleNamespaces, "dual-stack", "ipv4", "ipv6")
-	}
-
-	for _, ns := range sampleNamespaces {
-		var buf strings.Builder
-		logSampleNamespaceInfo(k, ns, &buf, printDebug)
-		writeDebugFile(artifactsDir, clusterName, "namespace-"+ns, &buf)
-	}
-}
-
-func logSampleNamespaceInfo(k kubectl.Kubectl, namespace string, buf *strings.Builder, printDebug bool) {
-	// Check if namespace exists
-	nsInfo, err := k.GetYAML("namespace", namespace)
-	if err != nil {
-		logDebugElement("=====Namespace "+namespace+" (not found)=====", "", err, buf, printDebug)
-		return
-	}
-	logDebugElement("=====Namespace "+namespace+" YAML=====", nsInfo, err, buf, printDebug)
-
-	// Get pods in the namespace with wide output for more details
-	pods, err := k.WithNamespace(namespace).GetPods("", "-o wide")
-	logDebugElement("=====Pods in "+namespace+"=====", pods, err, buf, printDebug)
-
-	// Get events in the namespace
-	events, err := k.WithNamespace(namespace).GetEvents()
-	logDebugElement("=====Events in "+namespace+"=====", events, err, buf, printDebug)
-
-	// Get deployments
-	deployments, err := k.WithNamespace(namespace).GetYAML("deployments", "")
-	logDebugElement("=====Deployments in "+namespace+"=====", deployments, err, buf, printDebug)
-
-	// Get services
-	services, err := k.WithNamespace(namespace).GetYAML("services", "")
-	logDebugElement("=====Services in "+namespace+"=====", services, err, buf, printDebug)
-
-	// Describe failed or non-ready pods specifically
-	logFailedPodsDetails(k, namespace, buf, printDebug)
-}
-
-func logFailedPodsDetails(k kubectl.Kubectl, namespace string, buf *strings.Builder, printDebug bool) {
-	describe, err := k.WithNamespace(namespace).Describe("pods", "")
-	logDebugElement("=====Pod descriptions in "+namespace+"=====", describe, err, buf, printDebug)
-}
-
-// truncateForJUnit truncates strings that exceed maxJUnitErrorMessageSize
-// to prevent junit XML files from becoming excessively large.
-func truncateForJUnit(s string) string {
-	if len(s) <= maxJUnitErrorMessageSize {
-		return s
-	}
-
-	const truncationMsg = "\n\n... [truncated due to size limit] ..."
-	truncateAt := maxJUnitErrorMessageSize - len(truncationMsg)
-	if truncateAt < 0 {
-		truncateAt = 0
-	}
-
-	return s[:truncateAt] + truncationMsg
-}
-
-func logDebugElement(caption string, info string, err error, buf *strings.Builder, printDebug bool) {
-	buf.WriteString("\n" + caption + ":\n")
-	if err != nil {
-		buf.WriteString(Indent(err.Error()) + "\n")
-	} else {
-		buf.WriteString(Indent(strings.TrimSpace(info)) + "\n")
-	}
-
-	if printDebug {
-		GinkgoWriter.Println("\n" + caption + ":")
-		if err != nil {
-			GinkgoWriter.Println(Indent(truncateForJUnit(err.Error())))
-		} else {
-			GinkgoWriter.Println(Indent(truncateForJUnit(strings.TrimSpace(info))))
-		}
-	}
-}
-
 func GetVersionFromIstiod() (*semver.Version, error) {
 	k := kubectl.New()
 	output, err := k.WithNamespace(ControlPlaneNamespace).Exec("deploy/istiod", "", "pilot-discovery version")
@@ -480,12 +232,11 @@ spec:
 
 func CreateZTunnel(k kubectl.Kubectl, version string, specs ...string) {
 	yaml := `
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: ZTunnel
 metadata:
   name: default
 spec:
-  profile: ambient
   version: %s
   namespace: %s`
 	yaml = fmt.Sprintf(yaml, version, ZtunnelNamespace)
@@ -537,11 +288,23 @@ func withClusterName(m string, k kubectl.Kubectl) string {
 	return m + " on " + k.ClusterName
 }
 
-func CheckPodConnectivity(podName, srcNamespace, destNamespace string, k kubectl.Kubectl) {
+// CheckPodConnectivityWithError tests connectivity from podName to httpbin in destNamespace
+// and returns an error instead of calling Expect directly. This allows callers wrapped in
+// Eventually to retry on transient failures (e.g. 503 during proxy startup/upgrade).
+func CheckPodConnectivityWithError(podName, containerName, srcNamespace, destNamespace string, k kubectl.Kubectl) error {
 	command := fmt.Sprintf(`curl -o /dev/null -s -w "%%{http_code}\n" httpbin.%s.svc.cluster.local:8000/get`, destNamespace)
-	response, err := k.WithNamespace(srcNamespace).Exec(podName, srcNamespace, command)
-	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("error connecting to the %q pod", podName))
-	Expect(response).To(ContainSubstring("200"), fmt.Sprintf("Unexpected response from %s pod", podName))
+	response, err := k.WithNamespace(srcNamespace).Exec(podName, containerName, command)
+	if err != nil {
+		return fmt.Errorf("error connecting to the %q pod: %w", podName, err)
+	}
+	if !strings.Contains(response, "200") {
+		return fmt.Errorf("unexpected response from %s pod: %s", podName, strings.TrimSpace(response))
+	}
+	return nil
+}
+
+func CheckPodConnectivity(podName, containerName, srcNamespace, destNamespace string, k kubectl.Kubectl) {
+	Expect(CheckPodConnectivityWithError(podName, containerName, srcNamespace, destNamespace, k)).To(Succeed())
 }
 
 func HaveContainersThat(matcher types.GomegaMatcher) types.GomegaMatcher {
@@ -574,4 +337,90 @@ func EnsureNamespaceWithCleanup(k kubectl.Kubectl, namespace string) {
 			Log(fmt.Sprintf("Failed to delete namespace: %s", err))
 		}
 	})
+}
+
+// GetProxyVersion extracts the Istio proxy version from a pod using istioctl proxy-status
+func GetProxyVersion(podName, namespace string) (*semver.Version, error) {
+	proxyStatus, err := istioctl.GetProxyStatus("--namespace " + namespace)
+	if err != nil {
+		return nil, fmt.Errorf("error getting proxy version: %w", err)
+	}
+
+	lines := strings.Split(proxyStatus, "\n")
+	colSplit := regexp.MustCompile(`\s{2,}`)
+
+	versionIdx := -1
+	headers := colSplit.Split(strings.TrimSpace(lines[0]), -1)
+	for i, header := range headers {
+		if header == "VERSION" {
+			versionIdx = i
+			break
+		}
+	}
+	if versionIdx == -1 {
+		return nil, fmt.Errorf("VERSION header not found")
+	}
+
+	var versionStr string
+	for _, line := range lines[1:] {
+		if strings.Contains(line, podName+"."+namespace) {
+			values := colSplit.Split(strings.TrimSpace(line), -1)
+			if versionIdx < len(values) {
+				versionStr = values[versionIdx]
+				break
+			}
+		}
+	}
+
+	if versionStr == "" {
+		return nil, fmt.Errorf("pod %s not found in proxy status output for namespace %s", podName, namespace)
+	}
+	version, err := semver.NewVersion(versionStr)
+	if err != nil {
+		return version, fmt.Errorf("error parsing proxy version %q: %w", versionStr, err)
+	}
+	return version, err
+}
+
+// GetIstioProxyContainer finds and returns the istio-proxy container from a pod
+// It checks both regular containers and init containers (for persistent init containers in K8s 1.28+)
+// Returns the container if found, nil otherwise
+func GetIstioProxyContainer(pod corev1.Pod) *corev1.Container {
+	// Check regular containers
+	for i := range pod.Spec.Containers {
+		if pod.Spec.Containers[i].Name == "istio-proxy" {
+			return &pod.Spec.Containers[i]
+		}
+	}
+
+	// Check init containers
+	for i := range pod.Spec.InitContainers {
+		if pod.Spec.InitContainers[i].Name == "istio-proxy" {
+			return &pod.Spec.InitContainers[i]
+		}
+	}
+
+	return nil
+}
+
+// HasSidecarInjected checks if a pod has the istio-proxy sidecar injected
+func HasSidecarInjected(pod corev1.Pod) bool {
+	return GetIstioProxyContainer(pod) != nil
+}
+
+// HasHBONEEnabled checks if the istio-proxy sidecar has HBONE capability enabled
+// by verifying the ISTIO_META_ENABLE_HBONE environment variable is set to "true"
+func HasHBONEEnabled(pod corev1.Pod) bool {
+	container := GetIstioProxyContainer(pod)
+	if container == nil {
+		return false
+	}
+
+	for _, env := range container.Env {
+		if env.Name == "ISTIO_META_ENABLE_HBONE" && env.Value == "true" {
+			return true
+		}
+	}
+
+	return false
 }
