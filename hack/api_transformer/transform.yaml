@@ -179,6 +179,7 @@ inputFiles:
       MeshConfig_OutboundTrafficPolicy.Tls: "*ClientTLSSettings"
       MeshConfig_ServiceScopeConfigs.NamespaceSelector: "*metav1.LabelSelector"
       MeshConfig_ServiceScopeConfigs.ServicesSelector: "*metav1.LabelSelector"
+      ServiceEntryVisibility_MatchRule_NamespaceSelector.NamespaceSelector: "*metav1.LabelSelector"
     removeTypes:
     - LabelSelector
     - LabelSelectorRequirement
