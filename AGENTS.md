@@ -160,21 +160,22 @@ The operator generates `api/v1/values_types.gen.go` from upstream Istio protobuf
 2. Applies transformations per `transform.yaml`: removes imports, replaces types, filters/preserves types, renames fields
 3. Merges all processed files into one output file (`api/v1/values_types.gen.go`)
 
-### Common breakage pattern
+### Auto-resolution of type references
 
-When upstream Istio adds new fields or structs that reference types from removed imports (e.g. `v1alpha3.SomeType`), the generated file will have dangling type references. The error looks like:
+When upstream Istio adds new fields that reference types from removed imports (e.g. `v1alpha3.ClientTLSSettings`), the transformer **automatically strips the package prefix** via `renameImports` entries (`v1alpha3: ""`, `v1beta1: ""`). If the referenced type is already preserved locally (via `preserveTypes`), no manual intervention is needed.
 
-```
-use of unimported package "v1alpha3"
-unknown type v1alpha3.SomeNewType
-```
+This means `replaceFieldTypes` entries are only needed when:
+- The field type must map to a **different** type (e.g. `ReadinessProbe` → `*k8sv1.Probe`)
+- The field type must map to a **k8s or standard library** type (e.g. `LabelSelector` → `*metav1.LabelSelector`)
+- The field type needs a **structural change** (e.g. wrapping in a map or slice)
 
-### How to fix
+### When manual fixes are still needed
 
-1. **Identify the new type references**: The error message shows the unknown types
-2. **Find the source**: Check which upstream `.pb.go` file defines the type (usually in `istio.io/api/networking/v1alpha3/`)
-3. **Preserve the type**: Add it and any sub-types (nested structs, enums) to `preserveTypes` in the relevant input file section of `transform.yaml`
-4. **Replace field type references**: Add `replaceFieldTypes` entries in the input file section where the type is *used* (e.g. `config.pb.go`), mapping `StructName.FieldName` to the local type (without import prefix)
+If the build fails with an unknown type after `make gen`, it means upstream added a reference to a type that is **not yet preserved locally**:
+
+1. **Find the source**: Check which upstream `.pb.go` file defines the type
+2. **Preserve the type**: Add it and any sub-types (nested structs, enums) to `preserveTypes` in the relevant input file section of `transform.yaml`
+3. If the type should map to a k8s type instead of being preserved, add a `replaceFieldTypes` entry
 
 ### Key files
 
