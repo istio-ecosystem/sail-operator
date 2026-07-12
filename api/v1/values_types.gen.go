@@ -1802,6 +1802,35 @@ const (
 	MeshConfigTLSConfigTLSProtocolTlsv13 MeshConfigTLSConfigTLSProtocol = "TLSV1_3"
 )
 
+// Visibility defines how widely a matching ServiceEntry is visible.
+// +kubebuilder:validation:Enum=VISIBILITY_UNSPECIFIED;NONE;NAMESPACE;PUBLIC
+type ServiceEntryVisibilityVisibility string
+
+const (
+	// Default. Resolves to `PUBLIC` to preserve legacy behavior.
+	ServiceEntryVisibilityVisibilityVisibilityUnspecified ServiceEntryVisibilityVisibility = "VISIBILITY_UNSPECIFIED"
+	// Not visible anywhere: the ServiceEntry may be written, but Istio
+	// configures no dataplane for it. Useful to expressly forbid a class of
+	// ServiceEntry.
+	ServiceEntryVisibilityVisibilityNone ServiceEntryVisibilityVisibility = "NONE"
+	// Visible only within the namespace the ServiceEntry is defined in.
+	// Equivalent to the legacy `exportTo: "."`.
+	ServiceEntryVisibilityVisibilityNamespace ServiceEntryVisibilityVisibility = "NAMESPACE"
+	// Visible to every workload the holding control plane configures.
+	// Equivalent to the legacy `exportTo: "*"`.
+	//
+	// The reach of `PUBLIC` is a control-plane-connectivity boundary, not a
+	// fixed topological one: it extends exactly as far as the control plane
+	// that holds this ServiceEntry distributes configuration. Mesh topology
+	// therefore determines how far `PUBLIC` actually reaches, and the same
+	// entry scopes differently under different topologies. For example, in a
+	// single-primary multi-cluster mesh a `PUBLIC` ServiceEntry reaches every
+	// proxy that primary configures, spanning clusters; in a multi-primary
+	// mesh it reaches only the proxies of the control plane that holds the
+	// entry and does not propagate to the other control planes.
+	ServiceEntryVisibilityVisibilityPublic ServiceEntryVisibilityVisibility = "PUBLIC"
+)
+
 // MeshConfig defines mesh-wide settings for the Istio service mesh.
 type MeshConfig struct {
 	// Port on which Envoy should listen for all outbound traffic to other services.
@@ -2153,6 +2182,33 @@ type MeshConfig struct {
 	// DestinationRule that sets `connectionPool` or `outlierDetection` has no mesh-level
 	// baseline, and unset blocks fall back to Istio's built-in defaults.
 	DefaultTrafficPolicy *MeshConfigDefaultTrafficPolicy `json:"defaultTrafficPolicy,omitempty"`
+	// ServiceEntryVisibility lets a mesh administrator control the visibility
+	// of ServiceEntry resources mesh-wide, without relying on external admission
+	// validation. When unset, ServiceEntry behaves as it does today (public visibility,
+	// cluster-wide; ambient ignores `exportTo`).
+	ServiceEntryVisibility *ServiceEntryVisibility `json:"serviceEntryVisibility,omitempty"`
+}
+
+// ServiceEntryVisibility controls the visibility of ServiceEntry resources
+// across the mesh, giving a mesh administrator a way to constrain ServiceEntry
+// visibility without relying on external (VAP/CEL/OPA) admission validation.
+//
+// Policies are evaluated in order; the first policy whose rules all match sets
+// the ServiceEntry's visibility. If no policy matches, `defaultVisibility`
+// applies. When this entire message is absent from `MeshConfig`, every
+// ServiceEntry is visible `PUBLIC`, preserving current Istio behavior.
+type ServiceEntryVisibility struct {
+	// The visibility used when no policy matches a ServiceEntry. If left
+	// `VISIBILITY_UNSPECIFIED`, it resolves to `PUBLIC`.
+	DefaultVisibility ServiceEntryVisibilityVisibility `json:"defaultVisibility,omitempty"`
+	// Whether sidecars honor these visibility semantics. When false (default),
+	// only ambient proxies (ztunnel and waypoints) apply them and sidecars
+	// continue to use `exportTo`. This enables incremental adoption during an
+	// ambient migration without affecting a working sidecar environment.
+	ApplyToSidecars *bool `json:"applyToSidecars,omitempty"`
+	// An ordered list of policies. Each policy is evaluated in turn; the first
+	// policy whose rules all match determines the ServiceEntry's visibility.
+	Policies []*ServiceEntryVisibilityPolicy `json:"policies,omitempty"`
 }
 
 // ConfigSource describes information about a configuration store inside a
@@ -3243,9 +3299,26 @@ type MeshConfigExtensionProviderResourceDetectorsEnvironmentResourceDetector str
 type MeshConfigExtensionProviderResourceDetectorsDynatraceResourceDetector struct {
 }
 
+// Policy assigns a visibility to ServiceEntries that match all of its rules.
+type ServiceEntryVisibilityPolicy struct {
+	// The visibility applied to a ServiceEntry when all `matchingRules` match.
+	Visibility ServiceEntryVisibilityVisibility `json:"visibility,omitempty"`
+	// The rules to evaluate. All rules must match (AND semantics) for this
+	// policy to apply.
+	MatchingRules []*ServiceEntryVisibilityMatchRule `json:"matchingRules,omitempty"`
+}
+
+// MatchRule is a single matcher.
+// +kubebuilder:validation:XValidation:message="At most one of [namespaceSelector] should be set",rule="(has(self.namespaceSelector)?1:0) <= 1"
+type ServiceEntryVisibilityMatchRule struct {
+	// Matches when the namespace the ServiceEntry is defined in matches this
+	// label selector.
+	NamespaceSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
+}
+
 const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\n" +
-	"\x1amesh/v1alpha1/config.proto\x12\x13istio.mesh.v1alpha1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19mesh/v1alpha1/proxy.proto\x1a*networking/v1alpha3/destination_rule.proto\x1a)networking/v1alpha3/virtual_service.proto\"\xfcu\n" +
+	"\x1amesh/v1alpha1/config.proto\x12\x13istio.mesh.v1alpha1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19mesh/v1alpha1/proxy.proto\x1a*networking/v1alpha3/destination_rule.proto\x1a)networking/v1alpha3/virtual_service.proto\"\xe3v\n" +
 	"\n" +
 	"MeshConfig\x12*\n" +
 	"\x11proxy_listen_port\x18\x04 \x01(\x05R\x0fproxyListenPort\x129\n" +
@@ -3295,7 +3368,8 @@ const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\x19default_http_retry_policy\x18> \x01(\v2$.istio.networking.v1alpha3.HTTPRetryR\x16defaultHttpRetryPolicy\x12F\n" +
 	"\tmesh_mTLS\x18? \x01(\v2).istio.mesh.v1alpha1.MeshConfig.TLSConfigR\bmeshMTLS\x12L\n" +
 	"\ftls_defaults\x18@ \x01(\v2).istio.mesh.v1alpha1.MeshConfig.TLSConfigR\vtlsDefaults\x12j\n" +
-	"\x16default_traffic_policy\x18G \x01(\v24.istio.mesh.v1alpha1.MeshConfig.DefaultTrafficPolicyR\x14defaultTrafficPolicy\x1a\x88\x02\n" +
+	"\x16default_traffic_policy\x18G \x01(\v24.istio.mesh.v1alpha1.MeshConfig.DefaultTrafficPolicyR\x14defaultTrafficPolicy\x12e\n" +
+	"\x18service_entry_visibility\x18H \x01(\v2+.istio.mesh.v1alpha1.ServiceEntryVisibilityR\x16serviceEntryVisibility\x1a\x88\x02\n" +
 	"\x15OutboundTrafficPolicy\x12N\n" +
 	"\x04mode\x18\x01 \x01(\x0e2:.istio.mesh.v1alpha1.MeshConfig.OutboundTrafficPolicy.ModeR\x04mode\x12>\n" +
 	"\x03tls\x18\x02 \x01(\v2,.istio.networking.v1alpha3.ClientTLSSettingsR\x03tls\"_\n" +
@@ -3570,7 +3644,26 @@ const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\x18LabelSelectorRequirement\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x1a\n" +
 	"\boperator\x18\x02 \x01(\tR\boperator\x12\x16\n" +
-	"\x06values\x18\x03 \x03(\tR\x06values\"\xcb\x01\n" +
+	"\x06values\x18\x03 \x03(\tR\x06values\"\xf8\x04\n" +
+	"\x16ServiceEntryVisibility\x12e\n" +
+	"\x12default_visibility\x18\x01 \x01(\x0e26.istio.mesh.v1alpha1.ServiceEntryVisibility.VisibilityR\x11defaultVisibility\x12*\n" +
+	"\x11apply_to_sidecars\x18\x02 \x01(\bR\x0fapplyToSidecars\x12N\n" +
+	"\bpolicies\x18\x03 \x03(\v22.istio.mesh.v1alpha1.ServiceEntryVisibility.PolicyR\bpolicies\x1a\xbe\x01\n" +
+	"\x06Policy\x12V\n" +
+	"\n" +
+	"visibility\x18\x01 \x01(\x0e26.istio.mesh.v1alpha1.ServiceEntryVisibility.VisibilityR\n" +
+	"visibility\x12\\\n" +
+	"\x0ematching_rules\x18\x02 \x03(\v25.istio.mesh.v1alpha1.ServiceEntryVisibility.MatchRuleR\rmatchingRules\x1ak\n" +
+	"\tMatchRule\x12S\n" +
+	"\x12namespace_selector\x18\x01 \x01(\v2\".istio.mesh.v1alpha1.LabelSelectorH\x00R\x11namespaceSelectorB\t\n" +
+	"\amatcher\"M\n" +
+	"\n" +
+	"Visibility\x12\x1a\n" +
+	"\x16VISIBILITY_UNSPECIFIED\x10\x00\x12\b\n" +
+	"\x04NONE\x10\x01\x12\r\n" +
+	"\tNAMESPACE\x10\x02\x12\n" +
+	"\n" +
+	"\x06PUBLIC\x10\x03\"\xcb\x01\n" +
 	"\fConfigSource\x12\x18\n" +
 	"\aaddress\x18\x01 \x01(\tR\aaddress\x12O\n" +
 	"\ftls_settings\x18\x02 \x01(\v2,.istio.networking.v1alpha3.ClientTLSSettingsR\vtlsSettings\x12P\n" +

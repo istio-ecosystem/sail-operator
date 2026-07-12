@@ -726,7 +726,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, master, v1.31.0-alpha.02e0457e. | v1.30.2 | Enum: [v1.30-latest v1.30.2 v1.30.1 v1.30.0 v1.29-latest v1.29.5 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.10 v1.28.9 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.31.0-alpha.02e0457e]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, master, v1.31.0-alpha.046b063e. | v1.30.2 | Enum: [v1.30-latest v1.30.2 v1.30.1 v1.30.0 v1.29-latest v1.29.5 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.10 v1.28.9 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.31.0-alpha.046b063e]   |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift openshift-ambient preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio CNI component should be installed. Note that this field is immutable. | istio-cni |  |
 | `values` _[CNIValues](#cnivalues)_ | Defines the values to be passed to the Helm charts when installing Istio CNI. |  |  |
@@ -836,7 +836,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30.2, v1.30.1, v1.30.0, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.31.0-alpha.02e0457e. |  | Enum: [v1.30.2 v1.30.1 v1.30.0 v1.29.5 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28.10 v1.28.9 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 v1.31.0-alpha.02e0457e]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30.2, v1.30.1, v1.30.0, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.31.0-alpha.046b063e. |  | Enum: [v1.30.2 v1.30.1 v1.30.0 v1.29.5 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28.10 v1.28.9 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 v1.31.0-alpha.046b063e]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. |  |  |
 | `values` _[Values](#values)_ | Defines the values to be passed to the Helm charts when installing Istio. |  |  |
 
@@ -954,7 +954,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, master, v1.31.0-alpha.02e0457e. | v1.30.2 | Enum: [v1.30-latest v1.30.2 v1.30.1 v1.30.0 v1.29-latest v1.29.5 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.10 v1.28.9 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.31.0-alpha.02e0457e]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, master, v1.31.0-alpha.046b063e. | v1.30.2 | Enum: [v1.30-latest v1.30.2 v1.30.1 v1.30.0 v1.29-latest v1.29.5 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.10 v1.28.9 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.31.0-alpha.046b063e]   |
 | `updateStrategy` _[IstioUpdateStrategy](#istioupdatestrategy)_ | Defines the update strategy to use when the version in the Istio CR is updated. | \{ type:InPlace \} |  |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift openshift-ambient preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. Note that this field is immutable. | istio-system |  |
@@ -1214,6 +1214,7 @@ _Appears in:_
 | `meshMTLS` _[MeshConfigTLSConfig](#meshconfigtlsconfig)_ | The below configuration parameters can be used to specify TLSConfig for mesh traffic. For example, a user could enable min TLS version for ISTIO_MUTUAL traffic and specify a curve for non ISTIO_MUTUAL traffic like below: ```yaml meshConfig:    meshMTLS:     minProtocolVersion: TLSV1_3   tlsDefaults:     Note: applicable only for non ISTIO_MUTUAL scenarios     ecdhCurves:       - P-256       - P-512  ``` Configuration of mTLS for traffic between workloads with ISTIO_MUTUAL TLS traffic.  Note: Mesh mTLS does not respect ECDH curves. |  |  |
 | `tlsDefaults` _[MeshConfigTLSConfig](#meshconfigtlsconfig)_ | Configuration of TLS for all traffic except for ISTIO_MUTUAL mode. For ISTIO_MUTUAL TLS settings, use meshMTLS configuration. |  |  |
 | `defaultTrafficPolicy` _[MeshConfigDefaultTrafficPolicy](#meshconfigdefaulttrafficpolicy)_ | The default traffic policy applied to outbound clusters in the mesh, providing a baseline that DestinationRules inherit and override per block. Without this, a DestinationRule that sets `connectionPool` or `outlierDetection` has no mesh-level baseline, and unset blocks fall back to Istio's built-in defaults. |  |  |
+| `serviceEntryVisibility` _[ServiceEntryVisibility](#serviceentryvisibility)_ | ServiceEntryVisibility lets a mesh administrator control the visibility of ServiceEntry resources mesh-wide, without relying on external admission validation. When unset, ServiceEntry behaves as it does today (public visibility, cluster-wide; ambient ignores `exportTo`). |  |  |
 
 
 #### MeshConfigAccessLogEncoding
@@ -3018,6 +3019,72 @@ _Appears in:_
 
 
 
+#### ServiceEntryVisibility
+
+
+
+ServiceEntryVisibility controls the visibility of ServiceEntry resources
+across the mesh, giving a mesh administrator a way to constrain ServiceEntry
+visibility without relying on external (VAP/CEL/OPA) admission validation.
+
+
+Policies are evaluated in order; the first policy whose rules all match sets
+the ServiceEntry's visibility. If no policy matches, `defaultVisibility`
+applies. When this entire message is absent from `MeshConfig`, every
+ServiceEntry is visible `PUBLIC`, preserving current Istio behavior.
+
+
+
+_Appears in:_
+- [MeshConfig](#meshconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `defaultVisibility` _[ServiceEntryVisibilityVisibility](#serviceentryvisibilityvisibility)_ | The visibility used when no policy matches a ServiceEntry. If left `VISIBILITY_UNSPECIFIED`, it resolves to `PUBLIC`. |  | Enum: [VISIBILITY_UNSPECIFIED NONE NAMESPACE PUBLIC]   |
+| `applyToSidecars` _boolean_ | Whether sidecars honor these visibility semantics. When false (default), only ambient proxies (ztunnel and waypoints) apply them and sidecars continue to use `exportTo`. This enables incremental adoption during an ambient migration without affecting a working sidecar environment. |  |  |
+| `policies` _[ServiceEntryVisibilityPolicy](#serviceentryvisibilitypolicy) array_ | An ordered list of policies. Each policy is evaluated in turn; the first policy whose rules all match determines the ServiceEntry's visibility. |  |  |
+
+
+
+
+#### ServiceEntryVisibilityPolicy
+
+
+
+Policy assigns a visibility to ServiceEntries that match all of its rules.
+
+
+
+_Appears in:_
+- [ServiceEntryVisibility](#serviceentryvisibility)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `visibility` _[ServiceEntryVisibilityVisibility](#serviceentryvisibilityvisibility)_ | The visibility applied to a ServiceEntry when all `matchingRules` match. |  | Enum: [VISIBILITY_UNSPECIFIED NONE NAMESPACE PUBLIC]   |
+| `matchingRules` _[ServiceEntryVisibilityMatchRule](#serviceentryvisibilitymatchrule) array_ | The rules to evaluate. All rules must match (AND semantics) for this policy to apply. |  |  |
+
+
+#### ServiceEntryVisibilityVisibility
+
+_Underlying type:_ _string_
+
+Visibility defines how widely a matching ServiceEntry is visible.
+
+_Validation:_
+- Enum: [VISIBILITY_UNSPECIFIED NONE NAMESPACE PUBLIC]
+
+_Appears in:_
+- [ServiceEntryVisibility](#serviceentryvisibility)
+- [ServiceEntryVisibilityPolicy](#serviceentryvisibilitypolicy)
+
+| Field | Description |
+| --- | --- |
+| `VISIBILITY_UNSPECIFIED` | Default. Resolves to `PUBLIC` to preserve legacy behavior.  |
+| `NONE` | Not visible anywhere: the ServiceEntry may be written, but Istio configures no dataplane for it. Useful to expressly forbid a class of ServiceEntry.  |
+| `NAMESPACE` | Visible only within the namespace the ServiceEntry is defined in. Equivalent to the legacy `exportTo: "."`.  |
+| `PUBLIC` | Visible to every workload the holding control plane configures. Equivalent to the legacy `exportTo: "*"`. The reach of `PUBLIC` is a control-plane-connectivity boundary, not a fixed topological one: it extends exactly as far as the control plane that holds this ServiceEntry distributes configuration. Mesh topology therefore determines how far `PUBLIC` actually reaches, and the same entry scopes differently under different topologies. For example, in a single-primary multi-cluster mesh a `PUBLIC` ServiceEntry reaches every proxy that primary configures, spanning clusters; in a multi-primary mesh it reaches only the proxies of the control plane that holds the entry and does not propagate to the other control planes.  |
+
+
 #### SidecarInjectorConfig
 
 
@@ -3620,7 +3687,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, master, v1.31.0-alpha.02e0457e. | v1.30.2 | Enum: [v1.30-latest v1.30.2 v1.30.1 v1.30.0 v1.29-latest v1.29.5 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.10 v1.28.9 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 master v1.31.0-alpha.02e0457e]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, master, v1.31.0-alpha.046b063e. | v1.30.2 | Enum: [v1.30-latest v1.30.2 v1.30.1 v1.30.0 v1.29-latest v1.29.5 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.10 v1.28.9 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 master v1.31.0-alpha.046b063e]   |
 | `namespace` _string_ | Namespace to which the Istio ztunnel component should be installed. | ztunnel |  |
 | `values` _[ZTunnelValues](#ztunnelvalues)_ | Defines the values to be passed to the Helm charts when installing Istio ztunnel. |  |  |
 | `targetRef` _[TargetReference](#targetreference)_ | The Istio control plane that this ZTunnel instance is associated with. Valid references are Istio and IstioRevision resources, Istio resources are always resolved to their current active revision. Values relevant for ZTunnel will be copied from the referenced IstioRevision resource, these are `spec.values.global`, `spec.values.meshConfig`, `spec.values.revision`. Any user configuration in the ZTunnel spec will always take precedence over the settings copied from the Istio resource, however. |  |  |
@@ -3750,7 +3817,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, master, v1.31.0-alpha.02e0457e. | v1.30.2 | Enum: [v1.30-latest v1.30.2 v1.30.1 v1.30.0 v1.29-latest v1.29.5 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.10 v1.28.9 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 master v1.31.0-alpha.02e0457e]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, master, v1.31.0-alpha.046b063e. | v1.30.2 | Enum: [v1.30-latest v1.30.2 v1.30.1 v1.30.0 v1.29-latest v1.29.5 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.10 v1.28.9 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 master v1.31.0-alpha.046b063e]   |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is 'ambient' and it is always applied. Must be one of: ambient, default, demo, empty, external, preview, remote, stable. | ambient | Enum: [ambient default demo empty external openshift-ambient openshift preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio ztunnel component should be installed. | ztunnel |  |
 | `values` _[ZTunnelValues](#ztunnelvalues)_ | Defines the values to be passed to the Helm charts when installing Istio ztunnel. |  |  |

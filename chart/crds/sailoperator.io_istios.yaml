@@ -6422,6 +6422,112 @@ spec:
                           The precise semantics of this processing are documented on each resource
                           type.
                         type: string
+                      serviceEntryVisibility:
+                        description: |-
+                          ServiceEntryVisibility lets a mesh administrator control the visibility
+                          of ServiceEntry resources mesh-wide, without relying on external admission
+                          validation. When unset, ServiceEntry behaves as it does today (public visibility,
+                          cluster-wide; ambient ignores `exportTo`).
+                        properties:
+                          applyToSidecars:
+                            description: |-
+                              Whether sidecars honor these visibility semantics. When false (default),
+                              only ambient proxies (ztunnel and waypoints) apply them and sidecars
+                              continue to use `exportTo`. This enables incremental adoption during an
+                              ambient migration without affecting a working sidecar environment.
+                            type: boolean
+                          defaultVisibility:
+                            description: |-
+                              The visibility used when no policy matches a ServiceEntry. If left
+                              `VISIBILITY_UNSPECIFIED`, it resolves to `PUBLIC`.
+                            enum:
+                            - VISIBILITY_UNSPECIFIED
+                            - NONE
+                            - NAMESPACE
+                            - PUBLIC
+                            type: string
+                          policies:
+                            description: |-
+                              An ordered list of policies. Each policy is evaluated in turn; the first
+                              policy whose rules all match determines the ServiceEntry's visibility.
+                            items:
+                              description: Policy assigns a visibility to ServiceEntries
+                                that match all of its rules.
+                              properties:
+                                matchingRules:
+                                  description: |-
+                                    The rules to evaluate. All rules must match (AND semantics) for this
+                                    policy to apply.
+                                  items:
+                                    description: MatchRule is a single matcher.
+                                    properties:
+                                      namespaceSelector:
+                                        description: |-
+                                          Matches when the namespace the ServiceEntry is defined in matches this
+                                          label selector.
+                                        properties:
+                                          matchExpressions:
+                                            description: matchExpressions is a list
+                                              of label selector requirements. The
+                                              requirements are ANDed.
+                                            items:
+                                              description: |-
+                                                A label selector requirement is a selector that contains values, a key, and an operator that
+                                                relates the key and values.
+                                              properties:
+                                                key:
+                                                  description: key is the label key
+                                                    that the selector applies to.
+                                                  type: string
+                                                operator:
+                                                  description: |-
+                                                    operator represents a key's relationship to a set of values.
+                                                    Valid operators are In, NotIn, Exists and DoesNotExist.
+                                                  type: string
+                                                values:
+                                                  description: |-
+                                                    values is an array of string values. If the operator is In or NotIn,
+                                                    the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                                    the values array must be empty. This array is replaced during a strategic
+                                                    merge patch.
+                                                  items:
+                                                    type: string
+                                                  type: array
+                                                  x-kubernetes-list-type: atomic
+                                              required:
+                                              - key
+                                              - operator
+                                              type: object
+                                            type: array
+                                            x-kubernetes-list-type: atomic
+                                          matchLabels:
+                                            additionalProperties:
+                                              type: string
+                                            description: |-
+                                              matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                              map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                              operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                            type: object
+                                        type: object
+                                        x-kubernetes-map-type: atomic
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: At most one of [namespaceSelector]
+                                        should be set
+                                      rule: (has(self.namespaceSelector)?1:0) <= 1
+                                  type: array
+                                visibility:
+                                  description: The visibility applied to a ServiceEntry
+                                    when all `matchingRules` match.
+                                  enum:
+                                  - VISIBILITY_UNSPECIFIED
+                                  - NONE
+                                  - NAMESPACE
+                                  - PUBLIC
+                                  type: string
+                              type: object
+                            type: array
+                        type: object
                       serviceScopeConfigs:
                         description: Scope to be applied to select services.
                         items:
@@ -10723,7 +10829,7 @@ spec:
                 default: v1.30.2
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.30-latest, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, master, v1.31.0-alpha.02e0457e.
+                  Must be one of: v1.30-latest, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, master, v1.31.0-alpha.046b063e.
                 enum:
                 - v1.30-latest
                 - v1.30.2
@@ -10796,7 +10902,7 @@ spec:
                 - v1.22.5
                 - v1.21.6
                 - master
-                - v1.31.0-alpha.02e0457e
+                - v1.31.0-alpha.046b063e
                 type: string
             required:
             - namespace
