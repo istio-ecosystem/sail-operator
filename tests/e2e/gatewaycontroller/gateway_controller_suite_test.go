@@ -43,6 +43,7 @@ var (
 	istioCniNamespace     = common.IstioCniNamespace
 	keepOnFailure         = env.GetBool("KEEP_ON_FAILURE", false)
 	artifactsDir          = env.Get("ARTIFACTS", "/tmp/artifacts")
+	multicluster          = env.GetBool("MULTICLUSTER", false)
 
 	k kubectl.Kubectl
 )
@@ -57,6 +58,10 @@ const (
 )
 
 func TestGatewayController(t *testing.T) {
+	if multicluster {
+		t.Skip("Skipping Gateway Controller tests")
+	}
+
 	RegisterFailHandler(Fail)
 	setup()
 	RunSpecs(t, "Gateway Controller Test Suite")
