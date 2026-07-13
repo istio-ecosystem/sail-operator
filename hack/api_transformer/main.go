@@ -970,13 +970,17 @@ func (t *FileTransformer) renameImports(file *ast.File) {
 			if node.Sel != nil && node.X != nil {
 				if ident, ok := node.X.(*ast.Ident); ok {
 					if newName, found := t.Transformations.RenameImports[ident.Name]; found {
+						if newName == "" {
+							cursor.Replace(node.Sel)
+							return false
+						}
 						ident.Name = newName
 					}
 				}
 			}
 		case *ast.ImportSpec:
 			if node.Name != nil {
-				if newName, found := t.Transformations.RenameImports[node.Name.Name]; found {
+				if newName, found := t.Transformations.RenameImports[node.Name.Name]; found && newName != "" {
 					node.Name.Name = newName
 				}
 			}
