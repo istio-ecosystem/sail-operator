@@ -1,0 +1,5 @@
+category: fixed
+title: Fix race condition in `ToDiscoveryClient`
+description: |
+  Concurrent calls shared the same config object; the fix copies it before
+  creating the discovery client.

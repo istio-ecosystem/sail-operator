@@ -1,0 +1,73 @@
+name: Changelog check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    if: >-
+      !contains(github.event.pull_request.labels.*.name, 'skip-changelog') &&
+      github.actor != 'openshiftservicemeshbot' &&
+      github.actor != 'istio-testing'
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+        fetch-depth: 0
+
+    - name: Check changelog fragment
+      env:
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      run: |
+        # Check that at least one .yaml file was added in changelog/
+        added_fragments=$(git diff --name-only --diff-filter=A "${BASE_SHA}...HEAD" -- 'changelog/*.yaml')
+        if [[ -z "$added_fragments" ]]; then
+          echo "::error::No changelog fragment found. Add a YAML file under 'changelog/' (see changelog/.gitkeep for format), or add the 'skip-changelog' label to opt out."
+          exit 1
+        fi
+
+        # Validate each added fragment
+        errors=false
+        valid_categories="added changed fixed removed"
+
+        for fragment in $added_fragments; do
+          echo "Validating ${fragment}..."
+
+          # Extract fields using grep (simple flat YAML, no yq dependency)
+          category=$(grep '^category:' "$fragment" | sed 's/^category:[[:space:]]*//')
+          title=$(grep '^title:' "$fragment" | sed 's/^title:[[:space:]]*//')
+          issue_link=$(grep '^issueLink:' "$fragment" | sed 's/^issueLink:[[:space:]]*//')
+
+          # Validate category
+          if [[ -z "$category" ]]; then
+            echo "::error file=${fragment}::Missing 'category' field. Must be one of: ${valid_categories}"
+            errors=true
+          elif ! echo "$valid_categories" | grep -qw "$category"; then
+            echo "::error file=${fragment}::Invalid category '${category}'. Must be one of: ${valid_categories}"
+            errors=true
+          fi
+
+          # Validate title
+          if [[ -z "$title" ]]; then
+            echo "::error file=${fragment}::Missing 'title' field."
+            errors=true
+          fi
+
+          # Validate issueLink for fixed entries
+          if [[ "$category" == "fixed" && -z "$issue_link" ]]; then
+            echo "::error file=${fragment}::Fixed entries must include an 'issueLink' field with a GitHub issue URL."
+            errors=true
+          fi
+          if [[ -n "$issue_link" ]] && ! echo "$issue_link" | grep -q 'https://github\.com/'; then
+            echo "::error file=${fragment}::issueLink must be a GitHub URL (got '${issue_link}')."
+            errors=true
+          fi
+        done
+
+        if $errors; then
+          exit 1
+        fi
+
+        echo "Changelog check passed."

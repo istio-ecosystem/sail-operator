@@ -1,0 +1,5 @@
+category: changed
+title: Remove `TLS12_ENABLED` from ZTunnel for Istio 1.31+
+description: |
+  Istio 1.31's OpenSSL backend supports FIPS 140-3 natively and no longer needs
+  the explicit TLS 1.2 enablement flag.
