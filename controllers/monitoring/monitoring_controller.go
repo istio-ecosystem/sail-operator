@@ -59,6 +59,21 @@ const (
 // rhobsGV is the GroupVersion for COO monitoring resources
 var rhobsGV = schema.GroupVersion{Group: rhobsAPIGroup, Version: rhobsAPIVersion}
 
+func (r *Reconciler) monitoringGV() schema.GroupVersion {
+	if r.Config.Platform == config.PlatformOpenShift {
+		return rhobsGV
+	}
+	return monitoringv1.SchemeGroupVersion
+}
+
+func (r *Reconciler) monitorLabels(app string) map[string]string {
+	labels := map[string]string{"app": app}
+	if r.Config.Platform == config.PlatformOpenShift {
+		labels[cooMonitoredByLabel] = cooMonitoredByValue
+	}
+	return labels
+}
+
 // TODO: map tuningEnabled from an Integration API spec field
 var tuningEnabled = false
 
@@ -143,7 +158,7 @@ func (r *Reconciler) reconcileServiceMonitor(ctx context.Context, rev *v1.IstioR
 	desired := r.buildServiceMonitor(rev)
 
 	existing := &monitoringv1.ServiceMonitor{}
-	existing.SetGroupVersionKind(rhobsGV.WithKind("ServiceMonitor"))
+	existing.SetGroupVersionKind(r.monitoringGV().WithKind("ServiceMonitor"))
 
 	err := r.Client.Get(ctx, client.ObjectKeyFromObject(desired), existing)
 	if err != nil {
@@ -210,7 +225,7 @@ func (r *Reconciler) reconcilePodMonitorInNamespace(ctx context.Context, rev *v1
 	desired := r.buildPodMonitor(rev, namespace)
 
 	existing := &monitoringv1.PodMonitor{}
-	existing.SetGroupVersionKind(rhobsGV.WithKind("PodMonitor"))
+	existing.SetGroupVersionKind(r.monitoringGV().WithKind("PodMonitor"))
 
 	err := r.Client.Get(ctx, client.ObjectKeyFromObject(desired), existing)
 	if err != nil {
@@ -236,10 +251,7 @@ func (r *Reconciler) buildServiceMonitor(rev *v1.IstioRevision) *monitoringv1.Se
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			Labels: map[string]string{
-				"app":               "istiod",
-				cooMonitoredByLabel: cooMonitoredByValue,
-			},
+			Labels: r.monitorLabels("istiod"),
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion:         v1.GroupVersion.String(),
@@ -274,8 +286,7 @@ func (r *Reconciler) buildServiceMonitor(rev *v1.IstioRevision) *monitoringv1.Se
 		},
 	}
 
-	// Set the GVK to use the rhobs API group instead of monitoring.coreos.com
-	sm.SetGroupVersionKind(rhobsGV.WithKind("ServiceMonitor"))
+	sm.SetGroupVersionKind(r.monitoringGV().WithKind("ServiceMonitor"))
 
 	return sm
 }
@@ -289,10 +300,7 @@ func (r *Reconciler) buildPodMonitor(rev *v1.IstioRevision, namespace string) *m
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			Labels: map[string]string{
-				"app":               "istio-proxy",
-				cooMonitoredByLabel: cooMonitoredByValue,
-			},
+			Labels: r.monitorLabels("istio-proxy"),
 			// Note: We don't set owner references here because the PodMonitor is in a different
 			// namespace than the IstioRevision (which is cluster-scoped). Cross-namespace owner
 			// references are not supported by Kubernetes.
@@ -317,8 +325,7 @@ func (r *Reconciler) buildPodMonitor(rev *v1.IstioRevision, namespace string) *m
 		},
 	}
 
-	// Set the GVK to use the rhobs API group instead of monitoring.coreos.com
-	pm.SetGroupVersionKind(rhobsGV.WithKind("PodMonitor"))
+	pm.SetGroupVersionKind(r.monitoringGV().WithKind("PodMonitor"))
 
 	return pm
 }
