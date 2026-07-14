@@ -365,7 +365,7 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1.IstioR
 		webhook := admissionv1.MutatingWebhookConfiguration{}
 		webhookKey := injectionWebhookKey(rev)
 		if err := r.Client.Get(ctx, webhookKey, &webhook); err == nil {
-			switch webhook.Annotations[constants.WebhookReadinessProbeStatusAnnotationKey] {
+			switch webhook.Annotations[constants.WebhookReadinessStatusAnnotationKey] {
 			case "true":
 				c.Status = metav1.ConditionTrue
 				c.Reason = v1.ConditionReason(v1.IstioRevisionConditionReady)
@@ -375,7 +375,7 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1.IstioR
 			default:
 				c.Reason = v1.IstioRevisionReasonRemoteIstiodNotReady
 				c.Message = fmt.Sprintf("invalid or missing annotation %s on MutatingWebhookConfiguration %s",
-					constants.WebhookReadinessProbeStatusAnnotationKey, webhookKey.Name)
+					constants.WebhookReadinessStatusAnnotationKey, webhookKey.Name)
 			}
 		} else if apierrors.IsNotFound(err) {
 			c.Reason = v1.IstioRevisionReasonRemoteIstiodNotReady
