@@ -251,7 +251,7 @@ func (r *Reconciler) buildServiceMonitor(rev *v1.IstioRevision) *monitoringv1.Se
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			Labels: r.monitorLabels("istiod"),
+			Labels:    r.monitorLabels("istiod"),
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion:         v1.GroupVersion.String(),
@@ -300,7 +300,7 @@ func (r *Reconciler) buildPodMonitor(rev *v1.IstioRevision, namespace string) *m
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			Labels: r.monitorLabels("istio-proxy"),
+			Labels:    r.monitorLabels("istio-proxy"),
 			// Note: We don't set owner references here because the PodMonitor is in a different
 			// namespace than the IstioRevision (which is cluster-scoped). Cross-namespace owner
 			// references are not supported by Kubernetes.
