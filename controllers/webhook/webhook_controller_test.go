@@ -16,23 +16,12 @@ package webhook
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/tls"
-	"crypto/x509"
-	"crypto/x509/pkix"
-	"encoding/pem"
 	"errors"
-	"fmt"
-	"math/big"
-	"net"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
@@ -40,11 +29,14 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	. "github.com/onsi/gomega"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ctrl "sigs.k8s.io/controller-runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"istio.io/istio/pkg/ptr"
 )
@@ -53,331 +45,719 @@ var ctx = context.Background()
 
 func TestReconcile(t *testing.T) {
 	tests := []struct {
-		name         string
-		setup        func(configuration *admissionv1.MutatingWebhookConfiguration)
-		probeFunc    func(context.Context, *admissionv1.MutatingWebhookConfiguration) (bool, error)
-		interceptors interceptor.Funcs
-		expectResult ctrl.Result
-		expectErr    error
-		expectValue  string
+		name          string
+		webhook       *admissionv1.MutatingWebhookConfiguration
+		setup         func(r *Reconciler)
+		interceptors  interceptor.Funcs
+		expectRequeue bool
+		expectErr     error
+		expectStatus  string
+		expectReason  string
 	}{
 		{
-			name: "ready",
-			probeFunc: func(context.Context, *admissionv1.MutatingWebhookConfiguration) (bool, error) {
-				return true, nil
+			name: "ready when caBundle is set",
+			webhook: &admissionv1.MutatingWebhookConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: "istio-sidecar-injector"},
+				Webhooks: []admissionv1.MutatingWebhook{{
+					ClientConfig: admissionv1.WebhookClientConfig{
+						Service:  &admissionv1.ServiceReference{Name: "istiod", Namespace: "istio-system"},
+						CABundle: []byte("ca-data"),
+					},
+				}},
 			},
-			expectResult: ctrl.Result{RequeueAfter: defaultPeriodSeconds * time.Second},
-			expectValue:  "true",
+			expectStatus: "true",
 		},
 		{
-			name: "not ready",
-			probeFunc: func(context.Context, *admissionv1.MutatingWebhookConfiguration) (bool, error) {
-				return false, nil
+			name: "not ready when caBundle is empty",
+			webhook: &admissionv1.MutatingWebhookConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: "istio-sidecar-injector"},
+				Webhooks: []admissionv1.MutatingWebhook{{
+					ClientConfig: admissionv1.WebhookClientConfig{
+						Service: &admissionv1.ServiceReference{Name: "istiod", Namespace: "istio-system"},
+					},
+				}},
 			},
-			expectResult: ctrl.Result{RequeueAfter: defaultPeriodSeconds * time.Second},
-			expectValue:  "false",
+			expectStatus: "false",
 		},
 		{
-			name: "probe error",
-			probeFunc: func(context.Context, *admissionv1.MutatingWebhookConfiguration) (bool, error) {
-				return false, fmt.Errorf("some error")
+			name: "not ready when webhook configuration contains no webhooks",
+			webhook: &admissionv1.MutatingWebhookConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: "istio-sidecar-injector"},
 			},
-			expectResult: ctrl.Result{RequeueAfter: defaultPeriodSeconds * time.Second},
-			expectValue:  "false",
+			expectStatus: "false",
+			expectReason: "webhook configuration contains no webhooks",
 		},
 		{
 			name: "update error",
-			probeFunc: func(context.Context, *admissionv1.MutatingWebhookConfiguration) (bool, error) {
-				return true, nil
+			webhook: &admissionv1.MutatingWebhookConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: "istio-sidecar-injector"},
+				Webhooks: []admissionv1.MutatingWebhook{{
+					ClientConfig: admissionv1.WebhookClientConfig{
+						Service:  &admissionv1.ServiceReference{Name: "istiod", Namespace: "istio-system"},
+						CABundle: []byte("ca-data"),
+					},
+				}},
 			},
 			interceptors: interceptor.Funcs{
 				Update: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
 					return errors.New("some error")
 				},
 			},
-			expectResult: ctrl.Result{},
 			expectErr:    errors.New("some error"),
-			expectValue:  "",
+			expectStatus: "",
 		},
 		{
-			name: "honors period annotation",
-			setup: func(webhook *admissionv1.MutatingWebhookConfiguration) {
-				webhook.Annotations = map[string]string{
-					constants.WebhookReadinessProbePeriodSecondsAnnotationKey: "123",
-				}
+			name: "not ready when recent failure event recorded",
+			webhook: &admissionv1.MutatingWebhookConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: "istio-sidecar-injector"},
+				Webhooks: []admissionv1.MutatingWebhook{{
+					ClientConfig: admissionv1.WebhookClientConfig{
+						Service:  &admissionv1.ServiceReference{Name: "istiod", Namespace: "istio-system"},
+						CABundle: []byte("ca-data"),
+					},
+				}},
 			},
-			probeFunc: func(context.Context, *admissionv1.MutatingWebhookConfiguration) (bool, error) {
-				return true, nil
+			setup: func(r *Reconciler) {
+				r.recordFailure("istio-sidecar-injector")
 			},
-			expectResult: ctrl.Result{RequeueAfter: 123 * time.Second},
-			expectValue:  "true",
+			expectRequeue: true,
+			expectStatus:  "false",
+			expectReason:  "webhook call failures reported in cluster events",
+		},
+		{
+			name: "recovers after failure ages out",
+			webhook: &admissionv1.MutatingWebhookConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: "istio-sidecar-injector"},
+				Webhooks: []admissionv1.MutatingWebhook{{
+					ClientConfig: admissionv1.WebhookClientConfig{
+						Service:  &admissionv1.ServiceReference{Name: "istiod", Namespace: "istio-system"},
+						CABundle: []byte("ca-data"),
+					},
+				}},
+			},
+			setup: func(r *Reconciler) {
+				r.mu.Lock()
+				r.failureHistory["istio-sidecar-injector"] = time.Now().Add(-10 * time.Minute)
+				r.mu.Unlock()
+			},
+			expectStatus: "true",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			webhook := &admissionv1.MutatingWebhookConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "istio-sidecar-injector",
-				},
-			}
-			if tt.setup != nil {
-				tt.setup(webhook)
-			}
-
 			cl := newFakeClientBuilder().
-				WithObjects(webhook).
+				WithObjects(tt.webhook).
 				WithInterceptorFuncs(tt.interceptors).
 				Build()
 			r := NewReconciler(newReconcilerTestConfig(t), cl, scheme.Scheme)
-			r.probe = tt.probeFunc
+			if tt.setup != nil {
+				tt.setup(r)
+			}
 
-			result, err := r.Reconcile(ctx, webhook)
+			result, err := r.Reconcile(ctx, tt.webhook)
 
-			g.Expect(result).To(Equal(tt.expectResult))
+			if tt.expectRequeue {
+				g.Expect(result.RequeueAfter).To(BeNumerically(">", 0))
+			} else {
+				g.Expect(result.RequeueAfter).To(BeZero())
+			}
 			if tt.expectErr != nil {
 				g.Expect(err).To(Equal(tt.expectErr))
 			} else {
 				g.Expect(err).ToNot(HaveOccurred())
 			}
 
-			g.Expect(cl.Get(ctx, kube.Key("istio-sidecar-injector"), webhook)).To(Succeed())
-			g.Expect(webhook.Annotations[constants.WebhookReadinessProbeStatusAnnotationKey]).To(Equal(tt.expectValue), "Unexpected annotation value")
+			if tt.expectStatus != "" {
+				g.Expect(cl.Get(ctx, kube.Key("istio-sidecar-injector"), tt.webhook)).To(Succeed())
+				g.Expect(tt.webhook.Annotations[constants.WebhookReadinessStatusAnnotationKey]).To(Equal(tt.expectStatus))
+			}
+			if tt.expectReason != "" {
+				g.Expect(tt.webhook.Annotations[constants.WebhookReadinessReasonAnnotationKey]).To(Equal(tt.expectReason))
+			}
 		})
 	}
 }
 
-func TestDoProbe(t *testing.T) {
+func TestReconcileDoesNotUpdateWhenAnnotationsAreCurrent(t *testing.T) {
+	g := NewWithT(t)
+
+	webhook := &admissionv1.MutatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "istio-sidecar-injector",
+			Annotations: map[string]string{
+				constants.WebhookReadinessStatusAnnotationKey: "true",
+				constants.WebhookReadinessReasonAnnotationKey: "",
+			},
+		},
+		Webhooks: []admissionv1.MutatingWebhook{{
+			ClientConfig: admissionv1.WebhookClientConfig{
+				Service:  &admissionv1.ServiceReference{Name: "istiod", Namespace: "istio-system"},
+				CABundle: []byte("ca-data"),
+			},
+		}},
+	}
+
+	cl := newFakeClientBuilder().WithObjects(webhook).Build()
+	r := NewReconciler(newReconcilerTestConfig(t), cl, scheme.Scheme)
+
+	before := &admissionv1.MutatingWebhookConfiguration{}
+	g.Expect(cl.Get(ctx, kube.Key("istio-sidecar-injector"), before)).To(Succeed())
+
+	_, err := r.Reconcile(ctx, webhook)
+	g.Expect(err).ToNot(HaveOccurred())
+
+	g.Expect(cl.Get(ctx, kube.Key("istio-sidecar-injector"), webhook)).To(Succeed())
+	g.Expect(webhook.ResourceVersion).To(Equal(before.ResourceVersion),
+		"no update expected when the readiness annotations are already current")
+}
+
+func TestReconcileRemovesLegacyReadinessAnnotations(t *testing.T) {
+	g := NewWithT(t)
+
+	webhook := &admissionv1.MutatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "istio-sidecar-injector",
+			Annotations: map[string]string{
+				"sailoperator.io/readinessProbe.status":         "false",
+				"sailoperator.io/readinessProbe.reason":         "readiness probe failed",
+				"sailoperator.io/readinessProbe.periodSeconds":  "10",
+				"sailoperator.io/readinessProbe.timeoutSeconds": "5",
+			},
+		},
+		Webhooks: []admissionv1.MutatingWebhook{{
+			ClientConfig: admissionv1.WebhookClientConfig{
+				Service:  &admissionv1.ServiceReference{Name: "istiod", Namespace: "istio-system"},
+				CABundle: []byte("ca-data"),
+			},
+		}},
+	}
+
+	cl := newFakeClientBuilder().WithObjects(webhook).Build()
+	r := NewReconciler(newReconcilerTestConfig(t), cl, scheme.Scheme)
+
+	_, err := r.Reconcile(ctx, webhook)
+	g.Expect(err).ToNot(HaveOccurred())
+
+	g.Expect(cl.Get(ctx, kube.Key("istio-sidecar-injector"), webhook)).To(Succeed())
+	g.Expect(webhook.Annotations).ToNot(HaveKey("sailoperator.io/readinessProbe.status"))
+	g.Expect(webhook.Annotations).ToNot(HaveKey("sailoperator.io/readinessProbe.reason"))
+	g.Expect(webhook.Annotations).ToNot(HaveKey("sailoperator.io/readinessProbe.periodSeconds"))
+	g.Expect(webhook.Annotations).ToNot(HaveKey("sailoperator.io/readinessProbe.timeoutSeconds"))
+	g.Expect(webhook.Annotations[constants.WebhookReadinessStatusAnnotationKey]).To(Equal("true"))
+}
+
+func TestEvaluateReadiness(t *testing.T) {
 	svc := admissionv1.ServiceReference{Name: "istiod", Namespace: "istio-system"}
-	host := svc.Name + "." + svc.Namespace + ".svc"
-
-	// Generate a self-signed certificate and key
-	certPEM, keyPEM, err := generateSelfSignedCert(host)
-	if err != nil {
-		panic(err)
-	}
-
-	// Load the certificate and key
-	cert, err := tls.X509KeyPair(certPEM, keyPEM)
-	if err != nil {
-		panic(err)
-	}
-
-	// Create a custom TLS configuration using the certificate and key
-	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		MinVersion:   tls.VersionTLS12,
-	}
 
 	tests := []struct {
 		name           string
-		webhook        *admissionv1.MutatingWebhookConfiguration
-		httpStatus     int
-		serverDelay    time.Duration
-		contextTimout  time.Duration
-		maxDuration    time.Duration
-		expectedResult bool
-		expectedError  string
+		webhookName    string
+		clientConfigs  []admissionv1.WebhookClientConfig
+		setup          func(r *Reconciler)
+		expectedReady  bool
+		expectedReason string
 	}{
 		{
-			name: "No webhooks",
-			webhook: &admissionv1.MutatingWebhookConfiguration{
-				Webhooks: []admissionv1.MutatingWebhook{},
-			},
-			expectedResult: false,
-			expectedError:  "mutatingwebhookconfiguration contains no webhooks",
+			name:           "no webhooks",
+			webhookName:    "test",
+			clientConfigs:  []admissionv1.WebhookClientConfig{},
+			expectedReady:  false,
+			expectedReason: "webhook configuration contains no webhooks",
 		},
 		{
-			name: "No service in client config",
-			webhook: &admissionv1.MutatingWebhookConfiguration{
-				Webhooks: []admissionv1.MutatingWebhook{
-					{ClientConfig: admissionv1.WebhookClientConfig{Service: nil}},
-				},
-			},
-			expectedResult: false,
-			expectedError:  "missing webhooks[].clientConfig.service",
+			name:           "no endpoint configured",
+			webhookName:    "test",
+			clientConfigs:  []admissionv1.WebhookClientConfig{{}},
+			expectedReady:  false,
+			expectedReason: "no endpoint configured in webhooks[].clientConfig",
 		},
 		{
-			name: "Missing CA bundle",
-			webhook: &admissionv1.MutatingWebhookConfiguration{
-				Webhooks: []admissionv1.MutatingWebhook{
-					{
-						ClientConfig: admissionv1.WebhookClientConfig{
-							Service:  &svc,
-							CABundle: nil,
-						},
-					},
-				},
-			},
-			expectedResult: false,
-			expectedError:  "webhooks[].clientConfig.caBundle hasn't been set; check if the remote istiod can access this cluster",
+			name:           "missing caBundle with service",
+			webhookName:    "test",
+			clientConfigs:  []admissionv1.WebhookClientConfig{{Service: &svc}},
+			expectedReady:  false,
+			expectedReason: "webhooks[].clientConfig.caBundle hasn't been set; check if the remote istiod can access this cluster",
 		},
 		{
-			name: "Invalid CA bundle",
-			webhook: &admissionv1.MutatingWebhookConfiguration{
-				Webhooks: []admissionv1.MutatingWebhook{
-					{
-						ClientConfig: admissionv1.WebhookClientConfig{
-							Service:  &svc,
-							CABundle: []byte("invalid"),
-						},
-					},
-				},
-			},
-			expectedResult: false,
-			expectedError:  "failed to append CA bundle to cert pool",
+			name:          "ready with service endpoint",
+			webhookName:   "test",
+			clientConfigs: []admissionv1.WebhookClientConfig{{Service: &svc, CABundle: []byte("ca")}},
+			expectedReady: true,
 		},
 		{
-			name: "Unsuccessful HTTP response",
-			webhook: &admissionv1.MutatingWebhookConfiguration{
-				Webhooks: []admissionv1.MutatingWebhook{
-					{
-						ClientConfig: admissionv1.WebhookClientConfig{
-							Service:  &svc,
-							CABundle: certPEM,
-						},
-					},
-				},
-			},
-			httpStatus:     http.StatusInternalServerError,
-			expectedResult: false,
-			expectedError:  "",
+			name:        "ready with URL endpoint",
+			webhookName: "test",
+			clientConfigs: []admissionv1.WebhookClientConfig{{
+				URL:      ptr.Of("https://remote-istiod.example.com/inject"),
+				CABundle: []byte("ca-data"),
+			}},
+			expectedReady: true,
 		},
 		{
-			name: "Successful HTTP response",
-			webhook: &admissionv1.MutatingWebhookConfiguration{
-				Webhooks: []admissionv1.MutatingWebhook{
-					{
-						ClientConfig: admissionv1.WebhookClientConfig{
-							Service:  &svc,
-							CABundle: certPEM,
-						},
-					},
-				},
+			name:          "degraded due to recent failure event",
+			webhookName:   "test",
+			clientConfigs: []admissionv1.WebhookClientConfig{{Service: &svc, CABundle: []byte("ca")}},
+			setup: func(r *Reconciler) {
+				r.recordFailure("test")
 			},
-			httpStatus:     http.StatusOK,
-			expectedResult: true,
-			expectedError:  "",
-		},
-		{
-			name: "Context timeout",
-			webhook: &admissionv1.MutatingWebhookConfiguration{
-				Webhooks: []admissionv1.MutatingWebhook{
-					{
-						ClientConfig: admissionv1.WebhookClientConfig{
-							Service:  &svc,
-							CABundle: certPEM,
-						},
-					},
-				},
-			},
-			httpStatus:     http.StatusOK,
-			serverDelay:    10 * time.Second,
-			contextTimout:  1 * time.Second,
-			maxDuration:    1500 * time.Millisecond,
-			expectedResult: false,
-			expectedError:  "context deadline exceeded",
-		},
-		{
-			name: "Default probe timeout",
-			webhook: &admissionv1.MutatingWebhookConfiguration{
-				Webhooks: []admissionv1.MutatingWebhook{
-					{
-						ClientConfig: admissionv1.WebhookClientConfig{
-							Service:  &svc,
-							CABundle: certPEM,
-						},
-					},
-				},
-			},
-			httpStatus:     http.StatusOK,
-			serverDelay:    defaultTimeoutSeconds + 10*time.Second,
-			maxDuration:    defaultTimeoutSeconds*time.Second + 500*time.Millisecond,
-			expectedResult: false,
-			expectedError:  "context deadline exceeded",
-		},
-		{
-			name: "Probe timeout annotation",
-			webhook: &admissionv1.MutatingWebhookConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						constants.WebhookReadinessProbeTimeoutSecondsAnnotationKey: "1",
-					},
-				},
-				Webhooks: []admissionv1.MutatingWebhook{
-					{
-						ClientConfig: admissionv1.WebhookClientConfig{
-							Service:  &svc,
-							CABundle: certPEM,
-						},
-					},
-				},
-			},
-			httpStatus:     http.StatusOK,
-			serverDelay:    10 * time.Second,
-			maxDuration:    1500 * time.Millisecond,
-			expectedResult: false,
-			expectedError:  "context deadline exceeded",
+			expectedReady:  false,
+			expectedReason: "webhook call failures reported in cluster events",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
-			server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if tt.serverDelay > 0 {
-					delay := time.NewTimer(tt.serverDelay)
-					select {
-					case <-delay.C:
-					case <-r.Context().Done():
-						delay.Stop()
-					}
-				}
-
-				if r.URL.Path == "/ready" {
-					w.WriteHeader(tt.httpStatus)
-				} else {
-					http.Error(w, "Not Found", http.StatusNotFound)
-				}
-			}))
-			server.TLS = tlsConfig
-			server.StartTLS()
-			defer server.Close()
-
-			customDialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-				if addr == host+":443" {
-					return net.Dial(network, server.Listener.Addr().String())
-				}
-				return net.Dial(network, addr)
+			r := NewReconciler(newReconcilerTestConfig(t), nil, scheme.Scheme)
+			if tt.setup != nil {
+				tt.setup(r)
 			}
-			defer func() {
-				customDialContext = nil
+			result := r.evaluateReadiness(tt.webhookName, tt.clientConfigs)
+			g.Expect(result.ready).To(Equal(tt.expectedReady))
+			g.Expect(result.reason).To(Equal(tt.expectedReason))
+		})
+	}
+}
+
+func TestIsDegraded(t *testing.T) {
+	g := NewWithT(t)
+	r := NewReconciler(newReconcilerTestConfig(t), nil, scheme.Scheme)
+
+	g.Expect(r.isDegraded("test")).To(BeZero(), "no failure recorded")
+
+	// Recent failure: still within the degraded window
+	r.recordFailure("test")
+	g.Expect(r.isDegraded("test")).To(BeNumerically(">", 0), "recent single failure")
+
+	// Failure older than the degraded window has aged out
+	r.mu.Lock()
+	r.failureHistory["test"] = time.Now().Add(-(DefaultDegradedWindow + time.Minute))
+	r.mu.Unlock()
+	g.Expect(r.isDegraded("test")).To(BeZero(), "failure aged out")
+
+	// Verify the entry was cleaned up
+	r.mu.Lock()
+	_, exists := r.failureHistory["test"]
+	r.mu.Unlock()
+	g.Expect(exists).To(BeFalse(), "expired entry removed from map")
+
+	// Failure within the degraded window is still degraded
+	r.mu.Lock()
+	r.failureHistory["test"] = time.Now().Add(-(DefaultDegradedWindow - time.Minute))
+	r.mu.Unlock()
+	g.Expect(r.isDegraded("test")).To(BeNumerically(">", 0), "still within the degraded window")
+}
+
+func TestPruneStaleFailures(t *testing.T) {
+	tests := []struct {
+		name       string
+		seed       map[string]time.Duration // name -> age of the entry (how far in the past it was recorded)
+		wantPruned int
+		wantKept   []string
+	}{
+		{
+			name:       "empty map is a no-op",
+			seed:       map[string]time.Duration{},
+			wantPruned: 0,
+			wantKept:   nil,
+		},
+		{
+			name:       "all fresh entries are kept",
+			seed:       map[string]time.Duration{"a": 0, "b": time.Minute},
+			wantPruned: 0,
+			wantKept:   []string{"a", "b"},
+		},
+		{
+			name:       "all stale entries are pruned",
+			seed:       map[string]time.Duration{"a": DefaultDegradedWindow + time.Minute, "b": DefaultDegradedWindow + 2*time.Minute},
+			wantPruned: 2,
+			wantKept:   nil,
+		},
+		{
+			name:       "entries at the window boundary are pruned",
+			seed:       map[string]time.Duration{"a": DefaultDegradedWindow},
+			wantPruned: 1,
+			wantKept:   nil,
+		},
+		{
+			name:       "mixed entries: only those within the window survive",
+			seed:       map[string]time.Duration{"stale": DefaultDegradedWindow + time.Minute, "boundary": DefaultDegradedWindow, "fresh": time.Minute},
+			wantPruned: 2,
+			wantKept:   []string{"fresh"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			r := NewReconciler(newReconcilerTestConfig(t), nil, scheme.Scheme)
+
+			now := time.Now()
+			r.mu.Lock()
+			for name, age := range tt.seed {
+				r.failureHistory[name] = now.Add(-age)
+			}
+			r.mu.Unlock()
+
+			g.Expect(r.pruneStaleFailures()).To(Equal(tt.wantPruned))
+
+			r.mu.Lock()
+			defer r.mu.Unlock()
+			for name := range r.failureHistory {
+				g.Expect(tt.wantKept).To(ContainElement(name), "unexpected entry survived: %s", name)
+			}
+			for _, name := range tt.wantKept {
+				g.Expect(r.failureHistory).To(HaveKey(name), "expected entry to survive: %s", name)
+			}
+		})
+	}
+}
+
+func TestFailureHistoryJanitor(t *testing.T) {
+	tests := []struct {
+		name     string
+		seed     map[string]time.Duration // name -> age of the entry
+		wantKept []string
+	}{
+		{
+			name:     "prunes stale entries and keeps fresh ones",
+			seed:     map[string]time.Duration{"stale": DefaultDegradedWindow + time.Minute, "fresh": 0},
+			wantKept: []string{"fresh"},
+		},
+		{
+			name:     "no-op when all entries are fresh",
+			seed:     map[string]time.Duration{"a": 0, "b": time.Minute},
+			wantKept: []string{"a", "b"},
+		},
+		{
+			name:     "no-op on empty map",
+			seed:     map[string]time.Duration{},
+			wantKept: nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			r := NewReconciler(newReconcilerTestConfig(t), nil, scheme.Scheme)
+
+			now := time.Now()
+			r.mu.Lock()
+			for name, age := range tt.seed {
+				r.failureHistory[name] = now.Add(-age)
+			}
+			r.mu.Unlock()
+
+			ctx, cancel := context.WithCancel(context.Background())
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				_ = r.failureHistoryJanitor(logr.Discard(), 10*time.Millisecond).Start(ctx)
 			}()
 
-			var probeCtx context.Context
-			if tt.contextTimout > 0 {
-				var cancel context.CancelFunc
-				probeCtx, cancel = context.WithTimeout(ctx, tt.contextTimout)
-				defer cancel()
+			g.Eventually(func() bool {
+				r.mu.Lock()
+				defer r.mu.Unlock()
+				if len(r.failureHistory) != len(tt.wantKept) {
+					return false
+				}
+				for _, name := range tt.wantKept {
+					if _, ok := r.failureHistory[name]; !ok {
+						return false
+					}
+				}
+				return true
+			}).Should(BeTrue(), "janitor should leave exactly the entries within the window")
+
+			cancel()
+			<-done
+		})
+	}
+}
+
+func TestExtractWebhookName(t *testing.T) {
+	tests := []struct {
+		name     string
+		message  string
+		expected string
+	}{
+		{
+			name: "replicaset controller event with connection refused",
+			message: `Error creating: Internal error occurred: failed calling webhook "sidecar-injector.istio.io": ` +
+				`Post "https://istiod.istio-system.svc:443/inject": dial tcp: connect: connection refused`,
+			expected: "sidecar-injector.istio.io",
+		},
+		{
+			name: "replicaset controller event with no endpoints",
+			message: `Error creating: Internal error occurred: failed calling webhook "sidecar-injector.istio.io": ` +
+				`Post "https://istiod.istio-system.svc:443/inject": no endpoints available for service "istiod"`,
+			expected: "sidecar-injector.istio.io",
+		},
+		{
+			name: "webhook with no further details",
+			message: `Error creating: Internal error occurred: failed calling webhook "sidecar-injector.istio.io"; ` +
+				`no further details available`,
+			expected: "sidecar-injector.istio.io",
+		},
+		{
+			name:     "no match",
+			message:  "some other event message",
+			expected: "",
+		},
+		{
+			name:     "empty message",
+			message:  "",
+			expected: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			g.Expect(ExtractWebhookName(tt.message)).To(Equal(tt.expected))
+		})
+	}
+}
+
+func TestWebhookFailureEventPredicate(t *testing.T) {
+	pred := webhookFailureEventPredicate()
+	tests := []struct {
+		name     string
+		obj      client.Object
+		expected bool
+	}{
+		{
+			name: "matching event with webhook failure message",
+			obj: &corev1.Event{
+				Type:    corev1.EventTypeWarning,
+				Reason:  "FailedCreate",
+				Message: `Error creating: Internal error occurred: failed calling webhook "sidecar-injector.istio.io": connection refused`,
+			},
+			expected: true,
+		},
+		{
+			name: "warning event without webhook failure",
+			obj: &corev1.Event{
+				Type:    corev1.EventTypeWarning,
+				Reason:  "FailedCreate",
+				Message: "Error creating: some other error",
+			},
+			expected: false,
+		},
+		{
+			name: "normal event with webhook text",
+			obj: &corev1.Event{
+				Type:    corev1.EventTypeNormal,
+				Message: `failed calling webhook "sidecar-injector.istio.io"`,
+			},
+			expected: false,
+		},
+		{
+			name:     "not an event",
+			obj:      &admissionv1.MutatingWebhookConfiguration{},
+			expected: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			g.Expect(pred.Create(event.CreateEvent{Object: tt.obj})).To(Equal(tt.expected))
+		})
+	}
+
+	failureEvent := &corev1.Event{
+		Type:    corev1.EventTypeWarning,
+		Reason:  "FailedCreate",
+		Message: `Error creating: Internal error occurred: failed calling webhook "sidecar-injector.istio.io": connection refused`,
+	}
+	t.Run("update matches on the new object", func(t *testing.T) {
+		g := NewWithT(t)
+		g.Expect(pred.Update(event.UpdateEvent{ObjectNew: failureEvent})).To(BeTrue())
+		g.Expect(pred.Update(event.UpdateEvent{
+			ObjectNew: &corev1.Event{Type: corev1.EventTypeWarning, Message: "Error creating: some other error"},
+		})).To(BeFalse())
+	})
+	t.Run("delete is ignored", func(t *testing.T) {
+		g := NewWithT(t)
+		g.Expect(pred.Delete(event.DeleteEvent{Object: failureEvent})).To(BeFalse())
+	})
+	t.Run("generic is ignored", func(t *testing.T) {
+		g := NewWithT(t)
+		g.Expect(pred.Generic(event.GenericEvent{Object: failureEvent})).To(BeFalse())
+	})
+}
+
+func testOwnedByRevisionRef(revisionName string) metav1.OwnerReference {
+	return metav1.OwnerReference{
+		APIVersion: v1.GroupVersion.String(),
+		Kind:       v1.IstioRevisionKind,
+		Name:       revisionName,
+		UID:        types.UID(revisionName + "-uid"),
+	}
+}
+
+func testRemoteRevision(name string) *v1.IstioRevision {
+	return &v1.IstioRevision{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec: v1.IstioRevisionSpec{
+			Values: &v1.Values{Profile: ptr.Of("remote")},
+		},
+	}
+}
+
+func TestMapFailureEventToWebhook(t *testing.T) {
+	mutatingConfig := &admissionv1.MutatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "istio-sidecar-injector",
+			OwnerReferences: []metav1.OwnerReference{testOwnedByRevisionRef("test-revision")},
+		},
+		Webhooks: []admissionv1.MutatingWebhook{{
+			Name: "sidecar-injector.istio.io",
+			ClientConfig: admissionv1.WebhookClientConfig{
+				Service: &admissionv1.ServiceReference{Name: "istiod", Namespace: "istio-system"},
+			},
+		}},
+	}
+	unownedConfig := &admissionv1.MutatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{Name: "unowned-sidecar-injector"},
+		Webhooks: []admissionv1.MutatingWebhook{{
+			Name: "unowned.istio.io",
+		}},
+	}
+	localConfig := &admissionv1.MutatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "local-sidecar-injector",
+			OwnerReferences: []metav1.OwnerReference{testOwnedByRevisionRef("local-revision")},
+		},
+		Webhooks: []admissionv1.MutatingWebhook{{
+			Name: "local.istio.io",
+		}},
+	}
+
+	tests := []struct {
+		name         string
+		obj          client.Object
+		expectedReqs []reconcile.Request
+		expectFailed bool
+	}{
+		{
+			name: "maps event to webhook config and records failure",
+			obj: &corev1.Event{
+				ObjectMeta: metav1.ObjectMeta{Name: "evt1", Namespace: "default"},
+				Message: `Error creating: Internal error occurred: failed calling webhook "sidecar-injector.istio.io": ` +
+					`Post "https://istiod.istio-system.svc:443/inject": dial tcp: connect: connection refused`,
+			},
+			expectedReqs: []reconcile.Request{{NamespacedName: types.NamespacedName{Name: "istio-sidecar-injector"}}},
+			expectFailed: true,
+		},
+		{
+			name: "ignores webhook in config that is not owned by an IstioRevision",
+			obj: &corev1.Event{
+				ObjectMeta: metav1.ObjectMeta{Name: "evt2", Namespace: "default"},
+				Message:    `Error creating: Internal error occurred: failed calling webhook "unowned.istio.io": connection refused`,
+			},
+		},
+		{
+			name: "ignores webhook in config owned by a non-remote IstioRevision",
+			obj: &corev1.Event{
+				ObjectMeta: metav1.ObjectMeta{Name: "evt3", Namespace: "default"},
+				Message:    `Error creating: Internal error occurred: failed calling webhook "local.istio.io": connection refused`,
+			},
+		},
+		{
+			name: "ignores webhook name not found in any config",
+			obj: &corev1.Event{
+				ObjectMeta: metav1.ObjectMeta{Name: "evt4", Namespace: "default"},
+				Message:    `Error creating: Internal error occurred: failed calling webhook "unknown-webhook.example.com": connection refused`,
+			},
+		},
+		{
+			name: "ignores unrelated message",
+			obj: &corev1.Event{
+				ObjectMeta: metav1.ObjectMeta{Name: "evt5", Namespace: "default"},
+				Message:    "some unrelated message",
+			},
+		},
+		{
+			name: "ignores non-event",
+			obj:  &admissionv1.MutatingWebhookConfiguration{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			cl := newFakeClientBuilder().WithObjects(
+				mutatingConfig, unownedConfig, localConfig,
+				testRemoteRevision("test-revision"),
+				&v1.IstioRevision{ObjectMeta: metav1.ObjectMeta{Name: "local-revision"}},
+			).Build()
+			r := NewReconciler(newReconcilerTestConfig(t), cl, scheme.Scheme)
+
+			reqs := r.mapFailureEventToWebhook(ctx, tt.obj)
+			g.Expect(reqs).To(Equal(tt.expectedReqs))
+
+			if tt.expectFailed {
+				g.Expect(r.isDegraded("istio-sidecar-injector")).To(BeNumerically(">", 0))
 			} else {
-				probeCtx = ctx
+				g.Expect(r.isDegraded("unowned-sidecar-injector")).To(BeZero())
+				g.Expect(r.isDegraded("local-sidecar-injector")).To(BeZero())
 			}
+		})
+	}
+}
 
-			startTime := time.Now()
-			result, err := doProbe(probeCtx, tt.webhook)
-			stopTime := time.Now()
+func TestFindOwnedWebhookConfig(t *testing.T) {
+	owned := testOwnedByRevisionRef("test-revision")
+	configs := []client.Object{
+		&admissionv1.MutatingWebhookConfiguration{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "istio-sidecar-injector",
+				OwnerReferences: []metav1.OwnerReference{owned},
+			},
+			Webhooks: []admissionv1.MutatingWebhook{
+				{Name: "sidecar-injector.istio.io"},
+				{Name: "namespace.sidecar-injector.istio.io"},
+			},
+		},
+		&admissionv1.MutatingWebhookConfiguration{
+			ObjectMeta: metav1.ObjectMeta{Name: "third-party-injector"},
+			Webhooks: []admissionv1.MutatingWebhook{
+				{Name: "third-party.istio.io"},
+			},
+		},
+	}
 
-			if tt.maxDuration > 0 {
-				g.Expect(stopTime.Sub(startTime)).To(BeNumerically("<=", tt.maxDuration))
-			}
-
-			g.Expect(result).To(Equal(tt.expectedResult))
-			if tt.expectedError == "" {
-				g.Expect(err).ToNot(HaveOccurred())
-			} else {
-				g.Expect(err.Error()).To(ContainSubstring(tt.expectedError))
-			}
+	tests := []struct {
+		name        string
+		webhookName string
+		expected    string
+	}{
+		{
+			name:        "finds owned config",
+			webhookName: "sidecar-injector.istio.io",
+			expected:    "istio-sidecar-injector",
+		},
+		{
+			name:        "finds second webhook in owned config",
+			webhookName: "namespace.sidecar-injector.istio.io",
+			expected:    "istio-sidecar-injector",
+		},
+		{
+			name:        "ignores webhook in config that is not owned by an IstioRevision",
+			webhookName: "third-party.istio.io",
+			expected:    "",
+		},
+		{
+			name:        "returns empty for unknown webhook",
+			webhookName: "unknown.webhook.io",
+			expected:    "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			cl := newFakeClientBuilder().WithObjects(configs...).WithObjects(testRemoteRevision("test-revision")).Build()
+			r := NewReconciler(newReconcilerTestConfig(t), cl, scheme.Scheme)
+			g.Expect(r.findOwnedWebhookConfig(ctx, tt.webhookName)).To(Equal(tt.expected))
 		})
 	}
 }
@@ -397,34 +777,28 @@ func TestIsOwnedByRevisionWithRemoteControlPlane(t *testing.T) {
 		},
 		{
 			name: "Owner reference not IstioRevision",
-			ownerRefs: []metav1.OwnerReference{
-				{
-					APIVersion: "someothergroup/v1",
-					Kind:       "SomeKind",
-				},
-			},
+			ownerRefs: []metav1.OwnerReference{{
+				APIVersion: "someothergroup/v1",
+				Kind:       "SomeKind",
+			}},
 			expected: false,
 		},
 		{
 			name: "IstioRevision not found",
-			ownerRefs: []metav1.OwnerReference{
-				{
-					APIVersion: v1.GroupVersion.String(),
-					Kind:       v1.IstioRevisionKind,
-					Name:       "revision1",
-				},
-			},
+			ownerRefs: []metav1.OwnerReference{{
+				APIVersion: v1.GroupVersion.String(),
+				Kind:       v1.IstioRevisionKind,
+				Name:       "revision1",
+			}},
 			expected: false,
 		},
 		{
 			name: "IstioRevision fetch error",
-			ownerRefs: []metav1.OwnerReference{
-				{
-					APIVersion: v1.GroupVersion.String(),
-					Kind:       v1.IstioRevisionKind,
-					Name:       "revision1",
-				},
-			},
+			ownerRefs: []metav1.OwnerReference{{
+				APIVersion: v1.GroupVersion.String(),
+				Kind:       v1.IstioRevisionKind,
+				Name:       "revision1",
+			}},
 			interceptors: interceptor.Funcs{
 				Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 					return errors.New("some error")
@@ -434,48 +808,37 @@ func TestIsOwnedByRevisionWithRemoteControlPlane(t *testing.T) {
 		},
 		{
 			name: "IstioRevision not using remote profile",
-			ownerRefs: []metav1.OwnerReference{
-				{
-					APIVersion: v1.GroupVersion.String(),
-					Kind:       v1.IstioRevisionKind,
-					Name:       "revision1",
-				},
-			},
+			ownerRefs: []metav1.OwnerReference{{
+				APIVersion: v1.GroupVersion.String(),
+				Kind:       v1.IstioRevisionKind,
+				Name:       "revision1",
+			}},
 			objects: []client.Object{
 				&v1.IstioRevision{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "revision1",
-					},
-					Spec: v1.IstioRevisionSpec{},
+					ObjectMeta: metav1.ObjectMeta{Name: "revision1"},
+					Spec:       v1.IstioRevisionSpec{},
 				},
 			},
 			expected: false,
 		},
 		{
 			name: "IstioRevision uses remote profile",
-			ownerRefs: []metav1.OwnerReference{
-				{
-					APIVersion: v1.GroupVersion.String(),
-					Kind:       v1.IstioRevisionKind,
-					Name:       "revision1",
-				},
-			},
+			ownerRefs: []metav1.OwnerReference{{
+				APIVersion: v1.GroupVersion.String(),
+				Kind:       v1.IstioRevisionKind,
+				Name:       "revision1",
+			}},
 			objects: []client.Object{
 				&v1.IstioRevision{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "revision1",
-					},
+					ObjectMeta: metav1.ObjectMeta{Name: "revision1"},
 					Spec: v1.IstioRevisionSpec{
-						Values: &v1.Values{
-							Profile: ptr.Of("remote"),
-						},
+						Values: &v1.Values{Profile: ptr.Of("remote")},
 					},
 				},
 			},
 			expected: true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
@@ -484,134 +847,16 @@ func TestIsOwnedByRevisionWithRemoteControlPlane(t *testing.T) {
 				WithObjects(tt.objects...).
 				WithInterceptorFuncs(tt.interceptors).
 				Build()
-
 			obj := &admissionv1.MutatingWebhookConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					OwnerReferences: tt.ownerRefs,
-				},
+				ObjectMeta: metav1.ObjectMeta{OwnerReferences: tt.ownerRefs},
 			}
-
-			result := IsOwnedByRevisionWithRemoteControlPlane(cl, obj)
-			g.Expect(result).To(Equal(tt.expected))
-		})
-	}
-}
-
-func TestGetReadinessProbeURL(t *testing.T) {
-	tests := []struct {
-		name      string
-		config    admissionv1.WebhookClientConfig
-		expectURL string
-		expectErr bool
-	}{
-		{
-			name: "URL",
-			config: admissionv1.WebhookClientConfig{
-				URL: ptr.Of("https://some.url"),
-			},
-			expectErr: true,
-		},
-		{
-			name:      "no URL or Service",
-			config:    admissionv1.WebhookClientConfig{},
-			expectErr: true,
-		},
-		{
-			name: "default port",
-			config: admissionv1.WebhookClientConfig{
-				Service: &admissionv1.ServiceReference{
-					Name:      "istiod",
-					Namespace: "istio-system",
-				},
-			},
-			expectURL: "https://istiod.istio-system.svc:443/ready",
-		},
-		{
-			name: "custom port",
-			config: admissionv1.WebhookClientConfig{
-				Service: &admissionv1.ServiceReference{
-					Name:      "istiod",
-					Namespace: "istio-system",
-					Port:      ptr.Of(int32(123)),
-				},
-			},
-			expectURL: "https://istiod.istio-system.svc:123/ready",
-		},
-		{
-			name: "ignores path",
-			config: admissionv1.WebhookClientConfig{
-				Service: &admissionv1.ServiceReference{
-					Name:      "istiod",
-					Namespace: "istio-system",
-					Path:      ptr.Of("/some/path"),
-				},
-			},
-			expectURL: "https://istiod.istio-system.svc:443/ready",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			g := NewWithT(t)
-
-			got, err := getReadinessProbeURL(tt.config)
-
-			g.Expect(got).To(Equal(tt.expectURL))
-			if tt.expectErr {
-				g.Expect(err).To(HaveOccurred())
-			} else {
-				g.Expect(err).ToNot(HaveOccurred())
-			}
+			g.Expect(IsOwnedByRevisionWithRemoteControlPlane(cl, obj)).To(Equal(tt.expected))
 		})
 	}
 }
 
 func newFakeClientBuilder() *fake.ClientBuilder {
-	return fake.NewClientBuilder().
-		WithScheme(scheme.Scheme)
-}
-
-func generateSelfSignedCert(dnsNames ...string) (certPEM []byte, keyPEM []byte, err error) {
-	// Generate a private key
-	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Create a template for the certificate
-	template := x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		Subject: pkix.Name{
-			Organization: []string{"test"},
-		},
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(365 * 24 * time.Hour), // 1 year
-		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		BasicConstraintsValid: true,
-		DNSNames:              dnsNames,
-	}
-
-	// Generate a self-signed certificate
-	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Encode the certificate and key to PEM format
-	certPEM = pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: certDER,
-	})
-	keyDER, err := x509.MarshalECPrivateKey(privateKey)
-	if err != nil {
-		return nil, nil, err
-	}
-	keyPEM = pem.EncodeToMemory(&pem.Block{
-		Type:  "EC PRIVATE KEY",
-		Bytes: keyDER,
-	})
-
-	return certPEM, keyPEM, nil
+	return fake.NewClientBuilder().WithScheme(scheme.Scheme)
 }
 
 func newReconcilerTestConfig(t *testing.T) config.ReconcilerConfig {
@@ -620,5 +865,6 @@ func newReconcilerTestConfig(t *testing.T) config.ReconcilerConfig {
 		Platform:                config.PlatformKubernetes,
 		DefaultProfile:          "",
 		MaxConcurrentReconciles: 1,
+		WebhookDegradedWindow:   DefaultDegradedWindow,
 	}
 }

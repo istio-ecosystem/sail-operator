@@ -365,17 +365,17 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1.IstioR
 		webhook := admissionv1.MutatingWebhookConfiguration{}
 		webhookKey := injectionWebhookKey(rev)
 		if err := r.Client.Get(ctx, webhookKey, &webhook); err == nil {
-			switch webhook.Annotations[constants.WebhookReadinessProbeStatusAnnotationKey] {
+			switch webhook.Annotations[constants.WebhookReadinessStatusAnnotationKey] {
 			case "true":
 				c.Status = metav1.ConditionTrue
 				c.Reason = v1.ConditionReason(v1.IstioRevisionConditionReady)
 			case "false":
 				c.Reason = v1.IstioRevisionReasonRemoteIstiodNotReady
-				c.Message = "readiness probe on remote istiod failed"
+				c.Message = webhookNotReadyMessage(webhook.Annotations)
 			default:
 				c.Reason = v1.IstioRevisionReasonRemoteIstiodNotReady
 				c.Message = fmt.Sprintf("invalid or missing annotation %s on MutatingWebhookConfiguration %s",
-					constants.WebhookReadinessProbeStatusAnnotationKey, webhookKey.Name)
+					constants.WebhookReadinessStatusAnnotationKey, webhookKey.Name)
 			}
 		} else if apierrors.IsNotFound(err) {
 			c.Reason = v1.IstioRevisionReasonRemoteIstiodNotReady
@@ -388,6 +388,15 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1.IstioR
 		}
 	}
 	return c, nil
+}
+
+// webhookNotReadyMessage derives a human-readable message from the webhook configuration's
+// readiness annotations, falling back to a generic message.
+func webhookNotReadyMessage(annotations map[string]string) string {
+	if reason := annotations[constants.WebhookReadinessReasonAnnotationKey]; reason != "" {
+		return reason
+	}
+	return "remote istiod is not ready"
 }
 
 func (r *Reconciler) determineDependenciesHealthyCondition(ctx context.Context, rev *v1.IstioRevision) (v1.StatusCondition, error) {
