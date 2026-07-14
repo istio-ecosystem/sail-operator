@@ -63,6 +63,21 @@ var (
 	testRhobsGV = schema.GroupVersion{Group: "monitoring.rhobs", Version: "v1"}
 )
 
+func testMonitoringGV(platform config.Platform) schema.GroupVersion {
+	if platform == config.PlatformOpenShift {
+		return testRhobsGV
+	}
+	return monitoringv1.SchemeGroupVersion
+}
+
+func expectMonitoredByLabel(g Gomega, platform config.Platform, labels map[string]string) {
+	if platform == config.PlatformOpenShift {
+		g.Expect(labels).To(HaveKeyWithValue("monitored-by", "coo-prometheus"))
+		return
+	}
+	g.Expect(labels).NotTo(HaveKey("monitored-by"))
+}
+
 // newNamespaceWithInjection creates a namespace with the istio-injection=enabled label
 func newNamespaceWithInjection(name string) *corev1.Namespace {
 	return &corev1.Namespace{
@@ -280,7 +295,7 @@ func TestReconcile(t *testing.T) {
 			// Check ServiceMonitor creation
 			if tt.expectSMCreated {
 				sm := &monitoringv1.ServiceMonitor{}
-				sm.SetGroupVersionKind(testRhobsGV.WithKind("ServiceMonitor"))
+				sm.SetGroupVersionKind(testMonitoringGV(cfg.Platform).WithKind("ServiceMonitor"))
 				revName := revisionName
 				if tt.rev != nil && tt.rev.Name != "" {
 					revName = tt.rev.Name
@@ -292,13 +307,13 @@ func TestReconcile(t *testing.T) {
 				g.Expect(err).ToNot(HaveOccurred())
 				// Verify the ServiceMonitor has expected content
 				g.Expect(sm.Name).To(Equal(revName + serviceMonitorNameSuffix))
-				g.Expect(sm.Labels["monitored-by"]).To(Equal("coo-prometheus"))
+				expectMonitoredByLabel(g, cfg.Platform, sm.Labels)
 			}
 
 			// Check PodMonitor creation
 			if tt.expectPMNamespace != "" {
 				pm := &monitoringv1.PodMonitor{}
-				pm.SetGroupVersionKind(testRhobsGV.WithKind("PodMonitor"))
+				pm.SetGroupVersionKind(testMonitoringGV(cfg.Platform).WithKind("PodMonitor"))
 				revName := revisionName
 				if tt.rev != nil && tt.rev.Name != "" {
 					revName = tt.rev.Name
@@ -310,7 +325,7 @@ func TestReconcile(t *testing.T) {
 				g.Expect(err).ToNot(HaveOccurred())
 				// Verify the PodMonitor has expected content
 				g.Expect(pm.Name).To(Equal(revName + podMonitorNameSuffix))
-				g.Expect(pm.Labels["monitored-by"]).To(Equal("coo-prometheus"))
+				expectMonitoredByLabel(g, cfg.Platform, pm.Labels)
 			}
 		})
 	}
@@ -359,7 +374,7 @@ func TestReconcileServiceMonitor(t *testing.T) {
 						ResourceVersion: "123",
 					},
 				}
-				sm.SetGroupVersionKind(testRhobsGV.WithKind("ServiceMonitor"))
+				sm.SetGroupVersionKind(testMonitoringGV(cfg.Platform).WithKind("ServiceMonitor"))
 				return sm
 			}(),
 			expectErr:    false,
@@ -416,7 +431,7 @@ func TestReconcileServiceMonitor(t *testing.T) {
 
 				// Verify the ServiceMonitor exists
 				result := &monitoringv1.ServiceMonitor{}
-				result.SetGroupVersionKind(testRhobsGV.WithKind("ServiceMonitor"))
+				result.SetGroupVersionKind(testMonitoringGV(cfg.Platform).WithKind("ServiceMonitor"))
 				err := cl.Get(ctx, types.NamespacedName{
 					Name:      revisionName + serviceMonitorNameSuffix,
 					Namespace: istioNamespace,
@@ -424,7 +439,7 @@ func TestReconcileServiceMonitor(t *testing.T) {
 				g.Expect(err).ToNot(HaveOccurred())
 				// Verify expected content
 				g.Expect(result.Name).To(Equal(revisionName + serviceMonitorNameSuffix))
-				g.Expect(result.Labels["monitored-by"]).To(Equal("coo-prometheus"))
+				expectMonitoredByLabel(g, cfg.Platform, result.Labels)
 			}
 		})
 	}
@@ -527,7 +542,7 @@ func TestReconcilePodMonitors(t *testing.T) {
 						ResourceVersion: "123",
 					},
 				}
-				pm.SetGroupVersionKind(testRhobsGV.WithKind("PodMonitor"))
+				pm.SetGroupVersionKind(testMonitoringGV(config.PlatformKubernetes).WithKind("PodMonitor"))
 				return pm
 			}(),
 			expectErr:          false,
@@ -607,7 +622,7 @@ func TestReconcilePodMonitors(t *testing.T) {
 				}
 				for _, ns := range tt.expectPMNamespaces {
 					pm := &monitoringv1.PodMonitor{}
-					pm.SetGroupVersionKind(testRhobsGV.WithKind("PodMonitor"))
+					pm.SetGroupVersionKind(testMonitoringGV(cfg.Platform).WithKind("PodMonitor"))
 					err := cl.Get(ctx, types.NamespacedName{
 						Name:      revName + podMonitorNameSuffix,
 						Namespace: ns,
@@ -615,7 +630,7 @@ func TestReconcilePodMonitors(t *testing.T) {
 					g.Expect(err).ToNot(HaveOccurred(), "PodMonitor should exist in namespace %s", ns)
 					// Verify expected content
 					g.Expect(pm.Name).To(Equal(revName + podMonitorNameSuffix))
-					g.Expect(pm.Labels["monitored-by"]).To(Equal("coo-prometheus"))
+					expectMonitoredByLabel(g, cfg.Platform, pm.Labels)
 				}
 			}
 		})
@@ -703,7 +718,7 @@ func TestBuildServiceMonitor(t *testing.T) {
 			reconciler := NewReconciler(cfg, cl, scheme.Scheme)
 			result := reconciler.buildServiceMonitor(tt.rev)
 
-			g.Expect(result.GetObjectKind().GroupVersionKind().Group).To(Equal("monitoring.rhobs"))
+			g.Expect(result.GetObjectKind().GroupVersionKind().Group).To(Equal(testMonitoringGV(tt.platform).Group))
 			g.Expect(result.GetObjectKind().GroupVersionKind().Version).To(Equal("v1"))
 			g.Expect(result.GetObjectKind().GroupVersionKind().Kind).To(Equal("ServiceMonitor"))
 			g.Expect(result.GetName()).To(Equal(tt.expectedName))
@@ -712,7 +727,7 @@ func TestBuildServiceMonitor(t *testing.T) {
 			// Check labels
 			labels := result.GetLabels()
 			g.Expect(labels["app"]).To(Equal("istiod"))
-			g.Expect(labels["monitored-by"]).To(Equal("coo-prometheus"))
+			expectMonitoredByLabel(g, tt.platform, labels)
 
 			// Check spec.targetLabels and selector
 			g.Expect(result.Spec.TargetLabels).To(Equal(tt.expectedTargetLabels))
@@ -803,7 +818,7 @@ func TestBuildPodMonitor(t *testing.T) {
 			reconciler := NewReconciler(cfg, cl, scheme.Scheme)
 			result := reconciler.buildPodMonitor(tt.rev, tt.namespace)
 
-			g.Expect(result.GetObjectKind().GroupVersionKind().Group).To(Equal("monitoring.rhobs"))
+			g.Expect(result.GetObjectKind().GroupVersionKind().Group).To(Equal(testMonitoringGV(tt.platform).Group))
 			g.Expect(result.GetObjectKind().GroupVersionKind().Version).To(Equal("v1"))
 			g.Expect(result.GetObjectKind().GroupVersionKind().Kind).To(Equal("PodMonitor"))
 			g.Expect(result.GetName()).To(Equal(tt.expectedName))
@@ -812,7 +827,7 @@ func TestBuildPodMonitor(t *testing.T) {
 			// Check labels
 			labels := result.GetLabels()
 			g.Expect(labels["app"]).To(Equal("istio-proxy"))
-			g.Expect(labels["monitored-by"]).To(Equal("coo-prometheus"))
+			expectMonitoredByLabel(g, tt.platform, labels)
 
 			// PodMonitor should NOT have owner references (cross-namespace)
 			ownerRefs := result.GetOwnerReferences()
@@ -1020,5 +1035,6 @@ func TestSidecarInjectionNamespacePredicate(t *testing.T) {
 func newReconcilerTestConfig() config.ReconcilerConfig {
 	return config.ReconcilerConfig{
 		MaxConcurrentReconciles: 1,
+		Platform:                config.PlatformKubernetes,
 	}
 }
