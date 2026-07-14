@@ -1,0 +1,41 @@
+name: Sync changelog from release branches
+
+on:
+  schedule:
+    - cron: "30 6 * * *" # daily at 6:30 AM UTC (after update-deps at 5 AM)
+  workflow_dispatch:
+
+env:
+  GIT_USER: ${{ secrets.GIT_USER }}
+  GH_TOKEN: ${{ secrets.GIT_TOKEN }}
+  AUTOMATOR_ORG: istio-ecosystem
+  AUTOMATOR_REPO: sail-operator
+
+jobs:
+  sync-changelog:
+    runs-on: ubuntu-latest
+    container:
+      image: registry.istio.io/testing/build-tools:master-6db0b4c7fbe345bd531a07fbcff13877dc9cd801
+      options: --entrypoint ''
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        repository: istio/test-infra
+        ref: master
+
+    - run: git config --system --add safe.directory /__w/sail-operator/sail-operator
+
+    - name: Sync changelog
+      run: |
+        ./tools/automator/automator.sh \
+          --org=$AUTOMATOR_ORG \
+          --repo=sail-operator \
+          --branch=main \
+          '--title=Automator: Sync changelog from release branches' \
+          --labels=auto-merge,skip-changelog \
+          --email=openshiftservicemeshbot@gmail.com \
+          --modifier=sync_changelog \
+          --token-env \
+          --cmd='UPSTREAM_REMOTE=origin ./hack/sync-changelog-releases.sh' \
+          --signoff
