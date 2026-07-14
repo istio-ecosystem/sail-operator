@@ -2255,7 +2255,6 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `enabled` _boolean_ | Enable the untaint controller for new nodes. This aims to solve a race for CNI installation on new nodes. For this to work, the newly added nodes need to have the istio CNI taint as they are added to the cluster. This is usually done by configuring the cluster infra provider. |  |  |
 | `namespace` _string_ | The namespace of the CNI daemonset, incase it's not the same as istiod. |  |  |
-| `name` _string_ | The taint key used by the node-untaint controller to identify nodes that should be untainted. This corresponds to the Helm chart value `values.pilot.taint.name` and the environment variable `PILOT_NODE_UNTAINT_CONTROLLERS_TAINT_NAME` used by istiod. |  |  |
 
 
 
