@@ -225,6 +225,17 @@ func (k Kubectl) GetYAML(kind, name string) (string, error) {
 	return output, nil
 }
 
+// GetRaw returns the raw response from the Kubernetes API server for the given path.
+func (k Kubectl) GetRaw(path string) (string, error) {
+	cmd := k.build(fmt.Sprintf(" get --raw %q", path))
+	output, err := k.executeCommand(cmd)
+	if err != nil {
+		return "", fmt.Errorf("error getting raw API response: %w, output: %s", err, output)
+	}
+
+	return output, nil
+}
+
 // GetClusterRoleNamesByLabel runs `kubectl|oc get clusterrole -l <selector> -o name` (cluster-scoped; no namespace).
 func (k Kubectl) GetClusterRoleNamesByLabel(labelSelector string) (string, error) {
 	cmd := k.build(fmt.Sprintf(" get clusterrole -l %q -o name", labelSelector))

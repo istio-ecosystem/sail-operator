@@ -72,6 +72,7 @@ if [ "${MULTICLUSTER}" == "true" ]; then
     # Apply Gateway API CRDs which are needed for Multi-Cluster Ambient testing
     for config in "${KUBECONFIGS[@]}"; do
         kubectl apply --kubeconfig="$config" --server-side -f "${SCRIPTPATH}/testdata/gateway-api/experimental-install.yaml"
+        kubectl apply --kubeconfig="$config" --server-side -f "${SCRIPTPATH}/testdata/monitoring-rhobs/"
     done
 
     export KUBECONFIG="${KUBECONFIGS[0]}"
@@ -80,6 +81,8 @@ if [ "${MULTICLUSTER}" == "true" ]; then
 else
   KUBECONFIG="${ARTIFACTS}/config" setup_kind_cluster "${KIND_CLUSTER_NAME}" "${KIND_IMAGE}" "" "true" "true"
   setup_kind_registry "$KIND_CLUSTER_NAME"
+
+  export KUBECONFIG="${ARTIFACTS}/config"
 
   # Apply Gateway API CRDs needed for library tests
   kubectl apply --server-side -f "${SCRIPTPATH}/testdata/gateway-api/experimental-install.yaml"

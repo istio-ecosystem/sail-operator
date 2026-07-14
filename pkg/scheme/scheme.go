@@ -45,6 +45,7 @@ func init() {
 	utilruntime.Must(v1alpha1.AddToScheme(Scheme))
 	utilruntime.Must(v1.AddToScheme(Scheme))
 	utilruntime.Must(apiextensionsv1.AddToScheme(Scheme))
+	utilruntime.Must(monitoringv1.AddToScheme(Scheme))
 
 	// Register prometheus-operator monitoring types with the rhobs API group.
 	// This allows using typed Go objects while targeting the monitoring.rhobs/v1 API
