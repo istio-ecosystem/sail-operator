@@ -38,7 +38,6 @@ var (
 	controlPlaneNamespace = common.ControlPlaneNamespace
 	istioCniNamespace     = common.IstioCniNamespace
 	istioName             = env.Get("ISTIO_NAME", "default")
-	istioCniName          = env.Get("ISTIOCNI_NAME", "default")
 	multicluster          = env.GetBool("MULTICLUSTER", false)
 	ipFamily              = env.Get("IP_FAMILY", "ipv4")
 
