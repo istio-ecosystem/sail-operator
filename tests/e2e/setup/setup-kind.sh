@@ -74,7 +74,6 @@ if [ "${MULTICLUSTER}" == "true" ]; then
     # Apply Gateway API CRDs which are needed for Multi-Cluster Ambient testing
     for config in "${KUBECONFIGS[@]}"; do
         kubectl apply --kubeconfig="$config" --server-side -f "${SCRIPTPATH}/testdata/gateway-api/experimental-install.yaml"
-        kubectl apply --kubeconfig="$config" --server-side -f "${SCRIPTPATH}/testdata/monitoring-rhobs/"
     done
 
     export KUBECONFIG="${KUBECONFIGS[0]}"
@@ -88,6 +87,9 @@ else
 
   # Apply Gateway API CRDs needed for library tests
   KUBECONFIG="${ARTIFACTS}/config" kubectl apply --server-side -f "${SCRIPTPATH}/testdata/gateway-api/experimental-install.yaml"
+
+  # Install kube-prometheus-stack for monitoring controller e2e tests
+  "${SCRIPTPATH}/install-kube-prometheus-stack.sh"
 
   echo "Your KinD environment is ready, to use it: export KUBECONFIG=${ARTIFACTS}/config"
 fi
