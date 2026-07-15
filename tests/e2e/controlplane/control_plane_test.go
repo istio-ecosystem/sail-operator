@@ -43,6 +43,8 @@ var _ = Describe("Control Plane Installation", Label("control-plane", "slow", "s
 		DescribeTable("IstioCNI",
 			Entry("no spec", ""),
 			Entry("empty spec", "spec: {}"),
+				Fail("TODO: Testing please fix me")
+
 			func(ctx SpecContext, spec string) {
 				yaml := `
 apiVersion: sailoperator.io/v1
