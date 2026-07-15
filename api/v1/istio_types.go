@@ -72,7 +72,8 @@ type IstioSpec struct {
 	Monitoring *MonitoringConfig `json:"monitoring,omitempty"`
 }
 
-// MonitoringConfig defines the configuration for Prometheus monitoring integration
+// MonitoringConfig defines the configuration for Prometheus monitoring integration.
+// TODO(#2028): revisit this API when the monitoring enhancement SEP is merged.
 type MonitoringConfig struct {
 	// When enabled, the operator creates ServiceMonitor resources for istiod
 	// and PodMonitor resources for Envoy sidecars in namespaces with
@@ -81,6 +82,16 @@ type MonitoringConfig struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Enable Monitoring",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:booleanSwitch"}
 	// +kubebuilder:default=false
 	Enabled bool `json:"enabled,omitempty"`
+
+	// MonitoredBy identifies the Prometheus stack that should scrape the generated
+	// ServiceMonitor and PodMonitor resources. On Kubernetes, this value is applied
+	// to both the release and monitored-by labels for kube-prometheus-stack discovery.
+	// On OpenShift, this sets the monitored-by label used by COO. When omitted on
+	// OpenShift, monitored-by defaults to coo-prometheus. On Kubernetes, monitored-by
+	// defaults to kube-prometheus when this field is omitted.
+	// TODO(#2028): revisit field semantics when the monitoring enhancement SEP is merged.
+	// +optional
+	MonitoredBy string `json:"monitoredBy,omitempty"`
 }
 
 // IstioUpdateStrategy defines how the control plane should be updated when the version in
