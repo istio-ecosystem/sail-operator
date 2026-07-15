@@ -70,7 +70,7 @@ func (r *Reconciler) monitoringGV() schema.GroupVersion {
 
 func (r *Reconciler) monitorLabels(app string, monitoring *v1.MonitoringConfig) map[string]string {
 	labels := map[string]string{
-		"app":                        app,
+		"app":                       app,
 		constants.ManagedByLabelKey: constants.ManagedByLabelValue,
 	}
 	if monitoring == nil {
