@@ -29,6 +29,7 @@ import (
 	releasecommon "helm.sh/helm/v4/pkg/release/common"
 	releasev1 "helm.sh/helm/v4/pkg/release/v1"
 	"helm.sh/helm/v4/pkg/storage/driver"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/rest"
@@ -211,7 +212,17 @@ func (h *ChartManager) UninstallChart(ctx context.Context, releaseName, namespac
 
 	uninstallAction := action.NewUninstall(cfg)
 	uninstallAction.WaitStrategy = kube.HookOnlyStrategy
-	return uninstallAction.Run(releaseName)
+	resp, err := uninstallAction.Run(releaseName)
+	if err != nil {
+		var statusErr *apierrors.StatusError
+		if errors.As(err, &statusErr) && apierrors.IsNotFound(statusErr) {
+			// The release secret was deleted concurrently (e.g. namespace teardown racing
+			// with Helm's purge step). The release is gone regardless; treat as success.
+			return resp, nil
+		}
+		return nil, err
+	}
+	return resp, nil
 }
 
 func getRelease(cfg *action.Configuration, releaseName string) (release.Releaser, error) {

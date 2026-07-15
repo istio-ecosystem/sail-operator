@@ -18,7 +18,6 @@ package library
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -33,7 +32,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	configv1 "github.com/openshift/api/config/v1"
-	"helm.sh/helm/v4/pkg/storage/driver"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -85,14 +83,7 @@ var _ = Describe("Library Reconciliation", Label("library", "reconciliation"), O
 			Expect(err).NotTo(HaveOccurred())
 
 			DeferCleanup(func() {
-				// lib.Uninstall may race with Helm's internal purge step: after finding
-				// the release, the secret can be deleted concurrently before Helm purges
-				// it, producing a spurious ErrReleaseNotFound. EnsureNamespaceWithCleanup
-				// deletes the namespace afterward regardless, so no state is left behind.
-				// Any other error is unexpected and must be reported.
-				if err := lib.Uninstall(ctx, namespace, revision); err != nil && !errors.Is(err, driver.ErrReleaseNotFound) {
-					Expect(err).NotTo(HaveOccurred(), "unexpected error uninstalling Helm chart")
-				}
+				Expect(lib.Uninstall(ctx, namespace, revision)).To(Succeed())
 				lib.Stop()
 				Success("Cleaned up TLS test")
 			})
@@ -197,14 +188,7 @@ var _ = Describe("Library Reconciliation", Label("library", "reconciliation"), O
 			Expect(err).NotTo(HaveOccurred())
 
 			DeferCleanup(func() {
-				// lib.Uninstall may race with Helm's internal purge step: after finding
-				// the release, the secret can be deleted concurrently before Helm purges
-				// it, producing a spurious ErrReleaseNotFound. EnsureNamespaceWithCleanup
-				// deletes the namespace afterward regardless, so no state is left behind.
-				// Any other error is unexpected and must be reported.
-				if err := lib.Uninstall(ctx, namespace, revision); err != nil && !errors.Is(err, driver.ErrReleaseNotFound) {
-					Expect(err).NotTo(HaveOccurred(), "unexpected error uninstalling Helm chart")
-				}
+				Expect(lib.Uninstall(ctx, namespace, revision)).To(Succeed())
 				lib.Stop()
 				Success("Cleaned up reconcile loop test")
 			})
