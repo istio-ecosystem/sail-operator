@@ -7893,12 +7893,6 @@ spec:
                               new nodes. For this to work, the newly added nodes need to have the istio CNI taint as they are
                               added to the cluster. This is usually done by configuring the cluster infra provider.
                             type: boolean
-                          name:
-                            description: |-
-                              The taint key used by the node-untaint controller to identify nodes that should be untainted.
-                              This corresponds to the Helm chart value `values.pilot.taint.name` and the
-                              environment variable `PILOT_NODE_UNTAINT_CONTROLLERS_TAINT_NAME` used by istiod.
-                            type: string
                           namespace:
                             description: The namespace of the CNI daemonset, incase
                               it's not the same as istiod.

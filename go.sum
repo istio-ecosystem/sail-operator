@@ -212,8 +212,8 @@ github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnr
 github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
 github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.4.0 h1:VzM3TYHDgqPkettiP6I6q2jOeQFL4nrJM+UcAc4f6Fs=
 github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.4.0/go.mod h1:nqCI7aelBJU61wiBeeZWJ6oi4bJy5nrjkM6lWIMA4j0=
-github.com/klauspost/compress v1.19.0 h1:sXLILfc9jV2QYWkzFOPWStmcUVH2RHEB1JCdY2oVvCQ=
-github.com/klauspost/compress v1.19.0/go.mod h1:cwPg85FWrGar70rWktvGQj8/hthj3wpl0PGDogxkrSQ=
+github.com/klauspost/compress v1.18.6 h1:2jupLlAwFm95+YDR+NwD2MEfFO9d4z4Prjl1XXDjuao=
+github.com/klauspost/compress v1.18.6/go.mod h1:cwPg85FWrGar70rWktvGQj8/hthj3wpl0PGDogxkrSQ=
 github.com/kr/pretty v0.3.1 h1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=
 github.com/kr/pretty v0.3.1/go.mod h1:hoEshYVHaxMs3cyo3Yncou5ZscifuDolrwPKZanG3xk=
 github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=
@@ -473,8 +473,8 @@ istio.io/api v1.30.1-0.20260529120535-23c54ad84d6e h1:GPtgMkMjv1bE0m/bhVzoQdPm2a
 istio.io/api v1.30.1-0.20260529120535-23c54ad84d6e/go.mod h1:+brQWcBHoROuyA6fv8rbgg8Kfn0RCGuqoY0duCMuSLA=
 istio.io/client-go v1.30.2 h1:fNSLm/RHj/8ZalrWlOCCw68QI7S+O2r8ucrxOsGc00A=
 istio.io/client-go v1.30.2/go.mod h1:M6zHgHi2uud1EMrphZ9gcKx+6Wwn3j1UjtHss5TQyA4=
-istio.io/istio v0.0.0-20260708140027-80e35e0b7dd3 h1:zDrO6tXxv2jRQK0yEa9oxKoaIvgrvHODgLrQsf9/Lmc=
-istio.io/istio v0.0.0-20260708140027-80e35e0b7dd3/go.mod h1:pqNj5t9fXu+iK4pZeisvZc05AuBKBpcSqCtnaRDL1TE=
+istio.io/istio v0.0.0-20260624003133-f888ab4c8a0c h1:hdOR5oV8JVSOBZSPKtrfSu/oa6OCLSJE2QYbbWeOs0w=
+istio.io/istio v0.0.0-20260624003133-f888ab4c8a0c/go.mod h1:vmwpLZ2G/pm5AfrfA4Y1WukzEtsD4VwnUSGkyq8ofMk=
 k8s.io/api v0.35.3 h1:pA2fiBc6+N9PDf7SAiluKGEBuScsTzd2uYBkA5RzNWQ=
 k8s.io/api v0.35.3/go.mod h1:9Y9tkBcFwKNq2sxwZTQh1Njh9qHl81D0As56tu42GA4=
 k8s.io/apiextensions-apiserver v0.35.3 h1:2fQUhEO7P17sijylbdwt0nBdXP0TvHrHj0KeqHD8FiU=
