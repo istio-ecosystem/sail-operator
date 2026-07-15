@@ -1,13 +1,20 @@
-# Use distroless as minimal base image to package the manager binary
-# Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM registry.access.redhat.com/ubi9/ubi-minimal:latest 
-# gcr.io/distroless/static:nonroot
-
+FROM registry.access.redhat.com/ubi10/ubi:latest AS packager
 ARG TARGETOS TARGETARCH
 
-ADD out/${TARGETOS:-linux}_${TARGETARCH:-amd64}/manager /manager
-ADD resources /var/lib/sail-operator/resources
+RUN dnf -y --setopt=install_weak_deps=0 --nodocs \
+    --installroot /output install \
+    setup \
+ && dnf clean all --installroot /output
+RUN [ -d /usr/share/buildinfo ] && cp -a /usr/share/buildinfo /output/usr/share/buildinfo ||:
+RUN [ -d /root/buildinfo ] && cp -a /root/buildinfo /output/root/buildinfo ||:
+
+FROM scratch
+ARG TARGETOS TARGETARCH
+
+COPY --from=packager /output /
+
+ADD out/${TARGETOS:-linux}_${TARGETARCH:-amd64}/sail-operator /sail-operator
 
 USER 65532:65532
 WORKDIR /
-ENTRYPOINT ["/manager"]
+ENTRYPOINT ["/sail-operator"]

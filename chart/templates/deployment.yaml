@@ -2,17 +2,21 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app.kubernetes.io/component: manager
+    app.kubernetes.io/component: sail-operator
     app.kubernetes.io/created-by: {{ .Values.name }}
     app.kubernetes.io/instance: {{ .Values.deployment.name }}
     app.kubernetes.io/managed-by: helm
     app.kubernetes.io/name: deployment
     app.kubernetes.io/part-of: {{ .Values.name }}
     control-plane: {{ .Values.deployment.name }}
+    {{- with .Values.deployment.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
   name: {{ .Values.deployment.name }}
   namespace: {{ .Release.Namespace }}
 spec:
   replicas: 1
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
   selector:
     matchLabels:
       app.kubernetes.io/created-by: {{ .Values.name }}
@@ -22,7 +26,7 @@ spec:
   template:
     metadata:
       annotations:
-        kubectl.kubernetes.io/default-container: manager
+        kubectl.kubernetes.io/default-container: sail-operator
 {{- range $key, $val := .Values.deployment.annotations }}
         {{ $key | quote }}: {{ $val | quote}}
 {{- end }}
@@ -30,6 +34,9 @@ spec:
         app.kubernetes.io/created-by: {{ .Values.name }}
         app.kubernetes.io/part-of: {{ .Values.name }}
         control-plane: {{ .Values.deployment.name }}
+        {{- with (.Values.pod).labels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
       affinity:
         nodeAffinity:
@@ -47,47 +54,46 @@ spec:
                 operator: In
                 values:
                 - linux
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 6 }}
+      {{- end }}
       containers:
       - args:
-        - --secure-listen-address=0.0.0.0:8443
-        - --upstream=http://127.0.0.1:8080/
-        - --logtostderr=true
-        - --v=0
-        image: gcr.io/kubebuilder/kube-rbac-proxy:v0.16.0
-        name: kube-rbac-proxy
-        ports:
-        - containerPort: 8443
-          name: https
-          protocol: TCP
-        resources:
-          limits:
-            cpu: 500m
-            memory: 128Mi
-          requests:
-            cpu: 5m
-            memory: 64Mi
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-      - args:
         - --health-probe-bind-address=:8081
-        - --metrics-bind-address=127.0.0.1:8080
-{{- if eq .Values.platform "openshift" }}
-        - --default-profile=openshift
-{{- end }}
+        - --metrics-bind-address=:8443
+        - --zap-log-level={{ .Values.operatorLogLevel }}
+        {{- with .Values.operator.extraArgs }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
+        {{- end }}
         command:
-        - /manager
+        - /sail-operator
+        {{- with .Values.operator.env }}
+        env:
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
         image: {{ .Values.image }}
+{{- if .Values.imagePullPolicy }}
         imagePullPolicy: {{ .Values.imagePullPolicy }}
+{{- end }}
         livenessProbe:
           httpGet:
             path: /healthz
             port: 8081
           initialDelaySeconds: 15
           periodSeconds: 20
-        name: manager
+        name: sail-operator
         readinessProbe:
           httpGet:
             path: /readyz
@@ -96,16 +102,17 @@ spec:
           periodSeconds: 10
         resources:
           limits:
-            cpu: 500m
-            memory: 512Mi
+            cpu: {{ .Values.operator.resources.limits.cpu }}
+            memory: {{ .Values.operator.resources.limits.memory }}
           requests:
-            cpu: 10m
-            memory: 64Mi
+            cpu: {{ .Values.operator.resources.requests.cpu }}
+            memory: {{ .Values.operator.resources.requests.memory }}
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
             drop:
             - ALL
+          readOnlyRootFilesystem: true
         volumeMounts:
         - mountPath: /etc/sail-operator
           name: operator-config

@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	. "github.com/onsi/gomega"
@@ -60,7 +60,7 @@ func TestHasFinalizer(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			obj := &v1alpha1.Istio{
+			obj := &v1.Istio{
 				ObjectMeta: metav1.ObjectMeta{
 					Finalizers: tc.finalizers,
 				},
@@ -140,7 +140,7 @@ func TestRemoveFinalizer(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			obj := &v1alpha1.Istio{
+			obj := &v1.Istio{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test",
 					Finalizers: tc.initialFinalizers,
@@ -241,7 +241,7 @@ func TestAddFinalizer(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			obj := &v1alpha1.Istio{
+			obj := &v1.Istio{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test",
 					Finalizers: tc.initialFinalizers,

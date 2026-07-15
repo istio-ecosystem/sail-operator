@@ -118,7 +118,7 @@ spec:
                               prefix:
                                 type: string
                               regex:
-                                description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                                description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                                 type: string
                             type: object
                           type: array
@@ -132,6 +132,9 @@ spec:
                           description: Specifies how long the results of a preflight
                             request can be cached.
                           type: string
+                          x-kubernetes-validations:
+                          - message: must be a valid duration greater than 1ms
+                            rule: duration(self) >= duration('1ms')
                         unmatchedPreflights:
                           description: |-
                             Indicates whether preflight requests not matching the configured allowed origin shouldn't be forwarded to the upstream.
@@ -175,7 +178,7 @@ spec:
                           properties:
                             bytes:
                               description: response body as base64 encoded bytes.
-                              format: binary
+                              format: byte
                               type: string
                             string:
                               type: string
@@ -249,10 +252,16 @@ spec:
                           properties:
                             exponentialDelay:
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                             fixedDelay:
                               description: Add a fixed delay before forwarding the
                                 request.
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                             percent:
                               description: Percentage of requests on which the delay
                                 will be injected (0-100).
@@ -310,7 +319,7 @@ spec:
                             description: 'HTTP Authority values are case-sensitive
                               and formatted as follows: - `exact: "value"` for exact
                               string match - `prefix: "value"` for prefix-based match
-                              - `regex: "value"` for RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).'
+                              - `regex: "value"` for [RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                             oneOf:
                             - not:
                                 anyOf:
@@ -332,7 +341,7 @@ spec:
                               prefix:
                                 type: string
                               regex:
-                                description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                                description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                                 type: string
                             type: object
                           gateways:
@@ -364,7 +373,7 @@ spec:
                                 prefix:
                                   type: string
                                 regex:
-                                  description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                                  description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                                   type: string
                               type: object
                             description: The header keys must be lowercase and use
@@ -378,7 +387,7 @@ spec:
                             description: 'HTTP Method values are case-sensitive and
                               formatted as follows: - `exact: "value"` for exact string
                               match - `prefix: "value"` for prefix-based match - `regex:
-                              "value"` for RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).'
+                              "value"` for [RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                             oneOf:
                             - not:
                                 anyOf:
@@ -400,7 +409,7 @@ spec:
                               prefix:
                                 type: string
                               regex:
-                                description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                                description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                                 type: string
                             type: object
                           name:
@@ -435,7 +444,7 @@ spec:
                                 prefix:
                                   type: string
                                 regex:
-                                  description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                                  description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                                   type: string
                               type: object
                             description: Query parameters for matching.
@@ -444,7 +453,7 @@ spec:
                             description: 'URI Scheme values are case-sensitive and
                               formatted as follows: - `exact: "value"` for exact string
                               match - `prefix: "value"` for prefix-based match - `regex:
-                              "value"` for RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).'
+                              "value"` for [RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                             oneOf:
                             - not:
                                 anyOf:
@@ -466,7 +475,7 @@ spec:
                               prefix:
                                 type: string
                               regex:
-                                description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                                description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                                 type: string
                             type: object
                           sourceLabels:
@@ -488,7 +497,7 @@ spec:
                             description: 'URI to match values are case-sensitive and
                               formatted as follows: - `exact: "value"` for exact string
                               match - `prefix: "value"` for prefix-based match - `regex:
-                              "value"` for RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).'
+                              "value"` for [RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                             oneOf:
                             - not:
                                 anyOf:
@@ -510,7 +519,7 @@ spec:
                               prefix:
                                 type: string
                               regex:
-                                description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                                description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                                 type: string
                             type: object
                           withoutHeaders:
@@ -536,7 +545,7 @@ spec:
                                 prefix:
                                   type: string
                                 regex:
-                                  description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                                  description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                                   type: string
                               type: object
                             description: withoutHeader has the same syntax with the
@@ -661,6 +670,10 @@ spec:
                           maximum: 4294967295
                           minimum: 0
                           type: integer
+                        prefixRewrite:
+                          description: On a redirect, replace the matched prefix with
+                            this value.
+                          type: string
                         redirectCode:
                           description: On a redirect, Specifies the HTTP status code
                             to use in the redirect response.
@@ -684,10 +697,25 @@ spec:
                             request.
                           format: int32
                           type: integer
+                        backoff:
+                          description: Specifies the minimum duration between retry
+                            attempts.
+                          type: string
+                          x-kubernetes-validations:
+                          - message: must be a valid duration greater than 1ms
+                            rule: duration(self) >= duration('1ms')
                         perTryTimeout:
                           description: Timeout per attempt for a given request, including
                             the initial call and any retries.
                           type: string
+                          x-kubernetes-validations:
+                          - message: must be a valid duration greater than 1ms
+                            rule: duration(self) >= duration('1ms')
+                        retryIgnorePreviousHosts:
+                          description: Flag to specify whether the retries should
+                            ignore previously tried hosts during retry.
+                          nullable: true
+                          type: boolean
                         retryOn:
                           description: Specifies the conditions under which retry
                             takes place.
@@ -714,7 +742,7 @@ spec:
                             specified regex.
                           properties:
                             match:
-                              description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                              description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                               type: string
                             rewrite:
                               description: The string that should replace into matching
@@ -796,6 +824,9 @@ spec:
                     timeout:
                       description: Timeout for HTTP requests, default is disabled.
                       type: string
+                      x-kubernetes-validations:
+                      - message: must be a valid duration greater than 1ms
+                        rule: duration(self) >= duration('1ms')
                   type: object
                 type: array
               tcp:
@@ -970,11 +1001,83 @@ spec:
                 type: array
             type: object
           status:
+            properties:
+              conditions:
+                description: Current service state of the resource.
+                items:
+                  properties:
+                    lastProbeTime:
+                      description: Last time we probed the condition.
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: Human-readable message indicating details about
+                        last transition.
+                      type: string
+                    observedGeneration:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: Resource Generation to which the Condition refers.
+                      x-kubernetes-int-or-string: true
+                    reason:
+                      description: Unique, one-word, CamelCase reason for the condition's
+                        last transition.
+                      type: string
+                    status:
+                      description: Status is the status of the condition.
+                      type: string
+                    type:
+                      description: Type is the type of the condition.
+                      type: string
+                  type: object
+                type: array
+              observedGeneration:
+                anyOf:
+                - type: integer
+                - type: string
+                x-kubernetes-int-or-string: true
+              validationMessages:
+                description: Includes any errors or warnings detected by Istio's analyzers.
+                items:
+                  properties:
+                    documentationUrl:
+                      description: A url pointing to the Istio documentation for this
+                        specific error type.
+                      type: string
+                    level:
+                      description: |-
+                        Represents how severe a message is.
+
+                        Valid Options: UNKNOWN, ERROR, WARNING, INFO
+                      enum:
+                      - UNKNOWN
+                      - ERROR
+                      - WARNING
+                      - INFO
+                      type: string
+                    type:
+                      properties:
+                        code:
+                          description: A 7 character code matching `^IST[0-9]{4}$`
+                            intended to uniquely identify the message type.
+                          type: string
+                        name:
+                          description: A human-readable name for the message type.
+                          type: string
+                      type: object
+                  type: object
+                type: array
             type: object
             x-kubernetes-preserve-unknown-fields: true
         type: object
     served: true
-    storage: false
+    storage: true
     subresources:
       status: {}
   - additionalPrinterColumns:
@@ -1071,7 +1174,7 @@ spec:
                               prefix:
                                 type: string
                               regex:
-                                description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                                description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                                 type: string
                             type: object
                           type: array
@@ -1085,6 +1188,9 @@ spec:
                           description: Specifies how long the results of a preflight
                             request can be cached.
                           type: string
+                          x-kubernetes-validations:
+                          - message: must be a valid duration greater than 1ms
+                            rule: duration(self) >= duration('1ms')
                         unmatchedPreflights:
                           description: |-
                             Indicates whether preflight requests not matching the configured allowed origin shouldn't be forwarded to the upstream.
@@ -1128,7 +1234,7 @@ spec:
                           properties:
                             bytes:
                               description: response body as base64 encoded bytes.
-                              format: binary
+                              format: byte
                               type: string
                             string:
                               type: string
@@ -1202,10 +1308,16 @@ spec:
                           properties:
                             exponentialDelay:
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                             fixedDelay:
                               description: Add a fixed delay before forwarding the
                                 request.
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                             percent:
                               description: Percentage of requests on which the delay
                                 will be injected (0-100).
@@ -1263,7 +1375,7 @@ spec:
                             description: 'HTTP Authority values are case-sensitive
                               and formatted as follows: - `exact: "value"` for exact
                               string match - `prefix: "value"` for prefix-based match
-                              - `regex: "value"` for RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).'
+                              - `regex: "value"` for [RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                             oneOf:
                             - not:
                                 anyOf:
@@ -1285,7 +1397,7 @@ spec:
                               prefix:
                                 type: string
                               regex:
-                                description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                                description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                                 type: string
                             type: object
                           gateways:
@@ -1317,7 +1429,7 @@ spec:
                                 prefix:
                                   type: string
                                 regex:
-                                  description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                                  description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                                   type: string
                               type: object
                             description: The header keys must be lowercase and use
@@ -1331,7 +1443,7 @@ spec:
                             description: 'HTTP Method values are case-sensitive and
                               formatted as follows: - `exact: "value"` for exact string
                               match - `prefix: "value"` for prefix-based match - `regex:
-                              "value"` for RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).'
+                              "value"` for [RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                             oneOf:
                             - not:
                                 anyOf:
@@ -1353,7 +1465,7 @@ spec:
                               prefix:
                                 type: string
                               regex:
-                                description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                                description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                                 type: string
                             type: object
                           name:
@@ -1388,7 +1500,7 @@ spec:
                                 prefix:
                                   type: string
                                 regex:
-                                  description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                                  description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                                   type: string
                               type: object
                             description: Query parameters for matching.
@@ -1397,7 +1509,7 @@ spec:
                             description: 'URI Scheme values are case-sensitive and
                               formatted as follows: - `exact: "value"` for exact string
                               match - `prefix: "value"` for prefix-based match - `regex:
-                              "value"` for RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).'
+                              "value"` for [RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                             oneOf:
                             - not:
                                 anyOf:
@@ -1419,7 +1531,7 @@ spec:
                               prefix:
                                 type: string
                               regex:
-                                description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                                description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                                 type: string
                             type: object
                           sourceLabels:
@@ -1441,7 +1553,7 @@ spec:
                             description: 'URI to match values are case-sensitive and
                               formatted as follows: - `exact: "value"` for exact string
                               match - `prefix: "value"` for prefix-based match - `regex:
-                              "value"` for RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).'
+                              "value"` for [RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                             oneOf:
                             - not:
                                 anyOf:
@@ -1463,7 +1575,7 @@ spec:
                               prefix:
                                 type: string
                               regex:
-                                description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                                description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                                 type: string
                             type: object
                           withoutHeaders:
@@ -1489,7 +1601,7 @@ spec:
                                 prefix:
                                   type: string
                                 regex:
-                                  description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                                  description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                                   type: string
                               type: object
                             description: withoutHeader has the same syntax with the
@@ -1614,6 +1726,10 @@ spec:
                           maximum: 4294967295
                           minimum: 0
                           type: integer
+                        prefixRewrite:
+                          description: On a redirect, replace the matched prefix with
+                            this value.
+                          type: string
                         redirectCode:
                           description: On a redirect, Specifies the HTTP status code
                             to use in the redirect response.
@@ -1637,10 +1753,25 @@ spec:
                             request.
                           format: int32
                           type: integer
+                        backoff:
+                          description: Specifies the minimum duration between retry
+                            attempts.
+                          type: string
+                          x-kubernetes-validations:
+                          - message: must be a valid duration greater than 1ms
+                            rule: duration(self) >= duration('1ms')
                         perTryTimeout:
                           description: Timeout per attempt for a given request, including
                             the initial call and any retries.
                           type: string
+                          x-kubernetes-validations:
+                          - message: must be a valid duration greater than 1ms
+                            rule: duration(self) >= duration('1ms')
+                        retryIgnorePreviousHosts:
+                          description: Flag to specify whether the retries should
+                            ignore previously tried hosts during retry.
+                          nullable: true
+                          type: boolean
                         retryOn:
                           description: Specifies the conditions under which retry
                             takes place.
@@ -1667,7 +1798,7 @@ spec:
                             specified regex.
                           properties:
                             match:
-                              description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                              description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                               type: string
                             rewrite:
                               description: The string that should replace into matching
@@ -1749,6 +1880,9 @@ spec:
                     timeout:
                       description: Timeout for HTTP requests, default is disabled.
                       type: string
+                      x-kubernetes-validations:
+                      - message: must be a valid duration greater than 1ms
+                        rule: duration(self) >= duration('1ms')
                   type: object
                 type: array
               tcp:
@@ -1923,6 +2057,78 @@ spec:
                 type: array
             type: object
           status:
+            properties:
+              conditions:
+                description: Current service state of the resource.
+                items:
+                  properties:
+                    lastProbeTime:
+                      description: Last time we probed the condition.
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: Human-readable message indicating details about
+                        last transition.
+                      type: string
+                    observedGeneration:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: Resource Generation to which the Condition refers.
+                      x-kubernetes-int-or-string: true
+                    reason:
+                      description: Unique, one-word, CamelCase reason for the condition's
+                        last transition.
+                      type: string
+                    status:
+                      description: Status is the status of the condition.
+                      type: string
+                    type:
+                      description: Type is the type of the condition.
+                      type: string
+                  type: object
+                type: array
+              observedGeneration:
+                anyOf:
+                - type: integer
+                - type: string
+                x-kubernetes-int-or-string: true
+              validationMessages:
+                description: Includes any errors or warnings detected by Istio's analyzers.
+                items:
+                  properties:
+                    documentationUrl:
+                      description: A url pointing to the Istio documentation for this
+                        specific error type.
+                      type: string
+                    level:
+                      description: |-
+                        Represents how severe a message is.
+
+                        Valid Options: UNKNOWN, ERROR, WARNING, INFO
+                      enum:
+                      - UNKNOWN
+                      - ERROR
+                      - WARNING
+                      - INFO
+                      type: string
+                    type:
+                      properties:
+                        code:
+                          description: A 7 character code matching `^IST[0-9]{4}$`
+                            intended to uniquely identify the message type.
+                          type: string
+                        name:
+                          description: A human-readable name for the message type.
+                          type: string
+                      type: object
+                  type: object
+                type: array
             type: object
             x-kubernetes-preserve-unknown-fields: true
         type: object
@@ -2024,7 +2230,7 @@ spec:
                               prefix:
                                 type: string
                               regex:
-                                description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                                description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                                 type: string
                             type: object
                           type: array
@@ -2038,6 +2244,9 @@ spec:
                           description: Specifies how long the results of a preflight
                             request can be cached.
                           type: string
+                          x-kubernetes-validations:
+                          - message: must be a valid duration greater than 1ms
+                            rule: duration(self) >= duration('1ms')
                         unmatchedPreflights:
                           description: |-
                             Indicates whether preflight requests not matching the configured allowed origin shouldn't be forwarded to the upstream.
@@ -2081,7 +2290,7 @@ spec:
                           properties:
                             bytes:
                               description: response body as base64 encoded bytes.
-                              format: binary
+                              format: byte
                               type: string
                             string:
                               type: string
@@ -2155,10 +2364,16 @@ spec:
                           properties:
                             exponentialDelay:
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                             fixedDelay:
                               description: Add a fixed delay before forwarding the
                                 request.
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                             percent:
                               description: Percentage of requests on which the delay
                                 will be injected (0-100).
@@ -2216,7 +2431,7 @@ spec:
                             description: 'HTTP Authority values are case-sensitive
                               and formatted as follows: - `exact: "value"` for exact
                               string match - `prefix: "value"` for prefix-based match
-                              - `regex: "value"` for RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).'
+                              - `regex: "value"` for [RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                             oneOf:
                             - not:
                                 anyOf:
@@ -2238,7 +2453,7 @@ spec:
                               prefix:
                                 type: string
                               regex:
-                                description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                                description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                                 type: string
                             type: object
                           gateways:
@@ -2270,7 +2485,7 @@ spec:
                                 prefix:
                                   type: string
                                 regex:
-                                  description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                                  description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                                   type: string
                               type: object
                             description: The header keys must be lowercase and use
@@ -2284,7 +2499,7 @@ spec:
                             description: 'HTTP Method values are case-sensitive and
                               formatted as follows: - `exact: "value"` for exact string
                               match - `prefix: "value"` for prefix-based match - `regex:
-                              "value"` for RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).'
+                              "value"` for [RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                             oneOf:
                             - not:
                                 anyOf:
@@ -2306,7 +2521,7 @@ spec:
                               prefix:
                                 type: string
                               regex:
-                                description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                                description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                                 type: string
                             type: object
                           name:
@@ -2341,7 +2556,7 @@ spec:
                                 prefix:
                                   type: string
                                 regex:
-                                  description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                                  description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                                   type: string
                               type: object
                             description: Query parameters for matching.
@@ -2350,7 +2565,7 @@ spec:
                             description: 'URI Scheme values are case-sensitive and
                               formatted as follows: - `exact: "value"` for exact string
                               match - `prefix: "value"` for prefix-based match - `regex:
-                              "value"` for RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).'
+                              "value"` for [RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                             oneOf:
                             - not:
                                 anyOf:
@@ -2372,7 +2587,7 @@ spec:
                               prefix:
                                 type: string
                               regex:
-                                description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                                description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                                 type: string
                             type: object
                           sourceLabels:
@@ -2394,7 +2609,7 @@ spec:
                             description: 'URI to match values are case-sensitive and
                               formatted as follows: - `exact: "value"` for exact string
                               match - `prefix: "value"` for prefix-based match - `regex:
-                              "value"` for RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).'
+                              "value"` for [RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                             oneOf:
                             - not:
                                 anyOf:
@@ -2416,7 +2631,7 @@ spec:
                               prefix:
                                 type: string
                               regex:
-                                description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                                description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                                 type: string
                             type: object
                           withoutHeaders:
@@ -2442,7 +2657,7 @@ spec:
                                 prefix:
                                   type: string
                                 regex:
-                                  description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                                  description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                                   type: string
                               type: object
                             description: withoutHeader has the same syntax with the
@@ -2567,6 +2782,10 @@ spec:
                           maximum: 4294967295
                           minimum: 0
                           type: integer
+                        prefixRewrite:
+                          description: On a redirect, replace the matched prefix with
+                            this value.
+                          type: string
                         redirectCode:
                           description: On a redirect, Specifies the HTTP status code
                             to use in the redirect response.
@@ -2590,10 +2809,25 @@ spec:
                             request.
                           format: int32
                           type: integer
+                        backoff:
+                          description: Specifies the minimum duration between retry
+                            attempts.
+                          type: string
+                          x-kubernetes-validations:
+                          - message: must be a valid duration greater than 1ms
+                            rule: duration(self) >= duration('1ms')
                         perTryTimeout:
                           description: Timeout per attempt for a given request, including
                             the initial call and any retries.
                           type: string
+                          x-kubernetes-validations:
+                          - message: must be a valid duration greater than 1ms
+                            rule: duration(self) >= duration('1ms')
+                        retryIgnorePreviousHosts:
+                          description: Flag to specify whether the retries should
+                            ignore previously tried hosts during retry.
+                          nullable: true
+                          type: boolean
                         retryOn:
                           description: Specifies the conditions under which retry
                             takes place.
@@ -2620,7 +2854,7 @@ spec:
                             specified regex.
                           properties:
                             match:
-                              description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                              description: '[RE2 style regex-based match](https://github.com/google/re2/wiki/Syntax).'
                               type: string
                             rewrite:
                               description: The string that should replace into matching
@@ -2702,6 +2936,9 @@ spec:
                     timeout:
                       description: Timeout for HTTP requests, default is disabled.
                       type: string
+                      x-kubernetes-validations:
+                      - message: must be a valid duration greater than 1ms
+                        rule: duration(self) >= duration('1ms')
                   type: object
                 type: array
               tcp:
@@ -2876,11 +3113,83 @@ spec:
                 type: array
             type: object
           status:
+            properties:
+              conditions:
+                description: Current service state of the resource.
+                items:
+                  properties:
+                    lastProbeTime:
+                      description: Last time we probed the condition.
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: Human-readable message indicating details about
+                        last transition.
+                      type: string
+                    observedGeneration:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: Resource Generation to which the Condition refers.
+                      x-kubernetes-int-or-string: true
+                    reason:
+                      description: Unique, one-word, CamelCase reason for the condition's
+                        last transition.
+                      type: string
+                    status:
+                      description: Status is the status of the condition.
+                      type: string
+                    type:
+                      description: Type is the type of the condition.
+                      type: string
+                  type: object
+                type: array
+              observedGeneration:
+                anyOf:
+                - type: integer
+                - type: string
+                x-kubernetes-int-or-string: true
+              validationMessages:
+                description: Includes any errors or warnings detected by Istio's analyzers.
+                items:
+                  properties:
+                    documentationUrl:
+                      description: A url pointing to the Istio documentation for this
+                        specific error type.
+                      type: string
+                    level:
+                      description: |-
+                        Represents how severe a message is.
+
+                        Valid Options: UNKNOWN, ERROR, WARNING, INFO
+                      enum:
+                      - UNKNOWN
+                      - ERROR
+                      - WARNING
+                      - INFO
+                      type: string
+                    type:
+                      properties:
+                        code:
+                          description: A 7 character code matching `^IST[0-9]{4}$`
+                            intended to uniquely identify the message type.
+                          type: string
+                        name:
+                          description: A human-readable name for the message type.
+                          type: string
+                      type: object
+                  type: object
+                type: array
             type: object
             x-kubernetes-preserve-unknown-fields: true
         type: object
     served: true
-    storage: true
+    storage: false
     subresources:
       status: {}
 status:

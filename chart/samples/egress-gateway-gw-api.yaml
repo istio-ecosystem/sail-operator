@@ -1,0 +1,64 @@
+# ServiceEntry to allow traffic to httpbin.org
+apiVersion: networking.istio.io/v1
+kind: ServiceEntry
+metadata:
+  name: httpbin-ext
+spec:
+  hosts:
+  - httpbin.org
+  ports:
+  - number: 80
+    name: http
+    protocol: HTTP
+  location: MESH_EXTERNAL
+  resolution: DNS
+---
+# Gateway API Gateway for egress
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: httpbin-egress-gateway
+  annotations:
+    networking.istio.io/service-type: ClusterIP
+spec:
+  gatewayClassName: istio
+  listeners:
+  - name: http
+    hostname: httpbin.org
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+# HTTPRoute to direct traffic from sidecars to the egress gateway
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: direct-httpbin-to-egress-gateway
+spec:
+  parentRefs:
+  - kind: ServiceEntry
+    group: networking.istio.io
+    name: httpbin-ext
+  rules:
+  - backendRefs:
+    - name: httpbin-egress-gateway-istio
+      port: 80
+---
+# HTTPRoute to forward traffic from the egress gateway to httpbin.org
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: forward-httpbin-from-egress-gateway
+spec:
+  parentRefs:
+  - name: httpbin-egress-gateway
+  hostnames:
+  - httpbin.org
+  rules:
+  - backendRefs:
+    - kind: Hostname
+      group: networking.istio.io
+      name: httpbin.org
+      port: 80

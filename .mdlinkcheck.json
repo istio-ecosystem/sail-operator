@@ -1,0 +1,16 @@
+{
+  "ignorePatterns": [
+    {
+      "pattern": "^https://docs.github.com"
+    },
+    {
+      "pattern": "^https://github.com/\\S+/\\S+/(issues|pull)/[0-9]+"
+    },
+    {
+      "pattern": "^https://github.com/pulls"
+    },
+    {
+      "pattern": "^https://opensource.org/licenses/Apache-2.0$"
+    }
+  ]
+}

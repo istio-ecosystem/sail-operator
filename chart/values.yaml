@@ -1,37 +1,92 @@
 name: sailoperator
 deployment:
   name: sail-operator
-  annotations: {}
+  annotations:
+    images.v1_30_2.ztunnel: registry.istio.io/release/ztunnel:1.30.2
+    images.v1_30_2.istiod: registry.istio.io/release/pilot:1.30.2
+    images.v1_30_2.proxy: registry.istio.io/release/proxyv2:1.30.2
+    images.v1_30_2.cni: registry.istio.io/release/install-cni:1.30.2
+    images.v1_30_1.ztunnel: registry.istio.io/release/ztunnel:1.30.1
+    images.v1_30_1.istiod: registry.istio.io/release/pilot:1.30.1
+    images.v1_30_1.proxy: registry.istio.io/release/proxyv2:1.30.1
+    images.v1_30_1.cni: registry.istio.io/release/install-cni:1.30.1
+    images.v1_30_0.ztunnel: registry.istio.io/release/ztunnel:1.30.0
+    images.v1_30_0.istiod: registry.istio.io/release/pilot:1.30.0
+    images.v1_30_0.proxy: registry.istio.io/release/proxyv2:1.30.0
+    images.v1_30_0.cni: registry.istio.io/release/install-cni:1.30.0
+    images.v1_29_5.ztunnel: registry.istio.io/release/ztunnel:1.29.5
+    images.v1_29_5.istiod: registry.istio.io/release/pilot:1.29.5
+    images.v1_29_5.proxy: registry.istio.io/release/proxyv2:1.29.5
+    images.v1_29_5.cni: registry.istio.io/release/install-cni:1.29.5
+    images.v1_29_4.ztunnel: registry.istio.io/release/ztunnel:1.29.4
+    images.v1_29_4.istiod: registry.istio.io/release/pilot:1.29.4
+    images.v1_29_4.proxy: registry.istio.io/release/proxyv2:1.29.4
+    images.v1_29_4.cni: registry.istio.io/release/install-cni:1.29.4
+    images.v1_29_3.ztunnel: registry.istio.io/release/ztunnel:1.29.3
+    images.v1_29_3.istiod: registry.istio.io/release/pilot:1.29.3
+    images.v1_29_3.proxy: registry.istio.io/release/proxyv2:1.29.3
+    images.v1_29_3.cni: registry.istio.io/release/install-cni:1.29.3
+    images.v1_29_2.ztunnel: registry.istio.io/release/ztunnel:1.29.2
+    images.v1_29_2.istiod: registry.istio.io/release/pilot:1.29.2
+    images.v1_29_2.proxy: registry.istio.io/release/proxyv2:1.29.2
+    images.v1_29_2.cni: registry.istio.io/release/install-cni:1.29.2
+    images.v1_29_1.ztunnel: registry.istio.io/release/ztunnel:1.29.1
+    images.v1_29_1.istiod: registry.istio.io/release/pilot:1.29.1
+    images.v1_29_1.proxy: registry.istio.io/release/proxyv2:1.29.1
+    images.v1_29_1.cni: registry.istio.io/release/install-cni:1.29.1
+    images.v1_29_0.ztunnel: registry.istio.io/release/ztunnel:1.29.0
+    images.v1_29_0.istiod: registry.istio.io/release/pilot:1.29.0
+    images.v1_29_0.proxy: registry.istio.io/release/proxyv2:1.29.0
+    images.v1_29_0.cni: registry.istio.io/release/install-cni:1.29.0
+    images.v1_31_0-alpha_25f4803e.ztunnel: registry.istio.io/testing/ztunnel:1.31.0-alpha.25f4803ee1e64fc2fcb95d07b1c0e3353594e9a9
+    images.v1_31_0-alpha_25f4803e.istiod: registry.istio.io/testing/pilot:1.31.0-alpha.25f4803ee1e64fc2fcb95d07b1c0e3353594e9a9
+    images.v1_31_0-alpha_25f4803e.proxy: registry.istio.io/testing/proxyv2:1.31.0-alpha.25f4803ee1e64fc2fcb95d07b1c0e3353594e9a9
+    images.v1_31_0-alpha_25f4803e.cni: registry.istio.io/testing/install-cni:1.31.0-alpha.25f4803ee1e64fc2fcb95d07b1c0e3353594e9a9
+revisionHistoryLimit: 10
 service:
   port: 8443
 serviceAccountName: sail-operator
-
+operatorLogLevel: info
 csv:
   displayName: Sail Operator
   categories: OpenShift Optional, Integration & Delivery, Networking, Security
   capabilities: Seamless Upgrades
-  description: Experimental operator for installing Istio service mesh
+  description: The Sail Operator manages the lifecycle of your Istio control plane. It provides custom resources for you to deploy and manage your control plane components.
   longDescription: |-
-    This is an experimental operator for installing Istio service mesh.
+    The Sail Operator manages the lifecycle of your Istio control plane. It provides custom resources for you to deploy and manage your control plane components.
 
     This version of the operator supports the following Istio versions:
 
-    - v1.22.0
-    - v1.21.2
-    - v1.21.0
-    - latest (99c8da36)
+    - v1.30-latest
+    - v1.30.2
+    - v1.30.1
+    - v1.30.0
+    - v1.29-latest
+    - v1.29.5
+    - v1.29.4
+    - v1.29.3
+    - v1.29.2
+    - v1.29.1
+    - v1.29.0
+    - master
+    - v1.31.0-alpha.25f4803e
 
-    [See this page](https://github.com/istio-ecosystem/sail-operator/blob/pre-main/bundle/README.md) for instructions on how to use it.
+    [See this page](https://github.com/istio-ecosystem/sail-operator/blob/main/bundle/README.md) for instructions on how to use it.
   support: Community based
-  version: 3.0.0
+  version: 1.30.0
   icon:
     base64data: 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
     mediatype: image/png
   keywords:
-  - istio
-  - servicemesh
-  - envoy
-  annotations: 
+    - istio
+    - servicemesh
+    - envoy
+  labels:
+    operatorframework.io/arch.amd64: supported
+    operatorframework.io/arch.s390x: supported
+    operatorframework.io/arch.ppc64le: supported
+    operatorframework.io/arch.arm64: supported
+  annotations:
     features.operators.openshift.io/disconnected: "true"
     features.operators.openshift.io/fips-compliant: "false"
     features.operators.openshift.io/proxy-aware: "false"
@@ -42,12 +97,27 @@ csv:
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
     features.operators.openshift.io/csi: "false"
-# !! note that this value is always overwritten in the makefile !!
-image: quay.io/maistra-dev/istio-operator:3.0-latest
-imagePullPolicy: Always
-
+image: quay.io/sail-dev/sail-operator:1.30-latest
+# We're commenting out the imagePullPolicy to use k8s defaults
+# imagePullPolicy: Always
+operator:
+  # env:
+  # - name: GOMAXPROCS
+  #   valueFrom:
+  #     resourceFieldRef:
+  #       resource: limits.cpu
+  #       divisor: '1'
+  # - name: GOMEMLIMIT
+  #   valueFrom:
+  #     resourceFieldRef:
+  #       resource: limits.memory
+  #       divisor: '1'
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1024Mi
+    requests:
+      cpu: 10m
+      memory: 64Mi
 # setting this to true will add resources required to generate the bundle using operator-sdk
 bundleGeneration: false
-
-# can be either kubernetes or openshift
-platform: kubernetes

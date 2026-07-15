@@ -20,10 +20,15 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
+	"maps"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
+	"golang.org/x/mod/modfile"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 	"golang.org/x/tools/go/ast/astutil"
@@ -49,25 +54,34 @@ type Config struct {
 }
 
 type InputFile struct {
+	Module          string           `yaml:"module"`
 	Path            string           `yaml:"path"`
 	Transformations *Transformations `yaml:"transformations"`
 }
 
 type Transformations struct {
-	RemoveImports              []string          `yaml:"removeImports"`
-	RenameImports              map[string]string `yaml:"renameImports"`
-	AddImports                 map[string]string `yaml:"addImports"`
-	RemoveVars                 []string          `yaml:"removeVars"`
-	RemoveTypes                []string          `yaml:"removeTypes"`
-	PreserveTypes              []string          `yaml:"preserveTypes"`
-	RemoveFunctions            []string          `yaml:"removeFunctions"`
-	RemoveFields               []string          `yaml:"removeFields"`
-	RenameFields               map[string]string `yaml:"renameFields"`
-	RenameTypes                map[string]string `yaml:"renameTypes"`
-	ReplaceFunctionReturnTypes map[string]string `yaml:"replaceFunctionReturnTypes"`
-	ReplaceFieldTypes          map[string]string `yaml:"replaceFieldTypes"`
-	ReplaceTypes               map[string]string `yaml:"replaceTypes"`
-	AddTags                    map[string]string `yaml:"addTags"`
+	RemoveImports              []string            `yaml:"removeImports"`
+	RenameImports              map[string]string   `yaml:"renameImports"`
+	AddImports                 map[string]string   `yaml:"addImports"`
+	RemoveVars                 []string            `yaml:"removeVars"`
+	RemoveTypes                []string            `yaml:"removeTypes"`
+	PreserveTypes              []string            `yaml:"preserveTypes"`
+	RemoveFunctions            []string            `yaml:"removeFunctions"`
+	RemoveFields               []string            `yaml:"removeFields"`
+	RenameFields               map[string]string   `yaml:"renameFields"`
+	RenameTypes                map[string]string   `yaml:"renameTypes"`
+	ReplaceFunctionReturnTypes map[string]string   `yaml:"replaceFunctionReturnTypes"`
+	ReplaceFieldTypes          map[string]string   `yaml:"replaceFieldTypes"`
+	ReplaceTypes               map[string]string   `yaml:"replaceTypes"`
+	CopyTypes                  []CopyTransform     `yaml:"copyTypes"`
+	AddComments                map[string][]string `yaml:"addComments"`
+}
+
+type CopyTransform struct {
+	From          string   `yaml:"from"`
+	To            string   `yaml:"to"`
+	Comments      []string `yaml:"comments"`
+	IncludeFields []string `yaml:"includeFields"`
 }
 
 var config *Config
@@ -93,7 +107,7 @@ func main() {
 	for _, inputFile := range config.InputFiles {
 		fileTransformer := FileTransformer{
 			FileSet:         fset,
-			InputFile:       inputFile.Path,
+			InputFile:       getFilePath(inputFile.Module, inputFile.Path),
 			Transformations: merge(inputFile.Transformations, config.GlobalTransformations),
 			Package:         config.Package,
 		}
@@ -136,7 +150,8 @@ func merge(local, global *Transformations) *Transformations {
 		ReplaceFunctionReturnTypes: mergeStringMaps(local.ReplaceFunctionReturnTypes, global.ReplaceFunctionReturnTypes),
 		ReplaceFieldTypes:          mergeStringMaps(local.ReplaceFieldTypes, global.ReplaceFieldTypes),
 		ReplaceTypes:               mergeStringMaps(local.ReplaceTypes, global.ReplaceTypes),
-		AddTags:                    mergeStringMaps(local.AddTags, global.AddTags),
+		CopyTypes:                  local.CopyTypes,
+		AddComments:                mergeStringArrayMaps(local.AddComments, global.AddComments),
 	}
 }
 
@@ -150,11 +165,19 @@ func mergeStringArrays(arrays ...[]string) []string {
 	return result
 }
 
-func mergeStringMaps(maps ...map[string]string) map[string]string {
+func mergeStringMaps(mapsToMerge ...map[string]string) map[string]string {
 	result := make(map[string]string)
+	for _, m := range mapsToMerge {
+		maps.Copy(result, m)
+	}
+	return result
+}
+
+func mergeStringArrayMaps(maps ...map[string][]string) map[string][]string {
+	result := make(map[string][]string)
 	for _, m := range maps {
 		for k, v := range m {
-			result[k] = v
+			result[k] = append(result[k], v...)
 		}
 	}
 	return result
@@ -237,17 +260,17 @@ func (t *FileTransformer) processFile() (*ast.File, error) {
 						field.Type = newType
 					}
 
-					if tag := t.getFieldTags(structName, fieldName); tag != "" {
-						addTag(field, tag)
+					for _, comment := range t.getFieldComments(structName, fieldName) {
+						addComment(field, comment)
 					}
 					if toString(field.Type) == "*intstr.IntOrString" {
-						addTag(field, "// +kubebuilder:validation:XIntOrString")
+						addComment(field, "// +kubebuilder:validation:XIntOrString")
 					}
 
 					if field.Doc != nil {
 						for _, comment := range field.Doc.List {
 							if strings.HasPrefix(comment.Text, "// REQUIRED.") {
-								addTag(field, "// +kubebuilder:validation:Required")
+								addComment(field, "// +kubebuilder:validation:Required")
 								removeOmitemptyFromJSONTag(field)
 								// TODO: remove pointer?
 							}
@@ -262,6 +285,40 @@ func (t *FileTransformer) processFile() (*ast.File, error) {
 				if newName := t.getTypeRename(structName); newName != "" {
 					typeSpec.Name.Name = newName
 				}
+
+				if ct, found := t.getCopyTransform(structName); found {
+					structCopy := &ast.StructType{
+						Fields: &ast.FieldList{},
+					}
+					for _, f := range structType.Fields.List {
+						if slices.Contains(ct.IncludeFields, f.Names[0].Name) {
+							fCopy := &ast.Field{
+								Comment: nil, // remove inline comments
+								Doc:     f.Doc,
+								Names:   f.Names,
+								Type:    f.Type,
+								Tag:     f.Tag,
+							}
+							structCopy.Fields.List = append(structCopy.Fields.List, fCopy)
+						}
+					}
+					declCopy := &ast.GenDecl{
+						Tok: token.TYPE,
+						Specs: []ast.Spec{
+							&ast.TypeSpec{
+								Name: &ast.Ident{Name: ct.To},
+								Type: structCopy,
+							},
+						},
+					}
+					if len(ct.Comments) > 0 {
+						declCopy.Doc = &ast.CommentGroup{}
+						for _, c := range ct.Comments {
+							declCopy.Doc.List = append(declCopy.Doc.List, &ast.Comment{Text: c})
+						}
+					}
+					file.Decls = append(file.Decls, declCopy)
+				}
 			}
 		}
 		return true
@@ -272,9 +329,53 @@ func (t *FileTransformer) processFile() (*ast.File, error) {
 
 	t.renameImports(file)
 	fixNames(file)
+	processDocs(file)
 	removeEmptyBlocks(file)
 
 	return file, nil
+}
+
+// getFilePath finds the file path of the given module and file in the go.mod cache.
+func getFilePath(module, file string) string {
+	goModPath := "go.mod"
+
+	data, err := os.ReadFile(goModPath)
+	if err != nil {
+		panic(fmt.Errorf("could not read go.mod file: %v", err))
+	}
+
+	modFile, err := modfile.Parse(goModPath, data, nil)
+	if err != nil {
+		panic(fmt.Errorf("could not parse go.mod file: %v", err))
+	}
+
+	module, version := findDependencyVersion(modFile, module)
+	if version == "" {
+		panic(fmt.Errorf("dependency %s not found in go.mod", module))
+	}
+
+	goEnvOutput, err := exec.Command("go", "env", "GOMODCACHE").Output()
+	if err != nil {
+		panic(fmt.Errorf("failed to execute 'go env GOMODCACHE': %s", err))
+	}
+	modCachePath := strings.Trim(string(goEnvOutput), "\n")
+
+	return filepath.Join(modCachePath, module+"@"+version, file)
+}
+
+// findDependencyVersion finds the version of the given module path in the parsed modfile.
+func findDependencyVersion(modFile *modfile.File, modulePath string) (string, string) {
+	for _, replace := range modFile.Replace {
+		if replace.Old.Path == modulePath {
+			return replace.New.Path, replace.New.Version
+		}
+	}
+	for _, req := range modFile.Require {
+		if req.Mod.Path == modulePath {
+			return modulePath, req.Mod.Version
+		}
+	}
+	return "", ""
 }
 
 func mergeFiles(fset *token.FileSet, files []*ast.File) *ast.File {
@@ -321,7 +422,66 @@ func fixNames(file *ast.File) {
 	})
 }
 
-func addTag(node ast.Node, text string) {
+func processDocs(file *ast.File) {
+	ast.Inspect(file, func(n ast.Node) bool {
+		switch x := n.(type) {
+		case *ast.GenDecl:
+			convertHideFromDocs(x.Doc)
+			convertTabsToHeadings(x.Doc)
+		case *ast.TypeSpec:
+			convertHideFromDocs(x.Doc)
+			convertTabsToHeadings(x.Doc)
+		case *ast.ValueSpec:
+			convertHideFromDocs(x.Doc)
+			convertTabsToHeadings(x.Doc)
+		case *ast.Field:
+			convertHideFromDocs(x.Doc)
+			convertTabsToHeadings(x.Doc)
+		}
+		return true
+	})
+}
+
+func convertHideFromDocs(doc *ast.CommentGroup) {
+	if doc == nil {
+		return
+	}
+	for _, comment := range doc.List {
+		if strings.HasPrefix(comment.Text, "// $hide_from_docs") {
+			comment.Text = "// +hidefromdoc"
+		}
+	}
+}
+
+func convertTabsToHeadings(doc *ast.CommentGroup) {
+	if doc == nil {
+		return
+	}
+
+	inTabset := false
+
+	for i, comment := range doc.List {
+		switch {
+		case strings.Contains(comment.Text, "{{<tabset"):
+			inTabset = true
+			doc.List[i] = &ast.Comment{Text: "//"}
+		case inTabset && strings.Contains(comment.Text, "{{<tab name="):
+			// Extract the tab name and convert it to a heading
+			start := strings.Index(comment.Text, "name=\"") + len("name=\"")
+			end := strings.Index(comment.Text[start:], "\"") + start
+			heading := comment.Text[start:end]
+			doc.List[i] = &ast.Comment{Text: "// #### " + heading} // #### Heading
+		case inTabset && (strings.Contains(comment.Text, "{{</tab>}}") || strings.Contains(comment.Text, "{{</tabset")):
+			// Handle closing tab or tabset tags
+			doc.List[i] = &ast.Comment{Text: "//"}
+			if strings.Contains(comment.Text, "{{</tabset>}}") {
+				inTabset = false
+			}
+		}
+	}
+}
+
+func addComment(node ast.Node, text string) {
 	switch n := node.(type) {
 	case *ast.Field:
 		if n.Doc == nil {
@@ -398,7 +558,7 @@ func processInterfaceFields(file *ast.File) {
 							newFields = append(newFields, field)
 						}
 						if hasInterfaceField {
-							addTag(genDecl, buildOneOfValidation(interfaceFields))
+							addComment(genDecl, buildOneOfValidation(interfaceFields))
 						}
 						structType.Fields.List = newFields
 					}
@@ -553,7 +713,7 @@ func convertEnum(enumName string, file *ast.File) {
 					if ident, ok := typeSpec.Type.(*ast.Ident); ok && ident.Name == "int32" {
 						ident.Name = "string"
 					}
-					addTag(genDecl, "// +kubebuilder:validation:Enum="+strings.Join(enumValues, ";"))
+					addComment(genDecl, "// +kubebuilder:validation:Enum="+strings.Join(enumValues, ";"))
 				}
 			case token.CONST:
 				// change the constant values to strings
@@ -592,19 +752,15 @@ func removeQuotes(s string) string {
 func underscoreToCamelCase(input string) string {
 	words := strings.Split(input, "_")
 	caser := cases.Title(language.English)
-	for i := 0; i < len(words); i++ {
+	for i := range len(words) {
 		words[i] = caser.String(strings.ToLower(words[i]))
 	}
 	return strings.Join(words, "")
 }
 
 func (t *FileTransformer) shouldRemoveImport(importSpec *ast.ImportSpec) bool {
-	for _, path := range t.Transformations.RemoveImports {
-		if removeQuotes(importSpec.Path.Value) == path {
-			return true
-		}
-	}
-	return false
+	importPath := removeQuotes(importSpec.Path.Value)
+	return slices.Contains(t.Transformations.RemoveImports, importPath)
 }
 
 func removeLeadingEmptyLinesFromStructs(str string) string {
@@ -612,12 +768,14 @@ func removeLeadingEmptyLinesFromStructs(str string) string {
 
 	lines := strings.Split(str, "\n")
 	var prevTrimmedLine string
-	for _, line := range lines {
+	for index, line := range lines {
 		trimmedLine := strings.TrimSpace(line)
 		skipLine := trimmedLine == "" && strings.HasSuffix(prevTrimmedLine, "struct {")
 		if !skipLine {
 			sb.WriteString(line)
-			sb.WriteString("\n")
+			if index < len(lines)-1 {
+				sb.WriteString("\n")
+			}
 		}
 		prevTrimmedLine = trimmedLine
 	}
@@ -644,18 +802,18 @@ func (t *FileTransformer) getFieldRename(structName string, fieldName string) st
 	return getMapValue(structName, fieldName, t.Transformations.RenameFields)
 }
 
-func (t *FileTransformer) getFieldTags(structName string, fieldName string) string {
-	return getMapValue(structName, fieldName, t.Transformations.AddTags)
+func (t *FileTransformer) getFieldComments(structName string, fieldName string) []string {
+	return getMapValue(structName, fieldName, t.Transformations.AddComments)
 }
 
-func getMapValue(parent string, child string, m map[string]string) string {
+func getMapValue[T any](parent string, child string, m map[string]T) T {
 	if v, found := m[parent+"."+child]; found {
 		return v
 	}
 	if v, found := m["*."+child]; found {
 		return v
 	}
-	return ""
+	return *new(T) // return empty value
 }
 
 func matches(parent string, child string, list []string) bool {
@@ -667,6 +825,15 @@ func matches(parent string, child string, list []string) bool {
 		}
 	}
 	return false
+}
+
+func (t *FileTransformer) getCopyTransform(typeName string) (CopyTransform, bool) {
+	for _, ct := range t.Transformations.CopyTypes {
+		if ct.From == typeName {
+			return ct, true
+		}
+	}
+	return CopyTransform{}, false
 }
 
 func (t *FileTransformer) getTypeRename(typeName string) string {
@@ -787,31 +954,13 @@ func (t *FileTransformer) filterDeclarations(file *ast.File) {
 }
 
 func (t *FileTransformer) shouldRemoveVar(varName string) bool {
-	if protobufRelatedVarNameRegex.MatchString(varName) {
-		return true
-	}
-	for _, name := range t.Transformations.RemoveVars {
-		if varName == name {
-			return true
-		}
-	}
-	return false
+	return protobufRelatedVarNameRegex.MatchString(varName) || slices.Contains(t.Transformations.RemoveVars, varName)
 }
 
 func (t *FileTransformer) shouldRemoveType(name string) bool {
-	shouldRemove := false
-	for _, v := range t.Transformations.RemoveTypes {
-		if v == "*" || v == name {
-			shouldRemove = true
-			break
-		}
-	}
-	for _, v := range t.Transformations.PreserveTypes {
-		if v == name {
-			return false
-		}
-	}
-	return shouldRemove
+	shouldRemove := slices.Contains(t.Transformations.RemoveTypes, name) || slices.Contains(t.Transformations.RemoveTypes, "*")
+	mustPreserve := slices.Contains(t.Transformations.PreserveTypes, name)
+	return shouldRemove && !mustPreserve
 }
 
 func (t *FileTransformer) renameImports(file *ast.File) {
@@ -821,13 +970,17 @@ func (t *FileTransformer) renameImports(file *ast.File) {
 			if node.Sel != nil && node.X != nil {
 				if ident, ok := node.X.(*ast.Ident); ok {
 					if newName, found := t.Transformations.RenameImports[ident.Name]; found {
+						if newName == "" {
+							cursor.Replace(node.Sel)
+							return false
+						}
 						ident.Name = newName
 					}
 				}
 			}
 		case *ast.ImportSpec:
 			if node.Name != nil {
-				if newName, found := t.Transformations.RenameImports[node.Name.Name]; found {
+				if newName, found := t.Transformations.RenameImports[node.Name.Name]; found && newName != "" {
 					node.Name.Name = newName
 				}
 			}

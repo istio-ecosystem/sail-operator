@@ -28,6 +28,55 @@ var testImages = IstioImageConfig{
 	ZTunnelImage: "ztunnel-test",
 }
 
+func TestReadBytes(t *testing.T) {
+	testCases := []struct {
+		name           string
+		data           string
+		expectedConfig OperatorConfig
+		success        bool
+	}{
+		{
+			name: "valid properties",
+			data: `
+images.v1_20_0.istiod=istiod-test
+images.v1_20_0.proxy=proxy-test
+images.v1_20_0.cni=cni-test
+images.v1_20_0.ztunnel=ztunnel-test
+`,
+			expectedConfig: OperatorConfig{
+				ImageDigests: map[string]IstioImageConfig{
+					"v1.20.0": testImages,
+				},
+			},
+			success: true,
+		},
+		{
+			name: "empty data",
+			data: "",
+			expectedConfig: OperatorConfig{
+				ImageDigests: map[string]IstioImageConfig{},
+			},
+			success: true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := ReadBytes([]byte(tc.data))
+			if tc.success && err != nil {
+				t.Fatal("expected no error but got:", err)
+			}
+			if !tc.success && err == nil {
+				t.Fatal("expected error but got nil")
+			}
+			if tc.success {
+				if diff := cmp.Diff(Config, tc.expectedConfig); diff != "" {
+					t.Fatal("config did not match expectation:\n\n", diff)
+				}
+			}
+		})
+	}
+}
+
 func TestRead(t *testing.T) {
 	testCases := []struct {
 		name           string

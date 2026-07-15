@@ -16,7 +16,7 @@ package constants
 
 const (
 	// MetadataNamespace is the namespace for service mesh metadata (labels, annotations)
-	MetadataNamespace = "operator.istio.io"
+	MetadataNamespace = "sailoperator.io"
 
 	// CreatedByKey is used in annotations to mark ServiceMeshMemberRolls created by the ServiceMeshMember controller
 	CreatedByKey = MetadataNamespace + "/created-by"
@@ -58,6 +58,43 @@ const (
 	// KubernetesAppPartOfValue is the KubernetesAppPartOfKey label value the operator sets on all objects it creates
 	KubernetesAppPartOfValue = "istio"
 
-	// KubernetesAppManagedByValue is the KubernetesAppManagedByKey label value the operator sets on all objects it creates
-	KubernetesAppManagedByValue = "sail-operator"
+	// ManagedByLabelKey is the key for the kubernetes resource label indicating the resource is managed by the Sail operator
+	ManagedByLabelKey = "managed-by"
+
+	// ManagedByLabelValue is the ManagedByKey label value the operator sets on all objects it creates
+	ManagedByLabelValue = "sail-operator"
+
+	// WebhookReadinessProbeStatusAnnotationKey is an annotation on the istio-sidecar-injection MutatingWebhookConfiguration that
+	// reports whether the remote control plane is ready or not
+	WebhookReadinessProbeStatusAnnotationKey = MetadataNamespace + "/readinessProbe.status"
+
+	// WebhookReadinessProbeStatusReasonAnnotationKey is an annotation on the istio-sidecar-injection MutatingWebhookConfiguration that
+	// reports why the remote control plane is not ready
+	WebhookReadinessProbeStatusReasonAnnotationKey = MetadataNamespace + "/readinessProbe.reason"
+
+	// WebhookReadinessProbePeriodSecondsAnnotationKey is an annotation on the istio-sidecar-injection MutatingWebhookConfiguration that
+	// specifies the period for the readiness probe
+	WebhookReadinessProbePeriodSecondsAnnotationKey = MetadataNamespace + "/readinessProbe.periodSeconds"
+
+	// WebhookReadinessProbeTimeoutSecondsAnnotationKey is an annotation on the istio-sidecar-injection MutatingWebhookConfiguration that
+	// specifies the timeout for the readiness probe
+	WebhookReadinessProbeTimeoutSecondsAnnotationKey = MetadataNamespace + "/readinessProbe.timeoutSeconds"
+
+	// IstioInjectionLabel is the label that is used to configure injection for the 'default' IstioRevision
+	IstioInjectionLabel = "istio-injection"
+
+	// IstioInjectionEnabledValue is the value for IstioInjectionLabel
+	IstioInjectionEnabledValue = "enabled"
+
+	// IstioRevLabel is the label that is used to configure injection for non-default IstioRevisions
+	IstioRevLabel = "istio.io/rev"
+
+	// IstioSidecarInjectLabel is the label that is used to configure injection for specific workloads
+	IstioSidecarInjectLabel = "sidecar.istio.io/inject"
+
+	// IstiodChartName is the name of the chart that installs istiod
+	IstiodChartName = "istiod"
+
+	// BaseChartName is the name of the base chart
+	BaseChartName = "base"
 )

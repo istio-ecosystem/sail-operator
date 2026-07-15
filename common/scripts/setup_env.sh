@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # shellcheck disable=SC2034
 
 # WARNING: DO NOT EDIT, THIS FILE IS PROBABLY A COPY
@@ -49,6 +49,8 @@ elif [[ ${LOCAL_ARCH} == s390x ]]; then
     TARGET_ARCH=s390x
 elif [[ ${LOCAL_ARCH} == ppc64le ]]; then
     TARGET_ARCH=ppc64le
+elif [[ ${LOCAL_ARCH} == riscv64 ]]; then
+    TARGET_ARCH=riscv64
 else
     echo "This system's architecture, ${LOCAL_ARCH}, isn't supported"
     exit 1
@@ -72,10 +74,10 @@ else
 fi
 
 # Build image to use
-TOOLS_REGISTRY_PROVIDER=${TOOLS_REGISTRY_PROVIDER:-gcr.io}
-PROJECT_ID=${PROJECT_ID:-istio-testing}
+TOOLS_REGISTRY_PROVIDER=${TOOLS_REGISTRY_PROVIDER:-registry.istio.io}
+PROJECT_ID=${PROJECT_ID:-testing}
 if [[ "${IMAGE_VERSION:-}" == "" ]]; then
-  IMAGE_VERSION=master-4f4e6c25bef11db5adfea9d1e41dfaa55bf1ed53
+  IMAGE_VERSION=master-6db0b4c7fbe345bd531a07fbcff13877dc9cd801
 fi
 if [[ "${IMAGE_NAME:-}" == "" ]]; then
   IMAGE_NAME=build-tools
@@ -94,6 +96,19 @@ CONTAINER_TARGET_OUT_LINUX="${CONTAINER_TARGET_OUT_LINUX:-/work/out/linux_${TARG
 IMG="${IMG:-${TOOLS_REGISTRY_PROVIDER}/${PROJECT_ID}/${IMAGE_NAME}:${IMAGE_VERSION}}"
 
 CONTAINER_CLI="${CONTAINER_CLI:-docker}"
+
+# Try to use the latest cached image we have. Use at your own risk, may have incompatibly-old versions
+if [[ "${LATEST_CACHED_IMAGE:-}" != "" ]]; then
+  prefix="$(<<<"$IMAGE_VERSION" cut -d- -f1)"
+  query="${TOOLS_REGISTRY_PROVIDER}/${PROJECT_ID}/${IMAGE_NAME}:${prefix}-*"
+  latest="$("${CONTAINER_CLI}" images --filter=reference="${query}" --format "{{.CreatedAt|json}}~{{.Repository}}:{{.Tag}}~{{.CreatedSince}}" | sort -n -r | head -n1)"
+  IMG="$(<<<"$latest" cut -d~ -f2)"
+  if [[ "${IMG}" == "" ]]; then
+    echo "Attempted to use LATEST_CACHED_IMAGE, but found no images matching ${query}" >&2
+    exit 1
+  fi
+  echo "Using cached image $IMG, created $(<<<"$latest" cut -d~ -f3)" >&2
+fi
 
 ENV_BLOCKLIST="${ENV_BLOCKLIST:-^_\|^PATH=\|^GOPATH=\|^GOROOT=\|^SHELL=\|^EDITOR=\|^TMUX=\|^USER=\|^HOME=\|^PWD=\|^TERM=\|^RUBY_\|^GEM_\|^rvm_\|^SSH=\|^TMPDIR=\|^CC=\|^CXX=\|^MAKEFILE_LIST=}"
 

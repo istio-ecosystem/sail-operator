@@ -1,0 +1,22 @@
+name: integration-tests
+
+on: [push, pull_request]
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Run coverage
+      run: |
+        make test.integration \
+          -e COVERAGE=true
+
+    - name: Upload to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        files: out/coverage-integration.out
+        token: ${{ secrets.CODECOV_TOKEN }}
+        flags: integration-tests
+        fail_ci_if_error: true

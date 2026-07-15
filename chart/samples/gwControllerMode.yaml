@@ -1,4 +1,4 @@
-apiVersion: operator.istio.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: istio-gw
@@ -7,7 +7,7 @@ spec:
   namespace: istio-gw
   values:
     global:
-      hub: quay.io/maistra-dev
+      hub: quay.io/sail-dev
       tag: gwAPIControllerMode
     pilot:
       env:

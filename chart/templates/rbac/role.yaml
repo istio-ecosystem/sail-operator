@@ -7,16 +7,41 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - '*'
+  - configmaps
+  - endpoints
+  - events
+  - namespaces
+  - nodes
+  - persistentvolumeclaims
+  - pods
+  - replicationcontrollers
+  - resourcequotas
+  - secrets
+  - serviceaccounts
+  - services
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - admissionregistration.k8s.io
   resources:
   - mutatingwebhookconfigurations
+  - validatingadmissionpolicies
+  - validatingadmissionpolicybindings
   - validatingwebhookconfigurations
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - apiextensions.k8s.io
   resources:
@@ -31,33 +56,75 @@ rules:
   - daemonsets
   - deployments
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - autoscaling
   resources:
   - horizontalpodautoscalers
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
 - apiGroups:
   - k8s.cni.cncf.io
   resources:
   - network-attachment-definitions
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - networking.istio.io
   resources:
   - envoyfilters
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - networking.k8s.io
   resources:
   - networkpolicies
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
-  - operator.istio.io
+  - sailoperator.io
   resources:
   - istiorevisions
   verbs:
@@ -69,13 +136,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - operator.istio.io
+  - sailoperator.io
   resources:
   - istiorevisions/finalizers
   verbs:
   - update
 - apiGroups:
-  - operator.istio.io
+  - sailoperator.io
   resources:
   - istiorevisions/status
   verbs:
@@ -83,7 +150,33 @@ rules:
   - patch
   - update
 - apiGroups:
-  - operator.istio.io
+  - sailoperator.io
+  resources:
+  - istiorevisiontags
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - sailoperator.io
+  resources:
+  - istiorevisiontags/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - sailoperator.io
+  resources:
+  - istiorevisiontags/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - sailoperator.io
   resources:
   - istiocnis
   verbs:
@@ -95,13 +188,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - operator.istio.io
+  - sailoperator.io
   resources:
   - istiocnis/finalizers
   verbs:
   - update
 - apiGroups:
-  - operator.istio.io
+  - sailoperator.io
   resources:
   - istiocnis/status
   verbs:
@@ -109,7 +202,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - operator.istio.io
+  - sailoperator.io
   resources:
   - istios
   verbs:
@@ -121,15 +214,41 @@ rules:
   - update
   - watch
 - apiGroups:
-  - operator.istio.io
+  - sailoperator.io
   resources:
   - istios/finalizers
   verbs:
   - update
 - apiGroups:
-  - operator.istio.io
+  - sailoperator.io
   resources:
   - istios/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - sailoperator.io
+  resources:
+  - remoteistios
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - sailoperator.io
+  resources:
+  - remoteistios/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - sailoperator.io
+  resources:
+  - remoteistios/status
   verbs:
   - get
   - patch
@@ -139,7 +258,13 @@ rules:
   resources:
   - poddisruptionbudgets
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
@@ -148,7 +273,15 @@ rules:
   - rolebindings
   - roles
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+  - bind
+  - escalate
 - apiGroups:
   - security.openshift.io
   resourceNames:
@@ -157,3 +290,37 @@ rules:
   - securitycontextconstraints
   verbs:
   - use
+- apiGroups:
+  - config.openshift.io
+  resources:
+  - apiservers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - sailoperator.io
+  resources:
+  - ztunnels
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - sailoperator.io
+  resources:
+  - ztunnels/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - sailoperator.io
+  resources:
+  - ztunnels/status
+  verbs:
+  - get
+  - patch
+  - update

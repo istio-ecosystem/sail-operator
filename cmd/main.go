@@ -15,6 +15,8 @@
 package main
 
 import (
+	"context"
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"net/http"
@@ -23,15 +25,25 @@ import (
 	"github.com/istio-ecosystem/sail-operator/controllers/istio"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiocni"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiorevision"
+	"github.com/istio-ecosystem/sail-operator/controllers/istiorevisiontag"
+	"github.com/istio-ecosystem/sail-operator/controllers/webhook"
+	"github.com/istio-ecosystem/sail-operator/controllers/ztunnel"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
+	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/version"
+	"github.com/istio-ecosystem/sail-operator/resources"
+	configv1 "github.com/openshift/api/config/v1"
+	openshifttls "github.com/openshift/controller-runtime-common/pkg/tls"
+	openshiftcrypto "github.com/openshift/library-go/pkg/crypto"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
@@ -42,19 +54,23 @@ func main() {
 	var probeAddr string
 	var configFile string
 	var resourceDirectory string
-	var defaultProfile string
 	var logAPIRequests bool
 	var printVersion bool
 	var leaderElectionEnabled bool
-	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
+	var reconcilerCfg config.ReconcilerConfig
+
+	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8443", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.StringVar(&configFile, "config-file", "/etc/sail-operator/config.properties", "Location of the config file, propagated by k8s downward APIs")
-	flag.StringVar(&resourceDirectory, "resource-directory", "/var/lib/sail-operator/resources", "Where to find resources (e.g. charts)")
-	flag.StringVar(&defaultProfile, "default-profile", "default", "The name of the profile to apply to Istio and IstioRevision resources by default")
+	flag.StringVar(&resourceDirectory, "resource-directory", "", "Where to find resources (e.g. charts). If empty, uses embedded resources.")
+	flag.IntVar(&reconcilerCfg.MaxConcurrentReconciles, "max-concurrent-reconciles", 1,
+		"MaxConcurrentReconciles is the maximum number of concurrent Reconciles which can be run.")
 	flag.BoolVar(&logAPIRequests, "log-api-requests", false, "Whether to log each request sent to the Kubernetes API server")
 	flag.BoolVar(&printVersion, "version", printVersion, "Prints version information and exits")
 	flag.BoolVar(&leaderElectionEnabled, "leader-elect", true,
 		"Enable leader election for this operator. Enabling this will ensure there is only one active controller manager.")
+
+	flag.BoolVar(&enqueuelogger.LogEnqueueEvents, "log-enqueue-events", false, "Whether to log events that cause an object to be enqueued for reconciliation")
 
 	opts := zap.Options{
 		Development: true,
@@ -62,18 +78,25 @@ func main() {
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
-	if printVersion {
+	if printVersion || flag.NArg() > 0 && flag.Arg(0) == "version" {
 		fmt.Println(version.Info)
 		os.Exit(0)
 	}
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	operatorNamespace := os.Getenv("POD_NAMESPACE")
-	if operatorNamespace == "" {
+	if resourceDirectory != "" {
+		setupLog.Info("using filesystem resources", "directory", resourceDirectory)
+		reconcilerCfg.ResourceFS = os.DirFS(resourceDirectory)
+	} else {
+		setupLog.Info("using embedded resources")
+		reconcilerCfg.ResourceFS = resources.FS
+	}
+	reconcilerCfg.OperatorNamespace = os.Getenv("POD_NAMESPACE")
+	if reconcilerCfg.OperatorNamespace == "" {
 		contents, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
-		operatorNamespace = string(contents)
-		if err != nil || operatorNamespace == "" {
+		reconcilerCfg.OperatorNamespace = string(contents)
+		if err != nil || reconcilerCfg.OperatorNamespace == "" {
 			setupLog.Error(err, "can't determine namespace this operator is running in; if running outside of a pod, please set the POD_NAMESPACE environment variable")
 			os.Exit(1)
 		}
@@ -95,13 +118,72 @@ func main() {
 		})
 	}
 
+	reconcilerCfg.Platform, err = config.DetectPlatform(cfg)
+	if err != nil {
+		setupLog.Error(err, "unable to detect platform")
+		os.Exit(1)
+	}
+	setupLog.Info("detected platform", "platform", reconcilerCfg.Platform)
+
+	if reconcilerCfg.Platform == config.PlatformOpenShift {
+		reconcilerCfg.DefaultProfile = "openshift"
+	} else {
+		reconcilerCfg.DefaultProfile = "default"
+	}
+
+	// if the enable-http2 flag is false (the default), http/2 should be disabled
+	// due to its vulnerabilities. More specifically, disabling http/2 will
+	// prevent from being vulnerable to the HTTP/2 Stream Cancellation and
+	// Rapid Reset CVEs. For more information see:
+	// - https://github.com/advisories/GHSA-qppj-fm5r-hxr3
+	// - https://github.com/advisories/GHSA-4374-p667-p6c8
+	disableHTTP2 := func(c *tls.Config) {
+		setupLog.Info("disabling http/2 for metrics server")
+		c.NextProtos = []string{"http/1.1"}
+	}
+
+	metricsServerTLSOptions := []func(*tls.Config){
+		// disable http/2 because of https://github.com/kubernetes/kubernetes/issues/121197
+		disableHTTP2,
+	}
+
+	ctx, shutdown := context.WithCancel(ctrl.SetupSignalHandler())
+
+	if reconcilerCfg.Platform == config.PlatformOpenShift {
+		// Create a temporary client to fetch the initial TLS settings.
+		// We can't use the manager's client here because the manager hasn't started yet.
+		cl, err := client.New(cfg, client.Options{Scheme: scheme.Scheme})
+		if err != nil {
+			setupLog.Error(err, "unable to create temporary client")
+			os.Exit(1)
+		}
+
+		reconcilerCfg.TLSConfig, err = config.FetchTLSConfigForOpenShift(ctx, setupLog, cl)
+		if err != nil {
+			setupLog.Error(err, "unable to fetch TLS config")
+			os.Exit(1)
+		}
+
+		if reconcilerCfg.TLSConfig.OpenShift != nil && reconcilerCfg.TLSConfig.OpenShift.TLSConfigFunc != nil {
+			setupLog.Info("Using TLS config from APIServer", "tlsProfileSpec", reconcilerCfg.TLSConfig.OpenShift.TLSProfileSpec)
+			metricsServerTLSOptions = append(metricsServerTLSOptions, reconcilerCfg.TLSConfig.OpenShift.TLSConfigFunc)
+		}
+	}
+
+	metricsServerOptions := metricsserver.Options{
+		BindAddress:    metricsAddr,
+		SecureServing:  true,
+		FilterProvider: filters.WithAuthenticationAndAuthorization,
+		TLSOpts:        metricsServerTLSOptions,
+	}
+
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:                  scheme.Scheme,
-		Metrics:                 metricsserver.Options{BindAddress: metricsAddr},
+		Metrics:                 metricsServerOptions,
 		HealthProbeBindAddress:  probeAddr,
 		LeaderElection:          leaderElectionEnabled,
 		LeaderElectionID:        "sail-operator-lock",
-		LeaderElectionNamespace: operatorNamespace,
+		LeaderElectionNamespace: reconcilerCfg.OperatorNamespace,
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
@@ -115,31 +197,82 @@ func main() {
 		// LeaderElectionReleaseOnCancel: true,
 	})
 	if err != nil {
-		setupLog.Error(err, "unable to start manager")
+		setupLog.Error(err, "unable to start sail-operator manager")
 		os.Exit(1)
 	}
 
 	chartManager := helm.NewChartManager(mgr.GetConfig(), os.Getenv("HELM_DRIVER"))
 
-	err = istio.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDirectory, defaultProfile).
+	err = istio.NewReconciler(reconcilerCfg, mgr.GetClient(), mgr.GetScheme()).
 		SetupWithManager(mgr)
 	if err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Istio")
 		os.Exit(1)
 	}
 
-	err = istiorevision.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDirectory, chartManager).
+	err = istiorevision.NewReconciler(reconcilerCfg, mgr.GetClient(), mgr.GetScheme(), chartManager).
 		SetupWithManager(mgr)
 	if err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "IstioRevision")
 		os.Exit(1)
 	}
 
-	err = istiocni.NewReconciler(mgr.GetClient(), mgr.GetScheme(), resourceDirectory, chartManager, defaultProfile).
+	err = istiorevisiontag.NewReconciler(reconcilerCfg, mgr.GetClient(), mgr.GetScheme(), chartManager).
+		SetupWithManager(mgr)
+	if err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "IstioRevisionTag")
+		os.Exit(1)
+	}
+
+	err = istiocni.NewReconciler(reconcilerCfg, mgr.GetClient(), mgr.GetScheme(), chartManager).
 		SetupWithManager(mgr)
 	if err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "IstioCNI")
 		os.Exit(1)
+	}
+
+	err = ztunnel.NewReconciler(reconcilerCfg, mgr.GetClient(), mgr.GetScheme(), chartManager).
+		SetupWithManager(mgr)
+	if err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ZTunnel")
+		os.Exit(1)
+	}
+
+	err = webhook.NewReconciler(reconcilerCfg, mgr.GetClient(), mgr.GetScheme()).
+		SetupWithManager(mgr)
+	if err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Webhook")
+		os.Exit(1)
+	}
+
+	if reconcilerCfg.TLSConfig != nil && reconcilerCfg.TLSConfig.OpenShift != nil {
+		tlsWatcher := &openshifttls.SecurityProfileWatcher{
+			Client:                    mgr.GetClient(),
+			InitialTLSProfileSpec:     reconcilerCfg.TLSConfig.OpenShift.TLSProfileSpec,
+			InitialTLSAdherencePolicy: reconcilerCfg.TLSConfig.OpenShift.TLSAdherencePolicy,
+			OnProfileChange: func(ctx context.Context, oldProfile, newProfile configv1.TLSProfileSpec) {
+				if openshiftcrypto.ShouldHonorClusterTLSProfile(reconcilerCfg.TLSConfig.OpenShift.TLSAdherencePolicy) {
+					setupLog.Info("TLS profile has changed, initiating shutdown to reload configuration",
+						"oldProfile", oldProfile,
+						"newProfile", newProfile)
+					shutdown()
+				} else {
+					setupLog.Info("TLS profile has changed, but TLS adherence policy does not honor cluster TLS profile, skipping reload",
+						"policy", reconcilerCfg.TLSConfig.OpenShift.TLSAdherencePolicy)
+				}
+			},
+			OnAdherencePolicyChange: func(ctx context.Context, oldPolicy, newPolicy configv1.TLSAdherencePolicy) {
+				setupLog.Info("TLS adherence policy has changed, initiating shutdown to reload configuration",
+					"oldPolicy", oldPolicy,
+					"newPolicy", newPolicy)
+				shutdown()
+			},
+		}
+		err = tlsWatcher.SetupWithManager(mgr)
+		if err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "TLSSecurityProfileWatcher")
+			os.Exit(1)
+		}
 	}
 	// +kubebuilder:scaffold:builder
 
@@ -152,9 +285,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
+	setupLog.Info("starting sail-operator manager")
+	if err := mgr.Start(ctx); err != nil {
+		setupLog.Error(err, "problem running sail-operator manager")
 		os.Exit(1)
 	}
 }

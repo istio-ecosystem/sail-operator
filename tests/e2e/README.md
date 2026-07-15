@@ -1,8 +1,8 @@
-# Sail-operator end-to-end test
+# Sail Operator end-to-end test
 
 This end-to-end test suite utilizes Ginkgo, a testing framework known for its expressive specs (reference: https://onsi.github.io/ginkgo/). The setup for the test run is similar to the upstream Istio integration tests:
 * In the case of kind execution, it relies on the upstream script [`kind_provisioner.sh`](https://github.com/istio-ecosystem/sail-operator/blob/main/common/scripts/kind_provisioner.sh) and [`integ-suite-kind.sh`](https://github.com/istio-ecosystem/sail-operator/blob/main/tests/e2e/integ-suite-kind.sh), which are copied from the `github.com/istio/common-files` repository to set up the kind cluster used for the test.
-* In the case of OCP execution, it relies on the `inter-suite-ocp.sh` and `common-operator-integ-suite` scripts to setup the OCP cluster to be ready for the test.
+* In the case of OCP execution, it relies on the `integ-suite-ocp.sh` and `common-operator-integ-suite.sh` scripts to set up the OCP cluster to be ready for the test.
 
 ## Table of Contents
 
@@ -11,12 +11,19 @@ This end-to-end test suite utilizes Ginkgo, a testing framework known for its ex
     1. [Adding a Test Suite](#adding-a-test-suite)
     1. [Sub-Tests](#sub-tests)
     1. [Best practices](#best-practices)
-1. [Running Tests](#running-tests)
-    1. [Pre-requisites](#Pre-requisites)
-    1. [How to Run the test](#How-to-Run-the-test)
-    1. [Running the test locally](#Running-the-test-locally)
-    1. [Settings for end-to-end test execution](#Settings-for-end-to-end-test-execution)    
-    1. [Get test definitions for the end-to-end test](#Get-test-definitions-for-the-end-to-end-test)
+1. [Test Labels](#test-labels)
+    1. [Label Structure](#label-structure)
+    1. [Label Reference](#label-reference)
+    1. [Common Filter Examples](#common-filter-examples)
+1. [Running Tests](#running-the-tests)
+    1. [Pre-requisites](#pre-requisites)
+    1. [How to Run the test](#how-to-run-the-test)
+    1. [Running the test locally](#running-the-test-locally)
+    1. [Test Run scenarios while running on OCP](#test-run-scenarios-while-running-on-ocp)
+    1. [Settings for end-to-end test execution](#settings-for-end-to-end-test-execution)
+    1. [Customizing the test run](#customizing-the-test-run)
+    1. [Detecting and investigating flaky tests](#detecting-and-investigating-flaky-tests)
+    1. [Get test definitions for the end-to-end test](#get-test-definitions-for-the-end-to-end-test)
 1. [Contributing](#contributing)
 
 ## Overview
@@ -50,7 +57,7 @@ import (
     . "github.com/onsi/ginkgo"
 )
 
-var _ = Describe("Operator", func() {
+var _ = Describe("Operator", Label("labels-for-the-test"), Ordered, func() {
     Context("installation", func() {
         BeforeAll(func() {
             // Test setup code here
@@ -69,6 +76,8 @@ var _ = Describe("Operator", func() {
     })
 })
 ``` 
+Note: The `Label` function is used to label the test. This is useful when you want to run a specific test or a group of tests. The label can be used to filter the tests when running them. Ordered is used to run the tests in the order they are defined. This is useful when you want to run the tests in a specific order.
+
 
 * `tests/e2e/operator/operator_suite_test.go`
 ```go
@@ -88,7 +97,7 @@ func TestOperator(t *testing.T) {
 ```
 
 ### Sub-Tests
-The test suite can have multiple levels of sub-tests. The `Describe` block is used to group tests together. The `Context` block is used to group tests that share the same context. The `When` block is used to group tests that share the same action. The `It` block is used to define the test itself. So, the test suite can have multiple levels of sub-tests.
+The test suite can have multiple levels of subtests. The `Describe` block is used to group tests together. The `Context` block is used to group tests that share the same context. The `When` block is used to group tests that share the same action. The `It` block is used to define the test itself. So, the test suite can have multiple levels of subtests.
 
 For example:
 ```go
@@ -131,6 +140,14 @@ var _ = Describe("Operator", func() {
     })
 })
 ``` 
+* Add Labels to the tests. This is useful when you want to run a specific test or a group of tests. The label can be used to filter the tests when running them. For example:
+```go
+var _ = Describe("Ambient configuration ", Label("smoke", "ambient"), Ordered, func() {
+    Context("installation", func() {
+        // Test code here...
+    })
+})
+```
 * Use the `Describe` block to group tests together. Remember that the `Describe` block is the top-level block in the test suite.
 * Use the `When` block to group tests that share the same action. For example:
 ```go
@@ -159,8 +176,139 @@ var _ = Describe("Operator", func() {
 * Use `Success` helper to print Success message in the test output.
 * Use `kubectl` and `helm` utils to make all the necessary operations in the test that are going to be done by a user. This means that the test should simulate the user behavior when using the operator.
 * Use `client` to interact with the Kubernetes API. This is useful when you need to interact with the Kubernetes API directly and not through `kubectl`. This needs to be used to make all the assertions if is possible. We use the client to make the assertions over `kubectl` because it is more reliable and faster, it will not need any complex parsing of the output.
+* Use `cleaner` to clean up any resources your tests create after they finish. The cleaner records a "snapshot" of the cluster, and removes any resources that weren't recorded. The best way to use it is by adding call in `BeforeAll` and `AfterAll` blocks. For example:
+```go
+import "github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 
-## Running the test
+var _ = Describe("Testing with cleanup", Ordered, func() {
+    clr := cleaner.New(cl)
+
+    BeforeAll(func(ctx SpecContext) {
+        clr.Record(ctx)
+        // Any additional set up goes here
+    })
+
+    // Tests go here
+
+    AfterAll(func(ctx SpecContext) {
+        // Any finalizing logic goes here
+        clr.Cleanup(ctx)
+    })
+})
+```
+    * You can use multiple cleaners, each with its own state. This is useful if the test does some global set up, e.g. sets up the operator, and then specific tests create further resources which you want cleaned.
+    * To clean resources without waiting, and waiting for them later, use `CleanupNoWait` followed by `WaitForDeletion`. This is particularly useful when working with more than one cluster.
+
+## Test Labels
+
+Tests are labeled using Ginkgo's `Label()` function so that CI pipelines and developers can filter exactly the tests they want to run. Labels are passed via the `--label-filter` flag in `GINKGO_FLAGS`.
+
+### Label Structure
+
+Labels follow a multi-dimensional structure. Each test file carries one label from each applicable dimension.
+
+**Scope / Duration** — `smoke` or `slow` (never both; absence means normal duration)
+
+| Label | Meaning |
+|-------|---------|
+| `smoke` | Fast, critical-path tests for basic operator functionality. Only `operator` tests currently. |
+| `slow` | Tests that deploy full control planes, run traffic, or perform upgrade procedures. Expect longer execution times. |
+
+**Feature Area** — primary label, one per file
+
+| Label | Tests |
+|-------|-------|
+| `operator` | Operator deployment, CRDs, metrics endpoint |
+| `control-plane` | Istio/IstioRevision/IstioCNI lifecycle, defaulting, status |
+| `ambient` | Ambient mode (IstioCNI + ZTunnel + Istio ambient profile) |
+| `library` | Sail install library (reconciliation, CRD ownership) |
+| `dualstack` | Dual-stack networking |
+| `gateway-controller` | Gateway API controller via install library |
+| `multicluster` | Multi-cluster deployments |
+| `multi-control-plane` | Multiple Istio CRs in a single cluster |
+| `migration` | Sidecar-to-ambient migration procedures |
+
+**Sub-feature** — optional, for finer filtering within a feature area
+
+| Label | Tests |
+|-------|-------|
+| `ambient-dependency` | Dependency detection and health propagation |
+| `ambient-targetref` | ZTunnel value propagation via targetRef |
+| `ambient-validation` | API validation (CR naming enforcement) |
+| `reconciliation` | Library reconciliation loop behavior |
+| `crd-ownership` | CRD ownership and OLM coexistence |
+| `multicluster-multiprimary` | Multi-primary multi-network topology |
+| `multicluster-primaryremote` | Primary-remote multi-network topology |
+| `multicluster-external` | External control plane topology |
+| `migration-procedure` | Full sidecar-to-ambient migration procedure |
+| `migration-coexistence` | Sidecar/ambient coexistence during migration |
+| `update` | Version upgrade and in-place update tests |
+| `tls-profile` | OpenShift TLS profile syncing (operator metrics + IstioRevision) |
+
+**Dataplane Mode** — additive, marks tests that exercise a specific dataplane
+
+| Label | Tests |
+|-------|-------|
+| `sidecar` | Tests that validate sidecar injection mode |
+
+### Label Reference
+
+Complete label set per test file:
+
+| File | Labels |
+|------|--------|
+| `operator/operator_install_test.go` | `smoke`, `operator` |
+| `operator/operator_install_test.go` (TLS sub-describe) | `smoke`, `operator`, `tls-profile` |
+| `controlplane/control_plane_test.go` | `control-plane`, `slow`, `sidecar` |
+| `controlplane/control_plane_update_test.go` | `control-plane`, `update`, `slow`, `sidecar` |
+| `ambient/ambient_test.go` | `ambient`, `slow` |
+| `ambient/ambient_dependency_test.go` | `ambient`, `ambient-dependency` |
+| `ambient/ambient_targetref_test.go` | `ambient`, `ambient-targetref` |
+| `ambient/ambient_update_test.go` | `ambient`, `update`, `slow` |
+| `ambient/ambient_validation_test.go` | `ambient`, `ambient-validation` |
+| `library/library_reconcile_test.go` | `library`, `reconciliation` |
+| `library/library_crd_ownership_test.go` | `library`, `crd-ownership` |
+| `dualstack/dualstack_test.go` | `dualstack`, `slow`, `sidecar` |
+| `gatewaycontroller/gateway_controller_test.go` | `gateway-controller`, `slow` |
+| `multicluster/multicluster_multiprimary_test.go` | `multicluster`, `multicluster-multiprimary`, `slow` |
+| `multicluster/multicluster_primaryremote_test.go` | `multicluster`, `multicluster-primaryremote`, `slow`, `sidecar` |
+| `multicluster/multicluster_externalcontrolplane_test.go` | `multicluster`, `multicluster-external`, `slow`, `sidecar` |
+| `multicontrolplane/multi_control_plane_test.go` | `multi-control-plane`, `slow`, `sidecar` |
+| `migration/migration_procedure_test.go` | `migration`, `migration-procedure`, `slow` |
+| `migration/migration_coexistence_test.go` | `migration`, `migration-coexistence`, `slow` |
+
+### Common Filter Examples
+
+```bash
+# Only the smoke suite (operator install checks)
+GINKGO_FLAGS="--label-filter=smoke" make test.e2e.kind
+
+# All ambient tests
+GINKGO_FLAGS="--label-filter=ambient" make test.e2e.kind
+
+# All tests except slow ones (fast feedback loop)
+GINKGO_FLAGS="--label-filter=!slow" make test.e2e.kind
+
+# All sidecar-mode tests
+GINKGO_FLAGS="--label-filter=sidecar" make test.e2e.kind
+
+# All library tests (reconciliation + CRD ownership)
+GINKGO_FLAGS="--label-filter=library" make test.e2e.kind
+
+# All multicluster tests
+GINKGO_FLAGS="--label-filter=multicluster" make test.e2e.kind
+
+# Smoke suite without OpenShift-specific TLS tests
+GINKGO_FLAGS="--label-filter=smoke && !tls-profile" make test.e2e.kind
+
+# All control plane tests except version update tests
+GINKGO_FLAGS="--label-filter=control-plane && !update" make test.e2e.kind
+
+# Run a specific sub-feature
+GINKGO_FLAGS="--label-filter=ambient-targetref" make test.e2e.kind
+```
+
+## Running the tests
 The end-to-end test can be run in two different environments: OCP (OpenShift Container Platform) and KinD (Kubernetes in Docker).
 
 ### Pre-requisites
@@ -177,28 +325,71 @@ Specifically for OCP:
 
 * To run the end-to-end tests in OCP cluster, use the following command:
 ```
-$ make test.e2e.ocp
+make test.e2e.ocp
 ```
 
 * To run the end-to-end tests in KinD cluster, use the following command:
 ```
-$ make test.e2e.kind
+make test.e2e.kind
 ```
 
 Both targets will run setup first by using `integ-suite-ocp.sh` and `integ-suite-kind.sh` scripts respectively, and then run the end-to-end tests using the `common-operator-integ-suite` script setting different flags for OCP and KinD.
 
 Note: By default, the test runs inside a container because the env var `BUILD_WITH_CONTAINER` default value is 1. Take into account that to be able to run the end-to-end tests in a container, you need to have `docker` or `podman` installed in your machine. To select the container cli you will also need to set the `CONTAINER_CLI` env var to `docker` or `podman` in the `make` command, the default value is `docker`.
 
+#### How to Run a specific subset of tests
+To run a specific subset of tests, you can use the `GINKGO_FLAGS` environment variable. For example, to run only the `smoke` tests, you can use the following command:
+
+```
+GINKGO_FLAGS="-v --label-filter=smoke" make test.e2e.kind
+```
+Note: `-v` is to add verbosity to the output. The `--label-filter` flag is used to filter the tests by label. You can use multiple labels separated by commas. Please take a look at the topic [Settings for end to end test execution](#settings-for-end-to-end-test-execution) to see how you can set more customizations for the test run.
+
 ### Running the test locally
 
 To run the end-to-end tests without a container, use the following command:
 
 ```
-$ make BUILD_WITH_CONTAINER=0 test.e2e.kind
+make BUILD_WITH_CONTAINER=0 test.e2e.kind
 ```
 or
 ```
-$ make BUILD_WITH_CONTAINER=0 test.2e2.ocp
+make BUILD_WITH_CONTAINER=0 test.e2e.ocp
+```
+
+Note: if you are running the test against a cluster that has a different architecture than the one you are running the test, you will need to set the `TARGET_ARCH` environment variable to the architecture of the cluster. For example, if you are running the test against an ARM64 cluster, you can use the following command:
+
+```
+TARGET_ARCH=arm64 make test.e2e.ocp
+```
+
+#### Test Run scenarios while running on OCP
+When running the E2E test on OpenShift clusters, the framework supports three different registry scenarios:
+
+**Scenario 1: Test run with Internal Registry (Default behaviour)**
+For test run on OpenShift with the default settings, no additional configuration is needed. The test scripts will automatically configure and use the OpenShift internal registry:
+
+```sh
+# No HUB setting needed - uses internal registry by default
+make test.e2e.ocp
+```
+
+**Scenario 2: Test run with CI Mode with External Registry**
+In CI environments, set `CI=true` to use external registries with proper tagging:
+
+```sh
+export CI=true
+# Uses default HUB=quay.io/sail-dev with auto-generated tags if no PR_NUMBER var is being set 
+make test.e2e.ocp
+```
+
+**Scenario 3: Test run with custom External Registry**
+For custom external registries, specify your own HUB value:
+
+```sh
+export HUB=your-registry.com/your-namespace
+export TAG=your-tag
+make test.e2e.ocp
 ```
 
 ### Settings for end-to-end test execution
@@ -206,20 +397,235 @@ $ make BUILD_WITH_CONTAINER=0 test.2e2.ocp
 The following environment variables define the behavior of the test run:
 
 * SKIP_BUILD=false - If set to true, the test will skip the build process and an existing operator image will be used to deploy the operator and run the test. The operator image that is going to be used is defined by the `IMAGE` variable.
-* IMAGE=quay.io/maistra-dev/sail-operator:latest - The operator image to be used to deploy the operator and run the test. This is useful when you want to test a specific operator image.
-* SKIP_DEPLOY=false - If set to true, the test will skip the deployment of the operator. This is useful when the operator is already deployed in the cluster and you want to run the test only.
+* IMAGE=quay.io/sail-dev/sail-operator:latest - The operator image to be used to deploy the operator and run the test. This is useful when you want to test a specific operator image.
+* SKIP_DEPLOY=false - If set to true, the test will skip the deployment of the operator. This is useful when the operator is already deployed in the cluster, and you want to run the test only.
 * OCP=false - If set to true, the test will be configured to run on an OCP cluster and use the `oc` command to interact with it. If set to false, the test will run in a KinD cluster and use `kubectl`.
+* OLM=false - If set to true, the test will use the OLM (Operator Lifecycle Manager) to install the operator. If set to false, the test will use Helm to install the operator.
+* GINKGO_FLAGS - The flags to be passed to the Ginkgo test runner. This is useful when you want to set specific ginkgo flags to be used during the test run. For example, to run only the `smoke` tests, you can use set to `GINKGO_FLAGS="--label-filter=smoke"`. Also, you can set to `GINKGO_FLAGS="-v"` to add verbosity to the output. To understand more about the ginkgo flags, please refer to the [Ginkgo documentation](https://onsi.github.io/ginkgo/).
 * NAMESPACE=sail-operator - The namespace where the operator will be deployed and the test will run.
 * CONTROL_PLANE_NS=istio-system - The namespace where the control plane will be deployed.
 * DEPLOYMENT_NAME=sail-operator - The name of the operator deployment.
-* EXPECTED_REGISTRY=`^docker\.io|^gcr\.io` - Which image registry should the operand images come from. Useful for downstream tests.
+* EXPECTED_REGISTRY=`^docker\.io|^gcr\.io|^registry\.istio\.io` - Which image registry should the operand images come from. Useful for downstream tests.
+* KEEP_ON_FAILURE - If set to true, when using a local KIND cluster, don't clean it up when the test fails. This allows to debug the failure.
+* DEFAULT_TEST_TIMEOUT=180 - The default timeout in seconds for `Eventually` assertions. Increase this value when running tests on slow clusters (e.g., `DEFAULT_TEST_TIMEOUT=300` for 5 minutes).
+
+### Customizing the test run
+
+The test run can be customized by setting the following environment variables:
+
+To change all the sample files used in the test, you can use the following environment variable:
+* `SAMPLES_PATH=<path-to-kustomize-sample-base-folder>`. We use kustomize to patch the upstream sample yaml files to use images located in the `quay.io/sail-dev` registry. This is useful when you want to use your own sample files or when you want to use a different version of the sample files. The path should point to the folder where the kustomize files are located. For example, if you have your own sample files in the `tests/e2e/samples/custom` folder, you can set the environment variable as follows:
+```
+CUSTOM_SAMPLES_PATH=tests/e2e/samples/custom
+```
+
+Note: when setting this environment variable, make sure that the folder contains the kustomize files with the same structure as the upstream sample files. This means that the folder should contain:
+- helloworld/kustomize.yaml
+- sleep/kustomize.yaml
+- httpbin/kustomize.yaml
+- tcp-echo-dual-stack/kustomize.yaml
+- tcp-echo-dual-stack-ipv6/kustomize.yaml
+- tcp-echo-dual-stack-ipv4/kustomize.yaml
+
+note that each of the folders have their own kustomize file that will be used to patch the sample files. For example, the `helloworld` folder should contain a `kustomization.yaml` file with a content similar to this:
+```yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - <path-or-url-to-the-source-of-your-sample-file> # For example: https://raw.githubusercontent.com/istio/istio/master/samples/helloworld/helloworld.yaml
+images:
+    - name: docker.io/istio/examples-helloworld-v1 # This is the image that will be patched
+        newName: quay.io/sail-dev/examples-helloworld-v1 # This is the image that will be used in the test
+```
+
+You can also only patch one or more appa and continue using the others samples in the rest of the test. To do this instead of set the env var `CUSTOM_SAMPLES_PATH`, you can set the following environment variables:
+- `HTTPBIN_KUSTOMIZE_PATH`
+- `HELLOWORLD_KUSTOMIZE_PATH`
+- `SLEEP_KUSTOMIZE_PATH`
+- `TCP_ECHO_DUAL_STACK_KUSTOMIZE_PATH`
+- `TCP_ECHO_IPV4_KUSTOMIZE_PATH`
+- `TCP_ECHO_IPV6_KUSTOMIZE_PATH`
+
+Each of the env var will be pointing to the kustomize directory that will be used to patch the sample files.
+
+Note: the default behaviour is to use the kustomize files located un the folder `tests/e2e/samples/`. These kustomize files are used to patch the upstream examples from the master branch of the Istio repository to use images located in the `quay.io/sail-dev` registry.
+
+### Using the e2e framework to test your cluster configuration
+The e2e framework can be used to test your cluster configuration. The framework is designed to be flexible and extensible. It is easy to add new test suites and new tests. The idea is to be able to simulate what a real user scenario looks like when using the operator.
+
+To do this, we have a set of test cases under a test group called `smoke`. This test group will run a set of tests that are designed to test the basic functionality of the operator. The tests in this group are designed to be run against a cluster that is already configured and running. The tests will not modify the cluster configuration or the operator configuration. The tests will only check if the operator is working as expected.
+
+Pre-requisites:
+* The operator is already installed and running in the cluster.
+
+To run the test group, you can use the following command:
+
+* Run the following command to run the smoke tests:
+For running on kind:
+```
+SKIP_BUILD=true SKIP_DEPLOY=true GINKGO_FLAGS="-v --label-filter=smoke" make test.e2e.kind
+```
+
+For running on OCP:
+```
+SKIP_BUILD=true SKIP_DEPLOY=true GINKGO_FLAGS="-v --label-filter=smoke" make test.e2e.ocp
+```
+
+#### Running with specific configuration for the Istio and IstioCNI resource
+There might be situations where you want to run tests with a specific configuration for the Istio and IstioCNI resource to match some cluster specific needs. For this, you can modify the `pkg/istiovalues/vendor_default.yaml` file to default `spec.values` for the Istio and IstioCNI resources. For more information and an example go to the [file](../../pkg/istiovalues/vendor_defaults.yaml)
+
+#### Running the testing framework against specific Istio versions
+By default, the test framework will run the tests against all the latest patch minor version available for the operator. This is useful when you want to test the operator against all the latest patch minor versions available. The test framework will automatically detect the latest patch minor version available for the operator and run the tests against it by reading the versions located in the `pkg/istioversion/versions.yaml` file.
+
+To avoid this and run the tests against a specific Istio versions, you can create your own `versions.yaml` file and set the `VERSIONS_YAML_FILE` environment variable to point to it. The file should have the following structure:
+```yaml
+versions:
+  - name: v1.26-latest
+    ref: v1.26.0
+  - name: v1.26.0
+    version: 1.26.0
+    repo: https://github.com/istio/istio
+    commit: 1.26.0
+    charts:
+      - https://istio-release.storage.googleapis.com/charts/base-1.26.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-1.26.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/gateway-1.26.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/cni-1.26.0.tgz
+      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.26.0.tgz
+  - name: v1.25-latest
+    ref: v1.25.3
+  - name: v1.25.3
+    version: 1.25.3
+    repo: https://github.com/istio/istio
+    commit: 1.25.3
+    charts:
+      - https://istio-release.storage.googleapis.com/charts/base-1.25.3.tgz
+      - https://istio-release.storage.googleapis.com/charts/istiod-1.25.3.tgz
+      - https://istio-release.storage.googleapis.com/charts/gateway-1.25.3.tgz
+      - https://istio-release.storage.googleapis.com/charts/cni-1.25.3.tgz
+      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.25.3.tgz
+```
+*Important*: avoid adding in the custom file versions that are not available in the `pkg/istioversion/versions.yaml` file. The test framework will not be able to run the tests because the operator does not contains the charts for those versions.
+
+* To run the test framework against a specific Istio version, you can use the following command:
+```
+VERSIONS_YAML_FILE=custom_versions.yaml SKIP_BUILD=true SKIP_DEPLOY=true GINKGO_FLAGS="-v --label-filter=smoke" make test.e2e.kind
+```
+Note: The `custom_versions.yaml` file must be placed in the `pkg/istioversion` directory. The test framework uses this file to run tests against the specific Istio versions it defines.
+
+### Understanding the test output
+By default, running the test using the make target will generate a report.xml file in the project's root directory. This file contains the test results in JUnit format, for example:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+  <testsuites tests="154" disabled="79" errors="0" failures="0" time="588.636386015">
+      <testsuite name="Ambient Test Suite" package="/work/tests/e2e/ambient" tests="60" disabled="0" skipped="60" errors="0" failures="0" time="0.020193112" timestamp="2025-05-22T13:07:53">
+          <properties>
+```
+As you can see, the test results are grouped by test suite. The `tests` attribute indicates the number of tests that were run, the `disabled` attribute indicates the number of tests that were skipped, and the `errors` and `failures` attributes indicate the number of tests that failed or had errors. The `time` attribute indicates the total time taken to run the tests.
+
+Also, in the terminal you will be able to see the test results in a human readable format. The test results will be printed to the console with the following format:
+```
+Ran 82 of 82 Specs in 224.026 seconds
+SUCCESS! -- 82 Passed | 0 Failed | 0 Pending | 0 Skipped
+PASS
+
+Ginkgo ran 1 suite in 3m46.401610849s
+Test Suite Passed
+```
+
+In case of failure, the test results will be printed to the console with the following format:
+```
+Ran 82 of 82 Specs in 224.026 seconds
+FAIL! -- 81 Passed | 1 Failed | 0 Pending | 0 Skipped
+Ginkgo ran 1 suite in 3m46.401610849s
+Test Suite Failed
+```
+
+### Detecting and investigating flaky tests
+
+The `GINKGO_FLAGS` variable is passed directly to the Ginkgo runner, so all Ginkgo stress-test and retry flags work without any additional setup. The workflows below are intended for local use when investigating a test that fails intermittently.
+
+#### Repeat a suite N times
+
+Run the full suite (or a focused subset) up to N additional times, stopping at the first failure. Total runs = `1 + N`.
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind GINKGO_FLAGS="--repeat=3"
+```
+
+Combine with `--randomize-all` to expose ordering-dependent failures:
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind GINKGO_FLAGS="--repeat=5 --randomize-all"
+```
+
+#### Loop until a failure occurs
+
+Runs the suite indefinitely until a failure is detected. Stop with `Ctrl+C`. Useful for catching rare race conditions.
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind GINKGO_FLAGS="--until-it-fails"
+```
+
+#### Retry flaky specs automatically
+
+When a spec fails, Ginkgo retries it up to N times before marking the suite as failed. Retried-but-passing specs are reported but do not fail the run.
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind GINKGO_FLAGS="--flake-attempts=3"
+```
+
+#### Targeting a specific test
+
+Combine any of the flags above with `--focus` to isolate a single spec:
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind \
+  GINKGO_FLAGS="--focus='should update istiod deployment' --repeat=10"
+```
+
+Or use a label filter to stress a specific feature area:
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind \
+  GINKGO_FLAGS="--label-filter=library --repeat=5"
+```
+
+#### Per-spec decorators in test code
+
+For specs that are known to be sensitive, you can mark them in the source instead of relying on command-line flags.
+
+`MustPassRepeatedly(N)` requires the spec to pass N times in a row with no retries on failure — use this to verify correctness:
+
+```go
+It("does not enter an infinite reconcile loop", MustPassRepeatedly(3), func() {
+    // ...
+})
+```
+
+`FlakeAttempts(N)` retries the spec up to N times on failure — use sparingly and prefer fixing the root cause:
+
+```go
+It("syncs TLS settings", FlakeAttempts(3), func() {
+    // ...
+})
+```
+
+> **Note on `FlakeAttempts` in `Ordered` containers**: if the failure occurs inside an `It`, only that `It` is retried — `BeforeAll` is not re-run. If the failure is in a `BeforeAll`, Ginkgo runs `AfterAll` to clean up and then re-runs `BeforeAll`.
+
+#### Recommended workflow for a flaky CI result
+
+1. Identify the failing spec from the CI output.
+2. Run it locally with `--focus` and `--repeat=10` to reproduce.
+3. If it reproduces, add `MustPassRepeatedly` or fix the underlying race condition.
+4. If it does not reproduce, try `--until-it-fails --randomize-all` to expose ordering dependencies.
 
 ### Get test definitions for the end-to-end test
 
 The end-to-end test suite is defined in the `tests/e2e/operator` directory. If you want to check the test definition without running the test, you can use the following make target:
 
 ```
-$ make test.e2e.describe
+make test.e2e.describe
 ```
 
 When you run this target, the test definitions will be printed to the console with format `indent`. For example:

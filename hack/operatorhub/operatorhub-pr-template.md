@@ -6,7 +6,7 @@ Thanks submitting your Operator. Please check below list before you create your 
 * [x] Have you [packaged and deployed](https://github.com/operator-framework/community-operators/blob/master/docs/testing-operators.md) your Operator for Operator Framework?
 * [x] Have you tested your Operator with all Custom Resource Definitions?
 * [x] Have you tested your Operator in all supported [installation modes](https://github.com/operator-framework/operator-lifecycle-manager/blob/master/doc/design/building-your-csv.md#operator-metadata)?
-* [x] Have you considered whether you want use [semantic versioning order](https://github.com/operator-framework/community-operators/blob/master/docs/operator-ci-yaml.md#semver-mode)?
+* [x] Have you considered whether you want to use [semantic versioning order](https://github.com/operator-framework/community-operators/blob/master/docs/operator-ci-yaml.md#semver-mode)?
 * [x] Is your submission [signed](https://github.com/operator-framework/community-operators/blob/master/docs/contributing-prerequisites.md#sign-your-work)?
 * [ ] Is operator [icon](https://github.com/operator-framework/community-operators/blob/master/docs/packaging-operator.md#operator-icon) set?
 
@@ -23,7 +23,7 @@ Thanks submitting your Operator. Please check below list before you create your 
 * [x] Modify more than one operator
 * [x] Modify an Operator you don't own
 * [x] Rename an operator - please remove and add with a different name instead
-* [x] Modify any files outside the above mentioned folders
+* [x] Modify any files outside the above-mentioned folders
 * [x] Contain more than one commit. **Please squash your commits.**
 
 ### Operator Description must contain (in order)
@@ -34,7 +34,7 @@ Thanks submitting your Operator. Please check below list before you create your 
 
 ### Operator Metadata should contain
 
-* [x] Human readable name and 1-liner description about your Operator
+* [x] Human-readable name and 1-liner description about your Operator
 * [x] Valid [category name](https://github.com/operator-framework/community-operators/blob/master/docs/packaging-operator.md#categories)<sup>1</sup>
 * [x] One of the pre-defined [capability levels](https://github.com/operator-framework/operator-courier/blob/4d1a25d2c8d52f7de6297ec18d8afd6521236aa2/operatorcourier/validate.py#L556)<sup>2</sup>
 * [x] Links to the maintainer, source code and documentation

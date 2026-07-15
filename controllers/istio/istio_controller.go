@@ -18,19 +18,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path"
-	"reflect"
 	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
+	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
-	"github.com/istio-ecosystem/sail-operator/pkg/helm"
-	"github.com/istio-ecosystem/sail-operator/pkg/kube"
-	"github.com/istio-ecosystem/sail-operator/pkg/profiles"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
+	"github.com/istio-ecosystem/sail-operator/pkg/revision"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -38,6 +36,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -46,31 +45,29 @@ import (
 
 // Reconciler reconciles an Istio object
 type Reconciler struct {
-	ResourceDirectory string
-	DefaultProfile    string
+	Config config.ReconcilerConfig
 	client.Client
 	Scheme *runtime.Scheme
 }
 
-func NewReconciler(client client.Client, scheme *runtime.Scheme, resourceDir string, defaultProfile string) *Reconciler {
+func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *runtime.Scheme) *Reconciler {
 	return &Reconciler{
-		ResourceDirectory: resourceDir,
-		DefaultProfile:    defaultProfile,
-		Client:            client,
-		Scheme:            scheme,
+		Config: cfg,
+		Client: client,
+		Scheme: scheme,
 	}
 }
 
-// +kubebuilder:rbac:groups=operator.istio.io,resources=istios,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=operator.istio.io,resources=istios/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=operator.istio.io,resources=istios/finalizers,verbs=update
+// +kubebuilder:rbac:groups=sailoperator.io,resources=istios,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=sailoperator.io,resources=istios/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=sailoperator.io,resources=istios/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
-func (r *Reconciler) Reconcile(ctx context.Context, istio *v1alpha1.Istio) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, istio *v1.Istio) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
 	log.Info("Reconciling")
@@ -84,24 +81,34 @@ func (r *Reconciler) Reconcile(ctx context.Context, istio *v1alpha1.Istio) (ctrl
 
 // doReconcile is the function that actually reconciles the Istio object. Any error reported by this
 // function should get reported in the status of the Istio object by the caller.
-func (r *Reconciler) doReconcile(ctx context.Context, istio *v1alpha1.Istio) (result ctrl.Result, err error) {
+func (r *Reconciler) doReconcile(ctx context.Context, istio *v1.Istio) (result ctrl.Result, err error) {
 	if err := validate(istio); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	var values *v1alpha1.Values
-	if values, err = computeIstioRevisionValues(istio, r.DefaultProfile, r.ResourceDirectory); err != nil {
+	if err = r.reconcileActiveRevision(ctx, istio); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	if err = r.reconcileActiveRevision(ctx, istio, values); err != nil {
-		return ctrl.Result{}, err
+	// We cannot prune revisions that manage an external cluster because the operator currently
+	// has no way of knowing if the revision is still in use on the external cluster.
+	if !managesExternalRevision(istio) {
+		return revision.PruneInactive(ctx, r.Client, istio.UID, getActiveRevisionName(istio), getPruningGracePeriod(istio))
 	}
 
-	return r.pruneInactiveRevisions(ctx, istio)
+	return result, err
 }
 
-func validate(istio *v1alpha1.Istio) error {
+func managesExternalRevision(istio *v1.Istio) bool {
+	if values := istio.Spec.Values; values != nil {
+		if pilot := values.Pilot; pilot != nil {
+			return pilot.Env["EXTERNAL_ISTIOD"] == "true"
+		}
+	}
+	return false
+}
+
+func validate(istio *v1.Istio) error {
 	if istio.Spec.Version == "" {
 		return reconciler.NewValidationError("spec.version not set")
 	}
@@ -111,164 +118,65 @@ func validate(istio *v1alpha1.Istio) error {
 	return nil
 }
 
-func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1alpha1.Istio, values *v1alpha1.Values) error {
-	log := logf.FromContext(ctx)
-
-	activeRevisionName := getActiveRevisionName(istio)
-	log = log.WithValues("IstioRevision", activeRevisionName)
-
-	rev, err := r.getActiveRevision(ctx, istio)
-	if err == nil {
-		// update
-		rev.Spec.Version = istio.Spec.Version
-		rev.Spec.Values = values
-		log.Info("Updating IstioRevision")
-		if err = r.Client.Update(ctx, &rev); err != nil {
-			return fmt.Errorf("failed to update IstioRevision %q: %w", rev.Name, err)
-		}
-	} else if apierrors.IsNotFound(err) {
-		// create new
-		rev = v1alpha1.IstioRevision{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: activeRevisionName,
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						APIVersion:         v1alpha1.GroupVersion.String(),
-						Kind:               v1alpha1.IstioKind,
-						Name:               istio.Name,
-						UID:                istio.UID,
-						Controller:         ptr.Of(true),
-						BlockOwnerDeletion: ptr.Of(true),
-					},
-				},
-			},
-			Spec: v1alpha1.IstioRevisionSpec{
-				Version:   istio.Spec.Version,
-				Namespace: istio.Spec.Namespace,
-				Values:    values,
-			},
-		}
-		log.Info("Creating IstioRevision")
-		if err = r.Client.Create(ctx, &rev); err != nil {
-			return fmt.Errorf("failed to create IstioRevision %q: %w", rev.Name, err)
-		}
-	}
+func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1.Istio) error {
+	version, err := istioversion.Resolve(istio.Spec.Version)
 	if err != nil {
-		return fmt.Errorf("failed to get active IstioRevision: %w", err)
+		if istioversion.IsEOLVersion(istio.Spec.Version) {
+			return reconciler.NewValidationError(fmt.Sprintf("version %q is end-of-life and cannot be installed; use a supported version", istio.Spec.Version))
+		}
+		return fmt.Errorf("failed to resolve Istio version for %q: %w", istio.Name, err)
 	}
-	return nil
+
+	values, err := revision.ComputeValues(
+		istio.Spec.Values, istio.Spec.Namespace, version,
+		r.Config.Platform, r.Config.DefaultProfile, istio.Spec.Profile,
+		r.Config.ResourceFS, getActiveRevisionName(istio), r.Config.TLSConfig)
+	if err != nil {
+		return err
+	}
+
+	return revision.CreateOrUpdate(ctx, r.Client,
+		getActiveRevisionName(istio),
+		version, istio.Spec.Namespace, values,
+		metav1.OwnerReference{
+			APIVersion:         v1.GroupVersion.String(),
+			Kind:               v1.IstioKind,
+			Name:               istio.Name,
+			UID:                istio.UID,
+			Controller:         ptr.Of(true),
+			BlockOwnerDeletion: ptr.Of(true),
+		})
 }
 
-func (r *Reconciler) pruneInactiveRevisions(ctx context.Context, istio *v1alpha1.Istio) (ctrl.Result, error) {
-	log := logf.FromContext(ctx)
-	revisions, err := r.getRevisions(ctx, istio)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to get revisions: %w", err)
-	}
-
-	// the following code does two things:
-	// - prunes revisions whose grace period has expired
-	// - finds the time when the next revision is to be pruned
-	var nextPruneTimestamp *time.Time
-	for _, rev := range revisions {
-		if isActiveRevision(istio, &rev) {
-			log.V(2).Info("IstioRevision is the active revision", "IstioRevision", rev.Name)
-			continue
-		}
-		inUseCondition := rev.Status.GetCondition(v1alpha1.IstioRevisionConditionInUse)
-		inUse := inUseCondition.Status == metav1.ConditionTrue
-		if inUse {
-			log.V(2).Info("IstioRevision is in use", "IstioRevision", rev.Name)
-			continue
-		}
-
-		pruneTimestamp := inUseCondition.LastTransitionTime.Time.Add(getPruningGracePeriod(istio))
-		expired := pruneTimestamp.Before(time.Now())
-		if expired {
-			log.Info("Deleting expired IstioRevision", "IstioRevision", rev.Name)
-			err = r.Client.Delete(ctx, &rev)
-			if err != nil {
-				return ctrl.Result{}, fmt.Errorf("delete failed: %w", err)
-			}
-		} else {
-			log.V(2).Info("IstioRevision is not in use, but hasn't yet expired", "IstioRevision", rev.Name, "InUseLastTransitionTime", inUseCondition.LastTransitionTime)
-			if nextPruneTimestamp == nil || nextPruneTimestamp.After(pruneTimestamp) {
-				nextPruneTimestamp = &pruneTimestamp
-			}
-		}
-	}
-	if nextPruneTimestamp == nil {
-		log.V(2).Info("No IstioRevisions to prune")
-		return ctrl.Result{}, nil
-	}
-
-	requeueAfter := time.Until(*nextPruneTimestamp)
-	log.Info("Requeueing Istio resource for cleanup of expired IstioRevision", "RequeueAfter", requeueAfter)
-	// requeue so that we prune the next revision at the right time (if we didn't, we would prune it when
-	// something else triggers another reconciliation)
-	return ctrl.Result{RequeueAfter: requeueAfter}, nil
-}
-
-func getPruningGracePeriod(istio *v1alpha1.Istio) time.Duration {
+func getPruningGracePeriod(istio *v1.Istio) time.Duration {
 	strategy := istio.Spec.UpdateStrategy
-	period := int64(v1alpha1.DefaultRevisionDeletionGracePeriodSeconds)
+	period := int64(v1.DefaultRevisionDeletionGracePeriodSeconds)
 	if strategy != nil && strategy.InactiveRevisionDeletionGracePeriodSeconds != nil {
 		period = *strategy.InactiveRevisionDeletionGracePeriodSeconds
 	}
-	if period < v1alpha1.MinRevisionDeletionGracePeriodSeconds {
-		period = v1alpha1.MinRevisionDeletionGracePeriodSeconds
+	if period < v1.MinRevisionDeletionGracePeriodSeconds {
+		period = v1.MinRevisionDeletionGracePeriodSeconds
 	}
 	return time.Duration(period) * time.Second
 }
 
-func (r *Reconciler) getActiveRevision(ctx context.Context, istio *v1alpha1.Istio) (v1alpha1.IstioRevision, error) {
-	rev := v1alpha1.IstioRevision{}
-	err := r.Client.Get(ctx, getActiveRevisionKey(istio), &rev)
+func (r *Reconciler) getActiveRevision(ctx context.Context, istio *v1.Istio) (v1.IstioRevision, error) {
+	rev := v1.IstioRevision{}
+	err := r.Client.Get(ctx, GetActiveRevisionKey(istio), &rev)
 	if err != nil {
 		return rev, fmt.Errorf("get failed: %w", err)
 	}
 	return rev, nil
 }
 
-func (r *Reconciler) getRevisions(ctx context.Context, istio *v1alpha1.Istio) ([]v1alpha1.IstioRevision, error) {
-	revList := v1alpha1.IstioRevisionList{}
-	if err := r.Client.List(ctx, &revList); err != nil {
-		return nil, fmt.Errorf("list failed: %w", err)
-	}
-
-	var revisions []v1alpha1.IstioRevision
-	for _, rev := range revList.Items {
-		if isRevisionOwnedByIstio(rev, istio) {
-			revisions = append(revisions, rev)
-		}
-	}
-	return revisions, nil
-}
-
-func isRevisionOwnedByIstio(rev v1alpha1.IstioRevision, istio *v1alpha1.Istio) bool {
-	if istio.UID == "" {
-		panic(fmt.Sprintf("No UID set in Istio %q; did you forget to set it in your test?", istio.Name))
-	}
-	for _, owner := range rev.OwnerReferences {
-		if owner.UID == istio.UID {
-			return true
-		}
-	}
-	return false
-}
-
-func isActiveRevision(istio *v1alpha1.Istio, rev *v1alpha1.IstioRevision) bool {
-	return rev.Name == getActiveRevisionName(istio)
-}
-
-func getActiveRevisionKey(istio *v1alpha1.Istio) types.NamespacedName {
+func GetActiveRevisionKey(istio *v1.Istio) types.NamespacedName {
 	return types.NamespacedName{
 		Name: getActiveRevisionName(istio),
 	}
 }
 
-func getActiveRevisionName(istio *v1alpha1.Istio) string {
-	var strategy v1alpha1.UpdateStrategyType
+func getActiveRevisionName(istio *v1.Istio) string {
+	var strategy v1.UpdateStrategyType
 	if istio.Spec.UpdateStrategy != nil {
 		strategy = istio.Spec.UpdateStrategy.Type
 	}
@@ -276,184 +184,109 @@ func getActiveRevisionName(istio *v1alpha1.Istio) string {
 	switch strategy {
 	default:
 		fallthrough
-	case v1alpha1.UpdateStrategyTypeInPlace:
+	case v1.UpdateStrategyTypeInPlace:
 		return istio.Name
-	case v1alpha1.UpdateStrategyTypeRevisionBased:
+	case v1.UpdateStrategyTypeRevisionBased:
 		return istio.Name + "-" + strings.ReplaceAll(istio.Spec.Version, ".", "-")
 	}
 }
 
-func computeIstioRevisionValues(istio *v1alpha1.Istio, defaultProfile string, resourceDir string) (*v1alpha1.Values, error) {
-	// get userValues from Istio.spec.values
-	userValues := istio.Spec.Values
-
-	// apply image digests from configuration, if not already set by user
-	userValues = applyImageDigests(istio, userValues, config.Config)
-
-	// apply userValues on top of defaultValues from profiles
-	mergedHelmValues, err := profiles.Apply(getProfilesDir(resourceDir, istio), defaultProfile, istio.Spec.Profile, helm.FromValues(userValues))
-	if err != nil {
-		return nil, fmt.Errorf("failed to apply profile: %w", err)
-	}
-
-	values, err := helm.ToValues(mergedHelmValues, &v1alpha1.Values{})
-	if err != nil {
-		return nil, fmt.Errorf("conversion to Helm values failed: %w", err)
-	}
-
-	// override values that are not configurable by the user
-	applyOverrides(istio, values)
-	return values, nil
-}
-
-func getProfilesDir(resourceDir string, istio *v1alpha1.Istio) string {
-	return path.Join(resourceDir, istio.Spec.Version, "profiles")
-}
-
-func applyOverrides(istio *v1alpha1.Istio, values *v1alpha1.Values) {
-	revisionName := getActiveRevisionName(istio)
-
-	// Set revision name to "" if revision name is "default". This is a temporary fix until we fix the injection
-	// mutatingwebhook manifest; the webhook performs injection on namespaces labeled with "istio-injection: enabled"
-	// only when revision is "", but not also for "default", which it should, since elsewhere in the same manifest,
-	// the "" revision is mapped to "default".
-	if revisionName == v1alpha1.DefaultRevision {
-		revisionName = ""
-	}
-	values.Revision = revisionName
-
-	if values.Global == nil {
-		values.Global = &v1alpha1.GlobalConfig{}
-	}
-	values.Global.IstioNamespace = istio.Spec.Namespace
-}
-
-func applyImageDigests(istio *v1alpha1.Istio, values *v1alpha1.Values, config config.OperatorConfig) *v1alpha1.Values {
-	imageDigests, digestsDefined := config.ImageDigests[istio.Spec.Version]
-	// if we don't have default image digests defined for this version, it's a no-op
-	if !digestsDefined {
-		return values
-	}
-
-	if values == nil {
-		values = &v1alpha1.Values{}
-	}
-
-	// set image digests for components unless they've been configured by the user
-	if values.Pilot == nil {
-		values.Pilot = &v1alpha1.PilotConfig{}
-	}
-	if values.Pilot.Image == "" && values.Pilot.Hub == "" && values.Pilot.Tag == nil {
-		values.Pilot.Image = imageDigests.IstiodImage
-	}
-
-	if values.Global == nil {
-		values.Global = &v1alpha1.GlobalConfig{}
-	}
-
-	if values.Global.Proxy == nil {
-		values.Global.Proxy = &v1alpha1.ProxyConfig{}
-	}
-	if values.Global.Proxy.Image == "" {
-		values.Global.Proxy.Image = imageDigests.ProxyImage
-	}
-
-	if values.Global.ProxyInit == nil {
-		values.Global.ProxyInit = &v1alpha1.ProxyInitConfig{}
-	}
-	if values.Global.ProxyInit.Image == "" {
-		values.Global.ProxyInit.Image = imageDigests.ProxyImage
-	}
-
-	// TODO: add this once the API supports ambient
-	// if !hasUserDefinedImage("ztunnel", values) {
-	// 	values.ZTunnel.Image = imageDigests.ZTunnelImage
-	// }
-	return values
-}
-
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+	logger := mgr.GetLogger().WithName("ctrlr").WithName("istio")
+
+	// mainObjectHandler handles the IstioRevision watch events
+	mainObjectHandler := wrapEventHandler(logger, &handler.EnqueueRequestForObject{})
+
+	// ownedResourceHandler handles resources that are owned by the IstioRevision CR
+	ownedResourceHandler := wrapEventHandler(logger,
+		handler.EnqueueRequestForOwner(r.Scheme, r.RESTMapper(), &v1.Istio{}, handler.OnlyControllerOwner()))
+
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
 			LogConstructor: func(req *reconcile.Request) logr.Logger {
-				log := mgr.GetLogger().WithName("ctrlr").WithName("istio")
+				log := logger
 				if req != nil {
 					log = log.WithValues("Istio", req.Name)
 				}
 				return log
 			},
+			MaxConcurrentReconciles: r.Config.MaxConcurrentReconciles,
 		}).
-		For(&v1alpha1.Istio{}).
-		Owns(&v1alpha1.IstioRevision{}).
-		Complete(reconciler.NewStandardReconciler(r.Client, &v1alpha1.Istio{}, r.Reconcile))
+		// we use the Watches function instead of For(), so that we can wrap the handler so that events that cause the object to be enqueued are logged
+		Watches(&v1.Istio{}, mainObjectHandler).
+		Named("istio").
+		Watches(&v1.IstioRevision{}, ownedResourceHandler).
+		Complete(reconciler.NewStandardReconciler(r.Client, r.Reconcile))
 }
 
-func (r *Reconciler) determineStatus(ctx context.Context, istio *v1alpha1.Istio, reconcileErr error) (v1alpha1.IstioStatus, error) {
+func (r *Reconciler) determineStatus(ctx context.Context, istio *v1.Istio, reconcileErr error) (v1.IstioStatus, error) {
 	var errs errlist.Builder
 	status := *istio.Status.DeepCopy()
 	status.ObservedGeneration = istio.Generation
 
 	// set Reconciled and Ready conditions
 	if reconcileErr != nil {
-		status.SetCondition(v1alpha1.IstioCondition{
-			Type:    v1alpha1.IstioConditionReconciled,
+		status.SetCondition(v1.StatusCondition{
+			Type:    v1.IstioConditionReconciled,
 			Status:  metav1.ConditionFalse,
-			Reason:  v1alpha1.IstioReasonReconcileError,
+			Reason:  v1.IstioReasonReconcileError,
 			Message: reconcileErr.Error(),
 		})
-		status.SetCondition(v1alpha1.IstioCondition{
-			Type:    v1alpha1.IstioConditionReady,
+		status.SetCondition(v1.StatusCondition{
+			Type:    v1.IstioConditionReady,
 			Status:  metav1.ConditionUnknown,
-			Reason:  v1alpha1.IstioReasonReconcileError,
+			Reason:  v1.IstioReasonReconcileError,
 			Message: "cannot determine readiness due to reconciliation error",
 		})
-		status.State = v1alpha1.IstioReasonReconcileError
+		status.State = v1.IstioReasonReconcileError
 	} else {
+		status.ActiveRevisionName = getActiveRevisionName(istio)
 		rev, err := r.getActiveRevision(ctx, istio)
 		if apierrors.IsNotFound(err) {
-			revisionNotFound := func(conditionType v1alpha1.IstioConditionType) v1alpha1.IstioCondition {
-				return v1alpha1.IstioCondition{
+			revisionNotFound := func(conditionType v1.IstioConditionType) v1.StatusCondition {
+				return v1.StatusCondition{
 					Type:    conditionType,
 					Status:  metav1.ConditionFalse,
-					Reason:  v1alpha1.IstioReasonRevisionNotFound,
+					Reason:  v1.IstioReasonRevisionNotFound,
 					Message: "active IstioRevision not found",
 				}
 			}
 
-			status.SetCondition(revisionNotFound(v1alpha1.IstioConditionReconciled))
-			status.SetCondition(revisionNotFound(v1alpha1.IstioConditionReady))
-			status.State = v1alpha1.IstioReasonRevisionNotFound
+			status.SetCondition(revisionNotFound(v1.IstioConditionReconciled))
+			status.SetCondition(revisionNotFound(v1.IstioConditionReady))
+			status.State = v1.IstioReasonRevisionNotFound
 		} else if err == nil {
-			status.SetCondition(convertCondition(rev.Status.GetCondition(v1alpha1.IstioRevisionConditionReconciled)))
-			status.SetCondition(convertCondition(rev.Status.GetCondition(v1alpha1.IstioRevisionConditionReady)))
-			status.State = convertConditionReason(rev.Status.State)
+			status.SetCondition(rev.Status.GetCondition(v1.IstioRevisionConditionReconciled))
+			status.SetCondition(rev.Status.GetCondition(v1.IstioRevisionConditionReady))
+			status.SetCondition(rev.Status.GetCondition(v1.IstioRevisionConditionDependenciesHealthy))
+			status.State = rev.Status.State
 		} else {
-			activeRevisionGetFailed := func(conditionType v1alpha1.IstioConditionType) v1alpha1.IstioCondition {
-				return v1alpha1.IstioCondition{
+			activeRevisionGetFailed := func(conditionType v1.IstioConditionType) v1.StatusCondition {
+				return v1.StatusCondition{
 					Type:    conditionType,
 					Status:  metav1.ConditionUnknown,
-					Reason:  v1alpha1.IstioReasonFailedToGetActiveRevision,
+					Reason:  v1.IstioReasonFailedToGetActiveRevision,
 					Message: fmt.Sprintf("failed to get active IstioRevision: %s", err),
 				}
 			}
-			status.SetCondition(activeRevisionGetFailed(v1alpha1.IstioConditionReconciled))
-			status.SetCondition(activeRevisionGetFailed(v1alpha1.IstioConditionReady))
-			status.State = v1alpha1.IstioReasonFailedToGetActiveRevision
+			status.SetCondition(activeRevisionGetFailed(v1.IstioConditionReconciled))
+			status.SetCondition(activeRevisionGetFailed(v1.IstioConditionReady))
+			status.State = v1.IstioReasonFailedToGetActiveRevision
 			errs.Add(fmt.Errorf("failed to get active IstioRevision: %w", err))
 		}
 	}
 
 	// count the ready, in-use, and total revisions
-	if revisions, err := r.getRevisions(ctx, istio); err == nil {
-		status.Revisions.Total = int32(len(revisions))
+	if revs, err := revision.ListOwned(ctx, r.Client, istio.UID); err == nil {
+		status.Revisions.Total = int32(len(revs))
 		status.Revisions.Ready = 0
 		status.Revisions.InUse = 0
-		for _, rev := range revisions {
-			if rev.Status.GetCondition(v1alpha1.IstioRevisionConditionReady).Status == metav1.ConditionTrue {
+		for _, rev := range revs {
+			if rev.Status.GetCondition(v1.IstioRevisionConditionReady).Status == metav1.ConditionTrue {
 				status.Revisions.Ready++
 			}
-			if rev.Status.GetCondition(v1alpha1.IstioRevisionConditionInUse).Status == metav1.ConditionTrue {
+			if rev.Status.GetCondition(v1.IstioRevisionConditionInUse).Status == metav1.ConditionTrue {
 				status.Revisions.InUse++
 			}
 		}
@@ -466,54 +299,11 @@ func (r *Reconciler) determineStatus(ctx context.Context, istio *v1alpha1.Istio,
 	return status, errs.Error()
 }
 
-func (r *Reconciler) updateStatus(ctx context.Context, istio *v1alpha1.Istio, reconcileErr error) error {
-	var errs errlist.Builder
+func (r *Reconciler) updateStatus(ctx context.Context, istio *v1.Istio, reconcileErr error) error {
 	status, err := r.determineStatus(ctx, istio, reconcileErr)
-	if err != nil {
-		errs.Add(fmt.Errorf("failed to determine status: %w", err))
-	}
-
-	if !reflect.DeepEqual(istio.Status, status) {
-		if err := r.Client.Status().Patch(ctx, istio, kube.NewStatusPatch(status)); err != nil {
-			errs.Add(fmt.Errorf("failed to patch status: %w", err))
-		}
-	}
-	return errs.Error()
+	return reconciler.UpdateStatus(ctx, r.Client, istio, istio.Status, status, err)
 }
 
-func convertCondition(condition v1alpha1.IstioRevisionCondition) v1alpha1.IstioCondition {
-	return v1alpha1.IstioCondition{
-		Type:    convertConditionType(condition),
-		Status:  condition.Status,
-		Reason:  convertConditionReason(condition.Reason),
-		Message: condition.Message,
-	}
-}
-
-func convertConditionType(condition v1alpha1.IstioRevisionCondition) v1alpha1.IstioConditionType {
-	switch condition.Type {
-	case v1alpha1.IstioRevisionConditionReconciled:
-		return v1alpha1.IstioConditionReconciled
-	case v1alpha1.IstioRevisionConditionReady:
-		return v1alpha1.IstioConditionReady
-	default:
-		panic(fmt.Sprintf("can't convert IstioRevisionConditionType: %s", condition.Type))
-	}
-}
-
-func convertConditionReason(reason v1alpha1.IstioRevisionConditionReason) v1alpha1.IstioConditionReason {
-	switch reason {
-	case "":
-		return ""
-	case v1alpha1.IstioRevisionReasonIstiodNotReady:
-		return v1alpha1.IstioReasonIstiodNotReady
-	case v1alpha1.IstioRevisionReasonHealthy:
-		return v1alpha1.IstioReasonHealthy
-	case v1alpha1.IstioRevisionReasonReadinessCheckFailed:
-		return v1alpha1.IstioReasonReadinessCheckFailed
-	case v1alpha1.IstioRevisionReasonReconcileError:
-		return v1alpha1.IstioReasonReconcileError
-	default:
-		panic(fmt.Sprintf("can't convert IstioRevisionConditionReason: %s", reason))
-	}
+func wrapEventHandler(logger logr.Logger, handler handler.EventHandler) handler.EventHandler {
+	return enqueuelogger.WrapIfNecessary(v1.IstioKind, logger, handler)
 }

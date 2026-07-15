@@ -17,51 +17,38 @@
 set -eux -o pipefail
 
 SCRIPTPATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-ROOT=$(dirname "$(dirname "${SCRIPTPATH}")")
+ROOT="$(dirname "$(dirname "${SCRIPTPATH}")")"
 
-# shellcheck source=common/scripts/kind_provisioner.sh
-source "${ROOT}/common/scripts/kind_provisioner.sh"
-
-# We run a local-registry in a docker container that KinD nodes pull from
-export KIND_REGISTRY_NAME="kind-registry"
-export KIND_REGISTRY_PORT="5000"
-export KIND_REGISTRY="localhost:${KIND_REGISTRY_PORT}"
-export DEFAULT_CLUSTER_YAML="${SCRIPTPATH}/config/default.yaml"
-export IP_FAMILY="${IP_FAMILY:-ipv4}"
 export ARTIFACTS="${ARTIFACTS:-$(mktemp -d)}"
-
-# Set variable for cluster kind name
+export MULTICLUSTER="${MULTICLUSTER:-false}"
+export IP_FAMILY="${IP_FAMILY:-ipv4}"
+export ISTIOCTL="${ISTIOCTL:-${ROOT}/bin/istioctl}"
 export KIND_CLUSTER_NAME="${KIND_CLUSTER_NAME:-operator-integration-tests}"
+
+function check_prerequisites() {
+  if ! command -v "${ISTIOCTL}" &> /dev/null; then
+    echo "istioctl not found. Please set ISTIOCTL to the path of istioctl binary"
+    exit 1
+  fi
+}
+
+function run_integration_tests() {
+  echo "Running integration tests"
+  if [ "${MULTICLUSTER}" == "true" ]; then
+    ARTIFACTS="${ARTIFACTS}" ISTIOCTL="${ISTIOCTL}" GINKGO_FLAGS="${GINKGO_FLAGS}" "${ROOT}/tests/e2e/common-operator-integ-suite.sh" --kind --multicluster
+  else
+    KUBECONFIG="${ARTIFACTS}/config"
+    ARTIFACTS="${ARTIFACTS}" IP_FAMILY="${IP_FAMILY}" GINKGO_FLAGS="${GINKGO_FLAGS}" "${ROOT}/tests/e2e/common-operator-integ-suite.sh" --kind
+  fi
+}
+
+check_prerequisites
+
+source "${ROOT}/tests/e2e/setup/setup-kind.sh"
 
 # Use the local registry instead of the default HUB
 export HUB="${KIND_REGISTRY}"
 # Workaround make inside make: ovewrite this variable so it is not recomputed in Makefile.core.mk
 export IMAGE="${HUB}/${IMAGE_BASE:-sail-operator}:${TAG:-latest}"
 
-# Copied from Istio: https://github.com/istio/istio/blob/861abfbc050c5be41154054853fe70336a851ce9/prow/lib.sh#L149
-function setup_kind_registry() {
-  # create a registry container if it not running already
-  running="$(docker inspect -f '{{.State.Running}}' "${KIND_REGISTRY_NAME}" 2>/dev/null || true)"
-  if [[ "${running}" != 'true' ]]; then
-      docker run \
-        -d --restart=always -p "${KIND_REGISTRY_PORT}:5000" --name "${KIND_REGISTRY_NAME}" \
-        gcr.io/istio-testing/registry:2
-
-    # Allow kind nodes to reach the registry
-    docker network connect "kind" "${KIND_REGISTRY_NAME}"
-  fi
-
-  # https://docs.tilt.dev/choosing_clusters.html#discovering-the-registry
-  # TODO get context/config from existing variables
-  kind export kubeconfig --name="${KIND_CLUSTER_NAME}"
-  for node in $(kind get nodes --name="${KIND_CLUSTER_NAME}"); do
-    kubectl annotate node "${node}" "kind.x-k8s.io/registry=localhost:${KIND_REGISTRY_PORT}" --overwrite;
-  done
-}
-
-KUBECONFIG="${ARTIFACTS}/config" setup_kind_cluster "${KIND_CLUSTER_NAME}" "" "" "true" "true"
-setup_kind_registry
-
-# Run the integration tests
-echo "Running integration tests"
-ARTIFACTS="${ARTIFACTS}" ./tests/e2e/common-operator-integ-suite.sh --kind
+run_integration_tests

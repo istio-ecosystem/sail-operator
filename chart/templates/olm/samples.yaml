@@ -1,9 +1,7 @@
-{{ if and .Values.bundleGeneration (eq .Values.platform "openshift") }}
-{{ .Files.Get "samples/istio-sample-openshift.yaml" }}
+{{ if .Values.bundleGeneration }}
+{{ .Files.Get "samples/istio-sample.yaml" }}
 ---
 {{ .Files.Get "samples/istiocni-sample.yaml" }}
-{{ else if .Values.bundleGeneration }}
-{{ .Files.Get "samples/istio-sample-kubernetes.yaml" }}
 ---
-{{ .Files.Get "samples/istiocni-sample.yaml" }}
+{{ .Files.Get "samples/ztunnel-sample.yaml" }}
 {{ end }}

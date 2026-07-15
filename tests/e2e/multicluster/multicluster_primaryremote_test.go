@@ -1,0 +1,390 @@
+//go:build e2e
+
+// Copyright Istio Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package multicluster
+
+import (
+	"fmt"
+	"slices"
+	"time"
+
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/env"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
+	"github.com/istio-ecosystem/sail-operator/pkg/kube"
+	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
+	"github.com/istio-ecosystem/sail-operator/pkg/version"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
+	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"istio.io/istio/pkg/ptr"
+)
+
+var _ = Describe("Multicluster deployment models", Label("multicluster", "multicluster-primaryremote", "slow", "sidecar"), Ordered, func() {
+	profile := "default"
+	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
+	SetDefaultEventuallyPollingInterval(time.Second)
+
+	Describe("Primary-Remote - Multi-Network configuration", func() {
+		// Test the Primary-Remote - Multi-Network configuration for each supported Istio version
+		for _, v := range istioversion.GetLatestPatchVersions() {
+			// The Primary-Remote - Multi-Network configuration is only supported in Istio 1.24+.
+			if version.Constraint("<1.24").Check(v.Version) {
+				Log(fmt.Sprintf("Skipping test, because Istio version %s does not support Primary-Remote Multi-Network configuration", v.Version))
+				continue
+			}
+
+			Context(fmt.Sprintf("Istio version %s", v.Version), func() {
+				clr1 := cleaner.New(clPrimary, "cluster=primary")
+				clr2 := cleaner.New(clRemote, "cluster=remote")
+
+				BeforeAll(func(ctx SpecContext) {
+					clr1.Record(ctx)
+					clr2.Record(ctx)
+				})
+
+				// Capture debug info immediately on test failure (before any cleanup or next BeforeEach runs)
+				// Use JustAfterEach instead of DeferCleanup to run immediately after test failure
+				JustAfterEach(func(ctx SpecContext) {
+					if CurrentSpecReport().Failed() {
+						common.LogDebugInfo(common.MultiCluster, k1, k2)
+					}
+				})
+
+				When("Istio and IstioCNI resources are created in both clusters", func() {
+					BeforeAll(func(ctx SpecContext) {
+						createIstioNamespaces(k1, "network1", profile)
+						createIstioNamespaces(k2, "network2", profile)
+
+						// Push the intermediate CA to both clusters
+						createIntermediateCA(k1, "east", "network1", artifacts, clPrimary)
+						createIntermediateCA(k2, "west", "network2", artifacts, clRemote)
+
+						// Wait for the secret to be created in both clusters
+						awaitSecretCreation(k1.ClusterName, clPrimary)
+						awaitSecretCreation(k2.ClusterName, clRemote)
+
+						pilot := `
+pilot:
+  env:
+    EXTERNAL_ISTIOD: "true"`
+						createIstioResources(k1, v.Name, "cluster1", "network1", profile, pilot)
+					})
+
+					It("updates Istio CR on Primary cluster status to Ready", func(ctx SpecContext) {
+						common.AwaitCondition(ctx, v1.IstioConditionReady, kube.Key(istioName), &v1.Istio{}, k1, clPrimary)
+					})
+
+					It("updates IstioCNI CR on Primary cluster status to Ready", func(ctx SpecContext) {
+						common.AwaitCondition(ctx, v1.IstioCNIConditionReady, kube.Key(istioCniName), &v1.IstioCNI{}, k1, clPrimary)
+					})
+
+					It("deploys istiod", func(ctx SpecContext) {
+						common.AwaitDeployment(ctx, "istiod", k1, clPrimary)
+						Expect(common.GetVersionFromIstiod()).To(Equal(v.Version), "Unexpected istiod version")
+					})
+
+					It("deploys istio-cni-node", func(ctx SpecContext) {
+						common.AwaitCniDaemonSet(ctx, k1, clPrimary)
+					})
+				})
+
+				When("Gateway is created on Primary cluster ", func() {
+					BeforeAll(func(ctx SpecContext) {
+						Expect(k1.WithNamespace(controlPlaneNamespace).Apply(eastGatewayYAML)).To(Succeed(), "Gateway creation failed on Primary Cluster")
+
+						// Expose istiod service in Primary cluster
+						Expect(k1.WithNamespace(controlPlaneNamespace).Apply(exposeIstiodYAML)).To(Succeed(), "Expose Istiod creation failed on Primary Cluster")
+
+						// Expose the Gateway service in both clusters
+						Expect(k1.WithNamespace(controlPlaneNamespace).Apply(exposeServiceYAML)).To(Succeed(), "Expose Service creation failed on Primary Cluster")
+					})
+
+					It("updates Gateway status to Available", func(ctx SpecContext) {
+						common.AwaitDeployment(ctx, "istio-eastwestgateway", k1, clPrimary)
+					})
+
+					It("has an external IP assigned", func(ctx SpecContext) {
+						expectLoadBalancerAddress(ctx, k1, clPrimary, "istio-eastwestgateway")
+					})
+				})
+
+				When("Istio and IstioCNI are created in Remote cluster", func() {
+					BeforeAll(func(ctx SpecContext) {
+						common.CreateIstioCNI(k2, v.Name)
+
+						spec := `
+values:
+  profile: remote
+  istiodRemote:
+    injectionPath: /inject/cluster/remote/net/network2
+  global:
+    remotePilotAddress: %s`
+
+						remotePilotAddress := common.GetSVCLoadBalancerAddress(ctx, clPrimary, controlPlaneNamespace, "istio-eastwestgateway")
+						Expect(remotePilotAddress).NotTo(BeEmpty(), "Remote Pilot Address is empty")
+						Expect(err).NotTo(HaveOccurred(), "Error getting Remote Pilot Address")
+						remotePilotIP, err := common.ResolveHostDomainToIP(remotePilotAddress)
+						Expect(remotePilotIP).NotTo(BeEmpty(), "Remote Pilot IP is empty")
+						Expect(err).NotTo(HaveOccurred(), "Error getting Remote Pilot IP")
+						common.CreateIstio(k2, v.Name, fmt.Sprintf(spec, remotePilotIP))
+
+						// Set the controlplane cluster and network for Remote namespace
+						By("Patching the istio-system namespace on Remote Cluster")
+						Expect(
+							k2.Patch(
+								"namespace",
+								controlPlaneNamespace,
+								"merge",
+								`{"metadata":{"annotations":{"topology.istio.io/controlPlaneClusters":"cluster1"}}}`)).
+							To(Succeed(), "Error patching istio-system namespace")
+
+						// To be able to access the remote cluster from the primary cluster, we need to create a secret in the primary cluster
+						// Remote Istio resource will not be Ready until the secret is created
+						// Get the cluster API URL of the Remote cluster
+						RemoteClusterAPIURL, err := k2.GetClusterAPIURL()
+						Expect(RemoteClusterAPIURL).NotTo(BeEmpty(), "API URL is empty for Remote Cluster")
+						Expect(err).NotTo(HaveOccurred())
+
+						// Install a remote secret in Primary cluster that provides access to the Remote cluster API server.
+						// Wrap in Eventually: CreateRemoteSecret may fail until the remote Istio service account is provisioned.
+						By("Creating Remote Secret on Primary Cluster")
+						var secret string
+						Eventually(func() error {
+							var err error
+							secret, err = istioctl.CreateRemoteSecret(kubeconfig2, controlPlaneNamespace, "remote", RemoteClusterAPIURL)
+							return err
+						}).ShouldNot(HaveOccurred(), "Remote secret generation failed")
+						Expect(k1.WithNamespace(controlPlaneNamespace).ApplyString(secret)).To(Succeed(), "Remote secret creation failed on Primary Cluster")
+					})
+
+					It("secret is created", func(ctx SpecContext) {
+						secret, err := common.GetObject(ctx, clPrimary, kube.Key("istio-remote-secret-remote", controlPlaneNamespace), &corev1.Secret{})
+						Expect(err).NotTo(HaveOccurred())
+						Expect(secret).NotTo(BeNil(), "Secret is not created on Primary Cluster")
+						Success("Remote secret is created in Primary cluster")
+					})
+
+					It("updates remote Istio CR status to Ready", func(ctx SpecContext) {
+						common.AwaitCondition(ctx, v1.IstioConditionReady, kube.Key(istioName), &v1.Istio{}, k2, clRemote, 10*time.Minute)
+					})
+				})
+
+				When("gateway is created in Remote cluster", func() {
+					BeforeAll(func(ctx SpecContext) {
+						Expect(k2.WithNamespace(controlPlaneNamespace).Apply(westGatewayYAML)).To(Succeed(), "Gateway creation failed on Remote Cluster")
+						Success("Gateway is created in Remote cluster")
+					})
+
+					It("updates Gateway status to Available", func(ctx SpecContext) {
+						common.AwaitDeployment(ctx, "istio-eastwestgateway", k2, clRemote)
+					})
+
+					It("has an external IP assigned", func(ctx SpecContext) {
+						expectLoadBalancerAddress(ctx, k2, clRemote, "istio-eastwestgateway")
+					})
+				})
+
+				When("sample apps are deployed in both clusters", func() {
+					BeforeAll(func(ctx SpecContext) {
+						deploySampleAppToClusters(sampleNamespace, profile, []ClusterDeployment{
+							{Kubectl: k1, AppVersion: "v1"},
+							{Kubectl: k2, AppVersion: "v2"},
+						})
+						Success("Sample app is deployed in both clusters")
+					})
+
+					It("updates the pods status to Ready", func(ctx SpecContext) {
+						Eventually(common.CheckSamplePodsReady).WithArguments(ctx, clPrimary).Should(Succeed(), "Error checking status of sample pods on Primary cluster")
+						Eventually(common.CheckSamplePodsReady).WithArguments(ctx, clRemote).Should(Succeed(), "Error checking status of sample pods on Remote cluster")
+						Success("Sample app is created in both clusters and Running")
+					})
+
+					It("can reach target east-west gateway from each cluster", func(ctx SpecContext) {
+						eventuallyLoadBalancerIsReachable(ctx, k1, k2, clRemote, "istio-eastwestgateway")
+						eventuallyLoadBalancerIsReachable(ctx, k2, k1, clPrimary, "istio-eastwestgateway")
+					})
+
+					It("can access the sample app from both clusters", func(ctx SpecContext) {
+						verifyResponsesAreReceivedFromExpectedVersions(k1)
+						verifyResponsesAreReceivedFromExpectedVersions(k2)
+						Success("Sample app is accessible from both clusters")
+					})
+				})
+
+				// This test ensures that the Sail Operator running on the primary cluster
+				// will not prune old revisions when they manage remote clusters because
+				// the Sail Operator on the primary cluster has no way of checking if
+				// the revision on the primary is still in use by the remote.
+				When("a revision is no longer in use on the primary cluster", func() {
+					BeforeAll(func(ctx SpecContext) {
+						Step("Switching the update strategy to revision based to create a new revision " +
+							"and setting the inactive revision deletion grace period to 0 so that the old revision would normally be deleted.")
+						istio := &v1.Istio{}
+						Expect(clPrimary.Get(ctx, kube.Key(istioName), istio)).To(Succeed(), "Error getting Istio "+istioName)
+						istio.Spec.UpdateStrategy = &v1.IstioUpdateStrategy{
+							Type: v1.UpdateStrategyTypeRevisionBased,
+							InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(0)),
+						}
+						Expect(clPrimary.Update(ctx, istio)).To(Succeed(), "Error updating Istio "+istioName)
+
+						Eventually(func(g Gomega) {
+							list := &v1.IstioRevisionList{}
+							g.Expect(clPrimary.List(ctx, list)).To(Succeed())
+							g.Expect(list.Items).To(HaveLen(2))
+						}).Should(Succeed())
+						Success("New revision is created")
+
+						// Wait for the new revision to become the active revision.
+						Eventually(func(g Gomega) {
+							istio := &v1.Istio{}
+							g.Expect(clPrimary.Get(ctx, kube.Key(istioName), istio)).To(Succeed())
+							g.Expect(istio.Status.ActiveRevisionName).To(Not(Equal(istio.Name)))
+						}).Should(Succeed())
+						Success("New revision is the active revision")
+
+						// Find the latest rev
+						// Migrate the pods over to the new revision. Both sample app and east/west gateway.
+						istio = &v1.Istio{}
+						_, err = common.GetObject(ctx, clPrimary, kube.Key(istioName), istio)
+						Expect(err).NotTo(HaveOccurred())
+
+						Step("Migrating the sample pods over to the new revision.")
+						sampleNs := &corev1.Namespace{}
+						Expect(clPrimary.Get(ctx, kube.Key("sample"), sampleNs)).To(Succeed(), "Error getting sample namespace")
+						delete(sampleNs.Labels, "istio-injection")
+						sampleNs.Labels["istio.io/rev"] = istio.Status.ActiveRevisionName
+						Expect(clPrimary.Update(ctx, sampleNs)).To(Succeed(), "Error updating sample namespace")
+
+						Expect(clPrimary.DeleteAllOf(ctx, &corev1.Pod{}, client.InNamespace("sample"))).To(Succeed())
+
+						Eventually(func(g Gomega) {
+							samplePods := &corev1.PodList{}
+							g.Expect(clPrimary.List(ctx, samplePods, client.InNamespace("sample"))).To(Succeed())
+							for _, pod := range samplePods.Items {
+								ensurePodIsOnRev(g, pod, istio.Status.ActiveRevisionName)
+							}
+						}).Should(Succeed())
+						Success("Sample pods are migrated to the new revision")
+
+						Step("Migrating the east/west gateway over to the new revision.")
+						gwDeploy := &appsv1.Deployment{}
+						Expect(clPrimary.Get(ctx, kube.Key("istio-eastwestgateway", controlPlaneNamespace), gwDeploy)).
+							To(Succeed(), "Error getting istio-eastwestgateway deployment")
+						gwDeploy.Labels["istio.io/rev"] = istio.Status.ActiveRevisionName
+						gwDeploy.Spec.Template.Labels["istio.io/rev"] = istio.Status.ActiveRevisionName
+						Expect(clPrimary.Update(ctx, gwDeploy)).
+							To(Succeed(), "Error updating istio-eastwestgateway deployment")
+						Eventually(func(g Gomega) {
+							gatewayPods := &corev1.PodList{}
+							g.Expect(clPrimary.List(ctx, gatewayPods, client.InNamespace(controlPlaneNamespace), client.MatchingLabels{"istio": "eastwestgateway"})).To(Succeed())
+							for _, pod := range gatewayPods.Items {
+								ensurePodIsOnRev(g, pod, istio.Status.ActiveRevisionName)
+							}
+						}).Should(Succeed())
+						Success("East/west gateway is migrated to the new revision")
+					})
+
+					It("sees the old revision as no longer in use", func(ctx SpecContext) {
+						Eventually(func(g Gomega) {
+							list := &v1.IstioRevisionList{}
+							g.Expect(clPrimary.List(ctx, list)).To(Succeed())
+							g.Expect(list.Items).To(HaveLen(2))
+
+							oldRevIndex := slices.IndexFunc(list.Items, func(rev v1.IstioRevision) bool {
+								return rev.Status.GetCondition(v1.IstioRevisionConditionInUse).Status == metav1.ConditionFalse
+							})
+							g.Expect(oldRevIndex).ToNot(Equal(-1), "Old revision is still in use")
+						}).Should(Succeed())
+					})
+
+					It("doesn't delete the old revision", func(ctx SpecContext) {
+						list := &v1.IstioRevisionList{}
+						Expect(clPrimary.List(ctx, list)).To(Succeed())
+						Expect(list.Items).To(HaveLen(2))
+					})
+
+					It("keeps the remote revision healthy", func(ctx SpecContext) {
+						list := &v1.IstioRevisionList{}
+						Expect(clRemote.List(ctx, list)).To(Succeed())
+						Expect(list.Items).To(HaveLen(1), "Expected exactly one IstioRevision on the remote cluster")
+
+						rev := list.Items[0]
+						readyCondition := rev.Status.GetCondition(v1.IstioRevisionConditionReady)
+						Expect(readyCondition.Status).To(Equal(metav1.ConditionTrue),
+							fmt.Sprintf("Remote IstioRevision %q is not Ready: %s", rev.Name, readyCondition.Message))
+					})
+				})
+
+				When("Istio CR is deleted in both clusters", func() {
+					BeforeEach(func() {
+						Expect(k1.WithNamespace(controlPlaneNamespace).Delete("istio", istioName)).To(Succeed(), "primary Istio CR failed to be deleted")
+						Expect(k2.WithNamespace(controlPlaneNamespace).Delete("istio", istioName)).To(Succeed(), "remote Istio CR failed to be deleted")
+						Success("Primary and Remote Istio resources are deleted")
+					})
+
+					It("removes istiod on Primary", func(ctx SpecContext) {
+						Eventually(clPrimary.Get).WithArguments(ctx, kube.Key("istiod", controlPlaneNamespace), &appsv1.Deployment{}).
+							Should(ReturnNotFoundError(), "Istiod should not exist anymore")
+						Success("Istiod is deleted on Primary Cluster")
+					})
+				})
+
+				When("IstioCNI CR is deleted in both clusters", func() {
+					BeforeEach(func() {
+						Expect(k1.WithNamespace(istioCniNamespace).Delete("istiocni", istioCniName)).To(Succeed(), "primary IstioCNI CR failed to be deleted")
+						Expect(k2.WithNamespace(istioCniNamespace).Delete("istiocni", istioCniName)).To(Succeed(), "remote IstioCNI CR failed to be deleted")
+						Success("Primary and Remote IstioCNI resources are deleted")
+					})
+
+					It("removes istio-cni-node on Primary", func(ctx SpecContext) {
+						daemonset := &appsv1.DaemonSet{}
+						Eventually(clPrimary.Get).WithArguments(ctx, kube.Key("istio-cni-node", istioCniNamespace), daemonset).
+							Should(ReturnNotFoundError(), "IstioCNI DaemonSet should not exist anymore")
+						Success("IstioCNI is deleted on Primary Cluster")
+					})
+				})
+
+				AfterAll(func(ctx SpecContext) {
+					// Skip cleanup if test failed and keepOnFailure is set
+					if CurrentSpecReport().Failed() && keepOnFailure {
+						return
+					}
+
+					c1Deleted := clr1.CleanupNoWait(ctx)
+					c2Deleted := clr2.CleanupNoWait(ctx)
+					clr1.WaitForDeletion(ctx, c1Deleted)
+					clr2.WaitForDeletion(ctx, c2Deleted)
+				})
+			})
+		}
+	})
+})
+
+func ensurePodIsOnRev(g Gomega, pod corev1.Pod, revision string) {
+	g.Expect(pod.DeletionTimestamp).To(BeNil())
+	g.Expect(pod).To(HaveConditionStatus(corev1.PodReady, metav1.ConditionTrue),
+		fmt.Sprintf("Pod: %s is not Ready in namespace: %s", pod.Name, pod.Namespace))
+	g.Expect(pod.Annotations["istio.io/rev"]).To(Equal(revision))
+}

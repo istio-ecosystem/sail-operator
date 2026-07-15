@@ -1,0 +1,26 @@
+name: Nightly image cleaning build workflow
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # run this a few hours after publishing new nightly images to avoid conflicts
+
+run-name: clean-nightly-images
+
+env:
+  GIT_USER: ${{ secrets.GIT_USER }}
+  GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+
+jobs:
+  clean-nightlies:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: main
+
+    - name: Clean old nightly releases in OpenShift OperatorHub
+      run: hack/operatorhub/clean-nightlies.sh
+      env:
+        GIT_CONFIG_USER_NAME: "${{ github.actor }}"
+        GIT_CONFIG_USER_EMAIL: "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"

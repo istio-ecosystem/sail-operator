@@ -1,0 +1,517 @@
+# Sail Operator Testing Framework Domain Knowledge
+
+This document provides AI agents with detailed knowledge about the Sail Operator's testing framework, methodologies, and best practices.
+
+## Testing Architecture
+
+The Sail Operator uses a multi-layered testing approach:
+
+### Unit Tests
+- **Framework**: Standard Go testing (`testing` package)
+- **Location**: Alongside source code files (`*_test.go`)
+- **Purpose**: Test individual functions and business logic
+- **Execution**: `make test`
+
+### Integration Tests
+- **Framework**: Ginkgo + Gomega + envtest
+- **Location**: `tests/integration/`
+- **Purpose**: Test controller behavior against fake Kubernetes API
+- **Execution**: `make test.integration`
+
+### End-to-End Tests
+- **Framework**: Ginkgo + Gomega + real clusters
+- **Location**: `tests/e2e/`
+- **Purpose**: Test complete operator functionality on real clusters
+- **Execution**: `make test.e2e.kind` or `make test.e2e.ocp`
+
+## Integration Testing Framework
+
+### Setup and Configuration
+Integration tests use `envtest` to create a fake Kubernetes control plane:
+
+```go
+// Example suite setup
+var _ = BeforeSuite(func() {
+    testEnv = &envtest.Environment{
+        CRDDirectoryPaths: []string{
+            filepath.Join("..", "..", "config", "crd", "bases"),
+        },
+    }
+
+    cfg, err := testEnv.Start()
+    Expect(err).NotTo(HaveOccurred())
+
+    k8sClient, err = client.New(cfg, client.Options{
+        Scheme: scheme.Scheme,
+    })
+    Expect(err).NotTo(HaveOccurred())
+})
+```
+
+### Testing Patterns
+Integration tests follow Ginkgo BDD patterns:
+
+```go
+var _ = Describe("IstioController", func() {
+    Context("when creating an Istio resource", func() {
+        BeforeEach(func() {
+            // Setup test resources
+        })
+
+        When("the resource is valid", func() {
+            It("should create an IstioRevision", func() {
+                // Test assertions
+                Eventually(func() error {
+                    return k8sClient.Get(ctx, key, &istioRevision)
+                }).Should(Succeed())
+            })
+        })
+
+        AfterEach(func() {
+            // Cleanup test resources
+        })
+    })
+})
+```
+
+### Key Testing Utilities
+- **envtest.Environment** - Fake Kubernetes API server
+- **client.Client** - Kubernetes API client for assertions
+- **Eventually/Consistently** - Async operation testing
+- **BeforeEach/AfterEach** - Test setup/teardown
+
+## End-to-End Testing Framework
+
+### Test Structure
+E2E tests are organized by functionality:
+
+```
+tests/e2e/
+├── ambient/              # Ambient mesh functionality tests
+├── controlplane/         # Control plane installation and update tests
+├── dualstack/            # Dual-stack networking tests
+├── multicluster/         # Multi-cluster scenarios (primary-remote, multi-primary, external control plane)
+├── multicontrolplane/    # Multiple control plane tests
+├── operator/             # Operator deployment and installation tests
+├── samples/              # Sample application tests
+├── setup/                # Test setup utilities
+└── util/                 # Shared utilities (cleaner, kubectl, helm, etc.)
+```
+
+### Cluster Management
+E2E tests support multiple cluster types:
+
+#### KIND Clusters
+- Automated setup via `integ-suite-kind.sh`
+- Uses upstream Istio provisioning scripts
+- Configurable with environment variables
+
+#### OpenShift Clusters
+- Uses existing OCP cluster
+- Setup via `integ-suite-ocp.sh`
+- Requires `oc` login and permissions
+
+### Test Execution Environments
+
+#### Containerized Execution (Default)
+```bash
+# Run in container (default)
+make test.e2e.kind
+
+# Specify container runtime
+CONTAINER_CLI=podman make test.e2e.kind
+```
+
+#### Local Execution
+```bash
+# Run locally without container
+BUILD_WITH_CONTAINER=0 make test.e2e.kind
+```
+
+### Test Configuration Variables
+
+#### Core Configuration
+- `SKIP_BUILD=false` - Skip operator image build
+- `SKIP_DEPLOY=false` - Skip operator deployment
+- `IMAGE=quay.io/sail-dev/sail-operator:latest` - Operator image
+- `OCP=true` - Use OpenShift cluster
+- `OLM=true` - Deploy via OLM instead of Helm
+
+#### Test Behavior
+- `GINKGO_FLAGS` - Pass flags to Ginkgo runner
+- `NAMESPACE=sail-operator` - Operator namespace
+- `CONTROL_PLANE_NS=istio-system` - Istio namespace
+- `EXPECTED_REGISTRY=^docker\.io|^gcr\.io|^registry\.istio\.io` - Expected image registry
+- `KEEP_ON_FAILURE=false` - Keep cluster on test failure
+
+#### Custom Samples
+- `CUSTOM_SAMPLES_PATH` - Path to custom kustomize samples
+- `HTTPBIN_KUSTOMIZE_PATH` - Custom httpbin samples
+- `HELLOWORLD_KUSTOMIZE_PATH` - Custom helloworld samples
+- `SLEEP_KUSTOMIZE_PATH` - Custom sleep samples
+
+### Test Labels and Filtering
+
+Tests use labels for categorization and selective execution:
+
+```go
+var _ = Describe("Ambient configuration", Label("smoke", "ambient"), func() {
+    // Test implementation
+})
+```
+
+Common labels:
+- **smoke** - Basic functionality tests
+- **ambient** - Ambient mesh specific tests
+- **sidecar** - Sidecar injection tests
+- **multicluster** - Multi-cluster scenarios
+- **upgrade** - Version upgrade tests
+
+### Test Utilities
+
+#### Resource Management
+```go
+import "github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
+
+// Automatic resource cleanup
+clr := cleaner.New(cl)
+BeforeAll(func(ctx SpecContext) {
+    clr.Record(ctx)  // Record initial state
+})
+AfterAll(func(ctx SpecContext) {
+    clr.Cleanup(ctx)  // Remove added resources
+})
+```
+
+#### kubectl and helm Utilities
+```go
+import (
+    "github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
+    "github.com/istio-ecosystem/sail-operator/tests/e2e/util/helm"
+)
+
+// Execute kubectl commands
+kubectl.Apply(namespace, yamlContent)
+kubectl.Delete(namespace, resourceType, resourceName)
+
+// Helm operations
+helm.Install(releaseName, chartPath, namespace, values)
+helm.Uninstall(releaseName, namespace)
+```
+
+#### Client-based Assertions
+```go
+// Use Kubernetes client for reliable assertions
+Eventually(func() error {
+    var istio v1.Istio
+    return k8sClient.Get(ctx, client.ObjectKey{
+        Name: "default",
+        Namespace: "istio-system",
+    }, &istio)
+}).Should(Succeed())
+
+// Check resource status
+Expect(istio.Status.State).To(Equal(v1.IstioReady))
+```
+
+## Testing Best Practices
+
+### Unit Test Guidelines
+1. **Isolation** - Test individual functions without Kubernetes dependencies
+2. **Mocking** - Use interfaces and mocks for external dependencies
+3. **Table-driven tests** - Use test tables for multiple scenarios
+4. **Error testing** - Test both success and failure cases
+
+```go
+func TestCalculateRevisionName(t *testing.T) {
+    tests := []struct {
+        name     string
+        input    string
+        expected string
+    }{
+        {"valid version", "1.25.0", "default-1-25-0"},
+        {"version with patch", "1.25.1", "default-1-25-1"},
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            result := calculateRevisionName("default", tt.input)
+            assert.Equal(t, tt.expected, result)
+        })
+    }
+}
+```
+
+### Integration Test Guidelines
+1. **Real API behavior** - Test controller interactions with Kubernetes API
+2. **Async testing** - Use `Eventually`/`Consistently` for async operations
+3. **Resource cleanup** - Always clean up created resources
+4. **Status testing** - Verify status conditions and state transitions
+
+### E2E Test Guidelines
+1. **User scenarios** - Test realistic user workflows
+2. **End-to-end validation** - Verify complete functionality
+3. **Resource cleanup** - Use cleaner utility for automatic cleanup
+4. **Platform coverage** - Test on different Kubernetes distributions
+
+### Ginkgo Best Practices
+
+#### Extract Common Setup into Helper Methods with `GinkgoHelper()`
+When multiple tests share setup logic, extract it into a helper function. Call `GinkgoHelper()` at the beginning of the helper so that test failures report the caller's location, not the helper's internals. Use the global `Expect` (from the gomega dot-import) for assertions:
+
+```go
+func createTestIstio(ctx context.Context, k8sClient client.Client, name, namespace string) *v1.Istio {
+    GinkgoHelper()
+    istio := &v1.Istio{
+        ObjectMeta: metav1.ObjectMeta{
+            Name:      name,
+            Namespace: namespace,
+        },
+        Spec: v1.IstioSpec{
+            Version: istioversion.Default,
+        },
+    }
+    Expect(k8sClient.Create(ctx, istio)).To(Succeed())
+    return istio
+}
+
+// Usage in a test:
+It("should reconcile", func() {
+    istio := createTestIstio(ctx, k8sClient, "test", "istio-system")
+    // ... assertions using istio
+})
+```
+
+This keeps tests concise while preserving clear error traces.
+
+**Important**: Do NOT use `func(ctx SpecContext, g Gomega)` as an `It` node signature. Ginkgo's `It` only accepts `func()`, `func(ctx SpecContext)`, or `func(ctx context.Context)`. The `g Gomega` parameter is only valid in `Eventually`/`Consistently` callbacks. For helper functions called from `It` blocks, use `GinkgoHelper()` with the global `Expect` instead of passing a `Gomega` instance.
+
+#### Use `DeferCleanup` for Setup Teardown
+Prefer `DeferCleanup` over manual `AfterEach`/`AfterAll` blocks to clean up resources created during setup. `DeferCleanup` ties the cleanup directly to the setup code, making the relationship explicit and reducing the risk of forgetting cleanup:
+
+```go
+BeforeAll(func(ctx SpecContext) {
+    ns := &corev1.Namespace{
+        ObjectMeta: metav1.ObjectMeta{Name: "test-ns"},
+    }
+    Expect(k8sClient.Create(ctx, ns)).To(Succeed())
+    DeferCleanup(func(ctx SpecContext) {
+        Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, ns))).To(Succeed())
+    })
+})
+
+BeforeEach(func(ctx SpecContext) {
+    configMap := &corev1.ConfigMap{
+        ObjectMeta: metav1.ObjectMeta{Name: "test-cm", Namespace: "test-ns"},
+    }
+    Expect(k8sClient.Create(ctx, configMap)).To(Succeed())
+    DeferCleanup(func(ctx SpecContext) {
+        Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, configMap))).To(Succeed())
+    })
+})
+```
+
+`DeferCleanup` runs at the matching scope (e.g., cleanup registered in `BeforeAll` runs after all specs in that container; cleanup in `BeforeEach` runs after each spec). This is preferred over separate `AfterEach`/`AfterAll` blocks because it colocates setup and teardown.
+
+### Common Testing Patterns
+
+#### Testing Controller Reconciliation
+```go
+It("should reconcile Istio resource", func() {
+    // Create resource
+    istio := &v1.Istio{
+        ObjectMeta: metav1.ObjectMeta{
+            Name: "test-istio",
+            Namespace: "istio-system",
+        },
+        Spec: v1.IstioSpec{
+            Version: "1.25.0",
+        },
+    }
+    Expect(k8sClient.Create(ctx, istio)).To(Succeed())
+
+    // Verify reconciliation results
+    Eventually(func() error {
+        var revision v1.IstioRevision
+        return k8sClient.Get(ctx, client.ObjectKey{
+            Name: "test-istio-1-25-0",
+            Namespace: "istio-system",
+        }, &revision)
+    }).Should(Succeed())
+})
+```
+
+#### Testing Status Updates
+```go
+It("should update status conditions", func() {
+    Eventually(func() []metav1.Condition {
+        var istio v1.Istio
+        if err := k8sClient.Get(ctx, key, &istio); err != nil {
+            return nil
+        }
+        return istio.Status.Conditions
+    }).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
+        "Type":   Equal("Ready"),
+        "Status": Equal(metav1.ConditionTrue),
+    })))
+})
+```
+
+#### Testing Error Conditions
+```go
+When("invalid configuration is provided", func() {
+    It("should report error condition", func() {
+        // Create resource with invalid config
+        Eventually(func() string {
+            var istio v1.Istio
+            k8sClient.Get(ctx, key, &istio)
+            for _, cond := range istio.Status.Conditions {
+                if cond.Type == "ReconcileError" {
+                    return cond.Status
+                }
+            }
+            return ""
+        }).Should(Equal(metav1.ConditionTrue))
+    })
+})
+```
+
+## Test Execution and CI/CD
+
+### Local Development
+
+**Important**: Always run e2e tests via `make` targets, never by invoking `ginkgo` directly. The `make` targets and their underlying shell scripts set up required environment variables, handle operator build/deploy, and configure the test runner correctly.
+
+```bash
+# Run all tests
+make test test.integration test.e2e.kind
+
+# Run specific test suites using GINKGO_FLAGS
+make test.integration GINKGO_FLAGS="--focus=IstioController"
+make test.e2e.kind GINKGO_FLAGS="--label-filter=smoke"
+make test.e2e.ocp GINKGO_FLAGS="--focus='some test'"
+
+# Skip build and deploy when operator is already running on the cluster
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.ocp GINKGO_FLAGS="--focus='some test'"
+
+# Debug test failures
+KEEP_ON_FAILURE=true make test.e2e.kind
+
+# macOS with Podman (see docs/macos/develop-on-macos.adoc)
+CONTAINER_CLI=podman TARGET_OS=linux TARGET_ARCH=arm64 make test.e2e.kind
+CONTAINER_CLI=podman DOCKER_GID=0 make test.integration
+```
+
+### Flaky Test Detection
+
+The test runner passes `GINKGO_FLAGS` verbatim to the `ginkgo` invocation, so all standard Ginkgo stress-test and retry flags work without any additional setup. These are intended for **local use only** — do not add them to CI job definitions.
+
+#### Repeat a suite N times (CI-safe stress test)
+
+Run the full suite up to N additional times or until the first failure. `--repeat=N` runs the suite `1+N` times total.
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind GINKGO_FLAGS="--repeat=3"
+```
+
+Combine with `--randomize-all` to surface ordering-dependent flakiness:
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind GINKGO_FLAGS="--repeat=5 --randomize-all"
+```
+
+#### Loop forever until a failure (local debugging)
+
+Runs indefinitely — useful for catching rare race conditions. Stop with `Ctrl+C` when a failure is detected.
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind GINKGO_FLAGS="--until-it-fails"
+```
+
+#### Retry flaky specs globally
+
+When a spec fails, Ginkgo retries it up to N times before marking the suite failed. Successful retries are reported but do not fail the run.
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind GINKGO_FLAGS="--flake-attempts=3"
+```
+
+#### Target a specific test to stress
+
+Combine with `--focus` to isolate a single spec:
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind \
+  GINKGO_FLAGS="--focus='should update istiod deployment' --repeat=10"
+```
+
+#### Per-spec decorators in test code
+
+For specs that are known to be sensitive, you can mark them in the source rather than relying on command-line flags:
+
+```go
+// Require strict N-in-a-row passes (no retries on failure — use for correctness checks)
+It("does not enter an infinite reconcile loop", MustPassRepeatedly(3), func() {
+    // ...
+})
+
+// Accept up to N retries (use sparingly — prefer fixing the root cause)
+It("syncs TLS settings", FlakeAttempts(3), func() {
+    // ...
+})
+```
+
+> **`FlakeAttempts` in `Ordered` containers**: if the failure occurs in a `BeforeAll`, Ginkgo runs `AfterAll` to clean up and then re-runs `BeforeAll`. If it occurs inside an `It`, only that `It` is retried — `BeforeAll` is not re-run. Keep this in mind when using `FlakeAttempts` on specs that depend on `BeforeAll` state.
+
+#### Recommended workflow for investigating a flaky CI result
+
+1. Identify the failing spec from CI output.
+2. Run it locally with `--focus` and `--repeat=10` to reproduce.
+3. If reproduced, add `MustPassRepeatedly` or fix the underlying race.
+4. If not reproduced, try `--until-it-fails` with `--randomize-all` to expose ordering dependencies.
+
+### Continuous Integration
+Tests run automatically on:
+- **Pull requests** - Unit and integration tests
+- **Merge to main** - Full test suite including E2E
+- **Release branches** - Extended test matrix across platforms
+
+### Test Reporting
+- **JUnit XML** - Generated as `report.xml` for CI integration
+- **Coverage reports** - Go coverage for unit/integration tests
+- **Test artifacts** - Logs and cluster state on failures
+
+## Platform-Specific Testing Considerations
+
+### macOS Development with Podman
+For macOS developers using Podman instead of Docker, refer to `docs/macos/develop-on-macos.adoc` for detailed guidance:
+
+#### Common Issues and Solutions
+- **Architecture mismatch**: Use `TARGET_ARCH=arm64` for ARM64 Macs
+- **UID conflicts**: Set `DOCKER_GID=0` to avoid permission issues
+- **Container runtime**: Always specify `CONTAINER_CLI=podman`
+- **KIND compatibility**: Use compatible KIND images for Podman
+
+#### Example Commands
+```bash
+# E2E tests on macOS with Podman
+CONTAINER_CLI=podman TARGET_OS=linux TARGET_ARCH=arm64 make test.e2e.kind
+
+# Integration tests with permission fixes
+CONTAINER_CLI=podman DOCKER_GID=0 make test.integration
+
+# Avoid container for specific targets
+make -f common/Makefile.common.mk update-common
+```
+
+### Container Runtime Considerations
+The testing framework supports both Docker and Podman:
+- **Default**: Docker (`CONTAINER_CLI=docker`)
+- **Alternative**: Podman (`CONTAINER_CLI=podman`)
+- **Local execution**: `BUILD_WITH_CONTAINER=0` to run tests without containers
+
+### Cluster Architecture
+When testing on different architectures:
+- **AMD64**: Default for most CI environments
+- **ARM64**: Common for Apple Silicon Macs
+- **Mixed environments**: Use `TARGET_ARCH` to specify target architecture

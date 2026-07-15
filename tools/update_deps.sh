@@ -16,11 +16,44 @@
 
 set -exo pipefail
 
+# Set up a cross-platform sed command.
+# On macOS, we use gsed (GNU sed) to have consistent behavior with Linux.
+# This requires gsed to be installed on macOS (e.g., via `brew install gnu-sed`).
+SED_CMD="sed"
+if [[ "$(uname)" == "Darwin" ]]; then
+  SED_CMD="gsed"
+fi
+
 UPDATE_BRANCH=${UPDATE_BRANCH:-"master"}
+# When true, only update to the latest patch version (keeps major.minor version the same)
+PIN_MINOR=${PIN_MINOR:-false}
+# When true, skip Istio module updates (istio.io/istio and istio.io/client-go), do not add new Istio versions and only update tools
+TOOLS_ONLY=${TOOLS_ONLY:-false}
 
 SCRIPTPATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ROOTDIR=$(dirname "${SCRIPTPATH}")
 cd "${ROOTDIR}"
+
+# Extract tool versions from Makefile
+function getVersionFromMakefile() {
+  grep "^${1} ?= " "${ROOTDIR}/Makefile.core.mk" | cut -d'=' -f2 | tr -d ' '
+}
+
+# Get current versions from Makefile and set as variables
+# Only needed when PIN_MINOR is true (for patch version updates)
+if [[ "${PIN_MINOR}" == "true" ]]; then
+  OPERATOR_SDK_VERSION=$(getVersionFromMakefile "OPERATOR_SDK_VERSION")
+  # shellcheck disable=SC2034
+  HELM_VERSION=$(getVersionFromMakefile "HELM_VERSION")
+  CONTROLLER_TOOLS_VERSION=$(getVersionFromMakefile "CONTROLLER_TOOLS_VERSION")
+  CONTROLLER_RUNTIME_BRANCH=$(getVersionFromMakefile "CONTROLLER_RUNTIME_BRANCH")
+  OPM_VERSION=$(getVersionFromMakefile "OPM_VERSION")
+  OLM_VERSION=$(getVersionFromMakefile "OLM_VERSION")
+  GITLEAKS_VERSION=$(getVersionFromMakefile "GITLEAKS_VERSION")
+  RUNME_VERSION=$(getVersionFromMakefile "RUNME_VERSION")
+  MISSPELL_VERSION=$(getVersionFromMakefile "MISSPELL_VERSION")
+fi
+
 
 # getLatestVersion gets the latest released version of a github project
 # $1 = org/repo
@@ -28,42 +61,191 @@ function getLatestVersion() {
   curl -sL "https://api.github.com/repos/${1}/releases/latest" | yq '.tag_name'
 }
 
+# getLatestVersionByPrefix gets the latest released version of a github project with a specific version prefix
+# $1 = org/repo
+# $2 = version prefix
+function getLatestVersionByPrefix() {
+  curl -sL "https://api.github.com/repos/${1}/releases?per_page=100" | \
+    yq -r '.[].tag_name' | \
+    grep -E "^v?${2}[.0-9]*$" | \
+    sort -V | \
+    tail -n 1
+}
+
+# getLatestPatchVersion gets the latest patch version for a given major.minor version
+# $1 = org/repo
+# $2 = current version (e.g., v1.2.3)
+function getLatestPatchVersion() {
+  local repo=$1
+  local current_version=$2
+
+  # Extract major.minor from current version
+  # Handle versions with or without 'v' prefix
+  local version_no_v=${current_version#v}
+  local major_minor=""
+  major_minor=$(echo "${version_no_v}" | cut -d'.' -f1,2)
+
+  getLatestVersionByPrefix "$repo" "${major_minor}"
+}
+
+# getVersionForUpdate chooses between getLatestVersion and getLatestPatchVersion based on PIN_MINOR
+# $1 = org/repo
+# $2 = current version (optional, required if PIN_MINOR=true)
+function getVersionForUpdate() {
+  local repo=$1
+  local current_version=$2
+
+  if [[ "${PIN_MINOR}" == "true" ]]; then
+    getLatestPatchVersion "${repo}" "${current_version}"
+  else
+    getLatestVersion "${repo}"
+  fi
+}
+
+function getReleaseBranch() {
+  minor=$(echo "${1}" | cut -f1,2 -d'.')
+  echo "release-${minor#*v}"
+}
+
+function getLatestVersionFromDockerHub() {
+  # $1 = org/repo
+  curl -sL "https://hub.docker.com/v2/repositories/${1}/tags/?page_size=100" | jq -r '.results[].name' | sort -V | tail -n 1
+}
+
 # Update common files
 make update-common
 
-# Update go dependencies
-export GO111MODULE=on
-go get -u "istio.io/istio@${UPDATE_BRANCH}"
-go get -u "istio.io/client-go@${UPDATE_BRANCH}"
-go mod tidy
-
-# Update operator-sdk
-OPERATOR_SDK_LATEST_VERSION=$(getLatestVersion operator-framework/operator-sdk)
-sed -i "s|OPERATOR_SDK_VERSION ?= .*|OPERATOR_SDK_VERSION ?= ${OPERATOR_SDK_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
-find "${ROOTDIR}/chart/templates/olm/scorecard.yaml" -type f -exec sed -i "s|quay.io/operator-framework/scorecard-test:.*|quay.io/operator-framework/scorecard-test:${OPERATOR_SDK_LATEST_VERSION}|" {} +
-
-# Update helm
-HELM_LATEST_VERSION=$(getLatestVersion helm/helm | cut -d/ -f2)
-sed -i "s|HELM_VERSION ?= .*|HELM_VERSION ?= ${HELM_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
-
-# Update controller-tools
-CONTROLLER_TOOLS_LATEST_VERSION=$(getLatestVersion kubernetes-sigs/controller-tools)
-sed -i "s|CONTROLLER_TOOLS_VERSION ?= .*|CONTROLLER_TOOLS_VERSION ?= ${CONTROLLER_TOOLS_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
-
-# Update opm
-OPM_LATEST_VERSION=$(getLatestVersion operator-framework/operator-registry)
-sed -i "s|OPM_VERSION ?= .*|OPM_VERSION ?= ${OPM_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
-
-# Update kube-rbac-proxy
-RBAC_PROXY_LATEST_VERSION=$(getLatestVersion brancz/kube-rbac-proxy | cut -d/ -f1)
-# Only update it if the newer image is available in the registry
-if docker manifest inspect "gcr.io/kubebuilder/kube-rbac-proxy:${RBAC_PROXY_LATEST_VERSION}" >/dev/null 2>/dev/null; then
-  sed -i "s|gcr.io/kubebuilder/kube-rbac-proxy:.*|gcr.io/kubebuilder/kube-rbac-proxy:${RBAC_PROXY_LATEST_VERSION}|" "${ROOTDIR}/chart/templates/deployment.yaml"
+# update build container used in github actions
+NEW_IMAGE_MASTER=$(grep IMAGE_VERSION= < common/scripts/setup_env.sh | cut -d= -f2)
+if [[ "${UPDATE_BRANCH}" == "master" ]]; then
+  "$SED_CMD" -i -e "s|\(registry.istio.io/testing/build-tools\):master.*|\1:$NEW_IMAGE_MASTER|" .github/workflows/update-deps.yaml .github/workflows/update-eol-versions.yaml
+  echo "Updated build-tools image in update-deps.yaml and update-eol-versions.yaml"
+else
+  echo "Skipping build-tools image update (UPDATE_BRANCH is not master)"
 fi
 
+# Update go dependencies
+export GO111MODULE=on
+if [[ "${TOOLS_ONLY}" != "true" ]]; then
+  go get -u "istio.io/istio@${UPDATE_BRANCH}"
+  go get -u "istio.io/client-go@${UPDATE_BRANCH}"
+  go mod tidy
+else
+  echo "Skipping Istio module updates (TOOLS_ONLY=true)"
+fi
+
+# Update operator-sdk
+OPERATOR_SDK_LATEST_VERSION=$(getVersionForUpdate operator-framework/operator-sdk "${OPERATOR_SDK_VERSION}")
+"$SED_CMD" -i "s|OPERATOR_SDK_VERSION ?= .*|OPERATOR_SDK_VERSION ?= ${OPERATOR_SDK_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+find "${ROOTDIR}/chart/templates/olm/scorecard.yaml" -type f -exec "$SED_CMD" -i "s|quay.io/operator-framework/scorecard-test:.*|quay.io/operator-framework/scorecard-test:${OPERATOR_SDK_LATEST_VERSION}|" {} +
+
+# Update helm
+HELM_LATEST_VERSION=$(getLatestVersionByPrefix helm/helm v4)
+"$SED_CMD" -i "s|HELM_VERSION ?= .*|HELM_VERSION ?= ${HELM_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+
+# Update controller-tools
+CONTROLLER_TOOLS_LATEST_VERSION=$(getVersionForUpdate kubernetes-sigs/controller-tools "${CONTROLLER_TOOLS_VERSION}")
+"$SED_CMD" -i "s|CONTROLLER_TOOLS_VERSION ?= .*|CONTROLLER_TOOLS_VERSION ?= ${CONTROLLER_TOOLS_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+
+# Update controller-runtime
+# Get current controller-runtime version from go.mod
+CONTROLLER_RUNTIME_CURRENT_VERSION=$(grep "sigs.k8s.io/controller-runtime" go.mod | awk '{print $2}')
+
+if [[ "${PIN_MINOR}" == "true" ]]; then
+  # On release branches, only apply patch updates within the current minor version
+  CONTROLLER_RUNTIME_LATEST_VERSION=$(getVersionForUpdate kubernetes-sigs/controller-runtime "${CONTROLLER_RUNTIME_CURRENT_VERSION}")
+  go get "sigs.k8s.io/controller-runtime@${CONTROLLER_RUNTIME_LATEST_VERSION}"
+  CONTROLLER_RUNTIME_BRANCH=$(getReleaseBranch "${CONTROLLER_RUNTIME_LATEST_VERSION}")
+else
+  # On main branch, align with upstream Istio
+  CONTROLLER_RUNTIME_LATEST_VERSION=$(getVersionForUpdate kubernetes-sigs/controller-runtime "${CONTROLLER_RUNTIME_CURRENT_VERSION}")
+
+  # Fetch Istio's controller-runtime version to stay aligned
+  ISTIO_CONTROLLER_RUNTIME_VERSION=$(curl -sL "https://raw.githubusercontent.com/istio/istio/master/go.mod" | \
+    grep "sigs.k8s.io/controller-runtime" | awk '{print $2}')
+
+  # Compare versions: if we're behind Istio, upgrade to latest; otherwise only patch upgrades
+  CURRENT_MINOR=$(echo "${CONTROLLER_RUNTIME_CURRENT_VERSION}" | cut -d'.' -f1,2)
+  ISTIO_MINOR=$(echo "${ISTIO_CONTROLLER_RUNTIME_VERSION}" | cut -d'.' -f1,2)
+
+  if [[ "${CURRENT_MINOR}" < "${ISTIO_MINOR}" ]]; then
+    # We're behind Istio, upgrade to latest to catch up
+    echo "Sail Operator controller-runtime (${CONTROLLER_RUNTIME_CURRENT_VERSION}) is behind Istio (${ISTIO_CONTROLLER_RUNTIME_VERSION}), upgrading to latest"
+    # FIXME: Do not use `go get -u` until https://github.com/kubernetes/apimachinery/issues/190 is resolved
+    # go get -u "sigs.k8s.io/controller-runtime@${CONTROLLER_RUNTIME_LATEST_VERSION}"
+    go get "sigs.k8s.io/controller-runtime@${CONTROLLER_RUNTIME_LATEST_VERSION}"
+    CONTROLLER_RUNTIME_BRANCH=$(getReleaseBranch "${CONTROLLER_RUNTIME_LATEST_VERSION}")
+  else
+    # We're aligned or ahead of Istio, only do patch upgrades to stay aligned
+    echo "Sail Operator controller-runtime (${CONTROLLER_RUNTIME_CURRENT_VERSION}) is aligned with Istio (${ISTIO_CONTROLLER_RUNTIME_VERSION}), only applying patch updates"
+    go get -u=patch sigs.k8s.io/controller-runtime
+    # Determine the new version after patch upgrade
+    CONTROLLER_RUNTIME_NEW_VERSION=$(grep "sigs.k8s.io/controller-runtime" go.mod | awk '{print $2}')
+    CONTROLLER_RUNTIME_BRANCH=$(getReleaseBranch "${CONTROLLER_RUNTIME_NEW_VERSION}")
+  fi
+fi
+
+"$SED_CMD" -i "s|CONTROLLER_RUNTIME_BRANCH ?= .*|CONTROLLER_RUNTIME_BRANCH ?= ${CONTROLLER_RUNTIME_BRANCH}|" "${ROOTDIR}/Makefile.core.mk"
+
+# Update opm
+OPM_LATEST_VERSION=$(getVersionForUpdate operator-framework/operator-registry "${OPM_VERSION}")
+"$SED_CMD" -i "s|OPM_VERSION ?= .*|OPM_VERSION ?= ${OPM_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+
+# Update olm
+OLM_LATEST_VERSION=$(getVersionForUpdate operator-framework/operator-lifecycle-manager "${OLM_VERSION}")
+"$SED_CMD" -i "s|OLM_VERSION ?= .*|OLM_VERSION ?= ${OLM_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+
+# Update gateway-api
+GW_API_LATEST_VERSION=$(getLatestVersion kubernetes-sigs/gateway-api)
+curl -sSL -o "${ROOTDIR}/tests/e2e/setup/testdata/gateway-api/experimental-install.yaml" \
+  "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GW_API_LATEST_VERSION}/experimental-install.yaml"
+
+# Update vendored Istio sample manifests
+SAMPLES_DIR="${ROOTDIR}/tests/e2e/samples"
+curl -sSL -o "${SAMPLES_DIR}/helloworld/helloworld.yaml" \
+  "https://raw.githubusercontent.com/istio/istio/${UPDATE_BRANCH}/samples/helloworld/helloworld.yaml"
+curl -sSL -o "${SAMPLES_DIR}/httpbin/httpbin.yaml" \
+  "https://raw.githubusercontent.com/istio/istio/${UPDATE_BRANCH}/samples/httpbin/httpbin.yaml"
+curl -sSL -o "${SAMPLES_DIR}/sleep/sleep.yaml" \
+  "https://raw.githubusercontent.com/istio/istio/${UPDATE_BRANCH}/samples/sleep/sleep.yaml"
+curl -sSL -o "${SAMPLES_DIR}/tcp-echo-dual-stack/tcp-echo-dual-stack.yaml" \
+  "https://raw.githubusercontent.com/istio/istio/${UPDATE_BRANCH}/samples/tcp-echo/tcp-echo-dual-stack.yaml"
+curl -sSL -o "${SAMPLES_DIR}/tcp-echo-ipv4/tcp-echo-ipv4.yaml" \
+  "https://raw.githubusercontent.com/istio/istio/${UPDATE_BRANCH}/samples/tcp-echo/tcp-echo-ipv4.yaml"
+curl -sSL -o "${SAMPLES_DIR}/tcp-echo-ipv6/tcp-echo-ipv6.yaml" \
+  "https://raw.githubusercontent.com/istio/istio/${UPDATE_BRANCH}/samples/tcp-echo/tcp-echo-ipv6.yaml"
+
 # Update gitleaks
-GITLEAKS_VERSION=$(getLatestVersion gitleaks/gitleaks)
-sed -i "s|GITLEAKS_VERSION ?= .*|GITLEAKS_VERSION ?= ${GITLEAKS_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+GITLEAKS_LATEST_VERSION=$(getVersionForUpdate gitleaks/gitleaks "${GITLEAKS_VERSION}")
+"$SED_CMD" -i "s|GITLEAKS_VERSION ?= .*|GITLEAKS_VERSION ?= ${GITLEAKS_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+
+# Update runme
+# Add 'v' prefix to current version for comparison if it doesn't have one
+RUNME_VERSION_WITH_V="v${RUNME_VERSION}"
+RUNME_LATEST_VERSION=$(getVersionForUpdate runmedev/runme "${RUNME_VERSION_WITH_V}")
+# Remove the leading "v" from the version string for storage in Makefile
+RUNME_LATEST_VERSION=${RUNME_LATEST_VERSION#v}
+"$SED_CMD" -i "s|RUNME_VERSION ?= .*|RUNME_VERSION ?= ${RUNME_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+
+# Update misspell
+MISSPELL_LATEST_VERSION=$(getVersionForUpdate client9/misspell "${MISSPELL_VERSION}")
+"$SED_CMD" -i "s|MISSPELL_VERSION ?= .*|MISSPELL_VERSION ?= ${MISSPELL_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+
+# Update KIND_IMAGE. Look for KIND_IMAGE := docker.io in the make file and look on docker.io/kindest/node for the latest version.
+KIND_LATEST_VERSION=$(getLatestVersionFromDockerHub kindest/node)
+if [[ -n "${KIND_LATEST_VERSION}" ]]; then
+  "$SED_CMD" -i "s|KIND_IMAGE := docker.io/kindest/node:.*|KIND_IMAGE := docker.io/kindest/node:${KIND_LATEST_VERSION}|" "${ROOTDIR}/Makefile.core.mk"
+else
+  echo "No latest version found for kindest/node on Docker Hub. Keeping the existing KIND_IMAGE."
+fi
+
+# Update Istio versions in the Documentation files
+./hack/update-istio-in-docs.sh
 
 # Regenerate files
-make update-istio gen
+if [[ "${TOOLS_ONLY}" != "true" ]]; then
+  make update-istio gen
+else
+  echo "Skipping 'make update-istio' (TOOLS_ONLY=true), running 'make gen' only"
+  make gen
+fi

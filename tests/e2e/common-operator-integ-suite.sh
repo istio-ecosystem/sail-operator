@@ -17,6 +17,9 @@
 # To be able to run this script, it's needed to pass the flag --ocp or --kind
 set -eu -o pipefail
 
+WD=$(dirname "$0")
+WD=$(cd "${WD}" || exit; pwd)
+
 check_arguments() {
   if [ $# -eq 0 ]; then
     echo "No arguments provided"
@@ -27,7 +30,10 @@ check_arguments() {
 parse_flags() {
   SKIP_BUILD=${SKIP_BUILD:-false}
   SKIP_DEPLOY=${SKIP_DEPLOY:-false}
+  SKIP_CLEANUP=${SKIP_CLEANUP:-false}
+  OLM=${OLM:-false}
   DESCRIBE=false
+  MULTICLUSTER=${MULTICLUSTER:-false}
   while [ $# -gt 0 ]; do
     case "$1" in
       --ocp)
@@ -38,6 +44,10 @@ parse_flags() {
         shift
         OCP=false
         ;;
+      --multicluster)
+        shift
+        MULTICLUSTER=true
+        ;;
       --skip-build)
         shift
         SKIP_BUILD=true
@@ -47,6 +57,10 @@ parse_flags() {
         # no point building if we don't deploy
         SKIP_BUILD=true
         SKIP_DEPLOY=true
+        ;;
+      --olm)
+        shift
+        OLM=true
         ;;
       --describe)
         shift
@@ -74,138 +88,300 @@ parse_flags() {
   else
     echo "Running on kind"
   fi
+
+  if [ "${MULTICLUSTER}" == "true" ]; then
+    echo "Running on multicluster"
+  fi
+
+  if [ "${SKIP_BUILD}" == "true" ]; then
+    echo "Skipping build"
+  fi
+
+  if [ "${SKIP_DEPLOY}" == "true" ]; then
+    echo "Skipping deploy"
+  fi
+
+  if [ "${OLM}" == "true" ]; then
+    echo "OLM deployment enabled"
+  fi
 }
 
 initialize_variables() {
-  WD=$(dirname "$0")
-  WD=$(cd "${WD}" || exit; pwd)
-
   VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"versions.yaml"}
+  VERSIONS_YAML_DIR=${VERSIONS_YAML_DIR:-"pkg/istioversions"}
   NAMESPACE="${NAMESPACE:-sail-operator}"
   DEPLOYMENT_NAME="${DEPLOYMENT_NAME:-sail-operator}"
   CONTROL_PLANE_NS="${CONTROL_PLANE_NS:-istio-system}"
   COMMAND="kubectl"
   ARTIFACTS="${ARTIFACTS:-$(mktemp -d)}"
   KUBECONFIG="${KUBECONFIG:-"${ARTIFACTS}/config"}"
+  ISTIOCTL_PATH="${ISTIOCTL:-"istioctl"}"
+  LOCALBIN="${LOCALBIN:-${HOME}/bin}"
+  OPERATOR_SDK=${LOCALBIN}/operator-sdk
+  IP_FAMILY=${IP_FAMILY:-ipv4}
+  ISTIO_MANIFEST="chart/samples/istio-sample.yaml"
+  CI=${CI:-"false"}
+  USE_INTERNAL_REGISTRY=${USE_INTERNAL_REGISTRY:-"false"}
+  FIPS_CLUSTER=${FIPS_CLUSTER:-"false"}
+  # In Prow CI, HEAD is a temporary merge commit not visible in the PR history.
+  # PULL_PULL_SHA holds the actual PR head commit — use it when available.
+  if [ -n "${PULL_PULL_SHA:-}" ]; then
+    COMMIT_HASH="${PULL_PULL_SHA:0:8}"
+  else
+    COMMIT_HASH=$(git rev-parse --short HEAD)
+  fi
+  echo "DEBUG commit hash resolution:"
+  echo "  PULL_PULL_SHA: ${PULL_PULL_SHA:-not set}"
+  echo "  git HEAD (full): $(git rev-parse HEAD)"
+  echo "  COMMIT_HASH resolved to: ${COMMIT_HASH}"
 
-  if [ "${OCP}" == "true" ]; then
-    COMMAND="oc"
+  # Debug logging and fallback for GINKGO_FLAGS
+  echo "CI environment: ${CI}"
+  echo "GINKGO_FLAGS received: '${GINKGO_FLAGS:-}'"
+
+  # Fallback: Generate GINKGO_FLAGS if empty and CI=true
+  if [ -z "${GINKGO_FLAGS:-}" ] && [ "${CI}" == "true" ]; then
+    GINKGO_FLAGS="--no-color"
+    echo "Generated GINKGO_FLAGS fallback: '${GINKGO_FLAGS}'"
   fi
 
-  echo "Using command: ${COMMAND}"
+  # export to be sure that the variables are available in the subshell
+  export IMAGE_BASE="${IMAGE_BASE:-sail-operator}"
+  export TAG="${TAG:-latest}"
+  export HUB="${HUB:-localhost:5000}"
 
+  # Handle OCP registry scenarios
+  # Note: Makefile.core.mk sets HUB=quay.io/sail-dev and TAG=1.29-latest by default
   if [ "${OCP}" == "true" ]; then
-    ISTIO_MANIFEST="chart/samples/istio-sample-openshift.yaml"
-  else
-    ISTIO_MANIFEST="chart/samples/istio-sample-kubernetes.yaml"
+    # Debug output for troubleshooting
+    echo "DEBUG: CI='${CI}', HUB='${HUB}'"
+
+    if [ "${CI}" == "true" ] && [ "${HUB}" == "quay.io/sail-dev" ]; then
+      # Scenario 2: CI mode with default HUB -> use external registry with proper CI tag
+      echo "CI mode detected for OCP, using external registry ${HUB}"
+      export USE_INTERNAL_REGISTRY="false"
+      # Use PR_NUMBER and commit hash to identify the image, avoid race conditions in CI when multiple runs are pushing to the same default tag
+      # Use TARGET_ARCH to differentiate tags for different architectures in CI
+      if [ -n "${PR_NUMBER:-}" ]; then
+        TAG="pr-${PR_NUMBER}-${COMMIT_HASH}-${TARGET_ARCH}"
+        export TAG
+        echo "Using PR-based tag: ${TAG}"
+      else
+        TAG="ci-test-${COMMIT_HASH}-${TARGET_ARCH}"
+        export TAG
+        echo "Using commit-based tag: ${TAG}"
+      fi
+    elif [ "${CI}" == "true" ]; then
+      # Additional CI mode check - handle CI mode regardless of HUB value
+      echo "CI mode detected for OCP with custom HUB (${HUB}), using external registry"
+      export USE_INTERNAL_REGISTRY="false"
+    elif [ "${HUB}" != "quay.io/sail-dev" ]; then
+      # Scenario 3: Custom registry provided by user
+      echo "Using custom registry: ${HUB}"
+      export USE_INTERNAL_REGISTRY="false"
+    else
+      # Scenario 1: Local development -> use internal OCP registry
+      echo "Local development mode, will use OCP internal registry"
+      export USE_INTERNAL_REGISTRY="true"
+    fi
   fi
 
   echo "Setting Istio manifest file: ${ISTIO_MANIFEST}"
   ISTIO_NAME=$(yq eval '.metadata.name' "${WD}/../../$ISTIO_MANIFEST")
 
-  TIMEOUT="3m"
-
-  VERBOSE=${VERBOSE:-"false"}
+  if [ "${OCP}" == "true" ]; then COMMAND="oc"; fi
 }
 
-get_internal_registry() {
-  # Validate that the internal registry is running in the OCP Cluster, configure the variable to be used in the make target. 
-  # If there is no internal registry, the test can't be executed targeting to the internal registry
-
-  # Check if the registry pods are running
-  ${COMMAND} get pods -n openshift-image-registry --no-headers | grep -v "Running\|Completed" && echo "It looks like the OCP image registry is not deployed or Running. This tests scenario requires it. Aborting." && exit 1
-
-  # Check if default route already exist
-  if [ -z "$(${COMMAND} get route default-route -n openshift-image-registry -o name)" ]; then
-    echo "Route default-route does not exist, patching DefaultRoute to true on Image Registry."
-    ${COMMAND} patch configs.imageregistry.operator.openshift.io/cluster --patch '{"spec":{"defaultRoute":true}}' --type=merge
-  
-    timeout --foreground -v -s SIGHUP -k ${TIMEOUT} ${TIMEOUT} bash --verbose -c \
-      "until ${COMMAND} get route default-route -n openshift-image-registry &> /dev/null; do sleep 5; done && echo 'The 'default-route' has been created.'"
+check_cluster_operators() {
+  # This function is only relevant for OCP clusters
+  if [ "${OCP}" != "true" ]; then
+    echo "Skipping ClusterOperator check on non-OCP cluster."
+    return 0
   fi
 
-  # Get the registry route
-  URL=$(${COMMAND} get route default-route -n openshift-image-registry --template='{{ .spec.host }}')
-  # Hub will be equal to the route url/project-name(NameSpace) 
-  export HUB="${URL}/${NAMESPACE}"
-  echo "Internal registry URL: ${HUB}"
+  # Check if jq is installed
+  if ! command -v jq &> /dev/null; then
+    echo "ERROR: jq is required for the cluster operator health check. Please install jq."
+    exit 1
+  fi
 
-  # Create namespace where operator will be located
-  # This is needed because the roles are created in the namespace where the operator is deployed
-  ${COMMAND} create namespace "${NAMESPACE}" || true
+  local timeout_seconds=600
+  echo "Validating OpenShift cluster operators are stable..."
+  local end_time=$(( $(date +%s) + timeout_seconds ))
 
-  # Adding roles to avoid the need to be authenticated to push images to the internal registry
-  # Using envsubst to replace the variable NAMESPACE in the yaml file
-  envsubst < "${WD}/config/role-bindings.yaml" | ${COMMAND} apply -f -
+  while [ "$(date +%s)" -lt $end_time ]; do
+    # This command uses jq to count operators that are not Available, or are Progressing, or are Degraded.
+    # A healthy cluster should have a count of 0.
+    local unstable_operators
+    unstable_operators=$(oc get clusteroperator -o json | jq '[.items[] | select(.status.conditions[] | (.type == "Available" and .status == "False") or (.type == "Progressing" and .status == "True") or (.type == "Degraded" and .status == "True"))] | length')
 
-  # Login to the internal registry when running on CRC
-  # Take into count that you will need to add before the registry URL as Insecure registry in "/etc/docker/daemon.json"
-  if [[ ${URL} == *".apps-crc.testing"* ]]; then
-    echo "Executing Docker login to the internal registry"
-    if ! oc whoami -t | docker login -u "$(${COMMAND} whoami)" --password-stdin "${URL}"; then
-      echo "***** Error: Failed to log in to Docker registry."
-      echo "***** Check the error and if is related to 'tls: failed to verify certificate' please add the registry URL as Insecure registry in '/etc/docker/daemon.json'"
-      exit 1
+    if [[ $unstable_operators -eq 0 ]]; then
+      echo "All cluster operators are stable."
+      return 0
+    fi
+
+    echo -n "."
+    sleep 15
+  done
+
+  echo "ERROR: Timeout reached. Not all cluster operators are stable."
+  oc get clusteroperator # Print the final status for debugging
+  exit 1
+}
+
+install_operator() {
+  echo "Installing sail-operator (KUBECONFIG=${KUBECONFIG})"
+  "${COMMAND}" create namespace "${NAMESPACE}"
+  helm install sail-operator "${SOURCE_DIR}"/chart --namespace "${NAMESPACE}" --set image="${HUB}/${IMAGE_BASE}:${TAG}" --set operatorLogLevel=3
+}
+
+await_operator() {
+  echo "Awaiting operator deployment on (KUBECONFIG=${KUBECONFIG})"
+  local name="${DEPLOYMENT_NAME}"
+  if [ "${OLM}" == "true" ]; then
+    local csv_name
+    local csv_file
+    csv_file=$(find "${WD}/../../bundle/manifests/" -name "*.clusterserviceversion.yaml" | head -1)
+    csv_name=$(yq eval '.spec.install.spec.deployments[0].name' "${csv_file}" 2>/dev/null || true)
+    if [ -n "${csv_name}" ]; then
+      echo "OLM mode: using deployment name from bundle CSV: ${csv_name}"
+      name="${csv_name}"
+      DEPLOYMENT_NAME="${csv_name}"
     fi
   fi
+  "${COMMAND}" wait --for=condition=available deployment/"${name}" -n "${NAMESPACE}" --timeout=5m
 }
 
-build_and_push_image() {
-  # Build and push docker image
-  # Notes: to be able to build and push to the local registry we need to set these variables to be used in the Makefile
-  # IMAGE ?= ${HUB}/${IMAGE_BASE}:${TAG}, so we need to pass hub, image_base, and tag to be able to build and push the image
-  echo "Building and pushing image"
-  echo "Image base: ${IMAGE_BASE}"
-  echo " Tag: ${TAG}"
+# shellcheck disable=SC2329  # Function is invoked indirectly via trap
+uninstall_operator() {
+  echo "Uninstalling sail-operator (KUBECONFIG=${KUBECONFIG})"
+  helm uninstall sail-operator --namespace "${NAMESPACE}"
+  "${COMMAND}" delete namespace "${NAMESPACE}"
+}
 
-  # Check the current architecture to build the image for the same architecture
-  # For now we are only building for arm64 and x86_64 because z and p are not supported by the operator yet.
-  DOCKER_BUILD_FLAGS=""
-  TARGET_ARCH=$(uname -m)
-
-  if [[ "$TARGET_ARCH" == "aarch64" || "$TARGET_ARCH" == "arm64" ]]; then
-      echo "Running on arm64 architecture"
-      TARGET_ARCH="arm64"
-      DOCKER_BUILD_FLAGS="--platform=linux/${TARGET_ARCH}"
-  elif [[ "$TARGET_ARCH" == "x86_64" || "$TARGET_ARCH" == "amd64" ]]; then
-      echo "Running on x86_64 architecture"
-      TARGET_ARCH="amd64"
-  else
-      echo "Unsupported architecture: ${TARGET_ARCH}"
-      exit 1
+# Ensure cleanup always runs and that the original test exit code is preserved
+# shellcheck disable=SC2329  # Function is invoked indirectly via trap
+cleanup() {
+  # Do not let cleanup errors affect the final exit code
+  set +e
+  if [ "${OLM}" != "true" ] && [ "${SKIP_DEPLOY}" != "true" ] && [ "${SKIP_CLEANUP}" != "true" ]; then
+    if [ "${MULTICLUSTER}" == true ]; then
+      KUBECONFIG="${KUBECONFIG}" uninstall_operator || true
+      # shellcheck disable=SC2153  # KUBECONFIG2 is set by multicluster setup scripts
+      KUBECONFIG="${KUBECONFIG2}" uninstall_operator || true
+    else
+      uninstall_operator || true
+    fi
   fi
-
-  # running docker build inside another container layer causes issues with bind mounts
-  BUILD_WITH_CONTAINER=0 DOCKER_BUILD_FLAGS=${DOCKER_BUILD_FLAGS} IMAGE=${HUB}/${IMAGE_BASE}:${TAG} TARGET_ARCH=${TARGET_ARCH} make docker-push
+  echo "JUnit report: ${ARTIFACTS}/report.xml"
 }
 
-# PRE SETUP: Get arguments and initialize variables
+trap cleanup EXIT INT TERM
+
+# Main script flow
 check_arguments "$@"
 parse_flags "$@"
 initialize_variables
 
+# Export necessary vars
+export COMMAND OCP HUB IMAGE_BASE TAG NAMESPACE USE_INTERNAL_REGISTRY
+
 if [ "${SKIP_BUILD}" == "false" ]; then
-  # SETUP
-  if [ "${OCP}" == "true" ]; then
-    # Internal Registry is only available in OCP clusters
-    get_internal_registry
-  fi
+  "${WD}/setup/build-and-push-operator.sh"
 
-  # BUILD AND PUSH IMAGE
-  build_and_push_image
-fi
-
-if [ "${OCP}" == "true" ]; then
-    # This is a workaround
+  if [ "${OCP}" = "true" ]; then
+    # This is a workaround when pulling the image from internal registry
     # To avoid errors of certificates meanwhile we are pulling the operator image from the internal registry
     # We need to set image $HUB to a fixed known value after the push
-    # This value always will be equal to the svc url of the internal registry
-  HUB="image-registry.openshift-image-registry.svc:5000/sail-operator"
+    # Convert from route URL to service URL format for image pulling
+    if [[ "${HUB}" == *"/istio-images" ]]; then
+      HUB="image-registry.openshift-image-registry.svc:5000/istio-images"
+      echo "Using internal registry service URL: ${HUB}"
+    else
+      echo "Using external registry: ${HUB}"
+    fi
+
+    # Workaround for OCP helm operator installation issues:
+    # To avoid any cleanup issues, after we build and push the image we check if the namespace exists and delete it if it does.
+    # The test logic already handles the namespace creation and deletion during the test run. 
+    if ${COMMAND} get ns "${NAMESPACE}" &>/dev/null; then
+      echo "Namespace ${NAMESPACE} already exists. Deleting it to avoid conflicts."
+      ${COMMAND} delete ns "${NAMESPACE}"
+    fi
+  fi
+  # If OLM is enabled, deploy the operator using OLM
+  # If PR_NUMBER is set we will tag the BUNDLE_IMG with the PR number and commit hash to avoid conflicts.
+  if [ "${OLM}" == "true" ] && [ "${SKIP_DEPLOY}" == "false" ] && [ "${MULTICLUSTER}" == "false" ]; then
+    IMAGE_TAG_BASE="${HUB}/${IMAGE_BASE}"
+    if [ "${CI}" == "true" ]; then
+      if [ -n "${PR_NUMBER:-}" ]; then
+        BUNDLE_IMG="${IMAGE_TAG_BASE}-bundle:pr-${PR_NUMBER}-${COMMIT_HASH}-${TARGET_ARCH}"
+      else
+        BUNDLE_IMG="${IMAGE_TAG_BASE}-bundle:ci-test-${COMMIT_HASH}-${TARGET_ARCH}"
+      fi
+    else
+      BUNDLE_IMG="${IMAGE_TAG_BASE}-bundle:ci-test-${COMMIT_HASH}-${TARGET_ARCH}"
+    fi
+
+    IMAGE="${HUB}/${IMAGE_BASE}:${TAG}" \
+    IMAGE_TAG_BASE="${IMAGE_TAG_BASE}" \
+    BUNDLE_IMG="${BUNDLE_IMG}" \
+    OCP="${OCP}" \
+    make bundle bundle-build bundle-push
+
+    if [ "${OCP}" == "false" ]; then
+      # Install OLM in the cluster because it's not available by default in kind.
+      OLM_INSTALL_ARGS=""
+      if [ "${OLM_VERSION}" != "" ]; then
+        OLM_INSTALL_ARGS+="--version ${OLM_VERSION}"
+      fi
+
+      # Ensure kubeconfig is set to the kind cluster
+      kind export kubeconfig --name="${KIND_CLUSTER_NAME}"
+      # shellcheck disable=SC2086
+      ${OPERATOR_SDK} olm install ${OLM_INSTALL_ARGS}
+
+      ${COMMAND} wait catalogsource operatorhubio-catalog -n olm --for 'jsonpath={.status.connectionState.lastObservedState}=READY' --timeout=5m
+    else
+      # On OCP, wait for different CatalogSources as operatorhubio-catalog might not exist
+      ${COMMAND} wait catalogsource redhat-operators -n openshift-marketplace --for 'jsonpath={.status.connectionState.lastObservedState}=READY' --timeout=5m || true
+    fi
+
+    ${COMMAND} create ns "${NAMESPACE}" || true
+    ${OPERATOR_SDK} run bundle "${BUNDLE_IMG}" -n "${NAMESPACE}" --skip-tls --timeout 5m || exit 1
+
+    await_operator
+
+    SKIP_DEPLOY=true
+  fi
 fi
 
-# Run the go test passing the env variables defined that are going to be used in the operator tests
+export SKIP_DEPLOY IP_FAMILY ISTIO_MANIFEST NAMESPACE CONTROL_PLANE_NS DEPLOYMENT_NAME MULTICLUSTER ARTIFACTS ISTIO_NAME COMMAND KUBECONFIG ISTIOCTL_PATH SKIP_CLEANUP GINKGO_FLAGS FIPS_CLUSTER
+
+if [ "${OLM}" != "true" ] && [ "${SKIP_DEPLOY}" != "true" ]; then
+  # shellcheck disable=SC2153
+  if [ "${MULTICLUSTER}" == true ]; then
+    KUBECONFIG="${KUBECONFIG}" install_operator
+    KUBECONFIG="${KUBECONFIG2}" install_operator
+    KUBECONFIG="${KUBECONFIG}" await_operator
+    KUBECONFIG="${KUBECONFIG2}" await_operator
+  else
+    install_operator
+    await_operator
+  fi
+fi
+
+# Check that all cluster operators are stable before running the tests. This only applies to OCP clusters.
+# This is to avoid test failures due to cluster instability.
+check_cluster_operators
+
+set +e
+# Disable to avoid failing the test run before generating the report.xml
+# Capture the test exit code and allow cleanup via trap to run
 # shellcheck disable=SC2086
-IMAGE="${HUB}/${IMAGE_BASE}:${TAG}" SKIP_DEPLOY="${SKIP_DEPLOY}" OCP="${OCP}" ISTIO_MANIFEST="${ISTIO_MANIFEST}" \
-NAMESPACE="${NAMESPACE}" CONTROL_PLANE_NS="${CONTROL_PLANE_NS}" DEPLOYMENT_NAME="${DEPLOYMENT_NAME}" \
-ISTIO_NAME="${ISTIO_NAME}" COMMAND="${COMMAND}" VERSIONS_YAML_FILE="${VERSIONS_YAML_FILE}" KUBECONFIG="${KUBECONFIG}" \
-go run github.com/onsi/ginkgo/v2/ginkgo -tags e2e --timeout 30m --junit-report=report.xml ${GINKGO_FLAGS} "${WD}"/...
+IMAGE="${HUB}/${IMAGE_BASE}:${TAG}" \
+go run github.com/onsi/ginkgo/v2/ginkgo -tags e2e \
+--timeout 60m --junit-report="${ARTIFACTS}/report.xml" ${GINKGO_FLAGS:-} "${WD}"/...
+TEST_EXIT_CODE=$?
+
+exit "${TEST_EXIT_CODE}"

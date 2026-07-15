@@ -15,6 +15,7 @@
 package config
 
 import (
+	"io/fs"
 	"strings"
 
 	"github.com/magiconair/properties"
@@ -33,25 +34,48 @@ type IstioImageConfig struct {
 	ZTunnelImage string `properties:"ztunnel"`
 }
 
+type ReconcilerConfig struct {
+	ResourceFS              fs.FS
+	Platform                Platform
+	DefaultProfile          string
+	OperatorNamespace       string
+	MaxConcurrentReconciles int
+	TLSConfig               *TLSConfig
+}
+
 func Read(configFile string) error {
 	p, err := properties.LoadFile(configFile, properties.UTF8)
 	if err != nil {
 		return err
 	}
-	// remove quotes
+	return decodeProperties(p)
+}
+
+func ReadBytes(data []byte) error {
+	p, err := properties.Load(data, properties.UTF8)
+	if err != nil {
+		return err
+	}
+	return decodeProperties(p)
+}
+
+func decodeProperties(p *properties.Properties) error {
+	return decodePropertiesInto(p, &Config)
+}
+
+func decodePropertiesInto(p *properties.Properties, cfg *OperatorConfig) error {
 	for _, key := range p.Keys() {
 		val, _ := p.Get(key)
 		_, _, _ = p.Set(key, strings.Trim(val, `"`))
 	}
-	err = p.Decode(&Config)
-	if err != nil {
+	if err := p.Decode(cfg); err != nil {
 		return err
 	}
 	// replace "_" in versions with "." (e.g. v1_20_0 => v1.20.0)
-	newImageDigests := make(map[string]IstioImageConfig, len(Config.ImageDigests))
-	for k, v := range Config.ImageDigests {
-		newImageDigests[strings.Replace(k, "_", ".", -1)] = v
+	newImageDigests := make(map[string]IstioImageConfig, len(cfg.ImageDigests))
+	for k, v := range cfg.ImageDigests {
+		newImageDigests[strings.ReplaceAll(k, "_", ".")] = v
 	}
-	Config.ImageDigests = newImageDigests
+	cfg.ImageDigests = newImageDigests
 	return nil
 }

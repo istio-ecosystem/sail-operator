@@ -27,4 +27,4 @@ if [ -z "${KUBECONFIG}" ]; then
     exit 1
 fi
 
-KUBECONFIG="${KUBECONFIG}" ./tests/e2e/common-operator-integ-suite.sh --ocp
+KUBECONFIG="${KUBECONFIG}" GINKGO_FLAGS="${GINKGO_FLAGS}" ./tests/e2e/common-operator-integ-suite.sh --ocp

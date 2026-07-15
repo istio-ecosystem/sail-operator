@@ -29,11 +29,11 @@ spec:
       jsonPath: .spec.host
       name: Host
       type: string
-    - description: 'CreationTimestamp is a timestamp representing the server time
-        when this object was created. It is not guaranteed to be set in happens-before
+    - description: CreationTimestamp is a timestamp representing the server time when
+        this object was created. It is not guaranteed to be set in happens-before
         order across separate operations. Clients may not set this value. It is represented
         in RFC3339 form and is in UTC. Populated by the system. Read-only. Null for
-        lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata'
+        lists. For more information, see [Kubernetes API Conventions](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata)
       jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -92,6 +92,28 @@ spec:
                                     pool connection.
                                   format: int32
                                   type: integer
+                                http2KeepAlive:
+                                  description: Configure HTTP/2 PING frames for upstream
+                                    connections.
+                                  properties:
+                                    interval:
+                                      description: Send HTTP/2 PING frames at this
+                                        interval.
+                                      type: string
+                                      x-kubernetes-validations:
+                                      - message: must be a valid duration greater
+                                          than 1ms
+                                        rule: duration(self) >= duration('1ms')
+                                    timeout:
+                                      description: How long to wait for a response
+                                        to an HTTP/2 PING frame before closing the
+                                        connection.
+                                      type: string
+                                      x-kubernetes-validations:
+                                      - message: must be a valid duration greater
+                                          than 1ms
+                                        rule: duration(self) >= duration('1ms')
+                                  type: object
                                 http2MaxRequests:
                                   description: Maximum number of active requests to
                                     a destination.
@@ -101,6 +123,10 @@ spec:
                                   description: The idle timeout for upstream connection
                                     pool connections.
                                   type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
                                 maxConcurrentStreams:
                                   description: The maximum number of concurrent streams
                                     allowed for a peer on one HTTP/2 connection.
@@ -129,12 +155,20 @@ spec:
                                 connectTimeout:
                                   description: TCP connection timeout.
                                   type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
                                 idleTimeout:
                                   description: The idle timeout for TCP connections.
                                   type: string
                                 maxConnectionDuration:
                                   description: The maximum duration of a connection.
                                   type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
                                 maxConnections:
                                   description: Maximum number of HTTP1 /TCP connections
                                     to a destination host.
@@ -148,6 +182,10 @@ spec:
                                       description: The time duration between keep-alive
                                         probes.
                                       type: string
+                                      x-kubernetes-validations:
+                                      - message: must be a valid duration greater
+                                          than 1ms
+                                        rule: duration(self) >= duration('1ms')
                                     probes:
                                       description: Maximum number of keepalive probes
                                         to send without response before deciding the
@@ -160,6 +198,10 @@ spec:
                                         needs to be idle before keep-alive probes
                                         start being sent.
                                       type: string
+                                      x-kubernetes-validations:
+                                      - message: must be a valid duration greater
+                                          than 1ms
+                                        rule: duration(self) >= duration('1ms')
                                   type: object
                               type: object
                           type: object
@@ -213,6 +255,21 @@ spec:
                                 httpCookie:
                                   description: Hash based on HTTP cookie.
                                   properties:
+                                    attributes:
+                                      description: Additional attributes for the cookie.
+                                      items:
+                                        properties:
+                                          name:
+                                            description: The name of the cookie attribute.
+                                            type: string
+                                          value:
+                                            description: The optional value of the
+                                              cookie attribute.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
                                     name:
                                       description: Name of the cookie.
                                       type: string
@@ -281,9 +338,7 @@ spec:
                                     type: object
                                   type: array
                                 enabled:
-                                  description: enable locality load balancing, this
-                                    is DestinationRule-level and will override mesh
-                                    wide settings in entirety.
+                                  description: Enable locality load balancing.
                                   nullable: true
                                   type: boolean
                                 failover:
@@ -322,15 +377,47 @@ spec:
                               - ROUND_ROBIN
                               - LEAST_REQUEST
                               type: string
+                            warmup:
+                              description: Represents the warmup configuration of
+                                Service.
+                              properties:
+                                aggression:
+                                  description: This parameter controls the speed of
+                                    traffic increase over the warmup duration.
+                                  format: double
+                                  minimum: 0
+                                  nullable: true
+                                  type: number
+                                duration:
+                                  type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
+                                minimumPercent:
+                                  format: double
+                                  maximum: 100
+                                  minimum: 0
+                                  nullable: true
+                                  type: number
+                              required:
+                              - duration
+                              type: object
                             warmupDurationSecs:
-                              description: Represents the warmup duration of Service.
+                              description: 'Deprecated: use `warmup` instead.'
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                           type: object
                         outlierDetection:
                           properties:
                             baseEjectionTime:
                               description: Minimum ejection duration.
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                             consecutive5xxErrors:
                               description: Number of 5xx errors before a host is ejected
                                 from the connection pool.
@@ -358,6 +445,9 @@ spec:
                             interval:
                               description: Time interval between ejection sweep analysis.
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                             maxEjectionPercent:
                               description: Maximum % of hosts in the load balancing
                                 pool for the upstream service that can be ejected.
@@ -366,7 +456,7 @@ spec:
                             minHealthPercent:
                               description: Outlier detection will be enabled as long
                                 as the associated load balancing pool has at least
-                                min_health_percent hosts in healthy mode.
+                                `minHealthPercent` hosts in healthy mode.
                               format: int32
                               type: integer
                             splitExternalLocalOriginErrors:
@@ -399,6 +489,28 @@ spec:
                                           connection pool connection.
                                         format: int32
                                         type: integer
+                                      http2KeepAlive:
+                                        description: Configure HTTP/2 PING frames
+                                          for upstream connections.
+                                        properties:
+                                          interval:
+                                            description: Send HTTP/2 PING frames at
+                                              this interval.
+                                            type: string
+                                            x-kubernetes-validations:
+                                            - message: must be a valid duration greater
+                                                than 1ms
+                                              rule: duration(self) >= duration('1ms')
+                                          timeout:
+                                            description: How long to wait for a response
+                                              to an HTTP/2 PING frame before closing
+                                              the connection.
+                                            type: string
+                                            x-kubernetes-validations:
+                                            - message: must be a valid duration greater
+                                                than 1ms
+                                              rule: duration(self) >= duration('1ms')
+                                        type: object
                                       http2MaxRequests:
                                         description: Maximum number of active requests
                                           to a destination.
@@ -408,6 +520,10 @@ spec:
                                         description: The idle timeout for upstream
                                           connection pool connections.
                                         type: string
+                                        x-kubernetes-validations:
+                                        - message: must be a valid duration greater
+                                            than 1ms
+                                          rule: duration(self) >= duration('1ms')
                                       maxConcurrentStreams:
                                         description: The maximum number of concurrent
                                           streams allowed for a peer on one HTTP/2
@@ -438,12 +554,20 @@ spec:
                                       connectTimeout:
                                         description: TCP connection timeout.
                                         type: string
+                                        x-kubernetes-validations:
+                                        - message: must be a valid duration greater
+                                            than 1ms
+                                          rule: duration(self) >= duration('1ms')
                                       idleTimeout:
                                         description: The idle timeout for TCP connections.
                                         type: string
                                       maxConnectionDuration:
                                         description: The maximum duration of a connection.
                                         type: string
+                                        x-kubernetes-validations:
+                                        - message: must be a valid duration greater
+                                            than 1ms
+                                          rule: duration(self) >= duration('1ms')
                                       maxConnections:
                                         description: Maximum number of HTTP1 /TCP
                                           connections to a destination host.
@@ -457,6 +581,10 @@ spec:
                                             description: The time duration between
                                               keep-alive probes.
                                             type: string
+                                            x-kubernetes-validations:
+                                            - message: must be a valid duration greater
+                                                than 1ms
+                                              rule: duration(self) >= duration('1ms')
                                           probes:
                                             description: Maximum number of keepalive
                                               probes to send without response before
@@ -469,6 +597,10 @@ spec:
                                               needs to be idle before keep-alive probes
                                               start being sent.
                                             type: string
+                                            x-kubernetes-validations:
+                                            - message: must be a valid duration greater
+                                                than 1ms
+                                              rule: duration(self) >= duration('1ms')
                                         type: object
                                     type: object
                                 type: object
@@ -523,6 +655,23 @@ spec:
                                       httpCookie:
                                         description: Hash based on HTTP cookie.
                                         properties:
+                                          attributes:
+                                            description: Additional attributes for
+                                              the cookie.
+                                            items:
+                                              properties:
+                                                name:
+                                                  description: The name of the cookie
+                                                    attribute.
+                                                  type: string
+                                                value:
+                                                  description: The optional value
+                                                    of the cookie attribute.
+                                                  type: string
+                                              required:
+                                              - name
+                                              type: object
+                                            type: array
                                           name:
                                             description: Name of the cookie.
                                             type: string
@@ -594,9 +743,7 @@ spec:
                                           type: object
                                         type: array
                                       enabled:
-                                        description: enable locality load balancing,
-                                          this is DestinationRule-level and will override
-                                          mesh wide settings in entirety.
+                                        description: Enable locality load balancing.
                                         nullable: true
                                         type: boolean
                                       failover:
@@ -635,16 +782,49 @@ spec:
                                     - ROUND_ROBIN
                                     - LEAST_REQUEST
                                     type: string
+                                  warmup:
+                                    description: Represents the warmup configuration
+                                      of Service.
+                                    properties:
+                                      aggression:
+                                        description: This parameter controls the speed
+                                          of traffic increase over the warmup duration.
+                                        format: double
+                                        minimum: 0
+                                        nullable: true
+                                        type: number
+                                      duration:
+                                        type: string
+                                        x-kubernetes-validations:
+                                        - message: must be a valid duration greater
+                                            than 1ms
+                                          rule: duration(self) >= duration('1ms')
+                                      minimumPercent:
+                                        format: double
+                                        maximum: 100
+                                        minimum: 0
+                                        nullable: true
+                                        type: number
+                                    required:
+                                    - duration
+                                    type: object
                                   warmupDurationSecs:
-                                    description: Represents the warmup duration of
-                                      Service.
+                                    description: 'Deprecated: use `warmup` instead.'
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: must be a valid duration greater than
+                                        1ms
+                                      rule: duration(self) >= duration('1ms')
                                 type: object
                               outlierDetection:
                                 properties:
                                   baseEjectionTime:
                                     description: Minimum ejection duration.
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: must be a valid duration greater than
+                                        1ms
+                                      rule: duration(self) >= duration('1ms')
                                   consecutive5xxErrors:
                                     description: Number of 5xx errors before a host
                                       is ejected from the connection pool.
@@ -673,6 +853,10 @@ spec:
                                     description: Time interval between ejection sweep
                                       analysis.
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: must be a valid duration greater than
+                                        1ms
+                                      rule: duration(self) >= duration('1ms')
                                   maxEjectionPercent:
                                     description: Maximum % of hosts in the load balancing
                                       pool for the upstream service that can be ejected.
@@ -681,7 +865,7 @@ spec:
                                   minHealthPercent:
                                     description: Outlier detection will be enabled
                                       as long as the associated load balancing pool
-                                      has at least min_health_percent hosts in healthy
+                                      has at least `minHealthPercent` hosts in healthy
                                       mode.
                                     format: int32
                                     type: integer
@@ -755,6 +939,7 @@ spec:
                                     type: array
                                 type: object
                             type: object
+                          maxItems: 4096
                           type: array
                         proxyProtocol:
                           description: The upstream PROXY protocol settings.
@@ -768,6 +953,31 @@ spec:
                               - V1
                               - V2
                               type: string
+                          type: object
+                        retryBudget:
+                          description: Specifies a limit on concurrent retries in
+                            relation to the number of active requests.
+                          properties:
+                            budgetInterval:
+                              description: Specifies the duration in which requests
+                                will be considered when calculating the budget for
+                                retries.
+                              type: string
+                            minRetryConcurrency:
+                              description: Specifies the minimum retry concurrency
+                                allowed for the retry budget.
+                              maximum: 4294967295
+                              minimum: 0
+                              type: integer
+                            percent:
+                              description: Specifies the limit on concurrent retries
+                                as a percentage of the sum of active requests and
+                                active pending requests.
+                              format: double
+                              maximum: 100
+                              minimum: 0
+                              nullable: true
+                              type: number
                           type: object
                         tls:
                           description: TLS related settings for connections to the
@@ -873,6 +1083,24 @@ spec:
                               while waiting for a ready connection pool connection.
                             format: int32
                             type: integer
+                          http2KeepAlive:
+                            description: Configure HTTP/2 PING frames for upstream
+                              connections.
+                            properties:
+                              interval:
+                                description: Send HTTP/2 PING frames at this interval.
+                                type: string
+                                x-kubernetes-validations:
+                                - message: must be a valid duration greater than 1ms
+                                  rule: duration(self) >= duration('1ms')
+                              timeout:
+                                description: How long to wait for a response to an
+                                  HTTP/2 PING frame before closing the connection.
+                                type: string
+                                x-kubernetes-validations:
+                                - message: must be a valid duration greater than 1ms
+                                  rule: duration(self) >= duration('1ms')
+                            type: object
                           http2MaxRequests:
                             description: Maximum number of active requests to a destination.
                             format: int32
@@ -881,6 +1109,9 @@ spec:
                             description: The idle timeout for upstream connection
                               pool connections.
                             type: string
+                            x-kubernetes-validations:
+                            - message: must be a valid duration greater than 1ms
+                              rule: duration(self) >= duration('1ms')
                           maxConcurrentStreams:
                             description: The maximum number of concurrent streams
                               allowed for a peer on one HTTP/2 connection.
@@ -908,12 +1139,18 @@ spec:
                           connectTimeout:
                             description: TCP connection timeout.
                             type: string
+                            x-kubernetes-validations:
+                            - message: must be a valid duration greater than 1ms
+                              rule: duration(self) >= duration('1ms')
                           idleTimeout:
                             description: The idle timeout for TCP connections.
                             type: string
                           maxConnectionDuration:
                             description: The maximum duration of a connection.
                             type: string
+                            x-kubernetes-validations:
+                            - message: must be a valid duration greater than 1ms
+                              rule: duration(self) >= duration('1ms')
                           maxConnections:
                             description: Maximum number of HTTP1 /TCP connections
                               to a destination host.
@@ -927,6 +1164,9 @@ spec:
                                 description: The time duration between keep-alive
                                   probes.
                                 type: string
+                                x-kubernetes-validations:
+                                - message: must be a valid duration greater than 1ms
+                                  rule: duration(self) >= duration('1ms')
                               probes:
                                 description: Maximum number of keepalive probes to
                                   send without response before deciding the connection
@@ -939,6 +1179,9 @@ spec:
                                   to be idle before keep-alive probes start being
                                   sent.
                                 type: string
+                                x-kubernetes-validations:
+                                - message: must be a valid duration greater than 1ms
+                                  rule: duration(self) >= duration('1ms')
                             type: object
                         type: object
                     type: object
@@ -992,6 +1235,21 @@ spec:
                           httpCookie:
                             description: Hash based on HTTP cookie.
                             properties:
+                              attributes:
+                                description: Additional attributes for the cookie.
+                                items:
+                                  properties:
+                                    name:
+                                      description: The name of the cookie attribute.
+                                      type: string
+                                    value:
+                                      description: The optional value of the cookie
+                                        attribute.
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
+                                type: array
                               name:
                                 description: Name of the cookie.
                                 type: string
@@ -1059,8 +1317,7 @@ spec:
                               type: object
                             type: array
                           enabled:
-                            description: enable locality load balancing, this is DestinationRule-level
-                              and will override mesh wide settings in entirety.
+                            description: Enable locality load balancing.
                             nullable: true
                             type: boolean
                           failover:
@@ -1098,15 +1355,45 @@ spec:
                         - ROUND_ROBIN
                         - LEAST_REQUEST
                         type: string
+                      warmup:
+                        description: Represents the warmup configuration of Service.
+                        properties:
+                          aggression:
+                            description: This parameter controls the speed of traffic
+                              increase over the warmup duration.
+                            format: double
+                            minimum: 0
+                            nullable: true
+                            type: number
+                          duration:
+                            type: string
+                            x-kubernetes-validations:
+                            - message: must be a valid duration greater than 1ms
+                              rule: duration(self) >= duration('1ms')
+                          minimumPercent:
+                            format: double
+                            maximum: 100
+                            minimum: 0
+                            nullable: true
+                            type: number
+                        required:
+                        - duration
+                        type: object
                       warmupDurationSecs:
-                        description: Represents the warmup duration of Service.
+                        description: 'Deprecated: use `warmup` instead.'
                         type: string
+                        x-kubernetes-validations:
+                        - message: must be a valid duration greater than 1ms
+                          rule: duration(self) >= duration('1ms')
                     type: object
                   outlierDetection:
                     properties:
                       baseEjectionTime:
                         description: Minimum ejection duration.
                         type: string
+                        x-kubernetes-validations:
+                        - message: must be a valid duration greater than 1ms
+                          rule: duration(self) >= duration('1ms')
                       consecutive5xxErrors:
                         description: Number of 5xx errors before a host is ejected
                           from the connection pool.
@@ -1134,6 +1421,9 @@ spec:
                       interval:
                         description: Time interval between ejection sweep analysis.
                         type: string
+                        x-kubernetes-validations:
+                        - message: must be a valid duration greater than 1ms
+                          rule: duration(self) >= duration('1ms')
                       maxEjectionPercent:
                         description: Maximum % of hosts in the load balancing pool
                           for the upstream service that can be ejected.
@@ -1141,7 +1431,7 @@ spec:
                         type: integer
                       minHealthPercent:
                         description: Outlier detection will be enabled as long as
-                          the associated load balancing pool has at least min_health_percent
+                          the associated load balancing pool has at least `minHealthPercent`
                           hosts in healthy mode.
                         format: int32
                         type: integer
@@ -1175,6 +1465,28 @@ spec:
                                     pool connection.
                                   format: int32
                                   type: integer
+                                http2KeepAlive:
+                                  description: Configure HTTP/2 PING frames for upstream
+                                    connections.
+                                  properties:
+                                    interval:
+                                      description: Send HTTP/2 PING frames at this
+                                        interval.
+                                      type: string
+                                      x-kubernetes-validations:
+                                      - message: must be a valid duration greater
+                                          than 1ms
+                                        rule: duration(self) >= duration('1ms')
+                                    timeout:
+                                      description: How long to wait for a response
+                                        to an HTTP/2 PING frame before closing the
+                                        connection.
+                                      type: string
+                                      x-kubernetes-validations:
+                                      - message: must be a valid duration greater
+                                          than 1ms
+                                        rule: duration(self) >= duration('1ms')
+                                  type: object
                                 http2MaxRequests:
                                   description: Maximum number of active requests to
                                     a destination.
@@ -1184,6 +1496,10 @@ spec:
                                   description: The idle timeout for upstream connection
                                     pool connections.
                                   type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
                                 maxConcurrentStreams:
                                   description: The maximum number of concurrent streams
                                     allowed for a peer on one HTTP/2 connection.
@@ -1212,12 +1528,20 @@ spec:
                                 connectTimeout:
                                   description: TCP connection timeout.
                                   type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
                                 idleTimeout:
                                   description: The idle timeout for TCP connections.
                                   type: string
                                 maxConnectionDuration:
                                   description: The maximum duration of a connection.
                                   type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
                                 maxConnections:
                                   description: Maximum number of HTTP1 /TCP connections
                                     to a destination host.
@@ -1231,6 +1555,10 @@ spec:
                                       description: The time duration between keep-alive
                                         probes.
                                       type: string
+                                      x-kubernetes-validations:
+                                      - message: must be a valid duration greater
+                                          than 1ms
+                                        rule: duration(self) >= duration('1ms')
                                     probes:
                                       description: Maximum number of keepalive probes
                                         to send without response before deciding the
@@ -1243,6 +1571,10 @@ spec:
                                         needs to be idle before keep-alive probes
                                         start being sent.
                                       type: string
+                                      x-kubernetes-validations:
+                                      - message: must be a valid duration greater
+                                          than 1ms
+                                        rule: duration(self) >= duration('1ms')
                                   type: object
                               type: object
                           type: object
@@ -1296,6 +1628,21 @@ spec:
                                 httpCookie:
                                   description: Hash based on HTTP cookie.
                                   properties:
+                                    attributes:
+                                      description: Additional attributes for the cookie.
+                                      items:
+                                        properties:
+                                          name:
+                                            description: The name of the cookie attribute.
+                                            type: string
+                                          value:
+                                            description: The optional value of the
+                                              cookie attribute.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
                                     name:
                                       description: Name of the cookie.
                                       type: string
@@ -1364,9 +1711,7 @@ spec:
                                     type: object
                                   type: array
                                 enabled:
-                                  description: enable locality load balancing, this
-                                    is DestinationRule-level and will override mesh
-                                    wide settings in entirety.
+                                  description: Enable locality load balancing.
                                   nullable: true
                                   type: boolean
                                 failover:
@@ -1405,15 +1750,47 @@ spec:
                               - ROUND_ROBIN
                               - LEAST_REQUEST
                               type: string
+                            warmup:
+                              description: Represents the warmup configuration of
+                                Service.
+                              properties:
+                                aggression:
+                                  description: This parameter controls the speed of
+                                    traffic increase over the warmup duration.
+                                  format: double
+                                  minimum: 0
+                                  nullable: true
+                                  type: number
+                                duration:
+                                  type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
+                                minimumPercent:
+                                  format: double
+                                  maximum: 100
+                                  minimum: 0
+                                  nullable: true
+                                  type: number
+                              required:
+                              - duration
+                              type: object
                             warmupDurationSecs:
-                              description: Represents the warmup duration of Service.
+                              description: 'Deprecated: use `warmup` instead.'
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                           type: object
                         outlierDetection:
                           properties:
                             baseEjectionTime:
                               description: Minimum ejection duration.
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                             consecutive5xxErrors:
                               description: Number of 5xx errors before a host is ejected
                                 from the connection pool.
@@ -1441,6 +1818,9 @@ spec:
                             interval:
                               description: Time interval between ejection sweep analysis.
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                             maxEjectionPercent:
                               description: Maximum % of hosts in the load balancing
                                 pool for the upstream service that can be ejected.
@@ -1449,7 +1829,7 @@ spec:
                             minHealthPercent:
                               description: Outlier detection will be enabled as long
                                 as the associated load balancing pool has at least
-                                min_health_percent hosts in healthy mode.
+                                `minHealthPercent` hosts in healthy mode.
                               format: int32
                               type: integer
                             splitExternalLocalOriginErrors:
@@ -1520,6 +1900,7 @@ spec:
                               type: array
                           type: object
                       type: object
+                    maxItems: 4096
                     type: array
                   proxyProtocol:
                     description: The upstream PROXY protocol settings.
@@ -1533,6 +1914,30 @@ spec:
                         - V1
                         - V2
                         type: string
+                    type: object
+                  retryBudget:
+                    description: Specifies a limit on concurrent retries in relation
+                      to the number of active requests.
+                    properties:
+                      budgetInterval:
+                        description: Specifies the duration in which requests will
+                          be considered when calculating the budget for retries.
+                        type: string
+                      minRetryConcurrency:
+                        description: Specifies the minimum retry concurrency allowed
+                          for the retry budget.
+                        maximum: 4294967295
+                        minimum: 0
+                        type: integer
+                      percent:
+                        description: Specifies the limit on concurrent retries as
+                          a percentage of the sum of active requests and active pending
+                          requests.
+                        format: double
+                        maximum: 100
+                        minimum: 0
+                        nullable: true
+                        type: number
                     type: object
                   tls:
                     description: TLS related settings for connections to the upstream
@@ -1615,20 +2020,102 @@ spec:
                 properties:
                   matchLabels:
                     additionalProperties:
+                      maxLength: 63
                       type: string
+                      x-kubernetes-validations:
+                      - message: wildcard not allowed in label value match
+                        rule: '!self.contains("*")'
                     description: One or more labels that indicate a specific set of
                       pods/VMs on which a policy should be applied.
+                    maxProperties: 4096
                     type: object
+                    x-kubernetes-validations:
+                    - message: wildcard not allowed in label key match
+                      rule: self.all(key, !key.contains("*"))
+                    - message: key must not be empty
+                      rule: self.all(key, key.size() != 0)
                 type: object
             required:
             - host
             type: object
           status:
+            properties:
+              conditions:
+                description: Current service state of the resource.
+                items:
+                  properties:
+                    lastProbeTime:
+                      description: Last time we probed the condition.
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: Human-readable message indicating details about
+                        last transition.
+                      type: string
+                    observedGeneration:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: Resource Generation to which the Condition refers.
+                      x-kubernetes-int-or-string: true
+                    reason:
+                      description: Unique, one-word, CamelCase reason for the condition's
+                        last transition.
+                      type: string
+                    status:
+                      description: Status is the status of the condition.
+                      type: string
+                    type:
+                      description: Type is the type of the condition.
+                      type: string
+                  type: object
+                type: array
+              observedGeneration:
+                anyOf:
+                - type: integer
+                - type: string
+                x-kubernetes-int-or-string: true
+              validationMessages:
+                description: Includes any errors or warnings detected by Istio's analyzers.
+                items:
+                  properties:
+                    documentationUrl:
+                      description: A url pointing to the Istio documentation for this
+                        specific error type.
+                      type: string
+                    level:
+                      description: |-
+                        Represents how severe a message is.
+
+                        Valid Options: UNKNOWN, ERROR, WARNING, INFO
+                      enum:
+                      - UNKNOWN
+                      - ERROR
+                      - WARNING
+                      - INFO
+                      type: string
+                    type:
+                      properties:
+                        code:
+                          description: A 7 character code matching `^IST[0-9]{4}$`
+                            intended to uniquely identify the message type.
+                          type: string
+                        name:
+                          description: A human-readable name for the message type.
+                          type: string
+                      type: object
+                  type: object
+                type: array
             type: object
             x-kubernetes-preserve-unknown-fields: true
         type: object
     served: true
-    storage: false
+    storage: true
     subresources:
       status: {}
   - additionalPrinterColumns:
@@ -1636,11 +2123,11 @@ spec:
       jsonPath: .spec.host
       name: Host
       type: string
-    - description: 'CreationTimestamp is a timestamp representing the server time
-        when this object was created. It is not guaranteed to be set in happens-before
+    - description: CreationTimestamp is a timestamp representing the server time when
+        this object was created. It is not guaranteed to be set in happens-before
         order across separate operations. Clients may not set this value. It is represented
         in RFC3339 form and is in UTC. Populated by the system. Read-only. Null for
-        lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata'
+        lists. For more information, see [Kubernetes API Conventions](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata)
       jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -1699,6 +2186,28 @@ spec:
                                     pool connection.
                                   format: int32
                                   type: integer
+                                http2KeepAlive:
+                                  description: Configure HTTP/2 PING frames for upstream
+                                    connections.
+                                  properties:
+                                    interval:
+                                      description: Send HTTP/2 PING frames at this
+                                        interval.
+                                      type: string
+                                      x-kubernetes-validations:
+                                      - message: must be a valid duration greater
+                                          than 1ms
+                                        rule: duration(self) >= duration('1ms')
+                                    timeout:
+                                      description: How long to wait for a response
+                                        to an HTTP/2 PING frame before closing the
+                                        connection.
+                                      type: string
+                                      x-kubernetes-validations:
+                                      - message: must be a valid duration greater
+                                          than 1ms
+                                        rule: duration(self) >= duration('1ms')
+                                  type: object
                                 http2MaxRequests:
                                   description: Maximum number of active requests to
                                     a destination.
@@ -1708,6 +2217,10 @@ spec:
                                   description: The idle timeout for upstream connection
                                     pool connections.
                                   type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
                                 maxConcurrentStreams:
                                   description: The maximum number of concurrent streams
                                     allowed for a peer on one HTTP/2 connection.
@@ -1736,12 +2249,20 @@ spec:
                                 connectTimeout:
                                   description: TCP connection timeout.
                                   type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
                                 idleTimeout:
                                   description: The idle timeout for TCP connections.
                                   type: string
                                 maxConnectionDuration:
                                   description: The maximum duration of a connection.
                                   type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
                                 maxConnections:
                                   description: Maximum number of HTTP1 /TCP connections
                                     to a destination host.
@@ -1755,6 +2276,10 @@ spec:
                                       description: The time duration between keep-alive
                                         probes.
                                       type: string
+                                      x-kubernetes-validations:
+                                      - message: must be a valid duration greater
+                                          than 1ms
+                                        rule: duration(self) >= duration('1ms')
                                     probes:
                                       description: Maximum number of keepalive probes
                                         to send without response before deciding the
@@ -1767,6 +2292,10 @@ spec:
                                         needs to be idle before keep-alive probes
                                         start being sent.
                                       type: string
+                                      x-kubernetes-validations:
+                                      - message: must be a valid duration greater
+                                          than 1ms
+                                        rule: duration(self) >= duration('1ms')
                                   type: object
                               type: object
                           type: object
@@ -1820,6 +2349,21 @@ spec:
                                 httpCookie:
                                   description: Hash based on HTTP cookie.
                                   properties:
+                                    attributes:
+                                      description: Additional attributes for the cookie.
+                                      items:
+                                        properties:
+                                          name:
+                                            description: The name of the cookie attribute.
+                                            type: string
+                                          value:
+                                            description: The optional value of the
+                                              cookie attribute.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
                                     name:
                                       description: Name of the cookie.
                                       type: string
@@ -1888,9 +2432,7 @@ spec:
                                     type: object
                                   type: array
                                 enabled:
-                                  description: enable locality load balancing, this
-                                    is DestinationRule-level and will override mesh
-                                    wide settings in entirety.
+                                  description: Enable locality load balancing.
                                   nullable: true
                                   type: boolean
                                 failover:
@@ -1929,15 +2471,47 @@ spec:
                               - ROUND_ROBIN
                               - LEAST_REQUEST
                               type: string
+                            warmup:
+                              description: Represents the warmup configuration of
+                                Service.
+                              properties:
+                                aggression:
+                                  description: This parameter controls the speed of
+                                    traffic increase over the warmup duration.
+                                  format: double
+                                  minimum: 0
+                                  nullable: true
+                                  type: number
+                                duration:
+                                  type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
+                                minimumPercent:
+                                  format: double
+                                  maximum: 100
+                                  minimum: 0
+                                  nullable: true
+                                  type: number
+                              required:
+                              - duration
+                              type: object
                             warmupDurationSecs:
-                              description: Represents the warmup duration of Service.
+                              description: 'Deprecated: use `warmup` instead.'
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                           type: object
                         outlierDetection:
                           properties:
                             baseEjectionTime:
                               description: Minimum ejection duration.
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                             consecutive5xxErrors:
                               description: Number of 5xx errors before a host is ejected
                                 from the connection pool.
@@ -1965,6 +2539,9 @@ spec:
                             interval:
                               description: Time interval between ejection sweep analysis.
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                             maxEjectionPercent:
                               description: Maximum % of hosts in the load balancing
                                 pool for the upstream service that can be ejected.
@@ -1973,7 +2550,7 @@ spec:
                             minHealthPercent:
                               description: Outlier detection will be enabled as long
                                 as the associated load balancing pool has at least
-                                min_health_percent hosts in healthy mode.
+                                `minHealthPercent` hosts in healthy mode.
                               format: int32
                               type: integer
                             splitExternalLocalOriginErrors:
@@ -2006,6 +2583,28 @@ spec:
                                           connection pool connection.
                                         format: int32
                                         type: integer
+                                      http2KeepAlive:
+                                        description: Configure HTTP/2 PING frames
+                                          for upstream connections.
+                                        properties:
+                                          interval:
+                                            description: Send HTTP/2 PING frames at
+                                              this interval.
+                                            type: string
+                                            x-kubernetes-validations:
+                                            - message: must be a valid duration greater
+                                                than 1ms
+                                              rule: duration(self) >= duration('1ms')
+                                          timeout:
+                                            description: How long to wait for a response
+                                              to an HTTP/2 PING frame before closing
+                                              the connection.
+                                            type: string
+                                            x-kubernetes-validations:
+                                            - message: must be a valid duration greater
+                                                than 1ms
+                                              rule: duration(self) >= duration('1ms')
+                                        type: object
                                       http2MaxRequests:
                                         description: Maximum number of active requests
                                           to a destination.
@@ -2015,6 +2614,10 @@ spec:
                                         description: The idle timeout for upstream
                                           connection pool connections.
                                         type: string
+                                        x-kubernetes-validations:
+                                        - message: must be a valid duration greater
+                                            than 1ms
+                                          rule: duration(self) >= duration('1ms')
                                       maxConcurrentStreams:
                                         description: The maximum number of concurrent
                                           streams allowed for a peer on one HTTP/2
@@ -2045,12 +2648,20 @@ spec:
                                       connectTimeout:
                                         description: TCP connection timeout.
                                         type: string
+                                        x-kubernetes-validations:
+                                        - message: must be a valid duration greater
+                                            than 1ms
+                                          rule: duration(self) >= duration('1ms')
                                       idleTimeout:
                                         description: The idle timeout for TCP connections.
                                         type: string
                                       maxConnectionDuration:
                                         description: The maximum duration of a connection.
                                         type: string
+                                        x-kubernetes-validations:
+                                        - message: must be a valid duration greater
+                                            than 1ms
+                                          rule: duration(self) >= duration('1ms')
                                       maxConnections:
                                         description: Maximum number of HTTP1 /TCP
                                           connections to a destination host.
@@ -2064,6 +2675,10 @@ spec:
                                             description: The time duration between
                                               keep-alive probes.
                                             type: string
+                                            x-kubernetes-validations:
+                                            - message: must be a valid duration greater
+                                                than 1ms
+                                              rule: duration(self) >= duration('1ms')
                                           probes:
                                             description: Maximum number of keepalive
                                               probes to send without response before
@@ -2076,6 +2691,10 @@ spec:
                                               needs to be idle before keep-alive probes
                                               start being sent.
                                             type: string
+                                            x-kubernetes-validations:
+                                            - message: must be a valid duration greater
+                                                than 1ms
+                                              rule: duration(self) >= duration('1ms')
                                         type: object
                                     type: object
                                 type: object
@@ -2130,6 +2749,23 @@ spec:
                                       httpCookie:
                                         description: Hash based on HTTP cookie.
                                         properties:
+                                          attributes:
+                                            description: Additional attributes for
+                                              the cookie.
+                                            items:
+                                              properties:
+                                                name:
+                                                  description: The name of the cookie
+                                                    attribute.
+                                                  type: string
+                                                value:
+                                                  description: The optional value
+                                                    of the cookie attribute.
+                                                  type: string
+                                              required:
+                                              - name
+                                              type: object
+                                            type: array
                                           name:
                                             description: Name of the cookie.
                                             type: string
@@ -2201,9 +2837,7 @@ spec:
                                           type: object
                                         type: array
                                       enabled:
-                                        description: enable locality load balancing,
-                                          this is DestinationRule-level and will override
-                                          mesh wide settings in entirety.
+                                        description: Enable locality load balancing.
                                         nullable: true
                                         type: boolean
                                       failover:
@@ -2242,16 +2876,49 @@ spec:
                                     - ROUND_ROBIN
                                     - LEAST_REQUEST
                                     type: string
+                                  warmup:
+                                    description: Represents the warmup configuration
+                                      of Service.
+                                    properties:
+                                      aggression:
+                                        description: This parameter controls the speed
+                                          of traffic increase over the warmup duration.
+                                        format: double
+                                        minimum: 0
+                                        nullable: true
+                                        type: number
+                                      duration:
+                                        type: string
+                                        x-kubernetes-validations:
+                                        - message: must be a valid duration greater
+                                            than 1ms
+                                          rule: duration(self) >= duration('1ms')
+                                      minimumPercent:
+                                        format: double
+                                        maximum: 100
+                                        minimum: 0
+                                        nullable: true
+                                        type: number
+                                    required:
+                                    - duration
+                                    type: object
                                   warmupDurationSecs:
-                                    description: Represents the warmup duration of
-                                      Service.
+                                    description: 'Deprecated: use `warmup` instead.'
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: must be a valid duration greater than
+                                        1ms
+                                      rule: duration(self) >= duration('1ms')
                                 type: object
                               outlierDetection:
                                 properties:
                                   baseEjectionTime:
                                     description: Minimum ejection duration.
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: must be a valid duration greater than
+                                        1ms
+                                      rule: duration(self) >= duration('1ms')
                                   consecutive5xxErrors:
                                     description: Number of 5xx errors before a host
                                       is ejected from the connection pool.
@@ -2280,6 +2947,10 @@ spec:
                                     description: Time interval between ejection sweep
                                       analysis.
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: must be a valid duration greater than
+                                        1ms
+                                      rule: duration(self) >= duration('1ms')
                                   maxEjectionPercent:
                                     description: Maximum % of hosts in the load balancing
                                       pool for the upstream service that can be ejected.
@@ -2288,7 +2959,7 @@ spec:
                                   minHealthPercent:
                                     description: Outlier detection will be enabled
                                       as long as the associated load balancing pool
-                                      has at least min_health_percent hosts in healthy
+                                      has at least `minHealthPercent` hosts in healthy
                                       mode.
                                     format: int32
                                     type: integer
@@ -2362,6 +3033,7 @@ spec:
                                     type: array
                                 type: object
                             type: object
+                          maxItems: 4096
                           type: array
                         proxyProtocol:
                           description: The upstream PROXY protocol settings.
@@ -2375,6 +3047,31 @@ spec:
                               - V1
                               - V2
                               type: string
+                          type: object
+                        retryBudget:
+                          description: Specifies a limit on concurrent retries in
+                            relation to the number of active requests.
+                          properties:
+                            budgetInterval:
+                              description: Specifies the duration in which requests
+                                will be considered when calculating the budget for
+                                retries.
+                              type: string
+                            minRetryConcurrency:
+                              description: Specifies the minimum retry concurrency
+                                allowed for the retry budget.
+                              maximum: 4294967295
+                              minimum: 0
+                              type: integer
+                            percent:
+                              description: Specifies the limit on concurrent retries
+                                as a percentage of the sum of active requests and
+                                active pending requests.
+                              format: double
+                              maximum: 100
+                              minimum: 0
+                              nullable: true
+                              type: number
                           type: object
                         tls:
                           description: TLS related settings for connections to the
@@ -2480,6 +3177,24 @@ spec:
                               while waiting for a ready connection pool connection.
                             format: int32
                             type: integer
+                          http2KeepAlive:
+                            description: Configure HTTP/2 PING frames for upstream
+                              connections.
+                            properties:
+                              interval:
+                                description: Send HTTP/2 PING frames at this interval.
+                                type: string
+                                x-kubernetes-validations:
+                                - message: must be a valid duration greater than 1ms
+                                  rule: duration(self) >= duration('1ms')
+                              timeout:
+                                description: How long to wait for a response to an
+                                  HTTP/2 PING frame before closing the connection.
+                                type: string
+                                x-kubernetes-validations:
+                                - message: must be a valid duration greater than 1ms
+                                  rule: duration(self) >= duration('1ms')
+                            type: object
                           http2MaxRequests:
                             description: Maximum number of active requests to a destination.
                             format: int32
@@ -2488,6 +3203,9 @@ spec:
                             description: The idle timeout for upstream connection
                               pool connections.
                             type: string
+                            x-kubernetes-validations:
+                            - message: must be a valid duration greater than 1ms
+                              rule: duration(self) >= duration('1ms')
                           maxConcurrentStreams:
                             description: The maximum number of concurrent streams
                               allowed for a peer on one HTTP/2 connection.
@@ -2515,12 +3233,18 @@ spec:
                           connectTimeout:
                             description: TCP connection timeout.
                             type: string
+                            x-kubernetes-validations:
+                            - message: must be a valid duration greater than 1ms
+                              rule: duration(self) >= duration('1ms')
                           idleTimeout:
                             description: The idle timeout for TCP connections.
                             type: string
                           maxConnectionDuration:
                             description: The maximum duration of a connection.
                             type: string
+                            x-kubernetes-validations:
+                            - message: must be a valid duration greater than 1ms
+                              rule: duration(self) >= duration('1ms')
                           maxConnections:
                             description: Maximum number of HTTP1 /TCP connections
                               to a destination host.
@@ -2534,6 +3258,9 @@ spec:
                                 description: The time duration between keep-alive
                                   probes.
                                 type: string
+                                x-kubernetes-validations:
+                                - message: must be a valid duration greater than 1ms
+                                  rule: duration(self) >= duration('1ms')
                               probes:
                                 description: Maximum number of keepalive probes to
                                   send without response before deciding the connection
@@ -2546,6 +3273,9 @@ spec:
                                   to be idle before keep-alive probes start being
                                   sent.
                                 type: string
+                                x-kubernetes-validations:
+                                - message: must be a valid duration greater than 1ms
+                                  rule: duration(self) >= duration('1ms')
                             type: object
                         type: object
                     type: object
@@ -2599,6 +3329,21 @@ spec:
                           httpCookie:
                             description: Hash based on HTTP cookie.
                             properties:
+                              attributes:
+                                description: Additional attributes for the cookie.
+                                items:
+                                  properties:
+                                    name:
+                                      description: The name of the cookie attribute.
+                                      type: string
+                                    value:
+                                      description: The optional value of the cookie
+                                        attribute.
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
+                                type: array
                               name:
                                 description: Name of the cookie.
                                 type: string
@@ -2666,8 +3411,7 @@ spec:
                               type: object
                             type: array
                           enabled:
-                            description: enable locality load balancing, this is DestinationRule-level
-                              and will override mesh wide settings in entirety.
+                            description: Enable locality load balancing.
                             nullable: true
                             type: boolean
                           failover:
@@ -2705,15 +3449,45 @@ spec:
                         - ROUND_ROBIN
                         - LEAST_REQUEST
                         type: string
+                      warmup:
+                        description: Represents the warmup configuration of Service.
+                        properties:
+                          aggression:
+                            description: This parameter controls the speed of traffic
+                              increase over the warmup duration.
+                            format: double
+                            minimum: 0
+                            nullable: true
+                            type: number
+                          duration:
+                            type: string
+                            x-kubernetes-validations:
+                            - message: must be a valid duration greater than 1ms
+                              rule: duration(self) >= duration('1ms')
+                          minimumPercent:
+                            format: double
+                            maximum: 100
+                            minimum: 0
+                            nullable: true
+                            type: number
+                        required:
+                        - duration
+                        type: object
                       warmupDurationSecs:
-                        description: Represents the warmup duration of Service.
+                        description: 'Deprecated: use `warmup` instead.'
                         type: string
+                        x-kubernetes-validations:
+                        - message: must be a valid duration greater than 1ms
+                          rule: duration(self) >= duration('1ms')
                     type: object
                   outlierDetection:
                     properties:
                       baseEjectionTime:
                         description: Minimum ejection duration.
                         type: string
+                        x-kubernetes-validations:
+                        - message: must be a valid duration greater than 1ms
+                          rule: duration(self) >= duration('1ms')
                       consecutive5xxErrors:
                         description: Number of 5xx errors before a host is ejected
                           from the connection pool.
@@ -2741,6 +3515,9 @@ spec:
                       interval:
                         description: Time interval between ejection sweep analysis.
                         type: string
+                        x-kubernetes-validations:
+                        - message: must be a valid duration greater than 1ms
+                          rule: duration(self) >= duration('1ms')
                       maxEjectionPercent:
                         description: Maximum % of hosts in the load balancing pool
                           for the upstream service that can be ejected.
@@ -2748,7 +3525,7 @@ spec:
                         type: integer
                       minHealthPercent:
                         description: Outlier detection will be enabled as long as
-                          the associated load balancing pool has at least min_health_percent
+                          the associated load balancing pool has at least `minHealthPercent`
                           hosts in healthy mode.
                         format: int32
                         type: integer
@@ -2782,6 +3559,28 @@ spec:
                                     pool connection.
                                   format: int32
                                   type: integer
+                                http2KeepAlive:
+                                  description: Configure HTTP/2 PING frames for upstream
+                                    connections.
+                                  properties:
+                                    interval:
+                                      description: Send HTTP/2 PING frames at this
+                                        interval.
+                                      type: string
+                                      x-kubernetes-validations:
+                                      - message: must be a valid duration greater
+                                          than 1ms
+                                        rule: duration(self) >= duration('1ms')
+                                    timeout:
+                                      description: How long to wait for a response
+                                        to an HTTP/2 PING frame before closing the
+                                        connection.
+                                      type: string
+                                      x-kubernetes-validations:
+                                      - message: must be a valid duration greater
+                                          than 1ms
+                                        rule: duration(self) >= duration('1ms')
+                                  type: object
                                 http2MaxRequests:
                                   description: Maximum number of active requests to
                                     a destination.
@@ -2791,6 +3590,10 @@ spec:
                                   description: The idle timeout for upstream connection
                                     pool connections.
                                   type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
                                 maxConcurrentStreams:
                                   description: The maximum number of concurrent streams
                                     allowed for a peer on one HTTP/2 connection.
@@ -2819,12 +3622,20 @@ spec:
                                 connectTimeout:
                                   description: TCP connection timeout.
                                   type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
                                 idleTimeout:
                                   description: The idle timeout for TCP connections.
                                   type: string
                                 maxConnectionDuration:
                                   description: The maximum duration of a connection.
                                   type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
                                 maxConnections:
                                   description: Maximum number of HTTP1 /TCP connections
                                     to a destination host.
@@ -2838,6 +3649,10 @@ spec:
                                       description: The time duration between keep-alive
                                         probes.
                                       type: string
+                                      x-kubernetes-validations:
+                                      - message: must be a valid duration greater
+                                          than 1ms
+                                        rule: duration(self) >= duration('1ms')
                                     probes:
                                       description: Maximum number of keepalive probes
                                         to send without response before deciding the
@@ -2850,6 +3665,10 @@ spec:
                                         needs to be idle before keep-alive probes
                                         start being sent.
                                       type: string
+                                      x-kubernetes-validations:
+                                      - message: must be a valid duration greater
+                                          than 1ms
+                                        rule: duration(self) >= duration('1ms')
                                   type: object
                               type: object
                           type: object
@@ -2903,6 +3722,21 @@ spec:
                                 httpCookie:
                                   description: Hash based on HTTP cookie.
                                   properties:
+                                    attributes:
+                                      description: Additional attributes for the cookie.
+                                      items:
+                                        properties:
+                                          name:
+                                            description: The name of the cookie attribute.
+                                            type: string
+                                          value:
+                                            description: The optional value of the
+                                              cookie attribute.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
                                     name:
                                       description: Name of the cookie.
                                       type: string
@@ -2971,9 +3805,7 @@ spec:
                                     type: object
                                   type: array
                                 enabled:
-                                  description: enable locality load balancing, this
-                                    is DestinationRule-level and will override mesh
-                                    wide settings in entirety.
+                                  description: Enable locality load balancing.
                                   nullable: true
                                   type: boolean
                                 failover:
@@ -3012,15 +3844,47 @@ spec:
                               - ROUND_ROBIN
                               - LEAST_REQUEST
                               type: string
+                            warmup:
+                              description: Represents the warmup configuration of
+                                Service.
+                              properties:
+                                aggression:
+                                  description: This parameter controls the speed of
+                                    traffic increase over the warmup duration.
+                                  format: double
+                                  minimum: 0
+                                  nullable: true
+                                  type: number
+                                duration:
+                                  type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
+                                minimumPercent:
+                                  format: double
+                                  maximum: 100
+                                  minimum: 0
+                                  nullable: true
+                                  type: number
+                              required:
+                              - duration
+                              type: object
                             warmupDurationSecs:
-                              description: Represents the warmup duration of Service.
+                              description: 'Deprecated: use `warmup` instead.'
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                           type: object
                         outlierDetection:
                           properties:
                             baseEjectionTime:
                               description: Minimum ejection duration.
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                             consecutive5xxErrors:
                               description: Number of 5xx errors before a host is ejected
                                 from the connection pool.
@@ -3048,6 +3912,9 @@ spec:
                             interval:
                               description: Time interval between ejection sweep analysis.
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                             maxEjectionPercent:
                               description: Maximum % of hosts in the load balancing
                                 pool for the upstream service that can be ejected.
@@ -3056,7 +3923,7 @@ spec:
                             minHealthPercent:
                               description: Outlier detection will be enabled as long
                                 as the associated load balancing pool has at least
-                                min_health_percent hosts in healthy mode.
+                                `minHealthPercent` hosts in healthy mode.
                               format: int32
                               type: integer
                             splitExternalLocalOriginErrors:
@@ -3127,6 +3994,7 @@ spec:
                               type: array
                           type: object
                       type: object
+                    maxItems: 4096
                     type: array
                   proxyProtocol:
                     description: The upstream PROXY protocol settings.
@@ -3140,6 +4008,30 @@ spec:
                         - V1
                         - V2
                         type: string
+                    type: object
+                  retryBudget:
+                    description: Specifies a limit on concurrent retries in relation
+                      to the number of active requests.
+                    properties:
+                      budgetInterval:
+                        description: Specifies the duration in which requests will
+                          be considered when calculating the budget for retries.
+                        type: string
+                      minRetryConcurrency:
+                        description: Specifies the minimum retry concurrency allowed
+                          for the retry budget.
+                        maximum: 4294967295
+                        minimum: 0
+                        type: integer
+                      percent:
+                        description: Specifies the limit on concurrent retries as
+                          a percentage of the sum of active requests and active pending
+                          requests.
+                        format: double
+                        maximum: 100
+                        minimum: 0
+                        nullable: true
+                        type: number
                     type: object
                   tls:
                     description: TLS related settings for connections to the upstream
@@ -3222,15 +4114,97 @@ spec:
                 properties:
                   matchLabels:
                     additionalProperties:
+                      maxLength: 63
                       type: string
+                      x-kubernetes-validations:
+                      - message: wildcard not allowed in label value match
+                        rule: '!self.contains("*")'
                     description: One or more labels that indicate a specific set of
                       pods/VMs on which a policy should be applied.
+                    maxProperties: 4096
                     type: object
+                    x-kubernetes-validations:
+                    - message: wildcard not allowed in label key match
+                      rule: self.all(key, !key.contains("*"))
+                    - message: key must not be empty
+                      rule: self.all(key, key.size() != 0)
                 type: object
             required:
             - host
             type: object
           status:
+            properties:
+              conditions:
+                description: Current service state of the resource.
+                items:
+                  properties:
+                    lastProbeTime:
+                      description: Last time we probed the condition.
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: Human-readable message indicating details about
+                        last transition.
+                      type: string
+                    observedGeneration:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: Resource Generation to which the Condition refers.
+                      x-kubernetes-int-or-string: true
+                    reason:
+                      description: Unique, one-word, CamelCase reason for the condition's
+                        last transition.
+                      type: string
+                    status:
+                      description: Status is the status of the condition.
+                      type: string
+                    type:
+                      description: Type is the type of the condition.
+                      type: string
+                  type: object
+                type: array
+              observedGeneration:
+                anyOf:
+                - type: integer
+                - type: string
+                x-kubernetes-int-or-string: true
+              validationMessages:
+                description: Includes any errors or warnings detected by Istio's analyzers.
+                items:
+                  properties:
+                    documentationUrl:
+                      description: A url pointing to the Istio documentation for this
+                        specific error type.
+                      type: string
+                    level:
+                      description: |-
+                        Represents how severe a message is.
+
+                        Valid Options: UNKNOWN, ERROR, WARNING, INFO
+                      enum:
+                      - UNKNOWN
+                      - ERROR
+                      - WARNING
+                      - INFO
+                      type: string
+                    type:
+                      properties:
+                        code:
+                          description: A 7 character code matching `^IST[0-9]{4}$`
+                            intended to uniquely identify the message type.
+                          type: string
+                        name:
+                          description: A human-readable name for the message type.
+                          type: string
+                      type: object
+                  type: object
+                type: array
             type: object
             x-kubernetes-preserve-unknown-fields: true
         type: object
@@ -3243,11 +4217,11 @@ spec:
       jsonPath: .spec.host
       name: Host
       type: string
-    - description: 'CreationTimestamp is a timestamp representing the server time
-        when this object was created. It is not guaranteed to be set in happens-before
+    - description: CreationTimestamp is a timestamp representing the server time when
+        this object was created. It is not guaranteed to be set in happens-before
         order across separate operations. Clients may not set this value. It is represented
         in RFC3339 form and is in UTC. Populated by the system. Read-only. Null for
-        lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata'
+        lists. For more information, see [Kubernetes API Conventions](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata)
       jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -3306,6 +4280,28 @@ spec:
                                     pool connection.
                                   format: int32
                                   type: integer
+                                http2KeepAlive:
+                                  description: Configure HTTP/2 PING frames for upstream
+                                    connections.
+                                  properties:
+                                    interval:
+                                      description: Send HTTP/2 PING frames at this
+                                        interval.
+                                      type: string
+                                      x-kubernetes-validations:
+                                      - message: must be a valid duration greater
+                                          than 1ms
+                                        rule: duration(self) >= duration('1ms')
+                                    timeout:
+                                      description: How long to wait for a response
+                                        to an HTTP/2 PING frame before closing the
+                                        connection.
+                                      type: string
+                                      x-kubernetes-validations:
+                                      - message: must be a valid duration greater
+                                          than 1ms
+                                        rule: duration(self) >= duration('1ms')
+                                  type: object
                                 http2MaxRequests:
                                   description: Maximum number of active requests to
                                     a destination.
@@ -3315,6 +4311,10 @@ spec:
                                   description: The idle timeout for upstream connection
                                     pool connections.
                                   type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
                                 maxConcurrentStreams:
                                   description: The maximum number of concurrent streams
                                     allowed for a peer on one HTTP/2 connection.
@@ -3343,12 +4343,20 @@ spec:
                                 connectTimeout:
                                   description: TCP connection timeout.
                                   type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
                                 idleTimeout:
                                   description: The idle timeout for TCP connections.
                                   type: string
                                 maxConnectionDuration:
                                   description: The maximum duration of a connection.
                                   type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
                                 maxConnections:
                                   description: Maximum number of HTTP1 /TCP connections
                                     to a destination host.
@@ -3362,6 +4370,10 @@ spec:
                                       description: The time duration between keep-alive
                                         probes.
                                       type: string
+                                      x-kubernetes-validations:
+                                      - message: must be a valid duration greater
+                                          than 1ms
+                                        rule: duration(self) >= duration('1ms')
                                     probes:
                                       description: Maximum number of keepalive probes
                                         to send without response before deciding the
@@ -3374,6 +4386,10 @@ spec:
                                         needs to be idle before keep-alive probes
                                         start being sent.
                                       type: string
+                                      x-kubernetes-validations:
+                                      - message: must be a valid duration greater
+                                          than 1ms
+                                        rule: duration(self) >= duration('1ms')
                                   type: object
                               type: object
                           type: object
@@ -3427,6 +4443,21 @@ spec:
                                 httpCookie:
                                   description: Hash based on HTTP cookie.
                                   properties:
+                                    attributes:
+                                      description: Additional attributes for the cookie.
+                                      items:
+                                        properties:
+                                          name:
+                                            description: The name of the cookie attribute.
+                                            type: string
+                                          value:
+                                            description: The optional value of the
+                                              cookie attribute.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
                                     name:
                                       description: Name of the cookie.
                                       type: string
@@ -3495,9 +4526,7 @@ spec:
                                     type: object
                                   type: array
                                 enabled:
-                                  description: enable locality load balancing, this
-                                    is DestinationRule-level and will override mesh
-                                    wide settings in entirety.
+                                  description: Enable locality load balancing.
                                   nullable: true
                                   type: boolean
                                 failover:
@@ -3536,15 +4565,47 @@ spec:
                               - ROUND_ROBIN
                               - LEAST_REQUEST
                               type: string
+                            warmup:
+                              description: Represents the warmup configuration of
+                                Service.
+                              properties:
+                                aggression:
+                                  description: This parameter controls the speed of
+                                    traffic increase over the warmup duration.
+                                  format: double
+                                  minimum: 0
+                                  nullable: true
+                                  type: number
+                                duration:
+                                  type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
+                                minimumPercent:
+                                  format: double
+                                  maximum: 100
+                                  minimum: 0
+                                  nullable: true
+                                  type: number
+                              required:
+                              - duration
+                              type: object
                             warmupDurationSecs:
-                              description: Represents the warmup duration of Service.
+                              description: 'Deprecated: use `warmup` instead.'
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                           type: object
                         outlierDetection:
                           properties:
                             baseEjectionTime:
                               description: Minimum ejection duration.
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                             consecutive5xxErrors:
                               description: Number of 5xx errors before a host is ejected
                                 from the connection pool.
@@ -3572,6 +4633,9 @@ spec:
                             interval:
                               description: Time interval between ejection sweep analysis.
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                             maxEjectionPercent:
                               description: Maximum % of hosts in the load balancing
                                 pool for the upstream service that can be ejected.
@@ -3580,7 +4644,7 @@ spec:
                             minHealthPercent:
                               description: Outlier detection will be enabled as long
                                 as the associated load balancing pool has at least
-                                min_health_percent hosts in healthy mode.
+                                `minHealthPercent` hosts in healthy mode.
                               format: int32
                               type: integer
                             splitExternalLocalOriginErrors:
@@ -3613,6 +4677,28 @@ spec:
                                           connection pool connection.
                                         format: int32
                                         type: integer
+                                      http2KeepAlive:
+                                        description: Configure HTTP/2 PING frames
+                                          for upstream connections.
+                                        properties:
+                                          interval:
+                                            description: Send HTTP/2 PING frames at
+                                              this interval.
+                                            type: string
+                                            x-kubernetes-validations:
+                                            - message: must be a valid duration greater
+                                                than 1ms
+                                              rule: duration(self) >= duration('1ms')
+                                          timeout:
+                                            description: How long to wait for a response
+                                              to an HTTP/2 PING frame before closing
+                                              the connection.
+                                            type: string
+                                            x-kubernetes-validations:
+                                            - message: must be a valid duration greater
+                                                than 1ms
+                                              rule: duration(self) >= duration('1ms')
+                                        type: object
                                       http2MaxRequests:
                                         description: Maximum number of active requests
                                           to a destination.
@@ -3622,6 +4708,10 @@ spec:
                                         description: The idle timeout for upstream
                                           connection pool connections.
                                         type: string
+                                        x-kubernetes-validations:
+                                        - message: must be a valid duration greater
+                                            than 1ms
+                                          rule: duration(self) >= duration('1ms')
                                       maxConcurrentStreams:
                                         description: The maximum number of concurrent
                                           streams allowed for a peer on one HTTP/2
@@ -3652,12 +4742,20 @@ spec:
                                       connectTimeout:
                                         description: TCP connection timeout.
                                         type: string
+                                        x-kubernetes-validations:
+                                        - message: must be a valid duration greater
+                                            than 1ms
+                                          rule: duration(self) >= duration('1ms')
                                       idleTimeout:
                                         description: The idle timeout for TCP connections.
                                         type: string
                                       maxConnectionDuration:
                                         description: The maximum duration of a connection.
                                         type: string
+                                        x-kubernetes-validations:
+                                        - message: must be a valid duration greater
+                                            than 1ms
+                                          rule: duration(self) >= duration('1ms')
                                       maxConnections:
                                         description: Maximum number of HTTP1 /TCP
                                           connections to a destination host.
@@ -3671,6 +4769,10 @@ spec:
                                             description: The time duration between
                                               keep-alive probes.
                                             type: string
+                                            x-kubernetes-validations:
+                                            - message: must be a valid duration greater
+                                                than 1ms
+                                              rule: duration(self) >= duration('1ms')
                                           probes:
                                             description: Maximum number of keepalive
                                               probes to send without response before
@@ -3683,6 +4785,10 @@ spec:
                                               needs to be idle before keep-alive probes
                                               start being sent.
                                             type: string
+                                            x-kubernetes-validations:
+                                            - message: must be a valid duration greater
+                                                than 1ms
+                                              rule: duration(self) >= duration('1ms')
                                         type: object
                                     type: object
                                 type: object
@@ -3737,6 +4843,23 @@ spec:
                                       httpCookie:
                                         description: Hash based on HTTP cookie.
                                         properties:
+                                          attributes:
+                                            description: Additional attributes for
+                                              the cookie.
+                                            items:
+                                              properties:
+                                                name:
+                                                  description: The name of the cookie
+                                                    attribute.
+                                                  type: string
+                                                value:
+                                                  description: The optional value
+                                                    of the cookie attribute.
+                                                  type: string
+                                              required:
+                                              - name
+                                              type: object
+                                            type: array
                                           name:
                                             description: Name of the cookie.
                                             type: string
@@ -3808,9 +4931,7 @@ spec:
                                           type: object
                                         type: array
                                       enabled:
-                                        description: enable locality load balancing,
-                                          this is DestinationRule-level and will override
-                                          mesh wide settings in entirety.
+                                        description: Enable locality load balancing.
                                         nullable: true
                                         type: boolean
                                       failover:
@@ -3849,16 +4970,49 @@ spec:
                                     - ROUND_ROBIN
                                     - LEAST_REQUEST
                                     type: string
+                                  warmup:
+                                    description: Represents the warmup configuration
+                                      of Service.
+                                    properties:
+                                      aggression:
+                                        description: This parameter controls the speed
+                                          of traffic increase over the warmup duration.
+                                        format: double
+                                        minimum: 0
+                                        nullable: true
+                                        type: number
+                                      duration:
+                                        type: string
+                                        x-kubernetes-validations:
+                                        - message: must be a valid duration greater
+                                            than 1ms
+                                          rule: duration(self) >= duration('1ms')
+                                      minimumPercent:
+                                        format: double
+                                        maximum: 100
+                                        minimum: 0
+                                        nullable: true
+                                        type: number
+                                    required:
+                                    - duration
+                                    type: object
                                   warmupDurationSecs:
-                                    description: Represents the warmup duration of
-                                      Service.
+                                    description: 'Deprecated: use `warmup` instead.'
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: must be a valid duration greater than
+                                        1ms
+                                      rule: duration(self) >= duration('1ms')
                                 type: object
                               outlierDetection:
                                 properties:
                                   baseEjectionTime:
                                     description: Minimum ejection duration.
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: must be a valid duration greater than
+                                        1ms
+                                      rule: duration(self) >= duration('1ms')
                                   consecutive5xxErrors:
                                     description: Number of 5xx errors before a host
                                       is ejected from the connection pool.
@@ -3887,6 +5041,10 @@ spec:
                                     description: Time interval between ejection sweep
                                       analysis.
                                     type: string
+                                    x-kubernetes-validations:
+                                    - message: must be a valid duration greater than
+                                        1ms
+                                      rule: duration(self) >= duration('1ms')
                                   maxEjectionPercent:
                                     description: Maximum % of hosts in the load balancing
                                       pool for the upstream service that can be ejected.
@@ -3895,7 +5053,7 @@ spec:
                                   minHealthPercent:
                                     description: Outlier detection will be enabled
                                       as long as the associated load balancing pool
-                                      has at least min_health_percent hosts in healthy
+                                      has at least `minHealthPercent` hosts in healthy
                                       mode.
                                     format: int32
                                     type: integer
@@ -3969,6 +5127,7 @@ spec:
                                     type: array
                                 type: object
                             type: object
+                          maxItems: 4096
                           type: array
                         proxyProtocol:
                           description: The upstream PROXY protocol settings.
@@ -3982,6 +5141,31 @@ spec:
                               - V1
                               - V2
                               type: string
+                          type: object
+                        retryBudget:
+                          description: Specifies a limit on concurrent retries in
+                            relation to the number of active requests.
+                          properties:
+                            budgetInterval:
+                              description: Specifies the duration in which requests
+                                will be considered when calculating the budget for
+                                retries.
+                              type: string
+                            minRetryConcurrency:
+                              description: Specifies the minimum retry concurrency
+                                allowed for the retry budget.
+                              maximum: 4294967295
+                              minimum: 0
+                              type: integer
+                            percent:
+                              description: Specifies the limit on concurrent retries
+                                as a percentage of the sum of active requests and
+                                active pending requests.
+                              format: double
+                              maximum: 100
+                              minimum: 0
+                              nullable: true
+                              type: number
                           type: object
                         tls:
                           description: TLS related settings for connections to the
@@ -4087,6 +5271,24 @@ spec:
                               while waiting for a ready connection pool connection.
                             format: int32
                             type: integer
+                          http2KeepAlive:
+                            description: Configure HTTP/2 PING frames for upstream
+                              connections.
+                            properties:
+                              interval:
+                                description: Send HTTP/2 PING frames at this interval.
+                                type: string
+                                x-kubernetes-validations:
+                                - message: must be a valid duration greater than 1ms
+                                  rule: duration(self) >= duration('1ms')
+                              timeout:
+                                description: How long to wait for a response to an
+                                  HTTP/2 PING frame before closing the connection.
+                                type: string
+                                x-kubernetes-validations:
+                                - message: must be a valid duration greater than 1ms
+                                  rule: duration(self) >= duration('1ms')
+                            type: object
                           http2MaxRequests:
                             description: Maximum number of active requests to a destination.
                             format: int32
@@ -4095,6 +5297,9 @@ spec:
                             description: The idle timeout for upstream connection
                               pool connections.
                             type: string
+                            x-kubernetes-validations:
+                            - message: must be a valid duration greater than 1ms
+                              rule: duration(self) >= duration('1ms')
                           maxConcurrentStreams:
                             description: The maximum number of concurrent streams
                               allowed for a peer on one HTTP/2 connection.
@@ -4122,12 +5327,18 @@ spec:
                           connectTimeout:
                             description: TCP connection timeout.
                             type: string
+                            x-kubernetes-validations:
+                            - message: must be a valid duration greater than 1ms
+                              rule: duration(self) >= duration('1ms')
                           idleTimeout:
                             description: The idle timeout for TCP connections.
                             type: string
                           maxConnectionDuration:
                             description: The maximum duration of a connection.
                             type: string
+                            x-kubernetes-validations:
+                            - message: must be a valid duration greater than 1ms
+                              rule: duration(self) >= duration('1ms')
                           maxConnections:
                             description: Maximum number of HTTP1 /TCP connections
                               to a destination host.
@@ -4141,6 +5352,9 @@ spec:
                                 description: The time duration between keep-alive
                                   probes.
                                 type: string
+                                x-kubernetes-validations:
+                                - message: must be a valid duration greater than 1ms
+                                  rule: duration(self) >= duration('1ms')
                               probes:
                                 description: Maximum number of keepalive probes to
                                   send without response before deciding the connection
@@ -4153,6 +5367,9 @@ spec:
                                   to be idle before keep-alive probes start being
                                   sent.
                                 type: string
+                                x-kubernetes-validations:
+                                - message: must be a valid duration greater than 1ms
+                                  rule: duration(self) >= duration('1ms')
                             type: object
                         type: object
                     type: object
@@ -4206,6 +5423,21 @@ spec:
                           httpCookie:
                             description: Hash based on HTTP cookie.
                             properties:
+                              attributes:
+                                description: Additional attributes for the cookie.
+                                items:
+                                  properties:
+                                    name:
+                                      description: The name of the cookie attribute.
+                                      type: string
+                                    value:
+                                      description: The optional value of the cookie
+                                        attribute.
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
+                                type: array
                               name:
                                 description: Name of the cookie.
                                 type: string
@@ -4273,8 +5505,7 @@ spec:
                               type: object
                             type: array
                           enabled:
-                            description: enable locality load balancing, this is DestinationRule-level
-                              and will override mesh wide settings in entirety.
+                            description: Enable locality load balancing.
                             nullable: true
                             type: boolean
                           failover:
@@ -4312,15 +5543,45 @@ spec:
                         - ROUND_ROBIN
                         - LEAST_REQUEST
                         type: string
+                      warmup:
+                        description: Represents the warmup configuration of Service.
+                        properties:
+                          aggression:
+                            description: This parameter controls the speed of traffic
+                              increase over the warmup duration.
+                            format: double
+                            minimum: 0
+                            nullable: true
+                            type: number
+                          duration:
+                            type: string
+                            x-kubernetes-validations:
+                            - message: must be a valid duration greater than 1ms
+                              rule: duration(self) >= duration('1ms')
+                          minimumPercent:
+                            format: double
+                            maximum: 100
+                            minimum: 0
+                            nullable: true
+                            type: number
+                        required:
+                        - duration
+                        type: object
                       warmupDurationSecs:
-                        description: Represents the warmup duration of Service.
+                        description: 'Deprecated: use `warmup` instead.'
                         type: string
+                        x-kubernetes-validations:
+                        - message: must be a valid duration greater than 1ms
+                          rule: duration(self) >= duration('1ms')
                     type: object
                   outlierDetection:
                     properties:
                       baseEjectionTime:
                         description: Minimum ejection duration.
                         type: string
+                        x-kubernetes-validations:
+                        - message: must be a valid duration greater than 1ms
+                          rule: duration(self) >= duration('1ms')
                       consecutive5xxErrors:
                         description: Number of 5xx errors before a host is ejected
                           from the connection pool.
@@ -4348,6 +5609,9 @@ spec:
                       interval:
                         description: Time interval between ejection sweep analysis.
                         type: string
+                        x-kubernetes-validations:
+                        - message: must be a valid duration greater than 1ms
+                          rule: duration(self) >= duration('1ms')
                       maxEjectionPercent:
                         description: Maximum % of hosts in the load balancing pool
                           for the upstream service that can be ejected.
@@ -4355,7 +5619,7 @@ spec:
                         type: integer
                       minHealthPercent:
                         description: Outlier detection will be enabled as long as
-                          the associated load balancing pool has at least min_health_percent
+                          the associated load balancing pool has at least `minHealthPercent`
                           hosts in healthy mode.
                         format: int32
                         type: integer
@@ -4389,6 +5653,28 @@ spec:
                                     pool connection.
                                   format: int32
                                   type: integer
+                                http2KeepAlive:
+                                  description: Configure HTTP/2 PING frames for upstream
+                                    connections.
+                                  properties:
+                                    interval:
+                                      description: Send HTTP/2 PING frames at this
+                                        interval.
+                                      type: string
+                                      x-kubernetes-validations:
+                                      - message: must be a valid duration greater
+                                          than 1ms
+                                        rule: duration(self) >= duration('1ms')
+                                    timeout:
+                                      description: How long to wait for a response
+                                        to an HTTP/2 PING frame before closing the
+                                        connection.
+                                      type: string
+                                      x-kubernetes-validations:
+                                      - message: must be a valid duration greater
+                                          than 1ms
+                                        rule: duration(self) >= duration('1ms')
+                                  type: object
                                 http2MaxRequests:
                                   description: Maximum number of active requests to
                                     a destination.
@@ -4398,6 +5684,10 @@ spec:
                                   description: The idle timeout for upstream connection
                                     pool connections.
                                   type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
                                 maxConcurrentStreams:
                                   description: The maximum number of concurrent streams
                                     allowed for a peer on one HTTP/2 connection.
@@ -4426,12 +5716,20 @@ spec:
                                 connectTimeout:
                                   description: TCP connection timeout.
                                   type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
                                 idleTimeout:
                                   description: The idle timeout for TCP connections.
                                   type: string
                                 maxConnectionDuration:
                                   description: The maximum duration of a connection.
                                   type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
                                 maxConnections:
                                   description: Maximum number of HTTP1 /TCP connections
                                     to a destination host.
@@ -4445,6 +5743,10 @@ spec:
                                       description: The time duration between keep-alive
                                         probes.
                                       type: string
+                                      x-kubernetes-validations:
+                                      - message: must be a valid duration greater
+                                          than 1ms
+                                        rule: duration(self) >= duration('1ms')
                                     probes:
                                       description: Maximum number of keepalive probes
                                         to send without response before deciding the
@@ -4457,6 +5759,10 @@ spec:
                                         needs to be idle before keep-alive probes
                                         start being sent.
                                       type: string
+                                      x-kubernetes-validations:
+                                      - message: must be a valid duration greater
+                                          than 1ms
+                                        rule: duration(self) >= duration('1ms')
                                   type: object
                               type: object
                           type: object
@@ -4510,6 +5816,21 @@ spec:
                                 httpCookie:
                                   description: Hash based on HTTP cookie.
                                   properties:
+                                    attributes:
+                                      description: Additional attributes for the cookie.
+                                      items:
+                                        properties:
+                                          name:
+                                            description: The name of the cookie attribute.
+                                            type: string
+                                          value:
+                                            description: The optional value of the
+                                              cookie attribute.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
                                     name:
                                       description: Name of the cookie.
                                       type: string
@@ -4578,9 +5899,7 @@ spec:
                                     type: object
                                   type: array
                                 enabled:
-                                  description: enable locality load balancing, this
-                                    is DestinationRule-level and will override mesh
-                                    wide settings in entirety.
+                                  description: Enable locality load balancing.
                                   nullable: true
                                   type: boolean
                                 failover:
@@ -4619,15 +5938,47 @@ spec:
                               - ROUND_ROBIN
                               - LEAST_REQUEST
                               type: string
+                            warmup:
+                              description: Represents the warmup configuration of
+                                Service.
+                              properties:
+                                aggression:
+                                  description: This parameter controls the speed of
+                                    traffic increase over the warmup duration.
+                                  format: double
+                                  minimum: 0
+                                  nullable: true
+                                  type: number
+                                duration:
+                                  type: string
+                                  x-kubernetes-validations:
+                                  - message: must be a valid duration greater than
+                                      1ms
+                                    rule: duration(self) >= duration('1ms')
+                                minimumPercent:
+                                  format: double
+                                  maximum: 100
+                                  minimum: 0
+                                  nullable: true
+                                  type: number
+                              required:
+                              - duration
+                              type: object
                             warmupDurationSecs:
-                              description: Represents the warmup duration of Service.
+                              description: 'Deprecated: use `warmup` instead.'
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                           type: object
                         outlierDetection:
                           properties:
                             baseEjectionTime:
                               description: Minimum ejection duration.
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                             consecutive5xxErrors:
                               description: Number of 5xx errors before a host is ejected
                                 from the connection pool.
@@ -4655,6 +6006,9 @@ spec:
                             interval:
                               description: Time interval between ejection sweep analysis.
                               type: string
+                              x-kubernetes-validations:
+                              - message: must be a valid duration greater than 1ms
+                                rule: duration(self) >= duration('1ms')
                             maxEjectionPercent:
                               description: Maximum % of hosts in the load balancing
                                 pool for the upstream service that can be ejected.
@@ -4663,7 +6017,7 @@ spec:
                             minHealthPercent:
                               description: Outlier detection will be enabled as long
                                 as the associated load balancing pool has at least
-                                min_health_percent hosts in healthy mode.
+                                `minHealthPercent` hosts in healthy mode.
                               format: int32
                               type: integer
                             splitExternalLocalOriginErrors:
@@ -4734,6 +6088,7 @@ spec:
                               type: array
                           type: object
                       type: object
+                    maxItems: 4096
                     type: array
                   proxyProtocol:
                     description: The upstream PROXY protocol settings.
@@ -4747,6 +6102,30 @@ spec:
                         - V1
                         - V2
                         type: string
+                    type: object
+                  retryBudget:
+                    description: Specifies a limit on concurrent retries in relation
+                      to the number of active requests.
+                    properties:
+                      budgetInterval:
+                        description: Specifies the duration in which requests will
+                          be considered when calculating the budget for retries.
+                        type: string
+                      minRetryConcurrency:
+                        description: Specifies the minimum retry concurrency allowed
+                          for the retry budget.
+                        maximum: 4294967295
+                        minimum: 0
+                        type: integer
+                      percent:
+                        description: Specifies the limit on concurrent retries as
+                          a percentage of the sum of active requests and active pending
+                          requests.
+                        format: double
+                        maximum: 100
+                        minimum: 0
+                        nullable: true
+                        type: number
                     type: object
                   tls:
                     description: TLS related settings for connections to the upstream
@@ -4829,20 +6208,102 @@ spec:
                 properties:
                   matchLabels:
                     additionalProperties:
+                      maxLength: 63
                       type: string
+                      x-kubernetes-validations:
+                      - message: wildcard not allowed in label value match
+                        rule: '!self.contains("*")'
                     description: One or more labels that indicate a specific set of
                       pods/VMs on which a policy should be applied.
+                    maxProperties: 4096
                     type: object
+                    x-kubernetes-validations:
+                    - message: wildcard not allowed in label key match
+                      rule: self.all(key, !key.contains("*"))
+                    - message: key must not be empty
+                      rule: self.all(key, key.size() != 0)
                 type: object
             required:
             - host
             type: object
           status:
+            properties:
+              conditions:
+                description: Current service state of the resource.
+                items:
+                  properties:
+                    lastProbeTime:
+                      description: Last time we probed the condition.
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: Human-readable message indicating details about
+                        last transition.
+                      type: string
+                    observedGeneration:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: Resource Generation to which the Condition refers.
+                      x-kubernetes-int-or-string: true
+                    reason:
+                      description: Unique, one-word, CamelCase reason for the condition's
+                        last transition.
+                      type: string
+                    status:
+                      description: Status is the status of the condition.
+                      type: string
+                    type:
+                      description: Type is the type of the condition.
+                      type: string
+                  type: object
+                type: array
+              observedGeneration:
+                anyOf:
+                - type: integer
+                - type: string
+                x-kubernetes-int-or-string: true
+              validationMessages:
+                description: Includes any errors or warnings detected by Istio's analyzers.
+                items:
+                  properties:
+                    documentationUrl:
+                      description: A url pointing to the Istio documentation for this
+                        specific error type.
+                      type: string
+                    level:
+                      description: |-
+                        Represents how severe a message is.
+
+                        Valid Options: UNKNOWN, ERROR, WARNING, INFO
+                      enum:
+                      - UNKNOWN
+                      - ERROR
+                      - WARNING
+                      - INFO
+                      type: string
+                    type:
+                      properties:
+                        code:
+                          description: A 7 character code matching `^IST[0-9]{4}$`
+                            intended to uniquely identify the message type.
+                          type: string
+                        name:
+                          description: A human-readable name for the message type.
+                          type: string
+                      type: object
+                  type: object
+                type: array
             type: object
             x-kubernetes-preserve-unknown-fields: true
         type: object
     served: true
-    storage: true
+    storage: false
     subresources:
       status: {}
 status:

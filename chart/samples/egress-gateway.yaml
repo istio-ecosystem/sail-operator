@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: istio-egressgateway
+spec:
+  type: ClusterIP
+  selector:
+    istio: egressgateway
+  ports:
+    - name: http2
+      port: 80
+      targetPort: 8080
+    - name: https
+      port: 443
+      targetPort: 8443
+    - name: tls
+      port: 15443
+      targetPort: 15443
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: istio-egressgateway
+spec:
+  selector:
+    matchLabels:
+      istio: egressgateway
+  template:
+    metadata:
+      annotations:
+        # Select the gateway injection template (rather than the default sidecar template)
+        inject.istio.io/templates: gateway
+      labels:
+        # Set a unique label for the gateway. This is required to ensure Gateways can select this workload
+        istio: egressgateway
+        # Enable gateway injection. If connecting to a revisioned control plane, replace with "istio.io/rev: revision-name"
+        sidecar.istio.io/inject: "true"
+    spec:
+      containers:
+        - name: istio-proxy
+          image: auto # The image will automatically update each time the pod starts.
+          env:
+            - name: ISTIO_META_ROUTER_MODE
+              value: "sni-dnat"
+
+---
+# Set up roles to allow reading credentials for TLS
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: istio-egressgateway-sds
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "watch", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: istio-egressgateway-sds
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: istio-egressgateway-sds
+subjects:
+  - kind: ServiceAccount
+    name: default

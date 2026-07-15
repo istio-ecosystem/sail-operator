@@ -1,0 +1,68 @@
+link:../README.adoc[Return to Project Root]
+
+== Table of Contents
+
+* <<installing-the-istioctl-tool>>
+** <<prerequisites>>
+** <<procedure>>
+
+[[installing-the-istioctl-tool]]
+== Installing the istioctl tool
+
+The `istioctl` tool is a configuration command line utility that allows service 
+operators to debug and diagnose Istio service mesh deployments.
+
+[[prerequisites]]
+=== Prerequisites
+
+Use an `istioctl` version that is the same version as the Istio control plane 
+for the Service Mesh deployment. See https://github.com/istio/istio/releases[Istio Releases] for a list of valid 
+releases, including Beta releases. 
+
+[[procedure]]
+=== Procedure
+
+. Confirm if you have `istioctl` installed, and if so which version, by running 
+the following command at the terminal:
++
+[source,bash,subs="attributes+"]
+----
+istioctl version
+----
+
+. Confirm the version of Istio you are using by running the following command 
+at the terminal:
++
+[source,bash,subs="attributes+"]
+----
+oc get istio
+----
+
+. Install `istioctl` by running the following command at the terminal: 
++
+[source,bash,subs="attributes+"]
+----
+curl -sL https://istio.io/downloadIstioctl | ISTIO_VERSION=<version> sh -
+----
++
+Replace `<version>` with the version of Istio you are using.
+
+. Put the `istioctl` directory on path by running the following command at the terminal:
++
+[source,bash,subs="attributes+"]
+----
+export PATH=$HOME/.istioctl/bin:$PATH
+----
+
+. Confirm that the `istioctl` client version and the Istio control plane 
+version now match (or are within one version) by running the following command
+at the terminal:
++
+[source,bash,subs="attributes+"]
+----
+istioctl version
+----
+
+For more information on usage, see the https://istio.io/latest/docs/ops/diagnostic-tools/istioctl/[Istioctl documentation].
+
+NOTE: `istioctl install` is not supported. The Sail Operator installs Istio.

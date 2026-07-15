@@ -43,13 +43,16 @@ func (c *restClientGetter) ToRESTConfig() (*rest.Config, error) {
 
 func (c *restClientGetter) ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error) {
 	if c.discoveryClient == nil {
-		oldBurst := c.config.Burst
+		// Copy the config to avoid mutating the original config.
+		// Otherwise calling ToDiscoveryClient can cause a race condition.
+		cfg := rest.CopyConfig(c.config)
 		// use the default (high) burst for discovery
-		c.config.Burst = 0
-		// write back the old burst value after it has been copied for discovery client creation
-		defer func() { c.config.Burst = oldBurst }()
+		cfg.Burst = 0
 
-		discoveryClient, _ := discovery.NewDiscoveryClientForConfig(c.config)
+		discoveryClient, err := discovery.NewDiscoveryClientForConfig(cfg)
+		if err != nil {
+			return nil, err
+		}
 		c.discoveryClient = memory.NewMemCacheClient(discoveryClient)
 	}
 	return c.discoveryClient, nil
@@ -57,8 +60,10 @@ func (c *restClientGetter) ToDiscoveryClient() (discovery.CachedDiscoveryInterfa
 
 func (c *restClientGetter) ToRESTMapper() (meta.RESTMapper, error) {
 	if c.restMapper == nil {
-		// we know err is always nil
-		discoveryClient, _ := c.ToDiscoveryClient()
+		discoveryClient, err := c.ToDiscoveryClient()
+		if err != nil {
+			return nil, err
+		}
 
 		mapper := restmapper.NewDeferredDiscoveryRESTMapper(discoveryClient)
 		c.restMapper = restmapper.NewShortcutExpander(mapper, discoveryClient, nil)

@@ -1,0 +1,17 @@
+# This file can be overwritten in vendor distributions of sail-operator to set
+# vendor-specific defaults. You can configure version-specific defaults for
+# every field in `spec.values` for both Istio and IstioCNI resource, 
+# see the following example:
+# 
+# v1.26.0:
+#   istio:
+#     pilot:
+#       env:
+#         test: "true"
+#   istiocni:
+#     cni:
+#       cniConfDir: custom/cni/conf/dir
+#
+# These defaults are type-checked at compile time.
+# Note: After modifying this file, run `make test` to ensure that the
+# generated defaults values from this files are valid.

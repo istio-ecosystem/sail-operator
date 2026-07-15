@@ -30,16 +30,29 @@ func (h *Values) GetBool(key string) (bool, bool, error) {
 	return unstructured.NestedBool(*h, toKeys(key)...)
 }
 
-// GetString returns the string value of a nested field.
-// Returns false if value is not found and an error if not a string.
-func (h *Values) GetString(key string) (string, bool, error) {
-	return unstructured.NestedString(*h, toKeys(key)...)
-}
-
 // Set sets the value of a nested field to a deep copy of the value provided.
 // Returns an error if value cannot be set because one of the nesting levels is not a map[string]any.
 func (h *Values) Set(key string, val any) error {
 	return unstructured.SetNestedField(*h, val, toKeys(key)...)
+}
+
+// Set sets the value of a nested string slice to the value provided.
+// Returns an error if value cannot be set because one of the nesting levels is not a map[string]any.
+func (h *Values) SetStringSlice(key string, val []string) error {
+	return unstructured.SetNestedStringSlice(*h, val, toKeys(key)...)
+}
+
+// SetIfAbsent sets the value of a nested field to a deep copy of the value
+// provided if the field does not exist.
+func (h *Values) SetIfAbsent(key string, val any) error {
+	if _, found, err := unstructured.NestedFieldNoCopy(*h, toKeys(key)...); err != nil {
+		return fmt.Errorf("failed to get value %s: %w", key, err)
+	} else if !found {
+		if err := h.Set(key, val); err != nil {
+			return fmt.Errorf("failed to set value %s: %w", key, err)
+		}
+	}
+	return nil
 }
 
 func toKeys(key string) []string {

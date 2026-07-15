@@ -16,20 +16,48 @@
 
 set -e -u -o pipefail
 
-: "${ISTIO_VERSION:=$1}"
-: "${ISTIO_REPO:=$2}"
-: "${ISTIO_COMMIT:=$3}"
-CHART_URLS=("${@:4}")
+: "${ISTIO_VERSION_NAME:=$1}"
+: "${ISTIO_VERSION:=$2}"
+: "${ISTIO_REPO:=$3}"
+: "${ISTIO_COMMIT:=$4}"
+CHART_URLS=("${@:5}")
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 REPO_ROOT=$(dirname "${SCRIPT_DIR}")
-MANIFEST_DIR="${REPO_ROOT}/resources/${ISTIO_VERSION}"
+MANIFEST_DIR="${REPO_ROOT}/resources/${ISTIO_VERSION_NAME}"
 CHARTS_DIR="${MANIFEST_DIR}/charts"
 PROFILES_DIR="${MANIFEST_DIR}/profiles"
 
 ISTIO_URL="${ISTIO_REPO}/archive/${ISTIO_COMMIT}.tar.gz"
 WORK_DIR=$(mktemp -d)
+FORCE_DOWNLOADS=${FORCE_DOWNLOADS:=false}
 trap 'rm -rf "${WORK_DIR}"' EXIT
+
+function downloadRequired() {
+  commit_file="${MANIFEST_DIR}/commit"
+  if [ ! -f "${commit_file}" ]; then
+    return 0
+  fi
+  if [ "$ISTIO_COMMIT" != "$(cat "${commit_file}")" ]; then
+    return 0
+  fi
+
+  if [ "${#CHART_URLS[@]}" -gt 0 ]; then
+    for url in "${CHART_URLS[@]}"; do
+      file="${url##*/}"
+      etag_file="${MANIFEST_DIR}/$file.etag"
+      if [ ! -f "${etag_file}" ]; then
+        return 0
+      fi
+      current=$(curl -I "$url" 2>/dev/null | awk -F': ' '/^etag:/ {print $2}' | tr -d "\"")
+      if [ "$current" != "$(cat "${etag_file}")" ]; then
+        return 0
+      fi
+    done
+  fi
+  return 1
+}
+
 
 function downloadIstioManifests() {
   rm -rf "${CHARTS_DIR}"
@@ -39,6 +67,10 @@ function downloadIstioManifests() {
   mkdir -p "${PROFILES_DIR}"
 
   pushd "${WORK_DIR}" >/dev/null
+  commit_file="${MANIFEST_DIR}/commit"  
+  echo "writing commit for Git archive to ${ISTIO_COMMIT}"
+  echo "${ISTIO_COMMIT}" > "${commit_file}"
+
   echo "downloading Git archive from ${ISTIO_URL}"
   curl -sSLfO "${ISTIO_URL}"
 
@@ -47,10 +79,10 @@ function downloadIstioManifests() {
 
   if [ "${#CHART_URLS[@]}" -gt 0 ]; then
     for url in "${CHART_URLS[@]}"; do
-      echo "downloading chart from $url"
-      curl -sSLfO "$url"
-
       file="${url##*/}"
+      etag_file="${MANIFEST_DIR}/$file.etag"
+      echo "downloading chart from $url"
+      curl -LfO -D - "$url" 2>/dev/null | awk -F': ' '/^etag:/ {print $2}' | tr -d "\"" > "$etag_file"
 
       echo "extracting charts from $file to ${CHARTS_DIR}"
       tar zxf "$file" -C "${CHARTS_DIR}"
@@ -70,6 +102,7 @@ function downloadIstioManifests() {
     cp -rf "${WORK_DIR}"/"${EXTRACT_DIR}"/manifests/charts/gateway "${CHARTS_DIR}/gateway"
     cp -rf "${WORK_DIR}"/"${EXTRACT_DIR}"/manifests/charts/istio-cni "${CHARTS_DIR}/cni"
     cp -rf "${WORK_DIR}"/"${EXTRACT_DIR}"/manifests/charts/istio-control/istio-discovery "${CHARTS_DIR}/istiod"
+    cp -rf "${WORK_DIR}"/"${EXTRACT_DIR}"/manifests/charts/istiod-remote "${CHARTS_DIR}/istiod-remote"
     cp -rf "${WORK_DIR}"/"${EXTRACT_DIR}"/manifests/charts/ztunnel "${CHARTS_DIR}/ztunnel"
 
     echo "copying profiles to ${PROFILES_DIR}"
@@ -84,16 +117,118 @@ function patchIstioCharts() {
   echo "patching istio charts ${CHARTS_DIR}/cni/templates/clusterrole.yaml "
   # NOTE: everything in the patchIstioCharts should be here only temporarily,
   # until we push the required changes upstream
+
+  # add permissions for CNI to use the privileged SCC. This has been added upstream in 1.23.0,
+  # so this can be removed once we remove support for versions <1.23
   sed -i '0,/rules:/s//rules:\
 - apiGroups: ["security.openshift.io"] \
   resources: ["securitycontextconstraints"] \
   resourceNames: ["privileged"] \
   verbs: ["use"]/' "${CHARTS_DIR}/cni/templates/clusterrole.yaml"
+
+  # remove CRDs from base chart, since they are installed by OLM, not by the operator
+  rm -f "${CHARTS_DIR}/base/templates/crds.yaml"
+  # <v1.24.0
+  rm -rf "${CHARTS_DIR}/base/crds/"
+  # >=v1.24.0
+  rm -f "${CHARTS_DIR}/base/files/crd-all.gen.yaml"
+
+  # TODO: remove this once we remove support for 1.23
+  # remove CRDs from istiod-remote chart, since they are installed by OLM, not by the operator
+  rm -f "${CHARTS_DIR}/istiod-remote/templates/crd-all.gen.yaml"
+
+  # remove install.operator.istio.io/owning-resource label from all charts
+  sed -i '/install.operator.istio.io\/owning-resource/d' "${CHARTS_DIR}"/*/templates/*.yaml
+
+  # add values ConfigMap template if it doesn't exist
+  if [ ! -f "${CHARTS_DIR}/istiod/templates/configmap-values.yaml" ]; then
+    cat <<EOF > "${CHARTS_DIR}/istiod/templates/configmap-values.yaml"
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: values{{- if not (eq .Values.revision "") }}-{{ .Values.revision }}{{- end }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    kubernetes.io/description: This ConfigMap contains the Helm values used during chart rendering. This ConfigMap is rendered for debugging purposes and external tooling; modifying these values has no effect.
+  labels:
+    istio.io/rev: {{ .Values.revision | default "default" | quote }}
+    install.operator.istio.io/owning-resource: {{ .Values.ownerName | default "unknown" }}
+    operator.istio.io/component: "Pilot"
+    release: {{ .Release.Name }}
+    app.kubernetes.io/name: "istiod"
+    {{- include "istio.labels" . | nindent 4 }}
+data:
+  original-values: |-
+{{ .Values._original | toPrettyJson | indent 4 }}
+{{- \$_ := unset $.Values "_original" }}
+  merged-values: |-
+{{ .Values | toPrettyJson | indent 4 }}
+EOF
+
+    # remove "include istio.labels" line if istio.labels is not defined in zzz_profile.yaml
+    if ! grep -q 'define "istio.labels"' "${CHARTS_DIR}/istiod/templates/zzz_profile.yaml"; then
+      sed -i '/istio.labels/d' "${CHARTS_DIR}/istiod/templates/configmap-values.yaml"
+    fi
+  fi
+
+  # shellcheck disable=SC2016
+  if ! grep -q '$x := set $.Values "_original" (deepCopy $.Values)' "${CHARTS_DIR}/istiod/templates/zzz_profile.yaml"; then
+    # shellcheck disable=SC2016
+    sed -i '/mustMergeOverwrite \$defaults \$.Values/i {{- $x := set $.Values "_original" (deepCopy $.Values) }}' "${CHARTS_DIR}/istiod/templates/zzz_profile.yaml"
+  fi
+
+  if versionIsBelow "1.27.1"; then
+    # patch the Gateway chart to comply with the new JSON schema validation introduced upstream
+    # This is necessary for all versions <1.27.1
+    # TODO: remove once we remove support for 1.27.0
+    jq '
+      del(.type, .additionalProperties) |
+      ."$defs".values.additionalProperties = false |
+      ."$defs".values.properties."_internal_defaults_do_not_set" = {"type": "object"}
+    ' "${CHARTS_DIR}/gateway/values.schema.json" > temp.json && mv temp.json "${CHARTS_DIR}/gateway/values.schema.json"
+  fi
+}
+
+# The charts use docker.io as the default registry, but this leads to issues
+# because of Docker Hub's rate limiting. This function modifies the hub field
+# in all charts to use registry.istio.io/release instead of docker.io/istio.
+# registry.istio.io also contains the official images for Istio and they are an exact match.
+function replaceDockerHubWithRegistryIstio() {
+  echo "replacing docker.io/istio with registry.istio.io/release in all charts"
+
+  find "${CHARTS_DIR}" -name values.yaml -exec sed -i 's/hub: docker.io\/istio/hub: registry.istio.io\/release/g' {} \;
+}
+
+# The alpha/beta releases from istio-release.storage.googleapis.com may specify
+# registry.istio.io/testing in their charts, but the images are actually published
+# to registry.istio.io/release. This function replaces /testing/ with /release/ only for
+# official releases from istio-release.storage.googleapis.com.
+# Dev builds from istio-build/dev/ should keep /testing/ as their images are published there.
+function replaceChartsNSForAlphaRelease() {
+  local is_official_release=false
+  if [ "${#CHART_URLS[@]}" -gt 0 ]; then
+    for url in "${CHART_URLS[@]}"; do
+      if [[ "$url" == *"istio-release.storage.googleapis.com"* ]]; then
+        is_official_release=true
+        break
+      fi
+    done
+  fi
+
+  if [ "$is_official_release" = true ]; then
+    echo "replacing registry.istio.io/testing with registry.istio.io/release for official release charts"
+    find "${CHARTS_DIR}" -name values.yaml -exec sed -i 's/registry\.istio\.io\/testing/registry.istio.io\/release/g' {} \;
+  else
+    echo "skipping registry replacement for dev/testing builds"
+  fi
 }
 
 function convertIstioProfiles() {
+  # delete the minimal profile, because it ends up being empty after the conversion
+  [ -f "${PROFILES_DIR}"/minimal.yaml ] && rm "${PROFILES_DIR}"/minimal.yaml
+  # convert profiles
   for profile in "${PROFILES_DIR}"/*.yaml; do
-    yq eval -i '.apiVersion="operator.istio.io/v1alpha1"
+    yq eval -i '.apiVersion="sailoperator.io/v1"
       | .kind="Istio"
       | (select(.spec.meshConfig) | .spec.values.meshConfig)=.spec.meshConfig
       | (select(.spec.values.istio_cni) | .spec.values.pilot.cni)=.spec.values.istio_cni
@@ -107,6 +242,41 @@ function convertIstioProfiles() {
   done
 }
 
+function createRevisionTagChart() {
+  mkdir -p "${CHARTS_DIR}/revisiontags/templates"
+  echo "apiVersion: v2
+appVersion: ${ISTIO_VERSION}
+description: Helm chart for istio revision tags
+name: revisiontags
+sources:
+- https://github.com/istio-ecosystem/sail-operator
+version: 0.1.0
+" > "${CHARTS_DIR}/revisiontags/Chart.yaml"
+  cp "${CHARTS_DIR}/istiod/values.yaml" "${CHARTS_DIR}/revisiontags/values.yaml"
+  if [ -e "${CHARTS_DIR}/istiod/templates/revision-tags.yaml" ]; then
+    cp "${CHARTS_DIR}/istiod/templates/revision-tags.yaml" "${CHARTS_DIR}/revisiontags/templates/revision-tags.yaml"
+  else
+    cp "${CHARTS_DIR}/istiod/templates/revision-tags-mwc.yaml" "${CHARTS_DIR}/revisiontags/templates/revision-tags-mwc.yaml"
+    cp "${CHARTS_DIR}/istiod/templates/revision-tags-svc.yaml" "${CHARTS_DIR}/revisiontags/templates/revision-tags-svc.yaml"
+  fi
+  cp "${CHARTS_DIR}/istiod/templates/zzz_profile.yaml" "${CHARTS_DIR}/revisiontags/templates/zzz_profile.yaml"
+
+  mkdir -p "${CHARTS_DIR}/revisiontags/files"
+  cp "${CHARTS_DIR}"/istiod/files/profile-*.yaml "${CHARTS_DIR}/revisiontags/files"
+}
+
+function versionIsBelow() {
+  local comparedVersion="$1"
+  [[ "$(printf '%s\n' "$ISTIO_VERSION" "${comparedVersion}" | sort -V | head -n1)" == "$ISTIO_VERSION" ]] && [[ "$ISTIO_VERSION" != "${comparedVersion}" ]]
+}
+
+if ! downloadRequired && [ "${FORCE_DOWNLOADS}" != "true" ] ; then
+  echo "${ISTIO_VERSION_NAME} charts are up to date. Skipping downloads"
+  exit 0
+fi
 downloadIstioManifests
 patchIstioCharts
+replaceDockerHubWithRegistryIstio
+replaceChartsNSForAlphaRelease
 convertIstioProfiles
+createRevisionTagChart

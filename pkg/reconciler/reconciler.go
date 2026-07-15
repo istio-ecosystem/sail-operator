@@ -16,6 +16,7 @@ package reconciler
 
 import (
 	"context"
+	"reflect"
 	"strings"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
@@ -31,12 +32,11 @@ type ReconcileFunc[T client.Object] func(ctx context.Context, obj T) (ctrl.Resul
 // FinalizeFunc is a function that finalizes an object. It does not remove the finalizer.
 type FinalizeFunc[T client.Object] func(ctx context.Context, obj T) error
 
-// StandardRecociler encapsulates common reconciler behavior, allowing you to
+// StandardReconciler encapsulates common reconciler behavior, allowing you to
 // implement a reconciler simply by providing a ReconcileFunc and an optional
 // FinalizeFunc. These functions are invoked at the appropriate time and are
 // passed the object being reconciled.
 type StandardReconciler[T client.Object] struct {
-	object    T
 	client    client.Client
 	reconcile ReconcileFunc[T]
 	finalizer string
@@ -44,17 +44,16 @@ type StandardReconciler[T client.Object] struct {
 }
 
 // NewStandardReconciler creates a new StandardReconciler for objects of the specified type.
-func NewStandardReconciler[T client.Object](cl client.Client, object T, reconcileFunc ReconcileFunc[T]) *StandardReconciler[T] {
-	return NewStandardReconcilerWithFinalizer(cl, object, reconcileFunc, nil, "")
+func NewStandardReconciler[T client.Object](cl client.Client, reconcileFunc ReconcileFunc[T]) *StandardReconciler[T] {
+	return NewStandardReconcilerWithFinalizer[T](cl, reconcileFunc, nil, "")
 }
 
 // NewStandardReconcilerWithFinalizer is similar to NewStandardReconciler, but also accepts a finalizer and a
 // FinalizerFunc.
 func NewStandardReconcilerWithFinalizer[T client.Object](
-	cl client.Client, object T, reconcileFunc ReconcileFunc[T], finalizeFunc FinalizeFunc[T], finalizer string,
+	cl client.Client, reconcileFunc ReconcileFunc[T], finalizeFunc FinalizeFunc[T], finalizer string,
 ) *StandardReconciler[T] {
 	return &StandardReconciler[T]{
-		object:    object,
 		client:    cl,
 		reconcile: reconcileFunc,
 		finalizer: finalizer,
@@ -63,13 +62,13 @@ func NewStandardReconcilerWithFinalizer[T client.Object](
 }
 
 // Reconcile reconciles the object. It first fetches the object from the client, then invokes the
-// configured ReconcileFunc. If a finalizer is configured in the reconciler and the object is new,
+// configured ReconcileFunc. If a finalizer is configured in the reconciler, and the object is new,
 // this function adds the finalizer to the object. When the object is being deleted, this function
 // invokes the configured FinalizerFunc and removes the finalizer afterward.
 func (r *StandardReconciler[T]) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
-	obj := r.object.DeepCopyObject().(T) // TODO: create object using scheme.New() instead?
+	obj := reflect.New(reflect.TypeOf(*new(T)).Elem()).Interface().(T)
 	if err := r.client.Get(ctx, req.NamespacedName, obj); err != nil {
 		if errors.IsNotFound(err) {
 			log.V(2).Info("Resource not found. Skipping reconciliation")
@@ -99,6 +98,12 @@ func (r *StandardReconciler[T]) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{Requeue: true}, nil
 	case errors.IsConflict(err):
 		log.Info("Conflict detected. Retrying...")
+		return ctrl.Result{Requeue: true}, nil
+	case errors.IsNotFound(err):
+		log.Info("Resource not found. Retrying...", "error", err)
+		return ctrl.Result{Requeue: true}, nil
+	case IsTransientError(err):
+		log.Info("Reconciliation failed. Retrying...", "error", err)
 		return ctrl.Result{Requeue: true}, nil
 	case IsValidationError(err):
 		log.Info("Validation failed", "error", err)

@@ -17,7 +17,9 @@
 set -euo pipefail
 
 SLEEP_TIME=10
+VERSIONS_YAML_DIR=${VERSIONS_YAML_DIR:-"pkg/istioversion"}
 VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"versions.yaml"}
+VERSIONS_YAML_PATH=${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}
 
 # Add a new entry in versions.yaml file.
 # First argument is the new version (e.g. 1.22.5)
@@ -26,6 +28,12 @@ VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"versions.yaml"}
 # The new entry will be placed immediately before the old one
 function add_stable_version() {
     echo "Adding new stable version: ${1}"
+    # we want to add the istiod-remote chart only for 1.23
+    istiod_remote_line=""
+    if [[ ${1} == 1.23.* ]]
+    then
+      istiod_remote_line="\"https://istio-release.storage.googleapis.com/charts/istiod-remote-${1}.tgz\","
+    fi
     template=$(cat <<-END
 {
   "name": "v${1}",
@@ -35,6 +43,7 @@ function add_stable_version() {
   "charts": [
     "https://istio-release.storage.googleapis.com/charts/base-${1}.tgz",
     "https://istio-release.storage.googleapis.com/charts/istiod-${1}.tgz",
+    ${istiod_remote_line}
     "https://istio-release.storage.googleapis.com/charts/gateway-${1}.tgz",
     "https://istio-release.storage.googleapis.com/charts/cni-${1}.tgz",
     "https://istio-release.storage.googleapis.com/charts/ztunnel-${1}.tgz"
@@ -42,13 +51,21 @@ function add_stable_version() {
 }
 END
     )
+
     # Insert the new key above the old one (https://stackoverflow.com/questions/74368503/is-it-possible-to-insert-an-element-into-a-middle-of-array-in-yaml-using-yq)
     # shellcheck disable=SC2016
     yq -i '.versions |=  (
         (.[] | select(.name == "v'"${2}"'") | key) as $pos |
         .[:$pos] +
         ['"${template}"'] +
-        .[$pos:])' "${VERSIONS_YAML_FILE}"
+        .[$pos:])' "${VERSIONS_YAML_PATH}"
+}
+
+function update_alias() {
+    local name="${1}"
+    local ref="${2}"
+    echo "Updating alias ${name} to point to ${ref}"
+    yq eval "( .versions[] | select(.name == \"${name}\").ref ) = \"${ref}\"" -i "${VERSIONS_YAML_PATH}"
 }
 
 # Given an input with potentially several major.minor versions, list only the latest one
@@ -67,6 +84,9 @@ function list_only_latest() {
     local current tmp=""
     while read -r input; do
         IFS="." read -r -a version <<< "${input}"
+        if [ "${#version[@]}" -lt "3" ]; then
+          continue
+        fi
         current="${version[0]}.${version[1]}"
         if [[ "${current}" != "${tmp}" ]]; then
             echo "${input}"
@@ -76,9 +96,8 @@ function list_only_latest() {
 }
 
 function update_stable() {
-    all_releases=$(curl -sL "https://api.github.com/repos/istio/istio/releases" | yq '.[].tag_name' -oy | grep -vE 'rc|alpha|beta')
-    supported_versions=$(yq '.versions[] | .name' "${VERSIONS_YAML_FILE}" | grep -v latest | list_only_latest)
-
+    all_releases=$(curl -sL "https://api.github.com/repos/istio/istio/releases?per_page=200" | yq '.[].tag_name' -oy)
+    supported_versions=$(yq '.versions[] | select(.name != "*.*-*.*") | .name' "${VERSIONS_YAML_PATH}" | list_only_latest)
     # For each supported version, look for a greater version in the all_releases list
     for version in ${supported_versions}; do
         version="${version:1}" # remove 'v' prefix, e.g. v1.21.0 => 1.21.0
@@ -86,20 +105,23 @@ function update_stable() {
         latest_release=$(echo "${all_releases}" | grep "${version_array[0]}.${version_array[1]}." | head -1) # get the latest release for "major.minor"
         if [[ "${version}" != "${latest_release}" ]]; then
             add_stable_version "${latest_release}" "${version}"
+            update_alias "v${version_array[0]}.${version_array[1]}-latest" "v${latest_release}"
         fi
     done
 }
 
-function update_latest() {
-    COMMIT=$(yq '.versions[] | select(.name == "latest") | "git ls-remote --heads " + .repo + ".git " + .branch + " | cut -f 1"' "${VERSIONS_YAML_FILE}" | sh)
-    CURRENT=$(yq '.versions[] | select(.name == "latest") | .commit' "${VERSIONS_YAML_FILE}")
+function update_prerelease() {
+    # get only dev versions containing commit hash and ignore official alpha/beta builds handled manually currently
+    VERSION_CURRENT=$(yq '.versions[] | select(.name | test("^v?[0-9]+\\.[0-9]+\\.[0-9]+.*\\.[0-9a-f]{8}$")) | .name' "${VERSIONS_YAML_PATH}")
+    COMMIT=$(yq '.versions[] | select(.name == '\""${VERSION_CURRENT}"\"') | "git ls-remote --heads " + .repo + ".git " + .branch + " | cut -f 1"' "${VERSIONS_YAML_PATH}" | sh)
+    CURRENT=$(yq '.versions[] | select(.name == '\""${VERSION_CURRENT}"\"') | .commit' "${VERSIONS_YAML_PATH}")
 
     if [ "${COMMIT}" == "${CURRENT}" ]; then
-        echo "${VERSIONS_YAML_FILE} is already up-to-date with latest commit ${COMMIT}."
+        echo "${VERSIONS_YAML_PATH} is already up-to-date with latest commit ${COMMIT}."
         return
     fi
 
-    echo Updating version 'latest' to commit "${COMMIT}"
+    echo Updating "${VERSION_CURRENT}" to commit "${COMMIT}"
     echo "Verifying the artifacts are available on GCS, this might take a while - you can abort the wait with CTRL+C"
 
     URL="https://storage.googleapis.com/istio-build/dev/${COMMIT}"
@@ -109,23 +131,25 @@ function update_latest() {
     done
     echo
 
-    FULL_VERSION=$(curl -sSfL "${URL}")
-    echo Full version: "${FULL_VERSION}"
-
-    PARTIAL_VERSION="${FULL_VERSION%.*}"
-    echo Partial version: "${PARTIAL_VERSION}"
+    full_version=$(curl -sSfL "${URL}")
+    IFS="." read -r -a version_array <<< "${full_version}" # split version into an array for major, minor and patch
+    commit_short=${version_array[3]:0:8} # cutoff commit at 8 chars
+    VERSION=${version_array[0]}.${version_array[1]}.${version_array[2]}.${commit_short}
+    echo New version: "${VERSION}"
 
     yq -i '
-        (.versions[] | select(.name == "latest") | .version) = "'"${PARTIAL_VERSION}"'" |
-        (.versions[] | select(.name == "latest") | .commit) = "'"${COMMIT}"'" |
-        (.versions[] | select(.name == "latest") | .charts) = [
-            "https://storage.googleapis.com/istio-build/dev/'"${FULL_VERSION}"'/helm/base-'"${FULL_VERSION}"'.tgz",
-            "https://storage.googleapis.com/istio-build/dev/'"${FULL_VERSION}"'/helm/cni-'"${FULL_VERSION}"'.tgz",
-            "https://storage.googleapis.com/istio-build/dev/'"${FULL_VERSION}"'/helm/gateway-'"${FULL_VERSION}"'.tgz",
-            "https://storage.googleapis.com/istio-build/dev/'"${FULL_VERSION}"'/helm/istiod-'"${FULL_VERSION}"'.tgz",
-            "https://storage.googleapis.com/istio-build/dev/'"${FULL_VERSION}"'/helm/ztunnel-'"${FULL_VERSION}"'.tgz"
-        ]' "${VERSIONS_YAML_FILE}"
+        (.versions[] | select(.name == "'"${VERSION_CURRENT}"'") | .version) = "'"${full_version}"'" |
+        (.versions[] | select(.name == "'"${VERSION_CURRENT}"'") | .commit) = "'"${COMMIT}"'" |
+        (.versions[] | select(.name == "'"${VERSION_CURRENT}"'") | .charts) = [
+            "https://storage.googleapis.com/istio-build/dev/'"${full_version}"'/helm/base-'"${full_version}"'.tgz",
+            "https://storage.googleapis.com/istio-build/dev/'"${full_version}"'/helm/cni-'"${full_version}"'.tgz",
+            "https://storage.googleapis.com/istio-build/dev/'"${full_version}"'/helm/gateway-'"${full_version}"'.tgz",
+            "https://storage.googleapis.com/istio-build/dev/'"${full_version}"'/helm/istiod-'"${full_version}"'.tgz",
+            "https://storage.googleapis.com/istio-build/dev/'"${full_version}"'/helm/ztunnel-'"${full_version}"'.tgz"
+        ] |
+        (.versions[] | select(.name == "'"${VERSION_CURRENT}"'") | .name) = "'"v${VERSION}"'"' "${VERSIONS_YAML_PATH}"
+    update_alias "master" "v${VERSION}"
 }
 
 update_stable
-update_latest
+update_prerelease

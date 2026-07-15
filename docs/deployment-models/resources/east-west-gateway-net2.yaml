@@ -1,0 +1,248 @@
+# Generated with https://github.com/istio/istio/blob/master/samples/multicluster/gen-eastwest-gateway.sh
+# gen-eastwest-gateway.sh --mesh mesh1 --cluster west --network network2
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: istio-eastwestgateway
+    install.operator.istio.io/owning-resource: unknown
+    istio: eastwestgateway
+    istio.io/rev: default
+    operator.istio.io/component: IngressGateways
+    release: istio
+    topology.istio.io/network: network2
+  name: istio-eastwestgateway-service-account
+  namespace: istio-system
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: istio-eastwestgateway
+    install.operator.istio.io/owning-resource: unknown
+    istio: eastwestgateway
+    istio.io/rev: default
+    operator.istio.io/component: IngressGateways
+    release: istio
+    topology.istio.io/network: network2
+  name: istio-eastwestgateway
+  namespace: istio-system
+spec:
+  selector:
+    matchLabels:
+      app: istio-eastwestgateway
+      istio: eastwestgateway
+      topology.istio.io/network: network2
+  strategy:
+    rollingUpdate:
+      maxSurge: 100%
+      maxUnavailable: 25%
+  template:
+    metadata:
+      annotations:
+        inject.istio.io/templates: gateway
+        prometheus.io/path: /stats/prometheus
+        prometheus.io/port: "15020"
+        prometheus.io/scrape: "true"
+        sidecar.istio.io/inject: "true"
+      labels:
+        app: istio-eastwestgateway
+        chart: gateways
+        heritage: Tiller
+        install.operator.istio.io/owning-resource: unknown
+        istio: eastwestgateway
+        operator.istio.io/component: IngressGateways
+        release: istio
+        sidecar.istio.io/inject: "true"
+        topology.istio.io/network: network2
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution: null
+          requiredDuringSchedulingIgnoredDuringExecution: null
+      containers:
+        - env:
+            - name: ISTIO_META_REQUESTED_NETWORK_VIEW
+              value: network2
+            - name: ISTIO_META_UNPRIVILEGED_POD
+              value: "true"
+          image: auto
+          name: istio-proxy
+          ports:
+            - containerPort: 15021
+              protocol: TCP
+            - containerPort: 15443
+              protocol: TCP
+            - containerPort: 15012
+              protocol: TCP
+            - containerPort: 15017
+              protocol: TCP
+            - containerPort: 15090
+              name: http-envoy-prom
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 2000m
+              memory: 1024Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - mountPath: /etc/istio/ingressgateway-certs
+              name: ingressgateway-certs
+              readOnly: true
+            - mountPath: /etc/istio/ingressgateway-ca-certs
+              name: ingressgateway-ca-certs
+              readOnly: true
+      serviceAccountName: istio-eastwestgateway-service-account
+      volumes:
+        - name: ingressgateway-certs
+          secret:
+            optional: true
+            secretName: istio-ingressgateway-certs
+        - name: ingressgateway-ca-certs
+          secret:
+            optional: true
+            secretName: istio-ingressgateway-ca-certs
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  labels:
+    app: istio-eastwestgateway
+    install.operator.istio.io/owning-resource: unknown
+    istio: eastwestgateway
+    istio.io/rev: default
+    operator.istio.io/component: IngressGateways
+    release: istio
+    topology.istio.io/network: network2
+  name: istio-eastwestgateway
+  namespace: istio-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: istio-eastwestgateway
+      istio: eastwestgateway
+      topology.istio.io/network: network2
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    install.operator.istio.io/owning-resource: unknown
+    istio.io/rev: default
+    operator.istio.io/component: IngressGateways
+    release: istio
+  name: istio-eastwestgateway-sds
+  namespace: istio-system
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+      - watch
+      - list
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    install.operator.istio.io/owning-resource: unknown
+    istio.io/rev: default
+    operator.istio.io/component: IngressGateways
+    release: istio
+  name: istio-eastwestgateway-sds
+  namespace: istio-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: istio-eastwestgateway-sds
+subjects:
+  - kind: ServiceAccount
+    name: istio-eastwestgateway-service-account
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  labels:
+    app: istio-eastwestgateway
+    install.operator.istio.io/owning-resource: unknown
+    istio: eastwestgateway
+    istio.io/rev: default
+    operator.istio.io/component: IngressGateways
+    release: istio
+    topology.istio.io/network: network2
+  name: istio-eastwestgateway
+  namespace: istio-system
+spec:
+  maxReplicas: 5
+  metrics:
+    - resource:
+        name: cpu
+        target:
+          averageUtilization: 80
+          type: Utilization
+      type: Resource
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: istio-eastwestgateway
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations: null
+  labels:
+    app: istio-eastwestgateway
+    install.operator.istio.io/owning-resource: unknown
+    istio: eastwestgateway
+    istio.io/rev: default
+    operator.istio.io/component: IngressGateways
+    release: istio
+    topology.istio.io/network: network2
+  name: istio-eastwestgateway
+  namespace: istio-system
+spec:
+  ports:
+    - name: status-port
+      port: 15021
+      protocol: TCP
+      targetPort: 15021
+    - name: tls
+      port: 15443
+      protocol: TCP
+      targetPort: 15443
+    - name: tls-istiod
+      port: 15012
+      protocol: TCP
+      targetPort: 15012
+    - name: tls-webhook
+      port: 15017
+      protocol: TCP
+      targetPort: 15017
+  selector:
+    app: istio-eastwestgateway
+    istio: eastwestgateway
+    topology.istio.io/network: network2
+  type: LoadBalancer
+
+---
+

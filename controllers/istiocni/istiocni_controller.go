@@ -18,23 +18,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path"
-	"reflect"
 
 	"github.com/go-logr/logr"
-	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
+	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
-	"github.com/istio-ecosystem/sail-operator/pkg/kube"
-	"github.com/istio-ecosystem/sail-operator/pkg/profiles"
+	sharedreconcile "github.com/istio-ecosystem/sail-operator/pkg/reconcile"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
-	"github.com/istio-ecosystem/sail-operator/pkg/validation"
-	appsv1 "k8s.io/api/apps/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/watches"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -48,35 +43,26 @@ import (
 	"istio.io/istio/pkg/ptr"
 )
 
-const (
-	cniReleaseName = "istio-cni"
-	cniChartName   = "cni"
-)
-
 // Reconciler reconciles an IstioCNI object
 type Reconciler struct {
-	ResourceDirectory string
-	DefaultProfile    string
 	client.Client
+	Config       config.ReconcilerConfig
 	Scheme       *runtime.Scheme
 	ChartManager *helm.ChartManager
 }
 
-func NewReconciler(
-	client client.Client, scheme *runtime.Scheme, resourceDir string, chartManager *helm.ChartManager, defaultProfile string,
-) *Reconciler {
+func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *runtime.Scheme, chartManager *helm.ChartManager) *Reconciler {
 	return &Reconciler{
-		ResourceDirectory: resourceDir,
-		DefaultProfile:    defaultProfile,
-		Client:            client,
-		Scheme:            scheme,
-		ChartManager:      chartManager,
+		Config:       cfg,
+		Client:       client,
+		Scheme:       scheme,
+		ChartManager: chartManager,
 	}
 }
 
-// +kubebuilder:rbac:groups=operator.istio.io,resources=istiocnis,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=operator.istio.io,resources=istiocnis/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=operator.istio.io,resources=istiocnis/finalizers,verbs=update
+// +kubebuilder:rbac:groups=sailoperator.io,resources=istiocnis,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=sailoperator.io,resources=istiocnis/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=sailoperator.io,resources=istiocnis/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources="*",verbs="*"
 // +kubebuilder:rbac:groups="networking.k8s.io",resources="networkpolicies",verbs="*"
 // +kubebuilder:rbac:groups="policy",resources="poddisruptionbudgets",verbs="*"
@@ -94,7 +80,7 @@ func NewReconciler(
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
-func (r *Reconciler) Reconcile(ctx context.Context, cni *v1alpha1.IstioCNI) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, cni *v1.IstioCNI) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
 	reconcileErr := r.doReconcile(ctx, cni)
@@ -105,134 +91,78 @@ func (r *Reconciler) Reconcile(ctx context.Context, cni *v1alpha1.IstioCNI) (ctr
 	return ctrl.Result{}, errors.Join(reconcileErr, statusErr)
 }
 
-func (r *Reconciler) Finalize(ctx context.Context, cni *v1alpha1.IstioCNI) error {
-	return r.uninstallHelmChart(ctx, cni)
+func (r *Reconciler) Finalize(ctx context.Context, cni *v1.IstioCNI) error {
+	cniReconciler := r.newCNIReconciler()
+	return cniReconciler.Uninstall(ctx, cni.Spec.Namespace)
 }
 
-func (r *Reconciler) doReconcile(ctx context.Context, cni *v1alpha1.IstioCNI) error {
+func (r *Reconciler) doReconcile(ctx context.Context, cni *v1.IstioCNI) error {
 	log := logf.FromContext(ctx)
-	if err := r.validate(ctx, cni); err != nil {
+	cniReconciler := r.newCNIReconciler()
+
+	if err := cniReconciler.Validate(ctx, cni.Spec.Version, cni.Spec.Namespace); err != nil {
 		return err
 	}
 
 	log.Info("Installing Helm chart")
-	return r.installHelmChart(ctx, cni)
-}
-
-func (r *Reconciler) validate(ctx context.Context, cni *v1alpha1.IstioCNI) error {
-	if cni.Spec.Version == "" {
-		return reconciler.NewValidationError("spec.version not set")
-	}
-	if cni.Spec.Namespace == "" {
-		return reconciler.NewValidationError("spec.namespace not set")
-	}
-	if err := validation.ValidateTargetNamespace(ctx, r.Client, cni.Spec.Namespace); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (r *Reconciler) installHelmChart(ctx context.Context, cni *v1alpha1.IstioCNI) error {
 	ownerReference := metav1.OwnerReference{
-		APIVersion:         v1alpha1.GroupVersion.String(),
-		Kind:               v1alpha1.IstioCNIKind,
+		APIVersion:         v1.GroupVersion.String(),
+		Kind:               v1.IstioCNIKind,
 		Name:               cni.Name,
 		UID:                cni.UID,
 		Controller:         ptr.Of(true),
 		BlockOwnerDeletion: ptr.Of(true),
 	}
-
-	// get userValues from Istio.spec.values
-	userValues := cni.Spec.Values
-
-	// apply image digests from configuration, if not already set by user
-	userValues = applyImageDigests(cni, userValues, config.Config)
-
-	// apply userValues on top of defaultValues from profiles
-	mergedHelmValues, err := profiles.Apply(getProfilesDir(r.ResourceDirectory, cni), r.DefaultProfile, cni.Spec.Profile, helm.FromValues(userValues))
-	if err != nil {
-		return fmt.Errorf("failed to apply profile: %w", err)
-	}
-
-	_, err = r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(cni), mergedHelmValues, cni.Spec.Namespace, cniReleaseName, ownerReference)
-	if err != nil {
-		return fmt.Errorf("failed to install/update Helm chart %q: %w", cniChartName, err)
-	}
-	return nil
+	return cniReconciler.Install(ctx, cni.Spec.Version, cni.Spec.Namespace, cni.Spec.Values, cni.Spec.Profile, &ownerReference)
 }
 
-func (r *Reconciler) getChartDir(cni *v1alpha1.IstioCNI) string {
-	return path.Join(r.ResourceDirectory, cni.Spec.Version, "charts", cniChartName)
-}
-
-func getProfilesDir(resourceDir string, cni *v1alpha1.IstioCNI) string {
-	return path.Join(resourceDir, cni.Spec.Version, "profiles")
-}
-
-func applyImageDigests(cni *v1alpha1.IstioCNI, values *v1alpha1.CNIValues, config config.OperatorConfig) *v1alpha1.CNIValues {
-	imageDigests, digestsDefined := config.ImageDigests[cni.Spec.Version]
-	// if we don't have default image digests defined for this version, it's a no-op
-	if !digestsDefined {
-		return values
-	}
-
-	if values == nil {
-		values = &v1alpha1.CNIValues{}
-	}
-
-	// set image digest unless any part of the image has been configured by the user
-	if values.Cni == nil {
-		values.Cni = &v1alpha1.CNIConfig{}
-	}
-	if values.Cni.Image == "" && values.Cni.Hub == "" && values.Cni.Tag == nil {
-		values.Cni.Image = imageDigests.CNIImage
-	}
-	return values
-}
-
-func (r *Reconciler) uninstallHelmChart(ctx context.Context, cni *v1alpha1.IstioCNI) error {
-	_, err := r.ChartManager.UninstallChart(ctx, cniReleaseName, cni.Spec.Namespace)
-	if err != nil {
-		return fmt.Errorf("failed to uninstall Helm chart %q: %w", cniChartName, err)
-	}
-	return nil
+func (r *Reconciler) newCNIReconciler() *sharedreconcile.CNIReconciler {
+	return sharedreconcile.NewCNIReconciler(sharedreconcile.Config{
+		ResourceFS:        r.Config.ResourceFS,
+		Platform:          r.Config.Platform,
+		DefaultProfile:    r.Config.DefaultProfile,
+		OperatorNamespace: r.Config.OperatorNamespace,
+		ChartManager:      r.ChartManager,
+	}, r.Client)
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
-	// ownedResourceHandler handles resources that are owned by the IstioCNI CR
-	ownedResourceHandler := handler.EnqueueRequestForOwner(r.Scheme, r.RESTMapper(), &v1alpha1.IstioCNI{}, handler.OnlyControllerOwner())
+	logger := mgr.GetLogger().WithName("ctrlr").WithName("istiocni")
 
-	return ctrl.NewControllerManagedBy(mgr).
+	// mainObjectHandler handles the IstioCNI watch events
+	mainObjectHandler := wrapEventHandler(logger, &handler.EnqueueRequestForObject{})
+
+	// ownedResourceHandler handles resources that are owned by the IstioCNI CR
+	ownedResourceHandler := wrapEventHandler(logger,
+		handler.EnqueueRequestForOwner(r.Scheme, r.RESTMapper(), &v1.IstioCNI{}, handler.OnlyControllerOwner()))
+
+	namespaceHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapNamespaceToReconcileRequest))
+
+	b := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
 			LogConstructor: func(req *reconcile.Request) logr.Logger {
-				log := mgr.GetLogger().WithName("ctrlr").WithName("istiocni")
+				log := logger
 				if req != nil {
 					log = log.WithValues("IstioCNI", req.Name)
 				}
 				return log
 			},
+			MaxConcurrentReconciles: r.Config.MaxConcurrentReconciles,
 		}).
-		For(&v1alpha1.IstioCNI{}).
+		// we use the Watches function instead of For(), so that we can wrap the handler so that events that cause the object to be enqueued are logged
+		Watches(&v1.IstioCNI{}, mainObjectHandler).
+		Named("istiocni")
 
-		// namespaced resources
-		Watches(&corev1.ConfigMap{}, ownedResourceHandler).
-		Watches(&appsv1.DaemonSet{}, ownedResourceHandler).
-		Watches(&corev1.ResourceQuota{}, ownedResourceHandler).
-		Watches(&corev1.ServiceAccount{}, ownedResourceHandler).
-		Watches(&rbacv1.RoleBinding{}, ownedResourceHandler).
+	watches.RegisterOwnedWatches(b, watches.CNIWatches, ownedResourceHandler, nil)
 
-		// TODO: only register NetAttachDef if the CRD is installed (may also need to watch for CRD creation)
-		// Owns(&multusv1.NetworkAttachmentDefinition{}).
-
-		// cluster-scoped resources
-		Watches(&corev1.Namespace{}, handler.EnqueueRequestsFromMapFunc(r.mapNamespaceToReconcileRequest)).
-		Watches(&rbacv1.ClusterRole{}, ownedResourceHandler).
-		Watches(&rbacv1.ClusterRoleBinding{}, ownedResourceHandler).
-		Complete(reconciler.NewStandardReconcilerWithFinalizer(r.Client, &v1alpha1.IstioCNI{}, r.Reconcile, r.Finalize, constants.FinalizerName))
+	return b.
+		// +lint-watches:ignore: Namespace (not present in charts, but must be watched to reconcile IstioCni when its namespace is created)
+		Watches(&corev1.Namespace{}, namespaceHandler).
+		Complete(reconciler.NewStandardReconcilerWithFinalizer[*v1.IstioCNI](r.Client, r.Reconcile, r.Finalize, constants.FinalizerName))
 }
 
-func (r *Reconciler) determineStatus(ctx context.Context, cni *v1alpha1.IstioCNI, reconcileErr error) (v1alpha1.IstioCNIStatus, error) {
+func (r *Reconciler) determineStatus(ctx context.Context, cni *v1.IstioCNI, reconcileErr error) (v1.IstioCNIStatus, error) {
 	var errs errlist.Builder
 	reconciledCondition := r.determineReconciledCondition(reconcileErr)
 	readyCondition, err := r.determineReadyCondition(ctx, cni)
@@ -242,78 +172,34 @@ func (r *Reconciler) determineStatus(ctx context.Context, cni *v1alpha1.IstioCNI
 	status.ObservedGeneration = cni.Generation
 	status.SetCondition(reconciledCondition)
 	status.SetCondition(readyCondition)
-	status.State = deriveState(reconciledCondition, readyCondition)
+	status.State = reconciler.DeriveState(v1.IstioCNIReasonHealthy, reconciledCondition, readyCondition)
 	return status, errs.Error()
 }
 
-func (r *Reconciler) updateStatus(ctx context.Context, cni *v1alpha1.IstioCNI, reconcileErr error) error {
-	var errs errlist.Builder
-
+func (r *Reconciler) updateStatus(ctx context.Context, cni *v1.IstioCNI, reconcileErr error) error {
 	status, err := r.determineStatus(ctx, cni, reconcileErr)
-	if err != nil {
-		errs.Add(fmt.Errorf("failed to determine status: %w", err))
-	}
-
-	if !reflect.DeepEqual(cni.Status, status) {
-		if err := r.Client.Status().Patch(ctx, cni, kube.NewStatusPatch(status)); err != nil {
-			errs.Add(fmt.Errorf("failed to patch status: %w", err))
-		}
-	}
-	return errs.Error()
+	return reconciler.UpdateStatus(ctx, r.Client, cni, cni.Status, status, err)
 }
 
-func deriveState(reconciledCondition, readyCondition v1alpha1.IstioCNICondition) v1alpha1.IstioCNIConditionReason {
-	if reconciledCondition.Status != metav1.ConditionTrue {
-		return reconciledCondition.Reason
-	} else if readyCondition.Status != metav1.ConditionTrue {
-		return readyCondition.Reason
-	}
-	return v1alpha1.IstioCNIReasonHealthy
-}
-
-func (r *Reconciler) determineReconciledCondition(err error) v1alpha1.IstioCNICondition {
-	c := v1alpha1.IstioCNICondition{Type: v1alpha1.IstioCNIConditionReconciled}
-
+func (r *Reconciler) determineReconciledCondition(err error) v1.StatusCondition {
+	c := v1.StatusCondition{Type: v1.IstioCNIConditionReconciled}
 	if err == nil {
 		c.Status = metav1.ConditionTrue
+		c.Reason = v1.ConditionReason(v1.IstioCNIConditionReconciled)
 	} else {
 		c.Status = metav1.ConditionFalse
-		c.Reason = v1alpha1.IstioCNIReasonReconcileError
+		c.Reason = v1.IstioCNIReasonReconcileError
 		c.Message = fmt.Sprintf("error reconciling resource: %v", err)
 	}
 	return c
 }
 
-func (r *Reconciler) determineReadyCondition(ctx context.Context, cni *v1alpha1.IstioCNI) (v1alpha1.IstioCNICondition, error) {
-	c := v1alpha1.IstioCNICondition{
-		Type:   v1alpha1.IstioCNIConditionReady,
-		Status: metav1.ConditionFalse,
-	}
-
-	ds := appsv1.DaemonSet{}
-	if err := r.Client.Get(ctx, r.cniDaemonSetKey(cni), &ds); err == nil {
-		if ds.Status.CurrentNumberScheduled == 0 {
-			c.Reason = v1alpha1.IstioCNIDaemonSetNotReady
-			c.Message = "no istio-cni-node pods are currently scheduled"
-		} else if ds.Status.NumberReady < ds.Status.CurrentNumberScheduled {
-			c.Reason = v1alpha1.IstioCNIDaemonSetNotReady
-			c.Message = "not all istio-cni-node pods are ready"
-		} else {
-			c.Status = metav1.ConditionTrue
-		}
-	} else if apierrors.IsNotFound(err) {
-		c.Reason = v1alpha1.IstioCNIDaemonSetNotReady
-		c.Message = "istio-cni-node DaemonSet not found"
-	} else {
-		c.Status = metav1.ConditionUnknown
-		c.Reason = v1alpha1.IstioCNIReasonReadinessCheckFailed
-		c.Message = fmt.Sprintf("failed to get readiness: %v", err)
-		return c, fmt.Errorf("get failed: %w", err)
-	}
-	return c, nil
+func (r *Reconciler) determineReadyCondition(ctx context.Context, cni *v1.IstioCNI) (v1.StatusCondition, error) {
+	return reconciler.CheckDaemonSetReadiness(ctx, r.Client, r.cniDaemonSetKey(cni),
+		"istio-cni-node", v1.IstioCNIConditionReady, v1.IstioCNIDaemonSetNotReady, v1.IstioCNIReasonReadinessCheckFailed)
 }
 
-func (r *Reconciler) cniDaemonSetKey(cni *v1alpha1.IstioCNI) client.ObjectKey {
+func (r *Reconciler) cniDaemonSetKey(cni *v1.IstioCNI) client.ObjectKey {
 	return client.ObjectKey{
 		Namespace: cni.Spec.Namespace,
 		Name:      "istio-cni-node",
@@ -324,7 +210,7 @@ func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, ns clie
 	log := logf.FromContext(ctx)
 
 	// Check if any IstioCNI references this namespace in .spec.namespace
-	cniList := v1alpha1.IstioCNIList{}
+	cniList := v1.IstioCNIList{}
 	if err := r.Client.List(ctx, &cniList); err != nil {
 		log.Error(err, "failed to list IstioCNIs")
 		return nil
@@ -337,4 +223,8 @@ func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, ns clie
 		}
 	}
 	return requests
+}
+
+func wrapEventHandler(logger logr.Logger, handler handler.EventHandler) handler.EventHandler {
+	return enqueuelogger.WrapIfNecessary(v1.IstioCNIKind, logger, handler)
 }

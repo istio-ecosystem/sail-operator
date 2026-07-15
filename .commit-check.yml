@@ -1,0 +1,14 @@
+# More config examples could be found here - https://github.com/commit-check/commit-check/blob/main/.commit-check.yml
+checks:
+  - check: message
+    regex: '^Automator(.|\n)*$|^([^\n]+)\n\n(?!(Signed-off-by:))([\s\S]+)$'
+    error: "The commit message should be structured as follows:\n
+    <commit header>\n\n
+    <commit body>"
+    suggest: Please check your commit message whether matches above regex
+
+  - check: commit_signoff
+    # Use \w (not [A-Za-z0-9]) so DCO sign-offs with non-ASCII display names are accepted
+    regex: Signed-off-by:.*\w\s+<.+@.+>
+    error: Signed-off-by not found in latest commit
+    suggest: "You can add signoff by running: git commit --amend --signoff"
