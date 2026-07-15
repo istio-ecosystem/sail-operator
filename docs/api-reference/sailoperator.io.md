@@ -2128,7 +2128,8 @@ _Appears in:_
 
 
 
-MonitoringConfig defines the configuration for Prometheus monitoring integration
+MonitoringConfig defines the configuration for Prometheus monitoring integration.
+TODO(#2028): revisit this API when the monitoring enhancement SEP is merged.
 
 
 
@@ -2138,7 +2139,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `enabled` _boolean_ | When enabled, the operator creates ServiceMonitor resources for istiod and PodMonitor resources for Envoy sidecars in namespaces with istio-injection=enabled label. Defaults to false. | false |  |
-| `monitoredBy` _string_ | MonitoredBy identifies the Prometheus stack that should scrape the generated ServiceMonitor and PodMonitor resources. On Kubernetes, this sets the release label used by kube-prometheus-stack. On OpenShift, this sets the monitored-by label used by COO. When omitted on OpenShift, monitored-by defaults to coo-prometheus. |  |  |
+| `monitoredBy` _string_ | MonitoredBy identifies the Prometheus stack that should scrape the generated ServiceMonitor and PodMonitor resources. On Kubernetes, this value is applied to both the release and monitored-by labels for kube-prometheus-stack discovery. On OpenShift, this sets the monitored-by label used by COO. When omitted on OpenShift, monitored-by defaults to coo-prometheus. On Kubernetes, monitored-by defaults to kube-prometheus when this field is omitted. TODO(#2028): revisit field semantics when the monitoring enhancement SEP is merged. |  |  |
 
 
 #### MultiClusterConfig
