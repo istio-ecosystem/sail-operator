@@ -70,12 +70,33 @@ func testMonitoringGV(platform config.Platform) schema.GroupVersion {
 	return monitoringv1.SchemeGroupVersion
 }
 
-func expectMonitoredByLabel(g Gomega, platform config.Platform, labels map[string]string) {
+func expectMonitoringLabels(g Gomega, platform config.Platform, labels map[string]string, helmRelease string) {
+	g.Expect(labels).To(HaveKeyWithValue(constants.ManagedByLabelKey, constants.ManagedByLabelValue))
+
 	if platform == config.PlatformOpenShift {
-		g.Expect(labels).To(HaveKeyWithValue("monitored-by", "coo-prometheus"))
+		value := cooPrometheusValue
+		if helmRelease != "" {
+			value = helmRelease
+		}
+		g.Expect(labels).To(HaveKeyWithValue(monitoredByLabel, value))
+		g.Expect(labels).NotTo(HaveKey(helmReleaseLabel))
 		return
 	}
-	g.Expect(labels).NotTo(HaveKey("monitored-by"))
+
+	if helmRelease != "" {
+		g.Expect(labels).To(HaveKeyWithValue(helmReleaseLabel, helmRelease))
+		g.Expect(labels).To(HaveKeyWithValue(monitoredByLabel, helmRelease))
+	} else {
+		g.Expect(labels).To(HaveKeyWithValue(monitoredByLabel, kubePrometheusValue))
+		g.Expect(labels).NotTo(HaveKey(helmReleaseLabel))
+	}
+}
+
+func testMonitoringConfig() *v1.MonitoringConfig {
+	return &v1.MonitoringConfig{
+		Enabled:     true,
+		MonitoredBy: "test-release",
+	}
 }
 
 // newNamespaceWithInjection creates a namespace with the istio-injection=enabled label
@@ -112,7 +133,8 @@ func newIstioWithMonitoringEnabled(name, namespace string) *v1.Istio {
 			Version:   "v1.29.2",
 			Namespace: namespace,
 			Monitoring: &v1.MonitoringConfig{
-				Enabled: true,
+				Enabled:     true,
+				MonitoredBy: "test-release",
 			},
 		},
 	}
@@ -307,7 +329,7 @@ func TestReconcile(t *testing.T) {
 				g.Expect(err).ToNot(HaveOccurred())
 				// Verify the ServiceMonitor has expected content
 				g.Expect(sm.Name).To(Equal(revName + serviceMonitorNameSuffix))
-				expectMonitoredByLabel(g, cfg.Platform, sm.Labels)
+				expectMonitoringLabels(g, cfg.Platform, sm.Labels, "test-release")
 			}
 
 			// Check PodMonitor creation
@@ -325,7 +347,7 @@ func TestReconcile(t *testing.T) {
 				g.Expect(err).ToNot(HaveOccurred())
 				// Verify the PodMonitor has expected content
 				g.Expect(pm.Name).To(Equal(revName + podMonitorNameSuffix))
-				expectMonitoredByLabel(g, cfg.Platform, pm.Labels)
+				expectMonitoringLabels(g, cfg.Platform, pm.Labels, "test-release")
 			}
 		})
 	}
@@ -422,7 +444,7 @@ func TestReconcileServiceMonitor(t *testing.T) {
 
 			cl := builder.Build()
 			reconciler := NewReconciler(cfg, cl, scheme.Scheme)
-			err := reconciler.reconcileServiceMonitor(ctx, tt.rev)
+			err := reconciler.reconcileServiceMonitor(ctx, tt.rev, testMonitoringConfig())
 
 			if tt.expectErr {
 				g.Expect(err).To(HaveOccurred())
@@ -439,7 +461,7 @@ func TestReconcileServiceMonitor(t *testing.T) {
 				g.Expect(err).ToNot(HaveOccurred())
 				// Verify expected content
 				g.Expect(result.Name).To(Equal(revisionName + serviceMonitorNameSuffix))
-				expectMonitoredByLabel(g, cfg.Platform, result.Labels)
+				expectMonitoringLabels(g, cfg.Platform, result.Labels, "test-release")
 			}
 		})
 	}
@@ -608,7 +630,7 @@ func TestReconcilePodMonitors(t *testing.T) {
 
 			cl := builder.Build()
 			reconciler := NewReconciler(cfg, cl, scheme.Scheme)
-			err := reconciler.reconcilePodMonitors(ctx, tt.rev)
+			err := reconciler.reconcilePodMonitors(ctx, tt.rev, testMonitoringConfig())
 
 			if tt.expectErr {
 				g.Expect(err).To(HaveOccurred())
@@ -630,7 +652,7 @@ func TestReconcilePodMonitors(t *testing.T) {
 					g.Expect(err).ToNot(HaveOccurred(), "PodMonitor should exist in namespace %s", ns)
 					// Verify expected content
 					g.Expect(pm.Name).To(Equal(revName + podMonitorNameSuffix))
-					expectMonitoredByLabel(g, cfg.Platform, pm.Labels)
+					expectMonitoringLabels(g, cfg.Platform, pm.Labels, "test-release")
 				}
 			}
 		})
@@ -716,7 +738,7 @@ func TestBuildServiceMonitor(t *testing.T) {
 
 			cl := newFakeClientBuilder().Build()
 			reconciler := NewReconciler(cfg, cl, scheme.Scheme)
-			result := reconciler.buildServiceMonitor(tt.rev)
+			result := reconciler.buildServiceMonitor(tt.rev, testMonitoringConfig())
 
 			g.Expect(result.GetObjectKind().GroupVersionKind().Group).To(Equal(testMonitoringGV(tt.platform).Group))
 			g.Expect(result.GetObjectKind().GroupVersionKind().Version).To(Equal("v1"))
@@ -727,7 +749,7 @@ func TestBuildServiceMonitor(t *testing.T) {
 			// Check labels
 			labels := result.GetLabels()
 			g.Expect(labels["app"]).To(Equal("istiod"))
-			expectMonitoredByLabel(g, tt.platform, labels)
+			expectMonitoringLabels(g, tt.platform, labels, "test-release")
 
 			// Check spec.targetLabels and selector
 			g.Expect(result.Spec.TargetLabels).To(Equal(tt.expectedTargetLabels))
@@ -816,7 +838,11 @@ func TestBuildPodMonitor(t *testing.T) {
 
 			cl := newFakeClientBuilder().Build()
 			reconciler := NewReconciler(cfg, cl, scheme.Scheme)
-			result := reconciler.buildPodMonitor(tt.rev, tt.namespace)
+			monitoring := testMonitoringConfig()
+			if tt.platform == config.PlatformOpenShift {
+				monitoring = &v1.MonitoringConfig{Enabled: true}
+			}
+			result := reconciler.buildPodMonitor(tt.rev, tt.namespace, monitoring)
 
 			g.Expect(result.GetObjectKind().GroupVersionKind().Group).To(Equal(testMonitoringGV(tt.platform).Group))
 			g.Expect(result.GetObjectKind().GroupVersionKind().Version).To(Equal("v1"))
@@ -827,7 +853,11 @@ func TestBuildPodMonitor(t *testing.T) {
 			// Check labels
 			labels := result.GetLabels()
 			g.Expect(labels["app"]).To(Equal("istio-proxy"))
-			expectMonitoredByLabel(g, tt.platform, labels)
+			monitoredBy := "test-release"
+			if tt.platform == config.PlatformOpenShift {
+				monitoredBy = ""
+			}
+			expectMonitoringLabels(g, tt.platform, labels, monitoredBy)
 
 			// PodMonitor should NOT have owner references (cross-namespace)
 			ownerRefs := result.GetOwnerReferences()

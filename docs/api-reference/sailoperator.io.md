@@ -2138,6 +2138,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `enabled` _boolean_ | When enabled, the operator creates ServiceMonitor resources for istiod and PodMonitor resources for Envoy sidecars in namespaces with istio-injection=enabled label. Defaults to false. | false |  |
+| `monitoredBy` _string_ | MonitoredBy identifies the Prometheus stack that should scrape the generated ServiceMonitor and PodMonitor resources. On Kubernetes, this sets the release label used by kube-prometheus-stack. On OpenShift, this sets the monitored-by label used by COO. When omitted on OpenShift, monitored-by defaults to coo-prometheus. |  |  |
 
 
 #### MultiClusterConfig

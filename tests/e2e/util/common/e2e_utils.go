@@ -20,18 +20,15 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/istio-ecosystem/sail-operator/pkg/env"
-	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/istioctl"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
-	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/shell"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -232,18 +229,6 @@ spec:
   namespace: %s`
 	yaml = fmt.Sprintf(yaml, istioCniName, version, IstioCniNamespace)
 	createResource(k, "IstioCNI", yaml, specs...)
-}
-
-// InstallKubePrometheusStack installs kube-prometheus-stack on KinD for monitoring e2e tests.
-// Prometheus is configured with serviceMonitorSelectorNilUsesHelmValues=false and
-// podMonitorSelectorNilUsesHelmValues=false so it discovers Sail-generated monitors.
-func InstallKubePrometheusStack() error {
-	script := filepath.Join(project.RootDir, "tests", "e2e", "setup", "install-kube-prometheus-stack.sh")
-	_, err := shell.ExecuteCommand(script)
-	if err != nil {
-		return fmt.Errorf("failed to install kube-prometheus-stack: %w", err)
-	}
-	return nil
 }
 
 func CreateZTunnel(k kubectl.Kubectl, version string, specs ...string) {
