@@ -1,5 +1,5 @@
 apiVersion: v2
-appVersion: 1.31.0-alpha.d2c53e2e04191f9cd3b642f4b74eea78dccc15da
+appVersion: 1.31.0-alpha.25f4803ee1e64fc2fcb95d07b1c0e3353594e9a9
 description: Helm chart for istio revision tags
 name: revisiontags
 sources:
