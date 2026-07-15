@@ -38,6 +38,7 @@ import (
 const (
 	prometheusNamespace    = "monitoring"
 	prometheusRelease      = "kube-prometheus-stack"
+	managedByValue         = "sail-operator"
 	kubernetesRelabelCount = 7
 )
 
@@ -56,7 +57,6 @@ var _ = Describe("Monitoring Controller", Label("smoke", "monitoring"), Ordered,
 
 	BeforeAll(func(ctx SpecContext) {
 		clr.Record(ctx)
-		Expect(common.InstallKubePrometheusStack()).To(Succeed(), "kube-prometheus-stack failed to install")
 		Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
 		Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
 	})
@@ -70,7 +70,8 @@ var _ = Describe("Monitoring Controller", Label("smoke", "monitoring"), Ordered,
 			common.CreateIstioCNI(k, version)
 			common.CreateIstio(k, version, `
 monitoring:
-  enabled: true`)
+  enabled: true
+  monitoredBy: kube-prometheus-stack`)
 		})
 
 		It("reconciles the Istio control plane", func(ctx SpecContext) {
@@ -86,7 +87,9 @@ monitoring:
 			Eventually(func(g Gomega) {
 				g.Expect(cl.Get(ctx, client.ObjectKey{Name: serviceMonitorName, Namespace: controlPlaneNamespace}, sm)).To(Succeed())
 				g.Expect(sm.Labels).To(HaveKeyWithValue("app", "istiod"))
-				g.Expect(sm.Labels).NotTo(HaveKey("monitored-by"))
+				g.Expect(sm.Labels).To(HaveKeyWithValue("managed-by", managedByValue))
+				g.Expect(sm.Labels).To(HaveKeyWithValue("monitored-by", prometheusRelease))
+				g.Expect(sm.Labels).To(HaveKeyWithValue("release", prometheusRelease))
 				g.Expect(sm.Spec.Endpoints).To(HaveLen(1))
 				g.Expect(sm.Spec.Endpoints[0].Port).To(Equal("http-monitoring"))
 				g.Expect(sm.Spec.Endpoints[0].Path).To(Equal("/metrics"))
@@ -152,6 +155,26 @@ monitoring:
 				ShouldNot(Succeed(), "PodMonitor should not be created in istio-system")
 			Success("PodMonitor not created in control plane namespace")
 		})
+
+		It("discovers the proxy PodMonitor target in Prometheus", func(ctx SpecContext) {
+			Expect(k.WithNamespace(injectionEnabledNamespace).ApplyKustomize("sleep")).To(Succeed())
+			Eventually(common.CheckPodsReady).WithArguments(ctx, cl, injectionEnabledNamespace).Should(Succeed())
+
+			targetsPath := fmt.Sprintf(
+				"/api/v1/namespaces/%s/services/%s-prometheus:http-web/proxy/api/v1/targets",
+				prometheusNamespace,
+				prometheusRelease,
+			)
+
+			Eventually(func(g Gomega) {
+				targets, err := k.GetRaw(targetsPath)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(targets).To(ContainSubstring(podMonitorName))
+				g.Expect(targets).To(ContainSubstring(injectionEnabledNamespace))
+				g.Expect(strings.ToLower(targets)).To(ContainSubstring("istio-proxy"))
+			}).Should(Succeed())
+			Success("Prometheus discovered proxy PodMonitor target")
+		})
 	})
 
 	AfterEach(func() {
@@ -164,7 +187,9 @@ monitoring:
 
 func assertPodMonitor(g Gomega, pm *monitoringv1.PodMonitor) {
 	g.Expect(pm.Labels).To(HaveKeyWithValue("app", "istio-proxy"))
-	g.Expect(pm.Labels).NotTo(HaveKey("monitored-by"))
+	g.Expect(pm.Labels).To(HaveKeyWithValue("managed-by", managedByValue))
+	g.Expect(pm.Labels).To(HaveKeyWithValue("monitored-by", prometheusRelease))
+	g.Expect(pm.Labels).To(HaveKeyWithValue("release", prometheusRelease))
 	g.Expect(pm.Spec.PodMetricsEndpoints).To(HaveLen(1))
 	g.Expect(pm.Spec.PodMetricsEndpoints[0].Path).To(Equal("/stats/prometheus"))
 	g.Expect(pm.Spec.PodMetricsEndpoints[0].RelabelConfigs).To(HaveLen(kubernetesRelabelCount))
