@@ -105,6 +105,15 @@ spec:
                       istio-injection=enabled label.
                       Defaults to false.
                     type: boolean
+                  monitoredBy:
+                    description: |-
+                      MonitoredBy identifies the Prometheus stack that should scrape the generated
+                      ServiceMonitor and PodMonitor resources. On Kubernetes, this value is applied
+                      to both the release and monitored-by labels for kube-prometheus-stack discovery.
+                      On OpenShift, this sets the monitored-by label used by COO. When omitted on
+                      OpenShift, monitored-by defaults to coo-prometheus. On Kubernetes, monitored-by
+                      defaults to kube-prometheus when this field is omitted.
+                    type: string
                 type: object
               namespace:
                 default: istio-system
