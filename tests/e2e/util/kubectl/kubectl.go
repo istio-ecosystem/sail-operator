@@ -6,11 +6,11 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//	http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR Condition OF ANY KIND, either express or implied.
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
@@ -25,6 +25,7 @@ import (
 
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/shell"
+	"github.com/onsi/gomega"
 )
 
 type Kubectl struct {
@@ -279,14 +280,34 @@ func (k Kubectl) GetSecret(secret string) (string, error) {
 	return output, nil
 }
 
-// Exec executes a command in the pod or specific container
+// Exec executes a command in the pod or specific container, retrying on transient WebSocket close
+// 1006 errors that occur on ARM64/Graviton2 when SPIRE ECDSA mTLS handshakes are slow.
 func (k Kubectl) Exec(pod, container, command string) (string, error) {
 	cmd := k.build(fmt.Sprintf(" exec %s %s -- %s", pod, containerFlag(container), command))
-	output, err := k.executeCommand(cmd)
-	if err != nil {
-		return "", err
+
+	var output string
+	var execErr error
+	// Noop fail handler: propagate the error to the caller rather than failing the test on timeout.
+	g := gomega.NewGomega(func(string, ...int) {})
+	g.Eventually(func() error {
+		output, execErr = k.executeCommand(cmd)
+		if isWebSocketCloseError(execErr) {
+			return execErr // keep retrying on transient WebSocket drops
+		}
+		return nil // success or non-retryable error — stop
+	}).WithTimeout(30 * time.Second).WithPolling(2 * time.Second).Should(gomega.Succeed())
+
+	return output, execErr
+}
+
+// isWebSocketCloseError returns true for WebSocket close 1006 (abnormal closure) errors.
+func isWebSocketCloseError(err error) bool {
+	if err == nil {
+		return false
 	}
-	return output, nil
+	msg := err.Error()
+	return strings.Contains(msg, "websocket: close 1006") ||
+		strings.Contains(msg, "abnormal closure")
 }
 
 // GetEvents returns the events of a namespace
@@ -404,7 +425,7 @@ func containerFlag(container string) string {
 // The path is determined with the following priority:
 // 1. App-specific environment variable (e.g., HTTPBIN_KUSTOMIZE_PATH).
 // 2. Custom base path defined in CUSTOM_SAMPLES_PATH.
-// 3. Default path within the project in this case will be: `tests/e2e/samples/httpbin“.
+// 3. Default path within the project in this case will be: `tests/e2e/samples/httpbin`.
 func getKustomizeDir(appName string) string {
 	// If app specific environment variable is set, use it.
 	if customPath := os.Getenv(strings.ToUpper(strings.ReplaceAll(appName, "-", "_") + "_KUSTOMIZE_PATH")); customPath != "" {
@@ -417,4 +438,14 @@ func getKustomizeDir(appName string) string {
 	}
 
 	return filepath.Join(project.RootDir, "tests", "e2e", "samples", appName)
+}
+
+// ApplyStringWithForceConflicts applies yaml using server-side apply and forces conflicts
+func (k Kubectl) ApplyStringWithForceConflicts(yamlString string) error {
+	cmd := k.build(" apply --server-side --force-conflicts -f -")
+	_, err := shell.ExecuteCommandWithInput(cmd, yamlString)
+	if err != nil {
+		return fmt.Errorf("error applying yaml with force conflicts: %w", err)
+	}
+	return nil
 }
