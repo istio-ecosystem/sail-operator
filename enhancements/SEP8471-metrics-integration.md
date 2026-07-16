@@ -8,71 +8,67 @@
 
 Upstream Istio generates telemetry metrics for the control plane and sidecar proxies. Users can customize Istio metrics with the Telemetry API and create scraping jobs by updating a Prometheus ConfigMap. For example, The following sample deploys a Prometheus instance and configures Istio telemetry integration in the Prometheus ConfigMap [samples/addons/prometheus.yaml](https://raw.githubusercontent.com/istio/istio/master/samples/addons/prometheus.yaml). However, that approach requires restarting the Prometheus instance and users may not have enough permission to update the existing Prometheus's ConfigMap.
 
-Alternatively, those can be configured by using two custom resources `ServiceMonitor` and `PodMonitor`. We want to automate the creation of `ServiceMonitor` and `PodMonitor` resources with default values in Sail Operator. And then users can query Istio metrics in Prometheus or Kiali dashboard without manual configuration step.
+Alternatively, those can be configured by using two custom resources `ServiceMonitor` and `PodMonitor`. We want to automate the creation of `ServiceMonitor` and `PodMonitor` resources with default values in Sail Operator. And then users can query Istio metrics in Prometheus or Kiali dashboard.
 
 ## Goals
 
-* Provide a monitoring controller that reconciles `ServiceMonitor` and `PodMonitor` resources for Istio control plane and sidecar proxy metrics.
-* Apply platform-appropriate default relabeling rules on Kubernetes and OpenShift.
+* Provide a monitoring controller that reconciles `ServiceMonitor` and `PodMonitor` resources from the Prometheus Operator.
+* Apply default configurations for scraping Istio control plane and sidecar proxy metrics.
+* Apply platform-appropriate default relabeling rules on Kubernetes and OpenShift platforms.
 
 ## Non-goals
 
-* Deploying observability stack components (Prometheus, OpenShift Cluster Observability Operator, OpenShift User-Workload Monitoring, etc.). We assume those are installed separately.
+* Deploying observability stack components (Prometheus, Prometheus Operator, OpenShift Cluster Observability Operator, OpenShift User-Workload Monitoring, etc.). This enhancement requires that the Prometheus Operator and Prometheus instance are running in a cluster.
 * Updating `ServiceMonitor` and `PodMonitor` for user customization of scraping paths, ports, or relabeling rules via the Sail Operator API.
-* Observability Distributed Tracing integration.
+* Attaching `ServiceMonitor` and `PodMonitor` custom labels for selector use cases.
+* Adding Observability Distributed Tracing integration.
 * Ambient mode metrics integration is out of scope. Scraping configurations of `ZTunnel`component and Waypoint proxies are non-goals in this SEP.
 
 ## Design
 
 ### User Stories
 
-1. As a user running Istio with a Prometheus monitoring stack, I want the Sail Operator to configure metrics scraping jobs for Istio-generated telemetry metrics without restart the Prometheus instance.
+1. As a user running Istio with a Prometheus production stack, I want the Sail Operator to configure metrics scraping jobs for Istio-generated telemetry metrics.
 2. As a user running OpenShift Service Mesh, I want the Sail Operator to create `PodMonitor` resources with platform-appropriate relabeling rules. So those metrics can be formatted and displayed correctly in the OpenShift console and Kiali dashboard.
 
 ### API Changes
 
-We will add fields `spec.monitoring.enabled` and `spec.monitoring.monitored-by` in the `Istio` Custom Resource(CR). For example,
+We will add an annotation `sail.operator.io/monitoring` in the `Istio` Custom Resource(CR). For example,
 
 ```yaml
 apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: default
-spec:
-  monitoring:
-    enabled: None
-    monitored-by: prometheus
+  annotations:
+    sail.operator.io/monitoring: enabled
 ```
 
-The `spec.monitoring.enabled` field allows values in the following list: `["None", "kube-prometheus"]`. It defaults to `None`. When it is set to other value, the monitoring controller reconciles `ServiceMonitor` and `PodMonitor` CRs for each owned `IstioRevision`.
-The `spec.monitoring.monitored-by` field value is used when the monitoring controller adds additional label(s) for label matching in `ServiceMonitor` and `PodMonitor` CRs.
+When the annotation `sail.operator.io/monitoring: enabled` is set, the monitoring controller reconciles `ServiceMonitor` and `PodMonitor` CRs for each owned `IstioRevision`.
 
-For example, users may set `spec.monitoring.enabled: kube-prometheus` and `spec.monitoring.monitored-by: prometheus`. The monitoring controller reconciles and adds required label `release: prometheus` in `ServiceMonitor` and `PodMonitor` CRs. Because Prometheus Operator configures the Prometheus resource with a selector by default in `kube-prometheus-stack` helm chart. The selector is matching label `release: <helm-chart-release-name>` in `ServiceMonitor` and `PodMonitor` CRs.
-
-If any custom relabeling or scraping configuration is required, users must leave `spec.monitoring.enabled` as default value `None` and they can apply independent `ServiceMonitor` and `PodMonitor` resources manually. The monitoring controller will not delete or update those independent resources in its reconciliation.
+If any custom relabeling or scraping configuration is required, users may set the annotation `sail.operator.io/monitoring: enabled` and then they can apply/update independent `ServiceMonitor` and `PodMonitor` resource changes. The monitoring controller will not overwrite or update those independent changes in its reconciliation.
 
 #### Alternatives API Considered
 
-A broader Observability Integration API and CRD can be added in a future enhancement. It uses target reference fields and helps integrating more monitoring and tracing component services. This enhancement focuses on a monitoring controller by adding a boolean field in the `Istio` CR.
+A broader Observability Integration API and CRD can be added in a future enhancement. It uses target reference fields and helps integrating more monitoring and tracing component services.
+
+Additional configuration options can be added as new `Istio` Custom Resource spec `type` fields. We may revisit those ideas after the initial implementation of metrics integration in Sail Operator.
 
 ### Architecture
 
-We assume `ServiceMonitor` and `PodMonitor` CRDs are available under `monitoring.coreos.com/v1` and/or `monitoring.rhobs/v1` group. The Sail Operator ClusterRole grants permissions for both API groups' `ServiceMonitor` and `PodMonitor` custom resources.
+We assume `ServiceMonitor` and `PodMonitor` CRDs are available from the Prometheus Operator. They are under the resource group `monitoring.coreos.com`. We use the Sail Operator ClusterRole grants permissions for both `ServiceMonitor` and `PodMonitor` custom resources.
 
-A monitoring controller watches `IstioRevision` resources and reconciles `ServiceMonitor` and `PodMonitor` CRs when the field `spec.monitoring.enabled` is set to `kube-prometheus` in the parent `Istio` CR. It also watches namespaces with the Istio sidecar injection labels and reconciles `PodMonitor` CRs for those namespaces.
+A monitoring controller watches `IstioRevision` resources and reconciles `ServiceMonitor` and `PodMonitor` CRs when the annotation `sail.operator.io/monitoring: enabled` is set in the parent `Istio` CR. It also watches namespaces with the Istio sidecar injection labels and reconciles `PodMonitor` CRs for those namespaces.
 
 The monitoring controller applies platform-specific relabeling defaults when creating `ServiceMonitor` and `PodMonitor` CRs. It detects the running platform at the Sail Operator startup time.
 
+Attaching `ServiceMonitor` and `PodMonitor` custom labels for selector use cases is a non-goal in this enhancement. We will address common integration use cases in the monitoring controller default label(s) creation such as mapping Prometheus stack helm chart release name to a Monitor resource's `release` label. Other use cases can be added in next enhancement proposal.
+
 #### Monitoring Controller Design
 
-When the `spec.monitoring.enabled` is `kube-prometheus` in an `Istio` custom resource, the monitoring controller reconciles `ServiceMonitor` or `PodMonitor` resources and adds the following labels in those resources:
-- `managed-by: mesh-operator`
-- `release: prometheus` (This value is mapped from Istio CR's `spec.monitoring.monitored-by`)
-- `monitored-by: prometheus` (This value is mapped from Istio CR's `spec.monitoring.monitored-by`)
+When the annotation `sail.operator.io/monitoring: enabled` is set in an `Istio` custom resource, the monitoring controller reconciles `ServiceMonitor` or `PodMonitor` resources. When the annotation `sail.operator.io/monitoring: enabled` is dropped, the monitoring controller stops reconciling.
 
-When the `spec.monitoring.enabled` is `None` in an `Istio` custom resource, the monitoring controller stops reconciling.
-
-The monitoring controller only interacts with monitoring resources it creates. Those resources are identified by a naming convention and labels. It will not delete or update user-managed `ServiceMonitor` or `PodMonitor` resources that were configured manually in existing environments.
+The monitoring controller only creates monitoring resources if they do not exist. Those resources are created by a naming convention and ownership label(s). It will not overwrite or update user-managed `ServiceMonitor` or `PodMonitor` resource changes in existing environments.
 
 The controller creates and reconciles `ServiceMonitor` resources named as `{IstioRevision.name}-istiod-metrics` in the control plane namespace. And it creates and reconciles `PodMonitor` resources named as `{IstioRevision.name}-proxies-metrics` in each matching application namespace. It uses Get/Create/Update methods and does not list or bulk-delete monitoring resources in a namespace.
 
@@ -99,9 +95,9 @@ On **Kubernetes** platform, the monitoring controller creates a `PodMonitor` res
 
 On **OpenShift** platform, the default Prometheus monitoring stack ignores a `namespaceSelector` field, so we need create `PodMonitor` resources in those sidecar injection enabled namespaces.
 
-#### External CRD/API Group Detection
+#### External CRD/API Group
 
-The monitoring controller should detect which Operator API group is available before creating `ServiceMonitor` or `PodMonitor` resources:
+The monitoring controller should detect an API group is available from the Prometheus Operator before creating `ServiceMonitor` or `PodMonitor` resources:
 
 | API group | Typical platform |
 |-----------|------------------|
@@ -112,7 +108,7 @@ By default, the monitoring controller will create the `ServiceMonitor` and `PodM
 
 #### Monitoring Availability
 
-When the `spec.monitoring.enabled` is `kube-prometheus` in an `Istio` custom resource, but the required `ServiceMonitor` and `PodMonitor` CRDs are not installed, the monitoring controller should set a status condition in the `Istio` custom resource. For example:
+When the annotation `sail.operator.io/monitoring: enabled` is set in an `Istio` custom resource, but the expected `ServiceMonitor` and `PodMonitor` objects are not installed, the monitoring controller should set a status condition in the `Istio` custom resource. For example:
 
 | Field | Value |
 |-------|-------|
@@ -136,7 +132,7 @@ The `PodMonitor` reconciliation watches namespaces with the sidecar injection la
 - [ ] Kubernetes PodMonitor strategy using `namespaceSelector.any: true`
 - [ ] Set a status condition in the `Istio` custom resource
 - [ ] Add Integration tests such as `tests/integration/api/monitoring_test.go`
-- [ ] Add KinD e2e tests
+- [x] Add KinD e2e tests
 - [ ] User-facing documentation
 
 Alternatives API Considered
@@ -152,3 +148,4 @@ Functionality will be tested in unit tests, integration tests (envtest), and Kin
 * 2026-06-23: Updated Overview, Goals, Non-goals, Design descriptions. Added Alternatives API Considered. Removed OSSM JIRA references.
 * 2026-07-01: Update descriptions. Addressed review comments. Renamed this file with JIRA work item number.
 * 2026-07-07: Update API changes.
+* 2026-07-16: Address API change review feedback and move custom labels for selector use cases as a non-goal in this initial enhancement.
