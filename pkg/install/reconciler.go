@@ -47,12 +47,14 @@ type libraryReconciler struct {
 }
 
 func (r *libraryReconciler) Reconcile(ctx context.Context, _ ctrlreconcile.Request) (ctrlreconcile.Result, error) {
+	r.lib.lifecycleMu.Lock()
 	r.lib.mu.Lock()
 	opts := r.lib.desiredOpts
 	gen := r.lib.generation
 	r.lib.mu.Unlock()
 
 	if opts == nil {
+		r.lib.lifecycleMu.Unlock()
 		return ctrlreconcile.Result{}, nil
 	}
 
@@ -61,9 +63,12 @@ func (r *libraryReconciler) Reconcile(ctx context.Context, _ ctrlreconcile.Reque
 		optsCopy.Values = optsCopy.Values.DeepCopy()
 	}
 
+	log.Info("Reconciling")
 	inst := r.lib.newInstaller(optsCopy.Namespace)
 	status := inst.reconcile(ctx, optsCopy)
 	status.Generation = gen
+	log.Infof("Reconcile complete: installed=%v, error=%v", status.Installed, status.Error)
+	r.lib.lifecycleMu.Unlock()
 
 	r.lib.statusMu.Lock()
 	r.lib.currentStatus = status

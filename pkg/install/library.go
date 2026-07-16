@@ -33,6 +33,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+
+	"istio.io/istio/pkg/log"
 )
 
 const (
@@ -156,8 +158,9 @@ type Status struct {
 // Library manages the lifecycle of an istiod installation without
 // requiring the full Sail Operator to be deployed.
 type Library struct {
-	mu       sync.Mutex
-	statusMu sync.RWMutex
+	mu          sync.Mutex
+	lifecycleMu sync.Mutex
+	statusMu    sync.RWMutex
 
 	kubeConfig             *rest.Config
 	resourceFS             fs.FS
@@ -259,6 +262,8 @@ func (l *Library) Apply(opts Options) error {
 	if err := ValidateOptions(opts); err != nil {
 		return fmt.Errorf("invalid options: %w", err)
 	}
+	l.lifecycleMu.Lock()
+	defer l.lifecycleMu.Unlock()
 	l.mu.Lock()
 	if l.desiredOpts != nil && optionsEqual(*l.desiredOpts, opts) {
 		l.mu.Unlock()
@@ -302,17 +307,23 @@ func (l *Library) Status() Status {
 	return l.currentStatus
 }
 
-// Uninstall removes the istiod Helm release. It nils the desired state
-// first so that any in-flight reconciliation triggered by drift watches
-// will short-circuit. On success, the status is cleared so that Status()
-// reflects the uninstalled state and a subsequent Apply with the same
-// options will trigger a fresh installation.
+// Uninstall removes the istiod Helm release. It holds the lifecycle lock
+// so that Apply and the reconciliation loop cannot run concurrently,
+// preventing a race where an in-flight reconcile reinstalls istiod
+// immediately after the Helm uninstall completes.
+// On success, the status is cleared so that Status() reflects the
+// uninstalled state and a subsequent Apply with the same options will
+// trigger a fresh installation.
 func (l *Library) Uninstall(ctx context.Context, namespace, revision string) error {
+	l.lifecycleMu.Lock()
+	defer l.lifecycleMu.Unlock()
+
 	l.mu.Lock()
 	l.desiredOpts = nil
 	inst := l.newInstaller(namespace)
 	l.mu.Unlock()
 
+	log.Infof("Uninstalling: namespace=%s, revision=%s", namespace, revision)
 	if err := inst.uninstall(ctx, namespace, revision); err != nil {
 		return err
 	}
@@ -320,5 +331,6 @@ func (l *Library) Uninstall(ctx context.Context, namespace, revision string) err
 	l.statusMu.Lock()
 	l.currentStatus = Status{}
 	l.statusMu.Unlock()
+	log.Infof("Uninstall complete: namespace=%s, revision=%s", namespace, revision)
 	return nil
 }
