@@ -440,28 +440,6 @@ func getKustomizeDir(appName string) string {
 	return filepath.Join(project.RootDir, "tests", "e2e", "samples", appName)
 }
 
-func (k Kubectl) Rollout(action, kind, name string) error {
-	var subcmd string
-
-	switch action {
-	case "restart":
-		subcmd = fmt.Sprintf(" rollout restart %s/%s", kind, name)
-	case "status":
-		subcmd = fmt.Sprintf(" rollout status %s/%s --timeout=300s", kind, name)
-	default:
-		return fmt.Errorf("unsupported rollout action: %s", action)
-	}
-
-	cmd := k.build(subcmd)
-
-	_, err := shell.ExecuteShell(cmd, "")
-	if err != nil {
-		return fmt.Errorf("rollout %s failed: %w", action, err)
-	}
-
-	return nil
-}
-
 // ApplyStringWithForceConflicts applies yaml using server-side apply and forces conflicts
 func (k Kubectl) ApplyStringWithForceConflicts(yamlString string) error {
 	cmd := k.build(" apply --server-side --force-conflicts -f -")
