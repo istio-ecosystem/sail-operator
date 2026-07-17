@@ -76,9 +76,7 @@ The controller creates and reconciles `ServiceMonitor` resources named as `{Isti
 
 The **ServiceMonitor** custom resource carries an `ownerReferences` field which points at the owning `IstioRevision` resource. When the `IstioRevision` resource is deleted, Kubernetes garbage collection removes the `ServiceMonitor` resource. 
 
-The **PodMonitor** custom resource does not carry an `ownerReferences` field because cross-namespace owner references are not supported. Those resources are not automatically garbage-collected when the owner `IstioRevision` is deleted. The monitoring controller explicitly handles the cleanup of those `PodMonitor` resources in the following conditions:
-- The owner `IstioRevision` is deleted. 
-- The sidecar injection label(s) are dropped or disabled in application namespaces.
+The **PodMonitor** custom resource does not carry an `ownerReferences` field because cross-namespace owner references are not supported. Those resources are not automatically garbage-collected when the owner `IstioRevision` is deleted. The monitoring controller explicitly handles the cleanup of those `PodMonitor` resources when the sidecar injection label(s) are dropped or disabled in application namespaces or pods.
 
 #### Sidecar injection namespace selection
 
