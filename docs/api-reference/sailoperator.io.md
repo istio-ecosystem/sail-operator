@@ -663,7 +663,7 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[IstioSpec](#istiospec)_ |  | \{ namespace:istio-system updateStrategy:map[type:InPlace] version:v1.30.2 \} |  |
+| `spec` _[IstioSpec](#istiospec)_ |  | \{ namespace:istio-system updateStrategy:map[type:InPlace] version:v1.30.3 \} |  |
 | `status` _[IstioStatus](#istiostatus)_ |  |  |  |
 
 
@@ -685,7 +685,7 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[IstioCNISpec](#istiocnispec)_ |  | \{ namespace:istio-cni version:v1.30.2 \} |  |
+| `spec` _[IstioCNISpec](#istiocnispec)_ |  | \{ namespace:istio-cni version:v1.30.3 \} |  |
 | `status` _[IstioCNIStatus](#istiocnistatus)_ |  |  |  |
 
 
@@ -726,7 +726,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, master, v1.31.0-alpha.25f4803e. | v1.30.2 | Enum: [v1.30-latest v1.30.2 v1.30.1 v1.30.0 v1.29-latest v1.29.5 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.10 v1.28.9 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.31.0-alpha.25f4803e]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.3, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.6, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, master, v1.31.0-alpha.c1a23dd7. | v1.30.3 | Enum: [v1.30-latest v1.30.3 v1.30.2 v1.30.1 v1.30.0 v1.29-latest v1.29.6 v1.29.5 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.10 v1.28.9 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.31.0-alpha.c1a23dd7]   |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift openshift-ambient preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio CNI component should be installed. Note that this field is immutable. | istio-cni |  |
 | `values` _[CNIValues](#cnivalues)_ | Defines the values to be passed to the Helm charts when installing Istio CNI. |  |  |
@@ -836,7 +836,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30.2, v1.30.1, v1.30.0, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.31.0-alpha.25f4803e. |  | Enum: [v1.30.2 v1.30.1 v1.30.0 v1.29.5 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28.10 v1.28.9 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 v1.31.0-alpha.25f4803e]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30.3, v1.30.2, v1.30.1, v1.30.0, v1.29.6, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.31.0-alpha.c1a23dd7. |  | Enum: [v1.30.3 v1.30.2 v1.30.1 v1.30.0 v1.29.6 v1.29.5 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28.10 v1.28.9 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 v1.31.0-alpha.c1a23dd7]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. |  |  |
 | `values` _[Values](#values)_ | Defines the values to be passed to the Helm charts when installing Istio. |  |  |
 
@@ -954,7 +954,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, master, v1.31.0-alpha.25f4803e. | v1.30.2 | Enum: [v1.30-latest v1.30.2 v1.30.1 v1.30.0 v1.29-latest v1.29.5 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.10 v1.28.9 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.31.0-alpha.25f4803e]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.3, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.6, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, master, v1.31.0-alpha.c1a23dd7. | v1.30.3 | Enum: [v1.30-latest v1.30.3 v1.30.2 v1.30.1 v1.30.0 v1.29-latest v1.29.6 v1.29.5 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.10 v1.28.9 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 v1.23-latest v1.23.6 v1.23.5 v1.23.4 v1.23.3 v1.23.2 v1.22-latest v1.22.8 v1.22.7 v1.22.6 v1.22.5 v1.21.6 master v1.31.0-alpha.c1a23dd7]   |
 | `updateStrategy` _[IstioUpdateStrategy](#istioupdatestrategy)_ | Defines the update strategy to use when the version in the Istio CR is updated. | \{ type:InPlace \} |  |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift openshift-ambient preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. Note that this field is immutable. | istio-system |  |
@@ -1199,7 +1199,8 @@ _Appears in:_
 | `defaultVirtualServiceExportTo` _string array_ | The default value for the VirtualService.exportTo field. Has the same syntax as `defaultServiceExportTo`.  If not set the system will use "*" as the default value which implies that virtual services are exported to all namespaces |  |  |
 | `defaultDestinationRuleExportTo` _string array_ | The default value for the `DestinationRule.exportTo` field. Has the same syntax as `defaultServiceExportTo`.  If not set the system will use "*" as the default value which implies that destination rules are exported to all namespaces |  |  |
 | `rootNamespace` _string_ | The namespace to treat as the administrative root namespace for Istio configuration. When processing a leaf namespace Istio will search for declarations in that namespace first and if none are found it will search in the root namespace. Any matching declaration found in the root namespace is processed as if it were declared in the leaf namespace.  The precise semantics of this processing are documented on each resource type. |  |  |
-| `localityLbSetting` _[LocalityLoadBalancerSetting](#localityloadbalancersetting)_ | Locality based load balancing distribution or failover settings. If unspecified, locality based load balancing will be enabled by default. However, this requires outlierDetection to actually take effect for a particular service, see https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/failover/ |  |  |
+| `localityLbSetting` _[LocalityLoadBalancerSetting](#localityloadbalancersetting)_ | Locality based load balancing distribution or failover settings. If unspecified, locality based load balancing will be enabled by default. Only one of locality_lb_setting and zone_aware_lb_setting should be enabled; if both are set, zone_aware_lb_setting takes precedence and this setting is ignored. Failover settings, require outlierDetection to actually take effect for a particular service, see https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/failover/ |  |  |
+| `zoneAwareLbSetting` _[ZoneAwareLoadBalancerSetting](#zoneawareloadbalancersetting)_ | Zone Aware based load balancing settings. Only one of locality_lb_setting and zone_aware_lb_setting should be enabled, if unspecified zone_aware_lb_setting is disabled by default. If both are set, zone_aware_lb_setting takes precedence over locality_lb_setting. Additionally, Zone Aware LB is only supported in Sidecar mode and only takes effect on proxies configured with `ISTIO_META_ENABLE_SELF_DISCOVERY=true` (via `proxyMetadata`); see [ZoneAwareLoadBalancerSetting](https://istio.io/latest/docs/reference/config/networking/destination-rule/#ZoneAwareLoadBalancerSetting). |  |  |
 | `dnsRefreshRate` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | Configures DNS refresh rate for Envoy clusters of type `STRICT_DNS` Default refresh rate is `60s`. |  |  |
 | `h2UpgradePolicy` _[MeshConfigH2UpgradePolicy](#meshconfigh2upgradepolicy)_ | Specify if http1.1 connections should be upgraded to http2 by default. if sidecar is installed on all pods in the mesh, then this should be set to `UPGRADE`. If one or more services or namespaces do not have sidecar(s), then this should be set to `DO_NOT_UPGRADE`. It can be enabled by destination using the `destinationRule.trafficPolicy.connectionPool.http.h2UpgradePolicy` override. |  | Enum: [DO_NOT_UPGRADE UPGRADE]   |
 | `inboundClusterStatName` _string_ | Name to be used while emitting statistics for inbound clusters. The same pattern is used while computing stat prefix for network filters like TCP and Redis. By default, Istio emits statistics with the pattern `inbound\|<port>\|<port-name>\|<service-FQDN>`. For example `inbound\|7443\|grpc-reviews\|reviews.prod.svc.cluster.local`. This can be used to override that pattern.  A Pattern can be composed of various pre-defined variables. The following variables are supported.  - `%SERVICE%` - Will be substituted with short hostname of the service. - `%SERVICE_NAME%` - Will be substituted with name of the service. - `%SERVICE_FQDN%` - Will be substituted with FQDN of the service. - `%SERVICE_PORT%` - Will be substituted with port of the service. - `%TARGET_PORT%`  - Will be substituted with the target port of the service. - `%SERVICE_PORT_NAME%` - Will be substituted with port name of the service.  Following are some examples of supported patterns for reviews:  - `%SERVICE_FQDN%_%SERVICE_PORT%` will use reviews.prod.svc.cluster.local_7443 as the stats name. - `%SERVICE%` will use reviews.prod as the stats name. |  |  |
@@ -3574,7 +3575,7 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[ZTunnelSpec](#ztunnelspec)_ |  | \{ namespace:ztunnel version:v1.30.2 \} |  |
+| `spec` _[ZTunnelSpec](#ztunnelspec)_ |  | \{ namespace:ztunnel version:v1.30.3 \} |  |
 | `status` _[ZTunnelStatus](#ztunnelstatus)_ |  |  |  |
 
 
@@ -3687,7 +3688,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, master, v1.31.0-alpha.25f4803e. | v1.30.2 | Enum: [v1.30-latest v1.30.2 v1.30.1 v1.30.0 v1.29-latest v1.29.5 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.10 v1.28.9 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 master v1.31.0-alpha.25f4803e]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.3, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.6, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, master, v1.31.0-alpha.c1a23dd7. | v1.30.3 | Enum: [v1.30-latest v1.30.3 v1.30.2 v1.30.1 v1.30.0 v1.29-latest v1.29.6 v1.29.5 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.10 v1.28.9 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 master v1.31.0-alpha.c1a23dd7]   |
 | `namespace` _string_ | Namespace to which the Istio ztunnel component should be installed. | ztunnel |  |
 | `values` _[ZTunnelValues](#ztunnelvalues)_ | Defines the values to be passed to the Helm charts when installing Istio ztunnel. |  |  |
 | `targetRef` _[TargetReference](#targetreference)_ | The Istio control plane that this ZTunnel instance is associated with. Valid references are Istio and IstioRevision resources, Istio resources are always resolved to their current active revision. Values relevant for ZTunnel will be copied from the referenced IstioRevision resource, these are `spec.values.global`, `spec.values.meshConfig`, `spec.values.revision`. Any user configuration in the ZTunnel spec will always take precedence over the settings copied from the Istio resource, however. |  |  |
@@ -3730,6 +3731,138 @@ _Appears in:_
 | `global` _[ZTunnelGlobalConfig](#ztunnelglobalconfig)_ | Part of the global configuration applicable to the Istio ztunnel component. |  |  |
 
 
+#### ZoneAwareLoadBalancerSetting
+
+
+
+Zone Aware Load Balancer automatically routes traffic to endpoints in the same
+availability zone as the downstream proxy, reducing cross-zone latency and
+inter-zone data transfer costs. Unlike
+[LocalityLoadBalancerSetting](#LocalityLoadBalancerSetting), which requires
+explicitly specifying traffic weights per locality, Zone Aware Load Balancer
+automatically calculates routing percentages based on the relative number of
+upstream endpoints in each zone — no manual distribution configuration is
+needed.
+
+
+When the local zone has proportionally fewer endpoints than the share of
+traffic it would need to absorb, Envoy automatically overflows the excess to
+other zones rather than overloading local endpoints.
+
+
+Additionally Zone Aware Load Balancer always partitions endpoints by region: the proxy's own region
+forms the highest-priority tier and Envoy's automatic zone balancing operates
+only among the endpoints within that region. Endpoints in other regions form
+lower-priority failover tiers that receive traffic only when the local region is
+unhealthy or runs out of capacity. The `failover` and `failoverPriority` fields
+only influence how those lower tiers are ordered; the regional partitioning
+itself is always applied whenever zone-aware load balancing is enabled.
+
+
+For proxies to activate Zone Aware Load Balancer all of the following conditions are needed:
+
+
+  - The downstream proxy is configured with  `ISTIO_META_ENABLE_SELF_DISCOVERY=true`
+    (set via `proxyMetadata`).
+  - The upstream cluster spans more than one zone.
+  - The upstream cluster has at least `minClusterSize` hosts (default 6) in the local region.
+  - There is at least one healthy endpoint in the local zone.
+
+
+If any of these conditions are not met, Envoy falls back to the configured load balancing policy
+(e.g. round-robin or least-request) across all endpoints in the local region.
+
+
+For additional details on the algorithm, refer to Envoy's
+[Zone Aware Routing](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/zone_aware)
+documentation.
+
+
+Note: Zone Aware Load Balancer is not supported on Ambient mode.
+
+
+The following example enables zone-aware load balancing for the ratings service:
+
+
+```yaml
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: ratings-zone-aware
+spec:
+  host: ratings.prod.svc.cluster.local
+  trafficPolicy:
+    loadBalancer:
+      simple: ROUND_ROBIN
+      zoneAwareLbSetting:
+        enabled: true
+```
+
+
+The following example adds a cross-region failover policy so that when all
+endpoints in `us-east` become unhealthy, traffic fails over to `eu-west`
+instead of any region globally:
+
+
+```yaml
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: ratings-zone-aware-failover
+spec:
+  host: ratings.prod.svc.cluster.local
+  trafficPolicy:
+    loadBalancer:
+      simple: LEAST_REQUEST
+      zoneAwareLbSetting:
+        enabled: true
+        failover:
+          - from: us-east
+            to: eu-west
+          - from: us-west
+            to: us-east
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+```
+
+
+
+_Appears in:_
+- [MeshConfig](#meshconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | Enable zone aware load balancing. This is DestinationRule-level and will override mesh-wide settings in entirety, meaning no merging is performed with MeshConfig. |  |  |
+| `failover` _[ZoneAwareLoadBalancerSettingFailover](#zoneawareloadbalancersettingfailover) array_ | Optional. Explicitly specifies the region traffic will land on when the endpoints in the local region become unhealthy. Regional partitioning is always applied; this field only customizes the ordering of the cross-region tiers. It may be used on its own, or together with `failoverPriority`, in which case it orders the regional tiers applied on top of the label-based priorities. For this to be effective consider one of the following: - Use together with `OutlierDetection` to detect unhealthy endpoints in the local zone so that traffic fails over to other zones according to the specified priority. - Enable `PILOT_SEND_UNHEALTHY_ENDPOINTS` to allow Envoy to know when endpoints in the local zone are unhealthy and failover according to the specified priority. |  |  |
+| `failoverPriority` _string array_ | failoverPriority is an ordered list of labels used to sort endpoints for priority-based load balancing. This supports traffic failover across different groups of endpoints and complements the automatic zone-level routing by allowing label-based priority tiers on top of it.  Regional partitioning is always applied in addition to these labels: within each tier produced by `failoverPriority`, endpoints in the proxy's own region are preferred over endpoints in other regions (ordered by `failover` when it is also set). Because region-, zone-, and subzone-level routing are all handled automatically, `failoverPriority` must not include the `topology.kubernetes.io/region`, `topology.kubernetes.io/zone`, or `topology.istio.io/subzone` labels.  Two kinds of labels can be specified:    - Specify only label keys `[key1, key2, key3]`, istio would compare the label values of client with endpoints.     Suppose there are total N label keys `[key1, key2, key3, ...keyN]` specified:      1. Endpoints matching all N labels with the client proxy have priority P(0) i.e. the highest priority.     2. Endpoints matching the first N-1 labels with the client proxy have priority P(1) i.e. second highest priority.     3. By extension of this logic, endpoints matching only the first label with the client proxy has priority P(N-1) i.e. second lowest priority.     4. All the other endpoints have priority P(N) i.e. lowest priority.    - Specify labels with key and value `[key1=value1, key2=value2, key3=value3]`, istio would compare the labels with endpoints.     Suppose there are total N labels `[key1=value1, key2=value2, key3=value3, ...keyN=valueN]` specified:      1. Endpoints matching all N labels have priority P(0) i.e. the highest priority.     2. Endpoints matching the first N-1 labels have priority P(1) i.e. second highest priority.     3. By extension of this logic, endpoints matching only the first label has priority P(N-1) i.e. second lowest priority.     4. All the other endpoints have priority P(N) i.e. lowest priority.  Note: For a label to be considered for match, the previous labels must match, i.e. nth label would be considered matched only if first n-1 labels match.  It can be any label specified on both client and server workloads. The following labels which have special semantic meaning are also supported:    - `topology.istio.io/network` is used to match the network metadata of an endpoint, which can be specified by pod/namespace label `topology.istio.io/network`, sidecar env `ISTIO_META_NETWORK` or MeshNetworks.   - `topology.istio.io/cluster` is used to match the clusterID of an endpoint, which can be specified by pod label `topology.istio.io/cluster` or pod env `ISTIO_META_CLUSTER_ID`.   - `topology.kubernetes.io/region` is used to match the region metadata of an endpoint, which maps to Kubernetes node label `topology.kubernetes.io/region` or the deprecated label `failure-domain.beta.kubernetes.io/region`.   - `topology.kubernetes.io/zone` is used to match the zone metadata of an endpoint, which maps to Kubernetes node label `topology.kubernetes.io/zone` or the deprecated label `failure-domain.beta.kubernetes.io/zone`.   - `kubernetes.io/hostname` is used to match the current node of an endpoint, which maps to Kubernetes node label `kubernetes.io/hostname`.  The below topology config indicates the following priority levels:  ```yaml failoverPriority: - "topology.istio.io/network" - "topology.kubernetes.io/region" - "topology.kubernetes.io/zone" ```  1. endpoints match same [network, region, zone] label with the client proxy have the highest priority. 2. endpoints have same [network, region] label but different [zone] label with the client proxy have the second highest priority. 3. endpoints have same [network] but different [region] labels with the client proxy have the third highest priority. 4. all the other endpoints have the same lowest priority.  Suppose a service associated endpoints reside in multi clusters, the below example represents: 1. endpoints in `clusterA` and has `version=v1` label have P(0) priority. 2. endpoints not in `clusterA` but has `version=v1` label have P(1) priority. 3. all the other endpoints have P(2) priority.  ```yaml failoverPriority: - "version=v1" - "topology.istio.io/cluster=clusterA" ```  Optional. May be combined with `failover` (which then orders the regional tiers applied on top of these label-based priorities). For this to be effective consider one of the following: - Use together with `OutlierDetection` to detect unhealthy endpoints in the local zone so that traffic fails over to other zones according to the specified priority. - Enable `PILOT_SEND_UNHEALTHY_ENDPOINTS` to allow Envoy to know when endpoints in the local zone are unhealthy and failover according to the specified priority. |  |  |
+| `minClusterSize` _integer_ | Minimum number of hosts in the upstream cluster's local region required for zone-aware load balancing to be enabled. If the total number of upstream hosts in the local region falls below this value, zone-aware load balancing is disabled for this cluster regardless of other settings. This guards against zone-skew issues that can occur with very small clusters where the uneven distribution of hosts across zones would produce poor load balancing results. If not specified, the default is 6. |  | Minimum: 1   |
+
+
+#### ZoneAwareLoadBalancerSettingFailover
+
+
+
+Specify the traffic failover policy across regions. Since zone and sub-zone
+failover is supported by default this only needs to be specified for
+regions when the operator needs to constrain traffic failover so that
+the default behavior of failing over to any endpoint globally does not
+apply. This is useful when failing over traffic across regions would not
+improve service health or may need to be restricted for other reasons
+like regulatory controls.
+
+
+
+_Appears in:_
+- [ZoneAwareLoadBalancerSetting](#zoneawareloadbalancersetting)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `from` _string_ | Originating region. |  |  |
+| `to` _string_ | Destination region the traffic will fail over to when endpoints in the 'from' region becomes unhealthy. |  |  |
+
+
 
 ## sailoperator.io/v1alpha1
 
@@ -3759,7 +3892,7 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[ZTunnelSpec](#ztunnelspec)_ |  | \{ namespace:ztunnel profile:ambient version:v1.30.2 \} |  |
+| `spec` _[ZTunnelSpec](#ztunnelspec)_ |  | \{ namespace:ztunnel profile:ambient version:v1.30.3 \} |  |
 | `status` _[ZTunnelStatus](#ztunnelstatus)_ |  |  |  |
 
 
@@ -3817,7 +3950,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, master, v1.31.0-alpha.25f4803e. | v1.30.2 | Enum: [v1.30-latest v1.30.2 v1.30.1 v1.30.0 v1.29-latest v1.29.5 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.10 v1.28.9 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 master v1.31.0-alpha.25f4803e]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.3, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.6, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, master, v1.31.0-alpha.c1a23dd7. | v1.30.3 | Enum: [v1.30-latest v1.30.3 v1.30.2 v1.30.1 v1.30.0 v1.29-latest v1.29.6 v1.29.5 v1.29.4 v1.29.3 v1.29.2 v1.29.1 v1.29.0 v1.28-latest v1.28.10 v1.28.9 v1.28.8 v1.28.7 v1.28.6 v1.28.5 v1.28.4 v1.28.3 v1.28.2 v1.28.1 v1.28.0 v1.27-latest v1.27.9 v1.27.8 v1.27.7 v1.27.6 v1.27.5 v1.27.4 v1.27.3 v1.27.2 v1.27.1 v1.27.0 v1.26-latest v1.26.8 v1.26.7 v1.26.6 v1.26.5 v1.26.4 v1.26.3 v1.26.2 v1.26.1 v1.26.0 v1.25-latest v1.25.5 v1.25.4 v1.25.3 v1.25.2 v1.25.1 v1.24-latest v1.24.6 v1.24.5 v1.24.4 v1.24.3 v1.24.2 v1.24.1 v1.24.0 master v1.31.0-alpha.c1a23dd7]   |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is 'ambient' and it is always applied. Must be one of: ambient, default, demo, empty, external, preview, remote, stable. | ambient | Enum: [ambient default demo empty external openshift-ambient openshift preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio ztunnel component should be installed. | ztunnel |  |
 | `values` _[ZTunnelValues](#ztunnelvalues)_ | Defines the values to be passed to the Helm charts when installing Istio ztunnel. |  |  |
