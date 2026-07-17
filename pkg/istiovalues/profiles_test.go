@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	. "github.com/onsi/gomega"
 )
@@ -251,6 +252,111 @@ func TestResolve(t *testing.T) {
 		t.Run("default:"+tc.dflt+",user:"+tc.user, func(t *testing.T) {
 			g := NewWithT(t)
 			g.Expect(resolve(tc.dflt, tc.user)).To(Equal(tc.expected))
+		})
+	}
+}
+
+func TestApplyProfilesAndPlatformNativeNftables(t *testing.T) {
+	const version = "my-version"
+	resourceDir := t.TempDir()
+	profilesDir := path.Join(resourceDir, version, "profiles")
+	Must(t, os.MkdirAll(profilesDir, 0o755))
+
+	Must(t, os.WriteFile(path.Join(profilesDir, "default.yaml"), []byte(`
+apiVersion: sailoperator.io/v1
+kind: IstioProfile
+spec:
+  values: {}
+`), 0o644))
+	Must(t, os.WriteFile(path.Join(profilesDir, "openshift.yaml"), []byte(`
+apiVersion: sailoperator.io/v1
+kind: IstioProfile
+spec:
+  values:
+    global:
+      platform: openshift
+`), 0o644))
+	Must(t, os.WriteFile(path.Join(profilesDir, "ambient.yaml"), []byte(`
+apiVersion: sailoperator.io/v1
+kind: IstioProfile
+spec:
+  values:
+    profile: ambient
+`), 0o644))
+
+	resourceFS := os.DirFS(resourceDir)
+	tests := []struct {
+		name                 string
+		platform             config.Platform
+		defaultProfile       string
+		userProfile          string
+		userValues           helm.Values
+		expectNativeNftables any
+		expectFound          bool
+	}{
+		{
+			name:                 "openshift unset defaults to true",
+			platform:             config.PlatformOpenShift,
+			defaultProfile:       "openshift",
+			userValues:           helm.Values{},
+			expectNativeNftables: true,
+			expectFound:          true,
+		},
+		{
+			name:           "openshift explicit false is honored",
+			platform:       config.PlatformOpenShift,
+			defaultProfile: "openshift",
+			userValues: helm.Values{
+				"global": map[string]any{
+					"nativeNftables": false,
+				},
+			},
+			expectNativeNftables: false,
+			expectFound:          true,
+		},
+		{
+			name:           "openshift explicit true is honored",
+			platform:       config.PlatformOpenShift,
+			defaultProfile: "openshift",
+			userValues: helm.Values{
+				"global": map[string]any{
+					"nativeNftables": true,
+				},
+			},
+			expectNativeNftables: true,
+			expectFound:          true,
+		},
+		{
+			name:           "kubernetes unset does not set nativeNftables",
+			platform:       config.PlatformKubernetes,
+			defaultProfile: "default",
+			userValues:     helm.Values{},
+			expectFound:    false,
+		},
+		{
+			name:                 "openshift with ambient profile still defaults to true",
+			platform:             config.PlatformOpenShift,
+			defaultProfile:       "openshift",
+			userProfile:          "ambient",
+			userValues:           helm.Values{},
+			expectNativeNftables: true,
+			expectFound:          true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			values, err := ApplyProfilesAndPlatform(
+				resourceFS, version, tt.platform, tt.defaultProfile, tt.userProfile, tt.userValues)
+			g.Expect(err).NotTo(HaveOccurred())
+
+			got, found, err := values.GetBool("global.nativeNftables")
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(found).To(Equal(tt.expectFound))
+			if tt.expectFound {
+				g.Expect(got).To(Equal(tt.expectNativeNftables))
+			}
 		})
 	}
 }

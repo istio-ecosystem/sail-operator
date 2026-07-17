@@ -46,6 +46,12 @@ func ApplyProfilesAndPlatform(
 			return nil, fmt.Errorf("failed to set global.platform: %w", err)
 		}
 	}
+	// On OpenShift, default to native nftables unless the user explicitly sets the flag.
+	if platform == config.PlatformOpenShift {
+		if err = values.SetIfAbsent("global.nativeNftables", true); err != nil {
+			return nil, fmt.Errorf("failed to set global.nativeNftables: %w", err)
+		}
+	}
 	return values, nil
 }
 
