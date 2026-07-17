@@ -33,7 +33,7 @@ Alternatively, those can be configured by using two custom resources `ServiceMon
 
 ### API Changes
 
-We will add an annotation `sail.operator.io/monitoring` in the `Istio` Custom Resource(CR). For example,
+We will add an annotation `sailoperator.io/monitoring` in the `Istio` Custom Resource(CR). For example,
 
 ```yaml
 apiVersion: sailoperator.io/v1
@@ -41,12 +41,12 @@ kind: Istio
 metadata:
   name: default
   annotations:
-    sail.operator.io/monitoring: enabled
+    sailoperator.io/monitoring: enabled
 ```
 
-When the annotation `sail.operator.io/monitoring: enabled` is set, the monitoring controller reconciles `ServiceMonitor` and `PodMonitor` CRs for each owned `IstioRevision`.
+When the annotation `sailoperator.io/monitoring: enabled` is set, the monitoring controller reconciles `ServiceMonitor` and `PodMonitor` CRs for each owned `IstioRevision`.
 
-If any custom relabeling or scraping configuration is required, users may set the annotation `sail.operator.io/monitoring: enabled` and then they can apply/update independent `ServiceMonitor` and `PodMonitor` resource changes. The monitoring controller will not overwrite or update those independent changes in its reconciliation.
+If any custom relabeling or scraping configuration is required, users may set the annotation `sailoperator.io/monitoring: enabled` and then they can apply/update independent `ServiceMonitor` and `PodMonitor` resource changes. The monitoring controller will not overwrite or update those independent changes in its reconciliation.
 
 #### Alternatives API Considered
 
@@ -58,7 +58,7 @@ Additional configuration options can be added as new `Istio` Custom Resource spe
 
 We assume `ServiceMonitor` and `PodMonitor` CRDs are available from the Prometheus Operator. They are under the resource group `monitoring.coreos.com`. We use the Sail Operator ClusterRole grants permissions for both `ServiceMonitor` and `PodMonitor` custom resources.
 
-A monitoring controller watches `IstioRevision` resources and reconciles `ServiceMonitor` and `PodMonitor` CRs when the annotation `sail.operator.io/monitoring: enabled` is set in the parent `Istio` CR. It also watches namespaces with the Istio sidecar injection labels and reconciles `PodMonitor` CRs for those namespaces.
+A monitoring controller watches `IstioRevision` resources and reconciles `ServiceMonitor` and `PodMonitor` CRs when the annotation `sailoperator.io/monitoring: enabled` is set in the parent `Istio` CR. It also watches namespaces with the Istio sidecar injection labels and reconciles `PodMonitor` CRs for those namespaces.
 
 The monitoring controller applies platform-specific relabeling defaults when creating `ServiceMonitor` and `PodMonitor` CRs. It detects the running platform at the Sail Operator startup time.
 
@@ -66,7 +66,7 @@ Attaching `ServiceMonitor` and `PodMonitor` custom labels for selector use cases
 
 #### Monitoring Controller Design
 
-When the annotation `sail.operator.io/monitoring: enabled` is set in an `Istio` custom resource, the monitoring controller reconciles `ServiceMonitor` or `PodMonitor` resources. When the annotation `sail.operator.io/monitoring: enabled` is dropped, the monitoring controller stops reconciling.
+When the annotation `sailoperator.io/monitoring: enabled` is set in an `Istio` custom resource, the monitoring controller reconciles `ServiceMonitor` or `PodMonitor` resources. When the annotation `sailoperator.io/monitoring: enabled` is dropped, the monitoring controller stops reconciling.
 
 The monitoring controller only creates monitoring resources if they do not exist. Those resources are created by a naming convention and ownership label(s). It will not overwrite or update user-managed `ServiceMonitor` or `PodMonitor` resource changes in existing environments.
 
@@ -82,12 +82,18 @@ The **PodMonitor** custom resource does not carry an `ownerReferences` field bec
 
 #### Sidecar injection namespace selection
 
-The monitoring controller reconciliation watches namespaces with the Istio sidecar injection labels. For example:
+The monitoring controller reconciliation watches namespaces and pods with the Istio sidecar injection labels. For example:
 
 | Namespace label | Resolved revision |
 |-----------------|-------------------|
 | `istio-injection: enabled` | `default` |
 | `istio.io/rev: <name>` | `<name>` |
+
+| Pod label | Resolved revision |
+|-----------------|-------------------|
+| `sidecar.istio.io/inject: true` | `default` |
+
+It also watches `IstioRevisionTag` custom resource objects and reconciles `PodMonitor` resource(s) in their namespace(s).
 
 #### Kubernetes vs OpenShift
 
@@ -108,7 +114,7 @@ By default, the monitoring controller will create the `ServiceMonitor` and `PodM
 
 #### Monitoring Availability
 
-When the annotation `sail.operator.io/monitoring: enabled` is set in an `Istio` custom resource, but the expected `ServiceMonitor` and `PodMonitor` objects are not installed, the monitoring controller should set a status condition in the `Istio` custom resource. For example:
+When the annotation `sailoperator.io/monitoring: enabled` is set in an `Istio` custom resource, but the expected `ServiceMonitor` and `PodMonitor` objects are not installed, the monitoring controller should set a status condition in the `Istio` custom resource. For example:
 
 | Field | Value |
 |-------|-------|
@@ -133,6 +139,7 @@ The `PodMonitor` reconciliation watches namespaces with the sidecar injection la
 - [ ] Set a status condition in the `Istio` custom resource
 - [ ] Add Integration tests such as `tests/integration/api/monitoring_test.go`
 - [x] Add KinD e2e tests
+- [ ] Add a watch for `IstioRevisionTag` custom resources and a watch for Pods with `sidecar.istio.io/inject` label
 - [ ] User-facing documentation
 
 Alternatives API Considered
