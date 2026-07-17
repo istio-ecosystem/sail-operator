@@ -42,7 +42,7 @@ type Config struct {
 	OperatorNamespace string
 
 	// ChartManager handles Helm chart installation and upgrades
-	ChartManager *helm.ChartManager
+	ChartManager helm.ChartReconciler
 
 	// TLSConfig holds the TLS configuration from the platform (e.g. OpenShift APIServer).
 	// Nil when not applicable.

@@ -166,7 +166,7 @@ type Library struct {
 	resourceFS             fs.FS
 	crdFS                  fs.FS
 	cl                     client.Client
-	chartManager           *helm.ChartManager
+	chartManager           helm.ChartReconciler
 	platform               config.Platform
 	crdOwnershipLabelKey   string
 	crdOwnershipLabelValue string
