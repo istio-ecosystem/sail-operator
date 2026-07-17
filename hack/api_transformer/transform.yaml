@@ -42,6 +42,7 @@ globalTransformations:
     "*wrappers.Int32Value": "*int32"
     "*wrappers.Int64Value": "*int64"
     "*wrappers.UInt32Value": "*uint32"
+    "*wrappers.UInt64Value": "*uint64"
     "*duration.Duration": "*metav1.Duration"
     bool: "*bool"
     string: "*string"
@@ -222,6 +223,8 @@ inputFiles:
     - LocalityLoadBalancerSetting_Failover
     - ClientTLSSettings
     - ClientTLSSettings_TLSmode
+    - ZoneAwareLoadBalancerSetting
+    - ZoneAwareLoadBalancerSetting_Failover
 
 - module: istio.io/api
   path: /networking/v1alpha3/virtual_service.pb.go
