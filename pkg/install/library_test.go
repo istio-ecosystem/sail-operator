@@ -15,12 +15,23 @@
 package install
 
 import (
+	"context"
+	"io/fs"
+	"sync"
 	"testing"
+	"time"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
+	"github.com/istio-ecosystem/sail-operator/resources"
 	. "github.com/onsi/gomega"
+	"helm.sh/helm/v4/pkg/release"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	ctrlreconcile "sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"istio.io/istio/pkg/ptr"
 )
@@ -321,4 +332,126 @@ func TestApply_triggersWhenOptionsChange(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(l.generation).To(Equal(uint64(2)))
 	g.Expect(l.triggerCh).To(HaveLen(1))
+}
+
+// slowChartReconciler blocks during UpgradeOrInstallChart and records the
+// order of install-start, install-end, and uninstall operations so tests
+// can verify serialization between Reconcile and Uninstall.
+type slowChartReconciler struct {
+	mu  sync.Mutex
+	ops []string
+
+	installEntered chan struct{} // closed when UpgradeOrInstallChart is entered
+	installBlock   chan struct{} // UpgradeOrInstallChart blocks until this is closed
+}
+
+var _ helm.ChartReconciler = (*slowChartReconciler)(nil)
+
+func (m *slowChartReconciler) UpgradeOrInstallChart(
+	_ context.Context, _ fs.FS, _ string, _ helm.Values,
+	_, _ string, _ *metav1.OwnerReference,
+) (release.Releaser, error) {
+	m.mu.Lock()
+	m.ops = append(m.ops, "install_start")
+	m.mu.Unlock()
+
+	close(m.installEntered)
+	<-m.installBlock
+
+	m.mu.Lock()
+	m.ops = append(m.ops, "install_end")
+	m.mu.Unlock()
+	return nil, nil
+}
+
+func (m *slowChartReconciler) UninstallChart(
+	_ context.Context, _, _ string,
+) (*release.UninstallReleaseResponse, error) {
+	m.mu.Lock()
+	m.ops = append(m.ops, "uninstall")
+	m.mu.Unlock()
+	return &release.UninstallReleaseResponse{Info: "ok"}, nil
+}
+
+func TestUninstall_raceWithReconcile(t *testing.T) {
+	g := NewWithT(t)
+
+	mock := &slowChartReconciler{
+		installEntered: make(chan struct{}),
+		installBlock:   make(chan struct{}),
+	}
+
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test-ns"}}
+	cl := fake.NewClientBuilder().WithObjects(ns).Build()
+
+	l := &Library{
+		chartManager: mock,
+		cl:           cl,
+		resourceFS:   resources.FS,
+		triggerCh:    make(chan event.GenericEvent, 1),
+		notifyCh:     make(chan struct{}, 1),
+	}
+
+	opts := Options{
+		Namespace: "test-ns",
+		Version:   istioversion.Default,
+		Revision:  "racetest",
+		Values:    GatewayAPIDefaults("test-ns"),
+	}
+	l.desiredOpts = &opts
+	l.generation = 1
+
+	reconciler := &libraryReconciler{lib: l}
+
+	var wg sync.WaitGroup
+
+	// Start a reconciliation — it will block inside UpgradeOrInstallChart.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, _ = reconciler.Reconcile(context.Background(), ctrlreconcile.Request{})
+	}()
+
+	// Wait for the install to be in progress.
+	select {
+	case <-mock.installEntered:
+	case <-time.After(10 * time.Second):
+		t.Fatal("timed out waiting for install to start")
+	}
+
+	// Call Uninstall while install is blocked. Without the lifecycleMu fix
+	// this runs concurrently and UninstallChart executes before
+	// UpgradeOrInstallChart returns.
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_ = l.Uninstall(context.Background(), "test-ns", "racetest")
+	}()
+
+	// Give Uninstall time to either execute (no fix) or block (with fix).
+	time.Sleep(200 * time.Millisecond)
+
+	// Release the blocked install.
+	close(mock.installBlock)
+
+	// Wait for both goroutines to finish.
+	done := make(chan struct{})
+	go func() { wg.Wait(); close(done) }()
+	select {
+	case <-done:
+	case <-time.After(10 * time.Second):
+		t.Fatal("timed out waiting for goroutines to complete")
+	}
+
+	mock.mu.Lock()
+	ops := append([]string{}, mock.ops...)
+	mock.mu.Unlock()
+
+	// The last Helm operation must be "uninstall". If UpgradeOrInstallChart
+	// completed after UninstallChart (the race), the last entry would be
+	// "install_end" and istiod would be re-created — which is the bug.
+	g.Expect(ops).NotTo(BeEmpty())
+	g.Expect(ops[len(ops)-1]).To(Equal("uninstall"),
+		"expected the last Helm operation to be uninstall, but got ops=%v — "+
+			"this means a concurrent reconcile re-installed istiod after Uninstall", ops)
 }

@@ -36,6 +36,14 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
+// ChartReconciler is the subset of ChartManager operations needed by the
+// reconciliation loop: install/upgrade and uninstall.
+type ChartReconciler interface {
+	UpgradeOrInstallChart(ctx context.Context, resourceFS fs.FS, chartPath string, values Values,
+		namespace, releaseName string, ownerReference *metav1.OwnerReference) (release.Releaser, error)
+	UninstallChart(ctx context.Context, releaseName, namespace string) (*release.UninstallReleaseResponse, error)
+}
+
 type ChartManager struct {
 	restClientGetter genericclioptions.RESTClientGetter
 	driver           string

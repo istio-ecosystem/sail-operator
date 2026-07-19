@@ -42,9 +42,10 @@ import (
 )
 
 const (
-	tlsTestNamespace   = "library-test-tls"
-	loopTestNamespace  = "library-test-loop"
-	driftTestNamespace = "library-test-drift"
+	tlsTestNamespace     = "library-test-tls"
+	loopTestNamespace    = "library-test-loop"
+	driftTestNamespace   = "library-test-drift"
+	upgradeTestNamespace = "library-test-upgrade"
 )
 
 var _ = Describe("Library Reconciliation", Label("library", "reconciliation"), Ordered, func() {
@@ -295,6 +296,120 @@ var _ = Describe("Library Reconciliation", Label("library", "reconciliation"), O
 				g.Expect(restored.Webhooks[0].FailurePolicy).To(HaveValue(Equal(admissionv1.Fail)))
 			}).Should(Succeed())
 			Success("Library re-reconciled validating webhook after drift")
+		})
+	})
+
+	When("the library upgrades istiod to a new version", func() {
+		var lib *install.Library
+
+		const (
+			namespace = upgradeTestNamespace
+			revision  = "upgradetest"
+		)
+
+		BeforeAll(func() {
+			if istioversion.Base == "" {
+				Skip("Only one Istio version available, cannot test upgrades")
+			}
+
+			common.EnsureNamespaceWithCleanup(k, namespace)
+
+			var err error
+			lib, err = install.New(kubeConfig, resources.FS, chart.CRDsFS)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = lib.Start(ctx)
+			Expect(err).NotTo(HaveOccurred())
+
+			DeferCleanup(func() {
+				if err := lib.Uninstall(ctx, namespace, revision); err != nil {
+					GinkgoWriter.Printf("upgrade test uninstall (best-effort): %v\n", err)
+				}
+				lib.Stop()
+				Success("Cleaned up upgrade test")
+			})
+		})
+
+		It("installs the base version and then upgrades to the new version", func(ctx SpecContext) {
+			baseVersion := istioversion.Base
+			newVersion := istioversion.New
+
+			GinkgoWriter.Printf("Upgrade test: %s -> %s\n", baseVersion, newVersion)
+
+			By(fmt.Sprintf("installing base version %s", baseVersion))
+			Expect(lib.Apply(install.Options{
+				Values:    install.GatewayAPIDefaults(namespace),
+				Namespace: namespace,
+				Version:   baseVersion,
+				Revision:  revision,
+			})).To(Succeed())
+
+			Eventually(func(g Gomega) {
+				s := lib.Status()
+				g.Expect(s.Error).NotTo(HaveOccurred(), "library install error")
+				g.Expect(s.Installed).To(BeTrue(), "library not yet installed")
+				g.Expect(s.Version).To(Equal(baseVersion))
+			}).Should(Succeed())
+			Success(fmt.Sprintf("Base version %s installed", baseVersion))
+
+			deployKey := types.NamespacedName{
+				Name:      "istiod-" + revision,
+				Namespace: namespace,
+			}
+
+			// Capture the base deployment's image
+			var baseImage string
+			Eventually(func(g Gomega) {
+				deploy := &appsv1.Deployment{}
+				g.Expect(cl.Get(ctx, deployKey, deploy)).To(Succeed())
+				for _, c := range deploy.Spec.Template.Spec.Containers {
+					if c.Name == "discovery" {
+						baseImage = c.Image
+						break
+					}
+				}
+				g.Expect(baseImage).NotTo(BeEmpty(), "discovery container not found")
+			}).Should(Succeed())
+
+			By(fmt.Sprintf("upgrading to new version %s", newVersion))
+			Expect(lib.Apply(install.Options{
+				Values:    install.GatewayAPIDefaults(namespace),
+				Namespace: namespace,
+				Version:   newVersion,
+				Revision:  revision,
+			})).To(Succeed())
+
+			Eventually(func(g Gomega) {
+				s := lib.Status()
+				g.Expect(s.Error).NotTo(HaveOccurred(), "library upgrade error")
+				g.Expect(s.Installed).To(BeTrue(), "library not installed after upgrade")
+				g.Expect(s.Version).To(Equal(newVersion))
+			}).Should(Succeed())
+
+			// Verify the deployment image changed
+			Eventually(func(g Gomega) {
+				deploy := &appsv1.Deployment{}
+				g.Expect(cl.Get(ctx, deployKey, deploy)).To(Succeed())
+				var newImage string
+				for _, c := range deploy.Spec.Template.Spec.Containers {
+					if c.Name == "discovery" {
+						newImage = c.Image
+						break
+					}
+				}
+				g.Expect(newImage).NotTo(BeEmpty(), "discovery container not found after upgrade")
+				g.Expect(newImage).NotTo(Equal(baseImage),
+					fmt.Sprintf("istiod image should change after upgrade from %s to %s", baseVersion, newVersion))
+			}).Should(Succeed())
+
+			// Verify the new deployment is available
+			Eventually(func(g Gomega) {
+				deploy := &appsv1.Deployment{}
+				g.Expect(cl.Get(ctx, deployKey, deploy)).To(Succeed())
+				g.Expect(deploy.Status.AvailableReplicas).To(BeNumerically(">=", 1),
+					"istiod should have at least one available replica after upgrade")
+			}).Should(Succeed())
+			Success(fmt.Sprintf("Upgraded from %s to %s", baseVersion, newVersion))
 		})
 	})
 })
