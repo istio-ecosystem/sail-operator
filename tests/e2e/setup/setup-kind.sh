@@ -82,7 +82,7 @@ else
   setup_kind_registry "$KIND_CLUSTER_NAME"
 
   # Apply Gateway API CRDs needed for library tests
-  kubectl apply --server-side -f "${SCRIPTPATH}/testdata/gateway-api/experimental-install.yaml"
+  KUBECONFIG="${ARTIFACTS}/config" kubectl apply --server-side -f "${SCRIPTPATH}/testdata/gateway-api/experimental-install.yaml"
 
   echo "Your KinD environment is ready, to use it: export KUBECONFIG=${ARTIFACTS}/config"
 fi
