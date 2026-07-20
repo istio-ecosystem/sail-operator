@@ -31,7 +31,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -47,37 +46,17 @@ const (
 	serviceMonitorNameSuffix = "-istiod-metrics"
 	podMonitorNameSuffix     = "-proxies-metrics"
 
-	// COO (Cluster Observability Operator) API group
-	rhobsAPIGroup   = "monitoring.rhobs"
-	rhobsAPIVersion = "v1"
-
 	// Labels
 	monitoredByLabel    = "monitored-by"
 	kubePrometheusValue = "kube-prometheus"
-	cooPrometheusValue  = "coo-prometheus"
 )
 
-// rhobsGV is the GroupVersion for COO monitoring resources
-var rhobsGV = schema.GroupVersion{Group: rhobsAPIGroup, Version: rhobsAPIVersion}
-
-func (r *Reconciler) monitoringGV() schema.GroupVersion {
-	if r.Config.Platform == config.PlatformOpenShift {
-		return rhobsGV
-	}
-	return monitoringv1.SchemeGroupVersion
-}
-
 func (r *Reconciler) monitorLabels(app string) map[string]string {
-	labels := map[string]string{
+	return map[string]string{
 		"app":                       app,
 		constants.ManagedByLabelKey: constants.ManagedByLabelValue,
+		monitoredByLabel:            kubePrometheusValue,
 	}
-	if r.Config.Platform == config.PlatformOpenShift {
-		labels[monitoredByLabel] = cooPrometheusValue
-	} else {
-		labels[monitoredByLabel] = kubePrometheusValue
-	}
-	return labels
 }
 
 // parentMonitoringEnabled reports whether the parent Istio CR enables monitoring via annotation.
@@ -117,8 +96,7 @@ func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *ru
 	}
 }
 
-// +kubebuilder:rbac:groups=monitoring.rhobs,resources=servicemonitors,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=monitoring.rhobs,resources=podmonitors,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors;podmonitors,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch
 
 // Reconcile creates ServiceMonitor and PodMonitor resources for each IstioRevision when monitoring is enabled.
@@ -161,8 +139,6 @@ func (r *Reconciler) reconcileServiceMonitor(ctx context.Context, rev *v1.IstioR
 	desired := r.buildServiceMonitor(rev)
 
 	existing := &monitoringv1.ServiceMonitor{}
-	existing.SetGroupVersionKind(r.monitoringGV().WithKind("ServiceMonitor"))
-
 	err := r.Client.Get(ctx, client.ObjectKeyFromObject(desired), existing)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -227,8 +203,6 @@ func (r *Reconciler) reconcilePodMonitorInNamespace(ctx context.Context, rev *v1
 	desired := r.buildPodMonitor(rev, namespace)
 
 	existing := &monitoringv1.PodMonitor{}
-	existing.SetGroupVersionKind(r.monitoringGV().WithKind("PodMonitor"))
-
 	err := r.Client.Get(ctx, client.ObjectKeyFromObject(desired), existing)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -287,8 +261,6 @@ func (r *Reconciler) buildServiceMonitor(rev *v1.IstioRevision) *monitoringv1.Se
 		},
 	}
 
-	sm.SetGroupVersionKind(r.monitoringGV().WithKind("ServiceMonitor"))
-
 	return sm
 }
 
@@ -325,8 +297,6 @@ func (r *Reconciler) buildPodMonitor(rev *v1.IstioRevision, namespace string) *m
 			},
 		},
 	}
-
-	pm.SetGroupVersionKind(r.monitoringGV().WithKind("PodMonitor"))
 
 	return pm
 }
@@ -371,8 +341,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		}).
 		Named("monitoring").
 		Watches(&v1.IstioRevision{}, wrapEventHandler(logger, &handler.EnqueueRequestForObject{})).
-		// Note: We don't watch ServiceMonitor/PodMonitor directly because they use the rhobs API group
-		// which requires COO CRDs. Owner references ensure cleanup on IstioRevision deletion.
+		// Owner references ensure ServiceMonitor cleanup on IstioRevision deletion.
 		// Watch Istio CR to react to monitoring annotation changes
 		Watches(&v1.Istio{}, istioHandler).
 		// Watch namespaces with sidecar injection labels to create PodMonitors in them
