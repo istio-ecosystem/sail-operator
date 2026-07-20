@@ -44,8 +44,8 @@ import (
 )
 
 const (
-	serviceMonitorNameSuffix = "-istiod"
-	podMonitorNameSuffix     = "-proxies"
+	serviceMonitorNameSuffix = "-istiod-metrics"
+	podMonitorNameSuffix     = "-proxies-metrics"
 
 	// COO (Cluster Observability Operator) API group
 	rhobsAPIGroup   = "monitoring.rhobs"
@@ -55,7 +55,6 @@ const (
 	monitoredByLabel    = "monitored-by"
 	kubePrometheusValue = "kube-prometheus"
 	cooPrometheusValue  = "coo-prometheus"
-	helmReleaseLabel    = "release"
 )
 
 // rhobsGV is the GroupVersion for COO monitoring resources
@@ -68,35 +67,21 @@ func (r *Reconciler) monitoringGV() schema.GroupVersion {
 	return monitoringv1.SchemeGroupVersion
 }
 
-func (r *Reconciler) monitorLabels(app string, monitoring *v1.MonitoringConfig) map[string]string {
+func (r *Reconciler) monitorLabels(app string) map[string]string {
 	labels := map[string]string{
 		"app":                       app,
 		constants.ManagedByLabelKey: constants.ManagedByLabelValue,
 	}
-	if monitoring == nil {
-		return labels
-	}
-
 	if r.Config.Platform == config.PlatformOpenShift {
-		value := cooPrometheusValue
-		if monitoring.MonitoredBy != "" {
-			value = monitoring.MonitoredBy
-		}
-		labels[monitoredByLabel] = value
-		return labels
-	}
-
-	if monitoring.MonitoredBy != "" {
-		labels[monitoredByLabel] = monitoring.MonitoredBy
-		labels[helmReleaseLabel] = monitoring.MonitoredBy
+		labels[monitoredByLabel] = cooPrometheusValue
 	} else {
 		labels[monitoredByLabel] = kubePrometheusValue
 	}
 	return labels
 }
 
-// parentMonitoringConfig returns the monitoring config from the parent Istio CR, if any.
-func (r *Reconciler) parentMonitoringConfig(ctx context.Context, rev *v1.IstioRevision) (*v1.MonitoringConfig, error) {
+// parentMonitoringEnabled reports whether the parent Istio CR enables monitoring via annotation.
+func (r *Reconciler) parentMonitoringEnabled(ctx context.Context, rev *v1.IstioRevision) (bool, error) {
 	for _, ownerRef := range rev.GetOwnerReferences() {
 		if ownerRef.Kind != v1.IstioKind {
 			continue
@@ -104,13 +89,13 @@ func (r *Reconciler) parentMonitoringConfig(ctx context.Context, rev *v1.IstioRe
 		istio := &v1.Istio{}
 		if err := r.Client.Get(ctx, client.ObjectKey{Name: ownerRef.Name}, istio); err != nil {
 			if apierrors.IsNotFound(err) {
-				return nil, nil
+				return false, nil
 			}
-			return nil, fmt.Errorf("failed to get Istio CR: %w", err)
+			return false, fmt.Errorf("failed to get Istio CR: %w", err)
 		}
-		return istio.Spec.Monitoring, nil
+		return istio.Annotations[constants.MonitoringAnnotationKey] == constants.MonitoringAnnotationEnabled, nil
 	}
-	return nil, nil
+	return false, nil
 }
 
 // TODO: map tuningEnabled from an Integration API spec field
@@ -136,7 +121,8 @@ func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *ru
 // +kubebuilder:rbac:groups=monitoring.rhobs,resources=podmonitors,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch
 
-// Reconcile creates or updates ServiceMonitor and PodMonitor resources for each IstioRevision
+// Reconcile creates ServiceMonitor and PodMonitor resources for each IstioRevision when monitoring is enabled.
+// Existing monitor resources are left unchanged so users can customize labels or specs without being overwritten.
 func (r *Reconciler) Reconcile(ctx context.Context, rev *v1.IstioRevision) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
@@ -146,23 +132,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, rev *v1.IstioRevision) (ctrl
 		return ctrl.Result{}, nil
 	}
 
-	// Check if monitoring is enabled in the parent Istio CR
-	monitoring, err := r.parentMonitoringConfig(ctx, rev)
+	enabled, err := r.parentMonitoringEnabled(ctx, rev)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to get monitoring config: %w", err)
+		return ctrl.Result{}, fmt.Errorf("failed to check if monitoring is enabled: %w", err)
 	}
-	if monitoring == nil || !monitoring.Enabled {
-		log.V(2).Info("Monitoring is not enabled in Istio CR, skipping reconciliation")
+	if !enabled {
+		log.V(2).Info("Monitoring is not enabled on Istio CR, skipping reconciliation")
 		return ctrl.Result{}, nil
 	}
 
 	// Reconcile ServiceMonitor for istiod (in the istio control plane namespace)
-	if err := r.reconcileServiceMonitor(ctx, rev, monitoring); err != nil {
+	if err := r.reconcileServiceMonitor(ctx, rev); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to reconcile ServiceMonitor: %w", err)
 	}
 
 	// Reconcile PodMonitors for istio-proxy sidecars in namespaces with injection enabled
-	if err := r.reconcilePodMonitors(ctx, rev, monitoring); err != nil {
+	if err := r.reconcilePodMonitors(ctx, rev); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to reconcile PodMonitors: %w", err)
 	}
 
@@ -170,10 +155,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, rev *v1.IstioRevision) (ctrl
 	return ctrl.Result{}, nil
 }
 
-// reconcileServiceMonitor creates or updates the ServiceMonitor for istiod
-func (r *Reconciler) reconcileServiceMonitor(ctx context.Context, rev *v1.IstioRevision, monitoring *v1.MonitoringConfig) error {
+// reconcileServiceMonitor creates the ServiceMonitor for istiod if it does not already exist.
+func (r *Reconciler) reconcileServiceMonitor(ctx context.Context, rev *v1.IstioRevision) error {
 	log := logf.FromContext(ctx)
-	desired := r.buildServiceMonitor(rev, monitoring)
+	desired := r.buildServiceMonitor(rev)
 
 	existing := &monitoringv1.ServiceMonitor{}
 	existing.SetGroupVersionKind(r.monitoringGV().WithKind("ServiceMonitor"))
@@ -187,14 +172,13 @@ func (r *Reconciler) reconcileServiceMonitor(ctx context.Context, rev *v1.IstioR
 		return fmt.Errorf("failed to get ServiceMonitor: %w", err)
 	}
 
-	log.V(2).Info("Updating ServiceMonitor", "name", desired.GetName(), "namespace", desired.GetNamespace())
-	desired.SetResourceVersion(existing.GetResourceVersion())
-	return r.Client.Update(ctx, desired)
+	log.V(2).Info("ServiceMonitor already exists, leaving unchanged", "name", desired.GetName(), "namespace", desired.GetNamespace())
+	return nil
 }
 
-// reconcilePodMonitors creates or updates PodMonitors for istio-proxy sidecars in namespaces
+// reconcilePodMonitors creates PodMonitors for istio-proxy sidecars in namespaces
 // that reference this IstioRevision via istio-injection=enabled or istio.io/rev labels.
-func (r *Reconciler) reconcilePodMonitors(ctx context.Context, rev *v1.IstioRevision, monitoring *v1.MonitoringConfig) error {
+func (r *Reconciler) reconcilePodMonitors(ctx context.Context, rev *v1.IstioRevision) error {
 	log := logf.FromContext(ctx)
 
 	namespaces, err := r.namespacesForRevision(ctx, rev)
@@ -203,7 +187,7 @@ func (r *Reconciler) reconcilePodMonitors(ctx context.Context, rev *v1.IstioRevi
 	}
 
 	for _, ns := range namespaces {
-		if err := r.reconcilePodMonitorInNamespace(ctx, rev, ns.Name, monitoring); err != nil {
+		if err := r.reconcilePodMonitorInNamespace(ctx, rev, ns.Name); err != nil {
 			return fmt.Errorf("failed to reconcile PodMonitor in namespace %s: %w", ns.Name, err)
 		}
 		log.V(2).Info("Reconciled PodMonitor for injection namespace", "namespace", ns.Name, "revision", rev.Name)
@@ -237,10 +221,10 @@ func namespaceReferencesRevision(ns *corev1.Namespace, rev *v1.IstioRevision) bo
 	return revision.GetReferencedRevisionFromNamespace(ns.GetLabels()) == rev.Name
 }
 
-// reconcilePodMonitorInNamespace creates or updates a PodMonitor in the specified namespace
-func (r *Reconciler) reconcilePodMonitorInNamespace(ctx context.Context, rev *v1.IstioRevision, namespace string, monitoring *v1.MonitoringConfig) error {
+// reconcilePodMonitorInNamespace creates a PodMonitor in the specified namespace if it does not already exist.
+func (r *Reconciler) reconcilePodMonitorInNamespace(ctx context.Context, rev *v1.IstioRevision, namespace string) error {
 	log := logf.FromContext(ctx)
-	desired := r.buildPodMonitor(rev, namespace, monitoring)
+	desired := r.buildPodMonitor(rev, namespace)
 
 	existing := &monitoringv1.PodMonitor{}
 	existing.SetGroupVersionKind(r.monitoringGV().WithKind("PodMonitor"))
@@ -254,13 +238,12 @@ func (r *Reconciler) reconcilePodMonitorInNamespace(ctx context.Context, rev *v1
 		return fmt.Errorf("failed to get PodMonitor: %w", err)
 	}
 
-	log.V(2).Info("Updating PodMonitor", "name", desired.GetName(), "namespace", namespace)
-	desired.SetResourceVersion(existing.GetResourceVersion())
-	return r.Client.Update(ctx, desired)
+	log.V(2).Info("PodMonitor already exists, leaving unchanged", "name", desired.GetName(), "namespace", namespace)
+	return nil
 }
 
 // buildServiceMonitor constructs the ServiceMonitor for monitoring istiod
-func (r *Reconciler) buildServiceMonitor(rev *v1.IstioRevision, monitoring *v1.MonitoringConfig) *monitoringv1.ServiceMonitor {
+func (r *Reconciler) buildServiceMonitor(rev *v1.IstioRevision) *monitoringv1.ServiceMonitor {
 	name := rev.Name + serviceMonitorNameSuffix
 	namespace := rev.Spec.Namespace
 	relabelCfg := relabeling.ForPlatform(r.Config.Platform, istioOwnerName(rev), tuningEnabled)
@@ -269,7 +252,7 @@ func (r *Reconciler) buildServiceMonitor(rev *v1.IstioRevision, monitoring *v1.M
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			Labels:    r.monitorLabels("istiod", monitoring),
+			Labels:    r.monitorLabels("istiod"),
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion:         v1.GroupVersion.String(),
@@ -310,7 +293,7 @@ func (r *Reconciler) buildServiceMonitor(rev *v1.IstioRevision, monitoring *v1.M
 }
 
 // buildPodMonitor constructs the PodMonitor for monitoring istio-proxy sidecars
-func (r *Reconciler) buildPodMonitor(rev *v1.IstioRevision, namespace string, monitoring *v1.MonitoringConfig) *monitoringv1.PodMonitor {
+func (r *Reconciler) buildPodMonitor(rev *v1.IstioRevision, namespace string) *monitoringv1.PodMonitor {
 	name := rev.Name + podMonitorNameSuffix
 	relabelCfg := relabeling.ForPlatform(r.Config.Platform, istioOwnerName(rev), tuningEnabled)
 
@@ -318,7 +301,7 @@ func (r *Reconciler) buildPodMonitor(rev *v1.IstioRevision, namespace string, mo
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			Labels:    r.monitorLabels("istio-proxy", monitoring),
+			Labels:    r.monitorLabels("istio-proxy"),
 			// Note: We don't set owner references here because the PodMonitor is in a different
 			// namespace than the IstioRevision (which is cluster-scoped). Cross-namespace owner
 			// references are not supported by Kubernetes.
@@ -372,7 +355,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	namespaceHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapNamespaceToReconcileRequest))
 
 	// istioHandler triggers reconciliation of owned IstioRevisions when an Istio CR's
-	// monitoring configuration changes
+	// monitoring annotation changes
 	istioHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapIstioToReconcileRequest))
 
 	return ctrl.NewControllerManagedBy(mgr).
@@ -390,7 +373,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&v1.IstioRevision{}, wrapEventHandler(logger, &handler.EnqueueRequestForObject{})).
 		// Note: We don't watch ServiceMonitor/PodMonitor directly because they use the rhobs API group
 		// which requires COO CRDs. Owner references ensure cleanup on IstioRevision deletion.
-		// Watch Istio CR to react to monitoring configuration changes
+		// Watch Istio CR to react to monitoring annotation changes
 		Watches(&v1.Istio{}, istioHandler).
 		// Watch namespaces with sidecar injection labels to create PodMonitors in them
 		Watches(&corev1.Namespace{}, namespaceHandler, builder.WithPredicates(sidecarInjectionNamespacePredicate())).
@@ -427,7 +410,7 @@ func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, obj cli
 }
 
 // mapIstioToReconcileRequest returns reconcile requests for all IstioRevisions
-// owned by the given Istio CR when the Istio CR's monitoring configuration changes
+// owned by the given Istio CR when the Istio CR changes
 func (r *Reconciler) mapIstioToReconcileRequest(ctx context.Context, obj client.Object) []reconcile.Request {
 	log := logf.FromContext(ctx)
 	istio, ok := obj.(*v1.Istio)
