@@ -16,8 +16,8 @@
 
 # Installs kube-prometheus-stack on KinD for monitoring controller e2e tests.
 # ServiceMonitor and PodMonitor CRDs are provided by the chart's Prometheus Operator.
-# Prometheus uses the chart defaults (release label selectors); Sail Istio CR
-# spec.monitoring.monitoredBy must match the helm release name for discovery.
+# SelectorNilUsesHelmValues is disabled so Prometheus discovers Sail-generated monitors
+# without requiring a matching release label (users can customize labels manually).
 
 set -eu -o pipefail
 
@@ -34,15 +34,34 @@ helm repo add prometheus-community https://prometheus-community.github.io/helm-c
 helm repo update
 
 # Install without --wait; readiness is verified via targeted kubectl waits below.
+# Disable admission webhooks so KinD does not depend on the certgen Job (fragile when
+# kube-proxy/service networking is degraded). CRDs and Prometheus scraping still work.
 helm install "${PROM_RELEASE}" prometheus-community/kube-prometheus-stack \
   --namespace "${PROM_NAMESPACE}" \
   --create-namespace \
+  --timeout "${WAIT_TIMEOUT}" \
   --set grafana.enabled=false \
-  --set alertmanager.enabled=false
+  --set alertmanager.enabled=false \
+  --set prometheusOperator.admissionWebhooks.enabled=false \
+  --set prometheusOperator.tls.enabled=false \
+  --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false \
+  --set prometheus.prometheusSpec.podMonitorSelectorNilUsesHelmValues=false
 
 kubectl wait --for=condition=Established crd/servicemonitors.monitoring.coreos.com --timeout="${WAIT_TIMEOUT}"
 kubectl wait --for=condition=Established crd/podmonitors.monitoring.coreos.com --timeout="${WAIT_TIMEOUT}"
 kubectl wait --for=condition=available "deployment/${PROM_RELEASE}-operator" -n "${PROM_NAMESPACE}" --timeout="${WAIT_TIMEOUT}"
-kubectl rollout status "statefulset/prometheus-${PROM_RELEASE}-prometheus" -n "${PROM_NAMESPACE}" --timeout="${WAIT_TIMEOUT}"
+
+# The Prometheus Operator creates the StatefulSet asynchronously from the Prometheus CR.
+prometheus_sts="prometheus-${PROM_RELEASE}-prometheus"
+echo "Waiting for StatefulSet/${prometheus_sts} to be created..."
+deadline=$((SECONDS + 300))
+until kubectl get "statefulset/${prometheus_sts}" -n "${PROM_NAMESPACE}" &>/dev/null; do
+  if (( SECONDS >= deadline )); then
+    echo "Timed out waiting for StatefulSet/${prometheus_sts}" >&2
+    exit 1
+  fi
+  sleep 2
+done
+kubectl rollout status "statefulset/${prometheus_sts}" -n "${PROM_NAMESPACE}" --timeout="${WAIT_TIMEOUT}"
 
 echo "kube-prometheus-stack is ready in namespace ${PROM_NAMESPACE}"
