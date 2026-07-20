@@ -759,19 +759,6 @@ spec:
                 - patch
                 - update
                 - watch
-            - apiGroups:
-                - monitoring.rhobs
-              resources:
-                - servicemonitors
-                - podmonitors
-              verbs:
-                - create
-                - delete
-                - get
-                - list
-                - patch
-                - update
-                - watch
           serviceAccountName: sail-operator
       deployments:
         - label:
