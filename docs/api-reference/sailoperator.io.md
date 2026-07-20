@@ -959,7 +959,6 @@ _Appears in:_
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift openshift-ambient preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. Note that this field is immutable. | istio-system |  |
 | `values` _[Values](#values)_ | Defines the values to be passed to the Helm charts when installing Istio. |  |  |
-| `monitoring` _[MonitoringConfig](#monitoringconfig)_ | Defines the configuration for Prometheus monitoring integration. When enabled, the operator creates ServiceMonitor and PodMonitor resources for scraping Istio metrics using the Cluster Observability Operator (COO). |  |  |
 
 
 #### IstioStatus
@@ -2122,24 +2121,6 @@ _Appears in:_
 | `TLSV1_3` | TLS version 1.3  |
 
 
-
-
-#### MonitoringConfig
-
-
-
-MonitoringConfig defines the configuration for Prometheus monitoring integration.
-TODO(#2028): revisit this API when the monitoring enhancement SEP is merged.
-
-
-
-_Appears in:_
-- [IstioSpec](#istiospec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `enabled` _boolean_ | When enabled, the operator creates ServiceMonitor resources for istiod and PodMonitor resources for Envoy sidecars in namespaces with istio-injection=enabled label. Defaults to false. | false |  |
-| `monitoredBy` _string_ | MonitoredBy identifies the Prometheus stack that should scrape the generated ServiceMonitor and PodMonitor resources. On Kubernetes, this value is applied to both the release and monitored-by labels for kube-prometheus-stack discovery. On OpenShift, this sets the monitored-by label used by COO. When omitted on OpenShift, monitored-by defaults to coo-prometheus. On Kubernetes, monitored-by defaults to kube-prometheus when this field is omitted. TODO(#2028): revisit field semantics when the monitoring enhancement SEP is merged. |  |  |
 
 
 #### MultiClusterConfig

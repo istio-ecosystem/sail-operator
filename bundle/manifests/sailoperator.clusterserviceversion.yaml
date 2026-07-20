@@ -323,21 +323,6 @@ spec:
             path: updateStrategy.updateWorkloads
             x-descriptors:
               - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
-          - description: |-
-              Defines the configuration for Prometheus monitoring integration.
-              When enabled, the operator creates ServiceMonitor and PodMonitor resources
-              for scraping Istio metrics using the Cluster Observability Operator (COO).
-            displayName: Monitoring
-            path: monitoring
-          - description: |-
-              When enabled, the operator creates ServiceMonitor resources for istiod
-              and PodMonitor resources for Envoy sidecars in namespaces with
-              istio-injection=enabled label.
-              Defaults to false.
-            displayName: Enable Monitoring
-            path: monitoring.enabled
-            x-descriptors:
-              - urn:alm:descriptor:com.tectonic.ui:booleanSwitch
           - description: Namespace to which the Istio components should be installed. Note that this field is immutable.
             displayName: Namespace
             path: namespace
