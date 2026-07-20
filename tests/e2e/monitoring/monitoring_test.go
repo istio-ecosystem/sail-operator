@@ -22,6 +22,7 @@ import (
 	"time"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
@@ -39,6 +40,7 @@ const (
 	prometheusNamespace    = "monitoring"
 	prometheusRelease      = "kube-prometheus-stack"
 	managedByValue         = "sail-operator"
+	kubePrometheusValue    = "kube-prometheus"
 	kubernetesRelabelCount = 7
 )
 
@@ -50,8 +52,8 @@ var _ = Describe("Monitoring Controller", Label("smoke", "monitoring"), Ordered,
 	debugInfoLogged := false
 
 	version := istioversion.Default
-	serviceMonitorName := istioName + "-istiod"
-	podMonitorName := istioName + "-proxies"
+	serviceMonitorName := istioName + "-istiod-metrics"
+	podMonitorName := istioName + "-proxies-metrics"
 
 	clr := cleaner.New(cl)
 
@@ -66,12 +68,19 @@ var _ = Describe("Monitoring Controller", Label("smoke", "monitoring"), Ordered,
 	})
 
 	When("Istio is installed with monitoring enabled", func() {
-		BeforeAll(func() {
+		BeforeAll(func(ctx SpecContext) {
 			common.CreateIstioCNI(k, version)
-			common.CreateIstio(k, version, `
-monitoring:
-  enabled: true
-  monitoredBy: kube-prometheus-stack`)
+			common.CreateIstio(k, version)
+
+			istio := &v1.Istio{}
+			Eventually(func(g Gomega) {
+				g.Expect(cl.Get(ctx, kube.Key(istioName), istio)).To(Succeed())
+				if istio.Annotations == nil {
+					istio.Annotations = map[string]string{}
+				}
+				istio.Annotations[constants.MonitoringAnnotationKey] = constants.MonitoringAnnotationEnabled
+				g.Expect(cl.Update(ctx, istio)).To(Succeed())
+			}).Should(Succeed())
 		})
 
 		It("reconciles the Istio control plane", func(ctx SpecContext) {
@@ -88,8 +97,7 @@ monitoring:
 				g.Expect(cl.Get(ctx, client.ObjectKey{Name: serviceMonitorName, Namespace: controlPlaneNamespace}, sm)).To(Succeed())
 				g.Expect(sm.Labels).To(HaveKeyWithValue("app", "istiod"))
 				g.Expect(sm.Labels).To(HaveKeyWithValue("managed-by", managedByValue))
-				g.Expect(sm.Labels).To(HaveKeyWithValue("monitored-by", prometheusRelease))
-				g.Expect(sm.Labels).To(HaveKeyWithValue("release", prometheusRelease))
+				g.Expect(sm.Labels).To(HaveKeyWithValue("monitored-by", kubePrometheusValue))
 				g.Expect(sm.Spec.Endpoints).To(HaveLen(1))
 				g.Expect(sm.Spec.Endpoints[0].Port).To(Equal("http-monitoring"))
 				g.Expect(sm.Spec.Endpoints[0].Path).To(Equal("/metrics"))
@@ -188,8 +196,7 @@ monitoring:
 func assertPodMonitor(g Gomega, pm *monitoringv1.PodMonitor) {
 	g.Expect(pm.Labels).To(HaveKeyWithValue("app", "istio-proxy"))
 	g.Expect(pm.Labels).To(HaveKeyWithValue("managed-by", managedByValue))
-	g.Expect(pm.Labels).To(HaveKeyWithValue("monitored-by", prometheusRelease))
-	g.Expect(pm.Labels).To(HaveKeyWithValue("release", prometheusRelease))
+	g.Expect(pm.Labels).To(HaveKeyWithValue("monitored-by", kubePrometheusValue))
 	g.Expect(pm.Spec.PodMetricsEndpoints).To(HaveLen(1))
 	g.Expect(pm.Spec.PodMetricsEndpoints[0].Path).To(Equal("/stats/prometheus"))
 	g.Expect(pm.Spec.PodMetricsEndpoints[0].RelabelConfigs).To(HaveLen(kubernetesRelabelCount))
