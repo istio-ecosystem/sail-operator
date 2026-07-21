@@ -9,7 +9,7 @@ replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.5
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/elastic/crd-ref-docs v0.1.0
-	github.com/go-logr/logr v1.4.3
+	github.com/go-logr/logr v1.4.4
 	github.com/google/go-cmp v0.7.0
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.4.0
 	github.com/magiconair/properties v1.8.9
@@ -28,7 +28,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v4 v4.2.0
 	istio.io/client-go v1.30.0-alpha.1.0.20260715174434-583f9cf29f1b
-	istio.io/istio v0.0.0-20260720012635-a217a27c4a03
+	istio.io/istio v0.0.0-20260721005830-77bfdc743714
 	k8s.io/api v0.36.2
 	k8s.io/apiextensions-apiserver v0.36.2
 	k8s.io/apimachinery v0.36.2
@@ -175,7 +175,7 @@ require (
 	k8s.io/apiserver v0.36.2 // indirect
 	k8s.io/component-base v0.36.2 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
-	k8s.io/kube-openapi v0.0.0-20260718133925-74c0ba7c0470 // indirect
+	k8s.io/kube-openapi v0.0.0-20260721042612-c26577a1ec9a // indirect
 	k8s.io/kubectl v0.36.0 // indirect
 	k8s.io/streaming v0.36.2 // indirect
 	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3 // indirect
