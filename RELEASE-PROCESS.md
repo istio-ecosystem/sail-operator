@@ -7,7 +7,8 @@ weeks prior to a new release.
 Please clone this [GitHub issue](https://github.com/istio-ecosystem/sail-operator/issues/1609) and follow all the steps of the checklist to prepare the release.
 
 # New z-stream release preparations
-Please clone this [GitHub issue](https://github.com/istio-ecosystem/sail-operator/issues/1608) and follow all the steps of the checklist to prepare the release.
+The easiest way to add new Istio patch versions to all release branches is by using the Claude command `/add-istio-version`.
+Please clone this [GitHub issue](https://github.com/istio-ecosystem/sail-operator/issues/2162) and follow all the steps of the checklist to prepare the release. (automatic via claude or manually)
 
 # Feature Freeze
 
