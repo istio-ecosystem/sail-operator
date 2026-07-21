@@ -674,6 +674,10 @@ type PilotTaintControllerConfig struct {
 	Enabled *bool `json:"enabled,omitempty"`
 	// The namespace of the CNI daemonset, incase it's not the same as istiod.
 	Namespace *string `json:"namespace,omitempty"`
+	// The taint key used by the node-untaint controller to identify nodes that should be untainted.
+	// This corresponds to the Helm chart value `values.pilot.taint.name` and the
+	// environment variable `PILOT_NODE_UNTAINT_CONTROLLERS_TAINT_NAME` used by istiod.
+	Name *string `json:"name,omitempty"`
 }
 
 // Controls whether Istio policy is applied to Pilot.
@@ -1347,10 +1351,11 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\n" +
 	"envVarFrom\x18> \x03(\v2\x17.google.protobuf.StructR\n" +
 	"envVarFrom\x12*\n" +
-	"\x10crlConfigMapName\x18? \x01(\tR\x10crlConfigMapName\"T\n" +
+	"\x10crlConfigMapName\x18? \x01(\tR\x10crlConfigMapName\"h\n" +
 	"\x1aPilotTaintControllerConfig\x12\x18\n" +
 	"\aenabled\x18\x01 \x01(\bR\aenabled\x12\x1c\n" +
-	"\tnamespace\x18\x02 \x01(\tR\tnamespace\"\xc6\x01\n" +
+	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\"\xc6\x01\n" +
 	"\x12PilotIngressConfig\x12&\n" +
 	"\x0eingressService\x18\x01 \x01(\tR\x0eingressService\x12d\n" +
 	"\x15ingressControllerMode\x18\x02 \x01(\x0e2..istio.operator.v1alpha1.ingressControllerModeR\x15ingressControllerMode\x12\"\n" +

@@ -20,6 +20,12 @@ import "github.com/istio-ecosystem/sail-operator/pkg/config"
 
 func init() {
 	config.Config.ImageDigests = map[string]config.IstioImageConfig{
+		"v1.30.3": {
+			IstiodImage:  "registry.istio.io/release/pilot:1.30.3",
+			ProxyImage:   "registry.istio.io/release/proxyv2:1.30.3",
+			CNIImage:     "registry.istio.io/release/install-cni:1.30.3",
+			ZTunnelImage: "registry.istio.io/release/ztunnel:1.30.3",
+		},
 		"v1.30.2": {
 			IstiodImage:  "registry.istio.io/release/pilot:1.30.2",
 			ProxyImage:   "registry.istio.io/release/proxyv2:1.30.2",
@@ -37,6 +43,12 @@ func init() {
 			ProxyImage:   "registry.istio.io/release/proxyv2:1.30.0",
 			CNIImage:     "registry.istio.io/release/install-cni:1.30.0",
 			ZTunnelImage: "registry.istio.io/release/ztunnel:1.30.0",
+		},
+		"v1.29.6": {
+			IstiodImage:  "registry.istio.io/release/pilot:1.29.6",
+			ProxyImage:   "registry.istio.io/release/proxyv2:1.29.6",
+			CNIImage:     "registry.istio.io/release/install-cni:1.29.6",
+			ZTunnelImage: "registry.istio.io/release/ztunnel:1.29.6",
 		},
 		"v1.29.5": {
 			IstiodImage:  "registry.istio.io/release/pilot:1.29.5",
