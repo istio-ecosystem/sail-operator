@@ -1,10 +1,10 @@
 // Variables embedded for GitHub compatibility
-:istio_latest_version: 1.30.2
-:istio_latest_version_revision_format: 1-30-2
+:istio_latest_version: 1.30.3
+:istio_latest_version_revision_format: 1-30-3
 :istio_latest_tag: v1.30-latest
 :istio_release_name: release-1.30
-:istio_latest_minus_one_version: 1.30.1
-:istio_latest_minus_one_version_revision_format: 1-30-1
+:istio_latest_minus_one_version: 1.30.2
+:istio_latest_minus_one_version_revision_format: 1-30-2
 
 link:../README.adoc[Return to Project Root]
 
