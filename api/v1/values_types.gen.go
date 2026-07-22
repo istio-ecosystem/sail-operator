@@ -5285,6 +5285,20 @@ type OutlierDetection struct {
 	// disabled by setting it to 0%. The default is 0% as it's not typically
 	// applicable in k8s environments with few pods per service.
 	MinHealthPercent *int32 `json:"minHealthPercent,omitempty"`
+	// Specifies the HTTP response status codes that are treated as outlier
+	// detection errors. If specified, only responses with one of these status
+	// codes will be treated as errors by outlier detection. If not specified,
+	// only 5xx responses are treated as errors.
+	//
+	// Note: Host ejection is still driven by the `consecutive5xxErrors` and
+	// `consecutiveGatewayErrors` thresholds; this field only redefines which
+	// HTTP status codes are counted as errors toward those thresholds.
+	//
+	// Values must be in the range [100, 599].
+	//
+	// +protoc-gen-crd:list-value-validation:Minimum=100
+	// +protoc-gen-crd:list-value-validation:Maximum=599
+	OutlierDetectionHttpErrorCodes []uint32 `json:"outlierDetectionHttpErrorCodes,omitempty"`
 }
 
 // SSL/TLS related settings for upstream connections. See Envoy's [TLS
