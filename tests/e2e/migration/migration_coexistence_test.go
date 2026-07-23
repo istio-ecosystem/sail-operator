@@ -148,7 +148,7 @@ var _ = Describe("Migration Sidecar-Ambient Coexistence Validation", Ordered,
 						Eventually(func() error {
 							// Stable client (sidecar mode) → httpbin (sidecar mode)
 							targetURL := fmt.Sprintf("httpbin.%s.svc.cluster.local:8000/get", workloadNamespace)
-							return common.CheckHTTPConnectivity(k, stableClientNamespace, clientPod, "sleep", targetURL, 5, "200")
+							return common.CheckHTTPConnectivity(k, stableClientNamespace, clientPod, "sleep", targetURL, "200", 5)
 						}).Should(Succeed())
 						Success("Traffic flows from stable client to httpbin (both sidecar mode)")
 					})
@@ -340,7 +340,7 @@ var _ = Describe("Migration Sidecar-Ambient Coexistence Validation", Ordered,
 						// All 10 attempts must succeed (200ms interval between attempts)
 						Eventually(func() error {
 							return common.CheckHTTPConnectivity(
-								k, stableClientNamespace, clientPod, "sleep", targetService, 5, "200")
+								k, stableClientNamespace, clientPod, "sleep", targetService, "200", 5)
 						}).WithPolling(200*time.Millisecond).MustPassRepeatedly(10).Should(Succeed(),
 							"Traffic should be stable after recovery (all 10 consecutive requests must succeed)")
 						// Summary
@@ -359,7 +359,7 @@ var _ = Describe("Migration Sidecar-Ambient Coexistence Validation", Ordered,
 						clientPod := pods.Items[0].Name
 						Eventually(func() error {
 							targetURL := fmt.Sprintf("httpbin.%s.svc.cluster.local:8000/get", workloadNamespace)
-							return common.CheckHTTPConnectivity(k, stableClientNamespace, clientPod, "sleep", targetURL, 5, "200")
+							return common.CheckHTTPConnectivity(k, stableClientNamespace, clientPod, "sleep", targetURL, "200", 5)
 						}).Should(Succeed())
 						Success("Cross-mode communication verified: sidecar client → ambient server")
 					})
