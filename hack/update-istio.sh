@@ -95,9 +95,39 @@ function list_only_latest() {
     done
 }
 
+function add_changelog_entry() {
+    local versions=("$@")
+    if [[ ${#versions[@]} -eq 0 ]]; then
+        return
+    fi
+
+    local changelog_dir="${VERSIONS_YAML_DIR}/../../changelog"
+    if [[ ! -d "$changelog_dir" ]]; then
+        return
+    fi
+
+    # Format: "1.30.1, 1.29.4 and 1.28.8" (comma-separated with "and" before last)
+    local formatted=""
+    if [[ ${#versions[@]} -eq 1 ]]; then
+        formatted="${versions[0]}"
+    elif [[ ${#versions[@]} -eq 2 ]]; then
+        formatted="${versions[0]} and ${versions[1]}"
+    else
+        formatted=$(printf '%s, ' "${versions[@]:0:${#versions[@]}-1}")
+        formatted="${formatted%, } and ${versions[${#versions[@]}-1]}"
+    fi
+
+    local fragment="${changelog_dir}/add-istio-${versions[0]}.yaml"
+    cat > "$fragment" <<EOF
+category: added
+title: Add support for Istio ${formatted}
+EOF
+}
+
 function update_stable() {
     all_releases=$(curl -sL "https://api.github.com/repos/istio/istio/releases?per_page=200" | yq '.[].tag_name' -oy)
     supported_versions=$(yq '.versions[] | select(.name != "*.*-*.*") | .name' "${VERSIONS_YAML_PATH}" | list_only_latest)
+    new_versions=()
     # For each supported version, look for a greater version in the all_releases list
     for version in ${supported_versions}; do
         version="${version:1}" # remove 'v' prefix, e.g. v1.21.0 => 1.21.0
@@ -106,8 +136,10 @@ function update_stable() {
         if [[ "${version}" != "${latest_release}" ]]; then
             add_stable_version "${latest_release}" "${version}"
             update_alias "v${version_array[0]}.${version_array[1]}-latest" "v${latest_release}"
+            new_versions+=("${latest_release}")
         fi
     done
+    add_changelog_entry "${new_versions[@]}"
 }
 
 function update_prerelease() {
