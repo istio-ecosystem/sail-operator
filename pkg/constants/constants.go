@@ -64,6 +64,14 @@ const (
 	// ManagedByLabelValue is the ManagedByKey label value the operator sets on all objects it creates
 	ManagedByLabelValue = "sail-operator"
 
+	// MonitoringAnnotationKey is an annotation on the Istio CR that enables the monitoring
+	// controller to create ServiceMonitor and PodMonitor resources.
+	// See enhancements/SEP8471-metrics-integration.md.
+	MonitoringAnnotationKey = MetadataNamespace + "/monitoring"
+
+	// MonitoringAnnotationEnabled is the annotation value that turns monitoring on.
+	MonitoringAnnotationEnabled = "enabled"
+
 	// WebhookReadinessProbeStatusAnnotationKey is an annotation on the istio-sidecar-injection MutatingWebhookConfiguration that
 	// reports whether the remote control plane is ready or not
 	WebhookReadinessProbeStatusAnnotationKey = MetadataNamespace + "/readinessProbe.status"

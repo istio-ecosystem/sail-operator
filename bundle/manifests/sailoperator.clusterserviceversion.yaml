@@ -756,6 +756,19 @@ spec:
                 - get
                 - patch
                 - update
+            - apiGroups:
+                - monitoring.coreos.com
+              resources:
+                - servicemonitors
+                - podmonitors
+              verbs:
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
           serviceAccountName: sail-operator
       deployments:
         - label:

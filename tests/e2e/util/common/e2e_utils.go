@@ -47,6 +47,7 @@ const (
 	MultiCluster      testSuite = "multi-cluster"
 	Operator          testSuite = "operator"
 	MultiControlPlane testSuite = "multi-control-plane"
+	Monitoring        testSuite = "monitoring"
 )
 
 const (

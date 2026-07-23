@@ -81,8 +81,13 @@ else
   KUBECONFIG="${ARTIFACTS}/config" setup_kind_cluster "${KIND_CLUSTER_NAME}" "${KIND_IMAGE}" "" "true" "true"
   setup_kind_registry "$KIND_CLUSTER_NAME"
 
+  export KUBECONFIG="${ARTIFACTS}/config"
+
   # Apply Gateway API CRDs needed for library tests
   KUBECONFIG="${ARTIFACTS}/config" kubectl apply --server-side -f "${SCRIPTPATH}/testdata/gateway-api/experimental-install.yaml"
+
+  # Install kube-prometheus-stack for monitoring controller e2e tests
+  "${SCRIPTPATH}/install-kube-prometheus-stack.sh"
 
   echo "Your KinD environment is ready, to use it: export KUBECONFIG=${ARTIFACTS}/config"
 fi
