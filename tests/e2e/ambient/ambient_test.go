@@ -279,7 +279,8 @@ profile: ambient`
 					})
 
 					It("can access the httpbin service from the sleep pod", func(ctx SpecContext) {
-						common.CheckPodConnectivity(sleepPod.Items[0].Name, common.SleepContainerName, common.SleepNamespace, common.HttpbinNamespace, k)
+						common.ValidateHTTPConnectivity(k, common.SleepNamespace, sleepPod.Items[0].Name, common.SleepContainerName,
+							fmt.Sprintf("httpbin.%s.svc.cluster.local:8000/get", common.HttpbinNamespace), "200", 5)
 					})
 				})
 
