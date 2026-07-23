@@ -561,6 +561,7 @@ operator-chart: download-istio-charts # pull the charts first as they are requir
 ifeq ($(PATCH_HELM_VALUES), true)
 	@hack/patch-values.sh ${HELM_VALUES_FILE}
 endif
+	@hack/gen-images-go.sh ${HELM_VALUES_FILE}
 
 .PHONY: update-istio
 update-istio: ## Update the Istio commit hash in the 'latest' entry in versions.yaml to the latest commit in the branch.
