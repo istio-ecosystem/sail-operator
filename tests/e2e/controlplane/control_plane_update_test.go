@@ -32,6 +32,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/update"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -115,6 +116,51 @@ spec:
 						Should(HaveField("Status.IstioRevision", ContainSubstring(revisionName)),
 							"IstioRevisionTag version does not match the IstioRevision name of the base version")
 					Success("IstioRevisionTag version matches the Istio version")
+				})
+
+				It("istiod-default-validator VWC has failurePolicy Fail", func(ctx SpecContext) {
+					Eventually(func(g Gomega) {
+						vwc := &admissionv1.ValidatingWebhookConfiguration{}
+						g.Expect(cl.Get(ctx, kube.Key("istiod-default-validator"), vwc)).To(Succeed())
+						g.Expect(vwc.Webhooks).NotTo(BeEmpty())
+						g.Expect(vwc.Webhooks[0].FailurePolicy).To(HaveValue(Equal(admissionv1.Fail)),
+							"failurePolicy must be Fail before testing validation; Ignore would make subsequent tests meaningless")
+					}).Should(Succeed())
+					Success("VWC failurePolicy is Fail — webhook is active")
+				})
+
+				It("istiod-default-validator VWC accepts valid Istio resources", func() {
+					peerAuthYAML := fmt.Sprintf(`
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: vwc-test
+  namespace: %s
+spec:
+  mtls:
+    mode: STRICT`, controlPlaneNamespace)
+					Expect(k.CreateFromString(peerAuthYAML)).To(Succeed(),
+						"VWC should allow creating valid Istio resources; if this fails, the istiod-default-validator may point to the wrong service")
+					DeferCleanup(func() {
+						if err := k.Delete("peerauthentication", "vwc-test"); err != nil {
+							Log(fmt.Sprintf("Failed to delete PeerAuthentication: %s", err))
+						}
+					})
+					Success("Valid Istio resource accepted by the default-validator VWC")
+				})
+
+				It("istiod-default-validator VWC rejects invalid Istio resources", func() {
+					invalidDRYAML := fmt.Sprintf(`
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: vwc-test-invalid
+  namespace: %s
+spec:
+  host: ""`, controlPlaneNamespace)
+					Expect(k.CreateFromString(invalidDRYAML)).ToNot(Succeed(),
+						"VWC should reject invalid Istio resources; if this passes, the webhook may not be validating")
+					Success("Invalid Istio resource correctly rejected by the default-validator VWC")
 				})
 			})
 
