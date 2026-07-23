@@ -93,8 +93,9 @@ func ApplyTLSConfig(tlsConfig *config.TLSConfig, istioVersion string, values *v1
 
 	if minVersionName := tlsVersionName(tlsConfig.MinVersion); minVersionName != "" {
 		v, err := semver.NewVersion(istioVersion)
-		if err != nil {
+		if err != nil || v == nil {
 			log.Warnf("failed to parse Istio version %q: %v", istioVersion, err)
+			return
 		}
 
 		// This flag is only supported on Istio 1.29+. TODO: Remove this check when we drop support for Istio 1.28
