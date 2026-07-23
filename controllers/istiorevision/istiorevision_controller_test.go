@@ -605,7 +605,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "istio-sidecar-injector",
 						Annotations: map[string]string{
-							constants.WebhookReadinessProbeStatusAnnotationKey: "true",
+							constants.WebhookReadinessStatusAnnotationKey: "true",
 						},
 					},
 				},
@@ -624,7 +624,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "istio-sidecar-injector",
 						Annotations: map[string]string{
-							constants.WebhookReadinessProbeStatusAnnotationKey: "false",
+							constants.WebhookReadinessStatusAnnotationKey: "false",
 						},
 					},
 				},
@@ -651,7 +651,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioRevisionReasonRemoteIstiodNotReady,
-				Message: "invalid or missing annotation sailoperator.io/readinessProbe.status on MutatingWebhookConfiguration istio-sidecar-injector",
+				Message: "invalid or missing annotation sailoperator.io/readiness.status on MutatingWebhookConfiguration istio-sidecar-injector",
 			},
 		},
 		{
