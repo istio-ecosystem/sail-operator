@@ -44,18 +44,18 @@ jobs:
       uses: dev-hanz-ops/install-gh-cli-action@v0.2.1
 
     - name: Login to build-harbor.alauda.cn
-      uses: docker/login-action@v3
+      uses: docker/login-action@v4
       with:
         registry: build-harbor.alauda.cn
         username: ${{ secrets.HARBOR_USERNAME }}
         password: ${{ secrets.HARBOR_PASSWORD }}
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@v4
       with:
         platforms: linux/amd64,linux/arm64
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Add operator provenance metadata
       shell: bash
