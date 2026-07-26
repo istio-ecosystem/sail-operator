@@ -57,6 +57,21 @@ jobs:
 
     - uses: actions/checkout@v4
 
+    - name: Add operator provenance metadata
+      shell: bash
+      env:
+        OPERATOR_DOCKERFILE: Dockerfile.alauda
+        SOURCE: ${{ github.server_url }}/${{ github.repository }}
+        SOURCE_REVISION: ${{ github.sha }}
+        SOURCE_REF: ${{ github.ref }}
+      run: |
+        {
+          printf '\n'
+          printf 'LABEL org.opencontainers.image.source="%s"\n' "$SOURCE"
+          printf 'LABEL org.opencontainers.image.revision="%s"\n' "$SOURCE_REVISION"
+          printf 'LABEL org.opencontainers.image.ref.name="%s"\n' "$SOURCE_REF"
+        } >> "$OPERATOR_DOCKERFILE"
+
     - name: Build and push operator image
       run: |
         make alauda-docker-buildx \
@@ -83,6 +98,21 @@ jobs:
           -e CHANNELS=$CHANNELS
       env:
         CHANNELS: ${{ inputs.bundle_channels }}
+
+    - name: Add bundle provenance metadata
+      shell: bash
+      env:
+        BUNDLE_DOCKERFILE: bundle.Dockerfile
+        SOURCE: ${{ github.server_url }}/${{ github.repository }}
+        SOURCE_REVISION: ${{ github.sha }}
+        SOURCE_REF: ${{ github.ref }}
+      run: |
+        {
+          printf '\n'
+          printf 'LABEL org.opencontainers.image.source="%s"\n' "$SOURCE"
+          printf 'LABEL org.opencontainers.image.revision="%s"\n' "$SOURCE_REVISION"
+          printf 'LABEL org.opencontainers.image.ref.name="%s"\n' "$SOURCE_REF"
+        } >> "$BUNDLE_DOCKERFILE"
 
     - name: Build and push bundle image
       id: build_bundle
