@@ -27,6 +27,7 @@ env:
   GIT_USER: ${{ secrets.GIT_USER }}
   GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
   VERSION: ${{ inputs.release_version }}
+  IMAGE_REPOSITORY: build-harbor.alauda.cn/asm/servicemesh-operator2
   TOOLS_REGISTRY_PROVIDER: gcr.m.daocloud.io
   GENERATE_RELATED_IMAGES: "true"
   VENDOR_LD_EXTRAFLAGS: ${{ vars.LD_EXTRAFLAGS }}
@@ -34,6 +35,9 @@ env:
 jobs:
   release:
     runs-on: [self-hosted, linux, x64]
+    outputs:
+      image: ${{ steps.output_image.outputs.image }}
+      bundle_image: ${{ steps.output_bundle_image.outputs.image }}
 
     steps:
     - name: Install GH CLI
@@ -58,6 +62,20 @@ jobs:
         make alauda-docker-buildx \
           -e TAG=$VERSION
 
+    - name: "Output image: ${{ env.IMAGE_REPOSITORY }}:${{ env.VERSION }}"
+      id: output_image
+      shell: bash
+      env:
+        IMAGE: ${{ env.IMAGE_REPOSITORY }}:${{ env.VERSION }}
+      run: |
+        echo "BUILD_IMAGE=${IMAGE}"
+        echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+        {
+          echo "### Build image"
+          echo
+          echo "\`${IMAGE}\`"
+        } >> "$GITHUB_STEP_SUMMARY"
+
     - name: Generate bundle metadata
       run: |
         make bundle \
@@ -67,11 +85,27 @@ jobs:
         CHANNELS: ${{ inputs.bundle_channels }}
 
     - name: Build and push bundle image
+      id: build_bundle
       continue-on-error: true
       run: |
         make bundle-build \
           -e VERSION=$VERSION
         make bundle-push
+
+    - name: "Output image: ${{ env.IMAGE_REPOSITORY }}-bundle:v${{ env.VERSION }}"
+      id: output_bundle_image
+      if: ${{ steps.build_bundle.outcome == 'success' }}
+      shell: bash
+      env:
+        IMAGE: ${{ env.IMAGE_REPOSITORY }}-bundle:v${{ env.VERSION }}
+      run: |
+        echo "BUILD_IMAGE=${IMAGE}"
+        echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+        {
+          echo "### Build image"
+          echo
+          echo "\`${IMAGE}\`"
+        } >> "$GITHUB_STEP_SUMMARY"
 
     - name: Create GitHub release
       run: |
