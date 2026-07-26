@@ -1,6 +1,13 @@
 name: integration-tests
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+      - 'release-*'
+    tags:
+      - '**'
+  pull_request:
 
 env:
   USE_VENDOR_DEFAULTS: "false"
