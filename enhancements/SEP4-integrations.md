@@ -18,62 +18,66 @@ Configuring Istio to work with various integrations, especially on OpenShift, of
 
 Note that the Integrations controller detailed below will be the same one implemented as part of the [metrics integration SEP](https://github.com/istio-ecosystem/sail-operator/pull/2028). See the Implementation Plan for more details.
 
-A new Integrations controller will be introduced along with a new `IstioIntegration` type. The `IstioIntegration` will have both a reference to an `Istio` and references to any other resources that Istio may integrate with. The controller would set fields on the Istio resource based on which integrations are configured. This is similar to the `targetRef` on a `ZTunnel` resource but with potentially more references involved. For example, a UWM integration would look like this:
-```
-kind: IstioIntegration
+A new Integrations controller will be introduced along with new `Integration` types. Each type will be grouped by function. The `Integration` types will have both a reference to an `Istio` resource and references to resources of that group. The Integration controller will configure the Istio resource and any other resource necessary to manage the integration based on which integrations are configured. This is similar to the `targetRef` on a `ZTunnel` resource. For example, a UWM integration would look like this:
+```yaml
+kind: MetricsIntegration
 apiVersion: sailoperator.io/v1alpha1
 metadata:
   name: openshift-obserability
 spec:
   istioRef:
     name: default
-  metrics:
-    type: UserWorkloadMonitoring
-    userWorkloadMonitoring: {}
+  type: UserWorkloadMonitoring
+  userWorkloadMonitoring: {}
 ```
 A COO integration would look like this:
-```
-kind: IstioIntegration
+```yaml
+kind: MetricsIntegration
 apiVersion: sailoperator.io/v1alpha1
 metadata:
   name: openshift-obserability
 spec:
   istioRef:
     name: default
-  metrics:
-    type: ClusterObservabilityOperator
-    clusterObservabilityOperator:
-      monitoringStackRef:
-        name: my-custom-prom
-        namespace: custom-metrics
+  type: ClusterObservabilityOperator
+  clusterObservabilityOperator:
+    monitoringStackRef:
+      name: my-custom-prom
+      namespace: custom-metrics
 ```
 the Integrations controller would use the `monitoringStackRef` to reference the `MonitoringStack` for the prometheus instance and copy over any relevant fields such as the `resourceSelector` labels needed for the controller to label the `PodMonitor` and `ServiceMonitor` resources correctly.
 
-An OpenShift with COO and OpenShift distributed tracing would look like this:
-```
-kind: IstioIntegration
+Integrating with OpenShift COO and distributed tracing would involve a `MetricsIntegration` and a `TracingIntegration`:
+```yaml
+kind: MetricsIntegration
 apiVersion: sailoperator.io/v1alpha1
 metadata:
   name: openshift-obserability
 spec:
   istioRef:
     name: default
-  metrics:
-    type: ClusterObservabilityOperator
-    clusterObservabilityOperator:
-      stackRef:
-        name: my-custom-prom
-        namespace: custom-metrics
-  tracing:
-    type: OpenTelemetry
-    openTelemetry:
-      otelCollectorRef:
-        name: otel
-        namespace: istio-system
+  type: ClusterObservabilityOperator
+  clusterObservabilityOperator:
+    monitoringStackRef:
+      name: my-custom-prom
+      namespace: custom-metrics
+---
+kind: TracingIntegration
+apiVersion: sailoperator.io/v1alpha1
+metadata:
+  name: openshift-obserability
+spec:
+  istioRef:
+    name: default
+  type: OpenTelemetry
+  openTelemetry:
+    otelCollectorRef:
+      name: otel
+      namespace: istio-system
 ```
 
-The controller would then in turn configure the following:
-```
+The controller would then configure the following fields on the `Istio` and `Telemetry` resources:
+```yaml
 kind: Istio
 apiVersion: sailoperator.io/v1
 metadata:
@@ -87,8 +91,7 @@ spec:
         opentelemetry:
           port: 4317
           service: otel-collector.istio-system.svc.cluster.local
-```
-```
+---
 apiVersion: telemetry.istio.io/v1
 kind: Telemetry
 metadata:
@@ -103,34 +106,101 @@ spec:
         - name: otel
 ```
 
-A key part of the design is using Server Side Apply for all controller updates to resources. This will allow the Integrations controller to manage the fields of the `Istio` and `Telemetry` resources necessary to setup the integration while allowing users to manage other parts of the resources without users fighting against the controller. If users want to take full control over some of the controller managed fields, they can also do this cleanly with Server Side Apply. When [dealing with conflicts](https://kubernetes.io/docs/reference/using-api/server-side-apply/#conflicts), the controller will either give up management or become a shared manager. The controller will never overwrite values specified by the user or other controllers.
+A key part of the design is using **Server Side Apply** for all controller updates to resources. This will allow the Integrations controller to manage the fields of the `Istio` and `Telemetry` resources necessary to setup the integration while allowing users to manage other parts of the resources without users fighting against the controller. If users want to take full control over some of the controller managed fields, they can also do this cleanly with Server Side Apply. When [dealing with conflicts](https://kubernetes.io/docs/reference/using-api/server-side-apply/#conflicts), the controller will either give up management or become a shared manager. The controller will never overwrite values specified by the user or other controllers.
 
-Kiali has these same configuration requirements. A `KialiIntegration` resource could also be managed by this controller which would look like this:
-```
-kind: KialiIntegration
+For users that manage their resources through Argo CD, the [Server Side Apply sync option](https://argo-cd.readthedocs.io/en/stable/user-guide/sync-options/#server-side-apply) must be enabled. This will cause Argo CD to use `kubectl apply --server-side --force-conflicts` and any fields that are written by both the Integrations controller and Argo CD will be owned by Argo CD. Since Server Side Apply is a stable, mature feature, it's assumed that other gitops solutions support a similar option.
+
+### User Stories
+
+- A mesh admin wants to configure Istio to work with UserWorkloadMonitoring on OpenShift. The admin wants Istio to work with UserWorkloadMonitoring without having to do any manual steps.
+- A mesh admin wants to configure Kiali to read from UserWorkloadMonitoring and distributed tracing without having to perform any manual steps.
+- A mesh admin wants to maintain full control over the configuration of all resources in case any customizations are needed.
+
+### API Changes
+
+Three new CRDs will be added corresponding broadly to different integration types for Istio. These can be added separately and new `type` for each group added over time but it's not expected that we will add many new `Integration` CRDs. The new CRDs and subtypes are:
+
+- `MetricsIntegration`
+  - UserWorkloadMonitoring
+  - ClusterObservabilityOperator
+  - PrometheusOperator
+- `TracingIntegration`
+  - OpenTelemetry
+  - TempoStack
+- `IdentityIntegration`
+  - ZeroTrustWorkloadIdentityManagement
+  - IstioCSR
+  - CertManager
+
+Dashboard integrations (e.g. Kiali, Perses) are configured via an optional `dashboard` field on `MetricsIntegration` and `TracingIntegration` rather than as a separate CRD. Without this you would need a `DashboardIntegration` that had separate subfields which would be an inconsistent API:
+```yaml
+kind: DashboardIntegration
 apiVersion: sailoperator.io/v1alpha1
 metadata:
-  name: kiali-openshift
+  name: kiali-integration
 spec:
-  kialiRef:
-    name: kiali
-    namespace: istio-system
+  type: Kiali
+  kiali:
+    kialiRef:
+      name: kiali
+      namespace: istio-system
   metrics:
     type: UserWorkloadMonitoring
     userWorkloadMonitoring: {}
   tracing:
     type: TempoStack
+    tempoStack:
+      tempoStackRef:
+        name: tempo-stack
+        namespace: tempo
+```
+
+Here are examples of each type:
+
+A `MetricsIntegration` with a Kiali dashboard and a `TracingIntegration` that also references Kiali:
+```yaml
+kind: MetricsIntegration
+apiVersion: sailoperator.io/v1alpha1
+metadata:
+  name: openshift-observability
+spec:
+  istioRef:
+    name: default
+  type: UserWorkloadMonitoring
+  userWorkloadMonitoring: {}
+  dashboard:
+    type: Kiali
+    kiali:
+      kialiRef:
+        name: kiali
+        namespace: istio-system
+---
+kind: TracingIntegration
+apiVersion: sailoperator.io/v1alpha1
+metadata:
+  name: openshift-observability
+spec:
+  istioRef:
+    name: default
+  type: TempoStack
+  tempoStack:
     tempoStackRef:
       name: tempo
       namespace: tracing
+  dashboard:
+    type: Kiali
+    kiali:
+      kialiRef:
+        name: kiali
+        namespace: istio-system
 ```
 
-The controller would configure:
-```
+Using the resources above, the controller would configure the following on the `Kiali` resource:
+```yaml
 apiVersion: kiali.io/v1alpha1
 kind: Kiali
 metadata:
-  name: kiali-user-workload-monitoring
+  name: kiali
   namespace: istio-system
 spec:
   external_services:
@@ -157,97 +227,206 @@ spec:
          url_format: "jaeger"
 ```
 
-Rather than having to manually configure each one of these fields, users only need to configure a reference to a resource which is much less error prone. The `IstioIntegration` or `KialiIntegration` statuses would be used to help validate the reference(s). Another advantage of having refs as the primary configuration mechanism is that it would make configuration from a UI much simpler. A UI could autopopulate configurations based on what types have been selected and what custom resources exist in the cluster for those types or else easily redirect to another part of the UI to create those types.
-
-Additional types could be added to `IstioIntegration` in the future for other integrations such as cert-manager or ZTWIM.
-
-### User Stories
-
-- A mesh admin wants to configure Istio to work with UserWorkoadMonitoring on OpenShift. The admin wants Istio to work with UserWorkloadMonitoring without having to do any manual steps.
-- A mesh admin wants to configure Kiali to read from UserWorkloadMonitoring and distributed tracing without having to perform any manual steps.
-- A mesh admin wants to maintain full control over the configuration of all resources in case any customizations are needed.
-
-### API Changes
-
-Initially only one new `IstioIntegration` CRD will be added as `v1alpha1` with the focus on `UserWorkloadMonitoring` for metrics but new fields will be added to this CRD in the future. Below more fields are added to show how the API is expected to evolve over time.
-
-A `KialiIntegration` CRD could be added in the future. That is also detailed below but wouldn't be included initially.
-
+A `MetricsIntegration` with a Perses dashboard:
+```yaml
+kind: MetricsIntegration
+apiVersion: sailoperator.io/v1alpha1
+metadata:
+  name: perses-openshift
+spec:
+  istioRef:
+    name: default
+  type: UserWorkloadMonitoring
+  userWorkloadMonitoring: {}
+  dashboard:
+    type: Perses
+    perses:
+      persesRef:
+        name: istio-dashboards
+        namespace: istio-system
 ```
-type IstioIntegrationSpec struct {
-  // IstioRef is a reference to the Istio resource that this integration configures.
-  IstioRef IstioReference `json:"istioRef"`
 
-  // Metrics configures the metrics collection integration for the Istio control plane.
-  Metrics *MetricsConfig `json:"metrics,omitempty"`
+```yaml
+kind: IdentityIntegration
+apiVersion: sailoperator.io/v1alpha1
+metadata:
+  name: ztwim
+spec:
+  istioRef:
+    name: default
+  type: ZeroTrustWorkloadIdentityManagement
+  ztwim: {}
+```
 
-  // Tracing configures the distributed tracing integration for the Istio control plane.
-  Tracing *TracingConfig `json:"tracing,omitempty"`
+```yaml
+kind: IdentityIntegration
+apiVersion: sailoperator.io/v1alpha1
+metadata:
+  name: istio-csr
+spec:
+  istioRef:
+    name: default
+  type: IstioCSR
+  istioCSR:
+    istioCSRRef:
+      name: default
+      namespace: istio-csr
+```
+
+#### Status
+Integrations will report `Status`. Non-exhaustive list of what should be in `Status`:
+- Validations: do the refs exist?
+- Success/failure to update resources.
+- Possibly report if the update was partially applied i.e. some other controller owns part of the fields.
+
+These are broadly what the golang API changes would be:
+```go
+// MetricsIntegrationSpec defines the desired state of MetricsIntegration.
+type MetricsIntegrationSpec struct {
+	// IstioRef is a reference to the Istio resource that this integration configures.
+	IstioRef IstioReference `json:"istioRef"`
+
+	MetricsConfig `json:",inline"`
+
+	// Dashboard configures the dashboard that reads from this metrics source.
+	Dashboard *DashboardConfig `json:"dashboard,omitempty"`
 }
 
 // MetricsType identifies the type of metrics integration.
 type MetricsType string
 
 const (
-	// MetricsTypeClusterObservability integrates with the Cluster Observability Operator's MonitoringStack.
-	MetricsTypeClusterObservability MetricsType = "ClusterObservability"
-
-	// MetricsTypeUserWorkloadMonitoring integrates with OpenShift User Workload Monitoring.
-	MetricsTypeUserWorkloadMonitoring MetricsType = "UserWorkloadMonitoring"
+	MetricsTypeUserWorkloadMonitoring      MetricsType = "UserWorkloadMonitoring"
+	MetricsTypeClusterObservabilityOperator MetricsType = "ClusterObservabilityOperator"
 )
 
-// MetricsConfig configures metrics collection for the service mesh.
+// MetricsConfig configures a metrics backend.
 type MetricsConfig struct {
 	// Type specifies the metrics integration type.
 	Type MetricsType `json:"type"`
 
-	// ClusterObservability configures integration with the Cluster Observability
+	// UserWorkloadMonitoring configures integration with OpenShift User Workload Monitoring.
+	UserWorkloadMonitoring *UserWorkloadMonitoringConfig `json:"userWorkloadMonitoring,omitempty"`
+
+	// ClusterObservabilityOperator configures integration with the Cluster Observability
 	// Operator's MonitoringStack resource for metrics collection.
-	ClusterObservability *ClusterObservabilityConfig `json:"clusterObservability,omitempty"`
+	ClusterObservabilityOperator *ClusterObservabilityOperatorConfig `json:"clusterObservabilityOperator,omitempty"`
 }
 
-// ClusterObservabilityConfig configures the Cluster Observability Operator integration.
-type ClusterObservabilityConfig struct {
+type UserWorkloadMonitoringConfig struct{}
+
+// ClusterObservabilityOperatorConfig configures the Cluster Observability Operator integration.
+type ClusterObservabilityOperatorConfig struct {
 	// MonitoringStackRef is a reference to a MonitoringStack resource that defines
 	// the Prometheus stack used for scraping Istio metrics.
 	MonitoringStackRef NamespacedReference `json:"monitoringStackRef"`
+}
+
+// TracingIntegrationSpec defines the desired state of TracingIntegration.
+type TracingIntegrationSpec struct {
+	// IstioRef is a reference to the Istio resource that this integration configures.
+	IstioRef IstioReference `json:"istioRef"`
+
+	TracingConfig `json:",inline"`
+
+	// Dashboard configures the dashboard that reads from this tracing source.
+	Dashboard *DashboardConfig `json:"dashboard,omitempty"`
 }
 
 // TracingType identifies the type of tracing integration.
 type TracingType string
 
 const (
-	// TracingTypeTempoStack integrates with a Tempo Operator TempoStack.
-	TracingTypeTempoStack TracingType = "TempoStack"
+	TracingTypeOpenTelemetry TracingType = "OpenTelemetry"
+	TracingTypeTempoStack    TracingType = "TempoStack"
 )
 
-// TracingConfig configures distributed tracing for the service mesh.
+// TracingConfig configures a tracing backend.
 type TracingConfig struct {
 	// Type specifies the tracing integration type.
 	Type TracingType `json:"type"`
 
-	// TempoStack configures integration with a Tempo Operator TempoStack resource
-	// for distributed tracing.
+	// OpenTelemetry configures integration with an OpenTelemetry Collector.
+	OpenTelemetry *OpenTelemetryConfig `json:"openTelemetry,omitempty"`
+
+	// TempoStack configures integration with a TempoStack resource.
 	TempoStack *TempoStackConfig `json:"tempoStack,omitempty"`
+}
+
+// OpenTelemetryConfig configures the OpenTelemetry integration.
+type OpenTelemetryConfig struct {
+	// OTELCollectorRef is a reference to an OpenTelemetry Collector resource.
+	OTELCollectorRef NamespacedReference `json:"otelCollectorRef"`
 }
 
 // TempoStackConfig configures the TempoStack integration.
 type TempoStackConfig struct {
-	// TempoStackRef is a reference to a TempoStack resource that receives
-	// trace data from the Istio control plane.
+	// TempoStackRef is a reference to a TempoStack resource.
 	TempoStackRef NamespacedReference `json:"tempoStackRef"`
 }
 
-// KialiIntegrationSpec defines the desired state of KialiIntegration
-type KialiIntegrationSpec struct {
-	// KialiRef is a reference to a Kiali resource that this integration configures.
+// DashboardConfig configures a dashboard that reads from a metrics or tracing source.
+type DashboardConfig struct {
+	// Type specifies the dashboard type.
+	Type DashboardType `json:"type"`
+
+	// Kiali configures integration with a Kiali resource.
+	Kiali *KialiConfig `json:"kiali,omitempty"`
+
+	// Perses configures integration with a Perses resource.
+	Perses *PersesConfig `json:"perses,omitempty"`
+}
+
+// DashboardType identifies the type of dashboard.
+type DashboardType string
+
+const (
+	DashboardTypeKiali  DashboardType = "Kiali"
+	DashboardTypePerses DashboardType = "Perses"
+)
+
+// KialiConfig configures the Kiali integration.
+type KialiConfig struct {
+	// KialiRef is a reference to a Kiali resource.
 	KialiRef NamespacedReference `json:"kialiRef"`
+}
 
-	// Metrics configures the metrics backend integration for Kiali.
-	Metrics *MetricsConfig `json:"metrics,omitempty"`
+// PersesConfig configures the Perses integration.
+type PersesConfig struct {
+	// PersesRef is a reference to a Perses resource.
+	PersesRef NamespacedReference `json:"persesRef"`
+}
 
-	// Tracing configures the distributed tracing backend integration for Kiali.
-	Tracing *TracingConfig `json:"tracing,omitempty"`
+// IdentityIntegrationSpec defines the desired state of IdentityIntegration.
+type IdentityIntegrationSpec struct {
+	// IstioRef is a reference to the Istio resource that this integration configures.
+	IstioRef IstioReference `json:"istioRef"`
+
+	// Type specifies the identity integration type.
+	Type IdentityType `json:"type"`
+
+	// ZTWIM configures integration with Zero Trust Workload Identity Management.
+	ZTWIM *ZTWIMConfig `json:"ztwim,omitempty"`
+
+	// IstioCSR configures integration with cert-manager istio-csr.
+	IstioCSR *IstioCSRConfig `json:"istioCSR,omitempty"`
+}
+
+// IdentityType identifies the type of identity integration.
+type IdentityType string
+
+const (
+	IdentityTypeZTWIM    IdentityType = "ZeroTrustWorkloadIdentityManagement"
+	IdentityTypeIstioCSR IdentityType = "IstioCSR"
+)
+
+// ZTWIMConfig configures the Zero Trust Workload Identity Management integration.
+type ZTWIMConfig struct{}
+
+// IstioCSRConfig configures the cert-manager istio-csr integration.
+type IstioCSRConfig struct {
+	// IstioCSRRef is a reference to an IstioCSR resource.
+	IstioCSRRef NamespacedReference `json:"istioCSRRef"`
 }
 ```
 
@@ -256,8 +435,8 @@ type KialiIntegrationSpec struct {
 ```mermaid
 flowchart TD
     subgraph "Resources"
-        II["IstioIntegration"]
-        KI["KialiIntegration"]
+        MI["MetricsIntegration"]
+        TI["TracingIntegration"]
     end
 
     subgraph "References"
@@ -267,16 +446,16 @@ flowchart TD
         Kiali["Kiali"]
     end
 
-    II -- "istioRef" --> Istio
-    II -. "metrics:\nClusterObservability" .-> MS
-    II -. "tracing:\nTempoStack" .-> TS
+    MI -- "istioRef" --> Istio
+    MI -. "metrics:\nClusterObservability" .-> MS
+    MI -. "dashboard:\nKiali" .-> Kiali
 
-    KI -- "kialiRef" --> Kiali
-    KI -. "metrics" .-> MS
-    KI -. "tracing" .-> TS
+    TI -- "istioRef" --> Istio
+    TI -. "tracing:\nTempoStack" .-> TS
+    TI -. "dashboard:\nKiali" .-> Kiali
 
-    style II fill:#4a9eff,color:#fff
-    style KI fill:#4a9eff,color:#fff
+    style MI fill:#4a9eff,color:#fff
+    style TI fill:#4a9eff,color:#fff
 ```
 
 ### Performance Impact
@@ -288,19 +467,59 @@ The exact performance impact will partially depend on the implementation details
 Some of this controller will only be applicable to OpenShift. The UWM and COO types are OpenShift specific but other types, such as `TempoStack` would be valid on either Kubernetes or OpenShift.
 
 ## Alternatives Considered
-- The main alternative to having a separate CRD for the integrations is to add fields to the `Istio` spec directly. One drawback of this approach is that there isn't a clear separation of concerns. Today the istio controller alone reconciles the `Istio` spec. If the integrations controller began to reconcile parts of the `Istio` spec, care would need to be taken to ensure the two controllers do not fight with one another. Having a separate `IstioIntegration` resource also allows the API to evolve and rapidly add new types without affecting the stable `Istio` API.
-- An entirely separate integrations operator. Since much of the focus in this SEP is on improving the OpenShift integration experience and some of the new types that are proposed are OpenShift specific, it may make sense to have this be a separate operator entirely from the upstream Sail Operator. But some of the propsed integration types are applicable outside of OpenShift as well.
+- The main alternative to having a separate CRD for the integrations is to add fields to the `Istio` spec directly. One drawback of this approach is that there isn't a clear separation of concerns. Today the istio controller alone reconciles the `Istio` spec. If the integrations controller began to reconcile parts of the `Istio` spec, care would need to be taken to ensure the two controllers do not fight with one another. Having a separate resources also allows the API to evolve and rapidly add new types without affecting the stable `Istio` API.
+
+- Two types with many subtypes. In this scenario you would have a `IstioIntegration` type and a `KialiIntegration` type rather than grouping the integrations by their function.
+
+  ```yaml
+  kind: IstioIntegration
+  apiVersion: sailoperator.io/v1alpha1
+  metadata:
+    name: openshift-obserability
+  spec:
+    istioRef:
+      name: default
+    metrics:
+      type: ClusterObservabilityOperator
+      clusterObservabilityOperator:
+        monitoringStackRef:
+          name: my-custom-prom
+          namespace: custom-metrics
+    tracing:
+      type: OpenTelemetry
+      openTelemetry:
+        otelCollectorRef:
+          name: otel
+          namespace: istio-system
+  ```
+  
+  The main disadvantage of this API is that you end up with a single large CR with many different fields and subtypes.
+
+- No subtypes and only CRDs e.g.
+  ```yaml
+  kind: ClusterObservabilityOperator
+  apiVersion: sailoperator.io/v1alpha1
+  metadata:
+    name: openshift-obserability
+  spec:
+    monitoringStackRef:
+      name: my-custom-prom
+      namespace: custom-metrics
+  ```
+
+  With this API you end up with a large number of CRDs that have very few fields.
 
 ## Implementation Plan
-The implementation for UWM is already complete as part of the [monitoring controller](https://github.com/istio-ecosystem/sail-operator/pull/1959). The only user facing change would be switching the enablement from an annotation on the `Istio` resource to creating a separate `IstioIntegration` resource. The monitoring controller implementation would change slighty to reconcile `IstioIntegration` resources and use Server Side Apply to update the `Istio` and `Telemetry` resources. A rough timeline would be:
+The implementation for UWM is already complete as part of the [monitoring controller](https://github.com/istio-ecosystem/sail-operator/pull/1959). The only user facing change would be switching the enablement from an annotation on the `Istio` resource to creating a separate `MetricsIntegration` resource. The monitoring controller implementation would change slightly to reconcile `MetricsIntegration` resources and use Server Side Apply to update the `Istio` and `Telemetry` resources. A rough timeline would be:
 
-- [ ] Update monitoring controller for UWM to reconcile `IstioIntegration` resources.
-- [ ] Add support for additional types (COO, tracing)
-- [ ] Add a `KialiIntegration` resource.
+- [ ] Add `MetricsIntegration` CRD
+- [ ] Update monitoring controller for UWM to reconcile `MetricsIntegration` resources.
+- [ ] Add `TracingIntegration` CRD
+- [ ] Add `IdentityIntegration` CRD
 
 ## Test Plan
 - A key aspect of this design is utilizing Server Side Apply to ensure that users can override values that the operator sets if need be without fighting against the controller. This needs to be an integral part of the test suite and will be included in e2e testing. Specifically e2e testing should ensure that the operator can Apply a configuration partially and ignore any conflict errors.
 - Some of the integrations types will only be available on OpenShift like the UWM and COO types. e2e tests for these can only be run in an OpenShift environment. These will be filtered out of the kind based suite with the openshift label similar to the TLS profile tests.
 
 ## Change History (only required when making changes after SEP has been accepted)
-N/A
+- Changed the API from `IstioIntegration` --> `<Component>Integration`
