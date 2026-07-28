@@ -281,8 +281,10 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// cluster-scoped resources
 		Watches(&v1.Istio{}, operatorResourcesHandler).
 		Watches(&v1.IstioRevision{}, operatorResourcesHandler).
-		Watches(&admissionv1.MutatingWebhookConfiguration{}, ownedResourceHandler).
-		Watches(&admissionv1.ValidatingWebhookConfiguration{}, ownedResourceHandler).
+		Watches(&admissionv1.MutatingWebhookConfiguration{}, ownedResourceHandler,
+			builder.WithPredicates(webhookConfigPredicate())).
+		Watches(&admissionv1.ValidatingWebhookConfiguration{}, ownedResourceHandler,
+			builder.WithPredicates(webhookConfigPredicate())).
 		Complete(reconciler.NewStandardReconcilerWithFinalizer[*v1.IstioRevisionTag](r.Client, r.Reconcile, r.Finalize, constants.FinalizerName))
 }
 
@@ -470,6 +472,42 @@ func (r *Reconciler) mapOperatorResourceToReconcileRequest(ctx context.Context, 
 		}
 	}
 	return requests
+}
+
+func webhookConfigPredicate() predicate.Funcs {
+	return predicate.Funcs{
+		UpdateFunc: func(e event.TypedUpdateEvent[client.Object]) bool {
+			if e.ObjectOld == nil || e.ObjectNew == nil {
+				return false
+			}
+
+			// Istiod updates the caBundle and failurePolicy fields in its webhook configs.
+			// We must ignore changes to these fields to prevent an endless update loop.
+			// We must use deep copies to avoid mutating the shared informer cache.
+			oldCopy := e.ObjectOld.DeepCopyObject().(client.Object)
+			newCopy := e.ObjectNew.DeepCopyObject().(client.Object)
+			clearIgnoredFields(oldCopy)
+			clearIgnoredFields(newCopy)
+			return !reflect.DeepEqual(newCopy, oldCopy)
+		},
+	}
+}
+
+func clearIgnoredFields(obj client.Object) {
+	obj.SetResourceVersion("")
+	obj.SetGeneration(0)
+	obj.SetManagedFields(nil)
+	switch webhookConfig := obj.(type) {
+	case *admissionv1.ValidatingWebhookConfiguration:
+		for i := range len(webhookConfig.Webhooks) {
+			webhookConfig.Webhooks[i].FailurePolicy = nil
+			webhookConfig.Webhooks[i].ClientConfig.CABundle = nil
+		}
+	case *admissionv1.MutatingWebhookConfiguration:
+		for i := range len(webhookConfig.Webhooks) {
+			webhookConfig.Webhooks[i].ClientConfig.CABundle = nil
+		}
+	}
 }
 
 // ignoreStatusChange returns a predicate that ignores watch events where only the resource status changes; if
