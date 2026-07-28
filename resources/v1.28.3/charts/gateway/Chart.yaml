@@ -1,5 +1,9 @@
+annotations:
+  org.opencontainers.image.ref.name: refs/tags/1.28.3-asm-r3
+  org.opencontainers.image.revision: b4bf499d97b4c6284824d83b637b04ad8b3d298c
+  org.opencontainers.image.source: https://github.com/alauda-mesh/istio
 apiVersion: v2
-appVersion: 1.28.3
+appVersion: 1.28.3-asm-r3
 description: Helm chart for deploying Istio gateways
 icon: https://istio.io/latest/favicons/android-192x192.png
 keywords:
@@ -9,4 +13,4 @@ name: gateway
 sources:
 - https://github.com/istio/istio
 type: application
-version: 1.28.3
+version: 1.28.3-asm-r3
