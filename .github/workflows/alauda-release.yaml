@@ -9,7 +9,7 @@ on:
       bundle_channels:
         description: "Bundle channels"
         required: true
-        default: "stable,stable-2.1"
+        default: stable,stable-2.2
       is_draft_release:
         description: "Draft release"
         type: boolean
@@ -28,7 +28,7 @@ env:
   GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
   VERSION: ${{ inputs.release_version }}
   IMAGE_REPOSITORY: build-harbor.alauda.cn/asm/servicemesh-operator2
-  TOOLS_REGISTRY_PROVIDER: gcr.m.daocloud.io
+  TOOLS_REGISTRY_PROVIDER: registry.istio.io
   GENERATE_RELATED_IMAGES: "true"
   VENDOR_LD_EXTRAFLAGS: ${{ vars.LD_EXTRAFLAGS }}
 

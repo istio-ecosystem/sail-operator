@@ -16,6 +16,25 @@
 # Note: After modifying this file, run `make test` to ensure that the
 # generated defaults values from this files are valid.
 
+v1.30.3:
+  istio:
+    pilot:
+      cni:
+        enabled: true
+        provider: multus
+      resources:
+        limits:
+          cpu: "2000m"
+          memory: 4096Mi
+  istiocni:
+    cni:
+      chained: false
+      provider: multus
+      cniConfFileName: istio-cni.conf
+      resources:
+        limits:
+          cpu: "1000m"
+          memory: 1024Mi
 v1.28.6:
   istio:
     pilot:
@@ -73,33 +92,3 @@ v1.28.1:
         limits:
           cpu: "1000m"
           memory: 1024Mi
-v1.26.3:
-  istio:
-    pilot:
-      cni:
-        enabled: true
-        provider: multus
-      resources:
-        limits:
-          cpu: "2000m"
-          memory: 4096Mi
-  istiocni:
-    cni:
-      chained: false
-      provider: multus
-      cniConfFileName: istio-cni.conf
-      resources:
-        limits:
-          cpu: "1000m"
-          memory: 1024Mi
-v1.24.6:
-  istio:
-    pilot:
-      cni:
-        enabled: true
-        provider: multus
-  istiocni:
-    cni:
-      chained: false
-      provider: multus
-      cniConfFileName: istio-cni.conf
