@@ -29,6 +29,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -615,7 +616,7 @@ func generateSelfSignedCert(dnsNames ...string) (certPEM []byte, keyPEM []byte, 
 
 func newReconcilerTestConfig(t *testing.T) config.ReconcilerConfig {
 	return config.ReconcilerConfig{
-		ResourceDirectory:       t.TempDir(),
+		ResourceFS:              os.DirFS(t.TempDir()),
 		Platform:                config.PlatformKubernetes,
 		DefaultProfile:          "",
 		MaxConcurrentReconciles: 1,

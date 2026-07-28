@@ -20,8 +20,8 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
+	"github.com/istio-ecosystem/sail-operator/pkg/install"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -31,7 +31,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -201,7 +200,7 @@ func (c *Cleaner) cleanup(ctx context.Context) (deleted []client.Object) {
 		// Skip any resource we recorded previously.
 		// Also, skip any OLM managed resource as it'll be recreated upon deletion.
 		if mapHasKey(c.resources, res.key) ||
-			mapHasKey(res.obj.GetLabels(), "olm.managed") {
+			mapHasKey(res.obj.GetLabels(), install.OLMManagedLabel) {
 			continue
 		}
 
@@ -277,33 +276,25 @@ func (c *Cleaner) WaitForDeletion(ctx context.Context, deleted []client.Object) 
 	}
 
 	By(fmt.Sprintf("Waiting for resources to be deleted%s", s))
-	for _, obj := range deleted {
-		Expect(c.waitForDeletion(ctx, obj)).To(Succeed(),
-			fmt.Sprintf("Failed while waiting for %s to delete", obj.GetName()))
-	}
+	Eventually(func() (remaining []client.ObjectKey, err error) {
+		for _, obj := range deleted {
+			gotObj := obj.DeepCopyObject().(client.Object)
+			key := client.ObjectKeyFromObject(obj)
+			err = c.cl.Get(ctx, key, gotObj)
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					continue
+				}
 
-	Success(fmt.Sprintf("Finished cleaning up resources%s", s))
-}
-
-func (c *Cleaner) waitForDeletion(ctx context.Context, obj client.Object) error {
-	objKey := client.ObjectKeyFromObject(obj)
-
-	err := wait.PollUntilContextTimeout(ctx, 100*time.Millisecond, 1*time.Minute, true, func(ctx context.Context) (bool, error) {
-		gotObj := obj.DeepCopyObject().(client.Object)
-
-		if err := c.cl.Get(ctx, objKey, gotObj); err != nil {
-			if apierrors.IsNotFound(err) {
-				return true, nil
+				return remaining, err
 			}
 
-			return false, err
+			remaining = append(remaining, key)
 		}
 
-		return false, nil
-	})
-	if err != nil {
-		return err
-	}
+		return remaining, nil
+	}).Should(BeEmpty(),
+		fmt.Sprintf("Failed while waiting for resources to be deleted, some still exist%s", s))
 
-	return nil
+	Success(fmt.Sprintf("Finished cleaning up resources%s", s))
 }

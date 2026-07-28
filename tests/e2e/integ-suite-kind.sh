@@ -35,10 +35,10 @@ function check_prerequisites() {
 function run_integration_tests() {
   echo "Running integration tests"
   if [ "${MULTICLUSTER}" == "true" ]; then
-    ARTIFACTS="${ARTIFACTS}" ISTIOCTL="${ISTIOCTL}" "${ROOT}/tests/e2e/common-operator-integ-suite.sh" --kind --multicluster
+    ARTIFACTS="${ARTIFACTS}" ISTIOCTL="${ISTIOCTL}" GINKGO_FLAGS="${GINKGO_FLAGS}" "${ROOT}/tests/e2e/common-operator-integ-suite.sh" --kind --multicluster
   else
     KUBECONFIG="${ARTIFACTS}/config"
-    ARTIFACTS="${ARTIFACTS}" IP_FAMILY="${IP_FAMILY}" "${ROOT}/tests/e2e/common-operator-integ-suite.sh" --kind
+    ARTIFACTS="${ARTIFACTS}" IP_FAMILY="${IP_FAMILY}" GINKGO_FLAGS="${GINKGO_FLAGS}" "${ROOT}/tests/e2e/common-operator-integ-suite.sh" --kind
   fi
 }
 

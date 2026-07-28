@@ -21,6 +21,7 @@ import (
 	"time"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
@@ -41,8 +42,8 @@ const (
 	externalIstioName = "external-istiod"
 )
 
-var _ = Describe("Multicluster deployment models", Label("multicluster", "multicluster-external"), Ordered, func() {
-	SetDefaultEventuallyTimeout(180 * time.Second)
+var _ = Describe("Multicluster deployment models", Label("multicluster", "multicluster-external", "slow", "sidecar"), Ordered, func() {
+	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
 	Describe("External Control Plane Multi-Network configuration", func() {
@@ -91,6 +92,10 @@ values:
 
 					It("updates Gateway status to Available", func(ctx SpecContext) {
 						common.AwaitDeployment(ctx, "istio-ingressgateway", k1, clPrimary)
+					})
+
+					It("has an external IP assigned", func(ctx SpecContext) {
+						expectLoadBalancerAddress(ctx, k1, clPrimary, "istio-ingressgateway")
 					})
 				})
 
@@ -162,7 +167,8 @@ kind: ServiceAccount
 metadata:
   name: istiod-service-account
 `
-						k1.WithNamespace(externalControlPlaneNamespace).CreateFromString(externalSVCAccountYAML)
+						Expect(k1.WithNamespace(externalControlPlaneNamespace).CreateFromString(externalSVCAccountYAML)).To(
+							Succeed(), "Failed to create istiod service account on Cluster #1")
 
 						apiURLCluster2, err := k2.GetClusterAPIURL()
 						Expect(apiURLCluster2).NotTo(BeEmpty(), "API URL is empty for the Cluster #2")
@@ -352,6 +358,10 @@ spec:
 							Expect(pod.Annotations).To(HaveKeyWithValue("istio.io/rev", "external-istiod"), "The pod dom't have expected annotation")
 						}
 						Success("Sample pods has expected annotation")
+					})
+
+					It("can reach the ingress gateway from remote cluster", func(ctx SpecContext) {
+						eventuallyLoadBalancerIsReachable(ctx, k2, k1, clPrimary, "istio-ingressgateway")
 					})
 
 					It("can access the sample app from the local service", func(ctx SpecContext) {

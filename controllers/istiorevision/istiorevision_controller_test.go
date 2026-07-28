@@ -17,6 +17,7 @@ package istiorevision
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -24,6 +25,8 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
+	sharedreconcile "github.com/istio-ecosystem/sail-operator/pkg/reconcile"
+	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	. "github.com/onsi/gomega"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
@@ -35,7 +38,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"istio.io/istio/pkg/ptr"
@@ -86,7 +88,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 			objects:   []client.Object{ns},
-			expectErr: "spec.version not set",
+			expectErr: "version not set",
 		},
 		{
 			name: "no namespace",
@@ -99,7 +101,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 			objects:   []client.Object{ns},
-			expectErr: "spec.namespace not set",
+			expectErr: "namespace not set",
 		},
 		{
 			name: "namespace not found",
@@ -110,6 +112,11 @@ func TestValidate(t *testing.T) {
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Default,
 					Namespace: "istio-system",
+					Values: &v1.Values{
+						Global: &v1.GlobalConfig{
+							IstioNamespace: ptr.Of("istio-system"),
+						},
+					},
 				},
 			},
 			objects:   []client.Object{},
@@ -127,7 +134,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 			objects:   []client.Object{ns},
-			expectErr: "spec.values not set",
+			expectErr: "values not set",
 		},
 		{
 			name: "invalid istioNamespace",
@@ -146,7 +153,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 			objects:   []client.Object{ns},
-			expectErr: "spec.values.global.istioNamespace does not match spec.namespace",
+			expectErr: "values.global.istioNamespace does not match namespace",
 		},
 		{
 			name: "invalid revision default",
@@ -166,7 +173,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 			objects:   []client.Object{ns},
-			expectErr: `spec.values.revision must be "" when IstioRevision name is default`,
+			expectErr: `values.revision must be "" when revision name is default`,
 		},
 		{
 			name: "invalid revision non-default",
@@ -186,16 +193,35 @@ func TestValidate(t *testing.T) {
 				},
 			},
 			objects:   []client.Object{ns},
-			expectErr: `spec.values.revision does not match IstioRevision name`,
+			expectErr: `values.revision does not match revision name`,
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
 			cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(tc.objects...).Build()
-			r := NewReconciler(cfg, cl, scheme.Scheme, nil)
 
-			err := r.validate(context.TODO(), tc.rev)
+			// Create controller reconciler for CRD-specific validations
+			reconciler := &Reconciler{
+				Client: cl,
+				Config: cfg,
+			}
+
+			// Run CRD-specific validations (same order as doReconcile)
+			var err error
+			if err = reconciler.validateRevisionConsistency(tc.rev); err == nil {
+				if err = reconciler.validateNoTagConflict(context.TODO(), tc.rev); err == nil {
+					// Run general validations
+					istiodReconciler := sharedreconcile.NewIstiodReconciler(sharedreconcile.Config{
+						ResourceFS:        cfg.ResourceFS,
+						Platform:          cfg.Platform,
+						DefaultProfile:    cfg.DefaultProfile,
+						OperatorNamespace: cfg.OperatorNamespace,
+					}, cl)
+					err = istiodReconciler.Validate(context.TODO(), tc.rev.Spec.Version, tc.rev.Spec.Namespace, tc.rev.Spec.Values)
+				}
+			}
+
 			if tc.expectErr == "" {
 				g.Expect(err).ToNot(HaveOccurred())
 			} else {
@@ -363,12 +389,12 @@ func TestMapEndpointSliceToReconcileRequests(t *testing.T) {
 func TestDeriveState(t *testing.T) {
 	testCases := []struct {
 		name          string
-		conditions    []v1.IstioRevisionCondition
+		conditions    []v1.StatusCondition
 		expectedState v1.IstioRevisionConditionReason
 	}{
 		{
 			name: "healthy",
-			conditions: []v1.IstioRevisionCondition{
+			conditions: []v1.StatusCondition{
 				newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionTrue, ""),
 				newCondition(v1.IstioRevisionConditionReady, metav1.ConditionTrue, ""),
 				newCondition(v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionTrue, ""),
@@ -377,7 +403,7 @@ func TestDeriveState(t *testing.T) {
 		},
 		{
 			name: "not reconciled",
-			conditions: []v1.IstioRevisionCondition{
+			conditions: []v1.StatusCondition{
 				newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionFalse, v1.IstioRevisionReasonReconcileError),
 				newCondition(v1.IstioRevisionConditionReady, metav1.ConditionTrue, ""),
 				newCondition(v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionTrue, ""),
@@ -386,7 +412,7 @@ func TestDeriveState(t *testing.T) {
 		},
 		{
 			name: "not ready",
-			conditions: []v1.IstioRevisionCondition{
+			conditions: []v1.StatusCondition{
 				newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionTrue, ""),
 				newCondition(v1.IstioRevisionConditionReady, metav1.ConditionFalse, v1.IstioRevisionReasonIstiodNotReady),
 				newCondition(v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionTrue, ""),
@@ -395,7 +421,7 @@ func TestDeriveState(t *testing.T) {
 		},
 		{
 			name: "readiness unknown",
-			conditions: []v1.IstioRevisionCondition{
+			conditions: []v1.StatusCondition{
 				newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionTrue, ""),
 				newCondition(v1.IstioRevisionConditionReady, metav1.ConditionUnknown, v1.IstioRevisionReasonReadinessCheckFailed),
 				newCondition(v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionTrue, ""),
@@ -404,7 +430,7 @@ func TestDeriveState(t *testing.T) {
 		},
 		{
 			name: "not reconciled nor ready",
-			conditions: []v1.IstioRevisionCondition{
+			conditions: []v1.StatusCondition{
 				newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionFalse, v1.IstioRevisionReasonReconcileError),
 				newCondition(v1.IstioRevisionConditionReady, metav1.ConditionFalse, v1.IstioRevisionReasonIstiodNotReady),
 				newCondition(v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionTrue, ""),
@@ -413,7 +439,7 @@ func TestDeriveState(t *testing.T) {
 		},
 		{
 			name: "dependencies not ready",
-			conditions: []v1.IstioRevisionCondition{
+			conditions: []v1.StatusCondition{
 				newCondition(v1.IstioRevisionConditionReconciled, metav1.ConditionTrue, ""),
 				newCondition(v1.IstioRevisionConditionReady, metav1.ConditionTrue, ""),
 				newCondition(v1.IstioRevisionConditionDependenciesHealthy, metav1.ConditionFalse, v1.IstioRevisionReasonIstioCNINotHealthy),
@@ -425,7 +451,7 @@ func TestDeriveState(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			result := deriveState(tc.conditions...)
+			result := reconciler.DeriveState(v1.IstioRevisionReasonHealthy, tc.conditions...)
 			g.Expect(result).To(Equal(tc.expectedState))
 		})
 	}
@@ -433,8 +459,8 @@ func TestDeriveState(t *testing.T) {
 
 func newCondition(
 	conditionType v1.IstioRevisionConditionType, status metav1.ConditionStatus, reason v1.IstioRevisionConditionReason,
-) v1.IstioRevisionCondition {
-	return v1.IstioRevisionCondition{
+) v1.StatusCondition {
+	return v1.StatusCondition{
 		Type:   conditionType,
 		Status: status,
 		Reason: reason,
@@ -449,7 +475,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 		values        *v1.Values
 		clientObjects []client.Object
 		interceptors  interceptor.Funcs
-		expected      v1.IstioRevisionCondition
+		expected      v1.StatusCondition
 		expectErr     bool
 	}{
 		{
@@ -468,9 +494,10 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1.IstioRevisionCondition{
+			expected: v1.StatusCondition{
 				Type:   v1.IstioRevisionConditionReady,
 				Status: metav1.ConditionTrue,
+				Reason: v1.ConditionReason(v1.IstioRevisionConditionReady),
 			},
 		},
 		{
@@ -489,7 +516,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1.IstioRevisionCondition{
+			expected: v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioRevisionReasonIstiodNotReady,
@@ -512,7 +539,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1.IstioRevisionCondition{
+			expected: v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioRevisionReasonIstiodNotReady,
@@ -523,7 +550,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 			name:          "Istiod not found",
 			values:        nil,
 			clientObjects: []client.Object{},
-			expected: v1.IstioRevisionCondition{
+			expected: v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioRevisionReasonIstiodNotReady,
@@ -548,9 +575,10 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1.IstioRevisionCondition{
+			expected: v1.StatusCondition{
 				Type:   v1.IstioRevisionConditionReady,
 				Status: metav1.ConditionTrue,
+				Reason: v1.ConditionReason(v1.IstioRevisionConditionReady),
 			},
 		},
 		{
@@ -561,7 +589,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 					return fmt.Errorf("simulated error")
 				},
 			},
-			expected: v1.IstioRevisionCondition{
+			expected: v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionUnknown,
 				Reason:  v1.IstioRevisionReasonReadinessCheckFailed,
@@ -582,9 +610,10 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1.IstioRevisionCondition{
+			expected: v1.StatusCondition{
 				Type:   v1.IstioRevisionConditionReady,
 				Status: metav1.ConditionTrue,
+				Reason: v1.ConditionReason(v1.IstioRevisionConditionReady),
 			},
 		},
 		{
@@ -600,7 +629,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1.IstioRevisionCondition{
+			expected: v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioRevisionReasonRemoteIstiodNotReady,
@@ -618,7 +647,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1.IstioRevisionCondition{
+			expected: v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioRevisionReasonRemoteIstiodNotReady,
@@ -629,7 +658,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 			name:          "Istiod-remote webhook config not found",
 			values:        &v1.Values{Profile: ptr.Of("remote")},
 			clientObjects: []client.Object{},
-			expected: v1.IstioRevisionCondition{
+			expected: v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioRevisionReasonRemoteIstiodNotReady,
@@ -645,7 +674,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 					return fmt.Errorf("simulated error")
 				},
 			},
-			expected: v1.IstioRevisionCondition{
+			expected: v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionUnknown,
 				Reason:  v1.IstioRevisionReasonReadinessCheckFailed,
@@ -928,132 +957,9 @@ func TestDetermineInUseCondition(t *testing.T) {
 	}
 }
 
-func TestIgnoreStatusChangePredicate(t *testing.T) {
-	predicate := ignoreStatusChange()
-
-	oldObj := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			ResourceVersion: "1",
-			Generation:      1,
-			Finalizers:      []string{"finalizer1"},
-			Labels:          map[string]string{"app": "test"},
-			Annotations:     map[string]string{"annotation1": "value1"},
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion: "v1",
-					Kind:       "IstioRevision",
-					Name:       "myrev",
-				},
-			},
-		},
-		Spec: corev1.ServiceSpec{
-			Type: corev1.ServiceTypeClusterIP,
-		},
-		Status: corev1.ServiceStatus{
-			LoadBalancer: corev1.LoadBalancerStatus{
-				Ingress: []corev1.LoadBalancerIngress{
-					{
-						IP: "1.1.1.1",
-					},
-				},
-			},
-			Conditions: nil,
-		},
-	}
-
-	tests := []struct {
-		name     string
-		update   func(svc *corev1.Service)
-		expected bool
-	}{
-		{
-			name:     "No changes",
-			update:   func(svc *corev1.Service) {},
-			expected: false,
-		},
-		{
-			name: "ResourceVersion changed",
-			update: func(svc *corev1.Service) {
-				svc.ResourceVersion = "2"
-			},
-			expected: false,
-		},
-		{
-			name: "Spec changed",
-			update: func(svc *corev1.Service) {
-				svc.ResourceVersion = "2"
-				svc.Generation++
-				svc.Spec.Type = corev1.ServiceTypeNodePort
-			},
-			expected: true,
-		},
-		{
-			name: "Status changed",
-			update: func(svc *corev1.Service) {
-				svc.ResourceVersion = "2"
-				svc.Status.LoadBalancer.Ingress[0].IP = "2.2.2.2"
-			},
-			expected: false,
-		},
-		{
-			name: "Spec and status changed",
-			update: func(svc *corev1.Service) {
-				svc.ResourceVersion = "2"
-				svc.Generation++
-				svc.Spec.Type = corev1.ServiceTypeNodePort
-				svc.Status.LoadBalancer.Ingress[0].IP = "2.2.2.2"
-			},
-			expected: true,
-		},
-		{
-			name: "Labels changed",
-			update: func(svc *corev1.Service) {
-				svc.ResourceVersion = "2"
-				svc.Labels["app"] = "new-value"
-			},
-			expected: true,
-		},
-		{
-			name: "Annotations changed",
-			update: func(svc *corev1.Service) {
-				svc.ResourceVersion = "2"
-				svc.Annotations["annotation1"] = "new-value"
-			},
-			expected: true,
-		},
-		{
-			name: "OwnerReferences changed",
-			update: func(svc *corev1.Service) {
-				svc.ResourceVersion = "2"
-				svc.OwnerReferences[0].Name = "new-owner"
-			},
-			expected: true,
-		},
-		{
-			name: "Finalizers changed",
-			update: func(svc *corev1.Service) {
-				svc.ResourceVersion = "2"
-				svc.Finalizers = append(svc.Finalizers, "finalizer2")
-			},
-			expected: true,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			g := NewWithT(t)
-			newObj := oldObj.DeepCopy()
-			tc.update(newObj)
-
-			result := predicate.Update(event.UpdateEvent{ObjectOld: oldObj, ObjectNew: newObj})
-			g.Expect(result).To(Equal(tc.expected), "unexpected result of predicate.Update()")
-		})
-	}
-}
-
 func newReconcilerTestConfig(t *testing.T) config.ReconcilerConfig {
 	return config.ReconcilerConfig{
-		ResourceDirectory:       t.TempDir(),
+		ResourceFS:              os.DirFS(t.TempDir()),
 		Platform:                config.PlatformKubernetes,
 		DefaultProfile:          "",
 		MaxConcurrentReconciles: 1,

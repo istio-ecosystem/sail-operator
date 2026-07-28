@@ -84,6 +84,33 @@ func Resolve(version string) (string, error) {
 	return info.Name, nil
 }
 
+func DefaultVersion() string {
+	return Default
+}
+
+func ValidateVersion(version string) error {
+	if version == "" {
+		return fmt.Errorf("version must not be empty")
+	}
+	if _, ok := Map[version]; !ok {
+		if IsEOLVersion(version) {
+			return fmt.Errorf("version %q is end-of-life and cannot be installed", version)
+		}
+		return fmt.Errorf("version %q is not supported", version)
+	}
+	return nil
+}
+
+// IsEOLVersion returns true if the version is known but has been marked end-of-life.
+func IsEOLVersion(version string) bool {
+	for _, eolVersion := range EOL {
+		if eolVersion == version {
+			return true
+		}
+	}
+	return false
+}
+
 func init() {
 	// we can't use ldflags when running tests, use an env variable instead
 	// tmp workaround for https://github.com/golang/go/issues/64246
@@ -175,4 +202,49 @@ func GetLatestPatchVersions() []VersionInfo {
 	})
 
 	return latestSlice
+}
+
+// GetTwoConsecutiveMinorVersions returns two consecutive minor versions (with their latest patches)
+// that are greater than or equal to the specified minimum version.
+// Returns the base (older) and new (newer) versions suitable for upgrade testing.
+func GetTwoConsecutiveMinorVersions(minVersion *semver.Version) (baseVer, newVer VersionInfo, err error) {
+	allLatestPatches := GetLatestPatchVersions()
+
+	// Filter: only keep versions >= minVersion
+	var filtered []VersionInfo
+	for _, v := range allLatestPatches {
+		if !v.Version.LessThan(minVersion) {
+			filtered = append(filtered, v)
+		}
+	}
+
+	if len(filtered) < 2 {
+		return baseVer, newVer, fmt.Errorf("insufficient versions available (need 2, found %d)", len(filtered))
+	}
+
+	// GetLatestPatchVersions() returns versions sorted descending, so:
+	// filtered[0] = newest version
+	// filtered[1] = second newest (previous minor)
+	return filtered[1], filtered[0], nil
+}
+
+// GetLatestAmbientVersion returns the latest supported version for ambient mode
+// Ambient mode requires Istio 1.24+, and FIPS clusters require 1.28+
+func GetLatestAmbientVersion() VersionInfo {
+	versions := GetLatestPatchVersions()
+	fipsCluster := env.GetBool("FIPS_CLUSTER", false)
+
+	for _, version := range versions {
+		// Minimum supported version is 1.24
+		if version.Version.LessThan(semver.MustParse("1.24.0")) {
+			continue
+		}
+		// FIPS clusters require v1.28+
+		if fipsCluster && version.Version.LessThan(semver.MustParse("1.28.0")) {
+			continue
+		}
+		return version
+	}
+	// Fallback to the last version if no suitable version found
+	return versions[len(versions)-1]
 }

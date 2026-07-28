@@ -37,7 +37,6 @@ var (
 	clRemote                      client.Client
 	err                           error
 	debugInfoLogged               bool
-	controlPlaneNamespace         = common.ControlPlaneNamespace
 	externalControlPlaneNamespace = env.Get("EXTERNAL_CONTROL_PLANE_NS", "external-istiod")
 	istioName                     = env.Get("ISTIO_NAME", "default")
 	istioCniNamespace             = common.IstioCniNamespace
@@ -63,7 +62,7 @@ func TestMultiCluster(t *testing.T) {
 	if !multicluster {
 		t.Skip("Skipping test. Only valid for multicluster")
 	}
-	if kubeconfig == "" && kubeconfig2 == "" {
+	if kubeconfig == "" || kubeconfig2 == "" {
 		t.Skip("Skipping test. Two clusters required for multicluster test")
 	}
 	RegisterFailHandler(Fail)

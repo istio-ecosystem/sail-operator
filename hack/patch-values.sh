@@ -116,6 +116,7 @@ for version in ${versions}; do
       exit 1
     fi
 
-    ${YQ} -i '.deployment.annotations |= (. + {"images.'"${name}"'": "'"${hub}"'/'"${image}"':'"${tag}"'"})' "${values_file_path}"
+    full_image="${hub}/${image}:${tag}"
+    ${YQ} -i '.deployment.annotations |= (. + {"images.'"${name}"'": "'"${full_image}"'"})' "${values_file_path}"
   done
 done

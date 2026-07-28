@@ -48,8 +48,9 @@ echo "$LATEST_VERSIONS"
 # LATEST_VERSIONS[0] is latest and LATEST_VERSIONS[1] is latest minus one
 LATEST_VERSION=$(echo "$LATEST_VERSIONS" | sed -n '1p')
 LATEST_VERSION_REVISION_FORMAT=$(echo "$LATEST_VERSION" | tr '.' '-')
+# Extract major.minor for tag and release name (e.g., "dd1.30.0" -> "1.30")
 LATEST_TAG="v${LATEST_VERSION%.*}-latest"
-LATEST_RELEASE_NAME="release-${LATEST_VERSION%.*}"
+LATEST_RELEASE_NAME="release-$(echo "$LATEST_VERSION" | cut -d'.' -f1,2)"
 LATEST_MINUS_ONE_VERSION=$(echo "$LATEST_VERSIONS" | sed -n '2p')
 LATEST_MINUS_ONE_VERSION_REVISION_FORMAT=$(echo "$LATEST_MINUS_ONE_VERSION" | tr '.' '-')
 echo "The versions to update are:"

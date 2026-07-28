@@ -18,9 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path"
 	"reflect"
-	"regexp"
 
 	"github.com/go-logr/logr"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
@@ -29,19 +27,16 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
-	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	predicate2 "github.com/istio-ecosystem/sail-operator/pkg/predicate"
+	sharedreconcile "github.com/istio-ecosystem/sail-operator/pkg/reconcile"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/revision"
 	"github.com/istio-ecosystem/sail-operator/pkg/validation"
+	"github.com/istio-ecosystem/sail-operator/pkg/watches"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
-	networkingv1 "k8s.io/api/networking/v1"
-	policyv1 "k8s.io/api/policy/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -50,10 +45,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"istio.io/istio/pkg/ptr"
@@ -115,57 +108,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, rev *v1.IstioRevision) (ctrl
 
 func (r *Reconciler) doReconcile(ctx context.Context, rev *v1.IstioRevision) error {
 	log := logf.FromContext(ctx)
-	if err := r.validate(ctx, rev); err != nil {
+	istiodReconciler := r.newIstiodReconciler()
+
+	// CRD-specific validations
+	if err := r.validateRevisionConsistency(rev); err != nil {
+		return err
+	}
+	if err := r.validateNoTagConflict(ctx, rev); err != nil {
+		return err
+	}
+
+	// General validations
+	if err := istiodReconciler.Validate(ctx, rev.Spec.Version, rev.Spec.Namespace, rev.Spec.Values); err != nil {
 		return err
 	}
 
 	log.Info("Installing Helm chart")
-	return r.installHelmCharts(ctx, rev)
-}
-
-func (r *Reconciler) Finalize(ctx context.Context, rev *v1.IstioRevision) error {
-	return r.uninstallHelmCharts(ctx, rev)
-}
-
-func (r *Reconciler) validate(ctx context.Context, rev *v1.IstioRevision) error {
-	if rev.Spec.Version == "" {
-		return reconciler.NewValidationError("spec.version not set")
-	}
-	if rev.Spec.Namespace == "" {
-		return reconciler.NewValidationError("spec.namespace not set")
-	}
-	if err := validation.ValidateTargetNamespace(ctx, r.Client, rev.Spec.Namespace); err != nil {
-		return err
-	}
-
-	if rev.Spec.Values == nil {
-		return reconciler.NewValidationError("spec.values not set")
-	}
-
-	revName := rev.Spec.Values.Revision
-	if rev.Name == v1.DefaultRevision && (revName != nil && *revName != "") {
-		return reconciler.NewValidationError(fmt.Sprintf("spec.values.revision must be \"\" when IstioRevision name is %s", v1.DefaultRevision))
-	} else if rev.Name != v1.DefaultRevision && (revName == nil || *revName != rev.Name) {
-		return reconciler.NewValidationError("spec.values.revision does not match IstioRevision name")
-	}
-
-	if rev.Spec.Values.Global == nil || rev.Spec.Values.Global.IstioNamespace == nil || *rev.Spec.Values.Global.IstioNamespace != rev.Spec.Namespace {
-		return reconciler.NewValidationError("spec.values.global.istioNamespace does not match spec.namespace")
-	}
-
-	tag := v1.IstioRevisionTag{}
-	if err := r.Client.Get(ctx, types.NamespacedName{Name: rev.Name}, &tag); err == nil {
-		if validation.ResourceTakesPrecedence(&tag.ObjectMeta, &rev.ObjectMeta) {
-			return reconciler.NewNameAlreadyExistsError("an IstioRevisionTag exists with this name", nil)
-		}
-	} else if !apierrors.IsNotFound(err) {
-		return err
-	}
-
-	return nil
-}
-
-func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevision) error {
 	ownerReference := metav1.OwnerReference{
 		APIVersion:         v1.GroupVersion.String(),
 		Kind:               v1.IstioRevisionKind,
@@ -174,39 +132,55 @@ func (r *Reconciler) installHelmCharts(ctx context.Context, rev *v1.IstioRevisio
 		Controller:         ptr.Of(true),
 		BlockOwnerDeletion: ptr.Of(true),
 	}
+	return istiodReconciler.Install(ctx, rev.Spec.Version, rev.Spec.Namespace, rev.Spec.Values, rev.Name, &ownerReference)
+}
 
-	values := helm.FromValues(rev.Spec.Values)
-	_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev, constants.IstiodChartName),
-		values, rev.Spec.Namespace, getReleaseName(rev, constants.IstiodChartName), &ownerReference)
-	if err != nil {
-		return fmt.Errorf("failed to install/update Helm chart %q: %w", constants.IstiodChartName, err)
+func (r *Reconciler) Finalize(ctx context.Context, rev *v1.IstioRevision) error {
+	istiodReconciler := r.newIstiodReconciler()
+	return istiodReconciler.Uninstall(ctx, rev.Spec.Namespace, rev.Name)
+}
+
+func (r *Reconciler) newIstiodReconciler() *sharedreconcile.IstiodReconciler {
+	return sharedreconcile.NewIstiodReconciler(sharedreconcile.Config{
+		ResourceFS:        r.Config.ResourceFS,
+		Platform:          r.Config.Platform,
+		DefaultProfile:    r.Config.DefaultProfile,
+		OperatorNamespace: r.Config.OperatorNamespace,
+		ChartManager:      r.ChartManager,
+	}, r.Client)
+}
+
+// validateRevisionConsistency validates that the IstioRevision CR fields are consistent
+// with the Helm values. This is CRD-specific validation.
+func (r *Reconciler) validateRevisionConsistency(rev *v1.IstioRevision) error {
+	values := rev.Spec.Values
+	if values == nil {
+		return nil // values nil check is done in general validation
 	}
-	if rev.Name == v1.DefaultRevision {
-		_, err := r.ChartManager.UpgradeOrInstallChart(ctx, r.getChartDir(rev, constants.BaseChartName),
-			values, r.Config.OperatorNamespace, getReleaseName(rev, constants.BaseChartName), &ownerReference)
-		if err != nil {
-			return fmt.Errorf("failed to install/update Helm chart %q: %w", constants.BaseChartName, err)
-		}
+
+	// Validate revision name consistency
+	revName := values.Revision
+	if rev.Name == v1.DefaultRevision && (revName != nil && *revName != "") {
+		return reconciler.NewValidationError(fmt.Sprintf("values.revision must be \"\" when revision name is %s", v1.DefaultRevision))
+	} else if rev.Name != v1.DefaultRevision && (revName == nil || *revName != rev.Name) {
+		return reconciler.NewValidationError("values.revision does not match revision name")
 	}
+
+	// Validate namespace consistency
+	if values.Global == nil || values.Global.IstioNamespace == nil || *values.Global.IstioNamespace != rev.Spec.Namespace {
+		return reconciler.NewValidationError("values.global.istioNamespace does not match namespace")
+	}
+
 	return nil
 }
 
-func getReleaseName(rev *v1.IstioRevision, chartName string) string {
-	return fmt.Sprintf("%s-%s", rev.Name, chartName)
-}
-
-func (r *Reconciler) getChartDir(rev *v1.IstioRevision, chartName string) string {
-	return path.Join(r.Config.ResourceDirectory, rev.Spec.Version, "charts", chartName)
-}
-
-func (r *Reconciler) uninstallHelmCharts(ctx context.Context, rev *v1.IstioRevision) error {
-	if _, err := r.ChartManager.UninstallChart(ctx, getReleaseName(rev, constants.IstiodChartName), rev.Spec.Namespace); err != nil {
-		return fmt.Errorf("failed to uninstall Helm chart %q: %w", constants.IstiodChartName, err)
-	}
-	if rev.Name == v1.DefaultRevision {
-		_, err := r.ChartManager.UninstallChart(ctx, getReleaseName(rev, constants.BaseChartName), r.Config.OperatorNamespace)
-		if err != nil {
-			return fmt.Errorf("failed to uninstall Helm chart %q: %w", constants.BaseChartName, err)
+// validateNoTagConflict checks that no IstioRevisionTag exists with the same name
+// as this IstioRevision. This is CRD-specific validation.
+func (r *Reconciler) validateNoTagConflict(ctx context.Context, rev *v1.IstioRevision) error {
+	tag := v1.IstioRevisionTag{}
+	if err := r.Client.Get(ctx, types.NamespacedName{Name: rev.Name}, &tag); err == nil {
+		if validation.ResourceTakesPrecedence(&tag.ObjectMeta, &rev.ObjectMeta) {
+			return reconciler.NewNameAlreadyExistsError("an IstioRevisionTag exists with this name", nil)
 		}
 	}
 	return nil
@@ -278,7 +252,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// or if it's owned by an Endpoints object which in turn is owned by an IstioRevision.
 	endpointSliceHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapEndpointSliceToReconcileRequests))
 
-	return ctrl.NewControllerManagedBy(mgr).
+	b := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
 			LogConstructor: func(req *reconcile.Request) logr.Logger {
 				log := logger
@@ -290,59 +264,26 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 			MaxConcurrentReconciles: r.Config.MaxConcurrentReconciles,
 		}).
 		// we use the Watches function instead of For(), so that we can wrap the handler so that events that cause the object to be enqueued are logged
-		// +lint-watches:ignore: IstioRevision (not found in charts, but this is the main resource watched by this controller)
 		Watches(&v1.IstioRevision{}, mainObjectHandler).
-		Named("istiorevision").
+		Named("istiorevision")
 
-		// namespaced resources
-		Watches(&corev1.ConfigMap{}, ownedResourceHandler, builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
-		// We don't ignore the status for Deployments because we use it to calculate the IstioRevision status
-		Watches(&appsv1.Deployment{}, ownedResourceHandler, builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
-		// +lint-watches:ignore: Endpoints (older versions of istiod chart create Endpoints for remote installs, but this controller watches EndpointSlices)
-		// +lint-watches:ignore: EndpointSlice (istiod chart creates Endpoints for remote installs, but this controller watches EndpointSlices)
-		Watches(&discoveryv1.EndpointSlice{}, endpointSliceHandler, builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
-		Watches(&corev1.Service{}, ownedResourceHandler,
-			builder.WithPredicates(ignoreStatusChange(), predicate2.IgnoreUpdateWhenAnnotation())).
+	// +lint-watches:ignore: Endpoints (older versions of istiod chart create Endpoints for remote installs, but this controller watches EndpointSlices)
+	// +lint-watches:ignore: EndpointSlice (istiod chart creates Endpoints for remote installs, but this controller watches EndpointSlices)
+	handlerOverrides := map[reflect.Type]handler.EventHandler{
+		reflect.TypeOf(&discoveryv1.EndpointSlice{}): endpointSliceHandler,
+	}
+	watches.RegisterOwnedWatches(b, watches.IstiodWatches, ownedResourceHandler, handlerOverrides, predicate2.IgnoreUpdateWhenAnnotation())
 
-		// +lint-watches:ignore: NetworkPolicy (FIXME: NetworkPolicy has not yet been added upstream, but is WIP)
-		Watches(&networkingv1.NetworkPolicy{}, ownedResourceHandler,
-			builder.WithPredicates(ignoreStatusChange(), predicate2.IgnoreUpdateWhenAnnotation())).
-
-		// We use predicate.IgnoreUpdate() so that we skip the reconciliation when a pull secret is added to the ServiceAccount.
-		// This is necessary so that we don't remove the newly-added secret.
-		// TODO: this is a temporary hack until we implement the correct solution on the Helm-render side
-		Watches(&corev1.ServiceAccount{}, ownedResourceHandler, builder.WithPredicates(predicate2.IgnoreUpdate())).
-		Watches(&rbacv1.Role{}, ownedResourceHandler, builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
-		Watches(&rbacv1.RoleBinding{}, ownedResourceHandler, builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
-		Watches(&policyv1.PodDisruptionBudget{}, ownedResourceHandler,
-			builder.WithPredicates(ignoreStatusChange(), predicate2.IgnoreUpdateWhenAnnotation())).
-		Watches(&autoscalingv2.HorizontalPodAutoscaler{}, ownedResourceHandler,
-			builder.WithPredicates(ignoreStatusChange(), predicate2.IgnoreUpdateWhenAnnotation())).
-
+	return b.
 		// +lint-watches:ignore: Namespace (not found in charts, but must be watched to reconcile IstioRevision when its namespace is created)
-		Watches(&corev1.Namespace{}, nsHandler, builder.WithPredicates(ignoreStatusChange()), builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
-
+		Watches(&corev1.Namespace{}, nsHandler,
+			builder.WithPredicates(watches.AsPredicate(watches.IgnoreStatusChanges()), predicate2.IgnoreUpdateWhenAnnotation())).
 		// +lint-watches:ignore: Pod (not found in charts, but must be watched to reconcile IstioRevision when a pod references it)
-		Watches(&corev1.Pod{}, podHandler, builder.WithPredicates(ignoreStatusChange(), predicate2.IgnoreUpdateWhenAnnotation())).
-
-		// +lint-watches:ignore: IstioRevisionTag (not found in charts, but must be watched to reconcile IstioRevision when a pod references it)
+		Watches(&corev1.Pod{}, podHandler,
+			builder.WithPredicates(watches.AsPredicate(watches.IgnoreStatusChanges()), predicate2.IgnoreUpdateWhenAnnotation())).
 		Watches(&v1.IstioRevisionTag{}, revisionTagHandler).
-
-		// cluster-scoped resources
-		Watches(&rbacv1.ClusterRole{}, ownedResourceHandler, builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
-		Watches(&rbacv1.ClusterRoleBinding{}, ownedResourceHandler, builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
-		Watches(&admissionv1.MutatingWebhookConfiguration{}, ownedResourceHandler, builder.WithPredicates(predicate2.IgnoreUpdateWhenAnnotation())).
-		Watches(&admissionv1.ValidatingWebhookConfiguration{}, ownedResourceHandler,
-			builder.WithPredicates(validatingWebhookConfigPredicate(), predicate2.IgnoreUpdateWhenAnnotation())).
-
-		// +lint-watches:ignore: IstioCNI (not found in charts, but this controller needs to watch it to update the IstioRevision status)
 		Watches(&v1.IstioCNI{}, istioCniHandler).
-
-		// +lint-watches:ignore: ZTunnel (not found in charts, but this controller needs to watch it to update the IstioRevision status)
 		Watches(&v1.ZTunnel{}, ztunnelHandler).
-
-		// +lint-watches:ignore: ValidatingAdmissionPolicy (TODO: fix this when CI supports golang 1.22 and k8s 1.30)
-		// +lint-watches:ignore: ValidatingAdmissionPolicyBinding (TODO: fix this when CI supports golang 1.22 and k8s 1.30)
 		// +lint-watches:ignore: CustomResourceDefinition (prevents `make lint-watches` from bugging us about CRDs)
 		Complete(reconciler.NewStandardReconcilerWithFinalizer[*v1.IstioRevision](r.Client, r.Reconcile, r.Finalize, constants.FinalizerName))
 }
@@ -364,54 +305,36 @@ func (r *Reconciler) determineStatus(ctx context.Context, rev *v1.IstioRevision,
 	status.SetCondition(readyCondition)
 	status.SetCondition(dependenciesHealthyCondition)
 	status.SetCondition(inUseCondition)
-	status.State = deriveState(reconciledCondition, readyCondition, dependenciesHealthyCondition)
+	status.State = reconciler.DeriveState(v1.IstioRevisionReasonHealthy, reconciledCondition, readyCondition, dependenciesHealthyCondition)
 	return status, errs.Error()
 }
 
 func (r *Reconciler) updateStatus(ctx context.Context, rev *v1.IstioRevision, reconcileErr error) error {
-	var errs errlist.Builder
-
 	status, err := r.determineStatus(ctx, rev, reconcileErr)
-	if err != nil {
-		errs.Add(fmt.Errorf("failed to determine status: %w", err))
-	}
-
-	if !reflect.DeepEqual(rev.Status, status) {
-		if err := r.Client.Status().Patch(ctx, rev, kube.NewStatusPatch(status)); err != nil {
-			errs.Add(fmt.Errorf("failed to patch status: %w", err))
-		}
-	}
-	return errs.Error()
+	return reconciler.UpdateStatus(ctx, r.Client, rev, rev.Status, status, err)
 }
 
-func deriveState(conditions ...v1.IstioRevisionCondition) v1.IstioRevisionConditionReason {
-	for _, c := range conditions {
-		if c.Status != metav1.ConditionTrue {
-			return c.Reason
-		}
-	}
-	return v1.IstioRevisionReasonHealthy
-}
-
-func (r *Reconciler) determineReconciledCondition(err error) v1.IstioRevisionCondition {
-	c := v1.IstioRevisionCondition{Type: v1.IstioRevisionConditionReconciled}
-
+func (r *Reconciler) determineReconciledCondition(err error) v1.StatusCondition {
+	c := v1.StatusCondition{Type: v1.IstioRevisionConditionReconciled}
 	if err == nil {
 		c.Status = metav1.ConditionTrue
-	} else if reconciler.IsNameAlreadyExistsError(err) {
-		c.Status = metav1.ConditionFalse
-		c.Reason = v1.IstioRevisionReasonNameAlreadyExists
-		c.Message = err.Error()
+		c.Reason = v1.ConditionReason(v1.IstioRevisionConditionReconciled)
 	} else {
 		c.Status = metav1.ConditionFalse
-		c.Reason = v1.IstioRevisionReasonReconcileError
-		c.Message = fmt.Sprintf("error reconciling resource: %v", err)
+		switch {
+		case reconciler.IsNameAlreadyExistsError(err):
+			c.Reason = v1.IstioRevisionReasonNameAlreadyExists
+			c.Message = err.Error()
+		default:
+			c.Reason = v1.IstioRevisionReasonReconcileError
+			c.Message = fmt.Sprintf("error reconciling resource: %v", err)
+		}
 	}
 	return c
 }
 
-func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1.IstioRevision) (v1.IstioRevisionCondition, error) {
-	c := v1.IstioRevisionCondition{
+func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1.IstioRevision) (v1.StatusCondition, error) {
+	c := v1.StatusCondition{
 		Type:   v1.IstioRevisionConditionReady,
 		Status: metav1.ConditionFalse,
 	}
@@ -427,6 +350,7 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1.IstioR
 				c.Message = "not all istiod pods are ready"
 			} else {
 				c.Status = metav1.ConditionTrue
+				c.Reason = v1.ConditionReason(v1.IstioRevisionConditionReady)
 			}
 		} else if apierrors.IsNotFound(err) {
 			c.Reason = v1.IstioRevisionReasonIstiodNotReady
@@ -444,6 +368,7 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1.IstioR
 			switch webhook.Annotations[constants.WebhookReadinessProbeStatusAnnotationKey] {
 			case "true":
 				c.Status = metav1.ConditionTrue
+				c.Reason = v1.ConditionReason(v1.IstioRevisionConditionReady)
 			case "false":
 				c.Reason = v1.IstioRevisionReasonRemoteIstiodNotReady
 				c.Message = "readiness probe on remote istiod failed"
@@ -465,12 +390,12 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1.IstioR
 	return c, nil
 }
 
-func (r *Reconciler) determineDependenciesHealthyCondition(ctx context.Context, rev *v1.IstioRevision) (v1.IstioRevisionCondition, error) {
+func (r *Reconciler) determineDependenciesHealthyCondition(ctx context.Context, rev *v1.IstioRevision) (v1.StatusCondition, error) {
 	if revision.DependsOnIstioCNI(rev, r.Config) {
 		cni := v1.IstioCNI{}
 		if err := r.Client.Get(ctx, client.ObjectKey{Name: istioCniName}, &cni); err != nil {
 			if apierrors.IsNotFound(err) {
-				return v1.IstioRevisionCondition{
+				return v1.StatusCondition{
 					Type:    v1.IstioRevisionConditionDependenciesHealthy,
 					Status:  metav1.ConditionFalse,
 					Reason:  v1.IstioRevisionReasonIstioCNINotFound,
@@ -478,7 +403,7 @@ func (r *Reconciler) determineDependenciesHealthyCondition(ctx context.Context, 
 				}, nil
 			}
 
-			return v1.IstioRevisionCondition{
+			return v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionDependenciesHealthy,
 				Status:  metav1.ConditionUnknown,
 				Reason:  v1.IstioRevisionDependencyCheckFailed,
@@ -487,7 +412,7 @@ func (r *Reconciler) determineDependenciesHealthyCondition(ctx context.Context, 
 		}
 
 		if cni.Status.State != v1.IstioCNIReasonHealthy {
-			return v1.IstioRevisionCondition{
+			return v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionDependenciesHealthy,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioRevisionReasonIstioCNINotHealthy,
@@ -500,7 +425,7 @@ func (r *Reconciler) determineDependenciesHealthyCondition(ctx context.Context, 
 		ztunnel := v1.ZTunnel{}
 		if err := r.Client.Get(ctx, client.ObjectKey{Name: ztunnelName}, &ztunnel); err != nil {
 			if apierrors.IsNotFound(err) {
-				return v1.IstioRevisionCondition{
+				return v1.StatusCondition{
 					Type:    v1.IstioRevisionConditionDependenciesHealthy,
 					Status:  metav1.ConditionFalse,
 					Reason:  v1.IstioRevisionReasonZTunnelNotFound,
@@ -508,7 +433,7 @@ func (r *Reconciler) determineDependenciesHealthyCondition(ctx context.Context, 
 				}, nil
 			}
 
-			return v1.IstioRevisionCondition{
+			return v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionDependenciesHealthy,
 				Status:  metav1.ConditionUnknown,
 				Reason:  v1.IstioRevisionDependencyCheckFailed,
@@ -517,7 +442,7 @@ func (r *Reconciler) determineDependenciesHealthyCondition(ctx context.Context, 
 		}
 
 		if ztunnel.Status.State != v1.ZTunnelReasonHealthy {
-			return v1.IstioRevisionCondition{
+			return v1.StatusCondition{
 				Type:    v1.IstioRevisionConditionDependenciesHealthy,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioRevisionReasonZTunnelNotHealthy,
@@ -526,14 +451,15 @@ func (r *Reconciler) determineDependenciesHealthyCondition(ctx context.Context, 
 		}
 	}
 
-	return v1.IstioRevisionCondition{
+	return v1.StatusCondition{
 		Type:   v1.IstioRevisionConditionDependenciesHealthy,
 		Status: metav1.ConditionTrue,
+		Reason: v1.ConditionReason(v1.IstioRevisionConditionDependenciesHealthy),
 	}, nil
 }
 
-func (r *Reconciler) determineInUseCondition(ctx context.Context, rev *v1.IstioRevision) (v1.IstioRevisionCondition, error) {
-	c := v1.IstioRevisionCondition{Type: v1.IstioRevisionConditionInUse}
+func (r *Reconciler) determineInUseCondition(ctx context.Context, rev *v1.IstioRevision) (v1.StatusCondition, error) {
+	c := v1.StatusCondition{Type: v1.IstioRevisionConditionInUse}
 
 	isReferenced, err := r.isRevisionReferenced(ctx, rev)
 	if err == nil {
@@ -729,65 +655,6 @@ func (r *Reconciler) mapZTunnelToReconcileRequests(ctx context.Context, _ client
 		}
 	}
 	return reqs
-}
-
-// ignoreStatusChange returns a predicate that ignores watch events where only the resource status changes; if
-// there are any other changes to the resource, the event is not ignored.
-// This ensures that the controller doesn't reconcile the entire IstioRevision every time the status of an owned
-// resource is updated. Without this predicate, the controller would continuously reconcile the IstioRevision
-// because the status.currentMetrics of the HorizontalPodAutoscaler object was updated.
-func ignoreStatusChange() predicate.Funcs {
-	return predicate.Funcs{
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			return specWasUpdated(e.ObjectOld, e.ObjectNew) ||
-				!reflect.DeepEqual(e.ObjectNew.GetLabels(), e.ObjectOld.GetLabels()) ||
-				!reflect.DeepEqual(e.ObjectNew.GetAnnotations(), e.ObjectOld.GetAnnotations()) ||
-				!reflect.DeepEqual(e.ObjectNew.GetOwnerReferences(), e.ObjectOld.GetOwnerReferences()) ||
-				!reflect.DeepEqual(e.ObjectNew.GetFinalizers(), e.ObjectOld.GetFinalizers())
-		},
-	}
-}
-
-func specWasUpdated(oldObject client.Object, newObject client.Object) bool {
-	// for HPAs, k8s doesn't set metadata.generation, so we actually have to check whether the spec was updated
-	if oldHpa, ok := oldObject.(*autoscalingv2.HorizontalPodAutoscaler); ok {
-		if newHpa, ok := newObject.(*autoscalingv2.HorizontalPodAutoscaler); ok {
-			return !reflect.DeepEqual(oldHpa.Spec, newHpa.Spec)
-		}
-	}
-
-	// for other resources, comparing the metadata.generation suffices
-	return oldObject.GetGeneration() != newObject.GetGeneration()
-}
-
-func validatingWebhookConfigPredicate() predicate.Funcs {
-	return predicate.Funcs{
-		UpdateFunc: func(e event.TypedUpdateEvent[client.Object]) bool {
-			if e.ObjectOld == nil || e.ObjectNew == nil {
-				return false
-			}
-
-			if matched, _ := regexp.MatchString("istiod-.*-validator|istio-validator.*", e.ObjectNew.GetName()); matched {
-				// Istiod updates the caBundle and failurePolicy fields in istiod-<ns>-validator and istio-validator[-<rev>]-<ns>
-				// webhook configs. We must ignore changes to these fields to prevent an endless update loop.
-				clearIgnoredFields(e.ObjectOld)
-				clearIgnoredFields(e.ObjectNew)
-				return !reflect.DeepEqual(e.ObjectNew, e.ObjectOld)
-			}
-			return true
-		},
-	}
-}
-
-func clearIgnoredFields(obj client.Object) {
-	obj.SetResourceVersion("")
-	obj.SetGeneration(0)
-	obj.SetManagedFields(nil)
-	if webhookConfig, ok := obj.(*admissionv1.ValidatingWebhookConfiguration); ok {
-		for i := range len(webhookConfig.Webhooks) {
-			webhookConfig.Webhooks[i].FailurePolicy = nil
-		}
-	}
 }
 
 func wrapEventHandler(logger logr.Logger, handler handler.EventHandler) handler.EventHandler {

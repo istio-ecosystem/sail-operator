@@ -17,6 +17,7 @@ package istiocni
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -24,6 +25,8 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/istiovalues"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
+	sharedreconcile "github.com/istio-ecosystem/sail-operator/pkg/reconcile"
+	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -76,7 +79,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 			objects:   []client.Object{ns},
-			expectErr: "spec.version not set",
+			expectErr: "version not set",
 		},
 		{
 			name: "no namespace",
@@ -89,7 +92,7 @@ func TestValidate(t *testing.T) {
 				},
 			},
 			objects:   []client.Object{ns},
-			expectErr: "spec.namespace not set",
+			expectErr: "namespace not set",
 		},
 		{
 			name: "namespace not found",
@@ -110,9 +113,14 @@ func TestValidate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
 			cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(tc.objects...).Build()
-			r := NewReconciler(cfg, cl, scheme.Scheme, nil)
+			cniReconciler := sharedreconcile.NewCNIReconciler(sharedreconcile.Config{
+				ResourceFS:        cfg.ResourceFS,
+				Platform:          cfg.Platform,
+				DefaultProfile:    cfg.DefaultProfile,
+				OperatorNamespace: cfg.OperatorNamespace,
+			}, cl)
 
-			err := r.validate(context.TODO(), tc.cni)
+			err := cniReconciler.Validate(context.TODO(), tc.cni.Spec.Version, tc.cni.Spec.Namespace)
 			if tc.expectErr == "" {
 				g.Expect(err).ToNot(HaveOccurred())
 			} else {
@@ -126,8 +134,8 @@ func TestValidate(t *testing.T) {
 func TestDeriveState(t *testing.T) {
 	testCases := []struct {
 		name                string
-		reconciledCondition v1.IstioCNICondition
-		readyCondition      v1.IstioCNICondition
+		reconciledCondition v1.StatusCondition
+		readyCondition      v1.StatusCondition
 		expectedState       v1.IstioCNIConditionReason
 	}{
 		{
@@ -165,14 +173,14 @@ func TestDeriveState(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			result := deriveState(tc.reconciledCondition, tc.readyCondition)
+			result := reconciler.DeriveState(v1.IstioCNIReasonHealthy, tc.reconciledCondition, tc.readyCondition)
 			g.Expect(result).To(Equal(tc.expectedState))
 		})
 	}
 }
 
-func newCondition(condType v1.IstioCNIConditionType, status metav1.ConditionStatus, reason v1.IstioCNIConditionReason) v1.IstioCNICondition {
-	return v1.IstioCNICondition{
+func newCondition(condType v1.IstioCNIConditionType, status metav1.ConditionStatus, reason v1.IstioCNIConditionReason) v1.StatusCondition {
+	return v1.StatusCondition{
 		Type:   condType,
 		Status: status,
 		Reason: reason,
@@ -187,7 +195,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 		cniEnabled    bool
 		clientObjects []client.Object
 		interceptors  interceptor.Funcs
-		expected      v1.IstioCNICondition
+		expected      v1.StatusCondition
 		expectErr     bool
 	}{
 		{
@@ -204,9 +212,10 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1.IstioCNICondition{
+			expected: v1.StatusCondition{
 				Type:   v1.IstioCNIConditionReady,
 				Status: metav1.ConditionTrue,
+				Reason: v1.ConditionReason(v1.IstioCNIConditionReady),
 			},
 		},
 		{
@@ -223,7 +232,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1.IstioCNICondition{
+			expected: v1.StatusCondition{
 				Type:    v1.IstioCNIConditionReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioCNIDaemonSetNotReady,
@@ -244,7 +253,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 					},
 				},
 			},
-			expected: v1.IstioCNICondition{
+			expected: v1.StatusCondition{
 				Type:    v1.IstioCNIConditionReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioCNIDaemonSetNotReady,
@@ -254,7 +263,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 		{
 			name:          "CNI not found",
 			clientObjects: []client.Object{},
-			expected: v1.IstioCNICondition{
+			expected: v1.StatusCondition{
 				Type:    v1.IstioCNIConditionReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioCNIDaemonSetNotReady,
@@ -269,7 +278,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 					return fmt.Errorf("simulated error")
 				},
 			},
-			expected: v1.IstioCNICondition{
+			expected: v1.StatusCondition{
 				Type:    v1.IstioCNIConditionReady,
 				Status:  metav1.ConditionUnknown,
 				Reason:  v1.IstioCNIReasonReadinessCheckFailed,
@@ -495,7 +504,7 @@ func TestApplyImageDigests(t *testing.T) {
 			if err != nil {
 				t.Errorf("failed to resolve IstioCNI version for %q: %v", tc.input.Name, err)
 			}
-			result := applyImageDigests(version, tc.input.Spec.Values, tc.config)
+			result := sharedreconcile.ApplyCNIImageDigests(version, tc.input.Spec.Values, tc.config)
 			if diff := cmp.Diff(tc.expectValues, result); diff != "" {
 				t.Errorf("unexpected merge result; diff (-expected, +actual):\n%v", diff)
 			}
@@ -691,21 +700,21 @@ func TestDetermineStatus(t *testing.T) {
 			readyCondition, err := r.determineReadyCondition(ctx, cni)
 			g.Expect(err).ToNot(HaveOccurred())
 
-			g.Expect(status.State).To(Equal(deriveState(reconciledCondition, readyCondition)))
+			g.Expect(status.State).To(Equal(reconciler.DeriveState(v1.IstioCNIReasonHealthy, reconciledCondition, readyCondition)))
 			g.Expect(normalize(status.GetCondition(v1.IstioCNIConditionReconciled))).To(Equal(normalize(reconciledCondition)))
 			g.Expect(normalize(status.GetCondition(v1.IstioCNIConditionReady))).To(Equal(normalize(readyCondition)))
 		})
 	}
 }
 
-func normalize(condition v1.IstioCNICondition) v1.IstioCNICondition {
+func normalize(condition v1.StatusCondition) v1.StatusCondition {
 	condition.LastTransitionTime = metav1.Time{}
 	return condition
 }
 
 func newReconcilerTestConfig(t *testing.T) config.ReconcilerConfig {
 	return config.ReconcilerConfig{
-		ResourceDirectory:       t.TempDir(),
+		ResourceFS:              os.DirFS(t.TempDir()),
 		Platform:                config.PlatformKubernetes,
 		DefaultProfile:          "",
 		MaxConcurrentReconciles: 1,

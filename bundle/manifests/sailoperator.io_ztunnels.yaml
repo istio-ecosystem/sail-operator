@@ -2,7 +2,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.19.0
+    controller-gen.kubebuilder.io/version: v0.20.1
   creationTimestamp: null
   name: ztunnels.sailoperator.io
 spec:
@@ -33,6 +33,10 @@ spec:
       jsonPath: .spec.version
       name: Version
       type: string
+    - description: The referenced IstioRevision.
+      jsonPath: .status.istioRevision
+      name: Revision
+      type: string
     - description: The age of the object
       jsonPath: .metadata.creationTimestamp
       name: Age
@@ -62,7 +66,7 @@ spec:
           spec:
             default:
               namespace: ztunnel
-              version: v1.28.6
+              version: v1.30.3
             description: ZTunnelSpec defines the desired state of ZTunnel
             properties:
               namespace:
@@ -70,6 +74,26 @@ spec:
                 description: Namespace to which the Istio ztunnel component should
                   be installed.
                 type: string
+              targetRef:
+                description: |-
+                  The Istio control plane that this ZTunnel instance is associated with. Valid references are Istio and IstioRevision resources, Istio resources are always resolved to their current active revision.
+                  Values relevant for ZTunnel will be copied from the referenced IstioRevision resource, these are `spec.values.global`, `spec.values.meshConfig`, `spec.values.revision`. Any user configuration in the ZTunnel spec will always take precedence over the settings copied from the Istio resource, however.
+                properties:
+                  kind:
+                    description: Kind is the kind of the target resource.
+                    enum:
+                    - Istio
+                    - IstioRevision
+                    type: string
+                  name:
+                    description: Name is the name of the target resource.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                required:
+                - kind
+                - name
+                type: object
               values:
                 description: Defines the values to be passed to the Helm charts when
                   installing Istio ztunnel.
@@ -1135,6 +1159,62 @@ spec:
                       caAddress:
                         description: The address of the CA for CSR.
                         type: string
+                      dnsConfig:
+                        description: |-
+                          DNS config for the ztunnel pod
+                          https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config
+                        properties:
+                          nameservers:
+                            description: |-
+                              A list of DNS name server IP addresses.
+                              This will be appended to the base nameservers generated from DNSPolicy.
+                              Duplicated nameservers will be removed.
+                            items:
+                              type: string
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          options:
+                            description: |-
+                              A list of DNS resolver options.
+                              This will be merged with the base options generated from DNSPolicy.
+                              Duplicated entries will be removed. Resolution options given in Options
+                              will override those that appear in the base DNSPolicy.
+                            items:
+                              description: PodDNSConfigOption defines DNS resolver
+                                options of a pod.
+                              properties:
+                                name:
+                                  description: |-
+                                    Name is this DNS resolver option's name.
+                                    Required.
+                                  type: string
+                                value:
+                                  description: Value is this DNS resolver option's
+                                    value.
+                                  type: string
+                              type: object
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          searches:
+                            description: |-
+                              A list of DNS search domains for host-name lookup.
+                              This will be appended to the base search paths generated from DNSPolicy.
+                              Duplicated search paths will be removed.
+                            items:
+                              type: string
+                            type: array
+                            x-kubernetes-list-type: atomic
+                        type: object
+                      dnsPolicy:
+                        description: |-
+                          DNS policy for the ztunnel pod
+                          More info: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy
+                        enum:
+                        - ClusterFirstWithHostNet
+                        - ClusterFirst
+                        - Default
+                        - None
+                        type: string
                       env:
                         additionalProperties:
                           type: string
@@ -1224,6 +1304,16 @@ spec:
                           K8s node selector settings.
 
                           See https://kubernetes.io/docs/user-guide/node-selection/
+                        type: object
+                      peerCaCrl:
+                        description: |-
+                          Certificate Revocation List (CRL) support for plugged-in CAs.
+                          When enabled, ztunnel will check certificates against the CRL
+                        properties:
+                          enabled:
+                            description: When enabled, ztunnel will check certificates
+                              against the CRL
+                            type: boolean
                         type: object
                       podAnnotations:
                         additionalProperties:
@@ -1371,9 +1461,10 @@ spec:
                             operator:
                               description: |-
                                 Operator represents a key's relationship to the value.
-                                Valid operators are Exists and Equal. Defaults to Equal.
+                                Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.
                                 Exists is equivalent to wildcard for value, so that a pod can
                                 tolerate all taints of a particular category.
+                                Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).
                               type: string
                             tolerationSeconds:
                               description: |-
@@ -2110,7 +2201,7 @@ spec:
                                         resources:
                                           description: |-
                                             resources represents the minimum resources the volume should have.
-                                            If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+                                            Users are allowed to specify resource requirements
                                             that are lower than previous value but must still be higher than capacity recorded in the
                                             status field of the claim.
                                             More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
@@ -2996,6 +3087,24 @@ spec:
                                             description: Kubelet's generated CSRs
                                               will be addressed to this signer.
                                             type: string
+                                          userAnnotations:
+                                            additionalProperties:
+                                              type: string
+                                            description: |-
+                                              userAnnotations allow pod authors to pass additional information to
+                                              the signer implementation.  Kubernetes does not restrict or validate this
+                                              metadata in any way.
+
+                                              These values are copied verbatim into the `spec.unverifiedUserAnnotations` field of
+                                              the PodCertificateRequest objects that Kubelet creates.
+
+                                              Entries are subject to the same validation as object metadata annotations,
+                                              with the addition that all keys must be domain-prefixed. No restrictions
+                                              are placed on values, except an overall size limitation on the entire field.
+
+                                              Signers should document the keys and values they support. Signers should
+                                              deny requests that contain keys they do not recognize.
+                                            type: object
                                         required:
                                         - keyType
                                         - signerName
@@ -3424,19 +3533,71 @@ spec:
                     type: object
                 type: object
               version:
-                default: v1.28.6
+                default: v1.30.3
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.28-latest, v1.28.6, v1.28.3, v1.28.1, v1.26-latest, v1.26.3.
+                  Must be one of: v1.30-latest, v1.30.3, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.6, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.28-latest, v1.28.10, v1.28.9, v1.28.8, v1.28.7, v1.28.6, v1.28.5, v1.28.4, v1.28.3, v1.28.2, v1.28.1, v1.28.0.
                 enum:
+                - v1.30-latest
+                - v1.30.3
+                - v1.30.2
+                - v1.30.1
+                - v1.30.0
+                - v1.29-latest
+                - v1.29.6
+                - v1.29.5
+                - v1.29.4
+                - v1.29.3
+                - v1.29.2
+                - v1.29.1
+                - v1.29.0
                 - v1.28-latest
+                - v1.28.10
+                - v1.28.9
+                - v1.28.8
+                - v1.28.7
                 - v1.28.6
+                - v1.28.5
+                - v1.28.4
                 - v1.28.3
+                - v1.28.2
                 - v1.28.1
+                - v1.28.0
+                - v1.27-latest
+                - v1.27.9
+                - v1.27.8
+                - v1.27.7
+                - v1.27.6
+                - v1.27.5
+                - v1.27.4
+                - v1.27.3
+                - v1.27.2
+                - v1.27.1
+                - v1.27.0
                 - v1.26-latest
+                - v1.26.8
+                - v1.26.7
+                - v1.26.6
+                - v1.26.5
+                - v1.26.4
                 - v1.26.3
+                - v1.26.2
+                - v1.26.1
+                - v1.26.0
+                - v1.25-latest
+                - v1.25.5
+                - v1.25.4
+                - v1.25.3
+                - v1.25.2
+                - v1.25.1
                 - v1.24-latest
                 - v1.24.6
+                - v1.24.5
+                - v1.24.4
+                - v1.24.3
+                - v1.24.2
+                - v1.24.1
+                - v1.24.0
                 type: string
             required:
             - namespace
@@ -3449,8 +3610,8 @@ spec:
                 description: Represents the latest available observations of the object's
                   current state.
                 items:
-                  description: ZTunnelCondition represents a specific observation
-                    of the ZTunnel object's state.
+                  description: StatusCondition represents a specific observation of
+                    an object's state.
                   properties:
                     lastTransitionTime:
                       description: Last time the condition transitioned from one status
@@ -3474,6 +3635,9 @@ spec:
                       type: string
                   type: object
                 type: array
+              istioRevision:
+                description: IstioRevision stores the name of the referenced IstioRevision
+                type: string
               observedGeneration:
                 description: |-
                   ObservedGeneration is the most recent generation observed for this
@@ -3546,7 +3710,7 @@ spec:
             default:
               namespace: ztunnel
               profile: ambient
-              version: v1.28.6
+              version: v1.30.3
             description: ZTunnelSpec defines the desired state of ZTunnel
             properties:
               namespace:
@@ -4637,6 +4801,62 @@ spec:
                       caAddress:
                         description: The address of the CA for CSR.
                         type: string
+                      dnsConfig:
+                        description: |-
+                          DNS config for the ztunnel pod
+                          https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config
+                        properties:
+                          nameservers:
+                            description: |-
+                              A list of DNS name server IP addresses.
+                              This will be appended to the base nameservers generated from DNSPolicy.
+                              Duplicated nameservers will be removed.
+                            items:
+                              type: string
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          options:
+                            description: |-
+                              A list of DNS resolver options.
+                              This will be merged with the base options generated from DNSPolicy.
+                              Duplicated entries will be removed. Resolution options given in Options
+                              will override those that appear in the base DNSPolicy.
+                            items:
+                              description: PodDNSConfigOption defines DNS resolver
+                                options of a pod.
+                              properties:
+                                name:
+                                  description: |-
+                                    Name is this DNS resolver option's name.
+                                    Required.
+                                  type: string
+                                value:
+                                  description: Value is this DNS resolver option's
+                                    value.
+                                  type: string
+                              type: object
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          searches:
+                            description: |-
+                              A list of DNS search domains for host-name lookup.
+                              This will be appended to the base search paths generated from DNSPolicy.
+                              Duplicated search paths will be removed.
+                            items:
+                              type: string
+                            type: array
+                            x-kubernetes-list-type: atomic
+                        type: object
+                      dnsPolicy:
+                        description: |-
+                          DNS policy for the ztunnel pod
+                          More info: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy
+                        enum:
+                        - ClusterFirstWithHostNet
+                        - ClusterFirst
+                        - Default
+                        - None
+                        type: string
                       env:
                         additionalProperties:
                           type: string
@@ -4726,6 +4946,16 @@ spec:
                           K8s node selector settings.
 
                           See https://kubernetes.io/docs/user-guide/node-selection/
+                        type: object
+                      peerCaCrl:
+                        description: |-
+                          Certificate Revocation List (CRL) support for plugged-in CAs.
+                          When enabled, ztunnel will check certificates against the CRL
+                        properties:
+                          enabled:
+                            description: When enabled, ztunnel will check certificates
+                              against the CRL
+                            type: boolean
                         type: object
                       podAnnotations:
                         additionalProperties:
@@ -4873,9 +5103,10 @@ spec:
                             operator:
                               description: |-
                                 Operator represents a key's relationship to the value.
-                                Valid operators are Exists and Equal. Defaults to Equal.
+                                Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.
                                 Exists is equivalent to wildcard for value, so that a pod can
                                 tolerate all taints of a particular category.
+                                Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).
                               type: string
                             tolerationSeconds:
                               description: |-
@@ -5612,7 +5843,7 @@ spec:
                                         resources:
                                           description: |-
                                             resources represents the minimum resources the volume should have.
-                                            If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+                                            Users are allowed to specify resource requirements
                                             that are lower than previous value but must still be higher than capacity recorded in the
                                             status field of the claim.
                                             More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
@@ -6498,6 +6729,24 @@ spec:
                                             description: Kubelet's generated CSRs
                                               will be addressed to this signer.
                                             type: string
+                                          userAnnotations:
+                                            additionalProperties:
+                                              type: string
+                                            description: |-
+                                              userAnnotations allow pod authors to pass additional information to
+                                              the signer implementation.  Kubernetes does not restrict or validate this
+                                              metadata in any way.
+
+                                              These values are copied verbatim into the `spec.unverifiedUserAnnotations` field of
+                                              the PodCertificateRequest objects that Kubelet creates.
+
+                                              Entries are subject to the same validation as object metadata annotations,
+                                              with the addition that all keys must be domain-prefixed. No restrictions
+                                              are placed on values, except an overall size limitation on the entire field.
+
+                                              Signers should document the keys and values they support. Signers should
+                                              deny requests that contain keys they do not recognize.
+                                            type: object
                                         required:
                                         - keyType
                                         - signerName
@@ -6926,19 +7175,71 @@ spec:
                     type: object
                 type: object
               version:
-                default: v1.28.6
+                default: v1.30.3
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.28-latest, v1.28.6, v1.28.3, v1.28.1, v1.26-latest, v1.26.3.
+                  Must be one of: v1.30-latest, v1.30.3, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.6, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.28-latest, v1.28.10, v1.28.9, v1.28.8, v1.28.7, v1.28.6, v1.28.5, v1.28.4, v1.28.3, v1.28.2, v1.28.1, v1.28.0.
                 enum:
+                - v1.30-latest
+                - v1.30.3
+                - v1.30.2
+                - v1.30.1
+                - v1.30.0
+                - v1.29-latest
+                - v1.29.6
+                - v1.29.5
+                - v1.29.4
+                - v1.29.3
+                - v1.29.2
+                - v1.29.1
+                - v1.29.0
                 - v1.28-latest
+                - v1.28.10
+                - v1.28.9
+                - v1.28.8
+                - v1.28.7
                 - v1.28.6
+                - v1.28.5
+                - v1.28.4
                 - v1.28.3
+                - v1.28.2
                 - v1.28.1
+                - v1.28.0
+                - v1.27-latest
+                - v1.27.9
+                - v1.27.8
+                - v1.27.7
+                - v1.27.6
+                - v1.27.5
+                - v1.27.4
+                - v1.27.3
+                - v1.27.2
+                - v1.27.1
+                - v1.27.0
                 - v1.26-latest
+                - v1.26.8
+                - v1.26.7
+                - v1.26.6
+                - v1.26.5
+                - v1.26.4
                 - v1.26.3
+                - v1.26.2
+                - v1.26.1
+                - v1.26.0
+                - v1.25-latest
+                - v1.25.5
+                - v1.25.4
+                - v1.25.3
+                - v1.25.2
+                - v1.25.1
                 - v1.24-latest
                 - v1.24.6
+                - v1.24.5
+                - v1.24.4
+                - v1.24.3
+                - v1.24.2
+                - v1.24.1
+                - v1.24.0
                 type: string
             required:
             - namespace
@@ -6951,8 +7252,8 @@ spec:
                 description: Represents the latest available observations of the object's
                   current state.
                 items:
-                  description: ZTunnelCondition represents a specific observation
-                    of the ZTunnel object's state.
+                  description: StatusCondition represents a specific observation of
+                    an object's state.
                   properties:
                     lastTransitionTime:
                       description: Last time the condition transitioned from one status

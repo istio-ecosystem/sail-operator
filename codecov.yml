@@ -1,5 +1,39 @@
+codecov:
+  notify:
+    require_ci_to_pass: no
+
+comment:
+  behavior: default
+  require_changes: false
+
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        informational: false
+    patch:
+      default:
+        target: 80%
+        threshold: 0%
+        informational: false
+
 ignore:
-  - "api"
-  - "hack"
-  - "tools"
+  # Generated code and API types
+  - "api/**"
+  # Build and development tools
+  - "hack/**"
+  - "tools.go"
+  # Documentation and examples
+  - "docs/**"
+  - "enhancements/**"
+  # Infrastructure and configuration
+  - "chart/**"
+  - "licenses/**"
+  - "tools/**"
+
+  # Test code and test utilities
   - "tests/**"
+  - "**/test/**"
+  - "**/*_test.go"
+  - "pkg/test/**"

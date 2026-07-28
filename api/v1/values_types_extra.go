@@ -23,6 +23,11 @@ type SDSConfigToken struct {
 	Aud string `json:"aud,omitempty"`
 }
 
+type PeerCaCrlConfig struct {
+	// When enabled, ztunnel will check certificates against the CRL
+	Enabled *bool `json:"enabled,omitempty"`
+}
+
 type CNIValues struct {
 	// Configuration for the Istio CNI plugin.
 	Cni *CNIConfig `json:"cni,omitempty"`
@@ -75,6 +80,9 @@ type ZTunnelConfig struct {
 	Resources *k8sv1.ResourceRequirements `json:"resources,omitempty"`
 	// The resource quotas configuration for ztunnel
 	ResourceQuotas *ResourceQuotas `json:"resourceQuotas,omitempty"`
+	// Certificate Revocation List (CRL) support for plugged-in CAs.
+	// When enabled, ztunnel will check certificates against the CRL
+	PeerCaCrl *PeerCaCrlConfig `json:"peerCaCrl,omitempty"`
 	// K8s node selector settings.
 	//
 	// See https://kubernetes.io/docs/user-guide/node-selection/
@@ -119,6 +127,13 @@ type ZTunnelConfig struct {
 	SeLinuxOptions *k8sv1.SELinuxOptions `json:"seLinuxOptions,omitempty"`
 	// Defines the update strategy to use when the version in the Ztunnel CR is updated.
 	UpdateStrategy *appsv1.DaemonSetUpdateStrategy `json:"updateStrategy,omitempty"`
+	// DNS policy for the ztunnel pod
+	// More info: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy
+	// +kubebuilder:validation:Enum=ClusterFirstWithHostNet;ClusterFirst;Default;None
+	DNSPolicy *k8sv1.DNSPolicy `json:"dnsPolicy,omitempty"`
+	// DNS config for the ztunnel pod
+	// https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config
+	DNSConfig *k8sv1.PodDNSConfig `json:"dnsConfig,omitempty"`
 }
 
 // ZTunnelGlobalConfig is a subset of the Global Configuration used in the Istio ztunnel chart.

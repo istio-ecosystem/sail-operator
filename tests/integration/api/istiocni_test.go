@@ -108,7 +108,7 @@ var _ = Describe("IstioCNI", Label("istiocni"), Ordered, func() {
 			})
 
 			It("indicates in the status that the namespace doesn't exist", func() {
-				expectCNICondition(ctx, v1.IstioCNIConditionReconciled, metav1.ConditionFalse, func(g Gomega, condition *v1.IstioCNICondition) {
+				expectCNICondition(ctx, v1.IstioCNIConditionReconciled, metav1.ConditionFalse, func(g Gomega, condition *v1.StatusCondition) {
 					g.Expect(condition.Reason).To(Equal(v1.IstioCNIReasonReconcileError))
 					g.Expect(condition.Message).To(ContainSubstring(fmt.Sprintf("namespace %q doesn't exist", nsName)))
 				})
@@ -269,7 +269,7 @@ var _ = Describe("IstioCNI", Label("istiocni"), Ordered, func() {
 })
 
 func expectCNICondition(ctx context.Context, condition v1.IstioCNIConditionType, status metav1.ConditionStatus,
-	extraChecks ...func(Gomega, *v1.IstioCNICondition),
+	extraChecks ...func(Gomega, *v1.StatusCondition),
 ) {
 	cni := v1.IstioCNI{}
 	Eventually(func(g Gomega) {

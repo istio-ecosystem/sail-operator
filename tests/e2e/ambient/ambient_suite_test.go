@@ -25,7 +25,9 @@ import (
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 var (
@@ -36,9 +38,10 @@ var (
 	istioCniNamespace     = common.IstioCniNamespace
 	ztunnelNamespace      = common.ZtunnelNamespace
 	istioCniName          = env.Get("ISTIOCNI_NAME", "default")
-	expectedRegistry      = env.Get("EXPECTED_REGISTRY", "^docker\\.io|^gcr\\.io")
+	expectedRegistry      = env.Get("EXPECTED_REGISTRY", "^docker\\.io|^gcr\\.io|^registry\\.istio\\.io")
 	multicluster          = env.GetBool("MULTICLUSTER", false)
 	keepOnFailure         = env.GetBool("KEEP_ON_FAILURE", false)
+	fipsCluster           = env.GetBool("FIPS_CLUSTER", false)
 
 	k kubectl.Kubectl
 )
@@ -55,6 +58,7 @@ func TestAmbient(t *testing.T) {
 
 func setup() {
 	GinkgoWriter.Println("************ Running Setup ************")
+	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
 	GinkgoWriter.Println("Initializing k8s client")
 	cl, err = k8sclient.InitK8sClient("")

@@ -25,6 +25,7 @@ import (
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	admissionv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -130,7 +131,7 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 
 				When("creating the IstioRevisionTag", func() {
 					BeforeAll(func() {
-						targetRef := v1.IstioRevisionTagTargetReference{
+						targetRef := v1.TargetReference{
 							Kind: referencedResource,
 							Name: getRevisionName(istio, istio.Spec.Version),
 						}
@@ -149,6 +150,20 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 					})
 					It("updates IstioRevisionTag status", func() {
 						expectTagInUse(ctx, metav1.ConditionFalse, getRevisionName(istio, istioversion.Base))
+					})
+					It("creates the istiod-default-validator ValidatingWebhookConfiguration", func() {
+						webhookKey := client.ObjectKey{Name: "istiod-default-validator"}
+						webhook := &admissionv1.ValidatingWebhookConfiguration{}
+						Eventually(k8sClient.Get).WithArguments(ctx, webhookKey, webhook).Should(Succeed())
+
+						revisionName := getRevisionName(istio, istioversion.Base)
+						expectedServiceName := "istiod-" + revisionName
+						Expect(webhook.Webhooks).To(HaveLen(1))
+						Expect(webhook.Webhooks[0].ClientConfig.Service).ToNot(BeNil())
+						Expect(webhook.Webhooks[0].ClientConfig.Service.Name).To(Equal(expectedServiceName),
+							"VWC should point to the istiod service for the referenced revision")
+						Expect(webhook.Webhooks[0].ClientConfig.Service.Namespace).To(Equal(istio.Spec.Namespace),
+							"VWC should point to the correct namespace for the referenced revision")
 					})
 				})
 				When("workload ns is labeled with istio-injection label", func() {
@@ -256,7 +271,7 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 					Name: "default",
 				},
 				Spec: v1.IstioRevisionTagSpec{
-					TargetRef: v1.IstioRevisionTagTargetReference{
+					TargetRef: v1.TargetReference{
 						Kind: "Istio",
 						Name: istioName,
 					},
@@ -301,7 +316,7 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 					Name: "default",
 				},
 				Spec: v1.IstioRevisionTagSpec{
-					TargetRef: v1.IstioRevisionTagTargetReference{
+					TargetRef: v1.TargetReference{
 						Kind: "Istio",
 						Name: istioName,
 					},
@@ -387,7 +402,7 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 					Name: defaultTagName,
 				},
 				Spec: v1.IstioRevisionTagSpec{
-					TargetRef: v1.IstioRevisionTagTargetReference{
+					TargetRef: v1.TargetReference{
 						Kind: "Istio",
 						Name: istioName,
 					},
@@ -434,7 +449,7 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 					Name: defaultTagName,
 				},
 				Spec: v1.IstioRevisionTagSpec{
-					TargetRef: v1.IstioRevisionTagTargetReference{
+					TargetRef: v1.TargetReference{
 						Kind: "Istio",
 						Name: istioName,
 					},

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
@@ -34,8 +35,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var _ = Describe("Multicluster deployment models", Label("multicluster", "multicluster-multiprimary"), Ordered, func() {
-	SetDefaultEventuallyTimeout(180 * time.Second)
+var _ = Describe("Multicluster deployment models", Label("multicluster", "multicluster-multiprimary", "slow"), Ordered, func() {
+	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
 	Context("Sidecar", func() {
@@ -126,6 +127,11 @@ func generateMultiPrimaryTestCases(profile string) {
 						common.AwaitDeployment(ctx, "istio-eastwestgateway", k2, clRemote)
 						Success("Gateway is created and available in both clusters")
 					})
+
+					It("has external IPs assigned", func(ctx SpecContext) {
+						expectLoadBalancerAddress(ctx, k1, clPrimary, "istio-eastwestgateway")
+						expectLoadBalancerAddress(ctx, k2, clRemote, "istio-eastwestgateway")
+					})
 				})
 
 				When("are installed remote secrets on each cluster", func() {
@@ -175,6 +181,11 @@ func generateMultiPrimaryTestCases(profile string) {
 						Eventually(common.CheckSamplePodsReady).WithArguments(ctx, clPrimary).Should(Succeed(), "Error checking status of sample pods on Cluster #1")
 						Eventually(common.CheckSamplePodsReady).WithArguments(ctx, clRemote).Should(Succeed(), "Error checking status of sample pods on Cluster #2")
 						Success("Sample app is created in both clusters and Running")
+					})
+
+					It("can reach target east-west gateway from each cluster", func(ctx SpecContext) {
+						eventuallyLoadBalancerIsReachable(ctx, k1, k2, clRemote, "istio-eastwestgateway")
+						eventuallyLoadBalancerIsReachable(ctx, k2, k1, clPrimary, "istio-eastwestgateway")
 					})
 
 					It("can access the sample app from both clusters", func(ctx SpecContext) {

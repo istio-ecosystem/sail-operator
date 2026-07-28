@@ -112,3 +112,51 @@ func TestGetBool(t *testing.T) {
 		})
 	}
 }
+
+func TestGetInt(t *testing.T) {
+	intKey := "ENV_TEST_TEST_GET_INT_VALID"
+	intValue := "42"
+	t.Setenv(intKey, intValue)
+
+	notIntKey := "ENV_TEST_TEST_GET_INT_INVALID"
+	notIntValue := "not an int"
+	t.Setenv(notIntKey, notIntValue)
+
+	tests := []struct {
+		name         string
+		key          string
+		defaultValue int
+		want         int
+	}{
+		{
+			name:         "empty-key",
+			key:          "",
+			defaultValue: 100,
+			want:         100,
+		},
+		{
+			name:         "missing-env-var",
+			key:          "NONEXISTENT_ENV_VAR",
+			defaultValue: 200,
+			want:         200,
+		},
+		{
+			name:         "int-value",
+			key:          intKey,
+			defaultValue: 0,
+			want:         42,
+		},
+		{
+			name:         "non-int-value-returns-default",
+			key:          notIntKey,
+			defaultValue: 300,
+			want:         300,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := GetInt(tt.key, tt.defaultValue)
+			assert.Equalf(t, tt.want, got, "GetInt(%v, %v)", tt.key, tt.defaultValue)
+		})
+	}
+}
