@@ -26,8 +26,9 @@ import (
 )
 
 const (
-	istioRevisionController = "istiorevision"
-	istioCNIController      = "istiocni"
+	istioRevisionController    = "istiorevision"
+	istioRevisionTagController = "istiorevisiontag"
+	istioCNIController         = "istiocni"
 )
 
 func getReconcileCount(g Gomega, controllerName string) float64 {
