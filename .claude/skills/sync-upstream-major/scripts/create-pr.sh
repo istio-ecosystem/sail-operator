@@ -36,7 +36,11 @@ CUR_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 git diff --quiet && git diff --cached --quiet || die "有未提交的修改，请先 commit（-s 签名，禁止 amend）"
 
 info "push $SYNC_BRANCH 到 origin ..."
-git push -u origin "$SYNC_BRANCH"
+# devpod 的 ssh-agent 可能中途失效（Permission denied (publickey)），失败时用 gh 凭据走 https
+git push -u origin "$SYNC_BRANCH" || {
+  warn "SSH push 失败，改用 gh credential helper 走 https"
+  git -c credential.helper='!gh auth git-credential' push "https://github.com/$REPO_SLUG.git" "$SYNC_BRANCH"
+}
 
 EXISTING="$(gh pr list --repo "$REPO_SLUG" --head "$SYNC_BRANCH" --state open --json number -q '.[0].number' 2>/dev/null || true)"
 if [[ -n "$EXISTING" ]]; then
