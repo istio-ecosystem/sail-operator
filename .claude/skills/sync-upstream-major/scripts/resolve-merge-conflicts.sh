@@ -149,7 +149,7 @@ if [[ -n "$merge_base" ]]; then
   both_changed=$(comm -12 \
     <(git diff --name-only "$merge_base" HEAD -- '*.go' | sort) \
     <(git diff --name-only "$merge_base" MERGE_HEAD -- '*.go' | sort))
-  suspects=$(grep -lE 'Fips|VendorDefaults|vendorDefaults|multus' $both_changed 2>/dev/null || true)
+  suspects=$(echo "$both_changed" | xargs -r grep -lE 'Fips|VendorDefaults|vendorDefaults|multus' 2>/dev/null || true)
   if [[ -n "$suspects" ]]; then
     echo "以下双侧改动的文件含 alauda 特有机制关键词，处理完 C 层后逐个 diff 上游核查重复定义/残留："
     while IFS= read -r s; do echo "  $s"; done <<<"$suspects"
