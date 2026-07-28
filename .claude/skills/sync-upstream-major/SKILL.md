@@ -141,7 +141,7 @@ bash "$SKILL_DIR/scripts/watch-release.sh"
 ```
 
 - **PIPELINE_SUCCESS（0）**：把输出中的 operator / bundle 镜像名加入最终汇报；
-- **PIPELINE_FAILED（2）**：输出附失败 step 概览与日志摘要（完整失败日志在 `out/sync-upstream-major/release-failed.log`）。若输出含 **`KNOWN_ISSUE: BUILD_TOOLS_IMAGE_PULL`**（istio-testing/build-tools 镜像下载问题），按约定**不要自行修复，直接报告用户处理**。其他失败：定位失败 step，判断是本次同步引入（构建错误、bundle 校验失败、workflow 编辑错误）还是环境问题（runner、registry 登录）；属同步引入的：修复 → 新 commit → `git push origin HEAD` → 重跑 run-release.sh（生成新时间戳版本）→ 重新后台 watch；拿不准的修复先向用户提问；
+- **PIPELINE_FAILED（2）**：输出附失败 step 概览与日志摘要（完整失败日志在 `out/sync-upstream-major/release-failed.log`）。若输出含 **`KNOWN_ISSUE: BUILD_TOOLS_IMAGE_PULL`**（istio-testing/build-tools 镜像下载问题），按约定**不要自行修复，直接报告用户处理**。若含 **`KNOWN_ISSUE: GH_RELEASE_TARGET_BRANCH_MISSING`**（1.30 首战实测）：create-gh-release 的 `--target release-2.X` 分支在 PR 合并前不存在（HTTP 422 Invalid target_commitish），是验证 run 的**预期尾部失败**——按脚本提示核对镜像 step 全绿后视为同步验证通过，镜像名从 `Output image:` step 名提取进汇报，GitHub release 留待 PR 合并、release-2.X 分支创建后的正式发版，写进遗留事项即可。其他失败：定位失败 step，判断是本次同步引入（构建错误、bundle 校验失败、workflow 编辑错误）还是环境问题（runner、registry 登录）；属同步引入的：修复 → 新 commit → `git push origin HEAD` → 重跑 run-release.sh（生成新时间戳版本）→ 重新后台 watch；拿不准的修复先向用户提问；
 - **PIPELINE_TIMEOUT（3）**：告知用户仍在运行，附 RUN_URL。
 
 ## 最终汇报

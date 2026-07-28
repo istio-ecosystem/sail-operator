@@ -81,6 +81,16 @@ if [[ -n "$BT_LINES" ]]; then
   echo "按约定：此问题不要自行修复，直接报告用户处理。"
 fi
 
+# 已知问题识别：PR 合并前的验证 run，create-gh-release 的 --target release-2.X 分支尚不存在。
+# 若镜像构建/推送 step 已全部成功、仅该步骤 422，同步验证视为通过，正式发版等 PR 合并建分支后再跑
+if grep -q 'Invalid target_commitish' "$LOG_FILE" 2>/dev/null; then
+  echo
+  echo "KNOWN_ISSUE: GH_RELEASE_TARGET_BRANCH_MISSING"
+  echo "create-gh-release 的 --target release-2.X 分支尚不存在（PR 合并前的验证 run 属预期）。"
+  echo "核对镜像 step 是否全绿: gh run view --repo <repo> <run_id> --json jobs -q '.jobs[].steps[] | select(.conclusion != \"skipped\") | .name + \" => \" + .conclusion'"
+  echo "全绿则同步验证通过，镜像名在 'Output image:' step 名里；GitHub release 待 PR 合并、release-2.X 分支创建后由正式发版补齐。"
+fi
+
 echo
 echo "==== 失败日志末尾（完整日志: $LOG_FILE）===="
 tail -80 "$LOG_FILE" 2>/dev/null || true
