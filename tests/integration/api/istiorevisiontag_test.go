@@ -165,6 +165,48 @@ var _ = Describe("IstioRevisionTag resource", Label("istiorevisiontag"), Ordered
 						Expect(webhook.Webhooks[0].ClientConfig.Service.Namespace).To(Equal(istio.Spec.Namespace),
 							"VWC should point to the correct namespace for the referenced revision")
 					})
+
+					It("skips reconcile when only caBundle and failurePolicy are updated on ValidatingWebhookConfiguration", func() {
+						time.Sleep(5 * time.Second)
+
+						webhook := &admissionv1.ValidatingWebhookConfiguration{}
+						webhookKey := client.ObjectKey{Name: "istiod-default-validator"}
+						Expect(k8sClient.Get(ctx, webhookKey, webhook)).To(Succeed())
+
+						expectNoReconciliation(istioRevisionTagController, func() {
+							By("updating caBundle and failurePolicy on ValidatingWebhookConfiguration")
+							for i := range webhook.Webhooks {
+								webhook.Webhooks[i].ClientConfig.CABundle = []byte("new-ca-bundle-data")
+								webhook.Webhooks[i].FailurePolicy = ptr.Of(admissionv1.Fail)
+							}
+							Expect(k8sClient.Update(ctx, webhook)).To(Succeed())
+						})
+					})
+
+					It("skips reconcile when only caBundle is updated on MutatingWebhookConfiguration", func() {
+						time.Sleep(5 * time.Second)
+
+						webhookList := &admissionv1.MutatingWebhookConfigurationList{}
+						Expect(k8sClient.List(ctx, webhookList)).To(Succeed())
+						var webhook *admissionv1.MutatingWebhookConfiguration
+						for i := range webhookList.Items {
+							for _, ref := range webhookList.Items[i].OwnerReferences {
+								if ref.Kind == v1.IstioRevisionTagKind {
+									webhook = &webhookList.Items[i]
+									break
+								}
+							}
+						}
+						Expect(webhook).ToNot(BeNil(), "expected to find a MutatingWebhookConfiguration owned by the IstioRevisionTag")
+
+						expectNoReconciliation(istioRevisionTagController, func() {
+							By("updating caBundle on MutatingWebhookConfiguration")
+							for i := range webhook.Webhooks {
+								webhook.Webhooks[i].ClientConfig.CABundle = []byte("new-ca-bundle-data")
+							}
+							Expect(k8sClient.Update(ctx, webhook)).To(Succeed())
+						})
+					})
 				})
 				When("workload ns is labeled with istio-injection label", func() {
 					BeforeAll(func() {
