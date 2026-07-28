@@ -1,4 +1,18 @@
 #!/usr/bin/env bash
+
+# Copyright Alauda Mesh Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 # 大版本同步冲突的机械化解决脚本（三层策略中的 A/B 层）。
 # 用法：git merge upstream/release-1.XX 出现冲突后，在仓库根目录执行本脚本。
 # A/B 层路径一律解决为上游侧（theirs）：A 层随后会被 make gen 整体重新生成，
@@ -122,4 +136,25 @@ if (( ${#manual_list[@]} > 0 )); then
 else
   echo
   echo "无 C 层冲突: git commit -s --no-edit 完成合并，再执行 update-versions.sh"
+fi
+
+# 语义冲突哨兵：git 自动合并"成功"的文件也可能坏——上游收编 alauda cherry-pick 后重构签名时，
+# 双侧改动会被 git 拼在一起产生重复定义（实测 1.30 同步中 fips.go/fips_test.go 即如此）。
+# 列出 alauda 特有机制关键词所在的、本次合并双侧都改过的 go 文件，提示人工 diff 上游核查；
+# merge commit 前务必 go build ./... && go vet ./... 冒烟。
+echo
+echo "==== 语义冲突哨兵（自动合并 ≠ 语义正确）===="
+merge_base=$(git merge-base HEAD MERGE_HEAD 2>/dev/null || true)
+if [[ -n "$merge_base" ]]; then
+  both_changed=$(comm -12 \
+    <(git diff --name-only "$merge_base" HEAD -- '*.go' | sort) \
+    <(git diff --name-only "$merge_base" MERGE_HEAD -- '*.go' | sort))
+  suspects=$(grep -lE 'Fips|VendorDefaults|vendorDefaults|multus' $both_changed 2>/dev/null || true)
+  if [[ -n "$suspects" ]]; then
+    echo "以下双侧改动的文件含 alauda 特有机制关键词，处理完 C 层后逐个 diff 上游核查重复定义/残留："
+    while IFS= read -r s; do echo "  $s"; done <<<"$suspects"
+  else
+    echo "未发现需要重点核查的双侧改动文件"
+  fi
+  echo "merge commit 前执行: go build ./... && go vet ./... 确认无重复定义等语义冲突"
 fi

@@ -1,4 +1,18 @@
 #!/usr/bin/env bash
+
+# Copyright Alauda Mesh Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 # 公共函数与常量，供各步骤脚本 source 使用。
 
 set -euo pipefail
@@ -67,13 +81,13 @@ detect_build_env() {
   local t
   for t in docker podman nerdctl; do
     if command -v "$t" >/dev/null 2>&1 && "$t" info >/dev/null 2>&1; then
-      BUILD_MODE=container
+      export BUILD_MODE=container
       export CONTAINER_CLI="$t"
       info "构建模式: 容器（$t）"
       return
     fi
   done
-  BUILD_MODE=local
+  export BUILD_MODE=local
   export BUILD_WITH_CONTAINER=0
   export PATH="$ROOT/bin:$PATH"
   info "构建模式: 本地工具链（未检测到可用容器工具，BUILD_WITH_CONTAINER=0）"
@@ -82,5 +96,30 @@ detect_build_env() {
   if ! command -v license-lint >/dev/null 2>&1; then
     info "安装 license-lint 到 ./bin ..."
     GOBIN="$ROOT/bin" go install istio.io/tools/cmd/license-lint@latest
+  fi
+  # make test 的管道用 go-junit-report（缺失会 SIGPIPE 打断 go test）
+  if ! command -v go-junit-report >/dev/null 2>&1; then
+    info "安装 go-junit-report 到 ./bin ..."
+    GOBIN="$ROOT/bin" go install github.com/jstemmer/go-junit-report/v2@v2.1.0
+  fi
+  # make lint 的 lint-go 用 golangci-lint（v2 配置格式，装 v2 系列）
+  if ! command -v golangci-lint >/dev/null 2>&1; then
+    info "安装 golangci-lint 到 ./bin（编译需 2~3 分钟）..."
+    GOBIN="$ROOT/bin" go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
+  fi
+  # make lint 的 lint-scripts 用 shellcheck（非 go 工具，取 release 静态二进制）。
+  # 固定 v0.8.0 与上游 build-tools 行为对齐：0.9+ 新增的 SC2317 会把上游 tests/e2e 脚本判红
+  if ! command -v shellcheck >/dev/null 2>&1; then
+    info "安装 shellcheck 到 ./bin ..."
+    local scver=v0.8.0 scdir
+    scdir=$(mktemp -d)
+    if curl -sSL --fail -o "$scdir/sc.tar.xz" \
+         "https://github.com/koalaman/shellcheck/releases/download/$scver/shellcheck-$scver.linux.$(uname -m).tar.xz" \
+       && tar -xJf "$scdir/sc.tar.xz" -C "$scdir"; then
+      cp "$scdir/shellcheck-$scver/shellcheck" "$ROOT/bin/"
+    else
+      warn "shellcheck 自动安装失败，make lint 的 lint-scripts 将不可用（如实汇报即可）"
+    fi
+    rm -rf "$scdir"
   fi
 }

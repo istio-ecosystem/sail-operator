@@ -1,4 +1,18 @@
 #!/usr/bin/env bash
+
+# Copyright Alauda Mesh Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 # 步骤 8a：在同步分支上触发 Alauda Release 流水线（workflow_dispatch）。
 #   release_version = <mesh版本>-r<时间戳>（日期后缀避免与手动发布的版本号冲突）
 #   bundle_channels = 新 channels（与 workflow 里更新后的默认值一致，显式传更稳）
@@ -6,6 +20,7 @@
 # 退出码: 0=已触发并拿到 RUN_ID  4=触发后未见 run  1=前置失败
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
 source "$SCRIPT_DIR/common.sh"
 repo_root
 load_state

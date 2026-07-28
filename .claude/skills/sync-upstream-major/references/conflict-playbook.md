@@ -47,17 +47,24 @@
 - 来自上游 cherry-pick（commit message 带上游 PR 号，如 `(#1596)`）→ 上游 release 分支已包含正式版本，**取上游侧**。
 - alauda 自有改动 → 保留，叠加到上游新版本上。
 
-| 文件 | alauda 自有改动（截至 2026-07） | 处理 |
+| 文件 | alauda 自有改动（截至 2026-07，1.30 同步后更新） | 处理 |
 |---|---|---|
-| `Makefile.core.mk` | 新增 `alauda-update-values` 目标、`GENERATE_RELATED_IMAGES` 分支逻辑 | 取上游新内容（VERSION、工具版本等），保留这两处 alauda 追加 |
-| `chart/values.yaml` | operator 镜像地址、版本行由 `alauda-update-values` sed；个别定制值 | 先取上游，gen 后过 diff 手动补回定制值 |
-| `chart/templates/olm/clusterserviceversion.yaml` 等 `chart/templates/` | CSV 模板小改（如 2 行 alauda 调整）；`rbac/role.yaml` 历史改动来自上游 cherry-pick | role.yaml 取上游；olm 模板保留 alauda 改动 |
-| `chart/samples/` | 样例里的 istio 版本号 | 取上游后把版本号对齐 alauda 默认版本 |
-| `controllers/`、`pkg/` 下 .go | 历史上均为上游 cherry-pick；alauda 自有逻辑集中在 vendor_defaults 机制（`pkg/istiovalues/`） | 逐文件核对来源，cherry-pick 的取上游 |
-| `tests/integration/` | `skip using vendor defaults in integration tests`（alauda 自有）+ cherry-pick 带来的用例 | 保留 vendor-defaults 相关改动，其余取上游 |
+| `Makefile.core.mk` | 新增 `alauda-update-values` 目标、`GENERATE_RELATED_IMAGES` 分支逻辑 | 取上游新内容（VERSION、工具版本等），保留这两处 alauda 追加。1.30 实测冲突仅 VERSION 一行 |
+| `chart/values.yaml` | operator 镜像地址、版本行由 `alauda-update-values` sed；`deployment.annotations`（矩阵内 alauda 镜像）与 `csv.longDescription` 版本列表为手动维护 | 先取上游，gen 后按 SKILL.md 步骤 4 明细回补（annotations 必须裁剪，否则上游键经 helm 深合并漏进 CSV） |
+| `chart/templates/olm/clusterserviceversion.yaml` 等 `chart/templates/` | olm 模板唯一 alauda 改动：`provider.name` 模板化（值在 alauda/values.yaml）；`rbac/role.yaml` 历史改动来自上游 cherry-pick #1477 | role.yaml 取上游；olm 模板保留 alauda 改动（1.30 实测 git 自动合并已正确保留，无冲突） |
+| `chart/samples/` | 样例里的 istio 版本号 | 取上游后把版本号对齐 alauda 默认版本。当 alauda 新构建基于上游 release 分支最新 patch 时（常态），上游侧版本号即目标值，直接取上游零修改 |
+| `controllers/`、`pkg/` 下 .go | **1.30 起 FIPS（#1596/#1682）与 vendor_defaults 机制均已被上游收编**：上游有 `pkg/istiovalues/vendor_defaults.go/.yaml/_test.go`，且 `pkg/reconcile/cni.go`、`pkg/revision/values.go` 自带调用。alauda 仅剩差异：`vendor_defaults.go` 的 `USE_VENDOR_DEFAULTS` 环境变量开关 + `vendor_defaults.yaml` 的版本数据块 | controller/reconcile 文件直接取上游；核对 `USE_VENDOR_DEFAULTS` 开关与 yaml 数据块保留（自动合并通常正确）。**警惕 fips.go/fips_test.go 型语义冲突**（见下节） |
+| `tests/integration/` | 无 alauda 自有改动残留（vendor defaults 开关生效于 `.github/workflows/integration-tests.yaml` 的 `USE_VENDOR_DEFAULTS: "false"`，不在测试代码里） | 直接取上游；冲突多为 import 排布 + 上游新增用例 |
 | `.github/workflows/` | alauda 自有 CI（`alauda-release.yaml` 等）+ 对上游 workflow 的修补（去重、action 升级） | alauda 独有文件保留；上游文件取上游后重放 alauda 修补 |
 | `go.mod` | 无自有依赖，但 istio.io/istio、istio.io/api 必须匹配 alauda 最新 istio 版本 | 取上游，校验 istio 依赖版本，`go mod tidy` |
-| `Makefile.vendor.mk`、`alauda/values.yaml`、`pkg/istioversion/alauda-versions.yaml`、`pkg/istiovalues/vendor_defaults.yaml`、`Dockerfile.alauda` | alauda 独有文件，上游没有，不会冲突 | 按 SKILL.md 第 5 步更新内容即可 |
+| `Makefile.vendor.mk`、`alauda/values.yaml`、`pkg/istioversion/alauda-versions.yaml`、`pkg/istiovalues/vendor_defaults.yaml`、`Dockerfile.alauda`、`hack/alauda-patch-csv.sh` | alauda 独有文件，上游没有，不会冲突 | 按 SKILL.md 第 3 步更新内容即可 |
+
+### 语义冲突：git 自动合并成功 ≠ 编译通过（1.30 实测）
+
+上游收编 alauda 的 cherry-pick 并重构签名/位置时，git 会把双侧改动拼在一起而不报冲突：
+
+- `pkg/istiovalues/fips.go`：上游新增 `ApplyZTunnelFipsValues(*v1.ZTunnelValues)`，alauda 旧版 `ApplyZTunnelFipsValues(helm.Values)` 被拼在文件尾 → 同名重复定义，编译失败；`fips_test.go` 同样残留旧签名测试。解法：功能已被上游收编（等价），两文件直接对齐上游。
+- resolve-merge-conflicts.sh 末尾的"语义冲突哨兵"会列出双侧改动且含 Fips/VendorDefaults/multus 关键词的 go 文件；merge commit 前必须 `go build ./... && go vet ./...`。
 
 ## 构建环境自适应（容器 / 本地工具链）的依据
 

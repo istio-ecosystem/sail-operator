@@ -1,9 +1,24 @@
 #!/usr/bin/env bash
+
+# Copyright Alauda Mesh Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 # 步骤 4：重新生成全部生成物。耗时可达 5~15 分钟（下载 charts、controller-gen、operator-sdk 等），
 # 调用方要设大 timeout 或后台运行。幂等，失败修复后可整体重跑。
 # 退出码: 0=OK  1=失败（make 的输出即错误现场）
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
 source "$SCRIPT_DIR/common.sh"
 repo_root
 load_state
@@ -30,13 +45,16 @@ make gen
 info "make alauda-update-values ..."
 make alauda-update-values
 
-# 上游命名的 CSV 是 A 层「取上游侧」的合并残留（alauda 的 operator 名是 servicemesh-operator2），
-# make gen 只会重写 alauda 命名的文件，不会清理它
-if [[ -e bundle/manifests/sailoperator.clusterserviceversion.yaml ]]; then
-  git rm -f -q --ignore-unmatch bundle/manifests/sailoperator.clusterserviceversion.yaml || true
-  rm -f bundle/manifests/sailoperator.clusterserviceversion.yaml
-  info "已清理上游命名的 CSV 残留 bundle/manifests/sailoperator.clusterserviceversion.yaml"
-fi
+# 上游命名的 bundle 文件（CSV、metrics-reader clusterrole、metrics-service 等）是 A 层「取上游侧」
+# 的合并残留（alauda 的 operator 名是 servicemesh-operator2），make gen 只会重写 alauda 命名的文件，
+# 不会清理它们。注意 sailoperator.io_*.yaml 是 CRD 文件（API group 域名），不是上游命名残留，必须保留。
+for leftover in bundle/manifests/sailoperator.*.yaml bundle/manifests/sailoperator-*.yaml bundle/manifests/sail-operator-*.yaml; do
+  [[ -e "$leftover" ]] || continue
+  [[ "$leftover" == bundle/manifests/sailoperator.io_* ]] && continue
+  git rm -f -q --ignore-unmatch "$leftover" || true
+  rm -f "$leftover"
+  info "已清理上游命名的 bundle 残留 $leftover"
+done
 
 git add -A
 echo "RESULT: OK 生成完成（构建模式: $BUILD_MODE），工作区变更统计:"

@@ -1,8 +1,24 @@
 #!/usr/bin/env bash
+
+# Copyright Alauda Mesh Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# shellcheck disable=SC2015  # p()/f() 恒为真，A && B || C 惯用法在此安全
 # 步骤 6：一致性校验，输出 PASS/FAIL/WARN 逐项清单。
 # 退出码: 0=无 FAIL（可有 WARN）  2=存在 FAIL（修复后重跑到全过）  1=前置失败
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
 source "$SCRIPT_DIR/common.sh"
 repo_root
 load_state
@@ -110,7 +126,7 @@ fi
 
 # 7) alauda-release.yaml 的修改落地
 WF=.github/workflows/alauda-release.yaml
-grep -qE "^[[:space:]]*default: \"$NEW_CHANNELS\"$" "$WF" \
+grep -qE "^[[:space:]]*default: \"?$NEW_CHANNELS\"?$" "$WF" \
   && p "$WF bundle_channels 默认值 = $NEW_CHANNELS" \
   || f "$WF bundle_channels 默认值不是 $NEW_CHANNELS"
 if [[ "$UPSTREAM_BRANCH" == "release-1.30" ]]; then

@@ -1,4 +1,18 @@
 #!/usr/bin/env bash
+
+# Copyright Alauda Mesh Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 # 步骤 3：机械更新版本信息（不 commit，便于 review）。
 #   1) Makefile.vendor.mk: VERSION / CHANNELS
 #   2) .github/workflows/alauda-release.yaml: bundle_channels 默认值；release-1.30 特例改 TOOLS_REGISTRY_PROVIDER
@@ -7,6 +21,7 @@
 # 退出码: 0=OK  2=PATTERN_MISMATCH（按 FAIL 清单用 Edit 手动完成，其余不要重复改）  1=前置失败
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
 source "$SCRIPT_DIR/common.sh"
 repo_root
 load_state
