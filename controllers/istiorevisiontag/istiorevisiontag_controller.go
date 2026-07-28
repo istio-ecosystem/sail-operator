@@ -31,6 +31,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/revision"
 	"github.com/istio-ecosystem/sail-operator/pkg/validation"
+	"github.com/istio-ecosystem/sail-operator/pkg/watches"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
@@ -254,8 +255,10 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// cluster-scoped resources
 		Watches(&v1.Istio{}, operatorResourcesHandler).
 		Watches(&v1.IstioRevision{}, operatorResourcesHandler).
-		Watches(&admissionv1.MutatingWebhookConfiguration{}, ownedResourceHandler).
-		Watches(&admissionv1.ValidatingWebhookConfiguration{}, ownedResourceHandler).
+		Watches(&admissionv1.MutatingWebhookConfiguration{}, ownedResourceHandler,
+			builder.WithPredicates(watches.AsPredicate(watches.WebhookFilter()))).
+		Watches(&admissionv1.ValidatingWebhookConfiguration{}, ownedResourceHandler,
+			builder.WithPredicates(watches.AsPredicate(watches.WebhookFilter()))).
 		Complete(reconciler.NewStandardReconcilerWithFinalizer[*v1.IstioRevisionTag](r.Client, r.Reconcile, r.Finalize, constants.FinalizerName))
 }
 
