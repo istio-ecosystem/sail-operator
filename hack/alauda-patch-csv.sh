@@ -29,7 +29,8 @@ fi
 clusterserviceversion_file_path="$1"
 values_file_path="$2"
 
-export RELATED_IMAGES=$(yq -oj '[.deployment.annotations | to_entries[] | {"name": .key, "image": .value}] | sort_by(.name)' "${values_file_path}")
+RELATED_IMAGES=$(yq -oj '[.deployment.annotations | to_entries[] | {"name": .key, "image": .value}] | sort_by(.name)' "${values_file_path}")
+export RELATED_IMAGES
 yq -i '.spec.relatedImages = env(RELATED_IMAGES)' "${clusterserviceversion_file_path}"
 
 operator_image="$( ${YQ} '.metadata.annotations.containerImage' "${clusterserviceversion_file_path}" )"
