@@ -15,7 +15,7 @@
 1. **冲突量与分支选择基本无关。** 真实冲突两者只差 1 个文件（一个测试文件），其余全是会被 `make gen` 重建的 `resources/`。"合 release 分支冲突更多"的担忧不成立。
 2. **main 的真正问题是内容，不是冲突。** 实测时 upstream main 领先 release-1.30 分叉点 116 个提交，全部是未发布的下一版本开发代码；而 release-1.30 分支是 1.30.3 已发布代码加持续的 backport。产品版本应该基于已发布代码。
 3. **历史上合 main 能工作**，是因为恰好在上游刚发布后不久同步（此时 main ≈ release 分叉点）。这依赖时机，而且后续拿不到该版本的 patch 修复，只能像过去一样零散 cherry-pick CVE 修复（`hotfix-2.1/*` 分支就是这么来的）。合 release 分支后，未来的小版本同步只需再次 `git merge upstream/release-1.XX` 拿到新 backport，干净得多。
-4. **版本矩阵保证。** alauda 需要 operator 同时支持两个偶数大版本（如 1.28 + 1.30）。release-1.30 的 operator 按上游 n-2 政策固定支持 1.28~1.30；而 main 会随着下一版本开发逐步丢弃老版本支持。
+4. **版本矩阵保证。** alauda 需要 operator 同时支持两个 istio 大版本（如 1.28 + 1.30）。istio 一年发 4 个大版本、alauda 一年发 3 个 mesh 版本，所以会不时跳过一个 istio 大版本——两个维护版本不保证连续，也不保证是偶数；但间距至多为 2，release-1.XX 的 operator 按上游 n-2 政策固定支持 1.XX 与其前两个大版本，恰好覆盖。而 main 会随着下一版本开发逐步丢弃老版本支持。
 
 ### 连续合并 release 分支的已知代价（可接受）
 
@@ -27,9 +27,9 @@
 
 | 路径 | 由哪个目标重新生成 |
 |---|---|
-| `resources/` | `download-istio-charts`（按 alauda-versions.yaml 下载）+ `remove-old-versions.sh`（删除不在矩阵中的目录）。解决冲突后直接 `rm -rf resources/*` 再 gen 最干净 |
+| `resources/` | `download-istio-charts`（按 alauda-versions.yaml 下载）+ `remove-old-versions.sh`（删除不在矩阵中的目录）。解决冲突后清掉版本目录再 gen 最干净，但**只能删 `resources/v*` 目录**——release-1.30 起 `resources/resources.go`（`//go:embed all:v*` 包，被 cmd/main.go import）是被跟踪的源码，整目录清空会导致编译失败（regen.sh 已按此实现） |
 | `api/`（`*_types.go`、`values_types.gen.go`） | `gen-api`（api_transformer 从 istio.io/istio 依赖生成）+ `update-version-list.sh`（版本枚举注解）。注意：当前 alauda 对 api/ 的历史改动全部来自上游 cherry-pick，可放心取上游；若未来 alauda 加了自有 API 字段，该文件要升级为 C 层人工处理 |
-| `bundle/`、`bundle.Dockerfile` | `bundle`（`operator-sdk generate bundle --overwrite`，channels 来自 Makefile.vendor.mk 的 `CHANNELS`，operator-sdk 版本标签来自 Makefile.core.mk 的 `OPERATOR_SDK_VERSION`，都不用手改 bundle.Dockerfile 本身） |
+| `bundle/`、`bundle.Dockerfile` | `bundle`（`operator-sdk generate bundle --overwrite`，channels 来自 Makefile.vendor.mk 的 `CHANNELS`，operator-sdk 版本标签来自 Makefile.core.mk 的 `OPERATOR_SDK_VERSION`，都不用手改 bundle.Dockerfile 本身）。注意：上游命名的 `bundle/manifests/sailoperator.clusterserviceversion.yaml` 会作为「取上游侧」的残留留下（alauda 的 operator 名是 servicemesh-operator2，`make gen` 只重写 alauda 命名的文件），regen.sh 已自动 `git rm` 清理 |
 | `chart/crds/` | `gen-manifests`（controller-gen）+ `extract-istio-crds.sh`（从 go.mod 的 istio 依赖提取 Istio CRD——所以 go.mod 对齐要在 gen 之前做） |
 | `chart/Chart.yaml` | `operator-chart` / `alauda-update-values`（sed 回写 version/appVersion 为 Makefile.vendor.mk 的 VERSION） |
 | `docs/api-reference/sailoperator.io.md` | `gen-api-docs`（crd-ref-docs） |
@@ -59,10 +59,9 @@
 | `go.mod` | 无自有依赖，但 istio.io/istio、istio.io/api 必须匹配 alauda 最新 istio 版本 | 取上游，校验 istio 依赖版本，`go mod tidy` |
 | `Makefile.vendor.mk`、`alauda/values.yaml`、`pkg/istioversion/alauda-versions.yaml`、`pkg/istiovalues/vendor_defaults.yaml`、`Dockerfile.alauda` | alauda 独有文件，上游没有，不会冲突 | 按 SKILL.md 第 5 步更新内容即可 |
 
-## devpod 无 docker 的完整依据
+## 构建环境自适应（容器 / 本地工具链）的依据
 
-- devpod 内无 `docker`/`podman`，也没有 `/var/run/docker.sock`。
-- 仓库默认 `BUILD_WITH_CONTAINER=1`（`Makefile.overrides.mk`），所有 make 目标经 `common/scripts/run.sh` 进 build-tools 容器执行——这是 docker 依赖的唯一来源，`make gen`/`make alauda-update-values` 的实际工作本身不需要 docker。
-- `BUILD_WITH_CONTAINER=0` 时直接本地执行 `Makefile.core.mk`。实测完整 `make gen`（含 chart 下载、controller-gen、crd-ref-docs、license-lint、operator-sdk generate bundle + validate）在无 docker 的 devpod 中全部通过。
-- 本地缺失且 Makefile 不会自动安装的只有两个工具（build-tools 镜像内置所以上游没写引导）：`yq`（`download-istio-charts`、`bundle` 使用）和 `license-lint`（`mirror-licenses` 使用），都用 `go install` 装进 `./bin` 即可。
-- 仍然需要 docker 的目标（`docker-build`、`bundle-build`、`alauda-docker-buildx` 等镜像构建）不属于同步流程，交给 CI。
+- 仓库默认 `BUILD_WITH_CONTAINER=1`（`Makefile.overrides.mk`），所有 make 目标经 `common/scripts/run.sh` 进 build-tools 容器执行——这是容器依赖的唯一来源，`make gen`/`make alauda-update-values` 的实际工作本身不需要容器。
+- 因此 `common.sh` 的 `detect_build_env` 按当前执行环境自适应：有可用的容器工具（docker/podman/nerdctl，CLI 存在且 `info` 成功）就用容器模式即 make 默认行为；没有则 `BUILD_WITH_CONTAINER=0` 直接本地执行 `Makefile.core.mk`。实测本地模式完整 `make gen`（含 chart 下载、controller-gen、crd-ref-docs、license-lint、operator-sdk generate bundle + validate）全部通过，且生成结果与已提交内容逐字节一致。
+- 本地模式下缺失且 Makefile 不会自动安装的只有两个工具（build-tools 镜像内置所以上游没写引导）：`yq`（`download-istio-charts`、`bundle` 使用）和 `license-lint`（`mirror-licenses` 使用），`detect_build_env` 会自动 `go install` 进 `./bin`；`helm`、`operator-sdk`、`controller-gen` 等其余工具由 Makefile 自动下载。
+- 任何模式下都需要容器的目标（`docker-build`、`bundle-build`、`alauda-docker-buildx` 等镜像构建）不属于本地同步流程，由 Alauda Release 流水线（CI）负责。

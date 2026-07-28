@@ -117,4 +117,9 @@ if (( ${#manual_list[@]} > 0 )); then
       printf '  %-50s %s\n' "$f" "（新出现的冲突文件，逐行人工判断）"
     fi
   done
+  echo
+  echo "C 层全部处理完后: git add <文件> && git commit -s --no-edit（禁止 amend），再执行 update-versions.sh"
+else
+  echo
+  echo "无 C 层冲突: git commit -s --no-edit 完成合并，再执行 update-versions.sh"
 fi
