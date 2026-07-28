@@ -72,7 +72,7 @@ function downloadIstioManifests() {
   echo "${ISTIO_COMMIT}" > "${commit_file}"
 
   echo "downloading Git archive from ${ISTIO_URL}"
-  curl -sSfLO "${ISTIO_URL}"
+  curl -sSLfO "${ISTIO_URL}"
 
   ISTIO_FILE="${ISTIO_URL##*/}"
   EXTRACT_DIR="${ISTIO_REPO##*/}-${ISTIO_COMMIT}"

@@ -28,6 +28,7 @@ disable-model-invocation: true
 - 脚本间通过 `out/sync-upstream-major/state.env` 传递状态（`out/` 已 gitignore）。步骤 7 之前不要 push、不要建 PR。
 - 全程禁止 `git commit --amend`，一律新 commit，全部 `-s` 签名。
 - 本仓库有 `upstream` remote，gh 不带 `--repo` 时可能解析错仓库——脚本内已统一处理；你手动执行 gh 时也要带 `--repo <origin 的 owner/repo>`。
+- **大 PR 的 review 盲区**：同步 PR 有 600+ 变更文件，`gh pr view --json files` 只返回前 100 个、`gh pr diff`（REST diff）只含前 300 个文件的 patch、网页 files changed 需多次 Load more——排序靠后的文件（如 go.mod）容易被误判为"没改"。核对单个文件一律用本地 `git diff <上游快照> HEAD -- <文件>`，不要依赖 PR 视图。依赖版本的比较基准是 **release-1.XX**（不是 upstream main——main 是下一版本开发分支，依赖天然更新，与之对比会得出"很多库没升级"的错误结论）。PR 描述中写明合并的上游快照 SHA，方便 reviewer 用同一基准核对。
 - **release-1.30 特例**：上游把 build-tools 镜像迁到了 registry.istio.io，`alauda-release.yaml` 的 `TOOLS_REGISTRY_PROVIDER` 需改为 `registry.istio.io`。update-versions.sh 已内置该分支逻辑；后续大版本同步不涉及，届时可移除。
 
 ## 步骤 1：合并上游
@@ -107,7 +108,7 @@ bash "$SKILL_DIR/scripts/csv-diff.sh"
 bash "$SKILL_DIR/scripts/verify.sh"
 ```
 
-脚本逐项校验：vendor.mk 版本与 channels、bundle 两处 channel、CSV 的 name/version、上游 CSV 残留、矩阵内每个非 EOL 版本的 `resources/` 目录与 `alauda/values.yaml` 镜像 annotation（build 号一致）、vendor_defaults 块齐全、go.mod istio 依赖、workflow 修改落地。**FAIL（退出码 2）逐项修复后重跑到全 PASS**；WARN 逐条判断并写进汇报。relatedImages 本地不生成（`GENERATE_RELATED_IMAGES` 仅 release 流水线开启），不算缺失。
+脚本逐项校验：vendor.mk 版本与 channels、bundle 两处 channel、CSV 的 name/version、上游 CSV 残留、矩阵内每个非 EOL 版本的 `resources/` 目录与 `alauda/values.yaml` 镜像 annotation（build 号一致）、vendor_defaults 块齐全、go.mod istio 依赖、workflow 修改落地，以及**与上游合并快照（state 的 UPSTREAM_SHA）的全量差异审计**：go.mod/go.sum 逐字节一致（go.mod 是 git 自动合并重灾区，混入旧版本行不会有冲突标记，只查 istio.io 行不够）、licenses/ 一致（依赖对齐的独立佐证）、白名单外与上游不同的文件逐个 WARN（每个都必须能解释：本次刻意修改 → 写进汇报；解释不了 → 对齐上游）。**FAIL（退出码 2）逐项修复后重跑到全 PASS**；WARN 逐条判断并写进汇报。relatedImages 本地不生成（`GENERATE_RELATED_IMAGES` 仅 release 流水线开启），不算缺失。
 
 然后跑 `make lint` 与 `make test`（耗时较长，设大 timeout 或后台运行；手动执行带 `PATH="$PWD/bin:$PATH" BUILD_WITH_CONTAINER=0`）。1.30 实测经验：
 
@@ -152,8 +153,8 @@ bash "$SKILL_DIR/scripts/watch-release.sh"
 2. 合并：同步分支、合入提交数、冲突统计（A/B 机械 / C 人工），C 层逐文件冲突点与解法；
 3. 版本文件修改：vendor.mk、alauda-versions.yaml、vendor_defaults 新增块要点、workflow 修改（channels；release-1.30 的 TOOLS_REGISTRY_PROVIDER 特例）；
 4. **CSV 变更分析**：上游 CSV 逐条变更 → alauda 落地结论（必含，即使结论是「全部经模板自动流入」）；
-5. 校验：verify 的 WARN 项说明、lint / test 结果；
-6. PR 链接；
+5. 校验：verify 的 WARN 项说明、lint / test 结果、**全量差异审计结论**（与上游快照不同的文件数及归类：alauda 独有 / 定制 / 生成 / 刻意修改，白名单外 WARN 逐条解释）；
+6. PR 链接（描述中注明合并的上游快照 SHA 与 review 基准提示）；
 7. 流水线：release_version、RUN_URL、结果（成功镜像名 / 失败分析与处理）；
 8. 遗留事项（需用户定夺的项）。
 

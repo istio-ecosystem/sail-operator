@@ -135,7 +135,35 @@ if [[ "$UPSTREAM_BRANCH" == "release-1.30" ]]; then
     || f "$WF TOOLS_REGISTRY_PROVIDER 未改为 registry.istio.io（release-1.30 特例）"
 fi
 
-# 8) 被淘汰大版本在样例中的残留（提示性）
+# 8) 与上游合并快照的全量差异审计。
+# 基准用 state.env 的 UPSTREAM_SHA（merge 时的快照）：release 分支持续前进（Automator），
+# 用 upstream/<branch> ref 会因后续 fetch 漂移出假差异。老 state 无此键时回退到 ref。
+AUDIT_BASE="${UPSTREAM_SHA:-upstream/$UPSTREAM_BRANCH}"
+# 8a) go.mod / go.sum 必须与上游快照逐字节一致（alauda 无自有依赖；只查 istio.io 行不够——
+#     go.mod 是 git 自动合并的重灾区，混入旧版本行不会有冲突标记）
+git diff --quiet "$AUDIT_BASE" HEAD -- go.mod \
+  && p "go.mod 与上游快照 ${AUDIT_BASE:0:12} 逐字节一致" \
+  || f "go.mod 与上游快照不一致（git diff $AUDIT_BASE HEAD -- go.mod 查看；应整体对齐上游后 go mod tidy）"
+git diff --quiet "$AUDIT_BASE" HEAD -- go.sum \
+  && p "go.sum 与上游快照逐字节一致" \
+  || f "go.sum 与上游快照不一致（go.mod 对齐后 go mod tidy 重新生成）"
+# 8b) licenses/ 由 go.mod 依赖镜像而来，一致性是 go.mod 对齐的独立佐证
+git diff --quiet "$AUDIT_BASE" HEAD -- licenses/ \
+  && p "licenses/ 与上游快照一致（go.mod 对齐佐证）" \
+  || f "licenses/ 与上游快照有差异——回查 go.mod 依赖是否对齐、mirror-licenses 是否重跑"
+# 8c) 白名单外差异审计：与上游快照不同的文件必须全部可解释。
+#     白名单 = 按 alauda 矩阵生成的目录 + alauda 独有文件 + 已知定制文件（见 playbook C 层表）
+ALLOW_RE='^(\.claude/|alauda/|resources/|bundle/|docs/api-reference/|licenses/|api/|chart/(Chart\.yaml|values\.yaml|crds/|templates/olm/|samples/)|\.github/workflows/(al(au|ua)da-|integration-tests\.yaml$|unit-tests\.yaml$)|\.gitattributes$|Makefile\.core\.mk$|Makefile\.vendor\.mk$|Dockerfile\.alauda$|PROJECT$|bundle\.Dockerfile$|hack/alauda-|pkg/install/images\.gen\.go$|pkg/istiovalues/vendor_defaults\.(go|yaml)$|pkg/istioversion/(alauda-versions\.yaml|version_test\.go)$)'
+UNEXPECTED=$(git diff --name-only "$AUDIT_BASE" HEAD | grep -Ev "$ALLOW_RE" || true)
+if [[ -z "$UNEXPECTED" ]]; then
+  p "全量差异审计: 白名单外无与上游不同的文件"
+else
+  while IFS= read -r x; do
+    w "白名单外与上游快照存在差异: $x（本次刻意修改则在汇报中说明，否则应对齐上游）"
+  done <<<"$UNEXPECTED"
+fi
+
+# 9) 被淘汰大版本在样例中的残留（提示性）
 for m in ${NEWLY_EOL_MAJORS:-}; do
   hits=$(grep -rl "v${m//./\\.}" chart/samples 2>/dev/null || true)
   [[ -z "$hits" ]] || w "chart/samples 中仍引用已 EOL 的 v$m（对齐到新默认版本）: $(tr '\n' ' ' <<<"$hits")"

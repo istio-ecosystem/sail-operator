@@ -113,8 +113,12 @@ git rev-parse -q --verify "refs/heads/$SYNC_BRANCH" >/dev/null \
 
 BASE_SHA=$(git rev-parse "origin/$TARGET_BRANCH")
 MERGE_BASE=$(git merge-base "$BASE_SHA" "upstream/$UPSTREAM_BRANCH")
+# 记录本次合并的上游快照 SHA：release 分支会持续前进（Automator 等），后续 verify 的
+# 全量差异审计必须以该快照为基准，避免 fetch 后 ref 漂移造成假差异
+UPSTREAM_SHA=$(git rev-parse "upstream/$UPSTREAM_BRANCH")
 git checkout -b "$SYNC_BRANCH" "$BASE_SHA"
 
+save_state UPSTREAM_SHA "$UPSTREAM_SHA"
 save_state UPSTREAM_BRANCH "$UPSTREAM_BRANCH"
 save_state TARGET_BRANCH "$TARGET_BRANCH"
 save_state SYNC_BRANCH "$SYNC_BRANCH"
