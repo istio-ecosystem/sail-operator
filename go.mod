@@ -188,3 +188,10 @@ require (
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.2 // indirect
 )
+
+// istio.io/istio 不发语义化 module tag，只能记录 v0.0.0 伪版本，镜像扫描器会把全部历史
+// CVE 误判为未修复（semver 比较中 v0.0.0 低于一切 Fixed Version）。replace 到 alauda fork
+// 后组件以 fork 身份记录、脱离漏洞库匹配，并继承 fork 的安全修复。
+// 点位取 fork istio-1.XX 分支（对应上游 release-1.XX）最新提交，每次上游同步时一并更新，
+// 且必须包含上游 require 的 istio commit（sync-upstream-major 的 verify.sh 6b 校验）。
+replace istio.io/istio => github.com/alauda-mesh/istio v0.0.0-20260728064650-1509adfcdb2e
