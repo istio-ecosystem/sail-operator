@@ -66,6 +66,7 @@ bash "$SKILL_DIR/scripts/update-versions.sh"
 - `Makefile.vendor.mk`：`VERSION` → 新 mesh 版本；`CHANNELS` → `"stable,stable-2.X"`（bundle.Dockerfile、CSV、annotations 的 channel 均由它生成，不用手改）；
 - `.github/workflows/alauda-release.yaml`：`bundle_channels` 默认值 → `stable,stable-2.X`；release-1.30 时把 `TOOLS_REGISTRY_PROVIDER` 改为 `registry.istio.io`；
 - `pkg/istioversion/alauda-versions.yaml`：按构建版本重建矩阵——新大版本条目（`vX.YY-latest` + 各构建的 charts URL）、上一大版本（给了构建列表则重建，否则原样保留）、被淘汰的大版本按既有 EOL 格式收尾；并输出新旧矩阵对照（进最终汇报）。
+- go.mod：`replace istio.io/istio => github.com/alauda-mesh/istio` 更新到 fork `istio-1.XX` 分支最新提交（istio.io/istio 只有 v0.0.0 伪版本，镜像扫描器会把全部历史 CVE 误判为未修复；replace 到 fork 后组件身份脱离漏洞库匹配，并继承 fork 的安全修复）。前提是 fork 的 `istio-1.XX` 分支已同步到不低于上游 go.mod 引用的 istio commit——verify.sh 6b 会校验包含关系，FAIL 时先同步 fork 再重跑本脚本。
 
 **PATTERN_MISMATCH（退出码 2）**：文件结构变化导致某些项没匹配上，按输出的 FAIL 清单用 Edit 手动完成，已 OK 的项不要重复改。
 

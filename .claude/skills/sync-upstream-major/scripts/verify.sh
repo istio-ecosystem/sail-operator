@@ -124,6 +124,27 @@ else
   f "go.mod istio.io 依赖与 upstream/$UPSTREAM_BRANCH 不一致（影响生成的 CRD schema）"
 fi
 
+# 6b) istio.io/istio 必须 replace 到 alauda fork（镜像扫描伪版本误报防护，见 conflict-playbook go.mod 条目），
+#     且 replace 指向的 fork commit 必须包含 require 的上游 istio commit（否则编译代码旧于上游预期）
+REPLACE_LINE=$(grep -E '^replace istio\.io/istio => github\.com/alauda-mesh/istio ' go.mod || true)
+if [[ -z "$REPLACE_LINE" ]]; then
+  f "go.mod 缺少 replace istio.io/istio => github.com/alauda-mesh/istio（update-versions.sh 应已写入）"
+else
+  p "go.mod istio.io/istio 已 replace 到 alauda fork"
+  REQ_SHA=$(grep -E '^	istio\.io/istio v0\.0\.0-' go.mod | grep -oE '[0-9a-f]{12}$' || true)
+  REP_SHA=$(grep -oE '[0-9a-f]{12}$' <<<"$REPLACE_LINE" || true)
+  if [[ -n "$REQ_SHA" && -n "$REP_SHA" ]]; then
+    CMP_STATUS=$(gh api "repos/alauda-mesh/istio/compare/$REQ_SHA...$REP_SHA" --jq .status 2>/dev/null || echo unknown)
+    case "$CMP_STATUS" in
+      ahead | identical) p "replace 的 fork commit $REP_SHA 包含上游 require 的 istio commit $REQ_SHA（$CMP_STATUS）" ;;
+      unknown) w "无法用 gh api 校验 fork commit $REP_SHA 是否包含上游 istio commit $REQ_SHA（gh 未认证/离线），请人工确认" ;;
+      *) f "replace 的 fork commit $REP_SHA 未包含上游 require 的 istio commit $REQ_SHA（compare=$CMP_STATUS）——先把 fork 的 istio-1.XX 分支同步到上游 $UPSTREAM_BRANCH 再更新 replace" ;;
+    esac
+  else
+    w "无法从 go.mod 提取 require/replace 的 istio commit（伪版本格式变化？），请人工确认 replace 点位包含上游 require 的 commit"
+  fi
+fi
+
 # 7) alauda-release.yaml 的修改落地
 WF=.github/workflows/alauda-release.yaml
 grep -qE "^[[:space:]]*default: \"?$NEW_CHANNELS\"?$" "$WF" \
