@@ -108,7 +108,7 @@ bash "$SKILL_DIR/scripts/csv-diff.sh"
 bash "$SKILL_DIR/scripts/verify.sh"
 ```
 
-脚本逐项校验：vendor.mk 版本与 channels、bundle 两处 channel、CSV 的 name/version、上游 CSV 残留、矩阵内每个非 EOL 版本的 `resources/` 目录与 `alauda/values.yaml` 镜像 annotation（build 号一致）、vendor_defaults 块齐全、go.mod istio 依赖、workflow 修改落地，以及**与上游合并快照（state 的 UPSTREAM_SHA）的全量差异审计**：go.mod/go.sum 逐字节一致（go.mod 是 git 自动合并重灾区，混入旧版本行不会有冲突标记，只查 istio.io 行不够）、licenses/ 一致（依赖对齐的独立佐证）、白名单外与上游不同的文件逐个 WARN（每个都必须能解释：本次刻意修改 → 写进汇报；解释不了 → 对齐上游）。**FAIL（退出码 2）逐项修复后重跑到全 PASS**；WARN 逐条判断并写进汇报。relatedImages 本地不生成（`GENERATE_RELATED_IMAGES` 仅 release 流水线开启），不算缺失。
+脚本逐项校验：vendor.mk 版本与 channels、bundle 两处 channel、CSV 的 name/version、上游 CSV 残留、矩阵内每个非 EOL 版本的 `resources/` 目录与 `alauda/values.yaml` 镜像 annotation（build 号一致）、vendor_defaults 块齐全、go.mod istio 依赖、workflow 修改落地，以及**与上游合并快照（state 的 UPSTREAM_SHA）的全量差异审计**：go.mod/go.sum 与快照 diff（一致 PASS；有差异 WARN 并列出差异行——**fork 主动的 CVE/安全升级属合法差异**，但 go.mod 是 git 自动合并重灾区、混血旧版本行不带冲突标记，必须逐行确认差异是有意为之并写进汇报）、licenses/ 一致性（依赖对齐的独立佐证，go.mod 有意差异时确认 mirror-licenses 已重跑）、白名单外与上游不同的文件逐个 WARN（每个都必须能解释：本次刻意修改 → 写进汇报；解释不了 → 对齐上游）。**FAIL（退出码 2）逐项修复后重跑到全 PASS**；WARN 逐条判断并写进汇报。relatedImages 本地不生成（`GENERATE_RELATED_IMAGES` 仅 release 流水线开启），不算缺失。
 
 然后跑 `make lint` 与 `make test`（耗时较长，设大 timeout 或后台运行；手动执行带 `PATH="$PWD/bin:$PATH" BUILD_WITH_CONTAINER=0`）。1.30 实测经验：
 

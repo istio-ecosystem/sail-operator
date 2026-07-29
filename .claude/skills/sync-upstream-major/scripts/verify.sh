@@ -139,21 +139,26 @@ fi
 # 基准用 state.env 的 UPSTREAM_SHA（merge 时的快照）：release 分支持续前进（Automator），
 # 用 upstream/<branch> ref 会因后续 fetch 漂移出假差异。老 state 无此键时回退到 ref。
 AUDIT_BASE="${UPSTREAM_SHA:-upstream/$UPSTREAM_BRANCH}"
-# 8a) go.mod / go.sum 必须与上游快照逐字节一致（alauda 无自有依赖；只查 istio.io 行不够——
-#     go.mod 是 git 自动合并的重灾区，混入旧版本行不会有冲突标记）
-git diff --quiet "$AUDIT_BASE" HEAD -- go.mod \
-  && p "go.mod 与上游快照 ${AUDIT_BASE:0:12} 逐字节一致" \
-  || f "go.mod 与上游快照不一致（git diff $AUDIT_BASE HEAD -- go.mod 查看；应整体对齐上游后 go mod tidy）"
+# 8a) go.mod / go.sum 与上游快照对比。基线应取自上游 release 分支；fork 的主动安全升级
+#     （CVE 修复提升库版本等）是合法差异——所以不作硬性 FAIL，但每行差异都必须有意为之：
+#     go.mod 是 git 自动合并的重灾区（双侧各改不同行会静默合出混血版本、无冲突标记），
+#     差异行列出供人工逐行确认，结论写进汇报。
+if git diff --quiet "$AUDIT_BASE" HEAD -- go.mod; then
+  p "go.mod 与上游快照 ${AUDIT_BASE:0:12} 一致"
+else
+  w "go.mod 与上游快照存在差异——fork 的 CVE/安全升级属预期，逐行确认是有意修改而非合并混血，结论写进汇报："
+  git diff "$AUDIT_BASE" HEAD -- go.mod | grep -E '^[+-][^+-]' | head -20 | sed 's/^/    /'
+fi
 git diff --quiet "$AUDIT_BASE" HEAD -- go.sum \
-  && p "go.sum 与上游快照逐字节一致" \
-  || f "go.sum 与上游快照不一致（go.mod 对齐后 go mod tidy 重新生成）"
-# 8b) licenses/ 由 go.mod 依赖镜像而来，一致性是 go.mod 对齐的独立佐证
+  && p "go.sum 与上游快照一致" \
+  || w "go.sum 与上游快照存在差异（go.mod 有意差异时属预期；否则回查 go.mod 后 go mod tidy 重新生成）"
+# 8b) licenses/ 由 go.mod 依赖镜像而来：go.mod 一致时它也应一致；go.mod 有意差异时确认 mirror-licenses 已重跑
 git diff --quiet "$AUDIT_BASE" HEAD -- licenses/ \
-  && p "licenses/ 与上游快照一致（go.mod 对齐佐证）" \
-  || f "licenses/ 与上游快照有差异——回查 go.mod 依赖是否对齐、mirror-licenses 是否重跑"
+  && p "licenses/ 与上游快照一致" \
+  || w "licenses/ 与上游快照有差异（go.mod 有意差异时属预期；否则确认 make gen 的 mirror-licenses 已重跑）"
 # 8c) 白名单外差异审计：与上游快照不同的文件必须全部可解释。
 #     白名单 = 按 alauda 矩阵生成的目录 + alauda 独有文件 + 已知定制文件（见 playbook C 层表）
-ALLOW_RE='^(\.claude/|alauda/|resources/|bundle/|docs/api-reference/|licenses/|api/|chart/(Chart\.yaml|values\.yaml|crds/|templates/olm/|samples/)|\.github/workflows/(al(au|ua)da-|integration-tests\.yaml$|unit-tests\.yaml$)|\.gitattributes$|Makefile\.core\.mk$|Makefile\.vendor\.mk$|Dockerfile\.alauda$|PROJECT$|bundle\.Dockerfile$|hack/alauda-|pkg/install/images\.gen\.go$|pkg/istiovalues/vendor_defaults\.(go|yaml)$|pkg/istioversion/(alauda-versions\.yaml|version_test\.go)$)'
+ALLOW_RE='^(\.claude/|alauda/|resources/|bundle/|docs/api-reference/|licenses/|go\.(mod|sum)$|api/|chart/(Chart\.yaml|values\.yaml|crds/|templates/olm/|samples/)|\.github/workflows/(al(au|ua)da-|integration-tests\.yaml$|unit-tests\.yaml$)|\.gitattributes$|Makefile\.core\.mk$|Makefile\.vendor\.mk$|Dockerfile\.alauda$|PROJECT$|bundle\.Dockerfile$|hack/alauda-|pkg/install/images\.gen\.go$|pkg/istiovalues/vendor_defaults\.(go|yaml)$|pkg/istioversion/(alauda-versions\.yaml|version_test\.go)$)'
 UNEXPECTED=$(git diff --name-only "$AUDIT_BASE" HEAD | grep -Ev "$ALLOW_RE" || true)
 if [[ -z "$UNEXPECTED" ]]; then
   p "全量差异审计: 白名单外无与上游不同的文件"

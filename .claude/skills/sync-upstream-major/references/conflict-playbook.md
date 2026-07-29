@@ -56,7 +56,7 @@
 | `controllers/`、`pkg/` 下 .go | **1.30 起 FIPS（#1596/#1682）与 vendor_defaults 机制均已被上游收编**：上游有 `pkg/istiovalues/vendor_defaults.go/.yaml/_test.go`，且 `pkg/reconcile/cni.go`、`pkg/revision/values.go` 自带调用。alauda 仅剩差异：`vendor_defaults.go` 的 `USE_VENDOR_DEFAULTS` 环境变量开关 + `vendor_defaults.yaml` 的版本数据块 | controller/reconcile 文件直接取上游；核对 `USE_VENDOR_DEFAULTS` 开关与 yaml 数据块保留（自动合并通常正确）。**警惕 fips.go/fips_test.go 型语义冲突**（见下节） |
 | `tests/integration/` | 无 alauda 自有改动残留（vendor defaults 开关生效于 `.github/workflows/integration-tests.yaml` 的 `USE_VENDOR_DEFAULTS: "false"`，不在测试代码里） | 直接取上游；冲突多为 import 排布 + 上游新增用例 |
 | `.github/workflows/` | alauda 自有 CI（`alauda-release.yaml` 等）+ 对上游 workflow 的修补（去重、action 升级） | alauda 独有文件保留；上游文件取上游后重放 alauda 修补 |
-| `go.mod` / `go.sum` | 无自有依赖 | **必须与上游 release 分支逐字节一致**（verify.sh 8a 强制校验）。go.mod 是 git 自动合并的重灾区：双侧各改过不同依赖行时 git 静默合出"混血"版本、旧版本行不带冲突标记；无论是否报冲突，最终以整体对齐上游 + `go mod tidy` 收尾。licenses/ 与上游一致是依赖对齐的独立佐证（verify.sh 8b）。reviewer 拿 upstream main 对比会看到"很多库没升级"——那是 main 在为下一版本升依赖，正常，比较基准永远是 release-1.XX 快照 |
+| `go.mod` / `go.sum` | fork 可能带主动安全升级（CVE 修复提升库版本等） | **基线取上游 release 分支；fork 的安全升级允许在基线上偏离**，但每行差异必须有意为之。go.mod 是 git 自动合并的重灾区：双侧各改过不同依赖行时 git 静默合出"混血"版本、旧版本行不带冲突标记——verify.sh 8a 会列出与快照的全部差异行（WARN），逐行确认"这是我们的安全升级"还是"合并混血残留"，混血残留对齐上游后 `go mod tidy`。istio.io 系依赖仍须匹配矩阵最新版本（影响 CRD 生成，verify 第 6 项）。licenses/ 随 go.mod 镜像（verify.sh 8b）：go.mod 有意差异时重跑 mirror-licenses。reviewer 拿 upstream main 对比会看到"很多库没升级"——那是 main 在为下一版本升依赖，正常，比较基准永远是 release-1.XX 快照 |
 | `Makefile.vendor.mk`、`alauda/values.yaml`、`pkg/istioversion/alauda-versions.yaml`、`pkg/istiovalues/vendor_defaults.yaml`、`Dockerfile.alauda`、`hack/alauda-patch-csv.sh` | alauda 独有文件，上游没有，不会冲突 | 按 SKILL.md 第 3 步更新内容即可 |
 
 ### 语义冲突：git 自动合并成功 ≠ 编译通过（1.30 实测）
