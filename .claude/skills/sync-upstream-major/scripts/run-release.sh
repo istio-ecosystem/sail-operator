@@ -31,7 +31,8 @@ APPEAR_TIMEOUT="${APPEAR_TIMEOUT:-180}"
 
 command -v gh >/dev/null 2>&1 || die "未安装 gh"
 gh auth status >/dev/null 2>&1 || die "gh 未认证，请提示用户执行: ! gh auth login"
-git ls-remote --exit-code --heads origin "$SYNC_BRANCH" >/dev/null \
+# 用 gh api 检查远端分支（git ls-remote 依赖 SSH，devpod 的 ssh-agent 可能中途失效）
+gh api "repos/$REPO_SLUG/branches/$SYNC_BRANCH" --silent >/dev/null 2>&1 \
   || die "origin 上没有分支 $SYNC_BRANCH（先执行 create-pr.sh）"
 
 RELEASE_VERSION="${MESH_VERSION}-r$(date +%Y%m%d%H%M%S)"
