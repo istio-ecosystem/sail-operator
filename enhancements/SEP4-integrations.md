@@ -18,15 +18,18 @@ Configuring Istio to work with various integrations, especially on OpenShift, of
 
 Note that the Integrations controller detailed below will be the same one implemented as part of the [metrics integration SEP](https://github.com/istio-ecosystem/sail-operator/pull/2028). See the Implementation Plan for more details.
 
-A new Integrations controller will be introduced along with new `Integration` types. Each type will be grouped by function. The `Integration` types will have both a reference to an `Istio` resource and references to resources of that group. The Integration controller will configure the Istio resource and any other resource necessary to manage the integration based on which integrations are configured. This is similar to the `targetRef` on a `ZTunnel` resource. For example, a UWM integration would look like this:
+A new Integrations controller will be introduced along with new `Integration` types. Each type will be grouped by function. The `Integration` types will have a `target` field that specifies the resource the integration configures, using a discriminated union. The supported target types are `Istio` and `Kiali`. The Integration controller will configure the target resource and any other resource necessary to manage the integration based on which integrations are configured. This is similar to the `targetRef` on a `ZTunnel` resource. For example, a UWM integration would look like this:
 ```yaml
 kind: MetricsIntegration
 apiVersion: sailoperator.io/v1alpha1
 metadata:
   name: openshift-obserability
 spec:
-  istioRef:
-    name: default
+  target:
+    type: Istio
+    istio:
+      ref:
+        name: default
   type: UserWorkloadMonitoring
   userWorkloadMonitoring: {}
 ```
@@ -37,8 +40,11 @@ apiVersion: sailoperator.io/v1alpha1
 metadata:
   name: openshift-obserability
 spec:
-  istioRef:
-    name: default
+  target:
+    type: Istio
+    istio:
+      ref:
+        name: default
   type: ClusterObservabilityOperator
   clusterObservabilityOperator:
     monitoringStackRef:
@@ -54,8 +60,11 @@ apiVersion: sailoperator.io/v1alpha1
 metadata:
   name: openshift-obserability
 spec:
-  istioRef:
-    name: default
+  target:
+    type: Istio
+    istio:
+      ref:
+        name: default
   type: ClusterObservabilityOperator
   clusterObservabilityOperator:
     monitoringStackRef:
@@ -67,8 +76,11 @@ apiVersion: sailoperator.io/v1alpha1
 metadata:
   name: openshift-obserability
 spec:
-  istioRef:
-    name: default
+  target:
+    type: Istio
+    istio:
+      ref:
+        name: default
   type: OpenTelemetry
   openTelemetry:
     otelCollectorRef:
@@ -132,70 +144,77 @@ Three new CRDs will be added corresponding broadly to different integration type
   - IstioCSR
   - CertManager
 
-Dashboard integrations (e.g. Kiali, Perses) are configured via an optional `dashboard` field on `MetricsIntegration` and `TracingIntegration` rather than as a separate CRD. Without this you would need a `DashboardIntegration` that had separate subfields which would be an inconsistent API:
-```yaml
-kind: DashboardIntegration
-apiVersion: sailoperator.io/v1alpha1
-metadata:
-  name: kiali-integration
-spec:
-  type: Kiali
-  kiali:
-    kialiRef:
-      name: kiali
-      namespace: istio-system
-  metrics:
-    type: UserWorkloadMonitoring
-    userWorkloadMonitoring: {}
-  tracing:
-    type: TempoStack
-    tempoStack:
-      tempoStackRef:
-        name: tempo-stack
-        namespace: tempo
-```
+Each `Integration` resource has a `target` field that uses a discriminated union to specify the resource the integration configures. The supported target types are `Istio` and `Kiali`. To configure both Istio and a dashboard like Kiali, you create separate `Integration` resources — one targeting Istio and one targeting Kiali. This ensures there's only one way to use the API to configure an integration. If there are multiple `Integration` resources of the same Kind that target the same ref, the one that is created later is considered invalid and this will be reflected in the status. 
 
 Here are examples of each type:
 
-A `MetricsIntegration` with a Kiali dashboard and a `TracingIntegration` that also references Kiali:
+A `MetricsIntegration` targeting Istio for UWM, and a separate `MetricsIntegration` targeting Kiali to configure the dashboard:
 ```yaml
 kind: MetricsIntegration
 apiVersion: sailoperator.io/v1alpha1
 metadata:
   name: openshift-observability
 spec:
-  istioRef:
-    name: default
+  target:
+    type: Istio
+    istio:
+      ref:
+        name: default
   type: UserWorkloadMonitoring
   userWorkloadMonitoring: {}
-  dashboard:
+---
+kind: MetricsIntegration
+apiVersion: sailoperator.io/v1alpha1
+metadata:
+  name: kiali-metrics
+spec:
+  target:
     type: Kiali
     kiali:
-      kialiRef:
+      ref:
         name: kiali
         namespace: istio-system
----
+  type: UserWorkloadMonitoring
+  userWorkloadMonitoring: {}
+```
+
+A `TracingIntegration` targeting Istio and another targeting Kiali:
+```yaml
 kind: TracingIntegration
 apiVersion: sailoperator.io/v1alpha1
 metadata:
   name: openshift-observability
 spec:
-  istioRef:
-    name: default
+  target:
+    type: Istio
+    istio:
+      ref:
+        name: default
   type: TempoStack
   tempoStack:
     tempoStackRef:
       name: tempo
       namespace: tracing
-  dashboard:
+---
+kind: TracingIntegration
+apiVersion: sailoperator.io/v1alpha1
+metadata:
+  name: kiali-tracing
+spec:
+  target:
     type: Kiali
     kiali:
-      kialiRef:
+      ref:
         name: kiali
         namespace: istio-system
+  type: TempoStack
+  tempoStack:
+    tempoStackRef:
+      name: tempo
+      namespace: tracing
 ```
 
-Using the resources above, the controller would configure the following on the `Kiali` resource:
+Using the Kiali-targeted resources above, the controller would configure the following on the `Kiali` resource:
 ```yaml
 apiVersion: kiali.io/v1alpha1
 kind: Kiali
@@ -227,33 +246,17 @@ spec:
          url_format: "jaeger"
 ```
 
-A `MetricsIntegration` with a Perses dashboard:
-```yaml
-kind: MetricsIntegration
-apiVersion: sailoperator.io/v1alpha1
-metadata:
-  name: perses-openshift
-spec:
-  istioRef:
-    name: default
-  type: UserWorkloadMonitoring
-  userWorkloadMonitoring: {}
-  dashboard:
-    type: Perses
-    perses:
-      persesRef:
-        name: istio-dashboards
-        namespace: istio-system
-```
-
 ```yaml
 kind: IdentityIntegration
 apiVersion: sailoperator.io/v1alpha1
 metadata:
   name: ztwim
 spec:
-  istioRef:
-    name: default
+  target:
+    type: Istio
+    istio:
+      ref:
+        name: default
   type: ZeroTrustWorkloadIdentityManagement
   ztwim: {}
 ```
@@ -264,8 +267,11 @@ apiVersion: sailoperator.io/v1alpha1
 metadata:
   name: istio-csr
 spec:
-  istioRef:
-    name: default
+  target:
+    type: Istio
+    istio:
+      ref:
+        name: default
   type: IstioCSR
   istioCSR:
     istioCSRRef:
@@ -281,15 +287,44 @@ Integrations will report `Status`. Non-exhaustive list of what should be in `Sta
 
 These are broadly what the golang API changes would be:
 ```go
+// IntegrationTargetType identifies what resource the integration targets.
+type IntegrationTargetType string
+
+const (
+	IntegrationTargetTypeIstio IntegrationTargetType = "Istio"
+	IntegrationTargetTypeKiali IntegrationTargetType = "Kiali"
+)
+
+// IntegrationTarget specifies the resource that this integration configures.
+type IntegrationTarget struct {
+	// Type specifies the target type.
+	Type IntegrationTargetType `json:"type"`
+
+	// Istio configures an Istio resource as the target.
+	Istio *IstioTarget `json:"istio,omitempty"`
+
+	// Kiali configures a Kiali resource as the target.
+	Kiali *KialiTarget `json:"kiali,omitempty"`
+}
+
+// IstioTarget references an Istio resource.
+type IstioTarget struct {
+	// Ref is a reference to the Istio resource.
+	Ref IstioReference `json:"ref"`
+}
+
+// KialiTarget references a Kiali resource.
+type KialiTarget struct {
+	// Ref is a reference to the Kiali resource.
+	Ref NamespacedReference `json:"ref"`
+}
+
 // MetricsIntegrationSpec defines the desired state of MetricsIntegration.
 type MetricsIntegrationSpec struct {
-	// IstioRef is a reference to the Istio resource that this integration configures.
-	IstioRef IstioReference `json:"istioRef"`
+	// Target specifies the resource that this integration configures.
+	Target IntegrationTarget `json:"target"`
 
 	MetricsConfig `json:",inline"`
-
-	// Dashboard configures the dashboard that reads from this metrics source.
-	Dashboard *DashboardConfig `json:"dashboard,omitempty"`
 }
 
 // MetricsType identifies the type of metrics integration.
@@ -324,13 +359,10 @@ type ClusterObservabilityOperatorConfig struct {
 
 // TracingIntegrationSpec defines the desired state of TracingIntegration.
 type TracingIntegrationSpec struct {
-	// IstioRef is a reference to the Istio resource that this integration configures.
-	IstioRef IstioReference `json:"istioRef"`
+	// Target specifies the resource that this integration configures.
+	Target IntegrationTarget `json:"target"`
 
 	TracingConfig `json:",inline"`
-
-	// Dashboard configures the dashboard that reads from this tracing source.
-	Dashboard *DashboardConfig `json:"dashboard,omitempty"`
 }
 
 // TracingType identifies the type of tracing integration.
@@ -365,42 +397,10 @@ type TempoStackConfig struct {
 	TempoStackRef NamespacedReference `json:"tempoStackRef"`
 }
 
-// DashboardConfig configures a dashboard that reads from a metrics or tracing source.
-type DashboardConfig struct {
-	// Type specifies the dashboard type.
-	Type DashboardType `json:"type"`
-
-	// Kiali configures integration with a Kiali resource.
-	Kiali *KialiConfig `json:"kiali,omitempty"`
-
-	// Perses configures integration with a Perses resource.
-	Perses *PersesConfig `json:"perses,omitempty"`
-}
-
-// DashboardType identifies the type of dashboard.
-type DashboardType string
-
-const (
-	DashboardTypeKiali  DashboardType = "Kiali"
-	DashboardTypePerses DashboardType = "Perses"
-)
-
-// KialiConfig configures the Kiali integration.
-type KialiConfig struct {
-	// KialiRef is a reference to a Kiali resource.
-	KialiRef NamespacedReference `json:"kialiRef"`
-}
-
-// PersesConfig configures the Perses integration.
-type PersesConfig struct {
-	// PersesRef is a reference to a Perses resource.
-	PersesRef NamespacedReference `json:"persesRef"`
-}
-
 // IdentityIntegrationSpec defines the desired state of IdentityIntegration.
 type IdentityIntegrationSpec struct {
-	// IstioRef is a reference to the Istio resource that this integration configures.
-	IstioRef IstioReference `json:"istioRef"`
+	// Target specifies the resource that this integration configures.
+	Target IntegrationTarget `json:"target"`
 
 	// Type specifies the identity integration type.
 	Type IdentityType `json:"type"`
@@ -439,20 +439,23 @@ flowchart TD
         TI["TracingIntegration"]
     end
 
-    subgraph "References"
+    subgraph "Targets"
         Istio["Istio"]
-        MS["MonitoringStack\n(COO)"]
-        TS["TempoStack\n(Tempo Operator)"]
         Kiali["Kiali"]
     end
 
-    MI -- "istioRef" --> Istio
-    MI -. "metrics:\nClusterObservability" .-> MS
-    MI -. "dashboard:\nKiali" .-> Kiali
+    subgraph "References"
+        MS["MonitoringStack\n(COO)"]
+        TS["TempoStack\n(Tempo Operator)"]
+    end
 
-    TI -- "istioRef" --> Istio
+    MI -- "target:\nIstio" --> Istio
+    MI -- "target:\nKiali" --> Kiali
+    MI -. "metrics:\nClusterObservability" .-> MS
+
+    TI -- "target:\nIstio" --> Istio
+    TI -- "target:\nKiali" --> Kiali
     TI -. "tracing:\nTempoStack" .-> TS
-    TI -. "dashboard:\nKiali" .-> Kiali
 
     style MI fill:#4a9eff,color:#fff
     style TI fill:#4a9eff,color:#fff
@@ -516,6 +519,7 @@ The implementation for UWM is already complete as part of the [monitoring contro
 - [ ] Update monitoring controller for UWM to reconcile `MetricsIntegration` resources.
 - [ ] Add `TracingIntegration` CRD
 - [ ] Add `IdentityIntegration` CRD
+- [ ] Add a `Kiali` target on the `Integration` resources.
 
 ## Test Plan
 - A key aspect of this design is utilizing Server Side Apply to ensure that users can override values that the operator sets if need be without fighting against the controller. This needs to be an integral part of the test suite and will be included in e2e testing. Specifically e2e testing should ensure that the operator can Apply a configuration partially and ignore any conflict errors.
@@ -523,3 +527,4 @@ The implementation for UWM is already complete as part of the [monitoring contro
 
 ## Change History (only required when making changes after SEP has been accepted)
 - Changed the API from `IstioIntegration` --> `<Component>Integration`
+- Replaced `istioRef` + `dashboard` fields with a unified `target` discriminated union (Istio | Kiali)
