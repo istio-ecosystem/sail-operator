@@ -76,7 +76,7 @@ bash "$SKILL_DIR/scripts/gomod-bump.sh" <module@vX.Y.Z> [...]   # timeout 600000
 - 失败时分析原因（版本冲突、新版本要求更高 go、API 变更），能明确解决就解决，拿不准就带着报错向用户提问，不要凭猜测大版本连锁升级；
 - 无修复版本的 CVE 升级修不了，记入最终汇报的"未修复项"。
 - **tidy 后必须审查连带升级面**：`git diff go.mod` 检查 k8s.io/api、apimachinery、client-go 等基础库是否被连带拉升 minor 版本；k8s.io 系列一旦超过同分支上游 istio 的钉定版本（对照 `istio/istio@release-1.XX` 的 go.mod）必须回钉。教训（2026-07，istio 1.28 系）：prometheus/prometheus v0.311.3 强拉 k8s.io v0.35.3，而 k8s 1.35 把生成类型的 `ProtoMessage()` 移入 opt-in 构建标签（gogo 移除过渡），istio 1.28 的 operator values proto 仍引用 k8s proto 类型，导致 istiod 启动即 panic（`message *v1.Affinity is neither a v1 or v2 Message`），带毒版本 1.28.6-asm-r4 发布后线上升级失败；修复见 alauda-mesh/istio#40/#41/#42。istio 1.30+ 已解耦（upstream istio#58632），无此约束；
-- prometheus/prometheus 在 1.28 系分支用 v0.305.3（3.5 LTS 修复线，覆盖 CVE-2026-42154/40179/42151/44903 且仅依赖 k8s v0.32）并用 replace 钉住——不加 replace 时 MVS 会因 gateway-api-inference-extension 抬到 v0.306.0（=3.6.0，落回漏洞区间 `>=3.6.0 <3.11.3`）。
+- prometheus/prometheus 在 1.28 系分支必须用 **v0.311.3 + replace 钉 k8s.io 三件套 v0.34.1**（`replace k8s.io/{api,apimachinery,client-go} => v0.34.1`，replace 不参与 MVS 传递，可压住 prometheus 对 k8s v0.35 的强拉）。不要试图用 v0.305.3（3.5 LTS）绕开：产品语义上它同样修复了那批 CVE，但 trivy DB 对 Go module 只收录 0.311.3 一条修复线，线性版本比较下 v0.305.3 仍被判 vulnerable，镜像扫描无法清零（2026-07-29 已实测否决）。**修复版本落位后用 trivy 复扫验证，勿只看 advisory 原文**：LTS/多分支修复线在 Go 漏洞库里经常只收录主线版本。
 
 **构建验证 + 提交**：
 
