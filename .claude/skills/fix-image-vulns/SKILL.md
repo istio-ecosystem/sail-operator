@@ -75,12 +75,16 @@ bash "$SKILL_DIR/scripts/gomod-bump.sh" <module@vX.Y.Z> [...]   # timeout 600000
 - 间接依赖解析崩时，优先参考上游 istio-ecosystem/sail-operator 或 alauda-mesh/istio 更高版本分支 go.mod 里的钉法，而不是自己试版本；
 - 失败时分析原因（版本冲突、新版本要求更高 go、API 变更），能明确解决就解决，拿不准就带着报错向用户提问，不要凭猜测大版本连锁升级；
 - 无修复版本的 CVE 升级修不了，记入最终汇报的"未修复项"。
+- **tidy 后必须审查连带升级面**：`git diff go.mod` 检查 k8s.io/api、apimachinery、client-go 等基础库是否被连带拉升 minor 版本；k8s.io 系列一旦超过同分支上游 istio 的钉定版本（对照 `istio/istio@release-1.XX` 的 go.mod）必须回钉。教训（2026-07，istio 1.28 系）：prometheus/prometheus v0.311.3 强拉 k8s.io v0.35.3，而 k8s 1.35 把生成类型的 `ProtoMessage()` 移入 opt-in 构建标签（gogo 移除过渡），istio 1.28 的 operator values proto 仍引用 k8s proto 类型，导致 istiod 启动即 panic（`message *v1.Affinity is neither a v1 or v2 Message`），带毒版本 1.28.6-asm-r4 发布后线上升级失败；修复见 alauda-mesh/istio#40/#41/#42。istio 1.30+ 已解耦（upstream istio#58632），无此约束；
+- prometheus/prometheus 在 1.28 系分支用 v0.305.3（3.5 LTS 修复线，覆盖 CVE-2026-42154/40179/42151/44903 且仅依赖 k8s v0.32）并用 replace 钉住——不加 replace 时 MVS 会因 gateway-api-inference-extension 抬到 v0.306.0（=3.6.0，落回漏洞区间 `>=3.6.0 <3.11.3`）。
 
 **构建验证 + 提交**：
 
 ```bash
 bash "$SKILL_DIR/scripts/verify-build.sh"    # timeout 600000；按 GOTOOLCHAIN pin 用与流水线一致的 go 编译
 ```
+
+BUILD_OK 只证明编译通过，抓不住依赖引入的运行时崩溃。istio 仓库 bump 后还必须跑最小运行时验证（几十秒）：`go test ./operator/pkg/apis/ ./pkg/kube/inject/ -count=1`——values proto 解析路径覆盖 istiod 启动初始化，1.28.6-asm-r4 的启动 panic 本可被它拦住。
 
 BUILD_OK 后在 worktree 内提交（两类修复各自独立 commit，`-s` 签名，禁止 amend）：
 
