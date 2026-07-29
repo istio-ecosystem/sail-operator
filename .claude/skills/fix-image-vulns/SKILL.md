@@ -75,8 +75,8 @@ bash "$SKILL_DIR/scripts/gomod-bump.sh" <module@vX.Y.Z> [...]   # timeout 600000
 - 间接依赖解析崩时，优先参考上游 istio-ecosystem/sail-operator 或 alauda-mesh/istio 更高版本分支 go.mod 里的钉法，而不是自己试版本；
 - 失败时分析原因（版本冲突、新版本要求更高 go、API 变更），能明确解决就解决，拿不准就带着报错向用户提问，不要凭猜测大版本连锁升级；
 - 无修复版本的 CVE 升级修不了，记入最终汇报的"未修复项"。
-- **tidy 后必须审查连带升级面**：`git diff go.mod` 检查 k8s.io/api、apimachinery、client-go 等基础库是否被连带拉升 minor 版本；k8s.io 系列一旦超过同分支上游 istio 的钉定版本（对照 `istio/istio@release-1.XX` 的 go.mod）必须回钉。教训（2026-07，istio 1.28 系）：prometheus/prometheus v0.311.3 强拉 k8s.io v0.35.3，而 k8s 1.35 把生成类型的 `ProtoMessage()` 移入 opt-in 构建标签（gogo 移除过渡），istio 1.28 的 operator values proto 仍引用 k8s proto 类型，导致 istiod 启动即 panic（`message *v1.Affinity is neither a v1 or v2 Message`），带毒版本 1.28.6-asm-r4 发布后线上升级失败；修复见 alauda-mesh/istio#40/#41/#42。istio 1.30+ 已解耦（upstream istio#58632），无此约束；
-- prometheus/prometheus 在 1.28 系分支必须用 **v0.311.3 + replace 钉 k8s.io 三件套 v0.34.1**（`replace k8s.io/{api,apimachinery,client-go} => v0.34.1`，replace 不参与 MVS 传递，可压住 prometheus 对 k8s v0.35 的强拉）。不要试图用 v0.305.3（3.5 LTS）绕开：产品语义上它同样修复了那批 CVE，但 trivy DB 对 Go module 只收录 0.311.3 一条修复线，线性版本比较下 v0.305.3 仍被判 vulnerable，镜像扫描无法清零（2026-07-29 已实测否决）。**修复版本落位后用 trivy 复扫验证，勿只看 advisory 原文**：LTS/多分支修复线在 Go 漏洞库里经常只收录主线版本。
+- **tidy 后必须审查连带升级面**：`git diff go.mod` 检查 k8s.io/api、apimachinery、client-go 等基础库是否被连带拉升 minor 版本；超过上游 istio-ecosystem/sail-operator 的钉定版本且拿不准兼容性时回钉。动机（2026-07，istio 1.28 系事故）：CVE bump 时 prometheus 连带把 k8s.io 拉到 v0.35.3，istiod 启动即 panic，带毒版本发布后线上升级失败——本仓库经 `replace istio.io/istio` 引用 fork 的 istio 代码，若点位处于未解耦 k8s proto 的版本线（1.28 系），同样的坑一样成立；
+- 落位版本以扫描器给的修复候选为准，**勿基于 advisory 原文自行换用其他修复分支**：LTS/多分支修复线 Go 漏洞库常只收录主线版本（2026-07 prometheus v0.305.3 实测语义已修但 trivy 仍判 vulnerable）；确需偏离候选钉法时，推流水线前先本地 trivy 预扫，别把试错留给回归轮。修 alauda-mesh/istio 镜像漏洞用 istio 仓库自己的同名 skill（istio-1.30 分支 `alauda/skills/fix-image-vulns/`），1.28 系 prometheus/k8s.io 的具体钉法细节维护在那边，不在本文件重复。
 
 **构建验证 + 提交**：
 
@@ -84,7 +84,7 @@ bash "$SKILL_DIR/scripts/gomod-bump.sh" <module@vX.Y.Z> [...]   # timeout 600000
 bash "$SKILL_DIR/scripts/verify-build.sh"    # timeout 600000；按 GOTOOLCHAIN pin 用与流水线一致的 go 编译
 ```
 
-BUILD_OK 只证明编译通过，抓不住依赖引入的运行时崩溃。istio 仓库 bump 后还必须跑最小运行时验证（几十秒）：`go test ./operator/pkg/apis/ ./pkg/kube/inject/ -count=1`——values proto 解析路径覆盖 istiod 启动初始化，1.28.6-asm-r4 的启动 panic 本可被它拦住。
+BUILD_OK 只证明编译通过，抓不住依赖引入的运行时崩溃。tidy 连带升级了 k8s.io 等基础库时，提交前补跑 `make test` 做最小运行时验证。
 
 BUILD_OK 后在 worktree 内提交（两类修复各自独立 commit，`-s` 签名，禁止 amend）：
 
