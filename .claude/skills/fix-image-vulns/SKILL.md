@@ -32,6 +32,7 @@ disable-model-invocation: true
 - **流水线是 workflow_dispatch**：PR 不会自动构建镜像。修复 push 后要用 `run-release.sh` 在修复分支上手动触发 Alauda Release workflow，release_version 用 `<VERSION>-r<UTC时间戳>`（时间戳保证 tag 唯一，不与手动执行的流水线冲突），其余参数默认值。
 - gh 命令必须显式 `--repo alauda-mesh/sail-operator`（脚本已内置）；commit 一律 `git commit -s`（签名）且带说明（`-m "标题" -m "补充说明"`）；全程禁止 `git commit --amend`，一律新建 commit。
 - **commit-check 只校验 PR 的首个 commit**（`.github/workflows/commit-validation.yaml`）：message 正则强制"标题 + 空行 + 正文"结构；signoff 正则在仓库 `.commit-check.yml`（已放宽支持中文署名），且配置文件必须存在于被校验的那个 commit 中才生效。因此**首个 commit 不合规时追加 commit 救不回来**，又禁止改写历史，唯一出路是从基分支重建分支（同日重建脚本会撞名，手动 `git checkout -b fix/cve-<日期>-2 <基分支>` 并同步改 `state.env` 的 `FIX_BRANCH`）、重做 commit、建新 PR 取代旧 PR（`gh pr close <旧号> --comment "被 #<新号> 取代：<原因>"`）。
+- **需要改上游继承的文件**（`.commit-check.yml`、workflow、docs 等非 alauda 独有文件）时，先查上游 istio-ecosystem/sail-operator 是否已有同类修改（搜上游 PR/commit 历史）；有则 `git fetch https://github.com/istio-ecosystem/sail-operator.git refs/pull/<N>/head` 后 `git cherry-pick -x -s <sha>`，**不要自造 fork 本地变体**——相同语义、不同文本的改动会加重未来上游同步的冲突（用户反馈，2026-07-29 signoff 正则一例：fork 变体已 revert，换成 cherry-pick 上游 #2005）。
 - 修复轮次上限 **3 轮**（首轮 + 回归后最多再修 2 次），修不完就如实汇报。
 - 状态目录 `out/fix-image-vulns/`（gitignore 内），各脚本经 `state.env` 串联；修复在独立 worktree 中进行，不打扰主工作区当前检出。
 
