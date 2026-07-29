@@ -1,10 +1,10 @@
 // Variables embedded for GitHub compatibility
-:istio_latest_version: 1.28.1
-:istio_latest_version_revision_format: 1-28-1
-:istio_latest_tag: v1.28-latest
-:istio_release_name: release-1.28
-:istio_latest_minus_one_version: 1.28.0
-:istio_latest_minus_one_version_revision_format: 1-28-0
+:istio_latest_version: 1.30.3
+:istio_latest_version_revision_format: 1-30-3
+:istio_latest_tag: v1.30-latest
+:istio_release_name: release-1.30
+:istio_latest_minus_one_version: 1.30.2
+:istio_latest_minus_one_version_revision_format: 1-30-2
 
 link:../../README.adoc[Return to Project Root]
 
@@ -14,18 +14,34 @@ link:../../README.adoc[Return to Project Root]
   - <<inplace>>
     - <<example-using-the-inplace-strategy>>
     - <<recommendations-for-inplace-strategy>>
+    - <<inplace-ambient-mode-considerations>>
   - <<revisionbased>>
     - <<example-using-the-revisionbased-strategy>>
     - <<example-using-the-revisionbased-strategy-and-an-istiorevisiontag>>
+- <<updating-ambient-components>>
+  - <<updating-istiocni-ambient>>
+  - <<updating-ztunnel-ambient>>
+  - <<verifying-ambient-workloads>>
+  - <<updating-waypoint-proxies>>
+  - <<ambient-special-considerations>>
 
 [[update-strategy]]
 == Update Strategy
 
-The Sail Operator supports two update strategies to update the version of the Istio control plane: `InPlace` and `RevisionBased`. The default strategy is `InPlace`.
+The Sail Operator supports two update strategies: `InPlace` and `RevisionBased`. The default is `InPlace`.
+
+**For ambient mode updates:**
+
+IMPORTANT: **Only the InPlace strategy is supported for ambient mode.** This is due to ZTunnel's cluster-wide singleton architecture - only one ztunnel instance can run in the cluster at a time, making canary-style upgrades impractical with RevisionBased updates.
+
+* Components update order: Control Plane → IstioCNI → ZTunnel
+* No pod restart needed (in ambient mode, the ztunnel maintains xDS connections to istiod, not application workloads directly)
+
+NOTE: Ambient mode requires Istio 1.24.0 or later. For installation, see link:../common/istio-ambient-mode.adoc[Istio Ambient Mode].
 
 [[inplace]]
 == InPlace
-When the `InPlace` strategy is used, the existing Istio control plane is replaced with a new version. The workload sidecars immediately connect to the new control plane. The workloads therefore don't need to be moved from one control plane instance to another.
+With InPlace, the existing control plane is replaced with a new version. Workload sidecars immediately connect to the new control plane. Workloads don't need to be moved from one control plane instance to another.
 
 [[example-using-the-inplace-strategy]]
 === Example using the InPlace strategy
@@ -37,14 +53,14 @@ Prerequisites:
 Steps:
 
 . Create the `istio-system` namespace.
-
++
 [source,bash,subs="attributes+",name="inplace-update-strategy"]
 ----
 kubectl create namespace istio-system
 ----
 
 . Create the `Istio` resource.
-
++
 [source,bash,subs="attributes+",name="inplace-update-strategy"]
 ----
 cat <<EOF | kubectl apply -f-
@@ -66,7 +82,7 @@ print_istio_info
 endif::[]
 
 . Confirm the installation and version of the control plane.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get istio -n istio-system
@@ -76,7 +92,7 @@ default   1           1       0        default           Healthy   v{istio_lates
 Note: `IN USE` field shows as 0, as `Istio` has just been installed and there are no workloads using it.
 
 . Create namespace `bookinfo` and deploy bookinfo application.
-
++
 [source,bash,subs="attributes+",name="inplace-update-strategy"]
 ----
 kubectl create namespace bookinfo
@@ -93,7 +109,7 @@ with_retries pods_istio_version_match "bookinfo" "{istio_latest_minus_one_versio
 endif::[]
 
 . Review the `Istio` resource after application deployment.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get istio -n istio-system
@@ -103,7 +119,7 @@ default   1           1       1        default           Healthy   v{istio_lates
 Note: `IN USE` field shows as 1, as the namespace label and the injected proxies reference the IstioRevision.
 
 . Perform the update of the control plane by changing the version in the Istio resource.
-
++
 [source,bash,subs="attributes+"]
 ----
 kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v{istio_latest_version}"}}'
@@ -118,7 +134,7 @@ print_istio_info
 endif::[]
 
 . Confirm the `Istio` resource version was updated.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get istio -n istio-system
@@ -127,7 +143,7 @@ default   1           1       1        default           Healthy   v{istio_lates
 ----
 
 . Delete `bookinfo` pods to trigger sidecar injection with the new version.
-
++
 [source,bash,subs="attributes+"]
 ----
 kubectl rollout restart deployment -n bookinfo
@@ -145,10 +161,10 @@ istioctl proxy-status
 endif::[]
 
 . Confirm that the new version is used in the sidecar.
-
++
 [source,bash,subs="attributes+",name="inplace-update-strategy"]
 ----
-istioctl proxy-status 
+istioctl proxy-status
 ----
 The column `VERSION` should match the new control plane version.
 
@@ -158,11 +174,24 @@ endif::[]
 
 [[recommendations-for-inplace-strategy]]
 === Recommendations for InPlace Strategy
-During `InPlace` updates, the control plane pods are restarted, which may cause temporary service disruptions. To minimize downtime during updates, we recommend configuring the `istiod` deployment with high availability (HA). For more information, please refer to this link:../../docs/general/istiod-ha.adoc[guide].
+InPlace updates restart control plane pods, which may cause brief service disruptions. Configure istiod with high availability (HA) to minimize downtime. See the link:../../docs/general/istiod-ha.adoc[HA guide].
+
+[[inplace-ambient-mode-considerations]]
+=== InPlace Strategy for Ambient Mode
+
+With InPlace updates in ambient mode, all components update directly. Update sequence is described below. In contrast to sidecar mode, ambient mode supports moving application pods to an upgraded ztunnel proxy without a mandatory restart or reschedule of running application pods. However, upgrading ztunnel could cause all long-lived TCP connections on the upgraded node to reset. See <<ambient-special-considerations>> for instruction how to avoid this problem. Recommendation to configure istiod with high availability (HA) applies for ambient mode as well.
+
+**Update sequence for ambient mode:**
+
+1. Istio control plane (patch version in Istio resource)
+2. IstioCNI (patch to same version)
+3. ZTunnel (patch to same version)
+
+See <<updating-ambient-components>> for detailed IstioCNI and ZTunnel update procedures.
 
 [[revisionbased]]
 == RevisionBased
-When the `RevisionBased` strategy is used, a new Istio control plane instance is created for every change to the `Istio.spec.version` field. The old control plane remains in place until all workloads have been moved to the new control plane instance. This needs to be done by the user by updating the namespace label and restarting all the pods. The old control plane will be deleted after the grace period specified in the `Istio` resource field `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds`.
+With RevisionBased, a new control plane instance is created for each version change. The old control plane stays until workloads migrate to the new version. The migration is triggered by updating namespace labels and restarting pods. The old control plane is deleted after the grace period in `spec.updateStrategy.inactiveRevisionDeletionGracePeriodSeconds`.
 
 [[example-using-the-revisionbased-strategy]]
 === Example using the RevisionBased strategy
@@ -174,14 +203,14 @@ Prerequisites:
 Steps:
 
 . Create the `istio-system` namespace.
-
++
 [source,bash,subs="attributes+",name="revision-based-strategy"]
 ----
 kubectl create namespace istio-system
 ----
 
 . Create the `Istio` resource.
-
++
 [source,bash,subs="attributes+",name="revision-based-strategy"]
 ----
 cat <<EOF | kubectl apply -f-
@@ -204,7 +233,7 @@ print_istio_info
 endif::[]
 
 . Confirm the control plane is installed and is using the desired version.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get istio -n istio-system
@@ -214,7 +243,7 @@ default   1           1       0        default-v1-25-3   Healthy   v{istio_lates
 Note: `IN USE` field shows as 0, as the control plane has just been installed and there are no workloads using it.
 
 . Get the `IstioRevision` name.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get istiorevision -n istio-system
@@ -228,7 +257,7 @@ kubectl get istiorevision -n istio-system
 endif::[]
 
 . Create `bookinfo` namespace and label it with the revision name.
-
++
 [source,bash,subs="attributes+",name="revision-based-strategy"]
 ----
 kubectl create namespace bookinfo
@@ -236,7 +265,7 @@ kubectl label namespace bookinfo istio.io/rev=default-v{istio_latest_minus_one_v
 ----
 
 . Deploy bookinfo application.
-
++
 [source,bash,subs="attributes+",name="revision-based-strategy"]
 ----
 kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo.yaml
@@ -250,7 +279,7 @@ with_retries pods_istio_version_match "bookinfo" "{istio_latest_minus_one_versio
 endif::[]
 
 . Review the `Istio` resource after application deployment.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get istio -n istio-system
@@ -264,15 +293,15 @@ with_retries istio_active_revision_match "default-v{istio_latest_minus_one_versi
 endif::[]
 
 . Confirm that the proxy version matches the control plane version.
-
++
 [source,bash,subs="attributes+"]
 ----
-istioctl proxy-status 
+istioctl proxy-status
 ----
 The column `VERSION` should match the control plane version.
 
 . Update the control plane to a new version.
-
++
 [source,bash,subs="attributes+",name="revision-based-strategy"]
 ----
 kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v{istio_latest_version}"}}'
@@ -285,7 +314,7 @@ print_istio_info
 endif::[]
 
 . Verify the `Istio` and `IstioRevision` resources. There will be a new revision created with the new version.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get istio
@@ -305,7 +334,7 @@ with_retries istio_revisions_ready_count "2"
 endif::[]
 
 . Confirm there are two control plane pods running, one for each revision.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get pods -n istio-system
@@ -319,10 +348,10 @@ with_retries istiod_pods_count "2"
 endif::[]
 
 . Confirm the proxy sidecar version remains the same:
-
++
 [source,bash,subs="attributes+",name="revision-based-strategy"]
 ----
-istioctl proxy-status 
+istioctl proxy-status
 ----
 The column `VERSION` should still match the old control plane version.
 
@@ -331,7 +360,7 @@ with_retries pods_istio_version_match "bookinfo" "{istio_latest_minus_one_versio
 endif::[]
 
 . Change the label of the `bookinfo` namespace to use the new revision.
-
++
 [source,bash,subs="attributes+",name="revision-based-strategy"]
 ----
 kubectl label namespace bookinfo istio.io/rev=default-v{istio_latest_version_revision_format} --overwrite
@@ -339,7 +368,7 @@ kubectl label namespace bookinfo istio.io/rev=default-v{istio_latest_version_rev
 The existing workload sidecars will continue to run and will remain connected to the old control plane instance. They will not be replacedwith a new version until the pods are deleted and recreated.
 
 . Restart all Deplyments in the `bookinfo` namespace.
-
++
 [source,bash,subs="attributes+"]
 ----
 kubectl rollout restart deployment -n bookinfo
@@ -359,15 +388,15 @@ with_retries pods_istio_version_match "bookinfo" "{istio_latest_version}"
 endif::[]
 
 . Confirm the new version is used in the sidecars.
-
++
 [source,bash,subs="attributes+",name="revision-based-strategy"]
 ----
-istioctl proxy-status 
+istioctl proxy-status
 ----
 The column `VERSION` should match the updated control plane version.
 
 . Confirm the deletion of the old control plane and IstioRevision.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get pods -n istio-system
@@ -400,14 +429,14 @@ Prerequisites:
 Steps:
 
 . Create the `istio-system` namespace.
-
++
 [source,bash,subs="attributes+",name="revision-istiorevisiontag-strategy"]
 ----
 kubectl create namespace istio-system
 ----
 
 . Create the `Istio` and `IstioRevisionTag` resources.
-
++
 [source,bash,subs="attributes+",name="revision-istiorevisiontag-strategy"]
 ----
 cat <<EOF | kubectl apply -f-
@@ -439,7 +468,7 @@ kubectl get pods -n istio-system
 endif::[]
 
 . Confirm the control plane is installed and is using the desired version.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get istio
@@ -453,7 +482,7 @@ with_retries istio_active_revision_match "default-v{istio_latest_minus_one_versi
 endif::[]
 
 . Inspect the `IstioRevisionTag`.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get istiorevisiontags
@@ -467,7 +496,7 @@ with_retries istio_revision_tag_status_equal "NotReferencedByAnything" "default"
 endif::[]
 
 . Create `bookinfo` namespace and label it to mark it for injection.
-
++
 [source,bash,subs="attributes+",name="revision-istiorevisiontag-strategy"]
 ----
 kubectl create namespace bookinfo
@@ -475,7 +504,7 @@ kubectl label namespace bookinfo istio-injection=enabled
 ----
 
 . Deploy bookinfo application.
-
++
 [source,bash,subs="attributes+",name="revision-istiorevisiontag-strategy"]
 ----
 kubectl apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/{istio_release_name}/samples/bookinfo/platform/kube/bookinfo.yaml
@@ -489,7 +518,7 @@ with_retries pods_istio_version_match "bookinfo" "{istio_latest_minus_one_versio
 endif::[]
 
 . Review the `IstioRevisionTag` resource after application deployment.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get istiorevisiontag
@@ -504,22 +533,22 @@ with_retries istio_revision_tag_inuse "true" "default"
 endif::[]
 
 . Confirm that the proxy version matches the control plane version.
-
++
 [source,bash,subs="attributes+"]
 ----
-istioctl proxy-status 
+istioctl proxy-status
 ----
 The column `VERSION` should match the control plane version.
 
 . Update the control plane to a new version.
-
++
 [source,bash,subs="attributes+",name="revision-istiorevisiontag-strategy"]
 ----
 kubectl patch istio default -n istio-system --type='merge' -p '{"spec":{"version":"v{istio_latest_version}"}}'
 ----
 
 . Verify the `Istio`, `IstioRevision` and `IstioRevisionTag` resources. There will be a new revision created with the new version.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get istio
@@ -536,7 +565,7 @@ default   Healthy   True     default-v{istio_latest_version_revision_format}   1
 Now, both our IstioRevisions and the IstioRevisionTag are considered in use. The old revision default-{istio_latest_minus_one_version_revision_format} because it is being used by proxies, the new revision default-{istio_latest_version_revision_format} because it is referenced by the tag, and lastly the tag because it is referenced by the bookinfonamespace.
 
 . Confirm there are two control plane pods running, one for each revision.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get pods -n istio-system
@@ -551,10 +580,10 @@ wait_istio_ready "istio-system"
 endif::[]
 
 . Confirm the proxy sidecar version remains the same:
-
++
 [source,bash,subs="attributes+",name="revision-istiorevisiontag-strategy"]
 ----
-istioctl proxy-status 
+istioctl proxy-status
 ----
 The column `VERSION` should still match the old control plane version.
 
@@ -564,17 +593,17 @@ print_istio_info
 endif::[]
 
 . Restart all the Deployments in the `bookinfo` namespace.
-
++
 [source,bash,subs="attributes+"]
 ----
 kubectl rollout restart deployment -n bookinfo
 ----
 
 . Confirm the new version is used in the sidecars. Note that it might take a few seconds for the restarts to complete.
-
++
 [source,bash,subs="attributes+"]
 ----
-istioctl proxy-status 
+istioctl proxy-status
 ----
 The column `VERSION` should match the updated control plane version.
 
@@ -592,7 +621,7 @@ with_retries pods_istio_version_match "bookinfo" "{istio_latest_version}"
 endif::[]
 
 . Confirm the deletion of the old control plane and IstioRevision.
-
++
 [source,console,subs="attributes+"]
 ----
 kubectl get pods -n istio-system
@@ -614,3 +643,166 @@ echo "Confirm istiorevision is deleted"
 with_retries istio_revisions_ready_count "1"
 print_istio_info
 endif::[]
+
+[[updating-ambient-components]]
+== Updating Ambient Mode Components
+
+This section covers updating IstioCNI, ZTunnel, and Waypoint proxies after control plane updates using the InPlace update strategy.
+
+[[updating-istiocni-ambient]]
+=== Updating IstioCNI
+
+After updating the Istio control plane, update the IstioCNI component. The CNI at version 1.x is compatible with the control plane at version 1.x+1 and 1.x, so the control plane must be upgraded before IstioCNI.
+
+[source,bash,subs="attributes+"]
+----
+kubectl patch istiocni default --type='merge' -p '{"spec":{"version":"v{istio_latest_version}"}}'
+kubectl wait --for=condition=Ready istiocnis/default --timeout=5m
+----
+
+[[updating-ztunnel-ambient]]
+=== Updating ZTunnel
+
+After updating IstioCNI, update the ZTunnel component. The ZTunnel DaemonSet uses a rolling update strategy, updating one node at a time to maintain mesh connectivity.
+
+[source,bash,subs="attributes+"]
+----
+kubectl patch ztunnel default --type='merge' -p '{"spec":{"version":"v{istio_latest_version}"}}'
+kubectl rollout status daemonset/ztunnel -n ztunnel
+kubectl wait --for=condition=Ready ztunnel/default --timeout=10m
+----
+
+*Note:* The ZTunnel DaemonSet update may take several minutes as pods are updated node-by-node to minimize disruption.
+
+Verify the ZTunnel resource shows the new version:
+
+[source,bash,subs="attributes+"]
+----
+kubectl get ztunnel
+kubectl get pods -n ztunnel -o wide
+----
+
+[[verifying-ambient-workloads]]
+=== Verifying Ambient Workloads
+
+After updating all ambient components, verify that your workloads are functioning correctly:
+
+[source,bash,subs="attributes+"]
+----
+# Check workload status
+kubectl get pods -n <your-namespace>
+
+# Verify ZTunnel is processing traffic
+istioctl ztunnel-config workloads --namespace ztunnel | grep <your-namespace>
+
+# Test connectivity within your mesh
+kubectl exec <your-pod> -n <your-namespace> -- curl -sS <service>:<port>
+----
+
+[[updating-waypoint-proxies]]
+=== Updating Waypoint Proxies (If Deployed)
+
+If you have deployed waypoint proxies for Layer 7 features, they automatically update to use the new control plane. Verify after upgrade:
+
+[source,bash,subs="attributes+"]
+----
+# List waypoint proxies
+kubectl get gateway -n <your-namespace>
+
+# Verify waypoint pods are running
+kubectl get pods -n <your-namespace> -l gateway.networking.k8s.io/gateway-name=<waypoint-name>
+----
+
+For detailed waypoint configuration, see link:../common/istio-ambient-waypoint.adoc[Istio Waypoint Proxy Guide].
+
+[[ambient-special-considerations]]
+=== Special Considerations for Ambient Mode
+
+**ZTunnel DaemonSet Updates:**
+
+Ztunnel operates at Layer 4 of the OSI model, proxying TCP traffic, and does not have application-layer visibility. Because of this, it cannot transfer connection state to another process. This has significant implications for the long-lived TCP connections on the upgraded node. The ztunnel runs as a DaemonSet — a per-node proxy — meaning that ztunnel upgrades affect, at minimum, an entire node at a time.
+
+**ZTunnel LifeCycle**
+
+By default ztunnel DaemonSet is using RollingUpdate update strategy and during every restart will go through following phases (node by node):
+
+. New ztunnel pod starts on a node (while old one is still running)
+. New ztunnel establishes listeners in each pod running on the node, and marks itself "ready".
+. At this point, we have both ztunnels running. New connections may be handled by either instance, for a very brief period of time as ztunnel uses SO_REUSEPORT.
+. Shortly after, Kubernetes will start terminating the old ztunnel. It does this initially by sending a SIGTERM. Old ztunnel will catch this, and start "draining".
+. Immediately upon starting a drain, the old ztunnel will close its listeners. Now only the new ztunnel is listening. Critically, at all times there will be at least one ztunnel available to accept new connections.
+. While old ztunnel will not accept new connections, it will continue processing existing connections.
+. After the drain period, the old ztunnel will forcefully terminate any outstanding connections.
+
+The drain period is configured by https://github.com/istio/istio/blob/master/manifests/charts/ztunnel/values.yaml#L96C3-L96C32[terminationGracePeriodSeconds]. Every connection still open after the drain period will be forcefully terminated.
+
+**Upgrade using high terminationGracePeriodSeconds**
+
+The simplest option to avoid dropping connections is to configure high enough terminationGracePeriodSeconds so all application connections can naturally and gracefully terminate. This however requires good knowledge of applications running in the mesh. Also with high terminationGracePeriodSeconds it will take a long time to finish the upgrade as only one node is being processed at the time. Therefore a wise balance is necessary.
+
+Default terminationGracePeriodSeconds value can be changed via:
+[source,yaml,subs="attributes+"]
+----
+apiVersion: sailoperator.io/v1
+kind: ZTunnel
+metadata:
+  name: default
+spec:
+  version: {istio_latest_version}
+  namespace: ztunnel
+  values:
+    ztunnel:
+      terminationGracePeriodSeconds: 300  # 5 minutes - adjust based on workload
+----
+
+
+**A safe upgrade using node draining**
+
+As it's not possible to pass TCP connection to another process, only reliable option to force an application to reconnect through a new ztunnel is by graceful restart of the application. This can be done manually by restarting selected applications or all at once by node draining. Applications would have to be restarted at the correct time when the new ztunnel is started and the old ztunnel is in the draining phase. This would be difficult to achieve.
+
+[NOTE]
+Applications with retry logic or short keepalive timeouts will naturally recover better than ones with very long idle TCP connections.
+
+For better control over the upgrade process it is possible to use https://kubernetes.io/docs/tasks/manage-daemon/update-daemon-set/#daemonset-update-strategy[OnDelete update strategy] which can be set via:
+
+[source,yaml,subs="attributes+"]
+----
+apiVersion: sailoperator.io/v1
+kind: ZTunnel
+metadata:
+  name: default
+spec:
+  version: {istio_latest_version}
+  namespace: ztunnel
+  values:
+    ztunnel:
+      updateStrategy:
+        type: OnDelete
+----
+
+With this update strategy, following workflow will avoid forceful termination of long-lived connections:
+
+. Update ZTunnel version
+. Drain a node: This forces all applications to move to other nodes, closing their long-lived connections gracefully (per their own terminationGracePeriodSeconds).
+. Delete old ztunnel pod and wait for new one to be started: Since the node is empty, deleting the old ztunnel and starting the new one carries zero risk to traffic.
+. Mark the node as schedulable: This allows applications to schedule back onto the node and they will now automatically use the new ztunnel.
+. repeat steps 2 -- 4 for all nodes
+
+
+**Version Skew:**
+
+* ZTunnel at version 1.x is compatible with control plane at version 1.x+1 and 1.x
+* Keep all components (Istio, IstioCNI, ZTunnel) at the same version when possible
+* Always test version combinations in non-production first
+* IstioCNI at version 1.x is compatible with control plane at version 1.x+1 and 1.x
+
+**Waypoint Proxy Compatibility:**
+
+* Waypoint proxies automatically reference the active control plane revision
+* With InPlace: waypoints transition directly to the new version
+* With RevisionBased: waypoints can function with both revisions during migration
+
+**Troubleshooting:**
+
+* ZTunnel: https://istio.io/latest/docs/ambient/usage/troubleshoot-ztunnel/
+* Waypoint: https://istio.io/latest/docs/ambient/usage/troubleshoot-waypoint/

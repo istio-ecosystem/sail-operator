@@ -18,8 +18,6 @@ set -eux -o pipefail
 
 SCRIPTPATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ROOT=$(cd "${SCRIPTPATH}/../../.." && pwd)
-GW_API_VERSION=${GW_API_VERSION:-v1.4.1}
-
 # shellcheck source=common/scripts/kind_provisioner.sh
 source "${ROOT}/common/scripts/kind_provisioner.sh"
 
@@ -47,7 +45,7 @@ function setup_kind_registry() {
   if [[ "${running}" != 'true' ]]; then
       docker run \
         -d --restart=always -p "${KIND_REGISTRY_PORT}:5000" --name "${KIND_REGISTRY_NAME}" \
-        gcr.io/istio-testing/registry:2
+        registry.istio.io/testing/registry:2
     docker network connect "kind" "${KIND_REGISTRY_NAME}"
   fi
 
@@ -73,7 +71,7 @@ if [ "${MULTICLUSTER}" == "true" ]; then
 
     # Apply Gateway API CRDs which are needed for Multi-Cluster Ambient testing
     for config in "${KUBECONFIGS[@]}"; do
-        kubectl apply --kubeconfig="$config" --server-side -f "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GW_API_VERSION}/experimental-install.yaml"
+        kubectl apply --kubeconfig="$config" --server-side -f "${SCRIPTPATH}/testdata/gateway-api/experimental-install.yaml"
     done
 
     export KUBECONFIG="${KUBECONFIGS[0]}"
@@ -82,5 +80,9 @@ if [ "${MULTICLUSTER}" == "true" ]; then
 else
   KUBECONFIG="${ARTIFACTS}/config" setup_kind_cluster "${KIND_CLUSTER_NAME}" "${KIND_IMAGE}" "" "true" "true"
   setup_kind_registry "$KIND_CLUSTER_NAME"
+
+  # Apply Gateway API CRDs needed for library tests
+  kubectl apply --server-side -f "${SCRIPTPATH}/testdata/gateway-api/experimental-install.yaml"
+
   echo "Your KinD environment is ready, to use it: export KUBECONFIG=${ARTIFACTS}/config"
 fi

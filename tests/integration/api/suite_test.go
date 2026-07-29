@@ -18,6 +18,7 @@ package integration
 
 import (
 	"context"
+	"os"
 	"path"
 	"testing"
 
@@ -86,7 +87,7 @@ var _ = BeforeSuite(func() {
 	Expect(k8sClient.Create(context.TODO(), operatorNs)).To(Succeed())
 
 	cfg := config.ReconcilerConfig{
-		ResourceDirectory:       path.Join(project.RootDir, "resources"),
+		ResourceFS:              os.DirFS(path.Join(project.RootDir, "resources")),
 		Platform:                config.PlatformKubernetes,
 		DefaultProfile:          "",
 		OperatorNamespace:       operatorNs.Name,

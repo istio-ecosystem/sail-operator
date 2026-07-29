@@ -141,7 +141,7 @@ BUILD_WITH_CONTAINER=0 make test.e2e.kind
 - `GINKGO_FLAGS` - Pass flags to Ginkgo runner
 - `NAMESPACE=sail-operator` - Operator namespace
 - `CONTROL_PLANE_NS=istio-system` - Istio namespace
-- `EXPECTED_REGISTRY=^docker\.io|^gcr\.io` - Expected image registry
+- `EXPECTED_REGISTRY=^docker\.io|^gcr\.io|^registry\.istio\.io` - Expected image registry
 - `KEEP_ON_FAILURE=false` - Keep cluster on test failure
 
 #### Custom Samples
@@ -254,6 +254,65 @@ func TestCalculateRevisionName(t *testing.T) {
 3. **Resource cleanup** - Use cleaner utility for automatic cleanup
 4. **Platform coverage** - Test on different Kubernetes distributions
 
+### Ginkgo Best Practices
+
+#### Extract Common Setup into Helper Methods with `GinkgoHelper()`
+When multiple tests share setup logic, extract it into a helper function. Call `GinkgoHelper()` at the beginning of the helper so that test failures report the caller's location, not the helper's internals. Use the global `Expect` (from the gomega dot-import) for assertions:
+
+```go
+func createTestIstio(ctx context.Context, k8sClient client.Client, name, namespace string) *v1.Istio {
+    GinkgoHelper()
+    istio := &v1.Istio{
+        ObjectMeta: metav1.ObjectMeta{
+            Name:      name,
+            Namespace: namespace,
+        },
+        Spec: v1.IstioSpec{
+            Version: istioversion.Default,
+        },
+    }
+    Expect(k8sClient.Create(ctx, istio)).To(Succeed())
+    return istio
+}
+
+// Usage in a test:
+It("should reconcile", func() {
+    istio := createTestIstio(ctx, k8sClient, "test", "istio-system")
+    // ... assertions using istio
+})
+```
+
+This keeps tests concise while preserving clear error traces.
+
+**Important**: Do NOT use `func(ctx SpecContext, g Gomega)` as an `It` node signature. Ginkgo's `It` only accepts `func()`, `func(ctx SpecContext)`, or `func(ctx context.Context)`. The `g Gomega` parameter is only valid in `Eventually`/`Consistently` callbacks. For helper functions called from `It` blocks, use `GinkgoHelper()` with the global `Expect` instead of passing a `Gomega` instance.
+
+#### Use `DeferCleanup` for Setup Teardown
+Prefer `DeferCleanup` over manual `AfterEach`/`AfterAll` blocks to clean up resources created during setup. `DeferCleanup` ties the cleanup directly to the setup code, making the relationship explicit and reducing the risk of forgetting cleanup:
+
+```go
+BeforeAll(func(ctx SpecContext) {
+    ns := &corev1.Namespace{
+        ObjectMeta: metav1.ObjectMeta{Name: "test-ns"},
+    }
+    Expect(k8sClient.Create(ctx, ns)).To(Succeed())
+    DeferCleanup(func(ctx SpecContext) {
+        Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, ns))).To(Succeed())
+    })
+})
+
+BeforeEach(func(ctx SpecContext) {
+    configMap := &corev1.ConfigMap{
+        ObjectMeta: metav1.ObjectMeta{Name: "test-cm", Namespace: "test-ns"},
+    }
+    Expect(k8sClient.Create(ctx, configMap)).To(Succeed())
+    DeferCleanup(func(ctx SpecContext) {
+        Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, configMap))).To(Succeed())
+    })
+})
+```
+
+`DeferCleanup` runs at the matching scope (e.g., cleanup registered in `BeforeAll` runs after all specs in that container; cleanup in `BeforeEach` runs after each spec). This is preferred over separate `AfterEach`/`AfterAll` blocks because it colocates setup and teardown.
+
 ### Common Testing Patterns
 
 #### Testing Controller Reconciliation
@@ -320,13 +379,20 @@ When("invalid configuration is provided", func() {
 ## Test Execution and CI/CD
 
 ### Local Development
+
+**Important**: Always run e2e tests via `make` targets, never by invoking `ginkgo` directly. The `make` targets and their underlying shell scripts set up required environment variables, handle operator build/deploy, and configure the test runner correctly.
+
 ```bash
 # Run all tests
 make test test.integration test.e2e.kind
 
-# Run specific test suites
+# Run specific test suites using GINKGO_FLAGS
 make test.integration GINKGO_FLAGS="--focus=IstioController"
 make test.e2e.kind GINKGO_FLAGS="--label-filter=smoke"
+make test.e2e.ocp GINKGO_FLAGS="--focus='some test'"
+
+# Skip build and deploy when operator is already running on the cluster
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.ocp GINKGO_FLAGS="--focus='some test'"
 
 # Debug test failures
 KEEP_ON_FAILURE=true make test.e2e.kind
@@ -335,6 +401,74 @@ KEEP_ON_FAILURE=true make test.e2e.kind
 CONTAINER_CLI=podman TARGET_OS=linux TARGET_ARCH=arm64 make test.e2e.kind
 CONTAINER_CLI=podman DOCKER_GID=0 make test.integration
 ```
+
+### Flaky Test Detection
+
+The test runner passes `GINKGO_FLAGS` verbatim to the `ginkgo` invocation, so all standard Ginkgo stress-test and retry flags work without any additional setup. These are intended for **local use only** — do not add them to CI job definitions.
+
+#### Repeat a suite N times (CI-safe stress test)
+
+Run the full suite up to N additional times or until the first failure. `--repeat=N` runs the suite `1+N` times total.
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind GINKGO_FLAGS="--repeat=3"
+```
+
+Combine with `--randomize-all` to surface ordering-dependent flakiness:
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind GINKGO_FLAGS="--repeat=5 --randomize-all"
+```
+
+#### Loop forever until a failure (local debugging)
+
+Runs indefinitely — useful for catching rare race conditions. Stop with `Ctrl+C` when a failure is detected.
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind GINKGO_FLAGS="--until-it-fails"
+```
+
+#### Retry flaky specs globally
+
+When a spec fails, Ginkgo retries it up to N times before marking the suite failed. Successful retries are reported but do not fail the run.
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind GINKGO_FLAGS="--flake-attempts=3"
+```
+
+#### Target a specific test to stress
+
+Combine with `--focus` to isolate a single spec:
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind \
+  GINKGO_FLAGS="--focus='should update istiod deployment' --repeat=10"
+```
+
+#### Per-spec decorators in test code
+
+For specs that are known to be sensitive, you can mark them in the source rather than relying on command-line flags:
+
+```go
+// Require strict N-in-a-row passes (no retries on failure — use for correctness checks)
+It("does not enter an infinite reconcile loop", MustPassRepeatedly(3), func() {
+    // ...
+})
+
+// Accept up to N retries (use sparingly — prefer fixing the root cause)
+It("syncs TLS settings", FlakeAttempts(3), func() {
+    // ...
+})
+```
+
+> **`FlakeAttempts` in `Ordered` containers**: if the failure occurs in a `BeforeAll`, Ginkgo runs `AfterAll` to clean up and then re-runs `BeforeAll`. If it occurs inside an `It`, only that `It` is retried — `BeforeAll` is not re-run. Keep this in mind when using `FlakeAttempts` on specs that depend on `BeforeAll` state.
+
+#### Recommended workflow for investigating a flaky CI result
+
+1. Identify the failing spec from CI output.
+2. Run it locally with `--focus` and `--repeat=10` to reproduce.
+3. If reproduced, add `MustPassRepeatedly` or fix the underlying race.
+4. If not reproduced, try `--until-it-fails` with `--randomize-all` to expose ordering dependencies.
 
 ### Continuous Integration
 Tests run automatically on:

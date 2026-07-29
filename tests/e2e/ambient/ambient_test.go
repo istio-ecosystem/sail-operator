@@ -22,6 +22,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
@@ -34,12 +35,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	defaultTimeout = 180
-)
+var defaultTimeout = env.GetInt("DEFAULT_TEST_TIMEOUT", 180)
 
-var _ = Describe("Ambient configuration ", Label("smoke", "ambient"), Ordered, func() {
-	SetDefaultEventuallyTimeout(defaultTimeout * time.Second)
+var _ = Describe("Ambient configuration ", Label("ambient", "slow"), Ordered, func() {
+	SetDefaultEventuallyTimeout(time.Duration(defaultTimeout) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
 	debugInfoLogged := false
@@ -51,6 +50,11 @@ var _ = Describe("Ambient configuration ", Label("smoke", "ambient"), Ordered, f
 				continue
 			}
 
+			// FIPS clusters do not support ambient mode for versions below 1.28
+			if fipsCluster && version.Version.LessThan(semver.MustParse("1.28.0")) {
+				continue
+			}
+
 			Context(fmt.Sprintf("Istio version %s", version.Version), func() {
 				clr := cleaner.New(cl)
 				BeforeAll(func(ctx SpecContext) {
@@ -58,11 +62,32 @@ var _ = Describe("Ambient configuration ", Label("smoke", "ambient"), Ordered, f
 					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
 					Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
 					Expect(k.CreateNamespace(ztunnelNamespace)).To(Succeed(), "ZTunnel namespace failed to be created")
-				})
 
-				When("the IstioCNI CR is created with ambient profile", func() {
-					BeforeAll(func() {
-						cniYAML := `
+					// Create all ambient components in reverse order to test order independence
+					// This validates that the operator correctly handles dependencies regardless of creation order
+
+					// Create ZTunnel first (won't be fully ready until Istio/istiod exists for XDS)
+					ztunnelYaml := `
+apiVersion: sailoperator.io/v1
+kind: ZTunnel
+metadata:
+  name: default
+spec:
+  version: %s
+  namespace: %s
+  targetRef:
+    kind: Istio
+    name: %s
+  values:
+    ztunnel:
+      env:
+        CUSTOM_ENV_VAR: "true"`
+					ztunnelYaml = fmt.Sprintf(ztunnelYaml, version.Name, ztunnelNamespace, istioName)
+					Log("Creating ZTunnel first (reverse order):", ztunnelYaml)
+					Expect(k.CreateFromString(ztunnelYaml)).To(Succeed(), "ZTunnel creation failed")
+
+					// Create IstioCNI second
+					cniYAML := `
 apiVersion: sailoperator.io/v1
 kind: IstioCNI
 metadata:
@@ -75,12 +100,26 @@ spec:
   profile: ambient
   version: %s
   namespace: %s`
-						cniYAML = fmt.Sprintf(cniYAML, version.Name, istioCniNamespace)
-						Log("IstioCNI YAML:", cniYAML)
-						Expect(k.CreateFromString(cniYAML)).To(Succeed(), "IstioCNI creation failed")
-						Success("IstioCNI created")
-					})
+					cniYAML = fmt.Sprintf(cniYAML, version.Name, istioCniNamespace)
+					Log("Creating IstioCNI second:", cniYAML)
+					Expect(k.CreateFromString(cniYAML)).To(Succeed(), "IstioCNI creation failed")
 
+					// Create Istio last (this will trigger ZTunnel to become ready)
+					istioYAML := `
+values:
+  global:
+    network: custom-network
+  pilot:
+    trustedZtunnelNamespace: ztunnel
+profile: ambient`
+					Log("Creating Istio last (enables ZTunnel to become ready)")
+					common.CreateIstio(k, version.Name, istioYAML)
+
+					Success("All ambient components created in reverse order to test order independence")
+				})
+
+				When("the ambient components are deployed", func() {
+					// IstioCNI tests
 					It("deploys the CNI DaemonSet", func(ctx SpecContext) {
 						Eventually(func(g Gomega) {
 							daemonset := &appsv1.DaemonSet{}
@@ -89,6 +128,10 @@ spec:
 								To(Equal(daemonset.Status.CurrentNumberScheduled), "CNI DaemonSet Pods not Available; expected numberAvailable to be equal to currentNumberScheduled")
 						}).Should(Succeed(), "CNI DaemonSet Pods are not Available")
 						Success("CNI DaemonSet is deployed in the namespace and Running")
+					})
+
+					It("updates the IstioCNI CR status to Ready", func(ctx SpecContext) {
+						common.AwaitCondition(ctx, v1.IstioCNIConditionReady, kube.Key("default"), &v1.IstioCNI{}, k, cl)
 					})
 
 					It("uses the configured values in the istio-cni-config config map", func(ctx SpecContext) {
@@ -105,23 +148,26 @@ spec:
 							return nil
 						}).Should(Succeed(), "Expected 'AMBIENT_DNS_CAPTURE' to be set to 'true'")
 					})
-				})
 
-				When("the Istio CR is created with ambient profile", func() {
-					BeforeAll(func() {
-						common.CreateIstio(k, version.Name, `
-values:
-  pilot:
-    trustedZtunnelNamespace: ztunnel
-profile: ambient`)
-					})
-
+					// Istio tests
 					It("updates the Istio CR status to Reconciled", func(ctx SpecContext) {
 						common.AwaitCondition(ctx, v1.IstioConditionReconciled, kube.Key(istioName), &v1.Istio{}, k, cl)
 					})
 
 					It("updates the Istio CR status to Ready", func(ctx SpecContext) {
 						common.AwaitCondition(ctx, v1.IstioConditionReady, kube.Key(istioName), &v1.Istio{}, k, cl)
+					})
+
+					It("updates the IstioRevision status to Ready", func(ctx SpecContext) {
+						// Get the active revision name from Istio CR
+						istio := &v1.Istio{}
+						Eventually(func(g Gomega) {
+							g.Expect(cl.Get(ctx, kube.Key(istioName), istio)).To(Succeed())
+							g.Expect(istio.Status.ActiveRevisionName).NotTo(BeEmpty(), "Active revision not set")
+						}).Should(Succeed(), "Istio should have an active revision")
+
+						revisionName := istio.Status.ActiveRevisionName
+						common.AwaitCondition(ctx, v1.IstioRevisionConditionReady, kube.Key(revisionName, controlPlaneNamespace), &v1.IstioRevision{}, k, cl)
 					})
 
 					It("deploys istiod", func(ctx SpecContext) {
@@ -150,28 +196,8 @@ profile: ambient`)
 							ContainElement(corev1.EnvVar{Name: "CA_TRUSTED_NODE_ACCOUNTS", Value: "ztunnel/ztunnel"})))),
 							"Expected CA_TRUSTED_NODE_ACCOUNTS to be set to ztunnel/ztunnel, but not found")
 					})
-				})
 
-				When("the ZTunnel CR is created", func() {
-					BeforeAll(func() {
-						ztunnelYaml := `
-apiVersion: sailoperator.io/v1
-kind: ZTunnel
-metadata:
-  name: default
-spec:
-  version: %s
-  namespace: %s
-  values:
-    ztunnel:
-      env:
-        CUSTOM_ENV_VAR: "true"`
-						ztunnelYaml = fmt.Sprintf(ztunnelYaml, version.Name, ztunnelNamespace)
-						Log("ZTunnel YAML:", ztunnelYaml)
-						Expect(k.CreateFromString(ztunnelYaml)).To(Succeed(), "ZTunnel creation failed")
-						Success("ZTunnel created")
-					})
-
+					// ZTunnel tests
 					It("deploys the ZTunnel DaemonSet", func(ctx SpecContext) {
 						Eventually(func(g Gomega) {
 							daemonset := &appsv1.DaemonSet{}
@@ -181,6 +207,10 @@ spec:
 									"ZTunnel DaemonSet Pods not Available; expected numberAvailable to be equal to currentNumberScheduled")
 						}).Should(Succeed(), "ZTunnel DaemonSet Pods are not Available")
 						Success("ZTunnel DaemonSet is deployed and Running")
+					})
+
+					It("updates the ZTunnel CR status to Ready", func(ctx SpecContext) {
+						common.AwaitCondition(ctx, v1.ZTunnelConditionReady, kube.Key("default"), &v1.ZTunnel{}, k, cl)
 					})
 
 					It("has ztunnel running with appropriate env variables set", func(ctx SpecContext) {
@@ -202,6 +232,12 @@ spec:
 						Expect(ztunnelObj).To(common.HaveContainersThat(ContainElement(WithTransform(getEnvVars,
 							ContainElement(corev1.EnvVar{Name: "CUSTOM_ENV_VAR", Value: "true"})))),
 							"Expected CUSTOM_ENV_VAR to be set to true, but not found")
+
+						if version.Version.GreaterThanEqual(semver.New(1, 27, 0, "", "")) {
+							Expect(ztunnelObj).To(common.HaveContainersThat(ContainElement(WithTransform(getEnvVars,
+								ContainElement(corev1.EnvVar{Name: "NETWORK", Value: "custom-network"})))),
+								"Expected NETWORK to be set to custom-network, but not found")
+						}
 					})
 				})
 
@@ -218,8 +254,8 @@ spec:
 						Expect(k.Label("namespace", common.HttpbinNamespace, "istio.io/dataplane-mode", "ambient")).To(Succeed(), "Error labeling httpbin namespace")
 
 						// Deploy the test pods.
-						Expect(k.WithNamespace(common.SleepNamespace).ApplyKustomize("sleep")).To(Succeed(), "Error deploying sleep pod")
-						Expect(k.WithNamespace(common.HttpbinNamespace).ApplyKustomize("httpbin")).To(Succeed(), "Error deploying httpbin pod")
+						Expect(k.WithNamespace(common.SleepNamespace).ApplyKustomize(common.SleepContainerName)).To(Succeed(), "Error deploying sleep pod")
+						Expect(k.WithNamespace(common.HttpbinNamespace).ApplyKustomize(common.HttpbinContainerName)).To(Succeed(), "Error deploying httpbin pod")
 
 						Success("Ambient validation pods deployed")
 					})
@@ -238,7 +274,7 @@ spec:
 					})
 
 					It("can access the httpbin service from the sleep pod", func(ctx SpecContext) {
-						common.CheckPodConnectivity(sleepPod.Items[0].Name, common.SleepNamespace, common.HttpbinNamespace, k)
+						common.CheckPodConnectivity(sleepPod.Items[0].Name, common.SleepContainerName, common.SleepNamespace, common.HttpbinNamespace, k)
 					})
 				})
 
@@ -287,6 +323,12 @@ spec:
 				})
 
 				AfterAll(func(ctx SpecContext) {
+					// Log debug info before Cleanup: Cleaner removes CRs created after Record()
+					// (e.g. Istio), and parent AfterAll hooks run after this AfterAll.
+					if CurrentSpecReport().Failed() {
+						common.LogDebugInfo(common.Ambient, k)
+						debugInfoLogged = true
+					}
 					if CurrentSpecReport().Failed() && keepOnFailure {
 						return
 					}
@@ -297,7 +339,7 @@ spec:
 		}
 
 		AfterAll(func(ctx SpecContext) {
-			if CurrentSpecReport().Failed() {
+			if CurrentSpecReport().Failed() && !debugInfoLogged {
 				common.LogDebugInfo(common.Ambient, k)
 				debugInfoLogged = true
 			}
@@ -317,7 +359,7 @@ func getEnvVars(container corev1.Container) []corev1.EnvVar {
 }
 
 func checkZtunnelPort(podName, srcNamespace string) {
-	response, err := k.WithNamespace(srcNamespace).Exec(podName, srcNamespace, "netstat -tlpn")
+	response, err := k.WithNamespace(srcNamespace).Exec(podName, common.SleepContainerName, "netstat -tlpn")
 	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("error validating the proxy sockets in the %q pod", podName))
 	// Verify that the HBONE mTLS tunnel port (15008) is listed in the output.
 	Expect(response).To(ContainSubstring("15008"), fmt.Sprintf("Unexpected response from %s pod", podName))

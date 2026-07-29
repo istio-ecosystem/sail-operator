@@ -22,7 +22,7 @@ import (
 
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"gopkg.in/yaml.v3"
-	"helm.sh/helm/v3/pkg/postrender"
+	"helm.sh/helm/v4/pkg/postrenderer"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -35,15 +35,16 @@ const (
 )
 
 // NewHelmPostRenderer creates a Helm PostRenderer that adds the following to each rendered manifest:
-// - adds the "managed-by: sail-operator" label
+// - adds the "managed-by" label with the given managedByValue
 // - adds the specified OwnerReference
 // It also removes the failurePolicy field from ValidatingWebhookConfigurations on updates, so
 // the in-cluster setting stays as-is, to prevent clashing with the istiod validation controller.
-func NewHelmPostRenderer(ownerReference *metav1.OwnerReference, ownerNamespace string, isUpdate bool) postrender.PostRenderer {
+func NewHelmPostRenderer(ownerReference *metav1.OwnerReference, ownerNamespace string, isUpdate bool, managedByValue string) postrenderer.PostRenderer {
 	return HelmPostRenderer{
 		ownerReference: ownerReference,
 		ownerNamespace: ownerNamespace,
 		isUpdate:       isUpdate,
+		managedByValue: managedByValue,
 	}
 }
 
@@ -51,9 +52,10 @@ type HelmPostRenderer struct {
 	ownerReference *metav1.OwnerReference
 	ownerNamespace string
 	isUpdate       bool
+	managedByValue string
 }
 
-var _ postrender.PostRenderer = HelmPostRenderer{}
+var _ postrenderer.PostRenderer = HelmPostRenderer{}
 
 func (pr HelmPostRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *bytes.Buffer, err error) {
 	modifiedManifests = &bytes.Buffer{}
@@ -175,6 +177,6 @@ func (pr HelmPostRenderer) addOwnerReference(manifest map[string]any) (map[strin
 }
 
 func (pr HelmPostRenderer) addManagedByLabel(manifest map[string]any) (map[string]any, error) {
-	err := unstructured.SetNestedField(manifest, constants.ManagedByLabelValue, "metadata", "labels", constants.ManagedByLabelKey)
+	err := unstructured.SetNestedField(manifest, pr.managedByValue, "metadata", "labels", constants.ManagedByLabelKey)
 	return manifest, err
 }

@@ -11,12 +11,18 @@ This end-to-end test suite utilizes Ginkgo, a testing framework known for its ex
     1. [Adding a Test Suite](#adding-a-test-suite)
     1. [Sub-Tests](#sub-tests)
     1. [Best practices](#best-practices)
+1. [Test Labels](#test-labels)
+    1. [Label Structure](#label-structure)
+    1. [Label Reference](#label-reference)
+    1. [Common Filter Examples](#common-filter-examples)
 1. [Running Tests](#running-the-tests)
     1. [Pre-requisites](#pre-requisites)
     1. [How to Run the test](#how-to-run-the-test)
     1. [Running the test locally](#running-the-test-locally)
+    1. [Test Run scenarios while running on OCP](#test-run-scenarios-while-running-on-ocp)
     1. [Settings for end-to-end test execution](#settings-for-end-to-end-test-execution)
-    1. [Customizing the test run](#customizing-the-test-run)    
+    1. [Customizing the test run](#customizing-the-test-run)
+    1. [Detecting and investigating flaky tests](#detecting-and-investigating-flaky-tests)
     1. [Get test definitions for the end-to-end test](#get-test-definitions-for-the-end-to-end-test)
 1. [Contributing](#contributing)
 
@@ -193,6 +199,115 @@ var _ = Describe("Testing with cleanup", Ordered, func() {
     * You can use multiple cleaners, each with its own state. This is useful if the test does some global set up, e.g. sets up the operator, and then specific tests create further resources which you want cleaned.
     * To clean resources without waiting, and waiting for them later, use `CleanupNoWait` followed by `WaitForDeletion`. This is particularly useful when working with more than one cluster.
 
+## Test Labels
+
+Tests are labeled using Ginkgo's `Label()` function so that CI pipelines and developers can filter exactly the tests they want to run. Labels are passed via the `--label-filter` flag in `GINKGO_FLAGS`.
+
+### Label Structure
+
+Labels follow a multi-dimensional structure. Each test file carries one label from each applicable dimension.
+
+**Scope / Duration** — `smoke` or `slow` (never both; absence means normal duration)
+
+| Label | Meaning |
+|-------|---------|
+| `smoke` | Fast, critical-path tests for basic operator functionality. Only `operator` tests currently. |
+| `slow` | Tests that deploy full control planes, run traffic, or perform upgrade procedures. Expect longer execution times. |
+
+**Feature Area** — primary label, one per file
+
+| Label | Tests |
+|-------|-------|
+| `operator` | Operator deployment, CRDs, metrics endpoint |
+| `control-plane` | Istio/IstioRevision/IstioCNI lifecycle, defaulting, status |
+| `ambient` | Ambient mode (IstioCNI + ZTunnel + Istio ambient profile) |
+| `library` | Sail install library (reconciliation, CRD ownership) |
+| `dualstack` | Dual-stack networking |
+| `gateway-controller` | Gateway API controller via install library |
+| `multicluster` | Multi-cluster deployments |
+| `multi-control-plane` | Multiple Istio CRs in a single cluster |
+| `migration` | Sidecar-to-ambient migration procedures |
+
+**Sub-feature** — optional, for finer filtering within a feature area
+
+| Label | Tests |
+|-------|-------|
+| `ambient-dependency` | Dependency detection and health propagation |
+| `ambient-targetref` | ZTunnel value propagation via targetRef |
+| `ambient-validation` | API validation (CR naming enforcement) |
+| `reconciliation` | Library reconciliation loop behavior |
+| `crd-ownership` | CRD ownership and OLM coexistence |
+| `multicluster-multiprimary` | Multi-primary multi-network topology |
+| `multicluster-primaryremote` | Primary-remote multi-network topology |
+| `multicluster-external` | External control plane topology |
+| `migration-procedure` | Full sidecar-to-ambient migration procedure |
+| `migration-coexistence` | Sidecar/ambient coexistence during migration |
+| `update` | Version upgrade and in-place update tests |
+| `tls-profile` | OpenShift TLS profile syncing (operator metrics + IstioRevision) |
+
+**Dataplane Mode** — additive, marks tests that exercise a specific dataplane
+
+| Label | Tests |
+|-------|-------|
+| `sidecar` | Tests that validate sidecar injection mode |
+
+### Label Reference
+
+Complete label set per test file:
+
+| File | Labels |
+|------|--------|
+| `operator/operator_install_test.go` | `smoke`, `operator` |
+| `operator/operator_install_test.go` (TLS sub-describe) | `smoke`, `operator`, `tls-profile` |
+| `controlplane/control_plane_test.go` | `control-plane`, `slow`, `sidecar` |
+| `controlplane/control_plane_update_test.go` | `control-plane`, `update`, `slow`, `sidecar` |
+| `ambient/ambient_test.go` | `ambient`, `slow` |
+| `ambient/ambient_dependency_test.go` | `ambient`, `ambient-dependency` |
+| `ambient/ambient_targetref_test.go` | `ambient`, `ambient-targetref` |
+| `ambient/ambient_update_test.go` | `ambient`, `update`, `slow` |
+| `ambient/ambient_validation_test.go` | `ambient`, `ambient-validation` |
+| `library/library_reconcile_test.go` | `library`, `reconciliation` |
+| `library/library_crd_ownership_test.go` | `library`, `crd-ownership` |
+| `dualstack/dualstack_test.go` | `dualstack`, `slow`, `sidecar` |
+| `gatewaycontroller/gateway_controller_test.go` | `gateway-controller`, `slow` |
+| `multicluster/multicluster_multiprimary_test.go` | `multicluster`, `multicluster-multiprimary`, `slow` |
+| `multicluster/multicluster_primaryremote_test.go` | `multicluster`, `multicluster-primaryremote`, `slow`, `sidecar` |
+| `multicluster/multicluster_externalcontrolplane_test.go` | `multicluster`, `multicluster-external`, `slow`, `sidecar` |
+| `multicontrolplane/multi_control_plane_test.go` | `multi-control-plane`, `slow`, `sidecar` |
+| `migration/migration_procedure_test.go` | `migration`, `migration-procedure`, `slow` |
+| `migration/migration_coexistence_test.go` | `migration`, `migration-coexistence`, `slow` |
+
+### Common Filter Examples
+
+```bash
+# Only the smoke suite (operator install checks)
+GINKGO_FLAGS="--label-filter=smoke" make test.e2e.kind
+
+# All ambient tests
+GINKGO_FLAGS="--label-filter=ambient" make test.e2e.kind
+
+# All tests except slow ones (fast feedback loop)
+GINKGO_FLAGS="--label-filter=!slow" make test.e2e.kind
+
+# All sidecar-mode tests
+GINKGO_FLAGS="--label-filter=sidecar" make test.e2e.kind
+
+# All library tests (reconciliation + CRD ownership)
+GINKGO_FLAGS="--label-filter=library" make test.e2e.kind
+
+# All multicluster tests
+GINKGO_FLAGS="--label-filter=multicluster" make test.e2e.kind
+
+# Smoke suite without OpenShift-specific TLS tests
+GINKGO_FLAGS="--label-filter=smoke && !tls-profile" make test.e2e.kind
+
+# All control plane tests except version update tests
+GINKGO_FLAGS="--label-filter=control-plane && !update" make test.e2e.kind
+
+# Run a specific sub-feature
+GINKGO_FLAGS="--label-filter=ambient-targetref" make test.e2e.kind
+```
+
 ## Running the tests
 The end-to-end test can be run in two different environments: OCP (OpenShift Container Platform) and KinD (Kubernetes in Docker).
 
@@ -248,6 +363,35 @@ Note: if you are running the test against a cluster that has a different archite
 TARGET_ARCH=arm64 make test.e2e.ocp
 ```
 
+#### Test Run scenarios while running on OCP
+When running the E2E test on OpenShift clusters, the framework supports three different registry scenarios:
+
+**Scenario 1: Test run with Internal Registry (Default behaviour)**
+For test run on OpenShift with the default settings, no additional configuration is needed. The test scripts will automatically configure and use the OpenShift internal registry:
+
+```sh
+# No HUB setting needed - uses internal registry by default
+make test.e2e.ocp
+```
+
+**Scenario 2: Test run with CI Mode with External Registry**
+In CI environments, set `CI=true` to use external registries with proper tagging:
+
+```sh
+export CI=true
+# Uses default HUB=quay.io/sail-dev with auto-generated tags if no PR_NUMBER var is being set 
+make test.e2e.ocp
+```
+
+**Scenario 3: Test run with custom External Registry**
+For custom external registries, specify your own HUB value:
+
+```sh
+export HUB=your-registry.com/your-namespace
+export TAG=your-tag
+make test.e2e.ocp
+```
+
 ### Settings for end-to-end test execution
 
 The following environment variables define the behavior of the test run:
@@ -261,8 +405,9 @@ The following environment variables define the behavior of the test run:
 * NAMESPACE=sail-operator - The namespace where the operator will be deployed and the test will run.
 * CONTROL_PLANE_NS=istio-system - The namespace where the control plane will be deployed.
 * DEPLOYMENT_NAME=sail-operator - The name of the operator deployment.
-* EXPECTED_REGISTRY=`^docker\.io|^gcr\.io` - Which image registry should the operand images come from. Useful for downstream tests.
+* EXPECTED_REGISTRY=`^docker\.io|^gcr\.io|^registry\.istio\.io` - Which image registry should the operand images come from. Useful for downstream tests.
 * KEEP_ON_FAILURE - If set to true, when using a local KIND cluster, don't clean it up when the test fails. This allows to debug the failure.
+* DEFAULT_TEST_TIMEOUT=180 - The default timeout in seconds for `Eventually` assertions. Increase this value when running tests on slow clusters (e.g., `DEFAULT_TEST_TIMEOUT=300` for 5 minutes).
 
 ### Customizing the test run
 
@@ -395,6 +540,85 @@ FAIL! -- 81 Passed | 1 Failed | 0 Pending | 0 Skipped
 Ginkgo ran 1 suite in 3m46.401610849s
 Test Suite Failed
 ```
+
+### Detecting and investigating flaky tests
+
+The `GINKGO_FLAGS` variable is passed directly to the Ginkgo runner, so all Ginkgo stress-test and retry flags work without any additional setup. The workflows below are intended for local use when investigating a test that fails intermittently.
+
+#### Repeat a suite N times
+
+Run the full suite (or a focused subset) up to N additional times, stopping at the first failure. Total runs = `1 + N`.
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind GINKGO_FLAGS="--repeat=3"
+```
+
+Combine with `--randomize-all` to expose ordering-dependent failures:
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind GINKGO_FLAGS="--repeat=5 --randomize-all"
+```
+
+#### Loop until a failure occurs
+
+Runs the suite indefinitely until a failure is detected. Stop with `Ctrl+C`. Useful for catching rare race conditions.
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind GINKGO_FLAGS="--until-it-fails"
+```
+
+#### Retry flaky specs automatically
+
+When a spec fails, Ginkgo retries it up to N times before marking the suite as failed. Retried-but-passing specs are reported but do not fail the run.
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind GINKGO_FLAGS="--flake-attempts=3"
+```
+
+#### Targeting a specific test
+
+Combine any of the flags above with `--focus` to isolate a single spec:
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind \
+  GINKGO_FLAGS="--focus='should update istiod deployment' --repeat=10"
+```
+
+Or use a label filter to stress a specific feature area:
+
+```bash
+SKIP_BUILD=true SKIP_DEPLOY=true make test.e2e.kind \
+  GINKGO_FLAGS="--label-filter=library --repeat=5"
+```
+
+#### Per-spec decorators in test code
+
+For specs that are known to be sensitive, you can mark them in the source instead of relying on command-line flags.
+
+`MustPassRepeatedly(N)` requires the spec to pass N times in a row with no retries on failure — use this to verify correctness:
+
+```go
+It("does not enter an infinite reconcile loop", MustPassRepeatedly(3), func() {
+    // ...
+})
+```
+
+`FlakeAttempts(N)` retries the spec up to N times on failure — use sparingly and prefer fixing the root cause:
+
+```go
+It("syncs TLS settings", FlakeAttempts(3), func() {
+    // ...
+})
+```
+
+> **Note on `FlakeAttempts` in `Ordered` containers**: if the failure occurs inside an `It`, only that `It` is retried — `BeforeAll` is not re-run. If the failure is in a `BeforeAll`, Ginkgo runs `AfterAll` to clean up and then re-runs `BeforeAll`.
+
+#### Recommended workflow for a flaky CI result
+
+1. Identify the failing spec from the CI output.
+2. Run it locally with `--focus` and `--repeat=10` to reproduce.
+3. If it reproduces, add `MustPassRepeatedly` or fix the underlying race condition.
+4. If it does not reproduce, try `--until-it-fails --randomize-all` to expose ordering dependencies.
 
 ### Get test definitions for the end-to-end test
 

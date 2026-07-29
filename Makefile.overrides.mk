@@ -19,6 +19,7 @@ BUILD_WITH_CONTAINER ?= 1
 CONTAINER_OPTIONS = --mount type=bind,source=/tmp,destination=/tmp --net=host
 
 export COMMONFILES_POSTPROCESS = tools/commonfiles-postprocess.sh
+FINDFILES_IGNORE = -path ./tests/e2e/setup/testdata -o -path ./tests/e2e/samples
 
 ifeq ($(CONTAINER_CLI),podman)
 CONTAINER_OPTIONS += --security-opt label=disable

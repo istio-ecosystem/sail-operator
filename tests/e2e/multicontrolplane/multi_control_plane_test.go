@@ -21,6 +21,7 @@ import (
 	"time"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
@@ -31,8 +32,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 )
 
-var _ = Describe("Multi control plane deployment model", Label("smoke", "multicontrol-plane"), Ordered, func() {
-	SetDefaultEventuallyTimeout(180 * time.Second)
+var _ = Describe("Multi control plane deployment model", Label("multi-control-plane", "slow", "sidecar"), Ordered, func() {
+	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 	debugInfoLogged := false
 	latestVersion := istioversion.GetLatestPatchVersions()[0]

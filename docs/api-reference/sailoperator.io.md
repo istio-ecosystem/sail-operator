@@ -23,6 +23,22 @@ package v1 contains API Schema definitions for the sailoperator.io v1 API group
 
 
 
+#### Agentgateway
+
+
+
+
+
+
+
+_Appears in:_
+- [GlobalConfig](#globalconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `image` _string_ |  |  |  |
+
+
 #### ArchConfig
 
 
@@ -143,6 +159,7 @@ _Appears in:_
 | `rollingMaxUnavailable` _[IntOrString](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#intorstring-intstr-util)_ | The number of pods that can be unavailable during a rolling update of the CNI DaemonSet (see `updateStrategy.rollingUpdate.maxUnavailable` here: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/daemon-set-v1/#DaemonSetSpec). May be specified as a number of pods or as a percent of the total number of pods at the start of the update. |  | XIntOrString: \{\}   |
 | `istioOwnedCNIConfig` _boolean_ | Specifies if an Istio owned CNI config should be created. |  |  |
 | `istioOwnedCNIConfigFileName` _string_ |  |  |  |
+| `useAppArmorAnnotation` _boolean_ | Specifies whether to use the AppArmor annotation or the appArmorProfile field in the securityContext to configure the profile. See https://kubernetes.io/docs/tutorials/security/apparmor/ https://kubernetes.io/docs/reference/labels-annotations-taints/#container-apparmor-security-beta-kubernetes-io |  |  |
 
 
 #### CNIGlobalConfig
@@ -299,10 +316,37 @@ spec:
 _Appears in:_
 - [ConfigSource](#configsource)
 - [MeshConfigCA](#meshconfigca)
+- [MeshConfigOutboundTrafficPolicy](#meshconfigoutboundtrafficpolicy)
 - [RemoteService](#remoteservice)
 - [Tracing](#tracing)
 
 
+
+
+
+#### ConditionReason
+
+_Underlying type:_ _string_
+
+ConditionReason represents a reason for a condition's current status.
+
+
+
+_Appears in:_
+- [StatusCondition](#statuscondition)
+
+
+
+#### ConditionType
+
+_Underlying type:_ _string_
+
+ConditionType represents the type of a status condition (e.g., "Reconciled", "Ready").
+
+
+
+_Appears in:_
+- [StatusCondition](#statuscondition)
 
 
 
@@ -451,6 +495,8 @@ _Appears in:_
 | `nativeNftables` _boolean_ | Specifies whether native nftables rules should be used instead of iptables rules for traffic redirection. |  |  |
 | `networkPolicy` _[NetworkPolicyConfig](#networkpolicyconfig)_ | Settings related to Kubernetes NetworkPolicy. |  |  |
 | `resourceScope` _[ResourceScope](#resourcescope)_ | Specifies resource scope for discovery selectors. This is useful when installing Istio on a cluster where some resources need to be owned by a cluster administrator and some can be owned by the mesh administrator. |  | Enum: [undefined all cluster namespace]   |
+| `agentgateway` _[Agentgateway](#agentgateway)_ | Specifies how proxies are configured within Istio. |  |  |
+| `enableReaderRBAC` _boolean_ | If true, install istio-reader service account and associated cluster role/binding, which are used for multicluster remote-secret workflows. |  |  |
 
 
 #### GlobalLoggingConfig
@@ -543,7 +589,7 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[IstioSpec](#istiospec)_ |  | \{ namespace:istio-system updateStrategy:map[type:InPlace] version:v1.28.6 \} |  |
+| `spec` _[IstioSpec](#istiospec)_ |  | \{ namespace:istio-system updateStrategy:map[type:InPlace] version:v1.30.3 \} |  |
 | `status` _[IstioStatus](#istiostatus)_ |  |  |  |
 
 
@@ -565,67 +611,12 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[IstioCNISpec](#istiocnispec)_ |  | \{ namespace:istio-cni version:v1.28.6 \} |  |
+| `spec` _[IstioCNISpec](#istiocnispec)_ |  | \{ namespace:istio-cni version:v1.30.3 \} |  |
 | `status` _[IstioCNIStatus](#istiocnistatus)_ |  |  |  |
 
 
-#### IstioCNICondition
 
 
-
-IstioCNICondition represents a specific observation of the IstioCNI object's state.
-
-
-
-_Appears in:_
-- [IstioCNIStatus](#istiocnistatus)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `type` _[IstioCNIConditionType](#istiocniconditiontype)_ | The type of this condition. |  |  |
-| `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#conditionstatus-v1-meta)_ | The status of this condition. Can be True, False or Unknown. |  |  |
-| `reason` _[IstioCNIConditionReason](#istiocniconditionreason)_ | Unique, single-word, CamelCase reason for the condition's last transition. |  |  |
-| `message` _string_ | Human-readable message indicating details about the last transition. |  |  |
-| `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta)_ | Last time the condition transitioned from one status to another. |  |  |
-
-
-#### IstioCNIConditionReason
-
-_Underlying type:_ _string_
-
-IstioCNIConditionReason represents a short message indicating how the condition came
-to be in its present state.
-
-
-
-_Appears in:_
-- [IstioCNICondition](#istiocnicondition)
-- [IstioCNIStatus](#istiocnistatus)
-
-| Field | Description |
-| --- | --- |
-| `ReconcileError` | IstioCNIReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried.  |
-| `DaemonSetNotReady` | IstioCNIDaemonSetNotReady indicates that the istio-cni-node DaemonSet is not ready.  |
-| `ReadinessCheckFailed` | IstioCNIReasonReadinessCheckFailed indicates that the DaemonSet readiness status could not be ascertained.  |
-| `Healthy` | IstioCNIReasonHealthy indicates that the control plane is fully reconciled and that all components are ready.  |
-
-
-#### IstioCNIConditionType
-
-_Underlying type:_ _string_
-
-IstioCNIConditionType represents the type of the condition.  Condition stages are:
-Installed, Reconciled, Ready
-
-
-
-_Appears in:_
-- [IstioCNICondition](#istiocnicondition)
-
-| Field | Description |
-| --- | --- |
-| `Reconciled` | IstioCNIConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.  |
-| `Ready` | IstioCNIConditionReady signifies whether the istio-cni-node DaemonSet is ready.  |
 
 
 #### IstioCNIList (v1)
@@ -661,7 +652,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.28-latest, v1.28.6, v1.28.3, v1.28.1, v1.26-latest, v1.26.3. | v1.28.6 | Enum: [v1.28-latest v1.28.6 v1.28.3 v1.28.1 v1.26-latest v1.26.3 v1.24-latest v1.24.6]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.3, v1.28-latest, v1.28.6, v1.28.3, v1.28.1. | v1.30.3 | Enum: [v1.30-latest v1.30.3 v1.28-latest v1.28.6 v1.28.3 v1.28.1 v1.26-latest v1.26.3 v1.24-latest v1.24.6]   |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift openshift-ambient preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio CNI component should be installed. Note that this field is immutable. | istio-cni |  |
 | `values` _[CNIValues](#cnivalues)_ | Defines the values to be passed to the Helm charts when installing Istio CNI. |  |  |
@@ -681,74 +672,12 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `observedGeneration` _integer_ | ObservedGeneration is the most recent generation observed for this IstioCNI object. It corresponds to the object's generation, which is updated on mutation by the API Server. The information in the status pertains to this particular generation of the object. |  |  |
-| `conditions` _[IstioCNICondition](#istiocnicondition) array_ | Represents the latest available observations of the object's current state. |  |  |
+| `conditions` _[StatusCondition](#statuscondition) array_ | Represents the latest available observations of the object's current state. |  |  |
 | `state` _[IstioCNIConditionReason](#istiocniconditionreason)_ | Reports the current state of the object. |  |  |
 
 
-#### IstioCondition
 
 
-
-IstioCondition represents a specific observation of the IstioCondition object's state.
-
-
-
-_Appears in:_
-- [IstioStatus](#istiostatus)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `type` _[IstioConditionType](#istioconditiontype)_ | The type of this condition. |  |  |
-| `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#conditionstatus-v1-meta)_ | The status of this condition. Can be True, False or Unknown. |  |  |
-| `reason` _[IstioConditionReason](#istioconditionreason)_ | Unique, single-word, CamelCase reason for the condition's last transition. |  |  |
-| `message` _string_ | Human-readable message indicating details about the last transition. |  |  |
-| `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta)_ | Last time the condition transitioned from one status to another. |  |  |
-
-
-#### IstioConditionReason
-
-_Underlying type:_ _string_
-
-IstioConditionReason represents a short message indicating how the condition came
-to be in its present state.
-
-
-
-_Appears in:_
-- [IstioCondition](#istiocondition)
-- [IstioStatus](#istiostatus)
-
-| Field | Description |
-| --- | --- |
-| `ReconcileError` | IstioReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried.  |
-| `ActiveRevisionNotFound` | IstioReasonRevisionNotFound indicates that the active IstioRevision is not found.  |
-| `FailedToGetActiveRevision` | IstioReasonFailedToGetActiveRevision indicates that a failure occurred when getting the active IstioRevision  |
-| `IstiodNotReady` | IstioReasonIstiodNotReady indicates that the control plane is fully reconciled, but istiod is not ready.  |
-| `RemoteIstiodNotReady` | IstioReasonRemoteIstiodNotReady indicates that the control plane is fully reconciled, but the remote istiod is not ready.  |
-| `ReadinessCheckFailed` | IstioReasonReadinessCheckFailed indicates that readiness could not be ascertained.  |
-| `IstioCNINotFound` | IstioReasonIstioCNINotFound indicates that the IstioCNI resource is not found.  |
-| `IstioCNINotHealthy` | IstioReasonIstioCNINotHealthy indicates that the IstioCNI resource is not healthy.  |
-| `DependencyCheckFailed` | IstioReasonDependencyCheckFailed indicates that the status of the dependencies could not be ascertained.  |
-| `Healthy` | IstioReasonHealthy indicates that the control plane is fully reconciled and that all components are ready.  |
-
-
-#### IstioConditionType
-
-_Underlying type:_ _string_
-
-IstioConditionType represents the type of the condition.  Condition stages are:
-Installed, Reconciled, Ready
-
-
-
-_Appears in:_
-- [IstioCondition](#istiocondition)
-
-| Field | Description |
-| --- | --- |
-| `Reconciled` | IstioConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.  |
-| `Ready` | IstioConditionReady signifies whether any Deployment, StatefulSet, etc. resources are Ready.  |
-| `DependenciesHealthy` | IstioConditionDependenciesHealthy signifies whether the dependencies required by this Istio are healthy. For example, an Istio with spec.values.pilot.cni.enabled=true requires the IstioCNI resource to be deployed and ready for the Istio revision to be considered healthy. The DependenciesHealthy condition is used to indicate that the IstioCNI resource is healthy.  |
 
 
 #### IstioList (v1)
@@ -796,75 +725,8 @@ _Appears in:_
 | `status` _[IstioRevisionStatus](#istiorevisionstatus)_ |  |  |  |
 
 
-#### IstioRevisionCondition
 
 
-
-IstioRevisionCondition represents a specific observation of the IstioRevision object's state.
-
-
-
-_Appears in:_
-- [IstioRevisionStatus](#istiorevisionstatus)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `type` _[IstioRevisionConditionType](#istiorevisionconditiontype)_ | The type of this condition. |  |  |
-| `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#conditionstatus-v1-meta)_ | The status of this condition. Can be True, False or Unknown. |  |  |
-| `reason` _[IstioRevisionConditionReason](#istiorevisionconditionreason)_ | Unique, single-word, CamelCase reason for the condition's last transition. |  |  |
-| `message` _string_ | Human-readable message indicating details about the last transition. |  |  |
-| `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta)_ | Last time the condition transitioned from one status to another. |  |  |
-
-
-#### IstioRevisionConditionReason
-
-_Underlying type:_ _string_
-
-IstioRevisionConditionReason represents a short message indicating how the condition came
-to be in its present state.
-
-
-
-_Appears in:_
-- [IstioRevisionCondition](#istiorevisioncondition)
-- [IstioRevisionStatus](#istiorevisionstatus)
-
-| Field | Description |
-| --- | --- |
-| `ReconcileError` | IstioRevisionReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried.  |
-| `IstiodNotReady` | IstioRevisionReasonIstiodNotReady indicates that the control plane is fully reconciled, but istiod is not ready.  |
-| `NameAlreadyExists` | IstioRevisionTagNameAlreadyExists indicates that a IstioRevisionTag with the same name as the IstioRevision already exists.  |
-| `RemoteIstiodNotReady` | IstioRevisionReasonRemoteIstiodNotReady indicates that the remote istiod is not ready.  |
-| `ReadinessCheckFailed` | IstioRevisionReasonReadinessCheckFailed indicates that istiod readiness status could not be ascertained.  |
-| `ReferencedByWorkloads` | IstioRevisionReasonReferencedByWorkloads indicates that the revision is referenced by at least one pod or namespace.  |
-| `NotReferencedByAnything` | IstioRevisionReasonNotReferenced indicates that the revision is not referenced by any pod or namespace.  |
-| `UsageCheckFailed` | IstioRevisionReasonUsageCheckFailed indicates that the operator could not check whether any workloads use the revision.  |
-| `IstioCNINotFound` | IstioRevisionReasonIstioCNINotFound indicates that the IstioCNI resource is not found.  |
-| `IstioCNINotHealthy` | IstioRevisionReasonIstioCNINotHealthy indicates that the IstioCNI resource is not healthy.  |
-| `ZTunnelNotFound` | IstioRevisionReasonZTunnelNotFound indicates that the ZTunnel resource is not found.  |
-| `ZTunnelNotHealthy` | IstioRevisionReasonZTunnelNotHealthy indicates that the ZTunnel resource is not healthy.  |
-| `DependencyCheckFailed` | IstioRevisionDependencyCheckFailed indicates that the status of the dependencies could not be ascertained.  |
-| `Healthy` | IstioRevisionReasonHealthy indicates that the control plane is fully reconciled and that all components are ready.  |
-
-
-#### IstioRevisionConditionType
-
-_Underlying type:_ _string_
-
-IstioRevisionConditionType represents the type of the condition.  Condition stages are:
-Installed, Reconciled, Ready
-
-
-
-_Appears in:_
-- [IstioRevisionCondition](#istiorevisioncondition)
-
-| Field | Description |
-| --- | --- |
-| `Reconciled` | IstioRevisionConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.  |
-| `Ready` | IstioRevisionConditionReady signifies whether any Deployment, StatefulSet, etc. resources are Ready.  |
-| `InUse` | IstioRevisionConditionInUse signifies whether any workload is configured to use the revision.  |
-| `DependenciesHealthy` | IstioRevisionConditionDependenciesHealthy signifies whether the dependencies required by this IstioRevision are healthy. For example, an IstioRevision with spec.values.pilot.cni.enabled=true requires the IstioCNI resource to be deployed and ready for the Istio revision to be considered healthy. The DependenciesHealthy condition is used to indicate that the IstioCNI resource is healthy.  |
 
 
 #### IstioRevisionList (v1)
@@ -900,7 +762,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.28.6, v1.28.3, v1.28.1, v1.26.3. |  | Enum: [v1.28.6 v1.28.3 v1.28.1 v1.26.3 v1.24.6]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30.3, v1.28.6, v1.28.3, v1.28.1. |  | Enum: [v1.30.3 v1.28.6 v1.28.3 v1.28.1 v1.26.3 v1.24.6]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. |  |  |
 | `values` _[Values](#values)_ | Defines the values to be passed to the Helm charts when installing Istio. |  |  |
 
@@ -919,7 +781,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `observedGeneration` _integer_ | ObservedGeneration is the most recent generation observed for this IstioRevision object. It corresponds to the object's generation, which is updated on mutation by the API Server. The information in the status pertains to this particular generation of the object. |  |  |
-| `conditions` _[IstioRevisionCondition](#istiorevisioncondition) array_ | Represents the latest available observations of the object's current state. |  |  |
+| `conditions` _[StatusCondition](#statuscondition) array_ | Represents the latest available observations of the object's current state. |  |  |
 | `state` _[IstioRevisionConditionReason](#istiorevisionconditionreason)_ | Reports the current state of the object. |  |  |
 
 
@@ -945,66 +807,8 @@ _Appears in:_
 | `status` _[IstioRevisionTagStatus](#istiorevisiontagstatus)_ |  |  |  |
 
 
-#### IstioRevisionTagCondition
 
 
-
-IstioRevisionCondition represents a specific observation of the IstioRevision object's state.
-
-
-
-_Appears in:_
-- [IstioRevisionTagStatus](#istiorevisiontagstatus)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `type` _[IstioRevisionTagConditionType](#istiorevisiontagconditiontype)_ | The type of this condition. |  |  |
-| `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#conditionstatus-v1-meta)_ | The status of this condition. Can be True, False or Unknown. |  |  |
-| `reason` _[IstioRevisionTagConditionReason](#istiorevisiontagconditionreason)_ | Unique, single-word, CamelCase reason for the condition's last transition. |  |  |
-| `message` _string_ | Human-readable message indicating details about the last transition. |  |  |
-| `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta)_ | Last time the condition transitioned from one status to another. |  |  |
-
-
-#### IstioRevisionTagConditionReason
-
-_Underlying type:_ _string_
-
-IstioRevisionConditionReason represents a short message indicating how the condition came
-to be in its present state.
-
-
-
-_Appears in:_
-- [IstioRevisionTagCondition](#istiorevisiontagcondition)
-- [IstioRevisionTagStatus](#istiorevisiontagstatus)
-
-| Field | Description |
-| --- | --- |
-| `NameAlreadyExists` | IstioRevisionTagNameAlreadyExists indicates that an IstioRevision with the same name as the IstioRevisionTag already exists.  |
-| `RefNotFound` | IstioRevisionTagReasonReferenceNotFound indicates that the resource referenced by the tag's TargetRef was not found  |
-| `ReconcileError` | IstioRevisionReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried.  |
-| `ReferencedByWorkloads` | IstioRevisionReasonReferencedByWorkloads indicates that the revision is referenced by at least one pod or namespace.  |
-| `NotReferencedByAnything` | IstioRevisionReasonNotReferenced indicates that the revision is not referenced by any pod or namespace.  |
-| `UsageCheckFailed` | IstioRevisionReasonUsageCheckFailed indicates that the operator could not check whether any workloads use the revision.  |
-| `Healthy` | IstioRevisionTagReasonHealthy indicates that the revision tag has been successfully reconciled and is in use.  |
-
-
-#### IstioRevisionTagConditionType
-
-_Underlying type:_ _string_
-
-IstioRevisionConditionType represents the type of the condition.  Condition stages are:
-Installed, Reconciled, Ready
-
-
-
-_Appears in:_
-- [IstioRevisionTagCondition](#istiorevisiontagcondition)
-
-| Field | Description |
-| --- | --- |
-| `Reconciled` | IstioRevisionConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.  |
-| `InUse` | IstioRevisionConditionInUse signifies whether any workload is configured to use the revision.  |
 
 
 #### IstioRevisionTagList (v1)
@@ -1040,7 +844,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `targetRef` _[IstioRevisionTagTargetReference](#istiorevisiontagtargetreference)_ |  |  | Required: \{\}   |
+| `targetRef` _[TargetReference](#targetreference)_ |  |  | Required: \{\}   |
 
 
 #### IstioRevisionTagStatus
@@ -1057,27 +861,10 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `observedGeneration` _integer_ | ObservedGeneration is the most recent generation observed for this IstioRevisionTag object. It corresponds to the object's generation, which is updated on mutation by the API Server. The information in the status pertains to this particular generation of the object. |  |  |
-| `conditions` _[IstioRevisionTagCondition](#istiorevisiontagcondition) array_ | Represents the latest available observations of the object's current state. |  |  |
+| `conditions` _[StatusCondition](#statuscondition) array_ | Represents the latest available observations of the object's current state. |  |  |
 | `state` _[IstioRevisionTagConditionReason](#istiorevisiontagconditionreason)_ | Reports the current state of the object. |  |  |
 | `istiodNamespace` _string_ | IstiodNamespace stores the namespace of the corresponding Istiod instance |  |  |
 | `istioRevision` _string_ | IstioRevision stores the name of the referenced IstioRevision |  |  |
-
-
-#### IstioRevisionTagTargetReference
-
-
-
-IstioRevisionTagTargetReference can reference either Istio or IstioRevision objects in the cluster. In the case of referencing an Istio object, the Sail Operator will automatically update the reference to the Istio object's Active Revision.
-
-
-
-_Appears in:_
-- [IstioRevisionTagSpec](#istiorevisiontagspec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `kind` _string_ | Kind is the kind of the target resource. |  | MaxLength: 253  MinLength: 1  Required: \{\}   |
-| `name` _string_ | Name is the name of the target resource. |  | MaxLength: 253  MinLength: 1  Required: \{\}   |
 
 
 #### IstioSpec
@@ -1093,7 +880,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.28-latest, v1.28.6, v1.28.3, v1.28.1, v1.26-latest, v1.26.3. | v1.28.6 | Enum: [v1.28-latest v1.28.6 v1.28.3 v1.28.1 v1.26-latest v1.26.3 v1.24-latest v1.24.6]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.3, v1.28-latest, v1.28.6, v1.28.3, v1.28.1. | v1.30.3 | Enum: [v1.30-latest v1.30.3 v1.28-latest v1.28.6 v1.28.3 v1.28.1 v1.26-latest v1.26.3 v1.24-latest v1.24.6]   |
 | `updateStrategy` _[IstioUpdateStrategy](#istioupdatestrategy)_ | Defines the update strategy to use when the version in the Istio CR is updated. | \{ type:InPlace \} |  |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is always applied. On OpenShift, the 'openshift' profile is also applied on top of 'default'. Must be one of: ambient, default, demo, empty, openshift, openshift-ambient, preview, remote, stable. |  | Enum: [ambient default demo empty external openshift openshift-ambient preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio components should be installed. Note that this field is immutable. | istio-system |  |
@@ -1114,7 +901,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `observedGeneration` _integer_ | ObservedGeneration is the most recent generation observed for this Istio object. It corresponds to the object's generation, which is updated on mutation by the API Server. The information in the status pertains to this particular generation of the object. |  |  |
-| `conditions` _[IstioCondition](#istiocondition) array_ | Represents the latest available observations of the object's current state. |  |  |
+| `conditions` _[StatusCondition](#statuscondition) array_ | Represents the latest available observations of the object's current state. |  |  |
 | `state` _[IstioConditionReason](#istioconditionreason)_ | Reports the current state of the object. |  |  |
 | `activeRevisionName` _string_ | The name of the active revision. |  |  |
 | `revisions` _[RevisionSummary](#revisionsummary)_ | Reports information about the underlying IstioRevisions. |  |  |
@@ -1314,6 +1101,7 @@ _Appears in:_
 | `proxyInboundListenPort` _integer_ | Port on which Envoy should listen for all inbound traffic to the pod/vm will be captured to. Default port is 15006. |  |  |
 | `proxyHttpPort` _integer_ | Port on which Envoy should listen for HTTP PROXY requests if set. |  |  |
 | `connectTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | Connection timeout used by Envoy. (MUST be >=1ms) Default timeout is 10s. |  |  |
+| `hboneIdleTimeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | Idle timeout configured on Envoy proxies for their connection pools to ztunnel via HBONE. This controls how long Envoy will keep idle connections to ztunnel before closing them. Note: This setting is applied only on the Envoy proxy side; ztunnel does not use it. Default timeout is 1 hour (3600s). For environments with aggressive IP address reuse, it is recommended to set this to a value less than the CNI IP cooldown period to prevent stale connection reuse. For example, if your CNI has a 30s cooldown period, setting this to 15s is recommended. |  |  |
 | `tcpKeepalive` _[ConnectionPoolSettingsTCPSettingsTcpKeepalive](#connectionpoolsettingstcpsettingstcpkeepalive)_ | If set then set `SO_KEEPALIVE` on the socket to enable TCP Keepalives. |  |  |
 | `ingressClass` _string_ | Class of ingress resources to be processed by Istio ingress controller. This corresponds to the value of `kubernetes.io/ingress.class` annotation. |  |  |
 | `ingressService` _string_ | Name of the Kubernetes service used for the istio ingress controller. If no ingress controller is specified, the default value `istio-ingressgateway` is used. |  |  |
@@ -1350,7 +1138,7 @@ _Appears in:_
 | `pathNormalization` _[MeshConfigProxyPathNormalization](#meshconfigproxypathnormalization)_ | ProxyPathNormalization configures how URL paths in incoming and outgoing HTTP requests are normalized by the sidecars and gateways. The normalized paths will be used in all aspects through the requests' lifetime on the sidecars and gateways, which includes routing decisions in outbound direction (client proxy), authorization policy match and enforcement in inbound direction (server proxy), and the URL path proxied to the upstream service. If not set, the NormalizationType.DEFAULT configuration will be used. |  |  |
 | `defaultHttpRetryPolicy` _[HTTPRetry](#httpretry)_ | Configure the default HTTP retry policy. The default number of retry attempts is set at 2 for these errors:    "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes".  Setting the number of attempts to 0 disables retry policy globally. This setting can be overridden on a per-host basis using the Virtual Service API. All settings in the retry policy except `perTryTimeout` can currently be configured globally via this field. |  |  |
 | `meshMTLS` _[MeshConfigTLSConfig](#meshconfigtlsconfig)_ | The below configuration parameters can be used to specify TLSConfig for mesh traffic. For example, a user could enable min TLS version for ISTIO_MUTUAL traffic and specify a curve for non ISTIO_MUTUAL traffic like below: ```yaml meshConfig:    meshMTLS:     minProtocolVersion: TLSV1_3   tlsDefaults:     Note: applicable only for non ISTIO_MUTUAL scenarios     ecdhCurves:       - P-256       - P-512  ``` Configuration of mTLS for traffic between workloads with ISTIO_MUTUAL TLS traffic.  Note: Mesh mTLS does not respect ECDH curves. |  |  |
-| `tlsDefaults` _[MeshConfigTLSConfig](#meshconfigtlsconfig)_ | Configuration of TLS for all traffic except for ISTIO_MUTUAL mode. Currently, this supports configuration of ecdhCurves and cipherSuites only. For ISTIO_MUTUAL TLS settings, use meshMTLS configuration. |  |  |
+| `tlsDefaults` _[MeshConfigTLSConfig](#meshconfigtlsconfig)_ | Configuration of TLS for all traffic except for ISTIO_MUTUAL mode. For ISTIO_MUTUAL TLS settings, use meshMTLS configuration. |  |  |
 
 
 #### MeshConfigAccessLogEncoding
@@ -1696,6 +1484,7 @@ _Appears in:_
 | `http` _[MeshConfigExtensionProviderHttpService](#meshconfigextensionproviderhttpservice)_ | Optional. Specifies the configuration for exporting OTLP traces via HTTP. When empty, traces will be exported via gRPC.  The following example shows how to configure the OpenTelemetry ExtensionProvider to export via HTTP:  1. Add/change the OpenTelemetry extension provider in `MeshConfig` ```yaml   - name: otel-tracing     opentelemetry:     port: 443     service: my.olly-backend.com     http:     path: "/api/otlp/traces"     timeout: 10s     headers:   - name: "my-custom-header"     value: "some value"  ```  2. Deploy a `ServiceEntry` for the observability back-end ```yaml apiVersion: networking.istio.io/v1alpha3 kind: ServiceEntry metadata:    name: my-olly-backend  spec:    hosts:   - my.olly-backend.com   ports:   - number: 443     name: https-port     protocol: HTTPS   resolution: DNS   location: MESH_EXTERNAL  --- apiVersion: networking.istio.io/v1alpha3 kind: DestinationRule metadata:    name: my-olly-backend  spec:    host: my.olly-backend.com   trafficPolicy:     portLevelSettings:     - port:         number: 443       tls:         mode: SIMPLE  ``` |  |  |
 | `grpc` _[MeshConfigExtensionProviderGrpcService](#meshconfigextensionprovidergrpcservice)_ | Optional. Specifies the configuration for exporting OTLP traces via GRPC. When empty, traces will check whether HTTP is set. If not, traces will use default GRPC configurations.  The following example shows how to configure the OpenTelemetry ExtensionProvider to export via GRPC:  1. Add/change the OpenTelemetry extension provider in `MeshConfig` ```yaml   - name: opentelemetry     opentelemetry:     port: 8090     service: tracing.example.com     grpc:     timeout: 10s     initialMetadata:   - name: "Authentication"     value: "token-xxxxx"  ```  2. Deploy a `ServiceEntry` for the observability back-end ```yaml apiVersion: networking.istio.io/v1alpha3 kind: ServiceEntry metadata:    name: tracing-grpc  spec:    hosts:   - tracing.example.com   ports:   - number: 8090     name: grpc-port     protocol: GRPC   resolution: DNS   location: MESH_EXTERNAL  ``` |  |  |
 | `resourceDetectors` _[MeshConfigExtensionProviderResourceDetectors](#meshconfigextensionproviderresourcedetectors)_ | Optional. Specifies [Resource Detectors](https://opentelemetry.io/docs/specs/otel/resource/sdk/) to be used by the OpenTelemetry Tracer. When multiple resources are provided, they are merged according to the OpenTelemetry [Resource specification](https://opentelemetry.io/docs/specs/otel/resource/sdk/#merge).  The following example shows how to configure the Environment Resource Detector, that will read the attributes from the environment variable `OTEL_RESOURCE_ATTRIBUTES`:  ```yaml   - name: otel-tracing     opentelemetry:     port: 443     service: my.olly-backend.com     resourceDetectors:     environment: \{\}  ``` |  |  |
+| `serviceAttributeEnrichment` _[MeshConfigExtensionProviderServiceAttributeEnrichment](#meshconfigextensionproviderserviceattributeenrichment)_ | Optional. Controls how service resource attributes are enriched in exported trace spans. When set to `OTEL_SEMANTIC_CONVENTIONS`, the service attributes (`service.name`, `service.namespace`, `service.version`, `service.instance.id`) will be populated following the OpenTelemetry semantic conventions for Kubernetes: https://opentelemetry.io/docs/specs/semconv/non-normative/k8s-attributes/#service-attributes  When not set or set to `ISTIO_CANONICAL`, Istio's default enrichment logic is used (controlled by `TracingServiceName` in `ProxyConfig`).  Example: ```yaml extensionProviders:   - name: otel-tracing     opentelemetry:     port: 443     service: my.olly-backend.com     serviceAttributeEnrichment: OTEL_SEMANTIC_CONVENTIONS  ``` |  | Enum: [ISTIO_CANONICAL OTEL_SEMANTIC_CONVENTIONS]   |
 | `dynatraceSampler` _[MeshConfigExtensionProviderOpenTelemetryTracingProviderDynatraceSampler](#meshconfigextensionprovideropentelemetrytracingproviderdynatracesampler)_ | The Dynatrace adaptive traffic management (ATM) sampler.  Example configuration:  ```yaml   - name: otel-tracing     opentelemetry:     port: 443     service: "\{your-environment-id\}.live.dynatrace.com"     http:     path: "/api/v2/otlp/v1/traces"     timeout: 10s     headers:   - name: "Authorization"     value: "Api-Token dt0c01."     resourceDetectors:     dynatrace: \{\}     dynatraceSampler:     tenant: "\{your-environment-id\}"     clusterId: 1234 |  |  |
 
 
@@ -1786,6 +1575,26 @@ _Appears in:_
 | `name` _string_ | REQUIRED. Specifies the name of the provider. This should be used to configure the Gateway SDS. |  | Required: \{\}   |
 | `service` _string_ | REQUIRED. Specifies the service that implements the  SDS service. The format is `[<Namespace>/]<Hostname>`. The specification of `<Namespace>` is required only when it is insufficient to unambiguously resolve a service in the service registry. The `<Hostname>` is a fully qualified host name of a service defined by the Kubernetes service or ServiceEntry.  Example: "gateway-sds.foo.svc.cluster.local" or "bar/gateway-sds.example.com". |  | Required: \{\}   |
 | `port` _integer_ | REQUIRED. Specifies the port of the service. |  | Required: \{\}   |
+
+
+#### MeshConfigExtensionProviderServiceAttributeEnrichment
+
+_Underlying type:_ _string_
+
+ServiceAttributeEnrichment controls how service resource attributes
+(such as `service.name`, `service.namespace`, `service.version`, and
+`service.instance.id`) are populated in exported trace spans.
+
+_Validation:_
+- Enum: [ISTIO_CANONICAL OTEL_SEMANTIC_CONVENTIONS]
+
+_Appears in:_
+- [MeshConfigExtensionProviderOpenTelemetryTracingProvider](#meshconfigextensionprovideropentelemetrytracingprovider)
+
+| Field | Description |
+| --- | --- |
+| `ISTIO_CANONICAL` | Use Istio's default service attribute enrichment logic. The service name is determined by the `TracingServiceName` setting in `ProxyConfig` (e.g., based on the `app` label, canonical name, etc.).  |
+| `OTEL_SEMANTIC_CONVENTIONS` | Follow the OpenTelemetry semantic conventions for Kubernetes service attributes. The service attributes are calculated following the fallback chain defined in: https://opentelemetry.io/docs/specs/semconv/non-normative/k8s-attributes/#service-attributes The fallback chain for `service.name` is:  1. `resource.opentelemetry.io/service.name` annotation on the pod  2. `app.kubernetes.io/name` label  3. Name of the owning Kubernetes resource (Deployment, StatefulSet, etc.)  4. Pod name  5. Container name (if single container in the pod)  6. `unknown_service` The fallback chain for `service.namespace` is:  1. `resource.opentelemetry.io/service.namespace` annotation on the pod  2. Kubernetes namespace name The fallback chain for `service.version` is:  1. `resource.opentelemetry.io/service.version` annotation on the pod  2. `app.kubernetes.io/version` label The fallback chain for `service.instance.id` is:  1. `resource.opentelemetry.io/service.instance.id` annotation on the pod  2. Pod UID  |
 
 
 #### MeshConfigExtensionProviderSkyWalkingTracingProvider
@@ -1957,7 +1766,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `mode` _[MeshConfigOutboundTrafficPolicyMode](#meshconfigoutboundtrafficpolicymode)_ |  |  | Enum: [REGISTRY_ONLY ALLOW_ANY]   |
+| `mode` _[MeshConfigOutboundTrafficPolicyMode](#meshconfigoutboundtrafficpolicymode)_ |  |  | Enum: [REGISTRY_ONLY ALLOW_ANY ALLOW_ANY_DYNAMIC_DNS]   |
+| `tls` _[ClientTLSSettings](#clienttlssettings)_ | TLS settings for client connections to unknown destinations. Applicable only when mode is set to `ALLOW_ANY_DYNAMIC_DNS`. |  |  |
 
 
 #### MeshConfigOutboundTrafficPolicyMode
@@ -1967,7 +1777,7 @@ _Underlying type:_ _string_
 
 
 _Validation:_
-- Enum: [REGISTRY_ONLY ALLOW_ANY]
+- Enum: [REGISTRY_ONLY ALLOW_ANY ALLOW_ANY_DYNAMIC_DNS]
 
 _Appears in:_
 - [MeshConfigOutboundTrafficPolicy](#meshconfigoutboundtrafficpolicy)
@@ -1976,6 +1786,7 @@ _Appears in:_
 | --- | --- |
 | `REGISTRY_ONLY` | In `REGISTRY_ONLY` mode, unknown outbound traffic will be dropped. Traffic destinations must be explicitly declared into the service registry through `ServiceEntry` configurations. Note: Istio [does not offer an outbound traffic security policy](https://istio.io/latest/docs/ops/best-practices/security/#understand-traffic-capture-limitations). This option does not act as one, or as any form of an outbound firewall. Instead, this option exists primarily to offer users a way to detect missing `ServiceEntry` configurations by explicitly failing.  |
 | `ALLOW_ANY` | In `ALLOW_ANY` mode, any traffic to unknown destinations will be allowed. Unknown destination traffic will have limited functionality, however, such as reduced observability. This mode allows users that do not have all possible egress destinations registered through `ServiceEntry` configurations to still connect to arbitrary destinations.  |
+| `ALLOW_ANY_DYNAMIC_DNS` | In `ALLOW_ANY_DYNAMIC_DNS` mode, traffic to unknown destinations will be allowed via dynamic DNS resolution. This mode allows users that do not have all possible egress destinations registered through `ServiceEntry` configurations to still connect to arbitrary destinations. Client TLS settings can be configured for connections to such destinations.  |
 
 
 #### MeshConfigProxyConfig
@@ -2051,6 +1862,9 @@ _Appears in:_
 | `image` _[ProxyImage](#proxyimage)_ | Specifies the details of the proxy image. |  |  |
 | `privateKeyProvider` _[PrivateKeyProvider](#privatekeyprovider)_ | Specifies the details of the Private Key Provider configuration for gateway and sidecar proxies. |  |  |
 | `proxyHeaders` _[ProxyConfigProxyHeaders](#proxyconfigproxyheaders)_ | Define the set of headers to add/modify for HTTP request/responses.  To enable an optional header, simply set the field. If no specific configuration is required, an empty object (`\{\}`) will enable it. Note: currently all headers are enabled by default.  Below shows an example of customizing the `server` header and disabling the `X-Envoy-Attempt-Count` header:  ```yaml proxyHeaders:    server:     value: "my-custom-server"   # Explicitly enable Request IDs.   # As this is the default, this has no effect.   requestId: \{\}   attemptCount:     disabled: true  ```  # Below shows an example of preserving the header case for HTTP 1.x requests  ```yaml proxyHeaders:    preserveHttp1HeaderCase: true  ```  Some headers are enabled by default, and require explicitly disabling. See below for an example of disabling all default-enabled headers:  ```yaml proxyHeaders:    forwardedClientCert: SANITIZE   server:     disabled: true   requestId:     disabled: true   attemptCount:     disabled: true   envoyDebugHeaders:     disabled: true   metadataExchangeHeaders:     mode: IN_MESH  ``` |  |  |
+| `fileFlushInterval` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#duration-v1-meta)_ | File flush interval for envoy flushes buffers to disk in milliseconds. The duration needs to be set to a value greater than or equal to 1 millisecond. Default is 1000ms. Optional. |  |  |
+| `fileFlushMinSizeKb` _integer_ | File flush buffer size for envoy flushes buffers to disk in kilobytes. Defaults to 64. Optional. |  |  |
+| `statsCompression` _boolean_ | Offer HTTP compression for stats Defaults to true. Optional. |  |  |
 
 
 #### MeshConfigProxyPathNormalization
@@ -2352,6 +2166,22 @@ _Appears in:_
 | `REGISTRY_ONLY` | Restrict outbound traffic to services defined in the service registry as well as those defined through ServiceEntries  |
 
 
+#### PeerCaCrlConfig
+
+
+
+
+
+
+
+_Appears in:_
+- [ZTunnelConfig](#ztunnelconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enabled` _boolean_ | When enabled, ztunnel will check certificates against the CRL |  |  |
+
+
 #### PilotConfig
 
 
@@ -2425,6 +2255,7 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `enabled` _boolean_ | Enable the untaint controller for new nodes. This aims to solve a race for CNI installation on new nodes. For this to work, the newly added nodes need to have the istio CNI taint as they are added to the cluster. This is usually done by configuring the cluster infra provider. |  |  |
 | `namespace` _string_ | The namespace of the CNI daemonset, incase it's not the same as istiod. |  |  |
+| `name` _string_ | The taint key used by the node-untaint controller to identify nodes that should be untainted. This corresponds to the Helm chart value `values.pilot.taint.name` and the environment variable `PILOT_NODE_UNTAINT_CONTROLLERS_TAINT_NAME` used by istiod. |  |  |
 
 
 
@@ -2504,6 +2335,7 @@ _Appears in:_
 | `readinessInitialDelaySeconds` _integer_ | Sets the initial delay for readiness probes in seconds. |  |  |
 | `readinessPeriodSeconds` _integer_ | Sets the interval between readiness probes in seconds. |  |  |
 | `readinessFailureThreshold` _integer_ | Sets the number of successive failed probes before indicating readiness failure. |  |  |
+| `seccompProfile` _[SeccompProfile](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#seccompprofile-v1-core)_ | Configures the seccomp profile for the istio-validation and istio-proxy containers.  See: https://kubernetes.io/docs/tutorials/security/seccomp/ |  |  |
 | `startupProbe` _[StartupProbe](#startupprobe)_ | Configures the startup probe for the istio-proxy container. |  |  |
 | `statusPort` _integer_ | Default port used for the Pilot agent's health checks. |  |  |
 | `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core)_ | K8s resources settings.  See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container  Deprecated: Marked as deprecated in pkg/apis/values_types.proto. |  |  |
@@ -2932,6 +2764,49 @@ _Appears in:_
 | `failureThreshold` _integer_ | Minimum consecutive failures for the probe to be considered failed after having succeeded. |  |  |
 
 
+#### StatusCondition
+
+
+
+StatusCondition represents a specific observation of an object's state.
+
+
+
+_Appears in:_
+- [IstioCNIStatus](#istiocnistatus)
+- [IstioRevisionStatus](#istiorevisionstatus)
+- [IstioRevisionTagStatus](#istiorevisiontagstatus)
+- [IstioStatus](#istiostatus)
+- [ZTunnelStatus](#ztunnelstatus)
+- [ZTunnelStatus](#ztunnelstatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `type` _[ConditionType](#conditiontype)_ | The type of this condition. |  |  |
+| `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#conditionstatus-v1-meta)_ | The status of this condition. Can be True, False or Unknown. |  |  |
+| `reason` _[ConditionReason](#conditionreason)_ | Unique, single-word, CamelCase reason for the condition's last transition. |  |  |
+| `message` _string_ | Human-readable message indicating details about the last transition. |  |  |
+| `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta)_ | Last time the condition transitioned from one status to another. |  |  |
+
+
+#### TargetReference
+
+
+
+TargetReference can reference either Istio or IstioRevision objects in the cluster. In the case of referencing an Istio object, the Sail Operator will automatically update the reference to the Istio object's Active Revision.
+
+
+
+_Appears in:_
+- [IstioRevisionTagSpec](#istiorevisiontagspec)
+- [ZTunnelSpec](#ztunnelspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `kind` _string_ | Kind is the kind of the target resource. |  | Enum: [Istio IstioRevision]  Required: \{\}   |
+| `name` _string_ | Name is the name of the target resource. |  | MaxLength: 253  MinLength: 1  Required: \{\}   |
+
+
 #### TargetUtilizationConfig
 
 
@@ -3337,67 +3212,12 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[ZTunnelSpec](#ztunnelspec)_ |  | \{ namespace:ztunnel version:v1.28.6 \} |  |
+| `spec` _[ZTunnelSpec](#ztunnelspec)_ |  | \{ namespace:ztunnel version:v1.30.3 \} |  |
 | `status` _[ZTunnelStatus](#ztunnelstatus)_ |  |  |  |
 
 
-#### ZTunnelCondition
 
 
-
-ZTunnelCondition represents a specific observation of the ZTunnel object's state.
-
-
-
-_Appears in:_
-- [ZTunnelStatus](#ztunnelstatus)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `type` _[ZTunnelConditionType](#ztunnelconditiontype)_ | The type of this condition. |  |  |
-| `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#conditionstatus-v1-meta)_ | The status of this condition. Can be True, False or Unknown. |  |  |
-| `reason` _[ZTunnelConditionReason](#ztunnelconditionreason)_ | Unique, single-word, CamelCase reason for the condition's last transition. |  |  |
-| `message` _string_ | Human-readable message indicating details about the last transition. |  |  |
-| `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta)_ | Last time the condition transitioned from one status to another. |  |  |
-
-
-#### ZTunnelConditionReason
-
-_Underlying type:_ _string_
-
-ZTunnelConditionReason represents a short message indicating how the condition came
-to be in its present state.
-
-
-
-_Appears in:_
-- [ZTunnelCondition](#ztunnelcondition)
-- [ZTunnelStatus](#ztunnelstatus)
-
-| Field | Description |
-| --- | --- |
-| `ReconcileError` | ZTunnelReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried.  |
-| `DaemonSetNotReady` | ZTunnelDaemonSetNotReady indicates that the ztunnel DaemonSet is not ready.  |
-| `ReadinessCheckFailed` | ZTunnelReasonReadinessCheckFailed indicates that the DaemonSet readiness status could not be ascertained.  |
-| `Healthy` | ZTunnelReasonHealthy indicates that the control plane is fully reconciled and that all components are ready.  |
-
-
-#### ZTunnelConditionType
-
-_Underlying type:_ _string_
-
-ZTunnelConditionType represents the type of the condition.  Condition stages are:
-Installed, Reconciled, Ready
-
-
-
-_Appears in:_
-- [ZTunnelCondition](#ztunnelcondition)
-
-| Field | Description |
-| --- | --- |
-| `Reconciled` | ZTunnelConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.  |
-| `Ready` | ZTunnelConditionReady signifies whether the ztunnel DaemonSet is ready.  |
 
 
 #### ZTunnelConfig
@@ -3429,6 +3249,7 @@ _Appears in:_
 | `podLabels` _object (keys:string, values:string)_ | Additional labels to apply on the pod level. |  |  |
 | `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core)_ | The k8s resource requests and limits for the ztunnel Pods. |  |  |
 | `resourceQuotas` _[ResourceQuotas](#resourcequotas)_ | The resource quotas configuration for ztunnel |  |  |
+| `peerCaCrl` _[PeerCaCrlConfig](#peercacrlconfig)_ | Certificate Revocation List (CRL) support for plugged-in CAs. When enabled, ztunnel will check certificates against the CRL |  |  |
 | `nodeSelector` _object (keys:string, values:string)_ | K8s node selector settings.  See https://kubernetes.io/docs/user-guide/node-selection/ |  |  |
 | `imagePullSecrets` _string array_ | List of secret names to add to the service account as image pull secrets to use for pulling any images in pods that reference this ServiceAccount. Must be set for any cluster configured with private docker registry. |  |  |
 | `env` _object (keys:string, values:string)_ | A `key: value` mapping of environment variables to add to the pod |  |  |
@@ -3443,6 +3264,8 @@ _Appears in:_
 | `logAsJson` _boolean_ | Specifies whether istio components should output logs in json format by adding --log_as_json argument to each container. |  |  |
 | `seLinuxOptions` _[SELinuxOptions](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#selinuxoptions-v1-core)_ | Set seLinux options for the ztunnel pod |  |  |
 | `updateStrategy` _[DaemonSetUpdateStrategy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#daemonsetupdatestrategy-v1-apps)_ | Defines the update strategy to use when the version in the Ztunnel CR is updated. |  |  |
+| `dnsPolicy` _[DNSPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#dnspolicy-v1-core)_ | DNS policy for the ztunnel pod More info: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy |  | Enum: [ClusterFirstWithHostNet ClusterFirst Default None]   |
+| `dnsConfig` _[PodDNSConfig](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#poddnsconfig-v1-core)_ | DNS config for the ztunnel pod https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-dns-config |  |  |
 
 
 #### ZTunnelGlobalConfig
@@ -3502,9 +3325,10 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.28-latest, v1.28.6, v1.28.3, v1.28.1, v1.26-latest, v1.26.3. | v1.28.6 | Enum: [v1.28-latest v1.28.6 v1.28.3 v1.28.1 v1.26-latest v1.26.3 v1.24-latest v1.24.6]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.3, v1.28-latest, v1.28.6, v1.28.3, v1.28.1. | v1.30.3 | Enum: [v1.30-latest v1.30.3 v1.28-latest v1.28.6 v1.28.3 v1.28.1 v1.26-latest v1.26.3 v1.24-latest v1.24.6]   |
 | `namespace` _string_ | Namespace to which the Istio ztunnel component should be installed. | ztunnel |  |
 | `values` _[ZTunnelValues](#ztunnelvalues)_ | Defines the values to be passed to the Helm charts when installing Istio ztunnel. |  |  |
+| `targetRef` _[TargetReference](#targetreference)_ | The Istio control plane that this ZTunnel instance is associated with. Valid references are Istio and IstioRevision resources, Istio resources are always resolved to their current active revision. Values relevant for ZTunnel will be copied from the referenced IstioRevision resource, these are `spec.values.global`, `spec.values.meshConfig`, `spec.values.revision`. Any user configuration in the ZTunnel spec will always take precedence over the settings copied from the Istio resource, however. |  |  |
 
 
 #### ZTunnelStatus
@@ -3521,8 +3345,9 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `observedGeneration` _integer_ | ObservedGeneration is the most recent generation observed for this ZTunnel object. It corresponds to the object's generation, which is updated on mutation by the API Server. The information in the status pertains to this particular generation of the object. |  |  |
-| `conditions` _[ZTunnelCondition](#ztunnelcondition) array_ | Represents the latest available observations of the object's current state. |  |  |
+| `conditions` _[StatusCondition](#statuscondition) array_ | Represents the latest available observations of the object's current state. |  |  |
 | `state` _[ZTunnelConditionReason](#ztunnelconditionreason)_ | Reports the current state of the object. |  |  |
+| `istioRevision` _string_ | IstioRevision stores the name of the referenced IstioRevision |  |  |
 
 
 #### ZTunnelValues
@@ -3572,41 +3397,19 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[ZTunnelSpec](#ztunnelspec)_ |  | \{ namespace:ztunnel profile:ambient version:v1.28.6 \} |  |
+| `spec` _[ZTunnelSpec](#ztunnelspec)_ |  | \{ namespace:ztunnel profile:ambient version:v1.30.3 \} |  |
 | `status` _[ZTunnelStatus](#ztunnelstatus)_ |  |  |  |
-
-
-#### ZTunnelCondition
-
-
-
-ZTunnelCondition represents a specific observation of the ZTunnel object's state.
-
-
-
-_Appears in:_
-- [ZTunnelStatus](#ztunnelstatus)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `type` _[ZTunnelConditionType](#ztunnelconditiontype)_ | The type of this condition. |  |  |
-| `status` _[ConditionStatus](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#conditionstatus-v1-meta)_ | The status of this condition. Can be True, False or Unknown. |  |  |
-| `reason` _[ZTunnelConditionReason](#ztunnelconditionreason)_ | Unique, single-word, CamelCase reason for the condition's last transition. |  |  |
-| `message` _string_ | Human-readable message indicating details about the last transition. |  |  |
-| `lastTransitionTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#time-v1-meta)_ | Last time the condition transitioned from one status to another. |  |  |
 
 
 #### ZTunnelConditionReason
 
 _Underlying type:_ _string_
 
-ZTunnelConditionReason represents a short message indicating how the condition came
-to be in its present state.
+ZTunnelConditionReason represents the reason for a ZTunnel condition.
 
 
 
 _Appears in:_
-- [ZTunnelCondition](#ztunnelcondition)
 - [ZTunnelStatus](#ztunnelstatus)
 
 | Field | Description |
@@ -3617,22 +3420,6 @@ _Appears in:_
 | `Healthy` | ZTunnelReasonHealthy indicates that the control plane is fully reconciled and that all components are ready.  |
 
 
-#### ZTunnelConditionType
-
-_Underlying type:_ _string_
-
-ZTunnelConditionType represents the type of the condition.  Condition stages are:
-Installed, Reconciled, Ready
-
-
-
-_Appears in:_
-- [ZTunnelCondition](#ztunnelcondition)
-
-| Field | Description |
-| --- | --- |
-| `Reconciled` | ZTunnelConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.  |
-| `Ready` | ZTunnelConditionReady signifies whether the ztunnel DaemonSet is ready.  |
 
 
 #### ZTunnelList (v1alpha1)
@@ -3668,7 +3455,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.28-latest, v1.28.6, v1.28.3, v1.28.1, v1.26-latest, v1.26.3. | v1.28.6 | Enum: [v1.28-latest v1.28.6 v1.28.3 v1.28.1 v1.26-latest v1.26.3 v1.24-latest v1.24.6]   |
+| `version` _string_ | Defines the version of Istio to install. Must be one of: v1.30-latest, v1.30.3, v1.28-latest, v1.28.6, v1.28.3, v1.28.1. | v1.30.3 | Enum: [v1.30-latest v1.30.3 v1.28-latest v1.28.6 v1.28.3 v1.28.1 v1.26-latest v1.26.3 v1.24-latest v1.24.6]   |
 | `profile` _string_ | The built-in installation configuration profile to use. The 'default' profile is 'ambient' and it is always applied. Must be one of: ambient, default, demo, empty, external, preview, remote, stable. | ambient | Enum: [ambient default demo empty external openshift-ambient openshift preview remote stable]   |
 | `namespace` _string_ | Namespace to which the Istio ztunnel component should be installed. | ztunnel |  |
 | `values` _[ZTunnelValues](#ztunnelvalues)_ | Defines the values to be passed to the Helm charts when installing Istio ztunnel. |  |  |
@@ -3688,7 +3475,153 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `observedGeneration` _integer_ | ObservedGeneration is the most recent generation observed for this ZTunnel object. It corresponds to the object's generation, which is updated on mutation by the API Server. The information in the status pertains to this particular generation of the object. |  |  |
-| `conditions` _[ZTunnelCondition](#ztunnelcondition) array_ | Represents the latest available observations of the object's current state. |  |  |
+| `conditions` _[StatusCondition](#statuscondition) array_ | Represents the latest available observations of the object's current state. |  |  |
 | `state` _[ZTunnelConditionReason](#ztunnelconditionreason)_ | Reports the current state of the object. |  |  |
 
+
+
+
+## Conditions Reference
+
+Each resource has a set of conditions in its status that indicate its current state.
+The `status` of each condition is one of `True`, `False`, or `Unknown`.
+
+### Istio
+
+**`Reconciled`** — IstioConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.
+
+| Reason | Description |
+| --- | --- |
+| `ReconcileError` | IstioReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried. |
+
+**`Ready`** — IstioConditionReady signifies whether any Deployment, StatefulSet, etc. resources are Ready.
+
+| Reason | Description |
+| --- | --- |
+| `ActiveRevisionNotFound` | IstioReasonRevisionNotFound indicates that the active IstioRevision is not found. |
+| `FailedToGetActiveRevision` | IstioReasonFailedToGetActiveRevision indicates that a failure occurred when getting the active IstioRevision |
+| `IstiodNotReady` | IstioReasonIstiodNotReady indicates that the control plane is fully reconciled, but istiod is not ready. |
+| `RemoteIstiodNotReady` | IstioReasonRemoteIstiodNotReady indicates that the control plane is fully reconciled, but the remote istiod is not ready. |
+| `ReadinessCheckFailed` | IstioReasonReadinessCheckFailed indicates that readiness could not be ascertained. |
+
+**`DependenciesHealthy`** — IstioConditionDependenciesHealthy signifies whether the dependencies required by this Istio are healthy. For example, an Istio with spec.values.pilot.cni.enabled=true requires the IstioCNI resource to be deployed and ready for the Istio revision to be considered healthy. The DependenciesHealthy condition is used to indicate that the IstioCNI resource is healthy.
+
+| Reason | Description |
+| --- | --- |
+| `IstioCNINotFound` | IstioReasonIstioCNINotFound indicates that the IstioCNI resource is not found. |
+| `IstioCNINotHealthy` | IstioReasonIstioCNINotHealthy indicates that the IstioCNI resource is not healthy. |
+| `DependencyCheckFailed` | IstioReasonDependencyCheckFailed indicates that the status of the dependencies could not be ascertained. |
+
+*General reasons:*
+
+| Reason | Description |
+| --- | --- |
+| `Healthy` | IstioReasonHealthy indicates that the control plane is fully reconciled and that all components are ready. |
+
+### IstioRevision
+
+**`Reconciled`** — IstioRevisionConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.
+
+| Reason | Description |
+| --- | --- |
+| `ReconcileError` | IstioRevisionReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried. |
+
+**`Ready`** — IstioRevisionConditionReady signifies whether any Deployment, StatefulSet, etc. resources are Ready.
+
+| Reason | Description |
+| --- | --- |
+| `IstiodNotReady` | IstioRevisionReasonIstiodNotReady indicates that the control plane is fully reconciled, but istiod is not ready. |
+| `NameAlreadyExists` | IstioRevisionTagNameAlreadyExists indicates that a IstioRevisionTag with the same name as the IstioRevision already exists. |
+| `RemoteIstiodNotReady` | IstioRevisionReasonRemoteIstiodNotReady indicates that the remote istiod is not ready. |
+| `ReadinessCheckFailed` | IstioRevisionReasonReadinessCheckFailed indicates that istiod readiness status could not be ascertained. |
+
+**`InUse`** — IstioRevisionConditionInUse signifies whether any workload is configured to use the revision.
+
+| Reason | Description |
+| --- | --- |
+| `ReferencedByWorkloads` | IstioRevisionReasonReferencedByWorkloads indicates that the revision is referenced by at least one pod or namespace. |
+| `NotReferencedByAnything` | IstioRevisionReasonNotReferenced indicates that the revision is not referenced by any pod or namespace. |
+| `UsageCheckFailed` | IstioRevisionReasonUsageCheckFailed indicates that the operator could not check whether any workloads use the revision. |
+
+**`DependenciesHealthy`** — IstioRevisionConditionDependenciesHealthy signifies whether the dependencies required by this IstioRevision are healthy. For example, an IstioRevision with spec.values.pilot.cni.enabled=true requires the IstioCNI resource to be deployed and ready for the Istio revision to be considered healthy. The DependenciesHealthy condition is used to indicate that the IstioCNI resource is healthy.
+
+| Reason | Description |
+| --- | --- |
+| `IstioCNINotFound` | IstioRevisionReasonIstioCNINotFound indicates that the IstioCNI resource is not found. |
+| `IstioCNINotHealthy` | IstioRevisionReasonIstioCNINotHealthy indicates that the IstioCNI resource is not healthy. |
+| `ZTunnelNotFound` | IstioRevisionReasonZTunnelNotFound indicates that the ZTunnel resource is not found. |
+| `ZTunnelNotHealthy` | IstioRevisionReasonZTunnelNotHealthy indicates that the ZTunnel resource is not healthy. |
+| `DependencyCheckFailed` | IstioRevisionDependencyCheckFailed indicates that the status of the dependencies could not be ascertained. |
+
+*General reasons:*
+
+| Reason | Description |
+| --- | --- |
+| `Healthy` | IstioRevisionReasonHealthy indicates that the control plane is fully reconciled and that all components are ready. |
+
+### IstioRevisionTag
+
+**`Reconciled`** — IstioRevisionConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.
+
+| Reason | Description |
+| --- | --- |
+| `NameAlreadyExists` | IstioRevisionTagNameAlreadyExists indicates that an IstioRevision with the same name as the IstioRevisionTag already exists. |
+| `RefNotFound` | IstioRevisionTagReasonReferenceNotFound indicates that the resource referenced by the tag's TargetRef was not found |
+| `ReconcileError` | IstioRevisionReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried. |
+
+**`InUse`** — IstioRevisionConditionInUse signifies whether any workload is configured to use the revision.
+
+| Reason | Description |
+| --- | --- |
+| `ReferencedByWorkloads` | IstioRevisionReasonReferencedByWorkloads indicates that the revision is referenced by at least one pod or namespace. |
+| `NotReferencedByAnything` | IstioRevisionReasonNotReferenced indicates that the revision is not referenced by any pod or namespace. |
+| `UsageCheckFailed` | IstioRevisionReasonUsageCheckFailed indicates that the operator could not check whether any workloads use the revision. |
+
+*General reasons:*
+
+| Reason | Description |
+| --- | --- |
+| `Healthy` | IstioRevisionTagReasonHealthy indicates that the revision tag has been successfully reconciled and is in use. |
+
+### IstioCNI
+
+**`Reconciled`** — IstioCNIConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.
+
+| Reason | Description |
+| --- | --- |
+| `ReconcileError` | IstioCNIReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried. |
+
+**`Ready`** — IstioCNIConditionReady signifies whether the istio-cni-node DaemonSet is ready.
+
+| Reason | Description |
+| --- | --- |
+| `DaemonSetNotReady` | IstioCNIDaemonSetNotReady indicates that the istio-cni-node DaemonSet is not ready. |
+| `ReadinessCheckFailed` | IstioCNIReasonReadinessCheckFailed indicates that the DaemonSet readiness status could not be ascertained. |
+
+*General reasons:*
+
+| Reason | Description |
+| --- | --- |
+| `Healthy` | IstioCNIReasonHealthy indicates that the control plane is fully reconciled and that all components are ready. |
+
+### ZTunnel
+
+**`Reconciled`** — ZTunnelConditionReconciled signifies whether the controller has successfully reconciled the resources defined through the CR.
+
+| Reason | Description |
+| --- | --- |
+| `ReconcileError` | ZTunnelReasonReconcileError indicates that the reconciliation of the resource has failed, but will be retried. |
+
+**`Ready`** — ZTunnelConditionReady signifies whether the ztunnel DaemonSet is ready.
+
+| Reason | Description |
+| --- | --- |
+| `DaemonSetNotReady` | ZTunnelDaemonSetNotReady indicates that the ztunnel DaemonSet is not ready. |
+| `ReadinessCheckFailed` | ZTunnelReasonReadinessCheckFailed indicates that the DaemonSet readiness status could not be ascertained. |
+
+*General reasons:*
+
+| Reason | Description |
+| --- | --- |
+| `Healthy` | ZTunnelReasonHealthy indicates that the control plane is fully reconciled and that all components are ready. |
 

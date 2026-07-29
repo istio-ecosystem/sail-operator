@@ -1,9 +1,25 @@
 #!/usr/bin/env bash
+
+# Copyright Alauda Mesh Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# shellcheck disable=SC2015  # p()/f() 恒为真，A && B || C 惯用法在此安全
 # 步骤 7：push 同步分支并创建 PR（幂等：分支已有 open PR 时直接复用）。
 # 用法: create-pr.sh <PR正文文件>
 # 退出码: 0=OK（输出 PR_NUMBER= / PR_URL=）  1=前置失败
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
 source "$SCRIPT_DIR/common.sh"
 repo_root
 load_state
@@ -20,7 +36,11 @@ CUR_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 git diff --quiet && git diff --cached --quiet || die "有未提交的修改，请先 commit（-s 签名，禁止 amend）"
 
 info "push $SYNC_BRANCH 到 origin ..."
-git push -u origin "$SYNC_BRANCH"
+# devpod 的 ssh-agent 可能中途失效（Permission denied (publickey)），失败时用 gh 凭据走 https
+git push -u origin "$SYNC_BRANCH" || {
+  warn "SSH push 失败，改用 gh credential helper 走 https"
+  git -c credential.helper='!gh auth git-credential' push "https://github.com/$REPO_SLUG.git" "$SYNC_BRANCH"
+}
 
 EXISTING="$(gh pr list --repo "$REPO_SLUG" --head "$SYNC_BRANCH" --state open --json number -q '.[0].number' 2>/dev/null || true)"
 if [[ -n "$EXISTING" ]]; then

@@ -2,7 +2,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.19.0
+    controller-gen.kubebuilder.io/version: v0.20.1
   creationTimestamp: null
   name: istiocnis.sailoperator.io
 spec:
@@ -66,7 +66,7 @@ spec:
           spec:
             default:
               namespace: istio-cni
-              version: v1.28.6
+              version: v1.30.3
             description: IstioCNISpec defines the desired state of IstioCNI
             properties:
               namespace:
@@ -1332,6 +1332,12 @@ spec:
                         description: The container image tag to pull. Image will be
                           `Hub/Image:Tag-Variant`.
                         type: string
+                      useAppArmorAnnotation:
+                        description: |-
+                          Specifies whether to use the AppArmor annotation or the appArmorProfile field in the securityContext to configure the profile.
+                          See https://kubernetes.io/docs/tutorials/security/apparmor/
+                          https://kubernetes.io/docs/reference/labels-annotations-taints/#container-apparmor-security-beta-kubernetes-io
+                        type: boolean
                       variant:
                         description: The container image variant to pull. Options
                           are "debug" or "distroless". Unset will use the default
@@ -1463,11 +1469,13 @@ spec:
                     type: object
                 type: object
               version:
-                default: v1.28.6
+                default: v1.30.3
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.28-latest, v1.28.6, v1.28.3, v1.28.1, v1.26-latest, v1.26.3.
+                  Must be one of: v1.30-latest, v1.30.3, v1.28-latest, v1.28.6, v1.28.3, v1.28.1.
                 enum:
+                - v1.30-latest
+                - v1.30.3
                 - v1.28-latest
                 - v1.28.6
                 - v1.28.3
@@ -1488,8 +1496,8 @@ spec:
                 description: Represents the latest available observations of the object's
                   current state.
                 items:
-                  description: IstioCNICondition represents a specific observation
-                    of the IstioCNI object's state.
+                  description: StatusCondition represents a specific observation of
+                    an object's state.
                   properties:
                     lastTransitionTime:
                       description: Last time the condition transitioned from one status

@@ -68,7 +68,7 @@ spec:
 		},
 	}
 
-	result, err := ComputeValues(values, namespace, version, config.PlatformOpenShift, "default", "my-profile", resourceDir, revisionName)
+	result, err := ComputeValues(values, namespace, version, config.PlatformOpenShift, "default", "my-profile", os.DirFS(resourceDir), revisionName, nil)
 	if err != nil {
 		t.Errorf("Expected no error, but got an error: %v", err)
 	}
@@ -84,7 +84,7 @@ spec:
 			IstioNamespace: ptr.Of(namespace), // this value is always added/overridden based on IstioRevision.spec.namespace
 		},
 		Revision:        ptr.Of(revisionName),
-		DefaultRevision: ptr.Of(""),
+		DefaultRevision: nil,
 	}
 
 	if !reflect.DeepEqual(result, expected) {
@@ -113,7 +113,7 @@ spec:`)), 0o644))
 	istiovalues.FipsEnabled = true
 	values := &v1.Values{}
 	result, err := ComputeValues(values, namespace, version, config.PlatformOpenShift, "default", "",
-		resourceDir, revisionName)
+		os.DirFS(resourceDir), revisionName, nil)
 	if err != nil {
 		t.Errorf("Expected no error, but got an error: %v", err)
 	}
@@ -127,7 +127,7 @@ spec:`)), 0o644))
 			IstioNamespace: ptr.Of(namespace), // this value is always added/overridden based on IstioRevision.spec.namespace
 		},
 		Revision:        ptr.Of(revisionName),
-		DefaultRevision: ptr.Of(""),
+		DefaultRevision: nil,
 	}
 
 	if !reflect.DeepEqual(result, expected) {

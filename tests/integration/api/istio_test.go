@@ -18,22 +18,26 @@ package integration
 
 import (
 	"context"
+	"crypto/tls"
 	"strings"
 	"time"
 
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/config"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
+	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
+	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"helm.sh/helm/v3/pkg/release"
+	"helm.sh/helm/v4/pkg/release"
+	releasecommon "helm.sh/helm/v4/pkg/release/common"
+	releasev1 "helm.sh/helm/v4/pkg/release/v1"
+	admissionv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
-	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
-	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
-	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
-	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 
 	"istio.io/istio/pkg/ptr"
 )
@@ -156,7 +160,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 						},
 					},
 					Revision:        &revKey.Name,
-					DefaultRevision: ptr.Of(""), // set in the default profile
+					DefaultRevision: nil,
 				},
 			}))
 		})
@@ -174,13 +178,17 @@ var _ = Describe("Istio resource", Ordered, func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rel).NotTo(BeNil())
 
-				rel.SetStatus(release.StatusPendingInstall, "pending-install")
+				concreteRel, ok := rel.(*releasev1.Release)
+				Expect(ok).To(BeTrue(), "expected *releasev1.Release, got %T", rel)
+				concreteRel.SetStatus(releasecommon.StatusPendingInstall, "pending-install")
 				Expect(chartManager.UpdateRelease(ctx, istioNamespace, rel)).To(Succeed())
-				lockedRelVer = rel.Version
+				acc, err := release.NewAccessor(rel)
+				Expect(err).NotTo(HaveOccurred())
+				lockedRelVer = acc.Version()
 
 				// trigger a istiorevision updates
 				_, err = controllerutil.CreateOrPatch(ctx, k8sClient, rev, func() error {
-					rev.Status.SetCondition(v1.IstioRevisionCondition{
+					rev.Status.SetCondition(v1.StatusCondition{
 						Type:   "Unlock",
 						Status: "True",
 					})
@@ -195,8 +203,10 @@ var _ = Describe("Istio resource", Ordered, func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(rel).NotTo(BeNil())
 
-					g.Expect(rel.Info.Status).To(Equal(release.StatusDeployed))
-					g.Expect(rel.Version).To(BeNumerically(">", lockedRelVer))
+					acc, err := release.NewAccessor(rel)
+					Expect(err).NotTo(HaveOccurred())
+					g.Expect(releasecommon.Status(acc.Status())).To(Equal(releasecommon.StatusDeployed))
+					g.Expect(acc.Version()).To(BeNumerically(">", lockedRelVer))
 				}).Should(Succeed())
 			})
 		})
@@ -232,7 +242,7 @@ var _ = Describe("Istio resource", Ordered, func() {
 							},
 						},
 						Revision:        &revKey.Name,
-						DefaultRevision: ptr.Of(""), // set in the default profile
+						DefaultRevision: nil,
 					},
 				}))
 			})
@@ -533,10 +543,176 @@ var _ = Describe("Istio resource", Ordered, func() {
 						Namespace: istioNamespace,
 					},
 				}
-				Expect(k8sClient.Create(ctx, istio, &client.CreateOptions{})).To(Succeed())
+				createIstioWithCleanup(ctx, istio)
 				Eventually(getObject).WithArguments(ctx, k8sClient, istioKey, istio).
-					Should(HaveConditionMessage(v1.IstioConditionReconciled, "failed to resolve Istio version"))
+					Should(HaveConditionMessage(v1.IstioConditionReconciled, "is end-of-life and cannot be installed"))
 			})
+		})
+	})
+
+	Describe("Operator TLSConfig", func() {
+		It("applies TLS cipher suites to the IstioRevision", func() {
+			cipherID := tls.CipherSuites()[0].ID
+			expectedCipherName := tls.CipherSuiteName(cipherID)
+			istioReconciler.Config.TLSConfig = &config.TLSConfig{
+				CipherSuites: []uint16{cipherID},
+			}
+			DeferCleanup(func() {
+				istioReconciler.Config.TLSConfig = nil
+			})
+
+			istio = &v1.Istio{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: istioName,
+				},
+				Spec: v1.IstioSpec{
+					Version:   istioversion.Default,
+					Namespace: istioNamespace,
+				},
+			}
+			createIstioWithCleanup(ctx, istio)
+
+			rev := &v1.IstioRevision{}
+			revKey := client.ObjectKey{Name: istioName}
+
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
+				g.Expect(rev.Spec.Values).NotTo(BeNil())
+				g.Expect(rev.Spec.Values.MeshConfig).NotTo(BeNil())
+
+				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults).NotTo(BeNil())
+				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults.CipherSuites).NotTo(BeEmpty())
+				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults.CipherSuites[0]).To(Equal(expectedCipherName))
+
+				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS).NotTo(BeNil())
+				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS.CipherSuites).NotTo(BeEmpty())
+				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS.CipherSuites[0]).To(Equal(expectedCipherName))
+
+				g.Expect(rev.Spec.Values.Pilot).NotTo(BeNil())
+				g.Expect(rev.Spec.Values.Pilot.ExtraContainerArgs).NotTo(BeEmpty())
+				expectedArg := "--tls-cipher-suites=" + expectedCipherName
+				g.Expect(rev.Spec.Values.Pilot.ExtraContainerArgs).To(ContainElement(expectedArg))
+			}).Should(Succeed())
+		})
+
+		It("does not overwrite user-specified TLS values", func() {
+			userCipherSuite := tls.CipherSuiteName(tls.TLS_AES_128_GCM_SHA256)
+			userExtraArg := "--tls-cipher-suites=" + userCipherSuite
+			tlsConfigCipherID := tls.TLS_AES_256_GCM_SHA384
+			tlsConfigCipherName := tls.CipherSuiteName(tlsConfigCipherID)
+			istioReconciler.Config.TLSConfig = &config.TLSConfig{
+				CipherSuites: []uint16{tlsConfigCipherID},
+			}
+			DeferCleanup(func() {
+				istioReconciler.Config.TLSConfig = nil
+			})
+
+			istio = &v1.Istio{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: istioName,
+				},
+				Spec: v1.IstioSpec{
+					Version:   istioversion.Default,
+					Namespace: istioNamespace,
+					Values: &v1.Values{
+						MeshConfig: &v1.MeshConfig{
+							TlsDefaults: &v1.MeshConfigTLSConfig{
+								CipherSuites: []string{userCipherSuite},
+							},
+							MeshMTLS: &v1.MeshConfigTLSConfig{
+								CipherSuites: []string{userCipherSuite},
+							},
+						},
+						Pilot: &v1.PilotConfig{
+							ExtraContainerArgs: []string{userExtraArg},
+						},
+					},
+				},
+			}
+			createIstioWithCleanup(ctx, istio)
+
+			rev := &v1.IstioRevision{}
+			revKey := client.ObjectKey{Name: istioName}
+
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(ctx, revKey, rev)).To(Succeed())
+				g.Expect(rev.Spec.Values).NotTo(BeNil())
+				g.Expect(rev.Spec.Values.MeshConfig).NotTo(BeNil())
+
+				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults).NotTo(BeNil())
+				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults.CipherSuites).To(HaveLen(1))
+				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults.CipherSuites[0]).To(Equal(userCipherSuite))
+				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults.CipherSuites).NotTo(ContainElement(tlsConfigCipherName))
+
+				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS).NotTo(BeNil())
+				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS.CipherSuites).To(HaveLen(1))
+				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS.CipherSuites[0]).To(Equal(userCipherSuite))
+				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS.CipherSuites).NotTo(ContainElement(tlsConfigCipherName))
+
+				g.Expect(rev.Spec.Values.Pilot).NotTo(BeNil())
+				g.Expect(rev.Spec.Values.Pilot.ExtraContainerArgs).To(ContainElement(userExtraArg))
+				g.Expect(rev.Spec.Values.Pilot.ExtraContainerArgs).NotTo(ContainElement("--tls-cipher-suites=" + tlsConfigCipherName))
+			}).Should(Succeed())
+		})
+	})
+
+	Describe("ValidatingWebhookConfiguration", func() {
+		validatorWebhookKey := client.ObjectKey{Name: "istiod-default-validator"}
+		It("creates istiod-default-validator when the Istio is named 'default' with InPlace strategy", func() {
+			istio = &v1.Istio{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1.IstioSpec{
+					Version:   istioversion.Default,
+					Namespace: istioNamespace,
+					UpdateStrategy: &v1.IstioUpdateStrategy{
+						Type: v1.UpdateStrategyTypeInPlace,
+					},
+				},
+			}
+			createIstioWithCleanup(ctx, istio)
+
+			Eventually(k8sClient.Get).WithArguments(ctx, validatorWebhookKey, &admissionv1.ValidatingWebhookConfiguration{}).Should(Succeed())
+		})
+
+		It("does not create istiod-default-validator when the Istio name is not 'default' with InPlace strategy", func() {
+			istio = &v1.Istio{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "custom",
+				},
+				Spec: v1.IstioSpec{
+					Version:   istioversion.Default,
+					Namespace: istioNamespace,
+					UpdateStrategy: &v1.IstioUpdateStrategy{
+						Type: v1.UpdateStrategyTypeInPlace,
+					},
+				},
+			}
+			createIstioWithCleanup(ctx, istio)
+
+			Consistently(k8sClient.Get).WithArguments(ctx, validatorWebhookKey, &admissionv1.ValidatingWebhookConfiguration{}).Should(ReturnNotFoundError())
+
+			revisionedWebhookKey := client.ObjectKey{Name: "istio-validator-custom-" + istioNamespace}
+			Eventually(k8sClient.Get).WithArguments(ctx, revisionedWebhookKey, &admissionv1.ValidatingWebhookConfiguration{}).Should(Succeed())
+		})
+
+		It("does not create istiod-default-validator with RevisionBased strategy", func() {
+			istio = &v1.Istio{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1.IstioSpec{
+					Version:   istioversion.Default,
+					Namespace: istioNamespace,
+					UpdateStrategy: &v1.IstioUpdateStrategy{
+						Type: v1.UpdateStrategyTypeRevisionBased,
+					},
+				},
+			}
+			createIstioWithCleanup(ctx, istio)
+
+			Consistently(k8sClient.Get).WithArguments(ctx, validatorWebhookKey, &admissionv1.ValidatingWebhookConfiguration{}).Should(ReturnNotFoundError())
 		})
 	})
 })
@@ -587,4 +763,11 @@ func getRevisionName(istio *v1.Istio, version string) string {
 func getObject(ctx context.Context, cl client.Client, key client.ObjectKey, obj client.Object) (client.Object, error) {
 	err := cl.Get(ctx, key, obj)
 	return obj, err
+}
+
+func createIstioWithCleanup(ctx context.Context, istio *v1.Istio) {
+	Expect(k8sClient.Create(ctx, istio, &client.CreateOptions{})).To(Succeed())
+	DeferCleanup(func() {
+		deleteAllIstiosAndRevisions(ctx)
+	})
 }

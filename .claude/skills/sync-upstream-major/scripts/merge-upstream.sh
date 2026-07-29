@@ -1,4 +1,19 @@
 #!/usr/bin/env bash
+
+# Copyright Alauda Mesh Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# shellcheck disable=SC2015  # p()/f() 恒为真，A && B || C 惯用法在此安全
 # 步骤 1：前置检查 + 创建同步分支 + 合并上游 release 分支。
 # 用法: merge-upstream.sh <上游release分支> <目标分支> <istio构建版本>...
 #   构建版本至少 1 个（新大版本，如 1.30.3-asm-rc.4）；可再给上一大版本的若干构建（如 1.28.6-asm-r4）。
@@ -9,6 +24,7 @@
 # 退出码: 0=MERGED 或 UP_TO_DATE  2=CONFLICT（正常，进入解冲突）  1=前置失败
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
 source "$SCRIPT_DIR/common.sh"
 repo_root
 
@@ -97,8 +113,12 @@ git rev-parse -q --verify "refs/heads/$SYNC_BRANCH" >/dev/null \
 
 BASE_SHA=$(git rev-parse "origin/$TARGET_BRANCH")
 MERGE_BASE=$(git merge-base "$BASE_SHA" "upstream/$UPSTREAM_BRANCH")
+# 记录本次合并的上游快照 SHA：release 分支会持续前进（Automator 等），后续 verify 的
+# 全量差异审计必须以该快照为基准，避免 fetch 后 ref 漂移造成假差异
+UPSTREAM_SHA=$(git rev-parse "upstream/$UPSTREAM_BRANCH")
 git checkout -b "$SYNC_BRANCH" "$BASE_SHA"
 
+save_state UPSTREAM_SHA "$UPSTREAM_SHA"
 save_state UPSTREAM_BRANCH "$UPSTREAM_BRANCH"
 save_state TARGET_BRANCH "$TARGET_BRANCH"
 save_state SYNC_BRANCH "$SYNC_BRANCH"

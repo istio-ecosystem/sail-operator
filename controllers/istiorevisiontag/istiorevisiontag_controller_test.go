@@ -17,6 +17,7 @@ package istiorevisiontag
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -218,7 +219,7 @@ func TestDetermineInUseCondition(t *testing.T) {
 						Name: tagName,
 					},
 					Spec: v1.IstioRevisionTagSpec{
-						TargetRef: v1.IstioRevisionTagTargetReference{
+						TargetRef: v1.TargetReference{
 							Kind: "IstioRevision",
 							Name: rev.Name,
 						},
@@ -277,7 +278,7 @@ func TestDetermineInUseCondition(t *testing.T) {
 
 func newReconcilerTestConfig(t *testing.T) config.ReconcilerConfig {
 	return config.ReconcilerConfig{
-		ResourceDirectory:       t.TempDir(),
+		ResourceFS:              os.DirFS(t.TempDir()),
 		Platform:                config.PlatformKubernetes,
 		DefaultProfile:          "",
 		MaxConcurrentReconciles: 1,
@@ -299,7 +300,7 @@ func TestValidation(t *testing.T) {
 					Name: "default",
 				},
 				Spec: v1.IstioRevisionTagSpec{
-					TargetRef: v1.IstioRevisionTagTargetReference{},
+					TargetRef: v1.TargetReference{},
 				},
 			},
 			expectedErrMessage: "spec.targetRef not set",
@@ -312,7 +313,7 @@ func TestValidation(t *testing.T) {
 					Name: "default",
 				},
 				Spec: v1.IstioRevisionTagSpec{
-					TargetRef: v1.IstioRevisionTagTargetReference{
+					TargetRef: v1.TargetReference{
 						Kind: "IstioRevision",
 						Name: revName,
 					},

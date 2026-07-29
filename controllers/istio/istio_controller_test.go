@@ -17,6 +17,7 @@ package istio
 import (
 	"context"
 	"fmt"
+	"os"
 	"runtime/debug"
 	"strings"
 	"testing"
@@ -29,7 +30,6 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/testtime"
 	. "github.com/onsi/gomega"
-	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -262,11 +262,14 @@ func TestDetermineStatus(t *testing.T) {
 			Spec: v1.IstioRevisionSpec{Namespace: istioNamespace},
 			Status: v1.IstioRevisionStatus{
 				State: v1.IstioRevisionReasonHealthy,
-				Conditions: []v1.IstioRevisionCondition{
-					{Type: v1.IstioRevisionConditionReconciled, Status: toConditionStatus(reconciled)},
-					{Type: v1.IstioRevisionConditionReady, Status: toConditionStatus(ready)},
-					{Type: v1.IstioRevisionConditionDependenciesHealthy, Status: toConditionStatus(true)},
-					{Type: v1.IstioRevisionConditionInUse, Status: toConditionStatus(inUse)},
+				Conditions: []v1.StatusCondition{
+					{Type: v1.IstioRevisionConditionReconciled, Status: toConditionStatus(reconciled), Reason: v1.ConditionReason(v1.IstioRevisionConditionReconciled)},
+					{Type: v1.IstioRevisionConditionReady, Status: toConditionStatus(ready), Reason: v1.ConditionReason(v1.IstioRevisionConditionReady)},
+					{
+						Type: v1.IstioRevisionConditionDependenciesHealthy, Status: toConditionStatus(true),
+						Reason: v1.ConditionReason(v1.IstioRevisionConditionDependenciesHealthy),
+					},
+					{Type: v1.IstioRevisionConditionInUse, Status: toConditionStatus(inUse), Reason: v1.ConditionReason(v1.IstioRevisionConditionInUse)},
 				},
 			},
 		}
@@ -288,7 +291,7 @@ func TestDetermineStatus(t *testing.T) {
 			expectedStatus: v1.IstioStatus{
 				State:              v1.IstioReasonReconcileError,
 				ObservedGeneration: generation,
-				Conditions: []v1.IstioCondition{
+				Conditions: []v1.StatusCondition{
 					{
 						Type:    v1.IstioConditionReconciled,
 						Status:  metav1.ConditionFalse,
@@ -318,7 +321,7 @@ func TestDetermineStatus(t *testing.T) {
 					},
 					Status: v1.IstioRevisionStatus{
 						State: v1.IstioRevisionReasonHealthy,
-						Conditions: []v1.IstioRevisionCondition{
+						Conditions: []v1.StatusCondition{
 							{
 								Type:    v1.IstioRevisionConditionReconciled,
 								Status:  metav1.ConditionTrue,
@@ -350,7 +353,7 @@ func TestDetermineStatus(t *testing.T) {
 					},
 					Status: v1.IstioRevisionStatus{
 						State: v1.IstioRevisionReasonHealthy,
-						Conditions: []v1.IstioRevisionCondition{
+						Conditions: []v1.StatusCondition{
 							{
 								Type:    v1.IstioRevisionConditionReconciled,
 								Status:  metav1.ConditionFalse,
@@ -370,7 +373,7 @@ func TestDetermineStatus(t *testing.T) {
 			expectedStatus: v1.IstioStatus{
 				State:              v1.IstioReasonHealthy,
 				ObservedGeneration: generation,
-				Conditions: []v1.IstioCondition{
+				Conditions: []v1.StatusCondition{
 					{
 						Type:    v1.IstioConditionReconciled,
 						Status:  metav1.ConditionTrue,
@@ -412,18 +415,21 @@ func TestDetermineStatus(t *testing.T) {
 			expectedStatus: v1.IstioStatus{
 				State:              v1.IstioReasonHealthy,
 				ObservedGeneration: generation,
-				Conditions: []v1.IstioCondition{
+				Conditions: []v1.StatusCondition{
 					{
 						Type:   v1.IstioConditionReconciled,
 						Status: metav1.ConditionTrue,
+						Reason: v1.ConditionReason(v1.IstioConditionReconciled),
 					},
 					{
 						Type:   v1.IstioConditionReady,
 						Status: metav1.ConditionTrue,
+						Reason: v1.ConditionReason(v1.IstioConditionReady),
 					},
 					{
 						Type:   v1.IstioConditionDependenciesHealthy,
 						Status: metav1.ConditionTrue,
+						Reason: v1.ConditionReason(v1.IstioConditionDependenciesHealthy),
 					},
 				},
 				ActiveRevisionName: istioKey.Name,
@@ -440,7 +446,7 @@ func TestDetermineStatus(t *testing.T) {
 			expectedStatus: v1.IstioStatus{
 				State:              v1.IstioReasonRevisionNotFound,
 				ObservedGeneration: generation,
-				Conditions: []v1.IstioCondition{
+				Conditions: []v1.StatusCondition{
 					{
 						Type:    v1.IstioConditionReconciled,
 						Status:  metav1.ConditionFalse,
@@ -471,7 +477,7 @@ func TestDetermineStatus(t *testing.T) {
 			expectedStatus: v1.IstioStatus{
 				State:              v1.IstioReasonFailedToGetActiveRevision,
 				ObservedGeneration: generation,
-				Conditions: []v1.IstioCondition{
+				Conditions: []v1.StatusCondition{
 					{
 						Type:    v1.IstioConditionReconciled,
 						Status:  metav1.ConditionUnknown,
@@ -503,7 +509,7 @@ func TestDetermineStatus(t *testing.T) {
 			expectedStatus: v1.IstioStatus{
 				State:              v1.IstioReasonRevisionNotFound,
 				ObservedGeneration: generation,
-				Conditions: []v1.IstioCondition{
+				Conditions: []v1.StatusCondition{
 					{
 						Type:    v1.IstioConditionReconciled,
 						Status:  metav1.ConditionFalse,
@@ -604,7 +610,7 @@ func TestUpdateStatus(t *testing.T) {
 			expectedStatus: v1.IstioStatus{
 				State:              v1.IstioReasonRevisionNotFound,
 				ObservedGeneration: generation,
-				Conditions: []v1.IstioCondition{
+				Conditions: []v1.StatusCondition{
 					{
 						Type:    v1.IstioConditionReconciled,
 						Status:  metav1.ConditionFalse,
@@ -641,7 +647,7 @@ func TestUpdateStatus(t *testing.T) {
 				Status: v1.IstioStatus{
 					ObservedGeneration: 100,
 					State:              v1.IstioReasonHealthy,
-					Conditions: []v1.IstioCondition{
+					Conditions: []v1.StatusCondition{
 						{
 							Type:               v1.IstioConditionReconciled,
 							Status:             metav1.ConditionTrue,
@@ -659,6 +665,7 @@ func TestUpdateStatus(t *testing.T) {
 						{
 							Type:               v1.IstioConditionDependenciesHealthy,
 							Status:             metav1.ConditionTrue,
+							Reason:             v1.ConditionReason(v1.IstioConditionDependenciesHealthy),
 							LastTransitionTime: *oneMinuteAgo,
 						},
 					},
@@ -675,7 +682,7 @@ func TestUpdateStatus(t *testing.T) {
 					},
 					Status: v1.IstioRevisionStatus{
 						State: v1.IstioRevisionReasonHealthy,
-						Conditions: []v1.IstioRevisionCondition{
+						Conditions: []v1.StatusCondition{
 							{
 								Type:               v1.IstioRevisionConditionReconciled,
 								Status:             metav1.ConditionTrue,
@@ -693,6 +700,7 @@ func TestUpdateStatus(t *testing.T) {
 							{
 								Type:               v1.IstioRevisionConditionDependenciesHealthy,
 								Status:             metav1.ConditionTrue,
+								Reason:             v1.ConditionReason(v1.IstioRevisionConditionDependenciesHealthy),
 								LastTransitionTime: *oneMinuteAgo,
 							},
 						},
@@ -702,7 +710,7 @@ func TestUpdateStatus(t *testing.T) {
 			expectedStatus: v1.IstioStatus{
 				State:              v1.IstioReasonHealthy,
 				ObservedGeneration: generation,
-				Conditions: []v1.IstioCondition{
+				Conditions: []v1.StatusCondition{
 					{
 						Type:    v1.IstioConditionReconciled,
 						Status:  metav1.ConditionTrue,
@@ -718,6 +726,7 @@ func TestUpdateStatus(t *testing.T) {
 					{
 						Type:   v1.IstioConditionDependenciesHealthy,
 						Status: metav1.ConditionTrue,
+						Reason: v1.ConditionReason(v1.IstioConditionDependenciesHealthy),
 					},
 				},
 				ActiveRevisionName: istioKey.Name,
@@ -951,100 +960,6 @@ func TestManagesExternalRevision(t *testing.T) {
 	}
 }
 
-func TestConvertCondition(t *testing.T) {
-	testCases := []struct {
-		conditionType    v1.IstioRevisionConditionType
-		expectedType     v1.IstioConditionType
-		conditionReasons []v1.IstioRevisionConditionReason
-		expectedReasons  []v1.IstioConditionReason
-	}{
-		{
-			conditionType: v1.IstioRevisionConditionReconciled,
-			expectedType:  v1.IstioConditionReconciled,
-			conditionReasons: []v1.IstioRevisionConditionReason{
-				v1.IstioRevisionReasonReconcileError,
-			},
-			expectedReasons: []v1.IstioConditionReason{
-				v1.IstioReasonReconcileError,
-			},
-		},
-		{
-			conditionType: v1.IstioRevisionConditionReady,
-			expectedType:  v1.IstioConditionReady,
-			conditionReasons: []v1.IstioRevisionConditionReason{
-				v1.IstioRevisionReasonIstiodNotReady,
-				v1.IstioRevisionReasonReadinessCheckFailed,
-				v1.IstioRevisionReasonRemoteIstiodNotReady,
-				v1.IstioRevisionReasonReadinessCheckFailed,
-			},
-			expectedReasons: []v1.IstioConditionReason{
-				v1.IstioReasonIstiodNotReady,
-				v1.IstioReasonReadinessCheckFailed,
-				v1.IstioReasonRemoteIstiodNotReady,
-				v1.IstioReasonReadinessCheckFailed,
-			},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(string(tc.conditionType), func(t *testing.T) {
-			got := convertCondition(
-				v1.IstioRevisionCondition{
-					Type:   tc.conditionType,
-					Status: metav1.ConditionTrue,
-				})
-			expected := v1.IstioCondition{
-				Type:   tc.expectedType,
-				Status: metav1.ConditionTrue,
-			}
-			if diff := cmp.Diff(expected, got); diff != "" {
-				t.Errorf("convertCondition() mismatch (-expected, +actual):\n%s", diff)
-			}
-		})
-
-		for i, reason := range tc.conditionReasons {
-			t.Run(fmt.Sprintf("%s %s", tc.conditionType, reason), func(t *testing.T) {
-				got := convertCondition(
-					v1.IstioRevisionCondition{
-						Type:    tc.conditionType,
-						Status:  metav1.ConditionFalse,
-						Reason:  reason,
-						Message: "some message",
-					})
-				expected := v1.IstioCondition{
-					Type:    tc.expectedType,
-					Status:  metav1.ConditionFalse,
-					Reason:  tc.expectedReasons[i],
-					Message: "some message",
-				}
-				if diff := cmp.Diff(expected, got); diff != "" {
-					t.Errorf("convertCondition() mismatch (-expected, +actual):\n%s", diff)
-				}
-			})
-		}
-	}
-}
-
-func TestConvertState(t *testing.T) {
-	testCases := []struct {
-		revisionState v1.IstioRevisionConditionReason
-		expected      v1.IstioConditionReason
-	}{
-		{revisionState: v1.IstioRevisionReasonHealthy, expected: v1.IstioReasonHealthy},
-		{revisionState: v1.IstioRevisionReasonReconcileError, expected: v1.IstioReasonReconcileError},
-		{revisionState: v1.IstioRevisionReasonIstiodNotReady, expected: v1.IstioReasonIstiodNotReady},
-		{revisionState: v1.IstioRevisionReasonRemoteIstiodNotReady, expected: v1.IstioReasonRemoteIstiodNotReady},
-		{revisionState: v1.IstioRevisionReasonReadinessCheckFailed, expected: v1.IstioReasonReadinessCheckFailed},
-	}
-
-	for _, tc := range testCases {
-		t.Run(string(tc.revisionState), func(t *testing.T) {
-			got := convertState(tc.revisionState)
-			assert.Equal(t, tc.expected, got)
-		})
-	}
-}
-
 func Must(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {
@@ -1091,7 +1006,7 @@ func noWrites(t *testing.T) interceptor.Funcs {
 
 func newReconcilerTestConfig(t *testing.T) config.ReconcilerConfig {
 	return config.ReconcilerConfig{
-		ResourceDirectory:       t.TempDir(),
+		ResourceFS:              os.DirFS(t.TempDir()),
 		Platform:                config.PlatformKubernetes,
 		DefaultProfile:          "",
 		MaxConcurrentReconciles: 1,

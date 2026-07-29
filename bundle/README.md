@@ -151,7 +151,7 @@ Alternatively, refer to [Istio's artifacthub chart documentation](https://artifa
 The `istioctl` tool is a configuration command line utility that allows service 
 operators to debug and diagnose Istio service mesh deployments.
 
-For installation steps, refer to the following [link](../docs/common/install-istioctl-tool.md).
+For installation steps, refer to the following [link](../docs/common/install-istioctl-tool.adoc).
 
 ## Installing the Bookinfo Application
 
@@ -159,7 +159,7 @@ You can use the `bookinfo` example application to explore service mesh features.
 Using the `bookinfo` application, you can easily confirm that requests from a 
 web browser pass through the mesh and reach the application.
 
-For installation steps, refer to the following [link](../docs/common/install-bookinfo-app.md).
+For installation steps, refer to the following [link](../docs/common/install-bookinfo-app.adoc).
 
 
 ## Creating and Configuring Gateways
@@ -171,7 +171,7 @@ contains the control plane.
 
 You can deploy gateways using either the Gateway API or Gateway Injection methods. 
 
-For installation steps, refer to the following [link](../docs/common/create-and-configure-gateways.md).
+For installation steps, refer to the following [link](../docs/common/create-and-configure-gateways.adoc).
 
 
 ## Istio Addons Integrations
@@ -181,7 +181,7 @@ Istio can be integrated with other software to provide additional functionality
 The following addons are for demonstration or development purposes only and 
 should not be used in production environments:
 
-For installation steps, refer to the following [link](../docs/common/istio-addons-integrations.md).
+For installation steps, refer to the following [link](../docs/common/istio-addons-integrations.adoc).
 
 
 ## Undeploying Istio and the Sail Operator

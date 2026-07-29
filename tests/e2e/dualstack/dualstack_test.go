@@ -22,6 +22,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
@@ -42,8 +43,8 @@ const (
 	SleepNamespace     = "sleep"
 )
 
-var _ = Describe("DualStack configuration ", Label("dualstack"), Ordered, func() {
-	SetDefaultEventuallyTimeout(180 * time.Second)
+var _ = Describe("DualStack configuration ", Label("dualstack", "slow", "sidecar"), Ordered, func() {
+	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
 	debugInfoLogged := false
@@ -221,6 +222,11 @@ values:
 				})
 
 				AfterAll(func(ctx SpecContext) {
+					if CurrentSpecReport().Failed() {
+						common.LogDebugInfo(common.DualStack, k)
+						debugInfoLogged = true
+					}
+
 					if CurrentSpecReport().Failed() && keepOnFailure {
 						return
 					}
@@ -229,19 +235,11 @@ values:
 				})
 			})
 		}
-
-		AfterAll(func(ctx SpecContext) {
-			if CurrentSpecReport().Failed() {
-				common.LogDebugInfo(common.DualStack, k)
-				debugInfoLogged = true
-			}
-		})
 	})
 
 	AfterAll(func(ctx SpecContext) {
 		if CurrentSpecReport().Failed() && !debugInfoLogged {
 			common.LogDebugInfo(common.DualStack, k)
-			debugInfoLogged = true
 		}
 	})
 })

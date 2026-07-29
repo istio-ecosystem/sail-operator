@@ -1,0 +1,15 @@
+annotations:
+  org.opencontainers.image.ref.name: refs/tags/1.30.3-asm-rc.4
+  org.opencontainers.image.revision: 0932ac8c3f42b9e76ae2a0a48bddb5cb58516f4f
+  org.opencontainers.image.source: https://github.com/alauda-mesh/istio
+apiVersion: v2
+appVersion: 1.30.3-asm-rc.4
+description: Helm chart for istio-cni components
+icon: https://istio.io/latest/favicons/android-192x192.png
+keywords:
+- istio-cni
+- istio
+name: cni
+sources:
+- https://github.com/istio/istio
+version: 1.30.3-asm-rc.4

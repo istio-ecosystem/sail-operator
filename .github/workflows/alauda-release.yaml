@@ -9,7 +9,7 @@ on:
       bundle_channels:
         description: "Bundle channels"
         required: true
-        default: "stable,stable-2.1"
+        default: stable,stable-2.2
       is_draft_release:
         description: "Draft release"
         type: boolean
@@ -28,7 +28,7 @@ env:
   GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
   VERSION: ${{ inputs.release_version }}
   IMAGE_REPOSITORY: build-harbor.alauda.cn/asm/servicemesh-operator2
-  TOOLS_REGISTRY_PROVIDER: gcr.m.daocloud.io
+  TOOLS_REGISTRY_PROVIDER: registry.istio.io
   GENERATE_RELATED_IMAGES: "true"
   VENDOR_LD_EXTRAFLAGS: ${{ vars.LD_EXTRAFLAGS }}
 
@@ -139,9 +139,26 @@ jobs:
 
     - name: Create GitHub release
       run: |
+        # release 的 --target 分支（release-X.Y）由 release_version 前两段推导，与 make 的 MINOR_VERSION 一致。
+        # PR 合并前的验证性 run 该分支尚不存在：跳过 release 创建并在 summary 记录，而不是让整个流水线失败
+        TARGET_BRANCH="release-$(echo "$VERSION" | cut -d. -f1-2)"
+        if ! gh api "repos/${GITHUB_REPOSITORY}/branches/${TARGET_BRANCH}" --silent >/dev/null 2>&1; then
+          {
+            echo "### GitHub release"
+            echo
+            echo "⏭️ Skipped: target branch \`${TARGET_BRANCH}\` does not exist (pre-merge validation run)."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "跳过 create-gh-release：分支 ${TARGET_BRANCH} 不存在（验证性 run 属预期）"
+          exit 0
+        fi
         make create-gh-release \
           -e GH_PRE_RELEASE=$GH_PRE_RELEASE \
           -e GH_RELEASE_DRAFT=$GH_RELEASE_DRAFT
+        {
+          echo "### GitHub release"
+          echo
+          echo "✅ Created release \`${VERSION}\` (target \`${TARGET_BRANCH}\`, draft: \`${GH_RELEASE_DRAFT}\`)."
+        } >> "$GITHUB_STEP_SUMMARY"
       env:
         GH_PRE_RELEASE: ${{ github.event.inputs.is_pre_release == 'true' }}
         GH_RELEASE_DRAFT: ${{ github.event.inputs.is_draft_release == 'true' }}

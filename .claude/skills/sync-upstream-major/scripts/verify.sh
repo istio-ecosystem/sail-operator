@@ -1,8 +1,24 @@
 #!/usr/bin/env bash
+
+# Copyright Alauda Mesh Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# shellcheck disable=SC2015  # p()/f() 恒为真，A && B || C 惯用法在此安全
 # 步骤 6：一致性校验，输出 PASS/FAIL/WARN 逐项清单。
 # 退出码: 0=无 FAIL（可有 WARN）  2=存在 FAIL（修复后重跑到全过）  1=前置失败
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
 source "$SCRIPT_DIR/common.sh"
 repo_root
 load_state
@@ -108,9 +124,30 @@ else
   f "go.mod istio.io 依赖与 upstream/$UPSTREAM_BRANCH 不一致（影响生成的 CRD schema）"
 fi
 
+# 6b) istio.io/istio 必须 replace 到 alauda fork（镜像扫描伪版本误报防护，见 conflict-playbook go.mod 条目），
+#     且 replace 指向的 fork commit 必须包含 require 的上游 istio commit（否则编译代码旧于上游预期）
+REPLACE_LINE=$(grep -E '^replace istio\.io/istio => github\.com/alauda-mesh/istio ' go.mod || true)
+if [[ -z "$REPLACE_LINE" ]]; then
+  f "go.mod 缺少 replace istio.io/istio => github.com/alauda-mesh/istio（update-versions.sh 应已写入）"
+else
+  p "go.mod istio.io/istio 已 replace 到 alauda fork"
+  REQ_SHA=$(grep -E '^	istio\.io/istio v0\.0\.0-' go.mod | grep -oE '[0-9a-f]{12}$' || true)
+  REP_SHA=$(grep -oE '[0-9a-f]{12}$' <<<"$REPLACE_LINE" || true)
+  if [[ -n "$REQ_SHA" && -n "$REP_SHA" ]]; then
+    CMP_STATUS=$(gh api "repos/alauda-mesh/istio/compare/$REQ_SHA...$REP_SHA" --jq .status 2>/dev/null || echo unknown)
+    case "$CMP_STATUS" in
+      ahead | identical) p "replace 的 fork commit $REP_SHA 包含上游 require 的 istio commit $REQ_SHA（$CMP_STATUS）" ;;
+      unknown) w "无法用 gh api 校验 fork commit $REP_SHA 是否包含上游 istio commit $REQ_SHA（gh 未认证/离线），请人工确认" ;;
+      *) f "replace 的 fork commit $REP_SHA 未包含上游 require 的 istio commit $REQ_SHA（compare=$CMP_STATUS）——先把 fork 的 istio-1.XX 分支同步到上游 $UPSTREAM_BRANCH 再更新 replace" ;;
+    esac
+  else
+    w "无法从 go.mod 提取 require/replace 的 istio commit（伪版本格式变化？），请人工确认 replace 点位包含上游 require 的 commit"
+  fi
+fi
+
 # 7) alauda-release.yaml 的修改落地
 WF=.github/workflows/alauda-release.yaml
-grep -qE "^[[:space:]]*default: \"$NEW_CHANNELS\"$" "$WF" \
+grep -qE "^[[:space:]]*default: \"?$NEW_CHANNELS\"?$" "$WF" \
   && p "$WF bundle_channels 默认值 = $NEW_CHANNELS" \
   || f "$WF bundle_channels 默认值不是 $NEW_CHANNELS"
 if [[ "$UPSTREAM_BRANCH" == "release-1.30" ]]; then
@@ -119,7 +156,40 @@ if [[ "$UPSTREAM_BRANCH" == "release-1.30" ]]; then
     || f "$WF TOOLS_REGISTRY_PROVIDER 未改为 registry.istio.io（release-1.30 特例）"
 fi
 
-# 8) 被淘汰大版本在样例中的残留（提示性）
+# 8) 与上游合并快照的全量差异审计。
+# 基准用 state.env 的 UPSTREAM_SHA（merge 时的快照）：release 分支持续前进（Automator），
+# 用 upstream/<branch> ref 会因后续 fetch 漂移出假差异。老 state 无此键时回退到 ref。
+AUDIT_BASE="${UPSTREAM_SHA:-upstream/$UPSTREAM_BRANCH}"
+# 8a) go.mod / go.sum 与上游快照对比。基线应取自上游 release 分支；fork 的主动安全升级
+#     （CVE 修复提升库版本等）是合法差异——所以不作硬性 FAIL，但每行差异都必须有意为之：
+#     go.mod 是 git 自动合并的重灾区（双侧各改不同行会静默合出混血版本、无冲突标记），
+#     差异行列出供人工逐行确认，结论写进汇报。
+if git diff --quiet "$AUDIT_BASE" HEAD -- go.mod; then
+  p "go.mod 与上游快照 ${AUDIT_BASE:0:12} 一致"
+else
+  w "go.mod 与上游快照存在差异——fork 的 CVE/安全升级属预期，逐行确认是有意修改而非合并混血，结论写进汇报："
+  git diff "$AUDIT_BASE" HEAD -- go.mod | grep -E '^[+-][^+-]' | head -20 | sed 's/^/    /'
+fi
+git diff --quiet "$AUDIT_BASE" HEAD -- go.sum \
+  && p "go.sum 与上游快照一致" \
+  || w "go.sum 与上游快照存在差异（go.mod 有意差异时属预期；否则回查 go.mod 后 go mod tidy 重新生成）"
+# 8b) licenses/ 由 go.mod 依赖镜像而来：go.mod 一致时它也应一致；go.mod 有意差异时确认 mirror-licenses 已重跑
+git diff --quiet "$AUDIT_BASE" HEAD -- licenses/ \
+  && p "licenses/ 与上游快照一致" \
+  || w "licenses/ 与上游快照有差异（go.mod 有意差异时属预期；否则确认 make gen 的 mirror-licenses 已重跑）"
+# 8c) 白名单外差异审计：与上游快照不同的文件必须全部可解释。
+#     白名单 = 按 alauda 矩阵生成的目录 + alauda 独有文件 + 已知定制文件（见 playbook C 层表）
+ALLOW_RE='^(\.claude/|alauda/|resources/|bundle/|docs/api-reference/|licenses/|go\.(mod|sum)$|api/|chart/(Chart\.yaml|values\.yaml|crds/|templates/olm/|samples/)|\.github/workflows/(al(au|ua)da-|integration-tests\.yaml$|unit-tests\.yaml$)|\.gitattributes$|Makefile\.core\.mk$|Makefile\.vendor\.mk$|Dockerfile\.alauda$|PROJECT$|bundle\.Dockerfile$|hack/alauda-|pkg/install/images\.gen\.go$|pkg/istiovalues/vendor_defaults\.(go|yaml)$|pkg/istioversion/(alauda-versions\.yaml|version_test\.go)$)'
+UNEXPECTED=$(git diff --name-only "$AUDIT_BASE" HEAD | grep -Ev "$ALLOW_RE" || true)
+if [[ -z "$UNEXPECTED" ]]; then
+  p "全量差异审计: 白名单外无与上游不同的文件"
+else
+  while IFS= read -r x; do
+    w "白名单外与上游快照存在差异: $x（本次刻意修改则在汇报中说明，否则应对齐上游）"
+  done <<<"$UNEXPECTED"
+fi
+
+# 9) 被淘汰大版本在样例中的残留（提示性）
 for m in ${NEWLY_EOL_MAJORS:-}; do
   hits=$(grep -rl "v${m//./\\.}" chart/samples 2>/dev/null || true)
   [[ -z "$hits" ]] || w "chart/samples 中仍引用已 EOL 的 v$m（对齐到新默认版本）: $(tr '\n' ' ' <<<"$hits")"

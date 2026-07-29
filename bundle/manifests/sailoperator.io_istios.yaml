@@ -2,7 +2,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.19.0
+    controller-gen.kubebuilder.io/version: v0.20.1
   creationTimestamp: null
   name: istios.sailoperator.io
 spec:
@@ -88,7 +88,7 @@ spec:
               namespace: istio-system
               updateStrategy:
                 type: InPlace
-              version: v1.28.6
+              version: v1.30.3
             description: IstioSpec defines the desired state of Istio
             properties:
               namespace:
@@ -194,6 +194,12 @@ spec:
                   global:
                     description: Global configuration for Istio components.
                     properties:
+                      agentgateway:
+                        description: Specifies how proxies are configured within Istio.
+                        properties:
+                          image:
+                            type: string
+                        type: object
                       arch:
                         description: "Specifies pod scheduling arch(amd64, ppc64le,
                           s390x, arm64) and weight as follows:\n\n\t0 - Never scheduled\n\t1
@@ -355,9 +361,10 @@ spec:
                             operator:
                               description: |-
                                 Operator represents a key's relationship to the value.
-                                Valid operators are Exists and Equal. Defaults to Equal.
+                                Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.
                                 Exists is equivalent to wildcard for value, so that a pod can
                                 tolerate all taints of a particular category.
+                                Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).
                               type: string
                             tolerationSeconds:
                               description: |-
@@ -374,6 +381,11 @@ spec:
                               type: string
                           type: object
                         type: array
+                      enableReaderRBAC:
+                        description: |-
+                          If true, install istio-reader service account and associated cluster role/binding,
+                          which are used for multicluster remote-secret workflows.
+                        type: boolean
                       externalIstiod:
                         description: Controls whether one external istiod is enabled.
                         type: boolean
@@ -1066,6 +1078,31 @@ spec:
                                   otherwise to an implementation-defined value. Requests cannot exceed Limits.
                                   More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                                 type: object
+                            type: object
+                          seccompProfile:
+                            description: |-
+                              Configures the seccomp profile for the istio-validation and istio-proxy containers.
+
+                              See: https://kubernetes.io/docs/tutorials/security/seccomp/
+                            properties:
+                              localhostProfile:
+                                description: |-
+                                  localhostProfile indicates a profile defined in a file on the node should be used.
+                                  The profile must be preconfigured on the node to work.
+                                  Must be a descending path, relative to the kubelet's configured seccomp profile location.
+                                  Must be set if type is "Localhost". Must NOT be set for any other type.
+                                type: string
+                              type:
+                                description: |-
+                                  type indicates which kind of seccomp profile will be applied.
+                                  Valid options are:
+
+                                  Localhost - a profile defined in a file on the node should be used.
+                                  RuntimeDefault - the container runtime default profile should be used.
+                                  Unconfined - no profile should be applied.
+                                type: string
+                            required:
+                            - type
                             type: object
                           startupProbe:
                             description: Configures the startup probe for the istio-proxy
@@ -2399,9 +2436,10 @@ spec:
                                 operator:
                                   description: |-
                                     Operator represents a key's relationship to the value.
-                                    Valid operators are Exists and Equal. Defaults to Equal.
+                                    Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.
                                     Exists is equivalent to wildcard for value, so that a pod can
                                     tolerate all taints of a particular category.
+                                    Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).
                                   type: string
                                 tolerationSeconds:
                                   description: |-
@@ -3309,6 +3347,20 @@ spec:
                             items:
                               type: string
                             type: array
+                          fileFlushInterval:
+                            description: |-
+                              File flush interval for envoy flushes buffers to disk in milliseconds.
+                              The duration needs to be set to a value greater than or equal to 1 millisecond.
+                              Default is 1000ms.
+                              Optional.
+                            type: string
+                          fileFlushMinSizeKb:
+                            description: |-
+                              File flush buffer size for envoy flushes buffers to disk in kilobytes.
+                              Defaults to 64.
+                              Optional.
+                            format: int32
+                            type: integer
                           gatewayTopology:
                             description: |-
                               Topology encapsulates the configuration which describes where the proxy is
@@ -3843,6 +3895,12 @@ spec:
                               Increase the value of this field if you find that the metrics from Envoys are truncated.
                             format: int32
                             type: integer
+                          statsCompression:
+                            description: |-
+                              Offer HTTP compression for stats
+                              Defaults to true.
+                              Optional.
+                            type: boolean
                           statsdUdpAddress:
                             description: IP Address and Port of a statsd UDP listener
                               (e.g. `10.75.241.127:9125`).
@@ -5255,6 +5313,32 @@ spec:
 
                                     Example: "otlp.default.svc.cluster.local" or "bar/otlp.example.com".
                                   type: string
+                                serviceAttributeEnrichment:
+                                  description: |-
+                                    Optional. Controls how service resource attributes are enriched in
+                                    exported trace spans. When set to `OTEL_SEMANTIC_CONVENTIONS`, the
+                                    service attributes (`service.name`, `service.namespace`,
+                                    `service.version`, `service.instance.id`) will be populated following
+                                    the OpenTelemetry semantic conventions for Kubernetes:
+                                    https://opentelemetry.io/docs/specs/semconv/non-normative/k8s-attributes/#service-attributes
+
+                                    When not set or set to `ISTIO_CANONICAL`, Istio's default enrichment
+                                    logic is used (controlled by `TracingServiceName` in `ProxyConfig`).
+
+                                    Example:
+                                    ```yaml
+                                    extensionProviders:
+                                      - name: otel-tracing
+                                        opentelemetry:
+                                        port: 443
+                                        service: my.olly-backend.com
+                                        serviceAttributeEnrichment: OTEL_SEMANTIC_CONVENTIONS
+
+                                    ```
+                                  enum:
+                                  - ISTIO_CANONICAL
+                                  - OTEL_SEMANTIC_CONVENTIONS
+                                  type: string
                               required:
                               - port
                               - service
@@ -5484,6 +5568,16 @@ spec:
                         enum:
                         - DO_NOT_UPGRADE
                         - UPGRADE
+                        type: string
+                      hboneIdleTimeout:
+                        description: |-
+                          Idle timeout configured on Envoy proxies for their connection pools to ztunnel via HBONE.
+                          This controls how long Envoy will keep idle connections to ztunnel before closing them.
+                          Note: This setting is applied only on the Envoy proxy side; ztunnel does not use it.
+                          Default timeout is 1 hour (3600s).
+                          For environments with aggressive IP address reuse, it is recommended to set
+                          this to a value less than the CNI IP cooldown period to prevent stale connection reuse.
+                          For example, if your CNI has a 30s cooldown period, setting this to 15s is recommended.
                         type: string
                       inboundClusterStatName:
                         description: |-
@@ -5769,7 +5863,98 @@ spec:
                             enum:
                             - REGISTRY_ONLY
                             - ALLOW_ANY
+                            - ALLOW_ANY_DYNAMIC_DNS
                             type: string
+                          tls:
+                            description: TLS settings for client connections to unknown
+                              destinations. Applicable only when mode is set to `ALLOW_ANY_DYNAMIC_DNS`.
+                            properties:
+                              caCertificates:
+                                description: |-
+                                  OPTIONAL: The path to the file containing certificate authority
+                                  certificates to use in verifying a presented server certificate. If
+                                  omitted, the proxy will verify the server's certificate using
+                                  the OS CA certificates.
+                                  Should be empty if mode is `ISTIO_MUTUAL`.
+                                type: string
+                              caCrl:
+                                description: |-
+                                  OPTIONAL: The path to the file containing the certificate revocation list (CRL)
+                                  to use in verifying a presented server certificate. `CRL` is a list of certificates
+                                  that have been revoked by the CA (Certificate Authority) before their scheduled expiration date.
+                                  If specified, the proxy will verify if the presented certificate is part of the revoked list of certificates.
+                                  If omitted, the proxy will not verify the certificate against the `crl`. Note that if `credentialName` is set,
+                                  `CRL` cannot be specified using `caCrl`, rather it has to be specified inside the credential.
+                                type: string
+                              clientCertificate:
+                                description: |-
+                                  REQUIRED if mode is `MUTUAL`. The path to the file holding the
+                                  client-side TLS certificate to use.
+                                  Should be empty if mode is `ISTIO_MUTUAL`.
+                                type: string
+                              credentialName:
+                                description: |-
+                                  The name of the secret that holds the TLS certs for the
+                                  client including the CA certificates. This secret must exist in
+                                  the namespace of the proxy using the certificates.
+                                  An Opaque secret should contain the following keys and values:
+                                  `key: <privateKey>`, `cert: <clientCert>`, `cacert: <CACertificate>`,
+                                  `crl: <certificateRevocationList>`
+                                  Here CACertificate is used to verify the server certificate.
+                                  For mutual TLS, `cacert: <CACertificate>` can be provided in the
+                                  same secret or a separate secret named `<secret>-cacert`.
+                                  A TLS secret for client certificates with an additional
+                                  `ca.crt` key for CA certificates and `ca.crl` key for
+                                  certificate revocation list(CRL) is also supported.
+                                  Only one of client certificates and CA certificate
+                                  or credentialName can be specified.
+
+                                  **NOTE:** This field is applicable at sidecars only if
+                                  `DestinationRule` has a `workloadSelector` specified.
+                                  Otherwise the field will be applicable only at gateways, and
+                                  sidecars will continue to use the certificate paths.
+                                type: string
+                              insecureSkipVerify:
+                                description: |-
+                                  `insecureSkipVerify` specifies whether the proxy should skip verifying the
+                                  CA signature and SAN for the server certificate corresponding to the host.
+                                  The default value of this field is false.
+                                type: boolean
+                              mode:
+                                description: |-
+                                  Indicates whether connections to this port should be secured
+                                  using TLS. The value of this field determines how TLS is enforced.
+                                enum:
+                                - DISABLE
+                                - SIMPLE
+                                - MUTUAL
+                                - ISTIO_MUTUAL
+                                type: string
+                              privateKey:
+                                description: |-
+                                  REQUIRED if mode is `MUTUAL`. The path to the file holding the
+                                  client's private key.
+                                  Should be empty if mode is `ISTIO_MUTUAL`.
+                                type: string
+                              sni:
+                                description: |-
+                                  SNI string to present to the server during TLS handshake.
+                                  If unspecified, SNI will be automatically set based on downstream HTTP
+                                  host/authority header for SIMPLE and MUTUAL TLS modes.
+                                type: string
+                              subjectAltNames:
+                                description: |-
+                                  A list of alternate names to verify the subject identity in the
+                                  certificate. If specified, the proxy will verify that the server
+                                  certificate's subject alt name matches one of the specified values.
+                                  If specified, this list overrides the value of `subjectAltNames`
+                                  from the `ServiceEntry`. If unspecified, automatic validation of upstream
+                                  presented certificate for new upstream connections will be done based on the
+                                  downstream HTTP host/authority header.
+                                items:
+                                  type: string
+                                type: array
+                            type: object
                         type: object
                       pathNormalization:
                         description: |-
@@ -6059,7 +6244,6 @@ spec:
                       tlsDefaults:
                         description: |-
                           Configuration of TLS for all traffic except for ISTIO_MUTUAL mode.
-                          Currently, this supports configuration of ecdhCurves and cipherSuites only.
                           For ISTIO_MUTUAL TLS settings, use meshMTLS configuration.
                         properties:
                           cipherSuites:
@@ -7142,8 +7326,8 @@ spec:
                                   and scale-down and scale-up tolerances of 5% and 1% respectively, scaling will be
                                   triggered when the actual consumption falls below 95Mi or exceeds 101Mi.
 
-                                  This is an alpha field and requires enabling the HPAConfigurableTolerance
-                                  feature gate.
+                                  This is an beta field and requires the HPAConfigurableTolerance feature
+                                  gate to be enabled.
                                 pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                 x-kubernetes-int-or-string: true
                             type: object
@@ -7217,8 +7401,8 @@ spec:
                                   and scale-down and scale-up tolerances of 5% and 1% respectively, scaling will be
                                   triggered when the actual consumption falls below 95Mi or exceeds 101Mi.
 
-                                  This is an alpha field and requires enabling the HPAConfigurableTolerance
-                                  feature gate.
+                                  This is an beta field and requires the HPAConfigurableTolerance feature
+                                  gate to be enabled.
                                 pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                 x-kubernetes-int-or-string: true
                             type: object
@@ -7709,6 +7893,12 @@ spec:
                               new nodes. For this to work, the newly added nodes need to have the istio CNI taint as they are
                               added to the cluster. This is usually done by configuring the cluster infra provider.
                             type: boolean
+                          name:
+                            description: |-
+                              The taint key used by the node-untaint controller to identify nodes that should be untainted.
+                              This corresponds to the Helm chart value `values.pilot.taint.name` and the
+                              environment variable `PILOT_NODE_UNTAINT_CONTROLLERS_TAINT_NAME` used by istiod.
+                            type: string
                           namespace:
                             description: The namespace of the CNI daemonset, incase
                               it's not the same as istiod.
@@ -7739,9 +7929,10 @@ spec:
                             operator:
                               description: |-
                                 Operator represents a key's relationship to the value.
-                                Valid operators are Exists and Equal. Defaults to Equal.
+                                Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.
                                 Exists is equivalent to wildcard for value, so that a pod can
                                 tolerate all taints of a particular category.
+                                Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).
                               type: string
                             tolerationSeconds:
                               description: |-
@@ -8608,7 +8799,7 @@ spec:
                                         resources:
                                           description: |-
                                             resources represents the minimum resources the volume should have.
-                                            If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+                                            Users are allowed to specify resource requirements
                                             that are lower than previous value but must still be higher than capacity recorded in the
                                             status field of the claim.
                                             More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
@@ -9494,6 +9685,24 @@ spec:
                                             description: Kubelet's generated CSRs
                                               will be addressed to this signer.
                                             type: string
+                                          userAnnotations:
+                                            additionalProperties:
+                                              type: string
+                                            description: |-
+                                              userAnnotations allow pod authors to pass additional information to
+                                              the signer implementation.  Kubernetes does not restrict or validate this
+                                              metadata in any way.
+
+                                              These values are copied verbatim into the `spec.unverifiedUserAnnotations` field of
+                                              the PodCertificateRequest objects that Kubelet creates.
+
+                                              Entries are subject to the same validation as object metadata annotations,
+                                              with the addition that all keys must be domain-prefixed. No restrictions
+                                              are placed on values, except an overall size limitation on the entire field.
+
+                                              Signers should document the keys and values they support. Signers should
+                                              deny requests that contain keys they do not recognize.
+                                            type: object
                                         required:
                                         - keyType
                                         - signerName
@@ -10111,11 +10320,13 @@ spec:
                     type: object
                 type: object
               version:
-                default: v1.28.6
+                default: v1.30.3
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.28-latest, v1.28.6, v1.28.3, v1.28.1, v1.26-latest, v1.26.3.
+                  Must be one of: v1.30-latest, v1.30.3, v1.28-latest, v1.28.6, v1.28.3, v1.28.1.
                 enum:
+                - v1.30-latest
+                - v1.30.3
                 - v1.28-latest
                 - v1.28.6
                 - v1.28.3
@@ -10143,8 +10354,8 @@ spec:
                 description: Represents the latest available observations of the object's
                   current state.
                 items:
-                  description: IstioCondition represents a specific observation of
-                    the IstioCondition object's state.
+                  description: StatusCondition represents a specific observation of
+                    an object's state.
                   properties:
                     lastTransitionTime:
                       description: Last time the condition transitioned from one status

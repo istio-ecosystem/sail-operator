@@ -1,10 +1,25 @@
 #!/usr/bin/env bash
+
+# Copyright Alauda Mesh Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 # 步骤 5：提取 CSV（ClusterServiceVersion）两侧变更，供模型做语义比对分析。
 #   上游: bundle/manifests/sailoperator.clusterserviceversion.yaml（merge-base → upstream/release-1.XX）
 #   alauda: bundle/manifests/servicemesh-operator2.clusterserviceversion.yaml（同步前基线 → 当前 HEAD）
 # 产物写入 out/sync-upstream-major/。退出码: 0=OK（无变更会标注 NO_CHANGE）  1=前置失败
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
 source "$SCRIPT_DIR/common.sh"
 repo_root
 load_state

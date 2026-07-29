@@ -30,6 +30,7 @@ check_arguments() {
 parse_flags() {
   SKIP_BUILD=${SKIP_BUILD:-false}
   SKIP_DEPLOY=${SKIP_DEPLOY:-false}
+  SKIP_CLEANUP=${SKIP_CLEANUP:-false}
   OLM=${OLM:-false}
   DESCRIBE=false
   MULTICLUSTER=${MULTICLUSTER:-false}
@@ -102,10 +103,6 @@ parse_flags() {
 
   if [ "${OLM}" == "true" ]; then
     echo "OLM deployment enabled"
-    if [ "${OCP}" == "true" ]; then
-      echo "Skipping operator deployment using OLM on OCP clusters due to certificate issues with the internal registry."
-      exit 1
-    fi
   fi
 }
 
@@ -123,11 +120,61 @@ initialize_variables() {
   OPERATOR_SDK=${LOCALBIN}/operator-sdk
   IP_FAMILY=${IP_FAMILY:-ipv4}
   ISTIO_MANIFEST="chart/samples/istio-sample.yaml"
+  CI=${CI:-"false"}
+  USE_INTERNAL_REGISTRY=${USE_INTERNAL_REGISTRY:-"false"}
+  FIPS_CLUSTER=${FIPS_CLUSTER:-"false"}
+  COMMIT_HASH=$(git rev-parse --short HEAD)
+
+  # Debug logging and fallback for GINKGO_FLAGS
+  echo "CI environment: ${CI}"
+  echo "GINKGO_FLAGS received: '${GINKGO_FLAGS:-}'"
+
+  # Fallback: Generate GINKGO_FLAGS if empty and CI=true
+  if [ -z "${GINKGO_FLAGS:-}" ] && [ "${CI}" == "true" ]; then
+    GINKGO_FLAGS="--no-color"
+    echo "Generated GINKGO_FLAGS fallback: '${GINKGO_FLAGS}'"
+  fi
 
   # export to be sure that the variables are available in the subshell
   export IMAGE_BASE="${IMAGE_BASE:-sail-operator}"
   export TAG="${TAG:-latest}"
   export HUB="${HUB:-localhost:5000}"
+
+  # Handle OCP registry scenarios
+  # Note: Makefile.core.mk sets HUB=quay.io/sail-dev and TAG=1.29-latest by default
+  if [ "${OCP}" == "true" ]; then
+    # Debug output for troubleshooting
+    echo "DEBUG: CI='${CI}', HUB='${HUB}'"
+
+    if [ "${CI}" == "true" ] && [ "${HUB}" == "quay.io/sail-dev" ]; then
+      # Scenario 2: CI mode with default HUB -> use external registry with proper CI tag
+      echo "CI mode detected for OCP, using external registry ${HUB}"
+      export USE_INTERNAL_REGISTRY="false"
+      # Use PR_NUMBER and commit hash to identify the image, avoid race conditions in CI when multiple runs are pushing to the same default tag
+      # Use TARGET_ARCH to differentiate tags for different architectures in CI
+      if [ -n "${PR_NUMBER:-}" ]; then
+        TAG="pr-${PR_NUMBER}-${COMMIT_HASH}-${TARGET_ARCH}"
+        export TAG
+        echo "Using PR-based tag: ${TAG}"
+      else
+        TAG="ci-test-${COMMIT_HASH}-${TARGET_ARCH}"
+        export TAG
+        echo "Using commit-based tag: ${TAG}"
+      fi
+    elif [ "${CI}" == "true" ]; then
+      # Additional CI mode check - handle CI mode regardless of HUB value
+      echo "CI mode detected for OCP with custom HUB (${HUB}), using external registry"
+      export USE_INTERNAL_REGISTRY="false"
+    elif [ "${HUB}" != "quay.io/sail-dev" ]; then
+      # Scenario 3: Custom registry provided by user
+      echo "Using custom registry: ${HUB}"
+      export USE_INTERNAL_REGISTRY="false"
+    else
+      # Scenario 1: Local development -> use internal OCP registry
+      echo "Local development mode, will use OCP internal registry"
+      export USE_INTERNAL_REGISTRY="true"
+    fi
+  fi
 
   echo "Setting Istio manifest file: ${ISTIO_MANIFEST}"
   ISTIO_NAME=$(yq eval '.metadata.name' "${WD}/../../$ISTIO_MANIFEST")
@@ -179,8 +226,20 @@ install_operator() {
 }
 
 await_operator() {
-  echo "Awaiting sail-operator deployment on (KUBECONFIG=${KUBECONFIG})"
-  "${COMMAND}" wait --for=condition=available deployment/"${DEPLOYMENT_NAME}" -n "${NAMESPACE}" --timeout=5m
+  echo "Awaiting operator deployment on (KUBECONFIG=${KUBECONFIG})"
+  local name="${DEPLOYMENT_NAME}"
+  if [ "${OLM}" == "true" ]; then
+    local csv_name
+    local csv_file
+    csv_file=$(find "${WD}/../../bundle/manifests/" -name "*.clusterserviceversion.yaml" | head -1)
+    csv_name=$(yq eval '.spec.install.spec.deployments[0].name' "${csv_file}" 2>/dev/null || true)
+    if [ -n "${csv_name}" ]; then
+      echo "OLM mode: using deployment name from bundle CSV: ${csv_name}"
+      name="${csv_name}"
+      DEPLOYMENT_NAME="${csv_name}"
+    fi
+  fi
+  "${COMMAND}" wait --for=condition=available deployment/"${name}" -n "${NAMESPACE}" --timeout=5m
 }
 
 # shellcheck disable=SC2329  # Function is invoked indirectly via trap
@@ -215,7 +274,7 @@ parse_flags "$@"
 initialize_variables
 
 # Export necessary vars
-export COMMAND OCP HUB IMAGE_BASE TAG NAMESPACE
+export COMMAND OCP HUB IMAGE_BASE TAG NAMESPACE USE_INTERNAL_REGISTRY
 
 if [ "${SKIP_BUILD}" == "false" ]; then
   "${WD}/setup/build-and-push-operator.sh"
@@ -224,9 +283,13 @@ if [ "${SKIP_BUILD}" == "false" ]; then
     # This is a workaround when pulling the image from internal registry
     # To avoid errors of certificates meanwhile we are pulling the operator image from the internal registry
     # We need to set image $HUB to a fixed known value after the push
-    # This value always will be equal to the svc url of the internal registry
-    HUB="image-registry.openshift-image-registry.svc:5000/istio-images"
-    echo "Using internal registry: ${HUB}"
+    # Convert from route URL to service URL format for image pulling
+    if [[ "${HUB}" == *"/istio-images" ]]; then
+      HUB="image-registry.openshift-image-registry.svc:5000/istio-images"
+      echo "Using internal registry service URL: ${HUB}"
+    else
+      echo "Using external registry: ${HUB}"
+    fi
 
     # Workaround for OCP helm operator installation issues:
     # To avoid any cleanup issues, after we build and push the image we check if the namespace exists and delete it if it does.
@@ -237,31 +300,42 @@ if [ "${SKIP_BUILD}" == "false" ]; then
     fi
   fi
   # If OLM is enabled, deploy the operator using OLM
-  # We are skipping the deploy via OLM test on OCP because the workaround to avoid the certificate issue is not working.
-  # Jira ticket related to the limitation: https://issues.redhat.com/browse/OSSM-7993
-  if [ "${OLM}" == "true" ] && [ "${SKIP_DEPLOY}" == "false" ] && [ "${MULTICLUSTER}" == "false" ]; then    
+  # If PR_NUMBER is set we will tag the BUNDLE_IMG with the PR number and commit hash to avoid conflicts.
+  if [ "${OLM}" == "true" ] && [ "${SKIP_DEPLOY}" == "false" ] && [ "${MULTICLUSTER}" == "false" ]; then
     IMAGE_TAG_BASE="${HUB}/${IMAGE_BASE}"
-    BUNDLE_IMG="${IMAGE_TAG_BASE}-bundle:v${VERSION}"
+    if [ "${CI}" == "true" ]; then
+      if [ -n "${PR_NUMBER:-}" ]; then
+        BUNDLE_IMG="${IMAGE_TAG_BASE}-bundle:pr-${PR_NUMBER}-${COMMIT_HASH}-${TARGET_ARCH}"
+      else
+        BUNDLE_IMG="${IMAGE_TAG_BASE}-bundle:ci-test-${COMMIT_HASH}-${TARGET_ARCH}"
+      fi
+    else
+      BUNDLE_IMG="${IMAGE_TAG_BASE}-bundle:ci-test-${COMMIT_HASH}-${TARGET_ARCH}"
+    fi
 
     IMAGE="${HUB}/${IMAGE_BASE}:${TAG}" \
     IMAGE_TAG_BASE="${IMAGE_TAG_BASE}" \
     BUNDLE_IMG="${BUNDLE_IMG}" \
-    OPENSHIFT_PLATFORM=false \
+    OCP="${OCP}" \
     make bundle bundle-build bundle-push
 
-    # Install OLM in the cluster because it's not available by default in kind.
-    OLM_INSTALL_ARGS=""
-    if [ "${OLM_VERSION}" != "" ]; then
-      OLM_INSTALL_ARGS+="--version ${OLM_VERSION}"
+    if [ "${OCP}" == "false" ]; then
+      # Install OLM in the cluster because it's not available by default in kind.
+      OLM_INSTALL_ARGS=""
+      if [ "${OLM_VERSION}" != "" ]; then
+        OLM_INSTALL_ARGS+="--version ${OLM_VERSION}"
+      fi
+
+      # Ensure kubeconfig is set to the kind cluster
+      kind export kubeconfig --name="${KIND_CLUSTER_NAME}"
+      # shellcheck disable=SC2086
+      ${OPERATOR_SDK} olm install ${OLM_INSTALL_ARGS}
+
+      ${COMMAND} wait catalogsource operatorhubio-catalog -n olm --for 'jsonpath={.status.connectionState.lastObservedState}=READY' --timeout=5m
+    else
+      # On OCP, wait for different CatalogSources as operatorhubio-catalog might not exist
+      ${COMMAND} wait catalogsource redhat-operators -n openshift-marketplace --for 'jsonpath={.status.connectionState.lastObservedState}=READY' --timeout=5m || true
     fi
-
-    # Ensure kubeconfig is set to the kind cluster
-    kind export kubeconfig --name="${KIND_CLUSTER_NAME}"
-    # shellcheck disable=SC2086
-    ${OPERATOR_SDK} olm install ${OLM_INSTALL_ARGS}
-
-    # Wait for for the CatalogSource to be CatalogSource.status.connectionState.lastObservedState == READY
-    ${COMMAND} wait catalogsource operatorhubio-catalog -n olm --for 'jsonpath={.status.connectionState.lastObservedState}=READY' --timeout=5m
 
     ${COMMAND} create ns "${NAMESPACE}" || true
     ${OPERATOR_SDK} run bundle "${BUNDLE_IMG}" -n "${NAMESPACE}" --skip-tls --timeout 5m || exit 1
@@ -272,7 +346,7 @@ if [ "${SKIP_BUILD}" == "false" ]; then
   fi
 fi
 
-export SKIP_DEPLOY IP_FAMILY ISTIO_MANIFEST NAMESPACE CONTROL_PLANE_NS DEPLOYMENT_NAME MULTICLUSTER ARTIFACTS ISTIO_NAME COMMAND KUBECONFIG ISTIOCTL_PATH
+export SKIP_DEPLOY IP_FAMILY ISTIO_MANIFEST NAMESPACE CONTROL_PLANE_NS DEPLOYMENT_NAME MULTICLUSTER ARTIFACTS ISTIO_NAME COMMAND KUBECONFIG ISTIOCTL_PATH SKIP_CLEANUP GINKGO_FLAGS FIPS_CLUSTER
 
 if [ "${OLM}" != "true" ] && [ "${SKIP_DEPLOY}" != "true" ]; then
   # shellcheck disable=SC2153

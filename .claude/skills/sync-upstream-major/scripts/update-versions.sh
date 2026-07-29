@@ -1,12 +1,28 @@
 #!/usr/bin/env bash
+
+# Copyright Alauda Mesh Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 # 步骤 3：机械更新版本信息（不 commit，便于 review）。
 #   1) Makefile.vendor.mk: VERSION / CHANNELS
 #   2) .github/workflows/alauda-release.yaml: bundle_channels 默认值；release-1.30 特例改 TOOLS_REGISTRY_PROVIDER
 #   3) pkg/istioversion/alauda-versions.yaml: 按构建版本重建版本矩阵（新大版本 + 上一大版本 + EOL 收尾）
-#   4) NOTICE: vendor_defaults.yaml 需人工处理的块、go.mod istio 依赖比对
+#   4) go.mod: istio.io/istio replace 更新到 github.com/alauda-mesh/istio 的 istio-1.XX 最新提交
+#   5) NOTICE: vendor_defaults.yaml 需人工处理的块、go.mod istio 依赖比对
 # 退出码: 0=OK  2=PATTERN_MISMATCH（按 FAIL 清单用 Edit 手动完成，其余不要重复改）  1=前置失败
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
 source "$SCRIPT_DIR/common.sh"
 repo_root
 load_state
@@ -200,7 +216,26 @@ else
   fi
 fi
 
-# ---------- 4) 人工项提示 ----------
+# ---------- 4) go.mod: istio.io/istio replace 指向 alauda fork ----------
+# 背景：istio.io/istio 不发语义化 module tag，go.mod 只能记录 v0.0.0 伪版本，镜像扫描器
+# （trivy 等）会把所有历史 CVE 误判为未修复（semver 比较中 v0.0.0 小于一切 Fixed Version）。
+# replace 到 github.com/alauda-mesh/istio 后组件以 fork 身份记录、脱离漏洞库匹配，
+# 且能继承 fork 的安全修复。fork 分支命名: istio-1.XX 对应上游 release-1.XX。
+FORK_REPO="github.com/alauda-mesh/istio"
+FORK_BRANCH="istio-${UPSTREAM_BRANCH#release-}"
+if ! command -v go >/dev/null 2>&1; then
+  fail "go 命令不可用，手动执行: go mod edit -replace istio.io/istio=$FORK_REPO@<istio-1.XX 最新 sha>"
+else
+  FORK_SHA=$(gh api "repos/alauda-mesh/istio/branches/$FORK_BRANCH" --jq .commit.sha 2>/dev/null || true)
+  if [[ -n "$FORK_SHA" ]]; then
+    go mod edit -replace "istio.io/istio=$FORK_REPO@$FORK_SHA"
+    ok "go.mod: replace istio.io/istio => $FORK_REPO@${FORK_SHA:0:12}（regen.sh 的 go mod tidy 会归一化为伪版本）"
+  else
+    fail "无法获取 $FORK_REPO 的 $FORK_BRANCH 分支最新提交（gh 未认证或分支不存在），手动执行: go mod edit -replace istio.io/istio=$FORK_REPO@<sha>"
+  fi
+fi
+
+# ---------- 5) 人工项提示 ----------
 VD=pkg/istiovalues/vendor_defaults.yaml
 NONEOL_VERSIONS=$(yq -r '.versions[] | select(.eol != true) | .version // ""' "$VF" | grep -v '^$' || true)
 VD_KEYS=$(yq -r 'keys | .[]' "$VD" 2>/dev/null || true)

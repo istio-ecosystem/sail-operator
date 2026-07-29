@@ -19,7 +19,7 @@ OLD_VARS := $(.VARIABLES)
 # Use `make print-variables` to inspect the values of the variables
 -include Makefile.vendor.mk
 
-VERSION ?= 1.28.1
+VERSION ?= 1.30.3
 MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 
 # This version will be used to generate the OLM upgrade graph in the FBC as a version to be replaced by the new operator version defined in $VERSION.
@@ -30,7 +30,7 @@ MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 # There are also GH workflows defined to release nightly and stable operators.
 # There is no need to define `replaces` and `skipRange` fields in the CSV as those fields are defined in the FBC and CSV values are ignored.
 # FBC is source of truth for OLM upgrade graph.
-PREVIOUS_VERSION ?= 1.27.0
+PREVIOUS_VERSION ?= 1.30.0
 
 OPERATOR_NAME ?= sailoperator
 VERSIONS_YAML_DIR ?= pkg/istioversion
@@ -80,13 +80,15 @@ endif
 # Image hub to use
 HUB ?= quay.io/sail-dev
 # Image tag to use
-TAG ?= ${MINOR_VERSION}-latest
+TAG ?= ${VERSION}
 # Image base to use
 IMAGE_BASE ?= sail-operator
 # Image URL to use all building/pushing image targets
 IMAGE ?= ${HUB}/${IMAGE_BASE}:${TAG}
 # Namespace to deploy the controller in
 NAMESPACE ?= sail-operator
+# Prevent overwriting existing images in registry (default: false, set to true in release workflows)
+PREVENT_IMAGE_OVERWRITE ?= false
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION ?= 1.30.0
 
@@ -119,7 +121,7 @@ KIND_IMAGE ?=
 ifeq ($(KIND_IMAGE),)
   ifeq ($(LOCAL_OS),Darwin)
     # If the OS is Darwin, set the image.
-    KIND_IMAGE := docker.io/kindest/node:v1.34.0
+    KIND_IMAGE := docker.io/kindest/node:v1.36.1
   endif
   # For other OS, KIND_IMAGE remains empty, which default to the upstream default image.
 endif
@@ -130,9 +132,10 @@ endif
 # To re-generate a bundle for other specific channels without changing the standard setup, you can:
 # - use the CHANNELS as arg of the bundle target (e.g make bundle CHANNELS=candidate,fast,stable)
 # - use environment variables to overwrite this value (e.g export CHANNELS="candidate,fast,stable")
-CHANNEL_PREFIX := dev
+CHANNEL_PREFIX := stable
+DEFAULT_CHANNEL := stable
 
-CHANNELS ?= $(CHANNEL_PREFIX)-$(MINOR_VERSION)
+CHANNELS := $(DEFAULT_CHANNEL),$(CHANNEL_PREFIX)-$(MINOR_VERSION)
 ifneq ($(origin CHANNELS), undefined)
 BUNDLE_CHANNELS = --channels=\"$(CHANNELS)\"
 endif
@@ -199,7 +202,7 @@ SHELL = /bin/bash -o pipefail
 .SHELLFLAGS = -ec
 
 .PHONY: all
-all: build
+all: build lint test.unit
 
 export
 
@@ -221,8 +224,8 @@ test.integration: envtest ## Run integration tests located in the tests/integrat
 	go run github.com/onsi/ginkgo/v2/ginkgo --tags=integration --junit-report=junit-integration.xml --output-dir="$(ARTIFACTS)" $(GINKGO_FLAGS) ./tests/integration/...
 
 .PHONY: test.scorecard
-test.scorecard: operator-sdk ## Run the operator scorecard test.
-	OPERATOR_SDK=$(OPERATOR_SDK) ${SOURCE_DIR}/tests/scorecard-test.sh
+test.scorecard: operator-sdk ## Run the operator scorecard test. Use OCP=true to run against an existing OCP cluster instead of Kind.
+	OCP=$${OCP:-false} OPERATOR_SDK=$(OPERATOR_SDK) SCORECARD_NAMESPACE="$${SCORECARD_NAMESPACE:-scorecard-test}" ${SOURCE_DIR}/tests/scorecard-test.sh
 
 .PHONY: test.e2e.ocp
 test.e2e.ocp: istioctl ## Run the end-to-end tests against an existing OCP cluster. While running on OCP in downstream you need to set ISTIOCTL_DOWNLOAD_URL to the URL where the istioctl productized binary.
@@ -254,7 +257,7 @@ build: build-$(TARGET_ARCH) ## Build the sail-operator binary.
 
 .PHONY: run
 run: gen ## Run a controller from your host.
-	POD_NAMESPACE=${NAMESPACE} go run ./cmd/main.go --config-file=./hack/config.properties --resource-directory=./resources
+	POD_NAMESPACE=${NAMESPACE} go run ./cmd/main.go --config-file=./hack/config.properties
 
 # docker build -t ${IMAGE} --build-arg GIT_TAG=${GIT_TAG} --build-arg GIT_REVISION=${GIT_REVISION} --build-arg GIT_STATUS=${GIT_STATUS} .
 .PHONY: docker-build
@@ -317,6 +320,29 @@ endif
 
 .PHONY: docker-buildx
 docker-buildx: build-all ## Build and push docker image with cross-platform support.
+ifeq ($(PREVENT_IMAGE_OVERWRITE),true)
+	@echo "Checking if image ${IMAGE} already exists..."
+	@if command -v crane >/dev/null 2>&1; then \
+		set +e; \
+		OUTPUT=$$(crane manifest ${IMAGE} 2>&1); \
+		EXIT_CODE=$$?; \
+		set -e; \
+		if echo "$$OUTPUT" | grep -q "MANIFEST_UNKNOWN"; then \
+			echo "Image tag ${IMAGE} does not exist. Proceeding with build and push."; \
+		elif [ $$EXIT_CODE -eq 0 ]; then \
+			echo "ERROR: Image tag ${IMAGE} already exists in the registry!"; \
+			echo "Please ensure you are releasing a new version."; \
+			exit 1; \
+		else \
+			echo "ERROR: Failed to check if image exists: $$OUTPUT"; \
+			exit 1; \
+		fi; \
+	else \
+		echo "ERROR: crane is not installed. Cannot verify if image already exists."; \
+		echo "Install crane or set PREVENT_IMAGE_OVERWRITE=false to skip this check."; \
+		exit 1; \
+	fi
+endif
 	# copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile
 	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
 	docker buildx ls --format "{{.Name}}" | grep project-v4-builder || docker buildx create --name project-v4-builder
@@ -391,11 +417,11 @@ deploy-yaml: helm ## Output YAML manifests used by `deploy`.
 deploy-openshift: verify-kubeconfig helm ## Deploy controller to an existing OCP cluster.
 	$(info NAMESPACE: $(NAMESPACE))
 	kubectl create ns ${NAMESPACE} || echo "namespace ${NAMESPACE} already exists"
-	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --namespace $(NAMESPACE) --set platform="openshift" | kubectl apply --server-side=true -f -
+	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --namespace $(NAMESPACE) | kubectl apply --server-side=true -f -
 
 .PHONY: deploy-yaml-openshift
 deploy-yaml-openshift: helm ## Output YAML manifests used by `deploy-openshift`.
-	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --namespace $(NAMESPACE) --set platform="openshift"
+	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --namespace $(NAMESPACE)"
 
 .PHONY: deploy-olm
 deploy-olm: verify-kubeconfig bundle bundle-build bundle-push ## Build and push the operator OLM bundle and deploy the operator using OLM.
@@ -506,6 +532,7 @@ gen-api-docs: ## Generate API documentation. Known issues: go fmt does not prope
 	@find $(OUTPUT_DOCS_PATH) -type f -name "*.md" -exec sed -i 's/<br \/>/ /g' {} \;
 	@find $(OUTPUT_DOCS_PATH) -type f \( -name "*.md" -o -name "*.asciidoc" \) -exec sed -i 's/\t/  /g' {} \;
 	@find $(OUTPUT_DOCS_PATH) -type f \( -name "*.md" -o -name "*.asciidoc" \) -exec sed -i '/^```/,/^```/ {/./!d;}' {} \;
+	go run ./hack/gen-condition-docs $(CRD_PATH)/v1 >> $(OUTPUT_DOCS_PATH)/sailoperator.io.md
 	@echo "API reference documentation generated at $(OUTPUT_DOCS_PATH)"
 
 .PHONY: restore-manifest-dates
@@ -529,6 +556,7 @@ operator-chart: download-istio-charts # pull the charts first as they are requir
 ifeq ($(PATCH_HELM_VALUES), true)
 	@hack/patch-values.sh ${HELM_VALUES_FILE}
 endif
+	@hack/gen-images-go.sh ${HELM_VALUES_FILE}
 
 .PHONY: alauda-update-values
 alauda-update-values: VERSIONS_YAML_FILE := alauda-versions.yaml
@@ -583,18 +611,20 @@ OPM ?= $(LOCALBIN)/opm
 ISTIOCTL ?= $(LOCALBIN)/istioctl
 RUNME ?= $(LOCALBIN)/runme
 MISSPELL ?= $(LOCALBIN)/misspell
+CRD_SCHEMA_CHECKER ?= $(LOCALBIN)/crd-schema-checker
 
 ## Tool Versions
-OPERATOR_SDK_VERSION ?= v1.42.0
-HELM_VERSION ?= v3.19.3
-CONTROLLER_TOOLS_VERSION ?= v0.19.0
-CONTROLLER_RUNTIME_BRANCH ?= release-0.22
-OPM_VERSION ?= v1.61.0
-OLM_VERSION ?= v0.38.0
-GITLEAKS_VERSION ?= v8.30.0
+OPERATOR_SDK_VERSION ?= v1.42.3
+HELM_VERSION ?= v4.2.3
+CONTROLLER_TOOLS_VERSION ?= v0.20.1
+CONTROLLER_RUNTIME_BRANCH ?= release-0.23
+OPM_VERSION ?= v1.65.0
+OLM_VERSION ?= v0.42.0
+GITLEAKS_VERSION ?= v8.30.1
 ISTIOCTL_VERSION ?= 1.26.2
-RUNME_VERSION ?= 3.16.4
+RUNME_VERSION ?= 3.16.18
 MISSPELL_VERSION ?= v0.3.4
+CRD_SCHEMA_CHECKER_VERSION ?= release-4.22
 
 .PHONY: helm $(HELM)
 helm: $(HELM) ## Download helm to bin directory. If wrong version is installed, it will be overwritten.
@@ -603,7 +633,7 @@ $(HELM): $(LOCALBIN)
 		echo "$(LOCALBIN)/helm version is not expected $(HELM_VERSION). Removing it before installing." > /dev/stderr; \
 		rm -rf $(LOCALBIN)/helm; \
 	fi
-	@test -s $(LOCALBIN)/helm || GOBIN=$(LOCALBIN) GO111MODULE=on go install helm.sh/helm/v3/cmd/helm@$(HELM_VERSION) > /dev/stderr
+	@test -s $(LOCALBIN)/helm || GOBIN=$(LOCALBIN) GO111MODULE=on go install helm.sh/helm/v4/cmd/helm@$(HELM_VERSION) > /dev/stderr
 .PHONY: operator-sdk $(OPERATOR_SDK)
 operator-sdk: $(OPERATOR_SDK)
 operator-sdk: OS=$(shell go env GOOS)
@@ -671,17 +701,11 @@ gitleaks: $(GITLEAKS) ## Download gitleaks to bin directory.
 $(GITLEAKS): $(LOCALBIN)
 	@test -s $(LOCALBIN)/gitleaks || GOBIN=$(LOCALBIN) go install github.com/zricethezav/gitleaks/v8@${GITLEAKS_VERSION}
 
-# Openshift Platform flag
-# If is set to true will add `--set platform=openshift` to the helm template command
-OPENSHIFT_PLATFORM ?= true
+OCP ?= false
 
 .PHONY: bundle
 bundle: gen-all-except-bundle helm operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
-	@TEMPL_FLAGS="$(HELM_TEMPL_DEF_FLAGS)"; \
-	if [ "$(OPENSHIFT_PLATFORM)" = "true" ]; then \
-		TEMPL_FLAGS="$$TEMPL_FLAGS --set platform=openshift"; \
-	fi; \
-	$(HELM) template chart chart $$TEMPL_FLAGS --set image='$(IMAGE)' --set bundleGeneration=true | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
+	$(HELM) template chart chart $(HELM_TEMPL_DEF_FLAGS) --set image='$(IMAGE)' --set bundleGeneration=true | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
 
 # operator sdk does not generate sorted relatedImages, we need to sort it here
 ifeq ($(USE_IMAGE_DIGESTS), true)
@@ -811,8 +835,21 @@ lint-spell: misspell
 misspell: $(LOCALBIN) ## Download misspell to bin directory.
 	@test -s $(LOCALBIN)/misspell || GOBIN=$(LOCALBIN) go install github.com/client9/misspell/cmd/misspell@$(MISSPELL_VERSION)
 
+.PHONY: crd-schema-checker
+crd-schema-checker: $(CRD_SCHEMA_CHECKER) ## Download crd-schema-checker to bin directory.
+$(CRD_SCHEMA_CHECKER): $(LOCALBIN)
+	@test -x $(LOCALBIN)/crd-schema-checker || GOBIN=$(LOCALBIN) GO111MODULE=on go install github.com/openshift/crd-schema-checker/cmd/crd-schema-checker@$(CRD_SCHEMA_CHECKER_VERSION) > /dev/stderr
+
+.PHONY: lint-crds
+lint-crds: crd-schema-checker ## Lint CRDs for backwards compatibility on release branches.
+	@PREVIOUS_VERSION=$(PREVIOUS_VERSION) ./tools/crd-schema-checker.sh
+
+.PHONY: lint-helm
+lint-helm:
+	@find ./chart ./resources -name 'Chart.yaml' -exec dirname {} \; | xargs -r helm lint
+
 .PHONY: lint
-lint: lint-scripts lint-licenses lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle lint-watches lint-secrets lint-spell ## Run all linters.
+lint: lint-scripts lint-licenses lint-copyright-banner lint-go lint-yaml lint-helm lint-bundle lint-watches lint-secrets lint-spell lint-crds ## Run all linters.
 
 .PHONY: format
 format: format-go tidy-go ## Auto-format all code. This should be run before sending a PR.
@@ -826,7 +863,7 @@ git-hook: gitleaks ## Installs gitleaks as a git pre-commit hook.
 
 .SILENT: helm $(HELM) $(LOCALBIN) deploy-yaml gen-api operator-name operator-chart
 
-COMMON_IMPORTS ?= mirror-licenses dump-licenses lint-all lint-licenses lint-scripts lint-copyright-banner lint-go lint-yaml lint-helm format-go tidy-go check-clean-repo update-common
+COMMON_IMPORTS ?= mirror-licenses dump-licenses lint-all lint-licenses lint-scripts lint-copyright-banner lint-go lint-yaml format-go tidy-go check-clean-repo update-common
 .PHONY: $(COMMON_IMPORTS)
 $(COMMON_IMPORTS):
 	@$(MAKE) --no-print-directory -f common/Makefile.common.mk $@

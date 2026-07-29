@@ -35,3 +35,12 @@ func GetBool(key string, defaultValue bool) bool {
 	}
 	return boolValue
 }
+
+func GetInt(key string, defaultValue int) int {
+	value := Get(key, strconv.Itoa(defaultValue))
+	intValue, err := strconv.Atoi(value)
+	if err != nil {
+		return defaultValue
+	}
+	return intValue
+}

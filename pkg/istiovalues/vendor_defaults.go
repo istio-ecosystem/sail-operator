@@ -118,5 +118,5 @@ func applyVendorDefaultsForResourceType(version, resourceType string, userValues
 	}
 
 	valsMap := runtime.DeepCopyJSON(resourceSpecificDefaultsMap)
-	return mergeOverwrite(valsMap, userValuesMap), nil
+	return MergeOverwrite(valsMap, userValuesMap), nil
 }

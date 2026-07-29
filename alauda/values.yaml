@@ -2,22 +2,22 @@ name: servicemesh-operator2
 deployment:
   name: servicemesh-operator2
   annotations:
-    images.v1_28_6.ztunnel: build-harbor.alauda.cn/asm/ztunnel:1.28.6-asm-r3
-    images.v1_28_6.istiod: build-harbor.alauda.cn/asm/pilot:1.28.6-asm-r3
-    images.v1_28_6.proxy: build-harbor.alauda.cn/asm/proxyv2:1.28.6-asm-r3
-    images.v1_28_6.cni: build-harbor.alauda.cn/asm/install-cni:1.28.6-asm-r3
-    images.v1_28_3.ztunnel: build-harbor.alauda.cn/asm/ztunnel:1.28.3-asm-r2
-    images.v1_28_3.istiod: build-harbor.alauda.cn/asm/pilot:1.28.3-asm-r2
-    images.v1_28_3.proxy: build-harbor.alauda.cn/asm/proxyv2:1.28.3-asm-r2
-    images.v1_28_3.cni: build-harbor.alauda.cn/asm/install-cni:1.28.3-asm-r2
-    images.v1_28_1.ztunnel: build-harbor.alauda.cn/asm/ztunnel:1.28.1-asm-r3
-    images.v1_28_1.istiod: build-harbor.alauda.cn/asm/pilot:1.28.1-asm-r3
-    images.v1_28_1.proxy: build-harbor.alauda.cn/asm/proxyv2:1.28.1-asm-r3
-    images.v1_28_1.cni: build-harbor.alauda.cn/asm/install-cni:1.28.1-asm-r3
-    images.v1_26_3.ztunnel: build-harbor.alauda.cn/asm/ztunnel:1.26.3-asm-r4
-    images.v1_26_3.istiod: build-harbor.alauda.cn/asm/pilot:1.26.3-asm-r4
-    images.v1_26_3.proxy: build-harbor.alauda.cn/asm/proxyv2:1.26.3-asm-r4
-    images.v1_26_3.cni: build-harbor.alauda.cn/asm/install-cni:1.26.3-asm-r4
+    images.v1_30_3.ztunnel: build-harbor.alauda.cn/asm/ztunnel:1.30.3-asm-rc.4
+    images.v1_30_3.istiod: build-harbor.alauda.cn/asm/pilot:1.30.3-asm-rc.4
+    images.v1_30_3.proxy: build-harbor.alauda.cn/asm/proxyv2:1.30.3-asm-rc.4
+    images.v1_30_3.cni: build-harbor.alauda.cn/asm/install-cni:1.30.3-asm-rc.4
+    images.v1_28_6.ztunnel: build-harbor.alauda.cn/asm/ztunnel:1.28.6-asm-r4
+    images.v1_28_6.istiod: build-harbor.alauda.cn/asm/pilot:1.28.6-asm-r4
+    images.v1_28_6.proxy: build-harbor.alauda.cn/asm/proxyv2:1.28.6-asm-r4
+    images.v1_28_6.cni: build-harbor.alauda.cn/asm/install-cni:1.28.6-asm-r4
+    images.v1_28_3.ztunnel: build-harbor.alauda.cn/asm/ztunnel:1.28.3-asm-r3
+    images.v1_28_3.istiod: build-harbor.alauda.cn/asm/pilot:1.28.3-asm-r3
+    images.v1_28_3.proxy: build-harbor.alauda.cn/asm/proxyv2:1.28.3-asm-r3
+    images.v1_28_3.cni: build-harbor.alauda.cn/asm/install-cni:1.28.3-asm-r3
+    images.v1_28_1.ztunnel: build-harbor.alauda.cn/asm/ztunnel:1.28.1-asm-r4
+    images.v1_28_1.istiod: build-harbor.alauda.cn/asm/pilot:1.28.1-asm-r4
+    images.v1_28_1.proxy: build-harbor.alauda.cn/asm/proxyv2:1.28.1-asm-r4
+    images.v1_28_1.cni: build-harbor.alauda.cn/asm/install-cni:1.28.1-asm-r4
 # NB(timonwong) Please note that the service account name should be the same as the deployment
 serviceAccountName: servicemesh-operator2
 csv:
