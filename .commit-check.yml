@@ -8,9 +8,6 @@ checks:
     suggest: Please check your commit message whether matches above regex
 
   - check: commit_signoff
-    # alauda-mesh fork 修改：上游正则 Signed-off-by:.*[A-Za-z0-9]\s+<.+@.+> 要求
-    # 邮箱前必须出现 ASCII 字母/数字，纯中文署名（如"王然"）无法通过；放宽为
-    # 任意非空名字 + <email>，空名字仍然拒绝。
-    regex: Signed-off-by:\s+\S.*\s+<.+@.+>
+    regex: Signed-off-by:.*[A-Za-z0-9]\s+<.+@.+>
     error: Signed-off-by not found in latest commit
     suggest: "You can add signoff by running: git commit --amend --signoff"
