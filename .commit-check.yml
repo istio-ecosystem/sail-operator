@@ -8,6 +8,7 @@ checks:
     suggest: Please check your commit message whether matches above regex
 
   - check: commit_signoff
-    regex: Signed-off-by:.*[A-Za-z0-9]\s+<.+@.+>
+    # Use \w (not [A-Za-z0-9]) so DCO sign-offs with non-ASCII display names are accepted
+    regex: Signed-off-by:.*\w\s+<.+@.+>
     error: Signed-off-by not found in latest commit
     suggest: "You can add signoff by running: git commit --amend --signoff"
