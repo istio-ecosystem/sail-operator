@@ -45,7 +45,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: Integration & Delivery, Networking, Security
     containerImage: build-harbor.alauda.cn/asm/servicemesh-operator2:2.2.0
-    createdAt: "2026-07-28T11:23:46Z"
+    createdAt: "2026-07-30T04:59:21Z"
     description: Alauda Service Mesh v2 enables you to install, configure, and manage an instance of Alauda Service Mesh. Alauda Service Mesh is based on the open source Istio project.
     operatorframework.io/suggested-namespace: sail-operator
     operators.operatorframework.io/builder: operator-sdk-v1.42.3
@@ -736,18 +736,18 @@ spec:
             template:
               metadata:
                 annotations:
-                  images.v1_28_1.cni: build-harbor.alauda.cn/asm/install-cni:1.28.1-asm-r4
-                  images.v1_28_1.istiod: build-harbor.alauda.cn/asm/pilot:1.28.1-asm-r4
-                  images.v1_28_1.proxy: build-harbor.alauda.cn/asm/proxyv2:1.28.1-asm-r4
-                  images.v1_28_1.ztunnel: build-harbor.alauda.cn/asm/ztunnel:1.28.1-asm-r4
-                  images.v1_28_3.cni: build-harbor.alauda.cn/asm/install-cni:1.28.3-asm-r3
-                  images.v1_28_3.istiod: build-harbor.alauda.cn/asm/pilot:1.28.3-asm-r3
-                  images.v1_28_3.proxy: build-harbor.alauda.cn/asm/proxyv2:1.28.3-asm-r3
-                  images.v1_28_3.ztunnel: build-harbor.alauda.cn/asm/ztunnel:1.28.3-asm-r3
-                  images.v1_28_6.cni: build-harbor.alauda.cn/asm/install-cni:1.28.6-asm-r4
-                  images.v1_28_6.istiod: build-harbor.alauda.cn/asm/pilot:1.28.6-asm-r4
-                  images.v1_28_6.proxy: build-harbor.alauda.cn/asm/proxyv2:1.28.6-asm-r4
-                  images.v1_28_6.ztunnel: build-harbor.alauda.cn/asm/ztunnel:1.28.6-asm-r4
+                  images.v1_28_1.cni: build-harbor.alauda.cn/asm/install-cni:1.28.1-asm-r5
+                  images.v1_28_1.istiod: build-harbor.alauda.cn/asm/pilot:1.28.1-asm-r5
+                  images.v1_28_1.proxy: build-harbor.alauda.cn/asm/proxyv2:1.28.1-asm-r5
+                  images.v1_28_1.ztunnel: build-harbor.alauda.cn/asm/ztunnel:1.28.1-asm-r5
+                  images.v1_28_3.cni: build-harbor.alauda.cn/asm/install-cni:1.28.3-asm-r4
+                  images.v1_28_3.istiod: build-harbor.alauda.cn/asm/pilot:1.28.3-asm-r4
+                  images.v1_28_3.proxy: build-harbor.alauda.cn/asm/proxyv2:1.28.3-asm-r4
+                  images.v1_28_3.ztunnel: build-harbor.alauda.cn/asm/ztunnel:1.28.3-asm-r4
+                  images.v1_28_6.cni: build-harbor.alauda.cn/asm/install-cni:1.28.6-asm-r5
+                  images.v1_28_6.istiod: build-harbor.alauda.cn/asm/pilot:1.28.6-asm-r5
+                  images.v1_28_6.proxy: build-harbor.alauda.cn/asm/proxyv2:1.28.6-asm-r5
+                  images.v1_28_6.ztunnel: build-harbor.alauda.cn/asm/ztunnel:1.28.6-asm-r5
                   images.v1_30_3.cni: build-harbor.alauda.cn/asm/install-cni:1.30.3-asm-rc.4
                   images.v1_30_3.istiod: build-harbor.alauda.cn/asm/pilot:1.30.3-asm-rc.4
                   images.v1_30_3.proxy: build-harbor.alauda.cn/asm/proxyv2:1.30.3-asm-rc.4

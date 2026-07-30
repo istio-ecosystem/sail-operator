@@ -116,6 +116,7 @@ _Appears in:_
 | `dnsCapture` _boolean_ | If enabled, and ambient is enabled, DNS redirection will be enabled. |  |  |
 | `ipv6` _boolean_ | UNSTABLE: If enabled, and ambient is enabled, enables ipv6 support |  |  |
 | `reconcileIptablesOnStartup` _boolean_ | If enabled, and ambient is enabled, iptables reconciliation will be enabled. |  |  |
+| `reconcileHostRulesInterval` _string_ | The interval at which the CNI agent periodically verifies the ambient host-level health check rules and re-installs them if they were removed by an external actor, as a duration string (e.g. "30s"). "0" disables the periodic reconciliation. |  |  |
 
 
 #### CNIConfig
