@@ -59,7 +59,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: quay.io
-          username: ${{ secrets.QUAY_PWDNAME }}
+          username: ${{ secrets.QUAY_USER }}
           password: ${{ secrets.QUAY_PWD }}
 
       - name: Build and push operator image
