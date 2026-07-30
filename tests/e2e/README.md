@@ -288,6 +288,12 @@ GINKGO_FLAGS="--label-filter=smoke && operator && !tls-profile" make test.e2e.oc
 GINKGO_FLAGS="--label-filter=smoke && sidecar" make test.e2e.ocp
 GINKGO_FLAGS="--label-filter=smoke && ambient" make test.e2e.ocp
 
+# Combined CRC-style smoke (same filter as .github/workflows/crc-e2e-sail.yaml).
+# That workflow runs on pull_request to main and release-* (plus workflow_dispatch).
+# Failures show as a failed check; keep it out of required status checks so merge
+# is not blocked while the suite stabilizes.
+GINKGO_LABEL_FILTER='smoke && (operator || sidecar || ambient) && !tls-profile' make test.e2e.ocp
+
 # All ambient tests
 GINKGO_FLAGS="--label-filter=ambient" make test.e2e.kind
 
