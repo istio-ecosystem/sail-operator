@@ -211,8 +211,8 @@ Labels follow a multi-dimensional structure. Each test file carries one label fr
 
 | Label | Meaning |
 |-------|---------|
-| `smoke` | Fast, critical-path tests for basic operator functionality. Only `operator` tests currently. |
-| `slow` | Tests that deploy full control planes, run traffic, or perform upgrade procedures. Expect longer execution times. |
+| `smoke` | Critical-path install checks suitable for fast CI gates (presubmit / resource-constrained clusters). Includes operator health plus basic sidecar and ambient install Ready paths. |
+| `slow` | Longer suites: upgrades, migration, multicluster, dualstack, and other heavy scenarios. Prefer full postsubmit coverage or regular CI testing when time is not an issue. |
 
 **Feature Area** — primary label, one per file
 
@@ -259,9 +259,9 @@ Complete label set per test file:
 |------|--------|
 | `operator/operator_install_test.go` | `smoke`, `operator` |
 | `operator/operator_install_test.go` (TLS sub-describe) | `smoke`, `operator`, `tls-profile` |
-| `controlplane/control_plane_test.go` | `control-plane`, `slow`, `sidecar` |
+| `controlplane/control_plane_test.go` | `smoke`, `control-plane`, `sidecar` |
 | `controlplane/control_plane_update_test.go` | `control-plane`, `update`, `slow`, `sidecar` |
-| `ambient/ambient_test.go` | `ambient`, `slow` |
+| `ambient/ambient_test.go` | `smoke`, `ambient` |
 | `ambient/ambient_dependency_test.go` | `ambient`, `ambient-dependency` |
 | `ambient/ambient_targetref_test.go` | `ambient`, `ambient-targetref` |
 | `ambient/ambient_update_test.go` | `ambient`, `update`, `slow` |
@@ -280,8 +280,13 @@ Complete label set per test file:
 ### Common Filter Examples
 
 ```bash
-# Only the smoke suite (operator install checks)
+# Only the smoke suite (operator + basic sidecar/ambient install)
 GINKGO_FLAGS="--label-filter=smoke" make test.e2e.kind
+
+# Constrained CI smoke slices (operator / sidecar / ambient)
+GINKGO_FLAGS="--label-filter=smoke && operator && !tls-profile" make test.e2e.ocp
+GINKGO_FLAGS="--label-filter=smoke && sidecar" make test.e2e.ocp
+GINKGO_FLAGS="--label-filter=smoke && ambient" make test.e2e.ocp
 
 # All ambient tests
 GINKGO_FLAGS="--label-filter=ambient" make test.e2e.kind
@@ -408,6 +413,11 @@ The following environment variables define the behavior of the test run:
 * EXPECTED_REGISTRY=`^docker\.io|^gcr\.io|^registry\.istio\.io` - Which image registry should the operand images come from. Useful for downstream tests.
 * KEEP_ON_FAILURE - If set to true, when using a local KIND cluster, don't clean it up when the test fails. This allows to debug the failure.
 * DEFAULT_TEST_TIMEOUT=180 - The default timeout in seconds for `Eventually` assertions. Increase this value when running tests on slow clusters (e.g., `DEFAULT_TEST_TIMEOUT=300` for 5 minutes).
+* E2E_VERSIONS_LIMIT - When set to `1`, `GetLatestPatchVersions()` returns only the newest supported minor (faster smoke on small clusters). Update suites skip themselves in this mode.
+* ISTIOD_MEMORY_REQUEST / CNI_MEMORY_REQUEST / ZTUNNEL_MEMORY_REQUEST / PROXY_MEMORY_REQUEST - Optional memory request overrides applied by `CreateIstio` / `CreateIstioCNI` / `CreateZTunnel` for resource-constrained CI. Chart defaults: istiod 2048Mi, CNI 100Mi, ztunnel 512Mi, injected sidecar proxy 128Mi.
+* OPERATOR_MEMORY_REQUEST / OPERATOR_MEMORY_LIMIT / OPERATOR_CPU_REQUEST / OPERATOR_CPU_LIMIT - Optional Helm overrides when installing the operator via the suite script.
+* OPERATOR_DEPLOY_TIMEOUT - Helm deploy wait timeout (default `5m`).
+* GINKGO_LABEL_FILTER - Quoted-safe Ginkgo label filter; preferred over embedding `--label-filter` in `GINKGO_FLAGS` when the expression contains `&&` / `||` / `!`.
 
 ### Customizing the test run
 
@@ -453,22 +463,28 @@ Note: the default behaviour is to use the kustomize files located un the folder 
 ### Using the e2e framework to test your cluster configuration
 The e2e framework can be used to test your cluster configuration. The framework is designed to be flexible and extensible. It is easy to add new test suites and new tests. The idea is to be able to simulate what a real user scenario looks like when using the operator.
 
-To do this, we have a set of test cases under a test group called `smoke`. This test group will run a set of tests that are designed to test the basic functionality of the operator. The tests in this group are designed to be run against a cluster that is already configured and running. The tests will not modify the cluster configuration or the operator configuration. The tests will only check if the operator is working as expected.
+To do this, we have a set of test cases under a test group called `smoke`. This group covers critical-path checks:
+
+* `smoke && operator` — operator CRDs, deployment, and metrics (does not deploy a mesh)
+* `smoke && sidecar` — basic sidecar control-plane install / Ready path
+* `smoke && ambient` — basic ambient (Istio + IstioCNI + ZTunnel) install / Ready path
+
+Note: prefer the filters above (or `smoke && operator && !tls-profile`) when you want a specific slice. Full upgrade / multicluster / migration coverage remains under `slow`.
 
 Pre-requisites:
-* The operator is already installed and running in the cluster.
+* The operator is already installed and running in the cluster (for operator-only smoke with `SKIP_DEPLOY=true`).
 
 To run the test group, you can use the following command:
 
 * Run the following command to run the smoke tests:
 For running on kind:
 ```
-SKIP_BUILD=true SKIP_DEPLOY=true GINKGO_FLAGS="-v --label-filter=smoke" make test.e2e.kind
+SKIP_BUILD=true SKIP_DEPLOY=true GINKGO_FLAGS="-v --label-filter=smoke && operator && !tls-profile" make test.e2e.kind
 ```
 
 For running on OCP:
 ```
-SKIP_BUILD=true SKIP_DEPLOY=true GINKGO_FLAGS="-v --label-filter=smoke" make test.e2e.ocp
+SKIP_BUILD=true SKIP_DEPLOY=true GINKGO_FLAGS="-v --label-filter=smoke && operator && !tls-profile" make test.e2e.ocp
 ```
 
 #### Running with specific configuration for the Istio and IstioCNI resource

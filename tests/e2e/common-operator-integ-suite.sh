@@ -232,12 +232,34 @@ check_cluster_operators() {
 install_operator() {
   echo "Installing sail-operator (KUBECONFIG=${KUBECONFIG})"
   "${COMMAND}" create namespace "${NAMESPACE}"
-  helm install sail-operator "${SOURCE_DIR}"/chart --namespace "${NAMESPACE}" --set image="${HUB}/${IMAGE_BASE}:${TAG}" --set operatorLogLevel=3
+
+  # Optional resource overrides for constrained CI (e.g. Openshift Local on ubuntu-latest).
+  # Defaults stay in chart/values.yaml; set OPERATOR_*_REQUEST / OPERATOR_*_LIMIT to tune.
+  local helm_sets=(
+    --set "image=${HUB}/${IMAGE_BASE}:${TAG}"
+    --set "operatorLogLevel=3"
+  )
+  if [ -n "${OPERATOR_MEMORY_REQUEST:-}" ]; then
+    helm_sets+=(--set "operator.resources.requests.memory=${OPERATOR_MEMORY_REQUEST}")
+  fi
+  if [ -n "${OPERATOR_MEMORY_LIMIT:-}" ]; then
+    helm_sets+=(--set "operator.resources.limits.memory=${OPERATOR_MEMORY_LIMIT}")
+  fi
+  if [ -n "${OPERATOR_CPU_REQUEST:-}" ]; then
+    helm_sets+=(--set "operator.resources.requests.cpu=${OPERATOR_CPU_REQUEST}")
+  fi
+  if [ -n "${OPERATOR_CPU_LIMIT:-}" ]; then
+    helm_sets+=(--set "operator.resources.limits.cpu=${OPERATOR_CPU_LIMIT}")
+  fi
+
+  echo "Helm install overrides: ${helm_sets[*]}"
+  helm install sail-operator "${SOURCE_DIR}"/chart --namespace "${NAMESPACE}" "${helm_sets[@]}"
 }
 
 await_operator() {
   echo "Awaiting operator deployment on (KUBECONFIG=${KUBECONFIG})"
   local name="${DEPLOYMENT_NAME}"
+  local timeout="${OPERATOR_DEPLOY_TIMEOUT:-5m}"
   if [ "${OLM}" == "true" ]; then
     local csv_name
     local csv_file
@@ -249,7 +271,16 @@ await_operator() {
       DEPLOYMENT_NAME="${csv_name}"
     fi
   fi
-  "${COMMAND}" wait --for=condition=available deployment/"${name}" -n "${NAMESPACE}" --timeout=5m
+  if ! "${COMMAND}" wait --for=condition=available deployment/"${name}" -n "${NAMESPACE}" --timeout="${timeout}"; then
+    # If the deployment is not available within the timeout, dump relevant information for diagnosis
+    # We need this because it's executed before e2e test run so we will not have any debug information if fails the deployment.
+    echo "ERROR: operator deployment/${name} not Available within ${timeout}; dumping status for diagnosis"
+    "${COMMAND}" get deployment,pods -n "${NAMESPACE}" -o wide || true
+    "${COMMAND}" describe deployment/"${name}" -n "${NAMESPACE}" || true
+    "${COMMAND}" describe pods -n "${NAMESPACE}" || true
+    "${COMMAND}" get events -n "${NAMESPACE}" --sort-by='.lastTimestamp' || true
+    return 1
+  fi
 }
 
 # shellcheck disable=SC2329  # Function is invoked indirectly via trap
@@ -378,10 +409,20 @@ check_cluster_operators
 set +e
 # Disable to avoid failing the test run before generating the report.xml
 # Capture the test exit code and allow cleanup via trap to run
+
+# GINKGO_LABEL_FILTER provides a dedicated, quoted-safe way to pass a Ginkgo
+# label-filter expression so that logical operators (&&, ||, !) are not
+# interpreted by the shell. It is ignored when GINKGO_FLAGS already carries a
+# --label-filter to preserve backward compatibility with existing callers.
+LABEL_FILTER_ARGS=()
+if [ -n "${GINKGO_LABEL_FILTER:-}" ] && [[ "${GINKGO_FLAGS:-}" != *"--label-filter"* ]]; then
+  LABEL_FILTER_ARGS=("--label-filter=${GINKGO_LABEL_FILTER}")
+fi
+
 # shellcheck disable=SC2086
 IMAGE="${HUB}/${IMAGE_BASE}:${TAG}" \
 go run github.com/onsi/ginkgo/v2/ginkgo -tags e2e \
---timeout 60m --junit-report="${ARTIFACTS}/report.xml" ${GINKGO_FLAGS:-} "${WD}"/...
+--timeout 60m --junit-report="${ARTIFACTS}/report.xml" ${GINKGO_FLAGS:-} "${LABEL_FILTER_ARGS[@]}" "${WD}"/...
 TEST_EXIT_CODE=$?
 
 exit "${TEST_EXIT_CODE}"

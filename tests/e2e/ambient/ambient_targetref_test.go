@@ -100,19 +100,10 @@ values:
 
 		When("ZTunnel is created with targetRef pointing to Istio", func() {
 			It("creates ZTunnel with targetRef (no custom values)", func(ctx SpecContext) {
-				ztunnelYAML := fmt.Sprintf(`
-apiVersion: sailoperator.io/v1
-kind: ZTunnel
-metadata:
-  name: default
-spec:
-  version: %s
-  namespace: %s
-  targetRef:
-    kind: Istio
-    name: %s`, version.Name, ztunnelNamespace, istioName)
-
-				Expect(k.CreateFromString(ztunnelYAML)).To(Succeed())
+				common.CreateZTunnel(k, version.Name, fmt.Sprintf(`
+targetRef:
+  kind: Istio
+  name: %s`, istioName))
 				Success("ZTunnel CR created with targetRef to Istio")
 			})
 
@@ -237,19 +228,10 @@ spec:
 
 		When("ZTunnel is created with targetRef to Istio with meshConfig", func() {
 			It("creates ZTunnel with targetRef (no custom meshConfig)", func(ctx SpecContext) {
-				ztunnelYAML := fmt.Sprintf(`
-apiVersion: sailoperator.io/v1
-kind: ZTunnel
-metadata:
-  name: default
-spec:
-  version: %s
-  namespace: %s
-  targetRef:
-    kind: Istio
-    name: meshconfig-test`, version.Name, ztunnelNamespace)
-
-				Expect(k.CreateFromString(ztunnelYAML)).To(Succeed())
+				common.CreateZTunnel(k, version.Name, `
+targetRef:
+  kind: Istio
+  name: meshconfig-test`)
 				Success("ZTunnel created with targetRef to Istio with meshConfig")
 			})
 
@@ -373,24 +355,15 @@ spec:
 
 		When("ZTunnel is created with targetRef AND custom values", func() {
 			It("creates ZTunnel with both targetRef and value overrides", func(ctx SpecContext) {
-				ztunnelYAML := fmt.Sprintf(`
-apiVersion: sailoperator.io/v1
-kind: ZTunnel
-metadata:
-  name: default
-spec:
-  version: %s
-  namespace: %s
-  targetRef:
-    kind: Istio
-    name: override-test
-  values:
-    ztunnel:
-      network: %s
-      env:
-        %s: "%s"`, version.Name, ztunnelNamespace, overrideNetwork, customEnvVar, customEnvValue)
-
-				Expect(k.CreateFromString(ztunnelYAML)).To(Succeed())
+				common.CreateZTunnel(k, version.Name, fmt.Sprintf(`
+targetRef:
+  kind: Istio
+  name: override-test
+values:
+  ztunnel:
+    network: %s
+    env:
+      %s: "%s"`, overrideNetwork, customEnvVar, customEnvValue))
 				Success("ZTunnel created with targetRef and custom values")
 			})
 
@@ -480,19 +453,10 @@ spec:
 			})
 
 			It("creates ZTunnel with targetRef to non-existent Istio", func(ctx SpecContext) {
-				ztunnelYAML := fmt.Sprintf(`
-apiVersion: sailoperator.io/v1
-kind: ZTunnel
-metadata:
-  name: default
-spec:
-  version: %s
-  namespace: %s
-  targetRef:
-    kind: Istio
-    name: %s`, version.Name, ztunnelNamespace, missingIstioName)
-
-				Expect(k.CreateFromString(ztunnelYAML)).To(Succeed())
+				common.CreateZTunnel(k, version.Name, fmt.Sprintf(`
+targetRef:
+  kind: Istio
+  name: %s`, missingIstioName))
 				Success("ZTunnel created with targetRef to non-existent Istio")
 			})
 

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
@@ -37,6 +38,14 @@ import (
 var _ = Describe("Ambient Update & Lifecycle", Label("ambient", "update", "slow"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(defaultTimeout) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
+
+	BeforeAll(func() {
+		// Update suites need two consecutive minors and extra memory; if smoke tests set E2E_VERSIONS_LIMIT=1
+		// we will skip the update tests to avoid failures in resource-constrained CI.
+		if env.Get("E2E_VERSIONS_LIMIT", "") == "1" {
+			Skip("Skipping ambient update tests when E2E_VERSIONS_LIMIT=1")
+		}
+	})
 
 	// Get two consecutive minor versions for update testing
 	baseVersion, newVersion, err := update.GetTwoConsecutiveAmbientVersions(fipsCluster)

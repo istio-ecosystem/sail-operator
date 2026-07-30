@@ -183,8 +183,10 @@ func mustParseVersionsYaml(yamlBytes []byte) (
 	return list, defaultVersion, baseVersion, newVersion, versionMap, aliasList, eolVersions
 }
 
-// GetLatestPatchVersions returns the latest patch versions for all the Major.Minor versions
-func GetLatestPatchVersions() []VersionInfo {
+// allLatestPatchVersions returns the latest patch version for every Major.Minor,
+// sorted descending. This is the unlimited internal helper used by functions
+// that need the full list (e.g. GetTwoConsecutiveMinorVersions).
+func allLatestPatchVersions() []VersionInfo {
 	latestPatchVersions := make(map[string]VersionInfo)
 	for _, version := range List {
 		majorMinorVersion := fmt.Sprintf("%d.%d", version.Version.Major(), version.Version.Minor())
@@ -193,14 +195,22 @@ func GetLatestPatchVersions() []VersionInfo {
 			latestPatchVersions[majorMinorVersion] = version
 		}
 	}
-
 	latestSlice := slices.Collect(maps.Values(latestPatchVersions))
-
-	// Sort the slice in descending order based on the version.
 	sort.Slice(latestSlice, func(i, j int) bool {
 		return latestSlice[i].Version.GreaterThan(latestSlice[j].Version)
 	})
+	return latestSlice
+}
 
+// GetLatestPatchVersions returns the latest patch versions for all the Major.Minor versions.
+// When E2E_VERSIONS_LIMIT=1 only the newest version is returned, reducing test cycle time
+// in resource-constrained CI environments.
+// To be used also to run smoke tests to limit the number of versions tested.
+func GetLatestPatchVersions() []VersionInfo {
+	latestSlice := allLatestPatchVersions()
+	if env.Get("E2E_VERSIONS_LIMIT", "") == "1" && len(latestSlice) > 1 {
+		return latestSlice[:1]
+	}
 	return latestSlice
 }
 
@@ -208,7 +218,7 @@ func GetLatestPatchVersions() []VersionInfo {
 // that are greater than or equal to the specified minimum version.
 // Returns the base (older) and new (newer) versions suitable for upgrade testing.
 func GetTwoConsecutiveMinorVersions(minVersion *semver.Version) (baseVer, newVer VersionInfo, err error) {
-	allLatestPatches := GetLatestPatchVersions()
+	allLatestPatches := allLatestPatchVersions()
 
 	// Filter: only keep versions >= minVersion
 	var filtered []VersionInfo

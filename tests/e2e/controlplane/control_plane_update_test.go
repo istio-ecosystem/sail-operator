@@ -43,6 +43,14 @@ var _ = Describe("Control Plane updates", Label("control-plane", "update", "slow
 	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
+	BeforeAll(func() {
+		// Update suites need two consecutive minors and extra memory; if tests set E2E_VERSIONS_LIMIT=1
+		// we will skip the update tests to avoid failures in resource-constrained CI.
+		if env.Get("E2E_VERSIONS_LIMIT", "") == "1" {
+			Skip("Skipping control plane update tests when E2E_VERSIONS_LIMIT=1")
+		}
+	})
+
 	Describe("using IstioRevisionTag", func() {
 		var baseVersion, newVersion istioversion.VersionInfo
 
