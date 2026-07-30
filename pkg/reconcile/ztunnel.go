@@ -86,6 +86,12 @@ func (r *ZTunnelReconciler) ComputeValues(version string, userValues *v1.ZTunnel
 	// Apply image digests from configuration, if not already set by user
 	userValues = ApplyZTunnelImageDigests(resolvedVersion, userValues, config.Config)
 
+	// Apply vendor-specific default values
+	userValues, err = istiovalues.ApplyZTunnelVendorDefaults(resolvedVersion, userValues)
+	if err != nil {
+		return nil, fmt.Errorf("failed to apply vendor defaults: %w", err)
+	}
+
 	// apply fips values
 	istiovalues.ApplyZTunnelFipsValues(userValues)
 

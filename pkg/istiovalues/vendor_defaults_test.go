@@ -22,6 +22,8 @@ import (
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	"istio.io/istio/pkg/ptr"
 )
@@ -275,6 +277,119 @@ v1.24.2:
 	}
 }
 
+func TestApplyZTunnelVendorDefaults(t *testing.T) {
+	ztunnelLimits := &v1.ZTunnelValues{
+		ZTunnel: &v1.ZTunnelConfig{
+			Resources: &corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("2000m"),
+					corev1.ResourceMemory: resource.MustParse("1024Mi"),
+				},
+			},
+		},
+	}
+
+	testcases := []struct {
+		name                 string
+		vendorDefaults       string
+		version              string
+		preValues            *v1.ZTunnelValues
+		postValues           *v1.ZTunnelValues
+		expectedError        bool
+		expectedErrSubstring string
+	}{
+		{
+			name: "adding resource limits for ZTunnel",
+			vendorDefaults: `
+v1.24.2:
+  ztunnel:
+    ztunnel:
+      resources:
+        limits:
+          cpu: "2000m"
+          memory: 1024Mi
+`,
+			version:    "v1.24.2",
+			preValues:  &v1.ZTunnelValues{},
+			postValues: ztunnelLimits,
+		},
+		{
+			name: "user values override and merge with vendor defaults",
+			vendorDefaults: `
+v1.24.2:
+  ztunnel:
+    ztunnel:
+      resources:
+        limits:
+          cpu: "2000m"
+          memory: 1024Mi
+`,
+			version: "v1.24.2",
+			preValues: &v1.ZTunnelValues{
+				ZTunnel: &v1.ZTunnelConfig{
+					Resources: &corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU: resource.MustParse("3000m"),
+						},
+					},
+				},
+			},
+			postValues: &v1.ZTunnelValues{
+				ZTunnel: &v1.ZTunnelConfig{
+					Resources: &corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("3000m"), // user value takes precedence
+							corev1.ResourceMemory: resource.MustParse("1024Mi"),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "no ztunnel defaults defined for this version",
+			vendorDefaults: `
+v1.24.2:
+  istio:
+    pilot:
+      env:
+        someEnvVar: "true"
+`,
+			version:    "v1.24.2",
+			preValues:  &v1.ZTunnelValues{},
+			postValues: &v1.ZTunnelValues{},
+		},
+		{
+			name: "malformed ztunnel defaults",
+			vendorDefaults: `
+v1.24.2:
+  ztunnel:
+    ztunnel: "resources"
+`,
+			version:              "v1.24.2",
+			preValues:            &v1.ZTunnelValues{},
+			postValues:           nil, // expect nil due to malformed defaults
+			expectedError:        true,
+			expectedErrSubstring: "cannot unmarshal string into Go struct field ZTunnelValues.ztunnel",
+		},
+	}
+	for _, tc := range testcases {
+		vendorDefaults = MustParseVendorDefaultsYAML([]byte(tc.vendorDefaults))
+
+		result, err := ApplyZTunnelVendorDefaults(tc.version, tc.preValues)
+		if tc.expectedError {
+			if assert.Error(t, err, "expected an error for ZTunnel on %s but got none", tc.name) {
+				assert.ErrorContains(t, err, tc.expectedErrSubstring,
+					"ZTunnel default values on %s should unwrap JSON-unmarshal errors", tc.name)
+			}
+		} else {
+			assert.NoError(t, err, "unexpected error for ZTunnel on %s: %v", tc.name, err)
+		}
+		if diff := cmp.Diff(tc.postValues, result); diff != "" {
+			t.Errorf("unexpected ZTunnel merge result on %s; diff (-expected, +actual):\n%v", tc.name, diff)
+		}
+	}
+}
+
 func TestValidateVendorDefaultsFile(t *testing.T) {
 	defaultsYAML, err := os.ReadFile("vendor_defaults.yaml")
 	if err != nil {
@@ -288,7 +403,15 @@ func TestValidateVendorDefaultsFile(t *testing.T) {
 	for version := range vendorDefaults {
 		_, err := ApplyIstioVendorDefaults(version, &v1.Values{})
 		if err != nil {
-			t.Errorf("failed to parse vendor_defaults.yaml at version %s: %v", version, err)
+			t.Errorf("failed to parse istio defaults in vendor_defaults.yaml at version %s: %v", version, err)
+		}
+		_, err = ApplyIstioCNIVendorDefaults(version, &v1.CNIValues{})
+		if err != nil {
+			t.Errorf("failed to parse istiocni defaults in vendor_defaults.yaml at version %s: %v", version, err)
+		}
+		_, err = ApplyZTunnelVendorDefaults(version, &v1.ZTunnelValues{})
+		if err != nil {
+			t.Errorf("failed to parse ztunnel defaults in vendor_defaults.yaml at version %s: %v", version, err)
 		}
 	}
 }

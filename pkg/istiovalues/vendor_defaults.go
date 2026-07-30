@@ -92,8 +92,27 @@ func ApplyIstioCNIVendorDefaults(version string, values *v1.CNIValues) (*v1.CNIV
 	return finalValues, nil
 }
 
+// ApplyZTunnelVendorDefaults applies vendor-specific default values to the provided
+// ZTunnel configuration (*v1.ZTunnelValues) for a given Istio version.
+func ApplyZTunnelVendorDefaults(version string, values *v1.ZTunnelValues) (*v1.ZTunnelValues, error) {
+	// Convert the specific *v1.ZTunnelValues struct to a generic map[string]any
+	userHelmValues := helm.FromValues(values)
+
+	mergedHelmValues, err := applyVendorDefaultsForResourceType(version, v1.ZTunnelKind, userHelmValues)
+	if err != nil {
+		return nil, fmt.Errorf("failed to apply vendor defaults for ztunnel: %w", err)
+	}
+
+	finalValues, err := helm.ToValues(mergedHelmValues, &v1.ZTunnelValues{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert merged values back to *v1.ZTunnelValues: %w", err)
+	}
+
+	return finalValues, nil
+}
+
 // applyVendorDefaultsForResourceType retrieves defaults for
-// a given version and resourceType, current valid resources are: "istio" and "istiocni"
+// a given version and resourceType, current valid resources are: "istio", "istiocni" and "ztunnel"
 // It returns the merged map and an error if the defaults are not found or malformed.
 // The userValuesMap is the 'base', and resource-specific defaults are 'overrides'.
 func applyVendorDefaultsForResourceType(version, resourceType string, userValuesMap map[string]any) (map[string]any, error) {

@@ -1,8 +1,8 @@
 # This file can be overwritten in vendor distributions of sail-operator to set
 # vendor-specific defaults. You can configure version-specific defaults for
-# every field in `spec.values` for both Istio and IstioCNI resource, 
+# every field in `spec.values` for the Istio, IstioCNI and ZTunnel resources,
 # see the following example:
-# 
+#
 # v1.26.0:
 #   istio:
 #     pilot:
@@ -11,6 +11,12 @@
 #   istiocni:
 #     cni:
 #       cniConfDir: custom/cni/conf/dir
+#   ztunnel:
+#     ztunnel:
+#       resources:
+#         limits:
+#           cpu: "2000m"
+#           memory: 1024Mi
 #
 # These defaults are type-checked at compile time.
 # Note: After modifying this file, run `make test` to ensure that the
@@ -34,6 +40,12 @@ v1.30.3:
       resources:
         limits:
           cpu: "1000m"
+          memory: 1024Mi
+  ztunnel:
+    ztunnel:
+      resources:
+        limits:
+          cpu: "2000m"
           memory: 1024Mi
 v1.28.6:
   istio:
