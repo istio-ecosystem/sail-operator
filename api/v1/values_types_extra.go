@@ -63,9 +63,9 @@ type ZTunnelConfig struct {
 	// It is recommended to not set this; this is primarily for backwards compatibility.
 	ResourceName *string `json:"resourceName,omitempty"`
 	// Annotations to apply to all top level resources
-	Annotations map[string]string `json:"Annotations,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty"`
 	// Labels to apply to all top level resources
-	Labels map[string]string `json:"Labels,omitempty"`
+	Labels map[string]string `json:"labels,omitempty"`
 	// Additional volumeMounts to the ztunnel container
 	VolumeMounts []k8sv1.VolumeMount `json:"volumeMounts,omitempty"`
 	// Additional volumes to add to the ztunnel Pod.
