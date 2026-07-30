@@ -2,7 +2,7 @@ name: crc-e2e-sail
 
 # CRC OpenShift Local smoke — early OCP-shaped signal on ubuntu-latest.
 # Keep this workflow OUT of branch-protection required status checks so PRs can still merge while the suite
-# stabilizes. Requires secrets: CRC_PULL_SECRET, QUAY_USERNAME, QUAY_PASSWORD.
+# stabilizes. Requires secrets: CRC_PULL_SECRET, QUAY_PWDNAME, QUAY_PWD.
 
 on:
   workflow_dispatch:
@@ -59,8 +59,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: quay.io
-          username: ${{ secrets.QUAY_USERNAME }}
-          password: ${{ secrets.QUAY_PASSWORD }}
+          username: ${{ secrets.QUAY_PWDNAME }}
+          password: ${{ secrets.QUAY_PWD }}
 
       - name: Build and push operator image
         id: build
