@@ -595,17 +595,19 @@ spec:
 					Success("Single ZTunnel DaemonSet shared by both revisions")
 				})
 
-				It("should have IstioCNI and ZTunnel at new version", func(ctx SpecContext) {
-					// Verify shared components were updated to new version
+				It("should have IstioCNI and ZTunnel at base version", func(ctx SpecContext) {
+					// Verify shared components remain at base version
+					// In revision-based updates, only the control plane has a new revision;
+					// shared dependencies stay at the base version
 					cni := &v1.IstioCNI{}
 					Expect(cl.Get(ctx, kube.Key("default"), cni)).To(Succeed())
-					Expect(cni.Spec.Version).To(Equal(newVersion.Name))
+					Expect(cni.Spec.Version).To(Equal(baseVersion.Name))
 
 					ztunnel := &v1.ZTunnel{}
 					Expect(cl.Get(ctx, kube.Key("default"), ztunnel)).To(Succeed())
-					Expect(ztunnel.Spec.Version).To(Equal(newVersion.Name))
+					Expect(ztunnel.Spec.Version).To(Equal(baseVersion.Name))
 
-					Success("Shared dependencies updated to new version")
+					Success("Shared dependencies remain at base version")
 				})
 			})
 
