@@ -196,6 +196,10 @@ type CNIAmbientConfig struct {
 	Ipv6 *bool `json:"ipv6,omitempty"`
 	// If enabled, and ambient is enabled, iptables reconciliation will be enabled.
 	ReconcileIptablesOnStartup *bool `json:"reconcileIptablesOnStartup,omitempty"`
+	// The interval at which the CNI agent periodically verifies the ambient host-level
+	// health check rules and re-installs them if they were removed by an external actor,
+	// as a duration string (e.g. "30s"). "0" disables the periodic reconciliation.
+	ReconcileHostRulesInterval *string `json:"reconcileHostRulesInterval,omitempty"`
 }
 
 type CNIRepairConfig struct {
@@ -1105,7 +1109,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x0eCNIUsageConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x128\n" +
 	"\achained\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueB\x02\x18\x01R\achained\x12\x1a\n" +
-	"\bprovider\x18\x03 \x01(\tR\bprovider\"\xae\x02\n" +
+	"\bprovider\x18\x03 \x01(\tR\bprovider\"\xee\x02\n" +
 	"\x10CNIAmbientConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12\x1c\n" +
 	"\tconfigDir\x18\x03 \x01(\tR\tconfigDir\x12:\n" +
@@ -1113,7 +1117,9 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"dnsCapture\x18\x05 \x01(\v2\x1a.google.protobuf.BoolValueR\n" +
 	"dnsCapture\x12.\n" +
 	"\x04ipv6\x18\a \x01(\v2\x1a.google.protobuf.BoolValueR\x04ipv6\x12Z\n" +
-	"\x1areconcileIptablesOnStartup\x18\t \x01(\v2\x1a.google.protobuf.BoolValueR\x1areconcileIptablesOnStartup\"\xad\x03\n" +
+	"\x1areconcileIptablesOnStartup\x18\t \x01(\v2\x1a.google.protobuf.BoolValueR\x1areconcileIptablesOnStartup\x12>\n" +
+	"\x1areconcileHostRulesInterval\x18\n" +
+	" \x01(\tR\x1areconcileHostRulesInterval\"\xad\x03\n" +
 	"\x0fCNIRepairConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12\x10\n" +
 	"\x03hub\x18\x02 \x01(\tR\x03hub\x12(\n" +

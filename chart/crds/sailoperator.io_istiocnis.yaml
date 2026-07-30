@@ -1045,6 +1045,12 @@ spec:
                             description: 'UNSTABLE: If enabled, and ambient is enabled,
                               enables ipv6 support'
                             type: boolean
+                          reconcileHostRulesInterval:
+                            description: |-
+                              The interval at which the CNI agent periodically verifies the ambient host-level
+                              health check rules and re-installs them if they were removed by an external actor,
+                              as a duration string (e.g. "30s"). "0" disables the periodic reconciliation.
+                            type: string
                           reconcileIptablesOnStartup:
                             description: If enabled, and ambient is enabled, iptables
                               reconciliation will be enabled.

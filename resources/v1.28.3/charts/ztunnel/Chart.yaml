@@ -1,9 +1,9 @@
 annotations:
-  org.opencontainers.image.ref.name: refs/tags/1.28.3-asm-r3
-  org.opencontainers.image.revision: b4bf499d97b4c6284824d83b637b04ad8b3d298c
+  org.opencontainers.image.ref.name: refs/tags/1.28.3-asm-r4
+  org.opencontainers.image.revision: 210dfc43fd631f476ebb63874f80cb3f4a065c46
   org.opencontainers.image.source: https://github.com/alauda-mesh/istio
 apiVersion: v2
-appVersion: 1.28.3-asm-r3
+appVersion: 1.28.3-asm-r4
 description: Helm chart for istio ztunnel components
 icon: https://istio.io/latest/favicons/android-192x192.png
 keywords:
@@ -12,4 +12,4 @@ keywords:
 name: ztunnel
 sources:
 - https://github.com/istio/istio
-version: 1.28.3-asm-r3
+version: 1.28.3-asm-r4
