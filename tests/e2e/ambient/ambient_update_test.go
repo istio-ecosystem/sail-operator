@@ -18,6 +18,7 @@ package ambient
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
@@ -423,33 +424,35 @@ spec:
 			})
 
 			When("canary IstioRevision is created with new version", func() {
+				// RevisionBased Istio CR creates an IstioRevision named <istio-name>-<version-with-dots-as-dashes>
+				canaryRevisionName := "canary-" + strings.ReplaceAll(newVersion.Name, ".", "-")
+
 				BeforeAll(func() {
 					revisionYAML := fmt.Sprintf(`
 apiVersion: sailoperator.io/v1
-kind: IstioRevision
+kind: Istio
 metadata:
   name: canary
 spec:
+  updateStrategy:
+    type: RevisionBased
   version: %s
   namespace: %s
   values:
     profile: ambient
-    revision: canary
-    global:
-      istioNamespace: %s
     pilot:
       cni:
         enabled: true
-      trustedZtunnelNamespace: ztunnel`, newVersion.Name, controlPlaneNamespace, controlPlaneNamespace)
-					Log("Creating canary IstioRevision with new version:", newVersion.Name)
+      trustedZtunnelNamespace: ztunnel`, newVersion.Name, controlPlaneNamespace)
+					Log("Creating canary Istio with new version:", newVersion.Name)
 					Expect(k.CreateFromString(revisionYAML)).To(Succeed())
-					Success("Canary IstioRevision created")
+					Success("Canary Istio created")
 				})
 
 				It("should become Ready", func(ctx SpecContext) {
 					Eventually(func(g Gomega) {
 						revision := &v1.IstioRevision{}
-						g.Expect(cl.Get(ctx, kube.Key("canary", controlPlaneNamespace), revision)).To(Succeed())
+						g.Expect(cl.Get(ctx, kube.Key(canaryRevisionName, controlPlaneNamespace), revision)).To(Succeed())
 						g.Expect(revision).To(HaveConditionStatus(v1.IstioRevisionConditionReady, metav1.ConditionTrue))
 					}).WithTimeout(240*time.Second).Should(Succeed(), "Canary revision should become Ready")
 					Success("Canary IstioRevision is Ready")
@@ -469,7 +472,7 @@ spec:
 
 					// Verify canary revision is Ready
 					canaryRevision := &v1.IstioRevision{}
-					Expect(cl.Get(ctx, kube.Key("canary", controlPlaneNamespace), canaryRevision)).To(Succeed())
+					Expect(cl.Get(ctx, kube.Key(canaryRevisionName, controlPlaneNamespace), canaryRevision)).To(Succeed())
 					Expect(canaryRevision).To(HaveConditionStatus(v1.IstioRevisionConditionReady, metav1.ConditionTrue))
 
 					// Verify both deployments exist
@@ -478,7 +481,7 @@ spec:
 					Expect(defaultDeployment.Status.AvailableReplicas).To(BeNumerically(">", 0))
 
 					canaryDeployment := &appsv1.Deployment{}
-					Expect(cl.Get(ctx, kube.Key("istiod-canary", controlPlaneNamespace), canaryDeployment)).To(Succeed())
+					Expect(cl.Get(ctx, kube.Key("istiod-"+canaryRevisionName, controlPlaneNamespace), canaryDeployment)).To(Succeed())
 					Expect(canaryDeployment.Status.AvailableReplicas).To(BeNumerically(">", 0))
 
 					Success("Default and canary revisions coexist successfully")
