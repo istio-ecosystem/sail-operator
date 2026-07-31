@@ -37,7 +37,7 @@ import (
 
 var defaultTimeout = env.GetInt("DEFAULT_TEST_TIMEOUT", 180)
 
-var _ = Describe("Ambient configuration ", Label("ambient", "slow"), Ordered, func() {
+var _ = Describe("Ambient configuration ", Label("smoke", "ambient"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(defaultTimeout) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
@@ -64,45 +64,29 @@ var _ = Describe("Ambient configuration ", Label("ambient", "slow"), Ordered, fu
 					// Create all ambient components in reverse order to test order independence
 					// This validates that the operator correctly handles dependencies regardless of creation order
 
-					// Create ZTunnel first (won't be fully ready until Istio/istiod exists for XDS)
-					ztunnelYaml := `
-apiVersion: sailoperator.io/v1
-kind: ZTunnel
-metadata:
-  name: default
-spec:
-  version: %s
-  namespace: %s
-  targetRef:
-    kind: Istio
-    name: %s
-  values:
-    ztunnel:
-      env:
-        CUSTOM_ENV_VAR: "true"`
-					ztunnelYaml = fmt.Sprintf(ztunnelYaml, version.Name, ztunnelNamespace, istioName)
-					Log("Creating ZTunnel first (reverse order):", ztunnelYaml)
-					Expect(k.CreateFromString(ztunnelYaml)).To(Succeed(), "ZTunnel creation failed")
+					// Create ZTunnel first (won't be fully ready until Istio/istiod exists for XDS).
+					// Use CreateZTunnel so ZTUNNEL_MEMORY_REQUEST is applied.
+					Log("Creating ZTunnel first (reverse order)")
+					common.CreateZTunnel(k, version.Name, fmt.Sprintf(`
+targetRef:
+  kind: Istio
+  name: %s
+values:
+  ztunnel:
+    env:
+      CUSTOM_ENV_VAR: "true"`, istioName))
 
 					// Create IstioCNI second
-					cniYAML := `
-apiVersion: sailoperator.io/v1
-kind: IstioCNI
-metadata:
-  name: default
-spec:
-  values:
-    cni:
-      ambient:
-        dnsCapture: true
-  profile: ambient
-  version: %s
-  namespace: %s`
-					cniYAML = fmt.Sprintf(cniYAML, version.Name, istioCniNamespace)
-					Log("Creating IstioCNI second:", cniYAML)
-					Expect(k.CreateFromString(cniYAML)).To(Succeed(), "IstioCNI creation failed")
+					Log("Creating IstioCNI second")
+					common.CreateIstioCNI(k, version.Name, `
+profile: ambient
+values:
+  cni:
+    ambient:
+      dnsCapture: true`)
 
-					// Create Istio last (this will trigger ZTunnel to become ready)
+					// Create Istio last (this will trigger ZTunnel to become ready).
+					// CreateIstio applies ISTIOD_MEMORY_REQUEST when set.
 					istioYAML := `
 values:
   global:

@@ -1,0 +1,216 @@
+name: crc-e2e-sail
+
+# CRC OpenShift Local smoke — early OCP-shaped signal on ubuntu-latest.
+# Keep this workflow OUT of branch-protection required status checks so PRs can still merge while the suite
+# stabilizes. Requires secrets: CRC_PULL_SECRET, QUAY_PWDNAME, QUAY_PWD.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+      - release-*
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    name: Resolve Build Image
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.get-image.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.base_ref || github.ref }}
+          persist-credentials: false
+          sparse-checkout: |
+            common/scripts/setup_env.sh
+          sparse-checkout-cone-mode: false
+
+      - name: Extract IMAGE_VERSION from base branch
+        id: get-image
+        run: |
+          version=$(grep -E '^\s*IMAGE_VERSION=' common/scripts/setup_env.sh \
+                    | grep -v ':-' | head -1 | sed 's/.*IMAGE_VERSION=//')
+          if [[ -z "${version}" ]]; then
+            echo "::error::Could not extract IMAGE_VERSION from common/scripts/setup_env.sh"
+            exit 1
+          fi
+          image="registry.istio.io/testing/build-tools:${version}"
+          echo "image=${image}" >> "$GITHUB_OUTPUT"
+          echo "Resolved build image: ${image}"
+
+  build-push:
+    name: Build and push operator image
+    needs: preflight
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.build.outputs.tag }}
+    container:
+      image: ${{ needs.preflight.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Login to quay.io
+        uses: docker/login-action@v3
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USER }}
+          password: ${{ secrets.QUAY_PWD }}
+
+      - name: Build and push operator image
+        id: build
+        shell: bash
+        env:
+          HUB: quay.io/sail-dev
+          BUILD_WITH_CONTAINER: "0"
+        run: |
+          git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+          COMMIT_HASH="${GITHUB_SHA:0:7}"
+          TAG="ci-test-${COMMIT_HASH}-amd64"
+          make docker-push HUB=${HUB} TAG=${TAG}
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+  # One CRC cluster for all smoke suites. A matrix would start CRC 3x (~30m each)
+  # and burn free-tier minutes; one ginkgo filter shares a single cluster instead.
+  e2e:
+    name: e2e smoke openshift local
+    needs: [preflight, build-push]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Start CRC OpenShift cluster
+        uses: crc-org/crc-github-action@v1
+        with:
+          pull-secret: ${{ secrets.CRC_PULL_SECRET }}
+          preset: openshift
+
+      - name: Prepare CRC for smoke tests
+        run: |
+          set -euo pipefail
+          echo "=== Node resources before prep ==="
+          oc describe node | sed -n '/Allocatable:/,/Allocated resources:/p;/Allocated resources:/,/Events:/p' || true
+
+          # Marketplace catalog pods are not needed for helm-based smoke and often sit in
+          # ImagePullBackOff while consuming request budget on small CRC nodes.
+          oc scale deployment -n openshift-marketplace --all --replicas=0 || true
+          oc delete pods -n openshift-marketplace --all --force --grace-period=0 || true
+
+          echo "Waiting for cluster operators to settle..."
+          for i in $(seq 1 30); do
+            if oc wait clusteroperator --all --for=condition=Available=True --for=condition=Progressing=False --for=condition=Degraded=False --timeout=30s 2>/dev/null; then
+              echo "Cluster operators stable"
+              break
+            fi
+            echo "attempt ${i}/30: clusteroperators not stable yet"
+            sleep 10
+          done
+
+          echo "=== Node resources after prep ==="
+          oc describe node | sed -n '/Allocated resources:/,/Events:/p' || true
+          oc get pods -A | grep -v Running | grep -v Completed || true
+
+      - name: Run CRC smoke tests
+        env:
+          BUILD_IMAGE: ${{ needs.preflight.outputs.image }}
+          OPERATOR_TAG: ${{ needs.build-push.outputs.tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p "${{ github.workspace }}/artifacts"
+
+          # One invocation: deploy operator once, run operator+sidecar+ambient smoke together.
+          # Exclude tls-profile (needs writable OCP FeatureGate/APIServer paths not suited to CRC smoke).
+          FILTER='smoke && (operator || sidecar || ambient) && !tls-profile'
+
+          echo "::group::e2e smoke (filter=${FILTER})"
+          set +e
+          docker run --rm \
+            --network=host \
+            --privileged \
+            -v "${{ github.workspace }}":/work \
+            -v "$HOME/.kube":/root/.kube \
+            -v "${{ github.workspace }}/artifacts":/tmp/artifacts \
+            -e KUBECONFIG=/root/.kube/config \
+            -e HUB=quay.io/sail-dev \
+            -e TAG="${OPERATOR_TAG}" \
+            -e CI=true \
+            -e BUILD_WITH_CONTAINER=0 \
+            -e SKIP_BUILD=true \
+            -e XDG_CACHE_HOME=/tmp/cache \
+            -e ARTIFACTS=/tmp/artifacts \
+            -e ISTIOD_MEMORY_REQUEST=128Mi \
+            -e CNI_MEMORY_REQUEST=40Mi \
+            -e ZTUNNEL_MEMORY_REQUEST=64Mi \
+            -e PROXY_MEMORY_REQUEST=64Mi \
+            -e E2E_VERSIONS_LIMIT=1 \
+            -e OPERATOR_DEPLOY_TIMEOUT=10m \
+            -e OPERATOR_MEMORY_REQUEST=32Mi \
+            -e OPERATOR_MEMORY_LIMIT=256Mi \
+            -e OPERATOR_CPU_REQUEST=10m \
+            -e OPERATOR_CPU_LIMIT=200m \
+            -e "GINKGO_LABEL_FILTER=${FILTER}" \
+            "${BUILD_IMAGE}" \
+            bash -c "git config --global --add safe.directory /work && cd /work && make test.e2e.ocp"
+          rc=$?
+          set -e
+          if [ "${rc}" -ne 0 ]; then
+            echo "::error::CRC smoke failed (exit ${rc}); capturing cluster snapshot"
+            {
+              echo "=== pods -A ==="
+              oc get pods -A -o wide || true
+              echo "=== sail-operator ==="
+              oc get all,events -n sail-operator -o wide || true
+              oc describe pods -n sail-operator || true
+              oc describe deploy -n sail-operator || true
+              echo "=== istio-cni / istio-system / ztunnel ==="
+              oc get all,istiocni,istio,ztunnel -A || true
+              oc describe pods -n istio-cni || true
+              oc describe pods -n istio-system || true
+              oc describe pods -n ztunnel || true
+              echo "=== node allocated ==="
+              oc describe node | sed -n '/Allocated resources:/,/Events:/p' || true
+            } | tee "${{ github.workspace }}/artifacts/cluster-snapshot.txt"
+          fi
+          echo "::endgroup::"
+          exit "${rc}"
+
+      - name: Print OpenShift version
+        if: always()
+        run: oc version
+
+      - name: Debug cluster state on failure
+        if: failure()
+        run: |
+          echo "=== Nodes ==="
+          oc get nodes -o wide || true
+          echo "=== Node allocatable / capacity ==="
+          oc describe nodes || true
+          echo "=== All pods ==="
+          oc get pods -A || true
+          echo "=== sail-operator pod describe ==="
+          oc describe pods -n sail-operator || true
+          echo "=== istio-system pod describe ==="
+          oc describe pods -n istio-system || true
+          echo "=== istio-cni pod describe ==="
+          oc describe pods -n istio-cni || true
+          echo "=== ztunnel pod describe ==="
+          oc describe pods -n ztunnel || true
+          echo "=== sail-operator logs ==="
+          oc logs -n sail-operator -l app=sail-operator --tail=100 || true
+          echo "=== Events ==="
+          oc get events -A --sort-by='.lastTimestamp' | tail -50 || true
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results-crc-smoke
+          path: ${{ github.workspace }}/artifacts/
+          if-no-files-found: warn
