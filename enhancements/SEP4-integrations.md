@@ -18,18 +18,19 @@ Configuring Istio to work with various integrations, especially on OpenShift, of
 
 Note that the Integrations controller detailed below will be the same one implemented as part of the [metrics integration SEP](https://github.com/istio-ecosystem/sail-operator/pull/2028). See the Implementation Plan for more details.
 
-A new Integrations controller will be introduced along with new `Integration` types. Each type will be grouped by function. The `Integration` types will have a `target` field that specifies the resource the integration configures, using a discriminated union. The supported target types are `Istio` and `Kiali`. The Integration controller will configure the target resource and any other resource necessary to manage the integration based on which integrations are configured. This is similar to the `targetRef` on a `ZTunnel` resource. For example, a UWM integration would look like this:
+A new Integrations controller will be introduced along with new `Integration` types. Each type will be grouped by function. The `Integration` types will have a `targetRefs` field that specifies the resources the integration configures. Each target reference specifies the `kind` (e.g. `Istio`, `Kiali`), `name`, and optionally `namespace` of the target resource. A single `Integration` resource can target multiple resources, such as both an `Istio` and a `Kiali` resource. The Integration controller will configure the target resources and any other resources necessary to manage the integration based on which integrations are configured. For example, a UWM integration would look like this:
 ```yaml
 kind: MetricsIntegration
 apiVersion: sailoperator.io/v1alpha1
 metadata:
   name: openshift-obserability
 spec:
-  target:
-    type: Istio
-    istio:
-      ref:
-        name: default
+  targetRefs:
+    - kind: Istio
+      name: default
+    - kind: Kiali
+      name: kiali
+      namespace: istio-system
   type: UserWorkloadMonitoring
   userWorkloadMonitoring: {}
 ```
@@ -40,11 +41,9 @@ apiVersion: sailoperator.io/v1alpha1
 metadata:
   name: openshift-obserability
 spec:
-  target:
-    type: Istio
-    istio:
-      ref:
-        name: default
+  targetRefs:
+    - kind: Istio
+      name: default
   type: ClusterObservabilityOperator
   clusterObservabilityOperator:
     monitoringStackRef:
@@ -60,11 +59,9 @@ apiVersion: sailoperator.io/v1alpha1
 metadata:
   name: openshift-obserability
 spec:
-  target:
-    type: Istio
-    istio:
-      ref:
-        name: default
+  targetRefs:
+    - kind: Istio
+      name: default
   type: ClusterObservabilityOperator
   clusterObservabilityOperator:
     monitoringStackRef:
@@ -76,11 +73,9 @@ apiVersion: sailoperator.io/v1alpha1
 metadata:
   name: openshift-obserability
 spec:
-  target:
-    type: Istio
-    istio:
-      ref:
-        name: default
+  targetRefs:
+    - kind: Istio
+      name: default
   type: OpenTelemetry
   openTelemetry:
     otelCollectorRef:
@@ -118,6 +113,8 @@ spec:
         - name: otel
 ```
 
+### Dealing with conflicts
+
 A key part of the design is using **Server Side Apply** for all controller updates to resources. This will allow the Integrations controller to manage the fields of the `Istio` and `Telemetry` resources necessary to setup the integration while allowing users to manage other parts of the resources without users fighting against the controller. If users want to take full control over some of the controller managed fields, they can also do this cleanly with Server Side Apply. When [dealing with conflicts](https://kubernetes.io/docs/reference/using-api/server-side-apply/#conflicts), the controller will either give up management or become a shared manager. The controller will never overwrite values specified by the user or other controllers.
 
 For users that manage their resources through Argo CD, the [Server Side Apply sync option](https://argo-cd.readthedocs.io/en/stable/user-guide/sync-options/#server-side-apply) must be enabled. This will cause Argo CD to use `kubectl apply --server-side --force-conflicts` and any fields that are written by both the Integrations controller and Argo CD will be owned by Argo CD. Since Server Side Apply is a stable, mature feature, it's assumed that other gitops solutions support a similar option.
@@ -139,74 +136,50 @@ Three new CRDs will be added corresponding broadly to different integration type
 - `TracingIntegration`
   - OpenTelemetry
   - TempoStack
-- `IdentityIntegration`
+- `CertificateIntegration`
   - ZeroTrustWorkloadIdentityManagement
   - IstioCSR
   - CertManager
+- `DashboardIntegration`
+  - Perses
 
-Each `Integration` resource has a `target` field that uses a discriminated union to specify the resource the integration configures. The supported target types are `Istio` and `Kiali`. To configure both Istio and a dashboard like Kiali, you create separate `Integration` resources — one targeting Istio and one targeting Kiali. This ensures there's only one way to use the API to configure an integration. If there are multiple `Integration` resources of the same Kind that target the same ref, the one that is created later is considered invalid and this will be reflected in the status. 
+Each `Integration` resource has a `targetRefs` field that specifies the resources the integration configures. Each target reference specifies the `kind` (e.g. `Istio`, `Kiali`), `name`, and optionally `namespace` of the target resource. A single `Integration` resource can target multiple resources, such as both an `Istio` and a `Kiali` resource. If there are multiple `Integration` resources of the same Kind that target the same ref, the one that is created later is considered invalid and this will be reflected in the status. 
 
 Here are examples of each type:
 
-A `MetricsIntegration` targeting Istio for UWM, and a separate `MetricsIntegration` targeting Kiali to configure the dashboard:
+A `MetricsIntegration` targeting Istio, Kiali, and Perses for UWM:
 ```yaml
 kind: MetricsIntegration
 apiVersion: sailoperator.io/v1alpha1
 metadata:
   name: openshift-observability
 spec:
-  target:
-    type: Istio
-    istio:
-      ref:
-        name: default
-  type: UserWorkloadMonitoring
-  userWorkloadMonitoring: {}
----
-kind: MetricsIntegration
-apiVersion: sailoperator.io/v1alpha1
-metadata:
-  name: kiali-metrics
-spec:
-  target:
-    type: Kiali
-    kiali:
-      ref:
-        name: kiali
-        namespace: istio-system
+  targetRefs:
+    - kind: Istio
+      name: default
+    - kind: Kiali
+      name: kiali
+      namespace: istio-system
+    - kind: Perses
+      name: perses
+      namespace: monitoring
   type: UserWorkloadMonitoring
   userWorkloadMonitoring: {}
 ```
 
-A `TracingIntegration` targeting Istio and another targeting Kiali:
+A `TracingIntegration` targeting both Istio and Kiali:
 ```yaml
 kind: TracingIntegration
 apiVersion: sailoperator.io/v1alpha1
 metadata:
   name: openshift-observability
 spec:
-  target:
-    type: Istio
-    istio:
-      ref:
-        name: default
-  type: TempoStack
-  tempoStack:
-    tempoStackRef:
-      name: tempo
-      namespace: tracing
----
-kind: TracingIntegration
-apiVersion: sailoperator.io/v1alpha1
-metadata:
-  name: kiali-tracing
-spec:
-  target:
-    type: Kiali
-    kiali:
-      ref:
-        name: kiali
-        namespace: istio-system
+  targetRefs:
+    - kind: Istio
+      name: default
+    - kind: Kiali
+      name: kiali
+      namespace: istio-system
   type: TempoStack
   tempoStack:
     tempoStackRef:
@@ -214,7 +187,7 @@ spec:
       namespace: tracing
 ```
 
-Using the Kiali-targeted resources above, the controller would configure the following on the `Kiali` resource:
+Using the resources above, the controller would configure the following on the `Kiali` resource:
 ```yaml
 apiVersion: kiali.io/v1alpha1
 kind: Kiali
@@ -246,32 +219,30 @@ spec:
          url_format: "jaeger"
 ```
 
+Integrating Istio with Zero Trust Workload Identity Management:
 ```yaml
-kind: IdentityIntegration
+kind: CertificateIntegration
 apiVersion: sailoperator.io/v1alpha1
 metadata:
   name: ztwim
 spec:
-  target:
-    type: Istio
-    istio:
-      ref:
-        name: default
+  targetRefs:
+    - kind: Istio
+      name: default
   type: ZeroTrustWorkloadIdentityManagement
   ztwim: {}
 ```
 
+Integrating Istio with Istio CSR:
 ```yaml
-kind: IdentityIntegration
+kind: CertificateIntegration
 apiVersion: sailoperator.io/v1alpha1
 metadata:
   name: istio-csr
 spec:
-  target:
-    type: Istio
-    istio:
-      ref:
-        name: default
+  targetRefs:
+    - kind: Istio
+      name: default
   type: IstioCSR
   istioCSR:
     istioCSRRef:
@@ -279,50 +250,43 @@ spec:
       namespace: istio-csr
 ```
 
-#### Status
-Integrations will report `Status`. Non-exhaustive list of what should be in `Status`:
-- Validations: do the refs exist?
-- Success/failure to update resources.
-- Possibly report if the update was partially applied i.e. some other controller owns part of the fields.
+Integrating Kiali with the Perses Dashboards:
+```yaml
+kind: DashboardIntegration
+apiVersion: sailoperator.io/v1alpha1
+metadata:
+  name: perses
+spec:
+  targetRefs:
+    - kind: Kiali
+      name: kiali
+      namespace: istio-system
+  type: Perses
+  perses:
+    persesDashboardRef:
+      name: perses
+      namespace: perses-monitoring
+```
 
 These are broadly what the golang API changes would be:
 ```go
-// IntegrationTargetType identifies what resource the integration targets.
-type IntegrationTargetType string
+// TargetReference identifies a resource that the integration configures.
+type TargetReference struct {
+	// Kind specifies the kind of resource (e.g. "Istio", "Kiali").
+	Kind string `json:"kind"`
 
-const (
-	IntegrationTargetTypeIstio IntegrationTargetType = "Istio"
-	IntegrationTargetTypeKiali IntegrationTargetType = "Kiali"
-)
+	// Name is the name of the target resource.
+	Name string `json:"name"`
 
-// IntegrationTarget specifies the resource that this integration configures.
-type IntegrationTarget struct {
-	// Type specifies the target type.
-	Type IntegrationTargetType `json:"type"`
-
-	// Istio configures an Istio resource as the target.
-	Istio *IstioTarget `json:"istio,omitempty"`
-
-	// Kiali configures a Kiali resource as the target.
-	Kiali *KialiTarget `json:"kiali,omitempty"`
-}
-
-// IstioTarget references an Istio resource.
-type IstioTarget struct {
-	// Ref is a reference to the Istio resource.
-	Ref IstioReference `json:"ref"`
-}
-
-// KialiTarget references a Kiali resource.
-type KialiTarget struct {
-	// Ref is a reference to the Kiali resource.
-	Ref NamespacedReference `json:"ref"`
+	// Namespace is the namespace of the target resource.
+	// Only required for namespace-scoped resources like Kiali.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 // MetricsIntegrationSpec defines the desired state of MetricsIntegration.
 type MetricsIntegrationSpec struct {
-	// Target specifies the resource that this integration configures.
-	Target IntegrationTarget `json:"target"`
+	// TargetRefs specifies the resources that this integration configures.
+	TargetRefs []TargetReference `json:"targetRefs"`
 
 	MetricsConfig `json:",inline"`
 }
@@ -359,8 +323,8 @@ type ClusterObservabilityOperatorConfig struct {
 
 // TracingIntegrationSpec defines the desired state of TracingIntegration.
 type TracingIntegrationSpec struct {
-	// Target specifies the resource that this integration configures.
-	Target IntegrationTarget `json:"target"`
+	// TargetRefs specifies the resources that this integration configures.
+	TargetRefs []TargetReference `json:"targetRefs"`
 
 	TracingConfig `json:",inline"`
 }
@@ -397,10 +361,10 @@ type TempoStackConfig struct {
 	TempoStackRef NamespacedReference `json:"tempoStackRef"`
 }
 
-// IdentityIntegrationSpec defines the desired state of IdentityIntegration.
-type IdentityIntegrationSpec struct {
-	// Target specifies the resource that this integration configures.
-	Target IntegrationTarget `json:"target"`
+// CertificateIntegrationSpec defines the desired state of CertificateIntegration.
+type CertificateIntegrationSpec struct {
+	// TargetRefs specifies the resources that this integration configures.
+	TargetRefs []TargetReference `json:"targetRefs"`
 
 	// Type specifies the identity integration type.
 	Type IdentityType `json:"type"`
@@ -430,6 +394,39 @@ type IstioCSRConfig struct {
 }
 ```
 
+#### Status
+Integrations will report `Status`. Non-exhaustive list of what should be in `Status`:
+- Validations: do the refs exist?
+- Success/failure to update resources.
+- Possibly report if the update was partially applied i.e. some other controller owns part of the fields.
+
+#### Migration
+
+Some users will already have configured their integrations. They may already have `PodMonitor` and `ServiceMonitor` resources created for example. How should the Integrations controller handles this?
+
+The integrations controller could either:
+
+1. Adopt the resources i.e. add the Integrations controller's OwnerRef to them. Adopting the resources is the best user experience but potentially the most problematic since these resources may have customizations or be managed by another system.
+2. Do nothing. This makes the controller useless.
+3. Create parallel resources. In the case of `PodMonitor` creating a second `PodMonitor`.
+
+The Integrations controller will adopt any resource normally created by the Integrations controller only if the resource is labeled with `sailoperator.io/integrations: adopt`. The controller will use SSA for these resources which will allow users to keep any customizations they have applied to these resources.
+
+#### Resource Ownership
+
+The Integrations controller should own the resources that it directly creates as part of the integration. This will tie the lifecycle of these resources to the `Integration` ensuring resources are properly cleaned up when the `Integration` is removed. The Integrations controller will **not** put an `ownerRef` on any of the resources that it references. The Integrations controller will never put an `ownerRef` on an `Istio` resource or on an `OpenTelemetry` resource. Users can remove the both the `ownerRef` and the `sailoperator.io/integrations: adopt` label from the resource before deleting the `Integration` if they wish to manage it themselves.
+
+#### Permissions
+
+Adding this API will require adding new permissions to the Sail Operator for each `Integration`. In general, the Sail Operator will need `READ` permissions for all of the `Integration` types and subtypes, `PATCH` permissions for any `targetRef`, and `CREATE`/`PATCH` for all resources the Integrations controller creates e.g. `PodMonitor`. Other permissions may also be needed for different integrations.
+
+Adding the Cluster Observability Operator integration would require adding:
+- `GET`/`WATCH`/`LIST` for `MonitoringStack` resources
+- `PATCH` for `Kiali` resources (the Sail Operator already has permission to patch `Istio` resources)
+- `CREATE`/`PATCH` for `PodMonitor`/`ServiceMonitor` resources.
+
+This will greatly increase the scope of the Sail Operator's Service Account but the operator already has full control of `Secret` and `ClusterRole`/`ClusterRoleBinding` resources effectively giving it cluster admin for the cluster.
+
 ### Architecture
 
 ```mermaid
@@ -449,12 +446,12 @@ flowchart TD
         TS["TempoStack\n(Tempo Operator)"]
     end
 
-    MI -- "target:\nIstio" --> Istio
-    MI -- "target:\nKiali" --> Kiali
+    MI -- "targetRefs:\nIstio" --> Istio
+    MI -- "targetRefs:\nKiali" --> Kiali
     MI -. "metrics:\nClusterObservability" .-> MS
 
-    TI -- "target:\nIstio" --> Istio
-    TI -- "target:\nKiali" --> Kiali
+    TI -- "targetRefs:\nIstio" --> Istio
+    TI -- "targetRefs:\nKiali" --> Kiali
     TI -. "tracing:\nTempoStack" .-> TS
 
     style MI fill:#4a9eff,color:#fff
@@ -518,7 +515,7 @@ The implementation for UWM is already complete as part of the [monitoring contro
 - [ ] Add `MetricsIntegration` CRD
 - [ ] Update monitoring controller for UWM to reconcile `MetricsIntegration` resources.
 - [ ] Add `TracingIntegration` CRD
-- [ ] Add `IdentityIntegration` CRD
+- [ ] Add `CertificateIntegration` CRD
 - [ ] Add a `Kiali` target on the `Integration` resources.
 
 ## Test Plan
@@ -528,3 +525,4 @@ The implementation for UWM is already complete as part of the [monitoring contro
 ## Change History (only required when making changes after SEP has been accepted)
 - Changed the API from `IstioIntegration` --> `<Component>Integration`
 - Replaced `istioRef` + `dashboard` fields with a unified `target` discriminated union (Istio | Kiali)
+- Replaced `target` discriminated union with `targetRefs` array of references
