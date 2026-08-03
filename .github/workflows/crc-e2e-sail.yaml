@@ -1,12 +1,14 @@
 name: crc-e2e-sail
 
-# CRC OpenShift Local smoke — early OCP-shaped signal on ubuntu-latest.
-# Keep this workflow OUT of branch-protection required status checks so PRs can still merge while the suite
-# stabilizes. Requires secrets: CRC_PULL_SECRET, QUAY_PWDNAME, QUAY_PWD.
+# CRC OpenShift Local smoke — postsubmit signal run against merged code.
+# Triggered on push to main/release-* (i.e. after every merged PR) so secrets are always
+# available and only maintainer-approved code is exercised.
+# Keep this workflow OUT of branch-protection required status checks.
+# Requires secrets: CRC_PULL_SECRET, QUAY_USER, QUAY_PWD.
 
 on:
   workflow_dispatch:
-  pull_request:
+  push:
     branches:
       - main
       - release-*
@@ -23,7 +25,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.base_ref || github.ref }}
           persist-credentials: false
           sparse-checkout: |
             common/scripts/setup_env.sh
