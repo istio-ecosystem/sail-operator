@@ -453,6 +453,24 @@ func GetProxyVersion(podName, namespace string) (*semver.Version, error) {
 	return version, err
 }
 
+// GetProxyVersionFromPod extracts the Istio proxy version directly from the pod's
+// istio-proxy container by executing pilot-agent version. This approach does not
+// require XDS connectivity to istiod, making it more reliable during control plane
+// upgrades when istiod may be temporarily inaccessible.
+func GetProxyVersionFromPod(podName, namespace string) (*semver.Version, error) {
+	k := kubectl.New().WithNamespace(namespace)
+	output, err := k.Exec(podName, "istio-proxy", "pilot-agent version")
+	if err != nil {
+		return nil, fmt.Errorf("error getting proxy version from pod %s: %w", podName, err)
+	}
+
+	matches := istiodVersionRegex.FindStringSubmatch(output)
+	if len(matches) > 1 && matches[1] != "" {
+		return semver.NewVersion(matches[1])
+	}
+	return nil, fmt.Errorf("error getting proxy version from pod %s: version not found in output: %s", podName, output)
+}
+
 // GetIstioProxyContainer finds and returns the istio-proxy container from a pod
 // It checks both regular containers and init containers (for persistent init containers in K8s 1.28+)
 // Returns the container if found, nil otherwise
