@@ -39,7 +39,7 @@ Backports are limited to bug fixes and security patches for supported minor rele
 
 To backport a change, you can follow these steps:
 
-1. Open a PR against the `main` branch. If the change is a bug fix, contributors or maintainers can add the appropriate cherry-pick label(s) (f.e., `cherrypick/release-1.30`) to indicate the supported release branch(es) the change should be backported to.
+1. Open a PR against the `main` branch. If the change is a bug fix, contributors or maintainers can add the appropriate cherry-pick label(s) (f.e., `cherrypick/release-1.30`) to indicate the supported release branch(es) the change should be backported to. Note that cherry-pick labels must be added while the PR is still open. If the PR has already been merged, the bot can be triggered manually by adding a `/cherrypick release-1.30` comment on the PR.
 2. Once the PR is merged into `main`, an automated process creates corresponding backport PRs for the target release branches based on the cherry-pick label(s).
 3. If the automated cherry-pick fails due to merge conflicts, the bot notifies the contributor. The author is then expected to manually cherry-pick the commit, resolve any conflicts locally, and open a PR against the appropriate release branch.
 
