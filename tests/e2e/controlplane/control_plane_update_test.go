@@ -130,9 +130,12 @@ spec:
 					Success("sample pods are ready")
 
 					for _, pod := range samplePods.Items {
-						sidecarVersion, err := getProxyVersion(pod.Name, sampleNamespace)
-						Expect(err).NotTo(HaveOccurred(), "Error getting sidecar version")
-						Expect(sidecarVersion).To(Equal(istioversion.Map[istioversion.Base].Version), "Sidecar Istio version does not match the expected version")
+						podName := pod.Name
+						Eventually(func(g Gomega) {
+							sidecarVersion, err := common.GetProxyVersionFromPod(podName, sampleNamespace)
+							g.Expect(err).NotTo(HaveOccurred(), "Error getting sidecar version")
+							g.Expect(sidecarVersion).To(Equal(istioversion.Map[istioversion.Base].Version), "Sidecar Istio version does not match the expected version")
+						}).Should(Succeed(), "Error verifying sidecar version for pod "+podName)
 					}
 					Success("Istio sidecar version matches the expected base Istio version")
 				})
@@ -202,11 +205,15 @@ spec:
 					Expect(samplePods.Items).ToNot(BeEmpty(), "No pods found in sample namespace")
 
 					for _, pod := range samplePods.Items {
-						Eventually(func() *semver.Version {
-							sidecarVersion, err := getProxyVersion(pod.Name, sampleNamespace)
-							Expect(err).NotTo(HaveOccurred(), "Error getting sidecar version")
-							return sidecarVersion
-						}).Should(Equal(istioversion.Map[istioversion.Base].Version), "Sidecar Istio version does not match the expected version")
+						podName := pod.Name
+						Eventually(func(g Gomega) {
+							// Use GetProxyVersionFromPod to avoid XDS authentication issues
+							// that can occur during control plane upgrades when two istiod pods
+							// are running simultaneously on OCP.
+							sidecarVersion, err := common.GetProxyVersionFromPod(podName, sampleNamespace)
+							g.Expect(err).NotTo(HaveOccurred(), "Error getting sidecar version")
+							g.Expect(sidecarVersion).To(Equal(istioversion.Map[istioversion.Base].Version))
+						}).Should(Succeed(), "Sidecar Istio version does not match the expected version")
 					}
 					Success("Istio sidecar version matches the expected Istio version")
 				})
