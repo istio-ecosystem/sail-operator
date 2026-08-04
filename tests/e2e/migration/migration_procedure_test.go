@@ -137,7 +137,7 @@ var _ = Describe("Migration Procedure Validation", Ordered,
 						sleepPod := pods.Items[0].Name
 
 						Eventually(func() error {
-							return common.CheckHTTPConnectivity(k, workloadNamespace, sleepPod, "sleep", "httpbin:8000/get", 5, "200")
+							return common.CheckHTTPConnectivity(k, workloadNamespace, sleepPod, "sleep", "httpbin:8000/get", "200", 5)
 						}).Should(Succeed())
 						Success("L4 connectivity verified in sidecar mode")
 					})
@@ -209,7 +209,7 @@ spec:
 
 						// Test that VirtualService routes traffic correctly
 						Eventually(func() error {
-							return common.CheckHTTPConnectivity(k, workloadNamespace, sleepPod, "sleep", "httpbin:8000/get", 5, "200")
+							return common.CheckHTTPConnectivity(k, workloadNamespace, sleepPod, "sleep", "httpbin:8000/get", "200", 5)
 						}).Should(Succeed())
 						Success("VirtualService routing verified in sidecar mode")
 					})
@@ -222,12 +222,12 @@ spec:
 
 						// Test allowed path
 						Eventually(func() error {
-							return common.CheckHTTPConnectivity(k, workloadNamespace, sleepPod, "sleep", "httpbin:8000/get", 5, "200")
+							return common.CheckHTTPConnectivity(k, workloadNamespace, sleepPod, "sleep", "httpbin:8000/get", "200", 5)
 						}).Should(Succeed())
 
 						// Test denied path
 						Eventually(func() error {
-							return common.CheckHTTPConnectivity(k, workloadNamespace, sleepPod, "sleep", "httpbin:8000/deny", 5, "403")
+							return common.CheckHTTPConnectivity(k, workloadNamespace, sleepPod, "sleep", "httpbin:8000/deny", "403", 5)
 						}).Should(Succeed())
 
 						Success("AuthorizationPolicy enforcement verified in sidecar mode")
@@ -376,7 +376,7 @@ spec:
 
 						Eventually(func() error {
 							targetURL := fmt.Sprintf("httpbin.%s.svc.cluster.local:8000/get", workloadNamespace)
-							return common.CheckHTTPConnectivity(k, workloadNamespace, sleepPod, "sleep", targetURL, 5, "200")
+							return common.CheckHTTPConnectivity(k, workloadNamespace, sleepPod, "sleep", targetURL, "200", 5)
 						}).Should(Succeed())
 						Success("L4 connectivity verified with HBONE-aware sidecars in coexistence mode")
 					})
@@ -473,7 +473,7 @@ spec:
 						Eventually(func() error {
 							// Test connectivity to httpbin service (should go through ztunnel)
 							targetURL := fmt.Sprintf("httpbin.%s.svc.cluster.local:8000/get", workloadNamespace)
-							return common.CheckHTTPConnectivity(k, workloadNamespace, clientPod, "sleep", targetURL, 5, "200")
+							return common.CheckHTTPConnectivity(k, workloadNamespace, clientPod, "sleep", targetURL, "200", 5)
 						}).Should(Succeed())
 						Success("L4 connectivity verified in ambient mode via ztunnel")
 					})
@@ -557,7 +557,7 @@ spec:
 
 						// VirtualService should continue to work (routes traffic through waypoint now)
 						Eventually(func() error {
-							return common.CheckHTTPConnectivity(k, workloadNamespace, sleepPod, "sleep", "httpbin:8000/get", 5, "200")
+							return common.CheckHTTPConnectivity(k, workloadNamespace, sleepPod, "sleep", "httpbin:8000/get", "200", 5)
 						}).Should(Succeed())
 						Success("VirtualService routing verified via waypoint")
 					})
@@ -570,12 +570,12 @@ spec:
 
 						// Test allowed path
 						Eventually(func() error {
-							return common.CheckHTTPConnectivity(k, workloadNamespace, sleepPod, "sleep", "httpbin:8000/get", 5, "200")
+							return common.CheckHTTPConnectivity(k, workloadNamespace, sleepPod, "sleep", "httpbin:8000/get", "200", 5)
 						}).Should(Succeed())
 
 						// Test denied path (L7 policy enforcement)
 						Eventually(func() error {
-							return common.CheckHTTPConnectivity(k, workloadNamespace, sleepPod, "sleep", "httpbin:8000/deny", 5, "403")
+							return common.CheckHTTPConnectivity(k, workloadNamespace, sleepPod, "sleep", "httpbin:8000/deny", "403", 5)
 						}).Should(Succeed())
 
 						Success("L7 AuthorizationPolicy successfully enforced via waypoint")
