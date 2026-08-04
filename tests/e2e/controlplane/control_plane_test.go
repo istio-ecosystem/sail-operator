@@ -190,11 +190,13 @@ metadata:
 					})
 
 					It("has sidecars with the correct istio version", func(ctx SpecContext) {
-						for _, pod := range samplePods.Items {
-							sidecarVersion, err := getProxyVersion(pod.Name, sampleNamespace)
-							Expect(err).NotTo(HaveOccurred(), "Error getting sidecar version")
-							Expect(sidecarVersion).To(Equal(version.Version), "Sidecar Istio version does not match the expected version")
-						}
+						Eventually(func(g Gomega) {
+							for _, pod := range samplePods.Items {
+								sidecarVersion, err := getProxyVersion(pod.Name, sampleNamespace)
+								g.Expect(err).NotTo(HaveOccurred(), "Error getting sidecar version")
+								g.Expect(sidecarVersion).To(Equal(version.Version), "Sidecar Istio version does not match the expected version")
+							}
+						}).Should(Succeed(), "Error verifying sidecar version")
 						Success("Istio sidecar version matches the expected Istio version")
 					})
 				})
