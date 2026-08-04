@@ -504,7 +504,7 @@ func TestApplyImageDigests(t *testing.T) {
 			if err != nil {
 				t.Errorf("failed to resolve IstioCNI version for %q: %v", tc.input.Name, err)
 			}
-			result := sharedreconcile.ApplyCNIImageDigests(version, tc.input.Spec.Values, tc.config)
+			result := istiovalues.ApplyCNIImageDigests(version, tc.input.Spec.Values, tc.config)
 			if diff := cmp.Diff(tc.expectValues, result); diff != "" {
 				t.Errorf("unexpected merge result; diff (-expected, +actual):\n%v", diff)
 			}

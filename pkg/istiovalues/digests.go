@@ -62,9 +62,53 @@ func ApplyDigests(version string, values *v1.Values, config config.OperatorConfi
 		values.Global.ProxyInit.Image = &imageDigests.ProxyImage
 	}
 
-	// TODO: add this once the API supports ambient
-	// if !hasUserDefinedImage("ztunnel", values) {
-	// 	values.ZTunnel.Image = imageDigests.ZTunnelImage
-	// }
+	return values
+}
+
+// ApplyCNIImageDigests applies image digests to CNI values if not already set by user.
+func ApplyCNIImageDigests(version string, values *v1.CNIValues, cfg config.OperatorConfig) *v1.CNIValues {
+	imageDigests, digestsDefined := cfg.ImageDigests[version]
+	if !digestsDefined {
+		return values
+	}
+
+	if values != nil && values.Global != nil && (values.Global.Hub != nil || values.Global.Tag != nil) {
+		return values
+	}
+
+	if values == nil {
+		values = &v1.CNIValues{}
+	}
+
+	if values.Cni == nil {
+		values.Cni = &v1.CNIConfig{}
+	}
+	if values.Cni.Image == nil && values.Cni.Hub == nil && values.Cni.Tag == nil {
+		values.Cni.Image = &imageDigests.CNIImage
+	}
+	return values
+}
+
+// ApplyZTunnelImageDigests applies image digests to ZTunnel values if not already set by user.
+func ApplyZTunnelImageDigests(version string, values *v1.ZTunnelValues, cfg config.OperatorConfig) *v1.ZTunnelValues {
+	imageDigests, digestsDefined := cfg.ImageDigests[version]
+	if !digestsDefined {
+		return values
+	}
+
+	if values != nil && values.Global != nil && (values.Global.Hub != nil || values.Global.Tag != nil) {
+		return values
+	}
+
+	if values == nil {
+		values = &v1.ZTunnelValues{}
+	}
+
+	if values.ZTunnel == nil {
+		values.ZTunnel = &v1.ZTunnelConfig{}
+	}
+	if values.ZTunnel.Image == nil && values.ZTunnel.Hub == nil && values.ZTunnel.Tag == nil {
+		values.ZTunnel.Image = &imageDigests.ZTunnelImage
+	}
 	return values
 }
