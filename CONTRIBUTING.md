@@ -7,6 +7,7 @@ So you want to make contributions to the Sail Operator project, please take a lo
 - [Code of Conduct](#code-of-conduct)
 - [Contributing to the Sail Operator](#contributing-to-the-sail-operator)
 - [Way of Working](#way-of-working)
+- [Backporting Changes](#backporting-changes)
 - [Community meetings](#community-meetings)
 - [Security Issues](#security-issues)
 - [Writing Documentation](#writing-documentation)
@@ -31,6 +32,16 @@ If you want to contribute to the Sail Operator project, you can follow some rule
   - `help wanted`: Use this label to indicate that the issue needs help from the community.
   - `enhancement`: Use this label to indicate that the issue is an enhancement related to a new feature or improvement.
 - Commit should contains Header and Body explanation of the change for the future references.
+
+## Backporting Changes
+
+Backports are limited to bug fixes and security patches for supported minor releases. Feature backports are strongly discouraged to avoid introducing regressions or breaking existing mesh deployments.
+
+To backport a change, you can follow these steps:
+
+1. Open a PR against the `main` branch. If the change is a bug fix, contributors or maintainers can add the appropriate cherry-pick label(s) (f.e., `cherrypick/release-1.30`) to indicate the supported release branch(es) the change should be backported to.
+2. Once the PR is merged into `main`, an automated process creates corresponding backport PRs for the target release branches based on the cherry-pick label(s).
+3. If the automated cherry-pick fails due to merge conflicts, the bot notifies the contributor. The author is then expected to manually cherry-pick the commit, resolve any conflicts locally, and open a PR against the appropriate release branch.
 
 ## Community meetings
 
