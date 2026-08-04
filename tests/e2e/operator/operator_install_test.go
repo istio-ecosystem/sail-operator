@@ -43,6 +43,7 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	crtls "github.com/openshift/controller-runtime-common/pkg/tls"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -545,9 +546,47 @@ func ensureTLSAdherence(ctx context.Context, cl client.Client, policy configv1.T
 		return
 	}
 
+	// Wait for the operator to restart after the TLSAdherence change.
+	oldUIDs := make(map[string]struct{})
+	podList := &corev1.PodList{}
+	Expect(cl.List(ctx, podList, client.InNamespace(namespace),
+		client.MatchingLabels{"control-plane": deploymentName})).To(Succeed(),
+		"Failed to list operator pods before TLSAdherence change")
+	for _, pod := range podList.Items {
+		oldUIDs[string(pod.UID)] = struct{}{}
+	}
+
 	Step(fmt.Sprintf("Updating APIServer TLSAdherence to %s", policy))
 	apiServer.Spec.TLSAdherence = policy
 	Expect(cl.Update(ctx, apiServer)).To(Succeed(), "Failed to update APIServer TLSAdherence")
+
+	Step("Waiting for operator to restart and be ready after TLSAdherence change")
+	Eventually(func(g Gomega) {
+		pods := &corev1.PodList{}
+		g.Expect(cl.List(ctx, pods, client.InNamespace(namespace),
+			client.MatchingLabels{"control-plane": deploymentName})).To(Succeed())
+
+		found := false
+		for _, pod := range pods.Items {
+			if _, wasOld := oldUIDs[string(pod.UID)]; wasOld {
+				continue
+			}
+			if pod.DeletionTimestamp != nil || pod.Status.Phase != corev1.PodRunning {
+				continue
+			}
+			for _, cond := range pod.Status.Conditions {
+				if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
+					found = true
+					break
+				}
+			}
+			if found {
+				break
+			}
+		}
+		g.Expect(found).To(BeTrue(), "No new ready operator pod found after TLSAdherence change to %s", policy)
+	}).WithTimeout(5*time.Minute).WithPolling(5*time.Second).Should(Succeed(),
+		"Operator should restart and be ready after TLSAdherence change")
 }
 
 func applyCustomTLSProfile(ctx context.Context, cl client.Client, ciphers []string) {
