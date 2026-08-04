@@ -449,19 +449,39 @@ spec:
 						Success("Pods running in ambient mode without sidecars")
 					})
 
-					It("verifies workloads are registered with ztunnel", func(ctx SpecContext) {
-						pods := &corev1.PodList{}
-						Expect(cl.List(ctx, pods, client.InNamespace(workloadNamespace))).To(Succeed())
-						Expect(pods.Items).NotTo(BeEmpty())
-
-						// Verify pods are detected by ztunnel
+					It("verifies CNI redirection is configured for workload pods", func(ctx SpecContext) {
+						// Checks that istio-cni has set the ambient.istio.io/redirection annotation,
+						// which means traffic interception rules for ztunnel are in place.
+						// End-to-end ztunnel registration is verified by the L4 connectivity test below.
 						Eventually(func(g Gomega) {
+							pods := &corev1.PodList{}
+							g.Expect(cl.List(ctx, pods, client.InNamespace(workloadNamespace))).To(Succeed())
+
+							workloadPods := []corev1.Pod{}
 							for _, pod := range pods.Items {
-								// Check pod annotations indicate ambient mode
-								g.Expect(pod.Annotations).To(HaveKey("ambient.istio.io/redirection"))
+								if pod.DeletionTimestamp != nil || pod.Status.Phase != corev1.PodRunning {
+									continue
+								}
+								isWaypoint := false
+								for key := range pod.Labels {
+									if key == "gateway.istio.io/managed" || key == "gateway.networking.k8s.io/gateway-name" {
+										isWaypoint = true
+										break
+									}
+								}
+								if !isWaypoint {
+									workloadPods = append(workloadPods, pod)
+								}
 							}
-						}).Should(Succeed())
-						Success("Workloads registered with ztunnel")
+
+							g.Expect(workloadPods).NotTo(BeEmpty(), "Expected at least one non-waypoint workload pod")
+							for _, pod := range workloadPods {
+								g.Expect(pod.Annotations).To(HaveKey("ambient.istio.io/redirection"),
+									"Pod %s should have ambient redirection annotation", pod.Name)
+							}
+						}).WithTimeout(3*time.Minute).WithPolling(5*time.Second).Should(Succeed(),
+							"All workload pods should have the ambient.istio.io/redirection annotation set by istio-cni")
+						Success("CNI redirection configured for all workload pods")
 					})
 
 					It("verifies L4 connectivity in ambient mode", func(ctx SpecContext) {
