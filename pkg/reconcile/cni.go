@@ -77,7 +77,7 @@ func (r *CNIReconciler) ComputeValues(version string, userValues *v1.CNIValues, 
 	}
 
 	// Apply image digests from configuration, if not already set by user
-	userValues = ApplyCNIImageDigests(resolvedVersion, userValues, config.Config)
+	userValues = istiovalues.ApplyCNIImageDigests(resolvedVersion, userValues, config.Config)
 
 	// Apply vendor-specific default values
 	userValues, err = istiovalues.ApplyIstioCNIVendorDefaults(resolvedVersion, userValues)
@@ -130,32 +130,4 @@ func (r *CNIReconciler) Uninstall(ctx context.Context, namespace string) error {
 		return fmt.Errorf("failed to uninstall Helm chart %q: %w", cniChartName, err)
 	}
 	return nil
-}
-
-// ApplyCNIImageDigests applies image digests to CNI values if not already set by user.
-// This function is exported for use by the controller and library.
-func ApplyCNIImageDigests(version string, values *v1.CNIValues, cfg config.OperatorConfig) *v1.CNIValues {
-	imageDigests, digestsDefined := cfg.ImageDigests[version]
-	// if we don't have default image digests defined for this version, it's a no-op
-	if !digestsDefined {
-		return values
-	}
-
-	// if a global hub or tag value is configured by the user, don't set image digests
-	if values != nil && values.Global != nil && (values.Global.Hub != nil || values.Global.Tag != nil) {
-		return values
-	}
-
-	if values == nil {
-		values = &v1.CNIValues{}
-	}
-
-	// set image digest unless any part of the image has been configured by the user
-	if values.Cni == nil {
-		values.Cni = &v1.CNIConfig{}
-	}
-	if values.Cni.Image == nil && values.Cni.Hub == nil && values.Cni.Tag == nil {
-		values.Cni.Image = &imageDigests.CNIImage
-	}
-	return values
 }

@@ -84,7 +84,7 @@ func (r *ZTunnelReconciler) ComputeValues(version string, userValues *v1.ZTunnel
 	}
 
 	// Apply image digests from configuration, if not already set by user
-	userValues = ApplyZTunnelImageDigests(resolvedVersion, userValues, config.Config)
+	userValues = istiovalues.ApplyZTunnelImageDigests(resolvedVersion, userValues, config.Config)
 
 	// apply fips values
 	istiovalues.ApplyZTunnelFipsValues(userValues, resolvedVersion)
@@ -163,32 +163,4 @@ func (r *ZTunnelReconciler) Uninstall(ctx context.Context, namespace string) err
 		return fmt.Errorf("failed to uninstall Helm chart %q: %w", ztunnelChartName, err)
 	}
 	return nil
-}
-
-// ApplyZTunnelImageDigests applies image digests to ZTunnel values if not already set by user.
-// This function is exported for use by the controller and library.
-func ApplyZTunnelImageDigests(version string, values *v1.ZTunnelValues, cfg config.OperatorConfig) *v1.ZTunnelValues {
-	imageDigests, digestsDefined := cfg.ImageDigests[version]
-	// if we don't have default image digests defined for this version, it's a no-op
-	if !digestsDefined {
-		return values
-	}
-
-	// if a global hub or tag value is configured by the user, don't set image digests
-	if values != nil && values.Global != nil && (values.Global.Hub != nil || values.Global.Tag != nil) {
-		return values
-	}
-
-	if values == nil {
-		values = &v1.ZTunnelValues{}
-	}
-
-	// set image digest unless any part of the image has been configured by the user
-	if values.ZTunnel == nil {
-		values.ZTunnel = &v1.ZTunnelConfig{}
-	}
-	if values.ZTunnel.Image == nil && values.ZTunnel.Hub == nil && values.ZTunnel.Tag == nil {
-		values.ZTunnel.Image = &imageDigests.ZTunnelImage
-	}
-	return values
 }
