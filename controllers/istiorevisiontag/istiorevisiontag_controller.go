@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"path"
-	"reflect"
 
 	"github.com/go-logr/logr"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
@@ -33,7 +32,6 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/validation"
 	"github.com/istio-ecosystem/sail-operator/pkg/watches"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
-	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,10 +41,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"istio.io/istio/pkg/ptr"
@@ -249,8 +245,8 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&v1.IstioRevisionTag{}, mainObjectHandler).
 		Named("istiorevisiontag").
 		// watches related to in-use detection
-		Watches(&corev1.Namespace{}, nsHandler, builder.WithPredicates(ignoreStatusChange())).
-		Watches(&corev1.Pod{}, podHandler, builder.WithPredicates(ignoreStatusChange())).
+		Watches(&corev1.Namespace{}, nsHandler, builder.WithPredicates(watches.AsPredicate(watches.IgnoreStatusChanges()))).
+		Watches(&corev1.Pod{}, podHandler, builder.WithPredicates(watches.AsPredicate(watches.IgnoreStatusChanges()))).
 
 		// cluster-scoped resources
 		Watches(&v1.Istio{}, operatorResourcesHandler).
@@ -425,35 +421,6 @@ func (r *Reconciler) mapOperatorResourceToReconcileRequest(ctx context.Context, 
 		}
 	}
 	return requests
-}
-
-// ignoreStatusChange returns a predicate that ignores watch events where only the resource status changes; if
-// there are any other changes to the resource, the event is not ignored.
-// This ensures that the controller doesn't reconcile the entire IstioRevisionTag every time the status of an owned
-// resource is updated. Without this predicate, the controller would continuously reconcile the IstioRevisionTag
-// because the status.currentMetrics of the HorizontalPodAutoscaler object was updated.
-func ignoreStatusChange() predicate.Funcs {
-	return predicate.Funcs{
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			return specWasUpdated(e.ObjectOld, e.ObjectNew) ||
-				!reflect.DeepEqual(e.ObjectNew.GetLabels(), e.ObjectOld.GetLabels()) ||
-				!reflect.DeepEqual(e.ObjectNew.GetAnnotations(), e.ObjectOld.GetAnnotations()) ||
-				!reflect.DeepEqual(e.ObjectNew.GetOwnerReferences(), e.ObjectOld.GetOwnerReferences()) ||
-				!reflect.DeepEqual(e.ObjectNew.GetFinalizers(), e.ObjectOld.GetFinalizers())
-		},
-	}
-}
-
-func specWasUpdated(oldObject client.Object, newObject client.Object) bool {
-	// for HPAs, k8s doesn't set metadata.generation, so we actually have to check whether the spec was updated
-	if oldHpa, ok := oldObject.(*autoscalingv2.HorizontalPodAutoscaler); ok {
-		if newHpa, ok := newObject.(*autoscalingv2.HorizontalPodAutoscaler); ok {
-			return !reflect.DeepEqual(oldHpa.Spec, newHpa.Spec)
-		}
-	}
-
-	// for other resources, comparing the metadata.generation suffices
-	return oldObject.GetGeneration() != newObject.GetGeneration()
 }
 
 func wrapEventHandler(logger logr.Logger, handler handler.EventHandler) handler.EventHandler {
