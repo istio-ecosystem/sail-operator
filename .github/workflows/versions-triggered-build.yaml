@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'pkg/istioversion/versions.yaml'
+      - 'bundle/manifests/sailoperator.clusterserviceversion.yaml'
 
 run-name: versions-triggered-build
 
