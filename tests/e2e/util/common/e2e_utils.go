@@ -51,8 +51,9 @@ const (
 )
 
 const (
-	SleepNamespace   = "sleep"
-	HttpbinNamespace = "httpbin"
+	SleepNamespace     = "sleep"
+	HttpbinNamespace   = "httpbin"
+	SleepContainerName = "sleep"
 )
 
 var (
