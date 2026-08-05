@@ -92,7 +92,8 @@ func AwaitCniDaemonSet(ctx context.Context, k kubectl.Kubectl, cl client.Client)
 		if err := cl.Get(ctx, key, daemonset); err != nil {
 			return false
 		}
-		return daemonset.Status.NumberAvailable == daemonset.Status.CurrentNumberScheduled
+		return daemonset.Status.DesiredNumberScheduled > 0 &&
+			daemonset.Status.NumberAvailable == daemonset.Status.DesiredNumberScheduled
 	}).Should(BeTrue(), fmt.Sprintf("DaemonSet '%s' is not Available in the '%s' namespace on %s cluster", key.Name, key.Namespace, k.ClusterName))
 	Success(fmt.Sprintf("DaemonSet '%s' is deployed and running in the '%s' namespace on %s cluster", key.Name, key.Namespace, k.ClusterName))
 }
