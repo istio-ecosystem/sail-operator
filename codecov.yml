@@ -1,6 +1,7 @@
 codecov:
   notify:
     require_ci_to_pass: no
+    after_n_builds: 2
 
 comment:
   behavior: default
@@ -18,9 +19,17 @@ coverage:
         threshold: 0%
         informational: false
 
+flags:
+  unit-tests:
+    carryforward: true
+  integration-tests:
+    carryforward: true
+
 ignore:
   # Generated code and API types
   - "api/**"
+  - "**/*.gen.go"
+  - "**/zz_generated*.go"
   # Build and development tools
   - "hack/**"
   - "tools.go"
@@ -31,6 +40,9 @@ ignore:
   - "chart/**"
   - "licenses/**"
   - "tools/**"
+  # Embed-only and entry-point packages (not meaningfully unit-testable)
+  - "resources/**"
+  - "cmd/**"
 
   # Test code and test utilities
   - "tests/**"
