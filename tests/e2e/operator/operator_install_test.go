@@ -458,6 +458,57 @@ spec:
 			}).Should(BeFalse(),
 				"Metrics endpoint should reject ECDHE-RSA-AES128-GCM-SHA256 after custom profile is applied")
 			Success("TLS settings were updated after profile change")
+
+			Step("Applying custom TLS profile with MinTLSVersion 1.3")
+			applyCustomTLSProfileWithMinVersion(ctx, cl, customTLSProfileCiphers, configv1.VersionTLS13)
+
+			Step("Verifying IstioRevision has TLS 1.3 settings with proxyMetadata")
+			Eventually(func(g Gomega) {
+				rev := &v1.IstioRevision{}
+				g.Expect(cl.Get(ctx, client.ObjectKey{Name: "default"}, rev)).To(Succeed())
+				g.Expect(rev.Spec.Values).NotTo(BeNil())
+				g.Expect(rev.Spec.Values.MeshConfig).NotTo(BeNil())
+
+				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults).NotTo(BeNil())
+				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults.MinProtocolVersion).To(
+					Equal(v1.MeshConfigTLSConfigTLSProtocolTlsv13),
+					"tlsDefaults.minProtocolVersion should be TLSV1_3")
+				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults.CipherSuites).To(BeEmpty(),
+					"tlsDefaults.cipherSuites should be empty for TLS 1.3")
+
+				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS).NotTo(BeNil())
+				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS.MinProtocolVersion).To(
+					Equal(v1.MeshConfigTLSConfigTLSProtocolTlsv13),
+					"meshMTLS.minProtocolVersion should be TLSV1_3")
+				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS.CipherSuites).To(BeEmpty(),
+					"meshMTLS.cipherSuites should be empty for TLS 1.3")
+
+				proxyMeta := getIstioRevisionProxyMetadata(rev)
+				g.Expect(proxyMeta).To(HaveKey("OPENSSL_TLS1_3_CIPHERSUITES"),
+					"proxyMetadata should contain OPENSSL_TLS1_3_CIPHERSUITES for TLS 1.3")
+				g.Expect(proxyMeta["OPENSSL_TLS1_3_CIPHERSUITES"]).NotTo(BeEmpty(),
+					"OPENSSL_TLS1_3_CIPHERSUITES should not be empty")
+			}).WithTimeout(5*time.Minute).WithPolling(5*time.Second).Should(Succeed(),
+				"IstioRevision should have TLS 1.3 proxyMetadata settings")
+
+			Step("Switching back to custom TLS profile with MinTLSVersion 1.2")
+			applyCustomTLSProfile(ctx, cl, customTLSProfileCiphers)
+
+			Step("Verifying proxyMetadata no longer has OPENSSL_TLS1_3_CIPHERSUITES")
+			Eventually(func(g Gomega) {
+				rev := &v1.IstioRevision{}
+				g.Expect(cl.Get(ctx, client.ObjectKey{Name: "default"}, rev)).To(Succeed())
+
+				ciphers := getIstioRevisionCipherSuites(rev)
+				g.Expect(ciphers).NotTo(BeEmpty(),
+					"tlsDefaults.cipherSuites should be populated for TLS 1.2 profile")
+
+				proxyMeta := getIstioRevisionProxyMetadata(rev)
+				g.Expect(proxyMeta).NotTo(HaveKey("OPENSSL_TLS1_3_CIPHERSUITES"),
+					"proxyMetadata should not contain OPENSSL_TLS1_3_CIPHERSUITES for TLS 1.2 profile")
+			}).WithTimeout(5*time.Minute).WithPolling(5*time.Second).Should(Succeed(),
+				"IstioRevision should revert to TLS 1.2 profile settings")
+			Success("OPENSSL_TLS1_3_CIPHERSUITES is correctly set for TLS 1.3 and cleared for TLS 1.2")
 		})
 	})
 
@@ -621,8 +672,12 @@ func ensureTLSAdherence(ctx context.Context, cl client.Client, policy configv1.T
 }
 
 func applyCustomTLSProfile(ctx context.Context, cl client.Client, ciphers []string) {
+	applyCustomTLSProfileWithMinVersion(ctx, cl, ciphers, configv1.VersionTLS12)
+}
+
+func applyCustomTLSProfileWithMinVersion(ctx context.Context, cl client.Client, ciphers []string, minVersion configv1.TLSProtocolVersion) {
 	GinkgoHelper()
-	Step("Applying a Custom TLS profile")
+	Step(fmt.Sprintf("Applying a Custom TLS profile with MinTLSVersion %s", minVersion))
 
 	apiServer := &configv1.APIServer{}
 	Expect(cl.Get(ctx, apiServerKey, apiServer)).To(Succeed(), "Failed to get APIServer")
@@ -631,12 +686,12 @@ func applyCustomTLSProfile(ctx context.Context, cl client.Client, ciphers []stri
 		Custom: &configv1.CustomTLSProfile{
 			TLSProfileSpec: configv1.TLSProfileSpec{
 				Ciphers:       ciphers,
-				MinTLSVersion: configv1.VersionTLS12,
+				MinTLSVersion: minVersion,
 			},
 		},
 	}
 	Expect(cl.Update(ctx, apiServer)).To(Succeed(), "Failed to update APIServer with custom TLS profile")
-	Success("Applied Custom TLS profile to APIServer")
+	Success(fmt.Sprintf("Applied Custom TLS profile with MinTLSVersion %s to APIServer", minVersion))
 }
 
 func getIstioRevisionCipherSuites(rev *v1.IstioRevision) []string {
@@ -644,6 +699,13 @@ func getIstioRevisionCipherSuites(rev *v1.IstioRevision) []string {
 		return nil
 	}
 	return rev.Spec.Values.MeshConfig.TlsDefaults.CipherSuites
+}
+
+func getIstioRevisionProxyMetadata(rev *v1.IstioRevision) map[string]string {
+	if rev.Spec.Values == nil || rev.Spec.Values.MeshConfig == nil || rev.Spec.Values.MeshConfig.DefaultConfig == nil {
+		return nil
+	}
+	return rev.Spec.Values.MeshConfig.DefaultConfig.ProxyMetadata
 }
 
 // metricsEndpointAcceptsCipher tests whether the operator's metrics endpoint
