@@ -215,3 +215,33 @@ jobs:
           name: e2e-results-crc-smoke
           path: ${{ github.workspace }}/artifacts/
           if-no-files-found: warn
+
+  notify-failure:
+    name: Open issue on failure
+    needs: e2e
+    # Only fire on real postsubmit runs — not on workflow_dispatch, where
+    # a human is already watching the run.
+    if: failure() && github.event_name == 'push' && needs.e2e.result == 'failure'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Write issue body
+        env:
+          BRANCH: ${{ github.ref_name }}
+          SHORT_SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          cat > /tmp/crc-e2e-failure.md <<EOF
+          CRC OpenShift Local smoke (\`e2e\` job) failed on \`${BRANCH}\` at \`${SHORT_SHA:0:7}\`.
+
+          - Failed job: \`e2e smoke openshift local\`
+          - [View failing run / logs](${RUN_URL})
+          EOF
+
+      - name: Raise an Issue to report CRC smoke failure
+        uses: peter-evans/create-issue-from-file@v5
+        with:
+          title: CRC smoke failed on ${{ github.ref_name }}
+          content-filepath: /tmp/crc-e2e-failure.md
+          labels: automated, test-e2e
