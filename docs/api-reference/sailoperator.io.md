@@ -3604,8 +3604,8 @@ _Appears in:_
 | `network` _string_ | defines the network this cluster belong to. This name corresponds to the networks in the map of mesh networks. |  |  |
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#affinity-v1-core)_ | K8s affinity to set on the ztunnel Pods. Can be used to exclude ztunnel from being scheduled on specified nodes. |  |  |
 | `resourceName` _string_ | resourceName, if set, will override the naming of resources. If not set, will default to the release name. It is recommended to not set this; this is primarily for backwards compatibility. |  |  |
-| `Annotations` _object (keys:string, values:string)_ | Annotations to apply to all top level resources |  |  |
-| `Labels` _object (keys:string, values:string)_ | Labels to apply to all top level resources |  |  |
+| `annotations` _object (keys:string, values:string)_ | Annotations to apply to all top level resources |  |  |
+| `labels` _object (keys:string, values:string)_ | Labels to apply to all top level resources |  |  |
 | `volumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#volumemount-v1-core) array_ | Additional volumeMounts to the ztunnel container |  |  |
 | `volumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#volume-v1-core) array_ | Additional volumes to add to the ztunnel Pod. |  |  |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#toleration-v1-core) array_ | Tolerations for the ztunnel pod |  |  |
