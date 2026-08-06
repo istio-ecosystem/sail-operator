@@ -64,21 +64,13 @@ const (
 	// ManagedByLabelValue is the ManagedByKey label value the operator sets on all objects it creates
 	ManagedByLabelValue = "sail-operator"
 
-	// WebhookReadinessProbeStatusAnnotationKey is an annotation on the istio-sidecar-injection MutatingWebhookConfiguration that
+	// WebhookReadinessStatusAnnotationKey is an annotation on the istio-sidecar-injection MutatingWebhookConfiguration that
 	// reports whether the remote control plane is ready or not
-	WebhookReadinessProbeStatusAnnotationKey = MetadataNamespace + "/readinessProbe.status"
+	WebhookReadinessStatusAnnotationKey = MetadataNamespace + "/readiness.status"
 
-	// WebhookReadinessProbeStatusReasonAnnotationKey is an annotation on the istio-sidecar-injection MutatingWebhookConfiguration that
+	// WebhookReadinessReasonAnnotationKey is an annotation on the istio-sidecar-injection MutatingWebhookConfiguration that
 	// reports why the remote control plane is not ready
-	WebhookReadinessProbeStatusReasonAnnotationKey = MetadataNamespace + "/readinessProbe.reason"
-
-	// WebhookReadinessProbePeriodSecondsAnnotationKey is an annotation on the istio-sidecar-injection MutatingWebhookConfiguration that
-	// specifies the period for the readiness probe
-	WebhookReadinessProbePeriodSecondsAnnotationKey = MetadataNamespace + "/readinessProbe.periodSeconds"
-
-	// WebhookReadinessProbeTimeoutSecondsAnnotationKey is an annotation on the istio-sidecar-injection MutatingWebhookConfiguration that
-	// specifies the timeout for the readiness probe
-	WebhookReadinessProbeTimeoutSecondsAnnotationKey = MetadataNamespace + "/readinessProbe.timeoutSeconds"
+	WebhookReadinessReasonAnnotationKey = MetadataNamespace + "/readiness.reason"
 
 	// IstioInjectionLabel is the label that is used to configure injection for the 'default' IstioRevision
 	IstioInjectionLabel = "istio-injection"
