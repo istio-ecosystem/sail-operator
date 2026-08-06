@@ -16,8 +16,12 @@
 
 # Installs kube-prometheus-stack on KinD for monitoring controller e2e tests.
 # ServiceMonitor and PodMonitor CRDs are provided by the chart's Prometheus Operator.
-# SelectorNilUsesHelmValues is disabled so Prometheus discovers Sail-generated monitors
-# without requiring a matching release label (users can customize labels manually).
+#
+# Leave serviceMonitorSelectorNilUsesHelmValues / podMonitorSelectorNilUsesHelmValues at
+# their chart defaults (true) so e2e matches a typical kube-prometheus-stack install.
+# With those defaults, Prometheus only selects monitors that carry a matching
+# release: <helm-release-name> label. Sail currently sets release: istio (upstream sample);
+# wiring the label expected by kube-prometheus-stack is follow-up work.
 
 set -eu -o pipefail
 
@@ -43,9 +47,7 @@ helm install "${PROM_RELEASE}" prometheus-community/kube-prometheus-stack \
   --set grafana.enabled=false \
   --set alertmanager.enabled=false \
   --set prometheusOperator.admissionWebhooks.enabled=false \
-  --set prometheusOperator.tls.enabled=false \
-  --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false \
-  --set prometheus.prometheusSpec.podMonitorSelectorNilUsesHelmValues=false
+  --set prometheusOperator.tls.enabled=false
 
 kubectl wait --for=condition=Established crd/servicemonitors.monitoring.coreos.com --timeout="${WAIT_TIMEOUT}"
 kubectl wait --for=condition=Established crd/podmonitors.monitoring.coreos.com --timeout="${WAIT_TIMEOUT}"
