@@ -379,6 +379,14 @@ if [ "${SKIP_BUILD}" == "false" ]; then
     fi
 
     ${COMMAND} create ns "${NAMESPACE}" || true
+    # OLM registry pods (registry-grpc, registry-grpc-init) don't satisfy the
+    # restricted:latest PodSecurity policy that OCP 4.23 enforces by default on new namespaces.
+    if [ "${OCP}" == "true" ]; then
+      ${COMMAND} label namespace "${NAMESPACE}" \
+        pod-security.kubernetes.io/enforce=privileged \
+        pod-security.kubernetes.io/warn=privileged \
+        pod-security.kubernetes.io/audit=privileged --overwrite || true
+    fi
     ${OPERATOR_SDK} run bundle "${BUNDLE_IMG}" -n "${NAMESPACE}" --skip-tls --timeout 5m || exit 1
 
     await_operator
