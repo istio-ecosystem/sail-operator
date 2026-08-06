@@ -289,6 +289,134 @@ func TestApplyTLSConfig(t *testing.T) {
 						MinProtocolVersion: v1.MeshConfigTLSConfigTLSProtocolTlsv13,
 						EcdhCurves:         []string{"X25519MLKEM768", "X25519", "P-256", "P-384"},
 					},
+					DefaultConfig: &v1.MeshConfigProxyConfig{
+						ProxyMetadata: map[string]string{
+							"OPENSSL_TLS1_3_CIPHERSUITES": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+						},
+					},
+				},
+				Pilot: &v1.PilotConfig{
+					ExtraContainerArgs: []string{
+						"--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+						"--tls-min-version=1.3",
+					},
+				},
+			},
+		},
+		{
+			name: "does not override existing OPENSSL_TLS1_3_CIPHERSUITES in proxyMetadata",
+			tlsConfig: &config.TLSConfig{
+				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
+				MinVersion:   tls.VersionTLS13,
+				OpenShift:    &config.OpenShiftTLS{},
+			},
+			istioVersion: "1.30.0",
+			inputValues: &v1.Values{
+				MeshConfig: &v1.MeshConfig{
+					DefaultConfig: &v1.MeshConfigProxyConfig{
+						ProxyMetadata: map[string]string{
+							"OPENSSL_TLS1_3_CIPHERSUITES": "TLS_AES_256_GCM_SHA384",
+						},
+					},
+				},
+			},
+			wantValues: &v1.Values{
+				MeshConfig: &v1.MeshConfig{
+					MeshMTLS: &v1.MeshConfigTLSConfig{
+						CipherSuites:       nil,
+						MinProtocolVersion: v1.MeshConfigTLSConfigTLSProtocolTlsv13,
+					},
+					TlsDefaults: &v1.MeshConfigTLSConfig{
+						CipherSuites:       nil,
+						MinProtocolVersion: v1.MeshConfigTLSConfigTLSProtocolTlsv13,
+					},
+					DefaultConfig: &v1.MeshConfigProxyConfig{
+						ProxyMetadata: map[string]string{
+							"OPENSSL_TLS1_3_CIPHERSUITES": "TLS_AES_256_GCM_SHA384",
+						},
+					},
+				},
+				Pilot: &v1.PilotConfig{
+					ExtraContainerArgs: []string{
+						"--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+						"--tls-min-version=1.3",
+					},
+				},
+			},
+		},
+		{
+			name: "preserves existing proxyMetadata keys when adding OPENSSL_TLS1_3_CIPHERSUITES",
+			tlsConfig: &config.TLSConfig{
+				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
+				MinVersion:   tls.VersionTLS13,
+				OpenShift:    &config.OpenShiftTLS{},
+			},
+			istioVersion: "1.30.0",
+			inputValues: &v1.Values{
+				MeshConfig: &v1.MeshConfig{
+					DefaultConfig: &v1.MeshConfigProxyConfig{
+						ProxyMetadata: map[string]string{
+							"ISTIO_DUAL_STACK": "true",
+						},
+					},
+				},
+			},
+			wantValues: &v1.Values{
+				MeshConfig: &v1.MeshConfig{
+					MeshMTLS: &v1.MeshConfigTLSConfig{
+						CipherSuites:       nil,
+						MinProtocolVersion: v1.MeshConfigTLSConfigTLSProtocolTlsv13,
+					},
+					TlsDefaults: &v1.MeshConfigTLSConfig{
+						CipherSuites:       nil,
+						MinProtocolVersion: v1.MeshConfigTLSConfigTLSProtocolTlsv13,
+					},
+					DefaultConfig: &v1.MeshConfigProxyConfig{
+						ProxyMetadata: map[string]string{
+							"ISTIO_DUAL_STACK":             "true",
+							"OPENSSL_TLS1_3_CIPHERSUITES": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+						},
+					},
+				},
+				Pilot: &v1.PilotConfig{
+					ExtraContainerArgs: []string{
+						"--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+						"--tls-min-version=1.3",
+					},
+				},
+			},
+		},
+		{
+			name: "preserves existing defaultConfig fields when adding proxyMetadata",
+			tlsConfig: &config.TLSConfig{
+				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
+				MinVersion:   tls.VersionTLS13,
+				OpenShift:    &config.OpenShiftTLS{},
+			},
+			istioVersion: "1.30.0",
+			inputValues: &v1.Values{
+				MeshConfig: &v1.MeshConfig{
+					DefaultConfig: &v1.MeshConfigProxyConfig{
+						DiscoveryAddress: new("istiod.custom-ns.svc:15012"),
+					},
+				},
+			},
+			wantValues: &v1.Values{
+				MeshConfig: &v1.MeshConfig{
+					MeshMTLS: &v1.MeshConfigTLSConfig{
+						CipherSuites:       nil,
+						MinProtocolVersion: v1.MeshConfigTLSConfigTLSProtocolTlsv13,
+					},
+					TlsDefaults: &v1.MeshConfigTLSConfig{
+						CipherSuites:       nil,
+						MinProtocolVersion: v1.MeshConfigTLSConfigTLSProtocolTlsv13,
+					},
+					DefaultConfig: &v1.MeshConfigProxyConfig{
+						DiscoveryAddress: new("istiod.custom-ns.svc:15012"),
+						ProxyMetadata: map[string]string{
+							"OPENSSL_TLS1_3_CIPHERSUITES": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+						},
+					},
 				},
 				Pilot: &v1.PilotConfig{
 					ExtraContainerArgs: []string{
