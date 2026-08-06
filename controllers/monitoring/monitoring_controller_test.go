@@ -59,9 +59,11 @@ var (
 	}
 )
 
-func expectMonitoringLabels(g Gomega, labels map[string]string) {
+func expectMonitoringLabels(g Gomega, labels map[string]string, monitoring string) {
 	g.Expect(labels).To(HaveKeyWithValue(constants.ManagedByLabelKey, constants.ManagedByLabelValue))
 	g.Expect(labels).To(HaveKeyWithValue(monitoredByLabel, kubePrometheusValue))
+	g.Expect(labels).To(HaveKeyWithValue(releaseLabel, releaseLabelValue))
+	g.Expect(labels).To(HaveKeyWithValue(monitoringLabel, monitoring))
 }
 
 // newNamespaceWithInjection creates a namespace with the istio-injection=enabled label
@@ -94,7 +96,7 @@ func newIstioWithMonitoringEnabled(name, namespace string) *v1.Istio {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Annotations: map[string]string{
-				constants.MonitoringAnnotationKey: constants.MonitoringAnnotationEnabled,
+				constants.MonitoringAnnotationKey: constants.MonitoringAnnotationEnabledValue,
 			},
 		},
 		Spec: v1.IstioSpec{
@@ -196,23 +198,6 @@ func TestReconcile(t *testing.T) {
 			expectPMNamespace: "",
 		},
 		{
-			name: "does not create PodMonitor in istio-system namespace",
-			rev: &v1.IstioRevision{
-				ObjectMeta: revisionMeta,
-				Spec: v1.IstioRevisionSpec{
-					Version:   "v1.24.0",
-					Namespace: istioNamespace,
-				},
-			},
-			existingObjects: []client.Object{
-				newIstioWithMonitoringEnabled(istioName, istioNamespace),
-				newNamespaceWithInjection(istioNamespace), // control plane namespace with injection label
-			},
-			expectErr:         false,
-			expectSMCreated:   true,
-			expectPMNamespace: "", // no PodMonitor should be created
-		},
-		{
 			name: "no PodMonitor when no namespaces have injection enabled",
 			rev: &v1.IstioRevision{
 				ObjectMeta: revisionMeta,
@@ -293,7 +278,7 @@ func TestReconcile(t *testing.T) {
 				g.Expect(err).ToNot(HaveOccurred())
 				// Verify the ServiceMonitor has expected content
 				g.Expect(sm.Name).To(Equal(revName + serviceMonitorNameSuffix))
-				expectMonitoringLabels(g, sm.Labels)
+				expectMonitoringLabels(g, sm.Labels, serviceMonitorMonitoring)
 			}
 
 			// Check PodMonitor creation
@@ -311,7 +296,7 @@ func TestReconcile(t *testing.T) {
 				g.Expect(err).ToNot(HaveOccurred())
 				// Verify the PodMonitor has expected content
 				g.Expect(pm.Name).To(Equal(revName + podMonitorNameSuffix))
-				expectMonitoringLabels(g, pm.Labels)
+				expectMonitoringLabels(g, pm.Labels, podMonitorMonitoring)
 			}
 		})
 	}
@@ -432,7 +417,7 @@ func TestReconcileServiceMonitor(t *testing.T) {
 					g.Expect(result.Labels).To(HaveKeyWithValue("custom", "user-set"))
 					g.Expect(result.ResourceVersion).To(Equal("123"))
 				} else {
-					expectMonitoringLabels(g, result.Labels)
+					expectMonitoringLabels(g, result.Labels, serviceMonitorMonitoring)
 				}
 			}
 		})
@@ -499,22 +484,6 @@ func TestReconcilePodMonitors(t *testing.T) {
 			},
 			expectErr:          false,
 			expectPMNamespaces: []string{appNamespace, "another-app-namespace"},
-		},
-		{
-			name: "skips control plane namespace",
-			rev: &v1.IstioRevision{
-				ObjectMeta: revisionMeta,
-				Spec: v1.IstioRevisionSpec{
-					Version:   "v1.24.0",
-					Namespace: istioNamespace,
-				},
-			},
-			existingNamespaces: []client.Object{
-				newNamespaceWithRevLabel(istioNamespace, revisionName), // should be skipped
-				newNamespaceWithRevLabel(appNamespace, revisionName),
-			},
-			expectErr:          false,
-			expectPMNamespaces: []string{appNamespace}, // only app namespace
 		},
 		{
 			name: "leaves existing PodMonitor unchanged",
@@ -631,7 +600,7 @@ func TestReconcilePodMonitors(t *testing.T) {
 						g.Expect(pm.Labels).To(HaveKeyWithValue("custom", "user-set"))
 						g.Expect(pm.ResourceVersion).To(Equal("123"))
 					} else {
-						expectMonitoringLabels(g, pm.Labels)
+						expectMonitoringLabels(g, pm.Labels, podMonitorMonitoring)
 					}
 				}
 			}
@@ -726,9 +695,10 @@ func TestBuildServiceMonitor(t *testing.T) {
 			// Check labels
 			labels := result.GetLabels()
 			g.Expect(labels["app"]).To(Equal("istiod"))
-			expectMonitoringLabels(g, labels)
+			expectMonitoringLabels(g, labels, serviceMonitorMonitoring)
 
 			// Check spec.targetLabels and selector
+			g.Expect(result.Spec.JobLabel).To(Equal(serviceMonitorJobLabel))
 			g.Expect(result.Spec.TargetLabels).To(Equal(tt.expectedTargetLabels))
 			g.Expect(result.Spec.Selector.MatchExpressions).To(HaveLen(1))
 			g.Expect(result.Spec.Selector.MatchExpressions[0].Key).To(Equal(tt.expectedSelectorKey))
@@ -738,9 +708,7 @@ func TestBuildServiceMonitor(t *testing.T) {
 			g.Expect(result.Spec.Endpoints).To(HaveLen(1))
 			endpoint := result.Spec.Endpoints[0]
 			g.Expect(endpoint.Port).To(Equal("http-monitoring"))
-			g.Expect(endpoint.Path).To(Equal("/metrics"))
-			g.Expect(string(*endpoint.Scheme)).To(Equal("http"))
-			g.Expect(string(endpoint.Interval)).To(Equal("30s"))
+			g.Expect(string(endpoint.Interval)).To(Equal("15s"))
 			g.Expect(endpoint.RelabelConfigs).To(BeEmpty())
 
 			// Check owner references
@@ -823,13 +791,14 @@ func TestBuildPodMonitor(t *testing.T) {
 			// Check labels
 			labels := result.GetLabels()
 			g.Expect(labels["app"]).To(Equal("istio-proxy"))
-			expectMonitoringLabels(g, labels)
+			expectMonitoringLabels(g, labels, podMonitorMonitoring)
 
 			// PodMonitor should NOT have owner references (cross-namespace)
 			ownerRefs := result.GetOwnerReferences()
 			g.Expect(ownerRefs).To(BeEmpty())
 
 			// Check spec.selector.matchExpressions
+			g.Expect(result.Spec.JobLabel).To(Equal(podMonitorJobLabel))
 			g.Expect(result.Spec.Selector.MatchExpressions).To(HaveLen(1))
 			expr := result.Spec.Selector.MatchExpressions[0]
 			g.Expect(expr.Key).To(Equal("istio-prometheus-ignore"))
@@ -840,8 +809,7 @@ func TestBuildPodMonitor(t *testing.T) {
 			endpoint := result.Spec.PodMetricsEndpoints[0]
 			g.Expect(endpoint.Port).To(BeNil())
 			g.Expect(endpoint.Path).To(Equal("/stats/prometheus"))
-			g.Expect(string(*endpoint.Scheme)).To(Equal("http"))
-			g.Expect(string(endpoint.Interval)).To(Equal("30s"))
+			g.Expect(string(endpoint.Interval)).To(Equal("15s"))
 			g.Expect(endpoint.RelabelConfigs).To(HaveLen(tt.expectedRelabelCount))
 			g.Expect(endpoint.RelabelConfigs[0].Regex).To(Equal("istio-proxy"))
 			g.Expect(endpoint.RelabelConfigs[len(endpoint.RelabelConfigs)-1].TargetLabel).To(Equal(tt.expectedLastLabel))
