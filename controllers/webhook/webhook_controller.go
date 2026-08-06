@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -106,8 +107,8 @@ func doProbe(ctx context.Context, webhook *admissionv1.MutatingWebhookConfigurat
 		return false, errors.New("mutatingwebhookconfiguration contains no webhooks")
 	}
 	clientConfig := webhook.Webhooks[0].ClientConfig
-	if clientConfig.Service == nil {
-		return false, errors.New("missing webhooks[].clientConfig.service")
+	if clientConfig.Service == nil && clientConfig.URL == nil {
+		return false, errors.New("missing both webhooks[].clientConfig.service and webhooks[].clientConfig.Url")
 	}
 
 	if len(clientConfig.CABundle) == 0 {
@@ -129,12 +130,12 @@ func doProbe(ctx context.Context, webhook *admissionv1.MutatingWebhookConfigurat
 		},
 	}
 
-	url, err := getReadinessProbeURL(clientConfig)
+	reqUrl, err := getReadinessProbeURL(clientConfig)
 	if err != nil {
 		return false, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqUrl, nil)
 	if err != nil {
 		return false, err
 	}
@@ -153,7 +154,10 @@ func doProbe(ctx context.Context, webhook *admissionv1.MutatingWebhookConfigurat
 func getReadinessProbeURL(config admissionv1.WebhookClientConfig) (string, error) {
 	switch {
 	case config.URL != nil:
-		return "", errors.New("only webhooks pointing to a Service are supported")
+		if u, err := url.Parse(*config.URL); err == nil && u.Scheme != "" && u.Host != "" {
+			return fmt.Sprintf("%s://%s/ready", u.Scheme, u.Host), nil
+		}
+		return "", errors.New("failed to parse webhook url in WebhookClientConfig")
 
 	case config.Service != nil:
 		svc := config.Service
