@@ -96,7 +96,7 @@ spec:
 func TestFipsComputeValues(t *testing.T) {
 	const (
 		namespace    = "istio-system"
-		version      = "my-version"
+		version      = "1.29.0"
 		revisionName = "my-revision"
 	)
 	resourceDir := t.TempDir()
