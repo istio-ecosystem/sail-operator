@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 func newFakeClientBuilder() *fake.ClientBuilder {
@@ -975,6 +976,43 @@ func TestSidecarInjectionNamespacePredicate(t *testing.T) {
 			},
 			expected: false,
 		},
+		{
+			name: "GenericFunc: namespace with injection enabled",
+			event: event.GenericEvent{
+				Object: newNamespaceWithInjection("test-ns"),
+			},
+			expected: true,
+		},
+		{
+			name: "GenericFunc: namespace without injection",
+			event: event.GenericEvent{
+				Object: &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-ns",
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "CreateFunc: nil object",
+			event: event.CreateEvent{
+				Object: nil,
+			},
+			expected: false,
+		},
+		{
+			name: "CreateFunc: namespace with nil labels map",
+			event: event.CreateEvent{
+				Object: &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "test-ns",
+						Labels: nil,
+					},
+				},
+			},
+			expected: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -989,11 +1027,183 @@ func TestSidecarInjectionNamespacePredicate(t *testing.T) {
 				result = pred.Update(e)
 			case event.DeleteEvent:
 				result = pred.Delete(e)
+			case event.GenericEvent:
+				result = pred.Generic(e)
 			}
 
 			g.Expect(result).To(Equal(tt.expected))
 		})
 	}
+}
+
+func TestParentMonitoringEnabled(t *testing.T) {
+	cfg := newReconcilerTestConfig()
+
+	tests := []struct {
+		name      string
+		rev       *v1.IstioRevision
+		objects   []client.Object
+		intercept interceptor.Funcs
+		want      bool
+		wantErr   bool
+	}{
+		{
+			name: "returns false when revision has no owner references",
+			rev: &v1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{Name: revisionName},
+			},
+			want: false,
+		},
+		{
+			name: "ignores non-Istio owner references",
+			rev: &v1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: revisionName,
+					OwnerReferences: []metav1.OwnerReference{
+						{Kind: "ConfigMap", Name: "not-istio"},
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "returns false when parent Istio CR is not found",
+			rev: &v1.IstioRevision{
+				ObjectMeta: revisionMeta,
+			},
+			want: false,
+		},
+		{
+			name: "returns error when getting parent Istio CR fails",
+			rev: &v1.IstioRevision{
+				ObjectMeta: revisionMeta,
+			},
+			intercept: interceptor.Funcs{
+				Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					if _, ok := obj.(*v1.Istio); ok {
+						return fmt.Errorf("get istio failed")
+					}
+					return c.Get(ctx, key, obj, opts...)
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "returns true when monitoring annotation is enabled",
+			rev: &v1.IstioRevision{
+				ObjectMeta: revisionMeta,
+			},
+			objects: []client.Object{
+				newIstioWithMonitoringEnabled(istioName, istioNamespace),
+			},
+			want: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			builder := newFakeClientBuilder().WithObjects(tt.objects...)
+			if tt.intercept.Get != nil {
+				builder = builder.WithInterceptorFuncs(tt.intercept)
+			}
+			r := NewReconciler(cfg, builder.Build(), scheme.Scheme)
+			got, err := r.parentMonitoringEnabled(ctx, tt.rev)
+			if tt.wantErr {
+				g.Expect(err).To(HaveOccurred())
+				return
+			}
+			g.Expect(err).ToNot(HaveOccurred())
+			g.Expect(got).To(Equal(tt.want))
+		})
+	}
+}
+
+func TestNamespacesForRevision(t *testing.T) {
+	cfg := newReconcilerTestConfig()
+
+	t.Run("skips namespaces where istio-injection takes precedence over istio.io/rev", func(t *testing.T) {
+		g := NewWithT(t)
+		both := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "both-labels",
+				Labels: map[string]string{
+					constants.IstioInjectionLabel: constants.IstioInjectionEnabledValue,
+					constants.IstioRevLabel:       revisionName,
+				},
+			},
+		}
+		cl := newFakeClientBuilder().WithObjects(
+			both,
+			newNamespaceWithRevLabel(appNamespace, revisionName),
+		).Build()
+		r := NewReconciler(cfg, cl, scheme.Scheme)
+		namespaces, err := r.namespacesForRevision(ctx, &v1.IstioRevision{ObjectMeta: revisionMeta})
+		g.Expect(err).ToNot(HaveOccurred())
+		g.Expect(namespaces).To(HaveLen(1))
+		g.Expect(namespaces[0].Name).To(Equal(appNamespace))
+	})
+
+	t.Run("default revision includes injection-labeled namespaces and skips rev-only duplicates", func(t *testing.T) {
+		g := NewWithT(t)
+		// Appears in both the istio-injection=enabled list and the istio.io/rev=default list.
+		overlap := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "overlap-ns",
+				Labels: map[string]string{
+					constants.IstioInjectionLabel: constants.IstioInjectionEnabledValue,
+					constants.IstioRevLabel:       v1.DefaultRevision,
+				},
+			},
+		}
+		injectionOnly := newNamespaceWithInjection("injection-only")
+		cl := newFakeClientBuilder().WithObjects(overlap, injectionOnly).Build()
+		r := NewReconciler(cfg, cl, scheme.Scheme)
+		namespaces, err := r.namespacesForRevision(ctx, &v1.IstioRevision{
+			ObjectMeta: metav1.ObjectMeta{Name: v1.DefaultRevision},
+		})
+		g.Expect(err).ToNot(HaveOccurred())
+		names := make([]string, 0, len(namespaces))
+		for _, ns := range namespaces {
+			names = append(names, ns.Name)
+		}
+		g.Expect(names).To(ConsistOf("overlap-ns", "injection-only"))
+	})
+}
+
+func TestMapNamespaceToReconcileRequest(t *testing.T) {
+	g := NewWithT(t)
+	cfg := newReconcilerTestConfig()
+	rev1 := &v1.IstioRevision{ObjectMeta: metav1.ObjectMeta{Name: "rev-a"}}
+	rev2 := &v1.IstioRevision{ObjectMeta: metav1.ObjectMeta{Name: "rev-b"}}
+	cl := newFakeClientBuilder().WithObjects(rev1, rev2).Build()
+	r := NewReconciler(cfg, cl, scheme.Scheme)
+	reqs := r.mapNamespaceToReconcileRequest(ctx, newNamespaceWithInjection(appNamespace))
+	g.Expect(reqs).To(ConsistOf(
+		reconcile.Request{NamespacedName: types.NamespacedName{Name: "rev-a"}},
+		reconcile.Request{NamespacedName: types.NamespacedName{Name: "rev-b"}},
+	))
+}
+
+func TestMapIstioToReconcileRequest(t *testing.T) {
+	g := NewWithT(t)
+	cfg := newReconcilerTestConfig()
+	owned := &v1.IstioRevision{ObjectMeta: revisionMeta}
+	other := &v1.IstioRevision{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "other",
+			OwnerReferences: []metav1.OwnerReference{
+				{Kind: v1.IstioKind, Name: "someone-else"},
+			},
+		},
+	}
+	unowned := &v1.IstioRevision{ObjectMeta: metav1.ObjectMeta{Name: "unowned"}}
+	cl := newFakeClientBuilder().WithObjects(owned, other, unowned).Build()
+	r := NewReconciler(cfg, cl, scheme.Scheme)
+	reqs := r.mapIstioToReconcileRequest(ctx, &v1.Istio{ObjectMeta: metav1.ObjectMeta{Name: istioName}})
+	g.Expect(reqs).To(ConsistOf(
+		reconcile.Request{NamespacedName: types.NamespacedName{Name: revisionName}},
+	))
 }
 
 func newReconcilerTestConfig() config.ReconcilerConfig {
