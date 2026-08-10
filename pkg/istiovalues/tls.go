@@ -90,6 +90,10 @@ func ApplyTLSConfig(tlsConfig *config.TLSConfig, istioVersion string, values *v1
 		// Envoy does not support setting TLS ciphers when minProtocolVersion is 1.3 BUT the openssl
 		// backend does allow you to customize these. On openshift the envoy image has a custom openssl
 		// config file baked in that will populate the tls1.3 cipher suites through an env var.
+		// Also important to note is that all non-FIPS approved ciphers will be silently dropped by
+		// openssl, even if they are specified in the openssl config. So we do not need to filter out
+		// FIPS ciphers here. We can pass them to the conf and openssl will drop them automatically on
+		// a FIPS enabled cluster.
 		if tlsConfig.MinVersion == tls.VersionTLS13 {
 			if values.MeshConfig.DefaultConfig == nil {
 				values.MeshConfig.DefaultConfig = &v1.MeshConfigProxyConfig{}
