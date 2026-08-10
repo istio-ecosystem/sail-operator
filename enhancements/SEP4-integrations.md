@@ -140,8 +140,6 @@ Three new CRDs will be added corresponding broadly to different integration type
   - ZeroTrustWorkloadIdentityManagement
   - IstioCSR
   - CertManager
-- `DashboardIntegration`
-  - Perses
 
 Each `Integration` resource has a `targetRefs` field that specifies the resources the integration configures. Each target reference specifies the `kind` (e.g. `Istio`, `Kiali`), `name`, and optionally `namespace` of the target resource. A single `Integration` resource can target multiple resources, such as both an `Istio` and a `Kiali` resource. If there are multiple `Integration` resources of the same Kind that target the same ref, the one that is created later is considered invalid and this will be reflected in the status. 
 
@@ -248,24 +246,6 @@ spec:
     istioCSRRef:
       name: default
       namespace: istio-csr
-```
-
-Integrating Kiali with the Perses Dashboards:
-```yaml
-kind: DashboardIntegration
-apiVersion: sailoperator.io/v1alpha1
-metadata:
-  name: perses
-spec:
-  targetRefs:
-    - kind: Kiali
-      name: kiali
-      namespace: istio-system
-  type: Perses
-  perses:
-    persesDashboardRef:
-      name: perses
-      namespace: perses-monitoring
 ```
 
 These are broadly what the golang API changes would be:
