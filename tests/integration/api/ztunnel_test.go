@@ -204,11 +204,7 @@ var _ = Describe("ZTunnel FIPS", Label("ztunnel", "fips"), Ordered, func() {
 
 	// TODO: Remove this test when Istio 1.29 goes out of support
 	It("sets TLS12_ENABLED on the ztunnel DaemonSet when FipsEnabled is true and version < 1.30", func() {
-		originalFipsEnabled := istiovalues.FipsEnabled
-		DeferCleanup(func() {
-			istiovalues.FipsEnabled = originalFipsEnabled
-		})
-		istiovalues.FipsEnabled = true
+		istiovalues.EnableFIPS(GinkgoT())
 
 		ztunnel := &v1.ZTunnel{
 			ObjectMeta: metav1.ObjectMeta{
@@ -234,11 +230,7 @@ var _ = Describe("ZTunnel FIPS", Label("ztunnel", "fips"), Ordered, func() {
 	})
 
 	It("removes TLS12_ENABLED from the ztunnel DaemonSet when version > 1.30", func() {
-		originalFipsEnabled := istiovalues.FipsEnabled
-		DeferCleanup(func() {
-			istiovalues.FipsEnabled = originalFipsEnabled
-		})
-		istiovalues.FipsEnabled = true
+		istiovalues.EnableFIPS(GinkgoT())
 
 		ztunnel := &v1.ZTunnel{
 			ObjectMeta: metav1.ObjectMeta{
@@ -392,7 +384,8 @@ var _ = Describe("ZTunnel targetRef", Label("ztunnel", "targetRef"), Ordered, fu
 				g.Expect(k8sClient.Get(ctx, daemonsetKey, ds)).To(Succeed())
 				g.Expect(ds.Spec.Template.Spec.Containers).ToNot(BeEmpty())
 				g.Expect(ds.Spec.Template.Spec.Containers[0].Env).To(
-					ContainElement(corev1.EnvVar{Name: "LOG_FORMAT", Value: "json"}))
+					ContainElement(corev1.EnvVar{Name: "LOG_FORMAT", Value: "json"}),
+				)
 			}).Should(Succeed())
 		})
 	})
@@ -461,7 +454,8 @@ var _ = Describe("ZTunnel targetRef", Label("ztunnel", "targetRef"), Ordered, fu
 				g.Expect(k8sClient.Get(ctx, daemonsetKey, ds)).To(Succeed())
 				g.Expect(ds.Spec.Template.Spec.Containers).ToNot(BeEmpty())
 				g.Expect(ds.Spec.Template.Spec.Containers[0].Env).To(
-					ContainElement(corev1.EnvVar{Name: "LOG_FORMAT", Value: "json"}))
+					ContainElement(corev1.EnvVar{Name: "LOG_FORMAT", Value: "json"}),
+				)
 			}).Should(Succeed())
 		})
 	})

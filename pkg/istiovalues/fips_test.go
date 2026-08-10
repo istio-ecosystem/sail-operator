@@ -15,51 +15,11 @@
 package istiovalues
 
 import (
-	"os"
-	"path"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 )
-
-func TestDetectFipsMode(t *testing.T) {
-	resourceDir := t.TempDir()
-	os.WriteFile(path.Join(resourceDir, "fips_enabled"), []byte("1\n"), 0o644)
-	os.WriteFile(path.Join(resourceDir, "fips_not_enabled"), []byte("0\n"), 0o644)
-	tests := []struct {
-		name        string
-		filepath    string
-		expectValue bool
-	}{
-		{
-			name:        "FIPS not enabled",
-			filepath:    path.Join(resourceDir, "fips_not_enabled"),
-			expectValue: false,
-		},
-		{
-			name:        "FIPS enabled",
-			filepath:    path.Join(resourceDir, "fips_enabled"),
-			expectValue: true,
-		},
-		{
-			name:        "file not found",
-			filepath:    path.Join(resourceDir, "fips_not_found"),
-			expectValue: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			detectFipsMode(tt.filepath)
-			actual := FipsEnabled
-
-			if diff := cmp.Diff(tt.expectValue, actual); diff != "" {
-				t.Errorf("FipsEnabled variable wasn't applied properly; diff (-expected, +actual):\n%v", diff)
-			}
-		})
-	}
-}
 
 func TestApplyFipsValues(t *testing.T) {
 	tests := []struct {
@@ -172,9 +132,9 @@ func TestApplyFipsValues(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			originalFipsEnabled := FipsEnabled
-			t.Cleanup(func() { FipsEnabled = originalFipsEnabled })
-			FipsEnabled = tt.fipsEnabled
+			if tt.fipsEnabled {
+				EnableFIPS(t)
+			}
 			err := ApplyFipsValues(tt.inputValues, tt.version)
 
 			if tt.expectErr {
@@ -309,9 +269,9 @@ func TestApplyZTunnelFipsValues(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			originalFipsEnabled := FipsEnabled
-			t.Cleanup(func() { FipsEnabled = originalFipsEnabled })
-			FipsEnabled = tt.fipsEnabled
+			if tt.fipsEnabled {
+				EnableFIPS(t)
+			}
 			ApplyZTunnelFipsValues(tt.inputValues, tt.version)
 
 			if diff := cmp.Diff(tt.expectValues, tt.inputValues); diff != "" {
