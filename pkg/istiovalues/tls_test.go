@@ -373,7 +373,7 @@ func TestApplyTLSConfig(t *testing.T) {
 					},
 					DefaultConfig: &v1.MeshConfigProxyConfig{
 						ProxyMetadata: map[string]string{
-							"ISTIO_DUAL_STACK":             "true",
+							"ISTIO_DUAL_STACK":            "true",
 							"OPENSSL_TLS1_3_CIPHERSUITES": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
 						},
 					},
