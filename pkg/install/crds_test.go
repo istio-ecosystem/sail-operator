@@ -430,7 +430,7 @@ func TestUnmanagedCRDNotTakenOver(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	infos, err := m.Reconcile(ctx, Options{ManageCRDs: true, IncludeAllCRDs: true})
+	infos, err := m.Reconcile(ctx, Options{ManageCRDs: true, IncludeAllCRDs: true}, "v1.30.0")
 	g.Expect(err).NotTo(HaveOccurred())
 
 	for _, info := range infos {
@@ -491,7 +491,7 @@ func TestCRDOwnershipLabelCustom(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	infos, err := m.Reconcile(ctx, Options{ManageCRDs: true, IncludeAllCRDs: true})
+	infos, err := m.Reconcile(ctx, Options{ManageCRDs: true, IncludeAllCRDs: true}, "v1.30.0")
 	g.Expect(err).NotTo(HaveOccurred())
 
 	for _, info := range infos {
@@ -513,6 +513,201 @@ func TestCRDOwnershipLabelCustom(t *testing.T) {
 			g.Expect(updated.Labels[customKey]).To(Equal(customValue))
 		}
 	}
+}
+
+func TestIsDowngrade(t *testing.T) {
+	tests := []struct {
+		name            string
+		existingVersion string
+		newVersion      string
+		expect          bool
+	}{
+		{
+			name:            "newer version is not a downgrade",
+			existingVersion: "v1.29.0",
+			newVersion:      "v1.30.0",
+			expect:          false,
+		},
+		{
+			name:            "same version is not a downgrade",
+			existingVersion: "v1.30.0",
+			newVersion:      "v1.30.0",
+			expect:          false,
+		},
+		{
+			name:            "older version is a downgrade",
+			existingVersion: "v1.30.0",
+			newVersion:      "v1.29.0",
+			expect:          true,
+		},
+		{
+			name:            "older patch version is a downgrade",
+			existingVersion: "v1.30.3",
+			newVersion:      "v1.30.1",
+			expect:          true,
+		},
+		{
+			name:            "no existing annotation is not a downgrade",
+			existingVersion: "",
+			newVersion:      "v1.30.0",
+			expect:          false,
+		},
+		{
+			name:            "empty new version is not a downgrade",
+			existingVersion: "v1.30.0",
+			newVersion:      "",
+			expect:          false,
+		},
+		{
+			name:            "invalid existing version is not a downgrade",
+			existingVersion: "not-a-version",
+			newVersion:      "v1.30.0",
+			expect:          false,
+		},
+		{
+			name:            "invalid new version is not a downgrade",
+			existingVersion: "v1.30.0",
+			newVersion:      "not-a-version",
+			expect:          false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			existing := &apiextensionsv1.CustomResourceDefinition{}
+			if tc.existingVersion != "" {
+				existing.SetAnnotations(map[string]string{
+					"app.kubernetes.io/version": tc.existingVersion,
+				})
+			}
+			g.Expect(isDowngrade(existing, tc.newVersion)).To(Equal(tc.expect))
+		})
+	}
+}
+
+func TestSetVersionAnnotation(t *testing.T) {
+	g := NewWithT(t)
+
+	crd := &apiextensionsv1.CustomResourceDefinition{}
+	setVersionAnnotation(crd, "v1.30.0")
+	g.Expect(crd.Annotations).To(HaveKeyWithValue("app.kubernetes.io/version", "v1.30.0"))
+
+	setVersionAnnotation(crd, "v1.31.0")
+	g.Expect(crd.Annotations).To(HaveKeyWithValue("app.kubernetes.io/version", "v1.31.0"))
+}
+
+func TestSetVersionAnnotation_emptyVersion(t *testing.T) {
+	g := NewWithT(t)
+
+	crd := &apiextensionsv1.CustomResourceDefinition{}
+	setVersionAnnotation(crd, "")
+	g.Expect(crd.Annotations).To(BeNil())
+}
+
+func TestApplyCRD_skipsDowngrade(t *testing.T) {
+	g := NewWithT(t)
+
+	existing := &apiextensionsv1.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "virtualservices.networking.istio.io",
+			Labels: map[string]string{
+				defaultCRDOwnershipLabelKey: defaultCRDOwnershipLabelValue,
+			},
+			Annotations: map[string]string{
+				"app.kubernetes.io/version": "v1.30.0",
+			},
+		},
+		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
+			Group: "networking.istio.io",
+			Names: apiextensionsv1.CustomResourceDefinitionNames{Kind: "VirtualService"},
+		},
+		Status: apiextensionsv1.CustomResourceDefinitionStatus{
+			Conditions: []apiextensionsv1.CustomResourceDefinitionCondition{
+				{Type: apiextensionsv1.Established, Status: apiextensionsv1.ConditionTrue},
+			},
+		},
+	}
+
+	s := runtime.NewScheme()
+	g.Expect(apiextensionsv1.AddToScheme(s)).To(Succeed())
+	cl := fake.NewClientBuilder().WithScheme(s).WithObjects(existing).Build()
+
+	m := &crdManager{
+		cl:                  cl,
+		ownershipLabelKey:   defaultCRDOwnershipLabelKey,
+		ownershipLabelValue: defaultCRDOwnershipLabelValue,
+	}
+
+	crd := &apiextensionsv1.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "virtualservices.networking.istio.io",
+		},
+		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
+			Group: "networking.istio.io",
+			Names: apiextensionsv1.CustomResourceDefinitionNames{Kind: "VirtualService"},
+		},
+	}
+
+	ctx := t.Context()
+	info, err := m.applyCRD(ctx, crd, "v1.29.0", nil)
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(info.Managed).To(BeTrue())
+	g.Expect(info.Ready).To(BeTrue())
+
+	var updated apiextensionsv1.CustomResourceDefinition
+	g.Expect(cl.Get(ctx, types.NamespacedName{Name: crd.Name}, &updated)).To(Succeed())
+	g.Expect(updated.Annotations).To(HaveKeyWithValue("app.kubernetes.io/version", "v1.30.0"))
+}
+
+func TestApplyCRD_updatesWhenNewer(t *testing.T) {
+	g := NewWithT(t)
+
+	existing := &apiextensionsv1.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "virtualservices.networking.istio.io",
+			Labels: map[string]string{
+				defaultCRDOwnershipLabelKey: defaultCRDOwnershipLabelValue,
+			},
+			Annotations: map[string]string{
+				"app.kubernetes.io/version": "v1.29.0",
+			},
+		},
+		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
+			Group: "networking.istio.io",
+			Names: apiextensionsv1.CustomResourceDefinitionNames{Kind: "VirtualService"},
+		},
+	}
+
+	s := runtime.NewScheme()
+	g.Expect(apiextensionsv1.AddToScheme(s)).To(Succeed())
+	cl := fake.NewClientBuilder().WithScheme(s).WithObjects(existing).Build()
+
+	m := &crdManager{
+		cl:                  cl,
+		ownershipLabelKey:   defaultCRDOwnershipLabelKey,
+		ownershipLabelValue: defaultCRDOwnershipLabelValue,
+	}
+
+	crd := &apiextensionsv1.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "virtualservices.networking.istio.io",
+		},
+		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
+			Group: "networking.istio.io",
+			Names: apiextensionsv1.CustomResourceDefinitionNames{Kind: "VirtualService"},
+		},
+	}
+
+	ctx := t.Context()
+	info, err := m.applyCRD(ctx, crd, "v1.30.0", nil)
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(info.Managed).To(BeTrue())
+
+	var updated apiextensionsv1.CustomResourceDefinition
+	g.Expect(cl.Get(ctx, types.NamespacedName{Name: crd.Name}, &updated)).To(Succeed())
+	g.Expect(updated.Annotations).To(HaveKeyWithValue("app.kubernetes.io/version", "v1.30.0"))
+	g.Expect(updated.Labels).To(HaveKeyWithValue(defaultCRDOwnershipLabelKey, defaultCRDOwnershipLabelValue))
 }
 
 func TestTargetCRDKinds(t *testing.T) {

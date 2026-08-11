@@ -21,12 +21,16 @@ import (
 	"io/fs"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"istio.io/istio/pkg/log"
 )
 
 const (
@@ -49,7 +53,9 @@ type crdManager struct {
 }
 
 // Reconcile installs or updates CRDs based on the provided options.
-func (m *crdManager) Reconcile(ctx context.Context, opts Options) ([]CRDInfo, error) {
+// The version parameter should be the resolved Istio version (e.g. "v1.30.3"),
+// not an alias (e.g. "v1.30-latest").
+func (m *crdManager) Reconcile(ctx context.Context, opts Options, version string) ([]CRDInfo, error) {
 	if !opts.ManageCRDs {
 		return nil, nil
 	}
@@ -61,7 +67,7 @@ func (m *crdManager) Reconcile(ctx context.Context, opts Options) ([]CRDInfo, er
 
 	var infos []CRDInfo
 	for _, crd := range crds {
-		info, err := m.applyCRD(ctx, crd, opts.OverwriteOLMManagedCRD)
+		info, err := m.applyCRD(ctx, crd, version, opts.OverwriteOLMManagedCRD)
 		if err != nil {
 			return infos, err
 		}
@@ -70,7 +76,10 @@ func (m *crdManager) Reconcile(ctx context.Context, opts Options) ([]CRDInfo, er
 	return infos, nil
 }
 
-func (m *crdManager) applyCRD(ctx context.Context, crd *apiextensionsv1.CustomResourceDefinition, overwriteOLM OverwriteOLMManagedCRDFunc) (CRDInfo, error) {
+func (m *crdManager) applyCRD(
+	ctx context.Context, crd *apiextensionsv1.CustomResourceDefinition,
+	version string, overwriteOLM OverwriteOLMManagedCRDFunc,
+) (CRDInfo, error) {
 	name := crd.GetName()
 	info := CRDInfo{Name: name, Managed: true}
 
@@ -78,6 +87,7 @@ func (m *crdManager) applyCRD(ctx context.Context, crd *apiextensionsv1.CustomRe
 	err := m.cl.Get(ctx, types.NamespacedName{Name: name}, existing)
 	if apierrors.IsNotFound(err) {
 		m.setManagedByLabel(crd)
+		setVersionAnnotation(crd, version)
 		if err := m.cl.Create(ctx, crd); err != nil {
 			return info, fmt.Errorf("failed to create CRD %s: %w", name, err)
 		}
@@ -100,13 +110,52 @@ func (m *crdManager) applyCRD(ctx context.Context, crd *apiextensionsv1.CustomRe
 		return info, nil
 	}
 
+	if isDowngrade(existing, version) {
+		log.Warnf("skipping update of CRD %s: cluster has newer version %s than %s being applied",
+			name, existing.Annotations[constants.KubernetesAppVersionKey], version)
+		info.Ready = m.isCRDReady(existing)
+		return info, nil
+	}
+
 	crd.SetResourceVersion(existing.ResourceVersion)
 	m.setManagedByLabel(crd)
+	setVersionAnnotation(crd, version)
 	if err := m.cl.Update(ctx, crd); err != nil {
 		return info, fmt.Errorf("failed to update CRD %s: %w", name, err)
 	}
 	info.Ready = m.isCRDReady(existing)
 	return info, nil
+}
+
+func setVersionAnnotation(crd *apiextensionsv1.CustomResourceDefinition, version string) {
+	if version == "" {
+		return
+	}
+	annotations := crd.GetAnnotations()
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+	annotations[constants.KubernetesAppVersionKey] = version
+	crd.SetAnnotations(annotations)
+}
+
+func isDowngrade(existing *apiextensionsv1.CustomResourceDefinition, newVersion string) bool {
+	if newVersion == "" {
+		return false
+	}
+	existingVersion, ok := existing.Annotations[constants.KubernetesAppVersionKey]
+	if !ok || existingVersion == "" {
+		return false
+	}
+	existingSemver, err := semver.NewVersion(existingVersion)
+	if err != nil {
+		return false
+	}
+	newSemver, err := semver.NewVersion(newVersion)
+	if err != nil {
+		return false
+	}
+	return newSemver.LessThan(existingSemver)
 }
 
 func (m *crdManager) setManagedByLabel(crd *apiextensionsv1.CustomResourceDefinition) {
