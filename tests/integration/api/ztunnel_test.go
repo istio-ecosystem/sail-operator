@@ -204,7 +204,7 @@ var _ = Describe("ZTunnel FIPS", Label("ztunnel", "fips"), Ordered, func() {
 
 	// TODO: Remove this test when Istio 1.29 goes out of support
 	It("sets TLS12_ENABLED on the ztunnel DaemonSet when FipsEnabled is true and version < 1.30", func() {
-		istiovalues.EnableFIPS(GinkgoT())
+		istiovalues.EnableFIPS(GinkgoTB())
 
 		ztunnel := &v1.ZTunnel{
 			ObjectMeta: metav1.ObjectMeta{
@@ -230,7 +230,7 @@ var _ = Describe("ZTunnel FIPS", Label("ztunnel", "fips"), Ordered, func() {
 	})
 
 	It("removes TLS12_ENABLED from the ztunnel DaemonSet when version > 1.30", func() {
-		istiovalues.EnableFIPS(GinkgoT())
+		istiovalues.EnableFIPS(GinkgoTB())
 
 		ztunnel := &v1.ZTunnel{
 			ObjectMeta: metav1.ObjectMeta{
