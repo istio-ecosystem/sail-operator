@@ -51,8 +51,9 @@ const (
 )
 
 const (
-	SleepNamespace   = "sleep"
-	HttpbinNamespace = "httpbin"
+	SleepNamespace     = "sleep"
+	HttpbinNamespace   = "httpbin"
+	SleepContainerName = "sleep"
 )
 
 var (
@@ -475,4 +476,22 @@ func HaveContainersThat(matcher types.GomegaMatcher) types.GomegaMatcher {
 
 func ImageFromRegistry(regexp string) types.GomegaMatcher {
 	return HaveField("Image", MatchRegexp(regexp))
+}
+
+// GetProxyVersionFromPod extracts the Istio proxy version directly from the pod's
+// istio-proxy container by executing pilot-agent version. This approach does not
+// require XDS connectivity to istiod, making it more reliable during control plane
+// upgrades when istiod may be temporarily inaccessible.
+func GetProxyVersionFromPod(podName, namespace string) (*semver.Version, error) {
+	k := kubectl.New().WithNamespace(namespace)
+	output, err := k.Exec(podName, "istio-proxy", "pilot-agent version")
+	if err != nil {
+		return nil, fmt.Errorf("error getting proxy version from pod %s: %w", podName, err)
+	}
+
+	matches := istiodVersionRegex.FindStringSubmatch(output)
+	if len(matches) > 1 && matches[1] != "" {
+		return semver.NewVersion(matches[1])
+	}
+	return nil, fmt.Errorf("error getting proxy version from pod %s: version not found in output: %s", podName, output)
 }
