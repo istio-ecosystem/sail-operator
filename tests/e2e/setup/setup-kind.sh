@@ -33,6 +33,8 @@ export MULTICLUSTER="${MULTICLUSTER:-false}"
 
 # Allow overriding DEFAULT_KIND_IMAGE from environment by passing as an argument in the setup_kind.sh script.
 export KIND_IMAGE="${KIND_IMAGE:-}"
+# Allow disabling MetalLB installation via environment variable (used by kind_provisioner.sh).
+export NOMETALBINSTALL="${NOMETALBINSTALL:-}"
 
 export KIND_CLUSTER_NAME="${KIND_CLUSTER_NAME:-operator-integration-tests}"
 if [ "${MULTICLUSTER}" == "true" ]; then
