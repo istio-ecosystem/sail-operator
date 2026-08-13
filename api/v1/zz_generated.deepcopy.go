@@ -2002,6 +2002,11 @@ func (in *MeshConfig) DeepCopyInto(out *MeshConfig) {
 		*out = new(HTTPRetry)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.DefaultInboundHttpRetryPolicy != nil {
+		in, out := &in.DefaultInboundHttpRetryPolicy, &out.DefaultInboundHttpRetryPolicy
+		*out = new(HTTPRetry)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.MeshMTLS != nil {
 		in, out := &in.MeshMTLS, &out.MeshMTLS
 		*out = new(MeshConfigTLSConfig)
