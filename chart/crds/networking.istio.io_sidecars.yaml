@@ -403,6 +403,12 @@ spec:
                           maxItems: 2
                           minItems: 1
                           type: array
+                        ecdhCurves:
+                          description: 'Optional: If specified, only support the specified
+                            ecdh curves.'
+                          items:
+                            type: string
+                          type: array
                         httpsRedirect:
                           description: If set to true, the load balancer will send
                             a 301 redirect for all http connections, asking the clients
@@ -1024,6 +1030,12 @@ spec:
                           maxItems: 2
                           minItems: 1
                           type: array
+                        ecdhCurves:
+                          description: 'Optional: If specified, only support the specified
+                            ecdh curves.'
+                          items:
+                            type: string
+                          type: array
                         httpsRedirect:
                           description: If set to true, the load balancer will send
                             a 301 redirect for all http connections, asking the clients
@@ -1644,6 +1656,12 @@ spec:
                             type: string
                           maxItems: 2
                           minItems: 1
+                          type: array
+                        ecdhCurves:
+                          description: 'Optional: If specified, only support the specified
+                            ecdh curves.'
+                          items:
+                            type: string
                           type: array
                         httpsRedirect:
                           description: If set to true, the load balancer will send

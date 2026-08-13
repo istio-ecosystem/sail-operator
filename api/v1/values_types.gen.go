@@ -2166,6 +2166,27 @@ type MeshConfig struct {
 	// All settings in the retry policy except `perTryTimeout` can currently be
 	// configured globally via this field.
 	DefaultHttpRetryPolicy *HTTPRetry `json:"defaultHttpRetryPolicy,omitempty"`
+	// Configure the default retry policy for inbound routes on sidecars.
+	//
+	// By default, a sidecar retries requests that were reset before they reached the
+	// application, using Envoy's `reset-before-request` condition with 2 attempts.
+	// Because such a request never reached the application, retrying it is safe even
+	// for non-idempotent methods. This shields clients from races where the
+	// application closes an idle connection while a request is in flight.
+	//
+	// Setting the number of attempts to 0 disables the inbound retry policy
+	// mesh-wide, for example `defaultInboundHttpRetryPolicy: {}`.
+	//
+	// Only `attempts`, `retryOn` and `backoff` apply here. `perTryTimeout`,
+	// `retryRemoteLocalities` and `retryIgnorePreviousHosts` are ignored, since an
+	// inbound route always targets the single local application cluster.
+	//
+	// The inbound retry policy is never applied to ports declared as gRPC, where
+	// `reset-before-request` does not work well for streaming services.
+	//
+	// Note this is distinct from `defaultHttpRetryPolicy`, which applies to outbound
+	// traffic to other services. Configuring one does not affect the other.
+	DefaultInboundHttpRetryPolicy *HTTPRetry `json:"defaultInboundHttpRetryPolicy,omitempty"`
 	// The below configuration parameters can be used to specify TLSConfig for mesh traffic.
 	// For example, a user could enable min TLS version for ISTIO_MUTUAL traffic and specify a curve for non ISTIO_MUTUAL traffic like below:
 	// ```yaml
@@ -3328,7 +3349,7 @@ type ServiceEntryVisibilityMatchRule struct {
 
 const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\n" +
-	"\x1amesh/v1alpha1/config.proto\x12\x13istio.mesh.v1alpha1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19mesh/v1alpha1/proxy.proto\x1a*networking/v1alpha3/destination_rule.proto\x1a)networking/v1alpha3/virtual_service.proto\"\xcfw\n" +
+	"\x1amesh/v1alpha1/config.proto\x12\x13istio.mesh.v1alpha1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19mesh/v1alpha1/proxy.proto\x1a*networking/v1alpha3/destination_rule.proto\x1a)networking/v1alpha3/virtual_service.proto\"\xbfx\n" +
 	"\n" +
 	"MeshConfig\x12*\n" +
 	"\x11proxy_listen_port\x18\x04 \x01(\x05R\x0fproxyListenPort\x129\n" +
@@ -3376,7 +3397,8 @@ const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\x11default_providers\x18< \x01(\v20.istio.mesh.v1alpha1.MeshConfig.DefaultProvidersR\x10defaultProviders\x12S\n" +
 	"\x13discovery_selectors\x18; \x03(\v2\".istio.mesh.v1alpha1.LabelSelectorR\x12discoverySelectors\x12e\n" +
 	"\x12path_normalization\x18= \x01(\v26.istio.mesh.v1alpha1.MeshConfig.ProxyPathNormalizationR\x11pathNormalization\x12_\n" +
-	"\x19default_http_retry_policy\x18> \x01(\v2$.istio.networking.v1alpha3.HTTPRetryR\x16defaultHttpRetryPolicy\x12F\n" +
+	"\x19default_http_retry_policy\x18> \x01(\v2$.istio.networking.v1alpha3.HTTPRetryR\x16defaultHttpRetryPolicy\x12n\n" +
+	"!default_inbound_http_retry_policy\x18J \x01(\v2$.istio.networking.v1alpha3.HTTPRetryR\x1ddefaultInboundHttpRetryPolicy\x12F\n" +
 	"\tmesh_mTLS\x18? \x01(\v2).istio.mesh.v1alpha1.MeshConfig.TLSConfigR\bmeshMTLS\x12L\n" +
 	"\ftls_defaults\x18@ \x01(\v2).istio.mesh.v1alpha1.MeshConfig.TLSConfigR\vtlsDefaults\x12j\n" +
 	"\x16default_traffic_policy\x18G \x01(\v24.istio.mesh.v1alpha1.MeshConfig.DefaultTrafficPolicyR\x14defaultTrafficPolicy\x12e\n" +
