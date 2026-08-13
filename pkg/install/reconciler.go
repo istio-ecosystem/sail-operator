@@ -233,7 +233,7 @@ func (inst *installer) reconcile(ctx context.Context, opts Options) Status {
 	}
 
 	if opts.ManageCRDs {
-		crdInfos, err := inst.crdManager.Reconcile(ctx, opts)
+		crdInfos, err := inst.crdManager.Reconcile(ctx, opts, resolvedVersion)
 		if err != nil {
 			status.Error = fmt.Errorf("failed to reconcile CRDs: %w", err)
 			status.CRDState = CRDManagementStateError
