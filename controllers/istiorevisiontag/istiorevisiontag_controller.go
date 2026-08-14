@@ -87,8 +87,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, tag *v1.IstioRevisionTag) (c
 	log.Info("Reconciliation done. Updating status.")
 	statusErr := r.updateStatus(ctx, tag, rev, reconcileErr)
 
-	reconcileErr = errors.Unwrap(reconcileErr)
-
 	return ctrl.Result{}, errors.Join(reconcileErr, statusErr)
 }
 
