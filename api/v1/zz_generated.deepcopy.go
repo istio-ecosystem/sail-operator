@@ -6417,7 +6417,7 @@ func (in *ZoneAwareLoadBalancerSetting) DeepCopyInto(out *ZoneAwareLoadBalancerS
 	}
 	if in.MinClusterSize != nil {
 		in, out := &in.MinClusterSize, &out.MinClusterSize
-		*out = new(uint64)
+		*out = new(uint32)
 		**out = **in
 	}
 }
