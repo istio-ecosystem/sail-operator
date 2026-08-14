@@ -5760,7 +5760,7 @@ type ZoneAwareLoadBalancerSetting struct {
 	// would produce poor load balancing results.
 	// If not specified, the default is 6.
 	// +kubebuilder:validation:Minimum=1
-	MinClusterSize *uint64 `json:"minClusterSize,omitempty"`
+	MinClusterSize *uint32 `json:"minClusterSize,omitempty"`
 }
 
 // Settings common to both HTTP and TCP upstream connections.
