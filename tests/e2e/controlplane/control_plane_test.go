@@ -193,7 +193,7 @@ metadata:
 					It("has sidecars with the correct istio version", func(ctx SpecContext) {
 						Eventually(func(g Gomega) {
 							for _, pod := range samplePods.Items {
-								sidecarVersion, err := common.GetProxyVersion(pod.Name, sampleNamespace)
+								sidecarVersion, err := common.GetProxyVersionFromPod(pod.Name, sampleNamespace)
 								g.Expect(err).NotTo(HaveOccurred(), "Error getting sidecar version")
 								g.Expect(sidecarVersion).To(Equal(version.Version), "Sidecar Istio version does not match the expected version")
 							}
