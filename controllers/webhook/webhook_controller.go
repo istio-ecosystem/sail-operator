@@ -20,6 +20,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"strconv"
@@ -145,6 +146,13 @@ func doProbe(ctx context.Context, webhook *admissionv1.MutatingWebhookConfigurat
 		log.V(3).Info("Probe failed", "error", err)
 		return false, err
 	}
+	defer func() {
+		// drain and close the body to release the underlying connection. Since httpClient (and its Transport) isn't
+		// reused across probes, close the idle connections so they don't linger indefinitely.
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+		httpClient.CloseIdleConnections()
+	}()
 	log.V(3).Info("Probe response", "response", resp.StatusCode)
 
 	return resp.StatusCode == http.StatusOK, nil
