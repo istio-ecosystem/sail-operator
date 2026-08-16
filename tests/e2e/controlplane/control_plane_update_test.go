@@ -298,7 +298,7 @@ spec:
 						}
 
 						for _, pod := range samplePods.Items {
-							sidecarVersion, err := common.GetProxyVersion(pod.Name, sampleNamespace)
+							sidecarVersion, err := common.GetProxyVersionFromPod(pod.Name, sampleNamespace)
 							if err != nil || !sidecarVersion.Equal(newVersion.Version) {
 								return false
 							}
