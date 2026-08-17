@@ -94,7 +94,7 @@ type FileTransformer struct {
 }
 
 func main() {
-	if len(os.Args) < 1 {
+	if len(os.Args) < 2 {
 		log("No transformation file specified")
 		os.Exit(1)
 	}
