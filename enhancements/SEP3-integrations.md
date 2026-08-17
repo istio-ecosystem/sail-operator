@@ -386,15 +386,15 @@ Some users will already have configured their integrations. They may already hav
 
 The integrations controller could either:
 
-1. Adopt the resources i.e. add the Integrations controller's OwnerRef to them. Adopting the resources is the best user experience but potentially the most problematic since these resources may have customizations or be managed by another system.
-2. Do nothing. This makes the controller useless.
+1. Adopt the resources i.e. add the Integrations controller's OwnerRef to them. 
+2. Do nothing.
 3. Create parallel resources. In the case of `PodMonitor` creating a second `PodMonitor`.
 
-The Integrations controller will adopt any resource normally created by the Integrations controller only if the resource is labeled with `sailoperator.io/integrations: adopt`. The controller will use SSA for these resources which will allow users to keep any customizations they have applied to these resources.
+The Integrations controller will implement option 3. and will create new resources regardless of any existing resources. This is the simplest option. Users who have already configured their integrations may not need this API and if they want to utilize this API they can remove their existing resources before or after creating the `Integration` resource.
 
 #### Resource Ownership
 
-The Integrations controller should own the resources that it directly creates as part of the integration. This will tie the lifecycle of these resources to the `Integration` ensuring resources are properly cleaned up when the `Integration` is removed. The Integrations controller will **not** put an `ownerRef` on any of the resources that it references. The Integrations controller will never put an `ownerRef` on an `Istio` resource or on an `OpenTelemetry` resource. Users can remove the both the `ownerRef` and the `sailoperator.io/integrations: adopt` label from the resource before deleting the `Integration` if they wish to manage it themselves.
+The Integrations controller should own the resources that it directly creates as part of the integration. This will tie the lifecycle of these resources to the `Integration` ensuring resources are properly cleaned up when the `Integration` is removed. The Integrations controller will **not** put an `ownerRef` on any of the resources that it references. The Integrations controller will never put an `ownerRef` on an `Istio` resource or on an `OpenTelemetry` resource. 
 
 #### Permissions
 
@@ -503,6 +503,7 @@ The implementation for UWM is already complete as part of the [monitoring contro
 - Some of the integrations types will only be available on OpenShift like the UWM and COO types. e2e tests for these can only be run in an OpenShift environment. These will be filtered out of the kind based suite with the openshift label similar to the TLS profile tests.
 
 ## Change History (only required when making changes after SEP has been accepted)
-- Changed the API from `IstioIntegration` --> `<Component>Integration`
-- Replaced `istioRef` + `dashboard` fields with a unified `target` discriminated union (Istio | Kiali)
-- Replaced `target` discriminated union with `targetRefs` array of references
+- Changed the API from `IstioIntegration` --> `<Component>Integration`.
+- Replaced `istioRef` + `dashboard` fields with a unified `target` discriminated union (Istio | Kiali).
+- Replaced `target` discriminated union with `targetRefs` array of references.
+- Updated migration section to ignore any existing resources.
