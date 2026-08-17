@@ -426,6 +426,39 @@ func TestApplyTLSConfig(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "sets OPENSSL_TLS1_3_CIPHERSUITES on OpenShift even when MinVersion is not 1.3",
+			tlsConfig: &config.TLSConfig{
+				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
+				MinVersion:   tls.VersionTLS12,
+				OpenShift:    &config.OpenShiftTLS{},
+			},
+			istioVersion: "1.30.0",
+			inputValues:  &v1.Values{},
+			wantValues: &v1.Values{
+				MeshConfig: &v1.MeshConfig{
+					MeshMTLS: &v1.MeshConfigTLSConfig{
+						CipherSuites:       []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+						MinProtocolVersion: v1.MeshConfigTLSConfigTLSProtocolTlsv12,
+					},
+					TlsDefaults: &v1.MeshConfigTLSConfig{
+						CipherSuites:       []string{"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"},
+						MinProtocolVersion: v1.MeshConfigTLSConfigTLSProtocolTlsv12,
+					},
+					DefaultConfig: &v1.MeshConfigProxyConfig{
+						ProxyMetadata: map[string]string{
+							"OPENSSL_TLS1_3_CIPHERSUITES": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+						},
+					},
+				},
+				Pilot: &v1.PilotConfig{
+					ExtraContainerArgs: []string{
+						"--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+						"--tls-min-version=1.2",
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
