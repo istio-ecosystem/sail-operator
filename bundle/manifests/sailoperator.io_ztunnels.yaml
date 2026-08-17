@@ -220,16 +220,6 @@ spec:
                   ztunnel:
                     description: Configuration for the Istio ztunnel plugin.
                     properties:
-                      Annotations:
-                        additionalProperties:
-                          type: string
-                        description: Annotations to apply to all top level resources
-                        type: object
-                      Labels:
-                        additionalProperties:
-                          type: string
-                        description: Labels to apply to all top level resources
-                        type: object
                       affinity:
                         description: K8s affinity to set on the ztunnel Pods. Can
                           be used to exclude ztunnel from being scheduled on specified
@@ -1156,6 +1146,11 @@ spec:
                                 x-kubernetes-list-type: atomic
                             type: object
                         type: object
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        description: Annotations to apply to all top level resources
+                        type: object
                       caAddress:
                         description: The address of the CA for CSR.
                         type: string
@@ -1253,6 +1248,11 @@ spec:
                         description: Specifies the default namespace for the Istio
                           control plane components.
                         type: string
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: Labels to apply to all top level resources
+                        type: object
                       logAsJson:
                         description: Specifies whether istio components should output
                           logs in json format by adding --log_as_json argument to
@@ -3862,16 +3862,6 @@ spec:
                   ztunnel:
                     description: Configuration for the Istio ztunnel plugin.
                     properties:
-                      Annotations:
-                        additionalProperties:
-                          type: string
-                        description: Annotations to apply to all top level resources
-                        type: object
-                      Labels:
-                        additionalProperties:
-                          type: string
-                        description: Labels to apply to all top level resources
-                        type: object
                       affinity:
                         description: K8s affinity to set on the ztunnel Pods. Can
                           be used to exclude ztunnel from being scheduled on specified
@@ -4798,6 +4788,11 @@ spec:
                                 x-kubernetes-list-type: atomic
                             type: object
                         type: object
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        description: Annotations to apply to all top level resources
+                        type: object
                       caAddress:
                         description: The address of the CA for CSR.
                         type: string
@@ -4895,6 +4890,11 @@ spec:
                         description: Specifies the default namespace for the Istio
                           control plane components.
                         type: string
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: Labels to apply to all top level resources
+                        type: object
                       logAsJson:
                         description: Specifies whether istio components should output
                           logs in json format by adding --log_as_json argument to
