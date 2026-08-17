@@ -27,7 +27,7 @@ var CNIWatches = []WatchedResource{
 	{Object: &corev1.ConfigMap{}},
 	{Object: &corev1.ResourceQuota{}},
 	{Object: &corev1.ServiceAccount{}, ShouldReconcile: IgnoreAllUpdates()},
-	{Object: &networkingv1.NetworkPolicy{}, ShouldReconcile: IgnoreAllUpdates()},
+	{Object: &networkingv1.NetworkPolicy{}, ShouldReconcile: IgnoreStatusChanges()},
 	{Object: &rbacv1.ClusterRole{}},
 	{Object: &rbacv1.ClusterRoleBinding{}},
 	// +lint-watches:ignore: NetworkAttachmentDefinition (TODO: register NetAttachDef watch when the CRD is installed)
