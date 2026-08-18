@@ -27,16 +27,6 @@ versions:
       - https://istio-release.storage.googleapis.com/charts/gateway-1.31.0-beta.1.tgz
       - https://istio-release.storage.googleapis.com/charts/cni-1.31.0-beta.1.tgz
       - https://istio-release.storage.googleapis.com/charts/ztunnel-1.31.0-beta.1.tgz
-  - name: v1.30.2
-    version: 1.30.2
-    repo: https://github.com/istio/istio
-    commit: 1.30.2
-    charts:
-      - https://istio-release.storage.googleapis.com/charts/base-1.30.2.tgz
-      - https://istio-release.storage.googleapis.com/charts/istiod-1.30.2.tgz
-      - https://istio-release.storage.googleapis.com/charts/gateway-1.30.2.tgz
-      - https://istio-release.storage.googleapis.com/charts/cni-1.30.2.tgz
-      - https://istio-release.storage.googleapis.com/charts/ztunnel-1.30.2.tgz
   - name: v1.30-latest
     ref: v1.30.3
   - name: v1.30.3
