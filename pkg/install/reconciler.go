@@ -221,6 +221,7 @@ func (inst *installer) reconcile(ctx context.Context, opts Options) Status {
 		opts.Namespace,
 		resolvedVersion,
 		inst.platform,
+		nil,
 		defaultProfile,
 		"",
 		inst.cfg.ResourceFS,

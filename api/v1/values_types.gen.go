@@ -1591,6 +1591,8 @@ type CNIGlobalConfig struct { // Default k8s resources settings for all Istio co
 
 	// Specifies whether native nftables rules should be used instead of iptables rules for traffic redirection.
 	NativeNftables *bool `json:"nativeNftables,omitempty"`
+	// Settings related to Kubernetes NetworkPolicy.
+	NetworkPolicy *NetworkPolicyConfig `json:"networkPolicy,omitempty"`
 }
 
 // Resource describes the source of configuration
