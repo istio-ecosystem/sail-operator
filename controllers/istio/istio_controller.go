@@ -129,7 +129,8 @@ func (r *Reconciler) reconcileActiveRevision(ctx context.Context, istio *v1.Isti
 
 	values, err := revision.ComputeValues(
 		istio.Spec.Values, istio.Spec.Namespace, version,
-		r.Config.Platform, r.Config.DefaultProfile, istio.Spec.Profile,
+		r.Config.Platform, r.Config.OCPVersion,
+		r.Config.DefaultProfile, istio.Spec.Profile,
 		r.Config.ResourceFS, getActiveRevisionName(istio), r.Config.TLSConfig)
 	if err != nil {
 		return err

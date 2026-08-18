@@ -187,6 +187,7 @@ _Appears in:_
 | `variant` _string_ | The variant of the Istio container images to use. Options are "debug" or "distroless". Unset will use the default for the given version. |  |  |
 | `platform` _string_ | Platform in which Istio is deployed. Possible values are: "openshift" and "gcp" An empty value means it is a vanilla Kubernetes distribution, therefore no special treatment will be considered. |  |  |
 | `nativeNftables` _boolean_ | Specifies whether native nftables rules should be used instead of iptables rules for traffic redirection. |  |  |
+| `networkPolicy` _[NetworkPolicyConfig](#networkpolicyconfig)_ | Settings related to Kubernetes NetworkPolicy. |  |  |
 
 
 #### CNIRepairConfig
@@ -2240,7 +2241,9 @@ Configuration for NetworkPolicy
 
 
 _Appears in:_
+- [CNIGlobalConfig](#cniglobalconfig)
 - [GlobalConfig](#globalconfig)
+- [ZTunnelGlobalConfig](#ztunnelglobalconfig)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -3648,7 +3651,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `defaultResources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core)_ | See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container  Deprecated: Marked as deprecated in pkg/apis/values_types.proto. |  |  |
+| `networkPolicy` _[NetworkPolicyConfig](#networkpolicyconfig)_ | Settings related to Kubernetes NetworkPolicy. |  |  |
+| `defaultResources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#resourcerequirements-v1-core)_ | Default k8s resources settings for all Istio control plane components.  See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container  Deprecated: Marked as deprecated in pkg/apis/values_types.proto. |  |  |
 | `hub` _string_ | Specifies the docker hub for Istio images. |  |  |
 | `imagePullPolicy` _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#pullpolicy-v1-core)_ | Specifies the image pull policy for the Istio images. one of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated.  More info: https://kubernetes.io/docs/concepts/containers/images#updating-images |  | Enum: [Always Never IfNotPresent]   |
 | `imagePullSecrets` _string array_ | ImagePullSecrets for the control plane ServiceAccount, list of secrets in the same namespace to use for pulling any images in pods that reference this ServiceAccount. Must be set for any cluster configured with private docker registry. |  |  |

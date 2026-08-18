@@ -15,11 +15,14 @@
 package config
 
 import (
+	"context"
 	"fmt"
 
+	configv1 "github.com/openshift/api/config/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Platform string
@@ -35,6 +38,20 @@ const (
 	openshiftResourceGroup   = "operator.openshift.io"
 	openshiftResourceVersion = "v1"
 )
+
+func DetectOCPVersion(ctx context.Context, cl client.Reader) (*OCPVersion, error) {
+	cv := &configv1.ClusterVersion{}
+	err := cl.Get(ctx, client.ObjectKey{Name: "version"}, cv)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ClusterVersion: %w", err)
+	}
+	var major, minor int
+	_, err = fmt.Sscanf(cv.Status.Desired.Version, "%d.%d", &major, &minor)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse ClusterVersion %q: %w", cv.Status.Desired.Version, err)
+	}
+	return &OCPVersion{Major: major, Minor: minor}, nil
+}
 
 func DetectPlatform(cfg *rest.Config) (Platform, error) {
 	dc, err := discovery.NewDiscoveryClientForConfig(cfg)

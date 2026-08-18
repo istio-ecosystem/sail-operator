@@ -104,6 +104,8 @@ spec:
                     properties:
                       defaultResources:
                         description: |-
+                          Default k8s resources settings for all Istio control plane components.
+
                           See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
 
                           Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
@@ -201,6 +203,14 @@ spec:
                               The control plane has different scopes depending on component, but can configure default log level across all components
                               If empty, default scope and level will be used as configured in code
                             type: string
+                        type: object
+                      networkPolicy:
+                        description: Settings related to Kubernetes NetworkPolicy.
+                        properties:
+                          enabled:
+                            description: Controls whether default NetworkPolicy resources
+                              will be created.
+                            type: boolean
                         type: object
                       platform:
                         description: |-
@@ -3747,6 +3757,8 @@ spec:
                     properties:
                       defaultResources:
                         description: |-
+                          Default k8s resources settings for all Istio control plane components.
+
                           See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
 
                           Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
@@ -3844,6 +3856,14 @@ spec:
                               The control plane has different scopes depending on component, but can configure default log level across all components
                               If empty, default scope and level will be used as configured in code
                             type: string
+                        type: object
+                      networkPolicy:
+                        description: Settings related to Kubernetes NetworkPolicy.
+                        properties:
+                          enabled:
+                            description: Controls whether default NetworkPolicy resources
+                              will be created.
+                            type: boolean
                         type: object
                       platform:
                         description: |-
