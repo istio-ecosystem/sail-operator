@@ -1,0 +1,23 @@
+name: Changelog check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    if: >-
+      !contains(github.event.pull_request.labels.*.name, 'skip-changelog') &&
+      github.actor != 'openshiftservicemeshbot' &&
+      github.actor != 'istio-testing'
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+        fetch-depth: 0
+
+    - name: Check changelog fragment
+      env:
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      run: hack/changelog-check.sh

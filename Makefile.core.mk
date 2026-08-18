@@ -390,10 +390,11 @@ endif
 .PHONY: create-gh-release
 create-gh-release: helm-package ## Create a GitHub release and upload the helm charts package to it.
 	export GITHUB_TOKEN=$(GITHUB_TOKEN)
+	$(REPO_ROOT)/hack/extract-changelog-section.sh $(VERSION) > $(REPO_ROOT)/out/release-notes.md
 	gh release create $(VERSION) $(REPO_ROOT)/out/sail-operator-$(VERSION).tgz \
 		--target release-$(MINOR_VERSION) \
 		--title "Sail Operator $(VERSION)" \
-		--generate-notes \
+		--notes-file $(REPO_ROOT)/out/release-notes.md \
 		$(GH_RELEASE_ADDITIONAL_FLAGS)
 
 .PHONY: cluster

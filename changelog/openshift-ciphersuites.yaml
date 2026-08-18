@@ -1,0 +1,5 @@
+category: changed
+title: Add correct ciphersuite and ECDH curves on OpenShift
+description: |
+  Removes cipher suite list from meshConfig when minProtocolVersion is TLS 1.3
+  and correctly sets ECDH curves from the OpenShift TLS profile.
