@@ -1,0 +1,7 @@
+category: added
+title: Enable NetworkPolicy defaults for OCP 5+ clusters
+description: |
+  Detects the OCP version at startup and enables NetworkPolicy for istiod,
+  istio-cni, and ztunnel by default on OCP 5+ clusters. On OCP 4, the
+  existing opt-in model is preserved. Users can always override by explicitly
+  setting spec.values.global.networkPolicy.enabled.
