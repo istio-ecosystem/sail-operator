@@ -32,6 +32,7 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("Ambient Dependency Management", Label("ambient", "ambient-dependency"), Ordered, func() {
@@ -211,11 +212,13 @@ spec:
 						originalReplicas := daemonset.Status.DesiredNumberScheduled
 						Log("Scaling IstioCNI DaemonSet to 0 replicas")
 
-						// Update the DaemonSet to have 0 desired replicas by setting nodeSelector that matches no nodes
+						// Update the DaemonSet to have 0 desired replicas by setting nodeSelector that matches no nodes.
+						// Use Patch instead of Update to avoid conflicts with concurrent modifications by the controller.
+						patch := client.MergeFrom(daemonset.DeepCopy())
 						daemonset.Spec.Template.Spec.NodeSelector = map[string]string{
 							"non-existent-label": "true",
 						}
-						Expect(cl.Update(ctx, daemonset)).To(Succeed())
+						Expect(cl.Patch(ctx, daemonset, patch)).To(Succeed())
 
 						// Wait for IstioCNI to become not Ready
 						Eventually(func(g Gomega) {
@@ -250,8 +253,9 @@ spec:
 						// Restore the DaemonSet
 						Log("Restoring IstioCNI DaemonSet")
 						Expect(cl.Get(ctx, kube.Key("istio-cni-node", istioCniNamespace), daemonset)).To(Succeed())
+						restorePatch := client.MergeFrom(daemonset.DeepCopy())
 						daemonset.Spec.Template.Spec.NodeSelector = nil
-						Expect(cl.Update(ctx, daemonset)).To(Succeed())
+						Expect(cl.Patch(ctx, daemonset, restorePatch)).To(Succeed())
 
 						// Wait for recovery
 						Eventually(func(g Gomega) {
@@ -272,11 +276,13 @@ spec:
 						originalReplicas := daemonset.Status.DesiredNumberScheduled
 						Log("Scaling ZTunnel DaemonSet to 0 replicas")
 
-						// Update the DaemonSet to have 0 desired replicas by setting nodeSelector that matches no nodes
+						// Update the DaemonSet to have 0 desired replicas by setting nodeSelector that matches no nodes.
+						// Use Patch instead of Update to avoid conflicts with concurrent modifications by the controller.
+						patch := client.MergeFrom(daemonset.DeepCopy())
 						daemonset.Spec.Template.Spec.NodeSelector = map[string]string{
 							"non-existent-label": "true",
 						}
-						Expect(cl.Update(ctx, daemonset)).To(Succeed())
+						Expect(cl.Patch(ctx, daemonset, patch)).To(Succeed())
 
 						// Wait for ZTunnel to become not Ready
 						Eventually(func(g Gomega) {
@@ -311,8 +317,9 @@ spec:
 						// Restore the DaemonSet
 						Log("Restoring ZTunnel DaemonSet")
 						Expect(cl.Get(ctx, kube.Key("ztunnel", ztunnelNamespace), daemonset)).To(Succeed())
+						restorePatch := client.MergeFrom(daemonset.DeepCopy())
 						daemonset.Spec.Template.Spec.NodeSelector = nil
-						Expect(cl.Update(ctx, daemonset)).To(Succeed())
+						Expect(cl.Patch(ctx, daemonset, restorePatch)).To(Succeed())
 
 						// Wait for recovery
 						Eventually(func(g Gomega) {
