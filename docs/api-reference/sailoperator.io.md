@@ -118,6 +118,8 @@ _Appears in:_
 | `reconcileIptablesOnStartup` _boolean_ | If enabled, and ambient is enabled, iptables reconciliation will be enabled. |  |  |
 
 
+
+
 #### CNIConfig
 
 

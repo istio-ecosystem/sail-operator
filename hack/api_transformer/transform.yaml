@@ -96,6 +96,7 @@ inputFiles:
       CNIConfig.PodLabels: "map[string]string"
       CNIConfig.SeccompProfile: "*k8sv1.SeccompProfile"
       CNIConfig.PullPolicy: "*k8sv1.PullPolicy"
+      CNIAmbientConfig.EnablementSelectors: "[]CNIAmbientEnablementSelector"
       Values.GatewayClasses: "json.RawMessage"
       Values.MeshConfig: "*MeshConfig"
       Values.Experimental: "json.RawMessage"
