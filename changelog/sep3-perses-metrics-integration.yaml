@@ -1,0 +1,6 @@
+category: changed
+title: Extend the Integrations SEP with Perses datasource and dashboard productization
+description: |
+  Documents how MetricsIntegration with targetRefs.kind Perses creates
+  namespace-scoped PersesDatasource and productized PersesDashboard resources.
+  No new CRD; dashboards are vendored from community-mixins.
