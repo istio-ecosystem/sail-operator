@@ -114,11 +114,16 @@ pilot:
 					BeforeAll(func(ctx SpecContext) {
 						Expect(k1.WithNamespace(controlPlaneNamespace).Apply(eastGatewayYAML)).To(Succeed(), "Gateway creation failed on Primary Cluster")
 
-						// Expose istiod service in Primary cluster
-						Expect(k1.WithNamespace(controlPlaneNamespace).Apply(exposeIstiodYAML)).To(Succeed(), "Expose Istiod creation failed on Primary Cluster")
+						// Expose istiod service in Primary cluster; retry because the istiod
+						// validation webhook may not be serving yet even though the Deployment is Available.
+						Eventually(func() error {
+							return k1.WithNamespace(controlPlaneNamespace).Apply(exposeIstiodYAML)
+						}).Should(Succeed(), "Expose Istiod creation failed on Primary Cluster")
 
-						// Expose the Gateway service in both clusters
-						Expect(k1.WithNamespace(controlPlaneNamespace).Apply(exposeServiceYAML)).To(Succeed(), "Expose Service creation failed on Primary Cluster")
+						// Expose the Gateway service in Primary cluster
+						Eventually(func() error {
+							return k1.WithNamespace(controlPlaneNamespace).Apply(exposeServiceYAML)
+						}).Should(Succeed(), "Expose Service creation failed on Primary Cluster")
 					})
 
 					It("updates Gateway status to Available", func(ctx SpecContext) {
