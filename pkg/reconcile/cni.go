@@ -85,6 +85,9 @@ func (r *CNIReconciler) ComputeValues(version string, userValues *v1.CNIValues, 
 		return nil, fmt.Errorf("failed to apply vendor defaults: %w", err)
 	}
 
+	// Apply network policy defaults for OCP 5+
+	userValues = istiovalues.ApplyCNINetworkPolicyDefaults(r.cfg.OCPVersion, userValues)
+
 	// Apply userValues on top of defaultValues from profiles
 	mergedHelmValues, err := istiovalues.ApplyProfilesAndPlatform(
 		r.cfg.ResourceFS, resolvedVersion, r.cfg.Platform, r.cfg.DefaultProfile, profile, helm.FromValues(userValues))

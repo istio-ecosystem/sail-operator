@@ -89,6 +89,15 @@ func (r *ZTunnelReconciler) ComputeValues(version string, userValues *v1.ZTunnel
 	// apply fips values
 	istiovalues.ApplyZTunnelFipsValues(userValues, resolvedVersion)
 
+	// apply vendor-specific default values
+	userValues, err = istiovalues.ApplyZTunnelVendorDefaults(resolvedVersion, userValues)
+	if err != nil {
+		return nil, fmt.Errorf("failed to apply vendor defaults: %w", err)
+	}
+
+	// apply network policy defaults for OCP 5+
+	userValues = istiovalues.ApplyZTunnelNetworkPolicyDefaults(r.cfg.OCPVersion, userValues)
+
 	var mergedHelmValues helm.Values
 	if len(baseValues) > 0 && baseValues[0] != nil {
 		// Apply base values (from IstioRevision) on top of profile defaults, like an additional profile
