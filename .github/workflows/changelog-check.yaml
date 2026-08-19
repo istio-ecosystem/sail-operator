@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     if: >-
       !contains(github.event.pull_request.labels.*.name, 'skip-changelog') &&
-      github.actor != 'openshiftservicemeshbot' &&
+      github.actor != 'openshift-service-mesh-bot' &&
       github.actor != 'istio-testing'
     steps:
     - uses: actions/checkout@v4
