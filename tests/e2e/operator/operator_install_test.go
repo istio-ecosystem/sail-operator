@@ -546,14 +546,29 @@ func ensureTLSAdherence(ctx context.Context, cl client.Client, policy configv1.T
 		return
 	}
 
-	// Wait for the operator to restart after the TLSAdherence change.
-	oldUIDs := make(map[string]struct{})
+	totalRestarts := func(pod corev1.Pod) int32 {
+		var n int32
+		for _, cs := range pod.Status.ContainerStatuses {
+			n += cs.RestartCount
+		}
+		return n
+	}
+	podReady := func(pod corev1.Pod) bool {
+		for _, cond := range pod.Status.Conditions {
+			if cond.Type == corev1.PodReady {
+				return cond.Status == corev1.ConditionTrue
+			}
+		}
+		return false
+	}
+
+	oldRestarts := make(map[string]int32)
 	podList := &corev1.PodList{}
 	Expect(cl.List(ctx, podList, client.InNamespace(namespace),
 		client.MatchingLabels{"control-plane": deploymentName})).To(Succeed(),
 		"Failed to list operator pods before TLSAdherence change")
 	for _, pod := range podList.Items {
-		oldUIDs[string(pod.UID)] = struct{}{}
+		oldRestarts[string(pod.UID)] = totalRestarts(pod)
 	}
 
 	Step(fmt.Sprintf("Updating APIServer TLSAdherence to %s", policy))
@@ -566,25 +581,17 @@ func ensureTLSAdherence(ctx context.Context, cl client.Client, policy configv1.T
 		g.Expect(cl.List(ctx, pods, client.InNamespace(namespace),
 			client.MatchingLabels{"control-plane": deploymentName})).To(Succeed())
 
-		found := false
+		restarted := false
 		for _, pod := range pods.Items {
-			if _, wasOld := oldUIDs[string(pod.UID)]; wasOld {
+			if pod.DeletionTimestamp != nil || pod.Status.Phase != corev1.PodRunning || !podReady(pod) {
 				continue
 			}
-			if pod.DeletionTimestamp != nil || pod.Status.Phase != corev1.PodRunning {
-				continue
-			}
-			for _, cond := range pod.Status.Conditions {
-				if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
-					found = true
-					break
-				}
-			}
-			if found {
+			if prev, seen := oldRestarts[string(pod.UID)]; !seen || totalRestarts(pod) > prev {
+				restarted = true
 				break
 			}
 		}
-		g.Expect(found).To(BeTrue(), "No new ready operator pod found after TLSAdherence change to %s", policy)
+		g.Expect(restarted).To(BeTrue(), "Operator did not restart (in place or via a new pod) after TLSAdherence change to %s", policy)
 	}).WithTimeout(5*time.Minute).WithPolling(5*time.Second).Should(Succeed(),
 		"Operator should restart and be ready after TLSAdherence change")
 }
