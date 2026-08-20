@@ -19,7 +19,6 @@ package operator
 import (
 	"context"
 	"crypto/rand"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -41,9 +40,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	configv1 "github.com/openshift/api/config/v1"
-	crtls "github.com/openshift/controller-runtime-common/pkg/tls"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -69,24 +66,7 @@ var sailCRDs = []string{
 	"workloadgroups.networking.istio.io",
 }
 
-// markerCipher is the OpenSSL name for a cipher that is in the Intermediate (default)
-// profile but intentionally omitted from the custom TLS profile used in tests.
-// Its absence distinguishes Custom from Intermediate on both the metrics endpoint
-// and in the IstioRevision values.
-const markerCipher = "ECDHE-RSA-AES128-GCM-SHA256"
-
-// markerCipherName is the Go TLS cipher name for the marker cipher.
-const markerCipherName = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
-
-var (
-	apiServerKey = client.ObjectKey{Name: crtls.APIServerName}
-
-	// customTLSProfileCiphers is the default (Intermediate) cipher list with the
-	// marker cipher removed. Its absence distinguishes Custom from Intermediate in tests.
-	customTLSProfileCiphers = slices.DeleteFunc(slices.Clone(crtls.DefaultTLSCiphers), func(c string) bool {
-		return c == markerCipher
-	})
-)
+var apiServerKey = client.ObjectKey{Name: "cluster"}
 
 var _ = Describe("Operator", Label("smoke", "operator"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
@@ -230,10 +210,9 @@ spec:
 	})
 
 	// These tests verify the operator's TLS behavior when the APIServer TLS settings change.
-	// Each test verifies both the metrics endpoint TLS configuration (by connecting with
-	// a specific TLS 1.2 cipher) and the TLS settings synced to the IstioRevision resource.
-	// Test 1 runs on all OpenShift clusters. Tests 2 and 3 require OpenShift >= 4.22
+	// The first test runs on all OpenShift clusters; the second requires OpenShift >= 4.22
 	// because the TLSAdherence field was introduced in 4.22.
+	// NOTE: Running this test has the side effect of setting the cluster's TLS profile to modern.
 	Describe("TLS profile change", Label("tls-profile"), func() {
 		var ocpMinorVersion int
 		var ocpMajorVersion int
@@ -316,31 +295,6 @@ spec:
 				}
 			}
 
-			Step("Saving the original APIServer TLS settings")
-			apiServer := &configv1.APIServer{}
-			err = cl.Get(ctx, apiServerKey, apiServer)
-			Expect(err).NotTo(HaveOccurred(), "Failed to get APIServer")
-			var originalTLSProfile *configv1.TLSSecurityProfile
-			if apiServer.Spec.TLSSecurityProfile != nil {
-				originalTLSProfile = apiServer.Spec.TLSSecurityProfile.DeepCopy()
-			}
-			originalTLSAdherence := apiServer.Spec.TLSAdherence
-
-			DeferCleanup(func(ctx SpecContext) {
-				Step("Restoring the original APIServer TLS settings")
-				Eventually(func(g Gomega) {
-					apiServer := &configv1.APIServer{}
-					g.Expect(cl.Get(ctx, apiServerKey, apiServer)).To(Succeed(), "Failed to get APIServer")
-					apiServer.Spec.TLSSecurityProfile = originalTLSProfile
-					// TLSAdherence cannot be set back to NoOpinion once set,
-					// so only restore it if the original was a non-empty value.
-					if originalTLSAdherence != configv1.TLSAdherencePolicyNoOpinion {
-						apiServer.Spec.TLSAdherence = originalTLSAdherence
-					}
-					g.Expect(cl.Update(ctx, apiServer)).To(Succeed(), "Failed to update APIServer TLS settings")
-				}).WithTimeout(30 * time.Second).WithPolling(2 * time.Second).Should(Succeed())
-			})
-
 			Step("Creating Istio")
 			// The cleaner should delete these.
 			common.EnsureNamespace(ctx, cl, common.ControlPlaneNamespace)
@@ -368,8 +322,6 @@ spec:
 				Skip(fmt.Sprintf("TLSAdherence is already set to %q; cannot reset to NoOpinion. Skipping test.", apiServer.Spec.TLSAdherence))
 			}
 
-			applyCustomTLSProfile(ctx, cl, customTLSProfileCiphers)
-
 			Step("Verifying IstioRevision does not have TLS cipher suites")
 			Consistently(func(g Gomega) {
 				rev := &v1.IstioRevision{}
@@ -378,9 +330,9 @@ spec:
 					"IstioRevision should not have cipher suites when TLSAdherence is NoOpinion")
 			}).WithTimeout(30 * time.Second).WithPolling(5 * time.Second).Should(Succeed())
 
-			Step("Verifying metrics endpoint still accepts the marker cipher")
-			Expect(metricsEndpointAcceptsCipher(k, markerCipher, "1.2")).To(BeTrue(),
-				"Metrics endpoint should accept ECDHE-RSA-AES128-GCM-SHA256 when TLSAdherence is NoOpinion (custom profile not applied)")
+			Step("Verifying metrics endpoint accepts a TLS 1.2 cipher")
+			Expect(metricsEndpointAcceptsCipher(k, "ECDHE-RSA-AES256-GCM-SHA384", "1.2")).To(BeTrue(),
+				"Metrics endpoint should accept TLS 1.2 ciphers when TLSAdherence is NoOpinion")
 			Success("TLS settings were not synced when TLSAdherence is NoOpinion")
 		})
 
@@ -405,7 +357,6 @@ spec:
 				ciphers := getIstioRevisionCipherSuites(rev)
 				g.Expect(ciphers).To(BeEmpty(), "IstioRevision should not have cipher suites")
 
-				// assert that pilot.extraContainerArgs does not contain --tls-cipher-suites
 				var pilotExtraArgs []string
 				if rev.Spec.Values != nil && rev.Spec.Values.Pilot != nil {
 					pilotExtraArgs = rev.Spec.Values.Pilot.ExtraContainerArgs
@@ -415,49 +366,83 @@ spec:
 
 			ensureTLSAdherence(ctx, cl, configv1.TLSAdherencePolicyStrictAllComponents)
 
-			Step("Verifying IstioRevision has TLS cipher suites from the custom profile")
+			Step("Verifying IstioRevision has TLS cipher suites from the Intermediate profile")
 			Eventually(func(g Gomega) {
 				rev := &v1.IstioRevision{}
 				g.Expect(cl.Get(ctx, client.ObjectKey{Name: "default"}, rev)).To(Succeed())
 				ciphers := getIstioRevisionCipherSuites(rev)
 				g.Expect(ciphers).NotTo(BeEmpty(), "IstioRevision should have cipher suites")
-				// This is on the intermediate profile, so it should be present
-				g.Expect(ciphers).To(ContainElement(tls.CipherSuiteName(tls.TLS_AES_256_GCM_SHA384)),
-					"IstioRevision should contain TLS_AES_256_GCM_SHA384 from the intermediate profile")
 
 				g.Expect(rev.Spec.Values.Pilot).NotTo(BeNil())
 				g.Expect(rev.Spec.Values.Pilot.ExtraContainerArgs).To(
 					ContainElement(ContainSubstring("--tls-cipher-suites=")),
-					"IstioRevision should have --tls-cipher-suites in pilot.extraContainerArgs")
+					"IstioRevision should have --tls-cipher-suites in pilot.extraContainerArgs",
+				)
 			}).WithTimeout(5*time.Minute).WithPolling(5*time.Second).Should(Succeed(),
 				"IstioRevision is not syncing TLS settings but should be")
 
-			Step("Verifying metrics endpoint accepts the custom cipher")
-			Eventually(func() bool {
-				return metricsEndpointAcceptsCipher(k, "ECDHE-RSA-AES256-GCM-SHA384", "1.2")
-			}).Should(BeTrue(),
-				"Metrics endpoint should accept ECDHE-RSA-AES256-GCM-SHA384 when TLS profile includes it")
-			Success("TLS settings were synced after TLSAdherence change to StrictAllComponents")
+			Step("Applying Modern TLS profile (TLS 1.3 only)")
+			applyModernTLSProfile(ctx, cl)
 
-			Step("Applying custom TLS profile without ECDHE-RSA-AES128-GCM-SHA256")
-			applyCustomTLSProfile(ctx, cl, customTLSProfileCiphers)
-
-			Step("Verifying IstioRevision cipher suites no longer include the marker cipher")
+			Step("Verifying IstioRevision has TLS 1.3 settings from the Modern profile")
 			Eventually(func(g Gomega) {
 				rev := &v1.IstioRevision{}
 				g.Expect(cl.Get(ctx, client.ObjectKey{Name: "default"}, rev)).To(Succeed())
-				ciphers := getIstioRevisionCipherSuites(rev)
-				g.Expect(ciphers).NotTo(BeEmpty(), "IstioRevision should have cipher suites")
-				g.Expect(ciphers).NotTo(ContainElement(markerCipherName),
-					"IstioRevision should not contain ECDHE-RSA-AES128-GCM-SHA256 after custom profile is applied")
-			}).WithTimeout(5 * time.Minute).WithPolling(5 * time.Second).Should(Succeed())
+				g.Expect(rev.Spec.Values).NotTo(BeNil())
+				g.Expect(rev.Spec.Values.MeshConfig).NotTo(BeNil())
 
-			Step("Verifying metrics endpoint rejects the marker cipher")
+				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults).NotTo(BeNil())
+				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults.MinProtocolVersion).To(
+					Equal(v1.MeshConfigTLSConfigTLSProtocolTlsv13),
+					"tlsDefaults.minProtocolVersion should be TLSV1_3",
+				)
+				g.Expect(rev.Spec.Values.MeshConfig.TlsDefaults.CipherSuites).To(BeEmpty(),
+					"tlsDefaults.cipherSuites should be empty for TLS 1.3")
+
+				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS).NotTo(BeNil())
+				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS.MinProtocolVersion).To(
+					Equal(v1.MeshConfigTLSConfigTLSProtocolTlsv13),
+					"meshMTLS.minProtocolVersion should be TLSV1_3",
+				)
+				g.Expect(rev.Spec.Values.MeshConfig.MeshMTLS.CipherSuites).To(BeEmpty(),
+					"meshMTLS.cipherSuites should be empty for TLS 1.3")
+
+				proxyMeta := getIstioRevisionProxyMetadata(rev)
+				g.Expect(proxyMeta).To(HaveKey("OPENSSL_TLS1_3_CIPHERSUITES"),
+					"proxyMetadata should contain OPENSSL_TLS1_3_CIPHERSUITES for TLS 1.3")
+				tls13Ciphers := proxyMeta["OPENSSL_TLS1_3_CIPHERSUITES"]
+				g.Expect(tls13Ciphers).NotTo(BeEmpty(),
+					"OPENSSL_TLS1_3_CIPHERSUITES should not be empty")
+				for _, cipher := range configv1.TLSProfiles[configv1.TLSProfileModernType].Ciphers {
+					g.Expect(tls13Ciphers).To(ContainSubstring(cipher),
+						fmt.Sprintf("OPENSSL_TLS1_3_CIPHERSUITES should contain %s from the Modern profile", cipher))
+				}
+			}).WithTimeout(5*time.Minute).WithPolling(5*time.Second).Should(Succeed(),
+				"IstioRevision should have TLS 1.3 settings from the Modern profile")
+
+			Step("Verifying metrics endpoint rejects TLS 1.2 connections")
 			Eventually(func() bool {
-				return metricsEndpointAcceptsCipher(k, markerCipher, "1.2")
+				return metricsEndpointAcceptsCipher(k, "ECDHE-RSA-AES256-GCM-SHA384", "1.2")
 			}).Should(BeFalse(),
-				"Metrics endpoint should reject ECDHE-RSA-AES128-GCM-SHA256 after custom profile is applied")
-			Success("TLS settings were updated after profile change")
+				"Metrics endpoint should reject TLS 1.2 connections when Modern profile is active")
+			Success("TLS settings were synced after switching to Modern profile")
+
+			Step("Deploying a proxy pod to verify synced TLS settings produce a healthy sidecar")
+			const tlsTestNamespace = "tls-test"
+			Expect(k.CreateNamespace(tlsTestNamespace)).To(Succeed(), "Failed to create test namespace")
+			DeferCleanup(func() {
+				_ = k.Delete("namespace", tlsTestNamespace)
+			})
+			Expect(k.Label("namespace", tlsTestNamespace, "istio-injection", "enabled")).To(Succeed(),
+				"Failed to label namespace for sidecar injection")
+			Expect(k.WithNamespace(tlsTestNamespace).ApplyKustomize("sleep")).To(Succeed(),
+				"Failed to deploy sleep workload")
+
+			Eventually(func() error {
+				return common.CheckPodsReady(ctx, cl, tlsTestNamespace)
+			}).WithTimeout(5*time.Minute).WithPolling(5*time.Second).Should(Succeed(),
+				"Sleep pod with sidecar should be ready after TLS settings are synced")
+			Success("Proxy pod is healthy with synced TLS settings")
 		})
 	})
 
@@ -577,66 +562,36 @@ func ensureTLSAdherence(ctx context.Context, cl client.Client, policy configv1.T
 		return
 	}
 
-	// Wait for the operator to restart after the TLSAdherence change.
-	oldUIDs := make(map[string]struct{})
-	podList := &corev1.PodList{}
-	Expect(cl.List(ctx, podList, client.InNamespace(namespace),
-		client.MatchingLabels{"control-plane": deploymentName})).To(Succeed(),
-		"Failed to list operator pods before TLSAdherence change")
-	for _, pod := range podList.Items {
-		oldUIDs[string(pod.UID)] = struct{}{}
-	}
-
-	Step(fmt.Sprintf("Updating APIServer TLSAdherence to %s", policy))
+	Step(fmt.Sprintf("Updating APIServer TLSAdherence from: %s to %s", apiServer.Spec.TLSAdherence, policy))
 	apiServer.Spec.TLSAdherence = policy
 	Expect(cl.Update(ctx, apiServer)).To(Succeed(), "Failed to update APIServer TLSAdherence")
-
-	Step("Waiting for operator to restart and be ready after TLSAdherence change")
-	Eventually(func(g Gomega) {
-		pods := &corev1.PodList{}
-		g.Expect(cl.List(ctx, pods, client.InNamespace(namespace),
-			client.MatchingLabels{"control-plane": deploymentName})).To(Succeed())
-
-		found := false
-		for _, pod := range pods.Items {
-			if _, wasOld := oldUIDs[string(pod.UID)]; wasOld {
-				continue
-			}
-			if pod.DeletionTimestamp != nil || pod.Status.Phase != corev1.PodRunning {
-				continue
-			}
-			for _, cond := range pod.Status.Conditions {
-				if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
-					found = true
-					break
-				}
-			}
-			if found {
-				break
-			}
-		}
-		g.Expect(found).To(BeTrue(), "No new ready operator pod found after TLSAdherence change to %s", policy)
-	}).WithTimeout(5*time.Minute).WithPolling(5*time.Second).Should(Succeed(),
-		"Operator should restart and be ready after TLSAdherence change")
 }
 
-func applyCustomTLSProfile(ctx context.Context, cl client.Client, ciphers []string) {
+func applyModernTLSProfile(ctx context.Context, cl client.Client) {
 	GinkgoHelper()
-	Step("Applying a Custom TLS profile")
+	Step("Applying Modern TLS profile")
 
 	apiServer := &configv1.APIServer{}
 	Expect(cl.Get(ctx, apiServerKey, apiServer)).To(Succeed(), "Failed to get APIServer")
 	apiServer.Spec.TLSSecurityProfile = &configv1.TLSSecurityProfile{
-		Type: configv1.TLSProfileCustomType,
-		Custom: &configv1.CustomTLSProfile{
-			TLSProfileSpec: configv1.TLSProfileSpec{
-				Ciphers:       ciphers,
-				MinTLSVersion: configv1.VersionTLS12,
-			},
-		},
+		Type:   configv1.TLSProfileModernType,
+		Modern: &configv1.ModernTLSProfile{},
 	}
-	Expect(cl.Update(ctx, apiServer)).To(Succeed(), "Failed to update APIServer with custom TLS profile")
-	Success("Applied Custom TLS profile to APIServer")
+	Expect(cl.Update(ctx, apiServer)).To(Succeed(), "Failed to update APIServer with Modern TLS profile")
+	Success("Applied Modern TLS profile to APIServer")
+
+	Step("Waiting for kube-apiserver to finish rolling out after TLS profile change")
+	Eventually(func(g Gomega) {
+		co := &configv1.ClusterOperator{}
+		g.Expect(cl.Get(ctx, client.ObjectKey{Name: "kube-apiserver"}, co)).To(Succeed())
+		for _, cond := range co.Status.Conditions {
+			if cond.Type == configv1.OperatorProgressing {
+				g.Expect(cond.Status).To(Equal(configv1.ConditionFalse), "kube-apiserver should not be Progressing")
+			}
+		}
+	}).WithTimeout(30*time.Minute).WithPolling(30*time.Second).Should(Succeed(),
+		"kube-apiserver should finish rolling out after TLS profile change")
+	Success("kube-apiserver is stable after TLS profile change")
 }
 
 func getIstioRevisionCipherSuites(rev *v1.IstioRevision) []string {
@@ -644,6 +599,13 @@ func getIstioRevisionCipherSuites(rev *v1.IstioRevision) []string {
 		return nil
 	}
 	return rev.Spec.Values.MeshConfig.TlsDefaults.CipherSuites
+}
+
+func getIstioRevisionProxyMetadata(rev *v1.IstioRevision) map[string]string {
+	if rev.Spec.Values == nil || rev.Spec.Values.MeshConfig == nil || rev.Spec.Values.MeshConfig.DefaultConfig == nil {
+		return nil
+	}
+	return rev.Spec.Values.MeshConfig.DefaultConfig.ProxyMetadata
 }
 
 // metricsEndpointAcceptsCipher tests whether the operator's metrics endpoint
