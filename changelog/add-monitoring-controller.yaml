@@ -1,0 +1,6 @@
+category: added
+title: Add monitoring controller for Istio metrics
+description: |
+  Creates Prometheus Operator ServiceMonitor and PodMonitor resources when the
+  Istio CR is annotated with sailoperator.io/monitoring: enabled, so control-plane
+  and sidecar proxy metrics can be scraped without manual Prometheus config.
