@@ -101,7 +101,8 @@ func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *ru
 
 // Reconcile creates ServiceMonitor and PodMonitor resources for each IstioRevision owned by the Istio
 // when monitoring is enabled. Existing monitor resources are left unchanged so users can customize
-// labels or specs without being overwritten.
+// labels or specs without being overwritten. Orphaned PodMonitors are not deleted when injection
+// labels are removed from a namespace.
 func (r *Reconciler) Reconcile(ctx context.Context, istio *v1.Istio) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
@@ -169,8 +170,9 @@ func (r *Reconciler) reconcileServiceMonitor(ctx context.Context, istio *v1.Isti
 	return nil
 }
 
-// reconcilePodMonitors creates PodMonitors for istio-proxy sidecars in namespaces
-// that reference this IstioRevision via istio-injection=enabled or istio.io/rev labels.
+// reconcilePodMonitors creates PodMonitors in namespaces selected for this revision.
+// Matching namespaces are those with istio.io/rev=<revision>, plus istio-injection=enabled
+// when this is the default revision. Existing PodMonitors are left unchanged.
 func (r *Reconciler) reconcilePodMonitors(ctx context.Context, istio *v1.Istio, rev *v1.IstioRevision) error {
 	log := logf.FromContext(ctx)
 
@@ -317,9 +319,15 @@ func (r *Reconciler) buildPodMonitor(istio *v1.Istio, rev *v1.IstioRevision, nam
 			Name:      name,
 			Namespace: namespace,
 			Labels:    r.monitorLabels("istio-proxy", podMonitorMonitoring),
-			// Note: We don't set owner references here because the PodMonitor is in a different
-			// namespace than the IstioRevision (which is cluster-scoped). Cross-namespace owner
-			// references are not supported by Kubernetes.
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: v1.GroupVersion.String(),
+					Kind:       v1.IstioRevisionKind,
+					Name:       rev.Name,
+					UID:        rev.UID,
+					Controller: ptr.Of(true),
+				},
+			},
 		},
 		Spec: monitoringv1.PodMonitorSpec{
 			JobLabel: podMonitorJobLabel,
@@ -355,8 +363,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	ownedRevisionHandler := wrapEventHandler(logger,
 		handler.EnqueueRequestForOwner(r.Scheme, r.RESTMapper(), &v1.Istio{}, handler.OnlyControllerOwner()))
 
-	// namespaceHandler triggers reconciliation of all Istio CRs when a namespace's
-	// sidecar injection labels (istio-injection or istio.io/rev) change
+	// namespaceHandler enqueues the Istio that owns the revision referenced by the
+	// namespace's sidecar injection labels. On update, the mapper runs for both the
+	// old and new namespace so the previous and current Istio are both requeued.
 	namespaceHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapNamespaceToReconcileRequest))
 
 	return ctrl.NewControllerManagedBy(mgr).
@@ -372,16 +381,18 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		}).
 		Named("monitoring").
 		Watches(&v1.Istio{}, mainObjectHandler).
-		// Watch owned IstioRevisions so revision create/update/delete requeues the parent Istio.
-		// ServiceMonitor owner references on IstioRevision still handle GC on revision deletion.
+		// Watch IstioRevisions so create/update/delete requeues the parent Istio.
+		// ServiceMonitor and PodMonitor owner references on IstioRevision handle GC on revision deletion.
 		Watches(&v1.IstioRevision{}, ownedRevisionHandler).
-		// Watch namespaces with sidecar injection labels to create PodMonitors in them
+		// Watch namespaces so sidecar injection label changes requeue the referenced Istio.
 		Watches(&corev1.Namespace{}, namespaceHandler, builder.WithPredicates(sidecarInjectionNamespacePredicate())).
 		Complete(reconciler.NewStandardReconciler[*v1.Istio](r.Client, r.Reconcile))
 }
 
-// mapNamespaceToReconcileRequest returns reconcile requests for all Istio CRs when a
-// namespace's sidecar injection labels change.
+// mapNamespaceToReconcileRequest returns a reconcile request for the Istio that owns
+// the IstioRevision referenced by the namespace's sidecar injection labels.
+// EnqueueRequestsFromMapFunc invokes this for both the old and new object on updates,
+// so a label change requeues the previous Istio and the newly referenced Istio.
 func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, obj client.Object) []reconcile.Request {
 	log := logf.FromContext(ctx)
 	ns, ok := obj.(*corev1.Namespace)
@@ -390,22 +401,42 @@ func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, obj cli
 		return nil
 	}
 
-	istioList := &v1.IstioList{}
-	if err := r.Client.List(ctx, istioList); err != nil {
-		log.Error(err, "failed to list Istio resources")
+	revisionName := revision.GetReferencedRevisionFromNamespace(ns.GetLabels())
+	if revisionName == "" {
 		return nil
 	}
 
-	requests := make([]reconcile.Request, 0, len(istioList.Items))
-	for i := range istioList.Items {
-		requests = append(requests, reconcile.Request{
-			NamespacedName: client.ObjectKeyFromObject(&istioList.Items[i]),
-		})
+	rev := &v1.IstioRevision{}
+	if err := r.Client.Get(ctx, client.ObjectKey{Name: revisionName}, rev); err != nil {
+		if !apierrors.IsNotFound(err) {
+			log.Error(err, "failed to get IstioRevision referenced by namespace",
+				"namespace", ns.Name, "IstioRevision", revisionName)
+		}
+		return nil
 	}
 
-	log.V(2).Info("Namespace sidecar injection labels changed, queuing Istio resources for reconciliation",
-		"namespace", ns.Name, "istioCount", len(requests))
-	return requests
+	istioName := ownerIstioName(rev)
+	if istioName == "" {
+		return nil
+	}
+
+	log.V(2).Info("Namespace sidecar injection labels changed, queuing Istio for reconciliation",
+		"namespace", ns.Name, "Istio", istioName, "IstioRevision", revisionName)
+	return []reconcile.Request{{
+		NamespacedName: client.ObjectKey{Name: istioName},
+	}}
+}
+
+// ownerIstioName returns the name of the Istio CR that owns the given IstioRevision.
+func ownerIstioName(rev *v1.IstioRevision) string {
+	owner := metav1.GetControllerOf(rev)
+	if owner == nil {
+		return ""
+	}
+	if owner.APIVersion != v1.GroupVersion.String() || owner.Kind != v1.IstioKind {
+		return ""
+	}
+	return owner.Name
 }
 
 // sidecarInjectionNamespacePredicate returns a predicate that filters namespace events
