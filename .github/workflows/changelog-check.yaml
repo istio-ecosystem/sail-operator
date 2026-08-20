@@ -9,8 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     if: >-
       !contains(github.event.pull_request.labels.*.name, 'skip-changelog') &&
-      github.actor != 'openshift-service-mesh-bot' &&
-      github.actor != 'istio-testing'
+      github.event.pull_request.user.login != 'openshift-service-mesh-bot' &&
+      github.event.pull_request.user.login != 'istio-testing'
     steps:
     - uses: actions/checkout@v4
       with:
