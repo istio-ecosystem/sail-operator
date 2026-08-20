@@ -215,4 +215,6 @@ func assertPodMonitor(g Gomega, pm *monitoringv1.PodMonitor) {
 		Key:      "istio-prometheus-ignore",
 		Operator: metav1.LabelSelectorOpDoesNotExist,
 	}))
+	g.Expect(pm.OwnerReferences).NotTo(BeEmpty())
+	g.Expect(pm.OwnerReferences[0].Kind).To(Equal(v1.IstioRevisionKind))
 }

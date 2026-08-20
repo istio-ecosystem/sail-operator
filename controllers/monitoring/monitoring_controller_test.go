@@ -340,6 +340,9 @@ func TestReconcile(t *testing.T) {
 				g.Expect(err).ToNot(HaveOccurred())
 				g.Expect(pm.Name).To(Equal(tt.expectPMRevision + podMonitorNameSuffix))
 				expectMonitoringLabels(g, pm.Labels, podMonitorMonitoring)
+				g.Expect(pm.OwnerReferences).To(HaveLen(1))
+				g.Expect(pm.OwnerReferences[0].Kind).To(Equal(v1.IstioRevisionKind))
+				g.Expect(pm.OwnerReferences[0].Name).To(Equal(tt.expectPMRevision))
 			}
 		})
 	}
@@ -838,9 +841,13 @@ func TestBuildPodMonitor(t *testing.T) {
 			g.Expect(labels["app"]).To(Equal("istio-proxy"))
 			expectMonitoringLabels(g, labels, podMonitorMonitoring)
 
-			// PodMonitor should NOT have owner references (cross-namespace)
 			ownerRefs := result.GetOwnerReferences()
-			g.Expect(ownerRefs).To(BeEmpty())
+			g.Expect(ownerRefs).To(HaveLen(1))
+			g.Expect(ownerRefs[0].Kind).To(Equal(v1.IstioRevisionKind))
+			g.Expect(ownerRefs[0].Name).To(Equal(tt.rev.Name))
+			g.Expect(ownerRefs[0].UID).To(Equal(tt.rev.UID))
+			g.Expect(ownerRefs[0].Controller).ToNot(BeNil())
+			g.Expect(*ownerRefs[0].Controller).To(BeTrue())
 
 			// Check spec.selector.matchExpressions
 			g.Expect(result.Spec.JobLabel).To(Equal(podMonitorJobLabel))
@@ -1141,17 +1148,100 @@ func TestNamespacesForRevision(t *testing.T) {
 }
 
 func TestMapNamespaceToReconcileRequest(t *testing.T) {
-	g := NewWithT(t)
 	cfg := newReconcilerTestConfig()
 	istioA := &v1.Istio{ObjectMeta: metav1.ObjectMeta{Name: "mesh-a", UID: "uid-a"}}
 	istioB := &v1.Istio{ObjectMeta: metav1.ObjectMeta{Name: "mesh-b", UID: "uid-b"}}
-	cl := newFakeClientBuilder().WithObjects(istioA, istioB).Build()
-	r := NewReconciler(cfg, cl, scheme.Scheme)
-	reqs := r.mapNamespaceToReconcileRequest(ctx, newNamespaceWithInjection(appNamespace))
-	g.Expect(reqs).To(ConsistOf(
-		reconcile.Request{NamespacedName: types.NamespacedName{Name: "mesh-a"}},
-		reconcile.Request{NamespacedName: types.NamespacedName{Name: "mesh-b"}},
-	))
+	defaultRev := &v1.IstioRevision{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: v1.DefaultRevision,
+			UID:  "default-rev-uid",
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: v1.GroupVersion.String(),
+					Kind:       v1.IstioKind,
+					Name:       istioA.Name,
+					UID:        istioA.UID,
+					Controller: ptr.Of(true),
+				},
+			},
+		},
+	}
+	namedRev := &v1.IstioRevision{ObjectMeta: revisionMeta}
+	unownedRev := &v1.IstioRevision{
+		ObjectMeta: metav1.ObjectMeta{Name: "unowned"},
+	}
+
+	tests := []struct {
+		name      string
+		objects   []client.Object
+		namespace *corev1.Namespace
+		want      []reconcile.Request
+	}{
+		{
+			name:      "enqueues owning Istio for istio-injection=enabled",
+			objects:   []client.Object{istioA, istioB, defaultRev, namedRev},
+			namespace: newNamespaceWithInjection(appNamespace),
+			want: []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Name: istioA.Name}},
+			},
+		},
+		{
+			name:      "enqueues owning Istio for istio.io/rev",
+			objects:   []client.Object{istioA, istioB, defaultRev, namedRev},
+			namespace: newNamespaceWithRevLabel(appNamespace, revisionName),
+			want: []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Name: istioName}},
+			},
+		},
+		{
+			name:    "istio-injection takes precedence over istio.io/rev",
+			objects: []client.Object{istioA, istioB, defaultRev, namedRev},
+			namespace: &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: appNamespace,
+					Labels: map[string]string{
+						constants.IstioInjectionLabel: constants.IstioInjectionEnabledValue,
+						constants.IstioRevLabel:       revisionName,
+					},
+				},
+			},
+			want: []reconcile.Request{
+				{NamespacedName: types.NamespacedName{Name: istioA.Name}},
+			},
+		},
+		{
+			name:      "no request when namespace has no injection labels",
+			objects:   []client.Object{istioA, defaultRev},
+			namespace: &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: appNamespace}},
+			want:      nil,
+		},
+		{
+			name:      "no request when referenced revision does not exist",
+			objects:   []client.Object{istioA, istioB},
+			namespace: newNamespaceWithRevLabel(appNamespace, "missing-revision"),
+			want:      nil,
+		},
+		{
+			name:      "no request when revision has no Istio owner",
+			objects:   []client.Object{unownedRev},
+			namespace: newNamespaceWithRevLabel(appNamespace, "unowned"),
+			want:      nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			cl := newFakeClientBuilder().WithObjects(tt.objects...).Build()
+			r := NewReconciler(cfg, cl, scheme.Scheme)
+			reqs := r.mapNamespaceToReconcileRequest(ctx, tt.namespace)
+			if tt.want == nil {
+				g.Expect(reqs).To(BeEmpty())
+				return
+			}
+			g.Expect(reqs).To(ConsistOf(tt.want))
+		})
+	}
 }
 
 func newReconcilerTestConfig() config.ReconcilerConfig {
