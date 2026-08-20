@@ -39,7 +39,7 @@ func RemoveFinalizer(ctx context.Context, cl client.Client, obj client.Object, f
 
 	finalizers := sets.New(obj.GetFinalizers()...)
 	finalizers.Delete(finalizer)
-	obj.SetFinalizers(finalizers.UnsortedList())
+	obj.SetFinalizers(sets.SortedList(finalizers))
 
 	err := cl.Update(ctx, obj)
 	if errors.IsNotFound(err) {
@@ -61,7 +61,7 @@ func AddFinalizer(ctx context.Context, cl client.Client, obj client.Object, fina
 
 	finalizers := sets.New(obj.GetFinalizers()...)
 	finalizers.Insert(finalizer)
-	obj.SetFinalizers(finalizers.UnsortedList())
+	obj.SetFinalizers(sets.SortedList(finalizers))
 
 	err := cl.Update(ctx, obj)
 	if errors.IsNotFound(err) {
