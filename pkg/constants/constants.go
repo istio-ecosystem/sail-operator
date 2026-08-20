@@ -66,7 +66,6 @@ const (
 
 	// MonitoringAnnotationKey is an annotation on the Istio CR that enables the monitoring
 	// controller to create ServiceMonitor and PodMonitor resources.
-	// See enhancements/SEP8471-metrics-integration.md.
 	MonitoringAnnotationKey = MetadataNamespace + "/monitoring"
 
 	// MonitoringAnnotationEnabledValue is the annotation value that turns monitoring on.
