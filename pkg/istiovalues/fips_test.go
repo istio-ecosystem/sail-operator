@@ -15,78 +15,76 @@
 package istiovalues
 
 import (
-	"os"
-	"path"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 )
 
-func TestDetectFipsMode(t *testing.T) {
-	resourceDir := t.TempDir()
-	os.WriteFile(path.Join(resourceDir, "fips_enabled"), []byte("1\n"), 0o644)
-	os.WriteFile(path.Join(resourceDir, "fips_not_enabled"), []byte("0\n"), 0o644)
-	tests := []struct {
-		name        string
-		filepath    string
-		expectValue bool
-	}{
-		{
-			name:        "FIPS not enabled",
-			filepath:    path.Join(resourceDir, "fips_not_enabled"),
-			expectValue: false,
-		},
-		{
-			name:        "FIPS enabled",
-			filepath:    path.Join(resourceDir, "fips_enabled"),
-			expectValue: true,
-		},
-		{
-			name:        "file not found",
-			filepath:    path.Join(resourceDir, "fips_not_found"),
-			expectValue: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			detectFipsMode(tt.filepath)
-			actual := FipsEnabled
-
-			if diff := cmp.Diff(tt.expectValue, actual); diff != "" {
-				t.Errorf("FipsEnabled variable wasn't applied properly; diff (-expected, +actual):\n%v", diff)
-			}
-		})
-	}
-}
-
 func TestApplyFipsValues(t *testing.T) {
 	tests := []struct {
 		name         string
 		fipsEnabled  bool
+		version      string
 		inputValues  *v1.Values
 		expectValues *v1.Values
+		expectErr    bool
 	}{
 		{
 			name:         "FIPS not enabled",
 			fipsEnabled:  false,
+			version:      "1.29.0",
 			inputValues:  &v1.Values{},
 			expectValues: &v1.Values{},
 		},
 		{
-			name:        "FIPS enabled",
+			name:        "FIPS enabled with version <= 1.30 uses fips-140-2",
 			fipsEnabled: true,
+			version:     "1.29.0",
 			inputValues: &v1.Values{},
 			expectValues: &v1.Values{
 				Pilot: &v1.PilotConfig{
-					Env: map[string]string{"COMPLIANCE_POLICY": "fips-140-2"},
+					Env: map[string]string{"COMPLIANCE_POLICY": fips140_2},
+				},
+			},
+		},
+		{
+			name:        "version 1.30 uses fips-140-2",
+			fipsEnabled: true,
+			version:     "1.30.0",
+			inputValues: &v1.Values{},
+			expectValues: &v1.Values{
+				Pilot: &v1.PilotConfig{
+					Env: map[string]string{"COMPLIANCE_POLICY": fips140_2},
+				},
+			},
+		},
+		{
+			name:        "version > 1.30 uses fips-140-3",
+			fipsEnabled: true,
+			version:     "1.31.0",
+			inputValues: &v1.Values{},
+			expectValues: &v1.Values{
+				Pilot: &v1.PilotConfig{
+					Env: map[string]string{"COMPLIANCE_POLICY": fips140_3},
+				},
+			},
+		},
+		{
+			name:        "version 1.31-alpha uses fips-140-3",
+			fipsEnabled: true,
+			version:     "1.31.0-alpha.0",
+			inputValues: &v1.Values{},
+			expectValues: &v1.Values{
+				Pilot: &v1.PilotConfig{
+					Env: map[string]string{"COMPLIANCE_POLICY": fips140_3},
 				},
 			},
 		},
 		{
 			name:        "FIPS enabled with existing env",
 			fipsEnabled: true,
+			version:     "1.29.0",
 			inputValues: &v1.Values{
 				Pilot: &v1.PilotConfig{
 					Env: map[string]string{"OTHER_VAR": "value"},
@@ -96,7 +94,7 @@ func TestApplyFipsValues(t *testing.T) {
 				Pilot: &v1.PilotConfig{
 					Env: map[string]string{
 						"OTHER_VAR":         "value",
-						"COMPLIANCE_POLICY": "fips-140-2",
+						"COMPLIANCE_POLICY": fips140_2,
 					},
 				},
 			},
@@ -104,6 +102,7 @@ func TestApplyFipsValues(t *testing.T) {
 		{
 			name:        "FIPS enabled but COMPLIANCE_POLICY already set",
 			fipsEnabled: true,
+			version:     "1.31.0",
 			inputValues: &v1.Values{
 				Pilot: &v1.PilotConfig{
 					Env: map[string]string{"COMPLIANCE_POLICY": "custom-policy"},
@@ -118,18 +117,36 @@ func TestApplyFipsValues(t *testing.T) {
 		{
 			name:         "nil values",
 			fipsEnabled:  false,
+			version:      "1.29.0",
 			inputValues:  nil,
 			expectValues: nil,
+		},
+		{
+			name:        "invalid version returns error",
+			fipsEnabled: true,
+			version:     "not-a-version",
+			inputValues: &v1.Values{},
+			expectErr:   true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			originalFipsEnabled := FipsEnabled
-			t.Cleanup(func() { FipsEnabled = originalFipsEnabled })
-			FipsEnabled = tt.fipsEnabled
-			ApplyFipsValues(tt.inputValues)
+			if tt.fipsEnabled {
+				EnableFIPS(t)
+			}
+			err := ApplyFipsValues(tt.inputValues, tt.version)
 
+			if tt.expectErr {
+				if err == nil {
+					t.Error("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
 			if diff := cmp.Diff(tt.expectValues, tt.inputValues); diff != "" {
 				t.Errorf("COMPLIANCE_POLICY env wasn't applied properly; diff (-expected, +actual):\n%v", diff)
 			}
@@ -252,9 +269,9 @@ func TestApplyZTunnelFipsValues(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			originalFipsEnabled := FipsEnabled
-			t.Cleanup(func() { FipsEnabled = originalFipsEnabled })
-			FipsEnabled = tt.fipsEnabled
+			if tt.fipsEnabled {
+				EnableFIPS(t)
+			}
 			ApplyZTunnelFipsValues(tt.inputValues, tt.version)
 
 			if diff := cmp.Diff(tt.expectValues, tt.inputValues); diff != "" {
