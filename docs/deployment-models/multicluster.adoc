@@ -21,6 +21,7 @@ link:../README.adoc[Return to Project Root]
 ** <<primary-remote---single-network,Primary-Remote - Single-Network>>
 ** <<primary-remote---multi-network,Primary-Remote - Multi-Network>>
 ** <<external-control-plane,External Control Plane>>
+** <<external-control-plane-dns-based-injection-url,External Control Plane (DNS-based Injection URL)>>
 
 You can use the Sail Operator and the Sail CRDs to manage a multi-cluster Istio deployment. The following instructions are adapted from the https://istio.io/latest/docs/setup/install/multicluster/[Istio multi-cluster documentation] and https://istio.io/latest/docs/ambient/install/multicluster/[Istio Ambient Mode multi-cluster documentation] to demonstrate how you can setup the various deployment models with Sail. Please familiarize yourself with the different https://istio.io/latest/docs/ops/deployment/deployment-models/[deployment models] before starting.
 
@@ -1547,3 +1548,471 @@ kubectl delete istios external-istiod --context="${CTX_CLUSTER2}"
 kubectl delete ns external-istiod --context="${CTX_CLUSTER2}"
 kubectl delete ns sample --context="${CTX_CLUSTER2}"
 ----
+
+=== External Control Plane (DNS-based Injection URL)
+
+These instructions install an https://istio.io/latest/docs/setup/install/external-controlplane/[external control plane] Istio deployment using DNS-based injection URLs. This is the production-recommended approach for external control plane setups, as described in the https://istio.io/latest/docs/setup/install/external-controlplane/[upstream Istio documentation]. The <<external-control-plane,IP-based External Control Plane>> setup using `injectionPath` and `remotePilotAddress` is suitable for development and testing, but is https://istio.io/latest/docs/setup/install/external-controlplane/#register-the-new-cluster[not recommended for production environments].
+
+In this approach, the remote cluster's webhook is configured with `injectionURL` — a full HTTPS URL pointing directly to the external istiod through the ingress gateway. This provides proper TLS termination at the gateway and eliminates the need for local Service/Endpoint port mapping workarounds.
+
+**Before you begin**, ensure you meet the requirements of the <<common-setup,common setup>> and complete **only** the "Setup env vars" step. Unlike other multi-cluster deployments, you won't be creating a common CA in this setup.
+
+**Additional prerequisites:**
+
+* A DNS hostname that resolves to the external cluster's ingress gateway (provided by your cloud load balancer, an external DNS service, or a nip.io-based controller for development environments).
+* The https://istio.io/latest/docs/setup/install/helm/[Istio Helm repository] (`helm repo add istio https://istio-release.storage.googleapis.com/charts`).
+* Install xref:../common/install-istioctl-tool.adoc[istioctl].
+
+In this setup there is an external control plane cluster (`cluster1`) and a remote cluster (`cluster2`) which are on separate networks.
+
+ifdef::external-cp-dns[]
+# Create second Kind cluster for the remote cluster
+kind create cluster --name external-cp-remote
+# Deploy operator on remote cluster
+kubectl --context kind-external-cp-remote create ns sail-operator
+helm template chart chart ${HELM_TEMPL_DEF_FLAGS} --set image="${IMAGE}" --namespace sail-operator | kubectl --context kind-external-cp-remote apply --server-side=true -f -
+kubectl --context kind-external-cp-remote wait --for=condition=available --timeout=600s deployment/sail-operator -n sail-operator
+# Set context variables
+export CTX_CLUSTER1=kind-docs-automation
+export CTX_CLUSTER2=kind-external-cp-remote
+# Add istio helm repo
+helm repo add istio https://istio-release.storage.googleapis.com/charts || true
+helm repo update
+# Deploy niplb on external cluster for DNS-based LB hostnames
+EXTERNAL_NODE_IP=$(kubectl get nodes --context "${CTX_CLUSTER1}" -o jsonpath='{.items[0].status.addresses[?(@.type == "InternalIP")].address}')
+kubectl apply --context "${CTX_CLUSTER1}" -f - <<EOF
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: niplb
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: niplb
+rules:
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["services/status"]
+    verbs: ["update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: niplb
+subjects:
+  - kind: ServiceAccount
+    name: niplb
+    namespace: default
+roleRef:
+  kind: ClusterRole
+  name: niplb
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: niplb
+  labels:
+    app: niplb
+spec:
+  selector:
+    matchLabels:
+      app: niplb
+  template:
+    metadata:
+      labels:
+        app: niplb
+    spec:
+      serviceAccountName: niplb
+      containers:
+        - name: niplb
+          image: docker.io/dimssss/niplb:latest
+          command:
+            - /usr/local/bin/niplb
+            - --nip-ip=${EXTERNAL_NODE_IP}
+          imagePullPolicy: Always
+EOF
+kubectl wait --context="${CTX_CLUSTER1}" --for=condition=Available deployment/niplb -n default
+endif::[]
+
+. Create namespaces on both clusters.
++
+[source,bash,subs="attributes+",name="external-cp-dns"]
+----
+kubectl create namespace istio-system --context "${CTX_CLUSTER1}"
+kubectl create namespace external-istiod --context "${CTX_CLUSTER1}"
+kubectl create namespace external-istiod --context "${CTX_CLUSTER2}"
+----
+
+. Create an `Istio` resource on `cluster1` to manage the ingress gateway.
++
+[source,bash,subs="attributes+",name="external-cp-dns"]
+----
+kubectl apply --context "${CTX_CLUSTER1}" -f - <<EOF
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  version: v${ISTIO_VERSION}
+  namespace: istio-system
+EOF
+kubectl wait --context "${CTX_CLUSTER1}" --for=condition=Ready istios/default --timeout=3m
+----
+ifdef::external-cp-dns[]
+wait_istio_ready "istio-system"
+endif::[]
+
+. Deploy the ingress gateway on `cluster1` using the Istio gateway Helm chart.
++
+[source,bash,subs="attributes+",name="external-cp-dns"]
+----
+helm install istio-gateway istio/gateway \
+  -n istio-system \
+  --kube-context="${CTX_CLUSTER1}" \
+  --set-json 'service={"ports": [{"port": 15021,"targetPort": 15021,"name": "status-port"},{"port": 15012,"targetPort": 15012,"name": "tls-xds"},{"port": 15017,"targetPort": 15017,"name": "tls-webhook"}]}'
+kubectl wait --context="${CTX_CLUSTER1}" --for=condition=Available deployment/istio-gateway -n istio-system
+----
+
+. Get the external istiod DNS address from the gateway's load balancer.
++
+[source,bash,subs="attributes+",name="external-cp-dns"]
+----
+export EXTERNAL_ISTIOD_ADDR=$(kubectl -n istio-system --context="${CTX_CLUSTER1}" get svc istio-gateway -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+echo "External istiod address: ${EXTERNAL_ISTIOD_ADDR}"
+----
+ifdef::external-cp-dns[]
+if [ -z "${EXTERNAL_ISTIOD_ADDR}" ]; then
+  echo "EXTERNAL_ISTIOD_ADDR is empty, LB hostname not yet assigned"
+  exit 1
+fi
+echo "Verified external istiod address: ${EXTERNAL_ISTIOD_ADDR}"
+endif::[]
+
+. Create a TLS certificate for the gateway hostname. In production, use a certificate signed by a trusted CA.
++
+[source,bash,subs="attributes+",name="external-cp-dns"]
+----
+openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes \
+  -subj "/CN=${EXTERNAL_ISTIOD_ADDR}" \
+  -addext "subjectAltName = DNS:${EXTERNAL_ISTIOD_ADDR}"
+----
+
+. Create a TLS secret in the gateway's namespace and distribute the CA certificate to both clusters.
++
+[source,bash,subs="attributes+",name="external-cp-dns"]
+----
+kubectl create secret tls external-webhook \
+  --context="${CTX_CLUSTER1}" \
+  --namespace istio-system \
+  --cert=cert.pem \
+  --key=key.pem
+
+kubectl create configmap external-istiod-ca \
+  --from-file=root-cert.pem=cert.pem \
+  -n external-istiod \
+  --context="${CTX_CLUSTER1}"
+
+kubectl create configmap external-istiod-ca \
+  --from-file=root-cert.pem=cert.pem \
+  -n external-istiod \
+  --context="${CTX_CLUSTER2}"
+----
+
+. Create the `sample` namespace on the remote cluster and distribute the CA certificate there as well.
++
+[source,bash,subs="attributes+",name="external-cp-dns"]
+----
+kubectl create namespace sample --context="${CTX_CLUSTER2}"
+kubectl create configmap external-istiod-ca \
+  --from-file=root-cert.pem=cert.pem \
+  -n sample \
+  --context="${CTX_CLUSTER2}"
+----
+
+. Create an `Istio` resource on the remote cluster (`cluster2`) with the `remote` profile and DNS-based injection URL.
++
+[source,bash,subs="attributes+",name="external-cp-dns"]
+----
+kubectl apply --context "${CTX_CLUSTER2}" -f - <<EOF
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: external-istiod
+spec:
+  namespace: external-istiod
+  profile: remote
+  values:
+    defaultRevision: external-istiod
+    global:
+      istioNamespace: external-istiod
+      configCluster: true
+    pilot:
+      configMap: true
+    istiodRemote:
+      injectionURL: https://${EXTERNAL_ISTIOD_ADDR}:15017/inject/cluster/cluster2/net/network1
+      injectionCABundle: $(base64 < cert.pem | tr -d '\n')
+    base:
+      validationURL: https://${EXTERNAL_ISTIOD_ADDR}:15017/validate
+EOF
+----
+
+. Create a service account and remote secret on `cluster1` so the external istiod can access the remote cluster.
++
+----
+kubectl create sa istiod-service-account -n external-istiod --context="${CTX_CLUSTER1}"
+istioctl create-remote-secret \
+  --context="${CTX_CLUSTER2}" \
+  --type=config \
+  --namespace=external-istiod \
+  --service-account=istiod-external-istiod \
+  --create-service-account=false | \
+  kubectl apply -f - --context="${CTX_CLUSTER1}"
+----
++
+**If using kind**, first get the remote cluster's controlplane IP and pass the `--server` option to `istioctl create-remote-secret`.
++
+----
+REMOTE_NODE_IP=$(kubectl get nodes -l node-role.kubernetes.io/control-plane --context "${CTX_CLUSTER2}" -o jsonpath='{.items[0].status.addresses[?(@.type == "InternalIP")].address}')
+istioctl create-remote-secret \
+  --context="${CTX_CLUSTER2}" \
+  --type=config \
+  --namespace=external-istiod \
+  --service-account=istiod-external-istiod \
+  --create-service-account=false \
+  --server="https://${REMOTE_NODE_IP}:6443" | \
+  kubectl apply -f - --context="${CTX_CLUSTER1}"
+----
+ifdef::external-cp-dns[]
+kubectl create sa istiod-service-account -n external-istiod --context="${CTX_CLUSTER1}"
+REMOTE_NODE_IP=$(kubectl get nodes -l node-role.kubernetes.io/control-plane --context "${CTX_CLUSTER2}" -o jsonpath='{.items[0].status.addresses[?(@.type == "InternalIP")].address}')
+istioctl create-remote-secret \
+  --context="${CTX_CLUSTER2}" \
+  --type=config \
+  --namespace=external-istiod \
+  --service-account=istiod-external-istiod \
+  --create-service-account=false \
+  --server="https://${REMOTE_NODE_IP}:6443" | \
+  kubectl apply -f - --context="${CTX_CLUSTER1}"
+endif::[]
+
+. Create the `Istio` resource for the external control plane on `cluster1`. This will manage both Istio configuration and proxies on the remote cluster.
++
+[source,bash,subs="attributes+",name="external-cp-dns"]
+----
+kubectl apply --context "${CTX_CLUSTER1}" -f - <<EOF
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: external-istiod
+spec:
+  namespace: external-istiod
+  profile: empty
+  values:
+    meshConfig:
+      rootNamespace: external-istiod
+      defaultConfig:
+        discoveryAddress: $EXTERNAL_ISTIOD_ADDR:15012
+        proxyMetadata:
+          XDS_ROOT_CA: /etc/external-istiod-ca/root-cert.pem
+          CA_ROOT_CA: /etc/external-istiod-ca/root-cert.pem
+    pilot:
+      enabled: true
+      volumes:
+        - name: config-volume
+          configMap:
+            name: istio-external-istiod
+        - name: inject-volume
+          configMap:
+            name: istio-sidecar-injector-external-istiod
+      volumeMounts:
+        - name: config-volume
+          mountPath: /etc/istio/config
+        - name: inject-volume
+          mountPath: /var/lib/istio/inject
+      env:
+        INJECTION_WEBHOOK_CONFIG_NAME: ""
+        VALIDATION_WEBHOOK_CONFIG_NAME: ""
+        EXTERNAL_ISTIOD: "true"
+        LOCAL_CLUSTER_SECRET_WATCHER: "true"
+        CLUSTER_ID: cluster2
+        SHARED_MESH_CONFIG: istio
+    global:
+      externalIstiod: true
+      caAddress: $EXTERNAL_ISTIOD_ADDR:15012
+      istioNamespace: external-istiod
+      operatorManageWebhooks: true
+      configValidation: false
+      meshID: mesh1
+      multiCluster:
+        clusterName: cluster2
+      network: network1
+    sidecarInjectorWebhook:
+      templates:
+        external-ca: |
+          spec:
+            initContainers:
+            - name: istio-proxy
+              volumeMounts:
+              - name: external-ca-cert
+                mountPath: /etc/external-istiod-ca
+                readOnly: true
+            volumes:
+            - name: external-ca-cert
+              configMap:
+                name: external-istiod-ca
+      defaultTemplates: ["sidecar", "external-ca"]
+EOF
+kubectl wait --context "${CTX_CLUSTER1}" --for=condition=Ready istios/external-istiod --timeout=3m
+----
+
+. Create the `Gateway`, `VirtualService`, and `DestinationRule` resources to route traffic from the ingress gateway to the external control plane.
++
+[source,bash,subs="attributes+",name="external-cp-dns"]
+----
+kubectl apply --context "${CTX_CLUSTER1}" -f - <<EOF
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: external-istiod-gw
+  namespace: external-istiod
+spec:
+  selector:
+    istio: istio-gateway
+  servers:
+    - port:
+        number: 15012
+        protocol: https
+        name: https-XDS
+      tls:
+        mode: SIMPLE
+        credentialName: external-webhook
+      hosts:
+      - $EXTERNAL_ISTIOD_ADDR
+    - port:
+        number: 15017
+        protocol: https
+        name: https-WEBHOOK
+      tls:
+        mode: SIMPLE
+        credentialName: external-webhook
+      hosts:
+      - $EXTERNAL_ISTIOD_ADDR
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: external-istiod-vs
+  namespace: external-istiod
+spec:
+  hosts:
+  - $EXTERNAL_ISTIOD_ADDR
+  gateways:
+  - external-istiod-gw
+  http:
+  - match:
+    - port: 15012
+    route:
+    - destination:
+        host: istiod-external-istiod.external-istiod.svc.cluster.local
+        port:
+          number: 15012
+  - match:
+    - port: 15017
+    route:
+    - destination:
+        host: istiod-external-istiod.external-istiod.svc.cluster.local
+        port:
+          number: 443
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: external-istiod-dr
+  namespace: external-istiod
+spec:
+  host: istiod-external-istiod.external-istiod.svc.cluster.local
+  trafficPolicy:
+    portLevelSettings:
+    - port:
+        number: 15012
+      tls:
+        mode: SIMPLE
+        caCertificates: /var/run/secrets/istio/root-cert.pem
+      connectionPool:
+        http:
+          h2UpgradePolicy: UPGRADE
+    - port:
+        number: 443
+      tls:
+        mode: SIMPLE
+        caCertificates: /var/run/secrets/istio/root-cert.pem
+EOF
+----
+
+. Wait for the `Istio` resource to be ready on the remote cluster.
++
+[source,bash,subs="attributes+",name="external-cp-dns"]
+----
+kubectl wait --context="${CTX_CLUSTER2}" --for=condition=Ready istios/external-istiod --timeout=3m
+----
+
+. Label the `sample` namespace on the remote cluster to enable injection and deploy sample applications.
++
+[source,bash,subs="attributes+",name="external-cp-dns"]
+----
+kubectl label --context="${CTX_CLUSTER2}" namespace sample istio.io/rev=external-istiod
+kubectl apply -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml" -l service=helloworld -n sample --context="${CTX_CLUSTER2}"
+kubectl apply -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/helloworld/helloworld.yaml" -l version=v1 -n sample --context="${CTX_CLUSTER2}"
+kubectl apply -f "https://raw.githubusercontent.com/istio/istio/${ISTIO_VERSION}/samples/sleep/sleep.yaml" -n sample --context="${CTX_CLUSTER2}"
+----
+
+. Verify the pods in the `sample` namespace have a sidecar injected. You should see `2/2` pods for each application.
++
+----
+kubectl get pod -n sample --context="${CTX_CLUSTER2}"
+----
+ifdef::external-cp-dns[]
+with_retries wait_pods_ready_by_ns "sample"
+kubectl get pods -n sample --context="${CTX_CLUSTER2}"
+endif::[]
+
+. Verify you can send a request to `helloworld` through the `sleep` app on the remote cluster.
++
+----
+kubectl exec --context="${CTX_CLUSTER2}" -n sample -c sleep \
+  "$(kubectl get pod --context="${CTX_CLUSTER2}" -n sample -l app=sleep -o jsonpath='{.items[0].metadata.name}')" \
+  -- curl -sS helloworld.sample:5000/hello
+----
++
+You should see a response from the `helloworld` app:
++
+----
+Hello version: v1, instance: helloworld-v1-<pod-id>
+----
+ifdef::external-cp-dns[]
+SLEEP_POD=$(kubectl get pod --context="${CTX_CLUSTER2}" -n sample -l app=sleep -o jsonpath='{.items[0].metadata.name}')
+with_retries kubectl exec --context="${CTX_CLUSTER2}" -n sample -c sleep "${SLEEP_POD}" -- curl -sS -o /dev/null -w "%{http_code}" helloworld.sample:5000/hello | grep -q 200
+endif::[]
+
+. Cleanup
++
+----
+kubectl delete istios default --context="${CTX_CLUSTER1}"
+kubectl delete ns istio-system --context="${CTX_CLUSTER1}"
+kubectl delete istios external-istiod --context="${CTX_CLUSTER1}"
+kubectl delete ns external-istiod --context="${CTX_CLUSTER1}"
+kubectl delete istios external-istiod --context="${CTX_CLUSTER2}"
+kubectl delete ns external-istiod --context="${CTX_CLUSTER2}"
+kubectl delete ns sample --context="${CTX_CLUSTER2}"
+----
+ifdef::external-cp-dns[]
+kubectl delete istios external-istiod --context="${CTX_CLUSTER2}" || true
+kubectl delete ns external-istiod --context="${CTX_CLUSTER2}" || true
+kubectl delete ns sample --context="${CTX_CLUSTER2}" || true
+kind delete cluster --name external-cp-remote
+endif::[]
