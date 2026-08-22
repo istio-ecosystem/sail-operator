@@ -213,11 +213,49 @@ spec:
                                 - simple
                               - required:
                                 - consistentHash
+                              - required:
+                                - backendUtilization
                           - required:
                             - simple
                           - required:
                             - consistentHash
+                          - required:
+                            - backendUtilization
                           properties:
+                            backendUtilization:
+                              description: Utilization-based load balancing that uses
+                                backend-reported ORCA metrics to weight endpoints
+                                by their current load.
+                              properties:
+                                errorUtilizationPenaltyPercent:
+                                  description: Additional penalty applied to endpoints
+                                    that return errors, expressed as a percentage
+                                    of the utilization.
+                                  maximum: 4294967295
+                                  minimum: 0
+                                  type: integer
+                                metricNamesForComputingUtilization:
+                                  description: Custom ORCA metric names used to compute
+                                    utilization.
+                                  items:
+                                    type: string
+                                  type: array
+                                weightExpirationPeriod:
+                                  description: If an endpoint stops reporting utilization
+                                    metrics for this long, its reported weight is
+                                    discarded and it reverts to the default (equal)
+                                    weight.
+                                  type: string
+                                weightStabilizationPeriod:
+                                  description: Duration after an endpoint first reports
+                                    metrics before its weight is trusted.
+                                  type: string
+                                weightUpdatePeriod:
+                                  description: How often the load balancer recomputes
+                                    endpoint weights from the latest reported utilization
+                                    data.
+                                  type: string
+                              type: object
                             consistentHash:
                               allOf:
                               - oneOf:
@@ -444,6 +482,7 @@ spec:
                                   description: Minimum number of hosts in the upstream
                                     cluster's local region required for zone-aware
                                     load balancing to be enabled.
+                                  maximum: 4294967295
                                   minimum: 1
                                   nullable: true
                                   type: integer
@@ -661,11 +700,49 @@ spec:
                                       - simple
                                     - required:
                                       - consistentHash
+                                    - required:
+                                      - backendUtilization
                                 - required:
                                   - simple
                                 - required:
                                   - consistentHash
+                                - required:
+                                  - backendUtilization
                                 properties:
+                                  backendUtilization:
+                                    description: Utilization-based load balancing
+                                      that uses backend-reported ORCA metrics to weight
+                                      endpoints by their current load.
+                                    properties:
+                                      errorUtilizationPenaltyPercent:
+                                        description: Additional penalty applied to
+                                          endpoints that return errors, expressed
+                                          as a percentage of the utilization.
+                                        maximum: 4294967295
+                                        minimum: 0
+                                        type: integer
+                                      metricNamesForComputingUtilization:
+                                        description: Custom ORCA metric names used
+                                          to compute utilization.
+                                        items:
+                                          type: string
+                                        type: array
+                                      weightExpirationPeriod:
+                                        description: If an endpoint stops reporting
+                                          utilization metrics for this long, its reported
+                                          weight is discarded and it reverts to the
+                                          default (equal) weight.
+                                        type: string
+                                      weightStabilizationPeriod:
+                                        description: Duration after an endpoint first
+                                          reports metrics before its weight is trusted.
+                                        type: string
+                                      weightUpdatePeriod:
+                                        description: How often the load balancer recomputes
+                                          endpoint weights from the latest reported
+                                          utilization data.
+                                        type: string
+                                    type: object
                                   consistentHash:
                                     allOf:
                                     - oneOf:
@@ -898,6 +975,7 @@ spec:
                                         description: Minimum number of hosts in the
                                           upstream cluster's local region required
                                           for zone-aware load balancing to be enabled.
+                                        maximum: 4294967295
                                         minimum: 1
                                         nullable: true
                                         type: integer
@@ -1290,11 +1368,45 @@ spec:
                           - simple
                         - required:
                           - consistentHash
+                        - required:
+                          - backendUtilization
                     - required:
                       - simple
                     - required:
                       - consistentHash
+                    - required:
+                      - backendUtilization
                     properties:
+                      backendUtilization:
+                        description: Utilization-based load balancing that uses backend-reported
+                          ORCA metrics to weight endpoints by their current load.
+                        properties:
+                          errorUtilizationPenaltyPercent:
+                            description: Additional penalty applied to endpoints that
+                              return errors, expressed as a percentage of the utilization.
+                            maximum: 4294967295
+                            minimum: 0
+                            type: integer
+                          metricNamesForComputingUtilization:
+                            description: Custom ORCA metric names used to compute
+                              utilization.
+                            items:
+                              type: string
+                            type: array
+                          weightExpirationPeriod:
+                            description: If an endpoint stops reporting utilization
+                              metrics for this long, its reported weight is discarded
+                              and it reverts to the default (equal) weight.
+                            type: string
+                          weightStabilizationPeriod:
+                            description: Duration after an endpoint first reports
+                              metrics before its weight is trusted.
+                            type: string
+                          weightUpdatePeriod:
+                            description: How often the load balancer recomputes endpoint
+                              weights from the latest reported utilization data.
+                            type: string
+                        type: object
                       consistentHash:
                         allOf:
                         - oneOf:
@@ -1516,6 +1628,7 @@ spec:
                             description: Minimum number of hosts in the upstream cluster's
                               local region required for zone-aware load balancing
                               to be enabled.
+                            maximum: 4294967295
                             minimum: 1
                             nullable: true
                             type: integer
@@ -1730,11 +1843,49 @@ spec:
                                 - simple
                               - required:
                                 - consistentHash
+                              - required:
+                                - backendUtilization
                           - required:
                             - simple
                           - required:
                             - consistentHash
+                          - required:
+                            - backendUtilization
                           properties:
+                            backendUtilization:
+                              description: Utilization-based load balancing that uses
+                                backend-reported ORCA metrics to weight endpoints
+                                by their current load.
+                              properties:
+                                errorUtilizationPenaltyPercent:
+                                  description: Additional penalty applied to endpoints
+                                    that return errors, expressed as a percentage
+                                    of the utilization.
+                                  maximum: 4294967295
+                                  minimum: 0
+                                  type: integer
+                                metricNamesForComputingUtilization:
+                                  description: Custom ORCA metric names used to compute
+                                    utilization.
+                                  items:
+                                    type: string
+                                  type: array
+                                weightExpirationPeriod:
+                                  description: If an endpoint stops reporting utilization
+                                    metrics for this long, its reported weight is
+                                    discarded and it reverts to the default (equal)
+                                    weight.
+                                  type: string
+                                weightStabilizationPeriod:
+                                  description: Duration after an endpoint first reports
+                                    metrics before its weight is trusted.
+                                  type: string
+                                weightUpdatePeriod:
+                                  description: How often the load balancer recomputes
+                                    endpoint weights from the latest reported utilization
+                                    data.
+                                  type: string
+                              type: object
                             consistentHash:
                               allOf:
                               - oneOf:
@@ -1961,6 +2112,7 @@ spec:
                                   description: Minimum number of hosts in the upstream
                                     cluster's local region required for zone-aware
                                     load balancing to be enabled.
+                                  maximum: 4294967295
                                   minimum: 1
                                   nullable: true
                                   type: integer
@@ -2499,11 +2651,49 @@ spec:
                                 - simple
                               - required:
                                 - consistentHash
+                              - required:
+                                - backendUtilization
                           - required:
                             - simple
                           - required:
                             - consistentHash
+                          - required:
+                            - backendUtilization
                           properties:
+                            backendUtilization:
+                              description: Utilization-based load balancing that uses
+                                backend-reported ORCA metrics to weight endpoints
+                                by their current load.
+                              properties:
+                                errorUtilizationPenaltyPercent:
+                                  description: Additional penalty applied to endpoints
+                                    that return errors, expressed as a percentage
+                                    of the utilization.
+                                  maximum: 4294967295
+                                  minimum: 0
+                                  type: integer
+                                metricNamesForComputingUtilization:
+                                  description: Custom ORCA metric names used to compute
+                                    utilization.
+                                  items:
+                                    type: string
+                                  type: array
+                                weightExpirationPeriod:
+                                  description: If an endpoint stops reporting utilization
+                                    metrics for this long, its reported weight is
+                                    discarded and it reverts to the default (equal)
+                                    weight.
+                                  type: string
+                                weightStabilizationPeriod:
+                                  description: Duration after an endpoint first reports
+                                    metrics before its weight is trusted.
+                                  type: string
+                                weightUpdatePeriod:
+                                  description: How often the load balancer recomputes
+                                    endpoint weights from the latest reported utilization
+                                    data.
+                                  type: string
+                              type: object
                             consistentHash:
                               allOf:
                               - oneOf:
@@ -2730,6 +2920,7 @@ spec:
                                   description: Minimum number of hosts in the upstream
                                     cluster's local region required for zone-aware
                                     load balancing to be enabled.
+                                  maximum: 4294967295
                                   minimum: 1
                                   nullable: true
                                   type: integer
@@ -2947,11 +3138,49 @@ spec:
                                       - simple
                                     - required:
                                       - consistentHash
+                                    - required:
+                                      - backendUtilization
                                 - required:
                                   - simple
                                 - required:
                                   - consistentHash
+                                - required:
+                                  - backendUtilization
                                 properties:
+                                  backendUtilization:
+                                    description: Utilization-based load balancing
+                                      that uses backend-reported ORCA metrics to weight
+                                      endpoints by their current load.
+                                    properties:
+                                      errorUtilizationPenaltyPercent:
+                                        description: Additional penalty applied to
+                                          endpoints that return errors, expressed
+                                          as a percentage of the utilization.
+                                        maximum: 4294967295
+                                        minimum: 0
+                                        type: integer
+                                      metricNamesForComputingUtilization:
+                                        description: Custom ORCA metric names used
+                                          to compute utilization.
+                                        items:
+                                          type: string
+                                        type: array
+                                      weightExpirationPeriod:
+                                        description: If an endpoint stops reporting
+                                          utilization metrics for this long, its reported
+                                          weight is discarded and it reverts to the
+                                          default (equal) weight.
+                                        type: string
+                                      weightStabilizationPeriod:
+                                        description: Duration after an endpoint first
+                                          reports metrics before its weight is trusted.
+                                        type: string
+                                      weightUpdatePeriod:
+                                        description: How often the load balancer recomputes
+                                          endpoint weights from the latest reported
+                                          utilization data.
+                                        type: string
+                                    type: object
                                   consistentHash:
                                     allOf:
                                     - oneOf:
@@ -3184,6 +3413,7 @@ spec:
                                         description: Minimum number of hosts in the
                                           upstream cluster's local region required
                                           for zone-aware load balancing to be enabled.
+                                        maximum: 4294967295
                                         minimum: 1
                                         nullable: true
                                         type: integer
@@ -3576,11 +3806,45 @@ spec:
                           - simple
                         - required:
                           - consistentHash
+                        - required:
+                          - backendUtilization
                     - required:
                       - simple
                     - required:
                       - consistentHash
+                    - required:
+                      - backendUtilization
                     properties:
+                      backendUtilization:
+                        description: Utilization-based load balancing that uses backend-reported
+                          ORCA metrics to weight endpoints by their current load.
+                        properties:
+                          errorUtilizationPenaltyPercent:
+                            description: Additional penalty applied to endpoints that
+                              return errors, expressed as a percentage of the utilization.
+                            maximum: 4294967295
+                            minimum: 0
+                            type: integer
+                          metricNamesForComputingUtilization:
+                            description: Custom ORCA metric names used to compute
+                              utilization.
+                            items:
+                              type: string
+                            type: array
+                          weightExpirationPeriod:
+                            description: If an endpoint stops reporting utilization
+                              metrics for this long, its reported weight is discarded
+                              and it reverts to the default (equal) weight.
+                            type: string
+                          weightStabilizationPeriod:
+                            description: Duration after an endpoint first reports
+                              metrics before its weight is trusted.
+                            type: string
+                          weightUpdatePeriod:
+                            description: How often the load balancer recomputes endpoint
+                              weights from the latest reported utilization data.
+                            type: string
+                        type: object
                       consistentHash:
                         allOf:
                         - oneOf:
@@ -3802,6 +4066,7 @@ spec:
                             description: Minimum number of hosts in the upstream cluster's
                               local region required for zone-aware load balancing
                               to be enabled.
+                            maximum: 4294967295
                             minimum: 1
                             nullable: true
                             type: integer
@@ -4016,11 +4281,49 @@ spec:
                                 - simple
                               - required:
                                 - consistentHash
+                              - required:
+                                - backendUtilization
                           - required:
                             - simple
                           - required:
                             - consistentHash
+                          - required:
+                            - backendUtilization
                           properties:
+                            backendUtilization:
+                              description: Utilization-based load balancing that uses
+                                backend-reported ORCA metrics to weight endpoints
+                                by their current load.
+                              properties:
+                                errorUtilizationPenaltyPercent:
+                                  description: Additional penalty applied to endpoints
+                                    that return errors, expressed as a percentage
+                                    of the utilization.
+                                  maximum: 4294967295
+                                  minimum: 0
+                                  type: integer
+                                metricNamesForComputingUtilization:
+                                  description: Custom ORCA metric names used to compute
+                                    utilization.
+                                  items:
+                                    type: string
+                                  type: array
+                                weightExpirationPeriod:
+                                  description: If an endpoint stops reporting utilization
+                                    metrics for this long, its reported weight is
+                                    discarded and it reverts to the default (equal)
+                                    weight.
+                                  type: string
+                                weightStabilizationPeriod:
+                                  description: Duration after an endpoint first reports
+                                    metrics before its weight is trusted.
+                                  type: string
+                                weightUpdatePeriod:
+                                  description: How often the load balancer recomputes
+                                    endpoint weights from the latest reported utilization
+                                    data.
+                                  type: string
+                              type: object
                             consistentHash:
                               allOf:
                               - oneOf:
@@ -4247,6 +4550,7 @@ spec:
                                   description: Minimum number of hosts in the upstream
                                     cluster's local region required for zone-aware
                                     load balancing to be enabled.
+                                  maximum: 4294967295
                                   minimum: 1
                                   nullable: true
                                   type: integer
@@ -4785,11 +5089,49 @@ spec:
                                 - simple
                               - required:
                                 - consistentHash
+                              - required:
+                                - backendUtilization
                           - required:
                             - simple
                           - required:
                             - consistentHash
+                          - required:
+                            - backendUtilization
                           properties:
+                            backendUtilization:
+                              description: Utilization-based load balancing that uses
+                                backend-reported ORCA metrics to weight endpoints
+                                by their current load.
+                              properties:
+                                errorUtilizationPenaltyPercent:
+                                  description: Additional penalty applied to endpoints
+                                    that return errors, expressed as a percentage
+                                    of the utilization.
+                                  maximum: 4294967295
+                                  minimum: 0
+                                  type: integer
+                                metricNamesForComputingUtilization:
+                                  description: Custom ORCA metric names used to compute
+                                    utilization.
+                                  items:
+                                    type: string
+                                  type: array
+                                weightExpirationPeriod:
+                                  description: If an endpoint stops reporting utilization
+                                    metrics for this long, its reported weight is
+                                    discarded and it reverts to the default (equal)
+                                    weight.
+                                  type: string
+                                weightStabilizationPeriod:
+                                  description: Duration after an endpoint first reports
+                                    metrics before its weight is trusted.
+                                  type: string
+                                weightUpdatePeriod:
+                                  description: How often the load balancer recomputes
+                                    endpoint weights from the latest reported utilization
+                                    data.
+                                  type: string
+                              type: object
                             consistentHash:
                               allOf:
                               - oneOf:
@@ -5016,6 +5358,7 @@ spec:
                                   description: Minimum number of hosts in the upstream
                                     cluster's local region required for zone-aware
                                     load balancing to be enabled.
+                                  maximum: 4294967295
                                   minimum: 1
                                   nullable: true
                                   type: integer
@@ -5233,11 +5576,49 @@ spec:
                                       - simple
                                     - required:
                                       - consistentHash
+                                    - required:
+                                      - backendUtilization
                                 - required:
                                   - simple
                                 - required:
                                   - consistentHash
+                                - required:
+                                  - backendUtilization
                                 properties:
+                                  backendUtilization:
+                                    description: Utilization-based load balancing
+                                      that uses backend-reported ORCA metrics to weight
+                                      endpoints by their current load.
+                                    properties:
+                                      errorUtilizationPenaltyPercent:
+                                        description: Additional penalty applied to
+                                          endpoints that return errors, expressed
+                                          as a percentage of the utilization.
+                                        maximum: 4294967295
+                                        minimum: 0
+                                        type: integer
+                                      metricNamesForComputingUtilization:
+                                        description: Custom ORCA metric names used
+                                          to compute utilization.
+                                        items:
+                                          type: string
+                                        type: array
+                                      weightExpirationPeriod:
+                                        description: If an endpoint stops reporting
+                                          utilization metrics for this long, its reported
+                                          weight is discarded and it reverts to the
+                                          default (equal) weight.
+                                        type: string
+                                      weightStabilizationPeriod:
+                                        description: Duration after an endpoint first
+                                          reports metrics before its weight is trusted.
+                                        type: string
+                                      weightUpdatePeriod:
+                                        description: How often the load balancer recomputes
+                                          endpoint weights from the latest reported
+                                          utilization data.
+                                        type: string
+                                    type: object
                                   consistentHash:
                                     allOf:
                                     - oneOf:
@@ -5470,6 +5851,7 @@ spec:
                                         description: Minimum number of hosts in the
                                           upstream cluster's local region required
                                           for zone-aware load balancing to be enabled.
+                                        maximum: 4294967295
                                         minimum: 1
                                         nullable: true
                                         type: integer
@@ -5862,11 +6244,45 @@ spec:
                           - simple
                         - required:
                           - consistentHash
+                        - required:
+                          - backendUtilization
                     - required:
                       - simple
                     - required:
                       - consistentHash
+                    - required:
+                      - backendUtilization
                     properties:
+                      backendUtilization:
+                        description: Utilization-based load balancing that uses backend-reported
+                          ORCA metrics to weight endpoints by their current load.
+                        properties:
+                          errorUtilizationPenaltyPercent:
+                            description: Additional penalty applied to endpoints that
+                              return errors, expressed as a percentage of the utilization.
+                            maximum: 4294967295
+                            minimum: 0
+                            type: integer
+                          metricNamesForComputingUtilization:
+                            description: Custom ORCA metric names used to compute
+                              utilization.
+                            items:
+                              type: string
+                            type: array
+                          weightExpirationPeriod:
+                            description: If an endpoint stops reporting utilization
+                              metrics for this long, its reported weight is discarded
+                              and it reverts to the default (equal) weight.
+                            type: string
+                          weightStabilizationPeriod:
+                            description: Duration after an endpoint first reports
+                              metrics before its weight is trusted.
+                            type: string
+                          weightUpdatePeriod:
+                            description: How often the load balancer recomputes endpoint
+                              weights from the latest reported utilization data.
+                            type: string
+                        type: object
                       consistentHash:
                         allOf:
                         - oneOf:
@@ -6088,6 +6504,7 @@ spec:
                             description: Minimum number of hosts in the upstream cluster's
                               local region required for zone-aware load balancing
                               to be enabled.
+                            maximum: 4294967295
                             minimum: 1
                             nullable: true
                             type: integer
@@ -6302,11 +6719,49 @@ spec:
                                 - simple
                               - required:
                                 - consistentHash
+                              - required:
+                                - backendUtilization
                           - required:
                             - simple
                           - required:
                             - consistentHash
+                          - required:
+                            - backendUtilization
                           properties:
+                            backendUtilization:
+                              description: Utilization-based load balancing that uses
+                                backend-reported ORCA metrics to weight endpoints
+                                by their current load.
+                              properties:
+                                errorUtilizationPenaltyPercent:
+                                  description: Additional penalty applied to endpoints
+                                    that return errors, expressed as a percentage
+                                    of the utilization.
+                                  maximum: 4294967295
+                                  minimum: 0
+                                  type: integer
+                                metricNamesForComputingUtilization:
+                                  description: Custom ORCA metric names used to compute
+                                    utilization.
+                                  items:
+                                    type: string
+                                  type: array
+                                weightExpirationPeriod:
+                                  description: If an endpoint stops reporting utilization
+                                    metrics for this long, its reported weight is
+                                    discarded and it reverts to the default (equal)
+                                    weight.
+                                  type: string
+                                weightStabilizationPeriod:
+                                  description: Duration after an endpoint first reports
+                                    metrics before its weight is trusted.
+                                  type: string
+                                weightUpdatePeriod:
+                                  description: How often the load balancer recomputes
+                                    endpoint weights from the latest reported utilization
+                                    data.
+                                  type: string
+                              type: object
                             consistentHash:
                               allOf:
                               - oneOf:
@@ -6533,6 +6988,7 @@ spec:
                                   description: Minimum number of hosts in the upstream
                                     cluster's local region required for zone-aware
                                     load balancing to be enabled.
+                                  maximum: 4294967295
                                   minimum: 1
                                   nullable: true
                                   type: integer
