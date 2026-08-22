@@ -187,7 +187,17 @@ func getActiveRevisionName(istio *v1.Istio) string {
 	case v1.UpdateStrategyTypeInPlace:
 		return istio.Name
 	case v1.UpdateStrategyTypeRevisionBased:
-		return istio.Name + "-" + strings.ReplaceAll(istio.Spec.Version, ".", "-")
+		// Use the resolved version (e.g. "v1.30.3") rather than the raw spec.Version so that
+		// moving a version alias (e.g. "v1.30-latest") to a new patch produces a new revision
+		// name. Otherwise the existing revision would be updated in place, defeating the
+		// canary upgrade behavior that RevisionBased is meant to provide. If the version can't
+		// be resolved (e.g. it's invalid), fall back to the raw value; reconcileActiveRevision
+		// will already have failed reconciliation in that case.
+		version := istio.Spec.Version
+		if resolved, err := istioversion.Resolve(version); err == nil {
+			version = resolved
+		}
+		return istio.Name + "-" + strings.ReplaceAll(version, ".", "-")
 	}
 }
 
