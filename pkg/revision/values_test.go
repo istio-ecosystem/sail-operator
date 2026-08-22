@@ -81,6 +81,7 @@ spec:
 		},
 		Global: &v1.GlobalConfig{
 			Platform:       ptr.Of("openshift"),
+			NativeNftables: ptr.Of(true),
 			IstioNamespace: ptr.Of(namespace), // this value is always added/overridden based on IstioRevision.spec.namespace
 		},
 		Revision:        ptr.Of(revisionName),
@@ -124,6 +125,7 @@ spec:`)), 0o644))
 		},
 		Global: &v1.GlobalConfig{
 			Platform:       ptr.Of("openshift"),
+			NativeNftables: ptr.Of(true),
 			IstioNamespace: ptr.Of(namespace), // this value is always added/overridden based on IstioRevision.spec.namespace
 		},
 		Revision:        ptr.Of(revisionName),

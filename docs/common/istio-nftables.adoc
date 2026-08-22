@@ -33,11 +33,14 @@ Many major Linux distributions are actively moving towards adopting native nftab
 === Installation
 
 The support for native nftables in Istio sidecar mode was implemented in the upstream istio https://istio.io/latest/news/releases/1.27.x/announcing-1.27[release-1.27].
-It is disabled by default. To enable it, you can set a feature flag as `+values.global.nativeNftables=true+`.
+On Kubernetes platforms other than OpenShift, it is disabled by default. To enable it, set `+values.global.nativeNftables=true+`.
+
+On OpenShift, the Sail Operator automatically sets `+global.nativeNftables=true+` for both `+Istio+` and `+IstioCNI+` resources.
+If you explicitly set `+spec.values.global.nativeNftables=false+`, that value is honored and overrides the OpenShift default.
 
 ==== Install in Sidecar Mode
 
-When installing `Istio` and `IstioCNI` resources with the Sail Operator, you can enable nftables by setting `spec.values.global.nativeNftables=true` in the resource. This option configures Istio to use the nftables backend for traffic redirection instead of iptables.
+When installing `Istio` and `IstioCNI` resources with the Sail Operator on non-OpenShift platforms, you can enable nftables by setting `spec.values.global.nativeNftables=true` in the resource. This option configures Istio to use the nftables backend for traffic redirection instead of iptables. On OpenShift, this setting is applied automatically unless you override it.
 
 . Create the `+istio-system+` and `+istio-cni+` namespaces.
 
@@ -89,7 +92,9 @@ EOF
 ==== Install in Ambient Mode
 
 The support for native nftables in Istio ambient mode was implemented in the upstream istio https://istio.io/latest/news/releases/1.28.x/announcing-1.28[release-1.28].
-To enable native nftables in ambient mode, you can set the same feature flag with ambient profile. For example,
+To enable native nftables in ambient mode on non-OpenShift platforms, set the same feature flag with the ambient profile.
+On OpenShift, the operator enables native nftables automatically for `+Istio+` and `+IstioCNI+` even when you select the ambient profile.
+For example,
 
 . Create the `+istio-system+`, `+istio-cni+` and `+ztunnel+` namespaces.
 
