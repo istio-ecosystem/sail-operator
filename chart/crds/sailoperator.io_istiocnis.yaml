@@ -1038,9 +1038,123 @@ spec:
                             description: If enabled, and ambient is enabled, DNS redirection
                               will be enabled.
                             type: boolean
+                          enableAmbientDetectionRetry:
+                            description: If enabled, the CNI plugin will retry checking
+                              whether a pod is ambient enabled when there are errors.
+                            type: boolean
                           enabled:
                             description: Controls whether ambient redirection is enabled
                             type: boolean
+                          enablementSelectors:
+                            description: If ambient is enabled, these selectors are
+                              used to identify the ambient-enabled pods.
+                            items:
+                              description: CNIAmbientEnablementSelector defines the
+                                pod and namespace selectors used to identify ambient-enabled
+                                pods.
+                              properties:
+                                namespaceSelector:
+                                  description: |-
+                                    A label selector is a label query over a set of resources. The result of matchLabels and
+                                    matchExpressions are ANDed. An empty label selector matches all objects. A null
+                                    label selector matches no objects.
+                                  properties:
+                                    matchExpressions:
+                                      description: matchExpressions is a list of label
+                                        selector requirements. The requirements are
+                                        ANDed.
+                                      items:
+                                        description: |-
+                                          A label selector requirement is a selector that contains values, a key, and an operator that
+                                          relates the key and values.
+                                        properties:
+                                          key:
+                                            description: key is the label key that
+                                              the selector applies to.
+                                            type: string
+                                          operator:
+                                            description: |-
+                                              operator represents a key's relationship to a set of values.
+                                              Valid operators are In, NotIn, Exists and DoesNotExist.
+                                            type: string
+                                          values:
+                                            description: |-
+                                              values is an array of string values. If the operator is In or NotIn,
+                                              the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                              the values array must be empty. This array is replaced during a strategic
+                                              merge patch.
+                                            items:
+                                              type: string
+                                            type: array
+                                            x-kubernetes-list-type: atomic
+                                        required:
+                                        - key
+                                        - operator
+                                        type: object
+                                      type: array
+                                      x-kubernetes-list-type: atomic
+                                    matchLabels:
+                                      additionalProperties:
+                                        type: string
+                                      description: |-
+                                        matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                        map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                        operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                      type: object
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                                podSelector:
+                                  description: |-
+                                    A label selector is a label query over a set of resources. The result of matchLabels and
+                                    matchExpressions are ANDed. An empty label selector matches all objects. A null
+                                    label selector matches no objects.
+                                  properties:
+                                    matchExpressions:
+                                      description: matchExpressions is a list of label
+                                        selector requirements. The requirements are
+                                        ANDed.
+                                      items:
+                                        description: |-
+                                          A label selector requirement is a selector that contains values, a key, and an operator that
+                                          relates the key and values.
+                                        properties:
+                                          key:
+                                            description: key is the label key that
+                                              the selector applies to.
+                                            type: string
+                                          operator:
+                                            description: |-
+                                              operator represents a key's relationship to a set of values.
+                                              Valid operators are In, NotIn, Exists and DoesNotExist.
+                                            type: string
+                                          values:
+                                            description: |-
+                                              values is an array of string values. If the operator is In or NotIn,
+                                              the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                              the values array must be empty. This array is replaced during a strategic
+                                              merge patch.
+                                            items:
+                                              type: string
+                                            type: array
+                                            x-kubernetes-list-type: atomic
+                                        required:
+                                        - key
+                                        - operator
+                                        type: object
+                                      type: array
+                                      x-kubernetes-list-type: atomic
+                                    matchLabels:
+                                      additionalProperties:
+                                        type: string
+                                      description: |-
+                                        matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                        map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                        operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                      type: object
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                              type: object
+                            type: array
                           ipv6:
                             description: 'UNSTABLE: If enabled, and ambient is enabled,
                               enables ipv6 support'
@@ -1048,6 +1162,11 @@ spec:
                           reconcileIptablesOnStartup:
                             description: If enabled, and ambient is enabled, iptables
                               reconciliation will be enabled.
+                            type: boolean
+                          shareHostNetworkNamespace:
+                            description: |-
+                              If enabled, and ambient is enabled, the CNI agent will always share the network namespace
+                              of the host node it is running on.
                             type: boolean
                         type: object
                       chained:
@@ -1472,7 +1591,7 @@ spec:
                 default: v1.31.0-beta.1
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.31-latest, v1.31.0-beta.1, v1.30-latest, v1.30.3, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.6, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, master, v1.32.0-alpha.8dc789c5.
+                  Must be one of: v1.31-latest, v1.31.0-beta.1, v1.30-latest, v1.30.3, v1.30.2, v1.30.1, v1.30.0, v1.29-latest, v1.29.6, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, master, v1.32.0-alpha.527f8d6c.
                 enum:
                 - v1.31-latest
                 - v1.31.0-beta.1
@@ -1549,7 +1668,7 @@ spec:
                 - v1.22.5
                 - v1.21.6
                 - master
-                - v1.32.0-alpha.8dc789c5
+                - v1.32.0-alpha.527f8d6c
                 type: string
             required:
             - namespace
