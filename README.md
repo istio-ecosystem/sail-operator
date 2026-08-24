@@ -3,6 +3,7 @@
 [![update-deps badge](https://github.com/istio-ecosystem/sail-operator/actions/workflows/update-deps.yaml/badge.svg)](https://github.com/istio-ecosystem/sail-operator/actions/workflows/update-deps.yaml)
 [![nightly-images badge](https://github.com/istio-ecosystem/sail-operator/actions/workflows/nightly-images.yaml/badge.svg)](https://github.com/istio-ecosystem/sail-operator/actions/workflows/nightly-images.yaml)
 [![update-eol-versions badge](https://github.com/istio-ecosystem/sail-operator/actions/workflows/update-eol-versions.yaml/badge.svg)](https://github.com/istio-ecosystem/sail-operator/actions/workflows/update-eol-versions.yaml)
+[![crc-e2e-sail](https://github.com/istio-ecosystem/sail-operator/actions/workflows/crc-e2e-sail.yaml/badge.svg)](https://github.com/istio-ecosystem/sail-operator/actions/workflows/crc-e2e-sail.yaml)
 
 # Sail Operator
 
