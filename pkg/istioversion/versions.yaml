@@ -18,7 +18,7 @@ versions:
   - name: v1.31-latest
     ref: v1.31.0-rc.0
   - name: v1.31.0-rc.0
-    version: v1.31.0-rc.0
+    version: 1.31.0-rc.0
     repo: https://github.com/istio/istio
     commit: 1.31.0-rc.0
     charts:
