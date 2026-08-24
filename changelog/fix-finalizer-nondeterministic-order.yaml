@@ -1,8 +1,0 @@
-category: fixed
-title: Fix nondeterministic finalizer ordering
-description: |
-  `AddFinalizer` and `RemoveFinalizer` used `UnsortedList()` when writing
-  finalizers back to the object, which could reorder existing finalizers
-  randomly whenever one was added or removed. They now use `SortedList()`
-  for deterministic ordering.
-issueLink: https://github.com/istio-ecosystem/sail-operator/issues/2090
