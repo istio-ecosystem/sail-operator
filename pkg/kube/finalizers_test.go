@@ -136,6 +136,14 @@ func TestRemoveFinalizer(t *testing.T) {
 			checkFinalizers:    true,
 			expectedFinalizers: nil,
 		},
+		{
+			name:               "finalizers written in sorted order",
+			initialFinalizers:  []string{constants.FinalizerName, "z.example.com/finalizer", "a.example.com/finalizer"},
+			expectResult:       ctrl.Result{},
+			expectError:        false,
+			checkFinalizers:    true,
+			expectedFinalizers: []string{"a.example.com/finalizer", "z.example.com/finalizer"},
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -165,7 +173,7 @@ func TestRemoveFinalizer(t *testing.T) {
 
 			if tc.checkFinalizers {
 				g.Expect(cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
-				g.Expect(obj.GetFinalizers()).To(ConsistOf(tc.expectedFinalizers))
+				g.Expect(obj.GetFinalizers()).To(Equal(tc.expectedFinalizers))
 			}
 		})
 	}
@@ -237,6 +245,14 @@ func TestAddFinalizer(t *testing.T) {
 			checkFinalizers:    true,
 			expectedFinalizers: []string{constants.FinalizerName},
 		},
+		{
+			name:               "finalizers written in sorted order",
+			initialFinalizers:  []string{"z.example.com/finalizer", "a.example.com/finalizer"},
+			expectResult:       ctrl.Result{},
+			expectError:        false,
+			checkFinalizers:    true,
+			expectedFinalizers: []string{"a.example.com/finalizer", constants.FinalizerName, "z.example.com/finalizer"},
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -266,7 +282,7 @@ func TestAddFinalizer(t *testing.T) {
 
 			if tc.checkFinalizers {
 				g.Expect(cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
-				g.Expect(obj.GetFinalizers()).To(ConsistOf(tc.expectedFinalizers))
+				g.Expect(obj.GetFinalizers()).To(Equal(tc.expectedFinalizers))
 			}
 		})
 	}
