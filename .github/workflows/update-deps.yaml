@@ -16,7 +16,7 @@ jobs:
   update-deps:
     runs-on: ubuntu-latest
     container:
-      image: registry.istio.io/testing/build-tools:master-9a67f0594faf23c0974ab3db461b03f50f39ae33
+      image: registry.istio.io/testing/build-tools:master-10be95ae4c9f6fb218f4c0eef2ef76ab9c7d35bd
       options: --entrypoint ''
 
     steps:
