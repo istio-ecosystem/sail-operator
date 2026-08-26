@@ -28,7 +28,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v4 v4.2.0
 	istio.io/client-go v1.31.0-alpha.1.0.20260824143355-0aa53649fd67
-	istio.io/istio v0.0.0-20260825033717-8dbd7f98c429
+	istio.io/istio v0.0.0-20260826045515-aed8285f99f5
 	k8s.io/api v0.36.4
 	k8s.io/apiextensions-apiserver v0.36.4
 	k8s.io/apimachinery v0.36.4
@@ -76,7 +76,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-openapi/jsonpointer v1.0.0 // indirect
-	github.com/go-openapi/jsonreference v1.0.0 // indirect
+	github.com/go-openapi/jsonreference v1.0.1 // indirect
 	github.com/go-openapi/swag v0.27.3 // indirect
 	github.com/go-openapi/swag/cmdutils v0.27.3 // indirect
 	github.com/go-openapi/swag/conv v0.27.3 // indirect
