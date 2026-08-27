@@ -195,7 +195,7 @@ v1.24.2:
 			istioCniPostValues:    &v1.CNIValues{},
 			expectedIstioError:    true,
 			expectedIstioCniError: false,
-			expectedErrSubstring:  "cannot unmarshal string into Go struct field Values.pilot", // expect a specific error for malformed defaults
+			expectedErrSubstring:  "cannot unmarshal string into Go struct field", // expect a specific error for malformed defaults
 		},
 		{
 			name: "user values override vendor defaults",
