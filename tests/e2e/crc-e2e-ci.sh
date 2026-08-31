@@ -72,12 +72,12 @@ if [[ "${tier}" == "standard" || "${tier}" == "extended" ]]; then
   skip_cleanup=true
 fi
 
-run_e2e smoke "${filter_smoke}" false "${skip_cleanup}" "${artifacts_root}/smoke"
+run_e2e smoke "${filter_smoke}" false "${skip_cleanup}" "${artifacts_root}/smoke" || exit 1
 
 if [[ "${tier}" == "standard" || "${tier}" == "extended" ]]; then
-  run_e2e standard "${filter_standard}" true true "${artifacts_root}/standard"
+  run_e2e standard "${filter_standard}" true true "${artifacts_root}/standard" || exit 1
 fi
 
 if [[ "${tier}" == "extended" ]]; then
-  run_e2e extended "${filter_extended}" true true "${artifacts_root}/extended"
+  run_e2e extended "${filter_extended}" true true "${artifacts_root}/extended" || exit 1
 fi
