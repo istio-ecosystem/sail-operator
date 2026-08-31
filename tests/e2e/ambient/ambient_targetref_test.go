@@ -34,7 +34,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe("Ambient TargetRef Behavior", Label("ambient", "ambient-targetref"), Ordered, func() {
+var _ = Describe("Ambient TargetRef Behavior", Label("ambient", "ambient-targetref", "crc"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(defaultTimeout) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 

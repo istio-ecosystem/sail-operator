@@ -37,7 +37,7 @@ import (
 
 var defaultTimeout = env.GetInt("DEFAULT_TEST_TIMEOUT", 180)
 
-var _ = Describe("Ambient configuration ", Label("smoke", "ambient"), Ordered, func() {
+var _ = Describe("Ambient configuration ", Label("smoke", "ambient", "crc"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(defaultTimeout) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 

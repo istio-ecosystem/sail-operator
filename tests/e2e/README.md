@@ -251,23 +251,41 @@ Labels follow a multi-dimensional structure. Each test file carries one label fr
 |-------|-------|
 | `sidecar` | Tests that validate sidecar injection mode |
 
+**Platform / CI** — additive, marks tests verified on OpenShift Local (CRC)
+
+| Label | Tests |
+|-------|-------|
+| `crc` | Suites validated on resource-constrained CRC clusters; used by `.github/workflows/crc-e2e-sail.yaml` tier filters |
+
+### CRC E2E tiers (CI only)
+
+CRC postsubmit CI (`.github/workflows/crc-e2e-sail.yaml`) runs tiered coverage on a **single cluster**. The operator is deployed once during the smoke step; later steps reuse it (`SKIP_DEPLOY=true`). Postsubmit pushes use the **standard** tier; `workflow_dispatch` can select `smoke`, `standard`, or `extended`. This workflow is **not** runnable via `make` — use GitHub Actions only.
+
+| Tier | Steps | Ginkgo filter (per step) |
+|------|-------|--------------------------|
+| `smoke` | smoke only | `crc && smoke && !tls-profile` |
+| `standard` | smoke → ambient extended | + `crc && (ambient-validation \|\| ambient-dependency \|\| ambient-targetref)` |
+| `extended` | smoke → standard → library | + `crc && (crd-ownership \|\| reconciliation)` |
+
+CI entry point: `tests/e2e/crc-e2e-ci.sh` (invoked by the workflow only).
+
 ### Label Reference
 
 Complete label set per test file:
 
 | File | Labels |
 |------|--------|
-| `operator/operator_install_test.go` | `smoke`, `operator` |
+| `operator/operator_install_test.go` | `smoke`, `operator`, `crc` |
 | `operator/operator_install_test.go` (TLS sub-describe) | `smoke`, `operator`, `tls-profile` |
-| `controlplane/control_plane_test.go` | `smoke`, `control-plane`, `sidecar` |
+| `controlplane/control_plane_test.go` | `smoke`, `control-plane`, `sidecar`, `crc` |
 | `controlplane/control_plane_update_test.go` | `control-plane`, `update`, `slow`, `sidecar` |
-| `ambient/ambient_test.go` | `smoke`, `ambient` |
-| `ambient/ambient_dependency_test.go` | `ambient`, `ambient-dependency` |
-| `ambient/ambient_targetref_test.go` | `ambient`, `ambient-targetref` |
+| `ambient/ambient_test.go` | `smoke`, `ambient`, `crc` |
+| `ambient/ambient_dependency_test.go` | `ambient`, `ambient-dependency`, `crc` |
+| `ambient/ambient_targetref_test.go` | `ambient`, `ambient-targetref`, `crc` |
 | `ambient/ambient_update_test.go` | `ambient`, `update`, `slow` |
-| `ambient/ambient_validation_test.go` | `ambient`, `ambient-validation` |
-| `library/library_reconcile_test.go` | `library`, `reconciliation` |
-| `library/library_crd_ownership_test.go` | `library`, `crd-ownership` |
+| `ambient/ambient_validation_test.go` | `ambient`, `ambient-validation`, `crc` |
+| `library/library_reconcile_test.go` | `library`, `reconciliation`, `crc` |
+| `library/library_crd_ownership_test.go` | `library`, `crd-ownership`, `crc` |
 | `dualstack/dualstack_test.go` | `dualstack`, `slow`, `sidecar` |
 | `gatewaycontroller/gateway_controller_test.go` | `gateway-controller`, `slow` |
 | `multicluster/multicluster_multiprimary_test.go` | `multicluster`, `multicluster-multiprimary`, `slow` |
@@ -288,11 +306,8 @@ GINKGO_FLAGS="--label-filter=smoke && operator && !tls-profile" make test.e2e.oc
 GINKGO_FLAGS="--label-filter=smoke && sidecar" make test.e2e.ocp
 GINKGO_FLAGS="--label-filter=smoke && ambient" make test.e2e.ocp
 
-# Combined CRC-style smoke (same filter as .github/workflows/crc-e2e-sail.yaml).
-# That workflow runs on pull_request to main and release-* (plus workflow_dispatch).
-# Failures show as a failed check; keep it out of required status checks so merge
-# is not blocked while the suite stabilizes.
-GINKGO_LABEL_FILTER='smoke && (operator || sidecar || ambient) && !tls-profile' make test.e2e.ocp
+# CRC smoke filter (CI — see .github/workflows/crc-e2e-sail.yaml)
+GINKGO_LABEL_FILTER='crc && smoke && !tls-profile' make test.e2e.ocp
 
 # All ambient tests
 GINKGO_FLAGS="--label-filter=ambient" make test.e2e.kind

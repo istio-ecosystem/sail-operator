@@ -48,7 +48,7 @@ const (
 	upgradeTestNamespace = "library-test-upgrade"
 )
 
-var _ = Describe("Library Reconciliation", Label("library", "reconciliation"), Ordered, func() {
+var _ = Describe("Library Reconciliation", Label("library", "reconciliation", "crc"), Ordered, func() {
 	SetDefaultEventuallyTimeout(3 * time.Minute)
 	SetDefaultEventuallyPollingInterval(time.Second)
 

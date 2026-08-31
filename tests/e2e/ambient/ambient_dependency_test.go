@@ -35,7 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("Ambient Dependency Management", Label("ambient", "ambient-dependency"), Ordered, func() {
+var _ = Describe("Ambient Dependency Management", Label("ambient", "ambient-dependency", "crc"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(defaultTimeout) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 

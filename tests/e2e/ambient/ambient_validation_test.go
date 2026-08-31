@@ -28,7 +28,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Ambient API Validation", Label("ambient", "ambient-validation"), Ordered, func() {
+var _ = Describe("Ambient API Validation", Label("ambient", "ambient-validation", "crc"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(defaultTimeout) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
