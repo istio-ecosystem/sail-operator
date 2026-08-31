@@ -130,12 +130,12 @@ func doProbe(ctx context.Context, webhook *admissionv1.MutatingWebhookConfigurat
 		},
 	}
 
-	reqUrl, err := getReadinessProbeURL(clientConfig)
+	reqURL, err := getReadinessProbeURL(clientConfig)
 	if err != nil {
 		return false, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqUrl, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 	if err != nil {
 		return false, err
 	}

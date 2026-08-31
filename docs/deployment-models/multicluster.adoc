@@ -1566,8 +1566,16 @@ In this approach, the remote cluster's webhook is configured with `injectionURL`
 In this setup there is an external control plane cluster (`cluster1`) and a remote cluster (`cluster2`) which are on separate networks.
 
 ifdef::external-cp-dns[]
-# Create second Kind cluster for the remote cluster
-kind create cluster --name external-cp-remote
+# Create second Kind cluster for the remote cluster. Configure the same local registry
+# mirror as the primary cluster so it can pull the locally-built operator image.
+kind create cluster --name external-cp-remote --config - <<'KIND_CONFIG'
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+containerdConfigPatches:
+  - |-
+    [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5000"]
+      endpoint = ["http://kind-registry:5000"]
+KIND_CONFIG
 # Deploy operator on remote cluster
 kubectl --context kind-external-cp-remote create ns sail-operator
 helm template chart chart ${HELM_TEMPL_DEF_FLAGS} --set image="${IMAGE}" --namespace sail-operator | kubectl --context kind-external-cp-remote apply --server-side=true -f -
