@@ -267,6 +267,13 @@ func (in *CNIConfig) DeepCopyInto(out *CNIConfig) {
 			(*out)[key] = val
 		}
 	}
+	if in.DaemonSetAnnotations != nil {
+		in, out := &in.DaemonSetAnnotations, &out.DaemonSetAnnotations
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	if in.PodAnnotations != nil {
 		in, out := &in.PodAnnotations, &out.PodAnnotations
 		*out = make(map[string]string, len(*in))
@@ -3836,6 +3843,11 @@ func (in *OutlierDetection) DeepCopyInto(out *OutlierDetection) {
 		in, out := &in.OutlierDetectionHttpErrorCodes, &out.OutlierDetectionHttpErrorCodes
 		*out = make([]uint32, len(*in))
 		copy(*out, *in)
+	}
+	if in.FailurePercentageThreshold != nil {
+		in, out := &in.FailurePercentageThreshold, &out.FailurePercentageThreshold
+		*out = new(uint32)
+		**out = **in
 	}
 }
 

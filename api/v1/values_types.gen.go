@@ -120,12 +120,13 @@ type CNIConfig struct {
 	//
 	// Examples:
 	// env:
-	//
-	//	ENV_VAR_1: value1
-	//	ENV_VAR_2: value2
+	//   ENV_VAR_1: value1
+	//   ENV_VAR_2: value2
 	Env map[string]string `json:"env,omitempty"`
 	// Additional labels to apply to the istio-cni DaemonSet.
 	DaemonSetLabels map[string]string `json:"daemonSetLabels,omitempty"`
+	// Additional annotations to apply to the istio-cni DaemonSet.
+	DaemonSetAnnotations map[string]string `json:"daemonSetAnnotations,omitempty"`
 	// Additional annotations to apply to the istio-cni Pods.
 	//
 	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
@@ -271,11 +272,10 @@ type DefaultPodDisruptionBudgetConfig struct {
 // Global Configuration for Istio components.
 type GlobalConfig struct {
 	// Specifies pod scheduling arch(amd64, ppc64le, s390x, arm64) and weight as follows:
-	//
-	//	0 - Never scheduled
-	//	1 - Least preferred
-	//	2 - No preference
-	//	3 - Most preferred
+	//   0 - Never scheduled
+	//   1 - Least preferred
+	//   2 - No preference
+	//   3 - Most preferred
 	//
 	// Deprecated: replaced by the affinity k8s settings which allows architecture nodeAffinity configuration of this behavior.
 	//
@@ -362,19 +362,19 @@ type GlobalConfig struct {
 	// it still need to be configured manually).
 	//
 	// meshNetworks:
+	//   network1:
+	//     endpoints:
+	//     - fromCidr: "192.168.0.1/24"
+	//     gateways:
+	//     - address: 1.1.1.1
+	//       port: 80
+	//   network2:
+	//     endpoints:
+	//     - fromRegistry: reg1
+	//     gateways:
+	//     - registryServiceName: istio-ingressgateway.istio-system.svc.cluster.local
+	//       port: 443
 	//
-	//	network1:
-	//	  endpoints:
-	//	  - fromCidr: "192.168.0.1/24"
-	//	  gateways:
-	//	  - address: 1.1.1.1
-	//	    port: 80
-	//	network2:
-	//	  endpoints:
-	//	  - fromRegistry: reg1
-	//	  gateways:
-	//	  - registryServiceName: istio-ingressgateway.istio-system.svc.cluster.local
-	//	    port: 443
 	MeshNetworks map[string]Network `json:"meshNetworks,omitempty"`
 	// Specifies the Configuration for Istio mesh across multiple clusters through Istio gateways.
 	MultiCluster *MultiClusterConfig `json:"multiCluster,omitempty"`
@@ -595,9 +595,8 @@ type PilotConfig struct {
 	//
 	// Examples:
 	// env:
-	//
-	//	ENV_VAR_1: value1
-	//	ENV_VAR_2: value2
+	//   ENV_VAR_1: value1
+	//   ENV_VAR_2: value2
 	Env map[string]string `json:"env,omitempty"`
 	// K8s affinity to set on the Pilot Pods.
 	Affinity *k8sv1.Affinity `json:"affinity,omitempty"`
@@ -893,7 +892,7 @@ type SidecarInjectorConfig struct {
 	NeverInjectSelector []metav1.LabelSelector `json:"neverInjectSelector,omitempty"`
 	// See NeverInjectSelector.
 	AlwaysInjectSelector []metav1.LabelSelector `json:"alwaysInjectSelector,omitempty"`
-	// If true, webhook or istioctl injector will rewrite PodSpec for liveness health check to redirect request to sidecar. This makes liveness check work even when mTLS is enabled.
+	//  If true, webhook or istioctl injector will rewrite PodSpec for liveness health check to redirect request to sidecar. This makes liveness check work even when mTLS is enabled.
 	RewriteAppHTTPProbe *bool `json:"rewriteAppHTTPProbe,omitempty"`
 	// injectedAnnotations are additional annotations that will be added to the pod spec after injection
 	// This is primarily to support PSP annotations.
@@ -903,11 +902,10 @@ type SidecarInjectorConfig struct {
 	// Templates defines a set of custom injection templates that can be used. For example, defining:
 	//
 	// templates:
-	//
-	//	hello: |
-	//	  metadata:
-	//	    labels:
-	//	      hello: world
+	//   hello: |
+	//     metadata:
+	//       labels:
+	//         hello: world
 	//
 	// Then starting a pod with the `inject.istio.io/templates: hello` annotation, will result in the pod
 	// being injected with the hello=world labels.
@@ -1077,7 +1075,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x05amd64\x18\x01 \x01(\rR\x05amd64\x12\x18\n" +
 	"\appc64le\x18\x02 \x01(\rR\appc64le\x12\x14\n" +
 	"\x05s390x\x18\x03 \x01(\rR\x05s390x\x12\x14\n" +
-	"\x05arm64\x18\x04 \x01(\rR\x05arm64\"\xe2\f\n" +
+	"\x05arm64\x18\x04 \x01(\rR\x05arm64\"\xaf\r\n" +
 	"\tCNIConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12\x10\n" +
 	"\x03hub\x18\x02 \x01(\tR\x03hub\x12(\n" +
@@ -1096,7 +1094,8 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x11excludeNamespaces\x18\t \x03(\tR\x11excludeNamespaces\x123\n" +
 	"\baffinity\x18\x14 \x01(\v2\x17.google.protobuf.StructR\baffinity\x12)\n" +
 	"\x03env\x18  \x01(\v2\x17.google.protobuf.StructR\x03env\x12A\n" +
-	"\x0fdaemonSetLabels\x18! \x01(\v2\x17.google.protobuf.StructR\x0fdaemonSetLabels\x12C\n" +
+	"\x0fdaemonSetLabels\x18! \x01(\v2\x17.google.protobuf.StructR\x0fdaemonSetLabels\x12K\n" +
+	"\x14daemonSetAnnotations\x18& \x01(\v2\x17.google.protobuf.StructR\x14daemonSetAnnotations\x12C\n" +
 	"\x0epodAnnotations\x18\n" +
 	" \x01(\v2\x17.google.protobuf.StructB\x02\x18\x01R\x0epodAnnotations\x125\n" +
 	"\tpodLabels\x18\" \x01(\v2\x17.google.protobuf.StructR\tpodLabels\x12(\n" +
@@ -5297,6 +5296,13 @@ type OutlierDetection struct {
 	// if the value of `consecutiveGatewayErrors` is greater than or equal to
 	// the value of `consecutive5xxErrors`, `consecutiveGatewayErrors` will have
 	// no effect.
+	//
+	// Because this threshold only counts *consecutive* failures, a host whose
+	// errors are interleaved with successful requests may never reach it even
+	// if its overall failure rate is high, e.g. a host that fails every other
+	// request will never accumulate 5 consecutive errors. Use
+	// `failurePercentageThreshold` to eject hosts based on failure rate over
+	// the analysis `interval` instead of requiring consecutive failures.
 	Consecutive5XxErrors *uint32 `json:"consecutive5xxErrors,omitempty"`
 	// Time interval between ejection sweep analysis. format:
 	// 1h/1m/1s/1ms. MUST be >=1ms. Default is 10s.
@@ -5332,6 +5338,17 @@ type OutlierDetection struct {
 	// +protoc-gen-crd:list-value-validation:Minimum=100
 	// +protoc-gen-crd:list-value-validation:Maximum=599
 	OutlierDetectionHttpErrorCodes []uint32 `json:"outlierDetectionHttpErrorCodes,omitempty"`
+	// The failure percentage to use when determining failure percentage-based outlier detection. If
+	// the failure percentage of a given host is greater than or equal to this value, it will be
+	// ejected. Defaults to 85.
+	//
+	// Unlike `consecutive5xxErrors` and `consecutiveGatewayErrors`, this does not require failures
+	// to occur back-to-back, so it will still eject a host whose failure rate is high but whose
+	// errors are interspersed with successful requests.
+	//
+	// +kubebuilder:validation:Maximum=100
+	// +kubebuilder:validation:Minimum=0
+	FailurePercentageThreshold *uint32 `json:"failurePercentageThreshold,omitempty"`
 }
 
 // SSL/TLS related settings for upstream connections. See Envoy's [TLS

@@ -128,12 +128,16 @@ spec:
                             type: string
                         type: object
                       arch:
-                        description: "Specifies pod scheduling arch(amd64, ppc64le,
-                          s390x, arm64) and weight as follows:\n\n\t0 - Never scheduled\n\t1
-                          - Least preferred\n\t2 - No preference\n\t3 - Most preferred\n\nDeprecated:
-                          replaced by the affinity k8s settings which allows architecture
-                          nodeAffinity configuration of this behavior.\n\nDeprecated:
-                          Marked as deprecated in pkg/apis/values_types.proto."
+                        description: |-
+                          Specifies pod scheduling arch(amd64, ppc64le, s390x, arm64) and weight as follows:
+                            0 - Never scheduled
+                            1 - Least preferred
+                            2 - No preference
+                            3 - Most preferred
+
+                          Deprecated: replaced by the affinity k8s settings which allows architecture nodeAffinity configuration of this behavior.
+
+                          Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
                         properties:
                           amd64:
                             description: Sets pod scheduling weight for amd64 arch
@@ -498,26 +502,33 @@ spec:
                                     <= 1
                               type: array
                           type: object
-                        description: "Configure the mesh networks to be used by the
-                          Split Horizon EDS.\n\nThe following example defines two
-                          networks with different endpoints association methods.\nFor
-                          `network1` all endpoints that their IP belongs to the provided
-                          CIDR range will be\nmapped to network1. The gateway for
-                          this network example is specified by its public IP\naddress
-                          and port.\nThe second network, `network2`, in this example
-                          is defined differently with all endpoints\nretrieved through
-                          the specified Multi-Cluster registry being mapped to network2.
-                          The\ngateway is also defined differently with the name of
-                          the gateway service on the remote\ncluster. The public IP
-                          for the gateway will be determined from that remote service
-                          (only\nLoadBalancer gateway service type is currently supported,
-                          for a NodePort type gateway service,\nit still need to be
-                          configured manually).\n\nmeshNetworks:\n\n\tnetwork1:\n\t
-                          \ endpoints:\n\t  - fromCidr: \"192.168.0.1/24\"\n\t  gateways:\n\t
-                          \ - address: 1.1.1.1\n\t    port: 80\n\tnetwork2:\n\t  endpoints:\n\t
-                          \ - fromRegistry: reg1\n\t  gateways:\n\t  - registryServiceName:
-                          istio-ingressgateway.istio-system.svc.cluster.local\n\t
-                          \   port: 443"
+                        description: |-
+                          Configure the mesh networks to be used by the Split Horizon EDS.
+
+                          The following example defines two networks with different endpoints association methods.
+                          For `network1` all endpoints that their IP belongs to the provided CIDR range will be
+                          mapped to network1. The gateway for this network example is specified by its public IP
+                          address and port.
+                          The second network, `network2`, in this example is defined differently with all endpoints
+                          retrieved through the specified Multi-Cluster registry being mapped to network2. The
+                          gateway is also defined differently with the name of the gateway service on the remote
+                          cluster. The public IP for the gateway will be determined from that remote service (only
+                          LoadBalancer gateway service type is currently supported, for a NodePort type gateway service,
+                          it still need to be configured manually).
+
+                          meshNetworks:
+                            network1:
+                              endpoints:
+                              - fromCidr: "192.168.0.1/24"
+                              gateways:
+                              - address: 1.1.1.1
+                                port: 80
+                            network2:
+                              endpoints:
+                              - fromRegistry: reg1
+                              gateways:
+                              - registryServiceName: istio-ingressgateway.istio-system.svc.cluster.local
+                                port: 443
                         type: object
                       mountMtlsCerts:
                         description: Controls whether the in-cluster MTLS key and
@@ -4649,6 +4660,13 @@ spec:
                                   if the value of `consecutiveGatewayErrors` is greater than or equal to
                                   the value of `consecutive5xxErrors`, `consecutiveGatewayErrors` will have
                                   no effect.
+
+                                  Because this threshold only counts *consecutive* failures, a host whose
+                                  errors are interleaved with successful requests may never reach it even
+                                  if its overall failure rate is high, e.g. a host that fails every other
+                                  request will never accumulate 5 consecutive errors. Use
+                                  `failurePercentageThreshold` to eject hosts based on failure rate over
+                                  the analysis `interval` instead of requiring consecutive failures.
                                 format: int32
                                 type: integer
                               consecutiveErrors:
@@ -4685,6 +4703,19 @@ spec:
                                   occurs. Defaults to 5. Parameter takes effect only when `splitExternalLocalOriginErrors`
                                   is set to true.
                                 format: int32
+                                type: integer
+                              failurePercentageThreshold:
+                                description: |-
+                                  The failure percentage to use when determining failure percentage-based outlier detection. If
+                                  the failure percentage of a given host is greater than or equal to this value, it will be
+                                  ejected. Defaults to 85.
+
+                                  Unlike `consecutive5xxErrors` and `consecutiveGatewayErrors`, this does not require failures
+                                  to occur back-to-back, so it will still eject a host whose failure rate is high but whose
+                                  errors are interspersed with successful requests.
+                                format: int32
+                                maximum: 100
+                                minimum: 0
                                 type: integer
                               interval:
                                 description: |-
@@ -8136,8 +8167,13 @@ spec:
                       env:
                         additionalProperties:
                           type: string
-                        description: "Environment variables passed to the Pilot container.\n\nExamples:\nenv:\n\n\tENV_VAR_1:
-                          value1\n\tENV_VAR_2: value2"
+                        description: |-
+                          Environment variables passed to the Pilot container.
+
+                          Examples:
+                          env:
+                            ENV_VAR_1: value1
+                            ENV_VAR_2: value2
                         type: object
                       envVarFrom:
                         description: Configuration for the istio-discovery chart
@@ -10932,21 +10968,26 @@ spec:
                           occur. Default: Never'
                         type: string
                       rewriteAppHTTPProbe:
-                        description: If true, webhook or istioctl injector will rewrite
-                          PodSpec for liveness health check to redirect request to
-                          sidecar. This makes liveness check work even when mTLS is
-                          enabled.
+                        description: ' If true, webhook or istioctl injector will
+                          rewrite PodSpec for liveness health check to redirect request
+                          to sidecar. This makes liveness check work even when mTLS
+                          is enabled.'
                         type: boolean
                       templates:
                         additionalProperties:
                           type: string
-                        description: "Templates defines a set of custom injection
-                          templates that can be used. For example, defining:\n\ntemplates:\n\n\thello:
-                          |\n\t  metadata:\n\t    labels:\n\t      hello: world\n\nThen
-                          starting a pod with the `inject.istio.io/templates: hello`
-                          annotation, will result in the pod\nbeing injected with
-                          the hello=world labels.\nThis is intended for advanced configuration
-                          only; most users should use the built in template"
+                        description: |-
+                          Templates defines a set of custom injection templates that can be used. For example, defining:
+
+                          templates:
+                            hello: |
+                              metadata:
+                                labels:
+                                  hello: world
+
+                          Then starting a pod with the `inject.istio.io/templates: hello` annotation, will result in the pod
+                          being injected with the hello=world labels.
+                          This is intended for advanced configuration only; most users should use the built in template
                         type: object
                     type: object
                   telemetry:
@@ -10982,13 +11023,15 @@ spec:
               version:
                 description: |-
                   Defines the version of Istio to install.
-                  Must be one of: v1.31.0-beta.1, v1.30.3, v1.30.2, v1.30.1, v1.30.0, v1.29.6, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.32.0-alpha.aed8285f.
+                  Must be one of: v1.31.0-beta.1, v1.30.4, v1.30.3, v1.30.2, v1.30.1, v1.30.0, v1.29.7, v1.29.6, v1.29.5, v1.29.4, v1.29.3, v1.29.2, v1.29.1, v1.29.0, v1.32.0-alpha.1d664989.
                 enum:
                 - v1.31.0-beta.1
+                - v1.30.4
                 - v1.30.3
                 - v1.30.2
                 - v1.30.1
                 - v1.30.0
+                - v1.29.7
                 - v1.29.6
                 - v1.29.5
                 - v1.29.4
@@ -11048,7 +11091,7 @@ spec:
                 - v1.22.6
                 - v1.22.5
                 - v1.21.6
-                - v1.32.0-alpha.aed8285f
+                - v1.32.0-alpha.1d664989
                 type: string
             required:
             - namespace
