@@ -112,6 +112,38 @@ func TestReconcile(t *testing.T) {
 			expectResult: ctrl.Result{RequeueAfter: 123 * time.Second},
 			expectValue:  "true",
 		},
+		{
+			name: "skips update when annotations unchanged",
+			setup: func(webhook *admissionv1.MutatingWebhookConfiguration) {
+				webhook.Annotations = map[string]string{
+					constants.WebhookReadinessProbeStatusAnnotationKey:       "true",
+					constants.WebhookReadinessProbeStatusReasonAnnotationKey: "",
+				}
+			},
+			probeFunc: func(context.Context, *admissionv1.MutatingWebhookConfiguration) (bool, error) {
+				return true, nil
+			},
+			interceptors: interceptor.Funcs{
+				Update: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+					return errors.New("Update should not be called when annotations are unchanged")
+				},
+			},
+			expectResult: ctrl.Result{RequeueAfter: defaultPeriodSeconds * time.Second},
+			expectValue:  "true",
+		},
+		{
+			name: "invalid period annotation falls back to default",
+			setup: func(webhook *admissionv1.MutatingWebhookConfiguration) {
+				webhook.Annotations = map[string]string{
+					constants.WebhookReadinessProbePeriodSecondsAnnotationKey: "-5",
+				}
+			},
+			probeFunc: func(context.Context, *admissionv1.MutatingWebhookConfiguration) (bool, error) {
+				return true, nil
+			},
+			expectResult: ctrl.Result{RequeueAfter: defaultPeriodSeconds * time.Second},
+			expectValue:  "true",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -144,6 +176,70 @@ func TestReconcile(t *testing.T) {
 
 			g.Expect(cl.Get(ctx, kube.Key("istio-sidecar-injector"), webhook)).To(Succeed())
 			g.Expect(webhook.Annotations[constants.WebhookReadinessProbeStatusAnnotationKey]).To(Equal(tt.expectValue), "Unexpected annotation value")
+		})
+	}
+}
+
+func TestGetPeriodAndTimeout(t *testing.T) {
+	tests := []struct {
+		name           string
+		annotations    map[string]string
+		expectedPeriod time.Duration
+		expectTimeout  time.Duration
+	}{
+		{
+			name:           "no annotations returns defaults",
+			annotations:    nil,
+			expectedPeriod: defaultPeriodSeconds * time.Second,
+			expectTimeout:  defaultTimeoutSeconds * time.Second,
+		},
+		{
+			name: "valid values are honored",
+			annotations: map[string]string{
+				constants.WebhookReadinessProbePeriodSecondsAnnotationKey:  "10",
+				constants.WebhookReadinessProbeTimeoutSecondsAnnotationKey: "20",
+			},
+			expectedPeriod: 10 * time.Second,
+			expectTimeout:  20 * time.Second,
+		},
+		{
+			name: "zero values fall back to defaults",
+			annotations: map[string]string{
+				constants.WebhookReadinessProbePeriodSecondsAnnotationKey:  "0",
+				constants.WebhookReadinessProbeTimeoutSecondsAnnotationKey: "0",
+			},
+			expectedPeriod: defaultPeriodSeconds * time.Second,
+			expectTimeout:  defaultTimeoutSeconds * time.Second,
+		},
+		{
+			name: "negative values fall back to defaults",
+			annotations: map[string]string{
+				constants.WebhookReadinessProbePeriodSecondsAnnotationKey:  "-3",
+				constants.WebhookReadinessProbeTimeoutSecondsAnnotationKey: "-7",
+			},
+			expectedPeriod: defaultPeriodSeconds * time.Second,
+			expectTimeout:  defaultTimeoutSeconds * time.Second,
+		},
+		{
+			name: "non-numeric values fall back to defaults",
+			annotations: map[string]string{
+				constants.WebhookReadinessProbePeriodSecondsAnnotationKey:  "abc",
+				constants.WebhookReadinessProbeTimeoutSecondsAnnotationKey: "xyz",
+			},
+			expectedPeriod: defaultPeriodSeconds * time.Second,
+			expectTimeout:  defaultTimeoutSeconds * time.Second,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			webhook := &admissionv1.MutatingWebhookConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: tt.annotations,
+				},
+			}
+			g.Expect(getPeriod(ctx, webhook)).To(Equal(tt.expectedPeriod))
+			g.Expect(getTimeout(ctx, webhook)).To(Equal(tt.expectTimeout))
 		})
 	}
 }
