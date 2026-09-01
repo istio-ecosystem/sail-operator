@@ -52,7 +52,7 @@ func (matcher *HaveConditionMatcher) Match(actual any) (success bool, err error)
 	matcher.lastSeenConditions = []string{}
 
 	val := reflect.ValueOf(actual)
-	if val.Kind() == reflect.Ptr && !val.IsNil() {
+	if val.Kind() == reflect.Pointer && !val.IsNil() {
 		val = val.Elem()
 	}
 

@@ -681,7 +681,7 @@ func convertEnum(enumName string, file *ast.File) {
 			for _, n := range valueSpec.Names {
 				if n.Name == enumName+"_name" {
 					// read the map's entries and store them in intsToEnumValues
-					if compositeLit, ok := (valueSpec.Values[0]).(*ast.CompositeLit); ok {
+					if compositeLit, ok := valueSpec.Values[0].(*ast.CompositeLit); ok {
 						for _, item := range compositeLit.Elts {
 							if keyValueExpr, ok := item.(*ast.KeyValueExpr); ok {
 								k := toString(keyValueExpr.Key)

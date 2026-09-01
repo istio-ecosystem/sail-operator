@@ -92,19 +92,24 @@ func (r *StandardReconciler[T]) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	result, err := r.reconcile(ctx, obj)
+	// TODO: Result.Requeue is deprecated in controller-runtime, but neither suggested replacement fits these
+	// branches. Returning the error queues the request identically (rate-limited), but logs "Reconciler error"
+	// and increments the reconcile_errors metric for conditions we treat as expected and log at Info here.
+	// RequeueAfter calls Forget and retries at a fixed interval, dropping the rate-limited backoff. Revisit if
+	// controller-runtime grows a non-deprecated rate-limited requeue, or when Requeue is finally removed.
 	switch {
 	case errors.IsForbidden(err) && strings.Contains(err.Error(), "RESTMapping"):
 		log.Info("APIServer seems to be not ready - RESTMapper of gc admission plugin is not up to date. Retrying...", "error", err)
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{Requeue: true}, nil //nolint:staticcheck // see TODO above
 	case errors.IsConflict(err):
 		log.Info("Conflict detected. Retrying...")
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{Requeue: true}, nil //nolint:staticcheck // see TODO above
 	case errors.IsNotFound(err):
 		log.Info("Resource not found. Retrying...", "error", err)
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{Requeue: true}, nil //nolint:staticcheck // see TODO above
 	case IsTransientError(err):
 		log.Info("Reconciliation failed. Retrying...", "error", err)
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{Requeue: true}, nil //nolint:staticcheck // see TODO above
 	case IsValidationError(err):
 		log.Info("Validation failed", "error", err)
 		return ctrl.Result{}, nil
