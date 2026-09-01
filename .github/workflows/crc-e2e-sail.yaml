@@ -12,7 +12,7 @@ on:
       test_tier:
         description: CRC E2E coverage tier
         required: true
-        default: standard
+        default: extended
         type: choice
         options:
           - smoke
@@ -89,11 +89,11 @@ jobs:
   # One CRC cluster for all tiers. A matrix would start CRC 3x (~30m each)
   # and burn free-tier minutes; sequential steps share a single cluster instead.
   e2e:
-    name: e2e openshift local (${{ github.event_name == 'workflow_dispatch' && inputs.test_tier || 'standard' }})
+    name: e2e openshift local (${{ github.event_name == 'workflow_dispatch' && inputs.test_tier || 'extended' }})
     needs: [preflight, build-push]
     runs-on: ubuntu-latest
     env:
-      TEST_TIER: ${{ github.event_name == 'workflow_dispatch' && inputs.test_tier || 'standard' }}
+      TEST_TIER: ${{ github.event_name == 'workflow_dispatch' && inputs.test_tier || 'extended' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -211,7 +211,7 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           cat > /tmp/crc-e2e-failure.md <<EOF
-          CRC OpenShift Local E2E (\`e2e\` job, tier \`standard\`) failed on \`${BRANCH}\` at \`${SHORT_SHA:0:7}\`.
+          CRC OpenShift Local E2E (\`e2e\` job, tier \`extended\`) failed on \`${BRANCH}\` at \`${SHORT_SHA:0:7}\`.
 
           - Failed job: \`e2e openshift local\`
           - [View failing run / logs](${RUN_URL})
