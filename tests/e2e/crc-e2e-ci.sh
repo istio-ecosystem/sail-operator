@@ -119,7 +119,7 @@ cleanup_mesh_between_tiers() {
 }
 
 filter_smoke='crc && smoke && !tls-profile'
-filter_standard='crc && (ambient-validation || ambient-dependency || ambient-targetref)'
+filter_standard='crc && (ambient-validation || ambient-dependency || ambient-targetref) && !ambient-targetref-override'
 filter_extended='crc && (crd-ownership || reconciliation)'
 
 skip_cleanup=false

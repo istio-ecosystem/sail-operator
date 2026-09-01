@@ -234,6 +234,7 @@ Labels follow a multi-dimensional structure. Each test file carries one label fr
 |-------|-------|
 | `ambient-dependency` | Dependency detection and health propagation |
 | `ambient-targetref` | ZTunnel value propagation via targetRef |
+| `ambient-targetref-override` | ZTunnel user-value override precedence (excluded from CRC; deploys a third Istio revision) |
 | `ambient-validation` | API validation (CR naming enforcement) |
 | `reconciliation` | Library reconciliation loop behavior |
 | `crd-ownership` | CRD ownership and OLM coexistence |
@@ -264,7 +265,7 @@ CRC postsubmit CI (`.github/workflows/crc-e2e-sail.yaml`) runs tiered coverage o
 | Tier | Steps | Ginkgo filter (per step) |
 |------|-------|--------------------------|
 | `smoke` | smoke only | `crc && smoke && !tls-profile` |
-| `standard` | smoke → ambient extended | + `crc && (ambient-validation \|\| ambient-dependency \|\| ambient-targetref)` |
+| `standard` | smoke → ambient extended | + `crc && (ambient-validation \|\| ambient-dependency \|\| ambient-targetref) && !ambient-targetref-override` |
 | `extended` | smoke → standard → library | + `crc && (crd-ownership \|\| reconciliation)` |
 
 CI entry point: `tests/e2e/crc-e2e-ci.sh` (invoked by the workflow only).
@@ -281,7 +282,7 @@ Complete label set per test file:
 | `controlplane/control_plane_update_test.go` | `control-plane`, `update`, `slow`, `sidecar` |
 | `ambient/ambient_test.go` | `smoke`, `ambient`, `crc` |
 | `ambient/ambient_dependency_test.go` | `ambient`, `ambient-dependency`, `crc` |
-| `ambient/ambient_targetref_test.go` | `ambient`, `ambient-targetref`, `crc` |
+| `ambient/ambient_targetref_test.go` | `ambient`, `ambient-targetref`, `crc`; override sub-context also has `ambient-targetref-override` (CRC excluded) |
 | `ambient/ambient_update_test.go` | `ambient`, `update`, `slow` |
 | `ambient/ambient_validation_test.go` | `ambient`, `ambient-validation`, `crc` |
 | `library/library_reconcile_test.go` | `library`, `reconciliation`, `crc` |

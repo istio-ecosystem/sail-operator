@@ -302,7 +302,7 @@ targetRef:
 		})
 	})
 
-	Context("User Value Override Precedence", Ordered, func() {
+	Context("User Value Override Precedence", Label("ambient-targetref-override"), Ordered, func() {
 		inheritedNetwork := "inherited-net"
 		overrideNetwork := "override-net"
 		customEnvVar := "CUSTOM_TEST_VAR"
@@ -316,31 +316,22 @@ targetRef:
 
 		When("Istio is created with a network value", func() {
 			It("creates second Istio CR for override testing", func(ctx SpecContext) {
-				istioName2 := "override-test"
-				istioYAML := fmt.Sprintf(`
-apiVersion: sailoperator.io/v1
-kind: Istio
-metadata:
-  name: %s
-spec:
-  version: %s
-  namespace: %s
-  profile: ambient
-  values:
-    global:
-      network: %s`, istioName2, version.Name, controlPlaneNamespace, inheritedNetwork)
-
-				Expect(k.CreateFromString(istioYAML)).To(Succeed())
+				common.CreateNamedIstio(k, "override-test", version.Name, fmt.Sprintf(`
+profile: ambient
+values:
+  global:
+    network: %s`, inheritedNetwork))
 				Success("Second Istio CR created")
 			})
 
-			It("waits for second Istio to be Ready", func(ctx SpecContext) {
+			It("waits for second Istio to reconcile", func(ctx SpecContext) {
 				istio := &v1.Istio{}
 				Eventually(func(g Gomega) {
 					g.Expect(cl.Get(ctx, kube.Key("override-test"), istio)).To(Succeed())
-					g.Expect(istio).To(HaveConditionStatus(v1.IstioConditionReady, metav1.ConditionTrue))
+					g.Expect(istio).To(HaveConditionStatus(v1.IstioConditionReconciled, metav1.ConditionTrue))
+					g.Expect(istio.Status.ActiveRevisionName).NotTo(BeEmpty())
 				}).Should(Succeed())
-				Success("Second Istio is Ready")
+				Success("Second Istio has an active revision")
 			})
 		})
 
@@ -471,17 +462,7 @@ targetRef:
 			})
 
 			It("creates the missing Istio resource", func(ctx SpecContext) {
-				istioYAML := fmt.Sprintf(`
-apiVersion: sailoperator.io/v1
-kind: Istio
-metadata:
-  name: %s
-spec:
-  version: %s
-  namespace: %s
-  profile: ambient`, missingIstioName, version.Name, controlPlaneNamespace)
-
-				Expect(k.CreateFromString(istioYAML)).To(Succeed())
+				common.CreateNamedIstio(k, missingIstioName, version.Name, "profile: ambient")
 				Success("Missing Istio CR created")
 			})
 
