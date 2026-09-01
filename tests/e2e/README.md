@@ -237,6 +237,7 @@ Labels follow a multi-dimensional structure. Each test file carries one label fr
 | `ambient-targetref-override` | ZTunnel user-value override precedence (excluded from CRC; deploys a third Istio revision) |
 | `ambient-validation` | API validation (CR naming enforcement) |
 | `reconciliation` | Library reconciliation loop behavior |
+| `library-upgrade` | Library istiod version upgrade (excluded from CRC; needs two istiod rollouts) |
 | `crd-ownership` | CRD ownership and OLM coexistence |
 | `multicluster-multiprimary` | Multi-primary multi-network topology |
 | `multicluster-primaryremote` | Primary-remote multi-network topology |
@@ -266,7 +267,7 @@ CRC postsubmit CI (`.github/workflows/crc-e2e-sail.yaml`) runs tiered coverage o
 |------|-------|--------------------------|
 | `smoke` | smoke only | `crc && smoke && !tls-profile` |
 | `standard` | smoke → ambient extended | + `crc && (ambient-validation \|\| ambient-dependency \|\| ambient-targetref) && !ambient-targetref-override` |
-| `extended` | smoke → standard → library | + `crc && (crd-ownership \|\| reconciliation)` |
+| `extended` | smoke → standard → library | + `crc && (crd-ownership \|\| reconciliation) && !library-upgrade` |
 
 CI entry point: `tests/e2e/crc-e2e-ci.sh` (invoked by the workflow only).
 
@@ -285,7 +286,7 @@ Complete label set per test file:
 | `ambient/ambient_targetref_test.go` | `ambient`, `ambient-targetref`, `crc`; override sub-context also has `ambient-targetref-override` (CRC excluded) |
 | `ambient/ambient_update_test.go` | `ambient`, `update`, `slow` |
 | `ambient/ambient_validation_test.go` | `ambient`, `ambient-validation`, `crc` |
-| `library/library_reconcile_test.go` | `library`, `reconciliation`, `crc` |
+| `library/library_reconcile_test.go` | `library`, `reconciliation`, `crc`; upgrade sub-context also has `library-upgrade` (CRC excluded) |
 | `library/library_crd_ownership_test.go` | `library`, `crd-ownership`, `crc` |
 | `dualstack/dualstack_test.go` | `dualstack`, `slow`, `sidecar` |
 | `gatewaycontroller/gateway_controller_test.go` | `gateway-controller`, `slow` |

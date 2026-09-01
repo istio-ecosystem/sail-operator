@@ -299,7 +299,7 @@ var _ = Describe("Library Reconciliation", Label("library", "reconciliation", "c
 		})
 	})
 
-	When("the library upgrades istiod to a new version", func() {
+	When("the library upgrades istiod to a new version", Label("library-upgrade"), func() {
 		var lib *install.Library
 
 		const (
