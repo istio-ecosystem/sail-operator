@@ -65,19 +65,25 @@ filter_smoke='crc && smoke && !tls-profile'
 filter_standard='crc && (ambient-validation || ambient-dependency || ambient-targetref)'
 filter_extended='crc && (crd-ownership || reconciliation)'
 
-keep_operator=false
 skip_cleanup=false
 if [[ "${tier}" == "standard" || "${tier}" == "extended" ]]; then
-  keep_operator=true
   skip_cleanup=true
 fi
+
+cleanup_mesh_between_tiers() {
+  echo "::group::CRC E2E mesh cleanup between tiers"
+  bash "${workspace}/tests/e2e/crc-e2e-mesh-cleanup.sh"
+  echo "::endgroup::"
+}
 
 run_e2e smoke "${filter_smoke}" false "${skip_cleanup}" "${artifacts_root}/smoke" || exit 1
 
 if [[ "${tier}" == "standard" || "${tier}" == "extended" ]]; then
+  cleanup_mesh_between_tiers
   run_e2e standard "${filter_standard}" true true "${artifacts_root}/standard" || exit 1
 fi
 
 if [[ "${tier}" == "extended" ]]; then
+  cleanup_mesh_between_tiers
   run_e2e extended "${filter_extended}" true true "${artifacts_root}/extended" || exit 1
 fi

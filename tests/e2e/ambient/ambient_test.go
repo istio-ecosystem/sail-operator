@@ -272,6 +272,11 @@ profile: ambient`
 						common.ValidateHTTPConnectivity(k, common.SleepNamespace, sleepPod.Items[0].Name, common.SleepContainerName,
 							fmt.Sprintf("httpbin.%s.svc.cluster.local:8000/get", common.HttpbinNamespace), "200", 5)
 					})
+
+					AfterAll(func() {
+						Expect(k.Delete("namespace", common.SleepNamespace)).To(Succeed())
+						Expect(k.Delete("namespace", common.HttpbinNamespace)).To(Succeed())
+					})
 				})
 
 				When("the Istio CR is deleted", func() {

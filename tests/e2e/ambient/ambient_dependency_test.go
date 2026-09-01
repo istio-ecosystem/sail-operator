@@ -63,23 +63,14 @@ var _ = Describe("Ambient Dependency Management", Label("ambient", "ambient-depe
 
 				When("IstioRevision with ambient profile is created before IstioCNI exists", func() {
 					BeforeAll(func() {
-						// Create IstioRevision with ambient profile (depends on IstioCNI)
-						istioYAML := fmt.Sprintf(`
-apiVersion: sailoperator.io/v1
-kind: Istio
-metadata:
-  name: %s
-spec:
-  version: %s
-  namespace: %s
-  values:
-    profile: ambient
-    pilot:
-      cni:
-        enabled: true
-      trustedZtunnelNamespace: ztunnel`, istioName, version.Name, controlPlaneNamespace)
-						Log("Creating Istio CR with ambient profile before IstioCNI exists:", istioYAML)
-						Expect(k.CreateFromString(istioYAML)).To(Succeed())
+						Log("Creating Istio CR with ambient profile before IstioCNI exists")
+						common.CreateIstio(k, version.Name, `
+profile: ambient
+values:
+  pilot:
+    cni:
+      enabled: true
+    trustedZtunnelNamespace: ztunnel`)
 						Success("Istio CR created")
 					})
 
@@ -117,17 +108,8 @@ spec:
 
 				When("IstioCNI is created", func() {
 					BeforeAll(func() {
-						cniYAML := fmt.Sprintf(`
-apiVersion: sailoperator.io/v1
-kind: IstioCNI
-metadata:
-  name: default
-spec:
-  version: %s
-  namespace: %s
-  profile: ambient`, version.Name, istioCniNamespace)
-						Log("Creating IstioCNI CR:", cniYAML)
-						Expect(k.CreateFromString(cniYAML)).To(Succeed())
+						Log("Creating IstioCNI CR")
+						common.CreateIstioCNI(k, version.Name, "profile: ambient")
 						Success("IstioCNI created")
 					})
 
@@ -161,16 +143,8 @@ spec:
 
 				When("ZTunnel is created", func() {
 					BeforeAll(func() {
-						ztunnelYAML := fmt.Sprintf(`
-apiVersion: sailoperator.io/v1
-kind: ZTunnel
-metadata:
-  name: default
-spec:
-  version: %s
-  namespace: %s`, version.Name, ztunnelNamespace)
-						Log("Creating ZTunnel CR:", ztunnelYAML)
-						Expect(k.CreateFromString(ztunnelYAML)).To(Succeed())
+						Log("Creating ZTunnel CR")
+						common.CreateZTunnel(k, version.Name)
 						Success("ZTunnel created")
 					})
 

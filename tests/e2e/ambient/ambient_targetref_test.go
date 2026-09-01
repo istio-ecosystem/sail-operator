@@ -197,20 +197,11 @@ targetRef:
 
 		When("Istio CR is created with custom meshConfig", func() {
 			It("creates Istio with custom trustDomain in meshConfig", func(ctx SpecContext) {
-				istioYAML := fmt.Sprintf(`
-apiVersion: sailoperator.io/v1
-kind: Istio
-metadata:
-  name: meshconfig-test
-spec:
-  version: %s
-  namespace: %s
-  profile: ambient
-  values:
-    meshConfig:
-      trustDomain: %s`, version.Name, controlPlaneNamespace, customTrustDomain)
-
-				Expect(k.CreateFromString(istioYAML)).To(Succeed())
+				common.CreateNamedIstio(k, "meshconfig-test", version.Name, fmt.Sprintf(`
+profile: ambient
+values:
+  meshConfig:
+    trustDomain: %s`, customTrustDomain))
 				Success("Istio CR created with custom meshConfig")
 			})
 

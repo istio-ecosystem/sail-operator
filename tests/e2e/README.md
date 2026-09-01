@@ -259,7 +259,7 @@ Labels follow a multi-dimensional structure. Each test file carries one label fr
 
 ### CRC E2E tiers (CI only)
 
-CRC postsubmit CI (`.github/workflows/crc-e2e-sail.yaml`) runs tiered coverage on a **single cluster**. The operator is deployed once during the smoke step; later steps reuse it (`SKIP_DEPLOY=true`). Postsubmit pushes use the **standard** tier; `workflow_dispatch` can select `smoke`, `standard`, or `extended`. This workflow is **not** runnable via `make` — use GitHub Actions only.
+CRC postsubmit CI (`.github/workflows/crc-e2e-sail.yaml`) runs tiered coverage on a **single cluster**. The operator is deployed once during the smoke step; later steps reuse it (`SKIP_DEPLOY=true`). Between tiers, `tests/e2e/crc-e2e-mesh-cleanup.sh` removes mesh CRs and workload namespaces to free CRC memory while keeping the operator. Postsubmit pushes use the **standard** tier; `workflow_dispatch` can select `smoke`, `standard`, or `extended`. This workflow is **not** runnable via `make` — use GitHub Actions only.
 
 | Tier | Steps | Ginkgo filter (per step) |
 |------|-------|--------------------------|
