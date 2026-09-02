@@ -148,10 +148,12 @@ skipInDryRun git commit -s -m"${TITLE}"
 skipInDryRun git push -f fork "${BRANCH}"
 
 PAYLOAD="${TMP_DIR}/PAYLOAD"
+PR_BODY="$(cat "${CUR_DIR}"/operatorhub-pr-template.md)"
+HEAD="${FORK}:${BRANCH}"
 
 jq -c -n \
-  --arg msg "$(cat "${CUR_DIR}"/operatorhub-pr-template.md)" \
-  --arg head "${FORK}:${BRANCH}" \
+  --arg msg "${PR_BODY}" \
+  --arg head "${HEAD}" \
   --arg base "${HUB_BASE_BRANCH}" \
   --arg title "${TITLE}" \
    '{head: $head, base: $base, title: $title, body: $msg }' > "${PAYLOAD}"
@@ -161,10 +163,35 @@ if $dryRun; then
   jq . "${PAYLOAD}"
 fi
 
-skipInDryRun curl \
+EXISTING_PR_URL=$(curl \
   --fail-with-body \
-  -X POST \
+  -s \
   -H "Authorization: token ${GITHUB_TOKEN}" \
   -H "Accept: application/vnd.github.v3+json" \
-  https://api.github.com/repos/"${OWNER}/${OPERATOR_HUB}"/pulls \
-   --data-binary "@${PAYLOAD}"
+  "https://api.github.com/repos/${OWNER}/${OPERATOR_HUB}/pulls?head=${HEAD}&state=open" \
+  | jq -r '.[0].url // empty')
+
+if [ -n "${EXISTING_PR_URL}" ]; then
+  echo "PR already exists: ${EXISTING_PR_URL} — updating"
+  UPDATE_PAYLOAD="${TMP_DIR}/UPDATE_PAYLOAD"
+  jq -c -n \
+    --arg title "${TITLE}" \
+    --arg msg "${PR_BODY}" \
+    '{title: $title, body: $msg}' > "${UPDATE_PAYLOAD}"
+  skipInDryRun curl \
+    --fail-with-body \
+    -X PATCH \
+    -H "Authorization: token ${GITHUB_TOKEN}" \
+    -H "Accept: application/vnd.github.v3+json" \
+    "${EXISTING_PR_URL}" \
+    --data-binary "@${UPDATE_PAYLOAD}"
+else
+  echo "Creating new PR"
+  skipInDryRun curl \
+    --fail-with-body \
+    -X POST \
+    -H "Authorization: token ${GITHUB_TOKEN}" \
+    -H "Accept: application/vnd.github.v3+json" \
+    "https://api.github.com/repos/${OWNER}/${OPERATOR_HUB}/pulls" \
+    --data-binary "@${PAYLOAD}"
+fi
