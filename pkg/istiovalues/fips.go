@@ -15,8 +15,9 @@
 package istiovalues
 
 import (
-	"crypto/fips140"
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
@@ -29,16 +30,39 @@ const (
 	fips140_3 = "fips-140-3"
 )
 
+var (
+	FipsEnabled        bool
+	FipsEnableFilePath = "/proc/sys/crypto/fips_enabled"
+)
+
 var istio1_30 = semver.MustParse("1.30.0")
 
-// This is separated out solely to let tests override it.
-var fipsEnabled = fips140.Enabled
+// detectFipsMode checks if FIPS mode is enabled in the system.
+func init() {
+	detectFipsMode(FipsEnableFilePath)
+}
+
+func detectFipsMode(filepath string) {
+	contents, err := os.ReadFile(filepath)
+	if err != nil {
+		log.Infof("FIPS detection: failed to read %s: %v; FIPS mode disabled", filepath, err)
+		FipsEnabled = false
+	} else {
+		fipsEnabled := strings.TrimSuffix(string(contents), "\n")
+		if fipsEnabled == "1" {
+			FipsEnabled = true
+			log.Infof("FIPS detection: %s contains %q; FIPS mode enabled", filepath, fipsEnabled)
+		} else {
+			log.Infof("FIPS detection: %s contains %q (expected \"1\"); FIPS mode disabled", filepath, fipsEnabled)
+		}
+	}
+}
 
 // ApplyFipsValues sets pilot.env.COMPLIANCE_POLICY if FIPS mode is enabled in the system.
 // For versions > 1.30, the policy is set to "fips-140-3".
 // For versions <= 1.30, the policy is set to "fips-140-2".
 func ApplyFipsValues(values *v1.Values, version string) error {
-	if !fipsEnabled() || values == nil {
+	if !FipsEnabled || values == nil {
 		return nil
 	}
 
@@ -71,7 +95,7 @@ func ApplyFipsValues(values *v1.Values, version string) error {
 // For versions > 1.30, TLS12_ENABLED is removed because ztunnel
 // defaults to using only FIPS 140-3 approved ciphers.
 func ApplyZTunnelFipsValues(values *v1.ZTunnelValues, version string) {
-	if !fipsEnabled() || values == nil {
+	if !FipsEnabled || values == nil {
 		return
 	}
 

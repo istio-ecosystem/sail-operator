@@ -19,11 +19,11 @@ import (
 	"testing"
 )
 
-// EnableFIPS overrides fipsEnabled to return true for the duration of the test.
-// This should ONLY be used for testing as it always returns true.
+// EnableFIPS overrides FipsEnabled for the duration of the test.
+// This should ONLY be used for testing as it always enables FIPS.
 func EnableFIPS(t testing.TB) {
 	t.Helper()
-	original := fipsEnabled
-	t.Cleanup(func() { fipsEnabled = original })
-	fipsEnabled = func() bool { return true }
+	original := FipsEnabled
+	t.Cleanup(func() { FipsEnabled = original })
+	FipsEnabled = true
 }
