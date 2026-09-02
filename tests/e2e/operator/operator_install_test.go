@@ -213,8 +213,8 @@ spec:
 	// These tests verify the operator's TLS behavior when the APIServer TLS settings change.
 	// The first test runs on all OpenShift clusters; the second requires OpenShift >= 4.22
 	// because the TLSAdherence field was introduced in 4.22.
-	// NOTE: Running this test may have side effects such as setting feature gates on OpenShift.
 	Describe("TLS profile change", Label("tls-profile"), func() {
+		Log("NOTE: Running this test may have IRREVERSIBLE side effects such as setting feature gates on OpenShift.")
 		var ocpMinorVersion int
 		var ocpMajorVersion int
 
