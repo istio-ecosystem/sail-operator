@@ -407,6 +407,8 @@ func logTestApplicationNamespaces(k kubectl.Kubectl, suite testSuite, artifactsD
 	case DualStack:
 		// Dual-stack tests use specific namespaces for TCP services
 		sampleNamespaces = append(sampleNamespaces, "dual-stack", "ipv4", "ipv6")
+	case Monitoring:
+		sampleNamespaces = append(sampleNamespaces, "monitoring", "monitoring-injection", "monitoring-rev")
 	}
 
 	for _, ns := range sampleNamespaces {
