@@ -58,10 +58,10 @@ deployment:
     images.v1_29_0.istiod: registry.istio.io/release/pilot:1.29.0
     images.v1_29_0.proxy: registry.istio.io/release/proxyv2:1.29.0
     images.v1_29_0.cni: registry.istio.io/release/install-cni:1.29.0
-    images.v1_32_0-alpha_1d664989.ztunnel: registry.istio.io/testing/ztunnel:1.32.0-alpha.1d664989587a128403997e8f41858135926e818d
-    images.v1_32_0-alpha_1d664989.istiod: registry.istio.io/testing/pilot:1.32.0-alpha.1d664989587a128403997e8f41858135926e818d
-    images.v1_32_0-alpha_1d664989.proxy: registry.istio.io/testing/proxyv2:1.32.0-alpha.1d664989587a128403997e8f41858135926e818d
-    images.v1_32_0-alpha_1d664989.cni: registry.istio.io/testing/install-cni:1.32.0-alpha.1d664989587a128403997e8f41858135926e818d
+    images.v1_32_0-alpha_102b69cd.ztunnel: registry.istio.io/testing/ztunnel:1.32.0-alpha.102b69cd5a7ac0917bc2f6cb05b6217532145c81
+    images.v1_32_0-alpha_102b69cd.istiod: registry.istio.io/testing/pilot:1.32.0-alpha.102b69cd5a7ac0917bc2f6cb05b6217532145c81
+    images.v1_32_0-alpha_102b69cd.proxy: registry.istio.io/testing/proxyv2:1.32.0-alpha.102b69cd5a7ac0917bc2f6cb05b6217532145c81
+    images.v1_32_0-alpha_102b69cd.cni: registry.istio.io/testing/install-cni:1.32.0-alpha.102b69cd5a7ac0917bc2f6cb05b6217532145c81
 revisionHistoryLimit: 10
 service:
   port: 8443
@@ -95,7 +95,7 @@ csv:
     - v1.29.1
     - v1.29.0
     - master
-    - v1.32.0-alpha.1d664989
+    - v1.32.0-alpha.102b69cd
 
     [See this page](https://github.com/istio-ecosystem/sail-operator/blob/main/bundle/README.md) for instructions on how to use it.
   support: Community based

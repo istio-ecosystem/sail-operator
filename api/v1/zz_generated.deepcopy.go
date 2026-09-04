@@ -4047,6 +4047,11 @@ func (in *PilotConfig) DeepCopyInto(out *PilotConfig) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.TerminationGracePeriodSeconds != nil {
+		in, out := &in.TerminationGracePeriodSeconds, &out.TerminationGracePeriodSeconds
+		*out = new(uint32)
+		**out = **in
+	}
 	if in.ExtraContainerArgs != nil {
 		in, out := &in.ExtraContainerArgs, &out.ExtraContainerArgs
 		*out = make([]string, len(*in))

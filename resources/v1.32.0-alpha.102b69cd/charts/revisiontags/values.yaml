@@ -76,6 +76,10 @@ _internal_defaults_do_not_set:
 
   topologySpreadConstraints: []
 
+  # The duration in seconds the istiod pod needs to terminate gracefully.
+  # Defaults to the Kubernetes default of 30 seconds.
+  terminationGracePeriodSeconds: 30
+
   # You can use jwksResolverExtraRootCA to provide a root certificate
   # in PEM format. This will then be trusted by pilot when resolving
   # JWKS URIs.
@@ -257,7 +261,7 @@ _internal_defaults_do_not_set:
     # Dev builds from prow are on registry.istio.io/testing.
     hub: registry.istio.io/testing
     # Default tag for Istio images.
-    tag: 1.32.0-alpha.1d664989587a128403997e8f41858135926e818d
+    tag: 1.32.0-alpha.102b69cd5a7ac0917bc2f6cb05b6217532145c81
     # Variant of the image to use.
     # Currently supported are: [debug, distroless]
     variant: ""
