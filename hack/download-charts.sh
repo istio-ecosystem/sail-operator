@@ -49,7 +49,7 @@ function downloadRequired() {
       if [ ! -f "${etag_file}" ]; then
         return 0
       fi
-      current=$(curl -I "$url" 2>/dev/null | awk -F': ' '/^etag:/ {print $2}' | tr -d "\"")
+      current=$(curl -IL "$url" 2>/dev/null | awk -F': ' '/^etag:/ {print $2}' | tr -d "\"")
       if [ "$current" != "$(cat "${etag_file}")" ]; then
         return 0
       fi
@@ -199,16 +199,16 @@ function replaceDockerHubWithRegistryIstio() {
   find "${CHARTS_DIR}" -name values.yaml -exec sed -i 's/hub: docker.io\/istio/hub: registry.istio.io\/release/g' {} \;
 }
 
-# The alpha/beta releases from istio-release.storage.googleapis.com may specify
-# registry.istio.io/testing in their charts, but the images are actually published
+# The alpha/beta releases from istio-release.storage.googleapis.com (or blob.istio.io/istio-release)
+# may specify registry.istio.io/testing in their charts, but the images are actually published
 # to registry.istio.io/release. This function replaces /testing/ with /release/ only for
-# official releases from istio-release.storage.googleapis.com.
+# official releases from istio-release.storage.googleapis.com or blob.istio.io/istio-release.
 # Dev builds from istio-build/dev/ should keep /testing/ as their images are published there.
 function replaceChartsNSForAlphaRelease() {
   local is_official_release=false
   if [ "${#CHART_URLS[@]}" -gt 0 ]; then
     for url in "${CHART_URLS[@]}"; do
-      if [[ "$url" == *"istio-release.storage.googleapis.com"* ]]; then
+      if [[ "$url" == *"istio-release.storage.googleapis.com"* || "$url" == *"blob.istio.io/istio-release"* ]]; then
         is_official_release=true
         break
       fi

@@ -77,13 +77,32 @@ func ApplyTLSConfig(tlsConfig *config.TLSConfig, istioVersion string, values *v1
 
 	// Configure the Ecdhcurves if they are available on Openshift configuration. Normalize before
 	// copying the names, given Openshift allows a different naming from NIST
-	if tlsConfig.OpenShift != nil && len(tlsConfig.OpenShift.TLSProfileSpec.Groups) > 0 {
-		ecdhCurves := copyECDHCurvesToConfig(tlsConfig.OpenShift.TLSProfileSpec.Groups)
-		if len(values.MeshConfig.TlsDefaults.EcdhCurves) == 0 {
-			values.MeshConfig.TlsDefaults.EcdhCurves = ecdhCurves
+	if tlsConfig.OpenShift != nil {
+		if len(tlsConfig.OpenShift.TLSProfileSpec.Groups) > 0 {
+			ecdhCurves := copyECDHCurvesToConfig(tlsConfig.OpenShift.TLSProfileSpec.Groups)
+			if len(values.MeshConfig.TlsDefaults.EcdhCurves) == 0 {
+				values.MeshConfig.TlsDefaults.EcdhCurves = ecdhCurves
+			}
+			// TODO: MeshMTLS does not support setting ecdhCurves and this will break Gateway provisioning.
+			// we should take care of ecdhCurves for mesh as a second step
 		}
-		// TODO: MeshMTLS does not support setting ecdhCurves and this will break Gateway provisioning.
-		// we should take care of ecdhCurves for mesh as a second step
+
+		// Envoy does not support setting TLS ciphers for TLS 1.3 BUT the openssl
+		// backend does allow you to customize these. On openshift the envoy image has a custom openssl
+		// config file baked in that will populate the tls1.3 cipher suites through an env var.
+		// Also important to note is that all non-FIPS approved ciphers will be silently dropped by
+		// openssl, even if they are specified in the openssl config. So we do not need to filter out
+		// FIPS ciphers here. We can pass them to the conf and openssl will drop them automatically on
+		// a FIPS enabled cluster.
+		if values.MeshConfig.DefaultConfig == nil {
+			values.MeshConfig.DefaultConfig = &v1.MeshConfigProxyConfig{}
+		}
+		if values.MeshConfig.DefaultConfig.ProxyMetadata == nil {
+			values.MeshConfig.DefaultConfig.ProxyMetadata = map[string]string{}
+		}
+		if _, ok := values.MeshConfig.DefaultConfig.ProxyMetadata["OPENSSL_TLS1_3_CIPHERSUITES"]; !ok {
+			values.MeshConfig.DefaultConfig.ProxyMetadata["OPENSSL_TLS1_3_CIPHERSUITES"] = strings.Join(cipherNames, ":")
+		}
 	}
 
 	if values.Pilot == nil {

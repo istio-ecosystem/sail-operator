@@ -521,6 +521,13 @@ spec:
                               minimum: 0
                               nullable: true
                               type: integer
+                            failurePercentageThreshold:
+                              description: The failure percentage to use when determining
+                                failure percentage-based outlier detection.
+                              maximum: 100
+                              minimum: 0
+                              nullable: true
+                              type: integer
                             interval:
                               description: Time interval between ejection sweep analysis.
                               type: string
@@ -1012,6 +1019,14 @@ spec:
                                     description: The number of consecutive locally
                                       originated failures before ejection occurs.
                                     maximum: 4294967295
+                                    minimum: 0
+                                    nullable: true
+                                    type: integer
+                                  failurePercentageThreshold:
+                                    description: The failure percentage to use when
+                                      determining failure percentage-based outlier
+                                      detection.
+                                    maximum: 100
                                     minimum: 0
                                     nullable: true
                                     type: integer
@@ -1667,6 +1682,13 @@ spec:
                         minimum: 0
                         nullable: true
                         type: integer
+                      failurePercentageThreshold:
+                        description: The failure percentage to use when determining
+                          failure percentage-based outlier detection.
+                        maximum: 100
+                        minimum: 0
+                        nullable: true
+                        type: integer
                       interval:
                         description: Time interval between ejection sweep analysis.
                         type: string
@@ -2148,6 +2170,13 @@ spec:
                               description: The number of consecutive locally originated
                                 failures before ejection occurs.
                               maximum: 4294967295
+                              minimum: 0
+                              nullable: true
+                              type: integer
+                            failurePercentageThreshold:
+                              description: The failure percentage to use when determining
+                                failure percentage-based outlier detection.
+                              maximum: 100
                               minimum: 0
                               nullable: true
                               type: integer
@@ -2959,6 +2988,13 @@ spec:
                               minimum: 0
                               nullable: true
                               type: integer
+                            failurePercentageThreshold:
+                              description: The failure percentage to use when determining
+                                failure percentage-based outlier detection.
+                              maximum: 100
+                              minimum: 0
+                              nullable: true
+                              type: integer
                             interval:
                               description: Time interval between ejection sweep analysis.
                               type: string
@@ -3450,6 +3486,14 @@ spec:
                                     description: The number of consecutive locally
                                       originated failures before ejection occurs.
                                     maximum: 4294967295
+                                    minimum: 0
+                                    nullable: true
+                                    type: integer
+                                  failurePercentageThreshold:
+                                    description: The failure percentage to use when
+                                      determining failure percentage-based outlier
+                                      detection.
+                                    maximum: 100
                                     minimum: 0
                                     nullable: true
                                     type: integer
@@ -4105,6 +4149,13 @@ spec:
                         minimum: 0
                         nullable: true
                         type: integer
+                      failurePercentageThreshold:
+                        description: The failure percentage to use when determining
+                          failure percentage-based outlier detection.
+                        maximum: 100
+                        minimum: 0
+                        nullable: true
+                        type: integer
                       interval:
                         description: Time interval between ejection sweep analysis.
                         type: string
@@ -4586,6 +4637,13 @@ spec:
                               description: The number of consecutive locally originated
                                 failures before ejection occurs.
                               maximum: 4294967295
+                              minimum: 0
+                              nullable: true
+                              type: integer
+                            failurePercentageThreshold:
+                              description: The failure percentage to use when determining
+                                failure percentage-based outlier detection.
+                              maximum: 100
                               minimum: 0
                               nullable: true
                               type: integer
@@ -5397,6 +5455,13 @@ spec:
                               minimum: 0
                               nullable: true
                               type: integer
+                            failurePercentageThreshold:
+                              description: The failure percentage to use when determining
+                                failure percentage-based outlier detection.
+                              maximum: 100
+                              minimum: 0
+                              nullable: true
+                              type: integer
                             interval:
                               description: Time interval between ejection sweep analysis.
                               type: string
@@ -5888,6 +5953,14 @@ spec:
                                     description: The number of consecutive locally
                                       originated failures before ejection occurs.
                                     maximum: 4294967295
+                                    minimum: 0
+                                    nullable: true
+                                    type: integer
+                                  failurePercentageThreshold:
+                                    description: The failure percentage to use when
+                                      determining failure percentage-based outlier
+                                      detection.
+                                    maximum: 100
                                     minimum: 0
                                     nullable: true
                                     type: integer
@@ -6543,6 +6616,13 @@ spec:
                         minimum: 0
                         nullable: true
                         type: integer
+                      failurePercentageThreshold:
+                        description: The failure percentage to use when determining
+                          failure percentage-based outlier detection.
+                        maximum: 100
+                        minimum: 0
+                        nullable: true
+                        type: integer
                       interval:
                         description: Time interval between ejection sweep analysis.
                         type: string
@@ -7024,6 +7104,13 @@ spec:
                               description: The number of consecutive locally originated
                                 failures before ejection occurs.
                               maximum: 4294967295
+                              minimum: 0
+                              nullable: true
+                              type: integer
+                            failurePercentageThreshold:
+                              description: The failure percentage to use when determining
+                                failure percentage-based outlier detection.
+                              maximum: 100
                               minimum: 0
                               nullable: true
                               type: integer

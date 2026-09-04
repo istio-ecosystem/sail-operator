@@ -1,6 +1,6 @@
 module github.com/istio-ecosystem/sail-operator
 
-go 1.26.0
+go 1.27.0
 
 // Client-go does not handle different versions of mergo due to some breaking changes - use the matching version
 // This replacement is aligned with istio/istio's go.mod
@@ -27,8 +27,8 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.5.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v4 v4.2.0
-	istio.io/client-go v1.31.0-alpha.1.0.20260824143355-0aa53649fd67
-	istio.io/istio v0.0.0-20260826045515-aed8285f99f5
+	istio.io/client-go v1.31.0-alpha.1.0.20260827144400-25b5d989d542
+	istio.io/istio v0.0.0-20260831153655-102b69cd5a7a
 	k8s.io/api v0.36.4
 	k8s.io/apiextensions-apiserver v0.36.4
 	k8s.io/apimachinery v0.36.4
@@ -171,7 +171,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	istio.io/api v1.31.0-alpha.1.0.20260824142755-83e8d3723b2f // indirect
+	istio.io/api v1.31.0-alpha.1.0.20260827143759-ff3bec58c3ca // indirect
 	k8s.io/apiserver v0.36.4 // indirect
 	k8s.io/component-base v0.36.4 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
