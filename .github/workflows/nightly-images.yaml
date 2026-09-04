@@ -6,12 +6,16 @@ on:
 
 run-name: nightly-images
 
+permissions: {}
+
 env:
   GIT_USER: ${{ secrets.GIT_USER }}
   GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
 
 jobs:
   release:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
 
     steps:

@@ -24,6 +24,8 @@ on:
 
 run-name: ${{ inputs.run_name }}
 
+permissions: {}
+
 env:
   GIT_USER: ${{ secrets.GIT_USER }}
   GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
@@ -31,6 +33,8 @@ env:
 
 jobs:
   release:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
 
     steps:

@@ -5,6 +5,8 @@ on:
     - cron: "30 6 * * *" # daily at 6:30 AM UTC (after update-deps at 5 AM)
   workflow_dispatch:
 
+permissions: {}
+
 env:
   GIT_USER: ${{ secrets.GIT_USER }}
   GH_TOKEN: ${{ secrets.GIT_TOKEN }}
@@ -13,6 +15,8 @@ env:
 
 jobs:
   sync-changelog:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     container:
       image: registry.istio.io/testing/build-tools:master-344978549023107b14c57d2ef8523d41b82ccc76
