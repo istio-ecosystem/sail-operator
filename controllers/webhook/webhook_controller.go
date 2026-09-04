@@ -88,17 +88,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, webhook *admissionv1.Mutatin
 		reason = err.Error()
 	}
 
-	if webhook.Annotations == nil {
-		webhook.Annotations = make(map[string]string)
-	}
-	webhook.Annotations[constants.WebhookReadinessProbeStatusAnnotationKey] = strconv.FormatBool(isReady)
-	webhook.Annotations[constants.WebhookReadinessProbeStatusReasonAnnotationKey] = reason
+	status := strconv.FormatBool(isReady)
+	if webhook.Annotations[constants.WebhookReadinessProbeStatusAnnotationKey] != status ||
+		webhook.Annotations[constants.WebhookReadinessProbeStatusReasonAnnotationKey] != reason {
+		if webhook.Annotations == nil {
+			webhook.Annotations = make(map[string]string)
+		}
+		webhook.Annotations[constants.WebhookReadinessProbeStatusAnnotationKey] = status
+		webhook.Annotations[constants.WebhookReadinessProbeStatusReasonAnnotationKey] = reason
 
-	err = r.Client.Update(ctx, webhook)
-	if err != nil {
-		return ctrl.Result{}, err
+		if err := r.Client.Update(ctx, webhook); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
-	return ctrl.Result{RequeueAfter: getPeriod(webhook)}, nil
+	return ctrl.Result{RequeueAfter: getPeriod(ctx, webhook)}, nil
 }
 
 func doProbe(ctx context.Context, webhook *admissionv1.MutatingWebhookConfiguration) (bool, error) {
@@ -120,7 +123,7 @@ func doProbe(ctx context.Context, webhook *admissionv1.MutatingWebhookConfigurat
 	}
 
 	httpClient := http.Client{
-		Timeout: getTimeout(webhook),
+		Timeout: getTimeout(ctx, webhook),
 		Transport: &http.Transport{
 			DialContext: customDialContext,
 			TLSClientConfig: &tls.Config{
@@ -235,22 +238,26 @@ func IsOwnedByRevisionWithRemoteControlPlane(cl client.Client, obj client.Object
 	return false
 }
 
-func getPeriod(webhook *admissionv1.MutatingWebhookConfiguration) time.Duration {
-	if period, ok := webhook.Annotations[constants.WebhookReadinessProbePeriodSecondsAnnotationKey]; ok {
-		if p, err := strconv.Atoi(period); err == nil {
-			return time.Duration(p) * time.Second
-		}
-	}
-	return defaultPeriodSeconds * time.Second
+func getPeriod(ctx context.Context, webhook *admissionv1.MutatingWebhookConfiguration) time.Duration {
+	return getSecondsAnnotation(ctx, webhook, constants.WebhookReadinessProbePeriodSecondsAnnotationKey, defaultPeriodSeconds)
 }
 
-func getTimeout(webhook *admissionv1.MutatingWebhookConfiguration) time.Duration {
-	if period, ok := webhook.Annotations[constants.WebhookReadinessProbeTimeoutSecondsAnnotationKey]; ok {
-		if p, err := strconv.Atoi(period); err == nil {
-			return time.Duration(p) * time.Second
+func getTimeout(ctx context.Context, webhook *admissionv1.MutatingWebhookConfiguration) time.Duration {
+	return getSecondsAnnotation(ctx, webhook, constants.WebhookReadinessProbeTimeoutSecondsAnnotationKey, defaultTimeoutSeconds)
+}
+
+// getSecondsAnnotation returns the duration parsed from the given annotation, falling back to the
+// default when the annotation is missing, unparseable, or not a positive value. A non-positive or
+// unparseable value is logged at debug verbosity to aid troubleshooting misconfigured annotations.
+func getSecondsAnnotation(ctx context.Context, webhook *admissionv1.MutatingWebhookConfiguration, key string, defaultSeconds int) time.Duration {
+	if value, ok := webhook.Annotations[key]; ok {
+		if seconds, err := strconv.Atoi(value); err == nil && seconds > 0 {
+			return time.Duration(seconds) * time.Second
 		}
+		logf.FromContext(ctx).V(3).Info("Ignoring invalid probe annotation, using default",
+			"annotation", key, "value", value, "default", defaultSeconds)
 	}
-	return defaultTimeoutSeconds * time.Second
+	return time.Duration(defaultSeconds) * time.Second
 }
 
 func wrapEventHandler(logger logr.Logger, handler handler.EventHandler) handler.EventHandler {

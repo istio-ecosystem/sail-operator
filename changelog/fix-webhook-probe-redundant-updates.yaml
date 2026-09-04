@@ -1,0 +1,11 @@
+category: fixed
+title: Avoid redundant webhook config updates and reject invalid probe annotations
+description: |
+  The webhook readiness controller called `Update` on the
+  MutatingWebhookConfiguration on every reconcile, even when the readiness
+  status and reason were unchanged, causing needless API requests and
+  audit-log entries for each remote control plane. It now updates only when a
+  value actually changes. Zero, negative, or non-numeric probe period/timeout
+  annotations are also rejected in favor of the defaults, preventing a
+  requeue hot loop and a disabled probe timeout.
+issueLink: https://github.com/istio-ecosystem/sail-operator/issues/2084
