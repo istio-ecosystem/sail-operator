@@ -205,6 +205,15 @@ func ResolveHostDomainToIP(hostDomain string) (string, error) {
 // CreateIstio custom resource using a given `kubectl` client and with the specified version.
 // An optional spec list can be given to inject into the CR's spec.
 func CreateIstio(k kubectl.Kubectl, version string, specs ...string) {
+	createIstioWithName(k, istioName, version, specs...)
+}
+
+// CreateNamedIstio is like CreateIstio but uses a custom resource name.
+func CreateNamedIstio(k kubectl.Kubectl, name, version string, specs ...string) {
+	createIstioWithName(k, name, version, specs...)
+}
+
+func createIstioWithName(k kubectl.Kubectl, name, version string, specs ...string) {
 	yaml := `
 apiVersion: sailoperator.io/v1
 kind: Istio
@@ -213,7 +222,7 @@ metadata:
 spec:
   version: %s
   namespace: %s`
-	yaml = fmt.Sprintf(yaml, istioName, version, ControlPlaneNamespace)
+	yaml = fmt.Sprintf(yaml, name, version, ControlPlaneNamespace)
 	// Optional override for resource-constrained CI. Chart default is 2048Mi.
 	if req := env.Get("ISTIOD_MEMORY_REQUEST", ""); req != "" {
 		specs = append(specs, fmt.Sprintf(`

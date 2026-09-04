@@ -37,7 +37,7 @@ import (
 
 var defaultTimeout = env.GetInt("DEFAULT_TEST_TIMEOUT", 180)
 
-var _ = Describe("Ambient configuration ", Label("smoke", "ambient"), Ordered, func() {
+var _ = Describe("Ambient configuration ", Label("smoke", "ambient", "crc"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(defaultTimeout) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
@@ -271,6 +271,11 @@ profile: ambient`
 					It("can access the httpbin service from the sleep pod", func(ctx SpecContext) {
 						common.ValidateHTTPConnectivity(k, common.SleepNamespace, sleepPod.Items[0].Name, common.SleepContainerName,
 							fmt.Sprintf("httpbin.%s.svc.cluster.local:8000/get", common.HttpbinNamespace), "200", 5)
+					})
+
+					AfterAll(func() {
+						Expect(k.Delete("namespace", common.SleepNamespace)).To(Succeed())
+						Expect(k.Delete("namespace", common.HttpbinNamespace)).To(Succeed())
 					})
 				})
 
