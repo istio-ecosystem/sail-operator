@@ -17,6 +17,7 @@ package config
 import (
 	"io/fs"
 	"strings"
+	"time"
 
 	"github.com/magiconair/properties"
 )
@@ -41,6 +42,9 @@ type ReconcilerConfig struct {
 	OperatorNamespace       string
 	MaxConcurrentReconciles int
 	TLSConfig               *TLSConfig
+	// WebhookDegradedWindow is how long a webhook stays not-ready after a call
+	// failure is detected from a cluster event.
+	WebhookDegradedWindow time.Duration
 }
 
 func Read(configFile string) error {

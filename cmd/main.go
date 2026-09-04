@@ -30,6 +30,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/controllers/ztunnel"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
+	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/version"
@@ -101,6 +102,7 @@ func main() {
 			os.Exit(1)
 		}
 	}
+	reconcilerCfg.WebhookDegradedWindow = env.GetDuration("WEBHOOK_DEGRADED_WINDOW", webhook.DefaultDegradedWindow)
 
 	setupLog.Info(version.Info.String())
 	setupLog.Info("reading config")

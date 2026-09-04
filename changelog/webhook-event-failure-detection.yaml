@@ -1,0 +1,8 @@
+category: changed
+title: Detect remote istiod webhook failures from cluster events instead of probing
+description: |
+  The webhook controller no longer actively probes the remote istiod's readiness
+  endpoint. It now passively detects webhook call failures from cluster events and
+  marks the webhook and its owning IstioRevision as not-ready for a short degraded
+  window after a failure. The length of this window is configurable via the
+  WEBHOOK_DEGRADED_WINDOW environment variable (default 2 minutes).

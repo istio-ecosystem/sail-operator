@@ -16,14 +16,9 @@ package webhook
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
-	"errors"
-	"fmt"
-	"io"
-	"net"
-	"net/http"
 	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -34,7 +29,9 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
 	"github.com/istio-ecosystem/sail-operator/pkg/revision"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,139 +39,190 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const (
-	defaultPeriodSeconds  = 3 // matches the period in the istiod chart
-	defaultTimeoutSeconds = 5 // matches the timeout in the istiod chart
-)
+// DefaultDegradedWindow is the default for ReconcilerConfig.WebhookDegradedWindow: how long
+// a webhook stays not-ready after a call failure, so an intermittently failing control plane
+// doesn't flap back to ready between events.
+const DefaultDegradedWindow = 2 * time.Minute
 
-// overrides the default dial context; only used in unit tests
-var customDialContext func(ctx context.Context, network, addr string) (net.Conn, error)
+const failureHistoryCleanupInterval = 30 * time.Second
 
-// Reconciler checks the readiness of MutatingWebhookConfiguration pointing to a remote Istio control plane
+const webhookFailurePrefix = `failed calling webhook "`
+
+// legacyReadinessAnnotationKeys are annotation keys older operator versions used to report
+// readiness-probe results; they are removed when a webhook configuration is reconciled.
+var legacyReadinessAnnotationKeys = []string{
+	"sailoperator.io/readinessProbe.status",
+	"sailoperator.io/readinessProbe.reason",
+	"sailoperator.io/readinessProbe.periodSeconds",
+	"sailoperator.io/readinessProbe.timeoutSeconds",
+}
+
+// Reconciler determines the readiness of a MutatingWebhookConfiguration pointing to a remote
+// Istio control plane from the configuration's fields and webhook call failure events.
+//
+// Failure detection is passive: Kubernetes controllers record a Warning event only when an API
+// call fails because a webhook was unreachable. A webhook that receives no API traffic cannot
+// be detected, so the status reports "no known failures" rather than an active health check.
 type Reconciler struct {
 	Config config.ReconcilerConfig
 	client.Client
 	Scheme *runtime.Scheme
-	probe  func(context.Context, *admissionv1.MutatingWebhookConfiguration) (bool, error)
+
+	mu             sync.Mutex
+	failureHistory map[string]time.Time
 }
 
 func NewReconciler(cfg config.ReconcilerConfig, client client.Client, scheme *runtime.Scheme) *Reconciler {
 	return &Reconciler{
-		Config: cfg,
-		Client: client,
-		Scheme: scheme,
-		probe:  doProbe,
+		Config:         cfg,
+		Client:         client,
+		Scheme:         scheme,
+		failureHistory: make(map[string]time.Time),
 	}
 }
 
 // +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
+// Reconcile records a MutatingWebhookConfiguration's readiness in its annotations, updating it
+// only when the readiness (or legacy) annotations changed.
 func (r *Reconciler) Reconcile(ctx context.Context, webhook *admissionv1.MutatingWebhookConfiguration) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
-	isReady, err := r.probe(ctx, webhook)
-	reason := ""
-	if err != nil {
-		log.V(3).Error(err, "Probe failed")
-		reason = err.Error()
+	var clientConfigs []admissionv1.WebhookClientConfig
+	for i := range webhook.Webhooks {
+		clientConfigs = append(clientConfigs, webhook.Webhooks[i].ClientConfig)
 	}
 
-	if webhook.Annotations == nil {
-		webhook.Annotations = make(map[string]string)
-	}
-	webhook.Annotations[constants.WebhookReadinessProbeStatusAnnotationKey] = strconv.FormatBool(isReady)
-	webhook.Annotations[constants.WebhookReadinessProbeStatusReasonAnnotationKey] = reason
-
-	err = r.Client.Update(ctx, webhook)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	return ctrl.Result{RequeueAfter: getPeriod(webhook)}, nil
-}
-
-func doProbe(ctx context.Context, webhook *admissionv1.MutatingWebhookConfiguration) (bool, error) {
-	log := logf.FromContext(ctx)
-	if len(webhook.Webhooks) == 0 {
-		return false, errors.New("mutatingwebhookconfiguration contains no webhooks")
-	}
-	clientConfig := webhook.Webhooks[0].ClientConfig
-	if clientConfig.Service == nil {
-		return false, errors.New("missing webhooks[].clientConfig.service")
+	result := r.evaluateReadiness(webhook.GetName(), clientConfigs)
+	if !result.ready {
+		log.V(3).Info("Webhook not ready", "reason", result.reason)
 	}
 
-	if len(clientConfig.CABundle) == 0 {
-		return false, errors.New("webhooks[].clientConfig.caBundle hasn't been set; check if the remote istiod can access this cluster")
-	}
-	caCertPool := x509.NewCertPool()
-	if ok := caCertPool.AppendCertsFromPEM(clientConfig.CABundle); !ok {
-		return false, errors.New("failed to append CA bundle to cert pool")
-	}
-
-	httpClient := http.Client{
-		Timeout: getTimeout(webhook),
-		Transport: &http.Transport{
-			DialContext: customDialContext,
-			TLSClientConfig: &tls.Config{
-				RootCAs:    caCertPool,
-				MinVersion: tls.VersionTLS12,
-			},
-		},
-	}
-
-	url, err := getReadinessProbeURL(clientConfig)
-	if err != nil {
-		return false, err
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return false, err
-	}
-
-	log.V(3).Info("Executing readiness probe on remote control plane", "url", req.URL.String())
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		log.V(3).Info("Probe failed", "error", err)
-		return false, err
-	}
-	defer func() {
-		// drain and close the body to release the underlying connection. Since httpClient (and its Transport) isn't
-		// reused across probes, close the idle connections so they don't linger indefinitely.
-		_, _ = io.Copy(io.Discard, resp.Body)
-		_ = resp.Body.Close()
-		httpClient.CloseIdleConnections()
-	}()
-	log.V(3).Info("Probe response", "response", resp.StatusCode)
-
-	return resp.StatusCode == http.StatusOK, nil
-}
-
-func getReadinessProbeURL(config admissionv1.WebhookClientConfig) (string, error) {
-	switch {
-	case config.URL != nil:
-		return "", errors.New("only webhooks pointing to a Service are supported")
-
-	case config.Service != nil:
-		svc := config.Service
-		port := 443
-		if svc.Port != nil {
-			port = int(*svc.Port)
+	status := strconv.FormatBool(result.ready)
+	annotations := webhook.GetAnnotations()
+	changed := annotations[constants.WebhookReadinessStatusAnnotationKey] != status ||
+		annotations[constants.WebhookReadinessReasonAnnotationKey] != result.reason
+	if !changed {
+		for _, key := range legacyReadinessAnnotationKeys {
+			if _, ok := annotations[key]; ok {
+				changed = true
+				break
+			}
 		}
-		return fmt.Sprintf("https://%s.%s.svc:%d/ready", svc.Name, svc.Namespace, port), nil
-
-	default:
-		return "", errors.New("no URL or Service specified in WebhookClientConfig")
 	}
+	if changed {
+		if annotations == nil {
+			annotations = make(map[string]string)
+		}
+		annotations[constants.WebhookReadinessStatusAnnotationKey] = status
+		annotations[constants.WebhookReadinessReasonAnnotationKey] = result.reason
+		for _, key := range legacyReadinessAnnotationKeys {
+			delete(annotations, key)
+		}
+		webhook.SetAnnotations(annotations)
+		if err := r.Client.Update(ctx, webhook); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+	return ctrl.Result{RequeueAfter: result.requeue}, nil
 }
+
+// readinessResult is the outcome of evaluateReadiness. reason is only set when ready is false;
+// requeue is only set for a degraded webhook, so the controller re-evaluates once the degraded
+// window expires (watches drive reconciliation otherwise).
+type readinessResult struct {
+	ready   bool
+	reason  string
+	requeue time.Duration
+}
+
+func (r *Reconciler) evaluateReadiness(name string, clientConfigs []admissionv1.WebhookClientConfig) readinessResult {
+	if len(clientConfigs) == 0 {
+		return readinessResult{reason: "webhook configuration contains no webhooks"}
+	}
+	cc := clientConfigs[0]
+	if cc.Service == nil && cc.URL == nil {
+		return readinessResult{reason: "no endpoint configured in webhooks[].clientConfig"}
+	}
+	if len(cc.CABundle) == 0 {
+		return readinessResult{reason: "webhooks[].clientConfig.caBundle hasn't been set; check if the remote istiod can access this cluster"}
+	}
+	if requeue := r.isDegraded(name); requeue > 0 {
+		return readinessResult{reason: "webhook call failures reported in cluster events", requeue: requeue}
+	}
+	return readinessResult{ready: true}
+}
+
+// isDegraded returns the time remaining in the degraded window after a webhook's most recent
+// recorded failure, or 0 if not degraded. It removes the entry once the window has expired.
+func (r *Reconciler) isDegraded(name string) time.Duration {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	last, ok := r.failureHistory[name]
+	if !ok {
+		return 0
+	}
+	remaining := r.Config.WebhookDegradedWindow - time.Since(last)
+	if remaining <= 0 {
+		delete(r.failureHistory, name)
+		return 0
+	}
+	return remaining
+}
+
+func (r *Reconciler) recordFailure(name string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.failureHistory[name] = time.Now()
+}
+
+// pruneStaleFailures drops failureHistory entries whose degraded window has expired,
+// returning the count. It sweeps the whole map, so it also reclaims entries for deleted
+// configs that isDegraded can never reach.
+func (r *Reconciler) pruneStaleFailures() int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	now := time.Now()
+	pruned := 0
+	for name, last := range r.failureHistory {
+		if now.Sub(last) >= r.Config.WebhookDegradedWindow {
+			delete(r.failureHistory, name)
+			pruned++
+		}
+	}
+	return pruned
+}
+
+func (r *Reconciler) failureHistoryJanitor(log logr.Logger, interval time.Duration) manager.Runnable {
+	return manager.RunnableFunc(func(ctx context.Context) error {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-ticker.C:
+				if n := r.pruneStaleFailures(); n > 0 {
+					log.V(3).Info("Pruned stale webhook failure history entries", "count", n)
+				}
+			}
+		}
+	})
+}
+
+// leaderElectionRunnable gates a Runnable to the leader (runs immediately when leader
+// election is disabled).
+type leaderElectionRunnable struct {
+	manager.Runnable
+}
+
+func (leaderElectionRunnable) NeedLeaderElection() bool { return true }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -182,8 +230,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// objectHandler handles the MutatingWebhookConfiguration watch events
 	objectHandler := wrapEventHandler(logger, &handler.EnqueueRequestForObject{})
+	failureEventHandler := wrapEventHandler(logger, handler.EnqueueRequestsFromMapFunc(r.mapFailureEventToWebhook))
 
-	return ctrl.NewControllerManagedBy(mgr).
+	err := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
 			LogConstructor: func(req *reconcile.Request) logr.Logger {
 				log := logger
@@ -196,10 +245,94 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		}).
 
 		// we use the Watches function instead of For(), so that we can wrap the handler so that events that cause the object to be enqueued are logged
-		// +lint-watches:ignore: IstioRevision (not found in charts, but this is the main resource watched by this controller)
 		Watches(&admissionv1.MutatingWebhookConfiguration{}, objectHandler, builder.WithPredicates(ownedByRemoteIstioRevisionPredicate(mgr.GetClient()))).
+		Watches(&corev1.Event{}, failureEventHandler, builder.WithPredicates(webhookFailureEventPredicate())).
 		Named("mutatingwebhookconfiguration").
 		Complete(reconciler.NewStandardReconciler[*admissionv1.MutatingWebhookConfiguration](r.Client, r.Reconcile))
+	if err != nil {
+		return err
+	}
+
+	// Gate the janitor to the leader: only the leader populates failureHistory.
+	return mgr.Add(leaderElectionRunnable{Runnable: r.failureHistoryJanitor(logger, failureHistoryCleanupInterval)})
+}
+
+// mapFailureEventToWebhook resolves a webhook failure event to its owning
+// MutatingWebhookConfiguration, records the failure, and enqueues it for reconciliation.
+func (r *Reconciler) mapFailureEventToWebhook(ctx context.Context, obj client.Object) []reconcile.Request {
+	evt, ok := obj.(*corev1.Event)
+	if !ok {
+		return nil
+	}
+	webhookName := ExtractWebhookName(evt.Message)
+	if webhookName == "" {
+		return nil
+	}
+
+	configName := r.findOwnedWebhookConfig(ctx, webhookName)
+	if configName == "" {
+		return nil
+	}
+
+	r.recordFailure(configName)
+
+	logf.FromContext(ctx).V(3).Info("Detected webhook call failure", "webhook", webhookName, "config", configName)
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: configName}}}
+}
+
+// findOwnedWebhookConfig resolves a webhook name to the MutatingWebhookConfiguration that
+// contains it and is owned by a remote-control-plane IstioRevision, or "" if none exists.
+func (r *Reconciler) findOwnedWebhookConfig(ctx context.Context, webhookName string) string {
+	log := logf.FromContext(ctx)
+	var configs admissionv1.MutatingWebhookConfigurationList
+	if err := r.Client.List(ctx, &configs); err != nil {
+		log.Error(err, "failed to list MutatingWebhookConfigurations")
+		return ""
+	}
+	for i := range configs.Items {
+		for _, webhook := range configs.Items[i].Webhooks {
+			if webhook.Name == webhookName && IsOwnedByRevisionWithRemoteControlPlane(r.Client, &configs.Items[i]) {
+				return configs.Items[i].Name
+			}
+		}
+	}
+	return ""
+}
+
+func ExtractWebhookName(message string) string {
+	_, after, found := strings.Cut(message, webhookFailurePrefix)
+	if !found {
+		return ""
+	}
+	name, _, found := strings.Cut(after, `"`)
+	if !found {
+		return ""
+	}
+	return name
+}
+
+// webhookFailureEventPredicate matches Warning events that report a webhook call failure.
+// Delete and generic events are ignored: an expiring or deleted event is not a new failure, and
+// re-recording it would spuriously mark the webhook as degraded.
+func webhookFailureEventPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return isWebhookFailureEvent(e.Object)
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return isWebhookFailureEvent(e.ObjectNew)
+		},
+		DeleteFunc:  func(event.DeleteEvent) bool { return false },
+		GenericFunc: func(event.GenericEvent) bool { return false },
+	}
+}
+
+func isWebhookFailureEvent(obj client.Object) bool {
+	evt, ok := obj.(*corev1.Event)
+	if !ok {
+		return false
+	}
+	return evt.Type == corev1.EventTypeWarning && strings.Contains(evt.Message, webhookFailurePrefix)
 }
 
 func ownedByRemoteIstioRevisionPredicate(cl client.Client) predicate.Predicate {
@@ -233,24 +366,6 @@ func IsOwnedByRevisionWithRemoteControlPlane(cl client.Client, obj client.Object
 		}
 	}
 	return false
-}
-
-func getPeriod(webhook *admissionv1.MutatingWebhookConfiguration) time.Duration {
-	if period, ok := webhook.Annotations[constants.WebhookReadinessProbePeriodSecondsAnnotationKey]; ok {
-		if p, err := strconv.Atoi(period); err == nil {
-			return time.Duration(p) * time.Second
-		}
-	}
-	return defaultPeriodSeconds * time.Second
-}
-
-func getTimeout(webhook *admissionv1.MutatingWebhookConfiguration) time.Duration {
-	if period, ok := webhook.Annotations[constants.WebhookReadinessProbeTimeoutSecondsAnnotationKey]; ok {
-		if p, err := strconv.Atoi(period); err == nil {
-			return time.Duration(p) * time.Second
-		}
-	}
-	return defaultTimeoutSeconds * time.Second
 }
 
 func wrapEventHandler(logger logr.Logger, handler handler.EventHandler) handler.EventHandler {
