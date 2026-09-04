@@ -6,6 +6,8 @@ on:
 
 run-name: update-deps
 
+permissions: {}
+
 env:
   GIT_USER: ${{ secrets.GIT_USER }}
   GH_TOKEN: ${{ secrets.GIT_TOKEN }}
@@ -14,6 +16,8 @@ env:
 
 jobs:
   update-deps:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     container:
       image: registry.istio.io/testing/build-tools:master-344978549023107b14c57d2ef8523d41b82ccc76

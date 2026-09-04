@@ -7,12 +7,16 @@ on:
 
 run-name: Publish Helm artifact ${{ inputs.release_version }}
 
+permissions: {}
+
 env:
   GIT_USER: ${{ secrets.GIT_USER }}
   GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
 
 jobs:
   helm:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
 
     steps:

@@ -2,8 +2,12 @@ name: Commit check
 
 on: [pull_request]
 
+permissions: {}
+
 jobs:
   commit-check:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
