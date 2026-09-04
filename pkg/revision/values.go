@@ -62,7 +62,9 @@ func ComputeValues(
 	istiovalues.ApplyTLSConfig(tlsConfig, version, values)
 
 	// apply FipsValues on top of merged values from profile
-	istiovalues.ApplyFipsValues(values)
+	if err := istiovalues.ApplyFipsValues(values, version); err != nil {
+		return nil, fmt.Errorf("failed to apply FIPS values: %w", err)
+	}
 
 	// override values that are not configurable by the user
 	istiovalues.ApplyOverrides(activeRevisionName, namespace, values)
