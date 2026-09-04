@@ -53,10 +53,11 @@ func TestValidate(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name      string
-		rev       *v1.IstioRevision
-		objects   []client.Object
-		expectErr string
+		name         string
+		rev          *v1.IstioRevision
+		objects      []client.Object
+		interceptors interceptor.Funcs
+		expectErr    string
 	}{
 		{
 			name: "success",
@@ -195,11 +196,38 @@ func TestValidate(t *testing.T) {
 			objects:   []client.Object{ns},
 			expectErr: `values.revision does not match revision name`,
 		},
+		{
+			name: "tag conflict check fails with transient error",
+			rev: &v1.IstioRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+				Spec: v1.IstioRevisionSpec{
+					Version:   istioversion.Default,
+					Namespace: "istio-system",
+					Values: &v1.Values{
+						Global: &v1.GlobalConfig{
+							IstioNamespace: ptr.Of("istio-system"),
+						},
+					},
+				},
+			},
+			objects: []client.Object{ns},
+			interceptors: interceptor.Funcs{
+				Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					if _, ok := obj.(*v1.IstioRevisionTag); ok {
+						return fmt.Errorf("simulated error")
+					}
+					return cl.Get(ctx, key, obj, opts...)
+				},
+			},
+			expectErr: "simulated error",
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(tc.objects...).Build()
+			cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(tc.objects...).WithInterceptorFuncs(tc.interceptors).Build()
 
 			// Create controller reconciler for CRD-specific validations
 			reconciler := &Reconciler{

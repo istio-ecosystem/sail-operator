@@ -182,6 +182,8 @@ func (r *Reconciler) validateNoTagConflict(ctx context.Context, rev *v1.IstioRev
 		if validation.ResourceTakesPrecedence(&tag.ObjectMeta, &rev.ObjectMeta) {
 			return reconciler.NewNameAlreadyExistsError("an IstioRevisionTag exists with this name", nil)
 		}
+	} else if !apierrors.IsNotFound(err) {
+		return err
 	}
 	return nil
 }
