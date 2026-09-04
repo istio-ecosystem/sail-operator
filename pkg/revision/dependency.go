@@ -21,7 +21,10 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 )
 
-type computeValuesFunc func(*v1.Values, string, string, config.Platform, string, string, fs.FS, string, *config.TLSConfig) (*v1.Values, error)
+type computeValuesFunc func(
+	*v1.Values, string, string, config.Platform,
+	string, string, fs.FS, string, *config.TLSConfig,
+) (*v1.Values, error)
 
 var defaultComputeValues computeValuesFunc = ComputeValues
 

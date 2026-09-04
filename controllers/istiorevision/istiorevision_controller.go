@@ -144,6 +144,7 @@ func (r *Reconciler) newIstiodReconciler() *sharedreconcile.IstiodReconciler {
 	return sharedreconcile.NewIstiodReconciler(sharedreconcile.Config{
 		ResourceFS:        r.Config.ResourceFS,
 		Platform:          r.Config.Platform,
+		OCPVersion:        r.Config.OCPVersion,
 		DefaultProfile:    r.Config.DefaultProfile,
 		OperatorNamespace: r.Config.OperatorNamespace,
 		ChartManager:      r.ChartManager,
