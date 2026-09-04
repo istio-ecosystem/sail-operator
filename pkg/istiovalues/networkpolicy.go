@@ -15,65 +15,33 @@
 package istiovalues
 
 import (
-	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
-	"k8s.io/utils/ptr"
+	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 )
 
 func shouldEnableNetworkPolicy(ocpVersion *config.OCPVersion) bool {
 	return ocpVersion != nil && ocpVersion.Major >= 5
 }
 
-// ApplyIstioNetworkPolicyDefaults sets global.networkPolicy.enabled to true
-// for OCP 5+ clusters, unless the user has explicitly set the value.
-func ApplyIstioNetworkPolicyDefaults(ocpVersion *config.OCPVersion, values *v1.Values) *v1.Values {
-	if !shouldEnableNetworkPolicy(ocpVersion) {
-		return values
+// ApplyNetworkPolicyDefaults sets global.networkPolicy.enabled to true on a
+// fresh OCP 5+ installation. For existing releases it restores the value
+// previously supplied to Helm, so an OCP 4 to 5 upgrade cannot introduce a
+// NetworkPolicy. Values explicitly set by the user always take precedence.
+func ApplyNetworkPolicyDefaults(ocpVersion *config.OCPVersion, values *helm.Values, existingReleaseValues helm.Values) error {
+	if _, found, err := values.GetBool("global.networkPolicy.enabled"); err != nil || found {
+		return err
 	}
-	if values.Global == nil {
-		values.Global = &v1.GlobalConfig{}
-	}
-	if values.Global.NetworkPolicy == nil {
-		values.Global.NetworkPolicy = &v1.NetworkPolicyConfig{}
-	}
-	if values.Global.NetworkPolicy.Enabled == nil {
-		values.Global.NetworkPolicy.Enabled = ptr.To(true)
-	}
-	return values
-}
 
-// ApplyCNINetworkPolicyDefaults sets global.networkPolicy.enabled to true
-// for OCP 5+ clusters, unless the user has explicitly set the value.
-func ApplyCNINetworkPolicyDefaults(ocpVersion *config.OCPVersion, values *v1.CNIValues) *v1.CNIValues {
-	if !shouldEnableNetworkPolicy(ocpVersion) {
-		return values
+	if existingReleaseValues != nil {
+		enabled, found, err := existingReleaseValues.GetBool("global.networkPolicy.enabled")
+		if err != nil || !found {
+			return err
+		}
+		return values.Set("global.networkPolicy.enabled", enabled)
 	}
-	if values.Global == nil {
-		values.Global = &v1.CNIGlobalConfig{}
-	}
-	if values.Global.NetworkPolicy == nil {
-		values.Global.NetworkPolicy = &v1.NetworkPolicyConfig{}
-	}
-	if values.Global.NetworkPolicy.Enabled == nil {
-		values.Global.NetworkPolicy.Enabled = ptr.To(true)
-	}
-	return values
-}
 
-// ApplyZTunnelNetworkPolicyDefaults sets global.networkPolicy.enabled to true
-// for OCP 5+ clusters, unless the user has explicitly set the value.
-func ApplyZTunnelNetworkPolicyDefaults(ocpVersion *config.OCPVersion, values *v1.ZTunnelValues) *v1.ZTunnelValues {
-	if !shouldEnableNetworkPolicy(ocpVersion) {
-		return values
+	if shouldEnableNetworkPolicy(ocpVersion) {
+		return values.Set("global.networkPolicy.enabled", true)
 	}
-	if values.Global == nil {
-		values.Global = &v1.ZTunnelGlobalConfig{}
-	}
-	if values.Global.NetworkPolicy == nil {
-		values.Global.NetworkPolicy = &v1.NetworkPolicyConfig{}
-	}
-	if values.Global.NetworkPolicy.Enabled == nil {
-		values.Global.NetworkPolicy.Enabled = ptr.To(true)
-	}
-	return values
+	return nil
 }

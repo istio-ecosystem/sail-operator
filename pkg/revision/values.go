@@ -35,7 +35,7 @@ import (
 // The resourceFS parameter accepts any fs.FS implementation (embed.FS, os.DirFS, etc.).
 func ComputeValues(
 	userValues *v1.Values, namespace string, version string,
-	platform config.Platform, ocpVersion *config.OCPVersion,
+	platform config.Platform,
 	defaultProfile, userProfile string, resourceFS fs.FS,
 	activeRevisionName string, tlsConfig *config.TLSConfig,
 ) (*v1.Values, error) {
@@ -47,9 +47,6 @@ func ComputeValues(
 	if err != nil {
 		return nil, fmt.Errorf("failed to apply vendor defaults: %w", err)
 	}
-
-	// apply network policy defaults for OCP 5+
-	userValues = istiovalues.ApplyIstioNetworkPolicyDefaults(ocpVersion, userValues)
 
 	// apply userValues on top of defaultValues from profiles
 	mergedHelmValues, err := istiovalues.ApplyProfilesAndPlatform(resourceFS, version, platform, defaultProfile, userProfile, helm.FromValues(userValues))

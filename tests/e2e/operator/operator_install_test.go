@@ -44,8 +44,10 @@ import (
 	crtls "github.com/openshift/controller-runtime-common/pkg/tls"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -226,6 +228,78 @@ spec:
 			Expect(metricsOutput).To(ContainSubstring(
 				"controller_runtime_reconcile_total",
 			))
+		})
+	})
+
+	Describe("NetworkPolicy defaults", Label("network-policy-defaults", "ocp5"), Ordered, func() {
+		const (
+			istioNamespace   = "network-policy-defaults-istio"
+			cniNamespace     = "network-policy-defaults-cni"
+			ztunnelNamespace = "network-policy-defaults-ztunnel"
+		)
+
+		BeforeAll(func(ctx SpecContext) {
+			if !env.GetBool("OCP", false) {
+				Skip("Skipping OCP 5 NetworkPolicy defaults test on non-OpenShift cluster")
+			}
+
+			cv := &configv1.ClusterVersion{}
+			Expect(cl.Get(ctx, client.ObjectKey{Name: "version"}, cv)).To(Succeed())
+			var major int
+			_, err := fmt.Sscanf(cv.Status.Desired.Version, "%d.", &major)
+			Expect(err).NotTo(HaveOccurred(), "Failed to parse OpenShift version %q", cv.Status.Desired.Version)
+			if major < 5 {
+				Skip(fmt.Sprintf("Skipping OCP 5 NetworkPolicy defaults test on OpenShift %s", cv.Status.Desired.Version))
+			}
+
+			for _, namespace := range []string{istioNamespace, cniNamespace, ztunnelNamespace} {
+				common.EnsureNamespace(ctx, cl, namespace)
+			}
+		})
+
+		It("enables NetworkPolicies for fresh installs and preserves an existing disabled release", func(ctx SpecContext) {
+			Expect(cl.Create(ctx, &v1.Istio{
+				ObjectMeta: metav1.ObjectMeta{Name: "network-policy-defaults"},
+				Spec:       v1.IstioSpec{Version: istioversion.Default, Namespace: istioNamespace},
+			})).To(Succeed())
+			cni := &v1.IstioCNI{
+				ObjectMeta: metav1.ObjectMeta{Name: "default"},
+				Spec:       v1.IstioCNISpec{Version: istioversion.Default, Namespace: cniNamespace},
+			}
+			Expect(cl.Create(ctx, cni)).To(Succeed())
+			Expect(cl.Create(ctx, &v1.ZTunnel{
+				ObjectMeta: metav1.ObjectMeta{Name: "default"},
+				Spec:       v1.ZTunnelSpec{Version: istioversion.Default, Namespace: ztunnelNamespace},
+			})).To(Succeed())
+
+			for _, key := range []client.ObjectKey{
+				{Name: "istiod-network-policy-defaults", Namespace: istioNamespace},
+				{Name: "istio-cni", Namespace: cniNamespace},
+				{Name: "ztunnel", Namespace: ztunnelNamespace},
+			} {
+				Eventually(cl.Get).WithArguments(ctx, key, &networkingv1.NetworkPolicy{}).Should(Succeed())
+			}
+
+			updateCNIValues := func(values *v1.CNIValues) {
+				Eventually(func() error {
+					cni := &v1.IstioCNI{}
+					if err := cl.Get(ctx, client.ObjectKey{Name: "default"}, cni); err != nil {
+						return err
+					}
+					cni.Spec.Values = values
+					return cl.Update(ctx, cni)
+				}).Should(Succeed())
+			}
+
+			updateCNIValues(&v1.CNIValues{Global: &v1.CNIGlobalConfig{NetworkPolicy: &v1.NetworkPolicyConfig{
+				Enabled: ptr.To(false),
+			}}})
+			cniPolicyKey := client.ObjectKey{Name: "istio-cni", Namespace: cniNamespace}
+			Eventually(cl.Get).WithArguments(ctx, cniPolicyKey, &networkingv1.NetworkPolicy{}).Should(ReturnNotFoundError())
+			Consistently(cl.Get).WithArguments(ctx, cniPolicyKey, &networkingv1.NetworkPolicy{}).Should(ReturnNotFoundError())
+
+			updateCNIValues(&v1.CNIValues{})
+			Consistently(cl.Get).WithArguments(ctx, cniPolicyKey, &networkingv1.NetworkPolicy{}).Should(ReturnNotFoundError())
 		})
 	})
 

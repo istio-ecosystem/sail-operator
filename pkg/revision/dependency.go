@@ -22,7 +22,7 @@ import (
 )
 
 type computeValuesFunc func(
-	*v1.Values, string, string, config.Platform, *config.OCPVersion,
+	*v1.Values, string, string, config.Platform,
 	string, string, fs.FS, string, *config.TLSConfig,
 ) (*v1.Values, error)
 
@@ -31,7 +31,7 @@ var defaultComputeValues computeValuesFunc = ComputeValues
 // DependsOnIstioCNI returns true if CNI is enabled in the revision
 func DependsOnIstioCNI(rev *v1.IstioRevision, cfg config.ReconcilerConfig) bool {
 	values, err := defaultComputeValues(rev.Spec.Values, rev.Spec.Namespace, rev.Spec.Version,
-		cfg.Platform, cfg.OCPVersion, cfg.DefaultProfile, "", cfg.ResourceFS, rev.Name, nil)
+		cfg.Platform, cfg.DefaultProfile, "", cfg.ResourceFS, rev.Name, nil)
 	if err != nil || values == nil {
 		return false
 	}
@@ -53,7 +53,7 @@ func DependsOnIstioCNI(rev *v1.IstioRevision, cfg config.ReconcilerConfig) bool 
 // DependsOnZTunnel returns true if the revision is configured for ambient mode and requires ZTunnel
 func DependsOnZTunnel(rev *v1.IstioRevision, cfg config.ReconcilerConfig) bool {
 	values, err := defaultComputeValues(rev.Spec.Values, rev.Spec.Namespace, rev.Spec.Version,
-		cfg.Platform, cfg.OCPVersion, cfg.DefaultProfile, "", cfg.ResourceFS, rev.Name, nil)
+		cfg.Platform, cfg.DefaultProfile, "", cfg.ResourceFS, rev.Name, nil)
 	if err != nil || values == nil {
 		return false
 	}

@@ -31,7 +31,6 @@ func mockComputeValues(
 	values *v1.Values,
 	_, _ string,
 	platform config.Platform,
-	_ *config.OCPVersion,
 	defaultProfile, userProfile string, _ fs.FS, _ string,
 	_ *config.TLSConfig,
 ) (*v1.Values, error) {

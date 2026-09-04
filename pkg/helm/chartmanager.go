@@ -42,6 +42,22 @@ type ChartReconciler interface {
 	UpgradeOrInstallChart(ctx context.Context, resourceFS fs.FS, chartPath string, values Values,
 		namespace, releaseName string, ownerReference *metav1.OwnerReference) (release.Releaser, error)
 	UninstallChart(ctx context.Context, releaseName, namespace string) (*release.UninstallReleaseResponse, error)
+	GetRelease(ctx context.Context, namespace, releaseName string) (release.Releaser, error)
+}
+
+// GetReleaseValues returns the values saved for an existing release. A nil
+// return value means the release does not exist.
+func GetReleaseValues(ctx context.Context, reconciler ChartReconciler, namespace, releaseName string) (Values, error) {
+	rel, err := reconciler.GetRelease(ctx, namespace, releaseName)
+	if err != nil || rel == nil {
+		return nil, err
+	}
+
+	relV1, ok := rel.(*releasev1.Release)
+	if !ok {
+		return nil, fmt.Errorf("unexpected release type %T for helm release %s", rel, releaseName)
+	}
+	return Values(relV1.Config), nil
 }
 
 type ChartManager struct {

@@ -17,200 +17,86 @@ package istiovalues
 import (
 	"testing"
 
-	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
+	"github.com/istio-ecosystem/sail-operator/pkg/helm"
 	"github.com/stretchr/testify/assert"
-	"k8s.io/utils/ptr"
+	"github.com/stretchr/testify/require"
 )
 
-func TestApplyIstioNetworkPolicyDefaults(t *testing.T) {
+func TestApplyNetworkPolicyDefaults(t *testing.T) {
 	tests := []struct {
-		name        string
-		ocpVersion  *config.OCPVersion
-		values      *v1.Values
-		wantEnabled *bool
+		name                  string
+		ocpVersion            *config.OCPVersion
+		values                helm.Values
+		existingReleaseValues helm.Values
+		wantEnabled           *bool
 	}{
 		{
-			name:        "nil OCPVersion (non-OpenShift) - no change",
-			ocpVersion:  nil,
-			values:      &v1.Values{},
+			name:        "fresh OCP 5 release enables NetworkPolicy",
+			ocpVersion:  &config.OCPVersion{Major: 5},
+			values:      helm.Values{},
+			wantEnabled: boolPtr(true),
+		},
+		{
+			name:        "fresh OCP 4 release remains opt in",
+			ocpVersion:  &config.OCPVersion{Major: 4},
+			values:      helm.Values{},
 			wantEnabled: nil,
 		},
 		{
-			name:        "OCP 4.16 - no change",
-			ocpVersion:  &config.OCPVersion{Major: 4, Minor: 16},
-			values:      &v1.Values{},
+			name:        "fresh non OpenShift release remains opt in",
+			values:      helm.Values{},
 			wantEnabled: nil,
 		},
 		{
-			name:        "OCP 5.0 - sets enabled true",
-			ocpVersion:  &config.OCPVersion{Major: 5, Minor: 0},
-			values:      &v1.Values{},
-			wantEnabled: ptr.To(true),
+			name:       "explicit false overrides fresh OCP 5 default",
+			ocpVersion: &config.OCPVersion{Major: 5},
+			values: helm.Values{"global": map[string]any{"networkPolicy": map[string]any{
+				"enabled": false,
+			}}},
+			wantEnabled: boolPtr(false),
 		},
 		{
-			name:        "OCP 5.1 - sets enabled true",
-			ocpVersion:  &config.OCPVersion{Major: 5, Minor: 1},
-			values:      &v1.Values{},
-			wantEnabled: ptr.To(true),
+			name:                  "legacy release without setting remains unchanged",
+			ocpVersion:            &config.OCPVersion{Major: 5},
+			values:                helm.Values{},
+			existingReleaseValues: helm.Values{},
+			wantEnabled:           nil,
 		},
 		{
-			name:        "OCP 6.0 - sets enabled true",
-			ocpVersion:  &config.OCPVersion{Major: 6, Minor: 0},
-			values:      &v1.Values{},
-			wantEnabled: ptr.To(true),
+			name:       "existing default enabled release remains enabled",
+			ocpVersion: &config.OCPVersion{Major: 5},
+			values:     helm.Values{},
+			existingReleaseValues: helm.Values{"global": map[string]any{"networkPolicy": map[string]any{
+				"enabled": true,
+			}}},
+			wantEnabled: boolPtr(true),
 		},
 		{
-			name:       "OCP 5+ with user-explicit false - remains false",
-			ocpVersion: &config.OCPVersion{Major: 5, Minor: 0},
-			values: &v1.Values{
-				Global: &v1.GlobalConfig{
-					NetworkPolicy: &v1.NetworkPolicyConfig{
-						Enabled: ptr.To(false),
-					},
-				},
-			},
-			wantEnabled: ptr.To(false),
-		},
-		{
-			name:       "OCP 4 with user-explicit true - remains true",
-			ocpVersion: &config.OCPVersion{Major: 4, Minor: 16},
-			values: &v1.Values{
-				Global: &v1.GlobalConfig{
-					NetworkPolicy: &v1.NetworkPolicyConfig{
-						Enabled: ptr.To(true),
-					},
-				},
-			},
-			wantEnabled: ptr.To(true),
+			name:   "existing disabled release remains disabled without OCP version",
+			values: helm.Values{},
+			existingReleaseValues: helm.Values{"global": map[string]any{"networkPolicy": map[string]any{
+				"enabled": false,
+			}}},
+			wantEnabled: boolPtr(false),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := ApplyIstioNetworkPolicyDefaults(tt.ocpVersion, tt.values)
+			err := ApplyNetworkPolicyDefaults(tt.ocpVersion, &tt.values, tt.existingReleaseValues)
+			require.NoError(t, err)
+
+			enabled, found, err := tt.values.GetBool("global.networkPolicy.enabled")
+			require.NoError(t, err)
 			if tt.wantEnabled == nil {
-				if result.Global != nil && result.Global.NetworkPolicy != nil {
-					assert.Nil(t, result.Global.NetworkPolicy.Enabled)
-				}
-			} else {
-				assert.NotNil(t, result.Global)
-				assert.NotNil(t, result.Global.NetworkPolicy)
-				assert.NotNil(t, result.Global.NetworkPolicy.Enabled)
-				assert.Equal(t, *tt.wantEnabled, *result.Global.NetworkPolicy.Enabled)
+				assert.False(t, found)
+				return
 			}
+			assert.True(t, found)
+			assert.Equal(t, *tt.wantEnabled, enabled)
 		})
 	}
 }
 
-func TestApplyCNINetworkPolicyDefaults(t *testing.T) {
-	tests := []struct {
-		name        string
-		ocpVersion  *config.OCPVersion
-		values      *v1.CNIValues
-		wantEnabled *bool
-	}{
-		{
-			name:        "nil OCPVersion - no change",
-			ocpVersion:  nil,
-			values:      &v1.CNIValues{},
-			wantEnabled: nil,
-		},
-		{
-			name:        "OCP 4.16 - no change",
-			ocpVersion:  &config.OCPVersion{Major: 4, Minor: 16},
-			values:      &v1.CNIValues{},
-			wantEnabled: nil,
-		},
-		{
-			name:        "OCP 5.0 - sets enabled true",
-			ocpVersion:  &config.OCPVersion{Major: 5, Minor: 0},
-			values:      &v1.CNIValues{},
-			wantEnabled: ptr.To(true),
-		},
-		{
-			name:       "OCP 5+ with user-explicit false - remains false",
-			ocpVersion: &config.OCPVersion{Major: 5, Minor: 0},
-			values: &v1.CNIValues{
-				Global: &v1.CNIGlobalConfig{
-					NetworkPolicy: &v1.NetworkPolicyConfig{
-						Enabled: ptr.To(false),
-					},
-				},
-			},
-			wantEnabled: ptr.To(false),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := ApplyCNINetworkPolicyDefaults(tt.ocpVersion, tt.values)
-			if tt.wantEnabled == nil {
-				if result.Global != nil && result.Global.NetworkPolicy != nil {
-					assert.Nil(t, result.Global.NetworkPolicy.Enabled)
-				}
-			} else {
-				assert.NotNil(t, result.Global)
-				assert.NotNil(t, result.Global.NetworkPolicy)
-				assert.NotNil(t, result.Global.NetworkPolicy.Enabled)
-				assert.Equal(t, *tt.wantEnabled, *result.Global.NetworkPolicy.Enabled)
-			}
-		})
-	}
-}
-
-func TestApplyZTunnelNetworkPolicyDefaults(t *testing.T) {
-	tests := []struct {
-		name        string
-		ocpVersion  *config.OCPVersion
-		values      *v1.ZTunnelValues
-		wantEnabled *bool
-	}{
-		{
-			name:        "nil OCPVersion - no change",
-			ocpVersion:  nil,
-			values:      &v1.ZTunnelValues{},
-			wantEnabled: nil,
-		},
-		{
-			name:        "OCP 4.16 - no change",
-			ocpVersion:  &config.OCPVersion{Major: 4, Minor: 16},
-			values:      &v1.ZTunnelValues{},
-			wantEnabled: nil,
-		},
-		{
-			name:        "OCP 5.0 - sets enabled true",
-			ocpVersion:  &config.OCPVersion{Major: 5, Minor: 0},
-			values:      &v1.ZTunnelValues{},
-			wantEnabled: ptr.To(true),
-		},
-		{
-			name:       "OCP 5+ with user-explicit false - remains false",
-			ocpVersion: &config.OCPVersion{Major: 5, Minor: 0},
-			values: &v1.ZTunnelValues{
-				Global: &v1.ZTunnelGlobalConfig{
-					NetworkPolicy: &v1.NetworkPolicyConfig{
-						Enabled: ptr.To(false),
-					},
-				},
-			},
-			wantEnabled: ptr.To(false),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := ApplyZTunnelNetworkPolicyDefaults(tt.ocpVersion, tt.values)
-			if tt.wantEnabled == nil {
-				if result.Global != nil && result.Global.NetworkPolicy != nil {
-					assert.Nil(t, result.Global.NetworkPolicy.Enabled)
-				}
-			} else {
-				assert.NotNil(t, result.Global)
-				assert.NotNil(t, result.Global.NetworkPolicy)
-				assert.NotNil(t, result.Global.NetworkPolicy.Enabled)
-				assert.Equal(t, *tt.wantEnabled, *result.Global.NetworkPolicy.Enabled)
-			}
-		})
-	}
-}
+func boolPtr(v bool) *bool { return &v }
