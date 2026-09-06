@@ -196,7 +196,7 @@ func TestDoProbe(t *testing.T) {
 				},
 			},
 			expectedResult: false,
-			expectedError:  "missing webhooks[].clientConfig.service",
+			expectedError:  "missing both webhooks[].clientConfig.service and webhooks[].clientConfig.Url",
 		},
 		{
 			name: "Missing CA bundle",
@@ -508,6 +508,34 @@ func TestGetReadinessProbeURL(t *testing.T) {
 			name: "URL",
 			config: admissionv1.WebhookClientConfig{
 				URL: ptr.Of("https://some.url"),
+			},
+			expectURL: "https://some.url/ready",
+		},
+		{
+			name: "URL with path",
+			config: admissionv1.WebhookClientConfig{
+				URL: ptr.Of("https://some.url/inject/path"),
+			},
+			expectURL: "https://some.url/ready",
+		},
+		{
+			name: "URL with port",
+			config: admissionv1.WebhookClientConfig{
+				URL: ptr.Of("https://istiod.istio-system.svc:15017/inject"),
+			},
+			expectURL: "https://istiod.istio-system.svc:15017/ready",
+		},
+		{
+			name: "URL missing scheme",
+			config: admissionv1.WebhookClientConfig{
+				URL: ptr.Of("some.url/inject"),
+			},
+			expectErr: true,
+		},
+		{
+			name: "URL empty",
+			config: admissionv1.WebhookClientConfig{
+				URL: ptr.Of(""),
 			},
 			expectErr: true,
 		},
