@@ -27,6 +27,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	predicate2 "github.com/istio-ecosystem/sail-operator/pkg/predicate"
 	sharedreconcile "github.com/istio-ecosystem/sail-operator/pkg/reconcile"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
@@ -118,8 +119,16 @@ func (r *Reconciler) doReconcile(ctx context.Context, rev *v1.IstioRevision) err
 		return err
 	}
 
+	revVersion, err := istioversion.Resolve(rev.Spec.Version)
+	if err != nil {
+		if istioversion.IsEOLVersion(rev.Spec.Version) {
+			return reconciler.NewValidationError(fmt.Sprintf("IstioRevision version %q is EOL and cannot be installed", rev.Spec.Version))
+		}
+		return fmt.Errorf("failed to resolve Istio version %s: %w", rev.Spec.Version, err)
+	}
+
 	// General validations
-	if err := istiodReconciler.Validate(ctx, rev.Spec.Version, rev.Spec.Namespace, rev.Spec.Values); err != nil {
+	if err := istiodReconciler.Validate(ctx, revVersion, rev.Spec.Namespace, rev.Spec.Values); err != nil {
 		return err
 	}
 
@@ -132,7 +141,7 @@ func (r *Reconciler) doReconcile(ctx context.Context, rev *v1.IstioRevision) err
 		Controller:         ptr.Of(true),
 		BlockOwnerDeletion: ptr.Of(true),
 	}
-	return istiodReconciler.Install(ctx, rev.Spec.Version, rev.Spec.Namespace, rev.Spec.Values, rev.Name, &ownerReference)
+	return istiodReconciler.Install(ctx, revVersion, rev.Spec.Namespace, rev.Spec.Values, rev.Name, &ownerReference)
 }
 
 func (r *Reconciler) Finalize(ctx context.Context, rev *v1.IstioRevision) error {
