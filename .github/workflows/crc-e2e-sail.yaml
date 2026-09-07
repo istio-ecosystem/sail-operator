@@ -151,6 +151,7 @@ jobs:
             -e ZTUNNEL_MEMORY_REQUEST=64Mi \
             -e PROXY_MEMORY_REQUEST=64Mi \
             -e E2E_VERSIONS_LIMIT=1 \
+            -e DEFAULT_TEST_TIMEOUT=300 \
             -e OPERATOR_DEPLOY_TIMEOUT=10m \
             -e OPERATOR_MEMORY_REQUEST=32Mi \
             -e OPERATOR_MEMORY_LIMIT=256Mi \
