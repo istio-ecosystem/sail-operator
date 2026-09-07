@@ -3,8 +3,8 @@
 :istio_latest_version_revision_format: 1-31-0-beta-1
 :istio_latest_tag: v1.31.0-beta-latest
 :istio_release_name: release-1.31
-:istio_latest_minus_one_version: 1.30.3
-:istio_latest_minus_one_version_revision_format: 1-30-3
+:istio_latest_minus_one_version: 1.30.4
+:istio_latest_minus_one_version_revision_format: 1-30-4
 
 link:../../README.adoc[Return to Project Root]
 
@@ -101,8 +101,8 @@ All AsciiDoc files should include variable definitions at the top for GitHub com
 :istio_latest_version_revision_format: 1-31-0-beta-1
 :istio_latest_tag: v1.31.0-beta-latest
 :istio_release_name: release-1.31
-:istio_latest_minus_one_version: 1.30.3
-:istio_latest_minus_one_version_revision_format: 1-30-3
+:istio_latest_minus_one_version: 1.30.4
+:istio_latest_minus_one_version_revision_format: 1-30-4
 ```
 
 Note: that the values of the variables will be automatically updated on each release to keep them in sync with the actual versions.
