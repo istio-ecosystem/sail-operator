@@ -70,7 +70,7 @@ var sailCRDs = []string{
 
 var apiServerKey = client.ObjectKey{Name: "cluster"}
 
-var _ = Describe("Operator", Label("smoke", "operator"), Ordered, func() {
+var _ = Describe("Operator", Label("smoke", "operator", "crc"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 	clr := cleaner.New(cl)

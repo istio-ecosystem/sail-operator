@@ -28,7 +28,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Ambient API Validation", Label("ambient", "ambient-validation"), Ordered, func() {
+var _ = Describe("Ambient API Validation", Label("ambient", "ambient-validation", "crc"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(defaultTimeout) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
@@ -104,31 +104,12 @@ spec:
 
 		When("creating IstioCNI and ZTunnel with metadata.name='default'", func() {
 			It("successfully creates IstioCNI with name 'default'", func(ctx SpecContext) {
-				cniYAML := fmt.Sprintf(`
-apiVersion: sailoperator.io/v1
-kind: IstioCNI
-metadata:
-  name: default
-spec:
-  version: %s
-  namespace: %s
-  profile: ambient`, version.Name, istioCniNamespace)
-
-				Expect(k.CreateFromString(cniYAML)).To(Succeed())
+				common.CreateIstioCNI(k, version.Name, "profile: ambient")
 				Success("IstioCNI with name='default' created successfully")
 			})
 
 			It("successfully creates ZTunnel with name 'default'", func(ctx SpecContext) {
-				ztunnelYAML := fmt.Sprintf(`
-apiVersion: sailoperator.io/v1
-kind: ZTunnel
-metadata:
-  name: default
-spec:
-  version: %s
-  namespace: %s`, version.Name, ztunnelNamespace)
-
-				Expect(k.CreateFromString(ztunnelYAML)).To(Succeed())
+				common.CreateZTunnel(k, version.Name)
 				Success("ZTunnel with name='default' created successfully")
 			})
 		})
