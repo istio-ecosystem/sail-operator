@@ -1,0 +1,7 @@
+category: added
+title: Enable NetworkPolicy defaults for fresh installs on OCP 5+ clusters
+description: |
+  On OCP 5+ clusters, fresh istiod, istio-cni, and ztunnel Helm releases
+  enable NetworkPolicy by default. Existing releases are not changed during
+  an OpenShift or operator upgrade. Set spec.values.global.networkPolicy.enabled
+  explicitly to override the default; explicit false settings are preserved.

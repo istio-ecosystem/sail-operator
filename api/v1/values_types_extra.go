@@ -144,7 +144,11 @@ type ZTunnelConfig struct {
 }
 
 // ZTunnelGlobalConfig is a subset of the Global Configuration used in the Istio ztunnel chart.
-type ZTunnelGlobalConfig struct { // Default k8s resources settings for all Istio control plane components.
+type ZTunnelGlobalConfig struct {
+	// Settings related to Kubernetes NetworkPolicy.
+	NetworkPolicy *NetworkPolicyConfig `json:"networkPolicy,omitempty"`
+
+	// Default k8s resources settings for all Istio control plane components.
 	//
 	// See https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container
 	//

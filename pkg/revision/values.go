@@ -35,7 +35,8 @@ import (
 // The resourceFS parameter accepts any fs.FS implementation (embed.FS, os.DirFS, etc.).
 func ComputeValues(
 	userValues *v1.Values, namespace string, version string,
-	platform config.Platform, defaultProfile, userProfile string, resourceFS fs.FS,
+	platform config.Platform,
+	defaultProfile, userProfile string, resourceFS fs.FS,
 	activeRevisionName string, tlsConfig *config.TLSConfig,
 ) (*v1.Values, error) {
 	// apply image digests from configuration, if not already set by user

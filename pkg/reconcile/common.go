@@ -35,6 +35,9 @@ type Config struct {
 	// Platform is the target Kubernetes platform (e.g., OpenShift, vanilla Kubernetes)
 	Platform config.Platform
 
+	// OCPVersion is the detected OpenShift Container Platform version (nil on non-OpenShift)
+	OCPVersion *config.OCPVersion
+
 	// DefaultProfile is the base profile applied before user-selected profiles
 	DefaultProfile string
 
