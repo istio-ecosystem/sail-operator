@@ -16,7 +16,17 @@
 # to avoid breaking API guarantees.
 versions:
   - name: v1.31-latest
-    ref: v1.31.0-beta.1
+    ref: v1.31.0
+  - name: v1.31.0
+    version: 1.31.0
+    repo: https://github.com/istio/istio
+    commit: 1.31.0
+    charts:
+      - https://blob.istio.io/istio-release/charts/base-1.31.0.tgz
+      - https://blob.istio.io/istio-release/charts/istiod-1.31.0.tgz
+      - https://blob.istio.io/istio-release/charts/gateway-1.31.0.tgz
+      - https://blob.istio.io/istio-release/charts/cni-1.31.0.tgz
+      - https://blob.istio.io/istio-release/charts/ztunnel-1.31.0.tgz
   - name: v1.31.0-beta.1
     version: 1.31.0-beta.1
     repo: https://github.com/istio/istio
