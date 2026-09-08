@@ -148,6 +148,9 @@ spec:
       - kind: WorkloadGroup
         name: workloadgroups.networking.istio.io
         version: v1beta1
+      - kind: TracingIntegration
+        name: tracingintegrations.sailoperator.io
+        version: v1alpha1
       - kind: ZTunnel
         name: ztunnels.sailoperator.io
         version: v1alpha1
@@ -693,6 +696,46 @@ spec:
                 - get
                 - patch
                 - update
+            - apiGroups:
+                - sailoperator.io
+              resources:
+                - tracingintegrations
+              verbs:
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
+            - apiGroups:
+                - sailoperator.io
+              resources:
+                - tracingintegrations/status
+              verbs:
+                - get
+                - patch
+                - update
+            - apiGroups:
+                - telemetry.istio.io
+              resources:
+                - telemetries
+              verbs:
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
+            - apiGroups:
+                - opentelemetry.io
+              resources:
+                - opentelemetrycollectors
+              verbs:
+                - get
+                - list
+                - watch
             - apiGroups:
                 - sailoperator.io
               resources:

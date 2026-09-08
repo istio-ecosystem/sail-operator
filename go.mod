@@ -10,11 +10,15 @@ require (
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/elastic/crd-ref-docs v0.1.0
 	github.com/go-logr/logr v1.4.4
+	github.com/golang/protobuf v1.5.4
 	github.com/google/go-cmp v0.7.0
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.4.0
 	github.com/magiconair/properties v1.8.9
 	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.41.0
+	// Keep on v0.158.x while client-go is v0.36.x; v0.159.0 requires k8s.io/api v0.37.x,
+	// which removes scheduling/v1alpha2 still imported by client-go v0.36.x.
+	github.com/open-telemetry/opentelemetry-operator/apis v0.158.0
 	github.com/openshift/api v0.0.0-20260630164038-90cdc3bbde7f
 	github.com/openshift/controller-runtime-common v0.0.0-20260428152732-64ee174f5e2e
 	github.com/openshift/library-go v0.0.0-20260318142011-72bf34f474bc
@@ -28,6 +32,7 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.5.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v4 v4.2.0
+	istio.io/api v1.31.0-alpha.1.0.20260922121423-a9f309745a1d
 	istio.io/client-go v1.31.0-alpha.1.0.20260922121723-b19f969767e1
 	istio.io/istio v0.0.0-20260922151441-ca66c728d863
 	k8s.io/api v0.36.4
@@ -36,6 +41,7 @@ require (
 	k8s.io/cli-runtime v0.36.0
 	k8s.io/client-go v0.36.4
 	sigs.k8s.io/controller-runtime v0.24.1
+	sigs.k8s.io/structured-merge-diff/v6 v6.4.2
 	sigs.k8s.io/yaml v1.6.0
 )
 
@@ -93,9 +99,8 @@ require (
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/gobuffalo/flect v1.0.2 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
-	github.com/goccy/go-yaml v1.18.0 // indirect
+	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/gofrs/flock v0.13.0 // indirect
-	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/cel-go v0.28.1 // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect
@@ -172,7 +177,6 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	istio.io/api v1.31.0-alpha.1.0.20260922121423-a9f309745a1d // indirect
 	k8s.io/apiserver v0.36.4 // indirect
 	k8s.io/component-base v0.36.4 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
@@ -187,5 +191,4 @@ require (
 	sigs.k8s.io/kustomize/api v0.21.1 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.21.1 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
-	sigs.k8s.io/structured-merge-diff/v6 v6.4.2 // indirect
 )

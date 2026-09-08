@@ -1,0 +1,32 @@
+= Tracing Integration
+
+A `TracingIntegration` configures the `targetRefs` to send distributed tracing data to
+the configured `type`. You can specify multiple `targetRefs` and the operator will configure
+each resource.
+
+In the example below, the `Istio` resource will be configured to send traces to the
+OpenTelemetry Collector resource.
+
+[source,yaml]
+----
+apiVersion: sailoperator.io/v1alpha1
+kind: TracingIntegration
+metadata:
+  name: tracing
+spec:
+  targetRefs:
+    - kind: Istio
+      name: default
+  type: OpenTelemetry
+  openTelemetry:
+    otelCollectorRef:
+      name: otel
+      namespace: istio-system
+----
+
+The Integrations controller uses this information to configure the target
+Istio resource with tracing enabled and an OpenTelemetry extension provider.
+It also configures the corresponding Istio `Telemetry` resource to use that
+provider for tracing. The controller uses Server Side Apply to only apply the
+fields owned by the integration, leaving the rest of the target resources
+available for user configuration.

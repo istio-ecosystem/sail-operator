@@ -24,8 +24,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// getConfig returns the configuration of the kubernetes go-client
-func getConfig(kubeconfig string) (*rest.Config, error) {
+// GetConfig returns the configuration of the Kubernetes Go client.
+func GetConfig(kubeconfig string) (*rest.Config, error) {
 	// If kubeconfig is provided, use it
 	if kubeconfig != "" {
 		config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
@@ -49,7 +49,7 @@ func getConfig(kubeconfig string) (*rest.Config, error) {
 // Kubeconfig: string
 // Set kubeconfig to "" to use the current context in kubeconfig
 func InitK8sClient(kubeconfig string) (client.Client, error) {
-	config, err := getConfig(kubeconfig)
+	config, err := GetConfig(kubeconfig)
 	if err != nil {
 		return nil, fmt.Errorf("error getting config for k8s client: %w", err)
 	}

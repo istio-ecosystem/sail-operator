@@ -6076,13 +6076,9 @@ func (in *WaypointConfig) DeepCopyInto(out *WaypointConfig) {
 	}
 	if in.TopologySpreadConstraints != nil {
 		in, out := &in.TopologySpreadConstraints, &out.TopologySpreadConstraints
-		*out = make([]*corev1.TopologySpreadConstraint, len(*in))
+		*out = make([]corev1.TopologySpreadConstraint, len(*in))
 		for i := range *in {
-			if (*in)[i] != nil {
-				in, out := &(*in)[i], &(*out)[i]
-				*out = new(corev1.TopologySpreadConstraint)
-				(*in).DeepCopyInto(*out)
-			}
+			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 	if in.NodeSelector != nil {
@@ -6092,24 +6088,16 @@ func (in *WaypointConfig) DeepCopyInto(out *WaypointConfig) {
 	}
 	if in.Tolerations != nil {
 		in, out := &in.Tolerations, &out.Tolerations
-		*out = make([]*corev1.Toleration, len(*in))
+		*out = make([]corev1.Toleration, len(*in))
 		for i := range *in {
-			if (*in)[i] != nil {
-				in, out := &(*in)[i], &(*out)[i]
-				*out = new(corev1.Toleration)
-				(*in).DeepCopyInto(*out)
-			}
+			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 	if in.Toleration != nil {
 		in, out := &in.Toleration, &out.Toleration
-		*out = make([]*corev1.Toleration, len(*in))
+		*out = make([]corev1.Toleration, len(*in))
 		for i := range *in {
-			if (*in)[i] != nil {
-				in, out := &(*in)[i], &(*out)[i]
-				*out = new(corev1.Toleration)
-				(*in).DeepCopyInto(*out)
-			}
+			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 }
