@@ -353,6 +353,16 @@ func (k Kubectl) Logs(pod string, since *time.Duration) (string, error) {
 	return output, nil
 }
 
+// LogsForContainer returns logs from a specific container in a pod.
+func (k Kubectl) LogsForContainer(pod, container string, since *time.Duration) (string, error) {
+	cmd := k.build(fmt.Sprintf(" logs %s %s %s", pod, containerFlag(container), sinceFlag(since)))
+	output, err := shell.ExecuteCommand(cmd)
+	if err != nil {
+		return "", err
+	}
+	return output, nil
+}
+
 // LogsPrevious returns the logs from the previous instance of a container
 func (k Kubectl) LogsPrevious(pod string, since *time.Duration) (string, error) {
 	cmd := k.build(fmt.Sprintf(" logs %s --previous %s", pod, sinceFlag(since)))

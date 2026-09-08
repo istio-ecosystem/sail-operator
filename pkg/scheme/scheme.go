@@ -18,6 +18,7 @@ import (
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	multusv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
+	otelv1beta1 "github.com/open-telemetry/opentelemetry-operator/apis/v1beta1"
 	configv1 "github.com/openshift/api/config/v1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -26,6 +27,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 
 	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
+	telemetryv1 "istio.io/client-go/pkg/apis/telemetry/v1"
 )
 
 var Scheme = runtime.NewScheme()
@@ -34,6 +36,8 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(Scheme))
 	utilruntime.Must(multusv1.AddToScheme(Scheme))
 	utilruntime.Must(networkingv1alpha3.AddToScheme(Scheme))
+	utilruntime.Must(telemetryv1.AddToScheme(Scheme))
+	utilruntime.Must(otelv1beta1.AddToScheme(Scheme))
 	utilruntime.Must(configv1.AddToScheme(Scheme))
 
 	utilruntime.Must(v1alpha1.AddToScheme(Scheme))

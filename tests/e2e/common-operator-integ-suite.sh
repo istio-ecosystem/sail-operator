@@ -334,7 +334,7 @@ if [ "${SKIP_BUILD}" == "false" ]; then
 
     # Workaround for OCP helm operator installation issues:
     # To avoid any cleanup issues, after we build and push the image we check if the namespace exists and delete it if it does.
-    # The test logic already handles the namespace creation and deletion during the test run. 
+    # The test logic already handles the namespace creation and deletion during the test run.
     if ${COMMAND} get ns "${NAMESPACE}" &>/dev/null; then
       echo "Namespace ${NAMESPACE} already exists. Deleting it to avoid conflicts."
       ${COMMAND} delete ns "${NAMESPACE}"

@@ -53,12 +53,13 @@ CONTAINER_CLI=podman DOCKER_GID=0 make deploy
 
 ## Code Style and Conventions
 
-- **Language**: Go 1.24+ with modules
+- **Language**: Go 1.27+ with modules
 - **Framework**: Kubebuilder with controller-runtime
 - **Testing**: Ginkgo/Gomega for E2E/integration tests, standard Go testing for unit tests
 - **Commit signing**: Required with `-s` flag
 - **API changes**: Must be discussed in SEP (Sail Enhancement Proposal) first
 - **Pointers**: Prefer `new(expr)` over `ptr.To(expr)` when creating a pointer to an expression.
+- **Initialization**: Prefer direct initialization of promoted fields e.g. {Name: ""} vs. {ObjectMeta: {Name: ""}}
 
 ## Key Directories
 
