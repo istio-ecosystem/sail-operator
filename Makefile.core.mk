@@ -572,6 +572,17 @@ update-istio: ## Update the Istio commit hash in the 'latest' entry in versions.
 update-istio-samples: ## Update the Istio samples files located in the samples folder to match the latest Istio upstream version of the charts.
 	@hack/update-istio-samples.sh
 
+# Istio minor releases component images are only publisheed to Docker Hub. We mirror these
+# quay.io/sail-dev. This is the single source of
+# truth: hack/istio-hub.sh reads it to decide both which images to mirror and which hub
+# to write into the downloaded charts. Add a minor here when Istio ships a new one.
+# TODO: Remove this once 1.30 drops out of support.
+MIRROR_ISTIO_MINORS ?= 1.31
+
+.PHONY: mirror-istio-images
+mirror-istio-images: crane ## Mirror the Istio operand images that upstream only publishes to Docker Hub into quay.io/sail-dev.
+	@CRANE=$(CRANE) hack/mirror-istio-images.sh $(MIRROR_ISTIO_MINORS)
+
 .PHONY: update-deps
 update-deps: ## Update all dependencies including tools, Go modules, and operator components.
 	@echo "Running dependency update script..."
@@ -603,6 +614,7 @@ ISTIOCTL ?= $(LOCALBIN)/istioctl
 RUNME ?= $(LOCALBIN)/runme
 MISSPELL ?= $(LOCALBIN)/misspell
 CRD_SCHEMA_CHECKER ?= $(LOCALBIN)/crd-schema-checker
+CRANE ?= $(LOCALBIN)/crane
 
 ## Tool Versions
 OPERATOR_SDK_VERSION ?= v1.42.3
@@ -616,6 +628,7 @@ ISTIOCTL_VERSION ?= 1.26.2
 RUNME_VERSION ?= 3.17.5
 MISSPELL_VERSION ?= v0.3.4
 CRD_SCHEMA_CHECKER_VERSION ?= release-4.22
+CRANE_VERSION ?= v0.22.1
 
 .PHONY: helm $(HELM)
 helm: $(HELM) ## Download helm to bin directory. If wrong version is installed, it will be overwritten.
@@ -691,6 +704,12 @@ $(ENVTEST): $(LOCALBIN)
 gitleaks: $(GITLEAKS) ## Download gitleaks to bin directory.
 $(GITLEAKS): $(LOCALBIN)
 	@test -s $(LOCALBIN)/gitleaks || GOBIN=$(LOCALBIN) go install github.com/zricethezav/gitleaks/v8@${GITLEAKS_VERSION}
+
+.PHONY: crane
+crane: $(CRANE) ## Download crane to bin directory. If wrong version is installed, it will be overwritten.
+$(CRANE): $(LOCALBIN)
+	@test -s $(LOCALBIN)/crane && $(LOCALBIN)/crane version | grep -q $(patsubst v%,%,$(CRANE_VERSION)) || \
+	GOBIN=$(LOCALBIN) go install github.com/google/go-containerregistry/cmd/crane@$(CRANE_VERSION)
 
 OCP ?= false
 
