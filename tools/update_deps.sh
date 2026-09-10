@@ -112,12 +112,13 @@ function getLatestVersionFromDockerHub() {
   curl -sL "https://hub.docker.com/v2/repositories/${1}/tags/?page_size=100" | jq -r '.results[].name' | sort -V | tail -n 1
 }
 
+# NOTE: This is skipped as 1.28 is EOL upstream and we need to use a custom quay.io build-tools image
 # Update common files
-make update-common
+# make update-common
 
 # update build container used in github actions
-NEW_IMAGE_MASTER=$(grep IMAGE_VERSION= < common/scripts/setup_env.sh | cut -d= -f2)
-"$SED_CMD" -i -e "s|\(registry.istio.io/testing/build-tools\):master.*|\1:$NEW_IMAGE_MASTER|" .github/workflows/update-deps.yaml
+# NEW_IMAGE_MASTER=$(grep IMAGE_VERSION= < common/scripts/setup_env.sh | cut -d= -f2)
+# "$SED_CMD" -i -e "s|\(registry.istio.io/testing/build-tools\):master.*|\1:$NEW_IMAGE_MASTER|" .github/workflows/update-deps.yaml
 
 # Update go dependencies
 export GO111MODULE=on
