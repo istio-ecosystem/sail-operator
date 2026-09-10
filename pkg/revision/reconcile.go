@@ -38,33 +38,39 @@ func CreateOrUpdate(
 		return fmt.Errorf("failed to get active IstioRevision: %w", err)
 	}
 
+	rev.Spec.Version = version
+	rev.Spec.Namespace = namespace
+	rev.Spec.Values = values
+	setOwnerReference(&rev, ownerRef)
+
 	if found {
 		// update
-		rev.Spec.Version = version
-		rev.Spec.Values = values
 		log.Info("Updating IstioRevision")
 		if err = cl.Update(ctx, &rev); err != nil {
 			return fmt.Errorf("failed to update IstioRevision %q: %w", rev.Name, err)
 		}
 	} else {
 		// create new
-		rev = v1.IstioRevision{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:            revName,
-				OwnerReferences: []metav1.OwnerReference{ownerRef},
-			},
-			Spec: v1.IstioRevisionSpec{
-				Version:   version,
-				Namespace: namespace,
-				Values:    values,
-			},
-		}
+		rev.Name = revName
 		log.Info("Creating IstioRevision")
 		if err = cl.Create(ctx, &rev); err != nil {
 			return fmt.Errorf("failed to create IstioRevision %q: %w", rev.Name, err)
 		}
 	}
 	return nil
+}
+
+// setOwnerReference ensures the expected ownerReference is present on the revision.
+// It replaces any existing ownerRef with the same Kind+Name (e.g. after the owner
+// was re-created with a new UID), or appends if none matches.
+func setOwnerReference(rev *v1.IstioRevision, ownerRef metav1.OwnerReference) {
+	for i, ref := range rev.OwnerReferences {
+		if ref.Kind == ownerRef.Kind && ref.Name == ownerRef.Name {
+			rev.OwnerReferences[i] = ownerRef
+			return
+		}
+	}
+	rev.OwnerReferences = append(rev.OwnerReferences, ownerRef)
 }
 
 func getRevision(ctx context.Context, cl client.Client, name string) (rev v1.IstioRevision, found bool, err error) {
