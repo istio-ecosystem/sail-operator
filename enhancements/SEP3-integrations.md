@@ -162,7 +162,14 @@ kind: PersesDatasource
 metadata:
   name: prometheus-datasource
   namespace: monitoring
-spec: {}
+spec:
+  config:
+    display:
+      name: prometheus-datasource
+    default: true
+    plugin:
+      kind: PrometheusDatasource
+      spec: {}
 ```
 
 ```yaml
