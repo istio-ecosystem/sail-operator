@@ -1,0 +1,9 @@
+category: fixed
+title: Reconcile OwnerRef on IstioRevision object during update
+description: |
+  When revision.CreateOrUpdate reconciles during update, the OwnerReference
+  is not being updated, which could lead to a state, where the orphaned
+  revision is never pruned or reflected in "status.revisions".
+
+  Add OwnerReference during reconcile update.
+issueLink: https://github.com/istio-ecosystem/sail-operator/issues/2083
