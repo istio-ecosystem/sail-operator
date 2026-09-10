@@ -74,8 +74,8 @@ else
 fi
 
 # Build image to use
-TOOLS_REGISTRY_PROVIDER=${TOOLS_REGISTRY_PROVIDER:-gcr.io}
-PROJECT_ID=${PROJECT_ID:-istio-testing}
+TOOLS_REGISTRY_PROVIDER=${TOOLS_REGISTRY_PROVIDER:-quay.io}
+PROJECT_ID=${PROJECT_ID:-sail-dev}
 if [[ "${IMAGE_VERSION:-}" == "" ]]; then
   IMAGE_VERSION=release-1.28-879cab1fff4bf7578feb9973cac1e413b6e16147
 fi
