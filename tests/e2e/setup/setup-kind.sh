@@ -83,6 +83,8 @@ else
   KUBECONFIG="${ARTIFACTS}/config" setup_kind_cluster "${KIND_CLUSTER_NAME}" "${KIND_IMAGE}" "" "true" "true"
   setup_kind_registry "$KIND_CLUSTER_NAME"
 
+  export KUBECONFIG="${ARTIFACTS}/config"
+
   # Apply Gateway API CRDs needed for library tests
   KUBECONFIG="${ARTIFACTS}/config" kubectl apply --server-side -f "${SCRIPTPATH}/testdata/gateway-api/experimental-install.yaml"
 
