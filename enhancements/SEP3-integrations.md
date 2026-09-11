@@ -521,7 +521,7 @@ Integrations will report `Status`. Non-exhaustive list of what should be in `Sta
 - Validations: do the refs exist?
 - Success/failure to update resources.
 - Possibly report if the update was partially applied i.e. some other controller owns part of the fields.
-- `PersesAvailable=False` with reason `MissingCRDs` when `kind: PersesDatasource` is set but `perses.dev` CRDs are not installed. Other targets still reconcile.
+- Missing CRDs when the targetRef's CRD does not exist in the cluster.
 
 #### Migration
 
