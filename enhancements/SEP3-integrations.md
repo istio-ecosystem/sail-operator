@@ -152,7 +152,7 @@ A single `Integration` resource can target multiple resources, such as both an `
 
 Here are examples of each type:
 
-A `MetricsIntegration` targeting Istio, Kiali, and a user-created `PersesDatasource` for UWM:
+A `MetricsIntegration` targeting Istio, and Perses for UWM:
 
 The user creates the `PersesDatasource` (and any Perses prerequisites) before or alongside the `MetricsIntegration`:
 
@@ -181,9 +181,6 @@ spec:
   targetRefs:
     - kind: Istio
       name: default
-    - kind: Kiali
-      name: kiali
-      namespace: istio-system
     - kind: PersesDatasource
       name: prometheus-datasource
       namespace: monitoring
