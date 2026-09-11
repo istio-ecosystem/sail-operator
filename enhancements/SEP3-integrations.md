@@ -668,4 +668,4 @@ The implementation for UWM is already complete as part of the [monitoring contro
 - Replaced `istioRef` + `dashboard` fields with a unified `target` discriminated union (Istio | Kiali).
 - Replaced `target` discriminated union with `targetRefs` array of references.
 - Updated migration section to ignore any existing resources.
-- Specified `PersesDatasource` as a `MetricsIntegration` targetRef: user-created datasource with controller SSA, productized dashboards, and dashboard productization (OSSM-15316). Kiali `external_services.perses` is not configured implicitly.
+- Updated `Perses` targetRef for `MetricsIntegration` to `PersesDatasource`.
