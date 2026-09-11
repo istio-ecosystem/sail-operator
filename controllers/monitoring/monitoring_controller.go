@@ -182,7 +182,7 @@ func (r *Reconciler) reconcilePodMonitors(ctx context.Context, istio *v1.Istio, 
 	}
 
 	for _, ns := range namespaces {
-		if err := r.reconcilePodMonitorInNamespace(ctx, istio, rev, ns.Name); err != nil {
+		if err := r.reconcilePodMonitorInNamespace(ctx, istio, ns.Name); err != nil {
 			return fmt.Errorf("failed to reconcile PodMonitor in namespace %s: %w", ns.Name, err)
 		}
 		log.V(2).Info("Reconciled PodMonitor for injection namespace", "namespace", ns.Name, "revision", rev.Name)
@@ -243,9 +243,9 @@ func (r *Reconciler) namespacesForRevision(ctx context.Context, rev *v1.IstioRev
 }
 
 // reconcilePodMonitorInNamespace creates a PodMonitor in the specified namespace if it does not already exist.
-func (r *Reconciler) reconcilePodMonitorInNamespace(ctx context.Context, istio *v1.Istio, rev *v1.IstioRevision, namespace string) error {
+func (r *Reconciler) reconcilePodMonitorInNamespace(ctx context.Context, istio *v1.Istio, namespace string) error {
 	log := logf.FromContext(ctx)
-	desired := r.buildPodMonitor(istio, rev, namespace)
+	desired := r.buildPodMonitor(istio, namespace)
 
 	existing := &monitoringv1.PodMonitor{}
 	err := r.Client.Get(ctx, client.ObjectKeyFromObject(desired), existing)
@@ -308,9 +308,11 @@ func (r *Reconciler) buildServiceMonitor(istio *v1.Istio, rev *v1.IstioRevision)
 	return sm
 }
 
-// buildPodMonitor constructs the PodMonitor for monitoring istio-proxy sidecars
-func (r *Reconciler) buildPodMonitor(istio *v1.Istio, rev *v1.IstioRevision, namespace string) *monitoringv1.PodMonitor {
-	name := rev.Name + podMonitorNameSuffix
+// buildPodMonitor constructs the PodMonitor for monitoring istio-proxy sidecars.
+// Named and owned by the Istio so a revisioned upgrade does not create a second
+// scrape job or garbage-collect the monitor when a revision is pruned.
+func (r *Reconciler) buildPodMonitor(istio *v1.Istio, namespace string) *monitoringv1.PodMonitor {
+	name := istio.Name + podMonitorNameSuffix
 	// TODO: map tuningEnabled from an Integration API spec field in a follow-up enhancement.
 	relabelCfg := relabeling.ForPlatform(r.Config.Platform, istio.Name, false)
 
@@ -322,9 +324,9 @@ func (r *Reconciler) buildPodMonitor(istio *v1.Istio, rev *v1.IstioRevision, nam
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion: v1.GroupVersion.String(),
-					Kind:       v1.IstioRevisionKind,
-					Name:       rev.Name,
-					UID:        rev.UID,
+					Kind:       v1.IstioKind,
+					Name:       istio.Name,
+					UID:        istio.UID,
 					Controller: ptr.Of(true),
 				},
 			},
@@ -382,7 +384,8 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Named("monitoring").
 		Watches(&v1.Istio{}, mainObjectHandler).
 		// Watch IstioRevisions so create/update/delete requeues the parent Istio.
-		// ServiceMonitor and PodMonitor owner references on IstioRevision handle GC on revision deletion.
+		// ServiceMonitors are owned by the IstioRevision. PodMonitors are owned by
+		// the Istio so they survive revisioned upgrades.
 		Watches(&v1.IstioRevision{}, ownedRevisionHandler).
 		// Watch namespaces so sidecar injection label changes requeue the referenced Istio.
 		Watches(&corev1.Namespace{}, namespaceHandler, builder.WithPredicates(sidecarInjectionNamespacePredicate())).
