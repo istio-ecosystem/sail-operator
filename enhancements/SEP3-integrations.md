@@ -13,7 +13,7 @@ Configuring Istio to work with various integrations, especially on OpenShift, of
 
 ## Non-goals
 - Modifying the existing Istio CRD.
-- Installing or managing the Perses Operator, Perses server, or Cluster Observability Operator (COO).
+- Installing or directly managing external datastores or integrations such as Prometheus, Tempo, Perses. This is another operator or admin's responsibility to manage.
 
 ## Design
 
