@@ -152,7 +152,7 @@ A single `Integration` resource can target multiple resources, such as both an `
 
 Here are examples of each type:
 
-A `MetricsIntegration` targeting Istio, and Perses for UWM:
+A `MetricsIntegration` targeting Istio and Perses for UWM:
 
 The user creates the `PersesDatasource` (and any Perses prerequisites) before or alongside the `MetricsIntegration`:
 
@@ -262,7 +262,7 @@ What is configurable vs fixed:
 
 Reconciliation order:
 
-1. Detect `PersesDatasource` and `PersesDashboard` CRDs (`perses.dev/v1alpha2`). If missing, skip Perses reconciliation and report `PersesAvailable=False` with reason `MissingCRDs`; other targets (`Istio`, `Kiali`, monitors) continue to reconcile.
+1. Detect `PersesDatasource` and `PersesDashboard` CRDs (`perses.dev/v1alpha2`). If missing, skip Perses reconciliation and report `PersesAvailable=False` with reason `MissingCRDs`; other targets (`Istio`, monitors) continue to reconcile.
 2. Verify each `PersesDatasource` targetRef exists. If not, report validation failure in status.
 3. Server-side apply mesh-related fields onto each referenced `PersesDatasource`, aligned with `type`.
 4. Create/apply productized `PersesDashboard` resources from content shipped in the operator bundle, in the same namespace as each datasource targetRef, referencing that datasource by name.
@@ -328,10 +328,6 @@ Names follow the community-mixins operator YAML. Kiali slugifies the display nam
 
 All six dashboards are installed for each `PersesDatasource` targetRef. Upstream community-mixins also has `istio-extension-dashboard` (Wasm); it is **not** in the initial supported set.
 
-###### Kiali deep links
-
-Kiali Perses integration requires `external_services.perses` on the `Kiali` CR (URL, project, auth, dashboard variable mapping). The Integrations controller does **not** infer or patch this configuration from `PersesDatasource` targetRefs. Users configure it explicitly on `Kiali` when they want deep links, or rely on a future explicit integration mechanism if one is added.
-
 ###### Lifecycle
 
 - The controller puts an `ownerRef` on every `PersesDashboard` it creates, so deleting the `MetricsIntegration` deletes them.
@@ -389,7 +385,7 @@ These are broadly what the golang API changes would be:
 ```go
 // TargetReference identifies a resource that the integration configures
 type TargetReference struct {
-	// Kind specifies the target kind: "Istio", "Kiali", or "PersesDatasource".
+	// Kind specifies the target kind: "Istio" or "PersesDatasource".
 	Kind string `json:"kind"`
 
 	// Name is the name of the target resource.
