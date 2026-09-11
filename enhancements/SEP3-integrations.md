@@ -600,7 +600,7 @@ The exact performance impact will partially depend on the implementation details
 
 ### Kubernetes vs OpenShift vs Other Distributions
 
-Some of this controller will only be applicable to OpenShift. The UWM and COO types are OpenShift specific but other types, such as `TempoStack` would be valid on either Kubernetes or OpenShift. `PersesDatasource` and `PersesDashboard` provisioning is reconciled only when `perses.dev` CRDs are present; the default UWM/COO datasource endpoints and dashboard productization are OpenShift-specific for the initial deliverable.
+Some of this controller will only be applicable to OpenShift. The UWM and COO types are OpenShift specific but other types, such as `TempoStack` would be valid on either Kubernetes or OpenShift.
 
 ## Alternatives Considered
 - The main alternative to having a separate CRD for the integrations is to add fields to the `Istio` spec directly. One drawback of this approach is that there isn't a clear separation of concerns. Today the istio controller alone reconciles the `Istio` spec. If the integrations controller began to reconcile parts of the `Istio` spec, care would need to be taken to ensure the two controllers do not fight with one another. Having a separate resources also allows the API to evolve and rapidly add new types without affecting the stable `Istio` API.
