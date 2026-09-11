@@ -656,7 +656,6 @@ The implementation for UWM is already complete as part of the [monitoring contro
 - [ ] Add `CertificateIntegration` CRD
 - [ ] Add a `Kiali` target on the `Integration` resources.
 - [ ] When `MetricsIntegration` targets a `PersesDatasource`, server-side apply mesh-related fields onto the referenced datasource and create productized `PersesDashboard` resources in the same namespace.
-- [ ] Vendor Istio Perses dashboard YAML from community-mixins under `resources/perses/dashboards/` and include it in the operator bundle.
 
 ## Test Plan
 - A key aspect of this design is utilizing Server Side Apply to ensure that users can override values that the operator sets if need be without fighting against the controller. This needs to be an integral part of the test suite and will be included in e2e testing. Specifically e2e testing should ensure that the operator can Apply a configuration partially and ignore any conflict errors.
