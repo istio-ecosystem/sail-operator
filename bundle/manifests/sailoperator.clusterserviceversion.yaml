@@ -45,7 +45,7 @@ metadata:
     capabilities: Seamless Upgrades
     categories: OpenShift Optional, Integration & Delivery, Networking, Security
     containerImage: quay.io/sail-dev/sail-operator:1.31-latest
-    createdAt: "2026-09-04T09:08:31Z"
+    createdAt: "2026-09-10T12:56:30Z"
     description: The Sail Operator manages the lifecycle of your Istio control plane. It provides custom resources for you to deploy and manage your control plane components.
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "true"
@@ -850,10 +850,10 @@ spec:
                   images.v1_30_4.istiod: registry.istio.io/release/pilot:1.30.4
                   images.v1_30_4.proxy: registry.istio.io/release/proxyv2:1.30.4
                   images.v1_30_4.ztunnel: registry.istio.io/release/ztunnel:1.30.4
-                  images.v1_31_0-beta_1.cni: registry.istio.io/release/install-cni:1.31.0-beta.1
-                  images.v1_31_0-beta_1.istiod: registry.istio.io/release/pilot:1.31.0-beta.1
-                  images.v1_31_0-beta_1.proxy: registry.istio.io/release/proxyv2:1.31.0-beta.1
-                  images.v1_31_0-beta_1.ztunnel: registry.istio.io/release/ztunnel:1.31.0-beta.1
+                  images.v1_31_0-beta_1.cni: quay.io/sail-dev/install-cni:1.31.0-beta.1
+                  images.v1_31_0-beta_1.istiod: quay.io/sail-dev/pilot:1.31.0-beta.1
+                  images.v1_31_0-beta_1.proxy: quay.io/sail-dev/proxyv2:1.31.0-beta.1
+                  images.v1_31_0-beta_1.ztunnel: quay.io/sail-dev/ztunnel:1.31.0-beta.1
                   images.v1_32_0-alpha_102b69cd.cni: registry.istio.io/testing/install-cni:1.32.0-alpha.102b69cd5a7ac0917bc2f6cb05b6217532145c81
                   images.v1_32_0-alpha_102b69cd.istiod: registry.istio.io/testing/pilot:1.32.0-alpha.102b69cd5a7ac0917bc2f6cb05b6217532145c81
                   images.v1_32_0-alpha_102b69cd.proxy: registry.istio.io/testing/proxyv2:1.32.0-alpha.102b69cd5a7ac0917bc2f6cb05b6217532145c81

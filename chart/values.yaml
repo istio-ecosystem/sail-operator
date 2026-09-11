@@ -2,10 +2,10 @@ name: sailoperator
 deployment:
   name: sail-operator
   annotations:
-    images.v1_31_0-beta_1.ztunnel: registry.istio.io/release/ztunnel:1.31.0-beta.1
-    images.v1_31_0-beta_1.istiod: registry.istio.io/release/pilot:1.31.0-beta.1
-    images.v1_31_0-beta_1.proxy: registry.istio.io/release/proxyv2:1.31.0-beta.1
-    images.v1_31_0-beta_1.cni: registry.istio.io/release/install-cni:1.31.0-beta.1
+    images.v1_31_0-beta_1.ztunnel: quay.io/sail-dev/ztunnel:1.31.0-beta.1
+    images.v1_31_0-beta_1.istiod: quay.io/sail-dev/pilot:1.31.0-beta.1
+    images.v1_31_0-beta_1.proxy: quay.io/sail-dev/proxyv2:1.31.0-beta.1
+    images.v1_31_0-beta_1.cni: quay.io/sail-dev/install-cni:1.31.0-beta.1
     images.v1_30_4.ztunnel: registry.istio.io/release/ztunnel:1.30.4
     images.v1_30_4.istiod: registry.istio.io/release/pilot:1.30.4
     images.v1_30_4.proxy: registry.istio.io/release/proxyv2:1.30.4
