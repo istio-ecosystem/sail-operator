@@ -380,6 +380,12 @@ func (k Kubectl) Label(kind, name, labelKey, labelValue string) error {
 	return err
 }
 
+// RemoveLabel removes a label from the specified resource
+func (k Kubectl) RemoveLabel(kind, name, labelKey string) error {
+	_, err := k.executeCommand(k.build(fmt.Sprintf(" label %s %s %s-", kind, name, labelKey)))
+	return err
+}
+
 // LabelNamespaced adds a label to the specified resource in the specified namespace
 func (k Kubectl) LabelNamespaced(kind, namespace, name, labelKey, labelValue string) error {
 	_, err := k.executeCommand(k.build(fmt.Sprintf(" label %s -n %s %s %s=%s", kind, namespace, name, labelKey, labelValue)))

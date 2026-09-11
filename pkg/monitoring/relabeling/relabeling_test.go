@@ -25,15 +25,17 @@ import (
 func TestForPlatformKubernetes(t *testing.T) {
 	g := NewWithT(t)
 
-	cfg := ForPlatform(config.PlatformKubernetes, "ignored-mesh-id", false)
+	cfg := ForPlatform(config.PlatformKubernetes, "my-mesh", false)
 
 	g.Expect(cfg.ServiceMonitorRelabelings).To(BeEmpty())
-	g.Expect(cfg.PodMonitorRelabelings).To(HaveLen(7))
+	g.Expect(cfg.PodMonitorRelabelings).To(HaveLen(8))
 
 	g.Expect(cfg.PodMonitorRelabelings[0].Action).To(Equal("keep"))
 	g.Expect(cfg.PodMonitorRelabelings[0].Regex).To(Equal("istio-proxy"))
 	g.Expect(cfg.PodMonitorRelabelings[4].Action).To(Equal("labeldrop"))
 	g.Expect(cfg.PodMonitorRelabelings[6].TargetLabel).To(Equal("pod"))
+	g.Expect(cfg.PodMonitorRelabelings[7].TargetLabel).To(Equal("mesh_id"))
+	g.Expect(*cfg.PodMonitorRelabelings[7].Replacement).To(Equal("my-mesh"))
 }
 
 func TestForPlatformOpenShift(t *testing.T) {
@@ -62,16 +64,18 @@ func TestForPlatformOpenShiftTuning(t *testing.T) {
 func TestForPlatformDefault(t *testing.T) {
 	g := NewWithT(t)
 
-	cfg := ForPlatform(config.PlatformUndefined, "ignored", false)
+	cfg := ForPlatform(config.PlatformUndefined, "my-mesh", false)
 
-	g.Expect(cfg.PodMonitorRelabelings).To(HaveLen(7))
+	g.Expect(cfg.PodMonitorRelabelings).To(HaveLen(8))
 	g.Expect(cfg.PodMonitorRelabelings[6].TargetLabel).To(Equal("pod"))
+	g.Expect(cfg.PodMonitorRelabelings[7].TargetLabel).To(Equal("mesh_id"))
+	g.Expect(*cfg.PodMonitorRelabelings[7].Replacement).To(Equal("my-mesh"))
 }
 
 func TestCloneRelabelConfigs(t *testing.T) {
 	g := NewWithT(t)
 
-	original := kubernetesPodMonitorRelabelings()
+	original := kubernetesPodMonitorRelabelings("mesh")
 	cloned := cloneRelabelConfigs(original)
 
 	g.Expect(cloned).To(HaveLen(len(original)))

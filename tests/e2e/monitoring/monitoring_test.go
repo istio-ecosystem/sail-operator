@@ -18,6 +18,7 @@ package monitoring
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -26,9 +27,11 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
+	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/cleaner"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/shell"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -37,11 +40,13 @@ import (
 )
 
 const (
-	prometheusNamespace    = "monitoring"
-	prometheusRelease      = "kube-prometheus-stack"
-	managedByValue         = "sail-operator"
-	kubePrometheusValue    = "kube-prometheus"
-	kubernetesRelabelCount = 7
+	prometheusNamespace           = "monitoring"
+	prometheusRelease             = "kube-prometheus-stack"
+	managedByValue                = "sail-operator"
+	kubePrometheusValue           = "kube-prometheus"
+	kubernetesRelabelCount        = 8
+	prometheusDiscoverySkipReason = "Prometheus only selects monitors with release: kube-prometheus-stack; " +
+		"Sail still uses release: istio from the upstream sample"
 )
 
 var monitoringGV = monitoringv1.SchemeGroupVersion
@@ -58,13 +63,19 @@ var _ = Describe("Monitoring Controller", Label("smoke", "monitoring"), Ordered,
 	clr := cleaner.New(cl)
 
 	BeforeAll(func(ctx SpecContext) {
+		if !env.GetBool("OCP", false) {
+			runKubePrometheusStack("install")
+			DeferCleanup(func(_ SpecContext) {
+				runKubePrometheusStack("uninstall")
+			})
+		}
+
 		clr.Record(ctx)
 		Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
 		Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
-	})
-
-	AfterAll(func(ctx SpecContext) {
-		clr.Cleanup(ctx)
+		DeferCleanup(func(ctx SpecContext) {
+			clr.Cleanup(ctx)
+		})
 	})
 
 	When("Istio is installed with monitoring enabled", func() {
@@ -111,14 +122,13 @@ var _ = Describe("Monitoring Controller", Label("smoke", "monitoring"), Ordered,
 				}))
 				g.Expect(sm.OwnerReferences).NotTo(BeEmpty())
 				g.Expect(sm.OwnerReferences[0].Kind).To(Equal(v1.IstioRevisionKind))
+				g.Expect(sm.OwnerReferences[0].Name).To(Equal(istioName))
 			}).Should(Succeed())
 			Success("ServiceMonitor for istiod exists")
 		})
 
-		PIt("discovers the istiod ServiceMonitor in Prometheus", func(ctx SpecContext) {
-			// Pending: smoke with default selectorNilUsesHelmValues=true requires monitors to
-			// carry release: <kube-prometheus-stack release name>. Follow-up will align Sail's
-			// release label with that selector (currently release: istio from upstream sample).
+		It("discovers the istiod ServiceMonitor in Prometheus", func(ctx SpecContext) {
+			Skip(prometheusDiscoverySkipReason)
 			targetsPath := fmt.Sprintf(
 				"/api/v1/namespaces/%s/services/%s-prometheus:http-web/proxy/api/v1/targets",
 				prometheusNamespace,
@@ -170,8 +180,13 @@ var _ = Describe("Monitoring Controller", Label("smoke", "monitoring"), Ordered,
 			Success("PodMonitor not created in control plane namespace")
 		})
 
-		PIt("discovers the proxy PodMonitor target in Prometheus", func(ctx SpecContext) {
-			// Pending: same release-label follow-up as the ServiceMonitor discovery test above.
+		It("keeps the PodMonitor when the istio.io/rev label is removed", func(ctx SpecContext) {
+			assertPodMonitorKept(ctx, revLabelNamespace, "istio.io/rev", podMonitorName)
+			Success("PodMonitor kept after istio.io/rev label removal")
+		})
+
+		It("discovers the proxy PodMonitor target in Prometheus", func(ctx SpecContext) {
+			Skip(prometheusDiscoverySkipReason)
 			Expect(k.WithNamespace(injectionEnabledNamespace).ApplyKustomize("sleep")).To(Succeed())
 			Eventually(common.CheckPodsReady).WithArguments(ctx, cl, injectionEnabledNamespace).Should(Succeed())
 
@@ -189,6 +204,11 @@ var _ = Describe("Monitoring Controller", Label("smoke", "monitoring"), Ordered,
 				g.Expect(strings.ToLower(targets)).To(ContainSubstring("istio-proxy"))
 			}).Should(Succeed())
 			Success("Prometheus discovered proxy PodMonitor target")
+		})
+
+		It("keeps the PodMonitor when the istio-injection label is removed", func(ctx SpecContext) {
+			assertPodMonitorKept(ctx, injectionEnabledNamespace, "istio-injection", podMonitorName)
+			Success("PodMonitor kept after istio-injection label removal")
 		})
 	})
 
@@ -216,5 +236,30 @@ func assertPodMonitor(g Gomega, pm *monitoringv1.PodMonitor) {
 		Operator: metav1.LabelSelectorOpDoesNotExist,
 	}))
 	g.Expect(pm.OwnerReferences).NotTo(BeEmpty())
-	g.Expect(pm.OwnerReferences[0].Kind).To(Equal(v1.IstioRevisionKind))
+	g.Expect(pm.OwnerReferences[0].Kind).To(Equal(v1.IstioKind))
+	g.Expect(pm.OwnerReferences[0].Name).To(Equal(istioName))
+}
+
+func assertPodMonitorKept(ctx SpecContext, namespace, labelKey, name string) {
+	Expect(k.RemoveLabel("namespace", namespace, labelKey)).To(Succeed())
+
+	pm := &monitoringv1.PodMonitor{}
+	pm.SetGroupVersionKind(monitoringGV.WithKind("PodMonitor"))
+	Consistently(cl.Get).WithTimeout(15*time.Second).
+		WithArguments(ctx, client.ObjectKey{Name: name, Namespace: namespace}, pm).
+		Should(Succeed(), "PodMonitor should be kept while sidecar workloads may still exist")
+
+	pmList := &monitoringv1.PodMonitorList{}
+	Expect(cl.List(ctx, pmList, client.InNamespace(namespace))).To(Succeed())
+	Expect(pmList.Items).To(HaveLen(1), "namespace label changes should not create a second PodMonitor")
+	Expect(pmList.Items[0].Name).To(Equal(name))
+}
+
+func kubePrometheusStackScript() string {
+	return filepath.Join(project.RootDir, "tests", "e2e", "monitoring", "install-kube-prometheus-stack.sh")
+}
+
+func runKubePrometheusStack(action string) {
+	out, err := shell.ExecuteCommand(fmt.Sprintf("%q %s", kubePrometheusStackScript(), action))
+	Expect(err).NotTo(HaveOccurred(), out)
 }
