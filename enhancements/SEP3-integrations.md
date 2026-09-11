@@ -201,10 +201,6 @@ spec:
   userWorkloadMonitoring: {}
 ```
 
-Opt-in for Perses is **including `kind: PersesDatasource` in `targetRefs`**, not a new `type`. `type` remains the metrics backend (`UserWorkloadMonitoring`, `ClusterObservabilityOperator`, …) so the controller knows which metrics endpoint to configure on the datasource.
-
-The Perses **project** is the Kubernetes namespace of the `PersesDatasource` targetRef (`namespace: monitoring` above). There is no separate `project` field on `MetricsIntegration`. See [Perses (MetricsIntegration)](#perses-metricsintegration).
-
 A `TracingIntegration` targeting both Istio and Kiali:
 ```yaml
 kind: TracingIntegration
