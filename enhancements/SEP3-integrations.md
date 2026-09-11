@@ -154,7 +154,7 @@ Here are examples of each type:
 
 A `MetricsIntegration` targeting Istio and Perses for UWM:
 
-The user creates the `PersesDatasource` (and any Perses prerequisites) before or alongside the `MetricsIntegration`:
+The user creates the resources specified in `targetRefs`:
 
 ```yaml
 apiVersion: perses.dev/v1alpha2
@@ -170,7 +170,20 @@ spec:
     plugin:
       kind: PrometheusDatasource
       spec: {}
-```
+---
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  namespace: istio-system
+---
+apiVersion: kiali.io/v1alpha1
+kind: Kiali
+metadata:
+  name: kiali
+  namespace: istio-system
+spec: {}
 
 ```yaml
 kind: MetricsIntegration
