@@ -21,24 +21,27 @@
 # runs this after adding a new Istio version but before generating the manifests that
 # reference it, so the images are always in place before anything points at them.
 #
-# Takes one or more Istio minor releases, defaulting to MIRROR_ISTIO_MINORS in the Makefile,
-# and mirrors every matching version in versions.yaml, e.g.:
+# Takes the path to versions.yaml, followed by one or more Istio minor releases,
+# defaulting to MIRROR_ISTIO_MINORS in the Makefile, and mirrors every matching
+# version in versions.yaml, e.g.:
 #
-#   hack/mirror-istio-images.sh 1.31
+#   hack/mirror-istio-images.sh pkg/istioversion/versions.yaml 1.31
 #
 # Requires crane to be authenticated against MIRROR_HUB.
 
 set -euo pipefail
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-REPO_ROOT=$(dirname "${SCRIPT_DIR}")
 
 # shellcheck source=hack/istio-hub.sh
 source "${SCRIPT_DIR}/istio-hub.sh"
 
-VERSIONS_YAML_DIR=${VERSIONS_YAML_DIR:-"${REPO_ROOT}/pkg/istioversion"}
-VERSIONS_YAML_FILE=${VERSIONS_YAML_FILE:-"versions.yaml"}
-VERSIONS_YAML_PATH=${VERSIONS_YAML_DIR}/${VERSIONS_YAML_FILE}
+if [ $# -eq 0 ]; then
+  echo "usage: $(basename "$0") <versions-yaml-path> [minor...]" >&2
+  exit 1
+fi
+VERSIONS_YAML_PATH=$1
+shift
 
 # crane binary to use. The Makefile pins the version and installs it into bin/.
 CRANE=${CRANE:-crane}
