@@ -28,7 +28,7 @@ type Config struct {
 }
 
 // ForPlatform returns default relabeling configuration for the given platform.
-// meshID is the Istio CR name used as the mesh_id label on OpenShift; it is ignored on Kubernetes.
+// meshID is the Istio CR name used as the mesh_id label on Kubernetes and OpenShift.
 // tuningEnabled is an option for metric thinning usages.
 func ForPlatform(platform config.Platform, meshID string, tuningEnabled bool) Config {
 	switch platform {
@@ -46,7 +46,7 @@ func ForPlatform(platform config.Platform, meshID string, tuningEnabled bool) Co
 		}
 	default:
 		return Config{
-			PodMonitorRelabelings:     kubernetesPodMonitorRelabelings(),
+			PodMonitorRelabelings:     kubernetesPodMonitorRelabelings(meshID),
 			ServiceMonitorRelabelings: nil,
 		}
 	}
@@ -54,7 +54,7 @@ func ForPlatform(platform config.Platform, meshID string, tuningEnabled bool) Co
 
 // kubernetesPodMonitorRelabelings returns relabeling rules from upstream Istio:
 // samples/addons/extras/prometheus-operator.yaml
-func kubernetesPodMonitorRelabelings() []monitoringv1.RelabelConfig {
+func kubernetesPodMonitorRelabelings(meshID string) []monitoringv1.RelabelConfig {
 	return cloneRelabelConfigs([]monitoringv1.RelabelConfig{
 		keepContainer("istio-proxy"),
 		keepAnnotationPresent(),
@@ -74,6 +74,11 @@ func kubernetesPodMonitorRelabelings() []monitoringv1.RelabelConfig {
 			Action:       "replace",
 			SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_name"},
 			TargetLabel:  "pod",
+		},
+		{
+			Action:      "replace",
+			TargetLabel: "mesh_id",
+			Replacement: strPtr(meshID),
 		},
 	})
 }
@@ -180,17 +185,8 @@ func addressReplaceIPv4() monitoringv1.RelabelConfig {
 
 func cloneRelabelConfigs(in []monitoringv1.RelabelConfig) []monitoringv1.RelabelConfig {
 	out := make([]monitoringv1.RelabelConfig, len(in))
-	for i, cfg := range in {
-		out[i] = cfg
-		if cfg.Separator != nil {
-			out[i].Separator = strPtr(*cfg.Separator)
-		}
-		if cfg.Replacement != nil {
-			out[i].Replacement = strPtr(*cfg.Replacement)
-		}
-		if len(cfg.SourceLabels) > 0 {
-			out[i].SourceLabels = append([]monitoringv1.LabelName(nil), cfg.SourceLabels...)
-		}
+	for i := range in {
+		out[i] = *in[i].DeepCopy()
 	}
 	return out
 }
