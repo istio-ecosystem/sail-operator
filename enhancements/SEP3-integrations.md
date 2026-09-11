@@ -550,7 +550,6 @@ Adding the Cluster Observability Operator integration would require adding:
 
 When `MetricsIntegration` targets a `PersesDatasource`, the Integrations controller also needs:
 - `PATCH` for `PersesDatasource` resources (`perses.dev/v1alpha2`)
-- `CREATE`/`PATCH`/`DELETE` for `PersesDashboard` resources (`perses.dev/v1alpha2`)
 
 This will greatly increase the scope of the Sail Operator's Service Account but the operator already has full control of `Secret` and `ClusterRole`/`ClusterRoleBinding` resources effectively giving it cluster admin for the cluster.
 
