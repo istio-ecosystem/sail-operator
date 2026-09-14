@@ -21,14 +21,17 @@ import (
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 func CreateOrUpdate(
-	ctx context.Context, cl client.Client, revName string, version string, namespace string,
-	values *v1.Values, ownerRef metav1.OwnerReference,
+	ctx context.Context, cl client.Client, scheme *runtime.Scheme,
+	revName string, version string, namespace string,
+	values *v1.Values, owner metav1.Object,
 ) error {
 	log := logf.FromContext(ctx)
 	log = log.WithValues("IstioRevision", revName)
@@ -41,7 +44,9 @@ func CreateOrUpdate(
 	rev.Spec.Version = version
 	rev.Spec.Namespace = namespace
 	rev.Spec.Values = values
-	setOwnerReference(&rev, ownerRef)
+	if err = controllerutil.SetControllerReference(owner, &rev, scheme); err != nil {
+		return fmt.Errorf("failed to set controller reference on IstioRevision %q: %w", revName, err)
+	}
 
 	if found {
 		// update
@@ -58,19 +63,6 @@ func CreateOrUpdate(
 		}
 	}
 	return nil
-}
-
-// setOwnerReference ensures the expected ownerReference is present on the revision.
-// It replaces any existing ownerRef with the same Kind+Name (e.g. after the owner
-// was re-created with a new UID), or appends if none matches.
-func setOwnerReference(rev *v1.IstioRevision, ownerRef metav1.OwnerReference) {
-	for i, ref := range rev.OwnerReferences {
-		if ref.Kind == ownerRef.Kind && ref.Name == ownerRef.Name {
-			rev.OwnerReferences[i] = ownerRef
-			return
-		}
-	}
-	rev.OwnerReferences = append(rev.OwnerReferences, ownerRef)
 }
 
 func getRevision(ctx context.Context, cl client.Client, name string) (rev v1.IstioRevision, found bool, err error) {
