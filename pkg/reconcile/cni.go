@@ -67,7 +67,9 @@ func (r *CNIReconciler) Validate(ctx context.Context, version, namespace string)
 }
 
 // ComputeValues computes the final Helm values by applying digests, vendor defaults, and profiles.
-func (r *CNIReconciler) ComputeValues(version string, userValues *v1.CNIValues, profile string, existingReleaseValues helm.Values) (helm.Values, error) {
+func (r *CNIReconciler) ComputeValues(
+	ctx context.Context, version, namespace string, userValues *v1.CNIValues, profile string,
+) (helm.Values, error) {
 	resolvedVersion, err := istioversion.Resolve(version)
 	if err != nil {
 		if istioversion.IsEOLVersion(version) {
@@ -91,6 +93,11 @@ func (r *CNIReconciler) ComputeValues(version string, userValues *v1.CNIValues, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to apply profile: %w", err)
 	}
+
+	existingReleaseValues, err := helm.GetReleaseValues(ctx, r.cfg.ChartManager, namespace, cniReleaseName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get existing Helm chart %q: %w", cniChartName, err)
+	}
 	if err := istiovalues.ApplyNetworkPolicyDefaults(r.cfg.OCPVersion, &mergedHelmValues, existingReleaseValues); err != nil {
 		return nil, fmt.Errorf("failed to apply network policy defaults: %w", err)
 	}
@@ -100,12 +107,7 @@ func (r *CNIReconciler) ComputeValues(version string, userValues *v1.CNIValues, 
 
 // Install installs or upgrades the istio-cni Helm chart.
 func (r *CNIReconciler) Install(ctx context.Context, version, namespace string, values *v1.CNIValues, profile string, ownerRef *metav1.OwnerReference) error {
-	existingReleaseValues, err := helm.GetReleaseValues(ctx, r.cfg.ChartManager, namespace, cniReleaseName)
-	if err != nil {
-		return fmt.Errorf("failed to get existing Helm chart %q: %w", cniChartName, err)
-	}
-
-	mergedHelmValues, err := r.ComputeValues(version, values, profile, existingReleaseValues)
+	mergedHelmValues, err := r.ComputeValues(ctx, version, namespace, values, profile)
 	if err != nil {
 		return err
 	}

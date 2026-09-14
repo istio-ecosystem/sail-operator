@@ -40,8 +40,9 @@ type OCPVersion struct {
 }
 
 type ReconcilerConfig struct {
-	ResourceFS              fs.FS
-	Platform                Platform
+	ResourceFS fs.FS
+	Platform   Platform
+	// TODO: Remove OCPVersion once support for OpenShift 4 is dropped.
 	OCPVersion              *OCPVersion
 	DefaultProfile          string
 	OperatorNamespace       string

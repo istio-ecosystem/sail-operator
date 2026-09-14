@@ -47,7 +47,6 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -292,7 +291,7 @@ spec:
 			}
 
 			updateCNIValues(&v1.CNIValues{Global: &v1.CNIGlobalConfig{NetworkPolicy: &v1.NetworkPolicyConfig{
-				Enabled: ptr.To(false),
+				Enabled: new(bool),
 			}}})
 			cniPolicyKey := client.ObjectKey{Name: "istio-cni", Namespace: cniNamespace}
 			Eventually(cl.Get).WithArguments(ctx, cniPolicyKey, &networkingv1.NetworkPolicy{}).Should(ReturnNotFoundError())

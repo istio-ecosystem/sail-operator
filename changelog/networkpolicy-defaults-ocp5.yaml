@@ -5,3 +5,6 @@ description: |
   enable NetworkPolicy by default. Existing releases are not changed during
   an OpenShift or operator upgrade. Set spec.values.global.networkPolicy.enabled
   explicitly to override the default; explicit false settings are preserved.
+  The OpenShift version is detected when the operator starts. Restart the
+  operator after upgrading OpenShift if new releases should receive the OCP 5
+  default immediately.
