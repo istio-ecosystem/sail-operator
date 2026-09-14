@@ -572,7 +572,7 @@ update-istio: ## Update the Istio commit hash in the 'latest' entry in versions.
 update-istio-samples: ## Update the Istio samples files located in the samples folder to match the latest Istio upstream version of the charts.
 	@hack/update-istio-samples.sh
 
-# Istio minor releases component images are only publisheed to Docker Hub. We mirror these
+# Istio minor releases component images are only published to Docker Hub. We mirror these
 # to quay.io/sail-dev. This is the single source of
 # truth: hack/istio-hub.sh reads it to decide both which images to mirror and which hub
 # to write into the downloaded charts. Add a minor here when Istio ships a new one.

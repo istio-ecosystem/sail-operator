@@ -75,6 +75,26 @@ function versionsForMinor() {
       | .version' "${VERSIONS_YAML_PATH}"
 }
 
+# get_digest prints the digest of an image, nothing if the image doesn't exist, and
+# returns non-zero for any other crane failure.
+# $1: image reference
+function get_digest() {
+  local image_ref=$1 output
+  if output=$("${CRANE}" digest "${image_ref}" 2>&1); then
+    echo "${output}"
+    return 0
+  fi
+
+  # A HEAD 404 can precede a different GET failure, so only the last line decides.
+  if [[ "${output##*$'\n'}" =~ MANIFEST_UNKNOWN|NAME_UNKNOWN|"unexpected status code 404" ]]; then
+    return 0
+  fi
+
+  printf '%s\n' "${output}" >&2
+  echo "  ERROR: failed to get digest for ${image_ref}" >&2
+  return 1
+}
+
 failures=()
 
 for minor in "$@"; do
@@ -90,14 +110,15 @@ for minor in "$@"; do
       src="${SOURCE_HUB}/${image}:${version}"
       dst="${MIRROR_HUB}/${image}:${version}"
 
-      src_digest=$("${CRANE}" digest "${src}" 2>/dev/null || true)
+      src_digest=$(get_digest "${src}") || exit 1
       if [ -z "${src_digest}" ]; then
         echo "  ERROR: ${src} does not exist"
         failures+=("${src}")
         continue
       fi
 
-      if [ "${src_digest}" == "$("${CRANE}" digest "${dst}" 2>/dev/null || true)" ]; then
+      dst_digest=$(get_digest "${dst}") || exit 1
+      if [ "${src_digest}" == "${dst_digest}" ]; then
         echo "  up to date: ${dst}"
         continue
       fi

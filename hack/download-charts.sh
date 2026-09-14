@@ -212,6 +212,9 @@ function normalizeChartHub() {
 
   local sed_args=() known_hub
   for known_hub in "${SOURCE_HUB}" "${UPSTREAM_HUB}" "${MIRROR_HUB}"; do
+    if [ "${known_hub}" == "${hub}" ]; then
+      continue
+    fi
     sed_args+=(-e "s|hub: ${known_hub}|hub: ${hub}|g")
   done
 
