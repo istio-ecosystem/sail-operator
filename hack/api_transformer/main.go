@@ -32,6 +32,7 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 	"golang.org/x/tools/go/ast/astutil"
+	"golang.org/x/tools/imports"
 	"gopkg.in/yaml.v3"
 )
 
@@ -86,6 +87,10 @@ type CopyTransform struct {
 
 var config *Config
 
+// danglingFieldRefs accumulates struct fields (across all input files) whose type still
+// references a package removed from imports. See findDanglingFieldTypeRefs.
+var danglingFieldRefs []string
+
 type FileTransformer struct {
 	FileSet         *token.FileSet
 	InputFile       string
@@ -118,10 +123,28 @@ func main() {
 		transformedFiles = append(transformedFiles, file)
 	}
 
+	if len(danglingFieldRefs) > 0 {
+		log("Upstream added or renamed field(s) that transform.yaml doesn't know how to map yet:")
+		for _, ref := range danglingFieldRefs {
+			log("  " + ref)
+		}
+		log("Add a replaceFieldTypes (or preserveTypes) entry for each field above in hack/api_transformer/transform.yaml, then re-run `make gen`.")
+		os.Exit(1)
+	}
+
 	mergedFile := mergeFiles(fset, transformedFiles)
 
 	output := getFileHeader(config.HeaderFile) + goFmt(fset, mergedFile)
 	output = removeLeadingEmptyLinesFromStructs(output)
+
+	// addImports entries may end up unused if the field they were added for doesn't exist yet at
+	// the currently pinned upstream version; goimports drops those (and would add back any
+	// accidentally missing ones).
+	if formatted, err := imports.Process(config.OutputFile, []byte(output), nil); err == nil {
+		output = string(formatted)
+	} else {
+		panic(err)
+	}
 
 	// write to outputFile
 	if err := os.WriteFile(config.OutputFile, []byte(output), 0o644); err != nil {
@@ -328,11 +351,77 @@ func (t *FileTransformer) processFile() (*ast.File, error) {
 	t.filterDeclarations(file)
 
 	t.renameImports(file)
+	danglingFieldRefs = append(danglingFieldRefs, t.findDanglingFieldTypeRefs(file)...)
 	fixNames(file)
 	processDocs(file)
 	removeEmptyBlocks(file)
 
 	return file, nil
+}
+
+// findDanglingFieldTypeRefs finds struct fields whose type still references a package that was
+// removed from the file's imports (e.g. a new upstream field of type *structpb.Struct that has no
+// corresponding replaceFieldTypes/preserveTypes entry in transform.yaml). Left unhandled, these
+// compile fine here (Go doesn't check unresolved selectors until later) but fail deep inside
+// `controller-gen` with a cryptic "use of unimported package" error. Catching it here lets us name
+// the exact struct field that needs a transform.yaml entry.
+func (t *FileTransformer) findDanglingFieldTypeRefs(file *ast.File) []string {
+	// file.Imports is populated once at parse time and isn't kept in sync with the import
+	// GenDecl mutations done earlier in processFile, so read the live decl instead.
+	knownImportNames := map[string]bool{}
+	for _, decl := range file.Decls {
+		genDecl, ok := decl.(*ast.GenDecl)
+		if !ok || genDecl.Tok != token.IMPORT {
+			continue
+		}
+		for _, spec := range genDecl.Specs {
+			imp, ok := spec.(*ast.ImportSpec)
+			if !ok {
+				continue
+			}
+			if imp.Name != nil {
+				knownImportNames[imp.Name.Name] = true
+				continue
+			}
+			path := removeQuotes(imp.Path.Value)
+			knownImportNames[path[strings.LastIndex(path, "/")+1:]] = true
+		}
+	}
+
+	var problems []string
+	for _, decl := range file.Decls {
+		genDecl, ok := decl.(*ast.GenDecl)
+		if !ok || genDecl.Tok != token.TYPE {
+			continue
+		}
+		for _, spec := range genDecl.Specs {
+			typeSpec, ok := spec.(*ast.TypeSpec)
+			if !ok {
+				continue
+			}
+			structType, ok := typeSpec.Type.(*ast.StructType)
+			if !ok {
+				continue
+			}
+			for _, field := range structType.Fields.List {
+				if len(field.Names) == 0 {
+					continue
+				}
+				ast.Inspect(field.Type, func(n ast.Node) bool {
+					sel, ok := n.(*ast.SelectorExpr)
+					if !ok {
+						return true
+					}
+					if ident, ok := sel.X.(*ast.Ident); ok && !knownImportNames[ident.Name] {
+						problems = append(problems, fmt.Sprintf("%s.%s: %s",
+							typeSpec.Name.Name, field.Names[0].Name, toString(field.Type)))
+					}
+					return false
+				})
+			}
+		}
+	}
+	return problems
 }
 
 // getFilePath finds the file path of the given module and file in the go.mod cache.
