@@ -213,9 +213,21 @@ spec:
 		var ocpMinorVersion int
 		var ocpMajorVersion int
 
+		// Calling Skip() from a BeforeAll makes Ginkgo defer the enclosing Ordered container's
+		// teardown (the cleaner) into the next top-level container, or drop it entirely. The
+		// cleaner then deletes resources belonging to whichever suite is running by then. So the
+		// checks below record why the specs cannot run and return, and each It skips itself.
+		var skipReason string
+		skipIfUnsupported := func() {
+			if skipReason != "" {
+				Skip(skipReason)
+			}
+		}
+
 		BeforeAll(func(ctx SpecContext) {
 			if !env.GetBool("OCP", false) {
-				Skip("Skipping OpenShift-specific tests on non-OpenShift cluster")
+				skipReason = "Skipping OpenShift-specific tests on non-OpenShift cluster"
+				return
 			}
 
 			// On hosted clusters, the APIServer resource is read-only and TLS settings cannot be changed,
@@ -225,7 +237,8 @@ spec:
 			infraErr := cl.Get(ctx, client.ObjectKey{Name: "cluster"}, infra)
 			Expect(infraErr).NotTo(HaveOccurred(), "Failed to get Infrastructure resource")
 			if infra.Status.ControlPlaneTopology == configv1.ExternalTopologyMode {
-				Skip("Skipping TLS profile tests on hosted cluster: APIServer resource is read-only on hosted clusters")
+				skipReason = "Skipping TLS profile tests on hosted cluster: APIServer resource is read-only on hosted clusters"
+				return
 			}
 
 			// The TLS profile tests must update the cluster-scoped APIServer resource. Rather than
@@ -238,7 +251,8 @@ spec:
 			Expect(cl.Get(ctx, apiServerKey, apiServerProbe)).To(Succeed(), "Failed to get APIServer")
 			if probeErr := cl.Update(ctx, apiServerProbe, client.DryRunAll); probeErr != nil {
 				if apierrors.IsForbidden(probeErr) {
-					Skip("Skipping TLS profile tests: the APIServer resource is not writable on this cluster: " + probeErr.Error())
+					skipReason = "Skipping TLS profile tests: the APIServer resource is not writable on this cluster: " + probeErr.Error()
+					return
 				}
 				Expect(probeErr).NotTo(HaveOccurred(), "Unexpected error while probing APIServer writability")
 			}
@@ -326,6 +340,8 @@ spec:
 		// Note: TLSAdherence cannot be set back to NoOpinion once set, so this test
 		// must run first and requires the cluster to have the default NoOpinion state.
 		It("does not sync TLS settings when TLSAdherence is NoOpinion", func(ctx SpecContext) {
+			skipIfUnsupported()
+
 			Step("Verifying TLSAdherence is NoOpinion")
 			apiServer := &configv1.APIServer{}
 			Expect(cl.Get(ctx, apiServerKey, apiServer)).To(Succeed(), "Failed to get APIServer")
@@ -350,6 +366,8 @@ spec:
 		// When TLSAdherence changes to StrictAllComponents, the operator should
 		// apply the TLS profile to both the metrics endpoint and the Istio resource.
 		It("syncs TLS settings when TLSAdherence is set to StrictAllComponents", func(ctx SpecContext) {
+			skipIfUnsupported()
+
 			if ocpMinorVersion < 22 {
 				Skip(fmt.Sprintf("TLSAdherence field requires OpenShift >= 4.22. Current version: '%d.%d'. Skipping test.", ocpMajorVersion, ocpMinorVersion))
 			}
