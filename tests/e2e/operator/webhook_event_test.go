@@ -53,12 +53,14 @@ var _ = Describe("Webhook failure event detection", Label("operator", "webhook-e
 		Log("Created test namespace", testNS)
 
 		DeferCleanup(func(ctx SpecContext) {
-			// Delete webhook config first to avoid blocking namespace deletion
+			// Delete webhook config first to avoid blocking namespace deletion.
 			whCfg := &admissionv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: webhookCfgName}}
 			_ = cl.Delete(ctx, whCfg)
 
 			ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNS}}
 			_ = cl.Delete(ctx, ns)
+
+			common.WaitForDeletion(ctx, cl, whCfg, ns)
 		})
 	})
 
@@ -253,8 +255,10 @@ var _ = Describe("Remote istiod webhook (DNS-based URL) failure detection", Labe
 			_ = cl.Delete(ctx, whCfg)
 			istio := &v1.Istio{ObjectMeta: metav1.ObjectMeta{Name: revName}}
 			_ = cl.Delete(ctx, istio)
+
 			ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNS}}
 			_ = cl.Delete(ctx, ns)
+			common.WaitForDeletion(ctx, cl, whCfg, istio, ns)
 		})
 	})
 

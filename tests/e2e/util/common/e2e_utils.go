@@ -93,6 +93,41 @@ func GetList(ctx context.Context, cl client.Client, list client.ObjectList, opts
 	return list, err
 }
 
+// WaitForDeletion waits until all the given resources have been deleted.
+func WaitForDeletion(ctx context.Context, cl client.Client, resources ...client.Object) {
+	if len(resources) == 0 {
+		return
+	}
+
+	resourceDescriptions := make([]string, 0, len(resources))
+	for _, resource := range resources {
+		namespace := resource.GetNamespace()
+		if namespace == "" {
+			namespace = "<cluster-scoped>"
+		}
+		resourceDescriptions = append(resourceDescriptions,
+			fmt.Sprintf("%s/%s: %T", namespace, resource.GetName(), resource))
+	}
+	resourcesDescription := strings.Join(resourceDescriptions, ", ")
+
+	By("Waiting for resources to be deleted: " + resourcesDescription)
+	Eventually(func() (remaining []client.ObjectKey, err error) {
+		for _, resource := range resources {
+			got := resource.DeepCopyObject().(client.Object)
+			key := client.ObjectKeyFromObject(resource)
+			if err = cl.Get(ctx, key, got); err != nil {
+				if apierrors.IsNotFound(err) {
+					continue
+				}
+				return remaining, err
+			}
+			remaining = append(remaining, key)
+		}
+		return remaining, nil
+	}).Should(BeEmpty(), "Failed while waiting for resources to be deleted: "+resourcesDescription)
+	Success("Finished waiting for resources to be deleted: " + resourcesDescription)
+}
+
 // GetPodNameByLabel returns the name of the pod with the given label
 func GetPodNameByLabel(ctx context.Context, cl client.Client, ns, labelKey, labelValue string) (string, error) {
 	podList := &corev1.PodList{}
