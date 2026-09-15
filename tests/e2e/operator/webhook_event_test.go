@@ -251,6 +251,7 @@ var _ = Describe("Remote istiod webhook (DNS-based URL) failure detection", Labe
 		Success("Created MutatingWebhookConfiguration with a DNS-based URL, owned by the remote IstioRevision")
 
 		DeferCleanup(func(ctx SpecContext) {
+			Log("Cleaning up ")
 			whCfg := &admissionv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: webhookCfgName}}
 			_ = cl.Delete(ctx, whCfg)
 			istio := &v1.Istio{ObjectMeta: metav1.ObjectMeta{Name: revName}}

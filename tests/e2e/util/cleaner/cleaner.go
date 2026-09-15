@@ -223,6 +223,8 @@ func (c *Cleaner) cleanup(ctx context.Context) (deleted []client.Object) {
 		})
 	}
 
+	c.WaitForDeletion(ctx, deleted)
+
 	return deleted
 }
 
