@@ -21,6 +21,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
+	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,6 +38,7 @@ func TestReconcileActiveRevision(t *testing.T) {
 		name                 string
 		istioValues          v1.Values
 		revValues            *v1.Values
+		existingOwnerRef     *metav1.OwnerReference
 		expectOwnerReference bool
 	}{
 		{
@@ -66,7 +68,29 @@ func TestReconcileActiveRevision(t *testing.T) {
 					Image: ptr.Of("old-image"),
 				},
 			},
-			expectOwnerReference: false,
+			expectOwnerReference: true,
+		},
+		{
+			name: "heals stale ownerReference on update",
+			istioValues: v1.Values{
+				Pilot: &v1.PilotConfig{
+					Hub: ptr.Of("quay.io/hub"),
+				},
+			},
+			revValues: &v1.Values{
+				Pilot: &v1.PilotConfig{
+					Image: ptr.Of("old-image"),
+				},
+			},
+			existingOwnerRef: &metav1.OwnerReference{
+				APIVersion:         v1.GroupVersion.String(),
+				Kind:               v1.IstioKind,
+				Name:               "my-istio",
+				UID:                "stale-UID",
+				Controller:         ptr.Of(true),
+				BlockOwnerDeletion: ptr.Of(true),
+			},
+			expectOwnerReference: true,
 		},
 	}
 
@@ -75,30 +99,31 @@ func TestReconcileActiveRevision(t *testing.T) {
 			var initObjs []client.Object
 
 			if tc.revValues != nil {
-				initObjs = append(initObjs,
-					&v1.IstioRevision{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "my-revision",
-						},
-						Spec: v1.IstioRevisionSpec{
-							Version: version,
-							Values:  tc.revValues,
-						},
+				rev := &v1.IstioRevision{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "my-revision",
 					},
-				)
+					Spec: v1.IstioRevisionSpec{
+						Version: version,
+						Values:  tc.revValues,
+					},
+				}
+				if tc.existingOwnerRef != nil {
+					rev.OwnerReferences = []metav1.OwnerReference{*tc.existingOwnerRef}
+				}
+				initObjs = append(initObjs, rev)
+			}
+
+			owner := &v1.Istio{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "my-istio",
+					UID:  "my-istio-UID",
+				},
 			}
 
 			cl := newFakeClientBuilder().WithObjects(initObjs...).Build()
 
-			ownerRef := metav1.OwnerReference{
-				APIVersion:         v1.GroupVersion.String(),
-				Kind:               v1.IstioKind,
-				Name:               "my-istio",
-				UID:                "my-istio-UID",
-				Controller:         ptr.Of(true),
-				BlockOwnerDeletion: ptr.Of(true),
-			}
-			err := CreateOrUpdate(ctx, cl, "my-revision", version, "istio-system", &tc.istioValues, ownerRef)
+			err := CreateOrUpdate(ctx, cl, scheme.Scheme, "my-revision", version, "istio-system", &tc.istioValues, owner)
 			if err != nil {
 				t.Errorf("Expected no error, but got: %v", err)
 			}
@@ -107,12 +132,22 @@ func TestReconcileActiveRevision(t *testing.T) {
 			rev := &v1.IstioRevision{}
 			Must(t, cl.Get(ctx, revKey, rev))
 
-			var expectedOwnerRefs []metav1.OwnerReference
 			if tc.expectOwnerReference {
-				expectedOwnerRefs = []metav1.OwnerReference{ownerRef}
-			}
-			if diff := cmp.Diff(rev.OwnerReferences, expectedOwnerRefs); diff != "" {
-				t.Errorf("invalid ownerReference; diff (-expected, +actual):\n%v", diff)
+				if len(rev.OwnerReferences) != 1 {
+					t.Fatalf("expected 1 ownerReference, got %d", len(rev.OwnerReferences))
+				}
+				ref := rev.OwnerReferences[0]
+				if ref.Name != owner.Name {
+					t.Errorf("ownerReference.Name = %q, want %q", ref.Name, owner.Name)
+				}
+				if ref.UID != owner.UID {
+					t.Errorf("ownerReference.UID = %q, want %q", ref.UID, owner.UID)
+				}
+				if ref.Controller == nil || !*ref.Controller {
+					t.Errorf("ownerReference.Controller should be true")
+				}
+			} else if len(rev.OwnerReferences) != 0 {
+				t.Errorf("expected no ownerReferences, got %v", rev.OwnerReferences)
 			}
 
 			if rev.Spec.Version != version {

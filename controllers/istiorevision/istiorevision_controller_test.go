@@ -43,6 +43,96 @@ import (
 	"istio.io/istio/pkg/ptr"
 )
 
+func TestReconcile(t *testing.T) {
+	cfg := newReconcilerTestConfig(t)
+
+	t.Run("returns error for EOL version", func(t *testing.T) {
+		rev := &v1.IstioRevision{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "default",
+			},
+			Spec: v1.IstioRevisionSpec{
+				Version:   "v1.28.10",
+				Namespace: "istio-system",
+				Values: &v1.Values{
+					Global: &v1.GlobalConfig{
+						IstioNamespace: ptr.Of("istio-system"),
+					},
+				},
+			},
+		}
+
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme.Scheme).
+			WithStatusSubresource(&v1.IstioRevision{}).
+			WithObjects(rev).
+			Build()
+		r := NewReconciler(cfg, cl, scheme.Scheme, nil)
+
+		_, err := r.Reconcile(context.TODO(), rev)
+		if err == nil {
+			t.Errorf("Expected an error, but got nil")
+		}
+
+		revKey := types.NamespacedName{Name: rev.Name}
+		if err := cl.Get(context.TODO(), revKey, rev); err != nil {
+			t.Fatalf("Failed to get IstioRevision: %v", err)
+		}
+
+		reconciledCond := rev.Status.GetCondition(v1.IstioRevisionConditionReconciled)
+		if reconciledCond.Status != metav1.ConditionFalse {
+			t.Errorf("Expected Reconciled condition status to be %q, but got %q", metav1.ConditionFalse, reconciledCond.Status)
+		}
+
+		if !strings.Contains(reconciledCond.Message, "is EOL and cannot be installed") {
+			t.Errorf("Expected Reconciled condition message to contain %q, but got %q", "is EOL and cannot be installed", reconciledCond.Message)
+		}
+	})
+
+	t.Run("returns error for unknown version", func(t *testing.T) {
+		rev := &v1.IstioRevision{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "default",
+			},
+			Spec: v1.IstioRevisionSpec{
+				Version:   "my-version",
+				Namespace: "istio-system",
+				Values: &v1.Values{
+					Global: &v1.GlobalConfig{
+						IstioNamespace: ptr.Of("istio-system"),
+					},
+				},
+			},
+		}
+
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme.Scheme).
+			WithStatusSubresource(&v1.IstioRevision{}).
+			WithObjects(rev).
+			Build()
+		r := NewReconciler(cfg, cl, scheme.Scheme, nil)
+
+		_, err := r.Reconcile(context.TODO(), rev)
+		if err == nil {
+			t.Errorf("Expected an error, but got nil")
+		}
+
+		revKey := types.NamespacedName{Name: rev.Name}
+		if err := cl.Get(context.TODO(), revKey, rev); err != nil {
+			t.Fatalf("Failed to get IstioRevision: %v", err)
+		}
+
+		reconciledCond := rev.Status.GetCondition(v1.IstioRevisionConditionReconciled)
+		if reconciledCond.Status != metav1.ConditionFalse {
+			t.Errorf("Expected Reconciled condition status to be %q, but got %q", metav1.ConditionFalse, reconciledCond.Status)
+		}
+
+		if !strings.Contains(reconciledCond.Message, "failed to resolve Istio version") {
+			t.Errorf("Expected Reconciled condition message to contain %q, but got %q", "failed to resolve Istio version", reconciledCond.Message)
+		}
+	})
+}
+
 func TestValidate(t *testing.T) {
 	cfg := newReconcilerTestConfig(t)
 
@@ -605,7 +695,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "istio-sidecar-injector",
 						Annotations: map[string]string{
-							constants.WebhookReadinessProbeStatusAnnotationKey: "true",
+							constants.WebhookReadinessStatusAnnotationKey: "true",
 						},
 					},
 				},
@@ -624,7 +714,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "istio-sidecar-injector",
 						Annotations: map[string]string{
-							constants.WebhookReadinessProbeStatusAnnotationKey: "false",
+							constants.WebhookReadinessStatusAnnotationKey: "false",
 						},
 					},
 				},
@@ -633,7 +723,28 @@ func TestDetermineReadyCondition(t *testing.T) {
 				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioRevisionReasonRemoteIstiodNotReady,
-				Message: "readiness probe on remote istiod failed",
+				Message: "remote istiod is not ready",
+			},
+		},
+		{
+			name:   "Istiod-remote not ready with reason annotation",
+			values: &v1.Values{Profile: ptr.Of("remote")},
+			clientObjects: []client.Object{
+				&admissionv1.MutatingWebhookConfiguration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "istio-sidecar-injector",
+						Annotations: map[string]string{
+							constants.WebhookReadinessStatusAnnotationKey: "false",
+							constants.WebhookReadinessReasonAnnotationKey: "webhooks[].clientConfig.caBundle hasn't been set; check if the remote istiod can access this cluster",
+						},
+					},
+				},
+			},
+			expected: v1.StatusCondition{
+				Type:    v1.IstioRevisionConditionReady,
+				Status:  metav1.ConditionFalse,
+				Reason:  v1.IstioRevisionReasonRemoteIstiodNotReady,
+				Message: "webhooks[].clientConfig.caBundle hasn't been set; check if the remote istiod can access this cluster",
 			},
 		},
 		{
@@ -651,7 +762,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 				Type:    v1.IstioRevisionConditionReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  v1.IstioRevisionReasonRemoteIstiodNotReady,
-				Message: "invalid or missing annotation sailoperator.io/readinessProbe.status on MutatingWebhookConfiguration istio-sidecar-injector",
+				Message: "invalid or missing annotation sailoperator.io/readiness.status on MutatingWebhookConfiguration istio-sidecar-injector",
 			},
 		},
 		{

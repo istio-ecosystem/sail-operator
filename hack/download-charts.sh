@@ -24,6 +24,10 @@ CHART_URLS=("${@:5}")
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 REPO_ROOT=$(dirname "${SCRIPT_DIR}")
+
+# shellcheck source=hack/istio-hub.sh
+source "${SCRIPT_DIR}/istio-hub.sh"
+
 MANIFEST_DIR="${REPO_ROOT}/resources/${ISTIO_VERSION_NAME}"
 CHARTS_DIR="${MANIFEST_DIR}/charts"
 PROFILES_DIR="${MANIFEST_DIR}/profiles"
@@ -49,7 +53,7 @@ function downloadRequired() {
       if [ ! -f "${etag_file}" ]; then
         return 0
       fi
-      current=$(curl -I "$url" 2>/dev/null | awk -F': ' '/^etag:/ {print $2}' | tr -d "\"")
+      current=$(curl -IL "$url" 2>/dev/null | awk -F': ' '/^etag:/ {print $2}' | tr -d "\"")
       if [ "$current" != "$(cat "${etag_file}")" ]; then
         return 0
       fi
@@ -189,26 +193,44 @@ EOF
   fi
 }
 
-# The charts use docker.io as the default registry, but this leads to issues
-# because of Docker Hub's rate limiting. This function modifies the hub field
-# in all charts to use registry.istio.io/release instead of docker.io/istio.
-# registry.istio.io also contains the official images for Istio and they are an exact match.
-function replaceDockerHubWithRegistryIstio() {
-  echo "replacing docker.io/istio with registry.istio.io/release in all charts"
+# Upstream is inconsistent about which registry it defaults to: charts up to 1.29.x
+# ship docker.io/istio, while newer ones ship registry.istio.io/release. Both hosted
+# the same official images and they were an exact match, but as of 1.31 upstream only
+# publishes to Docker Hub, which we can't pull from at runtime. So this function pins
+# the hub to UPSTREAM_HUB for the older releases and to MIRROR_HUB (populated by
+# hack/mirror-istio-images.sh) for 1.31 and newer, regardless of what the chart shipped.
+# This runs after replaceChartsNSForAlphaRelease, so charts that still point at
+# registry.istio.io/testing (dev builds) are left alone, since those images are
+# published there and nowhere else.
+function normalizeChartHub() {
+  local hub="${UPSTREAM_HUB}"
+  if usesMirror "${ISTIO_VERSION}"; then
+    hub="${MIRROR_HUB}"
+  fi
 
-  find "${CHARTS_DIR}" -name values.yaml -exec sed -i 's/hub: docker.io\/istio/hub: registry.istio.io\/release/g' {} \;
+  echo "setting hub to ${hub} in all charts"
+
+  local sed_args=() known_hub
+  for known_hub in "${SOURCE_HUB}" "${UPSTREAM_HUB}" "${MIRROR_HUB}"; do
+    if [ "${known_hub}" == "${hub}" ]; then
+      continue
+    fi
+    sed_args+=(-e "s|hub: ${known_hub}|hub: ${hub}|g")
+  done
+
+  find "${CHARTS_DIR}" -name values.yaml -exec sed -i "${sed_args[@]}" {} \;
 }
 
-# The alpha/beta releases from istio-release.storage.googleapis.com may specify
-# registry.istio.io/testing in their charts, but the images are actually published
+# The alpha/beta releases from istio-release.storage.googleapis.com (or blob.istio.io/istio-release)
+# may specify registry.istio.io/testing in their charts, but the images are actually published
 # to registry.istio.io/release. This function replaces /testing/ with /release/ only for
-# official releases from istio-release.storage.googleapis.com.
+# official releases from istio-release.storage.googleapis.com or blob.istio.io/istio-release.
 # Dev builds from istio-build/dev/ should keep /testing/ as their images are published there.
 function replaceChartsNSForAlphaRelease() {
   local is_official_release=false
   if [ "${#CHART_URLS[@]}" -gt 0 ]; then
     for url in "${CHART_URLS[@]}"; do
-      if [[ "$url" == *"istio-release.storage.googleapis.com"* ]]; then
+      if [[ "$url" == *"istio-release.storage.googleapis.com"* || "$url" == *"blob.istio.io/istio-release"* ]]; then
         is_official_release=true
         break
       fi
@@ -276,7 +298,7 @@ if ! downloadRequired && [ "${FORCE_DOWNLOADS}" != "true" ] ; then
 fi
 downloadIstioManifests
 patchIstioCharts
-replaceDockerHubWithRegistryIstio
 replaceChartsNSForAlphaRelease
+normalizeChartHub
 convertIstioProfiles
 createRevisionTagChart

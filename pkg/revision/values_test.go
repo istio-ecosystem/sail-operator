@@ -43,7 +43,7 @@ func TestComputeValues(t *testing.T) {
 	profilesDir := path.Join(resourceDir, version, "profiles")
 	Must(t, os.MkdirAll(profilesDir, 0o755))
 
-	Must(t, os.WriteFile(path.Join(profilesDir, "default.yaml"), []byte((`
+	Must(t, os.WriteFile(path.Join(profilesDir, "default.yaml"), []byte(`
 apiVersion: sailoperator.io/v1
 kind: IstioRevision
 spec:
@@ -51,16 +51,16 @@ spec:
     pilot: 
       hub: from-default-profile
       tag: from-default-profile      # this gets overridden in my-profile
-      image: from-default-profile    # this gets overridden in my-profile and values`)), 0o644))
+      image: from-default-profile    # this gets overridden in my-profile and values`), 0o644))
 
-	Must(t, os.WriteFile(path.Join(profilesDir, "my-profile.yaml"), []byte((`
+	Must(t, os.WriteFile(path.Join(profilesDir, "my-profile.yaml"), []byte(`
 apiVersion: sailoperator.io/v1
 kind: IstioRevision
 spec:
   values:
     pilot:
       tag: from-my-profile
-      image: from-my-profile  # this gets overridden in values`)), 0o644))
+      image: from-my-profile  # this gets overridden in values`), 0o644))
 
 	values := &v1.Values{
 		Pilot: &v1.PilotConfig{
@@ -103,10 +103,10 @@ func TestFipsComputeValues(t *testing.T) {
 	profilesDir := path.Join(resourceDir, version, "profiles")
 	Must(t, os.MkdirAll(profilesDir, 0o755))
 
-	Must(t, os.WriteFile(path.Join(profilesDir, "default.yaml"), []byte((`
+	Must(t, os.WriteFile(path.Join(profilesDir, "default.yaml"), []byte(`
 apiVersion: sailoperator.io/v1
 kind: IstioRevision
-spec:`)), 0o644))
+spec:`), 0o644))
 
 	originalFipsEnabled := istiovalues.FipsEnabled
 	t.Cleanup(func() { istiovalues.FipsEnabled = originalFipsEnabled })

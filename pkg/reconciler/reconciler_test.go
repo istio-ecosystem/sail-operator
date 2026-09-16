@@ -228,6 +228,7 @@ func TestReconcile(t *testing.T) {
 				mock.reconcileError = apierrors.NewConflict(schema.GroupResource{}, "foo", fmt.Errorf("simulated conflict"))
 			},
 			assert: func(g *WithT, cl client.Client, result ctrl.Result, err error, mock *mockReconciler) {
+				//nolint:staticcheck // asserts the deprecated Requeue that Reconcile sets; see TODO in reconciler.go
 				g.Expect(result).To(Equal(reconcile.Result{Requeue: true}))
 				g.Expect(err).ToNot(HaveOccurred())
 				g.Expect(mock.reconcileInvoked).To(BeTrue())
@@ -269,6 +270,7 @@ func TestReconcile(t *testing.T) {
 					fmt.Errorf("cannot set blockOwnerDeletion in this case because cannot find RESTMapping for APIVersion xyz"))
 			},
 			assert: func(g *WithT, cl client.Client, result ctrl.Result, err error, mock *mockReconciler) {
+				//nolint:staticcheck // asserts the deprecated Requeue that Reconcile sets; see TODO in reconciler.go
 				g.Expect(result).To(Equal(reconcile.Result{Requeue: true}))
 				g.Expect(err).ToNot(HaveOccurred())
 				g.Expect(mock.reconcileInvoked).To(BeTrue())

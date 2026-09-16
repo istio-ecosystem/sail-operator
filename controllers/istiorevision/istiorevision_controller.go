@@ -27,6 +27,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/errlist"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
+	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	predicate2 "github.com/istio-ecosystem/sail-operator/pkg/predicate"
 	sharedreconcile "github.com/istio-ecosystem/sail-operator/pkg/reconcile"
 	"github.com/istio-ecosystem/sail-operator/pkg/reconciler"
@@ -118,8 +119,16 @@ func (r *Reconciler) doReconcile(ctx context.Context, rev *v1.IstioRevision) err
 		return err
 	}
 
+	revVersion, err := istioversion.Resolve(rev.Spec.Version)
+	if err != nil {
+		if istioversion.IsEOLVersion(rev.Spec.Version) {
+			return reconciler.NewValidationError(fmt.Sprintf("IstioRevision version %q is EOL and cannot be installed", rev.Spec.Version))
+		}
+		return fmt.Errorf("failed to resolve Istio version %s: %w", rev.Spec.Version, err)
+	}
+
 	// General validations
-	if err := istiodReconciler.Validate(ctx, rev.Spec.Version, rev.Spec.Namespace, rev.Spec.Values); err != nil {
+	if err := istiodReconciler.Validate(ctx, revVersion, rev.Spec.Namespace, rev.Spec.Values); err != nil {
 		return err
 	}
 
@@ -132,7 +141,7 @@ func (r *Reconciler) doReconcile(ctx context.Context, rev *v1.IstioRevision) err
 		Controller:         ptr.Of(true),
 		BlockOwnerDeletion: ptr.Of(true),
 	}
-	return istiodReconciler.Install(ctx, rev.Spec.Version, rev.Spec.Namespace, rev.Spec.Values, rev.Name, &ownerReference)
+	return istiodReconciler.Install(ctx, revVersion, rev.Spec.Namespace, rev.Spec.Values, rev.Name, &ownerReference)
 }
 
 func (r *Reconciler) Finalize(ctx context.Context, rev *v1.IstioRevision) error {
@@ -365,17 +374,17 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1.IstioR
 		webhook := admissionv1.MutatingWebhookConfiguration{}
 		webhookKey := injectionWebhookKey(rev)
 		if err := r.Client.Get(ctx, webhookKey, &webhook); err == nil {
-			switch webhook.Annotations[constants.WebhookReadinessProbeStatusAnnotationKey] {
+			switch webhook.Annotations[constants.WebhookReadinessStatusAnnotationKey] {
 			case "true":
 				c.Status = metav1.ConditionTrue
 				c.Reason = v1.ConditionReason(v1.IstioRevisionConditionReady)
 			case "false":
 				c.Reason = v1.IstioRevisionReasonRemoteIstiodNotReady
-				c.Message = "readiness probe on remote istiod failed"
+				c.Message = webhookNotReadyMessage(webhook.Annotations)
 			default:
 				c.Reason = v1.IstioRevisionReasonRemoteIstiodNotReady
 				c.Message = fmt.Sprintf("invalid or missing annotation %s on MutatingWebhookConfiguration %s",
-					constants.WebhookReadinessProbeStatusAnnotationKey, webhookKey.Name)
+					constants.WebhookReadinessStatusAnnotationKey, webhookKey.Name)
 			}
 		} else if apierrors.IsNotFound(err) {
 			c.Reason = v1.IstioRevisionReasonRemoteIstiodNotReady
@@ -388,6 +397,15 @@ func (r *Reconciler) determineReadyCondition(ctx context.Context, rev *v1.IstioR
 		}
 	}
 	return c, nil
+}
+
+// webhookNotReadyMessage derives a human-readable message from the webhook configuration's
+// readiness annotations, falling back to a generic message.
+func webhookNotReadyMessage(annotations map[string]string) string {
+	if reason := annotations[constants.WebhookReadinessReasonAnnotationKey]; reason != "" {
+		return reason
+	}
+	return "remote istiod is not ready"
 }
 
 func (r *Reconciler) determineDependenciesHealthyCondition(ctx context.Context, rev *v1.IstioRevision) (v1.StatusCondition, error) {

@@ -46,12 +46,17 @@ isStableVersion() {
 # Output result with version info
 output_result() {
     local crd_name="$1" version="$2" output="$3"
-    local errors=0 warnings=0 infos=0
+    local errors=0 stable_errors=0 warnings=0 infos=0
     echo "$crd_name ($version)"
     if [ -n "${output}" ]; then
         while read -r line; do
             if echo "${line}" | grep -iq "ERROR:"; then
                 ((++errors))
+                # Alpha enum removals are not counted as stable breaking changes
+                # since they change with every automator run and carry no stability guarantee
+                if ! echo "${line}" | grep -qiE 'NoEnumRemoval.*-alpha\.'; then
+                    ((++stable_errors))
+                fi
             elif echo "${line}" | grep -iq "Warning:"; then
                 ((++warnings))
             elif echo "${line}" | grep -iq "info:"; then
@@ -62,7 +67,7 @@ output_result() {
     fi
     echo "--> ${errors} errors, ${warnings} warnings, ${infos} infos"
     if isStableVersion "${version}"; then
-        STABLE_ERRORS=$((STABLE_ERRORS + errors))
+        STABLE_ERRORS=$((STABLE_ERRORS + stable_errors))
     fi
     ERRORS=$((ERRORS + errors))
     WARNINGS=$((WARNINGS + warnings))

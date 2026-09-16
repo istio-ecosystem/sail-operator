@@ -28,6 +28,8 @@ globalTransformations:
   addImports:
     metav1: k8s.io/apimachinery/pkg/apis/meta/v1
     k8sv1: k8s.io/api/core/v1
+    appsv1: k8s.io/api/apps/v1
+    policyv1: k8s.io/api/policy/v1
     autoscalingv2: k8s.io/api/autoscaling/v2
     intstr: k8s.io/apimachinery/pkg/util/intstr
     json: encoding/json
@@ -90,12 +92,16 @@ inputFiles:
     replaceFieldTypes:
       "*.Tag": "string"
       CNIConfig.Affinity: "*k8sv1.Affinity"
+      CNIConfig.DaemonSetAnnotations: "map[string]string"
       CNIConfig.DaemonSetLabels: "map[string]string"
       CNIConfig.Env: "map[string]string"
       CNIConfig.PodAnnotations: "map[string]string"
       CNIConfig.PodLabels: "map[string]string"
       CNIConfig.SeccompProfile: "*k8sv1.SeccompProfile"
       CNIConfig.PullPolicy: "*k8sv1.PullPolicy"
+      CNIConfig.UpdateStrategy: "*appsv1.DaemonSetUpdateStrategy"
+      CNIConfig.SeLinuxOptions: "*k8sv1.SELinuxOptions"
+      CNIConfig.Tolerations: "[]k8sv1.Toleration"
       CNIAmbientConfig.EnablementSelectors: "[]CNIAmbientEnablementSelector"
       Values.GatewayClasses: "json.RawMessage"
       Values.MeshConfig: "*MeshConfig"
@@ -121,13 +127,18 @@ inputFiles:
       PilotConfig.TopologySpreadConstraints: "[]k8sv1.TopologySpreadConstraint"
       PilotConfig.VolumeMounts: "[]k8sv1.VolumeMount"
       PilotConfig.Volumes: "[]k8sv1.Volume"
+      PilotConfig.InitContainers: "[]k8sv1.Container"
+      PilotConfig.Pdb: "*policyv1.PodDisruptionBudgetSpec"
+      PilotConfig.DeploymentAnnotations: "map[string]string"
+      PilotConfig.SidecarInjectorWebhookAnnotations: "map[string]string"
       ProxyConfig.Resources: "*k8sv1.ResourceRequirements"
       ProxyConfig.Lifecycle: "*k8sv1.Lifecycle"
       ProxyConfig.SeccompProfile: "*k8sv1.SeccompProfile"
       WaypointConfig.Affinity: "*k8sv1.Affinity"
       WaypointConfig.TopologySpreadConstraints: "[]*k8sv1.TopologySpreadConstraint"
       WaypointConfig.NodeSelector: "*k8sv1.NodeSelector"
-      WaypointConfig.Toleration: "[]*k8sv1.Toleration"
+      WaypointConfig.Toleration: "[]*k8sv1.Toleration" # FIXME: remove once istio.io/istio is bumped past the Toleration->Tolerations rename
+      WaypointConfig.Tolerations: "[]*k8sv1.Toleration"
       SDSConfig.Token: "*SDSConfigToken"
       SidecarInjectorConfig.NeverInjectSelector: "[]metav1.LabelSelector"
       SidecarInjectorConfig.AlwaysInjectSelector: "[]metav1.LabelSelector"

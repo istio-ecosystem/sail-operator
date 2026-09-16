@@ -21,14 +21,17 @@ import (
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 func CreateOrUpdate(
-	ctx context.Context, cl client.Client, revName string, version string, namespace string,
-	values *v1.Values, ownerRef metav1.OwnerReference,
+	ctx context.Context, cl client.Client, scheme *runtime.Scheme,
+	revName string, version string, namespace string,
+	values *v1.Values, owner metav1.Object,
 ) error {
 	log := logf.FromContext(ctx)
 	log = log.WithValues("IstioRevision", revName)
@@ -38,27 +41,22 @@ func CreateOrUpdate(
 		return fmt.Errorf("failed to get active IstioRevision: %w", err)
 	}
 
+	rev.Spec.Version = version
+	rev.Spec.Namespace = namespace
+	rev.Spec.Values = values
+	if err = controllerutil.SetControllerReference(owner, &rev, scheme); err != nil {
+		return fmt.Errorf("failed to set controller reference on IstioRevision %q: %w", revName, err)
+	}
+
 	if found {
 		// update
-		rev.Spec.Version = version
-		rev.Spec.Values = values
 		log.Info("Updating IstioRevision")
 		if err = cl.Update(ctx, &rev); err != nil {
 			return fmt.Errorf("failed to update IstioRevision %q: %w", rev.Name, err)
 		}
 	} else {
 		// create new
-		rev = v1.IstioRevision{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:            revName,
-				OwnerReferences: []metav1.OwnerReference{ownerRef},
-			},
-			Spec: v1.IstioRevisionSpec{
-				Version:   version,
-				Namespace: namespace,
-				Values:    values,
-			},
-		}
+		rev.Name = revName
 		log.Info("Creating IstioRevision")
 		if err = cl.Create(ctx, &rev); err != nil {
 			return fmt.Errorf("failed to create IstioRevision %q: %w", rev.Name, err)
