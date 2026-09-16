@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/install"
-	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
+	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/common"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -223,6 +223,8 @@ func (c *Cleaner) cleanup(ctx context.Context) (deleted []client.Object) {
 		})
 	}
 
+	c.WaitForDeletion(ctx, deleted)
+
 	return deleted
 }
 
@@ -263,38 +265,8 @@ func (c *Cleaner) cleaningUpThe(obj client.Object, kind string) (s string) {
 	return fmt.Sprintf("Cleaning up the %s %s%s", obj.GetName(), kind, s)
 }
 
-// WaitForDeletion receives a slice of resources marked for deletion, and waits until they're all delete.
+// WaitForDeletion receives a slice of resources marked for deletion and waits until they are all deleted.
 // It will fail the test suite if any resource hasn't been deleted in sufficient time.
 func (c *Cleaner) WaitForDeletion(ctx context.Context, deleted []client.Object) {
-	if len(deleted) == 0 {
-		return
-	}
-
-	s := strings.Join(c.ctx, ", ")
-	if s != "" {
-		s = fmt.Sprintf(" on %s", s)
-	}
-
-	By(fmt.Sprintf("Waiting for resources to be deleted%s", s))
-	Eventually(func() (remaining []client.ObjectKey, err error) {
-		for _, obj := range deleted {
-			gotObj := obj.DeepCopyObject().(client.Object)
-			key := client.ObjectKeyFromObject(obj)
-			err = c.cl.Get(ctx, key, gotObj)
-			if err != nil {
-				if apierrors.IsNotFound(err) {
-					continue
-				}
-
-				return remaining, err
-			}
-
-			remaining = append(remaining, key)
-		}
-
-		return remaining, nil
-	}).Should(BeEmpty(),
-		fmt.Sprintf("Failed while waiting for resources to be deleted, some still exist%s", s))
-
-	Success(fmt.Sprintf("Finished cleaning up resources%s", s))
+	common.WaitForDeletion(ctx, c.cl, deleted...)
 }

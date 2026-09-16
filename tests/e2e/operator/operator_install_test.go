@@ -28,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
@@ -73,18 +74,24 @@ var apiServerKey = client.ObjectKey{Name: "cluster"}
 var _ = Describe("Operator", Label("smoke", "operator"), Ordered, func() {
 	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
-	debugInfoLogged := false
 	clr := cleaner.New(cl)
+
 	BeforeAll(func(ctx SpecContext) {
 		clr.Record(ctx)
 		DeferCleanup(func(ctx SpecContext) {
 			if CurrentSpecReport().Failed() {
 				common.LogDebugInfo(common.Operator, k)
-				debugInfoLogged = true
 			}
 
 			clr.Cleanup(ctx)
 		})
+	})
+
+	// Capture debug info immediately on test failure
+	JustAfterEach(func(ctx SpecContext) {
+		if CurrentSpecReport().Failed() {
+			common.LogDebugInfo(common.Operator, k)
+		}
 	})
 
 	Describe("installation", func() {
@@ -208,14 +215,25 @@ spec:
 	// These tests verify the operator's TLS behavior when the APIServer TLS settings change.
 	// The first test runs on all OpenShift clusters; the second requires OpenShift >= 4.22
 	// because the TLSAdherence field was introduced in 4.22.
-	// NOTE: Running this test may have side effects such as setting feature gates on OpenShift.
 	Describe("TLS profile change", Label("tls-profile"), func() {
-		var ocpMinorVersion int
-		var ocpMajorVersion int
+		Log("NOTE: Running this test may have IRREVERSIBLE side effects such as setting feature gates on OpenShift.")
+		var ocpVersion *semver.Version
+
+		// Calling Skip() from a BeforeAll makes Ginkgo defer the enclosing Ordered container's
+		// teardown (the cleaner) into the next top-level container, or drop it entirely. The
+		// cleaner then deletes resources belonging to whichever suite is running by then. So the
+		// checks below record why the specs cannot run and return, and each It skips itself.
+		var skipReason string
+		skipIfUnsupported := func() {
+			if skipReason != "" {
+				Skip(skipReason)
+			}
+		}
 
 		BeforeAll(func(ctx SpecContext) {
 			if !env.GetBool("OCP", false) {
-				Skip("Skipping OpenShift-specific tests on non-OpenShift cluster")
+				skipReason = "Skipping OpenShift-specific tests on non-OpenShift cluster"
+				return
 			}
 
 			// On hosted clusters, the APIServer resource is read-only and TLS settings cannot be changed,
@@ -225,7 +243,8 @@ spec:
 			infraErr := cl.Get(ctx, client.ObjectKey{Name: "cluster"}, infra)
 			Expect(infraErr).NotTo(HaveOccurred(), "Failed to get Infrastructure resource")
 			if infra.Status.ControlPlaneTopology == configv1.ExternalTopologyMode {
-				Skip("Skipping TLS profile tests on hosted cluster: APIServer resource is read-only on hosted clusters")
+				skipReason = "Skipping TLS profile tests on hosted cluster: APIServer resource is read-only on hosted clusters"
+				return
 			}
 
 			// The TLS profile tests must update the cluster-scoped APIServer resource. Rather than
@@ -238,7 +257,8 @@ spec:
 			Expect(cl.Get(ctx, apiServerKey, apiServerProbe)).To(Succeed(), "Failed to get APIServer")
 			if probeErr := cl.Update(ctx, apiServerProbe, client.DryRunAll); probeErr != nil {
 				if apierrors.IsForbidden(probeErr) {
-					Skip("Skipping TLS profile tests: the APIServer resource is not writable on this cluster: " + probeErr.Error())
+					skipReason = "Skipping TLS profile tests: the APIServer resource is not writable on this cluster: " + probeErr.Error()
+					return
 				}
 				Expect(probeErr).NotTo(HaveOccurred(), "Unexpected error while probing APIServer writability")
 			}
@@ -247,35 +267,69 @@ spec:
 			cv := &configv1.ClusterVersion{}
 			err := cl.Get(ctx, client.ObjectKey{Name: "version"}, cv)
 			Expect(err).NotTo(HaveOccurred(), "Failed to get ClusterVersion")
-			_, err = fmt.Sscanf(cv.Status.Desired.Version, "%d.%d", &ocpMajorVersion, &ocpMinorVersion)
+			ocpVersion, err = semver.NewVersion(cv.Status.Desired.Version)
 			Expect(err).NotTo(HaveOccurred(), "Failed to parse ClusterVersion %q", cv.Status.Desired.Version)
+			Log(fmt.Sprintf("Detected OpenShift version: %s", ocpVersion))
 
-			// TLSAdherence is behind a TechPreview feature gate.
-			// Enable it via CustomNoUpgrade so the TLSAdherence field is available on the APIServer CRD.
-			// On OCP < 4.22, the TLSAdherence tests are skipped entirely.
-			if ocpMinorVersion >= 22 {
+			// TLSAdherence is behind a TechPreview feature gate on OCP 4.22+.
+			// Enable it via CustomNoUpgrade only when TLSAdherence is still listed in the
+			// cluster FeatureGate resource. On newer releases (e.g. 5.0) where TLSAdherence
+			// is GA, it is no longer present in FeatureGate status and can be configured
+			// directly on the APIServer resource.
+			if ocpVersion.GreaterThanEqual(semver.MustParse("4.22.0")) {
+				Log(fmt.Sprintf("OpenShift %s is >= 4.22; checking whether TLSAdherence is controlled by a FeatureGate", ocpVersion))
+
 				featureGate := &configv1.FeatureGate{}
 				err = cl.Get(ctx, client.ObjectKey{Name: "cluster"}, featureGate)
 				Expect(err).NotTo(HaveOccurred(), "Failed to get FeatureGate")
+				Log("Retrieved cluster FeatureGate resource")
 
-				tlsAdherenceEnabled := slices.ContainsFunc(featureGate.Status.FeatureGates, func(fg configv1.FeatureGateDetails) bool {
-					return slices.Contains(fg.Enabled, configv1.FeatureGateAttributes{Name: "TLSAdherence"})
-				})
+				// TLSAdherence is GA on OCP 5.0+ and is no longer listed in FeatureGate
+				// status; only attempt to enable the gate when it is still a gated feature.
+				if featureGateHasTLSAdherence(featureGate) {
+					Log("TLSAdherence is listed in the cluster FeatureGate resource")
 
-				if !tlsAdherenceEnabled {
-					Step("Enabling TLSAdherence feature gate")
-					featureGate.Spec.FeatureSet = configv1.CustomNoUpgrade
-					featureGate.Spec.CustomNoUpgrade = &configv1.CustomFeatureGates{
-						Enabled: []configv1.FeatureGateName{"TLSAdherence"},
+					if tlsAdherenceFeatureGateEnabled(featureGate) {
+						Log("TLSAdherence feature gate is already enabled; no FeatureGate changes needed")
+					} else {
+						Log("TLSAdherence feature gate is present but not enabled; enabling it")
+						Step("Enabling TLSAdherence feature gate")
+						featureGate.Spec.FeatureSet = configv1.CustomNoUpgrade
+						featureGate.Spec.CustomNoUpgrade = &configv1.CustomFeatureGates{
+							Enabled: []configv1.FeatureGateName{"TLSAdherence"},
+						}
+						err = cl.Update(ctx, featureGate)
+						Expect(err).NotTo(HaveOccurred(), "Failed to enable TLSAdherence feature gate")
+						Success("TLSAdherence feature gate enabled")
+
+						Step("Waiting for TLSAdherence feature gate to become active")
+						Eventually(func(g Gomega) {
+							fg := &configv1.FeatureGate{}
+							g.Expect(cl.Get(ctx, client.ObjectKey{Name: "cluster"}, fg)).To(Succeed())
+							found := false
+							for _, details := range fg.Status.FeatureGates {
+								for _, enabled := range details.Enabled {
+									if enabled.Name == "TLSAdherence" {
+										found = true
+										break
+									}
+								}
+							}
+							g.Expect(found).To(BeTrue(),
+								"TLSAdherence not yet listed in FeatureGate status; kube-apiserver may not have rolled out yet")
+						}).WithTimeout(30*time.Minute).WithPolling(30*time.Second).Should(Succeed(),
+							"TLSAdherence feature gate should appear in FeatureGate status after rollout")
+						Success("TLSAdherence feature gate is active")
+
+						Step("Waiting for kube-apiserver to finish rolling out after feature gate change")
+						waitForAPIServerStable(ctx, cl)
+						Success("kube-apiserver is stable after feature gate change")
 					}
-					err = cl.Update(ctx, featureGate)
-					Expect(err).NotTo(HaveOccurred(), "Failed to enable TLSAdherence feature gate")
-					Success("TLSAdherence feature gate enabled")
-
-					Step("Waiting for kube-apiserver to finish rolling out after feature gate change")
-					waitForAPIServerStable(ctx, cl)
-					Success("kube-apiserver is stable after feature gate change")
+				} else {
+					Log(fmt.Sprintf("TLSAdherence is not listed in FeatureGate on OpenShift %s; assuming it is a GA feature", ocpVersion))
 				}
+			} else {
+				Log(fmt.Sprintf("OpenShift %s is below 4.22; skipping TLSAdherence FeatureGate setup", ocpVersion))
 			}
 
 			Step("Saving the original APIServer TLS settings")
@@ -326,6 +380,8 @@ spec:
 		// Note: TLSAdherence cannot be set back to NoOpinion once set, so this test
 		// must run first and requires the cluster to have the default NoOpinion state.
 		It("does not sync TLS settings when TLSAdherence is NoOpinion", func(ctx SpecContext) {
+			skipIfUnsupported()
+
 			Step("Verifying TLSAdherence is NoOpinion")
 			apiServer := &configv1.APIServer{}
 			Expect(cl.Get(ctx, apiServerKey, apiServer)).To(Succeed(), "Failed to get APIServer")
@@ -350,9 +406,13 @@ spec:
 		// When TLSAdherence changes to StrictAllComponents, the operator should
 		// apply the TLS profile to both the metrics endpoint and the Istio resource.
 		It("syncs TLS settings when TLSAdherence is set to StrictAllComponents", func(ctx SpecContext) {
-			if ocpMinorVersion < 22 {
-				Skip(fmt.Sprintf("TLSAdherence field requires OpenShift >= 4.22. Current version: '%d.%d'. Skipping test.", ocpMajorVersion, ocpMinorVersion))
+			skipIfUnsupported()
+
+			if !ocpVersion.GreaterThanEqual(semver.MustParse("4.22.0")) {
+				Log(fmt.Sprintf("OpenShift %s is below 4.22; skipping TLSAdherence sync test", ocpVersion))
+				Skip(fmt.Sprintf("TLSAdherence field requires OpenShift >= 4.22. Current version: '%s'. Skipping test.", ocpVersion))
 			}
+			Log(fmt.Sprintf("OpenShift %s supports TLSAdherence; running StrictAllComponents sync test", ocpVersion))
 
 			Step("Clearing TLS profile")
 			apiServer := &configv1.APIServer{}
@@ -461,10 +521,6 @@ spec:
 		if CurrentSpecReport().Failed() && keepOnFailure {
 			return
 		}
-
-		if CurrentSpecReport().Failed() && !debugInfoLogged {
-			common.LogDebugInfo(common.Operator, k)
-		}
 	})
 })
 
@@ -565,6 +621,25 @@ type tokenRequest struct {
 	Status struct {
 		Token string `json:"token"`
 	} `json:"status"`
+}
+
+func featureGateHasTLSAdherence(featureGate *configv1.FeatureGate) bool {
+	return slices.ContainsFunc(featureGate.Status.FeatureGates, func(fg configv1.FeatureGateDetails) bool {
+		return featureGateAttributesContains(fg.Enabled, "TLSAdherence") ||
+			featureGateAttributesContains(fg.Disabled, "TLSAdherence")
+	})
+}
+
+func tlsAdherenceFeatureGateEnabled(featureGate *configv1.FeatureGate) bool {
+	return slices.ContainsFunc(featureGate.Status.FeatureGates, func(fg configv1.FeatureGateDetails) bool {
+		return featureGateAttributesContains(fg.Enabled, "TLSAdherence")
+	})
+}
+
+func featureGateAttributesContains(attrs []configv1.FeatureGateAttributes, name string) bool {
+	return slices.ContainsFunc(attrs, func(attr configv1.FeatureGateAttributes) bool {
+		return attr.Name == configv1.FeatureGateName(name)
+	})
 }
 
 func waitForAPIServerStable(ctx context.Context, cl client.Client) {
