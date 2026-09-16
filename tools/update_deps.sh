@@ -140,8 +140,8 @@ fi
 # Update go dependencies
 export GO111MODULE=on
 if [[ "${TOOLS_ONLY}" != "true" ]]; then
-  go get -u "istio.io/istio@${UPDATE_BRANCH}"
-  go get -u "istio.io/client-go@${UPDATE_BRANCH}"
+  go get "istio.io/istio@${UPDATE_BRANCH}"
+  go get "istio.io/client-go@${UPDATE_BRANCH}"
   go mod tidy
 else
   echo "Skipping Istio module updates (TOOLS_ONLY=true)"
