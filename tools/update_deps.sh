@@ -128,6 +128,15 @@ else
   echo "Skipping build-tools image update (UPDATE_BRANCH is not master)"
 fi
 
+# Update the pinned Dockerfile base image digest (keeps registry.access.redhat.com/ubi10/ubi:latest pinned by digest)
+if command -v crane >/dev/null 2>&1; then
+  UBI_LATEST_DIGEST=$(crane digest registry.access.redhat.com/ubi10/ubi:latest)
+  "$SED_CMD" -i "s|registry.access.redhat.com/ubi10/ubi@sha256:[a-f0-9]*|registry.access.redhat.com/ubi10/ubi@${UBI_LATEST_DIGEST}|" "${ROOTDIR}/Dockerfile"
+  echo "Updated Dockerfile base image digest to ${UBI_LATEST_DIGEST}"
+else
+  echo "WARNING: crane is not installed. Skipping Dockerfile base image digest update."
+fi
+
 # Update go dependencies
 export GO111MODULE=on
 if [[ "${TOOLS_ONLY}" != "true" ]]; then
