@@ -373,6 +373,10 @@ func (m *slowChartReconciler) UninstallChart(
 	return &release.UninstallReleaseResponse{Info: "ok"}, nil
 }
 
+func (m *slowChartReconciler) GetRelease(_ context.Context, _, _ string) (release.Releaser, error) {
+	return nil, nil
+}
+
 func TestUninstall_raceWithReconcile(t *testing.T) {
 	g := NewWithT(t)
 
