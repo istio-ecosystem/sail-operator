@@ -1,6 +1,0 @@
-apiVersion: sailoperator.io/v1
-kind: Istio
-spec:
-  values:
-    global:
-      platform: openshift

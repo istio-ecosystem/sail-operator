@@ -16,17 +16,17 @@
 # to avoid breaking API guarantees.
 versions:
   - name: v1.31-latest
-    ref: v1.31.0-beta.1
-  - name: v1.31.0-beta.1
-    version: 1.31.0-beta.1
+    ref: v1.31.0
+  - name: v1.31.0
+    version: 1.31.0
     repo: https://github.com/istio/istio
-    commit: 1.31.0-beta.1
+    commit: 1.31.0
     charts:
-      - https://blob.istio.io/istio-release/charts/base-1.31.0-beta.1.tgz
-      - https://blob.istio.io/istio-release/charts/istiod-1.31.0-beta.1.tgz
-      - https://blob.istio.io/istio-release/charts/gateway-1.31.0-beta.1.tgz
-      - https://blob.istio.io/istio-release/charts/cni-1.31.0-beta.1.tgz
-      - https://blob.istio.io/istio-release/charts/ztunnel-1.31.0-beta.1.tgz
+      - https://blob.istio.io/istio-release/charts/base-1.31.0.tgz
+      - https://blob.istio.io/istio-release/charts/istiod-1.31.0.tgz
+      - https://blob.istio.io/istio-release/charts/gateway-1.31.0.tgz
+      - https://blob.istio.io/istio-release/charts/cni-1.31.0.tgz
+      - https://blob.istio.io/istio-release/charts/ztunnel-1.31.0.tgz
   - name: v1.30-latest
     ref: v1.30.4
   - name: v1.30.4
@@ -286,16 +286,3 @@ versions:
     eol: true
   - name: v1.21.6
     eol: true
-  - name: master
-    ref: v1.32.0-alpha.8dbd7f98
-  - name: v1.32.0-alpha.8dbd7f98
-    version: 1.32.0-alpha.8dbd7f98c429ed384de5158d700c86f94991fc72
-    repo: https://github.com/istio/istio
-    branch: master
-    commit: 8dbd7f98c429ed384de5158d700c86f94991fc72
-    charts:
-      - https://blob.istio.io/istio-build/dev/1.32.0-alpha.8dbd7f98c429ed384de5158d700c86f94991fc72/helm/base-1.32.0-alpha.8dbd7f98c429ed384de5158d700c86f94991fc72.tgz
-      - https://blob.istio.io/istio-build/dev/1.32.0-alpha.8dbd7f98c429ed384de5158d700c86f94991fc72/helm/cni-1.32.0-alpha.8dbd7f98c429ed384de5158d700c86f94991fc72.tgz
-      - https://blob.istio.io/istio-build/dev/1.32.0-alpha.8dbd7f98c429ed384de5158d700c86f94991fc72/helm/gateway-1.32.0-alpha.8dbd7f98c429ed384de5158d700c86f94991fc72.tgz
-      - https://blob.istio.io/istio-build/dev/1.32.0-alpha.8dbd7f98c429ed384de5158d700c86f94991fc72/helm/istiod-1.32.0-alpha.8dbd7f98c429ed384de5158d700c86f94991fc72.tgz
-      - https://blob.istio.io/istio-build/dev/1.32.0-alpha.8dbd7f98c429ed384de5158d700c86f94991fc72/helm/ztunnel-1.32.0-alpha.8dbd7f98c429ed384de5158d700c86f94991fc72.tgz
