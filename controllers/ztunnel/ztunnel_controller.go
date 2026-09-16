@@ -142,6 +142,7 @@ func (r *Reconciler) newZTunnelReconciler() *sharedreconcile.ZTunnelReconciler {
 	return sharedreconcile.NewZTunnelReconciler(sharedreconcile.Config{
 		ResourceFS:        r.Config.ResourceFS,
 		Platform:          r.Config.Platform,
+		OCPVersion:        r.Config.OCPVersion,
 		DefaultProfile:    r.Config.DefaultProfile,
 		OperatorNamespace: r.Config.OperatorNamespace,
 		ChartManager:      r.ChartManager,

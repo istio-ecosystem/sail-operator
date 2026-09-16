@@ -70,7 +70,9 @@ func (r *ZTunnelReconciler) Validate(ctx context.Context, version, namespace str
 // ComputeValues computes the final Helm values by applying digests, profiles, and user overrides.
 // If baseValues are provided (e.g. from a referenced IstioRevision), they are treated like an additional
 // profile layer: applied on top of profile defaults, with user values then applied on top.
-func (r *ZTunnelReconciler) ComputeValues(version string, userValues *v1.ZTunnelValues, baseValues ...helm.Values) (helm.Values, error) {
+func (r *ZTunnelReconciler) ComputeValues(
+	ctx context.Context, version, namespace string, userValues *v1.ZTunnelValues, baseValues ...helm.Values,
+) (helm.Values, error) {
 	resolvedVersion, err := istioversion.Resolve(version)
 	if err != nil {
 		if istioversion.IsEOLVersion(version) {
@@ -88,6 +90,12 @@ func (r *ZTunnelReconciler) ComputeValues(version string, userValues *v1.ZTunnel
 
 	// apply fips values
 	istiovalues.ApplyZTunnelFipsValues(userValues, resolvedVersion)
+
+	// apply vendor-specific default values
+	userValues, err = istiovalues.ApplyZTunnelVendorDefaults(resolvedVersion, userValues)
+	if err != nil {
+		return nil, fmt.Errorf("failed to apply vendor defaults: %w", err)
+	}
 
 	var mergedHelmValues helm.Values
 	if len(baseValues) > 0 && baseValues[0] != nil {
@@ -112,6 +120,14 @@ func (r *ZTunnelReconciler) ComputeValues(version string, userValues *v1.ZTunnel
 		}
 	}
 
+	existingReleaseValues, err := helm.GetReleaseValues(ctx, r.cfg.ChartManager, namespace, ztunnelReleaseName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get existing Helm chart %q: %w", ztunnelChartName, err)
+	}
+	if err := istiovalues.ApplyNetworkPolicyDefaults(r.cfg.OCPVersion, &mergedHelmValues, existingReleaseValues); err != nil {
+		return nil, fmt.Errorf("failed to apply network policy defaults: %w", err)
+	}
+
 	// Apply any user Overrides configured as part of values.ztunnel
 	// This step was not required for the IstioCNI resource because the Helm templates[*] automatically override values.cni
 	// [*]https://github.com/istio/istio/blob/0200fd0d4c3963a72f36987c2e8c2887df172abf/manifests/charts/istio-cni/templates/zzy_descope_legacy.yaml#L3
@@ -120,7 +136,6 @@ func (r *ZTunnelReconciler) ComputeValues(version string, userValues *v1.ZTunnel
 	if err != nil {
 		return nil, fmt.Errorf("failed to apply user overrides: %w", err)
 	}
-
 	return finalHelmValues, nil
 }
 
@@ -130,7 +145,7 @@ func (r *ZTunnelReconciler) ComputeValues(version string, userValues *v1.ZTunnel
 func (r *ZTunnelReconciler) Install(
 	ctx context.Context, version, namespace string, values *v1.ZTunnelValues, ownerRef *metav1.OwnerReference, baseValues ...helm.Values,
 ) error {
-	finalHelmValues, err := r.ComputeValues(version, values, baseValues...)
+	finalHelmValues, err := r.ComputeValues(ctx, version, namespace, values, baseValues...)
 	if err != nil {
 		return err
 	}
