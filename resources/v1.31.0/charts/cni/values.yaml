@@ -160,7 +160,7 @@ _internal_defaults_do_not_set:
     hub: quay.io/sail-dev
 
     # Default tag for Istio images.
-    tag: 1.31.0-beta.1
+    tag: 1.31.0
 
     # Variant of the image to use.
     # Currently supported are: [debug, distroless]
