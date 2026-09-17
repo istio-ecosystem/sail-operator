@@ -20,11 +20,11 @@ import "github.com/istio-ecosystem/sail-operator/pkg/config"
 
 func init() {
 	config.Config.ImageDigests = map[string]config.IstioImageConfig{
-		"v1.31.0-beta.1": {
-			IstiodImage:  "quay.io/sail-dev/pilot:1.31.0-beta.1",
-			ProxyImage:   "quay.io/sail-dev/proxyv2:1.31.0-beta.1",
-			CNIImage:     "quay.io/sail-dev/install-cni:1.31.0-beta.1",
-			ZTunnelImage: "quay.io/sail-dev/ztunnel:1.31.0-beta.1",
+		"v1.31.0": {
+			IstiodImage:  "quay.io/sail-dev/pilot:1.31.0",
+			ProxyImage:   "quay.io/sail-dev/proxyv2:1.31.0",
+			CNIImage:     "quay.io/sail-dev/install-cni:1.31.0",
+			ZTunnelImage: "quay.io/sail-dev/ztunnel:1.31.0",
 		},
 		"v1.30.4": {
 			IstiodImage:  "registry.istio.io/release/pilot:1.30.4",
