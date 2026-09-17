@@ -180,6 +180,15 @@ spec:
 
 As you can see in the YAML above, `IstioRevisionTag` really only has one field in its spec: `targetRef`. With this field, you can reference an `Istio` or `IstioRevision` resource. So after deploying this, you will be able to use both the `istio.io/rev=default` and also `istio-injection=enabled` labels to inject proxies into your workloads. The `istio-injection` label can only be used for revisions and revision tags named `default`, like the `IstioRevisionTag` in the above example.
 
+[NOTE]
+====
+The cluster-wide `istiod-default-validator` `ValidatingWebhookConfiguration` is only installed if either the revision or the revision tag is named `default`. Every revision always gets its own `istio-validator-<revision>-istio-system` webhook, but that one has an `objectSelector` on `istio.io/rev`, so it only validates resources that carry the matching revision label. The `istiod-default-validator` webhook has no such selector and is therefore the one that validates Istio resources created without the `istio.io/rev` label.
+
+So if you use a named revision (for example `prod`) and don't create an `IstioRevisionTag` named `default` pointing to it, Istio resources without the `istio.io/rev` label are not validated at admission time.
+
+This is a bug and will be fixed in a future release; the `istiod-default-validator` webhook should be installed regardless of the revision or revision tag name.
+====
+
 [#istiocni-resource]
 === IstioCNI resource
 
