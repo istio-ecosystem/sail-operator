@@ -34,7 +34,7 @@ MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 #   make bundle-publish -e PREVIOUS_VERSION=X.Y.Z
 #
 # Default: empty (will be auto-detected by publish-bundle.sh)
-PREVIOUS_VERSION ?=
+PREVIOUS_VERSION ?= 1.30.4
 
 OPERATOR_NAME ?= sailoperator
 VERSIONS_YAML_DIR ?= pkg/istioversion
@@ -82,7 +82,7 @@ endif
 # Image hub to use
 HUB ?= quay.io/sail-dev
 # Image tag to use
-TAG ?= ${MINOR_VERSION}-latest
+TAG ?= ${VERSION}
 # Image base to use
 IMAGE_BASE ?= sail-operator
 # Image URL to use all building/pushing image targets
@@ -134,9 +134,10 @@ endif
 # To re-generate a bundle for other specific channels without changing the standard setup, you can:
 # - use the CHANNELS as arg of the bundle target (e.g make bundle CHANNELS=candidate,fast,stable)
 # - use environment variables to overwrite this value (e.g export CHANNELS="candidate,fast,stable")
-CHANNEL_PREFIX := dev
+CHANNEL_PREFIX := stable
+DEFAULT_CHANNEL := stable
 
-CHANNELS ?= $(CHANNEL_PREFIX)-$(MINOR_VERSION)
+CHANNELS := $(DEFAULT_CHANNEL),$(CHANNEL_PREFIX)-$(MINOR_VERSION)
 ifneq ($(origin CHANNELS), undefined)
 BUNDLE_CHANNELS = --channels=\"$(CHANNELS)\"
 endif
@@ -618,14 +619,14 @@ CRANE ?= $(LOCALBIN)/crane
 
 ## Tool Versions
 OPERATOR_SDK_VERSION ?= v1.42.3
-HELM_VERSION ?= v4.2.4
+HELM_VERSION ?= v4.3.0
 CONTROLLER_TOOLS_VERSION ?= v0.21.0
 CONTROLLER_RUNTIME_BRANCH ?= release-0.24
 OPM_VERSION ?= v1.73.0
 OLM_VERSION ?= v0.46.0
 GITLEAKS_VERSION ?= v8.30.1
 ISTIOCTL_VERSION ?= 1.26.2
-RUNME_VERSION ?= 3.17.4
+RUNME_VERSION ?= 3.17.5
 MISSPELL_VERSION ?= v0.3.4
 CRD_SCHEMA_CHECKER_VERSION ?= release-4.22
 CRANE_VERSION ?= v0.22.1
