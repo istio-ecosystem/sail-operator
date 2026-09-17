@@ -96,7 +96,7 @@ spec:
 func TestFipsComputeValues(t *testing.T) {
 	const (
 		namespace    = "istio-system"
-		version      = "my-version"
+		version      = "1.29.0"
 		revisionName = "my-revision"
 	)
 	resourceDir := t.TempDir()
@@ -108,9 +108,7 @@ apiVersion: sailoperator.io/v1
 kind: IstioRevision
 spec:`), 0o644))
 
-	originalFipsEnabled := istiovalues.FipsEnabled
-	t.Cleanup(func() { istiovalues.FipsEnabled = originalFipsEnabled })
-	istiovalues.FipsEnabled = true
+	istiovalues.EnableFIPS(t)
 	values := &v1.Values{}
 	result, err := ComputeValues(values, namespace, version, config.PlatformOpenShift, "default", "",
 		os.DirFS(resourceDir), revisionName, nil)
