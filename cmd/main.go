@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/istio-ecosystem/sail-operator/controllers/analytics"
 	"github.com/istio-ecosystem/sail-operator/controllers/istio"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiocni"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiorevision"
@@ -250,6 +251,15 @@ func main() {
 	if err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Webhook")
 		os.Exit(1)
+	}
+
+	if os.Getenv("ENABLE_ANALYTICS") != "" {
+		err = analytics.NewReconciler(reconcilerCfg, mgr.GetClient(), mgr.GetScheme()).
+			SetupWithManager(mgr)
+		if err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "Analytics")
+			os.Exit(1)
+		}
 	}
 
 	if reconcilerCfg.TLSConfig != nil && reconcilerCfg.TLSConfig.OpenShift != nil {

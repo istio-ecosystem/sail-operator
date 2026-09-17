@@ -325,3 +325,14 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  - podmonitors
+  - prometheusrules
+  verbs:
+  - create
+  - delete
+  - get
+  - list
