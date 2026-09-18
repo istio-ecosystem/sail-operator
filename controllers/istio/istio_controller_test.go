@@ -843,6 +843,26 @@ func TestGetActiveRevisionName(t *testing.T) {
 		},
 	}
 
+	// Regression test for https://github.com/istio-ecosystem/sail-operator/issues/2080: the
+	// revision name must be derived from the resolved version, not the raw alias, so that a
+	// change in what the alias points to results in a new revision name.
+	for name, info := range istioversion.Map {
+		if name != istioversion.New && info.Name == istioversion.New {
+			tests = append(tests, struct {
+				name                 string
+				version              string
+				updateStrategyType   *v1.UpdateStrategyType
+				expectedRevisionName string
+			}{
+				name:                 "RevisionBased with version alias",
+				version:              name,
+				updateStrategyType:   ptr.Of(v1.UpdateStrategyTypeRevisionBased),
+				expectedRevisionName: "test-istio-" + strings.ReplaceAll(istioversion.New, ".", "-"),
+			})
+			break
+		}
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			istio := &v1.Istio{

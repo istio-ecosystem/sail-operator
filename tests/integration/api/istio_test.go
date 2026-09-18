@@ -25,6 +25,7 @@ import (
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
+	"github.com/istio-ecosystem/sail-operator/pkg/revision"
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	. "github.com/istio-ecosystem/sail-operator/tests/e2e/util/gomega"
 	. "github.com/onsi/ginkgo/v2"
@@ -715,6 +716,118 @@ var _ = Describe("Istio resource", Ordered, func() {
 			Consistently(k8sClient.Get).WithArguments(ctx, validatorWebhookKey, &admissionv1.ValidatingWebhookConfiguration{}).Should(ReturnNotFoundError())
 		})
 	})
+
+	Describe("RevisionBased strategy with a version alias", func() {
+		// Regression test for https://github.com/istio-ecosystem/sail-operator/issues/2080:
+		// revision names used to be derived from the raw (unresolved) spec.Version. This meant
+		// that a version alias (e.g. "v1.30-latest") always produced the same revision name even
+		// after the alias started pointing at a different patch release, so what should have been
+		// a RevisionBased canary upgrade instead silently mutated the existing revision in place.
+		var (
+			aliasVersion    string
+			resolvedVersion string
+		)
+
+		BeforeAll(func() {
+			resolvedVersion = istioversion.New
+			aliasVersion = findAliasFor(resolvedVersion)
+			if aliasVersion == "" {
+				Skip("no version alias points to the latest version; skipping alias regression test")
+			}
+		})
+
+		It("names the IstioRevision after the resolved version, not the alias", func() {
+			istio = &v1.Istio{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: istioName,
+				},
+				Spec: v1.IstioSpec{
+					Version:   aliasVersion,
+					Namespace: istioNamespace,
+					UpdateStrategy: &v1.IstioUpdateStrategy{
+						Type: v1.UpdateStrategyTypeRevisionBased,
+						InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(gracePeriod.Seconds())),
+					},
+				},
+			}
+			createIstioWithCleanup(ctx, istio)
+
+			revKey := getRevisionKey(istio, resolvedVersion)
+			rev := &v1.IstioRevision{}
+			Eventually(k8sClient.Get).WithArguments(ctx, revKey, rev).Should(Succeed())
+			Expect(rev.Spec.Version).To(Equal(resolvedVersion))
+
+			aliasRevKey := getRevisionKey(istio, aliasVersion)
+			Consistently(k8sClient.Get).WithArguments(ctx, aliasRevKey, &v1.IstioRevision{}).Should(ReturnNotFoundError())
+		})
+
+		// Simulates upgrading the operator across this fix: an existing revision was named after
+		// the alias by a pre-fix operator build; the newly-reconciled Istio must not keep updating
+		// that revision in place. Instead it should create a new, correctly-named revision and
+		// prune the old one once its grace period expires.
+		When("an old-style revision (named after the alias) already exists from before the fix", func() {
+			var oldRevisionKey client.ObjectKey
+
+			BeforeAll(func() {
+				istio = &v1.Istio{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: istioName,
+					},
+					Spec: v1.IstioSpec{
+						Version:   aliasVersion,
+						Namespace: istioNamespace,
+						UpdateStrategy: &v1.IstioUpdateStrategy{
+							Type: v1.UpdateStrategyTypeRevisionBased,
+							InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(gracePeriod.Seconds())),
+						},
+					},
+				}
+				Expect(k8sClient.Create(ctx, istio)).To(Succeed())
+
+				// Recreate what a pre-fix operator would have created: a revision named after
+				// the raw alias instead of the resolved version.
+				oldRevisionKey = getRevisionKey(istio, aliasVersion)
+				values, err := revision.ComputeValues(
+					istio.Spec.Values, istio.Spec.Namespace, resolvedVersion,
+					istioReconciler.Config.Platform, istioReconciler.Config.DefaultProfile, istio.Spec.Profile,
+					istioReconciler.Config.ResourceFS, oldRevisionKey.Name, istioReconciler.Config.TLSConfig)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(revision.CreateOrUpdate(ctx, k8sClient,
+					oldRevisionKey.Name, resolvedVersion, istio.Spec.Namespace, values,
+					metav1.OwnerReference{
+						APIVersion:         v1.GroupVersion.String(),
+						Kind:               v1.IstioKind,
+						Name:               istio.Name,
+						UID:                istio.UID,
+						Controller:         ptr.Of(true),
+						BlockOwnerDeletion: ptr.Of(true),
+					})).To(Succeed())
+			})
+
+			AfterAll(func() {
+				deleteAllIstiosAndRevisions(ctx)
+			})
+
+			It("creates a new, correctly-named IstioRevision instead of reusing the old one", func() {
+				revKey := getRevisionKey(istio, resolvedVersion)
+				rev := &v1.IstioRevision{}
+				Eventually(k8sClient.Get).WithArguments(ctx, revKey, rev).Should(Succeed())
+				Expect(rev.Spec.Version).To(Equal(resolvedVersion))
+			})
+
+			It("doesn't immediately delete the old alias-named revision", func() {
+				marginOfError := 2 * time.Second
+				Consistently(k8sClient.Get, gracePeriod-marginOfError).WithArguments(ctx, oldRevisionKey, &v1.IstioRevision{}).Should(Succeed())
+			})
+
+			When("grace period expires", func() {
+				It("prunes the old alias-named revision", func() {
+					marginOfError := 30 * time.Second
+					Eventually(k8sClient.Get, gracePeriod+marginOfError).WithArguments(ctx, oldRevisionKey, &v1.IstioRevision{}).Should(ReturnNotFoundError())
+				})
+			})
+		})
+	})
 })
 
 func deleteAllIstiosAndRevisions(ctx context.Context) {
@@ -758,6 +871,17 @@ func getRevisionName(istio *v1.Istio, version string) string {
 		return istio.Name
 	}
 	return istio.Name + "-" + strings.ReplaceAll(version, ".", "-")
+}
+
+// findAliasFor returns a version alias name (e.g. "v1.30-latest") that currently resolves to
+// target, or "" if none exists.
+func findAliasFor(target string) string {
+	for name, info := range istioversion.Map {
+		if name != target && info.Name == target {
+			return name
+		}
+	}
+	return ""
 }
 
 func getObject(ctx context.Context, cl client.Client, key client.ObjectKey, obj client.Object) (client.Object, error) {
