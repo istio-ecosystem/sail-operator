@@ -197,13 +197,6 @@ type CNIAmbientConfig struct {
 	Ipv6 *bool `json:"ipv6,omitempty"`
 	// If enabled, and ambient is enabled, iptables reconciliation will be enabled.
 	ReconcileIptablesOnStartup *bool `json:"reconcileIptablesOnStartup,omitempty"`
-	// If ambient is enabled, these selectors are used to identify the ambient-enabled pods.
-	EnablementSelectors []CNIAmbientEnablementSelector `json:"enablementSelectors,omitempty"`
-	// If enabled, and ambient is enabled, the CNI agent will always share the network namespace
-	// of the host node it is running on.
-	ShareHostNetworkNamespace *bool `json:"shareHostNetworkNamespace,omitempty"`
-	// If enabled, the CNI plugin will retry checking whether a pod is ambient enabled when there are errors.
-	EnableAmbientDetectionRetry *bool `json:"enableAmbientDetectionRetry,omitempty"`
 }
 
 type CNIRepairConfig struct {
@@ -1121,7 +1114,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x0eCNIUsageConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x128\n" +
 	"\achained\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueB\x02\x18\x01R\achained\x12\x1a\n" +
-	"\bprovider\x18\x03 \x01(\tR\bprovider\"\xb1\x04\n" +
+	"\bprovider\x18\x03 \x01(\tR\bprovider\"\xae\x02\n" +
 	"\x10CNIAmbientConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12\x1c\n" +
 	"\tconfigDir\x18\x03 \x01(\tR\tconfigDir\x12:\n" +
@@ -1129,11 +1122,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"dnsCapture\x18\x05 \x01(\v2\x1a.google.protobuf.BoolValueR\n" +
 	"dnsCapture\x12.\n" +
 	"\x04ipv6\x18\a \x01(\v2\x1a.google.protobuf.BoolValueR\x04ipv6\x12Z\n" +
-	"\x1areconcileIptablesOnStartup\x18\t \x01(\v2\x1a.google.protobuf.BoolValueR\x1areconcileIptablesOnStartup\x12I\n" +
-	"\x13enablementSelectors\x18\n" +
-	" \x03(\v2\x17.google.protobuf.StructR\x13enablementSelectors\x12X\n" +
-	"\x19shareHostNetworkNamespace\x18\v \x01(\v2\x1a.google.protobuf.BoolValueR\x19shareHostNetworkNamespace\x12\\\n" +
-	"\x1benableAmbientDetectionRetry\x18\f \x01(\v2\x1a.google.protobuf.BoolValueR\x1benableAmbientDetectionRetry\"\xad\x03\n" +
+	"\x1areconcileIptablesOnStartup\x18\t \x01(\v2\x1a.google.protobuf.BoolValueR\x1areconcileIptablesOnStartup\"\xad\x03\n" +
 	"\x0fCNIRepairConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12\x10\n" +
 	"\x03hub\x18\x02 \x01(\tR\x03hub\x12(\n" +
@@ -2178,27 +2167,6 @@ type MeshConfig struct {
 	// All settings in the retry policy except `perTryTimeout` can currently be
 	// configured globally via this field.
 	DefaultHttpRetryPolicy *HTTPRetry `json:"defaultHttpRetryPolicy,omitempty"`
-	// Configure the default retry policy for inbound routes on sidecars.
-	//
-	// By default, a sidecar retries requests that were reset before they reached the
-	// application, using Envoy's `reset-before-request` condition with 2 attempts.
-	// Because such a request never reached the application, retrying it is safe even
-	// for non-idempotent methods. This shields clients from races where the
-	// application closes an idle connection while a request is in flight.
-	//
-	// Setting the number of attempts to 0 disables the inbound retry policy
-	// mesh-wide, for example `defaultInboundHttpRetryPolicy: {}`.
-	//
-	// Only `attempts`, `retryOn` and `backoff` apply here. `perTryTimeout`,
-	// `retryRemoteLocalities` and `retryIgnorePreviousHosts` are ignored, since an
-	// inbound route always targets the single local application cluster.
-	//
-	// The inbound retry policy is never applied to ports declared as gRPC, where
-	// `reset-before-request` does not work well for streaming services.
-	//
-	// Note this is distinct from `defaultHttpRetryPolicy`, which applies to outbound
-	// traffic to other services. Configuring one does not affect the other.
-	DefaultInboundHttpRetryPolicy *HTTPRetry `json:"defaultInboundHttpRetryPolicy,omitempty"`
 	// The below configuration parameters can be used to specify TLSConfig for mesh traffic.
 	// For example, a user could enable min TLS version for ISTIO_MUTUAL traffic and specify a curve for non ISTIO_MUTUAL traffic like below:
 	// ```yaml
@@ -3361,7 +3329,7 @@ type ServiceEntryVisibilityMatchRule struct {
 
 const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\n" +
-	"\x1amesh/v1alpha1/config.proto\x12\x13istio.mesh.v1alpha1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19mesh/v1alpha1/proxy.proto\x1a*networking/v1alpha3/destination_rule.proto\x1a)networking/v1alpha3/virtual_service.proto\"\xbfx\n" +
+	"\x1amesh/v1alpha1/config.proto\x12\x13istio.mesh.v1alpha1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19mesh/v1alpha1/proxy.proto\x1a*networking/v1alpha3/destination_rule.proto\x1a)networking/v1alpha3/virtual_service.proto\"\xcfw\n" +
 	"\n" +
 	"MeshConfig\x12*\n" +
 	"\x11proxy_listen_port\x18\x04 \x01(\x05R\x0fproxyListenPort\x129\n" +
@@ -3409,8 +3377,7 @@ const fileMeshV1alpha1ConfigProtoRawDesc = "" +
 	"\x11default_providers\x18< \x01(\v20.istio.mesh.v1alpha1.MeshConfig.DefaultProvidersR\x10defaultProviders\x12S\n" +
 	"\x13discovery_selectors\x18; \x03(\v2\".istio.mesh.v1alpha1.LabelSelectorR\x12discoverySelectors\x12e\n" +
 	"\x12path_normalization\x18= \x01(\v26.istio.mesh.v1alpha1.MeshConfig.ProxyPathNormalizationR\x11pathNormalization\x12_\n" +
-	"\x19default_http_retry_policy\x18> \x01(\v2$.istio.networking.v1alpha3.HTTPRetryR\x16defaultHttpRetryPolicy\x12n\n" +
-	"!default_inbound_http_retry_policy\x18J \x01(\v2$.istio.networking.v1alpha3.HTTPRetryR\x1ddefaultInboundHttpRetryPolicy\x12F\n" +
+	"\x19default_http_retry_policy\x18> \x01(\v2$.istio.networking.v1alpha3.HTTPRetryR\x16defaultHttpRetryPolicy\x12F\n" +
 	"\tmesh_mTLS\x18? \x01(\v2).istio.mesh.v1alpha1.MeshConfig.TLSConfigR\bmeshMTLS\x12L\n" +
 	"\ftls_defaults\x18@ \x01(\v2).istio.mesh.v1alpha1.MeshConfig.TLSConfigR\vtlsDefaults\x12j\n" +
 	"\x16default_traffic_policy\x18G \x01(\v24.istio.mesh.v1alpha1.MeshConfig.DefaultTrafficPolicyR\x14defaultTrafficPolicy\x12e\n" +

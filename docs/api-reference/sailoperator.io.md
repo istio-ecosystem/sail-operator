@@ -116,26 +116,8 @@ _Appears in:_
 | `dnsCapture` _boolean_ | If enabled, and ambient is enabled, DNS redirection will be enabled. |  |  |
 | `ipv6` _boolean_ | UNSTABLE: If enabled, and ambient is enabled, enables ipv6 support |  |  |
 | `reconcileIptablesOnStartup` _boolean_ | If enabled, and ambient is enabled, iptables reconciliation will be enabled. |  |  |
-| `enablementSelectors` _[CNIAmbientEnablementSelector](#cniambientenablementselector) array_ | If ambient is enabled, these selectors are used to identify the ambient-enabled pods. |  |  |
-| `shareHostNetworkNamespace` _boolean_ | If enabled, and ambient is enabled, the CNI agent will always share the network namespace of the host node it is running on. |  |  |
-| `enableAmbientDetectionRetry` _boolean_ | If enabled, the CNI plugin will retry checking whether a pod is ambient enabled when there are errors. |  |  |
 
 
-#### CNIAmbientEnablementSelector
-
-
-
-CNIAmbientEnablementSelector defines the pod and namespace selectors used to identify ambient-enabled pods.
-
-
-
-_Appears in:_
-- [CNIAmbientConfig](#cniambientconfig)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `podSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#labelselector-v1-meta)_ |  |  |  |
-| `namespaceSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#labelselector-v1-meta)_ |  |  |  |
 
 
 #### CNIConfig
@@ -1232,7 +1214,6 @@ _Appears in:_
 | `discoverySelectors` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#labelselector-v1-meta) array_ | A list of Kubernetes selectors that specify the set of namespaces that Istio considers when computing configuration updates for sidecars. This can be used to reduce Istio's computational load by limiting the number of entities (including services, pods, and endpoints) that are watched and processed. If omitted, Istio will use the default behavior of processing all namespaces in the cluster. Elements in the list are disjunctive (OR semantics), i.e. a namespace will be included if it matches any selector. The following example selects any namespace that matches either below: 1. The namespace has both of these labels: `env: prod` and `region: us-east1` 2. The namespace has label `app` equal to `cassandra` or `spark`. ```yaml discoverySelectors:   - matchLabels:     env: prod     region: us-east1   - matchExpressions:   - key: app     operator: In     values:   - cassandra   - spark  ``` Refer to the [Kubernetes selector docs](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors) for additional detail on selector semantics. |  |  |
 | `pathNormalization` _[MeshConfigProxyPathNormalization](#meshconfigproxypathnormalization)_ | ProxyPathNormalization configures how URL paths in incoming and outgoing HTTP requests are normalized by the sidecars and gateways. The normalized paths will be used in all aspects through the requests' lifetime on the sidecars and gateways, which includes routing decisions in outbound direction (client proxy), authorization policy match and enforcement in inbound direction (server proxy), and the URL path proxied to the upstream service. If not set, the NormalizationType.DEFAULT configuration will be used. |  |  |
 | `defaultHttpRetryPolicy` _[HTTPRetry](#httpretry)_ | Configure the default HTTP retry policy. The default number of retry attempts is set at 2 for these errors:    "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes".  Setting the number of attempts to 0 disables retry policy globally. This setting can be overridden on a per-host basis using the Virtual Service API. All settings in the retry policy except `perTryTimeout` can currently be configured globally via this field. |  |  |
-| `defaultInboundHttpRetryPolicy` _[HTTPRetry](#httpretry)_ | Configure the default retry policy for inbound routes on sidecars.  By default, a sidecar retries requests that were reset before they reached the application, using Envoy's `reset-before-request` condition with 2 attempts. Because such a request never reached the application, retrying it is safe even for non-idempotent methods. This shields clients from races where the application closes an idle connection while a request is in flight.  Setting the number of attempts to 0 disables the inbound retry policy mesh-wide, for example `defaultInboundHttpRetryPolicy: \{\}`.  Only `attempts`, `retryOn` and `backoff` apply here. `perTryTimeout`, `retryRemoteLocalities` and `retryIgnorePreviousHosts` are ignored, since an inbound route always targets the single local application cluster.  The inbound retry policy is never applied to ports declared as gRPC, where `reset-before-request` does not work well for streaming services.  Note this is distinct from `defaultHttpRetryPolicy`, which applies to outbound traffic to other services. Configuring one does not affect the other. |  |  |
 | `meshMTLS` _[MeshConfigTLSConfig](#meshconfigtlsconfig)_ | The below configuration parameters can be used to specify TLSConfig for mesh traffic. For example, a user could enable min TLS version for ISTIO_MUTUAL traffic and specify a curve for non ISTIO_MUTUAL traffic like below: ```yaml meshConfig:    meshMTLS:     minProtocolVersion: TLSV1_3   tlsDefaults:     Note: applicable only for non ISTIO_MUTUAL scenarios     ecdhCurves:       - P-256       - P-512  ``` Configuration of mTLS for traffic between workloads with ISTIO_MUTUAL TLS traffic.  Note: Mesh mTLS does not respect ECDH curves. |  |  |
 | `tlsDefaults` _[MeshConfigTLSConfig](#meshconfigtlsconfig)_ | Configuration of TLS for all traffic except for ISTIO_MUTUAL mode. For ISTIO_MUTUAL TLS settings, use meshMTLS configuration. |  |  |
 | `defaultTrafficPolicy` _[MeshConfigDefaultTrafficPolicy](#meshconfigdefaulttrafficpolicy)_ | The default traffic policy applied to outbound clusters in the mesh, providing a baseline that DestinationRules inherit and override per block. Without this, a DestinationRule that sets `connectionPool` or `outlierDetection` has no mesh-level baseline, and unset blocks fall back to Istio's built-in defaults. |  |  |
