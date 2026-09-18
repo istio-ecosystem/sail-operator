@@ -22,8 +22,6 @@ import (
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 func TestApplyVendorDefaults(t *testing.T) {
@@ -63,7 +61,7 @@ v1.24.2:
 			},
 			istioCniPostValues: &v1.CNIValues{
 				Cni: &v1.CNIConfig{
-					CniConfDir: ptr.Of("example/path"),
+					CniConfDir: new("example/path"),
 				},
 			},
 			expectedIstioError:    false,
@@ -88,7 +86,7 @@ v1.24.2:
 				},
 				MeshConfig: &v1.MeshConfig{
 					LocalityLbSetting: &v1.LocalityLoadBalancerSetting{
-						Enabled: ptr.Of(true),
+						Enabled: new(true),
 					},
 				},
 			},
@@ -102,7 +100,7 @@ v1.24.2:
 				},
 				MeshConfig: &v1.MeshConfig{
 					LocalityLbSetting: &v1.LocalityLoadBalancerSetting{
-						Enabled: ptr.Of(true),
+						Enabled: new(true),
 					},
 				},
 			},
@@ -125,7 +123,7 @@ v1.24.2:
 			istoPostValues:    &v1.Values{},
 			istioCniPostValues: &v1.CNIValues{
 				Cni: &v1.CNIConfig{
-					CniConfDir: ptr.Of("example/path"),
+					CniConfDir: new("example/path"),
 				},
 			},
 			expectedIstioError:    false,

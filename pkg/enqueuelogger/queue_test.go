@@ -20,7 +20,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -37,7 +36,7 @@ func TestAdditionNotifierQueue(t *testing.T) {
 	}
 
 	t.Run("Add", func(t *testing.T) {
-		item := reconcile.Request{NamespacedName: types.NamespacedName{Namespace: "ns1", Name: "name1"}}
+		item := reconcile.Request{Namespace: "ns1", Name: "name1"}
 		mockQueue.On("Add", mock.Anything).Return()
 		queue.Add(item)
 		mockQueue.AssertCalled(t, "Add", item)
@@ -45,7 +44,7 @@ func TestAdditionNotifierQueue(t *testing.T) {
 	})
 
 	t.Run("AddAfter", func(t *testing.T) {
-		item := reconcile.Request{NamespacedName: types.NamespacedName{Namespace: "ns2", Name: "name2"}}
+		item := reconcile.Request{Namespace: "ns2", Name: "name2"}
 		mockQueue.On("AddAfter", mock.Anything, mock.Anything).Return()
 		queue.AddAfter(item, time.Second)
 		mockQueue.AssertCalled(t, "AddAfter", item, time.Second)
@@ -53,7 +52,7 @@ func TestAdditionNotifierQueue(t *testing.T) {
 	})
 
 	t.Run("AddRateLimited", func(t *testing.T) {
-		item := reconcile.Request{NamespacedName: types.NamespacedName{Namespace: "ns3", Name: "name3"}}
+		item := reconcile.Request{Namespace: "ns3", Name: "name3"}
 		mockQueue.On("AddRateLimited", mock.Anything).Return()
 		queue.AddRateLimited(item)
 		mockQueue.AssertCalled(t, "AddRateLimited", item)

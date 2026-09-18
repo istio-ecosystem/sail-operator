@@ -63,9 +63,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 	istiodKey := client.ObjectKey{Name: "istiod-" + revName, Namespace: istioNamespace}
 
 	namespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: istioNamespace,
-		},
+		Name: istioNamespace,
 	}
 	BeforeAll(func() {
 		Step("Creating the Namespace to perform the tests")
@@ -91,16 +89,14 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 
 		It("rejects an IstioRevision where spec.values.global.istioNamespace doesn't match spec.namespace", func() {
 			rev = &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: revName,
-				},
+				Name: revName,
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1.Values{
-						Revision: ptr.Of(revName),
+						Revision: new(revName),
 						Global: &v1.GlobalConfig{
-							IstioNamespace: ptr.Of("wrong-namespace"),
+							IstioNamespace: new("wrong-namespace"),
 						},
 					},
 				},
@@ -110,16 +106,14 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 
 		It("rejects an IstioRevision where spec.values.revision doesn't match metadata.name (when name is not default)", func() {
 			rev = &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: revName,
-				},
+				Name: revName,
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1.Values{
-						Revision: ptr.Of("is-not-" + revName),
+						Revision: new("is-not-" + revName),
 						Global: &v1.GlobalConfig{
-							IstioNamespace: ptr.Of(istioNamespace),
+							IstioNamespace: new(istioNamespace),
 						},
 					},
 				},
@@ -129,16 +123,14 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 
 		It("rejects an IstioRevision where metadata.name is default and spec.values.revision isn't empty", func() {
 			rev = &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1.Values{
-						Revision: ptr.Of("default"), // this must be rejected, because revision needs to be '' when metadata.name is 'default'
+						Revision: new("default"), // this must be rejected, because revision needs to be '' when metadata.name is 'default'
 						Global: &v1.GlobalConfig{
-							IstioNamespace: ptr.Of(istioNamespace),
+							IstioNamespace: new(istioNamespace),
 						},
 					},
 				},
@@ -148,16 +140,14 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 
 		It("accepts an IstioRevision where metadata.name is default and spec.values.revision is empty", func() {
 			rev = &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1.Values{
-						Revision: ptr.Of(""),
+						Revision: new(""),
 						Global: &v1.GlobalConfig{
-							IstioNamespace: ptr.Of(istioNamespace),
+							IstioNamespace: new(istioNamespace),
 						},
 					},
 				},
@@ -168,9 +158,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 
 	Describe("IstioCNI dependency checks", func() {
 		cni := &v1.IstioCNI{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: cniName,
-			},
+			Name: cniName,
 			Spec: v1.IstioCNISpec{
 				Version:   istioversion.Default,
 				Namespace: istioNamespace,
@@ -179,16 +167,14 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 
 		BeforeAll(func() {
 			rev = &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: revName,
-				},
+				Name: revName,
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1.Values{
-						Revision: ptr.Of(revName),
+						Revision: new(revName),
 						Global: &v1.GlobalConfig{
-							IstioNamespace: ptr.Of(istioNamespace),
+							IstioNamespace: new(istioNamespace),
 							Platform:       ptr.Of(string(config.PlatformOpenShift)),
 						},
 					},
@@ -236,9 +222,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 		ztunnelName := "default"
 		ztunnelKey := client.ObjectKey{Name: ztunnelName}
 		ztunnel := &v1.ZTunnel{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: ztunnelName,
-			},
+			Name: ztunnelName,
 			Spec: v1.ZTunnelSpec{
 				Version:   istioversion.Default,
 				Namespace: istioNamespace,
@@ -247,9 +231,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 
 		// Create IstioCNI as ambient mode requires it
 		cni := &v1.IstioCNI{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: cniName,
-			},
+			Name: cniName,
 			Spec: v1.IstioCNISpec{
 				Version:   istioversion.Default,
 				Namespace: istioNamespace,
@@ -269,17 +251,15 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 			expectCNICondition(ctx, v1.IstioCNIConditionReady, metav1.ConditionTrue)
 
 			rev = &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: revName,
-				},
+				Name: revName,
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1.Values{
-						Revision: ptr.Of(revName),
-						Profile:  ptr.Of("ambient"),
+						Revision: new(revName),
+						Profile:  new("ambient"),
 						Global: &v1.GlobalConfig{
-							IstioNamespace: ptr.Of(istioNamespace),
+							IstioNamespace: new(istioNamespace),
 						},
 					},
 				},
@@ -331,14 +311,12 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 			BeforeAll(func() {
 				Step("Creating the IstioRevision resource without the namespace")
 				rev = &v1.IstioRevision{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: revName,
-					},
+					Name: revName,
 					Spec: v1.IstioRevisionSpec{
 						Version:   istioversion.Default,
 						Namespace: nsName,
 						Values: &v1.Values{
-							Revision: ptr.Of(revName),
+							Revision: new(revName),
 							Global: &v1.GlobalConfig{
 								IstioNamespace: &nsName,
 							},
@@ -365,9 +343,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 
 				BeforeAll(func() {
 					ns = &corev1.Namespace{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: nsName,
-						},
+						Name: nsName,
 					}
 					Expect(k8sClient.Create(ctx, ns)).To(Succeed())
 				})
@@ -391,17 +367,15 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 			BeforeAll(func() {
 				// Uses istioNamespace which has already been created by suite setup
 				rev = &v1.IstioRevision{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: revName,
-					},
+					Name: revName,
 					Spec: v1.IstioRevisionSpec{
 						Version:   istioversion.Default,
 						Namespace: istioNamespace,
 						Values: &v1.Values{
 							Global: &v1.GlobalConfig{
-								IstioNamespace: ptr.Of(istioNamespace),
+								IstioNamespace: new(istioNamespace),
 							},
-							Revision: ptr.Of(revName),
+							Revision: new(revName),
 							Pilot: &v1.PilotConfig{
 								Image: ptr.Of(pilotImage),
 							},
@@ -434,17 +408,15 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 	Describe("istiod readiness changes", func() {
 		BeforeAll(func() {
 			rev = &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: revName,
-				},
+				Name: revName,
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1.Values{
 						Global: &v1.GlobalConfig{
-							IstioNamespace: ptr.Of(istioNamespace),
+							IstioNamespace: new(istioNamespace),
 						},
-						Revision: ptr.Of(revName),
+						Revision: new(revName),
 						Pilot: &v1.PilotConfig{
 							Image: ptr.Of(pilotImage),
 						},
@@ -488,20 +460,18 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 	Describe("owned resource reconciliations", func() {
 		BeforeAll(func() {
 			rev = &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: revName,
-				},
+				Name: revName,
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1.Values{
 						Global: &v1.GlobalConfig{
-							IstioNamespace: ptr.Of(istioNamespace),
+							IstioNamespace: new(istioNamespace),
 						},
-						Revision: ptr.Of(revName),
+						Revision: new(revName),
 						Pilot: &v1.PilotConfig{
 							Image:        ptr.Of(pilotImage),
-							AutoscaleMin: ptr.Of(uint32(2)),
+							AutoscaleMin: new(uint32(2)),
 						},
 					},
 				},
@@ -541,10 +511,8 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 			},
 			Entry("Deployment",
 				&appsv1.Deployment{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      istiodKey.Name,
-						Namespace: istiodKey.Namespace,
-					},
+					Name:      istiodKey.Name,
+					Namespace: istiodKey.Namespace,
 				}, func(obj client.Object) {
 					deployment := obj.(*appsv1.Deployment)
 					deployment.Spec.Template.Spec.Containers[0].Image = "xyz"
@@ -554,9 +522,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 				}),
 			Entry("MutatingWebhookConfiguration",
 				&admissionv1.MutatingWebhookConfiguration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "istio-sidecar-injector-" + revName + "-" + istioNamespace,
-					},
+					Name: "istio-sidecar-injector-" + revName + "-" + istioNamespace,
 				}, func(obj client.Object) {
 					webhook := obj.(*admissionv1.MutatingWebhookConfiguration)
 					webhook.Webhooks[0].Name = "xyz.xyz.xyz"
@@ -566,10 +532,8 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 				}),
 			Entry("HorizontalPodAutoscaler",
 				&autoscalingv2.HorizontalPodAutoscaler{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "istiod-" + revName,
-						Namespace: istioNamespace,
-					},
+					Name:      "istiod-" + revName,
+					Namespace: istioNamespace,
 				}, func(obj client.Object) {
 					hpa := obj.(*autoscalingv2.HorizontalPodAutoscaler)
 					hpa.Spec.MaxReplicas = 123
@@ -579,9 +543,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 				}),
 			Entry("ValidatingWebhookConfiguration",
 				&admissionv1.ValidatingWebhookConfiguration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: fmt.Sprintf("istio-validator-%s-%s", revName, istioNamespace),
-					},
+					Name: fmt.Sprintf("istio-validator-%s-%s", revName, istioNamespace),
 				}, func(obj client.Object) {
 					webhook := obj.(*admissionv1.ValidatingWebhookConfiguration)
 					webhook.Webhooks[0].Name = "xyz.xyz.xyz"
@@ -609,10 +571,8 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 			},
 			Entry("HorizontalPodAutoscaler",
 				&autoscalingv2.HorizontalPodAutoscaler{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "istiod-" + revName,
-						Namespace: istioNamespace,
-					},
+					Name:      "istiod-" + revName,
+					Namespace: istioNamespace,
 				},
 				func(obj client.Object) {
 					hpa := obj.(*autoscalingv2.HorizontalPodAutoscaler)
@@ -621,10 +581,8 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 			),
 			Entry("PodDisruptionBudget",
 				&policyv1.PodDisruptionBudget{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "istiod-" + revName,
-						Namespace: istioNamespace,
-					},
+					Name:      "istiod-" + revName,
+					Namespace: istioNamespace,
 				},
 				func(obj client.Object) {
 					pdb := obj.(*policyv1.PodDisruptionBudget)
@@ -637,10 +595,8 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 			waitForInFlightReconcileToFinish()
 
 			sa := &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "istiod-" + revName,
-					Namespace: istioNamespace,
-				},
+				Name:      "istiod-" + revName,
+				Namespace: istioNamespace,
 			}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(sa), sa)).To(Succeed())
 
@@ -660,9 +616,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 			waitForInFlightReconcileToFinish()
 
 			webhook := &admissionv1.MutatingWebhookConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "istio-sidecar-injector-" + revName + "-" + istioNamespace,
-				},
+				Name: "istio-sidecar-injector-" + revName + "-" + istioNamespace,
 			}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(webhook), webhook)).To(Succeed())
 
@@ -684,9 +638,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 			waitForInFlightReconcileToFinish()
 
 			webhook := &admissionv1.MutatingWebhookConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "istio-sidecar-injector-" + revName + "-" + istioNamespace,
-				},
+				Name: "istio-sidecar-injector-" + revName + "-" + istioNamespace,
 			}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(webhook), webhook)).To(Succeed())
 
@@ -704,9 +656,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 			waitForInFlightReconcileToFinish()
 
 			webhook := &admissionv1.ValidatingWebhookConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: fmt.Sprintf("istio-validator-%s-%s", revName, istioNamespace),
-				},
+				Name: fmt.Sprintf("istio-validator-%s-%s", revName, istioNamespace),
 			}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(webhook), webhook)).To(Succeed())
 
@@ -725,15 +675,13 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 		func(name, revision string, nsLabels, podLabels map[string]string) {
 			BeforeAll(func() {
 				rev := &v1.IstioRevision{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: name,
-					},
+					Name: name,
 					Spec: v1.IstioRevisionSpec{
 						Version:   istioversion.Default,
 						Namespace: istioNamespace,
 						Values: &v1.Values{
 							Global: &v1.GlobalConfig{
-								IstioNamespace: ptr.Of(istioNamespace),
+								IstioNamespace: new(istioNamespace),
 							},
 							Revision: &revision,
 						},
@@ -805,17 +753,15 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 	Describe("multiple control planes", func() {
 		BeforeAll(func() {
 			rev = &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: revName,
-				},
+				Name: revName,
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1.Values{
 						Global: &v1.GlobalConfig{
-							IstioNamespace: ptr.Of(istioNamespace),
+							IstioNamespace: new(istioNamespace),
 						},
-						Revision: ptr.Of(revName),
+						Revision: new(revName),
 						Pilot: &v1.PilotConfig{
 							Image: ptr.Of(pilotImage),
 						},
@@ -836,15 +782,13 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 
 			Step("Creating the second IstioRevision instance")
 			rev2 := &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: rev2Key.Name,
-				},
+				Name: rev2Key.Name,
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1.Values{
 						Global: &v1.GlobalConfig{
-							IstioNamespace: ptr.Of(istioNamespace),
+							IstioNamespace: new(istioNamespace),
 						},
 						Revision: &rev2Key.Name,
 						Pilot: &v1.PilotConfig{
@@ -887,9 +831,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 			deleteAllIstioRevisionTags(ctx)
 
 			rev = &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: revName,
-				},
+				Name: revName,
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Base,
 					Namespace: istioNamespace,
@@ -904,9 +846,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 			Expect(k8sClient.Create(ctx, rev)).To(Succeed())
 			Step("Creating the IstioRevisionTag")
 			tag = &v1.IstioRevisionTag{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioRevisionTagSpec{
 					TargetRef: v1.TargetReference{
 						Kind: "IstioRevision",
@@ -921,9 +861,7 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 				g.Expect(tag.Status.GetCondition(v1.IstioRevisionTagConditionReconciled).Status).To(Equal(metav1.ConditionTrue))
 			}).Should(Succeed())
 			rev = &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Base,
 					Namespace: istioNamespace,
@@ -956,14 +894,12 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 
 		It("still reconciles the IstioRevisionTag", func() {
 			rev = &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "something-else",
-				},
+				Name: "something-else",
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Base,
 					Namespace: istioNamespace,
 					Values: &v1.Values{
-						Revision: ptr.Of("something-else"),
+						Revision: new("something-else"),
 						Global: &v1.GlobalConfig{
 							IstioNamespace: &istioNamespace,
 						},
@@ -987,17 +923,15 @@ var _ = Describe("IstioRevision resource", Label("istiorevision"), Ordered, func
 	When("the IstioRevision has Spec.Values.GatewayClasses set", func() {
 		BeforeAll(func() {
 			rev = &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: revName,
-				},
+				Name: revName,
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Default,
 					Namespace: istioNamespace,
 					Values: &v1.Values{
 						Global: &v1.GlobalConfig{
-							IstioNamespace: ptr.Of(istioNamespace),
+							IstioNamespace: new(istioNamespace),
 						},
-						Revision: ptr.Of(revName),
+						Revision: new(revName),
 						Pilot: &v1.PilotConfig{
 							Image: ptr.Of(pilotImage),
 						},
@@ -1043,10 +977,8 @@ func deleteAllIstioRevisions(ctx context.Context) {
 
 func createOrUpdateNamespace(ctx context.Context, name string, labels map[string]string) *corev1.Namespace {
 	ns := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   name,
-			Labels: labels,
-		},
+		Name:   name,
+		Labels: labels,
 	}
 
 	err := k8sClient.Create(ctx, ns)
@@ -1060,11 +992,9 @@ func createOrUpdateNamespace(ctx context.Context, name string, labels map[string
 
 func createPod(ctx context.Context, name, ns string, labels map[string]string) *corev1.Pod {
 	pod := &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: ns,
-			Labels:    labels,
-		},
+		Name:      name,
+		Namespace: ns,
+		Labels:    labels,
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
 				{

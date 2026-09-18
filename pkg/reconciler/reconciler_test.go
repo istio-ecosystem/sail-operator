@@ -118,11 +118,9 @@ func TestReconcile(t *testing.T) {
 			name: "finalizes resource when resource deleted",
 			objects: []client.Object{
 				&v1.Istio{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              key.Name,
-						DeletionTimestamp: testtime.OneMinuteAgo(),
-						Finalizers:        []string{testFinalizer},
-					},
+					Name:              key.Name,
+					DeletionTimestamp: testtime.OneMinuteAgo(),
+					Finalizers:        []string{testFinalizer},
 				},
 			},
 			assert: func(g *WithT, cl client.Client, result ctrl.Result, err error, mock *mockReconciler) {
@@ -136,11 +134,9 @@ func TestReconcile(t *testing.T) {
 			name: "preserves finalizer and returns error when finalization fails",
 			objects: []client.Object{
 				&v1.Istio{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              key.Name,
-						DeletionTimestamp: testtime.OneMinuteAgo(),
-						Finalizers:        []string{testFinalizer},
-					},
+					Name:              key.Name,
+					DeletionTimestamp: testtime.OneMinuteAgo(),
+					Finalizers:        []string{testFinalizer},
 				},
 			},
 			setup: func(g *WithT, mock *mockReconciler) {
@@ -161,9 +157,7 @@ func TestReconcile(t *testing.T) {
 			name: "adds finalizer when resource doesn't have it",
 			objects: []client.Object{
 				&v1.Istio{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: key.Name,
-					},
+					Name: key.Name,
 				},
 			},
 			assert: func(g *WithT, cl client.Client, result ctrl.Result, err error, mock *mockReconciler) {
@@ -181,10 +175,8 @@ func TestReconcile(t *testing.T) {
 			name: "invokes reconcile if everything is fine",
 			objects: []client.Object{
 				&v1.Istio{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       key.Name,
-						Finalizers: []string{testFinalizer},
-					},
+					Name:       key.Name,
+					Finalizers: []string{testFinalizer},
 				},
 			},
 			assert: func(g *WithT, cl client.Client, result ctrl.Result, err error, mock *mockReconciler) {
@@ -198,10 +190,8 @@ func TestReconcile(t *testing.T) {
 			name: "returns error when reconcile fails",
 			objects: []client.Object{
 				&v1.Istio{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       key.Name,
-						Finalizers: []string{testFinalizer},
-					},
+					Name:       key.Name,
+					Finalizers: []string{testFinalizer},
 				},
 			},
 			setup: func(g *WithT, mock *mockReconciler) {
@@ -218,10 +208,8 @@ func TestReconcile(t *testing.T) {
 			name: "requeues on conflict",
 			objects: []client.Object{
 				&v1.Istio{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       key.Name,
-						Finalizers: []string{testFinalizer},
-					},
+					Name:       key.Name,
+					Finalizers: []string{testFinalizer},
 				},
 			},
 			setup: func(g *WithT, mock *mockReconciler) {
@@ -239,10 +227,8 @@ func TestReconcile(t *testing.T) {
 			name: "handles ValidationErrors",
 			objects: []client.Object{
 				&v1.Istio{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       key.Name,
-						Finalizers: []string{testFinalizer},
-					},
+					Name:       key.Name,
+					Finalizers: []string{testFinalizer},
 				},
 			},
 			setup: func(g *WithT, mock *mockReconciler) {
@@ -259,10 +245,8 @@ func TestReconcile(t *testing.T) {
 			name: "requeues when gc admission plugin does not yet know about our resources",
 			objects: []client.Object{
 				&v1.Istio{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       key.Name,
-						Finalizers: []string{testFinalizer},
-					},
+					Name:       key.Name,
+					Finalizers: []string{testFinalizer},
 				},
 			},
 			setup: func(g *WithT, mock *mockReconciler) {

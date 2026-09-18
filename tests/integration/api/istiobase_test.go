@@ -30,7 +30,6 @@ import (
 	. "github.com/onsi/gomega"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"istio.io/istio/pkg/ptr"
@@ -50,9 +49,7 @@ var _ = Describe("base chart support", Ordered, func() {
 	ctx := context.Background()
 
 	namespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: istioNamespace,
-		},
+		Name: istioNamespace,
 	}
 
 	saKey := client.ObjectKey{Name: "istio-reader-service-account", Namespace: istioNamespace}
@@ -81,9 +78,7 @@ var _ = Describe("base chart support", Ordered, func() {
 		It("deploys base chart when default IstioRevision is created", func() {
 			Step("Creating the IstioRevision")
 			rev = &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Default,
 					Namespace: istioNamespace,
@@ -91,7 +86,7 @@ var _ = Describe("base chart support", Ordered, func() {
 						Global: &v1.GlobalConfig{
 							IstioNamespace: ptr.Of(istioNamespace),
 						},
-						Revision: ptr.Of(""),
+						Revision: new(""),
 					},
 				},
 			}
@@ -125,9 +120,7 @@ var _ = Describe("base chart support", Ordered, func() {
 
 		BeforeAll(func() {
 			tag = &v1.IstioRevisionTag{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioRevisionTagSpec{
 					TargetRef: v1.TargetReference{
 						Kind: "IstioRevision",
@@ -138,9 +131,7 @@ var _ = Describe("base chart support", Ordered, func() {
 			Expect(k8sClient.Create(ctx, tag)).To(Succeed())
 			Step("Creating the IstioRevision")
 			rev := &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "my-rev",
-				},
+				Name: "my-rev",
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Default,
 					Namespace: istioNamespace,
@@ -148,7 +139,7 @@ var _ = Describe("base chart support", Ordered, func() {
 						Global: &v1.GlobalConfig{
 							IstioNamespace: ptr.Of(istioNamespace),
 						},
-						Revision: ptr.Of("my-rev"),
+						Revision: new("my-rev"),
 					},
 				},
 			}
@@ -184,9 +175,7 @@ var _ = Describe("base chart support", Ordered, func() {
 
 		BeforeAll(func() {
 			rev = &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Default,
 					Namespace: istioNamespace,
@@ -194,7 +183,7 @@ var _ = Describe("base chart support", Ordered, func() {
 						Global: &v1.GlobalConfig{
 							IstioNamespace: ptr.Of(istioNamespace),
 						},
-						Revision: ptr.Of(""),
+						Revision: new(""),
 					},
 				},
 			}
@@ -237,19 +226,15 @@ var _ = Describe("base chart support", Ordered, func() {
 			},
 			Entry("ServiceAccount",
 				&corev1.ServiceAccount{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "istio-reader-service-account",
-						Namespace: istioNamespace,
-					},
+					Name:      "istio-reader-service-account",
+					Namespace: istioNamespace,
 				}, nil, func(g Gomega, obj client.Object) {
 					sa := obj.(*corev1.ServiceAccount)
 					g.Expect(sa.Labels["app.kubernetes.io/name"]).To(Equal("istio-reader"))
 				}),
 			Entry("ValidatingWebhookConfiguration",
 				&admissionv1.ValidatingWebhookConfiguration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "istiod-default-validator",
-					},
+					Name: "istiod-default-validator",
 				}, func(obj client.Object) {
 					webhook := obj.(*admissionv1.ValidatingWebhookConfiguration)
 					webhook.Webhooks[0].Name = "xyz.xyz.xyz"
@@ -268,10 +253,8 @@ var _ = Describe("base chart support", Ordered, func() {
 			waitForInFlightReconcileToFinish()
 
 			sa := &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "istio-reader-service-account",
-					Namespace: istioNamespace,
-				},
+				Name:      "istio-reader-service-account",
+				Namespace: istioNamespace,
 			}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(sa), sa)).To(Succeed())
 
@@ -300,17 +283,15 @@ var _ = Describe("base chart support", Ordered, func() {
 		BeforeAll(func() {
 			Step("Creating the IstioRevision")
 			rev1 = v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "rev1",
-				},
+				Name: "rev1",
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Default,
 					Namespace: ns1,
 					Values: &v1.Values{
 						Global: &v1.GlobalConfig{
-							IstioNamespace: ptr.Of(ns1),
+							IstioNamespace: new(ns1),
 						},
-						Revision: ptr.Of("rev1"),
+						Revision: new("rev1"),
 					},
 				},
 			}
@@ -318,9 +299,7 @@ var _ = Describe("base chart support", Ordered, func() {
 
 			Step("Creating the IstioRevisionTag")
 			tag = v1.IstioRevisionTag{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioRevisionTagSpec{
 					TargetRef: v1.TargetReference{
 						Kind: "IstioRevision",
@@ -336,17 +315,15 @@ var _ = Describe("base chart support", Ordered, func() {
 
 		It("new IstioRevision in same namespace", func() {
 			rev2 = v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "rev2",
-				},
+				Name: "rev2",
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Default,
 					Namespace: ns1,
 					Values: &v1.Values{
 						Global: &v1.GlobalConfig{
-							IstioNamespace: ptr.Of(ns1),
+							IstioNamespace: new(ns1),
 						},
-						Revision: ptr.Of("rev2"),
+						Revision: new("rev2"),
 					},
 				},
 			}
@@ -368,24 +345,20 @@ var _ = Describe("base chart support", Ordered, func() {
 		It("new IstioRevision in different namespace", func() {
 			Step(fmt.Sprintf("Creating namespace %q", ns2))
 			namespace2 := &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: ns2,
-				},
+				Name: ns2,
 			}
 			Expect(k8sClient.Create(ctx, namespace2)).To(Succeed())
 
 			rev3 = v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "rev3",
-				},
+				Name: "rev3",
 				Spec: v1.IstioRevisionSpec{
 					Version:   istioversion.Default,
 					Namespace: ns2,
 					Values: &v1.Values{
 						Global: &v1.GlobalConfig{
-							IstioNamespace: ptr.Of(ns2),
+							IstioNamespace: new(ns2),
 						},
-						Revision: ptr.Of("rev3"),
+						Revision: new("rev3"),
 					},
 				},
 			}

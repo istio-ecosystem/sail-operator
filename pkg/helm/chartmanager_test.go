@@ -30,8 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 var ctx = context.TODO()
@@ -46,7 +44,7 @@ var (
 		Kind:       "Istio",
 		Name:       "my-istio",
 		UID:        "1234",
-		Controller: ptr.Of(true),
+		Controller: new(true),
 	}
 
 	tests = []struct {
@@ -203,9 +201,7 @@ func TestUninstallChart(t *testing.T) {
 
 func createNamespace(cl client.Client, ns string) error {
 	return cl.Create(ctx, &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: ns,
-		},
+		Name: ns,
 	})
 }
 

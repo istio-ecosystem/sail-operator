@@ -49,8 +49,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 const (
@@ -138,8 +136,8 @@ func (r *Reconciler) doReconcile(ctx context.Context, rev *v1.IstioRevision) err
 		Kind:               v1.IstioRevisionKind,
 		Name:               rev.Name,
 		UID:                rev.UID,
-		Controller:         ptr.Of(true),
-		BlockOwnerDeletion: ptr.Of(true),
+		Controller:         new(true),
+		BlockOwnerDeletion: new(true),
 	}
 	return istiodReconciler.Install(ctx, revVersion, rev.Spec.Namespace, rev.Spec.Values, rev.Name, &ownerReference)
 }
@@ -208,7 +206,7 @@ func (r *Reconciler) mapEndpointSliceToReconcileRequests(ctx context.Context, ob
 	}
 	if controller.APIVersion == v1.GroupVersion.String() && controller.Kind == v1.IstioRevisionKind {
 		return []reconcile.Request{
-			{NamespacedName: types.NamespacedName{Name: controller.Name}},
+			{Name: controller.Name},
 		}
 	}
 	if controller.APIVersion == corev1.SchemeGroupVersion.String() && controller.Kind == "Endpoints" {
@@ -221,7 +219,7 @@ func (r *Reconciler) mapEndpointSliceToReconcileRequests(ctx context.Context, ob
 		controller := metav1.GetControllerOf(ep)
 		if controller != nil && controller.APIVersion == v1.GroupVersion.String() && controller.Kind == v1.IstioRevisionKind {
 			return []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Name: controller.Name}},
+				{Name: controller.Name},
 			}
 		}
 	}
@@ -282,7 +280,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// +lint-watches:ignore: Endpoints (older versions of istiod chart create Endpoints for remote installs, but this controller watches EndpointSlices)
 	// +lint-watches:ignore: EndpointSlice (istiod chart creates Endpoints for remote installs, but this controller watches EndpointSlices)
 	handlerOverrides := map[reflect.Type]handler.EventHandler{
-		reflect.TypeOf(&discoveryv1.EndpointSlice{}): endpointSliceHandler,
+		reflect.TypeFor[*discoveryv1.EndpointSlice](): endpointSliceHandler,
 	}
 	watches.RegisterOwnedWatches(b, watches.IstiodWatches, ownedResourceHandler, handlerOverrides, predicate2.IgnoreUpdateWhenAnnotation())
 
@@ -605,14 +603,14 @@ func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, ns clie
 	}
 	for _, rev := range revList.Items {
 		if rev.Spec.Namespace == ns.GetName() {
-			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: rev.Name}})
+			requests = append(requests, reconcile.Request{Name: rev.Name})
 		}
 	}
 
 	// Check if the namespace references an IstioRevision in its labels
 	revisionName := revision.GetReferencedRevisionFromNamespace(ns.GetLabels())
 	if revisionName != "" {
-		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: revisionName}})
+		requests = append(requests, reconcile.Request{Name: revisionName})
 	}
 	return requests
 }
@@ -633,7 +631,7 @@ func (r *Reconciler) mapPodToReconcileRequest(ctx context.Context, pod client.Ob
 	if len(revisionNames) > 0 {
 		reqs := []reconcile.Request{}
 		for _, revName := range revisionNames {
-			reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: revName}})
+			reqs = append(reqs, reconcile.Request{Name: revName})
 		}
 		return reqs
 	}
@@ -643,7 +641,7 @@ func (r *Reconciler) mapPodToReconcileRequest(ctx context.Context, pod client.Ob
 func (r *Reconciler) mapRevisionTagToReconcileRequest(ctx context.Context, revisionTag client.Object) []reconcile.Request {
 	tag, ok := revisionTag.(*v1.IstioRevisionTag)
 	if ok && tag.Status.IstioRevision != "" {
-		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: tag.Status.IstioRevision}}}
+		return []reconcile.Request{{Name: tag.Status.IstioRevision}}
 	}
 	return nil
 }
@@ -657,7 +655,7 @@ func (r *Reconciler) mapIstioCniToReconcileRequests(ctx context.Context, _ clien
 	var reqs []reconcile.Request
 	for _, rev := range list.Items {
 		if revision.DependsOnIstioCNI(&rev, r.Config) {
-			reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: rev.Name}})
+			reqs = append(reqs, reconcile.Request{Name: rev.Name})
 		}
 	}
 	return reqs
@@ -672,7 +670,7 @@ func (r *Reconciler) mapZTunnelToReconcileRequests(ctx context.Context, _ client
 	var reqs []reconcile.Request
 	for _, rev := range list.Items {
 		if revision.DependsOnZTunnel(&rev, r.Config) {
-			reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: rev.Name}})
+			reqs = append(reqs, reconcile.Request{Name: rev.Name})
 		}
 	}
 	return reqs

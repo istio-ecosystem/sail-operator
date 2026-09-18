@@ -212,7 +212,7 @@ func ResolveHostDomainToIP(hostDomain string) (string, error) {
 
 	var lastErr error
 
-	for i := 0; i < maxRetries; i++ {
+	for i := range maxRetries {
 		ips, err := net.LookupIP(hostDomain)
 		if err == nil {
 			var ipv6Addr string

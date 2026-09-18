@@ -392,8 +392,8 @@ func validateZTunnelConfig(scriptConfig ScriptConfig) error {
 		if nestedUpstream, ok := upstreamFields.NestedFields[section]; ok {
 			nestedIgnored := make(map[string]bool)
 			for ignoredField := range ignored {
-				if strings.HasPrefix(ignoredField, strings.ToLower(section)+".") {
-					nestedIgnored[strings.TrimPrefix(ignoredField, strings.ToLower(section)+".")] = true
+				if after, ok0 := strings.CutPrefix(ignoredField, strings.ToLower(section)+"."); ok0 {
+					nestedIgnored[after] = true
 				}
 			}
 

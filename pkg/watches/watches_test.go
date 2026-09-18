@@ -28,18 +28,16 @@ func TestIgnoreStatusChanges(t *testing.T) {
 	pred := AsPredicate(shouldReconcile)
 
 	oldObj := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			ResourceVersion: "1",
-			Generation:      1,
-			Finalizers:      []string{"finalizer1"},
-			Labels:          map[string]string{"app": "test"},
-			Annotations:     map[string]string{"annotation1": "value1"},
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion: "v1",
-					Kind:       "IstioRevision",
-					Name:       "myrev",
-				},
+		ResourceVersion: "1",
+		Generation:      1,
+		Finalizers:      []string{"finalizer1"},
+		Labels:          map[string]string{"app": "test"},
+		Annotations:     map[string]string{"annotation1": "value1"},
+		OwnerReferences: []metav1.OwnerReference{
+			{
+				APIVersion: "v1",
+				Kind:       "IstioRevision",
+				Name:       "myrev",
 			},
 		},
 		Spec: corev1.ServiceSpec{
@@ -151,7 +149,7 @@ func TestIgnoreAllUpdates(t *testing.T) {
 	g := NewWithT(t)
 	shouldReconcile := IgnoreAllUpdates()
 
-	oldObj := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "sa", Generation: 1}}
+	oldObj := &corev1.ServiceAccount{Name: "sa", Generation: 1}
 	newObj := oldObj.DeepCopy()
 	newObj.Generation = 2
 
@@ -162,12 +160,12 @@ func TestWebhookFilter(t *testing.T) {
 	g := NewWithT(t)
 	shouldReconcile := WebhookFilter()
 
-	oldObj := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "cm"}}
+	oldObj := &corev1.ConfigMap{Name: "cm"}
 	newObj := oldObj.DeepCopy()
 	newObj.Labels = map[string]string{"new-key": "label"}
 	g.Expect(shouldReconcile(oldObj, newObj)).To(BeTrue(), "label change should trigger reconcile")
 
-	oldObj2 := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "cm", Generation: 1}}
+	oldObj2 := &corev1.ConfigMap{Name: "cm", Generation: 1}
 	newObj2 := oldObj2.DeepCopy()
 	newObj2.Generation = 2
 	g.Expect(shouldReconcile(oldObj2, newObj2)).To(BeFalse(), "generation-only change should not trigger reconcile (cleared by filter)")

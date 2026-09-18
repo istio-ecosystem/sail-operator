@@ -35,7 +35,7 @@ func TestApplyNetworkPolicyDefaults(t *testing.T) {
 			name:        "fresh OCP 5 release enables NetworkPolicy",
 			ocpVersion:  &config.OCPVersion{Major: 5},
 			values:      helm.Values{},
-			wantEnabled: boolPtr(true),
+			wantEnabled: new(true),
 		},
 		{
 			name:        "fresh OCP 4 release remains opt in",
@@ -54,7 +54,7 @@ func TestApplyNetworkPolicyDefaults(t *testing.T) {
 			values: helm.Values{"global": map[string]any{"networkPolicy": map[string]any{
 				"enabled": false,
 			}}},
-			wantEnabled: boolPtr(false),
+			wantEnabled: new(false),
 		},
 		{
 			name:                  "legacy release without setting remains unchanged",
@@ -70,7 +70,7 @@ func TestApplyNetworkPolicyDefaults(t *testing.T) {
 			existingReleaseValues: helm.Values{"global": map[string]any{"networkPolicy": map[string]any{
 				"enabled": true,
 			}}},
-			wantEnabled: boolPtr(true),
+			wantEnabled: new(true),
 		},
 		{
 			name:   "existing disabled release remains disabled without OCP version",
@@ -78,7 +78,7 @@ func TestApplyNetworkPolicyDefaults(t *testing.T) {
 			existingReleaseValues: helm.Values{"global": map[string]any{"networkPolicy": map[string]any{
 				"enabled": false,
 			}}},
-			wantEnabled: boolPtr(false),
+			wantEnabled: new(false),
 		},
 	}
 
@@ -98,5 +98,3 @@ func TestApplyNetworkPolicyDefaults(t *testing.T) {
 		})
 	}
 }
-
-func boolPtr(v bool) *bool { return &v }

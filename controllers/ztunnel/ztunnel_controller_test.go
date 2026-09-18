@@ -36,8 +36,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 const (
@@ -48,9 +46,7 @@ func TestValidate(t *testing.T) {
 	cfg := newReconcilerTestConfig(t)
 
 	ns := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: ztunnelNamespace,
-		},
+		Name: ztunnelNamespace,
 	}
 
 	testCases := []struct {
@@ -62,9 +58,7 @@ func TestValidate(t *testing.T) {
 		{
 			name: "success",
 			ztunnel: &v1.ZTunnel{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.ZTunnelSpec{
 					Version:   istioversion.Default,
 					Namespace: ztunnelNamespace,
@@ -76,9 +70,7 @@ func TestValidate(t *testing.T) {
 		{
 			name: "no version",
 			ztunnel: &v1.ZTunnel{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.ZTunnelSpec{
 					Namespace: ztunnelNamespace,
 				},
@@ -89,9 +81,7 @@ func TestValidate(t *testing.T) {
 		{
 			name: "no namespace",
 			ztunnel: &v1.ZTunnel{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.ZTunnelSpec{
 					Version: istioversion.Default,
 				},
@@ -102,9 +92,7 @@ func TestValidate(t *testing.T) {
 		{
 			name: "namespace not found",
 			ztunnel: &v1.ZTunnel{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.ZTunnelSpec{
 					Version:   istioversion.Default,
 					Namespace: ztunnelNamespace,
@@ -116,23 +104,19 @@ func TestValidate(t *testing.T) {
 		{
 			name: "namespace is being deleted",
 			ztunnel: &v1.ZTunnel{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.ZTunnelSpec{
 					Version:   istioversion.Default,
 					Namespace: ztunnelNamespace,
 				},
 			},
 			objects: []client.Object{&corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: ztunnelNamespace,
-					DeletionTimestamp: &metav1.Time{
-						Time: time.Now(),
-					},
-					Finalizers: []string{
-						"sail-operator",
-					},
+				Name: ztunnelNamespace,
+				DeletionTimestamp: &metav1.Time{
+					Time: time.Now(),
+				},
+				Finalizers: []string{
+					"sail-operator",
 				},
 			}},
 			expectErr: fmt.Sprintf(`namespace %q is being deleted`, ztunnelNamespace),
@@ -230,10 +214,8 @@ func TestDetermineReadyCondition(t *testing.T) {
 			name: "ZTunnel ready",
 			clientObjects: []client.Object{
 				&appsv1.DaemonSet{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ztunnel",
-						Namespace: ztunnelNamespace,
-					},
+					Name:      "ztunnel",
+					Namespace: ztunnelNamespace,
 					Status: appsv1.DaemonSetStatus{
 						CurrentNumberScheduled: 1,
 						NumberReady:            1,
@@ -250,10 +232,8 @@ func TestDetermineReadyCondition(t *testing.T) {
 			name: "ZTunnel not ready",
 			clientObjects: []client.Object{
 				&appsv1.DaemonSet{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ztunnel",
-						Namespace: ztunnelNamespace,
-					},
+					Name:      "ztunnel",
+					Namespace: ztunnelNamespace,
 					Status: appsv1.DaemonSetStatus{
 						CurrentNumberScheduled: 1,
 						NumberReady:            0,
@@ -271,10 +251,8 @@ func TestDetermineReadyCondition(t *testing.T) {
 			name: "ZTunnel pods not scheduled",
 			clientObjects: []client.Object{
 				&appsv1.DaemonSet{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ztunnel",
-						Namespace: ztunnelNamespace,
-					},
+					Name:      "ztunnel",
+					Namespace: ztunnelNamespace,
 					Status: appsv1.DaemonSetStatus{
 						CurrentNumberScheduled: 0,
 						NumberReady:            0,
@@ -325,9 +303,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 			r := NewReconciler(cfg, cl, scheme.Scheme, nil)
 
 			ztunnel := &v1.ZTunnel{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "ztunnel",
-				},
+				Name: "ztunnel",
 				Spec: v1.ZTunnelSpec{
 					Namespace: ztunnelNamespace,
 				},
@@ -364,14 +340,14 @@ func TestApplyImageDigests(t *testing.T) {
 					Version: "v1.24.0",
 					Values: &v1.ZTunnelValues{
 						ZTunnel: &v1.ZTunnelConfig{
-							Image: ptr.Of("ztunnel-test"),
+							Image: new("ztunnel-test"),
 						},
 					},
 				},
 			},
 			expectValues: &v1.ZTunnelValues{
 				ZTunnel: &v1.ZTunnelConfig{
-					Image: ptr.Of("ztunnel-test"),
+					Image: new("ztunnel-test"),
 				},
 			},
 		},
@@ -392,7 +368,7 @@ func TestApplyImageDigests(t *testing.T) {
 			},
 			expectValues: &v1.ZTunnelValues{
 				ZTunnel: &v1.ZTunnelConfig{
-					Image: ptr.Of("ztunnel-test"),
+					Image: new("ztunnel-test"),
 				},
 			},
 		},
@@ -410,14 +386,14 @@ func TestApplyImageDigests(t *testing.T) {
 					Version: "v1.24.0",
 					Values: &v1.ZTunnelValues{
 						ZTunnel: &v1.ZTunnelConfig{
-							Image: ptr.Of("ztunnel-custom"),
+							Image: new("ztunnel-custom"),
 						},
 					},
 				},
 			},
 			expectValues: &v1.ZTunnelValues{
 				ZTunnel: &v1.ZTunnelConfig{
-					Image: ptr.Of("ztunnel-custom"),
+					Image: new("ztunnel-custom"),
 				},
 			},
 		},
@@ -435,16 +411,16 @@ func TestApplyImageDigests(t *testing.T) {
 					Version: "v1.24.0",
 					Values: &v1.ZTunnelValues{
 						ZTunnel: &v1.ZTunnelConfig{
-							Hub: ptr.Of("docker.io/istio"),
-							Tag: ptr.Of("1.24.0"),
+							Hub: new("docker.io/istio"),
+							Tag: new("1.24.0"),
 						},
 					},
 				},
 			},
 			expectValues: &v1.ZTunnelValues{
 				ZTunnel: &v1.ZTunnelConfig{
-					Hub: ptr.Of("docker.io/istio"),
-					Tag: ptr.Of("1.24.0"),
+					Hub: new("docker.io/istio"),
+					Tag: new("1.24.0"),
 				},
 			},
 		},
@@ -462,14 +438,14 @@ func TestApplyImageDigests(t *testing.T) {
 					Version: "v1.24.0",
 					Values: &v1.ZTunnelValues{
 						Global: &v1.ZTunnelGlobalConfig{
-							Hub: ptr.Of("docker.io/istio"),
+							Hub: new("docker.io/istio"),
 						},
 					},
 				},
 			},
 			expectValues: &v1.ZTunnelValues{
 				Global: &v1.ZTunnelGlobalConfig{
-					Hub: ptr.Of("docker.io/istio"),
+					Hub: new("docker.io/istio"),
 				},
 			},
 		},
@@ -487,14 +463,14 @@ func TestApplyImageDigests(t *testing.T) {
 					Version: "v1.24.0",
 					Values: &v1.ZTunnelValues{
 						Global: &v1.ZTunnelGlobalConfig{
-							Tag: ptr.Of("v1.24.0-custom-build"),
+							Tag: new("v1.24.0-custom-build"),
 						},
 					},
 				},
 			},
 			expectValues: &v1.ZTunnelValues{
 				Global: &v1.ZTunnelGlobalConfig{
-					Tag: ptr.Of("v1.24.0-custom-build"),
+					Tag: new("v1.24.0-custom-build"),
 				},
 			},
 		},
@@ -512,16 +488,16 @@ func TestApplyImageDigests(t *testing.T) {
 					Version: "v1.24.1",
 					Values: &v1.ZTunnelValues{
 						ZTunnel: &v1.ZTunnelConfig{
-							Hub: ptr.Of("docker.io/istio"),
-							Tag: ptr.Of("1.24.1"),
+							Hub: new("docker.io/istio"),
+							Tag: new("1.24.1"),
 						},
 					},
 				},
 			},
 			expectValues: &v1.ZTunnelValues{
 				ZTunnel: &v1.ZTunnelConfig{
-					Hub: ptr.Of("docker.io/istio"),
-					Tag: ptr.Of("1.24.1"),
+					Hub: new("docker.io/istio"),
+					Tag: new("1.24.1"),
 				},
 			},
 		},
@@ -547,9 +523,7 @@ func TestDetermineStatus(t *testing.T) {
 		{
 			name: "no error",
 			rev: &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test",
-				},
+				Name: "test",
 			},
 			reconcileErr: nil,
 		},
@@ -568,10 +542,8 @@ func TestDetermineStatus(t *testing.T) {
 			g := NewWithT(t)
 
 			ztunnel := &v1.ZTunnel{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "ztunnel",
-					Generation: 123,
-				},
+				Name:       "ztunnel",
+				Generation: 123,
 			}
 
 			status, err := r.determineStatus(ctx, ztunnel, tt.rev, tt.reconcileErr)

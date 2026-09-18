@@ -32,8 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	ctrlreconcile "sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 func TestWithCRDOwnershipLabel(t *testing.T) {
@@ -274,7 +272,7 @@ func TestApply_isolatesFromCallerMutation(t *testing.T) {
 		triggerCh: make(chan event.GenericEvent, 1),
 	}
 
-	values := &v1.Values{Pilot: &v1.PilotConfig{Hub: ptr.Of("original")}}
+	values := &v1.Values{Pilot: &v1.PilotConfig{Hub: new("original")}}
 	opts := Options{
 		Namespace: "istio-system",
 		Version:   "v1.0.0",
@@ -288,7 +286,7 @@ func TestApply_isolatesFromCallerMutation(t *testing.T) {
 
 	// Caller mutates the Values pointer after Apply (simulates what
 	// ApplyDigests would do if Apply hadn't deep-copied).
-	values.Pilot.Image = ptr.Of("mutated-by-caller")
+	values.Pilot.Image = new("mutated-by-caller")
 
 	// Apply again with a fresh copy of the original intent — must be a
 	// no-op because stored desiredOpts should be isolated from the
@@ -296,7 +294,7 @@ func TestApply_isolatesFromCallerMutation(t *testing.T) {
 	freshOpts := Options{
 		Namespace: "istio-system",
 		Version:   "v1.0.0",
-		Values:    &v1.Values{Pilot: &v1.PilotConfig{Hub: ptr.Of("original")}},
+		Values:    &v1.Values{Pilot: &v1.PilotConfig{Hub: new("original")}},
 	}
 	err = l.Apply(freshOpts)
 	g.Expect(err).NotTo(HaveOccurred())
@@ -385,7 +383,7 @@ func TestUninstall_raceWithReconcile(t *testing.T) {
 		installBlock:   make(chan struct{}),
 	}
 
-	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test-ns"}}
+	ns := &corev1.Namespace{Name: "test-ns"}
 	cl := fake.NewClientBuilder().WithObjects(ns).Build()
 
 	l := &Library{
@@ -410,11 +408,9 @@ func TestUninstall_raceWithReconcile(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// Start a reconciliation — it will block inside UpgradeOrInstallChart.
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		_, _ = reconciler.Reconcile(context.Background(), ctrlreconcile.Request{})
-	}()
+	})
 
 	// Wait for the install to be in progress.
 	select {
@@ -426,11 +422,9 @@ func TestUninstall_raceWithReconcile(t *testing.T) {
 	// Call Uninstall while install is blocked. Without the lifecycleMu fix
 	// this runs concurrently and UninstallChart executes before
 	// UpgradeOrInstallChart returns.
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		_ = l.Uninstall(context.Background(), "test-ns", "racetest")
-	}()
+	})
 
 	// Give Uninstall time to either execute (no fix) or block (with fix).
 	time.Sleep(200 * time.Millisecond)
