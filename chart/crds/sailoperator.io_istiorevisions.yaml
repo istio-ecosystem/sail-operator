@@ -2371,7 +2371,7 @@ spec:
                                   More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                                 type: object
                             type: object
-                          tolerations:
+                          toleration:
                             description: |-
                               K8s tolerations settings.
 

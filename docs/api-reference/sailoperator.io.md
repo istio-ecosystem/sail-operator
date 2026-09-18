@@ -3589,7 +3589,7 @@ _Appears in:_
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#affinity-v1-core)_ | K8s affinity settings for waypoint pods.  See https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity |  |  |
 | `topologySpreadConstraints` _[TopologySpreadConstraint](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#topologyspreadconstraint-v1-core) array_ | K8s topology spread constraints settings.  See https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/ |  |  |
 | `nodeSelector` _[NodeSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#nodeselector-v1-core)_ | K8s node labels settings.  See https://kubernetes.io/docs/user-guide/node-selection/ |  |  |
-| `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#toleration-v1-core) array_ | K8s tolerations settings.  See https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/ |  |  |
+| `toleration` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#toleration-v1-core) array_ | K8s tolerations settings.  See https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/ |  |  |
 
 
 
