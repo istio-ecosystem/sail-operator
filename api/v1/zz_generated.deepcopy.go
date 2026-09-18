@@ -6090,8 +6090,8 @@ func (in *WaypointConfig) DeepCopyInto(out *WaypointConfig) {
 		*out = new(corev1.NodeSelector)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.Tolerations != nil {
-		in, out := &in.Tolerations, &out.Tolerations
+	if in.Toleration != nil {
+		in, out := &in.Toleration, &out.Toleration
 		*out = make([]*corev1.Toleration, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {

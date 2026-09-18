@@ -1093,7 +1093,7 @@ type WaypointConfig struct {
 	// K8s tolerations settings.
 	//
 	// See https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
-	Tolerations []*k8sv1.Toleration `json:"tolerations,omitempty"`
+	Toleration []*k8sv1.Toleration `json:"toleration,omitempty"`
 }
 
 // Configuration for NetworkPolicy

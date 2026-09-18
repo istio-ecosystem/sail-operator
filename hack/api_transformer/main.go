@@ -274,6 +274,14 @@ func (t *FileTransformer) processFile() (*ast.File, error) {
 						continue
 					}
 					if newName := t.getFieldRename(structName, fieldName); newName != "" {
+						if len(field.Names) > 0 {
+							field.Names[0].Name = newName
+						}
+						if field.Tag != nil {
+							oldJSON := getJSONName(field)
+							newJSON := strings.ToLower(newName[:1]) + newName[1:]
+							field.Tag.Value = strings.Replace(field.Tag.Value, `"`+oldJSON, `"`+newJSON, 1)
+						}
 						fieldName = newName
 					}
 					if newType := t.getFieldTypeReplacement(structName, fieldName); newType != nil {
