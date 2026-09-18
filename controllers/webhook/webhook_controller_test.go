@@ -37,8 +37,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 var ctx = context.Background()
@@ -57,7 +55,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "ready when caBundle is set",
 			webhook: &admissionv1.MutatingWebhookConfiguration{
-				ObjectMeta: metav1.ObjectMeta{Name: "istio-sidecar-injector"},
+				Name: "istio-sidecar-injector",
 				Webhooks: []admissionv1.MutatingWebhook{{
 					ClientConfig: admissionv1.WebhookClientConfig{
 						Service:  &admissionv1.ServiceReference{Name: "istiod", Namespace: "istio-system"},
@@ -70,7 +68,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "not ready when caBundle is empty",
 			webhook: &admissionv1.MutatingWebhookConfiguration{
-				ObjectMeta: metav1.ObjectMeta{Name: "istio-sidecar-injector"},
+				Name: "istio-sidecar-injector",
 				Webhooks: []admissionv1.MutatingWebhook{{
 					ClientConfig: admissionv1.WebhookClientConfig{
 						Service: &admissionv1.ServiceReference{Name: "istiod", Namespace: "istio-system"},
@@ -82,7 +80,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "not ready when webhook configuration contains no webhooks",
 			webhook: &admissionv1.MutatingWebhookConfiguration{
-				ObjectMeta: metav1.ObjectMeta{Name: "istio-sidecar-injector"},
+				Name: "istio-sidecar-injector",
 			},
 			expectStatus: "false",
 			expectReason: "webhook configuration contains no webhooks",
@@ -90,7 +88,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "update error",
 			webhook: &admissionv1.MutatingWebhookConfiguration{
-				ObjectMeta: metav1.ObjectMeta{Name: "istio-sidecar-injector"},
+				Name: "istio-sidecar-injector",
 				Webhooks: []admissionv1.MutatingWebhook{{
 					ClientConfig: admissionv1.WebhookClientConfig{
 						Service:  &admissionv1.ServiceReference{Name: "istiod", Namespace: "istio-system"},
@@ -109,7 +107,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "not ready when recent failure event recorded",
 			webhook: &admissionv1.MutatingWebhookConfiguration{
-				ObjectMeta: metav1.ObjectMeta{Name: "istio-sidecar-injector"},
+				Name: "istio-sidecar-injector",
 				Webhooks: []admissionv1.MutatingWebhook{{
 					ClientConfig: admissionv1.WebhookClientConfig{
 						Service:  &admissionv1.ServiceReference{Name: "istiod", Namespace: "istio-system"},
@@ -127,7 +125,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "recovers after failure ages out",
 			webhook: &admissionv1.MutatingWebhookConfiguration{
-				ObjectMeta: metav1.ObjectMeta{Name: "istio-sidecar-injector"},
+				Name: "istio-sidecar-injector",
 				Webhooks: []admissionv1.MutatingWebhook{{
 					ClientConfig: admissionv1.WebhookClientConfig{
 						Service:  &admissionv1.ServiceReference{Name: "istiod", Namespace: "istio-system"},
@@ -143,10 +141,8 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "degraded window annotation shortens the default window",
 			webhook: &admissionv1.MutatingWebhookConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "istio-sidecar-injector",
-					Annotations: map[string]string{constants.WebhookDegradedWindowAnnotationKey: "1s"},
-				},
+				Name:        "istio-sidecar-injector",
+				Annotations: map[string]string{constants.WebhookDegradedWindowAnnotationKey: "1s"},
 				Webhooks: []admissionv1.MutatingWebhook{{
 					ClientConfig: admissionv1.WebhookClientConfig{
 						Service:  &admissionv1.ServiceReference{Name: "istiod", Namespace: "istio-system"},
@@ -163,10 +159,8 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "invalid degraded window annotation falls back to the default",
 			webhook: &admissionv1.MutatingWebhookConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "istio-sidecar-injector",
-					Annotations: map[string]string{constants.WebhookDegradedWindowAnnotationKey: "not-a-duration"},
-				},
+				Name:        "istio-sidecar-injector",
+				Annotations: map[string]string{constants.WebhookDegradedWindowAnnotationKey: "not-a-duration"},
 				Webhooks: []admissionv1.MutatingWebhook{{
 					ClientConfig: admissionv1.WebhookClientConfig{
 						Service:  &admissionv1.ServiceReference{Name: "istiod", Namespace: "istio-system"},
@@ -223,12 +217,10 @@ func TestReconcileDoesNotUpdateWhenAnnotationsAreCurrent(t *testing.T) {
 	g := NewWithT(t)
 
 	webhook := &admissionv1.MutatingWebhookConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "istio-sidecar-injector",
-			Annotations: map[string]string{
-				constants.WebhookReadinessStatusAnnotationKey: "true",
-				constants.WebhookReadinessReasonAnnotationKey: "",
-			},
+		Name: "istio-sidecar-injector",
+		Annotations: map[string]string{
+			constants.WebhookReadinessStatusAnnotationKey: "true",
+			constants.WebhookReadinessReasonAnnotationKey: "",
 		},
 		Webhooks: []admissionv1.MutatingWebhook{{
 			ClientConfig: admissionv1.WebhookClientConfig{
@@ -256,14 +248,12 @@ func TestReconcileRemovesLegacyReadinessAnnotations(t *testing.T) {
 	g := NewWithT(t)
 
 	webhook := &admissionv1.MutatingWebhookConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "istio-sidecar-injector",
-			Annotations: map[string]string{
-				"sailoperator.io/readinessProbe.status":         "false",
-				"sailoperator.io/readinessProbe.reason":         "readiness probe failed",
-				"sailoperator.io/readinessProbe.periodSeconds":  "10",
-				"sailoperator.io/readinessProbe.timeoutSeconds": "5",
-			},
+		Name: "istio-sidecar-injector",
+		Annotations: map[string]string{
+			"sailoperator.io/readinessProbe.status":         "false",
+			"sailoperator.io/readinessProbe.reason":         "readiness probe failed",
+			"sailoperator.io/readinessProbe.periodSeconds":  "10",
+			"sailoperator.io/readinessProbe.timeoutSeconds": "5",
 		},
 		Webhooks: []admissionv1.MutatingWebhook{{
 			ClientConfig: admissionv1.WebhookClientConfig{
@@ -329,7 +319,7 @@ func TestEvaluateReadiness(t *testing.T) {
 			name:        "ready with URL endpoint",
 			webhookName: "test",
 			webhooks: []admissionv1.MutatingWebhook{{ClientConfig: admissionv1.WebhookClientConfig{
-				URL:      ptr.Of("https://remote-istiod.example.com/inject"),
+				URL:      new("https://remote-istiod.example.com/inject"),
 				CABundle: []byte("ca-data"),
 			}}},
 			expectedReady: true,
@@ -621,19 +611,17 @@ func testOwnedByRevisionRef(revisionName string) metav1.OwnerReference {
 
 func testRemoteRevision(name string) *v1.IstioRevision {
 	return &v1.IstioRevision{
-		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Name: name,
 		Spec: v1.IstioRevisionSpec{
-			Values: &v1.Values{Profile: ptr.Of("remote")},
+			Values: &v1.Values{Profile: new("remote")},
 		},
 	}
 }
 
 func TestMapFailureEventToWebhook(t *testing.T) {
 	mutatingConfig := &admissionv1.MutatingWebhookConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            "istio-sidecar-injector",
-			OwnerReferences: []metav1.OwnerReference{testOwnedByRevisionRef("test-revision")},
-		},
+		Name:            "istio-sidecar-injector",
+		OwnerReferences: []metav1.OwnerReference{testOwnedByRevisionRef("test-revision")},
 		Webhooks: []admissionv1.MutatingWebhook{{
 			Name: "sidecar-injector.istio.io",
 			ClientConfig: admissionv1.WebhookClientConfig{
@@ -642,16 +630,14 @@ func TestMapFailureEventToWebhook(t *testing.T) {
 		}},
 	}
 	unownedConfig := &admissionv1.MutatingWebhookConfiguration{
-		ObjectMeta: metav1.ObjectMeta{Name: "unowned-sidecar-injector"},
+		Name: "unowned-sidecar-injector",
 		Webhooks: []admissionv1.MutatingWebhook{{
 			Name: "unowned.istio.io",
 		}},
 	}
 	localConfig := &admissionv1.MutatingWebhookConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            "local-sidecar-injector",
-			OwnerReferences: []metav1.OwnerReference{testOwnedByRevisionRef("local-revision")},
-		},
+		Name:            "local-sidecar-injector",
+		OwnerReferences: []metav1.OwnerReference{testOwnedByRevisionRef("local-revision")},
 		Webhooks: []admissionv1.MutatingWebhook{{
 			Name: "local.istio.io",
 		}},
@@ -666,39 +652,39 @@ func TestMapFailureEventToWebhook(t *testing.T) {
 		{
 			name: "maps event to webhook config and records failure",
 			obj: &corev1.Event{
-				ObjectMeta: metav1.ObjectMeta{Name: "evt1", Namespace: "default"},
+				Name: "evt1", Namespace: "default",
 				Message: `Error creating: Internal error occurred: failed calling webhook "sidecar-injector.istio.io": ` +
 					`Post "https://istiod.istio-system.svc:443/inject": dial tcp: connect: connection refused`,
 			},
-			expectedReqs: []reconcile.Request{{NamespacedName: types.NamespacedName{Name: "istio-sidecar-injector"}}},
+			expectedReqs: []reconcile.Request{{Name: "istio-sidecar-injector"}},
 			expectFailed: true,
 		},
 		{
 			name: "ignores webhook in config that is not owned by an IstioRevision",
 			obj: &corev1.Event{
-				ObjectMeta: metav1.ObjectMeta{Name: "evt2", Namespace: "default"},
-				Message:    `Error creating: Internal error occurred: failed calling webhook "unowned.istio.io": connection refused`,
+				Name: "evt2", Namespace: "default",
+				Message: `Error creating: Internal error occurred: failed calling webhook "unowned.istio.io": connection refused`,
 			},
 		},
 		{
 			name: "ignores webhook in config owned by a non-remote IstioRevision",
 			obj: &corev1.Event{
-				ObjectMeta: metav1.ObjectMeta{Name: "evt3", Namespace: "default"},
-				Message:    `Error creating: Internal error occurred: failed calling webhook "local.istio.io": connection refused`,
+				Name: "evt3", Namespace: "default",
+				Message: `Error creating: Internal error occurred: failed calling webhook "local.istio.io": connection refused`,
 			},
 		},
 		{
 			name: "ignores webhook name not found in any config",
 			obj: &corev1.Event{
-				ObjectMeta: metav1.ObjectMeta{Name: "evt4", Namespace: "default"},
-				Message:    `Error creating: Internal error occurred: failed calling webhook "unknown-webhook.example.com": connection refused`,
+				Name: "evt4", Namespace: "default",
+				Message: `Error creating: Internal error occurred: failed calling webhook "unknown-webhook.example.com": connection refused`,
 			},
 		},
 		{
 			name: "ignores unrelated message",
 			obj: &corev1.Event{
-				ObjectMeta: metav1.ObjectMeta{Name: "evt5", Namespace: "default"},
-				Message:    "some unrelated message",
+				Name: "evt5", Namespace: "default",
+				Message: "some unrelated message",
 			},
 		},
 		{
@@ -712,7 +698,7 @@ func TestMapFailureEventToWebhook(t *testing.T) {
 			cl := newFakeClientBuilder().WithObjects(
 				mutatingConfig, unownedConfig, localConfig,
 				testRemoteRevision("test-revision"),
-				&v1.IstioRevision{ObjectMeta: metav1.ObjectMeta{Name: "local-revision"}},
+				&v1.IstioRevision{Name: "local-revision"},
 			).Build()
 			r := NewReconciler(newReconcilerTestConfig(t), cl, scheme.Scheme)
 
@@ -733,17 +719,15 @@ func TestFindOwnedWebhookConfig(t *testing.T) {
 	owned := testOwnedByRevisionRef("test-revision")
 	configs := []client.Object{
 		&admissionv1.MutatingWebhookConfiguration{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:            "istio-sidecar-injector",
-				OwnerReferences: []metav1.OwnerReference{owned},
-			},
+			Name:            "istio-sidecar-injector",
+			OwnerReferences: []metav1.OwnerReference{owned},
 			Webhooks: []admissionv1.MutatingWebhook{
 				{Name: "sidecar-injector.istio.io"},
 				{Name: "namespace.sidecar-injector.istio.io"},
 			},
 		},
 		&admissionv1.MutatingWebhookConfiguration{
-			ObjectMeta: metav1.ObjectMeta{Name: "third-party-injector"},
+			Name: "third-party-injector",
 			Webhooks: []admissionv1.MutatingWebhook{
 				{Name: "third-party.istio.io"},
 			},
@@ -839,8 +823,8 @@ func TestIsOwnedByRevisionWithRemoteControlPlane(t *testing.T) {
 			}},
 			objects: []client.Object{
 				&v1.IstioRevision{
-					ObjectMeta: metav1.ObjectMeta{Name: "revision1"},
-					Spec:       v1.IstioRevisionSpec{},
+					Name: "revision1",
+					Spec: v1.IstioRevisionSpec{},
 				},
 			},
 			expected: false,
@@ -854,9 +838,9 @@ func TestIsOwnedByRevisionWithRemoteControlPlane(t *testing.T) {
 			}},
 			objects: []client.Object{
 				&v1.IstioRevision{
-					ObjectMeta: metav1.ObjectMeta{Name: "revision1"},
+					Name: "revision1",
 					Spec: v1.IstioRevisionSpec{
-						Values: &v1.Values{Profile: ptr.Of("remote")},
+						Values: &v1.Values{Profile: new("remote")},
 					},
 				},
 			},
@@ -872,7 +856,7 @@ func TestIsOwnedByRevisionWithRemoteControlPlane(t *testing.T) {
 				WithInterceptorFuncs(tt.interceptors).
 				Build()
 			obj := &admissionv1.MutatingWebhookConfiguration{
-				ObjectMeta: metav1.ObjectMeta{OwnerReferences: tt.ownerRefs},
+				OwnerReferences: tt.ownerRefs,
 			}
 			g.Expect(IsOwnedByRevisionWithRemoteControlPlane(cl, obj)).To(Equal(tt.expected))
 		})

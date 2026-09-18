@@ -23,7 +23,6 @@ import (
 	openshifttls "github.com/openshift/controller-runtime-common/pkg/tls"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -48,7 +47,7 @@ func TestFetchTLSConfigForOpenShift(t *testing.T) {
 		{
 			name: "no TLS profile set, no adherence policy",
 			apiServer: &configv1.APIServer{
-				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+				Name: "cluster",
 			},
 			expected: TLSConfig{
 				MinVersion: tls.VersionTLS12,
@@ -60,7 +59,7 @@ func TestFetchTLSConfigForOpenShift(t *testing.T) {
 		{
 			name: "LegacyAdheringComponentsOnly does not honor profile",
 			apiServer: &configv1.APIServer{
-				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+				Name: "cluster",
 				Spec: configv1.APIServerSpec{
 					TLSAdherence: configv1.TLSAdherencePolicyLegacyAdheringComponentsOnly,
 					TLSSecurityProfile: &configv1.TLSSecurityProfile{
@@ -78,7 +77,7 @@ func TestFetchTLSConfigForOpenShift(t *testing.T) {
 		{
 			name: "StrictAllComponents honors profile and populates cipher suites",
 			apiServer: &configv1.APIServer{
-				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+				Name: "cluster",
 				Spec: configv1.APIServerSpec{
 					TLSAdherence: configv1.TLSAdherencePolicyStrictAllComponents,
 					TLSSecurityProfile: &configv1.TLSSecurityProfile{
@@ -97,7 +96,7 @@ func TestFetchTLSConfigForOpenShift(t *testing.T) {
 		{
 			name: "StrictAllComponents with nil profile uses default (intermediate)",
 			apiServer: &configv1.APIServer{
-				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+				Name: "cluster",
 				Spec: configv1.APIServerSpec{
 					TLSAdherence: configv1.TLSAdherencePolicyStrictAllComponents,
 				},

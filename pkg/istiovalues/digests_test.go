@@ -21,8 +21,6 @@ import (
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/stretchr/testify/assert"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 func TestApplyImageDigests(t *testing.T) {
@@ -41,12 +39,12 @@ func TestApplyImageDigests(t *testing.T) {
 			version: "v1.20.0",
 			inputValues: &v1.Values{
 				Pilot: &v1.PilotConfig{
-					Image: ptr.Of("istiod-test"),
+					Image: new("istiod-test"),
 				},
 			},
 			expectValues: &v1.Values{
 				Pilot: &v1.PilotConfig{
-					Image: ptr.Of("istiod-test"),
+					Image: new("istiod-test"),
 				},
 			},
 		},
@@ -65,14 +63,14 @@ func TestApplyImageDigests(t *testing.T) {
 			inputValues: &v1.Values{},
 			expectValues: &v1.Values{
 				Pilot: &v1.PilotConfig{
-					Image: ptr.Of("istiod-test"),
+					Image: new("istiod-test"),
 				},
 				Global: &v1.GlobalConfig{
 					Proxy: &v1.ProxyConfig{
-						Image: ptr.Of("proxy-test"),
+						Image: new("proxy-test"),
 					},
 					ProxyInit: &v1.ProxyInitConfig{
-						Image: ptr.Of("proxy-test"),
+						Image: new("proxy-test"),
 					},
 				},
 			},
@@ -91,19 +89,19 @@ func TestApplyImageDigests(t *testing.T) {
 			version: "v1.20.0",
 			inputValues: &v1.Values{
 				Pilot: &v1.PilotConfig{
-					Image: ptr.Of("istiod-custom"),
+					Image: new("istiod-custom"),
 				},
 			},
 			expectValues: &v1.Values{
 				Pilot: &v1.PilotConfig{
-					Image: ptr.Of("istiod-custom"),
+					Image: new("istiod-custom"),
 				},
 				Global: &v1.GlobalConfig{
 					Proxy: &v1.ProxyConfig{
-						Image: ptr.Of("proxy-test"),
+						Image: new("proxy-test"),
 					},
 					ProxyInit: &v1.ProxyInitConfig{
-						Image: ptr.Of("proxy-test"),
+						Image: new("proxy-test"),
 					},
 				},
 			},
@@ -122,21 +120,21 @@ func TestApplyImageDigests(t *testing.T) {
 			version: "v1.20.0",
 			inputValues: &v1.Values{
 				Pilot: &v1.PilotConfig{
-					Hub: ptr.Of("docker.io/istio"),
-					Tag: ptr.Of("1.20.1"),
+					Hub: new("docker.io/istio"),
+					Tag: new("1.20.1"),
 				},
 			},
 			expectValues: &v1.Values{
 				Pilot: &v1.PilotConfig{
-					Hub: ptr.Of("docker.io/istio"),
-					Tag: ptr.Of("1.20.1"),
+					Hub: new("docker.io/istio"),
+					Tag: new("1.20.1"),
 				},
 				Global: &v1.GlobalConfig{
 					Proxy: &v1.ProxyConfig{
-						Image: ptr.Of("proxy-test"),
+						Image: new("proxy-test"),
 					},
 					ProxyInit: &v1.ProxyInitConfig{
-						Image: ptr.Of("proxy-test"),
+						Image: new("proxy-test"),
 					},
 				},
 			},
@@ -155,14 +153,14 @@ func TestApplyImageDigests(t *testing.T) {
 			version: "v1.20.1",
 			inputValues: &v1.Values{
 				Pilot: &v1.PilotConfig{
-					Hub: ptr.Of("docker.io/istio"),
-					Tag: ptr.Of("1.20.2"),
+					Hub: new("docker.io/istio"),
+					Tag: new("1.20.2"),
 				},
 			},
 			expectValues: &v1.Values{
 				Pilot: &v1.PilotConfig{
-					Hub: ptr.Of("docker.io/istio"),
-					Tag: ptr.Of("1.20.2"),
+					Hub: new("docker.io/istio"),
+					Tag: new("1.20.2"),
 				},
 			},
 		},
@@ -180,12 +178,12 @@ func TestApplyImageDigests(t *testing.T) {
 			version: "v1.20.0",
 			inputValues: &v1.Values{
 				Global: &v1.GlobalConfig{
-					Hub: ptr.Of("docker.io/istio"),
+					Hub: new("docker.io/istio"),
 				},
 			},
 			expectValues: &v1.Values{
 				Global: &v1.GlobalConfig{
-					Hub: ptr.Of("docker.io/istio"),
+					Hub: new("docker.io/istio"),
 				},
 			},
 		},
@@ -203,12 +201,12 @@ func TestApplyImageDigests(t *testing.T) {
 			version: "v1.20.0",
 			inputValues: &v1.Values{
 				Global: &v1.GlobalConfig{
-					Tag: ptr.Of("1.20.0-custom-build"),
+					Tag: new("1.20.0-custom-build"),
 				},
 			},
 			expectValues: &v1.Values{
 				Global: &v1.GlobalConfig{
-					Tag: ptr.Of("1.20.0-custom-build"),
+					Tag: new("1.20.0-custom-build"),
 				},
 			},
 		},
@@ -251,7 +249,7 @@ func TestApplyCNIImageDigests(t *testing.T) {
 			},
 			expected: &v1.CNIValues{
 				Cni: &v1.CNIConfig{
-					Image: ptr.Of("istio/cni@sha256:abc123"),
+					Image: new("istio/cni@sha256:abc123"),
 				},
 			},
 		},
@@ -260,7 +258,7 @@ func TestApplyCNIImageDigests(t *testing.T) {
 			version: "v1.24.0",
 			values: &v1.CNIValues{
 				Global: &v1.CNIGlobalConfig{
-					Hub: ptr.Of("my-registry.io"),
+					Hub: new("my-registry.io"),
 				},
 			},
 			config: config.OperatorConfig{
@@ -270,7 +268,7 @@ func TestApplyCNIImageDigests(t *testing.T) {
 			},
 			expected: &v1.CNIValues{
 				Global: &v1.CNIGlobalConfig{
-					Hub: ptr.Of("my-registry.io"),
+					Hub: new("my-registry.io"),
 				},
 			},
 		},
@@ -279,7 +277,7 @@ func TestApplyCNIImageDigests(t *testing.T) {
 			version: "v1.24.0",
 			values: &v1.CNIValues{
 				Cni: &v1.CNIConfig{
-					Image: ptr.Of("my-custom-image"),
+					Image: new("my-custom-image"),
 				},
 			},
 			config: config.OperatorConfig{
@@ -289,7 +287,7 @@ func TestApplyCNIImageDigests(t *testing.T) {
 			},
 			expected: &v1.CNIValues{
 				Cni: &v1.CNIConfig{
-					Image: ptr.Of("my-custom-image"),
+					Image: new("my-custom-image"),
 				},
 			},
 		},
@@ -331,7 +329,7 @@ func TestApplyZTunnelImageDigests(t *testing.T) {
 			},
 			expected: &v1.ZTunnelValues{
 				ZTunnel: &v1.ZTunnelConfig{
-					Image: ptr.Of("istio/ztunnel@sha256:abc123"),
+					Image: new("istio/ztunnel@sha256:abc123"),
 				},
 			},
 		},
@@ -340,7 +338,7 @@ func TestApplyZTunnelImageDigests(t *testing.T) {
 			version: "v1.24.0",
 			values: &v1.ZTunnelValues{
 				Global: &v1.ZTunnelGlobalConfig{
-					Hub: ptr.Of("my-registry.io"),
+					Hub: new("my-registry.io"),
 				},
 			},
 			config: config.OperatorConfig{
@@ -350,7 +348,7 @@ func TestApplyZTunnelImageDigests(t *testing.T) {
 			},
 			expected: &v1.ZTunnelValues{
 				Global: &v1.ZTunnelGlobalConfig{
-					Hub: ptr.Of("my-registry.io"),
+					Hub: new("my-registry.io"),
 				},
 			},
 		},
@@ -359,7 +357,7 @@ func TestApplyZTunnelImageDigests(t *testing.T) {
 			version: "v1.24.0",
 			values: &v1.ZTunnelValues{
 				ZTunnel: &v1.ZTunnelConfig{
-					Image: ptr.Of("my-custom-image"),
+					Image: new("my-custom-image"),
 				},
 			},
 			config: config.OperatorConfig{
@@ -369,7 +367,7 @@ func TestApplyZTunnelImageDigests(t *testing.T) {
 			},
 			expected: &v1.ZTunnelValues{
 				ZTunnel: &v1.ZTunnelConfig{
-					Image: ptr.Of("my-custom-image"),
+					Image: new("my-custom-image"),
 				},
 			},
 		},

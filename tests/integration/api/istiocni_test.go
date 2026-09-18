@@ -51,9 +51,7 @@ var _ = Describe("IstioCNI", Label("istiocni"), Ordered, func() {
 	ctx := context.Background()
 
 	namespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: cniNamespace,
-		},
+		Name: cniNamespace,
 	}
 
 	daemonsetKey := client.ObjectKey{Name: "istio-cni-node", Namespace: cniNamespace}
@@ -73,9 +71,7 @@ var _ = Describe("IstioCNI", Label("istiocni"), Ordered, func() {
 	Describe("validation", func() {
 		It("only accepts IstioCNI with the name 'default'", func() {
 			cni = &v1.IstioCNI{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "not-default",
-				},
+				Name: "not-default",
 				Spec: v1.IstioCNISpec{
 					Version:   istioversion.Default,
 					Namespace: cniNamespace,
@@ -91,9 +87,7 @@ var _ = Describe("IstioCNI", Label("istiocni"), Ordered, func() {
 			BeforeAll(func() {
 				By("Creating the IstioCNI resource without the namespace")
 				cni = &v1.IstioCNI{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: cniName,
-					},
+					Name: cniName,
 					Spec: v1.IstioCNISpec{
 						Version:   istioversion.Default,
 						Namespace: nsName,
@@ -119,9 +113,7 @@ var _ = Describe("IstioCNI", Label("istiocni"), Ordered, func() {
 
 				BeforeAll(func() {
 					ns = &corev1.Namespace{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: nsName,
-						},
+						Name: nsName,
 					}
 					Expect(k8sClient.Create(ctx, ns)).To(Succeed())
 				})
@@ -140,9 +132,7 @@ var _ = Describe("IstioCNI", Label("istiocni"), Ordered, func() {
 		When("the resource is created", func() {
 			BeforeAll(func() {
 				cni = &v1.IstioCNI{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: cniName,
-					},
+					Name: cniName,
 					Spec: v1.IstioCNISpec{
 						Version:   istioversion.Default,
 						Namespace: cniNamespace,
@@ -227,10 +217,8 @@ var _ = Describe("IstioCNI", Label("istiocni"), Ordered, func() {
 				waitForInFlightReconcileToFinish()
 
 				sa := &corev1.ServiceAccount{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "istio-cni",
-						Namespace: cniNamespace,
-					},
+					Name:      "istio-cni",
+					Namespace: cniNamespace,
 				}
 				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(sa), sa)).To(Succeed())
 

@@ -241,17 +241,17 @@ spec:
 
 		It("enables NetworkPolicies for fresh installs and preserves an existing disabled release", func(ctx SpecContext) {
 			Expect(cl.Create(ctx, &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{Name: "network-policy-defaults"},
-				Spec:       v1.IstioSpec{Version: istioversion.Default, Namespace: istioNamespace},
+				Name: "network-policy-defaults",
+				Spec: v1.IstioSpec{Version: istioversion.Default, Namespace: istioNamespace},
 			})).To(Succeed())
 			cni := &v1.IstioCNI{
-				ObjectMeta: metav1.ObjectMeta{Name: "default"},
-				Spec:       v1.IstioCNISpec{Version: istioversion.Default, Namespace: cniNamespace},
+				Name: "default",
+				Spec: v1.IstioCNISpec{Version: istioversion.Default, Namespace: cniNamespace},
 			}
 			Expect(cl.Create(ctx, cni)).To(Succeed())
 			Expect(cl.Create(ctx, &v1.ZTunnel{
-				ObjectMeta: metav1.ObjectMeta{Name: "default"},
-				Spec:       v1.ZTunnelSpec{Version: istioversion.Default, Namespace: ztunnelNamespace},
+				Name: "default",
+				Spec: v1.ZTunnelSpec{Version: istioversion.Default, Namespace: ztunnelNamespace},
 			})).To(Succeed())
 
 			for _, key := range []client.ObjectKey{
@@ -615,7 +615,7 @@ func discoverMetricsReaderClusterRole() (string, error) {
 		return "", err
 	}
 	var matches []string
-	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(out), "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue

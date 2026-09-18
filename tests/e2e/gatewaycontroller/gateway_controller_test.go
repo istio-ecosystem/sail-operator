@@ -37,8 +37,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 var _ = Describe("Gateway Controller with Install Library", Label("gateway-controller", "slow"), Ordered, func() {
@@ -78,7 +76,7 @@ var _ = Describe("Gateway Controller with Install Library", Label("gateway-contr
 			Expect(err).NotTo(HaveOccurred())
 
 			overlay := &v1.Values{
-				Revision: ptr.Of("library"),
+				Revision: new("library"),
 				Pilot: &v1.PilotConfig{
 					Env: map[string]string{
 						"PILOT_GATEWAY_API_CONTROLLER_NAME":           "library.io/controller",
@@ -86,10 +84,10 @@ var _ = Describe("Gateway Controller with Install Library", Label("gateway-contr
 					},
 				},
 				Global: &v1.GlobalConfig{
-					TrustBundleName: ptr.Of(trustBundleName),
+					TrustBundleName: new(trustBundleName),
 				},
 				MeshConfig: &v1.MeshConfig{
-					AccessLogFile: ptr.Of("/dev/stdout"),
+					AccessLogFile: new("/dev/stdout"),
 				},
 				GatewayClasses: json.RawMessage(gatewayClassesJSON),
 			}

@@ -121,7 +121,7 @@ func (pr HelmPostRenderer) removeValidatingWebhookFailurePolicy(manifest map[str
 		return manifest, nil
 	}
 
-	webhooks, ok := webhooksAny.([]interface{})
+	webhooks, ok := webhooksAny.([]any)
 	if !ok {
 		return nil, fmt.Errorf("expected webhooks to be []interface{}, got %T", webhooksAny)
 	}

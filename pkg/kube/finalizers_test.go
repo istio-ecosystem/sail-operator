@@ -25,7 +25,6 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -61,9 +60,7 @@ func TestHasFinalizer(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
 			obj := &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Finalizers: tc.finalizers,
-				},
+				Finalizers: tc.finalizers,
 			}
 			g.Expect(HasFinalizer(obj, constants.FinalizerName)).To(Equal(tc.expectedResult))
 		})
@@ -149,10 +146,8 @@ func TestRemoveFinalizer(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
 			obj := &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test",
-					Finalizers: tc.initialFinalizers,
-				},
+				Name:       "test",
+				Finalizers: tc.initialFinalizers,
 			}
 
 			cl := fake.NewClientBuilder().
@@ -258,10 +253,8 @@ func TestAddFinalizer(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
 			obj := &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test",
-					Finalizers: tc.initialFinalizers,
-				},
+				Name:       "test",
+				Finalizers: tc.initialFinalizers,
 			}
 
 			cl := fake.NewClientBuilder().

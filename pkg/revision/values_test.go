@@ -64,7 +64,7 @@ spec:
 
 	values := &v1.Values{
 		Pilot: &v1.PilotConfig{
-			Image: ptr.Of("from-istio-spec-values"),
+			Image: new("from-istio-spec-values"),
 		},
 	}
 
@@ -75,12 +75,12 @@ spec:
 
 	expected := &v1.Values{
 		Pilot: &v1.PilotConfig{
-			Hub:   ptr.Of("from-default-profile"),
-			Tag:   ptr.Of("from-my-profile"),
-			Image: ptr.Of("from-istio-spec-values"),
+			Hub:   new("from-default-profile"),
+			Tag:   new("from-my-profile"),
+			Image: new("from-istio-spec-values"),
 		},
 		Global: &v1.GlobalConfig{
-			Platform:       ptr.Of("openshift"),
+			Platform:       new("openshift"),
 			IstioNamespace: ptr.Of(namespace), // this value is always added/overridden based on IstioRevision.spec.namespace
 		},
 		Revision:        ptr.Of(revisionName),
@@ -121,7 +121,7 @@ spec:`), 0o644))
 			Env: map[string]string{"COMPLIANCE_POLICY": "fips-140-2"},
 		},
 		Global: &v1.GlobalConfig{
-			Platform:       ptr.Of("openshift"),
+			Platform:       new("openshift"),
 			IstioNamespace: ptr.Of(namespace), // this value is always added/overridden based on IstioRevision.spec.namespace
 		},
 		Revision:        ptr.Of(revisionName),

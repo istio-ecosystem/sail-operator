@@ -27,7 +27,6 @@ import (
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/shell"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -252,10 +251,8 @@ func PushIntermediateCA(k kubectl.Kubectl, ns, zone, network, basePath string, c
 
 		// Create the secret by using the client in the cluster and the files created in the setup
 		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "cacerts",
-				Namespace: ns,
-			},
+			Name:      "cacerts",
+			Namespace: ns,
 			Data: map[string][]byte{
 				"ca-cert.pem":    caCert,
 				"ca-key.pem":     caKey,
