@@ -6,6 +6,12 @@ go 1.27.0
 // This replacement is aligned with istio/istio's go.mod
 replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.5
 
+// Pin kube-openapi to the last version that uses structured-merge-diff/v6, which is required for
+// compatibility with k8s.io/apimachinery v0.36.4. The newer kube-openapi switched to v7, which
+// causes a type mismatch in apimachinery's typeconverter.go. Remove this pin once apimachinery
+// ships a release compatible with structured-merge-diff/v7.
+replace k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20260821135717-be32def86098
+
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/elastic/crd-ref-docs v0.1.0
@@ -187,5 +193,4 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.21.1 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.4.2 // indirect
-	sigs.k8s.io/structured-merge-diff/v7 v7.0.0 // indirect
 )
