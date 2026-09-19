@@ -123,7 +123,7 @@ func TestIstiodReconciler_Validate(t *testing.T) {
 	}
 }
 
-func Test_getReleaseName(t *testing.T) {
+func TestGetReleaseName(t *testing.T) {
 	tests := []struct {
 		revisionName string
 		chartName    string
@@ -148,7 +148,7 @@ func Test_getReleaseName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.revisionName+"-"+tt.chartName, func(t *testing.T) {
-			result := getReleaseName(tt.revisionName, tt.chartName)
+			result := GetReleaseName(tt.revisionName, tt.chartName)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

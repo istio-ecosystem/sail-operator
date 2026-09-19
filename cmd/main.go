@@ -150,12 +150,19 @@ func main() {
 	ctx, shutdown := context.WithCancel(ctrl.SetupSignalHandler())
 
 	if reconcilerCfg.Platform == config.PlatformOpenShift {
-		// Create a temporary client to fetch the initial TLS settings.
+		// Create a temporary client for OpenShift-specific startup queries.
 		// We can't use the manager's client here because the manager hasn't started yet.
 		cl, err := client.New(cfg, client.Options{Scheme: scheme.Scheme})
 		if err != nil {
 			setupLog.Error(err, "unable to create temporary client")
 			os.Exit(1)
+		}
+
+		reconcilerCfg.OCPVersion, err = config.DetectOCPVersion(ctx, cl)
+		if err != nil {
+			setupLog.Error(err, "unable to detect OCP version, NetworkPolicy defaults will be disabled")
+		} else {
+			setupLog.Info("detected OCP version", "major", reconcilerCfg.OCPVersion.Major, "minor", reconcilerCfg.OCPVersion.Minor)
 		}
 
 		reconcilerCfg.TLSConfig, err = config.FetchTLSConfigForOpenShift(ctx, setupLog, cl)
