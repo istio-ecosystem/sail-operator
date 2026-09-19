@@ -263,6 +263,21 @@ spec:
 				Expect(probeErr).NotTo(HaveOccurred(), "Unexpected error while probing APIServer writability")
 			}
 
+			// The TLS profile tests must update the cluster-scoped APIServer resource. Rather than
+			// enumerate cluster flavors, probe writability directly: perform a no-op server-side
+			// dry-run update and skip if admission rejects it. This covers managed clusters (e.g.
+			// ROSA/OSD, whose Red Hat SRE webhooks forbid the write) and any other case where the
+			// resource is not manageable, without persisting any change.
+			Step("Checking whether the APIServer resource is writable")
+			apiServerProbe := &configv1.APIServer{}
+			Expect(cl.Get(ctx, apiServerKey, apiServerProbe)).To(Succeed(), "Failed to get APIServer")
+			if probeErr := cl.Update(ctx, apiServerProbe, client.DryRunAll); probeErr != nil {
+				if apierrors.IsForbidden(probeErr) {
+					Skip("Skipping TLS profile tests: the APIServer resource is not writable on this cluster: " + probeErr.Error())
+				}
+				Expect(probeErr).NotTo(HaveOccurred(), "Unexpected error while probing APIServer writability")
+			}
+
 			Step("Determining OpenShift version")
 			cv := &configv1.ClusterVersion{}
 			err := cl.Get(ctx, client.ObjectKey{Name: "version"}, cv)
