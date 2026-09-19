@@ -1452,6 +1452,14 @@ spec:
                         description: Specifies whether native nftables rules should
                           be used instead of iptables rules for traffic redirection.
                         type: boolean
+                      networkPolicy:
+                        description: Settings related to Kubernetes NetworkPolicy.
+                        properties:
+                          enabled:
+                            description: Controls whether default NetworkPolicy resources
+                              will be created.
+                            type: boolean
+                        type: object
                       platform:
                         description: |-
                           Platform in which Istio is deployed. Possible values are: "openshift" and "gcp"

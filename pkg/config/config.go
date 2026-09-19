@@ -34,9 +34,16 @@ type IstioImageConfig struct {
 	ZTunnelImage string `properties:"ztunnel"`
 }
 
+type OCPVersion struct {
+	Major int
+	Minor int
+}
+
 type ReconcilerConfig struct {
-	ResourceFS              fs.FS
-	Platform                Platform
+	ResourceFS fs.FS
+	Platform   Platform
+	// TODO: Remove OCPVersion once support for OpenShift 4 is dropped.
+	OCPVersion              *OCPVersion
 	DefaultProfile          string
 	OperatorNamespace       string
 	MaxConcurrentReconciles int
