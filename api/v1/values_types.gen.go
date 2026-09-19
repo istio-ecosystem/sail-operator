@@ -19,8 +19,10 @@ package v1
 import (
 	json "encoding/json"
 
+	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	k8sv1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -176,6 +178,19 @@ type CNIConfig struct {
 	// See https://kubernetes.io/docs/tutorials/security/apparmor/
 	// https://kubernetes.io/docs/reference/labels-annotations-taints/#container-apparmor-security-beta-kubernetes-io
 	UseAppArmorAnnotation *bool `json:"useAppArmorAnnotation,omitempty"`
+	// The duration in seconds the istio-cni pod needs to terminate gracefully.
+	// Defaults to the Kubernetes default of 30 seconds.
+	// See: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#hook-handler-execution
+	TerminationGracePeriodSeconds *int32 `json:"terminationGracePeriodSeconds,omitempty"`
+	// The update strategy for the CNI DaemonSet.
+	// See https://kubernetes.io/docs/tasks/manage-daemon/update-daemon-set/
+	UpdateStrategy *appsv1.DaemonSetUpdateStrategy `json:"updateStrategy,omitempty"`
+	// SELinux options for the CNI pod security context.
+	SeLinuxOptions *k8sv1.SELinuxOptions `json:"seLinuxOptions,omitempty"`
+	// K8s tolerations settings for CNI pods.
+	//
+	// See https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+	Tolerations []k8sv1.Toleration `json:"tolerations,omitempty"`
 }
 
 type CNIUsageConfig struct {
@@ -682,6 +697,17 @@ type PilotConfig struct {
 	EnvVarFrom []k8sv1.EnvVar `json:"envVarFrom,omitempty"`
 	// Select a custom name for istiod's plugged-in CA CRL ConfigMap.
 	CrlConfigMapName *string `json:"crlConfigMapName,omitempty"`
+	// Init containers for the istiod pod.
+	InitContainers []k8sv1.Container `json:"initContainers,omitempty"`
+	// Pod disruption budget for istiod.
+	// See https://kubernetes.io/docs/concepts/workloads/pods/disruptions/
+	Pdb *policyv1.PodDisruptionBudgetSpec `json:"pdb,omitempty"`
+	// Annotations for the istiod deployment.
+	DeploymentAnnotations map[string]string `json:"deploymentAnnotations,omitempty"`
+	// Annotations for the sidecar injector webhook.
+	SidecarInjectorWebhookAnnotations map[string]string `json:"sidecarInjectorWebhookAnnotations,omitempty"`
+	// The name of the ztunnel that istiod should trust for mTLS.
+	TrustedZtunnelName *string `json:"trustedZtunnelName,omitempty"`
 }
 
 type PilotTaintControllerConfig struct {
@@ -856,6 +882,9 @@ type ProxyInitConfig struct {
 	//
 	// Deprecated: Marked as deprecated in pkg/apis/values_types.proto.
 	Resources *k8sv1.ResourceRequirements `json:"resources,omitempty"`
+	// Bypasses iptables idempotency handling, and attempts to apply iptables rules regardless of table state, which may cause unrecoverable failures.
+	// Do not use unless you need to work around an issue of the idempotency handling. This flag will be removed in future releases.
+	ForceApplyIptables *bool `json:"forceApplyIptables,omitempty"`
 }
 
 // Configuration for K8s resource requests.
@@ -972,6 +1001,9 @@ type BaseConfig struct {
 
 	// validation webhook CA bundle
 	ValidationCABundle *string `json:"validationCABundle,omitempty"`
+	// Failure policy for the validation webhook. Defaults to `Ignore` on install, and is
+	// left unset on upgrade so the value set at runtime by the webhook controller is kept.
+	ValidationFailurePolicy *string `json:"validationFailurePolicy,omitempty"`
 }
 
 type IstiodRemoteConfig struct {
@@ -1061,7 +1093,7 @@ type WaypointConfig struct {
 	// K8s tolerations settings.
 	//
 	// See https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
-	Toleration []*k8sv1.Toleration `json:"toleration,omitempty"`
+	Tolerations []*k8sv1.Toleration `json:"tolerations,omitempty"`
 }
 
 // Configuration for NetworkPolicy
@@ -1078,7 +1110,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x05amd64\x18\x01 \x01(\rR\x05amd64\x12\x18\n" +
 	"\appc64le\x18\x02 \x01(\rR\appc64le\x12\x14\n" +
 	"\x05s390x\x18\x03 \x01(\rR\x05s390x\x12\x14\n" +
-	"\x05arm64\x18\x04 \x01(\rR\x05arm64\"\xaf\r\n" +
+	"\x05arm64\x18\x04 \x01(\rR\x05arm64\"\xb2\x0f\n" +
 	"\tCNIConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12\x10\n" +
 	"\x03hub\x18\x02 \x01(\tR\x03hub\x12(\n" +
@@ -1118,7 +1150,11 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x15rollingMaxUnavailable\x18\x17 \x01(\v2$.istio.operator.v1alpha1.IntOrStringR\x15rollingMaxUnavailable\x12L\n" +
 	"\x13istioOwnedCNIConfig\x18# \x01(\v2\x1a.google.protobuf.BoolValueR\x13istioOwnedCNIConfig\x12@\n" +
 	"\x1bistioOwnedCNIConfigFileName\x18$ \x01(\tR\x1bistioOwnedCNIConfigFileName\x12P\n" +
-	"\x15useAppArmorAnnotation\x18% \x01(\v2\x1a.google.protobuf.BoolValueR\x15useAppArmorAnnotation\"\x9c\x01\n" +
+	"\x15useAppArmorAnnotation\x18% \x01(\v2\x1a.google.protobuf.BoolValueR\x15useAppArmorAnnotation\x12D\n" +
+	"\x1dterminationGracePeriodSeconds\x18' \x01(\x05R\x1dterminationGracePeriodSeconds\x12?\n" +
+	"\x0eupdateStrategy\x18( \x01(\v2\x17.google.protobuf.StructR\x0eupdateStrategy\x12?\n" +
+	"\x0eseLinuxOptions\x18) \x01(\v2\x17.google.protobuf.StructR\x0eseLinuxOptions\x129\n" +
+	"\vtolerations\x18* \x03(\v2\x17.google.protobuf.StructR\vtolerations\"\x9c\x01\n" +
 	"\x0eCNIUsageConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x128\n" +
 	"\achained\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueB\x02\x18\x01R\achained\x12\x1a\n" +
@@ -1330,7 +1366,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x04mode\x18\x02 \x01(\x0e29.istio.operator.v1alpha1.OutboundTrafficPolicyConfig.ModeR\x04mode\"(\n" +
 	"\x04Mode\x12\r\n" +
 	"\tALLOW_ANY\x10\x00\x12\x11\n" +
-	"\rREGISTRY_ONLY\x10\x01\"\xd3\x13\n" +
+	"\rREGISTRY_ONLY\x10\x01\"\xa5\x16\n" +
 	"\vPilotConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12F\n" +
 	"\x10autoscaleEnabled\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x10autoscaleEnabled\x12\"\n" +
@@ -1377,7 +1413,12 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\n" +
 	"envVarFrom\x18> \x03(\v2\x17.google.protobuf.StructR\n" +
 	"envVarFrom\x12*\n" +
-	"\x10crlConfigMapName\x18? \x01(\tR\x10crlConfigMapName\"h\n" +
+	"\x10crlConfigMapName\x18? \x01(\tR\x10crlConfigMapName\x12?\n" +
+	"\x0einitContainers\x18A \x03(\v2\x17.google.protobuf.StructR\x0einitContainers\x12)\n" +
+	"\x03pdb\x18B \x01(\v2\x17.google.protobuf.StructR\x03pdb\x12M\n" +
+	"\x15deploymentAnnotations\x18C \x01(\v2\x17.google.protobuf.StructR\x15deploymentAnnotations\x12e\n" +
+	"!sidecarInjectorWebhookAnnotations\x18D \x01(\v2\x17.google.protobuf.StructR!sidecarInjectorWebhookAnnotations\x12.\n" +
+	"\x12trustedZtunnelName\x18E \x01(\tR\x12trustedZtunnelName\"h\n" +
 	"\x1aPilotTaintControllerConfig\x12\x18\n" +
 	"\aenabled\x18\x01 \x01(\bR\aenabled\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x12\n" +
@@ -1443,10 +1484,11 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x14includeOutboundPorts\x18' \x01(\tR\x14includeOutboundPorts\"p\n" +
 	"\fStartupProbe\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled\x12*\n" +
-	"\x10failureThreshold\x18\x02 \x01(\rR\x10failureThreshold\"m\n" +
+	"\x10failureThreshold\x18\x02 \x01(\rR\x10failureThreshold\"\x9d\x01\n" +
 	"\x0fProxyInitConfig\x12\x14\n" +
 	"\x05image\x18\x01 \x01(\tR\x05image\x12D\n" +
-	"\tresources\x18\x05 \x01(\v2\".istio.operator.v1alpha1.ResourcesB\x02\x18\x01R\tresources\"C\n" +
+	"\tresources\x18\x05 \x01(\v2\".istio.operator.v1alpha1.ResourcesB\x02\x18\x01R\tresources\x12.\n" +
+	"\x12forceApplyIptables\x18\x06 \x01(\bR\x12forceApplyIptables\"C\n" +
 	"\x17ResourcesRequestsConfig\x12\x10\n" +
 	"\x03cpu\x18\x01 \x01(\tR\x03cpu\x12\x16\n" +
 	"\x06memory\x18\x02 \x01(\tR\x06memory\">\n" +
@@ -1484,7 +1526,7 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\x05debug\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\x05debug\x124\n" +
 	"\x15maxNumberOfAttributes\x18\x02 \x01(\rR\x15maxNumberOfAttributes\x126\n" +
 	"\x16maxNumberOfAnnotations\x18\x03 \x01(\rR\x16maxNumberOfAnnotations\x12:\n" +
-	"\x18maxNumberOfMessageEvents\x18\x04 \x01(\rR\x18maxNumberOfMessageEvents\"\xea\x02\n" +
+	"\x18maxNumberOfMessageEvents\x18\x04 \x01(\rR\x18maxNumberOfMessageEvents\"\xa4\x03\n" +
 	"\n" +
 	"BaseConfig\x12J\n" +
 	"\x12enableCRDTemplates\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\x12enableCRDTemplates\x12\"\n" +
@@ -1492,7 +1534,8 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\rvalidationURL\x18\x02 \x01(\tR\rvalidationURL\x12P\n" +
 	"\x15enableIstioConfigCRDs\x18\x03 \x01(\v2\x1a.google.protobuf.BoolValueR\x15enableIstioConfigCRDs\x12D\n" +
 	"\x0fvalidateGateway\x18\x04 \x01(\v2\x1a.google.protobuf.BoolValueR\x0fvalidateGateway\x12.\n" +
-	"\x12validationCABundle\x18\x05 \x01(\tR\x12validationCABundle\"\x9e\x02\n" +
+	"\x12validationCABundle\x18\x05 \x01(\tR\x12validationCABundle\x128\n" +
+	"\x17validationFailurePolicy\x18\a \x01(\tR\x17validationFailurePolicy\"\x9e\x02\n" +
 	"\x12IstiodRemoteConfig\x12\"\n" +
 	"\finjectionURL\x18\x01 \x01(\tR\finjectionURL\x12$\n" +
 	"\rinjectionPath\x18\x02 \x01(\tR\rinjectionPath\x12,\n" +
@@ -1527,15 +1570,13 @@ const filePkgApisValuesTypesProtoRawDesc = "" +
 	"\vIntOrString\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\x03R\x04type\x123\n" +
 	"\x06intVal\x18\x02 \x01(\v2\x1b.google.protobuf.Int32ValueR\x06intVal\x124\n" +
-	"\x06strVal\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueR\x06strVal\"\xd4\x02\n" +
+	"\x06strVal\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueR\x06strVal\"\xd6\x02\n" +
 	"\x0eWaypointConfig\x12@\n" +
 	"\tresources\x18\x01 \x01(\v2\".istio.operator.v1alpha1.ResourcesR\tresources\x123\n" +
 	"\baffinity\x18\x02 \x01(\v2\x17.google.protobuf.StructR\baffinity\x12U\n" +
 	"\x19topologySpreadConstraints\x18\x03 \x03(\v2\x17.google.protobuf.StructR\x19topologySpreadConstraints\x12;\n" +
-	"\fnodeSelector\x18\x04 \x01(\v2\x17.google.protobuf.StructR\fnodeSelector\x127\n" +
-	"\n" +
-	"toleration\x18\x05 \x03(\v2\x17.google.protobuf.StructR\n" +
-	"toleration\"K\n" +
+	"\fnodeSelector\x18\x04 \x01(\v2\x17.google.protobuf.StructR\fnodeSelector\x129\n" +
+	"\vtolerations\x18\x05 \x03(\v2\x17.google.protobuf.StructR\vtolerations\"K\n" +
 	"\x13NetworkPolicyConfig\x124\n" +
 	"\aenabled\x18\x01 \x01(\v2\x1a.google.protobuf.BoolValueR\aenabled*C\n" +
 	"\rResourceScope\x12\r\n" +
@@ -1723,24 +1764,24 @@ const (
 	// https://opentelemetry.io/docs/specs/semconv/non-normative/k8s-attributes/#service-attributes
 	//
 	// The fallback chain for `service.name` is:
-	//  1. `resource.opentelemetry.io/service.name` annotation on the pod
-	//  2. `app.kubernetes.io/name` label
-	//  3. Name of the owning Kubernetes resource (Deployment, StatefulSet, etc.)
-	//  4. Pod name
-	//  5. Container name (if single container in the pod)
-	//  6. `unknown_service`
+	//   1. `resource.opentelemetry.io/service.name` annotation on the pod
+	//   2. `app.kubernetes.io/name` label
+	//   3. Name of the owning Kubernetes resource (Deployment, StatefulSet, etc.)
+	//   4. Pod name
+	//   5. Container name (if single container in the pod)
+	//   6. `unknown_service`
 	//
 	// The fallback chain for `service.namespace` is:
-	//  1. `resource.opentelemetry.io/service.namespace` annotation on the pod
-	//  2. Kubernetes namespace name
+	//   1. `resource.opentelemetry.io/service.namespace` annotation on the pod
+	//   2. Kubernetes namespace name
 	//
 	// The fallback chain for `service.version` is:
-	//  1. `resource.opentelemetry.io/service.version` annotation on the pod
-	//  2. `app.kubernetes.io/version` label
+	//   1. `resource.opentelemetry.io/service.version` annotation on the pod
+	//   2. `app.kubernetes.io/version` label
 	//
 	// The fallback chain for `service.instance.id` is:
-	//  1. `resource.opentelemetry.io/service.instance.id` annotation on the pod
-	//  2. Pod UID
+	//   1. `resource.opentelemetry.io/service.instance.id` annotation on the pod
+	//   2. Pod UID
 	MeshConfigExtensionProviderServiceAttributeEnrichmentOtelSemanticConventions MeshConfigExtensionProviderServiceAttributeEnrichment = "OTEL_SEMANTIC_CONVENTIONS"
 )
 
@@ -2150,15 +2191,14 @@ type MeshConfig struct {
 	// ```yaml
 	// discoverySelectors:
 	//   - matchLabels:
-	//     env: prod
-	//     region: us-east1
+	//       env: prod
+	//       region: us-east1
 	//   - matchExpressions:
-	//   - key: app
-	//     operator: In
-	//     values:
-	//   - cassandra
-	//   - spark
-	//
+	//     - key: app
+	//       operator: In
+	//       values:
+	//         - cassandra
+	//         - spark
 	// ```
 	// Refer to the [Kubernetes selector docs](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors)
 	// for additional detail on selector semantics.
@@ -2173,9 +2213,7 @@ type MeshConfig struct {
 	PathNormalization *MeshConfigProxyPathNormalization `json:"pathNormalization,omitempty"`
 	// Configure the default HTTP retry policy.
 	// The default number of retry attempts is set at 2 for these errors:
-	//
-	//	"connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes".
-	//
+	//   "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes".
 	// Setting the number of attempts to 0 disables retry policy globally.
 	// This setting can be overridden on a per-host basis using the Virtual Service
 	// API.
@@ -2207,20 +2245,19 @@ type MeshConfig struct {
 	// For example, a user could enable min TLS version for ISTIO_MUTUAL traffic and specify a curve for non ISTIO_MUTUAL traffic like below:
 	// ```yaml
 	// meshConfig:
-	//
-	//	meshMTLS:
-	//	  minProtocolVersion: TLSV1_3
-	//	tlsDefaults:
-	//	  Note: applicable only for non ISTIO_MUTUAL scenarios
-	//	  ecdhCurves:
-	//	    - P-256
-	//	    - P-512
-	//
+	//   meshMTLS:
+	//     minProtocolVersion: TLSV1_3
+	//   tlsDefaults:
+	//     Note: applicable only for non ISTIO_MUTUAL scenarios
+	//     ecdhCurves:
+	//       - P-256
+	//       - P-512
 	// ```
 	// Configuration of mTLS for traffic between workloads with ISTIO_MUTUAL TLS traffic.
 	//
 	// Note: Mesh mTLS does not respect ECDH curves.
 	MeshMTLS *MeshConfigTLSConfig `json:"meshMTLS,omitempty"`
+	//
 	// Configuration of TLS for all traffic except for ISTIO_MUTUAL mode.
 	// For ISTIO_MUTUAL TLS settings, use meshMTLS configuration.
 	TlsDefaults *MeshConfigTLSConfig `json:"tlsDefaults,omitempty"`
@@ -2527,10 +2564,12 @@ type MeshConfigTLSConfig struct {
 	// In the current Istio implementation, the maximum TLS protocol version
 	// is TLS 1.3.
 	MinProtocolVersion MeshConfigTLSConfigTLSProtocol `json:"minProtocolVersion,omitempty"`
+	//
 	// Optional: If specified, the TLS connection will only support the specified ECDH curves for the DH key exchange.
 	// If not specified, the default curves enforced by Envoy will be used. For details about the default curves, refer to
 	// [Ecdh Curves](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto).
 	EcdhCurves []string `json:"ecdhCurves,omitempty"`
+	//
 	// Optional: If specified, the TLS connection will only support the specified cipher list when negotiating TLS 1.0-1.2.
 	// If not specified, the following cipher suites will be used:
 	// ```
@@ -3000,17 +3039,16 @@ type MeshConfigExtensionProviderOpenTelemetryTracingProvider struct {
 	//
 	// 1. Add/change the OpenTelemetry extension provider in `MeshConfig`
 	// ```yaml
-	//   - name: otel-tracing
-	//     opentelemetry:
+	// - name: otel-tracing
+	//   opentelemetry:
 	//     port: 443
 	//     service: my.olly-backend.com
 	//     http:
-	//     path: "/api/otlp/traces"
-	//     timeout: 10s
-	//     headers:
-	//   - name: "my-custom-header"
-	//     value: "some value"
-	//
+	//       path: "/api/otlp/traces"
+	//       timeout: 10s
+	//       headers:
+	//       - name: "my-custom-header"
+	//         value: "some value"
 	// ```
 	//
 	// 2. Deploy a `ServiceEntry` for the observability back-end
@@ -3018,37 +3056,29 @@ type MeshConfigExtensionProviderOpenTelemetryTracingProvider struct {
 	// apiVersion: networking.istio.io/v1alpha3
 	// kind: ServiceEntry
 	// metadata:
-	//
-	//	name: my-olly-backend
-	//
+	//   name: my-olly-backend
 	// spec:
-	//
-	//	hosts:
-	//	- my.olly-backend.com
-	//	ports:
-	//	- number: 443
-	//	  name: https-port
-	//	  protocol: HTTPS
-	//	resolution: DNS
-	//	location: MESH_EXTERNAL
-	//
+	//   hosts:
+	//   - my.olly-backend.com
+	//   ports:
+	//   - number: 443
+	//     name: https-port
+	//     protocol: HTTPS
+	//   resolution: DNS
+	//   location: MESH_EXTERNAL
 	// ---
 	// apiVersion: networking.istio.io/v1alpha3
 	// kind: DestinationRule
 	// metadata:
-	//
-	//	name: my-olly-backend
-	//
+	//   name: my-olly-backend
 	// spec:
-	//
-	//	host: my.olly-backend.com
-	//	trafficPolicy:
-	//	  portLevelSettings:
-	//	  - port:
-	//	      number: 443
-	//	    tls:
-	//	      mode: SIMPLE
-	//
+	//   host: my.olly-backend.com
+	//   trafficPolicy:
+	//     portLevelSettings:
+	//     - port:
+	//         number: 443
+	//       tls:
+	//         mode: SIMPLE
 	// ```
 	Http *MeshConfigExtensionProviderHttpService `json:"http,omitempty"`
 	// Optional. Specifies the configuration for exporting OTLP traces via GRPC.
@@ -3059,16 +3089,15 @@ type MeshConfigExtensionProviderOpenTelemetryTracingProvider struct {
 	//
 	// 1. Add/change the OpenTelemetry extension provider in `MeshConfig`
 	// ```yaml
-	//   - name: opentelemetry
-	//     opentelemetry:
+	// - name: opentelemetry
+	//   opentelemetry:
 	//     port: 8090
 	//     service: tracing.example.com
 	//     grpc:
-	//     timeout: 10s
-	//     initialMetadata:
-	//   - name: "Authentication"
-	//     value: "token-xxxxx"
-	//
+	//       timeout: 10s
+	//       initialMetadata:
+	//       - name: "Authentication"
+	//         value: "token-xxxxx"
 	// ```
 	//
 	// 2. Deploy a `ServiceEntry` for the observability back-end
@@ -3076,20 +3105,16 @@ type MeshConfigExtensionProviderOpenTelemetryTracingProvider struct {
 	// apiVersion: networking.istio.io/v1alpha3
 	// kind: ServiceEntry
 	// metadata:
-	//
-	//	name: tracing-grpc
-	//
+	//   name: tracing-grpc
 	// spec:
-	//
-	//	hosts:
-	//	- tracing.example.com
-	//	ports:
-	//	- number: 8090
-	//	  name: grpc-port
-	//	  protocol: GRPC
-	//	resolution: DNS
-	//	location: MESH_EXTERNAL
-	//
+	//   hosts:
+	//   - tracing.example.com
+	//   ports:
+	//   - number: 8090
+	//     name: grpc-port
+	//     protocol: GRPC
+	//   resolution: DNS
+	//   location: MESH_EXTERNAL
 	// ```
 	Grpc *MeshConfigExtensionProviderGrpcService `json:"grpc,omitempty"`
 	// Optional. Specifies [Resource Detectors](https://opentelemetry.io/docs/specs/otel/resource/sdk/)
@@ -3100,13 +3125,12 @@ type MeshConfigExtensionProviderOpenTelemetryTracingProvider struct {
 	// read the attributes from the environment variable `OTEL_RESOURCE_ATTRIBUTES`:
 	//
 	// ```yaml
-	//   - name: otel-tracing
-	//     opentelemetry:
+	// - name: otel-tracing
+	//   opentelemetry:
 	//     port: 443
 	//     service: my.olly-backend.com
 	//     resourceDetectors:
-	//     environment: {}
-	//
+	//       environment: {}
 	// ```
 	ResourceDetectors *MeshConfigExtensionProviderResourceDetectors `json:"resourceDetectors,omitempty"`
 	// Optional. Controls how service resource attributes are enriched in
@@ -3122,12 +3146,11 @@ type MeshConfigExtensionProviderOpenTelemetryTracingProvider struct {
 	// Example:
 	// ```yaml
 	// extensionProviders:
-	//   - name: otel-tracing
-	//     opentelemetry:
+	// - name: otel-tracing
+	//   opentelemetry:
 	//     port: 443
 	//     service: my.olly-backend.com
 	//     serviceAttributeEnrichment: OTEL_SEMANTIC_CONVENTIONS
-	//
 	// ```
 	ServiceAttributeEnrichment MeshConfigExtensionProviderServiceAttributeEnrichment `json:"serviceAttributeEnrichment,omitempty"`
 
@@ -3136,21 +3159,21 @@ type MeshConfigExtensionProviderOpenTelemetryTracingProvider struct {
 	// Example configuration:
 	//
 	// ```yaml
-	//   - name: otel-tracing
-	//     opentelemetry:
+	// - name: otel-tracing
+	//   opentelemetry:
 	//     port: 443
 	//     service: "{your-environment-id}.live.dynatrace.com"
 	//     http:
-	//     path: "/api/v2/otlp/v1/traces"
-	//     timeout: 10s
-	//     headers:
-	//   - name: "Authorization"
-	//     value: "Api-Token dt0c01."
+	//       path: "/api/v2/otlp/v1/traces"
+	//       timeout: 10s
+	//       headers:
+	//         - name: "Authorization"
+	//           value: "Api-Token dt0c01."
 	//     resourceDetectors:
-	//     dynatrace: {}
+	//       dynatrace: {}
 	//     dynatraceSampler:
-	//     tenant: "{your-environment-id}"
-	//     clusterId: 1234
+	//       tenant: "{your-environment-id}"
+	//       clusterId: 1234
 	DynatraceSampler *MeshConfigExtensionProviderOpenTelemetryTracingProviderDynatraceSampler `json:"dynatraceSampler,omitempty"`
 }
 
@@ -3225,10 +3248,9 @@ type MeshConfigExtensionProviderStackdriverProviderLogging struct {
 	// supplied values.
 	//
 	// Example:
-	//
-	//	labels:
-	//	  path: request.url_path
-	//	  foo: request.headers['x-foo']
+	//   labels:
+	//     path: request.url_path
+	//     foo: request.headers['x-foo']
 	Labels map[string]string `json:"labels,omitempty"`
 }
 
@@ -3253,10 +3275,8 @@ type MeshConfigExtensionProviderEnvoyFileAccessLogProviderLogFormat struct {
 	// Example:
 	// ```
 	// labels:
-	//
-	//	status: "%RESPONSE_CODE%"
-	//	message: "%LOCAL_REPLY_BODY%"
-	//
+	//   status: "%RESPONSE_CODE%"
+	//   message: "%LOCAL_REPLY_BODY%"
 	// ```
 	Labels map[string]string `json:"labels,omitempty"`
 }
@@ -3279,10 +3299,8 @@ type MeshConfigExtensionProviderEnvoyOpenTelemetryLogProviderLogFormat struct {
 	// Example:
 	// ```
 	// labels:
-	//
-	//	status: "%RESPONSE_CODE%"
-	//	message: "%LOCAL_REPLY_BODY%"
-	//
+	//   status: "%RESPONSE_CODE%"
+	//   message: "%LOCAL_REPLY_BODY%"
 	// ```
 	Labels map[string]string `json:"labels,omitempty"`
 }
@@ -3986,18 +4004,17 @@ const (
 	// Explicitly setting any field overrides the corresponding profile default.
 	//
 	// Defaults applied by this profile:
-	//
-	//	listener_per_connection_buffer_limit_bytes: 32768 (32 KiB)
-	//	cluster_per_connection_buffer_limit_bytes:  32768 (32 KiB)
-	//	http_idle_timeout:                          3600s (1 hour)
-	//	http_request_timeout:                       300s  (5 minutes)
-	//	http_stream_idle_timeout:                   300s  (5 minutes)
-	//	http_max_concurrent_streams:                100
-	//	http2_initial_stream_window_size:           65536 (64 KiB)
-	//	http2_initial_connection_window_size:       1048576 (1 MiB)
-	//	http_headers_with_underscores_action:       HEADERS_WITH_UNDERSCORES_REJECT_REQUEST
-	//	http_merge_slashes:                         true
-	//	http_path_with_escaped_slashes_action:      UNESCAPE_AND_REDIRECT
+	//   listener_per_connection_buffer_limit_bytes: 32768 (32 KiB)
+	//   cluster_per_connection_buffer_limit_bytes:  32768 (32 KiB)
+	//   http_idle_timeout:                          3600s (1 hour)
+	//   http_request_timeout:                       300s  (5 minutes)
+	//   http_stream_idle_timeout:                   300s  (5 minutes)
+	//   http_max_concurrent_streams:                100
+	//   http2_initial_stream_window_size:           65536 (64 KiB)
+	//   http2_initial_connection_window_size:       1048576 (1 MiB)
+	//   http_headers_with_underscores_action:       HEADERS_WITH_UNDERSCORES_REJECT_REQUEST
+	//   http_merge_slashes:                         true
+	//   http_path_with_escaped_slashes_action:      UNESCAPE_AND_REDIRECT
 	ProxyConfigConnectionSettingsProfileEdge ProxyConfigConnectionSettingsProfile = "EDGE"
 )
 
@@ -4064,12 +4081,10 @@ type Tracing struct {
 	// Ex:
 	// ```yaml
 	// custom_tags:
-	//
-	//	new_tag_name:
-	//	  header:
-	//	    name: custom-http-header-name
-	//	    default_value: defaulted-value-from-custom-header
-	//
+	//   new_tag_name:
+	//     header:
+	//       name: custom-http-header-name
+	//       default_value: defaulted-value-from-custom-header
 	// ```
 	// +hidefromdoc
 	CustomTags map[string]*TracingCustomTag `json:"customTags,omitempty"`
@@ -4307,14 +4322,12 @@ type MeshConfigProxyConfig struct {
 	// you can specify stats matcher as follows:
 	// ```yaml
 	// proxyStatsMatcher:
-	//
-	//	inclusionRegexps:
-	//	  - .*outlier_detection.*
-	//	  - .*upstream_rq_retry.*
-	//	  - .*upstream_cx_.*
-	//	inclusionSuffixes:
-	//	  - upstream_rq_timeout
-	//
+	//   inclusionRegexps:
+	//     - .*outlier_detection.*
+	//     - .*upstream_rq_retry.*
+	//     - .*upstream_cx_.*
+	//   inclusionSuffixes:
+	//     - upstream_rq_timeout
 	// ```
 	// Note including more Envoy stats might increase number of time series
 	// collected by prometheus significantly. Care needs to be taken on Prometheus
@@ -4343,43 +4356,37 @@ type MeshConfigProxyConfig struct {
 	//
 	// ```yaml
 	// proxyHeaders:
-	//
-	//	server:
-	//	  value: "my-custom-server"
-	//	# Explicitly enable Request IDs.
-	//	# As this is the default, this has no effect.
-	//	requestId: {}
-	//	attemptCount:
-	//	  disabled: true
-	//
+	//   server:
+	//     value: "my-custom-server"
+	//   # Explicitly enable Request IDs.
+	//   # As this is the default, this has no effect.
+	//   requestId: {}
+	//   attemptCount:
+	//     disabled: true
 	// ```
 	//
-	// # Below shows an example of preserving the header case for HTTP 1.x requests
+	// Below shows an example of preserving the header case for HTTP 1.x requests
 	//
 	// ```yaml
 	// proxyHeaders:
-	//
-	//	preserveHttp1HeaderCase: true
-	//
+	//   preserveHttp1HeaderCase: true
 	// ```
 	//
 	// Some headers are enabled by default, and require explicitly disabling. See below for an example of disabling all default-enabled headers:
 	//
 	// ```yaml
 	// proxyHeaders:
-	//
-	//	forwardedClientCert: SANITIZE
-	//	server:
-	//	  disabled: true
-	//	requestId:
-	//	  disabled: true
-	//	attemptCount:
-	//	  disabled: true
-	//	envoyDebugHeaders:
-	//	  disabled: true
-	//	metadataExchangeHeaders:
-	//	  mode: IN_MESH
-	//
+	//   forwardedClientCert: SANITIZE
+	//   server:
+	//     disabled: true
+	//   requestId:
+	//     disabled: true
+	//   attemptCount:
+	//     disabled: true
+	//   envoyDebugHeaders:
+	//     disabled: true
+	//   metadataExchangeHeaders:
+	//     mode: IN_MESH
 	// ```
 	ProxyHeaders *ProxyConfigProxyHeaders `json:"proxyHeaders,omitempty"`
 	// File flush interval for envoy flushes buffers to disk in milliseconds.
@@ -4614,7 +4621,7 @@ type ProxyConfigProxyHeaders struct {
 	// This header is disabled by default.
 	XForwardedHost *ProxyConfigProxyHeadersXForwardedHost `json:"xForwardedHost,omitempty"`
 	// Controls the `X-Forwarded-Port` header. If enabled, the `X-Forwarded-Port` header is header with the port value
-	// client used to connect to Envoy. It will be ignored if the “x-forwarded-port“ header has been set by any
+	// client used to connect to Envoy. It will be ignored if the ``x-forwarded-port`` header has been set by any
 	// trusted proxy in front of Envoy.
 	// This header is disabled by default.
 	XForwardedPort *ProxyConfigProxyHeadersXForwardedPort `json:"xForwardedPort,omitempty"`
@@ -5458,6 +5465,17 @@ type ClientTLSSettings struct {
 	// Otherwise the field will be applicable only at gateways, and
 	// sidecars will continue to use the certificate paths.
 	CredentialName *string `json:"credentialName,omitempty"`
+	// The name of the secret or the configmap that holds CA certificates used to
+	// verify the server's certificate. Allows sourcing the trust bundle
+	// independently from `credentialName`.
+	//
+	// Applies to `SIMPLE` and `MUTUAL` TLS modes. Should be empty when using `ISTIO_MUTUAL`.
+	//
+	// **NOTE:** This field is applicable at sidecars only if
+	// `DestinationRule` has a `workloadSelector` specified.
+	// Otherwise the field will be applicable only at gateways, and
+	// sidecars will continue to use the certificate paths.
+	CaCertCredentialName *string `json:"caCertCredentialName,omitempty"`
 	// A list of alternate names to verify the subject identity in the
 	// certificate. If specified, the proxy will verify that the server
 	// certificate's subject alt name matches one of the specified values.
@@ -5547,22 +5565,21 @@ type LocalityLoadBalancerSetting struct {
 	// failoverPriority is an ordered list of labels used to sort endpoints to do priority based load balancing.
 	// This is to support traffic failover across different groups of endpoints.
 	// Two kinds of labels can be specified:
+	// - Specify only label keys `[key1, key2, key3]`, istio would compare the label values of client with endpoints.
+	//   Suppose there are total N label keys `[key1, key2, key3, ...keyN]` specified:
 	//
-	//   - Specify only label keys `[key1, key2, key3]`, istio would compare the label values of client with endpoints.
-	//     Suppose there are total N label keys `[key1, key2, key3, ...keyN]` specified:
+	//   1. Endpoints matching all N labels with the client proxy have priority P(0) i.e. the highest priority.
+	//   2. Endpoints matching the first N-1 labels with the client proxy have priority P(1) i.e. second highest priority.
+	//   3. By extension of this logic, endpoints matching only the first label with the client proxy has priority P(N-1) i.e. second lowest priority.
+	//   4. All the other endpoints have priority P(N) i.e. lowest priority.
 	//
-	//     1. Endpoints matching all N labels with the client proxy have priority P(0) i.e. the highest priority.
-	//     2. Endpoints matching the first N-1 labels with the client proxy have priority P(1) i.e. second highest priority.
-	//     3. By extension of this logic, endpoints matching only the first label with the client proxy has priority P(N-1) i.e. second lowest priority.
-	//     4. All the other endpoints have priority P(N) i.e. lowest priority.
+	// - Specify labels with key and value `[key1=value1, key2=value2, key3=value3]`, istio would compare the labels with endpoints.
+	//   Suppose there are total N labels `[key1=value1, key2=value2, key3=value3, ...keyN=valueN]` specified:
 	//
-	//   - Specify labels with key and value `[key1=value1, key2=value2, key3=value3]`, istio would compare the labels with endpoints.
-	//     Suppose there are total N labels `[key1=value1, key2=value2, key3=value3, ...keyN=valueN]` specified:
-	//
-	//     1. Endpoints matching all N labels have priority P(0) i.e. the highest priority.
-	//     2. Endpoints matching the first N-1 labels have priority P(1) i.e. second highest priority.
-	//     3. By extension of this logic, endpoints matching only the first label has priority P(N-1) i.e. second lowest priority.
-	//     4. All the other endpoints have priority P(N) i.e. lowest priority.
+	//   1. Endpoints matching all N labels have priority P(0) i.e. the highest priority.
+	//   2. Endpoints matching the first N-1 labels have priority P(1) i.e. second highest priority.
+	//   3. By extension of this logic, endpoints matching only the first label has priority P(N-1) i.e. second lowest priority.
+	//   4. All the other endpoints have priority P(N) i.e. lowest priority.
 	//
 	// Note: For a label to be considered for match, the previous labels must match, i.e. nth label would be considered matched only if first n-1 labels match.
 	//
@@ -5727,22 +5744,21 @@ type ZoneAwareLoadBalancerSetting struct {
 	// `topology.istio.io/subzone` labels.
 	//
 	// Two kinds of labels can be specified:
+	// - Specify only label keys `[key1, key2, key3]`, istio would compare the label values of client with endpoints.
+	//   Suppose there are total N label keys `[key1, key2, key3, ...keyN]` specified:
 	//
-	//   - Specify only label keys `[key1, key2, key3]`, istio would compare the label values of client with endpoints.
-	//     Suppose there are total N label keys `[key1, key2, key3, ...keyN]` specified:
+	//   1. Endpoints matching all N labels with the client proxy have priority P(0) i.e. the highest priority.
+	//   2. Endpoints matching the first N-1 labels with the client proxy have priority P(1) i.e. second highest priority.
+	//   3. By extension of this logic, endpoints matching only the first label with the client proxy has priority P(N-1) i.e. second lowest priority.
+	//   4. All the other endpoints have priority P(N) i.e. lowest priority.
 	//
-	//     1. Endpoints matching all N labels with the client proxy have priority P(0) i.e. the highest priority.
-	//     2. Endpoints matching the first N-1 labels with the client proxy have priority P(1) i.e. second highest priority.
-	//     3. By extension of this logic, endpoints matching only the first label with the client proxy has priority P(N-1) i.e. second lowest priority.
-	//     4. All the other endpoints have priority P(N) i.e. lowest priority.
+	// - Specify labels with key and value `[key1=value1, key2=value2, key3=value3]`, istio would compare the labels with endpoints.
+	//   Suppose there are total N labels `[key1=value1, key2=value2, key3=value3, ...keyN=valueN]` specified:
 	//
-	//   - Specify labels with key and value `[key1=value1, key2=value2, key3=value3]`, istio would compare the labels with endpoints.
-	//     Suppose there are total N labels `[key1=value1, key2=value2, key3=value3, ...keyN=valueN]` specified:
-	//
-	//     1. Endpoints matching all N labels have priority P(0) i.e. the highest priority.
-	//     2. Endpoints matching the first N-1 labels have priority P(1) i.e. second highest priority.
-	//     3. By extension of this logic, endpoints matching only the first label has priority P(N-1) i.e. second lowest priority.
-	//     4. All the other endpoints have priority P(N) i.e. lowest priority.
+	//   1. Endpoints matching all N labels have priority P(0) i.e. the highest priority.
+	//   2. Endpoints matching the first N-1 labels have priority P(1) i.e. second highest priority.
+	//   3. By extension of this logic, endpoints matching only the first label has priority P(N-1) i.e. second lowest priority.
+	//   4. All the other endpoints have priority P(N) i.e. lowest priority.
 	//
 	// Note: For a label to be considered for match, the previous labels must match, i.e. nth label would be considered matched only if first n-1 labels match.
 	//
@@ -5823,10 +5839,8 @@ type ConnectionPoolSettingsTCPSettings struct {
 	// annotation) which applies to all inbound connections.
 	// ```
 	// proxy.istio.io/config: |-
-	//
-	//	proxyMetadata:
-	//	   ISTIO_META_IDLE_TIMEOUT: "100s"
-	//
+	//    proxyMetadata:
+	//       ISTIO_META_IDLE_TIMEOUT: "100s"
 	// ```
 	// +protoc-gen-crd:duration-validation:none
 	IdleTimeout *metav1.Duration `json:"idleTimeout,omitempty"`
