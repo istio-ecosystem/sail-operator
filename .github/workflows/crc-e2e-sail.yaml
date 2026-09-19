@@ -1,6 +1,6 @@
 name: crc-e2e-sail
 
-# CRC OpenShift Local smoke — postsubmit signal run against merged code.
+# CRC OpenShift Local E2E — postsubmit signal run against merged code.
 # Triggered on push to main/release-* (i.e. after every merged PR) so secrets are always
 # available and only maintainer-approved code is exercised.
 # Keep this workflow OUT of branch-protection required status checks.
@@ -8,6 +8,16 @@ name: crc-e2e-sail
 
 on:
   workflow_dispatch:
+    inputs:
+      test_tier:
+        description: CRC E2E coverage tier
+        required: true
+        default: extended
+        type: choice
+        options:
+          - smoke
+          - standard
+          - extended
   push:
     branches:
       - main
@@ -76,12 +86,14 @@ jobs:
           make docker-push HUB=${HUB} TAG=${TAG}
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
-  # One CRC cluster for all smoke suites. A matrix would start CRC 3x (~30m each)
-  # and burn free-tier minutes; one ginkgo filter shares a single cluster instead.
+  # One CRC cluster for all tiers. A matrix would start CRC 3x (~30m each)
+  # and burn free-tier minutes; sequential steps share a single cluster instead.
   e2e:
-    name: e2e smoke openshift local
+    name: e2e openshift local (${{ github.event_name == 'workflow_dispatch' && inputs.test_tier || 'extended' }})
     needs: [preflight, build-push]
     runs-on: ubuntu-latest
+    env:
+      TEST_TIER: ${{ github.event_name == 'workflow_dispatch' && inputs.test_tier || 'extended' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -93,13 +105,13 @@ jobs:
           pull-secret: ${{ secrets.CRC_PULL_SECRET }}
           preset: openshift
 
-      - name: Prepare CRC for smoke tests
+      - name: Prepare CRC for E2E tests
         run: |
           set -euo pipefail
           echo "=== Node resources before prep ==="
           oc describe node | sed -n '/Allocatable:/,/Allocated resources:/p;/Allocated resources:/,/Events:/p' || true
 
-          # Marketplace catalog pods are not needed for helm-based smoke and often sit in
+          # Marketplace catalog pods are not needed for helm-based tests and often sit in
           # ImagePullBackOff while consuming request budget on small CRC nodes.
           oc scale deployment -n openshift-marketplace --all --replicas=0 || true
           oc delete pods -n openshift-marketplace --all --force --grace-period=0 || true
@@ -118,51 +130,18 @@ jobs:
           oc describe node | sed -n '/Allocated resources:/,/Events:/p' || true
           oc get pods -A | grep -v Running | grep -v Completed || true
 
-      - name: Run CRC smoke tests
+      - name: Run CRC E2E tests
+        id: crc-e2e
         env:
           BUILD_IMAGE: ${{ needs.preflight.outputs.image }}
           OPERATOR_TAG: ${{ needs.build-push.outputs.tag }}
+          WORKSPACE: ${{ github.workspace }}
+          ARTIFACTS_ROOT: ${{ github.workspace }}/artifacts
         run: |
           set -euo pipefail
-          mkdir -p "${{ github.workspace }}/artifacts"
-
-          # One invocation: deploy operator once, run operator+sidecar+ambient smoke together.
-          # Exclude tls-profile (needs writable OCP FeatureGate/APIServer paths not suited to CRC smoke).
-          FILTER='smoke && (operator || sidecar || ambient) && !tls-profile'
-
-          echo "::group::e2e smoke (filter=${FILTER})"
-          set +e
-          docker run --rm \
-            --network=host \
-            --privileged \
-            -v "${{ github.workspace }}":/work \
-            -v "$HOME/.kube":/root/.kube \
-            -v "${{ github.workspace }}/artifacts":/tmp/artifacts \
-            -e KUBECONFIG=/root/.kube/config \
-            -e HUB=quay.io/sail-dev \
-            -e TAG="${OPERATOR_TAG}" \
-            -e CI=true \
-            -e BUILD_WITH_CONTAINER=0 \
-            -e SKIP_BUILD=true \
-            -e XDG_CACHE_HOME=/tmp/cache \
-            -e ARTIFACTS=/tmp/artifacts \
-            -e ISTIOD_MEMORY_REQUEST=128Mi \
-            -e CNI_MEMORY_REQUEST=40Mi \
-            -e ZTUNNEL_MEMORY_REQUEST=64Mi \
-            -e PROXY_MEMORY_REQUEST=64Mi \
-            -e E2E_VERSIONS_LIMIT=1 \
-            -e OPERATOR_DEPLOY_TIMEOUT=10m \
-            -e OPERATOR_MEMORY_REQUEST=32Mi \
-            -e OPERATOR_MEMORY_LIMIT=256Mi \
-            -e OPERATOR_CPU_REQUEST=10m \
-            -e OPERATOR_CPU_LIMIT=200m \
-            -e "GINKGO_LABEL_FILTER=${FILTER}" \
-            "${BUILD_IMAGE}" \
-            bash -c "git config --global --add safe.directory /work && cd /work && make test.e2e.ocp"
-          rc=$?
-          set -e
-          if [ "${rc}" -ne 0 ]; then
-            echo "::error::CRC smoke failed (exit ${rc}); capturing cluster snapshot"
+          chmod +x tests/e2e/crc-e2e-ci.sh
+          if ! tests/e2e/crc-e2e-ci.sh "${TEST_TIER}"; then
+            echo "::error::CRC E2E tier ${TEST_TIER} failed; capturing cluster snapshot"
             {
               echo "=== pods -A ==="
               oc get pods -A -o wide || true
@@ -177,10 +156,9 @@ jobs:
               oc describe pods -n ztunnel || true
               echo "=== node allocated ==="
               oc describe node | sed -n '/Allocated resources:/,/Events:/p' || true
-            } | tee "${{ github.workspace }}/artifacts/cluster-snapshot.txt"
+            } | tee "${ARTIFACTS_ROOT}/cluster-snapshot.txt"
+            exit 1
           fi
-          echo "::endgroup::"
-          exit "${rc}"
 
       - name: Print OpenShift version
         if: always()
@@ -212,7 +190,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-results-crc-smoke
+          name: e2e-results-crc-${{ env.TEST_TIER }}
           path: ${{ github.workspace }}/artifacts/
           if-no-files-found: warn
 
@@ -233,15 +211,15 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           cat > /tmp/crc-e2e-failure.md <<EOF
-          CRC OpenShift Local smoke (\`e2e\` job) failed on \`${BRANCH}\` at \`${SHORT_SHA:0:7}\`.
+          CRC OpenShift Local E2E (\`e2e\` job, tier \`extended\`) failed on \`${BRANCH}\` at \`${SHORT_SHA:0:7}\`.
 
-          - Failed job: \`e2e smoke openshift local\`
+          - Failed job: \`e2e openshift local\`
           - [View failing run / logs](${RUN_URL})
           EOF
 
-      - name: Raise an Issue to report CRC smoke failure
+      - name: Raise an Issue to report CRC E2E failure
         uses: peter-evans/create-issue-from-file@v5
         with:
-          title: CRC smoke failed on ${{ github.ref_name }}
+          title: CRC E2E failed on ${{ github.ref_name }}
           content-filepath: /tmp/crc-e2e-failure.md
           labels: automated, test-e2e
