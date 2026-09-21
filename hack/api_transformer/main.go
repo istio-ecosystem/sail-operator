@@ -61,21 +61,22 @@ type InputFile struct {
 }
 
 type Transformations struct {
-	RemoveImports              []string            `yaml:"removeImports"`
-	RenameImports              map[string]string   `yaml:"renameImports"`
-	AddImports                 map[string]string   `yaml:"addImports"`
-	RemoveVars                 []string            `yaml:"removeVars"`
-	RemoveTypes                []string            `yaml:"removeTypes"`
-	PreserveTypes              []string            `yaml:"preserveTypes"`
-	RemoveFunctions            []string            `yaml:"removeFunctions"`
-	RemoveFields               []string            `yaml:"removeFields"`
-	RenameFields               map[string]string   `yaml:"renameFields"`
-	RenameTypes                map[string]string   `yaml:"renameTypes"`
-	ReplaceFunctionReturnTypes map[string]string   `yaml:"replaceFunctionReturnTypes"`
-	ReplaceFieldTypes          map[string]string   `yaml:"replaceFieldTypes"`
-	ReplaceTypes               map[string]string   `yaml:"replaceTypes"`
-	CopyTypes                  []CopyTransform     `yaml:"copyTypes"`
-	AddComments                map[string][]string `yaml:"addComments"`
+	RemoveImports              []string                `yaml:"removeImports"`
+	RenameImports              map[string]string       `yaml:"renameImports"`
+	AddImports                 map[string]string       `yaml:"addImports"`
+	RemoveVars                 []string                `yaml:"removeVars"`
+	RemoveTypes                []string                `yaml:"removeTypes"`
+	PreserveTypes              []string                `yaml:"preserveTypes"`
+	RemoveFunctions            []string                `yaml:"removeFunctions"`
+	RemoveFields               []string                `yaml:"removeFields"`
+	RenameFields               map[string]string       `yaml:"renameFields"`
+	RenameTypes                map[string]string       `yaml:"renameTypes"`
+	ReplaceFunctionReturnTypes map[string]string       `yaml:"replaceFunctionReturnTypes"`
+	ReplaceFieldTypes          map[string]string       `yaml:"replaceFieldTypes"`
+	ReplaceTypes               map[string]string       `yaml:"replaceTypes"`
+	CopyTypes                  []CopyTransform         `yaml:"copyTypes"`
+	AddComments                map[string][]string     `yaml:"addComments"`
+	AddFields                  map[string][]AddedField `yaml:"addFields"`
 }
 
 type CopyTransform struct {
@@ -83,6 +84,16 @@ type CopyTransform struct {
 	To            string   `yaml:"to"`
 	Comments      []string `yaml:"comments"`
 	IncludeFields []string `yaml:"includeFields"`
+}
+
+// AddedField describes a field to synthesize on a struct that no longer has a matching field
+// upstream (e.g. a field that was renamed or removed upstream but must be kept for CRD/API
+// compatibility, typically marked as deprecated via Comments).
+type AddedField struct {
+	Name     string   `yaml:"name"`
+	Type     string   `yaml:"type"`
+	JSONName string   `yaml:"jsonName"`
+	Comments []string `yaml:"comments"`
 }
 
 var config *Config
@@ -175,6 +186,7 @@ func merge(local, global *Transformations) *Transformations {
 		ReplaceTypes:               mergeStringMaps(local.ReplaceTypes, global.ReplaceTypes),
 		CopyTypes:                  local.CopyTypes,
 		AddComments:                mergeStringArrayMaps(local.AddComments, global.AddComments),
+		AddFields:                  mergeAddFieldsMaps(local.AddFields, global.AddFields),
 	}
 }
 
@@ -198,6 +210,16 @@ func mergeStringMaps(mapsToMerge ...map[string]string) map[string]string {
 
 func mergeStringArrayMaps(maps ...map[string][]string) map[string][]string {
 	result := make(map[string][]string)
+	for _, m := range maps {
+		for k, v := range m {
+			result[k] = append(result[k], v...)
+		}
+	}
+	return result
+}
+
+func mergeAddFieldsMaps(maps ...map[string][]AddedField) map[string][]AddedField {
+	result := make(map[string][]AddedField)
 	for _, m := range maps {
 		for k, v := range m {
 			result[k] = append(result[k], v...)
@@ -304,6 +326,14 @@ func (t *FileTransformer) processFile() (*ast.File, error) {
 					filteredList = append(filteredList, field)
 				}
 				structType.Fields.List = filteredList
+
+				for _, addedField := range t.Transformations.AddFields[structName] {
+					// Let a real, upstream-declared field win over a synthesized one.
+					if hasField(structType, addedField.Name) {
+						continue
+					}
+					structType.Fields.List = append(structType.Fields.List, t.buildAddedField(addedField))
+				}
 
 				if newName := t.getTypeRename(structName); newName != "" {
 					typeSpec.Name.Name = newName
@@ -914,6 +944,45 @@ func matches(parent string, child string, list []string) bool {
 		}
 	}
 	return false
+}
+
+func hasField(structType *ast.StructType, fieldName string) bool {
+	for _, field := range structType.Fields.List {
+		if field.Names[0].Name == fieldName {
+			return true
+		}
+	}
+	return false
+}
+
+// buildAddedField constructs an *ast.Field for a field declared via the addFields transformation,
+// i.e. a field that no longer exists upstream but must be preserved (typically deprecated) for
+// CRD/API compatibility.
+//
+// The field (and its Doc comments) are produced by parsing real source text through the shared
+// FileSet, rather than hand-building AST nodes with a zero token.Pos. go/printer's comment
+// placement is driven by comment/node positions; comments with no real Pos get attached to
+// whatever neighboring node happens to print next, corrupting the output (see the fix in #1193
+// for the same issue with copied fields).
+func (t *FileTransformer) buildAddedField(addedField AddedField) *ast.Field {
+	jsonName := addedField.JSONName
+	if jsonName == "" {
+		jsonName = strings.ToLower(addedField.Name[:1]) + addedField.Name[1:]
+	}
+
+	var src strings.Builder
+	src.WriteString("package p\n\ntype _ struct {\n")
+	for _, comment := range addedField.Comments {
+		src.WriteString(comment + "\n")
+	}
+	fmt.Fprintf(&src, "%s %s `json:\"%s,omitempty\"`\n}\n", addedField.Name, addedField.Type, jsonName)
+
+	file, err := parser.ParseFile(t.FileSet, "<addFields>", src.String(), parser.ParseComments)
+	if err != nil {
+		panic(fmt.Errorf("addFields: invalid field %q: %w", addedField.Name, err))
+	}
+	structType := file.Decls[0].(*ast.GenDecl).Specs[0].(*ast.TypeSpec).Type.(*ast.StructType)
+	return structType.Fields.List[0]
 }
 
 func (t *FileTransformer) getCopyTransform(typeName string) (CopyTransform, bool) {
