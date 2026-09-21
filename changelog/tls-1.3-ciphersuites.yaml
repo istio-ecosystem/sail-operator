@@ -1,0 +1,6 @@
+category: changed
+title: Pass TLS 1.3 cipher suites to Envoy via proxy metadata
+description: |
+  Allows passing TLS 1.3 cipher suites to envoy on OpenShift by passing
+  the env var `OPENSSL_TLS1_3_CIPHERSUITES` through proxy metadata. Syncs
+  this with the APIServer TLS settings.

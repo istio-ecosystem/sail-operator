@@ -1,0 +1,6 @@
+category: fixed
+title: Ensure base validator is created for default rev
+description: |
+  The validating webhook was not created for the default revision when
+  `defaultRevision` was set to a non-empty value.
+issueLink: https://github.com/istio-ecosystem/sail-operator/issues/2259

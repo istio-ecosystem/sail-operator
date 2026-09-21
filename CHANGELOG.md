@@ -6,60 +6,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 The changelog for the next version is compiled from the YAML files in the
 `changelog/` directory at release time, and the files are deleted afterwards.
 
-## v1.31.0 - 2026-09-21
-
-### Added
-- Add support for Istio 1.30.4 and 1.29.7
-
-- Enable NetworkPolicy defaults for fresh installs on OCP 5+ clusters
-  On OCP 5+ clusters, fresh istiod, istio-cni, and ztunnel Helm releases
-  enable NetworkPolicy by default. Existing releases are not changed during
-  an OpenShift or operator upgrade. Set spec.values.global.networkPolicy.enabled
-  explicitly to override the default; explicit false settings are preserved.
-  The OpenShift version is detected when the operator starts. Restart the
-  operator after upgrading OpenShift if new releases should receive the OCP 5
-  default immediately.
-
-### Changed
-- Add correct ciphersuite and ECDH curves on OpenShift
-  Removes cipher suite list from meshConfig when minProtocolVersion is TLS 1.3
-  and correctly sets ECDH curves from the OpenShift TLS profile.
-
-- Remove `TLS12_ENABLED` from ZTunnel for Istio 1.31+
-  Istio 1.31's OpenSSL backend supports FIPS 140-3 natively and no longer needs
-  the explicit TLS 1.2 enablement flag.
-
-- Resolve cipher suites directly from tlsProfile
-  Fixes cipher suites being filtered out by the controller-runtime library when
-  TLS min version is 1.3. The operator now reads them directly from the profile.
-
-- Pass TLS 1.3 cipher suites to Envoy via proxy metadata
-  Allows passing TLS 1.3 cipher suites to envoy on OpenShift by passing
-  the env var `OPENSSL_TLS1_3_CIPHERSUITES` through proxy metadata. Syncs
-  this with the APIServer TLS settings.
-
-- Detect remote istiod webhook failures from cluster events instead of probing
-  The webhook controller no longer actively probes the remote istiod's readiness
-  endpoint. It now passively detects webhook call failures from cluster events and
-  marks the webhook and its owning IstioRevision as not-ready for a short degraded
-  window after a failure. The length of this window is configurable via the
-  WEBHOOK_DEGRADED_WINDOW environment variable (default 2 minutes).
-
-### Fixed
-- Ensure base validator is created for default rev ([#2259](https://github.com/istio-ecosystem/sail-operator/issues/2259))
-  The validating webhook was not created for the default revision when
-  `defaultRevision` was set to a non-empty value.
-
-- Fix race condition in `ToDiscoveryClient` ([#2260](https://github.com/istio-ecosystem/sail-operator/issues/2260))
-  Concurrent calls shared the same config object; the fix copies it before
-  creating the discovery client.
-
-- Reconcile OwnerRef on IstioRevision object during update ([#2083](https://github.com/istio-ecosystem/sail-operator/issues/2083))
-  When revision.CreateOrUpdate reconciles during update, the OwnerReference
-  is not being updated, which could lead to a state, where the orphaned
-  revision is never pruned or reflected in "status.revisions".
-  Add OwnerReference during reconcile update.
-
 ## v1.30.0 - 2026-05-28
 
 ### Added
