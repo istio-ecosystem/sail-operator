@@ -137,7 +137,6 @@ inputFiles:
       WaypointConfig.Affinity: "*k8sv1.Affinity"
       WaypointConfig.TopologySpreadConstraints: "[]*k8sv1.TopologySpreadConstraint"
       WaypointConfig.NodeSelector: "*k8sv1.NodeSelector"
-      WaypointConfig.Toleration: "[]*k8sv1.Toleration" # FIXME: remove once istio.io/istio is bumped past the Toleration->Tolerations rename
       WaypointConfig.Tolerations: "[]*k8sv1.Toleration"
       SDSConfig.Token: "*SDSConfigToken"
       SidecarInjectorConfig.NeverInjectSelector: "[]metav1.LabelSelector"
@@ -175,6 +174,14 @@ inputFiles:
       Values.DefaultRevision:
       - "// +hidefromdoc"
       - "// Deprecated: This field is ignored. The default revision is expected to be configurable elsewhere."
+    addFields:
+      WaypointConfig:
+      - name: Toleration
+        type: "[]*k8sv1.Toleration"
+        jsonName: toleration
+        comments:
+        - "// +hidefromdoc"
+        - "// Deprecated: Use tolerations instead. This field is kept for backward compatibility and is ignored."
 
 - module: istio.io/api
   path: /mesh/v1alpha1/config.pb.go
