@@ -43,8 +43,8 @@ func TestPruneInactive(t *testing.T) {
 		Kind:               v1.IstioKind,
 		Name:               istioName,
 		UID:                istioUID,
-		Controller:         ptr.Of(true),
-		BlockOwnerDeletion: ptr.Of(true),
+		Controller:         new(true),
+		BlockOwnerDeletion: new(true),
 	}
 
 	ownedByAnotherIstio := metav1.OwnerReference{
@@ -52,8 +52,8 @@ func TestPruneInactive(t *testing.T) {
 		Kind:               v1.IstioKind,
 		Name:               "some-other-Istio",
 		UID:                "some-other-uid",
-		Controller:         ptr.Of(true),
-		BlockOwnerDeletion: ptr.Of(true),
+		Controller:         new(true),
+		BlockOwnerDeletion: new(true),
 	}
 
 	inUseFalse := v1.StatusCondition{
@@ -164,20 +164,16 @@ func TestPruneInactive(t *testing.T) {
 			gracePeriod := v1.DefaultRevisionDeletionGracePeriodSeconds * time.Second
 
 			istio := &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: istioName,
-					UID:  istioUID,
-				},
+				Name: istioName,
+				UID:  istioUID,
 				Spec: v1.IstioSpec{
 					Version: version,
 				},
 			}
 
 			rev := &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            tc.revName,
-					OwnerReferences: []metav1.OwnerReference{tc.ownerReference},
-				},
+				Name:            tc.revName,
+				OwnerReferences: []metav1.OwnerReference{tc.ownerReference},
 			}
 
 			if tc.inUseCondition != nil {
@@ -193,10 +189,8 @@ func TestPruneInactive(t *testing.T) {
 				cond := additionalRev.inUseCondition
 				cond.LastTransitionTime = metav1.Time{Time: now.Add(-additionalRev.transitionAge)}
 				initObjs = append(initObjs, &v1.IstioRevision{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            additionalRev.name,
-						OwnerReferences: []metav1.OwnerReference{tc.ownerReference},
-					},
+					Name:            additionalRev.name,
+					OwnerReferences: []metav1.OwnerReference{tc.ownerReference},
 					Status: v1.IstioRevisionStatus{
 						Conditions: []v1.StatusCondition{cond},
 					},

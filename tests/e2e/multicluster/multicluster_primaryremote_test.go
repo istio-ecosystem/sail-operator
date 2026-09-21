@@ -37,8 +37,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 var _ = Describe("Multicluster deployment models", Label("multicluster", "multicluster-primaryremote", "slow", "sidecar"), Ordered, func() {
@@ -250,7 +248,7 @@ values:
 						Expect(clPrimary.Get(ctx, kube.Key(istioName), istio)).To(Succeed(), "Error getting Istio "+istioName)
 						istio.Spec.UpdateStrategy = &v1.IstioUpdateStrategy{
 							Type: v1.UpdateStrategyTypeRevisionBased,
-							InactiveRevisionDeletionGracePeriodSeconds: ptr.Of(int64(0)),
+							InactiveRevisionDeletionGracePeriodSeconds: new(int64(0)),
 						}
 						Expect(clPrimary.Update(ctx, istio)).To(Succeed(), "Error updating Istio "+istioName)
 

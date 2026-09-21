@@ -35,17 +35,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 func TestValidate(t *testing.T) {
 	cfg := newReconcilerTestConfig(t)
 
 	ns := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "istio-cni",
-		},
+		Name: "istio-cni",
 	}
 
 	testCases := []struct {
@@ -57,9 +53,7 @@ func TestValidate(t *testing.T) {
 		{
 			name: "success",
 			cni: &v1.IstioCNI{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioCNISpec{
 					Version:   istioversion.Default,
 					Namespace: "istio-cni",
@@ -71,9 +65,7 @@ func TestValidate(t *testing.T) {
 		{
 			name: "no version",
 			cni: &v1.IstioCNI{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioCNISpec{
 					Namespace: "istio-cni",
 				},
@@ -84,9 +76,7 @@ func TestValidate(t *testing.T) {
 		{
 			name: "no namespace",
 			cni: &v1.IstioCNI{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioCNISpec{
 					Version: istioversion.Default,
 				},
@@ -97,9 +87,7 @@ func TestValidate(t *testing.T) {
 		{
 			name: "namespace not found",
 			cni: &v1.IstioCNI{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioCNISpec{
 					Version:   istioversion.Default,
 					Namespace: "istio-cni",
@@ -202,10 +190,8 @@ func TestDetermineReadyCondition(t *testing.T) {
 			name: "CNI ready",
 			clientObjects: []client.Object{
 				&appsv1.DaemonSet{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "istio-cni-node",
-						Namespace: "istio-cni",
-					},
+					Name:      "istio-cni-node",
+					Namespace: "istio-cni",
 					Status: appsv1.DaemonSetStatus{
 						CurrentNumberScheduled: 1,
 						NumberReady:            1,
@@ -222,10 +208,8 @@ func TestDetermineReadyCondition(t *testing.T) {
 			name: "CNI not ready",
 			clientObjects: []client.Object{
 				&appsv1.DaemonSet{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "istio-cni-node",
-						Namespace: "istio-cni",
-					},
+					Name:      "istio-cni-node",
+					Namespace: "istio-cni",
 					Status: appsv1.DaemonSetStatus{
 						CurrentNumberScheduled: 1,
 						NumberReady:            0,
@@ -243,10 +227,8 @@ func TestDetermineReadyCondition(t *testing.T) {
 			name: "CNI pods not scheduled",
 			clientObjects: []client.Object{
 				&appsv1.DaemonSet{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "istio-cni-node",
-						Namespace: "istio-cni",
-					},
+					Name:      "istio-cni-node",
+					Namespace: "istio-cni",
 					Status: appsv1.DaemonSetStatus{
 						CurrentNumberScheduled: 0,
 						NumberReady:            0,
@@ -297,9 +279,7 @@ func TestDetermineReadyCondition(t *testing.T) {
 			r := NewReconciler(cfg, cl, scheme.Scheme, nil)
 
 			cni := &v1.IstioCNI{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "my-istio",
-				},
+				Name: "my-istio",
 				Spec: v1.IstioCNISpec{
 					Namespace: "istio-cni",
 				},
@@ -336,14 +316,14 @@ func TestApplyImageDigests(t *testing.T) {
 					Version: istioversion.Default,
 					Values: &v1.CNIValues{
 						Cni: &v1.CNIConfig{
-							Image: ptr.Of("istiocni-test"),
+							Image: new("istiocni-test"),
 						},
 					},
 				},
 			},
 			expectValues: &v1.CNIValues{
 				Cni: &v1.CNIConfig{
-					Image: ptr.Of("istiocni-test"),
+					Image: new("istiocni-test"),
 				},
 			},
 		},
@@ -364,7 +344,7 @@ func TestApplyImageDigests(t *testing.T) {
 			},
 			expectValues: &v1.CNIValues{
 				Cni: &v1.CNIConfig{
-					Image: ptr.Of("cni-test"),
+					Image: new("cni-test"),
 				},
 			},
 		},
@@ -382,14 +362,14 @@ func TestApplyImageDigests(t *testing.T) {
 					Version: istioversion.Default,
 					Values: &v1.CNIValues{
 						Cni: &v1.CNIConfig{
-							Image: ptr.Of("cni-custom"),
+							Image: new("cni-custom"),
 						},
 					},
 				},
 			},
 			expectValues: &v1.CNIValues{
 				Cni: &v1.CNIConfig{
-					Image: ptr.Of("cni-custom"),
+					Image: new("cni-custom"),
 				},
 			},
 		},
@@ -407,16 +387,16 @@ func TestApplyImageDigests(t *testing.T) {
 					Version: istioversion.Default,
 					Values: &v1.CNIValues{
 						Cni: &v1.CNIConfig{
-							Hub: ptr.Of("docker.io/istio"),
-							Tag: ptr.Of("1.20.1"),
+							Hub: new("docker.io/istio"),
+							Tag: new("1.20.1"),
 						},
 					},
 				},
 			},
 			expectValues: &v1.CNIValues{
 				Cni: &v1.CNIConfig{
-					Hub: ptr.Of("docker.io/istio"),
-					Tag: ptr.Of("1.20.1"),
+					Hub: new("docker.io/istio"),
+					Tag: new("1.20.1"),
 				},
 			},
 		},
@@ -434,14 +414,14 @@ func TestApplyImageDigests(t *testing.T) {
 					Version: istioversion.Default,
 					Values: &v1.CNIValues{
 						Global: &v1.CNIGlobalConfig{
-							Hub: ptr.Of("docker.io/istio"),
+							Hub: new("docker.io/istio"),
 						},
 					},
 				},
 			},
 			expectValues: &v1.CNIValues{
 				Global: &v1.CNIGlobalConfig{
-					Hub: ptr.Of("docker.io/istio"),
+					Hub: new("docker.io/istio"),
 				},
 			},
 		},
@@ -459,14 +439,14 @@ func TestApplyImageDigests(t *testing.T) {
 					Version: istioversion.Default,
 					Values: &v1.CNIValues{
 						Global: &v1.CNIGlobalConfig{
-							Tag: ptr.Of("v1.24.0-custom-build"),
+							Tag: new("v1.24.0-custom-build"),
 						},
 					},
 				},
 			},
 			expectValues: &v1.CNIValues{
 				Global: &v1.CNIGlobalConfig{
-					Tag: ptr.Of("v1.24.0-custom-build"),
+					Tag: new("v1.24.0-custom-build"),
 				},
 			},
 		},
@@ -484,16 +464,16 @@ func TestApplyImageDigests(t *testing.T) {
 					Version: istioversion.Default,
 					Values: &v1.CNIValues{
 						Cni: &v1.CNIConfig{
-							Hub: ptr.Of("docker.io/istio"),
-							Tag: ptr.Of("1.20.2"),
+							Hub: new("docker.io/istio"),
+							Tag: new("1.20.2"),
 						},
 					},
 				},
 			},
 			expectValues: &v1.CNIValues{
 				Cni: &v1.CNIConfig{
-					Hub: ptr.Of("docker.io/istio"),
-					Tag: ptr.Of("1.20.2"),
+					Hub: new("docker.io/istio"),
+					Tag: new("1.20.2"),
 				},
 			},
 		},
@@ -526,14 +506,14 @@ func TestIstioCNIvendorDefaults(t *testing.T) {
 			version: "v1.24.2",
 			userValues: &v1.CNIValues{
 				Cni: &v1.CNIConfig{
-					CniConfDir: StringPtr("example/path"),
+					CniConfDir: new("example/path"),
 				},
 			},
 			vendorDefaultsYAML: `
 `, // No vendor defaults provided
 			expected: &v1.CNIValues{
 				Cni: &v1.CNIConfig{
-					CniConfDir: StringPtr("example/path"),
+					CniConfDir: new("example/path"),
 				},
 			},
 			expectError: false,
@@ -543,8 +523,8 @@ func TestIstioCNIvendorDefaults(t *testing.T) {
 			version: "v1.24.2",
 			userValues: &v1.CNIValues{
 				Cni: &v1.CNIConfig{
-					CniConfDir: StringPtr("example/path"),
-					Image:      StringPtr("custom/cni-image"),
+					CniConfDir: new("example/path"),
+					Image:      new("custom/cni-image"),
 				},
 			},
 			vendorDefaultsYAML: `
@@ -555,8 +535,8 @@ v1.24.2:
 `, // Vendor defaults provided but should not override user values
 			expected: &v1.CNIValues{
 				Cni: &v1.CNIConfig{
-					CniConfDir: StringPtr("example/path"),
-					Image:      StringPtr("custom/cni-image"),
+					CniConfDir: new("example/path"),
+					Image:      new("custom/cni-image"),
 				},
 			},
 			expectError: false,
@@ -566,7 +546,7 @@ v1.24.2:
 			version: "v1.24.2",
 			userValues: &v1.CNIValues{
 				Cni: &v1.CNIConfig{
-					Image: StringPtr("custom/cni-image"),
+					Image: new("custom/cni-image"),
 				},
 			},
 			vendorDefaultsYAML: `
@@ -578,8 +558,8 @@ v1.24.2:
 `,
 			expected: &v1.CNIValues{
 				Cni: &v1.CNIConfig{
-					CniConfDir: StringPtr("example/path/vendor/path"),
-					Image:      StringPtr("custom/cni-image"),
+					CniConfDir: new("example/path/vendor/path"),
+					Image:      new("custom/cni-image"),
 				},
 			},
 			expectError: false,
@@ -597,8 +577,8 @@ v1.24.2:
 `,
 			expected: &v1.CNIValues{
 				Cni: &v1.CNIConfig{
-					CniConfDir: StringPtr("example/path/vendor/path"),
-					Image:      StringPtr("vendor/cni-image"),
+					CniConfDir: new("example/path/vendor/path"),
+					Image:      new("vendor/cni-image"),
 				},
 			},
 			expectError: false,
@@ -655,8 +635,10 @@ v1.24.2:
 }
 
 // StringPtr returns a pointer to a string literal.
+//
+//go:fix inline
 func StringPtr(s string) *string {
-	return &s
+	return new(s)
 }
 
 func TestDetermineStatus(t *testing.T) {
@@ -685,10 +667,8 @@ func TestDetermineStatus(t *testing.T) {
 			g := NewWithT(t)
 
 			cni := &v1.IstioCNI{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "my-cni",
-					Generation: 123,
-				},
+				Name:       "my-cni",
+				Generation: 123,
 			}
 
 			status, err := r.determineStatus(ctx, cni, tt.reconcileErr)

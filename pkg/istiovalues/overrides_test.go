@@ -19,8 +19,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 func TestApplyOverrides(t *testing.T) {
@@ -37,9 +35,9 @@ func TestApplyOverrides(t *testing.T) {
 			namespace: "ns1",
 			values:    v1.Values{},
 			expectedValues: v1.Values{
-				Revision: ptr.Of(""),
+				Revision: new(""),
 				Global: &v1.GlobalConfig{
-					IstioNamespace: ptr.Of("ns1"),
+					IstioNamespace: new("ns1"),
 				},
 				DefaultRevision: nil,
 			},
@@ -50,9 +48,9 @@ func TestApplyOverrides(t *testing.T) {
 			namespace: "ns1",
 			values:    v1.Values{},
 			expectedValues: v1.Values{
-				Revision: ptr.Of("my-revision"),
+				Revision: new("my-revision"),
 				Global: &v1.GlobalConfig{
-					IstioNamespace: ptr.Of("ns1"),
+					IstioNamespace: new("ns1"),
 				},
 				DefaultRevision: nil,
 			},
@@ -62,12 +60,12 @@ func TestApplyOverrides(t *testing.T) {
 			revision:  "my-revision",
 			namespace: "ns1",
 			values: v1.Values{
-				Revision: ptr.Of("this-should-be-overridden"),
+				Revision: new("this-should-be-overridden"),
 			},
 			expectedValues: v1.Values{
-				Revision: ptr.Of("my-revision"),
+				Revision: new("my-revision"),
 				Global: &v1.GlobalConfig{
-					IstioNamespace: ptr.Of("ns1"),
+					IstioNamespace: new("ns1"),
 				},
 				DefaultRevision: nil,
 			},
@@ -78,13 +76,13 @@ func TestApplyOverrides(t *testing.T) {
 			namespace: "ns1",
 			values: v1.Values{
 				Global: &v1.GlobalConfig{
-					IstioNamespace: ptr.Of("this-should-be-overridden"),
+					IstioNamespace: new("this-should-be-overridden"),
 				},
 			},
 			expectedValues: v1.Values{
-				Revision: ptr.Of("my-revision"),
+				Revision: new("my-revision"),
 				Global: &v1.GlobalConfig{
-					IstioNamespace: ptr.Of("ns1"),
+					IstioNamespace: new("ns1"),
 				},
 				DefaultRevision: nil,
 			},
@@ -94,12 +92,12 @@ func TestApplyOverrides(t *testing.T) {
 			revision:  "my-revision",
 			namespace: "ns1",
 			values: v1.Values{
-				DefaultRevision: ptr.Of("my-revision"),
+				DefaultRevision: new("my-revision"),
 			},
 			expectedValues: v1.Values{
-				Revision: ptr.Of("my-revision"),
+				Revision: new("my-revision"),
 				Global: &v1.GlobalConfig{
-					IstioNamespace: ptr.Of("ns1"),
+					IstioNamespace: new("ns1"),
 				},
 				DefaultRevision: nil,
 			},

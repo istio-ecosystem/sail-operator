@@ -37,10 +37,8 @@ func Test_determineKind(t *testing.T) {
 		{
 			name: "with-type-meta",
 			arg: &v1.Istio{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Istio123",
-					APIVersion: "v1",
-				},
+				Kind:       "Istio123",
+				APIVersion: "v1",
 			},
 			want: "Istio123",
 		},

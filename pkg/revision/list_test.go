@@ -30,22 +30,16 @@ import (
 func TestListOwned(t *testing.T) {
 	t.Run("happy-path", func(t *testing.T) {
 		rev1 := v1.IstioRevision{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:            "rev1",
-				OwnerReferences: []metav1.OwnerReference{newOwnerReference("Istio", "default", "123")},
-			},
+			Name:            "rev1",
+			OwnerReferences: []metav1.OwnerReference{newOwnerReference("Istio", "default", "123")},
 		}
 		rev2 := v1.IstioRevision{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:            "rev2",
-				OwnerReferences: []metav1.OwnerReference{newOwnerReference("Istio", "default", "123")},
-			},
+			Name:            "rev2",
+			OwnerReferences: []metav1.OwnerReference{newOwnerReference("Istio", "default", "123")},
 		}
 		rev3 := v1.IstioRevision{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:            "rev3",
-				OwnerReferences: []metav1.OwnerReference{newOwnerReference("Istio", "default", "456")},
-			},
+			Name:            "rev3",
+			OwnerReferences: []metav1.OwnerReference{newOwnerReference("Istio", "default", "456")},
 		}
 		cl := newFakeClientBuilder().
 			WithObjects(&rev1, &rev2, &rev3).
@@ -74,40 +68,34 @@ func TestListOwned(t *testing.T) {
 func Test_isOwnedRevision(t *testing.T) {
 	t.Run("no-owner", func(t *testing.T) {
 		rev := v1.IstioRevision{
-			ObjectMeta: metav1.ObjectMeta{Name: "my-rev"},
+			Name: "my-rev",
 		}
 		assert.Equal(t, false, isOwnedRevision(rev, "111"))
 	})
 
 	t.Run("wrong-owner", func(t *testing.T) {
 		rev := v1.IstioRevision{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:            "my-rev",
-				OwnerReferences: []metav1.OwnerReference{newOwnerReference("Istio", "default", "222")},
-			},
+			Name:            "my-rev",
+			OwnerReferences: []metav1.OwnerReference{newOwnerReference("Istio", "default", "222")},
 		}
 		assert.Equal(t, false, isOwnedRevision(rev, "111"))
 	})
 
 	t.Run("single-owner", func(t *testing.T) {
 		rev := v1.IstioRevision{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:            "my-rev",
-				OwnerReferences: []metav1.OwnerReference{newOwnerReference("Istio", "default", "111")},
-			},
+			Name:            "my-rev",
+			OwnerReferences: []metav1.OwnerReference{newOwnerReference("Istio", "default", "111")},
 		}
 		assert.Equal(t, true, isOwnedRevision(rev, "111"))
 	})
 
 	t.Run("multiple-owners", func(t *testing.T) {
 		rev := v1.IstioRevision{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "my-rev",
-				OwnerReferences: []metav1.OwnerReference{
-					newOwnerReference("Foo", "foo", "111"),
-					newOwnerReference("Istio", "default", "222"),
-					newOwnerReference("Bar", "bar", "333"),
-				},
+			Name: "my-rev",
+			OwnerReferences: []metav1.OwnerReference{
+				newOwnerReference("Foo", "foo", "111"),
+				newOwnerReference("Istio", "default", "222"),
+				newOwnerReference("Bar", "bar", "333"),
 			},
 		}
 		assert.Equal(t, true, isOwnedRevision(rev, "222"))
@@ -117,7 +105,7 @@ func Test_isOwnedRevision(t *testing.T) {
 	// so that the test author is reminded to add the uid to the resource
 	t.Run("no-uid", func(t *testing.T) {
 		rev := v1.IstioRevision{
-			ObjectMeta: metav1.ObjectMeta{Name: "my-rev"},
+			Name: "my-rev",
 		}
 		assert.Panics(t, func() {
 			_ = isOwnedRevision(rev, "")

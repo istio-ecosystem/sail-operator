@@ -32,7 +32,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -48,16 +47,16 @@ var _ = Describe("Webhook failure event detection", Label("operator", "webhook-e
 	)
 
 	BeforeAll(func(ctx SpecContext) {
-		ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNS}}
+		ns := &corev1.Namespace{Name: testNS}
 		Expect(cl.Create(ctx, ns)).To(Succeed())
 		Log("Created test namespace", testNS)
 
 		DeferCleanup(func(ctx SpecContext) {
 			// Delete webhook config first to avoid blocking namespace deletion.
-			whCfg := &admissionv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: webhookCfgName}}
+			whCfg := &admissionv1.MutatingWebhookConfiguration{Name: webhookCfgName}
 			_ = cl.Delete(ctx, whCfg)
 
-			ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNS}}
+			ns := &corev1.Namespace{Name: testNS}
 			_ = cl.Delete(ctx, ns)
 
 			common.WaitForDeletion(ctx, cl, whCfg, ns)
@@ -69,7 +68,7 @@ var _ = Describe("Webhook failure event detection", Label("operator", "webhook-e
 		failPolicy := admissionv1.Fail
 
 		whCfg := &admissionv1.MutatingWebhookConfiguration{
-			ObjectMeta: metav1.ObjectMeta{Name: webhookCfgName},
+			Name: webhookCfgName,
 			Webhooks: []admissionv1.MutatingWebhook{{
 				Name:                    webhookName,
 				AdmissionReviewVersions: []string{"v1"},
@@ -79,16 +78,14 @@ var _ = Describe("Webhook failure event detection", Label("operator", "webhook-e
 					Service: &admissionv1.ServiceReference{
 						Name:      "nonexistent-service",
 						Namespace: testNS,
-						Path:      ptr.To("/inject"),
+						Path:      new("/inject"),
 					},
 				},
 				Rules: []admissionv1.RuleWithOperations{{
-					Operations: []admissionv1.OperationType{admissionv1.Create},
-					Rule: admissionv1.Rule{
-						APIGroups:   []string{""},
-						APIVersions: []string{"v1"},
-						Resources:   []string{"pods"},
-					},
+					Operations:  []admissionv1.OperationType{admissionv1.Create},
+					APIGroups:   []string{""},
+					APIVersions: []string{"v1"},
+					Resources:   []string{"pods"},
 				}},
 				NamespaceSelector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{"webhook-event-test": "true"},
@@ -111,10 +108,8 @@ var _ = Describe("Webhook failure event detection", Label("operator", "webhook-e
 		// Create a Deployment to trigger the webhook failure
 		replicas := int32(1)
 		deploy := &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      triggerDeployment,
-				Namespace: testNS,
-			},
+			Name:      triggerDeployment,
+			Namespace: testNS,
 			Spec: appsv1.DeploymentSpec{
 				Replicas: &replicas,
 				Selector: &metav1.LabelSelector{
@@ -181,12 +176,12 @@ var _ = Describe("Remote istiod webhook (DNS-based URL) failure detection", Labe
 	webhookURL := "https://istiod-remote." + testNS + ".svc:15017/mutate-istio.io"
 
 	BeforeAll(func(ctx SpecContext) {
-		ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNS, Labels: map[string]string{testNS: "true"}}}
+		ns := &corev1.Namespace{Name: testNS, Labels: map[string]string{testNS: "true"}}
 		Expect(cl.Create(ctx, ns)).To(Succeed())
 		Log("Created test namespace", testNS)
 
 		istio := &v1.Istio{
-			ObjectMeta: metav1.ObjectMeta{Name: revName},
+			Name: revName,
 			Spec: v1.IstioSpec{
 				Version:   istioversion.Default,
 				Namespace: testNS,
@@ -194,7 +189,7 @@ var _ = Describe("Remote istiod webhook (DNS-based URL) failure detection", Labe
 				Values: &v1.Values{
 					Global: &v1.GlobalConfig{
 						// So the istio chart does not create a conflicting MutatingWebhookConfiguration.
-						OperatorManageWebhooks: ptr.To(true),
+						OperatorManageWebhooks: new(true),
 					},
 				},
 			},
@@ -212,35 +207,31 @@ var _ = Describe("Remote istiod webhook (DNS-based URL) failure detection", Labe
 		sideEffects := admissionv1.SideEffectClassNone
 		failPolicy := admissionv1.Fail
 		whCfg := &admissionv1.MutatingWebhookConfiguration{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: webhookCfgName,
-				// Shortens the degraded window for this webhook only, so the recovery step is fast.
-				Annotations: map[string]string{constants.WebhookDegradedWindowAnnotationKey: "10s"},
-				OwnerReferences: []metav1.OwnerReference{{
-					APIVersion:         v1.GroupVersion.String(),
-					Kind:               v1.IstioRevisionKind,
-					Name:               revName,
-					UID:                rev.UID,
-					Controller:         ptr.To(true),
-					BlockOwnerDeletion: ptr.To(true),
-				}},
-			},
+			Name: webhookCfgName,
+			// Shortens the degraded window for this webhook only, so the recovery step is fast.
+			Annotations: map[string]string{constants.WebhookDegradedWindowAnnotationKey: "10s"},
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion:         v1.GroupVersion.String(),
+				Kind:               v1.IstioRevisionKind,
+				Name:               revName,
+				UID:                rev.UID,
+				Controller:         new(true),
+				BlockOwnerDeletion: new(true),
+			}},
 			Webhooks: []admissionv1.MutatingWebhook{{
 				Name:                    webhookName,
 				AdmissionReviewVersions: []string{"v1"},
 				SideEffects:             &sideEffects,
 				FailurePolicy:           &failPolicy,
 				ClientConfig: admissionv1.WebhookClientConfig{
-					URL:      ptr.To(webhookURL),
+					URL:      new(webhookURL),
 					CABundle: []byte("test-ca-bundle"),
 				},
 				Rules: []admissionv1.RuleWithOperations{{
-					Operations: []admissionv1.OperationType{admissionv1.Create},
-					Rule: admissionv1.Rule{
-						APIGroups:   []string{""},
-						APIVersions: []string{"v1"},
-						Resources:   []string{"pods"},
-					},
+					Operations:  []admissionv1.OperationType{admissionv1.Create},
+					APIGroups:   []string{""},
+					APIVersions: []string{"v1"},
+					Resources:   []string{"pods"},
 				}},
 				NamespaceSelector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{testNS: "true"},
@@ -252,12 +243,12 @@ var _ = Describe("Remote istiod webhook (DNS-based URL) failure detection", Labe
 
 		DeferCleanup(func(ctx SpecContext) {
 			Log("Cleaning up ")
-			whCfg := &admissionv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: webhookCfgName}}
+			whCfg := &admissionv1.MutatingWebhookConfiguration{Name: webhookCfgName}
 			_ = cl.Delete(ctx, whCfg)
-			istio := &v1.Istio{ObjectMeta: metav1.ObjectMeta{Name: revName}}
+			istio := &v1.Istio{Name: revName}
 			_ = cl.Delete(ctx, istio)
 
-			ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNS}}
+			ns := &corev1.Namespace{Name: testNS}
 			_ = cl.Delete(ctx, ns)
 			common.WaitForDeletion(ctx, cl, whCfg, istio, ns)
 		})
@@ -290,10 +281,8 @@ var _ = Describe("Remote istiod webhook (DNS-based URL) failure detection", Labe
 
 		replicas := int32(1)
 		deploy := &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      triggerDeployment,
-				Namespace: testNS,
-			},
+			Name:      triggerDeployment,
+			Namespace: testNS,
 			Spec: appsv1.DeploymentSpec{
 				Replicas: &replicas,
 				Selector: &metav1.LabelSelector{
@@ -339,7 +328,7 @@ var _ = Describe("Remote istiod webhook (DNS-based URL) failure detection", Labe
 	It("recovers to ready after the degraded window expires", func(ctx SpecContext) {
 		// Delete the Deployment first: while it is stuck, each re-attempted pod creation
 		// re-records the failure (via the event count-increment update), resetting the window.
-		deploy := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: triggerDeployment, Namespace: testNS}}
+		deploy := &appsv1.Deployment{Name: triggerDeployment, Namespace: testNS}
 		Expect(cl.Delete(ctx, deploy)).To(Succeed())
 		Success("Deleted the trigger Deployment to stop new failure events")
 

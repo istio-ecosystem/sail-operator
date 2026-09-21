@@ -126,27 +126,28 @@ values:
 		common.CreateZTunnel(k, version, spec)
 	}
 
-	spec := fmt.Sprintf(`
+	var spec strings.Builder
+	spec.WriteString(fmt.Sprintf(`
 profile: %s
 values:
   global:
     meshID: mesh1
     multiCluster:
       clusterName: %s
-    network: %s`, profile, cluster, network)
+    network: %s`, profile, cluster, network))
 	for _, value := range values {
-		spec += common.Indent(value)
+		spec.WriteString(common.Indent(value))
 	}
 
 	if profile == "ambient" {
-		spec += fmt.Sprintf(`
+		spec.WriteString(fmt.Sprintf(`
   pilot:
     trustedZtunnelNamespace: %s
     env:
-      AMBIENT_ENABLE_MULTI_NETWORK: "true"`, common.ZtunnelNamespace)
+      AMBIENT_ENABLE_MULTI_NETWORK: "true"`, common.ZtunnelNamespace))
 	}
 
-	common.CreateIstio(k, version, spec)
+	common.CreateIstio(k, version, spec.String())
 }
 
 func createIntermediateCA(k kubectl.Kubectl, zone, network, artifacts string, cl client.Client) {

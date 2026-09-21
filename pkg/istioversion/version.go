@@ -103,12 +103,7 @@ func ValidateVersion(version string) error {
 
 // IsEOLVersion returns true if the version is known but has been marked end-of-life.
 func IsEOLVersion(version string) bool {
-	for _, eolVersion := range EOL {
-		if eolVersion == version {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(EOL, version)
 }
 
 func init() {

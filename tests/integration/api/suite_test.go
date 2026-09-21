@@ -35,7 +35,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -83,7 +82,7 @@ var _ = BeforeSuite(func() {
 
 	chartManager = helm.NewChartManager(mgr.GetConfig(), "")
 
-	operatorNs := &corev1.Namespace{ObjectMeta: v1.ObjectMeta{Name: operatorNamespace}}
+	operatorNs := &corev1.Namespace{Name: operatorNamespace}
 	Expect(k8sClient.Create(context.TODO(), operatorNs)).To(Succeed())
 
 	cfg := config.ReconcilerConfig{
