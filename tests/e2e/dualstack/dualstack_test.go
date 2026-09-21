@@ -253,7 +253,7 @@ func getEnvVars(container corev1.Container) []corev1.EnvVar {
 
 func checkTCPEchoConnectivity(podName, namespace, echoStr string) {
 	command := fmt.Sprintf(`sh -c 'echo %s | nc tcp-echo.%s 9000'`, echoStr, echoStr)
-	response, err := k.WithNamespace(namespace).Exec(podName, "sleep", command)
-	Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("error connecting to the %q pod", podName))
-	Expect(response).To(ContainSubstring(fmt.Sprintf("hello %s", echoStr)), fmt.Sprintf("Unexpected response from %s pod", podName))
+	Eventually(func() (string, error) {
+		return k.WithNamespace(namespace).Exec(podName, "sleep", command)
+	}).Should(ContainSubstring(fmt.Sprintf("hello %s", echoStr)), fmt.Sprintf("Unexpected response from %s pod", podName))
 }

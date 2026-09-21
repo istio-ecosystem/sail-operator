@@ -166,7 +166,7 @@ spec:
 						// Step 3: Validate connectivity between workloads
 						// Tests that sleep pod in workload-update-test can reach httpbin service in httpbin namespace
 						// This verifies the ambient mesh is routing traffic correctly through ZTunnel proxies
-						g.Expect(validator.ValidateConnectivity(ctx)).To(Succeed())
+						g.Expect(validator.WaitForConnectivity(ctx)).To(Succeed())
 						// Step 4: Verify ZTunnel version matches base version
 						// Checks the ZTunnel DaemonSet image tag to confirm it's running the expected base version
 						g.Expect(validator.ValidateProxyVersion(ctx, baseVersion.Version)).To(Succeed())
@@ -244,7 +244,7 @@ spec:
 					// Validate connectivity is still working after IstioCNI update
 					// Tests that sleep pod can still reach httpbin service through the mesh
 					// This confirms that updating the CNI component doesn't break existing connections
-					Expect(validator.ValidateConnectivity(ctx)).To(Succeed(),
+					Expect(validator.WaitForConnectivity(ctx)).To(Succeed(),
 						"Workloads should maintain connectivity after IstioCNI update")
 					Success("Workloads maintain connectivity")
 				})
@@ -287,7 +287,7 @@ spec:
 						// Validate connectivity after ZTunnel update
 						// Tests that sleep pod can reach httpbin service through the updated ZTunnel proxies
 						// This confirms the ZTunnel rolling update completed successfully without breaking traffic
-						g.Expect(validator.ValidateConnectivity(ctx)).To(Succeed())
+						g.Expect(validator.WaitForConnectivity(ctx)).To(Succeed())
 						// Verify ZTunnel version has been upgraded
 						// ZTunnel DaemonSet should now have new version
 						g.Expect(validator.ValidateProxyVersion(ctx, newVersion.Version)).To(Succeed())
@@ -424,7 +424,7 @@ spec:
 						// Validate initial connectivity with base version
 						// Tests that sleep pod in workload-canary-test can reach httpbin service
 						// This establishes the baseline before introducing the canary revision
-						g.Expect(validator.ValidateConnectivity(ctx)).To(Succeed())
+						g.Expect(validator.WaitForConnectivity(ctx)).To(Succeed())
 						// Verify initial ZTunnel version
 						g.Expect(validator.ValidateProxyVersion(ctx, baseVersion.Version)).To(Succeed())
 					}).WithTimeout(120*time.Second).Should(Succeed(), "Workloads should have connectivity with base version")
@@ -501,7 +501,7 @@ spec:
 					// Tests that sleep pod can reach httpbin service while both default and canary
 					// istiod revisions are running side-by-side
 					// This confirms that introducing a canary revision doesn't disrupt existing traffic
-					Expect(validator.ValidateConnectivity(ctx)).To(Succeed(),
+					Expect(validator.WaitForConnectivity(ctx)).To(Succeed(),
 						"Workloads should maintain connectivity with canary revision present")
 					Success("Workloads maintain connectivity with both revisions")
 				})
