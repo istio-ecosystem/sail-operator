@@ -17,6 +17,12 @@
 # Syncs versioned changelog sections from release branches into main's CHANGELOG.md.
 # Idempotent — safe to run repeatedly; only adds sections that don't already exist.
 #
+# When a synced version is a new minor release (x.y.0), fragments on main whose
+# title matches an entry in that section are deleted: the fix is now covered by
+# that release, and main's own next release will be a different minor. Fragments
+# only matched by a patch release (x.y.z, z>0) are kept, so they still get
+# mentioned when main cuts its own next minor release.
+#
 # Usage:
 #   ./hack/sync-changelog-releases.sh                    # auto-detect release branches
 #   ./hack/sync-changelog-releases.sh release-1.30       # sync specific branch
@@ -26,7 +32,29 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 CHANGELOG="${REPO_ROOT}/CHANGELOG.md"
+FRAGMENT_DIR="${REPO_ROOT}/changelog"
 REMOTE="${UPSTREAM_REMOTE:-upstream}"
+
+# Deletes fragment files on main whose title matches an entry in a synced
+# x.y.0 section. $1: section text.
+prune_fragments_for_minor_release() {
+  local section="$1"
+  local line entry_title f ftitle
+  while IFS= read -r line; do
+    [[ "$line" == "- "* ]] || continue
+    entry_title="${line#- }"
+    # Strip a trailing issue link, e.g. " ([#123](url))"
+    entry_title="${entry_title%% \(\[#*}"
+    for f in "${FRAGMENT_DIR}"/*.yaml; do
+      [[ -f "$f" ]] || continue
+      ftitle=$(grep '^title:' "$f" | sed 's/^title:[[:space:]]*//')
+      if [[ "$ftitle" == "$entry_title" ]]; then
+        rm "$f"
+        echo "Removed fragment $(basename "$f"): included in v${version}"
+      fi
+    done
+  done <<< "$section"
+}
 
 if [[ ! -f "$CHANGELOG" ]]; then
   echo "Error: CHANGELOG.md not found at ${CHANGELOG}" >&2
@@ -114,6 +142,10 @@ for branch in "${branches[@]}"; do
 
     echo "Added v${version} from ${branch}"
     added=$((added + 1))
+
+    if [[ "$version" =~ ^[0-9]+\.[0-9]+\.0$ ]]; then
+      prune_fragments_for_minor_release "$section"
+    fi
     # Refresh existing versions after insertion
     existing_versions=$(grep -oP '^## v\K[0-9]+\.[0-9]+\.[0-9]+' "$CHANGELOG" || true)
   done
