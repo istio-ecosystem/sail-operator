@@ -1,0 +1,23 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    release: prometheus
+  name: service-mesh-usage-rules
+spec:
+  groups:
+  - interval: 30s
+    name: service-mesh.istiod.rules
+    rules:
+    - expr: sum(servicemesh_istiod_total) by (app.kubernetes.io/version)
+      record: servicemesh_istiod_total
+  - interval: 30s
+    name: service-mesh.sidecar.rules
+    rules:
+    - expr: sum(servicemesh_sidecar_proxy_total) by (app.kubernetes.io/version)
+      record: servicemesh_sidecar_proxy_total
+  - interval: 30s
+    name: service-mesh.ztunnel.rules
+    rules:
+    - expr: sum(servicemesh_ztunnel_total) by (app.kubernetes.io/version)
+      record: servicemesh_ztunnel_total

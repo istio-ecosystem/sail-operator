@@ -18,7 +18,11 @@ import (
 	"context"
 	"time"
 
+	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/prometheus/client_golang/prometheus"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
@@ -32,6 +36,7 @@ type MetricDescription struct {
 
 // MetricsRecorder manages periodic metrics collection
 type MetricsRecorder struct {
+	client.Client
 	interval time.Duration
 	ticker   *time.Ticker
 	done     chan struct{}
@@ -44,10 +49,10 @@ var metricDescription = map[string]MetricDescription{
 		Help: "Total number of Istiod control planes at each Istio version.",
 		Type: "GaugeVec",
 	},
-	"SidecarProxyVersionTotal": {
+	"SidecarProxyTotal": {
 		Name: "servicemesh_sidecar_proxy_total",
 		Help: "Total number of Envoy Sidecar proxies managed by an Istiod control plane.",
-		Type: "GaugeVec",
+		Type: "Gauge",
 	},
 	"SidecarNamespaceTotal": {
 		Name: "servicemesh_sidecar_namespace_total",
@@ -58,11 +63,6 @@ var metricDescription = map[string]MetricDescription{
 		Name: "servicemesh_ztunnel_total",
 		Help: "Total number of ZTunnel proxies managed by an Istiod control plane in Ambient mode.",
 		Type: "GaugeVec",
-	},
-	"WaypointProxyTotal": {
-		Name: "servicemesh_waypoint_proxy_total",
-		Help: "Total number of Waypoint proxies managed by an Istiod control plane in Ambient mode.",
-		Type: "Gauge",
 	},
 	"AmbientNamespaceTotal": {
 		Name: "servicemesh_ambient_namespace_total",
@@ -80,13 +80,12 @@ var (
 		},
 		[]string{"app.kubernetes.io/version"},
 	)
-	// SidecarProxyVersionTotal will count how many Envoy sidecar proxies were injected at each Istio version.
-	SidecarProxyVersionTotal = prometheus.NewGaugeVec(
+	// SidecarProxyTotal will count how many Envoy sidecar proxies were injected.
+	SidecarProxyTotal = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: metricDescription["SidecarProxyVersionTotal"].Name,
-			Help: metricDescription["SidecarProxyVersionTotal"].Help,
+			Name: metricDescription["SidecarProxyTotal"].Name,
+			Help: metricDescription["SidecarProxyTotal"].Help,
 		},
-		[]string{"app.kubernetes.io/version"},
 	)
 	// SidecarNamespaceTotal will count how many namespaces were enabled in Istio sidecar mode.
 	SidecarNamespaceTotal = prometheus.NewGauge(
@@ -103,13 +102,6 @@ var (
 		},
 		[]string{"app.kubernetes.io/version"},
 	)
-	// WaypointProxyTotal will count how many Waypoint proxies were created in Istio Ambient mode.
-	WaypointProxyTotal = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: metricDescription["WaypointProxyTotal"].Name,
-			Help: metricDescription["WaypointProxyTotal"].Help,
-		},
-	)
 	// AmbientNamespaceTotal will count how many namespaces were enabled in Istio Ambient mode.
 	AmbientNamespaceTotal = prometheus.NewGauge(
 		prometheus.GaugeOpts{
@@ -123,10 +115,9 @@ var (
 func RegisterMetrics() {
 	metrics.Registry.MustRegister(
 		IstioVersionTotal,
-		SidecarProxyVersionTotal,
+		SidecarProxyTotal,
 		SidecarNamespaceTotal,
 		ZTunnelVersionTotal,
-		WaypointProxyTotal,
 		AmbientNamespaceTotal,
 	)
 }
@@ -142,8 +133,9 @@ func ListMetrics() []MetricDescription {
 	return v
 }
 
-func NewMetricsRecorder(interval time.Duration) *MetricsRecorder {
+func NewMetricsRecorder(interval time.Duration, client client.Client) *MetricsRecorder {
 	return &MetricsRecorder{
+		Client:   client,
 		interval: interval,
 		done:     make(chan struct{}),
 	}
@@ -160,8 +152,8 @@ func (m *MetricsRecorder) Start(ctx context.Context) {
 				return
 			case <-m.done:
 				return
-			case t := <-m.ticker.C:
-				m.recordMetrics(t)
+			case <-m.ticker.C:
+				m.recordMetrics(ctx)
 			}
 		}
 	}()
@@ -175,9 +167,106 @@ func (m *MetricsRecorder) Stop() {
 	close(m.done)
 }
 
-// recordMetrics lists custom resources and record values
-func (m *MetricsRecorder) recordMetrics(t time.Time) {
+// recordMetrics lists custom resources such as Istio, IstioRevision, ZTunnel and records their counts.
+func (m *MetricsRecorder) recordMetrics(ctx context.Context) {
+	istiodCounts := m.listIstiod(ctx)
+	ztunnelCounts := m.listZTunnel(ctx)
+	sidecarProxyCounts := m.listSidecarProxies(ctx)
+	sidecarNsCounts := m.listSidecarNamespace(ctx)
+	ambientNsCounts := m.listAmbientNamespace(ctx)
 
+	// Update GaugeVec values
+	for version, count := range istiodCounts {
+		IstioVersionTotal.WithLabelValues(version).Set(count)
+	}
+	for version, count := range ztunnelCounts {
+		ZTunnelVersionTotal.WithLabelValues(version).Set(count)
+	}
+
+	SidecarProxyTotal.Set(sidecarProxyCounts)
+	SidecarNamespaceTotal.Set(sidecarNsCounts)
+	AmbientNamespaceTotal.Set(ambientNsCounts)
 }
 
+func (m *MetricsRecorder) listIstiod(ctx context.Context) map[string]float64 {
+	log := logf.FromContext(ctx)
+	istiodCounts := make(map[string]float64)
 
+	istioList := v1.IstioList{}
+	istioRevisionList := v1.IstioRevisionList{}
+	if err := m.Client.List(ctx, &istioList); err != nil {
+		log.V(4).Error(err, "failed to list Istio")
+	}
+	if err := m.Client.List(ctx, &istioRevisionList); err != nil {
+		log.V(4).Error(err, "failed to list IstioRevision")
+	}
+	for _, item := range istioList.Items {
+		if item.Spec.Version != "" {
+			istiodCounts[item.Spec.Version]++
+		}
+	}
+	for _, item := range istioRevisionList.Items {
+		if item.Spec.Version != "" {
+			istiodCounts[item.Spec.Version]++
+		}
+	}
+	return istiodCounts
+}
+
+func (m *MetricsRecorder) listZTunnel(ctx context.Context) map[string]float64 {
+	log := logf.FromContext(ctx)
+	ztunnelCounts := make(map[string]float64)
+
+	ztunnelList := v1.ZTunnelList{}
+	if err := m.Client.List(ctx, &ztunnelList); err != nil {
+		log.V(4).Error(err, "failed to list ZTunnel")
+	}
+	for _, item := range ztunnelList.Items {
+		if item.Spec.Version != "" {
+			ztunnelCounts[item.Spec.Version]++
+		}
+	}
+	return ztunnelCounts
+}
+
+func (m *MetricsRecorder) listSidecarProxies(ctx context.Context) float64 {
+	log := logf.FromContext(ctx)
+	podList := &corev1.PodList{}
+	// filter by security.istio.io/tlsMode=istio label
+	if err := m.Client.List(ctx, podList, client.MatchingLabels{"security.istio.io/tlsMode": "istio"}); err != nil {
+		log.V(4).Error(err, "failed to list Pod")
+	}
+	return float64(len(podList.Items))
+}
+
+func (m *MetricsRecorder) listSidecarNamespace(ctx context.Context) float64 {
+	log := logf.FromContext(ctx)
+	nsList := &corev1.NamespaceList{}
+	nsListAlt := &corev1.NamespaceList{}
+	// filter by istio-injection=enabled or istio.io/rev labels
+	if err := m.Client.List(ctx, nsList, client.MatchingLabels{"istio-injection": "enabled"}); err != nil {
+		log.V(4).Error(err, "failed to list namespace")
+	}
+	if err := m.Client.List(ctx, nsListAlt, client.HasLabels{"istio.io/rev"}); err != nil {
+		log.V(4).Error(err, "failed to list namespace")
+	}
+	return float64(len(nsList.Items) + len(nsListAlt.Items))
+}
+
+func (m *MetricsRecorder) listAmbientNamespace(ctx context.Context) float64 {
+	log := logf.FromContext(ctx)
+	ambientNsList := &corev1.NamespaceList{}
+	waypointNsList := &corev1.NamespaceList{}
+	ingressNsList := &corev1.NamespaceList{}
+	// filter by istio.io/dataplane-mode=ambient, istio.io/use-waypoint or istio.io/ingress-use-waypoint labels
+	if err := m.Client.List(ctx, ambientNsList, client.MatchingLabels{"istio.io/dataplane-mode": "ambient"}); err != nil {
+		log.V(4).Error(err, "failed to list namespace")
+	}
+	if err := m.Client.List(ctx, waypointNsList, client.HasLabels{"istio.io/use-waypoint"}); err != nil {
+		log.V(4).Error(err, "failed to list namespace")
+	}
+	if err := m.Client.List(ctx, ingressNsList, client.HasLabels{"istio.io/ingress-use-waypoint"}); err != nil {
+		log.V(4).Error(err, "failed to list namespace")
+	}
+	return float64(len(ambientNsList.Items) + len(waypointNsList.Items) + len(ingressNsList.Items))
+}

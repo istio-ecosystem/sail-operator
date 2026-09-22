@@ -14,10 +14,7 @@ Total number of Istiod control planes at each Istio version. Type: GaugeVec.
 Total number of namespaces enrolled in Istio sidecar mode. Type: Gauge.
 
 ### servicemesh_sidecar_proxy_total
-Total number of Envoy Sidecar proxies managed by an Istiod control plane. Type: GaugeVec.
-
-### servicemesh_waypoint_proxy_total
-Total number of Waypoint proxies managed by an Istiod control plane in Ambient mode. Type: Gauge.
+Total number of Envoy Sidecar proxies managed by an Istiod control plane. Type: Gauge.
 
 ### servicemesh_ztunnel_total
 Total number of ZTunnel proxies managed by an Istiod control plane in Ambient mode. Type: GaugeVec.
