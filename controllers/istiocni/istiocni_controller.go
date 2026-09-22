@@ -32,15 +32,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 // Reconciler reconciles an IstioCNI object
@@ -110,8 +107,8 @@ func (r *Reconciler) doReconcile(ctx context.Context, cni *v1.IstioCNI) error {
 		Kind:               v1.IstioCNIKind,
 		Name:               cni.Name,
 		UID:                cni.UID,
-		Controller:         ptr.Of(true),
-		BlockOwnerDeletion: ptr.Of(true),
+		Controller:         new(true),
+		BlockOwnerDeletion: new(true),
 	}
 	return cniReconciler.Install(ctx, cni.Spec.Version, cni.Spec.Namespace, cni.Spec.Values, cni.Spec.Profile, &ownerReference)
 }
@@ -220,7 +217,7 @@ func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, ns clie
 	var requests []reconcile.Request
 	for _, cni := range cniList.Items {
 		if cni.Spec.Namespace == ns.GetName() {
-			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: cni.Name}})
+			requests = append(requests, reconcile.Request{Name: cni.Name})
 		}
 	}
 	return requests

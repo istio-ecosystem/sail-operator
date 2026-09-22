@@ -15,6 +15,7 @@
 package istiovalues
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -22,6 +23,11 @@ import (
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 
 	"istio.io/istio/pkg/log"
+)
+
+const (
+	fips140_2 = "fips-140-2"
+	fips140_3 = "fips-140-3"
 )
 
 var (
@@ -53,10 +59,26 @@ func detectFipsMode(filepath string) {
 }
 
 // ApplyFipsValues sets pilot.env.COMPLIANCE_POLICY if FIPS mode is enabled in the system.
-func ApplyFipsValues(values *v1.Values) {
+// For versions > 1.30, the policy is set to "fips-140-3".
+// For versions <= 1.30, the policy is set to "fips-140-2".
+func ApplyFipsValues(values *v1.Values, version string) error {
 	if !FipsEnabled || values == nil {
-		return
+		return nil
 	}
+
+	v, err := semver.NewVersion(version)
+	if err != nil {
+		return fmt.Errorf("failed to parse version %q: %w", version, err)
+	}
+
+	// istio 1.31 is built with go1.26.
+	// FIPS mode for go1.26, which is what setting fips-140-3 enables,
+	// is certified on platforms with an openssl backend i.e. OpenShift.
+	policy := fips140_2
+	if v.GreaterThan(istio1_30) {
+		policy = fips140_3
+	}
+
 	if values.Pilot == nil {
 		values.Pilot = &v1.PilotConfig{}
 	}
@@ -64,8 +86,9 @@ func ApplyFipsValues(values *v1.Values) {
 		values.Pilot.Env = make(map[string]string)
 	}
 	if _, found := values.Pilot.Env["COMPLIANCE_POLICY"]; !found {
-		values.Pilot.Env["COMPLIANCE_POLICY"] = "fips-140-2"
+		values.Pilot.Env["COMPLIANCE_POLICY"] = policy
 	}
+	return nil
 }
 
 // ApplyZTunnelFipsValues sets ztunnel.env.TLS12_ENABLED if FIPS mode is enabled in the system.

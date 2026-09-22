@@ -22,7 +22,6 @@ import (
 	"github.com/istio-ecosystem/sail-operator/chart"
 	. "github.com/onsi/gomega"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -89,27 +88,21 @@ func TestClassifyCRD(t *testing.T) {
 		{
 			name: "OLM managed",
 			crd: &apiextensionsv1.CustomResourceDefinition{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{OLMManagedLabel: "test-operator"},
-				},
+				Labels: map[string]string{OLMManagedLabel: "test-operator"},
 			},
 			expect: crdManagedByOLM,
 		},
 		{
 			name: "library managed",
 			crd: &apiextensionsv1.CustomResourceDefinition{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{defaultCRDOwnershipLabelKey: defaultCRDOwnershipLabelValue},
-				},
+				Labels: map[string]string{defaultCRDOwnershipLabelKey: defaultCRDOwnershipLabelValue},
 			},
 			expect: crdManagedByLibrary,
 		},
 		{
 			name: "unmanaged",
 			crd: &apiextensionsv1.CustomResourceDefinition{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{"some-other-label": "value"},
-				},
+				Labels: map[string]string{"some-other-label": "value"},
 			},
 			expect: crdUnmanaged,
 		},
@@ -140,16 +133,12 @@ func TestClassifyCRDCustomOwnershipLabel(t *testing.T) {
 
 	g := NewWithT(t)
 	owned := &apiextensionsv1.CustomResourceDefinition{
-		ObjectMeta: metav1.ObjectMeta{
-			Labels: map[string]string{customKey: customValue},
-		},
+		Labels: map[string]string{customKey: customValue},
 	}
 	g.Expect(m.classifyCRD(owned)).To(Equal(crdManagedByLibrary))
 
 	wrongValue := &apiextensionsv1.CustomResourceDefinition{
-		ObjectMeta: metav1.ObjectMeta{
-			Labels: map[string]string{customKey: "false"},
-		},
+		Labels: map[string]string{customKey: "false"},
 	}
 	g.Expect(m.classifyCRD(wrongValue)).To(Equal(crdUnmanaged))
 }
@@ -399,11 +388,9 @@ func TestUnmanagedCRDNotTakenOver(t *testing.T) {
 	g := NewWithT(t)
 
 	existingVS := &apiextensionsv1.CustomResourceDefinition{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        "virtualservices.networking.istio.io",
-			Labels:      map[string]string{"some-label": "some-value"},
-			Annotations: map[string]string{"some-annotation": "ann-value"},
-		},
+		Name:        "virtualservices.networking.istio.io",
+		Labels:      map[string]string{"some-label": "some-value"},
+		Annotations: map[string]string{"some-annotation": "ann-value"},
 		Status: apiextensionsv1.CustomResourceDefinitionStatus{
 			Conditions: []apiextensionsv1.CustomResourceDefinitionCondition{
 				{Type: apiextensionsv1.Established, Status: apiextensionsv1.ConditionTrue},
@@ -411,11 +398,9 @@ func TestUnmanagedCRDNotTakenOver(t *testing.T) {
 		},
 	}
 	existingGW := &apiextensionsv1.CustomResourceDefinition{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        "gateways.networking.istio.io",
-			Labels:      map[string]string{"some-label": "some-value"},
-			Annotations: map[string]string{"some-annotation": "ann-value"},
-		},
+		Name:        "gateways.networking.istio.io",
+		Labels:      map[string]string{"some-label": "some-value"},
+		Annotations: map[string]string{"some-annotation": "ann-value"},
 	}
 
 	s := runtime.NewScheme()
@@ -462,10 +447,8 @@ func TestCRDOwnershipLabelCustom(t *testing.T) {
 	g := NewWithT(t)
 
 	existingOwned := &apiextensionsv1.CustomResourceDefinition{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   "virtualservices.networking.istio.io",
-			Labels: map[string]string{customKey: customValue},
-		},
+		Name:   "virtualservices.networking.istio.io",
+		Labels: map[string]string{customKey: customValue},
 		Status: apiextensionsv1.CustomResourceDefinitionStatus{
 			Conditions: []apiextensionsv1.CustomResourceDefinitionCondition{
 				{Type: apiextensionsv1.Established, Status: apiextensionsv1.ConditionTrue},
@@ -473,10 +456,8 @@ func TestCRDOwnershipLabelCustom(t *testing.T) {
 		},
 	}
 	existingUnmanaged := &apiextensionsv1.CustomResourceDefinition{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   "gateways.networking.istio.io",
-			Labels: map[string]string{"some-label": "some-value"},
-		},
+		Name:   "gateways.networking.istio.io",
+		Labels: map[string]string{"some-label": "some-value"},
 	}
 
 	s := runtime.NewScheme()
@@ -609,14 +590,12 @@ func TestApplyCRD_skipsDowngrade(t *testing.T) {
 	g := NewWithT(t)
 
 	existing := &apiextensionsv1.CustomResourceDefinition{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "virtualservices.networking.istio.io",
-			Labels: map[string]string{
-				defaultCRDOwnershipLabelKey: defaultCRDOwnershipLabelValue,
-			},
-			Annotations: map[string]string{
-				"app.kubernetes.io/version": "v1.30.0",
-			},
+		Name: "virtualservices.networking.istio.io",
+		Labels: map[string]string{
+			defaultCRDOwnershipLabelKey: defaultCRDOwnershipLabelValue,
+		},
+		Annotations: map[string]string{
+			"app.kubernetes.io/version": "v1.30.0",
 		},
 		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
 			Group: "networking.istio.io",
@@ -640,9 +619,7 @@ func TestApplyCRD_skipsDowngrade(t *testing.T) {
 	}
 
 	crd := &apiextensionsv1.CustomResourceDefinition{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "virtualservices.networking.istio.io",
-		},
+		Name: "virtualservices.networking.istio.io",
 		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
 			Group: "networking.istio.io",
 			Names: apiextensionsv1.CustomResourceDefinitionNames{Kind: "VirtualService"},
@@ -664,14 +641,12 @@ func TestApplyCRD_updatesWhenNewer(t *testing.T) {
 	g := NewWithT(t)
 
 	existing := &apiextensionsv1.CustomResourceDefinition{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "virtualservices.networking.istio.io",
-			Labels: map[string]string{
-				defaultCRDOwnershipLabelKey: defaultCRDOwnershipLabelValue,
-			},
-			Annotations: map[string]string{
-				"app.kubernetes.io/version": "v1.29.0",
-			},
+		Name: "virtualservices.networking.istio.io",
+		Labels: map[string]string{
+			defaultCRDOwnershipLabelKey: defaultCRDOwnershipLabelValue,
+		},
+		Annotations: map[string]string{
+			"app.kubernetes.io/version": "v1.29.0",
 		},
 		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
 			Group: "networking.istio.io",
@@ -690,9 +665,7 @@ func TestApplyCRD_updatesWhenNewer(t *testing.T) {
 	}
 
 	crd := &apiextensionsv1.CustomResourceDefinition{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "virtualservices.networking.istio.io",
-		},
+		Name: "virtualservices.networking.istio.io",
 		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
 			Group: "networking.istio.io",
 			Names: apiextensionsv1.CustomResourceDefinitionNames{Kind: "VirtualService"},

@@ -19,8 +19,6 @@ import (
 	"github.com/istio-ecosystem/sail-operator/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 func NewOwnerReference(obj client.Object) metav1.OwnerReference {
@@ -52,7 +50,7 @@ func NewOwnerReference(obj client.Object) metav1.OwnerReference {
 		Kind:               kind,
 		Name:               obj.GetName(),
 		UID:                obj.GetUID(),
-		Controller:         ptr.Of(true),
-		BlockOwnerDeletion: ptr.Of(true),
+		Controller:         new(true),
+		BlockOwnerDeletion: new(true),
 	}
 }

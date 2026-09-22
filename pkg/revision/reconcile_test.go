@@ -25,8 +25,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 var ctx = context.Background()
@@ -45,10 +43,10 @@ func TestReconcileActiveRevision(t *testing.T) {
 			name: "creates IstioRevision",
 			istioValues: v1.Values{
 				Pilot: &v1.PilotConfig{
-					Hub: ptr.Of("quay.io/hub"),
+					Hub: new("quay.io/hub"),
 				},
 				MeshConfig: &v1.MeshConfig{
-					AccessLogFile: ptr.Of("/dev/stdout"),
+					AccessLogFile: new("/dev/stdout"),
 				},
 			},
 			expectOwnerReference: true,
@@ -57,15 +55,15 @@ func TestReconcileActiveRevision(t *testing.T) {
 			name: "updates IstioRevision",
 			istioValues: v1.Values{
 				Pilot: &v1.PilotConfig{
-					Hub: ptr.Of("quay.io/new-hub"),
+					Hub: new("quay.io/new-hub"),
 				},
 				MeshConfig: &v1.MeshConfig{
-					AccessLogFile: ptr.Of("/dev/stdout"),
+					AccessLogFile: new("/dev/stdout"),
 				},
 			},
 			revValues: &v1.Values{
 				Pilot: &v1.PilotConfig{
-					Image: ptr.Of("old-image"),
+					Image: new("old-image"),
 				},
 			},
 			expectOwnerReference: true,
@@ -74,12 +72,12 @@ func TestReconcileActiveRevision(t *testing.T) {
 			name: "heals stale ownerReference on update",
 			istioValues: v1.Values{
 				Pilot: &v1.PilotConfig{
-					Hub: ptr.Of("quay.io/hub"),
+					Hub: new("quay.io/hub"),
 				},
 			},
 			revValues: &v1.Values{
 				Pilot: &v1.PilotConfig{
-					Image: ptr.Of("old-image"),
+					Image: new("old-image"),
 				},
 			},
 			existingOwnerRef: &metav1.OwnerReference{
@@ -87,8 +85,8 @@ func TestReconcileActiveRevision(t *testing.T) {
 				Kind:               v1.IstioKind,
 				Name:               "my-istio",
 				UID:                "stale-UID",
-				Controller:         ptr.Of(true),
-				BlockOwnerDeletion: ptr.Of(true),
+				Controller:         new(true),
+				BlockOwnerDeletion: new(true),
 			},
 			expectOwnerReference: true,
 		},
@@ -100,9 +98,7 @@ func TestReconcileActiveRevision(t *testing.T) {
 
 			if tc.revValues != nil {
 				rev := &v1.IstioRevision{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-revision",
-					},
+					Name: "my-revision",
 					Spec: v1.IstioRevisionSpec{
 						Version: version,
 						Values:  tc.revValues,
@@ -115,10 +111,8 @@ func TestReconcileActiveRevision(t *testing.T) {
 			}
 
 			owner := &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "my-istio",
-					UID:  "my-istio-UID",
-				},
+				Name: "my-istio",
+				UID:  "my-istio-UID",
 			}
 
 			cl := newFakeClientBuilder().WithObjects(initObjs...).Build()

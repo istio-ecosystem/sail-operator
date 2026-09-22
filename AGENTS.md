@@ -58,6 +58,7 @@ CONTAINER_CLI=podman DOCKER_GID=0 make deploy
 - **Testing**: Ginkgo/Gomega for E2E/integration tests, standard Go testing for unit tests
 - **Commit signing**: Required with `-s` flag
 - **API changes**: Must be discussed in SEP (Sail Enhancement Proposal) first
+- **Pointers**: Prefer `new(expr)` over `ptr.To(expr)` when creating a pointer to an expression.
 
 ## Key Directories
 

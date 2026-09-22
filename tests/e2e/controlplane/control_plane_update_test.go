@@ -412,7 +412,7 @@ updateStrategy:
 						// Step 3: Validate connectivity between sidecar-injected workloads
 						// Tests that sleep pod can reach httpbin service through their sidecar proxies
 						// This verifies the mesh is routing traffic correctly with base version sidecars
-						g.Expect(validator.ValidateConnectivity(ctx)).To(Succeed())
+						g.Expect(validator.WaitForConnectivity(ctx)).To(Succeed())
 					}).WithTimeout(120*time.Second).Should(Succeed(), "Workload connectivity failed")
 					Success("Workloads have connectivity")
 				})
@@ -485,7 +485,7 @@ updateStrategy:
 						// Validate connectivity after pod restart with new sidecars
 						// Tests that sleep pod (with new sidecar) can reach httpbin service (with new sidecar)
 						// This confirms the in-place update completed successfully and new sidecars are working
-						g.Expect(validator.ValidateConnectivity(ctx)).To(Succeed())
+						g.Expect(validator.WaitForConnectivity(ctx)).To(Succeed())
 					}).WithTimeout(120*time.Second).Should(Succeed(), "Workload connectivity failed after restart")
 					Success("Workloads have connectivity after restart")
 				})

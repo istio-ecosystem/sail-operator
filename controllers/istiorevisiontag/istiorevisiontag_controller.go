@@ -44,8 +44,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	"istio.io/istio/pkg/ptr"
 )
 
 const (
@@ -158,8 +156,8 @@ func (r *Reconciler) installHelmCharts(ctx context.Context, tag *v1.IstioRevisio
 		Kind:               v1.IstioRevisionTagKind,
 		Name:               tag.Name,
 		UID:                tag.UID,
-		Controller:         ptr.Of(true),
-		BlockOwnerDeletion: ptr.Of(true),
+		Controller:         new(true),
+		BlockOwnerDeletion: new(true),
 	}
 
 	values := helm.FromValues(rev.Spec.Values)
@@ -385,7 +383,7 @@ func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, ns clie
 	// Check if the namespace references an IstioRevisionTag in its labels
 	tag := revision.GetReferencedRevisionFromNamespace(ns.GetLabels())
 	if tag != "" {
-		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: tag}})
+		requests = append(requests, reconcile.Request{Name: tag})
 	}
 	return requests
 }
@@ -393,7 +391,7 @@ func (r *Reconciler) mapNamespaceToReconcileRequest(ctx context.Context, ns clie
 func (r *Reconciler) mapPodToReconcileRequest(ctx context.Context, pod client.Object) []reconcile.Request {
 	tag := revision.GetReferencedRevisionFromPod(pod.GetLabels())
 	if tag != "" {
-		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: tag}}}
+		return []reconcile.Request{{Name: tag}}
 	}
 	return nil
 }
@@ -415,7 +413,7 @@ func (r *Reconciler) mapOperatorResourceToReconcileRequest(ctx context.Context, 
 	requests := []reconcile.Request{}
 	for _, tag := range tags.Items {
 		if tag.Status.IstioRevision == revisionName {
-			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: tag.Name}})
+			requests = append(requests, reconcile.Request{Name: tag.Name})
 		}
 	}
 	return requests

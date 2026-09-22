@@ -180,9 +180,7 @@ func TestValidate(t *testing.T) {
 		{
 			name: "success",
 			istio: &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioSpec{
 					Version:   istioversion.Default,
 					Namespace: "istio-system",
@@ -193,9 +191,7 @@ func TestValidate(t *testing.T) {
 		{
 			name: "no version",
 			istio: &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioSpec{
 					Namespace: "istio-system",
 				},
@@ -205,9 +201,7 @@ func TestValidate(t *testing.T) {
 		{
 			name: "no namespace",
 			istio: &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 				Spec: v1.IstioSpec{
 					Version: istioversion.Default,
 				},
@@ -240,8 +234,8 @@ func TestDetermineStatus(t *testing.T) {
 		Kind:               v1.IstioKind,
 		Name:               istioName,
 		UID:                istioUID,
-		Controller:         ptr.Of(true),
-		BlockOwnerDeletion: ptr.Of(true),
+		Controller:         new(true),
+		BlockOwnerDeletion: new(true),
 	}
 
 	ownedByAnotherIstio := metav1.OwnerReference{
@@ -249,17 +243,15 @@ func TestDetermineStatus(t *testing.T) {
 		Kind:               v1.IstioKind,
 		Name:               "some-other-Istio",
 		UID:                "some-other-uid",
-		Controller:         ptr.Of(true),
-		BlockOwnerDeletion: ptr.Of(true),
+		Controller:         new(true),
+		BlockOwnerDeletion: new(true),
 	}
 
 	revision := func(name string, ownerRef metav1.OwnerReference, reconciled, ready, inUse bool) v1.IstioRevision {
 		return v1.IstioRevision{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:            name,
-				OwnerReferences: []metav1.OwnerReference{ownerRef},
-			},
-			Spec: v1.IstioRevisionSpec{Namespace: istioNamespace},
+			Name:            name,
+			OwnerReferences: []metav1.OwnerReference{ownerRef},
+			Spec:            v1.IstioRevisionSpec{Namespace: istioNamespace},
 			Status: v1.IstioRevisionStatus{
 				State: v1.IstioRevisionReasonHealthy,
 				Conditions: []v1.StatusCondition{
@@ -312,10 +304,8 @@ func TestDetermineStatus(t *testing.T) {
 			wantErr: false,
 			revisions: []v1.IstioRevision{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            istioKey.Name,
-						OwnerReferences: []metav1.OwnerReference{ownedByIstio},
-					},
+					Name:            istioKey.Name,
+					OwnerReferences: []metav1.OwnerReference{ownedByIstio},
 					Spec: v1.IstioRevisionSpec{
 						Namespace: istioNamespace,
 					},
@@ -344,10 +334,8 @@ func TestDetermineStatus(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            istioKey.Name + "-not-active",
-						OwnerReferences: []metav1.OwnerReference{ownedByIstio},
-					},
+					Name:            istioKey.Name + "-not-active",
+					OwnerReferences: []metav1.OwnerReference{ownedByIstio},
 					Spec: v1.IstioRevisionSpec{
 						Namespace: istioNamespace,
 					},
@@ -543,11 +531,9 @@ func TestDetermineStatus(t *testing.T) {
 			istio := tc.istio
 			if istio == nil {
 				istio = &v1.Istio{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       istioKey.Name,
-						UID:        istioUID,
-						Generation: 100,
-					},
+					Name:       istioKey.Name,
+					UID:        istioUID,
+					Generation: 100,
 					Spec: v1.IstioSpec{
 						Version:   "my-version",
 						Namespace: istioNamespace,
@@ -635,11 +621,9 @@ func TestUpdateStatus(t *testing.T) {
 		{
 			name: "skips update when status unchanged",
 			istio: &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       istioKey.Name,
-					UID:        istioUID,
-					Generation: 100,
-				},
+				Name:       istioKey.Name,
+				UID:        istioUID,
+				Generation: 100,
 				Spec: v1.IstioSpec{
 					Version:   "my-version",
 					Namespace: istioNamespace,
@@ -674,9 +658,7 @@ func TestUpdateStatus(t *testing.T) {
 			},
 			revisions: []v1.IstioRevision{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: istioKey.Name,
-					},
+					Name: istioKey.Name,
 					Spec: v1.IstioRevisionSpec{
 						Namespace: istioNamespace,
 					},
@@ -760,11 +742,9 @@ func TestUpdateStatus(t *testing.T) {
 			istio := tc.istio
 			if istio == nil {
 				istio = &v1.Istio{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       istioKey.Name,
-						UID:        istioUID,
-						Generation: 100,
-					},
+					Name:       istioKey.Name,
+					UID:        istioUID,
+					Generation: 100,
 					Spec: v1.IstioSpec{
 						Version:   "my-version",
 						Namespace: istioNamespace,
@@ -846,9 +826,7 @@ func TestGetActiveRevisionName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			istio := &v1.Istio{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-istio",
-				},
+				Name: "test-istio",
 				Spec: v1.IstioSpec{
 					Version: tt.version,
 				},

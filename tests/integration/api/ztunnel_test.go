@@ -53,9 +53,7 @@ var _ = Describe("ZTunnel DaemonSet status changes", Label("ztunnel"), Ordered, 
 	ctx := context.Background()
 
 	namespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: ztunnelNamespace,
-		},
+		Name: ztunnelNamespace,
 	}
 
 	daemonsetKey := client.ObjectKey{Name: "ztunnel", Namespace: ztunnelNamespace}
@@ -75,9 +73,7 @@ var _ = Describe("ZTunnel DaemonSet status changes", Label("ztunnel"), Ordered, 
 			BeforeAll(func() {
 				if apiVersion == "v1" {
 					ztunnel := &v1.ZTunnel{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: ztunnelName,
-						},
+						Name: ztunnelName,
 						Spec: v1.ZTunnelSpec{
 							Version:   istioversion.Default,
 							Namespace: ztunnelNamespace,
@@ -86,9 +82,7 @@ var _ = Describe("ZTunnel DaemonSet status changes", Label("ztunnel"), Ordered, 
 					Expect(k8sClient.Create(ctx, ztunnel)).To(Succeed())
 				} else {
 					ztunnel := &v1alpha1.ZTunnel{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: ztunnelName,
-						},
+						Name: ztunnelName,
 						Spec: v1alpha1.ZTunnelSpec{
 							Version:   istioversion.Default,
 							Namespace: ztunnelNamespace,
@@ -189,9 +183,7 @@ var _ = Describe("ZTunnel FIPS", Label("ztunnel", "fips"), Ordered, func() {
 	daemonsetKey := client.ObjectKey{Name: "ztunnel", Namespace: fipsZTunnelNamespace}
 
 	namespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: fipsZTunnelNamespace,
-		},
+		Name: fipsZTunnelNamespace,
 	}
 
 	BeforeAll(func() {
@@ -204,16 +196,10 @@ var _ = Describe("ZTunnel FIPS", Label("ztunnel", "fips"), Ordered, func() {
 
 	// TODO: Remove this test when Istio 1.29 goes out of support
 	It("sets TLS12_ENABLED on the ztunnel DaemonSet when FipsEnabled is true and version < 1.30", func() {
-		originalFipsEnabled := istiovalues.FipsEnabled
-		DeferCleanup(func() {
-			istiovalues.FipsEnabled = originalFipsEnabled
-		})
-		istiovalues.FipsEnabled = true
+		istiovalues.EnableFIPS(GinkgoTB())
 
 		ztunnel := &v1.ZTunnel{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: ztunnelName,
-			},
+			Name: ztunnelName,
 			Spec: v1.ZTunnelSpec{
 				Version:   "v1.29.3",
 				Namespace: fipsZTunnelNamespace,
@@ -234,16 +220,10 @@ var _ = Describe("ZTunnel FIPS", Label("ztunnel", "fips"), Ordered, func() {
 	})
 
 	It("removes TLS12_ENABLED from the ztunnel DaemonSet when version > 1.30", func() {
-		originalFipsEnabled := istiovalues.FipsEnabled
-		DeferCleanup(func() {
-			istiovalues.FipsEnabled = originalFipsEnabled
-		})
-		istiovalues.FipsEnabled = true
+		istiovalues.EnableFIPS(GinkgoTB())
 
 		ztunnel := &v1.ZTunnel{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: ztunnelName,
-			},
+			Name: ztunnelName,
 			Spec: v1.ZTunnelSpec{
 				Version:   "master",
 				Namespace: fipsZTunnelNamespace,
@@ -284,9 +264,7 @@ var _ = Describe("ZTunnel targetRef", Label("ztunnel", "targetRef"), Ordered, fu
 	)
 
 	namespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: targetRefIstioNamespace,
-		},
+		Name: targetRefIstioNamespace,
 	}
 
 	daemonsetKey := client.ObjectKey{Name: "ztunnel", Namespace: targetRefIstioNamespace}
@@ -297,9 +275,7 @@ var _ = Describe("ZTunnel targetRef", Label("ztunnel", "targetRef"), Ordered, fu
 		Expect(k8sClient.Create(ctx, namespace)).To(Succeed())
 
 		istio = &v1.Istio{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: targetRefIstioName,
-			},
+			Name: targetRefIstioName,
 			Spec: v1.IstioSpec{
 				Version:   istioversion.Default,
 				Namespace: targetRefIstioNamespace,
@@ -308,14 +284,14 @@ var _ = Describe("ZTunnel targetRef", Label("ztunnel", "targetRef"), Ordered, fu
 				},
 				Values: &v1.Values{
 					Pilot: &v1.PilotConfig{
-						Image: ptr.Of("sail-operator/test:latest"),
+						Image: new("sail-operator/test:latest"),
 						Cni: &v1.CNIUsageConfig{
-							Enabled: ptr.Of(true),
+							Enabled: new(true),
 						},
 					},
 					Global: &v1.GlobalConfig{
 						Hub:       ptr.Of(customHub),
-						LogAsJson: ptr.Of(true),
+						LogAsJson: new(true),
 					},
 				},
 			},
@@ -337,9 +313,7 @@ var _ = Describe("ZTunnel targetRef", Label("ztunnel", "targetRef"), Ordered, fu
 	When("creating a ZTunnel with targetRef referencing an Istio resource", func() {
 		BeforeAll(func() {
 			ztunnel := &v1.ZTunnel{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: ztunnelName,
-				},
+				Name: ztunnelName,
 				Spec: v1.ZTunnelSpec{
 					Version:   istioversion.Default,
 					Namespace: targetRefIstioNamespace,
@@ -392,7 +366,8 @@ var _ = Describe("ZTunnel targetRef", Label("ztunnel", "targetRef"), Ordered, fu
 				g.Expect(k8sClient.Get(ctx, daemonsetKey, ds)).To(Succeed())
 				g.Expect(ds.Spec.Template.Spec.Containers).ToNot(BeEmpty())
 				g.Expect(ds.Spec.Template.Spec.Containers[0].Env).To(
-					ContainElement(corev1.EnvVar{Name: "LOG_FORMAT", Value: "json"}))
+					ContainElement(corev1.EnvVar{Name: "LOG_FORMAT", Value: "json"}),
+				)
 			}).Should(Succeed())
 		})
 	})
@@ -406,9 +381,7 @@ var _ = Describe("ZTunnel targetRef", Label("ztunnel", "targetRef"), Ordered, fu
 			Expect(revisionName).ToNot(BeEmpty())
 
 			ztunnel := &v1.ZTunnel{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: ztunnelName,
-				},
+				Name: ztunnelName,
 				Spec: v1.ZTunnelSpec{
 					Version:   istioversion.Default,
 					Namespace: targetRefIstioNamespace,
@@ -461,7 +434,8 @@ var _ = Describe("ZTunnel targetRef", Label("ztunnel", "targetRef"), Ordered, fu
 				g.Expect(k8sClient.Get(ctx, daemonsetKey, ds)).To(Succeed())
 				g.Expect(ds.Spec.Template.Spec.Containers).ToNot(BeEmpty())
 				g.Expect(ds.Spec.Template.Spec.Containers[0].Env).To(
-					ContainElement(corev1.EnvVar{Name: "LOG_FORMAT", Value: "json"}))
+					ContainElement(corev1.EnvVar{Name: "LOG_FORMAT", Value: "json"}),
+				)
 			}).Should(Succeed())
 		})
 	})
@@ -469,9 +443,7 @@ var _ = Describe("ZTunnel targetRef", Label("ztunnel", "targetRef"), Ordered, fu
 	When("creating a ZTunnel with targetRef referencing a non-existent Istio", func() {
 		BeforeAll(func() {
 			ztunnel := &v1.ZTunnel{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: ztunnelName,
-				},
+				Name: ztunnelName,
 				Spec: v1.ZTunnelSpec{
 					Version:   istioversion.Default,
 					Namespace: targetRefIstioNamespace,

@@ -20,11 +20,11 @@ import "github.com/istio-ecosystem/sail-operator/pkg/config"
 
 func init() {
 	config.Config.ImageDigests = map[string]config.IstioImageConfig{
-		"v1.31.0-beta.1": {
-			IstiodImage:  "quay.io/sail-dev/pilot:1.31.0-beta.1",
-			ProxyImage:   "quay.io/sail-dev/proxyv2:1.31.0-beta.1",
-			CNIImage:     "quay.io/sail-dev/install-cni:1.31.0-beta.1",
-			ZTunnelImage: "quay.io/sail-dev/ztunnel:1.31.0-beta.1",
+		"v1.31.0": {
+			IstiodImage:  "quay.io/sail-dev/pilot:1.31.0",
+			ProxyImage:   "quay.io/sail-dev/proxyv2:1.31.0",
+			CNIImage:     "quay.io/sail-dev/install-cni:1.31.0",
+			ZTunnelImage: "quay.io/sail-dev/ztunnel:1.31.0",
 		},
 		"v1.30.4": {
 			IstiodImage:  "registry.istio.io/release/pilot:1.30.4",
@@ -104,11 +104,11 @@ func init() {
 			CNIImage:     "registry.istio.io/release/install-cni:1.29.0",
 			ZTunnelImage: "registry.istio.io/release/ztunnel:1.29.0",
 		},
-		"v1.32.0-alpha.102b69cd": {
-			IstiodImage:  "registry.istio.io/testing/pilot:1.32.0-alpha.102b69cd5a7ac0917bc2f6cb05b6217532145c81",
-			ProxyImage:   "registry.istio.io/testing/proxyv2:1.32.0-alpha.102b69cd5a7ac0917bc2f6cb05b6217532145c81",
-			CNIImage:     "registry.istio.io/testing/install-cni:1.32.0-alpha.102b69cd5a7ac0917bc2f6cb05b6217532145c81",
-			ZTunnelImage: "registry.istio.io/testing/ztunnel:1.32.0-alpha.102b69cd5a7ac0917bc2f6cb05b6217532145c81",
+		"v1.32.0-alpha.77cc135c": {
+			IstiodImage:  "registry.istio.io/testing/pilot:1.32.0-alpha.77cc135c123180ec55425157ce915f6382ad84e9",
+			ProxyImage:   "registry.istio.io/testing/proxyv2:1.32.0-alpha.77cc135c123180ec55425157ce915f6382ad84e9",
+			CNIImage:     "registry.istio.io/testing/install-cni:1.32.0-alpha.77cc135c123180ec55425157ce915f6382ad84e9",
+			ZTunnelImage: "registry.istio.io/testing/ztunnel:1.32.0-alpha.77cc135c123180ec55425157ce915f6382ad84e9",
 		},
 	}
 }

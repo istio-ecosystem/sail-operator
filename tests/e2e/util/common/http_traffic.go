@@ -26,7 +26,6 @@ import (
 	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	"github.com/istio-ecosystem/sail-operator/tests/e2e/util/kubectl"
 	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
 // CheckHTTPConnectivity performs an HTTP GET request from a source pod to a target URL
@@ -45,13 +44,6 @@ func CheckHTTPConnectivity(k kubectl.Kubectl, namespace, podName, containerName,
 		return fmt.Errorf("expected HTTP status %s, got %s", expectedStatus, status)
 	}
 	return nil
-}
-
-// ValidateHTTPConnectivity is a convenience wrapper around CheckHTTPConnectivity
-// that fails the test immediately if the connectivity check fails.
-// For use with Eventually, use CheckHTTPConnectivity directly.
-func ValidateHTTPConnectivity(k kubectl.Kubectl, namespace, podName, containerName, targetURL, expectedStatus string, timeoutSeconds int) {
-	Expect(CheckHTTPConnectivity(k, namespace, podName, containerName, targetURL, expectedStatus, timeoutSeconds)).To(Succeed())
 }
 
 // HTTPTrafficStats tracks continuous HTTP traffic statistics with thread-safe counters

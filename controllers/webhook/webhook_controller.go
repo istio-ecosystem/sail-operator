@@ -31,7 +31,6 @@ import (
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -324,7 +323,7 @@ func (r *Reconciler) mapFailureEventToWebhook(ctx context.Context, obj client.Ob
 	r.recordFailure(configName)
 
 	logf.FromContext(ctx).V(3).Info("Detected webhook call failure", "webhook", webhookName, "config", configName)
-	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: configName}}}
+	return []reconcile.Request{{Name: configName}}
 }
 
 // findOwnedWebhookConfig resolves a webhook name to the MutatingWebhookConfiguration that

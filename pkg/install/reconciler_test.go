@@ -34,16 +34,12 @@ func TestManagedByWatchPredicate(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 
 	labeled := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Labels: map[string]string{constants.ManagedByLabelKey: managedByValue},
-		},
+		Labels: map[string]string{constants.ManagedByLabelKey: managedByValue},
 	}
 	g.Expect(pred.Create(event.CreateEvent{Object: labeled})).To(BeTrue())
 
 	wrongKey := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Labels: map[string]string{constants.KubernetesAppManagedByKey: managedByValue},
-		},
+		Labels: map[string]string{constants.KubernetesAppManagedByKey: managedByValue},
 	}
 	g.Expect(pred.Create(event.CreateEvent{Object: wrongKey})).To(BeFalse())
 }

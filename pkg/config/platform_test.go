@@ -21,7 +21,6 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -41,8 +40,8 @@ func TestDetectOCPVersion(t *testing.T) {
 		{
 			name: "OCP 4.16.3",
 			cv: &configv1.ClusterVersion{
-				ObjectMeta: metav1.ObjectMeta{Name: "version"},
-				Status:     configv1.ClusterVersionStatus{Desired: configv1.Release{Version: "4.16.3"}},
+				Name:   "version",
+				Status: configv1.ClusterVersionStatus{Desired: configv1.Release{Version: "4.16.3"}},
 			},
 			wantMajor: 4,
 			wantMinor: 16,
@@ -50,8 +49,8 @@ func TestDetectOCPVersion(t *testing.T) {
 		{
 			name: "OCP 5.0.0",
 			cv: &configv1.ClusterVersion{
-				ObjectMeta: metav1.ObjectMeta{Name: "version"},
-				Status:     configv1.ClusterVersionStatus{Desired: configv1.Release{Version: "5.0.0"}},
+				Name:   "version",
+				Status: configv1.ClusterVersionStatus{Desired: configv1.Release{Version: "5.0.0"}},
 			},
 			wantMajor: 5,
 			wantMinor: 0,
@@ -59,8 +58,8 @@ func TestDetectOCPVersion(t *testing.T) {
 		{
 			name: "OCP 5.1.2",
 			cv: &configv1.ClusterVersion{
-				ObjectMeta: metav1.ObjectMeta{Name: "version"},
-				Status:     configv1.ClusterVersionStatus{Desired: configv1.Release{Version: "5.1.2"}},
+				Name:   "version",
+				Status: configv1.ClusterVersionStatus{Desired: configv1.Release{Version: "5.1.2"}},
 			},
 			wantMajor: 5,
 			wantMinor: 1,
@@ -74,8 +73,8 @@ func TestDetectOCPVersion(t *testing.T) {
 		{
 			name: "malformed version string",
 			cv: &configv1.ClusterVersion{
-				ObjectMeta: metav1.ObjectMeta{Name: "version"},
-				Status:     configv1.ClusterVersionStatus{Desired: configv1.Release{Version: "invalid"}},
+				Name:   "version",
+				Status: configv1.ClusterVersionStatus{Desired: configv1.Release{Version: "invalid"}},
 			},
 			wantErr:     true,
 			errContains: "failed to parse ClusterVersion",
@@ -83,8 +82,8 @@ func TestDetectOCPVersion(t *testing.T) {
 		{
 			name: "empty version string",
 			cv: &configv1.ClusterVersion{
-				ObjectMeta: metav1.ObjectMeta{Name: "version"},
-				Status:     configv1.ClusterVersionStatus{Desired: configv1.Release{Version: ""}},
+				Name:   "version",
+				Status: configv1.ClusterVersionStatus{Desired: configv1.Release{Version: ""}},
 			},
 			wantErr:     true,
 			errContains: "failed to parse ClusterVersion",
