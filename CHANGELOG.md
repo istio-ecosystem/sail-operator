@@ -46,10 +46,6 @@ The changelog for the next version is compiled from the YAML files in the
   WEBHOOK_DEGRADED_WINDOW environment variable (default 2 minutes).
 
 ### Fixed
-- Ensure base validator is created for default rev ([#2259](https://github.com/istio-ecosystem/sail-operator/issues/2259))
-  The validating webhook was not created for the default revision when
-  `defaultRevision` was set to a non-empty value.
-
 - Fix race condition in `ToDiscoveryClient` ([#2260](https://github.com/istio-ecosystem/sail-operator/issues/2260))
   Concurrent calls shared the same config object; the fix copies it before
   creating the discovery client.
