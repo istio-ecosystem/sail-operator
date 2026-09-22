@@ -20,11 +20,23 @@ import "github.com/istio-ecosystem/sail-operator/pkg/config"
 
 func init() {
 	config.Config.ImageDigests = map[string]config.IstioImageConfig{
+		"v1.31.1": {
+			IstiodImage:  "quay.io/sail-dev/pilot:1.31.1",
+			ProxyImage:   "quay.io/sail-dev/proxyv2:1.31.1",
+			CNIImage:     "quay.io/sail-dev/install-cni:1.31.1",
+			ZTunnelImage: "quay.io/sail-dev/ztunnel:1.31.1",
+		},
 		"v1.31.0": {
 			IstiodImage:  "quay.io/sail-dev/pilot:1.31.0",
 			ProxyImage:   "quay.io/sail-dev/proxyv2:1.31.0",
 			CNIImage:     "quay.io/sail-dev/install-cni:1.31.0",
 			ZTunnelImage: "quay.io/sail-dev/ztunnel:1.31.0",
+		},
+		"v1.30.5": {
+			IstiodImage:  "registry.istio.io/release/pilot:1.30.5",
+			ProxyImage:   "registry.istio.io/release/proxyv2:1.30.5",
+			CNIImage:     "registry.istio.io/release/install-cni:1.30.5",
+			ZTunnelImage: "registry.istio.io/release/ztunnel:1.30.5",
 		},
 		"v1.30.4": {
 			IstiodImage:  "registry.istio.io/release/pilot:1.30.4",
@@ -55,6 +67,12 @@ func init() {
 			ProxyImage:   "registry.istio.io/release/proxyv2:1.30.0",
 			CNIImage:     "registry.istio.io/release/install-cni:1.30.0",
 			ZTunnelImage: "registry.istio.io/release/ztunnel:1.30.0",
+		},
+		"v1.29.8": {
+			IstiodImage:  "registry.istio.io/release/pilot:1.29.8",
+			ProxyImage:   "registry.istio.io/release/proxyv2:1.29.8",
+			CNIImage:     "registry.istio.io/release/install-cni:1.29.8",
+			ZTunnelImage: "registry.istio.io/release/ztunnel:1.29.8",
 		},
 		"v1.29.7": {
 			IstiodImage:  "registry.istio.io/release/pilot:1.29.7",

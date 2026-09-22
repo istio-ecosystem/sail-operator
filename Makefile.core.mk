@@ -19,7 +19,7 @@ OLD_VARS := $(.VARIABLES)
 # Use `make print-variables` to inspect the values of the variables
 -include Makefile.vendor.mk
 
-VERSION ?= 1.31.0
+VERSION ?= 1.31.1
 MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 
 # PREVIOUS_VERSION is used to generate the OLM upgrade graph in FBC for stable releases.
@@ -34,7 +34,7 @@ MINOR_VERSION := $(shell echo "${VERSION}" | cut -f1,2 -d'.')
 #   make bundle-publish -e PREVIOUS_VERSION=X.Y.Z
 #
 # Default: empty (will be auto-detected by publish-bundle.sh)
-PREVIOUS_VERSION ?= 1.30.4
+PREVIOUS_VERSION ?= 1.31.0
 
 OPERATOR_NAME ?= sailoperator
 VERSIONS_YAML_DIR ?= pkg/istioversion
