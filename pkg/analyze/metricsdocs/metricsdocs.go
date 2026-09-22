@@ -20,11 +20,11 @@ import (
 	"sort"
 	"text/template"
 
-	"github.com/istio-ecosystem/sail-operator/pkg/analytics"
+	"github.com/istio-ecosystem/sail-operator/pkg/analyze"
 )
 
 func main() {
-	metricDescriptions := analytics.ListMetrics()
+	metricDescriptions := analyze.ListMetrics()
 	sort.Slice(metricDescriptions, func(i, j int) bool {
 		return metricDescriptions[i].Name < metricDescriptions[j].Name
 	})
@@ -42,7 +42,7 @@ func main() {
 		"{{end}}\n" +
 		"## Developing new metrics\n" +
 		"After developing new metrics or changing old ones, please run \"make generate-metricsdocs\" to regenerate this document.\n" +
-		"If you feel that the new metric doesn't follow these rules, please change \"analytics/metricsdocs\" according to your needs.")
+		"If you feel that the new metric doesn't follow these rules, please change \"analyze/metricsdocs\" according to your needs.")
 	if err != nil {
 		panic(err)
 	}

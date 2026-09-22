@@ -24,4 +24,4 @@ Total number of ZTunnel proxies managed by an Istiod control plane in Ambient mo
 
 ## Developing new metrics
 After developing new metrics or changing old ones, please run "make generate-metricsdocs" to regenerate this document.
-If you feel that the new metric doesn't follow these rules, please change "analytics/metricsdocs" according to your needs.
+If you feel that the new metric doesn't follow these rules, please change "analyze/metricsdocs" according to your needs.

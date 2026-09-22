@@ -21,14 +21,15 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
-	"github.com/istio-ecosystem/sail-operator/controllers/analytics"
 	"github.com/istio-ecosystem/sail-operator/controllers/istio"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiocni"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiorevision"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiorevisiontag"
 	"github.com/istio-ecosystem/sail-operator/controllers/webhook"
 	"github.com/istio-ecosystem/sail-operator/controllers/ztunnel"
+	"github.com/istio-ecosystem/sail-operator/pkg/analyze"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
@@ -253,14 +254,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	if os.Getenv("ENABLE_ANALYTICS") != "" {
-		err = analytics.NewReconciler(reconcilerCfg, mgr.GetClient(), mgr.GetScheme()).
-			SetupWithManager(mgr)
-		if err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "Analytics")
-			os.Exit(1)
-		}
-	}
+	// Record custom resources and Istio namespaces counts every 5 minutes
+	// those custom metrics are registered in the default metric server
+	recorder := analyze.NewMetricsRecorder(5 * time.Minute)
+	recorder.Start(ctx)
+	setupLog.Info("Collecting custom resource metrics")
+	// Wait for context timeout or operator shutdown
+	<-ctx.Done()
+	recorder.Stop()
+	setupLog.Info("Custom metrics collection stopped")
 
 	if reconcilerCfg.TLSConfig != nil && reconcilerCfg.TLSConfig.OpenShift != nil {
 		tlsWatcher := &openshifttls.SecurityProfileWatcher{

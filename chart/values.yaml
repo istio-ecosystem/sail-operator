@@ -147,3 +147,7 @@ operator:
       memory: 64Mi
 # setting this to true will add resources required to generate the bundle using operator-sdk
 bundleGeneration: false
+# setting metrics.helm.releaseName to match Prometheus serviceMonitorSelector
+metrics:
+  helm:
+    releaseName: prometheus

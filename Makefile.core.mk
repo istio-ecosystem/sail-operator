@@ -879,4 +879,4 @@ $(COMMON_IMPORTS):
 ##@ Generate the metrics documentation
 .PHONY: generate-metricsdocs
 generate-metricsdocs:
-	go run -ldflags="${LDFLAGS}" ./pkg/analytics/metricsdocs > docs/common/analytics-metrics.md
+	go run -ldflags="${LDFLAGS}" ./pkg/analyze/metricsdocs > docs/common/analytics-metrics.md

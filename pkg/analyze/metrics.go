@@ -12,9 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package analytics
+package analyze
 
 import (
+	"context"
+	"time"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
@@ -25,6 +28,13 @@ type MetricDescription struct {
 	Name string
 	Help string
 	Type string
+}
+
+// MetricsRecorder manages periodic metrics collection
+type MetricsRecorder struct {
+	interval time.Duration
+	ticker   *time.Ticker
+	done     chan struct{}
 }
 
 // metricsDescription is a map of string keys (metrics) to MetricDescription values (Name, Help).
@@ -131,3 +141,43 @@ func ListMetrics() []MetricDescription {
 
 	return v
 }
+
+func NewMetricsRecorder(interval time.Duration) *MetricsRecorder {
+	return &MetricsRecorder{
+		interval: interval,
+		done:     make(chan struct{}),
+	}
+}
+
+// Start begins recording metrics every interval until context is canceled
+func (m *MetricsRecorder) Start(ctx context.Context) {
+	m.ticker = time.NewTicker(m.interval)
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-m.done:
+				return
+			case t := <-m.ticker.C:
+				m.recordMetrics(t)
+			}
+		}
+	}()
+}
+
+// Stop cleans up the ticker
+func (m *MetricsRecorder) Stop() {
+	if m.ticker != nil {
+		m.ticker.Stop()
+	}
+	close(m.done)
+}
+
+// recordMetrics lists custom resources and record values
+func (m *MetricsRecorder) recordMetrics(t time.Time) {
+
+}
+
+

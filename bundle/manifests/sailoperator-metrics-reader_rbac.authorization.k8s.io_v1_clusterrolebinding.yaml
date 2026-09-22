@@ -1,5 +1,5 @@
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: ClusterRoleBinding
 metadata:
   creationTimestamp: null
   labels:
@@ -9,20 +9,11 @@ metadata:
     app.kubernetes.io/managed-by: helm
     app.kubernetes.io/name: clusterrole
     app.kubernetes.io/part-of: sailoperator
+  name: sailoperator-metrics-reader-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
   name: sailoperator-metrics-reader
-rules:
-- nonResourceURLs:
-  - /metrics
-  verbs:
-  - get
-- apiGroups:
-    - monitoring.coreos.com
-  resources:
-    - servicemonitors
-    - podmonitors
-    - prometheusrules
-  verbs:
-    - create
-    - delete
-    - get
-    - list
+subjects:
+- kind: ServiceAccount
+  name: sail-operator-metrics-service

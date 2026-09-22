@@ -1,0 +1,20 @@
+{{ if .Values.bundleGeneration }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: sail-operator-controller-manager-metrics-monitor
+  labels:
+    release: {{ .Values.metrics.helm.releaseName }}
+spec:
+  selector:
+    matchLabels:
+      control-plane: sail-operator
+  endpoints:
+  - path: /metrics
+    port: https
+    scheme: https
+    interval: 30s
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tlsConfig:
+      insecureSkipVerify: true
+{{ end }}
