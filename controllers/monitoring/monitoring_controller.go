@@ -138,8 +138,9 @@ func (r *Reconciler) doReconcile(ctx context.Context, istio *v1.Istio) error {
 			continue
 		}
 
-		if err := r.reconcileServiceMonitor(ctx, istio, rev); err != nil {
-			return fmt.Errorf("failed to reconcile ServiceMonitor for revision %s: %w", rev.Name, err)
+		// ServiceMonitor is named/owned by the Istio, so this is idempotent across revisions.
+		if err := r.reconcileServiceMonitor(ctx, istio); err != nil {
+			return fmt.Errorf("failed to reconcile ServiceMonitor: %w", err)
 		}
 
 		if err := r.reconcilePodMonitors(ctx, istio, rev); err != nil {
@@ -152,9 +153,9 @@ func (r *Reconciler) doReconcile(ctx context.Context, istio *v1.Istio) error {
 }
 
 // reconcileServiceMonitor creates the ServiceMonitor for istiod if it does not already exist.
-func (r *Reconciler) reconcileServiceMonitor(ctx context.Context, istio *v1.Istio, rev *v1.IstioRevision) error {
+func (r *Reconciler) reconcileServiceMonitor(ctx context.Context, istio *v1.Istio) error {
 	log := logf.FromContext(ctx)
-	desired := r.buildServiceMonitor(istio, rev)
+	desired := r.buildServiceMonitor(istio)
 
 	existing := &monitoringv1.ServiceMonitor{}
 	err := r.Client.Get(ctx, client.ObjectKeyFromObject(desired), existing)
@@ -261,27 +262,33 @@ func (r *Reconciler) reconcilePodMonitorInNamespace(ctx context.Context, istio *
 	return nil
 }
 
-// buildServiceMonitor constructs the ServiceMonitor for monitoring istiod
-func (r *Reconciler) buildServiceMonitor(istio *v1.Istio, rev *v1.IstioRevision) *monitoringv1.ServiceMonitor {
-	name := rev.Name + serviceMonitorNameSuffix
-	namespace := rev.Spec.Namespace
+// istioOwnerReference returns the OwnerReference used for resources owned by an Istio.
+func istioOwnerReference(istio *v1.Istio) metav1.OwnerReference {
+	return metav1.OwnerReference{
+		APIVersion:         v1.GroupVersion.String(),
+		Kind:               v1.IstioKind,
+		Name:               istio.Name,
+		UID:                istio.UID,
+		Controller:         ptr.Of(true),
+		BlockOwnerDeletion: ptr.Of(true),
+	}
+}
+
+// buildServiceMonitor constructs the ServiceMonitor for monitoring istiod.
+// Named and owned by the Istio so a revisioned upgrade does not create a second
+// scrape job or garbage-collect the monitor when a revision is pruned.
+func (r *Reconciler) buildServiceMonitor(istio *v1.Istio) *monitoringv1.ServiceMonitor {
+	name := istio.Name + serviceMonitorNameSuffix
+	namespace := istio.Spec.Namespace
 	// TODO: map tuningEnabled from an Integration API spec field in a follow-up enhancement.
 	relabelCfg := relabeling.ForPlatform(r.Config.Platform, istio.Name, false)
 
 	sm := &monitoringv1.ServiceMonitor{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels:    r.monitorLabels("istiod", serviceMonitorMonitoring),
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion: v1.GroupVersion.String(),
-					Kind:       v1.IstioRevisionKind,
-					Name:       rev.Name,
-					UID:        rev.UID,
-					Controller: ptr.Of(true),
-				},
-			},
+			Name:            name,
+			Namespace:       namespace,
+			Labels:          r.monitorLabels("istiod", serviceMonitorMonitoring),
+			OwnerReferences: []metav1.OwnerReference{istioOwnerReference(istio)},
 		},
 		Spec: monitoringv1.ServiceMonitorSpec{
 			JobLabel:     serviceMonitorJobLabel,
@@ -318,18 +325,10 @@ func (r *Reconciler) buildPodMonitor(istio *v1.Istio, namespace string) *monitor
 
 	pm := &monitoringv1.PodMonitor{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels:    r.monitorLabels("istio-proxy", podMonitorMonitoring),
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion: v1.GroupVersion.String(),
-					Kind:       v1.IstioKind,
-					Name:       istio.Name,
-					UID:        istio.UID,
-					Controller: ptr.Of(true),
-				},
-			},
+			Name:            name,
+			Namespace:       namespace,
+			Labels:          r.monitorLabels("istio-proxy", podMonitorMonitoring),
+			OwnerReferences: []metav1.OwnerReference{istioOwnerReference(istio)},
 		},
 		Spec: monitoringv1.PodMonitorSpec{
 			JobLabel: podMonitorJobLabel,
@@ -384,8 +383,8 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Named("monitoring").
 		Watches(&v1.Istio{}, mainObjectHandler).
 		// Watch IstioRevisions so create/update/delete requeues the parent Istio.
-		// ServiceMonitors are owned by the IstioRevision. PodMonitors are owned by
-		// the Istio so they survive revisioned upgrades.
+		// ServiceMonitors and PodMonitors are owned by the Istio so they survive
+		// revisioned upgrades.
 		Watches(&v1.IstioRevision{}, ownedRevisionHandler).
 		// Watch namespaces so sidecar injection label changes requeue the referenced Istio.
 		Watches(&corev1.Namespace{}, namespaceHandler, builder.WithPredicates(sidecarInjectionNamespacePredicate())).

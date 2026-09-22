@@ -54,14 +54,13 @@ if helm status "${PROM_RELEASE}" -n "${PROM_NAMESPACE}" &>/dev/null; then
   exit 0
 fi
 
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts --force-update
-helm repo update
-
 # Admission webhooks require a certgen Job that talks to the webhook Service. On KinD
 # that Job frequently times out (the webhook Service is not reachable until kube-proxy
 # is healthy), which would also make helm --wait hang. The monitoring e2e only needs CRDs
 # and scrape targets, so webhooks are disabled. --wait then tracks the operator Deployment.
-helm install "${PROM_RELEASE}" prometheus-community/kube-prometheus-stack \
+# Use --repo so we do not mutate the caller's local helm repositories.
+helm install "${PROM_RELEASE}" kube-prometheus-stack \
+  --repo https://prometheus-community.github.io/helm-charts \
   --namespace "${PROM_NAMESPACE}" \
   --create-namespace \
   --wait \

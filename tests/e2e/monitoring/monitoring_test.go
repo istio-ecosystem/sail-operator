@@ -121,7 +121,7 @@ var _ = Describe("Monitoring Controller", Label("smoke", "monitoring"), Ordered,
 					Values:   []string{"pilot"},
 				}))
 				g.Expect(sm.OwnerReferences).NotTo(BeEmpty())
-				g.Expect(sm.OwnerReferences[0].Kind).To(Equal(v1.IstioRevisionKind))
+				g.Expect(sm.OwnerReferences[0].Kind).To(Equal(v1.IstioKind))
 				g.Expect(sm.OwnerReferences[0].Name).To(Equal(istioName))
 			}).Should(Succeed())
 			Success("ServiceMonitor for istiod exists")

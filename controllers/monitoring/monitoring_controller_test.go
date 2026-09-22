@@ -22,7 +22,9 @@ import (
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/constants"
+	"github.com/istio-ecosystem/sail-operator/pkg/kube"
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
+	. "github.com/istio-ecosystem/sail-operator/pkg/test/util/ginkgo"
 	. "github.com/onsi/gomega"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -50,19 +52,18 @@ var (
 	istioUID       = types.UID("my-istio-uid")
 	istioNamespace = "my-istio-namespace"
 	appNamespace   = "my-app-namespace"
-	revisionMeta   = metav1.ObjectMeta{
-		Name: revisionName,
-		UID:  revisionUID,
-		OwnerReferences: []metav1.OwnerReference{
-			{
-				APIVersion:         "sailoperator.io/v1",
-				Kind:               v1.IstioKind,
-				Name:               istioName,
-				UID:                istioUID,
-				Controller:         ptr.Of(true),
-				BlockOwnerDeletion: ptr.Of(true),
-			},
-		},
+	ownedByIstio   = metav1.OwnerReference{
+		APIVersion:         v1.GroupVersion.String(),
+		Kind:               v1.IstioKind,
+		Name:               istioName,
+		UID:                istioUID,
+		Controller:         ptr.Of(true),
+		BlockOwnerDeletion: ptr.Of(true),
+	}
+	revisionMeta = metav1.ObjectMeta{
+		Name:            revisionName,
+		UID:             revisionUID,
+		OwnerReferences: []metav1.OwnerReference{ownedByIstio},
 	}
 )
 
@@ -71,6 +72,17 @@ func expectMonitoringLabels(g Gomega, labels map[string]string, monitoring strin
 	g.Expect(labels).To(HaveKeyWithValue(monitoredByLabel, kubePrometheusValue))
 	g.Expect(labels).To(HaveKeyWithValue(releaseLabel, releaseLabelValue))
 	g.Expect(labels).To(HaveKeyWithValue(monitoringLabel, monitoring))
+}
+
+func expectOwnedByIstio(g Gomega, ownerRefs []metav1.OwnerReference, name string) {
+	g.Expect(ownerRefs).To(HaveLen(1))
+	g.Expect(ownerRefs[0].APIVersion).To(Equal(v1.GroupVersion.String()))
+	g.Expect(ownerRefs[0].Kind).To(Equal(v1.IstioKind))
+	g.Expect(ownerRefs[0].Name).To(Equal(name))
+	g.Expect(ownerRefs[0].Controller).ToNot(BeNil())
+	g.Expect(*ownerRefs[0].Controller).To(BeTrue())
+	g.Expect(ownerRefs[0].BlockOwnerDeletion).ToNot(BeNil())
+	g.Expect(*ownerRefs[0].BlockOwnerDeletion).To(BeTrue())
 }
 
 // newNamespaceWithInjection creates a namespace with the istio-injection=enabled label
@@ -108,7 +120,6 @@ func newIstioWithMonitoringEnabled(name, namespace string) *v1.Istio {
 			},
 		},
 		Spec: v1.IstioSpec{
-			Version:   "v1.29.2",
 			Namespace: namespace,
 		},
 	}
@@ -127,7 +138,7 @@ func TestReconcile(t *testing.T) {
 		revisions         []*v1.IstioRevision
 		existingObjects   []client.Object
 		expectErr         bool
-		expectSMRevision  string // revision name for expected ServiceMonitor (empty = none)
+		expectSM          bool   // whether a ServiceMonitor should exist
 		expectPMNamespace string // namespace where PodMonitor should be created (empty = none)
 	}{
 		{
@@ -137,7 +148,6 @@ func TestReconcile(t *testing.T) {
 				{
 					ObjectMeta: revisionMeta,
 					Spec: v1.IstioRevisionSpec{
-						Version:   "v1.24.0",
 						Namespace: istioNamespace,
 					},
 				},
@@ -145,7 +155,7 @@ func TestReconcile(t *testing.T) {
 			existingObjects: []client.Object{
 				newNamespaceWithRevLabel(appNamespace, revisionName),
 			},
-			expectSMRevision:  revisionName,
+			expectSM:          true,
 			expectPMNamespace: appNamespace,
 		},
 		{
@@ -159,7 +169,6 @@ func TestReconcile(t *testing.T) {
 						OwnerReferences: revisionMeta.OwnerReferences,
 					},
 					Spec: v1.IstioRevisionSpec{
-						Version:   "v1.24.0",
 						Namespace: istioNamespace,
 					},
 				},
@@ -167,7 +176,7 @@ func TestReconcile(t *testing.T) {
 			existingObjects: []client.Object{
 				newNamespaceWithInjection(appNamespace),
 			},
-			expectSMRevision:  v1.DefaultRevision,
+			expectSM:          true,
 			expectPMNamespace: appNamespace,
 		},
 		{
@@ -177,7 +186,6 @@ func TestReconcile(t *testing.T) {
 				{
 					ObjectMeta: revisionMeta,
 					Spec: v1.IstioRevisionSpec{
-						Version:   "v1.24.0",
 						Namespace: istioNamespace,
 					},
 				},
@@ -185,7 +193,7 @@ func TestReconcile(t *testing.T) {
 			existingObjects: []client.Object{
 				newNamespaceWithRevLabel(appNamespace, "other-revision"),
 			},
-			expectSMRevision: revisionName,
+			expectSM: true,
 		},
 		{
 			name:  "skips deleting IstioRevision",
@@ -200,7 +208,6 @@ func TestReconcile(t *testing.T) {
 						OwnerReferences:   revisionMeta.OwnerReferences,
 					},
 					Spec: v1.IstioRevisionSpec{
-						Version:   "v1.24.0",
 						Namespace: istioNamespace,
 					},
 				},
@@ -213,12 +220,11 @@ func TestReconcile(t *testing.T) {
 				{
 					ObjectMeta: revisionMeta,
 					Spec: v1.IstioRevisionSpec{
-						Version:   "v1.24.0",
 						Namespace: istioNamespace,
 					},
 				},
 			},
-			expectSMRevision: revisionName,
+			expectSM: true,
 		},
 		{
 			name: "skips reconciliation when monitoring annotation is absent on Istio CR",
@@ -228,7 +234,6 @@ func TestReconcile(t *testing.T) {
 					UID:  istioUID,
 				},
 				Spec: v1.IstioSpec{
-					Version:   "v1.29.2",
 					Namespace: istioNamespace,
 				},
 			},
@@ -236,7 +241,6 @@ func TestReconcile(t *testing.T) {
 				{
 					ObjectMeta: revisionMeta,
 					Spec: v1.IstioRevisionSpec{
-						Version:   "v1.24.0",
 						Namespace: istioNamespace,
 					},
 				},
@@ -258,7 +262,6 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 				Spec: v1.IstioSpec{
-					Version:   "v1.29.2",
 					Namespace: istioNamespace,
 				},
 			},
@@ -266,7 +269,6 @@ func TestReconcile(t *testing.T) {
 				{
 					ObjectMeta: revisionMeta,
 					Spec: v1.IstioRevisionSpec{
-						Version:   "v1.24.0",
 						Namespace: istioNamespace,
 					},
 				},
@@ -299,33 +301,29 @@ func TestReconcile(t *testing.T) {
 				g.Expect(err).ToNot(HaveOccurred())
 			}
 
-			if tt.expectSMRevision != "" {
-				sm := &monitoringv1.ServiceMonitor{}
-				sm.SetGroupVersionKind(monitoringv1.SchemeGroupVersion.WithKind("ServiceMonitor"))
-				err := cl.Get(ctx, types.NamespacedName{
-					Name:      tt.expectSMRevision + serviceMonitorNameSuffix,
-					Namespace: istioNamespace,
-				}, sm)
-				g.Expect(err).ToNot(HaveOccurred())
-				g.Expect(sm.Name).To(Equal(tt.expectSMRevision + serviceMonitorNameSuffix))
+			sm := &monitoringv1.ServiceMonitor{}
+			sm.SetGroupVersionKind(monitoringv1.SchemeGroupVersion.WithKind("ServiceMonitor"))
+			smKey := kube.Key(istioName+serviceMonitorNameSuffix, istioNamespace)
+			if tt.expectSM {
+				g.Expect(cl.Get(ctx, smKey, sm)).To(Succeed())
+				g.Expect(sm.Name).To(Equal(istioName + serviceMonitorNameSuffix))
 				expectMonitoringLabels(g, sm.Labels, serviceMonitorMonitoring)
+				expectOwnedByIstio(g, sm.OwnerReferences, istioName)
+			} else {
+				g.Expect(cl.Get(ctx, smKey, sm)).To(ReturnNotFoundError())
 			}
 
+			pm := &monitoringv1.PodMonitor{}
+			pm.SetGroupVersionKind(monitoringv1.SchemeGroupVersion.WithKind("PodMonitor"))
+			pmKey := kube.Key(istioName+podMonitorNameSuffix, appNamespace)
 			if tt.expectPMNamespace != "" {
-				pm := &monitoringv1.PodMonitor{}
-				pm.SetGroupVersionKind(monitoringv1.SchemeGroupVersion.WithKind("PodMonitor"))
-				err := cl.Get(ctx, types.NamespacedName{
-					Name:      istioName + podMonitorNameSuffix,
-					Namespace: tt.expectPMNamespace,
-				}, pm)
-				g.Expect(err).ToNot(HaveOccurred())
+				g.Expect(cl.Get(ctx, pmKey, pm)).To(Succeed())
 				g.Expect(pm.Name).To(Equal(istioName + podMonitorNameSuffix))
+				g.Expect(pm.Namespace).To(Equal(tt.expectPMNamespace))
 				expectMonitoringLabels(g, pm.Labels, podMonitorMonitoring)
-				g.Expect(pm.OwnerReferences).To(HaveLen(1))
-				g.Expect(pm.OwnerReferences[0].Kind).To(Equal(v1.IstioKind))
-				g.Expect(pm.OwnerReferences[0].Name).To(Equal(istioName))
-				g.Expect(pm.OwnerReferences[0].Controller).ToNot(BeNil())
-				g.Expect(*pm.OwnerReferences[0].Controller).To(BeTrue())
+				expectOwnedByIstio(g, pm.OwnerReferences, istioName)
+			} else {
+				g.Expect(cl.Get(ctx, pmKey, pm)).To(ReturnNotFoundError())
 			}
 		})
 	}
@@ -334,21 +332,11 @@ func TestReconcile(t *testing.T) {
 func ownedRevision(name string) *v1.IstioRevision {
 	return &v1.IstioRevision{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-			UID:  types.UID(name + "-uid"),
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion:         "sailoperator.io/v1",
-					Kind:               v1.IstioKind,
-					Name:               istioName,
-					UID:                istioUID,
-					Controller:         ptr.Of(true),
-					BlockOwnerDeletion: ptr.Of(true),
-				},
-			},
+			Name:            name,
+			UID:             types.UID(name + "-uid"),
+			OwnerReferences: []metav1.OwnerReference{ownedByIstio},
 		},
 		Spec: v1.IstioRevisionSpec{
-			Version:   "v1.24.0",
 			Namespace: istioNamespace,
 		},
 	}
@@ -371,9 +359,7 @@ func TestReconcileSinglePodMonitorAcrossRevisions(t *testing.T) {
 	g.Expect(pmList.Items).To(HaveLen(1), "a revisioned upgrade should not create a second PodMonitor")
 	g.Expect(pmList.Items[0].Name).To(Equal(istioName + podMonitorNameSuffix))
 	g.Expect(pmList.Items[0].Namespace).To(Equal(appNamespace))
-	g.Expect(pmList.Items[0].OwnerReferences).To(HaveLen(1))
-	g.Expect(pmList.Items[0].OwnerReferences[0].Kind).To(Equal(v1.IstioKind))
-	g.Expect(pmList.Items[0].OwnerReferences[0].Name).To(Equal(istioName))
+	expectOwnedByIstio(g, pmList.Items[0].OwnerReferences, istioName)
 }
 
 func TestPodMonitorKeptWhenNamespaceUnlabeled(t *testing.T) {
@@ -466,38 +452,16 @@ func TestReconcileServiceMonitor(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		rev            *v1.IstioRevision
 		existingSM     *monitoringv1.ServiceMonitor
 		clientGetError error
 		expectErr      bool
-		expectCreate   bool
 	}{
 		{
-			name: "creates new ServiceMonitor",
-			rev: &v1.IstioRevision{
-				ObjectMeta: revisionMeta,
-				Spec: v1.IstioRevisionSpec{
-					Version:   "v1.24.0",
-					Namespace: istioNamespace,
-				},
-			},
-			existingSM:   nil,
-			expectErr:    false,
-			expectCreate: true,
-		},
-		{
 			name: "leaves existing ServiceMonitor unchanged",
-			rev: &v1.IstioRevision{
-				ObjectMeta: revisionMeta,
-				Spec: v1.IstioRevisionSpec{
-					Version:   "v1.24.0",
-					Namespace: istioNamespace,
-				},
-			},
 			existingSM: func() *monitoringv1.ServiceMonitor {
 				sm := &monitoringv1.ServiceMonitor{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:            revisionName + serviceMonitorNameSuffix,
+						Name:            istioName + serviceMonitorNameSuffix,
 						Namespace:       istioNamespace,
 						ResourceVersion: "123",
 						Labels: map[string]string{
@@ -508,21 +472,12 @@ func TestReconcileServiceMonitor(t *testing.T) {
 				sm.SetGroupVersionKind(monitoringv1.SchemeGroupVersion.WithKind("ServiceMonitor"))
 				return sm
 			}(),
-			expectErr:    false,
-			expectCreate: false,
+			expectErr: false,
 		},
 		{
-			name: "returns error on client Get failure",
-			rev: &v1.IstioRevision{
-				ObjectMeta: revisionMeta,
-				Spec: v1.IstioRevisionSpec{
-					Version:   "v1.24.0",
-					Namespace: istioNamespace,
-				},
-			},
+			name:           "returns error on client Get failure",
 			clientGetError: fmt.Errorf("test error"),
 			expectErr:      true,
-			expectCreate:   false,
 		},
 	}
 
@@ -531,7 +486,6 @@ func TestReconcileServiceMonitor(t *testing.T) {
 			g := NewWithT(t)
 
 			var objects []client.Object
-			objects = append(objects, tt.rev)
 			if tt.existingSM != nil {
 				objects = append(objects, tt.existingSM)
 			}
@@ -551,30 +505,23 @@ func TestReconcileServiceMonitor(t *testing.T) {
 
 			cl := builder.Build()
 			reconciler := NewReconciler(cfg, cl, scheme.Scheme)
-			err := reconciler.reconcileServiceMonitor(ctx, testIstio(), tt.rev)
+			err := reconciler.reconcileServiceMonitor(ctx, testIstio())
 
 			if tt.expectErr {
 				g.Expect(err).To(HaveOccurred())
-			} else {
-				g.Expect(err).ToNot(HaveOccurred())
-
-				// Verify the ServiceMonitor exists
-				result := &monitoringv1.ServiceMonitor{}
-				result.SetGroupVersionKind(monitoringv1.SchemeGroupVersion.WithKind("ServiceMonitor"))
-				err := cl.Get(ctx, types.NamespacedName{
-					Name:      revisionName + serviceMonitorNameSuffix,
-					Namespace: istioNamespace,
-				}, result)
-				g.Expect(err).ToNot(HaveOccurred())
-				g.Expect(result.Name).To(Equal(revisionName + serviceMonitorNameSuffix))
-				if tt.existingSM != nil {
-					// Existing resources must not be overwritten so user customizations remain.
-					g.Expect(result.Labels).To(HaveKeyWithValue("custom", "user-set"))
-					g.Expect(result.ResourceVersion).To(Equal("123"))
-				} else {
-					expectMonitoringLabels(g, result.Labels, serviceMonitorMonitoring)
-				}
+				return
 			}
+			g.Expect(err).ToNot(HaveOccurred())
+
+			result := &monitoringv1.ServiceMonitor{}
+			result.SetGroupVersionKind(monitoringv1.SchemeGroupVersion.WithKind("ServiceMonitor"))
+			err = cl.Get(ctx, types.NamespacedName{
+				Name:      istioName + serviceMonitorNameSuffix,
+				Namespace: istioNamespace,
+			}, result)
+			g.Expect(err).ToNot(HaveOccurred())
+			g.Expect(result.Labels).To(HaveKeyWithValue("custom", "user-set"))
+			g.Expect(result.ResourceVersion).To(Equal("123"))
 		})
 	}
 }
@@ -592,44 +539,10 @@ func TestReconcilePodMonitors(t *testing.T) {
 		expectPMNamespaces []string // namespaces where PodMonitors should exist
 	}{
 		{
-			name: "creates PodMonitor in namespace with istio.io/rev label",
-			rev: &v1.IstioRevision{
-				ObjectMeta: revisionMeta,
-				Spec: v1.IstioRevisionSpec{
-					Version:   "v1.24.0",
-					Namespace: istioNamespace,
-				},
-			},
-			existingNamespaces: []client.Object{
-				newNamespaceWithRevLabel(appNamespace, revisionName),
-			},
-			expectErr:          false,
-			expectPMNamespaces: []string{appNamespace},
-		},
-		{
-			name: "creates PodMonitor in namespace with istio-injection=enabled for default revision",
-			rev: &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: v1.DefaultRevision,
-					UID:  revisionUID,
-				},
-				Spec: v1.IstioRevisionSpec{
-					Version:   "v1.24.0",
-					Namespace: istioNamespace,
-				},
-			},
-			existingNamespaces: []client.Object{
-				newNamespaceWithInjection(appNamespace),
-			},
-			expectErr:          false,
-			expectPMNamespaces: []string{appNamespace},
-		},
-		{
 			name: "creates PodMonitor in multiple namespaces",
 			rev: &v1.IstioRevision{
 				ObjectMeta: revisionMeta,
 				Spec: v1.IstioRevisionSpec{
-					Version:   "v1.24.0",
 					Namespace: istioNamespace,
 				},
 			},
@@ -645,7 +558,6 @@ func TestReconcilePodMonitors(t *testing.T) {
 			rev: &v1.IstioRevision{
 				ObjectMeta: revisionMeta,
 				Spec: v1.IstioRevisionSpec{
-					Version:   "v1.24.0",
 					Namespace: istioNamespace,
 				},
 			},
@@ -670,31 +582,10 @@ func TestReconcilePodMonitors(t *testing.T) {
 			expectPMNamespaces: []string{appNamespace},
 		},
 		{
-			name: "no PodMonitor when no namespaces with injection",
-			rev: &v1.IstioRevision{
-				ObjectMeta: revisionMeta,
-				Spec: v1.IstioRevisionSpec{
-					Version:   "v1.24.0",
-					Namespace: istioNamespace,
-				},
-			},
-			existingNamespaces: []client.Object{
-				// Namespace without injection label
-				&corev1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: appNamespace,
-					},
-				},
-			},
-			expectErr:          false,
-			expectPMNamespaces: []string{},
-		},
-		{
 			name: "returns error on client List failure",
 			rev: &v1.IstioRevision{
 				ObjectMeta: revisionMeta,
 				Spec: v1.IstioRevisionSpec{
-					Version:   "v1.24.0",
 					Namespace: istioNamespace,
 				},
 			},
@@ -733,26 +624,24 @@ func TestReconcilePodMonitors(t *testing.T) {
 
 			if tt.expectErr {
 				g.Expect(err).To(HaveOccurred())
-			} else {
-				g.Expect(err).ToNot(HaveOccurred())
+				return
+			}
+			g.Expect(err).ToNot(HaveOccurred())
 
-				// Verify PodMonitors exist in expected namespaces, named after the Istio.
-				for _, ns := range tt.expectPMNamespaces {
-					pm := &monitoringv1.PodMonitor{}
-					pm.SetGroupVersionKind(monitoringv1.SchemeGroupVersion.WithKind("PodMonitor"))
-					err := cl.Get(ctx, types.NamespacedName{
-						Name:      istioName + podMonitorNameSuffix,
-						Namespace: ns,
-					}, pm)
-					g.Expect(err).ToNot(HaveOccurred(), "PodMonitor should exist in namespace %s", ns)
-					g.Expect(pm.Name).To(Equal(istioName + podMonitorNameSuffix))
-					if tt.existingPM != nil {
-						// Existing resources must not be overwritten so user customizations remain.
-						g.Expect(pm.Labels).To(HaveKeyWithValue("custom", "user-set"))
-						g.Expect(pm.ResourceVersion).To(Equal("123"))
-					} else {
-						expectMonitoringLabels(g, pm.Labels, podMonitorMonitoring)
-					}
+			for _, ns := range tt.expectPMNamespaces {
+				pm := &monitoringv1.PodMonitor{}
+				pm.SetGroupVersionKind(monitoringv1.SchemeGroupVersion.WithKind("PodMonitor"))
+				err := cl.Get(ctx, types.NamespacedName{
+					Name:      istioName + podMonitorNameSuffix,
+					Namespace: ns,
+				}, pm)
+				g.Expect(err).ToNot(HaveOccurred(), "PodMonitor should exist in namespace %s", ns)
+				g.Expect(pm.Name).To(Equal(istioName + podMonitorNameSuffix))
+				if tt.existingPM != nil {
+					g.Expect(pm.Labels).To(HaveKeyWithValue("custom", "user-set"))
+					g.Expect(pm.ResourceVersion).To(Equal("123"))
+				} else {
+					expectMonitoringLabels(g, pm.Labels, podMonitorMonitoring)
 				}
 			}
 		})
@@ -763,58 +652,31 @@ func TestBuildServiceMonitor(t *testing.T) {
 	tests := []struct {
 		name                 string
 		platform             config.Platform
-		rev                  *v1.IstioRevision
+		istio                *v1.Istio
 		expectedName         string
 		expectedNS           string
 		expectedTargetLabels []string
 	}{
 		{
-			name:     "default revision on kubernetes",
-			platform: config.PlatformKubernetes,
-			rev: &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-					UID:  "test-uid",
-				},
-				Spec: v1.IstioRevisionSpec{
-					Version:   "v1.24.0",
-					Namespace: "istio-system",
-				},
-			},
+			name:                 "default naming on kubernetes",
+			platform:             config.PlatformKubernetes,
+			istio:                newIstioWithMonitoringEnabled("default", "istio-system"),
 			expectedName:         "default-istiod-metrics",
 			expectedNS:           "istio-system",
 			expectedTargetLabels: []string{"app"},
 		},
 		{
-			name:     "named revision",
-			platform: config.PlatformKubernetes,
-			rev: &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "canary",
-					UID:  "test-uid",
-				},
-				Spec: v1.IstioRevisionSpec{
-					Version:   "v1.25.0",
-					Namespace: "istio-system",
-				},
-			},
+			name:                 "named Istio",
+			platform:             config.PlatformKubernetes,
+			istio:                newIstioWithMonitoringEnabled("canary", "istio-system"),
 			expectedName:         "canary-istiod-metrics",
 			expectedNS:           "istio-system",
 			expectedTargetLabels: []string{"app"},
 		},
 		{
-			name:     "custom namespace",
-			platform: config.PlatformKubernetes,
-			rev: &v1.IstioRevision{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-					UID:  "test-uid",
-				},
-				Spec: v1.IstioRevisionSpec{
-					Version:   "v1.24.0",
-					Namespace: "custom-istio-ns",
-				},
-			},
+			name:                 "custom namespace",
+			platform:             config.PlatformKubernetes,
+			istio:                newIstioWithMonitoringEnabled("default", "custom-istio-ns"),
 			expectedName:         "default-istiod-metrics",
 			expectedNS:           "custom-istio-ns",
 			expectedTargetLabels: []string{"app"},
@@ -830,17 +692,15 @@ func TestBuildServiceMonitor(t *testing.T) {
 
 			cl := newFakeClientBuilder().Build()
 			reconciler := NewReconciler(cfg, cl, scheme.Scheme)
-			result := reconciler.buildServiceMonitor(testIstio(), tt.rev)
+			result := reconciler.buildServiceMonitor(tt.istio)
 
 			g.Expect(result.GetName()).To(Equal(tt.expectedName))
 			g.Expect(result.GetNamespace()).To(Equal(tt.expectedNS))
 
-			// Check labels
 			labels := result.GetLabels()
 			g.Expect(labels["app"]).To(Equal("istiod"))
 			expectMonitoringLabels(g, labels, serviceMonitorMonitoring)
 
-			// Check spec.targetLabels and selector
 			g.Expect(result.Spec.JobLabel).To(Equal(serviceMonitorJobLabel))
 			g.Expect(result.Spec.TargetLabels).To(Equal(tt.expectedTargetLabels))
 			g.Expect(result.Spec.Selector.MatchExpressions).To(ConsistOf(
@@ -851,20 +711,14 @@ func TestBuildServiceMonitor(t *testing.T) {
 				},
 			))
 
-			// Check endpoints
 			g.Expect(result.Spec.Endpoints).To(HaveLen(1))
 			endpoint := result.Spec.Endpoints[0]
 			g.Expect(endpoint.Port).To(Equal("http-monitoring"))
 			g.Expect(string(endpoint.Interval)).To(Equal("15s"))
 			g.Expect(endpoint.RelabelConfigs).To(BeEmpty())
 
-			// Check owner references
 			ownerRefs := result.GetOwnerReferences()
-			g.Expect(ownerRefs).To(HaveLen(1))
-			g.Expect(ownerRefs[0].Kind).To(Equal(v1.IstioRevisionKind))
-			g.Expect(ownerRefs[0].Name).To(Equal(tt.rev.Name))
-			g.Expect(ownerRefs[0].Controller).ToNot(BeNil())
-			g.Expect(*ownerRefs[0].Controller).To(BeTrue())
+			expectOwnedByIstio(g, ownerRefs, tt.istio.Name)
 		})
 	}
 }
@@ -924,12 +778,8 @@ func TestBuildPodMonitor(t *testing.T) {
 			expectMonitoringLabels(g, labels, podMonitorMonitoring)
 
 			ownerRefs := result.GetOwnerReferences()
-			g.Expect(ownerRefs).To(HaveLen(1))
-			g.Expect(ownerRefs[0].Kind).To(Equal(v1.IstioKind))
-			g.Expect(ownerRefs[0].Name).To(Equal(istio.Name))
+			expectOwnedByIstio(g, ownerRefs, istio.Name)
 			g.Expect(ownerRefs[0].UID).To(Equal(istio.UID))
-			g.Expect(ownerRefs[0].Controller).ToNot(BeNil())
-			g.Expect(*ownerRefs[0].Controller).To(BeTrue())
 
 			// Check spec.selector.matchExpressions
 			g.Expect(result.Spec.JobLabel).To(Equal(podMonitorJobLabel))
@@ -1231,20 +1081,19 @@ func TestMapNamespaceToReconcileRequest(t *testing.T) {
 	cfg := newReconcilerTestConfig()
 	istioA := &v1.Istio{ObjectMeta: metav1.ObjectMeta{Name: "mesh-a", UID: "uid-a"}}
 	istioB := &v1.Istio{ObjectMeta: metav1.ObjectMeta{Name: "mesh-b", UID: "uid-b"}}
+	ownedByIstioA := metav1.OwnerReference{
+		APIVersion:         v1.GroupVersion.String(),
+		Kind:               v1.IstioKind,
+		Name:               istioA.Name,
+		UID:                istioA.UID,
+		Controller:         ptr.Of(true),
+		BlockOwnerDeletion: ptr.Of(true),
+	}
 	defaultRev := &v1.IstioRevision{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: v1.DefaultRevision,
-			UID:  "default-rev-uid",
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion:         v1.GroupVersion.String(),
-					Kind:               v1.IstioKind,
-					Name:               istioA.Name,
-					UID:                istioA.UID,
-					Controller:         ptr.Of(true),
-					BlockOwnerDeletion: ptr.Of(true),
-				},
-			},
+			Name:            v1.DefaultRevision,
+			UID:             "default-rev-uid",
+			OwnerReferences: []metav1.OwnerReference{ownedByIstioA},
 		},
 	}
 	namedRev := &v1.IstioRevision{ObjectMeta: revisionMeta}
