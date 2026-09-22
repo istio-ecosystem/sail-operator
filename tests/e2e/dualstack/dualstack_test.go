@@ -47,8 +47,6 @@ var _ = Describe("DualStack configuration ", Label("dualstack", "slow", "sidecar
 	SetDefaultEventuallyTimeout(time.Duration(env.GetInt("DEFAULT_TEST_TIMEOUT", 180)) * time.Second)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
-	debugInfoLogged := false
-
 	Describe("for supported versions", func() {
 		for _, version := range istioversion.GetLatestPatchVersions() {
 			// The minimum supported version is 1.23 (and above)
@@ -62,6 +60,13 @@ var _ = Describe("DualStack configuration ", Label("dualstack", "slow", "sidecar
 					clr.Record(ctx)
 					Expect(k.CreateNamespace(controlPlaneNamespace)).To(Succeed(), "Istio namespace failed to be created")
 					Expect(k.CreateNamespace(istioCniNamespace)).To(Succeed(), "IstioCNI namespace failed to be created")
+				})
+
+				// Capture debug info immediately on test failure
+				JustAfterEach(func(ctx SpecContext) {
+					if CurrentSpecReport().Failed() {
+						common.LogDebugInfo(common.ControlPlane, k)
+					}
 				})
 
 				When("the IstioCNI CR is created", func() {
@@ -222,11 +227,7 @@ values:
 				})
 
 				AfterAll(func(ctx SpecContext) {
-					if CurrentSpecReport().Failed() {
-						common.LogDebugInfo(common.DualStack, k)
-						debugInfoLogged = true
-					}
-
+					// Skip cleanup if test failed and keepOnFailure is set
 					if CurrentSpecReport().Failed() && keepOnFailure {
 						return
 					}
@@ -234,12 +235,6 @@ values:
 					clr.Cleanup(ctx)
 				})
 			})
-		}
-	})
-
-	AfterAll(func(ctx SpecContext) {
-		if CurrentSpecReport().Failed() && !debugInfoLogged {
-			common.LogDebugInfo(common.DualStack, k)
 		}
 	})
 })
