@@ -191,10 +191,15 @@ else
   else
     # We're aligned or ahead of Istio, only do patch upgrades to stay aligned
     echo "Sail Operator controller-runtime (${CONTROLLER_RUNTIME_CURRENT_VERSION}) is aligned with Istio (${ISTIO_CONTROLLER_RUNTIME_VERSION}), only applying patch updates"
-    go get -u=patch sigs.k8s.io/controller-runtime
+    go get sigs.k8s.io/controller-runtime@patch
     # Determine the new version after patch upgrade
     CONTROLLER_RUNTIME_NEW_VERSION=$(grep "sigs.k8s.io/controller-runtime" go.mod | awk '{print $2}')
     CONTROLLER_RUNTIME_BRANCH=$(getReleaseBranch "${CONTROLLER_RUNTIME_NEW_VERSION}")
+    if [[ "${CONTROLLER_RUNTIME_NEW_VERSION}" != "${CONTROLLER_RUNTIME_CURRENT_VERSION}" ]]; then
+      echo "Updated controller-runtime to ${CONTROLLER_RUNTIME_NEW_VERSION}"
+    else
+      echo "No patch update for controller-runtime available. Staying at ${CONTROLLER_RUNTIME_NEW_VERSION}"
+    fi
   fi
 fi
 
