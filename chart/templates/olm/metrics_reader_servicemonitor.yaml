@@ -2,7 +2,7 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: sail-operator-controller-manager-metrics-monitor
+  name: sail-operator-metrics-monitor
   labels:
     release: {{ .Values.metrics.helm.releaseName }}
 spec:

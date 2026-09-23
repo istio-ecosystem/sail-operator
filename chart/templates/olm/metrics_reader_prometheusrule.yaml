@@ -2,22 +2,17 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
-  name: service-mesh-usage-rules
+  name: sail-operator-metrics-recording-rules
   labels:
     release: {{ .Values.metrics.helm.releaseName }}
 spec:
   groups:
-    - name: service-mesh.istiod.rules
+    - name: mesh.istiod.rules
       interval: 30s
       rules:
         - record: servicemesh_istiod_total
           expr: sum(servicemesh_istiod_total) by (app.kubernetes.io/version)
-    - name: service-mesh.sidecar.rules
-      interval: 30s
-      rules:
-        - record: servicemesh_sidecar_proxy_total
-          expr: sum(servicemesh_sidecar_proxy_total) by (app.kubernetes.io/version)
-    - name: service-mesh.ztunnel.rules
+    - name: mesh.ztunnel.rules
       interval: 30s
       rules:
         - record: servicemesh_ztunnel_total
