@@ -4,17 +4,21 @@ kind: ServiceMonitor
 metadata:
   name: sail-operator-metrics-monitor
   labels:
-    release: {{ .Values.metrics.helm.releaseName }}
+    release: {{ .Values.metrics.helm.releaseName }}  # match Prometheus serviceMonitorSelector
 spec:
   selector:
     matchLabels:
-      control-plane: sail-operator
+      control-plane: {{ .Values.deployment.name }}
   endpoints:
-  - path: /metrics
-    port: https
+  - port: https
+    path: /metrics
     scheme: https
     interval: 30s
-    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
       insecureSkipVerify: true
+    authorization:
+      type: Bearer
+      credentials:  # the secret must live in the same namespace as the ServiceMonitor
+        name: {{ .Values.deployment.name }}
+        key: token
 {{ end }}

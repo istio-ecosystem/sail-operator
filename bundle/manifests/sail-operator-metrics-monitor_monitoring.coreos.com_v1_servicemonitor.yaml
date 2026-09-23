@@ -6,7 +6,11 @@ metadata:
   name: sail-operator-metrics-monitor
 spec:
   endpoints:
-  - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+  - authorization:
+      credentials:
+        key: token
+        name: sail-operator
+      type: Bearer
     interval: 30s
     path: /metrics
     port: https
