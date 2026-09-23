@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Mirrors the Istio operand images from SOURCE_HUB to MIRROR_HUB.
+# Mirrors the Istio operand images, including all their variants, from SOURCE_HUB to MIRROR_HUB.
 #
 # Istio stopped publishing to registry.istio.io as of 1.31, so from that release on the
 # only upstream source is Docker Hub, which we can't pull from at runtime. tools/update_deps.sh
@@ -107,30 +107,37 @@ for minor in "$@"; do
   for version in ${versions}; do
     echo "mirroring ${version}"
     for image in "${ISTIO_IMAGES[@]}"; do
-      src="${SOURCE_HUB}/${image}:${version}"
-      dst="${MIRROR_HUB}/${image}:${version}"
+      for variant in "${ISTIO_IMAGE_VARIANTS[@]}"; do
+        src="${SOURCE_HUB}/${image}:${version}${variant}"
+        dst="${MIRROR_HUB}/${image}:${version}${variant}"
 
-      src_digest=$(get_digest "${src}") || exit 1
-      if [ -z "${src_digest}" ]; then
-        echo "  ERROR: ${src} does not exist"
-        failures+=("${src}")
-        continue
-      fi
+        src_digest=$(get_digest "${src}") || exit 1
+        if [ -z "${src_digest}" ]; then
+          # Only the default variant is guaranteed to exist for every image.
+          if [ -n "${variant}" ]; then
+            echo "  WARNING: ${src} does not exist, skipping"
+            continue
+          fi
+          echo "  ERROR: ${src} does not exist"
+          failures+=("${src}")
+          continue
+        fi
 
-      dst_digest=$(get_digest "${dst}") || exit 1
-      if [ "${src_digest}" == "${dst_digest}" ]; then
-        echo "  up to date: ${dst}"
-        continue
-      fi
+        dst_digest=$(get_digest "${dst}") || exit 1
+        if [ "${src_digest}" == "${dst_digest}" ]; then
+          echo "  up to date: ${dst}"
+          continue
+        fi
 
-      echo "  copying ${src} -> ${dst}"
-      if [ "${DRY_RUN}" == "true" ]; then
-        continue
-      fi
-      if ! "${CRANE}" copy "${src}" "${dst}"; then
-        echo "  ERROR: failed to copy ${src} -> ${dst}"
-        failures+=("${src}")
-      fi
+        echo "  copying ${src} -> ${dst}"
+        if [ "${DRY_RUN}" == "true" ]; then
+          continue
+        fi
+        if ! "${CRANE}" copy "${src}" "${dst}"; then
+          echo "  ERROR: failed to copy ${src} -> ${dst}"
+          failures+=("${src}")
+        fi
+      done
     done
   done
 done
