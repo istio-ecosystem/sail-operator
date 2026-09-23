@@ -52,6 +52,12 @@ UPSTREAM_HUB=${UPSTREAM_HUB:-"registry.istio.io/release"}
 # Operand images referenced by the Istio charts.
 ISTIO_IMAGES=(pilot proxyv2 install-cni ztunnel)
 
+# Tag suffixes for the image variants Istio publishes. The empty suffix is the default
+# variant; the others are selected through .values.global.variant, which the ambient
+# profile sets to distroless, so they have to be mirrored too.
+# Add `-debug`` variants or additional options here if required.
+ISTIO_IMAGE_VARIANTS=("" "-distroless")
+
 # usesMirror returns 0 if the images for the given Istio version are served from
 # MIRROR_HUB rather than UPSTREAM_HUB.
 # $1: the Istio version, e.g. 1.31.0 or 1.31.0-beta.1
