@@ -226,6 +226,17 @@ func (k Kubectl) GetYAML(kind, name string) (string, error) {
 	return output, nil
 }
 
+// GetRaw returns the raw response from the Kubernetes API server for the given path.
+func (k Kubectl) GetRaw(path string) (string, error) {
+	cmd := k.build(fmt.Sprintf(" get --raw %q", path))
+	output, err := k.executeCommand(cmd)
+	if err != nil {
+		return "", fmt.Errorf("error getting raw API response: %w, output: %s", err, output)
+	}
+
+	return output, nil
+}
+
 // GetClusterRoleNamesByLabel runs `kubectl|oc get clusterrole -l <selector> -o name` (cluster-scoped; no namespace).
 func (k Kubectl) GetClusterRoleNamesByLabel(labelSelector string) (string, error) {
 	cmd := k.build(fmt.Sprintf(" get clusterrole -l %q -o name", labelSelector))
@@ -366,6 +377,12 @@ func (k Kubectl) TopPods() (string, error) {
 // Label adds a label to the specified resource
 func (k Kubectl) Label(kind, name, labelKey, labelValue string) error {
 	_, err := k.executeCommand(k.build(fmt.Sprintf(" label %s %s %s=%s", kind, name, labelKey, labelValue)))
+	return err
+}
+
+// RemoveLabel removes a label from the specified resource
+func (k Kubectl) RemoveLabel(kind, name, labelKey string) error {
+	_, err := k.executeCommand(k.build(fmt.Sprintf(" label %s %s %s-", kind, name, labelKey)))
 	return err
 }
 
