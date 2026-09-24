@@ -309,3 +309,12 @@ rules:
   - delete
   - get
   - list
+- apiGroups:
+  - perses.dev
+  resources:
+  - persesdashboards
+  verbs:
+  - create
+  - get
+  - list
+  - update

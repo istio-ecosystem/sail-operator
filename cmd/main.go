@@ -21,12 +21,14 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path"
 
 	"github.com/istio-ecosystem/sail-operator/controllers/istio"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiocni"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiorevision"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiorevisiontag"
 	"github.com/istio-ecosystem/sail-operator/controllers/monitoring"
+	"github.com/istio-ecosystem/sail-operator/controllers/persesdashboard"
 	"github.com/istio-ecosystem/sail-operator/controllers/webhook"
 	"github.com/istio-ecosystem/sail-operator/controllers/ztunnel"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
@@ -35,6 +37,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/version"
 	"github.com/istio-ecosystem/sail-operator/resources"
+	persesresources "github.com/istio-ecosystem/sail-operator/resources/perses"
 	configv1 "github.com/openshift/api/config/v1"
 	openshifttls "github.com/openshift/controller-runtime-common/pkg/tls"
 	openshiftcrypto "github.com/openshift/library-go/pkg/crypto"
@@ -89,9 +92,11 @@ func main() {
 	if resourceDirectory != "" {
 		setupLog.Info("using filesystem resources", "directory", resourceDirectory)
 		reconcilerCfg.ResourceFS = os.DirFS(resourceDirectory)
+		reconcilerCfg.PersesDashboardFS = os.DirFS(path.Join(resourceDirectory, "perses"))
 	} else {
 		setupLog.Info("using embedded resources")
 		reconcilerCfg.ResourceFS = resources.FS
+		reconcilerCfg.PersesDashboardFS = persesresources.FS
 	}
 	reconcilerCfg.OperatorNamespace = os.Getenv("POD_NAMESPACE")
 	if reconcilerCfg.OperatorNamespace == "" {
@@ -257,6 +262,13 @@ func main() {
 		SetupWithManager(mgr)
 	if err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Monitoring")
+		os.Exit(1)
+	}
+
+	err = persesdashboard.NewInstaller(reconcilerCfg, mgr.GetClient(), mgr.GetCache(), reconcilerCfg.PersesDashboardFS).
+		SetupWithManager(mgr)
+	if err != nil {
+		setupLog.Error(err, "unable to create installer", "controller", "PersesDashboard")
 		os.Exit(1)
 	}
 
