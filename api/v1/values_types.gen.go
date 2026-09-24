@@ -1085,7 +1085,7 @@ type WaypointConfig struct {
 	// K8s topology spread constraints settings.
 	//
 	// See https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
-	TopologySpreadConstraints []*k8sv1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
+	TopologySpreadConstraints []k8sv1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
 	// K8s node labels settings.
 	//
 	// See https://kubernetes.io/docs/user-guide/node-selection/
@@ -1093,11 +1093,11 @@ type WaypointConfig struct {
 	// K8s tolerations settings.
 	//
 	// See https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
-	Tolerations []*k8sv1.Toleration `json:"tolerations,omitempty"`
+	Tolerations []k8sv1.Toleration `json:"tolerations,omitempty"`
 
 	// +hidefromdoc
 	// Deprecated: Use tolerations instead. This field is kept for backward compatibility and is ignored.
-	Toleration []*k8sv1.Toleration `json:"toleration,omitempty"`
+	Toleration []k8sv1.Toleration `json:"toleration,omitempty"`
 }
 
 // Configuration for NetworkPolicy

@@ -27,6 +27,9 @@ var (
 	// GroupVersion is group version used to register these objects
 	GroupVersion = schema.GroupVersion{Group: "sailoperator.io", Version: "v1"}
 
+	// SchemeGroupVersion is retained for compatibility with Kubernetes code generators.
+	SchemeGroupVersion = GroupVersion
+
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
 	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
 

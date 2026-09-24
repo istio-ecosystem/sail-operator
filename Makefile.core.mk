@@ -479,7 +479,7 @@ gen-api: tidy-go ## Generate API types from upstream files.
 
 .PHONY: gen-code
 gen-code: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-	$(CONTROLLER_GEN) object:headerFile="common/scripts/copyright-banner-go.txt" paths="./..."
+	$(CONTROLLER_GEN) object:headerFile="common/scripts/copyright-banner-go.txt" applyconfiguration:headerFile="common/scripts/copyright-banner-go.txt" paths="./..."
 
 export FORCE_DOWNLOADS
 .PHONY: download-istio-charts

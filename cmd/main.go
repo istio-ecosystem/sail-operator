@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/istio-ecosystem/sail-operator/controllers/integration"
 	"github.com/istio-ecosystem/sail-operator/controllers/istio"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiocni"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiorevision"
@@ -243,6 +244,13 @@ func main() {
 		SetupWithManager(mgr)
 	if err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ZTunnel")
+		os.Exit(1)
+	}
+
+	err = integration.NewTracingReconciler(reconcilerCfg, mgr.GetClient(), mgr.GetScheme()).
+		SetupWithManager(mgr)
+	if err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "TracingIntegration")
 		os.Exit(1)
 	}
 

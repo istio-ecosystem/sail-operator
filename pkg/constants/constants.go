@@ -46,6 +46,12 @@ const (
 	// FinalizerName is the finalizer name the controllers add to any resources that need to be finalized during deletion
 	FinalizerName = MetadataNamespace + "/sail-operator"
 
+	// OpenTelemetryCollectorCRDName is the name of the OpenTelemetryCollector CRD.
+	OpenTelemetryCollectorCRDName = "opentelemetrycollectors.opentelemetry.io"
+
+	// TelemetryCRDName is the name of the Istio Telemetry CRD.
+	TelemetryCRDName = "telemetries.telemetry.istio.io"
+
 	// KubernetesAppNamespace is the common namespace for application information
 	KubernetesAppNamespace    = "app.kubernetes.io"
 	KubernetesAppNameKey      = KubernetesAppNamespace + "/name"

@@ -230,6 +230,46 @@ rules:
 - apiGroups:
   - sailoperator.io
   resources:
+  - tracingintegrations
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - sailoperator.io
+  resources:
+  - tracingintegrations/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - telemetry.istio.io
+  resources:
+  - telemetries
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - opentelemetry.io
+  resources:
+  - opentelemetrycollectors
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - sailoperator.io
+  resources:
   - remoteistios
   verbs:
   - create

@@ -7,6 +7,7 @@
 
 ## sailoperator.io/v1
 
+
 package v1 contains API Schema definitions for the sailoperator.io v1 API group
 
 ### Resource Types
@@ -3906,12 +3907,202 @@ _Appears in:_
 
 ## sailoperator.io/v1alpha1
 
+
 Package v1alpha1 contains API Schema definitions for the sailoperator.io v1alpha1 API group
 
 ### Resource Types
+- [TracingIntegration](#tracingintegration-v1alpha1)
+- [TracingIntegrationList](#tracingintegrationlist-v1alpha1)
 - [ZTunnel](#ztunnel-v1alpha1)
 - [ZTunnelList](#ztunnellist-v1alpha1)
 
+
+
+#### NamespacedReference
+
+
+
+NamespacedReference identifies a namespaced resource.
+
+
+
+_Appears in:_
+- [OpenTelemetryConfig](#opentelemetryconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | Name is the name of the referenced resource. |  | MinLength: 1   |
+| `namespace` _string_ | Namespace is the namespace of the referenced resource. |  | MinLength: 1   |
+
+
+#### OpenTelemetryConfig
+
+
+
+OpenTelemetryConfig configures the OpenTelemetry integration.
+
+
+
+_Appears in:_
+- [TracingConfig](#tracingconfig)
+- [TracingIntegrationSpec](#tracingintegrationspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `otelCollectorRef` _[NamespacedReference](#namespacedreference)_ | OTELCollectorRef is a reference to an OpenTelemetry Collector resource. |  |  |
+
+
+#### TargetReference
+
+
+
+TargetReference identifies a resource that the integration configures.
+
+
+
+_Appears in:_
+- [TracingIntegrationSpec](#tracingintegrationspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `kind` _string_ | Kind specifies the kind of resource (e.g. "Istio", "Kiali"). |  | MaxLength: 63  MinLength: 1   |
+| `name` _string_ | Name is the name of the target resource. |  | MinLength: 1   |
+| `namespace` _string_ | Namespace is the namespace of the target resource. Only required for namespace-scoped resources like Kiali. |  |  |
+
+
+#### TracingConfig
+
+
+
+TracingConfig configures a tracing backend.
+
+
+
+_Appears in:_
+- [TracingIntegrationSpec](#tracingintegrationspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `type` _[TracingType](#tracingtype)_ | Type specifies the tracing integration type. |  | Enum: [OpenTelemetry]   |
+| `openTelemetry` _[OpenTelemetryConfig](#opentelemetryconfig)_ | OpenTelemetry configures integration with an OpenTelemetry Collector. |  |  |
+
+
+#### TracingIntegration (v1alpha1)
+
+
+
+TracingIntegration configures Istio tracing integrations.
+
+
+
+_Appears in:_
+- [TracingIntegrationList](#tracingintegrationlist)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `sailoperator.io/v1alpha1` | | |
+| `kind` _string_ | `TracingIntegration` | | |
+| `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
+| `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[TracingIntegrationSpec](#tracingintegrationspec)_ |  |  |  |
+| `status` _[TracingIntegrationStatus](#tracingintegrationstatus)_ |  |  |  |
+
+
+#### TracingIntegrationConditionReason
+
+_Underlying type:_ _string_
+
+TracingIntegrationConditionReason represents the reason for a TracingIntegration condition.
+
+
+
+_Appears in:_
+- [TracingIntegrationStatus](#tracingintegrationstatus)
+
+| Field | Description |
+| --- | --- |
+| `ReconcileError` | TracingIntegrationReasonReconcileError indicates that reconciliation failed.  |
+| `InvalidConfiguration` | TracingIntegrationReasonInvalidConfiguration occurs if there's a validation error.  |
+| `ApplyConflict` | TracingIntegrationReasonApplyConflict indicates that reconciliation reached a server-side apply field ownership conflict.  |
+| `NoConflict` | TracingIntegrationReasonNoConflict indicates that no server-side apply field ownership conflict is currently observed.  |
+| `Healthy` | TracingIntegrationReasonHealthy indicates that the integration is fully reconciled.  |
+
+
+
+
+#### TracingIntegrationList (v1alpha1)
+
+
+
+TracingIntegrationList contains a list of TracingIntegration.
+
+
+
+
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `sailoperator.io/v1alpha1` | | |
+| `kind` _string_ | `TracingIntegrationList` | | |
+| `kind` _string_ | Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
+| `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `items` _[TracingIntegration](#tracingintegration) array_ |  |  |  |
+
+
+#### TracingIntegrationSpec
+
+
+
+TracingIntegrationSpec defines the desired state of TracingIntegration.
+
+
+
+_Appears in:_
+- [TracingIntegration](#tracingintegration)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `targetRefs` _[TargetReference](#targetreference) array_ | TargetRefs specifies the resources that this integration configures. |  | MaxItems: 10  MinItems: 1   |
+| `telemetryName` _string_ | TelemetryName specifies the name of the Istio Telemetry resource managed by this integration. | mesh-default | MinLength: 1   |
+| `type` _[TracingType](#tracingtype)_ | Type specifies the tracing integration type. |  | Enum: [OpenTelemetry]   |
+| `openTelemetry` _[OpenTelemetryConfig](#opentelemetryconfig)_ | OpenTelemetry configures integration with an OpenTelemetry Collector. |  |  |
+
+
+#### TracingIntegrationStatus
+
+
+
+TracingIntegrationStatus defines the observed state of TracingIntegration.
+
+
+
+_Appears in:_
+- [TracingIntegration](#tracingintegration)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `observedGeneration` _integer_ | ObservedGeneration is the most recent generation observed for this TracingIntegration object. |  |  |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#condition-v1-meta) array_ | Represents the latest available observations of the object's current state. |  |  |
+| `state` _[TracingIntegrationConditionReason](#tracingintegrationconditionreason)_ | Reports the current state of the object. |  |  |
+
+
+#### TracingType
+
+_Underlying type:_ _string_
+
+TracingType identifies the type of tracing integration.
+
+
+
+_Appears in:_
+- [TracingConfig](#tracingconfig)
+- [TracingIntegrationSpec](#tracingintegrationspec)
+
+| Field | Description |
+| --- | --- |
+| `OpenTelemetry` | TracingTypeOpenTelemetry configures tracing through an OpenTelemetry Collector.  |
 
 
 #### ZTunnel (v1alpha1)

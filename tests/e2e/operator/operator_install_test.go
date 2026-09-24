@@ -30,6 +30,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	v1 "github.com/istio-ecosystem/sail-operator/api/v1"
+	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	"github.com/istio-ecosystem/sail-operator/pkg/env"
 	"github.com/istio-ecosystem/sail-operator/pkg/istioversion"
 	"github.com/istio-ecosystem/sail-operator/pkg/kube"
@@ -63,7 +64,7 @@ var sailCRDs = []string{
 	"requestauthentications.security.istio.io",
 	"serviceentries.networking.istio.io",
 	"sidecars.networking.istio.io",
-	"telemetries.telemetry.istio.io",
+	constants.TelemetryCRDName,
 	"virtualservices.networking.istio.io",
 	"wasmplugins.extensions.istio.io",
 	"workloadentries.networking.istio.io",
