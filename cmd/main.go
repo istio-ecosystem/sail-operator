@@ -255,16 +255,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Record custom resources and Istio namespaces counts every 5 minutes
-	// those custom metrics are registered in the default metric server
-	recorder := analyze.NewMetricsRecorder(5*time.Minute, mgr.GetClient())
-	recorder.Start(ctx)
-	setupLog.Info("Collecting custom resource metrics")
-	// Wait for context timeout or operator shutdown
-	<-ctx.Done()
-	recorder.Stop()
-	setupLog.Info("Custom metrics collection stopped")
-
 	err = monitoring.NewReconciler(reconcilerCfg, mgr.GetClient(), mgr.GetScheme()).
 		SetupWithManager(mgr)
 	if err != nil {
@@ -317,6 +307,16 @@ func main() {
 		setupLog.Error(err, "problem running sail-operator manager")
 		os.Exit(1)
 	}
+
+	// Record custom resources and Istio namespaces counts every 5 minutes
+	// those custom metrics are registered in the default metric server
+	recorder := analyze.NewMetricsRecorder(5*time.Minute, mgr.GetClient())
+	recorder.Start(ctx)
+	setupLog.Info("Collecting custom resource metrics")
+	// Wait for context timeout or operator shutdown
+	<-ctx.Done()
+	recorder.Stop()
+	setupLog.Info("Custom metrics collection stopped")
 }
 
 type requestLogger struct {
