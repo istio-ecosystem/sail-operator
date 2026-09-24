@@ -1,0 +1,2460 @@
+apiVersion: perses.dev/v1alpha2
+kind: PersesDashboard
+metadata:
+  labels:
+    app.kubernetes.io/component: dashboard
+    app.kubernetes.io/instance: istio-service-dashboard
+    app.kubernetes.io/name: perses-dashboard
+    app.kubernetes.io/part-of: perses-operator
+  name: istio-service-dashboard
+  namespace: perses-dev
+spec:
+  config:
+    display:
+      name: Istio Service Dashboard
+    duration: 1h
+    layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: General
+        items:
+        - content:
+            $ref: '#/spec/panels/0_0'
+          height: 4
+          width: 24
+          x: 0
+          "y": 0
+    - kind: Grid
+      spec:
+        display:
+          title: General
+        items:
+        - content:
+            $ref: '#/spec/panels/1_0'
+          height: 4
+          width: 12
+          x: 0
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/1_1'
+          height: 4
+          width: 12
+          x: 12
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/1_2'
+          height: 4
+          width: 12
+          x: 0
+          "y": 4
+        - content:
+            $ref: '#/spec/panels/1_3'
+          height: 4
+          width: 12
+          x: 12
+          "y": 4
+        - content:
+            $ref: '#/spec/panels/1_4'
+          height: 4
+          width: 12
+          x: 0
+          "y": 8
+        - content:
+            $ref: '#/spec/panels/1_5'
+          height: 4
+          width: 12
+          x: 12
+          "y": 8
+        - content:
+            $ref: '#/spec/panels/1_6'
+          height: 4
+          width: 12
+          x: 0
+          "y": 12
+        - content:
+            $ref: '#/spec/panels/1_7'
+          height: 4
+          width: 12
+          x: 12
+          "y": 12
+    - kind: Grid
+      spec:
+        display:
+          title: Client Workloads
+        items:
+        - content:
+            $ref: '#/spec/panels/2_0'
+          height: 6
+          width: 12
+          x: 0
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/2_1'
+          height: 6
+          width: 12
+          x: 12
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/2_2'
+          height: 6
+          width: 12
+          x: 0
+          "y": 6
+    - kind: Grid
+      spec:
+        display:
+          title: Client Workloads (II)
+        items:
+        - content:
+            $ref: '#/spec/panels/3_0'
+          height: 6
+          width: 8
+          x: 0
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/3_1'
+          height: 6
+          width: 8
+          x: 8
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/3_2'
+          height: 6
+          width: 8
+          x: 16
+          "y": 0
+    - kind: Grid
+      spec:
+        display:
+          title: Client Workloads (III)
+        items:
+        - content:
+            $ref: '#/spec/panels/4_0'
+          height: 6
+          width: 12
+          x: 0
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/4_1'
+          height: 6
+          width: 12
+          x: 12
+          "y": 0
+    - kind: Grid
+      spec:
+        display:
+          title: Service Workloads
+        items:
+        - content:
+            $ref: '#/spec/panels/5_0'
+          height: 6
+          width: 12
+          x: 0
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/5_1'
+          height: 6
+          width: 12
+          x: 12
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/5_2'
+          height: 6
+          width: 12
+          x: 0
+          "y": 6
+    - kind: Grid
+      spec:
+        display:
+          title: Service Workloads (II)
+        items:
+        - content:
+            $ref: '#/spec/panels/6_0'
+          height: 6
+          width: 8
+          x: 0
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/6_1'
+          height: 6
+          width: 8
+          x: 8
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/6_2'
+          height: 6
+          width: 8
+          x: 16
+          "y": 0
+    - kind: Grid
+      spec:
+        display:
+          title: Service Workloads (III)
+        items:
+        - content:
+            $ref: '#/spec/panels/7_0'
+          height: 6
+          width: 12
+          x: 0
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/7_1'
+          height: 6
+          width: 12
+          x: 12
+          "y": 0
+    panels:
+      "0_0":
+        kind: Panel
+        spec:
+          display:
+            name: SERVICE
+          plugin:
+            kind: Markdown
+            spec:
+              text: |-
+                <div class="dashboard-header text-center">
+                <span>SERVICE: $service</span>
+                </div>
+      "1_0":
+        kind: Panel
+        spec:
+          display:
+            name: Client Request Volume
+          plugin:
+            kind: StatChart
+            spec:
+              calculation: last
+              sparkline:
+                width: 1
+              thresholds:
+                defaultColor: green
+                mode: absolute
+                steps:
+                - color: green
+                  value: 0
+                - color: red
+                  value: 80
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    round(
+                      sum(irate(istio_requests_total{destination_service=~"$service",reporter=~"$qrep"}[5m])),
+                      0.001
+                    )
+      "1_1":
+        kind: Panel
+        spec:
+          display:
+            name: Client Success Rate (non-5xx responses)
+          plugin:
+            kind: StatChart
+            spec:
+              calculation: last
+              format:
+                unit: percent-decimal
+              sparkline:
+                width: 1
+              thresholds:
+                defaultColor: green
+                mode: absolute
+                steps:
+                - color: dark-red
+                  value: 0
+                - color: dark-yellow
+                  value: 0.95
+                - color: dark-green
+                  value: 0.99
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                      sum(
+                        irate(
+                          istio_requests_total{destination_service=~"$service",reporter=~"$qrep",response_code!~"5.*"}[5m]
+                        )
+                      )
+                    /
+                        sum(irate(istio_requests_total{destination_service=~"$service",reporter=~"$qrep"}[5m]))
+                      or on ()
+                        vector(1)
+      "1_2":
+        kind: Panel
+        spec:
+          display:
+            name: Client Request Duration
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: right
+              yAxis:
+                format:
+                  unit: seconds
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                        histogram_quantile(
+                          0.5,
+                          sum by (le) (
+                            irate(
+                              istio_request_duration_milliseconds_bucket{destination_service=~"$service",reporter=~"$qrep"}[1m]
+                            )
+                          )
+                        )
+                      /
+                        1000
+                    or
+                      histogram_quantile(
+                        0.5,
+                        sum by (le) (
+                          irate(istio_request_duration_seconds_bucket{destination_service=~"$service",reporter=~"$qrep"}[1m])
+                        )
+                      )
+                  seriesNameFormat: P50
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                        histogram_quantile(
+                          0.9,
+                          sum by (le) (
+                            irate(
+                              istio_request_duration_milliseconds_bucket{destination_service=~"$service",reporter=~"$qrep"}[1m]
+                            )
+                          )
+                        )
+                      /
+                        1000
+                    or
+                      histogram_quantile(
+                        0.9,
+                        sum by (le) (
+                          irate(istio_request_duration_seconds_bucket{destination_service=~"$service",reporter=~"$qrep"}[1m])
+                        )
+                      )
+                  seriesNameFormat: P90
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                        histogram_quantile(
+                          0.99,
+                          sum by (le) (
+                            irate(
+                              istio_request_duration_milliseconds_bucket{destination_service=~"$service",reporter=~"$qrep"}[1m]
+                            )
+                          )
+                        )
+                      /
+                        1000
+                    or
+                      histogram_quantile(
+                        0.99,
+                        sum by (le) (
+                          irate(istio_request_duration_seconds_bucket{destination_service=~"$service",reporter=~"$qrep"}[1m])
+                        )
+                      )
+                  seriesNameFormat: P99
+      "1_3":
+        kind: Panel
+        spec:
+          display:
+            name: TCP Received Bytes
+          plugin:
+            kind: StatChart
+            spec:
+              calculation: mean
+              format:
+                unit: bytes/sec
+              sparkline:
+                width: 1
+              thresholds:
+                defaultColor: green
+                mode: absolute
+                steps:
+                - color: green
+                  value: 0
+                - color: red
+                  value: 80
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: sum(irate(istio_tcp_received_bytes_total{destination_service=~"$service",reporter=~"$qrep"}[1m]))
+      "1_4":
+        kind: Panel
+        spec:
+          display:
+            name: Server Request Volume
+          plugin:
+            kind: StatChart
+            spec:
+              calculation: last
+              sparkline:
+                width: 1
+              thresholds:
+                defaultColor: green
+                mode: absolute
+                steps:
+                - color: green
+                  value: 0
+                - color: red
+                  value: 80
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    round(
+                      sum(irate(istio_requests_total{destination_service=~"$service",reporter="destination"}[5m])),
+                      0.001
+                    )
+      "1_5":
+        kind: Panel
+        spec:
+          display:
+            name: Server Success Rate (non-5xx responses)
+          plugin:
+            kind: StatChart
+            spec:
+              calculation: last
+              format:
+                unit: percent-decimal
+              sparkline:
+                width: 1
+              thresholds:
+                defaultColor: green
+                mode: absolute
+                steps:
+                - color: rgba(50, 172, 45, 0.97)
+                  value: 0
+                - color: rgba(237, 129, 40, 0.89)
+                  value: 95
+                - color: rgba(245, 54, 54, 0.9)
+                  value: 99
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                      sum(
+                        irate(
+                          istio_requests_total{destination_service=~"$service",reporter="destination",response_code!="5.*"}[5m]
+                        )
+                      )
+                    /
+                        sum(irate(istio_requests_total{destination_service=~"$service",reporter="destination"}[5m]))
+                      or on ()
+                        vector(1)
+      "1_6":
+        kind: Panel
+        spec:
+          display:
+            name: Server Request Duration
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: right
+              yAxis:
+                format:
+                  unit: seconds
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                        histogram_quantile(
+                          0.5,
+                          sum by (le) (
+                            irate(
+                              istio_request_duration_milliseconds_bucket{destination_service=~"$service",reporter="destination"}[1m]
+                            )
+                          )
+                        )
+                      /
+                        1000
+                    or
+                      histogram_quantile(
+                        0.5,
+                        sum by (le) (
+                          irate(
+                            istio_request_duration_seconds_bucket{destination_service=~"$service",reporter="destination"}[1m]
+                          )
+                        )
+                      )
+                  seriesNameFormat: P50
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                        histogram_quantile(
+                          0.9,
+                          sum by (le) (
+                            irate(
+                              istio_request_duration_milliseconds_bucket{destination_service=~"$service",reporter="destination"}[1m]
+                            )
+                          )
+                        )
+                      /
+                        1000
+                    or
+                      histogram_quantile(
+                        0.9,
+                        sum by (le) (
+                          irate(
+                            istio_request_duration_seconds_bucket{destination_service=~"$service",reporter="destination"}[1m]
+                          )
+                        )
+                      )
+                  seriesNameFormat: P90
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                        histogram_quantile(
+                          0.99,
+                          sum by (le) (
+                            irate(
+                              istio_request_duration_milliseconds_bucket{destination_service=~"$service",reporter="destination"}[1m]
+                            )
+                          )
+                        )
+                      /
+                        1000
+                    or
+                      histogram_quantile(
+                        0.99,
+                        sum by (le) (
+                          irate(
+                            istio_request_duration_seconds_bucket{destination_service=~"$service",reporter="destination"}[1m]
+                          )
+                        )
+                      )
+                  seriesNameFormat: P99
+      "1_7":
+        kind: Panel
+        spec:
+          display:
+            name: TCP Sent Bytes
+          plugin:
+            kind: StatChart
+            spec:
+              calculation: mean
+              format:
+                unit: bytes/sec
+              sparkline:
+                width: 1
+              thresholds:
+                defaultColor: green
+                mode: absolute
+                steps:
+                - color: green
+                  value: 0
+                - color: red
+                  value: 80
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: sum(irate(istio_tcp_sent_bytes_total{destination_service=~"$service",reporter=~"$qrep"}[1m]))
+      "2_0":
+        kind: Panel
+        spec:
+          display:
+            name: CLIENT WORKLOADS
+          plugin:
+            kind: Markdown
+            spec:
+              text: |-
+                <div class="dashboard-header text-center">
+                <span>CLIENT WORKLOADS</span>
+                </div>
+      "2_1":
+        kind: Panel
+        spec:
+          display:
+            name: Incoming Requests By Source And Response Code
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                display: line
+                lineWidth: 1
+              yAxis: {}
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    round(
+                      sum by (source_workload, source_workload_namespace, response_code) (
+                        irate(
+                          istio_requests_total{connection_security_policy="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[5m]
+                        )
+                      ),
+                      0.001
+                    )
+                  seriesNameFormat: "{{ source_workload }}.{{ source_workload_namespace
+                    }} : {{ response_code }} (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    round(
+                      sum by (source_workload, source_workload_namespace, response_code) (
+                        irate(
+                          istio_requests_total{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[5m]
+                        )
+                      ),
+                      0.001
+                    )
+                  seriesNameFormat: '{{ source_workload }}.{{ source_workload_namespace
+                    }} : {{ response_code }}'
+      "2_2":
+        kind: Panel
+        spec:
+          display:
+            name: Incoming Success Rate (non-5xx responses) By Source
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+              yAxis:
+                format:
+                  unit: percent-decimal
+                max: 1.01
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                      sum by (source_workload, source_workload_namespace) (
+                        irate(
+                          istio_requests_total{connection_security_policy="mutual_tls",destination_service=~"$service",reporter=~"$qrep",response_code!="5.*",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[5m]
+                        )
+                      )
+                    /
+                      sum by (source_workload, source_workload_namespace) (
+                        irate(
+                          istio_requests_total{connection_security_policy="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[5m]
+                        )
+                      )
+                  seriesNameFormat: "{{ source_workload }}.{{ source_workload_namespace
+                    }} (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                      sum by (source_workload, source_workload_namespace) (
+                        irate(
+                          istio_requests_total{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter=~"$qrep",response_code!="5.*",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[5m]
+                        )
+                      )
+                    /
+                      sum by (source_workload, source_workload_namespace) (
+                        irate(
+                          istio_requests_total{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[5m]
+                        )
+                      )
+                  seriesNameFormat: '{{ source_workload }}.{{ source_workload_namespace
+                    }}'
+      "3_0":
+        kind: Panel
+        spec:
+          display:
+            name: Incoming Request Duration By Source
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+              yAxis:
+                format:
+                  unit: seconds
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                        histogram_quantile(
+                          0.5,
+                          sum by (source_workload, source_workload_namespace, le) (
+                            irate(
+                              istio_request_duration_milliseconds_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                            )
+                          )
+                        )
+                      /
+                        1000
+                    or
+                      histogram_quantile(
+                        0.5,
+                        sum by (source_workload, source_workload_namespace, le) (
+                          irate(
+                            istio_request_duration_seconds_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                          )
+                        )
+                      )
+                  seriesNameFormat: "{{source_workload}}.{{source_workload_namespace}}
+                    P50 (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                        histogram_quantile(
+                          0.9,
+                          sum by (source_workload, source_workload_namespace, le) (
+                            irate(
+                              istio_request_duration_milliseconds_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                            )
+                          )
+                        )
+                      /
+                        1000
+                    or
+                      histogram_quantile(
+                        0.9,
+                        sum by (source_workload, source_workload_namespace, le) (
+                          irate(
+                            istio_request_duration_seconds_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                          )
+                        )
+                      )
+                  seriesNameFormat: "{{source_workload}}.{{source_workload_namespace}}
+                    P90 (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                        histogram_quantile(
+                          0.95,
+                          sum by (source_workload, source_workload_namespace, le) (
+                            irate(
+                              istio_request_duration_milliseconds_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                            )
+                          )
+                        )
+                      /
+                        1000
+                    or
+                      histogram_quantile(
+                        0.95,
+                        sum by (source_workload, source_workload_namespace, le) (
+                          irate(
+                            istio_request_duration_seconds_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                          )
+                        )
+                      )
+                  seriesNameFormat: "{{source_workload}}.{{source_workload_namespace}}
+                    P95 (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                        histogram_quantile(
+                          0.99,
+                          sum by (source_workload, source_workload_namespace, le) (
+                            irate(
+                              istio_request_duration_milliseconds_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                            )
+                          )
+                        )
+                      /
+                        1000
+                    or
+                      histogram_quantile(
+                        0.99,
+                        sum by (source_workload, source_workload_namespace, le) (
+                          irate(
+                            istio_request_duration_seconds_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                          )
+                        )
+                      )
+                  seriesNameFormat: "{{source_workload}}.{{source_workload_namespace}}
+                    P99 (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                        histogram_quantile(
+                          0.5,
+                          sum by (source_workload, source_workload_namespace, le) (
+                            irate(
+                              istio_request_duration_milliseconds_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                            )
+                          )
+                        )
+                      /
+                        1000
+                    or
+                      histogram_quantile(
+                        0.5,
+                        sum by (source_workload, source_workload_namespace, le) (
+                          irate(
+                            istio_request_duration_seconds_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                          )
+                        )
+                      )
+                  seriesNameFormat: '{{source_workload}}.{{source_workload_namespace}}
+                    P50'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                        histogram_quantile(
+                          0.9,
+                          sum by (source_workload, source_workload_namespace, le) (
+                            irate(
+                              istio_request_duration_milliseconds_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                            )
+                          )
+                        )
+                      /
+                        1000
+                    or
+                      histogram_quantile(
+                        0.9,
+                        sum by (source_workload, source_workload_namespace, le) (
+                          irate(
+                            istio_request_duration_seconds_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                          )
+                        )
+                      )
+                  seriesNameFormat: '{{source_workload}}.{{source_workload_namespace}}
+                    P90'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                        histogram_quantile(
+                          0.95,
+                          sum by (source_workload, source_workload_namespace, le) (
+                            irate(
+                              istio_request_duration_milliseconds_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                            )
+                          )
+                        )
+                      /
+                        1000
+                    or
+                      histogram_quantile(
+                        0.95,
+                        sum by (source_workload, source_workload_namespace, le) (
+                          irate(
+                            istio_request_duration_seconds_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                          )
+                        )
+                      )
+                  seriesNameFormat: '{{source_workload}}.{{source_workload_namespace}}
+                    P95'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                        histogram_quantile(
+                          0.99,
+                          sum by (source_workload, source_workload_namespace, le) (
+                            irate(
+                              istio_request_duration_milliseconds_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                            )
+                          )
+                        )
+                      /
+                        1000
+                    or
+                      histogram_quantile(
+                        0.99,
+                        sum by (source_workload, source_workload_namespace, le) (
+                          irate(
+                            istio_request_duration_seconds_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                          )
+                        )
+                      )
+                  seriesNameFormat: '{{source_workload}}.{{source_workload_namespace}}
+                    P99'
+      "3_1":
+        kind: Panel
+        spec:
+          display:
+            name: Incoming Request Size By Source
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+              yAxis:
+                format:
+                  unit: bytes
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.5,
+                      sum by (source_workload, source_workload_namespace, le) (
+                        irate(
+                          istio_request_bytes_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: "{{source_workload}}.{{source_workload_namespace}}
+                    P50 (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.9,
+                      sum by (source_workload, source_workload_namespace, le) (
+                        irate(
+                          istio_request_bytes_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: "{{source_workload}}.{{source_workload_namespace}}
+                    \ P90 (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.95,
+                      sum by (source_workload, source_workload_namespace, le) (
+                        irate(
+                          istio_request_bytes_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: "{{source_workload}}.{{source_workload_namespace}}
+                    P95 (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.99,
+                      sum by (source_workload, source_workload_namespace, le) (
+                        irate(
+                          istio_request_bytes_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: "{{source_workload}}.{{source_workload_namespace}}
+                    \ P99 (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.5,
+                      sum by (source_workload, source_workload_namespace, le) (
+                        irate(
+                          istio_request_bytes_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: '{{source_workload}}.{{source_workload_namespace}}
+                    P50'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.9,
+                      sum by (source_workload, source_workload_namespace, le) (
+                        irate(
+                          istio_request_bytes_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: '{{source_workload}}.{{source_workload_namespace}}
+                    P90'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.95,
+                      sum by (source_workload, source_workload_namespace, le) (
+                        irate(
+                          istio_request_bytes_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: '{{source_workload}}.{{source_workload_namespace}}
+                    P95'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.99,
+                      sum by (source_workload, source_workload_namespace, le) (
+                        irate(
+                          istio_request_bytes_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: '{{source_workload}}.{{source_workload_namespace}}
+                    P99'
+      "3_2":
+        kind: Panel
+        spec:
+          display:
+            name: Response Size By Source
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+              yAxis:
+                format:
+                  unit: bytes
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.5,
+                      sum by (source_workload, source_workload_namespace, le) (
+                        irate(
+                          istio_response_bytes_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: "{{source_workload}}.{{source_workload_namespace}}
+                    P50 (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.9,
+                      sum by (source_workload, source_workload_namespace, le) (
+                        irate(
+                          istio_response_bytes_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: "{{source_workload}}.{{source_workload_namespace}}
+                    \ P90 (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.95,
+                      sum by (source_workload, source_workload_namespace, le) (
+                        irate(
+                          istio_response_bytes_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: "{{source_workload}}.{{source_workload_namespace}}
+                    P95 (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.95,
+                      sum by (source_workload, source_workload_namespace, le) (
+                        irate(
+                          istio_response_bytes_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: "{{source_workload}}.{{source_workload_namespace}}
+                    \ P99 (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.5,
+                      sum by (source_workload, source_workload_namespace, le) (
+                        irate(
+                          istio_response_bytes_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: '{{source_workload}}.{{source_workload_namespace}}
+                    P50'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.9,
+                      sum by (source_workload, source_workload_namespace, le) (
+                        irate(
+                          istio_response_bytes_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: '{{source_workload}}.{{source_workload_namespace}}
+                    P90'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.95,
+                      sum by (source_workload, source_workload_namespace, le) (
+                        irate(
+                          istio_response_bytes_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: '{{source_workload}}.{{source_workload_namespace}}
+                    P95'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.99,
+                      sum by (source_workload, source_workload_namespace, le) (
+                        irate(
+                          istio_response_bytes_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: '{{source_workload}}.{{source_workload_namespace}}
+                    P99'
+      "4_0":
+        kind: Panel
+        spec:
+          display:
+            name: Bytes Received from Incoming TCP Connection
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+              yAxis:
+                format:
+                  unit: bytes/sec
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    round(
+                      sum by (source_workload, source_workload_namespace) (
+                        irate(
+                          istio_tcp_received_bytes_total{connection_security_policy="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                        )
+                      ),
+                      0.001
+                    )
+                  seriesNameFormat: "{{ source_workload }}.{{ source_workload_namespace}}
+                    (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    round(
+                      sum by (source_workload, source_workload_namespace) (
+                        irate(
+                          istio_tcp_received_bytes_total{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                        )
+                      ),
+                      0.001
+                    )
+                  seriesNameFormat: '{{ source_workload }}.{{ source_workload_namespace}}'
+      "4_1":
+        kind: Panel
+        spec:
+          display:
+            name: Bytes Sent to Incoming TCP Connection
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+              yAxis:
+                format:
+                  unit: bytes/sec
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    round(
+                      sum by (source_workload, source_workload_namespace) (
+                        irate(
+                          istio_tcp_sent_bytes_total{connection_security_policy="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                        )
+                      ),
+                      0.001
+                    )
+                  seriesNameFormat: "{{ source_workload }}.{{ source_workload_namespace}}
+                    (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    round(
+                      sum by (source_workload, source_workload_namespace) (
+                        irate(
+                          istio_tcp_sent_bytes_total{connection_security_policy!="mutual_tls",destination_service=~"$service",reporter=~"$qrep",source_workload=~"$srcwl",source_workload_namespace=~"$srcns"}[1m]
+                        )
+                      ),
+                      0.001
+                    )
+                  seriesNameFormat: '{{ source_workload }}.{{ source_workload_namespace}}'
+      "5_0":
+        kind: Panel
+        spec:
+          display:
+            name: SERVICE WORKLOADS
+          plugin:
+            kind: Markdown
+            spec:
+              text: |-
+                <div class="dashboard-header text-center">
+                <span>SERVICE WORKLOADS</span>
+                </div>
+      "5_1":
+        kind: Panel
+        spec:
+          display:
+            name: Incoming Requests By Destination Workload And Response Code
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                display: line
+                lineWidth: 1
+              yAxis: {}
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    round(
+                      sum by (destination_workload, destination_workload_namespace, response_code) (
+                        irate(
+                          istio_requests_total{connection_security_policy="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[5m]
+                        )
+                      ),
+                      0.001
+                    )
+                  seriesNameFormat: "{{ destination_workload }}.{{ destination_workload_namespace
+                    }} : {{ response_code }} (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    round(
+                      sum by (destination_workload, destination_workload_namespace, response_code) (
+                        irate(
+                          istio_requests_total{connection_security_policy!="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[5m]
+                        )
+                      ),
+                      0.001
+                    )
+                  seriesNameFormat: '{{ destination_workload }}.{{ destination_workload_namespace
+                    }} : {{ response_code }}'
+      "5_2":
+        kind: Panel
+        spec:
+          display:
+            name: Incoming Success Rate (non-5xx responses) By Destination Workload
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+              yAxis:
+                format:
+                  unit: percent-decimal
+                max: 1.01
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                      sum by (destination_workload, destination_workload_namespace) (
+                        irate(
+                          istio_requests_total{connection_security_policy="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination",response_code!~"5.*"}[5m]
+                        )
+                      )
+                    /
+                      sum by (destination_workload, destination_workload_namespace) (
+                        irate(
+                          istio_requests_total{connection_security_policy="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[5m]
+                        )
+                      )
+                  seriesNameFormat: "{{ destination_workload }}.{{ destination_workload_namespace
+                    }} (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    round(
+                      sum by (destination_workload, destination_workload_namespace, response_code) (
+                        irate(
+                          istio_requests_total{connection_security_policy!="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[5m]
+                        )
+                      ),
+                      0.001
+                    )
+                  seriesNameFormat: '{{ destination_workload }}.{{ destination_workload_namespace
+                    }}'
+      "6_0":
+        kind: Panel
+        spec:
+          display:
+            name: Incoming Request Duration By Service Workload
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+              yAxis:
+                format:
+                  unit: seconds
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                        histogram_quantile(
+                          0.5,
+                          sum by (destination_workload, destination_workload_namespace, le) (
+                            irate(
+                              istio_request_duration_milliseconds_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                            )
+                          )
+                        )
+                      /
+                        1000
+                    or
+                      histogram_quantile(
+                        0.5,
+                        sum by (destination_workload, destination_workload_namespace, le) (
+                          irate(
+                            istio_request_duration_seconds_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                          )
+                        )
+                      )
+                  seriesNameFormat: "{{ destination_workload }}.{{ destination_workload_namespace
+                    }} P50 (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                        histogram_quantile(
+                          0.9,
+                          sum by (destination_workload, destination_workload_namespace, le) (
+                            irate(
+                              istio_request_duration_milliseconds_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                            )
+                          )
+                        )
+                      /
+                        1000
+                    or
+                      histogram_quantile(
+                        0.9,
+                        sum by (destination_workload, destination_workload_namespace, le) (
+                          irate(
+                            istio_request_duration_seconds_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                          )
+                        )
+                      )
+                  seriesNameFormat: "{{ destination_workload }}.{{ destination_workload_namespace
+                    }} P90 (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                        histogram_quantile(
+                          0.95,
+                          sum by (destination_workload, destination_workload_namespace, le) (
+                            irate(
+                              istio_request_duration_milliseconds_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                            )
+                          )
+                        )
+                      /
+                        1000
+                    or
+                      histogram_quantile(
+                        0.95,
+                        sum by (destination_workload, destination_workload_namespace, le) (
+                          irate(
+                            istio_request_duration_seconds_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                          )
+                        )
+                      )
+                  seriesNameFormat: "{{ destination_workload }}.{{ destination_workload_namespace
+                    }} P95 (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                        histogram_quantile(
+                          0.99,
+                          sum by (destination_workload, destination_workload_namespace, le) (
+                            irate(
+                              istio_request_duration_milliseconds_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                            )
+                          )
+                        )
+                      /
+                        1000
+                    or
+                      histogram_quantile(
+                        0.99,
+                        sum by (destination_workload, destination_workload_namespace, le) (
+                          irate(
+                            istio_request_duration_seconds_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                          )
+                        )
+                      )
+                  seriesNameFormat: "{{ destination_workload }}.{{ destination_workload_namespace
+                    }} P99 (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                        histogram_quantile(
+                          0.5,
+                          sum by (destination_workload, destination_workload_namespace, le) (
+                            irate(
+                              istio_request_duration_milliseconds_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                            )
+                          )
+                        )
+                      /
+                        1000
+                    or
+                      histogram_quantile(
+                        0.5,
+                        sum by (destination_workload, destination_workload_namespace, le) (
+                          irate(
+                            istio_request_duration_seconds_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                          )
+                        )
+                      )
+                  seriesNameFormat: '{{ destination_workload }}.{{ destination_workload_namespace
+                    }} P50'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                        histogram_quantile(
+                          0.9,
+                          sum by (destination_workload, destination_workload_namespace, le) (
+                            irate(
+                              istio_request_duration_milliseconds_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                            )
+                          )
+                        )
+                      /
+                        1000
+                    or
+                      histogram_quantile(
+                        0.9,
+                        sum by (destination_workload, destination_workload_namespace, le) (
+                          irate(
+                            istio_request_duration_seconds_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                          )
+                        )
+                      )
+                  seriesNameFormat: '{{ destination_workload }}.{{ destination_workload_namespace
+                    }} P90'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                        histogram_quantile(
+                          0.95,
+                          sum by (destination_workload, destination_workload_namespace, le) (
+                            irate(
+                              istio_request_duration_milliseconds_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                            )
+                          )
+                        )
+                      /
+                        1000
+                    or
+                      histogram_quantile(
+                        0.95,
+                        sum by (destination_workload, destination_workload_namespace, le) (
+                          irate(
+                            istio_request_duration_seconds_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                          )
+                        )
+                      )
+                  seriesNameFormat: '{{ destination_workload }}.{{ destination_workload_namespace
+                    }} P95'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                        histogram_quantile(
+                          0.99,
+                          sum by (destination_workload, destination_workload_namespace, le) (
+                            irate(
+                              istio_request_duration_milliseconds_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                            )
+                          )
+                        )
+                      /
+                        1000
+                    or
+                      histogram_quantile(
+                        0.99,
+                        sum by (destination_workload, destination_workload_namespace, le) (
+                          irate(
+                            istio_request_duration_seconds_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                          )
+                        )
+                      )
+                  seriesNameFormat: '{{ destination_workload }}.{{ destination_workload_namespace
+                    }} P99'
+      "6_1":
+        kind: Panel
+        spec:
+          display:
+            name: Incoming Request Size By Service Workload
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+              yAxis:
+                format:
+                  unit: bytes
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.5,
+                      sum by (destination_workload, destination_workload_namespace, le) (
+                        irate(
+                          istio_request_bytes_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: "{{ destination_workload }}.{{ destination_workload_namespace
+                    }} P50 (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.9,
+                      sum by (destination_workload, destination_workload_namespace, le) (
+                        irate(
+                          istio_request_bytes_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: "{{ destination_workload }}.{{ destination_workload_namespace
+                    }}  P90 (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.95,
+                      sum by (destination_workload, destination_workload_namespace, le) (
+                        irate(
+                          istio_request_bytes_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: "{{ destination_workload }}.{{ destination_workload_namespace
+                    }} P95 (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.99,
+                      sum by (destination_workload, destination_workload_namespace, le) (
+                        irate(
+                          istio_request_bytes_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: "{{ destination_workload }}.{{ destination_workload_namespace
+                    }}  P99 (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.5,
+                      sum by (destination_workload, destination_workload_namespace, le) (
+                        irate(
+                          istio_request_bytes_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: '{{ destination_workload }}.{{ destination_workload_namespace
+                    }} P50'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.9,
+                      sum by (destination_workload, destination_workload_namespace, le) (
+                        irate(
+                          istio_request_bytes_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: '{{ destination_workload }}.{{ destination_workload_namespace
+                    }} P90'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.95,
+                      sum by (destination_workload, destination_workload_namespace, le) (
+                        irate(
+                          istio_request_bytes_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: '{{ destination_workload }}.{{ destination_workload_namespace
+                    }} P95'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.99,
+                      sum by (destination_workload, destination_workload_namespace, le) (
+                        irate(
+                          istio_request_bytes_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: '{{ destination_workload }}.{{ destination_workload_namespace
+                    }} P99'
+      "6_2":
+        kind: Panel
+        spec:
+          display:
+            name: Response Size By Service Workload
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+              yAxis:
+                format:
+                  unit: bytes
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.5,
+                      sum by (destination_workload, destination_workload_namespace, le) (
+                        irate(
+                          istio_response_bytes_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: "{{ destination_workload }}.{{ destination_workload_namespace
+                    }} P50 (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.9,
+                      sum by (destination_workload, destination_workload_namespace, le) (
+                        irate(
+                          istio_response_bytes_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: "{{ destination_workload }}.{{ destination_workload_namespace
+                    }}  P90 (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.95,
+                      sum by (destination_workload, destination_workload_namespace, le) (
+                        irate(
+                          istio_response_bytes_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: "{{ destination_workload }}.{{ destination_workload_namespace
+                    }} P95 (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.99,
+                      sum by (destination_workload, destination_workload_namespace, le) (
+                        irate(
+                          istio_response_bytes_bucket{connection_security_policy="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: "{{ destination_workload }}.{{ destination_workload_namespace
+                    }}  P99 (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.5,
+                      sum by (destination_workload, destination_workload_namespace, le) (
+                        irate(
+                          istio_response_bytes_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: '{{ destination_workload }}.{{ destination_workload_namespace
+                    }} P50'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.9,
+                      sum by (destination_workload, destination_workload_namespace, le) (
+                        irate(
+                          istio_response_bytes_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: '{{ destination_workload }}.{{ destination_workload_namespace
+                    }} P90'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.95,
+                      sum by (destination_workload, destination_workload_namespace, le) (
+                        irate(
+                          istio_response_bytes_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: '{{ destination_workload }}.{{ destination_workload_namespace
+                    }} P95'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    histogram_quantile(
+                      0.99,
+                      sum by (destination_workload, destination_workload_namespace, le) (
+                        irate(
+                          istio_response_bytes_bucket{connection_security_policy!="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                        )
+                      )
+                    )
+                  seriesNameFormat: '{{ destination_workload }}.{{ destination_workload_namespace
+                    }} P99'
+      "7_0":
+        kind: Panel
+        spec:
+          display:
+            name: Bytes Received from Incoming TCP Connection
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+              yAxis:
+                format:
+                  unit: bytes/sec
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    round(
+                      sum by (destination_workload, destination_workload_namespace) (
+                        irate(
+                          istio_tcp_received_bytes_total{connection_security_policy="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                        )
+                      ),
+                      0.001
+                    )
+                  seriesNameFormat: "{{ destination_workload }}.{{ destination_workload_namespace}}
+                    (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    round(
+                      sum by (destination_workload, destination_workload_namespace) (
+                        irate(
+                          istio_tcp_received_bytes_total{connection_security_policy!="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                        )
+                      ),
+                      0.001
+                    )
+                  seriesNameFormat: '{{ destination_workload }}.{{ destination_workload_namespace}}'
+      "7_1":
+        kind: Panel
+        spec:
+          display:
+            name: Bytes Sent to Incoming TCP Connection
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+              yAxis:
+                format:
+                  unit: bytes/sec
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    round(
+                      sum by (destination_workload, destination_workload_namespace) (
+                        irate(
+                          istio_tcp_sent_bytes_total{connection_security_policy="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                        )
+                      ),
+                      0.001
+                    )
+                  seriesNameFormat: "{{ destination_workload }}.{{destination_workload_namespace
+                    }} (\U0001F510mTLS)"
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    round(
+                      sum by (destination_workload, destination_workload_namespace) (
+                        irate(
+                          istio_tcp_sent_bytes_total{connection_security_policy!="mutual_tls",destination_service=~"$service",destination_workload=~"$dstwl",destination_workload_namespace=~"$dstns",reporter="destination"}[1m]
+                        )
+                      ),
+                      0.001
+                    )
+                  seriesNameFormat: '{{ destination_workload }}.{{destination_workload_namespace
+                    }}'
+    variables:
+    - kind: ListVariable
+      spec:
+        allowAllValue: false
+        allowMultiple: false
+        display:
+          hidden: false
+          name: Service
+        name: service
+        plugin:
+          kind: PrometheusPromQLVariable
+          spec:
+            datasource:
+              kind: PrometheusDatasource
+              name: prometheus-datasource
+            expr: sum(istio_requests_total{}) by (destination_service) or sum(istio_tcp_sent_bytes_total{})
+              by (destination_service)
+            labelName: destination_service
+    - kind: ListVariable
+      spec:
+        allowAllValue: false
+        allowMultiple: true
+        defaultValue: destination
+        display:
+          hidden: false
+          name: Reporter
+        name: qrep
+        plugin:
+          kind: PrometheusPromQLVariable
+          spec:
+            datasource:
+              kind: PrometheusDatasource
+              name: prometheus-datasource
+            expr: sum(istio_requests_total) by (reporter)
+            labelName: reporter
+    - kind: ListVariable
+      spec:
+        allowAllValue: true
+        allowMultiple: true
+        display:
+          hidden: false
+          name: Client Cluster
+        name: srccluster
+        plugin:
+          kind: PrometheusPromQLVariable
+          spec:
+            datasource:
+              kind: PrometheusDatasource
+              name: prometheus-datasource
+            expr: sum(istio_requests_total{reporter=~"$qrep", destination_service="$service"})
+              by (source_cluster) or sum(istio_tcp_sent_bytes_total{reporter=~"$qrep",
+              destination_service=~"$service"}) by (source_cluster)
+            labelName: source_cluster
+    - kind: ListVariable
+      spec:
+        allowAllValue: true
+        allowMultiple: true
+        display:
+          hidden: false
+          name: Client Workload Namespace
+        name: srcns
+        plugin:
+          kind: PrometheusPromQLVariable
+          spec:
+            datasource:
+              kind: PrometheusDatasource
+              name: prometheus-datasource
+            expr: sum(istio_requests_total{reporter=~"$qrep", destination_service="$service"})
+              by (source_workload_namespace) or sum(istio_tcp_sent_bytes_total{reporter=~"$qrep",
+              destination_service=~"$service"}) by (source_workload_namespace)
+            labelName: source_workload_namespace
+    - kind: ListVariable
+      spec:
+        allowAllValue: true
+        allowMultiple: true
+        display:
+          hidden: false
+          name: Client Workload
+        name: srcwl
+        plugin:
+          kind: PrometheusPromQLVariable
+          spec:
+            datasource:
+              kind: PrometheusDatasource
+              name: prometheus-datasource
+            expr: sum(istio_requests_total{reporter=~"$qrep", destination_service=~"$service",
+              source_workload_namespace=~"$srcns"}) by (source_workload) or sum(istio_tcp_sent_bytes_total{reporter=~"$qrep",
+              destination_service=~"$service", source_workload_namespace=~"$srcns"})
+              by (source_workload)
+            labelName: source_workload
+    - kind: ListVariable
+      spec:
+        allowAllValue: true
+        allowMultiple: true
+        display:
+          hidden: false
+          name: Service Workload Cluster
+        name: dstcluster
+        plugin:
+          kind: PrometheusPromQLVariable
+          spec:
+            datasource:
+              kind: PrometheusDatasource
+              name: prometheus-datasource
+            expr: sum(istio_requests_total{reporter="destination", destination_service="$service"})
+              by (destination_cluster) or sum(istio_tcp_sent_bytes_total{reporter="destination",
+              destination_service=~"$service"}) by (destination_cluster)
+            labelName: destination_cluster
+    - kind: ListVariable
+      spec:
+        allowAllValue: true
+        allowMultiple: true
+        display:
+          hidden: false
+          name: Service Workload Namespace
+        name: dstns
+        plugin:
+          kind: PrometheusPromQLVariable
+          spec:
+            datasource:
+              kind: PrometheusDatasource
+              name: prometheus-datasource
+            expr: sum(istio_requests_total{reporter="destination", destination_service="$service"})
+              by (destination_workload_namespace) or sum(istio_tcp_sent_bytes_total{reporter="destination",
+              destination_service=~"$service"}) by (destination_workload_namespace)
+            labelName: destination_workload_namespace
+    - kind: ListVariable
+      spec:
+        allowAllValue: true
+        allowMultiple: true
+        display:
+          hidden: false
+          name: Service Workload
+        name: dstwl
+        plugin:
+          kind: PrometheusPromQLVariable
+          spec:
+            datasource:
+              kind: PrometheusDatasource
+              name: prometheus-datasource
+            expr: sum(istio_requests_total{reporter="destination", destination_service=~"$service",
+              destination_cluster=~"$dstcluster", destination_workload_namespace=~"$dstns"})
+              by (destination_workload) or sum(istio_tcp_sent_bytes_total{reporter="destination",
+              destination_service=~"$service", destination_cluster=~"$dstcluster",
+              destination_workload_namespace=~"$dstns"}) by (destination_workload)
+            labelName: destination_workload
+status: {}
