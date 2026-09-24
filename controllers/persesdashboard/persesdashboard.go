@@ -112,7 +112,7 @@ func (i *Installer) reconcile(ctx context.Context, log logr.Logger) error {
 
 // SetupWithManager registers the installer as a leader-elected Runnable.
 //
-// +kubebuilder:rbac:groups=perses.dev,resources=persesdashboards,verbs=get;list;create;update
+// +kubebuilder:rbac:groups=perses.dev,resources=persesdashboards,verbs=get;list;create
 func (i *Installer) SetupWithManager(mgr ctrl.Manager) error {
 	i.log = mgr.GetLogger().WithName("persesdashboard")
 	if i.Cache == nil {
