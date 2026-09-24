@@ -19,10 +19,8 @@ import (
 	"fmt"
 	"io/fs"
 
-	"github.com/istio-ecosystem/sail-operator/pkg/constants"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/util/equality"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -33,11 +31,9 @@ type ReconcileResult struct {
 	FailedNames   []string
 }
 
-// ReconcileDashboards creates or updates PersesDashboard resources in the target namespace.
-// Dashboards managed by the operator (app.kubernetes.io/managed-by=sail-operator) are updated
-// when the bundled spec differs from the cluster. User-managed dashboards (no managed-by label)
-// are left unchanged. The CRD must already be available; callers that need to wait for the CRD
-// should use kube.WaitForCRDs first.
+// ReconcileDashboards creates PersesDashboard resources in the target namespace when they do not exist.
+// Existing dashboards are left unchanged. The CRD must already be available; callers that need to wait
+// for the CRD should use kube.WaitForCRDs first.
 func ReconcileDashboards(
 	ctx context.Context,
 	cl client.Client,
@@ -55,53 +51,25 @@ func ReconcileDashboards(
 		if err != nil {
 			return result, err
 		}
-		if err := createOrUpdateIfChanged(ctx, cl, dashboard); err != nil {
+		if err := createIfNotExists(ctx, cl, dashboard); err != nil {
 			result.AllCreated = false
 			result.FailedNames = append(result.FailedNames, def.Name)
-			return result, fmt.Errorf("reconcile dashboard %s: %w", def.Name, err)
+			return result, fmt.Errorf("create dashboard %s: %w", def.Name, err)
 		}
 	}
 
 	return result, nil
 }
 
-func createOrUpdateIfChanged(ctx context.Context, cl client.Client, desired *unstructured.Unstructured) error {
+func createIfNotExists(ctx context.Context, cl client.Client, desired *unstructured.Unstructured) error {
 	existing := &unstructured.Unstructured{}
 	existing.SetGroupVersionKind(desired.GroupVersionKind())
 	err := cl.Get(ctx, client.ObjectKey{Namespace: desired.GetNamespace(), Name: desired.GetName()}, existing)
-	if apierrors.IsNotFound(err) {
-		return cl.Create(ctx, desired)
-	}
-	if err != nil {
-		return err
-	}
-
-	// Preserve dashboards not managed by the operator.
-	if existing.GetLabels()[constants.KubernetesAppManagedByKey] != constants.ManagedByLabelValue {
+	if err == nil {
 		return nil
 	}
-
-	desiredSpec, _, err := unstructured.NestedMap(desired.Object, "spec")
-	if err != nil {
-		return fmt.Errorf("desired spec: %w", err)
-	}
-	existingSpec, _, err := unstructured.NestedMap(existing.Object, "spec")
-	if err != nil {
-		return fmt.Errorf("existing spec: %w", err)
-	}
-	if equality.Semantic.DeepEqual(desiredSpec, existingSpec) {
-		return nil
-	}
-
-	if err := unstructured.SetNestedMap(existing.Object, desiredSpec, "spec"); err != nil {
+	if !apierrors.IsNotFound(err) {
 		return err
 	}
-	labels := existing.GetLabels()
-	if labels == nil {
-		labels = map[string]string{}
-	}
-	labels[constants.KubernetesAppManagedByKey] = constants.ManagedByLabelValue
-	existing.SetLabels(labels)
-	existing.SetOwnerReferences(nil)
-	return cl.Update(ctx, existing)
+	return cl.Create(ctx, desired)
 }

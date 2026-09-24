@@ -317,4 +317,3 @@ rules:
   - create
   - get
   - list
-  - update

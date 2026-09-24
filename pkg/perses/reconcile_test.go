@@ -16,7 +16,6 @@ package perses
 
 import (
 	"context"
-	"io/fs"
 	"os"
 	"path"
 	"testing"
@@ -25,7 +24,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/equality"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -62,7 +60,7 @@ func TestReconcileDashboardsCreatesAll(t *testing.T) {
 	}
 }
 
-func TestReconcileDashboardsSkipsUserManaged(t *testing.T) {
+func TestReconcileDashboardsSkipsExisting(t *testing.T) {
 	ctx := context.Background()
 	namespace := "sail-operator"
 	existing := &unstructured.Unstructured{}
@@ -93,66 +91,8 @@ func TestReconcileDashboardsSkipsUserManaged(t *testing.T) {
 		t.Fatalf("get existing dashboard: %v", err)
 	}
 	if got.GetLabels()["custom"] != "true" {
-		t.Fatal("expected user-managed dashboard to remain unchanged")
+		t.Fatal("expected existing dashboard to remain unchanged")
 	}
-	display, _, _ := unstructured.NestedString(got.Object, "spec", "config", "display", "name")
-	if display != "user-managed" {
-		t.Fatalf("expected user-managed spec to remain unchanged, got %q", display)
-	}
-}
-
-func TestReconcileDashboardsUpdatesManagedWhenSpecChanged(t *testing.T) {
-	ctx := context.Background()
-	namespace := "sail-operator"
-	fsys := os.DirFS(path.Join(project.RootDir, "resources", "perses"))
-
-	desired, err := PrepareDashboard(mustLoad(t, fsys, ProductDashboards[0]), namespace, ProductDashboards[0])
-	if err != nil {
-		t.Fatalf("PrepareDashboard: %v", err)
-	}
-	desiredSpec, _, err := unstructured.NestedMap(desired.Object, "spec")
-	if err != nil {
-		t.Fatalf("desired spec: %v", err)
-	}
-
-	existing := desired.DeepCopy()
-	if err := unstructured.SetNestedMap(existing.Object, map[string]interface{}{
-		"display": map[string]interface{}{"name": "stale"},
-	}, "spec", "config"); err != nil {
-		t.Fatalf("set nested map: %v", err)
-	}
-
-	cl := newPersesTestClient(t, testPersesDashboardCRD(), existing)
-
-	result, err := ReconcileDashboards(ctx, cl, fsys, namespace)
-	if err != nil {
-		t.Fatalf("ReconcileDashboards() error = %v", err)
-	}
-	if !result.AllCreated {
-		t.Fatal("expected reconciliation to succeed")
-	}
-
-	got := &unstructured.Unstructured{}
-	got.SetGroupVersionKind(DashboardGVK)
-	if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: ProductDashboards[0].Name}, got); err != nil {
-		t.Fatalf("get dashboard: %v", err)
-	}
-	gotSpec, _, err := unstructured.NestedMap(got.Object, "spec")
-	if err != nil {
-		t.Fatalf("got spec: %v", err)
-	}
-	if !equality.Semantic.DeepEqual(gotSpec, desiredSpec) {
-		t.Fatal("expected managed dashboard spec to be updated to bundled content")
-	}
-}
-
-func mustLoad(t *testing.T, fsys fs.FS, def DashboardDefinition) []byte {
-	t.Helper()
-	raw, err := LoadDashboardYAML(fsys, def)
-	if err != nil {
-		t.Fatalf("LoadDashboardYAML: %v", err)
-	}
-	return raw
 }
 
 func TestReconcileDashboardsIdempotent(t *testing.T) {
