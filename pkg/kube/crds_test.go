@@ -16,7 +16,9 @@ package kube
 
 import (
 	"context"
+	"errors"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
@@ -134,14 +136,120 @@ func TestWaitForCRDsCustomNames(t *testing.T) {
 	}
 }
 
+func TestWaitForCRDs(t *testing.T) {
+	readyCRDs := testCRDs()
+
+	for name, tc := range map[string]struct {
+		initial         []*apiextensionsv1.CustomResourceDefinition
+		addedDuringWait []*apiextensionsv1.CustomResourceDefinition
+		names           []string
+		wantReady       bool
+	}{
+		"CRDs already ready": {
+			initial: readyCRDs, names: []string{collectorCRDName, telemetryCRDName}, wantReady: true,
+		},
+		"CRDs never ready": {
+			names: []string{collectorCRDName, telemetryCRDName},
+		},
+		"missing CRD is added": {
+			initial:         readyCRDs[:1],
+			names:           []string{collectorCRDName, telemetryCRDName},
+			addedDuringWait: readyCRDs[1:],
+			wantReady:       true,
+		},
+		"waits for all missing CRDs": {
+			names:           []string{collectorCRDName, telemetryCRDName},
+			addedDuringWait: readyCRDs,
+			wantReady:       true,
+		},
+		"unrelated CRD event does not complete wait": {
+			addedDuringWait: []*apiextensionsv1.CustomResourceDefinition{{
+				Name: "unrelated.example.com",
+				Spec: apiextensionsv1.CustomResourceDefinitionSpec{
+					Versions: []apiextensionsv1.CustomResourceDefinitionVersion{{Name: "v1beta1", Served: true}},
+				},
+				Status: apiextensionsv1.CustomResourceDefinitionStatus{
+					Conditions: []apiextensionsv1.CustomResourceDefinitionCondition{{
+						Type: apiextensionsv1.Established, Status: apiextensionsv1.ConditionTrue,
+					}},
+				},
+			}},
+			names: []string{collectorCRDName},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(t.Context())
+				defer cancel()
+				builder := fake.NewClientBuilder().WithScheme(scheme.Scheme).
+					WithStatusSubresource(&apiextensionsv1.CustomResourceDefinition{})
+				for _, crd := range tc.initial {
+					builder.WithObjects(crd.DeepCopy())
+				}
+				cl := builder.Build()
+				informer := &crdTestInformer{handlers: make(chan toolscache.ResourceEventHandler, 1)}
+				crdCache := &crdTestCache{Reader: cl, informer: informer}
+				var (
+					err      error
+					returned bool
+				)
+				go func() {
+					err = WaitForCRDs(ctx, crdCache, tc.names...)
+					returned = true
+				}()
+				// Wait until the initial cache check finishes or WaitForCRDs blocks.
+				// In cases with events below, assert it has NOT returned before adding CRDs.
+				synctest.Wait()
+				if !informer.added {
+					t.Fatal("handler was not added to CRD informer")
+				}
+				handler := <-informer.handlers
+				check := func(wantReturned bool) {
+					t.Helper()
+					if returned != wantReturned {
+						t.Fatalf("WaitForCRDs returned = %t; want %t", returned, wantReturned)
+					}
+					if returned && err != nil {
+						t.Errorf("WaitForCRDs error = %v; want nil", err)
+					}
+					if informer.removed != wantReturned {
+						t.Errorf("handler removed = %t; want %t", informer.removed, wantReturned)
+					}
+				}
+				check(tc.wantReady && len(tc.addedDuringWait) == 0)
+
+				for i, crd := range tc.addedDuringWait {
+					if err := cl.Create(ctx, crd.DeepCopy()); err != nil {
+						t.Fatal(err)
+					}
+					handler.OnAdd(crd, false)
+					synctest.Wait()
+					check(tc.wantReady && i == len(tc.addedDuringWait)-1)
+				}
+
+				cancel()
+				synctest.Wait()
+				if !tc.wantReady && !errors.Is(err, context.Canceled) {
+					t.Errorf("WaitForCRDs error = %v; want context.Canceled", err)
+				}
+				if !informer.removed {
+					t.Error("handler was not removed after cancellation")
+				}
+			})
+		})
+	}
+}
+
 type crdTestInformer struct {
 	cache.Informer
 	handlers chan toolscache.ResourceEventHandler
+	added    bool
 	removed  bool
 }
 
 func (i *crdTestInformer) AddEventHandler(handler toolscache.ResourceEventHandler) (toolscache.ResourceEventHandlerRegistration, error) {
 	i.handlers <- handler
+	i.added = true
 	return nil, nil
 }
 
