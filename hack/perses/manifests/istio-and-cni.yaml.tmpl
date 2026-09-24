@@ -1,0 +1,17 @@
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  version: ${ISTIO_VERSION}
+  namespace: istio-system
+  updateStrategy:
+    type: InPlace
+---
+apiVersion: sailoperator.io/v1
+kind: IstioCNI
+metadata:
+  name: default
+spec:
+  version: ${ISTIO_VERSION}
+  namespace: istio-cni
