@@ -52,13 +52,19 @@ CURL_RETRY_DELAY_SECONDS="${CURL_RETRY_DELAY_SECONDS:-2}"
 # get_from_url downloads and extracts the istioctl binary from a provided URL.
 get_from_url() {
   local url="$1"
+  local curl_retry_args=(
+    --retry "${CURL_RETRY_ATTEMPTS}"
+    --retry-delay "${CURL_RETRY_DELAY_SECONDS}"
+    --retry-connrefused
+  )
   
   echo "Fetching istioctl from $url"
+  if curl --help all 2>/dev/null | grep -q -- '--retry-all-errors'; then
+    curl_retry_args+=(--retry-all-errors)
+  fi
+
   curl -fsSL \
-    --retry "${CURL_RETRY_ATTEMPTS}" \
-    --retry-delay "${CURL_RETRY_DELAY_SECONDS}" \
-    --retry-all-errors \
-    --retry-connrefused \
+    "${curl_retry_args[@]}" \
     "$url" -o /tmp/istioctl.tar.gz || {
     echo "Download failed after ${CURL_RETRY_ATTEMPTS} attempts. Please check the URL and ISTIOCTL_VERSION."
     exit 1
