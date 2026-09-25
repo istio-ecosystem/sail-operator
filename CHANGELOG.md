@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 The changelog for the next version is compiled from the YAML files in the
 `changelog/` directory at release time, and the files are deleted afterwards.
 
+## v1.31.1 - 2026-09-25
+
+### Added
+- Add support for Istio 1.31.1, 1.30.5 and 1.29.8
+
 ## v1.31.0 - 2026-09-21
 
 ### Added
