@@ -46,14 +46,21 @@ CONTAINER_CLI="${CONTAINER_CLI:-docker}"
 TARGET_OS="${TARGET_OS:-"$(go env GOOS)"}"
 TARGET_ARCH="${TARGET_ARCH:-"$(go env GOARCH)"}"
 LOCALBIN="${LOCALBIN:-"/tmp/bin"}"
+CURL_RETRY_ATTEMPTS="${CURL_RETRY_ATTEMPTS:-5}"
+CURL_RETRY_DELAY_SECONDS="${CURL_RETRY_DELAY_SECONDS:-2}"
 
 # get_from_url downloads and extracts the istioctl binary from a provided URL.
 get_from_url() {
   local url="$1"
   
   echo "Fetching istioctl from $url"
-  curl -fsL "$url" -o /tmp/istioctl.tar.gz || {
-    echo "Download failed! Please check the URL and ISTIOCTL_VERSION."
+  curl -fsSL \
+    --retry "${CURL_RETRY_ATTEMPTS}" \
+    --retry-delay "${CURL_RETRY_DELAY_SECONDS}" \
+    --retry-all-errors \
+    --retry-connrefused \
+    "$url" -o /tmp/istioctl.tar.gz || {
+    echo "Download failed after ${CURL_RETRY_ATTEMPTS} attempts. Please check the URL and ISTIOCTL_VERSION."
     exit 1
   }
   tar -xzf /tmp/istioctl.tar.gz -C /tmp || {
