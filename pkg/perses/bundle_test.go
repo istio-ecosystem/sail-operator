@@ -91,3 +91,24 @@ func TestPrepareDashboardSetsNamespaceAndClearsOwners(t *testing.T) {
 		t.Fatal("expected no ownerReferences")
 	}
 }
+
+func TestLoadDashboardYAMLMissing(t *testing.T) {
+	_, err := LoadDashboardYAML(os.DirFS(t.TempDir()), DashboardDefinition{Filename: "missing.yaml"})
+	if err == nil {
+		t.Fatal("expected error for missing dashboard file")
+	}
+}
+
+func TestParseDashboardInvalid(t *testing.T) {
+	_, err := ParseDashboard([]byte("::: not yaml"))
+	if err == nil {
+		t.Fatal("expected decode error")
+	}
+}
+
+func TestPrepareDashboardInvalid(t *testing.T) {
+	_, err := PrepareDashboard([]byte("{"), "ns", ProductDashboards[0])
+	if err == nil {
+		t.Fatal("expected prepare error for invalid YAML")
+	}
+}
