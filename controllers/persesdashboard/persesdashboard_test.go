@@ -30,9 +30,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
 func TestStartWaitsWithoutCRDThenInstalls(t *testing.T) {
@@ -125,6 +128,75 @@ func TestNewInstallerUsesOperatorNamespace(t *testing.T) {
 	i := NewInstaller(config.ReconcilerConfig{OperatorNamespace: "my-operator"}, nil, nil, nil)
 	if i.Namespace != "my-operator" {
 		t.Fatalf("Namespace = %q, want my-operator", i.Namespace)
+	}
+}
+
+func TestNeedLeaderElection(t *testing.T) {
+	if !(&Installer{}).NeedLeaderElection() {
+		t.Fatal("NeedLeaderElection() = false, want true")
+	}
+}
+
+func TestStartWaitError(t *testing.T) {
+	installer := &Installer{
+		waitForCRDs: func(context.Context, cache.Cache, ...string) error {
+			return context.DeadlineExceeded
+		},
+	}
+	if err := installer.Start(context.Background()); err == nil {
+		t.Fatal("expected wait error")
+	}
+}
+
+func TestStartReconcileErrorUsesDefaultInterval(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	installer := &Installer{
+		Client:      fake.NewClientBuilder().WithScheme(scheme.Scheme).Build(),
+		DashboardFS: os.DirFS(t.TempDir()), // missing dashboards → reconcile error path
+		Namespace:   "sail-operator",
+		Interval:    0, // exercise default interval
+		waitForCRDs: func(context.Context, cache.Cache, ...string) error { return nil },
+	}
+
+	done := make(chan error, 1)
+	go func() { done <- installer.Start(ctx) }()
+	time.Sleep(30 * time.Millisecond)
+	cancel()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("Start() error = %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Start did not return after cancel")
+	}
+}
+
+func TestSetupWithManager(t *testing.T) {
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	mgr, err := ctrl.NewManager(&rest.Config{Host: "https://127.0.0.1:1"}, ctrl.Options{
+		Scheme:                 scheme.Scheme,
+		Metrics:                metricsserver.Options{BindAddress: "0"},
+		HealthProbeBindAddress: "0",
+		NewClient: func(*rest.Config, client.Options) (client.Client, error) {
+			return cl, nil
+		},
+	})
+	if err != nil {
+		t.Fatalf("NewManager: %v", err)
+	}
+
+	installer := &Installer{} // nil Client/Cache → filled from manager
+	if err := installer.SetupWithManager(mgr); err != nil {
+		t.Fatalf("SetupWithManager: %v", err)
+	}
+	if installer.Client == nil || installer.Cache == nil {
+		t.Fatal("expected Client and Cache to be set from manager")
+	}
+	if installer.log.GetSink() == nil {
+		t.Fatal("expected logger to be set")
 	}
 }
 

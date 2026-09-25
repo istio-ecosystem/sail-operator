@@ -16,16 +16,22 @@ package perses
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"io/fs"
 	"os"
 	"path"
 	"testing"
+	"testing/fstest"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	"github.com/istio-ecosystem/sail-operator/pkg/test/project"
@@ -115,6 +121,58 @@ func TestReconcileDashboardsIdempotent(t *testing.T) {
 	}
 	if len(list.Items) != len(ProductDashboards) {
 		t.Fatalf("expected %d dashboards after idempotent reconcile, got %d", len(ProductDashboards), len(list.Items))
+	}
+}
+
+func TestReconcileDashboardsLoadError(t *testing.T) {
+	cl := newPersesTestClient(t, testPersesDashboardCRD())
+	_, err := ReconcileDashboards(context.Background(), cl, os.DirFS(t.TempDir()), "sail-operator")
+	if err == nil {
+		t.Fatal("expected load error")
+	}
+}
+
+func TestReconcileDashboardsPrepareError(t *testing.T) {
+	def := ProductDashboards[0]
+	fsys := fstest.MapFS{
+		path.Join("dashboards", def.Filename): &fstest.MapFile{Data: []byte(":::")},
+	}
+	cl := newPersesTestClient(t, testPersesDashboardCRD())
+	_, err := ReconcileDashboards(context.Background(), cl, fs.FS(fsys), "sail-operator")
+	if err == nil {
+		t.Fatal("expected prepare error")
+	}
+}
+
+func TestReconcileDashboardsCreateError(t *testing.T) {
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(testPersesDashboardCRD()).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Create: func(context.Context, client.WithWatch, client.Object, ...client.CreateOption) error {
+				return fmt.Errorf("create failed")
+			},
+		}).Build()
+	fsys := os.DirFS(path.Join(project.RootDir, "resources", "perses"))
+	result, err := ReconcileDashboards(context.Background(), cl, fsys, "sail-operator")
+	if err == nil {
+		t.Fatal("expected create error")
+	}
+	if result.AllCreated || len(result.FailedNames) == 0 {
+		t.Fatalf("result = %+v; want AllCreated=false with FailedNames", result)
+	}
+}
+
+func TestCreateIfNotExistsGetError(t *testing.T) {
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithInterceptorFuncs(interceptor.Funcs{
+		Get: func(context.Context, client.WithWatch, client.ObjectKey, client.Object, ...client.GetOption) error {
+			return apierrors.NewInternalError(errors.New("get failed"))
+		},
+	}).Build()
+	obj := &unstructured.Unstructured{}
+	obj.SetGroupVersionKind(DashboardGVK)
+	obj.SetName("istio-control-plane")
+	obj.SetNamespace("sail-operator")
+	if err := createIfNotExists(context.Background(), cl, obj); err == nil {
+		t.Fatal("expected get error")
 	}
 }
 
