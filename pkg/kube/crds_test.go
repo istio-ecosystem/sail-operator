@@ -23,11 +23,14 @@ import (
 
 	"github.com/istio-ecosystem/sail-operator/pkg/scheme"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
 
 const (
@@ -114,6 +117,18 @@ func TestCRDsReady(t *testing.T) {
 	}
 }
 
+func TestCRDsReadyGetError(t *testing.T) {
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithInterceptorFuncs(interceptor.Funcs{
+		Get: func(context.Context, client.WithWatch, client.ObjectKey, client.Object, ...client.GetOption) error {
+			return apierrors.NewInternalError(errors.New("boom"))
+		},
+	}).Build()
+	ready, err := CRDsReady(t.Context(), cl, collectorCRDName)
+	if err == nil || ready {
+		t.Fatalf("ready = %v, err = %v; want error", ready, err)
+	}
+}
+
 func TestWaitForCRDsEmpty(t *testing.T) {
 	if err := WaitForCRDs(t.Context(), nil); err != nil {
 		t.Fatal(err)
@@ -133,6 +148,79 @@ func TestWaitForCRDsCustomNames(t *testing.T) {
 	}
 	if !informer.removed {
 		t.Error("handler was not removed")
+	}
+}
+
+func TestWaitForCRDsGetInformerError(t *testing.T) {
+	crdCache := &crdTestCache{getInformerErr: errors.New("informer unavailable")}
+	if err := WaitForCRDs(t.Context(), crdCache, collectorCRDName); err == nil {
+		t.Fatal("expected GetInformer error")
+	}
+}
+
+func TestWaitForCRDsAddHandlerError(t *testing.T) {
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	informer := &crdTestInformer{addErr: errors.New("add failed")}
+	crdCache := &crdTestCache{Reader: cl, informer: informer}
+	if err := WaitForCRDs(t.Context(), crdCache, collectorCRDName); err == nil {
+		t.Fatal("expected AddEventHandler error")
+	}
+}
+
+func TestWaitForCRDsReadyCheckError(t *testing.T) {
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithInterceptorFuncs(interceptor.Funcs{
+		Get: func(context.Context, client.WithWatch, client.ObjectKey, client.Object, ...client.GetOption) error {
+			return apierrors.NewForbidden(schema.GroupResource{Resource: "customresourcedefinitions"}, collectorCRDName, errors.New("denied"))
+		},
+	}).Build()
+	informer := &crdTestInformer{handlers: make(chan toolscache.ResourceEventHandler, 1)}
+	crdCache := &crdTestCache{Reader: cl, informer: informer}
+	if err := WaitForCRDs(t.Context(), crdCache, collectorCRDName); err == nil {
+		t.Fatal("expected CRDsReady error")
+	}
+}
+
+func TestWaitForCRDsWaitsForEvent(t *testing.T) {
+	cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+	informer := &crdTestInformer{
+		handlers:  make(chan toolscache.ResourceEventHandler, 1),
+		removeErr: errors.New("remove failed"), // exercise RemoveEventHandler error log
+	}
+	crdCache := &crdTestCache{Reader: cl, informer: informer}
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+
+	done := make(chan error, 1)
+	go func() { done <- WaitForCRDs(ctx, crdCache, collectorCRDName) }()
+
+	handler := <-informer.handlers
+	// Ignored notifications: wrong type, unwanted CRD, tombstone with unwanted object.
+	handler.OnAdd("not-a-crd", false)
+	handler.OnAdd(&apiextensionsv1.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{Name: "other.example.com"},
+	}, false)
+	handler.OnDelete(toolscache.DeletedFinalStateUnknown{
+		Obj: &apiextensionsv1.CustomResourceDefinition{
+			ObjectMeta: metav1.ObjectMeta{Name: "other.example.com"},
+		},
+	})
+
+	ready := testCRDs()[0]
+	if err := cl.Create(ctx, ready.DeepCopy()); err != nil {
+		t.Fatal(err)
+	}
+	// Coalesce: multiple notifies before WaitForCRDs re-checks.
+	handler.OnAdd(ready, false)
+	handler.OnUpdate(nil, ready)
+	handler.OnAdd(ready, false)
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("WaitForCRDs did not return after CRD became ready")
 	}
 }
 
@@ -242,26 +330,34 @@ func TestWaitForCRDs(t *testing.T) {
 
 type crdTestInformer struct {
 	cache.Informer
-	handlers chan toolscache.ResourceEventHandler
-	added    bool
-	removed  bool
+	handlers  chan toolscache.ResourceEventHandler
+	added     bool
+	removed   bool
+	addErr    error
+	removeErr error
 }
 
 func (i *crdTestInformer) AddEventHandler(handler toolscache.ResourceEventHandler) (toolscache.ResourceEventHandlerRegistration, error) {
-	i.handlers <- handler
+	if i.addErr != nil {
+		return nil, i.addErr
+	}
+	if i.handlers != nil {
+		i.handlers <- handler
+	}
 	i.added = true
 	return nil, nil
 }
 
 func (i *crdTestInformer) RemoveEventHandler(toolscache.ResourceEventHandlerRegistration) error {
 	i.removed = true
-	return nil
+	return i.removeErr
 }
 
 type crdTestCache struct {
 	cache.Cache
 	client.Reader
-	informer *crdTestInformer
+	informer       *crdTestInformer
+	getInformerErr error
 }
 
 func (c *crdTestCache) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
@@ -273,5 +369,8 @@ func (c *crdTestCache) List(ctx context.Context, list client.ObjectList, opts ..
 }
 
 func (c *crdTestCache) GetInformer(context.Context, client.Object, ...cache.InformerGetOption) (cache.Informer, error) {
+	if c.getInformerErr != nil {
+		return nil, c.getInformerErr
+	}
 	return c.informer, nil
 }
