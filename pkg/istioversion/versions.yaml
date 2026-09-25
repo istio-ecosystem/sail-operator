@@ -317,15 +317,15 @@ versions:
   - name: v1.21.6
     eol: true
   - name: master
-    ref: v1.32.0-alpha.09d3eb46
-  - name: v1.32.0-alpha.09d3eb46
-    version: 1.32.0-alpha.09d3eb4658967b1c3e49b8f3369f136a5e03fcac
+    ref: v1.32.0-alpha.b9027949
+  - name: v1.32.0-alpha.b9027949
+    version: 1.32.0-alpha.b9027949a11ef01c4de7c89a4e28be07ec8326cc
     repo: https://github.com/istio/istio
     branch: master
-    commit: 09d3eb4658967b1c3e49b8f3369f136a5e03fcac
+    commit: b9027949a11ef01c4de7c89a4e28be07ec8326cc
     charts:
-      - https://blob.istio.io/istio-build/dev/1.32.0-alpha.09d3eb4658967b1c3e49b8f3369f136a5e03fcac/helm/base-1.32.0-alpha.09d3eb4658967b1c3e49b8f3369f136a5e03fcac.tgz
-      - https://blob.istio.io/istio-build/dev/1.32.0-alpha.09d3eb4658967b1c3e49b8f3369f136a5e03fcac/helm/cni-1.32.0-alpha.09d3eb4658967b1c3e49b8f3369f136a5e03fcac.tgz
-      - https://blob.istio.io/istio-build/dev/1.32.0-alpha.09d3eb4658967b1c3e49b8f3369f136a5e03fcac/helm/gateway-1.32.0-alpha.09d3eb4658967b1c3e49b8f3369f136a5e03fcac.tgz
-      - https://blob.istio.io/istio-build/dev/1.32.0-alpha.09d3eb4658967b1c3e49b8f3369f136a5e03fcac/helm/istiod-1.32.0-alpha.09d3eb4658967b1c3e49b8f3369f136a5e03fcac.tgz
-      - https://blob.istio.io/istio-build/dev/1.32.0-alpha.09d3eb4658967b1c3e49b8f3369f136a5e03fcac/helm/ztunnel-1.32.0-alpha.09d3eb4658967b1c3e49b8f3369f136a5e03fcac.tgz
+      - https://blob.istio.io/istio-build/dev/1.32.0-alpha.b9027949a11ef01c4de7c89a4e28be07ec8326cc/helm/base-1.32.0-alpha.b9027949a11ef01c4de7c89a4e28be07ec8326cc.tgz
+      - https://blob.istio.io/istio-build/dev/1.32.0-alpha.b9027949a11ef01c4de7c89a4e28be07ec8326cc/helm/cni-1.32.0-alpha.b9027949a11ef01c4de7c89a4e28be07ec8326cc.tgz
+      - https://blob.istio.io/istio-build/dev/1.32.0-alpha.b9027949a11ef01c4de7c89a4e28be07ec8326cc/helm/gateway-1.32.0-alpha.b9027949a11ef01c4de7c89a4e28be07ec8326cc.tgz
+      - https://blob.istio.io/istio-build/dev/1.32.0-alpha.b9027949a11ef01c4de7c89a4e28be07ec8326cc/helm/istiod-1.32.0-alpha.b9027949a11ef01c4de7c89a4e28be07ec8326cc.tgz
+      - https://blob.istio.io/istio-build/dev/1.32.0-alpha.b9027949a11ef01c4de7c89a4e28be07ec8326cc/helm/ztunnel-1.32.0-alpha.b9027949a11ef01c4de7c89a4e28be07ec8326cc.tgz
