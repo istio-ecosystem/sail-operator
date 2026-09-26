@@ -1,0 +1,705 @@
+apiVersion: perses.dev/v1alpha2
+kind: PersesDashboard
+metadata:
+  labels:
+    app.kubernetes.io/component: dashboard
+    app.kubernetes.io/instance: istio-performance
+    app.kubernetes.io/name: perses-dashboard
+    app.kubernetes.io/part-of: perses-operator
+  name: istio-performance
+  namespace: perses-dev
+spec:
+  config:
+    display:
+      name: Istio Performance Dashboard
+    duration: 1h
+    layouts:
+    - kind: Grid
+      spec:
+        display:
+          title: Performance Dashboard Notes
+        items:
+        - content:
+            $ref: '#/spec/panels/0_0'
+          height: 6
+          width: 24
+          x: 0
+          "y": 0
+    - kind: Grid
+      spec:
+        display:
+          title: vCPU Usage
+        items:
+        - content:
+            $ref: '#/spec/panels/1_0'
+          height: 8
+          width: 12
+          x: 0
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/1_1'
+          height: 8
+          width: 12
+          x: 12
+          "y": 0
+    - kind: Grid
+      spec:
+        display:
+          title: Memory and Data Rates
+        items:
+        - content:
+            $ref: '#/spec/panels/2_0'
+          height: 8
+          width: 12
+          x: 0
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/2_1'
+          height: 8
+          width: 12
+          x: 12
+          "y": 0
+    - kind: Grid
+      spec:
+        display:
+          title: Istio Component Versions
+        items:
+        - content:
+            $ref: '#/spec/panels/3_0'
+          height: 8
+          width: 24
+          x: 0
+          "y": 0
+    - kind: Grid
+      spec:
+        display:
+          title: Proxy Resource Usage
+        items:
+        - content:
+            $ref: '#/spec/panels/4_0'
+          height: 7
+          width: 8
+          x: 0
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/4_1'
+          height: 7
+          width: 8
+          x: 8
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/4_2'
+          height: 7
+          width: 8
+          x: 16
+          "y": 0
+    - kind: Grid
+      spec:
+        display:
+          title: Istiod Resource Usage
+        items:
+        - content:
+            $ref: '#/spec/panels/5_0'
+          height: 7
+          width: 6
+          x: 0
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/5_1'
+          height: 7
+          width: 6
+          x: 6
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/5_2'
+          height: 7
+          width: 6
+          x: 12
+          "y": 0
+        - content:
+            $ref: '#/spec/panels/5_3'
+          height: 7
+          width: 6
+          x: 18
+          "y": 0
+    panels:
+      "0_0":
+        kind: Panel
+        spec:
+          display:
+            name: Performance Dashboard README
+          plugin:
+            kind: Markdown
+            spec:
+              text: |+
+                The charts on this dashboard are intended to show Istio main components cost in terms of resources utilization under steady load.
+
+                - **vCPU / 1k rps:** shows vCPU utilization by the main Istio components normalized by 1000 requests/second. When idle or low traffic, this chart will be blank. The curve for istio-proxy refers to the services sidecars only.
+                - **vCPU:** vCPU utilization by Istio components, not normalized.
+                - **Memory:** memory footprint for the components. Telemetry and policy are normalized by 1k rps, and no data is shown  when there is no traffic. For ingress and istio-proxy, the data is per instance.
+                - **Bytes transferred / sec:** shows the number of bytes flowing through each Istio component.
+
+
+      "1_0":
+        kind: Panel
+        spec:
+          display:
+            name: vCPU / 1k rps
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+              yAxis:
+                format:
+                  unit: decimal
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                      sum(
+                        irate(
+                          container_cpu_usage_seconds_total{container="istio-proxy",pod=~"istio-ingressgateway-.*"}[$__rate_interval]
+                        )
+                      )
+                    /
+                        round(
+                          sum(
+                            irate(
+                              istio_requests_total{reporter="source",source_workload="istio-ingressgateway"}[$__rate_interval]
+                            )
+                          ),
+                          0.001
+                        )
+                      /
+                        1000
+                  seriesNameFormat: istio-ingressgateway
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                        sum(
+                          irate(
+                            container_cpu_usage_seconds_total{container="istio-proxy",namespace!="istio-system"}[$__rate_interval]
+                          )
+                        )
+                      /
+                        round(sum(irate(istio_requests_total[$__rate_interval])), 0.001) / 1000
+                    /
+                      sum(irate(istio_requests_total{source_workload="istio-ingressgateway"}[$__rate_interval])) > bool 10
+                  seriesNameFormat: istio-proxy
+      "1_1":
+        kind: Panel
+        spec:
+          display:
+            name: vCPU
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+              yAxis:
+                format:
+                  unit: decimal
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    sum(
+                      rate(
+                        container_cpu_usage_seconds_total{container="istio-proxy",pod=~"istio-ingressgateway-.*"}[$__rate_interval]
+                      )
+                    )
+                  seriesNameFormat: istio-ingressgateway
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    sum(
+                      rate(
+                        container_cpu_usage_seconds_total{container="istio-proxy",namespace!="istio-system"}[$__rate_interval]
+                      )
+                    )
+                  seriesNameFormat: istio-proxy
+      "2_0":
+        kind: Panel
+        spec:
+          display:
+            name: Memory Usage
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+              yAxis:
+                format:
+                  unit: bytes
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                      sum(container_memory_working_set_bytes{pod=~"istio-ingressgateway-.*"})
+                    /
+                      count(container_memory_working_set_bytes{container!="POD",pod=~"istio-ingressgateway-.*"})
+                  seriesNameFormat: per istio-ingressgateway
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                      sum(container_memory_working_set_bytes{container="istio-proxy",namespace!="istio-system"})
+                    /
+                      count(container_memory_working_set_bytes{container="istio-proxy",namespace!="istio-system"})
+                  seriesNameFormat: per istio proxy
+      "2_1":
+        kind: Panel
+        spec:
+          display:
+            name: Bytes transferred / sec
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+              yAxis:
+                format:
+                  unit: bytes/sec
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    sum(
+                      irate(
+                        istio_response_bytes_sum{reporter="source",source_workload="istio-ingressgateway"}[$__rate_interval]
+                      )
+                    )
+                  seriesNameFormat: istio-ingressgateway
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |2-
+                      sum(
+                        irate(
+                          istio_response_bytes_sum{reporter="source",source_workload_namespace!="istio-system"}[$__rate_interval]
+                        )
+                      )
+                    +
+                      sum(
+                        irate(
+                          istio_request_bytes_sum{reporter="source",source_workload_namespace!="istio-system"}[$__rate_interval]
+                        )
+                      )
+                  seriesNameFormat: istio-proxy
+      "3_0":
+        kind: Panel
+        spec:
+          display:
+            name: Istio Components by Version
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+              yAxis:
+                format:
+                  unit: decimal
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: sum by (component, tag) (istio_build)
+                  seriesNameFormat: '{{ component }}: {{ tag }}'
+      "4_0":
+        kind: Panel
+        spec:
+          display:
+            name: Memory
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+              yAxis:
+                format:
+                  unit: bytes
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: sum(container_memory_working_set_bytes{container="istio-proxy"})
+                  seriesNameFormat: Total (k8s)
+      "4_1":
+        kind: Panel
+        spec:
+          display:
+            name: vCPU
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+              yAxis:
+                format:
+                  unit: decimal
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: sum(rate(container_cpu_usage_seconds_total{container="istio-proxy"}[$__rate_interval]))
+                  seriesNameFormat: Total (k8s)
+      "4_2":
+        kind: Panel
+        spec:
+          display:
+            name: Disk
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+              yAxis:
+                format:
+                  unit: bytes
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: sum(container_fs_usage_bytes{container="istio-proxy"})
+                  seriesNameFormat: Total (k8s)
+      "5_0":
+        kind: Panel
+        spec:
+          display:
+            name: Memory
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+              yAxis:
+                format:
+                  unit: bytes
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: process_virtual_memory_bytes{app="istiod"}
+                  seriesNameFormat: Virtual Memory
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: process_resident_memory_bytes{app="istiod"}
+                  seriesNameFormat: Resident Memory
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: go_memstats_heap_sys_bytes{app="istiod"}
+                  seriesNameFormat: heap sys
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: go_memstats_heap_alloc_bytes{app="istiod"}
+                  seriesNameFormat: heap alloc
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: go_memstats_alloc_bytes{app="istiod"}
+                  seriesNameFormat: Alloc
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: go_memstats_heap_inuse_bytes{app="istiod"}
+                  seriesNameFormat: Heap in-use
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: go_memstats_stack_inuse_bytes{app="istiod"}
+                  seriesNameFormat: Stack in-use
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: sum(container_memory_working_set_bytes{container=~"discovery|istio-proxy",pod=~"istiod-.*"})
+                  seriesNameFormat: Total (k8s)
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: container_memory_working_set_bytes{container=~"discovery|istio-proxy",pod=~"istiod-.*"}
+                  seriesNameFormat: '{{ container }} (k8s)'
+      "5_1":
+        kind: Panel
+        spec:
+          display:
+            name: vCPU
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+              yAxis:
+                format:
+                  unit: decimal
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    sum(
+                      rate(
+                        container_cpu_usage_seconds_total{container=~"discovery|istio-proxy",pod=~"istiod-.*"}[$__rate_interval]
+                      )
+                    )
+                  seriesNameFormat: Total (k8s)
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: |-
+                    sum by (container) (
+                      rate(
+                        container_cpu_usage_seconds_total{container=~"discovery|istio-proxy",pod=~"istiod-.*"}[$__rate_interval]
+                      )
+                    )
+                  seriesNameFormat: '{{ container }} (k8s)'
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: irate(process_cpu_seconds_total{app="istiod"}[$__rate_interval])
+                  seriesNameFormat: pilot (self-reported)
+      "5_2":
+        kind: Panel
+        spec:
+          display:
+            name: Disk
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              legend:
+                mode: list
+                position: bottom
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+              yAxis:
+                format:
+                  unit: bytes
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: process_open_fds{app="istiod"}
+                  seriesNameFormat: Open FDs (pilot)
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: container_fs_usage_bytes{container=~"discovery|istio-proxy",pod=~"istiod-.*"}
+                  seriesNameFormat: '{{ container }}'
+      "5_3":
+        kind: Panel
+        spec:
+          display:
+            name: Goroutines
+          plugin:
+            kind: TimeSeriesChart
+            spec:
+              visual:
+                areaOpacity: 0.1
+                display: line
+                lineWidth: 1
+              yAxis:
+                format:
+                  unit: decimal
+          queries:
+          - kind: TimeSeriesQuery
+            spec:
+              plugin:
+                kind: PrometheusTimeSeriesQuery
+                spec:
+                  datasource:
+                    kind: PrometheusDatasource
+                    name: prometheus-datasource
+                  query: go_goroutines{app="istiod"}
+                  seriesNameFormat: Number of Goroutines
+status: {}
