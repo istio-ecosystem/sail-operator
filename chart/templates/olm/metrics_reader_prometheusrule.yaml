@@ -1,0 +1,20 @@
+{{ if .Values.bundleGeneration }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: sail-operator-metrics-recording-rules
+  labels:
+    release: {{ .Values.metrics.helm.releaseName }}
+spec:
+  groups:
+    - name: mesh.istiod.rules
+      interval: 30s
+      rules:
+        - record: servicemesh_istiod_total
+          expr: sum(servicemesh_istiod_total) by (app.kubernetes.io/version)
+    - name: mesh.ztunnel.rules
+      interval: 30s
+      rules:
+        - record: servicemesh_ztunnel_total
+          expr: sum(servicemesh_ztunnel_total) by (app.kubernetes.io/version)
+{{ end }}

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/istio-ecosystem/sail-operator/controllers/istio"
 	"github.com/istio-ecosystem/sail-operator/controllers/istiocni"
@@ -29,6 +30,7 @@ import (
 	"github.com/istio-ecosystem/sail-operator/controllers/monitoring"
 	"github.com/istio-ecosystem/sail-operator/controllers/webhook"
 	"github.com/istio-ecosystem/sail-operator/controllers/ztunnel"
+	"github.com/istio-ecosystem/sail-operator/pkg/analyze"
 	"github.com/istio-ecosystem/sail-operator/pkg/config"
 	"github.com/istio-ecosystem/sail-operator/pkg/enqueuelogger"
 	"github.com/istio-ecosystem/sail-operator/pkg/helm"
@@ -305,6 +307,16 @@ func main() {
 		setupLog.Error(err, "problem running sail-operator manager")
 		os.Exit(1)
 	}
+
+	// Record custom resources and Istio namespaces counts every 5 minutes
+	// those custom metrics are registered in the default metric server
+	recorder := analyze.NewMetricsRecorder(5*time.Minute, mgr.GetClient())
+	recorder.Start(ctx)
+	setupLog.Info("Collecting custom resource metrics")
+	// Wait for context timeout or operator shutdown
+	<-ctx.Done()
+	recorder.Stop()
+	setupLog.Info("Custom metrics collection stopped")
 }
 
 type requestLogger struct {

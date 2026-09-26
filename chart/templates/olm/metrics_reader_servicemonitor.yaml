@@ -1,0 +1,24 @@
+{{ if .Values.bundleGeneration }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: sail-operator-metrics-monitor
+  labels:
+    release: {{ .Values.metrics.helm.releaseName }}  # match Prometheus serviceMonitorSelector
+spec:
+  selector:
+    matchLabels:
+      control-plane: {{ .Values.deployment.name }}
+  endpoints:
+  - port: https
+    path: /metrics
+    scheme: https
+    interval: 30s
+    tlsConfig:
+      insecureSkipVerify: true
+    authorization:
+      type: Bearer
+      credentials:  # the secret must live in the same namespace as the ServiceMonitor
+        name: {{ .Values.deployment.name }}
+        key: token
+{{ end }}

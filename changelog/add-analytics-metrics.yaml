@@ -1,0 +1,5 @@
+category: added
+title: Add analytics metrics for Sail Operator components
+description: |
+  Introduce custom metrics that help measure Istio version counts, ZTunnel version counts,
+  managed namespace counts etc.
