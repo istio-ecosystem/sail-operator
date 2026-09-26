@@ -48,7 +48,7 @@ const (
 	upgradeTestNamespace = "library-test-upgrade"
 )
 
-var _ = Describe("Library Reconciliation", Label("library", "reconciliation"), Ordered, func() {
+var _ = Describe("Library Reconciliation", Label("library", "reconciliation", "crc"), Ordered, func() {
 	SetDefaultEventuallyTimeout(3 * time.Minute)
 	SetDefaultEventuallyPollingInterval(time.Second)
 
@@ -299,7 +299,7 @@ var _ = Describe("Library Reconciliation", Label("library", "reconciliation"), O
 		})
 	})
 
-	When("the library upgrades istiod to a new version", func() {
+	When("the library upgrades istiod to a new version", Label("library-upgrade"), func() {
 		var lib *install.Library
 
 		const (
