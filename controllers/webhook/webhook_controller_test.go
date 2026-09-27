@@ -858,7 +858,7 @@ func TestIsOwnedByRevisionWithRemoteControlPlane(t *testing.T) {
 			obj := &admissionv1.MutatingWebhookConfiguration{
 				OwnerReferences: tt.ownerRefs,
 			}
-			g.Expect(IsOwnedByRevisionWithRemoteControlPlane(cl, obj)).To(Equal(tt.expected))
+			g.Expect(IsOwnedByRevisionWithRemoteControlPlane(context.Background(), cl, obj)).To(Equal(tt.expected))
 		})
 	}
 }
