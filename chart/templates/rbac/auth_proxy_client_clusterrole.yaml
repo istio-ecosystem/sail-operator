@@ -10,10 +10,18 @@ metadata:
     app.kubernetes.io/part-of: {{ .Values.name }}
   name: {{ .Values.name }}-metrics-reader
 rules:
-  - apiGroups: [""]
-    resources:
-      - services
-      - endpoints
-      - pods
-      - namespaces
-    verbs: ["get", "list", "watch"]
+- nonResourceURLs:
+  - "/metrics"
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - services
+  - endpoints
+  - pods
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
